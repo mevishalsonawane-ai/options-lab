@@ -303,6 +303,21 @@ object ShadowRules {
         }
     }
 
+    /**
+     * 18 Oct review fix (D3): the premium stop of variant [id]'s own rule for a fill at [entry] - the ORB family's -40, which every
+     * variant but O08 has (O08's stop is on the index: null, its live trade rests the safety stop) - for its live path.
+     */
+    fun premiumStop(id: String, entry: Double): Double? = if (id == MOMO_O08.id || of(id) == null) null else OrbRules.stopTrigger(entry)
+
+    /**
+     * The profit lock variant [id]'s own rule holds at [peak] for a fill at [entry]: R20's ladder on +40, a study shadow's ladder
+     * ([ShadowStudy.Rule.ladder]); null when it has none (yet). Its live stop follows it up.
+     */
+    fun lockLevel(id: String, entry: Double, peak: Double): Double? = when (id) {
+        FADE_R20.id -> ProfitLock.level(entry, FADE_TARGET, peak)
+        else -> ShadowStudy.ruleOf(id)?.ladder?.let { ProfitLock.level(entry, it, peak) }
+    }
+
     /** S17's index exits on one closed minute's [close]: the stop beyond the sweep's extreme first, then the mid. */
     private fun sweepIndexExit(p: Open, close: Double): String? {
         val ext = p.extreme

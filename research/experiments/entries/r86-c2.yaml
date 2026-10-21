@@ -1,0 +1,34 @@
+id: r86-c2
+title: 'R86 C2: CFTC managed-money one-week change (z) -> MCX gold, silver, crude next week'
+family: mcx-crypto
+date: '2026-10-19'
+doc: research/HUNT_R86_BIG_PLAYERS.md
+hypothesis: 'Pre-registered (research/hunt/r86/PREREG.md): CFTC managed-money one-week change (z) -> MCX gold, silver, crude
+  next week beats random twins in walk-forward design (net > 0 and > twins, twin p < 0.10, BH q < 0.10 over R86''s 23 tests,
+  not carried by the top 5), then in the final window read once.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (participants/, index_daily, index_1m, equity_1m, derived/r28_gex, fut_daily_continuous;
+  files of 13-15 Oct 2026); CFTC Disaggregated Futures-Only history files downloaded 19 Oct 2026
+period:
+  design: 2012 - 2022 (walk-forward years 2015-2022)
+  holdout: 'final window NOT read: no R86 test passed design (PREREG section 2)'
+instruments:
+- GOLD
+- SILVER
+- CRUDE
+features:
+- 'signal source: the underlying (index / MCX future) or positioning data about it; no option chart'
+- CFTC managed money net / OI, weekly change z over 156 reports; used from report + 7 days
+model_or_rule: MCX mini future 5 sessions at abs z >= 1.5, walk-forward sign, stop 1.5 ATR14
+settings: research/hunt/r86/r86study.py, r86lib.py; PREREG.md
+prereg: research/hunt/r86/PREREG.md
+variants_tried: 3
+results:
+  summary: 'Design walk-forward. C2-GOLD: 52 trades, net Rs -36,452, win 0.462, without top 5 Rs -98,627, random twins mean
+    Rs -59,911, twin p 0.345, BH q 0.667; C2-SILVER: 53 trades, net Rs -62,503, win 0.415, without top 5 Rs -217,574, random
+    twins mean Rs -7,467, twin p 0.733, BH q 0.964; C2-CRUDE: 59 trades, net Rs 26,363, win 0.542, without top 5 Rs -925,
+    random twins mean Rs -3,380, twin p 0.038, BH q 0.291. Verdict: FAIL (no test passed the design gates; final window not
+    read).'
+  costs: McxCosts charges both legs, 0.03% slippage a fill, 0.10% on stops; roll-adjusted continuous future, 1 mini lot
+holdout_read: false
+verdict: rejected
+notes: Understanding the big players' footprints (Boss, 19 Oct). Research only; nothing changes paper or live.

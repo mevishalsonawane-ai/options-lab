@@ -1,0 +1,39 @@
+id: r52-r4-18
+title: 'R52 re-test on Nov 2024+: R4-18 Harmonic patterns (R4 engine)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R4-18 (old verdict: BN ABCD 15m OPT 147 tr +70/day (p 0.04), hold 30 tr -160; BN all
+  60m 80 tr +45, hold 13 tr +59; Cypher/5-0/Shark small +; Bat 245 tr +159/tr over 36 var) makes money net of real costs on
+  the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''unds'': [''BANKNIFTY''], ''var'': ''H_ABCD|tf15|OPT''} | ITM1/near | exits stop_pct=0.25,tgt_pct=0.5 |
+  expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 17
+results:
+  summary: 'Design original: 53 trades, win 42%, net Rs -17,590 (Rs -52/day), worst day Rs -8,126, max DD Rs -22,531, p 0.001
+    (coin-flip p 0.654); walk-forward Rs -12,253. Re-tune pick g01 ({''var'': ''H_ALL|tf60|NAT1'', ''unds'': (''BANKNIFTY'',)}
+    · ITM1/near · exits default): design 25 trades, win 52%, net Rs +23,911 (Rs +71/day), worst day Rs -9,538, max DD Rs -9,538,
+    p 0.026 (coin-flip p 0.122); walk-forward Rs +14,895. FINAL original: 19 trades, win 32%, net Rs -27,351 (Rs -207/day),
+    worst day Rs -6,056, max DD Rs -27,351, p 0.533 (coin-flip p 0.885), q 1.00 -> too few trades to judge. FINAL pick: 7
+    trades, win 71%, net Rs +12,506 (Rs +95/day), worst day Rs -970, max DD Rs -970, p 0.021 (coin-flip p 0.097), q 0.21 ->
+    too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = R4''s frozen pick (research/hunt/r4/results/frozen.json, HUNT_R4_GANN_FIB_MAGIC.md)
+  BANKNIFTY H_ABCD|tf15|OPT (the catalogue''s headline pick); the other frozen picks it names (BN all-60m / Cypher / 5-0 /
+  Gartley / Shark, NIFTY ABCD / all / 5-0 / Shark, FIN Shark / 5-0) are the grid, then ABCD''s own exits / timeframes on BANKNIFTY.
+  Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

@@ -1,0 +1,42 @@
+id: r46-a-call-l1
+title: 'R46 other AI''s ''Option 1'' re-test: A-call-L1'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R46_BTC_EMA_ADX_NN.md
+hypothesis: The other AI's BTC EMA8/21 + ADX>15 (+NN) entry, trading Delta India BTC options with a stop and a profit lock,
+  makes money after Delta fees + GST, spread, the one-minute-later fill and India's per-winning-trade crypto tax in design
+  and holdout, beats random-entry twins (p<0.05, BH q<=0.10 over 14) with 40+ trades each.
+data_version: 'Crypto lake gdrive:IraAlgo-data-crypto pulled 15 Oct 2026: Binance BTCUSDT spot + USD-M perp 1-minute (2023-10-01..2026-10-12),
+  Delta Exchange India BTC option 1-minute trade candles (1,018 expiry days 2023-12-28..2026-10-13). Raw data and pools outside
+  git.'
+period:
+  design: 2024-01-01..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (last ~6.5 months, partly seen by RC1/RC2/NN_CRYPTO/STRAD_CRYPTO; read once 2026-10-15 01:08
+    UTC)
+instruments:
+- CRYPTO
+features:
+- btc_spot_ema8
+- btc_spot_ema21
+- btc_spot_adx14
+model_or_rule: BTC spot 5-min EMA(8) crosses above EMA(21) AND Wilder ADX(14) > 15; buy the Delta India BTC ATM call (nearest
+  daily expiry with >= 90 min left) at the next bar, first real trade, filled one minute later; 60-min time exit; 50% premium
+  stop + step lock (1.25x->1.00x, +0.25x rungs); max 2 a day (IST), one position at a time
+settings: research/hunt/r46/r46cfg.py
+prereg: research/hunt/r46/PREREG.md
+variants_tried: 3
+results:
+  summary: 'Main fill (option price one minute later + half spread), 1,000 contracts (1 BTC). Design 2024-01-01..2026-03-31
+    (821 days): 1486 trades, win 24.6%, net before tax $-106,011.62, after tax $-128,339.58 ($-156.32/day), worst $-629.30,
+    max DD $128,391.02; twin p 0.5224775224775224, BH q 0.8252 (14 variants). Holdout 2026-04-01..2026-10-12 (195 days, read
+    once): 391 trades, win 29.7%, net before tax $-7,431.39, after tax $-12,187.07 ($-62.50/day), worst $-378.16, max DD $12,304.74;
+    holdout twin p 0.01998001998001998. Their window 2026-09-01..10-12 (not a test): 83 trades, win 27.7%, net before tax
+    $-2,511.15, after tax $-3,252.96 ($-77.45/day), worst $-273.37, max DD $3,370.63. Gate: FAILED.'
+  costs: Delta India option fee min(rate x notional, cap x premium) + 18% GST by expiry-date schedule (0.03%/10% to Jul 2025
+    ... 0.01%/3.5% now); RC2 spread model, buy mid + half spread, exits less half spread + 1 tick + 1%; perp 0.05% taker +
+    GST + 0.02% slippage a side. Tax A 31.2% of each winning trade, no set-off; 1% TDS tracked. variants_tried counts the
+    naive / real / stress fill readings of the one rule (real is the gate).
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: BTC spot (the underlying). Every trade had a stop-loss and a profit lock (the other AI''s no-lock exit
+  was not run). Research only; nothing in the app trades crypto.'

@@ -1,0 +1,35 @@
+id: r78-v5
+title: 'R78 gold Daily High/Low Reversal: 1.5 R target'
+family: patterns-indicators
+date: '2026-10-18'
+doc: research/HUNT_R78_GOLD_DAILY_HL_REVERSAL.md
+hypothesis: 'Boss (18 Oct): Gautam Jha''s Daily High/Low Reversal on XAUUSD: a 1-minute close beyond the previous UTC day''s
+  low (high), a green (red) candle, the next candle closing beyond its high (low); enter, stop beyond the swing, target the
+  move''s start. Passes only if net > 0 in design, walk-forward and final, beats same-time random-entry twins (BH q <= 0.10
+  over 24 lines) and has >= 100 design trades.'
+data_version: 'Dukascopy XAUUSD 1-minute BID: research-data release xauusd_m1_bid.csv.gz + 98 Dukascopy day files (missing
+  weekdays, 1-16 Oct 2026), 2 Oct 2023 - 16 Oct 2026'
+period:
+  design: 2 Oct 2023 - 31 Mar 2026 (walk-forward quarters Apr 2024 - Mar 2026)
+  holdout: 1 Apr - 16 Oct 2026, read once; gold seen by earlier studies (other rules)
+instruments:
+- XAUUSD
+features:
+- 'signal: XAUUSD 1-minute and UTC daily bars (the underlying itself)'
+model_or_rule: 'Daily High/Low Reversal, variant V5: 1.5 R target; entries 07:00-19:00 UTC, out 20:40 UTC, one per side per
+  day'
+settings: research/hunt/r78/r78engine.py VARIANTS; PREREG.md
+prereg: research/hunt/r78/PREREG.md
+variants_tried: 8
+results:
+  summary: 'long: design 156 trades, win 40%, net $+13,371, PF 1.33, worst day $-2,757, max DD $-8,050; walk-forward 121 trades
+    net $+13,305; final 45 trades, win 29%, net $-4,172, PF 0.79, worst day $-2,683, max DD $-11,188; twin p 0.008, BH q 0.17;
+    pass no. short: design 201 trades, win 28%, net $-14,811, PF 0.65, worst day $-945, max DD $-18,884; walk-forward 154
+    trades net $-11,746; final 30 trades, win 37%, net $-1,250, PF 0.91, worst day $-1,735, max DD $-5,251; twin p 0.841,
+    BH q 0.86; pass no. combined: design 357 trades, win 33%, net $-1,440, PF 0.98, worst day $-2,757, max DD $-14,165; walk-forward
+    275 trades net $+1,559; final 75 trades, win 32%, net $-5,422, PF 0.84, worst day $-2,683, max DD $-9,767; twin p 0.109,
+    BH q 0.47; pass no.'
+  costs: ask = bid + $0.30, $7 a lot round trip, $0.05/oz slippage on stop fills, no overnight (no swap); USD per 100 oz lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (XAUUSD). Research only; nothing changes paper or live.

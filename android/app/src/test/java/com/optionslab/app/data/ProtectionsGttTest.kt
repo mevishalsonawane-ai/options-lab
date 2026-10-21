@@ -1,0 +1,379 @@
+package com.optionslab.app.data
+
+import com.optionslab.app.testing.FakeKite
+import com.optionslab.app.testing.NetworkGuard
+import com.optionslab.app.testing.RobolectricTest
+import kotlinx.coroutines.runBlocking
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.robolectric.annotation.ConscryptMode
+import java.time.LocalDate
+
+/**
+ * 20 Oct, enhancement round 1 (idea 2): a carried (NRML) live protection's stop and target rest at Zerodha as a GTT while the
+ * session's DAY orders are gone (after the close, overnight, before the open), so a dead phone misses nothing. The GTT is
+ * deleted (confirmed) before the day's orders are placed again at the open, and whenever the protection ends: never two
+ * resting exits for one position, never an exit left for a position no longer held.
+ */
+@ConscryptMode(ConscryptMode.Mode.OFF)
+class ProtectionsGttTest : RobolectricTest() {
+    private lateinit var kite: FakeKite
+    private val sym = "NIFTY26OCT24500CE"
+
+    @Before fun up() {
+        ExitCoordinator.resetForTest()
+        kite = FakeKite()
+        kite.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", LocalDate.now().plusDays(20), 24_500.0, "CE", 75)
+        kite.position(sym, 75, 100.0)
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        kite.login()
+    }
+
+    @After fun down() { Market.testClock = null; kite.close(); assertEquals(emptyList<String>(), NetworkGuard.blocked.toList()) }
+
+    /** The clock at [h]:[m] IST on the [nth] trading day after today. */
+    private fun session(h: Int, m: Int, nth: Int = 1) {
+        var d = LocalDate.now(com.optionslab.engine.IST)
+        repeat(nth) { d = d.plusDays(1); while (!Market.isTradingDay(d)) d = d.plusDays(1) }
+        val at = d.atTime(h, m).atZone(com.optionslab.engine.IST).toInstant()
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), at))
+    }
+
+    private fun protect(product: String = "NRML", stop: Double? = 90.0, target: Double? = 130.0) = runBlocking {
+        Protections.protectLive(sym, "NFO", product, 75, 100.0, stop, null, target)
+    }
+
+    private fun one() = runBlocking { Protections.active() }.single()
+    private fun tick() = runBlocking { Protections.tick() }
+    private val gttPosts get() = kite.requests.filter { it.method == "POST" && it.path == "/gtt/triggers" }
+    private val gttDeletes get() = kite.requests.filter { it.method == "DELETE" && it.path.startsWith("/gtt/triggers/") }
+
+    /** The close: Zerodha cancels the DAY exits (the clock on the next trading day at 15:45, the orders still in its book). */
+    private fun theClose() {
+        val p = one()
+        session(15, 45)
+        listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { kite.order(it).status = "CANCELLED" }
+    }
+
+    @Test fun atTheCloseTheStopAndTargetRestAsOneGttAndTheOpenReplacesItWithTheDayOrders() {
+        protect()
+        theClose()
+        tick()
+        val g = kite.gtts.values.single()
+        assertEquals("two-leg", g.getString("type"))
+        val trig = g.getJSONObject("condition").getJSONArray("trigger_values")
+        assertEquals(listOf(90.0, 130.0), (0 until trig.length()).map { trig.getDouble(it) })
+        val leg = g.getJSONArray("orders").getJSONObject(0)
+        assertEquals("SELL", leg.getString("transaction_type")); assertEquals(75, leg.getInt("quantity")); assertEquals("NRML", leg.getString("product"))
+        val item = one()
+        assertEquals(g.getLong("id"), item.gttId)
+        assertTrue(com.optionslab.app.work.Alerts.queue.value.any { it.text.contains("rest at Zerodha overnight as a GTT") })
+        // Later looks that evening and before the open: nothing more sent.
+        tick()
+        kite.orders.clear()
+        session(9, 0, nth = 2)
+        kite.requests.clear()
+        tick()
+        assertTrue("nothing sent before the open", kite.requests.none { it.method != "GET" })
+        // The open: the GTT out first (confirmed), then the day's stop and target - never both resting.
+        session(9, 20, nth = 2)
+        kite.requests.clear()
+        tick()
+        val writes = kite.requests.filter { it.method != "GET" }
+        assertEquals("DELETE", writes.first().method)
+        assertTrue(writes.first().path.endsWith("/${item.gttId}"))
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertTrue("the GTT is gone", kite.gtts.isEmpty())
+        val now = one()
+        assertNull(now.gttId)
+        assertEquals(90.0, now.stop!!, 0.0)
+    }
+
+    @Test fun anIntradayProtectionNeverGetsAGtt() {
+        kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0, product = "MIS")
+        protect(product = "MIS")
+        theClose()
+        tick()
+        assertTrue(gttPosts.isEmpty())
+        assertTrue(kite.gtts.isEmpty())
+    }
+
+    @Test fun aStopOnlyProtectionRestsASingleGtt() {
+        protect(target = null)
+        theClose()
+        tick()
+        val g = kite.gtts.values.single()
+        assertEquals("single", g.getString("type"))
+        assertEquals(90.0, g.getJSONObject("condition").getJSONArray("trigger_values").getDouble(0), 0.0)
+    }
+
+    /** The GTT fired overnight (the price opened through the stop) and its sell filled: the protection ends, nothing more is placed. */
+    @Test fun aGttThatFiredAndFilledEndsTheProtectionWithNothingPlacedAgain() {
+        protect()
+        theClose()
+        tick()
+        val id = one().gttId!!
+        kite.orders.clear()
+        kite.quote("NFO:$sym", 86.0, 85.95, 86.05)        // opened through the stop, at or over the GTT's limit (90 less 5%)
+        session(9, 16, nth = 2)
+        val oid = kite.triggerGtt(id)
+        assertEquals("COMPLETE", kite.order(oid).status)
+        kite.flat()
+        kite.requests.clear()
+        tick()
+        assertTrue("no stop placed for a position no longer held", kite.placed.isEmpty())
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+    }
+
+    /** Fired at the open but not filled yet (its limit resting): that sell is counted, so the day's stop is not doubled. */
+    @Test fun aGttFiredButNotFilledIsCountedAndNeverDoubled() {
+        protect()
+        theClose()
+        tick()
+        val id = one().gttId!!
+        kite.orders.clear()
+        kite.quote("NFO:$sym", 60.0, 59.95, 60.05)        // under the GTT's limit (90 less 5%): its sell rests unfilled
+        session(9, 16, nth = 2)
+        val oid = kite.triggerGtt(id)
+        assertEquals("OPEN", kite.order(oid).status)
+        kite.requests.clear()
+        tick()
+        assertTrue("the fired GTT's sell already covers the position", kite.placed.isEmpty())
+        // Said plainly: the sell rests under the market.
+        assertTrue(com.optionslab.app.work.Alerts.queue.value.any { it.text.contains("its overnight GTT fired") })
+    }
+
+    /** Closed by hand overnight (Boss sold it after hours): the GTT is deleted before it can sell what is no longer held. */
+    @Test fun aPositionClosedOvernightDeletesItsGtt() {
+        protect()
+        theClose()
+        tick()
+        val id = one().gttId!!
+        kite.orders.clear()
+        kite.flat()
+        session(8, 30, nth = 2)
+        tick()
+        assertTrue(gttDeletes.any { it.path.endsWith("/$id") })
+        assertTrue(kite.gtts.isEmpty())
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+    }
+
+    @Test fun removingTheProtectionDeletesItsGtt() {
+        protect()
+        theClose()
+        tick()
+        val p = one()
+        assertEquals("Protection removed from $sym.", runBlocking { Protections.remove(p.id) })
+        assertTrue(kite.gtts.isEmpty())
+    }
+
+    /** A delete Zerodha does not confirm (the GTT still listed): the day's orders wait, the protection stays, and it is asked again. */
+    @Test fun aDeleteNotConfirmedHoldsTheDayOrdersBack() {
+        protect()
+        theClose()
+        tick()
+        val id = one().gttId!!
+        val saved = JSONObject(kite.gtts.getValue(id).toString())
+        kite.orders.clear()
+        session(9, 20, nth = 2)
+        kite.afterNext("/gtt/triggers/$id") { kite.gtts[id] = saved }       // the delete "went" but the GTT is still active
+        kite.requests.clear()
+        tick()
+        assertTrue("no day orders beside an active GTT", kite.placed.isEmpty())
+        assertEquals(id, one().gttId)
+        // The next look: deleted and confirmed, then the day's orders.
+        kite.requests.clear()
+        tick()
+        assertTrue(kite.gtts.isEmpty())
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
+
+    /** Another exit already covers it overnight (an arm's own GTT on the same contract): no second GTT. */
+    @Test fun anotherGttCoveringThePositionMeansNoSecondOne() {
+        protect()
+        runBlocking {
+            Broker.placeGtt(requireNotNull(com.optionslab.engine.Kite.protect(com.optionslab.engine.Kite.Spec("NFO", sym, 0L, 75, 0.05),
+                "NRML", 75, 100.0, 80.0, null).first))
+        }
+        theClose()
+        kite.requests.clear()
+        tick()
+        assertTrue(gttPosts.isEmpty())
+        assertNull(one().gttId)
+    }
+
+    /** At the close the price is already under the stop: Zerodha would refuse the GTT, so it is said plainly (and not retried forever). */
+    @Test fun aStopAlreadyThroughThePriceIsSaidPlainly() {
+        protect(target = null)
+        theClose()
+        kite.quote("NFO:$sym", 85.0, 84.95, 85.05)
+        repeat(5) { tick() }
+        assertTrue(kite.gtts.isEmpty())
+        val said = com.optionslab.app.work.Alerts.queue.value.map { it.text }
+        assertTrue(said.toString(), said.any { it.contains("could not rest at Zerodha overnight as a GTT") })
+        assertNotNull("the protection is kept for the open", runBlocking { Protections.active() }.singleOrNull())
+    }
+
+    /** Saved and read back (a restart overnight keeps the GTT's id, so the open still deletes it first). */
+    @Test fun theGttIdSurvivesARestart() {
+        protect()
+        theClose()
+        tick()
+        val id = one().gttId!!
+        Protections.forgetMemoryForTest()          // as after a restart: the file read again
+        assertEquals(id, one().gttId)
+    }
+
+    /** The watch's evening look runs only while a carried live protection still waits for its overnight GTT. */
+    @Test fun theEveningLookHintFollowsTheGtt() {
+        protect()
+        assertTrue("carried, no GTT yet", Protections.overnightHint)
+        theClose()
+        tick()
+        assertTrue(one().gttId != null)
+        assertTrue("its GTT rests: nothing more to wait for", !Protections.overnightHint)
+    }
+
+    @Test fun anIntradayProtectionNeverKeepsTheEveningLook() {
+        kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0, product = "MIS")
+        protect(product = "MIS")
+        assertTrue(!Protections.overnightHint)
+    }
+
+    /** Refused three times (the price through the stop): the evening look for it ends (bounded), the protection stays for the open. */
+    @Test fun repeatedRefusalsEndTheEveningLook() {
+        protect(target = null)
+        theClose()
+        kite.quote("NFO:$sym", 85.0, 84.95, 85.05)
+        repeat(3) { tick() }
+        assertTrue(!Protections.overnightHint)
+        assertNotNull(runBlocking { Protections.active() }.singleOrNull())
+    }
+
+    // ---- review findings ---------------------------------------------------------------------------------------------
+
+    /** Review 1: the GTT fires and fills after the pass read what is held: nothing is placed on that older figure (no naked short). */
+    @Test fun aGttFiringDuringThePassNeverLeadsToASecondSell() {
+        protect()
+        theClose()
+        tick()
+        val id = one().gttId!!
+        kite.orders.clear()
+        kite.quote("NFO:$sym", 140.0, 139.95, 140.05)           // opened through the target: its leg fills
+        session(9, 16, nth = 2)
+        kite.afterNext("/portfolio/positions") { kite.triggerGtt(id, leg = 1) }
+        kite.requests.clear()
+        tick()
+        assertTrue("nothing placed this pass", kite.placed.isEmpty())
+        tick()
+        assertTrue("nor on the next: the position is flat", kite.placed.isEmpty())
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+        assertEquals("never short", 0, kite.positions.getValue("NFO:$sym:NRML").first)
+    }
+
+    /** Review 2: a GTT of its own that went through but was never recorded is adopted, never counted as "another exit". */
+    @Test fun itsOwnUnrecordedGttIsAdoptedAndDeletedAtTheOpen() {
+        protect()
+        val orphan = runBlocking {
+            Broker.placeGtt(requireNotNull(com.optionslab.engine.Kite.protect(com.optionslab.engine.Kite.Spec("NFO", sym, 0L, 75, 0.05),
+                "NRML", 75, 100.0, 90.0, 130.0).first))
+        }
+        theClose()
+        kite.requests.clear()
+        tick()
+        assertTrue("no second GTT", gttPosts.isEmpty())
+        assertEquals(orphan, one().gttId)
+        kite.orders.clear()
+        session(9, 20, nth = 2)
+        tick()
+        assertTrue(kite.gtts.isEmpty())
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
+
+    /** Review 3: 150 held, 75 of it an arm's with its own GTT: this protection's 75 still rests overnight. */
+    @Test fun anArmsGttOnItsOwnLotsNeverTakesThisProtectionsPlace() {
+        kite.position(sym, 150, 100.0)
+        protect()
+        runBlocking {
+            Broker.placeGtt(requireNotNull(com.optionslab.engine.Kite.protect(com.optionslab.engine.Kite.Spec("NFO", sym, 0L, 75, 0.05),
+                "NRML", 75, 100.0, 80.0, null).first))
+        }
+        theClose()
+        kite.requests.clear()
+        tick()
+        assertEquals(1, gttPosts.size)
+        assertEquals(75, kite.gtts.getValue(one().gttId!!).getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+        // At the open: the arm's GTT counted against all that is held, so this protection's 75 go back as day orders.
+        kite.orders.clear()
+        session(9, 20, nth = 2)
+        kite.requests.clear()
+        tick()
+        assertEquals(listOf("75", "75"), kite.placed.map { it.form["quantity"] })
+    }
+
+    /** Review 4: a positions read that fails at the close never ends a carried protection. */
+    @Test fun aFailedPositionsReadAtTheCloseKeepsTheProtection() {
+        protect()
+        theClose()
+        kite.gatewayHtml["/portfolio/positions"] = 502
+        tick()
+        assertNotNull(runBlocking { Protections.active() }.singleOrNull())
+        kite.gatewayHtml.clear()
+        tick()
+        assertNotNull("the GTT rests once the read works", one().gttId)
+    }
+
+    /**
+     * 20 Oct, enhancement round 2 (idea 3): a carried MCX protection. MCX's DAY stop and target end at its 23:30 close (23:55 in US
+     * winter time), after NSE's evening look is long over: the watch keeps a look past MCX's close while it waits, and the GTT rests
+     * then; at MCX's next open (09:00) the GTT goes first and the day's orders come back, as on NSE.
+     */
+    @Test fun aCarriedMcxProtectionRestsAsAGttAfterMcxsCloseAndComesBackAtItsOpen() {
+        val m = "CRUDEOIL26NOVFUT"
+        kite.instruments += FakeKite.Ins(55_001, m, "CRUDEOIL", LocalDate.now(com.optionslab.engine.IST).plusDays(30), 0.0, "FUT", 1, tick = 1.0, exchange = "MCX")
+        kite.position(m, 2, 5_000.0, exchange = "MCX")
+        kite.quote("MCX:$m", 5_000.0, 4_999.0, 5_001.0)
+        val cal = McxMarket.calendar()
+        var d = LocalDate.now(com.optionslab.engine.IST).plusDays(1)
+        // Review: a full evening session, then a next day that opens at 09:00 (an evening-only holiday session would not).
+        while (cal.window(d)?.close?.let { it.hour == 23 } != true || cal.window(d.plusDays(1))?.open != com.optionslab.engine.mcx.McxSession.OPEN) d = d.plusDays(1)
+        val close = cal.window(d)!!.close
+        fun at(day: LocalDate, h: Int, mi: Int) {
+            val t = day.atTime(h, mi).atZone(com.optionslab.engine.IST).toInstant()
+            Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), t))
+        }
+        at(d, 21, 0)
+        val msg = runBlocking { Protections.protectLive(m, "MCX", "NRML", 2, 5_000.0, 4_900.0, null, 5_200.0) }
+        assertTrue(msg, msg.startsWith("Protected $m"))
+        val p = runBlocking { Protections.active() }.single { it.symbol == m }
+        assertTrue("a carried MCX protection waits for its overnight GTT", Protections.mcxOvernightHint)
+        assertTrue("not NSE's look", !Protections.overnightHint)
+        assertTrue("the look is not due while MCX trades", !McxMarket.eveningLookDue(true))
+        // MCX's close: Zerodha cancels the DAY exits; the look after it is due (and only while something waits).
+        at(d, close.hour, close.minute + 3)
+        listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { kite.order(it).status = "CANCELLED" }
+        assertTrue(McxMarket.eveningLookDue(true))
+        assertTrue(!McxMarket.eveningLookDue(false))
+        tick()
+        val g = kite.gtts.values.single()
+        assertEquals(m, g.getJSONObject("condition").getString("tradingsymbol"))
+        assertEquals("MCX", g.getJSONObject("condition").getString("exchange"))
+        assertEquals(2, g.getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+        assertTrue("nothing waits now: the look ends", !Protections.mcxOvernightHint)
+        // MCX's next open: the GTT out first, then the day's stop and target.
+        kite.orders.clear()
+        at(d.plusDays(1), 9, 5)
+        kite.requests.clear()
+        tick()
+        val writes = kite.requests.filter { it.method != "GET" }
+        assertEquals("DELETE", writes.first().method)
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertTrue(kite.gtts.isEmpty())
+    }
+}

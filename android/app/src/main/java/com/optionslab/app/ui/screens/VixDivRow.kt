@@ -38,6 +38,9 @@ import java.util.Locale
  */
 @Composable
 internal fun VixDivRow() {
+    // 15 Oct (Boss's cleanup): hidden once it holds nothing; restored from the Hidden arms list.
+    val hidden by com.optionslab.app.data.HiddenArms.state.collectAsState(Dispatchers.Main.immediate)
+    if (!com.optionslab.engine.orb.ArmsCleanup.visible(hidden, com.optionslab.engine.orb.ArmsCleanup.VIX_DIV)) return
     val v by VixDivArm.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { VixDivArm.refresh() } } }
@@ -49,29 +52,34 @@ internal fun paperTestLine(name: String, trades: List<com.optionslab.ira.Vetting
                             today: java.time.LocalDate? = runCatching { com.optionslab.app.data.Market.today() }.getOrNull()): String =
     com.optionslab.ira.Vetting.judge(name, trades, today).text() + " The research asks for about $wanted paper trades before any money."
 
-/** The row from plain state ([v]) and the switch's callback. */
+/** What the VIX divergence arm's name opens: its label, research (first), rules, paper test and each index's last decision. */
+internal fun vixDivExplanation(v: VixDivArm.View): List<String> = listOf(
+    VixDivRules.NOT_PROVEN + ".",
+    VixDivRules.RECORD,
+    VixDivRules.RULES,
+    paperTestLine(VixDivRules.LABEL, v.trades, VixDivRules.PAPER_TRADES_WANTED),
+    "Paper first: at Zerodha only by its own \"Trade live\" switch (beside the Live switch), in Live with AI trades on.",
+) + v.status.toSortedMap().map { (idx, s) -> "$idx: $s" }
+
+/** Its key numbers: its paper trades and their net after charges. */
+internal fun vixDivNumbers(v: VixDivArm.View): String =
+    "Paper: ${v.trades.size} trade${if (v.trades.size == 1) "" else "s"}, " + (if (v.trades.sumOf { it.net } < 0) "−₹" else "+₹") +
+        "%,.0f".format(Locale.ENGLISH, kotlin.math.abs(v.trades.sumOf { it.net }))
+
+/** The row from plain state ([v]) and the switch's callback. COMPACT (15 Oct): name (tap: the explanation), badge, numbers. */
 @Composable
 internal fun VixDivRowContent(v: VixDivArm.View, onArm: (Boolean) -> Unit) {
     val p = LocalPalette.current
     Rule()
-    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(VixDivRules.LABEL, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-            Text(VixDivRules.NOT_PROVEN, style = Type.label.copy(color = p.amber, fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(top = 2.dp).background(p.amber.copy(alpha = 0.12f), RoundedCornerShape(50)).padding(horizontal = 7.dp, vertical = 2.dp))
-            // The research numbers first, then the rules.
-            Text(keepNumbersWhole(VixDivRules.RECORD), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 4.dp))
-            Text(keepNumbersWhole(VixDivRules.RULES), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+            ExplainedName(VixDivRules.LABEL, vixDivExplanation(v))
             Text(if (v.armed) "ON · PAPER ONLY" else "OFF", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint, fontSize = 10.sp,
-                fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
-            Text(keepNumbersWhole(paperTestLine(VixDivRules.LABEL, v.trades, VixDivRules.PAPER_TRADES_WANTED)),
-                style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                fontWeight = FontWeight.Bold))
+            Text(keepNumbersWhole(vixDivNumbers(v)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
             v.open.forEach { o ->
                 Text(keepNumbersWhole("${o.symbol} · ${o.qty} @ %.2f · paper".format(Locale.ENGLISH, o.entry)),
                     style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
-            }
-            if (v.armed) v.status.toSortedMap().forEach { (idx, s) ->
-                Text(keepNumbersWhole("$idx: $s"), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
             }
         }
         Switch(

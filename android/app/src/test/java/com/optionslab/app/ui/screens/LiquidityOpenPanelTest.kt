@@ -9,6 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.OrbArms
 import com.optionslab.app.testing.until
@@ -154,6 +157,10 @@ class LiquidityOpenPanelTest {
                 }
             }
         }
+        // COMPACT (15 Oct): the row says the position in one line; its exits panel is in Liquidity's own dialog.
+        compose.waitForIdle()
+        assertFalse(shows("OPEN POSITION", sub = true))
+        compose.onNodeWithContentDescription("About Liquidity 15+5").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.until(10_000) { shows("OPEN POSITION", sub = true) }
         assertEquals("one panel", 1, compose.onAllNodesWithText("OPEN POSITION", substring = true).fetchSemanticsNodes().size)
         assertTrue(shows(keepNumbersWhole("Premium stop · 170.00, 15% under 210.00 (a resting order)")))

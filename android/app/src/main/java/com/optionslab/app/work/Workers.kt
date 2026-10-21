@@ -32,6 +32,23 @@ object WatchWorkers {
     const val ARMS_WAIT_MS = 45_000L
     /** How long the 15-second stop check waits for the arms' exits. */
     const val EXITS_WAIT_MS = 20_000L
+    /**
+     * How long a full pass waits for each arms group while anything is held (18 Oct, review): the stops and targets after
+     * the first group, and the 15-second stop check after the pass, waited behind a slow arm's 45 s twice. A step still
+     * running then is left to finish by itself, as at [ARMS_WAIT_MS] (never cut mid-order).
+     */
+    const val ARMS_WAIT_HELD_MS = 10_000L
+
+    /** The full pass's wait for an arms group: [ARMS_WAIT_HELD_MS] while [held], else [ARMS_WAIT_MS]. */
+    fun armsWaitMs(held: Boolean): Long = if (held) ARMS_WAIT_HELD_MS else ARMS_WAIT_MS
+
+    /**
+     * Anything open the watch protects, from memory only (no lock, no vault, no network): the cards' positions, the arms'
+     * and strategies' holdings, a protection. Unknown counts as held.
+     */
+    // 20 Oct, enhancement round 1 (idea 7): the one shared answer ([com.optionslab.app.data.HeldNow]; it keeps every source this
+    // list had, a book not read yet counting as held, and adds the paper book and the minute arms).
+    fun heldQuick(): Boolean = com.optionslab.app.data.HeldNow.any()
 
     /** One watch run's workers: its supervisor and the job they all run under. */
     class Run internal constructor(val supervisor: Supervisor, internal val job: Job)
@@ -51,6 +68,9 @@ object WatchWorkers {
 
     /** The shared market brain's worker (10 Oct): regime, windows, traps, health, findings, the daily self-review. */
     const val BRAIN = "Market brain"
+
+    /** The Candle agent's worker (20 Oct): a batch of candle reads every 5 minutes in session; knowledge only, never orders. */
+    const val CANDLES = "Candle agent"
 
     /** Today's date as text, worked out once a minute (the hot paths time every step: no date arithmetic per step). */
     @Volatile private var dayKept: Pair<Long, String>? = null

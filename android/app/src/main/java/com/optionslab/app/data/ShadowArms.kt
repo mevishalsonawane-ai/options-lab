@@ -23,6 +23,11 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * The shadow tracker (Boss's choice, 06 Oct 2026): beside ORB, ORB Fresh, ORB Sweep and Range Fade ([com.optionslab.engine.orb.RetiredArms]; un-retired 07 Oct, research rows here) the
  * research's best variant, and one new candidate, run on the app's live index and option prices - recording what each
  * WOULD have done, never placing an order (paper or live). The rules are [ShadowRules]'s (pinned there); entries and exits
@@ -49,6 +54,25 @@ object ShadowArms {
 
     fun init(context: Context) {
         file = File(context.applicationContext.noBackupFilesDir, "shadow.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): a re-armed variant's paper trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.SHADOW) { mirrorLegs }
+    }
+
+    /** The re-armed variants' paper trades of today and those open (0 once closed), for [ArmLive]; null until the book is read. */
+    @Volatile private var mirrorLegs: List<ArmLive.PaperLeg>? = null
+
+    /** A paper trade's reference for its live path: its variant and its paper order (or its entry time). */
+    private fun mirrorRef(t: Trade): String = "shadow:${t.variant}:${t.orderId ?: t.entryTime}"
+
+    /**
+     * 18 Oct review fix: the live path's stop and lock come from each variant's own rule ([ShadowRules.premiumStop], every -40 variant,
+     * and [ShadowRules.lockLevel]); the stop only ever moves up.
+     */
+    private fun mirrorLevel(p: Trade) {
+        if (!p.paper || !p.open) return
+        val stop = ShadowRules.premiumStop(p.variant, p.entry)
+        val lock = ShadowRules.lockLevel(p.variant, p.entry, p.peak)
+        listOfNotNull(stop, lock).maxOrNull()?.let { runCatching { ArmLive.level(mirrorRef(p), it) } }
     }
 
     // ---- state ----------------------------------------------------------------------------------------------------
@@ -323,6 +347,7 @@ object ShadowArms {
                 if (opt != null) {
                     val s = ShadowStudy.walk(rule, ShadowStudy.Walk(p.entry, p.entryTime.withSecond(0).withNano(0), p.peak, p.mfe, p.mae, p.walked), opt, t)
                     p = p.copy(peak = s.walk.peak, mfe = s.walk.mfe, mae = s.walk.mae, walked = s.walk.last)
+                    mirrorLevel(p)
                     val why = s.why
                     val fill = s.exit
                     if (why != null && fill != null) {
@@ -344,6 +369,7 @@ object ShadowArms {
                 // The LTP's best and worst (a study shadow's peak is its candles' highs: only its last price is kept).
                 val seen = if (ltp == null) p else if (rule != null) p.copy(last = ltp)
                     else p.copy(last = ltp, peak = maxOf(p.peak, ltp), trough = minOf(p.trough ?: p.entry, ltp))
+                if (seen.peak != p0.peak) mirrorLevel(seen)
                 if (seen != p0) { b.trades[i] = seen; changed = true }
                 continue
             }
@@ -562,6 +588,7 @@ object ShadowArms {
         val ltp = price(c) ?: return "no_quote"
         val fill = ShadowRules.entryFill(ltp)
         if (ShadowRules.refused(fill)) return "refused_premium_at_or_under_40"
+        runCatching { LiveRecorder.signal(v.name, c.symbol, c.underlying, right.name, ltp, paper = true) }
         val base = Trade(v.id, c.symbol, c.feedKey, c.underlying, c.expiry, e.strike, right.name, c.lotSize, fill, t, e.signalBar,
             e.extreme, e.mid, e.indexStop, fill, ltp)
         if (b.armed[v.id] == true) {
@@ -620,6 +647,14 @@ object ShadowArms {
         private set
 
     private fun hints(b: Book) {
+        runCatching {
+            val today = today()
+            val legs = b.trades.filter { it.paper && (it.open || it.entryTime.toLocalDate() == today) }
+                .map { ArmLive.PaperLeg(mirrorRef(it), com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED, if (it.open) it.qty else 0) }
+            val before = mirrorLegs?.associate { it.ref to it.qty }
+            mirrorLegs = legs
+            if (before != null && legs.any { l -> (before[l.ref] ?: 0) > l.qty }) ArmLive.nudge()
+        }
         liquidityHint = b.liq.mapValues { (_, a) ->
             val e2 = a.entry2
             val x2 = a.exit2
@@ -641,23 +676,28 @@ object ShadowArms {
                 com.optionslab.engine.orb.ArmPriority.rankOf(v.arms), trader = AutoExposure.SHADOW) != null) return null
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         if (Guard.check(Guard.paperOrder(c, "BUY", 1, base.entry), snap?.let { Guard.paperAccount(it) }, paper = true).isNotEmpty()) return null
-        val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
+        val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, auto = "${ShadowRules.armName(v)} (${v.name})")
         val (qty, px) = filled(buy) ?: return null
         val label = "${ShadowRules.armName(v)} (${v.name})"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "$label · entry") }
-        return base.copy(qty = qty, entry = px, peak = px, paper = true, orderId = buy.orderId,
+        val t = base.copy(qty = qty, entry = px, peak = px, paper = true, orderId = buy.orderId,
             charges = Paper.state.trades.filter { it.orderId == buy.orderId }.sumOf { it.charges.toDouble() })
+        // 18 Oct: its live path ([ArmLive]): the same option and lot; the -40 stop rests at Zerodha where the variant's rule has it.
+        runCatching { ArmLive.entered(ArmLive.Ask(com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED, mirrorRef(t), c, 1, qty, px,
+            stop = ShadowRules.premiumStop(v.id, px))) }
+        return t
     }
 
     /** A paper MARKET sell of the whole position; null when nothing sold (tried again next pass). */
     private suspend fun exitPaper(p: Trade, c: Paper.Contract, why: String, ltp: Double): Trade? {
         val held = Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity }
         // Gone from the paper book without this selling it (the 15:15 square-off, or Boss closed it): booked at the price seen.
-        if (held <= 0) return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp)
+        if (held <= 0) { runCatching { ArmLive.closed(mirrorRef(p), "closed_outside") }; return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp) }
         val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null)
         val (_, px) = filled(sell) ?: return null
         val v = ShadowRules.of(p.variant)
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${v?.let { x -> "${ShadowRules.armName(x)} (${x.name})" } ?: p.variant} · $why") }
+        runCatching { ArmLive.closed(mirrorRef(p), why) }
         return p.copy(exit = px, exitTime = now(), why = why, last = ltp,
             charges = p.charges + Paper.state.trades.filter { it.orderId == sell.orderId }.sumOf { it.charges.toDouble() })
     }
@@ -678,10 +718,14 @@ object ShadowArms {
      */
     suspend fun promote(id: String): String = lock.withLock {
         val v = ShadowRules.of(id) ?: return@withLock "No such shadow."
+        // 15 Oct (Boss's cleanup): re-armed shadows hidden - re-armed only after their restore from the Hidden arms list.
+        if (!HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.SHADOW))
+            return@withLock HiddenArms.refusal("Shadows re-armed on paper")
         val b = book()
         b.promoted[id] = today().toString(); b.armed[id] = true
         save(b)
-        val msg = "${ShadowRules.armName(v)} re-armed with ${v.name} on paper only (Boss's yes): ${v.description}. It never trades on Zerodha."
+        val msg = "${ShadowRules.armName(v)} re-armed with ${v.name} on paper (Boss's yes): ${v.description}. " +
+            "Its live copy goes by the \"Shadow variants re-armed\" switches (Trade live, Shadow): " + ArmLive.stateOf(com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED) + "."
         runCatching { Diag.record("orb", msg) }
         msg
     }
@@ -727,6 +771,12 @@ object ShadowArms {
         val rows = rows()
         return ShadowRules.answer(rows.map { Triple(it.variant, it.summary, it.since) }, rows.filter { it.armed }.map { it.variant.id }.toSet(),
             rows.associate { it.variant.id to it.losses })
+    }
+
+    /** Every variant's row read under the lock (waits for a pass), or null before the book can be read (15 Oct cleanup). */
+    suspend fun rowsNow(): List<Row>? {
+        if (!::file.isInitialized) return null
+        return lock.withLock { rowsOf(book()) }
     }
 
     /** The variants that met the bar and were never put to Boss. */

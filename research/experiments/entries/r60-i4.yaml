@@ -1,0 +1,40 @@
+id: r60-i4
+title: 'R60 Solo on all markets I4: A2 meta-labeller retrained with SENSEX (S1-S4 on five indices, logistic, 70th-percentile
+  take, 1 a day)'
+family: ml
+date: '2026-10-15'
+doc: research/HUNT_R60_SOLO_ALL_MARKETS.md
+hypothesis: 'Solo''s rule makes money after real costs on a market it does not trade yet (gates: final net > 0, random-entry
+  twin p < 0.05, BH q <= 0.10 over 21 variants, 40+ trades, top-5 < net, design positive).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: index_1m + INDIAVIX, options_rolling_1m WEEK files (foreign rows, bad
+  ticks removed), 21 Nov 2024 - 13 Oct 2026'
+period:
+  design: 21 Nov 2024 - 31 Mar 2026 (purged walk-forward, monthly refits)
+  holdout: '1 Apr - 13 Oct 2026 final test, read once (not pristine: R47-R59 saw parts of it)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the underlying index; option-chain IV / PCR context only in I4/I5'
+- R57 A2 inputs (12 brain index features, ATR14, minute, DTE, VIX, PCR / IV / skew context, index one-hots incl. SENSEX, side,
+  setup)
+model_or_rule: A2 meta-labeller retrained with SENSEX (S1-S4 on five indices, logistic, 70th-percentile take, 1 a day)
+settings: research/hunt/r60/PREREG.md section 3; research/hunt/r60/r60study.py
+prereg: research/hunt/r60/PREREG.md
+variants_tried: 21
+results:
+  summary: 'Design: 174 trades, net Rs +78,449, win 56%. Final test (1 Apr - 13 Oct 2026, read once): 129 trades, win 57%,
+    net Rs +96,088 (Rs +745/trade), at 2x costs Rs +77,713, max DD Rs 18,627, worst day Rs -6,120, months green 6/7, top-5
+    share 0.412, capital per lot (median) Rs 23,442, trades per day 0.97; twin p 0.002, BH q 0.042 (21 variants). Verdict:
+    PASS.'
+  costs: dated charges (STT 0.15% from 1 Apr 2026; BSE rates for SENSEX), R17 liq fills, next-minute fills, one held contract,
+    1 lot in force
+holdout_read: true
+verdict: paper-only
+notes: 'Paper only. SENSEX is BSE: the app''s paper account is NSE F&O only (IraSolo.kt), so Solo cannot trade it today. Passes,
+  but it is R57''s A2 again: 2 of its 129 final trades were SENSEX (+Rs 117); MIDCPNIFTY 80 trades +Rs 72,642; 92 trades from
+  S3. Adds nothing for SENSEX; the app keeps A2 on the four NSE indices. Model: research/hunt/r60/results/models/I4.json (threshold
+  0.4843). Signal on the underlying; no rule reads an option''s own chart.'

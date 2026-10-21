@@ -1,0 +1,32 @@
+id: r60-x1
+title: 'R60 Solo on all markets X1: SoloMidday translated to MCX: GOLD, 12:00 -> 14:30, 1-ITM else ATM option, future stop
+  0.3 ATR14, breakeven at 0.45 ATR14'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R60_SOLO_ALL_MARKETS.md
+hypothesis: 'Solo''s rule makes money after real costs on a market it does not trade yet (gates: final net > 0, random-entry
+  twin p < 0.05, BH q <= 0.10 over 21 variants, 40+ trades, top-5 < net, design positive).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: options_rolling_1m MCX MONTH files (ATM-3..+3, 5 Aug 2025 - 13 Oct 2026;
+  R47 foreign rows, R42 F1 and spikes.py bad prints removed), near-future proxy = median option spot'
+period:
+  design: 5 Aug 2025 - 31 Mar 2026
+  holdout: '1 Apr - 13 Oct 2026 final test, read once (not pristine: R47-R59 saw parts of it)'
+instruments:
+- GOLD
+features:
+- 'signal source: the commodity''s near future (median option spot); option IV / OI context only in M1/M2'
+model_or_rule: 'SoloMidday translated to MCX: GOLD, 12:00 -> 14:30, 1-ITM else ATM option, future stop 0.3 ATR14, breakeven
+  at 0.45 ATR14'
+settings: research/hunt/r60/PREREG.md section 3; research/hunt/r60/r60study.py
+prereg: research/hunt/r60/PREREG.md
+variants_tried: 21
+results:
+  summary: 'Design: 3 trades, net Rs -44,351, win 67%. Final test (1 Apr - 13 Oct 2026, read once): 6 trades, win 17%, net
+    Rs -49,120 (Rs -8,187/trade), at 2x costs Rs -77,841, max DD Rs 68,042, worst day Rs -34,042, months green 1/3, top-5
+    share None, capital per lot (median) Rs 338,125, trades per day 0.044; twin p 0.6627, BH q 0.8698 (21 variants). Verdict:
+    FAIL: final net <= 0; p >= 0.05; q > 0.10; fewer than 40 trades; top-5 >= net; design <= 0.'
+  costs: Zerodha MCX option charges (CTT 0.05% sell), per-commodity half-spread doubled before 17:00 and on a thin side, next-minute
+    fills, one held contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Paper only. Signal on the underlying; no rule reads an option's own chart.

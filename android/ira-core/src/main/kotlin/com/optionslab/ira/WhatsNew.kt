@@ -50,10 +50,335 @@ object WhatsNew {
     private val OCT10: LocalDate = LocalDate.of(2026, 10, 10)
     private val OCT11: LocalDate = LocalDate.of(2026, 10, 11)
     private val OCT12: LocalDate = LocalDate.of(2026, 10, 12)
+    private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
+    private val OCT14: LocalDate = LocalDate.of(2026, 10, 14)
+    private val OCT15: LocalDate = LocalDate.of(2026, 10, 15)
+    private val OCT16: LocalDate = LocalDate.of(2026, 10, 16)
+    private val OCT17: LocalDate = LocalDate.of(2026, 10, 17)
+    private val OCT18: LocalDate = LocalDate.of(2026, 10, 18)
+    private val OCT19: LocalDate = LocalDate.of(2026, 10, 19)
+    private val OCT20: LocalDate = LocalDate.of(2026, 10, 20)
+    private val OCT21: LocalDate = LocalDate.of(2026, 10, 21)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 21 Oct (Boss: "Yes, give commodities their own day lock"), with fixes from his 21 Oct diagnostics.
+        Entry("2026-10-21-commodities-own-lock", OCT21, "Commodities get their own paper day lock",
+            "MCX paper bots now have their own day lock and daily loss limit on paper. " +
+                "An NSE win or loss no longer stops the MCX evening bots, and MCX results never stop NSE bots. " +
+                "Your stop for today, the kill switch and every Zerodha limit still stop both. " +
+                "Home and the diagnostics now say plainly when a day lock is reached, with the amount and time. " +
+                "US-night silver now reads the rupee from hourly prices, so it can trade again. " +
+                "The candle agent no longer calls a live one minute chart stale. " +
+                "Jarvis's slow pattern check now runs on its own and never holds his other checks. " +
+                "Notes from an earlier day on the paper bots now show their date.",
+            "Bot settings → Commodities day lock (paper); Home → MCX card; Autopilot → change timeline"),
+        // 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features in the application"): round 3.
+        Entry("2026-10-21-enhance-round-3", OCT21, "No filled exit sold twice; Sunday review catch-up",
+            "Zerodha's positions can trail an exit that already filled, so a second exit could sell it again. " +
+                "A new guard reads them again and never sells a filled exit twice. " +
+                "It only logs what it would do until you switch it on in Bot settings. " +
+                "Open paper positions now stay on the live price stream until they close. " +
+                "If your phone was off or locked at 18:00, Jarvis says the Sunday review when you unlock it that evening. " +
+                "Copied diagnostics are marked private, so the phone hides their preview. " +
+                "Liquidity BANKNIFTY's live stop rule now keeps every live trade, so it never forgets its best day.",
+            "Bot settings → One exit at a time; Jarvis on Sunday evenings"),
+        // 20 Oct (Boss: "run a loop for enhancement and adding new features in the application"): round 2.
+        Entry("2026-10-20-enhance-round-2", OCT20, "Exits take turns; MCX stops overnight; Sunday review",
+            "Two of the app's exits on one contract now take turns, so one contract is never sold twice. " +
+                "It only logs what it would do until you switch it on in Bot settings. " +
+                "It never changes a size, and every exit still goes within a few seconds. " +
+                "A carried MCX stop now rests at Zerodha overnight after MCX's late close. " +
+                "Your account stop rule now reads each day after its charges, as the arms do. " +
+                "The Candles page shows when it last read, with a chip for each instrument. " +
+                "Only 5 and 15 minute candles become lessons; 1 minute ones are explained only. " +
+                "On Sundays Jarvis reads you a short review of the week, paper and live apart, never on a locked phone.",
+            "Bot settings → One exit at a time; Research → Candles; Jarvis on Sunday evenings"),
+        // 20 Oct (Boss: "...after that run a loop for enhancement and adding new features in the application"): round 1.
+        Entry("2026-10-20-enhance-round-1", OCT20, "Stops held overnight, no double contracts",
+            "A carried position's stop and target now rest at Zerodha overnight, so a dead phone misses nothing. " +
+                "On paper, the two Liquidity books no longer buy the same option; the second becomes a would-be trade. " +
+                "Your account stop rule now watches the whole Zerodha account; it only logs until you switch it on. " +
+                "The stop checks while holding now run every 15 seconds from start to start, and late ones are counted. " +
+                "Every worker now uses one shared check of what is held, so none slows a stop by mistake. " +
+                "The daily diagnostics count the entries the same-direction cap only logged.",
+            "Bot settings → account stop rule; Home → Automation → Strategy lab (the no-twin rule)"),
+        // 20 Oct (Boss: "Deep analysis of the whole application, find if there are any issues and resolve them").
+        Entry("2026-10-20-deep-review-fixes", OCT20, "Whole app review: safer exits, honest records",
+            "The 15:05 expiry exit reads orders first, so an exit that just filled is never sent twice. " +
+                "Expiring SENSEX options are closed too, and an arm's own live trade is left to its own exit. " +
+                "A carried position's stop and target at Zerodha are placed again when the next session opens. " +
+                "The same-direction cap now counts every bot entry, and catches four orders sent on one signal. " +
+                "Low battery never slows the stop checks, and the index prices stay on the live stream. " +
+                "The Candle agent reads only finished candles and lists the newest first. " +
+                "Backups, erasing and the data upload are safer; the upload goes only to a private repository.",
+            "Trade → positions (the stops); Bot settings → same-direction cap; Research → Candles"),
+        // 20 Oct (Boss: "Resolve all the problems/issues pushed to git by harvest"): the 19 Oct diagnostics file, fixed.
+        Entry("2026-10-20-diagnostics-fixes", OCT20, "Fixes from your 19 Oct diagnostics",
+            "The diagnostics now count only real failures as errors; warnings and notices are listed apart. " +
+                "Jarvis's log is saved in the background, so the screen no longer waits for it. " +
+                "A paper ticket's risk notice is said once, even after a restart, and says below the breakeven plainly. " +
+                "The backup passphrase hint now says exactly how long it must be. " +
+                "Your own phone's network trouble is no longer blamed on Zerodha. " +
+                "The 10:00 gamma line is kept after a restart, and the late diagnostics file reads the right day. " +
+                "No rupee figure of the passed arms leaves the phone in the diagnostics.",
+            "Data & Harvest → GitHub sync (the daily diagnostics file); Settings → Backup (the passphrase)"),
+        // 20 Oct (Boss: "add a new agent in the application who will only study the candle patterns").
+        Entry("2026-10-20-candle-agent", OCT20, "Candle agent: every candle read and explained",
+            "A new Candle agent studies each closed candle on NIFTY, BANKNIFTY, SENSEX and four MCX futures. " +
+                "It says why a candle is green or red, and where its support and resistance came from. " +
+                "It finds the earlier level a candle took support from, or the old high a rally ran into. " +
+                "It shows the big players' hand: stop runs, heavy volume, option writers and sweeps. " +
+                "It adds what that kind of candle did in our research, with the sample size and no edge said plainly. " +
+                "It learns around the clock, shares its reads with the other agents and hears theirs. " +
+                "Its own counts become Jarvis's lessons; any proposal stays a note for you. " +
+                "It never trades, and it is among the first things let go when memory is short.",
+            "Research → Candles", ask = "why was that candle green", to = "candles"),
+        // 19 Oct (Boss: "Yes, keep only breadth donchain").
+        Entry("2026-10-19-r51-record-only", OCT19, "R51 Donchian 20 records only; R72 trades",
+            "Only R72 Breadth Donchian now buys the Donchian breaks on paper, as you asked. " +
+                "R51 Donchian 20 is set to record only. " +
+                "It still decides every break, but buys nothing; each one is kept as a would-be trade. " +
+                "Would-be trades close by their own stop, target and time exit, and are counted apart. " +
+                "So the two can still be compared on the same days. " +
+                "Each passed arm's row now offers on, record only or off. " +
+                "The change is in the Autopilot change log, and one tap puts R51 back on.",
+            "Home → Strategies → R51 Donchian 20 (Record only); undo it in the Autopilot change log",
+            ask = "how is the donchian arm doing", jarvisOnly = true),
+        Entry("2026-10-19-exposure-speed", OCT19, "Faster paper orders and a cap on same-way bets",
+            "Paper orders now go in well under a second, because saving the books no longer holds them up. " +
+                "At most two automatic paper option positions may bet the same way on the indices at once. " +
+                "Later ones are refused with the reason and kept as would-be trades, so every record still compares. " +
+                "Exits and your own orders are never capped, and Liquidity's refused entries are counted apart. " +
+                "On live it only logs what it would refuse, until you switch it on. " +
+                "R51 and R72 no longer buy the same option twice; the second is kept as a would-be trade.",
+            "Settings → Bot settings → Same-direction cap; undo it in the Autopilot change log"),
+        Entry("2026-10-18-arms-live", OCT18, "Every paper strategy can trade live, starting in Shadow",
+            "Every paper strategy now has its own Trade live switch, so it can trade live too. " +
+                "Each one starts in Shadow: it records what it would do and sends nothing to Zerodha. " +
+                "Turning Shadow off needs your PIN, and you can turn it back on any time. " +
+                "Shadow records use Zerodha's ask and bid, the app's measured slippage and the charges. " +
+                "Live stops rest at Zerodha, as a GTT for trades carried overnight. " +
+                "Strategies with an index stop get a safety stop 30% below the fill; Hero and the Hero ticket get 80%. " +
+                "Every switch is checked again just before an order goes, and a check that fails blocks the entry. " +
+                "Exits, stops and square-offs always go.",
+            "Settings → Zerodha, beside the Live switch: each strategy's Trade live and Shadow"),
+        Entry("2026-10-18-live-check", OCT18, "Live check: test Zerodha, prices and orders in one tap",
+            "The Live check tests your Zerodha login, funds, prices, option chain and order margins, and never places an order. " +
+                "It times the price stream, its gaps and a reconnect, and checks each open position's stop is watched. " +
+                "A paper trade at live prices is bought and closed, and kept out of every result. " +
+                "Each step shows its time and passed, slow or failed. " +
+                "Before a stop is judged, a price over two seconds old is checked with Zerodha first. " +
+                "Prices are read faster, and the price stream never waits on saved data.",
+            "More → Zerodha → Live check, or ask Jarvis to run the live check"),
+        Entry("2026-10-18-live-like-paper", OCT18, "Live works like paper: your PIN, then the order goes",
+            "In Live, your Buy, Sell and Close go straight to Zerodha after your PIN, with no review card. " +
+                "Every check still runs first: the guard, kill switch, day lock, margin, lot size and market hours. " +
+                "Going Live asks your PIN once and turns on AI trades too; going back to Paper turns both off. " +
+                "Each arm keeps its own live choice, and Jarvis's own ideas stay on paper. " +
+                "During your paper-only period no new live entry goes out, but exits, stops and square-offs always do. " +
+                "In Paper you can still close a real Zerodha position with your PIN. " +
+                "Orders Zerodha took despite an error reply are now found and protected, never left without a stop. " +
+                "Live orders without PIN was switched off by this update; turn it on again only if you want it.",
+            "Settings → Zerodha for the Live switch; Trade tab for Still open at Zerodha"),
+        Entry("2026-10-18-whole-app-review", OCT18, "Kill switch needs your PIN; Jarvis quiet when locked",
+            "The kill switch can no longer be cleared by mistake, and clearing it asks for your PIN. " +
+                "Jarvis never says a request or an order's result aloud on a locked phone. " +
+                "The MCX expiry exit reads your positions fresh before it sells. " +
+                "Stops are now checked for strategy legs and for short positions too. " +
+                "Live cards keep their last figures when a read fails, instead of going blank. " +
+                "Paper arm fixes: Night, Gold lots, Signal tester stops and sandbox MIS orders. " +
+                "Screens never wait on reading or saving data, so they stay smooth. " +
+                "Login tokens are hidden in the app's logs.",
+            "Home → Strategies card and Settings → Account guard for the kill switch"),
+        Entry("2026-10-17-diagnostics-fixes", OCT17, "No screen freezes on saves; MCX evenings kept awake",
+            "A switch or setting saved on a screen no longer freezes it: the save finishes in the background. " +
+                "While the watch runs for a market, it keeps the phone awake, so evening MCX checks never sleep. " +
+                "A watch problem clears itself once the watch runs again or MCX closes. " +
+                "After a restart, the watch starts at once, before the slower books are read. " +
+                "Diagnostics now say truly whether Telegram's login is in the app and logged in. " +
+                "They also name the code behind any screen freeze.",
+            "Copy diagnostics (Settings → Zerodha); Home → Automation card for open problems"),
+        Entry("2026-10-16-donchian-supertrend", OCT16, "R51 Donchian 20 waits for Supertrend to agree (your ask)",
+            "New paper trades of R51 Donchian 20 now need Supertrend (10, 3) to agree with the break. " +
+                "Research R73 made +₹1,34,743 over 1,670 trades in the final test, against +₹81,845 without it. " +
+                "It only skips trades, and a break it cannot judge is not taken. " +
+                "R72 Breadth Donchian keeps its own rules. " +
+                "It is on paper only, in the change log, and one tap undoes it.",
+            "Home → Strategies → tap R51 Donchian 20's name for its rules and the filter's record",
+            ask = "how is the donchian arm doing"),
+        Entry("2026-10-16-breadth-donchian", OCT16, "Breadth Donchian on paper, beside Donchian (your choice)",
+            "A new paper arm buys a Donchian break only when at least 4 of the five indices break together. " +
+                "It runs beside R51 Donchian 20, so you can compare the two on the same days. " +
+                "Research R72 made +₹1,71,366 over 1,202 trades in the final test, against Donchian's +₹55,439. " +
+                "Its backtest drawdown of ₹1.99 lakh is beyond your −₹40k account stop, so it stays on paper only. " +
+                "It is in the change log, and one tap undoes it.",
+            "Home → Strategies → tap R72 Breadth Donchian's name for its risk and the comparison with Donchian",
+            ask = "how is breadth donchian doing"),
+        Entry("2026-10-16-passed-arms-l25", OCT16, "+5% locked once a paper trade has been +25% (your choice)",
+            "This is for new paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0. " +
+                "Each will lock +5% once the option has been +25%. " +
+                "The 30-60-100 lock stays on top, and a lock never goes back down. " +
+                "Research R66 found it a small improvement, not a proven one. " +
+                "It made +₹5,396 more over 2,202 trades in the final test, and +₹8,042 in design. " +
+                "It is your choice, on paper only, and open trades keep their exits. " +
+                "It is in the change log, and one tap undoes it.",
+            "Home → Strategies → tap a passed-research arm's name; tap an open position for its exits"),
+        Entry("2026-10-16-diagnostics-fixes", OCT16, "MCX evenings watched and Telegram channels kept",
+            "After Android closes the app in MCX's evening, the watch comes straight back for your armed MCX arms. " +
+                "The open positions are read back side by side at a restart, and diagnostics name why Android closed the app. " +
+                "Your Telegram channels now stay selected, and the window says which ones are read. " +
+                "The clock warning now checks Zerodha's server time and allows for the network delay. " +
+                "Paper fills use a price at most 2 seconds old, and a slow Zerodha read waits 5 seconds at most. " +
+                "The fingerprint unlock no longer freezes the screen.",
+            "Copy diagnostics (Settings → Zerodha); Home → Strategies → tap Signal tester's name → Telegram login"),
+        Entry("2026-10-16-passed-arms-lock", OCT16, "The 30-60-100 lock on three paper arms (your choice)",
+            "New paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0 have no fixed target now. " +
+                "Each keeps its own stop and time exit. " +
+                "At +30% the stop moves to breakeven, at +60% it locks +30%, at +100% it locks +60%. " +
+                "Research R64 found it about even with the old exits, so it is your choice on paper only. " +
+                "It is in the change log, and one tap undoes it.",
+            "Home → Strategies → the passed-research arms"),
+        Entry("2026-10-16-passed-arms-exits", OCT16, "Passed arms always sell at their target, stop and time",
+            "A second trade on the same option could be left with nothing selling it; now each trade is booked the moment it fills " +
+                "and its exits are checked every 15 seconds. A safety net takes back any arm's paper position that has no record and " +
+                "tells you, all on paper.",
+            "Home → Strategies → the passed-research arms"),
+        Entry("2026-10-16-telegram-login-fix", OCT16, "The Telegram login shows what it is doing",
+            "Each step of the Telegram login now shows its result inside the login window, with a spinner while Telegram starts. " +
+                "If Telegram does not answer within 20 seconds, it says what to check and offers Try again. " +
+                "After you save your api keys, the login starts by itself. " +
+                "Leaving the app to read the login code no longer closes the login.",
+            "Home → Strategies → tap Signal tester's name → Telegram login"),
+        Entry("2026-10-16-open-trade-change", OCT16, "A position's change is now its open trade only",
+            "A position's change now shows only the open trade's move on its average price, not earlier trades on the same option. " +
+                "Below it, Exits shows the stop, target and exit time its strategy is holding it to.",
+            "Tap any open position (Trade tab, Home or its notification)"),
+        Entry("2026-10-16-trend-watch", OCT16, "Trend watch: the Hero ticket sold when its index turns",
+            "The Hero ₹1,000 ticket's paper legs are sold when the index's trend turns against them. " +
+                "That one rule passed research. " +
+                "By your choice only the Hero ticket is watched. " +
+                "With \"Other strategies and orders too\" on, each open position and pending order is checked too. " +
+                "Then Jarvis writes a note: what turned, when, and the price it would sell at. " +
+                "For every other strategy the turn lost against random exits, so those stay notes. " +
+                "Live positions are never sold. " +
+                "Each Hero sale is in the change log, and one tap undoes it.",
+            "Home → Strategies → Trend watch (tap the name for the details and switches); ask Jarvis \"has the trend turned on my trades\"",
+            ask = "has the trend turned on my trades"),
+        Entry("2026-10-15-market-concepts", OCT15, "Market concepts, and Solo 2.0 says why",
+            "Jarvis now explains 40 market ideas, such as OI, gamma exposure, bull traps, fake breakouts and order flow. " +
+                "Each says what it means, where its signal comes from, and what our research found, with sample sizes. " +
+                "None of them beat Solo 2.0 in our tests, and Jarvis says so. " +
+                "Solo 2.0 now says why it took or skipped each candidate today. " +
+                "The words come from the numbers it already scores, so what it trades is unchanged. " +
+                "It stays on paper.",
+            "More → Assistant → Market concepts (tap a name); ask Jarvis \"what is a bull trap\"; Home → Strategies → tap Solo 2.0's name",
+            ask = "what is a bull trap"),
+        Entry("2026-10-15-arms-cleanup", OCT15, "Fewer arms: the others switched off and hidden",
+            "On your choice, a short list of arms keeps running as today. " +
+                "Liquidity 15+5 on BANKNIFTY, FINNIFTY and MIDCPNIFTY, the Hero ₹1,000 ticket, R51, R52, Solo 2.0 and the Watchlist stay. " +
+                "Solo midday and the MCX paper arms stay too. " +
+                "Every other automatic trader is switched off and hidden, its code, settings and trades kept. " +
+                "One holding a position keeps trading it to its own exit first. " +
+                "FINNIFTY is back on with Liquidity, on paper, as your choice; NIFTY has no Liquidity book (it failed research). " +
+                "Each one comes back in one tap from the Hidden arms list.",
+            "Home → Strategies → Hidden arms (one tap restores each); every switch-off and restore is also in " +
+                "Home → Automation card → Autopilot → Change log"),
+        Entry("2026-10-15-compact-rows", OCT15, "Shorter strategy rows: tap a name for its details",
+            "Each strategy row now shows just its name, one status line, its key numbers and its switch. " +
+                "Tap the name for its rules, settings and research notes in a small box with one OK button.",
+            "Home → Strategies, the MCX card, the Liquidity cards, Strategy lab and Autopilot: tap an arm's name"),
+        Entry("2026-10-15-passed-paper-arms", OCT15, "Three paper arms that passed research",
+            "R51 Donchian 20, R52 Open outside value and Solo 2.0 now trade on paper, 1 lot each. " +
+                "They passed every research gate, so your paper rule switches them on at once. " +
+                "Solo 2.0 is Jarvis's own trained Solo (R57), next to Solo midday, and stays on paper forever. " +
+                "Each reads its signal from the index and buys the option, always with a stop. " +
+                "Each keeps its own record and switches itself off if its forward test fails. " +
+                "None ever trades on Zerodha, and one tap switches each off.",
+            "Home → Strategies → the rows marked \"Passed research (R51/R52/R57) — paper only\" (switch, today, record, forward test); " +
+                "the switch-on is also in Home → Automation card → Autopilot → Change log, where one tap undoes it",
+            ask = "how are the passed arms doing"),
+        Entry("2026-10-15-watchlist-shadow", OCT15, "Watchlist of near misses (shadow only)",
+            "Three research near misses are followed in shadow: R47 C4 (an option-chain signal, marked non-default), R52 R4-8 and R52 H45-1. " +
+                "They are never traded; each would-be trade is priced with the paper costs. " +
+                "At 40 new trades Jarvis tells you once which passed on unseen data and which to drop.",
+            "Home → Strategies → Watchlist (shadow); its line is also in the evening summary",
+            ask = "what's on the watchlist"),
+        Entry("2026-10-15-hero-1000-ticket", OCT15, "Hero ₹1,000 ticket (paper, your choice)",
+            "On your choice, a new paper bot buys a call and a put of up to ₹1,000 each at 12:30 on NIFTY's and SENSEX's own expiry days, " +
+                "and sells on your 25% trail (for now it starts once a ticket has doubled; your choice waits on a follow-up study) or at 15:05. It did not pass research (R50: about −₹525 per ₹1,000 on average; jackpots are rare), " +
+                "its trades are kept in their own record, it never trades on Zerodha, and one tap switches it off.",
+            "Home → Strategies → Hero ₹1,000 ticket (its switch, today's tickets, the 2× / 3× / trail-only exit and where the trail starts); " +
+                "the change is also in Home → Automation card → Autopilot → Change log",
+            ask = "how is the hero ticket doing"),
+        Entry("2026-10-14-silverm-morning-off", OCT14, "SILVERM morning call switched off (paper)",
+            "On your OK, the SILVERM morning call paper bot is switched off once: research R42 found no proven edge on cleaned prices " +
+                "(+₹336 a trade over 53 holdout trades, no better than a random minute; walk-forward −₹44.6k over 129 trades). " +
+                "An open position still closes by its own exit, and one tap on the change undoes it, on paper only.",
+            "Home → Strategies → MCX (commodities) (its row and switch); the change is also in Home → Automation card → Autopilot → Change log"),
+        Entry("2026-10-14-gamma-line-oi-wall-shadow", OCT14, "Morning gamma line, and the OI-wall check in shadow",
+            "At 10:00 Jarvis says whether dealer gamma is negative or positive on each index whose chain is on the phone, how such days' " +
+                "rest-of-day range compared in the research, and the biggest call- and put-gamma strikes to watch; it says nothing about direction and is never a trade signal. " +
+                "On expiry days your OI-wall short-covering rule is checked from 13:45 to 14:30 and only written down, with what its ticket would have made in points " +
+                "and one evening line from Jarvis; it never places an order.",
+            "Settings → Jarvis → Market alerts (Morning gamma line; OI-wall check (shadow)); the OI-wall check is also in the evening Order Review and the diagnostics",
+            jarvisOnly = true, to = "jarvis"),
+        Entry("2026-10-14-signal-on-the-index", OCT14, "Signals read from the index, then the option is bought",
+            "Strategies read their signal from the index and then buy the option (the default); a Pine script set to an option chart is refused; option-derived ideas are labelled.",
+            "Research → Pine → a script → Auto-trade (its symbol); Home → Strategies (Hero's row); Home → Automation card → Strategy lab"),
+        Entry("2026-10-14-memory-positions-first", OCT14, "Memory: open positions first, the rest gives way",
+            "Memory: the app now gives back the memory it does not need (Jarvis's model, the research notes, old prices), so Android should stop closing it. " +
+                "Open positions and orders always come first: their prices and stop checks never slow down, and after any restart they are restored and watched before anything else.",
+            "Lab → Health → background trims (also in the diagnostics: Start-up)"),
+        Entry("2026-10-14-battery-rest", OCT14, "Battery: background work rests when nothing needs it",
+            "Battery: the evening MCX watch, the order-flow recorder and other background work now rest when nothing needs them, so the phone should last the day again. " +
+                "With an MCX position open, paper or live, every stop and exit is checked as often as before, and a new setting chooses when Jarvis listens for his name (Always stays the default).",
+            "Lab → Health → Background work today (also in the diagnostics); Jarvis's page → Listen for \"Jarvis\""),
+        Entry("2026-10-13-orb-family-parked", OCT13, "ORB, ORB Fresh, Sweep and Range Fade parked",
+            "On your choice, these four arms are paused once for research (they will be studied again on the full Dhan data), because each lost money after costs in every tested year; an open position is still managed to its own exit. " +
+                "Each row says \"parked on your choice (13 Oct)\" with a tap to switch it back on, and the morning check and Jarvis no longer nag about them.",
+            "Home → Strategies (each arm's row); the change is also in Home → Automation card → Autopilot → Change log"),
+        Entry("2026-10-13-market-context", OCT13, "Market context: events, expiry, days like today",
+            "Home now warns you the evening before and the morning of an RBI, Budget, US CPI or Fed day, with how BankNifty and Nifty moved on such days and how many days that is; on expiry days it shows how fast option time value melts, and from 09:21 the past days most like today, as context, not a forecast. " +
+                "On the chart, add \"Ira: level map\" for support and resistance with how often each held, and long-press any candle and pick \"Explain this candle\" for what the app knows about those minutes; a new switch can pause paper arms on event days, and it is off.",
+            "Home → Market context; Chart → indicators → Market context; Settings → Bot settings → Pause paper arms on event days",
+            to = "chart"),
+        Entry("2026-10-13-pretrade-checks", OCT13, "Three checks before each paper trade",
+            "Before each paper trade (Liquidity aside) the app notes how much of the expected 30-minute move the charges eat. " +
+                "It also notes where a stop sized to that move would sit, beside the fixed stop. " +
+                "Each morning it rates the day normal, careful or paper-only, with how many past days back the rating. " +
+                "We tested all three on two years of data and none beat chance. " +
+                "The held-back tests had 499 trades for the charges, 15 for the stop and 122 days for the rating. " +
+                "Hero had only 8 test trades and 2 held-back ones, far too few to judge. " +
+                "So they are notes and advice only: they never skip, resize or move a trade. " +
+                "The one switch, half size for paper arms on careful days, is off.",
+            "Settings → Bot settings → Pre-trade checks; Order review; Arms · today; the Good morning check"),
+        Entry("2026-10-13-shared-knowledge", OCT13, "All the agents now learn from one shared knowledge",
+            "Every agent now reads one shared knowledge: the research, Jarvis's lessons and the latest findings. " +
+                "The trade manager, order review, order flow, strategy lab and study now say what the research found. " +
+                "The slippage record, the Liquidity test and the study now add to Jarvis's lessons. " +
+                "Each night a lessons summary is saved for the research, with your money in it encrypted. " +
+                "It only explains and ranks: it never adds a trade or raises a size. " +
+                "A new skip rule only counts in shadow, and stays off until you turn it on.",
+            "Home → Ira → What Jarvis has learned → Shared knowledge today; the shadow switch in Bot settings → Shared knowledge",
+            ask = "what have you learned", jarvisOnly = true),
+        Entry("2026-10-13-exit-research", OCT13, "Exit research: today's exits stay",
+            "Five new ways to exit were tested against today's exits on every arm, over two years of data: VWAP bands, the next support or resistance, a 45-minute time stop, the expected range, and breakeven after +15%. " +
+                "None beat today's exits after charges once chance was allowed for, so nothing in the app changes (Liquidity BANKNIFTY was only studied, as it is frozen to 26 Oct, and none helped it either).",
+            "Not in the app: the research write-up HUNT_R18_EXITS.md"),
+        Entry("2026-10-13-github-sync", LocalDate.of(2026, 10, 13), "Recordings and backups go to GitHub by themselves",
+            "Each evening after the MCX evening close (15:45 on days without an MCX session), on Wi-Fi while charging, the phone uploads each recorded day and a backup to GitHub (a private data-only repository, never the app's code), sealed with your backup passphrase so GitHub sees only noise. " +
+                "A new phone gets everything back with Restore from GitHub: strategies and Pine scripts return switched off, and your PIN, Live switches and tokens are never in it.",
+            "Settings → Data and harvest → GitHub sync", to = "data"),
+        Entry("2026-10-13-github-diagnostics", OCT13, "Each evening's upload carries the day's diagnostics",
+            "With each evening's upload to the private data repository goes one small file for that day: each arm's signals, which were taken or skipped and why, its trades in points and percent, the app's health and the day's changes. " +
+                "It is cleaned on the phone first (no tokens, ids, names, phone, e-mail or rupee amounts), so the research sessions can read it to find and fix problems.",
+            "Settings → Data and harvest → GitHub sync (the Diagnostics line)", to = "data"),
+        Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",
+            "While the market is open the app now records, every second, the order flow of the BANKNIFTY and NIFTY futures, their options three strikes either side of the money, and VIX: price, volume, VWAP, OI and the five-level book. " +
+                "Each minute it also saves buying vs selling, the order-book balance, the spread, big trades and absorption; and \"Export recordings\" now asks your PIN and saves everything, your trades decrypted, to a file you pick.",
+            "Settings → Data and harvest → Recordings", to = "data"),
         Entry("2026-10-12-order-review", OCT12, "Order review: every order studied daily",
             "A new agent studies every order and trade each day after the close - live, paper, the bots, Pine and your own - and lists the flaws with their numbers. " +
                 "A flaw that keeps coming back is flagged for a fix or tested by the strategy lab on paper first; it never places, changes or cancels an order.",

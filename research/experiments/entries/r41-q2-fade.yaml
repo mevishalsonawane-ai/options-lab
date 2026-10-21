@@ -1,0 +1,33 @@
+id: r41-q2-fade
+title: R41 neural-net trade filter (meta-labelling) on the Range Fade (R17) arm, rule R8
+family: ml
+date: '2026-10-14'
+doc: research/HUNT_R41_NEURAL_NETS.md
+hypothesis: Given the state at entry, a neural net predicts whether a Range Fade (R17) trade wins after costs, and skipping
+  its weakest 30% improves the arm.
+data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
+  brain cube v2 + point-in-time feature store, built 14 Oct 2026)
+period:
+  design: 2021-08-01..2022-12-14 and 2024-07-15..2026-04-13; walk-forward folds 2022, 2024H2, 2025, 2026 (retrained each fold)
+  holdout: 2023-01-01..2024-06-30 (F1 India's block), read once 14 Oct 2026; embargo 2022-12-15..31 and 2024-07-01..14
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- brain features at the arm's signal minute
+- last 60 one-minute index bars
+- side, index, time of day
+model_or_rule: MLP 64-32, causal TCN (3x16, dilations 1/2/4) and GRU-32 on the last 60 one-minute bars + tabular features;
+  3 seeds each, NN = their average; baselines base rate, logistic/ridge, gradient-boosted trees; label = trade net > 0 after
+  the arm's own costs; rule R8 skips trades whose P(win) is in the bottom 30% of validation scores (risk-lowering only)
+settings: research/hunt/r41/PREREG.md
+prereg: research/hunt/r41/PREREG.md
+variants_tried: 1
+results:
+  summary: '1083 design trades scored in WF, 829 holdout trades. No model beats the base rate (WF 0.632 vs 0.626; holdout
+    0.617 vs 0.614). Filter: holdout -Rs 198/day vs unfiltered -306 (543 kept, 286 skipped, p 0.48, q 0.64); trees -190. The
+    arm still loses.'
+  costs: each arm's own fills and charges (R28 r28arms.py rebuild)
+holdout_read: true
+verdict: rejected
+notes: Trades rebuilt with R28's r28arms.py on the lake (the arm's own code).

@@ -40,3 +40,17 @@ java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
+
+// The knowledge index built once per APK (memory audit, 14 Oct 2026; Boss's "build once, load instantly"): the app's build
+// copies this file into the APK's assets beside the pack it was made from, and the phone opens it without unzipping and
+// parsing the pack's JSON (KnowledgeIndexFile). Made from the public research pack only; never kept in git.
+val knowledgeIndex by tasks.registering(JavaExec::class) {
+    description = "Builds the knowledge index file from the app's knowledge pack."
+    val pack = rootProject.file("app/src/main/assets/knowledge/pack.bin")
+    val out = layout.buildDirectory.file("generated/knowledgeIndex/index.bin")
+    inputs.file(pack)
+    outputs.file(out)
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.optionslab.ira.KnowledgeIndexFile")
+    argumentProviders.add(CommandLineArgumentProvider { listOf(pack.absolutePath, out.get().asFile.absolutePath) })
+}

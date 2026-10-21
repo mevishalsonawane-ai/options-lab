@@ -1,0 +1,1756 @@
+{
+ "originals": {
+  "O-H0": {
+   "id": "O-H0",
+   "part": "final",
+   "m": {
+    "trades": 2,
+    "n_days": 28,
+    "net": -3776.0,
+    "win": 0.0,
+    "per_day": -135.0,
+    "worst_day": -3069.0,
+    "max_dd": 3776.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 9763.0,
+    "top1": null,
+    "ex1": -3069.0,
+    "top3": null,
+    "ex3": 0.0,
+    "top5": null,
+    "ex5": 0.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -4043.0,
+   "twin_mean": -147.0,
+   "p": 0.6227544910179641,
+   "by_index": {
+    "NIFTY": [
+     2,
+     -3776.39
+    ]
+   },
+   "secs": 0.4,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-V4": {
+   "id": "O-V4",
+   "part": "final",
+   "m": {
+    "trades": 22,
+    "n_days": 73,
+    "net": -45066.0,
+    "win": 18.2,
+    "per_day": -617.0,
+    "worst_day": -11904.0,
+    "max_dd": 55628.0,
+    "hero5": 1,
+    "hero10": 0,
+    "banked5": 1,
+    "risked": 104900.0,
+    "top1": null,
+    "ex1": -53471.0,
+    "top3": null,
+    "ex3": -56115.0,
+    "top5": null,
+    "ex5": -53858.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -45269.0,
+   "twin_mean": 20642.0,
+   "p": 0.9940119760479041,
+   "by_index": {
+    "SENSEX": [
+     7,
+     -10905.86
+    ],
+    "NIFTY": [
+     9,
+     -15796.69
+    ],
+    "BANKNIFTY": [
+     2,
+     -6697.63
+    ],
+    "FINNIFTY": [
+     2,
+     -5940.89
+    ],
+    "MIDCPNIFTY": [
+     2,
+     -5724.6
+    ]
+   },
+   "secs": 1.5,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-L1": {
+   "id": "O-L1",
+   "part": "final",
+   "m": {
+    "trades": 121,
+    "n_days": 73,
+    "net": -28693.0,
+    "win": 8.3,
+    "per_day": -393.0,
+    "worst_day": -3670.0,
+    "max_dd": 34346.0,
+    "hero5": 6,
+    "hero10": 2,
+    "banked5": 3,
+    "risked": 54656.0,
+    "top1": null,
+    "ex1": -33715.0,
+    "top3": null,
+    "ex3": -38786.0,
+    "top5": null,
+    "ex5": -41813.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -28729.0,
+   "twin_mean": -32533.0,
+   "p": 0.10578842315369262,
+   "by_index": {
+    "NIFTY": [
+     56,
+     -6399.42
+    ],
+    "SENSEX": [
+     31,
+     -11411.52
+    ],
+    "BANKNIFTY": [
+     10,
+     -4119.33
+    ],
+    "FINNIFTY": [
+     12,
+     -4495.2
+    ],
+    "MIDCPNIFTY": [
+     12,
+     -2267.17
+    ]
+   },
+   "secs": 25.8,
+   "q": 0.329119538700377,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  },
+  "O-L3": {
+   "id": "O-L3",
+   "part": "final",
+   "m": {
+    "trades": 124,
+    "n_days": 73,
+    "net": -26486.0,
+    "win": 12.9,
+    "per_day": -363.0,
+    "worst_day": -3460.0,
+    "max_dd": 27184.0,
+    "hero5": 9,
+    "hero10": 2,
+    "banked5": 4,
+    "risked": 55258.0,
+    "top1": null,
+    "ex1": -29135.0,
+    "top3": null,
+    "ex3": -33299.0,
+    "top5": null,
+    "ex5": -36052.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -27512.0,
+   "twin_mean": -33505.0,
+   "p": 0.033932135728542916,
+   "by_index": {
+    "SENSEX": [
+     33,
+     -10898.56
+    ],
+    "NIFTY": [
+     56,
+     -5576.28
+    ],
+    "BANKNIFTY": [
+     11,
+     -4115.47
+    ],
+    "FINNIFTY": [
+     12,
+     -3683.78
+    ],
+    "MIDCPNIFTY": [
+     12,
+     -2211.82
+    ]
+   },
+   "secs": 26.7,
+   "q": 0.25149700598802394,
+   "gates": {
+    "net>0": false,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  },
+  "O-BASE": {
+   "id": "O-BASE",
+   "part": "final",
+   "m": {
+    "trades": 146,
+    "n_days": 73,
+    "net": 126738.0,
+    "win": 15.8,
+    "per_day": 1736.0,
+    "worst_day": -18877.0,
+    "max_dd": 78215.0,
+    "hero5": 12,
+    "hero10": 3,
+    "banked5": 5,
+    "risked": 645242.0,
+    "top1": 138.0,
+    "ex1": -48681.0,
+    "top3": 190.0,
+    "ex3": -114128.0,
+    "top5": 225.0,
+    "ex5": -158833.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 124945.0,
+   "twin_mean": -76086.0,
+   "p": 0.003992015968063872,
+   "by_index": {
+    "SENSEX": [
+     54,
+     105904.57
+    ],
+    "NIFTY": [
+     56,
+     42325.0
+    ],
+    "BANKNIFTY": [
+     12,
+     -15354.99
+    ],
+    "FINNIFTY": [
+     12,
+     -13050.99
+    ],
+    "MIDCPNIFTY": [
+     12,
+     6913.94
+    ]
+   },
+   "secs": 23.1,
+   "q": 0.0558882235528942,
+   "gates": {
+    "net>0": true,
+    "p<0.05": true,
+    "q<=0.10": true,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  },
+  "O-P": {
+   "id": "O-P",
+   "part": "final",
+   "m": {
+    "trades": 1,
+    "n_days": 73,
+    "net": 28.0,
+    "win": 100.0,
+    "per_day": 0.0,
+    "worst_day": 28.0,
+    "max_dd": 0.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 1800.0,
+    "top1": 100.0,
+    "ex1": 0.0,
+    "top3": 100.0,
+    "ex3": 0.0,
+    "top5": 100.0,
+    "ex5": 0.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 22.0,
+   "twin_mean": 1242.0,
+   "p": 1.0,
+   "by_index": {
+    "NIFTY": [
+     1,
+     28.39
+    ]
+   },
+   "secs": 0.8,
+   "q": 1.0,
+   "gates": {
+    "net>0": true,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": true,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-A6": {
+   "id": "O-A6",
+   "part": "final",
+   "m": {
+    "trades": 1,
+    "n_days": 73,
+    "net": 28.0,
+    "win": 100.0,
+    "per_day": 0.0,
+    "worst_day": 28.0,
+    "max_dd": 0.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 1800.0,
+    "top1": 100.0,
+    "ex1": 0.0,
+    "top3": 100.0,
+    "ex3": 0.0,
+    "top5": 100.0,
+    "ex5": 0.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 22.0,
+   "twin_mean": 879.0,
+   "p": 1.0,
+   "by_index": {
+    "NIFTY": [
+     1,
+     28.39
+    ]
+   },
+   "secs": 0.6,
+   "q": 1.0,
+   "gates": {
+    "net>0": true,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": true,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-B1": {
+   "id": "O-B1",
+   "part": "final",
+   "m": {
+    "trades": 1,
+    "n_days": 73,
+    "net": 28.0,
+    "win": 100.0,
+    "per_day": 0.0,
+    "worst_day": 28.0,
+    "max_dd": 0.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 1800.0,
+    "top1": 100.0,
+    "ex1": 0.0,
+    "top3": 100.0,
+    "ex3": 0.0,
+    "top5": 100.0,
+    "ex5": 0.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 22.0,
+   "twin_mean": 1242.0,
+   "p": 1.0,
+   "by_index": {
+    "NIFTY": [
+     1,
+     28.39
+    ]
+   },
+   "secs": 0.5,
+   "q": 1.0,
+   "gates": {
+    "net>0": true,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": true,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-X1": {
+   "id": "O-X1",
+   "part": "final",
+   "m": {
+    "trades": 30,
+    "n_days": 73,
+    "net": -1838.0,
+    "win": 33.3,
+    "per_day": -25.0,
+    "worst_day": -1631.0,
+    "max_dd": 7219.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 30255.0,
+    "top1": null,
+    "ex1": -4239.0,
+    "top3": null,
+    "ex3": -7292.0,
+    "top5": null,
+    "ex5": -9636.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -1909.0,
+   "twin_mean": -4469.0,
+   "p": 0.24550898203592814,
+   "by_index": {
+    "NIFTY": [
+     8,
+     2236.18
+    ],
+    "SENSEX": [
+     20,
+     -6262.96
+    ],
+    "BANKNIFTY": [
+     1,
+     -212.37
+    ],
+    "MIDCPNIFTY": [
+     1,
+     2401.04
+    ]
+   },
+   "secs": 5.5,
+   "q": 0.6874251497005988,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-X2": {
+   "id": "O-X2",
+   "part": "final",
+   "m": {
+    "trades": 53,
+    "n_days": 73,
+    "net": -20802.0,
+    "win": 20.8,
+    "per_day": -285.0,
+    "worst_day": -6121.0,
+    "max_dd": 20802.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 62462.0,
+    "top1": null,
+    "ex1": -23203.0,
+    "top3": null,
+    "ex3": -26390.0,
+    "top5": null,
+    "ex5": -29210.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -20992.0,
+   "twin_mean": -21199.0,
+   "p": 0.46506986027944114,
+   "by_index": {
+    "SENSEX": [
+     23,
+     -6005.41
+    ],
+    "NIFTY": [
+     11,
+     -8456.16
+    ],
+    "FINNIFTY": [
+     9,
+     -6692.03
+    ],
+    "MIDCPNIFTY": [
+     6,
+     2888.06
+    ],
+    "BANKNIFTY": [
+     4,
+     -2536.55
+    ]
+   },
+   "secs": 10.7,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  },
+  "O-E821": {
+   "id": "O-E821",
+   "part": "final",
+   "m": {
+    "trades": 36,
+    "n_days": 73,
+    "net": 121605.0,
+    "win": 13.9,
+    "per_day": 1666.0,
+    "worst_day": -8106.0,
+    "max_dd": 57266.0,
+    "hero5": 5,
+    "hero10": 1,
+    "banked5": 2,
+    "risked": 160928.0,
+    "top1": 115.0,
+    "ex1": -18408.0,
+    "top3": 148.0,
+    "ex3": -58763.0,
+    "top5": 160.0,
+    "ex5": -73087.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 120734.0,
+   "twin_mean": 26258.0,
+   "p": 0.0718562874251497,
+   "by_index": {
+    "SENSEX": [
+     15,
+     104104.45
+    ],
+    "NIFTY": [
+     11,
+     19203.99
+    ],
+    "MIDCPNIFTY": [
+     4,
+     8027.51
+    ],
+    "BANKNIFTY": [
+     3,
+     -5855.75
+    ],
+    "FINNIFTY": [
+     3,
+     -3875.68
+    ]
+   },
+   "secs": 6.8,
+   "q": 0.25149700598802394,
+   "gates": {
+    "net>0": true,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-E921": {
+   "id": "O-E921",
+   "part": "final",
+   "m": {
+    "trades": 26,
+    "n_days": 73,
+    "net": 139236.0,
+    "win": 19.2,
+    "per_day": 1907.0,
+    "worst_day": -5818.0,
+    "max_dd": 37860.0,
+    "hero5": 5,
+    "hero10": 1,
+    "banked5": 2,
+    "risked": 113049.0,
+    "top1": 101.0,
+    "ex1": -777.0,
+    "top3": 127.0,
+    "ex3": -37021.0,
+    "top5": 137.0,
+    "ex5": -51273.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 138722.0,
+   "twin_mean": 38736.0,
+   "p": 0.0499001996007984,
+   "by_index": {
+    "SENSEX": [
+     11,
+     113861.17
+    ],
+    "NIFTY": [
+     10,
+     20660.27
+    ],
+    "MIDCPNIFTY": [
+     3,
+     10002.42
+    ],
+    "BANKNIFTY": [
+     1,
+     -2882.38
+    ],
+    "FINNIFTY": [
+     1,
+     -2405.59
+    ]
+   },
+   "secs": 5.7,
+   "q": 0.25149700598802394,
+   "gates": {
+    "net>0": true,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": true,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-E926": {
+   "id": "O-E926",
+   "part": "final",
+   "m": {
+    "trades": 23,
+    "n_days": 73,
+    "net": 124611.0,
+    "win": 17.4,
+    "per_day": 1707.0,
+    "worst_day": -5944.0,
+    "max_dd": 20806.0,
+    "hero5": 5,
+    "hero10": 1,
+    "banked5": 2,
+    "risked": 101622.0,
+    "top1": 96.0,
+    "ex1": 5079.0,
+    "top3": 130.0,
+    "ex3": -37268.0,
+    "top5": 137.0,
+    "ex5": -45957.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 124161.0,
+   "twin_mean": 32957.0,
+   "p": 0.05788423153692615,
+   "by_index": {
+    "SENSEX": [
+     9,
+     128632.39
+    ],
+    "NIFTY": [
+     8,
+     -6160.25
+    ],
+    "MIDCPNIFTY": [
+     4,
+     7472.24
+    ],
+    "BANKNIFTY": [
+     1,
+     -2927.4
+    ],
+    "FINNIFTY": [
+     1,
+     -2405.59
+    ]
+   },
+   "secs": 5.3,
+   "q": 0.25149700598802394,
+   "gates": {
+    "net>0": true,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-RSIM": {
+   "id": "O-RSIM",
+   "part": "final",
+   "m": {
+    "trades": 64,
+    "n_days": 73,
+    "net": 95390.0,
+    "win": 20.3,
+    "per_day": 1307.0,
+    "worst_day": -10624.0,
+    "max_dd": 67055.0,
+    "hero5": 5,
+    "hero10": 1,
+    "banked5": 2,
+    "risked": 289879.0,
+    "top1": 125.0,
+    "ex1": -24142.0,
+    "top3": 167.0,
+    "ex3": -63892.0,
+    "top5": 194.0,
+    "ex5": -89287.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 96148.0,
+   "twin_mean": 979.0,
+   "p": 0.06986027944111776,
+   "by_index": {
+    "SENSEX": [
+     22,
+     71574.61
+    ],
+    "NIFTY": [
+     25,
+     11834.22
+    ],
+    "BANKNIFTY": [
+     6,
+     -837.19
+    ],
+    "FINNIFTY": [
+     5,
+     -4575.83
+    ],
+    "MIDCPNIFTY": [
+     6,
+     17394.41
+    ]
+   },
+   "secs": 8.0,
+   "q": 0.25149700598802394,
+   "gates": {
+    "net>0": true,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": true,
+    "pass": false,
+    "too_few": false
+   }
+  },
+  "O-RSIF": {
+   "id": "O-RSIF",
+   "part": "final",
+   "m": {
+    "trades": 61,
+    "n_days": 73,
+    "net": -113654.0,
+    "win": 6.6,
+    "per_day": -1557.0,
+    "worst_day": -8883.0,
+    "max_dd": 117554.0,
+    "hero5": 4,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 264377.0,
+    "top1": null,
+    "ex1": -124644.0,
+    "top3": null,
+    "ex3": -136402.0,
+    "top5": null,
+    "ex5": -134912.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -114894.0,
+   "twin_mean": -27050.0,
+   "p": 0.844311377245509,
+   "by_index": {
+    "SENSEX": [
+     24,
+     -53059.59
+    ],
+    "NIFTY": [
+     24,
+     -32683.16
+    ],
+    "BANKNIFTY": [
+     5,
+     -11834.51
+    ],
+    "FINNIFTY": [
+     3,
+     -7022.3
+    ],
+    "MIDCPNIFTY": [
+     5,
+     -9054.27
+    ]
+   },
+   "secs": 22.4,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  },
+  "O-DON": {
+   "id": "O-DON",
+   "part": "final",
+   "m": {
+    "trades": 73,
+    "n_days": 73,
+    "net": -8163.0,
+    "win": 17.8,
+    "per_day": -112.0,
+    "worst_day": -9523.0,
+    "max_dd": 62353.0,
+    "hero5": 5,
+    "hero10": 0,
+    "banked5": 3,
+    "risked": 287190.0,
+    "top1": null,
+    "ex1": -38091.0,
+    "top3": null,
+    "ex3": -74965.0,
+    "top5": null,
+    "ex5": -98673.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -8790.0,
+   "twin_mean": 11504.0,
+   "p": 0.5389221556886228,
+   "by_index": {
+    "SENSEX": [
+     27,
+     -11011.75
+    ],
+    "NIFTY": [
+     28,
+     13039.44
+    ],
+    "BANKNIFTY": [
+     6,
+     -11507.23
+    ],
+    "FINNIFTY": [
+     6,
+     -12754.31
+    ],
+    "MIDCPNIFTY": [
+     6,
+     14070.59
+    ]
+   },
+   "secs": 23.6,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  },
+  "O-S3": {
+   "id": "O-S3",
+   "part": "final",
+   "m": {
+    "trades": 26,
+    "n_days": 73,
+    "net": -5904.0,
+    "win": 34.6,
+    "per_day": -81.0,
+    "worst_day": -2749.0,
+    "max_dd": 8417.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 41326.0,
+    "top1": null,
+    "ex1": -9980.0,
+    "top3": null,
+    "ex3": -12894.0,
+    "top5": null,
+    "ex5": -15389.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -5689.0,
+   "twin_mean": 7531.0,
+   "p": 0.998003992015968,
+   "by_index": {
+    "NIFTY": [
+     7,
+     702.7
+    ],
+    "SENSEX": [
+     12,
+     -3156.4
+    ],
+    "FINNIFTY": [
+     2,
+     -1245.96
+    ],
+    "MIDCPNIFTY": [
+     5,
+     -2204.2
+    ]
+   },
+   "secs": 10.7,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-S5": {
+   "id": "O-S5",
+   "part": "final",
+   "m": {
+    "trades": 14,
+    "n_days": 73,
+    "net": -4264.0,
+    "win": 35.7,
+    "per_day": -58.0,
+    "worst_day": -1946.0,
+    "max_dd": 7225.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 22821.0,
+    "top1": null,
+    "ex1": -7204.0,
+    "top3": null,
+    "ex3": -9785.0,
+    "top5": null,
+    "ex5": -10757.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -4415.0,
+   "twin_mean": 4783.0,
+   "p": 0.9960079840319361,
+   "by_index": {
+    "NIFTY": [
+     5,
+     -409.53
+    ],
+    "SENSEX": [
+     6,
+     -6426.4
+    ],
+    "FINNIFTY": [
+     2,
+     917.57
+    ],
+    "MIDCPNIFTY": [
+     1,
+     1654.26
+    ]
+   },
+   "secs": 1.9,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "O-K1": {
+   "id": "O-K1",
+   "part": "final",
+   "m": {
+    "trades": 49,
+    "n_days": 73,
+    "net": 387.0,
+    "win": 30.6,
+    "per_day": 5.0,
+    "worst_day": -5228.0,
+    "max_dd": 16512.0,
+    "hero5": 3,
+    "hero10": 0,
+    "banked5": 2,
+    "risked": 84935.0,
+    "top1": 2471.0,
+    "ex1": -9178.0,
+    "top3": 6289.0,
+    "ex3": -23962.0,
+    "top5": 9153.0,
+    "ex5": -35049.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -717.0,
+   "twin_mean": 29851.0,
+   "p": 0.9940119760479041,
+   "by_index": {
+    "NIFTY": [
+     18,
+     2354.88
+    ],
+    "SENSEX": [
+     17,
+     -12260.66
+    ],
+    "FINNIFTY": [
+     6,
+     3431.12
+    ],
+    "MIDCPNIFTY": [
+     5,
+     3137.31
+    ],
+    "BANKNIFTY": [
+     3,
+     3724.49
+    ]
+   },
+   "secs": 0.3,
+   "q": 1.0,
+   "gates": {
+    "net>0": true,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  },
+  "O-T1": {
+   "id": "O-T1",
+   "part": "final",
+   "m": {
+    "trades": 56,
+    "n_days": 73,
+    "net": -3174.0,
+    "win": 10.7,
+    "per_day": -43.0,
+    "worst_day": -2227.0,
+    "max_dd": 17688.0,
+    "hero5": 5,
+    "hero10": 1,
+    "banked5": 5,
+    "risked": 46016.0,
+    "top1": null,
+    "ex1": -15233.0,
+    "top3": null,
+    "ex3": -21435.0,
+    "top5": null,
+    "ex5": -25516.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -3439.0,
+   "twin_mean": 1743.0,
+   "p": 0.6846307385229541,
+   "by_index": {
+    "SENSEX": [
+     18,
+     1769.84
+    ],
+    "NIFTY": [
+     28,
+     501.24
+    ],
+    "BANKNIFTY": [
+     3,
+     -1768.88
+    ],
+    "FINNIFTY": [
+     3,
+     -1496.81
+    ],
+    "MIDCPNIFTY": [
+     4,
+     -2178.98
+    ]
+   },
+   "secs": 18.8,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  }
+ },
+ "retunes": {
+  "T-HERO": {
+   "id": "T-HERO:5-30-app",
+   "part": "final",
+   "m": {
+    "trades": 5,
+    "n_days": 73,
+    "net": -11416.0,
+    "win": 20.0,
+    "per_day": -156.0,
+    "worst_day": -3305.0,
+    "max_dd": 11416.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 23024.0,
+    "top1": null,
+    "ex1": -12349.0,
+    "top3": null,
+    "ex3": -6581.0,
+    "top5": null,
+    "ex5": 0.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -11505.0,
+   "twin_mean": 1255.0,
+   "p": 0.8782435129740519,
+   "by_index": {
+    "SENSEX": [
+     3,
+     -9043.67
+    ],
+    "NIFTY": [
+     2,
+     -2372.71
+    ]
+   },
+   "secs": 1.2,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": true,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "T-LOT": {
+   "id": "T-LOT:1230-tr25",
+   "part": "final",
+   "m": {
+    "trades": 115,
+    "n_days": 73,
+    "net": 4072.0,
+    "win": 13.0,
+    "per_day": 56.0,
+    "worst_day": -966.0,
+    "max_dd": 5425.0,
+    "hero5": 5,
+    "hero10": 2,
+    "banked5": 2,
+    "risked": 51059.0,
+    "top1": 199.0,
+    "ex1": -4011.0,
+    "top3": 349.0,
+    "ex3": -10129.0,
+    "top5": 398.0,
+    "ex5": -12146.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 1897.0,
+   "twin_mean": -8525.0,
+   "p": 0.001996007984031936,
+   "by_index": {
+    "NIFTY": [
+     56,
+     2475.76
+    ],
+    "SENSEX": [
+     26,
+     4245.43
+    ],
+    "BANKNIFTY": [
+     9,
+     -1145.68
+    ],
+    "FINNIFTY": [
+     12,
+     -1518.44
+    ],
+    "MIDCPNIFTY": [
+     12,
+     14.89
+    ]
+   },
+   "secs": 10.3,
+   "q": 0.0558882235528942,
+   "gates": {
+    "net>0": true,
+    "p<0.05": true,
+    "q<=0.10": true,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  },
+  "T-OI": {
+   "id": "T-OI:E3",
+   "part": "final",
+   "m": {
+    "trades": 1,
+    "n_days": 73,
+    "net": 28.0,
+    "win": 100.0,
+    "per_day": 0.0,
+    "worst_day": 28.0,
+    "max_dd": 0.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 1800.0,
+    "top1": 100.0,
+    "ex1": 0.0,
+    "top3": 100.0,
+    "ex3": 0.0,
+    "top5": 100.0,
+    "ex5": 0.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 22.0,
+   "twin_mean": 879.0,
+   "p": 1.0,
+   "by_index": {
+    "NIFTY": [
+     1,
+     28.39
+    ]
+   },
+   "secs": 0.6,
+   "q": 1.0,
+   "gates": {
+    "net>0": true,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": true,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "T-BOSS": {
+   "id": "T-BOSS:atm1-E2",
+   "part": "final",
+   "m": {
+    "trades": 1,
+    "n_days": 73,
+    "net": 28.0,
+    "win": 100.0,
+    "per_day": 0.0,
+    "worst_day": 28.0,
+    "max_dd": 0.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 1800.0,
+    "top1": 100.0,
+    "ex1": 0.0,
+    "top3": 100.0,
+    "ex3": 0.0,
+    "top5": 100.0,
+    "ex5": 0.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 22.0,
+   "twin_mean": 1242.0,
+   "p": 1.0,
+   "by_index": {
+    "NIFTY": [
+     1,
+     28.39
+    ]
+   },
+   "secs": 0.5,
+   "q": 1.0,
+   "gates": {
+    "net>0": true,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "T-GEX": {
+   "id": "T-GEX:tr25",
+   "part": "final",
+   "m": {
+    "trades": 30,
+    "n_days": 73,
+    "net": -5471.0,
+    "win": 13.3,
+    "per_day": -75.0,
+    "worst_day": -639.0,
+    "max_dd": 5471.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 30255.0,
+    "top1": null,
+    "ex1": -6075.0,
+    "top3": null,
+    "ex3": -6657.0,
+    "top5": null,
+    "ex5": -6662.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -5608.0,
+   "twin_mean": 139.0,
+   "p": 0.9800399201596807,
+   "by_index": {
+    "NIFTY": [
+     8,
+     -1283.32
+    ],
+    "SENSEX": [
+     20,
+     -3754.18
+    ],
+    "BANKNIFTY": [
+     1,
+     -73.14
+    ],
+    "MIDCPNIFTY": [
+     1,
+     -360.84
+    ]
+   },
+   "secs": 2.5,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "T-SWEEP": {
+   "id": "T-SWEEP:ema921_adx20-s50",
+   "part": "final",
+   "m": {
+    "trades": 26,
+    "n_days": 73,
+    "net": 139236.0,
+    "win": 19.2,
+    "per_day": 1907.0,
+    "worst_day": -5818.0,
+    "max_dd": 37860.0,
+    "hero5": 5,
+    "hero10": 1,
+    "banked5": 2,
+    "risked": 113049.0,
+    "top1": 101.0,
+    "ex1": -777.0,
+    "top3": 127.0,
+    "ex3": -37021.0,
+    "top5": 137.0,
+    "ex5": -51273.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": 138722.0,
+   "twin_mean": 38736.0,
+   "p": 0.0499001996007984,
+   "by_index": {
+    "SENSEX": [
+     11,
+     113861.17
+    ],
+    "NIFTY": [
+     10,
+     20660.27
+    ],
+    "MIDCPNIFTY": [
+     3,
+     10002.42
+    ],
+    "BANKNIFTY": [
+     1,
+     -2882.38
+    ],
+    "FINNIFTY": [
+     1,
+     -2405.59
+    ]
+   },
+   "secs": 3.7,
+   "q": 0.25149700598802394,
+   "gates": {
+    "net>0": true,
+    "p<0.05": true,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "T-ST": {
+   "id": "T-ST:tr25",
+   "part": "final",
+   "m": {
+    "trades": 14,
+    "n_days": 73,
+    "net": -7340.0,
+    "win": 0.0,
+    "per_day": -101.0,
+    "worst_day": -884.0,
+    "max_dd": 7340.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 22821.0,
+    "top1": null,
+    "ex1": -7077.0,
+    "top3": null,
+    "ex3": -6444.0,
+    "top5": null,
+    "ex5": -5617.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -7536.0,
+   "twin_mean": 191.0,
+   "p": 1.0,
+   "by_index": {
+    "NIFTY": [
+     5,
+     -2557.95
+    ],
+    "SENSEX": [
+     6,
+     -3546.83
+    ],
+    "FINNIFTY": [
+     2,
+     -726.03
+    ],
+    "MIDCPNIFTY": [
+     1,
+     -508.78
+    ]
+   },
+   "secs": 1.7,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": false,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": true
+   }
+  },
+  "T-AFT": {
+   "id": "T-AFT:cheap-tr25",
+   "part": "final",
+   "m": {
+    "trades": 46,
+    "n_days": 73,
+    "net": -8542.0,
+    "win": 19.6,
+    "per_day": -117.0,
+    "worst_day": -2288.0,
+    "max_dd": 9762.0,
+    "hero5": 0,
+    "hero10": 0,
+    "banked5": 0,
+    "risked": 79361.0,
+    "top1": null,
+    "ex1": -14043.0,
+    "top3": null,
+    "ex3": -18080.0,
+    "top5": null,
+    "ex5": -20011.0
+   },
+   "blocks": {
+    "B0": 0.0,
+    "B1": 0.0,
+    "B2": 0.0,
+    "B3": 0.0,
+    "B4": 0.0
+   },
+   "spread2x": -8731.0,
+   "twin_mean": -124.0,
+   "p": 0.7564870259481038,
+   "by_index": {
+    "NIFTY": [
+     15,
+     -1687.26
+    ],
+    "SENSEX": [
+     17,
+     -6018.55
+    ],
+    "FINNIFTY": [
+     6,
+     -2759.11
+    ],
+    "MIDCPNIFTY": [
+     5,
+     4118.4
+    ],
+    "BANKNIFTY": [
+     3,
+     -2195.26
+    ]
+   },
+   "secs": 0.6,
+   "q": 1.0,
+   "gates": {
+    "net>0": false,
+    "p<0.05": false,
+    "q<=0.10": false,
+    "40+ trades": true,
+    "net without top 5 > 0": false,
+    "design WF > 0": false,
+    "pass": false,
+    "too_few": false
+   }
+  }
+ },
+ "bh_family": 28,
+ "passed": []
+}

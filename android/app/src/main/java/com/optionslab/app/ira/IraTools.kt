@@ -14,6 +14,16 @@ internal object IraTools {
     private val IST = ZoneId.of("Asia/Kolkata")
     private fun prefs() = com.optionslab.app.security.SecurePrefs
 
+    /**
+     * 20 Oct (the 17 Oct ANR): what is noted under this object's lock (mistakes, learned wordings, notes, habits, routines)
+     * goes to the settings' background writer, readable at once: the screen's thread (Jarvis's speech callbacks, onResume's
+     * alert) takes the same lock and must never wait for the Keystore's encryption behind it. Forgetting a whole list
+     * ([forgetLearned], [forgetMemory], [forgetRoutine], [forgetHabits]) stays a write to disk at once (rare, off the screen's
+     * thread, outside this lock but [forgetRoutine]'s), so it cannot come back after a kill; one word or note forgotten is
+     * written by the background writer within moments.
+     */
+    private fun putSoon(k: String, v: String?) = prefs().putAllSoon(mapOf(k to v))
+
     // ---- the mistakes list ---------------------------------------------------------------------------------------
 
     private const val MISTAKES = "jarvis.mistakes"
@@ -39,7 +49,7 @@ internal object IraTools {
         val said = com.optionslab.ira.Secrets.redact(question?.text ?: heard ?: "?").take(200)
         val all = (mistakes() + com.optionslab.ira.Mistakes.Entry(LocalDateTime.now(IST).withNano(0), said,
             com.optionslab.ira.Secrets.redact(answer.text).take(300))).takeLast(100)
-        prefs().put(MISTAKES, JSONArray().apply { all.forEach { put(JSONObject().put("t", it.at.toString()).put("s", it.said).put("a", it.answered)) } }.toString())
+        putSoon(MISTAKES, JSONArray().apply { all.forEach { put(JSONObject().put("t", it.at.toString()).put("s", it.said).put("a", it.answered)) } }.toString())
         count("mistakes")
         IraActivity.add("Marked wrong: \"$said\".")
         awaiting = said to System.currentTimeMillis()
@@ -298,7 +308,7 @@ internal object IraTools {
     }.getOrDefault(emptyList())
 
     private fun saveLearned(all: List<com.optionslab.ira.Corrections.Learned>) {
-        prefs().put(LEARNED, JSONArray().apply { all.forEach { l -> put(JSONObject().put("w", l.wrong).put("r", l.right)
+        putSoon(LEARNED, JSONArray().apply { all.forEach { l -> put(JSONObject().put("w", l.wrong).put("r", l.right)
             .put("u", (l.used ?: com.optionslab.app.data.Market.today()).toString()).apply { l.since?.let { put("s", it.toString()) } }) } }.toString())
     }
 
@@ -437,7 +447,7 @@ internal object IraTools {
     }
 
     private fun saveMemory(all: List<com.optionslab.ira.Memory.Item>) {
-        prefs().put(MEMORY, JSONArray().apply { all.forEach { put(JSONObject().put("d", it.day.toString()).put("t", it.text)) } }.toString())
+        putSoon(MEMORY, JSONArray().apply { all.forEach { put(JSONObject().put("d", it.day.toString()).put("t", it.text)) } }.toString())
     }
 
     /**
@@ -453,7 +463,9 @@ internal object IraTools {
         return item
     }
 
-    fun forgetMemory() { runCatching { prefs().put(MEMORY, null) } }
+    // 20 Oct, review: under the same lock as [remember] (which reads, adds and writes): a forget landing between those brought
+    // the forgotten notes back.
+    @Synchronized fun forgetMemory() { runCatching { prefs().put(MEMORY, null) } }
 
     // ---- Boss's habits ----------------------------------------------------------------------------------------------
 
@@ -464,7 +476,7 @@ internal object IraTools {
         o.keys().asSequence().associateWith { k -> val a = o.getJSONArray(k); IntArray(24) { a.optInt(it) } }
     }.getOrDefault(emptyMap())
 
-    fun forgetHabits() { runCatching { prefs().put(HABITS, null); prefs().put(HABITS_LAST, null) } }
+    @Synchronized fun forgetHabits() { runCatching { prefs().put(HABITS, null); prefs().put(HABITS_LAST, null) } }
 
     /** When each habit's question was last asked (a habit not asked for a week is not offered unasked). */
     private const val HABITS_LAST = "jarvis.habits.last"
@@ -496,7 +508,7 @@ internal object IraTools {
             }
         }
         val p = runCatching { noteRoutine(question, now, afterLoss, writes) }.getOrNull()
-        if (writes.isNotEmpty()) runCatching { prefs().putAll(writes) }
+        if (writes.isNotEmpty()) runCatching { prefs().putAllSoon(writes) }
         return p
     }
 
@@ -537,7 +549,7 @@ internal object IraTools {
     }.getOrDefault(emptyMap())
 
     private fun saveKept(all: List<com.optionslab.ira.Routine.Kept>) {
-        prefs().put(ROUTINE_KEPT, JSONArray(all.map { com.optionslab.ira.Routine.encode(it) }).toString())
+        putSoon(ROUTINE_KEPT, JSONArray(all.map { com.optionslab.ira.Routine.encode(it) }).toString())
     }
 
     /** [question] noted in Boss's routine; what to write is added to [writes] (the caller writes it once). */
@@ -558,7 +570,7 @@ internal object IraTools {
     @Synchronized fun routineOffered(p: com.optionslab.ira.Routine.Pattern) {
         runCatching {
             val all = routineOfferedAt() + (p.slot to com.optionslab.app.data.Market.today())
-            prefs().put(ROUTINE_OFFERED, JSONObject().apply { all.entries.sortedBy { it.value }.takeLast(40).forEach { (k, d) -> put(k, d.toString()) } }.toString())
+            putSoon(ROUTINE_OFFERED, JSONObject().apply { all.entries.sortedBy { it.value }.takeLast(40).forEach { (k, d) -> put(k, d.toString()) } }.toString())
         }
     }
 

@@ -96,6 +96,27 @@ class ProblemsHostTest : RobolectricTest() {
         assertTrue(ProblemsHost.open().first { it.key == "health:stall:$day" }.text.contains("BinderProxy.transactNative"))
     }
 
+    /** 18 Oct, review: the Live switch's check fails closed - before the period is read it asks the PIN, never lets Live through. */
+    @Test fun theLiveSwitchAsksThePinUntilThePeriodHasBeenRead() {
+        // A cold start inside the period: stored, not read yet.
+        SecurePrefs.put(PaperOnly.KEY, PaperOnlyPeriod.encode(PaperOnlyPeriod.Period(day.plusDays(9), "10 days on paper", day)))
+        PaperOnly.unreadForTest()
+        assertEquals("not read yet: the PIN", PaperOnly.UNREAD_ASK, PaperOnly.liveAskNow())
+        val ask = PaperOnly.liveAskRead()
+        assertTrue(ask, ask!!.contains("paper-only period until Wed 21 Oct") && ask.contains("10 days on paper"))
+        assertEquals("read once, kept", ask, PaperOnly.liveAskNow())
+        // No period stored: before the read the PIN, after it none.
+        SecurePrefs.put(PaperOnly.KEY, null)
+        PaperOnly.unreadForTest()
+        assertEquals(PaperOnly.UNREAD_ASK, PaperOnly.liveAskNow())
+        assertNull(PaperOnly.liveAskRead())
+        assertNull(PaperOnly.liveAskNow())
+        // A period that has ended asks nothing.
+        SecurePrefs.put(PaperOnly.KEY, PaperOnlyPeriod.encode(PaperOnlyPeriod.Period(day.minusDays(1), "done", day.minusDays(10))))
+        PaperOnly.unreadForTest()
+        assertNull(PaperOnly.liveAskRead())
+    }
+
     @Test fun thePaperOnlyPeriodLowersRiskFreelyAndAsksThePinToEndEarly() {
         val said = PaperOnly.set(day.plusDays(9), "10 days on paper", pinConfirmed = false)
         assertTrue(said, said.startsWith("Paper only until Wed 21 Oct (10 days left)"))

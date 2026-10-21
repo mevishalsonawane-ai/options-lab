@@ -28,7 +28,10 @@ import com.optionslab.app.testing.UpstoxStub.Companion.status
 import com.optionslab.engine.IST
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.SocketPolicy
 import org.junit.After
@@ -90,11 +93,25 @@ class JobsTest : RobolectricTest() {
     @After fun down() {
         services.forEach { runCatching { it.destroy() } }
         FakeAndroidKeyStore.failing.clear()
-        upstox.close(); Background.reset()
+        // 18 Oct: each destroyed service's jobs are waited for BEFORE the fake Upstox closes and the calendar is cleared.
+        // Destroying only cancels them; a job still in its blocking start (the start note) ran on after teardown into the
+        // holiday check, saw the calendar Background.reset() had just cleared as stale, and fetched it from Upstox and NSE.
+        try {
+            services.forEach { awaitJobsEnded(it) }
+        } finally {
+            upstox.close(); Background.reset()
+        }
         assertEquals("a test reached the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
     // ---- helpers ---------------------------------------------------------------------------------
+
+    /** A destroyed service's jobs (destroying cancels them), waited for; one still running after 30 s fails the test. */
+    private fun awaitJobsEnded(c: ServiceController<WatchService>) {
+        val scope = WatchService::class.java.getDeclaredField("scope").apply { isAccessible = true }.get(c.get()) as CoroutineScope
+        val job = scope.coroutineContext[Job]!!
+        if (runBlocking { withTimeoutOrNull(30_000) { job.join() } } == null) fail("a watch job was still running 30 s after its service was destroyed")
+    }
 
     private fun alarms(action: String) = am.scheduledAlarms.filter { shadowOf(it.operation).savedIntent.action == action }
     private fun alarm(action: String) = alarms(action).single()
@@ -336,6 +353,48 @@ class JobsTest : RobolectricTest() {
         Background.await("the restart in the diary") { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] restarted: the app's process had ended") } }
     }
 
+    @Test fun aWatchDestroyedDuringItsStartFetchesNothing() {
+        // A stale calendar: a live watch would start a refresh of it.
+        Background.calendar(null)
+        Background.at(WED, 10, 0)
+        val lock = WatchService::class.java.getDeclaredField("runDayLock").apply { isAccessible = true }.get(null)!!
+        val c = synchronized(lock) {
+            // The start note waits on this lock, so the service is destroyed while its watch is still starting.
+            val i = Intent(context, WatchService::class.java).putExtra(Jobs.EXTRA_KIND, Jobs.Kind.LIVE.name)
+            Robolectric.buildService(WatchService::class.java, i).create().also { services += it; it.startCommand(0, 1); it.destroy() }
+        }
+        awaitJobsEnded(c)
+        assertNull("no holiday refresh after the stop", com.optionslab.app.data.Holidays.pendingForTest())
+        assertEquals(emptyList<String>(), NetworkGuard.blocked.toList())
+        Background.await("its end in the diary") { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] ended") } }
+    }
+
+    @Test fun aStaleCalendarNeverHoldsUpTheWatchsChecks() {
+        // 18 Oct (open positions first): a restart with a week-old calendar and a holiday site that hangs.
+        val release = java.util.concurrent.CountDownLatch(1)
+        val newDay = LocalDate.of(2025, 12, 31)
+        com.optionslab.app.data.Holidays.testList = { release.await(); mapOf(newDay to "Test holiday") }
+        Background.calendar(WED.minusDays(30))
+        Background.at(WED, 10, 0)
+        upstox.reply = { p -> if (isIntraday(p)) UpstoxStub.candles(UpstoxStub.minutes(WED, LocalTime.of(9, 15), 46, 24_800.0)) else status(404) }
+        Alarms.upsert(PriceAlarm(31, "NIFTY", above = true, level = 24_000.0))
+        val t0 = System.nanoTime()
+        val svc = startService(Jobs.Kind.LIVE)
+        // The first pass's price checks (the same pass as every stop, target and square-off check) run on the cached calendar.
+        Background.await("the first pass's alarm check while the holiday site hangs") { alert("Alarm: NIFTY rises above 24,000.00") != null }
+        assertTrue("took ${(System.nanoTime() - t0) / 1e9} s", (System.nanoTime() - t0) / 1e9 < 15)
+        assertNotNull("the refresh runs in the background", com.optionslab.app.data.Holidays.pendingForTest())
+        assertEquals("still the cached calendar", WED.minusDays(30), com.optionslab.app.data.Holidays.book().fetched)
+        // A stop does not wait for it either.
+        svc.onStartCommand(Intent(context, WatchService::class.java).setAction(WatchService.STOP), 0, 2)
+        Background.await("the stop", timeoutMs = 10_000) { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] ended: stopped from the notification or the app") } }
+        // The site answers: the calendar is updated.
+        release.countDown()
+        Background.await("the refreshed calendar") { com.optionslab.app.data.Holidays.book().fetched == WED }
+        assertEquals("Test holiday", com.optionslab.app.data.Holidays.book().nse[newDay])
+        assertTrue(com.optionslab.app.data.Holidays.isHoliday(newDay))
+    }
+
     @Test fun androidsRestartAfterHoursEndsQuietly() {
         Background.at(WED, 16, 30)
         val c = Robolectric.buildService(WatchService::class.java).create()
@@ -420,6 +479,94 @@ class JobsTest : RobolectricTest() {
         assertEquals("No connection to the market data service", Tasks.reason(com.optionslab.app.data.Net.Offline()))
         assertEquals("Market data service is unavailable (502)", Tasks.reason(com.optionslab.app.data.Net.HttpFailure(502)))
     }
+
+    // ---- the ticket's retry when the entry bar is late (13 Oct) -----------------------------------------
+
+    private fun ticketOf(day: LocalDate) = com.optionslab.engine.Live.Ticket(day, "NIFTY", day, "SELL", "PE", 24_000.0, 75, 1, 75,
+        20.0, 24_300.0, 23_980.0, 90_000.0, null, null, null)
+    private val tooEarly get() = com.optionslab.engine.Live.TooEarly("latest bar is 10:59, entry is 11:00; the signal does not exist yet")
+    /** The tries' pause: the market clock moves on by the wait, nothing really sleeps. */
+    private val waits = ArrayList<Long>()
+    private val pause: suspend (Long) -> Unit = { ms ->
+        waits += ms
+        com.optionslab.app.data.Market.testClock = java.time.Clock.offset(com.optionslab.app.data.Market.testClock!!, Duration.ofMillis(ms))
+    }
+    private fun diaryOf(text: String) = com.optionslab.app.data.Diag.lines().filter { it.contains(text) }
+
+    @Test fun aLateEntryBarIsTriedAgainAndTheTicketRecordedAtTheSecondTry() = com.optionslab.app.testing.bounded("aLateEntryBarIsTriedAgain") { runBlocking {
+        otherAlerts(true)
+        Background.at(WED, 11, 1)
+        var tries = 0
+        Tasks.ticket(context, AppSettings.load(), draft = {
+            if (++tries == 1) throw tooEarly
+            com.optionslab.app.data.Market.TicketDraft(ticketOf(WED), "NSE_FO|1", null)
+        }, pause = pause)
+        assertEquals(2, tries)
+        assertEquals(listOf(30_000L), waits)
+        assertEquals(listOf(WED), com.optionslab.app.data.Ledger.all().map { it.row.ticket.session })
+        val n = Background.notifications(context).getNotification(2002)
+        assertEquals("Paper ticket: SELL NIFTY 24000 PE", Background.title(n))
+        assertNull("no failure notice", Background.notifications(context).getNotification(2900 + Jobs.Kind.TICKET.ordinal))
+        assertEquals(1, diaryOf("Ticket: the 11:00 prices are not out yet at 11:01:00 (try 1); trying again in 30 s, until 11:06").size)
+        assertEquals(1, diaryOf("Ticket: recorded at 11:01:30 on try 2").size)
+    } }
+
+    @Test fun anEntryBarThatNeverArrivesEndsAtTheCapWithAClearNotice() = com.optionslab.app.testing.bounded("anEntryBarThatNeverArrives") { runBlocking {
+        otherAlerts(true)
+        Background.at(WED, 11, 1)
+        var tries = 0
+        Tasks.ticket(context, AppSettings.load(), draft = { tries++; throw tooEarly }, pause = pause)
+        assertEquals("11:01:00 to 11:06:00 every 30 s", 11, tries)
+        assertEquals(300_000L, waits.sum())
+        assertTrue(com.optionslab.app.data.Ledger.all().isEmpty())
+        val n = Background.notifications(context).getNotification(2900 + Jobs.Kind.TICKET.ordinal)
+        assertEquals("Ticket did not complete", Background.title(n))
+        assertTrue(Background.text(n)!!, Background.text(n)!!.startsWith("The 11:00 prices never arrived"))
+        assertEquals(10, diaryOf("Ticket: the 11:00 prices are not out yet").size)
+        assertEquals(1, diaryOf("Ticket: given up at 11:06:00. The 11:00 prices never arrived").size)
+    } }
+
+    @Test fun aTicketJobRunningPastTheCapTriesOnceAndGivesUp() = com.optionslab.app.testing.bounded("aTicketJobRunningPastTheCap") { runBlocking {
+        otherAlerts(true)
+        Background.at(WED, 11, 20)
+        var tries = 0
+        Tasks.ticket(context, AppSettings.load(), draft = { tries++; throw tooEarly }, pause = pause)
+        assertEquals(1, tries)
+        assertTrue(waits.isEmpty())
+        assertTrue(Background.text(Background.notifications(context).getNotification(2900 + Jobs.Kind.TICKET.ordinal))!!.contains("(1 try)"))
+    } }
+
+    @Test fun otherTicketErrorsAreNotRetried() = com.optionslab.app.testing.bounded("otherTicketErrorsAreNotRetried") { runBlocking {
+        Background.at(WED, 11, 1)
+        var tries = 0
+        try {
+            Tasks.ticket(context, AppSettings.load(), draft = { tries++; throw com.optionslab.engine.ExpiryPut.SessionSkipped("no PE quote") }, pause = pause)
+            fail("a skipped session is passed on as before")
+        } catch (_: com.optionslab.engine.ExpiryPut.SessionSkipped) {}
+        assertEquals(1, tries)
+        // Too early first, then another error: that one is passed on, and the diary says so.
+        tries = 0
+        try {
+            Tasks.ticket(context, AppSettings.load(), draft = { if (++tries == 1) throw tooEarly else throw IllegalStateException("x") }, pause = pause)
+            fail("passed on")
+        } catch (_: IllegalStateException) {}
+        assertEquals(2, tries)
+        assertEquals(1, diaryOf("Ticket: try 2 at 11:01:30 stopped with IllegalStateException").size)
+        assertTrue(com.optionslab.app.data.Ledger.all().isEmpty())
+    } }
+
+    @Test fun aTicketAlreadyRecordedTodayStopsTheTries() = com.optionslab.app.testing.bounded("aTicketAlreadyRecordedTodayStopsTheTries") { runBlocking {
+        Background.at(WED, 11, 1)
+        var tries = 0
+        Tasks.ticket(context, AppSettings.load(), draft = {
+            tries++
+            // Recorded meanwhile (the Expiry Put page): the next try finds it and stops.
+            com.optionslab.app.data.Ledger.record(ticketOf(WED), null, null)
+            throw tooEarly
+        }, pause = pause)
+        assertEquals(1, tries)
+        assertEquals(1, com.optionslab.app.data.Ledger.all().size)
+    } }
 
     // ---- the watch's pass ----------------------------------------------------------------------------
 
@@ -582,6 +729,28 @@ class JobsTest : RobolectricTest() {
         assertTrue(lines.contains("• Mode: Paper"))
         DailyReports.post(context, DailyReports.Kind.MORNING, title, lines)
         assertEquals(title, Background.title(Background.notifications(context).getNotification(DailyReports.Kind.MORNING.id)))
+    } }
+
+    @Test fun theMorningCheckWaitsForAStaleCalendarsRefreshAndSaysWhenItFails() = com.optionslab.app.testing.bounded("theMorningCheckWaitsForAStaleCalendarsRefreshAndSaysWhenItFails") { runBlocking {
+        // 18 Oct: the 09:00 check joins the bounded background refresh (no order path waits on it).
+        Background.calendar(WED.minusDays(30))
+        com.optionslab.app.data.Holidays.testList = { Thread.sleep(300); mapOf(LocalDate.of(2025, 12, 25) to "Christmas") }
+        assertTrue(DailyReports.morning(context).second.contains("✓ NSE holiday list up to date"))
+        assertEquals(WED, com.optionslab.app.data.Holidays.book().fetched)
+        Background.calendar(WED.minusDays(30))
+        com.optionslab.app.data.Holidays.testList = { throw java.io.IOException("simulated: NSE refused") }
+        assertTrue(DailyReports.morning(context).second.contains("✗ NSE holiday list up to date"))
+        assertEquals("a failure keeps the cached list", WED.minusDays(30), com.optionslab.app.data.Holidays.book().fetched)
+    } }
+
+    /** 18 Oct (review): a paper-only period the start could not read is read by the 09:00 check (a worker thread). */
+    @Test fun theMorningCheckReadsAPaperOnlyPeriodTheStartCouldNot() = com.optionslab.app.testing.bounded("theMorningCheckReadsAPaperOnlyPeriodTheStartCouldNot") { runBlocking {
+        battery(true)
+        com.optionslab.app.data.PaperOnly.unreadForTest()
+        assertEquals(com.optionslab.app.data.PaperOnly.ENTRY_UNREAD, com.optionslab.app.data.PaperOnly.entryRefusal())
+        DailyReports.morning(context)
+        assertTrue("read by the morning check", com.optionslab.app.data.PaperOnly.isLoaded)
+        assertNull("no period set: entries may go", com.optionslab.app.data.PaperOnly.entryRefusal())
     } }
 
     @Test fun aBatteryOptimizedAppIsAMorningItemThatOpensTheBatteryRow() = com.optionslab.app.testing.bounded("aBatteryOptimizedAppIsAMorningItemThatOpensTheBatteryRow") { runBlocking {

@@ -67,6 +67,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     val botStopWhy by model.botStopWhy.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val dayLock by model.dayLockLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val paperSince by model.paperSinceLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // 15 Oct (Boss's cleanup): the scheduled strategies' rows are hidden once none runs; the Hidden arms list restores them.
+    val hidden by com.optionslab.app.data.HiddenArms.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     StrategyArmContent(
         live = s.live, killOn = s.guardKill, all = all, auto = auto, pending = pending, botStopped = botStopped,
         actions = object : StrategyArmActions {
@@ -76,21 +78,35 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
             override fun importText(text: String) = model.importStrategies(text)
             override fun say(text: String) = model.say(text)
             override fun clearKill() = model.update { it.copy(guardKill = false) }
+            // 18 Oct, review: clearing the kill switch here asks for the PIN as the Account guard page does ([GuardPin]).
+            override fun clearKillNeedsPin() = com.optionslab.app.security.GuardPin.clearKillAsks(s.live)
             override fun startBot() { model.startBotAgain() }
             override fun stopBot(alsoRunning: Boolean) { model.stopBotForToday(alsoRunning) }
         },
         onManage = onManage,
         orbRows = { OrbRows(model) },
         reauth = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel) },
+        reauthClearKill = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel, why = com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) },
         stopWhy = botStopWhy,
         dayLock = dayLock,
         paperSince = paperSince,
-        // Night (R3), then VIX divergence (9 Oct, research R1 N13): the NSE paper-only arms under the ORB rows.
+        // Night (R3), then VIX divergence (9 Oct, research R1 N13), then the Hero ₹1,000 ticket (15 Oct, Boss's choice; R50
+        // failed): the NSE paper-only arms under the ORB rows.
         // MCX is its own Home card (11 Oct, Boss: "it should separate"); the trade manager, order flow and the Brain are lines of
         // Home's Automation card, each opening its section ([AutomationHomeCard]).
-        nightRow = { NightRow(); VixDivRow() },
+        nightRow = { NightRow(); VixDivRow(); HeroTicketRow(); PassedArmRows(); WatchlistCard()
+            // The Trend watch (16 Oct, research R63): every open position judged on its underlying's trend. Not in IraGoldAlgo.
+            if (!com.optionslab.app.BuildConfig.GOLD) TrendWatchRow()
+            // The Signal tester (15 Oct, shadow - never trades): the allow-listed Telegram channels scored. Not in IraGoldAlgo.
+            if (!com.optionslab.app.BuildConfig.GOLD) SignalTesterCard() },
+        basketsVisible = com.optionslab.engine.orb.ArmsCleanup.visible(hidden, com.optionslab.engine.orb.ArmsCleanup.BASKETS),
+        hiddenArms = { HiddenArmsEntry() },
     )
 }
+
+/** What the Strategies card's title opens (15 Oct, compact rows). */
+internal const val STRATEGIES_NOTE = "Each arm's row shows its name, status, key numbers and switch; tap a name for its rules, research and notes."
+internal const val AUTO_NOTE = "AUTO places the entry by itself at the start time; APPROVE waits for your tap. Stops, targets and square-off always run by themselves."
 
 /** Home's MCX paper bots, a card of their own under the Strategies card (11 Oct). */
 @Composable
@@ -107,6 +123,8 @@ internal interface StrategyArmActions {
     fun importText(text: String)
     fun say(text: String)
     fun clearKill()
+    /** Clearing the kill switch asks for the PIN or fingerprint first ([com.optionslab.app.security.GuardPin]). */
+    fun clearKillNeedsPin(): Boolean
     fun startBot()
     fun stopBot(alsoRunning: Boolean)
 }
@@ -122,6 +140,8 @@ internal fun StrategyArmContent(
     pending: Map<Long, RunMode>, botStopped: Boolean, actions: StrategyArmActions, onManage: () -> Unit,
     orbRows: @Composable () -> Unit, reauth: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
     stopWhy: com.optionslab.ira.DayStop.Why? = null,
+    /** The PIN prompt for clearing the kill switch (18 Oct, review: its own words; [reauth] when not given). */
+    reauthClearKill: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit = reauth,
     /** The account day lock's line when reached today ("Day lock (paper): reached +Rs 8,000 at 14:11, no new entries"). */
     dayLock: String? = null,
     /** The paper account's running total since the Settings start date ("Paper since 1 Oct: +Rs 5,490 net over 5 days ..."). */
@@ -130,11 +150,15 @@ internal fun StrategyArmContent(
     nightRow: @Composable () -> Unit = {},
     /** The MCX paper bots' "MCX (commodities)" group, paper only ([McxArmRows] in the app); nothing by default. */
     mcxRows: @Composable () -> Unit = {},
+    /** 15 Oct (Boss's cleanup): false hides the saved strategies' rows (scheduled strategies hidden, none running). */
+    basketsVisible: Boolean = true,
+    /** The Hidden arms list's line ([HiddenArmsEntry] in the app); nothing by default. */
+    hiddenArms: @Composable () -> Unit = {},
 ) {
     val p = LocalPalette.current
     // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
-    val list = all.filter { !com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) }
-    val replaced = all.size - list.size
+    val list = all.filter { !com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) && (basketsVisible || it.running || pending.containsKey(it.def.id)) }
+    val replaced = all.count { com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) }
     var importing by remember { mutableStateOf(false) }
     // Arming asks how orders should go out; a live choice is then confirmed with the PIN or fingerprint.
     var choosing by remember { mutableStateOf<com.optionslab.engine.strategy.StrategyDef?>(null) }
@@ -144,7 +168,8 @@ internal fun StrategyArmContent(
 
     LedgerCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Strategies", style = Type.title.copy(color = p.ink, fontSize = 16.sp), modifier = Modifier.weight(1f))
+            // COMPACT (15 Oct): how the switches work is in the title's dialog.
+            ExplainedName("Strategies", listOfNotNull(paperSince, STRATEGIES_NOTE, AUTO_NOTE), Modifier.weight(1f), style = Type.title.copy(color = p.ink, fontSize = 16.sp))
             Text("Import from desktop", style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.clickable { importing = true }.padding(4.dp))
         }
@@ -162,10 +187,10 @@ internal fun StrategyArmContent(
         }
         // The account day lock (08 Oct): reached today, new automatic entries wait for tomorrow; open positions keep their exits.
         dayLock?.let { Note(it, Modifier.padding(top = 6.dp)) }
-        // The paper account's net since the start date (Settings → Bot settings): words only.
-        paperSince?.let { Note(it, Modifier.padding(top = 6.dp)) }
+        // (The paper account's net since the start date is in the title's dialog: 15 Oct, compact.)
         orbRows()
         nightRow()
+        hiddenArms()
         if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Research → Strategies, blocked.",
             Modifier.padding(bottom = 6.dp))
         list.forEachIndexed { i, e ->
@@ -229,8 +254,6 @@ internal fun StrategyArmContent(
                 }
             }
         }
-        if (list.isNotEmpty()) Note("AUTO places the entry by itself at the start time; APPROVE waits for your tap. Stops, targets and square-off always run by themselves.",
-            Modifier.padding(top = 4.dp))
         // The MCX paper bots (9 Oct, Boss: "it should be on home screen"): their own group, last, so no NSE row reads as MCX.
         mcxRows()
     }
@@ -243,9 +266,12 @@ internal fun StrategyArmContent(
     }
     reauthArm?.let { (id, automatic) -> reauth({ reauthArm = null; actions.arm(id, true, automatic) }, { reauthArm = null }) }
     reauthApprove?.let { id -> reauth({ reauthApprove = null; actions.approve(id) }, { reauthApprove = null }) }
+    var reauthKill by remember { mutableStateOf(false) }
+    if (reauthKill) reauthClearKill({ reauthKill = false; actions.clearKill() }, { reauthKill = false })
     if (importing) ImportDialog(actions) { importing = false }
     if (confirmBot) BotDialog(actions, killOn = killOn, stopped = botStopped, anyRunning = list.any { it.running },
-        lossStop = botStopped && stopWhy == com.optionslab.ira.DayStop.Why.LOSS) { confirmBot = false }
+        lossStop = botStopped && stopWhy == com.optionslab.ira.DayStop.Why.LOSS,
+        onClearKill = { if (actions.clearKillNeedsPin()) { reauthKill = true } else { actions.clearKill() } }) { confirmBot = false }
 }
 
 /** The desktop app's local API lists strategies and returns each one in full; this is the command that collects them. */
@@ -321,7 +347,8 @@ private fun ChoiceRow(title: String, detail: String, onClick: () -> Unit) {
 
 /** The confirmation behind Home's single bot button. */
 @Composable
-private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, lossStop: Boolean = false, onClose: () -> Unit) {
+private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, lossStop: Boolean = false,
+                      onClearKill: () -> Unit, onClose: () -> Unit) {
     val p = LocalPalette.current
     var alsoStop by remember { mutableStateOf(false) }
     AlertDialog(
@@ -350,7 +377,7 @@ private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boo
         confirmButton = {
             TextButton({
                 when {
-                    killOn -> actions.clearKill()
+                    killOn -> onClearKill()
                     stopped && lossStop -> Unit
                     stopped -> actions.startBot()
                     else -> actions.stopBot(alsoStop)

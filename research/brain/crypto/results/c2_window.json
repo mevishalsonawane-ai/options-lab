@@ -1,0 +1,519 @@
+{
+ "study": "C2",
+ "prereg": "research/brain/crypto/PREREG_C2_WINDOW.md",
+ "window": "00:00-09:00 IST",
+ "holdout_start": "2026-04-01 00:00:00",
+ "holdout_read": false,
+ "tests_in_family": 26,
+ "passed": [
+  "W1-BTCUSDT",
+  "W3-BTCUSDT",
+  "W1-ETHUSDT",
+  "W3-ETHUSDT",
+  "W4-ETHUSDT"
+ ],
+ "data": {
+  "BTCUSDT": {
+   "window_hours": 7928,
+   "windows": 880,
+   "first": "2023-11-02 00:29:00",
+   "last": "2026-03-31 22:29:00"
+  },
+  "ETHUSDT": {
+   "window_hours": 7928,
+   "windows": 880,
+   "first": "2023-11-02 00:29:00",
+   "last": "2026-03-31 22:29:00"
+  }
+ },
+ "describe": {
+  "BTCUSDT": {
+   "median_window_hour_range_pct": 0.554,
+   "median_window_range_pct": 1.83,
+   "window_range_p10_p90": [
+    0.9,
+    3.87
+   ],
+   "median_range_by_ist_hour_pct": {
+    "0": 0.631,
+    "1": 0.625,
+    "2": 0.56,
+    "3": 0.556,
+    "4": 0.513,
+    "5": 0.504,
+    "6": 0.588,
+    "7": 0.557,
+    "8": 0.498
+   },
+   "window_up_pct": 52.2,
+   "window_mean_ret_bps": 2.8,
+   "posthoc": {
+    "w4_as_tested": {
+     "trades": 464,
+     "gross_bps": 8.2,
+     "net_bps": -3.82
+    },
+    "w4_as_tested_2x_slip": {
+     "trades": 464,
+     "gross_bps": 8.2,
+     "net_bps": -5.82
+    },
+    "w4_entry_1min_later": {
+     "trades": 464,
+     "gross_bps": 7.67,
+     "net_bps": -4.35
+    },
+    "w4_entry_1min_later_2x_slip": {
+     "trades": 464,
+     "gross_bps": 7.67,
+     "net_bps": -6.35
+    },
+    "w4_by_year": {
+     "2024": {
+      "trades": 141,
+      "gross_bps": -2.54,
+      "net_bps": -14.65,
+      "auc": 0.5735,
+      "windows": 216
+     },
+     "2025": {
+      "trades": 257,
+      "gross_bps": 10.39,
+      "net_bps": -1.6,
+      "auc": 0.585,
+      "windows": 365
+     },
+     "2026": {
+      "trades": 66,
+      "gross_bps": 22.61,
+      "net_bps": 10.67,
+      "auc": 0.5747,
+      "windows": 89
+     }
+    },
+    "w4_single_input_auc": {
+     "ret_240m": 0.4454,
+     "ret_1440m": 0.4122,
+     "funding_z_30d": 0.4779,
+     "basis_z_7d": 0.514,
+     "oi_chg_24h_pct": 0.4537,
+     "vwap24_z": 0.4092
+    }
+   }
+  },
+  "ETHUSDT": {
+   "median_window_hour_range_pct": 0.777,
+   "median_window_range_pct": 2.64,
+   "window_range_p10_p90": [
+    1.34,
+    5.47
+   ],
+   "median_range_by_ist_hour_pct": {
+    "0": 0.842,
+    "1": 0.814,
+    "2": 0.79,
+    "3": 0.773,
+    "4": 0.731,
+    "5": 0.701,
+    "6": 0.861,
+    "7": 0.82,
+    "8": 0.722
+   },
+   "window_up_pct": 52.5,
+   "window_mean_ret_bps": 5.9,
+   "posthoc": {
+    "w4_as_tested": {
+     "trades": 351,
+     "gross_bps": 12.49,
+     "net_bps": 0.37
+    },
+    "w4_as_tested_2x_slip": {
+     "trades": 351,
+     "gross_bps": 12.49,
+     "net_bps": -1.63
+    },
+    "w4_entry_1min_later": {
+     "trades": 351,
+     "gross_bps": 12.2,
+     "net_bps": 0.08
+    },
+    "w4_entry_1min_later_2x_slip": {
+     "trades": 351,
+     "gross_bps": 12.2,
+     "net_bps": -1.92
+    },
+    "w4_by_year": {
+     "2024": {
+      "trades": 119,
+      "gross_bps": -14.83,
+      "net_bps": -27.3,
+      "auc": 0.4907,
+      "windows": 216
+     },
+     "2025": {
+      "trades": 179,
+      "gross_bps": 22.55,
+      "net_bps": 10.56,
+      "auc": 0.5848,
+      "windows": 365
+     },
+     "2026": {
+      "trades": 53,
+      "gross_bps": 39.87,
+      "net_bps": 28.08,
+      "auc": 0.6175,
+      "windows": 89
+     }
+    },
+    "w4_single_input_auc": {
+     "ret_240m": 0.4495,
+     "ret_1440m": 0.4182,
+     "funding_z_30d": 0.4906,
+     "basis_z_7d": 0.4918,
+     "oi_chg_24h_pct": 0.4869,
+     "vwap24_z": 0.4195
+    }
+   }
+  }
+ },
+ "tests": [
+  {
+   "id": "W1-BTCUSDT",
+   "n": 6308,
+   "weeks": 101,
+   "mae_model": 0.3496,
+   "mae_base": 0.4844,
+   "skill_pct": 27.8,
+   "p": 0.0,
+   "effect": 27.8,
+   "q": 0.0,
+   "pass": true
+  },
+  {
+   "id": "W2-BTCUSDT",
+   "n": 6306,
+   "auc": 0.5473,
+   "p": 0.0,
+   "base_up_pct": 50.5,
+   "bar": "auc>=0.52 and net>0",
+   "effect": 0.5473,
+   "costs": {
+    "trades": 2287,
+    "hit_pct": 55.6,
+    "gross_bps": 1.55,
+    "net_bps": -10.45
+   },
+   "costs_2x_slip": {
+    "trades": 2287,
+    "hit_pct": 55.6,
+    "gross_bps": 1.55,
+    "net_bps": -12.45
+   },
+   "q": 0.0,
+   "pass": false
+  },
+  {
+   "id": "W3-BTCUSDT",
+   "n": 670,
+   "weeks": 97,
+   "mae_model": 0.3774,
+   "mae_base": 0.4561,
+   "skill_pct": 17.2,
+   "p": 0.0,
+   "effect": 17.2,
+   "q": 0.0,
+   "pass": true
+  },
+  {
+   "id": "W4-BTCUSDT",
+   "n": 670,
+   "auc": 0.5801,
+   "p": 0.0,
+   "base_up_pct": 52.5,
+   "bar": "auc>=0.52 and net>0",
+   "effect": 0.5801,
+   "costs": {
+    "trades": 464,
+    "hit_pct": 58.8,
+    "gross_bps": 8.2,
+    "net_bps": -3.82
+   },
+   "costs_2x_slip": {
+    "trades": 464,
+    "hit_pct": 58.8,
+    "gross_bps": 8.2,
+    "net_bps": -5.82
+   },
+   "q": 0.0,
+   "pass": false
+  },
+  {
+   "id": "W5-00IST-BTCUSDT",
+   "n": 881,
+   "mean_bps": 0.78,
+   "abs_bps": 34.8,
+   "p": 0.64303,
+   "effect": 0.78,
+   "beats_costs": false,
+   "q": 0.9288,
+   "pass": false
+  },
+  {
+   "id": "W5-01IST-BTCUSDT",
+   "n": 881,
+   "mean_bps": -2.49,
+   "abs_bps": 36.5,
+   "p": 0.21054,
+   "effect": -2.49,
+   "beats_costs": false,
+   "q": 0.4976,
+   "pass": false
+  },
+  {
+   "id": "W5-02IST-BTCUSDT",
+   "n": 881,
+   "mean_bps": 1.82,
+   "abs_bps": 34.6,
+   "p": 0.33847,
+   "effect": 1.82,
+   "beats_costs": false,
+   "q": 0.6024,
+   "pass": false
+  },
+  {
+   "id": "W5-03IST-BTCUSDT",
+   "n": 881,
+   "mean_bps": 4.08,
+   "abs_bps": 33.0,
+   "p": 0.02312,
+   "effect": 4.08,
+   "beats_costs": false,
+   "q": 0.0601,
+   "pass": false
+  },
+  {
+   "id": "W5-04IST-BTCUSDT",
+   "n": 881,
+   "mean_bps": -0.17,
+   "abs_bps": 31.5,
+   "p": 0.91546,
+   "effect": -0.17,
+   "beats_costs": false,
+   "q": 0.9521,
+   "pass": false
+  },
+  {
+   "id": "W5-05IST-BTCUSDT",
+   "n": 880,
+   "mean_bps": -1.55,
+   "abs_bps": 30.3,
+   "p": 0.33785,
+   "effect": -1.55,
+   "beats_costs": false,
+   "q": 0.6024,
+   "pass": false
+  },
+  {
+   "id": "W5-06IST-BTCUSDT",
+   "n": 881,
+   "mean_bps": -0.3,
+   "abs_bps": 33.7,
+   "p": 0.86971,
+   "effect": -0.3,
+   "beats_costs": false,
+   "q": 0.9498,
+   "pass": false
+  },
+  {
+   "id": "W5-07IST-BTCUSDT",
+   "n": 881,
+   "mean_bps": 0.28,
+   "abs_bps": 34.6,
+   "p": 0.87676,
+   "effect": 0.28,
+   "beats_costs": false,
+   "q": 0.9498,
+   "pass": false
+  },
+  {
+   "id": "W5-08IST-BTCUSDT",
+   "n": 881,
+   "mean_bps": 0.42,
+   "abs_bps": 30.4,
+   "p": 0.79793,
+   "effect": 0.42,
+   "beats_costs": false,
+   "q": 0.9498,
+   "pass": false
+  },
+  {
+   "id": "W1-ETHUSDT",
+   "n": 6308,
+   "weeks": 101,
+   "mae_model": 0.3567,
+   "mae_base": 0.4654,
+   "skill_pct": 23.4,
+   "p": 0.0,
+   "effect": 23.4,
+   "q": 0.0,
+   "pass": true
+  },
+  {
+   "id": "W2-ETHUSDT",
+   "n": 6304,
+   "auc": 0.5497,
+   "p": 0.0,
+   "base_up_pct": 51.2,
+   "bar": "auc>=0.52 and net>0",
+   "effect": 0.5497,
+   "costs": {
+    "trades": 2236,
+    "hit_pct": 56.8,
+    "gross_bps": 1.28,
+    "net_bps": -10.73
+   },
+   "costs_2x_slip": {
+    "trades": 2236,
+    "hit_pct": 56.8,
+    "gross_bps": 1.28,
+    "net_bps": -12.73
+   },
+   "q": 0.0,
+   "pass": false
+  },
+  {
+   "id": "W3-ETHUSDT",
+   "n": 670,
+   "weeks": 97,
+   "mae_model": 0.3813,
+   "mae_base": 0.4496,
+   "skill_pct": 15.2,
+   "p": 0.0,
+   "effect": 15.2,
+   "q": 0.0,
+   "pass": true
+  },
+  {
+   "id": "W4-ETHUSDT",
+   "n": 670,
+   "auc": 0.5576,
+   "p": 0.006,
+   "base_up_pct": 51.9,
+   "bar": "auc>=0.52 and net>0",
+   "effect": 0.5576,
+   "costs": {
+    "trades": 351,
+    "hit_pct": 57.0,
+    "gross_bps": 12.49,
+    "net_bps": 0.37
+   },
+   "costs_2x_slip": {
+    "trades": 351,
+    "hit_pct": 57.0,
+    "gross_bps": 12.49,
+    "net_bps": -1.63
+   },
+   "q": 0.0173,
+   "pass": true
+  },
+  {
+   "id": "W5-00IST-ETHUSDT",
+   "n": 881,
+   "mean_bps": 1.43,
+   "abs_bps": 46.0,
+   "p": 0.53783,
+   "effect": 1.43,
+   "beats_costs": false,
+   "q": 0.8226,
+   "pass": false
+  },
+  {
+   "id": "W5-01IST-ETHUSDT",
+   "n": 881,
+   "mean_bps": -3.24,
+   "abs_bps": 50.6,
+   "p": 0.24591,
+   "effect": -3.24,
+   "beats_costs": false,
+   "q": 0.5328,
+   "pass": false
+  },
+  {
+   "id": "W5-02IST-ETHUSDT",
+   "n": 881,
+   "mean_bps": 2.51,
+   "abs_bps": 47.7,
+   "p": 0.34752,
+   "effect": 2.51,
+   "beats_costs": false,
+   "q": 0.6024,
+   "pass": false
+  },
+  {
+   "id": "W5-03IST-ETHUSDT",
+   "n": 881,
+   "mean_bps": 7.88,
+   "abs_bps": 47.9,
+   "p": 0.00238,
+   "effect": 7.88,
+   "beats_costs": false,
+   "q": 0.0077,
+   "pass": false
+  },
+  {
+   "id": "W5-04IST-ETHUSDT",
+   "n": 881,
+   "mean_bps": -1.5,
+   "abs_bps": 43.2,
+   "p": 0.48474,
+   "effect": -1.5,
+   "beats_costs": false,
+   "q": 0.7877,
+   "pass": false
+  },
+  {
+   "id": "W5-05IST-ETHUSDT",
+   "n": 880,
+   "mean_bps": 0.44,
+   "abs_bps": 40.8,
+   "p": 0.83665,
+   "effect": 0.44,
+   "beats_costs": false,
+   "q": 0.9498,
+   "pass": false
+  },
+  {
+   "id": "W5-06IST-ETHUSDT",
+   "n": 881,
+   "mean_bps": 0.05,
+   "abs_bps": 49.2,
+   "p": 0.98662,
+   "effect": 0.05,
+   "beats_costs": false,
+   "q": 0.9866,
+   "pass": false
+  },
+  {
+   "id": "W5-07IST-ETHUSDT",
+   "n": 881,
+   "mean_bps": -1.05,
+   "abs_bps": 49.4,
+   "p": 0.70701,
+   "effect": -1.05,
+   "beats_costs": false,
+   "q": 0.9498,
+   "pass": false
+  },
+  {
+   "id": "W5-08IST-ETHUSDT",
+   "n": 881,
+   "mean_bps": -0.57,
+   "abs_bps": 43.6,
+   "p": 0.80003,
+   "effect": -0.57,
+   "beats_costs": false,
+   "q": 0.9498,
+   "pass": false
+  }
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "name": "Sensex Kings",
+ "type": "public_channel",
+ "id": 1000000001,
+ "messages": [
+  {
+   "id": 101,
+   "type": "message",
+   "date": "2026-10-15T09:28:04",
+   "date_unixtime": "1792036684",
+   "from": "Sensex Kings",
+   "from_id": "channel1000000001",
+   "text": [
+    {"type": "hashtag", "text": "#sensex"},
+    " 73100 CE\nAbove 280\nTarget 310-345-400+++"
+   ],
+   "text_entities": []
+  },
+  {
+   "id": 102,
+   "type": "message",
+   "date": "2026-10-15T09:41:00",
+   "from": "Sensex Kings",
+   "text": "T1 done ✅"
+  },
+  {
+   "id": 103,
+   "type": "message",
+   "date": "2026-10-15T10:05:12",
+   "date_unixtime": "1792038912",
+   "edited": "2026-10-15T10:30:00",
+   "edited_unixtime": "1792040400",
+   "from": "Sensex Kings",
+   "text": "#sensex 73300 CE\nAbove 210\nTarget 240-270-300+++\nSL 185"
+  },
+  {
+   "id": 104,
+   "type": "service",
+   "date": "2026-10-15T10:06:00",
+   "action": "pin_message",
+   "text": ""
+  },
+  {
+   "id": 105,
+   "type": "message",
+   "date": "2026-10-15T10:07:00",
+   "photo": "photos/photo_1.jpg",
+   "text": ""
+  },
+  {
+   "id": 106,
+   "type": "message",
+   "date": "2026-10-15T11:00:00",
+   "text": "Join our VIP channel for 95% accuracy"
+  },
+  {
+   "id": 107,
+   "type": "message",
+   "date": "2026-10-15T11:30:00",
+   "text": "SL hit"
+  }
+ ]
+}

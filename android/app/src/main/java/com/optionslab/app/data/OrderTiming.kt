@@ -53,9 +53,43 @@ object OrderTiming {
         return read
     }
 
+    /**
+     * 18 Oct (speed review): the stream's socket thread is the tick path, and [lock] can be held through [bookLocked]'s vault
+     * read (the day's first figure, or the first after a restart) - a vault read, and a wait behind any vault write, on the
+     * thread every price arrives on. The socket thread's figures (the clock offset, the stream gap) are now only queued here,
+     * lock-free, and folded into the book by the next look at it under [lock] ([withBook]): any order step, the card, the
+     * health line. At most [PENDING_CAP] wait (the oldest go first); memory only, as before. The stream's drop is queued
+     * the same way ([streamDropped], [step] null). Each carries its day: one from an earlier day (queued before a night with
+     * no look) is dropped, never filed under today's book.
+     */
+    private class Pending(val step: OrderSpeed.Step?, val ms: Long, val day: String)
+    private val pending = java.util.concurrent.ConcurrentLinkedQueue<Pending>()
+    private val pendingCount = java.util.concurrent.atomic.AtomicInteger()
+    private const val PENDING_CAP = 64
+
+    /** From any thread, never locks or reads anything: [step]'s [ms] queued for the book. */
+    private fun queue(step: OrderSpeed.Step?, ms: Long) {
+        pending.offer(Pending(step, ms, today()))
+        if (pendingCount.incrementAndGet() > PENDING_CAP && pending.poll() != null) pendingCount.decrementAndGet()
+    }
+
+    /** Today's book with the queued figures folded in. Under [lock]. */
+    private fun withBook(): OrderSpeed.Book {
+        val b = bookLocked()
+        while (true) {
+            val p = pending.poll() ?: break
+            pendingCount.decrementAndGet()
+            if (p.day != b.day) continue
+            if (p.step == null) b.dropped() else b.add(p.step, false, p.ms)
+        }
+        val drops = synchronized(dropsLock) { (if (dropsDay == b.day) dropsPending else 0).also { dropsPending = 0 } }
+        repeat(drops) { b.dropped() }
+        return b
+    }
+
     private fun add(step: OrderSpeed.Step, live: Boolean, ms: Long, keep: Boolean) {
         val text = synchronized(lock) {
-            val b = bookLocked()
+            val b = withBook()
             if (!b.add(step, live, ms) || !keep) null else b.encode()
         } ?: return
         runCatching { SecurePrefs.putAllLazy(mapOf(KEY to text)) }
@@ -73,9 +107,24 @@ object OrderTiming {
         }
     }
 
+    /**
+     * [block] as ONE order's own decision (19 Oct): an arm that buys on several indices in one run (R51 Donchian 20 on five, one
+     * after another) timed every later order's "decision -> sent" from the run's FIRST decision, so the fourth index's order
+     * carried the three before it. Here the decision is now: a copy of the run's [Trigger] (the same signal time, price stamp and
+     * source) with its own decision time, so "signal -> decision" says how long this order waited and "decision -> sent" only
+     * its own checks. Counted as a decision. Outside a [Trigger]: just [block].
+     */
+    suspend fun <T> ownDecision(block: suspend () -> T): T {
+        val t = currentCoroutineContext()[Trigger] ?: return block()
+        val mine = Trigger(t.triggerMs, t.exchMs, t.source).also { it.startedAt = t.startedAt; it.candlesTold = t.candlesTold }
+        mine.decidedAt = System.currentTimeMillis()
+        runCatching { count(mine.source) }
+        return kotlinx.coroutines.withContext(mine) { block() }
+    }
+
     /** One decision taken on a price from [src] (memory; written with the next order step). */
     private fun count(src: OrderSpeed.Source) {
-        synchronized(lock) { bookLocked().decidedFrom(src) }
+        synchronized(lock) { withBook().decidedFrom(src) }
     }
 
     /**
@@ -95,11 +144,21 @@ object OrderTiming {
     /** A resting exchange stop was cancelled (and confirmed gone) in [ms] before an app exit. */
     fun stopCancel(ms: Long) = add(OrderSpeed.Step.STOP_CANCEL, true, ms, keep = true)
 
-    /** The price stream was down [ms] (from the drop to the first tick after it). In memory; written with the next step. */
-    fun streamGap(ms: Long) = add(OrderSpeed.Step.STREAM_GAP, false, ms, keep = false)
+    /**
+     * The price stream was down [ms] (from the drop to the first tick after it). In memory; written with the next step.
+     * Called on the stream's socket thread: only queued ([queue]).
+     */
+    fun streamGap(ms: Long) = queue(OrderSpeed.Step.STREAM_GAP, ms)
 
-    /** The price stream dropped. In memory; written with the next order step. */
-    fun streamDropped() { synchronized(lock) { bookLocked().dropped() } }
+    /** The price stream dropped. In memory; written with the next order step. On the socket thread: only queued ([queue]). */
+    fun streamDropped() {
+        // 18 Oct, review: counted apart from the queue, so a long run of clock samples can never push a drop out of it.
+        val d = today()
+        synchronized(dropsLock) { if (dropsDay != d) { dropsDay = d; dropsPending = 0 }; dropsPending++ }
+    }
+    private val dropsLock = Any()
+    private var dropsDay = ""
+    private var dropsPending = 0
 
     /**
      * An order's request starts now ([live] Zerodha, else paper): signal → decision, decision → sent and signal → sent from
@@ -127,7 +186,7 @@ object OrderTiming {
     /** The fill (or the order's end) became known [ms] after the answer; [viaStream]: Zerodha's stream told it first. */
     fun fillKnown(live: Boolean, ms: Long, viaStream: Boolean) {
         if (live) synchronized(lock) {
-            bookLocked()
+            withBook()
             fillsKnown += 1
             if (viaStream) fillsOnStream += 1
             Unit
@@ -146,16 +205,43 @@ object OrderTiming {
      * kept in memory only (it goes to the vault with the next order step or round trip). Never blocks the stream's thread.
      */
     fun clock(atMs: Long, exchSec: Long) {
-        if (exchSec <= 0 || atMs - clockAt < 5_000) return
+        // A clock stepped back since the last sample (a negative gap) samples again at once (18 Oct, review).
+        if (exchSec <= 0 || atMs - clockAt in 0 until 5_000) return
         clockAt = atMs
-        add(OrderSpeed.Step.CLOCK_OFFSET, false, atMs - (exchSec * 1000 + 500), keep = false)
+        // On the stream's socket thread: only queued ([queue]), never [lock] or the vault.
+        queue(OrderSpeed.Step.CLOCK_OFFSET, atMs - (exchSec * 1000 + 500))
+    }
+
+    @Volatile private var serverClockAt = 0L
+
+    /**
+     * Zerodha's reply to a read sent at [sentMs], answered at [gotMs], dated [dateSec] (its Date header): the phone clock's
+     * offset against Zerodha's server ([OrderSpeed.offsetFromDate]), sampled every 30 s at most, memory only (16 Oct).
+     */
+    fun serverClock(sentMs: Long, gotMs: Long, dateSec: Long) {
+        if (gotMs - serverClockAt < 30_000) return
+        val off = OrderSpeed.offsetFromDate(sentMs, gotMs, dateSec) ?: return
+        serverClockAt = gotMs
+        add(OrderSpeed.Step.CLOCK_SERVER, false, off, keep = false)
+    }
+
+    /**
+     * The phone clock's latest measured offset (ms, +: the phone ahead) and what it was measured against: Zerodha's server
+     * clock (NTP-style, [serverClock]) first, else the exchange's tick stamps (one way, so it includes the network's delay).
+     * Null: neither measured today. Reads no network (the Live check's clock step, on a background thread).
+     */
+    fun latestClockOffset(): Pair<Long, String>? = synchronized(lock) {
+        // 18 Oct, review: the tick-stamp offsets wait in the lock-free queue until a look folds them in.
+        val b = withBook()
+        b.all(OrderSpeed.Step.CLOCK_SERVER).lastOrNull()?.let { return@synchronized it to "Zerodha's server clock" }
+        b.all(OrderSpeed.Step.CLOCK_OFFSET).lastOrNull()?.let { it to "the exchange's tick stamps, network delay included" }
     }
 
     /** The card's lines, its warnings, and the relay's typical round trip (null: none timed today). */
     data class Card(val lines: List<String>, val warnings: List<String>, val relayMedianMs: Long?)
 
     fun card(): Card = synchronized(lock) {
-        val b = bookLocked()
+        val b = withBook()
         val relay = b.all(OrderSpeed.Step.RELAY_PING).takeIf { it.isNotEmpty() }?.let { OrderSpeed.median(it) }
         Card(OrderSpeed.lines(b, fillsOnStream, fillsKnown), OrderSpeed.warnings(b), relay)
     }
@@ -165,7 +251,7 @@ object OrderTiming {
      * timed. Read by the health worker, never on the order path.
      */
     fun signalToSent(): Pair<Long, Int>? = synchronized(lock) {
-        bookLocked().all(OrderSpeed.Step.SIGNAL_SENT).takeIf { it.isNotEmpty() }?.let { OrderSpeed.median(it) to it.size }
+        withBook().all(OrderSpeed.Step.SIGNAL_SENT).takeIf { it.isNotEmpty() }?.let { OrderSpeed.median(it) to it.size }
     }
 
     /**
@@ -173,12 +259,15 @@ object OrderTiming {
      * mixed them with live); null: none timed. Read by the health check, never on the order path.
      */
     fun paperDecisionToSent(): Pair<Long, Int>? = synchronized(lock) {
-        bookLocked().of(OrderSpeed.Step.DECISION_SENT, false).takeIf { it.isNotEmpty() }?.let { OrderSpeed.median(it) to it.size }
+        withBook().of(OrderSpeed.Step.DECISION_SENT, false).takeIf { it.isNotEmpty() }?.let { OrderSpeed.median(it) to it.size }
     }
 
     /** The diagnostics export's line. */
-    fun diagLine(): String = synchronized(lock) { OrderSpeed.diagLine(bookLocked()) }
+    fun diagLine(): String = synchronized(lock) { OrderSpeed.diagLine(withBook()) }
 
-    /** TEST ONLY (and a wipe): forget the in-memory book. */
-    internal fun forget() = synchronized(lock) { book = null; fillsOnStream = 0; fillsKnown = 0 }
+    /** TEST ONLY (and a wipe): forget the in-memory book, the queued figures, and when the clock was last sampled (18 Oct: the next reading counts). */
+    internal fun forget() = synchronized(lock) {
+        book = null; fillsOnStream = 0; fillsKnown = 0; clockAt = 0L; serverClockAt = 0L
+        pending.clear(); pendingCount.set(0); synchronized(dropsLock) { dropsPending = 0; dropsDay = "" }
+    }
 }

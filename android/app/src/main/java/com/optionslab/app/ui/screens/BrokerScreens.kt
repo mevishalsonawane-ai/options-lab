@@ -90,6 +90,7 @@ import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
 import com.optionslab.engine.Kite
 import com.optionslab.engine.Right
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
@@ -231,6 +232,14 @@ fun LoginPinDialog(model: AppModel) {
 // ---- confirming it is you ----------------------------------------------------------------
 
 /**
+ * "Live orders without PIN", as Settings → Zerodha says it (18 Oct review: plainly, since with the direct send one tap is the
+ * whole order, a basket too). It was reset to off once with that update; turning it on asks the PIN.
+ */
+internal const val ONE_TAP_SUB = "In Live, one tap sends a real order with no PIN and no review: Buy, Sell, Close or a whole basket go to " +
+    "Zerodha at once (also Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. " +
+    "Turning it on asks for your PIN."
+
+/**
  * A fresh proof of identity before a real order: the fingerprint when it is
  * enabled and strong, the PIN otherwise. Being unlocked is not enough - the
  * phone may have been handed over unlocked.
@@ -294,6 +303,165 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boo
             dismissButton = { TextButton(onCancel) { Text("Cancel") } },
         )
     }
+}
+
+/**
+ * Beside the Live switch (18 Oct, Boss: "Live like paper, arms too"): what goes live with it. "AI trades go live" (on with the
+ * switch to Live; turned off here on its own, no PIN), and each arm's own live choice - unchanged by the switch: only an arm
+ * cleared for live with its own PIN trades live by itself; paper-only arms and paper changes stay on paper. Reads only.
+ */
+@Composable
+internal fun LiveScopeNote(model: AppModel, live: Boolean) {
+    val p = LocalPalette.current
+    var aiLive by remember(live) { mutableStateOf(false) }
+    var liveArms by remember { mutableStateOf<List<String>>(emptyList()) }
+    var paperArms by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(live) {
+        // Read on the AI-live writes' own lane, so after a switch's write still queued there (18 Oct review: never the old value).
+        val ai = AI_LIVE_WRITES.async { runCatching { !com.optionslab.app.ira.IraNewsTrades.paperFirst }.getOrDefault(false) }.await()
+        val (on, off) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val orb = runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }
+            val strat = runCatching { com.optionslab.app.data.Strategies.all() }.getOrDefault(emptyList()).map { it.def }
+            (orb.filter { it.liveOk && !it.arm.paperOnly }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }) to
+                orb.filter { !it.liveOk || it.arm.paperOnly }.map { it.arm.label }
+        }
+        // Set on the main thread (never from a worker's continuation: the compose tests' unconfined dispatcher would run the frame there).
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { aiLive = ai; liveArms = on; paperArms = off }
+    }
+    Column(Modifier.padding(top = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("AI trades go live", style = Type.label.copy(color = if (aiLive) p.oxblood else p.ink, fontSize = 14.sp))
+                Text(if (aiLive) "On (with Live): Jarvis's ideas you approve may go to Zerodha. His own trades stay on paper."
+                    else "Off: Jarvis's ideas go on paper. It turns on when you switch to Live with your PIN.",
+                    style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+            }
+            // Off on its own at any time, no PIN (it lowers risk); on only with the switch to Live (its PIN) or Jarvis settings.
+            androidx.compose.material3.Switch(checked = aiLive, enabled = aiLive, onCheckedChange = { v ->
+                if (!v) {
+                    aiLive = false
+                    com.optionslab.app.ira.IraNewsTrades.paperNow()
+                    AI_LIVE_WRITES.launch {
+                        runCatching { com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
+                        runCatching { com.optionslab.app.data.Diag.record("mode", "AI trades go live off (by itself, beside the Live switch)") }
+                    }
+                }
+            }, modifier = Modifier.semantics { contentDescription = "AI trades go live" })
+        }
+        Note("Each arm keeps its own live choice: " +
+            (if (liveArms.isEmpty()) "no arm is cleared to trade live by itself" else "trade live when armed: ${liveArms.joinToString(", ")}") + ". " +
+            (if (paperArms.isNotEmpty()) "On paper: ${paperArms.joinToString(", ")}. " else "") +
+            "An ORB-family arm trades live only when you arm it in Live with its own PIN; one armed in Paper asks you first. " +
+            "The paper strategies below trade live by their own switch.")
+        ArmsLiveList(model)
+    }
+}
+
+/**
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"; "i will switch it off, if i need
+ * it"): each paper strategy's own "Trade live" switch ([com.optionslab.app.data.ArmLive]), on by default (a rule triggered by the
+ * option's own price starts off). Off with one tap, no PIN (it lowers risk); on asks the PIN. It acts only with the app in Live and
+ * "AI trades go live" on, and never in the paper-only period. Each arm's live record is shown apart from its paper record; Jarvis's
+ * own ideas are not listed (they stay on paper). Every change is logged in the diagnostics and Autopilot's change log.
+ *
+ * 18 Oct (Boss: "add a shadow button, so that even i move to live, until is on, it will not trade, but when i see thats making money,
+ * i will make it off"): beside it each arm's Shadow switch, ON by default: in shadow nothing is sent, each would-be live trade is
+ * recorded with its shadow record (trades, net after charges, win rate) shown here. On with one tap; off asks the PIN (Solo (midday),
+ * Jarvis's Solo, stays in shadow until it is proven - the reason is shown). Paper trades the live path did not copy are counted with
+ * the last reason. Shows "loading" until the book is read; Solo (midday) only in Jarvis builds; none of it in a GOLD build.
+ */
+@Composable
+internal fun ArmsLiveList(model: AppModel) {
+    if (com.optionslab.app.BuildConfig.GOLD) return
+    val p = LocalPalette.current
+    val v by com.optionslab.app.data.ArmLive.view.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var askOn by remember { mutableStateOf<String?>(null) }
+    var askShadowOff by remember { mutableStateOf<String?>(null) }
+    var said by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.ArmLive.refresh() } } }
+    askOn?.let { key ->
+        val label = com.optionslab.engine.orb.LiveMirror.spec(key)?.label ?: key
+        Reauth(model, onOk = {
+            askOn = null
+            scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setLive(key, true, pinConfirmed = true) } }
+        }, onCancel = { askOn = null }, pinOnly = true, why = "Enter your app PIN to let $label trade live (only in Live with AI trades on; never in the paper-only period).")
+    }
+    askShadowOff?.let { key ->
+        val label = com.optionslab.engine.orb.LiveMirror.spec(key)?.label ?: key
+        Reauth(model, onOk = {
+            askShadowOff = null
+            scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setShadow(key, false, pinConfirmed = true) } }
+        }, onCancel = { askShadowOff = null }, pinOnly = true,
+            why = "Enter your app PIN to take $label out of shadow: it may then send real orders (in Live with AI trades and its Trade live on).")
+    }
+    val today = com.optionslab.app.data.Market.today()
+    Column(Modifier.padding(top = 8.dp)) {
+        Text("Paper strategies, live", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
+        Note("Each follows its own paper trade at Zerodha: the same option and lots, the same exits; its stop rests at Zerodha and moves " +
+            "with its lock. Live only in Live with AI trades on; the paper-only period blocks every live entry. Shadow (on until you " +
+            "turn it off with your PIN) sends nothing and records what it would have traded.")
+        // Final review F4: what the shadow records include, so they are not read as better than live would get.
+        Note("Shadow records: " + com.optionslab.engine.orb.LiveMirror.SHADOW_BASIS + ".")
+        if (!v.loaded) { Note("Loading the arms' live choices…"); return@Column }
+        // Final review F1: every watching lane reads it again (at most every 5 s), and its open live trades are watched from then.
+        if (v.unreadable) Note("The arms' live book could not be read: no live entry goes until it is. The app reads it again every few " +
+            "seconds and watches its open live trades as soon as it reads; meanwhile their stops rest at Zerodha. Check open positions in Trade.")
+        for (spec in com.optionslab.engine.orb.LiveMirror.ARMS) {
+            if (spec.key == com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY && !com.optionslab.app.BuildConfig.JARVIS) continue
+            val on = v.on(spec.key)
+            val shadow = v.shadowOn(spec.key)
+            val (n, net) = v.record(spec.key)
+            val sr = v.shadowRecord(spec.key)
+            val open = v.openReal.count { it.key == spec.key }
+            val openShadow = v.openShadow.count { it.key == spec.key }
+            val (skipped, skipWhy) = v.notMirroredToday(spec.key, today)
+            Column(Modifier.padding(top = 6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(spec.label, style = Type.label.copy(color = if (on && !shadow) p.oxblood else p.ink, fontSize = 13.sp))
+                        Text(com.optionslab.app.data.ArmLive.stateWords(on, shadow) +
+                            (if (open > 0) " · $open open live" else "") + (if (n > 0) " · live record $n, ${com.optionslab.engine.orb.LiveMirror.rs(net)}" else ""),
+                            style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                    }
+                    androidx.compose.material3.Switch(checked = on, onCheckedChange = { want ->
+                        if (want) askOn = spec.key
+                        else scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setLive(spec.key, false, pinConfirmed = false) } }
+                    }, modifier = Modifier.semantics { contentDescription = "Trade live: ${spec.label}" })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Shadow: " + (if (shadow) "on" else "off") + " · " + com.optionslab.engine.orb.LiveMirror.recordWords(sr) +
+                            (if (openShadow > 0) " · $openShadow open in shadow" else ""),
+                            style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                        if (skipped > 0) Text("Not mirrored today: $skipped" + (skipWhy?.let { " (last: $it)" } ?: ""),
+                            style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                    }
+                    androidx.compose.material3.Switch(checked = shadow, onCheckedChange = { want ->
+                        if (want) scope.launch { said = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.setShadow(spec.key, true, pinConfirmed = false) } }
+                        // Jarvis's Solo leaves shadow only once proven: the reason is said, and no PIN is asked for nothing.
+                        else scope.launch {
+                            val why = if (spec.key != com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY) null
+                                else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.ArmLive.soloWhy() }
+                            if (why != null) said = "${spec.label} stays in shadow: $why" else askShadowOff = spec.key
+                        }
+                    }, modifier = Modifier.semantics { contentDescription = "Shadow: ${spec.label}" })
+                }
+            }
+        }
+        said?.let { Note(it) }
+    }
+}
+
+/**
+ * 18 Oct (Boss: "Live like paper, arms too"): the Live switch's PIN step, the one door to [AppModel.goLive] from the screen
+ * (the Masthead badge and Settings → Zerodha → Mode). The PIN or fingerprint, never skipped by "Live orders without PIN":
+ * right, Live and "AI trades go live" switch on in one step; wrong or cancelled, nothing changes. [why]: the words before it
+ * (the paper-only period's reason and end date while it runs).
+ */
+@Composable
+fun GoLivePin(model: AppModel, why: String, onDone: () -> Unit) {
+    Reauth(model, pinOnly = false, why = why, onOk = { onDone(); model.goLive() }, onCancel = onDone)
 }
 
 /**
@@ -368,6 +536,8 @@ fun OrderReviewDialog(model: AppModel) {
 
 @Composable
 private fun OrderReviewBody(model: AppModel) {
+    val direct by model.direct.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    if (direct) { DirectOrderBody(model); return }
     val p = LocalPalette.current
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val plan by model.plan.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -385,11 +555,70 @@ private fun OrderReviewBody(model: AppModel) {
             // His own record's losing rule, softly (S10; words only).
             if (pl.value.source.startsWith(com.optionslab.app.data.Origins.MANUAL)) BossRuleNote(!pl.value.exit)
             AgainstArmsNote(pl.value)
-            PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
+            // 18 Oct: in Paper mode an exit of a real Zerodha position may be sent too (with the PIN); an entry never.
+            PlanCard(pl.value, (s.allowRealOrders && s.live) || pl.value.exit, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
         }
     }
-    if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan() }, onCancel = { confirming = false }, orderAction = true)
+    // "Live orders without PIN" (the owner's setting) applies in Live only: a Paper-mode exit always asks the PIN.
+    if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan(reauthed = true) }, onCancel = { confirming = false }, orderAction = s.live && s.allowRealOrders)
+    stuckAction?.let { a ->
+        Reauth(model, onOk = {
+            stuckAction = null
+            when (a) { "cancel" -> model.cancelStuck(); "reprice" -> model.repriceStuck(); else -> model.continueAfterStuck() }
+        }, onCancel = { stuckAction = null })
+    }
+}
+
+/**
+ * Boss's own order sent straight after the PIN (18 Oct, Boss: "same as paper, directly placing order with pin"): no review card.
+ * The PIN (or fingerprint) is asked at once, while the order is priced; once right, the order goes ([AppModel.confirmDirect]) with
+ * every check the review ran. A wrong PIN or Cancel sends nothing and closes it. Shown after: the send's progress, a refusal or
+ * a leg still working (its own choices); a complete fill closes it (the fill is said, as for paper).
+ */
+@Composable
+private fun DirectOrderBody(model: AppModel) {
+    val p = LocalPalette.current
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val plan by model.plan.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val sending by model.sending.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val st by model.stuck.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // Asked once per order: afresh for each new one, even while the dialog stays open (18 Oct review).
+    val order by model.directOrder.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    var asking by remember(order) { mutableStateOf(true) }
+    var stuckAction by remember { mutableStateOf<String?>(null) }
+    val live = s.live && s.allowRealOrders
+    val title = (plan as? Load.Done<OrderPlan>)?.value?.title
+    // Jarvis's word before an opening order, and Boss's order against an automatic position: words only, as on the review.
+    (plan as? Load.Done<OrderPlan>)?.value?.let { PreTradeNote(it); AgainstArmsNote(it) }
+    LedgerCard(title = if (live) "Real order · Zerodha" else "Closing at Zerodha (real money)", accent = p.oxblood) {
+        title?.let { Text(it, style = Type.title.copy(color = p.ink, fontSize = 14.sp)) }
+        val pv = plan
+        val sv = sending
+        when {
+            pv is Load.Failed -> com.optionslab.app.ui.components.AlertOn(pv.why)
+            sv is Load.Busy -> FullSpinner(sv.label)
+            sv is Load.Failed -> com.optionslab.app.ui.components.AlertOn(sv.why)
+            sv is Load.Done -> sv.value.forEach { f ->
+                LedgerLine(f.orderId.takeLast(8), "${f.status} ${f.filled} @ ${"%.2f".format(f.avgPrice)}", if (f.status == "COMPLETE") p.verdigris else p.oxblood) }
+            pv is Load.Busy -> FullSpinner(pv.label)
+            else -> Note("Waiting for your PIN or fingerprint.")
+        }
+        val pl = (plan as? Load.Done<OrderPlan>)?.value
+        st?.takeIf { it.plan == pl }?.let { stk -> StuckCard(stk) { stuckAction = it } }
+        if (sending !is Load.Busy) BrassButton("Close", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkFaint) { model.dismissPlan() }
+    }
+    // Every leg filled: nothing left to decide here (the fill was said). Not priced: the reason shows in the red banner; it closes.
+    LaunchedEffect(sending, st) { if (sending is Load.Done && st == null) model.dismissPlan() }
+    LaunchedEffect(plan) { if (plan is Load.Failed) model.dismissPlan() }
+    // "Live orders without PIN" (the owner's setting) applies in Live only: a Paper-mode exit always asks the PIN.
+    // 18 Oct review: the PIN is bound to the order it was asked for ([order], its generation): a PIN typed for one order never
+    // sends a later one (the prompt starts afresh for each), and a second confirm of it (fingerprint and PIN) sends nothing.
+    if (asking) androidx.compose.runtime.key(order) {
+        Reauth(model, onOk = { asking = false; model.confirmDirect(order) }, onCancel = { asking = false; model.dismissPlan() },
+            orderAction = live,
+            why = if (live) "Enter your app PIN to send this order to Zerodha." else "Enter your app PIN to close this real position at Zerodha.")
+    }
     stuckAction?.let { a ->
         Reauth(model, onOk = {
             stuckAction = null
@@ -716,11 +945,13 @@ fun BrokerPage(
     // switches do); switching it off is free.
     var noPinAuth by remember { mutableStateOf(false) }
     if (noPinAuth) Reauth(model, onOk = { noPinAuth = false; model.update { it.copy(oneTapOrders = true) } }, onCancel = { noPinAuth = false },
-        pinOnly = true, why = "Enter your app PIN to send live orders without a PIN.")
+        pinOnly = true, why = "Enter your app PIN to turn this on: in Live, one tap then sends a real order with no PIN and no review.")
     // 12 Oct: going Live inside Boss's paper-only period asks his PIN, its reason and end date said first.
-    var paperOnlyPin by remember { mutableStateOf<com.optionslab.ira.PaperOnlyPeriod.Period?>(null) }
-    paperOnlyPin?.let { po -> Reauth(model, onOk = { paperOnlyPin = null; model.update { it.copy(mode = "live", allowRealOrders = true) } },
-        onCancel = { paperOnlyPin = null }, pinOnly = false, why = com.optionslab.ira.PaperOnlyPeriod.liveAsk(po)) }
+    // 18 Oct, review: the reason asked (the period's, or "not read yet": it fails closed); null when not asked.
+    var paperOnlyPin by remember { mutableStateOf<String?>(null) }
+    val modeScope = androidx.compose.runtime.rememberCoroutineScope()
+    // 18 Oct: going Live always asks the PIN (one switch: Live and "AI trades go live" together).
+    paperOnlyPin?.let { why -> GoLivePin(model, why) { paperOnlyPin = null } }
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() } } }
     Page {
@@ -752,9 +983,14 @@ fun BrokerPage(
                 LedgerCard(title = "Mode") {
                     ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
                         if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
-                        else if (i == 0 && !s.live && com.optionslab.app.data.PaperOnly.activeNow() != null) paperOnlyPin = com.optionslab.app.data.PaperOnly.activeNow()
-                        else model.update { it.copy(mode = if (i == 0) "live" else "sandbox", allowRealOrders = i == 0) }
+                        // Going Live: always the PIN; the paper-only period checked first, read off this thread if it is not yet.
+                        else if (i == 0 && !s.live) modeScope.launch {
+                            val ask = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.PaperOnly.liveAskRead() }
+                            paperOnlyPin = ask ?: com.optionslab.app.ui.LIVE_PIN_ASK
+                        }
+                        else if (i == 1 && s.live) model.goPaper()
                     }
+                    LiveScopeNote(model, s.live)
                     Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the market watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
                     else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Backtests, Health, the IC table, Signal Lab) is the same in both modes.")
                 }
@@ -764,18 +1000,19 @@ fun BrokerPage(
             com.optionslab.app.ui.SettingSpot("broker.orders") {
                 LedgerCard(title = "Real orders") {
                     Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top." +
-                        if (s.oneTapOrders) " No PIN is on: an order goes to Zerodha when you confirm it in the review; cancels and square-offs need no PIN either." else " Every order needs your review and your PIN or fingerprint.")
+                        if (s.oneTapOrders) " No PIN is on: in Live one tap sends a real order with no PIN and no review; cancels and square-offs need no PIN either (closing in Paper mode still asks it)."
+                        else " As on paper: tap Buy or Sell (or Close), enter your PIN or fingerprint, and it goes at once, with no review step. Every check still runs first.")
                     ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
                         model.update { it.copy(prepareRealOrder = on) }
                     }
-                    ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders) { on ->
+                    ToggleRow("Live orders without PIN", ONE_TAP_SUB, s.oneTapOrders, keepSub = true) { on ->
                         if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
                     }
                     ToggleRow("Keep a stop-loss order at the exchange for live positions",
                         "The bots already rest each live position's stop at Zerodha after the buy. With this on, a stop that could not be " +
                             "placed, or that Zerodha refused or cancelled, is placed again at the bot's own level on the next check, so " +
                             "Zerodha sells at the stop even if the phone is slow or off. The app takes it out before any exit of its own. " +
-                            "Live only; paper keeps its own stops.", s.exchangeStops) { on ->
+                            "Live only; paper keeps its own stops.", s.exchangeStops, keepSub = true) { on ->
                         model.update { it.copy(exchangeStops = on) }
                     }
                     ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
@@ -809,40 +1046,71 @@ fun BrokerPage(
     )
 }
 
-/** Checks the real Zerodha connection with read-only calls: nothing it does can place an order. (`internal` for the JVM tests only.) */
+/**
+ * The Live check (18 Oct; it was the read-only self-test): every live piece and how fast it is - the account reads, the price
+ * stream, the option chain, the order the app would send (built and checked, never sent), the margins, a GTT payload, the
+ * positions and their stops, a paper round trip on live prices, the data feeds and the clock. Nothing it does can place,
+ * change or cancel an order. Grouped, each step with its time and a pass / slow / fail mark, and a one-line summary.
+ * (`internal` for the JVM tests only.)
+ */
 @Composable
 internal fun SelfTestCard() {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
-    var steps by remember { mutableStateOf<List<com.optionslab.app.data.LiveSelfTest.Step>>(emptyList()) }
+    // The last run of this session shows when the card opens (memory; the diary keeps older ones).
+    var steps by remember { mutableStateOf(com.optionslab.app.data.LiveSelfTest.last) }
     var running by remember { mutableStateOf(false) }
-    LedgerCard(title = "Live self-test") {
-        Note("Reads your session, funds, positions, orders, holdings, GTTs, a NIFTY quote and the contract list, and checks orders would leave from your static IP. It only reads: it cannot place, change or cancel anything.")
-        steps.forEach { st ->
-            LedgerLine((if (st.ok) "✓ " else "✗ ") + st.name, st.detail + " · ${st.ms} ms", if (st.ok) p.verdigris else p.oxblood)
+    var auto by remember { mutableStateOf(false) }
+    // The 09:20 switch is read from the settings vault off the screen's thread.
+    LaunchedEffect(Unit) { auto = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.LiveSelfTest.autoOn() } }
+    LedgerCard(title = "Live check") {
+        Note("Checks every live piece and how fast it is: your Zerodha account, the price stream, the option chain, the order the app would send " +
+            "(built and checked, never sent), Zerodha's margin checks, a GTT stop and target (built, never placed), your positions and their stops, " +
+            "a paper trade on live prices (on its own book: never in any result), the data feeds and the phone's clock. " +
+            "It cannot place, change or cancel anything. Run it in market hours (09:15-15:30); outside them the stream and paper steps say \"market closed\".")
+        for ((group, list) in com.optionslab.ira.LiveCheck.grouped(steps)) {
+            Text(com.optionslab.ira.LiveCheck.groupLine(group, list), style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                modifier = Modifier.padding(top = 8.dp))
+            list.forEach { st ->
+                val tone = when (st.verdict) {
+                    com.optionslab.ira.LiveCheck.Verdict.PASS -> p.verdigris
+                    com.optionslab.ira.LiveCheck.Verdict.WARN -> p.amber
+                    com.optionslab.ira.LiveCheck.Verdict.FAIL -> p.oxblood
+                    else -> p.inkSoft
+                }
+                LedgerLine("${st.mark} ${st.name}", st.detail + " · ${st.ms} ms", tone)
+            }
         }
-        if (steps.isNotEmpty() && !running) {
-            val bad = steps.count { !it.ok }
-            Note(if (bad == 0) "All ${steps.size} checks passed." else "$bad of ${steps.size} checks failed.")
-        }
-        // Diagnostics: the app's own diary (banners, self-test, bot notes), redacted, copied for the owner to paste to whoever helps.
+        if (steps.isNotEmpty() && !running) Note(com.optionslab.ira.LiveCheck.summary(steps) + ".", Modifier.padding(top = 6.dp))
+        // Diagnostics: the app's own diary (banners, the live check, bot notes), redacted, copied for the owner to paste to whoever helps.
         val ctx = androidx.compose.ui.platform.LocalContext.current
         androidx.compose.material3.TextButton({
             scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                 val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
-                val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
-                cm?.setPrimaryClip(android.content.ClipData.newPlainText("IraAlgo diagnostics", text))
+                com.optionslab.app.ui.SensitiveClip.copy(ctx, "IraAlgo diagnostics", text)
                 com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
             }
         }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }
         Note("This app: build ${com.optionslab.app.BuildConfig.COMMIT}")
-        BrassButton(if (running) "Checking…" else "Run the self-test", Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        ToggleRow("Run it by itself at 09:20", "Once on each trading day, in the background: the same check without the stream drop. " +
+            "It only reads, plus its own paper trade. Off unless you turn it on.", auto, keepSub = true) { on ->
+            auto = on
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.LiveSelfTest.setAuto(on) }
+        }
+        BrassButton(if (running) "Checking…" else "Run the live check", Modifier.fillMaxWidth().padding(top = 8.dp)) {
             if (running) return@BrassButton
             running = true; steps = emptyList()
-            // On the main dispatcher itself: each step hops to IO and back, and its result lands on the screen's thread.
             scope.launch(kotlinx.coroutines.Dispatchers.Main) {
-                try { com.optionslab.app.data.LiveSelfTest.run { st -> steps = steps + st } }
-                finally { running = false }
+                try {
+                    // The check runs on a background thread and calls back from there: each step is put on the screen's thread.
+                    val out = com.optionslab.app.data.LiveSelfTest.run({ st -> scope.launch(kotlinx.coroutines.Dispatchers.Main) { steps = steps + st } })
+                    // A check already running (09:20's, or Jarvis's) gave nothing: the card waits for it ("Checking…") and then
+                    // shows its steps, never an older run's as if they were this one's.
+                    if (out.isEmpty()) {
+                        while (com.optionslab.app.data.LiveSelfTest.busy) kotlinx.coroutines.delay(250)
+                        steps = com.optionslab.app.data.LiveSelfTest.last
+                    } else steps = out
+                } finally { running = false }
             }
         }
     }
@@ -1169,9 +1437,13 @@ internal fun ManualOrder(model: AppModel) {
         OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Limit price (blank = best bid/offer)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
         Spacer(Modifier.height(8.dp))
-        BrassButton("Review the order", Modifier.fillMaxWidth(), enabled = !loading && !listing && expiry != null && strike.toDoubleOrNull()?.let { it in strikes } == true) {
-            model.planManual(underlying, expiry!!, strike.toDouble(), right, side, lots, s.orderProduct, price.toDoubleOrNull())
+        // 18 Oct: in Live, as on paper - one tap, then the PIN (or fingerprint), and the order goes; no review card. In Paper it
+        // opens the review, which says Paper mode sends nothing.
+        BrassButton(if (s.live) "${if (side == Kite.Side.BUY) "Buy" else "Sell"} (live)" else "Review the order", Modifier.fillMaxWidth(),
+            enabled = !loading && !listing && expiry != null && strike.toDoubleOrNull()?.let { it in strikes } == true) {
+            model.planManual(underlying, expiry!!, strike.toDouble(), right, side, lots, s.orderProduct, price.toDoubleOrNull(), direct = s.live)
         }
-        Note("Nothing is sent from here: the order opens for review over this page.")
+        Note(if (s.live) "Live: your PIN or fingerprint, then the order goes to Zerodha at once. The guard, margin and every limit are still checked first."
+            else "Paper mode: nothing is sent to Zerodha from here.")
     }
 }

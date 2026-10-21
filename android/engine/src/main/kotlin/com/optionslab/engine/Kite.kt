@@ -83,11 +83,12 @@ object Kite {
     )
 
     /**
-     * Rows of GET /instruments/NFO for the requested underlyings' options.
+     * Rows of GET /instruments/NFO for the requested underlyings' options ([segment] "BFO-OPT" for GET /instruments/BFO's:
+     * SENSEX's options, 15 Oct - the Hero ₹1,000 ticket's paper SENSEX side, priced on the stream).
      * Columns: instrument_token,exchange_token,tradingsymbol,name,last_price,
      * expiry,strike,tick_size,lot_size,instrument_type,segment,exchange
      */
-    fun parseInstruments(lines: Sequence<String>, underlyings: Set<String>): List<Instrument> {
+    fun parseInstruments(lines: Sequence<String>, underlyings: Set<String>, segment: String = "NFO-OPT"): List<Instrument> {
         val out = ArrayList<Instrument>()
         var head: Map<String, Int>? = null
         for (line in lines) {
@@ -97,7 +98,7 @@ object Kite {
             fun col(n: String) = c.getOrNull(head.getValue(n))?.trim() ?: ""
             val type = col("instrument_type")
             val name = col("name")
-            if ((type != "CE" && type != "PE") || name !in underlyings || col("segment") != "NFO-OPT") continue
+            if ((type != "CE" && type != "PE") || name !in underlyings || col("segment") != segment) continue
             out += Instrument(col("instrument_token").toLong(), col("tradingsymbol"), name, LocalDate.parse(col("expiry")),
                 col("strike").toDouble(), col("lot_size").toDouble().toInt(), if (type == "CE") Right.CE else Right.PE,
                 col("tick_size").toDoubleOrNull() ?: 0.05)
@@ -346,6 +347,28 @@ object Kite {
         val px = (if (side == Side.SELL) bid else ask)?.takeIf { it > 0 } ?: last
         return Order(spec.tradingSymbol, side, kotlin.math.abs(netQuantity), spec.lotSize, product, "LIMIT",
             onTick(px, spec.tickSize, side), spec.tickSize, spec.exchange)
+    }
+
+    /**
+     * 18 Oct (review): the oldest a price may be when Boss's PIN confirms an order sent straight after it. An entry priced
+     * earlier is not sent (he taps again for a fresh price); an exit is priced again ([repriced]), never refused for its age.
+     */
+    const val PRICE_MAX_AGE_MS = 30_000L
+
+    /** True when a price read at [pricedAtMs] is too old at [nowMs] to send on ([PRICE_MAX_AGE_MS]); a clock that went back counts as old. */
+    fun priceTooOld(pricedAtMs: Long, nowMs: Long, maxAgeMs: Long = PRICE_MAX_AGE_MS): Boolean {
+        val age = nowMs - pricedAtMs
+        return age > maxAgeMs || age < -5_000L
+    }
+
+    /**
+     * An exit's LIMIT [o] priced again from a fresh quote, as [squareOff] prices it: the bid when selling, the offer when buying,
+     * the last price when that side is empty. Any other order type, or no usable fresh price, comes back as it was.
+     */
+    fun repriced(o: Order, bid: Double?, ask: Double?, last: Double?): Order {
+        if (o.orderType != "LIMIT") return o
+        val px = (if (o.side == Side.SELL) bid else ask)?.takeIf { it > 0 && it.isFinite() } ?: last?.takeIf { it > 0 && it.isFinite() } ?: return o
+        return o.copy(price = onTick(px, o.tickSize, o.side))
     }
 
     /**

@@ -234,9 +234,27 @@ class JarvisVoice : Service() {
          */
         fun askYesNo(id: Long, text: String): Boolean {
             val v = instance?.get() ?: return false
-            v.main.post { v.asking = id; v.askingText = text; v.askingNeedsBoss = true; v.askingUntil = 0; v.sayWhenFree(text, "question") }
+            v.main.post { v.asking = id; v.askingText = text; v.askingNeedsBoss = true; v.askingUntil = 0; v.askWhenFree(text) }
             return true
         }
+
+        /**
+         * A confirmed request's result as said (18 Oct, review): the lock read again at the moment it is said (the phone can
+         * lock while the order goes), the way [askWords] reads it - unknown counts as locked. Locked: only that it is ready.
+         */
+        internal fun resultWords(r: String): String =
+            com.optionslab.ira.LockRule.resultAloud(com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), lockedSafe())
+
+        /** The phone is locked now, as [askWords] reads it (unknown counts as locked). */
+        internal fun lockedSafe(): Boolean = runCatching { IraHub.appContext() == null || IraHub.locked() }.getOrDefault(true)
+
+        /**
+         * A request's yes-or-no question [text] as it may be said now (18 Oct, review): the lock as it is this moment
+         * (unknown counts as locked, as for an announcement); locked, only how many requests wait.
+         */
+        internal fun askWords(text: String): String = com.optionslab.ira.Requests.askAloud(text,
+            lockedSafe(),
+            runCatching { IraHub.pendingRequests().value.count { it.voiced } }.getOrDefault(1))
 
         /** Pauses listening while the owner teaches Jarvis their voice (the microphone is needed for that). */
         fun hold(on: Boolean) {
@@ -283,10 +301,10 @@ class JarvisVoice : Service() {
                 keeper.launch {
                     val firstOk = runCatching { com.optionslab.app.security.SecurePrefs.flush() }.getOrDefault(false)
                     if (!firstOk) {
-                        // Queue the whole current map again (it carries this value and any newer one) and wait for it.
+                        // The whole current map (it carries this value and any newer one) written again now, on this IO thread.
+                        // 20 Oct, review: it was putAllSoon(emptyMap()), which queues nothing, so the retry never wrote.
                         val secondOk = runCatching {
-                            com.optionslab.app.security.SecurePrefs.putAllSoon(emptyMap())
-                            com.optionslab.app.security.SecurePrefs.flush()
+                            com.optionslab.app.security.SecurePrefs.writeNow() && com.optionslab.app.security.SecurePrefs.flush()
                         }.getOrDefault(false)
                         if (!secondOk) runCatching { com.optionslab.app.data.Diag.record("jarvis", "a safety setting could not be written to disk; it holds until the app closes") }
                     }
@@ -361,6 +379,29 @@ class JarvisVoice : Service() {
         var listenSaver: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.listen.saver", false) }.getOrDefault(false)
             set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.listen.saver" to v)) } }
+
+        /**
+         * "Listen for 'Jarvis'" (Bot setting, 14 Oct; [com.optionslab.ira.ListenWhen]): Always - the default, listening exactly
+         * as before - only when unlocked or charging, or market hours only. Never changed by itself. A question already under
+         * way (awake, a follow-up, the Talk or hold button) always goes on; no safety alert waits on listening.
+         */
+        var listenWhen: com.optionslab.ira.ListenWhen.Mode
+            get() = whenKept ?: runCatching { com.optionslab.ira.ListenWhen.parse(com.optionslab.app.security.SecurePrefs.getString(WHEN_KEY)) }
+                .getOrDefault(com.optionslab.ira.ListenWhen.DEFAULT).also { whenKept = it }
+            set(v) {
+                whenKept = v
+                runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(WHEN_KEY to v.name)) }
+                note("listen for Jarvis: ${v.label}")
+                instance?.get()?.let { s -> s.main.post { s.whenChanged() } }
+            }
+        private const val WHEN_KEY = "jarvis.listen.when"
+        @Volatile private var whenKept: com.optionslab.ira.ListenWhen.Mode? = null
+        /** [listenWhen] from memory only (the main thread's turns): the default until it has been read off the main thread. */
+        internal fun listenWhenQuick(): com.optionslab.ira.ListenWhen.Mode = whenKept ?: com.optionslab.ira.ListenWhen.DEFAULT
+        /** Robolectric shares static state between tests: the setting read again from the settings. */
+        internal fun resetListenWhenForTest() { whenKept = null }
+        /** Listening is resting now for [listenWhen] (locked on battery, or outside market hours). */
+        fun whenRestingNow(): Boolean = instance?.get()?.whenResting == true
 
         /** Listening runs now (the battery line). */
         fun listeningNow(): Boolean = instance?.get() != null
@@ -896,9 +937,10 @@ class JarvisVoice : Service() {
             if (listening && tap != null && hold == null && turnReadyAt > 0 && !turnHeardAny && !turnSpeech && now - turnReadyAt > 12_000 && !speaking) {
                 tapFailed = true
                 val n = silentShared + 1; silentShared = n
-                if (n >= 3) runCatching { com.optionslab.app.security.SecurePrefs.put(TAP_BROKEN, true) }
+                // On the main thread here: the vault writes go to the background writer, never done here (18 Oct, review).
+                if (n >= 3) runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(TAP_BROKEN to true)) }
                 note("shared audio gave nothing ($n in a row): back to the phone's own microphone" + if (n >= 3) " for good" else " for now")
-                IraActivity.add("Listening switched to the phone's own microphone (the shared one heard nothing).")
+                scope.launch(Dispatchers.IO) { IraActivity.add("Listening switched to the phone's own microphone (the shared one heard nothing).") }
                 main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap(); turnReadyAt = 0; again(300)
             }
             // Never while Boss is speaking into the turn (a reset then lost his words), unless it is stuck (45 s).
@@ -920,10 +962,11 @@ class JarvisVoice : Service() {
                 _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
             }
             // (Not inside a battery-saver rest: its own restart is already queued.)
-            if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING && now >= restUntil) again()
+            // (Nor while "Listen for 'Jarvis'" rests: its own look again is queued.)
+            if (!listening && !speaking && !held && !whenResting && _state.value.mode != Mode.THINKING && now >= restUntil) again()
             // Self-healing: no listening turn for 3 minutes (the phone took the microphone, the recognizer died):
             // a new recognizer, noted in the activity log.
-            if (Automations.on(Automations.Auto.SELFHEAL) && com.optionslab.ira.VoiceHealth.stuck(now, readyAt, speaking, !held && _state.value.mode != Mode.THINKING) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (Automations.on(Automations.Auto.SELFHEAL) && !whenResting && com.optionslab.ira.VoiceHealth.stuck(now, readyAt, speaking, !held && _state.value.mode != Mode.THINKING) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 readyAt = now
                 hearingCount { d, day -> com.optionslab.ira.Hearing.restart(d, day) }
                 runCatching { rec?.destroy() }
@@ -959,7 +1002,9 @@ class JarvisVoice : Service() {
     /** Shared turns in a row that heard nothing at all: only 3 in a row (not one quiet moment) drop it for good. */
     private var silentShared: Int
         get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.tapsilent")?.toInt() }.getOrNull() ?: 0
-        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.tapsilent", v.toString()) } }
+        // Set from the watchdog and the recognizer's callbacks (the main thread): read back at once, written on the
+        // background writer - never a vault write on the main thread (18 Oct, review).
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.voice.tapsilent" to v.toString())) } }
     /** When the recognizer said ready this turn, and whether it heard anything (for the silent-turn check). */
     @Volatile private var turnReadyAt = 0L
     @Volatile private var turnHeardAny = false
@@ -985,6 +1030,17 @@ class JarvisVoice : Service() {
     /** Battery saver for listening: resting between turns now, and until when (the watchdog does not cut a rest short). */
     @Volatile private var resting = false
     @Volatile private var restUntil = 0L
+    /** "Listen for 'Jarvis'" ([listenWhen]): resting now because of Boss's choice (no turn starts until it allows one). */
+    @Volatile private var whenResting = false
+    /** The ears rest (battery saver or [whenResting]): the warm-up loop waits on this instead of waking every 30 s. */
+    private val earsIdle = MutableStateFlow(false)
+    private fun idleChanged() {
+        val idle = resting || whenResting
+        earsIdle.value = idle
+        runCatching { com.optionslab.app.work.BatteryMeter.meter.set(com.optionslab.ira.LoopMeter.LISTEN_RESTING, idle) }
+    }
+    /** Looked at again when [listenWhen]'s rest may be over. */
+    private val whenRecheck = Runnable { if (!stopped && !listening && !speaking && !held) listen() }
     /** Battery (round 4): when listening started, and the recognizer's turns over the last hour (times only, never words). */
     private val startedAt = SystemClock.elapsedRealtime()
     private val turnTimes = java.util.ArrayDeque<Long>()
@@ -1101,15 +1157,27 @@ class JarvisVoice : Service() {
             listen()
             main.postDelayed(watchdog, 5_000)
             // Battery saver for listening: the screen coming on ends a rest at once (a system broadcast; nothing else read).
+            // "Listen for 'Jarvis'" (14 Oct): unlocking and the charger end its rest at once too.
             if (screenOn == null) screenOn = object : android.content.BroadcastReceiver() {
-                override fun onReceive(c: Context?, i: Intent?) { main.post { endRest() } }
+                override fun onReceive(c: Context?, i: Intent?) {
+                    when (i?.action) { Intent.ACTION_POWER_CONNECTED -> chargingKept = true; Intent.ACTION_POWER_DISCONNECTED -> chargingKept = false }
+                    main.post { endRest(); if (whenResting && !listening && !speaking && !held) again(0) }
+                }
             }.also { r ->
-                runCatching { ContextCompat.registerReceiver(this, r, android.content.IntentFilter(Intent.ACTION_SCREEN_ON), ContextCompat.RECEIVER_NOT_EXPORTED) }
+                val f = android.content.IntentFilter(Intent.ACTION_SCREEN_ON).apply {
+                    addAction(Intent.ACTION_USER_PRESENT); addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED)
+                }
+                runCatching { ContextCompat.registerReceiver(this, r, f, ContextCompat.RECEIVER_NOT_EXPORTED) }
             }
             // The question reader's first use builds all its patterns (the slowest reading of the day): done now, off the
             // main thread, not inside Boss's first question. A reading only: nothing is asked.
             // The same for the patterns the spoken words go through ([com.optionslab.ira.SpokenReply.warm]; words only, dropped),
             // and the voice's own records read once into memory (read only: nothing is noted, changed or acted on).
+            // "Listen for 'Jarvis'" and the charger read once here, off the main thread (the turns then read memory).
+            scope.launch(Dispatchers.IO) {
+                runCatching { listenWhen }
+                runCatching { chargingKept = com.optionslab.app.work.Battery.state(this@JarvisVoice).second }
+            }
             scope.launch(Dispatchers.Default) {
                 runCatching { com.optionslab.ira.Ask.parse("how is nifty today") }
                 runCatching { com.optionslab.ira.SpokenReply.warm() }
@@ -1125,6 +1193,8 @@ class JarvisVoice : Service() {
                 var n = 0
                 var screenLast: Boolean? = null
                 while (true) {
+                    // Battery (14 Oct): not while the ears rest (battery saver, or "Listen for 'Jarvis'"): it waits, not wakes.
+                    if (earsIdle.value) earsIdle.first { !it }
                     // Market hours on a trading day (battery round 1: an NSE holiday is not one - before, the clock alone was
                     // read, and a holiday weekday fetched prices every minute and the account every 30 s all session).
                     val open = runCatching { com.optionslab.app.data.Market.isOpen() }.getOrElse {
@@ -1406,6 +1476,7 @@ class JarvisVoice : Service() {
         if (stopped || held || listening) return
         // "Don't listen" switched on while this ran (it is being stopped): no new turn, not even one.
         if (deaf) { deafened(); return }
+        if (outsideListenHours()) return
         lastHeard = null                                 // a voice check only ever uses this turn's own audio
         turnInSpeech = speaking
         listenedAt = SystemClock.elapsedRealtime()
@@ -1456,6 +1527,54 @@ class JarvisVoice : Service() {
     private fun again(delayMs: Long = 250) { if (!stopped) main.postDelayed({ listen() }, delayMs) }
 
     /**
+     * "Listen for 'Jarvis'" ([listenWhen]; Always by default = never true): outside Boss's choice no new turn starts, unless a
+     * question is under way (awake, the Talk or hold button, a one-question listen, Jarvis speaking). Unlocking, the charger
+     * and the screen coming on look again at once; otherwise after [com.optionslab.ira.ListenWhen.recheckMs]. Main thread.
+     */
+    private fun outsideListenHours(): Boolean {
+        val mode = listenWhenQuick()
+        main.removeCallbacks(whenRecheck)
+        val busy = oneShot || hold != null || held || awake() || speaking
+        val ok = mode == com.optionslab.ira.ListenWhen.Mode.ALWAYS || busy ||
+            com.optionslab.ira.ListenWhen.allowed(mode, unlockedNow(), chargingNow(), marketHoursNow())
+        if (ok) {
+            if (whenResting) {
+                whenResting = false
+                readyAt = SystemClock.elapsedRealtime()      // the rest was chosen: not a silent microphone to heal
+                note("listen for Jarvis (${mode.label}): listening again")
+                idleChanged()
+            }
+            return false
+        }
+        if (!whenResting) { whenResting = true; note("listen for Jarvis (${mode.label}): resting now"); idleChanged() }
+        val untilOpen = runCatching { com.optionslab.app.data.Market.untilOpenMs(leadMs = 15 * 60_000L) }.getOrNull()
+        main.postDelayed(whenRecheck, com.optionslab.ira.ListenWhen.recheckMs(mode, untilOpen))
+        return true
+    }
+
+    /** Boss changed [listenWhen]: looked at again now. */
+    private fun whenChanged() {
+        main.removeCallbacks(whenRecheck)
+        if (!stopped && !listening && !speaking && !held) again(0)
+    }
+
+    /** The phone is unlocked (screen on, no keyguard); unknown counts as unlocked. */
+    private fun unlockedNow(): Boolean = runCatching {
+        val interactive = getSystemService(android.os.PowerManager::class.java)?.isInteractive ?: true
+        interactive && getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked != true
+    }.getOrDefault(true)
+
+    /** On the charger (from the charger broadcasts, first read off the main thread; unknown counts as charging). */
+    @Volatile private var chargingKept: Boolean? = null
+    private fun chargingNow(): Boolean = chargingKept ?: true
+
+    /** 09:00 to ten minutes past F&O's close on a trading day; unknown counts as market hours. */
+    private fun marketHoursNow(): Boolean = runCatching {
+        val m = com.optionslab.app.data.Market
+        com.optionslab.ira.ListenWhen.marketHours(m.isTradingDay(), m.minuteNow(), m.foClose())
+    }.getOrDefault(true)
+
+    /**
      * Battery saver for listening ([listenSaver], off by default): [base] as before, or a rest of a few seconds between quiet
      * turns while the screen is off, the market is shut, it is not one of Boss's usual hours and the room has been quiet a
      * while ([com.optionslab.ira.ListenSaver]). Never while Boss is [expected] to speak. Kinds only in the trace, never words.
@@ -1466,6 +1585,7 @@ class JarvisVoice : Service() {
         val rest = gap > base
         if (rest != resting) note(if (rest) "battery saver: resting ${gap / 1000} s between quiet turns (screen off, market shut)" else "battery saver: listening as usual again")
         resting = rest
+        idleChanged()
         restUntil = if (rest) SystemClock.elapsedRealtime() + gap else 0L
         return gap
     }
@@ -1489,6 +1609,7 @@ class JarvisVoice : Service() {
         if (restUntil == 0L) return
         val wasResting = SystemClock.elapsedRealtime() < restUntil
         restUntil = 0L; resting = false
+        idleChanged()
         if (wasResting) { note("screen on: battery-saver rest ended"); if (!listening && !speaking && !held) again(0) }
     }
 
@@ -1873,7 +1994,8 @@ class JarvisVoice : Service() {
         val day = hearingDay()
         if (runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.hearing.told") }.getOrNull() == day) return
         val text = runCatching { com.optionslab.ira.Hearing.nudge(hearingDays, day, googleSpeech) }.getOrNull() ?: return
-        runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.hearing.told", day) }
+        // Reached from the recognizer's callbacks (the main thread): written on the background writer (18 Oct, review).
+        runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.hearing.told" to day)) }
         hearingSave()
         runCatching { IraHub.note(text) }
     }
@@ -2115,7 +2237,8 @@ class JarvisVoice : Service() {
             if (yes != null && com.optionslab.ira.AnswerWindow.yesFor(true, lastInvite) == com.optionslab.ira.AnswerWindow.For.HOLD) {
                 note("a yes or no after another offer: not taken for the waiting request")
                 // Its own question asked again, so the next yes or no answers that very question.
-                say(com.optionslab.ira.AnswerWindow.hold(askingText), "question")
+                // On a locked phone the question is not said again in its own words (18 Oct, review).
+                say(askWords(com.optionslab.ira.AnswerWindow.hold(askingText)), "question")
                 return
             }
             if (manyRequestsWaiting(id, alternatives.firstOrNull(), yes)) return
@@ -2138,9 +2261,12 @@ class JarvisVoice : Service() {
                         // (His words for the no go with it: a reason in them, "no, too late in the day", is noted - its kind
                         // only, and only in Boss's own voice when it is enrolled - a no with no voice heard is not his reason; a
                         // no from anyone still cancels.)
-                        else { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { bossNo }, by = com.optionslab.ira.Requests.By.VOICE); "Rejected. Nothing was placed." }
-                    // An order's result is read back as it is: its prices exact, never rounded for the ear.
-                    say(com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), "answer")
+                        // (Off the main thread, as the yes is: the no's vault writes - 18 Oct, review.)
+                        else { withContext(Dispatchers.IO) { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { bossNo }, by = com.optionslab.ira.Requests.By.VOICE) }; "Rejected. Nothing was placed." }
+                    // An order's result is read back as it is: its prices exact, never rounded for the ear - on a phone still
+                    // unlocked when it is said (18 Oct, review: it may have locked while the order went).
+                    // A "no" works on a locked phone and its line holds nothing of the account: said as it is.
+                    say(if (yes) resultWords(r) else com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), "answer")
                 }
                 return
             }
@@ -2376,7 +2502,7 @@ class JarvisVoice : Service() {
             if (stopped) return@post
             if (asking == null) IraHub.requestAsk(id)?.let { shall ->
                 asking = id; askingText = shall; askingNeedsBoss = true; askingUntil = 0
-                sayWhenFree(shall, "question")
+                askWhenFree(shall)
             }
             if (_state.value.mode == Mode.THINKING && !speaking) { _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING); if (!listening) again() }
         }
@@ -2393,6 +2519,8 @@ class JarvisVoice : Service() {
         // Speed, round 4: this question's stages timed from Boss's last word ([com.optionslab.ira.AskStages]; durations only).
         val timed = IraHub.askStages.begin(heardAt, voice = true)
         askTimed = timed
+        // The lock as the question was asked (18 Oct, review): an answer ready after the phone locked is said without the account.
+        val lockedAsked = lockedSafe()
         answerJob = scope.launch {
             // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
             // only with no prices at all is the first answer held for a refresh.
@@ -2453,7 +2581,8 @@ class JarvisVoice : Service() {
                     // Asked aloud instead of a button hidden in the chat: "Shall I stop ORB? Yes or no?"
                     val shall = IraHub.requestAsk(a.action) ?: com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?")
                     asking = a.action; askingText = shall; askingNeedsBoss = IraHub.isExit(a.action); askingUntil = 0
-                    say(shall, "question")
+                    // A request's words (a symbol, its prices): not said on a locked phone (18 Oct, review).
+                    say(askWords(shall), "question")
                     return@launch
                 }
                 // Short answers (the owner's setting, or "shorter"): the first sentence; "tell me more" says the whole
@@ -2493,7 +2622,11 @@ class JarvisVoice : Service() {
                     shaped = r.shaped && !usualLed
                     if (usualLed) usualSpoken else r.spoken
                 }
-            }.let { text ->
+            }.let { whole ->
+                // Asked unlocked, ready after the phone locked (a slow account read, a late answer): no amount, P&L or symbol
+                // aloud, and nothing kept for "go on" (18 Oct, review). Asked locked: judged by the lock rule when asked.
+                val text = com.optionslab.ira.LockRule.answerAloud(whole, lockedAsked, lockedSafe())
+                if (text != whole) { full = null; shaped = false; note("the answer was ready after the phone locked: not said in full") }
                 // A follow-up (no "Jarvis") that brings back the very answer just given is not said again: the
                 // follow-up window closes instead, so one answer can never repeat itself in a loop.
                 val prev = lastAnswer
@@ -2631,6 +2764,14 @@ class JarvisVoice : Service() {
         say(words, id, reply = false)
     }
 
+    /**
+     * Jarvis's own yes-or-no question about a request (18 Oct, review): its words name the held symbol, its prices and
+     * the side, so on a locked phone only how many requests wait and "unlock to answer" is said
+     * ([com.optionslab.ira.Requests.askAloud]) - the lock checked when the words are finally said, as an announcement's
+     * are. The pop-up and the notification already hid them; the voice said them whole.
+     */
+    private fun askWhenFree(text: String) = sayWhenFree(text, "question", recheck = { askWords(text) })
+
     /** The words being said now answer Boss ([say]'s reply, an "answer" or "question"); unasked notes wait for them. */
     @Volatile private var sayingReply = false
     /** [sayWhenFree] waits this many 250 ms turns at most for Boss's answer to be worked out and said. */
@@ -2702,7 +2843,7 @@ class JarvisVoice : Service() {
         if (text != null && runCatching { IraHub.waitsFor(id) }.getOrDefault(false)) {
             note("an offer said over a waiting question: its window closed, the question asked again")
             // After this utterance's own end is done (posted), never from inside it; only while it is still the same ask.
-            main.post { if (asking == id && askingUntil == 0L) sayWhenFree(text, "question") }
+            main.post { if (asking == id && askingUntil == 0L) askWhenFree(text) }
         } else asking = null
     }
 
@@ -2763,6 +2904,7 @@ class JarvisVoice : Service() {
         if (instance?.get() === this) instance = null
         main.removeCallbacksAndMessages(null)
         screenOn?.let { r -> runCatching { unregisterReceiver(r) } }; screenOn = null
+        runCatching { com.optionslab.app.work.BatteryMeter.meter.off(com.optionslab.ira.LoopMeter.LISTEN_RESTING) }
         endTap(); lastHeard = null
         runCatching { rec?.destroy() }; rec = null
         runCatching { tts?.stop(); tts?.shutdown() }; tts = null

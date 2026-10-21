@@ -1,0 +1,7035 @@
+{
+ "rows": 92289,
+ "days": 271,
+ "test_days": 197,
+ "bh_size": 34,
+ "bh_min_q": 0.068,
+ "rules": {
+  "M1": {
+   "m": {
+    "expiries": 197,
+    "trades": 167,
+    "hit_pct": 13.2,
+    "avg_win": 6807.1,
+    "avg_loss": -1538.1,
+    "net": -73265.77,
+    "per_expiry": -371.91,
+    "per_1000_risked": -259.9,
+    "green_expiries_pct": 11.2,
+    "worst_day": -2058.93,
+    "best_day": 23800.53,
+    "max_dd": -115475.14,
+    "losing_streak_trades": 29,
+    "losing_streak_expiries": 29,
+    "best_day_share_pct": null,
+    "net_without_best_day": -97066.3,
+    "proxy_trades": 0,
+    "x2_pct": 29.3,
+    "x4_pct": 11.4,
+    "x10_pct": 3.0
+   },
+   "years": {
+    "2023": {
+     "expiries": 52,
+     "trades": 41,
+     "hit_pct": 26.8,
+     "avg_win": 7045.8,
+     "avg_loss": -1461.9,
+     "net": 33647.72,
+     "per_expiry": 647.07,
+     "per_1000_risked": 485.9,
+     "green_expiries_pct": 21.2,
+     "worst_day": -1973.19,
+     "best_day": 23800.53,
+     "max_dd": -13492.02,
+     "losing_streak_trades": 8,
+     "losing_streak_expiries": 8,
+     "best_day_share_pct": 70.7,
+     "net_without_best_day": 9847.19,
+     "proxy_trades": 0,
+     "x2_pct": 41.5,
+     "x4_pct": 17.1,
+     "x10_pct": 2.4
+    },
+    "2024": {
+     "expiries": 52,
+     "trades": 39,
+     "hit_pct": 5.1,
+     "avg_win": 7021.8,
+     "avg_loss": -1579.9,
+     "net": -44412.28,
+     "per_expiry": -854.08,
+     "per_1000_risked": -658.6,
+     "green_expiries_pct": 3.8,
+     "worst_day": -2008.17,
+     "best_day": 12901.0,
+     "max_dd": -44412.28,
+     "losing_streak_trades": 23,
+     "losing_streak_expiries": 23,
+     "best_day_share_pct": null,
+     "net_without_best_day": -57313.28,
+     "proxy_trades": 0,
+     "x2_pct": 12.8,
+     "x4_pct": 2.6,
+     "x10_pct": 0.0
+    },
+    "2025": {
+     "expiries": 53,
+     "trades": 48,
+     "hit_pct": 10.4,
+     "avg_win": 8830.5,
+     "avg_loss": -1649.7,
+     "net": -26784.23,
+     "per_expiry": -505.36,
+     "per_1000_risked": -328.7,
+     "green_expiries_pct": 9.4,
+     "worst_day": -2058.93,
+     "best_day": 16063.58,
+     "max_dd": -26784.23,
+     "losing_streak_trades": 11,
+     "losing_streak_expiries": 11,
+     "best_day_share_pct": null,
+     "net_without_best_day": -42847.81,
+     "proxy_trades": 0,
+     "x2_pct": 29.2,
+     "x4_pct": 12.5,
+     "x10_pct": 6.2
+    },
+    "2026": {
+     "expiries": 40,
+     "trades": 39,
+     "hit_pct": 10.3,
+     "avg_win": 3514.1,
+     "avg_loss": -1422.1,
+     "net": -35716.98,
+     "per_expiry": -892.92,
+     "per_1000_risked": -560.1,
+     "green_expiries_pct": 10.0,
+     "worst_day": -1979.94,
+     "best_day": 6053.29,
+     "max_dd": -40484.94,
+     "losing_streak_trades": 23,
+     "losing_streak_expiries": 23,
+     "best_day_share_pct": null,
+     "net_without_best_day": -41770.27,
+     "proxy_trades": 0,
+     "x2_pct": 33.3,
+     "x4_pct": 12.8,
+     "x10_pct": 2.6
+    }
+   },
+   "bands": {
+    "1-10": {
+     "trades": 71,
+     "net": -31694.0
+    },
+    "10-15": {
+     "trades": 30,
+     "net": -10452.0
+    },
+    "15-30": {
+     "trades": 66,
+     "net": -31120.0
+    }
+   },
+   "choices": {
+    "2023": {
+     "tau": 250.0,
+     "exit": "E1"
+    },
+    "2024": {
+     "tau": 500.0,
+     "exit": "E1"
+    },
+    "2025": {
+     "tau": 0.0,
+     "exit": "E1"
+    },
+    "2026": {
+     "tau": 100.0,
+     "exit": "E1"
+    }
+   },
+   "twins": {
+    "p": 0.182,
+    "mean": -132990.0,
+    "p05": -217762.0,
+    "p95": 9.0
+   },
+   "x2_spread": -75694.0,
+   "trades_list": [
+    {
+     "day": "2023-01-05",
+     "t": 164,
+     "side": "P",
+     "strike": 17950.0,
+     "price": 23.1,
+     "exit": "E1",
+     "net": -1143.0,
+     "peak": 2.94
+    },
+    {
+     "day": "2023-01-12",
+     "t": 339,
+     "side": "P",
+     "strike": 17800.0,
+     "price": 4.85,
+     "exit": "E1",
+     "net": -1888.0,
+     "peak": 1.54
+    },
+    {
+     "day": "2023-01-25",
+     "t": 164,
+     "side": "C",
+     "strike": 18000.0,
+     "price": 6.2,
+     "exit": "E1",
+     "net": -1863.0,
+     "peak": 1.32
+    },
+    {
+     "day": "2023-02-02",
+     "t": 204,
+     "side": "C",
+     "strike": 17600.0,
+     "price": 23.3,
+     "exit": "E1",
+     "net": -146.0,
+     "peak": 1.5
+    },
+    {
+     "day": "2023-02-16",
+     "t": 164,
+     "side": "P",
+     "strike": 18000.0,
+     "price": 5.3,
+     "exit": "E1",
+     "net": -1851.0,
+     "peak": 2.12
+    },
+    {
+     "day": "2023-02-23",
+     "t": 219,
+     "side": "P",
+     "strike": 17550.0,
+     "price": 20.15,
+     "exit": "E1",
+     "net": 3218.0,
+     "peak": 2.66
+    },
+    {
+     "day": "2023-03-02",
+     "t": 164,
+     "side": "C",
+     "strike": 17500.0,
+     "price": 2.05,
+     "exit": "E1",
+     "net": -1948.0,
+     "peak": 1.36
+    },
+    {
+     "day": "2023-03-09",
+     "t": 169,
+     "side": "C",
+     "strike": 17750.0,
+     "price": 3.85,
+     "exit": "E1",
+     "net": -1973.0,
+     "peak": 1.23
+    },
+    {
+     "day": "2023-03-16",
+     "t": 204,
+     "side": "P",
+     "strike": 16900.0,
+     "price": 20.4,
+     "exit": "E1",
+     "net": -1919.0,
+     "peak": 1.37
+    },
+    {
+     "day": "2023-04-06",
+     "t": 189,
+     "side": "P",
+     "strike": 17600.0,
+     "price": 22.25,
+     "exit": "E1",
+     "net": -924.0,
+     "peak": 2.55
+    },
+    {
+     "day": "2023-04-13",
+     "t": 169,
+     "side": "P",
+     "strike": 17750.0,
+     "price": 22.95,
+     "exit": "E1",
+     "net": -1191.0,
+     "peak": 1.58
+    },
+    {
+     "day": "2023-04-20",
+     "t": 319,
+     "side": "P",
+     "strike": 17550.0,
+     "price": 1.15,
+     "exit": "E1",
+     "net": -1863.0,
+     "peak": 1.38
+    },
+    {
+     "day": "2023-04-27",
+     "t": 204,
+     "side": "C",
+     "strike": 17850.0,
+     "price": 21.3,
+     "exit": "E1",
+     "net": 1219.0,
+     "peak": 2.52
+    },
+    {
+     "day": "2023-05-04",
+     "t": 164,
+     "side": "C",
+     "strike": 18200.0,
+     "price": 8.6,
+     "exit": "E1",
+     "net": 7550.0,
+     "peak": 5.62
+    },
+    {
+     "day": "2023-05-11",
+     "t": 339,
+     "side": "C",
+     "strike": 18300.0,
+     "price": 10.8,
+     "exit": "E1",
+     "net": -1250.0,
+     "peak": 1.04
+    },
+    {
+     "day": "2023-05-18",
+     "t": 164,
+     "side": "P",
+     "strike": 18200.0,
+     "price": 7.75,
+     "exit": "E1",
+     "net": 14001.0,
+     "peak": 8.23
+    },
+    {
+     "day": "2023-06-08",
+     "t": 164,
+     "side": "C",
+     "strike": 18700.0,
+     "price": 25.5,
+     "exit": "E1",
+     "net": -1276.0,
+     "peak": 1.37
+    },
+    {
+     "day": "2023-06-15",
+     "t": 164,
+     "side": "C",
+     "strike": 18750.0,
+     "price": 15.85,
+     "exit": "E1",
+     "net": -1604.0,
+     "peak": 1.7
+    },
+    {
+     "day": "2023-06-28",
+     "t": 164,
+     "side": "C",
+     "strike": 19000.0,
+     "price": 20.3,
+     "exit": "E1",
+     "net": -1056.0,
+     "peak": 1.6
+    },
+    {
+     "day": "2023-07-13",
+     "t": 164,
+     "side": "P",
+     "strike": 19450.0,
+     "price": 7.15,
+     "exit": "E1",
+     "net": 10870.0,
+     "peak": 9.16
+    },
+    {
+     "day": "2023-07-27",
+     "t": 164,
+     "side": "P",
+     "strike": 19700.0,
+     "price": 18.6,
+     "exit": "E1",
+     "net": 5747.0,
+     "peak": 5.24
+    },
+    {
+     "day": "2023-08-17",
+     "t": 179,
+     "side": "C",
+     "strike": 19450.0,
+     "price": 5.4,
+     "exit": "E1",
+     "net": -1973.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2023-08-24",
+     "t": 164,
+     "side": "P",
+     "strike": 19400.0,
+     "price": 4.85,
+     "exit": "E1",
+     "net": -251.0,
+     "peak": 3.32
+    },
+    {
+     "day": "2023-08-31",
+     "t": 299,
+     "side": "C",
+     "strike": 19300.0,
+     "price": 6.3,
+     "exit": "E1",
+     "net": -1848.0,
+     "peak": 1.13
+    },
+    {
+     "day": "2023-09-07",
+     "t": 164,
+     "side": "C",
+     "strike": 19650.0,
+     "price": 6.05,
+     "exit": "E1",
+     "net": 23801.0,
+     "peak": 17.24
+    },
+    {
+     "day": "2023-09-14",
+     "t": 164,
+     "side": "C",
+     "strike": 20100.0,
+     "price": 15.6,
+     "exit": "E1",
+     "net": -905.0,
+     "peak": 1.49
+    },
+    {
+     "day": "2023-09-21",
+     "t": 164,
+     "side": "C",
+     "strike": 19850.0,
+     "price": 2.8,
+     "exit": "E1",
+     "net": -1903.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-09-28",
+     "t": 164,
+     "side": "P",
+     "strike": 19600.0,
+     "price": 28.7,
+     "exit": "E1",
+     "net": 2115.0,
+     "peak": 2.5
+    },
+    {
+     "day": "2023-10-05",
+     "t": 164,
+     "side": "P",
+     "strike": 19500.0,
+     "price": 4.85,
+     "exit": "E1",
+     "net": -1928.0,
+     "peak": 2.14
+    },
+    {
+     "day": "2023-10-12",
+     "t": 164,
+     "side": "P",
+     "strike": 19800.0,
+     "price": 10.1,
+     "exit": "E1",
+     "net": -1270.0,
+     "peak": 1.59
+    },
+    {
+     "day": "2023-10-19",
+     "t": 164,
+     "side": "P",
+     "strike": 19600.0,
+     "price": 8.2,
+     "exit": "E1",
+     "net": -1678.0,
+     "peak": 1.09
+    },
+    {
+     "day": "2023-10-26",
+     "t": 164,
+     "side": "P",
+     "strike": 18850.0,
+     "price": 24.0,
+     "exit": "E1",
+     "net": -1029.0,
+     "peak": 1.13
+    },
+    {
+     "day": "2023-11-02",
+     "t": 164,
+     "side": "P",
+     "strike": 19050.0,
+     "price": 14.15,
+     "exit": "E1",
+     "net": -1459.0,
+     "peak": 1.15
+    },
+    {
+     "day": "2023-11-09",
+     "t": 164,
+     "side": "C",
+     "strike": 19550.0,
+     "price": 1.95,
+     "exit": "E1",
+     "net": -1948.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-11-16",
+     "t": 164,
+     "side": "C",
+     "strike": 19850.0,
+     "price": 10.2,
+     "exit": "E1",
+     "net": -1542.0,
+     "peak": 3.57
+    },
+    {
+     "day": "2023-11-23",
+     "t": 164,
+     "side": "P",
+     "strike": 19800.0,
+     "price": 23.9,
+     "exit": "E1",
+     "net": -934.0,
+     "peak": 1.1
+    },
+    {
+     "day": "2023-11-30",
+     "t": 164,
+     "side": "C",
+     "strike": 20100.0,
+     "price": 11.4,
+     "exit": "E1",
+     "net": 2811.0,
+     "peak": 4.69
+    },
+    {
+     "day": "2023-12-07",
+     "t": 164,
+     "side": "C",
+     "strike": 21000.0,
+     "price": 4.45,
+     "exit": "E1",
+     "net": -1808.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2023-12-14",
+     "t": 164,
+     "side": "C",
+     "strike": 21200.0,
+     "price": 7.05,
+     "exit": "E1",
+     "net": 3851.0,
+     "peak": 3.31
+    },
+    {
+     "day": "2023-12-21",
+     "t": 164,
+     "side": "C",
+     "strike": 21200.0,
+     "price": 19.7,
+     "exit": "E1",
+     "net": 2321.0,
+     "peak": 4.42
+    },
+    {
+     "day": "2023-12-28",
+     "t": 164,
+     "side": "P",
+     "strike": 21700.0,
+     "price": 14.65,
+     "exit": "E1",
+     "net": -1484.0,
+     "peak": 1.13
+    },
+    {
+     "day": "2024-01-04",
+     "t": 164,
+     "side": "C",
+     "strike": 21650.0,
+     "price": 16.7,
+     "exit": "E1",
+     "net": -1405.0,
+     "peak": 1.44
+    },
+    {
+     "day": "2024-01-18",
+     "t": 299,
+     "side": "C",
+     "strike": 21500.0,
+     "price": 4.3,
+     "exit": "E1",
+     "net": -1871.0,
+     "peak": 1.84
+    },
+    {
+     "day": "2024-01-25",
+     "t": 304,
+     "side": "C",
+     "strike": 21350.0,
+     "price": 2.15,
+     "exit": "E1",
+     "net": -860.0,
+     "peak": 1.41
+    },
+    {
+     "day": "2024-02-01",
+     "t": 234,
+     "side": "P",
+     "strike": 21700.0,
+     "price": 23.2,
+     "exit": "E1",
+     "net": -844.0,
+     "peak": 1.84
+    },
+    {
+     "day": "2024-02-08",
+     "t": 289,
+     "side": "C",
+     "strike": 21800.0,
+     "price": 4.35,
+     "exit": "E1",
+     "net": -1893.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-02-15",
+     "t": 219,
+     "side": "P",
+     "strike": 21850.0,
+     "price": 23.25,
+     "exit": "E1",
+     "net": -1201.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2024-02-22",
+     "t": 339,
+     "side": "P",
+     "strike": 22150.0,
+     "price": 13.6,
+     "exit": "E1",
+     "net": -1349.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-02-29",
+     "t": 314,
+     "side": "C",
+     "strike": 21950.0,
+     "price": 26.05,
+     "exit": "E1",
+     "net": -1106.0,
+     "peak": 2.46
+    },
+    {
+     "day": "2024-03-07",
+     "t": 164,
+     "side": "C",
+     "strike": 22650.0,
+     "price": 2.8,
+     "exit": "E1",
+     "net": -2008.0,
+     "peak": 1.25
+    },
+    {
+     "day": "2024-03-14",
+     "t": 234,
+     "side": "C",
+     "strike": 22200.0,
+     "price": 15.7,
+     "exit": "E1",
+     "net": -1609.0,
+     "peak": 1.3
+    },
+    {
+     "day": "2024-04-04",
+     "t": 259,
+     "side": "P",
+     "strike": 22550.0,
+     "price": 28.4,
+     "exit": "E1",
+     "net": 1143.0,
+     "peak": 2.33
+    },
+    {
+     "day": "2024-04-10",
+     "t": 249,
+     "side": "C",
+     "strike": 22750.0,
+     "price": 16.1,
+     "exit": "E1",
+     "net": -492.0,
+     "peak": 1.02
+    },
+    {
+     "day": "2024-04-25",
+     "t": 289,
+     "side": "P",
+     "strike": 22500.0,
+     "price": 25.2,
+     "exit": "E1",
+     "net": -1221.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2024-05-02",
+     "t": 164,
+     "side": "C",
+     "strike": 22750.0,
+     "price": 24.15,
+     "exit": "E1",
+     "net": -1811.0,
+     "peak": 1.24
+    },
+    {
+     "day": "2024-05-09",
+     "t": 334,
+     "side": "C",
+     "strike": 22000.0,
+     "price": 11.6,
+     "exit": "E1",
+     "net": -1677.0,
+     "peak": 1.56
+    },
+    {
+     "day": "2024-05-16",
+     "t": 169,
+     "side": "C",
+     "strike": 22250.0,
+     "price": 16.5,
+     "exit": "E1",
+     "net": 12901.0,
+     "peak": 9.1
+    },
+    {
+     "day": "2024-05-23",
+     "t": 324,
+     "side": "P",
+     "strike": 22900.0,
+     "price": 28.35,
+     "exit": "E1",
+     "net": -1376.0,
+     "peak": 1.13
+    },
+    {
+     "day": "2024-05-30",
+     "t": 164,
+     "side": "C",
+     "strike": 22650.0,
+     "price": 14.25,
+     "exit": "E1",
+     "net": -1787.0,
+     "peak": 1.56
+    },
+    {
+     "day": "2024-06-06",
+     "t": 194,
+     "side": "P",
+     "strike": 22600.0,
+     "price": 28.15,
+     "exit": "E1",
+     "net": -1466.0,
+     "peak": 2.28
+    },
+    {
+     "day": "2024-07-04",
+     "t": 304,
+     "side": "C",
+     "strike": 24350.0,
+     "price": 5.75,
+     "exit": "E1",
+     "net": -1868.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2024-07-11",
+     "t": 174,
+     "side": "P",
+     "strike": 24150.0,
+     "price": 13.15,
+     "exit": "E1",
+     "net": -1977.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-07-25",
+     "t": 164,
+     "side": "C",
+     "strike": 24400.0,
+     "price": 15.75,
+     "exit": "E1",
+     "net": -1338.0,
+     "peak": 1.75
+    },
+    {
+     "day": "2024-08-01",
+     "t": 179,
+     "side": "C",
+     "strike": 25050.0,
+     "price": 9.7,
+     "exit": "E1",
+     "net": -1978.0,
+     "peak": 1.06
+    },
+    {
+     "day": "2024-08-14",
+     "t": 164,
+     "side": "C",
+     "strike": 24200.0,
+     "price": 12.75,
+     "exit": "E1",
+     "net": -1902.0,
+     "peak": 1.71
+    },
+    {
+     "day": "2024-08-22",
+     "t": 169,
+     "side": "P",
+     "strike": 24800.0,
+     "price": 11.35,
+     "exit": "E1",
+     "net": -1931.0,
+     "peak": 1.75
+    },
+    {
+     "day": "2024-09-05",
+     "t": 189,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 6.0,
+     "exit": "E1",
+     "net": -1949.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-09-12",
+     "t": 329,
+     "side": "P",
+     "strike": 25250.0,
+     "price": 24.0,
+     "exit": "E1",
+     "net": -1699.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-09-19",
+     "t": 309,
+     "side": "P",
+     "strike": 25350.0,
+     "price": 2.75,
+     "exit": "E1",
+     "net": -1868.0,
+     "peak": 1.12
+    },
+    {
+     "day": "2024-10-03",
+     "t": 184,
+     "side": "C",
+     "strike": 25450.0,
+     "price": 26.0,
+     "exit": "E1",
+     "net": -1368.0,
+     "peak": 1.23
+    },
+    {
+     "day": "2024-10-10",
+     "t": 254,
+     "side": "P",
+     "strike": 25000.0,
+     "price": 9.35,
+     "exit": "E1",
+     "net": -1459.0,
+     "peak": 1.31
+    },
+    {
+     "day": "2024-10-17",
+     "t": 164,
+     "side": "P",
+     "strike": 24750.0,
+     "price": 11.45,
+     "exit": "E1",
+     "net": -1695.0,
+     "peak": 1.34
+    },
+    {
+     "day": "2024-10-24",
+     "t": 164,
+     "side": "C",
+     "strike": 24450.0,
+     "price": 7.1,
+     "exit": "E1",
+     "net": -1946.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2024-10-31",
+     "t": 169,
+     "side": "P",
+     "strike": 24200.0,
+     "price": 11.7,
+     "exit": "E1",
+     "net": -1498.0,
+     "peak": 2.16
+    },
+    {
+     "day": "2024-11-07",
+     "t": 179,
+     "side": "C",
+     "strike": 24250.0,
+     "price": 10.8,
+     "exit": "E1",
+     "net": -1914.0,
+     "peak": 1.48
+    },
+    {
+     "day": "2024-11-14",
+     "t": 164,
+     "side": "P",
+     "strike": 23450.0,
+     "price": 9.05,
+     "exit": "E1",
+     "net": -1994.0,
+     "peak": 1.12
+    },
+    {
+     "day": "2024-11-21",
+     "t": 164,
+     "side": "P",
+     "strike": 23300.0,
+     "price": 6.6,
+     "exit": "E1",
+     "net": -1863.0,
+     "peak": 1.91
+    },
+    {
+     "day": "2024-12-12",
+     "t": 164,
+     "side": "C",
+     "strike": 24650.0,
+     "price": 16.65,
+     "exit": "E1",
+     "net": -1286.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-12-19",
+     "t": 209,
+     "side": "P",
+     "strike": 23950.0,
+     "price": 13.15,
+     "exit": "E1",
+     "net": -1872.0,
+     "peak": 1.23
+    },
+    {
+     "day": "2024-12-26",
+     "t": 164,
+     "side": "C",
+     "strike": 23800.0,
+     "price": 13.9,
+     "exit": "E1",
+     "net": -1072.0,
+     "peak": 1.13
+    },
+    {
+     "day": "2025-01-02",
+     "t": 199,
+     "side": "C",
+     "strike": 24200.0,
+     "price": 26.7,
+     "exit": "E1",
+     "net": -1763.0,
+     "peak": 1.21
+    },
+    {
+     "day": "2025-01-09",
+     "t": 289,
+     "side": "C",
+     "strike": 23550.0,
+     "price": 7.85,
+     "exit": "E1",
+     "net": -1803.0,
+     "peak": 1.49
+    },
+    {
+     "day": "2025-01-16",
+     "t": 174,
+     "side": "C",
+     "strike": 23300.0,
+     "price": 11.95,
+     "exit": "E1",
+     "net": -1236.0,
+     "peak": 2.1
+    },
+    {
+     "day": "2025-01-23",
+     "t": 164,
+     "side": "C",
+     "strike": 23250.0,
+     "price": 11.35,
+     "exit": "E1",
+     "net": -1700.0,
+     "peak": 2.99
+    },
+    {
+     "day": "2025-01-30",
+     "t": 214,
+     "side": "P",
+     "strike": 23150.0,
+     "price": 27.6,
+     "exit": "E1",
+     "net": -2059.0,
+     "peak": 2.5
+    },
+    {
+     "day": "2025-02-06",
+     "t": 164,
+     "side": "C",
+     "strike": 23700.0,
+     "price": 8.55,
+     "exit": "E1",
+     "net": -1904.0,
+     "peak": 1.13
+    },
+    {
+     "day": "2025-02-13",
+     "t": 204,
+     "side": "P",
+     "strike": 23150.0,
+     "price": 12.95,
+     "exit": "E1",
+     "net": 8224.0,
+     "peak": 10.66
+    },
+    {
+     "day": "2025-02-20",
+     "t": 314,
+     "side": "P",
+     "strike": 22900.0,
+     "price": 9.1,
+     "exit": "E1",
+     "net": -1211.0,
+     "peak": 1.16
+    },
+    {
+     "day": "2025-02-27",
+     "t": 204,
+     "side": "P",
+     "strike": 22500.0,
+     "price": 7.2,
+     "exit": "E1",
+     "net": -1634.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-03-06",
+     "t": 174,
+     "side": "C",
+     "strike": 22650.0,
+     "price": 1.0,
+     "exit": "E1",
+     "net": -1848.0,
+     "peak": 3.32
+    },
+    {
+     "day": "2025-03-13",
+     "t": 164,
+     "side": "C",
+     "strike": 22450.0,
+     "price": 19.15,
+     "exit": "E1",
+     "net": -1470.0,
+     "peak": 1.15
+    },
+    {
+     "day": "2025-03-20",
+     "t": 279,
+     "side": "P",
+     "strike": 23100.0,
+     "price": 3.75,
+     "exit": "E1",
+     "net": -1912.0,
+     "peak": 1.16
+    },
+    {
+     "day": "2025-04-03",
+     "t": 194,
+     "side": "C",
+     "strike": 23400.0,
+     "price": 1.55,
+     "exit": "E1",
+     "net": -1788.0,
+     "peak": 1.09
+    },
+    {
+     "day": "2025-04-09",
+     "t": 164,
+     "side": "C",
+     "strike": 22450.0,
+     "price": 9.3,
+     "exit": "E1",
+     "net": -1398.0,
+     "peak": 2.01
+    },
+    {
+     "day": "2025-04-17",
+     "t": 184,
+     "side": "P",
+     "strike": 23450.0,
+     "price": 12.6,
+     "exit": "E1",
+     "net": -1865.0,
+     "peak": 1.13
+    },
+    {
+     "day": "2025-05-08",
+     "t": 169,
+     "side": "P",
+     "strike": 24400.0,
+     "price": 11.75,
+     "exit": "E1",
+     "net": 13631.0,
+     "peak": 10.85
+    },
+    {
+     "day": "2025-05-15",
+     "t": 164,
+     "side": "P",
+     "strike": 24450.0,
+     "price": 21.65,
+     "exit": "E1",
+     "net": -1635.0,
+     "peak": 1.11
+    },
+    {
+     "day": "2025-05-22",
+     "t": 179,
+     "side": "C",
+     "strike": 24700.0,
+     "price": 8.5,
+     "exit": "E1",
+     "net": -1837.0,
+     "peak": 1.41
+    },
+    {
+     "day": "2025-05-29",
+     "t": 164,
+     "side": "C",
+     "strike": 24850.0,
+     "price": 18.95,
+     "exit": "E1",
+     "net": -1346.0,
+     "peak": 1.32
+    },
+    {
+     "day": "2025-06-05",
+     "t": 164,
+     "side": "P",
+     "strike": 24600.0,
+     "price": 7.65,
+     "exit": "E1",
+     "net": -1736.0,
+     "peak": 1.55
+    },
+    {
+     "day": "2025-06-12",
+     "t": 174,
+     "side": "C",
+     "strike": 25100.0,
+     "price": 20.55,
+     "exit": "E1",
+     "net": -1560.0,
+     "peak": 1.68
+    },
+    {
+     "day": "2025-06-26",
+     "t": 164,
+     "side": "P",
+     "strike": 25050.0,
+     "price": 5.95,
+     "exit": "E1",
+     "net": -1698.0,
+     "peak": 1.08
+    },
+    {
+     "day": "2025-07-03",
+     "t": 209,
+     "side": "P",
+     "strike": 25450.0,
+     "price": 13.25,
+     "exit": "E1",
+     "net": 2486.0,
+     "peak": 5.75
+    },
+    {
+     "day": "2025-07-10",
+     "t": 179,
+     "side": "P",
+     "strike": 25300.0,
+     "price": 11.85,
+     "exit": "E1",
+     "net": -1730.0,
+     "peak": 1.07
+    },
+    {
+     "day": "2025-07-17",
+     "t": 174,
+     "side": "C",
+     "strike": 25400.0,
+     "price": 1.9,
+     "exit": "E1",
+     "net": -1901.0,
+     "peak": 1.05
+    },
+    {
+     "day": "2025-07-24",
+     "t": 164,
+     "side": "C",
+     "strike": 25100.0,
+     "price": 25.0,
+     "exit": "E1",
+     "net": -1871.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2025-07-31",
+     "t": 184,
+     "side": "P",
+     "strike": 24450.0,
+     "price": 1.55,
+     "exit": "E1",
+     "net": -1770.0,
+     "peak": 1.29
+    },
+    {
+     "day": "2025-08-07",
+     "t": 164,
+     "side": "P",
+     "strike": 24300.0,
+     "price": 5.15,
+     "exit": "E1",
+     "net": -1961.0,
+     "peak": 2.87
+    },
+    {
+     "day": "2025-08-21",
+     "t": 164,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 23.15,
+     "exit": "E1",
+     "net": -910.0,
+     "peak": 1.51
+    },
+    {
+     "day": "2025-08-28",
+     "t": 164,
+     "side": "C",
+     "strike": 24750.0,
+     "price": 7.05,
+     "exit": "E1",
+     "net": -1578.0,
+     "peak": 1.06
+    },
+    {
+     "day": "2025-09-02",
+     "t": 164,
+     "side": "P",
+     "strike": 24650.0,
+     "price": 7.8,
+     "exit": "E1",
+     "net": 16064.0,
+     "peak": 15.5
+    },
+    {
+     "day": "2025-09-09",
+     "t": 164,
+     "side": "P",
+     "strike": 24750.0,
+     "price": 10.8,
+     "exit": "E1",
+     "net": -1647.0,
+     "peak": 1.61
+    },
+    {
+     "day": "2025-09-16",
+     "t": 164,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 8.95,
+     "exit": "E1",
+     "net": -1375.0,
+     "peak": 1.05
+    },
+    {
+     "day": "2025-09-23",
+     "t": 164,
+     "side": "C",
+     "strike": 25250.0,
+     "price": 6.75,
+     "exit": "E1",
+     "net": -1544.0,
+     "peak": 6.82
+    },
+    {
+     "day": "2025-09-30",
+     "t": 164,
+     "side": "P",
+     "strike": 24500.0,
+     "price": 6.75,
+     "exit": "E1",
+     "net": -1555.0,
+     "peak": 1.09
+    },
+    {
+     "day": "2025-10-07",
+     "t": 164,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 21.05,
+     "exit": "E1",
+     "net": -1605.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-10-14",
+     "t": 164,
+     "side": "C",
+     "strike": 25300.0,
+     "price": 7.3,
+     "exit": "E1",
+     "net": -1690.0,
+     "peak": 1.02
+    },
+    {
+     "day": "2025-10-20",
+     "t": 164,
+     "side": "C",
+     "strike": 26100.0,
+     "price": 2.2,
+     "exit": "E1",
+     "net": -1863.0,
+     "peak": 1.29
+    },
+    {
+     "day": "2025-10-28",
+     "t": 164,
+     "side": "C",
+     "strike": 26000.0,
+     "price": 9.7,
+     "exit": "E1",
+     "net": -1398.0,
+     "peak": 2.87
+    },
+    {
+     "day": "2025-11-04",
+     "t": 164,
+     "side": "P",
+     "strike": 25550.0,
+     "price": 6.75,
+     "exit": "E1",
+     "net": -1522.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-11-11",
+     "t": 164,
+     "side": "P",
+     "strike": 25500.0,
+     "price": 23.7,
+     "exit": "E1",
+     "net": -1774.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-11-18",
+     "t": 164,
+     "side": "P",
+     "strike": 25900.0,
+     "price": 13.35,
+     "exit": "E1",
+     "net": -1012.0,
+     "peak": 1.57
+    },
+    {
+     "day": "2025-11-25",
+     "t": 229,
+     "side": "P",
+     "strike": 25950.0,
+     "price": 20.15,
+     "exit": "E1",
+     "net": 3748.0,
+     "peak": 4.04
+    },
+    {
+     "day": "2025-12-02",
+     "t": 229,
+     "side": "P",
+     "strike": 26000.0,
+     "price": 12.4,
+     "exit": "E1",
+     "net": -1820.0,
+     "peak": 1.26
+    },
+    {
+     "day": "2025-12-09",
+     "t": 164,
+     "side": "C",
+     "strike": 26050.0,
+     "price": 2.8,
+     "exit": "E1",
+     "net": -1837.0,
+     "peak": 2.23
+    },
+    {
+     "day": "2025-12-16",
+     "t": 164,
+     "side": "P",
+     "strike": 25850.0,
+     "price": 20.1,
+     "exit": "E1",
+     "net": -1526.0,
+     "peak": 1.05
+    },
+    {
+     "day": "2025-12-23",
+     "t": 164,
+     "side": "C",
+     "strike": 26250.0,
+     "price": 4.65,
+     "exit": "E1",
+     "net": -1736.0,
+     "peak": 1.64
+    },
+    {
+     "day": "2025-12-30",
+     "t": 174,
+     "side": "P",
+     "strike": 25900.0,
+     "price": 24.55,
+     "exit": "E1",
+     "net": -1909.0,
+     "peak": 1.35
+    },
+    {
+     "day": "2026-01-06",
+     "t": 164,
+     "side": "C",
+     "strike": 26250.0,
+     "price": 7.0,
+     "exit": "E1",
+     "net": -1816.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-01-13",
+     "t": 169,
+     "side": "C",
+     "strike": 25800.0,
+     "price": 18.6,
+     "exit": "E1",
+     "net": -1241.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-01-20",
+     "t": 229,
+     "side": "P",
+     "strike": 25400.0,
+     "price": 19.4,
+     "exit": "E1",
+     "net": 6053.0,
+     "peak": 5.89
+    },
+    {
+     "day": "2026-01-27",
+     "t": 164,
+     "side": "P",
+     "strike": 24850.0,
+     "price": 7.15,
+     "exit": "E1",
+     "net": -1855.0,
+     "peak": 1.25
+    },
+    {
+     "day": "2026-02-03",
+     "t": 164,
+     "side": "C",
+     "strike": 26100.0,
+     "price": 10.25,
+     "exit": "E1",
+     "net": -1330.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-02-10",
+     "t": 164,
+     "side": "P",
+     "strike": 25950.0,
+     "price": 24.1,
+     "exit": "E1",
+     "net": -1297.0,
+     "peak": 2.52
+    },
+    {
+     "day": "2026-02-17",
+     "t": 254,
+     "side": "P",
+     "strike": 25700.0,
+     "price": 13.45,
+     "exit": "E1",
+     "net": -1532.0,
+     "peak": 3.13
+    },
+    {
+     "day": "2026-02-24",
+     "t": 164,
+     "side": "P",
+     "strike": 25400.0,
+     "price": 20.9,
+     "exit": "E1",
+     "net": -946.0,
+     "peak": 3.74
+    },
+    {
+     "day": "2026-03-02",
+     "t": 174,
+     "side": "P",
+     "strike": 24700.0,
+     "price": 29.55,
+     "exit": "E1",
+     "net": -1957.0,
+     "peak": 4.04
+    },
+    {
+     "day": "2026-03-10",
+     "t": 174,
+     "side": "P",
+     "strike": 24100.0,
+     "price": 20.95,
+     "exit": "E1",
+     "net": -1387.0,
+     "peak": 2.08
+    },
+    {
+     "day": "2026-03-17",
+     "t": 164,
+     "side": "P",
+     "strike": 23250.0,
+     "price": 16.0,
+     "exit": "E1",
+     "net": -1072.0,
+     "peak": 1.37
+    },
+    {
+     "day": "2026-03-24",
+     "t": 164,
+     "side": "C",
+     "strike": 23100.0,
+     "price": 5.05,
+     "exit": "E1",
+     "net": -1624.0,
+     "peak": 11.75
+    },
+    {
+     "day": "2026-03-30",
+     "t": 164,
+     "side": "P",
+     "strike": 22200.0,
+     "price": 6.55,
+     "exit": "E1",
+     "net": -1595.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-04-07",
+     "t": 164,
+     "side": "P",
+     "strike": 22850.0,
+     "price": 22.55,
+     "exit": "E1",
+     "net": -1508.0,
+     "peak": 2.02
+    },
+    {
+     "day": "2026-04-13",
+     "t": 164,
+     "side": "P",
+     "strike": 23650.0,
+     "price": 16.6,
+     "exit": "E1",
+     "net": -1124.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2026-04-21",
+     "t": 164,
+     "side": "P",
+     "strike": 24450.0,
+     "price": 15.15,
+     "exit": "E1",
+     "net": -1954.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2026-04-28",
+     "t": 259,
+     "side": "C",
+     "strike": 24000.0,
+     "price": 27.1,
+     "exit": "E1",
+     "net": -1362.0,
+     "peak": 1.69
+    },
+    {
+     "day": "2026-05-05",
+     "t": 164,
+     "side": "P",
+     "strike": 23850.0,
+     "price": 27.5,
+     "exit": "E1",
+     "net": -1849.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-05-12",
+     "t": 164,
+     "side": "C",
+     "strike": 23700.0,
+     "price": 19.6,
+     "exit": "E1",
+     "net": -1319.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-05-19",
+     "t": 164,
+     "side": "P",
+     "strike": 23600.0,
+     "price": 7.4,
+     "exit": "E1",
+     "net": -1713.0,
+     "peak": 1.25
+    },
+    {
+     "day": "2026-05-26",
+     "t": 169,
+     "side": "P",
+     "strike": 23900.0,
+     "price": 5.45,
+     "exit": "E1",
+     "net": -1008.0,
+     "peak": 5.31
+    },
+    {
+     "day": "2026-06-02",
+     "t": 164,
+     "side": "P",
+     "strike": 23050.0,
+     "price": 1.35,
+     "exit": "E1",
+     "net": -1836.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-06-09",
+     "t": 164,
+     "side": "C",
+     "strike": 23400.0,
+     "price": 3.25,
+     "exit": "E1",
+     "net": -1949.0,
+     "peak": 1.12
+    },
+    {
+     "day": "2026-06-16",
+     "t": 249,
+     "side": "P",
+     "strike": 23950.0,
+     "price": 22.95,
+     "exit": "E1",
+     "net": -1547.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-06-23",
+     "t": 164,
+     "side": "C",
+     "strike": 24100.0,
+     "price": 9.9,
+     "exit": "E1",
+     "net": -1901.0,
+     "peak": 1.07
+    },
+    {
+     "day": "2026-06-30",
+     "t": 164,
+     "side": "C",
+     "strike": 24300.0,
+     "price": 1.1,
+     "exit": "E1",
+     "net": -1674.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-07-07",
+     "t": 164,
+     "side": "P",
+     "strike": 24450.0,
+     "price": 11.35,
+     "exit": "E1",
+     "net": 1945.0,
+     "peak": 3.79
+    },
+    {
+     "day": "2026-07-14",
+     "t": 164,
+     "side": "C",
+     "strike": 24150.0,
+     "price": 15.3,
+     "exit": "E1",
+     "net": -1980.0,
+     "peak": 1.3
+    },
+    {
+     "day": "2026-07-21",
+     "t": 164,
+     "side": "C",
+     "strike": 24200.0,
+     "price": 22.75,
+     "exit": "E1",
+     "net": -1456.0,
+     "peak": 1.19
+    },
+    {
+     "day": "2026-07-28",
+     "t": 164,
+     "side": "P",
+     "strike": 23950.0,
+     "price": 8.9,
+     "exit": "E1",
+     "net": -1501.0,
+     "peak": 2.29
+    },
+    {
+     "day": "2026-08-04",
+     "t": 169,
+     "side": "C",
+     "strike": 24700.0,
+     "price": 3.55,
+     "exit": "E1",
+     "net": -467.0,
+     "peak": 1.42
+    },
+    {
+     "day": "2026-08-11",
+     "t": 214,
+     "side": "C",
+     "strike": 24550.0,
+     "price": 16.65,
+     "exit": "E1",
+     "net": -317.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-08-25",
+     "t": 184,
+     "side": "P",
+     "strike": 24050.0,
+     "price": 2.05,
+     "exit": "E1",
+     "net": -1369.0,
+     "peak": 2.21
+    },
+    {
+     "day": "2026-09-01",
+     "t": 174,
+     "side": "P",
+     "strike": 24100.0,
+     "price": 22.8,
+     "exit": "E1",
+     "net": 5732.0,
+     "peak": 6.39
+    },
+    {
+     "day": "2026-09-08",
+     "t": 284,
+     "side": "C",
+     "strike": 23750.0,
+     "price": 8.2,
+     "exit": "E1",
+     "net": 326.0,
+     "peak": 1.54
+    },
+    {
+     "day": "2026-09-15",
+     "t": 239,
+     "side": "C",
+     "strike": 23450.0,
+     "price": 7.8,
+     "exit": "E1",
+     "net": -1063.0,
+     "peak": 1.02
+    },
+    {
+     "day": "2026-09-22",
+     "t": 329,
+     "side": "C",
+     "strike": 23400.0,
+     "price": 24.65,
+     "exit": "E1",
+     "net": -549.0,
+     "peak": 1.08
+    },
+    {
+     "day": "2026-09-29",
+     "t": 174,
+     "side": "C",
+     "strike": 22850.0,
+     "price": 22.5,
+     "exit": "E1",
+     "net": -1430.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2026-10-06",
+     "t": 164,
+     "side": "P",
+     "strike": 22600.0,
+     "price": 20.1,
+     "exit": "E1",
+     "net": -1245.0,
+     "peak": 1.26
+    }
+   ],
+   "q": 1.0,
+   "gates": {
+    "1 >= 30 trades": true,
+    "2 net > 0": false,
+    "3 >= 3 of 4 years > 0": false,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": false,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": false
+   },
+   "passes": false
+  },
+  "M2": {
+   "m": {
+    "expiries": 197,
+    "trades": 141,
+    "hit_pct": 29.1,
+    "avg_win": 1678.2,
+    "avg_loss": -1411.1,
+    "net": -72304.17,
+    "per_expiry": -367.03,
+    "per_1000_risked": -296.4,
+    "green_expiries_pct": 20.8,
+    "worst_day": -2163.94,
+    "best_day": 5330.99,
+    "max_dd": -72304.17,
+    "losing_streak_trades": 13,
+    "losing_streak_expiries": 13,
+    "best_day_share_pct": null,
+    "net_without_best_day": -77635.16,
+    "proxy_trades": 0,
+    "x2_pct": 29.8,
+    "x4_pct": 13.5,
+    "x10_pct": 3.5
+   },
+   "years": {
+    "2023": {
+     "expiries": 52,
+     "trades": 26,
+     "hit_pct": 30.8,
+     "avg_win": 1249.0,
+     "avg_loss": -1275.0,
+     "net": -12958.84,
+     "per_expiry": -249.21,
+     "per_1000_risked": -280.3,
+     "green_expiries_pct": 15.4,
+     "worst_day": -1973.19,
+     "best_day": 4584.17,
+     "max_dd": -16089.81,
+     "losing_streak_trades": 7,
+     "losing_streak_expiries": 7,
+     "best_day_share_pct": null,
+     "net_without_best_day": -17543.01,
+     "proxy_trades": 0,
+     "x2_pct": 26.9,
+     "x4_pct": 7.7,
+     "x10_pct": 3.8
+    },
+    "2024": {
+     "expiries": 52,
+     "trades": 49,
+     "hit_pct": 22.4,
+     "avg_win": 1961.9,
+     "avg_loss": -1434.4,
+     "net": -32927.77,
+     "per_expiry": -633.23,
+     "per_1000_risked": -390.8,
+     "green_expiries_pct": 21.2,
+     "worst_day": -1973.23,
+     "best_day": 5216.66,
+     "max_dd": -32927.77,
+     "losing_streak_trades": 7,
+     "losing_streak_expiries": 7,
+     "best_day_share_pct": null,
+     "net_without_best_day": -38144.43,
+     "proxy_trades": 0,
+     "x2_pct": 22.4,
+     "x4_pct": 12.2,
+     "x10_pct": 4.1
+    },
+    "2025": {
+     "expiries": 53,
+     "trades": 41,
+     "hit_pct": 39.0,
+     "avg_win": 1832.8,
+     "avg_loss": -1476.7,
+     "net": -7591.65,
+     "per_expiry": -143.24,
+     "per_1000_risked": -106.0,
+     "green_expiries_pct": 30.2,
+     "worst_day": -2163.94,
+     "best_day": 5330.99,
+     "max_dd": -17440.99,
+     "losing_streak_trades": 8,
+     "losing_streak_expiries": 8,
+     "best_day_share_pct": null,
+     "net_without_best_day": -12922.64,
+     "proxy_trades": 0,
+     "x2_pct": 41.5,
+     "x4_pct": 19.5,
+     "x10_pct": 4.9
+    },
+    "2026": {
+     "expiries": 40,
+     "trades": 25,
+     "hit_pct": 24.0,
+     "avg_win": 1318.0,
+     "avg_loss": -1407.1,
+     "net": -18825.91,
+     "per_expiry": -470.65,
+     "per_1000_risked": -450.3,
+     "green_expiries_pct": 15.0,
+     "worst_day": -1979.99,
+     "best_day": 1823.74,
+     "max_dd": -18825.91,
+     "losing_streak_trades": 9,
+     "losing_streak_expiries": 9,
+     "best_day_share_pct": null,
+     "net_without_best_day": -20649.65,
+     "proxy_trades": 0,
+     "x2_pct": 28.0,
+     "x4_pct": 12.0,
+     "x10_pct": 0.0
+    }
+   },
+   "bands": {
+    "1-10": {
+     "trades": 53,
+     "net": -18238.0
+    },
+    "10-15": {
+     "trades": 31,
+     "net": -18621.0
+    },
+    "15-30": {
+     "trades": 57,
+     "net": -35446.0
+    }
+   },
+   "choices": {
+    "2023": {
+     "tau": 500.0,
+     "exit": "E3"
+    },
+    "2024": {
+     "tau": 0.0,
+     "exit": "E3"
+    },
+    "2025": {
+     "tau": 0.0,
+     "exit": "E3"
+    },
+    "2026": {
+     "tau": 100.0,
+     "exit": "E3"
+    }
+   },
+   "twins": {
+    "p": 0.002,
+    "mean": -124050.0,
+    "p05": -154652.0,
+    "p95": -93565.0
+   },
+   "x2_spread": -74801.0,
+   "trades_list": [
+    {
+     "day": "2023-01-05",
+     "t": 334,
+     "side": "P",
+     "strike": 17950.0,
+     "price": 13.55,
+     "exit": "E3",
+     "net": -1828.0,
+     "peak": 1.66
+    },
+    {
+     "day": "2023-01-25",
+     "t": 169,
+     "side": "P",
+     "strike": 17900.0,
+     "price": 26.8,
+     "exit": "E3",
+     "net": -421.0,
+     "peak": 1.37
+    },
+    {
+     "day": "2023-02-16",
+     "t": 164,
+     "side": "P",
+     "strike": 18050.0,
+     "price": 12.0,
+     "exit": "E3",
+     "net": 1113.0,
+     "peak": 2.19
+    },
+    {
+     "day": "2023-03-09",
+     "t": 169,
+     "side": "C",
+     "strike": 17750.0,
+     "price": 3.85,
+     "exit": "E3",
+     "net": -1973.0,
+     "peak": 1.23
+    },
+    {
+     "day": "2023-04-13",
+     "t": 314,
+     "side": "P",
+     "strike": 17800.0,
+     "price": 10.7,
+     "exit": "E3",
+     "net": -1415.0,
+     "peak": 1.45
+    },
+    {
+     "day": "2023-04-27",
+     "t": 259,
+     "side": "C",
+     "strike": 17950.0,
+     "price": 2.15,
+     "exit": "E3",
+     "net": -1848.0,
+     "peak": 1.02
+    },
+    {
+     "day": "2023-05-04",
+     "t": 164,
+     "side": "C",
+     "strike": 18200.0,
+     "price": 8.6,
+     "exit": "E3",
+     "net": 4584.0,
+     "peak": 5.62
+    },
+    {
+     "day": "2023-06-08",
+     "t": 309,
+     "side": "C",
+     "strike": 18700.0,
+     "price": 10.3,
+     "exit": "E3",
+     "net": -1557.0,
+     "peak": 1.05
+    },
+    {
+     "day": "2023-08-17",
+     "t": 274,
+     "side": "P",
+     "strike": 19350.0,
+     "price": 13.7,
+     "exit": "E3",
+     "net": -1349.0,
+     "peak": 1.2
+    },
+    {
+     "day": "2023-08-24",
+     "t": 324,
+     "side": "P",
+     "strike": 19400.0,
+     "price": 5.0,
+     "exit": "E3",
+     "net": 833.0,
+     "peak": 2.75
+    },
+    {
+     "day": "2023-08-31",
+     "t": 329,
+     "side": "P",
+     "strike": 19250.0,
+     "price": 7.05,
+     "exit": "E3",
+     "net": -151.0,
+     "peak": 1.1
+    },
+    {
+     "day": "2023-09-07",
+     "t": 174,
+     "side": "C",
+     "strike": 19650.0,
+     "price": 4.7,
+     "exit": "E3",
+     "net": -391.0,
+     "peak": 22.32
+    },
+    {
+     "day": "2023-09-14",
+     "t": 279,
+     "side": "C",
+     "strike": 20100.0,
+     "price": 6.45,
+     "exit": "E3",
+     "net": 113.0,
+     "peak": 1.91
+    },
+    {
+     "day": "2023-09-21",
+     "t": 164,
+     "side": "C",
+     "strike": 19800.0,
+     "price": 6.0,
+     "exit": "E3",
+     "net": -1818.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-09-28",
+     "t": 289,
+     "side": "C",
+     "strike": 19550.0,
+     "price": 16.0,
+     "exit": "E3",
+     "net": -1634.0,
+     "peak": 1.77
+    },
+    {
+     "day": "2023-10-05",
+     "t": 304,
+     "side": "C",
+     "strike": 19550.0,
+     "price": 6.3,
+     "exit": "E3",
+     "net": 218.0,
+     "peak": 1.76
+    },
+    {
+     "day": "2023-10-12",
+     "t": 174,
+     "side": "P",
+     "strike": 19800.0,
+     "price": 10.95,
+     "exit": "E3",
+     "net": -1138.0,
+     "peak": 1.42
+    },
+    {
+     "day": "2023-10-19",
+     "t": 309,
+     "side": "C",
+     "strike": 19650.0,
+     "price": 6.7,
+     "exit": "E3",
+     "net": -1699.0,
+     "peak": 1.04
+    },
+    {
+     "day": "2023-10-26",
+     "t": 254,
+     "side": "C",
+     "strike": 18900.0,
+     "price": 8.0,
+     "exit": "E3",
+     "net": -1608.0,
+     "peak": 1.17
+    },
+    {
+     "day": "2023-11-02",
+     "t": 164,
+     "side": "P",
+     "strike": 19050.0,
+     "price": 14.15,
+     "exit": "E3",
+     "net": -1459.0,
+     "peak": 1.15
+    },
+    {
+     "day": "2023-11-09",
+     "t": 294,
+     "side": "C",
+     "strike": 19450.0,
+     "price": 4.7,
+     "exit": "E3",
+     "net": -1848.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-11-23",
+     "t": 274,
+     "side": "P",
+     "strike": 19800.0,
+     "price": 6.95,
+     "exit": "E3",
+     "net": -114.0,
+     "peak": 1.35
+    },
+    {
+     "day": "2023-12-07",
+     "t": 259,
+     "side": "P",
+     "strike": 20900.0,
+     "price": 7.2,
+     "exit": "E3",
+     "net": -700.0,
+     "peak": 1.45
+    },
+    {
+     "day": "2023-12-14",
+     "t": 229,
+     "side": "C",
+     "strike": 21200.0,
+     "price": 8.35,
+     "exit": "E3",
+     "net": 1337.0,
+     "peak": 2.83
+    },
+    {
+     "day": "2023-12-21",
+     "t": 239,
+     "side": "P",
+     "strike": 21200.0,
+     "price": 10.8,
+     "exit": "E3",
+     "net": 922.0,
+     "peak": 2.67
+    },
+    {
+     "day": "2023-12-28",
+     "t": 334,
+     "side": "C",
+     "strike": 21750.0,
+     "price": 10.15,
+     "exit": "E3",
+     "net": 873.0,
+     "peak": 2.36
+    },
+    {
+     "day": "2024-01-04",
+     "t": 164,
+     "side": "C",
+     "strike": 21650.0,
+     "price": 16.7,
+     "exit": "E3",
+     "net": -1405.0,
+     "peak": 1.44
+    },
+    {
+     "day": "2024-01-11",
+     "t": 164,
+     "side": "P",
+     "strike": 21650.0,
+     "price": 20.05,
+     "exit": "E3",
+     "net": 955.0,
+     "peak": 3.13
+    },
+    {
+     "day": "2024-01-18",
+     "t": 164,
+     "side": "C",
+     "strike": 21600.0,
+     "price": 9.05,
+     "exit": "E3",
+     "net": -1828.0,
+     "peak": 1.37
+    },
+    {
+     "day": "2024-01-25",
+     "t": 169,
+     "side": "P",
+     "strike": 21250.0,
+     "price": 26.9,
+     "exit": "E3",
+     "net": -1416.0,
+     "peak": 1.3
+    },
+    {
+     "day": "2024-02-01",
+     "t": 169,
+     "side": "C",
+     "strike": 21800.0,
+     "price": 24.6,
+     "exit": "E3",
+     "net": -1193.0,
+     "peak": 1.9
+    },
+    {
+     "day": "2024-02-08",
+     "t": 169,
+     "side": "P",
+     "strike": 21700.0,
+     "price": 9.35,
+     "exit": "E3",
+     "net": 1740.0,
+     "peak": 4.49
+    },
+    {
+     "day": "2024-02-15",
+     "t": 164,
+     "side": "P",
+     "strike": 21850.0,
+     "price": 27.75,
+     "exit": "E3",
+     "net": -1433.0,
+     "peak": 1.52
+    },
+    {
+     "day": "2024-02-22",
+     "t": 179,
+     "side": "P",
+     "strike": 21900.0,
+     "price": 18.25,
+     "exit": "E3",
+     "net": -1899.0,
+     "peak": 1.44
+    },
+    {
+     "day": "2024-02-29",
+     "t": 189,
+     "side": "C",
+     "strike": 22000.0,
+     "price": 24.1,
+     "exit": "E3",
+     "net": -1153.0,
+     "peak": 1.93
+    },
+    {
+     "day": "2024-03-07",
+     "t": 314,
+     "side": "P",
+     "strike": 22500.0,
+     "price": 13.3,
+     "exit": "E3",
+     "net": -990.0,
+     "peak": 1.41
+    },
+    {
+     "day": "2024-03-14",
+     "t": 209,
+     "side": "C",
+     "strike": 22200.0,
+     "price": 21.4,
+     "exit": "E3",
+     "net": -1101.0,
+     "peak": 1.37
+    },
+    {
+     "day": "2024-03-21",
+     "t": 314,
+     "side": "C",
+     "strike": 22050.0,
+     "price": 3.5,
+     "exit": "E3",
+     "net": -491.0,
+     "peak": 1.83
+    },
+    {
+     "day": "2024-03-28",
+     "t": 169,
+     "side": "C",
+     "strike": 22400.0,
+     "price": 19.55,
+     "exit": "E3",
+     "net": 2929.0,
+     "peak": 6.67
+    },
+    {
+     "day": "2024-04-04",
+     "t": 164,
+     "side": "P",
+     "strike": 22300.0,
+     "price": 20.9,
+     "exit": "E3",
+     "net": -1098.0,
+     "peak": 1.04
+    },
+    {
+     "day": "2024-04-10",
+     "t": 199,
+     "side": "P",
+     "strike": 22700.0,
+     "price": 26.85,
+     "exit": "E3",
+     "net": -1381.0,
+     "peak": 1.15
+    },
+    {
+     "day": "2024-04-25",
+     "t": 189,
+     "side": "P",
+     "strike": 22350.0,
+     "price": 25.55,
+     "exit": "E3",
+     "net": -1308.0,
+     "peak": 1.02
+    },
+    {
+     "day": "2024-05-02",
+     "t": 164,
+     "side": "C",
+     "strike": 22750.0,
+     "price": 24.15,
+     "exit": "E3",
+     "net": -1811.0,
+     "peak": 1.24
+    },
+    {
+     "day": "2024-05-09",
+     "t": 164,
+     "side": "C",
+     "strike": 22200.0,
+     "price": 22.0,
+     "exit": "E3",
+     "net": -1695.0,
+     "peak": 1.39
+    },
+    {
+     "day": "2024-05-16",
+     "t": 179,
+     "side": "P",
+     "strike": 22200.0,
+     "price": 25.65,
+     "exit": "E3",
+     "net": 2452.0,
+     "peak": 6.49
+    },
+    {
+     "day": "2024-05-23",
+     "t": 294,
+     "side": "P",
+     "strike": 22850.0,
+     "price": 28.65,
+     "exit": "E3",
+     "net": -1441.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-05-30",
+     "t": 164,
+     "side": "C",
+     "strike": 22600.0,
+     "price": 27.8,
+     "exit": "E3",
+     "net": -1406.0,
+     "peak": 1.5
+    },
+    {
+     "day": "2024-06-06",
+     "t": 164,
+     "side": "P",
+     "strike": 22550.0,
+     "price": 23.85,
+     "exit": "E3",
+     "net": -349.0,
+     "peak": 1.98
+    },
+    {
+     "day": "2024-06-13",
+     "t": 169,
+     "side": "P",
+     "strike": 23350.0,
+     "price": 14.3,
+     "exit": "E3",
+     "net": -1768.0,
+     "peak": 1.04
+    },
+    {
+     "day": "2024-06-20",
+     "t": 164,
+     "side": "P",
+     "strike": 23500.0,
+     "price": 15.1,
+     "exit": "E3",
+     "net": -1887.0,
+     "peak": 1.45
+    },
+    {
+     "day": "2024-06-27",
+     "t": 164,
+     "side": "P",
+     "strike": 23900.0,
+     "price": 23.2,
+     "exit": "E3",
+     "net": -1744.0,
+     "peak": 1.56
+    },
+    {
+     "day": "2024-07-04",
+     "t": 179,
+     "side": "C",
+     "strike": 24350.0,
+     "price": 17.45,
+     "exit": "E3",
+     "net": -1789.0,
+     "peak": 1.14
+    },
+    {
+     "day": "2024-07-11",
+     "t": 164,
+     "side": "P",
+     "strike": 24250.0,
+     "price": 28.8,
+     "exit": "E3",
+     "net": 1279.0,
+     "peak": 2.68
+    },
+    {
+     "day": "2024-07-18",
+     "t": 169,
+     "side": "C",
+     "strike": 24700.0,
+     "price": 6.8,
+     "exit": "E3",
+     "net": 3252.0,
+     "peak": 21.24
+    },
+    {
+     "day": "2024-07-25",
+     "t": 164,
+     "side": "C",
+     "strike": 24400.0,
+     "price": 15.75,
+     "exit": "E3",
+     "net": -192.0,
+     "peak": 1.75
+    },
+    {
+     "day": "2024-08-01",
+     "t": 164,
+     "side": "C",
+     "strike": 25050.0,
+     "price": 11.55,
+     "exit": "E3",
+     "net": -1752.0,
+     "peak": 1.06
+    },
+    {
+     "day": "2024-08-08",
+     "t": 329,
+     "side": "P",
+     "strike": 24150.0,
+     "price": 17.5,
+     "exit": "E3",
+     "net": 358.0,
+     "peak": 2.22
+    },
+    {
+     "day": "2024-08-14",
+     "t": 169,
+     "side": "P",
+     "strike": 24100.0,
+     "price": 10.9,
+     "exit": "E3",
+     "net": -1931.0,
+     "peak": 1.07
+    },
+    {
+     "day": "2024-08-22",
+     "t": 164,
+     "side": "P",
+     "strike": 24800.0,
+     "price": 10.95,
+     "exit": "E3",
+     "net": -254.0,
+     "peak": 1.8
+    },
+    {
+     "day": "2024-08-29",
+     "t": 164,
+     "side": "C",
+     "strike": 25150.0,
+     "price": 9.35,
+     "exit": "E3",
+     "net": 5217.0,
+     "peak": 8.14
+    },
+    {
+     "day": "2024-09-05",
+     "t": 164,
+     "side": "P",
+     "strike": 25150.0,
+     "price": 14.7,
+     "exit": "E3",
+     "net": -1388.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2024-09-12",
+     "t": 304,
+     "side": "P",
+     "strike": 25200.0,
+     "price": 23.25,
+     "exit": "E3",
+     "net": -1714.0,
+     "peak": 1.16
+    },
+    {
+     "day": "2024-09-19",
+     "t": 189,
+     "side": "P",
+     "strike": 25400.0,
+     "price": 18.4,
+     "exit": "E3",
+     "net": -74.0,
+     "peak": 1.97
+    },
+    {
+     "day": "2024-10-03",
+     "t": 274,
+     "side": "C",
+     "strike": 25300.0,
+     "price": 19.05,
+     "exit": "E3",
+     "net": -1874.0,
+     "peak": 1.22
+    },
+    {
+     "day": "2024-10-10",
+     "t": 164,
+     "side": "P",
+     "strike": 24950.0,
+     "price": 7.25,
+     "exit": "E3",
+     "net": -1973.0,
+     "peak": 1.09
+    },
+    {
+     "day": "2024-10-17",
+     "t": 169,
+     "side": "P",
+     "strike": 24750.0,
+     "price": 11.9,
+     "exit": "E3",
+     "net": -1565.0,
+     "peak": 1.26
+    },
+    {
+     "day": "2024-10-24",
+     "t": 164,
+     "side": "C",
+     "strike": 24450.0,
+     "price": 7.1,
+     "exit": "E3",
+     "net": -1946.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2024-10-31",
+     "t": 164,
+     "side": "P",
+     "strike": 24200.0,
+     "price": 12.45,
+     "exit": "E3",
+     "net": 847.0,
+     "peak": 2.03
+    },
+    {
+     "day": "2024-11-07",
+     "t": 164,
+     "side": "C",
+     "strike": 24250.0,
+     "price": 15.4,
+     "exit": "E3",
+     "net": -1918.0,
+     "peak": 1.06
+    },
+    {
+     "day": "2024-11-14",
+     "t": 164,
+     "side": "C",
+     "strike": 23550.0,
+     "price": 13.85,
+     "exit": "E3",
+     "net": 594.0,
+     "peak": 2.05
+    },
+    {
+     "day": "2024-11-21",
+     "t": 164,
+     "side": "P",
+     "strike": 23300.0,
+     "price": 6.6,
+     "exit": "E3",
+     "net": -1863.0,
+     "peak": 1.91
+    },
+    {
+     "day": "2024-12-05",
+     "t": 329,
+     "side": "P",
+     "strike": 24800.0,
+     "price": 27.05,
+     "exit": "E3",
+     "net": 1957.0,
+     "peak": 15.43
+    },
+    {
+     "day": "2024-12-12",
+     "t": 164,
+     "side": "P",
+     "strike": 24550.0,
+     "price": 27.45,
+     "exit": "E3",
+     "net": -1928.0,
+     "peak": 1.61
+    },
+    {
+     "day": "2024-12-19",
+     "t": 209,
+     "side": "P",
+     "strike": 23950.0,
+     "price": 13.15,
+     "exit": "E3",
+     "net": -1872.0,
+     "peak": 1.23
+    },
+    {
+     "day": "2024-12-26",
+     "t": 164,
+     "side": "C",
+     "strike": 23850.0,
+     "price": 7.35,
+     "exit": "E3",
+     "net": -1679.0,
+     "peak": 1.14
+    },
+    {
+     "day": "2025-01-02",
+     "t": 254,
+     "side": "C",
+     "strike": 24200.0,
+     "price": 8.0,
+     "exit": "E3",
+     "net": 1108.0,
+     "peak": 4.13
+    },
+    {
+     "day": "2025-01-16",
+     "t": 164,
+     "side": "P",
+     "strike": 23250.0,
+     "price": 7.4,
+     "exit": "E3",
+     "net": -1668.0,
+     "peak": 1.1
+    },
+    {
+     "day": "2025-01-23",
+     "t": 164,
+     "side": "C",
+     "strike": 23300.0,
+     "price": 5.0,
+     "exit": "E3",
+     "net": 636.0,
+     "peak": 2.65
+    },
+    {
+     "day": "2025-01-30",
+     "t": 279,
+     "side": "C",
+     "strike": 23250.0,
+     "price": 18.8,
+     "exit": "E3",
+     "net": 1326.0,
+     "peak": 2.18
+    },
+    {
+     "day": "2025-02-06",
+     "t": 274,
+     "side": "P",
+     "strike": 23550.0,
+     "price": 8.65,
+     "exit": "E3",
+     "net": -1983.0,
+     "peak": 1.22
+    },
+    {
+     "day": "2025-02-13",
+     "t": 239,
+     "side": "P",
+     "strike": 23150.0,
+     "price": 27.0,
+     "exit": "E3",
+     "net": 2181.0,
+     "peak": 4.86
+    },
+    {
+     "day": "2025-02-20",
+     "t": 164,
+     "side": "P",
+     "strike": 22800.0,
+     "price": 8.2,
+     "exit": "E3",
+     "net": -1848.0,
+     "peak": 1.23
+    },
+    {
+     "day": "2025-03-06",
+     "t": 174,
+     "side": "C",
+     "strike": 22500.0,
+     "price": 8.8,
+     "exit": "E3",
+     "net": 2297.0,
+     "peak": 5.57
+    },
+    {
+     "day": "2025-04-03",
+     "t": 164,
+     "side": "C",
+     "strike": 23550.0,
+     "price": 1.1,
+     "exit": "E3",
+     "net": -2004.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-04-09",
+     "t": 164,
+     "side": "C",
+     "strike": 22750.0,
+     "price": 1.5,
+     "exit": "E3",
+     "net": -1833.0,
+     "peak": 1.45
+    },
+    {
+     "day": "2025-04-17",
+     "t": 184,
+     "side": "P",
+     "strike": 23550.0,
+     "price": 22.1,
+     "exit": "E3",
+     "net": -1631.0,
+     "peak": 1.16
+    },
+    {
+     "day": "2025-04-24",
+     "t": 289,
+     "side": "P",
+     "strike": 24250.0,
+     "price": 5.1,
+     "exit": "E3",
+     "net": 2782.0,
+     "peak": 2.92
+    },
+    {
+     "day": "2025-04-30",
+     "t": 164,
+     "side": "C",
+     "strike": 24350.0,
+     "price": 26.85,
+     "exit": "E3",
+     "net": -214.0,
+     "peak": 1.56
+    },
+    {
+     "day": "2025-05-08",
+     "t": 264,
+     "side": "C",
+     "strike": 24350.0,
+     "price": 22.45,
+     "exit": "E3",
+     "net": -1714.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-05-15",
+     "t": 164,
+     "side": "C",
+     "strike": 24850.0,
+     "price": 24.1,
+     "exit": "E3",
+     "net": 1744.0,
+     "peak": 11.41
+    },
+    {
+     "day": "2025-05-22",
+     "t": 174,
+     "side": "P",
+     "strike": 24450.0,
+     "price": 8.35,
+     "exit": "E3",
+     "net": -209.0,
+     "peak": 2.52
+    },
+    {
+     "day": "2025-05-29",
+     "t": 164,
+     "side": "P",
+     "strike": 24600.0,
+     "price": 10.55,
+     "exit": "E3",
+     "net": -247.0,
+     "peak": 1.71
+    },
+    {
+     "day": "2025-06-05",
+     "t": 179,
+     "side": "P",
+     "strike": 24600.0,
+     "price": 5.65,
+     "exit": "E3",
+     "net": 644.0,
+     "peak": 2.04
+    },
+    {
+     "day": "2025-06-12",
+     "t": 284,
+     "side": "P",
+     "strike": 24850.0,
+     "price": 23.6,
+     "exit": "E3",
+     "net": 1655.0,
+     "peak": 2.3
+    },
+    {
+     "day": "2025-06-19",
+     "t": 204,
+     "side": "C",
+     "strike": 24800.0,
+     "price": 28.0,
+     "exit": "E3",
+     "net": -1490.0,
+     "peak": 1.88
+    },
+    {
+     "day": "2025-06-26",
+     "t": 174,
+     "side": "C",
+     "strike": 25550.0,
+     "price": 10.2,
+     "exit": "E3",
+     "net": 1733.0,
+     "peak": 4.31
+    },
+    {
+     "day": "2025-07-03",
+     "t": 164,
+     "side": "P",
+     "strike": 25450.0,
+     "price": 14.55,
+     "exit": "E3",
+     "net": 1024.0,
+     "peak": 5.37
+    },
+    {
+     "day": "2025-07-10",
+     "t": 274,
+     "side": "P",
+     "strike": 25350.0,
+     "price": 12.0,
+     "exit": "E3",
+     "net": -1191.0,
+     "peak": 1.64
+    },
+    {
+     "day": "2025-07-24",
+     "t": 164,
+     "side": "P",
+     "strike": 25050.0,
+     "price": 26.15,
+     "exit": "E3",
+     "net": 1916.0,
+     "peak": 2.45
+    },
+    {
+     "day": "2025-07-31",
+     "t": 164,
+     "side": "P",
+     "strike": 24550.0,
+     "price": 4.15,
+     "exit": "E3",
+     "net": -1848.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-08-07",
+     "t": 164,
+     "side": "P",
+     "strike": 24400.0,
+     "price": 21.5,
+     "exit": "E3",
+     "net": 1561.0,
+     "peak": 3.09
+    },
+    {
+     "day": "2025-08-28",
+     "t": 174,
+     "side": "P",
+     "strike": 24550.0,
+     "price": 12.75,
+     "exit": "E3",
+     "net": 1794.0,
+     "peak": 4.37
+    },
+    {
+     "day": "2025-09-02",
+     "t": 164,
+     "side": "P",
+     "strike": 24600.0,
+     "price": 4.75,
+     "exit": "E3",
+     "net": 5331.0,
+     "peak": 15.92
+    },
+    {
+     "day": "2025-09-09",
+     "t": 164,
+     "side": "P",
+     "strike": 24800.0,
+     "price": 19.65,
+     "exit": "E3",
+     "net": -1500.0,
+     "peak": 1.59
+    },
+    {
+     "day": "2025-09-16",
+     "t": 164,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 8.95,
+     "exit": "E3",
+     "net": -1375.0,
+     "peak": 1.05
+    },
+    {
+     "day": "2025-09-23",
+     "t": 174,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 16.95,
+     "exit": "E3",
+     "net": -1316.0,
+     "peak": 1.08
+    },
+    {
+     "day": "2025-10-07",
+     "t": 164,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 21.05,
+     "exit": "E3",
+     "net": -1605.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-10-14",
+     "t": 164,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 22.2,
+     "exit": "E3",
+     "net": 1595.0,
+     "peak": 2.73
+    },
+    {
+     "day": "2025-10-20",
+     "t": 169,
+     "side": "P",
+     "strike": 25750.0,
+     "price": 10.25,
+     "exit": "E3",
+     "net": -1542.0,
+     "peak": 1.07
+    },
+    {
+     "day": "2025-10-28",
+     "t": 239,
+     "side": "C",
+     "strike": 26050.0,
+     "price": 7.95,
+     "exit": "E3",
+     "net": -1893.0,
+     "peak": 1.3
+    },
+    {
+     "day": "2025-11-11",
+     "t": 164,
+     "side": "P",
+     "strike": 25500.0,
+     "price": 23.7,
+     "exit": "E3",
+     "net": -1774.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-12-02",
+     "t": 169,
+     "side": "P",
+     "strike": 26000.0,
+     "price": 14.8,
+     "exit": "E3",
+     "net": -1140.0,
+     "peak": 1.12
+    },
+    {
+     "day": "2025-12-09",
+     "t": 279,
+     "side": "C",
+     "strike": 25900.0,
+     "price": 28.65,
+     "exit": "E3",
+     "net": -2164.0,
+     "peak": 1.07
+    },
+    {
+     "day": "2025-12-16",
+     "t": 164,
+     "side": "P",
+     "strike": 25850.0,
+     "price": 20.1,
+     "exit": "E3",
+     "net": -1526.0,
+     "peak": 1.05
+    },
+    {
+     "day": "2025-12-23",
+     "t": 164,
+     "side": "P",
+     "strike": 26100.0,
+     "price": 5.5,
+     "exit": "E3",
+     "net": -1683.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-12-30",
+     "t": 184,
+     "side": "P",
+     "strike": 25850.0,
+     "price": 9.8,
+     "exit": "E3",
+     "net": -1518.0,
+     "peak": 1.12
+    },
+    {
+     "day": "2026-01-13",
+     "t": 164,
+     "side": "C",
+     "strike": 25850.0,
+     "price": 11.3,
+     "exit": "E3",
+     "net": -1499.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-02-03",
+     "t": 164,
+     "side": "C",
+     "strike": 26050.0,
+     "price": 15.45,
+     "exit": "E3",
+     "net": -1980.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-02-10",
+     "t": 164,
+     "side": "C",
+     "strike": 26000.0,
+     "price": 17.6,
+     "exit": "E3",
+     "net": -1150.0,
+     "peak": 1.42
+    },
+    {
+     "day": "2026-02-17",
+     "t": 164,
+     "side": "P",
+     "strike": 25600.0,
+     "price": 6.85,
+     "exit": "E3",
+     "net": -1751.0,
+     "peak": 1.04
+    },
+    {
+     "day": "2026-02-24",
+     "t": 294,
+     "side": "C",
+     "strike": 25450.0,
+     "price": 18.35,
+     "exit": "E3",
+     "net": -1212.0,
+     "peak": 1.61
+    },
+    {
+     "day": "2026-03-02",
+     "t": 164,
+     "side": "P",
+     "strike": 24550.0,
+     "price": 7.15,
+     "exit": "E3",
+     "net": 1377.0,
+     "peak": 4.31
+    },
+    {
+     "day": "2026-03-10",
+     "t": 334,
+     "side": "P",
+     "strike": 24250.0,
+     "price": 15.3,
+     "exit": "E3",
+     "net": 708.0,
+     "peak": 2.18
+    },
+    {
+     "day": "2026-03-17",
+     "t": 174,
+     "side": "P",
+     "strike": 23250.0,
+     "price": 11.15,
+     "exit": "E3",
+     "net": -60.0,
+     "peak": 1.95
+    },
+    {
+     "day": "2026-03-24",
+     "t": 164,
+     "side": "C",
+     "strike": 23050.0,
+     "price": 8.8,
+     "exit": "E3",
+     "net": 1563.0,
+     "peak": 9.59
+    },
+    {
+     "day": "2026-03-30",
+     "t": 189,
+     "side": "C",
+     "strike": 22900.0,
+     "price": 4.6,
+     "exit": "E3",
+     "net": -1823.0,
+     "peak": 1.47
+    },
+    {
+     "day": "2026-04-07",
+     "t": 164,
+     "side": "P",
+     "strike": 22750.0,
+     "price": 9.3,
+     "exit": "E3",
+     "net": 1112.0,
+     "peak": 2.08
+    },
+    {
+     "day": "2026-04-13",
+     "t": 164,
+     "side": "C",
+     "strike": 24150.0,
+     "price": 1.4,
+     "exit": "E3",
+     "net": -1891.0,
+     "peak": 1.48
+    },
+    {
+     "day": "2026-04-21",
+     "t": 164,
+     "side": "P",
+     "strike": 24150.0,
+     "price": 1.75,
+     "exit": "E3",
+     "net": -1872.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-05-05",
+     "t": 169,
+     "side": "P",
+     "strike": 23850.0,
+     "price": 20.15,
+     "exit": "E3",
+     "net": -1368.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-05-12",
+     "t": 179,
+     "side": "P",
+     "strike": 23500.0,
+     "price": 21.25,
+     "exit": "E3",
+     "net": -175.0,
+     "peak": 5.54
+    },
+    {
+     "day": "2026-05-19",
+     "t": 164,
+     "side": "P",
+     "strike": 23550.0,
+     "price": 4.4,
+     "exit": "E3",
+     "net": -1725.0,
+     "peak": 1.17
+    },
+    {
+     "day": "2026-05-26",
+     "t": 319,
+     "side": "C",
+     "strike": 23950.0,
+     "price": 9.85,
+     "exit": "E3",
+     "net": -1910.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-06-02",
+     "t": 214,
+     "side": "P",
+     "strike": 23350.0,
+     "price": 13.8,
+     "exit": "E3",
+     "net": -1837.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-06-16",
+     "t": 259,
+     "side": "P",
+     "strike": 23950.0,
+     "price": 18.2,
+     "exit": "E3",
+     "net": -1209.0,
+     "peak": 1.2
+    },
+    {
+     "day": "2026-06-30",
+     "t": 169,
+     "side": "C",
+     "strike": 24050.0,
+     "price": 12.05,
+     "exit": "E3",
+     "net": -1564.0,
+     "peak": 1.1
+    },
+    {
+     "day": "2026-07-07",
+     "t": 164,
+     "side": "P",
+     "strike": 24400.0,
+     "price": 6.5,
+     "exit": "E3",
+     "net": 1325.0,
+     "peak": 3.02
+    },
+    {
+     "day": "2026-08-25",
+     "t": 319,
+     "side": "C",
+     "strike": 24250.0,
+     "price": 14.05,
+     "exit": "E3",
+     "net": 1824.0,
+     "peak": 2.46
+    },
+    {
+     "day": "2026-09-01",
+     "t": 164,
+     "side": "C",
+     "strike": 24250.0,
+     "price": 6.1,
+     "exit": "E3",
+     "net": -1349.0,
+     "peak": 1.19
+    },
+    {
+     "day": "2026-09-29",
+     "t": 204,
+     "side": "P",
+     "strike": 22600.0,
+     "price": 23.45,
+     "exit": "E3",
+     "net": -772.0,
+     "peak": 1.51
+    },
+    {
+     "day": "2026-10-06",
+     "t": 164,
+     "side": "P",
+     "strike": 22500.0,
+     "price": 8.2,
+     "exit": "E3",
+     "net": -1589.0,
+     "peak": 1.25
+    }
+   ],
+   "q": 0.068,
+   "gates": {
+    "1 >= 30 trades": true,
+    "2 net > 0": false,
+    "3 >= 3 of 4 years > 0": false,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": false,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": false
+   },
+   "passes": false
+  },
+  "F1": {
+   "m": {
+    "expiries": 197,
+    "trades": 154,
+    "hit_pct": 25.3,
+    "avg_win": 4887.8,
+    "avg_loss": -1451.6,
+    "net": 23691.59,
+    "per_expiry": 120.26,
+    "per_1000_risked": 92.1,
+    "green_expiries_pct": 19.8,
+    "worst_day": -2115.22,
+    "best_day": 23800.53,
+    "max_dd": -24021.63,
+    "losing_streak_trades": 14,
+    "losing_streak_expiries": 14,
+    "best_day_share_pct": 100.5,
+    "net_without_best_day": -108.94,
+    "proxy_trades": 0,
+    "x2_pct": 34.4,
+    "x4_pct": 13.6,
+    "x10_pct": 2.6
+   },
+   "years": {
+    "2023": {
+     "expiries": 52,
+     "trades": 28,
+     "hit_pct": 25.0,
+     "avg_win": 4529.1,
+     "avg_loss": -1500.2,
+     "net": 200.42,
+     "per_expiry": 3.85,
+     "per_1000_risked": 4.0,
+     "green_expiries_pct": 13.5,
+     "worst_day": -2028.14,
+     "best_day": 23800.53,
+     "max_dd": -13541.58,
+     "losing_streak_trades": 7,
+     "losing_streak_expiries": 7,
+     "best_day_share_pct": 11875.3,
+     "net_without_best_day": -23600.11,
+     "proxy_trades": 0,
+     "x2_pct": 28.6,
+     "x4_pct": 7.1,
+     "x10_pct": 3.6
+    },
+    "2024": {
+     "expiries": 52,
+     "trades": 45,
+     "hit_pct": 20.0,
+     "avg_win": 6312.1,
+     "avg_loss": -1455.5,
+     "net": 4411.76,
+     "per_expiry": 84.84,
+     "per_1000_risked": 58.9,
+     "green_expiries_pct": 17.3,
+     "worst_day": -1918.12,
+     "best_day": 18926.66,
+     "max_dd": -20328.64,
+     "losing_streak_trades": 13,
+     "losing_streak_expiries": 13,
+     "best_day_share_pct": 429.0,
+     "net_without_best_day": -14514.9,
+     "proxy_trades": 0,
+     "x2_pct": 24.4,
+     "x4_pct": 13.3,
+     "x10_pct": 2.2
+    },
+    "2025": {
+     "expiries": 53,
+     "trades": 52,
+     "hit_pct": 30.8,
+     "avg_win": 5059.4,
+     "avg_loss": -1451.0,
+     "net": 28713.86,
+     "per_expiry": 541.77,
+     "per_1000_risked": 331.4,
+     "green_expiries_pct": 30.2,
+     "worst_day": -2115.22,
+     "best_day": 13630.77,
+     "max_dd": -9451.41,
+     "losing_streak_trades": 5,
+     "losing_streak_expiries": 5,
+     "best_day_share_pct": 47.5,
+     "net_without_best_day": 15083.09,
+     "proxy_trades": 0,
+     "x2_pct": 40.4,
+     "x4_pct": 15.4,
+     "x10_pct": 3.8
+    },
+    "2026": {
+     "expiries": 40,
+     "trades": 29,
+     "hit_pct": 24.1,
+     "avg_win": 3022.9,
+     "avg_loss": -1399.8,
+     "net": -9634.45,
+     "per_expiry": -240.86,
+     "per_1000_risked": -209.0,
+     "green_expiries_pct": 17.5,
+     "worst_day": -1943.5,
+     "best_day": 6287.73,
+     "max_dd": -13150.34,
+     "losing_streak_trades": 5,
+     "losing_streak_expiries": 5,
+     "best_day_share_pct": null,
+     "net_without_best_day": -15922.18,
+     "proxy_trades": 0,
+     "x2_pct": 44.8,
+     "x4_pct": 17.2,
+     "x10_pct": 0.0
+    }
+   },
+   "bands": {
+    "1-10": {
+     "trades": 35,
+     "net": -4473.0
+    },
+    "10-15": {
+     "trades": 28,
+     "net": 6486.0
+    },
+    "15-30": {
+     "trades": 91,
+     "net": 21679.0
+    }
+   },
+   "choices": {
+    "2023": {
+     "threshold": 0.85,
+     "exit": "E1"
+    },
+    "2024": {
+     "threshold": 0.85,
+     "exit": "E1"
+    },
+    "2025": {
+     "threshold": 1.0,
+     "exit": "E1"
+    },
+    "2026": {
+     "threshold": 1.0,
+     "exit": "E1"
+    }
+   },
+   "twins": {
+    "p": 0.058,
+    "mean": -108560.0,
+    "p05": -204380.0,
+    "p95": 37870.0
+   },
+   "x2_spread": 20863.0,
+   "trades_list": [
+    {
+     "day": "2023-01-25",
+     "t": 164,
+     "side": "P",
+     "strike": 17850.0,
+     "price": 15.75,
+     "exit": "E1",
+     "net": -1514.0,
+     "peak": 1.17
+    },
+    {
+     "day": "2023-02-02",
+     "t": 169,
+     "side": "C",
+     "strike": 17750.0,
+     "price": 10.1,
+     "exit": "E1",
+     "net": -1518.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-03-02",
+     "t": 229,
+     "side": "P",
+     "strike": 17350.0,
+     "price": 19.0,
+     "exit": "E1",
+     "net": 271.0,
+     "peak": 2.54
+    },
+    {
+     "day": "2023-03-09",
+     "t": 224,
+     "side": "C",
+     "strike": 17700.0,
+     "price": 9.9,
+     "exit": "E1",
+     "net": -2028.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2023-03-16",
+     "t": 164,
+     "side": "C",
+     "strike": 17050.0,
+     "price": 11.25,
+     "exit": "E1",
+     "net": -1692.0,
+     "peak": 2.68
+    },
+    {
+     "day": "2023-04-06",
+     "t": 164,
+     "side": "C",
+     "strike": 17650.0,
+     "price": 7.95,
+     "exit": "E1",
+     "net": -1998.0,
+     "peak": 2.15
+    },
+    {
+     "day": "2023-05-04",
+     "t": 329,
+     "side": "P",
+     "strike": 18200.0,
+     "price": 4.95,
+     "exit": "E1",
+     "net": -1968.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-05-18",
+     "t": 304,
+     "side": "P",
+     "strike": 18150.0,
+     "price": 13.4,
+     "exit": "E1",
+     "net": 122.0,
+     "peak": 1.14
+    },
+    {
+     "day": "2023-06-15",
+     "t": 339,
+     "side": "C",
+     "strike": 18700.0,
+     "price": 2.85,
+     "exit": "E1",
+     "net": 2349.0,
+     "peak": 2.22
+    },
+    {
+     "day": "2023-07-13",
+     "t": 329,
+     "side": "P",
+     "strike": 19400.0,
+     "price": 7.9,
+     "exit": "E1",
+     "net": -114.0,
+     "peak": 2.44
+    },
+    {
+     "day": "2023-08-10",
+     "t": 334,
+     "side": "C",
+     "strike": 19550.0,
+     "price": 6.3,
+     "exit": "E1",
+     "net": -1863.0,
+     "peak": 1.51
+    },
+    {
+     "day": "2023-08-24",
+     "t": 314,
+     "side": "C",
+     "strike": 19450.0,
+     "price": 6.9,
+     "exit": "E1",
+     "net": -1798.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-08-31",
+     "t": 189,
+     "side": "C",
+     "strike": 19300.0,
+     "price": 17.75,
+     "exit": "E1",
+     "net": -1789.0,
+     "peak": 1.34
+    },
+    {
+     "day": "2023-09-07",
+     "t": 164,
+     "side": "C",
+     "strike": 19650.0,
+     "price": 6.05,
+     "exit": "E1",
+     "net": 23801.0,
+     "peak": 17.24
+    },
+    {
+     "day": "2023-09-14",
+     "t": 164,
+     "side": "C",
+     "strike": 20100.0,
+     "price": 15.6,
+     "exit": "E1",
+     "net": -905.0,
+     "peak": 1.49
+    },
+    {
+     "day": "2023-09-21",
+     "t": 164,
+     "side": "C",
+     "strike": 19800.0,
+     "price": 6.0,
+     "exit": "E1",
+     "net": -1818.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-09-28",
+     "t": 164,
+     "side": "C",
+     "strike": 19650.0,
+     "price": 18.8,
+     "exit": "E1",
+     "net": -1914.0,
+     "peak": 1.18
+    },
+    {
+     "day": "2023-10-05",
+     "t": 259,
+     "side": "P",
+     "strike": 19550.0,
+     "price": 10.55,
+     "exit": "E1",
+     "net": -644.0,
+     "peak": 1.63
+    },
+    {
+     "day": "2023-10-12",
+     "t": 299,
+     "side": "P",
+     "strike": 19800.0,
+     "price": 5.15,
+     "exit": "E1",
+     "net": -558.0,
+     "peak": 1.39
+    },
+    {
+     "day": "2023-10-19",
+     "t": 164,
+     "side": "P",
+     "strike": 19600.0,
+     "price": 8.2,
+     "exit": "E1",
+     "net": -1678.0,
+     "peak": 1.09
+    },
+    {
+     "day": "2023-10-26",
+     "t": 184,
+     "side": "C",
+     "strike": 18900.0,
+     "price": 23.15,
+     "exit": "E1",
+     "net": -1206.0,
+     "peak": 1.2
+    },
+    {
+     "day": "2023-11-02",
+     "t": 164,
+     "side": "C",
+     "strike": 19100.0,
+     "price": 9.7,
+     "exit": "E1",
+     "net": 4246.0,
+     "peak": 4.23
+    },
+    {
+     "day": "2023-11-09",
+     "t": 164,
+     "side": "C",
+     "strike": 19500.0,
+     "price": 5.45,
+     "exit": "E1",
+     "net": -1956.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2023-11-16",
+     "t": 164,
+     "side": "P",
+     "strike": 19750.0,
+     "price": 6.75,
+     "exit": "E1",
+     "net": -1561.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2023-11-23",
+     "t": 329,
+     "side": "P",
+     "strike": 19800.0,
+     "price": 5.6,
+     "exit": "E1",
+     "net": 280.0,
+     "peak": 1.2
+    },
+    {
+     "day": "2023-11-30",
+     "t": 219,
+     "side": "P",
+     "strike": 20050.0,
+     "price": 11.35,
+     "exit": "E1",
+     "net": -1670.0,
+     "peak": 1.13
+    },
+    {
+     "day": "2023-12-14",
+     "t": 184,
+     "side": "C",
+     "strike": 21150.0,
+     "price": 15.95,
+     "exit": "E1",
+     "net": 636.0,
+     "peak": 3.72
+    },
+    {
+     "day": "2023-12-21",
+     "t": 164,
+     "side": "P",
+     "strike": 21150.0,
+     "price": 25.7,
+     "exit": "E1",
+     "net": -1311.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-01-04",
+     "t": 314,
+     "side": "C",
+     "strike": 21650.0,
+     "price": 5.85,
+     "exit": "E1",
+     "net": -890.0,
+     "peak": 1.08
+    },
+    {
+     "day": "2024-01-11",
+     "t": 309,
+     "side": "C",
+     "strike": 21650.0,
+     "price": 5.35,
+     "exit": "E1",
+     "net": -1117.0,
+     "peak": 2.57
+    },
+    {
+     "day": "2024-01-18",
+     "t": 164,
+     "side": "C",
+     "strike": 21550.0,
+     "price": 17.4,
+     "exit": "E1",
+     "net": -1764.0,
+     "peak": 1.36
+    },
+    {
+     "day": "2024-01-25",
+     "t": 164,
+     "side": "P",
+     "strike": 21250.0,
+     "price": 29.4,
+     "exit": "E1",
+     "net": -1516.0,
+     "peak": 1.21
+    },
+    {
+     "day": "2024-02-01",
+     "t": 169,
+     "side": "C",
+     "strike": 21800.0,
+     "price": 24.6,
+     "exit": "E1",
+     "net": -1193.0,
+     "peak": 1.9
+    },
+    {
+     "day": "2024-02-08",
+     "t": 164,
+     "side": "C",
+     "strike": 21800.0,
+     "price": 25.4,
+     "exit": "E1",
+     "net": -1308.0,
+     "peak": 1.15
+    },
+    {
+     "day": "2024-02-15",
+     "t": 164,
+     "side": "P",
+     "strike": 21850.0,
+     "price": 27.75,
+     "exit": "E1",
+     "net": -1433.0,
+     "peak": 1.52
+    },
+    {
+     "day": "2024-02-22",
+     "t": 194,
+     "side": "C",
+     "strike": 22000.0,
+     "price": 15.55,
+     "exit": "E1",
+     "net": 18927.0,
+     "peak": 13.54
+    },
+    {
+     "day": "2024-02-29",
+     "t": 164,
+     "side": "P",
+     "strike": 21900.0,
+     "price": 29.6,
+     "exit": "E1",
+     "net": -1215.0,
+     "peak": 1.65
+    },
+    {
+     "day": "2024-03-07",
+     "t": 164,
+     "side": "P",
+     "strike": 22450.0,
+     "price": 11.65,
+     "exit": "E1",
+     "net": -1760.0,
+     "peak": 1.23
+    },
+    {
+     "day": "2024-03-14",
+     "t": 164,
+     "side": "P",
+     "strike": 22150.0,
+     "price": 24.55,
+     "exit": "E1",
+     "net": -974.0,
+     "peak": 2.35
+    },
+    {
+     "day": "2024-03-21",
+     "t": 184,
+     "side": "C",
+     "strike": 22000.0,
+     "price": 24.15,
+     "exit": "E1",
+     "net": -1091.0,
+     "peak": 1.26
+    },
+    {
+     "day": "2024-03-28",
+     "t": 204,
+     "side": "P",
+     "strike": 22350.0,
+     "price": 18.7,
+     "exit": "E1",
+     "net": -74.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-04-04",
+     "t": 164,
+     "side": "C",
+     "strike": 22450.0,
+     "price": 23.0,
+     "exit": "E1",
+     "net": 1264.0,
+     "peak": 6.24
+    },
+    {
+     "day": "2024-04-10",
+     "t": 339,
+     "side": "C",
+     "strike": 22750.0,
+     "price": 4.75,
+     "exit": "E1",
+     "net": 2739.0,
+     "peak": 2.07
+    },
+    {
+     "day": "2024-04-18",
+     "t": 164,
+     "side": "C",
+     "strike": 22350.0,
+     "price": 17.3,
+     "exit": "E1",
+     "net": -1884.0,
+     "peak": 1.21
+    },
+    {
+     "day": "2024-04-25",
+     "t": 164,
+     "side": "P",
+     "strike": 22350.0,
+     "price": 24.55,
+     "exit": "E1",
+     "net": -1248.0,
+     "peak": 1.1
+    },
+    {
+     "day": "2024-05-02",
+     "t": 164,
+     "side": "P",
+     "strike": 22650.0,
+     "price": 20.45,
+     "exit": "E1",
+     "net": -1365.0,
+     "peak": 1.24
+    },
+    {
+     "day": "2024-05-09",
+     "t": 309,
+     "side": "P",
+     "strike": 22050.0,
+     "price": 15.9,
+     "exit": "E1",
+     "net": 7284.0,
+     "peak": 4.97
+    },
+    {
+     "day": "2024-05-16",
+     "t": 179,
+     "side": "C",
+     "strike": 22350.0,
+     "price": 22.45,
+     "exit": "E1",
+     "net": 1893.0,
+     "peak": 2.26
+    },
+    {
+     "day": "2024-06-06",
+     "t": 164,
+     "side": "C",
+     "strike": 22950.0,
+     "price": 23.65,
+     "exit": "E1",
+     "net": -1823.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-06-13",
+     "t": 224,
+     "side": "C",
+     "strike": 23400.0,
+     "price": 18.15,
+     "exit": "E1",
+     "net": -1635.0,
+     "peak": 1.73
+    },
+    {
+     "day": "2024-06-20",
+     "t": 289,
+     "side": "P",
+     "strike": 23550.0,
+     "price": 22.2,
+     "exit": "E1",
+     "net": -1583.0,
+     "peak": 1.39
+    },
+    {
+     "day": "2024-07-04",
+     "t": 294,
+     "side": "C",
+     "strike": 24350.0,
+     "price": 6.15,
+     "exit": "E1",
+     "net": -1893.0,
+     "peak": 1.17
+    },
+    {
+     "day": "2024-07-11",
+     "t": 169,
+     "side": "C",
+     "strike": 24250.0,
+     "price": 18.1,
+     "exit": "E1",
+     "net": 3473.0,
+     "peak": 4.99
+    },
+    {
+     "day": "2024-07-18",
+     "t": 249,
+     "side": "P",
+     "strike": 24650.0,
+     "price": 18.65,
+     "exit": "E1",
+     "net": -1874.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-08-01",
+     "t": 329,
+     "side": "P",
+     "strike": 25000.0,
+     "price": 8.8,
+     "exit": "E1",
+     "net": 1114.0,
+     "peak": 1.87
+    },
+    {
+     "day": "2024-08-08",
+     "t": 339,
+     "side": "C",
+     "strike": 24200.0,
+     "price": 3.0,
+     "exit": "E1",
+     "net": -1837.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-08-14",
+     "t": 164,
+     "side": "C",
+     "strike": 24150.0,
+     "price": 25.15,
+     "exit": "E1",
+     "net": -1744.0,
+     "peak": 1.76
+    },
+    {
+     "day": "2024-08-29",
+     "t": 314,
+     "side": "C",
+     "strike": 25050.0,
+     "price": 28.3,
+     "exit": "E1",
+     "net": 5874.0,
+     "peak": 5.89
+    },
+    {
+     "day": "2024-09-05",
+     "t": 324,
+     "side": "P",
+     "strike": 25150.0,
+     "price": 6.8,
+     "exit": "E1",
+     "net": -848.0,
+     "peak": 1.53
+    },
+    {
+     "day": "2024-09-12",
+     "t": 294,
+     "side": "C",
+     "strike": 25250.0,
+     "price": 16.75,
+     "exit": "E1",
+     "net": 14242.0,
+     "peak": 9.52
+    },
+    {
+     "day": "2024-09-19",
+     "t": 164,
+     "side": "P",
+     "strike": 25350.0,
+     "price": 27.15,
+     "exit": "E1",
+     "net": -1393.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-10-03",
+     "t": 284,
+     "side": "C",
+     "strike": 25300.0,
+     "price": 15.4,
+     "exit": "E1",
+     "net": -1893.0,
+     "peak": 1.25
+    },
+    {
+     "day": "2024-10-10",
+     "t": 164,
+     "side": "C",
+     "strike": 25050.0,
+     "price": 23.6,
+     "exit": "E1",
+     "net": -1766.0,
+     "peak": 1.04
+    },
+    {
+     "day": "2024-10-17",
+     "t": 164,
+     "side": "P",
+     "strike": 24750.0,
+     "price": 11.45,
+     "exit": "E1",
+     "net": -1695.0,
+     "peak": 1.34
+    },
+    {
+     "day": "2024-10-24",
+     "t": 169,
+     "side": "P",
+     "strike": 24400.0,
+     "price": 14.05,
+     "exit": "E1",
+     "net": -1699.0,
+     "peak": 1.67
+    },
+    {
+     "day": "2024-10-31",
+     "t": 169,
+     "side": "C",
+     "strike": 24250.0,
+     "price": 15.25,
+     "exit": "E1",
+     "net": -1918.0,
+     "peak": 1.07
+    },
+    {
+     "day": "2024-11-07",
+     "t": 164,
+     "side": "P",
+     "strike": 24200.0,
+     "price": 24.4,
+     "exit": "E1",
+     "net": -1714.0,
+     "peak": 1.29
+    },
+    {
+     "day": "2024-11-14",
+     "t": 164,
+     "side": "C",
+     "strike": 23550.0,
+     "price": 13.85,
+     "exit": "E1",
+     "net": -1787.0,
+     "peak": 2.05
+    },
+    {
+     "day": "2024-11-21",
+     "t": 174,
+     "side": "C",
+     "strike": 23350.0,
+     "price": 12.7,
+     "exit": "E1",
+     "net": -1812.0,
+     "peak": 1.21
+    },
+    {
+     "day": "2024-11-28",
+     "t": 304,
+     "side": "P",
+     "strike": 23800.0,
+     "price": 15.25,
+     "exit": "E1",
+     "net": -1132.0,
+     "peak": 1.35
+    },
+    {
+     "day": "2024-12-12",
+     "t": 284,
+     "side": "P",
+     "strike": 24550.0,
+     "price": 13.6,
+     "exit": "E1",
+     "net": -855.0,
+     "peak": 1.04
+    },
+    {
+     "day": "2024-12-19",
+     "t": 164,
+     "side": "P",
+     "strike": 23950.0,
+     "price": 19.15,
+     "exit": "E1",
+     "net": -1425.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-12-26",
+     "t": 189,
+     "side": "C",
+     "strike": 23750.0,
+     "price": 16.85,
+     "exit": "E1",
+     "net": -1237.0,
+     "peak": 1.88
+    },
+    {
+     "day": "2025-01-02",
+     "t": 229,
+     "side": "C",
+     "strike": 24200.0,
+     "price": 11.6,
+     "exit": "E1",
+     "net": -1168.0,
+     "peak": 2.8
+    },
+    {
+     "day": "2025-01-09",
+     "t": 174,
+     "side": "P",
+     "strike": 23550.0,
+     "price": 25.7,
+     "exit": "E1",
+     "net": 567.0,
+     "peak": 1.85
+    },
+    {
+     "day": "2025-01-16",
+     "t": 164,
+     "side": "C",
+     "strike": 23300.0,
+     "price": 13.7,
+     "exit": "E1",
+     "net": -773.0,
+     "peak": 1.83
+    },
+    {
+     "day": "2025-01-23",
+     "t": 164,
+     "side": "P",
+     "strike": 23200.0,
+     "price": 10.0,
+     "exit": "E1",
+     "net": -1451.0,
+     "peak": 1.02
+    },
+    {
+     "day": "2025-02-06",
+     "t": 219,
+     "side": "C",
+     "strike": 23600.0,
+     "price": 11.95,
+     "exit": "E1",
+     "net": -869.0,
+     "peak": 1.15
+    },
+    {
+     "day": "2025-02-13",
+     "t": 164,
+     "side": "P",
+     "strike": 23200.0,
+     "price": 28.95,
+     "exit": "E1",
+     "net": 10806.0,
+     "peak": 6.69
+    },
+    {
+     "day": "2025-02-20",
+     "t": 244,
+     "side": "P",
+     "strike": 22850.0,
+     "price": 8.35,
+     "exit": "E1",
+     "net": -1904.0,
+     "peak": 1.21
+    },
+    {
+     "day": "2025-02-27",
+     "t": 309,
+     "side": "P",
+     "strike": 22550.0,
+     "price": 4.7,
+     "exit": "E1",
+     "net": -1268.0,
+     "peak": 1.3
+    },
+    {
+     "day": "2025-03-06",
+     "t": 164,
+     "side": "C",
+     "strike": 22450.0,
+     "price": 18.6,
+     "exit": "E1",
+     "net": 5881.0,
+     "peak": 5.13
+    },
+    {
+     "day": "2025-03-13",
+     "t": 164,
+     "side": "C",
+     "strike": 22450.0,
+     "price": 19.15,
+     "exit": "E1",
+     "net": -1470.0,
+     "peak": 1.15
+    },
+    {
+     "day": "2025-03-20",
+     "t": 259,
+     "side": "P",
+     "strike": 23150.0,
+     "price": 14.4,
+     "exit": "E1",
+     "net": -1083.0,
+     "peak": 1.05
+    },
+    {
+     "day": "2025-03-27",
+     "t": 164,
+     "side": "P",
+     "strike": 23600.0,
+     "price": 18.3,
+     "exit": "E1",
+     "net": -800.0,
+     "peak": 1.39
+    },
+    {
+     "day": "2025-04-03",
+     "t": 164,
+     "side": "C",
+     "strike": 23300.0,
+     "price": 9.85,
+     "exit": "E1",
+     "net": -1480.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-04-09",
+     "t": 164,
+     "side": "C",
+     "strike": 22450.0,
+     "price": 9.3,
+     "exit": "E1",
+     "net": -1398.0,
+     "peak": 2.01
+    },
+    {
+     "day": "2025-04-17",
+     "t": 169,
+     "side": "C",
+     "strike": 23750.0,
+     "price": 22.8,
+     "exit": "E1",
+     "net": 5817.0,
+     "peak": 5.58
+    },
+    {
+     "day": "2025-04-24",
+     "t": 164,
+     "side": "P",
+     "strike": 24250.0,
+     "price": 14.05,
+     "exit": "E1",
+     "net": -556.0,
+     "peak": 1.09
+    },
+    {
+     "day": "2025-04-30",
+     "t": 164,
+     "side": "P",
+     "strike": 24300.0,
+     "price": 11.6,
+     "exit": "E1",
+     "net": -1730.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2025-05-08",
+     "t": 169,
+     "side": "P",
+     "strike": 24400.0,
+     "price": 11.75,
+     "exit": "E1",
+     "net": 13631.0,
+     "peak": 10.85
+    },
+    {
+     "day": "2025-05-15",
+     "t": 164,
+     "side": "P",
+     "strike": 24400.0,
+     "price": 13.3,
+     "exit": "E1",
+     "net": -1940.0,
+     "peak": 1.14
+    },
+    {
+     "day": "2025-05-22",
+     "t": 164,
+     "side": "C",
+     "strike": 24600.0,
+     "price": 29.6,
+     "exit": "E1",
+     "net": -1809.0,
+     "peak": 1.5
+    },
+    {
+     "day": "2025-05-29",
+     "t": 204,
+     "side": "C",
+     "strike": 24700.0,
+     "price": 30.0,
+     "exit": "E1",
+     "net": 4901.0,
+     "peak": 3.25
+    },
+    {
+     "day": "2025-06-05",
+     "t": 194,
+     "side": "P",
+     "strike": 24700.0,
+     "price": 13.9,
+     "exit": "E1",
+     "net": -1084.0,
+     "peak": 2.84
+    },
+    {
+     "day": "2025-06-12",
+     "t": 284,
+     "side": "C",
+     "strike": 24900.0,
+     "price": 24.25,
+     "exit": "E1",
+     "net": -1067.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-06-19",
+     "t": 164,
+     "side": "P",
+     "strike": 24800.0,
+     "price": 17.9,
+     "exit": "E1",
+     "net": -1099.0,
+     "peak": 1.51
+    },
+    {
+     "day": "2025-06-26",
+     "t": 309,
+     "side": "P",
+     "strike": 25500.0,
+     "price": 23.0,
+     "exit": "E1",
+     "net": -1669.0,
+     "peak": 1.15
+    },
+    {
+     "day": "2025-07-03",
+     "t": 164,
+     "side": "C",
+     "strike": 25550.0,
+     "price": 18.8,
+     "exit": "E1",
+     "net": -1440.0,
+     "peak": 3.92
+    },
+    {
+     "day": "2025-07-10",
+     "t": 294,
+     "side": "P",
+     "strike": 25400.0,
+     "price": 18.65,
+     "exit": "E1",
+     "net": 1706.0,
+     "peak": 2.91
+    },
+    {
+     "day": "2025-07-17",
+     "t": 164,
+     "side": "P",
+     "strike": 25150.0,
+     "price": 10.7,
+     "exit": "E1",
+     "net": 4339.0,
+     "peak": 4.37
+    },
+    {
+     "day": "2025-07-24",
+     "t": 184,
+     "side": "P",
+     "strike": 25050.0,
+     "price": 28.3,
+     "exit": "E1",
+     "net": -2115.0,
+     "peak": 1.24
+    },
+    {
+     "day": "2025-07-31",
+     "t": 164,
+     "side": "P",
+     "strike": 24750.0,
+     "price": 26.1,
+     "exit": "E1",
+     "net": -1924.0,
+     "peak": 1.35
+    },
+    {
+     "day": "2025-08-07",
+     "t": 164,
+     "side": "P",
+     "strike": 24400.0,
+     "price": 21.5,
+     "exit": "E1",
+     "net": -1654.0,
+     "peak": 3.09
+    },
+    {
+     "day": "2025-08-14",
+     "t": 174,
+     "side": "C",
+     "strike": 24650.0,
+     "price": 25.5,
+     "exit": "E1",
+     "net": -1853.0,
+     "peak": 1.69
+    },
+    {
+     "day": "2025-08-21",
+     "t": 219,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 13.15,
+     "exit": "E1",
+     "net": -190.0,
+     "peak": 2.59
+    },
+    {
+     "day": "2025-08-28",
+     "t": 164,
+     "side": "P",
+     "strike": 24600.0,
+     "price": 28.25,
+     "exit": "E1",
+     "net": 5711.0,
+     "peak": 3.69
+    },
+    {
+     "day": "2025-09-02",
+     "t": 174,
+     "side": "P",
+     "strike": 24700.0,
+     "price": 14.75,
+     "exit": "E1",
+     "net": 8531.0,
+     "peak": 11.6
+    },
+    {
+     "day": "2025-09-09",
+     "t": 324,
+     "side": "C",
+     "strike": 24900.0,
+     "price": 3.6,
+     "exit": "E1",
+     "net": -1781.0,
+     "peak": 1.06
+    },
+    {
+     "day": "2025-09-16",
+     "t": 319,
+     "side": "P",
+     "strike": 25200.0,
+     "price": 9.75,
+     "exit": "E1",
+     "net": -1488.0,
+     "peak": 1.05
+    },
+    {
+     "day": "2025-09-23",
+     "t": 194,
+     "side": "P",
+     "strike": 25150.0,
+     "price": 24.6,
+     "exit": "E1",
+     "net": -1864.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-09-30",
+     "t": 314,
+     "side": "C",
+     "strike": 24650.0,
+     "price": 8.4,
+     "exit": "E1",
+     "net": -1893.0,
+     "peak": 2.34
+    },
+    {
+     "day": "2025-10-07",
+     "t": 164,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 21.05,
+     "exit": "E1",
+     "net": -1605.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-10-14",
+     "t": 204,
+     "side": "C",
+     "strike": 25100.0,
+     "price": 29.4,
+     "exit": "E1",
+     "net": 2194.0,
+     "peak": 3.34
+    },
+    {
+     "day": "2025-10-20",
+     "t": 164,
+     "side": "P",
+     "strike": 25800.0,
+     "price": 21.1,
+     "exit": "E1",
+     "net": -1571.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2025-10-28",
+     "t": 184,
+     "side": "P",
+     "strike": 25800.0,
+     "price": 19.45,
+     "exit": "E1",
+     "net": -1444.0,
+     "peak": 1.19
+    },
+    {
+     "day": "2025-11-04",
+     "t": 279,
+     "side": "P",
+     "strike": 25650.0,
+     "price": 16.0,
+     "exit": "E1",
+     "net": 2563.0,
+     "peak": 3.5
+    },
+    {
+     "day": "2025-11-11",
+     "t": 284,
+     "side": "P",
+     "strike": 25600.0,
+     "price": 10.15,
+     "exit": "E1",
+     "net": -1594.0,
+     "peak": 1.08
+    },
+    {
+     "day": "2025-11-18",
+     "t": 239,
+     "side": "P",
+     "strike": 25950.0,
+     "price": 23.1,
+     "exit": "E1",
+     "net": 325.0,
+     "peak": 1.51
+    },
+    {
+     "day": "2025-11-25",
+     "t": 239,
+     "side": "P",
+     "strike": 25950.0,
+     "price": 13.05,
+     "exit": "E1",
+     "net": 8616.0,
+     "peak": 6.25
+    },
+    {
+     "day": "2025-12-02",
+     "t": 294,
+     "side": "P",
+     "strike": 26050.0,
+     "price": 14.95,
+     "exit": "E1",
+     "net": 940.0,
+     "peak": 3.35
+    },
+    {
+     "day": "2025-12-09",
+     "t": 164,
+     "side": "P",
+     "strike": 25800.0,
+     "price": 16.85,
+     "exit": "E1",
+     "net": -1305.0,
+     "peak": 1.07
+    },
+    {
+     "day": "2025-12-16",
+     "t": 214,
+     "side": "P",
+     "strike": 25850.0,
+     "price": 13.25,
+     "exit": "E1",
+     "net": -1992.0,
+     "peak": 1.2
+    },
+    {
+     "day": "2025-12-23",
+     "t": 309,
+     "side": "P",
+     "strike": 26200.0,
+     "price": 6.15,
+     "exit": "E1",
+     "net": 4422.0,
+     "peak": 5.84
+    },
+    {
+     "day": "2025-12-30",
+     "t": 314,
+     "side": "P",
+     "strike": 25900.0,
+     "price": 6.45,
+     "exit": "E1",
+     "net": -1908.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-01-06",
+     "t": 164,
+     "side": "P",
+     "strike": 26150.0,
+     "price": 15.25,
+     "exit": "E1",
+     "net": -1049.0,
+     "peak": 1.76
+    },
+    {
+     "day": "2026-01-13",
+     "t": 164,
+     "side": "P",
+     "strike": 25700.0,
+     "price": 19.9,
+     "exit": "E1",
+     "net": -1222.0,
+     "peak": 4.53
+    },
+    {
+     "day": "2026-01-20",
+     "t": 294,
+     "side": "P",
+     "strike": 25350.0,
+     "price": 19.8,
+     "exit": "E1",
+     "net": 2760.0,
+     "peak": 3.22
+    },
+    {
+     "day": "2026-01-27",
+     "t": 164,
+     "side": "P",
+     "strike": 25000.0,
+     "price": 28.35,
+     "exit": "E1",
+     "net": -1843.0,
+     "peak": 1.41
+    },
+    {
+     "day": "2026-02-10",
+     "t": 254,
+     "side": "C",
+     "strike": 25950.0,
+     "price": 15.35,
+     "exit": "E1",
+     "net": -1253.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-02-17",
+     "t": 239,
+     "side": "C",
+     "strike": 25750.0,
+     "price": 24.1,
+     "exit": "E1",
+     "net": -1537.0,
+     "peak": 1.43
+    },
+    {
+     "day": "2026-02-24",
+     "t": 309,
+     "side": "P",
+     "strike": 25400.0,
+     "price": 24.9,
+     "exit": "E1",
+     "net": -1232.0,
+     "peak": 1.53
+    },
+    {
+     "day": "2026-03-02",
+     "t": 204,
+     "side": "C",
+     "strike": 24750.0,
+     "price": 24.05,
+     "exit": "E1",
+     "net": 4295.0,
+     "peak": 6.53
+    },
+    {
+     "day": "2026-03-10",
+     "t": 204,
+     "side": "C",
+     "strike": 24250.0,
+     "price": 21.7,
+     "exit": "E1",
+     "net": -927.0,
+     "peak": 3.69
+    },
+    {
+     "day": "2026-03-17",
+     "t": 164,
+     "side": "C",
+     "strike": 23500.0,
+     "price": 27.15,
+     "exit": "E1",
+     "net": 4820.0,
+     "peak": 5.62
+    },
+    {
+     "day": "2026-03-24",
+     "t": 174,
+     "side": "C",
+     "strike": 22900.0,
+     "price": 22.25,
+     "exit": "E1",
+     "net": -454.0,
+     "peak": 7.66
+    },
+    {
+     "day": "2026-04-07",
+     "t": 274,
+     "side": "P",
+     "strike": 22950.0,
+     "price": 18.95,
+     "exit": "E1",
+     "net": -1280.0,
+     "peak": 2.35
+    },
+    {
+     "day": "2026-04-13",
+     "t": 329,
+     "side": "C",
+     "strike": 23900.0,
+     "price": 8.85,
+     "exit": "E1",
+     "net": -1745.0,
+     "peak": 1.81
+    },
+    {
+     "day": "2026-04-21",
+     "t": 229,
+     "side": "C",
+     "strike": 24550.0,
+     "price": 21.45,
+     "exit": "E1",
+     "net": 172.0,
+     "peak": 2.16
+    },
+    {
+     "day": "2026-04-28",
+     "t": 164,
+     "side": "P",
+     "strike": 24000.0,
+     "price": 15.5,
+     "exit": "E1",
+     "net": -427.0,
+     "peak": 3.63
+    },
+    {
+     "day": "2026-05-05",
+     "t": 164,
+     "side": "P",
+     "strike": 23850.0,
+     "price": 27.5,
+     "exit": "E1",
+     "net": -1849.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-05-12",
+     "t": 219,
+     "side": "P",
+     "strike": 23450.0,
+     "price": 15.2,
+     "exit": "E1",
+     "net": 6288.0,
+     "peak": 4.48
+    },
+    {
+     "day": "2026-05-19",
+     "t": 194,
+     "side": "C",
+     "strike": 23800.0,
+     "price": 17.25,
+     "exit": "E1",
+     "net": -1140.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2026-05-26",
+     "t": 169,
+     "side": "C",
+     "strike": 24050.0,
+     "price": 27.75,
+     "exit": "E1",
+     "net": -1875.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2026-06-02",
+     "t": 164,
+     "side": "P",
+     "strike": 23250.0,
+     "price": 23.75,
+     "exit": "E1",
+     "net": -1625.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-06-09",
+     "t": 164,
+     "side": "P",
+     "strike": 23150.0,
+     "price": 28.2,
+     "exit": "E1",
+     "net": -1830.0,
+     "peak": 1.06
+    },
+    {
+     "day": "2026-06-16",
+     "t": 164,
+     "side": "C",
+     "strike": 23950.0,
+     "price": 27.1,
+     "exit": "E1",
+     "net": 540.0,
+     "peak": 1.8
+    },
+    {
+     "day": "2026-06-23",
+     "t": 164,
+     "side": "C",
+     "strike": 24050.0,
+     "price": 19.4,
+     "exit": "E1",
+     "net": -1254.0,
+     "peak": 1.08
+    },
+    {
+     "day": "2026-06-30",
+     "t": 164,
+     "side": "P",
+     "strike": 23900.0,
+     "price": 23.95,
+     "exit": "E1",
+     "net": 2285.0,
+     "peak": 2.92
+    },
+    {
+     "day": "2026-07-07",
+     "t": 189,
+     "side": "C",
+     "strike": 24500.0,
+     "price": 23.0,
+     "exit": "E1",
+     "net": -1544.0,
+     "peak": 1.01
+    },
+    {
+     "day": "2026-07-14",
+     "t": 174,
+     "side": "C",
+     "strike": 24100.0,
+     "price": 29.05,
+     "exit": "E1",
+     "net": -1944.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-07-21",
+     "t": 339,
+     "side": "C",
+     "strike": 24200.0,
+     "price": 6.35,
+     "exit": "E1",
+     "net": -1349.0,
+     "peak": 2.12
+    },
+    {
+     "day": "2026-07-28",
+     "t": 329,
+     "side": "C",
+     "strike": 24000.0,
+     "price": 9.3,
+     "exit": "E1",
+     "net": -1832.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-08-25",
+     "t": 164,
+     "side": "P",
+     "strike": 24150.0,
+     "price": 13.85,
+     "exit": "E1",
+     "net": -1584.0,
+     "peak": 2.49
+    }
+   ],
+   "q": 0.6573,
+   "gates": {
+    "1 >= 30 trades": true,
+    "2 net > 0": true,
+    "3 >= 3 of 4 years > 0": true,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": true,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": true
+   },
+   "passes": false
+  },
+  "G1": {
+   "m": {
+    "expiries": 197,
+    "trades": 48,
+    "hit_pct": 43.8,
+    "avg_win": 1348.9,
+    "avg_loss": -1281.5,
+    "net": -6272.58,
+    "per_expiry": -31.84,
+    "per_1000_risked": -87.4,
+    "green_expiries_pct": 10.7,
+    "worst_day": -2074.0,
+    "best_day": 2699.4,
+    "max_dd": -13696.27,
+    "losing_streak_trades": 5,
+    "losing_streak_expiries": 5,
+    "best_day_share_pct": null,
+    "net_without_best_day": -8971.98,
+    "proxy_trades": 0,
+    "x2_pct": 41.7,
+    "x4_pct": 8.3,
+    "x10_pct": 0.0
+   },
+   "years": {
+    "2023": {
+     "expiries": 52,
+     "trades": 6,
+     "hit_pct": 50.0,
+     "avg_win": 1654.6,
+     "avg_loss": -839.9,
+     "net": 2444.25,
+     "per_expiry": 47.0,
+     "per_1000_risked": 314.0,
+     "green_expiries_pct": 5.8,
+     "worst_day": -1088.44,
+     "best_day": 2699.4,
+     "max_dd": -1984.58,
+     "losing_streak_trades": 2,
+     "losing_streak_expiries": 2,
+     "best_day_share_pct": 110.4,
+     "net_without_best_day": -255.15,
+     "proxy_trades": 0,
+     "x2_pct": 50.0,
+     "x4_pct": 0.0,
+     "x10_pct": 0.0
+    },
+    "2024": {
+     "expiries": 52,
+     "trades": 12,
+     "hit_pct": 25.0,
+     "avg_win": 1194.6,
+     "avg_loss": -1454.7,
+     "net": -9508.85,
+     "per_expiry": -182.86,
+     "per_1000_risked": -460.2,
+     "green_expiries_pct": 5.8,
+     "worst_day": -2074.0,
+     "best_day": 2202.84,
+     "max_dd": -11862.59,
+     "losing_streak_trades": 5,
+     "losing_streak_expiries": 5,
+     "best_day_share_pct": null,
+     "net_without_best_day": -11711.69,
+     "proxy_trades": 0,
+     "x2_pct": 16.7,
+     "x4_pct": 8.3,
+     "x10_pct": 0.0
+    },
+    "2025": {
+     "expiries": 53,
+     "trades": 15,
+     "hit_pct": 60.0,
+     "avg_win": 1373.6,
+     "avg_loss": -1156.2,
+     "net": 5424.75,
+     "per_expiry": 102.35,
+     "per_1000_risked": 240.6,
+     "green_expiries_pct": 17.0,
+     "worst_day": -1593.67,
+     "best_day": 2031.84,
+     "max_dd": -4075.62,
+     "losing_streak_trades": 2,
+     "losing_streak_expiries": 2,
+     "best_day_share_pct": 37.5,
+     "net_without_best_day": 3392.91,
+     "proxy_trades": 0,
+     "x2_pct": 60.0,
+     "x4_pct": 20.0,
+     "x10_pct": 0.0
+    },
+    "2026": {
+     "expiries": 40,
+     "trades": 15,
+     "hit_pct": 40.0,
+     "avg_win": 1236.3,
+     "avg_loss": -1339.0,
+     "net": -4632.73,
+     "per_expiry": -115.82,
+     "per_1000_risked": -222.7,
+     "green_expiries_pct": 15.0,
+     "worst_day": -1910.96,
+     "best_day": 1838.77,
+     "max_dd": -7345.91,
+     "losing_streak_trades": 4,
+     "losing_streak_expiries": 4,
+     "best_day_share_pct": null,
+     "net_without_best_day": -6471.5,
+     "proxy_trades": 0,
+     "x2_pct": 40.0,
+     "x4_pct": 0.0,
+     "x10_pct": 0.0
+    }
+   },
+   "bands": {
+    "1-10": {
+     "trades": 0,
+     "net": 0
+    },
+    "10-15": {
+     "trades": 0,
+     "net": 0
+    },
+    "15-30": {
+     "trades": 48,
+     "net": -6273.0
+    }
+   },
+   "choices": {
+    "2023": {
+     "threshold": [
+      0.5,
+      0.2
+     ],
+     "exit": "E3"
+    },
+    "2024": {
+     "threshold": [
+      0.5,
+      0.2
+     ],
+     "exit": "E3"
+    },
+    "2025": {
+     "threshold": [
+      0.5,
+      0.1
+     ],
+     "exit": "E3"
+    },
+    "2026": {
+     "threshold": [
+      0.5,
+      0.1
+     ],
+     "exit": "E3"
+    }
+   },
+   "twins": {
+    "p": 0.433,
+    "mean": -7879.0,
+    "p05": -23857.0,
+    "p95": 8473.0
+   },
+   "x2_spread": -8704.0,
+   "trades_list": [
+    {
+     "day": "2023-03-23",
+     "t": 279,
+     "side": "P",
+     "strike": 17150.0,
+     "price": 19.0,
+     "exit": "E3",
+     "net": 2699.0,
+     "peak": 3.63
+    },
+    {
+     "day": "2023-03-29",
+     "t": 289,
+     "side": "C",
+     "strike": 17050.0,
+     "price": 22.95,
+     "exit": "E3",
+     "net": -535.0,
+     "peak": 1.1
+    },
+    {
+     "day": "2023-07-13",
+     "t": 294,
+     "side": "P",
+     "strike": 19450.0,
+     "price": 20.25,
+     "exit": "E3",
+     "net": 985.0,
+     "peak": 3.22
+    },
+    {
+     "day": "2023-08-03",
+     "t": 189,
+     "side": "P",
+     "strike": 19400.0,
+     "price": 26.7,
+     "exit": "E3",
+     "net": 1279.0,
+     "peak": 3.73
+    },
+    {
+     "day": "2023-09-07",
+     "t": 324,
+     "side": "C",
+     "strike": 19750.0,
+     "price": 23.0,
+     "exit": "E3",
+     "net": -1088.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-10-26",
+     "t": 254,
+     "side": "P",
+     "strike": 18850.0,
+     "price": 21.45,
+     "exit": "E3",
+     "net": -896.0,
+     "peak": 1.04
+    },
+    {
+     "day": "2024-01-11",
+     "t": 299,
+     "side": "P",
+     "strike": 21600.0,
+     "price": 20.85,
+     "exit": "E3",
+     "net": -1118.0,
+     "peak": 1.24
+    },
+    {
+     "day": "2024-02-22",
+     "t": 284,
+     "side": "C",
+     "strike": 22100.0,
+     "price": 25.6,
+     "exit": "E3",
+     "net": 1269.0,
+     "peak": 4.12
+    },
+    {
+     "day": "2024-04-04",
+     "t": 254,
+     "side": "C",
+     "strike": 22600.0,
+     "price": 19.8,
+     "exit": "E3",
+     "net": -1954.0,
+     "peak": 1.71
+    },
+    {
+     "day": "2024-04-18",
+     "t": 254,
+     "side": "P",
+     "strike": 22000.0,
+     "price": 29.75,
+     "exit": "E3",
+     "net": -957.0,
+     "peak": 1.7
+    },
+    {
+     "day": "2024-04-25",
+     "t": 294,
+     "side": "C",
+     "strike": 22650.0,
+     "price": 18.85,
+     "exit": "E3",
+     "net": -1909.0,
+     "peak": 1.46
+    },
+    {
+     "day": "2024-05-09",
+     "t": 214,
+     "side": "P",
+     "strike": 22000.0,
+     "price": 24.0,
+     "exit": "E3",
+     "net": 112.0,
+     "peak": 1.61
+    },
+    {
+     "day": "2024-05-23",
+     "t": 204,
+     "side": "C",
+     "strike": 22950.0,
+     "price": 20.75,
+     "exit": "E3",
+     "net": -700.0,
+     "peak": 1.65
+    },
+    {
+     "day": "2024-07-11",
+     "t": 169,
+     "side": "P",
+     "strike": 24150.0,
+     "price": 23.7,
+     "exit": "E3",
+     "net": -1819.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-08-08",
+     "t": 179,
+     "side": "C",
+     "strike": 24450.0,
+     "price": 28.5,
+     "exit": "E3",
+     "net": -1491.0,
+     "peak": 1.25
+    },
+    {
+     "day": "2024-09-26",
+     "t": 324,
+     "side": "C",
+     "strike": 26250.0,
+     "price": 21.55,
+     "exit": "E3",
+     "net": -1070.0,
+     "peak": 1.04
+    },
+    {
+     "day": "2024-11-28",
+     "t": 304,
+     "side": "P",
+     "strike": 23850.0,
+     "price": 28.45,
+     "exit": "E3",
+     "net": -2074.0,
+     "peak": 1.29
+    },
+    {
+     "day": "2024-12-05",
+     "t": 179,
+     "side": "C",
+     "strike": 24800.0,
+     "price": 29.4,
+     "exit": "E3",
+     "net": 2203.0,
+     "peak": 3.53
+    },
+    {
+     "day": "2025-01-30",
+     "t": 254,
+     "side": "P",
+     "strike": 23150.0,
+     "price": 24.65,
+     "exit": "E3",
+     "net": 1931.0,
+     "peak": 2.57
+    },
+    {
+     "day": "2025-02-13",
+     "t": 259,
+     "side": "P",
+     "strike": 23050.0,
+     "price": 20.9,
+     "exit": "E3",
+     "net": -71.0,
+     "peak": 2.24
+    },
+    {
+     "day": "2025-03-20",
+     "t": 244,
+     "side": "C",
+     "strike": 23200.0,
+     "price": 17.6,
+     "exit": "E3",
+     "net": -1230.0,
+     "peak": 1.81
+    },
+    {
+     "day": "2025-05-15",
+     "t": 174,
+     "side": "C",
+     "strike": 24950.0,
+     "price": 23.1,
+     "exit": "E3",
+     "net": 1625.0,
+     "peak": 8.05
+    },
+    {
+     "day": "2025-05-22",
+     "t": 329,
+     "side": "C",
+     "strike": 24600.0,
+     "price": 18.0,
+     "exit": "E3",
+     "net": 1360.0,
+     "peak": 2.36
+    },
+    {
+     "day": "2025-06-05",
+     "t": 169,
+     "side": "C",
+     "strike": 24950.0,
+     "price": 19.4,
+     "exit": "E3",
+     "net": 1453.0,
+     "peak": 2.51
+    },
+    {
+     "day": "2025-06-12",
+     "t": 229,
+     "side": "P",
+     "strike": 24950.0,
+     "price": 15.45,
+     "exit": "E3",
+     "net": 1124.0,
+     "peak": 8.71
+    },
+    {
+     "day": "2025-06-26",
+     "t": 274,
+     "side": "C",
+     "strike": 25550.0,
+     "price": 18.0,
+     "exit": "E3",
+     "net": 1307.0,
+     "peak": 2.38
+    },
+    {
+     "day": "2025-07-03",
+     "t": 264,
+     "side": "C",
+     "strike": 25650.0,
+     "price": 21.05,
+     "exit": "E3",
+     "net": -1594.0,
+     "peak": 1.31
+    },
+    {
+     "day": "2025-07-24",
+     "t": 224,
+     "side": "P",
+     "strike": 25000.0,
+     "price": 15.85,
+     "exit": "E3",
+     "net": -1282.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-08-07",
+     "t": 339,
+     "side": "C",
+     "strike": 24550.0,
+     "price": 15.4,
+     "exit": "E3",
+     "net": 372.0,
+     "peak": 1.37
+    },
+    {
+     "day": "2025-10-14",
+     "t": 174,
+     "side": "P",
+     "strike": 25050.0,
+     "price": 20.45,
+     "exit": "E3",
+     "net": -1571.0,
+     "peak": 1.66
+    },
+    {
+     "day": "2025-11-11",
+     "t": 194,
+     "side": "C",
+     "strike": 25600.0,
+     "price": 28.65,
+     "exit": "E3",
+     "net": 2032.0,
+     "peak": 3.54
+    },
+    {
+     "day": "2025-11-25",
+     "t": 319,
+     "side": "P",
+     "strike": 25950.0,
+     "price": 16.75,
+     "exit": "E3",
+     "net": 1158.0,
+     "peak": 5.05
+    },
+    {
+     "day": "2025-12-16",
+     "t": 304,
+     "side": "P",
+     "strike": 25850.0,
+     "price": 15.9,
+     "exit": "E3",
+     "net": -1189.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-01-13",
+     "t": 229,
+     "side": "P",
+     "strike": 25600.0,
+     "price": 21.0,
+     "exit": "E3",
+     "net": -1404.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-02-24",
+     "t": 214,
+     "side": "P",
+     "strike": 25350.0,
+     "price": 22.65,
+     "exit": "E3",
+     "net": 1421.0,
+     "peak": 2.01
+    },
+    {
+     "day": "2026-03-02",
+     "t": 284,
+     "side": "P",
+     "strike": 24550.0,
+     "price": 28.3,
+     "exit": "E3",
+     "net": -1911.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-03-10",
+     "t": 294,
+     "side": "C",
+     "strike": 24350.0,
+     "price": 25.65,
+     "exit": "E3",
+     "net": -1469.0,
+     "peak": 1.28
+    },
+    {
+     "day": "2026-03-30",
+     "t": 304,
+     "side": "P",
+     "strike": 22350.0,
+     "price": 17.4,
+     "exit": "E3",
+     "net": 1043.0,
+     "peak": 3.05
+    },
+    {
+     "day": "2026-04-13",
+     "t": 279,
+     "side": "C",
+     "strike": 23950.0,
+     "price": 16.7,
+     "exit": "E3",
+     "net": -1105.0,
+     "peak": 1.21
+    },
+    {
+     "day": "2026-05-05",
+     "t": 164,
+     "side": "P",
+     "strike": 23850.0,
+     "price": 27.5,
+     "exit": "E3",
+     "net": -1849.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-05-26",
+     "t": 289,
+     "side": "P",
+     "strike": 23900.0,
+     "price": 22.85,
+     "exit": "E3",
+     "net": -1450.0,
+     "peak": 1.2
+    },
+    {
+     "day": "2026-06-02",
+     "t": 329,
+     "side": "P",
+     "strike": 23450.0,
+     "price": 16.05,
+     "exit": "E3",
+     "net": -550.0,
+     "peak": 1.55
+    },
+    {
+     "day": "2026-06-23",
+     "t": 164,
+     "side": "P",
+     "strike": 23900.0,
+     "price": 17.1,
+     "exit": "E3",
+     "net": 1101.0,
+     "peak": 3.88
+    },
+    {
+     "day": "2026-06-30",
+     "t": 309,
+     "side": "C",
+     "strike": 24000.0,
+     "price": 16.5,
+     "exit": "E3",
+     "net": -1157.0,
+     "peak": 1.25
+    },
+    {
+     "day": "2026-08-04",
+     "t": 164,
+     "side": "P",
+     "strike": 24450.0,
+     "price": 15.25,
+     "exit": "E3",
+     "net": 965.0,
+     "peak": 3.04
+    },
+    {
+     "day": "2026-09-01",
+     "t": 239,
+     "side": "P",
+     "strike": 24050.0,
+     "price": 28.9,
+     "exit": "E3",
+     "net": 1839.0,
+     "peak": 3.37
+    },
+    {
+     "day": "2026-09-15",
+     "t": 299,
+     "side": "P",
+     "strike": 23150.0,
+     "price": 17.05,
+     "exit": "E3",
+     "net": 1049.0,
+     "peak": 2.26
+    },
+    {
+     "day": "2026-09-22",
+     "t": 279,
+     "side": "P",
+     "strike": 23250.0,
+     "price": 22.35,
+     "exit": "E3",
+     "net": -1157.0,
+     "peak": 1.37
+    }
+   ],
+   "q": 1.0,
+   "gates": {
+    "1 >= 30 trades": true,
+    "2 net > 0": false,
+    "3 >= 3 of 4 years > 0": false,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": false,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": true
+   },
+   "passes": false
+  },
+  "Q1": {
+   "m": {
+    "expiries": 197,
+    "trades": 35,
+    "hit_pct": 25.7,
+    "avg_win": 1437.8,
+    "avg_loss": -1004.4,
+    "net": -13174.75,
+    "per_expiry": -66.88,
+    "per_1000_risked": -246.5,
+    "green_expiries_pct": 4.6,
+    "worst_day": -1859.36,
+    "best_day": 4400.69,
+    "max_dd": -15184.62,
+    "losing_streak_trades": 7,
+    "losing_streak_expiries": 7,
+    "best_day_share_pct": null,
+    "net_without_best_day": -17575.44,
+    "proxy_trades": 0,
+    "x2_pct": 17.1,
+    "x4_pct": 0.0,
+    "x10_pct": 0.0
+   },
+   "years": {
+    "2023": {
+     "expiries": 52,
+     "trades": 5,
+     "hit_pct": 20.0,
+     "avg_win": 1214.8,
+     "avg_loss": -1251.7,
+     "net": -3792.1,
+     "per_expiry": -72.93,
+     "per_1000_risked": -507.8,
+     "green_expiries_pct": 1.9,
+     "worst_day": -1859.36,
+     "best_day": 1214.78,
+     "max_dd": -3792.1,
+     "losing_streak_trades": 3,
+     "losing_streak_expiries": 3,
+     "best_day_share_pct": null,
+     "net_without_best_day": -5006.88,
+     "proxy_trades": 0,
+     "x2_pct": 20.0,
+     "x4_pct": 0.0,
+     "x10_pct": 0.0
+    },
+    "2024": {
+     "expiries": 52,
+     "trades": 11,
+     "hit_pct": 27.3,
+     "avg_win": 2851.6,
+     "avg_loss": -987.2,
+     "net": 657.29,
+     "per_expiry": 12.64,
+     "per_1000_risked": 35.6,
+     "green_expiries_pct": 5.8,
+     "worst_day": -1508.99,
+     "best_day": 4400.69,
+     "max_dd": -3631.52,
+     "losing_streak_trades": 4,
+     "losing_streak_expiries": 4,
+     "best_day_share_pct": 669.5,
+     "net_without_best_day": -3743.4,
+     "proxy_trades": 0,
+     "x2_pct": 45.5,
+     "x4_pct": 0.0,
+     "x10_pct": 0.0
+    },
+    "2025": {
+     "expiries": 53,
+     "trades": 6,
+     "hit_pct": 16.7,
+     "avg_win": 685.8,
+     "avg_loss": -1202.5,
+     "net": -5326.57,
+     "per_expiry": -100.5,
+     "per_1000_risked": -651.6,
+     "green_expiries_pct": 1.9,
+     "worst_day": -1804.23,
+     "best_day": 685.76,
+     "max_dd": -5326.57,
+     "losing_streak_trades": 3,
+     "losing_streak_expiries": 3,
+     "best_day_share_pct": null,
+     "net_without_best_day": -6012.33,
+     "proxy_trades": 0,
+     "x2_pct": 0.0,
+     "x4_pct": 0.0,
+     "x10_pct": 0.0
+    },
+    "2026": {
+     "expiries": 40,
+     "trades": 13,
+     "hit_pct": 30.8,
+     "avg_win": 621.2,
+     "avg_loss": -799.8,
+     "net": -4713.37,
+     "per_expiry": -117.83,
+     "per_1000_risked": -243.7,
+     "green_expiries_pct": 10.0,
+     "worst_day": -1403.79,
+     "best_day": 1516.87,
+     "max_dd": -6226.53,
+     "losing_streak_trades": 5,
+     "losing_streak_expiries": 5,
+     "best_day_share_pct": null,
+     "net_without_best_day": -6230.24,
+     "proxy_trades": 0,
+     "x2_pct": 0.0,
+     "x4_pct": 0.0,
+     "x10_pct": 0.0
+    }
+   },
+   "bands": {
+    "1-10": {
+     "trades": 0,
+     "net": 0
+    },
+    "10-15": {
+     "trades": 0,
+     "net": 0
+    },
+    "15-30": {
+     "trades": 35,
+     "net": -13175.0
+    }
+   },
+   "choices": {
+    "2023": {
+     "threshold": 0.5,
+     "exit": "E1"
+    },
+    "2024": {
+     "threshold": 0.5,
+     "exit": "E1"
+    },
+    "2025": {
+     "threshold": 0.5,
+     "exit": "E1"
+    },
+    "2026": {
+     "threshold": 0.5,
+     "exit": "E1"
+    }
+   },
+   "twins": {
+    "p": 0.272,
+    "mean": -18451.0,
+    "p05": -33387.0,
+    "p95": -1187.0
+   },
+   "x2_spread": -13442.0,
+   "trades_list": [
+    {
+     "day": "2023-01-05",
+     "t": 314,
+     "side": "P",
+     "strike": 17950.0,
+     "price": 19.95,
+     "exit": "E1",
+     "net": -1859.0,
+     "peak": 1.31
+    },
+    {
+     "day": "2023-06-15",
+     "t": 314,
+     "side": "P",
+     "strike": 18700.0,
+     "price": 20.1,
+     "exit": "E1",
+     "net": -520.0,
+     "peak": 1.6
+    },
+    {
+     "day": "2023-06-28",
+     "t": 314,
+     "side": "C",
+     "strike": 19000.0,
+     "price": 23.35,
+     "exit": "E1",
+     "net": -1243.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2023-07-27",
+     "t": 314,
+     "side": "P",
+     "strike": 19650.0,
+     "price": 15.4,
+     "exit": "E1",
+     "net": 1215.0,
+     "peak": 3.26
+    },
+    {
+     "day": "2023-12-21",
+     "t": 314,
+     "side": "C",
+     "strike": 21250.0,
+     "price": 16.85,
+     "exit": "E1",
+     "net": -1385.0,
+     "peak": 1.73
+    },
+    {
+     "day": "2024-02-08",
+     "t": 314,
+     "side": "P",
+     "strike": 21700.0,
+     "price": 20.75,
+     "exit": "E1",
+     "net": -250.0,
+     "peak": 2.09
+    },
+    {
+     "day": "2024-04-25",
+     "t": 314,
+     "side": "C",
+     "strike": 22650.0,
+     "price": 15.25,
+     "exit": "E1",
+     "net": -1509.0,
+     "peak": 1.84
+    },
+    {
+     "day": "2024-05-23",
+     "t": 314,
+     "side": "C",
+     "strike": 22950.0,
+     "price": 21.3,
+     "exit": "E1",
+     "net": -779.0,
+     "peak": 1.03
+    },
+    {
+     "day": "2024-05-30",
+     "t": 314,
+     "side": "P",
+     "strike": 22500.0,
+     "price": 24.75,
+     "exit": "E1",
+     "net": -480.0,
+     "peak": 3.33
+    },
+    {
+     "day": "2024-06-06",
+     "t": 314,
+     "side": "C",
+     "strike": 22750.0,
+     "price": 19.5,
+     "exit": "E1",
+     "net": 4401.0,
+     "peak": 3.46
+    },
+    {
+     "day": "2024-06-27",
+     "t": 314,
+     "side": "C",
+     "strike": 23950.0,
+     "price": 25.5,
+     "exit": "E1",
+     "net": 2906.0,
+     "peak": 3.59
+    },
+    {
+     "day": "2024-07-18",
+     "t": 314,
+     "side": "C",
+     "strike": 24800.0,
+     "price": 28.3,
+     "exit": "E1",
+     "net": -964.0,
+     "peak": 1.68
+    },
+    {
+     "day": "2024-08-08",
+     "t": 314,
+     "side": "P",
+     "strike": 24150.0,
+     "price": 27.75,
+     "exit": "E1",
+     "net": -1087.0,
+     "peak": 1.34
+    },
+    {
+     "day": "2024-09-26",
+     "t": 314,
+     "side": "C",
+     "strike": 26200.0,
+     "price": 27.1,
+     "exit": "E1",
+     "net": 1248.0,
+     "peak": 2.13
+    },
+    {
+     "day": "2024-11-28",
+     "t": 314,
+     "side": "P",
+     "strike": 23900.0,
+     "price": 27.65,
+     "exit": "E1",
+     "net": -1438.0,
+     "peak": 1.22
+    },
+    {
+     "day": "2024-12-05",
+     "t": 314,
+     "side": "C",
+     "strike": 25000.0,
+     "price": 20.15,
+     "exit": "E1",
+     "net": -1391.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-06-05",
+     "t": 314,
+     "side": "C",
+     "strike": 24750.0,
+     "price": 27.15,
+     "exit": "E1",
+     "net": -1804.0,
+     "peak": 1.66
+    },
+    {
+     "day": "2025-06-12",
+     "t": 314,
+     "side": "P",
+     "strike": 24850.0,
+     "price": 17.0,
+     "exit": "E1",
+     "net": -1196.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-06-26",
+     "t": 314,
+     "side": "C",
+     "strike": 25550.0,
+     "price": 15.85,
+     "exit": "E1",
+     "net": -515.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-09-16",
+     "t": 314,
+     "side": "C",
+     "strike": 25200.0,
+     "price": 15.95,
+     "exit": "E1",
+     "net": 686.0,
+     "peak": 1.94
+    },
+    {
+     "day": "2025-09-30",
+     "t": 314,
+     "side": "P",
+     "strike": 24600.0,
+     "price": 17.25,
+     "exit": "E1",
+     "net": -1264.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-12-09",
+     "t": 314,
+     "side": "P",
+     "strike": 25800.0,
+     "price": 15.8,
+     "exit": "E1",
+     "net": -1234.0,
+     "peak": 1.13
+    },
+    {
+     "day": "2026-02-03",
+     "t": 314,
+     "side": "C",
+     "strike": 25800.0,
+     "price": 21.6,
+     "exit": "E1",
+     "net": -1401.0,
+     "peak": 1.44
+    },
+    {
+     "day": "2026-02-24",
+     "t": 314,
+     "side": "P",
+     "strike": 25400.0,
+     "price": 21.45,
+     "exit": "E1",
+     "net": -992.0,
+     "peak": 1.8
+    },
+    {
+     "day": "2026-03-02",
+     "t": 314,
+     "side": "P",
+     "strike": 24650.0,
+     "price": 20.4,
+     "exit": "E1",
+     "net": -1358.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-03-10",
+     "t": 314,
+     "side": "C",
+     "strike": 24300.0,
+     "price": 16.3,
+     "exit": "E1",
+     "net": -1072.0,
+     "peak": 1.29
+    },
+    {
+     "day": "2026-03-24",
+     "t": 314,
+     "side": "C",
+     "strike": 23000.0,
+     "price": 21.0,
+     "exit": "E1",
+     "net": -1404.0,
+     "peak": 1.31
+    },
+    {
+     "day": "2026-03-30",
+     "t": 314,
+     "side": "P",
+     "strike": 22350.0,
+     "price": 26.8,
+     "exit": "E1",
+     "net": 1517.0,
+     "peak": 1.99
+    },
+    {
+     "day": "2026-04-13",
+     "t": 314,
+     "side": "P",
+     "strike": 23850.0,
+     "price": 20.2,
+     "exit": "E1",
+     "net": -493.0,
+     "peak": 1.1
+    },
+    {
+     "day": "2026-08-04",
+     "t": 314,
+     "side": "P",
+     "strike": 24400.0,
+     "price": 15.1,
+     "exit": "E1",
+     "net": 737.0,
+     "peak": 1.51
+    },
+    {
+     "day": "2026-09-01",
+     "t": 314,
+     "side": "P",
+     "strike": 23950.0,
+     "price": 16.7,
+     "exit": "E1",
+     "net": -145.0,
+     "peak": 1.61
+    },
+    {
+     "day": "2026-09-08",
+     "t": 314,
+     "side": "P",
+     "strike": 23650.0,
+     "price": 28.65,
+     "exit": "E1",
+     "net": 147.0,
+     "peak": 1.15
+    },
+    {
+     "day": "2026-09-15",
+     "t": 314,
+     "side": "P",
+     "strike": 23150.0,
+     "price": 26.15,
+     "exit": "E1",
+     "net": 84.0,
+     "peak": 1.45
+    },
+    {
+     "day": "2026-09-29",
+     "t": 314,
+     "side": "P",
+     "strike": 22600.0,
+     "price": 16.65,
+     "exit": "E1",
+     "net": -324.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-10-06",
+     "t": 314,
+     "side": "C",
+     "strike": 22700.0,
+     "price": 25.85,
+     "exit": "E1",
+     "net": -10.0,
+     "peak": 1.31
+    }
+   ],
+   "q": 1.0,
+   "gates": {
+    "1 >= 30 trades": true,
+    "2 net > 0": false,
+    "3 >= 3 of 4 years > 0": false,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": false,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": true
+   },
+   "passes": false
+  },
+  "Q2": {
+   "m": {
+    "expiries": 197,
+    "trades": 39,
+    "hit_pct": 20.5,
+    "avg_win": 1579.6,
+    "avg_loss": -1067.0,
+    "net": -20440.77,
+    "per_expiry": -103.76,
+    "per_1000_risked": -340.0,
+    "green_expiries_pct": 4.1,
+    "worst_day": -1980.15,
+    "best_day": 3973.18,
+    "max_dd": -23381.45,
+    "losing_streak_trades": 15,
+    "losing_streak_expiries": 15,
+    "best_day_share_pct": null,
+    "net_without_best_day": -24413.95,
+    "proxy_trades": 0,
+    "x2_pct": 23.1,
+    "x4_pct": 7.7,
+    "x10_pct": 2.6
+   },
+   "years": {
+    "2023": {
+     "expiries": 52,
+     "trades": 3,
+     "hit_pct": 66.7,
+     "avg_win": 1021.7,
+     "avg_loss": -508.0,
+     "net": 1535.41,
+     "per_expiry": 29.53,
+     "per_1000_risked": 367.1,
+     "green_expiries_pct": 3.8,
+     "worst_day": -507.98,
+     "best_day": 1797.31,
+     "max_dd": -507.98,
+     "losing_streak_trades": 1,
+     "losing_streak_expiries": 1,
+     "best_day_share_pct": 117.1,
+     "net_without_best_day": -261.9,
+     "proxy_trades": 0,
+     "x2_pct": 33.3,
+     "x4_pct": 33.3,
+     "x10_pct": 0.0
+    },
+    "2024": {
+     "expiries": 52,
+     "trades": 11,
+     "hit_pct": 9.1,
+     "avg_win": 1405.3,
+     "avg_loss": -1410.7,
+     "net": -12701.53,
+     "per_expiry": -244.26,
+     "per_1000_risked": -695.3,
+     "green_expiries_pct": 1.9,
+     "worst_day": -1980.15,
+     "best_day": 1405.27,
+     "max_dd": -14106.8,
+     "losing_streak_trades": 10,
+     "losing_streak_expiries": 10,
+     "best_day_share_pct": null,
+     "net_without_best_day": -14106.8,
+     "proxy_trades": 0,
+     "x2_pct": 18.2,
+     "x4_pct": 9.1,
+     "x10_pct": 9.1
+    },
+    "2025": {
+     "expiries": 53,
+     "trades": 7,
+     "hit_pct": 14.3,
+     "avg_win": 3673.2,
+     "avg_loss": -996.0,
+     "net": -2302.86,
+     "per_expiry": -43.45,
+     "per_1000_risked": -199.6,
+     "green_expiries_pct": 1.9,
+     "worst_day": -1924.03,
+     "best_day": 3673.21,
+     "max_dd": -4693.7,
+     "losing_streak_trades": 5,
+     "losing_streak_expiries": 5,
+     "best_day_share_pct": null,
+     "net_without_best_day": -5976.07,
+     "proxy_trades": 0,
+     "x2_pct": 57.1,
+     "x4_pct": 0.0,
+     "x10_pct": 0.0
+    },
+    "2026": {
+     "expiries": 40,
+     "trades": 18,
+     "hit_pct": 22.2,
+     "avg_win": 1378.6,
+     "avg_loss": -891.9,
+     "net": -6971.79,
+     "per_expiry": -174.29,
+     "per_1000_risked": -266.9,
+     "green_expiries_pct": 10.0,
+     "worst_day": -1797.92,
+     "best_day": 3973.18,
+     "max_dd": -9866.96,
+     "losing_streak_trades": 7,
+     "losing_streak_expiries": 7,
+     "best_day_share_pct": null,
+     "net_without_best_day": -10944.97,
+     "proxy_trades": 0,
+     "x2_pct": 11.1,
+     "x4_pct": 5.6,
+     "x10_pct": 0.0
+    }
+   },
+   "bands": {
+    "1-10": {
+     "trades": 0,
+     "net": 0
+    },
+    "10-15": {
+     "trades": 0,
+     "net": 0
+    },
+    "15-30": {
+     "trades": 39,
+     "net": -20441.0
+    }
+   },
+   "choices": {
+    "2023": {
+     "threshold": 0.5,
+     "exit": "E1"
+    },
+    "2024": {
+     "threshold": 0.5,
+     "exit": "E1"
+    },
+    "2025": {
+     "threshold": 0.5,
+     "exit": "E1"
+    },
+    "2026": {
+     "threshold": 0.5,
+     "exit": "E1"
+    }
+   },
+   "twins": {
+    "p": 0.755,
+    "mean": -5752.0,
+    "p05": -33094.0,
+    "p95": 26498.0
+   },
+   "x2_spread": -20726.0,
+   "trades_list": [
+    {
+     "day": "2023-01-19",
+     "t": 314,
+     "side": "C",
+     "strike": 18100.0,
+     "price": 17.15,
+     "exit": "E1",
+     "net": 246.0,
+     "peak": 1.35
+    },
+    {
+     "day": "2023-03-16",
+     "t": 314,
+     "side": "P",
+     "strike": 17050.0,
+     "price": 21.05,
+     "exit": "E1",
+     "net": 1797.0,
+     "peak": 4.68
+    },
+    {
+     "day": "2023-08-03",
+     "t": 314,
+     "side": "C",
+     "strike": 19350.0,
+     "price": 26.15,
+     "exit": "E1",
+     "net": -508.0,
+     "peak": 1.1
+    },
+    {
+     "day": "2024-04-04",
+     "t": 314,
+     "side": "P",
+     "strike": 22550.0,
+     "price": 23.55,
+     "exit": "E1",
+     "net": 1405.0,
+     "peak": 2.86
+    },
+    {
+     "day": "2024-04-25",
+     "t": 314,
+     "side": "P",
+     "strike": 22550.0,
+     "price": 20.0,
+     "exit": "E1",
+     "net": -913.0,
+     "peak": 1.16
+    },
+    {
+     "day": "2024-05-02",
+     "t": 314,
+     "side": "P",
+     "strike": 22650.0,
+     "price": 21.9,
+     "exit": "E1",
+     "net": -1444.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2024-05-09",
+     "t": 314,
+     "side": "C",
+     "strike": 22050.0,
+     "price": 15.6,
+     "exit": "E1",
+     "net": -1956.0,
+     "peak": 1.05
+    },
+    {
+     "day": "2024-05-23",
+     "t": 314,
+     "side": "P",
+     "strike": 22900.0,
+     "price": 26.8,
+     "exit": "E1",
+     "net": -1883.0,
+     "peak": 1.59
+    },
+    {
+     "day": "2024-06-06",
+     "t": 314,
+     "side": "P",
+     "strike": 22650.0,
+     "price": 20.7,
+     "exit": "E1",
+     "net": -1549.0,
+     "peak": 1.61
+    },
+    {
+     "day": "2024-09-12",
+     "t": 314,
+     "side": "P",
+     "strike": 25250.0,
+     "price": 28.0,
+     "exit": "E1",
+     "net": -1343.0,
+     "peak": 1.11
+    },
+    {
+     "day": "2024-09-26",
+     "t": 314,
+     "side": "P",
+     "strike": 26000.0,
+     "price": 27.3,
+     "exit": "E1",
+     "net": -1943.0,
+     "peak": 1.11
+    },
+    {
+     "day": "2024-10-03",
+     "t": 314,
+     "side": "C",
+     "strike": 25250.0,
+     "price": 18.3,
+     "exit": "E1",
+     "net": -916.0,
+     "peak": 1.64
+    },
+    {
+     "day": "2024-11-28",
+     "t": 314,
+     "side": "C",
+     "strike": 24050.0,
+     "price": 27.8,
+     "exit": "E1",
+     "net": -1980.0,
+     "peak": 1.18
+    },
+    {
+     "day": "2024-12-05",
+     "t": 314,
+     "side": "P",
+     "strike": 24650.0,
+     "price": 23.5,
+     "exit": "E1",
+     "net": -180.0,
+     "peak": 12.59
+    },
+    {
+     "day": "2025-05-15",
+     "t": 314,
+     "side": "P",
+     "strike": 25100.0,
+     "price": 24.35,
+     "exit": "E1",
+     "net": -337.0,
+     "peak": 2.15
+    },
+    {
+     "day": "2025-06-05",
+     "t": 314,
+     "side": "P",
+     "strike": 24700.0,
+     "price": 22.15,
+     "exit": "E1",
+     "net": -1643.0,
+     "peak": 1.11
+    },
+    {
+     "day": "2025-06-26",
+     "t": 314,
+     "side": "P",
+     "strike": 25500.0,
+     "price": 26.25,
+     "exit": "E1",
+     "net": -1924.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2025-09-02",
+     "t": 314,
+     "side": "C",
+     "strike": 24550.0,
+     "price": 22.45,
+     "exit": "E1",
+     "net": -128.0,
+     "peak": 3.16
+    },
+    {
+     "day": "2025-10-14",
+     "t": 314,
+     "side": "C",
+     "strike": 25150.0,
+     "price": 17.95,
+     "exit": "E1",
+     "net": -662.0,
+     "peak": 2.58
+    },
+    {
+     "day": "2025-10-28",
+     "t": 314,
+     "side": "C",
+     "strike": 25850.0,
+     "price": 21.0,
+     "exit": "E1",
+     "net": 3673.0,
+     "peak": 3.66
+    },
+    {
+     "day": "2025-12-02",
+     "t": 314,
+     "side": "C",
+     "strike": 26050.0,
+     "price": 17.55,
+     "exit": "E1",
+     "net": -1282.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-01-20",
+     "t": 314,
+     "side": "C",
+     "strike": 25400.0,
+     "price": 27.45,
+     "exit": "E1",
+     "net": -1781.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-02-03",
+     "t": 314,
+     "side": "P",
+     "strike": 25750.0,
+     "price": 24.0,
+     "exit": "E1",
+     "net": 703.0,
+     "peak": 1.92
+    },
+    {
+     "day": "2026-03-02",
+     "t": 314,
+     "side": "C",
+     "strike": 24750.0,
+     "price": 28.05,
+     "exit": "E1",
+     "net": 3973.0,
+     "peak": 5.41
+    },
+    {
+     "day": "2026-03-10",
+     "t": 314,
+     "side": "P",
+     "strike": 24200.0,
+     "price": 18.5,
+     "exit": "E1",
+     "net": -1238.0,
+     "peak": 1.56
+    },
+    {
+     "day": "2026-03-17",
+     "t": 314,
+     "side": "P",
+     "strike": 23500.0,
+     "price": 15.1,
+     "exit": "E1",
+     "net": -1798.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-03-24",
+     "t": 314,
+     "side": "P",
+     "strike": 22900.0,
+     "price": 29.75,
+     "exit": "E1",
+     "net": -1356.0,
+     "peak": 1.81
+    },
+    {
+     "day": "2026-03-30",
+     "t": 314,
+     "side": "C",
+     "strike": 22450.0,
+     "price": 17.0,
+     "exit": "E1",
+     "net": -1147.0,
+     "peak": 1.27
+    },
+    {
+     "day": "2026-04-13",
+     "t": 314,
+     "side": "C",
+     "strike": 23900.0,
+     "price": 17.45,
+     "exit": "E1",
+     "net": -1134.0,
+     "peak": 1.51
+    },
+    {
+     "day": "2026-04-28",
+     "t": 314,
+     "side": "C",
+     "strike": 24000.0,
+     "price": 20.85,
+     "exit": "E1",
+     "net": -972.0,
+     "peak": 2.06
+    },
+    {
+     "day": "2026-07-14",
+     "t": 314,
+     "side": "C",
+     "strike": 24050.0,
+     "price": 15.5,
+     "exit": "E1",
+     "net": -119.0,
+     "peak": 1.53
+    },
+    {
+     "day": "2026-08-04",
+     "t": 314,
+     "side": "C",
+     "strike": 24550.0,
+     "price": 16.15,
+     "exit": "E1",
+     "net": 183.0,
+     "peak": 1.69
+    },
+    {
+     "day": "2026-08-11",
+     "t": 314,
+     "side": "C",
+     "strike": 24500.0,
+     "price": 18.0,
+     "exit": "E1",
+     "net": 656.0,
+     "peak": 1.75
+    },
+    {
+     "day": "2026-08-18",
+     "t": 314,
+     "side": "C",
+     "strike": 24200.0,
+     "price": 28.4,
+     "exit": "E1",
+     "net": -176.0,
+     "peak": 1.9
+    },
+    {
+     "day": "2026-09-01",
+     "t": 314,
+     "side": "C",
+     "strike": 24050.0,
+     "price": 15.0,
+     "exit": "E1",
+     "net": -793.0,
+     "peak": 1.0
+    },
+    {
+     "day": "2026-09-08",
+     "t": 314,
+     "side": "C",
+     "strike": 23700.0,
+     "price": 24.25,
+     "exit": "E1",
+     "net": -159.0,
+     "peak": 1.1
+    },
+    {
+     "day": "2026-09-15",
+     "t": 314,
+     "side": "C",
+     "strike": 23300.0,
+     "price": 17.8,
+     "exit": "E1",
+     "net": -220.0,
+     "peak": 1.22
+    },
+    {
+     "day": "2026-09-29",
+     "t": 314,
+     "side": "C",
+     "strike": 22750.0,
+     "price": 15.6,
+     "exit": "E1",
+     "net": -712.0,
+     "peak": 1.4
+    },
+    {
+     "day": "2026-10-06",
+     "t": 314,
+     "side": "P",
+     "strike": 22650.0,
+     "price": 19.2,
+     "exit": "E1",
+     "net": -881.0,
+     "peak": 1.05
+    }
+   ],
+   "q": 1.0,
+   "gates": {
+    "1 >= 30 trades": true,
+    "2 net > 0": false,
+    "3 >= 3 of 4 years > 0": false,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": false,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": true
+   },
+   "passes": false
+  }
+ },
+ "desc_ivrv": {
+  "E1": {
+   "1-10 | (0.0, 0.8]": {
+    "n": 1654,
+    "per1000": -168.3
+   },
+   "1-10 | (0.8, 0.9]": {
+    "n": 1762,
+    "per1000": -110.0
+   },
+   "1-10 | (0.9, 1.0]": {
+    "n": 2850,
+    "per1000": -165.2
+   },
+   "1-10 | (1.0, 1.2]": {
+    "n": 9007,
+    "per1000": -293.7
+   },
+   "1-10 | (1.2, 1.5]": {
+    "n": 15907,
+    "per1000": -499.2
+   },
+   "1-10 | (1.5, 2.0]": {
+    "n": 19474,
+    "per1000": -653.8
+   },
+   "1-10 | (2.0, 99.0]": {
+    "n": 22081,
+    "per1000": -777.6
+   },
+   "10-15 | (0.0, 0.8]": {
+    "n": 605,
+    "per1000": -218.7
+   },
+   "10-15 | (0.8, 0.9]": {
+    "n": 558,
+    "per1000": -106.3
+   },
+   "10-15 | (0.9, 1.0]": {
+    "n": 792,
+    "per1000": 24.3
+   },
+   "10-15 | (1.0, 1.2]": {
+    "n": 1940,
+    "per1000": -152.1
+   },
+   "10-15 | (1.2, 1.5]": {
+    "n": 2248,
+    "per1000": -361.1
+   },
+   "10-15 | (1.5, 2.0]": {
+    "n": 1526,
+    "per1000": -312.4
+   },
+   "10-15 | (2.0, 99.0]": {
+    "n": 510,
+    "per1000": -551.6
+   },
+   "15-30 | (0.0, 0.8]": {
+    "n": 828,
+    "per1000": -164.6
+   },
+   "15-30 | (0.8, 0.9]": {
+    "n": 785,
+    "per1000": 37.5
+   },
+   "15-30 | (0.9, 1.0]": {
+    "n": 1182,
+    "per1000": -7.9
+   },
+   "15-30 | (1.0, 1.2]": {
+    "n": 2757,
+    "per1000": -80.9
+   },
+   "15-30 | (1.2, 1.5]": {
+    "n": 3134,
+    "per1000": -311.9
+   },
+   "15-30 | (1.5, 2.0]": {
+    "n": 1953,
+    "per1000": -282.1
+   },
+   "15-30 | (2.0, 99.0]": {
+    "n": 736,
+    "per1000": -404.8
+   }
+  },
+  "E3": {
+   "1-10 | (0.0, 0.8]": {
+    "n": 1654,
+    "per1000": -351.5
+   },
+   "1-10 | (0.8, 0.9]": {
+    "n": 1762,
+    "per1000": -333.5
+   },
+   "1-10 | (0.9, 1.0]": {
+    "n": 2850,
+    "per1000": -306.5
+   },
+   "1-10 | (1.0, 1.2]": {
+    "n": 9007,
+    "per1000": -354.6
+   },
+   "1-10 | (1.2, 1.5]": {
+    "n": 15907,
+    "per1000": -501.7
+   },
+   "1-10 | (1.5, 2.0]": {
+    "n": 19474,
+    "per1000": -590.8
+   },
+   "1-10 | (2.0, 99.0]": {
+    "n": 22081,
+    "per1000": -666.7
+   },
+   "10-15 | (0.0, 0.8]": {
+    "n": 605,
+    "per1000": -275.4
+   },
+   "10-15 | (0.8, 0.9]": {
+    "n": 558,
+    "per1000": -239.6
+   },
+   "10-15 | (0.9, 1.0]": {
+    "n": 792,
+    "per1000": -151.8
+   },
+   "10-15 | (1.0, 1.2]": {
+    "n": 1940,
+    "per1000": -268.9
+   },
+   "10-15 | (1.2, 1.5]": {
+    "n": 2248,
+    "per1000": -321.2
+   },
+   "10-15 | (1.5, 2.0]": {
+    "n": 1526,
+    "per1000": -293.7
+   },
+   "10-15 | (2.0, 99.0]": {
+    "n": 510,
+    "per1000": -308.6
+   },
+   "15-30 | (0.0, 0.8]": {
+    "n": 828,
+    "per1000": -195.3
+   },
+   "15-30 | (0.8, 0.9]": {
+    "n": 785,
+    "per1000": -93.1
+   },
+   "15-30 | (0.9, 1.0]": {
+    "n": 1182,
+    "per1000": -133.4
+   },
+   "15-30 | (1.0, 1.2]": {
+    "n": 2757,
+    "per1000": -177.0
+   },
+   "15-30 | (1.2, 1.5]": {
+    "n": 3134,
+    "per1000": -285.9
+   },
+   "15-30 | (1.5, 2.0]": {
+    "n": 1953,
+    "per1000": -316.0
+   },
+   "15-30 | (2.0, 99.0]": {
+    "n": 736,
+    "per1000": -209.8
+   }
+  }
+ },
+ "base_per1000": {
+  "E1": -494.5,
+  "E3": -479.6
+ }
+}

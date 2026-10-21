@@ -1,0 +1,28 @@
+id: x2
+title: 'Combining the studies: 5 combined rules'
+family: overnight
+date: '2026-10-08'
+doc: research/X2_CONNECTIONS.md
+hypothesis: Connections between studies make a combined rule pay.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- FII/positioning
+- close strength
+- OI
+model_or_rule: 5 pre-registered combined rules
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/x2/PREREG.md
+variants_tried: 5
+results:
+  summary: One real overnight connection; Rs 5,000/day still NO.
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

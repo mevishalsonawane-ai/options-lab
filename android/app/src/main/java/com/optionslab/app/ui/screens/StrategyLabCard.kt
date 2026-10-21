@@ -64,6 +64,17 @@ internal fun StrategyLabSection(model: AppModel) {
     val liq by com.optionslab.app.data.LiquidityTest.state.collectAsState(Dispatchers.Main.immediate)
     val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() } }
     LiquidityFreezeRow(liq, today) { model.liquidityFreeze(it) }
+    LiquidityTrailRow(liq) { model.liquidityTrail(it) }
+    // 20 Oct, enhancement round 1: Liquidity's no-twin rule on paper - its count read off the main thread (the record's file).
+    var twinLine by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(liq.noTwin) {
+        // Read again each minute while the card is open (a would-be trade made meanwhile shows).
+        while (true) {
+            twinLine = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.LiquidityTest.twinLine() }.getOrNull() }
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
+    LiquidityNoTwinRow(liq, twinLine) { model.liquidityNoTwin(it) }
     open?.let { sel -> StrategyLabDialog(model, sel.ifEmpty { null }) { open = null } }
 }
 
@@ -99,6 +110,46 @@ internal fun LiquidityFreezeRow(state: com.optionslab.ira.LiquidityFreeze.State,
     )
 }
 
+/**
+ * Boss's own Rs 500 give-back trail on the Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityTrail], from +Rs 1,000 a
+ * lot since R19c): research R19b and R19c failed, so it is off by default and said as "failed research, your choice" with its
+ * numbers. One tap switches it on
+ * (new paper trades carry it, each labelled), one tap back to plain rules. [onSet] true: on. Live trades never use it.
+ */
+@Composable
+internal fun LiquidityTrailRow(state: com.optionslab.ira.LiquidityFreeze.State, onSet: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Text(com.optionslab.ira.LiquidityFreeze.trailNote(state),
+        style = Type.label.copy(color = if (state.trail) p.amber else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp).testTag("lab-liq-trail"))
+    // What it costs the 26 Oct decision (13 Oct review): said whether it is on or off, before the tap.
+    Text(com.optionslab.ira.LiquidityFreeze.TRAIL_RECORD, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+        modifier = Modifier.padding(top = 4.dp).testTag("lab-liq-trail-record"))
+    BrassButton(if (state.trail) com.optionslab.ira.LiquidityFreeze.TRAIL_OFF else com.optionslab.ira.LiquidityFreeze.TRAIL_ON,
+        Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { onSet(!state.trail) }
+}
+
+internal const val NO_TWIN_OFF = "Let both books buy the same option (paper)"
+internal const val NO_TWIN_ON = "Turn the no-twin rule back on (paper)"
+
+/**
+ * 20 Oct, enhancement round 1 ([com.optionslab.ira.LiquidityTwin]): Liquidity's no-twin rule on the PAPER books - on by this update
+ * (19 Oct: both BANKNIFTY books held the same put and were stopped together). One tap off, one tap back on; every flip is in the
+ * change timeline and undone in one tap there. [line]: today's would-be trades (null while it is read). Live is never changed.
+ */
+@Composable
+internal fun LiquidityNoTwinRow(state: com.optionslab.ira.LiquidityFreeze.State, line: String?, onSet: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Text(if (state.noTwin) "No-twin rule on (paper): when one Liquidity book already holds an option, the other book's entry on it " +
+            "is a would-be trade, counted apart. Live only logs it."
+        else "No-twin rule off: both Liquidity books may buy the same option on paper.",
+        style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp).testTag("lab-liq-twin"))
+    line?.let { Text(it, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 4.dp).testTag("lab-liq-twin-line")) }
+    BrassButton(if (state.noTwin) NO_TWIN_OFF else NO_TWIN_ON, Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { onSet(!state.noTwin) }
+}
+
+/** What the Strategy lab's name opens. */
+internal const val LAB_NOTE = "Variants trade virtually beside each strategy, and new ideas are tested each night. Most ideas fail - that is honest."
+
 /** The card from plain state (tests drive it). [onOpen]: the sheet, at a candidate's id or at the top (null). */
 @Composable
 internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyForge.Book, onOpen: (String?) -> Unit) {
@@ -114,9 +165,8 @@ internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyFo
     val c = remember(forge) { StrategyForge.counts(forge) }
     val waitingLive = variants.changes.count { it.status == VariantLab.ChangeStatus.OFFERED }
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(LAB_TITLE, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-        Note("Variants trade virtually beside each strategy, and new ideas are tested each night. Most ideas fail - that is honest.",
-            Modifier.padding(top = 2.dp))
+        // COMPACT (15 Oct): what the lab does is in its name's dialog.
+        ExplainedName(LAB_TITLE, listOf(LAB_NOTE))
         if (rows.isEmpty()) Note("No strategy is running for the lab to tune yet.", Modifier.padding(top = 6.dp).testTag("lab-none"))
         rows.forEach { (k, line) ->
             Text(line, style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.padding(top = 6.dp).testTag("lab-strategy-$k"))

@@ -97,6 +97,7 @@ class HeroArmTest : RobolectricTest() {
     }
 
     @After fun down() {
+        com.optionslab.ira.ArmExits.clear()
         AutomationSupport.realClocks()
         Market.testClock = null
         upstox.close()
@@ -121,7 +122,9 @@ class HeroArmTest : RobolectricTest() {
 
     private fun armHero(): String {
         val msg = runBlocking { OrbArms.setArmed(HeroRules.ARM.source, true, automatic = true) }
-        assertTrue(msg, msg.startsWith("Hero (expiry) armed on paper (it never trades on Zerodha) - Not proven — paper only."))
+        assertTrue(msg, msg.startsWith("Hero (expiry) armed on paper (its live trade at Zerodha follows only by its own \"Trade live\" switch, in Live with AI trades on) - Not proven — paper only."))
+        // 14 Oct: where its signal comes from (the straddle's premium, not the default index-only signal) is said on arming.
+        assertTrue(msg, msg.endsWith(" ${HeroRules.SIGNAL_SOURCE}."))
         return msg
     }
 
@@ -208,6 +211,9 @@ class HeroArmTest : RobolectricTest() {
         tick(LocalTime.of(13, 59))
         assertEquals(0, hero().today.single().sold)
         assertEquals(1, Paper.state.orders.size)
+        // 16 Oct: the position popup's Exits line: -60% on a minute's close, 5x first, out by 15:05.
+        assertEquals("stop 1.62 · target 20.25 · time 15:05 · half at 5×, the rest at 20×, stop on a 1-minute close",
+            com.optionslab.ira.ArmExits.line(false, p.symbol))
         // 14:00: it trades at 20.50: half the lots (9 of 18) go with a LIMIT SELL at 20.25, filled at the market.
         upstox.price(ce, 20.5)
         tick(LocalTime.of(14, 0))
@@ -222,6 +228,8 @@ class HeroArmTest : RobolectricTest() {
         assertEquals("complete", half.status)
         assertEquals("Hero · hero_5x", runBlocking { Strategies.owners() }["paper:${half.orderId}"])
         assertEquals(9 * lot, Paper.state.positions.filter { it.symbol == h.symbol }.sumOf { it.quantity })
+        assertEquals("stop 1.62 · target %.2f · time 15:05 · half sold at 5×, stop on a 1-minute close".format(java.util.Locale.ENGLISH, HeroRules.target2(h.entry)),
+            com.optionslab.ira.ArmExits.line(false, h.symbol))
         // Up to 30 (below 20x = 80.00, and 5x is never sold twice): held to 15:05.
         upstox.price(ce, 30.0)
         passes(LocalTime.of(14, 1), LocalTime.of(15, 4))
@@ -280,6 +288,43 @@ class HeroArmTest : RobolectricTest() {
         assertTrue(c.grossPnl!! < 0)
         passes(LocalTime.of(14, 2), LocalTime.of(15, 6))
         assertEquals("one entry, one exit: nothing more that day", 2, Paper.state.orders.size)
+    }
+
+    /**
+     * 18 Oct (review D8): the Hero arm's paper trades reach the live path ([ArmLive]). Its paper buy is told with its own key, its
+     * reference and its quantity; once its -60% stop sells it on paper, the ORB book it registered shows that trade at quantity 0,
+     * so its live copy is sold too.
+     */
+    @Test fun itsPaperTradeAndItsStopReachTheLivePath() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        setUp(listOf(day, day.plusDays(7)))
+        armHero()
+        passes(LocalTime.of(13, 44), LocalTime.of(13, 46))
+        val p = hero().today.single()
+        assertTrue(p.open)
+        assertEquals(18 * lot, p.qty)
+        val armKey = HeroRules.ARM.source
+        val ref = "orb:${p.arm}:${p.entryOrderId ?: p.entryTime}"
+        val entered = synchronized(heard) { heard.filter { it.startsWith("entered|") } }
+        assertEquals("one paper buy told", 1, entered.size)
+        assertTrue(entered.single(), entered.single().startsWith("entered|$armKey|$ref|${18 * lot}|"))
+        assertEquals("open: held at its quantity", 18 * lot,
+            ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.ORB)!!.single { it.ref == ref }.qty)
+
+        // The bar labelled 14:00 closes at 1.50 (at or below 1.60, -60%): the 14:01 pass sells it all on paper.
+        val ce = key(day, 25_200.0, Right.CE)
+        upstox.price(ce, 1.5)
+        callPx = { m -> if (m >= 14 * 60) 1.5 else 1.7 }
+        passes(LocalTime.of(13, 47), LocalTime.of(14, 1))
+        val c = hero().today.single()
+        assertFalse(c.open)
+        assertEquals("hero_stop", c.why)
+        val leg = ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.ORB)!!.single { it.ref == ref }
+        assertEquals(armKey, leg.key)
+        assertTrue("closed: told by a closed line or by quantity 0 in its book",
+            synchronized(heard) { heard.any { it.startsWith("closed|$ref|") } } || leg.qty == 0)
+        assertEquals(0, leg.qty)
     }
 
     @Test fun inLiveModeItStillTradesOnlyOnPaper() {

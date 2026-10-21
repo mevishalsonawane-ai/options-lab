@@ -1,0 +1,822 @@
+[
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "big_lower_wick",
+  "n": 3314,
+  "low_broken": 0.593,
+  "low_broken_same_distance": 0.57,
+  "high_broken": 0.847,
+  "high_broken_same_distance": 0.833
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "big_upper_wick",
+  "n": 2505,
+  "low_broken": 0.851,
+  "low_broken_same_distance": 0.829,
+  "high_broken": 0.615,
+  "high_broken_same_distance": 0.602
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "both_big_wicks",
+  "n": 1746,
+  "low_broken": 0.741,
+  "low_broken_same_distance": 0.694,
+  "high_broken": 0.705,
+  "high_broken_same_distance": 0.707
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "small_both_wicks",
+  "n": 6107,
+  "low_broken": 0.716,
+  "low_broken_same_distance": 0.735,
+  "high_broken": 0.74,
+  "high_broken_same_distance": 0.749
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "hammer",
+  "n": 1190,
+  "low_broken": 0.651,
+  "low_broken_same_distance": 0.676,
+  "high_broken": 0.905,
+  "high_broken_same_distance": 0.912
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "shooting_star",
+  "n": 1330,
+  "low_broken": 0.916,
+  "low_broken_same_distance": 0.912,
+  "high_broken": 0.733,
+  "high_broken_same_distance": 0.708
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "dragonfly_doji",
+  "n": 778,
+  "low_broken": 0.62,
+  "low_broken_same_distance": 0.655,
+  "high_broken": 0.943,
+  "high_broken_same_distance": 0.944
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "gravestone_doji",
+  "n": 691,
+  "low_broken": 0.938,
+  "low_broken_same_distance": 0.944,
+  "high_broken": 0.686,
+  "high_broken_same_distance": 0.682
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "doji",
+  "n": 7458,
+  "low_broken": 0.799,
+  "low_broken_same_distance": 0.798,
+  "high_broken": 0.816,
+  "high_broken_same_distance": 0.816
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "marubozu_green",
+  "n": 3114,
+  "low_broken": 0.459,
+  "low_broken_same_distance": 0.5,
+  "high_broken": 0.966,
+  "high_broken_same_distance": 0.955
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "marubozu_red",
+  "n": 2994,
+  "low_broken": 0.959,
+  "low_broken_same_distance": 0.947,
+  "high_broken": 0.466,
+  "high_broken_same_distance": 0.49
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "fp_stop_run_down",
+  "n": 3307,
+  "low_broken": 0.686,
+  "low_broken_same_distance": 0.668,
+  "high_broken": 0.839,
+  "high_broken_same_distance": 0.815
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "fp_stop_run_up",
+  "n": 3633,
+  "low_broken": 0.819,
+  "low_broken_same_distance": 0.81,
+  "high_broken": 0.753,
+  "high_broken_same_distance": 0.738
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "fp_heavy_lower_wick",
+  "n": 5630,
+  "low_broken": 0.661,
+  "low_broken_same_distance": 0.649,
+  "high_broken": 0.847,
+  "high_broken_same_distance": 0.833
+ },
+ {
+  "und": "NIFTY",
+  "tf": 5,
+  "family": "fp_heavy_upper_wick",
+  "n": 4954,
+  "low_broken": 0.838,
+  "low_broken_same_distance": 0.829,
+  "high_broken": 0.695,
+  "high_broken_same_distance": 0.675
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "big_lower_wick",
+  "n": 1197,
+  "low_broken": 0.546,
+  "low_broken_same_distance": 0.504,
+  "high_broken": 0.786,
+  "high_broken_same_distance": 0.793
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "big_upper_wick",
+  "n": 753,
+  "low_broken": 0.802,
+  "low_broken_same_distance": 0.795,
+  "high_broken": 0.525,
+  "high_broken_same_distance": 0.513
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "both_big_wicks",
+  "n": 594,
+  "low_broken": 0.663,
+  "low_broken_same_distance": 0.635,
+  "high_broken": 0.652,
+  "high_broken_same_distance": 0.649
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "small_both_wicks",
+  "n": 1686,
+  "low_broken": 0.664,
+  "low_broken_same_distance": 0.687,
+  "high_broken": 0.698,
+  "high_broken_same_distance": 0.708
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "hammer",
+  "n": 355,
+  "low_broken": 0.648,
+  "low_broken_same_distance": 0.622,
+  "high_broken": 0.882,
+  "high_broken_same_distance": 0.898
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "shooting_star",
+  "n": 412,
+  "low_broken": 0.913,
+  "low_broken_same_distance": 0.907,
+  "high_broken": 0.667,
+  "high_broken_same_distance": 0.661
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "dragonfly_doji",
+  "n": 256,
+  "low_broken": 0.621,
+  "low_broken_same_distance": 0.584,
+  "high_broken": 0.93,
+  "high_broken_same_distance": 0.94
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "gravestone_doji",
+  "n": 204,
+  "low_broken": 0.922,
+  "low_broken_same_distance": 0.937,
+  "high_broken": 0.632,
+  "high_broken_same_distance": 0.64
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "doji",
+  "n": 2570,
+  "low_broken": 0.761,
+  "low_broken_same_distance": 0.764,
+  "high_broken": 0.794,
+  "high_broken_same_distance": 0.793
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "marubozu_green",
+  "n": 881,
+  "low_broken": 0.377,
+  "low_broken_same_distance": 0.421,
+  "high_broken": 0.951,
+  "high_broken_same_distance": 0.949
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "marubozu_red",
+  "n": 850,
+  "low_broken": 0.953,
+  "low_broken_same_distance": 0.939,
+  "high_broken": 0.369,
+  "high_broken_same_distance": 0.389
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "fp_stop_run_down",
+  "n": 1823,
+  "low_broken": 0.663,
+  "low_broken_same_distance": 0.636,
+  "high_broken": 0.793,
+  "high_broken_same_distance": 0.784
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "fp_stop_run_up",
+  "n": 1943,
+  "low_broken": 0.761,
+  "low_broken_same_distance": 0.785,
+  "high_broken": 0.734,
+  "high_broken_same_distance": 0.713
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "fp_heavy_lower_wick",
+  "n": 1721,
+  "low_broken": 0.613,
+  "low_broken_same_distance": 0.587,
+  "high_broken": 0.799,
+  "high_broken_same_distance": 0.796
+ },
+ {
+  "und": "NIFTY",
+  "tf": 15,
+  "family": "fp_heavy_upper_wick",
+  "n": 1445,
+  "low_broken": 0.772,
+  "low_broken_same_distance": 0.794,
+  "high_broken": 0.651,
+  "high_broken_same_distance": 0.62
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "big_lower_wick",
+  "n": 3397,
+  "low_broken": 0.623,
+  "low_broken_same_distance": 0.593,
+  "high_broken": 0.829,
+  "high_broken_same_distance": 0.826
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "big_upper_wick",
+  "n": 2871,
+  "low_broken": 0.831,
+  "low_broken_same_distance": 0.832,
+  "high_broken": 0.608,
+  "high_broken_same_distance": 0.598
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "both_big_wicks",
+  "n": 2019,
+  "low_broken": 0.737,
+  "low_broken_same_distance": 0.709,
+  "high_broken": 0.725,
+  "high_broken_same_distance": 0.708
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "small_both_wicks",
+  "n": 4897,
+  "low_broken": 0.713,
+  "low_broken_same_distance": 0.729,
+  "high_broken": 0.743,
+  "high_broken_same_distance": 0.746
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "hammer",
+  "n": 1130,
+  "low_broken": 0.662,
+  "low_broken_same_distance": 0.691,
+  "high_broken": 0.918,
+  "high_broken_same_distance": 0.911
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "shooting_star",
+  "n": 1184,
+  "low_broken": 0.927,
+  "low_broken_same_distance": 0.915,
+  "high_broken": 0.673,
+  "high_broken_same_distance": 0.7
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "dragonfly_doji",
+  "n": 780,
+  "low_broken": 0.691,
+  "low_broken_same_distance": 0.674,
+  "high_broken": 0.941,
+  "high_broken_same_distance": 0.942
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "gravestone_doji",
+  "n": 691,
+  "low_broken": 0.939,
+  "low_broken_same_distance": 0.944,
+  "high_broken": 0.698,
+  "high_broken_same_distance": 0.672
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "doji",
+  "n": 8044,
+  "low_broken": 0.818,
+  "low_broken_same_distance": 0.81,
+  "high_broken": 0.818,
+  "high_broken_same_distance": 0.811
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "marubozu_green",
+  "n": 2591,
+  "low_broken": 0.444,
+  "low_broken_same_distance": 0.495,
+  "high_broken": 0.965,
+  "high_broken_same_distance": 0.951
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "marubozu_red",
+  "n": 2441,
+  "low_broken": 0.961,
+  "low_broken_same_distance": 0.948,
+  "high_broken": 0.463,
+  "high_broken_same_distance": 0.486
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "fp_stop_run_down",
+  "n": 3114,
+  "low_broken": 0.688,
+  "low_broken_same_distance": 0.694,
+  "high_broken": 0.819,
+  "high_broken_same_distance": 0.803
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 5,
+  "family": "fp_stop_run_up",
+  "n": 3104,
+  "low_broken": 0.837,
+  "low_broken_same_distance": 0.812,
+  "high_broken": 0.706,
+  "high_broken_same_distance": 0.72
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "big_lower_wick",
+  "n": 1132,
+  "low_broken": 0.527,
+  "low_broken_same_distance": 0.516,
+  "high_broken": 0.763,
+  "high_broken_same_distance": 0.791
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "big_upper_wick",
+  "n": 856,
+  "low_broken": 0.806,
+  "low_broken_same_distance": 0.793,
+  "high_broken": 0.511,
+  "high_broken_same_distance": 0.512
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "both_big_wicks",
+  "n": 661,
+  "low_broken": 0.702,
+  "low_broken_same_distance": 0.65,
+  "high_broken": 0.62,
+  "high_broken_same_distance": 0.644
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "small_both_wicks",
+  "n": 1405,
+  "low_broken": 0.674,
+  "low_broken_same_distance": 0.681,
+  "high_broken": 0.704,
+  "high_broken_same_distance": 0.702
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "hammer",
+  "n": 329,
+  "low_broken": 0.614,
+  "low_broken_same_distance": 0.631,
+  "high_broken": 0.912,
+  "high_broken_same_distance": 0.896
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "shooting_star",
+  "n": 400,
+  "low_broken": 0.887,
+  "low_broken_same_distance": 0.909,
+  "high_broken": 0.693,
+  "high_broken_same_distance": 0.641
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "dragonfly_doji",
+  "n": 241,
+  "low_broken": 0.627,
+  "low_broken_same_distance": 0.596,
+  "high_broken": 0.913,
+  "high_broken_same_distance": 0.938
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "gravestone_doji",
+  "n": 197,
+  "low_broken": 0.975,
+  "low_broken_same_distance": 0.941,
+  "high_broken": 0.619,
+  "high_broken_same_distance": 0.619
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "doji",
+  "n": 2689,
+  "low_broken": 0.782,
+  "low_broken_same_distance": 0.776,
+  "high_broken": 0.783,
+  "high_broken_same_distance": 0.785
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "marubozu_green",
+  "n": 736,
+  "low_broken": 0.379,
+  "low_broken_same_distance": 0.405,
+  "high_broken": 0.954,
+  "high_broken_same_distance": 0.944
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "marubozu_red",
+  "n": 664,
+  "low_broken": 0.959,
+  "low_broken_same_distance": 0.946,
+  "high_broken": 0.384,
+  "high_broken_same_distance": 0.388
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "fp_stop_run_down",
+  "n": 1743,
+  "low_broken": 0.679,
+  "low_broken_same_distance": 0.665,
+  "high_broken": 0.78,
+  "high_broken_same_distance": 0.768
+ },
+ {
+  "und": "BANKNIFTY",
+  "tf": 15,
+  "family": "fp_stop_run_up",
+  "n": 1727,
+  "low_broken": 0.789,
+  "low_broken_same_distance": 0.786,
+  "high_broken": 0.697,
+  "high_broken_same_distance": 0.694
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "big_lower_wick",
+  "n": 3277,
+  "low_broken": 0.613,
+  "low_broken_same_distance": 0.578,
+  "high_broken": 0.844,
+  "high_broken_same_distance": 0.836
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "big_upper_wick",
+  "n": 2443,
+  "low_broken": 0.853,
+  "low_broken_same_distance": 0.83,
+  "high_broken": 0.616,
+  "high_broken_same_distance": 0.6
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "both_big_wicks",
+  "n": 1533,
+  "low_broken": 0.758,
+  "low_broken_same_distance": 0.695,
+  "high_broken": 0.725,
+  "high_broken_same_distance": 0.707
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "small_both_wicks",
+  "n": 7062,
+  "low_broken": 0.722,
+  "low_broken_same_distance": 0.739,
+  "high_broken": 0.744,
+  "high_broken_same_distance": 0.75
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "hammer",
+  "n": 1301,
+  "low_broken": 0.689,
+  "low_broken_same_distance": 0.677,
+  "high_broken": 0.902,
+  "high_broken_same_distance": 0.915
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "shooting_star",
+  "n": 1379,
+  "low_broken": 0.91,
+  "low_broken_same_distance": 0.912,
+  "high_broken": 0.726,
+  "high_broken_same_distance": 0.705
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "dragonfly_doji",
+  "n": 830,
+  "low_broken": 0.649,
+  "low_broken_same_distance": 0.658,
+  "high_broken": 0.945,
+  "high_broken_same_distance": 0.948
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "gravestone_doji",
+  "n": 738,
+  "low_broken": 0.955,
+  "low_broken_same_distance": 0.945,
+  "high_broken": 0.721,
+  "high_broken_same_distance": 0.699
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "doji",
+  "n": 7129,
+  "low_broken": 0.807,
+  "low_broken_same_distance": 0.8,
+  "high_broken": 0.828,
+  "high_broken_same_distance": 0.82
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "marubozu_green",
+  "n": 3651,
+  "low_broken": 0.465,
+  "low_broken_same_distance": 0.503,
+  "high_broken": 0.966,
+  "high_broken_same_distance": 0.955
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "marubozu_red",
+  "n": 3559,
+  "low_broken": 0.96,
+  "low_broken_same_distance": 0.946,
+  "high_broken": 0.477,
+  "high_broken_same_distance": 0.497
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "fp_stop_run_down",
+  "n": 3327,
+  "low_broken": 0.693,
+  "low_broken_same_distance": 0.682,
+  "high_broken": 0.835,
+  "high_broken_same_distance": 0.819
+ },
+ {
+  "und": "SENSEX",
+  "tf": 5,
+  "family": "fp_stop_run_up",
+  "n": 3478,
+  "low_broken": 0.831,
+  "low_broken_same_distance": 0.816,
+  "high_broken": 0.745,
+  "high_broken_same_distance": 0.738
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "big_lower_wick",
+  "n": 1132,
+  "low_broken": 0.548,
+  "low_broken_same_distance": 0.51,
+  "high_broken": 0.757,
+  "high_broken_same_distance": 0.785
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "big_upper_wick",
+  "n": 765,
+  "low_broken": 0.814,
+  "low_broken_same_distance": 0.803,
+  "high_broken": 0.518,
+  "high_broken_same_distance": 0.523
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "both_big_wicks",
+  "n": 568,
+  "low_broken": 0.665,
+  "low_broken_same_distance": 0.639,
+  "high_broken": 0.637,
+  "high_broken_same_distance": 0.655
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "small_both_wicks",
+  "n": 1891,
+  "low_broken": 0.672,
+  "low_broken_same_distance": 0.687,
+  "high_broken": 0.715,
+  "high_broken_same_distance": 0.715
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "hammer",
+  "n": 402,
+  "low_broken": 0.644,
+  "low_broken_same_distance": 0.634,
+  "high_broken": 0.866,
+  "high_broken_same_distance": 0.902
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "shooting_star",
+  "n": 440,
+  "low_broken": 0.918,
+  "low_broken_same_distance": 0.902,
+  "high_broken": 0.668,
+  "high_broken_same_distance": 0.66
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "dragonfly_doji",
+  "n": 274,
+  "low_broken": 0.617,
+  "low_broken_same_distance": 0.592,
+  "high_broken": 0.934,
+  "high_broken_same_distance": 0.939
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "gravestone_doji",
+  "n": 246,
+  "low_broken": 0.967,
+  "low_broken_same_distance": 0.94,
+  "high_broken": 0.585,
+  "high_broken_same_distance": 0.64
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "doji",
+  "n": 2571,
+  "low_broken": 0.774,
+  "low_broken_same_distance": 0.77,
+  "high_broken": 0.786,
+  "high_broken_same_distance": 0.792
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "marubozu_green",
+  "n": 1037,
+  "low_broken": 0.399,
+  "low_broken_same_distance": 0.426,
+  "high_broken": 0.957,
+  "high_broken_same_distance": 0.949
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "marubozu_red",
+  "n": 905,
+  "low_broken": 0.947,
+  "low_broken_same_distance": 0.936,
+  "high_broken": 0.376,
+  "high_broken_same_distance": 0.398
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "fp_stop_run_down",
+  "n": 1812,
+  "low_broken": 0.682,
+  "low_broken_same_distance": 0.651,
+  "high_broken": 0.788,
+  "high_broken_same_distance": 0.788
+ },
+ {
+  "und": "SENSEX",
+  "tf": 15,
+  "family": "fp_stop_run_up",
+  "n": 1923,
+  "low_broken": 0.775,
+  "low_broken_same_distance": 0.792,
+  "high_broken": 0.723,
+  "high_broken_same_distance": 0.711
+ }
+]

@@ -99,9 +99,9 @@ class LabScreensTest {
         set { LabTabs(page, { asked += it; page = it }) { Text("page=$it") } }
         text("page=trials").assertIsDisplayed()
         text("Backtests").assertIsSelected()
-        val tokens = listOf("Strategies" to "strategies", "Pine scripts" to "pine", "Health" to "health", "Portfolio" to "portfolio", "SIP" to "sip", "Replay" to "replay", "Arms" to "arms", "Backtests" to "trials")
+        val tokens = listOf("Strategies" to "strategies", "Pine scripts" to "pine", "Health" to "health", "Portfolio" to "portfolio", "SIP" to "sip", "Replay" to "replay", "Arms" to "arms", "Candles" to "candles", "Backtests" to "trials")
         for ((label, id) in tokens) {
-            text(label).performClick()
+            text(label).performScrollTo().performClick()
             text("page=$id").assertIsDisplayed()
             text(label).assertIsSelected()
             tokens.filter { it.first != label }.forEach { text(it.first).assertIsNotSelected() }
@@ -413,6 +413,18 @@ class LabScreensTest {
         text("›").performClick()
         text("Load this session").performClick()
         assertEquals(listOf("NIFTY" to LocalDate.of(2026, 3, 3)), loads)
+        text("BANKNIFTY").performClick()
+        text("No harvested sessions for BANKNIFTY yet.").assertIsDisplayed()
+    }
+
+    /** 18 Oct, review: the days are read off the main thread and arrive later (a new [daysFor]): the page follows. */
+    @Test fun replayShowsTheDaysOnceTheyArrive() {
+        var daysFor by mutableStateOf<(String) -> List<LocalDate>>({ emptyList() })
+        set { ReplayContent(Load.Idle, daysFor = daysFor, onLoad = { _, _ -> }) }
+        text("No harvested sessions for NIFTY yet.").assertIsDisplayed()
+        daysFor = { u -> if (u == "NIFTY") listOf(LocalDate.of(2026, 3, 4)) else emptyList() }
+        compose.waitForIdle()
+        text("Wed 4 Mar 2026").assertIsDisplayed()
         text("BANKNIFTY").performClick()
         text("No harvested sessions for BANKNIFTY yet.").assertIsDisplayed()
     }

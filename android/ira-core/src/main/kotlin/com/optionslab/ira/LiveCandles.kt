@@ -157,6 +157,27 @@ class LiveCandles(private val keepMinutes: Int = KEEP_MINUTES) {
 
     private fun freeze(c: Mut) = Candle(c.startSec, c.open, c.high, c.low, c.close, c.whole, c.fromFeed)
 
+    /**
+     * Memory (audit, 14 Oct 2026, item 7): the candles of every instrument whose latest tick is more than [idleSec] before
+     * [nowSec] (two hours by default) are dropped - except [keep]'s (the open positions', the armed arms' underlyings and the
+     * indices: never dropped, however quiet). An instrument with no tick yet (only the feed's minutes) is judged by its last
+     * minute. Returns how many were dropped. A dropped instrument starts a new run at its next tick, as after a reconnect.
+     */
+    @Synchronized fun prune(keep: Set<Long>, nowSec: Long, idleSec: Long = IDLE_SEC): Int {
+        val it = series.entries.iterator()
+        var n = 0
+        while (it.hasNext()) {
+            val (token, s) = it.next()
+            if (token in keep) continue
+            val last = if (s.latestSec != Long.MIN_VALUE) s.latestSec else s.minutes.lastEntry()?.value?.closeSec ?: Long.MIN_VALUE
+            if (last == Long.MIN_VALUE || nowSec - last > idleSec) { it.remove(); n++ }
+        }
+        return n
+    }
+
+    /** The instruments with candles kept (the trim's before/after figure). */
+    @Synchronized fun instruments(): Int = series.size
+
     /** TEST ONLY / a reset: forget everything. */
     @Synchronized fun clear() = series.clear()
 
@@ -165,6 +186,8 @@ class LiveCandles(private val keepMinutes: Int = KEEP_MINUTES) {
         const val KEEP_MINUTES = 120
         /** At most this many minutes are added to the feed's (more means the feed is far behind: read it instead). */
         const val MAX_ADD = 15
+        /** An instrument not ticked for this long has its candles dropped by [prune] (unless kept). */
+        const val IDLE_SEC = 2 * 3600L
 
         fun minuteOf(epochSec: Long): Long = Math.floorDiv(epochSec, 60L)
 

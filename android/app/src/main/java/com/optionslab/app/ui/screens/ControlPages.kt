@@ -75,14 +75,20 @@ import java.time.format.DateTimeFormatter
 private val ALARM_SYMBOL = Regex("^[A-Z]{2,4}:[A-Z0-9&_-]{1,32}$")
 
 @Composable
-fun ToggleRow(title: String, sub: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
+fun ToggleRow(title: String, sub: String?, checked: Boolean, keepSub: Boolean = false, onChange: (Boolean) -> Unit) {
     val p = LocalPalette.current
     // The whole row is the switch: a 48 dp target (the bare switch was 52x32 dp) read with its title by TalkBack.
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = checked, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onChange)
         .padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
+        // COMPACT (15 Oct, Boss): a setting's explanation is in its own small dialog (the ⓘ beside it), not under the row - except
+        // the safety and security switches ([keepSub]: the kill switch, the fingerprint, the device check, screenshots, the wipe,
+        // the lock screen, live orders' PIN and the exchange stop), whose line says their state and stays in sight.
+        if (keepSub || sub == null) Column(Modifier.weight(1f)) {
             Text(title, style = Type.body.copy(color = p.ink))
             if (sub != null) Text(sub, style = Type.italic.copy(color = p.inkSoft, fontSize = 13.sp))
+        } else Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = Type.body.copy(color = p.ink), modifier = Modifier.weight(1f, fill = false))
+            AboutButton(title, listOf(sub))
         }
         Spacer(Modifier.width(8.dp))
         Switch(checked, null, colors = SwitchDefaults.colors(
@@ -222,6 +228,10 @@ fun DataPage(model: AppModel) {
         }
         // The market recorder (Boss's 06 Oct approval): its switch, what it keeps, and the export.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.recorder") { MarketRecorderCard(model) } }
+        // The Data Brain's live recording (signals, fills, the minute grid): days kept, size, last written, export.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.recordings") { RecordingsCard(model) } }
+        // GitHub sync (13 Oct, TODO G1/G2): the recorded days and the phone backup to GitHub, sealed; and restore from it.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.github") { GitHubSyncCard(model) } }
         for ((u, rows) in manifests) item {
             LedgerCard(title = "Manifest · $u") {
                 val same = rows.count { it.scope == Manifest.SAME_DAY }
@@ -321,7 +331,7 @@ fun SecurityPage(model: AppModel) {
                         }
                     }
                     BrassButton("Check again", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft) { model.refreshIntegrity() }
-                    ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised) { on ->
+                    ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised, keepSub = true) { on ->
                         if (on) model.update { it.copy(refuseCompromised = true) } else guard("Enter your app PIN to let IraAlgo open on a compromised phone.") { model.update { it.copy(refuseCompromised = false) } }
                     }
                 }
@@ -356,13 +366,16 @@ fun SecurityPage(model: AppModel) {
                     BiometricGate.Kind.STRONG -> "Unlocks the app, confirms orders and opens the Zerodha secret; tied to a hardware key that dies if a finger is added or removed"
                     BiometricGate.Kind.WEAK -> "Face unlock is not used; add a fingerprint"
                     BiometricGate.Kind.NONE -> "No fingerprint added on this phone"
-                }, s.biometric && kind != BiometricGate.Kind.NONE) { on ->
+                }, s.biometric && kind != BiometricGate.Kind.NONE, keepSub = true) { on ->
                     if (on) {
                         // The PIN, never a finger: a finger added by someone else must not be able to trust itself.
                         guard("Enter your app PIN to switch the fingerprint on. Every finger on this phone can then approve orders.", pinOnly = true) {
-                            runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
-                                .onFailure { model.say("Could not enable the fingerprint: ${it.message}") }
-                                .onSuccess { model.update { it.copy(biometric = kind != BiometricGate.Kind.NONE, allowWeakFace = false) } }
+                            // The key is made on the fingerprint's background thread (16 Oct: Keystore calls off the screen's thread).
+                            val done: (Throwable?) -> Unit = { e ->
+                                if (e != null) model.say("Could not enable the fingerprint: ${e.message}")
+                                else model.update { it.copy(biometric = kind != BiometricGate.Kind.NONE, allowWeakFace = false) }
+                            }
+                            if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrolOffMain(done) else done(null)
                         }
                     } else {
                         BiometricGate.forget()
@@ -380,7 +393,7 @@ fun SecurityPage(model: AppModel) {
                 var capture by remember { mutableStateOf(com.optionslab.app.security.Capture.allowed) }
                 ToggleRow("Allow screenshots and screen recording",
                     if (capture) "On: anyone with the phone can capture any screen, keys and P&L included. Turn it off when you are done."
-                    else "Off: every screen and popup is blocked from screenshots, recordings and the recent-apps preview.", capture) { on ->
+                    else "Off: every screen and popup is blocked from screenshots, recordings and the recent-apps preview.", capture, keepSub = true) { on ->
                     if (!on) { capture = false; com.optionslab.app.security.Capture.set(context as? android.app.Activity, false) }
                     else guard("Enter your app PIN to allow screenshots and screen recording.") {
                         capture = true; com.optionslab.app.security.Capture.set(context as? android.app.Activity, true)
@@ -392,10 +405,10 @@ fun SecurityPage(model: AppModel) {
                     if (idles[i] <= s.idleSeconds) model.update { it.copy(idleSeconds = idles[i]) }
                     else guard("Enter your app PIN to keep the app open longer when idle.") { model.update { it.copy(idleSeconds = idles[i]) } }
                 }
-                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion) { on ->
+                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion, keepSub = true) { on ->
                     if (on) model.update { it.copy(wipeOnExhaustion = true) } else guard("Enter your app PIN to switch off erasing after wrong PINs.") { model.update { it.copy(wipeOnExhaustion = false) } }
                 }
-                ToggleRow("Hide figures on the lock screen", "Notifications show only \"Unlock to read\" while the phone is locked", s.hideAmountsOnLockScreen) { on -> model.update { it.copy(hideAmountsOnLockScreen = on) } }
+                ToggleRow("Hide figures on the lock screen", "Notifications show only \"Unlock to read\" while the phone is locked", s.hideAmountsOnLockScreen, keepSub = true) { on -> model.update { it.copy(hideAmountsOnLockScreen = on) } }
                 Spacer(Modifier.height(8.dp))
                 Row {
                     BrassButton("Change PIN", Modifier.weight(1f), tone = p.inkSoft) { changing = true }
@@ -411,7 +424,7 @@ fun SecurityPage(model: AppModel) {
                     "The ledger, alarms and settings are AES-256-GCM encrypted with a key held in the Android Keystore (StrongBox where present).",
                     "The PIN is never stored: only a salted PBKDF2 verifier, compared in constant time, with escalating lockouts.",
                     "HTTPS only, and only the system's certificate authorities - a user-installed CA cannot read the traffic.",
-                    "Zerodha API key, secret and the day's access token live only in the encrypted vault; a real order needs your review, a swipe and (unless switched off) a fresh PIN or fingerprint, and is refused on a compromised device.",
+                    "Zerodha API key, secret and the day's access token live only in the encrypted vault; a real order needs a fresh PIN or fingerprint (unless you switched that off), and is refused on a compromised device.",
                     "Nothing is written to the system log. Errors never carry a URL, an instrument key or a response.",
                     "No backups, no device transfer, no exported components beyond the launcher.",
                     "Touches through another app's overlay are ignored.",
@@ -442,14 +455,25 @@ fun SecurityPage(model: AppModel) {
                   pinScope.launch(kotlinx.coroutines.Dispatchers.Main) {
                     val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion) }
                     when (r) {
-                        PinLock.Result.Ok -> try {
+                        PinLock.Result.Ok -> {
+                          // The verifier as it was: changed after a failure means the new PIN is in the vault's memory, not on disk.
+                          val was = PinLock.verifierStamp()
+                          try {
                             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                                PinLock.setPin(next.toCharArray())
-                                // The Zerodha API secret is sealed with the PIN: re-seal it under the new one.
-                                com.optionslab.app.data.Broker.resealSecret(cur.toCharArray(), next.toCharArray())
+                                // The Zerodha API secret is sealed with the PIN: re-sealed under the new one first, then written
+                                // in the same vault write as the new PIN (18 Oct, review), so a failure before it changes neither.
+                                val sealed = com.optionslab.app.data.Broker.resealedSecret(cur.toCharArray(), next.toCharArray())
+                                PinLock.setPin(next.toCharArray(), also = sealed)
                             }
                             changing = false; model.say("PIN changed.")
-                        } catch (e: IllegalArgumentException) { err = e.message }
+                          } catch (e: IllegalArgumentException) { err = e.message
+                          } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                          } catch (e: Exception) {
+                            val why = e.message ?: e.javaClass.simpleName
+                            err = if (PinLock.verifierStamp() != was) "The new PIN could not be saved to the phone ($why). It works until the app closes; change it again."
+                                else "The PIN was not changed ($why). Try again."
+                          }
+                        }
                         is PinLock.Result.LockedOut -> err = "Locked for ${r.secondsLeft} s."
                         PinLock.Result.Wiped -> { changing = false; eraseEverything() }
                         else -> err = "The current PIN is not right."
@@ -661,13 +685,25 @@ fun RiskPage(model: AppModel) {
         // Risk across the arms, the event days learning leaves out and the market history kept on the phone (TODO S5, S11, S12).
         if (!com.optionslab.app.BuildConfig.GOLD) {
             item { PortfolioSettingCard() }
+            // 19 Oct: the same-direction cap on automatic entries (paper on, live logged only until switched on).
+            item { SameDirectionCapCard() }
+            // 20 Oct, enhancement round 1: Boss's account stop rule over the whole account (in shadow until switched on).
+            item { AccountStopCard(model) }
+            // 20 Oct, enhancement round 2: one exit at a time per contract (in shadow until switched on).
+            item { ExitCoordinatorCard() }
             item { EventCalendarCard() }
+            // TODO I6 (13 Oct): "pause paper arms on event days" - OFF by default, shadow first.
+            item { EventShieldSwitchCard() }
             item { HistoryVaultCard() }
+            // The shared knowledge's shadow rule (13 Oct): off by default; on, it only counts what it would skip.
+            item { SharedKnowledgeCard() }
         }
         // The learning freeze (S14): its state, Boss's own line and the unfreeze (PIN when live). Never from a backup.
         if (com.optionslab.app.ira.LearningFreeze.enabled()) item { com.optionslab.app.ui.SettingSpot("learn.freeze") { LearningFreezeCard(model) } }
         // Boss's paper-only period (12 Oct): until its end date, going Live asks the PIN and shows why. Never from a backup.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.paperonly") { PaperOnlyCard(model) } }
+        // The pre-trade checks (13 Oct, R17): shadow lines and the danger meter's half-size switch (off; paper arms only).
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.pretrade") { PreTradeCard(model) } }
     }
 }
 
@@ -676,44 +712,71 @@ private fun GuardCard(model: AppModel) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var confirmKill by remember { mutableStateOf<Boolean?>(null) }
+    // 18 Oct, review: a change that loosens the Zerodha guard (the kill switch cleared, a limit raised or switched off, a
+    // protection switched off, the drawdown peak restarted) asks for the PIN or fingerprint first, as the Security page's
+    // switches do - in Live, and in Paper too once Zerodha is set up (else it is loosened on Paper, then Live is one tap
+    // away). Tightening is at once; with no app PIN set there is nothing to ask.
+    var guarded by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+    guarded?.let { (why, action) -> Reauth(model, onOk = { guarded = null; action() }, onCancel = { guarded = null }, why = why) }
+    fun loosen(looser: Boolean, why: String, action: () -> Unit) {
+        if (com.optionslab.app.security.GuardPin.asks(looser, s.live)) guarded = why to action else action()
+    }
+    // A limit of 0 (or a cut-off below 0) is off: any limit is tighter than off; off, or a higher one, is looser.
+    fun looser(cur: Double, next: Double) = cur > 0 && (next <= 0 || next > cur)
+    val askLimit = "Enter your app PIN to loosen the account guard on Zerodha."
     confirmKill?.let { turnOn ->
         AlertDialog(
             onDismissRequest = { confirmKill = null },
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text(if (turnOn) "Turn the kill switch on?" else "Clear the kill switch?", style = Type.title) },
             text = { Text(if (turnOn) "No new position is opened until you clear it. Exits and the expiry square-off still go through." else "Orders are allowed again, within these limits.", style = Type.bodySmall) },
-            confirmButton = { TextButton({ model.update { it.copy(guardKill = turnOn) }; confirmKill = null }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
+            confirmButton = { TextButton({
+                confirmKill = null
+                loosen(!turnOn, com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) { model.update { it.copy(guardKill = turnOn) } }
+            }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
             dismissButton = { TextButton({ confirmKill = null }) { Text("Cancel") } },
         )
     }
     fun rupees(x: Double) = if (x >= 100_000) "₹${(x / 100_000).let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }}L" else "₹%,.0f".format(Locale.ENGLISH, x)
     LedgerCard(title = "Account guard", accent = if (s.guardKill) p.oxblood else null) {
         Note("Checked on every Zerodha order, from a strategy or by hand (paper is never refused). Closing a position is never blocked, not even by the kill switch.")
-        ToggleRow("Kill switch", if (s.guardKill) "ON: new entries are refused until you turn it off; exits and square-offs still go through" else "Off. Turn on to stop all new entries at once", s.guardKill) { on -> confirmKill = on }
+        ToggleRow("Kill switch", if (s.guardKill) "ON: new entries are refused until you turn it off; exits and square-offs still go through" else "Off. Turn on to stop all new entries at once", s.guardKill, keepSub = true) { on -> confirmKill = on }
         val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
-        ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> model.update { it.copy(guardDailyLoss = loss[i]) } }
+        ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> loosen(looser(s.guardDailyLoss, loss[i]), askLimit) { model.update { it.copy(guardDailyLoss = loss[i]) } } }
         val dd = listOf(5.0, 10.0, 20.0, 0.0)
-        ParamTokens("Max drawdown (from capital and from peak)", dd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardDrawdownPct) }) { i -> model.update { it.copy(guardDrawdownPct = dd[i]) } }
+        ParamTokens("Max drawdown (from capital and from peak)", dd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardDrawdownPct) }) { i -> loosen(looser(s.guardDrawdownPct, dd[i]), askLimit) { model.update { it.copy(guardDrawdownPct = dd[i]) } } }
         val open = listOf(1, 2, 3, 5, 0)
-        ParamTokens("Max open positions", open.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxOpen) }) { i -> model.update { it.copy(guardMaxOpen = open[i]) } }
+        ParamTokens("Max open positions", open.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxOpen) }) { i -> loosen(looser(s.guardMaxOpen.toDouble(), open[i].toDouble()), askLimit) { model.update { it.copy(guardMaxOpen = open[i]) } } }
         val trades = listOf(5, 10, 20, 0)
-        ParamTokens("Max orders per day (entries, stops and exits)", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> model.update { it.copy(guardMaxTrades = trades[i]) } }
+        ParamTokens("Max orders per day (entries, stops and exits)", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> loosen(looser(s.guardMaxTrades.toDouble(), trades[i].toDouble()), askLimit) { model.update { it.copy(guardMaxTrades = trades[i]) } } }
         val value = listOf(100_000.0, 200_000.0, 500_000.0, 1_000_000.0, 0.0)
-        ParamTokens("Max value per order", value.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxValue) }) { i -> model.update { it.copy(guardMaxValue = value[i]) } }
+        ParamTokens("Max value per order", value.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxValue) }) { i -> loosen(looser(s.guardMaxValue, value[i]), askLimit) { model.update { it.copy(guardMaxValue = value[i]) } } }
         val lots = listOf(1, 2, 5, 0)
-        ParamTokens("Max lots per instrument", lots.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxLots) }) { i -> model.update { it.copy(guardMaxLots = lots[i]) } }
+        ParamTokens("Max lots per instrument", lots.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxLots) }) { i -> loosen(looser(s.guardMaxLots.toDouble(), lots[i].toDouble()), askLimit) { model.update { it.copy(guardMaxLots = lots[i]) } } }
         val expo = listOf(100_000.0, 200_000.0, 500_000.0, 0.0)
-        ParamTokens("Max held in one instrument", expo.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxExposure) }) { i -> model.update { it.copy(guardMaxExposure = expo[i]) } }
+        ParamTokens("Max held in one instrument", expo.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxExposure) }) { i -> loosen(looser(s.guardMaxExposure, expo[i]), askLimit) { model.update { it.copy(guardMaxExposure = expo[i]) } } }
         val cut = listOf(14 * 60, 14 * 60 + 30, 14 * 60 + 55, 15 * 60, -1)
-        ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i -> model.update { it.copy(guardCutoff = cut[i]) } }
+        ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i ->
+            // The cut-off: -1 is off; a later time is looser.
+            loosen(s.guardCutoff >= 0 && (cut[i] < 0 || cut[i] > s.guardCutoff), askLimit) { model.update { it.copy(guardCutoff = cut[i]) } }
+        }
         // The day lock (08 Oct): only ever stops new automatic entries; set here alone (never by voice or a backup).
         val dayLocks = com.optionslab.engine.risk.DayLock.CHOICES
         ParamTokens("Day lock: no new automatic entries once the day is up by", dayLocks.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.dayLock) }) { i ->
-            model.update { it.copy(dayLock = dayLocks[i]) }
+            loosen(looser(s.dayLock, dayLocks[i]), askLimit) { model.update { it.copy(dayLock = dayLocks[i]) } }
         }
-        val dayLockNow = remember(s) { com.optionslab.app.data.DayLockGuard.statusLine() }
+        // 21 Oct (review): read off the main thread (it reads the kept stops, the vault on a first read).
+        val dayLockNow by androidx.compose.runtime.produceState<String?>(null, s) {
+            this.value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.DayLockGuard.statusLine() }.getOrNull() }
+        }
         Note(dayLockNow ?: "Paper and Zerodha are locked separately (the paper day after charges). Bots, Pine, Solo and Jarvis's trades " +
             "start nothing new once it is reached; open positions keep their own exits, and your own orders are never stopped by it.")
+        // 21 Oct: the commodities' own paper limits; loosening any of them takes the PIN, as the day lock does.
+        val askMcx = "Enter your app PIN to loosen the commodities' paper limits."
+        CommoditiesLimits(s, ::rupees, onOwn = { on ->
+            loosen(on, askMcx) { model.update { it.copy(mcxOwnLimits = on) }; com.optionslab.app.ira.Autopilot.logSegmentSplit(on) }
+        }, onLock = { v -> loosen(looser(s.mcxDayLock, v), askMcx) { model.update { it.copy(mcxDayLock = v) } } },
+            onLoss = { v -> loosen(looser(s.mcxPaperDailyLoss, v), askMcx) { model.update { it.copy(mcxPaperDailyLoss = v) } } })
         Text("Paper account", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), modifier = Modifier.padding(top = 12.dp))
         Note("Paper is practice: the limits above and the kill switch apply to Zerodha only. On paper your own orders and the bots (ORB, Pine, strategies) all go through, side by side; \"Stop for today\" still stops the bots.")
         Note("Hitting the Zerodha drawdown limit also turns the kill switch on, as the desktop does.")
@@ -729,20 +792,25 @@ private fun GuardCard(model: AppModel) {
                 "${since.year} (change the date)", style = Type.label.copy(color = p.inkSoft))
         }
         ToggleRow("Square off on expiry day at 15:05", "Closes every option position expiring today, paper and live, MIS and NRML", s.expirySquareOff) { on ->
-            model.update { it.copy(expirySquareOff = on) }
+            loosen(!on, askLimit) { model.update { it.copy(expirySquareOff = on) } }
         }
         if (s.expirySquareOff) ToggleRow("Keep the Expiry Put to settlement", "Its legs are left for the 15:30 settlement, as the strategy intends", s.keepExpiryPut) { on ->
-            model.update { it.copy(keepExpiryPut = on) }
+            loosen(on, askLimit) { model.update { it.copy(keepExpiryPut = on) } }
         }
         // MCX (9 Oct): an MCX option at expiry turns into a future (far more margin than the account has); delivery futures.
         ToggleRow("MCX expiry exit", "Closes MCX options by %02d:%02d the day before expiry, and gold, silver and metal futures %d trading days before expiry, paper and live"
             .format(java.util.Locale.ENGLISH, s.mcxOptionExitMinute / 60, s.mcxOptionExitMinute % 60, s.mcxFutureExitDays), s.mcxExpiryExit) { on ->
-            model.update { it.copy(mcxExpiryExit = on) }
+            loosen(!on, askLimit) { model.update { it.copy(mcxExpiryExit = on) } }
         }
         ToggleRow("Block naked option shorts", "Selling an option to open needs a bought option of the same index, expiry and type held first", s.guardNakedShort) { on ->
-            model.update { it.copy(guardNakedShort = on) }
+            loosen(!on, askLimit) { model.update { it.copy(guardNakedShort = on) } }
         }
-        TextButton({ com.optionslab.app.data.Guard.resetPeak(s.live); model.say("Drawdown peak restarts from today's equity.") }) {
+        TextButton({
+            val live = s.live
+            loosen(live, "Enter your app PIN to restart the Zerodha drawdown peak.") {
+                com.optionslab.app.data.Guard.resetPeak(live); model.say("Drawdown peak restarts from today's equity.")
+            }
+        }) {
             Text("Restart the drawdown peak (${if (s.live) "Zerodha" else "paper"})", style = Type.label.copy(color = p.inkSoft))
         }
     }
@@ -853,7 +921,8 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                         probe.fill('\u0000')
                         val (hint, tone) = when (strength) {
                             0 -> "${pass.length} of at least $minPass characters" to p.inkSoft
-                            1 -> "Weak: make it longer, or mix words, digits and symbols" to p.oxblood
+                            // 20 Oct: exactly what is still needed (the same rule, [com.optionslab.ira.Passphrase.advice]).
+                            1 -> (pass.toCharArray().let { a -> com.optionslab.ira.Passphrase.advice(a).also { a.fill('\u0000') } }?.short ?: "Weak") to p.oxblood
                             2 -> "Fair: a few more words would make it strong" to p.brass
                             else -> "Strong" to p.verdigris
                         }
@@ -864,10 +933,12 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
             },
             confirmButton = {
                 TextButton({
-                    if (mode == "backup" && pass.length < minPass) com.optionslab.app.work.Alerts.error("The backup passphrase needs at least $minPass characters.")
-                    else if (mode == "backup" && pass != again) com.optionslab.app.work.Alerts.error("The two passphrases differ.")
-                    else if (mode == "backup" && pass.toCharArray().let { a -> com.optionslab.app.data.Backup.strength(a).also { a.fill('\u0000') } } <= 1)
-                        com.optionslab.app.work.Alerts.error("That passphrase is too easy to guess: make it longer, or mix words, digits and symbols.")
+                    // 20 Oct: a form's hint, not an error (a notice in the diagnostics), saying exactly what is needed.
+                    if (mode == "backup" && pass.length < minPass) com.optionslab.app.work.Alerts.hint("The backup passphrase needs at least $minPass characters (${pass.length} now).")
+                    else if (mode == "backup" && pass != again) com.optionslab.app.work.Alerts.hint("The two passphrases differ.")
+                    else if (mode == "backup" && !pass.toCharArray().let { a -> com.optionslab.ira.Passphrase.accepted(a).also { a.fill('\u0000') } })
+                        com.optionslab.app.work.Alerts.hint(pass.toCharArray().let { a -> com.optionslab.ira.Passphrase.advice(a).also { a.fill('\u0000') } }?.full
+                            ?: "That passphrase is too easy to guess.")
                     else {
                         val typed = pin.toCharArray()
                         val phrase = pass.toCharArray()
@@ -956,4 +1027,24 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                     }
         })
     }
+}
+
+
+/**
+ * 21 Oct (Boss: "Yes, give commodities their own day lock"): the MCX paper arms' own day lock and daily loss limit, on the MCX
+ * paper day alone, and the switch that puts them back on the shared paper figure. Paper only: Zerodha's stay one account.
+ * Its own small function (the guard card is already long).
+ */
+@Composable
+internal fun CommoditiesLimits(s: com.optionslab.app.data.AppSettings, rupees: (Double) -> String, onOwn: (Boolean) -> Unit,
+                               onLock: (Double) -> Unit, onLoss: (Double) -> Unit) {
+    ToggleRow("Commodities keep their own paper limits", if (s.mcxOwnLimits) "On: MCX paper results never stop NSE arms, and NSE results never stop MCX arms"
+        else "Off: one paper figure stops both NSE and MCX arms", s.mcxOwnLimits, keepSub = true) { on -> onOwn(on) }
+    if (!s.mcxOwnLimits) return
+    val locks = com.optionslab.engine.risk.DayLock.CHOICES
+    ParamTokens("Commodities day lock (paper)", locks.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.mcxDayLock) }) { i -> onLock(locks[i]) }
+    val loss = listOf(2_000.0, 4_000.0, 6_000.0, 10_000.0, 0.0)
+    ParamTokens("Commodities daily loss limit (paper)", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.mcxPaperDailyLoss) }) { i -> onLoss(loss[i]) }
+    Note(com.optionslab.ira.SegmentLock.idleLine(true, s.mcxDayLock, s.mcxPaperDailyLoss) +
+        " Your stop for today, the kill switch, Zerodha's loss limit and the account stop rule still stop both.")
 }

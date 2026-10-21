@@ -11,6 +11,7 @@ import java.lang.ref.WeakReference
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * What Jarvis does when asked, through the app's own functions - the same ones its buttons call - so every limit the
@@ -180,7 +181,6 @@ internal object IraActions {
         return out
     }
 
-    /** Zerodha exits go through the app's own square-off (the order review's checks), sent without the swipe or PIN. */
     /** Closes Jarvis's own Zerodha position in [symbol] through the app's square-off (the app must be open). */
     suspend fun closeLiveSymbol(symbol: String): String {
         val ps = runCatching { Broker.positionBook().net.filter { it.symbol == symbol && it.qty != 0 } }.getOrNull() ?: return "Zerodha did not answer: close $symbol yourself."
@@ -188,9 +188,24 @@ internal object IraActions {
         return liveClose(ps)
     }
 
+    /**
+     * Zerodha exits go through the app's own square-off (the order review's checks). In Live they are sent without the swipe or
+     * PIN (Boss's yes confirmed them); in Paper mode (18 Oct) only with Boss's PIN typed in the app.
+     */
     private suspend fun liveClose(ps: List<Broker.Position>): String {
         val m = model() ?: return "Closing a Zerodha position needs IraAlgo open: open it and ask again."
-        if (ps.size == 1) m.planSquareOff(ps.single(), "Jarvis") else m.planSquareOffAll()
+        val s = m.settings.value
+        // 18 Oct (Boss): in Paper mode a real Zerodha position may still be closed - but only with Boss's PIN, typed in the app.
+        // Jarvis never sends it: on an unlocked phone the close opens with the PIN prompt on the screen and Jarvis says so; on a
+        // locked phone nothing opens (nothing about the account is shown or said there). A wrong PIN or Cancel sends nothing.
+        if (!s.live || !s.allowRealOrders) {
+            if (runCatching { IraHub.locked() }.getOrDefault(true))
+                return "Unlock the phone and ask again, Boss: in Paper mode a Zerodha close needs your PIN in the app."
+            m.planSquareOffList(ps, "Jarvis (Paper mode)", direct = true)
+            return "Enter your PIN on the screen to close it at Zerodha, Boss. Nothing is sent without it."
+        }
+        // Live: as before, Jarvis's close (confirmed with Boss's yes) goes through the app's square-off and its checks.
+        m.planSquareOffList(ps, "Jarvis")
         return sendPlan(m)
     }
 
@@ -201,8 +216,11 @@ internal object IraActions {
         } ?: return "Zerodha did not answer in time; nothing was sent."
         if (plan is com.optionslab.app.ui.Load.Failed) return "Not sent: ${plan.why}"
         val p = (plan as com.optionslab.app.ui.Load.Done<com.optionslab.app.ui.OrderPlan>).value
-        if (!p.sendable) { val why = p.refusals.flatten().joinToString(" ").ifBlank { "the app's checks refused it" }; m.dismissPlan(); return "Not sent: $why" }
-        m.sendPlan()
+        if (!p.sendable) { val why = p.refusals.flatten().distinct().joinToString(" ").ifBlank { "the app's checks refused it" }; m.dismissPlan(); return "Not sent: $why" }
+        // 18 Oct (live end-to-end tests): a send the app refused at once (Paper mode, a check that failed again) left the send's
+        // state as it was, and Jarvis answered from it: an earlier order's fills as "Sent to Zerodha", or after a minute "Sent;
+        // Zerodha has not confirmed yet", for a close that never went. The send now says when it did not start, and why.
+        m.sendPlan()?.let { why -> return "Not sent: $why" }
         val sent = kotlinx.coroutines.withTimeoutOrNull(60_000) {
             m.sending.first { it is com.optionslab.app.ui.Load.Done || it is com.optionslab.app.ui.Load.Failed }
         }
@@ -323,13 +341,33 @@ internal object IraActions {
                 if (nickOn && posNick == null) runCatching { IraTools.nickPicked(c.kind, i, posNames) }
                 Commands.describe(c, p[i].name) + (posNick?.let { " (${it.second})" } ?: "") to p[i].run
             }
-            Command.Kind.KILL_ON, Command.Kind.KILL_OFF -> Commands.describe(c) to suspend {
-                setSettings { it.copy(guardKill = c.kind == Command.Kind.KILL_ON) }
-                if (c.kind == Command.Kind.KILL_ON) "Kill switch on: no new live positions; exits still go." else "Kill switch off."
+            // 18 Oct, review: clearing the kill switch asks for the PIN as the Account guard page does ([GuardPin]); Jarvis
+            // cannot take a PIN, so he sends Boss to the switch. Turning it on never asks.
+            Command.Kind.KILL_OFF -> if (killOffNeedsPin()) KILL_OFF_PIN to null else Commands.describe(c) to suspend {
+                // Asked again when done (a PIN or Zerodha set up since the question): never cleared without it.
+                if (killOffNeedsPin()) KILL_OFF_PIN else { setSettings { it.copy(guardKill = false) }; "Kill switch off." }
             }
-            Command.Kind.MODE_PAPER -> Commands.describe(c) to suspend { setSettings { it.copy(mode = "sandbox", allowRealOrders = false) }; "Paper mode: orders now go to the paper account." }
+            Command.Kind.KILL_ON -> Commands.describe(c) to suspend {
+                setSettings { it.copy(guardKill = true) }
+                "Kill switch on: no new live positions; exits still go."
+            }
+            // 18 Oct (one switch): Paper turns "AI trades go live" off with it (memory at once, then the disk).
+            Command.Kind.MODE_PAPER -> Commands.describe(c) to suspend {
+                val m = model()
+                // The app's own one switch (as [setSettings], from this thread): Live and AI trades go live off together.
+                if (m != null) m.goPaper()
+                else {
+                    setSettings { it.copy(mode = "sandbox", allowRealOrders = false) }
+                    IraNewsTrades.paperNow()
+                    com.optionslab.app.ui.screens.AI_LIVE_WRITES.launch {
+                        runCatching { IraNewsTrades.paperFirst = true }
+                        runCatching { com.optionslab.app.data.Diag.record("mode", "AI trades go live off, with the switch to Paper (Jarvis)") }
+                    }
+                }
+                "Paper mode: orders now go to the paper account, and AI trades go live is off."
+            }
             // Real orders are never switched on via Jarvis (Boss's rule): going live is the PAPER / LIVE badge, asked there.
-            Command.Kind.MODE_LIVE -> "Going live is yours alone, Boss: tap PAPER TRADING at the top of the app and confirm there. I never switch real orders on." to null
+            Command.Kind.MODE_LIVE -> "Going live is yours alone, Boss: tap PAPER TRADING at the top of the app and confirm there with your PIN. I never switch real orders on." to null
             Command.Kind.ALARM_ADD -> {
                 val m = c.market; val above = c.above
                 // "Falls 1% from here": the level from the price now.
@@ -370,6 +408,8 @@ internal object IraActions {
                 if (key == SettingsTalk.Key.LIQUIDITY_LOTS) return liquidityLots(v)
                 val old = setting(key, AppSettings.load())
                 if (old == v) return "${key.label.replaceFirstChar { it.uppercase() }} is already ${SettingsTalk.show(key, v)}." to null
+                // 18 Oct, review: loosening the Zerodha guard asks for the PIN on its page ([GuardPin]); never by voice alone.
+                if (key in GUARD_KEYS && SettingsTalk.loosens(key, old, v) && guardPinNeeded()) return LIMIT_PIN to null
                 val more = if (SettingsTalk.loosens(key, old, v)) " (this allows more risk)" else ""
                 SettingsTalk.describe(key, old, v) + more to suspend {
                     // Checked again at Confirm: changed meanwhile (by hand, or another request), nothing is applied.
@@ -389,6 +429,7 @@ internal object IraActions {
                 group.firstOrNull { setting(it.key, cur) != it.new }?.let { ch ->
                     return "${ch.key.label.replaceFirstChar { it.uppercase() }} has changed again since, so I won't undo it: tell me the value you want." to null
                 }
+                if (group.any { it.key in GUARD_KEYS && SettingsTalk.loosens(it.key, it.new, it.old) } && guardPinNeeded()) return LIMIT_PIN to null
                 val more = if (group.any { SettingsTalk.loosens(it.key, it.new, it.old) }) " (this allows more risk)" else ""
                 "undo: " + group.joinToString(", ") { SettingsTalk.describe(it.key, it.new, it.old) } + more to suspend {
                     val again = AppSettings.load()
@@ -461,7 +502,7 @@ internal object IraActions {
                 val why = com.optionslab.ira.JarvisTrades.proven(IraNewsTrades.closedRecord())
                 // Never by voice (no backdoor to real money): Boss's own switch, with his fingerprint.
                 if (why != null) "$why I'll tell you when they have earned it." to null
-                else "Real money is yours to switch on, Boss: turn on \"AI trades go live\" in Jarvis settings, What Jarvis does by itself, with your fingerprint." to null
+                else "Real money is yours to switch on, Boss: switch the app to Live with your PIN (\"AI trades go live\" turns on with it), or turn it on in Jarvis settings, What Jarvis does by itself, with your fingerprint." to null
             }
             Command.Kind.JTRADES_LIMIT -> {
                 val v = c.level?.takeIf { it >= 500 } ?: return "Tell me the limit in rupees, at least 500." to null
@@ -639,6 +680,22 @@ internal object IraActions {
         SettingsTalk.Key.LIQUIDITY_LOTS -> s
     }
 
+    /** Clearing the kill switch from Jarvis would need the PIN (the guard's rule, [GuardPin]); unknown counts as yes. */
+    internal fun killOffNeedsPin(): Boolean = guardPinNeeded()
+
+    /** Loosening the Zerodha guard would need the PIN now ([GuardPin]); unknown counts as yes. */
+    private fun guardPinNeeded(): Boolean =
+        runCatching { com.optionslab.app.security.GuardPin.asks(true, AppSettings.load().live) }.getOrDefault(true)
+
+    /** The limits the Account guard page asks the PIN to loosen (its Zerodha limits; paper limits and alerts are not). */
+    private val GUARD_KEYS = setOf(SettingsTalk.Key.DAILY_LOSS, SettingsTalk.Key.DRAWDOWN, SettingsTalk.Key.MAX_OPEN,
+        SettingsTalk.Key.MAX_TRADES, SettingsTalk.Key.ORDER_VALUE, SettingsTalk.Key.MAX_LOTS, SettingsTalk.Key.EXPOSURE,
+        SettingsTalk.Key.CUTOFF)
+
+    const val LIMIT_PIN = "Loosening the Zerodha account guard needs your app PIN, Boss. Change it on the Account guard page and enter your PIN there. Nothing changed."
+
+    const val KILL_OFF_PIN = "Clearing the kill switch needs your app PIN, Boss. Tap Clear kill switch on Home, or turn it off on the Account guard page, and enter your PIN there. It stays on."
+
     /** Would [c] loosen one of the app's limits (so only Boss's voice may ask for it)? */
     fun loosens(c: Command): Boolean {
         if (c.kind == Command.Kind.UNDO) {
@@ -653,7 +710,16 @@ internal object IraActions {
     private fun setSettings(f: (AppSettings) -> AppSettings) {
         val m = model()
         // Applied to what is stored (not the screen's copy, which can lag a kill switch the guard turned on by itself).
-        if (m != null) m.update { f(AppSettings.load()) } else AppSettings.save(f(AppSettings.load()))
+        if (m != null) m.update { f(AppSettings.load()) } else setStored(f)
+    }
+
+    /**
+     * 18 Oct, review: with no screen open, only what [f] changes is written ([AppSettings.saveChanged]): a whole save of an
+     * older read could write the guard's kill switch (turned on meanwhile, off the order path) back off.
+     */
+    internal fun setStored(f: (AppSettings) -> AppSettings) {
+        val from = AppSettings.load()
+        AppSettings.saveChanged(from, f(from))
     }
 
     // ---- trades -------------------------------------------------------------------------------------------------------
@@ -665,6 +731,7 @@ internal object IraActions {
     suspend fun trade(t: IraOrders.Ticket, live: Boolean): String {
         IraAccount.invalidate()
         log("trade ${t.title} ${if (live) "LIVE" else "paper"}")
+        runCatching { com.optionslab.app.data.LiveRecorder.signal("Jarvis", "${t.underlying}${com.optionslab.engine.fmtG(t.strike)}${t.right.name}", t.underlying, if (t.buy) "BUY" else "SELL", null, paper = !live) }
         if (!live) {
             val c = com.optionslab.app.data.Paper.contractFor(t.underlying, t.expiry, t.strike, t.right) ?: return "${t.title} is not listed."
             val q = runCatching { com.optionslab.app.data.Paper.quote(c) }.getOrNull()

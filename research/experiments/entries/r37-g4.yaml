@@ -1,0 +1,31 @@
+id: r37-g4
+title: 'Gamma flip G4: G1 without the heavyweight check'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_R37_GAMMA_FLIP.md
+hypothesis: Spot crossing the 13:45 gamma-flip level (net GEX zero crossing) with volume, TWAP and heavyweight confirmation
+  starts a gamma squeeze that pays an ATM+-1 option after costs.
+data_version: 'Dhan lake on Drive: opt_{NIFTY,SENSEX}_WEEK (ATM+-10 with OI), index_1m, equity_1m HDFCBANK / RELIANCE / ICICIBANK;
+  R26 day files'
+period:
+  design: 'ALL expiries (nothing fitted): NIFTY 271, SENSEX 175 (130 with OI); R25 blocks reported'
+instruments:
+- NIFTY
+- SENSEX
+features:
+- net GEX profile (call OI - put OI) x BS gamma
+- index TWAP
+- option volume
+- heavyweight stock minutes
+model_or_rule: G1 without the heavyweight check
+settings: research/hunt/r37/r37flip.py
+prereg: research/hunt/r37/PREREG.md
+variants_tried: 4
+results:
+  summary: 65 trades (NIFTY 50, SENSEX 15; 15 CE / 50 PE), hit 16.9%, >= 4x 10.8%, net Rs -37,924 (-331 per Rs 1,000); max
+    DD Rs -43,030; without the best day Rs -56,445; random-time twin mean Rs -13,979, p 0.959, BH q 1.0 (family 52). FAILED
+    the gates.
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; x2 spread stress
+holdout_read: null
+verdict: rejected
+notes: BH across R21-R26 and R34-R37 (52). US sign convention (calls minus puts); under the Indian reading no flip exists.

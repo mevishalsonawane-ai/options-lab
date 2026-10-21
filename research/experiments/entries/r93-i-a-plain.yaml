@@ -1,0 +1,48 @@
+id: r93-i-a-plain
+title: 'R93 I-A: plain Donchian 20 (5-minute) on MCX commodities'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R93_BREADTH_DONCHIAN_MCX.md
+hypothesis: 'Boss (21 Oct): does Breadth Donchian work on commodities? I-A (plain Donchian 20 (5-minute)) earns after real
+  MCX costs, beats random entries on the same days and sides (twin p < 0.05, BH q <= 0.10 over 5 variants), in design, walk-forward
+  and the locked holdout.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (options_rolling_1m MONTH books of 19-20 Oct: near-future spot + ATM-3..+3
+  minutes; fut_1m_mcx_continuous + fut_mcx_rolls for ALUMINIUM; fut_daily_continuous to 16 Oct 2026); Dukascopy 1-minute drivers
+  fetched 21 Oct (not committed)'
+period:
+  design: 2025-08-05..2026-03-31 (walk-forward Nov-Dec 2025, Jan-Feb 2026, Mar 2026)
+  holdout: 2026-04-01..2026-10-19 (read once, 21 Oct)
+instruments:
+- GOLD/GOLDM
+- SILVER/SILVERM
+- COPPER
+- ZINC
+- ALUMINIUM
+- CRUDEOIL/CRUDEOILM
+- NATURALGAS/NATGASMINI
+features:
+- 'signal source: the MCX future itself (the near future under the option book; daily: the parent''s near-month daily, back-adjusted)'
+- 'traded: 1-ITM GOLDM / SILVERM / CRUDEOILM / NATGASMINI options on real prints; COPPER, ZINCMINI, ALUMINI futures (options
+  thin or absent)'
+model_or_rule: '5-minute close-only bars of each MCX family''s near future; close above the previous 20 bars'' high -> buy
+  the 1-ITM call (below the low -> put); copper / zinc / aluminium trade the future. R72 exits XL: stop -15% premium, +5%
+  once +25%, 30/60/100 ladder, out after 30 min; futures: channel-mid stop, 30 min; fills 09:10 to close - 20, square-off
+  close - 15, 2 a side a day, never on option expiry day'
+settings: research/hunt/r93_breadth_donchian_mcx/cfg.py; PREREG.md sections 2-5
+prereg: research/hunt/r93_breadth_donchian_mcx/PREREG.md
+variants_tried: 5
+results:
+  summary: 'Design: 3443 trades, gross -Rs 195,710, net -Rs 3,109,249, win 22%, max DD Rs 3,114,545, worst month -Rs 637,841,
+    design twin p 0.571; walk-forward -Rs 2,312,718. Holdout (read once): 3365 trades, gross Rs 154,111, net -Rs 3,006,394,
+    win 24%, avg win / loss Rs 1,171 / -Rs 1,559, worst month -Rs 484,721 (7 of 7 months below -Rs 13k), max DD Rs 3,006,394,
+    without top 5 -Rs 3,077,793, at 2x spread -Rs 5,588,886; twins avg -Rs 3,138,027, twin p 0.148, BH q 0.394 (5 variants).
+    By family: ALUMINIUM -Rs 92,820 (207), COPPER -Rs 2,028,960 (546), CRUDE -Rs 48,394 (529), GOLD -Rs 194,188 (528), NATGAS
+    -Rs 61,987 (536), SILVER -Rs 287,644 (496), ZINC -Rs 292,401 (523). Gates failed: bh_q, design_pos, holdout_net_pos, net_2x_slip_pos,
+    twin_p, wf_pos, wo_best_family_pos, wo_top5_pos. Verdict: FAIL.'
+  costs: 'Options: Zerodha MCX option charges + premium half-spread GOLDM / SILVERM / CRUDEOILM 0.30% (0.60% before 17:00),
+    NATGASMINI 0.45% / 0.90%, entry and exit. Futures: Zerodha MCX futures charges + half-spread 0.03% crude, 0.06% gas, 0.05%
+    metals + 0.02% on stops. Also reported at 2x the half-spreads.'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (the MCX future). Research only; nothing changes paper or live. Notes N1-N4 in NOTES.md (fill-only
+  twins, causal daily rolls, futures twin stop, zinc's April expiry).

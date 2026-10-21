@@ -1,0 +1,24 @@
+id: r53-gb1
+title: 'R53: Boss''s gold Option 1 (EMA9/21 + RSI, M15, H1 bias, 2R), re-tested on Nov 2024+ data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (gold_session_strats Option 1) earns after real costs on the recent market only (Boss, 15 Oct).
+data_version: Dukascopy XAUUSD 1m bid (release research-data + tail to 12 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- GOLD
+features:
+- 'signal source: XAUUSD (underlying)'
+model_or_rule: gold_session_strats Option 1
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 3
+results:
+  summary: 'USD per standard lot. orig: design 140 trades net 24,573, walk-forward 24,898; final 34 trades, win 38%, net -18,275,
+    p 0.850, q 0.870 -> too few trades to judge'
+  costs: 'ask = bid + 0.30, $7/lot; $40/lot/night swap only where the study charged it (GB13); others: not charged'
+holdout_read: true
+verdict: inconclusive

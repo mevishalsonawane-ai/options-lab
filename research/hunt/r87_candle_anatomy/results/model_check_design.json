@@ -1,0 +1,20 @@
+[
+ {
+  "und": "NIFTY",
+  "n": 260,
+  "median_ratio": 0.9175922925071032,
+  "median_abs_err_pct": 14.887073048831578
+ },
+ {
+  "und": "BANKNIFTY",
+  "n": 0,
+  "median_ratio": null,
+  "median_abs_err_pct": null
+ },
+ {
+  "und": "SENSEX",
+  "n": 0,
+  "median_ratio": null,
+  "median_abs_err_pct": null
+ }
+]

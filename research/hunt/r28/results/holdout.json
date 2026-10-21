@@ -1,0 +1,487 @@
+{
+ "read_at_utc": "2026-10-14T07:14:55.799904+00:00",
+ "prereg_sha256": "cdfd44a225a2e026adcf7099bf958eac078507355dc6b53417468d170214c4ae",
+ "filters": {
+  "G1": {
+   "text": "ORB: keep only S1 at 10:00 < 0",
+   "holdout": {
+    "base": {
+     "trades": 533,
+     "sessions": 351,
+     "trade_days": 267,
+     "net": -63991.13,
+     "per_day": -182.3109,
+     "win_pct": 32.2702,
+     "avg_win": 459.3832,
+     "avg_loss": -396.1358,
+     "green_days_pct": 39.3258,
+     "worst_day": -3247.15,
+     "max_dd": -67940.36
+    },
+    "kept": {
+     "trades": 50,
+     "sessions": 351,
+     "trade_days": 38,
+     "net": -5765.27,
+     "per_day": -16.4253,
+     "win_pct": 38.0,
+     "avg_win": 448.9437,
+     "avg_loss": -461.1355,
+     "green_days_pct": 36.8421,
+     "worst_day": -2151.57,
+     "max_dd": -8874.46,
+     "big_winners_cut": 26,
+     "big_winners_cut_rs": 28377.36
+    },
+    "kept_n": 50,
+    "skipped_n": 483,
+    "missing_gex": 0,
+    "delta_day": 165.8856,
+    "delta_day_x2": 172.2466,
+    "twin_p": 0.4723,
+    "twin_mean_delta": 164.8817
+   },
+   "design_pass": false,
+   "g5": false,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2021-08-02",
+    "2022-12-30"
+   ]
+  },
+  "G2": {
+   "text": "ORB: skip gex_norm at 10:00 > +1",
+   "holdout": {
+    "base": {
+     "trades": 533,
+     "sessions": 351,
+     "trade_days": 267,
+     "net": -63991.13,
+     "per_day": -182.3109,
+     "win_pct": 32.2702,
+     "avg_win": 459.3832,
+     "avg_loss": -396.1358,
+     "green_days_pct": 39.3258,
+     "worst_day": -3247.15,
+     "max_dd": -67940.36
+    },
+    "kept": {
+     "trades": 308,
+     "sessions": 351,
+     "trade_days": 184,
+     "net": -30908.02,
+     "per_day": -88.057,
+     "win_pct": 35.7143,
+     "avg_win": 450.2194,
+     "avg_loss": -406.223,
+     "green_days_pct": 38.587,
+     "worst_day": -2193.05,
+     "max_dd": -32517.31,
+     "big_winners_cut": 12,
+     "big_winners_cut_rs": 13293.72
+    },
+    "kept_n": 308,
+    "skipped_n": 225,
+    "missing_gex": 10,
+    "delta_day": 94.2539,
+    "delta_day_x2": 99.1505,
+    "twin_p": 0.1894,
+    "twin_mean_delta": 76.9763
+   },
+   "design_pass": false,
+   "g5": false,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2021-08-02",
+    "2022-12-30"
+   ]
+  },
+  "G3": {
+   "text": "ORB: keep only S2 (customer net buying) at 10:00 < 0",
+   "holdout": {
+    "base": {
+     "trades": 533,
+     "sessions": 351,
+     "trade_days": 267,
+     "net": -63991.13,
+     "per_day": -182.3109,
+     "win_pct": 32.2702,
+     "avg_win": 459.3832,
+     "avg_loss": -396.1358,
+     "green_days_pct": 39.3258,
+     "worst_day": -3247.15,
+     "max_dd": -67940.36
+    },
+    "kept": {
+     "trades": 203,
+     "sessions": 351,
+     "trade_days": 141,
+     "net": -39678.59,
+     "per_day": -113.0444,
+     "win_pct": 29.5567,
+     "avg_win": 399.7225,
+     "avg_loss": -445.1884,
+     "green_days_pct": 30.4965,
+     "worst_day": -2182.21,
+     "max_dd": -41403.84,
+     "big_winners_cut": 19,
+     "big_winners_cut_rs": 20651.5
+    },
+    "kept_n": 203,
+    "skipped_n": 330,
+    "missing_gex": 0,
+    "delta_day": 69.2665,
+    "delta_day_x2": 76.4492,
+    "twin_p": 0.9905,
+    "twin_mean_delta": 114.1325
+   },
+   "design_pass": false,
+   "g5": false,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2021-08-02",
+    "2022-12-30"
+   ]
+  },
+  "G4": {
+   "text": "ORB: keep only spot below the flip at 10:00",
+   "holdout": {
+    "base": {
+     "trades": 533,
+     "sessions": 351,
+     "trade_days": 267,
+     "net": -63991.13,
+     "per_day": -182.3109,
+     "win_pct": 32.2702,
+     "avg_win": 459.3832,
+     "avg_loss": -396.1358,
+     "green_days_pct": 39.3258,
+     "worst_day": -3247.15,
+     "max_dd": -67940.36
+    },
+    "kept": {
+     "trades": 52,
+     "sessions": 351,
+     "trade_days": 40,
+     "net": -5324.29,
+     "per_day": -15.1689,
+     "win_pct": 38.4615,
+     "avg_win": 455.0615,
+     "avg_loss": -450.7975,
+     "green_days_pct": 37.5,
+     "worst_day": -2151.57,
+     "max_dd": -8874.46,
+     "big_winners_cut": 26,
+     "big_winners_cut_rs": 28377.36
+    },
+    "kept_n": 52,
+    "skipped_n": 481,
+    "missing_gex": 4,
+    "delta_day": 167.142,
+    "delta_day_x2": 173.4888,
+    "twin_p": 0.4083,
+    "twin_mean_delta": 164.2191
+   },
+   "design_pass": false,
+   "g5": false,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2021-08-02",
+    "2022-12-30"
+   ]
+  },
+  "G5": {
+   "text": "Range Fade: keep only S1 at 10:00 > 0",
+   "holdout": {
+    "base": {
+     "trades": 809,
+     "sessions": 351,
+     "trade_days": 264,
+     "net": -97547.53,
+     "per_day": -277.9132,
+     "win_pct": 29.0482,
+     "avg_win": 422.5949,
+     "avg_loss": -342.957,
+     "green_days_pct": 37.5,
+     "worst_day": -3197.7,
+     "max_dd": -97726.47
+    },
+    "kept": {
+     "trades": 729,
+     "sessions": 351,
+     "trade_days": 254,
+     "net": -81736.47,
+     "per_day": -232.8674,
+     "win_pct": 28.8066,
+     "avg_win": 429.3915,
+     "avg_loss": -331.2306,
+     "green_days_pct": 39.3701,
+     "worst_day": -3197.7,
+     "max_dd": -81915.41,
+     "big_winners_cut": 4,
+     "big_winners_cut_rs": 4047.44
+    },
+    "kept_n": 729,
+    "skipped_n": 80,
+    "missing_gex": 0,
+    "delta_day": 45.0458,
+    "delta_day_x2": null,
+    "twin_p": 0.0905,
+    "twin_mean_delta": 27.4828
+   },
+   "design_pass": false,
+   "g5": true,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2021-08-02",
+    "2022-12-30"
+   ]
+  },
+  "G6": {
+   "text": "Range Fade: skip gex_norm at 10:00 < -1",
+   "holdout": {
+    "base": {
+     "trades": 809,
+     "sessions": 351,
+     "trade_days": 264,
+     "net": -97547.53,
+     "per_day": -277.9132,
+     "win_pct": 29.0482,
+     "avg_win": 422.5949,
+     "avg_loss": -342.957,
+     "green_days_pct": 37.5,
+     "worst_day": -3197.7,
+     "max_dd": -97726.47
+    },
+    "kept": {
+     "trades": 809,
+     "sessions": 351,
+     "trade_days": 264,
+     "net": -97547.53,
+     "per_day": -277.9132,
+     "win_pct": 29.0482,
+     "avg_win": 422.5949,
+     "avg_loss": -342.957,
+     "green_days_pct": 37.5,
+     "worst_day": -3197.7,
+     "max_dd": -97726.47,
+     "big_winners_cut": 0,
+     "big_winners_cut_rs": 0.0
+    },
+    "kept_n": 809,
+    "skipped_n": 0,
+    "missing_gex": 15,
+    "delta_day": 0.0,
+    "delta_day_x2": null,
+    "twin_p": null,
+    "twin_mean_delta": -0.0
+   },
+   "design_pass": false,
+   "g5": false,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2021-08-02",
+    "2022-12-30"
+   ]
+  },
+  "G7": {
+   "text": "Liquidity 15+5 BN: skip gex_norm > +1 at the signal",
+   "holdout": {
+    "base": {
+     "trades": 238,
+     "sessions": 348,
+     "trade_days": 151,
+     "net": -22321.62,
+     "per_day": -64.1426,
+     "win_pct": 28.5714,
+     "avg_win": 1821.8613,
+     "avg_loss": -860.0482,
+     "green_days_pct": 27.1523,
+     "worst_day": -4504.07,
+     "max_dd": -36835.7
+    },
+    "kept": {
+     "trades": 143,
+     "sessions": 348,
+     "trade_days": 97,
+     "net": -28110.63,
+     "per_day": -80.7777,
+     "win_pct": 26.5734,
+     "avg_win": 1844.1892,
+     "avg_loss": -935.1411,
+     "green_days_pct": 24.7423,
+     "worst_day": -4504.07,
+     "max_dd": -36501.95,
+     "big_winners_cut": 5,
+     "big_winners_cut_rs": 38815.35
+    },
+    "kept_n": 143,
+    "skipped_n": 95,
+    "missing_gex": 11,
+    "delta_day": -16.6351,
+    "delta_day_x2": null,
+    "twin_p": 0.8606,
+    "twin_mean_delta": 30.501
+   },
+   "design_pass": false,
+   "g5": false,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2021-08-04",
+    "2022-12-30"
+   ]
+  },
+  "G8": {
+   "text": "Hero H0: keep only S1 < 0 at 13:45 (or the signal)",
+   "holdout": {
+    "base": {
+     "trades": 16,
+     "sessions": 65,
+     "trade_days": 16,
+     "net": 116721.2,
+     "per_day": 1795.7108,
+     "win_pct": 18.75,
+     "avg_win": 52550.58,
+     "avg_loss": -3148.5031,
+     "green_days_pct": 18.75,
+     "worst_day": -3552.31,
+     "max_dd": -14875.93
+    },
+    "kept": {
+     "trades": 7,
+     "sessions": 65,
+     "trade_days": 7,
+     "net": 39654.9,
+     "per_day": 610.0754,
+     "win_pct": 14.2857,
+     "avg_win": 57694.93,
+     "avg_loss": -3006.6717,
+     "green_days_pct": 14.2857,
+     "worst_day": -3352.36,
+     "max_dd": -9387.52,
+     "big_winners_cut": 0,
+     "big_winners_cut_rs": 0.0
+    },
+    "kept_n": 7,
+    "skipped_n": 9,
+    "missing_gex": 0,
+    "delta_day": -1185.6354,
+    "delta_day_x2": -1188.9957,
+    "twin_p": 0.4158,
+    "twin_mean_delta": -1007.2402
+   },
+   "design_pass": false,
+   "g5": false,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2024-01-04",
+    "2025-03-27"
+   ]
+  },
+  "G9": {
+   "text": "Lottery L3 (14:30): keep only S1 at 13:45 < 0",
+   "holdout": {
+    "base": {
+     "trades": 237,
+     "sessions": 166,
+     "trade_days": 147,
+     "net": -55232.93,
+     "per_day": -332.7285,
+     "win_pct": 4.2194,
+     "avg_win": 4455.383,
+     "avg_loss": -439.5893,
+     "green_days_pct": 5.4422,
+     "worst_day": -1474.01,
+     "max_dd": -55232.93
+    },
+    "kept": {
+     "trades": 67,
+     "sessions": 166,
+     "trade_days": 45,
+     "net": -976.83,
+     "per_day": -5.8845,
+     "win_pct": 5.9701,
+     "avg_win": 6624.6525,
+     "avg_loss": -436.1181,
+     "green_days_pct": 6.6667,
+     "worst_day": -1002.49,
+     "max_dd": -14965.13,
+     "big_winners_cut": 7,
+     "big_winners_cut_rs": 17875.92
+    },
+    "kept_n": 67,
+    "skipped_n": 170,
+    "missing_gex": 0,
+    "delta_day": 326.844,
+    "delta_day_x2": 337.3151,
+    "twin_p": 0.1434,
+    "twin_mean_delta": 236.537
+   },
+   "design_pass": false,
+   "g5": false,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2024-01-03",
+    "2025-03-27"
+   ]
+  },
+  "G10": {
+   "text": "Night R3: keep only S1 at 15:15 < 0",
+   "holdout": {
+    "base": {
+     "trades": 224,
+     "sessions": 351,
+     "trade_days": 150,
+     "net": 87550.83,
+     "per_day": 249.4326,
+     "win_pct": 54.9107,
+     "avg_win": 2709.1093,
+     "avg_loss": -2432.3724,
+     "green_days_pct": 53.3333,
+     "worst_day": -15516.178,
+     "max_dd": -35137.034
+    },
+    "kept": {
+     "trades": 28,
+     "sessions": 351,
+     "trade_days": 24,
+     "net": -6459.044,
+     "per_day": -18.4018,
+     "win_pct": 50.0,
+     "avg_win": 2061.6406,
+     "avg_loss": -2523.0009,
+     "green_days_pct": 54.1667,
+     "worst_day": -8851.908,
+     "max_dd": -12800.2,
+     "big_winners_cut": 12,
+     "big_winners_cut_rs": 101848.598
+    },
+    "kept_n": 28,
+    "skipped_n": 196,
+    "missing_gex": 0,
+    "delta_day": -267.8344,
+    "delta_day_x2": -256.3868,
+    "twin_p": 0.8561,
+    "twin_mean_delta": -217.4388
+   },
+   "design_pass": false,
+   "g5": false,
+   "passed": false,
+   "paper_eligible": false,
+   "period": [
+    "2021-08-02",
+    "2022-12-30"
+   ]
+  }
+ },
+ "passed": []
+}

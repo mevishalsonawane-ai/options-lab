@@ -88,4 +88,22 @@ class WatchHealthTest {
         assertEquals("a check failed in Jarvis words (at news, timed out): Supervisor\$TimedOut (the watch goes on)",
             WatchHealth.failure(WatchHealth.workerStep("Jarvis words", "news", true), Supervisor.TimedOut::class.java.name))
     }
+
+    /** 18 Oct, review (battery): the processor's hold is renewed only while the loop makes progress. */
+    @Test fun theHoldIsRenewedOnlyWhileTheLoopMakesProgress() {
+        val start = 50_000L
+        val limit = WatchHealth.AWAKE_PROGRESS_MS
+        assertTrue(WatchHealth.keepAwake(start + 1_000, 0L, start), "just started, no pass yet")
+        assertTrue(WatchHealth.keepAwake(start + limit - 1, 0L, start), "a slow start still inside the limit")
+        assertFalse(WatchHealth.keepAwake(start + limit, 0L, start), "never a pass since the start")
+        // A slow but alive loop: a step every few minutes keeps it, however long the pass as a whole takes.
+        var progress = start
+        for (k in 1..10) { progress += 4 * 60_000L; assertTrue(WatchHealth.keepAwake(progress + 60_000L, progress, start)) }
+        // Hung on one call: let go once the last progress is the limit old.
+        assertTrue(WatchHealth.keepAwake(progress + limit - 1, progress, start))
+        assertFalse(WatchHealth.keepAwake(progress + limit, progress, start))
+        assertFalse(WatchHealth.keepAwake(progress + 60 * 60_000L, progress, start))
+        // A clock that reads earlier than the progress: kept.
+        assertTrue(WatchHealth.keepAwake(progress - 10, progress, start))
+    }
 }

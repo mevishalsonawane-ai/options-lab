@@ -27,6 +27,8 @@ fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit, onChart: 
             "arms" -> ArmsBacktestPage(model)
             // Plain-English study pages with the app's own research numbers (S19).
             "learn" -> StudyScreen()
+            // 20 Oct: the Candle agent's page (its reads, its table against the research, lessons, what it shared and heard).
+            "candles" -> CandleAgentPage()
             else -> TrialsScreen(model)
         }
     }
@@ -47,6 +49,7 @@ internal fun LabTabs(page: String, onPage: (String) -> Unit, content: @Composabl
             Token("Replay", page == "replay") { onPage("replay") }
             Token("Arms", page == "arms") { onPage("arms") }
             Token("Learn", page == "learn") { onPage("learn") }
+            Token("Candles", page == "candles") { onPage("candles") }
         }
         Box(Modifier.weight(1f)) { content(page) }
     }

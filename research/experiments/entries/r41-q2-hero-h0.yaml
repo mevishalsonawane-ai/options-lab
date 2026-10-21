@@ -1,0 +1,25 @@
+id: r41-q2-hero-h0
+title: 'R41 neural-net filter on Hero H0: not modelled (too few trades)'
+family: ml
+date: '2026-10-14'
+doc: research/HUNT_R41_NEURAL_NETS.md
+hypothesis: A neural-net filter improves Hero H0.
+data_version: Dhan lake on Google Drive (index_1m 5 indices + INDIAVIX, options_rolling_1m weekly ATM+-10, 2021-08 - 2026-04;
+  brain cube v2 + point-in-time feature store, built 14 Oct 2026)
+period:
+  design: 2021-08-01..2022-12-14 and 2024-07-15..2026-04-13; walk-forward folds 2022, 2024H2, 2025, 2026 (retrained each fold)
+  holdout: 2023-01-01..2024-06-30 (F1 India's block), read once 14 Oct 2026; embargo 2022-12-15..31 and 2024-07-01..14
+instruments:
+- NIFTY
+features:
+- brain features at the signal minute
+model_or_rule: 'not run: 28 design trades < the pre-registered 300'
+settings: research/hunt/r41/PREREG.md
+prereg: research/hunt/r41/PREREG.md
+variants_tried: null
+results:
+  summary: 'Not modelled: 28 design trades and 17 holdout trades (R25 H0 rebuilt on the lake).'
+  costs: n/a
+holdout_read: true
+verdict: not-a-test
+notes: Too few trades for any model; reported for completeness.

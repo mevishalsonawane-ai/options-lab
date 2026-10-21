@@ -32,8 +32,11 @@ object Alerts {
      * [throttle]: for automatic sources (background events, a failed load shown on a page): the
      * same words again within 20 s (a retry loop, a list scrolled back into view) show once.
      * What the owner just did (a tap, a wrong PIN) always shows.
+     * [severity] (20 Oct): how the diagnostics count a red banner - an error, a warning or a notice
+     * ([com.optionslab.ira.DiagErrors.Severity]); null: a red one is sorted by its words, any other is "info".
      */
-    fun post(text: String, kind: Kind = classify(text), title: String? = null, throttle: Boolean = false) {
+    fun post(text: String, kind: Kind = classify(text), title: String? = null, throttle: Boolean = false,
+             severity: com.optionslab.ira.DiagErrors.Severity? = null) {
         if (text.isBlank() && title.isNullOrBlank()) return
         val now = System.currentTimeMillis()
         val key = "$title|$text"
@@ -43,12 +46,21 @@ object Alerts {
             recent[key] = now
         }
         val a = Alert(seq.incrementAndGet(), kind, title, text)
-        // The owner's diagnostics diary keeps every banner (words already on screen; redacted again there).
-        com.optionslab.app.data.Diag.record(if (kind == Kind.ERROR) "error" else "info", listOfNotNull(title, text).joinToString(": "))
+        // The owner's diagnostics diary keeps every banner (words already on screen; redacted again there). 20 Oct: a red banner
+        // is kept as an error, a warning or a notice, so the day's error count holds only what failed.
+        val line = listOfNotNull(title, text).joinToString(": ")
+        com.optionslab.app.data.Diag.record(diaryArea(kind, severity, line), line)
         _queue.update { q -> (q + a).takeLast(4) }
         _posted.addLast(a)
         while (_posted.size > 50) _posted.pollFirst()
     }
+
+    /** The diary's area for a banner: [severity]'s when given, a red one's by its words, else "info". */
+    internal fun diaryArea(kind: Kind, severity: com.optionslab.ira.DiagErrors.Severity?, line: String): String =
+        severity?.area ?: if (kind == Kind.ERROR) com.optionslab.ira.DiagErrors.classify(line).area else "info"
+
+    /** A form's hint (a passphrase too weak, two entries that differ): red on screen, a notice in the diagnostics. */
+    fun hint(text: String) = post(text, Kind.ERROR, severity = com.optionslab.ira.DiagErrors.Severity.NOTICE)
 
     fun success(text: String, title: String? = null) = post(text, Kind.SUCCESS, title)
     fun error(text: String, title: String? = null) = post(text, Kind.ERROR, title)
@@ -56,7 +68,9 @@ object Alerts {
     fun dismiss(id: Long) = _queue.update { q -> q.filter { it.id != id } }
 
     private val FAILURE = Regex(
-        "(?i)(^not |\\bnot (sent|placed|modified|moved|closed|cancelled|deleted|saved|allowed)\\b|\\bfail|\\berror\\b|\\brefus|\\breject|" +
+        // 16 Oct: "fail" is not a failure in an arm's own description ("it fades a failed break of the opening range": ORB
+        // Sweep's and Range Fade's arming lines were red and counted as errors by the order review).
+        "(?i)(^not |\\bnot (sent|placed|modified|moved|closed|cancelled|deleted|saved|allowed)\\b|(?<!break )\\bfail(?!ed break)|\\berror\\b|\\brefus|\\breject|" +
             "could not|cannot|can't|couldn't|\\bblocked\\b|\\bdenied\\b|\\binvalid\\b|insufficient|\\bexpired\\b|\\blapsed\\b|" +
             "\\bno (quote|price|contract|session|bars|data)\\b|\\bkill switch is on\\b|\\blimit reached\\b|\\bcompromise|\\bmissing\\b|\\bstopped by android\\b)")
 

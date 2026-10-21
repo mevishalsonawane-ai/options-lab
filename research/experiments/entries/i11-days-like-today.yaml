@@ -1,0 +1,34 @@
+id: i11-days-like-today
+title: >-
+  Days like today at 09:20 (gap, VIX, previous range, expiry, event) - nearest 10 past days vs all past days
+family: market-facts
+date: '2026-10-13'
+doc: research/DAYS_LIKE_TODAY.md
+hypothesis: >-
+  The 10 nearest past days forecast the rest-of-day range and return better than all past days pooled.
+data_version: research-data release via research/context (SOURCE=release)
+period:
+  design: before the last 12 months (walk-forward, strictly earlier days)
+  holdout: last 12 months (read once)
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- gap %
+- VIX at 09:20
+- previous day range %
+- expiry day
+- event day
+model_or_rule: k-nearest neighbours (k=10), standardised Euclidean
+settings: research/context/PREREG.md I11
+prereg: research/context/PREREG.md
+variants_tried: 4
+results:
+  summary: >-
+    Return - worse than pooled in all 4 (skill -5% to -11%). Range - design -1% (BANKNIFTY) and +5% (NIFTY, q 0.12),
+    no design pass; holdout +16-21% mostly from VIX (quieter holdout year), which R16 already uses. 0 of 4 pass.
+  costs: none (no trading rule)
+holdout_read: true
+verdict: rejected
+notes: >-
+  Shown in the morning brief as context, not a forecast, with the sample size.

@@ -1,0 +1,25 @@
+id: h43
+title: The outside bake-off's 5 strategies and champion
+family: outside-strategies
+date: '2026-10-11'
+doc: research/HUNT_H43.md
+hypothesis: The bake-off champion is a real edge.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year) (not read for this test)
+instruments:
+- BANKNIFTY
+features:
+- report's rules
+model_or_rule: 29 versions
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h43/PREREG.md
+variants_tried: 29
+results:
+  summary: All lose after real costs on 845 pre-holdout days; 25-day luck.
+  costs: real costs
+holdout_read: false
+verdict: rejected
+backfilled: true

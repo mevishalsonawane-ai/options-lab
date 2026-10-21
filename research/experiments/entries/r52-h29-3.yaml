@@ -1,0 +1,36 @@
+id: r52-h29-3
+title: 'R52 re-test on Nov 2024+: H29-3 Cheap-IV entries, side from the last 30 min'
+family: flow-oi
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H29-3 (old verdict: Rejected. Best: 380-444 tr, gross +4.6/day, net -30/day, rand p 0.02
+  (BH 0.80); WF -1.44L, 0/4) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small
+  design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+- MIDCPNIFTY
+features:
+- 'signal source: index + option-chain context (ATM straddle IV)'
+model_or_rule: '{''dirn'': ''mom30'', ''q'': 0.1} | ITM1/near | exits stop_pct=0.15,tgt_pct=0.3,time_stop=20 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 16
+results:
+  summary: 'Design original: 263 trades, win 37%, net Rs -37,487 (Rs -111/day), worst day Rs -22,156, max DD Rs -57,327, p
+    0.851 (coin-flip p 0.405); walk-forward Rs -36,341. FINAL original: 102 trades, win 33%, net Rs -18,353 (Rs -138/day),
+    worst day Rs -11,020, max DD Rs -29,063, p 0.268 (coin-flip p 0.355), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index + option-chain context (ATM straddle IV). Why this original: the write-up''s best test-2a variant
+  (HUNT_H29.md: q 10%, last-30-min move, E2); hunt/h29/rules.py sig_t2. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over
+  every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

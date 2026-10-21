@@ -76,8 +76,9 @@ internal fun LiquidityEquityContent(q: LiquidityEquity.Equity) {
     var open by remember { mutableStateOf(false) }
     val soft = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)
     Column(Modifier.fillMaxWidth().padding(bottom = 10.dp).background(p.chip, RoundedCornerShape(12.dp)).padding(12.dp)) {
-        Text("PAPER RECORD", style = Type.label.copy(color = p.inkSoft, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp))
-        Text(keepNumbersWhole(subtitle(q)), style = soft.copy(fontSize = 11.sp))
+        // COMPACT (15 Oct): what the record is (and that it only reads) is in its name's dialog.
+        ExplainedName("PAPER RECORD", listOf(subtitle(q) + ".", EQUITY_READS_ONLY),
+            style = Type.label.copy(color = p.inkSoft, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp))
         if (!q.enough) {
             Text(keepNumbersWhole(LiquidityEquity.waiting(q)), style = soft, modifier = Modifier.padding(top = 4.dp))
         } else {
@@ -95,6 +96,9 @@ internal fun LiquidityEquityContent(q: LiquidityEquity.Equity) {
     }
     if (open && q.enough) LiquidityEquityDialog(q) { open = false }
 }
+
+/** The paper record only reads (its card's and its larger view's words). */
+internal const val EQUITY_READS_ONLY = "A read of the closed paper trades: it places, closes and arms nothing."
 
 private fun subtitle(q: LiquidityEquity.Equity): String =
     "${q.expectation.name} · closed paper trades" + (q.expectation.since?.let { " since ${LiquidityEquity.date(it)}" } ?: "") +
@@ -161,7 +165,7 @@ private fun LiquidityEquityDialog(q: LiquidityEquity.Equity, onClose: () -> Unit
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClickLabel = "Show this trade on the chart") { picked = pt.n }
                             .padding(vertical = 4.dp))
                 }
-                Text("A read of the closed paper trades: it places, closes and arms nothing.", style = soft, modifier = Modifier.padding(top = 8.dp))
+                Text(EQUITY_READS_ONLY, style = soft, modifier = Modifier.padding(top = 8.dp))
             }
         },
         confirmButton = { TextButton(onClose) { Text("Close") } },

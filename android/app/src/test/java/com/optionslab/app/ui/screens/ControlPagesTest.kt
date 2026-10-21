@@ -10,6 +10,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
@@ -328,9 +331,10 @@ class ControlPagesTest {
         field("Backup passphrase", "short")
         compose.waitForText("5 of at least ${Backup.MIN_PASSPHRASE} characters")
         tap("Continue")
-        waitAlert("The backup passphrase needs at least ${Backup.MIN_PASSPHRASE} characters.")
+        waitAlert("The backup passphrase needs at least ${Backup.MIN_PASSPHRASE} characters (5 now).")
         field("Backup passphrase", "aaaaaaaaaaaa")
-        compose.waitForText("Weak: make it longer, or mix words, digits and symbols")
+        // 20 Oct: the hint says exactly what is needed (one character repeated counts as two).
+        compose.waitForText("Weak: use at least 6 different characters (1 now)")
         field("Passphrase again", "aaaaaaaaaaab")
         compose.waitForText("The two passphrases differ.")
         tap("Continue")
@@ -338,7 +342,11 @@ class ControlPagesTest {
         field("Passphrase again", "aaaaaaaaaaaa")
         compose.waitForNoText("The two passphrases differ.")
         tap("Continue")
-        waitAlert("That passphrase is too easy to guess")
+        waitAlert("That passphrase is too easy to guess: use at least 6 different characters (1 now).")
+        // A form's hint: red on screen, a notice (never an error) in the diagnostics.
+        assertTrue(com.optionslab.app.work.Alerts.posted.any { it.text.startsWith("That passphrase is too easy") && it.kind == com.optionslab.app.work.Alerts.Kind.ERROR })
+        field("Backup passphrase", "mypassword")
+        compose.waitForText("Weak: make it 11 characters long as typed (10 now), or 10 with a digit and a dash or a space in it")
         field("Backup passphrase", "Abcdefgh12")
         compose.waitForText("Fair: a few more words would make it strong")
         field("Backup passphrase", "correct horse battery staple")
@@ -555,6 +563,76 @@ class ControlPagesTest {
         assertTrue(compose.onAllNodesWithText("Paper daily loss limit").fetchSemanticsNodes().isEmpty())
     }
 
+    /** 18 Oct, review: in Live, loosening the guard asks for the PIN (as the Security page does); tightening it never waits. */
+    @Test fun inLiveLooseningTheGuardAsksForThePinTighteningDoesNot() {
+        PinLock.setPin(pin.toCharArray())
+        model.update { it.copy(mode = "live", allowRealOrders = true) }
+        waitSettings { it.live && it.allowRealOrders }
+        show { RiskPage(model) }
+        compose.waitForText("Bot settings")
+        val ask = "Enter your app PIN to loosen the account guard on Zerodha."
+        fun chip(text: String) { compose.reveal(text); compose.onAllNodesWithText(text)[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
+        // Tighter (₹2,000 -> ₹1,000): at once.
+        chip("₹1,000")
+        waitSettings { it.guardDailyLoss == 1_000.0 }
+        assertFalse(compose.has("Confirm it is you"))
+        // Looser (₹1,000 -> ₹10,000): the PIN first; Cancel keeps the limit.
+        chip("₹10,000")
+        compose.waitForText("Confirm it is you")
+        compose.onNodeWithText(ask).assertExists()
+        tap("Cancel")
+        compose.waitForNoText("Confirm it is you")
+        assertEquals(1_000.0, model.settings.value.guardDailyLoss, 0.0)
+        // With the PIN it goes.
+        chip("₹10,000")
+        reauth(pin, ask)
+        waitSettings { it.guardDailyLoss == 10_000.0 }
+        // A later cut-off is looser too.
+        chip("15:00")
+        reauth(pin, ask)
+        waitSettings { it.guardCutoff == 15 * 60 }
+        // The kill switch: on at once, cleared only with the PIN.
+        compose.reveal("Kill switch")
+        toggle("Kill switch")
+        tap("Turn on")
+        waitSettings { it.guardKill }
+        assertFalse(compose.has("Confirm it is you"))
+        toggle("Kill switch")
+        tap("Clear")
+        compose.waitForText("Confirm it is you")
+        tap("Cancel")
+        compose.waitForNoText("Confirm it is you")
+        assertTrue("cancel keeps the kill switch on", model.settings.value.guardKill)
+        compose.until(10_000) { AppSettings.load().guardKill }
+        toggle("Kill switch")
+        tap("Clear")
+        reauth(pin, "Enter your app PIN to clear the kill switch on Zerodha.")
+        waitSettings { !it.guardKill }
+    }
+
+    /**
+     * 18 Oct, review: on Paper with Zerodha set up, loosening the Zerodha guard asks the PIN too (else it is loosened on Paper
+     * and Live is one tap away); with no Zerodha keys and no PIN the paper page changes it at once (the tests above).
+     */
+    @Test fun onPaperWithZerodhaSetUpLooseningTheGuardStillAsksForThePin() {
+        com.optionslab.app.testing.BrokerArea.saveKeys(pin)
+        assertFalse(model.settings.value.live)
+        show { RiskPage(model) }
+        compose.waitForText("Bot settings")
+        compose.reveal("Block naked option shorts")
+        val naked = model.settings.value.guardNakedShort
+        if (!naked) { toggle("Block naked option shorts"); waitSettings { it.guardNakedShort } }
+        assertFalse("switching a protection on never asks", compose.has("Confirm it is you"))
+        toggle("Block naked option shorts")
+        compose.waitForText("Confirm it is you")
+        tap("Cancel")
+        compose.waitForNoText("Confirm it is you")
+        assertTrue(model.settings.value.guardNakedShort)
+        toggle("Block naked option shorts")
+        reauth(pin, "Enter your app PIN to loosen the account guard on Zerodha.")
+        waitSettings { !it.guardNakedShort }
+    }
+
     @Test fun expirySquareOffAndNakedShortSwitches() {
         show { RiskPage(model) }
         val keep = "Keep the Expiry Put to settlement"
@@ -567,6 +645,32 @@ class ControlPagesTest {
         val naked = model.settings.value.guardNakedShort
         toggle("Block naked option shorts")
         waitSettings { it.guardNakedShort != naked }
+    }
+
+    /**
+     * The pre-trade checks card (review, 13 Oct): the note gives each test's sample, and the danger reading and its switch
+     * show only where the meter is read (Jarvis); there the switch saves and its memory copy follows the save.
+     */
+    @Test fun thePreTradeCardSaysItsSamplesAndTheSwitchFollowsTheSettings() {
+        val today = Market.today()
+        com.optionslab.app.data.DangerToday.read(com.optionslab.ira.DangerMeter.Inputs(null, 11.0, 0.0, event = false, expiry = true,
+            day = today.dayOfWeek), today)
+        show { PreTradeCard(model) }
+        for (t in listOf("charges check: 499 trades", "smart stop: 15 trades", "danger meter: 122 days", "8 design and 2 held-back trades"))
+            assertTrue(t, compose.has(t, substring = true))
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            assertTrue(compose.has("provisional, gap not known yet", substring = true))
+            val was = model.settings.value.dangerHalfSize
+            try {
+                toggle("Half size on careful days (paper arms only)")
+                waitSettings { it.dangerHalfSize != was }
+                compose.until(10_000, "the saved switch in memory") { com.optionslab.app.data.DangerToday.halfSize == !was && AppSettings.load().dangerHalfSize == !was }
+            } finally { com.optionslab.app.data.DangerToday.halfSize = false }
+        } else {
+            // No morning check in this build: no reading, no switch, and the card says why.
+            assertFalse(compose.has("Half size on careful days (paper arms only)"))
+            assertTrue(compose.has("which this build does not run", substring = true))
+        }
     }
 
     @Test fun theDrawdownPeakCanBeRestarted() {
@@ -591,10 +695,18 @@ class ControlPagesTest {
         compose.waitForText("Delete harvested data?")
         tap("Keep")
         compose.waitForNoText("Delete harvested data?")
-        // The closing dialog can still hold the button's words for a frame: wait for the page's one button alone.
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Delete this phone's harvested data").fetchSemanticsNodes().size == 1 }
+        // The page's own button - never one inside a dialog. 18 Oct, review: it is the list's last item, and the cards above it
+        // fill in from I/O after it was first shown (the manifests, the recorder, the recordings, GitHub sync), which could
+        // push it out of the list's composed window - an exact count then never came, and waitUntil (which does not run
+        // the main looper) only timed out. Shown again, then waited for with the looper running.
+        val pageButton = hasText("Delete this phone's harvested data") and !hasAnyAncestor(isDialog())
+        compose.reveal("Delete this phone's harvested data")
+        compose.until(15_000, "the page's delete button") {
+            compose.onAllNodes(pageButton).fetchSemanticsNodes().isNotEmpty() &&
+                compose.onAllNodes(hasText("Delete this phone's harvested data") and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isEmpty()
+        }
         // The scrolling list can briefly compose the same item twice (a prefetched copy): either copy is the page's button.
-        compose.onAllNodesWithText("Delete this phone's harvested data").onFirst().performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.onAllNodes(pageButton).onFirst().performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.waitForText("Delete harvested data?")
         tap("Delete")
         compose.until(15_000) { model.message.value == "Harvested data deleted." }
@@ -711,7 +823,9 @@ class ControlPagesTest {
         val label = "Add a holiday (yyyy-mm-dd)"
         field(label, "2026-13-40")
         compose.onNodeWithText("Add").assertIsNotEnabled()
-        val day = Market.today().plusDays(40)
+        // 15 Oct: about 40 days on, but never a built-in date (taken out above, so adding it back would not hold): on 15 Oct
+        // IST, 40 days on is 24 Nov, Guru Nanak Jayanti, and the row showed its name instead of "added by you".
+        val day = generateSequence(Market.today().plusDays(40)) { it.plusDays(1) }.first { it !in Holidays.BUILT_IN.keys }
         field(label, day.toString())
         compose.onNodeWithText("Add").assertIsEnabled()
         tap("Add")

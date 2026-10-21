@@ -1,0 +1,36 @@
+id: r58-gap-go-2
+title: 'R58 gap-go-2: gap-and-go / gap-fade on the stock, ATM stock option bought'
+family: stocks
+date: '2026-10-15'
+doc: research/HUNT_R58_STOCK_OPTIONS_TOP10.md
+hypothesis: Buying the nearest-monthly ATM option of a top-10 NIFTY 50 stock on this stock signal makes money after real costs
+  on one held contract (final net > 0, twin p < 0.05, BH q <= 0.10 over 38, 40+ trades, top-5 < net, design gate).
+data_version: 'Drive lake gdrive:IraAlgo-data-lake fetched 15 Oct 2026: stock_options_rolling_1m stkopt_<SYM>_MONTH (one held
+  contract per trade), equity_1m, equity_daily, index_1m NIFTY, nse_bhavcopy (lots, expiries, universe); read by research/hunt/r58/r58data.py'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (336 sessions), 10 stocks
+  holdout: final test 1 Apr - 12 Oct 2026 (132 sessions), read once 15 Oct 2026; stock options not read before
+instruments:
+- F&O stocks
+features:
+- stock daily close
+- first 15-minute bar
+model_or_rule: 'gap-go-2 (gap, {''s'': 14, ''th'': 0.02, ''how'': ''go''}, hold 1 session(s)); signal source: the stock (NIFTY
+  for relative strength); band exit at 1.25 strike steps; out by 15:15 on T-3 before expiry'
+settings: research/hunt/r58/PREREG.md section 5; research/hunt/r58/r58rules.py
+prereg: research/hunt/r58/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 36 trades, win 44%, net Rs +6,168 (Rs +171 a trade), avg win / loss Rs +4,255 / -3,096, worst day Rs -15,549,
+    max DD Rs -21,727, months green 6/10, premium x lot median Rs 15,488; 2x Rs -4,608; design gate yes. Final: 24 trades,
+    win 46%, net Rs -3,777 (Rs -157 a trade), avg win / loss Rs +2,422 / -2,340, worst day Rs -6,201, max DD Rs -14,537, months
+    green 3/6, premium x lot median Rs 16,382; twin p 0.387, BH q 1.00: too few trades to judge; 2x Rs -10,801; stock in cash
+    (same minutes) Rs +6,125 on 24 trades. Final by stock: INFY 8 / -2,717; KOTAKBANK 2 / -7,976; LT 2 / +5,649; M&M 1 / +1,253;
+    MARUTI 2 / +6,578; RELIANCE 1 / -1,837; SBIN 2 / -5,724; TATASTEEL 1 / +3,228; TRENT 5 / -2,232.'
+  costs: obuy Costs('dated') option charges (STT 0.1% to 31 Mar 2026, 0.15% from 1 Apr 2026), per-stock fitted spread (R17
+    ticks or the design Roll half-spread, whichever is larger, + 5/10 bps); 2x reported; 1 lot of the contract's own lot on
+    the date (bhavcopy / traded volumes)
+holdout_read: true
+verdict: rejected
+notes: 'One of 38 R58 variants in one BH family (research/hunt/r58/results/report.md). Stocks (instrument F&O stocks): RELIANCE,
+  SBIN, MARUTI, ICICIBANK, INFY, LT, KOTAKBANK, M&M, TRENT, TATASTEEL.'

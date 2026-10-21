@@ -1,0 +1,24 @@
+id: r94-opt-ns
+title: 'R94 idea 3 NS: MCX naked short strangle (+/-1), labelled comparison, research only'
+family: option-structure
+date: '2026-10-21'
+doc: research/HUNT_R94_MCX_ADVANCED.md
+hypothesis: 'Pre-registered (research/hunt/r94_mcx_advanced/PREREG.md): R94 idea 3 NS: MCX naked short strangle (+/-1), labelled comparison, research only; after real MCX costs on every leg it beats random entry (or zero for every-day option selling), p <= 0.05 and BH q <= 0.10 over all R94 cells, walk-forward, worst month >= -Rs 13k, then holds on the locked holdout read once; Boss risk rules: hard stop, 2% of Rs 1 lakh, liquid contracts. Signal source: none (non-directional); IV filter context.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 21 Oct 2026: fut_1m_live_mcx (contracts live on 19 Oct, 1-minute), fut_daily_continuous (near month, 2012 - 16 Oct 2026), options_rolling_1m MCX MONTH books (ATM-3..+3, 5 Aug 2025 - 19 Oct 2026); Dukascopy 1-minute BID CFDs (XAUUSD, XAGUSD, LIGHTCMDUSD, GASCMDUSD) for idea 5'
+period:
+  design: 5 Aug 2025 - 31 Mar 2026
+  holdout: 1 Apr - 19 Oct 2026 (not read, out of scope)
+instruments:
+- 'the same 6 books'
+features:
+- 'signal source: none (non-directional); IV filter context'
+model_or_rule: 'R94 idea 3 NS: MCX naked short strangle (+/-1), labelled comparison, research only'
+settings: research/hunt/r94_mcx_advanced/ (PREREG.md, NOTES.md, the idea module)
+prereg: research/hunt/r94_mcx_advanced/PREREG.md
+variants_tried: 24
+results:
+  summary: 'OUT OF SCOPE (Boss, 21 Oct: option selling is out of scope); design only, holdout NOT read. 24 cells (one BH family of 152 R94 cells). Design net after costs per cell, twin / bootstrap p and BH q, then the one holdout read: o-NS-CRUDEOIL-CY-ALL 7 tr -37,483 (p 1.000, q 1.00); o-NS-CRUDEOIL-CY-HIGH 3 tr -74,365 (p 1.000, q 1.00); o-NS-CRUDEOIL-D1-ALL 149 tr -532,912 (p 0.930, q 1.00); o-NS-CRUDEOIL-D1-HIGH 67 tr -554,557 (p 0.991, q 1.00); o-NS-CRUDEOILM-CY-ALL 7 tr -1,690 (p 0.878, q 1.00); o-NS-CRUDEOILM-CY-HIGH 3 tr -5,073 (p 1.000, q 1.00); o-NS-CRUDEOILM-D1-ALL 149 tr -59,714 (p 0.952, q 1.00); o-NS-CRUDEOILM-D1-HIGH 67 tr -53,064 (p 0.961, q 1.00); o-NS-GOLDM-CY-ALL 2 tr +19,213 (p 1.000, q 1.00); o-NS-GOLDM-CY-HIGH 0 tr +0 (p 1.000, q 1.00); o-NS-GOLDM-D1-ALL 31 tr -72,472 (p 0.679, q 1.00); o-NS-GOLDM-D1-HIGH 2 tr +2,539 (p 1.000, q 1.00); o-NS-NATGASMINI-CY-ALL 8 tr -7,335 (p 0.608, q 1.00); o-NS-NATGASMINI-CY-HIGH 4 tr -657 (p 1.000, q 1.00); o-NS-NATGASMINI-D1-ALL 147 tr -63,640 (p 0.981, q 1.00); o-NS-NATGASMINI-D1-HIGH 58 tr -24,993 (p 0.821, q 1.00); o-NS-NATURALGAS-CY-ALL 8 tr -42,799 (p 0.670, q 1.00); o-NS-NATURALGAS-CY-HIGH 4 tr -6,154 (p 1.000, q 1.00); o-NS-NATURALGAS-D1-ALL 148 tr -341,732 (p 0.995, q 1.00); o-NS-NATURALGAS-D1-HIGH 59 tr -171,892 (p 0.941, q 1.00); o-NS-SILVERM-CY-ALL 3 tr -119,511 (p 1.000, q 1.00); o-NS-SILVERM-CY-HIGH 1 tr -39,894 (p 1.000, q 1.00); o-NS-SILVERM-D1-ALL 59 tr -262,424 (p 0.913, q 1.00); o-NS-SILVERM-D1-HIGH 19 tr +42,510 (p 0.492, q 1.00). Design passers 0, design + holdout passers 0.'
+  costs: 'Zerodha MCX charges on every leg (McxCosts.kt), half-spread on every fill (futures R53 rule, far month 3x; options R85 strict ATM rate x (1 + 0.5 |offset|), >= 1 tick); 1 lot; margins without spread benefit'
+holdout_read: false
+verdict: inconclusive
+notes: 'Cells: o-NS-CRUDEOIL-CY-ALL, o-NS-CRUDEOIL-CY-HIGH, o-NS-CRUDEOIL-D1-ALL, o-NS-CRUDEOIL-D1-HIGH, o-NS-CRUDEOILM-CY-ALL, o-NS-CRUDEOILM-CY-HIGH, o-NS-CRUDEOILM-D1-ALL, o-NS-CRUDEOILM-D1-HIGH, o-NS-GOLDM-CY-ALL, o-NS-GOLDM-CY-HIGH, o-NS-GOLDM-D1-ALL, o-NS-GOLDM-D1-HIGH, o-NS-NATGASMINI-CY-ALL, o-NS-NATGASMINI-CY-HIGH, o-NS-NATGASMINI-D1-ALL, o-NS-NATGASMINI-D1-HIGH, o-NS-NATURALGAS-CY-ALL, o-NS-NATURALGAS-CY-HIGH, o-NS-NATURALGAS-D1-ALL, o-NS-NATURALGAS-D1-HIGH, o-NS-SILVERM-CY-ALL, o-NS-SILVERM-CY-HIGH, o-NS-SILVERM-D1-ALL, o-NS-SILVERM-D1-HIGH'

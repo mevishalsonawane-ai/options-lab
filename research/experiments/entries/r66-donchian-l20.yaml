@@ -1,0 +1,40 @@
+id: r66-donchian-l20
+title: R66 Donchian L20 A4 + stop +5% once +20%
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R66_LOCK_AT_25.md
+hypothesis: 'Boss (16 Oct): once the option is +25%, moving the stop to +5% (on top of the A4 30/60/100 ladder) improves the
+  paper arms after real costs, because trades that reach +25% no longer come back to the -15% stop. This variant: L20 A4 +
+  stop +5% once +20%; gates as R51 (BH over 15 tests); recommended only if it also beats B0 and A4 everywhere and random early
+  exits (q <= 0.10).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores (Donchian,
+  OOV) / R57 stores (Solo 2.0), 20 Nov 2024 - 13/14 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026; Solo 2.0 Jul 2025 - Mar 2026)
+  holdout: 1 Apr - 13/14 Oct 2026, read once; already read by R51 / R52 / R57 / R64 / R65 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars (Donchian 20) (unchanged); only the option exits differ (stops and locks on the premium)'
+model_or_rule: 'R51 Donchian 20 (5-min index Donchian-20 break, 1-ITM, 5 indices); exits: L20 A4 + stop +5% once +20%'
+settings: research/hunt/r66/r66cfg.py exit_spec / TRIGGER; PREREG.md
+prereg: research/hunt/r66/PREREG.md
+variants_tried: 15
+results:
+  summary: 'Design: 4500 trades, win 45%, net Rs 14,125 (Rs 3/trade), worst day -Rs 53,682, max DD Rs 224,943, stops 802.
+    Walk-forward: 3266 trades, win 46%, net Rs 180,746 (Rs 55/trade), worst day -Rs 31,959, max DD Rs 101,091, stops 515.
+    Final: 1781 trades, win 44%, net Rs 83,559 (Rs 47/trade), worst day -Rs 23,012, max DD Rs 92,091, stops 236; entry-twin
+    p 0.004, BH q 0.0067, exit-twin p 0.2695 (q 0.499). Verdict: PASS. Versus B0: design Rs 5,845 (bootstrap p 0.4455), final
+    Rs 28,120 (p 0.0755). Versus A4: design Rs 6,652 (bootstrap p 0.357), final Rs 4,782 (p 0.2185). Final: the +5% step closed
+    38 trades; versus A4 it gave up Rs 11,209 and saved Rs 16,252 (net Rs 5,044).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: inconclusive
+notes: 'Passed R51''s gates but not recommended (PREREG section 3): it must also beat both B0 and A4 in design, walk-forward
+  and final and beat random early exits; exit-twin q 0.499. Boss may still choose it. Signal on the underlying; research only,
+  nothing changes paper or live.'

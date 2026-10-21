@@ -1,0 +1,30 @@
+id: r36-x3
+title: 'Gamma exposure X3: both X1 and X2'
+hypothesis: Heavy dealer short gamma at 14:00 predicts afternoon moves big enough for a cheap CE + PE pair to pay.
+features:
+- option-chain OI x BS gamma (GEX)
+- ATM implied vol
+- realized vol
+model_or_rule: both X1 and X2
+variants_tried: 4
+results:
+  summary: '24 expiries (35 legs: Rs 15-30 CE + PE at 14:00, Rs 1,000 each, half at 2x + step lock), net Rs -15,385 (-504
+    per Rs 1,000), hit 16.7%, max DD Rs -15,385; random same-size expiry sets mean Rs -12,789, p 0.673, BH q 1.0 (family 48).
+    FAILED the gates.'
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; x2 spread stress
+verdict: rejected
+notes: 'BH across R21-R26 and R34-R36 (48). GEX at 14:00 ranks with a bigger afternoon move than ATM IV prices (Spearman 0.33), but that
+  is mostly low IV: given IV the link is -0.11.'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_R36_GAMMA_EXPOSURE.md
+data_version: 'Dhan lake on Drive: opt_{NIFTY,SENSEX}_WEEK (ATM+-10 with OI), index_1m, INDIAVIX; R26 day files'
+period:
+  design: 'ALL expiries with >= 20 earlier GEX values and >= 10 earlier regime values (expanding, point-in-time): NIFTY 241,
+    SENSEX 100 decision days (2021-2026)'
+instruments:
+- NIFTY
+- SENSEX
+prereg: research/hunt/r36/PREREG.md
+settings: research/hunt/r36/r36gex.py
+holdout_read: null

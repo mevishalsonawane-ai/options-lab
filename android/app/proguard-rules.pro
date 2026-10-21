@@ -44,3 +44,23 @@
 # Exception class NAMES only (12 Oct: the diagnostics said "a check failed in Jarvis words: ij1"): the diary names a failure
 # by its class, never its message, so the class must read as itself. Code is still shrunk and obfuscated.
 -keepnames class * extends java.lang.Throwable
+
+# The app's own class and method NAMES (memory audit, 14 Oct: the main-thread stalls said only "o.a" - the screen watchdog,
+# Speed.runningOnMain, looks for the app's first "com.optionslab." frame, which -repackageclasses had renamed away). Names only:
+# the code is still shrunk and optimised (allowoptimization: R8 may still inline and merge; review, 14 Oct), and nothing
+# secret is in a name (the repository is public).
+-keepnames,allowoptimization class com.optionslab.** { <methods>; }
+
+# TDLib (the Signal tester's read-only Telegram login, 15 Oct 2026): libtdjsonjava.so registers its native methods on
+# org.drinkless.tdlib.JsonClient (and its LogMessageHandler) by these exact names when it loads.
+-keep class org.drinkless.tdlib.** { *; }
+
+# The vault's write doors kept as real frames (17 Oct: Boss's diagnostics said only "BinderProxy.transactNative in
+# Vault.encrypt" - no caller - because allowoptimization above let R8 fold the settings and vault write paths into the
+# calling lambdas, which it renames). Without allowoptimization these few methods are never inlined, so the screen
+# watchdog's stack shows "from SecurePrefs.put < ..." and the main-thread guard names the write. Names only.
+-keepnames class com.optionslab.app.security.Vault { public <methods>; }
+-keepnames class com.optionslab.app.security.Vault$LastWrite { public <methods>; }
+-keepnames class com.optionslab.app.security.SecurePrefs { public <methods>; }
+-keepnames class com.optionslab.app.security.SecureBlobs { public <methods>; }
+-keepnames class com.optionslab.app.security.MainWrites { public <methods>; }

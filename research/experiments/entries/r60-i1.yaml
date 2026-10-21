@@ -1,0 +1,31 @@
+id: r60-i1
+title: 'R60 Solo on all markets I1: SoloMidday on SENSEX (4-ITM, index stop 0.3 ATR, breakeven at 0.45 ATR, 14:30)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R60_SOLO_ALL_MARKETS.md
+hypothesis: 'Solo''s rule makes money after real costs on a market it does not trade yet (gates: final net > 0, random-entry
+  twin p < 0.05, BH q <= 0.10 over 21 variants, 40+ trades, top-5 < net, design positive).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake: index_1m + INDIAVIX, options_rolling_1m WEEK files (foreign rows, bad
+  ticks removed), 21 Nov 2024 - 13 Oct 2026'
+period:
+  design: 21 Nov 2024 - 31 Mar 2026
+  holdout: '1 Apr - 13 Oct 2026 final test, read once (not pristine: R47-R59 saw parts of it)'
+instruments:
+- SENSEX
+features:
+- 'signal source: the underlying index; option-chain IV / PCR context only in I4/I5'
+model_or_rule: SoloMidday on SENSEX (4-ITM, index stop 0.3 ATR, breakeven at 0.45 ATR, 14:30)
+settings: research/hunt/r60/PREREG.md section 3; research/hunt/r60/r60study.py
+prereg: research/hunt/r60/PREREG.md
+variants_tried: 21
+results:
+  summary: 'Design: 57 trades, net Rs +21,656, win 54%. Final test (1 Apr - 13 Oct 2026, read once): 23 trades, win 52%, net
+    Rs +7,603 (Rs +331/trade), at 2x costs Rs +5,537, max DD Rs 10,020, worst day Rs -4,838, months green 5/7, top-5 share
+    2.872, capital per lot (median) Rs 11,559, trades per day 0.173; twin p 0.3353, BH q 0.7544 (21 variants). Verdict: FAIL:
+    p >= 0.05; q > 0.10; fewer than 40 trades; top-5 >= net.'
+  costs: dated charges (STT 0.15% from 1 Apr 2026; BSE rates for SENSEX), R17 liq fills, next-minute fills, one held contract,
+    1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Paper only. SENSEX is BSE: the app''s paper account is NSE F&O only (IraSolo.kt), so Solo cannot trade it today. Signal
+  on the underlying; no rule reads an option''s own chart.'

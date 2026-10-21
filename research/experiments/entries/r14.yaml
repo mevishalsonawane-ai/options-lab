@@ -1,0 +1,26 @@
+id: r14
+title: 'ORB re-entry churn: cap or let it run'
+family: orb
+date: '2026-10-12'
+doc: research/HUNT_R14_REENTRY_CHURN.md
+hypothesis: Capping re-entries cuts ORB's loss; letting it run adds profit.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2021-08-04 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-05
+instruments:
+- BANKNIFTY
+features:
+- re-entry count
+model_or_rule: 10 pre-registered tests
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/r14/PREREG.md
+variants_tried: 10
+results:
+  summary: 'Cap 1 a side a day: ORB -6.50 -> -0.97 lakh (design), -1.89 -> -0.18 lakh (holdout); let-it-run no effect.'
+  costs: app charges
+holdout_read: true
+verdict: adopted
+backfilled: true
+notes: Paper default 1 a side a day; live only with Boss's PIN.

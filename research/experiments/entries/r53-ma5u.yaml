@@ -1,0 +1,27 @@
+id: r53-ma5u
+title: 'R53: R2 C4 XAUUSD lead on GOLDM options (pre-registered: no daily cap; read after the lock), re-tested on Nov 2024+
+  data'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R53_MCX_CRYPTO_RECENT.md
+hypothesis: The rejected rule (5-min XAU - GOLDM catch-up > 23.8 bp, 1-ITM option, 15 min, one at a time) earns after real
+  costs on the recent market only (Boss, 15 Oct).
+data_version: Drive lake options_rolling_1m (MCX, from 5 Aug 2025), fut_daily_continuous, Yahoo 1h, Dukascopy XAUUSD 1m
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: 2026-04-01..2026-10-12 (final test, read once)
+instruments:
+- GOLD
+features:
+- 'signal source: XAUUSD and the GOLDM future (underlying)'
+model_or_rule: 5-min XAU - GOLDM catch-up > 23.8 bp, 1-ITM option, 15 min, one at a time
+settings: research/hunt/r53/PREREG.md
+prereg: research/hunt/r53/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Rs. orig: design 237 trades net -122,190, walk-forward -119,760; final 153 trades, win 41%, net 16,500, p 0.002,
+    q 0.044 -> fail'
+  costs: Zerodha MCX charges + half spread per side (x2 before 17:00 for options)
+holdout_read: true
+verdict: rejected
+notes: 'Post-lock correction: the capped MA5''s final test had been seen first, so this cannot be a clean pass.'

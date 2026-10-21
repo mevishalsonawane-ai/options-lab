@@ -1,0 +1,39 @@
+id: mb1-l1-events
+title: 'MCX brain L1-E: EIA crude, EIA gas storage, US CPI/NFP hours (bigger? follow or fade?)'
+family: calendar-events
+date: '2026-10-20'
+doc: research/BRAIN_MCX.md
+hypothesis: The hour after a scheduled US release is bigger than the same clock hour on other days, and its direction follows
+  the hour before.
+data_version: 'Drive lake options_rolling_1m (6 MCX monthly option books, 5 Aug 2025 - 13 Oct 2026: near-future close + ATM
+  IV/OI/volume) + fut_1m_live_mcx and fut_daily_continuous fetched from Dhan 19-20 Oct 2026 (to 16 Oct); MCX cube v1, 56 features
+  (research/brain/mcx/FEATURES.md); raw data on Drive, not in git'
+period:
+  design: 5 Aug 2025 - 2026-06-23 (226 sessions; walk-forward tests on blocks 3-6, 21 Nov 2025 - 23 Jun 2026, about 150 sessions)
+  holdout: 2026-07-01 - 16 Oct 2026 (77 sessions; embargo 24-30 Jun)
+instruments:
+- GOLD
+- GOLDM
+- SILVER
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- release calendar (R83 EIA/storage, R82 CPI/NFP)
+- the 60 minutes before
+model_or_rule: descriptive tests (day bootstrap, binomial)
+settings: research/brain/mcx/PREREG.md; results/design_metrics.json, holdout_metrics.json
+prereg: research/brain/mcx/PREREG.md
+variants_tried: 16
+results:
+  summary: 'Design: bigger on 5 of 8 groups, follow/fade on 0 of 8. CRUDEOIL:eia x1.15 (42 releases, q 0.110, fail), follow
+    0.51 of 45 (fail); NATURALGAS:storage x1.23 (33 releases, q 0.014, pass), follow 0.44 of 36 (fail); GOLD:us_macro x1.74
+    (10 releases, q 0.004, pass), follow 0.55 of 11 (fail); GOLDM:us_macro x1.60 (17 releases, q 0.004, pass), follow 0.50
+    of 18 (fail); SILVER:us_macro x1.63 (9 releases, q 0.015, pass), follow 0.30 of 10 (fail); SILVERM:us_macro x1.15 (17
+    releases, q 0.015, pass), follow 0.56 of 18 (fail); CRUDEOIL:us_macro x1.02 (17 releases, q 0.081, fail), follow 0.67
+    of 18 (fail); NATURALGAS:us_macro x1.13 (17 releases, q 0.923, fail), follow 0.76 of 17 (fail).'
+  costs: none (forecasts, no trades)
+holdout_read: false
+verdict: adopted
+notes: A size fact for risk (event hours are 1.1-1.7x bigger), not a direction edge; R83 already found EIA/storage fade and
+  follow lose after costs.

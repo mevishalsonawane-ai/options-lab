@@ -1,0 +1,34 @@
+id: r52-trend-filter-1
+title: 'R52 re-test on Nov 2024+: TREND_FILTER-1 BN 5-min EMA9/TWAP higher-highs trend'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule TREND_FILTER-1 (old verdict: Best 3 HH/HL, -40/+40, filter on: 462 tr, 52%, -126 (t 0.00),
+  halves +11.1k / -11.2k) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small
+  design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''chop'': True, ''exit_rule'': ''fixed'', ''n'': 3} | ATM/near | exits stop_pts=40.0,tgt_pts=40.0 | expiry
+  skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 8
+results:
+  summary: 'Design original: 599 trades, win 48%, net Rs -76,474 (Rs -227/day), worst day Rs -4,344, max DD Rs -76,474, p
+    0.777 (coin-flip p 0.132); walk-forward Rs -43,602. FINAL original: 226 trades, win 47%, net Rs -41,861 (Rs -317/day),
+    worst day Rs -2,950, max DD Rs -49,729, p 0.879 (coin-flip p 0.397), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = the study''s best row: 3 HH/HL, sideways filter on, -40/+40 premium
+  pts, <= 2/day, ATM (research/trend_filter.py trades). Grid = its own n 2/3 x filter on/off x exit fixed/trend (-60 stop)..
+  Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

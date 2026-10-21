@@ -434,7 +434,9 @@ object MarketRecorder {
         }
         // Inside F&O's session only (09:15 to its close: 15:40 from 3 Aug 2026, 15:30 before) for prices; once a minute.
         val close = Market.foClose(day)
-        if (minute < Market.OPEN || minute > close) return
+        // After the close only for the futures' last candles, while they are still to fetch: a pass that skipped the close's own
+        // minute (a slow pass, a missed wake) fetches them from any later pass in the window (18 Oct, review).
+        if (minute < Market.OPEN || (minute > close && st.bars)) return
         // (Its own four; MIDCPNIFTY's future is in the list for the order flow only.)
         val futs = runCatching { Kite.nearestFutures(src.futures().filter { it.name in MarketRecord.FUTURES }, day) }.getOrElse { e ->
             if (!st.futuresGap) { st.futuresGap = true; gap("futures list", MarketRecord.why(e)) }

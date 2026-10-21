@@ -1,0 +1,360 @@
+{
+ "source": "release",
+ "books": {
+  "BANKNIFTY": [
+   15,
+   5
+  ]
+ },
+ "breadth": [
+  "BANKNIFTY",
+  "FINNIFTY",
+  "NIFTY",
+  "SENSEX"
+ ],
+ "window": [
+  "2026-01-01",
+  "2026-02-23"
+ ],
+ "res": {
+  "B0": {
+   "final": {
+    "trades": 48,
+    "days": 30,
+    "win": 0.333,
+    "net": 16214,
+    "per_trade": 338,
+    "avg_win": 2145,
+    "avg_loss": -566,
+    "biggest_loss": -1863,
+    "worst_day": -1985,
+    "max_dd": 8277,
+    "green_days": 0.267,
+    "top5_share": 1.653,
+    "ex_top5": -10587,
+    "stops": 1,
+    "locks": 0,
+    "targets": 0,
+    "time": 12,
+    "squareoff": 2,
+    "rule_exit": 33,
+    "big_movers": 0,
+    "big_kept": 0,
+    "big_cut": 0,
+    "big_net": 0,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 48,
+      "net": 16214
+     }
+    }
+   }
+  },
+  "S1": {
+   "final": {
+    "trades": 46,
+    "days": 29,
+    "win": 0.326,
+    "net": 16288,
+    "per_trade": 354,
+    "avg_win": 2287,
+    "avg_loss": -581,
+    "biggest_loss": -1863,
+    "worst_day": -1985,
+    "max_dd": 8285,
+    "green_days": 0.276,
+    "top5_share": 1.645,
+    "ex_top5": -10513,
+    "stops": 1,
+    "locks": 0,
+    "targets": 0,
+    "time": 12,
+    "squareoff": 2,
+    "rule_exit": 31,
+    "big_movers": 0,
+    "big_kept": 0,
+    "big_cut": 0,
+    "big_net": 0,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 46,
+      "net": 16288
+     }
+    }
+   },
+   "vs_b0": {
+    "skipped": 2,
+    "skipped_net": -74,
+    "losers_avoided": 1,
+    "losers_avoided_rs": 81,
+    "winners_missed": 1,
+    "winners_missed_rs": 7,
+    "extra": 0,
+    "extra_net": 0,
+    "kept": 46,
+    "kept_diff": 0
+   },
+   "paired": {
+    "p": 0.3905,
+    "diff": 74
+   },
+   "skip_p": 0.5649,
+   "skip_k": 2
+  },
+  "S2": {
+   "final": {
+    "trades": 41,
+    "days": 25,
+    "win": 0.317,
+    "net": 16289,
+    "per_trade": 397,
+    "avg_win": 2481,
+    "avg_loss": -570,
+    "biggest_loss": -1863,
+    "worst_day": -1985,
+    "max_dd": 7792,
+    "green_days": 0.28,
+    "top5_share": 1.645,
+    "ex_top5": -10512,
+    "stops": 1,
+    "locks": 0,
+    "targets": 0,
+    "time": 11,
+    "squareoff": 2,
+    "rule_exit": 27,
+    "big_movers": 0,
+    "big_kept": 0,
+    "big_cut": 0,
+    "big_net": 0,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 41,
+      "net": 16289
+     }
+    }
+   },
+   "vs_b0": {
+    "skipped": 7,
+    "skipped_net": -75,
+    "losers_avoided": 4,
+    "losers_avoided_rs": 2133,
+    "winners_missed": 3,
+    "winners_missed_rs": 2058,
+    "extra": 0,
+    "extra_net": 0,
+    "kept": 41,
+    "kept_diff": 0
+   },
+   "paired": {
+    "p": 0.4695,
+    "diff": 75
+   },
+   "skip_p": 0.4012,
+   "skip_k": 7
+  },
+  "W10a": {
+   "final": {
+    "trades": 16,
+    "days": 13,
+    "win": 0.625,
+    "net": 13988,
+    "per_trade": 874,
+    "avg_win": 1662,
+    "avg_loss": -438,
+    "biggest_loss": -691,
+    "worst_day": -691,
+    "max_dd": 1105,
+    "green_days": 0.615,
+    "top5_share": 1.069,
+    "ex_top5": -968,
+    "stops": 0,
+    "locks": 0,
+    "targets": 0,
+    "time": 11,
+    "squareoff": 1,
+    "rule_exit": 4,
+    "big_movers": 0,
+    "big_kept": 0,
+    "big_cut": 0,
+    "big_net": 0,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 16,
+      "net": 13988
+     }
+    }
+   },
+   "vs_b0": {
+    "skipped": 32,
+    "skipped_net": -12712,
+    "losers_avoided": 26,
+    "losers_avoided_rs": 16164,
+    "winners_missed": 6,
+    "winners_missed_rs": 3452,
+    "extra": 0,
+    "extra_net": 0,
+    "kept": 16,
+    "kept_diff": -14938
+   },
+   "paired": {
+    "p": 0.559,
+    "diff": -2226
+   },
+   "skip_p": 0.1018,
+   "skip_k": 32
+  },
+  "W10b": {
+   "final": {
+    "trades": 7,
+    "days": 6,
+    "win": 0.429,
+    "net": -2147,
+    "per_trade": -307,
+    "avg_win": 191,
+    "avg_loss": -680,
+    "biggest_loss": -1630,
+    "worst_day": -1630,
+    "max_dd": 2267,
+    "green_days": 0.333,
+    "top5_share": null,
+    "ex_top5": -2086,
+    "stops": 0,
+    "locks": 0,
+    "targets": 0,
+    "time": 5,
+    "squareoff": 0,
+    "rule_exit": 2,
+    "big_movers": 0,
+    "big_kept": 0,
+    "big_cut": 0,
+    "big_net": 0,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 7,
+      "net": -2147
+     }
+    }
+   },
+   "vs_b0": {
+    "skipped": 41,
+    "skipped_net": -3882,
+    "losers_avoided": 30,
+    "losers_avoided_rs": 17110,
+    "winners_missed": 11,
+    "winners_missed_rs": 13228,
+    "extra": 0,
+    "extra_net": 0,
+    "kept": 7,
+    "kept_diff": -22244
+   },
+   "paired": {
+    "p": 0.9015,
+    "diff": -18362
+   },
+   "skip_p": 0.8244,
+   "skip_k": 41
+  },
+  "X1": {
+   "final": {
+    "trades": 43,
+    "days": 26,
+    "win": 0.349,
+    "net": 17934,
+    "per_trade": 417,
+    "avg_win": 2287,
+    "avg_loss": -585,
+    "biggest_loss": -1863,
+    "worst_day": -1985,
+    "max_dd": 6821,
+    "green_days": 0.308,
+    "top5_share": 1.494,
+    "ex_top5": -8867,
+    "stops": 1,
+    "locks": 0,
+    "targets": 0,
+    "time": 11,
+    "squareoff": 2,
+    "rule_exit": 29,
+    "big_movers": 0,
+    "big_kept": 0,
+    "big_cut": 0,
+    "big_net": 0,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 43,
+      "net": 17934
+     }
+    }
+   },
+   "vs_b0": {
+    "skipped": 5,
+    "skipped_net": -1719,
+    "losers_avoided": 4,
+    "losers_avoided_rs": 1727,
+    "winners_missed": 1,
+    "winners_missed_rs": 7,
+    "extra": 0,
+    "extra_net": 0,
+    "kept": 43,
+    "kept_diff": 0
+   },
+   "paired": {
+    "p": 0.015,
+    "diff": 1719
+   },
+   "skip_p": 0.2036,
+   "skip_k": 5
+  },
+  "X2": {
+   "final": {
+    "trades": 39,
+    "days": 25,
+    "win": 0.308,
+    "net": 12762,
+    "per_trade": 327,
+    "avg_win": 2416,
+    "avg_loss": -601,
+    "biggest_loss": -1863,
+    "worst_day": -1985,
+    "max_dd": 8002,
+    "green_days": 0.28,
+    "top5_share": 1.982,
+    "ex_top5": -12533,
+    "stops": 1,
+    "locks": 0,
+    "targets": 0,
+    "time": 9,
+    "squareoff": 2,
+    "rule_exit": 27,
+    "big_movers": 0,
+    "big_kept": 0,
+    "big_cut": 0,
+    "big_net": 0,
+    "per_index": {
+     "BANKNIFTY": {
+      "trades": 39,
+      "net": 12762
+     }
+    }
+   },
+   "vs_b0": {
+    "skipped": 9,
+    "skipped_net": 3452,
+    "losers_avoided": 5,
+    "losers_avoided_rs": 1873,
+    "winners_missed": 4,
+    "winners_missed_rs": 5325,
+    "extra": 0,
+    "extra_net": 0,
+    "kept": 39,
+    "kept_diff": 0
+   },
+   "paired": {
+    "p": 0.7645,
+    "diff": -3452
+   },
+   "skip_p": 0.6088,
+   "skip_k": 9
+  }
+ }
+}

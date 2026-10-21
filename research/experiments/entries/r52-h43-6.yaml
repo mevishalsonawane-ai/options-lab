@@ -1,0 +1,36 @@
+id: r52-h43-6
+title: 'R52 re-test on Nov 2024+: H43-6 Enhanced EMA5/21 + ADX (MIDCP)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H43-6 (old verdict: Pre +246/day (2024 +183k only); hold -82/day; nested WF EMA -138/day)
+  makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- MIDCPNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''f'': 5, ''fam'': ''ema'', ''filt'': ''wide'', ''s'': 21, ''tf'': 5, ''thr'': 15, ''und'': ''MIDCPNIFTY''}
+  | ITM1/near | exits stop_pct=0.3,tgt_pct=0.6,sq_off=915 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 17
+results:
+  summary: 'Design original: 243 trades, win 43%, net Rs +5,335 (Rs +16/day), worst day Rs -14,574, max DD Rs -65,540, p 0.431
+    (coin-flip p 0.133); walk-forward Rs +45,509. Re-tune pick g13 ({''und'': ''MIDCPNIFTY'', ''fam'': ''ema'', ''f'': 5,
+    ''s'': 21, ''thr'': 15, ''tf'': 5, ''filt'': ''wide''} · ITM1/near · exits stop_pct=0.3,trail_pct=0.15,trail_arm=0.1,sq_off=915):
+    design 243 trades, win 45%, net Rs +11,970 (Rs +36/day), worst day Rs -12,800, max DD Rs -50,518, p 0.310 (coin-flip p
+    0.132); walk-forward Rs +31,207. FINAL original: 99 trades, win 48%, net Rs +8,226 (Rs +62/day), worst day Rs -16,730,
+    max DD Rs -55,490, p 0.177 (coin-flip p 0.282), q 0.83 -> FAIL. FINAL pick: 99 trades, win 45%, net Rs +2,304 (Rs +17/day),
+    worst day Rs -16,730, max DD Rs -68,735, p 0.398 (coin-flip p 0.390), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = part D''s ''enhanced'' ema pick: MIDCP 1-ITM, EMA 5/21 + ADX >
+  15, 5-min, filter wide, S30EOD, 1/day. Grid = one-step neighbours in partD''s grid.. Gates: final net > 0, p < 0.05, q <=
+  0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

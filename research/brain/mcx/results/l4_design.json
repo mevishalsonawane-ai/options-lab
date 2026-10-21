@@ -1,0 +1,1663 @@
+{
+ "variants": {
+  "B1:GOLDM:0": {
+   "rule": "B1",
+   "sym": "GOLDM",
+   "variant": {
+    "thr": 0.55
+   },
+   "twin_p": 0.467662,
+   "twin_mean": -653471.022106,
+   "trades": 1341,
+   "win_rate": 0.442953,
+   "net": -649032.323994,
+   "avg_win": 3456.505268,
+   "avg_loss": -3617.398197,
+   "worst_day": -50697.636527,
+   "max_dd": 656098.434877,
+   "top5_share": null,
+   "days": 150,
+   "net_per_day": -4326.88216,
+   "by_block": {
+    "0": -238020.18465,
+    "1": -52847.714622,
+    "2": -237592.056286,
+    "3": -120572.368437
+   },
+   "gross": 17600.0,
+   "cost": 666632.323994,
+   "exits": {
+    "time": 1122,
+    "stop": 219
+   },
+   "top5_removed": -888406.214075,
+   "worst_month": -263164.19707
+  },
+  "B1:GOLDM:1": {
+   "rule": "B1",
+   "sym": "GOLDM",
+   "variant": {
+    "thr": 0.6
+   },
+   "twin_p": 0.154229,
+   "twin_mean": -352676.115502,
+   "trades": 710,
+   "win_rate": 0.447887,
+   "net": -189077.240693,
+   "avg_win": 4089.288767,
+   "avg_loss": -3799.671093,
+   "worst_day": -45116.512209,
+   "max_dd": 316315.010473,
+   "top5_share": null,
+   "days": 147,
+   "net_per_day": -1286.239733,
+   "by_block": {
+    "0": -68030.864117,
+    "1": 133129.219459,
+    "2": -133597.790842,
+    "3": -120577.805193
+   },
+   "gross": 166510.0,
+   "cost": 355587.240693,
+   "exits": {
+    "time": 594,
+    "stop": 116
+   },
+   "top5_removed": -432077.834996,
+   "worst_month": -116258.955466
+  },
+  "B1:GOLDM:wf": {
+   "wf_net": -121046.376576,
+   "wf_picks": [
+    1,
+    1,
+    1
+   ],
+   "block_net": [
+    [
+     -238020.18465,
+     -52847.714622,
+     -237592.056286,
+     -120572.368437
+    ],
+    [
+     -68030.864117,
+     133129.219459,
+     -133597.790842,
+     -120577.805193
+    ]
+   ],
+   "frozen": 1
+  },
+  "B2:GOLDM:0": {
+   "rule": "B2",
+   "sym": "GOLDM",
+   "variant": {
+    "q": "size_q67"
+   },
+   "twin_p": 0.542289,
+   "twin_mean": -321288.402173,
+   "trades": 622,
+   "win_rate": 0.418006,
+   "net": -347752.989545,
+   "avg_win": 6703.00873,
+   "avg_loss": -5774.95928,
+   "worst_day": -83616.597217,
+   "max_dd": 411716.513823,
+   "top5_share": null,
+   "days": 105,
+   "net_per_day": -3311.933234,
+   "by_block": {
+    "0": -83075.683852,
+    "1": -170349.911736,
+    "2": -35180.198645,
+    "3": -59147.195312
+   },
+   "gross": -19130.0,
+   "cost": 328622.989545,
+   "exits": {
+    "time": 354,
+    "stop": 152,
+    "target": 116
+   },
+   "top5_removed": -551956.436739,
+   "worst_month": -241027.445343
+  },
+  "B2:GOLDM:1": {
+   "rule": "B2",
+   "sym": "GOLDM",
+   "variant": {
+    "q": "size_q80"
+   },
+   "twin_p": 0.422886,
+   "twin_mean": -246792.113931,
+   "trades": 454,
+   "win_rate": 0.427313,
+   "net": -221925.283555,
+   "avg_win": 7621.736824,
+   "avg_loss": -6540.547028,
+   "worst_day": -83616.597217,
+   "max_dd": 358743.750854,
+   "top5_share": null,
+   "days": 77,
+   "net_per_day": -2882.14654,
+   "by_block": {
+    "0": -4824.098621,
+    "1": -179958.411164,
+    "2": -17368.717214,
+    "3": -19774.056555
+   },
+   "gross": 19590.0,
+   "cost": 241515.283555,
+   "exits": {
+    "time": 262,
+    "stop": 106,
+    "target": 86
+   },
+   "top5_removed": -426128.730749,
+   "worst_month": -237733.932514
+  },
+  "B2:GOLDM:wf": {
+   "wf_net": -217101.184934,
+   "wf_picks": [
+    1,
+    1,
+    1
+   ],
+   "block_net": [
+    [
+     -83075.683852,
+     -170349.911736,
+     -35180.198645,
+     -59147.195312
+    ],
+    [
+     -4824.098621,
+     -179958.411164,
+     -17368.717214,
+     -19774.056555
+    ]
+   ],
+   "frozen": 1
+  },
+  "B3:GOLDM:0": {
+   "rule": "B3",
+   "sym": "GOLDM",
+   "variant": {
+    "k": 1.0
+   },
+   "twin_p": 0.482587,
+   "twin_mean": -121309.416159,
+   "trades": 254,
+   "win_rate": 0.452756,
+   "net": -120782.698754,
+   "avg_win": 1951.829201,
+   "avg_loss": -2483.762999,
+   "worst_day": -16205.197566,
+   "max_dd": 126909.543966,
+   "top5_share": null,
+   "days": 92,
+   "net_per_day": -1312.855421,
+   "by_block": {
+    "0": -7004.251861,
+    "1": -7256.70115,
+    "2": -65542.97712,
+    "3": -40978.768623
+   },
+   "gross": 12170.0,
+   "cost": 132952.698754,
+   "exits": {
+    "time": 165,
+    "stop": 68,
+    "target": 21
+   },
+   "top5_removed": -154895.83422,
+   "worst_month": -44306.396834
+  },
+  "B3:GOLDM:1": {
+   "rule": "B3",
+   "sym": "GOLDM",
+   "variant": {
+    "k": 1.5
+   },
+   "twin_p": 0.497512,
+   "twin_mean": -56025.795685,
+   "trades": 113,
+   "win_rate": 0.469027,
+   "net": -57804.703511,
+   "avg_win": 1883.301926,
+   "avg_loss": -2626.995093,
+   "worst_day": -12193.637088,
+   "max_dd": 64255.996452,
+   "top5_share": null,
+   "days": 60,
+   "net_per_day": -963.411725,
+   "by_block": {
+    "0": 1201.448274,
+    "1": -3878.22588,
+    "2": -44804.27879,
+    "3": -10323.647114
+   },
+   "gross": 1650.0,
+   "cost": 59454.703511,
+   "exits": {
+    "time": 79,
+    "stop": 31,
+    "target": 3
+   },
+   "top5_removed": -89984.099664,
+   "worst_month": -32862.005869
+  },
+  "B3:GOLDM:wf": {
+   "wf_net": -59006.151784,
+   "wf_picks": [
+    1,
+    1,
+    1
+   ],
+   "block_net": [
+    [
+     -7004.251861,
+     -7256.70115,
+     -65542.97712,
+     -40978.768623
+    ],
+    [
+     1201.448274,
+     -3878.22588,
+     -44804.27879,
+     -10323.647114
+    ]
+   ],
+   "frozen": 1
+  },
+  "B4:GOLDM:0": {
+   "rule": "B4",
+   "sym": "GOLDM",
+   "variant": {
+    "q": "ratio_q90"
+   },
+   "twin_p": 0.323383,
+   "twin_mean": -88536.232089,
+   "trades": 110,
+   "win_rate": 0.318182,
+   "net": -82368.246799,
+   "avg_win": 1921.174061,
+   "avg_loss": -1994.791186,
+   "worst_day": -21509.578422,
+   "max_dd": 87075.39812,
+   "top5_share": null,
+   "days": 50,
+   "net_per_day": -1647.364936,
+   "by_block": {
+    "0": -28593.607853,
+    "1": -12926.44455,
+    "2": -27618.336038,
+    "3": -13229.858357
+   },
+   "gross": -19425.0,
+   "cost": 62943.246799,
+   "exits": {
+    "time": 109,
+    "stop": 1
+   },
+   "top5_removed": -116950.67677,
+   "worst_month": -27187.944532
+  },
+  "B4:GOLDM:1": {
+   "rule": "B4",
+   "sym": "GOLDM",
+   "variant": {
+    "q": "ratio_q80"
+   },
+   "twin_p": 0.18408,
+   "twin_mean": -224154.223799,
+   "trades": 279,
+   "win_rate": 0.261649,
+   "net": -197415.446421,
+   "avg_win": 1547.360716,
+   "avg_loss": -1506.663974,
+   "worst_day": -30031.840958,
+   "max_dd": 197415.446421,
+   "top5_share": null,
+   "days": 102,
+   "net_per_day": -1935.445553,
+   "by_block": {
+    "0": -48293.388445,
+    "1": -40298.716416,
+    "2": -58282.686916,
+    "3": -50540.654644
+   },
+   "gross": -36460.0,
+   "cost": 160955.446421,
+   "exits": {
+    "time": 278,
+    "stop": 1
+   },
+   "top5_removed": -243696.130239,
+   "worst_month": -52671.882214
+  },
+  "B4:GOLDM:wf": {
+   "wf_net": -53774.638946,
+   "wf_picks": [
+    0,
+    0,
+    0
+   ],
+   "block_net": [
+    [
+     -28593.607853,
+     -12926.44455,
+     -27618.336038,
+     -13229.858357
+    ],
+    [
+     -48293.388445,
+     -40298.716416,
+     -58282.686916,
+     -50540.654644
+    ]
+   ],
+   "frozen": 0
+  },
+  "B1:SILVERM:0": {
+   "rule": "B1",
+   "sym": "SILVERM",
+   "variant": {
+    "thr": 0.55
+   },
+   "twin_p": 0.736318,
+   "twin_mean": -450123.310061,
+   "trades": 1140,
+   "win_rate": 0.480702,
+   "net": -698641.136097,
+   "avg_win": 6231.294688,
+   "avg_loss": -6948.294975,
+   "worst_day": -115780.92041,
+   "max_dd": 887209.156066,
+   "top5_share": null,
+   "days": 147,
+   "net_per_day": -4752.66079,
+   "by_block": {
+    "0": -147107.824564,
+    "1": -641326.699057,
+    "2": 66004.9875,
+    "3": 23788.400024
+   },
+   "gross": -222205.0,
+   "cost": 476436.136097,
+   "exits": {
+    "time": 984,
+    "stop": 156
+   },
+   "top5_removed": -1028467.140645,
+   "worst_month": -336492.211397
+  },
+  "B1:SILVERM:1": {
+   "rule": "B1",
+   "sym": "SILVERM",
+   "variant": {
+    "thr": 0.6
+   },
+   "twin_p": 0.825871,
+   "twin_mean": -258410.183938,
+   "trades": 685,
+   "win_rate": 0.459854,
+   "net": -539186.794801,
+   "avg_win": 7101.245285,
+   "avg_loss": -7502.916377,
+   "worst_day": -105220.560149,
+   "max_dd": 653948.489316,
+   "top5_share": null,
+   "days": 139,
+   "net_per_day": -3879.041689,
+   "by_block": {
+    "0": -79797.736469,
+    "1": -530114.754359,
+    "2": 35804.430992,
+    "3": 34921.265035
+   },
+   "gross": -248355.0,
+   "cost": 290831.794801,
+   "exits": {
+    "time": 599,
+    "stop": 86
+   },
+   "top5_removed": -881384.425564,
+   "worst_month": -250240.675688
+  },
+  "B1:SILVERM:wf": {
+   "wf_net": -459389.058331,
+   "wf_picks": [
+    1,
+    1,
+    1
+   ],
+   "block_net": [
+    [
+     -147107.824564,
+     -641326.699057,
+     66004.9875,
+     23788.400024
+    ],
+    [
+     -79797.736469,
+     -530114.754359,
+     35804.430992,
+     34921.265035
+    ]
+   ],
+   "frozen": 1
+  },
+  "B2:SILVERM:0": {
+   "rule": "B2",
+   "sym": "SILVERM",
+   "variant": {
+    "q": "size_q67"
+   },
+   "twin_p": 0.044776,
+   "twin_mean": -307518.576513,
+   "trades": 734,
+   "win_rate": 0.448229,
+   "net": 143490.301468,
+   "avg_win": 10225.364557,
+   "avg_loss": -7952.233673,
+   "worst_day": -50455.868064,
+   "max_dd": 261266.260841,
+   "top5_share": 2.428362,
+   "days": 109,
+   "net_per_day": 1316.424784,
+   "by_block": {
+    "0": -159748.982625,
+    "1": 264728.673745,
+    "2": 66868.86293,
+    "3": -28358.252582
+   },
+   "gross": 464975.0,
+   "cost": 321484.698532,
+   "exits": {
+    "time": 461,
+    "stop": 153,
+    "target": 120
+   },
+   "top5_removed": -204956.104284,
+   "worst_month": -123045.784969
+  },
+  "B2:SILVERM:1": {
+   "rule": "B2",
+   "sym": "SILVERM",
+   "variant": {
+    "q": "size_q80"
+   },
+   "twin_p": 0.029851,
+   "twin_mean": -256613.131677,
+   "trades": 570,
+   "win_rate": 0.457895,
+   "net": 253364.907487,
+   "avg_win": 11447.133681,
+   "avg_loss": -8848.987001,
+   "worst_day": -51977.704822,
+   "max_dd": 185780.236555,
+   "top5_share": 1.375275,
+   "days": 103,
+   "net_per_day": 2459.853471,
+   "by_block": {
+    "0": -157182.178182,
+    "1": 358534.759159,
+    "2": 50703.342189,
+    "3": 1308.98432
+   },
+   "gross": 503840.0,
+   "cost": 250475.092513,
+   "exits": {
+    "time": 364,
+    "stop": 113,
+    "target": 93
+   },
+   "top5_removed": -95081.498265,
+   "worst_month": -123826.424603
+  },
+  "B2:SILVERM:wf": {
+   "wf_net": 410547.085668,
+   "wf_picks": [
+    1,
+    1,
+    1
+   ],
+   "block_net": [
+    [
+     -159748.982625,
+     264728.673745,
+     66868.86293,
+     -28358.252582
+    ],
+    [
+     -157182.178182,
+     358534.759159,
+     50703.342189,
+     1308.98432
+    ]
+   ],
+   "frozen": 1
+  },
+  "B3:SILVERM:0": {
+   "rule": "B3",
+   "sym": "SILVERM",
+   "variant": {
+    "k": 1.0
+   },
+   "twin_p": 0.378109,
+   "twin_mean": -41897.545604,
+   "trades": 99,
+   "win_rate": 0.494949,
+   "net": -26326.476741,
+   "avg_win": 3947.189601,
+   "avg_loss": -4394.775344,
+   "worst_day": -19183.455789,
+   "max_dd": 55759.340602,
+   "top5_share": null,
+   "days": 44,
+   "net_per_day": -598.329017,
+   "by_block": {
+    "0": 5630.579811,
+    "1": -10326.352435,
+    "2": -3247.474672,
+    "3": -18383.229445
+   },
+   "gross": 20290.0,
+   "cost": 46616.476741,
+   "exits": {
+    "time": 64,
+    "stop": 26,
+    "target": 9
+   },
+   "top5_removed": -76220.586229,
+   "worst_month": -26116.479824
+  },
+  "B3:SILVERM:1": {
+   "rule": "B3",
+   "sym": "SILVERM",
+   "variant": {
+    "k": 1.5
+   },
+   "twin_p": 0.472637,
+   "twin_mean": -17289.124004,
+   "trades": 50,
+   "win_rate": 0.54,
+   "net": -15878.70903,
+   "avg_win": 3961.581512,
+   "avg_loss": -5340.930864,
+   "worst_day": -19183.455789,
+   "max_dd": 34302.481968,
+   "top5_share": null,
+   "days": 27,
+   "net_per_day": -588.100334,
+   "by_block": {
+    "0": 5648.530396,
+    "1": -8061.304574,
+    "2": -4128.120493,
+    "3": -9337.81436
+   },
+   "gross": 8980.0,
+   "cost": 24858.70903,
+   "exits": {
+    "time": 32,
+    "stop": 17,
+    "target": 1
+   },
+   "top5_removed": -59887.258967,
+   "worst_month": -12050.309912
+  },
+  "B3:SILVERM:wf": {
+   "wf_net": -21527.239427,
+   "wf_picks": [
+    1,
+    1,
+    1
+   ],
+   "block_net": [
+    [
+     5630.579811,
+     -10326.352435,
+     -3247.474672,
+     -18383.229445
+    ],
+    [
+     5648.530396,
+     -8061.304574,
+     -4128.120493,
+     -9337.81436
+    ]
+   ],
+   "frozen": 1
+  },
+  "B4:SILVERM:0": {
+   "rule": "B4",
+   "sym": "SILVERM",
+   "variant": {
+    "q": "ratio_q90"
+   },
+   "twin_p": 0.726368,
+   "twin_mean": -422392.808891,
+   "trades": 315,
+   "win_rate": 0.209524,
+   "net": -447384.622623,
+   "avg_win": 1084.235807,
+   "avg_loss": -2084.113196,
+   "worst_day": -23080.108917,
+   "max_dd": 447384.622623,
+   "top5_share": null,
+   "days": 95,
+   "net_per_day": -4709.311817,
+   "by_block": {
+    "0": -85574.039464,
+    "1": -29824.343001,
+    "2": -236787.72672,
+    "3": -95198.513437
+   },
+   "gross": -180047.5,
+   "cost": 267337.122623,
+   "exits": {
+    "time": 315
+   },
+   "top5_removed": -476816.590648,
+   "worst_month": -149032.68254
+  },
+  "B4:SILVERM:1": {
+   "rule": "B4",
+   "sym": "SILVERM",
+   "variant": {
+    "q": "ratio_q80"
+   },
+   "twin_p": 0.900498,
+   "twin_mean": -607224.439457,
+   "trades": 451,
+   "win_rate": 0.206208,
+   "net": -668676.301635,
+   "avg_win": 937.536359,
+   "avg_loss": -2111.360846,
+   "worst_day": -36807.761672,
+   "max_dd": 669083.158067,
+   "top5_share": null,
+   "days": 120,
+   "net_per_day": -5572.302514,
+   "by_block": {
+    "0": -146111.140798,
+    "1": -137186.68085,
+    "2": -238372.066835,
+    "3": -147006.413152
+   },
+   "gross": -282632.5,
+   "cost": 386043.801635,
+   "exits": {
+    "time": 451
+   },
+   "top5_removed": -696255.278454,
+   "worst_month": -149032.68254
+  },
+  "B4:SILVERM:wf": {
+   "wf_net": -361810.583159,
+   "wf_picks": [
+    0,
+    0,
+    0
+   ],
+   "block_net": [
+    [
+     -85574.039464,
+     -29824.343001,
+     -236787.72672,
+     -95198.513437
+    ],
+    [
+     -146111.140798,
+     -137186.68085,
+     -238372.066835,
+     -147006.413152
+    ]
+   ],
+   "frozen": 0
+  },
+  "B1:CRUDEOIL:0": {
+   "rule": "B1",
+   "sym": "CRUDEOIL",
+   "variant": {
+    "thr": 0.55
+   },
+   "twin_p": 0.069652,
+   "twin_mean": -117114.174993,
+   "trades": 1438,
+   "win_rate": 0.385257,
+   "net": -76365.777458,
+   "avg_win": 491.067544,
+   "avg_loss": -394.1371,
+   "worst_day": -9711.65442,
+   "max_dd": 76980.397928,
+   "top5_share": null,
+   "days": 150,
+   "net_per_day": -509.105183,
+   "by_block": {
+    "0": -34193.130139,
+    "1": 306.317196,
+    "2": -14926.541684,
+    "3": -27552.422831
+   },
+   "gross": 34580.0,
+   "cost": 110945.777458,
+   "exits": {
+    "time": 1221,
+    "stop": 217
+   },
+   "top5_removed": -106787.37183,
+   "worst_month": -22276.626215
+  },
+  "B1:CRUDEOIL:1": {
+   "rule": "B1",
+   "sym": "CRUDEOIL",
+   "variant": {
+    "thr": 0.6
+   },
+   "twin_p": 0.825871,
+   "twin_mean": -68589.469021,
+   "trades": 860,
+   "win_rate": 0.373256,
+   "net": -85915.181063,
+   "avg_win": 429.970933,
+   "avg_loss": -415.4654,
+   "worst_day": -7740.9682,
+   "max_dd": 85922.398848,
+   "top5_share": null,
+   "days": 124,
+   "net_per_day": -692.864363,
+   "by_block": {
+    "0": -25737.781354,
+    "1": -16188.554784,
+    "2": -38989.800022,
+    "3": -4999.044902
+   },
+   "gross": -20690.0,
+   "cost": 65225.181063,
+   "exits": {
+    "time": 752,
+    "stop": 108
+   },
+   "top5_removed": -99793.42111,
+   "worst_month": -32845.091246
+  },
+  "B1:CRUDEOIL:wf": {
+   "wf_net": -58667.519299,
+   "wf_picks": [
+    1,
+    0,
+    0
+   ],
+   "block_net": [
+    [
+     -34193.130139,
+     306.317196,
+     -14926.541684,
+     -27552.422831
+    ],
+    [
+     -25737.781354,
+     -16188.554784,
+     -38989.800022,
+     -4999.044902
+    ]
+   ],
+   "frozen": 0
+  },
+  "B2:CRUDEOIL:0": {
+   "rule": "B2",
+   "sym": "CRUDEOIL",
+   "variant": {
+    "q": "size_q67"
+   },
+   "twin_p": 0.024876,
+   "twin_mean": -57506.95707,
+   "trades": 785,
+   "win_rate": 0.43949,
+   "net": -23058.791896,
+   "avg_win": 583.77929,
+   "avg_loss": -510.14238,
+   "worst_day": -7531.404556,
+   "max_dd": 33782.190745,
+   "top5_share": null,
+   "days": 117,
+   "net_per_day": -197.083691,
+   "by_block": {
+    "0": -8740.963512,
+    "1": -11737.15265,
+    "2": -11405.005435,
+    "3": 8824.329702
+   },
+   "gross": 39160.0,
+   "cost": 62218.791896,
+   "exits": {
+    "time": 484,
+    "stop": 176,
+    "target": 125
+   },
+   "top5_removed": -39134.397808,
+   "worst_month": -11644.191768
+  },
+  "B2:CRUDEOIL:1": {
+   "rule": "B2",
+   "sym": "CRUDEOIL",
+   "variant": {
+    "q": "size_q80"
+   },
+   "twin_p": 0.144279,
+   "twin_mean": -53261.660034,
+   "trades": 694,
+   "win_rate": 0.430836,
+   "net": -31612.043456,
+   "avg_win": 610.857114,
+   "avg_loss": -542.426128,
+   "worst_day": -7531.404556,
+   "max_dd": 36687.58172,
+   "top5_share": null,
+   "days": 107,
+   "net_per_day": -295.439658,
+   "by_block": {
+    "0": -7607.706491,
+    "1": -11293.739051,
+    "2": -14774.841228,
+    "3": 2064.243313
+   },
+   "gross": 23910.0,
+   "cost": 55522.043456,
+   "exits": {
+    "time": 438,
+    "stop": 154,
+    "target": 102
+   },
+   "top5_removed": -47687.649369,
+   "worst_month": -11702.705106
+  },
+  "B2:CRUDEOIL:wf": {
+   "wf_net": -17244.250577,
+   "wf_picks": [
+    1,
+    1,
+    0
+   ],
+   "block_net": [
+    [
+     -8740.963512,
+     -11737.15265,
+     -11405.005435,
+     8824.329702
+    ],
+    [
+     -7607.706491,
+     -11293.739051,
+     -14774.841228,
+     2064.243313
+    ]
+   ],
+   "frozen": 0
+  },
+  "B3:CRUDEOIL:0": {
+   "rule": "B3",
+   "sym": "CRUDEOIL",
+   "variant": {
+    "k": 1.0
+   },
+   "twin_p": 0.616915,
+   "twin_mean": -13663.162808,
+   "trades": 176,
+   "win_rate": 0.346591,
+   "net": -14581.081112,
+   "avg_win": 378.059244,
+   "avg_loss": -327.327782,
+   "worst_day": -2753.733013,
+   "max_dd": 15503.469048,
+   "top5_share": null,
+   "days": 56,
+   "net_per_day": -260.376448,
+   "by_block": {
+    "0": -3475.025381,
+    "1": -500.711352,
+    "3": -10605.344379
+   },
+   "gross": -290.0,
+   "cost": 14291.081112,
+   "exits": {
+    "time": 112,
+    "stop": 50,
+    "target": 14
+   },
+   "top5_removed": -21117.613611,
+   "worst_month": -10483.634654
+  },
+  "B3:CRUDEOIL:1": {
+   "rule": "B3",
+   "sym": "CRUDEOIL",
+   "variant": {
+    "k": 1.5
+   },
+   "twin_p": 0.313433,
+   "twin_mean": -7730.273091,
+   "trades": 89,
+   "win_rate": 0.382022,
+   "net": -5678.886279,
+   "avg_win": 373.945186,
+   "avg_loss": -334.418593,
+   "worst_day": -2388.224682,
+   "max_dd": 7488.505157,
+   "top5_share": null,
+   "days": 39,
+   "net_per_day": -145.612469,
+   "by_block": {
+    "0": -2055.044968,
+    "3": -3623.841311
+   },
+   "gross": 1520.0,
+   "cost": 7198.886279,
+   "exits": {
+    "time": 61,
+    "stop": 25,
+    "target": 3
+   },
+   "top5_removed": -11863.621601,
+   "worst_month": -6846.321732
+  },
+  "B3:CRUDEOIL:wf": {
+   "wf_net": -3623.841311,
+   "wf_picks": [
+    1,
+    1,
+    1
+   ],
+   "block_net": [
+    [
+     -3475.025381,
+     -500.711352,
+     0,
+     -10605.344379
+    ],
+    [
+     -2055.044968,
+     0,
+     0,
+     -3623.841311
+    ]
+   ],
+   "frozen": 1
+  },
+  "B4:CRUDEOIL:0": {
+   "rule": "B4",
+   "sym": "CRUDEOIL",
+   "variant": {
+    "q": "ratio_q90"
+   },
+   "twin_p": 0.945274,
+   "twin_mean": -324480.897787,
+   "trades": 472,
+   "win_rate": 0.283898,
+   "net": -391465.590014,
+   "avg_win": 1833.960162,
+   "avg_loss": -1885.255183,
+   "worst_day": -25059.925602,
+   "max_dd": 392913.496565,
+   "top5_share": null,
+   "days": 104,
+   "net_per_day": -3764.092212,
+   "by_block": {
+    "0": -16096.600455,
+    "1": -28449.856584,
+    "2": -302241.9912,
+    "3": -44677.141775
+   },
+   "gross": -11520.0,
+   "cost": 379945.590014,
+   "exits": {
+    "time": 472
+   },
+   "top5_removed": -443137.347661,
+   "worst_month": -164050.199806
+  },
+  "B4:CRUDEOIL:1": {
+   "rule": "B4",
+   "sym": "CRUDEOIL",
+   "variant": {
+    "q": "ratio_q80"
+   },
+   "twin_p": 0.985075,
+   "twin_mean": -412331.497809,
+   "trades": 612,
+   "win_rate": 0.272876,
+   "net": -507182.052853,
+   "avg_win": 1708.450943,
+   "avg_loss": -1780.883956,
+   "worst_day": -23821.128187,
+   "max_dd": 507182.052853,
+   "top5_share": null,
+   "days": 122,
+   "net_per_day": -4157.229941,
+   "by_block": {
+    "0": -30616.374311,
+    "1": -42465.119771,
+    "2": -321888.423991,
+    "3": -112212.134779
+   },
+   "gross": -58550.0,
+   "cost": 448632.052853,
+   "exits": {
+    "time": 612
+   },
+   "top5_removed": -557831.750127,
+   "worst_month": -180743.328826
+  },
+  "B4:CRUDEOIL:wf": {
+   "wf_net": -375368.989559,
+   "wf_picks": [
+    0,
+    0,
+    0
+   ],
+   "block_net": [
+    [
+     -16096.600455,
+     -28449.856584,
+     -302241.9912,
+     -44677.141775
+    ],
+    [
+     -30616.374311,
+     -42465.119771,
+     -321888.423991,
+     -112212.134779
+    ]
+   ],
+   "frozen": 0
+  },
+  "B1:NATURALGAS:0": {
+   "rule": "B1",
+   "sym": "NATURALGAS",
+   "variant": {
+    "thr": 0.55
+   },
+   "twin_p": 0.631841,
+   "twin_mean": -109459.368407,
+   "trades": 1315,
+   "win_rate": 0.428897,
+   "net": -120671.912284,
+   "avg_win": 568.448941,
+   "avg_loss": -587.586039,
+   "worst_day": -15278.7368,
+   "max_dd": 121493.005529,
+   "top5_share": null,
+   "days": 150,
+   "net_per_day": -804.479415,
+   "by_block": {
+    "0": -51037.710554,
+    "1": -31079.459271,
+    "2": -19185.152887,
+    "3": -19369.589572
+   },
+   "gross": -4100.0,
+   "cost": 116571.912284,
+   "exits": {
+    "time": 1072,
+    "stop": 243
+   },
+   "top5_removed": -168019.511309,
+   "worst_month": -37912.335564
+  },
+  "B1:NATURALGAS:1": {
+   "rule": "B1",
+   "sym": "NATURALGAS",
+   "variant": {
+    "thr": 0.6
+   },
+   "twin_p": 0.358209,
+   "twin_mean": -49283.136378,
+   "trades": 628,
+   "win_rate": 0.417197,
+   "net": -41809.937909,
+   "avg_win": 560.234897,
+   "avg_loss": -515.277271,
+   "worst_day": -6262.288886,
+   "max_dd": 50746.070759,
+   "top5_share": null,
+   "days": 146,
+   "net_per_day": -286.369438,
+   "by_block": {
+    "0": -48946.364035,
+    "1": 25341.16622,
+    "2": -14212.47487,
+    "3": -3992.265224
+   },
+   "gross": 14375.0,
+   "cost": 56184.937909,
+   "exits": {
+    "time": 505,
+    "stop": 123
+   },
+   "top5_removed": -69584.431284,
+   "worst_month": -31815.427086
+  },
+  "B1:NATURALGAS:wf": {
+   "wf_net": 7136.426126,
+   "wf_picks": [
+    1,
+    1,
+    1
+   ],
+   "block_net": [
+    [
+     -51037.710554,
+     -31079.459271,
+     -19185.152887,
+     -19369.589572
+    ],
+    [
+     -48946.364035,
+     25341.16622,
+     -14212.47487,
+     -3992.265224
+    ]
+   ],
+   "frozen": 1
+  },
+  "B2:NATURALGAS:0": {
+   "rule": "B2",
+   "sym": "NATURALGAS",
+   "variant": {
+    "q": "size_q67"
+   },
+   "twin_p": 0.004975,
+   "twin_mean": -57985.536659,
+   "trades": 615,
+   "win_rate": 0.487805,
+   "net": 19470.207851,
+   "avg_win": 997.369483,
+   "avg_loss": -888.065514,
+   "worst_day": -8598.685232,
+   "max_dd": 35265.584111,
+   "top5_share": 1.357182,
+   "days": 118,
+   "net_per_day": 165.001761,
+   "by_block": {
+    "0": -3220.1337,
+    "1": 27221.995643,
+    "2": -5900.80005,
+    "3": 1369.145958
+   },
+   "gross": 76025.0,
+   "cost": 56554.792149,
+   "exits": {
+    "time": 289,
+    "stop": 173,
+    "target": 153
+   },
+   "top5_removed": -6954.416571,
+   "worst_month": -11065.582317
+  },
+  "B2:NATURALGAS:1": {
+   "rule": "B2",
+   "sym": "NATURALGAS",
+   "variant": {
+    "q": "size_q80"
+   },
+   "twin_p": 0.004975,
+   "twin_mean": -35700.684157,
+   "trades": 421,
+   "win_rate": 0.47981,
+   "net": 20092.823823,
+   "avg_win": 1157.013163,
+   "avg_loss": -975.451302,
+   "worst_day": -9913.1742,
+   "max_dd": 26428.818496,
+   "top5_share": 1.315127,
+   "days": 95,
+   "net_per_day": 211.503409,
+   "by_block": {
+    "0": -4934.436322,
+    "1": 27662.12683,
+    "2": -1275.614464,
+    "3": -1359.252221
+   },
+   "gross": 58875.0,
+   "cost": 38782.176177,
+   "exits": {
+    "time": 213,
+    "stop": 110,
+    "target": 98
+   },
+   "top5_removed": -6331.800599,
+   "worst_month": -9524.636471
+  },
+  "B2:NATURALGAS:wf": {
+   "wf_net": 19961.943372,
+   "wf_picks": [
+    0,
+    0,
+    1
+   ],
+   "block_net": [
+    [
+     -3220.1337,
+     27221.995643,
+     -5900.80005,
+     1369.145958
+    ],
+    [
+     -4934.436322,
+     27662.12683,
+     -1275.614464,
+     -1359.252221
+    ]
+   ],
+   "frozen": 1
+  },
+  "B3:NATURALGAS:0": {
+   "rule": "B3",
+   "sym": "NATURALGAS",
+   "variant": {
+    "k": 1.0
+   },
+   "twin_p": 0.477612,
+   "twin_mean": -23017.856086,
+   "trades": 271,
+   "win_rate": 0.387454,
+   "net": -22614.649589,
+   "avg_win": 305.453048,
+   "avg_loss": -329.441082,
+   "worst_day": -2402.957911,
+   "max_dd": 25770.968123,
+   "top5_share": null,
+   "days": 92,
+   "net_per_day": -245.811409,
+   "by_block": {
+    "0": 1888.256614,
+    "1": -2274.760528,
+    "2": -11802.545689,
+    "3": -10425.599986
+   },
+   "gross": 1475.0,
+   "cost": 24089.649589,
+   "exits": {
+    "time": 153,
+    "stop": 87,
+    "target": 31
+   },
+   "top5_removed": -26493.905239,
+   "worst_month": -9126.187248
+  },
+  "B3:NATURALGAS:1": {
+   "rule": "B3",
+   "sym": "NATURALGAS",
+   "variant": {
+    "k": 1.5
+   },
+   "twin_p": 0.258706,
+   "twin_mean": -12394.515669,
+   "trades": 140,
+   "win_rate": 0.4,
+   "net": -9398.699819,
+   "avg_win": 296.185112,
+   "avg_loss": -309.346025,
+   "worst_day": -1751.162552,
+   "max_dd": 10978.243252,
+   "top5_share": null,
+   "days": 67,
+   "net_per_day": -140.279102,
+   "by_block": {
+    "0": 992.533185,
+    "1": -2101.328201,
+    "2": -2915.183393,
+    "3": -5374.72141
+   },
+   "gross": 2975.0,
+   "cost": 12373.699819,
+   "exits": {
+    "time": 97,
+    "stop": 38,
+    "target": 5
+   },
+   "top5_removed": -13182.437149,
+   "worst_month": -4825.778416
+  },
+  "B3:NATURALGAS:wf": {
+   "wf_net": -19452.027627,
+   "wf_picks": [
+    0,
+    0,
+    1
+   ],
+   "block_net": [
+    [
+     1888.256614,
+     -2274.760528,
+     -11802.545689,
+     -10425.599986
+    ],
+    [
+     992.533185,
+     -2101.328201,
+     -2915.183393,
+     -5374.72141
+    ]
+   ],
+   "frozen": 1
+  },
+  "B4:NATURALGAS:0": {
+   "rule": "B4",
+   "sym": "NATURALGAS",
+   "variant": {
+    "q": "ratio_q90"
+   },
+   "twin_p": 0.820896,
+   "twin_mean": -160181.957763,
+   "trades": 308,
+   "win_rate": 0.165584,
+   "net": -177332.056631,
+   "avg_win": 1028.972369,
+   "avg_loss": -894.200963,
+   "worst_day": -14349.12345,
+   "max_dd": 177332.056631,
+   "top5_share": null,
+   "days": 100,
+   "net_per_day": -1773.320566,
+   "by_block": {
+    "0": -16282.870784,
+    "1": -100541.831472,
+    "2": -22663.856389,
+    "3": -37843.497986
+   },
+   "gross": -58187.5,
+   "cost": 119144.556631,
+   "exits": {
+    "time": 308
+   },
+   "top5_removed": -198236.95467,
+   "worst_month": -67604.722579
+  },
+  "B4:NATURALGAS:1": {
+   "rule": "B4",
+   "sym": "NATURALGAS",
+   "variant": {
+    "q": "ratio_q80"
+   },
+   "twin_p": 0.681592,
+   "twin_mean": -231322.748049,
+   "trades": 447,
+   "win_rate": 0.217002,
+   "net": -241644.504627,
+   "avg_win": 847.05908,
+   "avg_loss": -925.169244,
+   "worst_day": -14349.12345,
+   "max_dd": 241644.504627,
+   "top5_share": null,
+   "days": 125,
+   "net_per_day": -1933.156037,
+   "by_block": {
+    "0": -22520.592242,
+    "1": -127566.162611,
+    "2": -41193.401067,
+    "3": -50364.348706
+   },
+   "gross": -66875.0,
+   "cost": 174769.504628,
+   "exits": {
+    "time": 447
+   },
+   "top5_removed": -258850.953971,
+   "worst_month": -76866.427136
+  },
+  "B4:NATURALGAS:wf": {
+   "wf_net": -161049.185848,
+   "wf_picks": [
+    0,
+    0,
+    0
+   ],
+   "block_net": [
+    [
+     -16282.870784,
+     -100541.831472,
+     -22663.856389,
+     -37843.497986
+    ],
+    [
+     -22520.592242,
+     -127566.162611,
+     -41193.401067,
+     -50364.348706
+    ]
+   ],
+   "frozen": 0
+  }
+ },
+ "bh_q": {
+  "B1:GOLDM:0": 0.79602,
+  "B1:GOLDM:1": 0.616915,
+  "B2:GOLDM:0": 0.826344,
+  "B2:GOLDM:1": 0.79602,
+  "B3:GOLDM:0": 0.79602,
+  "B3:GOLDM:1": 0.79602,
+  "B4:GOLDM:0": 0.79602,
+  "B4:GOLDM:1": 0.654505,
+  "B1:SILVERM:0": 0.906238,
+  "B1:SILVERM:1": 0.911306,
+  "B2:SILVERM:0": 0.286567,
+  "B2:SILVERM:1": 0.238806,
+  "B3:SILVERM:0": 0.79602,
+  "B3:SILVERM:1": 0.79602,
+  "B4:SILVERM:0": 0.906238,
+  "B4:SILVERM:1": 0.960531,
+  "B1:CRUDEOIL:0": 0.371476,
+  "B1:CRUDEOIL:1": 0.911306,
+  "B2:CRUDEOIL:0": 0.238806,
+  "B2:CRUDEOIL:1": 0.616915,
+  "B3:CRUDEOIL:0": 0.879083,
+  "B3:CRUDEOIL:1": 0.79602,
+  "B4:CRUDEOIL:0": 0.975766,
+  "B4:CRUDEOIL:1": 0.985075,
+  "B1:NATURALGAS:0": 0.879083,
+  "B1:NATURALGAS:1": 0.79602,
+  "B2:NATURALGAS:0": 0.079602,
+  "B2:NATURALGAS:1": 0.079602,
+  "B3:NATURALGAS:0": 0.79602,
+  "B3:NATURALGAS:1": 0.79602,
+  "B4:NATURALGAS:0": 0.911306,
+  "B4:NATURALGAS:1": 0.906238
+ },
+ "gates": {
+  "B1:GOLDM": {
+   "frozen": "B1:GOLDM:1",
+   "q": 0.616915,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B1:SILVERM": {
+   "frozen": "B1:SILVERM:1",
+   "q": 0.911306,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B1:CRUDEOIL": {
+   "frozen": "B1:CRUDEOIL:0",
+   "q": 0.371476,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B1:NATURALGAS": {
+   "frozen": "B1:NATURALGAS:1",
+   "q": 0.79602,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "True",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B2:GOLDM": {
+   "frozen": "B2:GOLDM:1",
+   "q": 0.79602,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B2:SILVERM": {
+   "frozen": "B2:SILVERM:1",
+   "q": 0.238806,
+   "gates": {
+    "net_pos": true,
+    "wf_pos": "True",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B2:CRUDEOIL": {
+   "frozen": "B2:CRUDEOIL:0",
+   "q": 0.238806,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B2:NATURALGAS": {
+   "frozen": "B2:NATURALGAS:1",
+   "q": 0.079602,
+   "gates": {
+    "net_pos": true,
+    "wf_pos": "True",
+    "q<=0.10": true,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B3:GOLDM": {
+   "frozen": "B3:GOLDM:1",
+   "q": 0.79602,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B3:SILVERM": {
+   "frozen": "B3:SILVERM:1",
+   "q": 0.79602,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B3:CRUDEOIL": {
+   "frozen": "B3:CRUDEOIL:1",
+   "q": 0.79602,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B3:NATURALGAS": {
+   "frozen": "B3:NATURALGAS:1",
+   "q": 0.79602,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B4:GOLDM": {
+   "frozen": "B4:GOLDM:0",
+   "q": 0.79602,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B4:SILVERM": {
+   "frozen": "B4:SILVERM:0",
+   "q": 0.906238,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B4:CRUDEOIL": {
+   "frozen": "B4:CRUDEOIL:0",
+   "q": 0.975766,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  },
+  "B4:NATURALGAS": {
+   "frozen": "B4:NATURALGAS:0",
+   "q": 0.911306,
+   "gates": {
+    "net_pos": false,
+    "wf_pos": "False",
+    "q<=0.10": false,
+    "trades>=30": true,
+    "top5_removed_pos": false
+   },
+   "verdict": "fail"
+  }
+ }
+}

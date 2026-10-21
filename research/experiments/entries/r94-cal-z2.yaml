@@ -1,0 +1,24 @@
+id: r94-cal-z2
+title: 'R94 idea 1 Z2: MCX calendar-spread mean reversion, z over 400 obs, exit z = 0 / 5 sessions / 2-sd stop'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R94_MCX_ADVANCED.md
+hypothesis: 'Pre-registered (research/hunt/r94_mcx_advanced/PREREG.md): R94 idea 1 Z2: MCX calendar-spread mean reversion, z over 400 obs, exit z = 0 / 5 sessions / 2-sd stop; after real MCX costs on every leg it beats random entry (or zero for every-day option selling), p <= 0.05 and BH q <= 0.10 over all R94 cells, walk-forward, worst month >= -Rs 13k, then holds on the locked holdout read once; Boss risk rules: hard stop, 2% of Rs 1 lakh, liquid contracts. Signal source: the two futures legs.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 21 Oct 2026: fut_1m_live_mcx (contracts live on 19 Oct, 1-minute), fut_daily_continuous (near month, 2012 - 16 Oct 2026), options_rolling_1m MCX MONTH books (ATM-3..+3, 5 Aug 2025 - 19 Oct 2026); Dukascopy 1-minute BID CFDs (XAUUSD, XAGUSD, LIGHTCMDUSD, GASCMDUSD) for idea 5'
+period:
+  design: May - 31 Aug 2026 (per pair, from its first common print)
+  holdout: 1 Sep - 19 Oct 2026 (read once)
+instruments:
+- 'the same 16 pairs'
+features:
+- 'signal source: the two futures legs'
+model_or_rule: 'R94 idea 1 Z2: MCX calendar-spread mean reversion, z over 400 obs, exit z = 0 / 5 sessions / 2-sd stop'
+settings: research/hunt/r94_mcx_advanced/ (PREREG.md, NOTES.md, the idea module)
+prereg: research/hunt/r94_mcx_advanced/PREREG.md
+variants_tried: 16
+results:
+  summary: '16 cells (one BH family of 152 R94 cells). Design net after costs per cell, twin / bootstrap p and BH q, then the one holdout read: c-Z2-CRUDEOIL-2610-2611 1 tr -68 (p 0.355, q 1.00) -> holdout 8 tr -23,724; c-Z2-CRUDEOIL-2611-2612 0 tr +0 (p 1.000, q 1.00) -> holdout 3 tr -15,902; c-Z2-CRUDEOILM-2610-2611 7 tr -558 (p 0.137, q 1.00) -> holdout 8 tr -3,821; c-Z2-CRUDEOILM-2611-2612 1 tr -911 (p 0.993, q 1.00) -> holdout 12 tr -3,418; c-Z2-CRUDEOILM-2612-2701 0 tr +0 (p 1.000, q 1.00) -> holdout 6 tr -1,402; c-Z2-GOLDM-2611-2612 27 tr -45,295 (p 0.913, q 1.00) -> holdout 23 tr -31,311; c-Z2-GOLDM-2612-2701 23 tr -36,109 (p 0.635, q 1.00) -> holdout 33 tr -45,876; c-Z2-GOLDM-2701-2702 1 tr +2,581 (p 0.017, q 0.70) -> holdout 19 tr -22,423; c-Z2-NATGASMINI-2610-2611 8 tr -2,825 (p 0.684, q 1.00) -> holdout 6 tr +244; c-Z2-NATGASMINI-2611-2612 3 tr +49 (p 0.105, q 1.00) -> holdout 10 tr -474; c-Z2-NATGASMINI-2612-2701 0 tr +0 (p 1.000, q 1.00) -> holdout 4 tr -877; c-Z2-NATURALGAS-2610-2611 4 tr -10,046 (p 0.815, q 1.00) -> holdout 7 tr +8,636; c-Z2-NATURALGAS-2611-2612 0 tr +0 (p 1.000, q 1.00) -> holdout 11 tr -6,087; c-Z2-SILVER-2612-2703 0 tr +0 (p 1.000, q 1.00) -> holdout 22 tr -34,573; c-Z2-SILVERM-2611-2702 18 tr -18,031 (p 0.431, q 1.00) -> holdout 27 tr -21,227; c-Z2-SILVERM-2702-2704 2 tr -2,736 (p 0.530, q 1.00) -> holdout 29 tr -23,640. Design passers 0, design + holdout passers 0.'
+  costs: 'Zerodha MCX charges on every leg (McxCosts.kt), half-spread on every fill (futures R53 rule, far month 3x; options R85 strict ATM rate x (1 + 0.5 |offset|), >= 1 tick); 1 lot; margins without spread benefit'
+holdout_read: true
+verdict: rejected
+notes: 'Cells: c-Z2-CRUDEOIL-2610-2611, c-Z2-CRUDEOIL-2611-2612, c-Z2-CRUDEOILM-2610-2611, c-Z2-CRUDEOILM-2611-2612, c-Z2-CRUDEOILM-2612-2701, c-Z2-GOLDM-2611-2612, c-Z2-GOLDM-2612-2701, c-Z2-GOLDM-2701-2702, c-Z2-NATGASMINI-2610-2611, c-Z2-NATGASMINI-2611-2612, c-Z2-NATGASMINI-2612-2701, c-Z2-NATURALGAS-2610-2611, c-Z2-NATURALGAS-2611-2612, c-Z2-SILVER-2612-2703, c-Z2-SILVERM-2611-2702, c-Z2-SILVERM-2702-2704'

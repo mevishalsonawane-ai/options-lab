@@ -154,4 +154,89 @@ class SecureBlobsTest : RobolectricTest() {
         assertTrue(line, line.startsWith("Settings size:"))
         assertFalse(line, line.contains("secret-looking"))
     }
+
+    /**
+     * 20 Oct (the 17 Oct 01:09 ANR, "Input dispatching timed out"): a value's lock was held for a whole Keystore write, so the
+     * screen's thread putting the same key waited for it. Now a write holds only its own write lock: a put in the meantime
+     * returns at once, and the newer value is the one left on disk.
+     */
+    @Test fun aSlowWriteNeverHoldsAPutOfTheSameKey() {
+        SecurePrefs.put(big, bulk(10))
+        Vault.testWriteDelayMs = 1_500L
+        try {
+            val writer = Thread { SecureBlobs.put(big, bulk(20)) }.apply { start() }
+            // The write is under way: the writer sleeps inside the vault's write (polled, never a fixed guess).
+            val until = System.currentTimeMillis() + 10_000
+            while (writer.state != Thread.State.TIMED_WAITING && System.currentTimeMillis() < until) Thread.sleep(5)
+            assertEquals(Thread.State.TIMED_WAITING, writer.state)
+            val t0 = System.nanoTime()
+            assertTrue(SecureBlobs.putSoon(big, bulk(30)))
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            assertTrue("putSoon waited $ms ms behind a write", ms < 500)
+            assertEquals(bulk(30), SecureBlobs.get(big))           // readable at once
+            writer.join(10_000)
+            Vault.testWriteDelayMs = 0L
+            // The slow write took the older value: the key is still to be written, and the next write leaves the newest.
+            assertTrue(SecureBlobs.anyDirty())
+            SecureBlobs.saveNow(big)
+            assertFalse(SecureBlobs.anyDirty())
+            SecureBlobs.reset()
+            assertEquals(bulk(30), SecureBlobs.get(big))
+        } finally { Vault.testWriteDelayMs = 0L }
+    }
+
+    /**
+     * 20 Oct, review: a large value whose write failed (a Keystore fault) stayed dirty with no write queued, and flush still said
+     * "written". Now flush says false while it is unwritten, queues it again, and is true once it is on disk.
+     */
+    @Test fun aFailedLargeWriteIsReportedAndWrittenAgain() {
+        val alias = "ol.vault.data.v1"
+        SecurePrefs.put("small", 1)                                   // the key exists
+        com.optionslab.app.testing.FakeAndroidKeyStore.failing += alias
+        try {
+            assertTrue(SecureBlobs.putSoon(big, "kept"))
+            assertFalse("the write failed", SecureBlobs.saveNow(big))
+            assertTrue(SecureBlobs.anyDirty())
+            assertFalse("not on disk: flush says so", SecurePrefs.flush())
+        } finally { com.optionslab.app.testing.FakeAndroidKeyStore.failing -= alias }
+        assertTrue("queued again and written", SecurePrefs.flush())
+        assertFalse(SecureBlobs.anyDirty())
+        SecureBlobs.reset()
+        assertEquals("kept", SecurePrefs.getString(big))
+    }
+
+    /** 20 Oct, review: the vault's "try again" keeps a value changed and not yet written (it was dropped for good). */
+    @Test fun aResetKeepsAnUnwrittenValue() {
+        SecurePrefs.put("small", 1)
+        assertTrue(SecureBlobs.putSoon(big, "not yet on disk"))
+        SecureBlobs.reset()
+        assertEquals("not yet on disk", SecureBlobs.get(big))
+        assertTrue(SecurePrefs.flush())
+    }
+
+    /**
+     * 20 Oct, review: a value's first read (a decryption, here retried with waits by a failing Keystore) no longer holds its lock:
+     * the screen's thread putting that key goes at once, and the newer value is the one kept.
+     */
+    @Test fun aSlowFirstReadNeverHoldsAPutOfTheSameKey() {
+        val alias = "ol.vault.data.v1"
+        SecurePrefs.put(big, "on disk")
+        SecureBlobs.reset()                                           // not read yet in this "process"
+        com.optionslab.app.testing.FakeAndroidKeyStore.failing += alias
+        var read: Any? = "unset"
+        val reader = Thread { read = SecureBlobs.get(big) }.apply { start() }
+        try {
+            val until = System.currentTimeMillis() + 10_000
+            while (reader.state != Thread.State.TIMED_WAITING && System.currentTimeMillis() < until) Thread.sleep(5)
+            assertEquals("the read is retrying", Thread.State.TIMED_WAITING, reader.state)
+            val t0 = System.nanoTime()
+            assertTrue(SecureBlobs.putSoon(big, "newer"))
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            assertTrue("putSoon waited $ms ms behind a read", ms < 100)
+            reader.join(10_000)
+        } finally { com.optionslab.app.testing.FakeAndroidKeyStore.failing -= alias }
+        assertEquals("the newer value wins over the late read", "newer", read)
+        assertEquals("newer", SecureBlobs.get(big))
+        assertTrue(SecurePrefs.flush())
+    }
 }

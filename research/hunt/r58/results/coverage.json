@@ -1,0 +1,122 @@
+{
+ "RELIANCE": {
+  "design": {
+   "atm": 0.979,
+   "pm1": 0.979,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 1.0,
+   "pm1": 1.0,
+   "sessions": 132
+  }
+ },
+ "SBIN": {
+  "design": {
+   "atm": 0.979,
+   "pm1": 0.976,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 1.0,
+   "pm1": 1.0,
+   "sessions": 132
+  }
+ },
+ "MARUTI": {
+  "design": {
+   "atm": 0.979,
+   "pm1": 0.979,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 1.0,
+   "pm1": 0.992,
+   "sessions": 132
+  }
+ },
+ "ICICIBANK": {
+  "design": {
+   "atm": 0.979,
+   "pm1": 0.976,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 1.0,
+   "pm1": 1.0,
+   "sessions": 132
+  }
+ },
+ "INFY": {
+  "design": {
+   "atm": 0.979,
+   "pm1": 0.976,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 1.0,
+   "pm1": 1.0,
+   "sessions": 132
+  }
+ },
+ "LT": {
+  "design": {
+   "atm": 0.97,
+   "pm1": 0.896,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 0.955,
+   "pm1": 0.886,
+   "sessions": 132
+  }
+ },
+ "KOTAKBANK": {
+  "design": {
+   "atm": 0.979,
+   "pm1": 0.973,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 1.0,
+   "pm1": 0.985,
+   "sessions": 132
+  }
+ },
+ "M&M": {
+  "design": {
+   "atm": 0.979,
+   "pm1": 0.976,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 0.992,
+   "pm1": 0.97,
+   "sessions": 132
+  }
+ },
+ "TRENT": {
+  "design": {
+   "atm": 0.979,
+   "pm1": 0.97,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 0.833,
+   "pm1": 0.97,
+   "sessions": 132
+  }
+ },
+ "TATASTEEL": {
+  "design": {
+   "atm": 0.958,
+   "pm1": 0.89,
+   "sessions": 336
+  },
+  "final": {
+   "atm": 0.992,
+   "pm1": 0.992,
+   "sessions": 132
+  }
+ }
+}

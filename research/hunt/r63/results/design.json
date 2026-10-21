@@ -1,0 +1,2020 @@
+{
+ "written": "2026-10-16T04:52:25+00:00",
+ "period": [
+  "2024-11-20",
+  "2026-03-31"
+ ],
+ "rules": {
+  "T1": "15-min close crosses EMA20 against the trade",
+  "T2": "15-min Supertrend(10, 3) flips against the trade",
+  "T3": "two 5-min closes in a row beyond the session VWAP (TWAP) against the trade",
+  "T4": "5-min Donchian-10 opposite break (close beyond the last 10 bars' extreme)"
+ },
+ "strategies": {
+  "LIQ": "Liquidity 15+5",
+  "DON": "R51 Donchian 20",
+  "OOV": "R52 Open outside value",
+  "SOLO": "Solo (midday)",
+  "SOLO2": "Solo 2.0",
+  "HERO": "Hero Rs 1,000 ticket",
+  "ALL": "all strategies pooled"
+ },
+ "cells": {
+  "T1": {
+   "LIQ": {
+    "trades": 881,
+    "changed": 7,
+    "sessions": 282,
+    "plain_net": 257249.0,
+    "rule_net": 251400.0,
+    "improvement": -5850.0,
+    "saved_on_losers": 2606.0,
+    "given_up_on_winners": 8456.0,
+    "losers_changed": 3,
+    "winners_changed": 4,
+    "impr_ex_top5": -7733.0,
+    "plain_max_dd": 32537.0,
+    "rule_max_dd": 31399.0,
+    "plain_worst_day": -8416.0,
+    "rule_worst_day": -8416.0,
+    "why": {
+     "rule_exit": 7
+    },
+    "p": 1.0,
+    "twin_mean": 22027.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 3,
+      "improvement": -7485.0,
+      "trades": 336
+     },
+     "FINNIFTY": {
+      "changed": 2,
+      "improvement": 1468.0,
+      "trades": 252
+     },
+     "MIDCPNIFTY": {
+      "changed": 2,
+      "improvement": 168.0,
+      "trades": 293
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 0.0,
+     "2025-01": -971.0,
+     "2025-02": 1138.0,
+     "2025-03": 0.0,
+     "2025-04": 0.0,
+     "2025-05": 0.0,
+     "2025-06": 0.0,
+     "2025-07": 0.0,
+     "2025-08": 0.0,
+     "2025-09": 707.0,
+     "2025-10": -423.0,
+     "2025-11": 0.0,
+     "2025-12": 0.0,
+     "2026-01": -7062.0,
+     "2026-02": 0.0,
+     "2026-03": 761.0
+    },
+    "wf_quarters": [
+     0.0,
+     707.0,
+     -423.0,
+     -6301.0
+    ],
+    "wf_net": -6017.0
+   },
+   "DON": {
+    "trades": 4551,
+    "changed": 204,
+    "sessions": 337,
+    "plain_net": 41859.0,
+    "rule_net": 36661.0,
+    "improvement": -9258.0,
+    "saved_on_losers": 27519.0,
+    "given_up_on_winners": 36777.0,
+    "losers_changed": 180,
+    "winners_changed": 24,
+    "impr_ex_top5": -21826.0,
+    "plain_max_dd": 203324.0,
+    "rule_max_dd": 219208.0,
+    "plain_worst_day": -54846.0,
+    "rule_worst_day": -54846.0,
+    "why": {
+     "rule_exit": 204
+    },
+    "p": 1.0,
+    "twin_mean": 77986.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 61,
+      "improvement": -7198.0,
+      "trades": 976
+     },
+     "FINNIFTY": {
+      "changed": 59,
+      "improvement": 3094.0,
+      "trades": 958
+     },
+     "MIDCPNIFTY": {
+      "changed": 47,
+      "improvement": -6820.0,
+      "trades": 981
+     },
+     "NIFTY": {
+      "changed": 20,
+      "improvement": -15.0,
+      "trades": 809
+     },
+     "SENSEX": {
+      "changed": 17,
+      "improvement": 1681.0,
+      "trades": 827
+     }
+    },
+    "by_month": {
+     "2024-11": 106.0,
+     "2024-12": -3136.0,
+     "2025-01": 4012.0,
+     "2025-02": -2997.0,
+     "2025-03": -5702.0,
+     "2025-04": -2848.0,
+     "2025-05": -8056.0,
+     "2025-06": 6534.0,
+     "2025-07": -3538.0,
+     "2025-08": -622.0,
+     "2025-09": 733.0,
+     "2025-10": -464.0,
+     "2025-11": -1152.0,
+     "2025-12": -945.0,
+     "2026-01": 1142.0,
+     "2026-02": 4267.0,
+     "2026-03": 3409.0
+    },
+    "wf_quarters": [
+     -4371.0,
+     -3427.0,
+     -2560.0,
+     8818.0
+    ],
+    "wf_net": -1540.0
+   },
+   "OOV": {
+    "trades": 712,
+    "changed": 65,
+    "sessions": 253,
+    "plain_net": 281720.0,
+    "rule_net": 293533.0,
+    "improvement": 11044.0,
+    "saved_on_losers": 23477.0,
+    "given_up_on_winners": 12433.0,
+    "losers_changed": 63,
+    "winners_changed": 2,
+    "impr_ex_top5": -7549.0,
+    "plain_max_dd": 83696.0,
+    "rule_max_dd": 72762.0,
+    "plain_worst_day": -22994.0,
+    "rule_worst_day": -22994.0,
+    "why": {
+     "rule_exit": 65
+    },
+    "p": 1.0,
+    "twin_mean": 54746.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 18,
+      "improvement": -2030.0,
+      "trades": 144
+     },
+     "FINNIFTY": {
+      "changed": 15,
+      "improvement": -2858.0,
+      "trades": 144
+     },
+     "MIDCPNIFTY": {
+      "changed": 21,
+      "improvement": 9611.0,
+      "trades": 162
+     },
+     "NIFTY": {
+      "changed": 5,
+      "improvement": 1552.0,
+      "trades": 131
+     },
+     "SENSEX": {
+      "changed": 6,
+      "improvement": 4769.0,
+      "trades": 131
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": -2878.0,
+     "2025-01": 6715.0,
+     "2025-02": 2571.0,
+     "2025-03": 12174.0,
+     "2025-04": -4411.0,
+     "2025-05": 2059.0,
+     "2025-06": -1390.0,
+     "2025-07": 263.0,
+     "2025-08": 626.0,
+     "2025-09": -692.0,
+     "2025-10": 1.0,
+     "2025-11": 1176.0,
+     "2025-12": 3422.0,
+     "2026-01": 198.0,
+     "2026-02": 121.0,
+     "2026-03": -8911.0
+    },
+    "wf_quarters": [
+     -3742.0,
+     198.0,
+     4598.0,
+     -8592.0
+    ],
+    "wf_net": -7538.0
+   },
+   "SOLO": {
+    "trades": 117,
+    "changed": 23,
+    "sessions": 117,
+    "plain_net": 39606.0,
+    "rule_net": 21915.0,
+    "improvement": -17691.0,
+    "saved_on_losers": 7867.0,
+    "given_up_on_winners": 25558.0,
+    "losers_changed": 14,
+    "winners_changed": 9,
+    "impr_ex_top5": -29596.0,
+    "plain_max_dd": 21939.0,
+    "rule_max_dd": 23694.0,
+    "plain_worst_day": -7184.0,
+    "rule_worst_day": -7184.0,
+    "why": {
+     "rule_exit": 22,
+     "missing": 1
+    },
+    "p": 1.0,
+    "twin_mean": 14140.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 10,
+      "improvement": -7062.0,
+      "trades": 45
+     },
+     "FINNIFTY": {
+      "changed": 10,
+      "improvement": -1684.0,
+      "trades": 46
+     },
+     "NIFTY": {
+      "changed": 3,
+      "improvement": -8945.0,
+      "trades": 26
+     }
+    },
+    "by_month": {
+     "2024-11": 440.0,
+     "2024-12": 1447.0,
+     "2025-01": 1703.0,
+     "2025-02": 0.0,
+     "2025-03": -7144.0,
+     "2025-04": -3442.0,
+     "2025-05": 0.0,
+     "2025-06": -573.0,
+     "2025-07": -6507.0,
+     "2025-08": 3091.0,
+     "2025-09": -5915.0,
+     "2025-10": -713.0,
+     "2025-11": -2773.0,
+     "2025-12": 2453.0,
+     "2026-01": 2352.0,
+     "2026-02": -2108.0,
+     "2026-03": 0.0
+    },
+    "wf_quarters": [
+     -4015.0,
+     -9332.0,
+     -1034.0,
+     244.0
+    ],
+    "wf_net": -14137.0
+   },
+   "SOLO2": {
+    "trades": 310,
+    "changed": 33,
+    "sessions": 310,
+    "plain_net": 102774.0,
+    "rule_net": 102568.0,
+    "improvement": -807.0,
+    "saved_on_losers": 8804.0,
+    "given_up_on_winners": 9611.0,
+    "losers_changed": 31,
+    "winners_changed": 2,
+    "impr_ex_top5": -10984.0,
+    "plain_max_dd": 26708.0,
+    "rule_max_dd": 25877.0,
+    "plain_worst_day": -14592.0,
+    "rule_worst_day": -14592.0,
+    "why": {
+     "rule_exit": 33
+    },
+    "p": 1.0,
+    "twin_mean": 21502.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 4,
+      "improvement": 315.0,
+      "trades": 37
+     },
+     "FINNIFTY": {
+      "changed": 14,
+      "improvement": -2081.0,
+      "trades": 118
+     },
+     "MIDCPNIFTY": {
+      "changed": 13,
+      "improvement": -751.0,
+      "trades": 137
+     },
+     "NIFTY": {
+      "changed": 2,
+      "improvement": 1710.0,
+      "trades": 18
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 887.0,
+     "2025-01": 2577.0,
+     "2025-02": 1271.0,
+     "2025-03": -175.0,
+     "2025-04": -169.0,
+     "2025-05": 0.0,
+     "2025-06": 269.0,
+     "2025-07": 1118.0,
+     "2025-08": 2058.0,
+     "2025-09": -448.0,
+     "2025-10": -846.0,
+     "2025-11": -2357.0,
+     "2025-12": 2741.0,
+     "2026-01": 380.0,
+     "2026-02": 805.0,
+     "2026-03": -8917.0
+    },
+    "wf_quarters": [
+     100.0,
+     2728.0,
+     -462.0,
+     -7731.0
+    ],
+    "wf_net": -5365.0
+   },
+   "HERO": {
+    "trades": 248,
+    "changed": 87,
+    "sessions": 134,
+    "plain_net": -59286.0,
+    "rule_net": -46513.0,
+    "improvement": 12774.0,
+    "saved_on_losers": 17037.0,
+    "given_up_on_winners": 4263.0,
+    "losers_changed": 81,
+    "winners_changed": 6,
+    "impr_ex_top5": 9917.0,
+    "plain_max_dd": 59853.0,
+    "rule_max_dd": 47074.0,
+    "plain_worst_day": -1999.0,
+    "rule_worst_day": -1919.0,
+    "why": {
+     "trend": 87
+    },
+    "p": 0.98,
+    "twin_mean": 16310.0,
+    "by_index": {
+     "NIFTY": {
+      "changed": 43,
+      "improvement": 6314.0,
+      "trades": 135
+     },
+     "SENSEX": {
+      "changed": 44,
+      "improvement": 6460.0,
+      "trades": 113
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 1029.0,
+     "2025-01": 420.0,
+     "2025-02": 2028.0,
+     "2025-03": 967.0,
+     "2025-04": 689.0,
+     "2025-05": 956.0,
+     "2025-06": 1298.0,
+     "2025-07": -1165.0,
+     "2025-08": 1399.0,
+     "2025-09": 1337.0,
+     "2025-10": 334.0,
+     "2025-11": 1166.0,
+     "2025-12": 166.0,
+     "2026-01": 2167.0,
+     "2026-02": 197.0,
+     "2026-03": -213.0
+    },
+    "wf_quarters": [
+     2943.0,
+     1571.0,
+     1666.0,
+     2151.0
+    ],
+    "wf_net": 8331.0
+   },
+   "ALL": {
+    "trades": 6819,
+    "changed": 419,
+    "sessions": 337,
+    "plain_net": 663921.0,
+    "rule_net": 659564.0,
+    "improvement": -9787.0,
+    "saved_on_losers": 87310.0,
+    "given_up_on_winners": 97097.0,
+    "losers_changed": 372,
+    "winners_changed": 47,
+    "impr_ex_top5": -31423.0,
+    "plain_max_dd": 243743.0,
+    "rule_max_dd": 238866.0,
+    "plain_worst_day": -67459.0,
+    "rule_worst_day": -67459.0,
+    "why": {
+     "rule_exit": 331,
+     "trend": 87,
+     "missing": 1
+    },
+    "p": 1.0,
+    "twin_mean": 206710.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 96,
+      "improvement": -23460.0,
+      "trades": 1538
+     },
+     "FINNIFTY": {
+      "changed": 100,
+      "improvement": -2061.0,
+      "trades": 1518
+     },
+     "MIDCPNIFTY": {
+      "changed": 83,
+      "improvement": 2208.0,
+      "trades": 1573
+     },
+     "NIFTY": {
+      "changed": 73,
+      "improvement": 616.0,
+      "trades": 1119
+     },
+     "SENSEX": {
+      "changed": 67,
+      "improvement": 12910.0,
+      "trades": 1071
+     }
+    },
+    "by_month": {
+     "2024-11": 546.0,
+     "2024-12": -2652.0,
+     "2025-01": 14456.0,
+     "2025-02": 4011.0,
+     "2025-03": 119.0,
+     "2025-04": -10181.0,
+     "2025-05": -5041.0,
+     "2025-06": 6138.0,
+     "2025-07": -9830.0,
+     "2025-08": 6551.0,
+     "2025-09": -4277.0,
+     "2025-10": -2111.0,
+     "2025-11": -3941.0,
+     "2025-12": 7837.0,
+     "2026-01": -823.0,
+     "2026-02": 3282.0,
+     "2026-03": -13871.0
+    },
+    "wf_quarters": [
+     -9084.0,
+     -7556.0,
+     1785.0,
+     -11412.0
+    ],
+    "wf_net": -26267.0
+   }
+  },
+  "T2": {
+   "LIQ": {
+    "trades": 881,
+    "changed": 3,
+    "sessions": 282,
+    "plain_net": 257249.0,
+    "rule_net": 251733.0,
+    "improvement": -5516.0,
+    "saved_on_losers": 2217.0,
+    "given_up_on_winners": 7733.0,
+    "losers_changed": 1,
+    "winners_changed": 2,
+    "impr_ex_top5": 0.0,
+    "plain_max_dd": 32537.0,
+    "rule_max_dd": 30320.0,
+    "plain_worst_day": -8416.0,
+    "rule_worst_day": -8416.0,
+    "why": {
+     "rule_exit": 3
+    },
+    "p": 0.996,
+    "twin_mean": 13828.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 1,
+      "improvement": -6763.0,
+      "trades": 336
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 252
+     },
+     "MIDCPNIFTY": {
+      "changed": 2,
+      "improvement": 1246.0,
+      "trades": 293
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 0.0,
+     "2025-01": -971.0,
+     "2025-02": 2217.0,
+     "2025-03": 0.0,
+     "2025-04": 0.0,
+     "2025-05": 0.0,
+     "2025-06": 0.0,
+     "2025-07": 0.0,
+     "2025-08": 0.0,
+     "2025-09": 0.0,
+     "2025-10": 0.0,
+     "2025-11": 0.0,
+     "2025-12": 0.0,
+     "2026-01": -6763.0,
+     "2026-02": 0.0,
+     "2026-03": 0.0
+    },
+    "wf_quarters": [
+     0.0,
+     0.0,
+     0.0,
+     -6763.0
+    ],
+    "wf_net": -6763.0
+   },
+   "DON": {
+    "trades": 4551,
+    "changed": 0,
+    "sessions": 337,
+    "plain_net": 41859.0,
+    "rule_net": 41859.0,
+    "improvement": 0.0,
+    "saved_on_losers": 0.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 0,
+    "winners_changed": 0,
+    "impr_ex_top5": 0.0,
+    "plain_max_dd": 203324.0,
+    "rule_max_dd": 203324.0,
+    "plain_worst_day": -54846.0,
+    "rule_worst_day": -54846.0,
+    "why": {},
+    "p": 1.0,
+    "twin_mean": 0.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 976
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 958
+     },
+     "MIDCPNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 981
+     },
+     "NIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 809
+     },
+     "SENSEX": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 827
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 0.0,
+     "2025-01": 0.0,
+     "2025-02": 0.0,
+     "2025-03": 0.0,
+     "2025-04": 0.0,
+     "2025-05": 0.0,
+     "2025-06": 0.0,
+     "2025-07": 0.0,
+     "2025-08": 0.0,
+     "2025-09": 0.0,
+     "2025-10": 0.0,
+     "2025-11": 0.0,
+     "2025-12": 0.0,
+     "2026-01": 0.0,
+     "2026-02": 0.0,
+     "2026-03": 0.0
+    },
+    "wf_quarters": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "wf_net": 0.0
+   },
+   "OOV": {
+    "trades": 712,
+    "changed": 18,
+    "sessions": 253,
+    "plain_net": 281720.0,
+    "rule_net": 280651.0,
+    "improvement": -1669.0,
+    "saved_on_losers": -1669.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 18,
+    "winners_changed": 0,
+    "impr_ex_top5": -7911.0,
+    "plain_max_dd": 83696.0,
+    "rule_max_dd": 83262.0,
+    "plain_worst_day": -22994.0,
+    "rule_worst_day": -22994.0,
+    "why": {
+     "rule_exit": 18
+    },
+    "p": 1.0,
+    "twin_mean": 20034.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 5,
+      "improvement": 143.0,
+      "trades": 144
+     },
+     "FINNIFTY": {
+      "changed": 3,
+      "improvement": 813.0,
+      "trades": 144
+     },
+     "MIDCPNIFTY": {
+      "changed": 8,
+      "improvement": -4824.0,
+      "trades": 162
+     },
+     "NIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 131
+     },
+     "SENSEX": {
+      "changed": 2,
+      "improvement": 2199.0,
+      "trades": 131
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 0.0,
+     "2025-01": 305.0,
+     "2025-02": 0.0,
+     "2025-03": -167.0,
+     "2025-04": 0.0,
+     "2025-05": 2059.0,
+     "2025-06": 1024.0,
+     "2025-07": 0.0,
+     "2025-08": -2245.0,
+     "2025-09": 0.0,
+     "2025-10": 0.0,
+     "2025-11": -2976.0,
+     "2025-12": 1703.0,
+     "2026-01": 0.0,
+     "2026-02": -1372.0,
+     "2026-03": 0.0
+    },
+    "wf_quarters": [
+     3083.0,
+     -2245.0,
+     -1274.0,
+     -1372.0
+    ],
+    "wf_net": -1808.0
+   },
+   "SOLO": {
+    "trades": 117,
+    "changed": 0,
+    "sessions": 117,
+    "plain_net": 39606.0,
+    "rule_net": 39606.0,
+    "improvement": 0.0,
+    "saved_on_losers": 0.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 0,
+    "winners_changed": 0,
+    "impr_ex_top5": 0.0,
+    "plain_max_dd": 21939.0,
+    "rule_max_dd": 21939.0,
+    "plain_worst_day": -7184.0,
+    "rule_worst_day": -7184.0,
+    "why": {},
+    "p": 1.0,
+    "twin_mean": 0.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 45
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 46
+     },
+     "NIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 26
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 0.0,
+     "2025-01": 0.0,
+     "2025-02": 0.0,
+     "2025-03": 0.0,
+     "2025-04": 0.0,
+     "2025-05": 0.0,
+     "2025-06": 0.0,
+     "2025-07": 0.0,
+     "2025-08": 0.0,
+     "2025-09": 0.0,
+     "2025-10": 0.0,
+     "2025-11": 0.0,
+     "2025-12": 0.0,
+     "2026-01": 0.0,
+     "2026-02": 0.0,
+     "2026-03": 0.0
+    },
+    "wf_quarters": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "wf_net": 0.0
+   },
+   "SOLO2": {
+    "trades": 310,
+    "changed": 7,
+    "sessions": 310,
+    "plain_net": 102774.0,
+    "rule_net": 99913.0,
+    "improvement": -3462.0,
+    "saved_on_losers": -3462.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 7,
+    "winners_changed": 0,
+    "impr_ex_top5": -4522.0,
+    "plain_max_dd": 26708.0,
+    "rule_max_dd": 26708.0,
+    "plain_worst_day": -14592.0,
+    "rule_worst_day": -14592.0,
+    "why": {
+     "rule_exit": 7
+    },
+    "p": 0.998,
+    "twin_mean": 4252.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 1,
+      "improvement": -140.0,
+      "trades": 37
+     },
+     "FINNIFTY": {
+      "changed": 2,
+      "improvement": 168.0,
+      "trades": 118
+     },
+     "MIDCPNIFTY": {
+      "changed": 4,
+      "improvement": -3490.0,
+      "trades": 137
+     },
+     "NIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 18
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 0.0,
+     "2025-01": 0.0,
+     "2025-02": 0.0,
+     "2025-03": 0.0,
+     "2025-04": 0.0,
+     "2025-05": 0.0,
+     "2025-06": 0.0,
+     "2025-07": -140.0,
+     "2025-08": -814.0,
+     "2025-09": 0.0,
+     "2025-10": 0.0,
+     "2025-11": -2976.0,
+     "2025-12": 1703.0,
+     "2026-01": 0.0,
+     "2026-02": -1235.0,
+     "2026-03": 0.0
+    },
+    "wf_quarters": [
+     0.0,
+     -954.0,
+     -1274.0,
+     -1235.0
+    ],
+    "wf_net": -3463.0
+   },
+   "HERO": {
+    "trades": 248,
+    "changed": 20,
+    "sessions": 134,
+    "plain_net": -59286.0,
+    "rule_net": -56903.0,
+    "improvement": 2384.0,
+    "saved_on_losers": 2384.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 20,
+    "winners_changed": 0,
+    "impr_ex_top5": 1119.0,
+    "plain_max_dd": 59853.0,
+    "rule_max_dd": 57469.0,
+    "plain_worst_day": -1999.0,
+    "rule_worst_day": -1999.0,
+    "why": {
+     "trend": 20
+    },
+    "p": 0.9741,
+    "twin_mean": 3797.0,
+    "by_index": {
+     "NIFTY": {
+      "changed": 9,
+      "improvement": 1397.0,
+      "trades": 135
+     },
+     "SENSEX": {
+      "changed": 11,
+      "improvement": 987.0,
+      "trades": 113
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 0.0,
+     "2025-01": 38.0,
+     "2025-02": 64.0,
+     "2025-03": 162.0,
+     "2025-04": 11.0,
+     "2025-05": 0.0,
+     "2025-06": 164.0,
+     "2025-07": 103.0,
+     "2025-08": 0.0,
+     "2025-09": 551.0,
+     "2025-10": 50.0,
+     "2025-11": 604.0,
+     "2025-12": 185.0,
+     "2026-01": 450.0,
+     "2026-02": 0.0,
+     "2026-03": 0.0
+    },
+    "wf_quarters": [
+     176.0,
+     654.0,
+     839.0,
+     450.0
+    ],
+    "wf_net": 2119.0
+   },
+   "ALL": {
+    "trades": 6819,
+    "changed": 48,
+    "sessions": 337,
+    "plain_net": 663921.0,
+    "rule_net": 656858.0,
+    "improvement": -8264.0,
+    "saved_on_losers": -531.0,
+    "given_up_on_winners": 7733.0,
+    "losers_changed": 46,
+    "winners_changed": 2,
+    "impr_ex_top5": -16969.0,
+    "plain_max_dd": 243743.0,
+    "rule_max_dd": 241428.0,
+    "plain_worst_day": -67459.0,
+    "rule_worst_day": -67459.0,
+    "why": {
+     "rule_exit": 28,
+     "trend": 20
+    },
+    "p": 1.0,
+    "twin_mean": 41911.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 7,
+      "improvement": -6759.0,
+      "trades": 1538
+     },
+     "FINNIFTY": {
+      "changed": 5,
+      "improvement": 981.0,
+      "trades": 1518
+     },
+     "MIDCPNIFTY": {
+      "changed": 14,
+      "improvement": -7069.0,
+      "trades": 1573
+     },
+     "NIFTY": {
+      "changed": 9,
+      "improvement": 1397.0,
+      "trades": 1119
+     },
+     "SENSEX": {
+      "changed": 13,
+      "improvement": 3185.0,
+      "trades": 1071
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 0.0,
+     "2025-01": -627.0,
+     "2025-02": 2281.0,
+     "2025-03": -5.0,
+     "2025-04": 11.0,
+     "2025-05": 2059.0,
+     "2025-06": 1188.0,
+     "2025-07": -37.0,
+     "2025-08": -3059.0,
+     "2025-09": 551.0,
+     "2025-10": 50.0,
+     "2025-11": -5349.0,
+     "2025-12": 3591.0,
+     "2026-01": -6312.0,
+     "2026-02": -2607.0,
+     "2026-03": 0.0
+    },
+    "wf_quarters": [
+     3258.0,
+     -2544.0,
+     -1708.0,
+     -8920.0
+    ],
+    "wf_net": -9914.0
+   }
+  },
+  "T3": {
+   "LIQ": {
+    "trades": 881,
+    "changed": 69,
+    "sessions": 282,
+    "plain_net": 257249.0,
+    "rule_net": 226241.0,
+    "improvement": -31008.0,
+    "saved_on_losers": 54306.0,
+    "given_up_on_winners": 85314.0,
+    "losers_changed": 33,
+    "winners_changed": 36,
+    "impr_ex_top5": -53896.0,
+    "plain_max_dd": 32537.0,
+    "rule_max_dd": 26872.0,
+    "plain_worst_day": -8416.0,
+    "rule_worst_day": -8416.0,
+    "why": {
+     "rule_exit": 69
+    },
+    "p": 1.0,
+    "twin_mean": 50239.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 24,
+      "improvement": -8207.0,
+      "trades": 336
+     },
+     "FINNIFTY": {
+      "changed": 21,
+      "improvement": -27292.0,
+      "trades": 252
+     },
+     "MIDCPNIFTY": {
+      "changed": 24,
+      "improvement": 4490.0,
+      "trades": 293
+     }
+    },
+    "by_month": {
+     "2024-11": 1150.0,
+     "2024-12": -5997.0,
+     "2025-01": -1957.0,
+     "2025-02": 2151.0,
+     "2025-03": -4730.0,
+     "2025-04": -5826.0,
+     "2025-05": 2287.0,
+     "2025-06": -400.0,
+     "2025-07": 1097.0,
+     "2025-08": 10438.0,
+     "2025-09": 9542.0,
+     "2025-10": 115.0,
+     "2025-11": 894.0,
+     "2025-12": 1960.0,
+     "2026-01": -8089.0,
+     "2026-02": -3172.0,
+     "2026-03": -30472.0
+    },
+    "wf_quarters": [
+     -3940.0,
+     21077.0,
+     2970.0,
+     -41732.0
+    ],
+    "wf_net": -21625.0
+   },
+   "DON": {
+    "trades": 4551,
+    "changed": 656,
+    "sessions": 337,
+    "plain_net": 41859.0,
+    "rule_net": 16156.0,
+    "improvement": -35822.0,
+    "saved_on_losers": 232268.0,
+    "given_up_on_winners": 268091.0,
+    "losers_changed": 501,
+    "winners_changed": 155,
+    "impr_ex_top5": -64505.0,
+    "plain_max_dd": 203324.0,
+    "rule_max_dd": 207088.0,
+    "plain_worst_day": -54846.0,
+    "rule_worst_day": -54327.0,
+    "why": {
+     "rule_exit": 656
+    },
+    "p": 1.0,
+    "twin_mean": 164177.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 156,
+      "improvement": -7926.0,
+      "trades": 976
+     },
+     "FINNIFTY": {
+      "changed": 158,
+      "improvement": -26689.0,
+      "trades": 958
+     },
+     "MIDCPNIFTY": {
+      "changed": 154,
+      "improvement": 27356.0,
+      "trades": 981
+     },
+     "NIFTY": {
+      "changed": 82,
+      "improvement": -16903.0,
+      "trades": 809
+     },
+     "SENSEX": {
+      "changed": 106,
+      "improvement": -11661.0,
+      "trades": 827
+     }
+    },
+    "by_month": {
+     "2024-11": 1659.0,
+     "2024-12": 819.0,
+     "2025-01": -11288.0,
+     "2025-02": -23267.0,
+     "2025-03": 9909.0,
+     "2025-04": 460.0,
+     "2025-05": -15728.0,
+     "2025-06": 9623.0,
+     "2025-07": -5632.0,
+     "2025-08": 1688.0,
+     "2025-09": -3414.0,
+     "2025-10": -2903.0,
+     "2025-11": -18221.0,
+     "2025-12": 11786.0,
+     "2026-01": -1307.0,
+     "2026-02": 14141.0,
+     "2026-03": -4148.0
+    },
+    "wf_quarters": [
+     -5645.0,
+     -7357.0,
+     -9338.0,
+     8685.0
+    ],
+    "wf_net": -13655.0
+   },
+   "OOV": {
+    "trades": 712,
+    "changed": 498,
+    "sessions": 253,
+    "plain_net": 281720.0,
+    "rule_net": 122126.0,
+    "improvement": -159911.0,
+    "saved_on_losers": 311385.0,
+    "given_up_on_winners": 471296.0,
+    "losers_changed": 296,
+    "winners_changed": 202,
+    "impr_ex_top5": -190329.0,
+    "plain_max_dd": 83696.0,
+    "rule_max_dd": 70799.0,
+    "plain_worst_day": -22994.0,
+    "rule_worst_day": -22994.0,
+    "why": {
+     "rule_exit": 498
+    },
+    "p": 1.0,
+    "twin_mean": 85362.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 104,
+      "improvement": -56913.0,
+      "trades": 144
+     },
+     "FINNIFTY": {
+      "changed": 95,
+      "improvement": -54484.0,
+      "trades": 144
+     },
+     "MIDCPNIFTY": {
+      "changed": 117,
+      "improvement": -3455.0,
+      "trades": 162
+     },
+     "NIFTY": {
+      "changed": 87,
+      "improvement": -35841.0,
+      "trades": 131
+     },
+     "SENSEX": {
+      "changed": 95,
+      "improvement": -9217.0,
+      "trades": 131
+     }
+    },
+    "by_month": {
+     "2024-11": 2402.0,
+     "2024-12": -848.0,
+     "2025-01": 6701.0,
+     "2025-02": -12790.0,
+     "2025-03": 4759.0,
+     "2025-04": 13389.0,
+     "2025-05": -4733.0,
+     "2025-06": -19949.0,
+     "2025-07": -39952.0,
+     "2025-08": 4747.0,
+     "2025-09": -9849.0,
+     "2025-10": -26665.0,
+     "2025-11": -18632.0,
+     "2025-12": 2822.0,
+     "2026-01": 22389.0,
+     "2026-02": 34508.0,
+     "2026-03": -118207.0
+    },
+    "wf_quarters": [
+     -11294.0,
+     -45054.0,
+     -42475.0,
+     -61310.0
+    ],
+    "wf_net": -160133.0
+   },
+   "SOLO": {
+    "trades": 117,
+    "changed": 31,
+    "sessions": 117,
+    "plain_net": 39606.0,
+    "rule_net": 21823.0,
+    "improvement": -17783.0,
+    "saved_on_losers": 5084.0,
+    "given_up_on_winners": 22866.0,
+    "losers_changed": 24,
+    "winners_changed": 7,
+    "impr_ex_top5": -30448.0,
+    "plain_max_dd": 21939.0,
+    "rule_max_dd": 24290.0,
+    "plain_worst_day": -7184.0,
+    "rule_worst_day": -7184.0,
+    "why": {
+     "rule_exit": 30,
+     "missing": 1
+    },
+    "p": 1.0,
+    "twin_mean": 27492.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 18,
+      "improvement": -14901.0,
+      "trades": 45
+     },
+     "FINNIFTY": {
+      "changed": 12,
+      "improvement": -1249.0,
+      "trades": 46
+     },
+     "NIFTY": {
+      "changed": 1,
+      "improvement": -1632.0,
+      "trades": 26
+     }
+    },
+    "by_month": {
+     "2024-11": -469.0,
+     "2024-12": 1934.0,
+     "2025-01": 1538.0,
+     "2025-02": 0.0,
+     "2025-03": -10924.0,
+     "2025-04": -4229.0,
+     "2025-05": -1835.0,
+     "2025-06": 279.0,
+     "2025-07": -2719.0,
+     "2025-08": -1580.0,
+     "2025-09": -415.0,
+     "2025-10": 494.0,
+     "2025-11": -1632.0,
+     "2025-12": 1939.0,
+     "2026-01": 2003.0,
+     "2026-02": -1175.0,
+     "2026-03": -991.0
+    },
+    "wf_quarters": [
+     -5785.0,
+     -4714.0,
+     802.0,
+     -163.0
+    ],
+    "wf_net": -9860.0
+   },
+   "SOLO2": {
+    "trades": 310,
+    "changed": 191,
+    "sessions": 310,
+    "plain_net": 102774.0,
+    "rule_net": 71951.0,
+    "improvement": -30973.0,
+    "saved_on_losers": 135939.0,
+    "given_up_on_winners": 166912.0,
+    "losers_changed": 116,
+    "winners_changed": 75,
+    "impr_ex_top5": -56182.0,
+    "plain_max_dd": 26708.0,
+    "rule_max_dd": 30771.0,
+    "plain_worst_day": -14592.0,
+    "rule_worst_day": -14592.0,
+    "why": {
+     "rule_exit": 191
+    },
+    "p": 1.0,
+    "twin_mean": 54815.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 20,
+      "improvement": -6138.0,
+      "trades": 37
+     },
+     "FINNIFTY": {
+      "changed": 67,
+      "improvement": -29163.0,
+      "trades": 118
+     },
+     "MIDCPNIFTY": {
+      "changed": 91,
+      "improvement": -279.0,
+      "trades": 137
+     },
+     "NIFTY": {
+      "changed": 13,
+      "improvement": 4608.0,
+      "trades": 18
+     }
+    },
+    "by_month": {
+     "2024-11": -367.0,
+     "2024-12": 10627.0,
+     "2025-01": -2785.0,
+     "2025-02": -5610.0,
+     "2025-03": -1406.0,
+     "2025-04": 3688.0,
+     "2025-05": 2558.0,
+     "2025-06": 773.0,
+     "2025-07": -11041.0,
+     "2025-08": -1511.0,
+     "2025-09": -4275.0,
+     "2025-10": 360.0,
+     "2025-11": -13440.0,
+     "2025-12": 3988.0,
+     "2026-01": -2063.0,
+     "2026-02": 12331.0,
+     "2026-03": -22802.0
+    },
+    "wf_quarters": [
+     7019.0,
+     -16827.0,
+     -9091.0,
+     -12534.0
+    ],
+    "wf_net": -31433.0
+   },
+   "HERO": {
+    "trades": 248,
+    "changed": 178,
+    "sessions": 134,
+    "plain_net": -59286.0,
+    "rule_net": -17459.0,
+    "improvement": 41827.0,
+    "saved_on_losers": 58315.0,
+    "given_up_on_winners": 16488.0,
+    "losers_changed": 149,
+    "winners_changed": 29,
+    "impr_ex_top5": 36928.0,
+    "plain_max_dd": 59853.0,
+    "rule_max_dd": 18659.0,
+    "plain_worst_day": -1999.0,
+    "rule_worst_day": -1235.0,
+    "why": {
+     "trend": 178
+    },
+    "p": 0.002,
+    "twin_mean": 24924.0,
+    "by_index": {
+     "NIFTY": {
+      "changed": 97,
+      "improvement": 27716.0,
+      "trades": 135
+     },
+     "SENSEX": {
+      "changed": 81,
+      "improvement": 14111.0,
+      "trades": 113
+     }
+    },
+    "by_month": {
+     "2024-11": 1020.0,
+     "2024-12": 3389.0,
+     "2025-01": 3869.0,
+     "2025-02": 979.0,
+     "2025-03": 3139.0,
+     "2025-04": 4599.0,
+     "2025-05": 1238.0,
+     "2025-06": 2621.0,
+     "2025-07": 1202.0,
+     "2025-08": 1760.0,
+     "2025-09": 3335.0,
+     "2025-10": 3295.0,
+     "2025-11": 3445.0,
+     "2025-12": 1611.0,
+     "2026-01": 3611.0,
+     "2026-02": 3176.0,
+     "2026-03": -461.0
+    },
+    "wf_quarters": [
+     8458.0,
+     6297.0,
+     8352.0,
+     6325.0
+    ],
+    "wf_net": 29432.0
+   },
+   "ALL": {
+    "trades": 6819,
+    "changed": 1623,
+    "sessions": 337,
+    "plain_net": 663921.0,
+    "rule_net": 440838.0,
+    "improvement": -233670.0,
+    "saved_on_losers": 797297.0,
+    "given_up_on_winners": 1030967.0,
+    "losers_changed": 1119,
+    "winners_changed": 504,
+    "impr_ex_top5": -269219.0,
+    "plain_max_dd": 243743.0,
+    "rule_max_dd": 256984.0,
+    "plain_worst_day": -67459.0,
+    "rule_worst_day": -66940.0,
+    "why": {
+     "rule_exit": 1444,
+     "trend": 178,
+     "missing": 1
+    },
+    "p": 1.0,
+    "twin_mean": 407009.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 322,
+      "improvement": -94084.0,
+      "trades": 1538
+     },
+     "FINNIFTY": {
+      "changed": 353,
+      "improvement": -138877.0,
+      "trades": 1518
+     },
+     "MIDCPNIFTY": {
+      "changed": 386,
+      "improvement": 28112.0,
+      "trades": 1573
+     },
+     "NIFTY": {
+      "changed": 280,
+      "improvement": -22053.0,
+      "trades": 1119
+     },
+     "SENSEX": {
+      "changed": 282,
+      "improvement": -6767.0,
+      "trades": 1071
+     }
+    },
+    "by_month": {
+     "2024-11": 5394.0,
+     "2024-12": 9924.0,
+     "2025-01": -3922.0,
+     "2025-02": -38537.0,
+     "2025-03": 745.0,
+     "2025-04": 12081.0,
+     "2025-05": -16214.0,
+     "2025-06": -7054.0,
+     "2025-07": -57044.0,
+     "2025-08": 15541.0,
+     "2025-09": -5075.0,
+     "2025-10": -25304.0,
+     "2025-11": -47585.0,
+     "2025-12": 24108.0,
+     "2026-01": 16544.0,
+     "2026-02": 59809.0,
+     "2026-03": -177082.0
+    },
+    "wf_quarters": [
+     -11187.0,
+     -46577.0,
+     -48780.0,
+     -100729.0
+    ],
+    "wf_net": -207273.0
+   }
+  },
+  "T4": {
+   "LIQ": {
+    "trades": 881,
+    "changed": 46,
+    "sessions": 282,
+    "plain_net": 257249.0,
+    "rule_net": 254133.0,
+    "improvement": -3116.0,
+    "saved_on_losers": 29614.0,
+    "given_up_on_winners": 32730.0,
+    "losers_changed": 9,
+    "winners_changed": 37,
+    "impr_ex_top5": -35393.0,
+    "plain_max_dd": 32537.0,
+    "rule_max_dd": 28137.0,
+    "plain_worst_day": -8416.0,
+    "rule_worst_day": -8416.0,
+    "why": {
+     "rule_exit": 46
+    },
+    "p": 1.0,
+    "twin_mean": 37377.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 14,
+      "improvement": -14903.0,
+      "trades": 336
+     },
+     "FINNIFTY": {
+      "changed": 17,
+      "improvement": -5798.0,
+      "trades": 252
+     },
+     "MIDCPNIFTY": {
+      "changed": 15,
+      "improvement": 17585.0,
+      "trades": 293
+     }
+    },
+    "by_month": {
+     "2024-11": 2407.0,
+     "2024-12": -6755.0,
+     "2025-01": 4665.0,
+     "2025-02": 3027.0,
+     "2025-03": -6240.0,
+     "2025-04": -3465.0,
+     "2025-05": 123.0,
+     "2025-06": 1281.0,
+     "2025-07": -1649.0,
+     "2025-08": 8571.0,
+     "2025-09": 8121.0,
+     "2025-10": -461.0,
+     "2025-11": -262.0,
+     "2025-12": 0.0,
+     "2026-01": 591.0,
+     "2026-02": -1682.0,
+     "2026-03": -11390.0
+    },
+    "wf_quarters": [
+     -2060.0,
+     15044.0,
+     -724.0,
+     -12481.0
+    ],
+    "wf_net": -221.0
+   },
+   "DON": {
+    "trades": 4551,
+    "changed": 87,
+    "sessions": 337,
+    "plain_net": 41859.0,
+    "rule_net": 41552.0,
+    "improvement": -2461.0,
+    "saved_on_losers": 4629.0,
+    "given_up_on_winners": 7090.0,
+    "losers_changed": 83,
+    "winners_changed": 4,
+    "impr_ex_top5": -12060.0,
+    "plain_max_dd": 203324.0,
+    "rule_max_dd": 203088.0,
+    "plain_worst_day": -54846.0,
+    "rule_worst_day": -54846.0,
+    "why": {
+     "rule_exit": 87
+    },
+    "p": 1.0,
+    "twin_mean": 55114.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 30,
+      "improvement": -6418.0,
+      "trades": 976
+     },
+     "FINNIFTY": {
+      "changed": 25,
+      "improvement": 322.0,
+      "trades": 958
+     },
+     "MIDCPNIFTY": {
+      "changed": 18,
+      "improvement": 4912.0,
+      "trades": 981
+     },
+     "NIFTY": {
+      "changed": 7,
+      "improvement": -306.0,
+      "trades": 809
+     },
+     "SENSEX": {
+      "changed": 7,
+      "improvement": -970.0,
+      "trades": 827
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": -2343.0,
+     "2025-01": -228.0,
+     "2025-02": 1160.0,
+     "2025-03": 3563.0,
+     "2025-04": -3756.0,
+     "2025-05": -2217.0,
+     "2025-06": 3820.0,
+     "2025-07": 459.0,
+     "2025-08": 153.0,
+     "2025-09": 901.0,
+     "2025-10": -4013.0,
+     "2025-11": -1501.0,
+     "2025-12": -76.0,
+     "2026-01": 1206.0,
+     "2026-02": -178.0,
+     "2026-03": 589.0
+    },
+    "wf_quarters": [
+     -2152.0,
+     1513.0,
+     -5589.0,
+     1617.0
+    ],
+    "wf_net": -4611.0
+   },
+   "OOV": {
+    "trades": 712,
+    "changed": 129,
+    "sessions": 253,
+    "plain_net": 281720.0,
+    "rule_net": 258231.0,
+    "improvement": -26192.0,
+    "saved_on_losers": 33674.0,
+    "given_up_on_winners": 59866.0,
+    "losers_changed": 110,
+    "winners_changed": 19,
+    "impr_ex_top5": -46120.0,
+    "plain_max_dd": 83696.0,
+    "rule_max_dd": 72333.0,
+    "plain_worst_day": -22994.0,
+    "rule_worst_day": -22994.0,
+    "why": {
+     "rule_exit": 129
+    },
+    "p": 1.0,
+    "twin_mean": 108037.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 28,
+      "improvement": -13751.0,
+      "trades": 144
+     },
+     "FINNIFTY": {
+      "changed": 25,
+      "improvement": -10065.0,
+      "trades": 144
+     },
+     "MIDCPNIFTY": {
+      "changed": 38,
+      "improvement": 1415.0,
+      "trades": 162
+     },
+     "NIFTY": {
+      "changed": 15,
+      "improvement": 1208.0,
+      "trades": 131
+     },
+     "SENSEX": {
+      "changed": 23,
+      "improvement": -4999.0,
+      "trades": 131
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": -1330.0,
+     "2025-01": 5416.0,
+     "2025-02": 5783.0,
+     "2025-03": 9553.0,
+     "2025-04": -4573.0,
+     "2025-05": -12.0,
+     "2025-06": -6276.0,
+     "2025-07": -5532.0,
+     "2025-08": 233.0,
+     "2025-09": -2315.0,
+     "2025-10": -274.0,
+     "2025-11": -2778.0,
+     "2025-12": 3498.0,
+     "2026-01": 2587.0,
+     "2026-02": -3881.0,
+     "2026-03": -26291.0
+    },
+    "wf_quarters": [
+     -10862.0,
+     -7614.0,
+     446.0,
+     -27584.0
+    ],
+    "wf_net": -45614.0
+   },
+   "SOLO": {
+    "trades": 117,
+    "changed": 78,
+    "sessions": 117,
+    "plain_net": 39606.0,
+    "rule_net": -6794.0,
+    "improvement": -46400.0,
+    "saved_on_losers": 50009.0,
+    "given_up_on_winners": 96409.0,
+    "losers_changed": 45,
+    "winners_changed": 33,
+    "impr_ex_top5": -63579.0,
+    "plain_max_dd": 21939.0,
+    "rule_max_dd": 30275.0,
+    "plain_worst_day": -7184.0,
+    "rule_worst_day": -5728.0,
+    "why": {
+     "rule_exit": 78
+    },
+    "p": 1.0,
+    "twin_mean": 33095.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 36,
+      "improvement": -26817.0,
+      "trades": 45
+     },
+     "FINNIFTY": {
+      "changed": 28,
+      "improvement": 6730.0,
+      "trades": 46
+     },
+     "NIFTY": {
+      "changed": 14,
+      "improvement": -26313.0,
+      "trades": 26
+     }
+    },
+    "by_month": {
+     "2024-11": -16.0,
+     "2024-12": -3389.0,
+     "2025-01": 1906.0,
+     "2025-02": 4291.0,
+     "2025-03": -7548.0,
+     "2025-04": 2291.0,
+     "2025-05": -15739.0,
+     "2025-06": -13848.0,
+     "2025-07": -2548.0,
+     "2025-08": -523.0,
+     "2025-09": -3919.0,
+     "2025-10": -3820.0,
+     "2025-11": -5124.0,
+     "2025-12": 3932.0,
+     "2026-01": -7773.0,
+     "2026-02": 3069.0,
+     "2026-03": 2358.0
+    },
+    "wf_quarters": [
+     -27296.0,
+     -6990.0,
+     -5012.0,
+     -2345.0
+    ],
+    "wf_net": -41643.0
+   },
+   "SOLO2": {
+    "trades": 310,
+    "changed": 51,
+    "sessions": 310,
+    "plain_net": 102774.0,
+    "rule_net": 99753.0,
+    "improvement": -4953.0,
+    "saved_on_losers": 13479.0,
+    "given_up_on_winners": 18432.0,
+    "losers_changed": 47,
+    "winners_changed": 4,
+    "impr_ex_top5": -20935.0,
+    "plain_max_dd": 26708.0,
+    "rule_max_dd": 27668.0,
+    "plain_worst_day": -14592.0,
+    "rule_worst_day": -14592.0,
+    "why": {
+     "rule_exit": 51
+    },
+    "p": 1.0,
+    "twin_mean": 47224.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 5,
+      "improvement": 987.0,
+      "trades": 37
+     },
+     "FINNIFTY": {
+      "changed": 19,
+      "improvement": -4487.0,
+      "trades": 118
+     },
+     "MIDCPNIFTY": {
+      "changed": 25,
+      "improvement": -2714.0,
+      "trades": 137
+     },
+     "NIFTY": {
+      "changed": 2,
+      "improvement": 1261.0,
+      "trades": 18
+     }
+    },
+    "by_month": {
+     "2024-11": 0.0,
+     "2024-12": 1379.0,
+     "2025-01": -913.0,
+     "2025-02": 2077.0,
+     "2025-03": -535.0,
+     "2025-04": -260.0,
+     "2025-05": 1077.0,
+     "2025-06": -3250.0,
+     "2025-07": -1103.0,
+     "2025-08": -2211.0,
+     "2025-09": -724.0,
+     "2025-10": 6176.0,
+     "2025-11": -413.0,
+     "2025-12": 5638.0,
+     "2026-01": 1420.0,
+     "2026-02": -3785.0,
+     "2026-03": -9528.0
+    },
+    "wf_quarters": [
+     -2433.0,
+     -4038.0,
+     11402.0,
+     -11892.0
+    ],
+    "wf_net": -6961.0
+   },
+   "HERO": {
+    "trades": 248,
+    "changed": 160,
+    "sessions": 134,
+    "plain_net": -59286.0,
+    "rule_net": -24145.0,
+    "improvement": 35142.0,
+    "saved_on_losers": 43586.0,
+    "given_up_on_winners": 8444.0,
+    "losers_changed": 147,
+    "winners_changed": 13,
+    "impr_ex_top5": 31418.0,
+    "plain_max_dd": 59853.0,
+    "rule_max_dd": 25229.0,
+    "plain_worst_day": -1999.0,
+    "rule_worst_day": -1619.0,
+    "why": {
+     "trend": 160
+    },
+    "p": 0.0978,
+    "twin_mean": 31104.0,
+    "by_index": {
+     "NIFTY": {
+      "changed": 86,
+      "improvement": 23301.0,
+      "trades": 135
+     },
+     "SENSEX": {
+      "changed": 74,
+      "improvement": 11841.0,
+      "trades": 113
+     }
+    },
+    "by_month": {
+     "2024-11": 740.0,
+     "2024-12": 1783.0,
+     "2025-01": 2025.0,
+     "2025-02": 2927.0,
+     "2025-03": 2527.0,
+     "2025-04": 2400.0,
+     "2025-05": 2302.0,
+     "2025-06": -403.0,
+     "2025-07": 3195.0,
+     "2025-08": 1539.0,
+     "2025-09": 2325.0,
+     "2025-10": 3259.0,
+     "2025-11": 2665.0,
+     "2025-12": 1776.0,
+     "2026-01": 3274.0,
+     "2026-02": 1465.0,
+     "2026-03": 1342.0
+    },
+    "wf_quarters": [
+     4299.0,
+     7058.0,
+     7701.0,
+     6081.0
+    ],
+    "wf_net": 25139.0
+   },
+   "ALL": {
+    "trades": 6819,
+    "changed": 551,
+    "sessions": 337,
+    "plain_net": 663921.0,
+    "rule_net": 622730.0,
+    "improvement": -47980.0,
+    "saved_on_losers": 174991.0,
+    "given_up_on_winners": 222971.0,
+    "losers_changed": 441,
+    "winners_changed": 110,
+    "impr_ex_top5": -80655.0,
+    "plain_max_dd": 243743.0,
+    "rule_max_dd": 219614.0,
+    "plain_worst_day": -67459.0,
+    "rule_worst_day": -67459.0,
+    "why": {
+     "rule_exit": 391,
+     "trend": 160
+    },
+    "p": 1.0,
+    "twin_mean": 311950.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 113,
+      "improvement": -60902.0,
+      "trades": 1538
+     },
+     "FINNIFTY": {
+      "changed": 114,
+      "improvement": -13299.0,
+      "trades": 1518
+     },
+     "MIDCPNIFTY": {
+      "changed": 96,
+      "improvement": 21198.0,
+      "trades": 1573
+     },
+     "NIFTY": {
+      "changed": 124,
+      "improvement": -849.0,
+      "trades": 1119
+     },
+     "SENSEX": {
+      "changed": 104,
+      "improvement": 5872.0,
+      "trades": 1071
+     }
+    },
+    "by_month": {
+     "2024-11": 3131.0,
+     "2024-12": -10655.0,
+     "2025-01": 12870.0,
+     "2025-02": 19265.0,
+     "2025-03": 1320.0,
+     "2025-04": -7362.0,
+     "2025-05": -14466.0,
+     "2025-06": -18676.0,
+     "2025-07": -7178.0,
+     "2025-08": 7762.0,
+     "2025-09": 4390.0,
+     "2025-10": 867.0,
+     "2025-11": -7412.0,
+     "2025-12": 14769.0,
+     "2026-01": 1306.0,
+     "2026-02": -4992.0,
+     "2026-03": -42918.0
+    },
+    "wf_quarters": [
+     -40504.0,
+     4974.0,
+     8224.0,
+     -46604.0
+    ],
+    "wf_net": -73910.0
+   }
+  }
+ },
+ "design_order": {
+  "LIQ": [
+   "T4",
+   "T2",
+   "T1",
+   "T3"
+  ],
+  "DON": [
+   "T2",
+   "T4",
+   "T1",
+   "T3"
+  ],
+  "OOV": [
+   "T1",
+   "T2",
+   "T4",
+   "T3"
+  ],
+  "SOLO": [
+   "T2",
+   "T1",
+   "T3",
+   "T4"
+  ],
+  "SOLO2": [
+   "T1",
+   "T2",
+   "T4",
+   "T3"
+  ],
+  "HERO": [
+   "T3",
+   "T4",
+   "T1",
+   "T2"
+  ],
+  "ALL": [
+   "T2",
+   "T1",
+   "T4",
+   "T3"
+  ]
+ }
+}

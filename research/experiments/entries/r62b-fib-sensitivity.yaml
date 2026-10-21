@@ -1,0 +1,35 @@
+id: r62b-fib-sensitivity
+title: 'R62b sensitivity: the 16 variants at fib 0.33 (script default) and 0.50'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R62B_MSB_ORDER_BLOCK.md
+hypothesis: 'Information only: does the fib confirmation factor change the picture? (never gated)'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake fetched 15 Oct 2026: index_1m and options_rolling_1m opt_<U>_WEEK 2024-2026
+  (R51 Amendment A clean store = R47 foreign / stray-row filter, plus research/data/spikes.py rule; one held contract per
+  trade); read by research/hunt/r62b/r62bdata.py'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward by quarter)
+  holdout: 'final test 1 Apr - 14 Oct 2026, read once 15 Oct 2026 (not pristine: earlier studies saw these sessions, never
+    with these rules)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the INDEX spot 1-minute bars (EmreKb MSB-OB port on 5- / 15-minute bars, 1-hour trend filter); the 1-ITM
+  nearest-expiry option is only what is bought; no option-chain input'
+model_or_rule: the 16 R62b variants with fib_factor 0.33 and 0.50
+settings: research/hunt/r62b/PREREG.md 5
+prereg: research/hunt/r62b/PREREG.md
+variants_tried: 32
+results:
+  summary: 'fib 0.33 design: 0 of 16 variants net > 0; win rates 20%-44%; total trades 2,325; fib 0.33 final: 4 of 16 variants
+    net > 0; win rates 31%-52%; total trades 1,057; fib 0.5 design: 3 of 16 variants net > 0; win rates 12%-43%; total trades
+    2,059; fib 0.5 final: 9 of 16 variants net > 0; win rates 33%-55%; total trades 939. Not gated, no twins.'
+  costs: 'R51 engine: R17 ''liq'' fills (buy +5 bps + 1/2/4 ticks; market sells -5 bps), obuy Costs(''dated'') charges (STT
+    from 1 Apr 2026; BSE rates for SENSEX), next-minute fills, 1 lot in force; 2x = double bps / ticks and charges'
+holdout_read: true
+verdict: rejected
+notes: Context for the fib choice only; does not enter the BH family.

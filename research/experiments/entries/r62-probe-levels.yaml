@@ -1,0 +1,34 @@
+id: r62-probe-levels
+title: 'R62 probe: is the volume profile''s POC / LVN a special pullback level? (diagnosis, design sessions only)'
+family: diagnosis
+date: '2026-10-15'
+doc: research/HUNT_R62_VOLUME_PROFILE_SMC.md
+hypothesis: The video's POC / LVN levels give a better pullback entry than plain 38.2 / 50 / 61.8% retracements or a
+  random level of the same leg (diagnosis after R62 failed; not a gated test).
+data_version: 'Drive lake fetched 15 Oct 2026 (as R62): index_1m, options_rolling_1m volumes, equity_1m; research/hunt/r62/r62probe.py'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 only (the final test is never read by the probe)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+- F&O stocks
+features:
+- R62 legs, touch + next-bar confirmation, stop beyond the anchor
+- level swapped: POC, LVN, VAH, VAL, 38.2 / 50 / 61.8% retracement, random
+model_or_rule: 'signal source: the underlying; first signal per leg per level, pre-cost R on the underlying (structural and
+  2R targets, 15:15 out)'
+settings: research/hunt/r62/r62probe.py
+prereg: null
+variants_tried: null
+results:
+  summary: 'Every level is about 0 R a trade before costs. Indices (option volume) POC +0.00 +- 0.03 (550), LVN -0.02 +-
+    0.02 (599), 38.2% +0.01 +- 0.02 (798), random -0.01 +- 0.03 (691); stocks POC -0.03 +- 0.02 (1,179), random -0.04 +-
+    0.02 (1,432). The profile levels are not special; the underlying "pullback after a break continues" has no edge
+    here. results/probe_design.json.'
+  costs: none (pre-cost diagnosis on the underlying)
+holdout_read: null
+verdict: not-a-test
+notes: Run after R62's final read at Boss's request (reverse-engineer the setup). Design sessions only.

@@ -132,6 +132,30 @@ class McxMarketTest : RobolectricTest() {
     }
 
     /**
+     * 16 Oct (Boss's diagnostics: "MCX is open with 2 armed, but the market watch is not running", 15 Oct 17:56): after Android
+     * ended the app in MCX's evening with the arms armed and nothing held, its restart of the watch asked this from memory, got
+     * "unknown" for the armed arms, and dropped the restart as "after the market hours". An armed arm's hint is a yes now
+     * (since 12 Oct an armed arm needs MCX's whole session).
+     */
+    @Test fun anArmedMcxArmsHintResumesTheWatchAfterAndroidEndedTheApp() {
+        at("2026-10-08", "17:56")
+        McxMarket.notePaperExposure(false); McxMarket.noteArmsArmed(true)
+        // A new process: neither book read.
+        Paper.forgetForTest(); McxMarket.wipe(); McxPaperArms.wipe()
+        assertEquals(true, McxMarket.watchDueQuick())
+        assertEquals(true, com.optionslab.app.work.Jobs.watchDueQuick())
+        assertNull("the book was not read to answer", Paper.stateIfLoaded())
+        // No arm armed and nothing held: no, at once.
+        McxMarket.noteArmsArmed(false); McxMarket.wipe()
+        assertEquals(false, McxMarket.watchDueQuick())
+        // MCX shut: no, whatever is armed.
+        McxMarket.noteArmsArmed(true); McxMarket.wipe()
+        at("2026-10-08", "23:45")
+        assertEquals(false, McxMarket.watchDueQuick())
+        McxMarket.noteArmsArmed(false)
+    }
+
+    /**
      * 12 Oct, 09:05-09:06: three "[error] Missing required field: quantity" - a close of a paper row that was already flat
      * (a second tap while the first close was on its way) reached the engine as an order of quantity 0. Now it is said to be
      * closed already, and nothing is placed.

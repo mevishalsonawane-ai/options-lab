@@ -161,6 +161,26 @@ class IraHubTest : RobolectricTest() {
         assertEquals(ps.size, ps.map { it.result.name }.toSet().size)
     }
 
+    /**
+     * 21 Oct (Boss's diagnostics: the words worker's pattern check took up to 6 min 44 s): from the words round's checks the
+     * two-year pattern lab runs on its own background job - the refresh returns without it, and its offers still come.
+     */
+    @Test fun theWordsRoundsRefreshLeavesThePatternLabToItsOwnJob() = runBlocking {
+        IraHub.testAutoLab = true
+        IraHub.testHistories = { sixty }
+        IraHub.testLabBars = { _, _ -> twoYears }
+        IraHub.refresh(labInline = false)
+        IraHub.awaitLabForTest()
+        val ps = IraHub.state.value.proposals
+        assertTrue(ps.all { it.result.recommended })
+        // Its patterns were tried by that job: an inline refresh now tries none again (each once a day).
+        IraHub.refresh()
+        assertEquals(ps.size, IraHub.state.value.proposals.size)
+        assertTrue("its two slow steps are bounded well inside the worker's 5 minutes",
+            com.optionslab.app.work.Tasks.WORD_SLOW_STEP_MS * 3 <= 5 * 60_000L)
+        assertTrue(IraHub.LAB_BUDGET_MS <= 5 * 60_000L)
+    }
+
     @Test fun learnsBuildsSnapshotsAndAnswers() = runBlocking {
         IraHub.testHistories = { histories }
         IraHub.refresh()
@@ -369,7 +389,7 @@ class IraHubTest : RobolectricTest() {
         assertEquals(listOf(p), st.proposals)
         assertTrue("the conversation is remembered", st.messages.any { it.proposal == p.id && it.text.contains("Backtest of") })
         assertTrue(st.messages.any { !it.fromIra && it.text == "backtest the hammer on banknifty 1 hour" })
-        IraHub.dismiss(p.id)
+        IraHub.dismiss(p.id).join()                                // its save runs off the caller's thread (18 Oct, review)
         IraHub.init(context); IraHub.awaitLoadedBlocking()
         st = IraHub.state.value
         assertEquals(IraHub.Proposal.DISMISSED, st.proposals.single().status)
@@ -482,6 +502,28 @@ class IraHubTest : RobolectricTest() {
         val p = IraHub.state.value.proposals.single()
         assertTrue(p.result.error!!, p.result.error!!.endsWith("needs at least 2 years"))
         assertTrue(!p.result.recommended)
+    }
+
+    /**
+     * 18 Oct, review: a tap on No now does its vault work off the main thread, but still takes the request off the waiting
+     * list at once - a Yes tapped right after it finds nothing waiting, and nothing is done.
+     */
+    @Test fun aNoTappedBeforeAYesAlwaysWins() = runBlocking {
+        IraHub.ask("alert me when nifty goes above 25000")
+        waitFor("the alarm confirm") { IraHub.state.value.pending.isNotEmpty() }
+        val id = IraHub.state.value.pending.single()
+        val job = IraHub.cancelAsync(id, by = com.optionslab.ira.Requests.By.TAP)
+        assertTrue("it was waiting", job != null)
+        // Taken at once, before its I/O half has run.
+        assertTrue(!IraHub.waitsFor(id))
+        assertEquals(null, IraHub.confirm(id))
+        job!!.join()
+        assertTrue("nothing was done", com.optionslab.app.data.Alarms.all().isEmpty())
+        assertEquals(com.optionslab.ira.Requests.Outcome.DECLINED, IraHub.recentRequests().value.first().outcome)
+        assertTrue(id !in IraHub.state.value.pending)
+        assertTrue(IraHub.state.value.messages.any { it.text == "Cancelled; nothing was done." })
+        // A second No on it: nothing waits, nothing launched.
+        assertEquals(null, IraHub.cancelAsync(id))
     }
 
     /** "Turn on the kill switch", "set an alarm": in IraAlgo every action waits for Confirm; nothing happens before it. */

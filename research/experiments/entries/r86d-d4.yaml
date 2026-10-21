@@ -1,0 +1,28 @@
+id: r86d-d4
+title: 'R86d D4: BANKNIFTY seller detector at 09:45, pooled + 15:15 + top 20%'
+family: ml
+date: '2026-10-19'
+doc: research/HUNT_R86D_SELLER_DETECTOR.md
+hypothesis: 'Pre-registered (research/hunt/r86/PREREG_D.md): the improved detector, shorting BANKNIFTY at 09:45, beats random
+  09:45 shorts on the unread 1 Jan 2025 - 14 Oct 2026 window (net > 0 and > twins, twin p < 0.10, BH q < 0.10 over D1-D4,
+  > 0 without its top 5).'
+data_version: Drive lake index_1m (BANKNIFTY, NIFTY, INDIAVIX), equity_1m (bank stocks), participants (labels), options_rolling_1m
+  BANKNIFTY WEEK 2025-26 (put version); copies of 13-15 Oct 2026
+period:
+  design: '2022-2024 post hoc: 36 trades, net Rs 8,792'
+  holdout: 1 Jan 2025 - 14 Oct 2026, read once (results/FINAL_D_READ)
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: BANKNIFTY index minutes, 14 bank stocks, INDIA VIX (09:15-09:44); FII labels only for training'
+model_or_rule: pooled + 15:15 + top 20%
+settings: research/hunt/r86/r86d.py; PREREG_D.md
+prereg: research/hunt/r86/PREREG_D.md
+variants_tried: 1
+results:
+  summary: 'Final: 62 trades, net Rs -41,361, win 0.387, without top 5 Rs -170,618, random twins Rs -77,390, twin p 0.265,
+    BH q 0.547; as ATM put Rs 9,490 on 62 (without top 5 Rs -74,890); detector AUC 0.7444987775061125. Verdict: FAIL.'
+  costs: 'futures: R86 model; put: Costs(''dated'') + 5 bps + Rs 0.05 a side'
+holdout_read: true
+verdict: rejected
+notes: Seller recognised (AUC 0.72-0.74 unseen) but not tradeable after 09:45.

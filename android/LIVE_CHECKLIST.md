@@ -13,9 +13,13 @@ the market, so it cannot fill, and it is cancelled in step 6.
 - [ ] The badge at the top shows **LIVE** (tap it and confirm if it shows PAPER).
 - [ ] More → Bot → Bot settings: kill switch **off**, order limits set.
 
-## 1. Self-test (read-only)
-- [ ] More → Zerodha → **Live self-test** → *Run the self-test*.
-- [ ] All checks show ✓. "Static IP for orders" must pass; otherwise orders would be rejected.
+## 1. Live check (sends no order)
+- [ ] More → Zerodha → **Live check** → *Run the live check* (about half a minute), in market hours.
+- [ ] Every step shows ✓ ("Dhan" shows – : the app no longer reads it). "Static IP for orders" must pass; otherwise
+      orders would be rejected. A **!** is a step that worked but slower than its budget; a ✗ failed (its reason is beside it).
+- [ ] The summary line reads "N of N passed". Copy diagnostics carries it.
+- [ ] Optional: switch on *Run it by itself at 09:20* to have it run once every trading morning (it then skips the
+      stream drop).
 
 ## 2. Place an order that cannot fill
 - [ ] Trade → pick a far out-of-the-money NIFTY option on the next expiry (premium under ₹5).

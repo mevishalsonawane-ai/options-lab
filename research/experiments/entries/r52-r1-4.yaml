@@ -1,0 +1,39 @@
+id: r52-r1-4
+title: 'R52 re-test on Nov 2024+: R1-4 Rest-of-day -> last 30 min momentum'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R1-4 (old verdict: NIFTY expiry 268 tr -33/day, hold 51 tr +6; BN -96 / +35 (13 tr).
+  TD-02 IS best -11.4k 5/7, WF -113.2k) makes money net of real costs on the recent market (Nov 2024+) at its original setting
+  or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''T'': ''1440'', ''base'': ''pc'', ''expiry_only'': True, ''thr'': 0.0, ''unds'': [''NIFTY'', ''BANKNIFTY'']}
+  | ITM1/near | exits default | expiry only'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 9
+results:
+  summary: 'Design original: 88 trades, win 44%, net Rs -36,286 (Rs -108/day), worst day Rs -9,222, max DD Rs -52,921, p 1.000
+    (coin-flip p 0.751); walk-forward Rs -21,367. Re-tune pick g06 ({''T'': ''1440'', ''base'': ''pc'', ''thr'': 0.005, ''expiry_only'':
+    False, ''unds'': (''NIFTY'', ''BANKNIFTY'')} · ITM1/near · exits default): design 309 trades, win 46%, net Rs -10,490
+    (Rs -31/day), worst day Rs -9,974, max DD Rs -92,640, p 1.000 (coin-flip p 0.082); walk-forward Rs +38,047. FINAL original:
+    34 trades, win 53%, net Rs +19,309 (Rs +145/day), worst day Rs -3,557, max DD Rs -9,006, p 1.000 (coin-flip p 0.032),
+    q 1.00 -> too few trades to judge. FINAL pick: 129 trades, win 40%, net Rs -9,797 (Rs -74/day), worst day Rs -9,551, max
+    DD Rs -42,781, p 1.000 (coin-flip p 0.400), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = R1''s frozen holdout pick per index (HUNT_R1_INTERNET.md results
+  table; hunt/r1/design.py frozen.json): both N4_ROD|1440|pc|expiry (14:40 from prev close, thr 0, expiry days only). Gates:
+  final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward
+  > 0.'

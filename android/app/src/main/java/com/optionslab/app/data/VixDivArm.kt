@@ -26,6 +26,11 @@ import java.util.Locale
  * expiry. BANKNIFTY holds to 15:10; NIFTY takes the Liquidity exit (-15% on the option's low, out after 20 minutes unless
  * +5%). It failed the research's luck checks: off by default, and it needs about 150 paper trades before anyone trusts it.
  *
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * PAPER ONLY, always: every order is the paper account's ([Paper.place] / [Paper.cancel]); there is no live flag, and its
  * file is not in the backup, so nothing here can reach Zerodha whatever Live, "AI trades go live" or a voice command says.
  * New entries obey the kill switch, the bot's stop for today (the daily loss limit included), the account day lock, a fresh
@@ -42,7 +47,17 @@ object VixDivArm {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "vix_div.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): its paper trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.VIX) {
+            if (cache == null) null else _view.value.let { v ->
+                val today = Market.today()
+                (v.open + v.closed.filter { it.entryDay == today }).map { ArmLive.PaperLeg(mirrorRef(it), VixDivRules.SOURCE, if (it.open) it.qty else 0) }
+            }
+        }
     }
+
+    /** A trade's reference for its live path ([ArmLive]): its index and paper order (or its entry time). */
+    private fun mirrorRef(p: Pos): String = "vix:${p.index}:${p.orderId ?: p.entryTime}"
 
     /** One paper trade. */
     data class Pos(
@@ -60,7 +75,8 @@ object VixDivArm {
         val positions: MutableList<Pos> = ArrayList(),
         /** "day|index" decided (one decision a day per index). */
         val decided: MutableSet<String> = HashSet(),
-        val status: MutableMap<String, String> = HashMap(),
+        /** 21 Oct: with the day each line was written ([StatusMap]). */
+        val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
     )
 
@@ -79,6 +95,9 @@ object VixDivArm {
 
     private fun ready() = ::file.isInitialized
 
+    /** Its book can be read now (15 Oct cleanup: a read before that counts as "holding", so nothing is switched off on it). */
+    fun readyForCleanup(): Boolean = ready()
+
     private fun book(): Book {
         cache?.let { return it }
         val b = Book()
@@ -87,7 +106,7 @@ object VixDivArm {
             b.armed = o.optBoolean("armed", false)
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += readPos(a.getJSONObject(i)) }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
         cache = b
@@ -116,6 +135,7 @@ object VixDivArm {
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(40).forEach { put(it) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
+        b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
@@ -123,10 +143,16 @@ object VixDivArm {
 
     private fun publish(b: Book) {
         val closed = b.positions.filter { !it.open }
-        _view.value = View(b.armed, b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(20), b.log.takeLast(30),
+        _view.value = View(b.armed, b.status.shown(), b.positions.filter { it.open }, closed.takeLast(20), b.log.takeLast(30),
             closed.map { it.net ?: 0.0 }, closed.map { com.optionslab.ira.Vetting.Trade((it.exitTime ?: it.entryTime).toLocalDate(), it.net ?: 0.0) })
         // The trade manager's one call (10 Oct): SHADOW by default - it records only; this arm's own exits stay authoritative.
         runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }) }
+        // 16 Oct: each open position's exits for the position popup's "Exits" line (memory only); NIFTY's minutes rule said.
+        runCatching { com.optionslab.ira.ArmExits.set("vixdiv", b.positions.filter { it.open }.map { p ->
+            val note = if (!VixDivRules.liquidityExit(p.index)) null else params(p.entryDay).minutes.let { m ->
+                p.entryTime.plusMinutes(m.toLong()).let { "out at %02d:%02d unless +5%%".format(Locale.ENGLISH, it.hour, it.minute) } }
+            TradeManagerHost.exitsOf("vixdiv", managed(p), note)
+        }) }
     }
 
     /** [p]'s id for the trade manager. */
@@ -157,6 +183,8 @@ object VixDivArm {
     /** Switch it on or off - on paper, always. Off sells nothing it holds: its own exits still close it. */
     suspend fun setArmed(on: Boolean): String {
         if (!ready()) return "${VixDivRules.LABEL} is not ready yet."
+        // 15 Oct (Boss's cleanup): hidden, it is switched on only by its restore from the Hidden arms list.
+        if (on && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.VIX_DIV)) return HiddenArms.refusal(VixDivRules.LABEL)
         return lock.withLock {
             val b = book()
             if (b.armed == on) return@withLock "${VixDivRules.LABEL} is already ${if (on) "on" else "off"} (paper only)."
@@ -197,7 +225,7 @@ object VixDivArm {
                         b.status[u] = d.why
                         note(b, "$u ${now.toLocalTime()}: ${d.why}")
                         changed = true
-                    } else if (b.status[u] != d.why) { b.status[u] = d.why; changed = true }
+                    } else if (!b.status.sameToday(u, d.why)) { b.status[u] = d.why; changed = true }
                 }
             }
             // Closed trades beyond what is kept are dropped (oldest first); open ones always stay.
@@ -239,6 +267,8 @@ object VixDivArm {
 
     /** The check's decision for [u] at [now]. */
     private suspend fun decide(b: Book, u: String, now: LocalDateTime): Decision {
+        // 15 Oct (Boss's cleanup): hidden, it buys nothing new; what it holds still closes by its own exits (memory only).
+        if (HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.VIX_DIV)) return Decision(false, "hidden (your 15 Oct cleanup): no new entry")
         val minute = minuteOf(now)
         if (minute < VixDivRules.CHECKS.first()) return Decision(false, "waiting for the 10:30 check")
         val today = now.toLocalDate()
@@ -285,7 +315,8 @@ object VixDivArm {
         // The order flow at the decision (9 Oct; paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
         val flow = FlowGate.gate(VixDivRules.SOURCE, u, sig.side, false, "$today ${hhmm(sig.check)}", right.name, contract = c)
         if (flow.skip) return Decision(true, flow.pausedWhy?.let { "vix_$it ($said)" } ?: "vix_${FlowGate.SKIPPED} ($said)")
-        val r = Paper.place(c, "BUY", VixDivRules.LOTS, "MARKET", "MIS", null, null)
+        runCatching { LiveRecorder.signal(VixDivRules.LABEL, c.symbol, u, right.name, q?.ltp, paper = true) }
+        val r = Paper.place(c, "BUY", VixDivRules.LOTS, "MARKET", "MIS", null, null, auto = VixDivRules.LABEL)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
             r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
@@ -297,7 +328,14 @@ object VixDivArm {
         val stopId = if (!VixDivRules.liquidityExit(u)) null else runCatching {
             Paper.place(c, "SELL", VixDivRules.LOTS, "SL-M", "MIS", null, VixDivRules.stop(fill.price, vp.stopPct))
         }.getOrNull()?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${VixDivRules.LABEL} · stop") } }
-        b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, minute, r.orderId, stopId, charges = chargesOf(r.orderId))
+        val pos = Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, minute, r.orderId, stopId, charges = chargesOf(r.orderId))
+        b.positions += pos
+        // 18 Oct: its live path ([ArmLive]): the same option and lot; NIFTY's -15% stop rests at Zerodha (BANKNIFTY has none: held to 15:10).
+        runCatching { ArmLive.entered(ArmLive.Ask(VixDivRules.SOURCE, mirrorRef(pos), c, 1, fill.quantity, fill.price,
+            stop = if (VixDivRules.liquidityExit(u)) VixDivRules.stop(fill.price, vp.stopPct) else null)) }
+        // R17 shadow (I3 / I5): the charges check and smart stop noted beside the trade (memory only; nothing changes).
+        runCatching { PreTradeShadow.vixDiv("${VixDivRules.SOURCE}_${u.lowercase()}", "${VixDivRules.LABEL} $u", index, c, fill.price, fill.quantity, now,
+            if (VixDivRules.liquidityExit(u)) fill.price - VixDivRules.stop(fill.price, vp.stopPct) else null) }
         val exits = if (VixDivRules.liquidityExit(u)) "stop %.2f on the low, out after %d min unless +5%%, else 15:10".format(Locale.ENGLISH,
                 VixDivRules.stop(fill.price, vp.stopPct), vp.minutes)
             else "held to 15:10"
@@ -361,7 +399,7 @@ object VixDivArm {
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
             r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
-            if (b.status[p.index] != "exit_retry") { b.status[p.index] = "exit_retry"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
+            if (!b.status.sameToday(p.index, "exit_retry")) { b.status[p.index] = "exit_retry"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
             return p.copy(stopOrderId = null)
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${VixDivRules.LABEL} · exit") } }
@@ -372,10 +410,11 @@ object VixDivArm {
     }
 
     private fun closed(b: Book, p: Pos) {
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
-        note(b, "${p.symbol}: sold (${p.why}) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)))
+        note(b, "%s: sold (%s) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6990 + VixDivRules.UNDERLYINGS.indexOf(p.index).coerceAtLeast(0), Notifier.SELL, "${VixDivRules.LABEL} sold ${p.symbol} · Paper",
-            "Sold (${p.why}) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
+            "Sold (%s) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
     }
 
     /** For tests: the book forgotten (its file goes with the test's directory). */

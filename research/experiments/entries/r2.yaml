@@ -1,0 +1,28 @@
+id: r2
+title: Does the US market tell MCX's direction
+family: mcx-crypto
+date: '2026-10-09'
+doc: research/HUNT_R2_US_MCX.md
+hypothesis: US moves lead MCX enough to trade.
+data_version: see doc (backfilled at summary level)
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- GOLD
+- SILVER
+- CRUDE
+- NATURALGAS
+features:
+- US futures minute moves
+- USD/INR
+model_or_rule: lead-lag rules
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/r2/PREREG.md
+variants_tried: null
+results:
+  summary: Lead at most 1 minute; two futures patterns and one gold option rule worth paper only.
+  costs: real costs
+holdout_read: true
+verdict: paper-only
+backfilled: true

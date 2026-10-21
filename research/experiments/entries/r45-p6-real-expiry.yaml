@@ -1,0 +1,31 @@
+id: r45-p6-real-expiry
+title: 'Premium scalp audit P6-real-expiry: T0 skipping real expiry days (lake time-value method) instead of ''last 5 closes
+  < 1.0'''
+hypothesis: The claimed NIFTY premium mean-reversion scalp (+Rs 174/trade, 3,726 trades) survives this pre-registered fix.
+instruments:
+- NIFTY
+features:
+- 5-minute ATM call premium
+- Bollinger(20, 2) lower band
+model_or_rule: T0 skipping real expiry days (lake time-value method) instead of 'last 5 closes < 1.0'
+variants_tried: null
+results:
+  summary: Design 2719 trades, win 61.1%, Rs +274.4/trade, net Rs +745,988, PF 1.72, green months 53/57, max DD Rs 25,948,
+    worst month Rs -19,993; by year 2021 +418 (n 234), 2022 +322 (n 546), 2023 +362 (n 598), 2024 +183 (n 607), 2025 +256
+    (n 579), 2026 -22 (n 155); random-entry twins Rs -192.5/trade, p 0.0033, BH q 0.0055 (family 20). Holdout 254 trades,
+    Rs +107.0/trade, PF 1.27. The rolling ATM strike moved during 69.6% of the trades.
+  costs: Rs 95/trade (T0) or research/obuy Costs('dated') with 0 / 0.5 / 1% slippage a side, as named
+holdout_read: true
+verdict: not-a-test
+notes: 'SIGNAL SOURCE: the option''s own price chart (not the default kind of rule; only Boss can switch it on for paper).
+  A measured fix (effect vs T0), not a strategy.'
+family: outside-strategies
+date: '2026-10-14'
+doc: research/HUNT_R45_PREMIUM_SCALP_AUDIT.md
+data_version: Drive lake gdrive:IraAlgo-data-lake/options_rolling_1m, opt_{NIFTY,BANKNIFTY}_{WEEK,MONTH}_2021-2026 (1-minute
+  rolling ATM+-10, Aug 2021 - 13 Oct 2026)
+period:
+  design: sessions Aug 2021 - 13 Apr 2026 (each year its own out-of-sample block; nothing fitted)
+  holdout: 27 Apr - 13 Oct 2026, read once (14-26 Apr embargo)
+prereg: research/hunt/r45/PREREG.md
+settings: research/hunt/r45/r45cfg.py

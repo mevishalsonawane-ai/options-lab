@@ -1,0 +1,24 @@
+id: r94-pairs
+title: 'R94 idea 2: sector-index pair proxies (GOLD/SILVER, COPPER/ZINC/ALUMINIUM, CRUDEOIL/NATURALGAS), ratio z over 60 / 120 days, |z| >= 2, exit z = 0 / 20 days / |z| >= 3.5'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R94_MCX_ADVANCED.md
+hypothesis: 'Pre-registered (research/hunt/r94_mcx_advanced/PREREG.md): R94 idea 2: sector-index pair proxies (GOLD/SILVER, COPPER/ZINC/ALUMINIUM, CRUDEOIL/NATURALGAS), ratio z over 60 / 120 days, |z| >= 2, exit z = 0 / 20 days / |z| >= 3.5; after real MCX costs on every leg it beats random entry (or zero for every-day option selling), p <= 0.05 and BH q <= 0.10 over all R94 cells, walk-forward, worst month >= -Rs 13k, then holds on the locked holdout read once; Boss risk rules: hard stop, 2% of Rs 1 lakh, liquid contracts. Signal source: the two roll-adjusted futures (log ratio).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 21 Oct 2026: fut_1m_live_mcx (contracts live on 19 Oct, 1-minute), fut_daily_continuous (near month, 2012 - 16 Oct 2026), options_rolling_1m MCX MONTH books (ATM-3..+3, 5 Aug 2025 - 19 Oct 2026); Dukascopy 1-minute BID CFDs (XAUUSD, XAGUSD, LIGHTCMDUSD, GASCMDUSD) for idea 5'
+period:
+  design: 2012 - 2021
+  holdout: 1 Jan 2022 - 16 Oct 2026 (read once)
+instruments:
+- 'GOLD, SILVER, COPPER, ZINC, ALUMINIUM, CRUDEOIL, NATURALGAS (daily continuous)'
+features:
+- 'signal source: the two roll-adjusted futures (log ratio)'
+model_or_rule: 'R94 idea 2: sector-index pair proxies (GOLD/SILVER, COPPER/ZINC/ALUMINIUM, CRUDEOIL/NATURALGAS), ratio z over 60 / 120 days, |z| >= 2, exit z = 0 / 20 days / |z| >= 3.5'
+settings: research/hunt/r94_mcx_advanced/ (PREREG.md, NOTES.md, the idea module)
+prereg: research/hunt/r94_mcx_advanced/PREREG.md
+variants_tried: 10
+results:
+  summary: '10 cells (one BH family of 152 R94 cells). Design net after costs per cell, twin / bootstrap p and BH q, then the one holdout read: p-CA-W120 48 tr +297,202 (p 0.124, q 1.00) -> holdout 24 tr +104,126; p-CA-W60 67 tr +101,307 (p 0.268, q 1.00) -> holdout 37 tr -63,949; p-CN-W120 44 tr -705,128 (p 0.777, q 1.00) -> holdout 18 tr -47,754; p-CN-W60 68 tr -229,137 (p 0.580, q 1.00) -> holdout 28 tr +1,207,330; p-CZ-W120 51 tr +193,152 (p 0.180, q 1.00) -> holdout 23 tr -126,762; p-CZ-W60 71 tr +124,960 (p 0.254, q 1.00) -> holdout 32 tr -217,922; p-GS-W120 50 tr -354,044 (p 0.876, q 1.00) -> holdout 21 tr -740,116; p-GS-W60 68 tr -626,347 (p 0.961, q 1.00) -> holdout 33 tr -168,790; p-ZA-W120 49 tr +144,900 (p 0.227, q 1.00) -> holdout 27 tr -23,193; p-ZA-W60 70 tr +254,190 (p 0.128, q 1.00) -> holdout 36 tr -9,170. Design passers 0, design + holdout passers 0.'
+  costs: 'Zerodha MCX charges on every leg (McxCosts.kt), half-spread on every fill (futures R53 rule, far month 3x; options R85 strict ATM rate x (1 + 0.5 |offset|), >= 1 tick); 1 lot; margins without spread benefit'
+holdout_read: true
+verdict: rejected
+notes: 'Cells: p-CA-W120, p-CA-W60, p-CN-W120, p-CN-W60, p-CZ-W120, p-CZ-W60, p-GS-W120, p-GS-W60, p-ZA-W120, p-ZA-W60'

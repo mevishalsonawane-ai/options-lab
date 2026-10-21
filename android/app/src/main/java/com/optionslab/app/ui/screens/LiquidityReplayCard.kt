@@ -70,10 +70,12 @@ internal fun LiquidityReplayDialog(p: OrbArms.Position, load: suspend (OrbArms.P
     if (com.optionslab.app.BuildConfig.GOLD) return
     var replay by remember(p) { mutableStateOf<LiquidityReplay.Replay?>(null) }
     var failed by remember(p) { mutableStateOf(false) }
-    LaunchedEffect(p) {
+    // Set on the main thread (15 Oct): under the test rule's unconfined dispatcher the code after withContext(IO) ran on
+    // the IO worker and drew the dialog's state from there.
+    LaunchedEffect(p) { withContext(Dispatchers.Main.immediate) {
         val r = withContext(Dispatchers.IO) { runCatching { load(p) }.getOrNull() }
         if (r == null) failed = true else replay = r
-    }
+    } }
     LiquidityReplayCard(replay, if (failed) "No replay for this trade: its candles could not be read." else null, onClose)
 }
 

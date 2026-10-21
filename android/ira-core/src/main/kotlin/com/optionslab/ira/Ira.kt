@@ -173,7 +173,7 @@ class Ira(private val book: PatternBook = PatternBook(),
         o.refusal?.let { return Answer(it, emptyList()) }
         if (o.missing.isNotEmpty()) return Answer("To prepare that order I need: ${o.missing.joinToString(", ")}.", emptyList(), o)
         return Answer("Ready for review: ${o.describe()}, nearest expiry. Tap Review; nothing is sent until you press Confirm " +
-            "(and, in Live, swipe and enter your PIN).", emptyList(), o)
+            "(and, in Live, enter your PIN or fingerprint: it then goes to Zerodha at once).", emptyList(), o)
     }
 
     /** Every number written in [text] appears in [facts]: the check a model's answer must pass (rule 4). */

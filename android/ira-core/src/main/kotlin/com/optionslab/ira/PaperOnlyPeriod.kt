@@ -6,8 +6,9 @@ import java.util.Locale
 
 /**
  * Boss's paper-only period (12 Oct: "For 10 days I will be on paper only"): an end date and a reason Boss sets in Settings.
- * Until the end date, switching the app to Live asks his PIN AND shows the period's reason and end date first; it never blocks
- * an exit or a square-off (nothing on the order path reads it) and it only ever lowers risk:
+ * Until the end date, switching the app to Live asks his PIN AND shows the period's reason and end date first, and (18 Oct,
+ * Boss) every NEW live entry is refused at the app's order door, from every source, even when the app is already Live. It
+ * never blocks an exit, a stop or a square-off, and it only ever lowers risk:
  *
  *  - setting a period, or moving its end LATER, lowers risk: no PIN;
  *  - ending it early, or moving its end EARLIER, raises risk: the PIN ([needsPin]);
@@ -45,7 +46,7 @@ object PaperOnlyPeriod {
     /** The words before the PIN when Boss switches to Live inside the period. */
     fun liveAsk(p: Period): String =
         "You set a paper-only period until ${day(p.until)}" + (if (p.reason.isNotBlank()) ": \"${p.reason}\"" else "") +
-            ". Enter your PIN to switch to Live anyway. Exits and square-offs are never blocked."
+            ". Enter your PIN to switch to Live anyway: no new live entry goes until then. Exits and square-offs are never blocked."
 
     /** The Settings card's status line. */
     fun status(p: Period?, today: LocalDate): String =

@@ -1,0 +1,8287 @@
+{
+ "BS-1:orig": {
+  "avg_loss": -795.9742105263159,
+  "avg_win": 1030.4421000000004,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -17943.869999999974
+  },
+  "days": 132,
+  "exits": {
+   "stop": 152,
+   "target": 100
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": true,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -21857.70999999997,
+  "net": -17943.869999999977,
+  "p": 0.013493253373313344,
+  "p_flip": 0.06996501749125437,
+  "per_day": -135.93840909090892,
+  "per_trade": -71.20583333333325,
+  "q": 0.1811951167273506,
+  "top5_share": NaN,
+  "trades": 252,
+  "twin_flip_mean": -155.83798257936502,
+  "twin_mean": -190.5804805952381,
+  "twins_used": 252,
+  "wf_design": -33185.110000000044,
+  "win_rate": 0.3968253968253968,
+  "worst_day": -2515.000000000001
+ },
+ "CH-1:g05": {
+  "avg_loss": -2936.7053333333333,
+  "avg_win": 2613.5596874999997,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -48517.830000000016
+  },
+  "days": 132,
+  "exits": {
+   "index_stop": 29,
+   "index_target": 27,
+   "square_off": 21
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -68333.99000000002,
+  "net": -48517.83000000001,
+  "p": 0.9995002498750625,
+  "p_flip": 0.8525737131434283,
+  "per_day": -367.55931818181824,
+  "per_trade": -630.1016883116885,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 77,
+  "twin_flip_mean": -255.3245269480518,
+  "twin_mean": 292.5381446103896,
+  "twins_used": 77,
+  "wf_design": 18200.759999999987,
+  "win_rate": 0.4155844155844156,
+  "worst_day": -8521.470000000001
+ },
+ "CH-1:orig": {
+  "avg_loss": -2949.6268421052637,
+  "avg_win": 3071.8399999999992,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -50649.02000000001
+  },
+  "days": 132,
+  "exits": {
+   "index_stop": 18,
+   "index_target": 12,
+   "square_off": 28
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -66188.97000000002,
+  "net": -50649.02000000002,
+  "p": 1.0,
+  "p_flip": 0.9460269865067467,
+  "per_day": -383.7046969696971,
+  "per_trade": -873.2589655172417,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 58,
+  "twin_flip_mean": -50.54321362068967,
+  "twin_mean": 313.6543917241379,
+  "twins_used": 58,
+  "wf_design": 26544.569999999996,
+  "win_rate": 0.3448275862068966,
+  "worst_day": -6250.589999999997
+ },
+ "H11-1:g20": {
+  "avg_loss": -722.5598360655734,
+  "avg_win": 1409.4225,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -15887.699999999988
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 15,
+   "index_stop": 19,
+   "index_target": 8,
+   "stop": 3,
+   "time_stop": 36
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -15887.699999999979,
+  "net": -15887.699999999986,
+  "p": 0.9175412293853074,
+  "p_flip": 0.8075962018990505,
+  "per_day": -119.4563909774435,
+  "per_trade": -196.14444444444428,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 81,
+  "twin_flip_mean": -107.6815024074073,
+  "twin_mean": -49.11392759259253,
+  "twins_used": 81,
+  "wf_design": 13076.24000000003,
+  "win_rate": 0.24691358024691357,
+  "worst_day": -2223.9300000000017
+ },
+ "H11-1:orig": {
+  "avg_loss": -885.3693333333334,
+  "avg_win": 1781.849333333333,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -13113.880000000006
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 14,
+   "index_stop": 12,
+   "index_target": 4,
+   "stop": 8,
+   "time_stop": 22
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -14716.34000000001,
+  "net": -13113.880000000008,
+  "p": 0.9635182408795602,
+  "p_flip": 0.8135932033983009,
+  "per_day": -98.60060150375946,
+  "per_trade": -218.5646666666668,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 60,
+  "twin_flip_mean": -73.16224741666662,
+  "twin_mean": 55.67168100000003,
+  "twins_used": 60,
+  "wf_design": 17461.860000000008,
+  "win_rate": 0.25,
+  "worst_day": -2789.4900000000007
+ },
+ "H11-2:g02": {
+  "avg_loss": -777.1280434782606,
+  "avg_win": 1571.0815999999998,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 3529.1500000000015
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 20,
+   "index_stop": 6,
+   "index_target": 11,
+   "square_off": 3,
+   "stop": 10,
+   "time_stop": 21
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -13866.959999999997,
+  "net": 3529.150000000001,
+  "p": 0.35582208895552225,
+  "p_flip": 0.10694652673663169,
+  "per_day": 26.735984848484858,
+  "per_trade": 49.70633802816903,
+  "q": 1.0,
+  "top5_share": 6.954581131433914,
+  "trades": 71,
+  "twin_flip_mean": -104.97598260563382,
+  "twin_mean": 5.556478309859185,
+  "twins_used": 71,
+  "wf_design": 26276.830000000013,
+  "win_rate": 0.352112676056338,
+  "worst_day": -3610.8799999999997
+ },
+ "H11-2:orig": {
+  "avg_loss": -781.7423809523808,
+  "avg_win": 2099.6981249999994,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 761.9899999999986
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 18,
+   "index_stop": 5,
+   "index_target": 3,
+   "square_off": 3,
+   "stop": 10,
+   "time_stop": 19
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -12827.789999999999,
+  "net": 761.9900000000011,
+  "p": 0.4012993503248376,
+  "p_flip": 0.28835582208895555,
+  "per_day": 5.772651515151524,
+  "per_trade": 13.137758620689675,
+  "q": 1.0,
+  "top5_share": 32.210081497132464,
+  "trades": 58,
+  "twin_flip_mean": -62.424829913793104,
+  "twin_mean": -15.25908827586206,
+  "twins_used": 58,
+  "wf_design": 21696.33000000001,
+  "win_rate": 0.27586206896551724,
+  "worst_day": -3610.8799999999997
+ },
+ "H18-1:g03": {
+  "avg_loss": -1058.4177102803737,
+  "avg_win": 2101.648143712575,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -64661.58999999997,
+   "FINNIFTY": 46478.340000000026,
+   "MIDCPNIFTY": -77660.79999999994,
+   "NIFTY": -70812.70999999999,
+   "SENSEX": -37398.319999999985
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 356,
+   "square_off": 139,
+   "stop": 112,
+   "time_stop": 583
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -204055.0799999999,
+  "net": -204055.07999999984,
+  "p": 1.0,
+  "p_flip": 0.9110444777611194,
+  "per_day": -1534.24872180451,
+  "per_trade": -171.47485714285702,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 1190,
+  "twin_flip_mean": -89.68091769327725,
+  "twin_mean": 60.16651359243704,
+  "twins_used": 1190,
+  "wf_design": 34603.6100000001,
+  "win_rate": 0.280672268907563,
+  "worst_day": -16769.609999999993
+ },
+ "H18-1:orig": {
+  "avg_loss": -1080.47933747412,
+  "avg_win": 2140.5483935742973,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -8847.269999999993,
+   "FINNIFTY": 52761.250000000015,
+   "MIDCPNIFTY": -15460.309999999945,
+   "NIFTY": 3907.870000000004,
+   "SENSEX": -21236.509999999984
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 270,
+   "square_off": 45,
+   "stop": 47,
+   "target": 76,
+   "time_stop": 294
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -55681.85999999998,
+  "net": 11125.03000000008,
+  "p": 0.9740129935032483,
+  "p_flip": 0.07746126936531735,
+  "per_day": 83.64684210526376,
+  "per_trade": 15.198128415300657,
+  "q": 1.0,
+  "top5_share": 4.89728027699697,
+  "trades": 732,
+  "twin_flip_mean": -82.33334110655727,
+  "twin_mean": 163.15323954234984,
+  "twins_used": 732,
+  "wf_design": -121669.20999999999,
+  "win_rate": 0.3401639344262295,
+  "worst_day": -12146.88
+ },
+ "H25-10:g01": {
+  "avg_loss": -2483.0549295774645,
+  "avg_win": 3314.304642857143,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 9304.160000000009
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 69,
+   "stop": 38,
+   "target": 20
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -33552.32999999999,
+  "net": 9304.160000000024,
+  "p": 0.0024987506246876563,
+  "p_flip": 0.11794102948525736,
+  "per_day": 70.48606060606079,
+  "per_trade": 73.26110236220491,
+  "q": 0.05637181409295352,
+  "top5_share": 6.153082062217315,
+  "trades": 127,
+  "twin_flip_mean": -305.31548499999997,
+  "twin_mean": -540.788819015748,
+  "twins_used": 127,
+  "wf_design": 30072.03,
+  "win_rate": 0.4409448818897638,
+  "worst_day": -10644.959999999995
+ },
+ "H25-10:orig": {
+  "avg_loss": -2483.0549295774645,
+  "avg_win": 3314.304642857143,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 9304.160000000009
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 69,
+   "stop": 38,
+   "target": 20
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -33552.32999999999,
+  "net": 9304.160000000024,
+  "p": 0.0029985007496251873,
+  "p_flip": 0.2288855572213893,
+  "per_day": 70.48606060606079,
+  "per_trade": 73.26110236220491,
+  "q": 0.05637181409295352,
+  "top5_share": 6.153082062217315,
+  "trades": 127,
+  "twin_flip_mean": -169.85540590551176,
+  "twin_mean": -515.3419961023621,
+  "twins_used": 127,
+  "wf_design": 30072.03,
+  "win_rate": 0.4409448818897638,
+  "worst_day": -10644.959999999995
+ },
+ "H25-11:g07": {
+  "avg_loss": -2045.1018627450983,
+  "avg_win": 2489.5522807017546,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -14070.149999999994,
+   "FINNIFTY": -38719.48,
+   "MIDCPNIFTY": -17124.22,
+   "NIFTY": 3838.4699999999993,
+   "SENSEX": -620.5300000000034
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 50,
+   "stop": 77,
+   "target": 32
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -88174.11,
+  "net": -66695.91,
+  "p": 0.7321339330334833,
+  "p_flip": 0.8935532233883059,
+  "per_day": -501.47300751879703,
+  "per_trade": -419.4711320754717,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 159,
+  "twin_flip_mean": -131.27522720125788,
+  "twin_mean": -324.509247672956,
+  "twins_used": 159,
+  "wf_design": 2818.0099999999948,
+  "win_rate": 0.3584905660377358,
+  "worst_day": -10999.490000000002
+ },
+ "H25-11:orig": {
+  "avg_loss": -542.2157462686567,
+  "avg_win": 1086.0717777777777,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -5935.729999999992,
+   "FINNIFTY": 2562.3799999999947,
+   "MIDCPNIFTY": -6955.260000000003,
+   "NIFTY": -2855.4499999999975,
+   "SENSEX": -10599.620000000003
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 116,
+   "square_off": 17,
+   "stop": 2,
+   "time_stop": 44
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -24783.230000000007,
+  "net": -23783.680000000004,
+  "p": 0.7621189405297352,
+  "p_flip": 0.5027486256871564,
+  "per_day": -178.82466165413535,
+  "per_trade": -132.86972067039108,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 179,
+  "twin_flip_mean": -126.14974282122903,
+  "twin_mean": -61.39053784916198,
+  "twins_used": 179,
+  "wf_design": -41553.25999999999,
+  "win_rate": 0.25139664804469275,
+  "worst_day": -3050.1100000000024
+ },
+ "H25-2:g10": {
+  "avg_loss": -902.7043333333334,
+  "avg_win": 795.7019999999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": -15145.599999999999
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 3,
+   "time_stop": 42
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -18071.550000000003,
+  "net": -15145.600000000002,
+  "p": 0.8045977011494253,
+  "p_flip": 0.9080459770114943,
+  "per_day": -114.73939393939395,
+  "per_trade": -336.5688888888889,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 45,
+  "twin_flip_mean": -81.5458264444444,
+  "twin_mean": -184.5947402222222,
+  "twins_used": 45,
+  "wf_design": 24091.33,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -2876.0500000000006
+ },
+ "H25-2:orig": {
+  "avg_loss": -645.3984615384616,
+  "avg_win": 2071.255714285714,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 12217.219999999994
+  },
+  "days": 132,
+  "exits": {
+   "index_stop": 22,
+   "square_off": 9,
+   "stop": 1,
+   "time_stop": 8
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -6156.070000000002,
+  "net": 12217.219999999994,
+  "p": 0.004997501249375313,
+  "p_flip": 0.022488755622188907,
+  "per_day": 92.55469696969692,
+  "per_trade": 305.4304999999998,
+  "q": 0.07829418624021324,
+  "top5_share": 1.8982067933621567,
+  "trades": 40,
+  "twin_flip_mean": -159.07503999999997,
+  "twin_mean": -269.976321375,
+  "twins_used": 40,
+  "wf_design": 25953.449999999997,
+  "win_rate": 0.35,
+  "worst_day": -1660.9400000000014
+ },
+ "H25-3:g11": {
+  "avg_loss": -1014.9775862068963,
+  "avg_win": 1884.4505000000001,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 8254.660000000003
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 3,
+   "time_stop": 46
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -8560.400000000001,
+  "net": 8254.660000000003,
+  "p": 0.020989505247376312,
+  "p_flip": 0.30484757621189407,
+  "per_day": 62.535303030303055,
+  "per_trade": 168.4624489795919,
+  "q": 0.20669665167416293,
+  "top5_share": 2.7925838253786335,
+  "trades": 49,
+  "twin_flip_mean": 30.568206122448945,
+  "twin_mean": -305.3575435714285,
+  "twins_used": 49,
+  "wf_design": 9326.030000000004,
+  "win_rate": 0.40816326530612246,
+  "worst_day": -3593.9200000000005
+ },
+ "H25-3:orig": {
+  "avg_loss": -721.8384615384615,
+  "avg_win": 957.9852173913044,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 3265.8600000000015
+  },
+  "days": 132,
+  "exits": {
+   "time_stop": 49
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -3837.430000000001,
+  "net": 3265.860000000002,
+  "p": 0.11044477761119441,
+  "p_flip": 0.24237881059470265,
+  "per_day": 24.74136363636365,
+  "per_trade": 66.6502040816327,
+  "q": 0.6292005512395318,
+  "top5_share": 3.9231289767473165,
+  "trades": 49,
+  "twin_flip_mean": -80.02432663265309,
+  "twin_mean": -158.76180877551022,
+  "twins_used": 49,
+  "wf_design": 16739.30000000001,
+  "win_rate": 0.46938775510204084,
+  "worst_day": -2567.62
+ },
+ "H25-5:g10": {
+  "avg_loss": -688.0854545454539,
+  "avg_win": 808.4824999999995,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": -1101.0799999999967
+  },
+  "days": 132,
+  "exits": {
+   "time_stop": 19
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -4668.769999999995,
+  "net": -1101.079999999997,
+  "p": 0.06196901549225387,
+  "p_flip": 0.28285857071464265,
+  "per_day": -8.341515151515129,
+  "per_trade": -57.95157894736826,
+  "q": 0.5269539143471743,
+  "top5_share": NaN,
+  "trades": 19,
+  "twin_flip_mean": -249.67762052631588,
+  "twin_mean": -550.4382921052631,
+  "twins_used": 19,
+  "wf_design": 14631.230000000005,
+  "win_rate": 0.42105263157894735,
+  "worst_day": -1752.0799999999986
+ },
+ "H25-5:orig": {
+  "avg_loss": -626.8690909090907,
+  "avg_win": 673.6362500000007,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": -1506.4699999999907
+  },
+  "days": 132,
+  "exits": {
+   "time_stop": 19
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -3693.5299999999925,
+  "net": -1506.4699999999905,
+  "p": 0.06446776611694154,
+  "p_flip": 0.3963018490754623,
+  "per_day": -11.412651515151444,
+  "per_trade": -79.28789473684161,
+  "q": 0.5269539143471743,
+  "top5_share": NaN,
+  "trades": 19,
+  "twin_flip_mean": -126.78138526315789,
+  "twin_mean": -408.671709736842,
+  "twins_used": 19,
+  "wf_design": 14324.869999999995,
+  "win_rate": 0.42105263157894735,
+  "worst_day": -1412.0599999999993
+ },
+ "H25-6:g08": {
+  "avg_loss": -1385.0225,
+  "avg_win": 1894.6364285714283,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": -23335.900000000005
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 10,
+   "stop": 32,
+   "target": 8
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -27537.410000000003,
+  "net": -23335.900000000005,
+  "p": 0.9470264867566217,
+  "p_flip": 0.8245877061469266,
+  "per_day": -176.78712121212126,
+  "per_trade": -466.7180000000001,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 50,
+  "twin_flip_mean": -224.4400338,
+  "twin_mean": -134.5819366,
+  "twins_used": 50,
+  "wf_design": 12954.610000000008,
+  "win_rate": 0.28,
+  "worst_day": -3180.060000000001
+ },
+ "H25-6:orig": {
+  "avg_loss": -1161.2792857142856,
+  "avg_win": 1069.6754545454546,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": -8982.959999999997
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 2,
+   "time_stop": 48
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -11482.509999999995,
+  "net": -8982.959999999997,
+  "p": 0.7406296851574213,
+  "p_flip": 0.7511244377811095,
+  "per_day": -68.05272727272725,
+  "per_trade": -179.65919999999994,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 50,
+  "twin_flip_mean": -27.644196700000013,
+  "twin_mean": -54.474158699999975,
+  "twins_used": 50,
+  "wf_design": 20271.870000000017,
+  "win_rate": 0.44,
+  "worst_day": -2603.5799999999995
+ },
+ "H28-1:g05": {
+  "avg_loss": 0.0,
+  "avg_win": 0.0,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {},
+  "days": 133,
+  "exits": {},
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": 0.0,
+  "net": 0.0,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": 0.0,
+  "per_trade": 0.0,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 0,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 0,
+  "wf_design": 32627.640000000003,
+  "win_rate": 0.0,
+  "worst_day": 0.0
+ },
+ "H28-1:orig": {
+  "avg_loss": 0.0,
+  "avg_win": 0.0,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {},
+  "days": 133,
+  "exits": {},
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": 0.0,
+  "net": 0.0,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": 0.0,
+  "per_trade": 0.0,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 0,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 0,
+  "wf_design": 23284.179999999997,
+  "win_rate": 0.0,
+  "worst_day": 0.0
+ },
+ "H28-2:g08": {
+  "avg_loss": -2479.7566666666667,
+  "avg_win": 1815.4666666666665,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -1992.8700000000006
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 6
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -4633.030000000001,
+  "net": -1992.8700000000006,
+  "p": 1.0,
+  "p_flip": 0.2623688155922039,
+  "per_day": -15.097500000000004,
+  "per_trade": -332.1450000000001,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 6,
+  "twin_flip_mean": -919.7458333333334,
+  "twin_mean": -332.1450000000001,
+  "twins_used": 6,
+  "wf_design": 14692.69,
+  "win_rate": 0.5,
+  "worst_day": -3317.6900000000005
+ },
+ "H28-2:orig": {
+  "avg_loss": -3054.0800000000004,
+  "avg_win": 6387.6675,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 19442.51
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 6
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -6108.1600000000035,
+  "net": 19442.509999999995,
+  "p": 1.0,
+  "p_flip": 0.031484257871064465,
+  "per_day": 147.2917424242424,
+  "per_trade": 3240.4183333333326,
+  "q": 1.0,
+  "top5_share": 1.2003208433479011,
+  "trades": 6,
+  "twin_flip_mean": -1671.5612958333334,
+  "twin_mean": 3240.418333333333,
+  "twins_used": 6,
+  "wf_design": -6313.459999999999,
+  "win_rate": 0.6666666666666666,
+  "worst_day": -3894.7400000000002
+ },
+ "H28-3:g07": {
+  "avg_loss": -3930.8455555555547,
+  "avg_win": 6959.256363636364,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 41174.21000000002
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 20
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -19737.659999999996,
+  "net": 41174.21000000002,
+  "p": 1.0,
+  "p_flip": 0.06896551724137931,
+  "per_day": 311.9258333333335,
+  "per_trade": 2058.710500000001,
+  "q": 1.0,
+  "top5_share": 1.3788305835133203,
+  "trades": 20,
+  "twin_flip_mean": -197.6530384999991,
+  "twin_mean": 2058.710500000001,
+  "twins_used": 20,
+  "wf_design": 27445.319999999996,
+  "win_rate": 0.55,
+  "worst_day": -7358.410000000002
+ },
+ "H28-3:orig": {
+  "avg_loss": -5029.961818181819,
+  "avg_win": 10099.591111111113,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 35566.73999999998
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 20
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -31030.92,
+  "net": 35566.73999999998,
+  "p": 1.0,
+  "p_flip": 0.20239880059970014,
+  "per_day": 269.4449999999999,
+  "per_trade": 1778.336999999999,
+  "q": 1.0,
+  "top5_share": 1.9894679692319295,
+  "trades": 20,
+  "twin_flip_mean": 247.43511024999935,
+  "twin_mean": 1778.3369999999993,
+  "twins_used": 20,
+  "wf_design": 21721.280000000013,
+  "win_rate": 0.45,
+  "worst_day": -9512.869999999997
+ },
+ "H28-4:g04": {
+  "avg_loss": -820.6046666666665,
+  "avg_win": 2149.103333333334,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 585.5500000000086
+  },
+  "days": 133,
+  "exits": {
+   "lock": 14,
+   "square_off": 6,
+   "stop": 1
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -9027.239999999994,
+  "net": 585.5500000000079,
+  "p": 1.0,
+  "p_flip": 0.664167916041979,
+  "per_day": 4.402631578947428,
+  "per_trade": 27.88333333333371,
+  "q": 1.0,
+  "top5_share": 20.955648535564578,
+  "trades": 21,
+  "twin_flip_mean": 275.987712380953,
+  "twin_mean": 27.883333333333717,
+  "twins_used": 21,
+  "wf_design": 2004.1600000000017,
+  "win_rate": 0.2857142857142857,
+  "worst_day": -4067.260000000002
+ },
+ "H28-4:orig": {
+  "avg_loss": -2506.0246666666662,
+  "avg_win": 4456.320000000001,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -10852.449999999983
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 21
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -31134.339999999997,
+  "net": -10852.449999999977,
+  "p": 1.0,
+  "p_flip": 0.8120939530234883,
+  "per_day": -81.59736842105247,
+  "per_trade": -516.7833333333323,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 21,
+  "twin_flip_mean": 390.34053476190525,
+  "twin_mean": -516.7833333333322,
+  "twins_used": 21,
+  "wf_design": -18545.380000000005,
+  "win_rate": 0.2857142857142857,
+  "worst_day": -11527.710000000001
+ },
+ "H29-3:orig": {
+  "avg_loss": -1049.0116176470585,
+  "avg_win": 1558.2261764705881,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 10064.270000000011,
+   "FINNIFTY": -2311.4500000000044,
+   "MIDCPNIFTY": -26051.25000000001,
+   "NIFTY": -54.66999999999936
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 4,
+   "stop": 12,
+   "target": 10,
+   "time_stop": 76
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -29063.129999999994,
+  "net": -18353.1,
+  "p": 0.2683658170914543,
+  "p_flip": 0.3553223388305847,
+  "per_day": -137.99323308270675,
+  "per_trade": -179.93235294117645,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 102,
+  "twin_flip_mean": -241.59181441176477,
+  "twin_mean": -273.8217174019609,
+  "twins_used": 102,
+  "wf_design": -36341.08999999996,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -11020.189999999995
+ },
+ "H31-4:g01": {
+  "avg_loss": -3191.6045394736843,
+  "avg_win": 3711.285035971223,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 23663.61999999999,
+   "FINNIFTY": -10095.650000000007,
+   "MIDCPNIFTY": 8670.869999999983,
+   "NIFTY": 24091.429999999993,
+   "SENSEX": -15585.539999999995
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 291
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -148270.74000000002,
+  "net": 30744.729999999956,
+  "p": 1.0,
+  "p_flip": 0.01999000499750125,
+  "per_day": 231.16338345864628,
+  "per_trade": 105.65199312714762,
+  "q": 1.0,
+  "top5_share": 2.3233035385251424,
+  "trades": 291,
+  "twin_flip_mean": -392.5971214261169,
+  "twin_mean": 105.65199312714758,
+  "twins_used": 291,
+  "wf_design": 51736.48999999992,
+  "win_rate": 0.47766323024054985,
+  "worst_day": -32607.25
+ },
+ "H31-4:orig": {
+  "avg_loss": -4621.533402777778,
+  "avg_win": 4453.728911564625,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -14652.109999999988,
+   "FINNIFTY": 10098.010000000004,
+   "MIDCPNIFTY": 1343.359999999977,
+   "NIFTY": 8506.470000000005,
+   "SENSEX": -16098.39
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 291
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -139257.28999999998,
+  "net": -10802.660000000018,
+  "p": 1.0,
+  "p_flip": 0.21139430284857572,
+  "per_day": -81.22300751879713,
+  "per_trade": -37.12254295532652,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 291,
+  "twin_flip_mean": -316.0494480927835,
+  "twin_mean": -37.12254295532653,
+  "twins_used": 291,
+  "wf_design": -80611.41000000002,
+  "win_rate": 0.5051546391752577,
+  "worst_day": -37613.380000000005
+ },
+ "H31-5:orig": {
+  "avg_loss": -5597.3679999999995,
+  "avg_win": 3423.7766666666666,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -11105.63,
+   "FINNIFTY": -9789.33,
+   "MIDCPNIFTY": -5136.4299999999985,
+   "NIFTY": -9399.629999999996
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 16
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -51724.799999999996,
+  "net": -35431.01999999999,
+  "p": 1.0,
+  "p_flip": 0.6871564217891054,
+  "per_day": -266.39864661654127,
+  "per_trade": -2214.4387499999993,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 16,
+  "twin_flip_mean": -1387.5410143749996,
+  "twin_mean": -2214.43875,
+  "twins_used": 16,
+  "wf_design": -55410.71000000001,
+  "win_rate": 0.375,
+  "worst_day": -46583.60999999999
+ },
+ "H33-1:g03": {
+  "avg_loss": -1350.8429411764707,
+  "avg_win": 3104.2749999999996,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": 14286.969999999994
+  },
+  "days": 132,
+  "exits": {
+   "time_stop": 29
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -6508.389999999998,
+  "net": 14286.969999999996,
+  "p": 0.01699150424787606,
+  "p_flip": 0.0544727636181909,
+  "per_day": 108.23462121212118,
+  "per_trade": 492.6541379310343,
+  "q": 0.198959343857483,
+  "top5_share": 2.015848706898664,
+  "trades": 29,
+  "twin_flip_mean": -146.30609689655168,
+  "twin_mean": -207.44673551724142,
+  "twins_used": 29,
+  "wf_design": 57945.600000000006,
+  "win_rate": 0.41379310344827586,
+  "worst_day": -3075.5000000000027
+ },
+ "H33-1:orig": {
+  "avg_loss": -1426.1708333333333,
+  "avg_win": 3643.8412499999995,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": 12036.679999999997
+  },
+  "days": 132,
+  "exits": {
+   "time_stop": 20
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -5191.219999999999,
+  "net": 12036.679999999995,
+  "p": 0.20189905047476261,
+  "p_flip": 0.022488755622188907,
+  "per_day": 91.18696969696965,
+  "per_trade": 601.8339999999997,
+  "q": 0.8827214299826831,
+  "top5_share": 2.188741413745319,
+  "trades": 20,
+  "twin_flip_mean": -271.192922,
+  "twin_mean": 178.17154900000003,
+  "twins_used": 20,
+  "wf_design": 39534.149999999994,
+  "win_rate": 0.4,
+  "worst_day": -3075.5000000000027
+ },
+ "H35-1:orig": {
+  "avg_loss": -1520.0547275922672,
+  "avg_win": 1906.485191489362,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 59994.070000000014,
+   "FINNIFTY": -11997.429999999997,
+   "MIDCPNIFTY": -53587.579999999914,
+   "NIFTY": -10329.589999999993,
+   "SENSEX": 47057.43000000001
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 70,
+   "time_stop": 969
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -93304.08999999998,
+  "net": 31136.90000000009,
+  "p": 0.6731634182908546,
+  "p_flip": 0.0034982508745627187,
+  "per_day": 234.11203007518864,
+  "per_trade": 29.96814244465841,
+  "q": 1.0,
+  "top5_share": 2.0053473531404804,
+  "trades": 1039,
+  "twin_flip_mean": -180.91876151106828,
+  "twin_mean": 61.34301784408091,
+  "twins_used": 1039,
+  "wf_design": -176392.8799999998,
+  "win_rate": 0.4523580365736285,
+  "worst_day": -21561.39
+ },
+ "H37-10:g17": {
+  "avg_loss": -1884.5520945945943,
+  "avg_win": 2244.4208904109596,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 6794.110000000018,
+   "FINNIFTY": -4647.1099999999815,
+   "MIDCPNIFTY": 46328.830000000016,
+   "NIFTY": -4478.98,
+   "SENSEX": 4774.890000000006
+  },
+  "days": 133,
+  "exits": {
+   "time_stop": 294
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": true,
+   "q": "True",
+   "top5": true,
+   "trades": true,
+   "verdict": "PASS"
+  },
+  "max_dd": -46362.79999999999,
+  "net": 48771.740000000056,
+  "p": 0.0009995002498750624,
+  "p_flip": 0.013993003498250875,
+  "per_day": 366.70481203007563,
+  "per_trade": 165.89027210884373,
+  "q": 0.026843720996644532,
+  "top5_share": 0.8150160318249863,
+  "trades": 294,
+  "twin_flip_mean": -140.94884069727883,
+  "twin_mean": -254.09060413265297,
+  "twins_used": 294,
+  "wf_design": 272366.64,
+  "win_rate": 0.4965986394557823,
+  "worst_day": -15837.17
+ },
+ "H37-10:orig": {
+  "avg_loss": -799.357116564417,
+  "avg_win": 980.0252671755725,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -2590.439999999983,
+   "FINNIFTY": -3942.8199999999842,
+   "MIDCPNIFTY": 12308.249999999989,
+   "NIFTY": -1767.9199999999955,
+   "SENSEX": -5918.969999999994
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 2,
+   "stop": 161,
+   "target": 131
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -16929.609999999993,
+  "net": -1911.8999999999687,
+  "p": 0.0029985007496251873,
+  "p_flip": 0.009995002498750625,
+  "per_day": -14.375187969924577,
+  "per_trade": -6.50306122448969,
+  "q": 0.05637181409295352,
+  "top5_share": NaN,
+  "trades": 294,
+  "twin_flip_mean": -145.29460768707474,
+  "twin_mean": -182.78497959183665,
+  "twins_used": 294,
+  "wf_design": -1481.1699999999983,
+  "win_rate": 0.445578231292517,
+  "worst_day": -6230.179999999995
+ },
+ "H37-2@MIDCPNIFTY:g15": {
+  "avg_loss": -2452.3410975609754,
+  "avg_win": 3132.8332075471703,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -35051.80999999999
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 21,
+   "stop": 72,
+   "target": 42
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -48075.979999999996,
+  "net": -35051.80999999999,
+  "p": 0.9685157421289355,
+  "p_flip": 0.5357321339330335,
+  "per_day": -265.54401515151505,
+  "per_trade": -259.64303703703695,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 135,
+  "twin_flip_mean": -230.57123214814808,
+  "twin_mean": 132.24775811111118,
+  "twins_used": 135,
+  "wf_design": 85649.95999999999,
+  "win_rate": 0.3925925925925926,
+  "worst_day": -7810.059999999996
+ },
+ "H37-2@MIDCPNIFTY:orig": {
+  "avg_loss": -2486.9091666666664,
+  "avg_win": 2310.5592307692305,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -28871.11000000001
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 10,
+   "stop": 66,
+   "target": 61
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -37659.51000000002,
+  "net": -28871.110000000015,
+  "p": 0.928535732133933,
+  "p_flip": 0.34332833583208394,
+  "per_day": -218.72053030303042,
+  "per_trade": -210.7380291970804,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 137,
+  "twin_flip_mean": -288.86268551094884,
+  "twin_mean": 58.91023127737232,
+  "twins_used": 137,
+  "wf_design": 63772.28999999999,
+  "win_rate": 0.4744525547445255,
+  "worst_day": -7810.059999999996
+ },
+ "H37-2@NIFTY:g18": {
+  "avg_loss": -869.4352459016392,
+  "avg_win": 956.1481481481483,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -1403.5499999999877
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 2,
+   "time_stop": 113
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -12842.64,
+  "net": -1403.5499999999868,
+  "p": 0.37681159420289856,
+  "p_flip": 0.1774112943528236,
+  "per_day": -10.553007518796893,
+  "per_trade": -12.204782608695536,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 115,
+  "twin_flip_mean": -102.39287156521729,
+  "twin_mean": -43.17711352173908,
+  "twins_used": 115,
+  "wf_design": 39551.54000000002,
+  "win_rate": 0.46956521739130436,
+  "worst_day": -3601.9699999999993
+ },
+ "H37-2@NIFTY:orig": {
+  "avg_loss": -870.053611111111,
+  "avg_win": 1471.0775,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -3800.75999999998
+  },
+  "days": 133,
+  "exits": {
+   "lock": 70,
+   "square_off": 8,
+   "stop": 20,
+   "target": 14
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -23441.829999999998,
+  "net": -3800.759999999984,
+  "p": 0.7971014492753623,
+  "p_flip": 0.4302848575712144,
+  "per_day": -28.577142857142736,
+  "per_trade": -33.935357142857,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 112,
+  "twin_flip_mean": -59.11512767857139,
+  "twin_mean": 71.43706357142858,
+  "twins_used": 112,
+  "wf_design": 26636.760000000013,
+  "win_rate": 0.35714285714285715,
+  "worst_day": -5371.109999999999
+ },
+ "H37-3:g15": {
+  "avg_loss": -2418.0885000000003,
+  "avg_win": 2660.424166666667,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -33821.63
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 33,
+   "stop": 69,
+   "target": 38
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -49104.939999999995,
+  "net": -33821.63,
+  "p": 0.9985007496251874,
+  "p_flip": 0.5922038980509745,
+  "per_day": -256.22446969696966,
+  "per_trade": -241.5830714285714,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 140,
+  "twin_flip_mean": -183.59411778571416,
+  "twin_mean": 401.8589708928572,
+  "twins_used": 140,
+  "wf_design": 88892.59999999999,
+  "win_rate": 0.42857142857142855,
+  "worst_day": -6004.5599999999995
+ },
+ "H37-3:orig": {
+  "avg_loss": -2403.0009999999993,
+  "avg_win": 1658.05,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": 6702.490000000005
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 16,
+   "stop": 51,
+   "target": 84
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -26349.210000000014,
+  "net": 6702.490000000004,
+  "p": 0.6616691654172914,
+  "p_flip": 0.017491254372813594,
+  "per_day": 50.77643939393943,
+  "per_trade": 44.38735099337751,
+  "q": 1.0,
+  "top5_share": 1.7954312501771714,
+  "trades": 151,
+  "twin_flip_mean": -322.6285371854304,
+  "twin_mean": 107.45056619205307,
+  "twins_used": 151,
+  "wf_design": 36754.06,
+  "win_rate": 0.6026490066225165,
+  "worst_day": -6004.5599999999995
+ },
+ "H37-6:g01": {
+  "avg_loss": -729.9699999999998,
+  "avg_win": 785.0475000000001,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -907.9200000000012,
+   "FINNIFTY": -729.0099999999987,
+   "MIDCPNIFTY": -4936.379999999998,
+   "NIFTY": 16.350000000000364,
+   "SENSEX": -1541.7499999999943
+  },
+  "days": 133,
+  "exits": {
+   "stop": 24,
+   "target": 12
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -8672.909999999996,
+  "net": -8098.709999999992,
+  "p": 0.4127936031984008,
+  "p_flip": 0.6866566716641679,
+  "per_day": -60.89255639097738,
+  "per_trade": -224.96416666666644,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 36,
+  "twin_flip_mean": -148.90430763888884,
+  "twin_mean": -251.04060444444443,
+  "twins_used": 36,
+  "wf_design": 5165.500000000022,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -2966.179999999998
+ },
+ "H37-6:orig": {
+  "avg_loss": -879.649999999999,
+  "avg_win": 512.8033333333349,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 646.5800000000037,
+   "MIDCPNIFTY": -1485.2399999999989,
+   "NIFTY": 891.8300000000008,
+   "SENSEX": -274.05999999999904
+  },
+  "days": 133,
+  "exits": {
+   "stop": 2,
+   "target": 3
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -1485.2399999999989,
+  "net": -220.88999999999328,
+  "p": 0.3933033483258371,
+  "p_flip": 0.3713143428285857,
+  "per_day": -1.6608270676691224,
+  "per_trade": -44.177999999998654,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 5,
+  "twin_flip_mean": -216.2957079999997,
+  "twin_mean": -119.05686000000013,
+  "twins_used": 5,
+  "wf_design": 24.79999999999461,
+  "win_rate": 0.6,
+  "worst_day": -1485.2399999999989
+ },
+ "H37-9:g03": {
+  "avg_loss": -1433.8409374999999,
+  "avg_win": 1858.0633333333335,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 4284.800000000003
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 14,
+   "time_stop": 45
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -10347.509999999998,
+  "net": 4284.800000000001,
+  "p": 0.9245377311344328,
+  "p_flip": 0.21389305347326337,
+  "per_day": 32.46060606060607,
+  "per_trade": 72.62372881355934,
+  "q": 1.0,
+  "top5_share": 5.127098114264375,
+  "trades": 59,
+  "twin_flip_mean": -112.06138101694916,
+  "twin_mean": 451.927701440678,
+  "twins_used": 59,
+  "wf_design": 51248.89999999998,
+  "win_rate": 0.4576271186440678,
+  "worst_day": -4512.52
+ },
+ "H37-9:orig": {
+  "avg_loss": -1645.5123809523811,
+  "avg_win": 1915.5025,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 3754.29
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 9,
+   "time_stop": 32
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -11136.769999999993,
+  "net": 3754.289999999998,
+  "p": 0.9145427286356822,
+  "p_flip": 0.2723638180909545,
+  "per_day": 28.441590909090895,
+  "per_trade": 91.56804878048776,
+  "q": 1.0,
+  "top5_share": 5.832378425747614,
+  "trades": 41,
+  "twin_flip_mean": -141.71911475609758,
+  "twin_mean": 575.2329430487805,
+  "twins_used": 41,
+  "wf_design": 18038.81000000001,
+  "win_rate": 0.4878048780487805,
+  "worst_day": -4987.909999999999
+ },
+ "H42-3:g01": {
+  "avg_loss": -2390.2248275862066,
+  "avg_win": 2537.3004545454546,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -13495.909999999989
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 51
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -28276.329999999994,
+  "net": -13495.909999999983,
+  "p": 1.0,
+  "p_flip": 0.5857071464267866,
+  "per_day": -102.2417424242423,
+  "per_trade": -264.62568627450946,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 51,
+  "twin_flip_mean": -174.00325735294103,
+  "twin_mean": -264.6256862745094,
+  "twins_used": 51,
+  "wf_design": 19230.170000000042,
+  "win_rate": 0.43137254901960786,
+  "worst_day": -6495.329999999998
+ },
+ "H42-3:orig": {
+  "avg_loss": -1403.725714285714,
+  "avg_win": 1339.4694444444442,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -5367.789999999995
+  },
+  "days": 132,
+  "exits": {
+   "stop": 5,
+   "target": 5,
+   "time_stop": 29
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -17130.289999999997,
+  "net": -5367.789999999999,
+  "p": 1.0,
+  "p_flip": 0.40729635182408797,
+  "per_day": -40.66507575757575,
+  "per_trade": -137.635641025641,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 39,
+  "twin_flip_mean": -208.04236064102548,
+  "twin_mean": -137.635641025641,
+  "twins_used": 39,
+  "wf_design": 35917.13000000001,
+  "win_rate": 0.46153846153846156,
+  "worst_day": -2777.1600000000017
+ },
+ "H42-4:g02": {
+  "avg_loss": -1193.6400000000003,
+  "avg_win": 1714.4849999999992,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -2691.1800000000067
+  },
+  "days": 132,
+  "exits": {
+   "stop": 7,
+   "target": 4,
+   "time_stop": 1
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -3523.340000000004,
+  "net": -2691.1800000000067,
+  "p": 1.0,
+  "p_flip": 0.4612693653173413,
+  "per_day": -20.38772727272732,
+  "per_trade": -224.26500000000055,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 12,
+  "twin_flip_mean": -277.4100495833339,
+  "twin_mean": -224.26500000000053,
+  "twins_used": 12,
+  "wf_design": 8344.600000000002,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -2585.4100000000017
+ },
+ "H42-4:orig": {
+  "avg_loss": -1205.9377777777781,
+  "avg_win": 1921.886666666666,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -5087.780000000005
+  },
+  "days": 132,
+  "exits": {
+   "stop": 8,
+   "target": 1,
+   "time_stop": 3
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -7307.180000000006,
+  "net": -5087.780000000005,
+  "p": 1.0,
+  "p_flip": 0.4757621189405297,
+  "per_day": -38.54378787878792,
+  "per_trade": -423.9816666666671,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 12,
+  "twin_flip_mean": -454.87051791666704,
+  "twin_mean": -423.98166666666725,
+  "twins_used": 12,
+  "wf_design": 676.1100000000056,
+  "win_rate": 0.25,
+  "worst_day": -2596.920000000001
+ },
+ "H42-6:g23": {
+  "avg_loss": -1025.0283333333334,
+  "avg_win": 728.9254545454544,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": 1868.0099999999993
+  },
+  "days": 133,
+  "exits": {
+   "stop": 3,
+   "target": 2,
+   "time_stop": 12
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -2666.8200000000015,
+  "net": 1868.0099999999998,
+  "p": 1.0,
+  "p_flip": 0.02948525737131434,
+  "per_day": 14.045187969924811,
+  "per_trade": 109.88294117647058,
+  "q": 1.0,
+  "top5_share": 3.3332369741061343,
+  "trades": 17,
+  "twin_flip_mean": -295.86782000000005,
+  "twin_mean": 109.88294117647054,
+  "twins_used": 17,
+  "wf_design": 7182.139999999996,
+  "win_rate": 0.6470588235294118,
+  "worst_day": -1437.85
+ },
+ "H42-6:orig": {
+  "avg_loss": -2058.657777777778,
+  "avg_win": 4081.5162499999997,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": 14124.21
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 17
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -10498.830000000002,
+  "net": 14124.210000000003,
+  "p": 1.0,
+  "p_flip": 0.2933533233383308,
+  "per_day": 106.19706766917295,
+  "per_trade": 830.8358823529413,
+  "q": 1.0,
+  "top5_share": 1.9423068617643033,
+  "trades": 17,
+  "twin_flip_mean": 226.86073176470586,
+  "twin_mean": 830.8358823529414,
+  "twins_used": 17,
+  "wf_design": 14673.270000000008,
+  "win_rate": 0.47058823529411764,
+  "worst_day": -8877.6
+ },
+ "H42-7:g23": {
+  "avg_loss": -1264.3390000000004,
+  "avg_win": 1561.6899999999998,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -149.8700000000041
+  },
+  "days": 133,
+  "exits": {
+   "stop": 8,
+   "target": 6,
+   "time_stop": 4
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -5385.080000000005,
+  "net": -149.87000000000455,
+  "p": 1.0,
+  "p_flip": 0.697151424287856,
+  "per_day": -1.126842105263192,
+  "per_trade": -8.326111111111365,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 18,
+  "twin_flip_mean": 170.97429861111112,
+  "twin_mean": -8.326111111111365,
+  "twins_used": 18,
+  "wf_design": 2241.279999999995,
+  "win_rate": 0.4444444444444444,
+  "worst_day": -1402.459999999999
+ },
+ "H42-7:orig": {
+  "avg_loss": -1162.292307692308,
+  "avg_win": 1221.7979999999998,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -9000.810000000007
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 3,
+   "stop": 10,
+   "time_stop": 5
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -9548.610000000006,
+  "net": -9000.810000000005,
+  "p": 1.0,
+  "p_flip": 0.750624687656172,
+  "per_day": -67.67526315789478,
+  "per_trade": -500.0450000000003,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 18,
+  "twin_flip_mean": -162.5431802777779,
+  "twin_mean": -500.04500000000013,
+  "twins_used": 18,
+  "wf_design": 22608.329999999994,
+  "win_rate": 0.2777777777777778,
+  "worst_day": -2045.0800000000013
+ },
+ "H42-8:orig": {
+  "avg_loss": -1100.1599999999999,
+  "avg_win": 1013.911965317919,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -73229.38999999996
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 5,
+   "time_stop": 394
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -75866.30999999997,
+  "net": -73229.38999999996,
+  "p": 0.6101949025487257,
+  "p_flip": 0.8315842078960519,
+  "per_day": -554.7681060606058,
+  "per_trade": -183.53230576441092,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 399,
+  "twin_flip_mean": -117.3264993233082,
+  "twin_mean": -166.08923100250618,
+  "twins_used": 399,
+  "wf_design": -83930.70999999999,
+  "win_rate": 0.43358395989974935,
+  "worst_day": -7964.739999999998
+ },
+ "H42-9:g01": {
+  "avg_loss": -1384.1114285714286,
+  "avg_win": 1183.0970000000002,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 2142.1900000000023
+  },
+  "days": 132,
+  "exits": {
+   "time_stop": 17
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -4378.7300000000005,
+  "net": 2142.1900000000014,
+  "p": 1.0,
+  "p_flip": 0.2688655672163918,
+  "per_day": 16.228712121212133,
+  "per_trade": 126.01117647058832,
+  "q": 1.0,
+  "top5_share": 4.945593061306418,
+  "trades": 17,
+  "twin_flip_mean": -118.54079411764695,
+  "twin_mean": 126.01117647058828,
+  "twins_used": 17,
+  "wf_design": 23067.99,
+  "win_rate": 0.5882352941176471,
+  "worst_day": -3243.779999999999
+ },
+ "H42-9:orig": {
+  "avg_loss": -956.5338461538461,
+  "avg_win": 4103.964999999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 3980.9199999999973
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 4,
+   "stop": 6,
+   "time_stop": 7
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -7513.489999999999,
+  "net": 3980.9199999999983,
+  "p": 1.0,
+  "p_flip": 0.303848075962019,
+  "per_day": 30.158484848484836,
+  "per_trade": 234.17176470588225,
+  "q": 1.0,
+  "top5_share": 4.11408669352813,
+  "trades": 17,
+  "twin_flip_mean": -39.187462352941054,
+  "twin_mean": 234.17176470588223,
+  "twins_used": 17,
+  "wf_design": 1334.3299999999963,
+  "win_rate": 0.23529411764705882,
+  "worst_day": -2784.449999999999
+ },
+ "H43-2:g03": {
+  "avg_loss": -1396.1619708029198,
+  "avg_win": 1683.4744144144147,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -4408.530000000011
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 4,
+   "stop": 5,
+   "target": 2,
+   "time_stop": 237
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -32918.97999999999,
+  "net": -4408.530000000013,
+  "p": 0.3458270864567716,
+  "p_flip": 0.06896551724137931,
+  "per_day": -33.397954545454645,
+  "per_trade": -17.776330645161345,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 248,
+  "twin_flip_mean": -177.71046481854836,
+  "twin_mean": -56.851530362903205,
+  "twins_used": 248,
+  "wf_design": 106608.53000000006,
+  "win_rate": 0.4475806451612903,
+  "worst_day": -10726.280000000002
+ },
+ "H43-2:orig": {
+  "avg_loss": -1129.5350704225348,
+  "avg_win": 1425.393090909091,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -3600.739999999968
+  },
+  "days": 132,
+  "exits": {
+   "stop": 2,
+   "target": 2,
+   "time_stop": 248
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -24227.249999999993,
+  "net": -3600.7399999999634,
+  "p": 0.17091454272863568,
+  "p_flip": 0.037481259370314844,
+  "per_day": -27.278333333333055,
+  "per_trade": -14.288650793650648,
+  "q": 0.8263047963197888,
+  "top5_share": NaN,
+  "trades": 252,
+  "twin_flip_mean": -148.8771519642857,
+  "twin_mean": -87.91670277777769,
+  "twins_used": 252,
+  "wf_design": 18518.059999999976,
+  "win_rate": 0.4365079365079365,
+  "worst_day": -5135.230000000002
+ },
+ "H43-3:orig": {
+  "avg_loss": -977.6140506329111,
+  "avg_win": 1001.5256451612904,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -15136.919999999971
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 39,
+   "stop": 2,
+   "time_stop": 100
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -29630.939999999977,
+  "net": -15136.919999999971,
+  "p": 0.655672163918041,
+  "p_flip": 0.25787106446776614,
+  "per_day": -114.67363636363615,
+  "per_trade": -107.35404255319128,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 141,
+  "twin_flip_mean": -185.64929886524823,
+  "twin_mean": -70.75334539007095,
+  "twins_used": 141,
+  "wf_design": -21204.969999999987,
+  "win_rate": 0.4397163120567376,
+  "worst_day": -5504.49
+ },
+ "H43-5:g13": {
+  "avg_loss": -3687.0711111111113,
+  "avg_win": 5468.558085106383,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": 24736.749999999993
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 75,
+   "stop": 23,
+   "target": 12
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -34526.52000000001,
+  "net": 24736.749999999978,
+  "p": 0.5197401299350325,
+  "p_flip": 0.15092453773113443,
+  "per_day": 187.39962121212105,
+  "per_trade": 224.87954545454525,
+  "q": 1.0,
+  "top5_share": 2.9138662112039806,
+  "trades": 110,
+  "twin_flip_mean": -213.96658399999993,
+  "twin_mean": 235.1803194545454,
+  "twins_used": 110,
+  "wf_design": 270048.43000000017,
+  "win_rate": 0.42727272727272725,
+  "worst_day": -13048.020000000004
+ },
+ "H43-5:orig": {
+  "avg_loss": -4098.255396825396,
+  "avg_win": 5052.385833333334,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -15675.569999999969
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 80,
+   "stop": 22,
+   "target": 9
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -52746.73999999998,
+  "net": -15675.569999999987,
+  "p": 0.9475262368815592,
+  "p_flip": 0.6466766616691654,
+  "per_day": -118.75431818181808,
+  "per_trade": -141.22135135135125,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 111,
+  "twin_flip_mean": 22.919259099099087,
+  "twin_mean": 267.41879617117127,
+  "twins_used": 111,
+  "wf_design": 233083.04000000004,
+  "win_rate": 0.43243243243243246,
+  "worst_day": -14729.970000000001
+ },
+ "H43-6:g13": {
+  "avg_loss": -3254.052407407408,
+  "avg_win": 3956.056222222222,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": 2303.700000000006
+  },
+  "days": 132,
+  "exits": {
+   "lock": 29,
+   "square_off": 64,
+   "stop": 6
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -68735.45999999999,
+  "net": 2303.7000000000044,
+  "p": 0.39780109945027486,
+  "p_flip": 0.38980509745127434,
+  "per_day": 17.45227272727276,
+  "per_trade": 23.269696969697012,
+  "q": 1.0,
+  "top5_share": 33.92581933411462,
+  "trades": 99,
+  "twin_flip_mean": -113.44192848484835,
+  "twin_mean": -47.74790146464646,
+  "twins_used": 99,
+  "wf_design": 31207.48000000004,
+  "win_rate": 0.45454545454545453,
+  "worst_day": -16729.92
+ },
+ "H43-6:orig": {
+  "avg_loss": -3979.1390196078432,
+  "avg_win": 4399.216458333333,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": 8226.300000000007
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 84,
+   "stop": 9,
+   "target": 6
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -55490.14,
+  "net": 8226.300000000003,
+  "p": 0.17691154422788605,
+  "p_flip": 0.28235882058970513,
+  "per_day": 62.32045454545457,
+  "per_trade": 83.09393939393942,
+  "q": 0.8314842578710644,
+  "top5_share": 9.11740636738266,
+  "trades": 99,
+  "twin_flip_mean": -178.06213313131298,
+  "twin_mean": -177.42913939393935,
+  "twins_used": 99,
+  "wf_design": 45508.550000000025,
+  "win_rate": 0.48484848484848486,
+  "worst_day": -16729.92
+ },
+ "H43-7:g12": {
+  "avg_loss": -1773.7161904761901,
+  "avg_win": 1885.1060606060603,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": -12287.580000000002
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 69,
+   "stop": 5,
+   "target": 1
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -17553.530000000002,
+  "net": -12287.58,
+  "p": 0.3548225887056472,
+  "p_flip": 0.20239880059970014,
+  "per_day": -93.08772727272728,
+  "per_trade": -163.8344,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 75,
+  "twin_flip_mean": -377.30794493333326,
+  "twin_mean": -199.71444945945936,
+  "twins_used": 74,
+  "wf_design": 14059.160000000003,
+  "win_rate": 0.44,
+  "worst_day": -8747.589999999998
+ },
+ "H43-7:orig": {
+  "avg_loss": -1841.0402127659574,
+  "avg_win": 2234.0526923076923,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": -28443.52000000002
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 66,
+   "stop": 6,
+   "target": 1
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -30639.020000000022,
+  "net": -28443.52000000002,
+  "p": 0.8040979510244878,
+  "p_flip": 0.4577711144427786,
+  "per_day": -215.48121212121225,
+  "per_trade": -389.63726027397286,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 73,
+  "twin_flip_mean": -417.0966839726026,
+  "twin_mean": -230.9835443055555,
+  "twins_used": 72,
+  "wf_design": 14193.049999999988,
+  "win_rate": 0.3561643835616438,
+  "worst_day": -8091.629999999998
+ },
+ "H45-1:g14": {
+  "avg_loss": -1315.06,
+  "avg_win": 1335.272099447514,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 4736.349999999997,
+   "FINNIFTY": 21263.68000000001,
+   "MIDCPNIFTY": 5274.6200000000235
+  },
+  "days": 132,
+  "exits": {
+   "stop": 54,
+   "target": 88,
+   "time_stop": 199
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": true,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -22105.690000000006,
+  "net": 31274.650000000034,
+  "p": 0.10144927536231885,
+  "p_flip": 0.0009995002498750624,
+  "per_day": 236.92916666666693,
+  "per_trade": 91.71451612903236,
+  "q": 0.6152407667134175,
+  "top5_share": 0.7071282971991686,
+  "trades": 341,
+  "twin_flip_mean": -164.7223302639295,
+  "twin_mean": -9.147746920820994,
+  "twins_used": 341,
+  "wf_design": 151306.5300000001,
+  "win_rate": 0.530791788856305,
+  "worst_day": -10974.539999999995
+ },
+ "H45-1:orig": {
+  "avg_loss": -1372.7224852071004,
+  "avg_win": 1148.236457142857,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -32075.769999999997,
+   "FINNIFTY": 16459.539999999997,
+   "MIDCPNIFTY": -15432.489999999998
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 3,
+   "stop": 167,
+   "target": 174
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -42043.19,
+  "net": -31048.72000000001,
+  "p": 0.841079460269865,
+  "p_flip": 0.12043978010994502,
+  "per_day": -235.21757575757582,
+  "per_trade": -90.25790697674421,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 344,
+  "twin_flip_mean": -190.1082311918604,
+  "twin_mean": -20.00276422965107,
+  "twins_used": 344,
+  "wf_design": 54529.660000000076,
+  "win_rate": 0.5087209302325582,
+  "worst_day": -7330.490000000003
+ },
+ "H46-2:g03": {
+  "avg_loss": -1243.3266666666666,
+  "avg_win": 1763.8416049382718,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -58547.74999999999
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 205,
+   "square_off": 38
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -74473.82,
+  "net": -58547.75,
+  "p": 1.0,
+  "p_flip": 0.4527736131934033,
+  "per_day": -443.5435606060606,
+  "per_trade": -240.9372427983539,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 243,
+  "twin_flip_mean": -259.1766367283949,
+  "twin_mean": 231.14694541152278,
+  "twins_used": 243,
+  "wf_design": 100593.78000000007,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -7042.010000000002
+ },
+ "H46-2:orig": {
+  "avg_loss": -1157.7042105263156,
+  "avg_win": 1740.7759722222224,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "MIDCPNIFTY": -72631.54999999996
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 205,
+   "square_off": 38
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -86355.49999999994,
+  "net": -72631.54999999996,
+  "p": 1.0,
+  "p_flip": 0.7871064467766117,
+  "per_day": -550.2390151515149,
+  "per_trade": -298.8952674897118,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 243,
+  "twin_flip_mean": -184.65368880658428,
+  "twin_mean": 274.3011240740742,
+  "twins_used": 243,
+  "wf_design": 100244.28000000006,
+  "win_rate": 0.2962962962962963,
+  "worst_day": -5957.829999999999
+ },
+ "H5-1:orig": {
+  "avg_loss": -1601.4622784810128,
+  "avg_win": 2437.4951111111113,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -13364.939999999995,
+   "NIFTY": -3463.3000000000047
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 95,
+   "square_off": 29
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -40384.14,
+  "net": -16828.239999999998,
+  "p": 1.0,
+  "p_flip": 0.552223888055972,
+  "per_day": -126.52812030075187,
+  "per_trade": -135.71161290322578,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 124,
+  "twin_flip_mean": -98.46417100806448,
+  "twin_mean": 907.1466104838711,
+  "twins_used": 124,
+  "wf_design": -21013.739999999976,
+  "win_rate": 0.3629032258064516,
+  "worst_day": -10623.899999999998
+ },
+ "H9-1:g05": {
+  "avg_loss": -598.5732258064517,
+  "avg_win": 1521.9844444444445,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": 3982.04
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 44,
+   "index_stop": 20,
+   "index_target": 13,
+   "square_off": 1,
+   "stop": 1,
+   "time_stop": 10
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -10897.660000000007,
+  "net": 3982.039999999998,
+  "p": 0.2703648175912044,
+  "p_flip": 0.06196901549225387,
+  "per_day": 30.166969696969684,
+  "per_trade": 44.74202247191009,
+  "q": 1.0,
+  "top5_share": 6.296872959588556,
+  "trades": 89,
+  "twin_flip_mean": -132.73967994382022,
+  "twin_mean": -21.502471966292134,
+  "twins_used": 89,
+  "wf_design": 16399.35000000003,
+  "win_rate": 0.30337078651685395,
+  "worst_day": -4705.009999999999
+ },
+ "H9-1:orig": {
+  "avg_loss": -1196.3738461538462,
+  "avg_win": 2034.9329629629628,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 6616.150000000003,
+   "MIDCPNIFTY": 1668.4600000000057
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 8,
+   "index_stop": 23,
+   "index_target": 9,
+   "square_off": 4,
+   "stop": 1,
+   "time_stop": 21
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -11221.919999999993,
+  "net": 8284.61000000001,
+  "p": 0.4237881059470265,
+  "p_flip": 0.04397801099450275,
+  "per_day": 62.762196969697044,
+  "per_trade": 125.52439393939409,
+  "q": 1.0,
+  "top5_share": 4.3707187182015765,
+  "trades": 66,
+  "twin_flip_mean": -203.86274598484843,
+  "twin_mean": 102.07274545454564,
+  "twins_used": 66,
+  "wf_design": 29623.250000000015,
+  "win_rate": 0.4090909090909091,
+  "worst_day": -4572.769999999999
+ },
+ "LIQ-12:g05": {
+  "avg_loss": -507.1660294117646,
+  "avg_win": 1039.3355555555556,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 12282.810000000003
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 32,
+   "index_target": 61,
+   "square_off": 1,
+   "stop": 19
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -14884.280000000002,
+  "net": 12282.810000000005,
+  "p": 0.5147426286856571,
+  "p_flip": 0.11744127936031984,
+  "per_day": 93.05159090909095,
+  "per_trade": 108.69743362831863,
+  "q": 1.0,
+  "top5_share": 1.993425771464347,
+  "trades": 113,
+  "twin_flip_mean": -6.420109070796423,
+  "twin_mean": 116.15508646017703,
+  "twins_used": 113,
+  "wf_design": 38055.43000000001,
+  "win_rate": 0.39823008849557523,
+  "worst_day": -2674.479999999999
+ },
+ "LIQ-12:orig": {
+  "avg_loss": -465.86752688172027,
+  "avg_win": 860.1148529411767,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "SENSEX": 15162.130000000014
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 60,
+   "index_target": 83,
+   "square_off": 1,
+   "stop": 17
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -9519.79,
+  "net": 15162.130000000017,
+  "p": 0.07846076961519241,
+  "p_flip": 0.017491254372813594,
+  "per_day": 114.86462121212135,
+  "per_trade": 94.17472049689452,
+  "q": 0.5532789160975068,
+  "top5_share": 1.5656843728420726,
+  "trades": 161,
+  "twin_flip_mean": -47.761778695652154,
+  "twin_mean": 2.7730009627329393,
+  "twins_used": 161,
+  "wf_design": -1889.0999999999804,
+  "win_rate": 0.422360248447205,
+  "worst_day": -2200.080000000001
+ },
+ "LIQ-19:g03": {
+  "avg_loss": -2159.0860377358495,
+  "avg_win": 1925.9074576271191,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -5724.02,
+   "FINNIFTY": 4117.980000000019
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 107,
+   "index_target": 76,
+   "square_off": 41
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -54056.47999999999,
+  "net": -1606.0399999999781,
+  "p": 1.0,
+  "p_flip": 0.1809095452273863,
+  "per_day": -12.166969696969531,
+  "per_trade": -7.169821428571331,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 224,
+  "twin_flip_mean": -230.51261966517853,
+  "twin_mean": 614.6932014285715,
+  "twins_used": 224,
+  "wf_design": 174366.09999999998,
+  "win_rate": 0.5267857142857143,
+  "worst_day": -25847.4
+ },
+ "LIQ-19:orig": {
+  "avg_loss": -1249.2937593984964,
+  "avg_win": 2409.478295454546,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 10326.800000000027,
+   "FINNIFTY": 35551.220000000016
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 124,
+   "index_target": 56,
+   "square_off": 41
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -36477.95,
+  "net": 45878.02000000004,
+  "p": 1.0,
+  "p_flip": 0.12343828085957022,
+  "per_day": 347.56075757575786,
+  "per_trade": 207.5928506787332,
+  "q": 1.0,
+  "top5_share": 1.317043106916993,
+  "trades": 221,
+  "twin_flip_mean": -41.13337821266963,
+  "twin_mean": 621.9601771945703,
+  "twins_used": 221,
+  "wf_design": 160503.79000000004,
+  "win_rate": 0.39819004524886875,
+  "worst_day": -10354.030000000002
+ },
+ "LIQ-1:orig": {
+  "avg_loss": -1360.5758736059483,
+  "avg_win": 1259.7781784386618,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -27114.58000000005
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 225,
+   "index_target": 289,
+   "square_off": 24
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -64178.71000000003,
+  "net": -27114.58000000006,
+  "p": 1.0,
+  "p_flip": 0.09245377311344327,
+  "per_day": -205.4134848484853,
+  "per_trade": -50.39884758364323,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 538,
+  "twin_flip_mean": -176.78783953531598,
+  "twin_mean": 244.67512086431228,
+  "twins_used": 538,
+  "wf_design": -45863.18999999993,
+  "win_rate": 0.5,
+  "worst_day": -15463.840000000004
+ },
+ "LIQ-22:g01": {
+  "avg_loss": -969.3222680412371,
+  "avg_win": 1925.939649122807,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 15754.300000000017
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 32,
+   "index_stop": 46,
+   "index_target": 31,
+   "square_off": 7,
+   "stop": 2,
+   "time_stop": 36
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -23447.399999999983,
+  "net": 15754.300000000017,
+  "p": 0.5342328835582209,
+  "p_flip": 0.047476261869065464,
+  "per_day": 119.35075757575771,
+  "per_trade": 102.30064935064946,
+  "q": 1.0,
+  "top5_share": 2.854431488545981,
+  "trades": 154,
+  "twin_flip_mean": -113.19847607142847,
+  "twin_mean": 118.77827425324685,
+  "twins_used": 154,
+  "wf_design": 59746.149999999994,
+  "win_rate": 0.37012987012987014,
+  "worst_day": -7980.089999999999
+ },
+ "LIQ-22:orig": {
+  "avg_loss": -987.5520652173913,
+  "avg_win": 1919.136545454546,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 14697.720000000016
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 31,
+   "index_stop": 43,
+   "index_target": 29,
+   "square_off": 7,
+   "stop": 2,
+   "time_stop": 35
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -21979.499999999993,
+  "net": 14697.720000000014,
+  "p": 0.5517241379310345,
+  "p_flip": 0.05347326336831584,
+  "per_day": 111.34636363636375,
+  "per_trade": 99.98448979591846,
+  "q": 1.0,
+  "top5_share": 3.059628976467095,
+  "trades": 147,
+  "twin_flip_mean": -95.96378421768698,
+  "twin_mean": 123.65517826530626,
+  "twins_used": 147,
+  "wf_design": 68583.30000000002,
+  "win_rate": 0.3741496598639456,
+  "worst_day": -7007.379999999999
+ },
+ "LIQ-2:g11": {
+  "avg_loss": -2420.114181818182,
+  "avg_win": 1510.0766666666668,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -51562.139999999956
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 26,
+   "index_target": 51,
+   "square_off": 32
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -62604.839999999946,
+  "net": -51562.13999999995,
+  "p": 1.0,
+  "p_flip": 0.8940529735132434,
+  "per_day": -390.62227272727233,
+  "per_trade": -473.04715596330226,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 109,
+  "twin_flip_mean": -46.94406009174301,
+  "twin_mean": 714.0447050458716,
+  "twins_used": 109,
+  "wf_design": 52494.13000000001,
+  "win_rate": 0.4954128440366973,
+  "worst_day": -12204.489999999998
+ },
+ "LIQ-2:orig": {
+  "avg_loss": -2567.5475999999994,
+  "avg_win": 1313.608857142858,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -18212.37999999998
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 12,
+   "index_target": 32,
+   "square_off": 16
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -33317.08999999998,
+  "net": -18212.379999999976,
+  "p": 1.0,
+  "p_flip": 0.6061969015492253,
+  "per_day": -137.97257575757558,
+  "per_trade": -303.5396666666663,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 60,
+  "twin_flip_mean": -183.22728341666667,
+  "twin_mean": 861.5770969166667,
+  "twins_used": 60,
+  "wf_design": 26400.129999999997,
+  "win_rate": 0.5833333333333334,
+  "worst_day": -6974.589999999998
+ },
+ "LIQ-3:orig": {
+  "avg_loss": -8238.271111111111,
+  "avg_win": 3840.7631578947367,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -1169.9400000000096
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 28
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -45379.54000000001,
+  "net": -1169.9400000000096,
+  "p": 0.9975012493753124,
+  "p_flip": 0.23288355822088955,
+  "per_day": -8.863181818181891,
+  "per_trade": -41.78357142857177,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 28,
+  "twin_flip_mean": -1051.9977317857142,
+  "twin_mean": 1120.820780892857,
+  "twins_used": 28,
+  "wf_design": -96276.44,
+  "win_rate": 0.6785714285714286,
+  "worst_day": -15551.46
+ },
+ "LIQ-4:orig": {
+  "avg_loss": -1012.8043915343914,
+  "avg_win": 1100.6078832116789,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -40636.74999999999
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 159,
+   "index_target": 153,
+   "square_off": 14
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -50993.33,
+  "net": -40636.74999999999,
+  "p": 1.0,
+  "p_flip": 0.5057471264367817,
+  "per_day": -307.85416666666663,
+  "per_trade": -124.65260736196316,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 326,
+  "twin_flip_mean": -124.63744794478528,
+  "twin_mean": 261.60391452453996,
+  "twins_used": 326,
+  "wf_design": 6578.920000000027,
+  "win_rate": 0.42024539877300615,
+  "worst_day": -7659.049999999997
+ },
+ "LIQ-5:orig": {
+  "avg_loss": -1490.840833333333,
+  "avg_win": 3415.6590000000006,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 16266.500000000007
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 5,
+   "index_target": 9,
+   "square_off": 8
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -16614.25,
+  "net": 16266.500000000013,
+  "p": 0.9970014992503748,
+  "p_flip": 0.175912043978011,
+  "per_day": 123.23106060606071,
+  "per_trade": 739.3863636363642,
+  "q": 1.0,
+  "top5_share": 1.7750382688347208,
+  "trades": 22,
+  "twin_flip_mean": -235.99004204545443,
+  "twin_mean": 1960.1682795454547,
+  "twins_used": 22,
+  "wf_design": -2463.5599999999904,
+  "win_rate": 0.45454545454545453,
+  "worst_day": -6407.829999999999
+ },
+ "LIQ-6:g10": {
+  "avg_loss": -656.8456716417911,
+  "avg_win": 953.191294117647,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": -6996.0600000000195
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 102,
+   "index_target": 99,
+   "square_off": 6,
+   "stop": 12
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -28507.630000000005,
+  "net": -6996.060000000021,
+  "p": 0.5102448775612194,
+  "p_flip": 0.06696651674162919,
+  "per_day": -53.00045454545471,
+  "per_trade": -31.94547945205489,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 219,
+  "twin_flip_mean": -280.96470184931496,
+  "twin_mean": -64.45441990867577,
+  "twins_used": 219,
+  "wf_design": 71489.63,
+  "win_rate": 0.3881278538812785,
+  "worst_day": -5037.499999999998
+ },
+ "LIQ-6:orig": {
+  "avg_loss": -678.0688636363639,
+  "avg_win": 847.1645454545452,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": -24273.420000000024
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 95,
+   "index_target": 96,
+   "square_off": 6,
+   "stop": 12
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -34959.310000000005,
+  "net": -24273.420000000027,
+  "p": 0.9095452273863068,
+  "p_flip": 0.21689155422288856,
+  "per_day": -183.88954545454567,
+  "per_trade": -116.14076555023937,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 209,
+  "twin_flip_mean": -192.0734034449761,
+  "twin_mean": -25.282733468899483,
+  "twins_used": 209,
+  "wf_design": 66357.12,
+  "win_rate": 0.3684210526315789,
+  "worst_day": -5037.499999999998
+ },
+ "LIQ-9:g21": {
+  "avg_loss": -764.7599999999999,
+  "avg_win": 683.875,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": 441.22000000000014
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 1,
+   "index_target": 5,
+   "stop": 1
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -1688.0899999999995,
+  "net": 441.22000000000014,
+  "p": 0.18590704647676162,
+  "p_flip": 0.3918040979510245,
+  "per_day": 3.3174436090225576,
+  "per_trade": 63.03142857142859,
+  "q": 0.8524518228690533,
+  "top5_share": 6.181224785821129,
+  "trades": 7,
+  "twin_flip_mean": -45.41337714285711,
+  "twin_mean": -133.41654071428565,
+  "twins_used": 7,
+  "wf_design": 13254.399999999998,
+  "win_rate": 0.5714285714285714,
+  "worst_day": -1191.0299999999997
+ },
+ "LIQ-9:orig": {
+  "avg_loss": -862.9325000000001,
+  "avg_win": 683.875,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -716.2300000000005
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 1,
+   "index_target": 5,
+   "stop": 2
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -1986.2000000000012,
+  "net": -716.2300000000004,
+  "p": 0.30884557721139433,
+  "p_flip": 0.5802098950524738,
+  "per_day": -5.385187969924814,
+  "per_trade": -89.52875000000004,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 8,
+  "twin_flip_mean": -1.0413874999999544,
+  "twin_mean": -243.24700374999992,
+  "twins_used": 8,
+  "wf_design": 8012.34,
+  "win_rate": 0.5,
+  "worst_day": -1191.0299999999997
+ },
+ "LV-2:orig": {
+  "avg_loss": -1622.0920689655168,
+  "avg_win": 3639.0481818181797,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -7011.139999999998
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 40
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -16760.929999999993,
+  "net": -7011.139999999997,
+  "p": 0.0944527736131934,
+  "p_flip": 0.07796101949025487,
+  "per_day": -53.11469696969694,
+  "per_trade": -175.27849999999992,
+  "q": 0.6123145323889779,
+  "top5_share": NaN,
+  "trades": 40,
+  "twin_flip_mean": -320.2173261249998,
+  "twin_mean": -303.84589462499997,
+  "twins_used": 40,
+  "wf_design": 3161.3399999999874,
+  "win_rate": 0.275,
+  "worst_day": -3383.529999999999
+ },
+ "LV-4:orig": {
+  "avg_loss": -1227.184523809524,
+  "avg_win": 1268.5242857142857,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -67564.82000000002
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 112
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -73115.88000000003,
+  "net": -67564.82000000002,
+  "p": 0.0004997501249375312,
+  "p_flip": 0.0004997501249375312,
+  "per_day": -511.85469696969716,
+  "per_trade": -603.2573214285716,
+  "q": 0.023488255872063966,
+  "top5_share": NaN,
+  "trades": 112,
+  "twin_flip_mean": -803.3638483035713,
+  "twin_mean": -804.7468576785714,
+  "twins_used": 112,
+  "wf_design": -176026.17,
+  "win_rate": 0.25,
+  "worst_day": -5956.690000000001
+ },
+ "LV-5:orig": {
+  "avg_loss": -1669.9700000000012,
+  "avg_win": 764.9700000000016,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -2574.970000000001
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 3
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -3339.940000000003,
+  "net": -2574.970000000001,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": -19.507348484848492,
+  "per_trade": -858.3233333333337,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 3,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 3,
+  "wf_design": -312.5500000000022,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -2105.979999999999
+ },
+ "MP-1:orig": {
+  "avg_loss": -2060.2511,
+  "avg_win": 3360.67647887324,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 32582.92000000004
+  },
+  "days": 132,
+  "exits": {
+   "index_stop": 56,
+   "index_target": 13,
+   "square_off": 102
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -44892.46999999999,
+  "net": 32582.92000000003,
+  "p": 0.0004997501249375312,
+  "p_flip": 0.041979010494752625,
+  "per_day": 246.84030303030326,
+  "per_trade": 190.54339181286568,
+  "q": 0.023488255872063966,
+  "top5_share": 1.6879840726368276,
+  "trades": 171,
+  "twin_flip_mean": -256.403145497076,
+  "twin_mean": -368.44921116959057,
+  "twins_used": 171,
+  "wf_design": -132415.18,
+  "win_rate": 0.4152046783625731,
+  "worst_day": -9499.959999999994
+ },
+ "MV-1:orig": {
+  "avg_loss": -1907.4215555555554,
+  "avg_win": 3480.3713197969537,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -86872.57999999997
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 492,
+   "square_off": 110
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -201891.95999999996,
+  "net": -86872.57999999996,
+  "p": 1.0,
+  "p_flip": 0.46676661669165415,
+  "per_day": -658.1256060606057,
+  "per_trade": -144.306611295681,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 602,
+  "twin_flip_mean": -158.40056960963454,
+  "twin_mean": 311.62082629568107,
+  "twins_used": 602,
+  "wf_design": -122387.76999999993,
+  "win_rate": 0.3272425249169435,
+  "worst_day": -28389.72000000001
+ },
+ "OBUY_GA-11:orig": {
+  "avg_loss": -975.3999999999997,
+  "avg_win": 4657.240000000001,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 17004.63,
+   "NIFTY": 4330.770000000002
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 7
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -1950.7999999999993,
+  "net": 21335.4,
+  "p": 0.0004997501249375312,
+  "p_flip": 0.0004997501249375312,
+  "per_day": 160.41654135338348,
+  "per_trade": 3047.914285714286,
+  "q": 0.023488255872063966,
+  "top5_share": 1.0914348922448136,
+  "trades": 7,
+  "twin_flip_mean": -601.0666278571425,
+  "twin_mean": 738.8496964285716,
+  "twins_used": 7,
+  "wf_design": -10829.469999999996,
+  "win_rate": 0.7142857142857143,
+  "worst_day": -1084.4699999999991
+ },
+ "OBUY_GA-11:s6.r1.x0": {
+  "avg_loss": -4213.17358974359,
+  "avg_win": 5160.397407407408,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 11520.279999999999,
+   "NIFTY": -36503.31999999999
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 9,
+   "square_off": 57
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -57156.80999999998,
+  "net": -24983.04,
+  "p": 0.9085457271364318,
+  "p_flip": 0.7956021989005497,
+  "per_day": -187.8424060150376,
+  "per_trade": -378.5309090909091,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 66,
+  "twin_flip_mean": 121.39313795454551,
+  "twin_mean": 5.64678962121214,
+  "twins_used": 66,
+  "wf_design": 72471.90999999997,
+  "win_rate": 0.4090909090909091,
+  "worst_day": -28514.670000000006
+ },
+ "OBUY_GA-12:orig": {
+  "avg_loss": -3000.418823529411,
+  "avg_win": 1701.97,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -28006.27999999999,
+   "NIFTY": -875.2299999999975
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 1,
+   "square_off": 29
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -37100.19999999999,
+  "net": -28881.509999999987,
+  "p": 0.999000499750125,
+  "p_flip": 0.744127936031984,
+  "per_day": -217.1542105263157,
+  "per_trade": -962.7169999999995,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 30,
+  "twin_flip_mean": -540.2262953333335,
+  "twin_mean": -5.668023999999967,
+  "twins_used": 30,
+  "wf_design": -25903.499999999985,
+  "win_rate": 0.43333333333333335,
+  "worst_day": -11150.53
+ },
+ "OBUY_GA-12:s7.r1.x1": {
+  "avg_loss": -3059.973636363636,
+  "avg_win": 3379.1514285714284,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -18361.170000000002,
+   "NIFTY": -45315.49
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 49,
+   "stop": 16
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -72327.99,
+  "net": -63676.659999999996,
+  "p": 1.0,
+  "p_flip": 0.9635182408795602,
+  "per_day": -478.7718796992481,
+  "per_trade": -979.6409230769231,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 65,
+  "twin_flip_mean": -18.775273538461455,
+  "twin_mean": 577.7720833846156,
+  "twins_used": 65,
+  "wf_design": 18768.340000000015,
+  "win_rate": 0.3230769230769231,
+  "worst_day": -17117.78
+ },
+ "OBUY_GA-1:orig": {
+  "avg_loss": -1853.4615,
+  "avg_win": 2093.3969999999995,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -2661.3100000000068,
+   "FINNIFTY": -6306.899999999993,
+   "NIFTY": -1702.8599999999974,
+   "SENSEX": -5464.190000000001
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 11,
+   "index_target": 10,
+   "square_off": 9
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -19136.300000000003,
+  "net": -16135.259999999995,
+  "p": 0.4062968515742129,
+  "p_flip": 0.657671164417791,
+  "per_day": -121.31774436090221,
+  "per_trade": -537.8419999999999,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 30,
+  "twin_flip_mean": -349.2543245,
+  "twin_mean": -553.9212045,
+  "twins_used": 30,
+  "wf_design": 17930.020000000026,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -5937.550000000001
+ },
+ "OBUY_GA-1:s3.r0.x0": {
+  "avg_loss": -2115.0654545454545,
+  "avg_win": 1763.3486666666668,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 563.8499999999922,
+   "FINNIFTY": -17193.379999999994,
+   "NIFTY": -6547.440000000002,
+   "SENSEX": -13800.94
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 44,
+   "index_target": 44,
+   "square_off": 12
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -46838.049999999996,
+  "net": -36977.91,
+  "p": 0.07946026986506746,
+  "p_flip": 0.6446776611694153,
+  "per_day": -278.0293984962406,
+  "per_trade": -369.7791,
+  "q": 0.5532789160975068,
+  "top5_share": NaN,
+  "trades": 100,
+  "twin_flip_mean": -280.43123015000003,
+  "twin_mean": -501.8880857,
+  "twins_used": 100,
+  "wf_design": 69351.90000000001,
+  "win_rate": 0.45,
+  "worst_day": -11746.57
+ },
+ "OBUY_GB-1:orig": {
+  "avg_loss": -2084.8307042253523,
+  "avg_win": 1912.376301369863,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -23339.799999999996,
+   "FINNIFTY": 2851.8899999999994,
+   "NIFTY": 6590.130000000004,
+   "SENSEX": 5478.269999999998
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 50,
+   "index_target": 71,
+   "square_off": 23
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -43297.22,
+  "net": -8419.509999999991,
+  "p": 0.16941529235382308,
+  "p_flip": 0.4912543728135932,
+  "per_day": -63.30458646616535,
+  "per_trade": -58.468819444444385,
+  "q": 0.8263047963197888,
+  "top5_share": NaN,
+  "trades": 144,
+  "twin_flip_mean": -57.55935954861112,
+  "twin_mean": -225.30892038194443,
+  "twins_used": 144,
+  "wf_design": 81.5600000000436,
+  "win_rate": 0.5069444444444444,
+  "worst_day": -13103.06
+ },
+ "OBUY_GB-1:s0.r0.x1": {
+  "avg_loss": -2109.839864864865,
+  "avg_win": 1968.6815714285713,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -22868.209999999995,
+   "FINNIFTY": 3284.2599999999993,
+   "NIFTY": 5029.250000000004,
+   "SENSEX": -3765.740000000001
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 41,
+   "index_target": 69,
+   "square_off": 18,
+   "stop": 16
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -46531.57,
+  "net": -18320.439999999988,
+  "p": 0.37231384307846077,
+  "p_flip": 0.45577211394302847,
+  "per_day": -137.74766917293223,
+  "per_trade": -127.22527777777769,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 144,
+  "twin_flip_mean": -151.70197840277774,
+  "twin_mean": -180.19155072916664,
+  "twins_used": 144,
+  "wf_design": 4135.500000000044,
+  "win_rate": 0.4861111111111111,
+  "worst_day": -12818.9
+ },
+ "OBUY_GB-4:orig": {
+  "avg_loss": -1499.136153846154,
+  "avg_win": 1736.2369047619047,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -24521.9
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 22,
+   "square_off": 17,
+   "stop": 31,
+   "target": 37
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -42543.68000000001,
+  "net": -24521.900000000005,
+  "p": 0.9805097451274363,
+  "p_flip": 0.6771614192903548,
+  "per_day": -184.37518796992484,
+  "per_trade": -229.17663551401873,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 107,
+  "twin_flip_mean": -154.0895752803738,
+  "twin_mean": 86.40736317757013,
+  "twins_used": 107,
+  "wf_design": 4639.0799999999945,
+  "win_rate": 0.3925233644859813,
+  "worst_day": -5104.04
+ },
+ "OBUY_GB-4:s1.r0.x9": {
+  "avg_loss": -1475.735430463576,
+  "avg_win": 1926.901647058823,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -59049.40999999998
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 136,
+   "square_off": 21,
+   "target": 79
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -69701.16999999998,
+  "net": -59049.40999999998,
+  "p": 1.0,
+  "p_flip": 0.775112443778111,
+  "per_day": -443.98052631578935,
+  "per_trade": -250.20936440677957,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 236,
+  "twin_flip_mean": -150.64128972457624,
+  "twin_mean": 240.10783338983055,
+  "twins_used": 236,
+  "wf_design": 6830.020000000031,
+  "win_rate": 0.3601694915254237,
+  "worst_day": -10474.019999999995
+ },
+ "OBUY_GC-14:orig": {
+  "avg_loss": -3808.7215384615383,
+  "avg_win": 5007.9282456140345,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 46631.59000000002,
+   "NIFTY": -8746.579999999989
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 84,
+   "stop": 38
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -53352.55999999999,
+  "net": 37885.01000000003,
+  "p": 0.9930034982508745,
+  "p_flip": 0.08995502248875563,
+  "per_day": 284.84969924812054,
+  "per_trade": 310.5328688524593,
+  "q": 1.0,
+  "top5_share": 1.9023473928078665,
+  "trades": 122,
+  "twin_flip_mean": -336.57907831967213,
+  "twin_mean": 580.6229876639345,
+  "twins_used": 122,
+  "wf_design": -12246.779999999966,
+  "win_rate": 0.4672131147540984,
+  "worst_day": -16873.64
+ },
+ "OBUY_GC-15:orig": {
+  "avg_loss": -4233.267500000001,
+  "avg_win": 12303.683333333336,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -910.8399999999979,
+   "NIFTY": 20888.820000000007
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 7
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -15066.96,
+  "net": 19977.98000000001,
+  "p": 0.8780609695152424,
+  "p_flip": 0.050474762618690654,
+  "per_day": 150.2103759398497,
+  "per_trade": 2853.9971428571444,
+  "q": 1.0,
+  "top5_share": 1.6108790778647286,
+  "trades": 7,
+  "twin_flip_mean": -3281.3844921428577,
+  "twin_mean": 3489.8586407142857,
+  "twins_used": 7,
+  "wf_design": 87492.30000000002,
+  "win_rate": 0.42857142857142855,
+  "worst_day": -6132.769999999999
+ },
+ "OBUY_GC-15:s4.r0.x0": {
+  "avg_loss": -3944.1974999999998,
+  "avg_win": 13154.269999999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 1284.5500000000006,
+   "NIFTY": 22401.469999999998
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 7
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -14249.2,
+  "net": 23686.019999999997,
+  "p": 0.42478760619690153,
+  "p_flip": 0.010494752623688156,
+  "per_day": 178.0903759398496,
+  "per_trade": 3383.7171428571423,
+  "q": 1.0,
+  "top5_share": 1.5222679876146354,
+  "trades": 7,
+  "twin_flip_mean": -6404.041902142857,
+  "twin_mean": 3309.0096307142853,
+  "twins_used": 7,
+  "wf_design": 72939.71,
+  "win_rate": 0.42857142857142855,
+  "worst_day": -6491.590000000001
+ },
+ "OBUY_GC-3:orig": {
+  "avg_loss": -204.64461538461535,
+  "avg_win": 287.7624999999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -899.1400000000008,
+   "NIFTY": -2119.5199999999995
+  },
+  "days": 133,
+  "exits": {
+   "stop": 26,
+   "target": 8
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -3018.6600000000008,
+  "net": -3018.6600000000008,
+  "p": 0.8845577211394303,
+  "p_flip": 0.7296351824087957,
+  "per_day": -22.696691729323312,
+  "per_trade": -88.78411764705885,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 34,
+  "twin_flip_mean": -68.66160455882351,
+  "twin_mean": -48.78469691176474,
+  "twins_used": 34,
+  "wf_design": -6447.020000000002,
+  "win_rate": 0.23529411764705882,
+  "worst_day": -470.2700000000002
+ },
+ "OBUY_SEARCH-2:g05": {
+  "avg_loss": 0.0,
+  "avg_win": 0.0,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {},
+  "days": 132,
+  "exits": {},
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": 0.0,
+  "net": 0.0,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": 0.0,
+  "per_trade": 0.0,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 0,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 0,
+  "wf_design": 9255.619999999999,
+  "win_rate": 0.0,
+  "worst_day": 0.0
+ },
+ "OBUY_SEARCH-2:orig": {
+  "avg_loss": 0.0,
+  "avg_win": 0.0,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {},
+  "days": 132,
+  "exits": {},
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": 0.0,
+  "net": 0.0,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": 0.0,
+  "per_trade": 0.0,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 0,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 0,
+  "wf_design": 5567.57,
+  "win_rate": 0.0,
+  "worst_day": 0.0
+ },
+ "OBUY_SEARCH-4:g07": {
+  "avg_loss": -1397.85,
+  "avg_win": 2516.775000000001,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": 2237.850000000002
+  },
+  "days": 133,
+  "exits": {
+   "target": 1,
+   "time_stop": 3
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -1672.5599999999995,
+  "net": 2237.850000000002,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": 16.825939849624078,
+  "per_trade": 559.4625000000005,
+  "q": 1.0,
+  "top5_share": 1.0,
+  "trades": 4,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 4,
+  "wf_design": 4132.089999999998,
+  "win_rate": 0.5,
+  "worst_day": -1672.5599999999995
+ },
+ "OBUY_SEARCH-4:orig": {
+  "avg_loss": -2897.8999999999996,
+  "avg_win": 1904.4900000000005,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -1986.819999999998
+  },
+  "days": 133,
+  "exits": {
+   "target": 1,
+   "time_stop": 3
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -5795.799999999999,
+  "net": -1986.8199999999988,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": -14.938496240601495,
+  "per_trade": -496.7049999999997,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 4,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 4,
+  "wf_design": 2263.399999999999,
+  "win_rate": 0.5,
+  "worst_day": -3160.7999999999993
+ },
+ "R1-14:orig": {
+  "avg_loss": -936.6151428571426,
+  "avg_win": 2604.2195454545454,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 21022.90000000002,
+   "NIFTY": 3488.399999999997
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 7,
+   "stop": 10,
+   "time_stop": 40
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -13889.139999999994,
+  "net": 24511.30000000001,
+  "p": 1.0,
+  "p_flip": 0.10344827586206896,
+  "per_day": 184.2954887218046,
+  "per_trade": 430.02280701754404,
+  "q": 1.0,
+  "top5_share": 1.6964257301734293,
+  "trades": 57,
+  "twin_flip_mean": 58.402510877193286,
+  "twin_mean": 430.0228070175442,
+  "twins_used": 57,
+  "wf_design": -3960.090000000002,
+  "win_rate": 0.38596491228070173,
+  "worst_day": -3131.4599999999946
+ },
+ "R1-1:g08": {
+  "avg_loss": -1037.0678125,
+  "avg_win": 2048.676060606061,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -4944.410000000009,
+   "NIFTY": 6178.380000000003
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 15,
+   "stop": 20,
+   "time_stop": 62
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -19619.190000000002,
+  "net": 1233.9699999999925,
+  "p": 0.7906046976511744,
+  "p_flip": 0.5247376311844077,
+  "per_day": 9.277969924811973,
+  "per_trade": 12.72134020618549,
+  "q": 1.0,
+  "top5_share": 31.171316968808185,
+  "trades": 97,
+  "twin_flip_mean": 42.429586030927936,
+  "twin_mean": 239.02822922680414,
+  "twins_used": 97,
+  "wf_design": 65448.69000000003,
+  "win_rate": 0.3402061855670103,
+  "worst_day": -6906.889999999999
+ },
+ "R1-1:orig": {
+  "avg_loss": -2222.6725287356317,
+  "avg_win": 3450.8976923076925,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 663.7899999999973,
+   "NIFTY": -59451.29
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 41,
+   "square_off": 85
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -84788.94000000003,
+  "net": -58787.5,
+  "p": 1.0,
+  "p_flip": 0.9365317341329336,
+  "per_day": -442.0112781954887,
+  "per_trade": -466.5674603174603,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 126,
+  "twin_flip_mean": 119.12825730158738,
+  "twin_mean": 786.287874325397,
+  "twins_used": 126,
+  "wf_design": -3391.059999999983,
+  "win_rate": 0.30952380952380953,
+  "worst_day": -13648.780000000002
+ },
+ "R1-2@BANKNIFTY:g01": {
+  "avg_loss": -2879.5713793103446,
+  "avg_win": 4865.844749999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -55888.92
+  },
+  "days": 132,
+  "exits": {
+   "index_stop": 75,
+   "square_off": 52
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -72135.70000000001,
+  "net": -55888.91999999999,
+  "p": 0.8365817091454273,
+  "p_flip": 0.8195902048975512,
+  "per_day": -423.400909090909,
+  "per_trade": -440.0702362204724,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 127,
+  "twin_flip_mean": -122.17022933070855,
+  "twin_mean": -198.72780732283456,
+  "twins_used": 127,
+  "wf_design": 20925.760000000017,
+  "win_rate": 0.31496062992125984,
+  "worst_day": -7674.58
+ },
+ "R1-2@BANKNIFTY:orig": {
+  "avg_loss": -1373.5023684210523,
+  "avg_win": 2652.7671428571425,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 3515.0200000000045
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 8,
+   "stop": 6,
+   "time_stop": 45
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -26770.460000000003,
+  "net": 3515.020000000003,
+  "p": 0.9260369815092454,
+  "p_flip": 0.4432783608195902,
+  "per_day": 26.62893939393942,
+  "per_trade": 59.57661016949158,
+  "q": 1.0,
+  "top5_share": 12.394859773201851,
+  "trades": 59,
+  "twin_flip_mean": 34.43612491525443,
+  "twin_mean": 639.7415804237288,
+  "twins_used": 59,
+  "wf_design": 11056.359999999986,
+  "win_rate": 0.3559322033898305,
+  "worst_day": -5701.270000000004
+ },
+ "R1-2@NIFTY:g07": {
+  "avg_loss": -2844.511388888889,
+  "avg_win": 4246.303636363636,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -8983.729999999996
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 9,
+   "square_off": 49
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -40809.34999999999,
+  "net": -8983.729999999996,
+  "p": 1.0,
+  "p_flip": 0.8225887056471765,
+  "per_day": -67.54684210526312,
+  "per_trade": -154.89189655172407,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 58,
+  "twin_flip_mean": 393.0454555172414,
+  "twin_mean": 1623.1802571551725,
+  "twins_used": 58,
+  "wf_design": 61787.37999999999,
+  "win_rate": 0.3793103448275862,
+  "worst_day": -8163.23
+ },
+ "R1-2@NIFTY:orig": {
+  "avg_loss": -2783.870833333333,
+  "avg_win": 4246.303636363636,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -6800.669999999999
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 58
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -37823.13999999999,
+  "net": -6800.669999999999,
+  "p": 1.0,
+  "p_flip": 0.6196901549225388,
+  "per_day": -51.132857142857134,
+  "per_trade": -117.25293103448274,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 58,
+  "twin_flip_mean": 73.89052301724143,
+  "twin_mean": 1593.3064381896552,
+  "twins_used": 58,
+  "wf_design": 46380.22,
+  "win_rate": 0.3793103448275862,
+  "worst_day": -9336.83
+ },
+ "R1-4:g06": {
+  "avg_loss": -1253.0220779220776,
+  "avg_win": 1667.0421153846157,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -21062.099999999988,
+   "NIFTY": 11265.590000000004
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 129
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -42781.43,
+  "net": -9796.50999999998,
+  "p": 1.0,
+  "p_flip": 0.4002998500749625,
+  "per_day": -73.65796992481188,
+  "per_trade": -75.94193798449596,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 129,
+  "twin_flip_mean": -119.595419496124,
+  "twin_mean": -75.94193798449598,
+  "twins_used": 129,
+  "wf_design": 38046.58,
+  "win_rate": 0.40310077519379844,
+  "worst_day": -9550.65
+ },
+ "R1-4:orig": {
+  "avg_loss": -1398.6218749999998,
+  "avg_win": 2315.921111111111,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 4264.510000000001,
+   "NIFTY": 15044.119999999999
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 34
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -9006.229999999996,
+  "net": 19308.63,
+  "p": 1.0,
+  "p_flip": 0.03248375812093953,
+  "per_day": 145.17766917293233,
+  "per_trade": 567.9008823529412,
+  "q": 1.0,
+  "top5_share": 1.30578088657766,
+  "trades": 34,
+  "twin_flip_mean": -151.14038764705882,
+  "twin_mean": 567.9008823529412,
+  "twins_used": 34,
+  "wf_design": -21366.930000000008,
+  "win_rate": 0.5294117647058824,
+  "worst_day": -3557.38
+ },
+ "R1-6@BANKNIFTY:orig": {
+  "avg_loss": -1039.4182857142862,
+  "avg_win": 1435.7490000000003,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -15329.320000000012
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 14,
+   "stop": 15,
+   "time_stop": 81
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -29741.200000000008,
+  "net": -15329.320000000014,
+  "p": 0.7711144427786107,
+  "p_flip": 0.46026986506746626,
+  "per_day": -116.13121212121223,
+  "per_trade": -139.3574545454547,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 110,
+  "twin_flip_mean": -152.79698059090902,
+  "twin_mean": 24.440222681818252,
+  "twins_used": 110,
+  "wf_design": -20948.649999999972,
+  "win_rate": 0.36363636363636365,
+  "worst_day": -3986.0399999999995
+ },
+ "R1-6@NIFTY:g03": {
+  "avg_loss": -1106.903111111111,
+  "avg_win": 2219.5727777777774,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -59668.96999999999
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 5,
+   "stop": 51,
+   "time_stop": 52
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -84008.45999999999,
+  "net": -59668.96999999999,
+  "p": 0.9830084957521239,
+  "p_flip": 1.0,
+  "per_day": -448.638872180451,
+  "per_trade": -552.4904629629629,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 108,
+  "twin_flip_mean": -12.451499166666629,
+  "twin_mean": -224.61674861111106,
+  "twins_used": 108,
+  "wf_design": 4786.990000000012,
+  "win_rate": 0.16666666666666666,
+  "worst_day": -2422.9799999999977
+ },
+ "R1-6@NIFTY:orig": {
+  "avg_loss": -1926.9172222222219,
+  "avg_win": 4803.1904,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -18658.28
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 61,
+   "square_off": 36
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -57975.22,
+  "net": -18658.280000000002,
+  "p": 0.9470264867566217,
+  "p_flip": 0.5097451274362819,
+  "per_day": -140.2878195488722,
+  "per_trade": -192.3534020618557,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 97,
+  "twin_flip_mean": -189.5076355670103,
+  "twin_mean": 184.90930546391755,
+  "twins_used": 97,
+  "wf_design": -65785.79999999997,
+  "win_rate": 0.25773195876288657,
+  "worst_day": -5007.91
+ },
+ "R1-7:orig": {
+  "avg_loss": -2240.488846153846,
+  "avg_win": 3470.3077419354845,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 16990.950000000037,
+   "NIFTY": -34842.70999999999
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 82,
+   "index_target": 19,
+   "square_off": 65
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -78375.27999999994,
+  "net": -17851.759999999966,
+  "p": 1.0,
+  "p_flip": 0.5817091454272864,
+  "per_day": -134.223759398496,
+  "per_trade": -107.54072289156606,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 166,
+  "twin_flip_mean": -42.368821084337284,
+  "twin_mean": 531.898490873494,
+  "twins_used": 166,
+  "wf_design": -7405.959999999977,
+  "win_rate": 0.37349397590361444,
+  "worst_day": -13591.919999999998
+ },
+ "R1-8@BANKNIFTY:orig": {
+  "avg_loss": -2627.1425,
+  "avg_win": 2829.5319354838707,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -6861.639999999976
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 67
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -17839.469999999994,
+  "net": -6861.639999999982,
+  "p": 1.0,
+  "p_flip": 0.49975012493753124,
+  "per_day": -51.98212121212108,
+  "per_trade": -102.41253731343257,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 67,
+  "twin_flip_mean": -101.44555850746252,
+  "twin_mean": -102.41253731343255,
+  "twins_used": 67,
+  "wf_design": 7122.490000000015,
+  "win_rate": 0.4626865671641791,
+  "worst_day": -6511.089999999999
+ },
+ "R1-8@NIFTY:g05": {
+  "avg_loss": -1599.86125,
+  "avg_win": 2272.0672727272727,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -13403.929999999993
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 35
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -16331.489999999994,
+  "net": -13403.929999999993,
+  "p": 1.0,
+  "p_flip": 0.7491254372813593,
+  "per_day": -100.78142857142852,
+  "per_trade": -382.96942857142835,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 35,
+  "twin_flip_mean": -115.98912799999975,
+  "twin_mean": -382.96942857142847,
+  "twins_used": 35,
+  "wf_design": 15144.590000000004,
+  "win_rate": 0.3142857142857143,
+  "worst_day": -5518.679999999999
+ },
+ "R1-8@NIFTY:orig": {
+  "avg_loss": -1155.6011538461537,
+  "avg_win": 3748.04,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": 3686.730000000004
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 6,
+   "stop": 16,
+   "time_stop": 13
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -19148.86,
+  "net": 3686.7300000000046,
+  "p": 1.0,
+  "p_flip": 0.5812093953023488,
+  "per_day": 27.71977443609026,
+  "per_trade": 105.33514285714298,
+  "q": 1.0,
+  "top5_share": 8.892121202257815,
+  "trades": 35,
+  "twin_flip_mean": 226.31895471428578,
+  "twin_mean": 105.33514285714297,
+  "twins_used": 35,
+  "wf_design": 15284.360000000011,
+  "win_rate": 0.2571428571428571,
+  "worst_day": -2935.9999999999986
+ },
+ "R1-9:g03": {
+  "avg_loss": -3746.472,
+  "avg_win": 3364.3599999999997,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 34.179999999995175,
+   "NIFTY": -1944.7400000000011
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 10
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -17438.160000000003,
+  "net": -1910.5600000000054,
+  "p": 1.0,
+  "p_flip": 0.5412293853073463,
+  "per_day": -14.365112781954927,
+  "per_trade": -191.05600000000055,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 10,
+  "twin_flip_mean": 80.9117029999996,
+  "twin_mean": -191.05600000000052,
+  "twins_used": 10,
+  "wf_design": 59260.79000000003,
+  "win_rate": 0.5,
+  "worst_day": -14596.400000000003
+ },
+ "R1-9:orig": {
+  "avg_loss": -2969.215,
+  "avg_win": 2028.705000000001,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -878.189999999996,
+   "NIFTY": -1002.8300000000023
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 4
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -3709.0000000000005,
+  "net": -1881.0199999999982,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": -14.14300751879698,
+  "per_trade": -470.25499999999954,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 4,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 4,
+  "wf_design": -3160.9800000000014,
+  "win_rate": 0.5,
+  "worst_day": -3709.0000000000005
+ },
+ "R13-1:orig": {
+  "avg_loss": 0.0,
+  "avg_win": 14814.539999999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": 14814.539999999999
+  },
+  "days": 133,
+  "exits": {
+   "index_target": 1
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": 0.0,
+  "net": 14814.539999999999,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": 111.38751879699248,
+  "per_trade": 14814.539999999999,
+  "q": 1.0,
+  "top5_share": 1.0,
+  "trades": 1,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 1,
+  "wf_design": -18195.65,
+  "win_rate": 1.0,
+  "worst_day": 14814.539999999999
+ },
+ "R20C-1:g01": {
+  "avg_loss": -449.98342465753404,
+  "avg_win": 537.5129411764707,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -14573.349999999988
+  },
+  "days": 132,
+  "exits": {
+   "lock": 78,
+   "stop": 18,
+   "target": 11
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -16199.029999999982,
+  "net": -14573.349999999986,
+  "p": 0.4127936031984008,
+  "p_flip": 0.36281859070464767,
+  "per_day": -110.40416666666655,
+  "per_trade": -136.19953271028024,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 107,
+  "twin_flip_mean": -159.28203532710276,
+  "twin_mean": -151.05964887850462,
+  "twins_used": 107,
+  "wf_design": 27257.060000000005,
+  "win_rate": 0.3177570093457944,
+  "worst_day": -1424.5599999999977
+ },
+ "R20C-1:orig": {
+  "avg_loss": -433.1105454545453,
+  "avg_win": 596.3026666666666,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 3012.540000000009
+  },
+  "days": 132,
+  "exits": {
+   "lock": 67,
+   "stop": 15,
+   "target": 18
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -4085.4300000000053,
+  "net": 3012.540000000009,
+  "p": 0.021989005497251374,
+  "p_flip": 0.009995002498750625,
+  "per_day": 22.822272727272797,
+  "per_trade": 30.12540000000009,
+  "q": 0.20669665167416293,
+  "top5_share": 1.8583388104390262,
+  "trades": 100,
+  "twin_flip_mean": -138.76465965000003,
+  "twin_mean": -113.27880889999997,
+  "twins_used": 100,
+  "wf_design": 9059.520000000017,
+  "win_rate": 0.45,
+  "worst_day": -1405.2200000000005
+ },
+ "R20C-1N:g01": {
+  "avg_loss": -414.5432,
+  "avg_win": 559.4459375000001,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -2824.8899999999944
+  },
+  "days": 133,
+  "exits": {
+   "lock": 60,
+   "stop": 14,
+   "target": 8
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -6522.0799999999945,
+  "net": -2824.889999999993,
+  "p": 0.39780109945027486,
+  "p_flip": 0.19290354822588707,
+  "per_day": -21.239774436090173,
+  "per_trade": -34.449878048780405,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 82,
+  "twin_flip_mean": -106.3313543292683,
+  "twin_mean": -56.087360121951235,
+  "twins_used": 82,
+  "wf_design": 13721.660000000005,
+  "win_rate": 0.3902439024390244,
+  "worst_day": -1504.920000000001
+ },
+ "R20C-1N:orig": {
+  "avg_loss": -306.40846153846167,
+  "avg_win": 594.1428571428572,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": 702.7599999999973
+  },
+  "days": 133,
+  "exits": {
+   "lock": 62,
+   "stop": 11,
+   "target": 7
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -5392.080000000001,
+  "net": 702.759999999997,
+  "p": 0.10494752623688156,
+  "p_flip": 0.191904047976012,
+  "per_day": 5.283909774436068,
+  "per_trade": 8.784499999999962,
+  "q": 0.6165667166416792,
+  "top5_share": 8.715678183163561,
+  "trades": 80,
+  "twin_flip_mean": -66.25370975000001,
+  "twin_mean": -97.82239481250002,
+  "twins_used": 80,
+  "wf_design": 10254.380000000014,
+  "win_rate": 0.35,
+  "worst_day": -1400.6199999999994
+ },
+ "R20C-3:orig": {
+  "avg_loss": -1128.2967256637169,
+  "avg_win": 857.9046428571435,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -44378.289999999986,
+   "NIFTY": -59097.90999999999
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 8,
+   "square_off": 6,
+   "stop": 30,
+   "time_stop": 97
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -103476.2,
+  "net": -103476.19999999998,
+  "p": 0.999000499750125,
+  "p_flip": 1.0,
+  "per_day": -778.0165413533833,
+  "per_trade": -733.8737588652481,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 141,
+  "twin_flip_mean": -233.72317003546092,
+  "twin_mean": -358.99472872340425,
+  "twins_used": 141,
+  "wf_design": 67099.68000000001,
+  "win_rate": 0.19858156028368795,
+  "worst_day": -10758.080000000002
+ },
+ "R20C-4:orig": {
+  "avg_loss": -702.5831999999999,
+  "avg_win": 1314.4368749999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -1838.6400000000096,
+   "NIFTY": -12259.529999999995
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 5,
+   "square_off": 7,
+   "stop": 8,
+   "time_stop": 46
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -22373.43,
+  "net": -14098.170000000007,
+  "p": 0.8605697151424287,
+  "p_flip": 0.7691154422788605,
+  "per_day": -106.00127819548878,
+  "per_trade": -213.60863636363646,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 66,
+  "twin_flip_mean": -100.03745916666664,
+  "twin_mean": 41.445158787878825,
+  "twins_used": 66,
+  "wf_design": -6330.680000000009,
+  "win_rate": 0.24242424242424243,
+  "worst_day": -2465.8399999999997
+ },
+ "R24-2:orig": {
+  "avg_loss": -848.5570833333333,
+  "avg_win": 3506.141111111111,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -5887.04,
+   "NIFTY": -3288.429999999996
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 1,
+   "square_off": 5,
+   "stop": 35,
+   "time_stop": 16
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -24577.7,
+  "net": -9175.47,
+  "p": 0.4732633683158421,
+  "p_flip": 0.5072463768115942,
+  "per_day": -68.98849624060149,
+  "per_trade": -160.97315789473683,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 57,
+  "twin_flip_mean": -132.53307421052628,
+  "twin_mean": -161.56155157894733,
+  "twins_used": 57,
+  "wf_design": -20974.42000000001,
+  "win_rate": 0.15789473684210525,
+  "worst_day": -3603.6399999999967
+ },
+ "R24-3:orig": {
+  "avg_loss": -1355.9660416666666,
+  "avg_win": 5151.346875,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -25087.1,
+   "NIFTY": 42422.280000000006
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 3,
+   "square_off": 5,
+   "stop": 33,
+   "time_stop": 23
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -30107.379999999994,
+  "net": 17335.180000000008,
+  "p": 0.12843578210894552,
+  "p_flip": 0.25537231384307846,
+  "per_day": 130.33969924812035,
+  "per_trade": 270.8621875000001,
+  "q": 0.6707201954578266,
+  "top5_share": 3.428604721727722,
+  "trades": 64,
+  "twin_flip_mean": 75.82475406250002,
+  "twin_mean": -43.969436640624956,
+  "twins_used": 64,
+  "wf_design": -85478.82,
+  "win_rate": 0.25,
+  "worst_day": -8760.559999999998
+ },
+ "R24-4:orig": {
+  "avg_loss": -605.3054838709677,
+  "avg_win": 10431.32,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -5295.65,
+   "NIFTY": 17825.14
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 3,
+   "stop": 27,
+   "time_stop": 4
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -17992.510000000002,
+  "net": 12529.49,
+  "p": 0.017991004497751123,
+  "p_flip": 0.12643678160919541,
+  "per_day": 94.20669172932331,
+  "per_trade": 368.51441176470587,
+  "q": 0.198959343857483,
+  "top5_share": 2.4791791206186367,
+  "trades": 34,
+  "twin_flip_mean": 8.84269558823527,
+  "twin_mean": -216.29971338235296,
+  "twins_used": 34,
+  "wf_design": -21636.07,
+  "win_rate": 0.08823529411764706,
+  "worst_day": -1840.85
+ },
+ "R24-5:g02": {
+  "avg_loss": -1457.5550000000003,
+  "avg_win": 2198.5525,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -2564.9500000000007,
+   "NIFTY": -11961.720000000003
+  },
+  "days": 133,
+  "exits": {
+   "lock": 8,
+   "square_off": 2,
+   "stop": 9,
+   "target": 1
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -16965.22,
+  "net": -14526.670000000002,
+  "p": 0.9950024987506247,
+  "p_flip": 0.8675662168915542,
+  "per_day": -109.22308270676693,
+  "per_trade": -726.3335000000001,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 20,
+  "twin_flip_mean": -318.5600002499999,
+  "twin_mean": 12.985688000000016,
+  "twins_used": 20,
+  "wf_design": 4179.939999999999,
+  "win_rate": 0.2,
+  "worst_day": -3951.169999999999
+ },
+ "R24-5:orig": {
+  "avg_loss": -1048.6200000000001,
+  "avg_win": 6082.3,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -2025.0900000000008,
+   "NIFTY": 16707.29
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 4,
+   "stop": 11,
+   "time_stop": 5
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -8139.6900000000005,
+  "net": 14682.199999999999,
+  "p": 0.02848575712143928,
+  "p_flip": 0.05247376311844078,
+  "per_day": 110.3924812030075,
+  "per_trade": 734.1099999999999,
+  "q": 0.25501534946812304,
+  "top5_share": 2.071317649943469,
+  "trades": 20,
+  "twin_flip_mean": -30.702514250000007,
+  "twin_mean": -132.53260724999996,
+  "twins_used": 20,
+  "wf_design": -34033.16,
+  "win_rate": 0.25,
+  "worst_day": -2718.9400000000005
+ },
+ "R24-6:g02": {
+  "avg_loss": -1284.4614925373135,
+  "avg_win": 2538.3341935483872,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 2209.4200000000005,
+   "NIFTY": -9579.98
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 3,
+   "lock": 44,
+   "square_off": 10,
+   "stop": 30,
+   "target": 11
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -27480.1,
+  "net": -7370.5599999999995,
+  "p": 0.887056471764118,
+  "p_flip": 0.4352823588205897,
+  "per_day": -55.417744360902255,
+  "per_trade": -75.20979591836735,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 98,
+  "twin_flip_mean": -103.65182913265302,
+  "twin_mean": 135.31943250000006,
+  "twins_used": 98,
+  "wf_design": 30915.46,
+  "win_rate": 0.3163265306122449,
+  "worst_day": -3929.8100000000004
+ },
+ "R24-6:orig": {
+  "avg_loss": -994.8056944444446,
+  "avg_win": 3198.0507692307688,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -784.2300000000023,
+   "NIFTY": 12307.53999999999
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 4,
+   "square_off": 17,
+   "stop": 38,
+   "time_stop": 39
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -24068.71000000001,
+  "net": 11523.309999999985,
+  "p": 0.6146926536731634,
+  "p_flip": 0.175912043978011,
+  "per_day": 86.64142857142846,
+  "per_trade": 117.58479591836719,
+  "q": 1.0,
+  "top5_share": 4.029689386122568,
+  "trades": 98,
+  "twin_flip_mean": -93.16229479591834,
+  "twin_mean": 197.0015796938776,
+  "twins_used": 98,
+  "wf_design": 51219.75999999999,
+  "win_rate": 0.2653061224489796,
+  "worst_day": -7022.589999999999
+ },
+ "R24-7:g01": {
+  "avg_loss": -1042.8663636363635,
+  "avg_win": 987.7413513513516,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -1890.6599999999928,
+   "NIFTY": -7449.029999999998
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 2,
+   "lock": 45,
+   "square_off": 1,
+   "stop": 20,
+   "target": 13
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -27148.600000000002,
+  "net": -9339.689999999991,
+  "p": 0.5167416291854073,
+  "p_flip": 0.4782608695652174,
+  "per_day": -70.2232330827067,
+  "per_trade": -115.3048148148147,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 81,
+  "twin_flip_mean": -124.1123095061728,
+  "twin_mean": -112.93013370370365,
+  "twins_used": 81,
+  "wf_design": 11125.070000000003,
+  "win_rate": 0.4567901234567901,
+  "worst_day": -4004.9900000000016
+ },
+ "R24-7:orig": {
+  "avg_loss": -1152.3933846153848,
+  "avg_win": 6208.296249999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 4046.019999999994,
+   "NIFTY": 20381.15
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 6,
+   "square_off": 7,
+   "stop": 45,
+   "time_stop": 23
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -43262.840000000004,
+  "net": 24427.17000000001,
+  "p": 0.017991004497751123,
+  "p_flip": 0.07446276861569215,
+  "per_day": 183.66293233082715,
+  "per_trade": 301.5700000000001,
+  "q": 0.198959343857483,
+  "top5_share": 2.821359985622566,
+  "trades": 81,
+  "twin_flip_mean": -70.35848975308637,
+  "twin_mean": -187.08804654320986,
+  "twins_used": 81,
+  "wf_design": 9072.250000000007,
+  "win_rate": 0.19753086419753085,
+  "worst_day": -6974.849999999999
+ },
+ "R24-8:orig": {
+  "avg_loss": -1125.3328571428574,
+  "avg_win": 4618.029047619047,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 559.7799999999947,
+   "NIFTY": 25522.86
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 3,
+   "square_off": 10,
+   "stop": 41,
+   "time_stop": 30
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -35094.15000000001,
+  "net": 26082.639999999992,
+  "p": 0.07746126936531735,
+  "p_flip": 0.07846076961519241,
+  "per_day": 196.11007518796987,
+  "per_trade": 310.50761904761896,
+  "q": 0.5532789160975068,
+  "top5_share": 2.588078123993584,
+  "trades": 84,
+  "twin_flip_mean": -67.29998946428573,
+  "twin_mean": -34.59533999999998,
+  "twins_used": 84,
+  "wf_design": -54122.75,
+  "win_rate": 0.25,
+  "worst_day": -6008.280000000003
+ },
+ "R4-10:g03": {
+  "avg_loss": -1201.4430769230771,
+  "avg_win": 1134.3680124223602,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -17123.66000000002,
+   "FINNIFTY": -38523.31,
+   "NIFTY": -27238.699999999997
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 381,
+   "square_off": 1
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -94306.50000000006,
+  "net": -82885.67000000001,
+  "p": 0.8495752123938031,
+  "p_flip": 0.7541229385307346,
+  "per_day": -623.2005263157896,
+  "per_trade": -216.97819371727752,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 382,
+  "twin_flip_mean": -162.70765103403136,
+  "twin_mean": -132.80365526178008,
+  "twins_used": 382,
+  "wf_design": 24332.17000000001,
+  "win_rate": 0.4214659685863874,
+  "worst_day": -10289.670000000002
+ },
+ "R4-10:orig": {
+  "avg_loss": -2183.951544401544,
+  "avg_win": 2762.1498400000005,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -103510.22,
+   "FINNIFTY": -23078.959999999977,
+   "NIFTY": -93785.54
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 213,
+   "square_off": 171
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -246355.6199999999,
+  "net": -220374.71999999997,
+  "p": 0.9985007496251874,
+  "p_flip": 0.9810094952523738,
+  "per_day": -1656.952781954887,
+  "per_trade": -573.8924999999999,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 384,
+  "twin_flip_mean": -226.4395975130208,
+  "twin_mean": -323.2527235937499,
+  "twins_used": 384,
+  "wf_design": -5413.960000000006,
+  "win_rate": 0.3255208333333333,
+  "worst_day": -27298.130000000005
+ },
+ "R4-13:orig": {
+  "avg_loss": -2414.853333333333,
+  "avg_win": 8374.490000000002,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 12476.170000000004,
+   "NIFTY": -10216.31
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 3,
+   "stop": 5
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -8000.029999999999,
+  "net": 2259.860000000004,
+  "p": 1.0,
+  "p_flip": 0.42278860569715143,
+  "per_day": 16.991428571428603,
+  "per_trade": 282.4825000000005,
+  "q": 1.0,
+  "top5_share": 4.908702308992584,
+  "trades": 8,
+  "twin_flip_mean": -99.5270299999991,
+  "twin_mean": 282.4825000000006,
+  "twins_used": 8,
+  "wf_design": 6259.419999999998,
+  "win_rate": 0.25,
+  "worst_day": -4675.859999999999
+ },
+ "R4-14:g16": {
+  "avg_loss": -3246.3874418604655,
+  "avg_win": 4065.8731972789114,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -90478.41999999998,
+   "FINNIFTY": 32007.35000000002,
+   "NIFTY": -41818.87000000002
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 164,
+   "stop": 137,
+   "target": 61
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": true,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -138792.89,
+  "net": -100289.93999999996,
+  "p": 0.011494252873563218,
+  "p_flip": 0.6101949025487257,
+  "per_day": -754.05969924812,
+  "per_trade": -277.0440331491712,
+  "q": 0.16622458001768348,
+  "top5_share": NaN,
+  "trades": 362,
+  "twin_flip_mean": -226.91508102209937,
+  "twin_mean": -526.5485724723756,
+  "twins_used": 362,
+  "wf_design": 183805.62999999998,
+  "win_rate": 0.40607734806629836,
+  "worst_day": -29954.60999999999
+ },
+ "R4-14:orig": {
+  "avg_loss": -1556.9972764227641,
+  "avg_win": 2286.5000000000005,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -13763.57,
+   "FINNIFTY": -18240.5,
+   "NIFTY": -65204.75999999999
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 246,
+   "index_target": 103,
+   "square_off": 22
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -120476.79999999999,
+  "net": -97208.82999999999,
+  "p": 0.8640679660169915,
+  "p_flip": 0.6621689155422289,
+  "per_day": -730.8934586466164,
+  "per_trade": -262.018409703504,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 371,
+  "twin_flip_mean": -216.49058199460913,
+  "twin_mean": -160.82306563342314,
+  "twins_used": 371,
+  "wf_design": 20329.87000000007,
+  "win_rate": 0.33692722371967654,
+  "worst_day": -7091.849999999999
+ },
+ "R4-16:orig": {
+  "avg_loss": -2192.740909090909,
+  "avg_win": 3298.02,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -23924.15999999999
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 14,
+   "stop": 38,
+   "target": 14
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -45555.48999999998,
+  "net": -23924.15999999999,
+  "p": 0.9975012493753124,
+  "p_flip": 0.7966016991504248,
+  "per_day": -179.880902255639,
+  "per_trade": -362.48727272727257,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 66,
+  "twin_flip_mean": -86.6187628030303,
+  "twin_mean": 320.84735166666667,
+  "twins_used": 66,
+  "wf_design": 17948.92000000002,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -3907.739999999999
+ },
+ "R4-18:g01": {
+  "avg_loss": -914.6900000000005,
+  "avg_win": 2867.0859999999993,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 12506.049999999996
+  },
+  "days": 132,
+  "exits": {
+   "index_target": 3,
+   "square_off": 4
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -969.6900000000016,
+  "net": 12506.049999999996,
+  "p": 0.020989505247376312,
+  "p_flip": 0.09745127436281859,
+  "per_day": 94.742803030303,
+  "per_trade": 1786.5785714285707,
+  "q": 0.20669665167416293,
+  "top5_share": 1.1462796006732743,
+  "trades": 7,
+  "twin_flip_mean": 242.4697235714288,
+  "twin_mean": 22.538405714285727,
+  "twins_used": 7,
+  "wf_design": 14894.639999999998,
+  "win_rate": 0.7142857142857143,
+  "worst_day": -969.6900000000016
+ },
+ "R4-18:orig": {
+  "avg_loss": -2662.759230769231,
+  "avg_win": 1210.84,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -27350.830000000005
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 13,
+   "stop": 4,
+   "target": 2
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -27350.83,
+  "net": -27350.83,
+  "p": 0.5332333833083458,
+  "p_flip": 0.8845577211394303,
+  "per_day": -207.2032575757576,
+  "per_trade": -1439.5173684210527,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 19,
+  "twin_flip_mean": -619.5822723684208,
+  "twin_mean": -1416.5998857894735,
+  "twins_used": 19,
+  "wf_design": -12253.289999999986,
+  "win_rate": 0.3157894736842105,
+  "worst_day": -6055.799999999999
+ },
+ "R4-1:g06": {
+  "avg_loss": -1398.9375999999997,
+  "avg_win": 1444.7467187499997,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -28006.060000000027,
+   "FINNIFTY": -19423.909999999996
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 162,
+   "square_off": 2
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -49512.77000000001,
+  "net": -47429.97000000002,
+  "p": 0.9115442278860569,
+  "p_flip": 0.7641179410294853,
+  "per_day": -359.3179545454547,
+  "per_trade": -289.2071341463416,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 164,
+  "twin_flip_mean": -185.70250780487797,
+  "twin_mean": -98.50788460365848,
+  "twins_used": 164,
+  "wf_design": 37899.49000000007,
+  "win_rate": 0.3902439024390244,
+  "worst_day": -9550.65
+ },
+ "R4-1:orig": {
+  "avg_loss": -2445.869120879121,
+  "avg_win": 3100.0164814814816,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 8684.410000000049,
+   "FINNIFTY": -63857.609999999986
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 103,
+   "stop": 30,
+   "target": 12
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -94663.83999999995,
+  "net": -55173.19999999994,
+  "p": 0.6916541729135433,
+  "p_flip": 0.6821589205397302,
+  "per_day": -417.97878787878744,
+  "per_trade": -380.5048275862065,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 145,
+  "twin_flip_mean": -228.32089099999988,
+  "twin_mean": -287.592717551724,
+  "twins_used": 145,
+  "wf_design": -91823.03,
+  "win_rate": 0.3724137931034483,
+  "worst_day": -17721.89
+ },
+ "R4-2:g01": {
+  "avg_loss": -2234.5625252525256,
+  "avg_win": 2502.0993846153847,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": -51388.17999999999,
+   "NIFTY": -7197.0499999999965
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 69,
+   "stop": 69,
+   "target": 26
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -84270.90999999997,
+  "net": -58585.229999999996,
+  "p": 0.8995502248875562,
+  "p_flip": 0.663168415792104,
+  "per_day": -440.49045112781954,
+  "per_trade": -357.2270121951219,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 164,
+  "twin_flip_mean": -268.21915807926825,
+  "twin_mean": -144.9158783536585,
+  "twins_used": 164,
+  "wf_design": 10002.939999999971,
+  "win_rate": 0.39634146341463417,
+  "worst_day": -15747.080000000002
+ },
+ "R4-2:orig": {
+  "avg_loss": -1259.335416666667,
+  "avg_win": 1363.9285294117647,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 2074.9899999999902
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 139,
+   "square_off": 1
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -15299.510000000006,
+  "net": 2074.98999999999,
+  "p": 0.30434782608695654,
+  "p_flip": 0.1519240379810095,
+  "per_day": 15.719621212121135,
+  "per_trade": 14.82135714285707,
+  "q": 1.0,
+  "top5_share": 9.932023768789296,
+  "trades": 140,
+  "twin_flip_mean": -143.57770439285704,
+  "twin_mean": -58.66028978571431,
+  "twins_used": 140,
+  "wf_design": 6651.9999999999845,
+  "win_rate": 0.4857142857142857,
+  "worst_day": -9855.95999999999
+ },
+ "R4-3:g01": {
+  "avg_loss": -2797.8593749999995,
+  "avg_win": 4284.940434782608,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -26721.490000000013
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 87,
+   "stop": 28,
+   "target": 11
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -67792.09999999999,
+  "net": -26721.489999999998,
+  "p": 0.0734632683658171,
+  "p_flip": 0.5087456271864068,
+  "per_day": -202.43553030303028,
+  "per_trade": -212.07531746031745,
+  "q": 0.5532789160975068,
+  "top5_share": NaN,
+  "trades": 126,
+  "twin_flip_mean": -212.85914130952378,
+  "twin_mean": -502.55755019841274,
+  "twins_used": 126,
+  "wf_design": 31230.910000000044,
+  "win_rate": 0.36507936507936506,
+  "worst_day": -9934.759999999995
+ },
+ "R4-3:orig": {
+  "avg_loss": -1779.5275362318841,
+  "avg_win": 2928.1897959183675,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": 4608.569999999998,
+   "NIFTY": 16085.330000000013
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 59,
+   "index_target": 25,
+   "square_off": 34
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -24209.440000000002,
+  "net": 20693.900000000012,
+  "p": 0.0009995002498750624,
+  "p_flip": 0.13043478260869565,
+  "per_day": 155.59323308270686,
+  "per_trade": 175.37203389830518,
+  "q": 0.026843720996644532,
+  "top5_share": 2.3011399494537024,
+  "trades": 118,
+  "twin_flip_mean": -128.19506262711863,
+  "twin_mean": -465.2984577118644,
+  "twins_used": 118,
+  "wf_design": -9727.049999999983,
+  "win_rate": 0.4152542372881356,
+  "worst_day": -6481.989999999999
+ },
+ "R4-4:orig": {
+  "avg_loss": -2386.6951674641145,
+  "avg_win": 2951.674478527607,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 29825.239999999998,
+   "FINNIFTY": -48902.67000000002,
+   "NIFTY": 1381.0799999999986
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 220,
+   "stop": 106,
+   "target": 46
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -69139.12000000001,
+  "net": -17696.350000000024,
+  "p": 0.2843578210894553,
+  "p_flip": 0.12543728135932034,
+  "per_day": -133.05526315789493,
+  "per_trade": -47.5708333333334,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 372,
+  "twin_flip_mean": -246.5755747983871,
+  "twin_mean": -108.54965516129033,
+  "twins_used": 372,
+  "wf_design": -124481.97999999994,
+  "win_rate": 0.4381720430107527,
+  "worst_day": -18945.37
+ },
+ "R4-6:orig": {
+  "avg_loss": -1685.2112903225805,
+  "avg_win": 955.155238095238,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -12125.029999999997
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 23,
+   "index_target": 45,
+   "square_off": 5
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -19140.509999999995,
+  "net": -12125.03,
+  "p": 0.704647676161919,
+  "p_flip": 0.6916541729135433,
+  "per_day": -91.16563909774436,
+  "per_trade": -166.09630136986303,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 73,
+  "twin_flip_mean": -53.011680547945154,
+  "twin_mean": -79.1685928767123,
+  "twins_used": 73,
+  "wf_design": 17332.799999999996,
+  "win_rate": 0.5753424657534246,
+  "worst_day": -5189.660000000001
+ },
+ "R4-8:g03": {
+  "avg_loss": -1250.7993333333332,
+  "avg_win": 1549.1060655737706,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 5851.189999999987,
+   "FINNIFTY": 29172.74000000001,
+   "NIFTY": 3871.0900000000083
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 232,
+   "square_off": 10
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": true,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -18806.829999999994,
+  "net": 38895.02,
+  "p": 0.12843578210894552,
+  "p_flip": 0.0009995002498750624,
+  "per_day": 292.44375939849624,
+  "per_trade": 160.72322314049586,
+  "q": 0.6707201954578266,
+  "top5_share": 0.9461108388683179,
+  "trades": 242,
+  "twin_flip_mean": -223.77228221074373,
+  "twin_mean": 38.49425847107444,
+  "twins_used": 242,
+  "wf_design": 77535.71000000006,
+  "win_rate": 0.5041322314049587,
+  "worst_day": -8517.02
+ },
+ "R4-8:orig": {
+  "avg_loss": -3286.1251578947363,
+  "avg_win": 3532.5257894736847,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -48071.549999999996,
+   "FINNIFTY": 13811.059999999987,
+   "NIFTY": -9449.440000000002
+  },
+  "days": 133,
+  "exits": {
+   "index_stop": 17,
+   "square_off": 154
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -63490.33,
+  "net": -43709.93000000001,
+  "p": 1.0,
+  "p_flip": 0.7006496751624188,
+  "per_day": -328.64609022556397,
+  "per_trade": -255.6136257309942,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 171,
+  "twin_flip_mean": -72.73320839181287,
+  "twin_mean": 832.7777767836259,
+  "twins_used": 171,
+  "wf_design": 24999.460000000025,
+  "win_rate": 0.4444444444444444,
+  "worst_day": -19360.699999999997
+ },
+ "R5-1:g07": {
+  "avg_loss": 0.0,
+  "avg_win": 0.0,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {},
+  "days": 133,
+  "exits": {},
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": 0.0,
+  "net": 0.0,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": 0.0,
+  "per_trade": 0.0,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 0,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 0,
+  "wf_design": 2635.5099999999984,
+  "win_rate": 0.0,
+  "worst_day": 0.0
+ },
+ "R5-1:orig": {
+  "avg_loss": 0.0,
+  "avg_win": 0.0,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {},
+  "days": 133,
+  "exits": {},
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": 0.0,
+  "net": 0.0,
+  "p": 1.0,
+  "p_flip": 1.0,
+  "per_day": 0.0,
+  "per_trade": 0.0,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 0,
+  "twin_flip_mean": NaN,
+  "twin_mean": NaN,
+  "twins_used": 0,
+  "wf_design": 0.0,
+  "win_rate": 0.0,
+  "worst_day": 0.0
+ },
+ "R9-4:orig": {
+  "avg_loss": -1120.5526666666665,
+  "avg_win": 1355.7749999999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -10514.179999999998,
+   "NIFTY": 1840.5399999999988
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 19,
+   "square_off": 2
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -12219.759999999998,
+  "net": -8673.639999999998,
+  "p": 0.1924037981009495,
+  "p_flip": 0.7446276861569215,
+  "per_day": -65.21533834586464,
+  "per_trade": -413.03047619047607,
+  "q": 0.8612360486423454,
+  "top5_share": NaN,
+  "trades": 21,
+  "twin_flip_mean": -90.92757690476192,
+  "twin_mean": -715.1645233333334,
+  "twins_used": 21,
+  "wf_design": -7858.73,
+  "win_rate": 0.2857142857142857,
+  "worst_day": -4738.95
+ },
+ "REVERSAL_SETUP-1:g04": {
+  "avg_loss": -1647.3118181818181,
+  "avg_win": 4969.916,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 6729.15
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 16
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -17482.649999999998,
+  "net": 6729.15,
+  "p": 0.0009995002498750624,
+  "p_flip": 0.5012493753123438,
+  "per_day": 50.97840909090909,
+  "per_trade": 420.571875,
+  "q": 0.026843720996644532,
+  "top5_share": 3.692825988423501,
+  "trades": 16,
+  "twin_flip_mean": 415.26085656250024,
+  "twin_mean": -1424.9852628125,
+  "twins_used": 16,
+  "wf_design": 15343.929999999991,
+  "win_rate": 0.3125,
+  "worst_day": -4450.810000000001
+ },
+ "REVERSAL_SETUP-1:orig": {
+  "avg_loss": -1958.0757142857146,
+  "avg_win": 1770.6244444444444,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 2229.0899999999974
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 7,
+   "target": 9
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -12430.470000000001,
+  "net": 2229.0899999999974,
+  "p": 0.004497751124437781,
+  "p_flip": 0.31284357821089454,
+  "per_day": 16.887045454545436,
+  "per_trade": 139.31812499999984,
+  "q": 0.07687065558130025,
+  "top5_share": 4.324383492815458,
+  "trades": 16,
+  "twin_flip_mean": -355.2622881249999,
+  "twin_mean": -1421.5816075,
+  "twins_used": 16,
+  "wf_design": 7258.999999999991,
+  "win_rate": 0.5625,
+  "worst_day": -4450.810000000001
+ },
+ "SCALP17-2:orig": {
+  "avg_loss": -826.4707352941174,
+  "avg_win": 189.82198630136992,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -28485.999999999975
+  },
+  "days": 132,
+  "exits": {
+   "stop": 60,
+   "target": 144,
+   "time_stop": 10
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -29670.809999999976,
+  "net": -28485.99999999997,
+  "p": 0.1714142928535732,
+  "p_flip": 0.1619190404797601,
+  "per_day": -215.80303030303008,
+  "per_trade": -133.11214953271013,
+  "q": 0.8263047963197888,
+  "top5_share": NaN,
+  "trades": 214,
+  "twin_flip_mean": -167.65273640186905,
+  "twin_mean": -163.3136128738317,
+  "twins_used": 214,
+  "wf_design": -51300.529999999984,
+  "win_rate": 0.6822429906542056,
+  "worst_day": -2358.659999999998
+ },
+ "SCALP17-3:orig": {
+  "avg_loss": -994.4249206349206,
+  "avg_win": 1136.7772131147542,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -49259.49
+  },
+  "days": 133,
+  "exits": {
+   "square_off": 7,
+   "stop": 170,
+   "target": 109,
+   "time_stop": 25
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -54332.78000000001,
+  "net": -49259.490000000005,
+  "p": 0.9965017491254373,
+  "p_flip": 0.703648175912044,
+  "per_day": -370.37210526315795,
+  "per_trade": -158.39064308681674,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 311,
+  "twin_flip_mean": -126.7698265755627,
+  "twin_mean": 4.389142652733111,
+  "twins_used": 311,
+  "wf_design": -61592.030000000006,
+  "win_rate": 0.39228295819935693,
+  "worst_day": -5601.16
+ },
+ "ST-1:g03": {
+  "avg_loss": -2551.323652173913,
+  "avg_win": 4038.5119354838707,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -43014.48000000003
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 80,
+   "square_off": 97
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -61715.54000000003,
+  "net": -43014.48000000004,
+  "p": 1.0,
+  "p_flip": 0.6216891554222889,
+  "per_day": -325.867272727273,
+  "per_trade": -243.01966101694939,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 177,
+  "twin_flip_mean": -155.14496994350273,
+  "twin_mean": 529.5799709039549,
+  "twins_used": 177,
+  "wf_design": 64534.6,
+  "win_rate": 0.3502824858757062,
+  "worst_day": -18027.670000000006
+ },
+ "ST-1:orig": {
+  "avg_loss": -2297.174237288135,
+  "avg_win": 4022.2698305084746,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -33752.63999999996
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 80,
+   "square_off": 97
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -57527.43999999999,
+  "net": -33752.639999999956,
+  "p": 1.0,
+  "p_flip": 0.5052473763118441,
+  "per_day": -255.70181818181786,
+  "per_trade": -190.69288135593195,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 177,
+  "twin_flip_mean": -189.2038611864407,
+  "twin_mean": 489.96881381355934,
+  "twins_used": 177,
+  "wf_design": 55308.20000000002,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -16664.499999999996
+ },
+ "SWING-3:orig": {
+  "avg_loss": -5345.6053571428565,
+  "avg_win": 5817.236785714286,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": 26411.360000000022
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 112
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": true,
+   "p": true,
+   "pass": false,
+   "q": "True",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -54753.45,
+  "net": 26411.360000000026,
+  "p": 0.0004997501249375312,
+  "p_flip": 0.2433783108445777,
+  "per_day": 200.0860606060608,
+  "per_trade": 235.8157142857145,
+  "q": 0.023488255872063966,
+  "top5_share": 3.696191714474374,
+  "trades": 112,
+  "twin_flip_mean": -252.27441977678558,
+  "twin_mean": -256.62019513392846,
+  "twins_used": 112,
+  "wf_design": -106181.93000000005,
+  "win_rate": 0.5,
+  "worst_day": -13828.200000000003
+ },
+ "SWING-4:orig": {
+  "avg_loss": -7765.623,
+  "avg_win": 8224.797777777778,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -3633.0499999999965
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 19
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -33695.29,
+  "net": -3633.0499999999965,
+  "p": 0.5982008995502249,
+  "p_flip": 0.23088455772113944,
+  "per_day": -27.523106060606036,
+  "per_trade": -191.21315789473667,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 19,
+  "twin_flip_mean": -1865.6633657894736,
+  "twin_mean": -123.76386052631564,
+  "twins_used": 19,
+  "wf_design": -22188.23000000001,
+  "win_rate": 0.47368421052631576,
+  "worst_day": -12811.79
+ },
+ "SWING-5:g02": {
+  "avg_loss": -8908.615,
+  "avg_win": 10067.559999999998,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -25566.9
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 5
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -35634.46,
+  "net": -25566.9,
+  "p": 0.735632183908046,
+  "p_flip": 0.6871564217891054,
+  "per_day": -193.68863636363636,
+  "per_trade": -5113.38,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 5,
+  "twin_flip_mean": -3370.7095839999997,
+  "twin_mean": -4874.112136,
+  "twins_used": 5,
+  "wf_design": 14485.710000000001,
+  "win_rate": 0.2,
+  "worst_day": -16988.15
+ },
+ "SWING-5:orig": {
+  "avg_loss": -12654.654999999999,
+  "avg_win": 3797.009999999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -10121.270000000002
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 6
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -16076.840000000004,
+  "net": -10121.270000000002,
+  "p": 0.6436781609195402,
+  "p_flip": 0.5617191404297851,
+  "per_day": -76.67628787878789,
+  "per_trade": -1686.8783333333338,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 6,
+  "twin_flip_mean": -786.0456124999998,
+  "twin_mean": -1558.662545,
+  "twins_used": 6,
+  "wf_design": 24317.769999999997,
+  "win_rate": 0.6666666666666666,
+  "worst_day": -12811.79
+ },
+ "SWING_DEEP-3:orig": {
+  "avg_loss": -17797.192000000003,
+  "avg_win": 2412.6500000000005,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -47904.270000000004,
+   "NIFTY": -38669.04
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 6
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -86573.31000000001,
+  "net": -86573.31000000001,
+  "p": 0.11644177911044477,
+  "p_flip": 0.888055972013993,
+  "per_day": -650.9271428571429,
+  "per_trade": -14428.885000000002,
+  "q": 0.643854543316577,
+  "top5_share": NaN,
+  "trades": 6,
+  "twin_flip_mean": -10320.372824166667,
+  "twin_mean": -14784.90659,
+  "twins_used": 6,
+  "wf_design": -121269.91,
+  "win_rate": 0.16666666666666666,
+  "worst_day": -45788.899999999994
+ },
+ "SWING_DEEP-6:g01": {
+  "avg_loss": -10559.180555555555,
+  "avg_win": 10910.416666666666,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -50543.87,
+   "NIFTY": -41327.63
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 27
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -109060.57,
+  "net": -91871.49999999999,
+  "p": 0.09995002498750624,
+  "p_flip": 0.6021989005497251,
+  "per_day": -690.7631578947368,
+  "per_trade": -3402.648148148148,
+  "q": 0.6152407667134175,
+  "top5_share": NaN,
+  "trades": 27,
+  "twin_flip_mean": -2731.9281168518514,
+  "twin_mean": -3768.974265,
+  "twins_used": 27,
+  "wf_design": 21667.240000000005,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -23989.469999999998
+ },
+ "SWING_DEEP-6:orig": {
+  "avg_loss": -15535.33285714286,
+  "avg_win": 8343.297499999999,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -65643.69,
+   "NIFTY": -9730.449999999999
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 11
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -80690.6,
+  "net": -75374.14000000001,
+  "p": 0.335832083958021,
+  "p_flip": 0.6046976511744128,
+  "per_day": -566.7228571428573,
+  "per_trade": -6852.194545454547,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 11,
+  "twin_flip_mean": -5713.209575909091,
+  "twin_mean": -7258.8190463636365,
+  "twins_used": 11,
+  "wf_design": -123668.53,
+  "win_rate": 0.36363636363636365,
+  "worst_day": -24771.18
+ },
+ "SWING_DEEP-8:g09": {
+  "avg_loss": -839.0400000000001,
+  "avg_win": 1824.04,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -2228.2599999999993,
+   "NIFTY": 2666.1399999999985
+  },
+  "days": 133,
+  "exits": {
+   "lock": 5,
+   "stop": 3,
+   "target": 1
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": true,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -3423.05,
+  "net": 437.8799999999992,
+  "p": 0.4547726136931534,
+  "p_flip": 0.41579210394802596,
+  "per_day": 3.292330827067663,
+  "per_trade": 48.653333333333244,
+  "q": 1.0,
+  "top5_share": 11.658102676532405,
+  "trades": 9,
+  "twin_flip_mean": -27.55557833333313,
+  "twin_mean": 10.200972777777618,
+  "twins_used": 9,
+  "wf_design": 8876.449999999992,
+  "win_rate": 0.3333333333333333,
+  "worst_day": -2030.1800000000003
+ },
+ "SWING_DEEP-8:orig": {
+  "avg_loss": -16176.084000000003,
+  "avg_win": 0.0,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -50203.509999999995,
+   "NIFTY": -30676.91
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 5
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": false,
+   "verdict": "too few trades to judge"
+  },
+  "max_dd": -80880.42000000001,
+  "net": -80880.42000000001,
+  "p": 0.09045477261369315,
+  "p_flip": 0.9440279860069966,
+  "per_day": -608.1234586466167,
+  "per_trade": -16176.084000000003,
+  "q": 0.6073391875490826,
+  "top5_share": NaN,
+  "trades": 5,
+  "twin_flip_mean": -6690.199458000001,
+  "twin_mean": -16494.99564,
+  "twins_used": 5,
+  "wf_design": -102426.47,
+  "win_rate": 0.0,
+  "worst_day": -33686.99
+ },
+ "TAS_OPTIONS-1:g14": {
+  "avg_loss": -3007.894838709677,
+  "avg_win": 3840.0786956521742,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "FINNIFTY": -4922.929999999998
+  },
+  "days": 132,
+  "exits": {
+   "exit_at": 4,
+   "square_off": 50
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -39557.05,
+  "net": -4922.929999999991,
+  "p": 0.9380309845077461,
+  "p_flip": 0.5237381309345327,
+  "per_day": -37.29492424242417,
+  "per_trade": -91.16537037037021,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 54,
+  "twin_flip_mean": -76.98054277777771,
+  "twin_mean": 1419.9296495370372,
+  "twins_used": 54,
+  "wf_design": 75921.30000000002,
+  "win_rate": 0.42592592592592593,
+  "worst_day": -10372.600000000002
+ },
+ "TAS_OPTIONS-1:orig": {
+  "avg_loss": -2509.1122499999997,
+  "avg_win": 4145.313125,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "NIFTY": -34039.479999999996
+  },
+  "days": 133,
+  "exits": {
+   "exit_at": 10,
+   "square_off": 46
+  },
+  "gates": {
+   "design_wf": true,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -42893.45999999999,
+  "net": -34039.479999999996,
+  "p": 1.0,
+  "p_flip": 0.8770614692653673,
+  "per_day": -255.93593984962402,
+  "per_trade": -607.847857142857,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 56,
+  "twin_flip_mean": 56.06962267857144,
+  "twin_mean": 701.2597566964286,
+  "twins_used": 56,
+  "wf_design": 510.370000000029,
+  "win_rate": 0.2857142857142857,
+  "worst_day": -5945.11
+ },
+ "TREND_FILTER-1:orig": {
+  "avg_loss": -1320.272773109244,
+  "avg_win": 1077.1189719626173,
+  "by_fold": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "by_und": {
+   "BANKNIFTY": -41860.72999999999
+  },
+  "days": 132,
+  "exits": {
+   "square_off": 3,
+   "stop": 117,
+   "target": 106
+  },
+  "gates": {
+   "design_wf": false,
+   "final_net": false,
+   "p": false,
+   "pass": false,
+   "q": "False",
+   "top5": false,
+   "trades": true,
+   "verdict": "FAIL"
+  },
+  "max_dd": -49728.829999999994,
+  "net": -41860.72999999999,
+  "p": 0.8785607196401799,
+  "p_flip": 0.3968015992003998,
+  "per_day": -317.12674242424237,
+  "per_trade": -185.22446902654863,
+  "q": 1.0,
+  "top5_share": NaN,
+  "trades": 226,
+  "twin_flip_mean": -206.86178838495573,
+  "twin_mean": -96.83707287610619,
+  "twins_used": 226,
+  "wf_design": -43602.0199999999,
+  "win_rate": 0.47345132743362833,
+  "worst_day": -2949.920000000002
+ }
+}

@@ -1,0 +1,47 @@
+id: r75-b-l4-vix
+title: R75 L4-VIX skip the day when India VIX is in its lowest 30% (120 sessions) on Donchian 20 + Supertrend (10, 3) agreement
+  (paper exits)
+family: daily-filters
+date: '2026-10-16'
+doc: research/HUNT_R75_DONCHIAN_LESS_LOSS.md
+hypothesis: 'Boss (16 Oct: "make Donchian more powerful, less loss"): skip the day when India VIX is in its lowest 30% (120
+  sessions) lowers the loss / drawdown of Donchian 20 + Supertrend (10, 3) agreement without materially lowering its P&L,
+  in design, in >= 3 of 4 walk-forward quarters and in the final, beats a random-skip twin (p < 0.05), survives BH over R75''s
+  40 tests (q <= 0.10), affects >= 40 trades and holds at 2x slippage.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, options_rolling_1m WEEK), R51 Amendment A clean
+  stores, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R75 (16 Oct); the window was already read by R51-R73 (Donchian chosen on it),
+    so weak evidence
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Donchian 20 on 5-minute index bars; the lever reads the index, India VIX, the arm''s own closed
+  trades or the calendar); no option chart'
+model_or_rule: 'Donchian 20 + Supertrend (10, 3) agreement + L4-VIX: skip the day when India VIX is in its lowest 30% (120
+  sessions); 1-ITM unless L5; exits P (-15%, A4 ladder + L25, 30 min)'
+settings: research/hunt/r75/r75cfg.py, research/hunt/r75/r75levers.py; PREREG.md
+prereg: research/hunt/r75/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 2538 trades, net -Rs 24,852, win 44%, avg win Rs 1,898 / loss -Rs 1,488, worst day -Rs 49,738, max DD
+    Rs 1,94,210, green days 42%, months < -13k 7, DD > 40k episodes 1; baseline design: 4208 trades, net Rs 50,425, win 44%,
+    avg win Rs 1,752 / loss -Rs 1,381, worst day -Rs 49,738, max DD Rs 2,14,239, green days 45%, months < -13k 8, DD > 40k
+    episodes 3; design better: False; better in 1 of 4 walk-forward quarters. Final: 939 trades, net Rs 1,07,750, win 46%,
+    avg win Rs 1,898 / loss -Rs 1,411, worst day -Rs 21,578, max DD Rs 62,763, green days 50%, months < -13k 1, DD > 40k episodes
+    1; baseline final: 1670 trades, net Rs 1,34,743, win 45%, avg win Rs 1,651 / loss -Rs 1,197, worst day -Rs 21,578, max
+    DD Rs 81,683, green days 46%, months < -13k 1, DD > 40k episodes 2; final better: False. Affected 731 trades: 415 losers
+    avoided (Rs 3,88,127), 316 winners missed (Rs 4,15,120), 0 halved, 0 new. Twin p 0.1836 (BH q 0.5834). 2x slippage: final
+    Rs 77,469 (baseline Rs 86,825). Verdict: FAIL (not better in design; better in 1 of 4 quarters; not better in the final;
+    random twin p >= 0.05; BH q > 0.10; fails at 2x slippage).'
+  costs: 'dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, one held
+    contract, 1 lot in force (half size: charges at half quantity)'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (the index). Research only; nothing changes paper or live unless Boss switches it on (paper
+  only). Donchian frozen after R75.

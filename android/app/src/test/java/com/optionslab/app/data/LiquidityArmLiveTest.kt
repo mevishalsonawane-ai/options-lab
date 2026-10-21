@@ -132,6 +132,38 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertNull("the approval is used up", row().pending)
     }
 
+    /**
+     * 20 Oct, enhancement round 1 (idea 3): the no-twin rule never changes a LIVE trade - the other book holding this option on
+     * Zerodha is only recorded (shadow), and the entry goes on exactly as before.
+     */
+    @Test fun aLiveTwinIsOnlyLoggedAndTheEntryGoesOn() {
+        state()
+        val call = Paper.contractFor("BANKNIFTY", expiry, 52_000.0, Right.CE)!!.symbol
+        OrbArms.testTwinHolders = { listOf(com.optionslab.ira.LiquidityTwin.Holding("liquidity15", call, live = true)) }
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("BUY", kite.placed.first().form["transaction_type"])
+        val rec = LiquidityTest.twins().single()
+        assertTrue(rec.live); assertFalse("shadow: nothing changed", rec.applied)
+        assertTrue(LiquidityTest.twinLine(), LiquidityTest.twinLine().contains("1 only logged"))
+    }
+
+    /** 13 Oct review: Boss's Rs 500 trail is paper only - a LIVE entry with the switch on carries no trail, and is not labelled trailed. */
+    @Test fun aLiveEntryWithBosssPaperTrailSwitchOnCarriesNoTrail() {
+        val before = LiquidityTest.state.value
+        LiquidityTest.setStateForTest(before.copy(trail = true))
+        try {
+            assertTrue(LiquidityTest.trailOn())
+            state()
+            assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+            val p = row().open!!
+            assertTrue(p.live)
+            assertNull("never on a live trade", p.trail)
+            assertNull(p.trailFrom)
+            // Its resting stop is the plain 15% one (170 under the 200 fill), not moved by any trail.
+            assertEquals(170.0, p.stopTrigger!!, 0.0)
+        } finally { LiquidityTest.setStateForTest(before) }
+    }
+
     @Test fun twoLotsAtZerodhaBuyTwiceTheLotAndTheStopCoversThemAll() {
         state(lots = 2)
         assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })

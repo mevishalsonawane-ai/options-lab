@@ -1,12 +1,16 @@
 package com.optionslab.app.data
 
 import com.optionslab.app.testing.RobolectricTest
+import kotlinx.coroutines.cancelAndJoin
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -21,6 +25,8 @@ class HolidaysTest : RobolectricTest() {
     private fun restart() = Holidays::class.java.getDeclaredField("cache").apply { isAccessible = true }.set(null, null)
 
     @Before fun fresh() = restart()
+
+    @After fun down() = Holidays.resetForTest()
 
     private val monday = LocalDate.of(2026, 10, 5)
     private val saturday = LocalDate.of(2026, 10, 3)
@@ -59,6 +65,79 @@ class HolidaysTest : RobolectricTest() {
             {"date":"2026-10-02","description":"Gandhi Jayanti","holiday_type":"TRADING_HOLIDAY","closed_exchanges":["NSE","NFO","CDS","BSE","BFO","BCD","MCX","NSCOM"],"open_exchanges":[]}]}"""
         assertEquals(mapOf(LocalDate.of(2026, 1, 15) to "Municipal Corporation Election", LocalDate.of(2026, 10, 2) to "Gandhi Jayanti"),
             Holidays.parseUpstox(body))
+    }
+
+    @Test fun aBackgroundRefreshUpdatesTheCalendarWhenItLands() {
+        writeNse(LocalDate.of(2026, 9, 1), mapOf(LocalDate.of(2026, 10, 20) to "Dussehra"))
+        val release = java.util.concurrent.CountDownLatch(1)
+        Holidays.testList = { release.await(); mapOf(monday to "Test holiday") }
+        val job = Holidays.refreshInBackground()
+        assertSame("one refresh at a time", job, Holidays.refreshInBackground())
+        assertFalse("the cached list until it lands", Holidays.isHoliday(monday))
+        assertTrue(Holidays.isHoliday(LocalDate.of(2026, 10, 20)))
+        release.countDown()
+        kotlinx.coroutines.runBlocking { job.join() }
+        assertTrue(Holidays.isHoliday(monday))
+        assertFalse("NSE's new list replaces the old", Holidays.isHoliday(LocalDate.of(2026, 10, 20)))
+        restart()
+        assertTrue("kept on disk", Holidays.isHoliday(monday))
+    }
+
+    @Test fun aHangingRefreshEndsAtItsLimitAndLeavesTheCachedList() {
+        writeNse(LocalDate.of(2026, 9, 1), mapOf(LocalDate.of(2026, 10, 20) to "Dussehra"))
+        val interrupted = java.util.concurrent.CountDownLatch(1)
+        Holidays.testList = {
+            try { Thread.sleep(600_000) } catch (e: InterruptedException) { interrupted.countDown(); throw e }
+            emptyMap()
+        }
+        val t0 = System.nanoTime()
+        val job = Holidays.refreshInBackground(timeoutMs = 300)
+        kotlinx.coroutines.runBlocking { job.join() }
+        assertTrue("ended at its limit", (System.nanoTime() - t0) / 1e9 < 10)
+        assertTrue("the hanging read is stopped", interrupted.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        assertEquals(LocalDate.of(2026, 9, 1), Holidays.book().fetched)
+        assertTrue(Holidays.isHoliday(LocalDate.of(2026, 10, 20)))
+        // The next refresh is a new one, and a failing site leaves the list as it was.
+        Holidays.testList = { throw java.io.IOException("simulated: NSE refused") }
+        val next = Holidays.refreshInBackground()
+        assertNotSame(job, next)
+        kotlinx.coroutines.runBlocking { next.join() }
+        assertEquals(LocalDate.of(2026, 9, 1), Holidays.book().fetched)
+    }
+
+    @Test fun cancellingTheRefreshStopsItsRead() {
+        val interrupted = java.util.concurrent.CountDownLatch(1)
+        val started = java.util.concurrent.CountDownLatch(1)
+        Holidays.testList = {
+            started.countDown()
+            try { Thread.sleep(600_000) } catch (e: InterruptedException) { interrupted.countDown(); throw e }
+            emptyMap()
+        }
+        val job = Holidays.refreshInBackground()
+        assertTrue(started.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        job.cancel()
+        assertTrue("the read is stopped with it", interrupted.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        assertNull(Holidays.book().fetched)
+    }
+
+    @Test fun aRefreshCancelledAtOnceNeverReadsOn() {
+        // 18 Oct: cancelled before its wait had first run (CI, shard 2), the refresh's read went on: the read was stopped
+        // only from the wait's body, which a coroutine cancelled before it starts never runs.
+        val started = java.util.concurrent.CountDownLatch(1)
+        val stopped = java.util.concurrent.CountDownLatch(1)
+        Holidays.testList = {
+            started.countDown()
+            try { Thread.sleep(600_000) } catch (e: InterruptedException) { stopped.countDown(); throw e }
+            emptyMap()
+        }
+        // Cancelled at once, likely before its wait first ran; once the cancel is through, the refresh is over: the next one
+        // reads afresh instead of joining a read still going on.
+        kotlinx.coroutines.runBlocking { Holidays.refreshInBackground().cancelAndJoin() }
+        Holidays.testList = { mapOf(monday to "Test holiday") }
+        kotlinx.coroutines.runBlocking { Holidays.refreshInBackground().join() }
+        assertTrue(Holidays.isHoliday(monday))
+        // The first read either never began or was stopped.
+        assertTrue("the cancelled read went on", started.count == 1L || stopped.await(10, java.util.concurrent.TimeUnit.SECONDS))
     }
 
     @Test fun holidaysAddedByHandCloseTheMarketAndCanBeUndone() {

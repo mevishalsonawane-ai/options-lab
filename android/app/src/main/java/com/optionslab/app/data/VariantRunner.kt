@@ -87,7 +87,7 @@ object VariantRunner {
     fun init(context: Context) {
         appContext = context.applicationContext
         if (!enabled()) return
-        scope.launch { runCatching { ensureLoaded() } }
+        scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() } }
         runCatching { com.optionslab.app.work.DiscoveryWorker.schedule(context.applicationContext) }
     }
 
@@ -182,6 +182,15 @@ object VariantRunner {
     fun ask(seed: VariantLab.Seed) {
         if (!enabled()) return
         if (seededResults[seed.id]?.final == true) return
+        // 13 Oct (the shared knowledge): a direction the research or the experiment log already tested and rejected is not tested
+        // again - answered at once, final, with the finding (never for Liquidity, whose behaviour is frozen). Memory only.
+        val rejected = runCatching { com.optionslab.ira.SharedKnowledge.variantRejected(SharedKnowledgeHost.snapshot, seed.strategy, seed.param, seed.dir) }.getOrNull()
+        if (rejected != null) {
+            seededResults[seed.id] = VariantLab.Seeded(seed.id, null, "not tested: $rejected", true)
+            SharedKnowledgeHost.read("Strategy lab", "the experiment log before a variant ($rejected)")
+            runCatching { Diag.record("strategylab", "variant ${seed.strategy} ${seed.param} ${if (seed.dir > 0) "higher" else "lower"} not tested: $rejected") }
+            return
+        }
         seeds[seed.id] = seed
         while (seeds.size > 40) seeds.keys.firstOrNull()?.let { seeds.remove(it) }
     }
@@ -306,7 +315,8 @@ object VariantRunner {
         runCatching {
             val closed = OrbArms.closedPaper() + OrbArms.closedLive()
             for (p in closed) {
-                if (p.day != d || p.exit == null) continue
+                // Boss's opt-in Liquidity give-back trail (R19b) is not the rules' own result: left out of the baseline.
+                if (p.day != d || p.exit == null || p.trail != null) continue
                 val key = lab(p.arm)
                 val run = runs[key] ?: continue
                 if (run == VariantLab.Run.OFF || p.live != (run == VariantLab.Run.LIVE)) continue
@@ -500,9 +510,24 @@ object VariantRunner {
         val hist = withContext(Dispatchers.IO) { UNDERLYINGS.associateWith { u -> runCatching { days(u, today, FORGE_DAYS) }.getOrDefault(emptyList()) } }
         if (hist.values.all { it.size < 30 }) return null
         val t0 = System.nanoTime()
-        val night = withContext(Dispatchers.Default) {
-            StrategyForge.night(_forge.value, today, hist, { (System.nanoTime() - t0) / 1_000_000 }, StrategyForge.BUDGET_MS, stopped)
+        // 13 Oct (the shared knowledge): the plain form of an idea the research or the experiment log rejected is not tested again,
+        // and the blocks are seeded from the findings (a prior beside their own record; the gates never read it).
+        val sk = SharedKnowledgeHost.snapshot
+        val prior = runCatching { com.optionslab.ira.SharedKnowledge.forgePrior(sk) }.getOrDefault(emptyMap())
+        val avoid: (StrategyForge.Candidate) -> String? = { c ->
+            runCatching { com.optionslab.ira.SharedKnowledge.forgeAvoid(sk, c.rules.entry.name, c.rules.filters.size) }.getOrNull()
         }
+        val night = withContext(Dispatchers.Default) {
+            StrategyForge.night(_forge.value, today, hist, { (System.nanoTime() - t0) / 1_000_000 }, StrategyForge.BUDGET_MS, stopped,
+                avoid = avoid, prior = prior)
+        }
+        if (prior.isNotEmpty()) SharedKnowledgeHost.read("Strategy lab", "the research's verdicts as the forge's seeds (${prior.size} blocks)")
+        SharedKnowledgeHost.forgeSkipped(night.skipped)
+        if (night.made.isNotEmpty() || night.skipped.isNotEmpty())
+            SharedKnowledgeHost.added("Strategy lab", "${night.made.size} ideas tried, ${night.skipped.size} not tested again (the research rejected them)")
+        // Every idea tried is logged (its gates' result), and every idea skipped with the finding that rejected it.
+        for (r in night.made) runCatching { Diag.record("strategylab", "idea ${r.c.name}: ${r.why}") }
+        for ((idea, why) in night.skipped.distinct().take(20)) runCatching { Diag.record("strategylab", "idea $idea not tested: $why") }
         synchronized(lock) {
             // Boss's answers made meanwhile are kept: only the night's own records and counters move.
             val now = _forge.value

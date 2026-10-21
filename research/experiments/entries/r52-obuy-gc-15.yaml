@@ -1,0 +1,39 @@
+id: r52-obuy-gc-15
+title: 'R52 re-test on Nov 2024+: OBUY_GC-15 Daily trend, monthly option, 5-10 day hold'
+family: overnight
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule OBUY_GC-15 (old verdict: IS best +68.4k on 66 tr (ST, Varsity, hold 5); WF -404 on 17
+  tr. SWING_DEEP-5 NIFTY monthly ATM 5d +306.9k (210 tr) 6/7; options WF NIFTY +21.3k 3/6, BN -149k; ''the only thing worth
+  paper-trading'') makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only
+  re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''hold'': 5, ''sig'': ''st'', ''strike'': ''varsity'', ''vix'': False} | ATM/month | exits sq_off=930 | expiry
+  skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 17 trades, win 59%, net Rs +103,540 (Rs +307/day), worst day Rs -15,560, max DD Rs -37,237, p
+    0.000 (coin-flip p 0.015); walk-forward Rs +87,492. Re-tune pick s4.r0.x0 ({''sig'': ''st'', ''strike'': ''atm'', ''hold'':
+    5, ''vix'': False} · ATM/month · exits sq_off=930): design 17 trades, win 65%, net Rs +74,013 (Rs +220/day), worst day
+    Rs -19,987, max DD Rs -44,874, p 0.293 (coin-flip p 0.124); walk-forward Rs +72,940. FINAL original: 7 trades, win 43%,
+    net Rs +19,978 (Rs +150/day), worst day Rs -6,133, max DD Rs -15,067, p 0.878 (coin-flip p 0.050), q 1.00 -> too few trades
+    to judge. FINAL pick: 7 trades, win 43%, net Rs +23,686 (Rs +178/day), worst day Rs -6,492, max DD Rs -14,249, p 0.425
+    (coin-flip p 0.010), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: in-sample best signal (Supertrend, Varsity strike, hold 5); exit not named:
+  none. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design
+  walk-forward > 0.'

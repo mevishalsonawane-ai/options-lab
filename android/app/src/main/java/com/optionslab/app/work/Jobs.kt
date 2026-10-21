@@ -39,9 +39,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -120,6 +122,9 @@ object Jobs {
         com.optionslab.app.ira.StudyWorker.schedule(context)
         // The market recorder's off-hours alarm: GIFT Nifty before the open and at night, NSE's participant files after 18:30.
         runCatching { com.optionslab.app.data.MarketRecorder.scheduleOffHours(context) }
+        // GitHub sync (13 Oct, TODO G1/G2): the evening upload (Wi-Fi and charging, after the MCX evening close, 15:45 without
+        // MCX; G4) and its twice-daily check.
+        runCatching { GitHubSyncWorker.schedule(context) }
     }
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
@@ -357,10 +362,51 @@ object Tasks {
         "Today is a ${s.ticketUnderlying} expiry. The strategy sells its put at ${s.entry} IST, ${"%.2f".format(100 * s.otmPct)}% below the parity forward. Hold to settlement; never buy it back.",
         "ticket")
 
-    suspend fun ticket(context: Context, s: AppSettings) {
-        if (Ledger.all().any { it.row.ticket.session == Market.today() }) return
-        val d = Market.draftTicket(s)
+    /**
+     * The expiry-day paper ticket: drafted at the entry bar, recorded in the paper ledger, and noticed; with a prepared real
+     * order, Boss is asked to review it (nothing is sent). 13 Oct: when the entry bar is late ([com.optionslab.engine.Live.TooEarly]
+     * after the entry time) it is drafted again every 30 s until six minutes past the entry ([com.optionslab.ira.TicketRetry]),
+     * each try at the entry bar only; every other error goes on as before. [draft] and [pause] are the tests' seams.
+     */
+    suspend fun ticket(
+        context: Context, s: AppSettings,
+        draft: suspend () -> Market.TicketDraft = { Market.draftTicket(s) },
+        pause: suspend (Long) -> Unit = { delay(it) },
+    ) {
+        val entry = LocalTime.of(s.entryMinute / 60, s.entryMinute % 60)
+        var attempt = 0
+        var drafted: Market.TicketDraft? = null
+        while (drafted == null) {
+            if (Ledger.all().any { it.row.ticket.session == Market.today() }) return
+            attempt++
+            try {
+                drafted = draft()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val now = Market.now().toLocalTime()
+                when (val next = com.optionslab.ira.TicketRetry.next(e, now, entry)) {
+                    is com.optionslab.ira.TicketRetry.Next.Wait -> {
+                        Heartbeat.diary(com.optionslab.ira.TicketRetry.retryLine(attempt, now, entry, next.seconds))
+                        pause(next.seconds * 1000L)
+                    }
+                    com.optionslab.ira.TicketRetry.Next.GiveUp -> {
+                        val why = com.optionslab.ira.TicketRetry.gaveUpText(entry, attempt)
+                        Heartbeat.diary(com.optionslab.ira.TicketRetry.gaveUpLine(now, why))
+                        // The job's own failure notice (same id), with the reason in words.
+                        Notifier.post(context, 2900 + Jobs.Kind.TICKET.ordinal, Notifier.SCHEDULE, "Ticket did not complete", why, "almanac")
+                        return
+                    }
+                    com.optionslab.ira.TicketRetry.Next.PassOn -> {
+                        if (attempt > 1) Heartbeat.diary(com.optionslab.ira.TicketRetry.stoppedLine(attempt, now, reason(e)))
+                        throw e
+                    }
+                }
+            }
+        }
+        val d = checkNotNull(drafted)
         Ledger.record(d.ticket, d.shortKey, d.wingKey)
+        if (attempt > 1) Heartbeat.diary(com.optionslab.ira.TicketRetry.recordedLine(attempt, Market.now().toLocalTime()))
         val t = d.ticket
         Notifier.post(context, 2002, Notifier.SCHEDULE, "Paper ticket: SELL ${t.underlying} ${fmtG(t.strike)} PE",
             "Credit Rs %.2f/unit (Rs %,.0f), breakeven %,.1f. Recorded as paper - nothing was sent."
@@ -382,7 +428,8 @@ object Tasks {
     }
 
     suspend fun harvest(context: Context, s: AppSettings, session: java.time.LocalDate, onProgress: (String, Float) -> Unit) {
-        if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
+        // Waited for here (the harvest is off every order path), but bounded, and a cancelled harvest stops waiting at once.
+        if (Holidays.stale(Market.today())) Holidays.refreshInBackground().join()
         // Jarvis: FINNIFTY's chain too, and the FINNIFTY and SENSEX index candles (1-minute OHLC, volume and OI for every contract).
         val r = if (com.optionslab.app.BuildConfig.JARVIS) Harvester.run(underlyings = listOf("NIFTY", "BANKNIFTY", "FINNIFTY"), session = session,
             extraIndices = linkedMapOf("FINNIFTY" to "NSE_INDEX|Nifty Fin Service", "SENSEX" to "BSE_INDEX|SENSEX"),
@@ -498,6 +545,11 @@ object Tasks {
             com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
             com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() },
             com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+            // 15 Oct: the Hero ₹1,000 ticket only when it needs a pass (a ticket held, or 12:25-12:33 switched on): never a round by itself.
+            if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
+            if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
+            // 15 Oct: a Telegram chat's calls on paper (Boss's choice, paper only): only when it needs a pass (a trade held, or a call in its window).
+            if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
             com.optionslab.ira.Supervisor.Step("Forge ideas") { com.optionslab.app.data.GrammarArm.tick() },
@@ -654,14 +706,27 @@ object Tasks {
     @Volatile private var wordsRoundAt = 0L
 
     /**
+     * 21 Oct: the most the words round's two slowest steps (the pattern check, the candle expert) may take each, so the round
+     * (5 minutes in all) never times out on them. Words only: the position watch never waits on the words worker.
+     */
+    internal const val WORD_SLOW_STEP_MS = 90_000L
+
+    /**
      * The words worker's pace (10 Oct): a round a minute in NSE's session (two with the battery saver on), as the pass gave
      * it; null (asleep) outside it.
      */
     internal fun wordsDelay(context: Context?): Long? {
-        if (!(Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose())) return null
+        // 16 Oct (R63's note: "Jarvis's background round sleeps after 15:40, so MCX evening positions are not watched"): the
+        // words round also runs in MCX's hours while something is held or working there. Words only; the exits themselves
+        // are the MCX pass's, at its full 15 s.
+        val mcxHeld = { runCatching { com.optionslab.app.data.McxMarket.isOpen() && com.optionslab.app.data.McxMarket.heldQuick() }.getOrDefault(false) }
+        if (!wordsDue(Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose(), mcxHeld)) return null
         val every = if (WatchWorkers.saver(context)) 120_000L else 60_000L
         return (every - (System.currentTimeMillis() - wordsRoundAt)).coerceIn(0L, every)
     }
+
+    /** The words round is due: NSE's session, or (asked only outside it) MCX open with something held or working there. */
+    internal fun wordsDue(nseSession: Boolean, mcxHeld: () -> Boolean): Boolean = nseSession || mcxHeld()
 
     /** One round of Jarvis's words-only checks as the lowest-priority worker: its Zerodha reads go last in the budget. */
     internal suspend fun wordsRound() {
@@ -692,6 +757,10 @@ object Tasks {
         word("overtrading") { com.optionslab.app.ira.IraCoach.overtradeWatch() }
         // Round 4: the app's books against Zerodha's (this round's own positions read; report only, never an order).
         word("zerodha sync") { com.optionslab.app.data.ZerodhaSync.check() }
+        // The Trend watch (16 Oct, research R63): every open position's and pending order's underlying judged on its completed
+        // bars - notes for all; the Hero ticket's paper legs sold on a T3 turn through the arm's own exit (a request in memory).
+        // Early in the round, with the safety words: never on the order or tick path, never slowing a stop or exit.
+        word("Trend watch") { com.optionslab.app.data.TrendWatchHost.watch() }
         // Battery (round 2): with the screen off and nothing held or armed, the slow group below runs every 3 minutes and
         // the news every 10 (every 20 until Boss asks about the news that day, round 6); the safety words above and the time-bound checks run every round as before.
         val quiet = wordsQuiet()
@@ -712,11 +781,12 @@ object Tasks {
         // paper is asked, once (never done by itself).
         word("shadow promotion") { com.optionslab.app.ira.IraBots.shadowPromotions() }
         // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
-        word("pattern check") { com.optionslab.app.ira.IraHub.backgroundCheck() }
+        // 21 Oct (Boss's diagnostics: max 6 min 44 s, the worker timed out): bounded here, and its two-year lab is now its own job.
+        word("pattern check") { kotlinx.coroutines.withTimeoutOrNull(WORD_SLOW_STEP_MS) { com.optionslab.app.ira.IraHub.backgroundCheck() } }
         // Jarvis: the news every 5 minutes, judged for your arms and positions.
         if (newsDue) word("news") { com.optionslab.app.ira.IraHub.newsWatch() }
         // Jarvis: the candle-pattern expert at each 5- and 15-minute close; a qualifying pattern becomes a trade to approve.
-        word("candle expert") { com.optionslab.app.ira.IraHub.expertWatch() }
+        word("candle expert") { kotlinx.coroutines.withTimeoutOrNull(WORD_SLOW_STEP_MS) { com.optionslab.app.ira.IraHub.expertWatch() } }
         word("ORB coach") { com.optionslab.app.ira.IraCoach.orbWatch() }
         word("moments") { com.optionslab.app.ira.IraCoach.momentsWatch() }
         // Jarvis: the price nearing a Liquidity 15+5 entry level with room (09:20-14:00, the arm armed): one line a level a day.
@@ -736,6 +806,18 @@ object Tasks {
         word("opening read") { com.optionslab.app.ira.IraOpening.watch() }
         // Jarvis: on an index's expiry day, the straddle's decay, spot against max pain and the last hour, at set times.
         word("expiry watch") { com.optionslab.app.ira.IraCoach.expiryWatch() }
+        // Jarvis (14 Oct, Boss approved): 10:00-10:15 on a trading day, the morning gamma line once - R28's dealer GEX from the
+        // chain already in memory; information only, never a trade signal (nothing is armed, sized or changed).
+        word("gamma line") { com.optionslab.app.data.GammaMorningHost.watch() }
+        // The OI-wall check in SHADOW (14 Oct, Boss approved; R26 rule P): expiry days only, 11:59-15:21, from memory; a record
+        // and one evening line, never an order or an alert. Any other day: one look at the calendar.
+        word("OI-wall shadow") { com.optionslab.app.data.OiWallShadowHost.watch() }
+        // The Watchlist in SHADOW (15 Oct, Boss: "Both"): research's near misses followed from 09:20, priced with the paper costs; a
+        // record and one evening line, never an order or an alert.
+        word("Watchlist (shadow)") { com.optionslab.app.data.WatchlistHost.watch() }
+        // The Signal tester in SHADOW (15 Oct): the allow-listed Telegram channels' calls priced from their options' minutes with
+        // the paper costs, each channel scored; never an order. Off (the default), one look at its switch.
+        word("Signal tester (shadow)") { com.optionslab.app.data.SignalTesterHost.watch() }
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }
         // Jarvis: a sharp move within minutes - what coincided with it (headlines, VIX, the other indices), timing only.
         word("sharp move") { com.optionslab.app.ira.IraCoach.sharpMoveWatch() }
@@ -780,23 +862,34 @@ object Tasks {
         // The safety steps first, in order (10 Oct: their Zerodha requests go first, and Jarvis's model gives way meanwhile).
         safely {
             step("paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
+            // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) before the arms run.
+            step("unwatched positions") { com.optionslab.app.data.OrphanWatch.run(context) }
             // One daily loss limit over every bot: past it, all of them sell and stop for the day.
             step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
             // The guards as they stand now, in the shared state (memory: the settings and the breaker's record).
             runCatching { com.optionslab.app.data.AppState.refreshGuards() }
         }
+        // 18 Oct, review: while anything is held each arms group is waited on 10 s, not 45 (a slow arm finishes by itself), so
+        // the stops and targets below and the 15-second stop check after the pass are never held up long behind it.
+        val armsWait = WatchWorkers.armsWaitMs(WatchWorkers.heldQuick())
         // The arms side by side (10 Oct), each under its own lock as before; every new position still goes through the one
         // entry door and the one-index claims. Outside the service (a test's pass) one after another, in this order.
-        together("arms", armsDue(lanes != null, listOf(
+        together("arms", armsDue(lanes != null, listOfNotNull(
             // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
             com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
             // Night (R3), paper only (08 Oct): its 09:16 sales, and its 15:20 decisions when armed.
             com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() },
             // VIX divergence, paper only (9 Oct, research R1 N13): its exits, and its 10:30-13:30 checks when armed.
             com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+            // The Hero ₹1,000 ticket, paper only (15 Oct, Boss's choice; R50 failed): its exits, and its 12:30 tickets on expiry days
+            // (only when it needs a pass: a ticket held, or 12:25-12:33 switched on).
+            if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
+            if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
+            // 15 Oct: a Telegram chat's calls on paper (Boss's choice, paper only): only when it needs a pass (a trade held, or a call in its window).
+            if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
-        )), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
+        )), armsWait, inOrder = lanes == null)
         safely {
             // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
             step("stops and targets") { com.optionslab.app.data.Protections.tick() }
@@ -816,7 +909,7 @@ object Tasks {
             },
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Solo") { com.optionslab.app.ira.IraSolo.tick() } else null,
-        )), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
+        )), armsWait, inOrder = lanes == null)
         // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
         step("stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
         // Jarvis: your own stops trailed up automatically (Boss's switch).
@@ -858,6 +951,27 @@ object Tasks {
     /** The whole pass's time, beside its steps' (the Order speed card says it). */
     const val PASS_TOTAL = "watch pass (total)"
 
+    /**
+     * The open paper ticket's risk notices already said (20 Oct; [com.optionslab.ira.TicketRisk]): read from the settings vault
+     * once a process (the watch's worker thread), written in the background ([SecurePrefs.putAllSoon]) - never the order path.
+     */
+    internal object TicketNotices {
+        private const val KEY = "ticket.risk.said"
+        @Volatile private var said: Set<String>? = null
+
+        fun said(): Set<String> = said ?: com.optionslab.ira.TicketRisk.decode(
+            runCatching { com.optionslab.app.security.SecurePrefs.getString(KEY) }.getOrNull()).also { said = it }
+
+        @Synchronized fun add(key: String) {
+            val next = said() + key
+            said = next
+            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(KEY to com.optionslab.ira.TicketRisk.encode(next))) }
+        }
+
+        /** TEST ONLY: forget the memory (the vault's copy stays). */
+        fun resetForTest() { said = null }
+    }
+
     private suspend fun watchTickOnce(context: Context, s: AppSettings, fired: MutableSet<String>, lanes: CoroutineScope?): Tick {
         riskSteps(context, s, lanes)
         Heartbeat.stepBegin("index quotes")
@@ -889,12 +1003,14 @@ object Tasks {
                 lines.add(0, "Cushion to breakeven %,.1f pts (%.2f%%)".format(spot - tk.breakeven, 100 * cushion))
                 // 0 at the breakeven, 100 at the forward the ticket was priced off.
                 progress = (100 * ((spot - tk.breakeven) / (tk.forward - tk.breakeven))).toInt().coerceIn(0, 100)
-                if (cushion <= s.riskAlertPct && fired.add("risk.near")) Notifier.post(context, 3001, Notifier.RISK,
-                    "Index nearing your breakeven",
-                    "${tk.underlying} %,.1f is %.2f%% above the %,.1f breakeven of the ${fmtG(tk.strike)} put.".format(spot, 100 * cushion, tk.breakeven), "ticket")
-                if (spot < tk.strike && fired.add("risk.itm")) Notifier.post(context, 3002, Notifier.RISK,
-                    "Short put is in the money",
-                    "${tk.underlying} %,.1f is below the ${fmtG(tk.strike)} strike. The loss is unbounded below here.".format(spot), "ticket")
+                // 20 Oct ([com.optionslab.ira.TicketRisk]): each notice once per ticket, kept across a restart (the 13:33
+                // restart on 19 Oct said both again); "below" the breakeven, never "-0.12% above"; nothing past its expiry.
+                val said = TicketNotices.said()
+                for (n in com.optionslab.ira.TicketRisk.due(tk.underlying, tk.side, tk.right, tk.strike, tk.breakeven, tk.expiry, tk.session,
+                        Market.today(), spot, s.riskAlertPct, said)) {
+                    TicketNotices.add(n.key)
+                    Notifier.post(context, n.id, Notifier.RISK, n.title, n.text, "ticket")
+                }
             }
         }
         // Alarms on any instrument ("NSE:INFY", "NFO:NIFTY26SEP24500PE") are priced from Zerodha.
@@ -1053,7 +1169,7 @@ object Tasks {
                 fired += tag
                 Alarms.markFired(a.id, System.currentTimeMillis())
                 Notifier.post(context, 4000 + (a.id % 1000).toInt(), Notifier.RISK, "Alarm: ${a.describe()}",
-                    "${a.symbol} is at %,.2f.${if (a.note.isNotBlank()) " ${a.note}" else ""}".format(price), "alarms")
+                    "%s is at %,.2f.%s".format(a.symbol, price, if (a.note.isNotBlank()) " ${a.note}" else ""), "alarms")  // a typed note may hold a "%" (14 Oct)
             }
         }
     }
@@ -1092,6 +1208,24 @@ class WatchService : Service() {
         internal fun resetRunsForTest() { synchronized(runDayLock) { watchRun = 0L; endSeenRun = 0L } }
         /** The watch's check pace now in seconds (30 before the open, 15 with a position open, 60 otherwise; 0 = not running), for the battery line. */
         @Volatile var stepSec: Int = 0
+
+        /**
+         * The wait after an MCX pass (Battery, 14 Oct; [com.optionslab.ira.McxRest]): 15 s when [cadence] says so, else up to
+         * 60 s in 15 s steps, ended as soon as [cadence] turns to 15 s (a position or order opened, an arm's entry minutes
+         * began) or [due] turns false - so nothing opened meanwhile waits longer for its first pass than before. [cadence] and
+         * [due] read memory (and the settings vault's cached values), never the network. Returns the first cadence.
+         */
+        internal suspend fun mcxWait(cadence: () -> Long = { com.optionslab.app.data.McxMarket.watchCadenceMs() }, due: () -> Boolean,
+                                     now: () -> Long = System::currentTimeMillis): Long {
+            val held = com.optionslab.ira.McxRest.HELD_MS
+            val first = cadence()
+            stepSec = (first / 1000).toInt()
+            runCatching { BatteryMeter.meter.count(if (first <= held) com.optionslab.ira.LoopMeter.MCX_FAST else com.optionslab.ira.LoopMeter.MCX_SLOW) }
+            val end = now() + first
+            delay(held)
+            while (now() < end && due() && cadence() > held) delay(minOf(held, end - now()).coerceAtLeast(1L))
+            return first
+        }
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -1180,6 +1314,8 @@ class WatchService : Service() {
         val byAndroid = intent == null
         // On the main thread: from memory and the plain MCX hint only (ANR fix, 9 Oct; [Jobs.watchDueQuick]), never a vault
         // decryption before the foreground. Unknown is not resumed here: the dead-man alarm (off the main thread) brings it back.
+        // 16 Oct: an armed MCX arm's hint now answers yes here ([com.optionslab.app.data.McxMarket.watchDueQuick]), so Android's
+        // restart in MCX's evening resumes the watch for the armed arms; "unknown" is still left to the dead-man alarm.
         val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDueQuick() == true) Jobs.Kind.LIVE
             else runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
         if (byAndroid && k == null && running.isEmpty()) {
@@ -1216,6 +1352,8 @@ class WatchService : Service() {
                 // ANR fix (9 Oct): the watch's start note - a settings read and a vault WRITE (a Keystore encryption and two
                 // disk syncs, queued behind any other vault work), the battery question to Android - off the main thread.
                 if (k == Jobs.Kind.LIVE) noteStart(run, byAndroid)
+                // 18 Oct: stopped or destroyed while the start note ran (blocking vault work): no further start-up.
+                ensureActive()
                 val s = AppSettings.load()
                 when (k) {
                     Jobs.Kind.LIVE -> { watch(s, run); end = com.optionslab.ira.WatchHealth.End.MARKET_CLOSED to null }
@@ -1314,49 +1452,104 @@ class WatchService : Service() {
 
     private suspend fun watch(s: AppSettings, run: Long) = kotlinx.coroutines.coroutineScope {
         // The service's own pulse: no network, no lock, every 30 s - "alive", whatever a check is waiting on.
+        // 17 Oct: each pulse also keeps the processor awake for the watch ([WatchWake]; a foreground service alone does not, and
+        // the evening's passes slept with the screen off) and closes a coverage gap told while the watch was away.
+        val me = this@WatchService
+        val runStartEl = android.os.SystemClock.elapsedRealtime()
         val pulse = launch {
-            while (true) { Heartbeat.pulse(); delay(com.optionslab.ira.WatchHealth.PULSE_MS) }
+            var hungTold = false
+            while (true) {
+                Heartbeat.pulse()
+                // Not under the run lock (the screen's thread takes it at a start; this is a binder call): the newest run only.
+                // 18 Oct, review (battery): renewed only while the watch loop makes progress (a pass or a step in the last 5
+                // minutes): a pass hung on one call with nothing open no longer keeps the processor awake for ever - the hold
+                // lapses by itself, and the dead-man alarm finds the watch stuck. A slow pass moves step by step and keeps it.
+                // With a position or order open it is renewed whatever the loop is doing: open positions come first.
+                val progressing = Heartbeat.keepsAwake(runStartEl) || holdingAny()
+                if (run == watchRun && progressing) { WatchWake.hold(me); hungTold = false }
+                else if (run == watchRun && !hungTold) {
+                    hungTold = true
+                    Heartbeat.diary("watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): the processor's hold is not renewed")
+                }
+                Heartbeat.watchRunning()
+                delay(com.optionslab.ira.WatchHealth.PULSE_MS)
+            }
         }
         // The watch's workers (10 Oct): the arms' groups run under this run's supervisor, and Jarvis's words-only checks as
         // the lowest-priority worker of their own. They end with this run.
-        val workers = WatchWorkers.begin(this)
-        if (com.optionslab.app.BuildConfig.JARVIS) {
-            val app = this@WatchService
-            workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.WORDS, "analysis", timeoutMs = 5 * 60_000L,
-                cancelOnTimeout = true, nextDelayMs = { Tasks.wordsDelay(app) }, restart = com.optionslab.ira.SelfHeal.Restart())) { Tasks.wordsRound() }
-        }
-        // The shared market brain (10 Oct): its own worker every 10 s in market hours (regime, event windows, trap flags, the
-        // data's health and incidents, the findings log, the daily self-review); words and readings only - it never orders.
-        // A read-only worker: cut at its time limit, restarted fresh after repeated failures.
-        if (!com.optionslab.app.BuildConfig.GOLD) {
-            val app = this@WatchService
-            var brainAt = 0L
-            workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.BRAIN, "analysis", timeoutMs = 30_000L,
-                cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.SmartWorkers.refreshDelay(brainAt) },
-                restart = com.optionslab.ira.SelfHeal.Restart())) {
-                brainAt = System.currentTimeMillis()
-                com.optionslab.app.data.SmartWorkers.refresh(app)
+        // 20 Oct, review (open positions first): the event-driven stops' consumer runs before any analysis worker starts (the
+        // watch loop's own start below only adds an owner; each start has its stop).
+        com.optionslab.app.data.FastPath.start(this@WatchService)
+        // 20 Oct, second review: a worker's start that throws gives the fast path's owner back (it outlived the watch before).
+        val workers = try {
+            val w = WatchWorkers.begin(this)
+            if (com.optionslab.app.BuildConfig.JARVIS) {
+                val app = this@WatchService
+                w.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.WORDS, "analysis", timeoutMs = 5 * 60_000L,
+                    cancelOnTimeout = true, nextDelayMs = { Tasks.wordsDelay(app) }, restart = com.optionslab.ira.SelfHeal.Restart())) { Tasks.wordsRound() }
             }
+            // The shared market brain (10 Oct): its own worker every 10 s in market hours (regime, event windows, trap flags, the
+            // data's health and incidents, the findings log, the daily self-review); words and readings only - it never orders.
+            // A read-only worker: cut at its time limit, restarted fresh after repeated failures.
+            if (!com.optionslab.app.BuildConfig.GOLD) {
+                val app = this@WatchService
+                var brainAt = 0L
+                w.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.BRAIN, "analysis", timeoutMs = 30_000L,
+                    cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.SmartWorkers.refreshDelay(brainAt) },
+                    restart = com.optionslab.ira.SelfHeal.Restart())) {
+                    // 20 Oct, review: after a restart the open positions are restored and watched first (at most PositionsFirst's wait).
+                    com.optionslab.app.data.PositionsFirst.awaitPositions()
+                    brainAt = System.currentTimeMillis()
+                    // The Live check's 09:20 run (its switch off by default): starts on its own thread when due, returns at once.
+                    runCatching { com.optionslab.app.data.LiveSelfTest.autoMaybe() }
+                    com.optionslab.app.data.SmartWorkers.refresh(app)
+                }
+            }
+            // The Candle agent (20 Oct): its own worker in the analysis group, a batch every 5 minutes in session (never per tick),
+            // cut at its time limit, restarted fresh after repeated failures. Knowledge only: it reads and explains, never orders.
+            if (com.optionslab.app.data.CandleAgentHost.enabled()) {
+                val app = this@WatchService
+                w.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.CANDLES, "analysis", timeoutMs = 2 * 60_000L,
+                    cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.CandleAgentHost.delayMs(app) },
+                    restart = com.optionslab.ira.SelfHeal.Restart())) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.optionslab.app.data.CandleAgentHost.batch(app) }
+                }
+            }
+            w
+        } catch (e: Throwable) {
+            com.optionslab.app.data.FastPath.stop()
+            throw e
         }
         try {
             watchLoop(s, workers)
         } finally {
+            com.optionslab.app.data.FastPath.stop()
             WatchWorkers.end(workers)
-            pulse.cancel()
+            // Joined (review, 17 Oct): a pulse already past its check can never take the processor's hold again after the
+            // release below.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { pulse.cancelAndJoin() }
             // Only the newest run's end stops the pulse (an old run ending after a new start leaves the new one's).
             // Checked and done under the one lock (fields in memory only), so a new run cannot start between the two.
-            synchronized(runDayLock) {
+            val newest = synchronized(runDayLock) {
                 if (run == watchRun) {
                     Heartbeat.pulseStopped()
                     stepSec = 0
                 }
+                run == watchRun
             }
+            // The processor may sleep again: a binder call, outside the run lock; an old run's end leaves a new run's hold.
+            if (newest && run == watchRun) WatchWake.release()
         }
     }
 
     private suspend fun watchLoop(s: AppSettings, workers: WatchWorkers.Run) {
         val fired = HashSet<String>()
-        if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
+        // 18 Oct: a watch already stopped or destroyed (its job cancelled while its start note ran) goes no further, and
+        // starts no holiday refresh.
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        // 18 Oct (open positions first): a stale calendar is refreshed in the background, never waited for. The first pass and
+        // every stop, target and square-off check run at once on the cached list (or the built-in one) until it lands.
+        if (Holidays.stale(Market.today())) Holidays.refreshInBackground()
         val b = com.optionslab.app.data.Broker
         if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
             "Yesterday's session ended at 06:00. Open ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha and log in before the 11:00 entry.", "broker",
@@ -1368,7 +1561,8 @@ class WatchService : Service() {
         // stops, exits and bar-close entries at once ([com.optionslab.app.data.FastPath]); these passes stay as the safety net.
         com.optionslab.app.data.FastPath.start(this)
         try {
-            while (nseWindow() || mcxDue()) {
+            // 17 Oct: the same rule Session coverage judges gaps by ([com.optionslab.app.data.McxMarket.coverage]).
+            while (com.optionslab.ira.SessionCoverage.watchShouldRun(nseWindow()) { listOf(mcxCoverage()) }) {
                 try {
                     watchPass(fired)
                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1396,25 +1590,94 @@ class WatchService : Service() {
      * run is still open.
      */
     private suspend fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.foClose() ||
-        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning()))
+        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning())) || eveningLookDue() || mcxEveningLookDue()
+
+    /**
+     * 20 Oct, enhancement round 2 (idea 3): up to half an hour past MCX's close (23:30, or 23:55 in US winter time; past midnight
+     * too) while a carried live MCX protection still waits for its overnight GTT (memory only): the watch stays for that look.
+     */
+    private fun mcxEveningLookDue(): Boolean = runCatching {
+        com.optionslab.app.data.McxMarket.eveningLookDue(com.optionslab.app.data.Protections.mcxOvernightHint)
+    }.getOrDefault(false)
+
+    /**
+     * 20 Oct, enhancement round 1 (idea 2): up to half an hour past F&O's close while a carried live protection still waits for
+     * its overnight GTT ([com.optionslab.app.data.Protections.overnightHint], memory only): the watch stays for that one look.
+     */
+    private fun eveningLookDue(): Boolean = runCatching {
+        com.optionslab.ira.EveningLook.due(Market.minuteNow(), Market.foClose(), Market.isTradingDay(), com.optionslab.app.data.Protections.overnightHint)
+    }.getOrDefault(false)
 
     private fun mcxDue(): Boolean = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
 
-    /** The MCX pass and its wait: every 15 s while MCX trades and something is held or working there. */
+    /** MCX now as Session coverage reads it; a read that fails counts as nothing to watch there (as [mcxDue]). */
+    private fun mcxCoverage(): com.optionslab.ira.SessionCoverage.Market = runCatching { com.optionslab.app.data.McxMarket.coverage() }
+        .getOrDefault(com.optionslab.ira.SessionCoverage.Market(com.optionslab.app.data.McxMarket.NAME, false))
+
+    /**
+     * The MCX pass and its wait. Every 15 s while something is held or working on MCX (paper or live) or an armed MCX arm is
+     * inside its entry minutes; else every 60 s (Battery, 14 Oct: it was every 15 s to 23:30 with an arm merely switched on).
+     * The 60 s wait is looked at every 15 s from what is already in memory, so a position or order opened meanwhile gets the
+     * next full pass within 15 s, as before ([mcxWait]).
+     */
     private suspend fun mcxPass() {
+        val started = System.currentTimeMillis()
         Heartbeat.beat(this)
-        stepSec = 15
         val t = Tasks.mcxTick(this, AppSettings.load())
+        // 18 Oct, review: a live MCX position kept as held with no Zerodha login to confirm it: Boss told once a day.
+        runCatching { com.optionslab.app.data.McxMarket.loginNoticeIfDue(this) }
         Tasks.publishWatch(Tasks.LiveState(true, t.title, -1f, System.currentTimeMillis()))
         show(t.title, t.lines.joinToString("\n"), t.progress, t.dest)
-        delay(15_000)
+        // The wait also ends at NSE's open, so the first NSE pass is not held back by a 60 s MCX wait.
+        mcxWait(due = { mcxDue() && !(Market.isTradingDay() && Market.minuteNow() in Market.OPEN until Market.foClose()) })
+        if (Market.minuteNow() >= Market.foClose())
+            runCatching { BatteryMeter.meter.add(com.optionslab.ira.LoopMeter.WATCH_EVENING, System.currentTimeMillis() - started) }
     }
+
+    /** Something the NSE pass sells by itself is open (the books as the loop reads them): its stops, targets and exits are checked every 15 s. */
+    // 20 Oct, enhancement round 1 (idea 7): the one shared answer ([com.optionslab.app.data.HeldNow], memory only) plus the two
+    // books only the loop reads (ORB's under its lock, Solo's in the vault). It keeps every source this list had and adds an
+    // active stop or target and MCX's positions while MCX trades: more often checked, never less.
+    private suspend fun holdingNse(): Boolean =
+        com.optionslab.app.data.HeldNow.any() || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
+            (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
+
+    /**
+     * 18 Oct, review: an open position or order anywhere (NSE or MCX, paper or live; memory only, unknown counts as held).
+     * The pulse keeps the processor awake for it even when a pass is slow to finish (open positions come first).
+     */
+    private fun holdingAny(): Boolean = runCatching {
+        // Never a lock or a vault read here (a hung pass may hold one): memory copies only. 20 Oct, enhancement round 1 (idea 7):
+        // the one shared answer ([com.optionslab.app.data.HeldNow]: the arms' own hints, the paper book as loaded, MCX only while
+        // it trades) and the NSE pass's last answer (Solo's book is in the vault: read by the loop, never by the pulse).
+        nseHeldSeen || com.optionslab.app.data.HeldNow.any(mcxLive = true)
+    }.getOrDefault(true)
+
+    /** The NSE pass's last [holdingNse] (memory; for the pulse, which never reads the books itself). */
+    @Volatile private var nseHeldSeen = false
 
     /** One pass of the watch loop and the wait until the next one. */
     private suspend fun watchPass(fired: HashSet<String>) {
         run {
             Heartbeat.beat(this)
             // Outside NSE's session (before its open, after its close, an NSE holiday): MCX's pass when it is due (9 Oct).
+            // 20 Oct, enhancement round 1 (idea 2): past the close, only the stops-and-targets look while a carried protection waits
+            // for its overnight GTT (a strategy still open past the close keeps its full pass, which looks at them too).
+            // 20 Oct, enhancement round 2 (idea 3): the same look after MCX's close for a carried MCX protection (MCX's pass, while it is
+            // due, looks at them itself).
+            // Review: never while NSE trades (a short MCX session ending in NSE's hours leaves NSE's full pass alone), and MCX's own pass
+            // goes first whenever MCX is due (its stops are checked by it, every 15 s while held).
+            val nseTrading = Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose()
+            if ((Market.minuteNow() > Market.foClose() && eveningLookDue() && !runCatching { com.optionslab.app.data.Strategies.anyRunning() }.getOrDefault(false)) ||
+                (mcxEveningLookDue() && !mcxDue() && !nseTrading)) {
+                if (mcxDue()) { mcxPass(); return }
+                Heartbeat.stepBegin("evening stops and targets")
+                try { com.optionslab.app.data.Protections.tick() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
+                    Tasks.stepFailed("evening stops and targets", e)
+                } finally { Heartbeat.stepEnd() }
+                delay(com.optionslab.ira.EveningLook.EVERY_MS)
+                return
+            }
             val nseOpen = nseWindow() && Market.minuteNow() >= Market.OPEN
             if (!nseOpen) {
                 if (mcxDue()) { mcxPass(); return }
@@ -1431,27 +1694,38 @@ class WatchService : Service() {
             }
             // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
             // Jarvis's words-only checks run beside it in the service's scope, never awaited ([Tasks.watchTick]).
+            // The full pass looks at the stops too (its exits): its start is a look for the drift guard (idea 6).
+            runCatching { com.optionslab.app.data.WatchClock.looked(held = nseHeldSeen || com.optionslab.app.data.HeldNow.any()) }
             val t = Tasks.watchTick(this, AppSettings.load(), fired, scope)
             Tasks.publishWatch(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
             show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress, t.dest)
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
-                val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
-                    com.optionslab.app.data.PineAuto.holding() ||
-                    (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
+                // 16 Oct: the paper arms that sell from the app (the passed-research arms, the Hero ticket, the Signal tester) count
+                // too, so their stops, targets and time exits are looked at every 15 s even without the stream's minute lane.
+                val holding = holdingNse()
+                nseHeldSeen = holding
                 stepSec = if (holding) 15 else 60
                 // 08 Oct (research X1 change 2): with an arm armed, the arms decide a few seconds after each bar close, not on
                 // the next full pass a minute or more later. The same pass as the full one (paper fills, then the arms), so
                 // every guard applies; each bar is still decided once (the arms' own record of the bars decided).
                 val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
-                    com.optionslab.app.data.VixDivArm.view.value.armed) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
-                val waitEnd = if (holding) System.currentTimeMillis() + 15_000 else next
+                    com.optionslab.app.data.VixDivArm.view.value.armed || com.optionslab.app.data.HeroTicketArm.wantsPass() ||
+                    com.optionslab.app.data.PassedArmsHost.wantsPass() || com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
+                // 20 Oct, enhancement round 1 (idea 6): while holding, the window ends 15 s after the last look at the stops STARTED
+                // ([WatchClock.windowEnd]); it ran from the end of the last check, so a 3 s check made the gap 18 s.
+                val waitEnd = if (holding) com.optionslab.app.data.WatchClock.windowEnd() else next
+                // 18 Oct, review: while holding, a bar-close check in this window is followed straight by the stop check (it
+                // went back to the top and waited another 15 s, so the stops were looked at about 30 s apart at each bar close).
+                var barCloseRan = false
                 if (wake <= waitEnd && wake < next) {
                     delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
                     Heartbeat.stepBegin("bar-close entry check")
-                    // Order speed: an order this check leads to is timed from the bar's close (the wake is 3 s after it).
-                    val closedAt = wake - com.optionslab.engine.orb.BarClose.AFTER_MS
+                    // Order speed: an order this check leads to is timed from this check (16 Oct: it was timed from the bar's
+                    // close, so every bar-close entry started 3 s "late" - the wait for the bar to finish at the feed, which is
+                    // by design - against a 1 s warning line). The exchange's own price age is still measured from its stamp.
+                    val closedAt = wake
                     try { kotlinx.coroutines.withContext(com.optionslab.app.data.OrderTiming.Trigger(closedAt, null)) {
                         try {
                             com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this@WatchService, it) }
@@ -1461,26 +1735,34 @@ class WatchService : Service() {
                             Tasks.stepFailed("bar-close entry check: paper orders", e)
                         }
                         // The three arms side by side (10 Oct), each in its own try, with this check's timing trigger.
-                        Tasks.together("bar-close entry check", listOf(
+                        Tasks.together("bar-close entry check", listOfNotNull(
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: ORB arms") { com.optionslab.app.data.OrbArms.tick() },
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: Night (R3)") { com.optionslab.app.data.NightArm.tick() },
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+                            if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Hero 1000 ticket") { com.optionslab.app.data.HeroTicketArm.tick() } else null,
+                            if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Passed-research arms") { com.optionslab.app.data.PassedArmsHost.tick() } else null,
+                            if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Telegram calls (paper)") { com.optionslab.app.data.SignalPaperArm.tick() } else null,
                         ), WatchWorkers.ARMS_WAIT_MS, inOrder = false)
                         // Smart scheduling: the minute arms just looked at this minute; the next pass need not look again for it.
                         // (Not the ORB arms: a bar the feed has not finished yet is looked at again on the next minute, as before.)
                         runCatching { com.optionslab.app.data.SmartWorkers.ranByLane(listOf("Night (R3)", "VIX divergence")) }
                     } } finally { Heartbeat.stepEnd() }
                     Heartbeat.beat(this)
-                    continue
+                    if (!holding) continue
+                    barCloseRan = true
                 }
                 // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
-                if (holding && streaming) {
-                    val until = System.currentTimeMillis() + 15_000
+                if (barCloseRan) Unit else if (holding && streaming) {
+                    val until = waitEnd
                     // The cards are for the eye: on a low battery (not charging) they move less often (stops are not affected).
+                    // 20 Oct, review: never waited past the 15 s window (a 6 s or 12 s step waited 18 s or 24 s before the stops).
                     val step = Battery.gap(this, 3_000)
-                    while (System.currentTimeMillis() < until) { delay(step); runCatching { PositionCards.tickLive(this) } }
-                } else if (holding) delay(15_000) else {
+                    while (System.currentTimeMillis() < until) {
+                        delay(com.optionslab.ira.BatterySaver.nextWait(until - System.currentTimeMillis(), step))
+                        runCatching { PositionCards.tickLive(this) }
+                    }
+                } else if (holding) delay((waitEnd - System.currentTimeMillis()).coerceAtLeast(0)) else {
                     // Smart scheduling (10 Oct): nothing held - the wait to the next full pass is cut into the safety-net interval
                     // (Boss's 15-60 s, 30 by default), ended early by an event a worker waits for (an order update, a position
                     // change, a news window); then only the arms the scheduler finds due run (usually none: nothing runs).
@@ -1496,6 +1778,8 @@ class WatchService : Service() {
                 if (holding) {
                     Heartbeat.stepBegin("15-second stop check")
                     val checkAt = System.currentTimeMillis()
+                    // The drift guard: the gap since the last look at the stops, counted and logged when over 16 s (never a wait).
+                    runCatching { com.optionslab.app.data.WatchClock.looked(held = true, now = checkAt) }
                     // Each in its own try: a paper or ORB failure never skips the stops and targets.
                     try { Tasks.safely {
                         try {
@@ -1504,6 +1788,14 @@ class WatchService : Service() {
                             throw e
                         } catch (e: Throwable) {
                             Tasks.stepFailed("15-second stop check: paper orders", e)
+                        }
+                        // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) first.
+                        try {
+                            com.optionslab.app.data.OrphanWatch.run(this)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: unwatched positions", e)
                         }
                         // The arms' exits side by side (10 Oct): ORB's (with Liquidity's index exits), and every money exit run
                         // here too (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3) - the Pine scripts' stops and locks, Solo's exits,
@@ -1514,6 +1806,20 @@ class WatchService : Service() {
                             com.optionslab.ira.Supervisor.Step("15-second stop check: Pine scripts") { com.optionslab.app.data.PineAuto.watchOnly() },
                             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Solo") { com.optionslab.app.ira.IraSolo.manageOnly() } else null,
                             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
+                            // 16 Oct: the paper arms whose exits ran only in the minute lane (which needs the stream's ticks) and the
+                            // full pass (which waits behind their own entries' reads): their exits only, every 15 s while held.
+                            if (com.optionslab.app.data.PassedArmsHost.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.PASSED_ARMS}") { com.optionslab.app.data.PassedArmsHost.manageOnly() } else null,
+                            if (com.optionslab.app.data.HeroTicketArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.HERO_TICKET}") { com.optionslab.app.data.HeroTicketArm.manageOnly() } else null,
+                            if (com.optionslab.app.data.SignalPaperArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.SIGNAL_PAPER}") { com.optionslab.app.data.SignalPaperArm.manageOnly() } else null,
+                            // 18 Oct: the paper strategies' live trades ([com.optionslab.app.data.ArmLive]): their Zerodha stops, the paper
+                            // exits they follow and the 15:15 square-off, every 15 s while held.
+                            if (com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch() } else null,
+                            // 18 Oct, review: the Strategy Module's open runs - their per-leg and basket stops, targets and trails
+                            // (no scheduled starts or square-offs: those stay in the full pass). Its leg stops were checked once a minute.
+                            if (com.optionslab.app.data.Strategies.runningHint) com.optionslab.ira.Supervisor.Step("15-second stop check: strategies") {
+                                val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(this@WatchService, 60_000))
+                                com.optionslab.app.data.Strategies.manageOnly(bad)
+                            } else null,
                         ), WatchWorkers.EXITS_WAIT_MS, inOrder = false)
                         // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the
                         // bots' live stops, and the no-price failsafe (REST quotes; a loud warning after two minutes).
@@ -1642,4 +1948,18 @@ class FallbackWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             if (runAttemptCount < 2) Result.retry() else Result.failure()
         }
     }
+}
+
+/**
+ * 20 Oct, review: the books the NSE pass's 15-second check also serves that [WatchService]'s "holding" left out - the paper
+ * book's own open positions and resting orders (a manual paper trade, or one held only by Night, VIX divergence or an MCX
+ * paper arm) and those arms' open trades. Without them, a resting paper stop waited for the ~60 s full pass with no stream.
+ * Memory only (never a lock or a vault read); a paper book not loaded yet counts as held (open positions come first).
+ */
+internal object HeldBooks {
+    // 20 Oct, enhancement round 1 (idea 7): read from the one shared gathering ([com.optionslab.app.data.HeldNow]).
+    fun paperOrMinuteArms(): Boolean = runCatching {
+        val s = com.optionslab.app.data.HeldNow.sources()
+        s.paperBook != false || s.night || s.vixDiv || s.mcxArms
+    }.getOrDefault(true)
 }

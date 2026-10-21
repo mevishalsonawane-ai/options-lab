@@ -53,6 +53,15 @@ object McxGuard {
         runCatching { Notifier.post(context, 2050, Notifier.RISK, title, text, "trade") }
     }
 
+    /**
+     * The exits due ([due]: found on the pass's shared read) re-sized from a fresh read of Zerodha's positions ([fresh]): a
+     * position gone flat since is dropped, one that changed size (or side) goes at its fresh quantity; shorts first. Pure.
+     */
+    internal fun <C, D> freshDue(due: List<Triple<Broker.Position, C, D>>, fresh: List<Broker.Position>): List<Triple<Broker.Position, C, D>> =
+        due.mapNotNull { (p, c, d) ->
+            fresh.firstOrNull { it.exchange == p.exchange && it.symbol == p.symbol && it.product == p.product && it.qty != 0 }?.let { Triple(it, c, d) }
+        }.sortedBy { if (it.first.qty < 0) 0 else 1 }
+
     suspend fun maybeRun(context: Context, s: AppSettings) {
         if (!s.mcxExpiryExit) return
         // Shut, nothing can be closed: whatever is due goes at the next session's first pass.
@@ -90,32 +99,49 @@ object McxGuard {
                 } else McxExpiry.due(c.name, c.expiry, c.isOption, now, cal, cfg)?.let { Triple(p, c, it) }
             }.sortedBy { if (it.first.qty < 0) 0 else 1 }
             if (dueList.isEmpty()) return@runCatching
-            val working = Broker.orders().filter { it.working }
-            for ((p, c, due) in dueList) {
-                val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
-                val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
-                // A resting stop or target on it would keep the market exit from going: cancelled first, exit next pass.
-                val others = same.filter { it.tag != "iraalgoexpiry" }
-                if (others.isNotEmpty()) { others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }; continue }
-                val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-                // Zerodha keeps MCX positions and orders in lots: the whole open quantity, one lot at a time.
-                val qty = com.optionslab.engine.risk.ExitQty.sendable(p.qty, pending, abs(p.qty), 1)
-                if (qty <= 0) continue
-                val o = Kite.Order(p.symbol, side, qty, 1, p.product, "MARKET", null, c.tick, Mcx.EXCHANGE, "iraalgoexpiry", multiplier = c.multiplier)
-                val bad = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = true)
-                if (bad.isNotEmpty()) {
-                    tellOnce(context, "refused ${p.symbol}", "MCX expiry exit", "${p.symbol}: the exit was not sent (${bad.joinToString("; ")}). Close it yourself in Trade. ${due.text}")
-                    continue
-                }
+            // 18 Oct, review: the pass's shared read above may be up to 20 s old and is for words only ([Broker.passPositionBook]):
+            // a resting stop filled at MCX since then left it showing the position, and a market exit sized from it opened a new
+            // one. So with an exit due, the orders are read, then the positions fresh (in that order: a stop filling between the
+            // two reads shows as still working and is only cancelled, never doubled), and only what is still open is closed.
+            val read = Broker.orders()
+            val working = read.filter { it.working }
+            val freshBook = Broker.positionBook()
+            val fresh = freshBook.net
+            McxMarket.noteLive(fresh)
+            val sendList = freshDue(dueList, fresh)
+            for ((p, c, due) in sendList) {
+                // 20 Oct, enhancement round 2: each contract in its one exit turn ([ExitCoordinator]), as the NSE expiry square-off.
+                val pass = ExitCoordinator.enter(Mcx.EXCHANGE, p.symbol, "MCX expiry exit")
                 try {
-                    val id = Broker.placeOrder(o, exit = true)
-                    runCatching { Strategies.tagOwner("kite:$id", Origins.EXPIRY) }
-                    tellOnce(context, "live ${p.symbol}", "MCX expiry exit", "Zerodha ${p.symbol}: close sent. ${due.text}")
-                } catch (e: Exception) {
-                    if (Broker.definite(e)) tellOnce(context, "rejected ${p.symbol} ${e.message}", "MCX expiry exit",
-                        "Zerodha refused the exit of ${p.symbol}: ${e.message}. Retrying every pass; close it yourself if it keeps failing.")
-                    else runCatching { Broker.findRecentRetrying(o, working.map { it.id }) }
-                }
+                    if (ExitCoordinator.stale(Mcx.EXCHANGE, p.symbol, "MCX expiry exit", read)) continue
+                    val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
+                    val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
+                    // A resting stop or target on it would keep the market exit from going: cancelled first, exit next pass.
+                    val others = same.filter { it.tag != "iraalgoexpiry" }
+                    if (others.isNotEmpty()) { others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }; continue }
+                    val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+                    // 21 Oct, enhancement round 3 (idea 1, review): held, checked against the orders read's fills ([ExitCoordinator.held]).
+                    val heldNow = runCatching { ExitCoordinator.held(Mcx.EXCHANGE, p.symbol, p.product, "MCX expiry exit", read, freshBook) }.getOrNull() ?: continue
+                    if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) continue
+                    // Zerodha keeps MCX positions and orders in lots: the whole open quantity, one lot at a time.
+                    val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), 1)
+                    if (qty <= 0) continue
+                    val o = Kite.Order(p.symbol, side, qty, 1, p.product, "MARKET", null, c.tick, Mcx.EXCHANGE, "iraalgoexpiry", multiplier = c.multiplier)
+                    val bad = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = true)
+                    if (bad.isNotEmpty()) {
+                        tellOnce(context, "refused ${p.symbol}", "MCX expiry exit", "${p.symbol}: the exit was not sent (${bad.joinToString("; ")}). Close it yourself in Trade. ${due.text}")
+                        continue
+                    }
+                    try {
+                        val id = Broker.placeOrder(o, exit = true)
+                        runCatching { Strategies.tagOwner("kite:$id", Origins.EXPIRY) }
+                        tellOnce(context, "live ${p.symbol}", "MCX expiry exit", "Zerodha ${p.symbol}: close sent. ${due.text}")
+                    } catch (e: Exception) {
+                        if (Broker.definite(e)) tellOnce(context, "rejected ${p.symbol} ${e.message}", "MCX expiry exit",
+                            "Zerodha refused the exit of ${p.symbol}: ${e.message}. Retrying every pass; close it yourself if it keeps failing.")
+                        else runCatching { Broker.findRecentRetrying(o, working.map { it.id }) }
+                    }
+                } finally { pass.leave() }
             }
         }
     }

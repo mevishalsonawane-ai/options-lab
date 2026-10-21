@@ -87,13 +87,24 @@ internal object SecureBlobs {
         var unreadable = false
         /** Changed in memory by [putSoon], not yet on disk. */
         var dirty = false
+        /** Bumped by each change, so a write knows whether what it wrote is still the newest. */
+        var version = 0L
+        /**
+         * Held while the file is written (20 Oct). The value's own lock is held only to read or set the value, never for the
+         * Keystore encryption: the screen's thread putting a value ([putSoon]) waited behind a write of the same key for
+         * the encryption's seconds (the 17 Oct ANR, "Input dispatching timed out", while Jarvis's log was written).
+         */
+        val writing = Any()
     }
     private val entries = ConcurrentHashMap<String, Entry>()
 
     fun init(d: File) = lock.write { dir = d; entries.clear() }
 
-    /** The cached values dropped (the vault's "try again"): each is read from its file again when next asked for. */
-    fun reset() = lock.write { entries.clear() }
+    /**
+     * The cached values dropped (the vault's "try again"): each is read from its file again when next asked for. 20 Oct, review:
+     * a value changed and not yet written is kept (dropping it lost the change for good); its write is still due.
+     */
+    fun reset() = lock.write { entries.entries.removeIf { !synchronized(it.value) { it.value.dirty } } }
 
     /** Every file deleted. Called by [SecurePrefs.wipe] before it takes its own locks. */
     fun <T> wipe(then: () -> T): T = lock.write {
@@ -120,18 +131,20 @@ internal object SecureBlobs {
 
     fun get(k: String): Any? = lock.read {
         val e = entry(k)
-        synchronized(e) { load(k, e); e.value }
-    }
-
-    /** Under [e]'s lock: the value read from its file (or, before it is moved, the settings file's legacy copy). */
-    private fun load(k: String, e: Entry) {
-        if (e.loaded) return
-        val f = file(k)
-        val bytes = try {
+        synchronized(e) { if (e.loaded) return@read e.value }
+        // 20 Oct, review: the file is read and decrypted with the value's lock let go (the screen's thread putting this key waited
+        // behind the Keystore's decryption, the 17 Oct ANR pattern); the result is kept only if no one set the value meanwhile.
+        val read = runCatching {
             loads.incrementAndGet()
             if (onMain()) { loadsOnMain.incrementAndGet(); lastOnMain = k }
-            Vault.readFileSteady(f)
-        } catch (_: Exception) {
+            Vault.readFileSteady(file(k))
+        }
+        synchronized(e) { if (!e.loaded) load(k, e, read); e.value }
+    }
+
+    /** Under [e]'s lock: [read] (the file's bytes, decrypted outside it) kept as the value, else the settings file's legacy copy. */
+    private fun load(k: String, e: Entry, read: Result<ByteArray?>) {
+        val bytes = read.getOrElse {
             // Tampered, or the key is gone. The settings file's copy, if it still has one, is the value until a write.
             e.unreadable = true
             e.value = SecurePrefs.legacy(k)
@@ -162,41 +175,55 @@ internal object SecureBlobs {
     /** [v] written to [k]'s file now (null: a tombstone). Throws when the encryption or the disk fails, as a settings write does. */
     fun put(k: String, v: Any?) = lock.read {
         val e = entry(k)
-        synchronized(e) {
-            if (e.loaded && !e.dirty && !e.unreadable && SecurePrefs.sameValue(e.value, v)) return@read
-            e.value = v; e.loaded = true; e.dirty = true
-            save(k, e)
+        synchronized(e.writing) {
+            synchronized(e) {
+                if (e.loaded && !e.dirty && !e.unreadable && SecurePrefs.sameValue(e.value, v)) return@read
+                e.value = v; e.loaded = true; e.dirty = true; e.version++
+            }
+            write(k, e)
         }
     }
 
-    /** [v] readable at once; its file written by [SecurePrefs]' background writer ([saveNow]). */
+    /** [v] readable at once; its file written by [SecurePrefs]' background writer ([saveNow]). Never waits on a write. */
     fun putSoon(k: String, v: Any?): Boolean = lock.read {
         val e = entry(k)
         synchronized(e) {
             if (e.loaded && !e.dirty && !e.unreadable && SecurePrefs.sameValue(e.value, v)) return@read false
-            e.value = v; e.loaded = true; e.dirty = true
+            e.value = v; e.loaded = true; e.dirty = true; e.version++
             true
         }
     }
 
-    /** A [putSoon] value written now (on the background writer). */
-    fun saveNow(k: String) = lock.read {
+    /** A [putSoon] value written now (on the background writer). False when the write failed (the value stays dirty, in memory). */
+    fun saveNow(k: String): Boolean = lock.read {
         val e = entry(k)
-        synchronized(e) { if (e.dirty) runCatching { save(k, e) } }
+        synchronized(e.writing) {
+            runCatching { write(k, e) }.onFailure {
+                // 20 Oct, review: said, not swallowed; [SecurePrefs.flush] reports it and queues it again.
+                runCatching { com.optionslab.app.data.Diag.record("vault", "A large setting ($k) could not be written (${it.javaClass.simpleName}); kept in memory and tried again") }
+            }.isSuccess
+        }
+    }
+
+    /**
+     * Under [Entry.writing] only (20 Oct): the newest value taken under [e]'s lock, then encrypted and written with that lock
+     * let go; still dirty afterwards when it changed meanwhile (the next write takes the newer value).
+     */
+    private fun write(k: String, e: Entry) {
+        if (SecurePrefs.unreadable) return                     // the settings vault fails closed; so does every part of it
+        val (v, ver, unreadable) = synchronized(e) { if (!e.dirty) return; Triple(e.value, e.version, e.unreadable) }
+        val f = file(k)
+        if (unreadable) { runCatching { if (f.exists()) Vault.setAside(f) }; synchronized(e) { e.unreadable = false } }
+        Vault.writeFile(f, encode(v))
+        synchronized(e) { if (e.version == ver) e.dirty = false }
+        SecurePrefs.dropLegacy(k)
     }
 
     /** Any value changed in memory and not yet written. */
     fun anyDirty(): Boolean = entries.values.any { synchronized(it) { it.dirty } }
 
-    /** Under [e]'s lock. */
-    private fun save(k: String, e: Entry) {
-        if (SecurePrefs.unreadable) return                     // the settings vault fails closed; so does every part of it
-        val f = file(k)
-        if (e.unreadable) { runCatching { if (f.exists()) Vault.setAside(f) }; e.unreadable = false }
-        Vault.writeFile(f, encode(e.value))
-        e.dirty = false
-        SecurePrefs.dropLegacy(k)
-    }
+    /** The keys changed in memory and not yet written (names only). */
+    fun dirtyKeys(): List<String> = entries.entries.filter { synchronized(it.value) { it.value.dirty } }.map { it.key }
 
     /**
      * One legacy value moved out of the settings file (on the background writer): written to its own file, read back and
@@ -204,10 +231,13 @@ internal object SecureBlobs {
      */
     fun migrate(k: String, legacy: Any?): Boolean = lock.read {
         val e = entry(k)
-        synchronized(e) {
+        // 20 Oct, review: the file work under [Entry.writing] only (one write of this key at a time); the value's own lock just
+        // to read or set the value, so the screen's thread putting this key never waits on the Keystore here.
+        synchronized(e.writing) {
             val f = file(k)
-            if (e.loaded && !e.unreadable) {
-                if (e.dirty) save(k, e)
+            val (loaded, unreadable, dirty) = synchronized(e) { Triple(e.loaded, e.unreadable, e.dirty) }
+            if (loaded && !unreadable) {
+                if (dirty) write(k, e)
                 // Written by this process since (or read from its file): that copy is the newer one.
                 if (runCatching { f.exists() }.getOrDefault(false)) { SecurePrefs.dropLegacy(k); return@read true }
             }
@@ -217,7 +247,8 @@ internal object SecureBlobs {
             Vault.writeFile(f, bytes)
             val back = Vault.readFileSteady(f)
             if (back == null || !back.contentEquals(bytes)) return@read false       // kept in the settings file; tried again later
-            if (!e.loaded || e.unreadable) { e.value = legacy; e.loaded = true; e.unreadable = false }
+            // A value set meanwhile (by [putSoon]) stays: it is newer, and still due to be written.
+            synchronized(e) { if (!e.loaded || e.unreadable) { e.value = legacy; e.loaded = true; e.unreadable = false } }
             SecurePrefs.dropLegacy(k)
             true
         }

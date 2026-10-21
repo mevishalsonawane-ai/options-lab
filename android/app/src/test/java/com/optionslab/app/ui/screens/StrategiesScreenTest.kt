@@ -23,6 +23,8 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -170,6 +172,8 @@ internal class RecordingStrategyActions(var saveError: String? = null) : Strateg
     override fun importText(text: String) { calls += "import ${text.length}" }
     override fun say(text: String) { calls += "say $text" }
     override fun clearKill() { calls += "clearKill" }
+    var killPin = false
+    override fun clearKillNeedsPin() = killPin
     override fun startBot() { calls += "startBot" }
     override fun stopBot(alsoRunning: Boolean) { calls += "stopBot also=$alsoRunning" }
     override fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean) { calls += "orb arm $source on=$on auto=$automatic pin=$pinConfirmed" }
@@ -290,6 +294,19 @@ class StrategiesScreenTest {
         assertEquals("delete 3", rec.calls.last())
         tap("Edit")
         assertTrue(shown("Edit Straddle"))
+    }
+
+    @Test fun aSignalStrategyOnAnOptionsChartIsLabelledNotTheDefault() {
+        // 14 Oct (Boss): by default a signal is read on the index, then the option is bought; an option leg is labelled.
+        fun leg(id: Int, segment: com.optionslab.engine.strategy.Segment, symbol: String) = com.optionslab.engine.strategy.LegDef(id, segment,
+            symbol = symbol, exchange = "NFO", side = com.optionslab.engine.strategy.LegSide.BOTH, qty = 1, qtyMode = com.optionslab.engine.strategy.QtyMode.LOTS)
+        val onOption = StrategyDef(id = 8, name = "Option alerts", kind = com.optionslab.engine.strategy.StrategyKind.SIGNAL, underlying = "NIFTY",
+            underlyingExchange = "NSE_INDEX", legs = listOf(leg(1, com.optionslab.engine.strategy.Segment.FUTURES, "NIFTY26OCT24500CE")))
+        val onIndex = onOption.copy(id = 9, name = "Index alerts", legs = listOf(leg(1, com.optionslab.engine.strategy.Segment.FUTURES, "NIFTY26OCTFUT")))
+        page(listOf(Strategies.Entry(onOption, null), Strategies.Entry(onIndex, null), Strategies.Entry(StrategyFakes.def(3, "Straddle"), null)))
+        assertTrue(shown("Not the default signal: leg 1 (NIFTY26OCT24500CE) names an option, so its alerts may come from an option's own chart."))
+        assertEquals("only the option's strategy is labelled", 1,
+            compose.onAllNodesWithText("Not the default signal", substring = true).fetchSemanticsNodes().size)
     }
 
     @Test fun aLiveStartIsConfirmedThenTakesThePin() {
@@ -419,6 +436,19 @@ class StrategyArmCardTest {
         assertEquals(listOf("clearKill"), rec.calls)
     }
 
+    /** 18 Oct, review: with a PIN set and Live on (or Zerodha set up), the card's Clear asks for the PIN first. */
+    @Test fun clearingTheKillSwitchFromTheCardAsksForThePinFirst() {
+        rec.killPin = true
+        card(emptyList(), kill = true)
+        tap("Clear kill switch"); tap("Clear")
+        assertTrue("nothing cleared before the PIN", rec.calls.isEmpty())
+        tap("PIN cancel")
+        assertTrue("a cancelled PIN clears nothing", rec.calls.isEmpty())
+        tap("Clear kill switch"); tap("Clear")
+        tap("PIN OK")
+        assertEquals(listOf("clearKill"), rec.calls)
+    }
+
     @Test fun pastedJsonIsImported() {
         card(emptyList())
         tap("Import from desktop")
@@ -445,6 +475,21 @@ class OrbRowsTest {
     private fun tap(text: String) { compose.onAllNodesWithText(text, substring = true).onFirst().areaCClick(); compose.waitForIdle() }
     private fun shown(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
 
+    /** COMPACT rows (15 Oct): an arm's name opens its explanation; [texts] are each checked there, then OK closes it. */
+    private fun explained(label: String, vararg texts: String): Boolean {
+        compose.onNodeWithContentDescription("About $label").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
+        val all = texts.all { shown(it) }
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
+        return all
+    }
+    /** Opens [label]'s own dialog (left open). */
+    private fun openAbout(label: String) { compose.onNodeWithContentDescription("About $label").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle() }
+    /** A tap on an arm's status line (the rest of the row): the day's detail. */
+    private fun tapRow(source: String) {
+        compose.onNode(androidx.compose.ui.test.hasClickAction() and androidx.compose.ui.test.hasAnyDescendant(androidx.compose.ui.test.hasTestTag("orb-line:$source")),
+            useUnmergedTree = true).areaCClick(); compose.waitForIdle()
+    }
+
     /** The switches on screen: ORB, ORB Fresh, ORB Sweep, Range Fade (0-3), the Hero arm (4) and Liquidity 15+5 (5). */
     private fun switches() = compose.onAllNodes(isToggleable())
     /** One arm's switch, by its label ("Arm ORB" is ORB's alone, never ORB Fresh's). */
@@ -457,21 +502,38 @@ class OrbRowsTest {
         for (label in listOf("ORB", "ORB Fresh", "ORB Sweep", "Range Fade", "Hero (expiry)", "Liquidity 15+5"))
             assertEquals(label, 1, compose.onAllNodes(isToggleable() and androidx.compose.ui.test.hasContentDescription("Arm $label")).fetchSemanticsNodes().size)
         assertTrue(!shown("Retired")); assertTrue(!shown("retired"))
-        assertTrue(shown("BANKNIFTY opening-range break · profit lock +10 → breakeven, +20 → +10, +30 → +20"))
+        // COMPACT (15 Oct): off, each row says "Off"; its rules are in its name's dialog.
+        assertTrue(!shown("BANKNIFTY opening-range break"))
+        assertTrue(explained("ORB", keepNumbersWhole("BANKNIFTY opening-range break · profit lock +10 → breakeven, +20 → +10, +30 → +20")))
         // ORB Sweep's rungs are on its own +80 target (F4, 07 Oct): said as they are, not as +10 / +20 / +30.
-        assertTrue(shown("-40 / +80 · profit lock +20 → breakeven, +40 → +20, +60 → +40"))
-        assertTrue(shown("BANKNIFTY opening-range break, fresh breaks only"))
-        assertTrue(shown("BANKNIFTY failed break of the opening range, faded · paper only"))
-        assertTrue(shown("BANKNIFTY touch of the range edge, faded to the middle · paper only"))
-        // The Hero arm stays off and says it is not proven.
-        assertTrue(shown(com.optionslab.engine.orb.HeroRules.NOT_PROVEN))
+        assertTrue(explained("ORB Sweep", "BANKNIFTY failed break of the opening range, faded · paper only", keepNumbersWhole("-40 / +80 · profit lock +20 → breakeven, +40 → +20, +60 → +40")))
+        assertTrue(explained("ORB Fresh", "BANKNIFTY opening-range break, fresh breaks only"))
+        assertTrue(explained("Range Fade", "BANKNIFTY touch of the range edge, faded to the middle · paper only"))
+        // The Hero arm stays off and says it is not proven (in its dialog).
+        assertTrue(explained("Hero (expiry)", com.optionslab.engine.orb.HeroRules.NOT_PROVEN))
+    }
+
+    @Test fun theHeroRowSaysItsSignalIsTheStraddlesPremiumNotTheDefaultArmedOrNot() {
+        // 14 Oct (Boss): by default a signal is read on the index; Hero's reads the straddle's premium, so its row says so.
+        val label = com.optionslab.engine.orb.HeroRules.SIGNAL_SOURCE
+        assertEquals("Signal uses the option straddle's premium (not the default index-only signal); paper only, armed by you", label)
+        rows(StrategyFakes.orbView(), live = false)
+        assertTrue("switched off: in its name's dialog", explained("Hero (expiry)", label))
+    }
+
+    @Test fun theArmedHeroRowSaysItsSignalIsNotTheDefaultToo() {
+        val v = StrategyFakes.orbView()
+        rows(v.copy(arms = v.arms.map { if (it.arm.hero) it.copy(armed = true, status = "hero_not_expiry_day") else it }), live = false)
+        // Its status on the row; its signal source, labelled as not the default, in its name's dialog.
+        assertTrue(shown(OrbArms.describe("hero_not_expiry_day")))
+        assertTrue(explained("Hero (expiry)", com.optionslab.engine.orb.HeroRules.SIGNAL_SOURCE + "."))
     }
 
     @Test fun theFourArmedOnPaperShowItAndTheirRecordIsInTheDetailAsInformation() {
         rows(StrategyFakes.orbView(fourArmed = true), live = false)
         assertEquals("ORB and ORB Fresh", 2, compose.onAllNodesWithText("ARMED · PAPER · AUTO").fetchSemanticsNodes().size)
         assertEquals("ORB Sweep and Range Fade", 2, compose.onAllNodesWithText("ARMED · PAPER ONLY · AUTO").fetchSemanticsNodes().size)
-        tap("ORB Fresh")
+        tapRow("orb_fresh")
         assertTrue(shown("Arms · today"))
         for (r in com.optionslab.engine.orb.RetiredArms.ALL) assertTrue(r.arm.label, shown(keepNumbersWhole(recordLine(r))))
         assertTrue(shown(keepNumbersWhole("You un-retired it on 07 Oct 2026. Its record: lost ₹9.77 lakh over 2021–2026 on real data; no fix held up out of sample.")))
@@ -569,7 +631,7 @@ class OrbRowsTest {
 
     @Test fun armingInPaper() {
         rows(StrategyFakes.orbView(), live = false)
-        assertTrue(shown("BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) + MIDCPNIFTY (15 + 5-min) liquidity pool"))
+        assertTrue(explained("Liquidity 15+5", keepNumbersWhole("BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) + MIDCPNIFTY (15 + 5-min) liquidity pool")))
         tapSwitch("Liquidity 15+5")
         assertTrue(shown("Arm Liquidity 15+5 (paper)"))
         tap("Automatic")
@@ -589,14 +651,21 @@ class OrbRowsTest {
     @Test fun anArmedArmSaysWhatItWaitsForAndDisarms() {
         rows(StrategyFakes.orbView(armed = true), live = false)
         assertTrue(shown("ARMED · PAPER · AUTO"))
-        assertTrue(shown("BANKNIFTY 15-min: Waiting for a close through a liquidity pool that sits on a swing zone."))
-        // Its paper record since 06 Oct, with and without each pre-registered candidate.
-        assertTrue(shown(keepNumbersWhole("Since 06 Oct, per lot: 1 paper trade, +₹1,158 net (+₹1,158 a trade) · (a) skip a level within one index stop: 0, no trades")))
-        // Candidate (c), the volatility risk filter: tracked beside them, its figures whole too.
-        assertTrue(shown(keepNumbersWhole("(c) skip in high volatility: 0 of 1, no trades against +₹1,158 a trade")))
-        // Candidates (d) all out by 14:30 and (e) 2 strikes in the money: on the same trade, never what it trades.
-        assertTrue(shown(keepNumbersWhole("(d) all out by 14:30: 1, +₹2,346 a trade against +₹1,158 a trade")))
-        assertTrue(shown(keepNumbersWhole("(e) 2 strikes in the money: 1, −₹12,345 a trade against +₹1,158 a trade")))
+        // COMPACT (15 Oct): one status line on the row; each book's state and the candidates' record in its name's dialog.
+        assertTrue(shown("Today: 1 closed · ₹1,158 after charges"))
+        assertTrue(!shown("Lots:"))
+        assertTrue(!shown("Since 06 Oct, per lot"))
+        assertTrue(explained("Liquidity 15+5",
+            keepNumbersWhole("BANKNIFTY 15-min: Waiting for a close through a liquidity pool that sits on a swing zone."),
+            // Its paper record since 06 Oct, with and without each pre-registered candidate.
+            keepNumbersWhole("Since 06 Oct, per lot: 1 paper trade, +₹1,158 net (+₹1,158 a trade) · (a) skip a level within one index stop: 0, no trades"),
+            // Candidate (c), the volatility risk filter: tracked beside them, its figures whole too.
+            keepNumbersWhole("(c) skip in high volatility: 0 of 1, no trades against +₹1,158 a trade"),
+            // Candidates (d) all out by 14:30 and (e) 2 strikes in the money: on the same trade, never what it trades.
+            keepNumbersWhole("(d) all out by 14:30: 1, +₹2,346 a trade against +₹1,158 a trade"),
+            keepNumbersWhole("(e) 2 strikes in the money: 1, −₹12,345 a trade against +₹1,158 a trade"),
+            // NIFTY has no book: it failed research (H4).
+            "Liquidity on NIFTY has no book"))
         tapSwitch("Liquidity 15+5")
         assertEquals(listOf("orb arm liquidity on=false auto=true pin=false"), rec.calls)
     }
@@ -604,16 +673,21 @@ class OrbRowsTest {
     // ---- Liquidity's size ----------------------------------------------------------------------------------------------
 
     private fun lotsTap(n: Int) {
+        if (compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Liquidity $n lot", substring = true)).fetchSemanticsNodes().isEmpty()) openAbout("Liquidity 15+5")
         compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Liquidity $n lot", substring = true)).onFirst().areaCClick(); compose.waitForIdle()
     }
 
     @Test fun theLiquidityRowShowsItsLotsAndEachBooksQuantity() {
         rows(StrategyFakes.orbView(armed = true, lots = 2), live = false)
+        // COMPACT (15 Oct): the size control is in Liquidity's own dialog.
+        assertTrue(!shown("Lots:"))
+        openAbout("Liquidity 15+5")
         assertTrue(shown("Lots:"))
         assertEquals(1, compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Liquidity 2 lots, chosen")).fetchSemanticsNodes().size)
-        assertTrue(shown(keepNumbersWhole("Size: 2 lots a trade (BANKNIFTY 60, FINNIFTY 130 qty) · an open position keeps its own")))
-        // The candidates' record is per lot, so the size never moves it.
-        assertTrue(shown(keepNumbersWhole("Since 06 Oct, per lot: 1 paper trade")))
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
+        // Each book's quantity, and the candidates' record (per lot, so the size never moves it), in its name's dialog.
+        assertTrue(explained("Liquidity 15+5", keepNumbersWhole("Size: 2 lots a trade (BANKNIFTY 60, FINNIFTY 130 qty) · an open position keeps its own"),
+            keepNumbersWhole("Since 06 Oct, per lot: 1 paper trade")))
     }
 
     @Test fun aCutInLotsAppliesAtOnceARaiseAsksFirst() {
@@ -639,6 +713,7 @@ class OrbRowsTest {
 
     @Test fun aRestoredHigherSizeWaitsForBoss() {
         rows(StrategyFakes.orbView(armed = false, lots = 2, lotsAsk = 3), live = false)
+        openAbout("Liquidity 15+5")
         assertTrue(shown(keepNumbersWhole("The backup had 3 lots: it trades 2 lots until you choose 3.")))
         lotsTap(3)
         assertTrue("choosing the backup's size is still a raise: asked first", rec.calls.isEmpty())
@@ -671,8 +746,9 @@ class OrbRowsTest {
         rows(StrategyFakes.orbView(armed = true, open = true, live = true), live = true)
         assertTrue(shown("IN TRADE · LIVE"))
         assertTrue(shown("in 210.00 · now 220.00 · ₹300 · stop 170.00"))
-        assertTrue(shown("Today: 1 closed · ₹1,158 after charges"))
-        tap("Liquidity 15+5")
+        // The day's closed trade, while one is open, is in its own dialog.
+        assertTrue(explained("Liquidity 15+5", keepNumbersWhole("Today: 1 closed · ₹1,158 after charges")))
+        tapRow("liquidity")
         assertTrue(shown("Arms · today"))
         assertTrue(shown("Strike 52000 (09:20 bar)"))
         assertTrue(shown("Evening replay"))

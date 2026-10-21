@@ -41,7 +41,7 @@ object Backup {
     private const val ROUNDS_PIN = 200_000
     private const val ROUNDS_V2 = 310_000
     private const val ROUNDS = 600_000
-    const val MIN_PASSPHRASE = 10
+    const val MIN_PASSPHRASE = com.optionslab.ira.Passphrase.MIN
 
     /** (directory, name): f = files, n = no-backup files. */
     // Not carried: protections (they name this phone's live Zerodha orders) and the holiday list
@@ -78,18 +78,7 @@ object Backup {
      * A rough strength hint for a passphrase: 0 too short, 1 weak, 2 fair, 3 strong.
      * Estimates the search space from length and kinds of characters; repeats count less.
      */
-    fun strength(pass: CharArray): Int {
-        if (pass.size < MIN_PASSPHRASE) return 0
-        var pool = 0
-        if (pass.any { it in 'a'..'z' }) pool += 26
-        if (pass.any { it in 'A'..'Z' }) pool += 26
-        if (pass.any { it in '0'..'9' }) pool += 10
-        if (pass.any { !it.isLetterOrDigit() }) pool += 33
-        if (pass.any { it.isLetter() && it !in 'a'..'z' && it !in 'A'..'Z' }) pool += 26
-        val distinct = pass.toSet().size
-        val bits = minOf(pass.size, distinct * 2) * (Math.log(maxOf(pool, 2).toDouble()) / Math.log(2.0))
-        return when { bits < 50 -> 1; bits < 72 -> 2; else -> 3 }
-    }
+    fun strength(pass: CharArray): Int = com.optionslab.ira.Passphrase.strength(pass)
 
     /**
      * 1 (PIN-sealed, old) or 2 (passphrase-sealed, whatever its round count); throws when the
@@ -112,19 +101,46 @@ object Backup {
     /** Make a backup sealed with [passphrase] (the caller wipes it). Reads on IO, derives the key on Default. */
     suspend fun create(ctx: Context, passphrase: CharArray): ByteArray {
         require(passphrase.size >= MIN_PASSPHRASE) { "The backup passphrase needs at least $MIN_PASSPHRASE characters." }
-        require(strength(passphrase) >= 2) { "That passphrase is too easy to guess. Make it longer, or mix in capitals, digits or symbols." }
+        require(strength(passphrase) >= 2) { com.optionslab.ira.Passphrase.advice(passphrase)?.full ?: "That passphrase is too easy to guess." }
         val body = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { snapshot(ctx) }
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             try {
-                val rnd = SecureRandom()
-                val salt = ByteArray(16).also(rnd::nextBytes)
-                val iv = ByteArray(12).also(rnd::nextBytes)
-                val c = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key(passphrase, salt, ROUNDS), GCMParameterSpec(128, iv)) }
-                c.updateAAD(MAGIC)
-                MAGIC + salt + iv + c.doFinal(body)
+                val salt = ByteArray(16).also(SecureRandom()::nextBytes)
+                seal(body, key(passphrase, salt, ROUNDS), salt)
             } finally { body.fill(0) }
         }.also { runCatching { SecurePrefs.put("backup.last", Market.today().toString()) } }   // for the backup reminder
     }
+
+    private fun seal(body: ByteArray, k: SecretKeySpec, salt: ByteArray): ByteArray {
+        val iv = ByteArray(12).also(SecureRandom()::nextBytes)
+        val c = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, k, GCMParameterSpec(128, iv)) }
+        c.updateAAD(MAGIC)
+        return MAGIC + salt + iv + c.doFinal(body)
+    }
+
+    /**
+     * The key [create] stretches from [passphrase] with [salt] (PBKDF2-SHA256, 600,000 rounds), as raw bytes: GitHub sync
+     * (TODO G2, 13 Oct) keeps this key - never the passphrase - so its unattended evening backup can be sealed ([createSealed]).
+     * Slow on purpose: off the main thread.
+     */
+    internal fun stretch(passphrase: CharArray, salt: ByteArray): ByteArray = key(passphrase, salt, ROUNDS).encoded
+
+    /**
+     * The same backup as [create], sealed with a key already stretched by [stretch] from the passphrase and [salt]. The file
+     * is an ordinary IRABK3 backup: it opens with the passphrase like any other ([open]), and [restore] treats it the same
+     * (everything comes back switched off). Reads on IO, seals on Default. Made is not yet off the phone: the backup reminder
+     * rests only once GitHub has it ([markOffPhone], 13 Oct review).
+     */
+    suspend fun createSealed(ctx: Context, key: ByteArray, salt: ByteArray): ByteArray {
+        require(key.size == 32 && salt.size == 16) { "The GitHub backup key is not set." }
+        val body = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { snapshot(ctx) }
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            try { seal(body, SecretKeySpec(key, "AES"), salt) } finally { body.fill(0) }
+        }
+    }
+
+    /** A backup is off the phone (GitHub sync uploaded it): the backup reminder rests. Never called for a failed upload. */
+    fun markOffPhone() { runCatching { SecurePrefs.put("backup.last", Market.today().toString()) } }
 
     private fun snapshot(ctx: Context): ByteArray {
         val files = JSONObject()
@@ -186,6 +202,11 @@ object Backup {
         val files = c.json.getJSONObject("files")
         // Liquidity 15+5's size in this phone's book now (before it is replaced): a restore never raises it ([liquidityLots]).
         val lotsHere = currentLiquidityLots(ctx)
+        // 20 Oct, review: the live stores keep saving their old books until the restart; from here only this restore writes
+        // the vault files it replaces ([Vault.freezeForRestore]), so none of them is written over in those seconds.
+        Vault.freezeForRestore(FILES.filter { it.second.endsWith(".vault") }.map { (dir, name) -> file(ctx, dir, name) })
+        // A restore that stops half-way (no restart follows) lets the stores save again, as before.
+        try {
         for ((dir, name) in FILES) {
             val f = file(ctx, dir, name)
             val b64 = files.optString("$dir/$name").ifEmpty { null }
@@ -194,7 +215,7 @@ object Backup {
             if (b64 == null) { if (!name.startsWith("ira-") && name != WEEKLY_REVIEWS) f.delete(); continue }
             val bytes = disarmed(name, Base64.decode(b64, Base64.NO_WRAP), lotsHere)
             try {
-                if (name.endsWith(".vault")) Vault.writeFile(f, bytes) else f.writeBytes(bytes)
+                if (name.endsWith(".vault")) Vault.writeRestored(f, bytes) else f.writeBytes(bytes)
             } finally { bytes.fill(0) }
         }
         val prefs = c.json.getJSONObject("prefs")
@@ -202,6 +223,13 @@ object Backup {
         prefs.keys().forEach { k -> if (carried(k)) values[k] = prefs.get(k) }
         values[DISARM] = true
         SecurePrefs.putAll(values)
+        // The danger meter's switch as restored, in the entry path's memory copy at once (the restart loads it again).
+        runCatching { AppSettings.syncDangerHalf() }
+        } catch (e: Throwable) {
+            // 20 Oct, second review: kept frozen. Both callers close the app after a failed restore too; a thaw here let the
+            // live stores write their old books over the files already restored, and the restart read a mix of the two.
+            throw e
+        }
         return Restored(changePin = c.pinSealed)
     }
 

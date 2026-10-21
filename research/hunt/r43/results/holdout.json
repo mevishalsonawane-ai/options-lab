@@ -1,0 +1,10751 @@
+{
+ "part": "holdout",
+ "index_days": {
+  "NIFTY": 93,
+  "BANKNIFTY": 21,
+  "FINNIFTY": 19,
+  "MIDCPNIFTY": 21,
+  "SENSEX": 91
+ },
+ "n_index_days": 245,
+ "bh_size": 88,
+ "rules": {
+  "ema821_adx15-cheap-all-hold": {
+   "rule": [
+    "ema821_adx15",
+    "cheap",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 213,
+    "win_pct": 7.5,
+    "peak5": 21,
+    "peak10": 5,
+    "banked5": 6,
+    "banked10": 4,
+    "net": 20982.0,
+    "net_per_day": 85.6,
+    "per_1000": 22.7,
+    "worst_day": -10111.0,
+    "max_dd": -183279.0,
+    "top5": 361597.0,
+    "top5_share": 1723.3,
+    "net_wo_top5": -340614.0,
+    "proxy": 8,
+    "ce": 109,
+    "pe": 104,
+    "spread2x": 18864.0,
+    "oor0": 2362.0
+   },
+   "by_year": {
+    "2025": [
+     120,
+     -128309.0
+    ],
+    "2026": [
+     93,
+     149291.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -46045.0
+    ],
+    "FINNIFTY": [
+     18,
+     -40662.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -19691.0
+    ],
+    "NIFTY": [
+     79,
+     28474.0
+    ],
+    "SENSEX": [
+     76,
+     98907.0
+    ]
+   },
+   "twin_mean": -82734.0,
+   "twin_sd": 113502.0,
+   "p": 0.1856,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72500.0,
+     "j": 38,
+     "entry": 24.91,
+     "peak": 29.5,
+     "xmult": 29.17,
+     "net": 140012.85
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83200.0,
+     "j": 8,
+     "entry": 30.22,
+     "peak": 21.7,
+     "xmult": 19.74,
+     "net": 90391.69
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 3,
+     "entry": 17.06,
+     "peak": 16.0,
+     "xmult": 12.63,
+     "net": 55383.53
+    },
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23150.0,
+     "j": 46,
+     "entry": 10.71,
+     "peak": 13.7,
+     "xmult": 11.59,
+     "net": 50886.85
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    }
+   ],
+   "q": 0.7101
+  },
+  "ema821_adx15-cheap-all-trail": {
+   "rule": [
+    "ema821_adx15",
+    "cheap",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 213,
+    "win_pct": 14.6,
+    "peak5": 19,
+    "peak10": 4,
+    "banked5": 5,
+    "banked10": 2,
+    "net": -18350.0,
+    "net_per_day": -74.9,
+    "per_1000": -19.8,
+    "worst_day": -9157.0,
+    "max_dd": -126630.0,
+    "top5": 210897.0,
+    "top5_share": null,
+    "net_wo_top5": -229247.0,
+    "proxy": 8,
+    "ce": 109,
+    "pe": 104,
+    "spread2x": -20468.0,
+    "oor0": -44154.0
+   },
+   "by_year": {
+    "2025": [
+     120,
+     -69473.0
+    ],
+    "2026": [
+     93,
+     51123.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -32384.0
+    ],
+    "FINNIFTY": [
+     18,
+     -17495.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -16566.0
+    ],
+    "NIFTY": [
+     79,
+     60890.0
+    ],
+    "SENSEX": [
+     76,
+     -12794.0
+    ]
+   },
+   "twin_mean": -116839.0,
+   "twin_sd": 76036.0,
+   "p": 0.1138,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83200.0,
+     "j": 8,
+     "entry": 30.22,
+     "peak": 21.7,
+     "xmult": 19.74,
+     "net": 90391.69
+    },
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23150.0,
+     "j": 46,
+     "entry": 10.71,
+     "peak": 13.7,
+     "xmult": 11.59,
+     "net": 50886.85
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 3,
+     "entry": 17.06,
+     "peak": 16.0,
+     "xmult": 6.66,
+     "net": 26933.25
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2025-01-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24050.0,
+     "j": 0,
+     "entry": 22.71,
+     "peak": 8.0,
+     "xmult": 6.24,
+     "net": 17763.44
+    }
+   ],
+   "q": 0.5564
+  },
+  "ema821_adx15-cheap-all-time": {
+   "rule": [
+    "ema821_adx15",
+    "cheap",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 213,
+    "win_pct": 18.8,
+    "peak5": 12,
+    "peak10": 3,
+    "banked5": 3,
+    "banked10": 2,
+    "net": -48666.0,
+    "net_per_day": -198.6,
+    "per_1000": -52.6,
+    "worst_day": -8742.0,
+    "max_dd": -135784.0,
+    "top5": 192377.0,
+    "top5_share": null,
+    "net_wo_top5": -241043.0,
+    "proxy": 8,
+    "ce": 109,
+    "pe": 104,
+    "spread2x": -52005.0,
+    "oor0": -74733.0
+   },
+   "by_year": {
+    "2025": [
+     120,
+     -69239.0
+    ],
+    "2026": [
+     93,
+     20573.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -22387.0
+    ],
+    "FINNIFTY": [
+     18,
+     -6980.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -22133.0
+    ],
+    "NIFTY": [
+     79,
+     25691.0
+    ],
+    "SENSEX": [
+     76,
+     -22857.0
+    ]
+   },
+   "twin_mean": -97817.0,
+   "twin_sd": 73868.0,
+   "p": 0.2315,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83200.0,
+     "j": 8,
+     "entry": 30.22,
+     "peak": 21.7,
+     "xmult": 19.74,
+     "net": 90391.69
+    },
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23150.0,
+     "j": 46,
+     "entry": 10.71,
+     "peak": 13.7,
+     "xmult": 11.59,
+     "net": 50886.85
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 8.0,
+     "xmult": 3.78,
+     "net": 13681.61
+    },
+    {
+     "d": "2026-05-26",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24000.0,
+     "j": 32,
+     "entry": 23.86,
+     "peak": 5.2,
+     "xmult": 3.7,
+     "net": 12495.11
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15-cheap-hero-hold": {
+   "rule": [
+    "ema821_adx15",
+    "cheap",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 119,
+    "win_pct": 10.1,
+    "peak5": 13,
+    "peak10": 3,
+    "banked5": 5,
+    "banked10": 2,
+    "net": 87534.0,
+    "net_per_day": 357.3,
+    "per_1000": 163.3,
+    "worst_day": -9069.0,
+    "max_dd": -74730.0,
+    "top5": 282214.0,
+    "top5_share": 322.4,
+    "net_wo_top5": -194680.0,
+    "proxy": 1,
+    "ce": 60,
+    "pe": 59,
+    "spread2x": 79857.0,
+    "oor0": 85260.0
+   },
+   "by_year": {
+    "2025": [
+     61,
+     10497.0
+    ],
+    "2026": [
+     58,
+     77037.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -4965.0
+    ],
+    "FINNIFTY": [
+     7,
+     -16701.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     -402.0
+    ],
+    "NIFTY": [
+     42,
+     94993.0
+    ],
+    "SENSEX": [
+     48,
+     14609.0
+    ]
+   },
+   "twin_mean": 62634.0,
+   "twin_sd": 97603.0,
+   "p": 0.3413,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72500.0,
+     "j": 38,
+     "entry": 24.91,
+     "peak": 29.5,
+     "xmult": 29.17,
+     "net": 140012.85
+    },
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23150.0,
+     "j": 46,
+     "entry": 10.71,
+     "peak": 13.7,
+     "xmult": 11.59,
+     "net": 50886.85
+    },
+    {
+     "d": "2025-07-31",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24850.0,
+     "j": 65,
+     "entry": 6.6,
+     "peak": 9.3,
+     "xmult": 9.16,
+     "net": 40265.97
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24200.0,
+     "j": 56,
+     "entry": 10.16,
+     "peak": 7.6,
+     "xmult": 6.68,
+     "net": 26126.76
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15-cheap-hero-trail": {
+   "rule": [
+    "ema821_adx15",
+    "cheap",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 119,
+    "win_pct": 16.8,
+    "peak5": 12,
+    "peak10": 2,
+    "banked5": 3,
+    "banked10": 1,
+    "net": -11436.0,
+    "net_per_day": -46.7,
+    "per_1000": -21.3,
+    "worst_day": -9069.0,
+    "max_dd": -91314.0,
+    "top5": 133620.0,
+    "top5_share": null,
+    "net_wo_top5": -145056.0,
+    "proxy": 1,
+    "ce": 60,
+    "pe": 59,
+    "spread2x": -19113.0,
+    "oor0": -13710.0
+   },
+   "by_year": {
+    "2025": [
+     61,
+     -19064.0
+    ],
+    "2026": [
+     58,
+     7629.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -4965.0
+    ],
+    "FINNIFTY": [
+     7,
+     -16701.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     -6199.0
+    ],
+    "NIFTY": [
+     42,
+     79768.0
+    ],
+    "SENSEX": [
+     48,
+     -63339.0
+    ]
+   },
+   "twin_mean": 3884.0,
+   "twin_sd": 74452.0,
+   "p": 0.523,
+   "top": [
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23150.0,
+     "j": 46,
+     "entry": 10.71,
+     "peak": 13.7,
+     "xmult": 11.59,
+     "net": 50886.85
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24200.0,
+     "j": 56,
+     "entry": 10.16,
+     "peak": 7.6,
+     "xmult": 6.68,
+     "net": 26126.76
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2025-11-25",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25950.0,
+     "j": 63,
+     "entry": 16.16,
+     "peak": 5.3,
+     "xmult": 4.39,
+     "net": 16349.74
+    },
+    {
+     "d": "2025-11-25",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 58900.0,
+     "j": 65,
+     "entry": 25.86,
+     "peak": 6.2,
+     "xmult": 4.41,
+     "net": 15335.2
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15-cheap-hero-time": {
+   "rule": [
+    "ema821_adx15",
+    "cheap",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 119,
+    "win_pct": 17.6,
+    "peak5": 12,
+    "peak10": 2,
+    "banked5": 3,
+    "banked10": 1,
+    "net": 4201.0,
+    "net_per_day": 17.1,
+    "per_1000": 7.8,
+    "worst_day": -7358.0,
+    "max_dd": -80869.0,
+    "top5": 133620.0,
+    "top5_share": 3180.8,
+    "net_wo_top5": -129420.0,
+    "proxy": 1,
+    "ce": 60,
+    "pe": 59,
+    "spread2x": -4360.0,
+    "oor0": 1927.0
+   },
+   "by_year": {
+    "2025": [
+     61,
+     -12708.0
+    ],
+    "2026": [
+     58,
+     16909.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -4965.0
+    ],
+    "FINNIFTY": [
+     7,
+     -14140.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     1270.0
+    ],
+    "NIFTY": [
+     42,
+     84540.0
+    ],
+    "SENSEX": [
+     48,
+     -62504.0
+    ]
+   },
+   "twin_mean": 20532.0,
+   "twin_sd": 74504.0,
+   "p": 0.5329,
+   "top": [
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23150.0,
+     "j": 46,
+     "entry": 10.71,
+     "peak": 13.7,
+     "xmult": 11.59,
+     "net": 50886.85
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24200.0,
+     "j": 56,
+     "entry": 10.16,
+     "peak": 7.6,
+     "xmult": 6.68,
+     "net": 26126.76
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2025-11-25",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25950.0,
+     "j": 63,
+     "entry": 16.16,
+     "peak": 5.3,
+     "xmult": 4.39,
+     "net": 16349.74
+    },
+    {
+     "d": "2025-11-25",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 58900.0,
+     "j": 65,
+     "entry": 25.86,
+     "peak": 6.2,
+     "xmult": 4.41,
+     "net": 15335.2
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15-otm2-all-hold": {
+   "rule": [
+    "ema821_adx15",
+    "otm2",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 214,
+    "win_pct": 8.9,
+    "peak5": 17,
+    "peak10": 3,
+    "banked5": 6,
+    "banked10": 3,
+    "net": -124909.0,
+    "net_per_day": -509.8,
+    "per_1000": -141.3,
+    "worst_day": -10258.0,
+    "max_dd": -166085.0,
+    "top5": 190621.0,
+    "top5_share": null,
+    "net_wo_top5": -315530.0,
+    "proxy": 1,
+    "ce": 110,
+    "pe": 104,
+    "spread2x": -127007.0,
+    "oor0": -124909.0
+   },
+   "by_year": {
+    "2025": [
+     121,
+     -134034.0
+    ],
+    "2026": [
+     93,
+     9125.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -25355.0
+    ],
+    "FINNIFTY": [
+     18,
+     -33472.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -28458.0
+    ],
+    "NIFTY": [
+     78,
+     17947.0
+    ],
+    "SENSEX": [
+     78,
+     -55571.0
+    ]
+   },
+   "twin_mean": -83981.0,
+   "twin_sd": 82362.0,
+   "p": 0.6687,
+   "top": [
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23100.0,
+     "j": 46,
+     "entry": 6.45,
+     "peak": 15.9,
+     "xmult": 11.54,
+     "net": 50850.87
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 8,
+     "entry": 66.53,
+     "peak": 12.8,
+     "xmult": 11.91,
+     "net": 43419.72
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 10.55,
+     "net": 43124.97
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84600.0,
+     "j": 3,
+     "entry": 54.88,
+     "peak": 7.7,
+     "xmult": 7.58,
+     "net": 28757.1
+    },
+    {
+     "d": "2026-08-04",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24500.0,
+     "j": 14,
+     "entry": 10.86,
+     "peak": 7.7,
+     "xmult": 5.97,
+     "net": 24468.44
+    }
+   ],
+   "q": 0.8141
+  },
+  "ema821_adx15-otm2-all-trail": {
+   "rule": [
+    "ema821_adx15",
+    "otm2",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 214,
+    "win_pct": 15.4,
+    "peak5": 16,
+    "peak10": 3,
+    "banked5": 4,
+    "banked10": 1,
+    "net": -83450.0,
+    "net_per_day": -340.6,
+    "per_1000": -94.4,
+    "worst_day": -9672.0,
+    "max_dd": -116812.0,
+    "top5": 129503.0,
+    "top5_share": null,
+    "net_wo_top5": -212953.0,
+    "proxy": 1,
+    "ce": 110,
+    "pe": 104,
+    "spread2x": -86685.0,
+    "oor0": -83450.0
+   },
+   "by_year": {
+    "2025": [
+     121,
+     -107982.0
+    ],
+    "2026": [
+     93,
+     24532.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -19475.0
+    ],
+    "FINNIFTY": [
+     18,
+     -17249.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -19633.0
+    ],
+    "NIFTY": [
+     78,
+     18499.0
+    ],
+    "SENSEX": [
+     78,
+     -45592.0
+    ]
+   },
+   "twin_mean": -94682.0,
+   "twin_sd": 64833.0,
+   "p": 0.4311,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 8,
+     "entry": 66.53,
+     "peak": 12.8,
+     "xmult": 11.91,
+     "net": 43419.72
+    },
+    {
+     "d": "2026-08-04",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24500.0,
+     "j": 14,
+     "entry": 10.86,
+     "peak": 7.7,
+     "xmult": 5.97,
+     "net": 24468.44
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    },
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23100.0,
+     "j": 46,
+     "entry": 6.45,
+     "peak": 12.9,
+     "xmult": 4.8,
+     "net": 18303.5
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15-otm2-all-time": {
+   "rule": [
+    "ema821_adx15",
+    "otm2",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 214,
+    "win_pct": 22.0,
+    "peak5": 10,
+    "peak10": 3,
+    "banked5": 3,
+    "banked10": 1,
+    "net": -84694.0,
+    "net_per_day": -345.7,
+    "per_1000": -95.8,
+    "worst_day": -9526.0,
+    "max_dd": -110502.0,
+    "top5": 119486.0,
+    "top5_share": null,
+    "net_wo_top5": -204180.0,
+    "proxy": 1,
+    "ce": 110,
+    "pe": 104,
+    "spread2x": -88532.0,
+    "oor0": -84694.0
+   },
+   "by_year": {
+    "2025": [
+     121,
+     -87367.0
+    ],
+    "2026": [
+     93,
+     2673.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -17085.0
+    ],
+    "FINNIFTY": [
+     18,
+     -5009.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -27116.0
+    ],
+    "NIFTY": [
+     78,
+     -9622.0
+    ],
+    "SENSEX": [
+     78,
+     -25861.0
+    ]
+   },
+   "twin_mean": -96837.0,
+   "twin_sd": 62679.0,
+   "p": 0.4072,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 8,
+     "entry": 66.53,
+     "peak": 12.8,
+     "xmult": 11.91,
+     "net": 43419.72
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    },
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23100.0,
+     "j": 46,
+     "entry": 6.45,
+     "peak": 12.9,
+     "xmult": 4.8,
+     "net": 18303.5
+    },
+    {
+     "d": "2025-07-31",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24850.0,
+     "j": 22,
+     "entry": 16.11,
+     "peak": 8.2,
+     "xmult": 4.01,
+     "net": 14451.42
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15-otm2-hero-hold": {
+   "rule": [
+    "ema821_adx15",
+    "otm2",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 121,
+    "win_pct": 11.6,
+    "peak5": 13,
+    "peak10": 3,
+    "banked5": 6,
+    "banked10": 2,
+    "net": -14527.0,
+    "net_per_day": -59.3,
+    "per_1000": -26.5,
+    "worst_day": -9309.0,
+    "max_dd": -109409.0,
+    "top5": 182547.0,
+    "top5_share": null,
+    "net_wo_top5": -197074.0,
+    "proxy": 1,
+    "ce": 60,
+    "pe": 61,
+    "spread2x": -17566.0,
+    "oor0": -14527.0
+   },
+   "by_year": {
+    "2025": [
+     63,
+     -4235.0
+    ],
+    "2026": [
+     58,
+     -10293.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -11506.0
+    ],
+    "FINNIFTY": [
+     7,
+     -17306.0
+    ],
+    "MIDCPNIFTY": [
+     13,
+     -4975.0
+    ],
+    "NIFTY": [
+     43,
+     99810.0
+    ],
+    "SENSEX": [
+     48,
+     -80550.0
+    ]
+   },
+   "twin_mean": 52800.0,
+   "twin_sd": 88886.0,
+   "p": 0.7784,
+   "top": [
+    {
+     "d": "2025-02-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23100.0,
+     "j": 46,
+     "entry": 6.45,
+     "peak": 15.9,
+     "xmult": 11.54,
+     "net": 50850.87
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 10.55,
+     "net": 43124.97
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 56,
+     "entry": 3.4,
+     "peak": 11.1,
+     "xmult": 8.61,
+     "net": 36892.87
+    },
+    {
+     "d": "2025-07-31",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24800.0,
+     "j": 65,
+     "entry": 2.0,
+     "peak": 7.8,
+     "xmult": 6.97,
+     "net": 29435.81
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    }
+   ],
+   "q": 0.8457
+  },
+  "ema821_adx15-otm2-hero-trail": {
+   "rule": [
+    "ema821_adx15",
+    "otm2",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 121,
+    "win_pct": 15.7,
+    "peak5": 12,
+    "peak10": 3,
+    "banked5": 4,
+    "banked10": 0,
+    "net": -36291.0,
+    "net_per_day": -148.1,
+    "per_1000": -66.1,
+    "worst_day": -9309.0,
+    "max_dd": -98625.0,
+    "top5": 119410.0,
+    "top5_share": null,
+    "net_wo_top5": -155701.0,
+    "proxy": 1,
+    "ce": 60,
+    "pe": 61,
+    "spread2x": -38567.0,
+    "oor0": -36291.0
+   },
+   "by_year": {
+    "2025": [
+     63,
+     -72096.0
+    ],
+    "2026": [
+     58,
+     35805.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -11506.0
+    ],
+    "FINNIFTY": [
+     7,
+     -17306.0
+    ],
+    "MIDCPNIFTY": [
+     13,
+     -6460.0
+    ],
+    "NIFTY": [
+     43,
+     48747.0
+    ],
+    "SENSEX": [
+     48,
+     -49766.0
+    ]
+   },
+   "twin_mean": -21232.0,
+   "twin_sd": 60992.0,
+   "p": 0.5928,
+   "top": [
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 56,
+     "entry": 3.4,
+     "peak": 11.1,
+     "xmult": 8.61,
+     "net": 36892.87
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2025-11-25",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25900.0,
+     "j": 63,
+     "entry": 4.5,
+     "peak": 8.0,
+     "xmult": 4.94,
+     "net": 18532.82
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15-otm2-hero-time": {
+   "rule": [
+    "ema821_adx15",
+    "otm2",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 121,
+    "win_pct": 16.5,
+    "peak5": 12,
+    "peak10": 3,
+    "banked5": 4,
+    "banked10": 0,
+    "net": -21511.0,
+    "net_per_day": -87.8,
+    "per_1000": -39.2,
+    "worst_day": -7099.0,
+    "max_dd": -88584.0,
+    "top5": 119410.0,
+    "top5_share": null,
+    "net_wo_top5": -140921.0,
+    "proxy": 1,
+    "ce": 60,
+    "pe": 61,
+    "spread2x": -24728.0,
+    "oor0": -21511.0
+   },
+   "by_year": {
+    "2025": [
+     63,
+     -65988.0
+    ],
+    "2026": [
+     58,
+     44477.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -10596.0
+    ],
+    "FINNIFTY": [
+     7,
+     -14926.0
+    ],
+    "MIDCPNIFTY": [
+     13,
+     447.0
+    ],
+    "NIFTY": [
+     43,
+     53112.0
+    ],
+    "SENSEX": [
+     48,
+     -49549.0
+    ]
+   },
+   "twin_mean": -8311.0,
+   "twin_sd": 61019.0,
+   "p": 0.5589,
+   "top": [
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 56,
+     "entry": 3.4,
+     "peak": 11.1,
+     "xmult": 8.61,
+     "net": 36892.87
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2025-11-25",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25900.0,
+     "j": 63,
+     "entry": 4.5,
+     "peak": 8.0,
+     "xmult": 4.94,
+     "net": 18532.82
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15_lock-cheap-all-step": {
+   "rule": [
+    "ema821_adx15_lock",
+    "cheap",
+    "all",
+    "step"
+   ],
+   "m": {
+    "trades": 213,
+    "win_pct": 33.3,
+    "peak5": 3,
+    "peak10": 1,
+    "banked5": 2,
+    "banked10": 1,
+    "net": -39750.0,
+    "net_per_day": -162.2,
+    "per_1000": -42.9,
+    "worst_day": -8482.0,
+    "max_dd": -71058.0,
+    "top5": 92632.0,
+    "top5_share": null,
+    "net_wo_top5": -132383.0,
+    "proxy": 6,
+    "ce": 109,
+    "pe": 104,
+    "spread2x": -48363.0,
+    "oor0": -65220.0
+   },
+   "by_year": {
+    "2025": [
+     120,
+     -63451.0
+    ],
+    "2026": [
+     93,
+     23701.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -13381.0
+    ],
+    "FINNIFTY": [
+     18,
+     -12994.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -20156.0
+    ],
+    "NIFTY": [
+     79,
+     -14278.0
+    ],
+    "SENSEX": [
+     76,
+     21059.0
+    ]
+   },
+   "twin_mean": -44760.0,
+   "twin_sd": 49452.0,
+   "p": 0.4331,
+   "top": [
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 3,
+     "entry": 17.06,
+     "peak": 16.0,
+     "xmult": 11.66,
+     "net": 50775.03
+    },
+    {
+     "d": "2025-07-24",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25150.0,
+     "j": 3,
+     "entry": 18.56,
+     "peak": 7.8,
+     "xmult": 5.84,
+     "net": 20106.85
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 4.2,
+     "xmult": 2.9,
+     "net": 9338.21
+    },
+    {
+     "d": "2026-04-09",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76300.0,
+     "j": 0,
+     "entry": 29.66,
+     "peak": 5.0,
+     "xmult": 2.83,
+     "net": 8629.48
+    },
+    {
+     "d": "2025-09-23",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 25200.0,
+     "j": 36,
+     "entry": 16.36,
+     "peak": 3.8,
+     "xmult": 1.78,
+     "net": 3782.77
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15_lock-cheap-hero-step": {
+   "rule": [
+    "ema821_adx15_lock",
+    "cheap",
+    "hero",
+    "step"
+   ],
+   "m": {
+    "trades": 119,
+    "win_pct": 31.1,
+    "peak5": 4,
+    "peak10": 0,
+    "banked5": 0,
+    "banked10": 0,
+    "net": -19993.0,
+    "net_per_day": -81.6,
+    "per_1000": -37.3,
+    "worst_day": -7358.0,
+    "max_dd": -43947.0,
+    "top5": 65102.0,
+    "top5_share": null,
+    "net_wo_top5": -85095.0,
+    "proxy": 1,
+    "ce": 60,
+    "pe": 59,
+    "spread2x": -22808.0,
+    "oor0": -22268.0
+   },
+   "by_year": {
+    "2025": [
+     61,
+     -39778.0
+    ],
+    "2026": [
+     58,
+     19785.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -7529.0
+    ],
+    "FINNIFTY": [
+     7,
+     -9637.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     12433.0
+    ],
+    "NIFTY": [
+     42,
+     -5842.0
+    ],
+    "SENSEX": [
+     48,
+     -9418.0
+    ]
+   },
+   "twin_mean": -9924.0,
+   "twin_sd": 40729.0,
+   "p": 0.5689,
+   "top": [
+    {
+     "d": "2026-01-14",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 46,
+     "entry": 22.01,
+     "peak": 7.5,
+     "xmult": 4.68,
+     "net": 17703.92
+    },
+    {
+     "d": "2026-02-26",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 82400.0,
+     "j": 63,
+     "entry": 11.76,
+     "peak": 7.9,
+     "xmult": 3.92,
+     "net": 14349.64
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14900.0,
+     "j": 45,
+     "entry": 16.21,
+     "peak": 5.3,
+     "xmult": 4.6,
+     "net": 13932.66
+    },
+    {
+     "d": "2025-07-31",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24850.0,
+     "j": 65,
+     "entry": 6.6,
+     "peak": 5.3,
+     "xmult": 2.99,
+     "net": 9777.14
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 4.2,
+     "xmult": 2.9,
+     "net": 9338.21
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema821_adx15_lock-otm2-all-step": {
+   "rule": [
+    "ema821_adx15_lock",
+    "otm2",
+    "all",
+    "step"
+   ],
+   "m": {
+    "trades": 214,
+    "win_pct": 33.6,
+    "peak5": 2,
+    "peak10": 0,
+    "banked5": 2,
+    "banked10": 0,
+    "net": -47088.0,
+    "net_per_day": -192.2,
+    "per_1000": -53.3,
+    "worst_day": -7968.0,
+    "max_dd": -60904.0,
+    "top5": 78665.0,
+    "top5_share": null,
+    "net_wo_top5": -125753.0,
+    "proxy": 0,
+    "ce": 110,
+    "pe": 104,
+    "spread2x": -51688.0,
+    "oor0": -47088.0
+   },
+   "by_year": {
+    "2025": [
+     121,
+     -34947.0
+    ],
+    "2026": [
+     93,
+     -12142.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -4796.0
+    ],
+    "FINNIFTY": [
+     18,
+     -10932.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -22596.0
+    ],
+    "NIFTY": [
+     78,
+     13004.0
+    ],
+    "SENSEX": [
+     78,
+     -21768.0
+    ]
+   },
+   "twin_mean": -26771.0,
+   "twin_sd": 56487.0,
+   "p": 0.6208,
+   "top": [
+    {
+     "d": "2025-07-24",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25100.0,
+     "j": 3,
+     "entry": 10.26,
+     "peak": 10.0,
+     "xmult": 8.09,
+     "net": 32594.03
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84600.0,
+     "j": 3,
+     "entry": 54.88,
+     "peak": 7.7,
+     "xmult": 5.93,
+     "net": 21534.73
+    },
+    {
+     "d": "2026-09-15",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23300.0,
+     "j": 9,
+     "entry": 31.52,
+     "peak": 4.7,
+     "xmult": 3.6,
+     "net": 10585.2
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 4.2,
+     "xmult": 2.9,
+     "net": 9338.21
+    },
+    {
+     "d": "2025-09-16",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 25200.0,
+     "j": 1,
+     "entry": 12.36,
+     "peak": 3.2,
+     "xmult": 2.01,
+     "net": 4612.82
+    }
+   ],
+   "q": 0.7917
+  },
+  "ema821_adx15_lock-otm2-hero-step": {
+   "rule": [
+    "ema821_adx15_lock",
+    "otm2",
+    "hero",
+    "step"
+   ],
+   "m": {
+    "trades": 121,
+    "win_pct": 33.1,
+    "peak5": 4,
+    "peak10": 0,
+    "banked5": 1,
+    "banked10": 0,
+    "net": -29557.0,
+    "net_per_day": -120.6,
+    "per_1000": -53.8,
+    "worst_day": -8009.0,
+    "max_dd": -50480.0,
+    "top5": 65832.0,
+    "top5_share": null,
+    "net_wo_top5": -95390.0,
+    "proxy": 0,
+    "ce": 60,
+    "pe": 61,
+    "spread2x": -37142.0,
+    "oor0": -29557.0
+   },
+   "by_year": {
+    "2025": [
+     63,
+     -47642.0
+    ],
+    "2026": [
+     58,
+     18084.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -7671.0
+    ],
+    "FINNIFTY": [
+     7,
+     -8099.0
+    ],
+    "MIDCPNIFTY": [
+     13,
+     12962.0
+    ],
+    "NIFTY": [
+     43,
+     -13005.0
+    ],
+    "SENSEX": [
+     48,
+     -13744.0
+    ]
+   },
+   "twin_mean": -23216.0,
+   "twin_sd": 39999.0,
+   "p": 0.5389,
+   "top": [
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 5.37,
+     "net": 17731.3
+    },
+    {
+     "d": "2026-02-26",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 82400.0,
+     "j": 63,
+     "entry": 11.76,
+     "peak": 7.9,
+     "xmult": 3.92,
+     "net": 14349.64
+    },
+    {
+     "d": "2026-01-14",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83500.0,
+     "j": 46,
+     "entry": 39.42,
+     "peak": 6.2,
+     "xmult": 3.93,
+     "net": 13781.79
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 56,
+     "entry": 3.4,
+     "peak": 6.6,
+     "xmult": 3.2,
+     "net": 10631.4
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 4.2,
+     "xmult": 2.9,
+     "net": 9338.21
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema921_adx20-cheap-all-hold": {
+   "rule": [
+    "ema921_adx20",
+    "cheap",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 169,
+    "win_pct": 8.3,
+    "peak5": 19,
+    "peak10": 5,
+    "banked5": 5,
+    "banked10": 3,
+    "net": 63987.0,
+    "net_per_day": 261.2,
+    "per_1000": 86.3,
+    "worst_day": -11288.0,
+    "max_dd": -167286.0,
+    "top5": 356819.0,
+    "top5_share": 557.6,
+    "net_wo_top5": -292833.0,
+    "proxy": 5,
+    "ce": 98,
+    "pe": 71,
+    "spread2x": 61482.0,
+    "oor0": 52504.0
+   },
+   "by_year": {
+    "2025": [
+     91,
+     -164668.0
+    ],
+    "2026": [
+     78,
+     228655.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     15,
+     -37872.0
+    ],
+    "FINNIFTY": [
+     13,
+     -30021.0
+    ],
+    "MIDCPNIFTY": [
+     14,
+     5673.0
+    ],
+    "NIFTY": [
+     62,
+     -23359.0
+    ],
+    "SENSEX": [
+     65,
+     149566.0
+    ]
+   },
+   "twin_mean": -67680.0,
+   "twin_sd": 102011.0,
+   "p": 0.1138,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72500.0,
+     "j": 38,
+     "entry": 24.91,
+     "peak": 29.5,
+     "xmult": 29.17,
+     "net": 140012.85
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83200.0,
+     "j": 9,
+     "entry": 22.81,
+     "peak": 28.7,
+     "xmult": 26.16,
+     "net": 114484.03
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 3,
+     "entry": 17.06,
+     "peak": 16.0,
+     "xmult": 12.63,
+     "net": 55383.53
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24200.0,
+     "j": 57,
+     "entry": 11.11,
+     "peak": 6.9,
+     "xmult": 6.1,
+     "net": 22016.95
+    }
+   ],
+   "q": 0.5564
+  },
+  "ema921_adx20-cheap-all-trail": {
+   "rule": [
+    "ema921_adx20",
+    "cheap",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 169,
+    "win_pct": 16.0,
+    "peak5": 16,
+    "peak10": 3,
+    "banked5": 4,
+    "banked10": 1,
+    "net": 20446.0,
+    "net_per_day": 83.5,
+    "per_1000": 27.6,
+    "worst_day": -9552.0,
+    "max_dd": -117927.0,
+    "top5": 203331.0,
+    "top5_share": 994.5,
+    "net_wo_top5": -182885.0,
+    "proxy": 5,
+    "ce": 98,
+    "pe": 71,
+    "spread2x": 17941.0,
+    "oor0": 8964.0
+   },
+   "by_year": {
+    "2025": [
+     91,
+     -115309.0
+    ],
+    "2026": [
+     78,
+     135756.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     15,
+     -20168.0
+    ],
+    "FINNIFTY": [
+     13,
+     -10200.0
+    ],
+    "MIDCPNIFTY": [
+     14,
+     5673.0
+    ],
+    "NIFTY": [
+     62,
+     10364.0
+    ],
+    "SENSEX": [
+     65,
+     34778.0
+    ]
+   },
+   "twin_mean": -94925.0,
+   "twin_sd": 69389.0,
+   "p": 0.0639,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83200.0,
+     "j": 9,
+     "entry": 22.81,
+     "peak": 28.7,
+     "xmult": 26.16,
+     "net": 114484.03
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 3,
+     "entry": 17.06,
+     "peak": 16.0,
+     "xmult": 6.66,
+     "net": 26933.25
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24200.0,
+     "j": 57,
+     "entry": 11.11,
+     "peak": 6.9,
+     "xmult": 6.1,
+     "net": 22016.95
+    },
+    {
+     "d": "2026-08-04",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24550.0,
+     "j": 14,
+     "entry": 22.26,
+     "peak": 5.6,
+     "xmult": 4.47,
+     "net": 14975.38
+    }
+   ],
+   "q": 0.4142
+  },
+  "ema921_adx20-cheap-all-time": {
+   "rule": [
+    "ema921_adx20",
+    "cheap",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 169,
+    "win_pct": 18.3,
+    "peak5": 12,
+    "peak10": 2,
+    "banked5": 3,
+    "banked10": 1,
+    "net": -1049.0,
+    "net_per_day": -4.3,
+    "per_1000": -1.4,
+    "worst_day": -8833.0,
+    "max_dd": -130128.0,
+    "top5": 189037.0,
+    "top5_share": null,
+    "net_wo_top5": -190086.0,
+    "proxy": 5,
+    "ce": 98,
+    "pe": 71,
+    "spread2x": -4057.0,
+    "oor0": -12795.0
+   },
+   "by_year": {
+    "2025": [
+     91,
+     -102390.0
+    ],
+    "2026": [
+     78,
+     101342.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     15,
+     -14955.0
+    ],
+    "FINNIFTY": [
+     13,
+     -2628.0
+    ],
+    "MIDCPNIFTY": [
+     14,
+     1927.0
+    ],
+    "NIFTY": [
+     62,
+     -8506.0
+    ],
+    "SENSEX": [
+     65,
+     23113.0
+    ]
+   },
+   "twin_mean": -79906.0,
+   "twin_sd": 64598.0,
+   "p": 0.1377,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83200.0,
+     "j": 9,
+     "entry": 22.81,
+     "peak": 28.7,
+     "xmult": 26.16,
+     "net": 114484.03
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24200.0,
+     "j": 57,
+     "entry": 11.11,
+     "peak": 6.9,
+     "xmult": 6.1,
+     "net": 22016.95
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14900.0,
+     "j": 45,
+     "entry": 16.21,
+     "peak": 5.3,
+     "xmult": 4.6,
+     "net": 13932.66
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 8.0,
+     "xmult": 3.78,
+     "net": 13681.61
+    }
+   ],
+   "q": 0.6059
+  },
+  "ema921_adx20-cheap-hero-hold": {
+   "rule": [
+    "ema921_adx20",
+    "cheap",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 75,
+    "win_pct": 12.0,
+    "peak5": 9,
+    "peak10": 3,
+    "banked5": 5,
+    "banked10": 2,
+    "net": 137909.0,
+    "net_per_day": 562.9,
+    "per_1000": 412.3,
+    "worst_day": -5818.0,
+    "max_dd": -50257.0,
+    "top5": 273572.0,
+    "top5_share": 198.4,
+    "net_wo_top5": -135663.0,
+    "proxy": 1,
+    "ce": 43,
+    "pe": 32,
+    "spread2x": 131285.0,
+    "oor0": 135635.0
+   },
+   "by_year": {
+    "2025": [
+     36,
+     33169.0
+    ],
+    "2026": [
+     39,
+     104740.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     4,
+     9477.0
+    ],
+    "FINNIFTY": [
+     3,
+     -7668.0
+    ],
+    "MIDCPNIFTY": [
+     8,
+     -691.0
+    ],
+    "NIFTY": [
+     26,
+     14595.0
+    ],
+    "SENSEX": [
+     34,
+     122196.0
+    ]
+   },
+   "twin_mean": 65001.0,
+   "twin_sd": 82362.0,
+   "p": 0.1856,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72500.0,
+     "j": 38,
+     "entry": 24.91,
+     "peak": 29.5,
+     "xmult": 29.17,
+     "net": 140012.85
+    },
+    {
+     "d": "2025-10-23",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84900.0,
+     "j": 47,
+     "entry": 18.81,
+     "peak": 16.2,
+     "xmult": 15.17,
+     "net": 69126.91
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24200.0,
+     "j": 57,
+     "entry": 11.11,
+     "peak": 6.9,
+     "xmult": 6.1,
+     "net": 22016.95
+    },
+    {
+     "d": "2025-07-31",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 56100.0,
+     "j": 64,
+     "entry": 20.91,
+     "peak": 5.4,
+     "xmult": 5.0,
+     "net": 17494.02
+    }
+   ],
+   "q": 0.7101
+  },
+  "ema921_adx20-cheap-hero-trail": {
+   "rule": [
+    "ema921_adx20",
+    "cheap",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 75,
+    "win_pct": 18.7,
+    "peak5": 7,
+    "peak10": 1,
+    "banked5": 3,
+    "banked10": 0,
+    "net": -21902.0,
+    "net_per_day": -89.4,
+    "per_1000": -65.5,
+    "worst_day": -5818.0,
+    "max_dd": -58986.0,
+    "top5": 92593.0,
+    "top5_share": null,
+    "net_wo_top5": -114495.0,
+    "proxy": 1,
+    "ce": 43,
+    "pe": 32,
+    "spread2x": -28526.0,
+    "oor0": -24176.0
+   },
+   "by_year": {
+    "2025": [
+     36,
+     -26934.0
+    ],
+    "2026": [
+     39,
+     5031.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     4,
+     9477.0
+    ],
+    "FINNIFTY": [
+     3,
+     -7668.0
+    ],
+    "MIDCPNIFTY": [
+     8,
+     -691.0
+    ],
+    "NIFTY": [
+     26,
+     36041.0
+    ],
+    "SENSEX": [
+     34,
+     -59062.0
+    ]
+   },
+   "twin_mean": 4272.0,
+   "twin_sd": 53468.0,
+   "p": 0.6846,
+   "top": [
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24200.0,
+     "j": 57,
+     "entry": 11.11,
+     "peak": 6.9,
+     "xmult": 6.1,
+     "net": 22016.95
+    },
+    {
+     "d": "2025-07-31",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 56100.0,
+     "j": 64,
+     "entry": 20.91,
+     "peak": 5.4,
+     "xmult": 5.0,
+     "net": 17494.02
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24050.0,
+     "j": 45,
+     "entry": 17.56,
+     "peak": 5.8,
+     "xmult": 4.13,
+     "net": 14227.48
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14900.0,
+     "j": 45,
+     "entry": 16.21,
+     "peak": 5.3,
+     "xmult": 4.6,
+     "net": 13932.66
+    }
+   ],
+   "q": 0.8141
+  },
+  "ema921_adx20-cheap-hero-time": {
+   "rule": [
+    "ema921_adx20",
+    "cheap",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 75,
+    "win_pct": 17.3,
+    "peak5": 7,
+    "peak10": 1,
+    "banked5": 3,
+    "banked10": 0,
+    "net": -14947.0,
+    "net_per_day": -61.0,
+    "per_1000": -44.7,
+    "worst_day": -5317.0,
+    "max_dd": -55537.0,
+    "top5": 92593.0,
+    "top5_share": null,
+    "net_wo_top5": -107540.0,
+    "proxy": 1,
+    "ce": 43,
+    "pe": 32,
+    "spread2x": -22455.0,
+    "oor0": -17222.0
+   },
+   "by_year": {
+    "2025": [
+     36,
+     -25963.0
+    ],
+    "2026": [
+     39,
+     11015.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     4,
+     9477.0
+    ],
+    "FINNIFTY": [
+     3,
+     -6130.0
+    ],
+    "MIDCPNIFTY": [
+     8,
+     2181.0
+    ],
+    "NIFTY": [
+     26,
+     38148.0
+    ],
+    "SENSEX": [
+     34,
+     -58623.0
+    ]
+   },
+   "twin_mean": 16250.0,
+   "twin_sd": 53325.0,
+   "p": 0.7106,
+   "top": [
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24200.0,
+     "j": 57,
+     "entry": 11.11,
+     "peak": 6.9,
+     "xmult": 6.1,
+     "net": 22016.95
+    },
+    {
+     "d": "2025-07-31",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 56100.0,
+     "j": 64,
+     "entry": 20.91,
+     "peak": 5.4,
+     "xmult": 5.0,
+     "net": 17494.02
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24050.0,
+     "j": 45,
+     "entry": 17.56,
+     "peak": 5.8,
+     "xmult": 4.13,
+     "net": 14227.48
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14900.0,
+     "j": 45,
+     "entry": 16.21,
+     "peak": 5.3,
+     "xmult": 4.6,
+     "net": 13932.66
+    }
+   ],
+   "q": 0.8228
+  },
+  "ema921_adx20-otm2-all-hold": {
+   "rule": [
+    "ema921_adx20",
+    "otm2",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 174,
+    "win_pct": 9.8,
+    "peak5": 15,
+    "peak10": 4,
+    "banked5": 7,
+    "banked10": 2,
+    "net": -59786.0,
+    "net_per_day": -244.0,
+    "per_1000": -82.3,
+    "worst_day": -10529.0,
+    "max_dd": -149721.0,
+    "top5": 178471.0,
+    "top5_share": null,
+    "net_wo_top5": -238257.0,
+    "proxy": 1,
+    "ce": 101,
+    "pe": 73,
+    "spread2x": -62976.0,
+    "oor0": -59786.0
+   },
+   "by_year": {
+    "2025": [
+     95,
+     -147331.0
+    ],
+    "2026": [
+     79,
+     87544.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     15,
+     -30389.0
+    ],
+    "FINNIFTY": [
+     13,
+     -22100.0
+    ],
+    "MIDCPNIFTY": [
+     14,
+     6808.0
+    ],
+    "NIFTY": [
+     63,
+     4088.0
+    ],
+    "SENSEX": [
+     69,
+     -18193.0
+    ]
+   },
+   "twin_mean": -47176.0,
+   "twin_sd": 77480.0,
+   "p": 0.5329,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83500.0,
+     "j": 9,
+     "entry": 78.64,
+     "peak": 12.1,
+     "xmult": 11.43,
+     "net": 49040.84
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 10.55,
+     "net": 43124.97
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 57,
+     "entry": 3.75,
+     "peak": 10.0,
+     "xmult": 7.81,
+     "net": 33079.48
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84600.0,
+     "j": 3,
+     "entry": 54.88,
+     "peak": 7.7,
+     "xmult": 7.58,
+     "net": 28757.1
+    },
+    {
+     "d": "2026-08-04",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24500.0,
+     "j": 14,
+     "entry": 10.86,
+     "peak": 7.7,
+     "xmult": 5.97,
+     "net": 24468.44
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema921_adx20-otm2-all-trail": {
+   "rule": [
+    "ema921_adx20",
+    "otm2",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 174,
+    "win_pct": 16.1,
+    "peak5": 13,
+    "peak10": 4,
+    "banked5": 7,
+    "banked10": 1,
+    "net": -18724.0,
+    "net_per_day": -76.4,
+    "per_1000": -25.8,
+    "worst_day": -9598.0,
+    "max_dd": -138154.0,
+    "top5": 149900.0,
+    "top5_share": null,
+    "net_wo_top5": -168624.0,
+    "proxy": 1,
+    "ce": 101,
+    "pe": 73,
+    "spread2x": -21914.0,
+    "oor0": -18724.0
+   },
+   "by_year": {
+    "2025": [
+     95,
+     -123650.0
+    ],
+    "2026": [
+     79,
+     104926.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     15,
+     -19956.0
+    ],
+    "FINNIFTY": [
+     13,
+     -9224.0
+    ],
+    "MIDCPNIFTY": [
+     14,
+     6808.0
+    ],
+    "NIFTY": [
+     63,
+     21216.0
+    ],
+    "SENSEX": [
+     69,
+     -17568.0
+    ]
+   },
+   "twin_mean": -43854.0,
+   "twin_sd": 63588.0,
+   "p": 0.3333,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83500.0,
+     "j": 9,
+     "entry": 78.64,
+     "peak": 12.1,
+     "xmult": 11.43,
+     "net": 49040.84
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 57,
+     "entry": 3.75,
+     "peak": 10.0,
+     "xmult": 7.81,
+     "net": 33079.48
+    },
+    {
+     "d": "2026-08-04",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24500.0,
+     "j": 14,
+     "entry": 10.86,
+     "peak": 7.7,
+     "xmult": 5.97,
+     "net": 24468.44
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema921_adx20-otm2-all-time": {
+   "rule": [
+    "ema921_adx20",
+    "otm2",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 174,
+    "win_pct": 21.8,
+    "peak5": 9,
+    "peak10": 3,
+    "banked5": 5,
+    "banked10": 1,
+    "net": -32110.0,
+    "net_per_day": -131.1,
+    "per_1000": -44.2,
+    "worst_day": -9590.0,
+    "max_dd": -131077.0,
+    "top5": 146105.0,
+    "top5_share": null,
+    "net_wo_top5": -178214.0,
+    "proxy": 1,
+    "ce": 101,
+    "pe": 73,
+    "spread2x": -35300.0,
+    "oor0": -32110.0
+   },
+   "by_year": {
+    "2025": [
+     95,
+     -108374.0
+    ],
+    "2026": [
+     79,
+     76265.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     15,
+     -15545.0
+    ],
+    "FINNIFTY": [
+     13,
+     -273.0
+    ],
+    "MIDCPNIFTY": [
+     14,
+     363.0
+    ],
+    "NIFTY": [
+     63,
+     -11414.0
+    ],
+    "SENSEX": [
+     69,
+     -5240.0
+    ]
+   },
+   "twin_mean": -54131.0,
+   "twin_sd": 60190.0,
+   "p": 0.3333,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83500.0,
+     "j": 9,
+     "entry": 78.64,
+     "peak": 12.1,
+     "xmult": 11.43,
+     "net": 49040.84
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 57,
+     "entry": 3.75,
+     "peak": 10.0,
+     "xmult": 7.81,
+     "net": 33079.48
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema921_adx20-otm2-hero-hold": {
+   "rule": [
+    "ema921_adx20",
+    "otm2",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 80,
+    "win_pct": 10.0,
+    "peak5": 9,
+    "peak10": 3,
+    "banked5": 6,
+    "banked10": 2,
+    "net": 16760.0,
+    "net_per_day": 68.4,
+    "per_1000": 46.5,
+    "worst_day": -8241.0,
+    "max_dd": -65172.0,
+    "top5": 168247.0,
+    "top5_share": 1003.9,
+    "net_wo_top5": -151487.0,
+    "proxy": 1,
+    "ce": 42,
+    "pe": 38,
+    "spread2x": 14683.0,
+    "oor0": 16760.0
+   },
+   "by_year": {
+    "2025": [
+     40,
+     11963.0
+    ],
+    "2026": [
+     40,
+     4797.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     4,
+     8710.0
+    ],
+    "FINNIFTY": [
+     4,
+     -10702.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     1243.0
+    ],
+    "NIFTY": [
+     27,
+     27551.0
+    ],
+    "SENSEX": [
+     36,
+     -10043.0
+    ]
+   },
+   "twin_mean": 77371.0,
+   "twin_sd": 77468.0,
+   "p": 0.7784,
+   "top": [
+    {
+     "d": "2025-10-23",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 85000.0,
+     "j": 47,
+     "entry": 33.42,
+     "peak": 12.1,
+     "xmult": 11.53,
+     "net": 49127.77
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 10.55,
+     "net": 43124.97
+    },
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 57,
+     "entry": 3.75,
+     "peak": 10.0,
+     "xmult": 7.81,
+     "net": 33079.48
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    }
+   ],
+   "q": 0.8457
+  },
+  "ema921_adx20-otm2-hero-trail": {
+   "rule": [
+    "ema921_adx20",
+    "otm2",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 80,
+    "win_pct": 15.0,
+    "peak5": 9,
+    "peak10": 3,
+    "banked5": 5,
+    "banked10": 0,
+    "net": -1829.0,
+    "net_per_day": -7.5,
+    "per_1000": -5.1,
+    "worst_day": -8241.0,
+    "max_dd": -65064.0,
+    "top5": 114558.0,
+    "top5_share": null,
+    "net_wo_top5": -116387.0,
+    "proxy": 1,
+    "ce": 42,
+    "pe": 38,
+    "spread2x": -3906.0,
+    "oor0": -1829.0
+   },
+   "by_year": {
+    "2025": [
+     40,
+     -42619.0
+    ],
+    "2026": [
+     40,
+     40790.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     4,
+     8710.0
+    ],
+    "FINNIFTY": [
+     4,
+     -10702.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     1243.0
+    ],
+    "NIFTY": [
+     27,
+     29405.0
+    ],
+    "SENSEX": [
+     36,
+     -30486.0
+    ]
+   },
+   "twin_mean": -1595.0,
+   "twin_sd": 47225.0,
+   "p": 0.483,
+   "top": [
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 57,
+     "entry": 3.75,
+     "peak": 10.0,
+     "xmult": 7.81,
+     "net": 33079.48
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2025-07-31",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 56100.0,
+     "j": 64,
+     "entry": 20.91,
+     "peak": 5.4,
+     "xmult": 5.0,
+     "net": 17494.02
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema921_adx20-otm2-hero-time": {
+   "rule": [
+    "ema921_adx20",
+    "otm2",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 80,
+    "win_pct": 15.0,
+    "peak5": 9,
+    "peak10": 3,
+    "banked5": 5,
+    "banked10": 0,
+    "net": 9921.0,
+    "net_per_day": 40.5,
+    "per_1000": 27.5,
+    "worst_day": -7331.0,
+    "max_dd": -59057.0,
+    "top5": 114558.0,
+    "top5_share": 1154.7,
+    "net_wo_top5": -104637.0,
+    "proxy": 1,
+    "ce": 42,
+    "pe": 38,
+    "spread2x": 6904.0,
+    "oor0": 9921.0
+   },
+   "by_year": {
+    "2025": [
+     40,
+     -38594.0
+    ],
+    "2026": [
+     40,
+     48515.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     4,
+     9620.0
+    ],
+    "FINNIFTY": [
+     4,
+     -8934.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     3830.0
+    ],
+    "NIFTY": [
+     27,
+     33691.0
+    ],
+    "SENSEX": [
+     36,
+     -28287.0
+    ]
+   },
+   "twin_mean": 4965.0,
+   "twin_sd": 47158.0,
+   "p": 0.4431,
+   "top": [
+    {
+     "d": "2026-08-25",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24250.0,
+     "j": 57,
+     "entry": 3.75,
+     "peak": 10.0,
+     "xmult": 7.81,
+     "net": 33079.48
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72000.0,
+     "j": 38,
+     "entry": 132.32,
+     "peak": 8.3,
+     "xmult": 9.44,
+     "net": 22242.21
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2025-07-31",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 56100.0,
+     "j": 64,
+     "entry": 20.91,
+     "peak": 5.4,
+     "xmult": 5.0,
+     "net": 17494.02
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema926_adx20-cheap-all-hold": {
+   "rule": [
+    "ema926_adx20",
+    "cheap",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 153,
+    "win_pct": 7.8,
+    "peak5": 15,
+    "peak10": 3,
+    "banked5": 5,
+    "banked10": 3,
+    "net": 22667.0,
+    "net_per_day": 92.5,
+    "per_1000": 33.5,
+    "worst_day": -10509.0,
+    "max_dd": -132695.0,
+    "top5": 289746.0,
+    "top5_share": 1278.3,
+    "net_wo_top5": -267079.0,
+    "proxy": 7,
+    "ce": 83,
+    "pe": 70,
+    "spread2x": 22053.0,
+    "oor0": 9831.0
+   },
+   "by_year": {
+    "2025": [
+     82,
+     -130094.0
+    ],
+    "2026": [
+     71,
+     152761.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     12,
+     -30415.0
+    ],
+    "FINNIFTY": [
+     10,
+     -25984.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     29353.0
+    ],
+    "NIFTY": [
+     57,
+     -47814.0
+    ],
+    "SENSEX": [
+     62,
+     97528.0
+    ]
+   },
+   "twin_mean": -24208.0,
+   "twin_sd": 105198.0,
+   "p": 0.3393,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 26.16,
+     "net": 119532.04
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83100.0,
+     "j": 11,
+     "entry": 28.86,
+     "peak": 19.2,
+     "xmult": 17.33,
+     "net": 75198.49
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 3,
+     "entry": 17.06,
+     "peak": 16.0,
+     "xmult": 12.63,
+     "net": 55383.53
+    },
+    {
+     "d": "2025-08-28",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 12575.0,
+     "j": 64,
+     "entry": 6.8,
+     "peak": 5.4,
+     "xmult": 5.11,
+     "net": 20048.1
+    },
+    {
+     "d": "2025-07-24",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25150.0,
+     "j": 5,
+     "entry": 15.71,
+     "peak": 9.2,
+     "xmult": 5.18,
+     "net": 19583.83
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema926_adx20-cheap-all-trail": {
+   "rule": [
+    "ema926_adx20",
+    "cheap",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 153,
+    "win_pct": 13.7,
+    "peak5": 15,
+    "peak10": 2,
+    "banked5": 3,
+    "banked10": 1,
+    "net": -45947.0,
+    "net_per_day": -187.5,
+    "per_1000": -67.9,
+    "worst_day": -9642.0,
+    "max_dd": -100249.0,
+    "top5": 126041.0,
+    "top5_share": null,
+    "net_wo_top5": -171988.0,
+    "proxy": 7,
+    "ce": 83,
+    "pe": 70,
+    "spread2x": -46561.0,
+    "oor0": -58783.0
+   },
+   "by_year": {
+    "2025": [
+     82,
+     -96338.0
+    ],
+    "2026": [
+     71,
+     50391.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     12,
+     -16755.0
+    ],
+    "FINNIFTY": [
+     10,
+     -6485.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     29353.0
+    ],
+    "NIFTY": [
+     57,
+     -22791.0
+    ],
+    "SENSEX": [
+     62,
+     -29270.0
+    ]
+   },
+   "twin_mean": -70166.0,
+   "twin_sd": 63975.0,
+   "p": 0.3493,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 11.09,
+     "net": 47913.27
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 3,
+     "entry": 17.06,
+     "peak": 16.0,
+     "xmult": 6.66,
+     "net": 26933.25
+    },
+    {
+     "d": "2025-08-28",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 12575.0,
+     "j": 64,
+     "entry": 6.8,
+     "peak": 5.4,
+     "xmult": 5.11,
+     "net": 20048.1
+    },
+    {
+     "d": "2025-07-24",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25150.0,
+     "j": 5,
+     "entry": 15.71,
+     "peak": 9.2,
+     "xmult": 4.5,
+     "net": 16394.97
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83100.0,
+     "j": 11,
+     "entry": 28.86,
+     "peak": 9.1,
+     "xmult": 4.21,
+     "net": 14751.02
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema926_adx20-cheap-all-time": {
+   "rule": [
+    "ema926_adx20",
+    "cheap",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 153,
+    "win_pct": 18.3,
+    "peak5": 9,
+    "peak10": 1,
+    "banked5": 2,
+    "banked10": 1,
+    "net": -96071.0,
+    "net_per_day": -392.1,
+    "per_1000": -142.0,
+    "worst_day": -8659.0,
+    "max_dd": -130914.0,
+    "top5": 106764.0,
+    "top5_share": null,
+    "net_wo_top5": -202834.0,
+    "proxy": 7,
+    "ce": 83,
+    "pe": 70,
+    "spread2x": -98147.0,
+    "oor0": -111774.0
+   },
+   "by_year": {
+    "2025": [
+     82,
+     -96990.0
+    ],
+    "2026": [
+     71,
+     919.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     12,
+     -14074.0
+    ],
+    "FINNIFTY": [
+     10,
+     -3642.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     31570.0
+    ],
+    "NIFTY": [
+     57,
+     -46477.0
+    ],
+    "SENSEX": [
+     62,
+     -63449.0
+    ]
+   },
+   "twin_mean": -61711.0,
+   "twin_sd": 61354.0,
+   "p": 0.6946,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 11.09,
+     "net": 47913.27
+    },
+    {
+     "d": "2025-08-28",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 12575.0,
+     "j": 64,
+     "entry": 6.8,
+     "peak": 5.4,
+     "xmult": 5.11,
+     "net": 20048.1
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14900.0,
+     "j": 45,
+     "entry": 16.21,
+     "peak": 5.3,
+     "xmult": 4.6,
+     "net": 13932.66
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 8.0,
+     "xmult": 3.78,
+     "net": 13681.61
+    },
+    {
+     "d": "2025-07-31",
+     "und": "BANKNIFTY",
+     "side": "CE",
+     "strike": 56300.0,
+     "j": 26,
+     "entry": 27.71,
+     "peak": 7.0,
+     "xmult": 3.32,
+     "net": 11187.92
+    }
+   ],
+   "q": 0.815
+  },
+  "ema926_adx20-cheap-hero-hold": {
+   "rule": [
+    "ema926_adx20",
+    "cheap",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 62,
+    "win_pct": 11.3,
+    "peak5": 9,
+    "peak10": 1,
+    "banked5": 4,
+    "banked10": 1,
+    "net": 81354.0,
+    "net_per_day": 332.1,
+    "per_1000": 291.2,
+    "worst_day": -7369.0,
+    "max_dd": -43338.0,
+    "top5": 206958.0,
+    "top5_share": 254.4,
+    "net_wo_top5": -125605.0,
+    "proxy": 0,
+    "ce": 32,
+    "pe": 30,
+    "spread2x": 79808.0,
+    "oor0": 81354.0
+   },
+   "by_year": {
+    "2025": [
+     32,
+     -25248.0
+    ],
+    "2026": [
+     30,
+     106601.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     2,
+     -5562.0
+    ],
+    "FINNIFTY": [
+     3,
+     -7513.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     23032.0
+    ],
+    "NIFTY": [
+     23,
+     -41287.0
+    ],
+    "SENSEX": [
+     25,
+     112683.0
+    ]
+   },
+   "twin_mean": 68710.0,
+   "twin_sd": 70686.0,
+   "p": 0.4192,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 26.16,
+     "net": 119532.04
+    },
+    {
+     "d": "2026-06-25",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77300.0,
+     "j": 49,
+     "entry": 28.66,
+     "peak": 9.1,
+     "xmult": 7.22,
+     "net": 28414.89
+    },
+    {
+     "d": "2025-10-23",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84800.0,
+     "j": 51,
+     "entry": 29.21,
+     "peak": 6.9,
+     "xmult": 6.38,
+     "net": 25030.68
+    },
+    {
+     "d": "2025-08-28",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 12575.0,
+     "j": 64,
+     "entry": 6.8,
+     "peak": 5.4,
+     "xmult": 5.11,
+     "net": 20048.1
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14900.0,
+     "j": 45,
+     "entry": 16.21,
+     "peak": 5.3,
+     "xmult": 4.6,
+     "net": 13932.66
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema926_adx20-cheap-hero-trail": {
+   "rule": [
+    "ema926_adx20",
+    "cheap",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 62,
+    "win_pct": 19.4,
+    "peak5": 8,
+    "peak10": 1,
+    "banked5": 2,
+    "banked10": 1,
+    "net": 7537.0,
+    "net_per_day": 30.8,
+    "per_1000": 27.0,
+    "worst_day": -7369.0,
+    "max_dd": -45299.0,
+    "top5": 105854.0,
+    "top5_share": 1404.4,
+    "net_wo_top5": -98317.0,
+    "proxy": 0,
+    "ce": 32,
+    "pe": 30,
+    "spread2x": 5992.0,
+    "oor0": 7537.0
+   },
+   "by_year": {
+    "2025": [
+     32,
+     -35783.0
+    ],
+    "2026": [
+     30,
+     43320.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     2,
+     -5562.0
+    ],
+    "FINNIFTY": [
+     3,
+     -7513.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     23032.0
+    ],
+    "NIFTY": [
+     23,
+     -15272.0
+    ],
+    "SENSEX": [
+     25,
+     12852.0
+    ]
+   },
+   "twin_mean": 11046.0,
+   "twin_sd": 46201.0,
+   "p": 0.507,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 11.09,
+     "net": 47913.27
+    },
+    {
+     "d": "2025-08-28",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 12575.0,
+     "j": 64,
+     "entry": 6.8,
+     "peak": 5.4,
+     "xmult": 5.11,
+     "net": 20048.1
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14900.0,
+     "j": 45,
+     "entry": 16.21,
+     "peak": 5.3,
+     "xmult": 4.6,
+     "net": 13932.66
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 8.0,
+     "xmult": 3.78,
+     "net": 13681.61
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24050.0,
+     "j": 46,
+     "entry": 19.51,
+     "peak": 5.2,
+     "xmult": 3.72,
+     "net": 10278.4
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema926_adx20-cheap-hero-time": {
+   "rule": [
+    "ema926_adx20",
+    "cheap",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 62,
+    "win_pct": 21.0,
+    "peak5": 8,
+    "peak10": 1,
+    "banked5": 2,
+    "banked10": 1,
+    "net": 15422.0,
+    "net_per_day": 62.9,
+    "per_1000": 55.2,
+    "worst_day": -7369.0,
+    "max_dd": -45299.0,
+    "top5": 105854.0,
+    "top5_share": 686.4,
+    "net_wo_top5": -90432.0,
+    "proxy": 0,
+    "ce": 32,
+    "pe": 30,
+    "spread2x": 13828.0,
+    "oor0": 15422.0
+   },
+   "by_year": {
+    "2025": [
+     32,
+     -35783.0
+    ],
+    "2026": [
+     30,
+     51205.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     2,
+     -5562.0
+    ],
+    "FINNIFTY": [
+     3,
+     -6947.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     25425.0
+    ],
+    "NIFTY": [
+     23,
+     -10687.0
+    ],
+    "SENSEX": [
+     25,
+     13192.0
+    ]
+   },
+   "twin_mean": 21346.0,
+   "twin_sd": 46002.0,
+   "p": 0.5469,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 11.09,
+     "net": 47913.27
+    },
+    {
+     "d": "2025-08-28",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 12575.0,
+     "j": 64,
+     "entry": 6.8,
+     "peak": 5.4,
+     "xmult": 5.11,
+     "net": 20048.1
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14900.0,
+     "j": 45,
+     "entry": 16.21,
+     "peak": 5.3,
+     "xmult": 4.6,
+     "net": 13932.66
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 8.0,
+     "xmult": 3.78,
+     "net": 13681.61
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24050.0,
+     "j": 46,
+     "entry": 19.51,
+     "peak": 5.2,
+     "xmult": 3.72,
+     "net": 10278.4
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema926_adx20-otm2-all-hold": {
+   "rule": [
+    "ema926_adx20",
+    "otm2",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 156,
+    "win_pct": 9.6,
+    "peak5": 12,
+    "peak10": 1,
+    "banked5": 5,
+    "banked10": 0,
+    "net": -88416.0,
+    "net_per_day": -360.9,
+    "per_1000": -135.7,
+    "worst_day": -12072.0,
+    "max_dd": -151792.0,
+    "top5": 138805.0,
+    "top5_share": null,
+    "net_wo_top5": -227221.0,
+    "proxy": 1,
+    "ce": 86,
+    "pe": 70,
+    "spread2x": -90223.0,
+    "oor0": -88416.0
+   },
+   "by_year": {
+    "2025": [
+     86,
+     -149576.0
+    ],
+    "2026": [
+     70,
+     61160.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     11,
+     -24676.0
+    ],
+    "FINNIFTY": [
+     10,
+     -22037.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     14615.0
+    ],
+    "NIFTY": [
+     57,
+     -37841.0
+    ],
+    "SENSEX": [
+     66,
+     -18478.0
+    ]
+   },
+   "twin_mean": -35695.0,
+   "twin_sd": 71715.0,
+   "p": 0.7784,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84600.0,
+     "j": 3,
+     "entry": 54.88,
+     "peak": 7.7,
+     "xmult": 7.58,
+     "net": 28757.1
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 11,
+     "entry": 89.79,
+     "peak": 9.5,
+     "xmult": 8.83,
+     "net": 27999.97
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2026-08-04",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24500.0,
+     "j": 15,
+     "entry": 11.96,
+     "peak": 7.0,
+     "xmult": 5.42,
+     "net": 20537.01
+    }
+   ],
+   "q": 0.8457
+  },
+  "ema926_adx20-otm2-all-trail": {
+   "rule": [
+    "ema926_adx20",
+    "otm2",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 156,
+    "win_pct": 14.1,
+    "peak5": 12,
+    "peak10": 1,
+    "banked5": 5,
+    "banked10": 0,
+    "net": -51924.0,
+    "net_per_day": -211.9,
+    "per_1000": -79.7,
+    "worst_day": -9590.0,
+    "max_dd": -139130.0,
+    "top5": 129367.0,
+    "top5_share": null,
+    "net_wo_top5": -181291.0,
+    "proxy": 1,
+    "ce": 86,
+    "pe": 70,
+    "spread2x": -53731.0,
+    "oor0": -51924.0
+   },
+   "by_year": {
+    "2025": [
+     86,
+     -123746.0
+    ],
+    "2026": [
+     70,
+     71822.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     11,
+     -15171.0
+    ],
+    "FINNIFTY": [
+     10,
+     -9161.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     14615.0
+    ],
+    "NIFTY": [
+     57,
+     -17748.0
+    ],
+    "SENSEX": [
+     66,
+     -24459.0
+    ]
+   },
+   "twin_mean": -35414.0,
+   "twin_sd": 56488.0,
+   "p": 0.6168,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 11,
+     "entry": 89.79,
+     "peak": 9.5,
+     "xmult": 8.83,
+     "net": 27999.97
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2026-08-04",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24500.0,
+     "j": 15,
+     "entry": 11.96,
+     "peak": 7.0,
+     "xmult": 5.42,
+     "net": 20537.01
+    },
+    {
+     "d": "2025-07-24",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25100.0,
+     "j": 5,
+     "entry": 8.55,
+     "peak": 12.0,
+     "xmult": 5.33,
+     "net": 19319.38
+    }
+   ],
+   "q": 0.7917
+  },
+  "ema926_adx20-otm2-all-time": {
+   "rule": [
+    "ema926_adx20",
+    "otm2",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 156,
+    "win_pct": 20.5,
+    "peak5": 6,
+    "peak10": 0,
+    "banked5": 2,
+    "banked10": 0,
+    "net": -97771.0,
+    "net_per_day": -399.1,
+    "per_1000": -150.1,
+    "worst_day": -9590.0,
+    "max_dd": -141677.0,
+    "top5": 91987.0,
+    "top5_share": null,
+    "net_wo_top5": -189758.0,
+    "proxy": 1,
+    "ce": 86,
+    "pe": 70,
+    "spread2x": -100009.0,
+    "oor0": -97771.0
+   },
+   "by_year": {
+    "2025": [
+     86,
+     -113321.0
+    ],
+    "2026": [
+     70,
+     15550.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     11,
+     -10612.0
+    ],
+    "FINNIFTY": [
+     10,
+     -609.0
+    ],
+    "MIDCPNIFTY": [
+     12,
+     12480.0
+    ],
+    "NIFTY": [
+     57,
+     -55833.0
+    ],
+    "SENSEX": [
+     66,
+     -43197.0
+    ]
+   },
+   "twin_mean": -47411.0,
+   "twin_sd": 57693.0,
+   "p": 0.8004,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 8.0,
+     "xmult": 3.78,
+     "net": 13681.61
+    },
+    {
+     "d": "2025-07-31",
+     "und": "FINNIFTY",
+     "side": "CE",
+     "strike": 26700.0,
+     "j": 26,
+     "entry": 24.51,
+     "peak": 6.6,
+     "xmult": 2.94,
+     "net": 9176.45
+    },
+    {
+     "d": "2026-04-09",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77200.0,
+     "j": 1,
+     "entry": 195.55,
+     "peak": 4.4,
+     "xmult": 2.97,
+     "net": 7618.52
+    }
+   ],
+   "q": 0.8486
+  },
+  "ema926_adx20-otm2-hero-hold": {
+   "rule": [
+    "ema926_adx20",
+    "otm2",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 66,
+    "win_pct": 9.1,
+    "peak5": 8,
+    "peak10": 0,
+    "banked5": 4,
+    "banked10": 0,
+    "net": -12445.0,
+    "net_per_day": -50.8,
+    "per_1000": -41.1,
+    "worst_day": -8322.0,
+    "max_dd": -68335.0,
+    "top5": 128692.0,
+    "top5_share": null,
+    "net_wo_top5": -141136.0,
+    "proxy": 1,
+    "ce": 33,
+    "pe": 33,
+    "spread2x": -14956.0,
+    "oor0": -12445.0
+   },
+   "by_year": {
+    "2025": [
+     35,
+     -46699.0
+    ],
+    "2026": [
+     31,
+     34254.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     2,
+     -5594.0
+    ],
+    "FINNIFTY": [
+     3,
+     -7685.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     254.0
+    ],
+    "NIFTY": [
+     24,
+     -45538.0
+    ],
+    "SENSEX": [
+     28,
+     46120.0
+    ]
+   },
+   "twin_mean": 63078.0,
+   "twin_sd": 68540.0,
+   "p": 0.8543,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2026-06-25",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77400.0,
+     "j": 49,
+     "entry": 45.52,
+     "peak": 7.9,
+     "xmult": 6.88,
+     "net": 26673.86
+    },
+    {
+     "d": "2025-10-23",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84800.0,
+     "j": 51,
+     "entry": 29.21,
+     "peak": 6.9,
+     "xmult": 6.38,
+     "net": 25030.68
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2025-06-24",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 82500.0,
+     "j": 45,
+     "entry": 113.26,
+     "peak": 6.1,
+     "xmult": 4.44,
+     "net": 15476.65
+    }
+   ],
+   "q": 0.8742
+  },
+  "ema926_adx20-otm2-hero-trail": {
+   "rule": [
+    "ema926_adx20",
+    "otm2",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 66,
+    "win_pct": 16.7,
+    "peak5": 8,
+    "peak10": 0,
+    "banked5": 2,
+    "banked10": 0,
+    "net": -10017.0,
+    "net_per_day": -40.9,
+    "per_1000": -33.1,
+    "worst_day": -8322.0,
+    "max_dd": -69892.0,
+    "top5": 105054.0,
+    "top5_share": null,
+    "net_wo_top5": -115071.0,
+    "proxy": 1,
+    "ce": 33,
+    "pe": 33,
+    "spread2x": -12942.0,
+    "oor0": -10017.0
+   },
+   "by_year": {
+    "2025": [
+     35,
+     -56829.0
+    ],
+    "2026": [
+     31,
+     46812.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     2,
+     -5594.0
+    ],
+    "FINNIFTY": [
+     3,
+     -7685.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     6865.0
+    ],
+    "NIFTY": [
+     24,
+     -18844.0
+    ],
+    "SENSEX": [
+     28,
+     15241.0
+    ]
+   },
+   "twin_mean": -714.0,
+   "twin_sd": 40214.0,
+   "p": 0.5788,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2025-06-24",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 82500.0,
+     "j": 45,
+     "entry": 113.26,
+     "peak": 6.1,
+     "xmult": 4.44,
+     "net": 15476.65
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24000.0,
+     "j": 46,
+     "entry": 9.4,
+     "peak": 6.6,
+     "xmult": 3.96,
+     "net": 14385.02
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 8.0,
+     "xmult": 3.78,
+     "net": 13681.61
+    }
+   ],
+   "q": 0.7812
+  },
+  "ema926_adx20-otm2-hero-time": {
+   "rule": [
+    "ema926_adx20",
+    "otm2",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 66,
+    "win_pct": 18.2,
+    "peak5": 8,
+    "peak10": 0,
+    "banked5": 2,
+    "banked10": 0,
+    "net": -223.0,
+    "net_per_day": -0.9,
+    "per_1000": -0.7,
+    "worst_day": -8322.0,
+    "max_dd": -67749.0,
+    "top5": 105054.0,
+    "top5_share": null,
+    "net_wo_top5": -105277.0,
+    "proxy": 1,
+    "ce": 33,
+    "pe": 33,
+    "spread2x": -3147.0,
+    "oor0": -223.0
+   },
+   "by_year": {
+    "2025": [
+     35,
+     -54687.0
+    ],
+    "2026": [
+     31,
+     54464.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     2,
+     -5594.0
+    ],
+    "FINNIFTY": [
+     3,
+     -6889.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     8781.0
+    ],
+    "NIFTY": [
+     24,
+     -13859.0
+    ],
+    "SENSEX": [
+     28,
+     17338.0
+    ]
+   },
+   "twin_mean": 3666.0,
+   "twin_sd": 39905.0,
+   "p": 0.503,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 45,
+     "entry": 8.5,
+     "peak": 7.5,
+     "xmult": 6.09,
+     "net": 20672.84
+    },
+    {
+     "d": "2025-06-24",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 82500.0,
+     "j": 45,
+     "entry": 113.26,
+     "peak": 6.1,
+     "xmult": 4.44,
+     "net": 15476.65
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24000.0,
+     "j": 46,
+     "entry": 9.4,
+     "peak": 6.6,
+     "xmult": 3.96,
+     "net": 14385.02
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23450.0,
+     "j": 41,
+     "entry": 15.26,
+     "peak": 8.0,
+     "xmult": 3.78,
+     "net": 13681.61
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_fade-cheap-all-hold": {
+   "rule": [
+    "rsi_fade",
+    "cheap",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 186,
+    "win_pct": 4.8,
+    "peak5": 15,
+    "peak10": 2,
+    "banked5": 1,
+    "banked10": 1,
+    "net": -215365.0,
+    "net_per_day": -879.0,
+    "per_1000": -270.1,
+    "worst_day": -10107.0,
+    "max_dd": -215365.0,
+    "top5": 188426.0,
+    "top5_share": null,
+    "net_wo_top5": -403792.0,
+    "proxy": 9,
+    "ce": 95,
+    "pe": 91,
+    "spread2x": -218498.0,
+    "oor0": -229256.0
+   },
+   "by_year": {
+    "2025": [
+     97,
+     -177207.0
+    ],
+    "2026": [
+     89,
+     -38159.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     14,
+     -29965.0
+    ],
+    "FINNIFTY": [
+     14,
+     -33425.0
+    ],
+    "MIDCPNIFTY": [
+     17,
+     -11857.0
+    ],
+    "NIFTY": [
+     77,
+     -123822.0
+    ],
+    "SENSEX": [
+     64,
+     -16297.0
+    ]
+   },
+   "twin_mean": -143715.0,
+   "twin_sd": 102700.0,
+   "p": 0.7405,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 0,
+     "entry": 25.96,
+     "peak": 32.8,
+     "xmult": 30.53,
+     "net": 137659.21
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12550.0,
+     "j": 60,
+     "entry": 10.0,
+     "peak": 8.1,
+     "xmult": 4.7,
+     "net": 17681.69
+    },
+    {
+     "d": "2025-03-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 22500.0,
+     "j": 8,
+     "entry": 23.91,
+     "peak": 5.0,
+     "xmult": 4.38,
+     "net": 12039.52
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24100.0,
+     "j": 24,
+     "entry": 26.51,
+     "peak": 5.6,
+     "xmult": 4.21,
+     "net": 10990.28
+    },
+    {
+     "d": "2025-10-14",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25250.0,
+     "j": 1,
+     "entry": 24.36,
+     "peak": 8.0,
+     "xmult": 3.77,
+     "net": 10055.68
+    }
+   ],
+   "q": 0.8457
+  },
+  "rsi_fade-cheap-all-trail": {
+   "rule": [
+    "rsi_fade",
+    "cheap",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 186,
+    "win_pct": 15.1,
+    "peak5": 13,
+    "peak10": 2,
+    "banked5": 1,
+    "banked10": 1,
+    "net": -72325.0,
+    "net_per_day": -295.2,
+    "per_1000": -90.7,
+    "worst_day": -10107.0,
+    "max_dd": -121188.0,
+    "top5": 192405.0,
+    "top5_share": null,
+    "net_wo_top5": -264729.0,
+    "proxy": 7,
+    "ce": 95,
+    "pe": 91,
+    "spread2x": -75403.0,
+    "oor0": -96357.0
+   },
+   "by_year": {
+    "2025": [
+     97,
+     -110892.0
+    ],
+    "2026": [
+     89,
+     38567.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     14,
+     -7094.0
+    ],
+    "FINNIFTY": [
+     14,
+     -18436.0
+    ],
+    "MIDCPNIFTY": [
+     17,
+     -11857.0
+    ],
+    "NIFTY": [
+     77,
+     -93525.0
+    ],
+    "SENSEX": [
+     64,
+     58587.0
+    ]
+   },
+   "twin_mean": -184048.0,
+   "twin_sd": 68022.0,
+   "p": 0.0719,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 0,
+     "entry": 25.96,
+     "peak": 32.8,
+     "xmult": 30.53,
+     "net": 137659.21
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12550.0,
+     "j": 60,
+     "entry": 10.0,
+     "peak": 8.1,
+     "xmult": 4.7,
+     "net": 17681.69
+    },
+    {
+     "d": "2026-04-16",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77900.0,
+     "j": 0,
+     "entry": 27.36,
+     "peak": 10.2,
+     "xmult": 3.87,
+     "net": 14034.07
+    },
+    {
+     "d": "2025-03-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 22500.0,
+     "j": 8,
+     "entry": 23.91,
+     "peak": 5.0,
+     "xmult": 4.38,
+     "net": 12039.52
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24100.0,
+     "j": 24,
+     "entry": 26.51,
+     "peak": 5.6,
+     "xmult": 4.21,
+     "net": 10990.28
+    }
+   ],
+   "q": 0.4218
+  },
+  "rsi_fade-cheap-all-time": {
+   "rule": [
+    "rsi_fade",
+    "cheap",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 186,
+    "win_pct": 21.0,
+    "peak5": 8,
+    "peak10": 2,
+    "banked5": 1,
+    "banked10": 1,
+    "net": -14932.0,
+    "net_per_day": -60.9,
+    "per_1000": -18.7,
+    "worst_day": -8697.0,
+    "max_dd": -91724.0,
+    "top5": 186813.0,
+    "top5_share": null,
+    "net_wo_top5": -201746.0,
+    "proxy": 7,
+    "ce": 95,
+    "pe": 91,
+    "spread2x": -18412.0,
+    "oor0": -43178.0
+   },
+   "by_year": {
+    "2025": [
+     97,
+     -78686.0
+    ],
+    "2026": [
+     89,
+     63754.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     14,
+     1576.0
+    ],
+    "FINNIFTY": [
+     14,
+     -17495.0
+    ],
+    "MIDCPNIFTY": [
+     17,
+     -10684.0
+    ],
+    "NIFTY": [
+     77,
+     -74782.0
+    ],
+    "SENSEX": [
+     64,
+     86453.0
+    ]
+   },
+   "twin_mean": -129107.0,
+   "twin_sd": 67346.0,
+   "p": 0.0659,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 0,
+     "entry": 25.96,
+     "peak": 32.8,
+     "xmult": 30.53,
+     "net": 137659.21
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12550.0,
+     "j": 60,
+     "entry": 10.0,
+     "peak": 8.1,
+     "xmult": 4.7,
+     "net": 17681.69
+    },
+    {
+     "d": "2026-04-16",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77900.0,
+     "j": 0,
+     "entry": 27.36,
+     "peak": 10.2,
+     "xmult": 3.87,
+     "net": 14034.07
+    },
+    {
+     "d": "2026-02-24",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 61000.0,
+     "j": 28,
+     "entry": 29.51,
+     "peak": 8.2,
+     "xmult": 3.28,
+     "net": 9331.54
+    },
+    {
+     "d": "2025-02-04",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76600.0,
+     "j": 0,
+     "entry": 27.66,
+     "peak": 6.4,
+     "xmult": 2.64,
+     "net": 8106.94
+    }
+   ],
+   "q": 0.4142
+  },
+  "rsi_fade-cheap-hero-hold": {
+   "rule": [
+    "rsi_fade",
+    "cheap",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 94,
+    "win_pct": 8.5,
+    "peak5": 5,
+    "peak10": 1,
+    "banked5": 2,
+    "banked10": 1,
+    "net": -105923.0,
+    "net_per_day": -432.3,
+    "per_1000": -252.8,
+    "worst_day": -10501.0,
+    "max_dd": -105923.0,
+    "top5": 108494.0,
+    "top5_share": null,
+    "net_wo_top5": -214417.0,
+    "proxy": 0,
+    "ce": 58,
+    "pe": 36,
+    "spread2x": -107732.0,
+    "oor0": -105923.0
+   },
+   "by_year": {
+    "2025": [
+     48,
+     -22619.0
+    ],
+    "2026": [
+     46,
+     -83304.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     9,
+     -19672.0
+    ],
+    "FINNIFTY": [
+     5,
+     -11112.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     41986.0
+    ],
+    "NIFTY": [
+     41,
+     -36745.0
+    ],
+    "SENSEX": [
+     30,
+     -80380.0
+    ]
+   },
+   "twin_mean": -142393.0,
+   "twin_sd": 38764.0,
+   "p": 0.1717,
+   "top": [
+    {
+     "d": "2025-08-07",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24400.0,
+     "j": 49,
+     "entry": 15.46,
+     "peak": 11.6,
+     "xmult": 10.78,
+     "net": 45232.66
+    },
+    {
+     "d": "2026-06-30",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 14475.0,
+     "j": 65,
+     "entry": 8.5,
+     "peak": 6.8,
+     "xmult": 6.49,
+     "net": 22301.7
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12550.0,
+     "j": 60,
+     "entry": 10.0,
+     "peak": 8.1,
+     "xmult": 4.7,
+     "net": 17681.69
+    },
+    {
+     "d": "2025-10-28",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 13300.0,
+     "j": 65,
+     "entry": 11.86,
+     "peak": 5.6,
+     "xmult": 4.69,
+     "net": 15683.99
+    },
+    {
+     "d": "2025-10-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25900.0,
+     "j": 45,
+     "entry": 26.06,
+     "peak": 4.0,
+     "xmult": 2.96,
+     "net": 7593.81
+    }
+   ],
+   "q": 0.7101
+  },
+  "rsi_fade-cheap-hero-trail": {
+   "rule": [
+    "rsi_fade",
+    "cheap",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 94,
+    "win_pct": 9.6,
+    "peak5": 5,
+    "peak10": 1,
+    "banked5": 2,
+    "banked10": 1,
+    "net": -97364.0,
+    "net_per_day": -397.4,
+    "per_1000": -232.3,
+    "worst_day": -10501.0,
+    "max_dd": -97364.0,
+    "top5": 108494.0,
+    "top5_share": null,
+    "net_wo_top5": -205858.0,
+    "proxy": 0,
+    "ce": 58,
+    "pe": 36,
+    "spread2x": -99172.0,
+    "oor0": -97364.0
+   },
+   "by_year": {
+    "2025": [
+     48,
+     -22619.0
+    ],
+    "2026": [
+     46,
+     -74745.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     9,
+     -19672.0
+    ],
+    "FINNIFTY": [
+     5,
+     -11112.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     41986.0
+    ],
+    "NIFTY": [
+     41,
+     -36745.0
+    ],
+    "SENSEX": [
+     30,
+     -71821.0
+    ]
+   },
+   "twin_mean": -160685.0,
+   "twin_sd": 30659.0,
+   "p": 0.0379,
+   "top": [
+    {
+     "d": "2025-08-07",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24400.0,
+     "j": 49,
+     "entry": 15.46,
+     "peak": 11.6,
+     "xmult": 10.78,
+     "net": 45232.66
+    },
+    {
+     "d": "2026-06-30",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 14475.0,
+     "j": 65,
+     "entry": 8.5,
+     "peak": 6.8,
+     "xmult": 6.49,
+     "net": 22301.7
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12550.0,
+     "j": 60,
+     "entry": 10.0,
+     "peak": 8.1,
+     "xmult": 4.7,
+     "net": 17681.69
+    },
+    {
+     "d": "2025-10-28",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 13300.0,
+     "j": 65,
+     "entry": 11.86,
+     "peak": 5.6,
+     "xmult": 4.69,
+     "net": 15683.99
+    },
+    {
+     "d": "2025-10-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25900.0,
+     "j": 45,
+     "entry": 26.06,
+     "peak": 4.0,
+     "xmult": 2.96,
+     "net": 7593.81
+    }
+   ],
+   "q": 0.3706
+  },
+  "rsi_fade-cheap-hero-time": {
+   "rule": [
+    "rsi_fade",
+    "cheap",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 94,
+    "win_pct": 13.8,
+    "peak5": 5,
+    "peak10": 1,
+    "banked5": 2,
+    "banked10": 1,
+    "net": -73746.0,
+    "net_per_day": -301.0,
+    "per_1000": -176.0,
+    "worst_day": -10501.0,
+    "max_dd": -81920.0,
+    "top5": 108494.0,
+    "top5_share": null,
+    "net_wo_top5": -182240.0,
+    "proxy": 0,
+    "ce": 58,
+    "pe": 36,
+    "spread2x": -74850.0,
+    "oor0": -73746.0
+   },
+   "by_year": {
+    "2025": [
+     48,
+     -5925.0
+    ],
+    "2026": [
+     46,
+     -67821.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     9,
+     -21445.0
+    ],
+    "FINNIFTY": [
+     5,
+     -11112.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     46690.0
+    ],
+    "NIFTY": [
+     41,
+     -24656.0
+    ],
+    "SENSEX": [
+     30,
+     -63223.0
+    ]
+   },
+   "twin_mean": -150428.0,
+   "twin_sd": 30737.0,
+   "p": 0.016,
+   "top": [
+    {
+     "d": "2025-08-07",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24400.0,
+     "j": 49,
+     "entry": 15.46,
+     "peak": 11.6,
+     "xmult": 10.78,
+     "net": 45232.66
+    },
+    {
+     "d": "2026-06-30",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 14475.0,
+     "j": 65,
+     "entry": 8.5,
+     "peak": 6.8,
+     "xmult": 6.49,
+     "net": 22301.7
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12550.0,
+     "j": 60,
+     "entry": 10.0,
+     "peak": 8.1,
+     "xmult": 4.7,
+     "net": 17681.69
+    },
+    {
+     "d": "2025-10-28",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 13300.0,
+     "j": 65,
+     "entry": 11.86,
+     "peak": 5.6,
+     "xmult": 4.69,
+     "net": 15683.99
+    },
+    {
+     "d": "2025-10-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25900.0,
+     "j": 45,
+     "entry": 26.06,
+     "peak": 4.0,
+     "xmult": 2.96,
+     "net": 7593.81
+    }
+   ],
+   "q": 0.2011
+  },
+  "rsi_fade-otm2-all-hold": {
+   "rule": [
+    "rsi_fade",
+    "otm2",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 191,
+    "win_pct": 8.9,
+    "peak5": 12,
+    "peak10": 2,
+    "banked5": 4,
+    "banked10": 1,
+    "net": -195373.0,
+    "net_per_day": -797.4,
+    "per_1000": -250.6,
+    "worst_day": -9035.0,
+    "max_dd": -195440.0,
+    "top5": 123897.0,
+    "top5_share": null,
+    "net_wo_top5": -319270.0,
+    "proxy": 1,
+    "ce": 98,
+    "pe": 93,
+    "spread2x": -199059.0,
+    "oor0": -195373.0
+   },
+   "by_year": {
+    "2025": [
+     103,
+     -122718.0
+    ],
+    "2026": [
+     88,
+     -72655.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     14,
+     -1165.0
+    ],
+    "FINNIFTY": [
+     14,
+     -16411.0
+    ],
+    "MIDCPNIFTY": [
+     16,
+     -79.0
+    ],
+    "NIFTY": [
+     76,
+     -114702.0
+    ],
+    "SENSEX": [
+     71,
+     -63017.0
+    ]
+   },
+   "twin_mean": -179625.0,
+   "twin_sd": 74564.0,
+   "p": 0.5669,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83700.0,
+     "j": 0,
+     "entry": 87.59,
+     "peak": 12.3,
+     "xmult": 12.08,
+     "net": 38684.4
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12575.0,
+     "j": 60,
+     "entry": 2.75,
+     "peak": 20.9,
+     "xmult": 7.96,
+     "net": 34326.9
+    },
+    {
+     "d": "2025-06-24",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 82600.0,
+     "j": 0,
+     "entry": 111.81,
+     "peak": 7.0,
+     "xmult": 5.39,
+     "net": 19539.12
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24050.0,
+     "j": 24,
+     "entry": 13.66,
+     "peak": 7.5,
+     "xmult": 5.32,
+     "net": 19064.23
+    },
+    {
+     "d": "2025-03-13",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 22450.0,
+     "j": 8,
+     "entry": 13.71,
+     "peak": 5.8,
+     "xmult": 4.01,
+     "net": 12282.31
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_fade-otm2-all-trail": {
+   "rule": [
+    "rsi_fade",
+    "otm2",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 191,
+    "win_pct": 15.2,
+    "peak5": 9,
+    "peak10": 2,
+    "banked5": 3,
+    "banked10": 1,
+    "net": -171089.0,
+    "net_per_day": -698.3,
+    "per_1000": -219.4,
+    "worst_day": -9035.0,
+    "max_dd": -171156.0,
+    "top5": 109930.0,
+    "top5_share": null,
+    "net_wo_top5": -281019.0,
+    "proxy": 1,
+    "ce": 98,
+    "pe": 93,
+    "spread2x": -174775.0,
+    "oor0": -171089.0
+   },
+   "by_year": {
+    "2025": [
+     103,
+     -116634.0
+    ],
+    "2026": [
+     88,
+     -54454.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     14,
+     -6096.0
+    ],
+    "FINNIFTY": [
+     14,
+     -14645.0
+    ],
+    "MIDCPNIFTY": [
+     16,
+     -79.0
+    ],
+    "NIFTY": [
+     76,
+     -100556.0
+    ],
+    "SENSEX": [
+     71,
+     -49714.0
+    ]
+   },
+   "twin_mean": -195067.0,
+   "twin_sd": 54838.0,
+   "p": 0.3214,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83700.0,
+     "j": 0,
+     "entry": 87.59,
+     "peak": 12.3,
+     "xmult": 12.08,
+     "net": 38684.4
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12575.0,
+     "j": 60,
+     "entry": 2.75,
+     "peak": 20.9,
+     "xmult": 7.96,
+     "net": 34326.9
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24050.0,
+     "j": 24,
+     "entry": 13.66,
+     "peak": 7.5,
+     "xmult": 5.32,
+     "net": 19064.23
+    },
+    {
+     "d": "2026-01-14",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83600.0,
+     "j": 30,
+     "entry": 59.88,
+     "peak": 6.3,
+     "xmult": 2.9,
+     "net": 9011.06
+    },
+    {
+     "d": "2026-04-13",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23650.0,
+     "j": 0,
+     "entry": 56.28,
+     "peak": 4.6,
+     "xmult": 3.44,
+     "net": 8843.05
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_fade-otm2-all-time": {
+   "rule": [
+    "rsi_fade",
+    "otm2",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 191,
+    "win_pct": 19.9,
+    "peak5": 6,
+    "peak10": 2,
+    "banked5": 2,
+    "banked10": 1,
+    "net": -116635.0,
+    "net_per_day": -476.1,
+    "per_1000": -149.6,
+    "worst_day": -8490.0,
+    "max_dd": -116635.0,
+    "top5": 91508.0,
+    "top5_share": null,
+    "net_wo_top5": -208143.0,
+    "proxy": 1,
+    "ce": 98,
+    "pe": 93,
+    "spread2x": -121006.0,
+    "oor0": -116635.0
+   },
+   "by_year": {
+    "2025": [
+     103,
+     -85077.0
+    ],
+    "2026": [
+     88,
+     -31558.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     14,
+     1702.0
+    ],
+    "FINNIFTY": [
+     14,
+     -13251.0
+    ],
+    "MIDCPNIFTY": [
+     16,
+     5542.0
+    ],
+    "NIFTY": [
+     76,
+     -90039.0
+    ],
+    "SENSEX": [
+     71,
+     -20590.0
+    ]
+   },
+   "twin_mean": -151155.0,
+   "twin_sd": 54948.0,
+   "p": 0.2615,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83700.0,
+     "j": 0,
+     "entry": 87.59,
+     "peak": 12.3,
+     "xmult": 12.08,
+     "net": 38684.4
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12575.0,
+     "j": 60,
+     "entry": 2.75,
+     "peak": 20.9,
+     "xmult": 7.96,
+     "net": 34326.9
+    },
+    {
+     "d": "2025-05-27",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 81500.0,
+     "j": 17,
+     "entry": 179.14,
+     "peak": 6.1,
+     "xmult": 2.91,
+     "net": 6759.69
+    },
+    {
+     "d": "2026-01-27",
+     "und": "FINNIFTY",
+     "side": "CE",
+     "strike": 26800.0,
+     "j": 2,
+     "entry": 80.64,
+     "peak": 3.0,
+     "xmult": 2.38,
+     "net": 6604.11
+    },
+    {
+     "d": "2026-02-24",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 61300.0,
+     "j": 28,
+     "entry": 89.64,
+     "peak": 5.7,
+     "xmult": 2.66,
+     "net": 5132.53
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_fade-otm2-hero-hold": {
+   "rule": [
+    "rsi_fade",
+    "otm2",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 102,
+    "win_pct": 8.8,
+    "peak5": 3,
+    "peak10": 3,
+    "banked5": 3,
+    "banked10": 2,
+    "net": -54460.0,
+    "net_per_day": -222.3,
+    "per_1000": -119.3,
+    "worst_day": -10584.0,
+    "max_dd": -112938.0,
+    "top5": 168421.0,
+    "top5_share": null,
+    "net_wo_top5": -222881.0,
+    "proxy": 0,
+    "ce": 63,
+    "pe": 39,
+    "spread2x": -59715.0,
+    "oor0": -54460.0
+   },
+   "by_year": {
+    "2025": [
+     53,
+     42859.0
+    ],
+    "2026": [
+     49,
+     -97319.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -19317.0
+    ],
+    "FINNIFTY": [
+     5,
+     -10965.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     60998.0
+    ],
+    "NIFTY": [
+     41,
+     -18342.0
+    ],
+    "SENSEX": [
+     37,
+     -66834.0
+    ]
+   },
+   "twin_mean": -129963.0,
+   "twin_sd": 56583.0,
+   "p": 0.0918,
+   "top": [
+    {
+     "d": "2025-08-07",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24450.0,
+     "j": 49,
+     "entry": 6.7,
+     "peak": 18.6,
+     "xmult": 17.38,
+     "net": 73874.32
+    },
+    {
+     "d": "2025-10-28",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 13325.0,
+     "j": 65,
+     "entry": 3.05,
+     "peak": 13.3,
+     "xmult": 10.49,
+     "net": 44985.65
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12575.0,
+     "j": 60,
+     "entry": 2.75,
+     "peak": 20.9,
+     "xmult": 7.96,
+     "net": 34326.9
+    },
+    {
+     "d": "2026-05-07",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 78200.0,
+     "j": 41,
+     "entry": 100.1,
+     "peak": 3.9,
+     "xmult": 3.04,
+     "net": 8078.23
+    },
+    {
+     "d": "2025-05-27",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 81300.0,
+     "j": 60,
+     "entry": 75.44,
+     "peak": 3.3,
+     "xmult": 2.6,
+     "net": 7156.37
+    }
+   ],
+   "q": 0.5049
+  },
+  "rsi_fade-otm2-hero-trail": {
+   "rule": [
+    "rsi_fade",
+    "otm2",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 102,
+    "win_pct": 8.8,
+    "peak5": 3,
+    "peak10": 3,
+    "banked5": 2,
+    "banked10": 1,
+    "net": -122242.0,
+    "net_per_day": -498.9,
+    "per_1000": -267.9,
+    "worst_day": -10584.0,
+    "max_dd": -122242.0,
+    "top5": 103795.0,
+    "top5_share": null,
+    "net_wo_top5": -226037.0,
+    "proxy": 0,
+    "ce": 63,
+    "pe": 39,
+    "spread2x": -127497.0,
+    "oor0": -122242.0
+   },
+   "by_year": {
+    "2025": [
+     53,
+     -19312.0
+    ],
+    "2026": [
+     49,
+     -102930.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -19317.0
+    ],
+    "FINNIFTY": [
+     5,
+     -10965.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     60998.0
+    ],
+    "NIFTY": [
+     41,
+     -80513.0
+    ],
+    "SENSEX": [
+     37,
+     -72445.0
+    ]
+   },
+   "twin_mean": -174532.0,
+   "twin_sd": 31918.0,
+   "p": 0.0639,
+   "top": [
+    {
+     "d": "2025-10-28",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 13325.0,
+     "j": 65,
+     "entry": 3.05,
+     "peak": 13.3,
+     "xmult": 10.49,
+     "net": 44985.65
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12575.0,
+     "j": 60,
+     "entry": 2.75,
+     "peak": 20.9,
+     "xmult": 7.96,
+     "net": 34326.9
+    },
+    {
+     "d": "2025-08-07",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24450.0,
+     "j": 49,
+     "entry": 6.7,
+     "peak": 11.2,
+     "xmult": 3.99,
+     "net": 13443.1
+    },
+    {
+     "d": "2025-05-27",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 81300.0,
+     "j": 60,
+     "entry": 75.44,
+     "peak": 3.3,
+     "xmult": 2.6,
+     "net": 7156.37
+    },
+    {
+     "d": "2025-10-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25850.0,
+     "j": 45,
+     "entry": 11.96,
+     "peak": 4.3,
+     "xmult": 1.88,
+     "net": 3883.33
+    }
+   ],
+   "q": 0.4142
+  },
+  "rsi_fade-otm2-hero-time": {
+   "rule": [
+    "rsi_fade",
+    "otm2",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 102,
+    "win_pct": 11.8,
+    "peak5": 3,
+    "peak10": 3,
+    "banked5": 2,
+    "banked10": 1,
+    "net": -101179.0,
+    "net_per_day": -413.0,
+    "per_1000": -221.7,
+    "worst_day": -9673.0,
+    "max_dd": -115781.0,
+    "top5": 103795.0,
+    "top5_share": null,
+    "net_wo_top5": -204974.0,
+    "proxy": 0,
+    "ce": 63,
+    "pe": 39,
+    "spread2x": -105679.0,
+    "oor0": -101179.0
+   },
+   "by_year": {
+    "2025": [
+     53,
+     -1016.0
+    ],
+    "2026": [
+     49,
+     -100163.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     10,
+     -22821.0
+    ],
+    "FINNIFTY": [
+     5,
+     -10965.0
+    ],
+    "MIDCPNIFTY": [
+     9,
+     66191.0
+    ],
+    "NIFTY": [
+     41,
+     -70157.0
+    ],
+    "SENSEX": [
+     37,
+     -63426.0
+    ]
+   },
+   "twin_mean": -166609.0,
+   "twin_sd": 32252.0,
+   "p": 0.0359,
+   "top": [
+    {
+     "d": "2025-10-28",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 13325.0,
+     "j": 65,
+     "entry": 3.05,
+     "peak": 13.3,
+     "xmult": 10.49,
+     "net": 44985.65
+    },
+    {
+     "d": "2025-09-30",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 12575.0,
+     "j": 60,
+     "entry": 2.75,
+     "peak": 20.9,
+     "xmult": 7.96,
+     "net": 34326.9
+    },
+    {
+     "d": "2025-08-07",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24450.0,
+     "j": 49,
+     "entry": 6.7,
+     "peak": 11.2,
+     "xmult": 3.99,
+     "net": 13443.1
+    },
+    {
+     "d": "2025-05-27",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 81300.0,
+     "j": 60,
+     "entry": 75.44,
+     "peak": 3.3,
+     "xmult": 2.6,
+     "net": 7156.37
+    },
+    {
+     "d": "2025-10-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25850.0,
+     "j": 45,
+     "entry": 11.96,
+     "peak": 4.3,
+     "xmult": 1.88,
+     "net": 3883.33
+    }
+   ],
+   "q": 0.3706
+  },
+  "rsi_momo-cheap-all-hold": {
+   "rule": [
+    "rsi_momo",
+    "cheap",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 243,
+    "win_pct": 10.3,
+    "peak5": 26,
+    "peak10": 9,
+    "banked5": 12,
+    "banked10": 6,
+    "net": 69282.0,
+    "net_per_day": 282.8,
+    "per_1000": 65.4,
+    "worst_day": -11480.0,
+    "max_dd": -141481.0,
+    "top5": 288113.0,
+    "top5_share": 415.9,
+    "net_wo_top5": -218831.0,
+    "proxy": 11,
+    "ce": 134,
+    "pe": 109,
+    "spread2x": 67655.0,
+    "oor0": 35257.0
+   },
+   "by_year": {
+    "2025": [
+     139,
+     -55960.0
+    ],
+    "2026": [
+     104,
+     125243.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     2590.0
+    ],
+    "FINNIFTY": [
+     19,
+     4952.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -37701.0
+    ],
+    "NIFTY": [
+     92,
+     -4454.0
+    ],
+    "SENSEX": [
+     90,
+     103895.0
+    ]
+   },
+   "twin_mean": -107431.0,
+   "twin_sd": 103558.0,
+   "p": 0.0579,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83100.0,
+     "j": 11,
+     "entry": 28.86,
+     "peak": 19.2,
+     "xmult": 17.33,
+     "net": 75198.49
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74500.0,
+     "j": 37,
+     "entry": 26.51,
+     "peak": 18.8,
+     "xmult": 13.05,
+     "net": 57356.01
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 2,
+     "entry": 16.76,
+     "peak": 16.3,
+     "xmult": 12.85,
+     "net": 55467.56
+    },
+    {
+     "d": "2026-03-30",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 50400.0,
+     "j": 42,
+     "entry": 22.96,
+     "peak": 12.7,
+     "xmult": 11.85,
+     "net": 52162.39
+    },
+    {
+     "d": "2025-06-26",
+     "und": "FINNIFTY",
+     "side": "CE",
+     "strike": 27000.0,
+     "j": 0,
+     "entry": 23.16,
+     "peak": 11.9,
+     "xmult": 11.65,
+     "net": 47928.96
+    }
+   ],
+   "q": 0.4142
+  },
+  "rsi_momo-cheap-all-trail": {
+   "rule": [
+    "rsi_momo",
+    "cheap",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 243,
+    "win_pct": 17.3,
+    "peak5": 22,
+    "peak10": 6,
+    "banked5": 8,
+    "banked10": 3,
+    "net": 14751.0,
+    "net_per_day": 60.2,
+    "per_1000": 13.9,
+    "worst_day": -9756.0,
+    "max_dd": -106749.0,
+    "top5": 223702.0,
+    "top5_share": 1516.5,
+    "net_wo_top5": -208952.0,
+    "proxy": 11,
+    "ce": 134,
+    "pe": 109,
+    "spread2x": 13124.0,
+    "oor0": -11444.0
+   },
+   "by_year": {
+    "2025": [
+     139,
+     -64242.0
+    ],
+    "2026": [
+     104,
+     78993.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     7563.0
+    ],
+    "FINNIFTY": [
+     19,
+     -19463.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -37701.0
+    ],
+    "NIFTY": [
+     92,
+     -32222.0
+    ],
+    "SENSEX": [
+     90,
+     96574.0
+    ]
+   },
+   "twin_mean": -60803.0,
+   "twin_sd": 95736.0,
+   "p": 0.2196,
+   "top": [
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74500.0,
+     "j": 37,
+     "entry": 26.51,
+     "peak": 18.8,
+     "xmult": 13.05,
+     "net": 57356.01
+    },
+    {
+     "d": "2026-03-30",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 50400.0,
+     "j": 42,
+     "entry": 22.96,
+     "peak": 12.7,
+     "xmult": 11.85,
+     "net": 52162.39
+    },
+    {
+     "d": "2026-10-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 71700.0,
+     "j": 0,
+     "entry": 25.71,
+     "peak": 11.7,
+     "xmult": 11.38,
+     "net": 47882.83
+    },
+    {
+     "d": "2025-10-16",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 83300.0,
+     "j": 31,
+     "entry": 23.31,
+     "peak": 14.1,
+     "xmult": 9.45,
+     "net": 39283.8
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 2,
+     "entry": 16.76,
+     "peak": 16.3,
+     "xmult": 6.78,
+     "net": 27017.28
+    }
+   ],
+   "q": 0.773
+  },
+  "rsi_momo-cheap-all-time": {
+   "rule": [
+    "rsi_momo",
+    "cheap",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 243,
+    "win_pct": 21.0,
+    "peak5": 12,
+    "peak10": 2,
+    "banked5": 3,
+    "banked10": 1,
+    "net": -121747.0,
+    "net_per_day": -496.9,
+    "per_1000": -114.9,
+    "worst_day": -8761.0,
+    "max_dd": -127182.0,
+    "top5": 136072.0,
+    "top5_share": null,
+    "net_wo_top5": -257819.0,
+    "proxy": 11,
+    "ce": 134,
+    "pe": 109,
+    "spread2x": -125818.0,
+    "oor0": -150297.0
+   },
+   "by_year": {
+    "2025": [
+     139,
+     -65814.0
+    ],
+    "2026": [
+     104,
+     -55932.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     14697.0
+    ],
+    "FINNIFTY": [
+     19,
+     -8214.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -22873.0
+    ],
+    "NIFTY": [
+     92,
+     -34831.0
+    ],
+    "SENSEX": [
+     90,
+     -70525.0
+    ]
+   },
+   "twin_mean": -70435.0,
+   "twin_sd": 94219.0,
+   "p": 0.6806,
+   "top": [
+    {
+     "d": "2026-03-30",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 50400.0,
+     "j": 42,
+     "entry": 22.96,
+     "peak": 12.7,
+     "xmult": 11.85,
+     "net": 52162.39
+    },
+    {
+     "d": "2025-10-16",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 83300.0,
+     "j": 31,
+     "entry": 23.31,
+     "peak": 14.1,
+     "xmult": 9.45,
+     "net": 39283.8
+    },
+    {
+     "d": "2025-11-11",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 25600.0,
+     "j": 31,
+     "entry": 15.61,
+     "peak": 6.7,
+     "xmult": 6.28,
+     "net": 24626.2
+    },
+    {
+     "d": "2025-07-31",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24850.0,
+     "j": 21,
+     "entry": 18.16,
+     "peak": 7.3,
+     "xmult": 3.56,
+     "net": 10365.31
+    },
+    {
+     "d": "2025-07-15",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 82700.0,
+     "j": 9,
+     "entry": 27.51,
+     "peak": 6.5,
+     "xmult": 2.96,
+     "net": 9634.12
+    }
+   ],
+   "q": 0.8141
+  },
+  "rsi_momo-cheap-hero-hold": {
+   "rule": [
+    "rsi_momo",
+    "cheap",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 218,
+    "win_pct": 12.4,
+    "peak5": 15,
+    "peak10": 5,
+    "banked5": 7,
+    "banked10": 3,
+    "net": 4546.0,
+    "net_per_day": 18.6,
+    "per_1000": 4.6,
+    "worst_day": -10624.0,
+    "max_dd": -190854.0,
+    "top5": 295539.0,
+    "top5_share": 6501.4,
+    "net_wo_top5": -290993.0,
+    "proxy": 1,
+    "ce": 97,
+    "pe": 121,
+    "spread2x": 3644.0,
+    "oor0": 2415.0
+   },
+   "by_year": {
+    "2025": [
+     123,
+     -180951.0
+    ],
+    "2026": [
+     95,
+     185497.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     33217.0
+    ],
+    "FINNIFTY": [
+     16,
+     -14075.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -11657.0
+    ],
+    "NIFTY": [
+     82,
+     -42848.0
+    ],
+    "SENSEX": [
+     79,
+     39908.0
+    ]
+   },
+   "twin_mean": -8485.0,
+   "twin_sd": 102957.0,
+   "p": 0.4271,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 26.16,
+     "net": 119532.04
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74500.0,
+     "j": 39,
+     "entry": 25.21,
+     "peak": 19.8,
+     "xmult": 13.73,
+     "net": 57590.11
+    },
+    {
+     "d": "2026-03-30",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 50400.0,
+     "j": 42,
+     "entry": 22.96,
+     "peak": 12.7,
+     "xmult": 11.85,
+     "net": 52162.39
+    },
+    {
+     "d": "2025-07-29",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 81100.0,
+     "j": 38,
+     "entry": 23.61,
+     "peak": 10.7,
+     "xmult": 8.29,
+     "net": 34305.05
+    },
+    {
+     "d": "2026-01-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25350.0,
+     "j": 63,
+     "entry": 8.2,
+     "peak": 8.4,
+     "xmult": 7.69,
+     "net": 31949.54
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_momo-cheap-hero-trail": {
+   "rule": [
+    "rsi_momo",
+    "cheap",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 218,
+    "win_pct": 16.1,
+    "peak5": 14,
+    "peak10": 5,
+    "banked5": 5,
+    "banked10": 3,
+    "net": -62706.0,
+    "net_per_day": -255.9,
+    "per_1000": -64.1,
+    "worst_day": -10624.0,
+    "max_dd": -194653.0,
+    "top5": 214537.0,
+    "top5_share": null,
+    "net_wo_top5": -277243.0,
+    "proxy": 1,
+    "ce": 97,
+    "pe": 121,
+    "spread2x": -63608.0,
+    "oor0": -64837.0
+   },
+   "by_year": {
+    "2025": [
+     123,
+     -177031.0
+    ],
+    "2026": [
+     95,
+     114325.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     33217.0
+    ],
+    "FINNIFTY": [
+     16,
+     -14075.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -7726.0
+    ],
+    "NIFTY": [
+     82,
+     -32528.0
+    ],
+    "SENSEX": [
+     79,
+     -41595.0
+    ]
+   },
+   "twin_mean": -73361.0,
+   "twin_sd": 80666.0,
+   "p": 0.4271,
+   "top": [
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74500.0,
+     "j": 39,
+     "entry": 25.21,
+     "peak": 19.8,
+     "xmult": 13.73,
+     "net": 57590.11
+    },
+    {
+     "d": "2026-03-30",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 50400.0,
+     "j": 42,
+     "entry": 22.96,
+     "peak": 12.7,
+     "xmult": 11.85,
+     "net": 52162.39
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 11.09,
+     "net": 47913.27
+    },
+    {
+     "d": "2026-01-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25350.0,
+     "j": 63,
+     "entry": 8.2,
+     "peak": 8.4,
+     "xmult": 7.69,
+     "net": 31949.54
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_momo-cheap-hero-time": {
+   "rule": [
+    "rsi_momo",
+    "cheap",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 218,
+    "win_pct": 15.6,
+    "peak5": 12,
+    "peak10": 4,
+    "banked5": 5,
+    "banked10": 3,
+    "net": -68066.0,
+    "net_per_day": -277.8,
+    "per_1000": -69.6,
+    "worst_day": -10624.0,
+    "max_dd": -178292.0,
+    "top5": 214537.0,
+    "top5_share": null,
+    "net_wo_top5": -282603.0,
+    "proxy": 1,
+    "ce": 97,
+    "pe": 121,
+    "spread2x": -70305.0,
+    "oor0": -70197.0
+   },
+   "by_year": {
+    "2025": [
+     123,
+     -164866.0
+    ],
+    "2026": [
+     95,
+     96800.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     36124.0
+    ],
+    "FINNIFTY": [
+     16,
+     -14586.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -12271.0
+    ],
+    "NIFTY": [
+     82,
+     -30062.0
+    ],
+    "SENSEX": [
+     79,
+     -47270.0
+    ]
+   },
+   "twin_mean": -61956.0,
+   "twin_sd": 78823.0,
+   "p": 0.481,
+   "top": [
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74500.0,
+     "j": 39,
+     "entry": 25.21,
+     "peak": 19.8,
+     "xmult": 13.73,
+     "net": 57590.11
+    },
+    {
+     "d": "2026-03-30",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 50400.0,
+     "j": 42,
+     "entry": 22.96,
+     "peak": 12.7,
+     "xmult": 11.85,
+     "net": 52162.39
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 11.09,
+     "net": 47913.27
+    },
+    {
+     "d": "2026-01-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25350.0,
+     "j": 63,
+     "entry": 8.2,
+     "peak": 8.4,
+     "xmult": 7.69,
+     "net": 31949.54
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 48,
+     "entry": 18.21,
+     "peak": 10.2,
+     "xmult": 7.11,
+     "net": 24921.77
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_momo-otm2-all-hold": {
+   "rule": [
+    "rsi_momo",
+    "otm2",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 242,
+    "win_pct": 13.2,
+    "peak5": 23,
+    "peak10": 3,
+    "banked5": 12,
+    "banked10": 1,
+    "net": 4730.0,
+    "net_per_day": 19.3,
+    "per_1000": 4.9,
+    "worst_day": -10860.0,
+    "max_dd": -111839.0,
+    "top5": 163846.0,
+    "top5_share": 3463.6,
+    "net_wo_top5": -159116.0,
+    "proxy": 1,
+    "ce": 136,
+    "pe": 106,
+    "spread2x": 2012.0,
+    "oor0": 4730.0
+   },
+   "by_year": {
+    "2025": [
+     138,
+     7617.0
+    ],
+    "2026": [
+     104,
+     -2886.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -24771.0
+    ],
+    "FINNIFTY": [
+     19,
+     -1011.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -22585.0
+    ],
+    "NIFTY": [
+     91,
+     -34849.0
+    ],
+    "SENSEX": [
+     90,
+     87947.0
+    ]
+   },
+   "twin_mean": -124926.0,
+   "twin_sd": 74181.0,
+   "p": 0.0479,
+   "top": [
+    {
+     "d": "2025-06-26",
+     "und": "FINNIFTY",
+     "side": "CE",
+     "strike": 26950.0,
+     "j": 0,
+     "entry": 31.57,
+     "peak": 10.3,
+     "xmult": 10.14,
+     "net": 37385.12
+    },
+    {
+     "d": "2025-04-01",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77000.0,
+     "j": 9,
+     "entry": 124.86,
+     "peak": 8.9,
+     "xmult": 8.07,
+     "net": 35202.34
+    },
+    {
+     "d": "2025-10-16",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 83200.0,
+     "j": 31,
+     "entry": 41.52,
+     "peak": 10.3,
+     "xmult": 7.7,
+     "net": 33270.81
+    },
+    {
+     "d": "2025-02-04",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 77800.0,
+     "j": 0,
+     "entry": 110.05,
+     "peak": 7.9,
+     "xmult": 7.62,
+     "net": 29050.91
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84600.0,
+     "j": 2,
+     "entry": 52.63,
+     "peak": 8.1,
+     "xmult": 7.9,
+     "net": 28937.17
+    }
+   ],
+   "q": 0.4142
+  },
+  "rsi_momo-otm2-all-trail": {
+   "rule": [
+    "rsi_momo",
+    "otm2",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 242,
+    "win_pct": 18.2,
+    "peak5": 18,
+    "peak10": 2,
+    "banked5": 8,
+    "banked10": 0,
+    "net": -1771.0,
+    "net_per_day": -7.2,
+    "per_1000": -1.8,
+    "worst_day": -9445.0,
+    "max_dd": -104666.0,
+    "top5": 150728.0,
+    "top5_share": null,
+    "net_wo_top5": -152499.0,
+    "proxy": 1,
+    "ce": 136,
+    "pe": 106,
+    "spread2x": -4489.0,
+    "oor0": -1771.0
+   },
+   "by_year": {
+    "2025": [
+     138,
+     36856.0
+    ],
+    "2026": [
+     104,
+     -38627.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -12697.0
+    ],
+    "FINNIFTY": [
+     19,
+     -21646.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -19154.0
+    ],
+    "NIFTY": [
+     91,
+     -29904.0
+    ],
+    "SENSEX": [
+     90,
+     81629.0
+    ]
+   },
+   "twin_mean": -83378.0,
+   "twin_sd": 70509.0,
+   "p": 0.1337,
+   "top": [
+    {
+     "d": "2025-04-01",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77000.0,
+     "j": 9,
+     "entry": 124.86,
+     "peak": 8.9,
+     "xmult": 8.07,
+     "net": 35202.34
+    },
+    {
+     "d": "2025-10-16",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 83200.0,
+     "j": 31,
+     "entry": 41.52,
+     "peak": 10.3,
+     "xmult": 7.7,
+     "net": 33270.81
+    },
+    {
+     "d": "2025-02-04",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 77800.0,
+     "j": 0,
+     "entry": 110.05,
+     "peak": 7.9,
+     "xmult": 7.62,
+     "net": 29050.91
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 11,
+     "entry": 89.79,
+     "peak": 9.5,
+     "xmult": 8.83,
+     "net": 27999.97
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74900.0,
+     "j": 37,
+     "entry": 110.86,
+     "peak": 8.1,
+     "xmult": 6.71,
+     "net": 25203.7
+    }
+   ],
+   "q": 0.6059
+  },
+  "rsi_momo-otm2-all-time": {
+   "rule": [
+    "rsi_momo",
+    "otm2",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 242,
+    "win_pct": 26.4,
+    "peak5": 8,
+    "peak10": 1,
+    "banked5": 4,
+    "banked10": 0,
+    "net": -42475.0,
+    "net_per_day": -173.4,
+    "per_1000": -44.1,
+    "worst_day": -8022.0,
+    "max_dd": -126289.0,
+    "top5": 134143.0,
+    "top5_share": null,
+    "net_wo_top5": -176618.0,
+    "proxy": 1,
+    "ce": 136,
+    "pe": 106,
+    "spread2x": -45803.0,
+    "oor0": -42475.0
+   },
+   "by_year": {
+    "2025": [
+     138,
+     54780.0
+    ],
+    "2026": [
+     104,
+     -97255.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -16146.0
+    ],
+    "FINNIFTY": [
+     19,
+     -5088.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -23039.0
+    ],
+    "NIFTY": [
+     91,
+     -18073.0
+    ],
+    "SENSEX": [
+     90,
+     19871.0
+    ]
+   },
+   "twin_mean": -91389.0,
+   "twin_sd": 69476.0,
+   "p": 0.2435,
+   "top": [
+    {
+     "d": "2025-04-01",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77000.0,
+     "j": 9,
+     "entry": 124.86,
+     "peak": 8.9,
+     "xmult": 8.07,
+     "net": 35202.34
+    },
+    {
+     "d": "2025-10-16",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 83200.0,
+     "j": 31,
+     "entry": 41.52,
+     "peak": 10.3,
+     "xmult": 7.7,
+     "net": 33270.81
+    },
+    {
+     "d": "2025-02-04",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 77800.0,
+     "j": 0,
+     "entry": 110.05,
+     "peak": 7.9,
+     "xmult": 7.62,
+     "net": 29050.91
+    },
+    {
+     "d": "2025-11-11",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 25600.0,
+     "j": 31,
+     "entry": 15.61,
+     "peak": 6.7,
+     "xmult": 6.28,
+     "net": 24626.2
+    },
+    {
+     "d": "2025-08-26",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 81100.0,
+     "j": 0,
+     "entry": 79.19,
+     "peak": 4.1,
+     "xmult": 3.54,
+     "net": 11992.32
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_momo-otm2-hero-hold": {
+   "rule": [
+    "rsi_momo",
+    "otm2",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 222,
+    "win_pct": 13.1,
+    "peak5": 16,
+    "peak10": 2,
+    "banked5": 9,
+    "banked10": 1,
+    "net": -91422.0,
+    "net_per_day": -373.2,
+    "per_1000": -91.8,
+    "worst_day": -12454.0,
+    "max_dd": -148563.0,
+    "top5": 173061.0,
+    "top5_share": null,
+    "net_wo_top5": -264483.0,
+    "proxy": 1,
+    "ce": 98,
+    "pe": 124,
+    "spread2x": -98745.0,
+    "oor0": -91422.0
+   },
+   "by_year": {
+    "2025": [
+     126,
+     -135182.0
+    ],
+    "2026": [
+     96,
+     43760.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     6133.0
+    ],
+    "FINNIFTY": [
+     16,
+     -27457.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     2682.0
+    ],
+    "NIFTY": [
+     84,
+     -34788.0
+    ],
+    "SENSEX": [
+     81,
+     -37992.0
+    ]
+   },
+   "twin_mean": -86521.0,
+   "twin_sd": 79948.0,
+   "p": 0.525,
+   "top": [
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 10.55,
+     "net": 43124.97
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2026-01-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25300.0,
+     "j": 63,
+     "entry": 2.25,
+     "peak": 9.6,
+     "xmult": 7.73,
+     "net": 33336.15
+    },
+    {
+     "d": "2025-07-29",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 81000.0,
+     "j": 38,
+     "entry": 40.92,
+     "peak": 8.5,
+     "xmult": 7.22,
+     "net": 30415.56
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74900.0,
+     "j": 39,
+     "entry": 107.3,
+     "peak": 8.3,
+     "xmult": 6.93,
+     "net": 25346.16
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_momo-otm2-hero-trail": {
+   "rule": [
+    "rsi_momo",
+    "otm2",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 222,
+    "win_pct": 17.6,
+    "peak5": 14,
+    "peak10": 1,
+    "banked5": 8,
+    "banked10": 0,
+    "net": -100396.0,
+    "net_per_day": -409.8,
+    "per_1000": -100.8,
+    "worst_day": -11003.0,
+    "max_dd": -162676.0,
+    "top5": 141190.0,
+    "top5_share": null,
+    "net_wo_top5": -241586.0,
+    "proxy": 1,
+    "ce": 98,
+    "pe": 124,
+    "spread2x": -107719.0,
+    "oor0": -100396.0
+   },
+   "by_year": {
+    "2025": [
+     126,
+     -149295.0
+    ],
+    "2026": [
+     96,
+     48899.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     9486.0
+    ],
+    "FINNIFTY": [
+     16,
+     -36262.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     1006.0
+    ],
+    "NIFTY": [
+     84,
+     -24964.0
+    ],
+    "SENSEX": [
+     81,
+     -49661.0
+    ]
+   },
+   "twin_mean": -126487.0,
+   "twin_sd": 63518.0,
+   "p": 0.3293,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2026-01-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25300.0,
+     "j": 63,
+     "entry": 2.25,
+     "peak": 9.6,
+     "xmult": 7.73,
+     "net": 33336.15
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74900.0,
+     "j": 39,
+     "entry": 107.3,
+     "peak": 8.3,
+     "xmult": 6.93,
+     "net": 25346.16
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 44,
+     "entry": 8.65,
+     "peak": 7.3,
+     "xmult": 5.98,
+     "net": 20600.81
+    }
+   ],
+   "q": 0.7812
+  },
+  "rsi_momo-otm2-hero-time": {
+   "rule": [
+    "rsi_momo",
+    "otm2",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 222,
+    "win_pct": 18.0,
+    "peak5": 10,
+    "peak10": 1,
+    "banked5": 6,
+    "banked10": 0,
+    "net": -136731.0,
+    "net_per_day": -558.1,
+    "per_1000": -137.3,
+    "worst_day": -10235.0,
+    "max_dd": -156676.0,
+    "top5": 136210.0,
+    "top5_share": null,
+    "net_wo_top5": -272941.0,
+    "proxy": 1,
+    "ce": 98,
+    "pe": 124,
+    "spread2x": -152105.0,
+    "oor0": -136731.0
+   },
+   "by_year": {
+    "2025": [
+     126,
+     -147006.0
+    ],
+    "2026": [
+     96,
+     10275.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -6844.0
+    ],
+    "FINNIFTY": [
+     16,
+     -32865.0
+    ],
+    "MIDCPNIFTY": [
+     20,
+     -8636.0
+    ],
+    "NIFTY": [
+     84,
+     -11095.0
+    ],
+    "SENSEX": [
+     81,
+     -77292.0
+    ]
+   },
+   "twin_mean": -119496.0,
+   "twin_sd": 63368.0,
+   "p": 0.5709,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2026-01-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25300.0,
+     "j": 63,
+     "entry": 2.25,
+     "peak": 9.6,
+     "xmult": 7.73,
+     "net": 33336.15
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 48,
+     "entry": 7.55,
+     "peak": 18.0,
+     "xmult": 5.67,
+     "net": 21069.41
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 44,
+     "entry": 8.65,
+     "peak": 7.3,
+     "xmult": 5.98,
+     "net": 20600.81
+    },
+    {
+     "d": "2025-05-15",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24750.0,
+     "j": 40,
+     "entry": 61.53,
+     "peak": 6.2,
+     "xmult": 5.43,
+     "net": 20366.31
+    }
+   ],
+   "q": 0.7812
+  },
+  "donchian20-cheap-all-hold": {
+   "rule": [
+    "donchian20",
+    "cheap",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 245,
+    "win_pct": 11.0,
+    "peak5": 21,
+    "peak10": 7,
+    "banked5": 10,
+    "banked10": 3,
+    "net": -57065.0,
+    "net_per_day": -232.9,
+    "per_1000": -53.3,
+    "worst_day": -10810.0,
+    "max_dd": -156729.0,
+    "top5": 214437.0,
+    "top5_share": null,
+    "net_wo_top5": -271502.0,
+    "proxy": 14,
+    "ce": 119,
+    "pe": 126,
+    "spread2x": -59697.0,
+    "oor0": -92040.0
+   },
+   "by_year": {
+    "2025": [
+     140,
+     -74523.0
+    ],
+    "2026": [
+     105,
+     17458.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -50168.0
+    ],
+    "FINNIFTY": [
+     19,
+     -17760.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -6346.0
+    ],
+    "NIFTY": [
+     93,
+     47517.0
+    ],
+    "SENSEX": [
+     91,
+     -30308.0
+    ]
+   },
+   "twin_mean": -47733.0,
+   "twin_sd": 103826.0,
+   "p": 0.5429,
+   "top": [
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 12,
+     "entry": 16.26,
+     "peak": 16.8,
+     "xmult": 13.25,
+     "net": 59582.97
+    },
+    {
+     "d": "2026-10-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 71700.0,
+     "j": 0,
+     "entry": 25.71,
+     "peak": 11.7,
+     "xmult": 11.38,
+     "net": 47882.83
+    },
+    {
+     "d": "2025-05-08",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24350.0,
+     "j": 48,
+     "entry": 5.95,
+     "peak": 15.6,
+     "xmult": 8.86,
+     "net": 38452.31
+    },
+    {
+     "d": "2026-05-12",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23600.0,
+     "j": 0,
+     "entry": 19.31,
+     "peak": 11.6,
+     "xmult": 11.08,
+     "net": 37814.1
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74300.0,
+     "j": 47,
+     "entry": 20.31,
+     "peak": 14.9,
+     "xmult": 7.32,
+     "net": 30704.31
+    }
+   ],
+   "q": 0.7812
+  },
+  "donchian20-cheap-all-trail": {
+   "rule": [
+    "donchian20",
+    "cheap",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 245,
+    "win_pct": 16.7,
+    "peak5": 19,
+    "peak10": 5,
+    "banked5": 8,
+    "banked10": 2,
+    "net": -63212.0,
+    "net_per_day": -258.0,
+    "per_1000": -59.0,
+    "worst_day": -9709.0,
+    "max_dd": -128386.0,
+    "top5": 168684.0,
+    "top5_share": null,
+    "net_wo_top5": -231896.0,
+    "proxy": 14,
+    "ce": 119,
+    "pe": 126,
+    "spread2x": -65844.0,
+    "oor0": -90356.0
+   },
+   "by_year": {
+    "2025": [
+     140,
+     -113762.0
+    ],
+    "2026": [
+     105,
+     50550.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -42146.0
+    ],
+    "FINNIFTY": [
+     19,
+     -11137.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -74.0
+    ],
+    "NIFTY": [
+     93,
+     -26519.0
+    ],
+    "SENSEX": [
+     91,
+     16663.0
+    ]
+   },
+   "twin_mean": -32802.0,
+   "twin_sd": 96385.0,
+   "p": 0.5948,
+   "top": [
+    {
+     "d": "2026-10-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 71700.0,
+     "j": 0,
+     "entry": 25.71,
+     "peak": 11.7,
+     "xmult": 11.38,
+     "net": 47882.83
+    },
+    {
+     "d": "2026-05-12",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23600.0,
+     "j": 0,
+     "entry": 19.31,
+     "peak": 11.6,
+     "xmult": 11.08,
+     "net": 37814.1
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 12,
+     "entry": 16.26,
+     "peak": 16.8,
+     "xmult": 6.99,
+     "net": 29100.53
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74300.0,
+     "j": 47,
+     "entry": 20.31,
+     "peak": 14.9,
+     "xmult": 6.78,
+     "net": 28045.33
+    },
+    {
+     "d": "2025-04-17",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23650.0,
+     "j": 24,
+     "entry": 28.21,
+     "peak": 7.9,
+     "xmult": 7.13,
+     "net": 25841.43
+    }
+   ],
+   "q": 0.7812
+  },
+  "donchian20-cheap-all-time": {
+   "rule": [
+    "donchian20",
+    "cheap",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 245,
+    "win_pct": 20.4,
+    "peak5": 15,
+    "peak10": 4,
+    "banked5": 7,
+    "banked10": 1,
+    "net": -72904.0,
+    "net_per_day": -297.6,
+    "per_1000": -68.1,
+    "worst_day": -8823.0,
+    "max_dd": -107065.0,
+    "top5": 145231.0,
+    "top5_share": null,
+    "net_wo_top5": -218135.0,
+    "proxy": 14,
+    "ce": 119,
+    "pe": 126,
+    "spread2x": -101633.0,
+    "oor0": -104307.0
+   },
+   "by_year": {
+    "2025": [
+     140,
+     -99789.0
+    ],
+    "2026": [
+     105,
+     26885.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -39074.0
+    ],
+    "FINNIFTY": [
+     19,
+     1398.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     5758.0
+    ],
+    "NIFTY": [
+     93,
+     -22595.0
+    ],
+    "SENSEX": [
+     91,
+     -18391.0
+    ]
+   },
+   "twin_mean": -58244.0,
+   "twin_sd": 90205.0,
+   "p": 0.5269,
+   "top": [
+    {
+     "d": "2026-05-12",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23600.0,
+     "j": 0,
+     "entry": 19.31,
+     "peak": 11.6,
+     "xmult": 11.08,
+     "net": 37814.1
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84400.0,
+     "j": 12,
+     "entry": 16.26,
+     "peak": 16.8,
+     "xmult": 6.99,
+     "net": 29100.53
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74300.0,
+     "j": 47,
+     "entry": 20.31,
+     "peak": 14.9,
+     "xmult": 6.78,
+     "net": 28045.33
+    },
+    {
+     "d": "2025-04-17",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23650.0,
+     "j": 24,
+     "entry": 28.21,
+     "peak": 7.9,
+     "xmult": 7.13,
+     "net": 25841.43
+    },
+    {
+     "d": "2025-06-26",
+     "und": "FINNIFTY",
+     "side": "CE",
+     "strike": 27050.0,
+     "j": 1,
+     "entry": 30.97,
+     "peak": 7.3,
+     "xmult": 7.09,
+     "net": 24429.74
+    }
+   ],
+   "q": 0.7812
+  },
+  "donchian20-cheap-hero-hold": {
+   "rule": [
+    "donchian20",
+    "cheap",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 220,
+    "win_pct": 12.7,
+    "peak5": 15,
+    "peak10": 5,
+    "banked5": 7,
+    "banked10": 1,
+    "net": 7694.0,
+    "net_per_day": 31.4,
+    "per_1000": 7.8,
+    "worst_day": -10103.0,
+    "max_dd": -158984.0,
+    "top5": 252253.0,
+    "top5_share": 3278.5,
+    "net_wo_top5": -244559.0,
+    "proxy": 1,
+    "ce": 108,
+    "pe": 112,
+    "spread2x": 3975.0,
+    "oor0": 5420.0
+   },
+   "by_year": {
+    "2025": [
+     126,
+     -33553.0
+    ],
+    "2026": [
+     94,
+     41247.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -27521.0
+    ],
+    "FINNIFTY": [
+     15,
+     -4447.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -16267.0
+    ],
+    "NIFTY": [
+     80,
+     -1304.0
+    ],
+    "SENSEX": [
+     84,
+     57233.0
+    ]
+   },
+   "twin_mean": 26955.0,
+   "twin_sd": 98343.0,
+   "p": 0.5609,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 26.16,
+     "net": 119532.04
+    },
+    {
+     "d": "2025-05-08",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24350.0,
+     "j": 48,
+     "entry": 5.95,
+     "peak": 15.6,
+     "xmult": 8.86,
+     "net": 38452.31
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76600.0,
+     "j": 42,
+     "entry": 29.86,
+     "peak": 19.4,
+     "xmult": 9.07,
+     "net": 38445.11
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74300.0,
+     "j": 47,
+     "entry": 20.31,
+     "peak": 14.9,
+     "xmult": 7.32,
+     "net": 30704.31
+    },
+    {
+     "d": "2025-04-17",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23750.0,
+     "j": 38,
+     "entry": 16.36,
+     "peak": 7.6,
+     "xmult": 6.14,
+     "net": 25119.72
+    }
+   ],
+   "q": 0.7812
+  },
+  "donchian20-cheap-hero-trail": {
+   "rule": [
+    "donchian20",
+    "cheap",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 220,
+    "win_pct": 18.6,
+    "peak5": 13,
+    "peak10": 3,
+    "banked5": 4,
+    "banked10": 1,
+    "net": -49098.0,
+    "net_per_day": -200.4,
+    "per_1000": -49.8,
+    "worst_day": -10103.0,
+    "max_dd": -136940.0,
+    "top5": 156757.0,
+    "top5_share": null,
+    "net_wo_top5": -205856.0,
+    "proxy": 1,
+    "ce": 108,
+    "pe": 112,
+    "spread2x": -52818.0,
+    "oor0": -51373.0
+   },
+   "by_year": {
+    "2025": [
+     126,
+     -74920.0
+    ],
+    "2026": [
+     94,
+     25821.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -27521.0
+    ],
+    "FINNIFTY": [
+     15,
+     -4447.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -16267.0
+    ],
+    "NIFTY": [
+     80,
+     -27494.0
+    ],
+    "SENSEX": [
+     84,
+     26631.0
+    ]
+   },
+   "twin_mean": 7907.0,
+   "twin_sd": 75439.0,
+   "p": 0.7505,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 11.09,
+     "net": 47913.27
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76600.0,
+     "j": 42,
+     "entry": 29.86,
+     "peak": 19.4,
+     "xmult": 9.05,
+     "net": 38325.34
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74300.0,
+     "j": 47,
+     "entry": 20.31,
+     "peak": 14.9,
+     "xmult": 6.78,
+     "net": 28045.33
+    },
+    {
+     "d": "2025-03-20",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23100.0,
+     "j": 40,
+     "entry": 14.61,
+     "peak": 8.2,
+     "xmult": 6.71,
+     "net": 24941.31
+    },
+    {
+     "d": "2025-08-28",
+     "und": "FINNIFTY",
+     "side": "PE",
+     "strike": 25750.0,
+     "j": 41,
+     "entry": 24.01,
+     "peak": 4.8,
+     "xmult": 4.76,
+     "net": 17531.95
+    }
+   ],
+   "q": 0.8457
+  },
+  "donchian20-cheap-hero-time": {
+   "rule": [
+    "donchian20",
+    "cheap",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 220,
+    "win_pct": 22.7,
+    "peak5": 12,
+    "peak10": 3,
+    "banked5": 4,
+    "banked10": 1,
+    "net": -66071.0,
+    "net_per_day": -269.7,
+    "per_1000": -67.0,
+    "worst_day": -10023.0,
+    "max_dd": -160378.0,
+    "top5": 154012.0,
+    "top5_share": null,
+    "net_wo_top5": -220083.0,
+    "proxy": 1,
+    "ce": 108,
+    "pe": 112,
+    "spread2x": -69791.0,
+    "oor0": -68346.0
+   },
+   "by_year": {
+    "2025": [
+     126,
+     -107703.0
+    ],
+    "2026": [
+     94,
+     41631.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -26698.0
+    ],
+    "FINNIFTY": [
+     15,
+     -22368.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -5789.0
+    ],
+    "NIFTY": [
+     80,
+     -27052.0
+    ],
+    "SENSEX": [
+     84,
+     15836.0
+    ]
+   },
+   "twin_mean": 16302.0,
+   "twin_sd": 76470.0,
+   "p": 0.8483,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72600.0,
+     "j": 39,
+     "entry": 23.81,
+     "peak": 26.6,
+     "xmult": 11.09,
+     "net": 47913.27
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76600.0,
+     "j": 42,
+     "entry": 29.86,
+     "peak": 19.4,
+     "xmult": 9.05,
+     "net": 38325.34
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74300.0,
+     "j": 47,
+     "entry": 20.31,
+     "peak": 14.9,
+     "xmult": 6.78,
+     "net": 28045.33
+    },
+    {
+     "d": "2025-03-20",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23100.0,
+     "j": 40,
+     "entry": 14.61,
+     "peak": 8.2,
+     "xmult": 6.71,
+     "net": 24941.31
+    },
+    {
+     "d": "2026-09-01",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24050.0,
+     "j": 44,
+     "entry": 15.41,
+     "peak": 6.6,
+     "xmult": 4.71,
+     "net": 14786.74
+    }
+   ],
+   "q": 0.8742
+  },
+  "donchian20-otm2-all-hold": {
+   "rule": [
+    "donchian20",
+    "otm2",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 245,
+    "win_pct": 14.3,
+    "peak5": 16,
+    "peak10": 3,
+    "banked5": 9,
+    "banked10": 1,
+    "net": -67696.0,
+    "net_per_day": -276.3,
+    "per_1000": -69.3,
+    "worst_day": -9877.0,
+    "max_dd": -131331.0,
+    "top5": 150661.0,
+    "top5_share": null,
+    "net_wo_top5": -218357.0,
+    "proxy": 0,
+    "ce": 119,
+    "pe": 126,
+    "spread2x": -69678.0,
+    "oor0": -67696.0
+   },
+   "by_year": {
+    "2025": [
+     140,
+     -58421.0
+    ],
+    "2026": [
+     105,
+     -9275.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -44405.0
+    ],
+    "FINNIFTY": [
+     19,
+     -21132.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -11757.0
+    ],
+    "NIFTY": [
+     93,
+     -219.0
+    ],
+    "SENSEX": [
+     91,
+     9817.0
+    ]
+   },
+   "twin_mean": -21855.0,
+   "twin_sd": 101227.0,
+   "p": 0.6587,
+   "top": [
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84500.0,
+     "j": 12,
+     "entry": 30.77,
+     "peak": 11.2,
+     "xmult": 10.29,
+     "net": 45578.51
+    },
+    {
+     "d": "2026-05-12",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23650.0,
+     "j": 0,
+     "entry": 32.32,
+     "peak": 8.4,
+     "xmult": 8.15,
+     "net": 29928.15
+    },
+    {
+     "d": "2025-02-04",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 77800.0,
+     "j": 0,
+     "entry": 110.05,
+     "peak": 7.9,
+     "xmult": 7.62,
+     "net": 29050.91
+    },
+    {
+     "d": "2025-06-26",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 25350.0,
+     "j": 0,
+     "entry": 32.67,
+     "peak": 6.5,
+     "xmult": 6.27,
+     "net": 25718.58
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 46,
+     "entry": 9.1,
+     "peak": 7.0,
+     "xmult": 5.69,
+     "net": 20384.71
+    }
+   ],
+   "q": 0.8141
+  },
+  "donchian20-otm2-all-trail": {
+   "rule": [
+    "donchian20",
+    "otm2",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 245,
+    "win_pct": 17.6,
+    "peak5": 15,
+    "peak10": 2,
+    "banked5": 7,
+    "banked10": 0,
+    "net": -91328.0,
+    "net_per_day": -372.8,
+    "per_1000": -93.4,
+    "worst_day": -9799.0,
+    "max_dd": -152229.0,
+    "top5": 116494.0,
+    "top5_share": null,
+    "net_wo_top5": -207822.0,
+    "proxy": 0,
+    "ce": 119,
+    "pe": 126,
+    "spread2x": -93310.0,
+    "oor0": -91328.0
+   },
+   "by_year": {
+    "2025": [
+     140,
+     -70081.0
+    ],
+    "2026": [
+     105,
+     -21247.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -40074.0
+    ],
+    "FINNIFTY": [
+     19,
+     -21132.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -5833.0
+    ],
+    "NIFTY": [
+     93,
+     -13896.0
+    ],
+    "SENSEX": [
+     91,
+     -10394.0
+    ]
+   },
+   "twin_mean": -47981.0,
+   "twin_sd": 84970.0,
+   "p": 0.6826,
+   "top": [
+    {
+     "d": "2026-05-12",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23650.0,
+     "j": 0,
+     "entry": 32.32,
+     "peak": 8.4,
+     "xmult": 8.15,
+     "net": 29928.15
+    },
+    {
+     "d": "2025-02-04",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 77800.0,
+     "j": 0,
+     "entry": 110.05,
+     "peak": 7.9,
+     "xmult": 7.62,
+     "net": 29050.91
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 46,
+     "entry": 9.1,
+     "peak": 7.0,
+     "xmult": 5.69,
+     "net": 20384.71
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84500.0,
+     "j": 12,
+     "entry": 30.77,
+     "peak": 11.2,
+     "xmult": 4.87,
+     "net": 18947.19
+    },
+    {
+     "d": "2025-04-17",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23550.0,
+     "j": 24,
+     "entry": 58.13,
+     "peak": 5.6,
+     "xmult": 5.19,
+     "net": 18182.62
+    }
+   ],
+   "q": 0.8141
+  },
+  "donchian20-otm2-all-time": {
+   "rule": [
+    "donchian20",
+    "otm2",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 245,
+    "win_pct": 21.6,
+    "peak5": 9,
+    "peak10": 0,
+    "banked5": 6,
+    "banked10": 0,
+    "net": -99762.0,
+    "net_per_day": -407.2,
+    "per_1000": -102.1,
+    "worst_day": -9698.0,
+    "max_dd": -140225.0,
+    "top5": 114605.0,
+    "top5_share": null,
+    "net_wo_top5": -214368.0,
+    "proxy": 0,
+    "ce": 119,
+    "pe": 126,
+    "spread2x": -101744.0,
+    "oor0": -99762.0
+   },
+   "by_year": {
+    "2025": [
+     140,
+     -75146.0
+    ],
+    "2026": [
+     105,
+     -24616.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     21,
+     -36831.0
+    ],
+    "FINNIFTY": [
+     19,
+     -6796.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     1711.0
+    ],
+    "NIFTY": [
+     93,
+     -30561.0
+    ],
+    "SENSEX": [
+     91,
+     -27285.0
+    ]
+   },
+   "twin_mean": -76369.0,
+   "twin_sd": 79477.0,
+   "p": 0.5948,
+   "top": [
+    {
+     "d": "2026-05-12",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23650.0,
+     "j": 0,
+     "entry": 32.32,
+     "peak": 8.4,
+     "xmult": 8.15,
+     "net": 29928.15
+    },
+    {
+     "d": "2025-02-04",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 77800.0,
+     "j": 0,
+     "entry": 110.05,
+     "peak": 7.9,
+     "xmult": 7.62,
+     "net": 29050.91
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 46,
+     "entry": 9.1,
+     "peak": 7.0,
+     "xmult": 5.69,
+     "net": 20384.71
+    },
+    {
+     "d": "2025-04-17",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23550.0,
+     "j": 24,
+     "entry": 58.13,
+     "peak": 5.6,
+     "xmult": 5.19,
+     "net": 18182.62
+    },
+    {
+     "d": "2026-01-20",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 25450.0,
+     "j": 1,
+     "entry": 29.66,
+     "peak": 5.7,
+     "xmult": 5.45,
+     "net": 17059.02
+    }
+   ],
+   "q": 0.7812
+  },
+  "donchian20-otm2-hero-hold": {
+   "rule": [
+    "donchian20",
+    "otm2",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 226,
+    "win_pct": 15.0,
+    "peak5": 17,
+    "peak10": 3,
+    "banked5": 8,
+    "banked10": 1,
+    "net": -54747.0,
+    "net_per_day": -223.5,
+    "per_1000": -54.4,
+    "worst_day": -10514.0,
+    "max_dd": -160295.0,
+    "top5": 169075.0,
+    "top5_share": null,
+    "net_wo_top5": -223822.0,
+    "proxy": 1,
+    "ce": 110,
+    "pe": 116,
+    "spread2x": -62997.0,
+    "oor0": -54747.0
+   },
+   "by_year": {
+    "2025": [
+     131,
+     -70044.0
+    ],
+    "2026": [
+     95,
+     15297.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     15899.0
+    ],
+    "FINNIFTY": [
+     15,
+     -13348.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -7622.0
+    ],
+    "NIFTY": [
+     83,
+     -59155.0
+    ],
+    "SENSEX": [
+     87,
+     9479.0
+    ]
+   },
+   "twin_mean": -83324.0,
+   "twin_sd": 77904.0,
+   "p": 0.3553,
+   "top": [
+    {
+     "d": "2025-03-20",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23150.0,
+     "j": 40,
+     "entry": 4.75,
+     "peak": 15.1,
+     "xmult": 10.17,
+     "net": 45612.09
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76700.0,
+     "j": 42,
+     "entry": 44.02,
+     "peak": 15.4,
+     "xmult": 8.4,
+     "net": 32475.24
+    },
+    {
+     "d": "2025-04-17",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23750.0,
+     "j": 38,
+     "entry": 16.36,
+     "peak": 7.6,
+     "xmult": 6.14,
+     "net": 25119.72
+    },
+    {
+     "d": "2025-10-23",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84800.0,
+     "j": 51,
+     "entry": 29.21,
+     "peak": 6.9,
+     "xmult": 6.38,
+     "net": 25030.68
+    }
+   ],
+   "q": 0.7812
+  },
+  "donchian20-otm2-hero-trail": {
+   "rule": [
+    "donchian20",
+    "otm2",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 226,
+    "win_pct": 19.5,
+    "peak5": 16,
+    "peak10": 2,
+    "banked5": 6,
+    "banked10": 1,
+    "net": -49163.0,
+    "net_per_day": -200.7,
+    "per_1000": -48.9,
+    "worst_day": -10514.0,
+    "max_dd": -138855.0,
+    "top5": 153987.0,
+    "top5_share": null,
+    "net_wo_top5": -203150.0,
+    "proxy": 1,
+    "ce": 110,
+    "pe": 116,
+    "spread2x": -57413.0,
+    "oor0": -49163.0
+   },
+   "by_year": {
+    "2025": [
+     131,
+     -90690.0
+    ],
+    "2026": [
+     95,
+     41527.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     15899.0
+    ],
+    "FINNIFTY": [
+     15,
+     -13348.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -13581.0
+    ],
+    "NIFTY": [
+     83,
+     -43847.0
+    ],
+    "SENSEX": [
+     87,
+     5713.0
+    ]
+   },
+   "twin_mean": -89104.0,
+   "twin_sd": 60380.0,
+   "p": 0.2635,
+   "top": [
+    {
+     "d": "2025-03-20",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23150.0,
+     "j": 40,
+     "entry": 4.75,
+     "peak": 15.1,
+     "xmult": 10.17,
+     "net": 45612.09
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76700.0,
+     "j": 42,
+     "entry": 44.02,
+     "peak": 15.4,
+     "xmult": 6.82,
+     "net": 25502.41
+    },
+    {
+     "d": "2026-03-30",
+     "und": "BANKNIFTY",
+     "side": "PE",
+     "strike": 50500.0,
+     "j": 50,
+     "entry": 57.98,
+     "peak": 6.7,
+     "xmult": 6.36,
+     "net": 21649.71
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 46,
+     "entry": 9.1,
+     "peak": 7.0,
+     "xmult": 5.69,
+     "net": 20384.71
+    }
+   ],
+   "q": 0.7812
+  },
+  "donchian20-otm2-hero-time": {
+   "rule": [
+    "donchian20",
+    "otm2",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 226,
+    "win_pct": 23.9,
+    "peak5": 14,
+    "peak10": 2,
+    "banked5": 5,
+    "banked10": 1,
+    "net": -78857.0,
+    "net_per_day": -321.9,
+    "per_1000": -78.4,
+    "worst_day": -10514.0,
+    "max_dd": -163607.0,
+    "top5": 150519.0,
+    "top5_share": null,
+    "net_wo_top5": -229376.0,
+    "proxy": 1,
+    "ce": 110,
+    "pe": 116,
+    "spread2x": -85788.0,
+    "oor0": -78857.0
+   },
+   "by_year": {
+    "2025": [
+     131,
+     -115289.0
+    ],
+    "2026": [
+     95,
+     36431.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     20,
+     -10805.0
+    ],
+    "FINNIFTY": [
+     15,
+     -27538.0
+    ],
+    "MIDCPNIFTY": [
+     21,
+     -6274.0
+    ],
+    "NIFTY": [
+     83,
+     -38409.0
+    ],
+    "SENSEX": [
+     87,
+     4168.0
+    ]
+   },
+   "twin_mean": -86897.0,
+   "twin_sd": 60700.0,
+   "p": 0.4491,
+   "top": [
+    {
+     "d": "2025-03-20",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23150.0,
+     "j": 40,
+     "entry": 4.75,
+     "peak": 15.1,
+     "xmult": 10.17,
+     "net": 45612.09
+    },
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72100.0,
+     "j": 39,
+     "entry": 124.91,
+     "peak": 8.9,
+     "xmult": 9.2,
+     "net": 40837.69
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76700.0,
+     "j": 42,
+     "entry": 44.02,
+     "peak": 15.4,
+     "xmult": 6.82,
+     "net": 25502.41
+    },
+    {
+     "d": "2026-08-25",
+     "und": "MIDCPNIFTY",
+     "side": "CE",
+     "strike": 14925.0,
+     "j": 46,
+     "entry": 9.1,
+     "peak": 7.0,
+     "xmult": 5.69,
+     "net": 20384.71
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74700.0,
+     "j": 47,
+     "entry": 85.19,
+     "peak": 8.1,
+     "xmult": 6.36,
+     "net": 18182.13
+    }
+   ],
+   "q": 0.7812
+  },
+  "base-cheap-all-hold": {
+   "rule": [
+    "base",
+    "cheap",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 460,
+    "win_pct": 5.4,
+    "peak5": 25,
+    "peak10": 6,
+    "banked5": 12,
+    "banked10": 4,
+    "net": -420864.0,
+    "net_per_day": -1717.8,
+    "per_1000": -211.4,
+    "worst_day": -17880.0,
+    "max_dd": -491946.0,
+    "top5": 352104.0,
+    "top5_share": null,
+    "net_wo_top5": -772968.0,
+    "proxy": 14,
+    "ce": 231,
+    "pe": 229,
+    "spread2x": -425317.0,
+    "oor0": -436625.0
+   },
+   "by_year": {
+    "2025": [
+     257,
+     -315469.0
+    ],
+    "2026": [
+     203,
+     -105395.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     40,
+     -98348.0
+    ],
+    "FINNIFTY": [
+     38,
+     -73020.0
+    ],
+    "MIDCPNIFTY": [
+     42,
+     -47323.0
+    ],
+    "NIFTY": [
+     186,
+     -162361.0
+    ],
+    "SENSEX": [
+     154,
+     -39812.0
+    ]
+   },
+   "twin_mean": -200795.0,
+   "twin_sd": 151962.0,
+   "p": 0.9341,
+   "top": [
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83100.0,
+     "j": 5,
+     "entry": 22.51,
+     "peak": 24.6,
+     "xmult": 22.22,
+     "net": 104813.19
+    },
+    {
+     "d": "2025-04-01",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76600.0,
+     "j": 5,
+     "entry": 30.07,
+     "peak": 25.2,
+     "xmult": 20.19,
+     "net": 92108.5
+    },
+    {
+     "d": "2025-05-15",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24650.0,
+     "j": 5,
+     "entry": 28.51,
+     "peak": 16.8,
+     "xmult": 15.22,
+     "net": 60653.84
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84500.0,
+     "j": 5,
+     "entry": 24.06,
+     "peak": 14.3,
+     "xmult": 13.16,
+     "net": 58327.48
+    },
+    {
+     "d": "2026-10-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 71600.0,
+     "j": 5,
+     "entry": 24.01,
+     "peak": 9.2,
+     "xmult": 8.57,
+     "net": 36201.29
+    }
+   ],
+   "q": 0.9341
+  },
+  "base-cheap-all-trail": {
+   "rule": [
+    "base",
+    "cheap",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 460,
+    "win_pct": 12.8,
+    "peak5": 22,
+    "peak10": 5,
+    "banked5": 10,
+    "banked10": 1,
+    "net": -387416.0,
+    "net_per_day": -1581.3,
+    "per_1000": -194.6,
+    "worst_day": -17872.0,
+    "max_dd": -471777.0,
+    "top5": 208801.0,
+    "top5_share": null,
+    "net_wo_top5": -596217.0,
+    "proxy": 14,
+    "ce": 231,
+    "pe": 229,
+    "spread2x": -397273.0,
+    "oor0": -414372.0
+   },
+   "by_year": {
+    "2025": [
+     257,
+     -230053.0
+    ],
+    "2026": [
+     203,
+     -157363.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     40,
+     -72625.0
+    ],
+    "FINNIFTY": [
+     38,
+     -62622.0
+    ],
+    "MIDCPNIFTY": [
+     42,
+     -42038.0
+    ],
+    "NIFTY": [
+     186,
+     -167486.0
+    ],
+    "SENSEX": [
+     154,
+     -42645.0
+    ]
+   },
+   "twin_mean": -242923.0,
+   "twin_sd": 113594.0,
+   "p": 0.8942,
+   "top": [
+    {
+     "d": "2025-04-01",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76600.0,
+     "j": 5,
+     "entry": 30.07,
+     "peak": 25.2,
+     "xmult": 20.19,
+     "net": 92108.5
+    },
+    {
+     "d": "2026-10-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 71600.0,
+     "j": 5,
+     "entry": 24.01,
+     "peak": 9.2,
+     "xmult": 8.57,
+     "net": 36201.29
+    },
+    {
+     "d": "2026-05-12",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23550.0,
+     "j": 5,
+     "entry": 25.11,
+     "peak": 6.9,
+     "xmult": 6.52,
+     "net": 26937.69
+    },
+    {
+     "d": "2026-09-15",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23350.0,
+     "j": 5,
+     "entry": 21.66,
+     "peak": 9.0,
+     "xmult": 7.37,
+     "net": 26783.59
+    },
+    {
+     "d": "2025-10-16",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 83400.0,
+     "j": 5,
+     "entry": 18.71,
+     "peak": 12.3,
+     "xmult": 6.53,
+     "net": 26769.75
+    }
+   ],
+   "q": 0.9045
+  },
+  "base-cheap-all-time": {
+   "rule": [
+    "base",
+    "cheap",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 460,
+    "win_pct": 22.4,
+    "peak5": 10,
+    "peak10": 3,
+    "banked5": 3,
+    "banked10": 1,
+    "net": -309795.0,
+    "net_per_day": -1264.5,
+    "per_1000": -155.6,
+    "worst_day": -14994.0,
+    "max_dd": -345707.0,
+    "top5": 169482.0,
+    "top5_share": null,
+    "net_wo_top5": -479277.0,
+    "proxy": 13,
+    "ce": 231,
+    "pe": 229,
+    "spread2x": -321652.0,
+    "oor0": -339640.0
+   },
+   "by_year": {
+    "2025": [
+     257,
+     -161717.0
+    ],
+    "2026": [
+     203,
+     -148078.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     40,
+     -47436.0
+    ],
+    "FINNIFTY": [
+     38,
+     -39206.0
+    ],
+    "MIDCPNIFTY": [
+     42,
+     -4222.0
+    ],
+    "NIFTY": [
+     186,
+     -148937.0
+    ],
+    "SENSEX": [
+     154,
+     -69994.0
+    ]
+   },
+   "twin_mean": -213862.0,
+   "twin_sd": 108901.0,
+   "p": 0.8004,
+   "top": [
+    {
+     "d": "2025-04-01",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76600.0,
+     "j": 5,
+     "entry": 30.07,
+     "peak": 25.2,
+     "xmult": 20.19,
+     "net": 92108.5
+    },
+    {
+     "d": "2026-09-15",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23350.0,
+     "j": 5,
+     "entry": 21.66,
+     "peak": 9.0,
+     "xmult": 7.37,
+     "net": 26783.59
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83100.0,
+     "j": 5,
+     "entry": 22.51,
+     "peak": 11.7,
+     "xmult": 5.4,
+     "net": 21697.94
+    },
+    {
+     "d": "2025-02-27",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 11025.0,
+     "j": 5,
+     "entry": 12.96,
+     "peak": 10.0,
+     "xmult": 4.95,
+     "net": 18341.94
+    },
+    {
+     "d": "2026-06-11",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 74300.0,
+     "j": 5,
+     "entry": 27.26,
+     "peak": 7.1,
+     "xmult": 3.17,
+     "net": 10550.49
+    }
+   ],
+   "q": 0.8486
+  },
+  "base-cheap-hero-hold": {
+   "rule": [
+    "base",
+    "cheap",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 467,
+    "win_pct": 11.3,
+    "peak5": 38,
+    "peak10": 11,
+    "banked5": 20,
+    "banked10": 6,
+    "net": 33777.0,
+    "net_per_day": 137.9,
+    "per_1000": 16.4,
+    "worst_day": -20379.0,
+    "max_dd": -199053.0,
+    "top5": 389032.0,
+    "top5_share": 1151.8,
+    "net_wo_top5": -355255.0,
+    "proxy": 3,
+    "ce": 232,
+    "pe": 235,
+    "spread2x": 27210.0,
+    "oor0": 27233.0
+   },
+   "by_year": {
+    "2025": [
+     258,
+     15613.0
+    ],
+    "2026": [
+     209,
+     18165.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     42,
+     -21443.0
+    ],
+    "FINNIFTY": [
+     38,
+     -47980.0
+    ],
+    "MIDCPNIFTY": [
+     42,
+     -40393.0
+    ],
+    "NIFTY": [
+     184,
+     16340.0
+    ],
+    "SENSEX": [
+     161,
+     127253.0
+    ]
+   },
+   "twin_mean": -290174.0,
+   "twin_sd": 127842.0,
+   "p": 0.012,
+   "top": [
+    {
+     "d": "2026-04-02",
+     "und": "SENSEX",
+     "side": "CE",
+     "strike": 72500.0,
+     "j": 38,
+     "entry": 24.91,
+     "peak": 29.5,
+     "xmult": 29.17,
+     "net": 140012.85
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76700.0,
+     "j": 38,
+     "entry": 22.11,
+     "peak": 30.6,
+     "xmult": 16.73,
+     "net": 76324.38
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74500.0,
+     "j": 38,
+     "entry": 22.86,
+     "peak": 21.8,
+     "xmult": 15.14,
+     "net": 64464.45
+    },
+    {
+     "d": "2025-10-23",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 85000.0,
+     "j": 38,
+     "entry": 27.61,
+     "peak": 14.6,
+     "xmult": 13.96,
+     "net": 64223.99
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 38,
+     "entry": 11.71,
+     "peak": 15.8,
+     "xmult": 11.05,
+     "net": 44006.35
+    }
+   ],
+   "q": 0.176
+  },
+  "base-cheap-hero-trail": {
+   "rule": [
+    "base",
+    "cheap",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 467,
+    "win_pct": 18.4,
+    "peak5": 35,
+    "peak10": 8,
+    "banked5": 14,
+    "banked10": 4,
+    "net": -37878.0,
+    "net_per_day": -154.6,
+    "per_1000": -18.4,
+    "worst_day": -20379.0,
+    "max_dd": -168526.0,
+    "top5": 249656.0,
+    "top5_share": null,
+    "net_wo_top5": -287535.0,
+    "proxy": 3,
+    "ce": 232,
+    "pe": 235,
+    "spread2x": -44911.0,
+    "oor0": -44423.0
+   },
+   "by_year": {
+    "2025": [
+     258,
+     -11703.0
+    ],
+    "2026": [
+     209,
+     -26175.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     42,
+     -12709.0
+    ],
+    "FINNIFTY": [
+     38,
+     -42515.0
+    ],
+    "MIDCPNIFTY": [
+     42,
+     -30105.0
+    ],
+    "NIFTY": [
+     184,
+     44693.0
+    ],
+    "SENSEX": [
+     161,
+     2757.0
+    ]
+   },
+   "twin_mean": -327957.0,
+   "twin_sd": 103926.0,
+   "p": 0.006,
+   "top": [
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74500.0,
+     "j": 38,
+     "entry": 22.86,
+     "peak": 21.8,
+     "xmult": 15.14,
+     "net": 64464.45
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76700.0,
+     "j": 38,
+     "entry": 22.11,
+     "peak": 30.6,
+     "xmult": 13.57,
+     "net": 60984.15
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 38,
+     "entry": 11.71,
+     "peak": 15.8,
+     "xmult": 11.05,
+     "net": 44006.35
+    },
+    {
+     "d": "2025-05-08",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24400.0,
+     "j": 38,
+     "entry": 10.46,
+     "peak": 13.6,
+     "xmult": 9.87,
+     "net": 41594.5
+    },
+    {
+     "d": "2025-05-15",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24800.0,
+     "j": 38,
+     "entry": 25.86,
+     "peak": 12.8,
+     "xmult": 10.99,
+     "net": 38606.71
+    }
+   ],
+   "q": 0.132
+  },
+  "base-cheap-hero-time": {
+   "rule": [
+    "base",
+    "cheap",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 467,
+    "win_pct": 25.7,
+    "peak5": 25,
+    "peak10": 6,
+    "banked5": 11,
+    "banked10": 4,
+    "net": -274.0,
+    "net_per_day": -1.1,
+    "per_1000": -0.1,
+    "worst_day": -17680.0,
+    "max_dd": -175100.0,
+    "top5": 249656.0,
+    "top5_share": null,
+    "net_wo_top5": -249930.0,
+    "proxy": 3,
+    "ce": 232,
+    "pe": 235,
+    "spread2x": -11475.0,
+    "oor0": -6818.0
+   },
+   "by_year": {
+    "2025": [
+     258,
+     44872.0
+    ],
+    "2026": [
+     209,
+     -45146.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     42,
+     -28933.0
+    ],
+    "FINNIFTY": [
+     38,
+     -15988.0
+    ],
+    "MIDCPNIFTY": [
+     42,
+     -19940.0
+    ],
+    "NIFTY": [
+     184,
+     67666.0
+    ],
+    "SENSEX": [
+     161,
+     -3079.0
+    ]
+   },
+   "twin_mean": -282664.0,
+   "twin_sd": 104826.0,
+   "p": 0.004,
+   "top": [
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74500.0,
+     "j": 38,
+     "entry": 22.86,
+     "peak": 21.8,
+     "xmult": 15.14,
+     "net": 64464.45
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76700.0,
+     "j": 38,
+     "entry": 22.11,
+     "peak": 30.6,
+     "xmult": 13.57,
+     "net": 60984.15
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24700.0,
+     "j": 38,
+     "entry": 11.71,
+     "peak": 15.8,
+     "xmult": 11.05,
+     "net": 44006.35
+    },
+    {
+     "d": "2025-05-08",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24400.0,
+     "j": 38,
+     "entry": 10.46,
+     "peak": 13.6,
+     "xmult": 9.87,
+     "net": 41594.5
+    },
+    {
+     "d": "2025-05-15",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24800.0,
+     "j": 38,
+     "entry": 25.86,
+     "peak": 12.8,
+     "xmult": 10.99,
+     "net": 38606.71
+    }
+   ],
+   "q": 0.132
+  },
+  "base-otm2-all-hold": {
+   "rule": [
+    "base",
+    "otm2",
+    "all",
+    "hold"
+   ],
+   "m": {
+    "trades": 459,
+    "win_pct": 10.0,
+    "peak5": 21,
+    "peak10": 4,
+    "banked5": 12,
+    "banked10": 3,
+    "net": -349608.0,
+    "net_per_day": -1427.0,
+    "per_1000": -192.3,
+    "worst_day": -18921.0,
+    "max_dd": -380996.0,
+    "top5": 176885.0,
+    "top5_share": null,
+    "net_wo_top5": -526493.0,
+    "proxy": 2,
+    "ce": 230,
+    "pe": 229,
+    "spread2x": -352697.0,
+    "oor0": -349608.0
+   },
+   "by_year": {
+    "2025": [
+     265,
+     -252241.0
+    ],
+    "2026": [
+     194,
+     -97367.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     36,
+     -49987.0
+    ],
+    "FINNIFTY": [
+     38,
+     -54712.0
+    ],
+    "MIDCPNIFTY": [
+     36,
+     -48262.0
+    ],
+    "NIFTY": [
+     177,
+     -176568.0
+    ],
+    "SENSEX": [
+     172,
+     -20078.0
+    ]
+   },
+   "twin_mean": -222688.0,
+   "twin_sd": 133128.0,
+   "p": 0.8303,
+   "top": [
+    {
+     "d": "2025-04-01",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77300.0,
+     "j": 5,
+     "entry": 121.66,
+     "peak": 9.5,
+     "xmult": 10.63,
+     "net": 46734.05
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 5,
+     "entry": 69.63,
+     "peak": 12.2,
+     "xmult": 11.38,
+     "net": 43233.65
+    },
+    {
+     "d": "2025-05-15",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24600.0,
+     "j": 5,
+     "entry": 40.02,
+     "peak": 13.2,
+     "xmult": 12.08,
+     "net": 33143.56
+    },
+    {
+     "d": "2026-05-12",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23550.0,
+     "j": 5,
+     "entry": 25.11,
+     "peak": 6.9,
+     "xmult": 6.52,
+     "net": 26937.69
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84700.0,
+     "j": 5,
+     "entry": 69.38,
+     "peak": 7.5,
+     "xmult": 7.47,
+     "net": 26836.04
+    }
+   ],
+   "q": 0.8698
+  },
+  "base-otm2-all-trail": {
+   "rule": [
+    "base",
+    "otm2",
+    "all",
+    "trail"
+   ],
+   "m": {
+    "trades": 459,
+    "win_pct": 16.1,
+    "peak5": 19,
+    "peak10": 3,
+    "banked5": 12,
+    "banked10": 2,
+    "net": -242270.0,
+    "net_per_day": -988.9,
+    "per_1000": -133.2,
+    "worst_day": -17545.0,
+    "max_dd": -285441.0,
+    "top5": 170525.0,
+    "top5_share": null,
+    "net_wo_top5": -412795.0,
+    "proxy": 2,
+    "ce": 230,
+    "pe": 229,
+    "spread2x": -233917.0,
+    "oor0": -242270.0
+   },
+   "by_year": {
+    "2025": [
+     265,
+     -175811.0
+    ],
+    "2026": [
+     194,
+     -66459.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     36,
+     -29970.0
+    ],
+    "FINNIFTY": [
+     38,
+     -48286.0
+    ],
+    "MIDCPNIFTY": [
+     36,
+     -36758.0
+    ],
+    "NIFTY": [
+     177,
+     -135748.0
+    ],
+    "SENSEX": [
+     172,
+     8492.0
+    ]
+   },
+   "twin_mean": -260473.0,
+   "twin_sd": 106944.0,
+   "p": 0.4212,
+   "top": [
+    {
+     "d": "2025-04-01",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77300.0,
+     "j": 5,
+     "entry": 121.66,
+     "peak": 9.5,
+     "xmult": 10.63,
+     "net": 46734.05
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 5,
+     "entry": 69.63,
+     "peak": 12.2,
+     "xmult": 11.38,
+     "net": 43233.65
+    },
+    {
+     "d": "2026-05-12",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23550.0,
+     "j": 5,
+     "entry": 25.11,
+     "peak": 6.9,
+     "xmult": 6.52,
+     "net": 26937.69
+    },
+    {
+     "d": "2026-01-08",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 84700.0,
+     "j": 5,
+     "entry": 69.38,
+     "peak": 7.5,
+     "xmult": 7.47,
+     "net": 26836.04
+    },
+    {
+     "d": "2026-09-15",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23350.0,
+     "j": 5,
+     "entry": 21.66,
+     "peak": 9.0,
+     "xmult": 7.37,
+     "net": 26783.59
+    }
+   ],
+   "q": 0.7812
+  },
+  "base-otm2-all-time": {
+   "rule": [
+    "base",
+    "otm2",
+    "all",
+    "time"
+   ],
+   "m": {
+    "trades": 459,
+    "win_pct": 24.4,
+    "peak5": 9,
+    "peak10": 2,
+    "banked5": 5,
+    "banked10": 2,
+    "net": -169683.0,
+    "net_per_day": -692.6,
+    "per_1000": -93.3,
+    "worst_day": -13641.0,
+    "max_dd": -195555.0,
+    "top5": 156398.0,
+    "top5_share": null,
+    "net_wo_top5": -326081.0,
+    "proxy": 2,
+    "ce": 230,
+    "pe": 229,
+    "spread2x": -163622.0,
+    "oor0": -169683.0
+   },
+   "by_year": {
+    "2025": [
+     265,
+     -103066.0
+    ],
+    "2026": [
+     194,
+     -66617.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     36,
+     -9135.0
+    ],
+    "FINNIFTY": [
+     38,
+     -21548.0
+    ],
+    "MIDCPNIFTY": [
+     36,
+     -4867.0
+    ],
+    "NIFTY": [
+     177,
+     -118474.0
+    ],
+    "SENSEX": [
+     172,
+     -15659.0
+    ]
+   },
+   "twin_mean": -249435.0,
+   "twin_sd": 102179.0,
+   "p": 0.2196,
+   "top": [
+    {
+     "d": "2025-04-01",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 77300.0,
+     "j": 5,
+     "entry": 121.66,
+     "peak": 9.5,
+     "xmult": 10.63,
+     "net": 46734.05
+    },
+    {
+     "d": "2026-02-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 83400.0,
+     "j": 5,
+     "entry": 69.63,
+     "peak": 12.2,
+     "xmult": 11.38,
+     "net": 43233.65
+    },
+    {
+     "d": "2026-09-15",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 23350.0,
+     "j": 5,
+     "entry": 21.66,
+     "peak": 9.0,
+     "xmult": 7.37,
+     "net": 26783.59
+    },
+    {
+     "d": "2025-05-20",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 81800.0,
+     "j": 5,
+     "entry": 84.84,
+     "peak": 7.4,
+     "xmult": 7.13,
+     "net": 20718.17
+    },
+    {
+     "d": "2025-02-27",
+     "und": "MIDCPNIFTY",
+     "side": "PE",
+     "strike": 11000.0,
+     "j": 5,
+     "entry": 8.85,
+     "peak": 12.1,
+     "xmult": 5.48,
+     "net": 18928.6
+    }
+   ],
+   "q": 0.773
+  },
+  "base-otm2-hero-hold": {
+   "rule": [
+    "base",
+    "otm2",
+    "hero",
+    "hold"
+   ],
+   "m": {
+    "trades": 482,
+    "win_pct": 11.4,
+    "peak5": 40,
+    "peak10": 6,
+    "banked5": 22,
+    "banked10": 6,
+    "net": -95971.0,
+    "net_per_day": -391.7,
+    "per_1000": -45.8,
+    "worst_day": -20509.0,
+    "max_dd": -208380.0,
+    "top5": 277014.0,
+    "top5_share": null,
+    "net_wo_top5": -372985.0,
+    "proxy": 1,
+    "ce": 241,
+    "pe": 241,
+    "spread2x": -104055.0,
+    "oor0": -95971.0
+   },
+   "by_year": {
+    "2025": [
+     273,
+     -76108.0
+    ],
+    "2026": [
+     209,
+     -19863.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     42,
+     -29741.0
+    ],
+    "FINNIFTY": [
+     38,
+     -54248.0
+    ],
+    "MIDCPNIFTY": [
+     42,
+     -38606.0
+    ],
+    "NIFTY": [
+     186,
+     22461.0
+    ],
+    "SENSEX": [
+     174,
+     4163.0
+    ]
+   },
+   "twin_mean": -411472.0,
+   "twin_sd": 114861.0,
+   "p": 0.006,
+   "top": [
+    {
+     "d": "2025-05-08",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24350.0,
+     "j": 38,
+     "entry": 3.65,
+     "peak": 25.4,
+     "xmult": 14.44,
+     "net": 66058.4
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76800.0,
+     "j": 38,
+     "entry": 32.87,
+     "peak": 23.5,
+     "xmult": 14.29,
+     "net": 60971.98
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 38,
+     "entry": 5.75,
+     "peak": 23.6,
+     "xmult": 13.85,
+     "net": 60800.2
+    },
+    {
+     "d": "2025-03-20",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23150.0,
+     "j": 38,
+     "entry": 4.7,
+     "peak": 15.3,
+     "xmult": 10.28,
+     "net": 45664.62
+    },
+    {
+     "d": "2025-10-23",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 85100.0,
+     "j": 38,
+     "entry": 45.47,
+     "peak": 11.1,
+     "xmult": 10.6,
+     "net": 43519.06
+    }
+   ],
+   "q": 0.132
+  },
+  "base-otm2-hero-trail": {
+   "rule": [
+    "base",
+    "otm2",
+    "hero",
+    "trail"
+   ],
+   "m": {
+    "trades": 482,
+    "win_pct": 17.4,
+    "peak5": 36,
+    "peak10": 4,
+    "banked5": 16,
+    "banked10": 2,
+    "net": -180940.0,
+    "net_per_day": -738.5,
+    "per_1000": -86.3,
+    "worst_day": -20509.0,
+    "max_dd": -233782.0,
+    "top5": 185263.0,
+    "top5_share": null,
+    "net_wo_top5": -366203.0,
+    "proxy": 1,
+    "ce": 241,
+    "pe": 241,
+    "spread2x": -190217.0,
+    "oor0": -180940.0
+   },
+   "by_year": {
+    "2025": [
+     273,
+     -167433.0
+    ],
+    "2026": [
+     209,
+     -13507.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     42,
+     -30140.0
+    ],
+    "FINNIFTY": [
+     38,
+     -49106.0
+    ],
+    "MIDCPNIFTY": [
+     42,
+     -28278.0
+    ],
+    "NIFTY": [
+     186,
+     -74119.0
+    ],
+    "SENSEX": [
+     174,
+     704.0
+    ]
+   },
+   "twin_mean": -461497.0,
+   "twin_sd": 86990.0,
+   "p": 0.006,
+   "top": [
+    {
+     "d": "2025-03-20",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23150.0,
+     "j": 38,
+     "entry": 4.7,
+     "peak": 15.3,
+     "xmult": 10.28,
+     "net": 45664.62
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76800.0,
+     "j": 38,
+     "entry": 32.87,
+     "peak": 23.5,
+     "xmult": 10.71,
+     "net": 44552.98
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23350.0,
+     "j": 38,
+     "entry": 11.21,
+     "peak": 19.7,
+     "xmult": 9.55,
+     "net": 37228.79
+    },
+    {
+     "d": "2025-09-02",
+     "und": "NIFTY",
+     "side": "PE",
+     "strike": 24650.0,
+     "j": 38,
+     "entry": 5.75,
+     "peak": 23.6,
+     "xmult": 7.45,
+     "net": 30473.8
+    },
+    {
+     "d": "2025-08-12",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 80500.0,
+     "j": 38,
+     "entry": 43.57,
+     "peak": 7.8,
+     "xmult": 7.3,
+     "net": 27343.04
+    }
+   ],
+   "q": 0.132
+  },
+  "base-otm2-hero-time": {
+   "rule": [
+    "base",
+    "otm2",
+    "hero",
+    "time"
+   ],
+   "m": {
+    "trades": 482,
+    "win_pct": 24.5,
+    "peak5": 24,
+    "peak10": 3,
+    "banked5": 11,
+    "banked10": 2,
+    "net": -170826.0,
+    "net_per_day": -697.2,
+    "per_1000": -81.5,
+    "worst_day": -17677.0,
+    "max_dd": -218735.0,
+    "top5": 178485.0,
+    "top5_share": null,
+    "net_wo_top5": -349311.0,
+    "proxy": 1,
+    "ce": 241,
+    "pe": 241,
+    "spread2x": -180899.0,
+    "oor0": -170826.0
+   },
+   "by_year": {
+    "2025": [
+     273,
+     -152963.0
+    ],
+    "2026": [
+     209,
+     -17863.0
+    ]
+   },
+   "by_index": {
+    "BANKNIFTY": [
+     42,
+     -28043.0
+    ],
+    "FINNIFTY": [
+     38,
+     -19605.0
+    ],
+    "MIDCPNIFTY": [
+     42,
+     -31694.0
+    ],
+    "NIFTY": [
+     186,
+     -58104.0
+    ],
+    "SENSEX": [
+     174,
+     -33380.0
+    ]
+   },
+   "twin_mean": -430504.0,
+   "twin_sd": 90909.0,
+   "p": 0.012,
+   "top": [
+    {
+     "d": "2025-03-20",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23150.0,
+     "j": 38,
+     "entry": 4.7,
+     "peak": 15.3,
+     "xmult": 10.28,
+     "net": 45664.62
+    },
+    {
+     "d": "2025-02-11",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 76800.0,
+     "j": 38,
+     "entry": 32.87,
+     "peak": 23.5,
+     "xmult": 10.71,
+     "net": 44552.98
+    },
+    {
+     "d": "2026-06-02",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 23350.0,
+     "j": 38,
+     "entry": 11.21,
+     "peak": 19.7,
+     "xmult": 9.55,
+     "net": 37228.79
+    },
+    {
+     "d": "2026-03-19",
+     "und": "SENSEX",
+     "side": "PE",
+     "strike": 74900.0,
+     "j": 38,
+     "entry": 96.3,
+     "peak": 9.3,
+     "xmult": 7.72,
+     "net": 25786.34
+    },
+    {
+     "d": "2025-05-15",
+     "und": "NIFTY",
+     "side": "CE",
+     "strike": 24700.0,
+     "j": 38,
+     "entry": 46.77,
+     "peak": 9.2,
+     "xmult": 8.23,
+     "net": 25252.54
+    }
+   ],
+   "q": 0.176
+  }
+ },
+ "when": "2026-10-14T16:29:43+00:00"
+}

@@ -1,0 +1,29 @@
+id: r51-liq-bn-base
+title: 'R51 LIQ-BN-base: Liquidity BANKNIFTY 15+5 unfiltered (reference)'
+family: liquidity
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'Re-tested on the Nov 2024+ market only, this rule makes money after real costs on one held contract (gates: final
+  net > 0, twin p < 0.05, BH q <= 0.10 over the study, 40+ final trades, top-5 < net, design walk-forward > 0).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK files; brain cube + features rebuilt
+  from the lake), 21 Nov 2024 - 13 Oct 2026
+period:
+  design: 2024-11-20 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once (not pristine: earlier studies saw parts of 2025-26)'
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: index (15-min + 5-min bars)'
+model_or_rule: Liquidity BANKNIFTY 15+5 unfiltered (reference)
+settings: research/hunt/r51/fam_liq.py (liq|BANKNIFTY|15+5|room1.0)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: null
+results:
+  summary: 'design 336 trades, win 42%, net Rs 118,828 (Rs 353/day), avg win Rs 2,009 / loss Rs -858, worst day Rs -6,164,
+    max DD Rs 12,691, without top 5 Rs 51,193; twin p 0.0279; folds [16712.0, 12134.0, 692.0, 43190.0]. final test (1 Apr
+    - 13 Oct 2026, read once) 131 trades, win 37%, net Rs 10,978 (Rs 83/day), avg win Rs 1,982 / loss Rs -1,014, worst day
+    Rs -6,910, max DD Rs 24,873, without top 5 Rs -33,992; twin p 0.6986, BH q None: reference (not gated). OLD: see the write-up'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills, next-minute fills, gap fills at the worse price, one held
+    contract, lots in force
+holdout_read: true
+verdict: not-a-test

@@ -108,15 +108,82 @@ class HealthBookTest {
         assertEquals(2, b.exits.size)
     }
 
+    /** 20 Oct: the 17 Oct 01:09 ANR said only Android's words; the trace's main thread now names the code. */
+    @Test fun anAnrsMainThreadIsNamedFromItsTrace() {
+        val trace = """
+            ----- pid 1234 at 2026-10-17 01:09:12 -----
+            "Signal Catcher" daemon prio=10 tid=7 Runnable
+              at java.lang.Thread.run(Thread.java:1012)
+
+            "main" prio=5 tid=1 Blocked
+              | group="main" sCount=1 ucsCount=0 flags=1 obj=0x72a1 self=0xb400
+              at com.optionslab.app.data.Diag.linesInMemory(Diag.kt:137)
+              - waiting to lock <0x0a1b2c3d> (a com.optionslab.app.data.Diag) held by thread 23
+              at com.optionslab.app.ui.screens.MemoryCard.invoke(MemoryCard.kt:40)
+              at androidx.compose.runtime.Recomposer.run(Recomposer.kt:100)
+
+            "diag" daemon prio=5 tid=23 Native
+              at android.security.keystore2.KeyStore.encrypt(Native method)
+        """.trimIndent()
+        assertEquals("main thread in Diag.linesInMemory · waiting for a lock of Diag", HealthBook.anrMain(trace))
+        val idle = "\"main\" prio=5 tid=1 Native\n  at android.os.BinderProxy.transactNative(Native method)\n" +
+            "  at android.os.BinderProxy.transact(BinderProxy.java:584)\n  at com.optionslab.app.AppModel.switchArm(AppModel.kt:10)\n"
+        assertEquals("main thread in AppModel.switchArm (top BinderProxy.transactNative)", HealthBook.anrMain(idle))
+        assertEquals("main thread in MessageQueue.nativePollOnce (no app frame)",
+            HealthBook.anrMain("\"main\" prio=5 tid=1 Native\n  at android.os.MessageQueue.nativePollOnce(Native method)\n"))
+        assertNull(HealthBook.anrMain(null))
+        assertNull(HealthBook.anrMain(""))
+        assertNull(HealthBook.anrMain("\"main\" prio=5 tid=1 Native\n  | no frames\n"))
+        assertNull(HealthBook.anrMain("\"worker\" prio=5\n  at com.optionslab.app.X.y(X.kt:1)\n"))
+        // Kept whole after Android's own words (up to 200 characters; never cut at 60 any more).
+        val where = "user request after error Input dispatching timed out 27ec3b6 · " + HealthBook.anrMain(trace)
+        val b = HealthBook.exits(HealthBook.Book(), listOf(HealthBook.Exit(at(d0, 1, 9), HealthBook.ExitKind.ANR, where)))
+        assertTrue(b.exits[0].where.endsWith("main thread in Diag.linesInMemory · waiting for a lock of Diag"), b.exits[0].where)
+        // A day without stalls says none for it.
+        assertEquals("Health: no stalls today · last ANR 12 Oct 01:09 in ${b.exits[0].where} · no crash seen · tuner: nothing adjusted",
+            HealthBook.diagLine(b, d0, ::hhmm))
+    }
+
+    /** 20 Oct: the start's merge kept only the stalls and reconnects counted before the file was read. */
+    @Test fun theStartsMergeKeepsEveryCount() {
+        var read = stalls(HealthBook.Book(), d0, 2, "A.b")
+        read = HealthBook.reconnect(read, at(d0, 11))
+        var early = stalls(HealthBook.Book(), d0, 1, "C.d", 2_000)
+        early = HealthBook.reconnect(early, at(d0, 12)); early = HealthBook.stale(early, at(d0, 12))
+        early = HealthBook.overrun(early, at(d0, 12), "words"); early = HealthBook.trim(early, at(d0, 12))
+        early = HealthBook.saver(early, at(d0, 12), true)
+        early = HealthBook.exits(early, listOf(HealthBook.Exit(at(d0, 8), HealthBook.ExitKind.ANR, "x")))
+        val m = HealthBook.merge(read, early)
+        val d = m.day(d0)!!
+        assertEquals(3, d.stalls); assertEquals(2_000, d.longestMs); assertEquals(mapOf("A.b" to 2, "C.d" to 1), d.places)
+        assertEquals(2, d.reconnects); assertEquals(1, d.stale); assertEquals(mapOf("words" to 1), d.overruns)
+        assertEquals(1, d.trims); assertEquals(1 to 1, d.saverOn to d.saverLooks)
+        assertEquals(1, m.exits.size)
+        assertEquals(read, HealthBook.merge(read, HealthBook.Book()))
+        // An early day the file does not hold is added as it is.
+        val other = HealthBook.merge(read, HealthBook.reconnect(HealthBook.Book(), at(d0.plusDays(1), 9)))
+        assertEquals(1, other.day(d0.plusDays(1))!!.reconnects)
+    }
+
+    /** 20 Oct: the diagnostics' catch-up reads the day it is for: 19 Oct's reconnects, not 20 Oct's none. */
+    @Test fun anEarlierDaysLineIsThatDays() {
+        var b = HealthBook.Book()
+        repeat(15) { b = HealthBook.reconnect(b, at(d0, 10, it)) }
+        b = HealthBook.trim(b, at(d0.plusDays(1), 2))
+        assertTrue("stream reconnects 15" in HealthBook.diagLine(b, d0, ::hhmm))
+        assertTrue("stream reconnects 0" in HealthBook.diagLine(b, d0.plusDays(1), ::hhmm))
+        assertTrue(HealthBook.diagLine(b, d0, ::hhmm, "that day").startsWith("Health: no stalls that day"))
+    }
+
     @Test fun theDiagnosticsLineAndJarvisWords() {
         var b = stalls(HealthBook.Book(), d0, 3, "BrainSection.invoke", 1_200)
         b = HealthBook.exits(b, listOf(HealthBook.Exit(at(d0, 9, 30), HealthBook.ExitKind.ANR, "Input dispatching timed out")))
         b = HealthBook.orderPath(b, d0, 210, 4)
         b = HealthBook.reconnect(b, at(d0, 12)); b = HealthBook.saver(b, at(d0, 12), true); b = HealthBook.trim(b, at(d0, 12))
         b = HealthTuner.evaluate(b, d0).first
-        assertEquals("Health: 3 stalls today (longest 1.2 s, most in BrainSection.invoke) · last ANR 12 Oct 09:30 in Input dispatching timed out · " +
-            "no crash seen · tuner: the Brain card's consensus refresh every 30 s (normally 15 s, since 12 Oct) · stream reconnects 1, stale 0, " +
-            "worker overruns 0, battery saver on, memory trims 1", HealthBook.diagLine(b, d0, ::hhmm))
+        assertEquals("Health: 3 stalls today (longest 1.2 s, most in BrainSection.invoke) · last ANR 12 Oct 09:30 in Input dispatching timed out " +
+            "(that day 3 stalls, most in BrainSection.invoke) · no crash seen · tuner: the Brain card's consensus refresh every 30 s (normally 15 s, since 12 Oct) · stream reconnects 1, stale 0, " +
+            "worker overruns 0, battery saver on, background trims 1", HealthBook.diagLine(b, d0, ::hhmm))
         val h = HealthBook.sayHealthy(b, d0)
         assertTrue(h.startsWith("Not quite, Boss. Today: 3 stalls of 0.7 s or more (longest 1.2 s). Last 7 days: 3 stalls, 1 ANR, 0 crashes."), h)
         assertTrue("Orders today: signal to sent 210 ms typical over 4." in h, h)

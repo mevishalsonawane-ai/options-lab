@@ -1,0 +1,1357 @@
+[
+ {
+  "id": "R16-a1_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "log range of the next 30 min",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "cnn",
+   "baseline": "btod30",
+   "was": "linear"
+  },
+  "design": {
+   "n": 5523,
+   "sessions": 263,
+   "model": "linear",
+   "best_baseline": "btod30",
+   "skill": 0.1700115614630081,
+   "p": 0.0004997501249375312,
+   "q": 0.0017134289997858213,
+   "metrics": {
+    "mae": 0.31188140183097157,
+    "rmse": 0.3959264208338633
+   },
+   "baselines": {
+    "btod30": {
+     "mae": 0.37576595931953005,
+     "rmse": 0.4757296366703639
+    },
+    "blast30": {
+     "mae": 0.384051906432338,
+     "rmse": 0.4820930656120073
+    },
+    "bvix": {
+     "mae": 0.4020518802486667,
+     "rmse": 0.5005592859154927
+    }
+   }
+  },
+  "holdout": {
+   "n": 2562,
+   "sessions": 122,
+   "model": "cnn",
+   "best_baseline": "btod30",
+   "skill": 0.1782755513894858,
+   "p": 0.0004997501249375312,
+   "q": 0.0029985007496251873,
+   "metrics": {
+    "mae": 0.27352544085778774,
+    "rmse": 0.34172417981387954
+   },
+   "baselines": {
+    "btod30": {
+     "mae": 0.33286759487356443,
+     "rmse": 0.4205258103938815
+    },
+    "blast30": {
+     "mae": 0.35885776174428546,
+     "rmse": 0.4493012529135527
+    },
+    "bvix": {
+     "mae": 0.31842579997471704,
+     "rmse": 0.3987450240101625
+    }
+   }
+  },
+  "verdict": "predictable"
+ },
+ {
+  "id": "R16-a2_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "log range of the next 60 min",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "linear",
+   "baseline": "btod60"
+  },
+  "design": {
+   "n": 4997,
+   "sessions": 263,
+   "model": "linear",
+   "best_baseline": "btod60",
+   "skill": 0.14812372433891985,
+   "p": 0.0004997501249375312,
+   "q": 0.0017134289997858213,
+   "metrics": {
+    "mae": 0.32803168629523866,
+    "rmse": 0.4150004126340219
+   },
+   "baselines": {
+    "btod60": {
+     "mae": 0.3850696347197564,
+     "rmse": 0.4842186808017423
+    },
+    "blast60": {
+     "mae": 0.40913060647176386,
+     "rmse": 0.5124736882821532
+    },
+    "bvix": {
+     "mae": 0.4064516645080495,
+     "rmse": 0.5052942040639404
+    }
+   }
+  },
+  "holdout": {
+   "n": 2318,
+   "sessions": 122,
+   "model": "linear",
+   "best_baseline": "btod60",
+   "skill": 0.15130370477670552,
+   "p": 0.0004997501249375312,
+   "q": 0.0029985007496251873,
+   "metrics": {
+    "mae": 0.2891973156252448,
+    "rmse": 0.3636538047919126
+   },
+   "baselines": {
+    "btod60": {
+     "mae": 0.34075477559278866,
+     "rmse": 0.4321464380948163
+    },
+    "blast60": {
+     "mae": 0.39168947972617957,
+     "rmse": 0.49154198158211854
+    },
+    "bvix": {
+     "mae": 0.322602795404685,
+     "rmse": 0.40407036820699366
+    }
+   }
+  },
+  "verdict": "predictable"
+ },
+ {
+  "id": "R16-a3b_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "log rest-of-day range from 09:30",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "lgbm",
+   "baseline": "btod_rest"
+  },
+  "design": {
+   "n": 263,
+   "sessions": 263,
+   "model": "lgbm",
+   "best_baseline": "btod_rest",
+   "skill": -0.055852668761140034,
+   "p": 0.95952023988006,
+   "q": 0.9995002498750626,
+   "metrics": {
+    "mae": 0.38382385906030725,
+    "rmse": 0.4653236656429294
+   },
+   "baselines": {
+    "btod_rest": {
+     "mae": 0.363520281206144,
+     "rmse": 0.45316388578618944
+    },
+    "bvix": {
+     "mae": 0.3763335152099627,
+     "rmse": 0.4651930196793029
+    }
+   }
+  },
+  "holdout": {
+   "n": 122,
+   "sessions": 122,
+   "model": "lgbm",
+   "best_baseline": "btod_rest",
+   "skill": 0.09173702316351062,
+   "p": 0.050474762618690654,
+   "q": 0.20189905047476261,
+   "metrics": {
+    "mae": 0.30985400959551707,
+    "rmse": 0.3815354912854053
+   },
+   "baselines": {
+    "btod_rest": {
+     "mae": 0.341150104647829,
+     "rmse": 0.4196942615123185
+    },
+    "bvix": {
+     "mae": 0.311674246252931,
+     "rmse": 0.3853073685248923
+    }
+   }
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-a3_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "log next-day range (daily, 2012-2026)",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "linear",
+   "baseline": "bvix"
+  },
+  "design": {
+   "n": 3017,
+   "sessions": 3017,
+   "model": "linear",
+   "best_baseline": "bvix",
+   "skill": 0.058440960862114255,
+   "p": 0.0004997501249375312,
+   "q": 0.0017134289997858213,
+   "metrics": {
+    "mae": 0.32529589929321023,
+    "rmse": 0.4096340728677729
+   },
+   "baselines": {
+    "b20": {
+     "mae": 0.3456029858273119,
+     "rmse": 0.43781615557474773
+    },
+    "bvix": {
+     "mae": 0.3454864599792479,
+     "rmse": 0.43335000980864996
+    }
+   }
+  },
+  "holdout": {
+   "n": 126,
+   "sessions": 126,
+   "model": "linear",
+   "best_baseline": "bvix",
+   "skill": -0.0353396733384046,
+   "p": 0.9000499750124937,
+   "q": 0.9391825826217325,
+   "metrics": {
+    "mae": 0.2979518082061758,
+    "rmse": 0.36538001649935714
+   },
+   "baselines": {
+    "b20": {
+     "mae": 0.31370417273380946,
+     "rmse": 0.3900528924503108
+    },
+    "bvix": {
+     "mae": 0.2877816970400101,
+     "rmse": 0.3591155680923369
+    }
+   }
+  },
+  "verdict": "not predictable beyond VIX"
+ },
+ {
+  "id": "R16-b15_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "sign of next 15-min return",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "lgbm"
+  },
+  "design": {
+   "n": 6047,
+   "sessions": 263,
+   "model": "lgbm",
+   "auc": 0.5267195388090641,
+   "p": 0.0004997501249375312,
+   "q": 0.0017134289997858213,
+   "metrics": {
+    "n": 6047,
+    "auc": 0.5267195388090641,
+    "acc": 0.5171159252521912,
+    "acc_base": 0.5002480568877129,
+    "ll": 0.7006621181460251,
+    "ll_base": 0.6933225802590401,
+    "brier": 0.253499017636032,
+    "brier_base": 0.2500876809073103
+   },
+   "trade": {
+    "trades": 3135,
+    "per_day": 11.920152091254753,
+    "hit": 0.5346092503987241,
+    "rs_trade": -115.2346148644353,
+    "t": -5.602999025569373,
+    "net": -361260.5176000047,
+    "twin_pct": 0.9375,
+    "twin_mean": -146.13650679834285
+   }
+  },
+  "holdout": {
+   "n": 2805,
+   "sessions": 122,
+   "model": "lgbm",
+   "auc": 0.5126500223196809,
+   "p": 0.09245377311344327,
+   "q": 0.2773613193403298,
+   "metrics": {
+    "n": 2805,
+    "auc": 0.5126500223196809,
+    "acc": 0.503030303030303,
+    "acc_base": 0.5040998217468806,
+    "ll": 0.6964822489169655,
+    "ll_base": 0.6931467250854928,
+    "brier": 0.25162027014388,
+    "brier_base": 0.24999977085039915
+   },
+   "trade": {
+    "trades": 872,
+    "per_day": 7.147540983606557,
+    "hit": 0.5275229357798165,
+    "rs_trade": -114.6778233944969,
+    "t": -3.6909543398997697,
+    "net": -99999.0620000013,
+    "twin_pct": 0.696,
+    "twin_mean": -130.65257866284549
+   }
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-b30_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "sign of next 30-min return",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "lgbm"
+  },
+  "design": {
+   "n": 5782,
+   "sessions": 263,
+   "model": "lgbm",
+   "auc": 0.5103905720835955,
+   "p": 0.10394802598700649,
+   "q": 0.20789605197401298,
+   "metrics": {
+    "n": 5782,
+    "auc": 0.5103905720835955,
+    "acc": 0.5067450709097199,
+    "acc_base": 0.4986163957108267,
+    "ll": 0.7100465207432334,
+    "ll_base": 0.693840896748951,
+    "brier": 0.2577698280185817,
+    "brier_base": 0.2503466607483398
+   },
+   "trade": {
+    "trades": 3099,
+    "per_day": 11.783269961977187,
+    "hit": 0.5066150371087448,
+    "rs_trade": -166.12137089383825,
+    "t": -6.090984714539289,
+    "net": -514810.1284000047,
+    "twin_pct": 0.37,
+    "twin_mean": -157.42410575340583
+   }
+  },
+  "holdout": {
+   "n": 2682,
+   "sessions": 122,
+   "model": "lgbm",
+   "auc": 0.5087296919694847,
+   "p": 0.2673663168415792,
+   "q": 0.64167916041979,
+   "metrics": {
+    "n": 2682,
+    "auc": 0.5087296919694847,
+    "acc": 0.5044742729306487,
+    "acc_base": 0.5119313944817301,
+    "ll": 0.699296274623078,
+    "ll_base": 0.6929929426879616,
+    "brier": 0.25296944325655896,
+    "brier_base": 0.2499228779083866
+   },
+   "trade": {
+    "trades": 1070,
+    "per_day": 8.770491803278688,
+    "hit": 0.514018691588785,
+    "rs_trade": -142.28220485981464,
+    "t": -3.864093804952912,
+    "net": -152241.95920000167,
+    "twin_pct": 0.4925,
+    "twin_mean": -141.60684862990803
+   }
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-b60_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "sign of next 60-min return",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "lgbm"
+  },
+  "design": {
+   "n": 5260,
+   "sessions": 263,
+   "model": "lgbm",
+   "auc": 0.5052737996212067,
+   "p": 0.3103448275862069,
+   "q": 0.4965517241379311,
+   "metrics": {
+    "n": 5260,
+    "auc": 0.5052737996212067,
+    "acc": 0.5102661596958175,
+    "acc_base": 0.49486692015209127,
+    "ll": 0.7239636175886527,
+    "ll_base": 0.6943471820415599,
+    "brier": 0.2638721516497298,
+    "brier_base": 0.2505994025423502
+   },
+   "trade": {
+    "trades": 3329,
+    "per_day": 12.657794676806084,
+    "hit": 0.5082607389606488,
+    "rs_trade": -201.86456245118802,
+    "t": -5.477228151170546,
+    "net": -672007.1284000049,
+    "twin_pct": 0.1855,
+    "twin_mean": -169.77276728092673
+   }
+  },
+  "holdout": {
+   "n": 2440,
+   "sessions": 122,
+   "model": "lgbm",
+   "auc": 0.5092691931251074,
+   "p": 0.3188405797101449,
+   "q": 0.6536731634182908,
+   "metrics": {
+    "n": 2440,
+    "auc": 0.5092691931251074,
+    "acc": 0.5073770491803279,
+    "acc_base": 0.5114754098360655,
+    "ll": 0.7039939178593253,
+    "ll_base": 0.6931241082376788,
+    "brier": 0.25514076311113243,
+    "brier_base": 0.24998844422426647
+   },
+   "trade": {
+    "trades": 1123,
+    "per_day": 9.204918032786885,
+    "hit": 0.5164737310774711,
+    "rs_trade": -136.1430667853977,
+    "t": -2.8047573901317833,
+    "net": -152888.66400000162,
+    "twin_pct": 0.8125,
+    "twin_mean": -176.55376372698277
+   }
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-c30_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "rest-of-day trend day (ER>=0.5) from first 30 min",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "lgbm"
+  },
+  "design": {
+   "n": 263,
+   "sessions": 263,
+   "model": "lgbm",
+   "auc": 0.4810052600818234,
+   "p": 0.7021489255372314,
+   "q": 0.9361985673829751,
+   "metrics": {
+    "n": 263,
+    "auc": 0.4810052600818234,
+    "acc": 0.532319391634981,
+    "acc_base": 0.5513307984790875,
+    "ll": 0.7318409443199309,
+    "ll_base": 0.6891478776125908,
+    "brier": 0.2664118823011253,
+    "brier_base": 0.2479915632587828
+   },
+   "yday_acc": 0.5285171102661597
+  },
+  "holdout": {
+   "n": 122,
+   "sessions": 122,
+   "model": "lgbm",
+   "auc": 0.5239010989010989,
+   "p": 0.3268365817091454,
+   "q": 0.6536731634182908,
+   "metrics": {
+    "n": 122,
+    "auc": 0.5239010989010989,
+    "acc": 0.5,
+    "acc_base": 0.5737704918032787,
+    "ll": 0.7132002685580784,
+    "ll_base": 0.6825579492389201,
+    "brier": 0.2598798149163892,
+    "brier_base": 0.24472249420489378
+   },
+   "yday_acc": 0.48360655737704916
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-c45_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "rest-of-day trend day from first 45 min",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "linear"
+  },
+  "design": {
+   "n": 263,
+   "sessions": 263,
+   "model": "linear",
+   "auc": 0.4980128579777907,
+   "p": 0.5292353823088456,
+   "q": 0.7471558338477821,
+   "metrics": {
+    "n": 263,
+    "auc": 0.4980128579777907,
+    "acc": 0.5513307984790875,
+    "acc_base": 0.5513307984790875,
+    "ll": 0.7395491687181277,
+    "ll_base": 0.6907277981458168,
+    "brier": 0.2693938950698348,
+    "brier_base": 0.24876437217845254
+   },
+   "yday_acc": 0.5399239543726235
+  },
+  "holdout": {
+   "n": 122,
+   "sessions": 122,
+   "model": "linear",
+   "auc": 0.5068825910931174,
+   "p": 0.45027486256871563,
+   "q": 0.6754122938530734,
+   "metrics": {
+    "n": 122,
+    "auc": 0.5068825910931174,
+    "acc": 0.5245901639344263,
+    "acc_base": 0.5327868852459017,
+    "ll": 0.7221302139599157,
+    "ll_base": 0.6925170521505001,
+    "brier": 0.25975926599468163,
+    "brier_base": 0.2496775831930907
+   },
+   "yday_acc": 0.5327868852459017
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-d_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "expiry close vs max pain (MAE % of open)",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "shrink"
+  },
+  "design": {
+   "n": 140,
+   "model": "shrink",
+   "skill": -0.0008640184568557974,
+   "p": 0.5272363818090955,
+   "q": 0.7471558338477821,
+   "mae_nochange": 0.6241936158227737,
+   "mae_maxpain": 0.7764795771869887,
+   "mae_shrink": 0.6247329306274961,
+   "pin_maxpain": 0.25,
+   "pin_open": 0.29285714285714287
+  },
+  "holdout": {
+   "n": 6,
+   "model": "shrink",
+   "skill": 0.010002703828456472,
+   "p": 0.42528735632183906,
+   "q": 0.6754122938530734,
+   "mae_nochange": 0.42796598890523246,
+   "mae_maxpain": 0.7382706410922412,
+   "mae_shrink": 0.42368517186956095,
+   "pin_maxpain": 0.5,
+   "pin_open": 0.3333333333333333
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-e1_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "rest-of-day return from 10:15, analog ensemble (CRPS)",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {},
+  "design": {
+   "n": 242,
+   "skill": -0.04327172346032482,
+   "p": 0.9995002498750625,
+   "q": 0.9995002498750626,
+   "crps_analog": 0.302109204517989,
+   "crps_uncond": 0.2895786377837912,
+   "ll_analog": 1.1370064929766508,
+   "ll_uncond": 1.0985588673072724
+  },
+  "holdout": {
+   "n": 122,
+   "skill": -0.005613735820377386,
+   "p": 0.6086956521739131,
+   "q": 0.8115942028985508,
+   "crps_analog": 0.2733338555216514,
+   "crps_uncond": 0.27180799723132887,
+   "ll_analog": 1.1010125867835971,
+   "ll_uncond": 1.098105804578536
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-e2_BANKNIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "rest-of-day range from 10:15, analog ensemble (CRPS)",
+  "index": "BANKNIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {},
+  "design": {
+   "n": 242,
+   "skill": -0.0573232404409596,
+   "p": 0.999000499750125,
+   "q": 0.9995002498750626,
+   "crps_analog": 0.22152130752644875,
+   "crps_uncond": 0.20951143326241714,
+   "ll_analog": 1.1439393234798314,
+   "ll_uncond": 1.0983874287952426
+  },
+  "holdout": {
+   "n": 122,
+   "skill": -0.05499046887345238,
+   "p": 0.9950024987506247,
+   "q": 0.9950024987506247,
+   "crps_analog": 0.2053979562878528,
+   "crps_uncond": 0.19469176485279752,
+   "ll_analog": 1.1879709234709142,
+   "ll_uncond": 1.0986453701615395
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-a1_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "log range of the next 30 min",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "cnn",
+   "baseline": "btod30",
+   "was": "linear"
+  },
+  "design": {
+   "n": 5355,
+   "sessions": 255,
+   "model": "linear",
+   "best_baseline": "btod30",
+   "skill": 0.18924973785199284,
+   "p": 0.0004997501249375312,
+   "q": 0.0017134289997858213,
+   "metrics": {
+    "mae": 0.3232278943033342,
+    "rmse": 0.41116806298148095
+   },
+   "baselines": {
+    "btod30": {
+     "mae": 0.39867750822179454,
+     "rmse": 0.5067228632836346
+    },
+    "blast30": {
+     "mae": 0.3992784532378529,
+     "rmse": 0.5020735643577379
+    },
+    "bvix": {
+     "mae": 0.40855170041323785,
+     "rmse": 0.5179037114251092
+    }
+   }
+  },
+  "holdout": {
+   "n": 2520,
+   "sessions": 120,
+   "model": "cnn",
+   "best_baseline": "btod30",
+   "skill": 0.1976253778908441,
+   "p": 0.0004997501249375312,
+   "q": 0.0029985007496251873,
+   "metrics": {
+    "mae": 0.2840730973454677,
+    "rmse": 0.3619907280715128
+   },
+   "baselines": {
+    "btod30": {
+     "mae": 0.3540404812389768,
+     "rmse": 0.4512039098551676
+    },
+    "blast30": {
+     "mae": 0.3741031149922942,
+     "rmse": 0.4669240561787566
+    },
+    "bvix": {
+     "mae": 0.3341915757054391,
+     "rmse": 0.42419809048424273
+    }
+   }
+  },
+  "verdict": "predictable"
+ },
+ {
+  "id": "R16-a2_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "log range of the next 60 min",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "cnn",
+   "baseline": "btod60",
+   "was": "linear"
+  },
+  "design": {
+   "n": 4845,
+   "sessions": 255,
+   "model": "linear",
+   "best_baseline": "btod60",
+   "skill": 0.1837687138235644,
+   "p": 0.0004997501249375312,
+   "q": 0.0017134289997858213,
+   "metrics": {
+    "mae": 0.3306301582885077,
+    "rmse": 0.4192085875430986
+   },
+   "baselines": {
+    "btod60": {
+     "mae": 0.4050692051236065,
+     "rmse": 0.5091366544652303
+    },
+    "blast60": {
+     "mae": 0.4179030974093314,
+     "rmse": 0.5213524565697557
+    },
+    "bvix": {
+     "mae": 0.41117996378461125,
+     "rmse": 0.5170402558186254
+    }
+   }
+  },
+  "holdout": {
+   "n": 2280,
+   "sessions": 120,
+   "model": "cnn",
+   "best_baseline": "btod60",
+   "skill": 0.17744789741813605,
+   "p": 0.0004997501249375312,
+   "q": 0.0029985007496251873,
+   "metrics": {
+    "mae": 0.2861985159194504,
+    "rmse": 0.3619836060510775
+   },
+   "baselines": {
+    "btod60": {
+     "mae": 0.3479396806854149,
+     "rmse": 0.4481558373973178
+    },
+    "blast60": {
+     "mae": 0.3862564361822035,
+     "rmse": 0.479356850989234
+    },
+    "bvix": {
+     "mae": 0.32291667476089897,
+     "rmse": 0.41199858756967933
+    }
+   }
+  },
+  "verdict": "predictable"
+ },
+ {
+  "id": "R16-a3b_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "log rest-of-day range from 09:30",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "lgbm",
+   "baseline": "bvix"
+  },
+  "design": {
+   "n": 255,
+   "sessions": 255,
+   "model": "lgbm",
+   "best_baseline": "bvix",
+   "skill": 0.04940346504090143,
+   "p": 0.06696651674162919,
+   "q": 0.16071964017991008,
+   "metrics": {
+    "mae": 0.3480268948456387,
+    "rmse": 0.44395755575121376
+   },
+   "baselines": {
+    "btod_rest": {
+     "mae": 0.3688360455874553,
+     "rmse": 0.44992509963664296
+    },
+    "bvix": {
+     "mae": 0.36611420518234195,
+     "rmse": 0.4571123228944264
+    }
+   }
+  },
+  "holdout": {
+   "n": 120,
+   "sessions": 120,
+   "model": "lgbm",
+   "best_baseline": "bvix",
+   "skill": -0.030072687567986645,
+   "p": 0.7016491754122939,
+   "q": 0.8862936952576345,
+   "metrics": {
+    "mae": 0.3057716891145922,
+    "rmse": 0.3708658523811935
+   },
+   "baselines": {
+    "btod_rest": {
+     "mae": 0.3371096464346371,
+     "rmse": 0.41782694665265413
+    },
+    "bvix": {
+     "mae": 0.29684476911675295,
+     "rmse": 0.36430103059038377
+    }
+   }
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-a3_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "log next-day range (daily, 2012-2026)",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "linear",
+   "baseline": "bvix"
+  },
+  "design": {
+   "n": 3011,
+   "sessions": 3011,
+   "model": "linear",
+   "best_baseline": "bvix",
+   "skill": 0.030296021299885068,
+   "p": 0.0004997501249375312,
+   "q": 0.0017134289997858213,
+   "metrics": {
+    "mae": 0.3207488416323089,
+    "rmse": 0.40563244840116336
+   },
+   "baselines": {
+    "b20": {
+     "mae": 0.3418512454964054,
+     "rmse": 0.431716332806571
+    },
+    "bvix": {
+     "mae": 0.330769852117418,
+     "rmse": 0.4171237374613656
+    }
+   }
+  },
+  "holdout": {
+   "n": 126,
+   "sessions": 126,
+   "model": "linear",
+   "best_baseline": "bvix",
+   "skill": -0.0014409871062881496,
+   "p": 0.5067466266866567,
+   "q": 0.7154070023811624,
+   "metrics": {
+    "mae": 0.3012712659865518,
+    "rmse": 0.38074424703715715
+   },
+   "baselines": {
+    "b20": {
+     "mae": 0.32019350962835125,
+     "rmse": 0.40214285569528574
+    },
+    "bvix": {
+     "mae": 0.3008377626494893,
+     "rmse": 0.3805178131964395
+    }
+   }
+  },
+  "verdict": "not predictable beyond VIX"
+ },
+ {
+  "id": "R16-b15_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "sign of next 15-min return",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "linear"
+  },
+  "design": {
+   "n": 5859,
+   "sessions": 255,
+   "model": "linear",
+   "auc": 0.5120836275585945,
+   "p": 0.0544727636181909,
+   "q": 0.1452607029818424,
+   "metrics": {
+    "n": 5859,
+    "auc": 0.5120836275585945,
+    "acc": 0.5089605734767025,
+    "acc_base": 0.5017921146953405,
+    "ll": 0.6942977826149976,
+    "ll_base": 0.6934627710642367,
+    "brier": 0.2505725234212608,
+    "brier_base": 0.25015772883840875
+   },
+   "trade": {
+    "trades": 782,
+    "per_day": 3.066666666666667,
+    "hit": 0.530690537084399,
+    "rs_trade": -119.37441585677833,
+    "t": -2.823965857739091,
+    "net": -93350.79320000065,
+    "twin_pct": 0.4695,
+    "twin_mean": -115.34872228491132
+   }
+  },
+  "holdout": {
+   "n": 2756,
+   "sessions": 120,
+   "model": "linear",
+   "auc": 0.5125547691270644,
+   "p": 0.1359320339830085,
+   "q": 0.3624854239546893,
+   "metrics": {
+    "n": 2756,
+    "auc": 0.5125547691270644,
+    "acc": 0.510522496371553,
+    "acc_base": 0.5007256894049347,
+    "ll": 0.6943611396083953,
+    "ll_base": 0.6933107658127236,
+    "brier": 0.250600762856413,
+    "brier_base": 0.250081782426539
+   },
+   "trade": {
+    "trades": 357,
+    "per_day": 2.975,
+    "hit": 0.5014005602240896,
+    "rs_trade": -112.07181288515525,
+    "t": -1.6441893703552233,
+    "net": -40009.63720000043,
+    "twin_pct": 0.442,
+    "twin_mean": -103.02328821624762
+   }
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-b30_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "sign of next 30-min return",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "linear"
+  },
+  "design": {
+   "n": 5606,
+   "sessions": 255,
+   "model": "linear",
+   "auc": 0.5137990302393447,
+   "p": 0.05147426286856572,
+   "q": 0.1452607029818424,
+   "metrics": {
+    "n": 5606,
+    "auc": 0.5137990302393447,
+    "acc": 0.5155190866928291,
+    "acc_base": 0.49910809846592935,
+    "ll": 0.6952179574327264,
+    "ll_base": 0.6942990814159188,
+    "brier": 0.25102173425933266,
+    "brier_base": 0.2505750664762515
+   },
+   "trade": {
+    "trades": 1393,
+    "per_day": 5.462745098039216,
+    "hit": 0.5082555635319455,
+    "rs_trade": -148.71447695621046,
+    "t": -3.230039581229301,
+    "net": -207159.2664000012,
+    "twin_pct": 0.158,
+    "twin_mean": -104.48549547509057
+   }
+  },
+  "holdout": {
+   "n": 2638,
+   "sessions": 120,
+   "model": "linear",
+   "auc": 0.5182171433826911,
+   "p": 0.08045977011494253,
+   "q": 0.27586206896551724,
+   "metrics": {
+    "n": 2638,
+    "auc": 0.5182171433826911,
+    "acc": 0.5136467020470054,
+    "acc_base": 0.4965883244882487,
+    "ll": 0.6938138082798394,
+    "ll_base": 0.6937120182628951,
+    "brier": 0.25032962880382725,
+    "brier_base": 0.25028234072563643
+   },
+   "trade": {
+    "trades": 524,
+    "per_day": 4.366666666666666,
+    "hit": 0.5343511450381679,
+    "rs_trade": -14.492602290077427,
+    "t": -0.21566093623229965,
+    "net": -7594.123600000572,
+    "twin_pct": 0.9625,
+    "twin_mean": -125.33869706564992
+   }
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-b60_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "sign of next 60-min return",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "linear"
+  },
+  "design": {
+   "n": 5096,
+   "sessions": 255,
+   "model": "linear",
+   "auc": 0.5161753446962758,
+   "p": 0.10044977511244378,
+   "q": 0.20789605197401298,
+   "metrics": {
+    "n": 5096,
+    "auc": 0.5161753446962758,
+    "acc": 0.5194270015698587,
+    "acc_base": 0.4911695447409733,
+    "ll": 0.6974142979898637,
+    "ll_base": 0.6955157621923943,
+    "brier": 0.2520233303057384,
+    "brier_base": 0.25118192636415987
+   },
+   "trade": {
+    "trades": 1683,
+    "per_day": 6.6,
+    "hit": 0.5169340463458111,
+    "rs_trade": -188.6125872846116,
+    "t": -3.8117497266793428,
+    "net": -317434.98440000135,
+    "twin_pct": 0.109,
+    "twin_mean": -131.47034771479585
+   }
+  },
+  "holdout": {
+   "n": 2397,
+   "sessions": 120,
+   "model": "linear",
+   "auc": 0.536119833185967,
+   "p": 0.03548225887056472,
+   "q": 0.17031484257871066,
+   "metrics": {
+    "n": 2397,
+    "auc": 0.536119833185967,
+    "acc": 0.5210680016687526,
+    "acc_base": 0.5035460992907801,
+    "ll": 0.6922745966781999,
+    "ll_base": 0.693406198439658,
+    "brier": 0.2495301614093601,
+    "brier_base": 0.25012946680748
+   },
+   "trade": {
+    "trades": 646,
+    "per_day": 5.383333333333334,
+    "hit": 0.5603715170278638,
+    "rs_trade": -12.208402476781105,
+    "t": -0.16515382170503146,
+    "net": -7886.628000000594,
+    "twin_pct": 0.981,
+    "twin_mean": -152.63246066501637
+   }
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-c30_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "rest-of-day trend day (ER>=0.5) from first 30 min",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "linear"
+  },
+  "design": {
+   "n": 255,
+   "sessions": 255,
+   "model": "linear",
+   "auc": 0.5216802168021679,
+   "p": 0.2748625687156422,
+   "q": 0.4711929749411009,
+   "metrics": {
+    "n": 255,
+    "auc": 0.5216802168021679,
+    "acc": 0.5254901960784314,
+    "acc_base": 0.4666666666666667,
+    "ll": 0.7077411218175271,
+    "ll_base": 0.6969639528058974,
+    "brier": 0.25721330824965083,
+    "brier_base": 0.2519042008305011
+   },
+   "yday_acc": 0.5098039215686274
+  },
+  "holdout": {
+   "n": 120,
+   "sessions": 120,
+   "model": "linear",
+   "auc": 0.46324978879188966,
+   "p": 0.7551224387806097,
+   "q": 0.9061469265367317,
+   "metrics": {
+    "n": 120,
+    "auc": 0.46324978879188966,
+    "acc": 0.475,
+    "acc_base": 0.5583333333333333,
+    "ll": 0.7388538623443368,
+    "ll_base": 0.691770578205841,
+    "brier": 0.27184602048515993,
+    "brier_base": 0.2493115803627245
+   },
+   "yday_acc": 0.525
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-c45_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "rest-of-day trend day from first 45 min",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "linear"
+  },
+  "design": {
+   "n": 255,
+   "sessions": 255,
+   "model": "linear",
+   "auc": 0.533011272141707,
+   "p": 0.19490254872563717,
+   "q": 0.35982008995502246,
+   "metrics": {
+    "n": 255,
+    "auc": 0.533011272141707,
+    "acc": 0.5411764705882353,
+    "acc_base": 0.5411764705882353,
+    "ll": 0.7118191105279567,
+    "ll_base": 0.6923115956046998,
+    "brier": 0.2581951579383609,
+    "brier_base": 0.24955562757917701
+   },
+   "yday_acc": 0.5019607843137255
+  },
+  "holdout": {
+   "n": 120,
+   "sessions": 120,
+   "model": "linear",
+   "auc": 0.508888888888889,
+   "p": 0.44127936031984005,
+   "q": 0.6754122938530734,
+   "metrics": {
+    "n": 120,
+    "auc": 0.508888888888889,
+    "acc": 0.49166666666666664,
+    "acc_base": 0.5,
+    "ll": 0.7507844553746075,
+    "ll_base": 0.699099712614475,
+    "brier": 0.2743991388316436,
+    "brier_base": 0.25295841541789466
+   },
+   "yday_acc": 0.4583333333333333
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-d_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "expiry close vs max pain (MAE % of open)",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {
+   "model": "shrink"
+  },
+  "design": {
+   "n": 197,
+   "model": "shrink",
+   "skill": -0.00914421857797243,
+   "p": 0.993503248375812,
+   "q": 0.9995002498750626,
+   "mae_nochange": 0.4949239453685367,
+   "mae_maxpain": 0.6455429018215936,
+   "mae_shrink": 0.499449638104459,
+   "pin_maxpain": 0.24873096446700507,
+   "pin_open": 0.29949238578680204
+  },
+  "holdout": {
+   "n": 26,
+   "model": "shrink",
+   "skill": 0.005283158502681684,
+   "p": 0.41829085457271364,
+   "q": 0.6754122938530734,
+   "mae_nochange": 0.5200978120379434,
+   "mae_maxpain": 0.5835992534823944,
+   "mae_shrink": 0.517350052860049,
+   "pin_maxpain": 0.2692307692307692,
+   "pin_open": 0.34615384615384615
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-e1_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "rest-of-day return from 10:15, analog ensemble (CRPS)",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {},
+  "design": {
+   "n": 233,
+   "skill": -0.02557121310039623,
+   "p": 0.9710144927536232,
+   "q": 0.9995002498750626,
+   "crps_analog": 0.3120599424272331,
+   "crps_uncond": 0.3042791553049224,
+   "ll_analog": 1.1362020096101713,
+   "ll_uncond": 1.0986069799206657
+  },
+  "holdout": {
+   "n": 120,
+   "skill": -0.02547476184346631,
+   "p": 0.862568715642179,
+   "q": 0.9391825826217325,
+   "crps_analog": 0.32273312263837606,
+   "crps_uncond": 0.3147158122723645,
+   "ll_analog": 1.1214303765664828,
+   "ll_uncond": 1.0982153846329594
+  },
+  "verdict": "not predictable"
+ },
+ {
+  "id": "R16-e2_NIFTY",
+  "date": "2026-10-12",
+  "study": "R16 What is predictable",
+  "prereg": "research/hunt/r16/PREREG.md",
+  "target": "rest-of-day range from 10:15, analog ensemble (CRPS)",
+  "index": "NIFTY",
+  "data": "release research-data (1-min, Feb/Apr 2024 - Feb/Apr 2026); Yahoo daily 2010-2026; NSE bhavcopy 2022-2026",
+  "code": "research/hunt/r16/{data,build,run,seq}.py",
+  "frozen_choice": {},
+  "design": {
+   "n": 233,
+   "skill": -0.03274827921356738,
+   "p": 0.9390304847576212,
+   "q": 0.9995002498750626,
+   "crps_analog": 0.22612156008137282,
+   "crps_uncond": 0.2189512823527174,
+   "ll_analog": 1.1398011790529907,
+   "ll_uncond": 1.0987902752989824
+  },
+  "holdout": {
+   "n": 120,
+   "skill": -0.02758215105015349,
+   "p": 0.8025987006496752,
+   "q": 0.917255657885343,
+   "crps_analog": 0.22128709515494574,
+   "crps_uncond": 0.215347351964802,
+   "ll_analog": 1.128393013283754,
+   "ll_uncond": 1.099377895674361
+  },
+  "verdict": "not predictable"
+ }
+]

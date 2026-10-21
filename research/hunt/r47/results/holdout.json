@@ -1,0 +1,613 @@
+{
+ "read_at": "2026-10-15T01:29:40+00:00",
+ "holdout_start": "2025-11-10",
+ "last_session": "2026-10-13",
+ "candidates": [
+  {
+   "id": "C1",
+   "fam": "U3_lateday",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "instr": "itm3",
+   "filt": "dte2p",
+   "params": {
+    "th": 0.5,
+    "how": "follow"
+   },
+   "exit_spec": [
+    0.0,
+    1.0,
+    "am",
+    null
+   ],
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "holdout": {
+    "trades": 90,
+    "net": -92814.0,
+    "npt": -1031.3,
+    "win": 44.4,
+    "top5": 114906.0,
+    "best_month": 47618.0,
+    "months": {
+     "2025-11": 2824.0,
+     "2025-12": 3682.0,
+     "2026-01": -18645.0,
+     "2026-02": 26613.0,
+     "2026-03": -64772.0,
+     "2026-04": -50679.0,
+     "2026-05": 47618.0,
+     "2026-06": 16318.0,
+     "2026-07": -14762.0,
+     "2026-08": -9755.0,
+     "2026-09": -8948.0,
+     "2026-10": -22310.0
+    },
+    "fallback": 9,
+    "mean_outlay": 33306.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": -99080.0,
+    "mean_npt": -1100.9,
+    "p95_net": 22805.0
+   },
+   "p": 0.497,
+   "q": 0.5633,
+   "gates": {
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C2",
+   "fam": "U4_donchian",
+   "und": "NIFTY",
+   "kind": "spread",
+   "instr": "sp_itm2_otm2",
+   "filt": "vix_lo",
+   "params": {
+    "n": 10
+   },
+   "exit_spec": [
+    0.0,
+    0.0,
+    1,
+    null
+   ],
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "holdout": {
+    "trades": 43,
+    "net": 32045.0,
+    "npt": 745.2,
+    "win": 44.2,
+    "top5": 101469.0,
+    "best_month": 40232.0,
+    "months": {
+     "2025-11": -7915.0,
+     "2025-12": -5683.0,
+     "2026-01": -7016.0,
+     "2026-02": -606.0,
+     "2026-06": -3733.0,
+     "2026-07": 9073.0,
+     "2026-08": 24901.0,
+     "2026-09": 40232.0,
+     "2026-10": -17208.0
+    },
+    "fallback": 0,
+    "mean_outlay": 17104.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": 12799.0,
+    "mean_npt": 297.6,
+    "p95_net": 152108.0
+   },
+   "p": 0.3912,
+   "q": 0.5633,
+   "gates": {
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C3",
+   "fam": "U3_lateday",
+   "und": "FINNIFTY",
+   "kind": "spread",
+   "instr": "sp_itm2_otm2",
+   "filt": "vix_lo",
+   "params": {
+    "th": 0.5,
+    "how": "follow"
+   },
+   "exit_spec": [
+    0.0,
+    1.0,
+    "am",
+    null
+   ],
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "holdout": {
+    "trades": 49,
+    "net": -265497.0,
+    "npt": -5418.3,
+    "win": 28.6,
+    "top5": 17961.0,
+    "best_month": -401.0,
+    "months": {
+     "2025-11": -9265.0,
+     "2025-12": -5956.0,
+     "2026-01": -1665.0,
+     "2026-02": -23599.0,
+     "2026-03": -8414.0,
+     "2026-06": -21663.0,
+     "2026-07": -135954.0,
+     "2026-08": -24174.0,
+     "2026-09": -34404.0,
+     "2026-10": -401.0
+    },
+    "fallback": 15,
+    "mean_outlay": 9361.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": -601762.0,
+    "mean_npt": -12280.9,
+    "p95_net": -171211.0
+   },
+   "p": 0.4032,
+   "q": 0.5633,
+   "gates": {
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C4",
+   "fam": "C1_pcr",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "instr": "itm3",
+   "filt": "all",
+   "params": {
+    "at": [
+     10,
+     15
+    ],
+    "how": "follow"
+   },
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.6,
+     0.3
+    ]
+   ],
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "holdout": {
+    "trades": 91,
+    "net": 78750.0,
+    "npt": 865.4,
+    "win": 48.4,
+    "top5": 76457.0,
+    "best_month": 29255.0,
+    "months": {
+     "2025-11": 5082.0,
+     "2025-12": 13011.0,
+     "2026-01": 17674.0,
+     "2026-02": -8821.0,
+     "2026-03": -10086.0,
+     "2026-04": 29255.0,
+     "2026-05": 27612.0,
+     "2026-06": -21640.0,
+     "2026-07": 18991.0,
+     "2026-08": 12674.0,
+     "2026-09": 2689.0,
+     "2026-10": -7691.0
+    },
+    "fallback": 0,
+    "mean_outlay": 33830.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": -26136.0,
+    "mean_npt": -287.2,
+    "p95_net": 77023.0
+   },
+   "p": 0.0499,
+   "q": 0.499,
+   "gates": {
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": true,
+    "G4_q": false,
+    "G5_top5": true,
+    "G6_best_month": true
+   },
+   "passes": false
+  },
+  {
+   "id": "C5",
+   "fam": "U1_orb",
+   "und": "SENSEX",
+   "kind": "spread",
+   "instr": "sp_itm2_otm2",
+   "filt": "dte0",
+   "params": {
+    "or_min": 60
+   },
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.6,
+     0.3
+    ]
+   ],
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "holdout": {
+    "trades": 47,
+    "net": -31675.0,
+    "npt": -673.9,
+    "win": 31.9,
+    "top5": 89826.0,
+    "best_month": 32560.0,
+    "months": {
+     "2025-11": -11581.0,
+     "2025-12": -24245.0,
+     "2026-01": 24012.0,
+     "2026-02": 18739.0,
+     "2026-03": -21005.0,
+     "2026-04": 7197.0,
+     "2026-05": -1005.0,
+     "2026-06": -12366.0,
+     "2026-07": -33169.0,
+     "2026-08": -13126.0,
+     "2026-09": 2313.0,
+     "2026-10": 32560.0
+    },
+    "fallback": 0,
+    "mean_outlay": 17863.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": -14294.0,
+    "mean_npt": -304.1,
+    "p95_net": 58503.0
+   },
+   "p": 0.6527,
+   "q": 0.6527,
+   "gates": {
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C6",
+   "fam": "C3_oishift",
+   "und": "NIFTY",
+   "kind": "spread",
+   "instr": "sp_itm2_otm2",
+   "filt": "dte0",
+   "params": {
+    "how": "follow"
+   },
+   "exit_spec": [
+    0.3,
+    0.0,
+    "sq",
+    [
+     0.3,
+     0.1
+    ]
+   ],
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "holdout": {
+    "trades": 24,
+    "net": 430.0,
+    "npt": 17.9,
+    "win": 50.0,
+    "top5": 59257.0,
+    "best_month": 15081.0,
+    "months": {
+     "2025-11": -13879.0,
+     "2025-12": -2329.0,
+     "2026-02": -2985.0,
+     "2026-04": 15081.0,
+     "2026-05": 6542.0,
+     "2026-06": -18415.0,
+     "2026-07": 2680.0,
+     "2026-08": -1122.0,
+     "2026-09": 9862.0,
+     "2026-10": 4996.0
+    },
+    "fallback": 0,
+    "mean_outlay": 16272.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": -2224.0,
+    "mean_npt": -92.7,
+    "p95_net": 43953.0
+   },
+   "p": 0.4631,
+   "q": 0.5633,
+   "gates": {
+    "G1_net_positive": true,
+    "G2_trades_40": false,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C7",
+   "fam": "C1_pcr",
+   "und": "NIFTY",
+   "kind": "dir",
+   "instr": "itm3",
+   "filt": "all",
+   "params": {
+    "at": [
+     11,
+     30
+    ],
+    "how": "follow"
+   },
+   "exit_spec": [
+    0.25,
+    1.0,
+    "sq",
+    null
+   ],
+   "signal_source": "option-chain signal (OI / PCR / IV of the lake's ATM+-10 chain) - relaxed item 1",
+   "holdout": {
+    "trades": 102,
+    "net": 74805.0,
+    "npt": 733.4,
+    "win": 45.1,
+    "top5": 87075.0,
+    "best_month": 31556.0,
+    "months": {
+     "2025-11": -14174.0,
+     "2025-12": 27438.0,
+     "2026-01": 15424.0,
+     "2026-02": 25399.0,
+     "2026-03": -1280.0,
+     "2026-04": 31556.0,
+     "2026-05": 22144.0,
+     "2026-06": -19468.0,
+     "2026-07": -3536.0,
+     "2026-08": -26197.0,
+     "2026-09": 10048.0,
+     "2026-10": 7452.0
+    },
+    "fallback": 0,
+    "mean_outlay": 15611.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": 31870.0,
+    "mean_npt": 312.4,
+    "p95_net": 124203.0
+   },
+   "p": 0.2136,
+   "q": 0.5633,
+   "gates": {
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": true
+   },
+   "passes": false
+  },
+  {
+   "id": "C8",
+   "fam": "U6_ema",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "otm2",
+   "filt": "dow2",
+   "params": {
+    "f": 9,
+    "s": 21,
+    "vwap": true
+   },
+   "exit_spec": [
+    0.0,
+    0.0,
+    60,
+    null
+   ],
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "holdout": {
+    "trades": 67,
+    "net": -28448.0,
+    "npt": -424.6,
+    "win": 41.8,
+    "top5": 56343.0,
+    "best_month": 6073.0,
+    "months": {
+     "2025-11": 4462.0,
+     "2025-12": 2779.0,
+     "2026-01": 941.0,
+     "2026-02": -10973.0,
+     "2026-03": -8003.0,
+     "2026-04": -17212.0,
+     "2026-05": -4888.0,
+     "2026-06": 5903.0,
+     "2026-07": 1714.0,
+     "2026-08": 6073.0,
+     "2026-09": -11390.0,
+     "2026-10": 2145.0
+    },
+    "fallback": 0,
+    "mean_outlay": 17714.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": -18062.0,
+    "mean_npt": -269.6,
+    "p95_net": 93955.0
+   },
+   "p": 0.507,
+   "q": 0.5633,
+   "gates": {
+    "G1_net_positive": false,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C9",
+   "fam": "U7_bigbar",
+   "und": "BANKNIFTY",
+   "kind": "dir",
+   "instr": "itm3",
+   "filt": "dow0",
+   "params": {
+    "k": 2.0,
+    "how": "follow"
+   },
+   "exit_spec": [
+    0.4,
+    0.0,
+    "sq",
+    null
+   ],
+   "signal_source": "underlying (index spot) - the CLAUDE.md default",
+   "holdout": {
+    "trades": 41,
+    "net": 11113.0,
+    "npt": 271.0,
+    "win": 48.8,
+    "top5": 60110.0,
+    "best_month": 17133.0,
+    "months": {
+     "2025-11": -983.0,
+     "2025-12": 1907.0,
+     "2026-01": 6503.0,
+     "2026-02": 17133.0,
+     "2026-03": -7806.0,
+     "2026-04": -15048.0,
+     "2026-05": -480.0,
+     "2026-06": 2908.0,
+     "2026-07": 10784.0,
+     "2026-08": -13180.0,
+     "2026-09": -1442.0,
+     "2026-10": 10818.0
+    },
+    "fallback": 0,
+    "mean_outlay": 28409.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": -11871.0,
+    "mean_npt": -289.5,
+    "p95_net": 46978.0
+   },
+   "p": 0.2715,
+   "q": 0.5633,
+   "gates": {
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  },
+  {
+   "id": "C10",
+   "fam": "O1_prem_orb",
+   "und": "SENSEX",
+   "kind": "dir",
+   "instr": "own",
+   "filt": "dow4",
+   "params": {
+    "or_min": 15
+   },
+   "exit_spec": [
+    0.25,
+    1.0,
+    "sq",
+    null
+   ],
+   "signal_source": "non-default: option-chart signal (the option's own premium bars) - only Boss could switch it on",
+   "holdout": {
+    "trades": 41,
+    "net": 13191.0,
+    "npt": 321.7,
+    "win": 39.0,
+    "top5": 40167.0,
+    "best_month": 18827.0,
+    "months": {
+     "2025-11": -11587.0,
+     "2025-12": -7885.0,
+     "2026-01": 18827.0,
+     "2026-02": 13678.0,
+     "2026-03": 16498.0,
+     "2026-04": 11581.0,
+     "2026-05": -2389.0,
+     "2026-06": -6746.0,
+     "2026-07": -5808.0,
+     "2026-08": -13589.0,
+     "2026-09": -4132.0,
+     "2026-10": 4743.0
+    },
+    "fallback": 0,
+    "mean_outlay": 14879.0
+   },
+   "twins": {
+    "n": 500,
+    "mean_net": 2791.0,
+    "mean_npt": 68.1,
+    "p95_net": 77021.0
+   },
+   "p": 0.3892,
+   "q": 0.5633,
+   "gates": {
+    "G1_net_positive": true,
+    "G2_trades_40": true,
+    "G3_p": false,
+    "G4_q": false,
+    "G5_top5": false,
+    "G6_best_month": false
+   },
+   "passes": false
+  }
+ ],
+ "any_pass": false
+}

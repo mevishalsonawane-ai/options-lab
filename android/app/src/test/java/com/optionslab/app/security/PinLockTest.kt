@@ -29,6 +29,30 @@ class PinLockTest : RobolectricTest() {
         assertFalse(SecurePrefs.snapshot().values.any { it.toString().contains(pin) })
     }
 
+    /** 18 Oct, review: Change PIN writes the new PIN and the API secret re-sealed under it in one vault write. */
+    @Test fun aNewPinAndTheResealedSecretGoTogether() {
+        val b = com.optionslab.app.data.Broker
+        val next = "135792"
+        PinLock.setPin(pin.toCharArray())
+        assertTrue("no secret yet: nothing to re-seal", b.resealedSecret(pin.toCharArray(), next.toCharArray()).isEmpty())
+        b.saveCredentials("testkey1", "testsecret1", pin.toCharArray())
+        assertTrue("the wrong current PIN opens nothing", b.resealedSecret("999991".toCharArray(), next.toCharArray()).isEmpty())
+        val sealed = b.resealedSecret(pin.toCharArray(), next.toCharArray())
+        assertEquals(1, sealed.size)
+        assertEquals("computed only, not yet written", "testsecret1", b.unsealSecret(pin.toCharArray()))
+        // A weak new PIN: neither the PIN nor the secret changes.
+        try { PinLock.setPin("111111".toCharArray(), also = sealed); throw AssertionError("weak PIN accepted") } catch (_: IllegalArgumentException) {}
+        assertEquals(PinLock.Result.Ok, verify(pin))
+        assertEquals("testsecret1", b.unsealSecret(pin.toCharArray()))
+        PinLock.setPin(next.toCharArray(), also = sealed)
+        assertEquals(PinLock.Result.Ok, verify(next))
+        assertEquals("the secret opens with the new PIN", "testsecret1", b.unsealSecret(next.toCharArray()))
+        assertNull("and no longer with the old one", b.unsealSecret(pin.toCharArray()))
+        // Both are on disk, not only in memory.
+        assertTrue(SecurePrefs.flush()); assertTrue(SecurePrefs.reload())
+        assertEquals("testsecret1", b.unsealSecret(next.toCharArray()))
+    }
+
     @Test fun weakOrShortPinsAreRefused() {
         for (bad in listOf("12345", "1234567", "111111")) {
             try { PinLock.setPin(bad.toCharArray()); throw AssertionError("$bad accepted") } catch (_: IllegalArgumentException) {}

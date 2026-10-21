@@ -1,0 +1,54 @@
+id: r43-ema921-adx20
+title: 'Sweep signal as zero-to-hero expiry trade: EMA9 x EMA21 with ADX(14) > 20'
+family: patterns-indicators
+date: '2026-10-14'
+doc: research/HUNT_R43_SWEEP_SIGNALS_HERO.md
+hypothesis: 'Boss''s sweep signal, read on the 5-minute INDEX close (signal source: the index spot), buying a cheap OTM option
+  (Rs 5-30) or the OTM2 strike at the next 5-minute bar''s open on the index''s own expiry day and holding for a big multiple
+  with a -50% stop, catches zero-to-hero trades better than random entries after costs.'
+data_version: 'Dhan lake on Drive: opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX}_WEEK (ATM+-10, 1-minute), index_1m of
+  the same; 5-minute index bars built from the 1-minute data; expiry days from the data (R25 rule); lake ends 12 Oct 2026'
+period:
+  design: expiry days 5 Aug 2021 - 31 Dec 2024 (per-year results = walk-forward of a fixed rule)
+  holdout: expiry days 1 Jan 2025 - 12 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 5-minute index EMA / RSI / ADX / Donchian (signal on the underlying)
+model_or_rule: EMA9 x EMA21 with ADX(14) > 20
+settings: research/hunt/r43/r43cfg.py
+prereg: research/hunt/r43/PREREG.md
+variants_tried: 12
+results:
+  summary: '12 variants (strike cheap Rs 5-30 / OTM2 x window all-day / 12:30-14:45 x exit), Rs 5,000 a trade, 1 trade per
+    index-expiry-day max, on 670 design and 245 holdout index-expiry-days. 0 of 12 pass. Best holdout variant: ema921_adx20-cheap-hero-hold:
+    design 178 trades net Rs -29,677; holdout 75 trades, win 12.0%, peak 5x/10x 9/3, net Rs +137,909 (+563 a day), max DD
+    Rs -50,257, p 0.1856, q 0.7101: fail. All variants: ema921_adx20-cheap-all-hold: design 428 trades net Rs -76,444; holdout
+    169 trades, win 8.3%, peak 5x/10x 19/5, net Rs +63,987 (+261 a day), max DD Rs -167,286, p 0.1138, q 0.5564: fail; ema921_adx20-cheap-all-trail:
+    design 428 trades net Rs -91,818; holdout 169 trades, win 16.0%, peak 5x/10x 16/3, net Rs +20,446 (+84 a day), max DD
+    Rs -117,927, p 0.0639, q 0.4142: fail; ema921_adx20-cheap-all-time: design 428 trades net Rs -48,315; holdout 169 trades,
+    win 18.3%, peak 5x/10x 12/2, net Rs -1,049 (-4 a day), max DD Rs -130,128, p 0.1377, q 0.6059: fail; ema921_adx20-cheap-hero-hold:
+    design 178 trades net Rs -29,677; holdout 75 trades, win 12.0%, peak 5x/10x 9/3, net Rs +137,909 (+563 a day), max DD
+    Rs -50,257, p 0.1856, q 0.7101: fail; ema921_adx20-cheap-hero-trail: design 178 trades net Rs +12,097; holdout 75 trades,
+    win 18.7%, peak 5x/10x 7/1, net Rs -21,902 (-89 a day), max DD Rs -58,986, p 0.6846, q 0.8141: fail; ema921_adx20-cheap-hero-time:
+    design 178 trades net Rs +19,572; holdout 75 trades, win 17.3%, peak 5x/10x 7/1, net Rs -14,947 (-61 a day), max DD Rs
+    -55,537, p 0.7106, q 0.8228: fail; ema921_adx20-otm2-all-hold: design 437 trades net Rs -303,098; holdout 174 trades,
+    win 9.8%, peak 5x/10x 15/4, net Rs -59,786 (-244 a day), max DD Rs -149,721, p 0.5329, q 0.7812: fail; ema921_adx20-otm2-all-trail:
+    design 437 trades net Rs -283,152; holdout 174 trades, win 16.1%, peak 5x/10x 13/4, net Rs -18,724 (-76 a day), max DD
+    Rs -138,154, p 0.3333, q 0.7812: fail; ema921_adx20-otm2-all-time: design 437 trades net Rs -242,751; holdout 174 trades,
+    win 21.8%, peak 5x/10x 9/3, net Rs -32,110 (-131 a day), max DD Rs -131,077, p 0.3333, q 0.7812: fail; ema921_adx20-otm2-hero-hold:
+    design 191 trades net Rs +32,066; holdout 80 trades, win 10.0%, peak 5x/10x 9/3, net Rs +16,760 (+68 a day), max DD Rs
+    -65,172, p 0.7784, q 0.8457: fail; ema921_adx20-otm2-hero-trail: design 191 trades net Rs -36,592; holdout 80 trades,
+    win 15.0%, peak 5x/10x 9/3, net Rs -1,829 (-8 a day), max DD Rs -65,064, p 0.483, q 0.7812: fail; ema921_adx20-otm2-hero-time:
+    design 191 trades net Rs -29,144; holdout 80 trades, win 15.0%, peak 5x/10x 9/3, net Rs +9,921 (+40 a day), max DD Rs
+    -59,057, p 0.4431, q 0.7812: fail.'
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; entry limit 1.2x + 0.10 for 3 min;
+    x2 spread stress reported
+holdout_read: true
+verdict: rejected
+notes: 'One family of the R43 BH family of 88 tests (BH over all 88 holdout p-values). Random-entry twins: 500 per rule, same
+  index-day, side, window, strike rule and exit. Signal source: the index spot.'

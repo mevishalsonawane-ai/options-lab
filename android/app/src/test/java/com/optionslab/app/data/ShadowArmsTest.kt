@@ -243,6 +243,52 @@ class ShadowArmsTest : RobolectricTest() {
         assertNoBankOrders(paperOrders)
     }
 
+    /**
+     * 18 Oct (review D8): a shadow variant re-armed on paper (Boss's yes, [ShadowArms.promote]) reaches the live path ([ArmLive]).
+     * OP10 on the day above, re-armed: its 10:11 entry is a real paper buy, told with the "Shadow variants re-armed" key, its
+     * reference, its quantity and its own -40 stop on the paper fill ([ShadowRules.premiumStop]); its 10:13 profit lock sells it on
+     * paper, and that close is told too.
+     */
+    @Test fun aReArmedVariantsPaperTradeAndItsExitReachTheLivePath() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        bankFeed()
+        upstox.price(bankCe, 290.0)                         // the paper MARKET buy fills near the study's LIMIT 290
+        HiddenArms.reloadForTest()                          // the hidden-arms list read and empty: re-arming is allowed
+        val said = runBlocking { ShadowArms.promote(ShadowRules.ORB_P10.id) }
+        assertTrue(said, said.contains("re-armed with OP10 on paper"))
+        val paperOrders = Paper.state.orders.size
+        tick(LocalTime.of(10, 10))
+        tick(LocalTime.of(10, 11))
+        tick(LocalTime.of(10, 12))
+        val open = row(ShadowRules.ORB_P10).trades.single()
+        assertTrue(open.open); assertTrue("on paper", open.paper)
+        assertEquals(30, open.qty)
+        val buy = Paper.state.orders.drop(paperOrders).single { it.action == "BUY" }
+        assertEquals(buy.orderId, open.orderId)
+        val key = com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED
+        val ref = "shadow:${open.variant}:${open.orderId ?: open.entryTime}"
+        val stop = ShadowRules.premiumStop(open.variant, open.entry)
+        assertEquals("OP10 has the -40 rule: the stop is the paper fill less 40", com.optionslab.engine.orb.OrbRules.stopTrigger(open.entry), stop)
+        assertEquals(open.entry - 40, stop!!, 0.051)
+        val entered = synchronized(heard) { heard.filter { it.startsWith("entered|") } }
+        assertEquals("one paper buy told, with the re-armed key, its reference, quantity and -40 stop",
+            listOf("entered|$key|$ref|30|$stop"), entered)
+        assertEquals("open: held at its quantity", 30,
+            ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.SHADOW)!!.single { it.ref == ref }.qty)
+
+        // 10:14: the walk reads 10:11 - 10:13: +10 or more at 10:12 locks the price paid, 10:13's low 289 sells it on paper.
+        tick(LocalTime.of(10, 14))
+        val done = row(ShadowRules.ORB_P10).trades.single()
+        assertTrue("sold on paper", !done.open)
+        assertEquals("profit_lock", done.why)
+        assertTrue(Paper.state.orders.drop(paperOrders).any { it.action == "SELL" && it.status == "complete" })
+        assertTrue(synchronized(heard) { heard.toList() }.toString(),
+            synchronized(heard) { heard.contains("closed|$ref|profit_lock") })
+        val leg = ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.SHADOW)!!.single { it.ref == ref }
+        assertEquals(key, leg.key); assertEquals(0, leg.qty)
+    }
+
     private fun assertNoBankOrders(paperOrders: Int) {
         assertEquals("the paper account was not touched", paperOrders, Paper.state.orders.size)
         assertTrue("no paper position", Paper.state.positions.none { it.symbol.startsWith("BANKNIFTY-SHADOW") })

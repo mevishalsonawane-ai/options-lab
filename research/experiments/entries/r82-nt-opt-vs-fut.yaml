@@ -1,0 +1,24 @@
+id: r82-nt-opt-vs-fut
+title: 'R82 (not tested): MCX options versus futures for the same signal'
+family: mcx-crypto
+date: '2026-10-18'
+doc: research/HUNT_R82_MCX_PRECIOUS.md
+hypothesis: 'Pre-registered in R82 as an idea; not tested: no MCX option history reachable in the R82 sandbox.'
+data_version: none
+period:
+  design: n/a
+  holdout: n/a
+instruments:
+- GOLDM
+- SILVERM
+features:
+- not tested
+model_or_rule: MCX options versus futures for the same signal
+settings: research/hunt/r82/PREREG.md section 4
+prereg: research/hunt/r82/PREREG.md
+variants_tried: null
+results:
+  summary: 'Not tested: no MCX option history reachable in the R82 sandbox.'
+  costs: n/a
+holdout_read: false
+verdict: not-a-test

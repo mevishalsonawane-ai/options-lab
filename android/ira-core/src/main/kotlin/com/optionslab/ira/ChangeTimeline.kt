@@ -36,6 +36,8 @@ object ChangeTimeline {
     data class Item(
         val id: String, val source: Source, val atMs: Long, val agent: String, val what: String, val why: String,
         val undo: UndoState, val scope: String = "", val key: String = "",
+        /** Boss's own change, only logged here (13 Oct's park): undone by its own tap, never by "undo everything today". */
+        val own: Boolean = false,
     ) {
         val pending: Boolean get() = undo == UndoState.UNDOABLE || undo == UndoState.NEEDS_PIN
     }
@@ -70,11 +72,15 @@ object ChangeTimeline {
                 AutoChange.Status.REVERTED -> UndoState.REVERTED
                 AutoChange.Status.OFFERED -> UndoState.ASKED
                 AutoChange.Status.REVERT_ASKED -> UndoState.NEEDS_PIN
-                else -> if (AutoChange.undoNeedsPin(c) || undoNeedsPin(e)) UndoState.NEEDS_PIN else UndoState.UNDOABLE
+                // An older flip of Boss's Liquidity paper trail switch: only the newest one undoes (13 Oct review).
+                else -> if (AutoChange.superseded(book, e)) UndoState.NO_UNDO
+                    else if (AutoChange.undoNeedsPin(c) || undoNeedsPin(e)) UndoState.NEEDS_PIN else UndoState.UNDOABLE
             }
             Item("ap:${e.id}", if (tuning) Source.SPECIALISTS else Source.AUTOPILOT, e.atMs,
-                if (tuning) Source.SPECIALISTS.agent else "Autopilot · ${c.kind.agent}",
-                "${c.what}: ${c.from} → ${c.to}", c.reason, state, c.scope.words, e.id)
+                // Boss's own changes (13 Oct: the park, the Liquidity paper trail), logged here so each can be undone in one tap:
+                // said as Boss's, not Autopilot's.
+                if (tuning) Source.SPECIALISTS.agent else if (AutoChange.bossOwn(c.kind)) "You (logged by Autopilot)" else "Autopilot · ${c.kind.agent}",
+                "${c.what}: ${c.from} → ${c.to}", c.reason, state, c.scope.words, e.id, own = AutoChange.bossOwn(c.kind))
         }
 
     /** The lab's automatic paper promotions on [day] (a live rule moves back only through its own PIN flow). */
@@ -117,7 +123,8 @@ object ChangeTimeline {
     fun undoPlan(items: List<Item>, pinConfirmed: Boolean = false): Plan {
         val newest = items.sortedWith(compareByDescending<Item> { it.atMs }.thenByDescending { it.id })
         val now = ArrayList<Item>(); val pin = ArrayList<Item>(); val left = ArrayList<Item>()
-        for (i in newest) when (i.undo) {
+        // Boss's own changes (13 Oct's park) are not today's automatic changes: only their own Undo puts them back.
+        for (i in newest.filter { !it.own }) when (i.undo) {
             UndoState.UNDOABLE -> now += i
             UndoState.NEEDS_PIN -> if (pinConfirmed) now += i else pin += i
             UndoState.NO_UNDO -> left += i

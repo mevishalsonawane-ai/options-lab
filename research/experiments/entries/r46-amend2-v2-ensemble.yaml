@@ -1,0 +1,47 @@
+id: r46-amend2-v2-ensemble
+title: 'R46 amendment 2: the other AI''s v2 "Ensemble" (MLP + GB + RF on the call''s chart) re-tested'
+family: mcx-crypto
+date: '2026-10-15'
+doc: research/HUNT_R46_BTC_EMA_ADX_NN.md
+hypothesis: 'Their claim: EMA8/21 cross + ADX>15 with an ensemble filter > 0.65 (target: call premium up after 60 min) wins 85.7%
+  of 35 trades, +$132/trade, AUC 0.78. Tested: AUC with a random vs a time-ordered split, rolling vs held contract, and trading
+  it walk-forward with honest fills, costs, tax and a stop + lock.'
+data_version: 'Crypto lake gdrive:IraAlgo-data-crypto pulled 15 Oct 2026 (as R46). Raw data, panels and model outputs outside
+  git.'
+period:
+  design: 2024-11-20..2026-03-31 (PRIMARY); full span 2024-01-01..2026-03-31 beside it
+  holdout: 2026-04-01..2026-10-12 (final test = R46's already-read holdout span)
+instruments:
+- CRYPTO
+features:
+- ce_ret1_3_6_12
+- ce_vol12
+- ce_rsi14
+- spot_ret1
+- spot_ret6
+- spot_vol12
+- dte_hours
+- hour
+- ce_spot_ratio
+model_or_rule: BTC spot 5-min EMA(8) crosses above EMA(21) AND ADX(14) > 15, AND the average of MLP 12-64-32-1 (dropout 0.2) +
+  gradient-boosted trees (200, depth 4, lr 0.05) + random forest (200, depth 10) > 0.65, trained walk-forward by quarter (purge +
+  12-bar embargo); buy the ATM call next bar (one-minute-later fill + half spread); 60-min exit, 50% stop, step (L1) or trailing
+  (L2) lock; max 2 a day
+settings: research/hunt/r46/amend_cfg.py
+prereg: null
+variants_tried: 4
+results:
+  summary: 'AUC (Nov 2024+ design): rolling ATM series, random split 0.786, time-ordered walk-forward 0.782, final 0.796 - but
+    judged against the HELD contract''s own move the same model scores 0.510 / 0.502. Held-contract features: random 0.575 vs
+    walk-forward 0.538 (leakage gap 0.04), final 0.543. The rolling strike or expiry changes inside 97.9% of 60-min label windows;
+    98% of rolling "up" labels coincide with a switch; rolling and held labels agree only 57%. Trades (1,000 contracts, Delta):
+    rolling-feature ensemble L1 281 design trades, win 24.6%, after tax -$16,561 (p 0.006, q 0.11), final 140 trades -$4,027;
+    held-feature ensemble 1 design trade, 0 final (it almost never clears 0.65). Their window Sep-Oct 2026: 23 trades, 43.5%
+    win, -$183 before tax (claim 35, 85.7%, +$132/trade). CoinSwitch costs change no sign. 0 of 4 pass.'
+  costs: Delta India dated fees + 18% GST (gate), CoinSwitch 0.015% of notional with/without GST; spread model, one-minute-later
+    fill, exits less half spread + tick + 1%; tax 31.2% per winning trade
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: BTC spot (the underlying) for the entry; the ensemble filter reads the call''s own chart (an option-chart
+  filter, non-default, labelled). Never tested without a stop and a lock. Gradient boosting fitted with histogram splits for speed.
+  Research only.'

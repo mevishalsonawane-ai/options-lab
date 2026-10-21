@@ -66,6 +66,8 @@ object Slippage {
             tag == "iraorb" -> "ORB"
             tag == "iraalgoexpiry" || o.startsWith("expiry") -> "Expiry square-off"
             tag == "iraalgostrat" -> "Strategy"
+            // 18 Oct: a paper strategy's live trade (tag "iraarm", the app's ArmLive), apart from the ORB family's own.
+            tag == "iraarm" || a.startsWith("arm:") -> "Arms (live)"
             else -> "Manual"
         }
     }
@@ -93,6 +95,22 @@ object Slippage {
         val rs = fills.map { it.rupees }
         val ts = fills.map { it.ticks }
         return Stats(fills.size, median(rs), quantile(rs, 0.9), median(ts), quantile(ts, 0.9), fills.sumOf { it.rupees * it.qty })
+    }
+
+    /** Live fills needed before a measured slippage is used ([medianShare]). */
+    const val MIN_MEASURED = 5
+
+    /**
+     * 18 Oct (final review F4, shadow P&L no better than live): the median slippage of Zerodha's own fills (never paper) on [leg]
+     * whose intended price came from one of [bases], as a share of that price (a cost positive, never below 0): [strategy]'s own
+     * fills when it has [min] of them, else every strategy's; 0 with fewer than [min] (nothing measured yet).
+     */
+    fun medianShare(fills: List<Fill>, leg: Leg, bases: Set<Basis>, strategy: String? = null, min: Int = MIN_MEASURED): Double {
+        val all = fills.filter { !it.paper && it.leg == leg && it.basis in bases && it.intended > 0 }
+        val own = if (strategy == null) emptyList() else all.filter { it.strategy == strategy }
+        val use = if (own.size >= min) own else all
+        if (use.size < min) return 0.0
+        return median(use.map { it.rupees / it.intended }).coerceAtLeast(0.0)
     }
 
     /** Per strategy, then entry or exit, then buy or sell: "ORB · entries · BUY" -> its figures. Most fills first. */

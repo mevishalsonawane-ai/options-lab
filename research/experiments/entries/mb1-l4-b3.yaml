@@ -1,0 +1,36 @@
+id: mb1-l4-b3
+title: 'MCX brain L4 B3: quiet fade: predicted range bottom third and price >= 1-1.5x it from the session mean'
+family: mcx-crypto
+date: '2026-10-20'
+doc: research/BRAIN_MCX.md
+hypothesis: When the brain expects a quiet hour, fading stretched prices to the session mean pays.
+data_version: 'Drive lake options_rolling_1m (6 MCX monthly option books, 5 Aug 2025 - 13 Oct 2026: near-future close + ATM
+  IV/OI/volume) + fut_1m_live_mcx and fut_daily_continuous fetched from Dhan 19-20 Oct 2026 (to 16 Oct); MCX cube v1, 56 features
+  (research/brain/mcx/FEATURES.md); raw data on Drive, not in git'
+period:
+  design: 5 Aug 2025 - 2026-06-23 (226 sessions; walk-forward tests on blocks 3-6, 21 Nov 2025 - 23 Jun 2026, about 150 sessions)
+  holdout: 2026-07-01 - 16 Oct 2026 (77 sessions; embargo 24-30 Jun)
+instruments:
+- GOLDM
+- SILVERM
+- CRUDEOIL
+- NATURALGAS
+features:
+- brain forecasts (L1-L3, walk-forward test folds)
+- MCX future minute closes
+- ATM IV (B4)
+model_or_rule: 'B3: quiet fade: predicted range bottom third and price >= 1-1.5x it from the session mean. Signal on the MCX
+  future; traded as one mini-future lot (B1-B3) or the ATM straddle (B4)'
+settings: research/brain/mcx/l4.py, PREREG section 7; results/l4_design.json
+prereg: research/brain/mcx/PREREG.md
+variants_tried: 8
+results:
+  summary: 'Design (forecasts from walk-forward test folds, ~150 sessions): GOLDM 113 trades net Rs -57,805 (gross 1,650),
+    twin p 0.498 q 0.796, wf Rs -59,006, top-5 removed Rs -89,984: fail; SILVERM 50 trades net Rs -15,879 (gross 8,980), twin
+    p 0.473 q 0.796, wf Rs -21,527, top-5 removed Rs -59,887: fail; CRUDEOIL 89 trades net Rs -5,679 (gross 1,520), twin p
+    0.313 q 0.796, wf Rs -3,624, top-5 removed Rs -11,864: fail; NATURALGAS 140 trades net Rs -9,399 (gross 2,975), twin p
+    0.259 q 0.796, wf Rs -19,452, top-5 removed Rs -13,182: fail.'
+  costs: Zerodha MCX futures/options charges (R53), R53 half-spreads, 0.02% stop slippage (R83)
+holdout_read: false
+verdict: rejected
+notes: No rule passed the design gate, so the holdout was not read for rules (PREREG section 7). Stays a note.

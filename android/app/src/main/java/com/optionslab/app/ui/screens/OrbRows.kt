@@ -60,9 +60,12 @@ private fun px(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
 fun OrbRows(model: AppModel) {
     val v by model.orb.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val settings by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // 15 Oct (Boss's cleanup): the hidden arms' rows are left out once they hold nothing (Home → Strategies → Hidden arms).
+    val hidden by com.optionslab.app.data.HiddenArms.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // Home's own poll (only while the app is on screen) refreshes the arm states every 20 s.
-    val view = v ?: return
-    OrbRowsContent(view, live = settings.live && settings.allowRealOrders,
+    val all = v ?: return
+    val view = visibleOrbView(all, hidden)
+    OrbRowsContent(view, live = settings.live && settings.allowRealOrders, waiting = { it in hidden.waiting },
         actions = object : OrbActions {
             override fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean) { model.armOrb(source, on, automatic, pinConfirmed) }
             override fun approve(source: String, pinConfirmed: Boolean) { model.approveOrb(source, pinConfirmed) }
@@ -77,6 +80,14 @@ fun OrbRows(model: AppModel) {
         paperRecord = { com.optionslab.app.data.ForwardRecords.liquidityEquity() },
         openRead = { p -> OrbArms.liquidityOpenNow(p.arm, p.symbol) })
 }
+
+/**
+ * The arms' view as Home shows it after Boss's 15 Oct cleanup ([hidden]): the hidden arms' rows left out once they hold nothing
+ * (ORB, ORB Fresh, ORB Sweep, Range Fade and the expiry Hero among them), and the research shadows with the re-armed shadows.
+ */
+internal fun visibleOrbView(all: OrbArms.View, hidden: com.optionslab.engine.orb.ArmsCleanup.State): OrbArms.View =
+    all.copy(arms = all.arms.filter { com.optionslab.engine.orb.ArmsCleanup.visible(hidden, it.arm.source) },
+        shadows = if (com.optionslab.engine.orb.ArmsCleanup.visible(hidden, com.optionslab.engine.orb.ArmsCleanup.SHADOW)) all.shadows else emptyList())
 
 /** What the ORB rows ask the model to do (an interface so tests can record it without an [AppModel]). */
 internal interface OrbActions {
@@ -112,6 +123,8 @@ internal fun OrbRowsContent(
      * app), off the main thread on each refresh of the rows. Null: the panel shows the row's own position and mark. Reads only.
      */
     openRead: (suspend (OrbArms.Position) -> OrbArms.LiquidityOpenNow?)? = null,
+    /** 15 Oct (Boss's cleanup): an arm to be hidden still holding a position (it says so until its exit). Memory only. */
+    waiting: (String) -> Boolean = { false },
 ) {
     val p = LocalPalette.current
     var choosing by remember { mutableStateOf<String?>(null) }
@@ -126,93 +139,56 @@ internal fun OrbRowsContent(
     // Liquidity BANKNIFTY's live entries re-enabled after its stop rule: the PIN first, always.
     var reenableAuth by remember { mutableStateOf(false) }
 
+    // Switching an arm on, by its switch or by the parked arm's tap (13 Oct): the same flow either way - the Hero arm's own
+    // confirmation, a paper-only arm at once, any other the automatic / approve choice (and the PIN in Live).
+    fun switchOn(a: OrbArms.ArmView) {
+        if (a.arm.hero) heroConfirm = a.arm.source
+        else if (a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
+        else choosing = a.arm.source
+    }
+
     view.arms.forEachIndexed { i, a ->
         if (i > 0) Rule()
-        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).clickable { detail = true }) {
+                // COMPACT (15 Oct, Boss): the name, a short badge, ONE status line and the switch. A tap on the name opens a dialog
+                // with only this arm's details - its rules, books, size (the lots control), parked indices, paper test, record,
+                // what-ifs, charges and labels - and OK. A tap elsewhere on the row opens the day's detail.
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(a.arm.label, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+                    ExplainedName(a.arm.label, orbExplanation(a, view), extra = {
+                        OrbDialogExtras(a, onLots = { n, pick ->
+                            if (com.optionslab.engine.orb.LiquidityLots.raises(n, pick)) lotsConfirm = n to pick else if (pick != n || a.lotsAsk != null) actions.lots(pick)
+                        }, onUnpark = { actions.unpark(it) }, onSwitchOn = { switchOn(a) },
+                            onWatched = { on -> actions.firstLiveWatched(on) }, onReenable = { reenableAuth = true },
+                            openRead = openRead, paperRecord = paperRecord)
+                    })
                     Spacer(Modifier.width(8.dp))
                     // The bot stopped for today: an armed arm never looks normally ARMED (it makes no new entries today).
                     val dayStopped = view.stopped != null && a.armed
                     val (label, color) = when {
                         a.open != null -> if (a.open.live) "IN TRADE · LIVE" to p.oxblood else "IN TRADE · PAPER" to p.verdigris
                         dayStopped -> "STOPPED TODAY · ARMED" to p.oxblood
-                        a.armed && a.arm.hero -> "ARMED · PAPER ONLY · NOT PROVEN" to p.amber
+                        a.armed && a.arm.hero -> "ARMED · PAPER ONLY" to p.amber
                         a.armed && a.arm.paperOnly -> "ARMED · PAPER ONLY · AUTO" to p.verdigris
                         a.armed && live && a.liveOk -> "ARMED · LIVE · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.oxblood
                         a.armed && live -> "ARMED · LIVE · APPROVE (re-arm for auto)" to p.oxblood
                         a.armed -> "ARMED · PAPER · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.verdigris
                         else -> "OFF" to p.inkFaint
                     }
-                    Text(label, style = Type.label.copy(color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                        modifier = Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(50)).padding(horizontal = 7.dp, vertical = 2.dp))
+                    RowBadge(label, color)
                 }
-                val line = a.open?.let { o ->
-                    val m = a.mark
-                    "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
-                        (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "") +
-                        // The Hero arm: the part already sold at 5x.
-                        (o.soldAt?.takeIf { o.sold > 0 }?.let { " · ${o.sold} sold @ ${px(it)}" } ?: "") +
-                        // The profit lock earned so far (25 / 50 / 75 % of the target reached -> breakeven after charges / +25% / +50%).
-                        (com.optionslab.engine.orb.ProfitLock.targetOf(a.arm)?.takeIf { o.ladder }
-                            ?.let { tg -> com.optionslab.engine.orb.ProfitLock.level(o.entry, tg, o.peak ?: o.entry,
-                                com.optionslab.engine.orb.ProfitLock.roundTripPerUnit(o.entry, o.qty)) }
-                            ?.let { " · locked ${px(it)}" } ?: "")
-                } ?: when {
-                    view.stopped != null && a.armed -> view.stopped.orEmpty()
-                    !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) + MIDCPNIFTY (15 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15, MIDCPNIFTY 8) or not +5% in 20 min · else at the next liquidity"
-
-                    a.arm.liquidity -> a.status
-                    !a.armed && a.arm.hero -> keepNumbersWhole("NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, Rs 5,000 · ${com.optionslab.engine.orb.HeroRules.EXITS} · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}")
-                    a.arm.hero -> OrbArms.describe(a.status)
-                    // The profit lock's rungs on the arm's own target (ORB Sweep's +80: +20 / +40 / +60), as the stop moves up.
-                    !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock ${rungsOf(a.arm)}"
-                    !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock ${rungsOf(a.arm)}"
-                    !a.armed -> "BANKNIFTY opening-range break" + (if (a.arm.freshOnly) ", fresh breaks only" else "") + " · profit lock ${rungsOf(a.arm)}"
-                    else -> OrbArms.describe(a.status, a.arm) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
-                }
-                Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-                // Liquidity 15+5's size for new entries; an open position keeps its own quantity.
-                a.lots?.let { n ->
-                    // "Lots: 1 · 2 · 3" (a raise asks first, a cut applies at once).
-                    LotsChooser(n) { pick -> if (com.optionslab.engine.orb.LiquidityLots.raises(n, pick)) lotsConfirm = n to pick else if (pick != n || a.lotsAsk != null) actions.lots(pick) }
-                    Text(keepNumbersWhole(com.optionslab.engine.orb.LiquidityLots.line(n, a.lotSizes)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-                    // A restore's higher size waits for Boss: it never raised the size by itself.
-                    a.lotsAsk?.let { w -> Text(keepNumbersWhole("The backup had ${com.optionslab.engine.orb.LiquidityLots.words(w)}: it trades " +
-                        "${com.optionslab.engine.orb.LiquidityLots.words(n)} until you choose $w."), style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp)) }
-                }
-                // Liquidity 15+5's indices parked on Boss's OK (9 Oct): each said with its record, and a tap switches it back on (paper).
-                a.parked.forEach { idx ->
-                    Text(keepNumbersWhole("$idx parked on your OK (${com.optionslab.engine.orb.ParkedArms.record(idx)}): its books stay off with the switch."),
-                        style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
-                    Text("Switch $idx back on", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
-                        modifier = Modifier.clickable { actions.unpark(idx) }.padding(vertical = 4.dp))
-                }
-                // Liquidity 15+5's pre-registered candidates, tracked in its shadow per lot (they never change what it trades).
-                a.shadow?.let { s -> Text(keepNumbersWhole(com.optionslab.engine.orb.LiquidityShadow.line(s)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)) }
-                val closed = a.today.filter { !it.open }
-                if (closed.isNotEmpty()) Text("Today: ${closed.size} closed · ${rs(closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges",
-                    style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-                // What the arm paid in charges today and this month (R14: re-entries cost charges and made about nothing),
-                // folded so the row stays short; the re-entry cap in force is said with it.
-                a.chargesLine?.let { line ->
-                    Expandable("charges:${a.arm.source}", label = "Show charges", hideLabel = "Hide charges") {
-                        Text(keepNumbersWhole(line), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
-                            modifier = Modifier.testTag("orb-charges:${a.arm.source}"))
-                        OrbArms.capLine(a.arm)?.let { cap -> Text(keepNumbersWhole(cap), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)) }
-                    }
-                }
-                // Liquidity BANKNIFTY's paper test (12 Oct): its freeze, the live stop rule, the go-live checklist and its fill quality.
-                a.test?.let { t -> LiquidityTestLines(t, onWatched = { on -> actions.firstLiveWatched(on) }, onReenable = { reenableAuth = true }) }
+                // Safety, kept as short badges: an arm to be hidden still holding a position (it trades it to its exit first), and
+                // Liquidity BANKNIFTY's live stop rule reached (its re-enable, with the PIN, is in the name's dialog).
+                if (waiting(a.arm.source)) RowBadge("SWITCHING OFF AFTER ITS EXIT", p.amber, Modifier.padding(top = 2.dp))
+                if (a.test?.stopped == true) RowBadge("LIVE ENTRIES STOPPED · PAPER", p.oxblood, Modifier.padding(top = 2.dp))
+                Text(orbStatusLine(a, view), style = Type.bodySmall.copy(color = if (!a.armed && a.bossParked && a.open == null) p.amber else p.inkSoft, fontSize = 12.sp),
+                    maxLines = 2, modifier = Modifier.testTag("orb-line:${a.arm.source}"))
             }
             Switch(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
                 checked = a.armed,
                 // The Hero arm takes its own confirmation (not proven); Liquidity 15+5 chooses automatic or approve.
-                onCheckedChange = { on -> if (on && a.arm.hero) heroConfirm = a.arm.source
-                    else if (on && a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
-                    else if (on) choosing = a.arm.source else actions.arm(a.arm.source, false, a.automatic, false) },
+                onCheckedChange = { on -> if (on) switchOn(a) else actions.arm(a.arm.source, false, a.automatic, false) },
                 colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),
             )
         }
@@ -230,12 +206,6 @@ internal fun OrbRowsContent(
                 }
             }
         }
-        // Liquidity 15+5's open position, live: its exits as they stand and how far each is (reads only; never in the GOLD build).
-        if (a.arm.liquidity && a.open != null && !com.optionslab.app.BuildConfig.GOLD) LiquidityOpenPanel(a.open, a.mark, openRead)
-        // Liquidity 15+5's paper record since its forward test began, against its backtest; read again when a trade closes.
-        // Reads only, never in the GOLD build.
-        if (a.arm.liquidity && paperRecord != null && !com.optionslab.app.BuildConfig.GOLD)
-            LiquidityEquityCard(a.today.count { !it.open && !it.live }, paperRecord)
     }
     // The research shadows (no orders): for each arm that has them, one line - the only one, or the best of its two or three
     // (the tap lists them all) - then the new candidate. They never change what an arm trades.
@@ -301,13 +271,20 @@ internal fun OrbRowsContent(
     if (reenableAuth) reauth("Enter your app PIN to let Liquidity BANKNIFTY take live entries again after its stop rule. Its stop rule then counts from now.",
         { reenableAuth = false; actions.reenableLiquidityLive(true) }, { reenableAuth = false })
     heroConfirm?.let { src ->
+        // Final review F7: the live state is worked out on the IO threads, never in composition on the main thread.
+        val heroLive by androidx.compose.runtime.produceState("live state not read yet", src) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.optionslab.app.data.ArmLive.stateOf(com.optionslab.engine.orb.HeroRules.ARM.source)
+            }
+        }
         AlertDialog(
             onDismissRequest = { heroConfirm = null },
             properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Arm Hero (expiry) (paper)", style = Type.title) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(com.optionslab.engine.orb.HeroRules.NOT_PROVEN + ". It never trades on Zerodha.",
+                    Text(com.optionslab.engine.orb.HeroRules.NOT_PROVEN + ". Arming it here is paper; its live copy goes by its own " +
+                        "Trade live and Shadow switches ($heroLive).",
                         style = Type.body.copy(color = p.oxblood, fontWeight = FontWeight.SemiBold))
                     Text("On NIFTY expiry days only, from 13:30 to 14:45: when the ATM straddle is 15% above its low since 12:00 and " +
                         "NIFTY has moved 0.25% in 15 minutes, it buys the nearest OTM option on that side priced Rs 1–5 with a LIMIT " +
@@ -339,6 +316,118 @@ internal fun OrbRowsContent(
         )
     }
     if (detail) OrbDetail(view, onShadowOff = { actions.shadowOff(it) }, replay = replay) { detail = false }
+}
+
+/** Liquidity 15+5 in words (its name's dialog). */
+internal const val LIQ_DESCRIPTION = "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) + MIDCPNIFTY (15 + 5-min) liquidity pool taken on a swing zone · " +
+    "stop −15% · out 30 index pts back (FINNIFTY 15, MIDCPNIFTY 8) or not +5% in 20 min · else at the next liquidity"
+
+/** The Hero (expiry) arm in words (its name's dialog). */
+internal fun heroDescription(): String = "NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, " +
+    "Rs 5,000 · ${com.optionslab.engine.orb.HeroRules.EXITS} · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}"
+
+/**
+ * An arm's one status line on its compact row (15 Oct): its open position with the mark, stop and lock; else the day's stop; its
+ * park; "Off"; or what it waits for now. The rules, records and research are in its name's dialog ([orbExplanation]).
+ */
+internal fun orbStatusLine(a: OrbArms.ArmView, view: OrbArms.View): String = a.open?.let { o ->
+    val m = a.mark
+    "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
+        (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "") +
+        // The Hero arm: the part already sold at 5x.
+        (o.soldAt?.takeIf { o.sold > 0 }?.let { " · ${o.sold} sold @ ${px(it)}" } ?: "") +
+        // The profit lock earned so far (25 / 50 / 75 % of the target reached -> breakeven after charges / +25% / +50%).
+        (com.optionslab.engine.orb.ProfitLock.targetOf(a.arm)?.takeIf { o.ladder }
+            ?.let { tg -> com.optionslab.engine.orb.ProfitLock.level(o.entry, tg, o.peak ?: o.entry,
+                com.optionslab.engine.orb.ProfitLock.roundTripPerUnit(o.entry, o.qty)) }
+            ?.let { " · locked ${px(it)}" } ?: "")
+} ?: when {
+    view.stopped != null && a.armed -> view.stopped.orEmpty()
+    // Parked on Boss's choice (13 Oct): said short; its tested record is in the name's dialog, the tap under it switches it back on.
+    !a.armed && a.bossParked -> com.optionslab.engine.orb.FamilyPark.ROW
+    !a.armed -> "Off"
+    // The day's closed trades, when there are any: "Today: 2 closed · ₹1,773 after charges".
+    a.today.any { !it.open } -> a.today.filter { !it.open }.let { c -> "Today: ${c.size} closed · ${rs(c.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges" }
+    a.arm.liquidity -> "Watching " + com.optionslab.engine.orb.LiquidityRules.UNDERLYINGS.filter { it !in a.parked }.joinToString(", ")
+    a.arm.hero -> OrbArms.describe(a.status)
+    else -> OrbArms.describe(a.status, a.arm) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
+}
+
+/**
+ * What an arm's name opens (15 Oct, compact rows): its rules and exits, its profit lock, its research record and park, its signal
+ * source (the Hero arm's is not the default), Liquidity's books' states, sizes, parked indices and pre-registered candidates, its
+ * best shadow, and its charges with the re-entry cap. One paragraph each.
+ */
+internal fun orbExplanation(a: OrbArms.ArmView, view: OrbArms.View): List<String> {
+    val out = ArrayList<String>()
+    val src = a.arm.source
+    when {
+        a.arm.liquidity -> {
+            out += LIQ_DESCRIPTION + "."
+            if (a.armed && a.status.isNotBlank()) out += a.status
+            a.lots?.let { out += com.optionslab.engine.orb.LiquidityLots.line(it, a.lotSizes) }
+            a.parked.forEach { idx -> out += "$idx parked on your OK (${com.optionslab.engine.orb.ParkedArms.record(idx)}): its books stay off with the switch." }
+            a.shadow?.let { out += com.optionslab.engine.orb.LiquidityShadow.line(it) }
+            out += com.optionslab.engine.orb.ArmsCleanup.NIFTY_NOTE + "."
+        }
+        a.arm.hero -> {
+            out += heroDescription() + "."
+            out += com.optionslab.engine.orb.HeroRules.SIGNAL_SOURCE + "."
+        }
+        else -> {
+            out += when {
+                a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock ${rungsOf(a.arm)}"
+                a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock ${rungsOf(a.arm)}"
+                else -> "BANKNIFTY opening-range break" + (if (a.arm.freshOnly) ", fresh breaks only" else "") + " · profit lock ${rungsOf(a.arm)}"
+            }
+            if (a.bossParked) out += com.optionslab.engine.orb.FamilyPark.rowLine(src) + "."
+            a.record?.let { out += recordLine(it) }
+            armShadowLine(view.shadows, src)?.let { out += "Shadow: $it" }
+        }
+    }
+    // The day's closed trades (on the row only when nothing is open).
+    a.today.filter { !it.open }.takeIf { it.isNotEmpty() }?.let { c -> out += "Today: ${c.size} closed · ${rs(c.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges" }
+    a.chargesLine?.let { out += it }
+    OrbArms.capLine(a.arm)?.let { out += it }
+    return out
+}
+
+/**
+ * The controls and cards that belong to ONE arm, shown in that arm's own dialog (15 Oct, compact rows): a parked arm's switch-back,
+ * Liquidity's size (the lots control and a restore's waiting size), its parked indices' switch-back, its BANKNIFTY paper test
+ * (freeze, live stop rule and its PIN-only re-enable, the go-live checklist, fills), its open position's exits and its paper
+ * record. Never another arm's.
+ */
+@Composable
+private fun OrbDialogExtras(
+    a: OrbArms.ArmView, onLots: (Int, Int) -> Unit, onUnpark: (String) -> Unit, onSwitchOn: () -> Unit, onWatched: (Boolean) -> Unit,
+    onReenable: () -> Unit, openRead: (suspend (OrbArms.Position) -> OrbArms.LiquidityOpenNow?)?,
+    paperRecord: (suspend () -> com.optionslab.ira.LiquidityEquity.Equity?)?,
+) {
+    val p = LocalPalette.current
+    if (!a.armed && a.bossParked) {
+        if (a.open != null) Text(keepNumbersWhole(com.optionslab.engine.orb.FamilyPark.ROW + ": its open position is still managed to its exit."),
+            style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
+        Text("Switch ${a.arm.label} back on", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.testTag("orb-unpark:${a.arm.source}").heightIn(min = 48.dp).clickable { onSwitchOn() }.padding(vertical = 4.dp))
+    }
+    // Liquidity 15+5's size for new entries (a raise asks first, a cut applies at once); an open position keeps its own quantity.
+    a.lots?.let { n ->
+        LotsChooser(n) { pick -> onLots(n, pick) }
+        // A restore's higher size waits for Boss: it never raised the size by itself.
+        a.lotsAsk?.let { w -> Text(keepNumbersWhole("The backup had ${com.optionslab.engine.orb.LiquidityLots.words(w)}: it trades " +
+            "${com.optionslab.engine.orb.LiquidityLots.words(n)} until you choose $w."), style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp)) }
+    }
+    a.parked.forEach { idx ->
+        Text("Switch $idx back on", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.heightIn(min = 48.dp).clickable { onUnpark(idx) }.padding(vertical = 4.dp))
+    }
+    a.test?.let { t -> LiquidityTestLines(t, onWatched = onWatched, onReenable = onReenable) }
+    // Liquidity 15+5's open position, live: its exits as they stand and how far each is (reads only; never in the GOLD build).
+    if (a.arm.liquidity && a.open != null && !com.optionslab.app.BuildConfig.GOLD) LiquidityOpenPanel(a.open, a.mark, openRead)
+    // Its paper record since its forward test began, against its backtest (reads only, never in the GOLD build).
+    if (a.arm.liquidity && paperRecord != null && !com.optionslab.app.BuildConfig.GOLD)
+        LiquidityEquityCard(a.today.count { !it.open && !it.live }, paperRecord)
 }
 
 /** "Lots: 1 · 2 · 3": the size chosen in bold; each figure a 48 dp target. */
@@ -400,13 +489,16 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {},
                     // ORB, ORB Fresh, ORB Sweep, Range Fade: their 2021–2026 record, as information (never a block).
                     a.record?.let { r -> Text(keepNumbersWhole(recordLine(r)), style = soft) }
                     if (a.today.isEmpty()) Text("No trades today.", style = soft)
+                    // The pre-trade checks in shadow (R17): what the costs took of the expected move, and the smart stop (memory only).
+                    com.optionslab.app.data.PreTradeShadow.lines(a.arm.source, java.time.LocalDate.now(com.optionslab.engine.IST))
+                        .forEach { Text(keepNumbersWhole("  Shadow · $it"), style = soft) }
                     // Liquidity 15+5: a closed paper trade opens its replay (the chart around it, the result and its lesson).
                     if (a.today.any { replayable(a, it) }) Text("Tap a closed trade to replay it.", style = soft)
                     a.today.forEach { t ->
                         val tail = if (t.open) "open" else "${px(t.exit ?: 0.0)} ${t.why?.replace('_', ' ')} · ${rs((t.grossPnl ?: 0.0) - t.charges)}"
                         // Liquidity 15+5's quantity said (its size can be 1-3 lots); the rupees are the trade's own at that quantity.
                         val qty = if (a.arm.liquidity) " ×${t.qty}" else ""
-                        val line = "%02d:%02d ${if (t.live) "LIVE" else "paper"} BUY ${t.right}$qty @ ${px(t.entry)} → $tail".format(t.entryTime.hour, t.entryTime.minute)
+                        val line = "%02d:%02d".format(t.entryTime.hour, t.entryTime.minute) + " ${if (t.live) "LIVE" else "paper"} BUY ${t.right}$qty @ ${px(t.entry)} → $tail"  // no text in a format string (14 Oct)
                         if (replayable(a, t)) Text(line, style = small.copy(color = p.verdigris),
                             modifier = Modifier.heightIn(min = 48.dp).clickable(onClickLabel = "Replay this trade") { replaying = t }.padding(vertical = 4.dp))
                         else Text(line, style = small)

@@ -80,7 +80,10 @@ object JarvisSpeaker {
     /** [sentences]: how much to say (null: the usual, one in short-answer mode); "tell me more" says it in full. */
     fun speak(context: Context, text: String, sentences: Int? = null) {
         if (!com.optionslab.app.BuildConfig.JARVIS || JarvisVoice.muted && !text.startsWith("Voice on")) return
-        val said = if (sentences != null) words(text, sentences) else words(text)
+        val whole = if (sentences != null) words(text, sentences) else words(text)
+        // 18 Oct, review: a typed question's reply (up to 20 s later), a tapped message or the morning check is said on a
+        // phone that may have locked since: the lock read now (unknown counts as locked), and no amount, P&L or symbol aloud.
+        val said = com.optionslab.ira.Overheard.said(whole, JarvisVoice.lockedSafe(), com.optionslab.ira.LockRule.ANSWER_LOCKED)
         if (JarvisVoice.announce(said, prompted = true)) return
         aloud(context, said, flush = true)
     }

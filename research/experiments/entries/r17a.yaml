@@ -1,0 +1,27 @@
+id: r17a
+title: 'Charges check: skip a paper trade when costs take more than X% of the expected 30-minute move (TODO I3)'
+family: sizing-execution
+date: '2026-10-13'
+doc: research/HUNT_R17_PRETRADE.md
+hypothesis: Trades whose round-trip costs are a larger share of the expected premium move (R16 range x delta) lose more; skipping those above X* beats skipping the same number at random.
+data_version: 'research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13, NIFTY expiry chains 2025-04..2026-04); Yahoo daily ^INDIAVIX for the previous close; app fills (liq) and charges (app, current rates)'
+period:
+  design: BANKNIFTY < 2025-08-25, NIFTY < 2025-10-13 (after a 60-session warm-up)
+  holdout: BANKNIFTY 2025-08-25..2026-02-23, NIFTY 2025-10-13..2026-04-13
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- expected 30-minute range (R16 4-input model, refit walk-forward monthly)
+- delta at the option's implied vol
+- round-trip charges plus 2 x (5 bps + 1 tick)
+model_or_rule: skip if cost / (E30 x |delta|) > X*, X* in {10,15,20,25,30,40,50}%
+settings: research/hunt/r17/PREREG.md; pick in research/hunt/r17/results/picks.json
+prereg: research/hunt/r17/PREREG.md
+variants_tried: 7
+results:
+  summary: 'Costs are small next to the expected move (median 3-6% on every arm). Design pick X*=10% skipped 47 of 1,276 trades (+Rs 4,182, random-twin 32%). Holdout: 3 of 499 skipped, skipped mean -Rs 471 vs kept -Rs 166, p 0.31, twin 57%, BH q 0.46. FAILED.'
+  costs: app charges at today's rates, liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks
+holdout_read: true
+verdict: rejected
+notes: Kept in the app as a shadow log only (switch off). Post hoc, ORB alone lost more in its top two cost fifths in both periods (X above ~5%); that is a new idea for a fresh pre-registration, not a finding.

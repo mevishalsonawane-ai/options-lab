@@ -1,0 +1,24 @@
+id: r94-gap-g1
+title: 'R94 idea 5 G1: MCX catch-up to the US overnight move (US-implied gap minus the MCX move to 09:05), 09:06-14:00'
+family: overnight
+date: '2026-10-21'
+doc: research/HUNT_R94_MCX_ADVANCED.md
+hypothesis: 'Pre-registered (research/hunt/r94_mcx_advanced/PREREG.md): R94 idea 5 G1: MCX catch-up to the US overnight move (US-implied gap minus the MCX move to 09:05), 09:06-14:00; after real MCX costs on every leg it beats random entry (or zero for every-day option selling), p <= 0.05 and BH q <= 0.10 over all R94 cells, walk-forward, worst month >= -Rs 13k, then holds on the locked holdout read once; Boss risk rules: hard stop, 2% of Rs 1 lakh, liquid contracts. Signal source: US benchmark CFD proxy (Dukascopy) and the MCX future itself.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 21 Oct 2026: fut_1m_live_mcx (contracts live on 19 Oct, 1-minute), fut_daily_continuous (near month, 2012 - 16 Oct 2026), options_rolling_1m MCX MONTH books (ATM-3..+3, 5 Aug 2025 - 19 Oct 2026); Dukascopy 1-minute BID CFDs (XAUUSD, XAGUSD, LIGHTCMDUSD, GASCMDUSD) for idea 5'
+period:
+  design: 5 Aug 2025 - 31 Mar 2026
+  holdout: 1 Apr - 19 Oct 2026 (read once)
+instruments:
+- 'GOLDM, SILVERM, CRUDEOILM, NATGASMINI'
+features:
+- 'signal source: US benchmark CFD proxy (Dukascopy) and the MCX future itself'
+model_or_rule: 'R94 idea 5 G1: MCX catch-up to the US overnight move (US-implied gap minus the MCX move to 09:05), 09:06-14:00'
+settings: research/hunt/r94_mcx_advanced/ (PREREG.md, NOTES.md, the idea module)
+prereg: research/hunt/r94_mcx_advanced/PREREG.md
+variants_tried: 4
+results:
+  summary: '4 cells (one BH family of 152 R94 cells). Design net after costs per cell, twin / bootstrap p and BH q, then the one holdout read: g-G1-CRUDEOILM 20 tr +5,002 (p 0.365, q 1.00) -> holdout 13 tr +8,220; g-G1-GOLDM 23 tr -41,877 (p 0.526, q 1.00) -> holdout 23 tr +17,037; g-G1-NATGASMINI 9 tr +8,164 (p 0.271, q 1.00) -> holdout 12 tr -2,176; g-G1-SILVERM 25 tr +83,403 (p 0.196, q 1.00) -> holdout 21 tr -9,006. Design passers 0, design + holdout passers 0.'
+  costs: 'Zerodha MCX charges on every leg (McxCosts.kt), half-spread on every fill (futures R53 rule, far month 3x; options R85 strict ATM rate x (1 + 0.5 |offset|), >= 1 tick); 1 lot; margins without spread benefit'
+holdout_read: true
+verdict: rejected
+notes: 'Cells: g-G1-CRUDEOILM, g-G1-GOLDM, g-G1-NATGASMINI, g-G1-SILVERM'

@@ -84,7 +84,7 @@ import java.time.LocalDate
  * The Zerodha pages, driven as the owner drives them, over a real [AppModel] and the fake Kite
  * ([FakeKite], localhost): the setup guide and the keys form, the login PIN and Kite's login page, the
  * Zerodha page (connection, mode, real orders, erase), the static-IP card with its relay controls, the
- * live self-test, the hand-typed order, the hold-to-send control, the PIN re-check and the stuck-leg card.
+ * Live check, the hand-typed order, the hold-to-send control, the PIN re-check and the stuck-leg card.
  * The API secret is never on screen and never on the wire.
  */
 @RunWith(AndroidJUnit4::class)
@@ -629,7 +629,7 @@ class BrokerScreensTest {
         node("Connection")
         assertTrue(shown("not set")); assertTrue(shown("not logged in today"))
         assertTrue("the keys form is open", shown("1. Create a Kite Connect app"))
-        assertFalse(shown("Log in to Zerodha")); assertFalse(shown("Erase Zerodha keys from this phone")); assertFalse(shown("Live self-test"))
+        assertFalse(shown("Log in to Zerodha")); assertFalse(shown("Erase Zerodha keys from this phone")); assertFalse(shown("Live check"))
         click("Set up")
         assertFalse("Set up toggles the form", shown("1. Create a Kite Connect app"))
         click("Live · Zerodha")
@@ -680,7 +680,7 @@ class BrokerScreensTest {
         page(m)
         until("the session") { m.broker.value.loggedIn }
         node("Test User · until", substring = true)
-        node("Live self-test"); node("Place an order"); node("Your account")
+        node("Live check"); node("Place an order"); node("Your account")
         assertNoSecretShown()
         click("Log out")
         until("logged out") { !Broker.loggedIn }
@@ -693,13 +693,21 @@ class BrokerScreensTest {
         BrokerArea.saveKeys()
         val m = model()
         page(m)
+        // 18 Oct (one switch): going Live asks the PIN, then turns Live and "AI trades go live" on together.
+        PinLock.setPin(BrokerArea.PIN.toCharArray())
         click("Live · Zerodha")
+        until("the PIN asked") { shown("Confirm it is you") }
+        assertFalse("not Live before the PIN", m.settings.value.live)
+        field("PIN").performTextInput(BrokerArea.PIN)
+        compose.onNodeWithText("Confirm").performClick(); compose.waitForIdle()
         until("live") { m.settings.value.live }
         assertTrue(m.settings.value.allowRealOrders)
+        until("AI trades go live on with it") { !com.optionslab.app.ira.IraNewsTrades.paperFirst }
         node("Live · Zerodha").assertIsSelected()
         click("Paper · simulated")
         until("paper") { !m.settings.value.live }
         assertFalse(m.settings.value.allowRealOrders)
+        assertTrue("AI trades go live off with Paper", com.optionslab.app.ira.IraNewsTrades.paperFirst)
         click("MIS")
         until("MIS") { m.settings.value.orderProduct == "MIS" }
         node("MIS positions are squared off by Zerodha", substring = true)
@@ -712,6 +720,32 @@ class BrokerScreensTest {
         until("toggled") { m.settings.value.prepareRealOrder != before }
         node("Sent today")
         assertTrue(shown("0 of 10"))
+    }
+
+    /**
+     * 18 Oct (review): "Live orders without PIN" says plainly that one tap sends a real order with no PIN and no review (with
+     * the direct send that is the whole order); turning it on asks the PIN, turning it off never does.
+     */
+    @Test fun liveOrdersWithoutPinSaysOneTapSendsARealOrderAndTurningItOnAsksThePin() {
+        BrokerArea.saveKeys()
+        PinLock.setPin(BrokerArea.PIN.toCharArray())
+        val m = model()
+        page(m)
+        assertTrue(ONE_TAP_SUB.contains("one tap sends a real order with no PIN and no review"))
+        node(ONE_TAP_SUB)
+        assertFalse(m.settings.value.oneTapOrders)
+        val row = { compose.onNode(isToggleable() and hasText("Live orders without PIN", substring = true)) }
+        row().performClick(); compose.waitForIdle()
+        until("the PIN asked") { shown("Confirm it is you") }
+        assertTrue(shown("one tap then sends a real order with no PIN and no review", substring = true))
+        assertFalse("not on before the PIN", m.settings.value.oneTapOrders)
+        field("PIN").performTextInput(BrokerArea.PIN)
+        compose.onNodeWithText("Confirm").performClick(); compose.waitForIdle()
+        until("on after the PIN") { m.settings.value.oneTapOrders }
+        until("the dialog closed") { !shown("Confirm it is you") }
+        row().performClick(); compose.waitForIdle()
+        until("off, with no PIN") { !m.settings.value.oneTapOrders }
+        assertFalse(shown("Confirm it is you"))
     }
 
     // ---- static IP and the relay ------------------------------------------------------------------------
@@ -827,33 +861,97 @@ class BrokerScreensTest {
         assertEquals("${Intent.ACTION_VIEW} https://cloud.oracle.com/compute/instances", lastLink())
     }
 
-    // ---- the live self-test --------------------------------------------------------------------------------
+    // ---- the Live check (it was the live self-test) -----------------------------------------------------------------
 
-    @Test fun theSelfTestShowsEveryStepAndOnlyReads() {
+    private fun liveCheckReady() {
         keysAndLogin()
         BrokerArea.listNifty(kite, listOf(e1))
         kite.quote("NSE:NIFTY 50", 24_480.0)
+        for (i in kite.instruments) kite.quote("NFO:${i.symbol}", 100.0, 99.95, 100.05)
         StaticIp.registered = "13.235.10.20"
         BrokerArea.phoneIp("13.235.10.20")
-        show { SelfTestCard() }
-        click("Run the self-test")
-        // A second tap while it runs does not start another.
-        compose.onAllNodes(hasText("Checking…") or hasText("Run the self-test")).onFirst().performClick()
-        until("the verdict", 60_000) { shown("All 9 checks passed.") }
-        for (s in listOf("✓ Session", "✓ Funds", "✓ Positions", "✓ Order book", "✓ Holdings", "✓ GTT triggers", "✓ Quote (NIFTY 50)", "✓ Contract list", "✓ Static IP for orders"))
-            assertTrue(s, shown(s))
-        assertEquals("one run", 1, kite.requests.count { it.path == "/user/margins" })
-        assertTrue("reads only", kite.requests.all { it.method == "GET" })
-        assertTrue(shown("Run the self-test"))
     }
 
-    @Test fun theSelfTestShowsWhatFailed() {
+    @Test fun theLiveCheckShowsEveryGroupWithTimesAndOnlyReads() {
+        // The test app's sources say the market is closed (whatever the hour CI runs at).
+        liveCheckReady()
         show { SelfTestCard() }
-        click("Run the self-test")
-        until("the verdict") { shown("2 of 2 checks failed.") }
-        assertTrue(shown("✗ Session")); assertTrue(shown("✗ Static IP for orders"))
+        assertTrue("off by default", shown("Run it by itself at 09:20"))
+        click("Run the live check")
+        // A second tap while it runs does not start another.
+        compose.onAllNodes(hasText("Checking…") or hasText("Run the live check")).onFirst().performClick()
+        until("the verdict", 60_000) { shown("slowest:", substring = true) && shown("Run the live check") }
+        for (g in listOf("Zerodha account · 7 of 7 passed", "Option chain · 3 of 3 passed", "Price stream · market closed",
+                "Order readiness (nothing sent) · 4 of 4 passed", "Positions and stops · 4 of 4 passed", "Paper round trip on live prices · market closed",
+                "Data feeds · 1 of 1 passed", "Clock · 1 of 1 passed"))
+            assertTrue(g, shown(g))
+        for (st in listOf("✓ Session", "✓ Funds", "✓ Contract list", "✓ ATM strike (NIFTY)", "✓ 1-lot ATM CE buy (built, not sent)",
+                "✓ Order margin (Zerodha, read-only)", "✓ GTT stop and target (built, not placed)", "✓ Every open position's stop watched",
+                "– Connected", "– Paper fill", "– Dhan", "✓ Static IP for orders"))
+            assertTrue(st, shown(st))
+        assertTrue(shown("market closed · ", substring = true))
+        assertTrue(shown("20 of 20 passed, 14 waiting for market hours, 1 skipped, slowest:", substring = true))
+        assertEquals("one run", 1, kite.requests.count { it.path == "/margins/orders" })
+        assertTrue("reads only", kite.writes.isEmpty() && kite.placed.isEmpty() && kite.gtts.isEmpty())
+        // The run is kept: the card opens on it next time (it starts from LiveSelfTest.last).
+        assertEquals(20 + 14 + 1, LiveSelfTest.last.size)
+    }
+
+    @Test fun theLiveCheckShowsWhatFailed() {
+        show { SelfTestCard() }
+        click("Run the live check")
+        until("the verdict") { shown("slowest:", substring = true) && shown("Run the live check") }
+        assertTrue(shown("✗ Session")); assertTrue(shown("✗ Static IP for orders")); assertTrue(shown("✗ Zerodha login"))
         assertTrue(shown("Zerodha is not set up on this phone", substring = true))
+        assertTrue(shown("failed, ", substring = true))
         assertTrue(kite.requests.isEmpty())
+    }
+
+    @Test fun theLiveCheckOnLivePricesPassesEverything() {
+        liveCheckReady()
+        val src = com.optionslab.app.testing.FakeLiveSources(open = true).apply {
+            val bar = System.currentTimeMillis() / 60_000 * 60 - 60
+            upstox = listOf(com.optionslab.engine.Upstox.Bar(bar, 1.0, 1.0, 1.0, 1.0, 0, 0))
+            kite.candles = org.json.JSONArray().put(org.json.JSONArray().put(java.time.Instant.ofEpochSecond(bar).atZone(com.optionslab.engine.IST).toOffsetDateTime().toString())
+                .put(1.0).put(1.0).put(1.0).put(1.0).put(0).put(0))
+            paperAt = System.currentTimeMillis(); stopsAt = paperAt
+        }
+        LiveSelfTest.sourcesForTest = src
+        try {
+            show { SelfTestCard() }
+            click("Run the live check")
+            until("the verdict", 90_000) { shown("slowest:", substring = true) && shown("Run the live check") }
+            for (g in listOf("Price stream · 8 of 8 passed", "Paper round trip on live prices · 4 of 4 passed", "Data feeds · 3 of 3 passed"))
+                assertTrue(g, shown(g))
+            assertTrue(shown("✓ Reconnect after a forced drop"))
+            assertTrue(shown("34 of 34 passed, 1 skipped, slowest:", substring = true))
+        } finally { src.close() }
+    }
+
+    @Test fun aTapWhileAnotherCheckRunsWaitsForThatChecksResult() {
+        // The 09:20 run (or Jarvis's) is under way when Boss taps: the card says "Checking…" until it ends, then shows it.
+        val src = com.optionslab.app.testing.FakeLiveSources(open = true).apply { upstoxDelayMs = 1_500 }
+        LiveSelfTest.sourcesForTest = src
+        try {
+            show { SelfTestCard() }
+            val other = Thread { kotlinx.coroutines.runBlocking { LiveSelfTest.run(src = src) } }.apply { isDaemon = true; start() }
+            until("the other check to start") { LiveSelfTest.busy }
+            click("Run the live check")
+            until("checking") { shown("Checking…") }
+            assertFalse("no older run shown as this one", shown("slowest:", substring = true))
+            other.join(30_000)
+            until("the other check's verdict", 30_000) { shown("slowest:", substring = true) && shown("Run the live check") }
+            assertTrue(shown("✗ Session")); assertTrue(shown("✗ Upstox public 1-minute candles (NIFTY)"))
+        } finally { src.close() }
+    }
+
+    @Test fun theLiveChecks0920SwitchIsOffByDefaultAndSaved() {
+        show { SelfTestCard() }
+        assertFalse(LiveSelfTest.autoOn())
+        click("Run it by itself at 09:20")
+        until("saved") { LiveSelfTest.autoOn() }
+        click("Run it by itself at 09:20")
+        until("saved off") { !LiveSelfTest.autoOn() }
     }
 
     // ---- the hand-typed order ---------------------------------------------------------------------------------
@@ -871,14 +969,15 @@ class BrokerScreensTest {
         return m
     }
 
+    /** 18 Oct: in Live the card's button is "Buy (live)" / "Sell (live)" (the PIN then sends it; no dialog is shown here, so nothing goes). */
     private fun reviewed(m: AppModel): OrderPlan {
-        click("Review the order")
+        click(" (live)", substring = true)
         return BrokerArea.await("the plan") { (m.plan.value as? Load.Done)?.value ?: (m.plan.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
     }
 
     @Test fun theOrderCardReviewsWithoutSending() {
         val m = orderCard()
-        node("Review the order").assertIsEnabled()
+        node("Sell (live)").assertIsEnabled()
         click("CE"); click("BUY"); click("2")
         node("CE").assertIsSelected(); node("BUY").assertIsSelected(); node("2").assertIsSelected()
         field("Limit price (blank = best bid/offer)").performTextInput("1a01.5")
@@ -888,8 +987,9 @@ class BrokerScreensTest {
         assertEquals(BrokerArea.symbol("NIFTY", e1, 24_500.0, "CE"), leg.tradingSymbol)
         assertEquals(Kite.Side.BUY, leg.side); assertEquals(150, leg.quantity); assertEquals(101.5, leg.price!!, 0.0)
         assertEquals("NRML", leg.product)
-        assertTrue("the review sends nothing: ${kite.writes}", kite.writes.isEmpty())
-        assertTrue(shown("Nothing is sent from here: the order opens for review over this page."))
+        assertTrue("nothing goes before the PIN: ${kite.writes}", kite.writes.isEmpty())
+        assertTrue("the PIN is asked at once (no review card)", m.direct.value)
+        assertTrue(shown("Live: your PIN or fingerprint, then the order goes to Zerodha at once.", substring = true))
     }
 
     @Test fun aBlankPriceSellsAtTheBidOnTheChosenExpiry() {
@@ -934,7 +1034,7 @@ class BrokerScreensTest {
         val m = model()
         show { ManualOrder(m) }
         until("the reason") { shown("Could not load Zerodha's contract list: Gateway timed out") }
-        node("Review the order").assertIsNotEnabled()
+        node("Sell (live)").assertIsNotEnabled()
         assertEquals(Load.Idle, m.plan.value)
     }
 
@@ -979,6 +1079,34 @@ class BrokerScreensTest {
         until("the spinner") { shown("Looking up the contract") }
         m.plan.value = Load.Idle
         until("gone") { !shown("Looking up the contract") }
+    }
+
+    /**
+     * 18 Oct (review): a direct order's PIN prompt is bound to that order. A second order started while it is open asks its own
+     * PIN afresh (what was typed is gone), and the PIN sends that order, once.
+     */
+    @Test fun aDirectOrdersPinPromptIsBoundToItsOrderAndSendsItOnce() {
+        PinLock.setPin(BrokerArea.PIN.toCharArray())
+        kite.login()
+        BrokerArea.listNifty(kite, listOf(e1))
+        val sym = BrokerArea.symbol("NIFTY", e1, 24_500.0, "CE")
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        val m = model()
+        m.loadAccount(quiet = true)
+        BrokerArea.await("the account") { m.account.value as? Load.Done }
+        pausedShow { OrderReviewDialog(m) }
+        m.planManual("NIFTY", e1, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        until("the PIN asked") { shown("Confirm it is you") }
+        field("PIN").performTextInput(BrokerArea.PIN.take(2))                  // part typed for the first order
+        m.planManual("NIFTY", e1, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", 100.5, direct = true)
+        until("asked afresh for the second") { shown("Confirm it is you") && runCatching { editable("PIN").isEmpty() }.getOrDefault(false) }
+        until("priced") { m.plan.value is Load.Done }
+        field("PIN").performTextInput(BrokerArea.PIN)
+        compose.onNodeWithText("Confirm").performClick()
+        until("the order at Zerodha") { kite.placed.isNotEmpty() }
+        until("filled") { m.sending.value is Load.Done || m.plan.value == Load.Idle }
+        frames(30); Thread.sleep(300); frames(30)
+        assertEquals("one order, the second one", listOf("100.50"), kite.placed.map { it.form["price"] })
     }
 
     @Test fun inPaperModeTheReviewCannotSend() {
@@ -1059,9 +1187,10 @@ abstract class BrokerLayoutBase(device: DeviceConfig) : BrokerScreenBase(device)
         val m = model()
         show { Column(Modifier.verticalScroll(rememberScrollState())) { StaticIpCard(m, ip); SelfTestCard(); ManualOrder(m) } }
         compose.onNodeWithText("Advanced: use a WireGuard VPN instead ▼").performScrollTo().performClick()
-        compose.onNodeWithText("Run the self-test").performScrollTo().performClick()
-        until(60_000) { compose.onAllNodesWithText("All 9 checks passed.").fetchSemanticsNodes().isNotEmpty() }
-        until { runCatching { compose.onNodeWithText("Review the order").assertIsEnabled(); true }.getOrDefault(false) }
+        compose.onNodeWithText("Run the live check").performScrollTo().performClick()
+        until(60_000) { compose.onAllNodesWithText("slowest:", substring = true).fetchSemanticsNodes().isNotEmpty() &&
+            compose.onAllNodesWithText("Run the live check").fetchSemanticsNodes().isNotEmpty() }
+        until { runCatching { compose.onNodeWithText("Sell (live)").assertIsEnabled(); true }.getOrDefault(false) }
         snap("zerodha-cards", KNOWN)
         smokeOnce(NO_SMOKE)
     }

@@ -70,6 +70,41 @@ object Candles {
     fun closed(candles: List<Candle>, minutes: Int, now: LocalDateTime): List<Candle> =
         candles.filter { !it.t.plusMinutes(minutes.toLong()).isAfter(now) }
 
+    /**
+     * 20 Oct, review: where the DATA ends, not the clock. [minuteTimes]: the start of each 1-minute bar the app holds, read at
+     * [asOf] (when it was fetched or refreshed; the clock at most). A minute not yet over at [asOf] is left out, and while
+     * the data is not [complete] (its session still running) its newest minute is not trusted either: it may have been read
+     * while still forming. Null: no minute to go by. A minute from an earlier day than [asOf] is always complete.
+     */
+    fun dataEnd(minuteTimes: List<LocalDateTime>, asOf: LocalDateTime, complete: Boolean): LocalDateTime? {
+        var last: LocalDateTime? = null
+        for (t in minuteTimes) if (!t.plusMinutes(1).isAfter(asOf) && (last == null || t.isAfter(last))) last = t
+        val l = last ?: return null
+        return if (complete || l.toLocalDate() != asOf.toLocalDate()) l.plusMinutes(1) else l
+    }
+
+    /**
+     * The candles of [minutes] (starting at [start]) that are closed by the data ending at [end] ([dataEnd]): every minute of
+     * them is known. A wall clock past a candle's end is not enough (a 5-minute candle built from 2 of its 5 minutes, read
+     * from a cache 10 minutes old, was read and counted as closed). [sessionOver]: the session has ended, so the last candle,
+     * even one cut short by the close, is closed too.
+     */
+    /**
+     * 20 Oct, second review: whether a session's minutes reach its [close] (the last minute starting within [slackMin] of it).
+     * A session the clock says is over but whose data stopped early (a history refreshed last at 11:01) is NOT over for its
+     * candles: its last ones were never seen whole, so they are not closed or settled as if they were.
+     */
+    fun reachesClose(lastMinute: LocalDateTime?, close: LocalDateTime, slackMin: Int = 1): Boolean =
+        lastMinute != null && !lastMinute.plusMinutes(1L + slackMin).isBefore(close)
+
+    fun <T> closedByData(candles: List<T>, minutes: Int, end: LocalDateTime?, sessionOver: Boolean = false, start: (T) -> LocalDateTime): List<T> {
+        val e = end ?: return emptyList()
+        return candles.filter { c ->
+            val s = start(c)
+            if (sessionOver) s.isBefore(e) else !s.plusMinutes(minutes.toLong()).isAfter(e)
+        }
+    }
+
     fun trueRange(c: List<Candle>, i: Int): Double =
         if (i == 0) c[0].range else max(c[i].range, max(abs(c[i].h - c[i - 1].c), abs(c[i].l - c[i - 1].c)))
 

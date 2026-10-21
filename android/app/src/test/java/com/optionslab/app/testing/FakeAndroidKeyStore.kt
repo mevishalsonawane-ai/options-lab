@@ -45,6 +45,12 @@ class FakeAndroidKeyStore : Provider(NAME, 1.0, "In-memory stand-in for the Andr
         /** Aliases whose key the "Keystore" refuses to read or create (a flaky or broken Keystore). */
         val failing: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
+        /** Aliases held whose key the "Keystore" returns as null (a transient fault some phones show). */
+        val nullKey: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+        /** The next this many key reads (any alias) fail, then the "Keystore" works again (a passing fault). */
+        val failNext = java.util.concurrent.atomic.AtomicInteger(0)
+
         /** Idempotent. Registered last, so it is only ever used when asked for by name. */
         @Synchronized fun install() {
             // One provider per JVM, but Robolectric loads this class once per sandbox (SDK, graphics mode,
@@ -57,7 +63,7 @@ class FakeAndroidKeyStore : Provider(NAME, 1.0, "In-memory stand-in for the Andr
         }
 
         /** Forget every key (a fresh phone). */
-        fun reset() { keys.clear(); failing.clear() }
+        fun reset() { keys.clear(); failing.clear(); nullKey.clear(); failNext.set(0) }
 
         /** The aliases currently held (for tests that check a key was created or destroyed). */
         fun aliases(): Set<String> = keys.keys.toSet()
@@ -66,6 +72,8 @@ class FakeAndroidKeyStore : Provider(NAME, 1.0, "In-memory stand-in for the Andr
     class Store : KeyStoreSpi() {
         override fun engineGetKey(alias: String, password: CharArray?): Key? {
             if (alias in failing) throw java.security.UnrecoverableKeyException("simulated Keystore fault")
+            if (alias in nullKey) return null
+            if (failNext.getAndUpdate { if (it > 0) it - 1 else 0 } > 0) throw java.security.UnrecoverableKeyException("simulated passing Keystore fault")
             return keys[alias]
         }
         override fun engineGetCertificateChain(alias: String): Array<Certificate>? = null

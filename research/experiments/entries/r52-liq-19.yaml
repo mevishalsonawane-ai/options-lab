@@ -1,0 +1,38 @@
+id: r52-liq-19
+title: 'R52 re-test on Nov 2024+: LIQ-19 No stop, no target: hold to a liquidity level'
+family: liquidity
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule LIQ-19 (old verdict: Rejected (risk): N3 +53-55k/yr, better than A in 4/6 yrs but DD
+  -49..-55k vs -37k) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only
+  re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+- FINNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''books'': [[''BANKNIFTY'', 15], [''BANKNIFTY'', 5], [''FINNIFTY'', 30], [''FINNIFTY'', 5]], ''mode'': ''N3''}
+  | ITM1/near | exits default | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 4
+results:
+  summary: 'Design original: 559 trades, win 42%, net Rs +164,533 (Rs +488/day), worst day Rs -22,210, max DD Rs -42,531,
+    p 0.150 (coin-flip p 0.000); walk-forward Rs +160,504. Re-tune pick g03 ({''books'': ((''BANKNIFTY'', 15), (''BANKNIFTY'',
+    5), (''FINNIFTY'', 30), (''FINNIFTY'', 5)), ''mode'': ''N12''} · ITM1/near · exits default): design 559 trades, win 57%,
+    net Rs +159,114 (Rs +472/day), worst day Rs -18,031, max DD Rs -48,806, p 0.551 (coin-flip p 0.000); walk-forward Rs +174,366.
+    FINAL original: 221 trades, win 40%, net Rs +45,878 (Rs +348/day), worst day Rs -10,354, max DD Rs -36,478, p 1.000 (coin-flip
+    p 0.123), q 1.00 -> FAIL. FINAL pick: 224 trades, win 53%, net Rs -1,606 (Rs -12/day), worst day Rs -25,847, max DD Rs
+    -54,056, p 1.000 (coin-flip p 0.181), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = N3 (next level + failed break, 15:10), the variant the study named
+  (LIQUIDITY_EXITS_3060.md post hoc, liquidity_nostop.py, ''as the app would run it''); grid = N1, N2, N12. Gates: final net
+  > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

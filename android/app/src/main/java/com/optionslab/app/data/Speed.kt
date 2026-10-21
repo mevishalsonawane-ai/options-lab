@@ -80,16 +80,62 @@ object Speed {
     }
 
     /** The main thread's first frames: the code running (class.method), the app's own frame named if it is deeper. */
-    private fun runningOnMain(): String {
-        val st = Looper.getMainLooper().thread.stackTrace
+    private fun runningOnMain(): String = where(Looper.getMainLooper().thread.stackTrace)
+
+    /**
+     * [runningOnMain] from a stack: the top frame, the app's first frame, and (16 Oct) who called it - up to two more of the
+     * app's own frames outside its storage and security code ("BinderProxy.transactNative in Vault.encrypt from
+     * SecurePrefs.put < AppModel.save"). Boss's diagnostics named only "Vault.encrypt", which every save goes through, so the
+     * screen code that wrote on the screen's thread could not be found. Class and method names only.
+     */
+    internal fun where(st: Array<StackTraceElement>): String {
         if (st.isEmpty()) return "?"
-        fun f(e: StackTraceElement) = "${e.className.substringAfterLast('.')}.${e.methodName}"
+        fun f(e: StackTraceElement) = "${e.className.substringAfterLast('.').substringBefore('$')}.${e.methodName}"
         val top = f(st[0])
-        val ours = st.firstOrNull { it.className.startsWith("com.optionslab.") }
-        return if (ours == null || ours === st[0]) top else "$top in ${f(ours)}"
+        val i = st.indexOfFirst { it.className.startsWith("com.optionslab.") }
+        if (i < 0) return top
+        val head = if (i == 0) top else "$top in ${f(st[i])}"
+        val callers = st.drop(i + 1).filter { it.className.startsWith("com.optionslab.") }.map { f(it) }
+            .filter { it != f(st[i]) }.distinct()
+        // The storage layers first named as they come, then the first frame of the code that asked for them.
+        val store = callers.takeWhile { STORE.any { p -> it.startsWith(p) } }
+        val asker = callers.drop(store.size).firstOrNull()
+        val chain = (store.takeLast(1) + listOfNotNull(asker)).distinct()
+        if (chain.isNotEmpty()) return head + " from " + chain.joinToString(" < ")
+        // 17 Oct (Boss's diagnostics: "BinderProxy.transactNative in Vault.encrypt" with no caller, twice): every frame below
+        // the app's first one was outside "com.optionslab." - the release build's optimiser folds small callers into
+        // lambdas it renames ("o.a"), and a call posted to the screen's thread starts in Android's own code. The caller is
+        // still named: the first frame below that is not Android's, Java's or Kotlin's own, else the nearest framework frame.
+        val below = st.drop(i + 1)
+        if (below.isEmpty()) return head
+        val outside = below.firstOrNull { e -> FRAMEWORK.none { e.className.startsWith(it) } }
+        return head + if (outside != null) " from " + f(outside) else " from <framework ${f(below.first())}>"
     }
 
-    private fun note(lag: Long, what: String?) {
+    /** Android's, Java's and Kotlin's own code: never the caller worth naming. */
+    private val FRAMEWORK = listOf("android.", "androidx.", "com.android.", "java.", "javax.", "kotlin.", "kotlinx.", "dalvik.",
+        "libcore.", "sun.", "jdk.", "org.json.", "com.google.android.")
+
+    /** The storage and security layers every save passes through (named, but the caller beyond them is the useful frame). */
+    /** The vault's write paths, as a freeze's place names them. */
+    private val WRITES = listOf("Vault.encrypt", "Vault.writeFile", "Vault.write", "SecurePrefs.put", "SecureBlobs.put", "SecureBlobs.saveNow")
+
+    private val STORE = listOf("Vault.", "SecurePrefs.", "SecureBlobs.", "SecretBox.", "Diag.")
+
+    /**
+     * 17 Oct: a freeze in the vault's code gets the write the guard caught on the screen's thread meanwhile
+     * ([com.optionslab.app.security.MainWrites]: the settings keys or the file, and who asked), so the problem names it even
+     * when the stack's own frames could not. [writer] null, or a freeze elsewhere: [what] as it was.
+     */
+    internal fun withWriter(what: String?, writer: String?): String? {
+        if (writer == null) return what
+        // Writes only (review, 17 Oct): a freeze in a read (Vault.decrypt) is never given a write it did not make.
+        if (what != null && WRITES.none { it in what }) return what
+        return (what ?: "?") + " · " + writer
+    }
+
+    private fun note(lag: Long, seen: String?) {
+        val what = withWriter(seen, runCatching { com.optionslab.app.security.MainWrites.since(System.currentTimeMillis() - lag - 1_000) }.getOrNull())
         val now = LocalTime.now(com.optionslab.engine.IST).withNano(0)
         val diary = synchronized(this) {
             val today = LocalDate.now(com.optionslab.engine.IST)

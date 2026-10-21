@@ -17,6 +17,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Asks once to be left out of battery optimisation, so the market watch is not stopped. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 17 Oct: the market watch keeps the processor awake while it runs (a foreground service alone does not), so its
+         15-60 s passes and the stops they check are not frozen while the screen is off. Was merged by WorkManager already. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Android 12+: hide other apps' overlay windows over ours (tapjacking on dialogs and the PIN pad). -->
     <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
 
@@ -215,6 +218,22 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/export_paths" />
         </provider>
+
+        <!-- The Signal tester (15 Oct 2026; its calls are shadow-scored, and paper-traded only for a chat Boss switches on - never
+             live): share a Telegram message's text to it. Nothing is recorded until Boss picks the chat and taps OK. -->
+        <activity
+            android:name=".data.SignalShareActivity"
+            android:enabled="@bool/signal_tester_enabled"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:label="@string/signal_share_label"
+            android:theme="@style/Theme.IraAlgo">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
 
         <!-- Exported only because the system delivers these; it acts on nothing else. -->
         <receiver

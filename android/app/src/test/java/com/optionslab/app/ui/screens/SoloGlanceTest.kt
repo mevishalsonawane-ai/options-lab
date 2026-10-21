@@ -12,7 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.optionslab.app.testing.until
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.engine.orb.SoloMidday
 import com.optionslab.ira.SoloProgress
@@ -55,7 +60,14 @@ class SoloGlanceTest {
         assertTrue(shows(keepNumbersWhole(five.glance.drawdownLine)))
         assertTrue(described("Drawdown against the switch-off line"))
         assertTrue(shows(keepNumbersWhole("Decides at 12:00 today (orders only until 12:03).")))
+        // COMPACT (15 Oct): the research line is in the name's dialog; OK closes it.
+        assertFalse(shows(keepNumbersWhole(five.glance.research)))
+        compose.onNodeWithContentDescription("About FORWARD TEST").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
         assertTrue(shows(keepNumbersWhole(five.glance.research)))
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        assertFalse(shows(keepNumbersWhole(five.glance.research)))
         assertTrue(five.glance.research.contains("about break-even"))
         assertFalse(shows("Switched itself off", sub = true))
     }
@@ -81,24 +93,29 @@ class SoloGlanceTest {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         val reads = AtomicInteger()
         val offMain = AtomicInteger()
+        // Where each read was handed back (18 Oct, review): always the main thread, never the I/O one.
+        val setOnMain = AtomicInteger(); val setOffMain = AtomicInteger()
         var key by mutableIntStateOf(0)
         compose.setContent {
             IraAlgoTheme("light") {
-                SoloForwardGlance(key) {
+                SoloForwardGlance(key, onRead = { (if (Looper.myLooper() == Looper.getMainLooper()) setOnMain else setOffMain).incrementAndGet() }) {
                     reads.incrementAndGet()
                     if (Looper.myLooper() != Looper.getMainLooper()) offMain.incrementAndGet()
                     five
                 }
             }
         }
-        compose.waitUntil(10_000) { shows("FORWARD TEST") }
+        // (18 Oct, review) [until], not waitUntil: the read is set back on the main thread, so the wait must run its looper.
+        compose.until(10_000, "the glance") { shows("FORWARD TEST") }
         compose.waitForIdle()
         assertEquals(1, reads.get())
         androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot { key = 1 }   // applied at once, so the effect re-keys
-        compose.waitUntil(10_000) { reads.get() == 2 }
+        compose.until(10_000, "the second read, handed back") { reads.get() == 2 && setOnMain.get() + setOffMain.get() == 2 }
         compose.waitForIdle()
         assertEquals(2, reads.get())
         assertEquals(2, offMain.get())
+        assertEquals(2, setOnMain.get())
+        assertEquals(0, setOffMain.get())
     }
 
     @Test fun anUnreadableRecordShowsNothing() {

@@ -201,7 +201,9 @@ object SelfHeal {
             val fails = rest.count { !it.first }
             val slowMs = median(rest.map { it.second })
             out[Dep.KITE_REST] = when {
-                breakers.getValue(Dep.KITE_REST).state != Breaker.State.CLOSED -> Level.DOWN to "Zerodha's requests are failing ($fails of the last ${rest.size})"
+                // 20 Oct: the breaker shuts after failures IN A ROW, which "5 of the last 20" did not say (it read like a quarter).
+                breakers.getValue(Dep.KITE_REST).state != Breaker.State.CLOSED ->
+                    Level.DOWN to "Zerodha's requests are failing (${breakers.getValue(Dep.KITE_REST).inRow} in a row)"
                 rest.size >= REST_MIN && fails * 2 >= rest.size -> Level.DOWN to "Zerodha's requests are failing ($fails of the last ${rest.size})"
                 limits.size >= RATE_LIMITS -> Level.SLOW to "Zerodha says too many requests (${limits.size} in a minute)"
                 rest.size >= REST_MIN && slowMs >= REST_SLOW_MS -> Level.SLOW to "Zerodha is slow (half the answers take ${secs(slowMs)} or more)"
@@ -284,6 +286,26 @@ object SelfHeal {
             keystoreMs = 0; battery = null; charging = true; thermal = 0; open.clear(); okSince.clear(); history.clear()
             Dep.entries.forEach { breakers[it] = Breaker() }
         }
+    }
+
+    /**
+     * Does a failed request count against Zerodha's health (20 Oct)? Boss's 19 Oct diagnostics said "Zerodha's requests are
+     * failing" 7 times on a day the phone's own network changed and its stream fell silent again and again: every I/O failure
+     * was put down to Zerodha. A failure that never reached Zerodha - no DNS ([errorClass] UnknownHostException), no route
+     * or the network gone ("network is unreachable", ENETUNREACH, "software caused connection abort", the phone's network
+     * changing under the socket), or a request this app cancelled itself ("canceled") - is the phone's, not Zerodha's. A
+     * timeout, a reset or a refused connection still counts: Zerodha may be the slow or broken side. Pure; it reads only the
+     * exception's class and words (never a URL or header), so nothing on the order path waits on it.
+     */
+    fun zerodhaFault(errorClass: String?, message: String?): Boolean {
+        val c = errorClass.orEmpty()
+        val m = message.orEmpty().lowercase(Locale.ENGLISH)
+        if (c == "UnknownHostException" || c == "NoRouteToHostException") return false
+        if ("unable to resolve host" in m || "no address associated" in m) return false
+        if ("network is unreachable" in m || "enetunreach" in m || "software caused connection abort" in m || "econnaborted" in m) return false
+        if (c == "InterruptedIOException" && "cancel" in m) return false
+        if (m == "canceled" || m == "cancelled") return false
+        return true
     }
 
     /** What the fallback is, in Boss's words, for an incident's first line. */

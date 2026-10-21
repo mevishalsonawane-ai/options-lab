@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.OrbArms
 import com.optionslab.app.ui.components.expandTag
@@ -50,7 +51,16 @@ class LiquidityTestCardTest {
             LiquidityTestLines(view(), onWatched = { watched = it }, onReenable = {})
         } } }
         compose.waitForIdle()
+        // COMPACT (15 Oct): the freeze said short; a tap shows its words in full, OK closes them.
+        assertTrue(shows(FROZEN_SHORT))
+        assertFalse(shows(keepNumbersWhole("Frozen for the paper test until Mon 26 Oct"), sub = true))
+        compose.onNodeWithText(FROZEN_SHORT).performClick()
+        compose.waitForIdle()
         assertTrue(shows(keepNumbersWhole("Frozen for the paper test until Mon 26 Oct"), sub = true))
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        assertFalse(shows(keepNumbersWhole("Frozen for the paper test until Mon 26 Oct"), sub = true))
+        // The live stop rule (the account stop) stays on the row.
         assertTrue(shows("would not have stopped", sub = true))
         assertFalse("no re-enable while it runs", shows(REENABLE_LIVE))
         // The checklist is folded: its count in sight, the lines behind the tap.
@@ -101,6 +111,40 @@ class LiquidityTestCardTest {
         compose.onNodeWithText("Unfreeze").performClick()
         compose.waitForIdle()
         assertEquals(listOf(true), set)
+    }
+
+    @Test fun bossesTrailSwitchIsOffSaysItFailedAndFlipsInOneTap() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val set = ArrayList<Boolean>()
+        var state = LiquidityFreeze.State()
+        compose.setContent { IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
+            LiquidityTrailRow(state) { set += it }
+        } } }
+        compose.waitForIdle()
+        assertTrue(shows("failed research, your choice", sub = true))
+        assertTrue(shows("off. Liquidity trades on plain rules.", sub = true))
+        assertTrue(shows("12 of 13 big winners", sub = true))
+        // What it costs the plain-rules record, said before the tap.
+        assertTrue(shows(LiquidityFreeze.TRAIL_RECORD))
+        compose.onNodeWithTag("lab-liq-trail-record").assertExists()
+        compose.onNodeWithText(LiquidityFreeze.TRAIL_ON).performClick()
+        compose.waitForIdle()
+        assertEquals("one tap on, no PIN (paper only)", listOf(true), set)
+    }
+
+    @Test fun bossesTrailSwitchWhenOnSaysPaperOnlyAndGoesBackInOneTap() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val set = ArrayList<Boolean>()
+        compose.setContent { IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
+            LiquidityTrailRow(LiquidityFreeze.State(trail = true)) { set += it }
+        } } }
+        compose.waitForIdle()
+        assertTrue(shows("ON for new Liquidity PAPER trades", sub = true))
+        assertTrue(shows("live trades never use it", sub = true))
+        assertTrue(shows("so the plain-rules record (used for the 26 Oct decision) does not grow", sub = true))
+        compose.onNodeWithText(LiquidityFreeze.TRAIL_OFF).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(false), set)
     }
 
     @Test fun afterTheTenthDayNoButton() {

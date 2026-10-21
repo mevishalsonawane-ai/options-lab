@@ -1,0 +1,36 @@
+id: r26-describe
+title: 'OI wall blast: descriptive check of the wall / OI-unwinding claim'
+family: outside-strategies
+date: '2026-10-14'
+doc: research/HUNT_R26_OI_WALL_BLAST.md
+hypothesis: 'Descriptive: how often walls break in the window and how wall OI moves around 4x option moves.'
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_{NIFTY,BANKNIFTY,SENSEX,FINNIFTY}_WEEK (ATM+-10,
+  nearest expiry, OI per strike), index_1m NIFTY/BANKNIFTY/SENSEX/FINNIFTY/INDIAVIX; expiry days found from the data (R25
+  loader); BANKNIFTY weeklies to 2024-11-13, FINNIFTY to 2024-11-19; 13 Oct 2026 not in the lake'
+period:
+  design: 'ALL expiry days 2021-08-05..2026-10-08 as an out-of-sample test of a third-party rule (no fitted parameter): NIFTY
+    271, BANKNIFTY 172, SENSEX 175, FINNIFTY 152 (770); R25''s blocks reported separately (2021-22: 201, 2023-26: 569)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+features:
+- option-chain OI per strike (walls)
+- index minutes
+- ATM+-1 option prices
+model_or_rule: descriptive (research/hunt/r26/describe.py)
+settings: research/hunt/r26/describe.py
+prereg: research/hunt/r26/PREREG.md
+variants_tried: null
+results:
+  summary: '1540 expiry-sides: the 13:00 wall is the outermost stored strike on 25, no OI on 92 (SENSEX 2023-24). Spot closed
+    beyond the wall in 13:45-14:30 on 338, held 16 closes on 169, + wall OI down >= theta 128, + volume 38, full trigger 35.
+    ATM+-1 at 13:45 reached 4x on 142 of 1486; the wall''s OI fell >= theta during 54 blasts and 516 non-blasts. Point-in-time
+    at 13:45 the wall''s OI state does not lift the blast rate: falling < theta 10.2% (n 855), rising or flat 7.7% (n 363),
+    falling >= theta 10.0% (n 180), no OI 10.2% (n 88).'
+  costs: none (descriptive)
+holdout_read: null
+verdict: not-a-test
+notes: 'Linked to R25 (jackpots come with strike OI rising): wall OI falling during a move is a consequence of the move, not
+  a predictor.'

@@ -1,0 +1,45 @@
+id: r93-d-b-breadth-daily
+title: 'R93 D-B: complex breadth (daily, futures) on MCX commodities'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R93_BREADTH_DONCHIAN_MCX.md
+hypothesis: 'Boss (21 Oct): does Breadth Donchian work on commodities? D-B (complex breadth (daily, futures)) earns after
+  real MCX costs, beats random entries on the same days and sides (twin p < 0.05, BH q <= 0.10 over 5 variants), in design,
+  walk-forward and the locked holdout.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (options_rolling_1m MONTH books of 19-20 Oct: near-future spot + ATM-3..+3
+  minutes; fut_1m_mcx_continuous + fut_mcx_rolls for ALUMINIUM; fut_daily_continuous to 16 Oct 2026); Dukascopy 1-minute drivers
+  fetched 21 Oct (not committed)'
+period:
+  design: 2012-01-01..2022-12-31 (walk-forward 2019, 2020, 2021, 2022)
+  holdout: 2023-01-01..2026-10-16 (read once, 21 Oct)
+instruments:
+- GOLD/GOLDM
+- SILVER/SILVERM
+- COPPER
+- ZINC
+- ALUMINIUM
+- CRUDEOIL/CRUDEOILM
+- NATURALGAS/NATGASMINI
+features:
+- 'signal source: the MCX future itself (the near future under the option book; daily: the parent''s near-month daily, back-adjusted)'
+- 'traded: the future at the mini lot (no option history before Aug 2025)'
+model_or_rule: 'D-A, but only when at least M families of the group break the same way on the same day (metals 3 of 5, energy
+  2 of 2). Daily exits: stop 2 x ATR14, chandelier lock 3 x ATR14, out after 10 sessions or before a roll'
+settings: research/hunt/r93_breadth_donchian_mcx/cfg.py; PREREG.md sections 2-5
+prereg: research/hunt/r93_breadth_donchian_mcx/PREREG.md
+variants_tried: 5
+results:
+  summary: 'Design: 373 trades, gross Rs 142,085, net -Rs 39,447, win 45%, max DD Rs 636,366, worst month -Rs 131,555, design
+    twin p 0.623; walk-forward -Rs 113,006. Holdout (read once): 133 trades, gross -Rs 223,355, net -Rs 367,544, win 45%,
+    avg win / loss Rs 35,495 / -Rs 34,209, worst month -Rs 807,208 (14 of 30 months below -Rs 13k), max DD Rs 1,174,870, without
+    top 5 -Rs 1,393,607, at 2x spread -Rs 486,212; twins avg Rs 252,938, twin p 0.856, BH q 0.856 (5 variants). By family:
+    ALUMINIUM Rs 55,351 (22), COPPER Rs 425,855 (23), CRUDE -Rs 20,096 (11), GOLD -Rs 319,311 (22), NATGAS -Rs 49,468 (11),
+    SILVER -Rs 539,592 (22), ZINC Rs 79,718 (22). Gates failed: bh_q, design_pos, holdout_net_pos, net_2x_slip_pos, twin_p,
+    wf_pos, wo_best_family_pos, wo_top5_pos. Verdict: FAIL.'
+  costs: 'Options: Zerodha MCX option charges + premium half-spread GOLDM / SILVERM / CRUDEOILM 0.30% (0.60% before 17:00),
+    NATGASMINI 0.45% / 0.90%, entry and exit. Futures: Zerodha MCX futures charges + half-spread 0.03% crude, 0.06% gas, 0.05%
+    metals + 0.02% on stops. Also reported at 2x the half-spreads.'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (the MCX future). Research only; nothing changes paper or live. Notes N1-N4 in NOTES.md (fill-only
+  twins, causal daily rolls, futures twin stop, zinc's April expiry).

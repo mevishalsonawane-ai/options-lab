@@ -1,0 +1,36 @@
+id: r76-liquidity-b0
+title: 'R76 Liquidity: own exits (today)'
+family: trade-management
+date: '2026-10-18'
+doc: research/HUNT_R76_LIQUIDITY_LOCK_35.md
+hypothesis: 'Boss (18 Oct): ''What about 35-5 for liquidity'', then ''25% -35% of target'': once the index has covered 25-35%
+  of the way to Liquidity''s own index target, the option''s stop rises to +5% over the fill. This variant: own exits (today);
+  recommended only if its net is at least B0''s in design, walk-forward and final and it beats random early exits (BH q <=
+  0.10).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once; already read by R51 / R63 / R70 (weak)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal: index bars (liquidity levels); exits: option premium and index levels'
+model_or_rule: 'Liquidity 15+5 (index level breaks on 15/5-min bars BANKNIFTY and MIDCPNIFTY, 30/5 FINNIFTY; 1-ITM); exits:
+  own exits (today)'
+settings: research/hunt/r76/r76study.py; PREREG.md
+prereg: research/hunt/r76/PREREG.md
+variants_tried: 5
+results:
+  summary: 'Design: 881 trades, win 44%, net Rs 257,249 (Rs 292/trade), worst day -Rs 8,416, max DD Rs 32,537, stops 31. Walk-forward:
+    657 trades, win 44%, net Rs 238,064 (Rs 362/trade), worst day -Rs 6,363, max DD Rs 23,139, stops 23. Final: 357 trades,
+    win 37%, net Rs 11,155 (Rs 31/trade), worst day -Rs 11,405, max DD Rs 61,062, stops 12. Liquidity''s own exits re-measured
+    (reproduces R70''s B0 exactly); unchanged.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot
+holdout_read: true
+verdict: paper-only
+notes: Signal on the underlying; research only, nothing changes paper or live. Liquidity BANKNIFTY's plain-rules record for
+  the 26 Oct decision is untouched.

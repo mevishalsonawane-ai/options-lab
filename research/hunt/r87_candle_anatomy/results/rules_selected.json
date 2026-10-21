@@ -1,0 +1,87 @@
+{
+ "cost": {
+  "NIFTY": {
+   "und": "NIFTY",
+   "premium": 137.19705895260086,
+   "days": 223,
+   "lot": 75,
+   "unit_cost": 1.1231970589526008,
+   "points": 1.8719950982543347,
+   "pricing": "modelled premium (A1)"
+  },
+  "BANKNIFTY": {
+   "und": "BANKNIFTY",
+   "premium": 740.2680658355312,
+   "days": 223,
+   "lot": 35,
+   "unit_cost": 3.573696637264103,
+   "points": 5.956161062106839,
+   "pricing": "modelled premium (A1)"
+  },
+  "SENSEX": {
+   "und": "SENSEX",
+   "premium": 494.35795767948,
+   "days": 223,
+   "lot": 20,
+   "unit_cost": 3.84385795767948,
+   "points": 6.4064299294658005,
+   "pricing": "modelled premium (A1)"
+  }
+ },
+ "rules": [
+  {
+   "id": "R87-1",
+   "und": "NIFTY",
+   "tf": 5,
+   "family": "three_white",
+   "cond": "",
+   "src": "P1",
+   "long": true,
+   "eff": 0.173324,
+   "z": 3.19701,
+   "q": 0.0403847,
+   "n": 893,
+   "fold_same": 4,
+   "rw_n": 217,
+   "dir_pts": 3.79954,
+   "cost_pts": 1.8719950982543347,
+   "screen": "passes every screen"
+  },
+  {
+   "id": "R87-2",
+   "und": "NIFTY",
+   "tf": 15,
+   "family": "fp_stop_run_up",
+   "cond": "",
+   "src": "P1",
+   "long": true,
+   "eff": 0.129408,
+   "z": 3.01093,
+   "q": 0.0649265,
+   "n": 1666,
+   "fold_same": 4,
+   "rw_n": 326,
+   "dir_pts": 8.38206,
+   "cost_pts": 1.8719950982543347,
+   "screen": "passes every screen"
+  },
+  {
+   "id": "R87-3",
+   "und": "SENSEX",
+   "tf": 15,
+   "family": "gravestone_doji",
+   "cond": "",
+   "src": "P1",
+   "long": false,
+   "eff": -0.29481,
+   "z": -2.81938,
+   "q": 0.0932921,
+   "n": 205,
+   "fold_same": 3,
+   "rw_n": 70,
+   "dir_pts": 48.0124,
+   "cost_pts": 6.4064299294658005,
+   "screen": "passes every screen"
+  }
+ ]
+}

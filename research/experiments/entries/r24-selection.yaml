@@ -1,0 +1,32 @@
+id: r24-selection
+title: R24 mechanical rule selection (lift x support, design only) under walk-forward
+family: patterns-indicators
+date: '2026-10-13'
+doc: research/HUNT_R24_WHATIF_PATTERNS.md
+hypothesis: Rules chosen from earlier design blocks by the pre-registered procedure make money on the next block.
+data_version: 'Dhan lake on Google Drive (gdrive:IraAlgo-data-lake, uploaded 13 Oct 2026): opt_{NIFTY,BANKNIFTY}_WEEK_2021-2026,
+  index_1m NIFTY/BANKNIFTY/INDIAVIX, via research/brain cube v2 + feature store (signature c2c76a808596); what-if table gdrive:IraAlgo-data-lake/derived/r24_whatif
+  (CATALOG.json)'
+period:
+  design: 'lake sessions 2021-08-02..2026-04-13 with option chains (1,161; 4 blocks from 2021-01-01, block 1 partly without
+    options); folds: select on blocks < k, score block k (k = 2, 3, 4)'
+  holdout: none (design walk-forward)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- as r24-whatif
+model_or_rule: 'up to 8 rules per fold: winner lift >= 1.3, >= 100 sessions, fixes a side, design net > 0 under its best exit
+  family; ranked by lift x support; <= 70% day overlap'
+settings: research/hunt/r24/PREREG.md (Step 3)
+prereg: research/hunt/r24/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Test-block nets of the 8 rules picked on the earlier blocks: block 2 Rs -214,260, block 3 Rs 84,575, block 4 Rs
+    -202,313 (total Rs -331,999). The procedure does not carry forward.'
+  costs: app charges at today's rates (STT 0.15%); buy at open + 5 bps + half-spread max(h(moneyness) x price, 1/2/4 ticks
+    by 5-min volume), h = 0.16% ITM/ATM, 0.20% OTM1, 0.25% OTM2, 0.35% OTM3; sells -5 bps (stops -10 bps, 2x ticks) - half-spread;
+    stress 2x half-spread
+holdout_read: false
+verdict: rejected
+notes: The final 8 rules (r24-p1..p8) were re-selected once on the whole design period and read once on the holdout.

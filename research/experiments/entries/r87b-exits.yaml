@@ -1,0 +1,34 @@
+id: r87b-exits
+title: R87B candle exits on reconstructed ORB and Donchian-20 paper arms (big wick / marubozu / engulfing against)
+family: patterns-indicators
+date: '2026-10-20'
+doc: research/HUNT_R87_CANDLE_ANATOMY.md
+hypothesis: Exiting a breakout option trade at the next minute after a 5m candle that closes against it (big wick, marubozu
+  or engulfing) improves net and does not worsen worst day / max DD (paired, BH q < 0.10, >= 2 of 3 folds), and keeps it in
+  the holdout.
+data_version: 'Dhan v2 direct: index 1-minute (R87, A2-cleaned) and daily (2015-2026); option snapshot of 19 Oct 2026 23:30
+  UTC (real 1-ITM only for SENSEX holdout months; NIFTY ATM 199 design days); hybrid pricing = real where printed, calibrated
+  Black-Scholes/VIX model elsewhere'
+period:
+  design: 20 Nov 2024 - 14 Oct 2025
+  holdout: 15 Oct 2025 - 16 Oct 2026, read once for the one passing overlay (ORB + big wick)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s own 5m candles (arms and overlays)'
+model_or_rule: DON (Donchian-20, 30 min) and ORB (09:15-09:29 range, 60 min) 1-ITM option arms, reconstructed; overlays X1
+  big wick against, X2 marubozu against, X3 engulfing against
+settings: research/hunt/r87_candle_anatomy/exits.py; PREREG_B.md section 4
+prereg: research/hunt/r87_candle_anatomy/PREREG_B.md
+variants_tried: 6
+results:
+  summary: 'Design: ORB+X1 +Rs 47,606 over 813 trades (base -Rs 50,071 -> -Rs 2,465), q 0.092, folds +16,961/+29,348/+5,877,
+    max DD 89,452 -> 53,202: pass. ORB+X2 -32,888, ORB+X3 -42,729, DON+X1 +10,647 (q 0.53), DON+X2 -14,257, DON+X3 -29,944
+    (q 0.13). Holdout ORB+X1: 912 trades, base -Rs 1,09,274 -> -Rs 93,166 (+16,107; better on all 3 indices), p 0.40: FAIL.
+    Real entry prints 0.7% design, 4.8% holdout.'
+  costs: hybrid prices, 5 bps + ticks, dated charges, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Not a paper candidate. Strong opposite candles (marubozu / engulfing) as exits made both arms worse.

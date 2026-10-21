@@ -128,6 +128,7 @@ class CollisionTest {
         "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
+        "SundayReview" to { q -> SundayReview.asked(q) },
         "WeeklyReview" to { q -> WeeklyReview.asked(q) != null },
         "LotsWhatIf" to { q -> LotsWhatIf.asked(q) != null },
         "LiquidityInsight" to { q -> LiquidityInsight.asked(q) != null },
@@ -146,6 +147,7 @@ class CollisionTest {
         "Slippage" to { q -> Slippage.asked(q) != null },
         "PositionSync" to { q -> PositionSync.asked(q) },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
+        "LiveCheck" to { q -> LiveCheck.asked(q) },
         "StreamHealth" to { q -> StreamHealth.asked(q) },
         "BatteryUse" to { q -> BatteryUse.asked(q) },
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
@@ -179,6 +181,7 @@ class CollisionTest {
         "MonthTurns" to { q -> MonthTurns.asked(q) != null },
         "LunchRange" to { q -> LunchRange.asked(q) != null },
         "OpenHighLow" to { q -> OpenHighLow.asked(q) != null },
+        "CandleAgent" to { q -> CandleAgent.asked(q) != null },
         "BigCandles" to { q -> BigCandles.asked(q) != null },
         "ExtremeCloses" to { q -> ExtremeCloses.asked(q) != null },
         "WeekRange" to { q -> WeekRange.asked(q) != null },
@@ -199,6 +202,7 @@ class CollisionTest {
         "TradeCase" to { q -> TradeCase.asked(q) },
         "Scenarios" to { q -> Scenarios.asked(q) != null },
         "Causes" to { q -> Causes.asked(q) != null },
+        "Knowledge" to { q -> Knowledge.asked(q) },
         "MarketDays" to { q -> MarketDays.expiryAsked(q) || MarketDays.asked(q, today) != null },
         // The account's own sections, in Account.sections' precedence (STREAKS is set last, then NEED; each wins over HEALTH).
         "Account:NUMBERS" to { q -> MyNumbers.asked(q) },
@@ -616,6 +620,9 @@ class CollisionTest {
         "paper slippage" to "Slippage", "how good are my fills" to "Slippage",
         "are my positions in sync" to "PositionSync", "do my positions match zerodha" to "PositionSync",
         "reconcile the app with zerodha" to "PositionSync",
+        // ---- LiveCheck (18 Oct): Boss starts the Live check by voice; it never places an order ----
+        "run the live check" to "LiveCheck", "live check karo" to "LiveCheck", "do the self-test" to "LiveCheck",
+        "check everything live" to "LiveCheck", "start the live check now" to "LiveCheck",
         // ---- The order review (12 Oct): questions only, never an order ----
         "review my orders" to "OrderReview", "what went wrong today" to "OrderReview", "flaws in orb today" to "OrderReview",
         "how much did slippage cost me" to "OrderReview", "any flaws in my orders today" to "OrderReview", "order review" to "OrderReview",
@@ -803,6 +810,9 @@ class CollisionTest {
         "after a big 5-minute candle in the first hour does the day continue" to "BigCandles", "big candle record for banknifty" to "BigCandles",
         "how often does a big green candle in the morning follow through" to "BigCandles", "subah bada candle aane ke baad nifty kya karta hai" to "BigCandles",
         "what happens after a 0.4% 5-minute candle" to "BigCandles", "large first hour candles record for finnifty" to "BigCandles",
+        // ---- CandleAgent: one candle explained by the Candle agent (20 Oct), never the big-candle record or a named pattern ----
+        "why was that candle green" to "CandleAgent", "what does this candle mean" to "CandleAgent", "where is support for this candle" to "CandleAgent",
+        "explain the last 5 minute candle on nifty" to "CandleAgent", "why did the last candle turn red" to "CandleAgent",
         // Its neighbours: the first move of the day, a sharp move explained, which candle patterns work.
         "does the first half hour decide the day for sensex" to "FirstMove", "which candle patterns work on nifty" to "PatternCalls", "how often do opening range breaks hold for sensex" to "RangeBreaks",
         // ---- ExtremeCloses: closes at the ends of the day's range and what the next day did (round 29) ----
@@ -911,6 +921,13 @@ class CollisionTest {
         "what is the fii long short ratio" to "MorningCues", "fii ka position kya hai" to "MorningCues", "fii kya kar rahe hain" to "MorningCues",
         "are fiis long or short" to "MorningCues", "fii index futures position" to "MorningCues", "morning cues" to "MorningCues",
         "pre market cues" to "MorningCues",
+        // ---- Knowledge: the research's findings, strategy cards and h42 answers (L5 Level 4; market knowledge, nothing acts) ----
+        "how does banknifty behave on expiry after a gap down" to "Knowledge", "what did research say about ORB" to "Knowledge",
+        "is liquidity profitable" to "Knowledge", "research kya kehta hai liquidity ke baare me" to "Knowledge",
+        "is selling straddles profitable" to "Knowledge", "does the supertrend strategy make money" to "Knowledge",
+        "what did the study find about big candles" to "Knowledge", "is expiry hero profitable" to "Knowledge",
+        "does machine learning work for option buying" to "Knowledge", "what did research find about orb re-entries" to "Knowledge",
+        "is there an edge in gap fills" to "Knowledge", "liquidity munafa deta hai kya" to "Knowledge",
         // ---- MajorityRule: Majority Rule 14 on weekly NIFTY (research R13; context only, never a trade) ----
         "what about majority rule" to "MajorityRule", "what about the majority rule" to "MajorityRule", "majority rule 14" to "MajorityRule",
         "MR 14" to "MajorityRule", "what is MR14 now" to "MajorityRule", "is nifty in the sell-off zone" to "MajorityRule",
@@ -922,6 +939,9 @@ class CollisionTest {
         "banknifty abhi volatile hai kya" to "BigMoveRisk", "is nifty volatile now" to "BigMoveRisk", "is the market volatile right now" to "BigMoveRisk",
         "how risky is the market now" to "BigMoveRisk", "market risky hai kya abhi" to "BigMoveRisk", "is a sharp move likely in sensex" to "BigMoveRisk",
         // ---- WeeklyReview: Jarvis's review of the week (money by strategy, live vs backtest, shadows, the market, next week) ----
+        // ---- SundayReview (20 Oct, round 2): the spoken one, taken before the written review that also hears "weekly review" ----
+        "jarvis sunday review" to "SundayReview", "speak the sunday review" to "SundayReview", "read out the weekly review" to "SundayReview",
+        "weekly review sunao" to "SundayReview",
         "weekly review" to "WeeklyReview", "jarvis weekly review" to "WeeklyReview", "show me the weekly review" to "WeeklyReview",
         "is hafte ka review" to "WeeklyReview", "hafte ka review" to "WeeklyReview", "week ka review" to "WeeklyReview",
         "how did this week go" to "WeeklyReview", "how did the week go" to "WeeklyReview", "how was this week" to "WeeklyReview",
@@ -1628,9 +1648,9 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "SelfTalk", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
-        "SelfWhy", "MajorityRule", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
-        "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SignalTalk", "TrendTalk", "PassedArmsTalk", "SoloDay", "HeroTicketTalk", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "SundayReview", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "LiveCheck", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "GammaMorning", "OiWallBlast", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "SelfWhy", "MajorityRule", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "CandleAgent", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "TradeCase", "Scenarios", "Causes", "Agenda", "Improve", "Knowledge")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
         val hub = java.io.File("../app/src/main/java/com/optionslab/app/ira/IraHub.kt").takeIf { it.isFile }?.readText() ?: return

@@ -11,6 +11,7 @@ import com.optionslab.engine.mcx.McxContract
 import com.optionslab.engine.mcx.McxEveRules
 import com.optionslab.engine.mcx.McxExpiry
 import com.optionslab.engine.mcx.McxInstruments
+import com.optionslab.engine.mcx.McxMorningPark
 import com.optionslab.engine.mcx.McxMorningRules
 import com.optionslab.engine.mcx.McxSession
 import com.optionslab.engine.mcx.McxTrendRules
@@ -33,6 +34,11 @@ import java.util.Locale
  * 12-month trend rule on the MCX minis (M2). None passed its research gates: each is "Not proven - paper only", OFF by
  * default, 1 lot fixed, no compounding.
  *
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * PAPER ONLY, always: every order here is the paper account's ([Paper.place] / [Paper.cancel]); nothing in this file can
  * reach Zerodha, whatever Live, "AI trades go live" or any voice command says - there is no live flag to set, and its file
  * is not in the backup. New entries obey MCX's hours and holidays ([McxMarket.isOpen]), the kill switch, the bot's stop
@@ -51,7 +57,17 @@ object McxPaperArms {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "mcx_arms.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): their paper trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.MCX) {
+            if (cache == null) null else _view.value.let { v ->
+                val today = Market.today()
+                (v.open + v.closed.filter { it.exitTime?.toLocalDate() == today }).map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0) }
+            }
+        }
     }
+
+    /** A trade's reference for its live path ([ArmLive]): its arm and paper order (or its entry time). */
+    private fun mirrorRef(p: Pos): String = "mcx:${p.arm}:${p.orderId ?: p.entryTime}"
 
     /** The arms, in the order the screen lists them (the US-night silver futures rule, 9 Oct research R2, last). */
     val ARMS: List<String> = listOf(McxEveRules.SOURCE, McxMorningRules.SOURCE, McxTrendRules.SOURCE, McxUsSilverRules.SOURCE)
@@ -103,7 +119,8 @@ object McxPaperArms {
         val decided: MutableSet<String> = HashSet(),
         /** "yyyy-MM|LEG" -> the month's trend signal. */
         val signals: MutableMap<String, Int> = HashMap(),
-        val status: MutableMap<String, String> = HashMap(),
+        /** 21 Oct: with the day each line was written ([StatusMap]). */
+        val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
         /** Small facts kept between days ("silver_near": the near SILVERMIC expiry the US-night silver arm last saw). */
         val marks: MutableMap<String, String> = HashMap(),
@@ -116,7 +133,9 @@ object McxPaperArms {
     data class View(val armed: Map<String, Boolean>, val status: Map<String, String>, val open: List<Pos>, val closed: List<Pos>, val log: List<String>,
                     val nets: Map<String, List<Double>> = emptyMap(),
                     /** The same closed trades with the day each closed, per arm, for the paper test ([com.optionslab.ira.Vetting]). */
-                    val trades: Map<String, List<com.optionslab.ira.Vetting.Trade>> = emptyMap()) {
+                    val trades: Map<String, List<com.optionslab.ira.Vetting.Trade>> = emptyMap(),
+                    /** The arms switched off once on Boss's OK and not switched back on since (14 Oct: [McxMorningPark]); their rows say why. */
+                    val parked: Set<String> = emptySet()) {
         fun isArmed(arm: String): Boolean = armed[arm] == true
     }
 
@@ -124,6 +143,10 @@ object McxPaperArms {
     val view: StateFlow<View> = _view
 
     @Volatile private var cache: Book? = null
+    /** The one-time switch-off's notification ([parkMorning]); the arms' own trades use 6970 + their index. */
+    private const val NOTICE_ID = 6949
+    /** A mark "parked:<arm>" (its day): switched off once on Boss's OK, until Boss switches it back on ([setArmed]). */
+    private const val PARKED_MARK = "parked:"
     private const val LOG_KEPT = 200
     private const val CLOSED_KEPT = 400
 
@@ -132,22 +155,64 @@ object McxPaperArms {
 
     private fun ready() = ::file.isInitialized
 
+    /**
+     * One book per process (14 Oct review): the watch's scheduling reads it without [lock] ([loaded]) while a pass reads it under
+     * the lock; built under this monitor so two first reads never build two books (a position booked in one lost from the other)
+     * nor run the one-time switch-off twice.
+     */
+    private val building = Any()
+
     private fun book(): Book {
         cache?.let { return it }
+        synchronized(building) { cache?.let { return it }; return build() }
+    }
+
+    private fun build(): Book {
         val b = Book()
+        // Nothing saved yet (a new install): the one-time change below has nothing to change ([McxMorningPark]).
+        val existed = file.exists()
         runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
             o.optJSONObject("armed")?.let { a -> a.keys().forEach { b.armed[it] = a.getBoolean(it) } }
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += readPos(a.getJSONObject(i)) }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
             o.optJSONObject("signals")?.let { m -> m.keys().forEach { b.signals[it] = m.getInt(it) } }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
             o.optJSONObject("marks")?.let { m -> m.keys().forEach { b.marks[it] = m.getString(it) } }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
+        val parked = runCatching { parkMorning(b, newBook = !existed) }.getOrDefault(false)
         cache = b
-        publish(b)
+        if (parked) save(b) else publish(b)
         return b
+    }
+
+    /**
+     * Once, on this update (14 Oct 2026, Boss's OK; research R42's pre-registered rule, [McxMorningPark]): the SILVERM morning
+     * call is switched off if it is on. Paper only, like every arm here: nothing can reach Zerodha, so nothing carries over to
+     * live. Switching off only stops NEW entries: a position it holds stays in the book and [tick] still watches it and
+     * closes it by its own 4-hour exit (the expiry exit and the bot's stop as before). Told once - the arm log, the
+     * diagnostics, a notification, and the Autopilot change log, where one tap switches it back on (paper only). Never runs
+     * again: an arm Boss switches back on stays on. A new book has nothing to switch off (the mark is saved with its first
+     * save). True when [b] must be saved.
+     */
+    private fun parkMorning(b: Book, newBook: Boolean): Boolean {
+        val off = McxMorningPark.switchOff(b.armed, done = McxMorningPark.MIGRATION in b.marks) ?: return false
+        b.marks[McxMorningPark.MIGRATION] = McxMarket.now().toLocalDate().toString()
+        if (newBook) return false
+        if (!off) return true
+        val arm = McxMorningPark.SOURCE
+        val holding = b.positions.any { it.arm == arm && it.open }
+        b.armed[arm] = false
+        b.status[arm] = McxMorningPark.PARKED
+        b.marks[PARKED_MARK + arm] = b.marks.getValue(McxMorningPark.MIGRATION)
+        note(b, arm, McxMorningPark.PARKED + if (holding) "; what it holds still closes by its own exit" else "")
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            runCatching { com.optionslab.app.ira.Autopilot.logMcxPark(arm, label(arm), holding) }
+            runCatching { Diag.record("mcx-arms", McxMorningPark.NOTICE) }
+            runCatching { Notifier.post(app, NOTICE_ID, Notifier.SCHEDULE, "SILVERM morning call switched off", McxMorningPark.NOTICE, "almanac") }
+        }
+        return true
     }
 
     private fun readPos(p: JSONObject): Pos = Pos(
@@ -180,6 +245,7 @@ object McxPaperArms {
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(200).forEach { put(it) } })
         o.put("signals", JSONObject().apply { b.signals.keys.sorted().takeLast(60).forEach { put(it, b.signals.getValue(it)) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
+        b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
         o.put("marks", JSONObject().apply { b.marks.forEach { (k, v) -> put(k, v) } })
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
@@ -189,16 +255,17 @@ object McxPaperArms {
     private fun publish(b: Book) {
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
         runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
-        _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
+        _view.value = View(b.armed.toMap(), b.status.shown({ _, x -> x == McxMorningPark.PARKED }), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
             b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } },
             b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) ->
-                l.map { com.optionslab.ira.Vetting.Trade((it.exitTime ?: it.entryTime).toLocalDate(), it.net ?: 0.0) } })
+                l.map { com.optionslab.ira.Vetting.Trade((it.exitTime ?: it.entryTime).toLocalDate(), it.net ?: 0.0) } },
+            b.marks.keys.filter { it.startsWith(PARKED_MARK) }.map { it.removePrefix(PARKED_MARK) }.toSet())
         // The trade manager's one call (10 Oct), every leg: SHADOW by default - it records only; the arms' own exits stay authoritative.
         runCatching {
             val now = McxMarket.now()
             val since = now.minusDays(2)
             val cal = runCatching { McxMarket.calendar() }.getOrDefault(McxSession.DEFAULT)
-            TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.isAfter(since) == true }.mapNotNull { managed(it, cal, now.toLocalDate()) })
+            TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.isAfter(since) == true }.mapNotNull { managed(it, cal, now.toLocalDate()) }, owner = "mcx")
         }
     }
 
@@ -258,6 +325,12 @@ object McxPaperArms {
             val b = book()
             if ((b.armed[arm] == true) == on) return@withLock "${label(arm)} is already ${if (on) "on" else "off"} (paper only)."
             b.armed[arm] = on
+            // Back on after the 14 Oct switch-off ([McxMorningPark]): no longer parked, its row no longer says why, and the
+            // change log's entry is closed (its Undo can no longer switch it on later, after Boss switched it off by hand).
+            if (on && b.marks.remove(PARKED_MARK + arm) != null) {
+                if (b.status[arm] == McxMorningPark.PARKED) b.status.remove(arm)
+                if (!com.optionslab.app.BuildConfig.GOLD) runCatching { com.optionslab.app.ira.Autopilot.mcxUnparkedByBoss(arm) }
+            }
             note(b, arm, if (on) "switched on, paper only (${McxArmRules.NOT_PROVEN}; ${record(arm)})" else "switched off" +
                 if (b.positions.any { it.arm == arm && it.open }) "; what it holds still closes by its own exits" else "")
             save(b)
@@ -303,6 +376,31 @@ object McxPaperArms {
         val w = windows(loaded())
         w.isNotEmpty() && McxMarket.isOpen() && w.any { minute in it }
     }.getOrDefault(false)
+
+    /** The arms switched on (the book as last read; read first when nothing has read it yet). */
+    fun armedNow(): List<String> = loaded().let { v -> ARMS.filter { v.isArmed(it) } }
+
+    /**
+     * A position is open in an arm's book (memory: the book as last read; false before it is read - the arms' positions are
+     * the paper account's too, which [McxMarket.heldNow] counts on its own).
+     */
+    fun holdsNow(): Boolean = _view.value.open.isNotEmpty()
+
+    /** [inEntryMinutes] from memory only (never the vault): false before the arms' book is read in this process. */
+    fun inEntryMinutesQuick(): Boolean = runCatching {
+        val v = _view.value
+        val now = McxMarket.now()
+        com.optionslab.ira.McxRest.inEntryMinutes(ARMS.filter { v.isArmed(it) }, now.hour * 60 + now.minute)
+    }.getOrDefault(false)
+
+    /**
+     * Battery (14 Oct): an armed arm is inside its own entry minutes now ([com.optionslab.ira.McxRest.entryMinutes]), so the
+     * MCX pass keeps its 15 s pace there; unknown counts as inside (the 15 s pace, as before).
+     */
+    fun inEntryMinutes(): Boolean = runCatching {
+        val now = McxMarket.now()
+        com.optionslab.ira.McxRest.inEntryMinutes(armedNow(), now.hour * 60 + now.minute)
+    }.getOrDefault(true)
 
     /** [wantsWatch] from memory only (never the vault): null when the arms' book has not been read in this process yet. */
     fun wantsWatchIfLoaded(): Boolean? {
@@ -373,19 +471,28 @@ object McxPaperArms {
 
     // ---- guards -----------------------------------------------------------------------------------------------------------
 
-    /** Whether the bot is stopped for today (Boss's stop, or the daily loss limit). Unknown counts as stopped. */
-    private suspend fun stoppedToday(): Boolean =
-        runCatching { Strategies.stoppedToday() }.getOrDefault(true) || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
+    /**
+     * Whether the bot is stopped for today for these arms (Boss's stop, the tile, Zerodha's loss limit; 21 Oct: with commodities on
+     * their own limits, their own loss limit and not the NSE paper one, [LossBreaker.mcxStopped]). Unknown counts as stopped.
+     */
+    private suspend fun stoppedToday(): Boolean = runCatching {
+        LossBreaker.mcxStopped(Strategies.stoppedWhy())
+    }.getOrDefault(true)
+
+    /** The MCX arms' refusal words while their own loss stop holds (else the bot's stop for today). */
+    private fun stoppedWords(): String? = if (runCatching { LossBreaker.mcxTrippedToday() }.getOrDefault(false))
+        com.optionslab.ira.SegmentLock.MCX_LOSS_REFUSAL else null
 
     /** Why a new entry in [c] ([buy]: a buy) may not go now, or null ([fresh]: the deciding price is under a minute old). */
     private suspend fun refusal(c: Paper.Contract, buy: Boolean, fresh: Boolean): String? = McxArmRules.entryRefusal(
         sessionOpen = McxMarket.isOpen(),
         kill = runCatching { AppSettings.load().guardKill }.getOrDefault(true),
         stoppedToday = stoppedToday(),
-        dayLock = runCatching { DayLockGuard.refusal(false) }.getOrNull(),
+        // 21 Oct: the commodities' own day lock while they keep their own (NSE's never stops them), else the shared paper lock.
+        dayLock = runCatching { DayLockGuard.mcxRefusal() }.getOrElse { "the day lock could not be checked" },
         expiry = McxGuard.entryRefusal(c, buy),
         freshPrice = fresh,
-    )
+    )?.let { r -> if (r == "stopped_for_today") stoppedWords()?.let { "$r: $it" } ?: r else r }
 
     private fun nowSec(): Long = Market.now().toEpochSecond()
 
@@ -495,7 +602,7 @@ object McxPaperArms {
         }
         val (fill, r) = paperOrder(c, if (p.side > 0) "SELL" else "BUY", "${label(p.arm)} · exit")
         if (fill == null) {
-            if (b.status[p.arm] != "exit_retry") { b.status[p.arm] = "exit_retry"; note(b, p.arm, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
+            if (!b.status.sameToday(p.arm, "exit_retry")) { b.status[p.arm] = "exit_retry"; note(b, p.arm, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
             return p.copy(stopOrderId = null)
         }
         val done = p.copy(exit = fill.price, exitTime = McxMarket.now().withNano(0), why = why, stopOrderId = null, charges = p.charges + chargesOf(r.orderId))
@@ -504,18 +611,27 @@ object McxPaperArms {
     }
 
     private fun closed(b: Book, p: Pos) {
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
         b.status[p.arm] = "closed ${p.symbol}: ${p.why}"
-        note(b, p.arm, "${p.symbol}: closed (${p.why}) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)))
+        note(b, p.arm, "%s: closed (%s) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6970 + ARMS.indexOf(p.arm).coerceAtLeast(0), Notifier.SELL, "${label(p.arm)} closed ${p.symbol} · Paper",
-            "Closed (${p.why}) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
+            "Closed (%s) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
     }
 
     private fun opened(b: Book, p: Pos, facts: String) {
         b.positions += p
+        // 18 Oct: its live path ([ArmLive]): the same contract and lot at Zerodha (MCX, NRML), long or short as on paper; its paper
+        // stop (when it has one) rests at Zerodha as a GTT - the one resting exit that outlives MCX's session.
+        runCatching {
+            val c = Paper.contractOf(p.symbol) ?: return@runCatching
+            val stop = p.stopOrderId?.let { id -> Paper.state.orders.firstOrNull { it.orderId == id }?.triggerPrice?.toDouble() }
+            ArmLive.entered(ArmLive.Ask(p.arm, mirrorRef(p), c, p.side, p.qty, p.entry, stop = stop))
+        }
+        runCatching { LiveRecorder.signal(label(p.arm), p.symbol, null, if (p.side > 0) "BUY" else "SELL", p.entry, paper = true, exchange = "MCX") }
         val verb = if (p.side > 0) "bought" else "sold"
-        decideLine(b, p.arm, "$verb ${p.symbol} @ %.2f ($facts) · paper".format(Locale.ENGLISH, p.entry))
+        decideLine(b, p.arm, "%s %s @ %.2f (%s) · paper".format(Locale.ENGLISH, verb, p.symbol, p.entry, facts))
         runCatching { Notifier.post(app, 6970 + ARMS.indexOf(p.arm).coerceAtLeast(0), Notifier.BUY, "${label(p.arm)} $verb ${p.symbol} · Paper",
-            "${verb.replaceFirstChar { it.uppercase() }} ${p.qty} @ %.2f ($facts). Paper only, not proven.".format(Locale.ENGLISH, p.entry), "almanac") }
+            "%s %d @ %.2f (%s). Paper only, not proven.".format(Locale.ENGLISH, verb.replaceFirstChar { it.uppercase() }, p.qty, p.entry, facts), "almanac") }
     }
 
     private fun decideLine(b: Book, arm: String, text: String) { b.status[arm] = text; note(b, arm, text) }
@@ -530,7 +646,7 @@ object McxPaperArms {
         val minute = minuteOf(now)
         if (minute < McxEveRules.RANGE_TO) {
             val s = "waiting for the 17:00-19:00 range"
-            if (b.status[arm] != s) { b.status[arm] = s; return true }
+            if (!b.status.sameToday(arm, s)) { b.status[arm] = s; return true }
             return false
         }
         val flatBy = McxEveRules.flatBy(window)
@@ -544,7 +660,7 @@ object McxPaperArms {
         if (sig == null) {
             if (minute > McxEveRules.ENTRY_UNTIL + 1) { decide(b, arm, key, "eve_no_break (range %.2f-%.2f)".format(Locale.ENGLISH, range.low, range.high)); return true }
             val s = "range %.2f-%.2f · watching for a break to 22:00".format(Locale.ENGLISH, range.low, range.high)
-            if (b.status[arm] != s) { b.status[arm] = s; return true }
+            if (!b.status.sameToday(arm, s)) { b.status[arm] = s; return true }
             return false
         }
         val facts = "break %s at %s close %.2f, range %.2f-%.2f".format(Locale.ENGLISH, if (sig.side > 0) "up" else "down", hhmm(sig.minute), sig.close, range.low, range.high)
@@ -695,7 +811,7 @@ object McxPaperArms {
         }
         if (notes.isNotEmpty()) {
             val s = notes.joinToString(" · ")
-            if (b.status[arm] != s) { b.status[arm] = s; changed = true }
+            if (!b.status.sameToday(arm, s)) { b.status[arm] = s; changed = true }
         }
         return changed
     }
@@ -730,7 +846,7 @@ object McxPaperArms {
         val minute = minuteOf(now)
         if (minute < McxUsSilverRules.ENTRY) {
             val s = "waiting for 09:05"
-            if (b.status[arm] != s) { b.status[arm] = s; return true }
+            if (!b.status.sameToday(arm, s)) { b.status[arm] = s; return true }
             return false
         }
         val near = McxInstruments.futures(McxMarket.contracts(), McxUsSilverRules.UNDERLYING, today, 2).firstOrNull()
@@ -748,21 +864,26 @@ object McxPaperArms {
         val prev = McxUsSilverRules.prevClose(today, cal) ?: run { decide(b, arm, key, "silver_no_previous_session"); return true }
         val ref = McxUsSilverRules.refAt(today)
         val si = UsCues.bars(McxUsSilverRules.US_SYMBOL)
+        // 21 Oct: USD/INR from its 5-minute bars, else its 1-hour ones (the research's own; the 5-minute series is empty at night).
         val fx = UsCues.bars(McxUsSilverRules.FX_SYMBOL)
+        val fxHourly = UsCues.bars(McxUsSilverRules.FX_SYMBOL, McxUsSilverRules.FX_HOURLY)
         val siNow = McxUsSilverRules.priceAt(si, McxUsSilverRules.epoch(ref))
         val siPrev = McxUsSilverRules.priceAt(si, McxUsSilverRules.epoch(prev))
-        val fxNow = McxUsSilverRules.priceAt(fx, McxUsSilverRules.epoch(ref))
-        val fxPrev = McxUsSilverRules.priceAt(fx, McxUsSilverRules.epoch(prev))
-        val missing = listOfNotNull(
-            "COMEX silver at 08:30".takeIf { siNow == null }, "COMEX silver at the ${hhmm(prev.hour * 60 + prev.minute)} close".takeIf { siPrev == null },
-            "USD/INR at 08:30".takeIf { fxNow == null }, "USD/INR at the ${hhmm(prev.hour * 60 + prev.minute)} close".takeIf { fxPrev == null })
-        val s = McxUsSilverRules.signal(siNow, siPrev, fxNow, fxPrev)
-        if (s == null) {
-            val why = if (si.isEmpty() || fx.isEmpty()) "the US price feed did not answer" else "not in the feed's history"
+        val fxNow = McxUsSilverRules.fxAt(fx, fxHourly, McxUsSilverRules.epoch(ref))
+        val fxPrev = McxUsSilverRules.fxAt(fx, fxHourly, McxUsSilverRules.epoch(prev))
+        val closeAt = hhmm(prev.hour * 60 + prev.minute)
+        val sig = McxUsSilverRules.researchSignal(siNow, siPrev, fxNow, fxPrev)
+        if (sig == null) {
+            val missing = listOfNotNull("COMEX silver at 08:30".takeIf { siNow == null }, "COMEX silver at the $closeAt close".takeIf { siPrev == null })
+            val why = if (si.isEmpty()) "the US price feed did not answer" else "not in the feed's history"
             decide(b, arm, key, "silver_no_us_price: ${missing.joinToString(", ").ifEmpty { "a price" }} not read ($why); no trade today"); return true
         }
-        val facts = "s %+.4f: COMEX silver %.3f to %.3f, USD/INR %.4f to %.4f since %s".format(Locale.ENGLISH, s, siPrev, siNow, fxPrev, fxNow,
-            prev.toLocalDate().toString() + " " + hhmm(prev.hour * 60 + prev.minute))
+        val s = sig.first
+        // USD/INR not read at all (both feeds): counted as no rupee move, as the research did - said plainly, never silently.
+        val fxWords = if (sig.second) "USD/INR not read (${if (fx.isEmpty() && fxHourly.isEmpty()) "the feed did not answer" else "not in the feed's history"}): " +
+            "counted as no move, as the research did" else "USD/INR %.4f to %.4f".format(Locale.ENGLISH, fxPrev, fxNow)
+        val facts = "s %+.4f: COMEX silver %.3f to %.3f, %s since %s".format(Locale.ENGLISH, s, siPrev, siNow, fxWords,
+            prev.toLocalDate().toString() + " " + closeAt)
         val side = McxUsSilverRules.side(s)
         if (side == 0) { decide(b, arm, key, "silver_flat ($facts)"); return true }
         val pc = McxMarket.paperContract(near)

@@ -1,0 +1,41 @@
+id: r87-atlas
+title: 'R87 candle anatomy atlas: every candle shape x context x next 1-50 candles (NIFTY, BANKNIFTY, SENSEX 1m/5m/15m)'
+family: patterns-indicators
+date: '2026-10-19'
+doc: research/HUNT_R87_CANDLE_ANATOMY.md
+hypothesis: Some candle shapes, two/three-candle patterns, big-player footprints or data-driven body/wick cells, alone or
+  in one of 30 contexts, move the index over the next 5 candles differently from matched candles (same index, timeframe, time
+  of day, trend, volatility regime, colour), BH q < 0.10 and the same sign in >= 3 of 4 design years, and keep it in the locked
+  holdout.
+data_version: 'Dhan v2 direct (lake not reachable): index 1-minute NIFTY/BANKNIFTY/SENSEX/INDIAVIX 4 Aug 2021 - 16 Oct 2026
+  (weekend mock sessions dropped, A2); NIFTY ATM option pair for parts of 2021-2026; index futures 29 Jul - 16 Oct 2026; cache
+  ~/.cache/iraalgo/r87 (not committed)'
+period:
+  design: 4 Aug 2021 - 14 Oct 2025 (folds 2021-22, 2023, 2024, 2025)
+  holdout: 15 Oct 2025 - 16 Oct 2026, read once (atlas)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+features:
+- 'signal source: the index candle (spot)'
+- body/wick %, close location, colour, range vs ATR, ATM option activity vs usual (proxy, NIFTY only)
+- trend over prior 50, day high/low, prior-day high/low, opening range, VWAP, gap, time, ATM OI shift/tilt, prior-day value
+  area, expiry, volatility regime
+model_or_rule: Matched-baseline effect on the 5-candle forward move (ATR), day-clustered z, BH within P1 / P2 / P3
+settings: research/hunt/r87_candle_anatomy/ (candles.py, context.py, outcome.py, stats.py, atlas.py); PREREG.md + amendments
+  A0-A3
+prereg: research/hunt/r87_candle_anatomy/PREREG.md
+variants_tried: 4771
+results:
+  summary: 'Design: P1 349 tested, 18 BH pass (17 with 3-of-4 years; 14 on 1m); P2 4,049 tested, 0 pass (best q 0.31); P3
+    373, 0 pass. Holdout: P1 341 / P2 2,326 / P3 109 tested, 0 pass; 2 of 17 design findings held (NIFTY 1m stop run below
+    the day low +0.195 ATR, n 1,702, +1.8 pts; SENSEX 1m green marubozu +0.076 ATR, n 5,851, +1.6 pts), both below an option
+    round trip (NIFTY 1.87 pts, SENSEX 6.41). After any shape the index went up over 5 candles 43-62% (92% of 234 5m/15m cells
+    within 45-55%) vs ~51% matched. Wick levels are broken as often as any level at the same distance (NIFTY 5m big tail 59%
+    vs 57%, n 3,314). Activity proxy vs true futures volume: correlation 0.07-0.15.'
+  costs: none (index moves in ATR / points); option cost per round trip in index points for comparison
+holdout_read: true
+verdict: rejected
+notes: 'Knowledge only: candle shapes carry no tradeable direction edge on the indices; knowledge pack research/hunt/r87_candle_anatomy/knowledge/.
+  First atlas run on uncleaned data discarded (A2). MCX reused from R85.'

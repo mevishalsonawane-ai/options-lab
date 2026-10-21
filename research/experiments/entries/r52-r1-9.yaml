@@ -1,0 +1,38 @@
+id: r52-r1-9
+title: 'R52 re-test on Nov 2024+: R1-9 India VIX spike -> CE'
+family: outside-strategies
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R1-9 (old verdict: Too few: NIFTY chg15 18 tr in 5 yrs +44/day, rand p 0.04; hold 7 tr
+  +13. BN 14 tr +51 / -26) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small
+  design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: India VIX + index'
+model_or_rule: '{''T'': ''0916'', ''exit'': ''EOD'', ''trig'': ''chg15'', ''unds'': [''NIFTY'', ''BANKNIFTY'']} | ITM1/near
+  | exits default | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design original: 14 trades, win 29%, net Rs -9,077 (Rs -27/day), worst day Rs -10,846, max DD Rs -12,276, p 1.000
+    (coin-flip p 0.260); walk-forward Rs -3,161. Re-tune pick g03 ({''trig'': ''chg10'', ''T'': ''0945'', ''exit'': ''EOD'',
+    ''unds'': (''NIFTY'', ''BANKNIFTY'')} · ITM1/near · exits default): design 28 trades, win 64%, net Rs +52,864 (Rs +157/day),
+    worst day Rs -15,914, max DD Rs -18,531, p 1.000 (coin-flip p 0.016); walk-forward Rs +59,261. FINAL original: 4 trades,
+    win 50%, net Rs -1,881 (Rs -14/day), worst day Rs -3,709, max DD Rs -3,709, p 1.000 (coin-flip p 1.000), q 1.00 -> too
+    few trades to judge. FINAL pick: 10 trades, win 50%, net Rs -1,911 (Rs -14/day), worst day Rs -14,596, max DD Rs -17,438,
+    p 1.000 (coin-flip p 0.541), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: India VIX + index. Why this original: original = R1''s frozen holdout pick per index (HUNT_R1_INTERNET.md
+  results table; hunt/r1/design.py frozen.json): both chg15 (yesterday''s VIX close +15%) CE at 09:16, EOD. Gates: final net
+  > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

@@ -1,0 +1,284 @@
+[
+ {
+  "design_15": {
+   "trades": 160,
+   "net": -6289.039776761845,
+   "win": 0.39375,
+   "top5_removed": -22808.713838341704,
+   "worst_day": -3024.6778091619617,
+   "max_dd": 18333.92051635091,
+   "months_below_13k": 0,
+   "avg": -39.30649860476153,
+   "stale_exits": 0,
+   "why": {
+    "time": 52,
+    "und_stop": 47,
+    "lock": 32,
+    "stop": 29
+   }
+  },
+  "design_25": {
+   "trades": 160,
+   "net": -3909.6324267611135,
+   "win": 0.41875,
+   "top5_removed": -20429.306488340968,
+   "worst_day": -3519.922827406987,
+   "max_dd": 14721.508551639541,
+   "months_below_13k": 0,
+   "avg": -24.43520266725696,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 56,
+    "time": 56,
+    "lock": 35,
+    "stop": 13
+   }
+  },
+  "wf_net": -2931.7860536494863,
+  "wf_trades": 121,
+  "wf_folds": [
+   {
+    "fold": "2025-02-01..2025-04-30",
+    "stop": 0.25,
+    "net": -9938.449533326242,
+    "trades": 41
+   },
+   {
+    "fold": "2025-05-01..2025-07-31",
+    "stop": 0.25,
+    "net": 10738.639573374734,
+    "trades": 47
+   },
+   {
+    "fold": "2025-08-01..2025-10-14",
+    "stop": 0.25,
+    "net": -3731.9760936979783,
+    "trades": 33
+   }
+  ],
+  "frozen_stop": 0.25,
+  "rule": {
+   "id": "R87-1",
+   "und": "NIFTY",
+   "tf": 5,
+   "family": "three_white",
+   "cond": "",
+   "src": "P1",
+   "long": true,
+   "eff": 0.173324,
+   "z": 3.19701,
+   "q": 0.0403847,
+   "n": 893,
+   "fold_same": 4,
+   "rw_n": 217,
+   "dir_pts": 3.79954,
+   "cost_pts": 1.8719950982543347,
+   "screen": "passes every screen"
+  },
+  "signals": 197,
+  "twin_mean": -13308.438601954978,
+  "twin_p": 0.23552894211576847,
+  "real_check": {
+   "n": 21,
+   "model_net": -19311.157772534138,
+   "real_net": -26640.845193749996
+  },
+  "pricing": "modelled premium (PREREG A1)",
+  "bh_q": 0.3532934131736527,
+  "design_pass": false,
+  "fail_reasons": [
+   "walk-forward net <= 0",
+   "not better than random entries (twin p or BH q >= 0.10)",
+   "carried by its 5 best trades"
+  ]
+ },
+ {
+  "design_15": {
+   "trades": 270,
+   "net": -25063.91333555372,
+   "win": 0.2962962962962963,
+   "top5_removed": -56524.249257919466,
+   "worst_day": -4935.247892234565,
+   "max_dd": 28790.953346737777,
+   "months_below_13k": 0,
+   "avg": -92.82930865019897,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 122,
+    "lock": 60,
+    "stop": 60,
+    "time": 24,
+    "squareoff": 4
+   }
+  },
+  "design_25": {
+   "trades": 269,
+   "net": -30836.333934115464,
+   "win": 0.30855018587360594,
+   "top5_removed": -63019.15756390078,
+   "worst_day": -5139.774911348828,
+   "max_dd": 34563.37394529953,
+   "months_below_13k": 1,
+   "avg": -114.63321165098685,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 151,
+    "lock": 63,
+    "time": 27,
+    "stop": 24,
+    "squareoff": 4
+   }
+  },
+  "wf_net": -28993.051150921354,
+  "wf_trades": 206,
+  "wf_folds": [
+   {
+    "fold": "2025-02-01..2025-04-30",
+    "stop": 0.25,
+    "net": -26845.74448906566,
+    "trades": 75
+   },
+   {
+    "fold": "2025-05-01..2025-07-31",
+    "stop": 0.15,
+    "net": 11020.749584352581,
+    "trades": 67
+   },
+   {
+    "fold": "2025-08-01..2025-10-14",
+    "stop": 0.15,
+    "net": -13168.056246208278,
+    "trades": 64
+   }
+  ],
+  "frozen_stop": 0.15,
+  "rule": {
+   "id": "R87-2",
+   "und": "NIFTY",
+   "tf": 15,
+   "family": "fp_stop_run_up",
+   "cond": "",
+   "src": "P1",
+   "long": true,
+   "eff": 0.129408,
+   "z": 3.01093,
+   "q": 0.0649265,
+   "n": 1666,
+   "fold_same": 4,
+   "rw_n": 326,
+   "dir_pts": 8.38206,
+   "cost_pts": 1.8719950982543347,
+   "screen": "passes every screen"
+  },
+  "signals": 339,
+  "twin_mean": -25975.598206613977,
+  "twin_p": 0.48902195608782434,
+  "real_check": {
+   "n": 25,
+   "model_net": -11146.177951046962,
+   "real_net": -19988.206593406234
+  },
+  "pricing": "modelled premium (PREREG A1)",
+  "bh_q": 0.48902195608782434,
+  "design_pass": false,
+  "fail_reasons": [
+   "walk-forward net <= 0",
+   "not better than random entries (twin p or BH q >= 0.10)",
+   "carried by its 5 best trades"
+  ]
+ },
+ {
+  "design_15": {
+   "trades": 71,
+   "net": 9732.292281405451,
+   "win": 0.4225352112676056,
+   "top5_removed": -7361.64520586377,
+   "worst_day": -2433.130283967399,
+   "max_dd": 16986.548076768595,
+   "months_below_13k": 0,
+   "avg": 137.07453917472466,
+   "stale_exits": 0,
+   "why": {
+    "lock": 23,
+    "und_stop": 22,
+    "stop": 14,
+    "time": 9,
+    "squareoff": 3
+   }
+  },
+  "design_25": {
+   "trades": 71,
+   "net": 14372.85488639546,
+   "win": 0.4788732394366197,
+   "top5_removed": -2721.082600873758,
+   "worst_day": -2585.1366457391987,
+   "max_dd": 17220.752631964173,
+   "months_below_13k": 0,
+   "avg": 202.4345758647248,
+   "stale_exits": 0,
+   "why": {
+    "und_stop": 27,
+    "lock": 26,
+    "time": 10,
+    "stop": 5,
+    "squareoff": 3
+   }
+  },
+  "wf_net": -1923.4473633068746,
+  "wf_trades": 51,
+  "wf_folds": [
+   {
+    "fold": "2025-02-01..2025-04-30",
+    "stop": 0.25,
+    "net": 3437.3535270973466,
+    "trades": 17
+   },
+   {
+    "fold": "2025-05-01..2025-07-31",
+    "stop": 0.25,
+    "net": -11406.871622065359,
+    "trades": 22
+   },
+   {
+    "fold": "2025-08-01..2025-10-14",
+    "stop": 0.25,
+    "net": 6046.070731661138,
+    "trades": 12
+   }
+  ],
+  "frozen_stop": 0.25,
+  "rule": {
+   "id": "R87-3",
+   "und": "SENSEX",
+   "tf": 15,
+   "family": "gravestone_doji",
+   "cond": "",
+   "src": "P1",
+   "long": false,
+   "eff": -0.29481,
+   "z": -2.81938,
+   "q": 0.0932921,
+   "n": 205,
+   "fold_same": 3,
+   "rw_n": 70,
+   "dir_pts": 48.0124,
+   "cost_pts": 6.4064299294658005,
+   "screen": "passes every screen"
+  },
+  "signals": 73,
+  "twin_mean": -4192.192143427119,
+  "twin_p": 0.02594810379241517,
+  "real_check": {
+   "n": 0,
+   "model_net": 0.0,
+   "real_net": 0.0
+  },
+  "pricing": "modelled premium (PREREG A1)",
+  "bh_q": 0.07784431137724551,
+  "design_pass": false,
+  "fail_reasons": [
+   "walk-forward net <= 0",
+   "carried by its 5 best trades"
+  ]
+ }
+]

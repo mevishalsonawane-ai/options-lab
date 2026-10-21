@@ -68,7 +68,7 @@ object AutomationSupport {
 
     /** Every test clock back to the real one. */
     fun realClocks() {
-        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; OrbArms.testHeroBars = null; OrbArms.testOptionBars = null; ExpirySquareOff.testNow = null; PineAuto.testNow = null; PineAuto.testBars = null
+        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; OrbArms.testHeroBars = null; OrbArms.testOptionBars = null; OrbArms.testTwinHolders = null; ExpirySquareOff.testNow = null; PineAuto.testNow = null; PineAuto.testBars = null
     }
 
     fun clearAlerts() = Alerts.queue.value.forEach { Alerts.dismiss(it.id) }
@@ -95,7 +95,8 @@ object AutomationSupport {
      */
     fun orbState(context: Context, o: JSONObject) {
         if (!o.has("migrated")) o.put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE)
-            .put(com.optionslab.engine.orb.LiquidityRules.MIDCP_JOIN).put(com.optionslab.engine.orb.ParkedArms.MIGRATION))
+            .put(com.optionslab.engine.orb.LiquidityRules.MIDCP_JOIN).put(com.optionslab.engine.orb.ParkedArms.MIGRATION)
+            .put(com.optionslab.engine.orb.FamilyPark.MIGRATION))
         OrbArms.wipe()
         Vault.writeFile(File(context.filesDir, "orb.vault"), o.toString().toByteArray(Charsets.UTF_8))
     }
@@ -121,8 +122,9 @@ object AutomationSupport {
 
     /** A saved-strategy definition: one leg per (position, CE/PE) at the 24500 strike, weekly expiry, a 30-point stop. */
     fun strategy(name: String = "Test basket", vararg legs: Pair<com.optionslab.engine.strategy.Position, com.optionslab.engine.strategy.OptionType>,
-                 lots: Int = 1, sl: Double? = 30.0) = com.optionslab.engine.strategy.StrategyDef(
-        name = name, underlying = "NIFTY", underlyingExchange = "NSE_INDEX",
+                 lots: Int = 1, sl: Double? = 30.0, product: com.optionslab.engine.strategy.Product = com.optionslab.engine.strategy.Product.NRML) =
+        com.optionslab.engine.strategy.StrategyDef(
+        name = name, underlying = "NIFTY", underlyingExchange = "NSE_INDEX", product = product,
         entryTime = LocalTime.of(9, 20), exitTime = LocalTime.of(15, 15),
         legs = legs.mapIndexed { i, (pos, t) ->
             com.optionslab.engine.strategy.LegDef(i + 1, com.optionslab.engine.strategy.Segment.OPTIONS, pos, lots, t,

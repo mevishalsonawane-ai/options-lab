@@ -1,0 +1,43 @@
+id: r52-h37-6
+title: 'R52 re-test on Nov 2024+: H37-6 Gann time cycles (daily)'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H37-6 (old verdict: Daily cycles WF 2/3 yrs +13,886 on 41 tr, Holm 0.97; intraday WF
+  -262k/-362k; R4-11/12 lose both periods) makes money net of real costs on the recent market (Nov 2024+) at its original
+  setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''k'': 2, ''unds'': [''NIFTY'', ''BANKNIFTY'', ''FINNIFTY'', ''MIDCPNIFTY'', ''SENSEX'']} | ITM1/near | exits
+  stop_pts=10,tgt_pts=15,sig_levels=False | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 18
+results:
+  summary: 'Design original: 20 trades, win 50%, net Rs -371 (Rs -1/day), worst day Rs -3,980, max DD Rs -5,309, p 0.215 (coin-flip
+    p 0.189); walk-forward Rs +25. Re-tune pick g01 ({''unds'': (''NIFTY'', ''BANKNIFTY'', ''FINNIFTY'', ''MIDCPNIFTY'', ''SENSEX''),
+    ''k'': 4} · ITM1/near · exits stop_pts=10,tgt_pts=15,sig_levels=False): design 94 trades, win 49%, net Rs +11,709 (Rs
+    +35/day), worst day Rs -3,430, max DD Rs -6,748, p 0.003 (coin-flip p 0.002); walk-forward Rs +5,166. FINAL original:
+    5 trades, win 60%, net Rs -221 (Rs -2/day), worst day Rs -1,485, max DD Rs -1,485, p 0.393 (coin-flip p 0.371), q 1.00
+    -> too few trades to judge. FINAL pick: 36 trades, win 33%, net Rs -8,099 (Rs -61/day), worst day Rs -2,966, max DD Rs
+    -8,673, p 0.413 (coin-flip p 0.687), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: WF family GTC_D (HUNT_H37.md): no frozen variant: the per-year walk-forward
+  picks were not recorded (scratch wf.csv deleted) and rebuilding them needs pre-2025 P&L; as OBUY_GA-1, the original is the
+  study''s FIRST setting in its own loop order, on every index the family''s walk-forward chose from; R52''s re-tune walk-forward
+  over the grid plays the original WF''s role (all 5 indices, k2, P15_10). Gates: final net > 0, p < 0.05, q <= 0.10 (BH over
+  every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

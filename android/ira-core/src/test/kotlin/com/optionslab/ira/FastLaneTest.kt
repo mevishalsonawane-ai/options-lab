@@ -87,7 +87,20 @@ class FastLaneTest {
         assertTrue(FastLane.plan(emptyList(), r, g, t0, held, all).idle)
         assertTrue(FastLane.plan(listOf(Ev(9, t0, null)), r, g, t0, held.copy(holding = false), all).lanes.isEmpty())
         // A paper holding without a stream price: the stream lane would read the candle feed, so it waits for the 15-second pass.
-        assertTrue(FastLane.plan(listOf(Ev(9, t0, null)), r, g, t0, held.copy(covered = false, liveHolding = true), all).lanes.isEmpty())
+        assertTrue(FastLane.plan(listOf(Ev(9, t0, null)), r, g, t0, held.copy(covered = false), all).lanes.isEmpty())
+    }
+
+    /** 18 Oct, review: one paper holding without a stream price no longer switches the live (real-money) exits' lane off. */
+    @Test fun anUnstreamedPaperHoldingKeepsTheLiveLaneButNotItsPaperLook() {
+        val r = FastLane.Rolls(); val g = FastLane.Debounce()
+        val st = held.copy(covered = false, liveHolding = true)
+        assertEquals(setOf(Lane.LIVE), FastLane.plan(listOf(Ev(9, t0, null)), r, g, t0, st, all).lanes, "the live lane alone, not the stream lane")
+        assertFalse(FastLane.liveMarksPaper(st), "its look that marks paper waits for the stream")
+        assertTrue(FastLane.liveMarksPaper(st.copy(covered = true)), "streamed paper: it runs")
+        assertTrue(FastLane.liveMarksPaper(st.copy(holding = false)), "nothing on paper: it runs")
+        assertTrue(FastLane.liveMarksPaper(st.copy(holding = false, covered = true)))
+        // Nothing at Zerodha: no live lane, covered or not.
+        assertTrue(FastLane.plan(listOf(Ev(9, t0, null)), FastLane.Rolls(), FastLane.Debounce(), t0, st.copy(liveHolding = false), all).lanes.isEmpty())
     }
 
     @Test fun liveHoldingsRunTheLiveLaneEveryTwoSeconds() {

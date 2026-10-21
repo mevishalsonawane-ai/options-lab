@@ -68,6 +68,18 @@ object AccountGuard {
         return held != 0 && (held > 0) != (signed > 0) && abs(signed) <= abs(held)
     }
 
+    /**
+     * 20 Oct, review: whether a drawdown below the peak is NOT explained by today's trading (today's P&L is less than half of
+     * it): most likely money taken out of the account (or a loss after the last look yesterday), which this guard cannot tell
+     * apart. Only words: the refusal then says how to restart the peak; the peak is never lowered by itself (that would hide a
+     * real drawdown).
+     */
+    fun drawdownNotFromToday(a: Account): Boolean {
+        if (!(a.peakEquity > 0 && a.equity.isFinite() && a.dayPnl.isFinite())) return false
+        val dd = a.peakEquity - a.equity
+        return dd > 0 && a.dayPnl > -dd / 2
+    }
+
     /** Every reason the order is refused; empty when it may go. */
     fun refusals(o: Order, a: Account, l: Limits): List<String> {
         if (l.killSwitch) return listOf("The kill switch is on: no orders at all until it is cleared.")

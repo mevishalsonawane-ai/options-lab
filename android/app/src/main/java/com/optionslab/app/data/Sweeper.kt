@@ -19,11 +19,17 @@ import java.util.Locale
  *    price (one order: never a second sell in flight). Said as "Lock missed at X, sold at Y". The bots' own checks (Pine,
  *    Solo, Liquidity, ORB, protections, Jarvis's trades) run in the same loop for positions with no resting order.
  *  - 6, the live backup: a GTT beside every bot's resting SL at Zerodha ([LiveBackup]), moved up with it, never down;
- *    when either fires the other comes out; deleted when the position is closed. Placing or moving one needs Live on
- *    ([OrbArms.liveNow]); a failed GTT is said plainly and alerted, and the SL itself always stays.
+ *    when either fires the other comes out; deleted when the position is closed. 18 Oct (review of the arms' live path):
+ *    NO LONGER PLACED. With the phone dead, the SL triggered and resting at its limit, the GTT firing at that limit puts in a
+ *    second sell; a bounce back to the limit then fills both and turns the long into a short - the one state that must never
+ *    exist. The SL alone rests at Zerodha now (the app's own check sells a price through its limit; Zerodha's MIS square-off
+ *    is the dead-phone backstop). A backup still active beside a working SL (placed by an older build) is deleted here.
  *  - 8, the no-price failsafe: Zerodha prices are read through its REST quote (never the stream alone); no price for any
  *    open position for over two minutes is a loud warning, a notice and Jarvis's spoken safety warning
- *    ("Positions not protected: no prices since HH:MM").
+ *    ("Positions not protected: no prices since HH:MM"). 15 Oct: a position is judged only while its own market trades
+ *    (NSE 09:15 to its close on a trading day, MCX in its own hours; [PriceWatch.inSession]): from 09:00 the MCX pass ran
+ *    this with an overnight NSE paper position, which has no price before 09:15, and Boss was told "Positions not
+ *    protected" before the open. A book not read is judged on the positions it last showed, with no price.
  *
  * Nothing here opens a position, and nothing live is ever sent for a paper position.
  */
@@ -36,24 +42,47 @@ object Sweeper {
     /** The bots' stops that get a GTT backup (the ORB arms and Liquidity, the Pine scripts). */
     private fun backed(tag: String) = tag == "iraorb" || tag == "irapine"
 
-    @Volatile private var openSince: Long? = null
-    @Volatile private var lastPrice: Long? = null
-    @Volatile private var alertedFor: Long? = null
+    /** The no-price failsafe's memory (when the positions were first seen in their session, the last price, what was said). */
+    @Volatile private var watch = PriceWatch.Failsafe()
+    /**
+     * The positions each book showed when last read (15 Oct). A book that cannot be read this pass is judged on them, with
+     * no price: a read that fails once is within the two minutes (no false alarm), a silence that goes on is still said.
+     * Nothing read yet (just started): nothing to judge.
+     */
+    @Volatile private var lastPaper: List<PriceWatch.Held> = emptyList()
+    @Volatile private var lastLive: List<PriceWatch.Held> = emptyList()
+
+    /** Tests: the failsafe starts afresh. */
+    internal fun resetForTest() { watch = PriceWatch.Failsafe(); lastPaper = emptyList(); lastLive = emptyList() }
+
+    /** (holding, priced) over [held] at [at]: only the positions whose own market trades then ([PriceWatch.judge]). */
+    internal fun judge(held: List<PriceWatch.Held>, quoted: Set<String>, at: java.time.LocalDateTime, all: Boolean = false): Pair<Boolean, Boolean> =
+        PriceWatch.judge(held, quoted, at, { d, minute -> Market.isOpenAt(d, minute) },
+            runCatching { McxMarket.calendar() }.getOrDefault(com.optionslab.engine.mcx.McxSession.DEFAULT), all)
 
     /** One sweep; never throws. */
     suspend fun run(context: Context) {
         if (!mutex.tryLock()) return            // one sweep at a time: a sweep already running does this one's work
         try {
-            val now = System.currentTimeMillis()
-            var holding = false
-            var priced = false
-            runCatching { Paper.sweepMissedStops() }.getOrNull()?.let { s ->
-                holding = holding || s.holding
-                priced = priced || (s.holding && s.priced)
-                s.swept.forEach { said(context, MissedLock.say(it.trigger, it.price, it.symbol), "Paper", it.orderId) }
-            }
-            if (Broker.loggedIn) runCatching { live(context) }.getOrNull()?.let { (h, p) -> holding = holding || h; priced = priced || p }
-            failsafe(context, holding, priced, now)
+            // The app's clock (the tests' too): the session and the two minutes are judged on the same one.
+            val at = Market.now()
+            val t = at.toLocalDateTime()
+            // Each book's (holding, priced) over its positions in their session.
+            val books = ArrayList<Pair<Boolean, Boolean>>(2)
+            val paper = runCatching { Paper.sweepMissedStops() }.getOrNull()
+            if (paper != null) {
+                lastPaper = paper.held
+                books += judge(paper.held, paper.quoted, t)
+                paper.swept.forEach { said(context, MissedLock.say(it.trigger, it.price, it.symbol), "Paper", it.orderId) }
+            } else books += judge(lastPaper, emptySet(), t)
+            if (Broker.loggedIn) {
+                val l = runCatching { live(context) }.getOrNull()
+                if (l != null) { lastLive = l.first; books += judge(l.first, l.second, t, all = true) }
+                else books += judge(lastLive, emptySet(), t, all = true)
+            } else lastLive = emptyList()
+            // Every book holding in its session must be priced: a priced paper book never hides a live one with no price.
+            val (holding, priced) = PriceWatch.combine(books)
+            failsafe(context, holding, priced, at.toInstant().toEpochMilli())
         } finally { mutex.unlock() }
     }
 
@@ -67,14 +96,21 @@ object Sweeper {
     /** The exchanges swept at Zerodha: NFO, and MCX (9 Oct: its positions are watched in its own hours too). */
     private val SWEPT = setOf("NFO", "MCX")
 
-    /** Zerodha: the sweeper and the GTT backups. (holding, priced). */
-    private suspend fun live(context: Context): Pair<Boolean, Boolean> {
-        val held = runCatching { Broker.positionBook().net.filter { it.exchange in SWEPT && it.qty > 0 } }.getOrNull() ?: return false to false
-        val orders = runCatching { Broker.orders() }.getOrNull() ?: return held.isNotEmpty() to false
-        val stops = orders.filter { it.working && it.side == "SELL" && it.exchange in SWEPT && ours(it.tag) && (it.type == "SL" || it.type == "SL-M") }
+    /**
+     * Zerodha: the sweeper and the GTT backups. The positions held and the keys priced this pass; null when the position book
+     * could not be read. 15 Oct: an order book not read no longer counts as "no prices" (a false alarm): the positions are
+     * still priced, and only the sweep and the backups wait for the next pass.
+     */
+    private suspend fun live(context: Context): Pair<List<PriceWatch.Held>, Set<String>>? {
+        // Long and short alike (18 Oct, review): a sold leg at Zerodha with no prices was never warned of (it was qty > 0, while
+        // the paper side counts every quantity != 0). The sweep below still turns only SELL stops (a long's) into sells.
+        val held = runCatching { Broker.positionBook().net.filter { it.exchange in SWEPT && it.qty != 0 } }.getOrNull() ?: return null
+        val orders = runCatching { Broker.orders() }.getOrNull()
+        val stops = orders.orEmpty().filter { it.working && it.side == "SELL" && it.exchange in SWEPT && ours(it.tag) && (it.type == "SL" || it.type == "SL-M") }
         val keys = (held.map { "${it.exchange}:${it.symbol}" } + stops.map { "${it.exchange}:${it.symbol}" }).distinct()
-        // REST quotes, whatever the stream says (item 8): a silent stream never leaves the stops unread.
-        val ltp = if (keys.isEmpty()) emptyMap() else runCatching { Broker.quotes(keys) }.getOrDefault(emptyMap())
+        // REST quotes, whatever the stream says (item 8): a silent stream never leaves the stops unread. 18 Oct: a tick only
+        // while 2 s fresh ([Broker.stopQuotes]); [Broker.quotes] answered from one up to 5 s old.
+        val ltp = if (keys.isEmpty()) emptyMap() else runCatching { Broker.stopQuotes(keys) }.getOrDefault(emptyMap())
             .mapValues { it.value.last }.filterValues { it > 0 }
         // Item 7: a resting stop the price is already through is turned into a sell at a protected limit (the same order).
         for (so in stops) {
@@ -87,8 +123,8 @@ object Sweeper {
             else com.optionslab.app.work.Alerts.post("Zerodha: ${so.symbol} is through its stop %.2f at %.2f, and the stop could not be turned into a sell (%s). Close it in Trade."
                 .format(Locale.ENGLISH, so.trigger, px, r.exceptionOrNull()?.message?.take(160) ?: "an error"), com.optionslab.app.work.Alerts.Kind.ERROR, "Missed lock", throttle = true)
         }
-        runCatching { backups(orders, stops.filter { backed(it.tag) }, ltp) }
-        return held.isNotEmpty() to (held.isNotEmpty() && held.all { ltp.containsKey("${it.exchange}:${it.symbol}") })
+        if (orders != null) runCatching { backups(orders, stops.filter { backed(it.tag) }, ltp) }
+        return held.map { PriceWatch.Held("${it.exchange}:${it.symbol}", it.exchange) } to ltp.keys
     }
 
     // ---- item 6: the GTT beside each bot's SL ------------------------------------------------------------------------
@@ -116,23 +152,19 @@ object Sweeper {
                     map.remove(sl)
                 }
                 LiveBackup.Step.DROP_GTT -> { runCatching { Broker.deleteGtt(gid) }; map.remove(sl) }
-                LiveBackup.Step.KEEP -> if (g.status.lowercase() != "active" && so?.working != true) map.remove(sl)
+                LiveBackup.Step.KEEP -> when {
+                    g.status.lowercase() != "active" && so?.working != true -> map.remove(sl)
+                    // 18 Oct: an older build's backup beside a working SL - two resting sells: the GTT comes out, the SL stays.
+                    g.status.lowercase() == "active" && so?.working == true -> {
+                        if (runCatching { Broker.deleteGtt(gid) }.isSuccess) {
+                            map.remove(sl)
+                            runCatching { Diag.record("risk", "Zerodha: the backup GTT beside the stop on ${g.symbol} was deleted (two resting sells could both fill); the stop stays") }
+                        }
+                    }
+                }
             }
         }
-        // Placed or moved up only with Live on (the live gates); a paper position never has one.
-        if (OrbArms.liveNow()) for (so in stops) {
-            val spec = runCatching { Broker.spec(so.exchange, so.symbol) }.getOrNull() ?: continue
-            val want = LiveBackup.trigger(so.trigger, so.price.takeIf { so.type == "SL" }, spec.tickSize) ?: continue
-            val old = map[so.id]?.let { id -> gtts.firstOrNull { it.id == id } }
-            if (!LiveBackup.moves(old?.triggers?.firstOrNull(), want)) continue
-            val px = ltp["${so.exchange}:${so.symbol}"] ?: continue
-            val (gtt, why) = com.optionslab.engine.Kite.protect(spec, so.product.ifBlank { "MIS" }, so.qty - so.filled, px, want, null)
-            if (gtt == null) { failed(so.symbol, want, why.joinToString("; ")); continue }
-            // Moved: the old one out first, so two GTTs never sell the same position.
-            old?.let { o -> runCatching { Broker.deleteGtt(o.id) }; map.remove(so.id) }
-            val id = runCatching { Broker.placeGtt(gtt) }
-            id.getOrNull()?.let { map[so.id] = it } ?: failed(so.symbol, want, id.exceptionOrNull()?.message?.take(160) ?: "an error")
-        }
+        // 18 Oct: no backup GTT is placed beside a stop any more (see item 6 above): the stop alone rests at Zerodha.
         keep(map)
     }
 
@@ -144,14 +176,9 @@ object Sweeper {
 
     // ---- item 8: no prices --------------------------------------------------------------------------------------------
 
+    /** Said once per silence ([PriceWatch.Failsafe.look]). */
     private fun failsafe(context: Context, holding: Boolean, priced: Boolean, now: Long) {
-        if (!holding) { openSince = null; alertedFor = null; return }
-        val since = openSince ?: now.also { openSince = it }
-        if (priced) { lastPrice = now; alertedFor = null; return }
-        if (!PriceWatch.alert(lastPrice, since, now)) return
-        val from = maxOf(lastPrice ?: since, since)
-        if (alertedFor == from) return                 // said once for this silence
-        alertedFor = from
+        val from = watch.look(holding, priced, now) ?: return
         val text = PriceWatch.say(java.time.Instant.ofEpochMilli(from).atZone(com.optionslab.engine.IST).toLocalTime())
         runCatching { Diag.record("risk", text) }
         runCatching { Notifier.post(context, 2043, Notifier.RISK, "Positions not protected", "$text. Check them in Trade.", "trade") }

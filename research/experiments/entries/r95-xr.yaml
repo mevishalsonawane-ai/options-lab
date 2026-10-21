@@ -1,0 +1,72 @@
+id: r95-xr
+title: 'R95 XR: Mo3ty CCI Signals (CCI of hlc3 crossing back inside the levels), as B, exit at a fixed 2R target'
+family: patterns-indicators
+date: '2026-10-21'
+doc: research/HUNT_R95_CCI_SIGNALS.md
+hypothesis: 'Pre-registered: buying the 1-ITM call on a CCI BUY (the put on a SELL), signal on the underlying (as B, exit
+  at a fixed 2R target; entry at the next minute''s open, 09:30-14:45, stop beyond the stretch''s extreme +/- 1 tick, flat
+  15:15 / 15:05 expiry), on 3m / 5m / 15m / 60m bars, beats 1000 after-trigger random-entry twins after real costs (p_emp
+  < 0.05, BH q < 0.10 over 328 cells), >= 40 trades, positive in 3 of 4 folds, without the top 5, worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): index_1m + options_rolling_1m WEEK (R51 loader via
+  R89 stores, clean + stale step) to 19 Oct 2026; MCX MONTH option books GOLDM, SILVERM, CRUDEOILM, NATGASMINI (R53 Market,
+  close-only near future)'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
+  holdout: 1 Apr - 19 Oct 2026 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+- GOLDM
+- SILVERM
+- CRUDEOILM
+- NATGASMINI
+features:
+- 'signal source: the underlying (index spot 1m OHLC; MCX near future, close-only); no option chart, no option-chain data'
+- CCI 25 of hlc3, levels +-200, pulse off, all signals, exit R
+model_or_rule: R95 XR
+settings: research/hunt/r95_cci_signals/cfg.py, rules.py, PREREG.md, NOTES.md
+prereg: research/hunt/r95_cci_signals/PREREG.md
+variants_tried: 8
+results:
+  summary: 'Design option net (1 lot, 1-ITM, real prints, after costs): 3m: NIFTY 785 tr, win 36%, payoff 1.462, Rs -95,675
+    (p 0.34266, q 1.0; underlying win 35%); BANKNIFTY 776 tr, win 37%, payoff 1.335, Rs -108,912 (p 0.84416, q 1.0; underlying
+    win 36%); SENSEX 782 tr, win 37%, payoff 1.568, Rs -38,831 (p 0.2967, q 1.0; underlying win 36%); FINNIFTY 773 tr, win
+    32%, payoff 1.476, Rs -141,641 (p 0.84715, q 1.0; underlying win 33%); MIDCPNIFTY 810 tr, win 34%, payoff 1.443, Rs -185,792
+    (p 0.43157, q 1.0; underlying win 33%); GOLDM 227 tr, win 22%, payoff 0.547, Rs -151,779 (p 1.0, q 1.0; underlying win
+    36%); SILVERM 230 tr, win 22%, payoff 0.558, Rs -221,851 (p 1.0, q 1.0; underlying win 38%); CRUDEOIL (mini) 533 tr, win
+    15%, payoff 0.793, Rs -44,650 (p 0.8961, q 1.0; underlying win 34%); NATURALGAS (mini) 508 tr, win 21%, payoff 0.758,
+    Rs -68,078 (p 0.997, q 1.0; underlying win 38%). Pooled indices 3926 tr Rs -570,851, MCX 1498 tr Rs -486,358 | 5m: NIFTY
+    536 tr, win 36%, payoff 1.746, Rs -8,145 (p 0.08791, q 0.80495; underlying win 36%); BANKNIFTY 511 tr, win 36%, payoff
+    1.31, Rs -106,632 (p 0.95804, q 1.0; underlying win 36%); SENSEX 518 tr, win 37%, payoff 1.47, Rs -53,653 (p 0.75225,
+    q 1.0; underlying win 37%); FINNIFTY 495 tr, win 30%, payoff 1.462, Rs -146,325 (p 0.995, q 1.0; underlying win 30%);
+    MIDCPNIFTY 530 tr, win 35%, payoff 1.575, Rs -102,582 (p 0.1029, q 0.80495; underlying win 36%); GOLDM 204 tr, win 20%,
+    payoff 0.455, Rs -212,457 (p 1.0, q 1.0; underlying win 38%); SILVERM 196 tr, win 22%, payoff 0.672, Rs -226,858 (p 1.0,
+    q 1.0; underlying win 36%); CRUDEOIL (mini) 491 tr, win 22%, payoff 0.716, Rs -42,959 (p 0.88212, q 1.0; underlying win
+    34%); NATURALGAS (mini) 484 tr, win 23%, payoff 1.067, Rs -67,322 (p 0.86214, q 1.0; underlying win 33%). Pooled indices
+    2590 tr Rs -417,337, MCX 1375 tr Rs -549,596 | 15m: NIFTY 220 tr, win 34%, payoff 1.795, Rs -22,970 (p 0.11289, q 0.80495;
+    underlying win 35%); BANKNIFTY 220 tr, win 36%, payoff 1.818, Rs +4,835 (p 0.16084, q 0.98618; underlying win 39%); SENSEX
+    226 tr, win 33%, payoff 1.719, Rs -45,282 (p 0.53846, q 1.0; underlying win 34%); FINNIFTY 225 tr, win 34%, payoff 1.834,
+    Rs -11,830 (p 0.14186, q 0.88992; underlying win 38%); MIDCPNIFTY 237 tr, win 39%, payoff 1.607, Rs +14,971 (p 0.04196,
+    q 0.4427; underlying win 40%); GOLDM 107 tr, win 22%, payoff 0.446, Rs -128,293 (p 1.0, q 1.0; underlying win 37%); SILVERM
+    101 tr, win 22%, payoff 0.458, Rs -161,006 (p 1.0, q 1.0; underlying win 34%); CRUDEOIL (mini) 205 tr, win 23%, payoff
+    0.891, Rs -19,361 (p 0.92108, q 1.0; underlying win 36%); NATURALGAS (mini) 239 tr, win 25%, payoff 1.097, Rs -40,742
+    (p 0.96503, q 1.0; underlying win 32%). Pooled indices 1128 tr Rs -60,276, MCX 652 tr Rs -349,402 | 60m: NIFTY 49 tr,
+    win 45%, payoff 2.356, Rs +40,441 (p 0.002, q 0.06595; underlying win 53%); BANKNIFTY 48 tr, win 44%, payoff 2.897, Rs
+    +42,966 (p 0.01199, q 0.11269; underlying win 50%); SENSEX 49 tr, win 41%, payoff 2.676, Rs +30,840 (p 0.02597, q 0.40623;
+    underlying win 49%); FINNIFTY 38 tr, win 45%, payoff 1.626, Rs +11,613 (p 0.00799, q 0.21435; underlying win 48%); MIDCPNIFTY
+    60 tr, win 30%, payoff 1.484, Rs -40,004 (p 0.999, q 1.0; underlying win 33%); GOLDM 29 tr, win 28%, payoff 0.867, Rs
+    -21,701 (p 0.69231, q 1.0; underlying win 46%); SILVERM 18 tr, win 17%, payoff 0.712, Rs -43,442 (p 0.998, q 1.0; underlying
+    win 41%); CRUDEOIL (mini) 38 tr, win 39%, payoff 0.549, Rs -4,321 (p 0.70529, q 1.0; underlying win 55%); NATURALGAS (mini)
+    48 tr, win 33%, payoff 1.322, Rs -5,032 (p 0.51049, q 1.0; underlying win 46%). Pooled indices 244 tr Rs +85,856, MCX
+    133 tr Rs -74,496. Holdout (read once): 3m pooled indices 1553 tr Rs -149,690, MCX 1765 tr Rs -530,257; 5m pooled indices
+    1056 tr Rs -166,866, MCX 1647 tr Rs -463,889; 15m pooled indices 464 tr Rs +41,134, MCX 719 tr Rs -180,212; 60m pooled
+    indices 86 tr Rs -18,468, MCX 148 tr Rs -86,243.'
+  costs: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges), flat 15:15 / 15:05 expiry; MCX R53 charges + R85
+    strict half-spread; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'One of 8 fade variants x 4 timeframes x 9 instruments (288 cells); one BH family of 328 cells with MO and EX (amendment
+  A1). Design passers: none. Holdout paper candidates: none. Signal source: the underlying.'

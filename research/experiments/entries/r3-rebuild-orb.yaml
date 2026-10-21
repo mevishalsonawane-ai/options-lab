@@ -1,0 +1,33 @@
+id: r3-rebuild-orb
+title: 'R3 rebuild: ORB exactly as the app has it, on the lake'
+family: orb
+date: '2026-10-14'
+doc: research/HUNT_R3_ORB_FAMILY.md
+data_version: Dhan lake data-20261014 (options_rolling_1m opt_<UND>_WEEK = nearest expiry on or after the day, ATM+-10; index_1m
+  incl. INDIAVIX) read by research/hunt/r3orb/r3data.py
+period:
+  design: BANKNIFTY 2021-09-03..2026-10-12 (1,255 sessions) + NIFTY 2021-08-02..2026-10-12 (1,284)
+  holdout: 'out-of-instrument: FINNIFTY 2021-09-03.. (1,254), MIDCPNIFTY 2022-02-21.. (906), SENSEX 2023-05-15.. (845), all
+    to 2026-10-12; read once 14 Oct 2026'
+prereg: research/hunt/r3orb/PREREG.md
+hypothesis: 'Not a test: the arm''s current rules rebuilt on the full lake, per year and index.'
+instruments:
+- BANKNIFTY
+- NIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 1-minute index
+- opening range 09:15-10:04
+model_or_rule: ORB (OrbRules / SweepRules / RangeFadeRules), PREREG A2
+settings: research/hunt/r3orb/PREREG.md A2
+variants_tried: null
+results:
+  summary: 'Design: 2,489 trades, net Rs -223,040 (Rs -174 a day), win rate 36%, worst day Rs -5,298, max drawdown Rs -238,721;
+    years > 0: 0 of 6. Holdout indices: 2,572 trades, net Rs -113,993 (Rs -91 a day), win rate 41%, worst day Rs -21,250,
+    max drawdown Rs -136,582.'
+  costs: app fees at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
+holdout_read: true
+verdict: not-a-test
+notes: Baseline for the R3 variants. Matches R14 / R12 within a few percent (results/rebuild.md).

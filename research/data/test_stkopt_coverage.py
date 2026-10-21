@@ -18,3 +18,13 @@ def test_fraction_per_stock_and_offset(tmp_path):
     cov = sc.coverage(jobs)
     assert cov == {"AAA": {"-1": 0.0, "0": 0.5, "1": 0.0}, "BBB": {"-1": 0.25, "0": 0.0, "1": 0.0}}
     assert list(cov["AAA"]) == ["-1", "0", "1"]
+
+
+def test_since_counts_only_later_windows(tmp_path):
+    raw = str(tmp_path)
+    jobs = [lf.Job(f"{raw}/stkopt/AAA/MONTH/c1/+00C/{w}", "/x", dict(fromDate=w, toDate=t))
+            for w, t in (("2024-10-01", "2024-10-30"), ("2024-10-31", "2024-11-29"))]
+    os.makedirs(os.path.dirname(jobs[1].path), exist_ok=True)
+    open(jobs[1].path + ".parquet", "w").close()
+    assert sc.coverage(jobs) == {"AAA": {"0": 0.5}}
+    assert sc.coverage(jobs, lf.dt.date(2024, 11, 1)) == {"AAA": {"0": 1.0}}

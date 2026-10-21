@@ -1,0 +1,30 @@
+id: of1-signals
+title: 'Does a participant group''s positioning change predict the next day (open->close)? 18 signals x NIFTY/BANKNIFTY'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_OF1_ORDERFLOW_INDIA.md
+hypothesis: z-scored day changes of each group's net index futures, long share, options stance and put writing (FII,
+  DII, Pro, Client), FPI cash net and FII+FPI predict the next session's open-to-close index move.
+data_version: 'NSE public archives (nsearchives.nseindia.com) fetched 13 Oct 2026: participant OI/volume 3,644 days 2 Jan 2012 - 13 Oct 2026 (3,632 usable), F&O bhavcopy index rows 3,644 days, all-index closes (Dhan lake index_daily for gaps), NSDL FPI 3,560 reporting days; copies on gdrive:IraAlgo-data-lake/participants'
+period:
+  design: signal days 2012 .. target <= 2025-10-12 (3,322 days)
+  holdout: 2025-10-13 .. 2026-10-13 (246 days)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- S1-S4 per group (60-day z of day changes), S5 FPI cash net (reporting date), S6 = S1_FII + S5
+model_or_rule: OLS slope with Newey-West (lag 1); BH q 0.10 over 36 tests; holdout pass = design sign and one-sided p < 0.05
+settings: research/hunt/of1/PREREG.md section 5
+prereg: research/hunt/of1/PREREG.md
+variants_tried: 36
+results:
+  summary: 'Design: 15 of 36 survive BH (q 0.012-0.067; FII S1-S4 positive, Client S1-S4 negative, S6 BANKNIFTY), slopes
+    0.03-0.08% of the index per 1 sigma, Spearman 0.04-0.08, n 3,322. Holdout (246 days): 0 of 15 pass, 13 of 15 slopes
+    flipped sign, best one-sided p 0.13 (S1_FII NIFTY). Walk-forward FII S1 -> NIFTY hit rate 68% in 2014 (44 days) but
+    39% in 2024 (44) and 33% in 2025 (33). FPI cash flow alone: p 0.66 / 0.97. FAILED the holdout.'
+  costs: n/a (a signal test; trading costs in of1-r0..r3)
+holdout_read: true
+verdict: rejected
+notes: The 5- and 20-day horizons and positioning levels are descriptive (6 of 36 with q < 0.10 at 5 days, 0 at 20 days;
+  level quintiles HAC t -1.1..+1.4). All 36 tests were also computed on the holdout for the record.

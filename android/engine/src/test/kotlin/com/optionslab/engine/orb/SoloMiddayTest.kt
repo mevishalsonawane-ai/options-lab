@@ -374,7 +374,7 @@ class SoloMiddayTest {
     @Test fun theCardShowsTheForwardTestAndTheResearchLine() {
         val r = SoloMidday.record(listOf(1_200.0, -2_000.0, 500.0))
         val lines = SoloMidday.card(r, LocalDate.of(2026, 10, 7))
-        assertEquals("Not proven: paper only, never Zerodha.", lines[0])
+        assertEquals("Not proven: paper only; its live copy stays in shadow (records, never sends) until it is.", lines[0])
         assertEquals("Trades since start (07 Oct): 3, net −₹300, −₹100 a trade, drawdown −₹1,500.", lines[1])
         assertEquals("3 of 60 trades of the forward test.", lines[2])
         assertTrue(lines[3].contains("more than ₹25,000 below its best"))

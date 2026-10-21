@@ -1,0 +1,24 @@
+id: r94-seas-akshaya
+title: 'R94 idea 4: long GOLD / SILVER 10 rows before Akshaya Tritiya, 2 x ATR14 stop'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R94_MCX_ADVANCED.md
+hypothesis: 'Pre-registered (research/hunt/r94_mcx_advanced/PREREG.md): R94 idea 4: long GOLD / SILVER 10 rows before Akshaya Tritiya, 2 x ATR14 stop; after real MCX costs on every leg it beats random entry (or zero for every-day option selling), p <= 0.05 and BH q <= 0.10 over all R94 cells, walk-forward, worst month >= -Rs 13k, then holds on the locked holdout read once; Boss risk rules: hard stop, 2% of Rs 1 lakh, liquid contracts. Signal source: the calendar.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 21 Oct 2026: fut_1m_live_mcx (contracts live on 19 Oct, 1-minute), fut_daily_continuous (near month, 2012 - 16 Oct 2026), options_rolling_1m MCX MONTH books (ATM-3..+3, 5 Aug 2025 - 19 Oct 2026); Dukascopy 1-minute BID CFDs (XAUUSD, XAGUSD, LIGHTCMDUSD, GASCMDUSD) for idea 5'
+period:
+  design: 2012 - 2021
+  holdout: 2022 - 16 Oct 2026 (read once)
+instruments:
+- 'GOLD, SILVER'
+features:
+- 'signal source: the calendar'
+model_or_rule: 'R94 idea 4: long GOLD / SILVER 10 rows before Akshaya Tritiya, 2 x ATR14 stop'
+settings: research/hunt/r94_mcx_advanced/ (PREREG.md, NOTES.md, the idea module)
+prereg: research/hunt/r94_mcx_advanced/PREREG.md
+variants_tried: 2
+results:
+  summary: '2 cells (one BH family of 152 R94 cells). Design net after costs per cell, twin / bootstrap p and BH q, then the one holdout read: s-AT-PRE-GOLD 10 tr +40,607 (p 0.092, q 1.00) -> holdout 5 tr +64,625; s-AT-PRE-SILVER 10 tr -16,473 (p 0.624, q 1.00) -> holdout 5 tr +140,549. Design passers 0, design + holdout passers 0.'
+  costs: 'Zerodha MCX charges on every leg (McxCosts.kt), half-spread on every fill (futures R53 rule, far month 3x; options R85 strict ATM rate x (1 + 0.5 |offset|), >= 1 tick); 1 lot; margins without spread benefit'
+holdout_read: true
+verdict: rejected
+notes: 'Cells: s-AT-PRE-GOLD, s-AT-PRE-SILVER'

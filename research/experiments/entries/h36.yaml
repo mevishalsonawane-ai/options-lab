@@ -1,0 +1,24 @@
+id: h36
+title: The single best honest plan at Rs 1 lakh
+family: diagnosis
+date: '2026-10-08'
+doc: research/HUNT_H36.md
+hypothesis: Put the best plan day by day.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: see doc
+instruments:
+- BANKNIFTY
+features:
+- Liquidity 15+5
+model_or_rule: 'plan A: BN Liquidity 1 lot'
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: Rs 65/day before the holdout, Rs 167/day in it, after all costs.
+  costs: all costs
+holdout_read: null
+verdict: not-a-test
+backfilled: true

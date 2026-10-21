@@ -1,0 +1,30 @@
+id: c2-window-size
+title: "Crypto C2: range of the next hour / whole window inside Boss's 00:00-09:00 IST window (BTC, ETH)"
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/CRYPTO_C2_WINDOW.md
+hypothesis: Inside 00:00-09:00 IST, a ridge model on recent ranges forecasts the log range of the next window hour (W1)
+  and of the whole window (W3) at least 5% better than the window-hour average / the last 20 windows.
+data_version: Binance bulk archive BTCUSDT/ETHUSDT; crypto cube v2, feature signature afe36b892dd9
+period:
+  design: 2023-11-02 .. 2026-03-31 (walk-forward, 30 blocks)
+  holdout: 2026-04-01 onward, locked, not read
+instruments:
+- CRYPTO
+features:
+- range_60m_pct
+- range_240m_pct
+- rv_1440m_pct
+- dvol
+- window-hour x weekend mean
+model_or_rule: ridge regression (alpha 1.0)
+settings: research/brain/crypto/PREREG_C2_WINDOW.md tests W1, W3
+prereg: research/brain/crypto/PREREG_C2_WINDOW.md
+variants_tried: 4
+results:
+  summary: 'All 4 pass in design (q < 0.001): next window hour 27.8% (BTC) / 23.4% (ETH) better on 6,308 hours; whole
+    window 17.2% / 15.2% better on 670 windows. Holdout not read.'
+  costs: n/a (a forecast of size)
+holdout_read: false
+verdict: inconclusive
+notes: Candidate for one holdout read together with C1's range forecast.

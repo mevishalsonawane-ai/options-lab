@@ -33,7 +33,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * Settings → Bot settings → Paper-only period (Boss, 12 Oct: "For 10 days I will be on paper only"): how many days and why.
- * Until the end date, switching to Live asks the PIN and shows the reason and the end date; exits are never blocked. Starting
+ * Until the end date, switching to Live asks the PIN and shows the reason and the end date, and every new live entry is refused
+ * (18 Oct, [PaperOnly.entryRefusal]); exits are never blocked. Starting
  * one or a later end needs no PIN (it lowers risk); an earlier end or "End now" asks the PIN. The only door to [PaperOnly.set]
  * and [PaperOnly.end]: never by voice, a backup or an automatic change. It never switches the mode itself.
  */
@@ -60,7 +61,8 @@ internal fun PaperOnlyCard(model: AppModel) {
     }
     LedgerCard(title = "Paper-only period", accent = if (active) p.verdigris else null, modifier = Modifier.testTag("paper-only-card")) {
         Text(PaperOnlyPeriod.status(period, today), style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.testTag("paper-only-status"))
-        Note("Until the end date, switching to Live asks your PIN and shows this reason. Exits and square-offs are never blocked. " +
+        Note("Until the end date, switching to Live asks your PIN and shows this reason, and no new live entry goes to Zerodha from anything " +
+            "(your own orders, the arms, Pine, the strategies, Jarvis), even if the app is already Live. Exits, stops and square-offs are never blocked. " +
             "Starting it or a later end needs no PIN; an earlier end or ending it now asks for it. Only here: never by voice, a backup or an automatic change.",
             Modifier.padding(top = 4.dp))
         OutlinedTextField(days, { days = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Days from today") }, singleLine = true,

@@ -79,6 +79,78 @@ object AutoChange {
         REGIME_THRESHOLD("market brain", "a regime threshold (shadow)"),
         DRIFT_THRESHOLD("self-review", "a park threshold"),
         FINDINGS_WEIGHT("findings", "a consensus weight (shadow)"),
+        /**
+         * An arm Boss parked by their own choice (13 Oct: ORB, ORB Fresh, ORB Sweep and Range Fade, [armPark]): logged so the
+         * change timeline shows it and its Undo switches the arm back on, on paper. Never proposed or applied by Autopilot.
+         */
+        ARM_PARK("strategies", "an arm parked on your choice"),
+        /**
+         * Boss's own Rs 500 give-back trail on the Liquidity PAPER books switched on or off from the Strategy lab card (13 Oct,
+         * [liqTrail]; research R19b / R19c failed, so it is their choice): logged so the change timeline shows it and its Undo
+         * flips the switch back. Never proposed or applied by Autopilot.
+         */
+        LIQ_TRAIL("strategies", "your ₹500 trail on Liquidity paper"),
+        /**
+         * A PAPER arm Boss switched on by their own choice although it did not pass research (15 Oct: the Hero ₹1,000 ticket,
+         * R50, [heroTicketOn]): logged so the change timeline shows it and its Undo switches the arm off. Never proposed or
+         * applied by Autopilot; paper only, so neither way needs the PIN.
+         * Also (15 Oct, Boss's "Both") the paper arms that PASSED research - R51 Donchian 20, R52 Open outside value, Solo 2.0
+         * ([passedArmOn]) - switched on by the update under CLAUDE.md's PAPER rule, and their forward-test bar switching one
+         * off by itself ([passedArmOff], lowering risk). Paper only: no PIN either way.
+         */
+        PAPER_ARM_ON("strategies", "a paper arm switched on by your choice"),
+        /**
+         * Boss's 15 Oct cleanup ([com.optionslab.engine.orb.ArmsCleanup], [armHidden]): an arm or automatic trader switched off
+         * and hidden (only once it holds nothing), and each restore from the Hidden arms list ([armRestored]). Logged so the
+         * change timeline shows both and one tap undoes either (a restore: back on PAPER only; its undo: hidden again). Never
+         * proposed or applied by Autopilot.
+         */
+        ARM_HIDE("strategies", "an arm hidden on your choice"),
+        /**
+         * 15 Oct (Boss's choice): Liquidity 15+5's FINNIFTY or MIDCPNIFTY books back on with its switch, ON PAPER ([liqIndexOn]),
+         * logged so the timeline shows it and one tap undoes it (the index parked again). BANKNIFTY is never one of them.
+         */
+        LIQ_INDEX_ON("strategies", "a Liquidity index switched on by your choice"),
+        /**
+         * 16 Oct (Boss: "if the trend changes, sell the orders"; research R63): the Trend watch's paper exit where a rule PASSED -
+         * today only the Hero ₹1,000 ticket's legs, with T3 ([trendExitOn], [trendExitSold]). Logged as Boss's (his ask, the PAPER
+         * rule), shown in the timeline; one tap undoes it - the Hero trend exit switched off (a sold leg is not bought back).
+         * Paper only, so no PIN either way; never live.
+         */
+        TREND_EXIT("trend watch", "a trend-turn exit on paper"),
+        /**
+         * 16 Oct (Boss's choice: "All three"): R64's 30-60-100 profit lock (variant A4, passed every research gate) on the three passed PAPER
+         * arms - R51 Donchian 20, R52 Open outside value, Solo 2.0 ([passedLock]): new paper trades keep their own stop and time
+         * exit, drop the fixed target and lock breakeven at +30%, +30% at +60%, +60% at +100%. Logged so the timeline shows it and
+         * one tap undoes it (back to the research exits for new trades). Paper only, never live: no PIN either way.
+         */
+        PAPER_LOCK("strategies", "the 30-60-100 lock on the passed paper arms"),
+        /**
+         * 16 Oct (Boss: "Update normal Donchian as you recommended, T7 supertrend agree"; research R73 T7, passed every gate): R51
+         * Donchian 20's paper breaks taken only when Supertrend (10, 3) agrees ([passedSupertrend]). It only skips entries, so on
+         * lowers risk. Logged so the timeline shows it and one tap undoes it (back to the plain rules). Paper only: no PIN.
+         */
+        PAPER_FILTER("strategies", "an entry filter on a passed paper arm"),
+        /**
+         * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too ... i will switch it off, if i
+         * need it"): a paper strategy's own "Trade live" switch ([armLive]) - Boss's own change, logged so the timeline shows it and
+         * one tap undoes it. LIVE scope: on adds live risk, so an undo that turns it back on asks the PIN; off is free. Never
+         * proposed or applied by Autopilot.
+         */
+        ARM_LIVE("strategies", "an arm's own live switch"),
+        /**
+         * 18 Oct (Boss: "add a shadow button, so that even i move to live, until is on, it will not trade, but when i see thats making
+         * money, i will make it off"): an arm's own Shadow switch ([armShadow]) - Boss's own change, logged so the timeline shows it and
+         * one tap undoes it. LIVE scope: off sends real live orders (adds live risk), so an undo that takes it out of shadow asks the
+         * PIN; on is free. Never proposed or applied by Autopilot.
+         */
+        ARM_SHADOW("strategies", "an arm's own shadow switch"),
+        /**
+         * 21 Oct (Boss: "Yes, give commodities their own day lock"): the MCX paper arms on their own PAPER day lock and loss limit
+         * ([segmentSplit], [SegmentLock]) - Boss's own change, logged so the timeline shows it and one tap undoes it (back to the
+         * shared paper lock). Paper only, never live: no PIN either way. Never proposed or applied by Autopilot.
+         */
+        SEGMENT_SPLIT("risk guards", "commodities' own paper limits"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -229,6 +301,28 @@ object AutoChange {
             Kind.MANAGER_MODE -> if (c.to == TradeManager.Mode.ACT.name) Risk.RAISE else Risk.LOWER
             Kind.PAPER_ENTRIES -> if (c.to == PAUSED) Risk.LOWER else Risk.RAISE
             Kind.LIVE_ENTRIES -> if (c.to == PARKED) Risk.LOWER else Risk.RAISE
+            Kind.ARM_PARK -> if (c.to == PARKED) Risk.LOWER else Risk.RAISE
+            // The trail only ever adds an earlier exit, on paper: on lowers risk, off takes that away.
+            Kind.LIQ_TRAIL -> if (c.to == ON) Risk.LOWER else Risk.RAISE
+            // A paper arm on adds paper trades (risk up, on paper); off takes them away.
+            Kind.PAPER_ARM_ON -> if (c.to == ON) Risk.RAISE else Risk.LOWER
+            // Hidden: switched off (lower); restored: it may come back on, on paper (adds risk, on paper).
+            Kind.ARM_HIDE -> if (c.to == HIDDEN) Risk.LOWER else Risk.RAISE
+            Kind.LIQ_INDEX_ON -> if (c.to == ON) Risk.RAISE else Risk.LOWER
+            // An earlier exit on paper lowers risk (on, or a leg sold); off takes the earlier exits away.
+            Kind.TREND_EXIT -> if (c.to == SWITCHED_OFF || c.to == HELD) Risk.RAISE else Risk.LOWER
+            // The lock drops the fixed target (a trade may be held for more), so on counts as a raise (on paper); off puts the
+            // research exits back.
+            // 16 Oct: R66's L25 step ([L25_TARGET]) only raises a stop (an earlier exit), so on lowers risk; off takes it away.
+            Kind.PAPER_LOCK -> if (c.target == L25_TARGET) { if (c.to == ON) Risk.LOWER else Risk.RAISE } else if (c.to == ON) Risk.RAISE else Risk.LOWER
+            // 16 Oct: an entry filter only skips paper entries: on lowers risk, off takes the skips away.
+            Kind.PAPER_FILTER -> if (c.to == ON) Risk.LOWER else Risk.RAISE
+            // 18 Oct: an arm's own live switch on lets its live entries go (adds live risk); off keeps it on paper.
+            Kind.ARM_LIVE -> if (c.to == ON) Risk.RAISE else Risk.LOWER
+            // 18 Oct: an arm's Shadow on sends nothing live (lowers risk); off lets its real live entries go (adds live risk).
+            Kind.ARM_SHADOW -> if (c.to == ON) Risk.LOWER else Risk.RAISE
+            // 21 Oct: on, MCX paper arms are no longer stopped by NSE's paper results (more paper trades); off puts the shared lock back.
+            Kind.SEGMENT_SPLIT -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -252,8 +346,24 @@ object AutoChange {
     const val COUNTS = "counts"
     const val PAUSED = "paused"
     const val ON = "on"
+    /** An arm on, approving each entry ([Kind.ARM_PARK]'s "from" when it was not fully automatic). */
+    const val ON_APPROVE = "on, approve each entry"
     const val PARKED = "parked"
     const val LIVE = "live"
+    /** A switch off ([Kind.LIQ_TRAIL]'s "from" when it was switched on, its "to" when switched off). */
+    const val SWITCHED_OFF = "off"
+    /** An arm switched off and hidden by Boss's 15 Oct cleanup ([Kind.ARM_HIDE]'s "to"). */
+    const val HIDDEN = "hidden"
+    /** An arm restored from the Hidden arms list ([Kind.ARM_HIDE]'s "to" on a restore). */
+    const val RESTORED = "restored"
+
+    /**
+     * Boss's own changes, only logged here so they show in the timeline and undo in one tap (13 Oct: the arms' park, the
+     * Liquidity paper trail): never counted as Autopilot's change, never undone by "undo the last change" or "undo everything".
+     */
+    fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
+        k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK || k == Kind.PAPER_FILTER || k == Kind.ARM_LIVE ||
+        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -286,6 +396,306 @@ object AutoChange {
             }
         }
     }
+
+    /**
+     * Boss's 13 Oct park of the arm [source] ([label]; Kind.ARM_PARK), for the change timeline: "on → parked", lowering risk,
+     * on paper (its Undo switches the arm back on, on paper only - in Live it is armed with the PIN on its row). [tested]: its
+     * two tested years in words; [rs]: their sum, rupees a lot; [automatic]: it was fully automatic (else "on, approve each
+     * entry", as its Undo puts it back).
+     */
+    fun armPark(source: String, label: String, tested: String, rs: Double, automatic: Boolean = true): Change = Change(Kind.ARM_PARK, "arm:$source",
+        if (automatic) ON else ON_APPROVE, PARKED,
+        "your choice (13 Oct): $label lost money after costs in every tested year ($tested)", Evidence(2, rs, AgentLessons.Confidence.STRONG, -1),
+        Risk.LOWER, Scope.PAPER, what = "$label's switch")
+
+    /** The target prefix of an MCX paper arm switched off on Boss's OK ([mcxArmPark]); "arm:" stays the NSE arms'. */
+    const val MCX_ARM = "mcx:"
+
+    /**
+     * An MCX PAPER arm [source] ([label]) switched off on Boss's OK (14 Oct: the SILVERM morning call, research R42), for the
+     * change timeline: "on → parked", lowering risk, on paper (the MCX arms never reach Zerodha, so its Undo - the arm back on,
+     * paper only - needs no PIN). [reason]: why, with the sample sizes; [n] trades and [rs] rupees of the losing test it
+     * avoids (R42's walk-forward), as [armPark] keeps the tested losses (sign -1: what it avoided). Logged as Boss's
+     * ([Kind.ARM_PARK]): never Autopilot's own change, undone only by its own tap.
+     */
+    fun mcxArmPark(source: String, label: String, reason: String, n: Int, rs: Double): Change = Change(Kind.ARM_PARK, "$MCX_ARM$source",
+        ON, PARKED, reason, Evidence(n, rs, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch")
+
+    /** The target of Boss's Liquidity paper trail switch ([Kind.LIQ_TRAIL]; no "liquidity" in it, so the paper-test freeze never holds its Undo). */
+    const val TRAIL_TARGET = "trail:liq_paper"
+
+    /**
+     * Boss switching their own Rs 500 give-back trail on the Liquidity PAPER books [on] or off ([Kind.LIQ_TRAIL]), for the change
+     * timeline: "off -> on" (or back), on paper only (live trades never use it), so its Undo needs no PIN.
+     */
+    fun liqTrail(on: Boolean): Change = Change(Kind.LIQ_TRAIL, TRAIL_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your choice (13 Oct): new Liquidity paper trades use your ₹500 give-back trail - failed research (R19b, R19c); " +
+            "they are kept apart from the plain-rules record for the 26 Oct decision"
+        else "your choice: new Liquidity paper trades are back on plain rules",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "Liquidity's ₹500 trail (paper)")
+
+    /** The target of the commodities' own paper limits ([Kind.SEGMENT_SPLIT]; no safety word in it, so its Undo is never held). */
+    const val SPLIT_TARGET = "split:mcx_paper"
+
+    /**
+     * 21 Oct (Boss: "Yes, give commodities their own day lock"): the MCX paper arms on their own paper day lock and daily loss
+     * limit, on the MCX paper day alone - "off → on" on paper, logged as Boss's (kept, never Autopilot's). One tap undoes it:
+     * back to one shared paper figure. Paper only: Zerodha's lock and limit stay one account, so neither way needs the PIN.
+     */
+    fun segmentSplit(): Change = Change(Kind.SEGMENT_SPLIT, SPLIT_TARGET, SWITCHED_OFF, ON,
+        "your choice (21 Oct): commodities keep their own paper day lock and daily loss limit, on the MCX paper day alone - NSE " +
+            "results no longer stop the MCX arms and MCX results no longer stop the NSE arms; your stop, the kill switch and every live " +
+            "guard still stop both. Paper only, never live",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Commodities' own paper limits")
+
+    /** The target of Boss's Hero ₹1,000 ticket switch ([Kind.PAPER_ARM_ON]). */
+    const val TICKET_TARGET = "paperarm:hero_ticket"
+
+    /**
+     * 15 Oct (Boss: "add it directly to arm"): the Hero ₹1,000 ticket, a PAPER-only arm that did not pass research (R50), switched
+     * on once by the update, on Boss's own choice - "off → on" on paper, logged as Boss's (kept, never Autopilot's), so the change
+     * timeline shows it and one tap undoes it (the arm off; paper only, no PIN either way).
+     */
+    fun heroTicketOn(): Change = Change(Kind.PAPER_ARM_ON, TICKET_TARGET, SWITCHED_OFF, ON,
+        "your choice (15 Oct): the Hero ₹1,000 ticket on, paper only - it did not pass research (R50: 0 of 28 hero rules passed; " +
+            "cheap expiry tickets lose about ₹525 of every ₹1,000 on average, jackpots are rare); its trades are kept in their own record, " +
+            "apart from the arms that passed and from the plain-rules record for 26 Oct",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Hero ₹1,000 ticket's switch (paper)")
+
+    /** The target of a passed-research paper arm's switch ([Kind.PAPER_ARM_ON]): "paperarm:" + its source. */
+    const val PAPER_ARM = "paperarm:"
+    /**
+     * 19 Oct (Boss: "Yes, keep only breadth donchain"): a passed paper arm set to RECORD ONLY ([Kind.PAPER_ARM_ON]'s "to"): its breaks are
+     * still decided, each kept as a would-be trade, and nothing is bought. Less risk than on (nothing on the account).
+     */
+    const val RECORD_ONLY = "record only"
+
+    /**
+     * 15 Oct (Boss: "Both"): the paper arm [source] ([label]) PASSED every research gate ([research]), so under CLAUDE.md's
+     * PAPER rule the update switches it on at once - "off → on" on paper, logged as Boss's (kept, never Autopilot's), shown in
+     * the timeline and undone in one tap (the arm off; paper only, no PIN). It never carries over to live by itself. [choice]: Boss's
+     * words that asked for it (16 Oct: R72 Breadth Donchian's "Okay add it").
+     */
+    fun passedArmOn(source: String, label: String, research: String, choice: String = passedArmChoice(source)): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, SWITCHED_OFF, ON,
+        "$choice: $label passed every research gate ($research), so under the PAPER rule it trades on paper at once - " +
+            "1 lot, its own record, never live; it never carries over to live by itself",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "$label's switch (paper)")
+
+    /**
+     * 19 Oct: the passed paper arm [source] ([label]) set to record only ([RECORD_ONLY]) from [from] ("on" or "off"), on [choice] (Boss's
+     * words): its breaks are kept as would-be trades, nothing is bought. Logged as Boss's (kept); one tap undoes it (back to [from]).
+     * Paper only, no PIN either way; it never carries over to live by itself.
+     */
+    fun passedArmRecordOnly(source: String, label: String, from: String, choice: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, from, RECORD_ONLY,
+        "$choice: $label set to record only - its signals are still decided on the index and each is kept as a would-be trade " +
+            "(its own record, labelled apart); nothing is bought, never live",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
+
+    /** 19 Oct: Boss's answer that set R51 Donchian 20 to record only, beside R72 Breadth Donchian (quoted as Boss wrote it). */
+    const val CHOICE_KEEP_BREADTH = "your \"Yes, keep only breadth donchain\" (19 Oct)"
+
+    /** The 15 Oct update's words: Boss's "Both" (R51, R52, Solo 2.0). */
+    const val CHOICE_BOTH = "your \"Both\" (15 Oct)"
+    /** 16 Oct: R72 Breadth Donchian's: Boss's "Okay add it". */
+    const val CHOICE_BREADTH = "your \"Okay add it\" (16 Oct, after R72)"
+
+    /**
+     * 16 Oct (R72 review): whose choice switched the paper arm [source] on, in the change log's words - the update's switch-on and
+     * Boss's own switch-on from its row alike, so R72's never reads as the 15 Oct "Both".
+     */
+    fun passedArmChoice(source: String): String = if (source == com.optionslab.engine.orb.BreadthDonchianArm.SOURCE) CHOICE_BREADTH else CHOICE_BOTH
+
+    /**
+     * The paper arm [source] ([label]) switched itself off on its forward-test bar, set in advance ([why]): "on → off" on paper,
+     * lowering risk, logged so the timeline shows it; its Undo switches it back on (Boss's choice; paper only, no PIN).
+     */
+    fun passedArmOff(source: String, label: String, why: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, ON, SWITCHED_OFF,
+        "its forward-test bar, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
+
+    /** The target prefix of an arm's own live switch ([Kind.ARM_LIVE]): + its key ([com.optionslab.engine.orb.LiveMirror]). */
+    const val ARM_LIVE = "armlive:"
+
+    /**
+     * 18 Oct (Boss): [label]'s own "Trade live" switch [on] or off, by Boss ([Kind.ARM_LIVE], LIVE scope, kept). It acts only with the
+     * app in Live and "AI trades go live" on (only going Live with the PIN turns that on), never in the paper-only period.
+     */
+    fun armLive(key: String, label: String, on: Boolean): Change = Change(Kind.ARM_LIVE, ARM_LIVE + key, if (on) SWITCHED_OFF else ON,
+        if (on) ON else SWITCHED_OFF,
+        "your choice: $label ${if (on) "trades live again" else "stays on paper"} (\"What ever strategies are present for paper, should be present " +
+            "for live too ... i will switch it off, if i need it\"); it acts only in Live with AI trades on, never in the paper-only period",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, if (on) 1 else -1), if (on) Risk.RAISE else Risk.LOWER, Scope.LIVE,
+        what = "$label's live switch")
+
+    /** The target prefix of an arm's own Shadow switch ([Kind.ARM_SHADOW]): + its key ([com.optionslab.engine.orb.LiveMirror]). */
+    const val ARM_SHADOW = "armshadow:"
+
+    /**
+     * 18 Oct (Boss): [label]'s own Shadow switch [on] (records what it would trade live, sends nothing) or off (real live entries, with
+     * the PIN), by Boss ([Kind.ARM_SHADOW], LIVE scope, kept).
+     */
+    fun armShadow(key: String, label: String, on: Boolean): Change = Change(Kind.ARM_SHADOW, ARM_SHADOW + key, if (on) SWITCHED_OFF else ON,
+        if (on) ON else SWITCHED_OFF,
+        "your choice: $label ${if (on) "goes into shadow (it records what it would trade live and sends nothing)" else "leaves shadow (it may send real live orders)"} " +
+            "(\"add a shadow button, so that even i move to live, until is on, it will not trade\"); real orders still need Live, AI trades and its Trade live switch",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, if (on) -1 else 1), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
+        what = "$label's shadow switch")
+
+    /** The target prefix of a Telegram chat's paper trading in the Signal tester ([Kind.PAPER_ARM_ON]): + the chat's short id. */
+    const val TELEGRAM_PAPER = "paperarm:telegram:"
+
+    /**
+     * 15 Oct (Boss's explicit choice): paper-trading the calls of the Telegram chat [id] (the Signal tester; its name stays on the
+     * phone, the log carries its short id) switched [on] by Boss - "off → on" on paper, logged as Boss's (kept), undone in one tap
+     * (paper only, no PIN either way). Not proven; never live; it never carries over to live by itself.
+     */
+    fun telegramPaperOn(id: String): Change = Change(Kind.PAPER_ARM_ON, TELEGRAM_PAPER + id, SWITCHED_OFF, ON,
+        "your choice (15 Oct): paper-trade a Telegram chat's calls (Signal tester chat $id) - not proven, paper only; its trades are " +
+            "kept in their own record beside the chat's honest shadow scorecard",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Telegram chat $id's paper trading")
+
+    /** The target prefix of an arm hidden by Boss's 15 Oct cleanup ([Kind.ARM_HIDE]): "hide:" + its key. */
+    const val HIDE = "hide:"
+
+    /**
+     * Boss's 15 Oct cleanup switched [key] ([label]) off and hid it - only once it held nothing ([wasOn]: it was on, else it was
+     * off already): "on → hidden" (or "off → hidden"), lowering risk. Its Undo restores it (back on, ON PAPER ONLY, when it was on).
+     */
+    fun armHidden(key: String, label: String, wasOn: Boolean): Change = Change(Kind.ARM_HIDE, HIDE + key, if (wasOn) ON else SWITCHED_OFF, HIDDEN,
+        "your cleanup (15 Oct): $label switched off and hidden" + (if (wasOn) " once it held nothing" else "") +
+            "; its code, settings and trades are kept, and the Hidden arms list restores it in one tap",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label (hidden arms)")
+
+    /** Boss restored [key] ([label]) from the Hidden arms list: "hidden → restored" (back on paper only if it was on); its Undo hides it again. */
+    fun armRestored(key: String, label: String): Change = Change(Kind.ARM_HIDE, HIDE + key, HIDDEN, RESTORED,
+        "your choice: $label restored from the Hidden arms list - back on PAPER only if it was on (Live still takes your PIN on its row)",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "$label (hidden arms)")
+
+    /** The target prefix of a Liquidity index switched on by the 15 Oct cleanup ([Kind.LIQ_INDEX_ON]). */
+    const val LIQ_INDEX = "liqindex:"
+
+    /**
+     * 15 Oct (Boss's choice): Liquidity 15+5's [index] books back on with its switch, ON PAPER - [parked]: it was parked (9 Oct),
+     * else it was off. Never cleared for Zerodha; BANKNIFTY never. Its Undo parks the index again (books off; an open position
+     * still exits by its own rules).
+     */
+    fun liqIndexOn(index: String, parked: Boolean): Change = Change(Kind.LIQ_INDEX_ON, LIQ_INDEX + index, if (parked) PARKED else SWITCHED_OFF, ON,
+        "your choice (15 Oct): Liquidity 15+5 keeps its $index books on with its switch, on paper only - labelled \"Boss's choice\" and " +
+            "kept apart; BANKNIFTY is not touched, so its plain-rules record stays separable for 26 Oct",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Liquidity 15+5 $index (paper)")
+
+    /** The target prefix of a source's trend-turn exit on paper ([Kind.TREND_EXIT]): + the Trend watch's source key. */
+    const val TREND_TARGET = "trendexit:"
+    /** A leg still held ([trendExitSold]'s "from"); its Undo lands on it and switches the source's trend exit off. */
+    const val HELD = "held"
+    /** A leg sold on the trend turn ([trendExitSold]'s "to"). */
+    const val SOLD_ON_TURN = "sold on the trend turn"
+
+    /**
+     * 16 Oct (Boss's ask, research R63): [label]'s trend-turn exit on PAPER switched on by the update - its rule ([rule]) passed
+     * every gate ([research]), so under CLAUDE.md's PAPER rule it acts at once: "off → on", lowering risk (it only adds an earlier
+     * exit), logged as Boss's, undone in one tap (the exit off; paper only, no PIN).
+     */
+    fun trendExitOn(source: String, label: String, rule: String, research: String): Change = Change(Kind.TREND_EXIT, TREND_TARGET + source,
+        SWITCHED_OFF, ON,
+        "your ask (16 Oct: \"if the trend changes, sell\"): $label's legs are sold on paper when the index turns against them ($rule), " +
+            "which passed every research gate ($research) - so under the PAPER rule it acts at once; never live, and it never carries over to live",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.LOWER, Scope.PAPER, what = "$label's trend-turn exit (paper)")
+
+    /**
+     * One paper leg of [label] sold on the trend turn ([line]: what was sold, when, at what). Its Undo cannot buy the leg back:
+     * it switches the source's trend exit off, so no further leg is sold that way (paper only, no PIN).
+     */
+    fun trendExitSold(source: String, label: String, line: String): Change = Change(Kind.TREND_EXIT, TREND_TARGET + source, HELD, SOLD_ON_TURN,
+        "the Trend watch (research R63): $line. Undo switches $label's trend exit off; the leg sold stays sold",
+        Evidence(1, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's trend-turn exit (paper)")
+    /** The target of R64's lock on the passed paper arms ([Kind.PAPER_LOCK]). */
+    const val LOCK_TARGET = "lock:passed_paper"
+
+    /**
+     * 16 Oct (Boss's choice: "All three"): R64's 30-60-100 lock (A4) switched [on] for new trades of the three passed PAPER arms, or off again
+     * ([Kind.PAPER_LOCK]). It passed every R64 gate on all three (final test 1 Apr - 13 Oct 2026, already read by R51 / R52 / R57:
+     * the three together 2,202 trades, +Rs 2,22,063 against +Rs 2,03,566 on the research exits); not better in every period, so
+     * it is Boss's choice. Paper only, never live: no PIN either way.
+     */
+    fun passedLock(on: Boolean): Change = Change(Kind.PAPER_LOCK, LOCK_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your choice (16 Oct): new paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0 keep their own stop and " +
+            "time exit, drop the fixed target and lock breakeven at +30%, +30% at +60%, +60% at +100% (R64 A4: passed every gate; " +
+            "final test 2,202 trades, ₹2,22,063 against ₹2,03,566 - about equal, not better in every period); paper only, never live"
+        else "new paper trades of the passed arms are back on their research exits",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.RAISE else Risk.LOWER, Scope.PAPER,
+        what = "the 30-60-100 lock on the passed paper arms")
+
+    /** The target of R66's L25 step on the passed paper arms' lock ([Kind.PAPER_LOCK], versioned: its own target, its own undo). */
+    const val L25_TARGET = "lock:passed_paper_l25"
+
+    /**
+     * 16 Oct (Boss's choice after R65 - R69: "Select the best"): R66's L25 switched [on] for NEW trades of the three passed PAPER arms
+     * that enter under the 30-60-100 lock - once the option has been +25% above the fill, its stop is at least +5% above it - or off
+     * again (new trades back on the plain 30-60-100 lock). Not proven: it beat A4 in design, walk-forward and final (+Rs 8,042 /
+     * +Rs 18,050 / +Rs 5,396; final 2,202 trades) but failed the random-exit check, so it is Boss's choice. Paper only: no PIN.
+     */
+    fun passedL25(on: Boolean): Change = Change(Kind.PAPER_LOCK, L25_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your choice (16 Oct, \"Select the best\"): new paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0 under " +
+            "the 30-60-100 lock also lock +5% once the option has been +25% (R66 L25: a small improvement, not proven - final test " +
+            "2,202 trades, +₹5,396 over the 30-60-100 lock; design +₹8,042); open trades keep their exits; paper only, never live"
+        else "new paper trades of the passed arms are back on the plain 30-60-100 lock (no +5% step)",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "the +5% once +25% step on the passed paper arms' lock")
+
+    /** The target of R73 T7's Supertrend filter on R51 Donchian 20's paper entries ([Kind.PAPER_FILTER]). */
+    const val ST_TARGET = "filter:r51_donchian20_supertrend"
+
+    /**
+     * 16 Oct (Boss: "Update normal Donchian as you recommended, T7 supertrend agree"): R73 T7 switched [on] for R51 Donchian 20's
+     * NEW paper breaks - taken only when Supertrend (10, 3) on the same 5-minute index bars points the same way - or off again
+     * (every break taken, the plain rules). It passed every R73 gate and beat Donchian in design, walk-forward and final (final
+     * 1,670 trades, +Rs 1,34,743 vs +Rs 81,845). Paper only, never live: no PIN either way.
+     */
+    fun passedSupertrend(on: Boolean): Change = Change(Kind.PAPER_FILTER, ST_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (16 Oct, \"T7 supertrend agree\"): R51 Donchian 20 takes a paper break only when Supertrend (10, 3) on the " +
+            "same 5-minute index bars agrees (R73 T7: passed every gate; final test 1,670 trades, +₹1,34,743 against Donchian's " +
+            "+₹81,845; it skipped 162 losers and 111 winners); open trades are not touched; its trades are labelled apart from the " +
+            "plain rules'; paper only, never live"
+        else "R51 Donchian 20 is back on its plain rules: every paper break is taken",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "R51 Donchian 20's Supertrend filter (paper)")
+
+    /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
+    const val SAME_DIR_TARGET = "filter:same_direction_cap"
+
+    /** 20 Oct, enhancement round 1: the target of Liquidity's no-twin rule on paper ([liqNoTwin]; no "liquidity" in it, so the freeze never holds its Undo). */
+    const val NO_TWIN_TARGET = "filter:liq_no_twin"
+
+    /**
+     * 20 Oct, enhancement round 1 (idea 3, [LiquidityTwin]; the 19 Oct triple stop): Liquidity's no-twin rule switched [on] for its
+     * PAPER books - a book's entry on an option another Liquidity book already holds becomes a would-be trade - or off again. It
+     * only skips entries, so on lowers risk. Paper only (live in shadow, logged only); no PIN either way.
+     */
+    fun liqNoTwin(on: Boolean): Change = Change(Kind.PAPER_FILTER, NO_TWIN_TARGET,
+        if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "the 20 Oct update (19 Oct: both Liquidity BANKNIFTY books held the same put and were stopped together): a Liquidity " +
+            "paper entry on an option another Liquidity book already holds becomes a would-be trade, counted apart from the plain-rules " +
+            "record; live only logs what it would skip"
+        else "Liquidity's no-twin rule is off for paper: both books may buy the same option again",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "Liquidity's no-twin rule (paper)")
+
+    /**
+     * 19 Oct (Boss: "Resolve the issues", after about 11 index puts on one 09:30 move lost Rs 18,121 on paper): the same-direction
+     * cap switched [on] for the automatic PAPER entries - at most [max] automatic open index options betting the same way, across
+     * all arms; a later one is refused and kept as a would-be entry - or off again. It only refuses entries, so on lowers risk.
+     * Paper only: live stays in shadow (logged only) behind its own switch, off by default. No PIN either way.
+     */
+    fun sameDirCap(on: Boolean, max: Int = SameDirectionCap.DEFAULT_MAX): Change = Change(Kind.PAPER_FILTER, SAME_DIR_TARGET,
+        if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (19 Oct, \"Resolve the issues\"): at most $max automatic paper option positions betting the same way on the " +
+            "index options, across all arms; a later entry is refused and kept as a would-be entry (Liquidity's counted apart); exits " +
+            "and your own orders are never capped; live only logs what it would refuse"
+        else "the same-direction cap is off for paper: automatic entries are no longer refused by it",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "the same-direction cap on automatic paper entries")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
@@ -672,13 +1082,30 @@ object AutoChange {
 
     fun undo(book: Book, id: String): Undo? {
         val e = entry(book, id) ?: return null
-        if (!e.applied) return null
+        if (!e.applied || superseded(book, e)) return null
         val inv = inverse(e.change, "undone by you")
         return Undo(e, inv, undoNeedsPin(e.change))
     }
 
+    /**
+     * Boss's Liquidity paper trail switch ([Kind.LIQ_TRAIL]) logged again since [e]: only the newest flip may be undone (13 Oct
+     * review: undoing an older one would set the switch against what the newest entry shows). Every other change: false.
+     */
+    fun superseded(book: Book, e: Entry): Boolean {
+        // 15 Oct: an arm hidden, restored and hidden again ([Kind.ARM_HIDE]) likewise - only its newest entry undoes.
+        // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) and the passed arms' lock ([Kind.PAPER_LOCK]) likewise - the
+        // switch flipped since is the one to undo.
+        if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER, Kind.ARM_LIVE,
+                Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT)) return false
+        val i = book.entries.indexOfFirst { it.id == e.id }
+        return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
+    }
+
+    /** What Boss is told when he taps Undo on a [superseded] flip of his trail switch. */
+    const val SUPERSEDED_UNDO = "That switch was changed again since: undo the newest change of it instead (or use the switch on the Strategy lab card). Nothing changed."
+
     /** The newest change that can be undone ("undo the last change"). */
-    fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied }
+    fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied && !bossOwn(it.change.kind) }
 
     /** [id] undone by Boss: its target rests [REST_DAYS] days (Autopilot does not redo what he undid). */
     fun undone(book: Book, id: String, day: LocalDate): Book {
@@ -811,6 +1238,9 @@ object AutoChange {
                        val reverted: Int, val asked: Int, val effect: Double)
 
     fun summary(book: Book, day: LocalDate): Summary {
+        // Boss's own changes (13 Oct: the park, the Liquidity paper trail; [bossOwn]) are logged here, but they are not
+        // Autopilot's: never counted as its change.
+        @Suppress("NAME_SHADOWING") val book = book.copy(entries = book.entries.filter { !bossOwn(it.change.kind) })
         val t = book.entries.filter { it.day == day && it.applied }
         return Summary(t.size, t.count { it.change.scope == Scope.PAPER }, t.count { it.change.scope == Scope.LIVE }, t.count { it.change.scope == Scope.SHADOW },
             book.entries.count { it.status == Status.PROBATION }, book.entries.count { it.status == Status.KEPT },
@@ -828,7 +1258,7 @@ object AutoChange {
 
     /** "What did you change today?" */
     fun sayToday(book: Book, day: LocalDate): String {
-        val t = book.entries.filter { it.day == day && (it.applied || it.status == Status.OFFERED) }
+        val t = book.entries.filter { it.day == day && (it.applied || it.status == Status.OFFERED) && !bossOwn(it.change.kind) }
         val reverted = book.entries.filter { it.closedOn == day && it.status == Status.REVERTED }
         if (t.isEmpty() && reverted.isEmpty()) return "I changed nothing by myself today, Boss."
         val lines = t.map { "• " + it.change.what + ": " + it.change.from + " → " + it.change.to + " (" + it.change.scope.words + ", " +
@@ -848,6 +1278,8 @@ object AutoChange {
 
     /** "How is autopilot doing?": kept against reverted, and the rupees against the counterfactual. */
     fun sayHow(book: Book, mode: Mode): String {
+        // Boss's own changes ([bossOwn]: the park, the Liquidity paper trail) are logged here but are not Autopilot's.
+        @Suppress("NAME_SHADOWING") val book = book.copy(entries = book.entries.filter { !bossOwn(it.change.kind) })
         if (book.entries.none { it.by == "autopilot" || it.applied }) return "Autopilot learning is ${mode.words} and has made no change yet, Boss."
         val kept = book.entries.count { it.status == Status.KEPT }
         val rev = book.entries.count { it.status == Status.REVERTED }

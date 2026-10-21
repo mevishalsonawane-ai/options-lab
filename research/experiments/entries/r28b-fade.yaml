@@ -1,0 +1,31 @@
+id: r28b-fade
+title: 'R28b: 30-min pre-decision candle patterns (+ GEX sign) as a filter on fade'
+family: orb
+date: '2026-10-14'
+doc: research/HUNT_R28_GEX.md
+hypothesis: The shape of the 30 one-minute candles before the decision (alone or with GEX) separates the arm's good trades
+  from bad ones, out of sample.
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX}_{WEEK,MONTH}
+  (ATM+-10 each minute, OI in units), index_1m incl. INDIAVIX, Aug 2021 - 12 Oct 2026; expiries found from the data; per-minute
+  GEX tables on Drive derived/r28_gex/'
+period:
+  design: design years only, R28 holdouts and embargoes excluded; walk-forward folds per PREREG_B
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- 30-min pre-decision index candle shape (7 features, terciles)
+- GEX S1 sign
+model_or_rule: best of 63 patterns per training fold (keep only one tercile [and GEX side])
+settings: research/hunt/r28/PREREG_B.md
+prereg: research/hunt/r28/PREREG_B.md
+variants_tried: 63
+results:
+  summary: '2251 design trades, 921 sessions, 0 with no full 30-min window. Walk-forward picks: [''c_ret:mid&S1<0'', ''c_bars:high&S1<0'',
+    ''c_bars:high&S1<0'']. Out of sample: 1701 -> 142 trades, Rs/day -373.2 -> -13.4 (change +359.8), twin p 0.0695, folds
+    positive 3/3; pick''s q (m 378) 0.6111. FAILED the gates.'
+  costs: R17 Fills 'liq' + app charges (R22 trade()); x2 spread stress
+holdout_read: false
+verdict: rejected
+notes: No locked holdout left on the lake (R28 read them); a pattern passing all 5 gates would have gone to a forward paper/shadow
+  test. None did.

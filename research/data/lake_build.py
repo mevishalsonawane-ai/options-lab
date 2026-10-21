@@ -14,6 +14,9 @@ import pyarrow as pa, pyarrow.parquet as pq
 
 IST = "Asia/Kolkata"
 MAX_BYTES = 1_900_000_000
+# MCX underlyings (futures and options); MCX minutes keep their own session (no NSE calendar or 09:15-15:29 filter)
+MCX = {"CRUDEOIL", "NATURALGAS", "GOLD", "GOLDM", "SILVER", "SILVERM",
+       "CRUDEOILM", "NATGASMINI", "COPPER", "ZINC", "ALUMINIUM"}  # last five added 19 Oct 2026
 
 
 def read_chunks(pattern):
@@ -200,7 +203,7 @@ def build_fut_1m(raw, out, sub="fut_1m"):
         df.insert(0, "symbol", d.split("/")[-2]); df.insert(1, "expiry", e); df.insert(2, "security_id", int(sid))
         parts.append(df)
     df = pd.concat(parts, ignore_index=True)
-    mcxs = ["CRUDEOIL", "NATURALGAS", "GOLD", "GOLDM", "SILVER", "SILVERM"]
+    mcxs = sorted(MCX)
     a, da = clean(df[~df.symbol.isin(mcxs)], calendar(raw, "NIFTY"), (9 * 60 + 15, 15 * 60 + 29))
     b, db = clean(df[df.symbol.isin(mcxs)], None, None)
     b = b[b.ts.dt.date <= max(calendar(raw, "NIFTY"))]
@@ -244,7 +247,7 @@ def build_opt(raw, out, sub="opt"):
         for c in ("volume", "oi"):
             if c in df:
                 df[c] = df[c].astype("int64")
-        mcx = und in ("CRUDEOIL", "NATURALGAS", "GOLD", "GOLDM", "SILVER", "SILVERM")
+        mcx = und in MCX
         if mcx:
             last = max(calendar(raw, "NIFTY"))
             df, dropped = clean(df[df.ts.dt.date <= last], None, None)

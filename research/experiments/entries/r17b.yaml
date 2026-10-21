@@ -1,0 +1,26 @@
+id: r17b
+title: 'Smart stop-loss: stop = k x expected 30-minute range x delta instead of fixed points (TODO I5)'
+family: trade-management
+date: '2026-10-13'
+doc: research/HUNT_R17_PRETRADE.md
+hypothesis: A stop scaled to the expected 30-minute range beats the fixed stop on each arm's daily net.
+data_version: 'research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13, NIFTY expiry chains 2025-04..2026-04); Yahoo daily ^INDIAVIX for the previous close; app fills (liq) and charges (app, current rates)'
+period:
+  design: BANKNIFTY < 2025-08-25, NIFTY < 2025-10-13
+  holdout: BANKNIFTY 2025-08-25..2026-02-23, NIFTY 2025-10-13..2026-04-13
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- expected 30-minute range
+- delta at the option's implied vol
+model_or_rule: 'k in {0.5,0.75,1,1.25,1.5} x forms {smart (replaces), tight (min with fixed)}; per arm: ORB, Sweep, Range Fade, VIX divergence NIFTY / BANKNIFTY, Hero'
+settings: research/hunt/r17/PREREG.md
+prereg: research/hunt/r17/PREREG.md
+variants_tried: 60
+results:
+  summary: 'Design: only VIX divergence NIFTY tight k=1 cleared the p<0.10 bar (+Rs 480 on 56 trades, p 0.08); ORB smart k=1 +Rs 11,399 on 285 trades but p 0.11, so fixed. Holdout: VIX divergence NIFTY tight k=1 p 0.17, BH q 0.46. FAILED. Every arm keeps its fixed stop.'
+  costs: app charges, liq fills
+holdout_read: true
+verdict: rejected
+notes: The app shows a shadow line per trade with k = 1 (smart stop N points vs fixed M); it never moves a stop.

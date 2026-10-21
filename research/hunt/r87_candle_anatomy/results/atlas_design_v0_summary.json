@@ -1,0 +1,64 @@
+{
+ "P1": {
+  "cells": 387,
+  "tested": 349,
+  "bh_pass": 23
+ },
+ "P2": {
+  "cells": 4314,
+  "tested": 4068,
+  "bh_pass": 0
+ },
+ "P3": {
+  "cells": 394,
+  "tested": 373,
+  "bh_pass": 0
+ },
+ "coverage": {
+  "NIFTY_1m": {
+   "candles": 390089,
+   "days": 1047,
+   "act_known": 0.587
+  },
+  "NIFTY_5m": {
+   "candles": 78019,
+   "days": 1047,
+   "act_known": 0.587
+  },
+  "NIFTY_15m": {
+   "candles": 26007,
+   "days": 1047,
+   "act_known": 0.587
+  },
+  "BANKNIFTY_1m": {
+   "candles": 387107,
+   "days": 1046,
+   "act_known": 0.0
+  },
+  "BANKNIFTY_5m": {
+   "candles": 77650,
+   "days": 1046,
+   "act_known": 0.0
+  },
+  "BANKNIFTY_15m": {
+   "candles": 25888,
+   "days": 1046,
+   "act_known": 0.0
+  },
+  "SENSEX_1m": {
+   "candles": 388172,
+   "days": 1045,
+   "act_known": 0.0
+  },
+  "SENSEX_5m": {
+   "candles": 77695,
+   "days": 1045,
+   "act_known": 0.0
+  },
+  "SENSEX_15m": {
+   "candles": 25898,
+   "days": 1045,
+   "act_known": 0.0
+  }
+ }
+}

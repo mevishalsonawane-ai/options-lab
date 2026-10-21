@@ -1,0 +1,378 @@
+{
+ "design_findings": 17,
+ "holds": 2,
+ "rules": [
+  {
+   "id": "R87-1",
+   "read": false,
+   "why": "failed design gates: holdout not read for it"
+  },
+  {
+   "id": "R87-2",
+   "read": false,
+   "why": "failed design gates: holdout not read for it"
+  },
+  {
+   "id": "R87-3",
+   "read": false,
+   "why": "failed design gates: holdout not read for it"
+  }
+ ],
+ "futures_check": [
+  {
+   "und": "NIFTY",
+   "available": true,
+   "days": 56,
+   "first": "2026-07-29",
+   "last": "2026-10-16",
+   "minutes": 19124,
+   "corr_1m": 0.1364940551600238,
+   "corr_5m": 0.14750869118959825,
+   "all_candles": {
+    "n": 4200,
+    "fut_vol_ratio_median": 2.074074074074074,
+    "fut_oi_change_pct_median": 0.04665621007252249,
+    "oi_up_share": 0.7930952380952381
+   },
+   "families": [
+    {
+     "family": "big_upper_wick",
+     "n": 138,
+     "fut_vol_ratio_median": 2.5904761904761906,
+     "fut_oi_change_pct_median": 0.06568324420245711,
+     "oi_up_share": 0.7391304347826086
+    },
+    {
+     "family": "big_lower_wick",
+     "n": 147,
+     "fut_vol_ratio_median": 2.953841823810864,
+     "fut_oi_change_pct_median": 0.05374565900446503,
+     "oi_up_share": 0.7755102040816326
+    },
+    {
+     "family": "both_big_wicks",
+     "n": 102,
+     "fut_vol_ratio_median": 2.116883116883117,
+     "fut_oi_change_pct_median": 0.059854448428787205,
+     "oi_up_share": 0.7745098039215687
+    },
+    {
+     "family": "small_both_wicks",
+     "n": 308,
+     "fut_vol_ratio_median": 2.2776079136690646,
+     "fut_oi_change_pct_median": 0.06272825994903286,
+     "oi_up_share": 0.8311688311688312
+    },
+    {
+     "family": "doji",
+     "n": 480,
+     "fut_vol_ratio_median": 1.8406307506821498,
+     "fut_oi_change_pct_median": 0.03912820008092473,
+     "oi_up_share": 0.7875
+    },
+    {
+     "family": "marubozu_green",
+     "n": 119,
+     "fut_vol_ratio_median": 2.9565217391304346,
+     "fut_oi_change_pct_median": 0.06011207335710647,
+     "oi_up_share": 0.7899159663865546
+    },
+    {
+     "family": "marubozu_red",
+     "n": 191,
+     "fut_vol_ratio_median": 2.579524564183835,
+     "fut_oi_change_pct_median": 0.07371341002114411,
+     "oi_up_share": 0.8586387434554974
+    },
+    {
+     "family": "hammer",
+     "n": 90,
+     "fut_vol_ratio_median": 2.0,
+     "fut_oi_change_pct_median": 0.07195336992111923,
+     "oi_up_share": 0.8777777777777778
+    },
+    {
+     "family": "shooting_star",
+     "n": 58,
+     "fut_vol_ratio_median": 1.9898633759365358,
+     "fut_oi_change_pct_median": 0.015897560115556732,
+     "oi_up_share": 0.6206896551724138
+    },
+    {
+     "family": "huge_range",
+     "n": 176,
+     "fut_vol_ratio_median": 3.135135135135135,
+     "fut_oi_change_pct_median": 0.09418941842884526,
+     "oi_up_share": 0.8238636363636364
+    },
+    {
+     "family": "tiny_range",
+     "n": 323,
+     "fut_vol_ratio_median": 1.7525510204081631,
+     "fut_oi_change_pct_median": 0.04971661529283086,
+     "oi_up_share": 0.7770897832817337
+    },
+    {
+     "family": "fp_absorption",
+     "n": 217,
+     "fut_vol_ratio_median": 2.1333333333333333,
+     "fut_oi_change_pct_median": 0.040544101846783843,
+     "oi_up_share": 0.7695852534562212
+    },
+    {
+     "family": "fp_climax",
+     "n": 149,
+     "fut_vol_ratio_median": 4.6,
+     "fut_oi_change_pct_median": 0.08088978766430738,
+     "oi_up_share": 0.785234899328859
+    },
+    {
+     "family": "fp_stop_run_up",
+     "n": 120,
+     "fut_vol_ratio_median": 2.5904761904761906,
+     "fut_oi_change_pct_median": 0.032277066988939014,
+     "oi_up_share": 0.6916666666666667
+    },
+    {
+     "family": "fp_stop_run_down",
+     "n": 215,
+     "fut_vol_ratio_median": 3.381048387096774,
+     "fut_oi_change_pct_median": 0.07874015748031496,
+     "oi_up_share": 0.8511627906976744
+    }
+   ]
+  },
+  {
+   "und": "BANKNIFTY",
+   "available": true,
+   "days": 56,
+   "first": "2026-07-29",
+   "last": "2026-10-16",
+   "minutes": 14249,
+   "corr_1m": 0.06841115182591577,
+   "corr_5m": 0.07730996310827423,
+   "all_candles": {
+    "n": 4200,
+    "fut_vol_ratio_median": 2.3333333333333335,
+    "fut_oi_change_pct_median": 0.025588538011190466,
+    "oi_up_share": 0.5995238095238096
+   },
+   "families": [
+    {
+     "family": "big_upper_wick",
+     "n": 162,
+     "fut_vol_ratio_median": 3.4143302180685358,
+     "fut_oi_change_pct_median": 0.03197894647976773,
+     "oi_up_share": 0.5864197530864198
+    },
+    {
+     "family": "big_lower_wick",
+     "n": 141,
+     "fut_vol_ratio_median": 3.1822222222222223,
+     "fut_oi_change_pct_median": 0.0800768737988469,
+     "oi_up_share": 0.6737588652482269
+    },
+    {
+     "family": "both_big_wicks",
+     "n": 114,
+     "fut_vol_ratio_median": 3.0,
+     "fut_oi_change_pct_median": 0.04991859828663213,
+     "oi_up_share": 0.6052631578947368
+    },
+    {
+     "family": "small_both_wicks",
+     "n": 250,
+     "fut_vol_ratio_median": 2.8333333333333335,
+     "fut_oi_change_pct_median": 0.042849933277394,
+     "oi_up_share": 0.652
+    },
+    {
+     "family": "doji",
+     "n": 536,
+     "fut_vol_ratio_median": 2.125,
+     "fut_oi_change_pct_median": 0.02364171753630433,
+     "oi_up_share": 0.582089552238806
+    },
+    {
+     "family": "marubozu_green",
+     "n": 120,
+     "fut_vol_ratio_median": 2.7142857142857144,
+     "fut_oi_change_pct_median": 0.05760217110183695,
+     "oi_up_share": 0.675
+    },
+    {
+     "family": "marubozu_red",
+     "n": 141,
+     "fut_vol_ratio_median": 3.4444444444444446,
+     "fut_oi_change_pct_median": 0.03883243802990098,
+     "oi_up_share": 0.6524822695035462
+    },
+    {
+     "family": "hammer",
+     "n": 83,
+     "fut_vol_ratio_median": 2.5454545454545454,
+     "fut_oi_change_pct_median": 0.053624211985665325,
+     "oi_up_share": 0.6506024096385542
+    },
+    {
+     "family": "shooting_star",
+     "n": 68,
+     "fut_vol_ratio_median": 2.1,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.4264705882352941
+    },
+    {
+     "family": "huge_range",
+     "n": 168,
+     "fut_vol_ratio_median": 3.64634847613571,
+     "fut_oi_change_pct_median": 0.14854713388206053,
+     "oi_up_share": 0.7202380952380952
+    },
+    {
+     "family": "tiny_range",
+     "n": 295,
+     "fut_vol_ratio_median": 2.0,
+     "fut_oi_change_pct_median": 0.011048502927853277,
+     "oi_up_share": 0.5491525423728814
+    },
+    {
+     "family": "fp_absorption",
+     "n": 94,
+     "fut_vol_ratio_median": 18.55746140651801,
+     "fut_oi_change_pct_median": 0.1860501672717811,
+     "oi_up_share": 0.9574468085106383
+    },
+    {
+     "family": "fp_climax",
+     "n": 68,
+     "fut_vol_ratio_median": 14.659041394335512,
+     "fut_oi_change_pct_median": 0.21642718569321376,
+     "oi_up_share": 0.8235294117647058
+    },
+    {
+     "family": "fp_stop_run_up",
+     "n": 133,
+     "fut_vol_ratio_median": 4.1136534133533385,
+     "fut_oi_change_pct_median": 0.01819174094960888,
+     "oi_up_share": 0.5639097744360902
+    },
+    {
+     "family": "fp_stop_run_down",
+     "n": 170,
+     "fut_vol_ratio_median": 4.571428571428571,
+     "fut_oi_change_pct_median": 0.12374729109597168,
+     "oi_up_share": 0.7823529411764706
+    }
+   ]
+  },
+  {
+   "und": "SENSEX",
+   "available": true,
+   "days": 54,
+   "first": "2026-07-31",
+   "last": "2026-10-16",
+   "minutes": 10853,
+   "corr_1m": 0.0887590274772559,
+   "corr_5m": 0.13055192671051621,
+   "all_candles": {
+    "n": 3937,
+    "fut_vol_ratio_median": 10.0,
+    "fut_oi_change_pct_median": 0.0,
+    "oi_up_share": 0.270510541021082
+   },
+   "families": [
+    {
+     "family": "big_upper_wick",
+     "n": 120,
+     "fut_vol_ratio_median": 19.0,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.2833333333333333
+    },
+    {
+     "family": "big_lower_wick",
+     "n": 166,
+     "fut_vol_ratio_median": 10.410256410256409,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.2469879518072289
+    },
+    {
+     "family": "both_big_wicks",
+     "n": 95,
+     "fut_vol_ratio_median": 31.0,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.28421052631578947
+    },
+    {
+     "family": "small_both_wicks",
+     "n": 348,
+     "fut_vol_ratio_median": 11.0,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.3563218390804598
+    },
+    {
+     "family": "doji",
+     "n": 482,
+     "fut_vol_ratio_median": 7.266666666666667,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.24688796680497926
+    },
+    {
+     "family": "marubozu_green",
+     "n": 171,
+     "fut_vol_ratio_median": 8.0,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.3216374269005848
+    },
+    {
+     "family": "marubozu_red",
+     "n": 178,
+     "fut_vol_ratio_median": 14.333333333333334,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.39325842696629215
+    },
+    {
+     "family": "hammer",
+     "n": 72,
+     "fut_vol_ratio_median": 50.0,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.3194444444444444
+    },
+    {
+     "family": "shooting_star",
+     "n": 54,
+     "fut_vol_ratio_median": 5.0,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.2777777777777778
+    },
+    {
+     "family": "huge_range",
+     "n": 183,
+     "fut_vol_ratio_median": 9.555555555555555,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.3879781420765027
+    },
+    {
+     "family": "tiny_range",
+     "n": 341,
+     "fut_vol_ratio_median": 5.1,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.2287390029325513
+    },
+    {
+     "family": "fp_stop_run_up",
+     "n": 102,
+     "fut_vol_ratio_median": 7.409090909090909,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.30392156862745096
+    },
+    {
+     "family": "fp_stop_run_down",
+     "n": 220,
+     "fut_vol_ratio_median": 19.166666666666664,
+     "fut_oi_change_pct_median": 0.0,
+     "oi_up_share": 0.35454545454545455
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+{
+ "NIGHT-V1_H1_I20s": {
+  "delta": -17120.0,
+  "nights": 86,
+  "p": 0.9685
+ },
+ "NIGHT-V2_H1_I30s": {
+  "delta": -16139.0,
+  "nights": 86,
+  "p": 0.9145
+ },
+ "NIGHT-V3_H1_I20r": {
+  "delta": -17499.0,
+  "nights": 86,
+  "p": 0.977
+ },
+ "NIGHT-V4_H1_I30r": {
+  "delta": -16433.0,
+  "nights": 86,
+  "p": 0.9475
+ },
+ "NIGHT-V5_H1_P20": {
+  "delta": -8927.0,
+  "nights": 86,
+  "p": 0.8466
+ },
+ "NIGHT-V6_H1_P30": {
+  "delta": -17642.0,
+  "nights": 86,
+  "p": 0.927
+ },
+ "NIGHT-V7_H2_I30s": {
+  "delta": -4992.0,
+  "nights": 86,
+  "p": 0.7356
+ },
+ "NIGHT-V8_H3_LOCK": {
+  "delta": -18884.0,
+  "nights": 86,
+  "p": 0.984
+ },
+ "NIGHT-HOLD-RT": {
+  "delta": -12713.0,
+  "nights": 86,
+  "p": 0.995
+ }
+}

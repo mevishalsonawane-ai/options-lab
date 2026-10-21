@@ -1,0 +1,33 @@
+id: r90b-c5t
+title: 'R90B C5T: Almazov BOS setups with 5 x 1m confirmation + 1R stop trail'
+family: patterns-indicators
+date: '2026-10-20'
+doc: research/HUNT_R90_ALMAZOV_BOS.md
+hypothesis: 'Pre-registered (PREREG_B): on R90 setups (signal on the underlying), a 5 x 1-minute direction confirmation and / or profit lock, stop trail and profit trail (all read on the underlying in R) make the bought 1-ITM option beat 500 after-trigger twins after costs (gates as R90, BH over 189 cells).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (20 Oct 2026 copy), the R90 / R89 stores to 19 Oct 2026'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
+  holdout: 1 Apr - 19 Oct 2026 (read once for R90B; already read by R90 for the base rule, so not unseen)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+- GOLDM
+- SILVERM
+- CRUDEOILM
+- NATGASMINI
+features:
+- 'signal source: the underlying (index spot 1m; MCX near future); no option chart'
+- R90 structure setups, 5 x 1m confirmation, lock / trail / giveback in R
+model_or_rule: R90B C5T on charts A1, A5, H60
+settings: research/hunt/r90_almazov_bos/r90b.py, PREREG_B.md
+prereg: research/hunt/r90_almazov_bos/PREREG_B.md
+variants_tried: 21
+results:
+  summary: 'Option net, 1 lot, after costs. A1 indices: design 355 tr win 36% -85,895; check 118 tr win 37% -3,192; A1 mcx: design 217 tr win 20% -96,008; check 338 tr win 20% -159,914; A5 indices: design 45 tr win 33% -20,239; check 22 tr win 27% -19,749; A5 mcx: design 37 tr win 32% -8,906; check 51 tr win 25% -38,559; H60 indices: design 130 tr win 41% -20,657; check 52 tr win 37% +8,491; H60 mcx: design 82 tr win 32% -32,122; check 109 tr win 31% -39,916. Design passers 0 of 189.'
+  costs: as R90 (R51 engine, dated charges; MCX R53 / R85, option sold at the exit minute close)
+holdout_read: true
+verdict: rejected
+notes: 'One of 7 rules x 3 charts x 9 instruments (189 cells, one BH family).'

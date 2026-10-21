@@ -1,0 +1,36 @@
+id: r52-h25-5
+title: 'R52 re-test on Nov 2024+: H25-5 FINNIFTY 60-min EMA 13/34 fade'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H25-5 (old verdict: Top pre t: 110 tr +182/tr, t 2.44, +20/day; hold 36 tr -38/day) makes
+  money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- FINNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''name'': ''EMA_X13_34'', ''orient'': ''fade'', ''tf'': 60, ''unds'': [''FINNIFTY'']} | ITM1/near | exits
+  time_stop=15,time_gain=None,sig_levels=False | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 23
+results:
+  summary: 'Design original: 60 trades, win 62%, net Rs +15,887 (Rs +47/day), worst day Rs -7,343, max DD Rs -9,210, p 0.001
+    (coin-flip p 0.008); walk-forward Rs +14,325. Re-tune pick g10 ({''unds'': (''FINNIFTY'',), ''tf'': 60, ''name'': ''EMA_X13_34'',
+    ''orient'': ''fade''} · ITM1/near · exits time_stop=30,time_gain=None,sig_levels=False): design 60 trades, win 53%, net
+    Rs +18,991 (Rs +56/day), worst day Rs -6,097, max DD Rs -9,882, p 0.002 (coin-flip p 0.022); walk-forward Rs +14,631.
+    FINAL original: 19 trades, win 42%, net Rs -1,506 (Rs -11/day), worst day Rs -1,412, max DD Rs -3,694, p 0.064 (coin-flip
+    p 0.396), q 0.53 -> too few trades to judge. FINAL pick: 19 trades, win 42%, net Rs -1,101 (Rs -8/day), worst day Rs -1,752,
+    max DD Rs -4,669, p 0.062 (coin-flip p 0.283), q 0.53 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = #1 of HUNT_H25.md''s top 20 by pre-holdout t (FINNIFTY 60m EMA_X13_34
+  fade T15; LAD and P25_10 are in the grid). Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final
+  trades, top-5 < 100% of net, design walk-forward > 0.'

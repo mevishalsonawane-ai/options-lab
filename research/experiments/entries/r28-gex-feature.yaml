@@ -1,0 +1,37 @@
+id: r28-gex-feature
+title: 'R28 GEX feature: intraday dealer gamma exposure in the Data Brain (L4)'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_R28_GEX.md
+hypothesis: A point-in-time intraday GEX (S1/S2/S3, norm, flip, walls, near vs all) can be built from the lake's ATM+-10 option
+  minutes.
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX}_{WEEK,MONTH}
+  (ATM+-10 each minute, OI in units), index_1m incl. INDIAVIX, Aug 2021 - 12 Oct 2026; expiries found from the data; per-minute
+  GEX tables on Drive derived/r28_gex/'
+period:
+  design: every lake day (a measurement, not a test)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- option last trade <= 30 min
+- OI (units)
+- Black-Scholes IV r 6.5% q 0
+- index close
+model_or_rule: research/brain/gex.py + research/brain/features/gex_f.py (12 L4 features)
+settings: research/hunt/r28/PREREG.md
+prereg: research/hunt/r28/PREREG.md
+variants_tried: null
+results:
+  summary: 'NIFTY: gamma at ATM+-9/10 median 0.035, OI there 0.115, S1<0 at 10:00 on 18% of days, flip found 100%; BANKNIFTY:
+    gamma at ATM+-9/10 median 0.057, OI there 0.110, S1<0 at 10:00 on 27% of days, flip found 89%; FINNIFTY: gamma at ATM+-9/10
+    median 0.046, OI there 0.107, S1<0 at 10:00 on 24% of days, flip found 78%; MIDCPNIFTY: gamma at ATM+-9/10 median 0.077,
+    OI there 0.120, S1<0 at 10:00 on 25% of days, flip found 65%; SENSEX: gamma at ATM+-9/10 median 0.068, OI there 0.112,
+    S1<0 at 10:00 on 29% of days, flip found 98%'
+  costs: none (feature)
+holdout_read: null
+verdict: not-a-test
+notes: 'Coverage gap: only ATM+-10 is stored; the share of stored gamma and OI at the edge strikes is in results/describe.md.'

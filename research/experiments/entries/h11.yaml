@@ -1,0 +1,26 @@
+id: h11
+title: Liquidity 15+5 on NIFTY and SENSEX
+family: liquidity
+date: '2026-10-11'
+doc: research/HUNT_H11.md
+hypothesis: The high-capacity indices add edge.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- SENSEX
+features:
+- liquidity levels
+model_or_rule: Liquidity 15+5 variants
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h11/PREREG.md
+variants_tried: null
+results:
+  summary: No variant has an edge after costs; entries hardly beat random.
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

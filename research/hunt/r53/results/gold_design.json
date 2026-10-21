@@ -1,0 +1,1142 @@
+{
+ "GB1": {
+  "design_pick": null,
+  "name": "boss-opt1 (M15 EMA9/21+RSI, H1 bias)",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_session_strats.py option1",
+  "twin_kind": "random entries, the rule's own exits",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 4.82345238095238,
+    "exits": {
+     "cut-off": 51,
+     "stop": 61,
+     "target": 28
+    },
+    "net_per_trading_day": 69.41384180791104,
+    "p": 0.07984031936127745,
+    "summary": {
+     "avg_loss": -1399.245945945943,
+     "avg_win": 1941.1621212121258,
+     "days": 120,
+     "max_dd": 17613.69999999984,
+     "net": 24572.50000000051,
+     "net_per_day": 204.77083333333758,
+     "top5_share": 1.2166690405941305,
+     "trades": 140,
+     "win_rate": 0.4714285714285714,
+     "worst_day": -10726.699999999979
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 200.0
+    },
+    "trades_csv": "results/trades/gold_GB1_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -9722.819800000078,
+     "n": 500,
+     "p95": 32239.534999998876
+    }
+   },
+   "rt_1R": {
+    "avg_hold_h": 3.748333333333333,
+    "exits": {
+     "cut-off": 31,
+     "stop": 57,
+     "target": 52
+    },
+    "net_per_trading_day": -20.00988700564852,
+    "p": 0.4590818363273453,
+    "summary": {
+     "avg_loss": -1441.636764705878,
+     "avg_win": 1263.1638888888908,
+     "days": 120,
+     "max_dd": 25511.699999999844,
+     "net": -7083.499999999575,
+     "net_per_day": -59.02916666666313,
+     "top5_share": null,
+     "trades": 140,
+     "win_rate": 0.5142857142857142,
+     "worst_day": -10726.699999999979
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 200.0
+    },
+    "trades_csv": "results/trades/gold_GB1_rt_1R_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -8617.878600000033,
+     "n": 500,
+     "p95": 23787.27500000001
+    }
+   },
+   "rt_oppcross": {
+    "avg_hold_h": 3.9281007751937977,
+    "exits": {
+     "cut-off": 51,
+     "signal": 97,
+     "stop": 24
+    },
+    "net_per_trading_day": 58.72655367232211,
+    "p": 0.16766467065868262,
+    "summary": {
+     "avg_loss": -1016.4991228070056,
+     "avg_win": 2356.3810344827702,
+     "days": 120,
+     "max_dd": 21026.99999999933,
+     "net": 20789.200000002027,
+     "net_per_day": 173.24333333335022,
+     "top5_share": 1.9008427452714176,
+     "trades": 172,
+     "win_rate": 0.3372093023255814,
+     "worst_day": -11961.199999999699
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 120.0
+    },
+    "trades_csv": "results/trades/gold_GB1_rt_oppcross_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -4828.430799999465,
+     "n": 500,
+     "p95": 37180.585000001556
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 24572.500000000513,
+    "rt_1R": -7083.499999999575,
+    "rt_oppcross": 20789.20000000203
+   },
+   "design_pick": null,
+   "orig_wf_net": 24898.3000000008,
+   "retune_picks": [
+    "rt_oppcross",
+    "rt_oppcross",
+    "rt_oppcross",
+    "orig"
+   ],
+   "retune_wf_net": 24034.300000001385
+  }
+ },
+ "GB10": {
+  "design_pick": null,
+  "name": "liq-india-15+5",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "liquidity_gold.py",
+  "twin_kind": "hold-matched random entries",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 1.3923638778220453,
+    "exits": {
+     "cut-off": 29,
+     "failed break": 91,
+     "new liquidity": 53,
+     "next liquidity": 78
+    },
+    "net_per_trading_day": 72.14237288134647,
+    "p": 0.07385229540918163,
+    "summary": {
+     "avg_loss": -373.96095890412386,
+     "avg_win": 763.2066666666545,
+     "days": 152,
+     "max_dd": 10639.000000000106,
+     "net": 25538.399999996655,
+     "net_per_day": 168.0157894736622,
+     "top5_share": 0.7158749177709772,
+     "trades": 251,
+     "win_rate": 0.41832669322709165,
+     "worst_day": -5481.000000000007
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB10_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -6073.107199998003,
+     "n": 500,
+     "p95": 28671.750000002732
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 25538.399999996655
+   },
+   "design_pick": null,
+   "orig_wf_net": 22063.299999998,
+   "retune_picks": [
+    "orig",
+    "orig",
+    "orig",
+    "orig"
+   ],
+   "retune_wf_net": 22063.299999997995
+  }
+ },
+ "GB11": {
+  "design_pick": null,
+  "name": "hammer-1h",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_candles.py",
+  "twin_kind": "random entries, the rule's own exits",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 4.640101522842639,
+    "exits": {
+     "cut-off": 62,
+     "stop": 94,
+     "target": 41
+    },
+    "net_per_trading_day": 136.244067796613,
+    "p": 0.06187624750499002,
+    "summary": {
+     "avg_loss": -1274.0478632478614,
+     "avg_win": 2466.1750000000093,
+     "days": 164,
+     "max_dd": 18436.699999999924,
+     "net": 48230.400000001,
+     "net_per_day": 294.08780487805484,
+     "top5_share": 1.1657585257430803,
+     "trades": 197,
+     "win_rate": 0.40609137055837563,
+     "worst_day": -14363.7
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 80.0
+    },
+    "trades_csv": "results/trades/gold_GB11_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": 1509.8874000004282,
+     "n": 500,
+     "p95": 50536.81500000083
+    }
+   },
+   "rt_4candles": {
+    "avg_hold_h": 2.833014354066986,
+    "exits": {
+     "cut-off": 32,
+     "signal": 103,
+     "stop": 74
+    },
+    "net_per_trading_day": 94.92740112994896,
+    "p": 0.10179640718562874,
+    "summary": {
+     "avg_loss": -1094.350909090906,
+     "avg_win": 1555.3828282828445,
+     "days": 167,
+     "max_dd": 11383.000000000278,
+     "net": 33604.30000000193,
+     "net_per_day": 201.22335329342474,
+     "top5_share": 1.295658591311163,
+     "trades": 209,
+     "win_rate": 0.47368421052631576,
+     "worst_day": -6162.999999999887
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 40.0
+    },
+    "trades_csv": "results/trades/gold_GB11_rt_4candles_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -216.82519999909087,
+     "n": 500,
+     "p95": 43956.020000002085
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 48230.400000001006,
+    "rt_4candles": 33604.30000000193
+   },
+   "design_pick": null,
+   "orig_wf_net": 52235.50000000115,
+   "retune_picks": [
+    "rt_4candles",
+    "rt_4candles",
+    "rt_4candles",
+    "orig"
+   ],
+   "retune_wf_net": 42537.900000001326
+  }
+ },
+ "GB12": {
+  "design_pick": null,
+  "name": "dip-keephalf (2 ATR, 8 h)",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_mtf_lock.py",
+  "twin_kind": "random entries, the rule's own exits",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 5.7532327586206895,
+    "exits": {
+     "break": 148,
+     "stop/lock": 107,
+     "time": 209
+    },
+    "net_per_trading_day": 318.8290960452071,
+    "p": 0.017964071856287425,
+    "summary": {
+     "avg_loss": -1523.6424242424146,
+     "avg_win": 1558.4462406015089,
+     "days": 300,
+     "max_dd": 26756.000000000044,
+     "net": 112865.50000000332,
+     "net_per_day": 376.2183333333444,
+     "top5_share": 0.4212722222468236,
+     "trades": 464,
+     "win_rate": 0.5732758620689655,
+     "worst_day": -11659.700000000033
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB12_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -27155.808499996154,
+     "n": 500,
+     "p95": 78478.11500000584
+    }
+   },
+   "rt_giveback1.5": {
+    "avg_hold_h": 4.8008608815427,
+    "exits": {
+     "break": 140,
+     "stop/lock": 221,
+     "time": 123
+    },
+    "net_per_trading_day": 291.9390115069677,
+    "p": 0.011976047904191617,
+    "summary": {
+     "avg_loss": -1076.388255937631,
+     "avg_win": 1451.2163025533807,
+     "days": 300,
+     "max_dd": 23636.57449567192,
+     "net": 103346.41007346657,
+     "net_per_day": 344.4880335782219,
+     "top5_share": 0.4644105908833657,
+     "trades": 484,
+     "win_rate": 0.5103305785123967,
+     "worst_day": -11659.700000000033
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB12_rt_giveback1.5_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -30407.871657846033,
+     "n": 500,
+     "p95": 68628.17889711828
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 112865.5000000033,
+    "rt_giveback1.5": 103346.41007346656
+   },
+   "design_pick": null,
+   "orig_wf_net": 111569.00000000541,
+   "retune_picks": [
+    "rt_giveback1.5",
+    "orig",
+    "orig",
+    "orig"
+   ],
+   "retune_wf_net": 103839.83055074338
+  }
+ },
+ "GB13": {
+  "design_pick": "rt_giveback5",
+  "name": "trend-gb3 (Supertrend 4h, 3-ATR giveback, wait)",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_trend_lock.py",
+  "twin_kind": "hold-matched random entries (swap)",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 155.73076923076923,
+    "exits": {
+     "": 26
+    },
+    "net_per_trading_day": 407.1622226463085,
+    "p": 0.07385229540918163,
+    "summary": {
+     "avg_loss": -1413.1385248286285,
+     "avg_win": 8635.58527863457,
+     "days": 26,
+     "max_dd": 4948.298397569015,
+     "net": 144135.42681679322,
+     "net_per_day": 5543.670262184354,
+     "top5_share": 0.7668550931063012,
+     "trades": 26,
+     "win_rate": 0.6923076923076923,
+     "worst_day": -2900.581546202504
+    },
+    "swap": {
+     "charged": true,
+     "usd_charged": 6600.0
+    },
+    "trades_csv": "results/trades/gold_GB13_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries (swap)",
+     "mean": 54726.01100000021,
+     "n": 500,
+     "p95": 153428.51500000022
+    }
+   },
+   "rt_giveback5": {
+    "avg_hold_h": 244.73076923076923,
+    "exits": {
+     "": 26
+    },
+    "net_per_trading_day": 692.9649607330557,
+    "p": 0.017964071856287425,
+    "summary": {
+     "avg_loss": -1926.8192732919306,
+     "avg_win": 16536.111802026317,
+     "days": 26,
+     "max_dd": 11853.100000000064,
+     "net": 245309.59609950174,
+     "net_per_day": 9434.98446536545,
+     "top5_share": 0.7277520965391214,
+     "trades": 26,
+     "win_rate": 0.6153846153846154,
+     "worst_day": -4302.000000000018
+    },
+    "swap": {
+     "charged": true,
+     "usd_charged": 10840.0
+    },
+    "trades_csv": "results/trades/gold_GB13_rt_giveback5_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries (swap)",
+     "mean": 90151.79180000024,
+     "n": 500,
+     "p95": 218721.90500000026
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 144135.42681679322,
+    "rt_giveback5": 245309.59609950174
+   },
+   "design_pick": "rt_giveback5",
+   "orig_wf_net": 139999.19483335823,
+   "retune_picks": [
+    "rt_giveback5",
+    "rt_giveback5",
+    "rt_giveback5",
+    "rt_giveback5"
+   ],
+   "retune_wf_net": 224052.64946165323
+  }
+ },
+ "GB2": {
+  "design_pick": null,
+  "name": "boss-opt2 (M5 Asian-range sweep)",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_session_strats.py option2",
+  "twin_kind": "random entries, the rule's own exits",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 1.407834757834758,
+    "exits": {
+     "cut-off": 6,
+     "stop": 101,
+     "target": 10
+    },
+    "net_per_trading_day": 35.68276836158142,
+    "p": 0.07584830339321358,
+    "summary": {
+     "avg_loss": -507.19108910891157,
+     "avg_win": 3991.124999999993,
+     "days": 117,
+     "max_dd": 19931.30000000023,
+     "net": 12631.699999999822,
+     "net_per_day": 107.96324786324635,
+     "top5_share": 3.809281411053202,
+     "trades": 117,
+     "win_rate": 0.13675213675213677,
+     "worst_day": -3472.9999999999854
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB2_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -4832.734400000006,
+     "n": 500,
+     "p95": 15966.994999999868
+    }
+   },
+   "rt_200": {
+    "avg_hold_h": 1.7917378917378919,
+    "exits": {
+     "cut-off": 12,
+     "stop": 102,
+     "target": 3
+    },
+    "net_per_trading_day": 11.82401129943504,
+    "p": 0.1996007984031936,
+    "summary": {
+     "avg_loss": -508.532352941177,
+     "avg_win": 3737.0666666666707,
+     "days": 117,
+     "max_dd": 19839.400000000256,
+     "net": 4185.700000000004,
+     "net_per_day": 35.77521367521371,
+     "top5_share": 9.357574599230754,
+     "trades": 117,
+     "win_rate": 0.1282051282051282,
+     "worst_day": -3472.9999999999854
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB2_rt_200_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": -4733.67859999996,
+     "n": 500,
+     "p95": 18335.79500000029
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 12631.699999999826,
+    "rt_200": 4185.7000000000035
+   },
+   "design_pick": null,
+   "orig_wf_net": 16220.899999999738,
+   "retune_picks": [
+    "rt_200",
+    "rt_200",
+    "rt_200",
+    "rt_200"
+   ],
+   "retune_wf_net": 5115.899999999903
+  }
+ },
+ "GB3": {
+  "design_pick": "rt_notargets",
+  "name": "tas-15m (ATR 19, flip + delayed)",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_tas.py",
+  "twin_kind": "hold-matched random entries",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 10.65937721160651,
+    "exits": {
+     "stop": 93,
+     "targets": 38,
+     "tracker": 340
+    },
+    "net_per_trading_day": 167.50475369610837,
+    "p": 0.5349301397205589,
+    "summary": {
+     "avg_loss": -1372.6232211948766,
+     "avg_win": 2660.532321612033,
+     "days": 312,
+     "max_dd": 62447.38080420823,
+     "net": 59296.68280842236,
+     "net_per_day": 190.05347053981527,
+     "top5_share": 1.383041273821283,
+     "trades": 471,
+     "win_rate": 0.37154989384288745,
+     "worst_day": -10173.699999999946
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 8160.0
+    },
+    "trades_csv": "results/trades/gold_GB3_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": 67687.70900000399,
+     "n": 500,
+     "p95": 221519.2950000043
+    }
+   },
+   "rt_notargets": {
+    "avg_hold_h": 11.680184005661713,
+    "exits": {
+     "stop": 83,
+     "tracker": 388
+    },
+    "net_per_trading_day": 366.58488105858345,
+    "p": 0.2754491017964072,
+    "summary": {
+     "avg_loss": -1350.288620809447,
+     "avg_win": 3207.788690476196,
+     "days": 312,
+     "max_dd": 68442.71789473426,
+     "net": 129771.04789473854,
+     "net_per_day": 415.9328458164697,
+     "top5_share": 0.7606272862962862,
+     "trades": 471,
+     "win_rate": 0.35668789808917195,
+     "worst_day": -10173.699999999946
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 9240.0
+    },
+    "trades_csv": "results/trades/gold_GB3_rt_notargets_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": 75990.1748000039,
+     "n": 500,
+     "p95": 217822.430000004
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 59296.68280842236,
+    "rt_notargets": 129771.04789473854
+   },
+   "design_pick": "rt_notargets",
+   "orig_wf_net": 54754.31063895014,
+   "retune_picks": [
+    "orig",
+    "rt_notargets",
+    "rt_notargets",
+    "rt_notargets"
+   ],
+   "retune_wf_net": 101808.16342263616
+  }
+ },
+ "GB4-30m": {
+  "design_pick": null,
+  "name": "tas-30m no targets",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_tas.py (gold_tas_lock.py row)",
+  "twin_kind": "hold-matched random entries",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 27.702932098765434,
+    "exits": {
+     "stop": 41,
+     "tracker": 175
+    },
+    "net_per_trading_day": 485.06178233720294,
+    "p": 0.16966067864271456,
+    "summary": {
+     "avg_loss": -2190.0018929969456,
+     "avg_win": 4596.864210526318,
+     "days": 197,
+     "max_dd": 40831.07189473632,
+     "net": 171711.87094736984,
+     "net_per_day": 871.6338626770042,
+     "top5_share": 0.49811757060300305,
+     "trades": 216,
+     "win_rate": 0.4398148148148148,
+     "worst_day": -14647.999999999985
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 9680.0
+    },
+    "trades_csv": "results/trades/gold_GB4-30m_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": 83708.01440000173,
+     "n": 500,
+     "p95": 225753.3000000025
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 171711.87094736984
+   },
+   "design_pick": null,
+   "orig_wf_net": 137929.53305263392,
+   "retune_picks": [
+    "orig",
+    "orig",
+    "orig",
+    "orig"
+   ],
+   "retune_wf_net": 137929.53305263392
+  }
+ },
+ "GB4-4h": {
+  "design_pick": null,
+  "name": "tas-4h with targets",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_tas.py",
+  "twin_kind": "hold-matched random entries",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 190.13988095238096,
+    "exits": {
+     "stop": 2,
+     "targets": 3,
+     "tracker": 23
+    },
+    "net_per_trading_day": 444.69056937704363,
+    "p": 0.13972055888223553,
+    "summary": {
+     "avg_loss": -3510.893565789497,
+     "avg_win": 9275.380504289471,
+     "days": 28,
+     "max_dd": 17660.4485263158,
+     "net": 157420.46155947345,
+     "net_per_day": 5622.159341409766,
+     "top5_share": 0.7081473998051876,
+     "trades": 28,
+     "win_rate": 0.7142857142857143,
+     "worst_day": -17660.448526315788
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 8760.0
+    },
+    "trades_csv": "results/trades/gold_GB4-4h_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": 75655.16980000027,
+     "n": 500,
+     "p95": 194507.91000000015
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 157420.46155947348
+   },
+   "design_pick": null,
+   "orig_wf_net": 134442.84378999984,
+   "retune_picks": [
+    "orig",
+    "orig",
+    "orig",
+    "orig"
+   ],
+   "retune_wf_net": 134442.84378999984
+  }
+ },
+ "GB5-1h": {
+  "design_pick": null,
+  "name": "ai-opinion Robust 1h",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_ai_opinion.py",
+  "twin_kind": "random entries, the rule's own exits",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 12.760917030567686,
+    "exits": {
+     "stop": 141,
+     "target": 88
+    },
+    "net_per_trading_day": 140.69097200397653,
+    "p": 0.3932135728542914,
+    "summary": {
+     "avg_loss": -1584.3038036700618,
+     "avg_win": 3104.448186441892,
+     "days": 164,
+     "max_dd": 31709.94356304784,
+     "net": 49804.60408940769,
+     "net_per_day": 303.6866103012664,
+     "top5_share": 1.3596870520012532,
+     "trades": 229,
+     "win_rate": 0.38427947598253276,
+     "worst_day": -18560.938045228035
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 5560.0
+    },
+    "trades_csv": "results/trades/gold_GB5-1h_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": 36754.014604801865,
+     "n": 500,
+     "p95": 105764.8018138132
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 49804.60408940769
+   },
+   "design_pick": null,
+   "orig_wf_net": 47234.1690098257,
+   "retune_picks": [
+    "orig",
+    "orig",
+    "orig",
+    "orig"
+   ],
+   "retune_wf_net": 47234.169009825695
+  }
+ },
+ "GB5-4h": {
+  "design_pick": null,
+  "name": "ai-opinion Robust 4h",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_ai_opinion.py",
+  "twin_kind": "random entries, the rule's own exits",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 39.51821705426356,
+    "exits": {
+     "stop": 40,
+     "target": 46
+    },
+    "net_per_trading_day": 480.3561213025062,
+    "p": 0.007984031936127744,
+    "summary": {
+     "avg_loss": -2342.559523209225,
+     "avg_win": 5733.661910205569,
+     "days": 84,
+     "max_dd": 23184.95885436215,
+     "net": 170046.0669410872,
+     "net_per_day": 2024.3579397748476,
+     "top5_share": 0.43746874873693575,
+     "trades": 86,
+     "win_rate": 0.5348837209302325,
+     "worst_day": -4653.342032288521
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 5560.0
+    },
+    "trades_csv": "results/trades/gold_GB5-4h_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "random entries, the rule's own exits",
+     "mean": 36562.763431393854,
+     "n": 500,
+     "p95": 120734.14151696664
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 170046.0669410872
+   },
+   "design_pick": null,
+   "orig_wf_net": 155096.51505240635,
+   "retune_picks": [
+    "orig",
+    "orig",
+    "orig",
+    "orig"
+   ],
+   "retune_wf_net": 155096.51505240635
+  }
+ },
+ "GB6": {
+  "design_pick": "rt_fixed2300",
+  "name": "reopen-drift (reopen +5 to +120 min)",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_reopen.py by_reopen",
+  "twin_kind": "hold-matched random entries",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 1.9166666666666667,
+    "exits": {
+     "time": 348
+    },
+    "net_per_trading_day": 112.02316384181732,
+    "p": 0.12375249500998003,
+    "summary": {
+     "avg_loss": -874.2104294478446,
+     "avg_win": 984.6081081081189,
+     "days": 348,
+     "max_dd": 20345.79999999759,
+     "net": 39656.20000000333,
+     "net_per_day": 113.95459770115899,
+     "top5_share": 0.9012361244899277,
+     "trades": 348,
+     "win_rate": 0.5316091954022989,
+     "worst_day": -9002.299999999952
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB6_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -176.06999999707577,
+     "n": 500,
+     "p95": 54052.07000000189
+    }
+   },
+   "rt_fixed2300": {
+    "avg_hold_h": 0.9166666666666665,
+    "exits": {
+     "time": 337
+    },
+    "net_per_trading_day": 183.20621468927308,
+    "p": 0.003992015968063872,
+    "summary": {
+     "avg_loss": -647.5224489795896,
+     "avg_win": 842.3200000000122,
+     "days": 337,
+     "max_dd": 11643.89999999907,
+     "net": 64855.00000000267,
+     "net_per_day": 192.44807121662512,
+     "top5_share": 0.5234214786831984,
+     "trades": 337,
+     "win_rate": 0.5637982195845698,
+     "worst_day": -8106.299999999947
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB6_rt_fixed2300_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": -6668.475399997268,
+     "n": 500,
+     "p95": 31149.390000002208
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 39656.20000000333,
+    "rt_fixed2300": 64855.00000000267
+   },
+   "design_pick": "rt_fixed2300",
+   "orig_wf_net": 40436.600000005055,
+   "retune_picks": [
+    "rt_fixed2300",
+    "orig",
+    "rt_fixed2300",
+    "rt_fixed2300"
+   ],
+   "retune_wf_net": 57251.100000004306
+  }
+ },
+ "GB7": {
+  "design_pick": null,
+  "name": "liq-india-1h15",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "liquidity_gold_1h.py",
+  "twin_kind": "hold-matched random entries",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 3.477777777777777,
+    "exits": {
+     "cut-off": 36,
+     "failed break": 12,
+     "new liquidity": 4,
+     "next liquidity": 11
+    },
+    "net_per_trading_day": 102.5612994350259,
+    "p": 0.023952095808383235,
+    "summary": {
+     "avg_loss": -522.7750000000143,
+     "avg_win": 1455.5542857142734,
+     "days": 52,
+     "max_dd": 5268.0,
+     "net": 36306.69999999917,
+     "net_per_day": 698.2057692307533,
+     "top5_share": 0.5112720241718578,
+     "trades": 63,
+     "win_rate": 0.5555555555555556,
+     "worst_day": -5267.999999999996
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 0.0
+    },
+    "trades_csv": "results/trades/gold_GB7_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": 844.0150000005061,
+     "n": 500,
+     "p95": 26418.39500000049
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 36306.69999999917
+   },
+   "design_pick": null,
+   "orig_wf_net": 30144.799999999566,
+   "retune_picks": [
+    "orig",
+    "orig",
+    "orig",
+    "orig"
+   ],
+   "retune_wf_net": 30144.79999999957
+  }
+ },
+ "GB8": {
+  "design_pick": null,
+  "name": "liq-2h (confirm 15, second level)",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_timeframes.py",
+  "twin_kind": "hold-matched random entries",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 19.594583333333333,
+    "exits": {
+     "cut-off": 7,
+     "failed break": 14,
+     "new liquidity": 2,
+     "next liquidity": 17
+    },
+    "net_per_trading_day": 231.59774011299203,
+    "p": 0.007984031936127744,
+    "summary": {
+     "avg_loss": -1303.6533333333578,
+     "avg_win": 4061.615999999982,
+     "days": 32,
+     "max_dd": 6416.999999999971,
+     "net": 81985.59999999918,
+     "net_per_day": 2562.0499999999743,
+     "top5_share": 1.01434642181067,
+     "trades": 40,
+     "win_rate": 0.625,
+     "worst_day": -4825.99999999996
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 1680.0
+    },
+    "trades_csv": "results/trades/gold_GB8_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": 10293.84640000034,
+     "n": 500,
+     "p95": 64916.825000000084
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 81985.59999999918
+   },
+   "design_pick": null,
+   "orig_wf_net": 80267.69999999953,
+   "retune_picks": [
+    "orig",
+    "orig",
+    "orig",
+    "orig"
+   ],
+   "retune_wf_net": 80267.69999999953
+  }
+ },
+ "GB9": {
+  "design_pick": null,
+  "name": "liq-1h-conf20 (second level)",
+  "signal_source": "U (XAUUSD itself), buys only",
+  "source": "gold_1h_plus.py",
+  "twin_kind": "hold-matched random entries",
+  "variants": {
+   "orig": {
+    "avg_hold_h": 14.565942028985509,
+    "exits": {
+     "cut-off": 8,
+     "failed break": 32,
+     "new liquidity": 12,
+     "next liquidity": 17
+    },
+    "net_per_trading_day": 247.17796610169236,
+    "p": 0.03792415169660679,
+    "summary": {
+     "avg_loss": -924.2694444444637,
+     "avg_win": 3659.839393939388,
+     "days": 58,
+     "max_dd": 4765.8000000001775,
+     "net": 87500.9999999991,
+     "net_per_day": 1508.637931034467,
+     "top5_share": 0.7336910435309403,
+     "trades": 69,
+     "win_rate": 0.4782608695652174,
+     "worst_day": -2793.000000000058
+    },
+    "swap": {
+     "charged": false,
+     "usd_if_charged": 2120.0
+    },
+    "trades_csv": "results/trades/gold_GB9_orig_design.csv",
+    "trading_days": 354,
+    "twins": {
+     "kind": "hold-matched random entries",
+     "mean": 15565.478000000532,
+     "n": 500,
+     "p95": 76906.88000000092
+    }
+   }
+  },
+  "walk_forward": {
+   "design_net": {
+    "orig": 87500.99999999911
+   },
+   "design_pick": null,
+   "orig_wf_net": 87169.59999999945,
+   "retune_picks": [
+    "orig",
+    "orig",
+    "orig",
+    "orig"
+   ],
+   "retune_wf_net": 87169.59999999945
+  }
+ },
+ "_meta": {
+  "data": "xauusd_m1_bid_to20261012_filled.csv.gz",
+  "design": [
+   "2024-11-20",
+   "2026-03-31"
+  ],
+  "fills": "next-bar; stops gapped through fill at the bar's open (R53 gap rule)",
+  "first_bar": "2023-10-01 22:00:00",
+  "last_bar": "2026-10-12 23:59:00",
+  "money": "USD per standard lot (100 oz) after the study's costs",
+  "n_twins": 500,
+  "trading_days": 354
+ }
+}

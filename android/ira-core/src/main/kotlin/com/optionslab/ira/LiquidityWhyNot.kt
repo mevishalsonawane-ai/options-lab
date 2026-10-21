@@ -118,7 +118,7 @@ object LiquidityWhyNot {
         verdict == "stopped_for_today" -> Kind.STOPPED
         verdict == "flat_after_square_off" -> Kind.SQUARED_OFF
         verdict == "liquidity_history_loading" -> Kind.LOADING
-        verdict == "no_index_data" -> Kind.NO_DATA
+        com.optionslab.engine.orb.IndexData.isNone(verdict) -> Kind.NO_DATA      // named by index since 13 Oct
         verdict == "no_contract" -> Kind.NO_CONTRACT
         verdict == "refused: no quote" -> Kind.NO_QUOTE
         verdict.startsWith("guard_refused") -> Kind.GUARD

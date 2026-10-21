@@ -80,7 +80,7 @@ import java.util.Locale
 
 private val IST: ZoneId = ZoneId.of("Asia/Kolkata")
 /** Indices a Pine script can run on (option data for premium backtests: NIFTY and BANKNIFTY). */
-private val PINE_SYMBOLS = listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
+private val PINE_SYMBOLS = com.optionslab.ira.PineUnderlying.ROOTS
 
 private val secureDialog get() = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 private val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 19.sp)
@@ -727,12 +727,19 @@ private fun ExportCsv(t: TestRun, modifier: Modifier) {
     val p = LocalPalette.current
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val rep = t.report
+    val csvScope = androidx.compose.runtime.rememberCoroutineScope()
     val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        if (uri != null && rep != null) runCatching {
-            ctx.contentResolver.openOutputStream(uri)?.use { it.write(tradesCsv(rep).toByteArray(Charsets.UTF_8)) } ?: error("could not open the file")
-        }.onSuccess { com.optionslab.app.work.Alerts.success("Saved ${rep.trades.size} trades") }
-            .onFailure { com.optionslab.app.work.Alerts.error("Could not save the CSV: ${it.message}") }
+        if (uri != null && rep != null) {
+            // 18 Oct, review: written on the IO threads (a cloud provider's stream can block), never in this main-thread callback.
+            val resolver = ctx.applicationContext.contentResolver
+            csvScope.launch {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { resolver.openOutputStream(uri)?.use { it.write(tradesCsv(rep).toByteArray(Charsets.UTF_8)) } ?: error("could not open the file") }
+                }.onSuccess { com.optionslab.app.work.Alerts.success("Saved ${rep.trades.size} trades") }
+                    .onFailure { com.optionslab.app.work.Alerts.error("Could not save the CSV: ${it.message}") }
+            }
+        }
     }
     BrassButton("Export CSV", modifier, tone = p.inkSoft, enabled = rep != null && rep.trades.isNotEmpty()) {
         launcher.launch("pine-${t.symbol.lowercase()}-${t.interval}-${java.time.LocalDate.now()}.csv")
@@ -891,6 +898,10 @@ private fun num(x: Double) = if (x == Math.floor(x) && kotlin.math.abs(x) < 1e12
 
 // ---- auto-trade ----------------------------------------------------------------------------
 
+/** What the auto-trade tab says while Pine auto-trading is hidden (Boss's 15 Oct cleanup). */
+internal const val PINE_HIDDEN = "Pine auto-trading is hidden on your choice (15 Oct): restore it from Home → Strategies → Hidden arms " +
+    "to place orders again. Alerts-only, the editor, the backtester and the indicators work as before."
+
 @Composable
 private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script, dirty: Boolean, save: suspend () -> PineScripts.Item, onItem: (PineScripts.Item) -> Unit) {
     val p = LocalPalette.current
@@ -975,6 +986,11 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Note("On every completed candle the script runs on the symbol below. When its signal changes the app buys the ATM option of the nearest expiry after today (a CALL on buy, a PUT on sell, or just exits) and sells the one it held. Market MIS orders; everything is sold at 15:15.")
+        // 15 Oct (Boss's cleanup): Pine auto-trading is hidden - a script that places orders is switched on only after its restore
+        // (alerts-only scripts never trade and still work). The editor, backtester and indicators are unchanged.
+        val hiddenState by com.optionslab.app.data.HiddenArms.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+        if (!com.optionslab.engine.orb.ArmsCleanup.mayArm(hiddenState, com.optionslab.engine.orb.ArmsCleanup.PINE))
+            Note(PINE_HIDDEN, Modifier.semantics { contentDescription = PINE_HIDDEN })
         if (!usable) {
             Text("This indicator has no signals to trade on. Add for example:\nplotshape(buy, \"Buy\")\nplotshape(sell, \"Sell\")",
                 style = Mono.copy(color = p.oxblood))
@@ -1014,6 +1030,8 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
             if (!locked) set { au -> au.copy(mode = if (i == 1) "alert" else "trade") }
         }
         ParamTokens("Symbol", PINE_SYMBOLS.map { it to (it == a.symbol) }) { if (!locked) set { au -> au.copy(symbol = PINE_SYMBOLS[it]) } }
+        // 14 Oct: a script saved on an option's or any other non-index chart is refused (it stays off) until an index is picked.
+        if (com.optionslab.ira.PineUnderlying.rootOf(a.symbol) == null) Note(com.optionslab.ira.PineUnderlying.refusal(a.symbol) + ". Pick an index above.")
         if (a.symbol == "SENSEX" && a.mode != "alert") Note("SENSEX options trade on BSE, where the app does not place orders: choose Alerts only for SENSEX.")
         ParamTokens("Candles", listOf("1m", "5m", "15m", "1h").map { it to (it == a.interval) }) { if (!locked) set { au -> au.copy(interval = listOf("1m", "5m", "15m", "1h")[it]) } }
         ParamTokens("Lots", listOf(1, 2, 3, 5, 10).map { "$it" to (it == a.lots) }) { if (!locked) set { au -> au.copy(lots = listOf(1, 2, 3, 5, 10)[it]) } }

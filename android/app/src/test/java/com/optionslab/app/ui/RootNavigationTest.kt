@@ -159,6 +159,9 @@ class RootNavigationTest {
         assertEquals(NavState(tab = Tab.PNL), h.home("pnl"))
         // "What's new": the Pine change opens the Pine scripts page; its full list is a Settings page.
         assertEquals(NavState(tab = Tab.LAB, labPage = "pine"), h.home("pine"))
+        // 20 Oct, enhancement round 2: the Candle agent's change opens Research → Candles.
+        assertEquals(NavState(tab = Tab.LAB, labPage = "candles"), h.home("candles"))
+        assertEquals(NavState(tab = Tab.LAB, labPage = "candles"), NavState(tab = Tab.PNL, labPage = "pine").home("candles"))
         assertEquals(NavState(tab = Tab.CABINET, cabinetPage = "whatsnew"), h.home("whatsnew"))
         for (page in listOf("alarms", "broker", "risk", "security", "schedule", "data", "jarvis", "ira")) assertEquals(NavState(tab = Tab.CABINET, cabinetPage = page), h.home(page))
         val away = NavState(tab = Tab.PNL)
@@ -225,32 +228,38 @@ class RootNavigationTest {
         assertTrue(compose.has("Market open") || compose.has("Market closed"))
         compose.onNodeWithText("PAPER TRADING").performClick()
         compose.waitForText("Switch to live trading?")
-        compose.onNodeWithText("Orders you send will use real money", substring = true).assertExists()
+        compose.onNodeWithText("with real money", substring = true).assertExists()
+        // 18 Oct: one switch - the dialog says the AI trades switch on with it, and that the paper strategies' own Trade live switches act.
+        compose.onNodeWithText("\"AI trades go live\" turns on too", substring = true).assertExists()
+        // 18 Oct (final review): a paper strategy trades live only once out of Shadow with the PIN and with its own Trade live on.
+        compose.onNodeWithText("its own \"Trade live\" is on", substring = true).assertExists()
+        compose.onNodeWithText("out of Shadow with your PIN", substring = true).assertExists()
         compose.onNodeWithText("Stay on paper").performClick()
         compose.waitForNoText("Switch to live trading?")
         assertEquals(emptyList<Boolean>(), calls)
         compose.onNodeWithText("PAPER TRADING").performClick()
-        compose.onNodeWithText("Go live").performClick()
+        // The PIN follows: the caller (Root) asks it before anything switches ([AppModel.goLive] only after it).
+        compose.onNodeWithText("Enter PIN to go live").performClick()
         compose.waitForNoText("Switch to live trading?")
         assertEquals(listOf(true), calls)
         assertEquals(0, linkAsked)
     }
 
-    /** 12 Oct: inside Boss's paper-only period the switch shows its reason and end date and hands over to the PIN; it never switches by itself. */
+    /**
+     * 12 Oct: inside Boss's paper-only period the switch shows its reason and end date and hands over to the PIN. 18 Oct: going
+     * Live always hands over to the caller's PIN step (Root asks it, with the period's words), so the tap is passed on as "Live".
+     */
     @Test fun goingLiveInsideThePaperOnlyPeriodShowsWhyAndAsksThePin() {
         val calls = mutableListOf<Boolean>()
-        var pinAsked = 0
         val period = com.optionslab.ira.PaperOnlyPeriod.Period(java.time.LocalDate.of(2026, 10, 21), "10 days on paper", java.time.LocalDate.of(2026, 10, 12))
-        compose.setContent { IraAlgoTheme("light") { Masthead(live = false, calm = true, linked = true, onMode = { calls += it },
-            paperOnly = period, onLiveWithPin = { pinAsked++ }) } }
+        compose.setContent { IraAlgoTheme("light") { Masthead(live = false, calm = true, linked = true, onMode = { calls += it }, paperOnly = period) } }
         compose.onNodeWithText("PAPER TRADING").performClick()
         compose.waitForText("Switch to live trading?")
         compose.onNodeWithText("paper-only period until Wed 21 Oct", substring = true).assertExists()
         compose.onNodeWithText("\"10 days on paper\"", substring = true).assertExists()
         compose.onNodeWithText("Enter PIN to go live").performClick()
         compose.waitForNoText("Switch to live trading?")
-        assertEquals(1, pinAsked)
-        assertEquals("the switch waits for the PIN", emptyList<Boolean>(), calls)
+        assertEquals("handed to the PIN step", listOf(true), calls)
     }
 
     @Test fun theBadgeFollowsTheModeAndLeavingLiveNeedsNoConfirmation() {
@@ -263,7 +272,7 @@ class RootNavigationTest {
         compose.onNodeWithText("PAPER TRADING").assertIsNotSelected()
         assertFalse(compose.has("Switch to live trading?"))
         compose.onNodeWithText("PAPER TRADING").performClick()
-        compose.onNodeWithText("Go live").performClick()
+        compose.onNodeWithText("Enter PIN to go live").performClick()
         compose.onNodeWithText("LIVE TRADING").assertExists()
         assertEquals(listOf(false, true), calls)
     }
@@ -318,6 +327,9 @@ class RootNavigationTest {
         assertEquals(report, clip?.getItemAt(0)?.text?.toString())
         compose.onNodeWithText("Dismiss").performClick()
         compose.waitForNoText("IraAlgo closed unexpectedly last time")
+        // 20 Oct: deleted on a worker, not the screen's thread.
+        val until = System.currentTimeMillis() + 5_000
+        while (crashFile().exists() && System.currentTimeMillis() < until) Thread.sleep(20)
         assertFalse("shown once: the report is deleted", crashFile().exists())
     }
 
@@ -330,6 +342,14 @@ class RootNavigationTest {
     }
 
     // ---- The sealed vault ------------------------------------------------------------------------
+
+    /** 20 Oct, review: while "Try again" reads the vault on a worker, the button says so and cannot be tapped again. */
+    @Test fun anUnreadableVaultsRetryShowsItIsChecking() {
+        var retries = 0
+        compose.setContent { IraAlgoTheme("light") { VaultUnreadable(onRetry = { retries++ }, onErase = {}, checking = true) } }
+        compose.onNodeWithText("Checking…", substring = true, useUnmergedTree = true).assertExists()
+        assertFalse(compose.has("Try again"))
+    }
 
     @Test fun anUnreadableVaultOffersRetryAndAnEraseThatNeedsTwoTaps() {
         var retries = 0
@@ -377,6 +397,30 @@ class RootNavigationTest {
         eraseEverything()
         shadowOf(Looper.getMainLooper()).idle()
         assertErased(before)
+    }
+
+    /**
+     * 20 Oct, review: the keys were destroyed LAST, after about 18 unguarded wipes; one that threw (here the ledger's file not set
+     * up) skipped them, and the data stayed readable. Now the keys go first and every wipe is guarded.
+     */
+    @Test fun aWipeThatThrowsStillDestroysTheKeys() {
+        seedPersonalData()
+        val before = wipes.value
+        val vaultAlias = "ol.vault.data.v1"
+        assertTrue(vaultAlias in com.optionslab.app.testing.FakeAndroidKeyStore.aliases())
+        val field = com.optionslab.app.data.Ledger::class.java.getDeclaredField("file").apply { isAccessible = true }
+        val kept = field.get(null)
+        field.set(null, null)
+        try {
+            eraseEverything()
+            shadowOf(Looper.getMainLooper()).idle()
+        } finally { field.set(null, kept) }
+        assertFalse("the vault key is gone", vaultAlias in com.optionslab.app.testing.FakeAndroidKeyStore.aliases())
+        assertFalse("the PIN pepper is gone", "ol.pin.pepper.v1" in com.optionslab.app.testing.FakeAndroidKeyStore.aliases())
+        assertFalse(PinLock.isSet)
+        assertTrue(SessionLock.locked.value)
+        assertEquals(before + 1, wipes.value)
+        assertTrue(SecurePrefs.snapshot().isEmpty())
     }
 
     @Test fun eraseEverythingFromABackgroundThread() {

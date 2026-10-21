@@ -1,6 +1,13 @@
 package com.optionslab.app.data
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -125,14 +132,89 @@ object Holidays {
      * Returns how many holidays were read.
      */
     fun refresh(): Int {
+        val out = testList?.invoke() ?: fetch()
+        // Read and written under the one lock (18 Oct): a date added by hand while the fetch ran is kept.
+        synchronized(this) { save(book().copy(fetched = Market.today(), nse = out)) }
+        return out.size
+    }
+
+    private fun fetch(): Map<LocalDate, String> {
         val upstox = runCatching { fromUpstox() }
-        val out = upstox.getOrNull()?.takeIf { it.isNotEmpty() }
+        return upstox.getOrNull()?.takeIf { it.isNotEmpty() }
             ?: runCatching { fromNse() }.getOrElse { e ->
                 throw IOException("Could not update the holidays: Upstox (${upstox.exceptionOrNull()?.message ?: "no dates"}), NSE (${e.message})")
             }
-        val b = book()
-        save(b.copy(fetched = Market.today(), nse = out))
-        return out.size
+    }
+
+    /**
+     * The longest a background refresh may take (18 Oct). Each read already has its own 15 s connect and 20 s read limits,
+     * but Upstox and then NSE's two reads could add up to minutes; at this limit the reads still open are closed.
+     */
+    const val REFRESH_TIMEOUT_MS = 60_000L
+
+    private val bg = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** Guards [pending] and [work]. */
+    private val refreshLock = Any()
+    /** The refresh's wait (it ends at the limit) and its work (the reads, which may outlive the wait while a stuck read unwinds). */
+    @Volatile private var pending: Job? = null
+    @Volatile private var work: Job? = null
+    /** The thread the background refresh reads on (one at a time, as [work] is). */
+    @Volatile private var reader: Thread? = null
+    /** The connections [get] has open now, with the thread reading each: at its limit a background refresh closes its own. */
+    private val open = java.util.concurrent.ConcurrentHashMap<HttpsURLConnection, Thread>()
+
+    /**
+     * TEST SEAM (JVM tests only): the holiday list a refresh reads, in place of Upstox and NSE (it may block, as a slow
+     * site does). Its setter throws unless BuildConfig.DEBUG, and no app code sets it.
+     */
+    @Volatile internal var testList: (() -> Map<LocalDate, String>)? = null
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the test holiday list exists only in debug builds" }
+            field = v
+        }
+
+    /**
+     * [refresh] in the background, never on the caller's thread (18 Oct: the watch waited for it before its first pass, so
+     * a stale calendar after a restart held every stop and target check behind Upstox's and NSE's timeouts). One refresh at
+     * a time: a call while one runs gets that one (with the limit it was started with), and a call after a refresh's limit
+     * while its reads are still unwinding waits for those reads rather than starting more. The job ends within [timeoutMs]:
+     * at the limit the refresh's own open reads are closed and it is cancelled. A failure only leaves the cached list (or
+     * the built-in one) in use. Callers that want the result join the job; the watch does not. Cancelling the job stops the
+     * refresh too.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)   // CoroutineStart.ATOMIC
+    fun refreshInBackground(timeoutMs: Long = REFRESH_TIMEOUT_MS): Job = synchronized(refreshLock) {
+        pending?.takeIf { it.isActive } ?: run {
+            // Not the wait's child: a read stuck where closing cannot reach it (a DNS lookup) never holds the wait past its limit.
+            val w = work?.takeIf { it.isActive } ?: bg.launch {
+                reader = Thread.currentThread()
+                // Cleared only while still this work's: a cancelled work unwinding never clears the next work's reader.
+                try { runCatching { runInterruptible { refresh() } } } finally { if (reader === Thread.currentThread()) reader = null }
+            }.also { work = it }
+            // ATOMIC (18 Oct): the wait always runs, so its finally always stops the reads. A wait cancelled before its
+            // coroutine first ran skipped its body, finally and all, and the reads went on (CI, shard 2).
+            bg.launch(start = kotlinx.coroutines.CoroutineStart.ATOMIC) {
+                try {
+                    withTimeoutOrNull(timeoutMs) { w.join() }
+                } finally {
+                    if (!w.isCompleted) {
+                        // Only this refresh's reads: a refresh from the Schedule page's button keeps its own.
+                        val mine = reader
+                        if (mine != null) open.forEach { (c, t) -> if (t === mine) runCatching { c.disconnect() } }
+                        w.cancel()
+                    }
+                }
+            }.also { pending = it }
+        }
+    }
+
+    /** TEST ONLY: the background refresh started last (null: none since [resetForTest]). */
+    internal fun pendingForTest(): Job? = pending
+
+    /** TEST ONLY: no background refresh or test list left from an earlier test. */
+    internal fun resetForTest() {
+        synchronized(refreshLock) { pending?.cancel(); pending = null; work?.cancel(); work = null }
+        testList = null
     }
 
     const val UPSTOX_URL = "https://api.upstox.com/v2/market/holidays"
@@ -184,6 +266,7 @@ object Holidays {
 
     private fun get(url: String, cookie: String?, nse: Boolean = true): Pair<String, String?> {
         val c = URL(url).openConnection() as HttpsURLConnection
+        open[c] = Thread.currentThread()
         try {
             c.connectTimeout = 15_000; c.readTimeout = 20_000
             c.instanceFollowRedirects = true
@@ -200,6 +283,7 @@ object Holidays {
         } catch (e: IOException) {
             throw IOException("Could not read ${URL(url).host}'s holiday list: ${e.message}")
         } finally {
+            open.remove(c)
             c.disconnect()
         }
     }

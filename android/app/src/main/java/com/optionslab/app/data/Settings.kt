@@ -53,7 +53,10 @@ data class AppSettings(
     // Zerodha: real orders are OFF until the owner turns them on
     val allowRealOrders: Boolean = false,
     val orderProduct: String = "NRML",
-    /** Live orders without PIN: the review's confirm sends it (and a cancel, square-off or protect) - no PIN or fingerprint. The owner's choice. */
+    /**
+     * Live orders without PIN: one tap sends a real order (or a whole basket) with no PIN and no review (and a cancel, square-off
+     * or protect). The owner's choice, off by default; turning it on asks the PIN. Reset to off once on 18 Oct ([ONE_TAP_KEY]).
+     */
     val oneTapOrders: Boolean = false,
     /**
      * "Keep a stop-loss order at the exchange for live positions" (Settings → Zerodha; off unless the owner chooses it):
@@ -61,6 +64,11 @@ data class AppSettings(
      * it placed again at the arm's own level, so Zerodha triggers it with no phone in the loop. Only lowers risk; live only.
      */
     val exchangeStops: Boolean = false,
+    /**
+     * The danger meter's one action (TODO I4, research/HUNT_R17_PRETRADE.md; off unless Boss chooses it): on a careful or
+     * paper-only day, PAPER arms buy half their lots (rounded down, at least 1). Only lowers size; never live, never Liquidity.
+     */
+    val dangerHalfSize: Boolean = false,
     val maxOrdersPerDay: Int = 4,
     val maxLotsPerOrder: Int = 2,
     val maxOrderValue: Double = 500_000.0,
@@ -105,6 +113,16 @@ data class AppSettings(
      * ever stops entries. Set in Bot settings only: never by voice, never from a backup (a "g." setting stays on the phone).
      */
     val dayLock: Double = com.optionslab.engine.risk.DayLock.DEFAULT_RUPEES,
+    /**
+     * 21 Oct (Boss: "Yes, give commodities their own day lock"): the MCX paper arms keep their own PAPER day lock and daily loss
+     * limit, on the MCX paper day alone, and the NSE paper ones read the rest ([com.optionslab.ira.SegmentLock]). On by Boss's
+     * choice, logged in the Autopilot change timeline (one tap back to the shared lock). Paper only: Zerodha stays one account.
+     */
+    val mcxOwnLimits: Boolean = true,
+    /** The commodities' own paper day lock, rupees (0 = off); unset, the paper day lock's amount. Bot settings only. */
+    val mcxDayLock: Double = com.optionslab.engine.risk.DayLock.DEFAULT_RUPEES,
+    /** The commodities' own paper daily loss limit, rupees (0 = off); unset, the paper daily loss limit. Bot settings only. */
+    val mcxPaperDailyLoss: Double = 6_000.0,
     /** Home's paper running total counts from this day (ISO date; Boss's 08 Oct wish, [com.optionslab.engine.risk.PaperSince]). Words only. */
     val paperSince: String = com.optionslab.engine.risk.PaperSince.DEFAULT_START.toString(),
 ) {
@@ -133,6 +151,13 @@ data class AppSettings(
     companion object {
         /** The kill switch's key in the settings vault: read alone by the entry door ([Broker.placeOrder]). */
         const val KILL_KEY = "g.kill"
+        /**
+         * "Live orders without PIN" (18 Oct review: its second key - the first, "k.oneTap", was set when one tap still opened a
+         * review card; it is never read again, so the setting starts off once with this update).
+         */
+        const val ONE_TAP_KEY = "k.oneTap2"
+        /** The danger meter's half-size switch (paper arms; off by default). */
+        const val DANGER_HALF_KEY = "r.dangerHalf"
 
         fun load(): AppSettings {
             val d = AppSettings()
@@ -174,8 +199,12 @@ data class AppSettings(
                 // Live trading means real orders; the separate switch is gone, so Live always allows them.
                 allowRealOrders = p.getBoolean("k.allow", d.allowRealOrders) || p.getString("k.mode", d.mode) == "live",
                 orderProduct = p.getString("k.product", d.orderProduct)!!,
-                oneTapOrders = p.getBoolean("k.oneTap", d.oneTapOrders),
+                // 18 Oct (review): with the direct send, one tap now sends a real order with no PIN and no review - a stronger
+                // meaning than Boss switched on. Reset to off once with this update (a new key: the old "k.oneTap" is never read
+                // again), so it is on only after he turns it on again knowingly, with his PIN.
+                oneTapOrders = p.getBoolean(ONE_TAP_KEY, d.oneTapOrders),
                 exchangeStops = p.getBoolean("k.exStop", d.exchangeStops),
+                dangerHalfSize = p.getBoolean(DANGER_HALF_KEY, d.dangerHalfSize),
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
                 maxLotsPerOrder = p.getInt("k.maxLots", d.maxLotsPerOrder),
                 maxOrderValue = p.getDouble("k.maxValue", d.maxOrderValue),
@@ -194,14 +223,68 @@ data class AppSettings(
                 theme = p.getString("ui.theme", d.theme)!!,
                 reduceMotion = p.getBoolean("ui.calm", d.reduceMotion),
                 dayLock = com.optionslab.engine.risk.DayLock.clean(p.getDouble("g.dayLock", d.dayLock)),
+                mcxOwnLimits = p.getBoolean("g.mcxOwn", d.mcxOwnLimits),
+                // Unset: the same amounts as the paper ones (Boss, 21 Oct).
+                mcxDayLock = com.optionslab.engine.risk.DayLock.clean(p.getDouble("g.mcxDayLock", p.getDouble("g.dayLock", d.dayLock))),
+                mcxPaperDailyLoss = p.getDouble("g.mcxPLoss", p.getDouble("g.pLoss", d.guardPaperDailyLoss)).let { if (it.isFinite() && it >= 0) it else d.mcxPaperDailyLoss },
                 paperSince = com.optionslab.engine.risk.PaperSince.startOf(p.getString("ui.paperSince", d.paperSince)).toString(),
             )
         }
 
-        fun save(s: AppSettings) {
-            // The limits' history ("what did I change this week", "Jarvis, undo"); never stops a save.
-            runCatching { SettingsLog.diff(load(), s) }
-            SecurePrefs.putAll(mapOf(
+        /**
+         * Bumped after every [save] (18 Oct, review): the screen's copy ([com.optionslab.app.ui.AppModel.settings]) reads the
+         * vault again, so a kill switch the guard turned on shows at once and is never written back off. Memory only.
+         */
+        private val saveCount = java.util.concurrent.atomic.AtomicLong()
+        private val savesFlow = kotlinx.coroutines.flow.MutableStateFlow(0L)
+        val saves: kotlinx.coroutines.flow.StateFlow<Long> = savesFlow
+
+        /**
+         * The kill switch on, as the guard turns it on by itself (18 Oct, review): readable at once by every reader (the entry
+         * door, the arms, the screen through [saves]) and written to disk by the vault's background writer, so the order path
+         * and the screen's thread never wait on a vault write. Only that one key: nothing else the vault holds is touched.
+         */
+        fun killSoon() {
+            SecurePrefs.putAllSoon(mapOf(KILL_KEY to true))
+            savesFlow.value = saveCount.incrementAndGet()
+            // In the diary, on its own thread (the screen's own switch writes the same line through AppModel.update).
+            runCatching { Diag.record("mode", "kill switch ON (the guard: a live drawdown)") }
+            // 18 Oct, review: made sure it reaches disk, as PinLock does with its failure count - on a thread of its own (the
+            // caller is the order path, which never waits on a vault write): the background write is waited for, and if it
+            // failed the key is written directly, tried again a few times. A process death or a failed write no longer loses it.
+            runCatching { killWriter.execute { persistKill() } }
+        }
+
+        /** The kill switch's own disk writer (one daemon thread; never the order path's or the screen's). */
+        private val killWriter = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "kill-writer").apply { isDaemon = true } }
+
+        /** Tests: wait until the kill switch's writer has nothing queued. */
+        internal fun awaitKillWriter() { runCatching { killWriter.submit(Runnable {}).get(30, java.util.concurrent.TimeUnit.SECONDS) } }
+
+        /** How the kill switch is waited for and written (tests swap them to make a write fail). */
+        @Volatile internal var killFlush: () -> Boolean = { SecurePrefs.flush() }
+        // The settings as they are in memory now, written on this thread: the kill switch with them, or Boss's clear if they
+        // cleared it meanwhile (never a stale "on" written over it).
+        @Volatile internal var killPut: () -> Unit = { check(SecurePrefs.writeNow()) { "the settings could not be written" } }
+        @Volatile internal var killRetryMs: Long = 2_000L
+
+        /**
+         * The kill switch on disk: true once [killFlush] says the background write landed, or a direct [killPut] did not throw.
+         * Tried [attempts] times, [killRetryMs] apart. What is written is what memory holds then, so a kill switch Boss
+         * cleared meanwhile stays cleared.
+         */
+        internal fun persistKill(attempts: Int = 4): Boolean {
+            repeat(attempts) { n ->
+                if (runCatching { killFlush() }.getOrDefault(false)) return true
+                if (runCatching { killPut() }.isSuccess) return true
+                if (n < attempts - 1) runCatching { Thread.sleep(killRetryMs) }
+            }
+            runCatching { Diag.record("mode", "kill switch: the vault write failed ${attempts}x; it is on in memory, written again at the next save") }
+            return false
+        }
+
+        /** Every setting's vault key and value. */
+        private fun keys(s: AppSettings): Map<String, Any?> = mapOf(
                 "s.otm" to s.otmPct, "s.entry" to s.entry, "s.regime" to s.regime, "s.dated" to s.datedLot,
                 "s.lot" to s.pinnedLot, "s.wing" to (s.wingPct ?: -1.0), "s.capital" to s.capital,
                 "s.survive" to s.survive, "s.holdout" to s.holdout, "s.last" to s.healthLast,
@@ -213,7 +296,7 @@ data class AppSettings(
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
                 "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,
-                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.oneTap" to s.oneTapOrders, "k.exStop" to s.exchangeStops, "k.maxOrders" to s.maxOrdersPerDay,
+                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, ONE_TAP_KEY to s.oneTapOrders, "k.exStop" to s.exchangeStops, DANGER_HALF_KEY to s.dangerHalfSize, "k.maxOrders" to s.maxOrdersPerDay,
                 "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue,
                 "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,
@@ -221,8 +304,42 @@ data class AppSettings(
                 "g.pLoss" to s.guardPaperDailyLoss, "g.pDd" to s.guardPaperDrawdownPct, "g.v" to 2, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
                 "g.mcxExit" to s.mcxExpiryExit, "g.mcxOptAt" to s.mcxOptionExitMinute, "g.mcxFutDays5" to s.mcxFutureExitDays,
                 "g.dayLock" to com.optionslab.engine.risk.DayLock.clean(s.dayLock),
+                "g.mcxOwn" to s.mcxOwnLimits, "g.mcxDayLock" to com.optionslab.engine.risk.DayLock.clean(s.mcxDayLock), "g.mcxPLoss" to s.mcxPaperDailyLoss,
                 "ui.paperSince" to com.optionslab.engine.risk.PaperSince.startOf(s.paperSince).toString(),
-            ))
+            )
+
+        /**
+         * 18 Oct, review: only the settings [to] changes from [from] are written (the screen's change, applied to what was
+         * stored), so a value written meanwhile by someone else - the guard's kill switch - is never written back over.
+         */
+        fun saveChanged(from: AppSettings, to: AppSettings) {
+            // Settings from before the guard's v2 defaults are read through a migration (see [load]): written whole once.
+            // 18 Oct, review: a kill switch the guard turned on since [from] was read (this change did not touch it) is kept in that
+            // whole write too - CI's SettingsUpdateTest caught the first change on a fresh vault writing it back off.
+            // 18 Oct (CI, again): a kill switch this change did not touch is left out of that whole write altogether. Checked and
+            // then written whole, the guard's write could still land in between (the save's own history read sits there) and be
+            // written back off; and a switch Boss cleared since [from] was read was written back on.
+            if (SecurePrefs.getInt("g.v", 1) < 2) { save(to, keepKill = from.guardKill == to.guardKill); return }
+            runCatching { SettingsLog.diff(from, to) }
+            val was = keys(from)
+            val changed = keys(to).filter { (k, v) -> was[k] != v }
+            if (changed.isNotEmpty()) SecurePrefs.putAll(changed)
+            DangerToday.halfSize = to.dangerHalfSize
+            savesFlow.value = saveCount.incrementAndGet()
         }
+
+        /** Every setting written ([keepKill]: all but the kill switch, which keeps what the vault holds). */
+        fun save(s: AppSettings, keepKill: Boolean = false) {
+            // The limits' history ("what did I change this week", "Jarvis, undo"); never stops a save.
+            // A kill switch left as the vault holds it ([keepKill]) is logged as it is, never as a change that was not written.
+            runCatching { val was = load(); SettingsLog.diff(was, if (keepKill) s.copy(guardKill = was.guardKill) else s) }
+            SecurePrefs.putAll(if (keepKill) keys(s) - KILL_KEY else keys(s))
+            // The entry path reads the danger meter's switch from memory only: kept in step with every save (13 Oct).
+            DangerToday.halfSize = s.dangerHalfSize
+            savesFlow.value = saveCount.incrementAndGet()
+        }
+
+        /** The danger meter's switch from the vault into [DangerToday]'s memory copy: the app's start, after a restore. */
+        fun syncDangerHalf() { DangerToday.halfSize = SecurePrefs.getBoolean(DANGER_HALF_KEY, false) }
     }
 }

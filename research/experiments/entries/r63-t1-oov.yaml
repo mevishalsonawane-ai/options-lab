@@ -1,0 +1,41 @@
+id: r63-t1-oov
+title: 'R63 T1 on R52 Open outside value: sell when the underlying''s trend turns against the trade'
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R63_TREND_TURN_EXIT.md
+hypothesis: 'Boss, 16 Oct: if the trend turns, sell. Added to the strategy''s own exits, a trend-turn exit on the underlying
+  makes more after costs than the plain rules and than random early exits of the same trades (gates: final net change > 0,
+  twin p < 0.05, BH q <= 0.10 over 28 cells, >= 40 changed trades, not from the top 5, design and walk-forward > 0).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake fetched 16 Oct 2026: index_1m and options_rolling_1m WEEK 2024-2026; strategies
+  priced on their own studies'' stores (R51 Amendment A clean, R57, R54)'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 'final test 1 Apr - 14 Oct 2026, read once 16 Oct 2026 (not pristine: R51, R52, R54, R55, R57 and R61 read it,
+    and these strategies were chosen on it)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the INDEX 1-minute spot bars (15-minute bars); no option-chain or option-price input; the strategy''s own
+  entries held fixed'
+model_or_rule: '15-min close crosses EMA20 against the trade; acts only on a completed bar >= 5 minutes after the fill; sells
+  the held contract at the next minute''s open (R51 engine forced exit; Hero: R54''s sell)'
+settings: research/hunt/r63/PREREG.md sections 2-7; r63rules.py
+prereg: research/hunt/r63/PREREG.md
+variants_tried: 28
+results:
+  summary: '15-min close crosses EMA20 against the trade (signal: the underlying) added to R52 Open outside value''s own exits.
+    Design: 712 trades, 65 changed, net change +Rs 11,044 (saved on losers +Rs 23,477, given up on winners +Rs 12,433), walk-forward
+    -Rs 7,538, twin p 1.000. Final (read once): 292 trades on 102 sessions, 13 changed, net change +Rs 4,911 (saved +Rs 4,911,
+    given up +Rs 0; without the top 5 -Rs 1,919), plain +Rs 54,058 -> +Rs 58,969, max DD -Rs 45,689 -> -Rs 46,301, twin p
+    0.990 (twin mean +Rs 12,728), BH q 1.000. Verdict: FAIL: p >= 0.05; q > 0.10; fewer than 40 changed trades; top-5 >= improvement;
+    walk-forward <= 0.'
+  costs: 'R51 engine: R17 ''liq'' fills, Costs(''dated'') charges, lot in force; Hero: R54''s limit fill, late-minute spread
+    and R50''s dated charges'
+holdout_read: true
+verdict: rejected
+notes: One of 28 R63 cells in one BH family (research/hunt/r63/results/report.md). Shadow notes and alerts only in the app;
+  never acts.

@@ -42,6 +42,21 @@ class TestApp : Application() {
         // The fake candle feeds are a few fixed minutes of the morning: the 08 Oct feed checks (a stale price never fills an
         // entry, Pine's thin-option check and its best price from the minute highs) are off unless a test turns them on.
         Paper.testSkipFeedChecks = true
+        // 19 Oct: the paper book's and the passed arms' vault writes on the caller's thread, as before, so a test can read the file
+        // right after an order; the order-speed tests (ExposureSpeedTest) turn this off to measure the app's background writes.
+        Paper.writeInlineForTest = true
+        com.optionslab.app.data.PassedArmsHost.writeInlineForTest = true
+        Strategies.writeInlineForTest = true
+        com.optionslab.app.security.Vault.testWriteDelayMs = 0L
+        // 20 Oct: a backup restore freezes its vault files until the restart (no restart in a test): every test starts thawed.
+        com.optionslab.app.security.Vault.thaw()
+        com.optionslab.app.security.Vault.testFailWrites = emptySet()
+        // The same-direction cap off for every other test (their arms' many same-way entries are not what they test); its own
+        // tests switch it on.
+        com.optionslab.app.data.ExposureCapHost.resetForTest(paperOn = false)
+        // 20 Oct, enhancement round 1: the account stop rule in shadow with no days, the drift guard with no looks.
+        com.optionslab.app.data.AccountStopHost.resetForTest()
+        com.optionslab.app.data.WatchClock.resetForTest()
         IdleSampler.install()
         NetworkGuard.install()
         NetworkGuard.blocked.clear()
@@ -56,16 +71,27 @@ class TestApp : Application() {
         Store.init(this)
         Market.init(this)
         Holidays.init(this)
+        Holidays.resetForTest()            // no background holiday refresh or test list left from the previous test
         com.optionslab.app.data.McxMarket.init(this)
         Broker.init(this)
         StaticIp.init(this)
         Paper.init(this)
         History.init(this)
         Strategies.init(this)
+        com.optionslab.app.data.ArmLive.init(this)
         OrbArms.init(this)
         ShadowArms.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.VixDivArm.init(this)
+        com.optionslab.app.data.HeroTicketArm.init(this)
+        // 15 Oct: the Hero ₹1,000 ticket's one-time switch-on stays out of every other test (its own tests turn it back on).
+        com.optionslab.app.data.HeroTicketArm.testNoAutoOn = true
+        com.optionslab.app.data.PassedArmsHost.init(this)
+        com.optionslab.app.data.PassedArmsHost.testNoAutoOn = true
+        com.optionslab.app.data.WatchlistHost.init(this)
+        com.optionslab.app.data.SignalTesterHost.init(this)
+        com.optionslab.app.data.SignalPaperArm.init(this)
+        com.optionslab.app.data.TelegramCapture.init(this)
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.MarketRecorder.init(this)
         PineAuto.init(this)
@@ -78,6 +104,8 @@ class TestApp : Application() {
         // Liquidity BANKNIFTY's paper-test freeze ends on a fixed date: unfrozen here so no test depends on the real date (the freeze
         // has its own tests, which set it).
         com.optionslab.app.data.LiquidityTest.setStateForTest(com.optionslab.ira.LiquidityFreeze.State(unfrozen = true))
+        // 18 Oct: no paper-only period, read (a fresh phone whose start read it); the period's own tests set or unread it.
+        com.optionslab.app.data.PaperOnly.resetForTest()
         com.optionslab.app.data.ZerodhaSync.resetForTest()
         com.optionslab.app.data.OrderReviewHost.init(this)
         com.optionslab.app.data.OrderReviewHost.resetForTest()
@@ -93,6 +121,9 @@ class TestApp : Application() {
         com.optionslab.app.data.AppHealth.resetForTest()
         com.optionslab.app.ira.SelfGrowth.init(this)
         com.optionslab.app.ira.SelfGrowth.resetForTest()
+        // Reset before init too (13 Oct): init's background read of Boss's modes then finds them read and writes nothing - it
+        // raced the reset and could leave "trademanager.policy.perarm" in a test's settings (VaultTest).
+        com.optionslab.app.data.TradeManagerHost.resetForTest()
         com.optionslab.app.data.TradeManagerHost.init(this)
         com.optionslab.app.data.TradeManagerHost.resetForTest()
         // The watch's workers (10 Oct): no claim, timing, shared state or busy mark left from an earlier test.
@@ -108,11 +139,23 @@ class TestApp : Application() {
         com.optionslab.app.ira.IraHub.testLive = { emptyList() }
         com.optionslab.app.ira.IraHub.testFeed = { "" }
         // Caches from an earlier test (the files behind them are already gone with its directories).
-        Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); ShadowArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
+        Paper.loadInlineForTest = false; Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); ShadowArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
         com.optionslab.app.data.MarketRecorder.wipe()
         com.optionslab.app.data.McxMarket.wipe()
         com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null
+        com.optionslab.app.data.LossBreaker.testPaperDay = null
         com.optionslab.app.data.VixDivArm.wipe()
+        com.optionslab.app.data.HeroTicketArm.wipe()
+        // 15 Oct: the earlier sessions' history is empty unless a test gives its own - the watch's Watchlist step starts its
+        // background reads (JobsTest's "a test reached the internet: api.upstox.com" on main came from them).
+        com.optionslab.app.data.PassedArmsHost.wipe(); com.optionslab.app.data.PassedArmsHost.testHistory = { emptyList() }
+        com.optionslab.app.data.ArmLive.wipe(); com.optionslab.app.data.ArmLive.testNow = null; com.optionslab.app.data.ArmLive.testSync = false; com.optionslab.app.data.ArmLive.testHeard = null
+        com.optionslab.app.data.ArmLive.testDefaultOff = true
+        com.optionslab.app.data.PassedArmsHost.testDaily = { emptyList() }
+        com.optionslab.app.data.WatchlistHost.resetForTest()
+        com.optionslab.app.data.SignalTesterHost.resetForTest()
+        com.optionslab.app.data.SignalPaperArm.wipe()
+        com.optionslab.app.data.TelegramCapture.resetForTest()
         com.optionslab.app.data.GrammarArm.wipe()
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()
         com.optionslab.app.work.PositionCards.forgetPostedForTest()
@@ -124,5 +167,10 @@ class TestApp : Application() {
         com.optionslab.app.data.Broker.resetForTest()
         // The stream's ticks too: Broker.quotes answers from one up to 5 s old, so an earlier test's price would be this one's.
         com.optionslab.app.data.KiteStream.resetForTest()
+        // The Live check's last run and the watch's check stamps of an earlier test (memory only).
+        com.optionslab.app.data.LiveSelfTest.resetForTest()
+        // A Live check a screen starts sees a closed market (no stream to wait on, no feed to read): the hour CI runs at never matters.
+        com.optionslab.app.data.LiveSelfTest.sourcesForTest = FakeLiveSources(open = false)
+        com.optionslab.app.data.WatchClock.resetForTest()
     }
 }

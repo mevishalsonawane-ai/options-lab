@@ -1,0 +1,38 @@
+id: r52-r4-8
+title: 'R52 re-test on Nov 2024+: R4-8 Gann 2-bar swing chart break'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R4-8 (old verdict: NIFTY 15m 679 tr -77/day, hold 113 tr +42/day; FIN 60m -2 / -44) makes
+  money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''unds'': [''NIFTY'', ''BANKNIFTY'', ''FINNIFTY''], ''var'': [[''BANKNIFTY'', ''G3_SWING|tf15|NAT''], [''FINNIFTY'',
+  ''G3_SWING|tf60|NAT''], [''NIFTY'', ''G3_SWING|tf15|NAT'']]} | ITM1/near | exits default | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 7
+results:
+  summary: 'Design original: 407 trades, win 40%, net Rs -118,389 (Rs -351/day), worst day Rs -24,705, max DD Rs -185,262,
+    p 1.000 (coin-flip p 0.554); walk-forward Rs +24,999. Re-tune pick g03 ({''var'': ''G3_SWING|tf15|T30'', ''unds'': (''NIFTY'',
+    ''BANKNIFTY'', ''FINNIFTY'')} · ITM1/near · exits default): design 568 trades, win 48%, net Rs +50,942 (Rs +151/day),
+    worst day Rs -16,040, max DD Rs -28,717, p 0.257 (coin-flip p 0.001); walk-forward Rs +77,536. FINAL original: 171 trades,
+    win 44%, net Rs -43,710 (Rs -329/day), worst day Rs -19,361, max DD Rs -63,490, p 1.000 (coin-flip p 0.701), q 1.00 ->
+    FAIL. FINAL pick: 242 trades, win 50%, net Rs +38,895 (Rs +292/day), worst day Rs -8,517, max DD Rs -18,807, p 0.128 (coin-flip
+    p 0.001), q 0.67 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = R4''s frozen pick (research/hunt/r4/results/frozen.json, HUNT_R4_GANN_FIB_MAGIC.md)
+  G3_SWING NAT: NIFTY + BANKNIFTY tf15, FINNIFTY tf60. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read),
+  40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

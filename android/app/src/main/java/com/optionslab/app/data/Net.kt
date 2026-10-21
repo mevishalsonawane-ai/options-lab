@@ -315,19 +315,42 @@ object Net {
         return out.distinctBy { it.epochSecond }.sortedBy { it.epochSecond }
     }
 
-    fun parseMaster(input: InputStream, underlyings: Set<String>): List<Upstox.Contract> {
+    /**
+     * Upstox's public BSE list (BSE.json.gz): its BSE_FO segment holds SENSEX's options (15 Oct: the Hero ₹1,000 ticket's
+     * SENSEX side, PAPER only - [Market.bfoContracts]). Read once a day, off the main thread; never on the order or tick path.
+     */
+    const val BSE_MASTER_URL = "https://assets.upstox.com/market-quote/instruments/exchange/BSE.json.gz"
+
+    /** SENSEX's listed options from [BSE_MASTER_URL] ([parseMaster] on the BSE_FO segment). */
+    fun fetchBseMaster(underlyings: Set<String> = setOf("SENSEX")): List<Upstox.Contract> {
+        val c = open(BSE_MASTER_URL, 120_000)
+        c.setRequestProperty("Accept", "*/*")
+        try {
+            if (c.responseCode != 200) throw HttpFailure(c.responseCode)
+            return c.inputStream.use { parseMaster(GZIPInputStream(it, 1 shl 16), underlyings, segment = "BSE_FO") }
+        } catch (e: HttpFailure) {
+            throw e
+        } catch (_: IOException) {
+            throw Offline()
+        } finally {
+            c.disconnect()
+        }
+    }
+
+    /** The options of [underlyings] in the master's [segment] (NSE_FO, as always; BSE_FO for SENSEX since 15 Oct). */
+    fun parseMaster(input: InputStream, underlyings: Set<String>, segment: String = "NSE_FO"): List<Upstox.Contract> {
         val out = ArrayList<Upstox.Contract>()
         JsonReader(InputStreamReader(input, Charsets.UTF_8)).use { r ->
             r.beginArray()
             while (r.hasNext()) {
-                var segment: String? = null; var type: String? = null; var und: String? = null; var asset: String? = null
+                var seg: String? = null; var type: String? = null; var und: String? = null; var asset: String? = null
                 var expiry = 0L; var strike = 0.0; var lot = 0; var key: String? = null; var sym: String? = null
                 r.beginObject()
                 while (r.hasNext()) {
                     val name = r.nextName()
                     if (r.peek() == JsonToken.NULL) { r.nextNull(); continue }
                     when (name) {
-                        "segment" -> segment = r.nextString()
+                        "segment" -> seg = r.nextString()
                         "instrument_type" -> type = r.nextString()
                         "underlying_symbol" -> und = r.nextString()
                         "asset_symbol" -> asset = r.nextString()
@@ -341,7 +364,7 @@ object Net {
                 }
                 r.endObject()
                 val u = und ?: asset
-                if (segment == "NSE_FO" && (type == "CE" || type == "PE") && u in underlyings && key != null) {
+                if (seg == segment && (type == "CE" || type == "PE") && u in underlyings && key != null) {
                     out += Upstox.Contract(
                         underlying = u!!,
                         expiry = Instant.ofEpochMilli(expiry).atZone(com.optionslab.engine.IST).toLocalDate(),

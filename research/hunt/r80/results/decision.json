@@ -1,0 +1,282 @@
+{
+ "BANKNIFTY": {
+  "V1": {
+   "q": 0.9661,
+   "passed": false,
+   "fails": [
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "carried by top 5"
+   ]
+  },
+  "V2": {
+   "q": 0.8041,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V3": {
+   "q": 0.3095,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V4": {
+   "q": 0.3095,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "BH q >= 0.10"
+   ]
+  },
+  "V5": {
+   "q": 0.8041,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V6": {
+   "q": 0.8041,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V7": {
+   "q": 0.9661,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V8": {
+   "q": 0.8041,
+   "passed": false,
+   "fails": [
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V9": {
+   "q": 0.8041,
+   "passed": false,
+   "fails": [
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V10": {
+   "q": 0.9661,
+   "passed": false,
+   "fails": [
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "carried by top 5"
+   ]
+  }
+ },
+ "NIFTY": {
+  "V1": {
+   "q": 0.3394,
+   "passed": false,
+   "fails": [
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V2": {
+   "q": 0.3394,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V3": {
+   "q": 0.3394,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V4": {
+   "q": 0.726,
+   "passed": false,
+   "fails": [
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V5": {
+   "q": 0.3394,
+   "passed": false,
+   "fails": [
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V6": {
+   "q": 0.726,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V7": {
+   "q": 0.726,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V8": {
+   "q": 0.3394,
+   "passed": false,
+   "fails": [
+    "BH q >= 0.10"
+   ]
+  },
+  "V9": {
+   "q": 0.8363,
+   "passed": false,
+   "fails": [
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V10": {
+   "q": 0.8363,
+   "passed": false,
+   "fails": [
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  }
+ },
+ "SENSEX": {
+  "V1": {
+   "q": 0.5617,
+   "passed": false,
+   "fails": [
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V2": {
+   "q": 0.8782,
+   "passed": false,
+   "fails": [
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V3": {
+   "q": 0.5617,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V4": {
+   "q": 0.8782,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V5": {
+   "q": 0.5617,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V6": {
+   "q": 0.5617,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V7": {
+   "q": 0.6961,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "final not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10",
+    "< 40 final trades"
+   ]
+  },
+  "V8": {
+   "q": 0.5617,
+   "passed": false,
+   "fails": [
+    "walk-forward not above B0",
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V9": {
+   "q": 0.5617,
+   "passed": false,
+   "fails": [
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  },
+  "V10": {
+   "q": 0.5617,
+   "passed": false,
+   "fails": [
+    "twin p >= 0.10",
+    "BH q >= 0.10"
+   ]
+  }
+ }
+}

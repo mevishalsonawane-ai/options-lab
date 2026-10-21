@@ -95,6 +95,7 @@ import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.app.ui.theme.Type
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -154,10 +155,23 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
         // The app stopped unexpectedly last time: show why, once, so it can be reported.
         // Sealed in the vault by IraAlgoApp's crash handler: class names and stack frames, no messages.
-        CrashReport(activity.filesDir)
+        // 20 Oct, review: shown only once unlocked (it was drawn over the PIN screen).
+        if (!locked) CrashReport(activity.filesDir)
         var vaultBad by remember { mutableStateOf(SecurePrefs.unreadable) }
         if (vaultBad) {
-            VaultUnreadable(onRetry = { vaultBad = !SecurePrefs.reload() }, onErase = { eraseEverything(); vaultBad = false })
+            // 20 Oct, review: "Try again" reads the vault on a worker (it waited up to 30 s for the writer, then decrypted with
+            // retries and sleeps, on the screen's thread - when the Keystore is failing, exactly when it is slow).
+            val retryScope = androidx.compose.runtime.rememberCoroutineScope()
+            var checking by remember { mutableStateOf(false) }
+            VaultUnreadable(checking = checking, onRetry = {
+                if (!checking) {
+                    checking = true
+                    retryScope.launch {
+                        val ok = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { SecurePrefs.reload() } }.getOrDefault(false)
+                        vaultBad = !ok; checking = false
+                    }
+                }
+            }, onErase = { eraseEverything(); vaultBad = false })
             return@IraAlgoTheme
         }
         if (compromised && settings.refuseCompromised) {
@@ -215,8 +229,8 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
             error = offerError,
             onUse = {
                 // Prove it works on this phone before switching it on.
-                runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
-                BiometricGate.authenticate(activity, allowWeakFace = false) { out ->
+                // The key is made on the fingerprint's background thread, not here (16 Oct: Keystore calls off the screen's thread).
+                BiometricGate.authenticate(activity, allowWeakFace = false, enrolFirst = kind == BiometricGate.Kind.STRONG) { out ->
                     when (out) {
                         BiometricGate.Outcome.Success -> {
                             model.update { it.copy(biometric = true, allowWeakFace = false) }
@@ -308,7 +322,7 @@ private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> 
 /** Destroy the vault key and every personal file. Market data is public and stays. */
 /** The settings vault exists but cannot be decrypted: fail closed, never "choose a new PIN". */
 @Composable
-internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
+internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit, checking: Boolean = false) {
     val p = com.optionslab.app.ui.theme.LocalPalette.current
     var confirm by remember { mutableStateOf(false) }
     // Centred, and scrolling when a large font makes it taller than the screen (the last button was squeezed).
@@ -320,7 +334,7 @@ internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
             "it can also mean the file was altered. Nothing has been changed and no new PIN can be set over it.",
             style = com.optionslab.app.ui.theme.Type.body.copy(color = p.ink))
         Spacer(Modifier.height(20.dp))
-        com.optionslab.app.ui.components.BrassButton("Try again", Modifier.fillMaxWidth(), onClick = onRetry)
+        com.optionslab.app.ui.components.BrassButton(if (checking) "Checking…" else "Try again", Modifier.fillMaxWidth(), enabled = !checking, busy = checking, onClick = onRetry)
         Spacer(Modifier.height(10.dp))
         com.optionslab.app.ui.components.BrassButton(if (confirm) "Tap again: erase ALL IraAlgo data" else "Erase everything and start again",
             Modifier.fillMaxWidth(), tone = p.oxblood) { if (confirm) onErase() else confirm = true }
@@ -329,24 +343,30 @@ internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
 }
 
 fun eraseEverything() {
-    com.optionslab.app.data.Ledger.wipe()
-    com.optionslab.app.data.Alarms.wipe()
-    com.optionslab.app.data.Paper.wipe()
-    com.optionslab.app.data.OrbArms.wipe()
-    com.optionslab.app.data.ShadowArms.wipe()
-    com.optionslab.app.data.MarketRecorder.wipe()
-    com.optionslab.app.data.PineScripts.wipe()
-    com.optionslab.app.data.PineAuto.wipe()
-    com.optionslab.app.data.Protections.wipe()
-    com.optionslab.app.data.TradeBook.wipe()
-    runCatching { com.optionslab.app.data.FillSlippage.wipe() }
-    com.optionslab.app.data.Diag.wipe()
-    com.optionslab.app.data.Journal.wipe()
-    com.optionslab.app.data.Strategies.wipe()
-    com.optionslab.app.data.History.wipe()
-    com.optionslab.app.data.Market.wipe()
-    runCatching { com.optionslab.app.data.Broker.forget() }
-    runCatching { com.optionslab.app.data.Store.wipeDeviceData() }
+    // 20 Oct, review: the keys go FIRST. They were destroyed last, after about 18 wipes with no guard: one wipe that threw (a
+    // store not set up yet) skipped them, and on the too-many-wrong-PINs path the data stayed readable. Every wipe below is
+    // guarded, so one failing never stops the rest; the keys are destroyed again at the end (a save made in between was
+    // sealed with a new key, which goes too).
+    runCatching { com.optionslab.app.security.PinPepper.destroy() }
+    runCatching { Vault.destroy() }
+    runCatching { SessionLock.lock() }
+    fun w(f: () -> Unit) { runCatching(f) }
+    w { com.optionslab.app.data.Ledger.wipe() }
+    w { com.optionslab.app.data.Alarms.wipe() }
+    w { com.optionslab.app.data.Paper.wipe() }
+    w { com.optionslab.app.data.OrbArms.wipe() }
+    w { com.optionslab.app.data.ShadowArms.wipe() }
+    w { com.optionslab.app.data.PineScripts.wipe() }
+    w { com.optionslab.app.data.PineAuto.wipe() }
+    w { com.optionslab.app.data.Protections.wipe() }
+    w { com.optionslab.app.data.TradeBook.wipe() }
+    // The OI-wall shadow log (14 Oct): its own encrypted file.
+    w { com.optionslab.app.data.OiWallShadowHost.wipe() }
+    w { com.optionslab.app.data.Diag.wipe() }
+    w { com.optionslab.app.data.Journal.wipe() }
+    w { com.optionslab.app.data.Strategies.wipe() }
+    w { com.optionslab.app.data.Market.wipe() }
+    w { com.optionslab.app.data.Broker.forget() }
     // WebView state (the Zerodha login's cookies and storage) must be cleared on the main thread;
     // eraseEverything can be called from a background dispatcher, where these calls fail silently.
     val web = Runnable {
@@ -354,13 +374,24 @@ fun eraseEverything() {
         runCatching { android.webkit.WebStorage.getInstance().deleteAllData() }
     }
     val main = android.os.Looper.getMainLooper()
-    if (android.os.Looper.myLooper() == main) web.run() else android.os.Handler(main).post(web)
-    SecurePrefs.wipe()
-    com.optionslab.ira.ShortAnswer.clearCache()
-    BiometricGate.forget()
-    com.optionslab.app.security.PinPepper.destroy()
-    Vault.destroy()
-    SessionLock.lock()
+    val onMain = android.os.Looper.myLooper() == main
+    if (onMain) web.run() else android.os.Handler(main).post(web)
+    w { SecurePrefs.wipe() }
+    w { com.optionslab.ira.ShortAnswer.clearCache() }
+    w { BiometricGate.forget() }
+    runCatching { com.optionslab.app.security.PinPepper.destroy() }
+    runCatching { Vault.destroy() }
+    runCatching { SessionLock.lock() }
+    // The large folders (the recordings, the price history, the device data): deleted off the screen's thread (an erase from
+    // a button no longer freezes it). Nothing here holds a key, and nothing destroys one, so a PIN set meanwhile is safe.
+    val slow = Runnable {
+        w { com.optionslab.app.data.MarketRecorder.wipe() }
+        w { com.optionslab.app.data.FillSlippage.wipe() }
+        w { com.optionslab.app.data.LiveRecorder.wipe() }
+        w { com.optionslab.app.data.History.wipe() }
+        w { com.optionslab.app.data.Store.wipeDeviceData() }
+    }
+    if (onMain) Thread(slow, "erase-files").start() else slow.run()
     wipes.value = wipes.value + 1
 }
 
@@ -405,7 +436,7 @@ private fun Main(model: AppModel) {
     val tabs = Tab.entries
     LaunchedEffect(linked) {
         if (!linked && tab !in tabs) tab = Tab.ALMANAC
-        if (!linked && settings.live) model.update { it.copy(mode = "sandbox", allowRealOrders = false) }
+        if (!linked && settings.live) model.goPaper()
     }
 
     // Every move goes through [NavState], which holds the rules (and is what the tests drive).
@@ -462,22 +493,30 @@ private fun Main(model: AppModel) {
 
     // Boss's paper-only period (12 Oct), read off the main thread; the Live switch asks his PIN inside it.
     val paperOnlyPeriod by com.optionslab.app.data.PaperOnly.period.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    var paperOnlyPin by remember { mutableStateOf(false) }
+    // The PIN step's reason while it is asked (null: not asked).
+    var paperOnlyAsk by remember { mutableStateOf<String?>(null) }
+    val modeScope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() } } }
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
             // Turned sideways, the chart takes the whole screen.
             val fullChart = tab == Tab.CHART && LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } },
+            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live ->
+                    // 18 Oct (Boss: one switch): Paper turns Live and "AI trades go live" off together, no PIN (it lowers risk).
+                    if (!live) model.goPaper()
+                    // Going Live always asks the PIN now (it also turns "AI trades go live" on). The paper-only period is checked
+                    // first (read off this thread if it is not yet; 18 Oct, review): inside it, its reason and end date are said.
+                    else modeScope.launch {
+                        val ask = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.PaperOnly.liveAskRead() }
+                        paperOnlyAsk = ask ?: LIVE_PIN_ASK
+                    }
+                },
                 onLink = { tab = Tab.CABINET; cabinetPage = "broker" },
-                paperOnly = paperOnlyPeriod?.takeIf { com.optionslab.ira.PaperOnlyPeriod.active(it, Market.today()) },
-                onLiveWithPin = { paperOnlyPin = true })
-            // 12 Oct: going Live inside Boss's paper-only period asks his PIN, its reason and end date said first.
-            if (paperOnlyPin) paperOnlyPeriod?.let { po ->
-                com.optionslab.app.ui.screens.Reauth(model, pinOnly = false, why = com.optionslab.ira.PaperOnlyPeriod.liveAsk(po),
-                    onOk = { paperOnlyPin = false; model.update { it.copy(mode = "live", allowRealOrders = true) } }, onCancel = { paperOnlyPin = false })
-            }
+                paperOnly = paperOnlyPeriod?.takeIf { com.optionslab.ira.PaperOnlyPeriod.active(it, Market.today()) })
+            // Going Live: the PIN (or fingerprint), with the paper-only period's reason and end date when it runs. Right: Live and
+            // "AI trades go live" on in one step. Wrong or cancelled: nothing changes.
+            paperOnlyAsk?.let { why -> com.optionslab.app.ui.screens.GoLivePin(model, why) { paperOnlyAsk = null } }
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
@@ -617,6 +656,8 @@ internal data class NavState(
         "pnl" -> copy(tab = Tab.PNL)
         // "What's new": the Pine change opens the Pine scripts page.
         "pine" -> copy(tab = Tab.LAB, labPage = "pine")
+        // 20 Oct, enhancement round 2: "What's new": the Candle agent's change opens Research → Candles.
+        "candles" -> copy(tab = Tab.LAB, labPage = "candles")
         else -> copy(tab = Tab.CABINET, cabinetPage = dest)
     }
 
@@ -651,11 +692,17 @@ internal fun NavBack(nav: NavState, onNav: (NavState) -> Unit) {
  */
 @Composable
 internal fun CrashReport(dir: java.io.File) {
-    var crash by remember { mutableStateOf(runCatching {
-        Vault.readFile(java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE))?.toString(Charsets.UTF_8)
-    }.getOrNull()) }
+    // 20 Oct, review: read (a file and a Keystore decryption) on a worker, not while the screen is drawn; deleted there too.
+    var crash by remember { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    LaunchedEffect(dir) {
+        crash = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { Vault.readFile(java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE))?.toString(Charsets.UTF_8) }.getOrNull()
+        }
+    }
     crash?.let { text ->
-        val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+        // 21 Oct, enhancement round 3 (idea 6): copied marked sensitive, as the diagnostics are ([com.optionslab.app.ui.SensitiveClip]).
+        val clipCtx = androidx.compose.ui.platform.LocalContext.current
         com.optionslab.app.ui.components.AlertDialog(
             onDismissRequest = {},
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
@@ -669,9 +716,10 @@ internal fun CrashReport(dir: java.io.File) {
                     }
                 }
             },
-            confirmButton = { com.optionslab.app.ui.components.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
+            confirmButton = { com.optionslab.app.ui.components.TextButton({ com.optionslab.app.ui.SensitiveClip.copy(clipCtx, "IraAlgo crash report", text) }) { Text("Copy") } },
             dismissButton = { com.optionslab.app.ui.components.TextButton({
-                runCatching { java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() }; crash = null
+                crash = null
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() } }
             }) { Text("Dismiss") } },
         )
     }
@@ -698,10 +746,8 @@ private fun ConnectGate(model: AppModel) {
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit, onLink: () -> Unit = {},
-                      /** Boss's paper-only period in force (12 Oct): going Live then shows its reason and end date and asks the PIN. */
-                      paperOnly: com.optionslab.ira.PaperOnlyPeriod.Period? = null,
-                      /** Going Live inside [paperOnly]: the caller asks the PIN, then switches. */
-                      onLiveWithPin: () -> Unit = {}) {
+                      /** Boss's paper-only period in force (12 Oct): going Live then shows its reason and end date (the PIN follows). */
+                      paperOnly: com.optionslab.ira.PaperOnlyPeriod.Period? = null) {
     val p = LocalPalette.current
     var confirmLive by remember { mutableStateOf(false) }
     var needLink by remember { mutableStateOf(false) }
@@ -751,15 +797,18 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
                     Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)),
                         style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.align(Alignment.CenterVertically))
                     Text("  ·  ", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.align(Alignment.CenterVertically))
+                    // Shut on a weekday in session hours: the holiday's name, so a wrong list is visible (and fixable in Schedule).
+                    val why = remember(now, open) { if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.foClose()) null else
+                        runCatching { com.optionslab.app.data.Holidays.book().upcoming(Market.today()).firstOrNull { it.first == Market.today() }?.second }.getOrNull() }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterVertically)) {
                         StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
                         Spacer(Modifier.width(4.dp))
-                        // Shut on a weekday in session hours: the holiday's name, so a wrong list is visible (and fixable in Schedule).
-                        val why = remember(now, open) { if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.foClose()) null else
-                            runCatching { com.optionslab.app.data.Holidays.book().upcoming(Market.today()).firstOrNull { it.first == Market.today() }?.second }.getOrNull() }
                         Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-                        if (why != null) Text(" · $why", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                     }
+                    // Its own item (20 Oct, Dussehra: beside "Market closed" it was cut off on a small phone at 2x fonts): it wraps
+                    // to a line of its own when the bar is narrow.
+                    if (why != null) Text(" · $why", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
+                        modifier = Modifier.align(Alignment.CenterVertically))
                 }
             }
             if (!narrow) modePill()
@@ -773,10 +822,16 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
         onDismissRequest = { confirmLive = false },
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Switch to live trading?", style = Type.title) },
-        text = { Text((paperOnly?.let { com.optionslab.ira.PaperOnlyPeriod.liveAsk(it) + "\n\n" } ?: "") +
-            "Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review and a swipe to send (plus your PIN or fingerprint unless you switch that off).", style = Type.bodySmall) },
-        confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; if (paperOnly != null) onLiveWithPin() else onMode(true) }) {
-            Text(if (paperOnly != null) "Enter PIN to go live" else "Go live", color = p.oxblood) } },
+        // Scrolls at a large font or in landscape (CI's layout check: the text was cut at 2x fonts).
+        text = { androidx.compose.foundation.layout.Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+            Text((paperOnly?.let { com.optionslab.ira.PaperOnlyPeriod.liveAsk(it) + "\n\n" } ?: "") +
+            "Prices, positions and orders will come from your Zerodha account, with real money. As on paper, an order goes when you tap Buy or Sell " +
+            "and enter your PIN (no review step). \"AI trades go live\" turns on too. Each arm keeps its own live choice. A paper strategy " +
+            "trades live only once you have taken it out of Shadow with your PIN and its own \"Trade live\" is on (beside the Live " +
+            "switch), outside the paper-only period; in Shadow (where each starts) it sends nothing. Paper turns both off.", style = Type.bodySmall) } },
+        // Your PIN follows (the caller asks it): Live and "AI trades go live" switch on only with it.
+        confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; onMode(true) }) {
+            Text("Enter PIN to go live", color = p.oxblood) } },
         dismissButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
     )
     if (needLink) com.optionslab.app.ui.components.AlertDialog(

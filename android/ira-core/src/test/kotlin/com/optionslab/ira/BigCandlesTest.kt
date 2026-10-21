@@ -134,4 +134,21 @@ class BigCandlesTest {
         val early = BigCandles.answer(BigCandles.Q(null), Market.NIFTY, quiet, today, LocalDateTime.of(today, LocalTime.of(9, 51)))
         assertTrue(early.contains("Today Nifty has had no 5-minute candle of 0.4% or more in the first hour so far - the biggest was +0.20% at 09:30."), early)
     }
+
+    @Test fun aCandleStillFormingIsNeverCalledBig() {
+        // 18 Oct, review: at 09:33 the 09:30 candle holds three minutes (+0.60% so far): not a 5-minute candle yet.
+        val past = weekdaysBefore(25).flatMap { session(it, 50.0, 25100.0) }
+        val forming = BigCandles.answer(BigCandles.Q(null), Market.NIFTY, past + session(today, 250.0, 25300.0, until = LocalTime.of(9, 32)),
+            today, LocalDateTime.of(today, LocalTime.of(9, 33)))
+        assertFalse(forming.contains("Today Nifty had a"), forming)
+        assertTrue(forming.contains("Today Nifty has had no 5-minute candle of 0.4% or more in the first hour so far - the biggest was 0.00% at 09:15."), forming)
+        // Once it has ended (09:35): it is the day's big candle.
+        val ended = BigCandles.answer(BigCandles.Q(null), Market.NIFTY, past + session(today, 250.0, 25300.0, until = LocalTime.of(9, 34)),
+            today, LocalDateTime.of(today, LocalTime.of(9, 35)))
+        assertTrue(ended.contains("Today Nifty had a +1.00% 5-minute candle at 09:30"), ended)
+        // Edge: at 09:17 no candle has ended yet - nothing said about today.
+        val first = BigCandles.answer(BigCandles.Q(null), Market.NIFTY, past + session(today, 250.0, 25300.0, until = LocalTime.of(9, 16)),
+            today, LocalDateTime.of(today, LocalTime.of(9, 17)))
+        assertFalse(first.contains("Today Nifty"), first)
+    }
 }

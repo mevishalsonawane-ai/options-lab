@@ -45,8 +45,11 @@ object TomorrowPlan {
     /** An index's levels carried into tomorrow: the [close] read and the nearest untaken level [above] and [below] it. */
     data class Levels(val underlying: String, val close: Double, val above: Level?, val below: Level?)
 
-    /** Liquidity 15+5's closed paper trades today: [trades], [wins], [net] rupees after charges. */
-    data class Day(val trades: Int, val wins: Int, val net: Double)
+    /**
+     * Liquidity 15+5's closed paper trades today: [trades], [wins], [net] rupees after charges; [trailed] of them under Boss's
+     * opt-in Rs 500 give-back trail (13 Oct: said, so a day of trailed trades never reads as "no paper trade").
+     */
+    data class Day(val trades: Int, val wins: Int, val net: Double, val trailed: Int = 0)
 
     /**
      * What the app read. [next]: the next session (null: not known). [holidays]: the weekday holidays between today and
@@ -82,7 +85,7 @@ object TomorrowPlan {
     /** Liquidity 15+5's paper trades closed on [today] from its book's rows ([LiquidityRecord.rows]: closed paper, net after charges). */
     fun dayOf(rows: List<LiquidityRecord.Row>, today: LocalDate): Day {
         val mine = rows.filter { it.trade.exitTime?.toLocalDate() == today }
-        return Day(mine.size, mine.count { it.win }, mine.sumOf { it.net })
+        return Day(mine.size, mine.count { it.win }, mine.sumOf { it.net }, mine.count { it.trailed })
     }
 
     // ---- the levels -----------------------------------------------------------------------------------------------
@@ -137,7 +140,8 @@ object TomorrowPlan {
 
     private fun resultLine(d: Day): String =
         if (d.trades == 0) "Liquidity 15+5 today: no paper trade."
-        else "Liquidity 15+5 today on paper: ${d.trades} trade${s(d.trades)}, ${d.wins} won, net ${rs(d.net)} after charges."
+        else "Liquidity 15+5 today on paper: ${d.trades} trade${s(d.trades)}, ${d.wins} won, net ${rs(d.net)} after charges" +
+            (if (d.trailed > 0) " (${if (d.trailed == d.trades) "all" else "${d.trailed}"} ${com.optionslab.engine.orb.LiquidityTrail.TRAILED}, not the plain rules)" else "") + "."
 
     private fun levelWords(l: Level?, word: String): String =
         if (l == null) "nothing untaken $word read" else "$word ${n(l.edge)} (${l.name}, ${l.minutes}-min) ${pts(l.distance)} pts away"

@@ -80,6 +80,22 @@ object McxMarket {
     /** MCX is trading now (its own hours and holidays). */
     fun isOpen(): Boolean = runCatching { calendar().isOpen(now()) }.getOrDefault(false)
 
+    /** [isOpen], or null when it cannot be told now (20 Oct: a failed read is not "closed" for what runs only after the close). */
+    fun openOrNull(): Boolean? = runCatching { calendar().isOpen(now()) }.getOrNull()
+
+    /**
+     * 20 Oct, enhancement round 2 (idea 3): whether the watch's look after MCX's close is due ([com.optionslab.ira.EveningLook.dueAfter]):
+     * a carried live MCX protection still waits for its overnight GTT ([pending]) within half an hour of the session's close
+     * (after midnight: yesterday's session). Memory and the calendar only.
+     */
+    fun eveningLookDue(pending: Boolean): Boolean = runCatching {
+        if (!pending) return@runCatching false
+        val t = now()
+        val d = if (t.hour < 12) t.toLocalDate().minusDays(1) else t.toLocalDate()
+        val w = calendar().window(d) ?: return@runCatching false
+        com.optionslab.ira.EveningLook.dueAfter(t.hour * 60 + t.minute, w.close.hour * 60 + w.close.minute, true, true)
+    }.getOrDefault(false)
+
     /** Today's MCX session, or null when MCX does not trade today. */
     fun todayWindow(): McxSession.Window? = runCatching { calendar().window(Market.today()) }.getOrNull()
 
@@ -150,6 +166,9 @@ object McxMarket {
         cached().firstOrNull { it.name == name && it.expiry == expiry && it.right == right && (right == null || it.strike == strike) }
 
     /** Zerodha's instrument token for an MCX trading symbol (the live stream), or null. */
+    /** [tokenOf] from the list already in memory only (never the file): the tick path's lookup. */
+    fun tokenKnown(tradingSymbol: String): Long? = mem?.second?.firstOrNull { it.tradingSymbol == tradingSymbol }?.token?.takeIf { it > 0 }
+
     fun tokenOf(tradingSymbol: String): Long? = cached().firstOrNull { it.tradingSymbol == tradingSymbol }?.token?.takeIf { it > 0 }
 
     /** The paper account's contract for [c]: units per lot as its lot (paper keeps units, as for NFO), a future's right IX. */
@@ -175,6 +194,12 @@ object McxMarket {
 
     // ---- prices ----------------------------------------------------------------------------------------------------------
 
+    /**
+     * Battery (14 Oct): an MCX price read keeps the price stream awake only while something is held or working on MCX
+     * ([heldQuick]); else it is a quote call (the MCX pass's once a minute), and the stream's idle stop may close it.
+     */
+    private fun streamKept(): Boolean = com.optionslab.ira.McxRest.keepsStream(heldQuick())
+
     /** One contract's price. [lastSession]: the last session's close (MCX shut, or no candle yet today). */
     data class Quote(val contract: McxContract, val last: Double, val open: Double, val bid: Double?, val ask: Double?, val lastSession: Boolean) {
         val changePct: Double? get() = if (open > 0 && !lastSession) (last - open) / open else null
@@ -186,7 +211,7 @@ object McxMarket {
      */
     suspend fun quote(c: McxContract, quick: Boolean = true): Quote? {
         if (AppSettings.load().live || Broker.loggedIn) {
-            val q = runCatching { Broker.quotes(listOf(c.kiteKey))[c.kiteKey] }.getOrNull()
+            val q = runCatching { Broker.quotes(listOf(c.kiteKey), keepStream = streamKept())[c.kiteKey] }.getOrNull()
             if (q != null && q.last > 0) return Quote(c, q.last, q.open, q.bid, q.ask, false)
             if (AppSettings.load().live) return null
         }
@@ -203,7 +228,7 @@ object McxMarket {
     suspend fun quotes(list: List<McxContract>): Map<String, Quote> = coroutineScope {
         if (list.isEmpty()) return@coroutineScope emptyMap()
         if (AppSettings.load().live || Broker.loggedIn) {
-            val got = runCatching { Broker.quotes(list.map { it.kiteKey }) }.getOrNull()
+            val got = runCatching { Broker.quotes(list.map { it.kiteKey }, keepStream = streamKept()) }.getOrNull()
             if (got != null && (got.isNotEmpty() || AppSettings.load().live))
                 return@coroutineScope list.mapNotNull { c -> got[c.kiteKey]?.takeIf { it.last > 0 }?.let { q -> c.tradingSymbol to Quote(c, q.last, q.open, q.bid, q.ask, false) } }.toMap()
         }
@@ -255,32 +280,139 @@ object McxMarket {
     private const val K_LIVE_HELD = "mcx.liveHeld"
 
     /** The paper account holds an MCX position or has a working MCX order (no price read). */
-    fun paperExposure(): Boolean = runCatching {
-        val st = Paper.state
-        st.positions.any { it.quantity != 0 && it.exchange == Mcx.EXCHANGE } ||
-            st.orders.any { (it.status == "open" || it.status == "trigger pending") && it.exchange == Mcx.EXCHANGE }
-    }.getOrDefault(false)
+    fun paperExposure(): Boolean = runCatching { paperExposureOrThrow() }.getOrDefault(false)
 
-    /** Zerodha showed an open MCX position at the last look (kept for the day, so a restart keeps watching). */
-    fun liveExposure(): Boolean = runCatching { SecurePrefs.getString(K_LIVE_HELD) == Market.today().toString() }.getOrDefault(false)
+    /** [paperExposure] with a failed read let through, so the battery's cadence can count it as held (review, 14 Oct). */
+    private fun paperExposureOrThrow(): Boolean {
+        val st = Paper.state
+        return st.positions.any { it.quantity != 0 && it.exchange == Mcx.EXCHANGE } ||
+            st.orders.any { (it.status == "open" || it.status == "trigger pending") && it.exchange == Mcx.EXCHANGE }
+    }
+
+    /**
+     * Zerodha showed an open MCX position at the last look (kept, so a restart keeps watching). 18 Oct, review: kept until a
+     * read of the positions shows MCX flat ([noteLive]), not only for the day it was seen: a live MCX position carried
+     * overnight in Paper mode stopped counting at midnight, and then nothing read Zerodha again for it (the MCX expiry exit
+     * and the evening watch skipped it). A day is still what is stored (the day it was first seen held); any day counts.
+     */
+    fun liveExposure(): Boolean = runCatching { liveExposureOrThrow() }.getOrDefault(false)
+
+    /** [liveExposure] with a failed read let through (the start-up's restore and the cadence count it as held; review, 14 Oct). */
+    internal fun liveExposureOrThrow(): Boolean = (!SecurePrefs.getString(K_LIVE_HELD).isNullOrBlank())
+        .also { liveSeen = Market.today() to it }
+
+    /** [liveExposure] as last read or written in this process (memory; null: not today, or not read yet). */
+    @Volatile private var liveSeen: Pair<LocalDate, Boolean>? = null
 
     /** Called with each read of Zerodha's positions. */
     fun noteLive(positions: List<Broker.Position>) {
         val held = positions.any { it.exchange == Mcx.EXCHANGE && it.qty != 0 }
         val now = liveExposure()
-        if (held != now) runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE_HELD to if (held) Market.today().toString() else null)) }
+        if (held != now) {
+            liveSeen = Market.today() to held
+            runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE_HELD to if (held) Market.today().toString() else null)) }
+        }
     }
 
     /** An MCX order was just sent to Zerodha from the app: watched from now (the next read of the positions settles it). */
-    fun markLive() { runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE_HELD to Market.today().toString())) } }
+    fun markLive() {
+        liveSeen = Market.today() to true
+        runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE_HELD to Market.today().toString())) }
+    }
 
     fun exposure(): Boolean = paperExposure() || liveExposure()
+
+    // ---- 18 Oct, review: a live MCX position kept as held with no Zerodha session to confirm it ---------------------------
+
+    /**
+     * The live MCX flag stays on until a logged-in read of Zerodha's positions shows MCX flat, so with no session the MCX
+     * watch (and its wake lock) keeps running every MCX day. That is right - an open position comes first, and is never
+     * dropped on a guess - but Boss is told once a day that a Zerodha login is needed to confirm it.
+     */
+    private const val K_LOGIN_TOLD = "mcx.liveLoginTold"
+    const val LOGIN_NOTICE_ID = 2052
+    const val LOGIN_TITLE = "MCX: log in to Zerodha"
+    const val LOGIN_TEXT = "The app last saw an open MCX position on Zerodha and keeps watching it. There is no Zerodha login " +
+        "now, so it cannot check whether the position is still open. Log in to Zerodha once so the app can confirm it; if " +
+        "the position is closed, the MCX watch then stops on its own."
+    @Volatile private var loginToldOn: LocalDate? = null
+
+    /**
+     * Boss is told today ([LOGIN_TEXT]): [stored] is the live flag's day (the day the position was first seen), [toldOn] the
+     * day Boss was last told. Only with no session and a flag from before today (seen today, a read is due anyway). Pure.
+     */
+    internal fun loginNoticeDue(stored: String?, today: LocalDate, loggedIn: Boolean, toldOn: LocalDate?): Boolean {
+        if (loggedIn || stored.isNullOrBlank() || toldOn == today) return false
+        // A flag that is not a day (an older version's) counts as older than today.
+        val seen = runCatching { LocalDate.parse(stored) }.getOrNull() ?: return true
+        return seen.isBefore(today)
+    }
+
+    /** Once a day at most (kept across restarts): the notification and the diary's line. Off the order path; never throws. */
+    fun loginNoticeIfDue(context: Context, loggedIn: Boolean = runCatching { Broker.loggedIn }.getOrDefault(false)): Boolean = runCatching {
+        val today = Market.today()
+        val told = loginToldOn ?: SecurePrefs.getString(K_LOGIN_TOLD)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        if (!loginNoticeDue(SecurePrefs.getString(K_LIVE_HELD), today, loggedIn, told)) return@runCatching false
+        loginToldOn = today
+        SecurePrefs.putAllSoon(mapOf(K_LOGIN_TOLD to today.toString()))
+        runCatching { Diag.record("risk", "MCX: a live MCX position is kept as held (seen ${SecurePrefs.getString(K_LIVE_HELD)}); no Zerodha login to confirm it - Boss told") }
+        runCatching { com.optionslab.app.work.Notifier.post(context, LOGIN_NOTICE_ID, com.optionslab.app.work.Notifier.RISK, LOGIN_TITLE, LOGIN_TEXT, "trade") }
+        true
+    }.getOrDefault(false)
+
+    /** Tests: forget today's notice (memory only). */
+    internal fun resetLoginNoticeForTest() { loginToldOn = null }
+
+    // ---- Battery (14 Oct): how often the MCX pass runs, and what it keeps awake ([com.optionslab.ira.McxRest]) ------------
+
+    /** Something is held or working on MCX: a paper position or order, a live one, or a position in an MCX arm's book. */
+    fun heldNow(): Boolean = com.optionslab.ira.McxRest.held(
+        // A book that cannot be read counts as held (review, 14 Oct): the pass stays at its full 15 s.
+        runCatching { paperExposureOrThrow() }.getOrDefault(true),
+        runCatching { liveExposureOrThrow() }.getOrDefault(true),
+        runCatching { McxPaperArms.holdsNow() }.getOrDefault(true))
+
+    /**
+     * [heldNow] from memory only (no vault read, no file, no lock): for the price reads and the brain's scheduling. Anything
+     * not known yet in this process counts as held (the stream kept, as before).
+     */
+    fun heldQuick(): Boolean {
+        val paper = runCatching { Paper.mcxExposureIfLoaded() }.getOrNull() ?: true
+        val live = liveSeen?.takeIf { it.first == Market.today() }?.second ?: true
+        return com.optionslab.ira.McxRest.held(paper, live, runCatching { McxPaperArms.holdsNow() }.getOrDefault(true))
+    }
+
+    /**
+     * The MCX pass's wait now: 15 s with anything held or working on MCX (paper or live) or inside an armed arm's entry
+     * minutes - as before - else 60 s ([com.optionslab.ira.McxRest.cadenceMs]). A failed read counts as 15 s.
+     */
+    fun watchCadenceMs(): Long = runCatching {
+        com.optionslab.ira.McxRest.cadenceMs(heldNow(), McxPaperArms.inEntryMinutes())
+    }.getOrDefault(com.optionslab.ira.McxRest.HELD_MS)
 
     /**
      * The watch should run now for MCX: MCX is open and something is held or working there, or an MCX paper arm is on and
      * inside its minutes ([McxPaperArms.wantsWatch]: the evening break 17:00-23:16, the morning call 09:14-14:00).
      */
-    fun watchDue(): Boolean = isOpen() && (exposure() || runCatching { McxPaperArms.wantsWatch() }.getOrDefault(false))
+    fun watchDue(): Boolean = coverage().needs
+
+    /**
+     * MCX now as Session coverage sees it (17 Oct): open on its own calendar, what is held or working there (the paper and live
+     * books, a position in an MCX arm's book) and the arms armed. [watchDue] - the watch's own "should I run?" for MCX - is
+     * this market's [com.optionslab.ira.SessionCoverage.Market.needs], and the dead-man check judges its gaps from this same
+     * reading ([com.optionslab.app.work.Heartbeat]), so the two can never disagree about whether MCX needs the watch. A read
+     * that throws is passed on: the watch's rule counts it as nothing there (as before), the dead-man check judges nothing.
+     */
+    fun coverage(): com.optionslab.ira.SessionCoverage.Market {
+        if (!isOpen()) return com.optionslab.ira.SessionCoverage.Market(NAME, false)
+        // The arms' book read first (when nothing has read it yet), then its open positions from memory.
+        val armed = McxPaperArms.armedNow().map { McxPaperArms.label(it) }
+        val held = exposure() || McxPaperArms.holdsNow()
+        return com.optionslab.ira.SessionCoverage.Market(NAME, true, if (held) 1 else 0, armed)
+    }
+
+    /** The market's name in Session coverage's words and problem keys ("coverage:MCX:watch"). */
+    const val NAME = "MCX"
 
     /**
      * [watchDue] for the main thread (ANR fix, 9 Oct): from memory only - never a vault read (a Keystore decryption) and
@@ -294,7 +426,11 @@ object McxMarket {
         // The books themselves when this process has read them, else what their last write left in the hint file.
         val paper = runCatching { Paper.mcxExposureIfLoaded() }.getOrNull() ?: hint(H_PAPER)
         if (paper == true) return true
-        val arms = runCatching { McxPaperArms.wantsWatchIfLoaded() }.getOrNull() ?: hint(H_ARMS)?.let { armed -> if (armed) null else false }
+        // 16 Oct: an armed arm's hint is a yes. Since 12 Oct an armed arm needs the watch for MCX's whole session
+        // ([McxPaperArms.wantsWatch]), and MCX is open here. It was "unknown", so a restart of the watch by Android in MCX's
+        // evening (after Android ended the app) with the arms armed and nothing held was dropped as "after the market hours",
+        // and nothing watched the arms until the next dead-man check minutes later ("Session coverage", 15 Oct 17:56).
+        val arms = runCatching { McxPaperArms.wantsWatchIfLoaded() }.getOrNull() ?: hint(H_ARMS)
         if (arms == true) return true
         return if (paper == null || arms == null) null else false
     }
@@ -373,5 +509,5 @@ object McxMarket {
     }
 
     /** For tests: the day's lists and the calendar forgotten (their files go with the test's directories). */
-    internal fun wipe() { mem = null; cal = null; margins = null; synchronized(hintLock) { hints = null } }
+    internal fun wipe() { mem = null; cal = null; margins = null; liveSeen = null; synchronized(hintLock) { hints = null } }
 }

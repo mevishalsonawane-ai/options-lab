@@ -27,6 +27,8 @@ object GoldBooks {
         synchronized(this) { gate = g; _ready.value = false }
         Thread({
             try {
+                // 16 Oct: after the open positions are restored (their Keystore reads go first; at most 20 s, at once in tests).
+                runCatching { kotlinx.coroutines.runBlocking { PositionsFirst.awaitPositions() } }
                 // A later init (tests start the app again in one process) replaces this read: its result is dropped.
                 if (gate === g) GoldPaper.load()
                 if (gate === g) GoldTrendPaper.load()
@@ -57,6 +59,16 @@ object GoldBooks {
         if (gate.isCompleted && _ready.value) return true
         return kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(BLOCK_MS) { awaitLoaded() } } != null
     }
+
+    /** Read already (no wait). */
+    fun loadedNow(): Boolean = gate.isCompleted && _ready.value
+
+    /**
+     * 18 Oct, review: [awaitBlocking] off the main thread; on it, only [loadedNow] - never a wait there (the gold service's
+     * start and its ensure, called from the screen, the boot receiver and the watch's start, waited up to 3 s each).
+     */
+    fun awaitOffMain(): Boolean =
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) loadedNow() else awaitBlocking()
 
     private const val BLOCK_MS = 3_000L
 }

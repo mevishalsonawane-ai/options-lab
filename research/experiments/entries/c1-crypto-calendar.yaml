@@ -1,0 +1,29 @@
+id: c1-crypto-calendar
+title: 'Crypto C1: weekend, hour-of-day and day-of-week effects (BTC, ETH)'
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/CRYPTO_C1_PREDICTABILITY.md
+hypothesis: Weekend hours differ from weekday hours in size (D1s) or direction (D1d); some UTC hour (D2, 24) or weekday
+  (D4, 7) has a mean return that beats a perp round trip.
+data_version: Binance bulk archive BTCUSDT/ETHUSDT spot 1m; crypto cube v2
+period:
+  design: 2023-11-02 .. 2026-03-31
+  holdout: 2026-04-01 onward, locked, not read
+instruments:
+- CRYPTO
+features:
+- hour_utc
+- dow
+- is_weekend
+model_or_rule: Welch / one-sample t tests, one BH family with the rest of C1
+settings: research/brain/crypto/PREREG.md tests D1s, D1d, D2, D4
+prereg: research/brain/crypto/PREREG.md
+variants_tried: 66
+results:
+  summary: 'Weekends are quieter: weekend hours move 0.595x (BTC) / 0.672x (ETH) of weekday hours, 126 weeks, q < 0.001
+    (2 pass). Direction: no weekend difference (q 0.91 / 0.95); no hour or weekday beats costs (best ETH 21:00 UTC +7.5
+    bps, q 0.02, below the 12 bps round trip; weekdays best q 0.12). 2 of 66 pass.'
+  costs: perp taker round trip 0.12% (+ funding) as the bar for returns
+holdout_read: false
+verdict: inconclusive
+notes: The weekend size effect passed in design (a market fact, not a trade); hour and weekday returns failed.

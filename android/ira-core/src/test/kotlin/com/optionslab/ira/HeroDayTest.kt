@@ -264,6 +264,13 @@ class HeroDayTest {
         assertFalse("In all" in same, same)
     }
 
+    @Test fun jarvisSaysItsSignalIsTheStraddlesPremiumNotTheDefault() {
+        // 14 Oct (Boss): by default a signal is read on the index; Hero's reads the option straddle's premium, said every time.
+        assertTrue(HeroDay.UNPROVEN.endsWith("Signal uses the option straddle's premium (not the default index-only signal); paper only, armed by you."),
+            HeroDay.UNPROVEN)
+        assertTrue(HeroDay.recordLine(facts(at(15, 0), record = null)).endsWith(HeroRules.SIGNAL_SOURCE + "."))
+    }
+
     @Test fun neverAWordOfActing() {
         val answers = listOf(
             HeroDay.answer(WHAT, facts(at(14, 10), today = listOf(bought))),

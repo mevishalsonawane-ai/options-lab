@@ -1,0 +1,26 @@
+id: h30
+title: Signals on the option's own chart
+family: patterns-indicators
+date: '2026-10-11'
+doc: research/HUNT_H30.md
+hypothesis: Premium breakouts/VWAP/EMAs beat costs.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- premium chart signals
+model_or_rule: 54 signals x 3 strikes x 19 exits
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h30/PREREG.md
+variants_tried: 3078
+results:
+  summary: No; most do worse than a random minute (buys the top).
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

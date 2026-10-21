@@ -1,0 +1,40 @@
+id: r69-solo2-x20
+title: R69 Solo2 X20 +5% at +20%, then +1 per +1
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R69_ONE_POINT_TRAIL.md
+hypothesis: 'Boss (16 Oct): a +5% stop once the option is +25%, then +1 point of stop for every +1 point of gain (on top of
+  the A4 ladder), improves the paper arms after real costs. This variant: {R.VLABEL[v]}; gates as R51 (BH over 15 tests);
+  recommended only if it also beats B0 and A4 everywhere and random early exits (q <= 0.10).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores (Donchian,
+  OOV) / R57 stores (Solo 2.0), 20 Nov 2024 - 13/14 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026; Solo 2.0 Jul 2025 - Mar 2026)
+  holdout: 1 Apr - 13/14 Oct 2026, read once; already read by R51 / R52 / R57 / R64 - R68 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: index (setups S1-S4); model inputs as R57 (unchanged); only the option exits differ (stops and locks on
+  the premium)'
+model_or_rule: 'Solo 2.0 (R57 A2 logistic meta-labeller picks of setups S1-S4, one a day, 4 indices); exits: X20 +5% at +20%,
+  then +1 per +1'
+settings: research/hunt/r69/r69cfg.py exit_spec / TRIGGER; PREREG.md
+prereg: research/hunt/r69/PREREG.md
+variants_tried: 15
+results:
+  summary: 'Design: 166 trades, win 58%, net Rs 55,929 (Rs 337/trade), worst day -Rs 10,370, max DD Rs 20,867, stops 9. Walk-forward:
+    166 trades, win 58%, net Rs 55,929 (Rs 337/trade), worst day -Rs 10,370, max DD Rs 20,867, stops 9. Final: 128 trades,
+    win 62%, net Rs 102,297 (Rs 799/trade), worst day -Rs 6,120, max DD Rs 16,073, stops 5; entry-twin p 0.002, BH q 0.006,
+    exit-twin p 0.1856 (q 0.7006). Verdict: PASS. Versus B0: design Rs 19 (bootstrap p 0.511), final Rs 3,125 (p 0.337). Versus
+    A4: design -Rs 2,712 (bootstrap p 0.601), final Rs 4,744 (p 0.2845). Final: versus A4 the rule changed 16 trades; it gave
+    up Rs 11,387 and saved Rs 16,132 (net Rs 4,744).'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: inconclusive
+notes: 'Passed R51''s gates but not recommended (PREREG section 3): it must also beat both B0 and A4 in design, walk-forward
+  and final and beat random early exits; exit-twin q 0.7006. Boss may still choose it. Signal on the underlying; research
+  only, nothing changes paper or live.'

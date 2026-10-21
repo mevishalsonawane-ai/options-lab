@@ -1,0 +1,28 @@
+id: h29
+title: 'Option prices: cheap options and which side'
+family: option-structure
+date: '2026-10-08'
+doc: research/HUNT_H29.md
+hypothesis: Skew, forward or cheapness tells a buyer which side.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- IV
+- skew
+- synthetic forward
+model_or_rule: 24 directional variants
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h29/PREREG.md
+variants_tried: 24
+results:
+  summary: All lose gross and net; best -Rs 76/day net at 1 lot.
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

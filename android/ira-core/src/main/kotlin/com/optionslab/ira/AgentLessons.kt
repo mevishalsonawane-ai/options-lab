@@ -33,6 +33,10 @@ import kotlin.math.abs
  *    [REJECTS] noes stop it being proposed for [COOLDOWN_DAYS] days.
  *  - The research's own findings travel with them as fixed notes ([RESEARCH]: Majority Rule 14, R13), said in the answers
  *    and the model's notes beside the lessons - never a lesson, never a proposal, never a trade or more risk.
+ *  - 13 Oct (one shared knowledge, [SharedKnowledge]): the slippage record's live fills and the Liquidity paper test's signal
+ *    spreads, judged against the research's real spread ([ExecResult], "exec:" lessons, [EXECUTION]), and the nightly market study's
+ *    setups ([StudyResult], "study:" snapshot lessons, [STUDY]) are evidence like every other agent's - the same buckets, tests and
+ *    confidence; they never propose anything.
  *
  * Nothing here acts. Pure: the app reads the agents' stores and keeps the [Book] (noBackupFilesDir).
  */
@@ -48,6 +52,12 @@ object AgentLessons {
         LAB("Strategy lab", "lab tests"),
         /** The order review's recurring flaws (12 Oct): a rate of the orders and trades reviewed. */
         ORDERS("Order review", "orders reviewed"),
+        /** Fills and signal-time spreads against the research's baseline (13 Oct: the slippage record, the Liquidity paper test). */
+        EXECUTION("Execution", "fills"),
+        /** Jarvis's nightly market study (13 Oct): which setups held in both years of candles. */
+        STUDY("Market study", "days counted"),
+        /** The Candle agent's own counts per candle shape against the research (20 Oct): a nightly snapshot, like the study's. */
+        CANDLES("Candle agent", "candles counted"),
     }
 
     enum class Confidence(val word: String) { WEAK("weak"), BUILDING("building"), STRONG("strong") }
@@ -81,6 +91,8 @@ object AgentLessons {
     const val MOVES_RATE = 0.4
     /** A recurring order flaw on this share of a strategy's reviewed orders or more: "keeps happening" (the order review). */
     const val ORDER_RATE = 0.2
+    /** Fills off the research's baseline on this share or more: "often off the baseline" (13 Oct, [ExecResult]). */
+    const val EXEC_RATE = 0.2
 
     /** One day's evidence: [n] trades (or days, or events), their rupee effect [rs], and [hits] (won, or the event seen). */
     data class Bucket(val day: LocalDate, val n: Int, val rs: Double, val hits: Int,
@@ -164,7 +176,35 @@ object AgentLessons {
         val lab: List<LabResult> = emptyList(),
         /** The order review's RECURRING flaws only ([OrderReview.lessonInputs]): a one-off flaw is never a lesson. */
         val orders: List<OrderFlawResult> = emptyList(),
+        /** Fills and spreads judged against the research's baseline (13 Oct: [SharedKnowledge.execResults]). */
+        val exec: List<ExecResult> = emptyList(),
+        /** The nightly market study's setups (13 Oct: [Study.Finding]s as [StudyResult]s). */
+        val study: List<StudyResult> = emptyList(),
+        /** The Candle agent's shapes, its own count against the research (20 Oct: [CandleBook.results]). */
+        val candles: List<CandleResult> = emptyList(),
     )
+
+    /**
+     * One day's fills of one strategy on one index judged against the research's execution baseline (13 Oct: the slippage record,
+     * "fills:ORB:BANKNIFTY", and the Liquidity paper test's signal-time spreads, "spread:Liquidity:BANKNIFTY"): [n] fills, [hits] of
+     * them off the baseline ([SharedKnowledge.offBaseline]). A rate, like the order review's flaws; [agent] says whose it is.
+     */
+    data class ExecResult(val day: LocalDate, val key: String, val name: String, val n: Int, val hits: Int, val tags: List<String> = emptyList(),
+                          val agent: String = if (key.startsWith("spread")) "the Liquidity paper test" else "the slippage record")
+
+    /**
+     * One setup of the nightly market study (13 Oct): on [day] it counted [days] days of [key] ("nifty:gapup") and the outcome
+     * [held] in both years or was a coin toss. The study counts the whole two years again each night, so this is the latest of a
+     * daily review (a snapshot), never added up night after night.
+     */
+    data class StudyResult(val day: LocalDate, val key: String, val name: String, val days: Int, val held: Boolean, val tags: List<String> = emptyList())
+
+    /**
+     * One candle shape of the Candle agent (20 Oct): on [day] its own count of [key] ("nifty:5:big_lower_wick") had [n] settled
+     * candles and [agrees] with the research (R87 / R85) or not. Its counts are cumulative and re-read each night, so this is the
+     * latest of a daily review (a snapshot), and it stays at building at most ([ceiling]): never a proposal, never an action.
+     */
+    data class CandleResult(val day: LocalDate, val key: String, val name: String, val n: Int, val agrees: Boolean, val tags: List<String> = emptyList())
 
     /**
      * One recurring order flaw on one day (the order review, 12 Oct): [key] "orb_fresh:paper:gb", [n] the strategy's orders or
@@ -236,6 +276,7 @@ object AgentLessons {
             "health" -> if (r >= HEALTH_RATE) -1 else 1
             "moves" -> if (r >= MOVES_RATE) 1 else -1
             "order" -> if (r >= ORDER_RATE) -1 else 1
+            "exec" -> if (r >= EXEC_RATE) -1 else 1
             else -> if (r >= 0.5) 1 else -1
         }
     }
@@ -279,6 +320,14 @@ object AgentLessons {
 
     fun evidence(l: Lesson): Evidence = l.ev
 
+    /**
+     * The most a lesson of [topic] may be (13 Oct review): a market-study lesson ([Topic.STUDY]) is at most building. Its nightly
+     * counts re-read the same two years of candles, so night after night agreeing is not independent evidence - it never becomes
+     * strong, so never a passed test in the shared knowledge, never a proposal, never sent to research as a confirmed finding.
+     */
+    fun ceiling(topic: Topic, c: Confidence): Confidence =
+        if ((topic == Topic.STUDY || topic == Topic.CANDLES) && c == Confidence.STRONG) Confidence.BUILDING else c
+
     /** [confidence], with strong also needing the night's q-value [q] at or under [BH_Q] (null: not tested yet - not strong). */
     fun confidence(e: Evidence, q: Double?): Confidence {
         val c = confidence(e)
@@ -302,7 +351,7 @@ object AgentLessons {
             Kind.RATE -> {
                 var n = 0; var h = 0
                 for (b in buckets) { n += b.n; h += b.hits }
-                val p0 = when (prefix(id)) { "health" -> HEALTH_RATE; "moves" -> MOVES_RATE; "order" -> ORDER_RATE; else -> 0.5 }
+                val p0 = when (prefix(id)) { "health" -> HEALTH_RATE; "moves" -> MOVES_RATE; "order" -> ORDER_RATE; "exec" -> EXEC_RATE; else -> 0.5 }
                 LearnStats.binomTwoSided(h, n, p0)
             }
             Kind.SNAPSHOT -> {
@@ -434,6 +483,9 @@ object AgentLessons {
             "exp" -> if (pos) "did better than the current setting" else "did worse than the current setting"
             "lab" -> if (pos) "mostly passed in the strategy lab" else "mostly failed in the strategy lab"
             "order" -> if (pos) "has become rare" else "keeps happening"
+            "exec" -> if (pos) "stay near the research's baseline" else "are often off the research's baseline"
+            "study" -> if (pos) "held in both years of my study" else "was a coin toss in my study"
+            "candle" -> if (pos) "behaves as the research says in the Candle agent's own count" else "differs from the research in the Candle agent's own count"
             else -> if (pos) "goes well" else "goes badly"
         }
         return "${l.name} $verb" + (condWords(l.cond)?.let { " $it" } ?: "")
@@ -454,9 +506,12 @@ object AgentLessons {
                 "moves" -> "${e.hits} of ${e.n} big moves"
                 "lab" -> "passed ${e.hits} of ${e.n} ${l.topic.unit}, ${rs(e.rs)}"
                 "order" -> "on ${e.hits} of ${e.n} ${l.topic.unit}, ${rs(e.rs)}"
+                "exec" -> "${e.hits} of ${e.n} fills off the baseline"
                 else -> "trouble on ${e.hits} of ${e.n} days watched"
             }
-            Kind.SNAPSHOT -> "${e.n} trades judged, drifting on ${e.hits} of ${e.of} daily reviews, latest ${rs(e.rs)} a trade"
+            Kind.SNAPSHOT -> if (p == "study") "${e.n} days counted, held on ${e.of - e.hits} of ${e.of} nightly counts"
+                else if (p == "candle") "${e.n} candles counted, agreed with the research on ${e.of - e.hits} of ${e.of} nightly counts"
+                else "${e.n} trades judged, drifting on ${e.hits} of ${e.of} daily reviews, latest ${rs(e.rs)} a trade"
         }
         return "$body, $span, $from" + (l.q?.let { ", " + qWords(it) } ?: "") +
             (if (l.cond != null) l.condQ?.let { " (the split: " + qWords(it) + ")" } ?: "" else "")
@@ -523,6 +578,8 @@ object AgentLessons {
     private const val A_MOVES = "the move recorder"
     private const val A_LAB = "the strategy lab"
     private const val A_ORDERS = "the order review"
+    private const val A_STUDY = "the market study"
+    private const val A_CANDLES = "the Candle agent"
 
     private val SKIP_OWNERS = setOf("", "manual", "protection")
     private val SLOTS = listOf("morning", "midday", "afternoon", "evening")
@@ -707,6 +764,24 @@ object AgentLessons {
             acc("order:${r.key}", Topic.ORDERS, Kind.RATE, r.name, (r.tags + listOf("orders", "flaws")).distinct(), A_ORDERS)
                 .add(r.day.toEpochDay(), r.n, r.rs, r.hits.coerceIn(0, r.n))
         }
+        // Execution against the research's baseline (13 Oct): each strategy's fills on an index as a rate off the baseline, per day.
+        for (r in i.exec) {
+            if (r.n <= 0 || r.key.isBlank()) continue
+            acc("exec:${r.key}", Topic.EXECUTION, Kind.RATE, r.name, (r.tags + listOf("execution", "costs")).distinct(), r.agent)
+                .add(r.day.toEpochDay(), r.n, 0.0, r.hits.coerceIn(0, r.n))
+        }
+        // The market study (13 Oct): each setup's latest count, held in both years or not (a daily review, like the self-review's).
+        for (r in i.study) {
+            if (r.days <= 0 || r.key.isBlank()) continue
+            acc("study:${r.key}", Topic.STUDY, Kind.SNAPSHOT, r.name, (r.tags + listOf("study")).distinct(), A_STUDY)
+                .add(r.day.toEpochDay(), r.days, 0.0, if (r.held) 0 else 1)
+        }
+        // The Candle agent (20 Oct): each shape's own count against the research, the latest of a daily review.
+        for (r in i.candles) {
+            if (r.n <= 0 || r.key.isBlank()) continue
+            acc("candle:${r.key}", Topic.CANDLES, Kind.SNAPSHOT, r.name, (r.tags + listOf("candles", "candle")).distinct(), A_CANDLES)
+                .add(r.day.toEpochDay(), r.n, 0.0, if (r.agrees) 0 else 1)
+        }
         // The self-review: each strategy's health against its backtest, one reading a day.
         for (r in i.drift) {
             if (r.verdict == DriftReview.Verdict.TOO_FEW) continue
@@ -765,7 +840,7 @@ object AgentLessons {
                         merged: List<Bucket>? = null): Pair<Lesson, List<ChangeKind>> {
         val buckets = merged ?: mergeBuckets(old?.buckets.orEmpty(), fresh)
         val e = evidence(kind, id, buckets)
-        val conf = confidence(e, q)
+        val conf = ceiling(topic, confidence(e, q))
         val first = buckets.first().from; val last = buckets.last().day
         if (old == null) {
             val st = if (conf == Confidence.STRONG) Status.CONFIRMED else Status.NEW
@@ -807,7 +882,7 @@ object AgentLessons {
             val e = evidence(o.kind, o.id, bs)
             out[l.id] = o.copy(buckets = bs, agents = o.agents + l.agents, tags = (o.tags + l.tags).distinct().take(16),
                 firstSeen = minOf(o.firstSeen, l.firstSeen), lastSeen = maxOf(o.lastSeen, l.lastSeen),
-                confidence = confidence(e, o.q ?: l.q), sign = if (e.sign != 0) e.sign else o.sign, weight = maxOf(o.weight, l.weight),
+                confidence = ceiling(o.topic, confidence(e, o.q ?: l.q)), sign = if (e.sign != 0) e.sign else o.sign, weight = maxOf(o.weight, l.weight),
                 rejections = o.rejections + l.rejections, cooldownUntil = listOfNotNull(o.cooldownUntil, l.cooldownUntil).maxOrNull(),
                 proposedOn = listOfNotNull(o.proposedOn, l.proposedOn).maxOrNull(), accepted = o.accepted || l.accepted, auto = o.auto ?: l.auto,
                 status = if (o.status.ordinal >= l.status.ordinal) o.status else l.status)
@@ -844,12 +919,18 @@ object AgentLessons {
      * moved on, the proposals the strong lessons imply (at most [MAX_PROPOSALS], only [safe] ones), the evening's line and the
      * finding's words.
      */
+    /** A 1-minute candle lesson's id ("candle:<instrument>:1:<shape>"). */
+    private val ONE_MINUTE_CANDLE = Regex("candle:[^:]+:1:.+")
+
     fun pass(book: Book, inputs: Inputs): Pass {
         val day = inputs.day
         val regimes = HashMap(book.regimes)
         inputs.regimeToday?.lowercase(Locale.ENGLISH)?.takeIf { it in setOf("busy", "quiet", "normal") }?.let { regimes[day] = it }
         val keptRegimes = if (regimes.size > REGIME_DAYS) regimes.entries.sortedByDescending { it.key }.take(REGIME_DAYS).associate { it.key to it.value } else regimes
         val byId = merge(book.lessons).associateBy { it.id }.toMutableMap()
+        // 20 Oct, enhancement round 2 (review): only 5- and 15-minute candles are lessons now; a 1-minute candle lesson an earlier
+        // pass kept is let go here, so Jarvis never cites one again.
+        byId.keys.removeAll { ONE_MINUTE_CANDLE.matches(it) }
         val changes = ArrayList<Change>()
         val accs = samples(inputs, keptRegimes).sortedBy { it.id }
         // Each lesson's days brought up to date first, so that tonight's p-values are adjusted together (Benjamini-Hochberg
@@ -897,7 +978,7 @@ object AgentLessons {
             if (id in merged) continue
             if (l.status == Status.RETIRED) { if (l.q != null) byId[id] = l.copy(q = null); continue }
             val q = qOf[id]
-            val conf = confidence(evidence(l), q)
+            val conf = ceiling(l.topic, confidence(evidence(l), q))
             if (q != l.q || conf != l.confidence || pOf[id] != l.p) byId[id] = l.copy(p = pOf[id], q = q, confidence = conf)
         }
         // Regime-aware: a lesson whose effect holds only under one condition says so ([conditions]).
@@ -957,13 +1038,14 @@ object AgentLessons {
 
     /** The prefixes whose evidence counts toward each topic's skill without counting a trade twice. */
     private val SKILL_BASE = mapOf(Topic.STRATEGY to "strat", Topic.MANAGER to "mgr", Topic.SPECIALIST to "spec", Topic.ORDER_FLOW to "flow",
-        Topic.REGIME to "regime", Topic.TIME_OF_DAY to "tod", Topic.DATA_HEALTH to "health", Topic.LAB to "lab", Topic.ORDERS to "order")
+        Topic.REGIME to "regime", Topic.TIME_OF_DAY to "tod", Topic.DATA_HEALTH to "health", Topic.LAB to "lab", Topic.ORDERS to "order",
+        Topic.EXECUTION to "exec", Topic.STUDY to "study", Topic.CANDLES to "candle")
 
     /** Each topic's level (its best active lesson's confidence) and its evidence count. */
     fun skills(book: Book): List<Skill> = Topic.entries.map { t ->
         val mine = active(book).filter { it.topic == t }
         val base = SKILL_BASE.getValue(t)
-        val n = if (t == Topic.DATA_HEALTH) book.lessons.filter { prefix(it.id) == base }.maxOfOrNull { evidence(it).n } ?: 0
+        val n = if (t == Topic.DATA_HEALTH || t == Topic.STUDY || t == Topic.CANDLES) book.lessons.filter { prefix(it.id) == base }.maxOfOrNull { evidence(it).n } ?: 0
             else book.lessons.filter { prefix(it.id) == base }.sumOf { evidence(it).n }
         Skill(t, mine.maxOfOrNull { it.confidence.ordinal }?.let { Confidence.entries[it] }, n, mine.size)
     }
@@ -1181,6 +1263,9 @@ object AgentLessons {
         for ((w, key) in FAMILY_TAGS.drop(8)) if (r.contains(" $w ")) return null to key
         if (Regex(" (strategy lab|the lab|lab|forge|the forge) ").containsMatchIn(r)) return Topic.LAB to null
         if (Regex("^ (order review|orders|order flaws|flaws|my fills|fills|execution|order execution) $").containsMatchIn(r)) return Topic.ORDERS to null
+        if (Regex(" (slippage|spreads?|fill quality|the baseline) ").containsMatchIn(r)) return Topic.EXECUTION to null
+        if (Regex(" (study|market study|the study|setups) ").containsMatchIn(r)) return Topic.STUDY to null
+        if (Regex(" (candle agent|candle shapes?|the candles?) ").containsMatchIn(r)) return Topic.CANDLES to null
         if (Regex("^ (strategies|bots|agents|arms|my bots|the bots|the agents) $").containsMatchIn(r)) return Topic.STRATEGY to null
         return null
     }
@@ -1300,7 +1385,9 @@ object AgentLessons {
                 Confidence.STRONG -> "strong: $STRONG_N or more and ${e.agreeing} of $SPLITS periods point the same way" +
                     (l.q?.let { ", and ${qWords(it)} across all my lessons (the bar is ${fmtQ(BH_Q)})" } ?: "")
                 Confidence.BUILDING -> "building: ${e.n} so far" + (if (e.splits.size == SPLITS) ", ${e.agreeing} of $SPLITS periods agree" else "") +
-                    (if (confidence(e) == Confidence.STRONG) "; ${l.q?.let { qWords(it) } ?: "q not worked out yet"} is above the bar of ${fmtQ(BH_Q)}, so with this many lessons it could be luck"
+                    (if (l.topic == Topic.STUDY) "; a market-study lesson stays at building: each night counts the same two years again, so the nights are not independent"
+                    else if (l.topic == Topic.CANDLES) "; a Candle agent lesson stays at building: it compares running counts with the research and never changes anything"
+                    else if (confidence(e) == Confidence.STRONG) "; ${l.q?.let { qWords(it) } ?: "q not worked out yet"} is above the bar of ${fmtQ(BH_Q)}, so with this many lessons it could be luck"
                     else "; strong needs $STRONG_N, agreement over time and q at most ${fmtQ(BH_Q)}")
                 Confidence.WEAK -> contradiction(l)?.let { "not trusted: it $it" } ?: "weak: only ${e.n} so far"
             }

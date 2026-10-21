@@ -164,6 +164,9 @@ internal fun ChartPane(
     var order by remember { mutableStateOf<Pair<ChainPick, Pair<Boolean, Double?>>?>(null) }
     var hint by remember { mutableStateOf<String?>(null) }
     var alerting by remember { mutableStateOf(false) }
+    // Jarvis on a long-pressed candle (TODO I13): open while [explaining]; [explainText] null while it is being read.
+    var explaining by remember { mutableStateOf(false) }
+    var explainText by remember { mutableStateOf<String?>(null) }
     // The option chain over the chart ([chainFor] = its underlying), and the index chart to go back to
     // after an option was opened from it.
     var chainFor by remember { mutableStateOf<String?>(null) }
@@ -175,16 +178,20 @@ internal fun ChartPane(
     var recentsRead by remember { mutableStateOf(false) }
     LaunchedEffect(current, symbolPicker) {
         if (!symbolPicker) return@LaunchedEffect
-        if (!recentsRead) {
-            recents = withContext(Dispatchers.IO) {
-                runCatching { ChartSymbols.decode(com.optionslab.app.security.SecurePrefs.getString(ChartSymbols.RECENT_KEY)) }.getOrDefault(emptyList())
+        // Set on the main thread (15 Oct): under the test rule's unconfined dispatcher the code after withContext(IO)
+        // ran on the IO worker and wrote [recents] there.
+        withContext(Dispatchers.Main.immediate) {
+            if (!recentsRead) {
+                recents = withContext(Dispatchers.IO) {
+                    runCatching { ChartSymbols.decode(com.optionslab.app.security.SecurePrefs.getString(ChartSymbols.RECENT_KEY)) }.getOrDefault(emptyList())
+                }
+                recentsRead = true
             }
-            recentsRead = true
+            val now = current
+            recents = ChartSymbols.pushRecent(recents, now)
+            val kept = mapOf(ChartSymbols.RECENT_KEY to ChartSymbols.encode(recents), ChartSymbols.LAST_KEY to ChartSymbols.encode(listOf(now)))
+            withContext(Dispatchers.IO) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(kept) } }
         }
-        val now = current
-        recents = ChartSymbols.pushRecent(recents, now)
-        val kept = mapOf(ChartSymbols.RECENT_KEY to ChartSymbols.encode(recents), ChartSymbols.LAST_KEY to ChartSymbols.encode(listOf(now)))
-        withContext(Dispatchers.IO) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(kept) } }
     }
     // A hidden chart (another tab in front) never keeps its picker open over that tab.
     LaunchedEffect(visible) { if (!visible) picking = false }
@@ -437,7 +444,9 @@ internal fun ChartPane(
                         // Only fatal before the first candles: one runtime error later must not drop the chart for the session.
                         onPageError = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
                         // The page's own 5-minute candles feed the liquidity layer, so it reads nothing more while they are fresh.
-                        onBars = { s, iv, list -> val clock = liquidity; if (iv == "5m" && clock != null) liqCache.offer(s, list, clock.now()) }), "IraBridge")
+                        onBars = { s, iv, list -> val clock = liquidity; if (iv == "5m" && clock != null) liqCache.offer(s, list, clock.now()) },
+                        // TODO I13 (13 Oct): "Explain this candle" from the long-press menu: the dialog opens at once, the text follows.
+                        onExplain = { t -> explaining = true; explainText = t }), "IraBridge")
                     // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
@@ -546,6 +555,7 @@ internal fun ChartPane(
         }
     }
     if (alerting) alertDialog(current.first) { alerting = false }
+    if (explaining) CandleExplainDialog(explainText) { explaining = false; explainText = null }
     if (picking && visible && symbolPicker) ChartSymbolSheet(current.first, source, recents,
         onPick = { s, e -> picking = false; returnTo = null; showSymbol(s, e) },
         // An underlying's priced chain: the chart's own OPT popup (tap a price there to chart that option).
@@ -642,6 +652,8 @@ internal class Bridge(
     private val onPainted: (Int, Int, Int) -> Unit = { _, _, _ -> },
     /** Every batch of candles the page was given (symbol, interval, candles), on the reading thread. */
     private val onBars: (String, String, List<com.optionslab.engine.Upstox.Bar>) -> Unit = { _, _, _ -> },
+    /** "Explain this candle" (TODO I13): null when it starts, then Jarvis's text. On the main thread. */
+    private val onExplain: (String?) -> Unit = {},
 ) {
     /** terminal.mjs: the chart drew its first candles at this size. */
     @JavascriptInterface
@@ -706,6 +718,36 @@ internal class Bridge(
             arr.put(JSONObject().put("label", l.label).put("price", l.price).put("kind", l.kind.name))
         arr.toString()
     }.getOrDefault("[]")
+
+    /**
+     * terminal.mjs: the level map of the charted index (TODO I12) as JSON {"levels":[{type,label,price,side}],"note"} - read
+     * from [com.optionslab.app.data.MarketContext]'s cache (memory; a stale one is recomputed on its own thread, never here).
+     */
+    @JavascriptInterface
+    fun levelMap(symbol: String): String = runCatching {
+        val u = flowUnderlyingOf(symbol)
+        if (u == null || !com.optionslab.app.data.ChartFeed.isIndex(symbol)) "{\"levels\":[]}" else com.optionslab.app.data.MarketContext.levelJson(u)
+    }.getOrDefault("{\"levels\":[]}")
+
+    /**
+     * terminal.mjs, the long-press menu's "Explain this candle" (TODO I13): the candle ([bar]: [time, o, h, l, c, v]) of
+     * [minutes] on [symbol] and that day's other candles ([day], the same rows). Read on an IO thread; the answer is shown
+     * in a dialog.
+     */
+    @JavascriptInterface
+    fun explain(symbol: String, minutes: Int, bar: String, day: String) {
+        web.post { onExplain(null) }
+        scope.launch(Dispatchers.IO) {
+            val text = runCatching {
+                fun row(a: JSONArray) = DoubleArray(a.length()) { i -> a.optDouble(i) }
+                val b = row(JSONArray(bar))
+                val d = JSONArray(day).let { a -> (0 until a.length()).mapNotNull { a.optJSONArray(it)?.let(::row) } }
+                val u = flowUnderlyingOf(symbol) ?: symbol.takeWhile { it.isLetter() }.uppercase()
+                com.optionslab.app.data.MarketContext.explain(symbol, minutes, b[0].toLong(), b[1], b[2], b[3], b[4], b.getOrNull(5), d, u)
+            }.getOrElse { "I could not read that candle: ${it.message ?: "no data"}." }
+            web.post { onExplain(text) }
+        }
+    }
 
     /** terminal.mjs: the owner's Pine scripts, registered as indicators. */
     @JavascriptInterface

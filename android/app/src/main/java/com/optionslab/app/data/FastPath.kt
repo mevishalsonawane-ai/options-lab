@@ -5,6 +5,7 @@ import com.optionslab.engine.KiteTicks
 import com.optionslab.ira.FastLane
 import com.optionslab.ira.OrderSpeed
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -107,6 +108,7 @@ object FastPath {
     /** TEST ONLY: no consumer and no owner left from an earlier test. */
     internal fun resetForTest() {
         synchronized(this) { owners = 0; job?.cancel(); job = null }
+        warmedAt = 0L; warming.set(false); deadKeys = null
         inbox.drain()
         snap = null
         modeAt = 0L
@@ -133,21 +135,66 @@ object FastPath {
     }
 
     /** Zerodha's instrument tokens of what is held there and watched by an app exit (ORB/Liquidity, Pine, protections). */
-    private fun liveTokens(): Set<Long> {
-        val keys = OrbArms.liveSymbolsHint.map { "NFO:$it" } + PineAuto.liveSymbols().map { "NFO:$it" } + Protections.liveKeysHint
-        return keys.distinct().mapNotNull { k -> runCatching { Broker.tokenOf(k) }.getOrNull() }.toSet()
+    /** The paper strategies' live trades' step's name ([ArmLive]). */
+    const val ARMS_LIVE = "Arms live"
+
+    internal fun liveTokens(): Set<Long> {
+        val keys = (OrbArms.liveSymbolsHint.map { "NFO:$it" } + PineAuto.liveSymbols().map { "NFO:$it" } + Protections.liveKeysHint +
+            ArmLive.liveKeysHint).distinct()
+        // 20 Oct, review: memory only on this (the consumer's) thread. [Broker.tokenOf] built the day's map from the instruments
+        // file (several MB) the first time after a restart - disk on the tick path. A token not in memory yet is looked up once
+        // in the background ([warmTokens]) and the next snapshot has it; until then the stop is judged as before, on REST quotes.
+        val out = HashSet<Long>(keys.size)
+        var missing = false
+        val dead = deadKeys?.takeIf { System.currentTimeMillis() - it.first in 0 until DEAD_MS }?.second.orEmpty()
+        for (k in keys) runCatching { Broker.tokenKnown(k) }.getOrNull()?.let { out += it } ?: run { if (k !in dead) missing = true }
+        if (missing) warmTokens(keys)
+        return out
     }
+
+    private val warming = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var warmedAt = 0L
+    /**
+     * Keys the last background lookup could not resolve (an NSE stock, a list not downloaded yet) and when: not looked up again
+     * every 5 s, only after [DEAD_MS] (the day's list may come in meanwhile).
+     */
+    @Volatile private var deadKeys: Pair<Long, Set<String>>? = null
+    private const val DEAD_MS = 5 * 60_000L
+
+    /** [keys]' tokens looked up off the tick path (the day's instrument map built from its file once), at most every 5 s. */
+    private fun warmTokens(keys: List<String>) {
+        val now = System.currentTimeMillis()
+        if (now - warmedAt in 0 until WARM_MS || !warming.compareAndSet(false, true)) return
+        warmedAt = now
+        warmScope.launch {
+            try {
+                val dead = keys.filter { k -> runCatching { Broker.tokenOf(k) }.getOrNull() == null }.toSet()
+                deadKeys = if (dead.isEmpty()) null else System.currentTimeMillis() to dead
+            } finally { warming.set(false); snap = null }
+        }
+    }
+
+    private val warmScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private const val WARM_MS = 5_000L
 
     private fun snapshot(now: Long): Snap {
         snap?.takeIf { now - it.at in 0 until STATE_MS }?.let { return it }
+        // Asked BEFORE the cover is read (13 Oct): the cover's own read starts the paper book's background load, which can
+        // finish before the end of this function - asked afterwards, a "not covered" read from before the load was kept the
+        // full 500 ms, and a live stop's tick in that window planned no LIVE lane (OrderPathRound2Test, after a quick load).
+        val paperReady = runCatching { Paper.loaded() }.getOrDefault(true)
         val cover = runCatching { Paper.streamCover() }.getOrDefault(Paper.StreamCover(emptySet(), covered = false, any = false))
         val orbLive = OrbArms.liveHint
         val jarvis = com.optionslab.app.BuildConfig.JARVIS
         val anyLive = runCatching { com.optionslab.app.work.PositionCards.anyOpen }.getOrDefault(false)
-        val liveHolding = orbLive || PineAuto.holding() || Protections.activeHint != false
+        // 18 Oct: the paper strategies' live trades ([ArmLive]) are real-money positions too: the LIVE lane runs for them.
+        val liveHolding = orbLive || PineAuto.holding() || Protections.activeHint != false || ArmLive.holdingHint || ArmLive.recoverHint
         val holding = cover.any || OrbArms.holdingHint
         val minuteArms = NightArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
             VixDivArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
+            HeroTicketArm.holding() ||
+            PassedArmsHost.holding() ||
+            SignalPaperArm.holding() ||
             McxPaperArms.view.value.let { v -> v.armed.values.any { it } || v.open.isNotEmpty() } ||
             (jarvis && runCatching { com.optionslab.app.ira.IraSolo.holding() }.getOrDefault(false)) ||
             holding || liveHolding || anyLive
@@ -161,7 +208,7 @@ object FastPath {
         val tokens = cover.tokens + KiteStream.followed() + KiteStream.INDEX_TOKENS + live
         val liveActive = live.isNotEmpty() || (OrbArms.armedHint && liveMode(now))
         // Built before the paper book was in memory (not covered for now): kept only briefly, so the cover is read again soon.
-        val at = if (runCatching { Paper.loaded() }.getOrDefault(true)) now else now - STATE_MS + 25
+        val at = if (paperReady) now else now - STATE_MS + 25
         return Snap(at, st, tokens, cover.any, live, liveActive).also { snap = it }
     }
 
@@ -276,9 +323,13 @@ object FastPath {
                 FastLane.Lane.LIVE -> com.optionslab.app.work.TradingBusy.during {
                     // Real-money exits: Jarvis's model gives way while they run (10 Oct).
                     val stream = s?.st?.liveFresh == true
-                    if (OrbArms.liveHint) step("ORB arms") { OrbArms.priceCheckOnly(fast = true, stream = stream) }
+                    // 18 Oct, review: the ORB book's look also marks its paper positions, so it waits for those to be streamed
+                    // (the 15-second pass covers it meanwhile); the stops and targets below run on every live tick regardless.
+                    if (OrbArms.liveHint && s?.st?.let { FastLane.liveMarksPaper(it) } != false) step("ORB arms") { OrbArms.priceCheckOnly(fast = true, stream = stream) }
                     if (PineAuto.holding()) step("Pine scripts") { PineAuto.watchOnly(fast = true, stream = stream) }
                     if (Protections.activeHint != false) step("stops and targets") { Protections.tick(fast = true, stream = stream) }
+                    // 18 Oct: the paper strategies' live trades ([ArmLive]): their stops, the paper exits they follow, 15:15.
+                    if (ArmLive.holdingHint || ArmLive.recoverHint) step(ARMS_LIVE) { ArmLive.watch(stream = stream) }
                     // The trade manager after the exits (R4): nothing runs before a real-money exit; an exit it decides here wakes
                     // the strategy's own look at once. Never waits on another lane's look ([TradeManagerHost.onLook]).
                     runCatching { TradeManagerHost.onLook() }
@@ -292,6 +343,19 @@ object FastPath {
                     step("Forge ideas") { GrammarArm.tick() }
                     if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.manageOnly() }
                     step("missed-lock sweep") { Sweeper.run(ctx) }
+                    // 15 Oct: the Hero ₹1,000 ticket (paper): its open tickets' trail, target and 15:05 every minute (exits only - its
+                    // 12:30 chain reads run in the watch's arms passes, never in this lane).
+                    // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) before their exits.
+                    step("unwatched positions") { OrphanWatch.run(ctx) }
+                    step(HERO_TICKET) { HeroTicketArm.manageOnly() }
+                    // 15 Oct: the passed-research paper arms (R51, R52, Solo 2.0): their open trades' stops, targets, locks, time exits
+                    // and square-offs every minute (exits only - their entries' reads run in the watch's arms passes).
+                    step(PASSED_ARMS) { PassedArmsHost.manageOnly() }
+                    // 15 Oct: a Telegram chat's calls on paper (Boss's choice): their stops, targets and square-off every minute (exits only).
+                    step(SIGNAL_PAPER) { SignalPaperArm.manageOnly() }
+                    // 18 Oct: after the paper exits above, their live trades follow at once ([ArmLive]; nothing held: returns at once).
+                    // (A shadow trade or a damaged book's recovery too: no order for a shadow, its record checked every minute.)
+                    if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
                     // Smart scheduling (10 Oct): these looked at this minute; the watch's passes need not look again for it.
                     runCatching { SmartWorkers.ranByLane(MINUTE_ARMS) }
                 }
@@ -306,6 +370,15 @@ object FastPath {
 
     /** The watch's step names of the arms these lanes run (the smart scheduler counts their looks as done). */
     private val MINUTE_ARMS = listOf("Night (R3)", "VIX divergence", "MCX paper arms", "Forge ideas")
+    /**
+     * The Hero ₹1,000 ticket's step name (the minute lane and the watch's rounds). Not a smart-scheduler step: the rounds include
+     * it only when it needs a pass ([HeroTicketArm.wantsPass]), and then it always runs.
+     */
+    const val HERO_TICKET = "Hero 1000 ticket"
+    /** The passed-research paper arms' step name (as [HERO_TICKET]: in the rounds only when they need a pass, [PassedArmsHost.wantsPass]). */
+    const val PASSED_ARMS = "Passed-research arms"
+    /** The Telegram calls' paper arm's step name (as [HERO_TICKET]: in the rounds only when it needs a pass, [SignalPaperArm.wantsPass]). */
+    const val SIGNAL_PAPER = "Telegram calls (paper)"
 
     private suspend inline fun step(name: String, block: () -> Unit) {
         // Measured (10 Oct): each check's time today, beside the watch's steps.

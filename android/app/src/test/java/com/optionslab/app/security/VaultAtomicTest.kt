@@ -26,7 +26,7 @@ class VaultAtomicTest : RobolectricTest() {
         try { Vault.writeFile(f, "version two".toByteArray()); fail("wrote without a key") } catch (_: Exception) {}
         FakeAndroidKeyStore.failing -= alias
         assertArrayEquals("not touched", before, f.readBytes())
-        assertFalse(File(f.parentFile, "ledger.vault.tmp").exists())
+        assertTrue("no temp file left", f.parentFile!!.listFiles()!!.none { it.name.endsWith(".tmp") })
         assertEquals("version one", String(Vault.readFile(f)!!))
     }
 
@@ -68,5 +68,64 @@ class VaultAtomicTest : RobolectricTest() {
         try { Vault.readFileSteady(f, attempts = 2); fail("a lasting fault must surface") } catch (_: Exception) {}
         FakeAndroidKeyStore.failing -= alias
         assertEquals("steady", String(Vault.readFile(f)!!))
+    }
+
+    /** 20 Oct, review: writers of one file each use their own temp file; the file is never lost or torn, no temp is left. */
+    @Test fun concurrentWritesToOneFileNeverLoseIt() {
+        val f = File(context.filesDir, "orb.vault")
+        Vault.writeFile(f, "start".toByteArray())
+        val errors = java.util.concurrent.ConcurrentLinkedQueue<Throwable>()
+        val threads = (0 until 6).map { t -> Thread { repeat(15) { i -> runCatching { Vault.writeFile(f, "w$t-$i".toByteArray()) }.onFailure { errors += it } } } }
+        threads.forEach { it.start() }; threads.forEach { it.join() }
+        assertTrue(errors.toString(), errors.isEmpty())
+        assertTrue("still there and readable", String(Vault.readFile(f)!!).matches(Regex("w[0-5]-[0-9]+")))
+        assertTrue("no temp file left", f.parentFile!!.listFiles()!!.none { it.name.endsWith(".tmp") })
+    }
+
+    /** 20 Oct, review: while a backup is restored, a live store's save of its old book never writes over the restored file. */
+    @Test fun aSaveDuringARestoreIsDroppedAndTheRestoredFileKept() {
+        val f = File(context.filesDir, "paper.vault")
+        Vault.writeFile(f, "old book".toByteArray())
+        Vault.freezeForRestore(listOf(f))
+        try {
+            Vault.writeRestored(f, "restored".toByteArray())
+            Vault.writeFile(f, "old book again".toByteArray())            // the store's save, seconds before the restart
+            assertEquals("restored", String(Vault.readFile(f)!!))
+            val other = File(context.filesDir, "other.vault")
+            Vault.writeFile(other, "not frozen".toByteArray())
+            assertEquals("not frozen", String(Vault.readFile(other)!!))
+        } finally { Vault.thaw() }
+        Vault.writeFile(f, "after".toByteArray())
+        assertEquals("a restore that stopped: saves go again", "after", String(Vault.readFile(f)!!))
+    }
+
+    /** 20 Oct, review: a key that exists but comes back null is never replaced by a new one (every file would be lost). */
+    @Test fun aKeyPresentButNotReturnedIsNeverReplaced() {
+        val f = File(context.filesDir, "c.vault")
+        Vault.writeFile(f, "kept".toByteArray())
+        FakeAndroidKeyStore.nullKey += alias
+        try { Vault.readFile(f); fail("read with no key") } catch (_: Exception) {}
+        try { Vault.writeFile(f, "new".toByteArray()); fail("wrote with no key") } catch (_: Exception) {}
+        FakeAndroidKeyStore.nullKey -= alias
+        assertEquals("the same key, the file still readable", "kept", String(Vault.readFile(f)!!))
+    }
+
+    /** 20 Oct, second review: a save already encrypting when the restore froze its file never lands over the restored one. */
+    @Test fun aSaveAlreadyUnderWayWhenTheRestoreFreezesIsDropped() {
+        val f = java.io.File(context.filesDir, "race.vault")
+        Vault.writeFile(f, "old".toByteArray())
+        Vault.testWriteDelayMs = 400L                 // after the early check, before the encryption and the rename
+        try {
+            val late = Thread { Vault.writeFile(f, "stale book".toByteArray()) }
+            late.start()
+            Thread.sleep(100)                          // it passed the early check and is waiting
+            Vault.freezeForRestore(listOf(f))
+            Vault.testWriteDelayMs = 0L
+            Vault.writeRestored(f, "restored".toByteArray())
+            late.join(5_000)
+            assertEquals("restored", String(Vault.readFile(f)!!))
+            val left = context.filesDir.listFiles { x -> x.name.startsWith("race.vault.") && x.name.endsWith(".tmp") }.orEmpty()
+            assertEquals("no temp file left", 0, left.size)
+        } finally { Vault.testWriteDelayMs = 0L; Vault.thaw() }
     }
 }

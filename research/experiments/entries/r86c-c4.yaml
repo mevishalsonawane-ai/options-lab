@@ -1,0 +1,32 @@
+id: r86c-c4
+title: 'R86c C4: Unusual OTM option buying (8x volume, OI up, index confirming) -> follow 30 minutes'
+family: flow-oi
+date: '2026-10-19'
+doc: research/HUNT_R86C_CATCH_THEM.md
+hypothesis: 'Pre-registered (research/hunt/r86/PREREG_C.md): Unusual OTM option buying (8x volume, OI up, index confirming)
+  -> follow 30 minutes beats random twins in design (net > 0 and > twins, twin p < 0.10, BH q < 0.10 over R86c''s 12 tests,
+  not carried by its top 5).'
+data_version: Drive lake gdrive:IraAlgo-data-lake index_1m (NIFTY 2017-, BANKNIFTY Aug 2021-, INDIAVIX), equity_1m (59 current
+  index stocks 2019 - 12 Oct 2026), options_rolling_1m WEEK (Aug 2021 -), derived/r28_gex (dte only); files of 13-15 Oct 2026;
+  NSE participant OI as labels only
+period:
+  design: to 2024 (folds 2022-2024; C2 every year 2018-2024)
+  holdout: '1 Jan 2025 - Oct 2026 NOT read: no R86c test passed design'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: OPTION-CHAIN volume/OI trigger confirmed by the underlying: labelled non-default'
+model_or_rule: Unusual OTM option buying (8x volume, OI up, index confirming) -> follow 30 minutes
+settings: research/hunt/r86/r86c.py; PREREG_C.md
+prereg: research/hunt/r86/PREREG_C.md
+variants_tried: 2
+results:
+  summary: 'Design. C4-NIFTY: 215 trades, net Rs -171,410, without top 5 Rs -191,960, random twins mean Rs -107,224, twin
+    p 0.996, BH q 0.998; C4-BANKNIFTY: 256 trades, net Rs -138,247, without top 5 Rs -165,274, random twins mean Rs -116,369,
+    twin p 0.758, BH q 0.996. Verdict: FAIL.'
+  costs: 'index future: Rs 40, dated STT, exchange, SEBI, stamp, GST, 0.02% slippage a side (0.04% stops), carry overnight;
+    1 lot'
+holdout_read: false
+verdict: rejected
+notes: Out-of-the-box ways to catch the big players (Boss, 19 Oct). Research only.

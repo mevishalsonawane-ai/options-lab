@@ -70,13 +70,13 @@ object PositionCards {
     }
 
     /**
-     * The card's P&L line: [pnl] (the symbol's day, trades already closed on it plus the open one) and that P&L as a
-     * percentage of what the open position cost (qty x average), so the sign of the two always agrees.
+     * The card's P&L line: [pnl] (the symbol's day, trades already closed on it plus the open one) and, apart, the open
+     * trade's own move on its average ([com.optionslab.ira.OpenChange.pct], from [ltp]). 16 Oct: the percentage was the day's
+     * P&L over the open position's cost, so an earlier closed trade on the symbol made a +18% open trade read +49%.
      */
-    internal fun pnlLine(qty: Int, avg: Double, pnl: Double): String {
-        val cost = avg * abs(qty)
-        return "P&L ${rs(pnl)}" + (if (cost > 0) " (%+.1f%%)".format(Locale.ENGLISH, 100 * pnl / cost) else "")
-    }
+    internal fun pnlLine(qty: Int, avg: Double, ltp: Double?, pnl: Double): String =
+        "P&L ${rs(pnl)}" + (ltp?.let { com.optionslab.ira.OpenChange.pct(qty, avg, it) }
+            ?.let { " · open trade %+.1f%%".format(Locale.ENGLISH, it) } ?: "")
 
     /**
      * Post or rewrite a position's card. [alert] makes it sound (a fill); updates are silent.
@@ -95,7 +95,7 @@ object PositionCards {
         val by = sources["$venue|$symbol"]?.let { "\n" + com.optionslab.app.data.Origins.positionDisplay(it).first } ?: ""
         val title = headline ?: if (open) "$symbol · $venue · ${rs(pnl)}" else "Closed $symbol · $venue · ${rs(pnl)}"
         val text0 = if (open) "${if (qty > 0) "LONG" else "SHORT"} ${abs(qty)} @ ${px(avg)}" + (ltp?.let { " · LTP ${px(it)}" } ?: "") +
-            "\n" + pnlLine(qty, avg, pnl)
+            "\n" + pnlLine(qty, avg, ltp, pnl)
             else "Realised P&L ${rs(pnl)}"
         val text = text0 + by
         val key = "$venue|$symbol"
@@ -209,6 +209,12 @@ object PositionCards {
             val key = "Live|${p.symbol}"
             if (p.qty != 0) { now[key] = Unit; card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl) }
             else if (shown.remove(key) != null) card(context, "Live", p.symbol, 0, p.avg, null, p.pnl)
+        }
+        // 18 Oct, review: a Zerodha read that failed (a timeout, a network blip) is not "no positions": the Live cards stay as
+        // they were, and so does the watch's 15-second stop check (anyOpen), until a read that succeeds lacks them.
+        if (s.live && liveLoggedIn && liveBook == null) {
+            shown.keys.filter { it.startsWith("Live|") }.forEach { now[it] = Unit }
+            lastLive?.net?.filter { it.qty != 0 }?.forEach { now["Live|${it.symbol}"] = Unit }
         }
         // A card whose position vanished from the book entirely (a new session): no longer ongoing.
         shown.keys.filter { it !in now }.forEach { k ->

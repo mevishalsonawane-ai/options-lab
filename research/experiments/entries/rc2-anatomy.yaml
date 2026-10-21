@@ -1,0 +1,35 @@
+id: rc2-anatomy
+title: 'RC2 step 1: anatomy of Delta India BTC/ETH daily options (design data only)'
+family: market-facts
+date: '2026-10-13'
+doc: research/HUNT_RC2_CRYPTO_OPTIONS.md
+hypothesis: Describe spreads, premium decay, zero-to-hero odds, realised vs implied moves by hour and what precedes big days,
+  before choosing rules.
+data_version: 'Delta Exchange India public API: .DEXBTUSD/.DEETHUSD 5-min index 2024-03-01..2026-10-13, MARK 5-min candles
+  of 1,912 BTC/ETH daily expiries (956 per coin) (2024-03-02..2026-10-13, strikes +-3.5% fine grid + 3.5-8% OTM); live chain
+  polls 13 Oct 2026; Deribit DVOL and funding (hourly) and option trades (history API). Raw data in the session scratchpad,
+  not in git.'
+period:
+  design: 2024-03-02..2026-04-12 (772 expiries per coin)
+instruments:
+- CRYPTO
+features:
+- live bid/ask by strike and expiry
+- ATM straddle by hours left
+- cheap OTM option multiples
+- hourly realised vs DVOL-implied
+- big-day precursors
+- Delta mark vs Deribit trade IV
+model_or_rule: descriptive
+settings: research/hunt/rc2/anatomy.py, deribit_check.py
+prereg: null
+variants_tried: null
+results:
+  summary: Delta daily ATM straddle 1.72% (BTC, 767 days) / 2.53% (ETH, 764) of spot at 24 h left, 0.66%/0.98% at 6 h (712/655
+    days). Cheap OTM options (0.02-0.10% of spot) bought 3 h before settlement closed at >= 3x on 17% (BTC, 3,554 options)
+    / 13% (ETH, 2,185), 10x on 4%/4%; worth 0.68x/0.69x of entry at 11:50 on average. Realised/implied 1-h move 0.67-0.87
+    (BTC) / 0.73-0.90 (ETH) at 03:00-12:00 UTC, 1.12-1.46 at 13:00-16:00 UTC (773 days). Delta mark IV is 0.88x (BTC, 230
+    h) / 0.92x (ETH, 227 h) Deribit trade IV.
+  costs: none (descriptive)
+holdout_read: null
+verdict: not-a-test

@@ -174,6 +174,113 @@ internal fun PortfolioSettingCard() {
     }
 }
 
+/**
+ * Bot settings: the same-direction cap (19 Oct, Boss: "Resolve the issues"): its paper switch (on by default; each flip logged in
+ * the Autopilot change log, one tap undoes it), its number, its live switch (off: live only logs what it would refuse), the
+ * automatic index options open now, and today's refused entries by arm (Liquidity's counted apart).
+ */
+@Composable
+internal fun SameDirectionCapCard() {
+    val view by com.optionslab.app.data.ExposureCapHost.view.collectAsState(Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var said by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.ExposureCapHost.refresh() } } }
+    fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
+    LedgerCard(title = "Same-direction cap") {
+        Note("At most this many automatic option positions may bet the same way on the indices at once (long calls up, long puts " +
+            "down), across all arms. A later entry is refused and kept as a would-be trade. Exits and your own orders are never capped.")
+        ToggleRow("Cap automatic paper entries", if (view.paperOn) "On: at most ${view.max} the same way" else "Off: any number may open the same way", view.paperOn) { on ->
+            save { com.optionslab.app.data.ExposureCapHost.setPaperOn(on) }
+        }
+        ParamTokens("Most open the same way", com.optionslab.ira.SameDirectionCap.CHOICES.map { "$it" to (it == view.max) }) { i ->
+            save { com.optionslab.app.data.ExposureCapHost.setMax(com.optionslab.ira.SameDirectionCap.CHOICES[i]) }
+        }
+        ToggleRow("Also refuse the bots' live entries", if (view.liveOn) "On: live entries past the cap are refused" else "Off: live only logs what it would refuse", view.liveOn) { on ->
+            save { com.optionslab.app.data.ExposureCapHost.setLiveOn(on) }
+        }
+        if (view.openNow.isNotEmpty()) Note("Open now (paper): " + view.openNow.joinToString(", "), Modifier.padding(top = 4.dp))
+        if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
+/**
+ * 20 Oct, enhancement round 1 (idea 4): Bot settings' account stop rule (-Rs 40,000 from the best, -Rs 13,000 a month) over the whole
+ * Zerodha account. Its switch is off by default (shadow: what it would refuse is only logged); on, the bots' new live entries are
+ * refused once it is reached. Boss's own orders and every exit are never refused. Restarting the count after it is reached
+ * takes the PIN.
+ */
+@Composable
+internal fun AccountStopCard(model: com.optionslab.app.ui.AppModel) {
+    val view by com.optionslab.app.data.AccountStopHost.view.collectAsState(Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var said by remember { mutableStateOf<String?>(null) }
+    var askPin by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.AccountStopHost.refresh() } } }
+    fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
+    AccountStopCardContent(view, said, onSwitch = { on -> save { com.optionslab.app.data.AccountStopHost.setOn(on) } }, onRestart = { askPin = true })
+    if (askPin) Reauth(model, onOk = { askPin = false; save { com.optionslab.app.data.AccountStopHost.restart(pinConfirmed = true) } },
+        onCancel = { askPin = false }, why = "Enter your app PIN to restart the account stop rule's count. It then counts again from the next trading day.")
+}
+
+internal const val ACCOUNT_STOP_RESTART = "Restart the count (PIN)"
+
+/** The card from plain state (tests drive it). */
+@Composable
+internal fun AccountStopCardContent(view: com.optionslab.app.data.AccountStopHost.View, said: String?, onSwitch: (Boolean) -> Unit, onRestart: () -> Unit) {
+    LedgerCard(title = "Account stop rule") {
+        Note("Your rule: once the Zerodha account is -Rs 40,000 from its best or -Rs 13,000 in a calendar month (Zerodha's day " +
+            "figures, less the day's charges), the bots take no new live entry. Your own orders and every exit always go.")
+        ToggleRow("Refuse the bots' live entries once reached", if (view.on) "On: refused once reached" else "Off: live only logs what it would refuse", view.on, keepSub = true, onChange = onSwitch)
+        if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
+        if (view.reached) BrassButton(ACCOUNT_STOP_RESTART, Modifier.fillMaxWidth().padding(top = 4.dp)) { onRestart() }
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
+/**
+ * 20 Oct, enhancement round 2 (idea 1): Bot settings' exit coordinator. Off by default (shadow: what it would do is only logged);
+ * on, two automatic exits on one contract never read Zerodha's books at once, and a read missing an exit just sent is read again.
+ * It never refuses or resizes an exit, and past a short wait an exit always goes.
+ */
+@Composable
+internal fun ExitCoordinatorCard() {
+    val view by com.optionslab.app.data.ExitCoordinator.view.collectAsState(Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var said by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.ExitCoordinator.refresh() } } }
+    ExitCoordinatorCardContent(view, said, onLagSwitch = { on ->
+        scope.launch(Dispatchers.IO) {
+            val m = runCatching { com.optionslab.app.data.ExitCoordinator.setLagOn(on) }.getOrElse { "Could not save that." }
+            withContext(Dispatchers.Main) { said = m }
+        }
+    }) { on ->
+        scope.launch(Dispatchers.IO) {
+            val m = runCatching { com.optionslab.app.data.ExitCoordinator.setOn(on) }.getOrElse { "Could not save that." }
+            withContext(Dispatchers.Main) { said = m }
+        }
+    }
+}
+
+/** The card from plain state (tests drive it). */
+@Composable
+internal fun ExitCoordinatorCardContent(view: com.optionslab.app.data.ExitCoordinator.View, said: String?, onLagSwitch: (Boolean) -> Unit = {},
+                                        onSwitch: (Boolean) -> Unit) {
+    LedgerCard(title = "One exit at a time") {
+        Note("When two of the app's exits (an arm, a stop, the expiry square-off, a strategy) want to sell the same contract at once, " +
+            "each waits its turn and reads Zerodha's books again, so one contract is never sold twice. Your own exits never wait.")
+        ToggleRow("Make exits take turns", if (view.on) "On: one exit at a time per contract" else "Off: only logs what it would do", view.on, keepSub = true, onChange = onSwitch)
+        if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
+        // 21 Oct, enhancement round 3 (idea 1): the positions-lag guard, its own switch (off: logged only).
+        ToggleRow("Never sell a filled exit twice", if (view.lagOn) "On: a positions read behind an exit's fill is read again"
+            else "Off: only logs what it would do", view.lagOn, keepSub = true, onChange = onLagSwitch)
+        Note("Zerodha's positions can trail an exit that already filled by a moment. On, the next exit reads them again, and " +
+            "counts the fill as sold if they still trail; it only ever sends less.", Modifier.padding(top = 2.dp))
+        if (view.lagLine.isNotEmpty()) Note(view.lagLine, Modifier.padding(top = 4.dp))
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
 /** Bot settings: the market history kept on the phone, its use and its cap (TODO S5). */
 @Composable
 internal fun HistoryVaultCard() {

@@ -48,6 +48,7 @@ class ExpirySquareOffTest : RobolectricTest() {
     }
 
     @After fun down() {
+        ExpirySquareOff.armOwns = { ArmLive.ownerOf(it) != null }
         AutomationSupport.realClocks()
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -101,6 +102,82 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertEquals("MARKET", o["order_type"]); assertEquals("NRML", o["product"]); assertEquals("iraalgoexpiry", o["tag"])
     }
 
+    /**
+     * 20 Oct, review: the last pass's exit was resting and filled between this pass's two reads. Positions were read first,
+     * so the long still showed and no exit was working any more: a second SELL went out and left a short on expiry day.
+     */
+    @Test fun anExitFillingBetweenTheReadsIsNeverSentTwice() {
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(outcome = Outcome.OPEN)                      // a thin book: the first exit rests
+        pass()
+        val first = kite.orders.values.single()
+        assertEquals("OPEN", first.status)
+        at(15, 7)
+        // It fills right after the next pass reads the positions (still +75 there).
+        kite.afterNext("/portfolio/positions") { kite.fill(first.id) }
+        pass()
+        assertEquals("one exit only", listOf(Triple(ce, "SELL", "75")), sent())
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        at(15, 8); pass()
+        assertEquals("still one exit once it is flat", 1, kite.placed.size)
+        assertTrue("and the day is done", done())
+    }
+
+    /** The other half: a fill between the reads leaves the orders read first showing it working; the positions then flat. */
+    @Test fun ordersAreReadBeforeThePositions() {
+        kite.position(ce, 75, 20.0)
+        pass()
+        val gets = kite.requests.filter { it.method == "GET" }.map { it.path }
+        assertTrue(gets.toString(), gets.indexOf("/orders") in 0 until gets.indexOf("/portfolio/positions"))
+    }
+
+    /**
+     * 20 Oct, review: an arm's live trade is sold by the arm's own 15:05 square-off; this one leaves it to its owner (two senders
+     * at once could sell it twice) until the backstop minute, and closes it then if it is still open. Not done meanwhile.
+     */
+    @Test fun anArmsLiveTradeIsLeftToItsOwnerUntilTheBackstop() {
+        kite.position(ce, 75, 20.0)
+        kite.position(pe, 75, 20.0)
+        ExpirySquareOff.armOwns = { it == ce }
+        at(15, 6); pass()
+        assertEquals("only the one no arm owns", listOf(Triple(pe, "SELL", "75")), sent())
+        assertTrue("the arm's is still open: not done", !done())
+        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        assertEquals("the backstop closes what its owner did not", listOf(Triple(pe, "SELL", "75"), Triple(ce, "SELL", "75")), sent())
+    }
+
+    /** Second review: at the backstop, an arm whose own exit is still working at Zerodha is left to finish it (no cancel, no second sell). */
+    @Test fun atTheBackstopAnArmsWorkingExitIsLeftAlone() {
+        kite.position(ce, 75, 20.0)
+        ExpirySquareOff.armOwns = { it == ce }
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val armSell = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO",
+            com.optionslab.engine.orb.LiveMirror.TAG), exit = true) }
+        kite.requests.clear()
+        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertTrue("the arm's exit not cancelled", kite.requests.none { it.method == "DELETE" })
+        assertEquals("OPEN", kite.order(armSell).status)
+        assertTrue("not done while it is open", !done())
+    }
+
+    /** 20 Oct, review: SENSEX's options (BFO) expiring today are closed too, on BFO, once the day's list is in. */
+    @Test fun aSensexOptionExpiringTodayIsClosedOnBfo() {
+        val sx = "SENSEX26OCT81000CE"
+        kite.instruments += FakeKite.Ins(2_001, sx, "SENSEX", today, 81_000.0, "CE", 20, exchange = "BFO")
+        kite.quote("BFO:$sx", 50.0, 49.9, 50.1)
+        kite.position(sx, 40, 60.0, exchange = "BFO")
+        Broker.resetBfoForTest()
+        pass()                                                        // asks for the SENSEX list in the background
+        val until = System.currentTimeMillis() + 5_000
+        while (Broker.cachedBfoOptions() == null && System.currentTimeMillis() < until + 10_000) Thread.sleep(20)
+        assertTrue("the list is in", Broker.cachedBfoOptions() != null)
+        at(15, 7); pass()
+        val o = kite.placed.single().form
+        assertEquals(listOf(sx, "SELL", "40", "BFO"), listOf(o["tradingsymbol"], o["transaction_type"], o["quantity"], o["exchange"]))
+        assertTrue("no false 'cannot tell when it expires' notice", texts().none { it.contains("cannot tell when it expires") })
+    }
+
     @Test fun shortsAreBoughtBackBeforeLongsAreSold() {
         kite.position(ce, 75, 20.0)
         kite.position(pe, -150, 30.0)
@@ -114,6 +191,36 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertEquals(listOf("1800", "1800", "150"), kite.placed.map { it.form["quantity"] })
         assertTrue(kite.placed.all { it.form["transaction_type"] == "BUY" })
         assertEquals("closed in full", 0, kite.positions.getValue("NFO:$pe:NRML").first)
+    }
+
+    /** 18 Oct, review: no Zerodha session at 15:05 is a book not read: not done for the day, and a 15:10 login still closes it. */
+    @Test fun noSessionAt1505IsNotDoneAndALaterLoginStillClosesIt() {
+        kite.position(ce, 75, 20.0)
+        // A linked account as on Boss's phone (the key and its secret saved, a login once; made-up values, as
+        // Background.linkZerodha): the fake Kite's login saves no secret, so it would not count as linked. Then no session today.
+        SecurePrefs.putAll(mapOf("kite.apiSecret" to "test-secret-not-real", "kite.accessToken" to null))
+        assertTrue("no session", !Broker.loggedIn)
+        assertTrue("linked", Broker.linked)
+        pass()
+        assertTrue("nothing can be sent without a session", kite.requests.isEmpty())
+        assertTrue("the live book was not read: not done", !done())
+        at(15, 7); pass()
+        assertTrue("still not done while the session is missing", !done())
+        kite.login()
+        at(15, 10); pass()
+        assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
+        pass()
+        assertTrue("closed and read: done", done())
+    }
+
+    /** No Zerodha account linked at all (paper only): an empty paper book is done for the day, as before. */
+    @Test fun noLinkedAccountAndNothingExpiringOnPaperIsDone() {
+        SecurePrefs.putAll(mapOf("kite.apiSecret" to "test-secret-not-real", "kite.accessToken" to null, "kite.userId" to null))
+        assertTrue("no session", !Broker.loggedIn)
+        assertTrue("never logged in: not linked", !Broker.linked)
+        pass()
+        assertTrue(done())
+        assertTrue(kite.requests.isEmpty())
     }
 
     @Test fun retriesEveryPassUntilNothingIsLeftThenStops() {
@@ -191,7 +298,12 @@ class ExpirySquareOffTest : RobolectricTest() {
 
     @Test fun aDerivativeTheAppCannotDateIsReportedNotClosed() {
         kite.position("SENSEX26SEP80000CE", 20, 100.0, exchange = "BFO")
+        Broker.resetBfoForTest()
         pass()
+        assertTrue(kite.placed.isEmpty())
+        // 20 Oct: SENSEX's list is asked for first; with no list by the backstop minute, it is said whatever.
+        assertTrue("not before the list could be read", texts().none { it.contains("SENSEX26SEP80000CE") })
+        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
         assertTrue(kite.placed.isEmpty())
         val said = texts().single { it.contains("SENSEX26SEP80000CE") }
         assertTrue(said, said.contains("NOT closed automatically"))

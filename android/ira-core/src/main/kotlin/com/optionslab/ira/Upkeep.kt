@@ -24,6 +24,9 @@ object Upkeep {
      */
     val PRIVATE: List<String> = listOf("jarvis.memory", "kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "g.",
         "sec.", "lock.", "ui.widgetPnl", "w.", "intent.", "relay.", "breaker.",
+        // The Signal tester's Telegram login (15 Oct): Boss's api_id / api_hash and the key of TDLib's encrypted database are
+        // this phone's alone - never in a backup, an upload or a log.
+        "telegram.",
         // Jarvis: the owner's voice print never leaves the phone; its trades' safety (paper first - the "AI trades go live"
         // switch -, loss limit, risk) and the autopilot are this phone's alone, like the other limits. Its learning (the
         // study, records) is carried.
@@ -60,7 +63,10 @@ object Upkeep {
         // switch it on (review 2, 11 Oct).
         "trademanager.",
         // The regime book (its live approval) and the learning-freeze line: safety settings, never from a file (review 2).
-        "regime.", "learn.freeze")
+        "regime.", "learn.freeze",
+        // GitHub sync (13 Oct, TODO G1/G2): the token (PIN-sealed, and the device copy the evening upload uses), the backup
+        // passphrase's keys and the upload record are this phone's alone - a backup never carries a token or a key.
+        "github.")
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }

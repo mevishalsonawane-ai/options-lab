@@ -1,0 +1,485 @@
+{
+ "source": "Yahoo 1-minute index bars for days after the lake (15, 16, 19 Oct) + lake index minutes",
+ "yahoo_vs_lake_max_close_gap_pct": {
+  "NIFTY": {
+   "2026-10-08": 0.014,
+   "2026-10-09": 0.011,
+   "2026-10-12": 0.006,
+   "2026-10-13": 0.004,
+   "2026-10-14": 0.004
+  },
+  "BANKNIFTY": {
+   "2026-10-08": 0.011,
+   "2026-10-09": 0.013,
+   "2026-10-12": 0.027,
+   "2026-10-13": 0.009,
+   "2026-10-14": 0.009
+  },
+  "FINNIFTY": {
+   "2026-10-08": 0.018,
+   "2026-10-09": 0.009,
+   "2026-10-12": 0.014,
+   "2026-10-13": 0.012,
+   "2026-10-14": 0.011
+  },
+  "MIDCPNIFTY": {
+   "2026-10-08": 0.008,
+   "2026-10-09": 0.007,
+   "2026-10-12": 0.008,
+   "2026-10-13": 0.005,
+   "2026-10-14": 0.008
+  },
+  "SENSEX": {
+   "2026-10-08": 0.656,
+   "2026-10-09": 0.179,
+   "2026-10-12": 0.333,
+   "2026-10-13": 0.067,
+   "2026-10-14": 0.128
+  }
+ },
+ "bars": {
+  "09:15": {
+   "indices": {
+    "NIFTY": {
+     "close": 23153.3,
+     "down": false,
+     "up": true,
+     "size_put": -3.481
+    },
+    "BANKNIFTY": {
+     "close": 55684.6,
+     "down": false,
+     "up": false,
+     "size_put": -0.478
+    },
+    "FINNIFTY": {
+     "close": 25271.9,
+     "down": true,
+     "up": false,
+     "size_put": 0.703
+    },
+    "MIDCPNIFTY": {
+     "close": 13699.5,
+     "down": false,
+     "up": false,
+     "size_put": -1.247
+    },
+    "SENSEX": {
+     "close": 74763.24,
+     "down": false,
+     "up": false,
+     "size_put": -2.844
+    }
+   },
+   "n_down": 1,
+   "n_up": 1,
+   "nifty_10min_move_pct": 0.011,
+   "nifty_shock_ratio": 0.20784660416700323
+  },
+  "09:20": {
+   "indices": {
+    "NIFTY": {
+     "close": 23107.15,
+     "down": false,
+     "up": false,
+     "size_put": -1.37
+    },
+    "BANKNIFTY": {
+     "close": 55619.3,
+     "down": false,
+     "up": false,
+     "size_put": -1.076
+    },
+    "FINNIFTY": {
+     "close": 25229.2,
+     "down": false,
+     "up": false,
+     "size_put": -0.585
+    },
+    "MIDCPNIFTY": {
+     "close": 13670.35,
+     "down": false,
+     "up": false,
+     "size_put": -1.143
+    },
+    "SENSEX": {
+     "close": 74578.5,
+     "down": false,
+     "up": false,
+     "size_put": -0.694
+    }
+   },
+   "n_down": 0,
+   "n_up": 0,
+   "nifty_10min_move_pct": 0.189,
+   "nifty_shock_ratio": 3.705466073015234
+  },
+  "09:25": {
+   "indices": {
+    "NIFTY": {
+     "close": 22981.9,
+     "down": true,
+     "up": false,
+     "size_put": 2.711
+    },
+    "BANKNIFTY": {
+     "close": 55397.2,
+     "down": true,
+     "up": false,
+     "size_put": 1.437
+    },
+    "FINNIFTY": {
+     "close": 25094.3,
+     "down": true,
+     "up": false,
+     "size_put": 2.571
+    },
+    "MIDCPNIFTY": {
+     "close": 13615.45,
+     "down": true,
+     "up": false,
+     "size_put": 1.296
+    },
+    "SENSEX": {
+     "close": 74208.4,
+     "down": true,
+     "up": false,
+     "size_put": 2.611
+    }
+   },
+   "n_down": 5,
+   "n_up": 0,
+   "nifty_10min_move_pct": 0.74,
+   "nifty_shock_ratio": 14.528047790273009
+  },
+  "09:30": {
+   "indices": {
+    "NIFTY": {
+     "close": 23096.9,
+     "down": false,
+     "up": false,
+     "size_put": -3.102
+    },
+    "BANKNIFTY": {
+     "close": 55589.45,
+     "down": false,
+     "up": false,
+     "size_put": -2.028
+    },
+    "FINNIFTY": {
+     "close": 25199.3,
+     "down": false,
+     "up": false,
+     "size_put": -2.329
+    },
+    "MIDCPNIFTY": {
+     "close": 13650.7,
+     "down": false,
+     "up": false,
+     "size_put": -1.916
+    },
+    "SENSEX": {
+     "close": 74570.28,
+     "down": false,
+     "up": false,
+     "size_put": -2.736
+    }
+   },
+   "n_down": 0,
+   "n_up": 0,
+   "nifty_10min_move_pct": 0.042,
+   "nifty_shock_ratio": 0.8198716585632415
+  },
+  "09:35": {
+   "indices": {
+    "NIFTY": {
+     "close": 23137.25,
+     "down": false,
+     "up": false,
+     "size_put": -3.877
+    },
+    "BANKNIFTY": {
+     "close": 55629.3,
+     "down": false,
+     "up": false,
+     "size_put": -2.672
+    },
+    "FINNIFTY": {
+     "close": 25236.4,
+     "down": false,
+     "up": false,
+     "size_put": -3.179
+    },
+    "MIDCPNIFTY": {
+     "close": 13665.4,
+     "down": false,
+     "up": false,
+     "size_put": -2.418
+    },
+    "SENSEX": {
+     "close": 74708.0,
+     "down": false,
+     "up": false,
+     "size_put": -3.74
+    }
+   },
+   "n_down": 0,
+   "n_up": 0,
+   "nifty_10min_move_pct": 0.677,
+   "nifty_shock_ratio": 13.291175451051998
+  },
+  "09:40": {
+   "indices": {
+    "NIFTY": {
+     "close": 23145.7,
+     "down": false,
+     "up": false,
+     "size_put": -4.082
+    },
+    "BANKNIFTY": {
+     "close": 55647.9,
+     "down": false,
+     "up": false,
+     "size_put": -2.839
+    },
+    "FINNIFTY": {
+     "close": 25250.25,
+     "down": false,
+     "up": false,
+     "size_put": -3.432
+    },
+    "MIDCPNIFTY": {
+     "close": 13667.45,
+     "down": false,
+     "up": false,
+     "size_put": -2.506
+    },
+    "SENSEX": {
+     "close": 74744.03,
+     "down": false,
+     "up": false,
+     "size_put": -4.057
+    }
+   },
+   "n_down": 0,
+   "n_up": 0,
+   "nifty_10min_move_pct": 0.211,
+   "nifty_shock_ratio": 4.143392759261994
+  },
+  "09:45": {
+   "indices": {
+    "NIFTY": {
+     "close": 23133.8,
+     "down": false,
+     "up": false,
+     "size_put": -3.868
+    },
+    "BANKNIFTY": {
+     "close": 55570.0,
+     "down": false,
+     "up": false,
+     "size_put": -2.131
+    },
+    "FINNIFTY": {
+     "close": 25217.3,
+     "down": false,
+     "up": false,
+     "size_put": -2.83
+    },
+    "MIDCPNIFTY": {
+     "close": 13667.85,
+     "down": false,
+     "up": false,
+     "size_put": -2.607
+    },
+    "SENSEX": {
+     "close": 74698.1,
+     "down": false,
+     "up": false,
+     "size_put": -3.811
+    }
+   },
+   "n_down": 0,
+   "n_up": 0,
+   "nifty_10min_move_pct": 0.009,
+   "nifty_shock_ratio": 0.18229363459171177
+  },
+  "09:50": {
+   "indices": {
+    "NIFTY": {
+     "close": 23112.9,
+     "down": false,
+     "up": false,
+     "size_put": -3.445
+    },
+    "BANKNIFTY": {
+     "close": 55538.25,
+     "down": false,
+     "up": false,
+     "size_put": -1.89
+    },
+    "FINNIFTY": {
+     "close": 25189.25,
+     "down": false,
+     "up": false,
+     "size_put": -2.338
+    },
+    "MIDCPNIFTY": {
+     "close": 13671.15,
+     "down": false,
+     "up": false,
+     "size_put": -2.809
+    },
+    "SENSEX": {
+     "close": 74616.72,
+     "down": false,
+     "up": false,
+     "size_put": -3.304
+    }
+   },
+   "n_down": 0,
+   "n_up": 0,
+   "nifty_10min_move_pct": 0.138,
+   "nifty_shock_ratio": 2.718266444402077
+  }
+ },
+ "signals": [
+  {
+   "und": "NIFTY",
+   "bar": 2,
+   "side": "P"
+  },
+  {
+   "und": "NIFTY",
+   "bar": 49,
+   "side": "P"
+  },
+  {
+   "und": "NIFTY",
+   "bar": 50,
+   "side": "P"
+  },
+  {
+   "und": "BANKNIFTY",
+   "bar": 2,
+   "side": "P"
+  },
+  {
+   "und": "BANKNIFTY",
+   "bar": 49,
+   "side": "P"
+  },
+  {
+   "und": "BANKNIFTY",
+   "bar": 50,
+   "side": "P"
+  },
+  {
+   "und": "FINNIFTY",
+   "bar": 2,
+   "side": "P"
+  },
+  {
+   "und": "FINNIFTY",
+   "bar": 49,
+   "side": "P"
+  },
+  {
+   "und": "FINNIFTY",
+   "bar": 50,
+   "side": "P"
+  },
+  {
+   "und": "MIDCPNIFTY",
+   "bar": 2,
+   "side": "P"
+  },
+  {
+   "und": "MIDCPNIFTY",
+   "bar": 49,
+   "side": "P"
+  },
+  {
+   "und": "MIDCPNIFTY",
+   "bar": 50,
+   "side": "P"
+  },
+  {
+   "und": "SENSEX",
+   "bar": 2,
+   "side": "P"
+  },
+  {
+   "und": "SENSEX",
+   "bar": 49,
+   "side": "P"
+  },
+  {
+   "und": "SENSEX",
+   "bar": 50,
+   "side": "P"
+  }
+ ],
+ "nifty_usual_10min_move_pct": 0.0509,
+ "first_put_signal_bar": "09:25",
+ "costs": {
+  "K0": {
+   "keep": [
+    "BANKNIFTY",
+    "FINNIFTY",
+    "MIDCPNIFTY",
+    "SENSEX"
+   ],
+   "cost": -9722
+  },
+  "K2-first": {
+   "keep": [
+    "BANKNIFTY",
+    "FINNIFTY"
+   ],
+   "cost": -5049
+  },
+  "K2-strong": {
+   "keep": [
+    "SENSEX",
+    "FINNIFTY"
+   ],
+   "cost": -4374
+  },
+  "K1-strong": {
+   "keep": [
+    "SENSEX"
+   ],
+   "cost": -1765
+  },
+  "K1-BN": {
+   "keep": [
+    "BANKNIFTY"
+   ],
+   "cost": -2440
+  },
+  "X-skip": {
+   "keep": [],
+   "cost": 0
+  },
+  "X-K2": {
+   "keep": [],
+   "cost": 0
+  },
+  "RB": {
+   "keep": [
+    "SENSEX",
+    "FINNIFTY"
+   ],
+   "cost": -4374
+  },
+  "K2-open": {
+   "keep": [
+    "BANKNIFTY",
+    "FINNIFTY"
+   ],
+   "cost": -5049
+  }
+ },
+ "app_total": -9722
+}

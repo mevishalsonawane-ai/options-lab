@@ -56,6 +56,26 @@ class ZerodhaSyncTest : RobolectricTest() {
         assertEquals("report only: nothing placed, changed or cancelled", writes, kite.writes.size)
     }
 
+    /**
+     * 20 Oct, review: an arm's live trade ([ArmLive]) was said "no bot follows it" every check. Its belief now covers it; its SL
+     * order is judged, a GTT stop (never in the order book) is not; a shadow or closed trade is no belief at all.
+     */
+    @Test fun anArmsLiveTradeIsFollowedNotUntracked() {
+        fun pos(symbol: String, stop: String?, shadow: Boolean = false, exit: Double? = null) = ArmLive.Pos(
+            "r51", "ref-$symbol", symbol, "NFO", "MIS", 1, 65, 65, 65, 0.05, 1, 100.0, java.time.LocalDateTime.of(2026, 10, 20, 9, 30),
+            100.0, 65, null, "1", stopOrderId = stop, shadow = shadow, exit = exit)
+        val b = ZerodhaSync.armBeliefs(listOf(pos(sym, "250926000000123"), pos(other, "gtt:42"), pos("X1", null, shadow = true),
+            pos("X2", null, exit = 90.0)))
+        assertEquals(listOf(sym, other), b.map { it.symbol })
+        assertEquals(listOf(65, 65), b.map { it.qty })
+        assertEquals(listOf("250926000000123", null), b.map { it.stopOrderId })
+        val orders = listOf(PositionSync.Order("250926000000123", sym, "TRIGGER PENDING", true))
+        assertEquals("both followed, the SL resting, the GTT not judged", emptyList<PositionSync.Mismatch>(),
+            PositionSync.check(b, mapOf(sym to 65, other to 65), orders))
+        // Without it, Zerodha's two positions were both "not followed by the app".
+        assertEquals(2, PositionSync.check(emptyList(), mapOf(sym to 65, other to 65), orders).count { it.kind == PositionSync.Kind.UNTRACKED })
+    }
+
     @Test fun aProtectionOnAPositionZerodhaShowsFlat() {
         kite.position(sym, 75, 100.0)
         val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 75, 100.0, 90.0, null, null) }

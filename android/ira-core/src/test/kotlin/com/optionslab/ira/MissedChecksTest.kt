@@ -53,6 +53,25 @@ class MissedChecksTest {
         t.add(day, "info", "fine")
         assertEquals(mapOf("missing required field: quantity" to 3), t.of(day).errors)
         assertEquals(mapOf("Jarvis words: ij1" to 1), t.of(day).unreadable)
+        // 20 Oct: a notice or a warning is counted apart, never as an error (an old "[error]" line sorted by its words).
+        t.add(day, "error", "Good morning Boss · 3 things need you")
+        t.add(day, "notice", "That passphrase is too easy to guess")
+        t.add(day, "error", "Short put is in the money: NIFTY 25000 is below the 25100 strike")
+        t.add(day, "warning", "Live price stream dropped (the phone's network changed); reconnecting")
+        assertEquals(mapOf("missing required field: quantity" to 3), t.of(day).errors)
+        assertEquals(2, t.of(day).notices.values.sum())
+        assertEquals(2, t.of(day).warnings.values.sum())
+        assertEquals(DiagErrors.Severity.ERROR, D.classify("Positions not protected: 1 open"))
+        assertEquals(DiagErrors.Severity.WARNING, D.classify("  Daily loss limit reached: only exits today"))
+        assertEquals(DiagErrors.Severity.NOTICE, D.classify("Day report · Mon 19 Oct"))
+        assertNull(D.severityOf("info", "Good morning"))
+        // Two counts of one day: kind by kind the larger; another day's is left out.
+        val a = DiagErrors.Day(day, mapOf("x" to 2), warnings = mapOf("w" to 1))
+        val b = DiagErrors.Day(day, mapOf("x" to 1, "y" to 4), notices = mapOf("n" to 3))
+        assertEquals(DiagErrors.Day(day, mapOf("x" to 2, "y" to 4), emptyMap(), mapOf("w" to 1), mapOf("n" to 3)), DiagErrors.merge(a, b))
+        assertEquals(a, DiagErrors.merge(a, b.copy(day = day.plusDays(1))))
+        assertEquals(b, DiagErrors.merge(null, b))
+        assertNull(DiagErrors.merge(null, null))
         // A new day starts afresh.
         t.add(day.plusDays(1), "error", "x")
         assertTrue(t.of(day).errors.isEmpty())
@@ -108,6 +127,47 @@ class MissedChecksTest {
         assertTrue(C.gaps(listOf(SessionCoverage.Market("MCX", open = true)), watchAlive = false, streamUp = null).isEmpty())
         assertTrue(C.gaps(listOf(SessionCoverage.Market("MCX", open = false, held = 1)), watchAlive = false, streamUp = null).isEmpty())
         assertTrue("1 position or order open" in C.gaps(listOf(SessionCoverage.Market("NSE", open = true, held = 1)), false, null).single().text)
+    }
+
+    /**
+     * 16 Oct (Boss's diagnostics: "MCX is open with 2 armed, but the market watch is not running" at 09:01 and 17:56): the
+     * dead-man check that starts the watch judged the gap from before that start. A gap is now told only once it has lasted
+     * the grace (the watch's start takes seconds; Boss's restarts about 16 s).
+     */
+    @Test fun aCoverageGapIsToldOnlyWhenItOutlastsTheGrace() {
+        val t = SessionCoverage.GapTimer()
+        val at = 1_000_000L
+        // 09:01: MCX opened, the arms armed, the watch not yet up - this very check starts it. Not told.
+        assertFalse(t.report(true, at))
+        assertTrue(t.pending())
+        // The watch came up within seconds: the next look sees no gap, and the timer is cleared.
+        assertFalse(t.report(false, at + 20_000))
+        assertFalse(t.pending())
+        // A real gap: still there when the grace is over - told (and every look after, while it lasts).
+        val r = SessionCoverage.GapTimer()
+        assertFalse(r.report(true, at))
+        assertFalse(r.report(true, at + SessionCoverage.GRACE_MS - 1))
+        assertTrue(r.report(true, at + SessionCoverage.GRACE_MS))
+        assertTrue(r.report(true, at + SessionCoverage.GRACE_MS + 300_000))
+        // A clock set back never makes an old gap look new and told at once: its grace starts again.
+        val c = SessionCoverage.GapTimer(graceMs = 1_000)
+        assertFalse(c.report(true, 5_000))
+        assertFalse(c.report(true, 1_000))
+        assertTrue(c.report(true, 2_000))
+        assertTrue(SessionCoverage.GRACE_MS >= 60_000, "longer than a restart, which took about 16 s")
+    }
+
+    /** Review, 16 Oct: a watch that keeps dying and is brought back within the grace each time is still told. */
+    @Test fun aGapThatKeepsComingBackIsToldAtOnce() {
+        val t = SessionCoverage.GapTimer()
+        val at = 1_000_000L
+        assertFalse(t.report(true, at))
+        assertFalse(t.report(false, at + 20_000))
+        // The watch ended again 5 minutes later: within 30 minutes of the last gap - told at once.
+        assertTrue(t.report(true, at + 5 * 60_000L))
+        assertFalse(t.report(false, at + 5 * 60_000L + 20_000))
+        // Long after the last one: a fresh gap waits for its grace again.
+        assertFalse(t.report(true, at + 5 * 60_000L + SessionCoverage.REPEAT_MS + 1))
     }
 
     // ---- the policy check ----

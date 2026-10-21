@@ -2,4 +2,6 @@
 <resources>
     <!-- The "Open" widget (Zerodha and paper books): IraAlgo only; the gold build turns it off. -->
     <bool name="open_widget_enabled">true</bool>
+    <!-- The Signal tester's share target (shadow - never trades): IraAlgo only. -->
+    <bool name="signal_tester_enabled">true</bool>
 </resources>

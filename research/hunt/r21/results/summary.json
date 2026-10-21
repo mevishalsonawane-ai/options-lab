@@ -1,0 +1,41 @@
+{
+ "variants": {
+  "V0": {
+   "text": "Design 9 trades, 1 wins, net Rs -17,054 (33 expiries). Holdout 2 trades, 0 wins, net Rs -6,259 (31 expiries; worst Rs -3,203; big days caught 0 of 23). Twin p 0.704, BH q 1.000. FAILED the gates.",
+   "verdict": "rejected"
+  },
+  "V1": {
+   "text": "Design 7 trades, 3 wins, net Rs +10,338 (33 expiries). Holdout 11 trades, 0 wins, net Rs -35,188 (31 expiries; worst Rs -3,387; big days caught 0 of 23). Twin p 0.905, BH q 1.000. FAILED the gates.",
+   "verdict": "rejected"
+  },
+  "V2": {
+   "text": "Design 9 trades, 3 wins, net Rs +3,870 (33 expiries). Holdout 13 trades, 1 wins, net Rs -18,837 (31 expiries; worst Rs -3,899; big days caught 1 of 23). Twin p 0.919, BH q 1.000. FAILED the gates.",
+   "verdict": "rejected"
+  },
+  "V3": {
+   "text": "Design 8 trades, 3 wins, net Rs +7,398 (33 expiries). Holdout 11 trades, 0 wins, net Rs -35,188 (31 expiries; worst Rs -3,387; big days caught 0 of 23). Twin p 0.846, BH q 1.000. FAILED the gates.",
+   "verdict": "rejected"
+  },
+  "V4": {
+   "text": "Design 10 trades, 5 wins, net Rs +44,527 (33 expiries). Holdout 15 trades, 0 wins, net Rs -46,268 (31 expiries; worst Rs -3,267; big days caught 0 of 23). Twin p 0.996, BH q 1.000. FAILED the gates.",
+   "verdict": "rejected"
+  },
+  "V5": {
+   "text": "Design 10 trades, 5 wins, net Rs +45,227 (33 expiries). Holdout 15 trades, 0 wins, net Rs -46,268 (31 expiries; worst Rs -3,267; big days caught 0 of 23). Twin p 1.000, BH q 1.000. FAILED the gates.",
+   "verdict": "rejected"
+  },
+  "V6": {
+   "text": "Design 10 trades, 5 wins, net Rs +46,170 (33 expiries). Holdout 15 trades, 0 wins, net Rs -46,268 (31 expiries; worst Rs -3,267; big days caught 0 of 23). Twin p 0.999, BH q 1.000. FAILED the gates.",
+   "verdict": "rejected"
+  },
+  "V7": {
+   "text": "Design 10 trades, 3 wins, net Rs +9,342 (33 expiries). Holdout 15 trades, 0 wins, net Rs -61,863 (31 expiries; worst Rs -4,850; big days caught 0 of 23). Twin p 1.000, BH q 1.000. FAILED the gates.",
+   "verdict": "rejected"
+  },
+  "V8": {
+   "text": "Design 31 trades, 4 wins, net Rs -46,285 (33 expiries). Holdout 30 trades, 2 wins, net Rs -66,764 (31 expiries; worst Rs -4,013; big days caught 1 of 23). Twin p 0.006, BH q 0.054. FAILED the gates.",
+   "verdict": "rejected"
+  }
+ },
+ "anatomy": "Design 33 expiry days (27 NIFTY + 6 BANKNIFTY): some Rs 1-10 option (13:00-14:30) reached 5x before 15:05 on 24, 10x on 11, 20x on 7 (hindsight); 11 of the 24 were back under 2x by 15:05 (median give-back 68%). The straddle condition held on 32 of 33 days; 15-minute 0.25% momentum on only 9. Nothing at 13:00 separated big days."
+}

@@ -1,0 +1,40 @@
+id: r65-donchian-s10
+title: R65 Donchian S10 breakeven at +10%, trail 10 pts, target kept
+family: trade-management
+date: '2026-10-16'
+doc: research/HUNT_R65_STEP_TRAIL.md
+hypothesis: 'Boss (16 Oct): once the premium is +10%, put the stop at +5%, then +10% at +15%, and so on (a 5-point step trail),
+  and a -5% stop moved up the same way, improve the new paper arms after real costs. This variant: S10 breakeven at +10%,
+  trail 10 pts, target kept; gates as R51 (final net > 0, twin p < 0.05, BH q <= 0.10 over 30 tests, 40+ trades, top-5 < net,
+  design and walk-forward > 0); recommended only if it also beats B0 and A4 everywhere and random early exits (q <= 0.10).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores (Donchian,
+  OOV) / R57 stores (Solo 2.0), 20 Nov 2024 - 13/14 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026; Solo 2.0 Jul 2025 - Mar 2026)
+  holdout: 1 Apr - 13/14 Oct 2026, read once; already read by R51 / R52 / R57 / R64 (weak)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars (Donchian 20) (unchanged); only the option exits differ (stops and trail on the premium)'
+model_or_rule: 'R51 Donchian 20 (5-min index Donchian-20 break, 1-ITM, 5 indices); exits: S10 breakeven at +10%, trail 10
+  pts, target kept'
+settings: research/hunt/r65/r65cfg.py exit_spec / trail_steps; PREREG.md sections 2-3
+prereg: research/hunt/r65/PREREG.md
+variants_tried: 30
+results:
+  summary: 'Design: 4541 trades, win 43%, net -Rs 13,659 (-Rs 3/trade), worst day -Rs 51,228, max DD Rs 209,797, stops 701.
+    Walk-forward: 3288 trades, win 44%, net Rs 126,272 (Rs 38/trade), worst day -Rs 31,525, max DD Rs 111,820, stops 449.
+    Final: 1793 trades, win 43%, net Rs 29,717 (Rs 17/trade), worst day -Rs 21,841, max DD Rs 98,222, stops 226; entry-twin
+    p 0.01, BH q 0.0143, exit-twin p 0.8323 (q 1.0). Verdict: FAIL: top-5 >= net; design net <= 0. Versus B0: design -Rs 21,940
+    (bootstrap p 0.6415), final -Rs 25,722 (p 0.936). Versus A4: design -Rs 21,133 (bootstrap p 0.594), final -Rs 49,061 (p
+    0.974). Final: the lock closed 245 trades; versus the plain rules it gave up Rs 117,040 and saved Rs 87,535 (net -Rs 29,504);
+    119 of them went on to +30% after the exit.'
+  costs: dated charges, R17 liq fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, one held contract, 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: Failed the gates. Signal on the underlying; research only, nothing changes paper or live.

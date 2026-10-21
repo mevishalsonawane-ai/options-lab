@@ -1,0 +1,26 @@
+id: h18
+title: What decides whether candles go up or down
+family: patterns-indicators
+date: '2026-10-11'
+doc: research/HUNT_H18.md
+hypothesis: Something a retail chart sees decides the next candle.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- candle and flow features
+model_or_rule: option-buying rule from the best predictors
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h18/PREREG.md
+variants_tried: null
+results:
+  summary: Nothing visible in advance decides the next candle; no tradable rule.
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

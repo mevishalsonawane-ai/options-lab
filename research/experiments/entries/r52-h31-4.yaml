@@ -1,0 +1,44 @@
+id: r52-h31-4
+title: 'R52 re-test on Nov 2024+: H31-4 Overnight close-location / day-move follow'
+family: overnight
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H31-4 (old verdict: R03: 82% of variants +, median +151/tr; hold 48% +. R08: 65%, +71/tr;
+  WF 2023 pick +30,450) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small
+  design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''filt'': ''F0'', ''rule'': ''R03'', ''series'': ''near'', ''unds'': [''NIFTY'', ''BANKNIFTY'', ''FINNIFTY'',
+  ''MIDCPNIFTY'', ''SENSEX''], ''xit'': ''X1015''} | ITM1/near | exits sq_off=930 | expiry skip'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 20
+results:
+  summary: 'Design original: 788 trades, win 48%, net Rs +163,436 (Rs +485/day), worst day Rs -46,582, max DD Rs -221,942,
+    p 1.000 (coin-flip p 0.000); walk-forward Rs -80,611. Re-tune pick g01 ({''rule'': ''R03'', ''filt'': ''F0'', ''xit'':
+    ''X0916'', ''series'': ''near'', ''unds'': (''NIFTY'', ''BANKNIFTY'', ''FINNIFTY'', ''MIDCPNIFTY'', ''SENSEX'')} · ITM1/near
+    · exits sq_off=930): design 788 trades, win 51%, net Rs +210,837 (Rs +626/day), worst day Rs -56,908, max DD Rs -103,363,
+    p 1.000 (coin-flip p 0.000); walk-forward Rs +51,736. FINAL original: 291 trades, win 51%, net Rs -10,803 (Rs -81/day),
+    worst day Rs -37,613, max DD Rs -139,257, p 1.000 (coin-flip p 0.211), q 1.00 -> FAIL. FINAL pick: 291 trades, win 48%,
+    net Rs +30,745 (Rs +231/day), worst day Rs -32,607, max DD Rs -148,271, p 1.000 (coin-flip p 0.020), q 1.00 -> FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: h31 froze no single variant. original = R03 (15:19 price in the top 25% of
+  the day''s range -> CE, bottom 25% -> PE; the catalogue''s first rule, 82% of its variants positive), all 5 indices, 1-ITM
+  nearest contract that expires after the exit day, F0 (every night), out next session 10:15 (the exit every h31 walk-forward
+  pick used). Grid: h31''s own axes - R08 (day move vs previous close +-0.3%, follow), exits X0916 / X0930 / P15-P30, filters
+  F1 / F2, monthly contract (GX left out, see LEFT).. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read),
+  40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

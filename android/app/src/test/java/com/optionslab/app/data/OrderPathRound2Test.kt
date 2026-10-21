@@ -14,6 +14,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -65,6 +66,7 @@ class OrderPathRound2Test : RobolectricTest() {
     }
 
     @After fun down() {
+        Paper.loadInlineForTest = false
         FastPath.resetForTest()
         SecurePrefs.countedThread = null
         KiteStream.stop()
@@ -145,6 +147,38 @@ class OrderPathRound2Test : RobolectricTest() {
         assertEquals("30", sells.single().form["quantity"])
         assertEquals("stop", arm().today.single().why)
         assertTrue(OrderTiming.card().lines.toString(), OrderTiming.card().lines.any { it.startsWith("Decided from the stream 1") })
+    }
+
+    /**
+     * 13 Oct (CI shard 0): the fast path's first look finds the paper book not in memory and starts its load, which can finish
+     * before that look ends. The look's "not covered" was then kept the full 500 ms (the book counted as loaded only when
+     * asked afterwards), and a stop's tick inside that window planned no LIVE lane - no sell at all until another tick.
+     * Here the load is done at once (on the look's own thread), so the window is hit every time.
+     */
+    @Test fun aStopTickRightAfterTheFirstLookLoadedThePaperBookSellsWithin300ms() {
+        state(listOf(position(30, 200.0, stopId = null, stop = 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        KiteStream.liveForTest(true)
+        tick(200.0)
+        pass()
+        assertTrue(sells.isEmpty())
+        // As a new process: the paper book not in memory; the first look's read of it loads it before the look ends.
+        Paper.forgetForTest()
+        assertFalse(Paper.loaded())
+        Paper.loadInlineForTest = true
+        FastPath.start(context)
+        tick(200.0)
+        awaitTrue("the first look loaded the paper book") { Paper.loaded() }
+        Thread.sleep(100)                                   // well inside the 500 ms a covered look is kept
+        assertTrue("nothing sold at 200", sells.isEmpty())
+        val t0 = System.nanoTime()
+        tick(150.0)
+        awaitTrue("the sell") { sells.isNotEmpty() }
+        val ms = (sells.first().atNanos - t0) / 1_000_000
+        assertTrue("sent $ms ms after the tick (at most 300 ms)", ms <= 300)
+        Thread.sleep(1_500)
+        assertEquals("exactly one sell", 1, sells.size)
+        assertEquals("stop", arm().today.single().why)
     }
 
     /**
@@ -280,6 +314,91 @@ class OrderPathRound2Test : RobolectricTest() {
     }
 
     /**
+     * 18 Oct (speed review): the stream's socket thread is the tick path - a tick, even the day's first (the order-speed book
+     * not yet in memory), reads nothing from the settings vault there. It used to: the clock-offset figure read the day's
+     * book from the vault on the socket thread ([OrderTiming.clock]).
+     */
+    @Test fun aTickOnTheStreamsThreadReadsNothingFromTheSettingsVaultEvenTheDaysFirst() {
+        OrderTiming.forget()
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        try {
+            // feedForTest runs exactly what the socket's message runs, on this thread.
+            tick(201.0)
+            tick(201.5, tok = peToken)
+        } finally { SecurePrefs.countedThread = null }
+        assertEquals("settings reads on the stream's thread for a tick", 0L, SecurePrefs.readsForTest.get())
+        assertNotNull(KiteStream.freshTick(token))
+    }
+
+    /**
+     * 18 Oct, review: the stream's drop and its gap (both told on the socket thread) read nothing from the vault either, and
+     * reach the speed card on its next read. One queued on an earlier day (no look overnight) is never filed under today.
+     */
+    @Test fun theStreamsDropAndGapAreQueuedOffTheVaultAndKeptToTheirOwnDay() {
+        val was = Market.testClock
+        try {
+            OrderTiming.forget()
+            SecurePrefs.readsForTest.set(0)
+            SecurePrefs.countedThread = Thread.currentThread()
+            try { OrderTiming.streamDropped(); OrderTiming.streamGap(1_200) } finally { SecurePrefs.countedThread = null }
+            assertEquals("settings reads on the stream's thread for a drop", 0L, SecurePrefs.readsForTest.get())
+            assertTrue(OrderTiming.card().lines.toString(), OrderTiming.card().lines.any { it.startsWith("Price stream drops today: 1") })
+            // Queued yesterday, read today: dropped.
+            OrderTiming.forget()
+            Market.testClock = java.time.Clock.offset(java.time.Clock.systemUTC(), java.time.Duration.ofDays(-1))
+            OrderTiming.streamDropped(); OrderTiming.streamGap(900)
+            Market.testClock = was
+            assertFalse(OrderTiming.card().lines.toString(), OrderTiming.card().lines.any { it.startsWith("Price stream drops today") })
+        } finally { Market.testClock = was; OrderTiming.forget() }
+    }
+
+    /**
+     * 18 Oct: a tick whose arrival is "in the future" (the phone's clock stepped back since) is not fresh: the price read goes
+     * to Zerodha's quote, and the decisions' fresh tick is none. It used to pass for fresh for as long as the clock's step.
+     */
+    @Test fun aTickFromBeforeTheClockSteppedBackIsNotFresh() = runBlocking {
+        try {
+            tick(150.0, atMs = System.currentTimeMillis() + 60_000)
+            kite.requests.clear()
+            assertNull(KiteStream.tick(token))
+            assertNull(KiteStream.freshTick(token))
+            assertEquals("Zerodha's quote, not the stepped tick", 200.0, Broker.quotes(listOf("NFO:$sym")).getValue("NFO:$sym").last, 0.0)
+            assertTrue(kite.requests.any { it.path.startsWith("/quote") })
+        } finally { KiteStream.resetForTest() }
+    }
+
+    /**
+     * 18 Oct (speed review): a stop is judged on a tick only while it is 2 s fresh, else on Zerodha's quote call. The pass's
+     * "fallback" used to be [Broker.quotes], which answers from a tick up to 5 s old - a stream gone quiet (called stalled
+     * only after 10 s) had the stop judged on its last price, with no REST read.
+     */
+    @Test fun aStopIsNeverJudgedOnATickOlderThanTwoSecondsWithoutAskingZerodha() = runBlocking {
+        try {
+            // Fresh: answered from the stream, no quote call.
+            tick(201.0)
+            kite.requests.clear()
+            assertEquals(201.0, Broker.stopQuotes(listOf("NFO:$sym")).getValue("NFO:$sym").last, 0.0)
+            assertFalse("a fresh tick needs no quote call", kite.requests.any { it.path.startsWith("/quote") })
+            // 3.5 s old (still answered by the screens' 5-s read): the stop read asks Zerodha.
+            tick(201.0, atMs = System.currentTimeMillis() - 3_500)
+            assertNotNull("the screens' read still takes it", KiteStream.tick(token))
+            kite.quote("NFO:$sym", 150.0, 149.95, 150.05)
+            kite.requests.clear()
+            assertEquals("Zerodha's quote, not the 3.5-s tick", 150.0, Broker.stopQuotes(listOf("NFO:$sym")).getValue("NFO:$sym").last, 0.0)
+            assertTrue(kite.requests.any { it.path.startsWith("/quote") })
+            assertTrue("kept followed on the stream", token in KiteStream.touchedForTest())
+            // The ORB pass with the app's own 160 stop: the stream's last price says 201, Zerodha's says 150 - it sells.
+            state(listOf(position(30, 200.0, stopId = null, stop = 160.0)))
+            kite.position(sym, 30, 200.0, product = "MIS")
+            tick(201.0, atMs = System.currentTimeMillis() - 3_500)
+            pass()
+            awaitTrue("the sell at the stop, judged on Zerodha's 150") { sells.isNotEmpty() }
+            assertEquals("stop", arm().today.single().why)
+        } finally { KiteStream.resetForTest() }
+    }
+
+    /**
      * Review R1: a BOT's entry (tag "iraorb") also asks the door's bot checks - the daily loss limit's day, the day stop, the
      * day lock (and its amount), the smart workers and the portfolio guard - and still reads nothing from the settings vault.
      * A trip written later is seen at once (kept in memory, refreshed on the write).
@@ -303,6 +422,30 @@ class OrderPathRound2Test : RobolectricTest() {
             assertNull(Broker.entryRecheck(o.copy(tag = "iraalgo")))
         } finally { SecurePrefs.put("breaker.day", null) }
         assertNull(Broker.entryRecheck(o, "orb"))
+    }
+
+    /**
+     * 18 Oct (final review F2, F7): a paper fill told to the arms' live path ([ArmLive.entered]) and a mirrored entry's last look
+     * inside the door (Live, AI trades, its Trade live and its Shadow) read nothing from the settings vault - the Live switch is
+     * kept in memory and read again only after it is written - and a flip written later is seen at once.
+     */
+    @Test fun theArmsLivePathsPaperNoteAndItsDoorLookReadNothingFromTheSettingsVault() {
+        val key = com.optionslab.engine.orb.LiveMirror.ARMS.first().key
+        val o = Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", com.optionslab.engine.orb.LiveMirror.TAG)
+        val c = Paper.Contract(paperCe, "BANKNIFTY", expiry, 52_000.0, com.optionslab.engine.Right.CE, 30, "NSE_FO|TESTCE")
+        AutomationSupport.liveSettings(live = false)                 // Paper: a paper fill is only noted
+        // Warm: the first look after a write reads the switch once (then kept in memory).
+        ArmLive.liveFlags(); Broker.entryRecheck(o, "arm:$key")
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        try {
+            ArmLive.entered(ArmLive.Ask(key, "purity:1", c, 1, 30, 200.0, stop = 170.0))
+            assertEquals("refused: the app is in Paper", Broker.entryRecheck(o, "arm:$key"))
+        } finally { SecurePrefs.countedThread = null }
+        assertEquals("settings reads for a paper fill and a mirrored entry's door look", 0L, SecurePrefs.readsForTest.get())
+        AutomationSupport.liveSettings()                             // Live written: seen at once
+        assertTrue(Broker.entryRecheck(o, "arm:$key") != "refused: the app is in Paper")
+        assertTrue(ArmLive.liveFlags().first)
     }
 
     /** Review R1: the vault's generation only ever grows (a kept kill switch can never match a stale one); dropKept forgets it. */
@@ -410,5 +553,61 @@ class OrderPathRound2Test : RobolectricTest() {
         assertTrue("$v", v.size in 3..8)
         assertTrue("never closer than 250 ms: $v", v.zipWithNext().all { (a, b) -> b - a >= 250 })
         assertTrue("the last tick shown within 300 ms: ${v.last() - last}", v.last() >= last - 250 && v.last() - last <= 300)
+    }
+
+    /** 18 Oct (review): the paper-only period is read again inside the entry door too: memory only, nothing from the vault. */
+    @Test fun theDoorItselfRefusesAnEntryInThePaperOnlyPeriodReadingNothingFromTheVault() {
+        val o = Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
+        assertNull("warm: the kept kill switch read once", Broker.entryRecheck(o, "orb"))
+        val today = Market.today()
+        val p = com.optionslab.ira.PaperOnlyPeriod.Period(today.plusDays(8), "10 days on paper", today.minusDays(1))
+        PaperOnly.resetForTest(p)
+        try {
+            SecurePrefs.readsForTest.set(0)
+            SecurePrefs.countedThread = Thread.currentThread()
+            assertEquals(PaperOnly.entryWhy(p), Broker.entryRecheck(o, "orb"))
+            // Known as the period's own refusal: the door types and tells it as at its front ("paper_only", Boss told once a day).
+            assertTrue(PaperOnly.isRefusal(Broker.entryRecheck(o, "orb")!!))
+            assertTrue(PaperOnly.isRefusal(PaperOnly.ENTRY_UNREAD))
+            assertFalse(PaperOnly.isRefusal("refused: the kill switch is on"))
+            assertEquals("Boss's own entry too", PaperOnly.entryWhy(p), Broker.entryRecheck(o.copy(tag = "iraalgo")))
+            SecurePrefs.countedThread = null
+            assertEquals("settings reads at the door", 0L, SecurePrefs.readsForTest.get())
+            PaperOnly.unreadForTest()
+            assertEquals("it fails closed before the period is read", PaperOnly.ENTRY_UNREAD, Broker.entryRecheck(o))
+        } finally { SecurePrefs.countedThread = null; PaperOnly.resetForTest(null) }
+        assertNull(Broker.entryRecheck(o, "orb"))
+    }
+
+    /** 18 Oct (review): a period the start could not read is tried again with a growing wait, never given up after ten minutes. */
+    @Test fun theUnreadPeriodIsTriedAgainWithAGrowingWaitUntilItIsRead() {
+        assertEquals(listOf(20_000L, 40_000L, 80_000L, 160_000L, 300_000L, 300_000L),
+            (0..5).map { PaperOnly.retryWaitMs(it) })
+        assertEquals(300_000L, PaperOnly.retryWaitMs(10_000))
+        assertEquals(1L, PaperOnly.retryWaitMs(0, everyMs = 0, maxWaitMs = 10))
+        val realRead = PaperOnly.readRaw
+        try {
+            // Unreadable at the start, readable a moment later: read by the background retry (no screen opened).
+            val failing = java.util.concurrent.atomic.AtomicInteger(4)
+            PaperOnly.readRaw = { if (failing.getAndDecrement() > 0) throw java.io.IOException("simulated: the vault is busy") else realRead() }
+            PaperOnly.unreadForTest()
+            PaperOnly.loadSoon(everyMs = 5, maxWaitMs = 20, until = { true })
+            val end = System.currentTimeMillis() + 10_000
+            while (!PaperOnly.isLoaded && System.currentTimeMillis() < end) Thread.sleep(10)
+            assertTrue("read in the background after the failed tries", PaperOnly.isLoaded)
+            assertNull(PaperOnly.entryRefusal())
+            // Its stop rule (tests only; the app's retry runs until the period is read): the retry ends, and new live entries stay
+            // refused until the morning check or a Zerodha login reads it.
+            PaperOnly.readRaw = { throw java.io.IOException("simulated: the vault is unreadable") }
+            PaperOnly.unreadForTest()
+            val asked = java.util.concurrent.atomic.AtomicInteger()
+            PaperOnly.loadSoon(everyMs = 5, maxWaitMs = 5, until = { asked.incrementAndGet() < 3 })
+            val stop = System.currentTimeMillis() + 5_000
+            while (asked.get() < 3 && System.currentTimeMillis() < stop) Thread.sleep(10)
+            Thread.sleep(200)
+            assertEquals("asked until told to stop, then stopped", 3, asked.get())
+            assertFalse(PaperOnly.isLoaded)
+            assertEquals(PaperOnly.ENTRY_UNREAD, PaperOnly.entryRefusal())
+        } finally { PaperOnly.readRaw = realRead; PaperOnly.resetForTest(null) }
     }
 }

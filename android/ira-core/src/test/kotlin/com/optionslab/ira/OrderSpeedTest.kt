@@ -76,13 +76,14 @@ class OrderSpeedTest {
         assertTrue("Paper · Order sent → Zerodha's answer: p50 2 ms, p95 2 ms, 1 time" in l, l.toString())
         assertTrue("Live fills first seen on Zerodha's stream: 2 of 3" in l, l.toString())
         assertTrue("Relay round trip: p50 180 ms, p95 200 ms, 3 times" in l, l.toString())
-        assertTrue("Phone clock vs exchange: phone behind by 1.5 s (typical, network delay included)" in l, l.toString())
+        assertTrue("Ticks arrive after the exchange's stamp: before it by 1.5 s (typical; network delay and Zerodha's batching, not the phone's clock)" in l, l.toString())
+        // 16 Oct: the tick arrival figure never warns about the clock (it is not the clock's error).
         val w = OrderSpeed.warnings(b)
-        assertEquals(4, w.size, w.toString())
+        assertEquals(3, w.size, w.toString())
         assertTrue(w[0].startsWith("Relay is slow: typical 180 ms"), w[0])
         assertTrue(w[1].startsWith("Prices were up to 2.6 s old"), w[1])
-        assertTrue("automatic date and time" in w[2], w[2])
-        assertTrue(w[3].startsWith("Signal to order took up to 1.4 s"), w[3])
+        assertTrue(w[2].startsWith("Signal to order took up to 1.4 s"), w[2])
+        assertTrue(w.none { "automatic date and time" in it }, w.toString())
         val d = OrderSpeed.diagLine(b)
         assertTrue(d.startsWith("Order speed (2026-10-09, typical/worst/slowest): "), d)
         assertTrue("rp 180/200/200ms n3" in d && "WARN Relay is slow" in d, d)
@@ -99,7 +100,40 @@ class OrderSpeedTest {
         assertEquals("p50 10 ms, p95 90 ms (slowest 120 ms), 30 times", OrderSpeed.said(OrderSpeed.Summary(30, 10, 90, 120)))
         // A phone ahead of the exchange.
         val ahead = OrderSpeed.Book("2026-10-09").also { it.add(OrderSpeed.Step.CLOCK_OFFSET, false, 300) }
-        assertTrue("Phone clock vs exchange: phone ahead by 300 ms (typical, network delay included)" in OrderSpeed.lines(ahead))
+        assertTrue("Ticks arrive after the exchange's stamp: by 300 ms (typical; network delay and Zerodha's batching, not the phone's clock)" in OrderSpeed.lines(ahead))
+    }
+
+    @Test fun theClockIsMeasuredAgainstZerodhasServerWithTheRoundTripAllowedFor() {
+        // Sent at 10.000 s, answered at 10.200 s, dated second 10 (its middle 10.500 s): the phone is 400 ms behind.
+        assertEquals(-400L, OrderSpeed.offsetFromDate(10_000, 10_200, 10))
+        // Ahead: sent 12.900, answered 13.100 (middle 13.000) for a reply dated 11 (11.500): 1.5 s ahead.
+        assertEquals(1_500L, OrderSpeed.offsetFromDate(12_900, 13_100, 11))
+        // A slow round trip, a reply before its request (a clock jump) or no Date: no sample.
+        assertNull(OrderSpeed.offsetFromDate(0, OrderSpeed.CLOCK_RTT_MAX_MS + 1, 0))
+        assertNull(OrderSpeed.offsetFromDate(5_000, 4_000, 4))
+        assertNull(OrderSpeed.offsetFromDate(5_000, 5_100, 0))
+    }
+
+    @Test fun theClockWarnsOnlyWhenItIsReallyOffWithEnoughReadingsAndNeverAsksForAutomaticTime() {
+        // Boss's case: ticks arriving 2.5 s after their stamps with the clock right - no warning at all.
+        val ok = OrderSpeed.Book("2026-10-16")
+        repeat(20) { ok.add(OrderSpeed.Step.CLOCK_OFFSET, false, 2_500) }
+        repeat(11) { ok.add(OrderSpeed.Step.CLOCK_SERVER, false, if (it % 2 == 0) 300L else -200L) }
+        assertEquals(emptyList(), OrderSpeed.warnings(ok))
+        // Within the measurement's own uncertainty (2 s): no warning.
+        assertNull(OrderSpeed.clockWarning(List(10) { 1_900L }))
+        // Really off, but too few readings: no warning yet.
+        assertNull(OrderSpeed.clockWarning(List(OrderSpeed.CLOCK_MIN_N - 1) { 5_000L }))
+        // Really off with enough readings: said, ahead or behind, without asking for what Boss already has on.
+        val ahead = OrderSpeed.clockWarning(List(OrderSpeed.CLOCK_MIN_N) { 5_000L })!!
+        assertTrue(ahead.startsWith("The phone's clock reads 5.0 s ahead of Zerodha's server (median of 5 readings"), ahead)
+        assertFalse("switch on" in ahead, ahead)
+        val behind = OrderSpeed.clockWarning(List(7) { -3_000L })!!
+        assertTrue("3.0 s behind Zerodha's server" in behind, behind)
+        assertTrue("Phone clock vs Zerodha's server: phone ahead by 300 ms (median of 11, round trip allowed for)" in OrderSpeed.lines(ok), OrderSpeed.lines(ok).toString())
+        // Kept through the book's text like every step (negative values allowed).
+        assertTrue(ok.add(OrderSpeed.Step.CLOCK_SERVER, false, -900))
+        assertFalse(ok.add(OrderSpeed.Step.CLOCK_SERVER, false, OrderSpeed.MAX_MS))
     }
 
     @Test fun whereDecisionsCameFromTheOrderPathStepsAndTheStreamsDropsAreCountedAndKept() {

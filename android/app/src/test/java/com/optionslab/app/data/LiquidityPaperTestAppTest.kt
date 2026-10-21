@@ -75,6 +75,28 @@ class LiquidityPaperTestAppTest : RobolectricTest() {
         assertFalse(LiquidityTest.frozen("liquidity15"))
     }
 
+    /**
+     * 20 Oct, review: a change made at start-up before the saved state was read (a stop told) left the state non-default, so the
+     * file was ignored: Boss's unfreeze fell back to frozen and was written over. Now the saved state is read with the early
+     * change applied on top, and a write never puts the defaults over the file.
+     */
+    @Test fun aChangeBeforeTheSavedStateIsReadNeverLosesIt() {
+        at(oct20)
+        LiquidityTest.setStateForTest(LiquidityFreeze.State())
+        LiquidityTest.setUnfrozen(true)
+        LiquidityTest.setTrail(true, log = false)
+        waitFor("the state file") { LiquidityTest.stateWrittenForTest()?.let { it.contains("unfrozen=true") && it.contains("trail=true") } == true }
+        // A restart: memory forgotten, the file kept; a stop is told before the background read.
+        LiquidityTest.forgetMemoryForTest()
+        assertTrue(LiquidityTest.markStopTold("liquidity15|2026-10-20"))
+        LiquidityTest.ensureLoaded()
+        val st = LiquidityTest.state.value
+        assertTrue("the unfreeze kept", st.unfrozen)
+        assertTrue("the trail kept", st.trail)
+        assertEquals("the early change kept too", "liquidity15|2026-10-20", st.stopTold)
+        waitFor("written merged") { LiquidityTest.stateWrittenForTest()?.let { it.contains("unfrozen=true") && it.contains("liquidity15|2026-10-20") } == true }
+    }
+
     @Test fun autopilotAppliesNoChangeToLiquidityWhileFrozen() {
         at(oct20)
         LiquidityTest.setStateForTest(LiquidityFreeze.State())
@@ -108,5 +130,44 @@ class LiquidityPaperTestAppTest : RobolectricTest() {
         assertNull(AutoExposure.liveYield("BANKNIFTY", live = true, ArmPriority.Rank.OTHER, null))
         assertNull(AutoExposure.liveYield("NIFTY", live = true, ArmPriority.Rank.OTHER, null))
         AutoExposure.resetForTest()
+    }
+
+    /**
+     * 21 Oct, enhancement round 3 (idea 6, round 1's idea 14): the live stop rule's record is kept whole. The arms' book keeps
+     * its last 2,000 rows; a busy paper stretch after a live loss pushed that live trade out at the next restart, and the rule
+     * that had stopped Liquidity BANKNIFTY's live entries read as not reached. Every live row is kept now.
+     */
+    @Test fun theLiveStopRuleKeepsItsLiveTradesWhenTheBookIsTrimmed() {
+        at(oct20)
+        LiquidityTest.setStateForTest(LiquidityFreeze.State())
+        fun row(day: LocalDate, live: Boolean, entry: Double, exit: Double, qty: Int, arm: String = "liquidity15") = org.json.JSONObject()
+            .put("arm", arm).put("symbol", "BANKNIFTY26OCT52000CE").put("right", "CE").put("qty", qty).put("entry", entry)
+            .put("entryTime", day.atTime(10, 0).toString()).put("signalBar", day.atTime(9, 55).toString())
+            .put("exit", exit).put("exitTime", day.atTime(11, 0).toString()).put("why", "stop").put("charges", 0.0).put("live", live)
+        val rows = org.json.JSONArray()
+        rows.put(row(LocalDate.of(2026, 10, 14), live = false, entry = 100.0, exit = 110.0, qty = 30))     // an old paper row (trimmed)
+        rows.put(row(LocalDate.of(2026, 10, 14), live = true, entry = 500.0, exit = 90.0, qty = 100))      // live: -41,000
+        repeat(OrbArms.KEEP_POSITIONS) { n -> rows.put(row(LocalDate.of(2026, 10, 15 + n % 5), live = false, entry = 100.0, exit = 101.0, qty = 30)) }
+        com.optionslab.app.testing.AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("armed", org.json.JSONObject()).put("auto", org.json.JSONObject()).put("liveOk", org.json.JSONObject()).put("positions", rows))
+        kotlinx.coroutines.runBlocking { OrbArms.view() }
+        assertTrue("reached on the whole record", OrbArms.liquidityStopHint.stopped)
+        // A save (any change), then a restart: read back from the file.
+        kotlinx.coroutines.runBlocking { OrbArms.setArmed("orb", false, automatic = true, pinConfirmed = false) }
+        OrbArms.forgetMemoryForTest()
+        kotlinx.coroutines.runBlocking { OrbArms.view() }
+        assertTrue("still reached after the trim and a restart", OrbArms.liquidityStopHint.stopped)
+        val saved = org.json.JSONObject(String(com.optionslab.app.security.Vault.readFile(java.io.File(context.filesDir, "orb.vault"))!!, Charsets.UTF_8)).getJSONArray("positions")
+        assertEquals("the last 2,000 and the live row before them; the old paper row trimmed", OrbArms.KEEP_POSITIONS + 1, saved.length())
+        assertTrue(saved.getJSONObject(0).getBoolean("live"))
+    }
+
+    @Test fun aBookUnderTheTrimKeepsEveryRowInOrder() {
+        val all = (0 until 5).map { n ->
+            OrbArms.Position("liquidity15", "S$n", "CE", 30, 100.0, java.time.LocalDateTime.of(2026, 10, 14, 10, n), java.time.LocalDateTime.of(2026, 10, 14, 9, n),
+                null, null, null, live = n == 1)
+        }
+        assertEquals(all, OrbArms.keptPositions(all))
+        assertEquals(emptyList<OrbArms.Position>(), OrbArms.keptPositions(emptyList()))
     }
 }

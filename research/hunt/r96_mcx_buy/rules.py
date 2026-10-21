@@ -1,0 +1,449 @@
+"""R96 round 1 rules (PREREG_ROUND1.md s6). Signal source of every rule: the MCX future.
+
+daily_ind adds the indicators to a book's daily signal series (R93 daily_series: RAW o/h/l/c, causal roll flag, ATR14).
+Each rule's `candidates(book, period)` returns trade specs; `twin(book, spec, day)` returns the same trade moved to
+another session (the rule's twin, s6). A spec is a dict the study turns into a trade with engine.sim_single /
+engine.sim_straddle:
+    day, i_sig, i_from, side (+1 / -1 / 0 straddle), ustop (None or a price), n_sessions (None = same session),
+    kind ('single' / 'straddle'), i_end_fixed (None or a grid index), katr (stop distance in ATR14 units, or None)
+"""
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+
+from research.hunt.r93_breadth_donchian_mcx import rules as R93
+from research.hunt.r96_mcx_buy import cfg as K
+
+DAY = np.timedelta64(1, "D")
+
+
+# ================================================================================================ daily indicators
+def har_forecast(rv: np.ndarray, h: int = 5, min_rows: int = 250) -> np.ndarray:
+    """HAR forecast made at each row t (with rows <= t only) of the mean daily variance over rows t+1..t+h.
+    Features at s: rv[s], mean rv[s-4..s], mean rv[s-21..s]; target at s: mean rv[s+1..s+h]. The OLS at t uses only
+    rows s with s + h <= t (targets fully known at t). NaN until min_rows such rows exist."""
+    rv = np.asarray(rv, float)
+    n = len(rv)
+    s = pd.Series(rv)
+    X = np.column_stack([np.ones(n), rv, s.rolling(5).mean().values, s.rolling(22).mean().values])
+    y = s[::-1].rolling(h).mean()[::-1].shift(-1).values         # mean of rv[s+1..s+h]
+    ok = np.isfinite(X).all(axis=1) & np.isfinite(y)
+    out = np.full(n, np.nan)
+    XtX = np.zeros((4, 4))
+    Xty = np.zeros(4)
+    cnt = 0
+    for t in range(n):
+        s_new = t - h                                          # row whose target became known at t
+        if s_new >= 0 and ok[s_new]:
+            XtX += np.outer(X[s_new], X[s_new])
+            Xty += X[s_new] * y[s_new]
+            cnt += 1
+        if cnt >= min_rows and np.isfinite(X[t]).all():
+            beta = np.linalg.lstsq(XtX, Xty, rcond=None)[0]
+            out[t] = float(X[t] @ beta)
+    return out
+
+
+def daily_ind(d: pd.DataFrame) -> pd.DataFrame:
+    """d: R93 daily_series output. Adds back-adjusted closes and every daily signal input (all causal)."""
+    d = d.copy().reset_index(drop=True)
+    roll = d.roll.values.astype(bool)
+    ao, ah, al, ac = R93.back_adjust(d.open.values, d.high.values, d.low.values, d.close.values, roll)
+    d["ao"], d["ah"], d["al"], d["ac"] = ao, ah, al, ac
+    c = pd.Series(ac)
+    d["sma20"] = c.rolling(20).mean().values
+    sd = c.rolling(20).std(ddof=0).values
+    ema = c.ewm(span=20, adjust=False).mean().values
+    atr20 = R93.atr_roll(d.high.values, d.low.values, d.close.values, roll, 20)
+    bb_u, bb_l = d.sma20.values + 2 * sd, d.sma20.values - 2 * sd
+    kc_u, kc_l = ema + 1.5 * atr20, ema - 1.5 * atr20
+    sq = (bb_u < kc_u) & (bb_l > kc_l) & np.isfinite(sd) & np.isfinite(atr20)
+    d["sq"] = sq
+    prev6 = pd.Series(sq.astype(float)).shift(1).rolling(6).sum().values
+    d["sq_release"] = (~sq) & np.r_[False, sq[:-1]] & (prev6 >= 5)
+    prev5 = pd.Series(sq.astype(float)).shift(1).rolling(5).sum().values
+    d["sq_release3"] = (~sq) & np.r_[False, sq[:-1]] & (prev5 >= 3)          # round 2 R2F (relaxed)
+    d["sq_side"] = np.nan_to_num(np.sign(ac - d.sma20.values)).astype(int)
+    rng = (d.high - d.low).values
+    d["rng"] = rng
+    prev_min6 = pd.Series(rng).shift(1).rolling(6).min().values
+    d["nr7"] = np.isfinite(prev_min6) & (rng < prev_min6)
+    hp, lp = np.r_[np.nan, d.high.values[:-1]], np.r_[np.nan, d.low.values[:-1]]
+    roll_today = d.roll.values.astype(bool)
+    d["inside"] = (d.high.values < hp) & (d.low.values > lp) & ~roll_today             # raw prices; not on a roll day
+    d["nr7_id"] = d.nr7.values & d.inside.values                                         # round 2 R2C (Crabel ID/NR7)
+    hi20 = c.shift(1).rolling(20).max().values
+    lo20 = c.shift(1).rolling(20).min().values
+    nr7_recent = pd.Series(d.nr7.values.astype(float)).shift(1).rolling(5).max().values >= 1
+    dc = np.where(ac > hi20, 1, np.where(ac < lo20, -1, 0))
+    d["qb_side"] = np.where(nr7_recent & np.isfinite(hi20), dc, 0).astype(int)          # round 2 R2H
+    atr_prev = np.r_[np.nan, d.atr.values[:-1]]
+    loc = np.where(rng > 0, (d.close.values - d.low.values) / np.where(rng > 0, rng, 1), 0.5)
+    wide = np.isfinite(atr_prev) & (rng >= 1.8 * atr_prev)
+    d["wrb_side"] = np.where(wide & (loc >= 0.75), 1, np.where(wide & (loc <= 0.25), -1, 0))
+    r20 = c.diff(20).values
+    r60 = c.diff(60).values
+    tr = np.where((np.sign(r20) == np.sign(r60)) & np.isfinite(r20) & np.isfinite(r60), np.sign(r20), 0)
+    d1 = np.r_[np.nan, np.diff(ac)]
+    d2 = np.r_[np.nan, d1[:-1]]
+    pull = (tr != 0) & (d1 * tr < 0) & (d2 * tr < 0)
+    d["pb_side"] = np.where(pull, tr, 0).astype(int)
+    o, h, l, cl = (d[x].values.astype(float) for x in ("open", "high", "low", "close"))
+    with np.errstate(all="ignore"):
+        gk = 0.5 * np.log(h / l) ** 2 - (2 * np.log(2) - 1) * np.log(cl / o) ** 2
+    gk = np.where(np.isfinite(gk), np.maximum(gk, 0.0), np.nan)
+    d["gk"] = gk
+    fc = har_forecast(pd.Series(gk).ffill().fillna(0.0).values)       # a missing day repeats the last one (causal)
+    d["fc_vol"] = np.sqrt(252.0 * np.maximum(fc, 0.0))
+    return d
+
+
+# ================================================================================================ helpers
+def _day64(x):
+    return np.datetime64(pd.Timestamp(x).normalize(), "ns")
+
+
+def next_market_day(book, t):
+    """The first option-book session after daily date t (None when none)."""
+    m = book.m
+    k = int(np.searchsorted(m.days, _day64(t), side="right"))
+    return m.days[k] if k < len(m.days) else None
+
+
+def entry_ix(book, day, tod: int):
+    """(i_sig, i_from): i_from = first grid minute of `day` at or after tod; i_sig = the minute before it when it is
+    the same day, else i_from."""
+    m = book.m
+    i_from = m.at_or_after(day, tod)
+    if i_from < 0:
+        return None
+    i_sig = i_from - 1 if i_from > 0 and m.day[i_from - 1] == m.day[i_from] else i_from
+    return i_sig, i_from
+
+
+def atr_before(book, day):
+    """ATR14 of the last daily row strictly before `day` (known at that day's open)."""
+    d = book.daily
+    k = int(np.searchsorted(d.date.values, _day64(day), side="left")) - 1
+    return float(d.atr.values[k]) if k >= 0 else float("nan")
+
+
+def in_p(day, period) -> bool:
+    return K.in_period(pd.Timestamp(day).date(), period)
+
+
+# ================================================================================================ rules
+class DailyDir:
+    """S2, W1, P1: a daily signal at date t -> 1-ITM next session 09:15, stop katr x ATR14(t), n sessions."""
+
+    def __init__(self, rid, col, katr, n, mask_col=None, edge=False, books=K.BOOK_ORDER):
+        self.rid, self.col, self.katr, self.n, self.mask_col = rid, col, katr, n, mask_col
+        self.kind, self.edge, self.books = "single", edge, books
+
+    def sides(self, d):
+        s = d[self.col].values.astype(int)
+        if self.mask_col:
+            s = np.where(d[self.mask_col].values, s, 0)
+        return s
+
+    def spec(self, book, day, side, atr):
+        e = entry_ix(book, day, K.ENTRY_TOD)
+        if e is None or not np.isfinite(atr) or side == 0:
+            return None
+        i_sig, i_from = e
+        ust = book.m.F[i_sig] - side * self.katr * atr
+        return dict(day=day, i_sig=i_sig, i_from=i_from, side=int(side), ustop=float(ust), n_sessions=self.n,
+                    kind="single", i_end_fixed=None, katr=self.katr, edge=self.edge)
+
+    def candidates(self, book, period):
+        d = book.daily
+        out = []
+        for t, side, atr in zip(d.date.values, self.sides(d), d.atr.values):
+            if side == 0:
+                continue
+            day = next_market_day(book, t)
+            if day is None or not in_p(day, period) or (day - _day64(t)) > 7 * DAY:
+                continue
+            sp = self.spec(book, day, side, atr)
+            if sp:
+                out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        return self.spec(book, day, sp["side"], atr_before(book, day))
+
+
+class SqueezeStraddle:
+    """S1 (and round 2: R2F relaxed squeeze, R2G NR7 day): a daily flag at date t -> ATM straddle next session."""
+    kind = "straddle"
+
+    def __init__(self, rid="S1", n=5, col="sq_release", edge=False, books=K.BOOK_ORDER):
+        self.rid, self.n, self.col, self.edge, self.books = rid, n, col, edge, books
+
+    def spec(self, book, day):
+        e = entry_ix(book, day, K.ENTRY_TOD)
+        if e is None:
+            return None
+        return dict(day=day, i_sig=e[0], i_from=e[1], side=0, ustop=None, n_sessions=self.n, kind="straddle",
+                    i_end_fixed=None, katr=None, edge=self.edge)
+
+    def candidates(self, book, period):
+        d = book.daily
+        out = []
+        for t in d.date.values[d[self.col].values.astype(bool)]:
+            day = next_market_day(book, t)
+            if day is None or not in_p(day, period) or (day - _day64(t)) > 7 * DAY:
+                continue
+            sp = self.spec(book, day)
+            if sp:
+                out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        return self.spec(book, day)
+
+
+class NR7:
+    """N1 (and round 2: R2A-R2E with edge exits, 2-ITM, inside day, big books, a risk cap)."""
+    kind = "single"
+    n = 3
+    LAST_TOD = 22 * 60
+
+    def __init__(self, rid="N1", col="nr7", itm=1, edge=False, max_risk=None, books=K.BOOK_ORDER):
+        self.rid, self.col, self.itm, self.edge, self.max_risk, self.books = rid, col, itm, edge, max_risk, books
+
+    def extra(self):
+        return dict(itm=self.itm, edge=self.edge, max_risk=self.max_risk)
+
+    def candidates(self, book, period):
+        m, d = book.m, book.daily
+        out = []
+        for t in d.date.values[d[self.col].values.astype(bool)]:
+            t = _day64(t)
+            if t not in book.day_pos:
+                continue
+            day = next_market_day(book, t)
+            if day is None or not in_p(day, period) or (day - t) > 7 * DAY:
+                continue
+            ix = m.day_ix(t)
+            hi, lo = float(np.nanmax(m.F[ix])), float(np.nanmin(m.F[ix]))
+            jx = m.day_ix(day)
+            jx = jx[(m.tod[jx] >= K.ENTRY_TOD) & (m.tod[jx] <= self.LAST_TOD)]
+            br = np.flatnonzero((m.F[jx] > hi) | (m.F[jx] < lo))
+            if not len(br):
+                continue
+            i_sig = int(jx[br[0]])
+            side = 1 if m.F[i_sig] > hi else -1
+            ust = lo if side > 0 else hi
+            atr = atr_before(book, day)
+            katr = abs(m.F[i_sig] - ust) / atr if np.isfinite(atr) and atr > 0 else None
+            out.append(dict(day=day, i_sig=i_sig, i_from=i_sig + 1, side=side, ustop=float(ust), n_sessions=self.n,
+                            kind="single", i_end_fixed=None, katr=katr, tod=int(m.tod[i_sig]), **self.extra()))
+        return out
+
+    def twin(self, book, sp, day):
+        m = book.m
+        i_sig = m.at_or_before(day, sp["tod"])
+        if i_sig < 0 or sp.get("katr") is None:
+            return None
+        atr = atr_before(book, day)
+        if not np.isfinite(atr):
+            return None
+        katr = round(sp["katr"] * 4) / 4                      # cache-friendly: quarter-ATR steps
+        ust = m.F[i_sig] - sp["side"] * katr * atr
+        return dict(day=day, i_sig=i_sig, i_from=i_sig + 1, side=sp["side"], ustop=float(ust), n_sessions=self.n,
+                    kind="single", i_end_fixed=None, katr=katr, tod=sp["tod"], **self.extra())
+
+
+class VRP:
+    rid, kind = "V1", "straddle"
+    n = 5
+    TOD = 17 * 60 + 1
+
+    def atm_iv(self, book, day):
+        m = book.m
+        ix = m.day_ix(day)
+        ix = ix[(m.tod[ix] >= 16 * 60 + 45) & (m.tod[ix] < 17 * 60)]
+        if not len(ix):
+            return float("nan")
+        a = book.iv.get((0, 0))
+        b = book.iv.get((1, 0))
+        if a is None or b is None:
+            return float("nan")
+        v = np.nanmean(np.vstack([a[ix], b[ix]]), axis=0)
+        v = v[np.isfinite(v)]
+        return float(np.median(v)) if len(v) else float("nan")
+
+    def forecast(self, book, day):
+        d = book.daily
+        k = int(np.searchsorted(d.date.values, _day64(day), side="left")) - 1
+        return float(d.fc_vol.values[k]) if k >= 0 else float("nan")
+
+    def spec(self, book, day):
+        e = entry_ix(book, day, self.TOD)
+        if e is None:
+            return None
+        return dict(day=day, i_sig=e[0], i_from=e[1], side=0, ustop=None, n_sessions=self.n, kind="straddle",
+                    i_end_fixed=None, katr=None)
+
+    def candidates(self, book, period):
+        out = []
+        for day in book.m.days:
+            if not in_p(day, period):
+                continue
+            iv, fc = self.atm_iv(book, day), self.forecast(book, day)
+            if np.isfinite(iv) and np.isfinite(fc) and iv / 100.0 < fc:
+                sp = self.spec(book, day)
+                if sp:
+                    sp["iv"], sp["fc"] = iv, fc
+                    out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        return self.spec(book, day)
+
+
+def release_days(book, period_or_all=None) -> dict:
+    """{day (datetime64): release minute (IST)} for the book's events, over the whole option data."""
+    from research.brain.mcx import events as EV
+    cal = EV.calendar(K.DATA_START, K.HOLDOUT[1])
+    out = {}
+    for kind in book.events:
+        for d, mnt in cal.get(kind, {}).items():
+            out[_day64(d)] = int(mnt)
+    return out
+
+
+class EventStraddle:
+    rid, kind = "E1", "straddle"
+    PRE, POST = 20, 45
+
+    def spec(self, book, day, rel):
+        m = book.m
+        i_from = m.at_or_after(day, rel - self.PRE, until=rel - self.PRE + 2)
+        i_end = m.at_or_before(day, rel + self.POST)
+        if i_from < 0 or i_end < 0 or m.tod[i_end] < rel:
+            return None
+        i_sig = i_from - 1 if i_from > 0 and m.day[i_from - 1] == m.day[i_from] else i_from
+        return dict(day=day, i_sig=i_sig, i_from=i_from, side=0, ustop=None, n_sessions=None, kind="straddle",
+                    i_end_fixed=i_end, katr=None, rel=rel, fill_wait=self.PRE - 5)
+
+    def candidates(self, book, period):
+        out = []
+        for day, rel in sorted(release_days(book).items()):
+            if day in book.day_pos and in_p(day, period):
+                sp = self.spec(book, day, rel)
+                if sp:
+                    out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        if day in release_days(book):
+            return None
+        return self.spec(book, day, sp["rel"])
+
+
+class EventFollow:
+    rid, kind = "E2", "single"
+
+    def spec(self, book, day, rel):
+        m = book.m
+        i_pre = m.at_or_before(day, rel - 1)
+        i_sig = m.at_or_before(day, rel + 15)
+        if i_pre < 0 or i_sig < 0 or m.tod[i_pre] < rel - 5 or m.tod[i_sig] < rel + 10:
+            return None
+        mv = m.F[i_sig] - m.F[i_pre]
+        if not np.isfinite(mv) or mv == 0:
+            return None
+        side = 1 if mv > 0 else -1
+        return dict(day=day, i_sig=i_sig, i_from=i_sig + 1, side=side, ustop=float(m.F[i_pre]), n_sessions=None,
+                    kind="single", i_end_fixed=None, katr=None, rel=rel)
+
+    def candidates(self, book, period):
+        out = []
+        for day, rel in sorted(release_days(book).items()):
+            if day in book.day_pos and in_p(day, period):
+                sp = self.spec(book, day, rel)
+                if sp:
+                    out.append(sp)
+        return out
+
+    def twin(self, book, sp, day):
+        if day in release_days(book):
+            return None
+        return self.spec(book, day, sp["rel"])
+
+
+class USMomentum:
+    rid, kind = "U1", "single"
+    MULT, LOOK, MIN_PAST = 1.5, 20, 10
+
+    @staticmethod
+    def us_open(day) -> int:
+        from research.hunt.r83.common import et_to_ist_min
+        return et_to_ist_min(pd.Timestamp(day).date(), 9, 30)
+
+    def window(self, book, day):
+        m = book.m
+        t0 = self.us_open(day)
+        i_a = m.at_or_before(day, t0 - 1)
+        i_b = m.at_or_before(day, t0 + 29)
+        if i_a < 0 or i_b < 0 or m.tod[i_a] < t0 - 5 or m.tod[i_b] < t0 + 25:
+            return None
+        return i_a, i_b, float(m.F[i_b] - m.F[i_a])
+
+    def spec_from(self, i_a, i_b, mv, book, day):
+        side = 1 if mv > 0 else -1
+        return dict(day=day, i_sig=i_b, i_from=i_b + 1, side=side, ustop=float(book.m.F[i_a]), n_sessions=None,
+                    kind="single", i_end_fixed=None, katr=None)
+
+    def candidates(self, book, period):
+        hist = []
+        out = []
+        for day in book.m.days:
+            w = self.window(book, day)
+            past = [abs(x) for x in hist[-self.LOOK:] if np.isfinite(x)]
+            if w is not None:
+                i_a, i_b, mv = w
+                if in_p(day, period) and len(past) >= self.MIN_PAST and mv != 0 \
+                        and abs(mv) >= self.MULT * float(np.median(past)):
+                    out.append(self.spec_from(i_a, i_b, mv, book, day))
+                hist.append(mv)
+        return out
+
+    def twin(self, book, sp, day):
+        w = self.window(book, day)
+        if w is None or w[2] == 0:
+            return None
+        return self.spec_from(*w, book, day)
+
+
+RULES = {
+    "S1": SqueezeStraddle(),
+    "S2": DailyDir("S2", "sq_side", 1.0, 7, mask_col="sq_release"),
+    "N1": NR7(),
+    "W1": DailyDir("W1", "wrb_side", 1.0, 5),
+    "P1": DailyDir("P1", "pb_side", 1.5, 5),
+    "V1": VRP(),
+    "E1": EventStraddle(),
+    "E2": EventFollow(),
+    "U1": USMomentum(),
+}
+ORDER = ("S1", "S2", "N1", "W1", "P1", "V1", "E1", "E2", "U1")
+DIRECTIONAL_DAILY = ("S2", "N1", "W1", "P1")
+
+# ---------------------------------------------------------------------------------------------- round 2 (PREREG_ROUND2)
+RULES.update({
+    "R2A": NR7("R2A", edge=True),
+    "R2B": NR7("R2B", itm=2, edge=True),
+    "R2C": NR7("R2C", col="nr7_id", edge=True),
+    "R2D": NR7("R2D", edge=True, books=K.BIG_ENERGY),
+    "R2E": NR7("R2E", edge=True, max_risk=K.R2_MAX_RISK),
+    "R2F": SqueezeStraddle("R2F", n=5, col="sq_release3", edge=True, books=K.ALL_BOOKS),
+    "R2G": SqueezeStraddle("R2G", n=3, col="nr7", edge=True),
+    "R2H": DailyDir("R2H", "qb_side", 1.0, 5, edge=True),
+})
+ORDER2 = ("R2A", "R2B", "R2C", "R2D", "R2E", "R2F", "R2G", "R2H")
+HISTORY_RULES = {"S2": "dir", "N1": "nr7", "W1": "dir", "P1": "dir", "R2A": "nr7", "R2B": "nr7", "R2C": "nr7_id",
+                 "R2D": "nr7", "R2E": "nr7", "R2H": "dir"}

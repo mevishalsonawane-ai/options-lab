@@ -58,8 +58,8 @@ private fun px(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
  * Your Zerodha account, live: positions with square-off, the order book with
  * modify and cancel, the day's trades, delivery holdings, funds and the day's
  * P&L curve - the PC's positions/orderbook/tradebook/holdings/P&L pages in
- * one place. Every action that sends something opens the same review as a
- * ticket: price check, hold-to-send, and your PIN or fingerprint.
+ * one place. 18 Oct (Boss: "same as paper"): a square-off or a sale asks your PIN or fingerprint and goes at once (no review
+ * card), every check still run. In Paper mode a Zerodha position still open is listed and can be closed the same way.
  */
 @Composable
 fun TradeScreen(model: AppModel) {
@@ -98,6 +98,14 @@ fun TradeScreen(model: AppModel) {
         }
     }
 
+    // 18 Oct: in Paper mode, Zerodha's own positions are read too (once a minute while the page is open), so one still open there
+    // is shown and can be closed with the PIN without switching to Live. Reads only.
+    val liveRows by model.livePositions.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    com.optionslab.app.ui.PollWhileStarted(b.loggedIn, s.live) {
+        if (!b.loggedIn || s.live) return@PollWhileStarted
+        while (true) { model.loadLivePositions(); delay(60_000) }
+    }
+
     // Fresh while the page is open: every 15 s in market hours, 2 min outside.
     com.optionslab.app.ui.PollWhileStarted(b.loggedIn, s.live) {
         if (!b.loggedIn || !s.live) return@PollWhileStarted
@@ -118,6 +126,9 @@ fun TradeScreen(model: AppModel) {
             }
         }
         if (!s.live) {
+            // 18 Oct (Boss): a real Zerodha position still open in Paper mode is listed first, and closed with the PIN here.
+            val leftover = liveRows.filter { it.open }
+            if (b.loggedIn && leftover.isNotEmpty()) item { ZerodhaLeftoverCard(model, leftover) }
             paperTrade(model, paperSnap, paperBook, { paperBook = it }, onReset = { resetting = true })
             return@Page
         }
@@ -198,7 +209,7 @@ fun TradeScreen(model: AppModel) {
             title = { Text("Sell ${h.symbol}", style = Type.title) },
             text = {
                 Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
-                    Text("You hold ${h.qty}${if (h.t1 > 0) " (+${h.t1} T1, not yet sellable)" else ""}. The sale opens for review first.", style = Type.bodySmall)
+                    Text("You hold ${h.qty}${if (h.t1 > 0) " (+${h.t1} T1, not yet sellable)" else ""}. Your PIN or fingerprint, then the sale goes to Zerodha.", style = Type.bodySmall)
                     OutlinedTextField(qty, { qty = it.filter(Char::isDigit).take(7) }, label = { Text("Quantity") }, singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 }
@@ -206,11 +217,36 @@ fun TradeScreen(model: AppModel) {
             confirmButton = {
                 TextButton({
                     val n = qty.toIntOrNull() ?: 0
-                    if (n in 1..h.qty) { model.planSellHolding(h, n); selling = null } else model.say("Between 1 and ${h.qty}.")
-                }) { Text("Review sale") }
+                    if (n in 1..h.qty) { model.planSellHolding(h, n, direct = true); selling = null } else model.say("Between 1 and ${h.qty}.")
+                }) { Text("Sell") }
             },
             dismissButton = { TextButton({ selling = null }) { Text("Close") } },
         )
+    }
+}
+
+/**
+ * Paper mode, 18 Oct (Boss): real Zerodha positions still open. Each closes with one tap and the PIN (or fingerprint), straight
+ * to Zerodha: an exit only, exactly the held quantity; no new position is ever opened from here.
+ */
+@Composable
+internal fun ZerodhaLeftoverCard(model: AppModel, open: List<Broker.Position>) {
+    val p = LocalPalette.current
+    LedgerCard(title = "Still open at Zerodha (real money)", accent = p.oxblood) {
+        Note("The app is in Paper mode, but these real positions are open at Zerodha. Closing one asks your PIN and sends the exit to Zerodha; nothing new is opened.")
+        open.forEach { ps -> androidx.compose.runtime.key(ps.symbol, ps.product) {
+            Rule(Modifier.padding(vertical = 6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(ps.symbol, style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                    Text("${if (ps.qty > 0) "LONG" else "SHORT"} ${kotlin.math.abs(ps.qty)} · ${ps.product} · ${rs(ps.pnl, true)}", style = Type.bodySmall.copy(color = p.inkSoft))
+                }
+                BrassButton("Close", tone = p.oxblood) { model.planSquareOff(ps, "Close (Paper mode)", direct = true) }
+            }
+        } }
+        if (open.size > 1) BrassButton("Close all ${open.size} at Zerodha", Modifier.fillMaxWidth().padding(top = 10.dp), tone = p.oxblood) {
+            model.planSquareOffList(open, "Close all (Paper mode)", direct = true)
+        }
     }
 }
 
@@ -240,11 +276,11 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
             Rule(Modifier.padding(vertical = 6.dp))
             PositionRow(ps, by(ps)) { model.rowAction.value = RowTarget.LivePosition(ps) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
-                BrassButton("Square off", tone = p.oxblood) { model.planSquareOff(ps) }
+                BrassButton("Square off", tone = p.oxblood) { model.planSquareOff(ps, direct = true) }
                 BrassButton("Protect (GTT)", tone = p.inkSoft) { onProtect(GttTarget(ps.exchange, ps.symbol, ps.product, ps.qty)) }
             }
         } }
-        if (open.size > 1) BrassButton("Square off all ${open.size}", Modifier.fillMaxWidth().padding(top = 10.dp), tone = p.oxblood) { model.planSquareOffAll() }
+        if (open.size > 1) BrassButton("Square off all ${open.size}", Modifier.fillMaxWidth().padding(top = 10.dp), tone = p.oxblood) { model.planSquareOffAll(direct = true) }
         if (closed.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Text("CLOSED TODAY", style = Type.label.copy(color = p.inkSoft))

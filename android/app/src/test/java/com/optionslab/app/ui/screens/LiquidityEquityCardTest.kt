@@ -10,6 +10,10 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.ForwardRecords
 import com.optionslab.app.data.OrbArms
@@ -75,7 +79,15 @@ class LiquidityEquityCardTest {
         card(q)
         compose.waitForIdle()
         assertTrue(chart("Paper record chart").fetchSemanticsNodes().isNotEmpty())
-        assertTrue(shows(keepNumbersWhole("Liquidity 15+5 · closed paper trades since 6 Oct 2026, per lot after charges, against the backtest")))
+        // COMPACT (15 Oct): what the record is, in its name's dialog (OK closes it).
+        assertFalse(shows(keepNumbersWhole("Liquidity 15+5 · closed paper trades since 6 Oct 2026"), sub = true))
+        compose.onNodeWithContentDescription("About PAPER RECORD").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        assertTrue(shows(keepNumbersWhole("Liquidity 15+5 · closed paper trades since 6 Oct 2026, per lot after charges, against the backtest.")))
+        assertTrue(shows(EQUITY_READS_ONLY))
+        compose.onNodeWithText("OK").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        assertFalse(shows(EQUITY_READS_ONLY))
         listOf("Trades", "Net", "Max drawdown", "Streak").forEach { assertTrue(it, shows(it)) }
         // 5 trades, +₹1,200, the deepest fall −₹1,100, the last one a loss.
         listOf("5", "+₹1,200", "−₹1,100", "1 loss").forEach { assertTrue(it, shows(keepNumbersWhole(it))) }
@@ -152,8 +164,12 @@ class LiquidityEquityCardTest {
                 }
             }
         }
+        // COMPACT (15 Oct): the paper record is in Liquidity's own dialog, not on the card.
+        compose.waitForIdle()
+        assertFalse(shows("PAPER RECORD"))
+        compose.onNodeWithContentDescription("About Liquidity 15+5").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitUntil(10_000) { shows("PAPER RECORD") }
-        assertEquals("one card, under Liquidity 15+5", 1, count("PAPER RECORD"))
+        assertEquals("one card, in Liquidity 15+5's dialog", 1, count("PAPER RECORD"))
         assertTrue(shows(keepNumbersWhole(LiquidityEquity.verdict(EquityFixtures.inLine))))
     }
 
@@ -185,6 +201,10 @@ class LiquidityEquityCardTest {
         assertEquals(500.0, q.net, 1e-6)
         // The same trades as Live vs backtest's.
         assertEquals(ForwardRecords.liquidity(closed).map { it.net }.sorted(), trades.map { it.net }.sorted())
+        // Boss's opt-in Rs 500 give-back trail (R19b): its paper trades stay out of the plain-rules record and chart.
+        val withTrail = closed + pos(LiquidityRules.ARM5.source, 7_000.0, hour = 12).copy(trail = 500.0)
+        assertEquals(trades, ForwardRecords.liquidityEquityTrades(withTrail))
+        assertEquals(ForwardRecords.liquidity(closed), ForwardRecords.liquidity(withTrail))
     }
 }
 

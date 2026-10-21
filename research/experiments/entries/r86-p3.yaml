@@ -1,0 +1,30 @@
+id: r86-p3
+title: 'R86 P3: FII index-option stance at a 250-day extreme -> NIFTY next 5 days'
+family: flow-oi
+date: '2026-10-19'
+doc: research/HUNT_R86_BIG_PLAYERS.md
+hypothesis: 'Pre-registered (research/hunt/r86/PREREG.md): FII index-option stance at a 250-day extreme -> NIFTY next 5 days
+  beats random twins in walk-forward design (net > 0 and > twins, twin p < 0.10, BH q < 0.10 over R86''s 23 tests, not carried
+  by the top 5), then in the final window read once.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (participants/, index_daily, index_1m, equity_1m, derived/r28_gex, fut_daily_continuous;
+  files of 13-15 Oct 2026); CFTC Disaggregated Futures-Only history files downloaded 19 Oct 2026
+period:
+  design: 2012 - 2022 (walk-forward years 2015-2022)
+  holdout: 'final window NOT read: no R86 test passed design (PREREG section 2)'
+instruments:
+- NIFTY
+features:
+- 'signal source: the underlying (index / MCX future) or positioning data about it; no option chart'
+- 'NSE participant OI: FII (callL - callS - putL + putS) / sum, percentile over 250 days'
+model_or_rule: NIFTY future 5 days at pct extremes, walk-forward sign, stop 1.5 ATR14
+settings: research/hunt/r86/r86study.py, r86lib.py; PREREG.md
+prereg: research/hunt/r86/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design walk-forward. P3: 154 trades, net Rs -64,947, win 0.455, without top 5 Rs -271,187, random twins mean Rs
+    -140,886, twin p 0.369, BH q 0.667. Verdict: FAIL (no test passed the design gates; final window not read).'
+  costs: NSE index futures as the index + Rs 40 brokerage, dated STT on the sell leg, exchange, SEBI, stamp, GST, 0.02% slippage
+    a side (0.04% on stops), 5.5%/yr carry (longs pay, shorts receive); 1 lot in force
+holdout_read: false
+verdict: rejected
+notes: Understanding the big players' footprints (Boss, 19 Oct). Research only; nothing changes paper or live.

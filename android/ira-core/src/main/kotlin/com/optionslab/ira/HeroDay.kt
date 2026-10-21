@@ -153,9 +153,12 @@ object HeroDay {
     /** The exits (the deep study's F07), in one sentence. */
     val EXITS: String = "Its exits (F07): ${HeroRules.EXITS}."
 
-    /** The paper-only, not-proven line, always said. */
-    val UNPROVEN: String = "Paper only - it never trades on Zerodha - and not proven: its research is a lottery (a few huge days make " +
-        "all of it), and with its first exits it lost all 13 trades out of sample."
+    /**
+     * The paper-only, not-proven line, always said; since 14 Oct with where its signal comes from (the straddle's premium,
+     * not the default index-only signal, [HeroRules.SIGNAL_SOURCE]).
+     */
+    val UNPROVEN: String = "Its paper book, and not proven (its live copy goes by its own Trade live and Shadow switches, in shadow by default): its research is a lottery (a few huge days make " +
+        "all of it), and with its first exits it lost all 13 trades out of sample. ${HeroRules.SIGNAL_SOURCE}."
 
     /** Today's place among NIFTY's expiries: is it Hero's day, and the next one. */
     fun dayLine(f: Facts, kind: Kind = Kind.WHAT): String {

@@ -239,6 +239,21 @@ object BatterySaver {
     }
 
     fun saving(percent: Int?, charging: Boolean) = !charging && percent != null && percent <= LOW
+
+    /**
+     * 20 Oct, review: the next wait inside a fixed window (the 15-second stop check) - the card's [stepMs] (longer on a low
+     * battery), never past what is left of the window ([remainingMs]). A 12 s step in a 15 s window waited 24 s, and the stops
+     * after it ran late; now the window ends on time whatever the battery. Never negative.
+     */
+    fun nextWait(remainingMs: Long, stepMs: Long): Long = minOf(stepMs.coerceAtLeast(1L), remainingMs).coerceAtLeast(0L)
+
+    /** Every wait [nextWait] makes across a [windowMs] window with [stepMs] steps (no time spent between them): they sum to it. */
+    fun waits(windowMs: Long, stepMs: Long): List<Long> {
+        val out = ArrayList<Long>()
+        var left = windowMs
+        while (left > 0) { val w = nextWait(left, stepMs); out += w; left -= w }
+        return out
+    }
 }
 
 /**

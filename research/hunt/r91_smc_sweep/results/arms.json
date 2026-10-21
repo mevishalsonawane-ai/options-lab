@@ -1,0 +1,830 @@
+{
+ "design": {
+  "arms": {
+   "breadth_donchian": {
+    "trades": 3071,
+    "net": 216929.0
+   },
+   "liquidity_bn": {
+    "trades": 336,
+    "net": 110094.0
+   },
+   "liquidity_bn_fn": {
+    "trades": 588,
+    "net": 209139.0
+   },
+   "orb_signal": {
+    "trades": 1659,
+    "net": null
+   }
+  },
+  "variants": {
+   "B": {
+    "breadth_donchian": {
+     "r89_trades": 135,
+     "share_same_day": 0.8667,
+     "share_same_side": 0.563,
+     "share_opposite": 0.7037,
+     "r89_net_arm_days": -40846.0,
+     "n_arm_days": 117,
+     "r89_net_other_days": 507.0,
+     "n_other": 18,
+     "daily_corr": {
+      "BANKNIFTY": 0.101,
+      "FINNIFTY": 0.087,
+      "MIDCPNIFTY": 0.021,
+      "NIFTY": -0.205,
+      "SENSEX": 0.176
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 27,
+     "share_same_day": 0.7407,
+     "share_same_side": 0.3333,
+     "share_opposite": 0.5556,
+     "r89_net_arm_days": -21987.0,
+     "n_arm_days": 20,
+     "r89_net_other_days": -5103.0,
+     "n_other": 7,
+     "daily_corr": {
+      "BANKNIFTY": -0.004
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 56,
+     "share_same_day": 0.7143,
+     "share_same_side": 0.2857,
+     "share_opposite": 0.5357,
+     "r89_net_arm_days": -41790.0,
+     "n_arm_days": 40,
+     "r89_net_other_days": -3623.0,
+     "n_other": 16,
+     "daily_corr": {
+      "BANKNIFTY": -0.004,
+      "FINNIFTY": 0.052
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 135,
+     "share_same_day": 0.9259,
+     "share_same_side": 0.4519,
+     "share_opposite": 0.6519,
+     "r89_net_arm_days": -24710.0,
+     "n_arm_days": 125,
+     "r89_net_other_days": -15629.0,
+     "n_other": 10
+    }
+   },
+   "N3": {
+    "breadth_donchian": {
+     "r89_trades": 107,
+     "share_same_day": 0.8411,
+     "share_same_side": 0.5514,
+     "share_opposite": 0.6729,
+     "r89_net_arm_days": -29597.0,
+     "n_arm_days": 90,
+     "r89_net_other_days": -39614.0,
+     "n_other": 17,
+     "daily_corr": {
+      "BANKNIFTY": 0.092,
+      "FINNIFTY": 0.075,
+      "MIDCPNIFTY": -0.005,
+      "NIFTY": -0.032,
+      "SENSEX": 0.199
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 21,
+     "share_same_day": 0.8095,
+     "share_same_side": 0.3333,
+     "share_opposite": 0.5714,
+     "r89_net_arm_days": -19371.0,
+     "n_arm_days": 17,
+     "r89_net_other_days": -3531.0,
+     "n_other": 4,
+     "daily_corr": {
+      "BANKNIFTY": -0.014
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 44,
+     "share_same_day": 0.7045,
+     "share_same_side": 0.2273,
+     "share_opposite": 0.5682,
+     "r89_net_arm_days": -32587.0,
+     "n_arm_days": 31,
+     "r89_net_other_days": 3786.0,
+     "n_other": 13,
+     "daily_corr": {
+      "BANKNIFTY": -0.014,
+      "FINNIFTY": 0.032
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 107,
+     "share_same_day": 0.9065,
+     "share_same_side": 0.4393,
+     "share_opposite": 0.6262,
+     "r89_net_arm_days": -62589.0,
+     "n_arm_days": 97,
+     "r89_net_other_days": -6622.0,
+     "n_other": 10
+    }
+   },
+   "ANY": {
+    "breadth_donchian": {
+     "r89_trades": 162,
+     "share_same_day": 0.8395,
+     "share_same_side": 0.5185,
+     "share_opposite": 0.7037,
+     "r89_net_arm_days": -31973.0,
+     "n_arm_days": 136,
+     "r89_net_other_days": 23190.0,
+     "n_other": 26,
+     "daily_corr": {
+      "BANKNIFTY": 0.111,
+      "FINNIFTY": 0.105,
+      "MIDCPNIFTY": 0.015,
+      "NIFTY": -0.178,
+      "SENSEX": 0.143
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 31,
+     "share_same_day": 0.7097,
+     "share_same_side": 0.3226,
+     "share_opposite": 0.5484,
+     "r89_net_arm_days": -1021.0,
+     "n_arm_days": 22,
+     "r89_net_other_days": 893.0,
+     "n_other": 9,
+     "daily_corr": {
+      "BANKNIFTY": 0.078
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 67,
+     "share_same_day": 0.6418,
+     "share_same_side": 0.2537,
+     "share_opposite": 0.4925,
+     "r89_net_arm_days": -20797.0,
+     "n_arm_days": 43,
+     "r89_net_other_days": 7646.0,
+     "n_other": 24,
+     "daily_corr": {
+      "BANKNIFTY": 0.078,
+      "FINNIFTY": 0.047
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 162,
+     "share_same_day": 0.9012,
+     "share_same_side": 0.4012,
+     "share_opposite": 0.6481,
+     "r89_net_arm_days": -1844.0,
+     "n_arm_days": 146,
+     "r89_net_other_days": -6938.0,
+     "n_other": 16
+    }
+   },
+   "S15": {
+    "breadth_donchian": {
+     "r89_trades": 154,
+     "share_same_day": 0.8247,
+     "share_same_side": 0.6104,
+     "share_opposite": 0.6104,
+     "r89_net_arm_days": -50990.0,
+     "n_arm_days": 127,
+     "r89_net_other_days": -28718.0,
+     "n_other": 27,
+     "daily_corr": {
+      "BANKNIFTY": -0.03,
+      "FINNIFTY": 0.087,
+      "MIDCPNIFTY": -0.051,
+      "NIFTY": 0.055,
+      "SENSEX": 0.028
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 26,
+     "share_same_day": 0.7692,
+     "share_same_side": 0.1154,
+     "share_opposite": 0.6923,
+     "r89_net_arm_days": -13336.0,
+     "n_arm_days": 20,
+     "r89_net_other_days": -17091.0,
+     "n_other": 6,
+     "daily_corr": {
+      "BANKNIFTY": -0.063
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 51,
+     "share_same_day": 0.6863,
+     "share_same_side": 0.1569,
+     "share_opposite": 0.5882,
+     "r89_net_arm_days": -22639.0,
+     "n_arm_days": 35,
+     "r89_net_other_days": -20915.0,
+     "n_other": 16,
+     "daily_corr": {
+      "BANKNIFTY": -0.063,
+      "FINNIFTY": -0.009
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 154,
+     "share_same_day": 0.9026,
+     "share_same_side": 0.4351,
+     "share_opposite": 0.6039,
+     "r89_net_arm_days": -48845.0,
+     "n_arm_days": 139,
+     "r89_net_other_days": -30863.0,
+     "n_other": 15
+    }
+   },
+   "TPD": {
+    "breadth_donchian": {
+     "r89_trades": 112,
+     "share_same_day": 0.875,
+     "share_same_side": 0.5625,
+     "share_opposite": 0.7232,
+     "r89_net_arm_days": -26796.0,
+     "n_arm_days": 98,
+     "r89_net_other_days": 976.0,
+     "n_other": 14,
+     "daily_corr": {
+      "BANKNIFTY": 0.086,
+      "FINNIFTY": 0.12,
+      "MIDCPNIFTY": -0.0,
+      "NIFTY": -0.065,
+      "SENSEX": 0.173
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 28,
+     "share_same_day": 0.7143,
+     "share_same_side": 0.2857,
+     "share_opposite": 0.5357,
+     "r89_net_arm_days": -12123.0,
+     "n_arm_days": 20,
+     "r89_net_other_days": -6294.0,
+     "n_other": 8,
+     "daily_corr": {
+      "BANKNIFTY": 0.058
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 50,
+     "share_same_day": 0.66,
+     "share_same_side": 0.22,
+     "share_opposite": 0.54,
+     "r89_net_arm_days": -14030.0,
+     "n_arm_days": 33,
+     "r89_net_other_days": -4815.0,
+     "n_other": 17,
+     "daily_corr": {
+      "BANKNIFTY": 0.058,
+      "FINNIFTY": 0.084
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 112,
+     "share_same_day": 0.9196,
+     "share_same_side": 0.3929,
+     "share_opposite": 0.6786,
+     "r89_net_arm_days": -12663.0,
+     "n_arm_days": 103,
+     "r89_net_other_days": -13157.0,
+     "n_other": 9
+    }
+   },
+   "T2R": {
+    "breadth_donchian": {
+     "r89_trades": 188,
+     "share_same_day": 0.8138,
+     "share_same_side": 0.5319,
+     "share_opposite": 0.6596,
+     "r89_net_arm_days": -58234.0,
+     "n_arm_days": 153,
+     "r89_net_other_days": -3666.0,
+     "n_other": 35,
+     "daily_corr": {
+      "BANKNIFTY": 0.084,
+      "FINNIFTY": 0.135,
+      "MIDCPNIFTY": 0.026,
+      "NIFTY": -0.08,
+      "SENSEX": 0.169
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 42,
+     "share_same_day": 0.7381,
+     "share_same_side": 0.3571,
+     "share_opposite": 0.5476,
+     "r89_net_arm_days": -42092.0,
+     "n_arm_days": 31,
+     "r89_net_other_days": -17820.0,
+     "n_other": 11,
+     "daily_corr": {
+      "BANKNIFTY": 0.001
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 79,
+     "share_same_day": 0.6962,
+     "share_same_side": 0.3165,
+     "share_opposite": 0.519,
+     "r89_net_arm_days": -56711.0,
+     "n_arm_days": 55,
+     "r89_net_other_days": -32637.0,
+     "n_other": 24,
+     "daily_corr": {
+      "BANKNIFTY": 0.001,
+      "FINNIFTY": 0.103
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 188,
+     "share_same_day": 0.9202,
+     "share_same_side": 0.5532,
+     "share_opposite": 0.5266,
+     "r89_net_arm_days": -34797.0,
+     "n_arm_days": 173,
+     "r89_net_other_days": -27103.0,
+     "n_other": 15
+    }
+   },
+   "RR2": {
+    "breadth_donchian": {
+     "r89_trades": 77,
+     "share_same_day": 0.8961,
+     "share_same_side": 0.5325,
+     "share_opposite": 0.7532,
+     "r89_net_arm_days": -13497.0,
+     "n_arm_days": 69,
+     "r89_net_other_days": -1124.0,
+     "n_other": 8,
+     "daily_corr": {
+      "BANKNIFTY": 0.144,
+      "FINNIFTY": 0.047,
+      "MIDCPNIFTY": 0.026,
+      "NIFTY": -0.082,
+      "SENSEX": 0.125
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 15,
+     "share_same_day": 0.7333,
+     "share_same_side": 0.2667,
+     "share_opposite": 0.6667,
+     "r89_net_arm_days": -1512.0,
+     "n_arm_days": 11,
+     "r89_net_other_days": -1404.0,
+     "n_other": 4,
+     "daily_corr": {
+      "BANKNIFTY": 0.068
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 33,
+     "share_same_day": 0.6667,
+     "share_same_side": 0.1818,
+     "share_opposite": 0.5758,
+     "r89_net_arm_days": -4888.0,
+     "n_arm_days": 22,
+     "r89_net_other_days": 1060.0,
+     "n_other": 11,
+     "daily_corr": {
+      "BANKNIFTY": 0.068,
+      "FINNIFTY": 0.018
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 77,
+     "share_same_day": 0.9351,
+     "share_same_side": 0.3506,
+     "share_opposite": 0.7143,
+     "r89_net_arm_days": -8249.0,
+     "n_arm_days": 72,
+     "r89_net_other_days": -6373.0,
+     "n_other": 5
+    }
+   }
+  }
+ },
+ "final": {
+  "arms": {
+   "breadth_donchian": {
+    "trades": 1225,
+    "net": 169712.0
+   },
+   "liquidity_bn": {
+    "trades": 136,
+    "net": 8211.0
+   },
+   "liquidity_bn_fn": {
+    "trades": 238,
+    "net": 8795.0
+   },
+   "orb_signal": {
+    "trades": 690,
+    "net": null
+   }
+  },
+  "variants": {
+   "B": {
+    "breadth_donchian": {
+     "r89_trades": 44,
+     "share_same_day": 0.75,
+     "share_same_side": 0.4545,
+     "share_opposite": 0.6818,
+     "r89_net_arm_days": 32541.0,
+     "n_arm_days": 33,
+     "r89_net_other_days": -17298.0,
+     "n_other": 11,
+     "daily_corr": {
+      "BANKNIFTY": 0.116,
+      "FINNIFTY": 0.099,
+      "MIDCPNIFTY": 0.013,
+      "NIFTY": 0.014,
+      "SENSEX": 0.001
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 11,
+     "share_same_day": 0.7273,
+     "share_same_side": 0.1818,
+     "share_opposite": 0.5455,
+     "r89_net_arm_days": 14665.0,
+     "n_arm_days": 8,
+     "r89_net_other_days": -4643.0,
+     "n_other": 3,
+     "daily_corr": {
+      "BANKNIFTY": -0.23
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 22,
+     "share_same_day": 0.7273,
+     "share_same_side": 0.1364,
+     "share_opposite": 0.5909,
+     "r89_net_arm_days": 25206.0,
+     "n_arm_days": 16,
+     "r89_net_other_days": -4751.0,
+     "n_other": 6,
+     "daily_corr": {
+      "BANKNIFTY": -0.23,
+      "FINNIFTY": -0.012
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 44,
+     "share_same_day": 0.9091,
+     "share_same_side": 0.4318,
+     "share_opposite": 0.6591,
+     "r89_net_arm_days": 18572.0,
+     "n_arm_days": 40,
+     "r89_net_other_days": -3329.0,
+     "n_other": 4
+    }
+   },
+   "N3": {
+    "breadth_donchian": {
+     "r89_trades": 34,
+     "share_same_day": 0.8235,
+     "share_same_side": 0.5294,
+     "share_opposite": 0.7059,
+     "r89_net_arm_days": 38220.0,
+     "n_arm_days": 28,
+     "r89_net_other_days": -6988.0,
+     "n_other": 6,
+     "daily_corr": {
+      "BANKNIFTY": 0.124,
+      "FINNIFTY": 0.091,
+      "MIDCPNIFTY": 0.019,
+      "NIFTY": 0.013,
+      "SENSEX": 0.006
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 7,
+     "share_same_day": 1.0,
+     "share_same_side": 0.1429,
+     "share_opposite": 0.8571,
+     "r89_net_arm_days": 11072.0,
+     "n_arm_days": 7,
+     "r89_net_other_days": 0.0,
+     "n_other": 0,
+     "daily_corr": {
+      "BANKNIFTY": -0.259
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 14,
+     "share_same_day": 0.8571,
+     "share_same_side": 0.1429,
+     "share_opposite": 0.7143,
+     "r89_net_arm_days": 21655.0,
+     "n_arm_days": 12,
+     "r89_net_other_days": 2209.0,
+     "n_other": 2,
+     "daily_corr": {
+      "BANKNIFTY": -0.259,
+      "FINNIFTY": -0.09
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 34,
+     "share_same_day": 0.9706,
+     "share_same_side": 0.5,
+     "share_opposite": 0.6471,
+     "r89_net_arm_days": 33712.0,
+     "n_arm_days": 33,
+     "r89_net_other_days": -2480.0,
+     "n_other": 1
+    }
+   },
+   "ANY": {
+    "breadth_donchian": {
+     "r89_trades": 59,
+     "share_same_day": 0.8136,
+     "share_same_side": 0.3898,
+     "share_opposite": 0.7458,
+     "r89_net_arm_days": 28379.0,
+     "n_arm_days": 48,
+     "r89_net_other_days": -15305.0,
+     "n_other": 11,
+     "daily_corr": {
+      "BANKNIFTY": 0.127,
+      "FINNIFTY": 0.1,
+      "MIDCPNIFTY": 0.016,
+      "NIFTY": -0.0,
+      "SENSEX": 0.053
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 13,
+     "share_same_day": 0.7692,
+     "share_same_side": 0.1538,
+     "share_opposite": 0.6154,
+     "r89_net_arm_days": 16004.0,
+     "n_arm_days": 10,
+     "r89_net_other_days": -4643.0,
+     "n_other": 3,
+     "daily_corr": {
+      "BANKNIFTY": -0.207
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 28,
+     "share_same_day": 0.6786,
+     "share_same_side": 0.1071,
+     "share_opposite": 0.5714,
+     "r89_net_arm_days": 27691.0,
+     "n_arm_days": 19,
+     "r89_net_other_days": -5128.0,
+     "n_other": 9,
+     "daily_corr": {
+      "BANKNIFTY": -0.207,
+      "FINNIFTY": -0.018
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 59,
+     "share_same_day": 0.8814,
+     "share_same_side": 0.3898,
+     "share_opposite": 0.678,
+     "r89_net_arm_days": 17330.0,
+     "n_arm_days": 52,
+     "r89_net_other_days": -4256.0,
+     "n_other": 7
+    }
+   },
+   "S15": {
+    "breadth_donchian": {
+     "r89_trades": 45,
+     "share_same_day": 0.7778,
+     "share_same_side": 0.5556,
+     "share_opposite": 0.5778,
+     "r89_net_arm_days": 30315.0,
+     "n_arm_days": 35,
+     "r89_net_other_days": -18738.0,
+     "n_other": 10,
+     "daily_corr": {
+      "BANKNIFTY": -0.013,
+      "FINNIFTY": -0.033,
+      "MIDCPNIFTY": 0.013,
+      "NIFTY": 0.063,
+      "SENSEX": 0.064
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 12,
+     "share_same_day": 0.6667,
+     "share_same_side": 0.0833,
+     "share_opposite": 0.5833,
+     "r89_net_arm_days": -3088.0,
+     "n_arm_days": 8,
+     "r89_net_other_days": -7506.0,
+     "n_other": 4,
+     "daily_corr": {
+      "BANKNIFTY": -0.025
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 21,
+     "share_same_day": 0.8095,
+     "share_same_side": 0.1429,
+     "share_opposite": 0.6667,
+     "r89_net_arm_days": -4128.0,
+     "n_arm_days": 17,
+     "r89_net_other_days": -7506.0,
+     "n_other": 4,
+     "daily_corr": {
+      "BANKNIFTY": -0.025,
+      "FINNIFTY": -0.181
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 45,
+     "share_same_day": 0.9556,
+     "share_same_side": 0.5111,
+     "share_opposite": 0.5778,
+     "r89_net_arm_days": 12558.0,
+     "n_arm_days": 43,
+     "r89_net_other_days": -982.0,
+     "n_other": 2
+    }
+   },
+   "TPD": {
+    "breadth_donchian": {
+     "r89_trades": 42,
+     "share_same_day": 0.7619,
+     "share_same_side": 0.4524,
+     "share_opposite": 0.6905,
+     "r89_net_arm_days": 22374.0,
+     "n_arm_days": 32,
+     "r89_net_other_days": -17101.0,
+     "n_other": 10,
+     "daily_corr": {
+      "BANKNIFTY": 0.121,
+      "FINNIFTY": 0.112,
+      "MIDCPNIFTY": 0.016,
+      "NIFTY": 0.013,
+      "SENSEX": 0.001
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 10,
+     "share_same_day": 0.7,
+     "share_same_side": 0.2,
+     "share_opposite": 0.5,
+     "r89_net_arm_days": 14204.0,
+     "n_arm_days": 7,
+     "r89_net_other_days": -4643.0,
+     "n_other": 3,
+     "daily_corr": {
+      "BANKNIFTY": -0.229
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 20,
+     "share_same_day": 0.7,
+     "share_same_side": 0.1,
+     "share_opposite": 0.6,
+     "r89_net_arm_days": 17251.0,
+     "n_arm_days": 14,
+     "r89_net_other_days": -4751.0,
+     "n_other": 6,
+     "daily_corr": {
+      "BANKNIFTY": -0.229,
+      "FINNIFTY": 0.012
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 42,
+     "share_same_day": 0.9286,
+     "share_same_side": 0.4524,
+     "share_opposite": 0.6667,
+     "r89_net_arm_days": 8309.0,
+     "n_arm_days": 39,
+     "r89_net_other_days": -3036.0,
+     "n_other": 3
+    }
+   },
+   "T2R": {
+    "breadth_donchian": {
+     "r89_trades": 57,
+     "share_same_day": 0.7719,
+     "share_same_side": 0.5263,
+     "share_opposite": 0.5789,
+     "r89_net_arm_days": 52776.0,
+     "n_arm_days": 44,
+     "r89_net_other_days": -12043.0,
+     "n_other": 13,
+     "daily_corr": {
+      "BANKNIFTY": 0.098,
+      "FINNIFTY": 0.057,
+      "MIDCPNIFTY": 0.001,
+      "NIFTY": 0.02,
+      "SENSEX": 0.004
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 12,
+     "share_same_day": 0.6667,
+     "share_same_side": 0.1667,
+     "share_opposite": 0.5,
+     "r89_net_arm_days": 16565.0,
+     "n_arm_days": 8,
+     "r89_net_other_days": -464.0,
+     "n_other": 4,
+     "daily_corr": {
+      "BANKNIFTY": -0.21
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 25,
+     "share_same_day": 0.64,
+     "share_same_side": 0.12,
+     "share_opposite": 0.52,
+     "r89_net_arm_days": 26320.0,
+     "n_arm_days": 16,
+     "r89_net_other_days": 5924.0,
+     "n_other": 9,
+     "daily_corr": {
+      "BANKNIFTY": -0.21,
+      "FINNIFTY": -0.041
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 57,
+     "share_same_day": 0.9298,
+     "share_same_side": 0.5614,
+     "share_opposite": 0.5263,
+     "r89_net_arm_days": 44063.0,
+     "n_arm_days": 53,
+     "r89_net_other_days": -3329.0,
+     "n_other": 4
+    }
+   },
+   "RR2": {
+    "breadth_donchian": {
+     "r89_trades": 32,
+     "share_same_day": 0.75,
+     "share_same_side": 0.375,
+     "share_opposite": 0.75,
+     "r89_net_arm_days": -14218.0,
+     "n_arm_days": 24,
+     "r89_net_other_days": -21863.0,
+     "n_other": 8,
+     "daily_corr": {
+      "BANKNIFTY": -0.044,
+      "FINNIFTY": 0.052,
+      "MIDCPNIFTY": -0.053,
+      "NIFTY": 0.013,
+      "SENSEX": 0.001
+     }
+    },
+    "liquidity_bn": {
+     "r89_trades": 5,
+     "share_same_day": 0.8,
+     "share_same_side": 0.0,
+     "share_opposite": 0.8,
+     "r89_net_arm_days": -3048.0,
+     "n_arm_days": 4,
+     "r89_net_other_days": -556.0,
+     "n_other": 1,
+     "daily_corr": {
+      "BANKNIFTY": -0.555
+     }
+    },
+    "liquidity_bn_fn": {
+     "r89_trades": 14,
+     "share_same_day": 0.7857,
+     "share_same_side": 0.0714,
+     "share_opposite": 0.7143,
+     "r89_net_arm_days": -1497.0,
+     "n_arm_days": 11,
+     "r89_net_other_days": -4074.0,
+     "n_other": 3,
+     "daily_corr": {
+      "BANKNIFTY": -0.555,
+      "FINNIFTY": 0.027
+     }
+    },
+    "orb_signal": {
+     "r89_trades": 32,
+     "share_same_day": 0.9375,
+     "share_same_side": 0.3438,
+     "share_opposite": 0.8125,
+     "r89_net_arm_days": -32965.0,
+     "n_arm_days": 30,
+     "r89_net_other_days": -3116.0,
+     "n_other": 2
+    }
+   }
+  }
+ }
+}

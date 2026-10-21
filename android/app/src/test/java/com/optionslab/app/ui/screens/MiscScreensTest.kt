@@ -346,6 +346,17 @@ class MiscScreensTest {
         assertEquals(Alerts.Kind.SUCCESS, Alerts.classify("Paper order placed"))
     }
 
+    /** 20 Oct: a red banner is kept in the diary as an error, a warning or a notice (the diagnostics count only errors as errors). */
+    @Test fun aRedBannersDiaryAreaIsItsSeverity() {
+        assertEquals("error", Alerts.diaryArea(Alerts.Kind.ERROR, null, "Positions not protected: 1 open"))
+        assertEquals("notice", Alerts.diaryArea(Alerts.Kind.ERROR, null, "Good morning Boss · 2 things need you"))
+        assertEquals("warning", Alerts.diaryArea(Alerts.Kind.ERROR, null, "Short put is in the money: NIFTY 25000 is below the 25100 strike"))
+        assertEquals("warning", Alerts.diaryArea(Alerts.Kind.ERROR, com.optionslab.ira.DiagErrors.Severity.WARNING, "Live price stream dropped (x); reconnecting"))
+        assertEquals("notice", Alerts.diaryArea(Alerts.Kind.ERROR, com.optionslab.ira.DiagErrors.Severity.NOTICE, "Anything at all"))
+        assertEquals("info", Alerts.diaryArea(Alerts.Kind.SUCCESS, null, "Paper order placed"))
+        assertEquals("info", Alerts.diaryArea(Alerts.Kind.INFO, null, "Not placed"))
+    }
+
     @Test fun aDialogShowsTheAlertsRaisedWhileItIsOpenAndAlertOnPostsOnce() {
         show {
             AlertDialog(onDismissRequest = {}, confirmButton = {}, title = { androidx.compose.material3.Text("A dialog (test)") },

@@ -115,8 +115,11 @@ object KiteStream {
         if (wants[owner] == set) return
         if (set.isEmpty()) wants.remove(owner) else wants[owner] = set
         resubscribe()
-        // The order flow's instruments ride along with the stream; they never wake it or keep it running by themselves.
-        if (set.isNotEmpty() && owner != "index" && owner != OrderFlowLive.OWNER) wake()
+        // The order flow's and the tick zone's instruments ride along with the stream; they never wake it or keep it running
+        // by themselves (12 Oct: the tick zone records only while something else has the stream on; 14 Oct: the OI-wall shadow
+        // log's one option too).
+        if (set.isNotEmpty() && owner != "index" && owner != OrderFlowLive.OWNER && owner != TickZoneRecorder.OWNER &&
+            owner != OiWallShadowHost.OWNER) wake()
     }
 
     private val touched = ConcurrentHashMap<Long, Long>()
@@ -141,15 +144,23 @@ object KiteStream {
     /** The highest price [token] traded on the stream after [sinceMs] (epoch ms), or null when the stream has none kept. */
     fun highSince(token: Long, sinceMs: Long): Double? = paths[token]?.highSince(sinceMs)
 
+    /** The lowest price [token] traded on the stream after [sinceMs] (epoch ms), or null when the stream has none kept. */
+    fun lowSince(token: Long, sinceMs: Long): Double? = paths[token]?.lowSince(sinceMs)
+
     /** Where a resting SELL stop at [trigger] on [token], resting since [sinceMs], filled on the stream's ticks, or null. */
     fun sellStopFill(token: Long, sinceMs: Long, trigger: Double): Double? = paths[token]?.sellStopFill(sinceMs, trigger)
 
     /** The 1-minute candle of [token] that started at [startMs] built from the stream's ticks (open, high, low, close), or null. */
     fun minuteBar(token: Long, startMs: Long): DoubleArray? = paths[token]?.minute(startMs)
 
-    /** The last tick for [token] if it is at most [maxAgeMs] old (market closed = none fresh). */
+    /**
+     * The last tick for [token] if it is at most [maxAgeMs] old (market closed = none fresh). 18 Oct: a tick that reached
+     * the phone "in the future" (the phone's clock stepped back since, e.g. a network time correction) is not fresh either -
+     * its age was negative, so it passed for fresh for as long as the step, however long the stream had been silent (as
+     * [com.optionslab.ira.LiveQuote.pick] already judged it): the caller reads Zerodha's quote instead.
+     */
     fun tick(token: Long, maxAgeMs: Long = 5_000): KiteTicks.Tick? =
-        ticks[token]?.takeIf { System.currentTimeMillis() - it.at <= maxAgeMs }?.tick
+        ticks[token]?.takeIf { System.currentTimeMillis() - it.at in 0..maxAgeMs }?.tick
 
     /**
      * The last tick for [token] when it is fresh enough to DECIDE on ([com.optionslab.ira.LiveQuote.FRESH_MS], 2 s), else
@@ -184,6 +195,8 @@ object KiteStream {
         @Volatile var tokens = 0
         @Volatile var pausedSec: Long? = null
         @Volatile var network: String? = null
+        /** Closed on purpose by the Live check to time the reconnect ([dropForCheck]): not a drop of the stream's health. */
+        @Volatile var byCheck = false
     }
     @Volatile private var conn: Conn? = null
 
@@ -226,7 +239,7 @@ object KiteStream {
     /** Something reads live prices: the app on screen (or unknown), a part following instruments, a quote asked in the last 3 min. */
     private fun needed(): Boolean {
         if (foreground() != false) return true
-        if (wants.keys.any { it != "index" && it != OrderFlowLive.OWNER }) return true
+        if (wants.keys.any { it != "index" && it != OrderFlowLive.OWNER && it != TickZoneRecorder.OWNER && it != OiWallShadowHost.OWNER }) return true
         // The big-move recorder (on by default): kept on 09:15 to F&O's close, never in battery saver ([OrderFlowLive.keepStreamOn]).
         if (runCatching { OrderFlowLive.keepStreamOn() }.getOrDefault(false)) return true
         wanted()                                          // drops touches older than 3 minutes
@@ -244,6 +257,31 @@ object KiteStream {
     fun following(): Int = synchronized(subscribed) { subscribed.size }
 
     /**
+     * Ticks the current connection has brought so far (0: none open). The Live check reads it twice to count ticks a second:
+     * the connection's own counter, read only - nothing is added to the socket thread for it.
+     */
+    fun ticksNow(): Long = conn?.ticks?.get() ?: 0L
+
+    /**
+     * The Live check (18 Oct) times the reconnect: the open connection is closed as if it had dropped, and the loop opens a
+     * new one after its first wait (0.5 s). Not counted as a drop ([Conn.byCheck]). False when no connection is open. The
+     * check never calls this while a position or order is open, nor in its automatic 09:20 run (open positions come first).
+     */
+    @Synchronized   // with start() and stop(): a stop landing mid-way can never leave the status RETRYING with no loop
+    fun dropForCheck(): Boolean {
+        if (loop?.isActive != true) return false
+        val c = conn ?: return false
+        val ws = socket ?: return false
+        if (!c.opened.get() || _status.value != Status.LIVE) return false
+        c.byCheck = true
+        c.end.compareAndSet(null, StreamHealth.Drop(forced = StreamHealth.Cause.CLOSED, message = "closed by the live check"))
+        _status.value = Status.RETRYING
+        ws.cancel()
+        c.done.complete(Unit)
+        return true
+    }
+
+    /**
      * TEST ONLY: true keeps the stream from ever opening its socket (the fake Kite has no stream, and a connect the
      * test did not wait for would race its "no test may reach the internet" check). False in the app, always: the
      * setter throws unless BuildConfig.DEBUG, and only the test application sets it.
@@ -255,7 +293,8 @@ object KiteStream {
     private fun start() {
         if (testOff) return
         if (loop?.isActive == true) return
-        wants["index"] = INDEX_TOKENS
+        // 20 Oct, review: the armed arms' other indices (FINNIFTY, MIDCPNIFTY) kept too, not wiped until the next ORB pass.
+        wants["index"] = INDEX_TOKENS + wants["index"].orEmpty()
         loop = scope.launch {
             var wait = 0L
             var fails = 0
@@ -292,9 +331,12 @@ object KiteStream {
                     watch = watchRunning(), pausedSec = c.pausedSec, tries = if (opened) 1 else fails + 1,
                 )
                 val cause = StreamHealth.cause(d)
+                // 18 Oct: the Live check closed it on purpose ([dropForCheck]) - not counted as a drop anywhere (the order speed
+                // card, the app's health, today's drops in the diary), no "dropped" banner; tried again at once.
+                val check = c.byCheck
                 // Round 2: a drop of a live connection is counted for the order speed card, and the local candles' runs are
                 // broken (a minute that lost ticks is never decided on: the feed is read for it instead).
-                if (opened) {
+                if (opened && !check) {
                     if (downSince == 0L) downSince = now
                     runCatching { OrderTiming.streamDropped() }
                     // The app's own health record: a reconnect of the live stream (a counter; it reconnects by itself).
@@ -304,15 +346,18 @@ object KiteStream {
                 if (opened) fails = 0 else fails++
                 // A connection that never opened is noted once per kind of failure and every tenth try (offline for an hour
                 // is not 120 lines); every live connection lost is noted.
-                if (opened || fails == 1 || cause != lastCause || fails % 10 == 0)
+                if (check) runCatching { Diag.record(StreamHealth.AREA, "live check: closed the connection on purpose to time the reconnect") }
+                else if (opened || fails == 1 || cause != lastCause || fails % 10 == 0)
                     runCatching { Diag.record(StreamHealth.AREA, StreamHealth.diary(d, listOf(token, key))) }
                 lastCause = cause
-                if (opened) {
+                if (opened && !check) {
                     val why = StreamHealth.plain(cause, if (cause == StreamHealth.Cause.PAUSED) d.pausedSec ?: d.silentSec else d.silentSec)
-                    com.optionslab.app.work.Alerts.post("Live price stream dropped ($why); reconnecting", com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true)
+                    com.optionslab.app.work.Alerts.post("Live price stream dropped ($why); reconnecting", com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true,
+                        // 20 Oct: it reconnects by itself (each drop is also counted in the stream's own line): a warning, not an error.
+                        severity = com.optionslab.ira.DiagErrors.Severity.WARNING)
                 }
                 _status.value = Status.RETRYING
-                wait = StreamHealth.wait(wait, d.upMs, cause)
+                wait = if (check) StreamHealth.FIRST_WAIT_MS else StreamHealth.wait(wait, d.upMs, cause)
                 delay(wait)
             }
             _status.value = Status.OFF
@@ -335,7 +380,9 @@ object KiteStream {
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
             if (conn !== c) return
             c.lastFrame = System.currentTimeMillis()
-            onTicks(c, bytes.toByteArray())
+            // 18 Oct (speed): the frame is read through a read-only view of okio's bytes (in place when okio holds them in one
+            // piece, else the single copy it always cost). Each packet is then read in place, with no array of its own.
+            onTicks(c, bytes.asByteBuffer())
         }
         override fun onMessage(webSocket: WebSocket, text: String) { if (conn === c) onText(text) }
         // Zerodha's close frame: its code and reason are kept, and the close is answered (left unanswered, the socket
@@ -430,7 +477,8 @@ object KiteStream {
     private fun resubscribe() {
         val ws = socket ?: return
         if (_status.value != Status.LIVE) return
-        val first = (wants["index"].orEmpty() + wants["positions"].orEmpty() + wants["live-exits"].orEmpty())
+        // 21 Oct, enhancement round 3 (idea 3): the paper book's open positions first too (open positions come first, paper or live).
+        val first = (wants["index"].orEmpty() + wants["positions"].orEmpty() + wants["live-exits"].orEmpty() + wants[Paper.STREAM_OWNER].orEmpty())
         val want = StreamHealth.cap(wanted(), first)
         synchronized(subscribed) {
             val add = want - subscribed
@@ -447,7 +495,7 @@ object KiteStream {
         }
     }
 
-    private fun onTicks(c: Conn, message: ByteArray) {
+    private fun onTicks(c: Conn, message: java.nio.ByteBuffer) {
         val now = System.currentTimeMillis()
         val got = runCatching { KiteTicks.parse(message) }.getOrDefault(emptyList())
         if (got.isEmpty()) return
@@ -482,6 +530,41 @@ object KiteStream {
         if (s != null) runCatching { OrderTiming.clock(now, s) }
     }
 
+    /**
+     * Memory trim (audit, 14 Oct, item 7): the paths and the candles grew with every instrument streamed today and were never
+     * let go. Dropped now: the tick paths of instruments nothing follows any more, and the candles of those quiet for two
+     * hours ([com.optionslab.ira.LiveCandles.IDLE_SEC]). What anything follows now - the open positions, the live exits, the
+     * armed arms' indices, every subscribed or recently quoted instrument - is never touched, however quiet. Memory only (a
+     * background thread; the socket thread's next tick simply starts a new path). Returns (paths, candles) dropped.
+     */
+    fun pruneIdle(nowMs: Long = System.currentTimeMillis()): Pair<Int, Int> {
+        val keep = followedNow()
+        var paths = 0
+        val it = this.paths.keys.iterator()
+        while (it.hasNext()) {
+            val t = it.next()
+            // Looked at again just before it goes (review, 14 Oct): one followed this very moment keeps its path.
+            if (t !in keep && !followsNow(t)) { it.remove(); paths++ }
+        }
+        val candles = runCatching { candles.prune(keep, nowMs / 1000) }.getOrDefault(0)
+        return paths to candles
+    }
+
+    /** Everything followed now: every part's instruments, the ones just quoted, and every subscribed one (memory only). */
+    fun followedNow(): Set<Long> {
+        val keep = HashSet<Long>(MoveRecorder.INDEX_TOKENS.keys)
+        for (v in wants.values) keep.addAll(v)
+        keep.addAll(touched.keys)
+        synchronized(subscribed) { keep.addAll(subscribed) }
+        return keep
+    }
+
+    private fun followsNow(t: Long): Boolean = t in MoveRecorder.INDEX_TOKENS || touched.containsKey(t) || wants.values.any { t in it } ||
+        synchronized(subscribed) { t in subscribed }
+
+    /** The instruments with a tick path and with candles kept (the trim's figures; memory only). */
+    fun keptCounts(): Pair<Int, Int> = paths.size to candles.instruments()
+
     /** The last tick for [token] as it arrived (the exchange's stamp and the phone's arrival time), however old. */
     fun seen(token: Long): Seen? = ticks[token]
 
@@ -510,10 +593,22 @@ object KiteStream {
      */
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
-        ticks.clear(); paths.clear(); candles.clear()
+        ticks.clear(); paths.clear(); candles.clear(); touched.clear()
         synchronized(updates) { updates.clear() }   // an earlier test's order update would answer for the same order id
         lastTickAt = 0L
         _status.value = Status.OFF
+    }
+
+    /** TEST ONLY: the instruments [owner] follows now (21 Oct). Throws unless BuildConfig.DEBUG. */
+    internal fun wantsForTest(owner: String): Set<Long> {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        return wants[owner].orEmpty()
+    }
+
+    /** TEST ONLY: the instruments a price read keeps the stream awake for now (Battery, 14 Oct). Throws unless BuildConfig.DEBUG. */
+    internal fun touchedForTest(): Set<Long> {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        return touched.keys.toSet()
     }
 
     /** TEST ONLY: a text frame as if the socket had brought it (an order update). Throws unless BuildConfig.DEBUG. */
@@ -559,6 +654,16 @@ object KiteStream {
     /** "Live stream: LIVE · drops today 3 · last drop 09:58:45 (no data from Zerodha for 12 s)", from the diary [lines]. */
     fun statusLine(lines: List<String>): String =
         StreamHealth.statusLine(_status.value.name, lines, Market.now().toLocalDateTime())
+
+    /**
+     * The line for [day] (20 Oct): today's as above; an earlier day's (the diagnostics' catch-up the next morning) from that
+     * day's own diary lines - before, the 02:53 retry of 19 Oct said "drops today 0" (20 Oct's) beside 19 Oct's 15 drops.
+     */
+    fun statusLine(lines: List<String>, day: java.time.LocalDate): String {
+        val now = Market.now().toLocalDateTime()
+        return if (day == now.toLocalDate()) statusLine(lines)
+        else StreamHealth.statusLine("the day's record", lines, day.atTime(23, 59, 59), dayWord = "that day")
+    }
 
 
     /** The latest order update per order id that Zerodha pushed on the stream (the newest [UPDATES_KEPT]). */

@@ -242,6 +242,51 @@ class SandboxTest {
         assertEquals(mapOf("ZEEL" to 50, "RELIANCE" to 0, "UNKNOWN" to 10, "BTCUSD.P" to 10), after)
     }
 
+    @Test fun `catch-up cancels the MIS orders of an earlier session so a stale stop never opens a short`() {
+        // 18 Oct, review: an arm bought MIS and rested a SELL SL-M stop and a LIMIT target; the phone was dead through 15:15.
+        val day1 = "2026-09-21"; val day2 = "2026-09-22"
+        var s = sb.newState(at(day1, "09:00"))
+        s = sb.place(s, buy("ZEEL", 100), q(100.0), at(day1, "10:00")).state
+        s = sb.place(s, OrderRequest("ZEEL", "NSE", "SELL", 100, "SL-M", "MIS", triggerPrice = 95.0), q(100.0), at(day1, "10:00")).state
+        s = sb.place(s, OrderRequest("ZEEL", "NSE", "SELL", 100, "LIMIT", "MIS", price = 120.0), q(100.0), at(day1, "10:00")).state
+        // A CNC order of the same day is not the MIS square-off's: it stays.
+        s = sb.place(s, OrderRequest("RELIANCE", "NSE", "BUY", 1, "LIMIT", "CNC", price = 50.0), q(100.0), at(day1, "10:01")).state
+        val stop = s.orders.single { it.priceType == "SL-M" }.orderId
+        val target = s.orders.single { it.priceType == "LIMIT" && it.symbol == "ZEEL" }.orderId
+        // The next morning, after the boundary: a new MIS order placed today (after it) is today's and stays.
+        s = sb.place(s, OrderRequest("RELIANCE", "NSE", "BUY", 1, "LIMIT", "MIS", price = 50.0), q(100.0), at(day2, "09:20")).state
+        val today = s.orders.single { it.symbol == "RELIANCE" && it.product == "MIS" }.orderId
+        s = sb.catchUp(s, at(day2, "09:30")).state
+        assertEquals(0, s.positions.single { it.symbol == "ZEEL" }.quantity)
+        assertEquals(OrderStatus.CANCELLED, s.orders.single { it.orderId == stop }.status)
+        assertEquals(OrderStatus.CANCELLED, s.orders.single { it.orderId == target }.status)
+        assertEquals(OrderStatus.OPEN, s.orders.single { it.symbol == "RELIANCE" && it.product == "CNC" }.status)
+        assertEquals(OrderStatus.OPEN, s.orders.single { it.orderId == today }.status)
+        // Today's price under the old trigger: the stop no longer fills, and nothing goes short.
+        assertFalse(sb.fillRestingStop(s, stop, 90.0, at(day2, "09:31")).result.ok)
+        s = sb.onQuotes(s, mapOf("NSE:ZEEL" to q(90.0)), at(day2, "09:32")).state
+        assertEquals(0, s.positions.single { it.symbol == "ZEEL" }.quantity)
+        // A second catch-up finds nothing more to cancel.
+        assertEquals(s.orders, sb.catchUp(s, at(day2, "09:40")).state.orders)
+    }
+
+    @Test fun `a modify to a zero or negative quantity is refused and the order kept`() {
+        var s = sb.newState(at(mon, "09:00"))
+        s = sb.place(s, buy("ZEEL", 100), q(100.0), at(mon, "09:30")).state
+        s = sb.place(s, OrderRequest("ZEEL", "NSE", "SELL", 100, "SL-M", "MIS", triggerPrice = 95.0), q(100.0), at(mon, "09:30")).state
+        val id = s.orders.single { it.priceType == "SL-M" }.orderId
+        for (bad in listOf(0, -100, -1)) {
+            val r = sb.modify(s, id, OrderChange(quantity = bad), at(mon, "09:31"))
+            assertFalse(r.result.ok, "quantity $bad")
+            assertEquals("Quantity must be positive", r.result.message)
+            assertEquals(100, r.state.orders.single { it.orderId == id }.quantity)
+        }
+        // A positive change still applies.
+        val ok = sb.modify(s, id, OrderChange(quantity = 50), at(mon, "09:31"))
+        assertTrue(ok.result.ok)
+        assertEquals(50, ok.state.orders.single { it.orderId == id }.quantity)
+    }
+
     @Test fun `the position book keeps this session plus carried NRML`() {
         val now = at("2026-08-18", "14:07")
         val boundary = LocalDateTime.of(2026, 8, 18, 3, 0)

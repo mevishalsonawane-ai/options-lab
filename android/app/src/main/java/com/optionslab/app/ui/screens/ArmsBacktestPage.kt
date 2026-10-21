@@ -37,9 +37,10 @@ internal fun ArmsBacktestContent(st: Load<ArmsBacktest.Result>, onRun: () -> Uni
         item { PageTitle("Arms backtest", "ORB, ORB Fresh, ORB Sweep and Range Fade on every recorded day") }
         item {
             LedgerCard {
-                Note("Each arm's own rules on 5-minute BANKNIFTY bars, filled on the real option minute bars: the entry at the " +
+                // COMPACT (15 Oct): how it runs, in a small dialog.
+                ExplainedName("How the backtest runs", listOf("Each arm's own rules on 5-minute BANKNIFTY bars, filled on the real option minute bars: the entry at the " +
                     "next minute after the signal bar, its own stop and target, the 15:10 exit, 0.5 point slippage a side and " +
-                    "Rs 40 a round trip, one lot. The bundled month plus every day this phone has harvested.")
+                    "Rs 40 a round trip, one lot. The bundled month plus every day this phone has harvested."))
                 Spacer(Modifier.height(10.dp))
                 BrassButton("Run", Modifier.fillMaxWidth(), busy = st is Load.Busy) { onRun() }
             }
@@ -68,8 +69,8 @@ internal fun ArmsBacktestContent(st: Load<ArmsBacktest.Result>, onRun: () -> Uni
                 }
                 item {
                     LedgerCard {
-                        Note("Green: profitable in both halves. A t-stat under 2 is not yet an edge, and a month of range days " +
-                            "favours the fades: the more days the phone harvests, the more this table is worth.")
+                        ExplainedName("How to read this table", listOf("Green: profitable in both halves. A t-stat under 2 is not yet an edge, and a month of range days " +
+                            "favours the fades: the more days the phone harvests, the more this table is worth."))
                     }
                 }
             }

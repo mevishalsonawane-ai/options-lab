@@ -74,7 +74,7 @@ object OrderReviewHost {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        if (enabled()) scope.launch { runCatching { ensureLoaded() } }
+        if (enabled()) scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() } }
     }
 
     private fun file(): File? = appContext?.let { File(File(it.noBackupFilesDir, DIR), FILE) }
@@ -158,7 +158,7 @@ object OrderReviewHost {
         val dayStart = ms(day.atStartOfDay())
         val from = if (b0.cutoffMs > 0) maxOf(b0.cutoffMs, dayStart - 4 * 86_400_000L) else dayStart
         val inputs = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(day, from, nowMs) ?: gather(day, from, nowMs) }.getOrNull() } ?: return null
-        val reviewed = withContext(Dispatchers.Default) { OrderReview.review(inputs) }
+        val reviewed = withContext(Dispatchers.Default) { cited(OrderReview.review(inputs)) }
         val before = b0.last
         val dayResult = if (morning && before != null && before.day == day) OrderReview.merge(before, reviewed) else reviewed
         val logs = OrderReview.keep(b0.logs, OrderReview.log(dayResult))
@@ -177,6 +177,26 @@ object OrderReviewHost {
         runCatching { Diag.record("orders", "reviewed $day${if (morning) " (MCX catch-up)" else ""}: ${reviewed.orders} orders, ${reviewed.trades} trades, " +
             "${reviewed.flaws.size} flaws, ${patterns.size} recurring") }
         return dayResult
+    }
+
+    /**
+     * [d]'s flaws with the research they touch (13 Oct, the shared knowledge): a charges-ate-the-day or re-entry flaw cites R14's
+     * charges-versus-edge finding, a slippage flaw the real spread baseline (h24), a give-back the profit-lock study, and so on
+     * ([com.optionslab.ira.SharedKnowledge.flawCite]). Words in the flaw's evidence only: the flaws found, their counts and their
+     * rupees are the review's own, unchanged. Before the knowledge is built: as found.
+     */
+    internal fun cited(d: OrderReview.Day): OrderReview.Day {
+        val s = SharedKnowledgeHost.snapshot
+        if (s.size == 0 || d.flaws.isEmpty()) return d
+        var n = 0
+        val flaws = d.flaws.map { f ->
+            if (f.evidence.contains("research:")) return@map f
+            val c = runCatching { com.optionslab.ira.SharedKnowledge.flawCite(s, f.category.key, f.strategy) }.getOrNull() ?: return@map f
+            n++
+            f.copy(evidence = "${f.evidence} - $c")
+        }
+        if (n > 0) SharedKnowledgeHost.read("Order review", "the research behind $n flaw${if (n == 1) "" else "s"} (R14's charges vs edge, the real spread)")
+        return d.copy(flaws = flaws)
     }
 
     /** The parameter-like patterns asked of the strategy lab (once per pattern per [REASK_DAYS]); every queued one handed over again. */
@@ -313,11 +333,12 @@ object OrderReviewHost {
         return serious to misfires
     }
 
-    /** Every order and trade in [from]..[to] for [day], from memory and the app's own files (no network). A worker thread. */
-    private suspend fun gather(day: LocalDate, from: Long, to: Long): OrderReview.Inputs {
-        val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
+    /**
+     * The orders placed in [from]..[to] with who placed each ([owners]' labels): Zerodha's order book as the app's regular
+     * passes last read it (never read for this) and the paper book. Memory only. Also the day's diagnostics' orders (G3).
+     */
+    internal fun ordersIn(owners: Map<String, String>, from: Long, to: Long): List<OrderReview.Order> {
         val orders = ArrayList<OrderReview.Order>()
-        // Zerodha's order book as the app's regular passes last read it (never read for this).
         runCatching { AppState.orders.value?.value }.getOrNull()?.forEach { o ->
             val at = kiteMs(o.placedAt) ?: return@forEach
             if (at !in from..to) return@forEach
@@ -333,6 +354,13 @@ object OrderReviewHost {
             orders += OrderReview.Order("paper:${o.orderId}", OrderReview.Venue.PAPER, strategy, o.symbol, o.action, o.quantity, o.filledQuantity, o.status,
                 o.rejectionReason.orEmpty(), at, o.averagePrice?.toDouble() ?: 0.0, o.priceType, manual = strategy == "Manual")
         }
+        return orders
+    }
+
+    /** Every order and trade in [from]..[to] for [day], from memory and the app's own files (no network). A worker thread. */
+    private suspend fun gather(day: LocalDate, from: Long, to: Long): OrderReview.Inputs {
+        val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
+        val orders = ArrayList(ordersIn(owners, from, to))
         // The arms' trades as the trade manager records each (every arm is hooked), with the original rules' exit.
         runCatching { TradeManagerHost.ensureLoaded() }
         val records = runCatching { TradeManagerHost.records.value }.getOrDefault(emptyList())
@@ -397,7 +425,11 @@ object OrderReviewHost {
         val live = runCatching { AppSettings.load().live }.getOrDefault(false)
         // Liquidity's fill quality that day (12 Oct): the bid/ask, depth and timing at its signals and fills, as notes (facts).
         val quality = runCatching { LiquidityTest.reviewNotes(day) }.getOrDefault(emptyList())
-        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to, protections, errors, live, fillNotes = quality)
+        // The pre-trade checks in shadow (13 Oct, R17): the charges check and smart stop at each paper entry, as notes (facts).
+        val pretrade = runCatching { PreTradeShadow.reviewNotes(day) }.getOrDefault(emptyList())
+        // The OI-wall check in shadow (14 Oct, R26 rule P): on an expiry day, whether it fired and its ticket in points (a record only).
+        val oiWall = if (com.optionslab.app.BuildConfig.GOLD) emptyList() else runCatching { OiWallShadowHost.reviewNotes(day) }.getOrDefault(emptyList())
+        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to, protections, errors, live, fillNotes = quality + pretrade + oiWall)
     }
 
     /** The ORB family's entry window on [day] (after its opening range, to its last entry and two minutes for the order); else null. */

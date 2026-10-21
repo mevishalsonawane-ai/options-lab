@@ -99,6 +99,9 @@ object GrammarArm {
 
     private fun ready() = ::file.isInitialized
 
+    /** Its book can be read now (15 Oct cleanup: a read before that counts as "holding", so nothing is switched off on it). */
+    fun readyForCleanup(): Boolean = ready()
+
     /** The lab's switch (the strategy lab's builds only; never in IraGoldAlgo). */
     fun enabled(): Boolean = VariantRunner.enabled()
 
@@ -166,7 +169,7 @@ object GrammarArm {
             IdeaView(x, b.positions.firstOrNull { it.idea == x.id && it.open }, nets, GrammarPaper.judge(nets, x.expect)?.why)
         }, b.log.takeLast(30))
         // The trade manager's one call: SHADOW (an unlisted family records only); this arm's own exits stay authoritative.
-        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(b, it) }) }
+        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(b, it) }, owner = "grammar") }
     }
 
     private fun managerId(p: Pos): String = "${GrammarPaper.FAMILY}:${p.symbol}:${p.entryTime}"
@@ -243,7 +246,7 @@ object GrammarArm {
 
     /** Every approved idea not hosted yet (and never stopped) taken in while there is room. True when [b] changed. */
     private fun adopt(b: Book): Boolean {
-        if (!enabled()) return false
+        if (!enabled() || HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.FORGE)) return false
         val forge = runCatching { VariantRunner.forge.value }.getOrNull() ?: return false
         var changed = false
         for (r in forge.records) {
@@ -285,7 +288,7 @@ object GrammarArm {
         val v = _view.value
         val act = v.active
         return "$LABEL: ${act.size} of ${GrammarPaper.MAX_HOSTED} on paper" + act.joinToString("") { iv ->
-            " · ${iv.idea.id} ${iv.nets.size} trades %,.0f".format(Locale.ENGLISH, iv.nets.sum()) + (if (iv.open != null) " (holding)" else "")
+            " · %s %d trades %,.0f".format(Locale.ENGLISH, iv.idea.id, iv.nets.size, iv.nets.sum()) + (if (iv.open != null) " (holding)" else "")
         } + (v.ideas.count { !it.idea.active }.takeIf { it > 0 }?.let { " · $it stopped" } ?: "")
     }
 
@@ -296,13 +299,15 @@ object GrammarArm {
         if (!ready() || !enabled() || !Market.isTradingDay()) return
         lock.withLock {
             val b = book()
-            var changed = adopt(b)
+            // 15 Oct (Boss's cleanup): hidden, it hosts no new idea and takes no new entry; what it holds still exits by its rules.
+            val hidden = HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.FORGE)
+            var changed = if (hidden) false else adopt(b)
             if (b.ideas.none { it.active } && b.positions.none { it.open }) { if (changed) save(b); return@withLock }
             val now = Market.now().toLocalDateTime().withNano(0)
             changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true } || changed
             changed = judgeAll(b) || changed
             for (i in b.ideas.indices) {
-                if (!b.ideas[i].active) continue
+                if (!b.ideas[i].active || hidden) continue
                 changed = runCatching { enter(b, i, now) }.getOrElse { note(b, "${b.ideas[i].id}: entry check failed: ${it.javaClass.simpleName}"); true } || changed
             }
             val closed = b.positions.count { !it.open }
@@ -412,7 +417,8 @@ object GrammarArm {
         // The account-wide guard (paper: it refuses nothing today, but every entry asks it).
         Guard.check(Guard.paperOrder(c, "BUY", 1, 0.0), null, exit = false, paper = true).takeIf { it.isNotEmpty() }
             ?.let { return refused("account guard: " + it.joinToString(" ")) }
-        val placed = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
+        runCatching { LiveRecorder.signal("Grammar ${x.id}", c.symbol, u, right.name, null, paper = true) }
+        val placed = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, auto = LABEL, mirror = ExposureCapHost.NO_LIVE)
         val fill = placed.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
             placed.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }

@@ -60,6 +60,17 @@ object StrategyForge {
         E.VIX_DIVERGENCE, E.PREV_DAY_BREAK, E.SQUEEZE_BREAK)
     val FILTERS: List<ShadowSim.Filter> = ShadowSim.Filter.entries.toList()
 
+    /**
+     * 14 Oct (Boss: "all the indicators and strategies should be on the regular funds/index, and on the basis of that we buy
+     * options; make this default"): the entries the forge draws from. By default only those read from the index; an entry
+     * read from the options themselves ([ShadowSim.Entry.optionDerived], OI build-up) only when [optionDerived] is asked for
+     * (off unless Boss switches it on). Its old ideas stay in the book, labelled ([OPTION_DERIVED]).
+     */
+    fun entriesFor(optionDerived: Boolean = false): List<ShadowSim.Entry> = if (optionDerived) ENTRIES else ENTRIES.filterNot { it.optionDerived }
+
+    /** How an idea whose entry is read from the options is labelled wherever it is shown or logged. */
+    const val OPTION_DERIVED = "option-derived signal, not the default"
+
     /** The exit blocks (each with a premium stop: a candidate never runs without one). */
     enum class ExitBlock(val words: String) {
         FIXED("fixed premium stop and target"), NO_PROGRESS("the no-progress exit"), TIME_STOP("a time stop"), INDEX_LEVEL("an index-level exit"),
@@ -83,7 +94,10 @@ object StrategyForge {
 
     data class Candidate(val n: Int, val born: LocalDate, val underlying: String, val rules: ShadowSim.Rules, val exit: ExitBlock) {
         val id: String get() = "F$n"
-        val name: String get() = "$id ${rules.entry.words} ${underlying.lowercase(Locale.ENGLISH).replaceFirstChar { it.uppercase() }} ${rules.barMin}m"
+        /** Its entry is read from the options, not the index (14 Oct): not the default, and said so in its [name]. */
+        val optionDerived: Boolean get() = rules.entry.optionDerived
+        val name: String get() = "$id ${rules.entry.words} ${underlying.lowercase(Locale.ENGLISH).replaceFirstChar { it.uppercase() }} ${rules.barMin}m" +
+            if (optionDerived) " ($OPTION_DERIVED)" else ""
         val blocks: List<String> get() = listOf(key(rules.entry), key(exit)) + rules.filters.map { key(it) }
     }
 
@@ -152,9 +166,13 @@ object StrategyForge {
 
     private fun <T> one(xs: List<T>, rng: DiscoveryStats.Rng): T = xs[rng.nextInt(xs.size)]
 
-    /** One candidate numbered [n], born [day], on one of [underlyings]: blocks by [w], the parameters from small grids. */
-    fun generate(n: Int, day: LocalDate, underlyings: List<String>, w: Map<String, Pair<Double, Double>>, rng: DiscoveryStats.Rng): Candidate {
-        val entry = ShadowSim.Entry.valueOf(pick(ENTRIES.map { key(it) }, w, rng).substringAfter(':'))
+    /**
+     * One candidate numbered [n], born [day], on one of [underlyings]: blocks by [w], the parameters from small grids. Its
+     * entry is read from the index unless [optionDerived] is asked for ([entriesFor]).
+     */
+    fun generate(n: Int, day: LocalDate, underlyings: List<String>, w: Map<String, Pair<Double, Double>>, rng: DiscoveryStats.Rng,
+                 optionDerived: Boolean = false): Candidate {
+        val entry = ShadowSim.Entry.valueOf(pick(entriesFor(optionDerived).map { key(it) }, w, rng).substringAfter(':'))
         val exit = ExitBlock.valueOf(pick(ExitBlock.entries.map { key(it) }, w, rng).substringAfter(':'))
         val filters = if (rng.nextDouble() < 0.5) setOf(ShadowSim.Filter.valueOf(pick(FILTERS.map { key(it) }, w, rng).substringAfter(':')))
             else emptySet()
@@ -236,33 +254,56 @@ object StrategyForge {
 
     // ---- the night ---------------------------------------------------------------------------------------------------------
 
-    data class Night(val book: Book, val made: List<Record>, val stoppedEarly: Boolean, val ms: Long)
+    /** [skipped]: the ideas not tested because the shared knowledge says the research already rejected them (name, why). */
+    data class Night(val book: Book, val made: List<Record>, val stoppedEarly: Boolean, val ms: Long,
+                     val skipped: List<Pair<String, String>> = emptyList())
+
+    /** A generated idea is drawn again at most this many times when the research already rejected it. */
+    const val AVOID_TRIES = 4
 
     /**
      * One night: up to [n] candidates (deterministic for [day] and the book), each counted as tried and backtested on
      * [history] (per index, oldest first), the false-discovery check across every p ever, survivors into the forward test
      * while there is room. Stops when [nowMs] passes [budgetMs] or [cancelled] says so (what was not made is not counted).
+     *
+     * The shared knowledge (13 Oct, [SharedKnowledge]): [avoid] says why an idea the research or the experiment log already
+     * rejected is not tested again (it is drawn again, [AVOID_TRIES] at most, and listed in [Night.skipped] - never counted as
+     * tried, so the false-discovery count stays honest); [prior] seeds the blocks' weights from the findings (added to their own
+     * record; the exploration floor stays and the gates never read it).
+     *
+     * [optionDerived] (14 Oct): false, the default, draws only entries read from the index; true (an explicit opt-in, off
+     * unless Boss asks) lets the entries read from the options (OI build-up) in too, each labelled ([OPTION_DERIVED]).
      */
     fun night(book: Book, day: LocalDate, history: Map<String, List<ShadowSim.Day>>, nowMs: () -> Long, budgetMs: Long = BUDGET_MS,
-              cancelled: () -> Boolean = { false }, n: Int = PER_NIGHT): Night {
+              cancelled: () -> Boolean = { false }, n: Int = PER_NIGHT, avoid: (Candidate) -> String? = { null },
+              prior: Map<String, Pair<Double, Double>> = emptyMap(), optionDerived: Boolean = false): Night {
         val t0 = nowMs()
         val unders = history.filterValues { it.size >= 30 }.keys.sorted()
         if (unders.isEmpty() || book.lastNight == day) return Night(book, emptyList(), false, 0)
         val rng = DiscoveryStats.Rng(DiscoveryStats.seedOf(day, 17))
         var b = book.copy(lastNight = day)
         val made = ArrayList<Record>()
+        val skipped = ArrayList<Pair<String, String>>()
         var early = false
         val over = { nowMs() - t0 > budgetMs || cancelled() }
         for (i in 0 until n) {
             if (over()) { early = true; break }
-            val c = generate(b.tried + 1, day, unders, weights(b), rng)
+            val w = if (prior.isEmpty()) weights(b) else weights(b).mapValues { (k, v) -> prior[k]?.let { (a, f) -> v.first + a to v.second + f } ?: v }
+            var c = generate(b.tried + 1, day, unders, w, rng, optionDerived)
+            var why = avoid(c)
+            var tries = 1
+            while (why != null && tries < AVOID_TRIES) {
+                skipped += "${c.rules.entry.words} on ${c.underlying}" to why
+                c = generate(b.tried + 1, day, unders, w, rng, optionDerived); why = avoid(c); tries++
+            }
+            if (why != null) { skipped += "${c.rules.entry.words} on ${c.underlying}" to why; continue }
             val bt0 = backtest(c, history[c.underlying].orEmpty(), over)
             // Cut short by the budget: its twin may be unfinished, so it is not judged (nor counted) - tried again another night.
             if (over()) { early = true; break }
             val (nb, rec) = judge(b, c, bt0, history[c.underlying].orEmpty(), day)
             b = nb; made += rec
         }
-        return Night(trim(b), made, early, nowMs() - t0)
+        return Night(trim(b), made, early, nowMs() - t0, skipped)
     }
 
     /**

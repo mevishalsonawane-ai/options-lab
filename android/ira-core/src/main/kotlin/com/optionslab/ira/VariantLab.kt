@@ -537,7 +537,11 @@ object VariantLab {
                             events += Event.Applied(c); promotedFor += v.strategy
                         }
                         Run.LIVE -> if (b.changes.none { it.strategy == v.strategy && it.status == ChangeStatus.OFFERED }) {
-                            val c = Change("C${b.nextId}", v.strategy, v.id, ChangeKind.LIVE_PROPOSAL, ChangeStatus.OFFERED, date, b.currentOf(v.strategy),
+                            // The proposal's "from" is what the LIVE arm trades now (its newest live tune, or its defaults), as
+                            // research() does: the lab's current rules are the paper ones and can differ, so the PIN screen and
+                            // undoLive would show and restore rules live never traded (18 Oct, review).
+                            val liveNow = strategy(v.strategy)?.let { newest(b, it, true) } ?: b.currentOf(v.strategy)
+                            val c = Change("C${b.nextId}", v.strategy, v.id, ChangeKind.LIVE_PROPOSAL, ChangeStatus.OFFERED, date, liveNow,
                                 v.values, why, expect = expect)
                             b = promote(b, v, c, Status.PROPOSED, applied = false)
                             events += Event.Proposed(c); promotedFor += v.strategy
@@ -729,9 +733,25 @@ object VariantLab {
         val c = b.change(id) ?: return null
         if (c.status != ChangeStatus.ACCEPTED || c.kind != ChangeKind.LIVE_PROPOSAL) return null
         if (!pinConfirmed && !restoresDefault(b, id)) return null
-        var out = b.copy(current = b.current + (c.strategy to c.from), changes = b.changes.map { if (it.id == id) it.copy(status = ChangeStatus.UNDONE) else it })
+        // The live arm goes back to [Change.from] (what it traded before), the paper arm and the lab's current rules to what
+        // PAPER traded before the accept: the paper tune just before the one this change made (its defaults when there was
+        // none). The two can differ (a paper promotion before the strategy went live), so one "from" for both put rules on
+        // an account that never traded them (18 Oct, review). Accepted without a session (no tune): paper is left as it is.
+        val paperBack = strategy(c.strategy)?.let { s -> paperBefore(b, s, id) } ?: c.from
+        var out = b.copy(current = b.current + (c.strategy to paperBack), changes = b.changes.map { if (it.id == id) it.copy(status = ChangeStatus.UNDONE) else it })
         out = tune(out, c.strategy, true, from, c.from, id)
-        return tune(out, c.strategy, false, from, c.from, id)
+        return tune(out, c.strategy, false, from, paperBack, id)
+    }
+
+    /** What [s]'s PAPER arm traded before change [id]'s paper tune: the paper tune before it, its defaults when none; with no tune of [id], its newest paper rules. */
+    private fun paperBefore(b: Book, s: Strategy, id: String): Map<String, Double> {
+        val paper = b.tunes.filter { it.strategy == s.key && !it.live }
+        val at = paper.indexOfFirst { it.change == id }
+        return when {
+            at < 0 -> newest(b, s, false)
+            at == 0 -> s.defaults
+            else -> s.values(paper[at - 1].values)
+        }
     }
 
     /**

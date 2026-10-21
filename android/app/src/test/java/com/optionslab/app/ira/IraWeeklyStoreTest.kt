@@ -57,4 +57,34 @@ class IraWeeklyStoreTest : RobolectricTest() {
         assertEquals(emptyList<WeeklyReview.Review>(), IraWeekly.kept())
         assertFalse(IraWeekly.file()!!.exists())
     }
+
+    /**
+     * 18 Oct, review: a file there but unreadable (the Keystore or the disk failed) read as no reviews, and the week's new
+     * review was then saved over it - every earlier one lost. Unreadable is now not "none": nothing is written over it.
+     */
+    @Test fun anUnreadableFileIsNeverSavedOver() = kotlinx.coroutines.runBlocking {
+        val f = IraWeekly.file()!!
+        f.parentFile?.mkdirs()
+        val junk = "not a vault file".toByteArray(Charsets.UTF_8)
+        f.writeBytes(junk)
+        // Unreadable: null to the review maker; the page's card shows none.
+        assertNull(IraWeekly.read())
+        assertEquals(emptyList<WeeklyReview.Review>(), IraWeekly.kept())
+        // A review run (the weekly or a morning report) leaves the file exactly as it was.
+        IraWeekly.prepare(null)
+        assertTrue(f.exists())
+        assertTrue(junk.contentEquals(f.readBytes()))
+    }
+
+    @Test fun aReadableFileAndNoFileStillReadAsBefore() {
+        // No file: an empty list, not null (a first review is made).
+        assertEquals(emptyList<WeeklyReview.Review>(), IraWeekly.read())
+        val mine = listOf(review(LocalDate.of(2026, 10, 12)))
+        Vault.writeFile(IraWeekly.file()!!, WeeklyReview.encodeAll(mine).toByteArray(Charsets.UTF_8))
+        assertEquals(mine, IraWeekly.read())
+        assertEquals(mine, IraWeekly.kept())
+        // An empty file that reads as no reviews: empty, not null.
+        Vault.writeFile(IraWeekly.file()!!, ByteArray(0))
+        assertEquals(emptyList<WeeklyReview.Review>(), IraWeekly.read())
+    }
 }

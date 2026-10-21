@@ -1,0 +1,29 @@
+id: r86c-seller-catalogue
+title: 'R86c 6a: twelve early (09:15-09:44) seller patterns and how often they mark an FII selling day'
+family: market-facts
+date: '2026-10-19'
+doc: research/HUNT_R86C_CATCH_THEM.md
+hypothesis: Describe which early patterns mark heavy FII selling days (lift vs base rate, Fisher exact, BH within the catalogue).
+data_version: Drive lake gdrive:IraAlgo-data-lake index_1m (NIFTY 2017-, BANKNIFTY Aug 2021-, INDIAVIX), equity_1m (59 current
+  index stocks 2019 - 12 Oct 2026), options_rolling_1m WEEK (Aug 2021 -), derived/r28_gex (dte only); files of 13-15 Oct 2026;
+  NSE participant OI as labels only
+period:
+  design: 2019 - 2024 (descriptive)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 12 pattern flags at 09:45 from index, constituents and VIX; FII-sell labels after the close
+model_or_rule: lift table
+settings: research/hunt/r86/PREREG_C.md amendment C-A1
+prereg: research/hunt/r86/PREREG_C.md
+variants_tried: null
+results:
+  summary: 'NIFTY P1: 132 days, FII-sell share 0.371 vs base 0.114 (lift 3.25, BH q 2.5e-15); NIFTY P2: 55 days, FII-sell
+    share 0.4 vs base 0.114 (lift 3.5, BH q 1.4e-07); NIFTY P9: 87 days, FII-sell share 0.264 vs base 0.114 (lift 2.31, BH
+    q 0.0002); BANKNIFTY P1: 107 days, FII-sell share 0.327 vs base 0.12 (lift 2.73, BH q 4.8e-09); BANKNIFTY P2: 45 days,
+    FII-sell share 0.378 vs base 0.12 (lift 3.16, BH q 2e-05); BANKNIFTY P9: 87 days, FII-sell share 0.264 vs base 0.12 (lift
+    2.21, BH q 0.00023). Full table in the doc.'
+  costs: none (description)
+holdout_read: null
+verdict: not-a-test

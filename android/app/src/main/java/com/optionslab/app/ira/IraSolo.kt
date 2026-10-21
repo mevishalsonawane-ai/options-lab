@@ -39,8 +39,14 @@ import com.optionslab.ira.Market as IraMarket
  * research harness. Their trades stay in the record, readable; the new Solo's record starts fresh with its first trade
  * (tagged [SoloMidday.TAG]), so its 60-trade forward test is clean.
  *
- * Never live: Solo has no path to Zerodha - its orders go to the paper account only, and it never offers its setups as
- * trade ideas for approval.
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
+ * Its own orders: this book's go to the paper account only, and it never offers its setups as trade ideas for approval. Its live
+ * path ([com.optionslab.app.data.ArmLive]) starts in Shadow - it records what it would have sent and sends nothing - and, Solo being
+ * Jarvis's, its Shadow cannot be turned off until [provenWhy] passes (review C5, 18 Oct); today it never does.
  */
 internal object IraSolo {
     private const val KEY_ON = "jarvis.solo"
@@ -334,6 +340,16 @@ internal object IraSolo {
     /** Whether Solo holds an open trade (its saved list; no network): the 15-second check runs while it does. */
     fun holding(): Boolean = runCatching { all().any { !it.closed } }.getOrDefault(false)
 
+    /**
+     * [holding] that lets a vault or parse failure through (review, 14 Oct): the start-up's restore counts an unreadable book
+     * as open and starts the watch, where [holding] (and [all]) would read it as empty. A trade without its closed flag
+     * fails too, so it also counts as open.
+     */
+    internal fun holdingOrThrow(): Boolean {
+        val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: "[]")
+        return (0 until a.length()).any { !a.getJSONObject(it).getBoolean("c") }
+    }
+
     /** One pass at [t], after the market watch's gates ([tick]); tests call it directly. */
     internal suspend fun passAt(t: LocalDateTime) = lock.withLock { pass(t) }
 
@@ -499,8 +515,9 @@ internal object IraSolo {
                 noteDay { com.optionslab.ira.SoloDay.late(it, if (clock.isAfter(t)) clock else t) }
                 return LATE
             }
+            runCatching { com.optionslab.app.data.LiveRecorder.signal("Solo", c.symbol, s.underlying, right.name, q.ltp, paper = true) }
             // PAPER ONLY: the paper account's MARKET buy, 1 lot - there is no Zerodha path here.
-            val r = Paper.place(c, "BUY", SoloMidday.LOTS, "MARKET", "MIS", null, null, q)
+            val r = Paper.place(c, "BUY", SoloMidday.LOTS, "MARKET", "MIS", null, null, q, auto = "Jarvis Solo")
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
             if (fill == null) {
                 // Not filled now (a stale quote): cancelled, never left to fill later with no record.
@@ -514,6 +531,10 @@ internal object IraSolo {
             val trade = T(today.toString(), s.underlying, c.symbol, s.call, fill.quantity, fill.price,
                 t.hour * 60 + t.minute - (9 * 60 + 15), s.index, s.stop, s.target, seen, orderId = r.orderId, tag = SoloMidday.TAG, atr = s.atr)
             save(list + trade)
+            // 18 Oct (Boss: every paper strategy present for live too): Solo (midday)'s live path ([com.optionslab.app.data.ArmLive]) -
+            // the same option and lot; its stop is on the index (no premium stop rests), so the live trade follows these exits.
+            runCatching { com.optionslab.app.data.ArmLive.entered(com.optionslab.app.data.ArmLive.Ask(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY,
+                managerId(trade), c, 1, trade.qty, trade.entry)) }
             // Labelled once the trade is recorded: a label that cannot be saved never leaves the position untracked.
             r.orderId?.let { ownerTag("paper:$it", "Jarvis solo · entry") }
             val thinMoved = thinFirst != null
@@ -564,6 +585,8 @@ internal object IraSolo {
         // The trade manager (10 Oct): Solo's open trade handed over (memory only; paper acts by default). It may only want it
         // out sooner - Solo has no target, so nothing is ever extended - and Solo's own exits below come first.
         val mid = if (t.midday && a != null) runCatching { attachManager(t, a) }.getOrNull() else null
+        // 16 Oct: its exits for the position popup's "Exits" line (memory only; cleared when it closes, [finish]).
+        if (t.midday) runCatching { com.optionslab.ira.ArmExits.set(exitsOwner(t), listOf(exitsOf(t))) }
         // The retired Solo's trade, still open when Solo (midday) replaced it: its rules are gone, so it is closed now.
         val walked: Pair<SoloMidday.Open, SoloMidday.Walk>? = if (!t.midday || a == null) null else {
             // From the 12:00 decision minute (the research's entry bar), not the minute the paper order filled.
@@ -619,6 +642,18 @@ internal object IraSolo {
         val lots = (minOf(net, t.qty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
         return Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
     }
+
+    /**
+     * 18 Oct: Solo (midday)'s paper trades of today and those still open, for their live path ([com.optionslab.app.data.ArmLive]):
+     * each with what it holds (0 once closed). The settings vault's copy in memory; null when it cannot be read.
+     */
+    internal fun mirrorLegs(): List<com.optionslab.app.data.ArmLive.PaperLeg>? = runCatching {
+        // A vault that cannot be read is not "no trades": nothing is decided on it.
+        if (com.optionslab.app.security.SecurePrefs.unreadable) return null
+        val today = com.optionslab.app.data.Market.today().toString()
+        all().filter { it.midday && (!it.closed || it.day == today) }
+            .map { com.optionslab.app.data.ArmLive.PaperLeg(managerId(it), com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY, if (it.closed) 0 else it.qty) }
+    }.getOrNull()
 
     /** Solo's trade's id for the trade manager. */
     internal fun managerId(t: T): String = "solo:${t.day}:${t.symbol}:${t.entryMinute}"
@@ -683,7 +718,19 @@ internal object IraSolo {
         return if (q == 0) null else value / q to sells.first().orderId
     }
 
+    private fun exitsOwner(t: T) = "solo|${t.day}|${t.symbol}"
+
+    /** [t]'s exits as the position popup words them: SoloMidday's stop on the index (0.3 ATR), its breakeven lock, out by 14:30. */
+    internal fun exitsOf(t: T): com.optionslab.ira.ArmExits.Entry {
+        val stop = t.atr?.let { SoloMidday.stopLevel(if (t.call) 1 else -1, t.index, it) }
+        return com.optionslab.ira.ArmExits.Entry(exitsOwner(t), "Solo", false, t.symbol, null, null, SoloMidday.EXIT,
+            (stop?.let { "stop on the index at %.2f".format(java.util.Locale.ENGLISH, it) } ?: "stop on the index") + ", breakeven lock")
+    }
+
     private fun finish(t: T, list: List<T>, px: Double?, why: String, exitOrderId: String? = null) {
+        runCatching { com.optionslab.ira.ArmExits.set(exitsOwner(t), emptyList()) }
+        // 18 Oct: its live trade, if any, is sold on the next look ([com.optionslab.app.data.ArmLive]; memory only).
+        if (t.midday) runCatching { com.optionslab.app.data.ArmLive.closed(managerId(t), "paper_exit") }
         val net = px?.let { (it - t.entry) * t.qty - ShadowRules.charges(t.entry, it, t.qty) }
         val done = t.copy(closed = true, exitPrice = px, net = net, exit = why, exitOrderId = exitOrderId)
         val all = list.map { if (it === t) done else it }
@@ -766,8 +813,12 @@ internal object IraSolo {
     /** Solo's record as Jarvis's graduation reads it: none - Solo (midday) never graduates to real money from here. */
     fun closedRecord(): List<com.optionslab.ira.JarvisTrades.Closed> = emptyList()
 
-    /** Why Solo's trades do not go live: always - Solo is paper only, with no path to Zerodha. */
-    fun provenWhy(): String? = "Solo's trades stay on paper always: Solo (midday) is a paper-only test, not proven, and never reaches Zerodha."
+    /**
+     * Why Solo's trades do not go live: always - Solo (midday) is not proven. Its live path stays in Shadow (it records, never sends)
+     * while this is not null ([com.optionslab.app.data.ArmLive.setShadow]).
+     */
+    fun provenWhy(): String? = "Solo's trades stay on paper always: Solo (midday) is a paper-only test, not proven, so its live path stays in shadow " +
+        "(it records what it would trade and never sends an order to Zerodha)."
 
     /** Solo's paper record in one line: Solo (midday)'s, then the retired rules' (kept readable). */
     fun record(list: List<T> = all()): String {

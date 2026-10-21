@@ -43,6 +43,12 @@ class OrderLatencyTest : RobolectricTest() {
         const val LIVE_BUDGET_MS = 150L
         const val FILL_BUDGET_MS = 400L
         const val PAPER_BUDGET_MS = 50L
+        /**
+         * 18 Oct (Boss: "same as paper, directly placing order with pin"): the direct live order, from the Buy tap to the POST
+         * at Zerodha, with the PIN given at once (the pricing runs while the PIN is typed). A generous ceiling (it includes the
+         * contract lookup, the quote and the margin read); the review step it replaced was human time on top of all of it.
+         */
+        const val DIRECT_BUDGET_MS = 1_500L
     }
 
     private val store = androidx.lifecycle.ViewModelStore()
@@ -113,6 +119,48 @@ class OrderLatencyTest : RobolectricTest() {
         println("LATENCY live confirm->POST ms: $toOrder (median ${median(toOrder)}); confirm->fill shown ms: $toFill (median ${median(toFill)})")
         assertTrue("confirm -> order at Zerodha took ${median(toOrder)} ms (budget $LIVE_BUDGET_MS): $toOrder", median(toOrder) < LIVE_BUDGET_MS)
         assertTrue("confirm -> fill shown took ${median(toFill)} ms (budget $FILL_BUDGET_MS): $toFill", median(toFill) < FILL_BUDGET_MS)
+    }
+
+    @Test fun liveDirectTapToOrderStaysWithinBudgetWithOneStepLess() {
+        val k = FakeKite().also { kite = it }
+        k.keepAlive = true
+        k.login()
+        SecurePrefs.putAll(mapOf("g.cutoff" to -1, "g.trades" to 50))
+        val expiry = LocalDate.now().plusDays(9)
+        val sym = "NIFTY26OCT24500CE"
+        k.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", expiry, 24_500.0, "CE", 75)
+        k.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        val m = androidx.lifecycle.ViewModelProvider(store, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory(context as Application))[AppModel::class.java]
+        val direct = ArrayList<Long>()
+        val reviewed = ArrayList<Long>()
+        repeat(6) { run ->
+            k.flat()
+            settledAccount(m)
+            // Before (the review): the tap prices the plan, the review card waits for the swipe, then the PIN, then the send.
+            val r0 = System.nanoTime()
+            m.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null)
+            await("the plan") { (m.plan.value as? Load.Done)?.value }
+            val before = k.placed.size
+            m.sendPlan(reauthed = true)
+            val rPost = await("the order") { k.placed.drop(before).firstOrNull() }
+            await("the fill") { m.sending.value as? Load.Done }
+            m.dismissPlan()
+            k.flat(); settledAccount(m)
+            // Now (direct): the tap, the PIN at once (it is typed while the order is priced), the send.
+            val d0 = System.nanoTime()
+            m.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+            val before2 = k.placed.size
+            m.confirmDirect(m.directOrder.value)
+            val dPost = await("the order") { k.placed.drop(before2).firstOrNull() }
+            await("the fill") { (m.sending.value as? Load.Done)?.value ?: (m.sending.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
+            m.dismissPlan()
+            if (run > 0) { reviewed += (rPost.atNanos - r0) / 1_000_000; direct += (dPost.atNanos - d0) / 1_000_000 }
+        }
+        // Taps (each with the PIN): before - "Review buy order", the swipe on the review card, the PIN's Confirm (3 steps, the
+        // review card read in between); now - "Buy (live)", the PIN's Confirm (2 steps, no card).
+        println("LATENCY live tap->POST, machine time only: review flow (3 steps + the human review) ms $reviewed (median ${median(reviewed)}); " +
+            "direct (2 steps) ms $direct (median ${median(direct)})")
+        assertTrue("tap -> order at Zerodha took ${median(direct)} ms (budget $DIRECT_BUDGET_MS): $direct", median(direct) < DIRECT_BUDGET_MS)
     }
 
     @Test fun anOrderStateIsReadAgainWithinAFewHundredMs() = runBlocking {

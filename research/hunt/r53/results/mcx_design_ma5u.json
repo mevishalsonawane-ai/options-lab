@@ -1,0 +1,87 @@
+{
+ "book": "mcx",
+ "n_twins": 500,
+ "note": "MA5u = MA5 without the one-a-day cap (post-lock correction)",
+ "part": "design",
+ "rules": {
+  "MA5u": {
+   "design_pick": null,
+   "variants": {
+    "hold30": {
+     "avg_loss": -2075.6003383983602,
+     "avg_win": 1613.6077028333332,
+     "costs": 95483.4866806,
+     "days": 55,
+     "gross": -41560.0,
+     "longs": 91,
+     "max_dd": 139638.07672669998,
+     "net": -137043.48668059998,
+     "net_longs": -58392.6422662,
+     "net_per_day": -2491.6997578290907,
+     "net_per_trading_day": -820.6196807221555,
+     "net_shorts": -78650.8444144,
+     "p": 0.9840319361277445,
+     "params": {
+      "hold": 30
+     },
+     "seconds": 15.2,
+     "shorts": 103,
+     "stale_exits": 86,
+     "top5_share": null,
+     "trades": 194,
+     "trades_file": "results/trades/mcx_MA5u_hold30_design.csv.gz",
+     "trading_days": 167,
+     "twin_mean": -88227.0132461902,
+     "twin_p95": -51942.335317205034,
+     "twins": 500,
+     "win_rate": 0.3711340206185567,
+     "worst_day": -30437.6710148
+    },
+    "orig": {
+     "avg_loss": -1899.341723362667,
+     "avg_win": 1870.2390702896553,
+     "costs": 122820.4593892,
+     "days": 55,
+     "gross": 630.0,
+     "longs": 107,
+     "max_dd": 131611.97745189996,
+     "net": -122190.45938920003,
+     "net_longs": -20856.260684200002,
+     "net_per_day": -2221.644716167273,
+     "net_per_trading_day": -731.6793975401199,
+     "net_shorts": -101334.198705,
+     "p": 0.8902195608782435,
+     "params": {
+      "hold": 15
+     },
+     "seconds": 18.5,
+     "shorts": 130,
+     "stale_exits": 81,
+     "top5_share": null,
+     "trades": 237,
+     "trades_file": "results/trades/mcx_MA5u_orig_design.csv.gz",
+     "trading_days": 167,
+     "twin_mean": -94031.6783872682,
+     "twin_p95": -60061.70866989002,
+     "twins": 500,
+     "win_rate": 0.3670886075949367,
+     "worst_day": -35431.912578999996
+    }
+   },
+   "walk_forward": {
+    "design_net": {
+     "hold30": -137043.4866806,
+     "orig": -122190.4593892
+    },
+    "design_pick": null,
+    "orig_wf_net": -119760.4018789,
+    "retune_picks": [
+     "hold30",
+     "hold30",
+     "orig"
+    ],
+    "retune_wf_net": -125552.2971751
+   }
+  }
+ }
+}

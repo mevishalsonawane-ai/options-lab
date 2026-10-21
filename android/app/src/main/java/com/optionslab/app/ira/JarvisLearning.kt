@@ -58,7 +58,7 @@ internal object JarvisLearning {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        if (enabled()) scope.launch { runCatching { ensureLoaded() } }
+        if (enabled()) scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() } }
     }
 
     private fun file(): File? = appContext?.let { File(File(it.noBackupFilesDir, DIR), FILE) }
@@ -95,6 +95,16 @@ internal object JarvisLearning {
     }
 
     // ---- the nightly pass -------------------------------------------------------------------------------------------------
+
+    /**
+     * Memory only: today's pass is due and not done yet (review, 14 Oct: the brain's worker keeps looking after the close
+     * until it is, so a pass the battery budget refused at 15:45 runs once the phone allows it).
+     */
+    fun pendingToday(): Boolean {
+        if (!enabled()) return false
+        val today = Market.today()
+        return passedOn != today && Market.isTradingDay(today) && Market.minuteNow() >= 15 * 60 + 45
+    }
 
     /**
      * Once a trading day after 15:45: the day's learning pass. Cheap when not due (memory only). True when it ran.
@@ -204,7 +214,57 @@ internal object JarvisLearning {
             f.include(java.time.Instant.ofEpochMilli(r.trade.entryMs).atZone(com.optionslab.engine.IST).toLocalDate()) }.getOrDefault(true) }
         // The order review's recurring flaws only (a one-off never becomes a lesson): its own small file, read here.
         val orders = runCatching { com.optionslab.app.data.OrderReviewHost.lessonInputs() }.getOrDefault(emptyList())
-        return AgentLessons.Inputs(today, keptTrips, regime, drift, keptManaged, flow, findingsKept(), incidents, moves, muted, paused, modes, orders = orders)
+        if (orders.isNotEmpty()) com.optionslab.app.data.SharedKnowledgeHost.added("Order review", "${orders.size} recurring-flaw records to my lessons")
+        // 13 Oct (the shared knowledge): the slippage record, the Liquidity paper test and the market study write to the lessons too.
+        val exec = runCatching { execResults() }.getOrDefault(emptyList())
+        val study = runCatching { studyResults(today) }.getOrDefault(emptyList())
+        // 20 Oct: the Candle agent's shapes, its own count against the research (never above building, never a proposal).
+        val candles = appContext?.let { c -> runCatching { com.optionslab.app.data.CandleAgentHost.lessons(c, today) }.getOrDefault(emptyList()) }.orEmpty()
+        return AgentLessons.Inputs(today, keptTrips, regime, drift, keptManaged, flow, findingsKept(), incidents, moves, muted, paused, modes, orders = orders,
+            exec = exec, study = study, candles = candles)
+    }
+
+    /**
+     * The fills judged against the research's execution baseline ([com.optionslab.ira.SharedKnowledge.execResults], memory once the
+     * stores are read): the slippage record's LIVE fills (paper fills are the sandbox's model, never judged) and the Liquidity paper
+     * test's signal-time spreads (read and explained only - Liquidity's behaviour is frozen). Empty before the shared knowledge is built.
+     */
+    private fun execResults(): List<AgentLessons.ExecResult> {
+        val sk = com.optionslab.app.data.SharedKnowledgeHost
+        val s = sk.snapshot
+        if (s.baselines.spreads.isEmpty()) return emptyList()
+        val slips = runCatching { com.optionslab.app.data.FillSlippage.fills() }.getOrDefault(emptyList()).filter { !it.paper }.mapNotNull { f ->
+            val d = runCatching { LocalDate.parse(f.day) }.getOrNull() ?: return@mapNotNull null
+            com.optionslab.ira.SharedKnowledge.FillCheck(d, f.strategy, f.symbol, AgentLessons.minuteOf(f.at), f.rupees / f.intended * 100)
+        }
+        val spreads = runCatching { com.optionslab.app.data.LiquidityTest.fills() }.getOrDefault(emptyList())
+            .filter { it.kind == com.optionslab.ira.FillQuality.Kind.SIGNAL && !it.stale }.mapNotNull { r ->
+                val hs = r.halfSpreadPct ?: return@mapNotNull null
+                com.optionslab.ira.SharedKnowledge.FillCheck(r.day, "Liquidity", r.symbol, AgentLessons.minuteOf(r.atMs), hs)
+            }
+        val a = com.optionslab.ira.SharedKnowledge.execResults(s, slips, "fills")
+        val b = com.optionslab.ira.SharedKnowledge.execResults(s, spreads, "spread")
+        if (slips.isNotEmpty()) {
+            sk.read("Slippage record", "the research's real spread (h24) as each fill's baseline")
+            sk.added("Slippage record", "${slips.size} live fills judged, ${a.sumOf { it.hits }} off the baseline")
+        }
+        if (spreads.isNotEmpty()) {
+            sk.read("Liquidity paper test", "the research's real spread (h24) for each signal's time")
+            sk.added("Liquidity paper test", "${spreads.size} signal spreads judged, ${b.sumOf { it.hits }} off the baseline")
+        }
+        return a + b
+    }
+
+    /**
+     * The market study's latest count as lesson evidence ([com.optionslab.ira.Study.freshResults]): one snapshot a setup, and only
+     * when the kept study was made today (13 Oct review: a stale study sent again would be counted again).
+     */
+    private fun studyResults(today: LocalDate): List<AgentLessons.StudyResult> {
+        val k = IraStudy.state.value
+        val out = com.optionslab.ira.Study.freshResults(k.findings, k.at, today)
+        if (out.isEmpty()) return emptyList()
+        com.optionslab.app.data.SharedKnowledgeHost.added("Market study", "${k.findings.size} setups (${k.findings.count { it.held }} held in both years) to my lessons")
+        return out
     }
 
     /**
@@ -300,8 +360,17 @@ internal object JarvisLearning {
             AgentLessons.AskKind.GROWTH -> Pair(AgentLessons.sayGrowth(b), emptyList<AgentLessons.Lesson>())
             AgentLessons.AskKind.ABOUT -> Pair(AgentLessons.sayAbout(b, a), AgentLessons.about(b, a).take(4))
         }
-        shown = used.map { it.id }; shownText = text; shownAt = System.currentTimeMillis()
-        return text to AgentLessons.facts(used)
+        // 13 Oct (the shared knowledge): an answer about a strategy says the research's verdict beside the lessons, with its source,
+        // and a disagreement plainly (both kept). Memory only.
+        val research = if (a.kind != AgentLessons.AskKind.ABOUT) emptyList() else runCatching {
+            val arm = com.optionslab.ira.SharedKnowledge.armOf(a.tag ?: a.about)
+            val s = com.optionslab.app.data.SharedKnowledgeHost.snapshot
+            if (arm == null || s.size == 0) emptyList() else listOf(com.optionslab.ira.SharedKnowledge.verdict(s, arm).words())
+        }.getOrDefault(emptyList()).filter { !it.contains("no research verdict yet") }
+        if (research.isNotEmpty()) com.optionslab.app.data.SharedKnowledgeHost.read("Jarvis", "the research's verdict for an answer about ${a.tag ?: a.about}")
+        val said = if (research.isEmpty()) text else "$text From the research: ${research.first()}"
+        shown = used.map { it.id }; shownText = said; shownAt = System.currentTimeMillis()
+        return said to (AgentLessons.facts(used) + research)
     }
 
     /** Is "why do you think that?" about the lessons answer just said ([lastIra]: the newest thing Jarvis said)? */
@@ -318,8 +387,11 @@ internal object JarvisLearning {
     fun appendFor(tag: String?, topic: AgentLessons.Topic? = null): String? =
         if (!enabled() || !loaded) null else runCatching { AgentLessons.appendFor(_book.value, tag, topic) }.getOrNull()
 
-    /** The model's notes for [question]: the relevant lessons, short with their numbers, at most 600 characters. */
-    fun modelNotes(question: String): List<String> =
+    /**
+     * The model's notes for [question]: for a research question, the knowledge pack's best facts first ([KnowledgeLibrary]);
+     * then the relevant lessons, short with their numbers. [com.optionslab.ira.Writer.capLessons] keeps them to 600 characters.
+     */
+    fun modelNotes(question: String): List<String> = KnowledgeLibrary.modelNotes(question) +
         if (!enabled() || !loaded) emptyList() else runCatching { AgentLessons.forModel(_book.value, question) }.getOrDefault(emptyList()) +
             runCatching { com.optionslab.ira.LabTalk.asked(question)?.let { com.optionslab.app.data.VariantRunner.modelNotes() } }.getOrNull().orEmpty()
 

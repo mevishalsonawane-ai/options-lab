@@ -1,0 +1,40 @@
+id: r51-r44-donchian20-rt-clean
+title: 'R51 Amendment A: R44-donchian20-RT re-priced on lake data with foreign rows and stray prints removed'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R51_CANCELLED_RECENT.md
+hypothesis: 'The passing R51 rule R44-donchian20-RT (Donchian 20 on index 5-min bars, 1-ITM nearest expiry, stop -15%,
+  target +30%, 30-min time exit; signal on the index) and its 6 R44 near-misses keep their verdicts when the lake rows of
+  another underlying and stray prints are removed (R47''s two data fixes). Same rules, spans and gates; the final test
+  re-priced, not re-selected.'
+data_version: Drive lake gdrive:IraAlgo-data-lake as re-uploaded 15 Oct 2026 (the option files changed after R51's read),
+  WEEK options 21 Nov 2024 - 13 Oct 2026 cleaned by research/hunt/lakeclean.py (R51_CLEAN=1 stores); index warm-up from
+  1 Sep 2024; expiry and ATM labels from the rows before the stray step
+period:
+  design: 2024-11-21 - 2026-03-31 (walk-forward quarters from Apr 2025)
+  holdout: '2026-04-01 - 2026-10-13 final test, read once in R51; re-priced once on cleaned data (Amendment A)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index (5-min)'
+model_or_rule: 'donchian20|B|m1 (frozen); near-misses: R44 ema821_adx15 (+RT, plock, plock-RT), ema921_adx20, ema926_adx20'
+settings: research/hunt/r51/amend.py (results/amend_clean.json)
+prereg: research/hunt/r51/PREREG.md
+variants_tried: 7
+results:
+  summary: 'R44-donchian20-RT cleaned final 1,787 trades, net Rs +55,439, twin p 0.002, BH q 0.025 (same 125 variants, 7 p
+    replaced) -> PASS. Committed final 1,775 trades Rs +48,689; the same rules on the re-uploaded lake before cleaning 1,787
+    trades Rs +66,047, so foreign / stray rows were Rs 10,608 (16%) of the current profit: two FINNIFTY targets reached only
+    through stray highs (-Rs 9,991) and a SENSEX stop fill. Cleaned design 4,518 trades Rs +8,281 (was +33,681), walk-forward
+    Rs +169,661 (was +181,820), same pick every fold. Top 5 trades 76% of the final net; NIFTY -18,955. Twice the spread and
+    slippage: final Rs +5,757, design Rs -111,255. The 6 R44 near-misses all still fail (design walk-forward <= 0). Not
+    re-priced: F1/R41/B2 (brain feature store from 2023), R29 (2023 warm-up; Boss: Nov 2024 onwards only), M4-SILVERM (MCX).'
+  costs: dated charges (STT 0.15% from 1 Apr 2026), R17 liq fills (and a 2x run), next-minute fills, gap fills at the worse
+    price, one held contract, lots in force
+holdout_read: true
+verdict: paper-only
+notes: 'Still a paper candidate only: thin design, profit gone at 2x costs, NIFTY negative.'

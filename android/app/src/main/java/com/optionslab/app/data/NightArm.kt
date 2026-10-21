@@ -19,6 +19,11 @@ import java.time.LocalDateTime
 import java.util.Locale
 
 /**
+ * 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"): this file itself still places
+ * only paper orders; its live path is [com.optionslab.app.data.ArmLive], told of each paper buy, stop or lock and close (memory
+ * only). That live trade goes only in Live with "AI trades go live" on, its own "Trade live" switch on, outside the paper-only
+ * period and past every guard - so the words below about Zerodha describe this book, not that live path.
+ *
  * "Night (R3)" (08 Oct, Boss's yes; research/hunt/x2/PREREG.md rule R3, the rules in [NightRules]): a PAPER-ONLY arm that
  * buys one lot of a 1-ITM NIFTY weekly and BANKNIFTY monthly option at 15:20 on a strong close the day-end OI build-up
  * agrees with, and sells it at 09:16 the next session. Not proven (research: about Rs 207 a day before the holdout, Rs 150
@@ -37,7 +42,17 @@ object NightArm {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "night.vault")
+        // 18 Oct (Boss: every paper strategy present for live too): its paper trades, for their live path ([ArmLive]).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.NIGHT) {
+            if (cache == null) null else _view.value.let { v ->
+                val today = Market.today()
+                (v.open + v.closed.filter { it.exitTime?.toLocalDate() == today }).map { ArmLive.PaperLeg(mirrorRef(it), NightRules.SOURCE, if (it.open) it.qty else 0) }
+            }
+        }
     }
+
+    /** A trade's reference for its live path ([ArmLive]): its index and paper order (or its entry time). */
+    private fun mirrorRef(p: Pos): String = "night:${p.index}:${p.orderId ?: p.entryTime}"
 
     /** One overnight trade on paper. */
     data class Pos(
@@ -57,7 +72,8 @@ object NightArm {
         val history: MutableMap<String, MutableList<Double>> = HashMap(),
         /** "day|index" already decided (and recorded). */
         val decided: MutableSet<String> = HashSet(),
-        val status: MutableMap<String, String> = HashMap(),
+        /** 21 Oct: with the day each line was written ([StatusMap]). */
+        val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
     )
 
@@ -72,6 +88,9 @@ object NightArm {
     private const val CLOSED_KEPT = 400
 
     private fun ready() = ::file.isInitialized
+
+    /** Its book can be read now (15 Oct cleanup: a read before that counts as "holding", so nothing is switched off on it). */
+    fun readyForCleanup(): Boolean = ready()
 
     private fun book(): Book {
         cache?.let { return it }
@@ -90,7 +109,7 @@ object NightArm {
             }
             o.optJSONObject("history")?.let { h -> h.keys().forEach { k -> val a = h.getJSONArray(k); b.history[k] = (0 until a.length()).map { a.getDouble(it) }.toMutableList() } }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
         cache = b
@@ -115,16 +134,17 @@ object NightArm {
         // Only the last few days' decisions are needed (one a day per index).
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(40).forEach { put(it) } })
         o.put("status", JSONObject(b.status as Map<*, *>))
+        b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
     }
 
     private fun publish(b: Book) {
-        _view.value = View(b.armed, b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(20),
+        _view.value = View(b.armed, b.status.shown(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(20),
             b.log.takeLast(30))
         // The trade manager's one call (10 Oct): SHADOW by default - it records only; this arm's own 09:16 sale stays the exit.
-        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }) }
+        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }, owner = "night") }
     }
 
     /** When a position bought on [entryDay] is out by: 09:16 of the next trading session (a Friday's is Monday's), as the arm's own sale. */
@@ -155,6 +175,8 @@ object NightArm {
     /** Switch it on or off (paper only, always). Off never sells what it holds: that still goes at 09:16. */
     suspend fun setArmed(on: Boolean): String {
         if (!ready()) return "Night (R3) is not ready yet."
+        // 15 Oct (Boss's cleanup): hidden, it is switched on only by its restore from the Hidden arms list.
+        if (on && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.NIGHT)) return HiddenArms.refusal(NightRules.LABEL)
         return lock.withLock {
             val b = book()
             if (b.armed == on) return@withLock "${NightRules.LABEL} is already ${if (on) "on" else "off"}."
@@ -183,7 +205,8 @@ object NightArm {
         lock.withLock {
             val b = book()
             val now = Market.now().toLocalDateTime()
-            var changed = runCatching { exits(b, now) }.getOrDefault(false)
+            // 16 Oct: a failure part-way still saves what was sold before it (a sale booked in the book must reach its file).
+            var changed = runCatching { exits(b, now) }.getOrElse { runCatching { Diag.record("night", "exit check failed: ${it.javaClass.simpleName}") }; true }
             // The strategy lab (11 Oct): Night ran today, on paper (one map write: no setting, no I/O).
             if (b.armed) VariantRunner.saw(NightRules.SOURCE, live = false)
             if (b.armed && NightRules.entryWindow(now.toLocalTime())) {
@@ -212,18 +235,32 @@ object NightArm {
             val manager = if (p.open) TradeManagerHost.exitDue(managerId(p)) else null
             if (!p.open || (!NightRules.exitDue(p.entryDay, now) && manager == null)) continue
             val c = Paper.contractOf(p.symbol) ?: continue
-            val lots = (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
+            // Gone from the paper book without this arm selling it (Boss's close, an exit-all): booked as closed elsewhere at
+            // that sale, never sold again - a SELL on a flat book opens a naked short nothing manages (18 Oct, review).
+            val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
+            val gone = closedElsewhere(p, held, Paper.state.trades, now)
+            if (gone != null) {
+                b.positions[i] = gone
+                runCatching { ArmLive.closed(mirrorRef(p), "closed_elsewhere") }
+                b.status[p.index] = "closed elsewhere"
+                note(b, "${p.symbol}: no longer held on paper (closed elsewhere), %s after charges".format(Locale.ENGLISH, rs(gone.net ?: 0.0)))
+                changed = true
+                continue
+            }
+            val lots = (sellQty(p.qty, held) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
             val r = Paper.place(c, "SELL", lots, "MARKET", "NRML", null, null)
             val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
             if (fill == null) {
                 r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
-                if (b.status[p.index] != "night_exit_retry") { b.status[p.index] = "night_exit_retry"; note(b, "${p.symbol}: the 09:16 sale did not fill (${r.message}); tried again"); changed = true }
+                if (!b.status.sameToday(p.index, "night_exit_retry")) { b.status[p.index] = "night_exit_retry"; note(b, "${p.symbol}: the 09:16 sale did not fill (${r.message}); tried again"); changed = true }
                 continue
             }
             r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${NightRules.LABEL} · exit") } }
             val charges = p.charges + chargesOf(r.orderId)
             val done = p.copy(exit = fill.price, exitTime = now, why = if (NightRules.exitDue(p.entryDay, now)) "night_exit_0916" else "trade_manager", charges = charges)
             b.positions[i] = done
+            // 18 Oct: its live trade, if any, is sold now too ([ArmLive]; memory only).
+            runCatching { ArmLive.closed(mirrorRef(p), done.why ?: "night_exit_0916") }
             b.status[p.index] = "sold at 09:16"
             note(b, "${p.symbol}: sold ${fill.quantity} @ %.2f, %s after charges".format(Locale.ENGLISH, fill.price, rs(done.net ?: 0.0)))
             runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(p.index), Notifier.SELL, "${NightRules.LABEL} sold ${p.symbol} · Paper",
@@ -239,6 +276,20 @@ object NightArm {
         }
         return changed
     }
+
+    /**
+     * [p] booked as closed elsewhere when the paper book holds none of it ([held] <= 0): at the last SELL of its symbol since its
+     * entry in [trades] (its entry price and [now] when none is found), that sale's charges added. Null while it is still held.
+     */
+    internal fun closedElsewhere(p: Pos, held: Int, trades: List<com.optionslab.engine.sandbox.Trade>, now: LocalDateTime): Pos? {
+        if (held > 0) return null
+        val t = trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+        return p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere",
+            charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
+    }
+
+    /** The quantity the 09:16 sale sells: the arm's [qty], never more than the paper book still [held] (18 Oct, review). */
+    internal fun sellQty(qty: Int, held: Int): Int = minOf(qty, held.coerceAtLeast(0))
 
     private fun chargesOf(orderId: String?): Double =
         if (orderId == null) 0.0 else Paper.state.trades.filter { it.orderId == orderId }.sumOf { it.charges.toDouble() }
@@ -257,6 +308,8 @@ object NightArm {
 
     /** 15:20's decision for [u]: what it did, in a few words. Records the day's build-up once. */
     private suspend fun decide(b: Book, u: String, now: LocalDateTime): String {
+        // 15 Oct (Boss's cleanup): hidden, it buys nothing new; what it holds is still sold at 09:16 (memory only).
+        if (HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.NIGHT)) return "hidden (your 15 Oct cleanup): no new entry"
         val today = now.toLocalDate()
         // The index's minutes to 15:19, and the previous session's close.
         val key = Upstox.INDEX_KEYS[u] ?: return "night_no_index_data"
@@ -303,7 +356,8 @@ object NightArm {
         // The order flow at the decision (9 Oct; paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
         val flow = FlowGate.gate(NightRules.SOURCE, u, d.side, false, now.withSecond(0).withNano(0).toString(), right.name, contract = c)
         if (flow.skip) return "${flow.pausedWhy ?: FlowGate.SKIPPED} ($facts)"
-        val r = Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null)
+        runCatching { LiveRecorder.signal(NightRules.LABEL, c.symbol, u, right.name, null, paper = true) }
+        val r = Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null, auto = NightRules.LABEL)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
             r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
@@ -311,10 +365,14 @@ object NightArm {
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${NightRules.LABEL} · entry") } }
         FlowGate.taken(flow, r.orderId)
-        b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, r.orderId, charges = chargesOf(r.orderId))
+        val pos = Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, r.orderId, charges = chargesOf(r.orderId))
+        b.positions += pos
+        // 18 Oct: its live path ([ArmLive]): the same option and lot, NRML, sold at 09:16 with its paper trade (the rule has no stop).
+        runCatching { ArmLive.entered(ArmLive.Ask(NightRules.SOURCE, mirrorRef(pos), c, 1, fill.quantity, fill.price)) }
         runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(u), Notifier.BUY, "${NightRules.LABEL} bought ${c.symbol} · Paper",
             "Bought ${fill.quantity} @ %.2f on a strong close (%s). Sells at 09:16 next session. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts), "almanac") }
-        return "${d.why} ${c.symbol} @ %.2f ($facts)".format(Locale.ENGLISH, fill.price)
+        // Text goes in as %s arguments (14 Oct: [facts] always holds a "%" - "day +1.20%" - and broke this line on every buy).
+        return "%s %s @ %.2f (%s)".format(Locale.ENGLISH, d.why, c.symbol, fill.price, facts)
     }
 
     /**

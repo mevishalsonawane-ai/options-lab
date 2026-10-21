@@ -205,6 +205,72 @@ object PineAuto {
     }
 
     /**
+     * 14 Oct (Boss: signal on the index, then buy the option): every switched-on script whose chart is not an index
+     * ([com.optionslab.ira.PineUnderlying]) is switched off - never deleted - and said in its log; an option it holds is
+     * managed to its exit (its stop, target, lock, 15:15; [Book.winding]), never dumped, and nothing more is bought. Reads the
+     * scripts already in memory; writes only when one is found. True when [b] changed (it is then saved).
+     */
+    private fun offNonIndex(b: Book): Boolean {
+        val bad = PineScripts.items.value.filter { it.auto.on && com.optionslab.ira.PineUnderlying.rootOf(it.auto.symbol) == null }
+        for (item in bad) {
+            PineScripts.setAuto(item.id, item.auto.copy(on = false))
+            b.liveOk.remove(item.id)
+            val holding = b.held.containsKey(item.id)
+            if (holding) b.winding[item.id] = "its chart is not an index"
+            note(b, item.id, "Switched off: ${com.optionslab.ira.PineUnderlying.refusal(item.auto.symbol)}." +
+                if (holding) " Its open option is managed to its exit; nothing more is bought." else "")
+        }
+        return bad.isNotEmpty()
+    }
+
+    /**
+     * 14 Oct: the armed scripts the saved file's load switched off for a chart that is not an index
+     * ([PineScripts.takeRefused]). One holding an option is put in [Book.winding] at once, before anything else looks at
+     * it: its stop, target, profit lock, 15:15 and the day's stop keep being watched ([watchOnlyLocked], [one]) and it is
+     * never sold at market by the switch-off; nothing more is bought. Also without that note (a restart after the file
+     * was rewritten switched off but before this book saved its winding): any holding of a switched-off script on a chart
+     * that is not an index is managed the same way. Memory only (never reads the vault): safe on the fast position path.
+     * True when [b] changed.
+     */
+    private fun refusedHeld(b: Book): Boolean {
+        var changed = false
+        val items = PineScripts.items.value
+        val offNonIndex = b.held.keys.filter { id ->
+            items.firstOrNull { it.id == id }?.let { !it.auto.on && com.optionslab.ira.PineUnderlying.rootOf(it.auto.symbol) == null } == true
+        }
+        for (id in PineScripts.takeRefused() + offNonIndex) {
+            if (!b.held.containsKey(id) || id in b.winding) continue
+            b.winding[id] = "its chart is not an index"
+            note(b, id, "Its open option is managed to its exit (its stop, target and profit lock); nothing more is bought.")
+            changed = true
+        }
+        return changed
+    }
+
+    /**
+     * 14 Oct: two armed scripts saved under two spellings of one index ("NIFTY 50" and "NIFTY") with the same code and chart
+     * were not the same to the one-time 06 Oct check ([dedupe]); written the index's own way on load they are, and both
+     * would trade every signal. Once per load: of each such pair the first armed (the oldest) keeps trading and the later one
+     * is switched off - never deleted - said in its log; an option it holds is managed to its exit ([Book.winding]). Other
+     * scripts on the same index stay armed. True when [b] changed (it is then saved).
+     */
+    private fun renamedDupes(b: Book): Boolean {
+        val items = PineScripts.loadNow() ?: return false
+        val renamed = PineScripts.takeRenamed().ifEmpty { return false }      // nearly every pass: nothing to look at
+        val extra = com.optionslab.ira.PineDupes.extraArmedAfterRename(items.map {
+            com.optionslab.ira.PineDupes.Script(it.id, it.code, it.auto.symbol, it.auto.interval, it.auto.on)
+        }, renamed)
+        for ((s, kept) in extra) {
+            val item = PineScripts.get(s.id) ?: continue
+            PineScripts.setAuto(s.id, item.auto.copy(on = false))
+            b.liveOk.remove(s.id)
+            if (b.held.containsKey(s.id)) b.winding[s.id] = "the same strategy as #$kept"
+            note(b, s.id, com.optionslab.ira.PineDupes.note(kept))
+        }
+        return extra.isNotEmpty()
+    }
+
+    /**
      * Switch a script off by the app's own rule (Boss's yes to switching a losing script off, [com.optionslab.ira.ArmCutoff]):
      * unlike [arm] off, what it holds is NOT sold now - it is managed to its exit, and nothing more is bought. Never
      * switches anything on. Returns "ok", or why not.
@@ -259,7 +325,13 @@ object PineAuto {
         save(b); publish(b)
     }
 
-    suspend fun load() = lock.withLock { val b = book(); if (ruleNotes(b)) save(b); Unit }
+    suspend fun load() = lock.withLock {
+        val b = book()
+        // 14 Oct: the scripts are read first, so a refused one's holding is in winding (watched) before any pass looks at it.
+        PineScripts.loadNow()
+        if (refusedHeld(b) or ruleNotes(b) or renamedDupes(b)) save(b)
+        Unit
+    }
 
     /**
      * The lines Boss's 06 Oct rule left when it protected an armed script on load ("Pine 'EMA': stop-loss 30 and target 60
@@ -277,15 +349,23 @@ object PineAuto {
      */
     suspend fun arm(id: Long, on: Boolean, pinConfirmed: Boolean = false): String = lock.withLock {
         val item = PineScripts.get(id) ?: return@withLock "not found"
+        // 15 Oct (Boss's cleanup): Pine auto-trading hidden - a script places orders again only after its restore (Hidden arms).
+        // Alerts-only scripts never trade and are not hidden.
+        if (on && item.auto.mode == "trade" && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.PINE))
+            return@withLock HiddenArms.refusal("Pine auto-trading")
         // Boss's 06 Oct rule: a script that places orders switches on only with a stop-loss and a target.
         if (on) com.optionslab.ira.PineProtection.armRefusal(item.auto.mode, item.auto.stopPts, item.auto.targetPts)?.let { return@withLock it }
+        // 14 Oct (Boss): the signal is read on the index chart, then the option is bought. An option's own chart, an MCX
+        // contract or any other symbol is refused and the script stays off; an index written another way is armed as its root.
+        val root = if (on) com.optionslab.ira.PineUnderlying.rootOf(item.auto.symbol)
+            ?: return@withLock com.optionslab.ira.PineUnderlying.refusal(item.auto.symbol) else item.auto.symbol
         val b = book()
         b.winding.remove(id)
         if (on) {
             b.liveOk[id] = pinConfirmed
             b.lastTarget.remove(id); b.lastBar.remove(id)
-            PineScripts.setAuto(id, item.auto.copy(on = true))
-            note(b, id, "Switched on (${if (item.auto.mode == "alert") "alerts only" else if (OrbArms.liveNow()) "Live" else "Paper"}): waiting for the next signal on ${item.auto.symbol} ${item.auto.interval}")
+            PineScripts.setAuto(id, item.auto.copy(on = true, symbol = root))
+            note(b, id, "Switched on (${if (item.auto.mode == "alert") "alerts only" else if (OrbArms.liveNow()) "Live" else "Paper"}): waiting for the next signal on $root ${item.auto.interval}")
         } else {
             PineScripts.setAuto(id, item.auto.copy(on = false))
             b.liveOk.remove(id)
@@ -301,11 +381,20 @@ object PineAuto {
         // A restore not yet disarmed: every script counts as switched off (what it holds is still sold).
         val disarm = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         val b = book()
+        // 14 Oct: a script refused on load for a chart that is not an index: its holding managed to its exit, never sold by
+        // the switch-off (before the "no longer auto-trading" sale below).
+        PineScripts.loadNow()
+        if (refusedHeld(b)) save(b)
         if (ruleNotes(b)) save(b)
         // The one-time switch-off of duplicate scripts (Boss's 06 Oct diagnostics), before anything trades.
         if (!disarm && dedupe(b)) save(b)
         // The one-time FINNIFTY breakdown switch-off (Boss's 08 Oct yes), before anything trades.
         if (!disarm && finniftyOff(b)) save(b)
+        // 14 Oct: a script switched on some other way on a chart that is not an index (the saved file and [arm] both refuse
+        // one) is switched off before anything runs, said once; an option it holds is managed to its exit.
+        if (!disarm && offNonIndex(b)) save(b)
+        // 14 Oct: two spellings of one index, written the same on load, are one script: the later one is switched off.
+        if (renamedDupes(b)) save(b)
         val all = PineScripts.items.value
         val on = if (disarm) emptyList() else all.filter { it.auto.on }
         // Switched off by the app's own rule while holding: managed to its exit, buying nothing more.
@@ -366,6 +455,8 @@ object PineAuto {
         // [fast]: an event-driven look ([FastPath]). Only the best premium seen changed (peak): kept in memory and written with
         // the next save, never a Keystore write per tick; a stop moved, a sale or a note is written now as before.
         val before = if (fast) untracked(b) else null
+        // 14 Oct: a script refused on load for a non-index chart: its holding is watched from the first look (memory only).
+        refusedHeld(b)
         // A restore not yet disarmed: the full pass sells what is held.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) return
         val stopped = dayStopped()
@@ -449,6 +540,9 @@ object PineAuto {
         // Stopped for the day or the kill switch: a real pause - on the way back a signal that changed meanwhile is not chased.
         if (stopped) { b.lastBar.remove(id); noteStopOnce(b, id); return }
         if (!isOpen() || mins >= 15 * 60 + 15) return
+        // 14 Oct: a script refused for a chart that is not an index never reads a signal there - not even to exit; what it
+        // holds goes only by its own stop, target, profit lock, 15:15 or the day's stop (above).
+        if (!entries && com.optionslab.ira.PineUnderlying.rootOf(item.auto.symbol) == null) return
         val script = PineScripts.script(item) ?: run { note(b, id, "The script has errors: nothing traded"); return }
         val step = stepSeconds(item.auto.interval)
         val now = epochSecondNow()
@@ -489,9 +583,11 @@ object PineAuto {
         }
         note(b, id, "Signal: ${describe(target)} at ${"%.2f".format(java.util.Locale.ENGLISH, last.close)}")
         if (a.mode == "alert" && entries) {
-            // Alerts only: tell the owner, place nothing.
+            // Alerts only: tell the owner, place nothing. 16 Oct: the banner (and so the diary) as information, not an error -
+            // "jarvis: breakout above ... flat" was counted among the day's errors by the order review.
             Notifier.post(app, 5000 + (id % 1000).toInt(), Notifier.RISK, "${item.name}: ${describe(target)}",
-                "${a.symbol} ${a.interval} at ${"%,.2f".format(java.util.Locale.ENGLISH, last.close)} · Pine signal (alerts only, no order placed)", "pine")
+                "${a.symbol} ${a.interval} at ${"%,.2f".format(java.util.Locale.ENGLISH, last.close)} · Pine signal (alerts only, no order placed)", "pine",
+                banner = com.optionslab.app.work.Alerts.Kind.INFO)
             return
         }
         if (h?.right == want) return
@@ -558,7 +654,7 @@ object PineAuto {
         else h.kite?.let { sym ->
             if (!Broker.loggedIn) null
             else (if (streamLook) Broker.tokenOf("NFO:$sym")?.let { KiteStream.freshTick(it) }?.last?.takeIf { it > 0 } else null)
-                ?: Broker.quotes(listOf("NFO:$sym"))["NFO:$sym"]?.last?.takeIf { it > 0 }
+                ?: Broker.stopQuotes(listOf("NFO:$sym"))["NFO:$sym"]?.last?.takeIf { it > 0 }
         }
 
     // ---- the stop-loss and the profit lock as a resting stop (08 Oct, research/PROFIT_LOCK_8OCT.md fixes 1 and 3) ----------
@@ -940,13 +1036,14 @@ object PineAuto {
         val flow = FlowGate.gate("pine", u, if (right == Right.CE) 1 else -1, live,
             Market.now().toLocalDateTime().withSecond(0).withNano(0).toString(), "$id:${right.name}", contract = c)
         if (flow.skip) { note(b, id, flow.pausedWhy?.let { "Not bought: $it" } ?: "Not bought: skipped by the order flow (CONFIRM; the flow did not agree)"); return }
+        runCatching { LiveRecorder.signal(label(item), c.symbol, c.underlying, right.name, null, paper = !live) }
         val lots = item.auto.lots.coerceIn(1, 50)
         if (!live) {
             val ltp = Paper.lastPrice(c) ?: run { note(b, id, "No price for ${c.symbol}: nothing bought"); return }
             val snap = runCatching { Paper.snapshot() }.getOrNull()
             val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
             if (refusals.isNotEmpty()) { note(b, id, "Guard refused: ${refusals.joinToString(" ")}"); return }
-            val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null)
+            val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, auto = label(item), mirror = ExposureCapHost.NO_LIVE)
             val fill = filledOrCancelled(buy) ?: run { note(b, id, "Paper buy not filled: ${buy.message}"); return }
             buy.orderId?.let { ownerTag("paper:$it", "${label(item)} · entry") }
             FlowGate.taken(flow, buy.orderId)
@@ -1125,28 +1222,38 @@ object PineAuto {
         suspend fun restop(left: Held) {
             if (tookStop && left.qty > 0) b.held[id] = placeLiveStop(item, left.copy(stop = null), left.stopAt)
         }
-        val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull() ?: return
-        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
-        val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
-            h.qty, spec.lotSize)
-        if (qty <= 0) {
-            note(b, id, if (h.unconfirmed) "$sym: the buy is not confirmed yet and nothing of it is held to sell; checked again next pass"
-                else "$sym: other exits already working at Zerodha cover what is held; checked again next pass")
-            return
-        }
-        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "irapine")
-        val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
-        if (bad.isNotEmpty()) {
-            com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "Pine live")
-            restop(h)
-            return
-        }
-        val orderId = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-            val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite() + orders.map { it.id }) }.getOrNull()
-            found ?: run {
-                com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit failed (${e.message}); retrying on the next pass.", "Pine live")
+        // 20 Oct, enhancement round 2: read and sent in the contract's one exit turn, from an orders read that shows every exit sent
+        // from here ([ExitCoordinator]); and the orders first, then the positions read again (an exit filling between the two reads
+        // shows as still working, never as still held with nothing on its way out).
+        val orderId = ExitCoordinator.turn("NFO", sym, "Pine ${label(item)}") {
+            val book = runCatching { ExitCoordinator.orders("NFO", sym, "Pine ${label(item)}") }.getOrNull() ?: return
+            val working = book.filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" }
+            // Review: the read failing here, after its stop came out, puts the stop back (as every other "not sold" path does).
+            // 21 Oct, enhancement round 3 (idea 1): held, checked against that orders read's fills ([ExitCoordinator.held]).
+            val heldNow = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "Pine ${label(item)}", book) }
+                .getOrNull() ?: run { restop(h); return }
+            val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
+            val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
+                h.qty, spec.lotSize)
+            if (qty <= 0) {
+                note(b, id, if (h.unconfirmed) "$sym: the buy is not confirmed yet and nothing of it is held to sell; checked again next pass"
+                    else "$sym: other exits already working at Zerodha cover what is held; checked again next pass")
+                return
+            }
+            val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "irapine")
+            val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
+            if (bad.isNotEmpty()) {
+                com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "Pine live")
                 restop(h)
                 return
+            }
+            try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
+                val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite() + orders.map { it.id }) }.getOrNull()
+                found ?: run {
+                    com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit failed (${e.message}); retrying on the next pass.", "Pine live")
+                    restop(h)
+                    return
+                }
             }
         }
         ownerTag("kite:$orderId", "${label(item)} · $why")

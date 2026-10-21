@@ -140,10 +140,13 @@ object LabLessons {
     /** Lessons as short notes for the model or the findings bus (at most [n], the strongest-counted first). */
     fun notes(ls: List<Lesson>, n: Int = 5): List<String> = ls.sortedByDescending { it.n }.take(n).map { it.text }
 
-    /** The blocks the forge leans toward next (best posterior mean first), with their counts. */
+    /**
+     * The blocks the forge leans toward next (best posterior mean first), with their counts. Only the entries it draws by
+     * default (14 Oct: read from the index, [StrategyForge.entriesFor]) - never one it would not try.
+     */
     fun exploring(f: StrategyForge.Book, n: Int = 3): List<Pair<String, String>> {
         val w = StrategyForge.weights(f)
-        return StrategyForge.ENTRIES.map { StrategyForge.key(it) }.sortedByDescending { StrategyForge.mean(w.getValue(it)) }.take(n).map { k ->
+        return StrategyForge.entriesFor().map { StrategyForge.key(it) }.sortedByDescending { StrategyForge.mean(w.getValue(it)) }.take(n).map { k ->
             val s = f.blocks[k]
             k to (StrategyForge.words(k) + if (s == null || s.tried == 0) " (not tried yet)" else " (${s.btPassed} of ${s.tried} passed the backtest)")
         }

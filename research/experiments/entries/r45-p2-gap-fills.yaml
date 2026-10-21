@@ -1,0 +1,30 @@
+id: r45-p2-gap-fills
+title: 'Premium scalp audit P2-gap-fills: T0 with stop/lock gap fills at the open and locks armed from the previous bar'
+hypothesis: The claimed NIFTY premium mean-reversion scalp (+Rs 174/trade, 3,726 trades) survives this pre-registered fix.
+instruments:
+- NIFTY
+features:
+- 5-minute ATM call premium
+- Bollinger(20, 2) lower band
+model_or_rule: T0 with stop/lock gap fills at the open and locks armed from the previous bar
+variants_tried: null
+results:
+  summary: Design 2833 trades, win 55.3%, Rs +132.8/trade, net Rs +376,306, PF 1.34, green months 43/57, max DD Rs 28,511,
+    worst month Rs -21,323; by year 2021 +208 (n 242), 2022 +208 (n 573), 2023 +162 (n 621), 2024 +55 (n 640), 2025 +142 (n
+    600), 2026 -89 (n 157); random-entry twins Rs -256.0/trade, p 0.0033, BH q 0.0055 (family 20). Holdout 265 trades, Rs
+    +35.6/trade, PF 1.09. The rolling ATM strike moved during 69.1% of the trades.
+  costs: Rs 95/trade (T0) or research/obuy Costs('dated') with 0 / 0.5 / 1% slippage a side, as named
+holdout_read: true
+verdict: not-a-test
+notes: 'SIGNAL SOURCE: the option''s own price chart (not the default kind of rule; only Boss can switch it on for paper).
+  A measured fix (effect vs T0), not a strategy.'
+family: outside-strategies
+date: '2026-10-14'
+doc: research/HUNT_R45_PREMIUM_SCALP_AUDIT.md
+data_version: Drive lake gdrive:IraAlgo-data-lake/options_rolling_1m, opt_{NIFTY,BANKNIFTY}_{WEEK,MONTH}_2021-2026 (1-minute
+  rolling ATM+-10, Aug 2021 - 13 Oct 2026)
+period:
+  design: sessions Aug 2021 - 13 Apr 2026 (each year its own out-of-sample block; nothing fitted)
+  holdout: 27 Apr - 13 Oct 2026, read once (14-26 Apr embargo)
+prereg: research/hunt/r45/PREREG.md
+settings: research/hunt/r45/r45cfg.py

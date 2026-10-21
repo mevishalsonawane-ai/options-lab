@@ -1,0 +1,26 @@
+{
+ "pooled_q<0.10": {
+  "cells": 59,
+  "with_final_n>=10": 59,
+  "same_sign_effect": 41,
+  "same_sign_colour_matched": 43,
+  "median_design_effect": 0.27697,
+  "median_final_effect_signed": 0.05108377376941113
+ },
+ "both_tests": {
+  "cells": 18,
+  "with_final_n>=10": 18,
+  "same_sign_effect": 14,
+  "same_sign_colour_matched": 15,
+  "median_design_effect": 0.27683,
+  "median_final_effect_signed": 0.07999367492278883
+ },
+ "all_tested": {
+  "cells": 7564,
+  "with_final_n>=10": 7552,
+  "same_sign_effect": 3723,
+  "same_sign_colour_matched": 4026,
+  "median_design_effect": 0.087574,
+  "median_final_effect_signed": -0.0018898247784046277
+ }
+}

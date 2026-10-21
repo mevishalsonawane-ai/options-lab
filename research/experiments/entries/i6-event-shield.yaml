@@ -1,0 +1,34 @@
+id: i6-event-shield
+title: >-
+  Event shield - index behaviour and the ORB arms on RBI, Budget, US CPI/FOMC and results days
+family: calendar-events
+date: '2026-10-13'
+doc: research/EVENT_SHIELD.md
+hypothesis: >-
+  Event sessions (India policy, US macro, heavyweight results) have a larger day range than normal days, and the
+  ORB arms lose more on them.
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/context (SOURCE=release)
+period:
+  design: before the last 12 months of each index
+  holdout: BANKNIFTY 2025-02-23..2026-02-23, NIFTY 2025-04-13..2026-04-13 (read once)
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- event calendar (research/context/events.csv)
+- day range, gap, open-close, first-hour range
+model_or_rule: 8 Mann-Whitney tests (RBI, India policy, US macro, results x 2 indices) + 2 arm tests (ORB, ORB Fresh per-day net)
+settings: research/context/PREREG.md I6
+prereg: research/context/PREREG.md
+variants_tried: 10
+results:
+  summary: >-
+    BANKNIFTY India-policy days range 1.48x normal (15 sessions; design q 0.08, holdout p 0.03 confirmed). NIFTY
+    1.28x not significant. US macro: bigger gaps (1.5x BANKNIFTY), same range. Results: bigger gap, same range (p 0.22).
+    ORB Fresh loses more on event days in design (q 0.096) but the holdout did not confirm (p 0.21). 1 of 10 confirmed.
+  costs: arm replay with app paper fills + modelled half-spread and SandboxCosts charges
+holdout_read: true
+verdict: shadow
+notes: >-
+  App - warning the evening before and the morning of; pause-paper-arms switch OFF by default with a shadow mode;
+  never Liquidity BANKNIFTY. 25 of 27 results dates unverified (from memory).

@@ -740,6 +740,9 @@ class Sandbox(
             var quantity = o.quantity
             var pending = o.pendingQuantity
             if (c.quantity != null) {
+                // A zero or negative quantity passed the lot check (0 % lot == 0): a stop left at 0 protects nothing, and a
+                // negative SELL books as a BUY. Refused, as placement refuses it (18 Oct, review).
+                if (c.quantity <= 0) return err("Quantity must be positive")
                 val inst = instruments.lookup(o.symbol, o.exchange)
                 if (inst != null && o.exchange in LOT_EXCHANGES) {
                     val lot = if (inst.lotSize == 0) 1 else inst.lotSize
@@ -1008,6 +1011,13 @@ class Sandbox(
          */
         fun catchUpMisSquareOff() {
             val boundary = SandboxRules.lastSessionExpiry(config.sessionExpiryTime, now)
+            // An MIS order placed before the boundary ended with its session (the square-off cancels them at the cut-off): one
+            // still pending because no pass ran then (the phone was off) is cancelled first, as checkAndSquareOff would have.
+            // Left resting, an arm's SELL SL-M stop or LIMIT target filled later against the flat position and opened a naked
+            // short (18 Oct, review).
+            for (o in pendingOrders().filter { it.product == "MIS" && it.exchange in config.squareOffTimes && it.orderTimestamp.isBefore(boundary) }) {
+                cancelOrder(o.orderId, null)
+            }
             val stale = positions.filter { it.product == "MIS" && it.quantity != 0 && it.updatedAt.isBefore(boundary) }
             for (p in stale) {
                 if (p.exchange !in config.squareOffTimes) continue

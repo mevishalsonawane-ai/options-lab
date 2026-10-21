@@ -1,0 +1,38 @@
+id: r24-p7
+title: 'R24 pattern rule p7: room to the next level ahead = some AND ATM IV = high -> exit liq'
+family: patterns-indicators
+date: '2026-10-13'
+doc: research/HUNT_R24_WHATIF_PATTERNS.md
+hypothesis: A pre-entry pattern mined from the design period's big winning option buys (net >= +50% at 15:05; winner lift
+  1.36, support 10.3%), traded as the first entry of the day with the app's strike and exit family, makes money after costs
+  on the locked holdout and beats random entries and random patterns of the same size and frequency.
+data_version: 'Dhan lake on Google Drive (gdrive:IraAlgo-data-lake, uploaded 13 Oct 2026): opt_{NIFTY,BANKNIFTY}_WEEK_2021-2026,
+  index_1m NIFTY/BANKNIFTY/INDIAVIX, via research/brain cube v2 + feature store (signature c2c76a808596); what-if table gdrive:IraAlgo-data-lake/derived/r24_whatif
+  (CATALOG.json)'
+period:
+  design: lake sessions 2021-08-02..2026-04-13 with option chains (1,161; 4 blocks from 2021-01-01, block 1 partly without
+    options)
+  holdout: 2026-04-27..2026-10-12 (116 sessions per index), read once; embargo 2026-04-14..26
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- lvl_above/below_dist_pct (ahead)
+- atm_iv
+model_or_rule: room to the next level ahead = some AND ATM IV = high -> exit liq
+settings: research/hunt/r24/PREREG.md (Step 3); results/step3_design.json
+prereg: research/hunt/r24/PREREG.md
+variants_tried: 3
+results:
+  summary: 'Design (1,305 sessions): 1,015 trades, win 16%, net Rs 51,329 (Rs 39 a session), blocks [3,228, 38,139, 23,721,
+    -13,760], max DD Rs -95,248, big winners cut short 363 of 439. Holdout (116 sessions): 61 trades, win 23%, net Rs 804
+    (Rs 7 a session), worst day Rs -7,844, max DD Rs -37,255, 2x spread Rs -220; random-entry twin p 0.287 (BH q 1.000 over
+    41 with R20-R22), random-pattern twin p 0.114 (200 twins). FAILED gate(s) 3, 4, 5.'
+  costs: app charges at today's rates (STT 0.15%); buy at open + 5 bps + half-spread max(h(moneyness) x price, 1/2/4 ticks
+    by 5-min volume), h = 0.16% ITM/ATM, 0.20% OTM1, 0.25% OTM2, 0.35% OTM3; sells -5 bps (stops -10 bps, 2x ticks) - half-spread;
+    stress 2x half-spread
+holdout_read: true
+verdict: rejected
+notes: 'One of 8 R24 rules; exit family chosen on design among orb / sweep / liq (3 tries, all counted): design nets orb -57,432,
+  sweep -131,330, liq 51,329. Per-session figures divide by every session of the period (design: 1,305 index sessions, 1,161
+  with options).'

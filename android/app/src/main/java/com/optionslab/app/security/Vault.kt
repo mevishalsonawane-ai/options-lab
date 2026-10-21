@@ -34,6 +34,9 @@ object Vault {
     private fun dataKey(): SecretKey {
         val ks = keyStore()
         (ks.getKey(DATA_KEY, null) as? SecretKey)?.let { return it }
+        // 20 Oct, review: a key that exists but did not come back (a Keystore hiccup on some phones) is never replaced: a new
+        // key under the same name would make every vault file unreadable for good. Only a key truly absent is made.
+        if (ks.containsAlias(DATA_KEY)) throw java.security.KeyStoreException("the vault key is present but was not returned; try again")
         return generate(strongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
     }
 
@@ -53,7 +56,10 @@ object Vault {
         }
     }
 
-    fun encrypt(plain: ByteArray): ByteArray {
+    // 17 Oct: a write on the screen's thread is noted with its caller ([MainWrites]; never stopped, never thrown).
+    fun encrypt(plain: ByteArray): ByteArray = MainWrites.guard({ "Vault.encrypt" }) { encryptNow(plain) }
+
+    private fun encryptNow(plain: ByteArray): ByteArray {
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.ENCRYPT_MODE, dataKey())
         val iv = c.iv
@@ -72,15 +78,85 @@ object Vault {
      * Atomic and durable: the new file is synced before it is renamed over the old one, and the
      * rename is synced too, so neither a crash nor a power cut leaves a half-written (or empty) vault file.
      */
-    fun writeFile(file: File, plain: ByteArray) {
-        file.parentFile?.mkdirs()
+    fun writeFile(file: File, plain: ByteArray) = MainWrites.guard({ "Vault.writeFile ${file.name}" }) { writeFileNow(file, plain) }
+
+    /**
+     * TEST ONLY (19 Oct, order speed): every vault file write takes this long more (ms), as a Pixel's StrongBox can - so a test can
+     * show a slow write never holds an order. 0 in the app; set only in debug builds.
+     */
+    /**
+     * TEST ONLY (20 Oct): writes of these vault files (by name) fail, as a disk or Keystore fault would. Tests used to block a
+     * write by making its fixed "<name>.tmp" a directory; each write now has its own temp file, so that no longer fails it.
+     */
+    @Volatile internal var testFailWrites: Set<String> = emptySet()
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    @Volatile internal var testWriteDelayMs = 0L
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    private fun writeFileNow(file: File, plain: ByteArray, restoring: Boolean = false) {
+        // 20 Oct, review: a backup being restored owns its files until the app restarts: a live store saving its old book in
+        // the seconds before the restart would write it over the restored file. Such a save is dropped (the store's memory
+        // is the old data anyway; the restart reads the restored file).
+        if (!restoring && file.path in frozen) {
+            runCatching { com.optionslab.app.data.Diag.record("vault", "${file.name}: a save during a restore was dropped (the restored file is kept)") }
+            return
+        }
+        testWriteDelayMs.takeIf { it > 0 }?.let { Thread.sleep(it) }
+        if (file.name in testFailWrites) throw java.io.IOException("simulated disk fault writing ${file.name}")
+        val dir = file.parentFile
+        dir?.mkdirs()
         val blob = encrypt(plain)   // before the file is opened: a Keystore failure leaves nothing half-written
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        java.io.FileOutputStream(tmp).use { it.write(blob); it.fd.sync() }
-        if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
-        syncDir(file.parentFile)
+        // 20 Oct, review: each write its own temp file. One shared "<name>.tmp" let two writers of a file interleave (a broken
+        // GCM tag: "tampered"), and the second's rename then failed and its fallback DELETED the good file.
+        val tmp = File.createTempFile(file.name + ".", ".tmp", dir)
+        try {
+            java.io.FileOutputStream(tmp).use { it.write(blob); it.fd.sync() }
+            // A rename replaces the file in one step; if it cannot, the old file is kept as it is and the write fails.
+            // 20 Oct, second review: the freeze is asked again here, under the lock the freeze takes - a save that began
+            // (and was encrypting) before the restore froze its file never lands over the restored one.
+            val dropped = synchronized(freezeLock) {
+                if (!restoring && file.path in frozen) true
+                else { if (!tmp.renameTo(file)) throw java.io.IOException("could not replace ${file.name}"); false }
+            }
+            if (dropped) {
+                runCatching { com.optionslab.app.data.Diag.record("vault", "${file.name}: a save during a restore was dropped (the restored file is kept)") }
+                return
+            }
+        } finally { if (tmp.exists()) tmp.delete() }
+        syncDir(dir)
+        // The one fixed temp name used before 20 Oct, and this file's own temp files a crash left (over a minute old, so
+        // never another writer's in flight): nothing will rename them any more.
+        File(dir, file.name + ".tmp").takeIf { it.exists() }?.delete()
+        if (swept.add(file.path)) {                                    // once a file a run: a directory listing is not free
+            val old = System.currentTimeMillis() - 60_000L
+            runCatching {
+                dir?.listFiles { f -> f.name.startsWith(file.name + ".") && f.name.endsWith(".tmp") && f.lastModified() < old }?.forEach { it.delete() }
+            }
+        }
         fileWrites.merge(file.path, 1L) { a, b -> a + b }
     }
+
+    /** Files a backup restore owns until the restart ([freezeForRestore]); every other write to them is dropped. */
+    @Volatile private var frozen: Set<String> = emptySet()
+
+    /**
+     * A restore begins (20 Oct, review): from now until the process ends, only [writeRestored] writes [files]. Saves by the live
+     * stores (their old books, still in memory) are dropped, so the restored data is what the restart reads.
+     */
+    fun freezeForRestore(files: Collection<File>) { synchronized(freezeLock) { frozen = frozen + files.map { it.path } } }
+
+    /** Files whose leftover temp files this run already swept. */
+    private val swept: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** Taken by [freezeForRestore] and by each write's final rename, so a freeze and a rename never cross. */
+    private val freezeLock = Any()
+
+    /** The restore's own write of a file [freezeForRestore] froze. */
+    fun writeRestored(file: File, plain: ByteArray) = writeFileNow(file, plain, restoring = true)
+
+    /** A restore that stopped half-way (no restart follows), and tests: the stores write their files again. */
+    fun thaw() { synchronized(freezeLock) { frozen = emptySet() } }
 
     /** How many times this process wrote each vault file (by path): a [LastWrite] knows when someone else wrote it since. */
     private val fileWrites = java.util.concurrent.ConcurrentHashMap<String, Long>()

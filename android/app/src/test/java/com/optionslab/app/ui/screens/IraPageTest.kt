@@ -137,11 +137,15 @@ class IraPageTest {
             compose.waitForText("Sent to the paper account", substring = true)
             live = true
             IraHub.ask("sell 1 lot nifty 24000 pe"); compose.frames()
-            compose.waitForText("Review (Live, Zerodha)")
-            compose.onNodeWithText("Review (Live, Zerodha)").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
-            compose.until(5_000, "the review opened") { reviewed.isNotEmpty() }
+            // 18 Oct: Live is the same card as paper; its Confirm hands the order to the app's PIN-then-send path, never before.
+            compose.waitForText("Review (live)")
+            compose.onNodeWithText("Review (live)").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+            compose.waitForText("Confirm (live)")
+            assertTrue("nothing goes before Confirm", reviewed.isEmpty())
+            compose.onNodeWithText("Confirm (live)").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+            compose.until(5_000, "handed to the PIN step") { reviewed.isNotEmpty() }
             assertEquals(1, placed.size); assertEquals(false, reviewed.single().buy)
-            compose.waitForText("Only the swipe and your PIN send it", substring = true)
+            compose.waitForText("Enter your PIN or fingerprint to send it to Zerodha", substring = true)
         } finally { com.optionslab.app.ira.IraOrders.testListed = null }
     }
 }

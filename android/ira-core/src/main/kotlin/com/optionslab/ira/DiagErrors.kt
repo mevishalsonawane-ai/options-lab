@@ -13,9 +13,44 @@ import java.util.Locale
  *  - [unreadable]: a failure named only by a shrunk class name ("ij1": R8's renaming before the -keepnames rule) - nobody can
  *    act on that, so it is a problem of its own.
  *
+ * Severities (20 Oct, Boss's 19 Oct diagnostics: "34 errors in 10 kinds" held a good-morning line, the day report, five
+ * passphrase hints and the paper ticket's risk notices, so the count said nothing): every red banner used to be "[error]".
+ * Each counted line now has a [Severity]: an ERROR is something that failed; a WARNING is a risk or a fault the app rides
+ * out by itself (a stream drop it reconnects, a position near its breakeven, the loss limit stopping the day); a NOTICE is
+ * information or a form's hint (the morning check, the day report, a passphrase too weak). Banners write "[error]",
+ * "[warning]" or "[notice]" ([severityOf]); an old "[error]" line is sorted by its words ([classify]).
+ *
  * Words and counts only (the diary is already redacted). Thread-safe. Pure: the day is given.
  */
 object DiagErrors {
+    /** How bad a counted line is; [area] is its diary area. */
+    enum class Severity(val area: String) { ERROR("error"), WARNING("warning"), NOTICE("notice") }
+
+    /** Information and form hints, by how the line starts (lower case): never an error. */
+    private val NOTICE_STARTS = listOf("good morning", "day report", "week report", "good evening", "that passphrase is too easy",
+        "the two passphrases differ", "the backup passphrase needs", "passphrase too weak")
+    /** Risks and faults the app rides out by itself, by how the line starts (lower case). */
+    private val WARNING_STARTS = listOf("index nearing your breakeven", "index below your breakeven", "short put is in the money", "daily loss limit reached",
+        "live price stream dropped")
+
+    /** A red banner's severity by its words ("Title: text"): a notice, a warning, else an error. */
+    fun classify(text: String): Severity {
+        val t = text.trim().lowercase(Locale.ENGLISH)
+        return when {
+            NOTICE_STARTS.any { t.startsWith(it) } -> Severity.NOTICE
+            WARNING_STARTS.any { t.startsWith(it) } -> Severity.WARNING
+            else -> Severity.ERROR
+        }
+    }
+
+    /** A diary line's severity by its [area] ("error" sorted by [classify]; "warning", "notice"), or null: not counted. */
+    fun severityOf(area: String, text: String): Severity? = when (area.lowercase(Locale.ENGLISH)) {
+        "error" -> classify(text)
+        "warning" -> Severity.WARNING
+        "notice" -> Severity.NOTICE
+        else -> null
+    }
+
     /** At most this many kinds a day (the rest under [OTHER]). */
     const val KINDS = 30
     const val OTHER = "other errors"
@@ -41,8 +76,27 @@ object DiagErrors {
         return if (obfuscated(cls)) m.groupValues[1].trim() to cls else null
     }
 
-    /** One day's counts: [errors] by kind, [unreadable] failures by "step: class". */
-    data class Day(val day: LocalDate, val errors: Map<String, Int> = emptyMap(), val unreadable: Map<String, Int> = emptyMap())
+    /** One day's counts: [errors] by kind, [unreadable] failures by "step: class", and the [warnings] and [notices] apart. */
+    data class Day(val day: LocalDate, val errors: Map<String, Int> = emptyMap(), val unreadable: Map<String, Int> = emptyMap(),
+                   val warnings: Map<String, Int> = emptyMap(), val notices: Map<String, Int> = emptyMap()) {
+        val empty: Boolean get() = errors.isEmpty() && unreadable.isEmpty() && warnings.isEmpty() && notices.isEmpty()
+    }
+
+    /**
+     * Two counts of one day put together, kind by kind the larger (20 Oct): the diary's own tally starts again at each process
+     * start (memory only), and the diary file may have lost the day's first lines to its cap; neither alone is the whole day.
+     */
+    fun merge(a: Day?, b: Day?): Day? {
+        if (a == null) return b
+        if (b == null || b.day != a.day) return a
+        fun m(x: Map<String, Int>, y: Map<String, Int>) = (x.keys + y.keys).associateWith { maxOf(x[it] ?: 0, y[it] ?: 0) }
+        return Day(a.day, m(a.errors, b.errors), m(a.unreadable, b.unreadable), m(a.warnings, b.warnings), m(a.notices, b.notices))
+    }
+
+    private fun bump(m: Map<String, Int>, kind: String): Map<String, Int> {
+        val k = if (kind in m || m.size < KINDS) kind else OTHER
+        return m + (k to (m[k] ?: 0) + 1)
+    }
 
     /** The diary's counts, today's only (a new day starts afresh). */
     class Tally {
@@ -51,9 +105,11 @@ object DiagErrors {
         @Synchronized fun add(day: LocalDate, area: String, text: String) {
             val cur = d?.takeIf { it.day == day } ?: Day(day)
             var next = cur
-            if (area.equals("error", true)) {
-                val k = kindOf(text).let { if (it in cur.errors || cur.errors.size < KINDS) it else OTHER }
-                next = next.copy(errors = next.errors + (k to (next.errors[k] ?: 0) + 1))
+            when (severityOf(area, text)) {
+                Severity.ERROR -> next = next.copy(errors = bump(next.errors, kindOf(text)))
+                Severity.WARNING -> next = next.copy(warnings = bump(next.warnings, kindOf(text)))
+                Severity.NOTICE -> next = next.copy(notices = bump(next.notices, kindOf(text)))
+                null -> {}
             }
             unreadable(text)?.let { (step, cls) ->
                 val k = "$step: $cls"

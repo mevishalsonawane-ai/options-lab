@@ -86,6 +86,7 @@ class VixDivArmTest : RobolectricTest() {
     }
 
     @After fun down() {
+        com.optionslab.ira.ArmExits.clear()
         Market.testClock = null
         kite.close(); upstox.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -129,6 +130,11 @@ class VixDivArmTest : RobolectricTest() {
         val stop = Paper.state.orders.single { it.orderId == pos.stopOrderId }
         assertEquals("SL-M", stop.priceType)
         assertEquals(VixDivRules.stop(pos.entry), stop.triggerPrice!!.toDouble(), 1e-9)
+        // 16 Oct: the position popup's Exits line says its stop, its 15:10 exit and NIFTY's 20-minute rule.
+        val out = pos.entryTime.plusMinutes(20)
+        val exits = com.optionslab.ira.ArmExits.line(false, pos.symbol)!!
+        assertTrue(exits, exits.startsWith("stop %.2f · time ".format(java.util.Locale.ENGLISH, VixDivRules.stop(pos.entry))) &&
+            exits.endsWith(" · out at %02d:%02d unless +5%%".format(java.util.Locale.ENGLISH, out.hour, out.minute)))
         // The decision says the check, the moves and the bid/ask at the signal (the arm log and the diagnostics).
         val said = VixDivArm.view.value.status["NIFTY"].orEmpty()
         assertTrue(said, said.startsWith("bought") && said.contains("10:30 check: NIFTY +0.25% from its open, India VIX +2.50%") && said.contains("bid/ask"))
@@ -151,6 +157,34 @@ class VixDivArmTest : RobolectricTest() {
         // Restart: the record is read back from its encrypted file.
         AutomationSupport.reloadFromDisk(VixDivArm)
         assertEquals(done, runBlocking { VixDivArm.refresh() }.closed.single())
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * 18 Oct (review D8): its paper trades reach the live path ([ArmLive]) - the 10:30 buy under its own LiveMirror key with the
+     * paper quantity, and the 20-minute sale by the same reference; its book shows the sold trade at 0.
+     */
+    @Test fun itsPaperTradesReachTheLivePathEntryAndClose() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        assertTrue(runBlocking { VixDivArm.setArmed(true) }.contains("paper only"))
+        market(LocalTime.of(10, 30))
+        tick(LocalTime.of(10, 30))
+        val pos = VixDivArm.view.value.open.single()
+        assertEquals(65, pos.qty)
+        val ref = "vix:${pos.index}:${pos.orderId ?: pos.entryTime}"
+        val entered = heard.toList().filter { it.startsWith("entered|") }
+        assertEquals(heard.toString(), 1, entered.size)
+        assertTrue(heard.toString(), entered.single().startsWith("entered|${VixDivRules.SOURCE}|$ref|${pos.qty}|"))
+        assertTrue(ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.VIX).orEmpty()
+            .contains(ArmLive.PaperLeg(ref, VixDivRules.SOURCE, 65)))
+        // The 20th minute closes under +5% of the fill: sold at the 10:50 pass on paper, and the live path is told.
+        market(LocalTime.of(10, 50))
+        tick(LocalTime.of(10, 50))
+        assertEquals("not_up_5_in_20", VixDivArm.view.value.closed.single().why)
+        assertTrue(heard.toString(), heard.toList().contains("closed|$ref|not_up_5_in_20"))
+        assertTrue(ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.VIX).orEmpty()
+            .contains(ArmLive.PaperLeg(ref, VixDivRules.SOURCE, 0)))
         assertNothingAtZerodha()
     }
 

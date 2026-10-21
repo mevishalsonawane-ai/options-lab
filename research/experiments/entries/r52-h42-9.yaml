@@ -1,0 +1,35 @@
+id: r52-h42-9
+title: 'R52 re-test on Nov 2024+: H42-9 SENSEX gap-down bounce'
+family: calendar-events
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule H42-9 (old verdict: Not candidate: +314/tr on 35 tr (NIFTY/BN -290..-342)) makes money
+  net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- SENSEX
+features:
+- 'signal source: index'
+model_or_rule: '{''qid'': ''Q0125''} | ITM1/near | exits stop_pct=0.15,time_stop=20 | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design original: 25 trades, win 24%, net Rs -2,929 (Rs -9/day), worst day Rs -3,581, max DD Rs -22,231, p 1.000
+    (coin-flip p 0.381); walk-forward Rs +1,334. Re-tune pick g01 ({''qid'': ''Q0125''} · ITM1/near · exits time_stop=15,time_gain=None):
+    design 25 trades, win 48%, net Rs +19,844 (Rs +59/day), worst day Rs -3,269, max DD Rs -5,269, p 1.000 (coin-flip p 0.051);
+    walk-forward Rs +23,068. FINAL original: 17 trades, win 24%, net Rs +3,981 (Rs +30/day), worst day Rs -2,784, max DD Rs
+    -7,513, p 1.000 (coin-flip p 0.304), q 1.00 -> too few trades to judge. FINAL pick: 17 trades, win 59%, net Rs +2,142
+    (Rs +16/day), worst day Rs -3,244, max DD Rs -4,379, p 1.000 (coin-flip p 0.269), q 1.00 -> too few trades to judge.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = answers.csv #3 = Q0125 (gap down > 0.5% -> CE at 09:16, 1-ITM
+  near) with its best exit ''liq'', the +314/tr on 34-35 trades the catalogue quotes; its own horizon (out after 15 min) is
+  in the grid.. Gates: final net > 0, p < 0.05, q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net,
+  design walk-forward > 0.'

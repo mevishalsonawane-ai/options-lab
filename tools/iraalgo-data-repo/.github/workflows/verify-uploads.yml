@@ -1,0 +1,80 @@
+name: Phone uploads (nightly check)
+
+# TODO G1 (13 Oct 2026): each night, check what the phone uploaded to THIS data repository (the live-YYYY-MM releases and
+# phone-backup) and add every verified file to CATALOG.json. verify_uploads.py loads the last catalogue first, so only new
+# or replaced files are downloaded. It needs no passphrase and decrypts nothing (there is no passphrase secret, by design).
+# A failed file fails this job (a red X, and a notification when the NTFY_TOPIC secret is set); gaps and an old backup are
+# warnings in the job's summary.
+#
+# This repository is data only. Its own GITHUB_TOKEN reads its releases and commits CATALOG.json; nothing here can reach
+# options-lab. The phone's token has Contents read/write here but never the Workflows permission, so it cannot change this
+# file, and the checker it runs is pinned by hash below.
+on:
+  schedule:
+    - cron: "52 21 * * *"          # 03:22 IST: after the phone's evening uploads (15:45 onwards, on charge, on Wi-Fi)
+  workflow_dispatch:
+
+permissions:
+  contents: write                  # read the releases; commit CATALOG.json
+
+concurrency:
+  group: phone-uploads
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify the phone's uploads
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # The phone's token can write files here but never this workflow (no Workflows permission). The checker and its tests
+      # are pinned by hash here, so a stolen token cannot change the code this job runs. Changing the checker means
+      # updating these hashes in the same commit, with an account that may edit workflows.
+      - name: The checker is the reviewed one
+        run: |
+          printf '%s  %s\n' \
+            "592416a6a97cd5e80b58dad329b0b6a465d2cc0f0a1be38a3a246cdbd231567a" verify_uploads.py \
+            "54e5f9442cf0d5f3a77bafa7e8d015da4ef2e9cf96e7e8320fa108b16601e48b" tests/test_verify_uploads.py \
+            | sha256sum -c -
+      - name: Test the checker
+        run: |
+          pip install pytest
+          python -m pytest tests -q
+      - name: Check the uploads and update the catalogue
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          python verify_uploads.py --catalog CATALOG.json --summary "$RUNNER_TEMP/uploads.md"
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/uploads.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      - name: Commit the catalogue
+        run: |
+          if git diff --quiet -- CATALOG.json; then echo "The catalogue is unchanged."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CATALOG.json
+          git commit -m "Catalogue: the phone's verified uploads ($(date -u +%F))"
+          # Never a force push: on a race, replay this one commit on top and push again.
+          for i in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then echo "Pushed to ${GITHUB_REF_NAME}."; exit 0; fi
+            git pull --rebase origin "${GITHUB_REF_NAME}" || exit 1
+          done
+          echo "::error::Could not push the catalogue to ${GITHUB_REF_NAME}." && exit 1
+      - name: Tell the phone a check failed
+        if: steps.check.outputs.status != '0'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          if [ -n "$NTFY_TOPIC" ]; then
+            curl -sS --max-time 20 -H "Title: IraAlgo upload check failed" -H "Tags: warning" \
+              -H "Click: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              -d "A file the phone uploaded to GitHub did not pass tonight's check. Tap for the details." \
+              "https://ntfy.sh/$NTFY_TOPIC" >/dev/null || true
+          fi
+          exit 1

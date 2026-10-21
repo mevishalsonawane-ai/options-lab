@@ -1,0 +1,32 @@
+id: r86c-c6
+title: 'R86c C6: Learned ''seller at work'' detector at 09:45 (12 seller patterns) -> short to 11:15'
+family: ml
+date: '2026-10-19'
+doc: research/HUNT_R86C_CATCH_THEM.md
+hypothesis: 'Pre-registered (research/hunt/r86/PREREG_C.md): Learned ''seller at work'' detector at 09:45 (12 seller patterns)
+  -> short to 11:15 beats random twins in design (net > 0 and > twins, twin p < 0.10, BH q < 0.10 over R86c''s 12 tests, not
+  carried by its top 5).'
+data_version: Drive lake gdrive:IraAlgo-data-lake index_1m (NIFTY 2017-, BANKNIFTY Aug 2021-, INDIAVIX), equity_1m (59 current
+  index stocks 2019 - 12 Oct 2026), options_rolling_1m WEEK (Aug 2021 -), derived/r28_gex (dte only); files of 13-15 Oct 2026;
+  NSE participant OI as labels only
+period:
+  design: to 2024 (folds 2022-2024; C2 every year 2018-2024)
+  holdout: '1 Jan 2025 - Oct 2026 NOT read: no R86c test passed design'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: underlying (index + constituents + VIX); participant OI only as training labels'
+model_or_rule: Learned 'seller at work' detector at 09:45 (12 seller patterns) -> short to 11:15
+settings: research/hunt/r86/r86c.py; PREREG_C.md
+prereg: research/hunt/r86/PREREG_C.md
+variants_tried: 2
+results:
+  summary: 'Design. C6-NIFTY: 16 trades, net Rs -7,046, without top 5 Rs -30,315, random twins mean Rs -7,773, twin p 0.441,
+    BH q 0.756; C6-BANKNIFTY: 13 trades, net Rs 36,188, without top 5 Rs -12,654, random twins mean Rs -6,561, twin p 0.002,
+    BH q 0.024. Verdict: FAIL.'
+  costs: 'index future: Rs 40, dated STT, exchange, SEBI, stamp, GST, 0.02% slippage a side (0.04% stops), carry overnight;
+    1 lot'
+holdout_read: false
+verdict: rejected
+notes: Out-of-the-box ways to catch the big players (Boss, 19 Oct). Research only.

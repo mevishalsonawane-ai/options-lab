@@ -1,0 +1,30 @@
+id: rc1-b
+title: 'Crypto: 50/50 BTC/ETH rebalanced monthly vs at a 40/60 band'
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/HUNT_RC1_CRYPTO_SMALL_ACCOUNT.md
+hypothesis: Rebalancing a 50/50 BTC/ETH split adds return or cuts risk after tax.
+data_version: 'Binance public archive (data.binance.vision): spot BTCUSDT/ETHUSDT 1d+1h 2017-08-17..2026-10-12, USD-M perps
+  1d+1h 2020-01-01..2026-10-12, funding 2020-01..2026-09-30; USD/INR ECB (frankfurter.dev); parquet cache outside git'
+period:
+  design: walk-forward OOS 2019-10-13..2025-10-12 (6 yearly OOS years, anchored; training from 2018-03-05)
+  holdout: 2025-10-13..2026-10-12 (13 months), read once
+instruments:
+- CRYPTO
+features:
+- BTC / ETH prices in INR
+model_or_rule: rebalance to 50/50 monthly / when a weight leaves 40-60%
+settings: research/hunt/rc1/config.py
+prereg: research/hunt/rc1/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Walk-forward Rs 1L after tax: monthly +57.5%/yr (72 rebalances, max DD -78%), band +58.9% (7 rebalances, -76%)
+    vs hold +58.8% (-76%). Random-day twins p 0.534 / 0.836, BH q 0.713 / 0.836. Holdout: -30.4% both (band never triggered).
+    Same as holding; FAILED the gates.'
+  costs: Indian spot taker 0.25% + 18% GST + 0.15% half-spread per side (low 0.168% / high 0.890%); INR perps 0.05% + GST
+    + 0.02% (0.079%); real funding; 31.2% VDA tax per profitable sale, no loss set-off; 1% TDS locked 365 d; perps tax readings
+    A (VDA) and B (business)
+holdout_read: true
+verdict: rejected
+notes: 'RC1 (Boss 13 Oct 2026, small Indian account). BH across 8 active tests (b x2, c, c-perp, d, f, g, g-perp). Tax figures
+  are modelling assumptions; confirm with a CA. Research only: nothing in the app trades crypto.'

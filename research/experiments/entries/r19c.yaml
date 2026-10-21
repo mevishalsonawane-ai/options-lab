@@ -1,0 +1,27 @@
+id: r19c
+title: "Consistency, not total P&L: Boss's +Rs 1,000 / Rs 500 profit floor on every arm with no profit lock, the ORB family switched off, and account day rules"
+family: trade-management
+date: '2026-10-13'
+doc: research/HUNT_R19C_CONSISTENCY.md
+hypothesis: "A profit floor (from +Rs 1,000 a lot, sell Rs 500 a lot below the best) or an account day rule raises the share of green days without a worse worst day or drawdown, keeping net positive and at least 70% of plain-rules net."
+data_version: 'research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13, nearest-expiry chains, NIFTY expiry-day chains from 2025); reused simulators R19b (Liquidity) and R17 (ORB family, VIX divergence, Hero) fills; app charges at current rates; no Dhan API'
+period:
+  design: before 2025-04-01 (BANKNIFTY from 2024-02-13, NIFTY from 2024-04-01)
+  holdout: 2025-04-01 onward (read once 2026-10-13 09:02 UTC); not unseen (R19b read Liquidity Mar-Aug 2025; R12/R14/R16/R17 read Aug 2025 on), but no R19c rule was chosen on it
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- option 1-minute highs (peak since entry)
+- lot size of the day
+- portfolio realised + open P&L per minute (day rules)
+model_or_rule: 'Per arm (Liquidity 15m/5m, ORB, ORB Fresh, ORB Sweep, Range Fade, VIX divergence BANKNIFTY/NIFTY, Hero, Solo midday): F1000_500 (Boss), F750_500, F1500_500, F1000_300, F1000_700; ORB family also R1000_500 (instead of the ladder). Portfolio: P1 ORB family off, P2/P3 day loss cap -Rs 2,000/-3,000 (no new entries), P4 day profit lock (+Rs 2,000 -> keep +Rs 1,000), P5 P1+P4, P6 P1+P2, P7 P1+P2+P4'
+settings: research/hunt/r19c/PREREG.md
+prereg: research/hunt/r19c/PREREG.md
+variants_tried: 61
+results:
+  summary: 'FAILED, all 61 (54 arm x variant + 7 portfolio); Hero inconclusive (10 holdout trades). Boss''s floor raised green days (holdout: Solo 52%->80% n 75, VIX div BANKNIFTY 32%->68% n 37, Liquidity 5m 40%->50% n 170) and removed nearly all "in profit, ended in loss" trades, but gave up far more than 30% of net (Liquidity 15m +Rs 23,373 -> -Rs 6,911; 5m +Rs 27,342 -> +Rs 6,675; Solo +Rs 42,457 -> +Rs 18,451), left the worst day unchanged on 5 of 6 arms and lost to random early-exit twins (0-3%, VIX BANKNIFTY 70%). ORB family: the ladder already locks first (floor on top moves net <= Rs 3k on ORB/Fresh/Fade); floor instead of the ladder is worse (ORB -Rs 18,026 vs -Rs 10,958, n 207). ORB, ORB Fresh, Sweep, Fade lost in both years; switching them off (P1): holdout net -Rs 1.29L -> +Rs 68.9k, max DD -Rs 1.71L -> -Rs 35.2k, green days 42% -> 44% (design: +Rs 7.5k -> +Rs 116.8k, DD -Rs 85.0k -> -Rs 23.6k); passed gates 1-2 both years but failed the pre-registered colour sign test (20 up / 36 down: days with only ORB-family winners become no-trade days). Day loss caps lowered green days (42% -> 36%/39%). Day profit lock raised green days (P4 42% -> 49%; P5 vs P1 44% -> 53%, post hoc) but failed net/drawdown or the twin (6%, 62%). MIDCPNIFTY, MCX, Night and Pine not tested (no data / not applicable).'
+  costs: app charges at today's rates; R19b fills (+-5 bps + 1 tick market, 2 ticks stops) for Liquidity; R17 fills (+-5 bps + 1-4 ticks by volume, stops x2) for the rest
+holdout_read: true
+verdict: rejected
+notes: "No automatic app change. Liquidity's opt-in 'your choice' paper switch (R19b) now uses Boss's exact rule (from +Rs 1,000, Rs 500 below the best), off by default, labelled failed, never live, trades kept out of the plain-rules record. Recommendation to Boss: switch off the ORB family; pre-register the day profit lock on top of that (R19d) on the Dhan lake's fresh years."

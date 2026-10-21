@@ -1,0 +1,26 @@
+id: h24
+title: Real bid/ask vs the spread models
+family: diagnosis
+date: '2026-10-11'
+doc: research/HUNT_H24.md
+hypothesis: Measure the real spread.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: see doc
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- Dhan option chain
+model_or_rule: measurement and post-hoc sensitivity
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: Half-spreads BN 0.16%, MIDCP 0.21%, FIN 0.42%; BN 1 lot is the robust plan.
+  costs: measured spread
+holdout_read: null
+verdict: not-a-test
+backfilled: true

@@ -52,6 +52,8 @@ class KiteTicksTest {
         val t = KiteTicks.parse(message(p)).single()
         assertEquals(212.55, t.last)
         assertEquals(123_456L, t.volume)
+        // The day's average traded price (bytes 12-15): the tick zone's exact VWAP.
+        assertEquals(210.0, t.avgPrice)
         assertEquals(200.0, t.open)
         assertEquals(205.0, t.close)
         assertEquals(654_321L, t.oi)
@@ -73,6 +75,7 @@ class KiteTicksTest {
         assertEquals(null, noDepth.bidQty); assertEquals(null, noDepth.askQty)
         assertEquals(0L, noDepth.buyQty); assertEquals(0L, noDepth.sellQty)
         assertEquals(null, noDepth.depth); assertEquals(null, noDepth.lastTradeTime); assertEquals(0L, noDepth.lastQty)
+        assertEquals(null, noDepth.avgPrice, "no average price in the packet: none invented")
     }
 
     @Test fun fullBookAllFiveLevels() {
@@ -94,6 +97,29 @@ class KiteTicksTest {
         assertEquals(listOf(1.0, 2.0), KiteTicks.parse(message(a, b)).map { it.last })
         assertTrue(KiteTicks.parse(byteArrayOf(0)).isEmpty())            // heartbeat
         assertTrue(KiteTicks.parse(byteArrayOf(0, 3, 0, 8, 1)).isEmpty()) // truncated: nothing invented
+    }
+
+    /**
+     * 18 Oct (speed): the socket's frame is parsed in place from its read-only view (okio's ByteString.asByteBuffer), no copy
+     * per frame. Only the bytes from the buffer's position to its limit count, whatever its byte order, and the buffer is
+     * left as it was; a count that promises more packets than the frame holds gives the whole ones only.
+     */
+    @Test fun aFrameIsParsedInPlaceFromABufferView() {
+        val a = packet(8) { putInt(option.toInt()); putInt(100) }
+        val b = packet(8) { putInt((option + 256).toInt()); putInt(200) }
+        val frame = message(a, b)
+        val padded = byteArrayOf(9, 9, 9) + frame + byteArrayOf(7, 7)
+        val view = java.nio.ByteBuffer.wrap(padded, 3, frame.size).asReadOnlyBuffer().order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        assertEquals(KiteTicks.parse(frame), KiteTicks.parse(view))
+        assertEquals(listOf(1.0, 2.0), KiteTicks.parse(view).map { it.last })
+        assertEquals(3, view.position()); assertEquals(3 + frame.size, view.limit())
+        assertEquals(java.nio.ByteOrder.LITTLE_ENDIAN, view.order())
+        // A slice (its own index space) reads the same.
+        assertEquals(KiteTicks.parse(frame), KiteTicks.parse(java.nio.ByteBuffer.wrap(padded, 3, frame.size).slice()))
+        // Three packets promised, two sent: the two whole ones.
+        val short = frame.copyOf().also { it[1] = 3 }
+        assertEquals(2, KiteTicks.parse(short).size)
+        assertTrue(KiteTicks.parse(java.nio.ByteBuffer.wrap(frame, 0, 1)).isEmpty())   // under the count itself
     }
 
     @Test fun currencyDivisor() {

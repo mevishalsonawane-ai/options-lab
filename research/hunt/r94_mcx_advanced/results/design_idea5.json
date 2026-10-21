@@ -1,0 +1,354 @@
+{
+ "g-G1-CRUDEOILM": {
+  "extra": {
+   "corr_e_0905_1400": 0.5682318545515642,
+   "corr_u_gap0900": 0.829869364351505,
+   "longs": 10,
+   "n_e_rest": 152,
+   "n_u_gap0900": 153,
+   "skips": {
+    "no_mcx_0905_0906": 11,
+    "no_prev": 1,
+    "no_us_minute": 3,
+    "sessions": 167
+   },
+   "stops": 1
+  },
+  "folds": [
+   394.57231079999997,
+   -1173.9217468000002,
+   -508.3282212,
+   6290.0567427999995
+  ],
+  "p": 0.3646353646353646,
+  "signal_source": "US proxy (Dukascopy) + the MCX future itself; trade = MCX mini future",
+  "summary": {
+   "avg": 250.11895427999997,
+   "cap_2pct_max": 96163.92580071428,
+   "cap_2pct_median": 38640.47214428572,
+   "days": 20,
+   "fit_2pct_1L": 1.0,
+   "gross": 6400.0,
+   "margin_median": 26729.0,
+   "max_dd": -2669.429566,
+   "months": 6,
+   "months_below_stop": 0,
+   "net": 5002.3790856,
+   "net_wo_top5": -2977.3977495999998,
+   "trades": 20,
+   "win_rate": 0.5,
+   "worst_day": -987.1795979999999,
+   "worst_month": -1143.0764060000001,
+   "worst_month_name": "2025-11",
+   "worst_trade": -987.1795979999999
+  }
+ },
+ "g-G1-GOLDM": {
+  "extra": {
+   "corr_e_0905_1400": -0.018637467954376565,
+   "corr_u_gap0900": 0.7142987247798733,
+   "longs": 12,
+   "n_e_rest": 148,
+   "n_u_gap0900": 139,
+   "skips": {
+    "no_mcx_0905_0906": 16,
+    "no_prev": 1,
+    "no_us_minute": 2,
+    "sessions": 167
+   },
+   "stops": 4
+  },
+  "folds": [
+   -1648.9604365107907,
+   1096.7873016871763,
+   -41324.46501675433,
+   null
+  ],
+  "p": 0.5264735264735265,
+  "signal_source": "US proxy (Dukascopy) + the MCX future itself; trade = MCX mini future",
+  "summary": {
+   "avg": -1820.723397894693,
+   "cap_2pct_max": 1858706.0198257142,
+   "cap_2pct_median": 609757.45001,
+   "days": 23,
+   "fit_2pct_1L": 0.0,
+   "gross": -32140.0,
+   "margin_median": 136807.0,
+   "max_dd": -83684.58434082741,
+   "months": 5,
+   "months_below_stop": 1,
+   "net": -41876.63815157794,
+   "net_wo_top5": -128322.40517814748,
+   "trades": 23,
+   "win_rate": 0.43478260869565216,
+   "worst_day": -40578.56041595481,
+   "worst_month": -38121.09123415457,
+   "worst_month_name": "2026-02",
+   "worst_trade": -40578.56041595481
+  }
+ },
+ "g-G1-NATGASMINI": {
+  "extra": {
+   "corr_e_0905_1400": 0.01042751585705312,
+   "corr_u_gap0900": 0.1855719318005415,
+   "longs": 4,
+   "n_e_rest": 150,
+   "n_u_gap0900": 151,
+   "skips": {
+    "no_mcx_0905_0906": 11,
+    "no_prev": 1,
+    "no_us_minute": 5,
+    "sessions": 167
+   },
+   "stops": 2
+  },
+  "folds": [
+   -1371.5434460000142,
+   -2576.506914000017,
+   12111.577395999982,
+   null
+  ],
+  "p": 0.2707292707292707,
+  "signal_source": "US proxy (Dukascopy) + the MCX future itself; trade = MCX mini future",
+  "summary": {
+   "avg": 907.0585595555502,
+   "cap_2pct_max": 336478.65781607147,
+   "cap_2pct_median": 164622.28400357146,
+   "days": 9,
+   "fit_2pct_1L": 0.2222222222222222,
+   "gross": 8950.000000000002,
+   "margin_median": 12968.0,
+   "max_dd": -4023.4799350000485,
+   "months": 4,
+   "months_below_stop": 0,
+   "net": 8163.527035999952,
+   "net_wo_top5": -9445.088236000045,
+   "trades": 9,
+   "win_rate": 0.4444444444444444,
+   "worst_day": -3312.085063000014,
+   "worst_month": -2576.506914000017,
+   "worst_month_name": "2025-12",
+   "worst_trade": -3312.085063000014
+  }
+ },
+ "g-G1-SILVERM": {
+  "extra": {
+   "corr_e_0905_1400": 0.08780636681182664,
+   "corr_u_gap0900": 0.8703724168341893,
+   "longs": 13,
+   "n_e_rest": 124,
+   "n_u_gap0900": 119,
+   "skips": {
+    "no_mcx_0905_0906": 36,
+    "no_prev": 1,
+    "no_us_minute": 2,
+    "sessions": 167
+   },
+   "stops": 3
+  },
+  "folds": [
+   -3874.3342076250265,
+   109925.60265849231,
+   3943.387859183629,
+   -26591.37053344986
+  ],
+  "p": 0.1958041958041958,
+  "signal_source": "US proxy (Dukascopy) + the MCX future itself; trade = MCX mini future",
+  "summary": {
+   "avg": 3336.1314310640423,
+   "cap_2pct_max": 4640764.336124999,
+   "cap_2pct_median": 656206.1022025,
+   "days": 25,
+   "fit_2pct_1L": 0.0,
+   "gross": 91950.0,
+   "margin_median": 143930.0,
+   "max_dd": -74909.81939475669,
+   "months": 6,
+   "months_below_stop": 2,
+   "net": 83403.28577660106,
+   "net_wo_top5": -86965.88331213263,
+   "trades": 25,
+   "win_rate": 0.64,
+   "worst_day": -37348.03803068133,
+   "worst_month": -48318.44886130684,
+   "worst_month_name": "2026-02",
+   "worst_trade": -37348.03803068133
+  }
+ },
+ "g-G2-CRUDEOILM": {
+  "extra": {
+   "corr_e_0905_1400": 0.5682318545515642,
+   "corr_u_gap0900": 0.829869364351505,
+   "longs": 32,
+   "n_e_rest": 152,
+   "n_u_gap0900": 153,
+   "skips": {
+    "no_mcx_0905_0906": 11,
+    "no_prev": 1,
+    "no_us_minute": 3,
+    "sessions": 167
+   },
+   "stops": 2
+  },
+  "folds": [
+   -453.42070359999997,
+   -2077.3747372,
+   -1256.1425587999995,
+   12613.706297199999
+  ],
+  "p": 0.08391608391608392,
+  "signal_source": "US proxy (Dukascopy) + the MCX future itself; trade = MCX mini future",
+  "summary": {
+   "avg": 152.18566030344826,
+   "cap_2pct_max": 223000.77368714288,
+   "cap_2pct_median": 39678.17839214285,
+   "days": 58,
+   "fit_2pct_1L": 0.8620689655172413,
+   "gross": 12920.0,
+   "margin_median": 26729.0,
+   "max_dd": -3786.9379995999993,
+   "months": 6,
+   "months_below_stop": 0,
+   "net": 8826.7682976,
+   "net_wo_top5": -6168.506141599999,
+   "trades": 58,
+   "win_rate": 0.4482758620689655,
+   "worst_day": -1371.9077916,
+   "worst_month": -1364.073478,
+   "worst_month_name": "2025-12",
+   "worst_trade": -1371.9077916
+  }
+ },
+ "g-G2-GOLDM": {
+  "extra": {
+   "corr_e_0905_1400": -0.018637467954376565,
+   "corr_u_gap0900": 0.7142987247798733,
+   "longs": 48,
+   "n_e_rest": 148,
+   "n_u_gap0900": 139,
+   "skips": {
+    "no_mcx_0905_0906": 16,
+    "no_prev": 1,
+    "no_us_minute": 2,
+    "sessions": 167
+   },
+   "stops": 6
+  },
+  "folds": [
+   -1287.377135157174,
+   28384.76935320889,
+   39428.74770380267,
+   46778.32708372382
+  ],
+  "p": 0.03696303696303696,
+  "signal_source": "US proxy (Dukascopy) + the MCX future itself; trade = MCX mini future",
+  "summary": {
+   "avg": 1691.1114478444508,
+   "cap_2pct_max": 2532119.760358572,
+   "cap_2pct_median": 680617.0484064287,
+   "days": 67,
+   "fit_2pct_1L": 0.0,
+   "gross": 141870.0,
+   "margin_median": 136807.0,
+   "max_dd": -43739.9107435888,
+   "months": 6,
+   "months_below_stop": 0,
+   "net": 113304.4670055782,
+   "net_wo_top5": -63933.259322605605,
+   "trades": 67,
+   "win_rate": 0.5970149253731343,
+   "worst_day": -30028.556489499835,
+   "worst_month": -1287.3771351571722,
+   "worst_month_name": "2025-10",
+   "worst_trade": -30028.556489499835
+  }
+ },
+ "g-G2-NATGASMINI": {
+  "extra": {
+   "corr_e_0905_1400": 0.01042751585705312,
+   "corr_u_gap0900": 0.1855719318005415,
+   "longs": 15,
+   "n_e_rest": 150,
+   "n_u_gap0900": 151,
+   "skips": {
+    "no_mcx_0905_0906": 11,
+    "no_prev": 1,
+    "no_us_minute": 5,
+    "sessions": 167
+   },
+   "stops": 2
+  },
+  "folds": [
+   -80.1233000000509,
+   4912.688147999969,
+   69342.45334199992,
+   -179.88013700001417
+  ],
+  "p": 0.002997002997002997,
+  "signal_source": "US proxy (Dukascopy) + the MCX future itself; trade = MCX mini future",
+  "summary": {
+   "avg": 2551.556484586201,
+   "cap_2pct_max": 360283.8313678572,
+   "cap_2pct_median": 129544.75883928576,
+   "days": 29,
+   "fit_2pct_1L": 0.3103448275862069,
+   "gross": 76525.0,
+   "margin_median": 12968.0,
+   "max_dd": -3261.2661450000173,
+   "months": 6,
+   "months_below_stop": 0,
+   "net": 73995.13805299983,
+   "net_wo_top5": 5473.911513999845,
+   "trades": 29,
+   "win_rate": 0.6896551724137931,
+   "worst_day": -3261.2661450000173,
+   "worst_month": -218.23087400001987,
+   "worst_month_name": "2025-11",
+   "worst_trade": -3261.2661450000173
+  }
+ },
+ "g-G2-SILVERM": {
+  "extra": {
+   "corr_e_0905_1400": 0.08780636681182664,
+   "corr_u_gap0900": 0.8703724168341893,
+   "longs": 38,
+   "n_e_rest": 124,
+   "n_u_gap0900": 119,
+   "skips": {
+    "no_mcx_0905_0906": 36,
+    "no_prev": 1,
+    "no_us_minute": 2,
+    "sessions": 167
+   },
+   "stops": 6
+  },
+  "folds": [
+   2709.046341439336,
+   -17325.579805356134,
+   77612.69140753472,
+   2691.64537064338
+  ],
+  "p": 0.24475524475524477,
+  "signal_source": "US proxy (Dukascopy) + the MCX future itself; trade = MCX mini future",
+  "summary": {
+   "avg": 1172.9964877546663,
+   "cap_2pct_max": 4640764.336124999,
+   "cap_2pct_median": 816656.3660551786,
+   "days": 56,
+   "fit_2pct_1L": 0.0,
+   "gross": 84265.0,
+   "margin_median": 143930.0,
+   "max_dd": -91883.10857251706,
+   "months": 6,
+   "months_below_stop": 1,
+   "net": 65687.80331426131,
+   "net_wo_top5": -127476.84849118379,
+   "trades": 56,
+   "win_rate": 0.5714285714285714,
+   "worst_day": -42469.31389073573,
+   "worst_month": -38733.41373418586,
+   "worst_month_name": "2025-12",
+   "worst_trade": -42469.31389073573
+  }
+ }
+}

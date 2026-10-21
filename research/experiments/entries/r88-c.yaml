@@ -1,0 +1,29 @@
+id: r88-c
+title: 'R88 Part C: 22 factors known before the candle vs its size and its direction (quintile tests, BH, locked holdout)'
+family: market-facts
+date: '2026-10-20'
+doc: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+hypothesis: Some factors known before a 5m/15m candle (previous candles, volatility, VIX/IV, gap, position in the day,
+  opening range, PCR, OI changes, skew, implied vs realised, option volume, expiry, weekday, events, leader index, yesterday)
+  change the next candle's size or direction.
+data_version: as r88-a
+period:
+  design: 2024-11-20..2026-05-31 (MCX 2025-08-05..2026-05-31)
+  holdout: 2026-06-01..2026-10-19
+instruments: [NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, GOLD, GOLDM, SILVER, SILVERM, CRUDEOIL, CRUDEOILM, NATURALGAS,
+  NATGASMINI, COPPER, ZINC]
+features: [F01-F22b of research/hunt/r88/candles.py, 'signal source: the underlying; option chain as context only']
+model_or_rule: top vs bottom design quintile (categories vs rest), session-clustered SE; BH q<0.05 per target family in design;
+  survivors re-measured once in the holdout (same sign, BH q<0.10)
+settings: research/hunt/r88/PREREG.md section 5, amendments A1-A3; results/cuts.json
+prereg: research/hunt/r88/PREREG.md
+variants_tried: 1
+results:
+  summary: '1,682 design tests (841 size, 841 direction): 305 size and 8 direction pass. Holdout: 225 of 305 size effects
+    hold (previous candle size 1.5x index / 1.65x MCX, realised volatility 1.4x / 1.7x, yesterday''s range 1.3x / 1.4x, VIX/IV
+    level 1.3x, PCR high 1.4x index, expiry day 1.27x, implied rich vs realised 0.85-0.9x, call-heavy volume 0.87x); 0 of 8
+    direction effects hold (SENSEX 5m leader and PCR-change effects kept sign, q 0.15).'
+  costs: none (no rule)
+holdout_read: true
+verdict: rejected
+notes: Verdict rejected = no direction effect held; size effects are facts (not a rule).

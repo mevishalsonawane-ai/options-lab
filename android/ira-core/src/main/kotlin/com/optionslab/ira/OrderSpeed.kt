@@ -15,7 +15,9 @@ import java.util.Locale
  *  - answer → fill: the answer to the fill being known (Zerodha's stream, or a read of the order);
  *  - price age: how old the price an order used was, by the exchange's own stamp (the phone clock's offset included);
  *  - relay / direct round trip: a cheap read through the static-IP relay, and the same read without it;
- *  - clock offset: the phone's clock minus the exchange's stamp of its ticks (network delay included).
+ *  - tick arrival: the phone's clock minus the exchange's stamp of its ticks (network delay and Zerodha's batching included;
+ *    16 Oct: informational only - it was read as the phone clock's error and warned falsely);
+ *  - phone clock vs Zerodha's server: the clock's real offset, NTP-style from Zerodha's Date header ([offsetFromDate]).
  *
  * Round 2 (9 Oct): the order path's own steps too - the live entry's margin check, the resting exchange stop's cancel
  * before an app exit, the stream's gaps when it drops and comes back - and where each decision's price came from
@@ -32,7 +34,8 @@ object OrderSpeed {
         RELAY_PING("rp", "Relay round trip"),
         RELAY_COLD("rc", "Relay round trip (cold)"),
         DIRECT_PING("dp", "Direct round trip (no relay)"),
-        CLOCK_OFFSET("co", "Phone clock vs exchange"),
+        CLOCK_OFFSET("co", "Ticks arrive after the exchange's stamp"),
+        CLOCK_SERVER("cs", "Phone clock vs Zerodha's server"),
         MARGIN_CHECK("mc", "Margin check (live entry)"),
         STOP_CANCEL("sc", "Exchange stop cancelled before an exit"),
         STREAM_GAP("sg", "Price stream gap (drop to first tick)"),
@@ -95,7 +98,7 @@ object OrderSpeed {
 
         /** Kept unless out of range: a negative time (only the clock offset may be negative) or [MAX_MS] and over. */
         fun add(step: Step, live: Boolean, ms: Long): Boolean {
-            val ok = if (step == Step.CLOCK_OFFSET) kotlin.math.abs(ms) < MAX_MS else ms in 0 until MAX_MS
+            val ok = if (step == Step.CLOCK_OFFSET || step == Step.CLOCK_SERVER) kotlin.math.abs(ms) < MAX_MS else ms in 0 until MAX_MS
             if (!ok) return false
             val q = samples.getOrPut(step to live) { ArrayDeque() }
             q.addLast(ms)
@@ -179,7 +182,12 @@ object OrderSpeed {
             out += "Price stream drops today: ${b.drops}" + (gaps?.let { " · gap ${said(it)}" } ?: "")
         for (st in listOf(Step.RELAY_PING, Step.RELAY_COLD, Step.DIRECT_PING)) summary(b.all(st))?.let { out += "${st.label}: ${said(it)}" }
         summary(b.all(Step.CLOCK_OFFSET))?.let {
-            out += "${Step.CLOCK_OFFSET.label}: phone ${if (it.median >= 0) "ahead by" else "behind by"} ${ms(kotlin.math.abs(it.median))} (typical, network delay included)"
+            out += "${Step.CLOCK_OFFSET.label}: ${if (it.median >= 0) "by" else "before it by"} ${ms(kotlin.math.abs(it.median))} " +
+                "(typical; network delay and Zerodha's batching, not the phone's clock)"
+        }
+        summary(b.all(Step.CLOCK_SERVER))?.let {
+            out += "${Step.CLOCK_SERVER.label}: phone ${if (it.median >= 0) "ahead by" else "behind by"} ${ms(kotlin.math.abs(it.median))} " +
+                "(median of ${it.n}, round trip allowed for)"
         }
         if (out.isEmpty()) out += "No timings yet today: they appear with the first order, price or relay check in market hours."
         return out
@@ -199,12 +207,44 @@ object OrderSpeed {
             val tag = if (live) "" else "Paper (simulated orders): "
             summary(b.of(Step.PRICE_AGE, live))?.let { if (it.p95 > PRICE_AGE_WARN_MS) out += "${tag}Prices were up to ${ms(it.p95)} old when used (over ${ms(PRICE_AGE_WARN_MS)})." }
         }
-        summary(b.all(Step.CLOCK_OFFSET))?.let { if (kotlin.math.abs(it.median) > 1_000) out += "The phone's clock is off by ${ms(kotlin.math.abs(it.median))}: switch on automatic date and time." }
+        clockWarning(b.all(Step.CLOCK_SERVER))?.let { out += it }
         for (live in listOf(true, false)) {
             val tag = if (live) "" else "Paper (simulated orders): "
             summary(b.of(Step.SIGNAL_SENT, live))?.let { if (it.p95 > SIGNAL_SENT_WARN_MS) out += "${tag}Signal to order took up to ${ms(it.p95)} (over ${ms(SIGNAL_SENT_WARN_MS)})." }
         }
         return out
+    }
+
+    /**
+     * 16 Oct (Boss's diagnostics: "The phone's clock is off by 2.5 s: switch on automatic date and time", with automatic time
+     * already on): that figure was each tick's arrival minus the exchange's whole-second stamp - the network, Zerodha's
+     * batching and a quiet contract's old stamp, all one way - never the clock's error. The clock's offset is now measured
+     * NTP-style on Zerodha's own replies: the middle of the request's round trip against the reply's Date header (whole
+     * seconds, so its middle, +500 ms). A reply whose round trip took over [CLOCK_RTT_MAX_MS] is not used (its middle is
+     * too uncertain). Null: no usable sample.
+     */
+    fun offsetFromDate(sentMs: Long, gotMs: Long, dateSec: Long): Long? {
+        val rtt = gotMs - sentMs
+        if (dateSec <= 0 || rtt < 0 || rtt > CLOCK_RTT_MAX_MS) return null
+        return (sentMs + gotMs) / 2 - (dateSec * 1000 + 500)
+    }
+
+    const val CLOCK_RTT_MAX_MS = 1_000L
+    /** The Date header's half second and half the largest round trip kept: a median within this says nothing. */
+    const val CLOCK_WARN_MS = 2_000L
+    /** Readings needed before the clock is warned about. */
+    const val CLOCK_MIN_N = 5
+
+    /**
+     * The clock's warning: only with [CLOCK_MIN_N] readings or more and a median beyond [CLOCK_WARN_MS] (the measurement's own
+     * uncertainty is at most 1 s). Plain words, and nothing Boss already did: Android's automatic time is usually on.
+     */
+    fun clockWarning(samples: List<Long>): String? {
+        val s = summary(samples) ?: return null
+        if (s.n < CLOCK_MIN_N || kotlin.math.abs(s.median) <= CLOCK_WARN_MS) return null
+        return "The phone's clock reads ${ms(kotlin.math.abs(s.median))} ${if (s.median > 0) "ahead of" else "behind"} Zerodha's server " +
+            "(median of ${s.n} readings, round trip allowed for). Android's automatic time usually corrects this within hours; " +
+            "until then the price ages on this card include it."
     }
 
     /**

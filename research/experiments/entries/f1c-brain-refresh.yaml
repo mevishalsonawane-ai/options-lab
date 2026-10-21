@@ -1,0 +1,26 @@
+id: f1c-brain-refresh
+title: Crypto brain refresh for F1 (lake layout, ETH DVOL, option columns, EMA ribbons)
+family: mcx-crypto
+date: '2026-10-14'
+doc: research/brain/crypto/README.md
+hypothesis: 'Not a test: the crypto brain rebuilt on the Drive lake for five coins with new point-in-time features.'
+data_version: Crypto brain cube v3 refreshed 14 Oct 2026 from the Drive crypto lake (Binance spot, USD-M perp, mark, index,
+  funding, 5-min metrics; premium-index klines and SOL/BNB/XRP mark/index/metrics from data.binance.vision), Oct 2023 - Mar
+  2026; Deribit DVOL and option trades and Delta Exchange India 1-minute option candles from the options lake. Raw data and
+  trade lists outside git.
+period:
+  design: 2023-10-01..2026-03-31 (built); Apr 2026 on not built (the brain's lock)
+instruments:
+- CRYPTO
+features:
+- '78 crypto features: 64 earlier + 7 EMA ribbon + 7 option market'
+model_or_rule: cube v3, research/brain/crypto
+settings: research/brain/crypto/config.py
+prereg: null
+variants_tried: null
+results:
+  summary: 913 cube days per coin (BTC, ETH, SOL, BNB, XRP), no gap minutes; look-ahead guard passes on the synthetic tests
+    and on the real cube (BTC, ETH, SOL, 40 days, 6 cuts x 2 modes).
+  costs: none
+holdout_read: null
+verdict: not-a-test

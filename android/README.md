@@ -313,6 +313,49 @@ Prices are Upstox's public 1-minute candles, so nothing reaches Zerodha. The
 live watch keeps filling resting orders and notifies you of fills and
 settlements. The account is stored in one encrypted vault file.
 
+## Signal tester (Home → Strategies)
+
+Records the option calls of the Telegram channels Boss follows and scores each
+channel honestly in shadow (trigger, reaction delay, T1/T2/T3/as given/with a
+stop, paper slippage and charges, a p against random entries from 40 triggered
+calls). Paper-trading a channel's calls is a per-channel switch, off by default:
+Boss's choice, not proven, paper only, never live.
+
+IraAlgo reads only the channels Boss selects ("IraAlgo reads only the channels you select. It never reads your private chats
+or groups, never sends messages, never marks anything as read."). There is no notification reading. Sources:
+
+- **Telegram login (read-only)**, `TelegramCapture` + `engine/signals/TdSession`: TDLib, Telegram's official client
+  library, through its JSON interface. Boss enters his own api_id / api_hash (my.telegram.org) once; they and the random
+  key of TDLib's encrypted database live in the encrypted settings (`telegram.` keys: never backed up, uploaded or
+  logged); phone, code and 2-step password go only to TDLib. Every request passes an allow-list (login steps, chat list,
+  a chat's history, log out, close): never a send, join, leave, open or "mark as read". The chat list shows channels'
+  titles only; nothing is selected at first; a post of any chat not selected is dropped as soon as its chat id is seen.
+  Each selected channel's post is read the moment it arrives (plus a look at its newest posts every 15 s as a backstop).
+  TDLib runs on its own thread only while capture is on, inside the capture window (09:00-15:35 by default) on trading
+  days, or for a job Boss taps (login, "Check this chat", history from 20 Nov 2024, paged and paced); it is closed first
+  under memory pressure. "Log out of Telegram" wipes the session, database and keys.
+- A Telegram Desktop export (File → Export chat history → JSON), Share from Telegram, or the paste box.
+
+The reader is two-stage: fixed rules, then Jarvis's on-device model (given the channel's open calls) for what they are
+unsure of, then Boss's review. Status posts - the call re-posted with ✅ / ✔️ on the levels reached, "done", "T1
+achieved", "SL hit", "booked", "exit", "hold" - are linked to the open call (the message replied to first, else the same
+contract that day with the most similar text, else the channel's latest open call) and only annotate it; never a new call
+or a trade; a status for an unknown call is ignored. The scorecard's "claims accuracy" checks those claims on the real
+prices (confirmed / not reached / reached only after our stop). A call edited after posting keeps its first text for
+scoring and is flagged.
+
+TDLib is built in CI from source (`android/tools/tdlib/build-tdlib.sh`: tdlib/td at a pinned commit, OpenSSL 3.5 from its
+official release with its SHA-256 checked, the NDK's zlib; arm64-v8a; about 20-30 minutes the first time, then cached by
+the script's hash and checked against its recorded SHA-256 and pinned commit) and goes into IraAlgo only
+(`app/src/ira/jniLibs`, never committed). The library is 23 MB, about 10 MB compressed in the APK.
+
+Paper trading per chat (off by default; Boss's choice - not proven, paper only, never live): 1 lot, MIS, bought when the
+premium trades at or above the entry within 15 minutes after a 30 s delay; the chat's stop else our -20%; book all at T1
+(or half at T1 + stop to cost, or hold to the last target); square-off 15:15 (15:05 on the expiry day); at most 3 a day and
+a ₹3,000 daily paper loss cap per chat. After a month on paper its record is shown against the pass marks (≥40 triggered,
+net > 0, beats random entries, under half moved before the message, ≤ ₹13k loss a month and ₹40k drawdown, break-even
+without its 5 best trades); passing promotes nothing.
+
 ## Security
 
 - **No screenshots or screen recording.** The window is `FLAG_SECURE` from

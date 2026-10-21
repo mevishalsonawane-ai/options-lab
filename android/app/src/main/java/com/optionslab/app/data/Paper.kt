@@ -5,6 +5,7 @@ import com.optionslab.app.security.Vault
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.fmtG
+import com.optionslab.engine.risk.PriceWatch
 import com.optionslab.engine.sandbox.Instrument
 import com.optionslab.engine.sandbox.InstrumentMaster
 import com.optionslab.engine.sandbox.OrderChange
@@ -55,11 +56,29 @@ object Paper {
     }
 
     /** The exchange a paper symbol trades on (NFO unless it is a remembered MCX contract). */
-    private fun exchangeOf(symbol: String): String = book().contracts[symbol]?.exchange ?: "NFO"
+    private fun exchangeOf(symbol: String): String = exchangeIn(book().contracts, symbol)
+
+    /** [exchangeOf] in a given list of [contracts] (one rule for the books and the no-price failsafe, 15 Oct). */
+    internal fun exchangeIn(contracts: Map<String, Contract>, symbol: String): String = contracts[symbol]?.exchange ?: "NFO"
+
+    /**
+     * The open positions [symbols] as the no-price failsafe judges them (15 Oct, [Sweeper]): each one's price key as
+     * [quotes] keys it, its exchange and its expiry (null when its contract is not remembered).
+     */
+    internal fun failsafeHeld(symbols: Collection<String>, contracts: Map<String, Contract>): List<PriceWatch.Held> =
+        symbols.map { s -> exchangeIn(contracts, s).let { ex -> PriceWatch.Held(Sandbox.key(s, ex), ex, contracts[s]?.expiry) } }
 
     /** [why]: why the app cancelled an order (order id -> a reason key, see [cancel]); the newest [WHY_KEPT] only. */
     private data class Book(val state: SandboxState, val capital: BigDecimal, val contracts: Map<String, Contract>,
-                            val why: Map<String, String> = emptyMap())
+                            val why: Map<String, String> = emptyMap(),
+                            /**
+                             * 19 Oct (the same-direction cap, [com.optionslab.ira.SameDirectionCap]): the automatic entries' order ids
+                             * (order id -> the arm that placed it; the newest [AUTO_KEPT] only). Boss's own orders are never here.
+                             */
+                            val auto: Map<String, String> = emptyMap())
+
+    /** How many automatic entries' order ids are kept (the newest). */
+    private const val AUTO_KEPT = 400
 
     /** How many cancel reasons are kept (the newest). */
     private const val WHY_KEPT = 300
@@ -149,13 +168,17 @@ object Paper {
             val w = o.optJSONObject("cancelWhy")
             val why = LinkedHashMap<String, String>()
             if (w != null) for (k in w.keys()) why[k] = w.optString(k)
-            Book(SandboxJson.decode(o.getString("state")), BigDecimal(o.getString("capital")), contracts, why)
+            val a = o.optJSONObject("auto")
+            val auto = LinkedHashMap<String, String>()
+            if (a != null) for (k in a.keys()) auto[k] = a.optString(k)
+            Book(SandboxJson.decode(o.getString("state")), BigDecimal(o.getString("capital")), contracts, why, auto)
         }.getOrNull()
         // An unreadable account is set aside, never silently overwritten.
         if (loaded == null && file.exists()) file.renameTo(File(file.parentFile, "paper.unreadable.${System.currentTimeMillis()}"))
         val b = loaded ?: fresh(SandboxConfig().startingCapital, emptyMap())
         cache = b
         runCatching { mcxExposureIfLoaded()?.let { McxMarket.notePaperExposure(it) } }
+        followKnown(b)
         return b
     }
 
@@ -164,10 +187,30 @@ object Paper {
     /** One vault write at a time, in order; taken BEFORE this object's lock, never inside it. */
     private val writeLock = Any()
 
-    /** [block] under this object's lock, then the book it saved written to disk outside the lock ([flush]). */
+    /**
+     * [block] under this object's lock, then the book it saved written to disk outside the lock, on the paper writer's own thread
+     * ([writer]). 19 Oct (Boss's diagnostics: "Paper orders took 5.7 s typical from decision to sent today (18 orders)"): the
+     * caller used to wait for that write (a Keystore encryption and two disk syncs, a second or more on a Pixel's StrongBox), so
+     * an arm's entry waited on the snapshot's write, then the order's own, and the next index's entry waited behind both. Now
+     * an order is answered from memory; the write follows on the writer at once (a process killed in that moment loses at
+     * most the last change, which the next look writes again; the open positions are on disk within the second).
+     */
     private inline fun <T> locked(block: () -> T): T {
-        try { return synchronized(this) { block() } } finally { flush() }
+        try { return synchronized(this) { block() } } finally { writer.kick() }
     }
+
+    /** The paper book's own writer thread ([locked]): one write at a time, the newest book last ([flush]). */
+    private val writer = com.optionslab.ira.WriteBehind(com.optionslab.ira.WriteBehind.thread("paper-writer")) { flush() }
+
+    /**
+     * TEST ONLY: the vault write runs on the caller's thread again (the tests that read the file right after an order). False in
+     * the app; the order-speed tests turn it off. Throws unless BuildConfig.DEBUG.
+     */
+    @Volatile internal var writeInlineForTest = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v; writer.inline = v }
+
+    /** Every change made so far written to disk now (a wipe, a test), waiting [timeoutMs] at most. Never on the order path. */
+    internal fun awaitWrites(timeoutMs: Long = 10_000L): Boolean = writer.await(timeoutMs).also { flush() }
 
     /**
      * Writes the newest saved book to the vault, outside this object's lock (readers and other orders go on meanwhile); one
@@ -190,8 +233,9 @@ object Paper {
         val cs = JSONArray()
         b.contracts.values.forEach { cs.put(JSONArray().put(it.symbol).put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.feedKey).put(it.exchange)) }
         val why = JSONObject(); b.why.forEach { (k, v) -> why.put(k, v) }
+        val auto = JSONObject(); b.auto.forEach { (k, v) -> auto.put(k, v) }
         Vault.writeFile(file, JSONObject().put("state", SandboxJson.encode(b.state)).put("capital", b.capital.toPlainString())
-            .put("contracts", cs).put("cancelWhy", why).toString().toByteArray(Charsets.UTF_8))
+            .put("contracts", cs).put("cancelWhy", why).put("auto", auto).toString().toByteArray(Charsets.UTF_8))
     }
 
     private fun fresh(capital: BigDecimal, contracts: Map<String, Contract>) =
@@ -211,6 +255,8 @@ object Paper {
         val ordersMoved = cache.let { was -> was == null || was.state.orders != b.state.orders || was.state.trades != b.state.trades }
         cache = b
         savedAtMs = System.currentTimeMillis()
+        // 21 Oct, enhancement round 3 (idea 3): the open positions and working orders followed on the stream as their own owner.
+        followKnown(b)
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
         runCatching { mcxExposureIfLoaded()?.let { McxMarket.notePaperExposure(it) } }
         if (ordersMoved) runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
@@ -229,7 +275,9 @@ object Paper {
             pnlAlwaysToFunds = true, paperSpread = true, mcxSessionAware = true),
         InstrumentMaster { sym, ex ->
             when (ex) {
-                "NFO" -> contracts[sym]?.takeIf { !it.isMcx }?.let { Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
+                "NFO" -> contracts[sym]?.takeIf { !it.isMcx && it.exchange == "NFO" }?.let { Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
+                // 15 Oct: SENSEX's options on BSE (the Hero ₹1,000 ticket, paper only); F&O hours, lots and charges as NFO's.
+                "BFO" -> contracts[sym]?.takeIf { it.exchange == "BFO" }?.let { Instrument(sym, "BFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
                 com.optionslab.engine.mcx.Mcx.EXCHANGE -> contracts[sym]?.takeIf { it.isMcx }?.let { mcxInstrument(it) }
                 else -> null
             }
@@ -256,6 +304,13 @@ object Paper {
     /** The contract a paper symbol stands for (underlying, expiry, type, lot), when it has been traded here. */
     fun contractOf(symbol: String): Contract? = book().contracts[symbol]
     fun engine(): Sandbox = book().let { engine(it.capital, it.contracts) }
+
+    /**
+     * The Live check's own paper book (18 Oct): the paper account's very engine - its fills, spreads, slippage, charges and
+     * rules - knowing only [c], for a state the caller keeps in memory and never saves. Nothing it does reaches this book,
+     * its trades, any arm's results, the P&L records or research: the self-test trade lives and ends inside the check.
+     */
+    internal fun scratchEngine(c: Contract, capital: BigDecimal = BigDecimal("1000000")): Sandbox = engine(capital, mapOf(c.symbol to c))
 
     // ---- prices -----------------------------------------------------------------
 
@@ -387,6 +442,14 @@ object Paper {
             val m = McxMarket.find(c.symbol) ?: return null
             return m.token.takeIf { it > 0 }?.also { kiteTokens[c.symbol] = it }
         }
+        // 15 Oct: a SENSEX option (BFO, the Hero ₹1,000 ticket's paper side) from Zerodha's BFO list - read in the background,
+        // never here (memory only); not read yet: asked again next time, not remembered as unlisted.
+        if (c.exchange == "BFO") {
+            val bfo = Broker.cachedBfoOptions() ?: run { Broker.loadBfoOptionsInBackground(); return null }
+            val t = Broker.find(bfo, c.underlying, c.expiry, c.strike, c.right)?.token ?: 0L
+            kiteTokens[c.symbol] = t
+            return t.takeIf { it > 0 }
+        }
         val list = Broker.cachedInstruments() ?: return null
         val t = Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token ?: 0L
         // G1-2: "not listed" (0) is remembered only from today's list; from an older one the contract may simply be new, so it
@@ -411,6 +474,28 @@ object Paper {
         BookNow(t.last.takeIf { it > 0 }, t.bid?.takeIf { it > 0 }, t.ask?.takeIf { it > 0 }, t.bidQty, t.askQty,
             t.depth?.bidQty, t.depth?.askQty, (nowMs - seen.at).coerceAtLeast(0L))
     }.getOrNull()
+
+    /** A paper fill's quote may be this old at most when a newer one can be had ([place], 16 Oct). */
+    const val FILL_FRESH_MS = 2_000L
+
+    private fun quoteOf(t: com.optionslab.engine.KiteTicks.Tick): Quote = Quote(t.last, bid = t.bid ?: 0.0, ask = t.ask ?: 0.0, high = t.high,
+        low = t.low, open = t.open, prevClose = t.close, volume = t.volume, bidQty = t.bidQty ?: 0L, askQty = t.askQty ?: 0L)
+
+    /** Zerodha's quote for [c] read now (never the stream's memory), waited [FILL_FRESH_MS] at most (null: none in time, or not listed). */
+    private suspend fun freshRestQuote(c: Contract): Quote? {
+        val key = zerodhaKey(c) ?: return null
+        val q = Broker.within(FILL_FRESH_MS) { Broker.quotesFresh(listOf(key))[key] } ?: return null
+        if (q.last <= 0) return null
+        return Quote(q.last, bid = q.bid ?: 0.0, ask = q.ask ?: 0.0, open = q.open, volume = q.volume)
+    }
+
+    /** Zerodha's "EXCHANGE:TRADINGSYMBOL" for an NSE or BSE option (the day's lists in memory only; null: not known, or MCX). */
+    private fun zerodhaKey(c: Contract): String? {
+        kiteKeys[c.symbol]?.let { return it }
+        val list = when (c.exchange) { "NFO" -> Broker.cachedInstruments(); "BFO" -> Broker.cachedBfoOptions(); else -> null } ?: return null
+        return Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.let { "${c.exchange}:${it.tradingSymbol}" }?.also { kiteKeys[c.symbol] = it }
+    }
+    private val kiteKeys = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     /**
      * The live tick from Zerodha's stream, if there is a fresh one; asking also keeps the contract subscribed. [kept]: the
@@ -438,14 +523,51 @@ object Paper {
         // exit lane, which must never wait behind a paper write. Not loaded yet: not covered (the watch pass loads it).
         val b = cache ?: run { loadSoon(); return StreamCover(emptySet(), covered = false, any = false) }
         val syms = watched(b.state)
-        if (syms.isEmpty()) return StreamCover(emptySet(), covered = true, any = false)
+        if (syms.isEmpty()) { follow(emptySet(), wait = false); return StreamCover(emptySet(), covered = true, any = false) }
         var covered = true
         val tokens = HashSet<Long>()
         for (s in syms) {
             val tok = b.contracts[s]?.let { runCatching { kiteToken(it) }.getOrNull() }
             if (tok == null) { covered = false } else { tokens += tok; if (KiteStream.tick(tok) == null) covered = false }
         }
+        // 21 Oct, enhancement round 3 (idea 3): the tokens looked up here (after a restart, the first time) followed at once.
+        follow(tokens, wait = false)
         return StreamCover(tokens, covered, any = true)
+    }
+
+    /**
+     * 21 Oct, enhancement round 3 (idea 3): the stream's owner for the paper book's open positions and working orders. Until now
+     * they stayed on Zerodha's stream only by being priced (each price read "touched" them for three minutes), so a pass that
+     * paused for longer let the stream drop them, and the stream's cap could leave them out. Now they are followed for as long as
+     * they are open, first among the stream's instruments with the live positions (CLAUDE.md: open positions come first), and
+     * let go when they close. Memory only, never the instruments file or the vault: [save] is on the order path.
+     */
+    const val STREAM_OWNER = "paper-positions"
+    private var followedNow: Set<Long> = emptySet()
+    /** Its own small lock (never this object's: [streamCover] must never wait on a paper write); held only for the stream's want. */
+    private val followLock = java.util.concurrent.locks.ReentrantLock()
+
+    /**
+     * [wait] false (review: [streamCover], on the fast path's exit lane): only when the lock is free at once; taken, a save is
+     * following the newest book right now, and the next look follows again (it heals within a look).
+     */
+    private fun follow(tokens: Set<Long>, wait: Boolean = true) {
+        if (wait) followLock.lock() else if (!followLock.tryLock()) return
+        try {
+            if (tokens == followedNow) return
+            followedNow = tokens
+            runCatching { KiteStream.want(STREAM_OWNER, tokens) }
+        } finally { followLock.unlock() }
+    }
+
+    /** [b]'s open positions and working orders, by the tokens already looked up (memory only; the rest come with [streamCover]). */
+    private fun followKnown(b: Book) {
+        runCatching {
+            val syms = watched(b.state)
+            if (syms.isEmpty()) { follow(emptySet()); return }
+            // Those not looked up yet come with [streamCover], which looks them up and follows the whole set.
+            follow(syms.mapNotNull { s -> kiteTokens[s]?.takeIf { it > 0 } }.toSet())
+        }
     }
 
     private val loading = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -458,7 +580,9 @@ object Paper {
      * process's stream exits (the LIVE lane waits for the paper cover) are not held until the next watch pass loads it.
      */
     private fun loadSoon() {
-        if (!::file.isInitialized || !loading.compareAndSet(false, true)) return
+        if (!::file.isInitialized) return
+        if (loadInlineForTest) { runCatching { book() }; return }
+        if (!loading.compareAndSet(false, true)) return
         Thread({ try { runCatching { book() } } finally { loading.set(false) } }, "paper-load").apply { isDaemon = true }.start()
     }
 
@@ -501,7 +625,9 @@ object Paper {
 
     // ---- actions -----------------------------------------------------------------
 
-    data class Result(val ok: Boolean, val message: String, val events: List<SandboxEvent>, val orderId: String? = null)
+    /** [capped]: refused by the same-direction cap (19 Oct): nothing was placed; the caller may keep it as a would-be entry. */
+    data class Result(val ok: Boolean, val message: String, val events: List<SandboxEvent>, val orderId: String? = null,
+                      val capped: Boolean = false)
 
     private fun describe(r: OrderResult, events: List<SandboxEvent>): Result {
         val fill = events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
@@ -511,6 +637,21 @@ object Paper {
             else -> r.message ?: "Paper order placed"
         }
         return Result(r.ok, msg, events, r.orderId)
+    }
+
+    /** The one BSE index whose options the paper account takes (15 Oct, the Hero ₹1,000 ticket's SENSEX side). */
+    const val BFO_UNDERLYING = "SENSEX"
+
+    /**
+     * The Hero ₹1,000 ticket's own door (15 Oct): SENSEX's options are BSE's (BFO), from the list saved on the phone today
+     * ([Market.cachedBfoContracts]; never a download here); NIFTY's as [contractFor]. Every other caller keeps [contractFor],
+     * where SENSEX is still not listed (nothing else in the app trades it).
+     */
+    fun ticketContract(underlying: String, expiry: LocalDate, strike: Double, right: Right): Contract? {
+        if (underlying != BFO_UNDERLYING) return contractFor(underlying, expiry, strike, right)
+        val saved = Market.cachedBfoContracts()?.takeIf { it.first == Market.today() }?.second ?: return null
+        val c = saved.firstOrNull { it.underlying == underlying && it.expiry == expiry && it.strike == strike && it.right == right } ?: return null
+        return Contract(symbolOf(c), c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey, exchange = "BFO")
     }
 
     /** Resolve a listed option into a paper contract (and remember it). An MCX name resolves on MCX's list (9 Oct). */
@@ -582,6 +723,7 @@ object Paper {
     private suspend fun restQuote(c: Contract): Quote? {
         if (!Broker.loggedIn) return null
         val key = if (c.isMcx) McxMarket.find(c.symbol)?.kiteKey ?: return null
+            else if (c.exchange == "BFO") "BFO:" + (Broker.cachedBfoOptions()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null).tradingSymbol
             else "NFO:" + (Broker.cachedInstruments()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null).tradingSymbol
         val r = runCatching { Broker.quotes(listOf(key)) }.getOrNull()?.get(key) ?: return null
         if (!(r.last > 0)) return null
@@ -659,16 +801,47 @@ object Paper {
         com.optionslab.engine.sandbox.PaperSpread.dayLine(t.sumOf { it.spread }, t.count { it.spread > 0 })
     }
 
-    /** [known]: the contract's quote when the caller has just read it (read here otherwise). */
+    /**
+     * [known]: the contract's quote when the caller has just read it (read here otherwise). [auto]: the arm placing it, for an
+     * automatic entry (19 Oct: the same-direction cap counts and may refuse it); null for Boss's own orders and every exit -
+     * those are never capped. [mirror]: the arm's own live key (ArmLive), when it has one: the cap only logs while that arm's
+     * entry could also be mirrored live (19 Oct review).
+     */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
-                      known: Quote? = null): Result {
+                      known: Quote? = null, auto: String? = null, mirror: String? = null): Result {
         // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
         // exchange stamp of this contract's last stream tick, when it streams.
-        val stamp = runCatching { kiteToken(c)?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
+        // 16 Oct (Boss's diagnostics: "Prices were up to 3.6 s old when used"): a fill never uses a quote older than
+        // [FILL_FRESH_MS] when a newer one can be had - a stream tick that came in in the last 2 s first; else, for an ENTRY
+        // only (logged in to Zerodha), Zerodha's own quote, waited [FILL_FRESH_MS] at most. An exit never waits on the network
+        // here: the stream's fresh tick, else the caller's [known] quote, as before. Timed from before that read; the price
+        // age is the exchange stamp of the tick actually used (none for a REST quote, read just now).
+        // 19 Oct: an automatic entry the same-direction cap refuses now is refused before any price read (memory only); the
+        // same check is made again inside the book's lock below, with the place, where it counts.
+        if (auto != null && action.equals("BUY", true) && runCatching { opens(c.symbol, action) }.getOrDefault(false)) {
+            val d = com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name)
+            val why = d?.let { capCheck(book(), it) }
+            // 19 Oct review: while this entry could also be mirrored live, the cap only logs (a refusal here would skip the live
+            // mirror too); the live door applies the cap to the live order itself.
+            if (d != null && why != null && ExposureCapHost.liveMirrorPossible(mirror)) {
+                runCatching { ExposureCapHost.refused(auto, c.symbol, d, known?.ltp, live = false, applied = false,
+                    why = "$why (logged only: this entry may also go live)") }
+            } else if (d != null && why != null) {
+                runCatching { ExposureCapHost.refused(auto, c.symbol, d, known?.ltp ?: runCatching { streamQuote(c, kept = true) ?: lastQuotes[c.symbol]?.second }.getOrNull()?.ltp,
+                    live = false, applied = true, why = why) }
+                return Result(false, why, emptyList(), capped = true)
+            }
+        }
+        val token = runCatching { kiteToken(c) }.getOrNull()
+        val freshTick = token?.let { tok -> runCatching { KiteStream.touch(listOf(tok)); KiteStream.freshTick(tok) }.getOrNull() }?.takeIf { it.last > 0 }
+        val reRead = freshTick == null && token != null && Broker.loggedIn && runCatching { opens(c.symbol, action) }.getOrDefault(false)
+        val stamp = if (freshTick != null) freshTick.exchangeTime
+            else if (reRead) null else runCatching { token?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
         val t0 = runCatching { OrderTiming.sending(live = false, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
+        val fresh = freshTick?.let { quoteOf(it) } ?: if (reRead) freshRestQuote(c) else null
         // 12 Oct: the stream's tick, else a price read in the last [PLACE_REUSE_MS] (the candle feed moves once a minute and
         // the honest-paper checks below still judge its age), else a fresh read - not a download of the day's candles per order.
-        val read = known ?: runCatching { recentQuote(c, PLACE_REUSE_MS) }.getOrNull()
+        val read = fresh?.also { remember(c.symbol, it) } ?: known ?: runCatching { recentQuote(c, PLACE_REUSE_MS) }.getOrNull()
         // A paper entry never fills on a stale candle close (fix 4): refused with the reason, nothing placed.
         staleEntry(c, action, priceType)?.let { return Result(false, it, emptyList()) }
         // Honest paper (08 Oct): no fill on a price over a minute old. An exit fills on Zerodha's quote or the stale minute's
@@ -683,15 +856,30 @@ object Paper {
         val q = x.quote
         x.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
         val entry = runCatching { opens(c.symbol, action) }.getOrDefault(true)
+        // 19 Oct: an automatic BUY that opens an index option is counted by the same-direction cap ([capCheck]); its way (+1 a
+        // call, -1 a put). Exits, sells, Boss's own orders and anything but the index options: null, never asked.
+        // 20 Oct, review: the entry is COUNTED ([capWay]) even while the cap only logs it (an entry that may also go live): it is
+        // a paper position the cap must still see once Live is off (before, it was never recorded and the cap undercounted).
+        val capWay = if (auto != null && action.equals("BUY", true) && entry)
+            com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name) else null
+        val capDir = capWay?.takeIf { !ExposureCapHost.liveMirrorPossible(mirror) }
         val r = locked {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()
+            // The cap asked inside the book's lock, with the place: the first entry to reach it is the one that goes (two arms
+            // on the same bar can never both take the last place). Memory only.
+            if (capDir != null) capCheck(b0, capDir)?.let { why -> return@locked Result(false, why, emptyList(), capped = true) }
             val b = if (b0.contracts[c.symbol] == c) b0 else b0.copy(contracts = b0.contracts + (c.symbol to c))
             val out = engine(b.capital, b.contracts).place(b.state,
                 OrderRequest(c.symbol, c.exchange, action, lots * c.lotSize, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
-            save(b.copy(state = out.state))
+            val id = out.result.orderId
+            val autoNow = if (capWay != null && out.result.ok && id != null) (b.auto + (id to auto!!)).let { m ->
+                if (m.size > AUTO_KEPT) m.entries.drop(m.size - AUTO_KEPT).associate { it.key to it.value } else m } else b.auto
+            save(b.copy(state = out.state, auto = autoNow))
             describe(out.result, out.events)
         }
+        // A refused automatic entry is kept as a would-be entry (its arm, option, way and the price it would have filled at).
+        if (r.capped && capDir != null) runCatching { ExposureCapHost.refused(auto!!, c.symbol, capDir, q?.ltp, live = false, applied = true, why = r.message) }
         timed(r, t0)
         // The sandbox's modelled slippage (kept apart as paper): a LIMIT from its price, else from the price it read.
         val limit = priceType.equals("LIMIT", true) && price != null
@@ -699,9 +887,50 @@ object Paper {
         return r
     }
 
+    /**
+     * The same-direction cap's answer for an automatic entry betting [dir] (19 Oct): null when it may go, else the reason (the
+     * caller records the would-be entry once out of the lock, [ExposureCapHost.refused]). The automatic entries open now are read
+     * from [b] itself: its fills first in, first out, what it holds, and its working automatic BUY orders. Memory only; called
+     * under the book's lock. A failure to judge lets the entry go (the cap only ever refuses).
+     */
+    private fun capCheck(b: Book, dir: Int): String? = runCatching {
+        val max = ExposureCapHost.paperMax() ?: return@runCatching null
+        com.optionslab.ira.SameDirectionCap.refusal(capOpen(b), dir, max)
+    }.getOrNull()
+
+    /** The automatic index-option entries open in [b] ([com.optionslab.ira.SameDirectionCap.openEntries]). */
+    private fun capOpen(b: Book): List<com.optionslab.ira.SameDirectionCap.Open> {
+        if (b.auto.isEmpty()) return emptyList()
+        val st = b.state
+        val held = HashMap<String, Int>()
+        for (p in st.positions) held[p.symbol] = (held[p.symbol] ?: 0) + p.quantity
+        val fills = st.trades.map { com.optionslab.ira.SameDirectionCap.Fill(it.orderId, it.symbol, it.action.equals("BUY", true), it.quantity, it.timestamp) }
+        val working = st.orders.filter { (it.status == "open" || it.status == "trigger pending") && it.action.equals("BUY", true) }.map { it.orderId to it.symbol }
+        return com.optionslab.ira.SameDirectionCap.openEntries(fills, held, working, { s ->
+            b.contracts[s]?.let { c -> com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name) }
+        }) { b.auto[it] }
+    }
+
+    /** The automatic index-option entries open now in the paper book, from memory (Bot settings' line; empty before it is read). */
+    fun capOpenNow(): List<com.optionslab.ira.SameDirectionCap.Open> = cache?.let { runCatching { capOpen(it) }.getOrNull() }.orEmpty()
+
+    /**
+     * [c] remembered in the book's contracts without an order (19 Oct: a would-be entry the cap or a twin arm kept off the
+     * account still needs its contract for its own would-be exits). Memory at once; written in the background.
+     */
+    fun rememberContract(c: Contract) {
+        if (book().contracts[c.symbol] == c) return
+        locked { val b = book(); if (b.contracts[c.symbol] != c) save(b.copy(contracts = b.contracts + (c.symbol to c))) }
+    }
+
     /** Each paper fill in [r] measured against [intended] ([FillSlippage.paper]: kept in the background, never the book's). */
     private fun modelled(r: Result, entry: Boolean, intended: Double?, limit: Boolean) {
-        if (!r.ok || intended == null) return
+        if (!r.ok) return
+        // The live recording's snapshot of each paper fill (a queue add; built and written in the background).
+        r.events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
+            runCatching { LiveRecorder.fill(f.symbol, f.action, !entry, f.quantity, f.price, intended, paper = true, arm = null) }
+        }
+        if (intended == null) return
         r.events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
             runCatching { FillSlippage.paper(f.symbol, f.action, entry, f.quantity, intended, f.price, limit) }
         }
@@ -799,6 +1028,12 @@ object Paper {
      */
     suspend fun tick(): List<SandboxEvent> {
         val events = tickLocked()
+        // The Live check's "last checked" for paper positions (a volatile stamp; nothing written anywhere).
+        WatchClock.paperChecked()
+        // Resting paper orders that filled on this pass (stops, limits): the live recording's snapshot of each.
+        events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
+            runCatching { LiveRecorder.fill(f.symbol, f.action, f.action.equals("SELL", true), f.quantity, f.price, null, paper = true, arm = null, note = "resting") }
+        }
         // The engine's own 15:15 MIS square-off is named on the order it placed.
         events.filterIsInstance<SandboxEvent.SquareOff>().mapNotNull { it.result.orderId }
             .forEach { runCatching { Strategies.tagOwner("paper:$it", Origins.AUTO_SQUARE_OFF) } }
@@ -893,11 +1128,15 @@ object Paper {
             if (s != b.state) save(b.copy(state = s))
         }
         noteStale(fill, events)
-        return Sweep(out, q.isNotEmpty(), held.isNotEmpty())
+        return Sweep(out, failsafeHeld(held, book().contracts), q.keys)
     }
 
-    /** What [sweepMissedStops] did: the stops it sold, whether any price was read, and whether any position is open. */
-    data class Sweep(val swept: List<Swept>, val priced: Boolean, val holding: Boolean)
+    /**
+     * What [sweepMissedStops] did: the stops it sold, the open positions ([held]: their price keys, exchanges and expiries)
+     * and the keys priced this pass ([quoted]). 15 Oct: the positions themselves, not two yes/no answers, so the no-price
+     * failsafe can judge each in its own market's hours ([Sweeper]).
+     */
+    data class Sweep(val swept: List<Swept>, val held: List<PriceWatch.Held>, val quoted: Set<String>)
 
     /**
      * Views, priced with fresh quotes where the engine uses them. [reuseQuotesMs] > 0 only for words and cards (never the
@@ -980,14 +1219,22 @@ object Paper {
     /** Back to a fresh account with [capital]; the contracts seen are kept. */
     fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) } }
 
+    /**
+     * TEST ONLY: [loadSoon] reads the book on the caller's thread - the background load as fast as it can be, done before
+     * [streamCover] even returns (the race [FastPath]'s snapshot must survive). False in the app. Throws unless BuildConfig.DEBUG.
+     */
+    @Volatile internal var loadInlineForTest = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v }
+
     /** TEST SEAM: forget the book in memory (its file kept), as a new process starts. */
-    internal fun forgetForTest() { flush(); synchronized(this) { cache = null; savedAtMs = 0L } }
+    internal fun forgetForTest() { awaitWrites(); synchronized(this) { cache = null; savedAtMs = 0L }; follow(emptySet()) }
 
     fun wipe() {
         // The write lock first (as [flush] takes it): a write on its way never puts the file back after the delete.
         synchronized(writeLock) { synchronized(this) {
             pending = null; cache = null; savedAtMs = 0L; file.delete()
         } }
-        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear()
+        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear()
+        follow(emptySet())
     }
 }

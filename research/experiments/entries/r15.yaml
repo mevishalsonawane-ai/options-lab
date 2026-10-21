@@ -1,0 +1,29 @@
+id: r15
+title: Pre-open daily filters on Liquidity BANKNIFTY
+family: daily-filters
+date: '2026-10-12'
+doc: research/HUNT_R15_DAILY_FILTERS.md
+hypothesis: A daily filter improves the Liquidity arm.
+data_version: research-data release parquet Feb 2024 - Feb 2026 + NSE bhavcopy + Yahoo daily index/VIX
+period:
+  design: 2024-02-13 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-02-23 (part of the locked year)
+instruments:
+- BANKNIFTY
+features:
+- quiet yesterday
+- VIX
+- PCR
+- futures OI build-up
+- after a -1% day
+model_or_rule: 5 pre-registered filters
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/r15/PREREG.md
+variants_tried: 5
+results:
+  summary: 0 of 5 passed (best BH q 0.50); add-ons A1-A3 pre-registered for shadow only.
+  costs: app exits, real spread and charges
+holdout_read: true
+verdict: rejected
+backfilled: true
+notes: 'Add-ons in shadow: PREREG_LIQUIDITY_ADDONS.md.'

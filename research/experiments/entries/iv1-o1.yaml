@@ -1,0 +1,32 @@
+id: iv1-o1
+title: 'IV1 O1: M4-style P(net>0) model on option-market inputs only, top 5%'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_IV1_OPTION_MARKET.md
+hypothesis: Option-market signals (IV skew, straddle, PCR, OI build-up) pick CE/PE buys that make money after costs.
+data_version: R30 decision table (Dhan lake, 5 indices, chain OI/IV/volume)
+period:
+  design: train expanding from Aug 2021 (F1 holdout Jan 2023 - Jun 2024 never used)
+  walk_forward: 'Jul-Dec 2024, 2025, Jan-12 Oct 2026 (descriptive: inputs chosen after R30)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- option chain OI/IV/PCR/straddle/volume
+- time
+- dte
+- VIX
+model_or_rule: M4-style P(net>0) model on option-market inputs only, top 5%
+settings: research/hunt/iv1/PREREG.md
+prereg: research/hunt/iv1/PREREG.md
+variants_tried: 5
+results:
+  summary: 'Out of sample: NIFTY 227 trades -73/trade (p 0.600, q 0.818); BANKNIFTY 646 trades -224/trade (p 0.506, q 0.759);
+    FINNIFTY 336 trades -28/trade (p 0.066, q 0.197); MIDCPNIFTY 856 trades -256/trade (p 0.686, q 0.858); SENSEX 239 trades
+    -16/trade (p 0.086, q 0.197). None positive in every test period; none frozen for the forward test.'
+  costs: app charges at today's rates; fills next open + 5 bps + 1/2/4-tick half-spread; Boss's lock exit
+holdout_read: null
+verdict: rejected

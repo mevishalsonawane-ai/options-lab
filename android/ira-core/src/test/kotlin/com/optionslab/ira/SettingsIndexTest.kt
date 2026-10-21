@@ -113,6 +113,7 @@ class SettingsIndexTest {
         assertEquals("Fingerprint", titles("fingerprint").first())
         assertTrue(titles("quiet").containsAll(listOf("Quiet hours 22:00 to 07:00", "Quiet hours")))
         assertTrue("Opening read" in titles("gift"))
+        assertTrue("Morning gamma line" in titles("gamma") && "OI-wall check (shadow)" in titles("short covering"))
         assertTrue("Record market data" in titles("recorder"))
         assertTrue("Mute Jarvis (replies on screen only)" in titles("sound"))
         assertTrue(titles("lots").containsAll(listOf("Max lots per instrument", "Lot sizes")))

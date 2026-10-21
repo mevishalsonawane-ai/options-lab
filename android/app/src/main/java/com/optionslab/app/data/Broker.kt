@@ -130,8 +130,11 @@ object Broker {
      */
     private val entryGate = com.optionslab.ira.EntryGate(maxWaitMs = 15_000L)
 
-    /** The order tags of the bots' own entries (ORB and Liquidity, the Pine scripts, the scheduled strategies). */
-    private val BOT_TAGS = setOf("iraorb", "irapine", "iraalgostrat")
+    /**
+     * The order tags of the bots' own entries (ORB and Liquidity, the Pine scripts, the scheduled strategies, and since 18 Oct the
+     * paper strategies' live path, [ArmLive]: "iraarm").
+     */
+    private val BOT_TAGS = setOf("iraorb", "irapine", "iraalgostrat", com.optionslab.engine.orb.LiveMirror.TAG)
 
     /**
      * Why an entry may not be sent NOW, asked inside the door (null: it may). Reads memory and the settings already in it:
@@ -151,8 +154,15 @@ object Broker {
         // The kill switch kept in memory and read again only when a kept-elsewhere setting changed (g.kill is one of them):
         // the door reads nothing from the settings store on the order path (round 2's rule), yet sees a flip at once.
         if (killOn()) return "refused: the kill switch is on"
+        // 18 Oct (review): the paper-only period read again inside the door too (memory only), so a period set while this entry
+        // waited its turn still refuses it. [placeOrder] asks it first; this is the door's own look.
+        PaperOnly.entryRefusal()?.let { return it }
+        // 18 Oct (final review F2): a paper strategy's mirrored entry can wait here up to 15 s after its own checks ran: the app in
+        // Live, "AI trades go live", its arm's Trade live and its Shadow asked again at the last moment - memory only.
+        if (o.tag == com.optionslab.engine.orb.LiveMirror.TAG) ArmLive.doorRefusal(arm)?.let { return it }
         if (o.tag in BOT_TAGS) {
-            if (LossBreaker.trippedToday()) return "refused: the daily loss limit was reached today"
+            // 21 Oct: either paper segment's loss stop, or the whole paper day past the paper limit, refuses too: never weaker than one paper figure.
+            if (LossBreaker.liveDoorTripped()) return "refused: the daily loss limit was reached today"
             if (Strategies.stopHint() != null) return "stopped_for_today"
             DayLockGuard.refusal(true)?.let { return it }
             // Smart workers (10 Oct): a news window paused ON, unreliable data, the relay down - memory only, lower risk only.
@@ -161,6 +171,16 @@ object Broker {
             // only blocks. Review R1: another arm's entry and a saved strategy's basket leg (no arm) are never refused here.
             if (o.tag != "iraalgostrat")
                 runCatching { PortfolioHost.doorRefusal(arm, o.tradingSymbol, o.side == Kite.Side.BUY) }.getOrNull()?.let { return it }
+            // 19 Oct: the same-direction cap on the bots' live index-option entries - in SHADOW by default (what it would refuse is
+            // only recorded; nothing changes) until Boss switches it on in Bot settings. Memory only; it only ever refuses. A saved
+            // strategy's basket leg is never asked (refusing one leg of a hedged basket could leave the rest unhedged).
+            if (o.tag != "iraalgostrat")
+                runCatching { ExposureCapHost.liveCheck(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag) }.getOrNull()?.let { return it }
+            // 20 Oct, enhancement round 1 (idea 4): Boss's account stop rule over the whole Zerodha account - in SHADOW by default
+            // (what it would refuse is only recorded) until Boss switches it on in Bot settings. Memory only; it only refuses. A
+            // saved strategy's basket leg is never asked (one leg refused could leave the rest unhedged): its automatic start is.
+            if (o.tag != "iraalgostrat")
+                runCatching { AccountStopHost.doorCheck(o.tradingSymbol, arm ?: o.tag) }.getOrNull()?.let { return it }
         }
         return null
     }
@@ -272,6 +292,55 @@ object Broker {
     /** Bumped when Zerodha itself ends the session (expired or logged out elsewhere): the app asks to log in again. */
     val sessionEnded = kotlinx.coroutines.flow.MutableStateFlow(0)
 
+    /** The notification of a session Zerodha ended ([endedNotice]). */
+    internal const val ID_SESSION_ENDED = 2061
+
+    /**
+     * 18 Oct (live end-to-end tests): Zerodha ended the session mid-day (a token expired or a login elsewhere). Only the open
+     * app asked to log in again ([sessionEnded]); with the app in the background Boss was not told, while no order, stop or exit
+     * of the app's could go out. Now a notification says so (always shown, like an order's): the stops and GTTs resting at
+     * Zerodha still stand. No account figure in it. Posted off the caller's thread (the settings read is never on an order's path).
+     */
+    private fun endedNotice() {
+        runCatching {
+            val ctx = app
+            readScope.launch {
+                runCatching {
+                    com.optionslab.app.work.Notifier.post(ctx, ID_SESSION_ENDED, com.optionslab.app.work.Notifier.APPROVAL, "Zerodha session ended",
+                        "Zerodha ended today's session (it expired or you logged in elsewhere). Until you log in again the app cannot place, " +
+                            "change or exit any order; stops and GTTs resting at Zerodha still stand. Open Zerodha in the app and log in.",
+                        "broker", setting = "broker.login")
+                }
+            }
+        }
+    }
+
+    /** The notification of a bot's live entry the paper-only period refused ([paperOnlyRefused]). */
+    internal const val ID_PAPER_ONLY = 2062
+    /** The day the last [ID_PAPER_ONLY] notice was posted (memory only): one a day is enough to tell Boss why. */
+    @Volatile private var paperOnlyNoticeDay: String? = null
+
+    /**
+     * 18 Oct: a live entry refused by the paper-only period. Always in the diagnostics; a bot's (no screen shows its refusal)
+     * also as one notification a day. Posted off the caller's thread: the order path only reads memory here.
+     */
+    private fun paperOnlyRefused(o: Kite.Order, why: String) {
+        runCatching { Diag.record("zerodha", "Entry not sent (${o.tradingSymbol}): the paper-only period") }
+        if (o.tag !in BOT_TAGS) return
+        val day = runCatching { Market.today().toString() }.getOrNull() ?: return
+        if (paperOnlyNoticeDay == day) return
+        paperOnlyNoticeDay = day
+        runCatching {
+            val ctx = app
+            readScope.launch {
+                runCatching {
+                    com.optionslab.app.work.Notifier.post(ctx, ID_PAPER_ONLY, com.optionslab.app.work.Notifier.APPROVAL, "Live entry not sent: paper-only period",
+                        "A bot's live entry (${o.tradingSymbol}) was not sent. $why", "broker", setting = "risk.paperonly")
+                }
+            }
+        }
+    }
+
     // ---- HTTP ---------------------------------------------------------------------
 
     /**
@@ -322,8 +391,10 @@ object Broker {
         } catch (e: Exception) {
             if (e !is kotlinx.coroutines.CancellationException)
                 Diag.record("zerodha", "$where$asked$route -> FAILED ${e.javaClass.simpleName}: ${e.message} (${System.currentTimeMillis() - t0} ms)")
-            // A network failure counts against Zerodha's health; Zerodha's own refusal (a KiteError) or no login does not.
-            if (e is java.io.IOException && e !is KiteError && e !is NotLoggedIn) SmartWorkers.restSample(false, System.currentTimeMillis() - t0)
+            // A network failure counts against Zerodha's health; Zerodha's own refusal (a KiteError) or no login does not, and
+            // (20 Oct) nor does a failure that never reached Zerodha - the phone's own DNS or network gone, or our own cancel.
+            if (e is java.io.IOException && e !is KiteError && e !is NotLoggedIn &&
+                com.optionslab.ira.SelfHeal.zerodhaFault(e.javaClass.simpleName, e.message)) SmartWorkers.restSample(false, System.currentTimeMillis() - t0)
             throw e
         } finally {
             if (write) {
@@ -339,6 +410,11 @@ object Broker {
     private suspend fun callInner(method: String, path: String, body: String?, auth: Boolean, raw: Boolean,
                                   json: Boolean, viaRelay: Boolean, readOnly: Boolean = false): Any {
         var attempt = 0
+        // 16 Oct (Boss's diagnostics: "GET /portfolio/positions -> FAILED ... (105388 ms)"): a read had only per-socket limits
+        // (20 s connect, 60 s read), which the HTTP stack's own silent retries and the 429 retries each started afresh. A read
+        // now has one budget for the whole call ([readBudgetMs]); past it the connection is cut, and no 429 retry starts.
+        val budget = readBudgetMs(method, path, readOnly, viaRelay)
+        val began = System.currentTimeMillis()
         while (true) {
             // Orders and every other write go through the static-IP relay when it is on (it throws if it
             // cannot connect, so nothing leaves from another IP); reads go direct ([viaRelay]: a read that
@@ -363,10 +439,13 @@ object Broker {
             // Any failure closes it. A POST is never re-sent on a pooled connection: its body is streamed at
             // a fixed length (below), which the stack cannot replay, and a non-GET gets a health check first.
             var reusable = false
+            // The read's budget left: the connection is cut when it runs out (writes are never cut: an order is never half-sent).
+            val left = budget?.let { (it - (System.currentTimeMillis() - began)).coerceAtLeast(1L) }
+            val cut = left?.let { ms -> runCatching { cutter.schedule(Runnable { runCatching { c.disconnect() } }, ms, java.util.concurrent.TimeUnit.MILLISECONDS) }.getOrNull() }
             try {
                 c.requestMethod = method
-                c.connectTimeout = if (quick) FAST_READ_MS else 20_000
-                c.readTimeout = if (quick) FAST_READ_MS else 60_000
+                c.connectTimeout = if (quick) FAST_READ_MS else if (budget != null) READ_SOCKET_MS else 20_000
+                c.readTimeout = if (quick) FAST_READ_MS else if (budget != null) READ_SOCKET_MS else 60_000
                 c.instanceFollowRedirects = false
                 c.useCaches = false
                 c.setRequestProperty("X-Kite-Version", "3")
@@ -381,8 +460,16 @@ object Broker {
                     c.setFixedLengthStreamingMode(bytes.size)
                     c.outputStream.use { it.write(bytes) }
                 }
+                val askedAt = System.currentTimeMillis()
                 val code = c.responseCode
-                if (code == 429 && attempt < 3) { SmartWorkers.restLimited(); attempt++; delay(1_000L * attempt); continue }
+                // 16 Oct: the phone clock's offset against Zerodha's server, NTP-style (the round trip's middle vs the Date header).
+                if (method == "GET" && code in 200..299) {
+                    val gotAt = System.currentTimeMillis()
+                    runCatching { c.getHeaderFieldDate("Date", 0L).takeIf { it > 0 }?.let { OrderTiming.serverClock(askedAt, gotAt, it / 1000) } }
+                }
+                if (code == 429 && attempt < 3 && retryFits(budget, System.currentTimeMillis() - began, 1_000L * (attempt + 1))) {
+                    SmartWorkers.restLimited(); attempt++; delay(1_000L * attempt); continue
+                }
                 val stream = if (code in 200..299) c.inputStream else c.errorStream
                 val text = stream?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
                 reusable = true
@@ -407,7 +494,7 @@ object Broker {
                         Diag.record("info", "Zerodha TokenException on $method ${path.substringBefore('?')}: $msg" +
                             if (kept) " (the profile still answers: session kept)" else " (session ended)")
                         if (kept) throw KiteError(type, msg)
-                        if (loggedIn) { dropSession(); sessionEnded.value++ }
+                        if (loggedIn) { dropSession(); sessionEnded.value++; endedNotice() }
                         throw KiteError(type, "Zerodha session ended: $msg")
                     }
                     // SEBI's static-IP rule: Zerodha takes orders only from an IP listed in the Kite Connect app.
@@ -430,11 +517,37 @@ object Broker {
                         "check api.kite.trade in a browser, then re-trust it under More → Security.")
                 throw IOException("Could not reach Zerodha")
             } finally {
+                cut?.cancel(false)
                 if (!reusable) c.disconnect()
                 if (relay != null) relayUsedAt = System.currentTimeMillis()
             }
         }
     }
+
+    /** A read's whole budget (16 Oct): connect, wait, retries and reply together. */
+    const val READ_BUDGET_MS = 5_000L
+    /** Each socket step of a budgeted read (connect, each read) gives up after this. */
+    const val READ_SOCKET_MS = 5_000
+    /** The big downloads keep their old limits: the instrument list (megabytes) and the historical candles. */
+    private val UNBUDGETED = listOf("/instruments")
+
+    /**
+     * The budget of one call (null: not cut - every write, which must never be half-sent, the big downloads, and a read that
+     * warms the order route through the relay, whose SSH connect alone can take seconds). A plain read, or a POST that only
+     * reads, gets [READ_BUDGET_MS]. The event-driven reads keep their own 3 s socket limits inside it.
+     */
+    internal fun readBudgetMs(method: String, path: String, readOnly: Boolean, viaRelay: Boolean = false): Long? {
+        if (method != "GET" && !readOnly) return null
+        if (viaRelay) return null
+        if (UNBUDGETED.any { path.startsWith(it) }) return null
+        return READ_BUDGET_MS
+    }
+
+    /** A 429 retry after [waitMs] fits the read's budget (no budget: always, as before). */
+    internal fun retryFits(budget: Long?, spentMs: Long, waitMs: Long): Boolean = budget == null || spentMs + waitMs < budget
+
+    /** Cuts a read's connection when its budget is spent (one small thread for the whole app). */
+    private val cutter = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "zerodha-cut").apply { isDaemon = true } }
 
     @Volatile private var warmedAt = 0L
     private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
@@ -509,10 +622,14 @@ object Broker {
         return legacy
     }
 
-    /** The PIN changed: re-seal the secret under the new one. */
-    fun resealSecret(oldPin: CharArray, newPin: CharArray) {
-        val secret = unsealSecret(oldPin) ?: return
-        SecurePrefs.put(K_SEALED, com.optionslab.app.security.SecretBox.seal(secret, newPin))
+    /**
+     * The PIN changed: the API secret sealed under [newPin], as the settings to write together with the new PIN ([com.optionslab.app.security.PinLock.setPin]'s
+     * `also`), or nothing when no PIN-sealed secret opens with [oldPin]. 18 Oct, review: it used to be written after the PIN
+     * changed, so a failed write left the secret sealed under the old PIN (and crashed the app); now both go in one write.
+     */
+    fun resealedSecret(oldPin: CharArray, newPin: CharArray): Map<String, Any?> {
+        val secret = unsealSecret(oldPin) ?: return emptyMap()
+        return mapOf(K_SEALED to com.optionslab.app.security.SecretBox.seal(secret, newPin))
     }
 
     /** Exchange the request token for the day's access token (kite_login.exchange_token). */
@@ -526,6 +643,9 @@ object Broker {
         SecurePrefs.putAll(mapOf(K_TOKEN to token, K_LOGIN_AT to System.currentTimeMillis(),
             K_USER to data.optString("user_name"), K_UID to data.optString("user_id")))
         dropCreds(); dropKept()
+        // 18 Oct (review): a paper-only period the start could not read is read now (this is a worker thread, never the order
+        // path), so the day's live entries are not refused for want of it.
+        runCatching { PaperOnly.ensureLoaded() }
         return data.optString("user_name", "you")
     }
 
@@ -551,6 +671,8 @@ object Broker {
         val exchange: String = "NFO", val token: Long = 0L, val overnight: Int = 0, val multiplier: Double = 1.0,
         val m2m: Double = 0.0, val realised: Double = 0.0, val unrealised: Double = 0.0, val close: Double = 0.0,
         val buyQty: Int = 0, val buyAvg: Double = 0.0, val sellQty: Int = 0, val sellAvg: Double = 0.0,
+        /** 21 Oct, round 3: Kite's day_buy_quantity / day_sell_quantity (today's only); null when the read did not give them. */
+        val dayBuyQty: Int? = null, val daySellQty: Int? = null,
     ) {
         val open: Boolean get() = qty != 0
     }
@@ -637,7 +759,7 @@ object Broker {
     private fun dropKept() { keptOrders = null; keptBook = null; fundsKept = null; killKept = null; writes.incrementAndGet() }
 
     /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
-    internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null }
+    internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
         it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
@@ -683,7 +805,11 @@ object Broker {
         it.optDouble("last_price", 0.0), it.optDouble("pnl", 0.0), it.optString("exchange", "NFO"), it.optLong("instrument_token"),
         it.optInt("overnight_quantity"), it.optDouble("multiplier", 1.0), it.optDouble("m2m", 0.0), it.optDouble("realised", 0.0),
         it.optDouble("unrealised", 0.0), it.optDouble("close_price", 0.0), it.optInt("buy_quantity"), it.optDouble("buy_price", 0.0),
-        it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0))
+        it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0),
+        dayQty(it, "day_buy_quantity"), dayQty(it, "day_sell_quantity"))
+
+    /** 21 Oct, round 3: a day quantity Zerodha gave (a number); absent or null is "not known", never 0 (review). */
+    internal fun dayQty(o: JSONObject, k: String): Int? = if (o.has(k) && !o.isNull(k)) o.optInt(k) else null
 
     private fun rows(a: JSONArray?): List<JSONObject> = if (a == null) emptyList() else (0 until a.length()).map { a.getJSONObject(it) }
 
@@ -700,6 +826,8 @@ object Broker {
         }
         passBook.put(ticket, at, r.value)
         keptBook = Kept(r.startedAt, gen, r.value)
+        // 19 Oct: the same-direction cap's live count follows what Zerodha holds (a stop that filled there closes its entry).
+        ExposureCapHost.livePositions(r.value.net.groupBy { it.symbol }.mapValues { e -> e.value.sumOf { it.qty } }, r.startedAt)
         runCatching { AppState.publishPositions(r.value, r.startedAt) }
         return r.value
     }
@@ -737,6 +865,8 @@ object Broker {
             rows(call("GET", "/orders") as JSONArray).map(::orderRow).sortedByDescending { it.placedAt }
         }
         val list = r.value
+        // 20 Oct, enhancement round 2: the exits sent from here that this read shows are ticked off (memory only).
+        ExitCoordinator.ordersRead(list)
         // A resting stop that filled between the stream's updates is measured from the book (memory only; most reads skip it).
         runCatching { if (FillSlippage.anyWaiting()) list.forEach { if (FillSlippage.waiting(it.id)) FillSlippage.ended(it.id, it.status, it.avg, it.filled) } }
         keptOrders = Kept(r.startedAt, gen, list)
@@ -767,6 +897,8 @@ object Broker {
         INDEX.values.firstOrNull { it.first == key }?.let { return it.second }
         // MCX: from the day's MCX list ([McxMarket]), so its contracts stream too.
         if (key.startsWith("MCX:")) return McxMarket.tokenOf(key.removePrefix("MCX:"))
+        // 20 Oct, review: SENSEX's options (BFO) from today's BFO list in memory, so a live SENSEX trade's exits stream too.
+        if (key.startsWith("BFO:")) return bfoToken(key)
         if (!key.startsWith("NFO:")) return null
         val m = tokenMap?.takeIf { it.first == Market.today() }?.second
             ?: cachedInstruments()?.associate { "NFO:" + it.tradingSymbol to it.token }?.also { tokenMap = Market.today() to it }
@@ -779,22 +911,65 @@ object Broker {
      * trade manager's looks.
      */
     internal fun tokenKnown(key: String): Long? =
-        INDEX.values.firstOrNull { it.first == key }?.second ?: tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
+        INDEX.values.firstOrNull { it.first == key }?.second ?: if (key.startsWith("BFO:")) bfoToken(key)
+        // 20 Oct, second review: MCX from its list in memory (a live MCX trade's exits stream again; never the file here).
+        else if (key.startsWith("MCX:")) McxMarket.tokenKnown(key.removePrefix("MCX:"))
+        else tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
+
+    /** "BFO:<symbol>" -> its token from today's BFO list in memory (never a file or the network); the map built once per list. */
+    @Volatile private var bfoTokens: Pair<List<Kite.Instrument>, Map<String, Long>>? = null
+    private fun bfoToken(key: String): Long? {
+        val list = cachedBfoOptions() ?: return null
+        val m = bfoTokens?.takeIf { it.first === list }?.second
+            ?: list.associate { "BFO:" + it.tradingSymbol to it.token }.also { bfoTokens = list to it }
+        return m[key]
+    }
 
     /**
      * Quotes for "EXCHANGE:SYMBOL" keys. Instruments the live stream has a fresh tick for
      * are answered from it at once; only the rest go to Kite's quote API (and are
      * followed by the stream from then on).
      */
-    suspend fun quotes(keys: List<String>): Map<String, Quote> {
+    suspend fun quotes(keys: List<String>, keepStream: Boolean = true): Map<String, Quote> {
         if (keys.isEmpty()) return emptyMap()
         val tokens = keys.associateWith { tokenOf(it) }
-        KiteStream.touch(tokens.values.filterNotNull())
+        // [keepStream] false (Battery, 14 Oct: the MCX price reads with nothing held on MCX): answered from the stream if it
+        // runs, else by the quote call, without keeping the stream awake for these instruments.
+        if (keepStream) KiteStream.touch(tokens.values.filterNotNull())
         val streamed = keys.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
         val rest = keys.filter { it !in streamed }
         if (rest.isEmpty()) return streamed
         return streamed + quotesRest(rest)
     }
+
+    /**
+     * 18 Oct (speed review): the prices a stop, target or profit lock is judged on. Each from the stream's tick while it is
+     * [com.optionslab.ira.LiveQuote.FRESH_MS] (2 s) fresh, the rest from Zerodha's quote call itself. [quotes] answers from
+     * a tick up to 5 s old, and a stream gone quiet is called stalled only after 10 s: a stop was judged on a price 2-5 s
+     * old, with no REST read, as the "fallback" of a look whose ticks were not fresh. Kept followed on the stream. When the
+     * quote call fails (a 429, no network), the rest are answered from a tick up to 5 s old as before, and the fresh ones are
+     * kept: a failed read never leaves every held position unpriced for that look.
+     */
+    suspend fun stopQuotes(keys: List<String>): Map<String, Quote> {
+        if (keys.isEmpty()) return emptyMap()
+        val tokens = keys.associateWith { tokenOf(it) }
+        KiteStream.touch(tokens.values.filterNotNull())
+        val streamed = keys.mapNotNull { k ->
+            tokens[k]?.let { KiteStream.freshTick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) }
+        }.toMap()
+        val rest = keys.filter { it !in streamed }
+        if (rest.isEmpty()) return streamed
+        val read = try { quotesRest(rest) } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            val older = rest.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
+            if (streamed.isEmpty() && older.isEmpty()) throw e
+            older
+        }
+        return streamed + read
+    }
+
+    /** Zerodha's quote call itself, never the stream's memory (a paper fill's re-read when no stream tick is 2 s fresh, 16 Oct). */
+    suspend fun quotesFresh(keys: List<String>): Map<String, Quote> = if (keys.isEmpty()) emptyMap() else quotesRest(keys)
 
     private suspend fun quotesRest(keys: List<String>): Map<String, Quote> {
         val data = call("GET", "/quote?" + keys.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject
@@ -1000,14 +1175,11 @@ object Broker {
         val f = File(app.filesDir, "kite_instruments.json")
         val stamp = f.lastModified() to f.length()
         instrumentsMemo?.let { if (it.stamp == stamp && stamp.first != 0L) return it }
+        // Memory audit (14 Oct, item 5): read as a stream, the repeated names and expiries shared - no whole-file string, no
+        // JSON tree (several MB at once after every restart).
         return runCatching {
-            val o = JSONObject(f.readText())
-            val a = o.getJSONArray("i")
-            val list = (0 until a.length()).map { a.getJSONArray(it) }.map {
-                Kite.Instrument(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getDouble(4),
-                    it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
-            }
-            InstrumentsMemo(stamp, o.optString("day"), list).also { instrumentsMemo = it }
+            val (day, list) = f.bufferedReader(Charsets.UTF_8).use { com.optionslab.ira.InstrumentsFile.read(it) } ?: return@runCatching null
+            InstrumentsMemo(stamp, day, list).also { instrumentsMemo = it }
         }.getOrNull() ?: instrumentsMemo?.takeIf { f.exists() }   // G1-6: a file that does not parse keeps the list in memory; a file gone (cleared data) has none
     }
 
@@ -1029,7 +1201,7 @@ object Broker {
         val f = File(app.filesDir, "kite_instruments.json")
         instrumentsFile()?.takeIf { it.day == Market.today().toString() }?.let { return it.list }
         val text = call("GET", "/instruments/NFO", raw = true) as String
-        val list = Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"))
+        val list = com.optionslab.ira.InstrumentsFile.compact(Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")))
         // The market recorder's index futures from the same dump (never a second download for them).
         runCatching { keepNfoFutures(text) }
         val a = JSONArray()
@@ -1070,6 +1242,40 @@ object Broker {
         val got = Kite.lookup(text.lineSequence(), setOf(symbol))[symbol] ?: throw IOException("$exchange:$symbol is not listed on Zerodha today")
         specs["$exchange:$symbol"] = got
         return got
+    }
+
+    // ---- SENSEX's options at Zerodha (BFO), for the stream's prices of the Hero ₹1,000 ticket's paper SENSEX side (15 Oct) ----
+
+    /** Today's SENSEX options from GET /instruments/BFO (memory only), or null when not read today. */
+    @Volatile private var bfoOptions: Pair<LocalDate, List<Kite.Instrument>>? = null
+    @Volatile private var bfoTriedAt = 0L
+    private val bfoLoading = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** Today's SENSEX options list, memory only (never the network or a file): null when not read today. */
+    fun cachedBfoOptions(): List<Kite.Instrument>? = bfoOptions?.takeIf { it.first == Market.today() }?.second
+
+    /** Tests: SENSEX's list forgotten and its 10-minute retry wait cleared. */
+    internal fun resetBfoForTest() { bfoOptions = null; bfoTriedAt = 0L }
+
+    /**
+     * Read today's SENSEX options in the background (logged in only; at most every 10 minutes after a failure). Returns at once:
+     * the stream's price of a SENSEX paper ticket follows on the next look once the list is in.
+     */
+    fun loadBfoOptionsInBackground() {
+        if (!loggedIn || cachedBfoOptions() != null) return
+        val now = System.currentTimeMillis()
+        if (now - bfoTriedAt < 10 * 60_000L || !bfoLoading.compareAndSet(false, true)) return
+        bfoTriedAt = now
+        readScope.launch {
+            try {
+                val text = call("GET", "/instruments/BFO", raw = true) as String
+                bfoOptions = Market.today() to Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Tried again after 10 minutes; until then the ticket is priced from the candle feed, as before.
+            } finally { bfoLoading.set(false) }
+        }
     }
 
     fun find(list: List<Kite.Instrument>, underlying: String, expiry: LocalDate, strike: Double, right: Right) =
@@ -1140,20 +1346,88 @@ object Broker {
      * its entry check asked the portfolio guard with), so the door refuses only that arm's entry; null for any other order.
      */
     suspend fun placeOrder(o: Kite.Order, exit: Boolean = false, arm: String? = null, intended: Double? = null): String {
+        // 18 Oct (Boss): the paper-only period refuses every NEW live entry, from every source (Boss's own, the arms, Pine, the
+        // strategies, Jarvis, MCX), even when the app is already Live. Memory only ([PaperOnly.entryRefusal]); an exit never asks.
+        if (!exit) PaperOnly.entryRefusal()?.let { why -> paperOnlyRefused(o, why); throw KiteError("paper_only", why) }
         // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         // An exit never waits behind an entry.
-        if (exit) return com.optionslab.app.work.TradingBusy.during { send(o, true, arm, intended) }
+        // 20 Oct, review: an exit sent no longer frees a place in the same-direction cap by itself. A resting LIMIT target, a part
+        // sold, Boss's own sale or an exit Zerodha then rejected each freed a whole place while the position was still held, and
+        // the cap undercounted all day. A place is freed only when a positions read shows the position closed
+        // ([ExposureCapHost.livePositions], on every read): until then it is counted one too many, which only lowers risk.
+        // 20 Oct, enhancement round 2: every exit sent is noted by the exit coordinator (memory only) until a read of the book shows
+        // it, so the next exit sender on the same contract never reads the book without it ([ExitCoordinator]).
+        if (exit) {
+            val ticket = ExitCoordinator.sending(o)
+            return try {
+                com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }.also { ExitCoordinator.answered(ticket, it) }
+            } catch (e: Throwable) {
+                ExitCoordinator.failed(ticket, e is Exception && e !is kotlinx.coroutines.CancellationException && definite(e))
+                throw e
+            }
+        }
         // A new position (10 Oct): through the one door, one at a time from any worker, the kill switch (and, for the bots,
         // the loss limit, the day stop and the day lock) read again inside it. A refusal is definite: nothing was sent.
+        // 19 Oct: a bot's live index-option entry counted by the same-direction cap until it closes (memory only).
+        // 20 Oct, review: counted INSIDE the door, before it opens for the next entry. Counted after it (as before), four puts
+        // queued on one signal each passed the cap's check before the one ahead of it was counted. A reply lost on the way (the
+        // order may exist) counts too: counting one too many only lowers risk, and the next positions read corrects it.
+        val counted = o.tag in BOT_TAGS && o.tag != "iraalgostrat"
+        fun count() = ExposureCapHost.liveEntered(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag)
         return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm) }) {
-            com.optionslab.app.work.TradingBusy.during { send(o, false, arm, intended) } }) {
+            com.optionslab.app.work.TradingBusy.during {
+                try { sendChecked(o, false, arm, intended).also { if (counted) count() } }
+                catch (e: Exception) { if (counted && e !is kotlinx.coroutines.CancellationException && !definite(e)) runCatching { count() }; throw e }
+            } }) {
             is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
             is com.optionslab.ira.EntryGate.Outcome.Refused -> {
+                // The paper-only period's refusal inside the door: told and typed as at the door's front ([paperOnlyRefused]).
+                if (PaperOnly.isRefusal(r.why)) { paperOnlyRefused(o, r.why); throw KiteError("paper_only", r.why) }
                 runCatching { Diag.record("zerodha", "Entry not sent (${o.tradingSymbol}): ${r.why}") }
                 throw KiteError("entry_gate", r.why)
             }
         }
+    }
+
+    /**
+     * 18 Oct (live end-to-end tests): Kite's error types after which an order may still have been placed although Zerodha
+     * answered with an error, not a lost reply: DataException (502, the OMS answered but Kite could not read the answer) and
+     * GeneralException (500, unclassified). They were taken as refusals ([definite]): an ORB entry the exchange filled was left
+     * untracked with no stop, and an ORB exit that filled put the stop back on a flat position (a sell resting with nothing held).
+     */
+    private val UNSURE = setOf("DataException", "GeneralException")
+
+    /**
+     * [send], and after one of the [UNSURE] errors the order book is read for the order before anything is decided, as for a
+     * lost reply ([findRecentRetrying]: three looks two seconds apart, the book can trail the POST): found, it is the order placed
+     * (its id, as if Zerodha had answered); not there, the error stands as before (a refusal); the book unreadable, the order's
+     * fate is unknown (not definite, so the caller looks again). Only what really exists changes the outcome. An entry's look
+     * holds the entry door meanwhile: no other entry goes while this one's fate is unknown.
+     */
+    private suspend fun sendChecked(o: Kite.Order, exit: Boolean, arm: String?, intended: Double?): String = try {
+        send(o, exit, arm, intended)
+    } catch (e: KiteError) {
+        if (e.type !in UNSURE) throw e
+        val found = try { findRecentRetrying(o, emptyList(), afterError = true) } catch (x: kotlinx.coroutines.CancellationException) { throw x
+        } catch (_: Exception) { throw IOException("${e.message} (Zerodha's ${e.type}); its order book could not be read, so the order may exist") }
+        runCatching { Diag.record("zerodha", "${o.tradingSymbol}: Zerodha answered ${e.type} (${e.message}); " +
+            (found?.let { "the order is in the book: $it" } ?: "no such order in the book: refused")) }
+        found ?: throw e
+    }
+
+    /**
+     * Ids Zerodha gave this phone for its orders (and lost replies adopted since) in the last [SENT_KEEP_MS], memory only:
+     * [findRecent] never takes one of them for another order's lost reply (18 Oct: a second identical hand order refused at
+     * Kite's gateway was shown "Filled" with the first one's id). Only the last minutes matter: [findRecent] looks back three.
+     */
+    private val sentIds = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val SENT_KEEP_MS = 15 * 60_000L
+
+    private fun noteSent(id: String) {
+        val now = System.currentTimeMillis()
+        if (sentIds.size > 200) sentIds.entries.removeIf { now - it.value > SENT_KEEP_MS }
+        sentIds[id] = now
     }
 
     /**
@@ -1170,6 +1444,7 @@ object Broker {
         runCatching { OrderTiming.answered(live = true, startedAt = t0) }
         countSent()
         val id = data.getString("order_id")
+        noteSent(id)
         // Measuring never costs the order: the order is placed, so nothing here may throw past the id.
         runCatching { FillSlippage.sent(id, o, exit, arm, intended) }
         return id
@@ -1228,10 +1503,13 @@ object Broker {
 
     /**
      * After a POST whose answer was lost (timeout, dropped connection), find the
-     * order Kite may have placed anyway: same symbol, side, quantity and tag,
-     * placed in the last three minutes, and not one of [known].
+     * order Kite may have placed anyway: same symbol, side, quantity, tag and order type,
+     * placed in the last three minutes, and not one of [known] nor one this phone already has the id of.
+     * [afterError] (18 Oct review: Kite answered DataException or GeneralException, [sendChecked]): stricter, as the order
+     * is adopted only when it is surely this one - a LIMIT's price must match too (to half a tick), and an order the
+     * exchange REJECTED, or CANCELLED with nothing filled, is never taken for it (that is no live order; the error stands).
      */
-    suspend fun findRecent(o: Kite.Order, known: Collection<String>): String? {
+    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false): String? {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val rs = rows(call("GET", "/orders") as JSONArray)
         fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
@@ -1242,14 +1520,36 @@ object Broker {
         return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
                 it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
-                it.optString("order_id") !in known && at(it)?.isBefore(since) == false
-        }?.optString("order_id")?.also { countSent() }
+                // 18 Oct: the order's own type too (a resting SL of the same size and tag is never taken for a market exit's lost reply).
+                it.optString("order_type") == o.orderType &&
+                it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(since) == false &&
+                (!afterError || adoptableAfterError(o, it))
+        }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it) }
+    }
+
+    /**
+     * [findRecent] after Kite's error: the row's prices and its status as described there - a LIMIT's or an SL's price, and an
+     * SL's or an SL-M's trigger too (a resting stop at another level is never taken for a new one).
+     */
+    internal fun adoptableAfterError(o: Kite.Order, r: JSONObject): Boolean {
+        fun same(want: Double?, field: String): Boolean {
+            val w = want ?: return false
+            val got = r.optDouble(field, Double.NaN)
+            return got.isFinite() && kotlin.math.abs(got - w) <= o.tickSize / 2 + 1e-9
+        }
+        if (o.hasPrice && !same(o.price, "price")) return false
+        if (o.hasTrigger && !same(o.triggerPrice, "trigger_price")) return false
+        val status = r.optString("status").uppercase()
+        if (status == "REJECTED") return false
+        if (status == "CANCELLED" && r.optInt("filled_quantity", 0) <= 0) return false
+        return true
     }
 
     /**
      * True when [e] from [placeOrder] means the order was certainly NOT placed: Zerodha answered with a
      * refusal, or nothing was sent (not logged in). A lost reply (timeout, dropped connection, an
-     * unreadable answer, Kite's own NetworkException) is not definite: the order may exist.
+     * unreadable answer, Kite's own NetworkException) is not definite: the order may exist. Kite's DataException and
+     * GeneralException on an order are checked against the order book inside [placeOrder] first ([UNSURE]).
      */
     fun definite(e: Throwable): Boolean = e is NotLoggedIn || (e is KiteError && e.type != "NetworkException")
 
@@ -1258,13 +1558,13 @@ object Broker {
      * trail the POST by a moment). The order id; null when the book was read and holds no such order;
      * throws when the book could not be read at all, so the caller knows the order's fate is unknown.
      */
-    suspend fun findRecentRetrying(o: Kite.Order, known: Collection<String>, tries: Int = 3, waitMs: Long = 2_000): String? {
+    suspend fun findRecentRetrying(o: Kite.Order, known: Collection<String>, tries: Int = 3, waitMs: Long = 2_000, afterError: Boolean = false): String? {
         var read = false
         var err: Exception? = null
         for (i in 0 until tries) {
             if (i > 0) delay(waitMs)
             try {
-                findRecent(o, known)?.let { return it }
+                findRecent(o, known, afterError)?.let { return it }
                 read = true
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -1292,21 +1592,66 @@ object Broker {
 
     // ---- GTT ------------------------------------------------------------------------------
 
+    /** [orderIds]: the orders a fired GTT placed (its legs' results), so a fired stop's own exit order can be found (18 Oct). */
     data class GttRow(val id: Long, val type: String, val status: String, val exchange: String, val symbol: String,
-                      val triggers: List<Double>, val lastPrice: Double, val orders: String, val created: String)
+                      val triggers: List<Double>, val lastPrice: Double, val orders: String, val created: String,
+                      val orderIds: List<String> = emptyList(), val legPrices: List<Double> = emptyList(),
+                      /** 18 Oct review: each leg's side, quantity and product (what an active GTT would sell or buy). */
+                      val legSides: List<String> = emptyList(), val legQtys: List<Int> = emptyList(), val legProducts: List<String> = emptyList()) {
+        val active: Boolean get() = status.lowercase() == "active"
+        /** The quantity this GTT, while active, would send on [side] in [product] (its first leg: a single-leg stop). */
+        fun covers(side: String, product: String): Int =
+            if (!active || legSides.isEmpty()) 0 else if (legSides[0] == side && legProducts.getOrNull(0)?.let { it == product } != false) legQtys.getOrElse(0) { 0 } else 0
+    }
 
     suspend fun gtts(): List<GttRow> = rows(call("GET", "/gtt/triggers") as? JSONArray).map { g ->
         val c = g.optJSONObject("condition") ?: JSONObject()
         val tv = c.optJSONArray("trigger_values") ?: JSONArray()
         val os = rows(g.optJSONArray("orders")).joinToString(" / ") { "${it.optString("transaction_type")} ${it.optInt("quantity")} @ ${it.optDouble("price")}" }
         GttRow(g.optLong("id"), g.optString("type"), g.optString("status"), c.optString("exchange"), c.optString("tradingsymbol"),
-            (0 until tv.length()).map { tv.getDouble(it) }, c.optDouble("last_price", 0.0), os, g.optString("created_at"))
-    }.sortedByDescending { it.created }
+            (0 until tv.length()).map { tv.getDouble(it) }, c.optDouble("last_price", 0.0), os, g.optString("created_at"),
+            rows(g.optJSONArray("orders")).mapNotNull { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.optString("order_id")?.takeIf { it.isNotBlank() } },
+            rows(g.optJSONArray("orders")).map { it.optDouble("price", 0.0) },
+            rows(g.optJSONArray("orders")).map { it.optString("transaction_type") },
+            rows(g.optJSONArray("orders")).map { it.optInt("quantity") },
+            rows(g.optJSONArray("orders")).map { it.optString("product") })
+    }.sortedByDescending { it.created }.also { ExitCoordinator.gttsRead(it) }
 
     /** Places a GTT. Callers must have had the owner confirm it. */
-    suspend fun placeGtt(g: Kite.Gtt): Long = (call("POST", "/gtt/triggers", g.formBody()) as JSONObject).getLong("trigger_id")
+    /**
+     * 18 Oct review: [placeGtt] where a lost reply never leaves a second GTT: on an answer that is not a definite refusal, the GTT
+     * list is read and an active GTT on the same contract with the same trigger and quantity, not one of [known], is adopted (the
+     * POST went through). Null when refused or not found (the caller rests it on a later look).
+     */
+    suspend fun placeGttOnce(g: Kite.Gtt, known: Set<Long>): Long? {
+        return try { placeGtt(g) } catch (e: Exception) {
+            if (definite(e)) return null
+            val q = g.orders.firstOrNull()?.quantity ?: return null
+            runCatching {
+                gtts().firstOrNull { r -> r.active && r.id !in known && r.symbol == g.tradingSymbol && r.exchange == g.exchange &&
+                    r.legQtys.firstOrNull() == q && r.triggers.zip(g.triggers).all { (a, b) -> kotlin.math.abs(a - b) < 1e-6 } && r.triggers.size == g.triggers.size }?.id
+            }.getOrNull()
+        }
+    }
 
-    suspend fun deleteGtt(id: Long) { call("DELETE", "/gtt/triggers/$id") }
+    suspend fun placeGtt(g: Kite.Gtt): Long {
+        // 20 Oct, enhancement round 2: noted by the exit coordinator until a read of the GTT list shows it ([ExitCoordinator]).
+        val ticket = ExitCoordinator.sendingGtt(g)
+        return try {
+            (call("POST", "/gtt/triggers", g.formBody()) as JSONObject).getLong("trigger_id").also { ExitCoordinator.answered(ticket, it.toString()) }
+        } catch (e: Throwable) {
+            ExitCoordinator.failed(ticket, e is Exception && e !is kotlinx.coroutines.CancellationException && definite(e))
+            throw e
+        }
+    }
+
+    suspend fun deleteGtt(id: Long) { call("DELETE", "/gtt/triggers/$id"); ExitCoordinator.gttDeleted(id) }
+
+    /**
+     * 18 Oct (the arms' live path, [ArmLive]): an active GTT's trigger and order replaced in place (PUT), so a carried position's
+     * stop moves up with its lock without ever being deleted and placed again (no moment with two, or none).
+     */
+    suspend fun modifyGtt(id: Long, g: Kite.Gtt) { call("PUT", "/gtt/triggers/$id", g.formBody()) }
 
     /** What Zerodha would block for these orders together ([required]), against the account's free margin. */
     data class Margin(val required: Double, val initial: Double, val available: Double, val charges: Double) {
@@ -1317,12 +1662,21 @@ object Broker {
     suspend fun basketMargin(orders: List<Kite.Order>): Margin = kotlinx.coroutines.coroutineScope {
         // The free margin is read alongside the basket, not after it.
         val free = async { funds() }
-        val d = call("POST", "/margins/basket?consider_positions=true", Kite.basketJson(orders), json = true) as JSONObject
+        val d = call("POST", "/margins/basket?consider_positions=true", Kite.basketJson(orders), json = true, readOnly = true) as JSONObject
         val fin = d.optJSONObject("final")?.optDouble("total", Double.NaN) ?: Double.NaN
         val init = d.optJSONObject("initial")?.optDouble("total", Double.NaN) ?: Double.NaN
         val charges = rows(d.optJSONArray("orders")).sumOf { it.optJSONObject("charges")?.optDouble("total", 0.0) ?: 0.0 }
         Margin(if (fin.isNaN()) init else fin, init, free.await().net, charges)
     }
+
+    /**
+     * POST /margins/orders (Kite Connect's order margin calculator): what Zerodha would block for each of [orders] on its own.
+     * A read - it places, changes and cancels nothing - sent as JSON like [basketMargin] and, like the contract note, direct
+     * and without a diary line unless it fails. The rows' totals, in order (the Live check, 18 Oct, shows only that each was
+     * priced and whether the free margin covers them, never the figures).
+     */
+    suspend fun orderMargins(orders: List<Kite.Order>): List<Double> =
+        rows(call("POST", "/margins/orders", Kite.basketJson(orders), json = true, readOnly = true) as? JSONArray).map { it.optDouble("total", Double.NaN) }
 
     /**
      * POST /charges/orders (Kite Connect's virtual contract note): Zerodha's own charges for orders already executed,

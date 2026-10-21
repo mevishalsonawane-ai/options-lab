@@ -1,0 +1,1802 @@
+{
+ "written": "2026-10-16T04:55:58+00:00",
+ "period": [
+  "2026-04-01",
+  "2026-10-14"
+ ],
+ "cells": {
+  "T1": {
+   "LIQ": {
+    "trades": 357,
+    "changed": 0,
+    "sessions": 113,
+    "plain_net": 11155.0,
+    "rule_net": 11155.0,
+    "improvement": 0.0,
+    "saved_on_losers": 0.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 0,
+    "winners_changed": 0,
+    "impr_ex_top5": 0.0,
+    "plain_max_dd": 61062.0,
+    "rule_max_dd": 61062.0,
+    "plain_worst_day": -11405.0,
+    "rule_worst_day": -11405.0,
+    "why": {},
+    "p": 1.0,
+    "twin_mean": 0.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 131
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 95
+     },
+     "MIDCPNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 131
+     }
+    },
+    "by_month": {
+     "2026-04": 0.0,
+     "2026-05": 0.0,
+     "2026-06": 0.0,
+     "2026-07": 0.0,
+     "2026-08": 0.0,
+     "2026-09": 0.0,
+     "2026-10": 0.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "final improvement <= 0",
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "DON": {
+    "trades": 1807,
+    "changed": 76,
+    "sessions": 134,
+    "plain_net": 65402.0,
+    "rule_net": 71529.0,
+    "improvement": 5011.0,
+    "saved_on_losers": 13257.0,
+    "given_up_on_winners": 8246.0,
+    "losers_changed": 65,
+    "winners_changed": 11,
+    "impr_ex_top5": -4010.0,
+    "plain_max_dd": 91467.0,
+    "rule_max_dd": 82726.0,
+    "plain_worst_day": -23012.0,
+    "rule_worst_day": -23099.0,
+    "why": {
+     "rule_exit": 76
+    },
+    "p": 1.0,
+    "twin_mean": 29907.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 14,
+      "improvement": 9295.0,
+      "trades": 381
+     },
+     "FINNIFTY": {
+      "changed": 17,
+      "improvement": -518.0,
+      "trades": 359
+     },
+     "MIDCPNIFTY": {
+      "changed": 21,
+      "improvement": -4124.0,
+      "trades": 396
+     },
+     "NIFTY": {
+      "changed": 14,
+      "improvement": 921.0,
+      "trades": 332
+     },
+     "SENSEX": {
+      "changed": 10,
+      "improvement": -563.0,
+      "trades": 339
+     }
+    },
+    "by_month": {
+     "2026-04": 2220.0,
+     "2026-05": 2547.0,
+     "2026-06": 5228.0,
+     "2026-07": 1754.0,
+     "2026-08": 1963.0,
+     "2026-09": -4894.0,
+     "2026-10": -3806.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "OOV": {
+    "trades": 292,
+    "changed": 13,
+    "sessions": 102,
+    "plain_net": 54058.0,
+    "rule_net": 58969.0,
+    "improvement": 4911.0,
+    "saved_on_losers": 4911.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 13,
+    "winners_changed": 0,
+    "impr_ex_top5": -1919.0,
+    "plain_max_dd": 45689.0,
+    "rule_max_dd": 46301.0,
+    "plain_worst_day": -16554.0,
+    "rule_worst_day": -16554.0,
+    "why": {
+     "rule_exit": 13
+    },
+    "p": 0.99,
+    "twin_mean": 12728.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 2,
+      "improvement": 401.0,
+      "trades": 59
+     },
+     "FINNIFTY": {
+      "changed": 2,
+      "improvement": 278.0,
+      "trades": 43
+     },
+     "MIDCPNIFTY": {
+      "changed": 4,
+      "improvement": 4017.0,
+      "trades": 66
+     },
+     "NIFTY": {
+      "changed": 2,
+      "improvement": -1031.0,
+      "trades": 64
+     },
+     "SENSEX": {
+      "changed": 3,
+      "improvement": 1245.0,
+      "trades": 60
+     }
+    },
+    "by_month": {
+     "2026-04": 0.0,
+     "2026-05": -1294.0,
+     "2026-06": -612.0,
+     "2026-07": 3364.0,
+     "2026-08": 832.0,
+     "2026-09": 711.0,
+     "2026-10": 1909.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "SOLO": {
+    "trades": 36,
+    "changed": 9,
+    "sessions": 36,
+    "plain_net": -21589.0,
+    "rule_net": -21219.0,
+    "improvement": 370.0,
+    "saved_on_losers": 370.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 9,
+    "winners_changed": 0,
+    "impr_ex_top5": -2519.0,
+    "plain_max_dd": 28815.0,
+    "rule_max_dd": 29206.0,
+    "plain_worst_day": -6235.0,
+    "rule_worst_day": -6235.0,
+    "why": {
+     "rule_exit": 9
+    },
+    "p": 1.0,
+    "twin_mean": 15809.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 2,
+      "improvement": 365.0,
+      "trades": 11
+     },
+     "FINNIFTY": {
+      "changed": 3,
+      "improvement": -203.0,
+      "trades": 14
+     },
+     "NIFTY": {
+      "changed": 4,
+      "improvement": 208.0,
+      "trades": 11
+     }
+    },
+    "by_month": {
+     "2026-04": 1011.0,
+     "2026-05": 0.0,
+     "2026-06": -1372.0,
+     "2026-07": -169.0,
+     "2026-08": -979.0,
+     "2026-09": 344.0,
+     "2026-10": 1534.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "SOLO2": {
+    "trades": 128,
+    "changed": 7,
+    "sessions": 128,
+    "plain_net": 88818.0,
+    "rule_net": 92401.0,
+    "improvement": 3583.0,
+    "saved_on_losers": 3583.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 7,
+    "winners_changed": 0,
+    "impr_ex_top5": -1892.0,
+    "plain_max_dd": 26055.0,
+    "rule_max_dd": 22733.0,
+    "plain_worst_day": -6120.0,
+    "rule_worst_day": -4730.0,
+    "why": {
+     "rule_exit": 7
+    },
+    "p": 0.8303,
+    "twin_mean": 6546.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 1,
+      "improvement": 432.0,
+      "trades": 11
+     },
+     "FINNIFTY": {
+      "changed": 1,
+      "improvement": -189.0,
+      "trades": 23
+     },
+     "MIDCPNIFTY": {
+      "changed": 4,
+      "improvement": 4633.0,
+      "trades": 87
+     },
+     "NIFTY": {
+      "changed": 1,
+      "improvement": -1294.0,
+      "trades": 7
+     }
+    },
+    "by_month": {
+     "2026-04": 0.0,
+     "2026-05": -1294.0,
+     "2026-06": -42.0,
+     "2026-07": 2765.0,
+     "2026-08": 0.0,
+     "2026-09": 244.0,
+     "2026-10": 1909.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "HERO": {
+    "trades": 107,
+    "changed": 36,
+    "sessions": 55,
+    "plain_net": -9680.0,
+    "rule_net": -7377.0,
+    "improvement": 2303.0,
+    "saved_on_losers": 5221.0,
+    "given_up_on_winners": 2918.0,
+    "losers_changed": 31,
+    "winners_changed": 5,
+    "impr_ex_top5": 4.0,
+    "plain_max_dd": 13429.0,
+    "rule_max_dd": 12423.0,
+    "plain_worst_day": -1752.0,
+    "rule_worst_day": -1590.0,
+    "why": {
+     "trend": 36
+    },
+    "p": 0.8782,
+    "twin_mean": 3579.0,
+    "by_index": {
+     "NIFTY": {
+      "changed": 15,
+      "improvement": 1196.0,
+      "trades": 55
+     },
+     "SENSEX": {
+      "changed": 21,
+      "improvement": 1106.0,
+      "trades": 52
+     }
+    },
+    "by_month": {
+     "2026-04": 1630.0,
+     "2026-05": -791.0,
+     "2026-06": -89.0,
+     "2026-07": 1107.0,
+     "2026-08": -38.0,
+     "2026-09": 483.0,
+     "2026-10": 0.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades"
+     ],
+     "q": 1.0
+    }
+   },
+   "ALL": {
+    "trades": 2727,
+    "changed": 141,
+    "sessions": 134,
+    "plain_net": 188165.0,
+    "rule_net": 205457.0,
+    "improvement": 16178.0,
+    "saved_on_losers": 27342.0,
+    "given_up_on_winners": 11164.0,
+    "losers_changed": 125,
+    "winners_changed": 16,
+    "impr_ex_top5": 2544.0,
+    "plain_max_dd": 127535.0,
+    "rule_max_dd": 118668.0,
+    "plain_worst_day": -52335.0,
+    "rule_worst_day": -52422.0,
+    "why": {
+     "rule_exit": 105,
+     "trend": 36
+    },
+    "p": 1.0,
+    "twin_mean": 68570.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 19,
+      "improvement": 10493.0,
+      "trades": 593
+     },
+     "FINNIFTY": {
+      "changed": 23,
+      "improvement": -631.0,
+      "trades": 534
+     },
+     "MIDCPNIFTY": {
+      "changed": 29,
+      "improvement": 4526.0,
+      "trades": 680
+     },
+     "NIFTY": {
+      "changed": 36,
+      "improvement": 1.0,
+      "trades": 469
+     },
+     "SENSEX": {
+      "changed": 34,
+      "improvement": 1789.0,
+      "trades": 451
+     }
+    },
+    "by_month": {
+     "2026-04": 4861.0,
+     "2026-05": -830.0,
+     "2026-06": 3113.0,
+     "2026-07": 8823.0,
+     "2026-08": 1778.0,
+     "2026-09": -3112.0,
+     "2026-10": 1546.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   }
+  },
+  "T2": {
+   "LIQ": {
+    "trades": 357,
+    "changed": 0,
+    "sessions": 113,
+    "plain_net": 11155.0,
+    "rule_net": 11155.0,
+    "improvement": 0.0,
+    "saved_on_losers": 0.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 0,
+    "winners_changed": 0,
+    "impr_ex_top5": 0.0,
+    "plain_max_dd": 61062.0,
+    "rule_max_dd": 61062.0,
+    "plain_worst_day": -11405.0,
+    "rule_worst_day": -11405.0,
+    "why": {},
+    "p": 1.0,
+    "twin_mean": 0.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 131
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 95
+     },
+     "MIDCPNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 131
+     }
+    },
+    "by_month": {
+     "2026-04": 0.0,
+     "2026-05": 0.0,
+     "2026-06": 0.0,
+     "2026-07": 0.0,
+     "2026-08": 0.0,
+     "2026-09": 0.0,
+     "2026-10": 0.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "final improvement <= 0",
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "DON": {
+    "trades": 1807,
+    "changed": 0,
+    "sessions": 134,
+    "plain_net": 65402.0,
+    "rule_net": 65402.0,
+    "improvement": 0.0,
+    "saved_on_losers": 0.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 0,
+    "winners_changed": 0,
+    "impr_ex_top5": 0.0,
+    "plain_max_dd": 91467.0,
+    "rule_max_dd": 91467.0,
+    "plain_worst_day": -23012.0,
+    "rule_worst_day": -23012.0,
+    "why": {},
+    "p": 1.0,
+    "twin_mean": 0.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 381
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 359
+     },
+     "MIDCPNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 396
+     },
+     "NIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 332
+     },
+     "SENSEX": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 339
+     }
+    },
+    "by_month": {
+     "2026-04": 0.0,
+     "2026-05": 0.0,
+     "2026-06": 0.0,
+     "2026-07": 0.0,
+     "2026-08": 0.0,
+     "2026-09": 0.0,
+     "2026-10": 0.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "final improvement <= 0",
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "OOV": {
+    "trades": 292,
+    "changed": 2,
+    "sessions": 102,
+    "plain_net": 54058.0,
+    "rule_net": 57375.0,
+    "improvement": 3316.0,
+    "saved_on_losers": 3316.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 2,
+    "winners_changed": 0,
+    "impr_ex_top5": 0.0,
+    "plain_max_dd": 45689.0,
+    "rule_max_dd": 45689.0,
+    "plain_worst_day": -16554.0,
+    "rule_worst_day": -16554.0,
+    "why": {
+     "rule_exit": 2
+    },
+    "p": 0.3253,
+    "twin_mean": 2648.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 59
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 43
+     },
+     "MIDCPNIFTY": {
+      "changed": 2,
+      "improvement": 3316.0,
+      "trades": 66
+     },
+     "NIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 64
+     },
+     "SENSEX": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 60
+     }
+    },
+    "by_month": {
+     "2026-04": 0.0,
+     "2026-05": 0.0,
+     "2026-06": 0.0,
+     "2026-07": 1407.0,
+     "2026-08": 0.0,
+     "2026-09": 0.0,
+     "2026-10": 1909.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "SOLO": {
+    "trades": 36,
+    "changed": 1,
+    "sessions": 36,
+    "plain_net": -21589.0,
+    "rule_net": -20577.0,
+    "improvement": 1011.0,
+    "saved_on_losers": 1011.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 1,
+    "winners_changed": 0,
+    "impr_ex_top5": 0.0,
+    "plain_max_dd": 28815.0,
+    "rule_max_dd": 27804.0,
+    "plain_worst_day": -6235.0,
+    "rule_worst_day": -6235.0,
+    "why": {
+     "rule_exit": 1
+    },
+    "p": 0.8723,
+    "twin_mean": 5150.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 11
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 14
+     },
+     "NIFTY": {
+      "changed": 1,
+      "improvement": 1011.0,
+      "trades": 11
+     }
+    },
+    "by_month": {
+     "2026-04": 1011.0,
+     "2026-05": 0.0,
+     "2026-06": 0.0,
+     "2026-07": 0.0,
+     "2026-08": 0.0,
+     "2026-09": 0.0,
+     "2026-10": 0.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "SOLO2": {
+    "trades": 128,
+    "changed": 2,
+    "sessions": 128,
+    "plain_net": 88818.0,
+    "rule_net": 92134.0,
+    "improvement": 3316.0,
+    "saved_on_losers": 3316.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 2,
+    "winners_changed": 0,
+    "impr_ex_top5": 0.0,
+    "plain_max_dd": 26055.0,
+    "rule_max_dd": 24648.0,
+    "plain_worst_day": -6120.0,
+    "rule_worst_day": -4730.0,
+    "why": {
+     "rule_exit": 2
+    },
+    "p": 0.3253,
+    "twin_mean": 2629.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 11
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 23
+     },
+     "MIDCPNIFTY": {
+      "changed": 2,
+      "improvement": 3316.0,
+      "trades": 87
+     },
+     "NIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 7
+     }
+    },
+    "by_month": {
+     "2026-04": 0.0,
+     "2026-05": 0.0,
+     "2026-06": 0.0,
+     "2026-07": 1407.0,
+     "2026-08": 0.0,
+     "2026-09": 0.0,
+     "2026-10": 1909.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "HERO": {
+    "trades": 107,
+    "changed": 10,
+    "sessions": 55,
+    "plain_net": -9680.0,
+    "rule_net": -8528.0,
+    "improvement": 1152.0,
+    "saved_on_losers": 1152.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 10,
+    "winners_changed": 0,
+    "impr_ex_top5": 233.0,
+    "plain_max_dd": 13429.0,
+    "rule_max_dd": 13278.0,
+    "plain_worst_day": -1752.0,
+    "rule_worst_day": -1590.0,
+    "why": {
+     "trend": 10
+    },
+    "p": 0.8902,
+    "twin_mean": 1822.0,
+    "by_index": {
+     "NIFTY": {
+      "changed": 6,
+      "improvement": 672.0,
+      "trades": 55
+     },
+     "SENSEX": {
+      "changed": 4,
+      "improvement": 480.0,
+      "trades": 52
+     }
+    },
+    "by_month": {
+     "2026-04": 588.0,
+     "2026-05": 319.0,
+     "2026-06": 190.0,
+     "2026-07": 0.0,
+     "2026-08": 0.0,
+     "2026-09": 56.0,
+     "2026-10": 0.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades"
+     ],
+     "q": 1.0
+    }
+   },
+   "ALL": {
+    "trades": 2727,
+    "changed": 15,
+    "sessions": 134,
+    "plain_net": 188165.0,
+    "rule_net": 196961.0,
+    "improvement": 8797.0,
+    "saved_on_losers": 8797.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 15,
+    "winners_changed": 0,
+    "impr_ex_top5": 1152.0,
+    "plain_max_dd": 127535.0,
+    "rule_max_dd": 124626.0,
+    "plain_worst_day": -52335.0,
+    "rule_worst_day": -52335.0,
+    "why": {
+     "trend": 10,
+     "rule_exit": 5
+    },
+    "p": 0.7864,
+    "twin_mean": 12248.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 593
+     },
+     "FINNIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 534
+     },
+     "MIDCPNIFTY": {
+      "changed": 4,
+      "improvement": 6633.0,
+      "trades": 680
+     },
+     "NIFTY": {
+      "changed": 7,
+      "improvement": 1684.0,
+      "trades": 469
+     },
+     "SENSEX": {
+      "changed": 4,
+      "improvement": 480.0,
+      "trades": 451
+     }
+    },
+    "by_month": {
+     "2026-04": 1599.0,
+     "2026-05": 319.0,
+     "2026-06": 190.0,
+     "2026-07": 2815.0,
+     "2026-08": 0.0,
+     "2026-09": 56.0,
+     "2026-10": 3818.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   }
+  },
+  "T3": {
+   "LIQ": {
+    "trades": 357,
+    "changed": 46,
+    "sessions": 113,
+    "plain_net": 11155.0,
+    "rule_net": 14194.0,
+    "improvement": 3039.0,
+    "saved_on_losers": 17427.0,
+    "given_up_on_winners": 14388.0,
+    "losers_changed": 33,
+    "winners_changed": 13,
+    "impr_ex_top5": -7453.0,
+    "plain_max_dd": 61062.0,
+    "rule_max_dd": 56662.0,
+    "plain_worst_day": -11405.0,
+    "rule_worst_day": -10546.0,
+    "why": {
+     "rule_exit": 46
+    },
+    "p": 1.0,
+    "twin_mean": 18796.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 18,
+      "improvement": 2678.0,
+      "trades": 131
+     },
+     "FINNIFTY": {
+      "changed": 10,
+      "improvement": -1594.0,
+      "trades": 95
+     },
+     "MIDCPNIFTY": {
+      "changed": 18,
+      "improvement": 1955.0,
+      "trades": 131
+     }
+    },
+    "by_month": {
+     "2026-04": 9332.0,
+     "2026-05": -7121.0,
+     "2026-06": 1847.0,
+     "2026-07": -8.0,
+     "2026-08": 1740.0,
+     "2026-09": -2751.0,
+     "2026-10": 0.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "DON": {
+    "trades": 1807,
+    "changed": 324,
+    "sessions": 134,
+    "plain_net": 65402.0,
+    "rule_net": 64220.0,
+    "improvement": -3028.0,
+    "saved_on_losers": 104189.0,
+    "given_up_on_winners": 107217.0,
+    "losers_changed": 253,
+    "winners_changed": 71,
+    "impr_ex_top5": -19253.0,
+    "plain_max_dd": 91467.0,
+    "rule_max_dd": 77367.0,
+    "plain_worst_day": -23012.0,
+    "rule_worst_day": -26792.0,
+    "why": {
+     "rule_exit": 324
+    },
+    "p": 1.0,
+    "twin_mean": 76164.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 80,
+      "improvement": 10465.0,
+      "trades": 381
+     },
+     "FINNIFTY": {
+      "changed": 62,
+      "improvement": -1346.0,
+      "trades": 359
+     },
+     "MIDCPNIFTY": {
+      "changed": 72,
+      "improvement": -5576.0,
+      "trades": 396
+     },
+     "NIFTY": {
+      "changed": 63,
+      "improvement": -4321.0,
+      "trades": 332
+     },
+     "SENSEX": {
+      "changed": 47,
+      "improvement": -2250.0,
+      "trades": 339
+     }
+    },
+    "by_month": {
+     "2026-04": -13858.0,
+     "2026-05": -15320.0,
+     "2026-06": 20933.0,
+     "2026-07": 21292.0,
+     "2026-08": -3154.0,
+     "2026-09": 983.0,
+     "2026-10": -13904.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "final improvement <= 0",
+      "p >= 0.05",
+      "q > 0.10",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "OOV": {
+    "trades": 292,
+    "changed": 223,
+    "sessions": 102,
+    "plain_net": 54058.0,
+    "rule_net": 67114.0,
+    "improvement": 13056.0,
+    "saved_on_losers": 142293.0,
+    "given_up_on_winners": 129237.0,
+    "losers_changed": 139,
+    "winners_changed": 84,
+    "impr_ex_top5": -5450.0,
+    "plain_max_dd": 45689.0,
+    "rule_max_dd": 30755.0,
+    "plain_worst_day": -16554.0,
+    "rule_worst_day": -9693.0,
+    "why": {
+     "rule_exit": 223
+    },
+    "p": 1.0,
+    "twin_mean": 74622.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 47,
+      "improvement": 5558.0,
+      "trades": 59
+     },
+     "FINNIFTY": {
+      "changed": 32,
+      "improvement": 16386.0,
+      "trades": 43
+     },
+     "MIDCPNIFTY": {
+      "changed": 50,
+      "improvement": -21787.0,
+      "trades": 66
+     },
+     "NIFTY": {
+      "changed": 49,
+      "improvement": 10891.0,
+      "trades": 64
+     },
+     "SENSEX": {
+      "changed": 45,
+      "improvement": 2008.0,
+      "trades": 60
+     }
+    },
+    "by_month": {
+     "2026-04": -31356.0,
+     "2026-05": -2162.0,
+     "2026-06": 24132.0,
+     "2026-07": 24248.0,
+     "2026-08": -7298.0,
+     "2026-09": 1987.0,
+     "2026-10": 3505.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "SOLO": {
+    "trades": 36,
+    "changed": 12,
+    "sessions": 36,
+    "plain_net": -21589.0,
+    "rule_net": -19260.0,
+    "improvement": 2329.0,
+    "saved_on_losers": 2329.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 11,
+    "winners_changed": 1,
+    "impr_ex_top5": -3226.0,
+    "plain_max_dd": 28815.0,
+    "rule_max_dd": 26486.0,
+    "plain_worst_day": -6235.0,
+    "rule_worst_day": -6235.0,
+    "why": {
+     "rule_exit": 12
+    },
+    "p": 0.998,
+    "twin_mean": 13677.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 3,
+      "improvement": -860.0,
+      "trades": 11
+     },
+     "FINNIFTY": {
+      "changed": 5,
+      "improvement": 1757.0,
+      "trades": 14
+     },
+     "NIFTY": {
+      "changed": 4,
+      "improvement": 1432.0,
+      "trades": 11
+     }
+    },
+    "by_month": {
+     "2026-04": 2376.0,
+     "2026-05": 451.0,
+     "2026-06": -2282.0,
+     "2026-07": -169.0,
+     "2026-08": 1185.0,
+     "2026-09": 0.0,
+     "2026-10": 768.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "SOLO2": {
+    "trades": 128,
+    "changed": 85,
+    "sessions": 128,
+    "plain_net": 88818.0,
+    "rule_net": 68102.0,
+    "improvement": -20716.0,
+    "saved_on_losers": 51538.0,
+    "given_up_on_winners": 72254.0,
+    "losers_changed": 47,
+    "winners_changed": 38,
+    "impr_ex_top5": -38770.0,
+    "plain_max_dd": 26055.0,
+    "rule_max_dd": 18065.0,
+    "plain_worst_day": -6120.0,
+    "rule_worst_day": -4762.0,
+    "why": {
+     "rule_exit": 85
+    },
+    "p": 1.0,
+    "twin_mean": 18570.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 11,
+      "improvement": -2728.0,
+      "trades": 11
+     },
+     "FINNIFTY": {
+      "changed": 14,
+      "improvement": 7441.0,
+      "trades": 23
+     },
+     "MIDCPNIFTY": {
+      "changed": 53,
+      "improvement": -20718.0,
+      "trades": 87
+     },
+     "NIFTY": {
+      "changed": 7,
+      "improvement": -4711.0,
+      "trades": 7
+     }
+    },
+    "by_month": {
+     "2026-04": -25696.0,
+     "2026-05": 694.0,
+     "2026-06": 3581.0,
+     "2026-07": 14735.0,
+     "2026-08": -10411.0,
+     "2026-09": -3393.0,
+     "2026-10": -226.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "final improvement <= 0",
+      "p >= 0.05",
+      "q > 0.10",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "HERO": {
+    "trades": 107,
+    "changed": 74,
+    "sessions": 55,
+    "plain_net": -9680.0,
+    "rule_net": 5050.0,
+    "improvement": 14730.0,
+    "saved_on_losers": 20659.0,
+    "given_up_on_winners": 5929.0,
+    "losers_changed": 61,
+    "winners_changed": 13,
+    "impr_ex_top5": 11295.0,
+    "plain_max_dd": 13429.0,
+    "rule_max_dd": 8162.0,
+    "plain_worst_day": -1752.0,
+    "rule_worst_day": -939.0,
+    "why": {
+     "trend": 74
+    },
+    "p": 0.002,
+    "twin_mean": 8187.0,
+    "by_index": {
+     "NIFTY": {
+      "changed": 38,
+      "improvement": 8377.0,
+      "trades": 55
+     },
+     "SENSEX": {
+      "changed": 36,
+      "improvement": 6354.0,
+      "trades": 52
+     }
+    },
+    "by_month": {
+     "2026-04": 3347.0,
+     "2026-05": 2628.0,
+     "2026-06": 2439.0,
+     "2026-07": 2677.0,
+     "2026-08": 535.0,
+     "2026-09": 1430.0,
+     "2026-10": 1673.0
+    },
+    "gate": {
+     "passed": true,
+     "fails": [],
+     "q": 0.056
+    }
+   },
+   "ALL": {
+    "trades": 2727,
+    "changed": 764,
+    "sessions": 134,
+    "plain_net": 188165.0,
+    "rule_net": 199421.0,
+    "improvement": 9410.0,
+    "saved_on_losers": 338436.0,
+    "given_up_on_winners": 329025.0,
+    "losers_changed": 544,
+    "winners_changed": 220,
+    "impr_ex_top5": -12098.0,
+    "plain_max_dd": 127535.0,
+    "rule_max_dd": 103283.0,
+    "plain_worst_day": -52335.0,
+    "rule_worst_day": -42457.0,
+    "why": {
+     "rule_exit": 690,
+     "trend": 74
+    },
+    "p": 1.0,
+    "twin_mean": 210017.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 159,
+      "improvement": 15112.0,
+      "trades": 593
+     },
+     "FINNIFTY": {
+      "changed": 123,
+      "improvement": 22644.0,
+      "trades": 534
+     },
+     "MIDCPNIFTY": {
+      "changed": 193,
+      "improvement": -46127.0,
+      "trades": 680
+     },
+     "NIFTY": {
+      "changed": 161,
+      "improvement": 11668.0,
+      "trades": 469
+     },
+     "SENSEX": {
+      "changed": 128,
+      "improvement": 6112.0,
+      "trades": 451
+     }
+    },
+    "by_month": {
+     "2026-04": -55854.0,
+     "2026-05": -20830.0,
+     "2026-06": 50650.0,
+     "2026-07": 62776.0,
+     "2026-08": -17404.0,
+     "2026-09": -1744.0,
+     "2026-10": -8184.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   }
+  },
+  "T4": {
+   "LIQ": {
+    "trades": 357,
+    "changed": 18,
+    "sessions": 113,
+    "plain_net": 11155.0,
+    "rule_net": 469.0,
+    "improvement": -10686.0,
+    "saved_on_losers": 5454.0,
+    "given_up_on_winners": 16141.0,
+    "losers_changed": 4,
+    "winners_changed": 14,
+    "impr_ex_top5": -17451.0,
+    "plain_max_dd": 61062.0,
+    "rule_max_dd": 65286.0,
+    "plain_worst_day": -11405.0,
+    "rule_worst_day": -11405.0,
+    "why": {
+     "rule_exit": 18
+    },
+    "p": 0.982,
+    "twin_mean": 1680.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 7,
+      "improvement": -8053.0,
+      "trades": 131
+     },
+     "FINNIFTY": {
+      "changed": 7,
+      "improvement": -2591.0,
+      "trades": 95
+     },
+     "MIDCPNIFTY": {
+      "changed": 4,
+      "improvement": -42.0,
+      "trades": 131
+     }
+    },
+    "by_month": {
+     "2026-04": 0.0,
+     "2026-05": -7197.0,
+     "2026-06": 0.0,
+     "2026-07": 191.0,
+     "2026-08": 760.0,
+     "2026-09": -4728.0,
+     "2026-10": 287.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "final improvement <= 0",
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "DON": {
+    "trades": 1807,
+    "changed": 39,
+    "sessions": 134,
+    "plain_net": 65402.0,
+    "rule_net": 77666.0,
+    "improvement": 8156.0,
+    "saved_on_losers": 8632.0,
+    "given_up_on_winners": 476.0,
+    "losers_changed": 38,
+    "winners_changed": 1,
+    "impr_ex_top5": 1583.0,
+    "plain_max_dd": 91467.0,
+    "rule_max_dd": 86221.0,
+    "plain_worst_day": -23012.0,
+    "rule_worst_day": -23012.0,
+    "why": {
+     "rule_exit": 39
+    },
+    "p": 1.0,
+    "twin_mean": 31553.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 13,
+      "improvement": 844.0,
+      "trades": 381
+     },
+     "FINNIFTY": {
+      "changed": 13,
+      "improvement": 3445.0,
+      "trades": 359
+     },
+     "MIDCPNIFTY": {
+      "changed": 10,
+      "improvement": 3630.0,
+      "trades": 396
+     },
+     "NIFTY": {
+      "changed": 0,
+      "improvement": 0.0,
+      "trades": 332
+     },
+     "SENSEX": {
+      "changed": 3,
+      "improvement": 236.0,
+      "trades": 339
+     }
+    },
+    "by_month": {
+     "2026-04": 933.0,
+     "2026-05": 4794.0,
+     "2026-06": -1384.0,
+     "2026-07": 831.0,
+     "2026-08": 648.0,
+     "2026-09": 2164.0,
+     "2026-10": 169.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "OOV": {
+    "trades": 292,
+    "changed": 28,
+    "sessions": 102,
+    "plain_net": 54058.0,
+    "rule_net": 56441.0,
+    "improvement": 2383.0,
+    "saved_on_losers": 2383.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 28,
+    "winners_changed": 0,
+    "impr_ex_top5": -6770.0,
+    "plain_max_dd": 45689.0,
+    "rule_max_dd": 45681.0,
+    "plain_worst_day": -16554.0,
+    "rule_worst_day": -16554.0,
+    "why": {
+     "rule_exit": 28
+    },
+    "p": 1.0,
+    "twin_mean": 29525.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 6,
+      "improvement": 1967.0,
+      "trades": 59
+     },
+     "FINNIFTY": {
+      "changed": 3,
+      "improvement": 2503.0,
+      "trades": 43
+     },
+     "MIDCPNIFTY": {
+      "changed": 5,
+      "improvement": 3592.0,
+      "trades": 66
+     },
+     "NIFTY": {
+      "changed": 8,
+      "improvement": -3679.0,
+      "trades": 64
+     },
+     "SENSEX": {
+      "changed": 6,
+      "improvement": -2000.0,
+      "trades": 60
+     }
+    },
+    "by_month": {
+     "2026-04": -3593.0,
+     "2026-05": -2576.0,
+     "2026-06": 8.0,
+     "2026-07": 2483.0,
+     "2026-08": 1200.0,
+     "2026-09": 3778.0,
+     "2026-10": 1083.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "SOLO": {
+    "trades": 36,
+    "changed": 23,
+    "sessions": 36,
+    "plain_net": -21589.0,
+    "rule_net": -1545.0,
+    "improvement": 20044.0,
+    "saved_on_losers": 26775.0,
+    "given_up_on_winners": 6731.0,
+    "losers_changed": 17,
+    "winners_changed": 6,
+    "impr_ex_top5": 1786.0,
+    "plain_max_dd": 28815.0,
+    "rule_max_dd": 10279.0,
+    "plain_worst_day": -6235.0,
+    "rule_worst_day": -4445.0,
+    "why": {
+     "rule_exit": 23
+    },
+    "p": 0.978,
+    "twin_mean": 30974.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 7,
+      "improvement": 4605.0,
+      "trades": 11
+     },
+     "FINNIFTY": {
+      "changed": 8,
+      "improvement": 2840.0,
+      "trades": 14
+     },
+     "NIFTY": {
+      "changed": 8,
+      "improvement": 12599.0,
+      "trades": 11
+     }
+    },
+    "by_month": {
+     "2026-04": 9143.0,
+     "2026-05": 5414.0,
+     "2026-06": 1782.0,
+     "2026-07": 516.0,
+     "2026-08": 1529.0,
+     "2026-09": 4715.0,
+     "2026-10": -3055.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "SOLO2": {
+    "trades": 128,
+    "changed": 9,
+    "sessions": 128,
+    "plain_net": 88818.0,
+    "rule_net": 96121.0,
+    "improvement": 7289.0,
+    "saved_on_losers": 7289.0,
+    "given_up_on_winners": -0.0,
+    "losers_changed": 9,
+    "winners_changed": 0,
+    "impr_ex_top5": -701.0,
+    "plain_max_dd": 26055.0,
+    "rule_max_dd": 22071.0,
+    "plain_worst_day": -6120.0,
+    "rule_worst_day": -5038.0,
+    "why": {
+     "rule_exit": 9
+    },
+    "p": 0.976,
+    "twin_mean": 13522.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 1,
+      "improvement": 2010.0,
+      "trades": 11
+     },
+     "FINNIFTY": {
+      "changed": 2,
+      "improvement": 944.0,
+      "trades": 23
+     },
+     "MIDCPNIFTY": {
+      "changed": 5,
+      "improvement": 4854.0,
+      "trades": 87
+     },
+     "NIFTY": {
+      "changed": 1,
+      "improvement": -518.0,
+      "trades": 7
+     }
+    },
+    "by_month": {
+     "2026-04": 0.0,
+     "2026-05": 0.0,
+     "2026-06": 1090.0,
+     "2026-07": 2894.0,
+     "2026-08": 0.0,
+     "2026-09": 2222.0,
+     "2026-10": 1083.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "fewer than 40 changed trades",
+      "top-5 >= improvement",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   },
+   "HERO": {
+    "trades": 107,
+    "changed": 65,
+    "sessions": 55,
+    "plain_net": -9680.0,
+    "rule_net": 3450.0,
+    "improvement": 13130.0,
+    "saved_on_losers": 14988.0,
+    "given_up_on_winners": 1858.0,
+    "losers_changed": 62,
+    "winners_changed": 3,
+    "impr_ex_top5": 10470.0,
+    "plain_max_dd": 13429.0,
+    "rule_max_dd": 8699.0,
+    "plain_worst_day": -1752.0,
+    "rule_worst_day": -1313.0,
+    "why": {
+     "trend": 65
+    },
+    "p": 0.0339,
+    "twin_mean": 10355.0,
+    "by_index": {
+     "NIFTY": {
+      "changed": 32,
+      "improvement": 6639.0,
+      "trades": 55
+     },
+     "SENSEX": {
+      "changed": 33,
+      "improvement": 6491.0,
+      "trades": 52
+     }
+    },
+    "by_month": {
+     "2026-04": 1956.0,
+     "2026-05": 2868.0,
+     "2026-06": 1938.0,
+     "2026-07": 2581.0,
+     "2026-08": 204.0,
+     "2026-09": 1937.0,
+     "2026-10": 1646.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "q > 0.10"
+     ],
+     "q": 0.4746
+    }
+   },
+   "ALL": {
+    "trades": 2727,
+    "changed": 182,
+    "sessions": 134,
+    "plain_net": 188165.0,
+    "rule_net": 232601.0,
+    "improvement": 40316.0,
+    "saved_on_losers": 65522.0,
+    "given_up_on_winners": 25206.0,
+    "losers_changed": 158,
+    "winners_changed": 24,
+    "impr_ex_top5": 20700.0,
+    "plain_max_dd": 127535.0,
+    "rule_max_dd": 116206.0,
+    "plain_worst_day": -52335.0,
+    "rule_worst_day": -53206.0,
+    "why": {
+     "rule_exit": 117,
+     "trend": 65
+    },
+    "p": 1.0,
+    "twin_mean": 117609.0,
+    "by_index": {
+     "BANKNIFTY": {
+      "changed": 34,
+      "improvement": 1372.0,
+      "trades": 593
+     },
+     "FINNIFTY": {
+      "changed": 33,
+      "improvement": 7141.0,
+      "trades": 534
+     },
+     "MIDCPNIFTY": {
+      "changed": 24,
+      "improvement": 12034.0,
+      "trades": 680
+     },
+     "NIFTY": {
+      "changed": 49,
+      "improvement": 15041.0,
+      "trades": 469
+     },
+     "SENSEX": {
+      "changed": 42,
+      "improvement": 4728.0,
+      "trades": 451
+     }
+    },
+    "by_month": {
+     "2026-04": 8439.0,
+     "2026-05": 3303.0,
+     "2026-06": 3435.0,
+     "2026-07": 9496.0,
+     "2026-08": 4342.0,
+     "2026-09": 10088.0,
+     "2026-10": 1214.0
+    },
+    "gate": {
+     "passed": false,
+     "fails": [
+      "p >= 0.05",
+      "q > 0.10",
+      "design improvement <= 0",
+      "walk-forward <= 0"
+     ],
+     "q": 1.0
+    }
+   }
+  }
+ },
+ "passed": [
+  "T3:HERO"
+ ],
+ "paper_rule": {
+  "LIQ": null,
+  "DON": null,
+  "OOV": null,
+  "SOLO": null,
+  "SOLO2": null,
+  "HERO": "T3",
+  "ALL": null
+ },
+ "shadow_rule": "T2"
+}

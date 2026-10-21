@@ -1,0 +1,74 @@
+id: r95-pu
+title: 'R95 PU: Mo3ty CCI Signals (CCI of hlc3 crossing back inside the levels), as B, Volatility Pulse on (ATR14 > its SMA20
+  and body >= 0.25 ATR)'
+family: patterns-indicators
+date: '2026-10-21'
+doc: research/HUNT_R95_CCI_SIGNALS.md
+hypothesis: 'Pre-registered: buying the 1-ITM call on a CCI BUY (the put on a SELL), signal on the underlying (as B, Volatility
+  Pulse on (ATR14 > its SMA20 and body >= 0.25 ATR); entry at the next minute''s open, 09:30-14:45, stop beyond the stretch''s
+  extreme +/- 1 tick, flat 15:15 / 15:05 expiry), on 3m / 5m / 15m / 60m bars, beats 1000 after-trigger random-entry twins
+  after real costs (p_emp < 0.05, BH q < 0.10 over 328 cells), >= 40 trades, positive in 3 of 4 folds, without the top 5,
+  worst month >= -Rs 13k.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): index_1m + options_rolling_1m WEEK (R51 loader via
+  R89 stores, clean + stale step) to 19 Oct 2026; MCX MONTH option books GOLDM, SILVERM, CRUDEOILM, NATGASMINI (R53 Market,
+  close-only near future)'
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (indices); 5 Aug 2025 - 31 Mar 2026 (MCX)
+  holdout: 1 Apr - 19 Oct 2026 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+- MIDCPNIFTY
+- GOLDM
+- SILVERM
+- CRUDEOILM
+- NATGASMINI
+features:
+- 'signal source: the underlying (index spot 1m OHLC; MCX near future, close-only); no option chart, no option-chain data'
+- CCI 25 of hlc3, levels +-200, pulse on, all signals, exit Z
+model_or_rule: R95 PU
+settings: research/hunt/r95_cci_signals/cfg.py, rules.py, PREREG.md, NOTES.md
+prereg: research/hunt/r95_cci_signals/PREREG.md
+variants_tried: 8
+results:
+  summary: 'Design option net (1 lot, 1-ITM, real prints, after costs): 3m: NIFTY 437 tr, win 39%, payoff 1.176, Rs -70,225
+    (p 0.85215, q 1.0; underlying win 39%); BANKNIFTY 374 tr, win 42%, payoff 1.094, Rs -45,776 (p 0.71429, q 1.0; underlying
+    win 41%); SENSEX 425 tr, win 41%, payoff 1.257, Rs -31,143 (p 0.46454, q 1.0; underlying win 40%); FINNIFTY 394 tr, win
+    36%, payoff 1.344, Rs -61,685 (p 0.56943, q 1.0; underlying win 38%); MIDCPNIFTY 390 tr, win 36%, payoff 1.208, Rs -108,543
+    (p 0.93506, q 1.0; underlying win 36%); GOLDM 188 tr, win 23%, payoff 0.632, Rs -133,472 (p 1.0, q 1.0; underlying win
+    39%); SILVERM 213 tr, win 27%, payoff 0.56, Rs -171,146 (p 1.0, q 1.0; underlying win 39%); CRUDEOIL (mini) 491 tr, win
+    14%, payoff 0.793, Rs -40,231 (p 0.96903, q 1.0; underlying win 41%); NATURALGAS (mini) 477 tr, win 22%, payoff 0.759,
+    Rs -61,998 (p 0.99101, q 1.0; underlying win 40%). Pooled indices 2020 tr Rs -317,372, MCX 1369 tr Rs -406,847 | 5m: NIFTY
+    303 tr, win 38%, payoff 1.683, Rs +8,045 (p 0.10989, q 0.83694; underlying win 39%); BANKNIFTY 262 tr, win 36%, payoff
+    1.264, Rs -68,082 (p 0.99201, q 1.0; underlying win 36%); SENSEX 291 tr, win 36%, payoff 1.74, Rs -610 (p 0.10589, q 0.80495;
+    underlying win 38%); FINNIFTY 275 tr, win 35%, payoff 1.288, Rs -77,029 (p 0.99301, q 1.0; underlying win 32%); MIDCPNIFTY
+    310 tr, win 41%, payoff 1.31, Rs -35,667 (p 0.24176, q 1.0; underlying win 41%); GOLDM 172 tr, win 27%, payoff 0.548,
+    Rs -122,737 (p 1.0, q 1.0; underlying win 43%); SILVERM 161 tr, win 24%, payoff 0.603, Rs -158,267 (p 1.0, q 1.0; underlying
+    win 45%); CRUDEOIL (mini) 380 tr, win 23%, payoff 0.595, Rs -30,000 (p 0.85215, q 1.0; underlying win 40%); NATURALGAS
+    (mini) 381 tr, win 27%, payoff 0.761, Rs -49,546 (p 0.94805, q 1.0; underlying win 39%). Pooled indices 1441 tr Rs -173,343,
+    MCX 1094 tr Rs -360,550 | 15m: NIFTY 142 tr, win 40%, payoff 1.492, Rs +123 (p 0.03297, q 0.4427; underlying win 38%);
+    BANKNIFTY 134 tr, win 40%, payoff 1.644, Rs +17,936 (p 0.1009, q 0.80495; underlying win 38%); SENSEX 143 tr, win 40%,
+    payoff 1.431, Rs -8,974 (p 0.22178, q 1.0; underlying win 41%); FINNIFTY 128 tr, win 38%, payoff 1.866, Rs +17,621 (p
+    0.03596, q 0.42736; underlying win 39%); MIDCPNIFTY 147 tr, win 37%, payoff 1.343, Rs -55,610 (p 0.7013, q 1.0; underlying
+    win 39%); GOLDM 68 tr, win 22%, payoff 0.413, Rs -83,272 (p 1.0, q 1.0; underlying win 36%); SILVERM 63 tr, win 24%, payoff
+    0.574, Rs -91,958 (p 0.998, q 1.0; underlying win 43%); CRUDEOIL (mini) 126 tr, win 29%, payoff 0.745, Rs -11,250 (p 0.67832,
+    q 1.0; underlying win 39%); NATURALGAS (mini) 148 tr, win 28%, payoff 0.95, Rs -25,852 (p 0.99201, q 1.0; underlying win
+    33%). Pooled indices 694 tr Rs -28,904, MCX 405 tr Rs -212,332 | 60m: NIFTY 23 tr, win 52%, payoff 1.777, Rs +21,193 (p
+    0.01099, q 0.21435; underlying win 70%); BANKNIFTY 21 tr, win 57%, payoff 2.522, Rs +42,971 (p 0.005, q 0.11823; underlying
+    win 57%); SENSEX 21 tr, win 48%, payoff 2.137, Rs +18,009 (p 0.14785, q 0.97328; underlying win 57%); FINNIFTY 20 tr,
+    win 40%, payoff 2.106, Rs +9,637 (p 0.04995, q 0.4427; underlying win 43%); MIDCPNIFTY 27 tr, win 41%, payoff 1.177, Rs
+    -9,891 (p 0.91808, q 1.0; underlying win 41%); GOLDM 15 tr, win 27%, payoff 0.917, Rs -11,454 (p 0.51948, q 1.0; underlying
+    win 42%); SILVERM 8 tr, win 0%, payoff None, Rs -25,918 (p 0.99101, q 1.0; underlying win 35%); CRUDEOIL (mini) 18 tr,
+    win 11%, payoff 0.68, Rs -3,291 (p 0.99201, q 1.0; underlying win 33%); NATURALGAS (mini) 21 tr, win 29%, payoff 0.925,
+    Rs -6,283 (p 0.84515, q 1.0; underlying win 45%). Pooled indices 112 tr Rs +81,919, MCX 62 tr Rs -46,946. Holdout (read
+    once): 3m pooled indices 825 tr Rs -153,132, MCX 1619 tr Rs -455,704; 5m pooled indices 541 tr Rs -97,140, MCX 1271 tr
+    Rs -323,631; 15m pooled indices 273 tr Rs +41,191, MCX 438 tr Rs -114,991; 60m pooled indices 38 tr Rs -6,684, MCX 70
+    tr Rs -47,620.'
+  costs: index R51 engine (5 bps + 1/2/4 ticks by volume, dated charges), flat 15:15 / 15:05 expiry; MCX R53 charges + R85
+    strict half-spread; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'One of 8 fade variants x 4 timeframes x 9 instruments (288 cells); one BH family of 328 cells with MO and EX (amendment
+  A1). Design passers: none. Holdout paper candidates: none. Signal source: the underlying.'

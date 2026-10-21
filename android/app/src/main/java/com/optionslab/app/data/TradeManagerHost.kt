@@ -63,7 +63,8 @@ object TradeManagerHost {
         subscribed = true
         runCatching {
             SmartWorkers.bus.subscribe(Findings.Sub(emptySet(), emptySet()) { f ->
-                if (!f.who.startsWith(TradeManager.WHO) && live.isNotEmpty() &&
+                // (20 Oct: the Candle agent's reads are knowledge only - they never bring a look forward.)
+                if (!f.who.startsWith(TradeManager.WHO) && f.kind != Findings.Kind.CANDLE && live.isNotEmpty() &&
                     live.values.any { f.instrument == Findings.ALL || it.reg.trade.underlying.equals(f.instrument, ignoreCase = true) })
                     if (!testNoWake) scope.launch { runCatching { onLook() } }
             })
@@ -298,13 +299,29 @@ object TradeManagerHost {
     )
 
     /**
+     * [a]'s exits as the position popup words them: its stop and target where it has them on its own price, and its last exit
+     * time ([ArmTrade.squareOffMs]), dated when that is after the day it was bought (an overnight hold).
+     */
+    internal fun exitsOf(owner: String, a: ArmTrade, note: String? = null): com.optionslab.ira.ArmExits.Entry {
+        val off = java.time.Instant.ofEpochMilli(a.squareOffMs).atZone(com.optionslab.engine.IST).toLocalDateTime()
+        val bought = java.time.Instant.ofEpochMilli(a.entryMs).atZone(com.optionslab.engine.IST).toLocalDate()
+        val later = if (off.toLocalDate().isAfter(bought))
+            "out on " + off.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM", java.util.Locale.ENGLISH)) else null
+        // A live one is found by Zerodha's name for it (the positions book's), a paper one by the paper book's.
+        return com.optionslab.ira.ArmExits.Entry(owner, a.label, a.live, if (a.live) a.kite ?: a.symbol else a.symbol, a.stop, a.target, off.toLocalTime(),
+            listOfNotNull(note, later).joinToString(" · ").ifEmpty { null })
+    }
+
+    /**
      * An arm's positions handed over in ONE call, from its book's publish (never on its order path; a contract's Zerodha token
      * not yet in memory is resolved on this host's worker, so every later look reads memory only): each open
      * one is attached (SHADOW by default: the arm's own exits stay authoritative, the manager only records), each one closed
      * since is told its real exit. A short future is followed with its prices negated (a long on −price: the same
      * arithmetic; the words show the market's prices). Never throws.
      */
-    fun sync(trades: List<ArmTrade>) {
+    fun sync(trades: List<ArmTrade>, owner: String? = null) {
+        // 16 Oct: the open ones' own exits for the position popup's "Exits" line ([com.optionslab.ira.ArmExits], memory only).
+        owner?.let { o -> runCatching { com.optionslab.ira.ArmExits.set(o, trades.filter { it.exit == null }.map { exitsOf(o, it) }) } }
         if (com.optionslab.app.BuildConfig.GOLD) return
         for (a in trades) runCatching {
             val k = if (a.shortFuture) -1.0 else 1.0
@@ -463,7 +480,8 @@ object TradeManagerHost {
                 val lockHit = d.rule == TradeManager.Rule.LOCK
                 val words = if (lockHit) "profit lock hit" else TradeManager.short(d.rule, t.side)
                 val kind = if (lockHit) TradeManager.LOCK_NOTE else TradeManager.EXIT_EARLY
-                note(id, TradeManager.Note(now, kind, d.rule.key, "$words (${d.reason})", px, act, d.evidence, lock = step.state.core.lock,
+                val cite = if (lockHit) "" else researchCite(lead, t.family)
+                note(id, TradeManager.Note(now, kind, d.rule.key, "$words (${d.reason}$cite)", px, act, d.evidence, lock = step.state.core.lock,
                     lead = if (lockHit) null else lead, voters = if (lockHit) emptyList() else voters))
                 update(id) { r ->
                     var x = r.copy(actedAtMs = r.actedAtMs ?: now)
@@ -479,7 +497,7 @@ object TradeManagerHost {
             }
             is TradeManager.Decision.Extend -> {
                 note(id, TradeManager.Note(now, TradeManager.EXTEND_NOTE, TradeManager.Rule.EXTEND.key,
-                    "target ${TradeManager.lv(d.newTarget)}, lock ${TradeManager.lv(d.newStop)} (${d.reason})", px, act, d.evidence,
+                    "target ${TradeManager.lv(d.newTarget)}, lock ${TradeManager.lv(d.newStop)} (${d.reason}${researchCite(lead, t.family)})", px, act, d.evidence,
                     target = d.newTarget, lock = d.newStop, lead = lead, voters = voters))
                 l.noteLock = d.newStop
                 update(id) { it.copy(target = d.newTarget, lock = d.newStop, extensions = step.state.core.extensions, actedAtMs = it.actedAtMs ?: now) }
@@ -490,6 +508,18 @@ object TradeManagerHost {
                 } else post(t, "$who would have extended its target to ${TradeManager.lv(d.newTarget)} with the lock at ${TradeManager.lv(d.newStop)} (shadow)")
             }
         }
+    }
+
+    /**
+     * The research prior the leading specialist's vote is cited with (13 Oct, the shared knowledge: "the Traps specialist reads the
+     * trap findings, and the chair's reasons cite them"): "; research on traps: still open - ..." or "". Words only - it never changes
+     * the decision. Memory only (a lookup in the built snapshot), safe on the manager's thread.
+     */
+    private fun researchCite(lead: String?, family: String): String {
+        if (lead == null) return ""
+        val n = runCatching { com.optionslab.ira.SharedKnowledge.specialistNote(SharedKnowledgeHost.snapshot, lead, family) }.getOrNull() ?: return ""
+        SharedKnowledgeHost.read("Trade manager", "the research on the ${ManagerTeam.nameOf(lead)} specialist's subject for its vote")
+        return "; $n"
     }
 
     /** TEST ONLY: the strategy's own look is not woken (the test runs it itself). False in the app. Throws unless BuildConfig.DEBUG. */
@@ -530,7 +560,14 @@ object TradeManagerHost {
         try {
             for ((id, l) in live.toMap()) runCatching {
                 val t = l.reg.trade
-                val bars = testBars?.invoke(id) ?: l.reg.bars?.invoke() ?: return@runCatching
+                val bars = testBars?.invoke(id) ?: l.reg.bars?.invoke() ?: run {
+                    // No bars to read (a live trade whose contract is not in the paper book): a closed trade is still let go
+                    // once its square-off is 30 minutes past, so it never stays followed (and its record kept) for good. An
+                    // open one is kept followed (18 Oct, review).
+                    val done = synchronized(recs) { recs[id] }?.closed ?: true
+                    if (done && now > t.caps.squareOffMs + 30 * 60_000L) { live.remove(id); runCatching { ManagerSpecialists.dropView(id) } }
+                    return@runCatching
+                }
                 // The research's rules read only minutes that had closed when read (a minute still forming is never kept).
                 l.bars = bars.filter { it.startMs + 60_000L <= now }.sortedBy { it.startMs }
                 // The best wick and the recent range from the entry's minute on, closed minutes only (G4 L2).

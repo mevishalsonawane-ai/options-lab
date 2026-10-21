@@ -1,0 +1,31 @@
+id: h42
+title: 1,296 questions about how the market moves
+family: market-facts
+date: '2026-10-08'
+doc: research/HUNT_H42.md
+hypothesis: Some true market habit is a profitable option buy.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 23 question categories
+model_or_rule: each question turned into option tests (38 exits)
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h42/PREREG.md
+variants_tried: 44536
+results:
+  summary: 327 of 1,296 answers significant after BH (310 stable); only 3.8% of option tests net positive, none a profitable
+    buy.
+  costs: app fills and charges plus real spread
+holdout_read: true
+verdict: rejected
+backfilled: true
+notes: The answers are in the knowledge pack (h42.*).

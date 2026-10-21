@@ -101,6 +101,7 @@ class LiquidityNoticeTest {
             "operator_stop" to ("stopped for today" to "You stopped the strategies for today"),
             "closed_by_you" to ("closed by you" to "Closed by you"),
             "profit_lock" to ("profit lock" to "Exit: profit lock"),
+            "give_back_trail" to ("₹500 trail" to "₹500 trail: the option gave back ₹500 a lot from its best (your paper choice)"),
         )
         for ((why, w) in words) {
             assertEquals(w.first, LiquidityNotice.short(why), why)
@@ -113,6 +114,16 @@ class LiquidityNoticeTest {
         assertEquals("Failed break: a bar closed back below the broken level", LiquidityNotice.reason(exit("failed_break").copy(level = null)))
         assertEquals("Target: the index reached the next level", LiquidityNotice.reason(exit("next_liquidity").copy(target = null)))
         assertEquals(-1, pe.side)
+    }
+
+    @Test fun aPaperTradeSaysWhichRulesItRanOn() {
+        // R19b: each paper trade carries "plain rules" or "with ₹500 trail" (Boss's opt-in switch); none said when not given.
+        val plain = LiquidityNotice.entry(entry().copy(label = com.optionslab.engine.orb.LiquidityTrail.PLAIN), hide = false)
+        assertEquals("Rules: plain rules", plain.lines.last())
+        val trailed = LiquidityNotice.exit(exit("give_back_trail").copy(label = com.optionslab.engine.orb.LiquidityTrail.TRAILED), hide = true)
+        assertEquals("Rules: with ₹500 trail", trailed.lines.last())
+        assertEquals(4, LiquidityNotice.entry(entry(), hide = false).lines.size)
+        assertEquals(4, LiquidityNotice.exit(exit("stop"), hide = false).lines.size)
     }
 
     @Test fun exitWithoutLotsAndSingleTradeTally() {

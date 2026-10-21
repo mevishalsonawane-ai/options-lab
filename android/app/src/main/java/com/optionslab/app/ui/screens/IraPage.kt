@@ -198,7 +198,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     var learnedOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = learnedOpen) { learnedOpen = false }
     if (learnedOpen && learnedShown()) {
-        JarvisLearnedSheet(rememberLearnedBook(), onClose = { learnedOpen = false }, goals = rememberLearningGoals())
+        JarvisLearnedSheet(rememberLearnedBook(), onClose = { learnedOpen = false }, goals = rememberLearningGoals(), agents = rememberSharedLines())
         return
     }
     // The phone's Back closes the chat (back to the globe) in Jarvis.
@@ -265,7 +265,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
                 LedgerCard(title = "Ira") {
                     Note("Ask about Nifty, BankNifty, FinNifty, Sensex, India VIX or gold. Ira answers only from the market data and news it reads, " +
                         "and says when it does not know. It never gives buy or sell advice. An order you ask for is sent only after you confirm it " +
-                        "(Paper: Confirm; Live: the order review, swipe and PIN).")
+                        "(Paper: Confirm; Live: Confirm, then your PIN or fingerprint).")
                     val day = st.lastDay?.let { " Latest data: ${it.dayOfMonth} ${it.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)} ${it.year}." } ?: ""
                     Note(when {
                         !memoryReady -> "Reading what I remember..."
@@ -397,8 +397,9 @@ internal fun ProposalActions(id: Long) {
 }
 
 /**
- * The app's own order paths, as Ira uses them. [paper] places on the paper account; [review] opens IraAlgo's order
- * review (swipe and PIN) for Zerodha. Read at the moment of the tap: [live] and [maxLots] from the settings.
+ * The app's own order paths, as Ira uses them. [paper] places on the paper account; [review] sends Boss's order to Zerodha
+ * straight after his PIN or fingerprint (18 Oct: no review card, every check still run). Read at the moment of the tap:
+ * [live] and [maxLots] from the settings.
  */
 class IraOrderPaths(val live: () -> Boolean, val maxLots: () -> Int,
                     val paper: (IraOrders.Ticket) -> Unit, val review: (IraOrders.Ticket) -> Unit)
@@ -409,12 +410,14 @@ fun iraOrderPathsFor(model: com.optionslab.app.ui.AppModel) = with(model) { com.
     paper = { t -> paperPlace(t.underlying, t.expiry, t.strike, t.right, if (t.buy) "BUY" else "SELL", t.lots, "MARKET",
         settings.value.orderProduct, null, null, null, "Ira") },
     review = { t -> planManual(t.underlying, t.expiry, t.strike, t.right,
-        if (t.buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, t.lots, settings.value.orderProduct, null, null, "Ira") },
+        if (t.buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, t.lots, settings.value.orderProduct, null, null, "Ira",
+        direct = true) },
 ) }
 
 /**
- * Under an order Ira read: Review looks the contract up (nearest expiry; ATM from the live price). Paper then shows
- * the contract with Confirm / Cancel; Live opens the order review, where only the swipe and the PIN send it.
+ * Under an order Ira read: Review looks the contract up (nearest expiry; ATM from the live price), then shows it with
+ * Confirm / Cancel. 18 Oct (Boss: "same as paper"): Live is the same card; its Confirm asks the PIN or fingerprint and the
+ * order goes to Zerodha at once (no review card).
  */
 @Composable
 private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPaths) {
@@ -422,12 +425,27 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var ticket by remember { mutableStateOf<IraOrders.Ticket?>(null) }
+    // Whether the ticket was prepared for Live (the mode at the tap; the app's checks read the mode again at the send).
+    var ticketLive by remember { mutableStateOf(false) }
     var problem by remember { mutableStateOf<String?>(null) }
     var done by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     Column(Modifier.padding(top = 6.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val t = ticket
         when {
             done != null -> Note(done!!)
+            t != null && ticketLive -> LedgerCard(title = "Live order · Zerodha", accent = pal.oxblood) {
+                Text(t.title, style = Type.figure.copy(color = if (t.buy) pal.verdigris else pal.oxblood))
+                Note("Real money: ${t.lots * t.lotSize} quantity (lot ${t.lotSize}) at the best price. Confirm asks your PIN or fingerprint, then it goes to Zerodha.")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BrassButton("Confirm (live)", tone = pal.oxblood) {
+                        ticket = null
+                        // The mode read again at the tap: switched to Paper since, nothing goes to Zerodha (18 Oct review).
+                        if (!orders.live()) done = "The app is in Paper mode now: nothing was sent. Ask again for a paper order."
+                        else { orders.review(t); done = "Enter your PIN or fingerprint to send it to Zerodha: ${t.title}." }
+                    }
+                    BrassButton("Cancel", tone = pal.inkSoft) { ticket = null; done = "Cancelled; nothing was sent." }
+                }
+            }
             t != null -> LedgerCard(title = "Paper order") {
                 Text(t.title, style = Type.figure.copy(color = if (t.buy) pal.verdigris else pal.oxblood))
                 Note("Market order on the paper account, ${t.lots * t.lotSize} quantity (lot ${t.lotSize}). Nothing is placed until you press Confirm.")
@@ -439,17 +457,14 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
             else -> {
                 problem?.let { Note(it) }
                 val live = orders.live()
-                BrassButton(if (busy) "Looking up the contract…" else if (live) "Review (Live, Zerodha)" else "Review (paper)", enabled = !busy) {
+                BrassButton(if (busy) "Looking up the contract…" else if (live) "Review (live)" else "Review (paper)", enabled = !busy) {
                     busy = true; problem = null
                     scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                         val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                             IraOrders.prepare(o, live, orders.maxLots(), o.market?.let { m -> IraHub.state.value.snaps[m] }?.price)
                         }
                         busy = false
-                        r.onSuccess { tk ->
-                            if (live) { orders.review(tk); done = "Opened in the order review: ${tk.title}. Only the swipe and your PIN send it." }
-                            else ticket = tk
-                        }.onFailure { problem = it.message ?: "Could not prepare the order." }
+                        r.onSuccess { tk -> ticketLive = live; ticket = tk }.onFailure { problem = it.message ?: "Could not prepare the order." }
                     }
                 }
             }
@@ -591,7 +606,7 @@ internal fun VoiceSwitch() {
         androidx.compose.material3.TextButton({
             diagScope.launch(kotlinx.coroutines.Dispatchers.Main) {
                 val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
-                vctx.getSystemService(android.content.ClipboardManager::class.java)?.setPrimaryClip(android.content.ClipData.newPlainText("IraAlgo diagnostics", text))
+                com.optionslab.app.ui.SensitiveClip.copy(vctx, "IraAlgo diagnostics", text)
                 com.optionslab.app.work.Alerts.success("Diagnostics copied (Jarvis's ears included): paste them in the chat. Keys, tokens, passwords and your words are never included.")
             }
         }, Modifier.fillMaxWidth()) { Text("Copy diagnostics (for help)") }
@@ -629,6 +644,12 @@ internal fun VoiceSwitch() {
             }
         }
         Note(com.optionslab.ira.ListenSaver.WHAT + " Alerts and stops never wait on listening.")
+        // Battery (14 Oct): when the wake word is listened for; Always (as before) unless Boss picks another.
+        var listenWhen by remember { mutableStateOf(JarvisVoice.listenWhen) }
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.when") {
+            ListenWhenPicker(listenWhen) { m -> listenWhen = m; JarvisVoice.listenWhen = m }
+        }
+        Note(listenWhen.what + " A question you have started, the Talk button and hold to talk always work; alerts never wait on listening.")
         var hin by remember { mutableStateOf(JarvisVoice.hindi) }
         com.optionslab.app.ui.SettingSpot("jarvis.voice.hindi") {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
@@ -832,7 +853,7 @@ internal fun ActionConfirm(id: Long, yes: String = "Yes", no: String = "No") {
                 }
             }
         } else BrassButton(yes, tone = LocalPalette.current.oxblood) { mine()?.let { mineId -> IraHub.confirmAsync(mineId) } }
-        BrassButton(no, tone = LocalPalette.current.inkSoft) { mine()?.let { mineId -> IraHub.cancelAction(mineId, by = com.optionslab.ira.Requests.By.TAP) } }
+        BrassButton(no, tone = LocalPalette.current.inkSoft) { mine()?.let { mineId -> IraHub.cancelAsync(mineId, by = com.optionslab.ira.Requests.By.TAP) } }
     }
 }
 
@@ -1146,37 +1167,48 @@ fun JarvisSettingsPage() {
  * today's state, the research line), the "not proven" label and the bar set in advance.
  */
 @Composable
-private fun SoloCard() {
+internal fun SoloCard() {
     val p = LocalPalette.current
-    LedgerCard(title = "Solo: Jarvis trades by himself (paper)") {
+    LedgerCard {
         // Solo's own state, not a copy: it shows off once Solo has switched itself off (the forward test's bar).
         val on by com.optionslab.app.ira.IraSolo.onState.collectAsState()
         LaunchedEffect(Unit) { com.optionslab.app.ira.IraSolo.refreshOn() }
+        // The forward test set in advance and the "not proven" label: in the name's dialog (COMPACT, 15 Oct), with its rules.
+        // Its dialog's lines and the record line: read off the main thread, again on each switch (18 Oct, review: both read
+        // Solo's trades from the vault, decrypted on a first read, during composition). Shown once read.
+        // (Set on the main thread, never from the I/O thread's continuation: as [SoloForwardGlance].)
+        val solo by androidx.compose.runtime.produceState<Pair<List<String>, String>?>(null, on) {
+            val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { com.optionslab.app.ira.IraSolo.card() to com.optionslab.app.ira.IraSolo.record() }.getOrNull()
+            }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { value = r }
+        }
+        val lines = solo?.first.orEmpty()
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(if (on) "Solo (midday) is on" else "Solo (midday) is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                Text("Paper account only - never real money, never Zerodha. At 12:00 it buys the index (NIFTY, BANKNIFTY or FINNIFTY) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one, 1 lot, 4 strikes in the money, one trade a day, never on that index's expiry day. Out on a 1-minute close 0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30.",
-                    style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                ExplainedName("Solo: Jarvis trades by himself (paper)", listOf(SOLO_RULES) + lines,
+                    style = Type.title.copy(color = p.ink, fontSize = 16.sp))
+                Text(if (on) "Solo (midday) is on · paper only" else "Solo (midday) is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
             }
-            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.switch(v) })
+            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.switch(v) },
+                modifier = Modifier.semantics { contentDescription = "Paper only: switch Solo (midday)" })
         }
         // The forward test at a glance (read off the main thread, again on each switch; never in GOLD).
         var glance by remember { mutableStateOf<SoloGlanceRead?>(null) }
         SoloForwardGlance(on, onRead = { glance = it }) { readSoloGlance(on) }
-        // The forward test set in advance, and the "not proven" label (the lines the glance shows are left out under it -
-        // only once it has been read; while it is not, or cannot be, the card keeps them).
-        val shown = glance
-        val lines = remember(on) { com.optionslab.app.ira.IraSolo.card() }
-        lines.filter { com.optionslab.app.BuildConfig.GOLD || shown == null || !com.optionslab.ira.SoloProgress.shownAtAGlance(it) }.forEach { Note(it) }
-        val rec = remember(on) { com.optionslab.app.ira.IraSolo.record() }
-        Note(rec)
+        solo?.second?.let { Note(it) }
         // The trade manager on Solo's newest trade: its lock (Solo has no target to extend), an early exit, against the original rules.
         val managed by com.optionslab.app.data.TradeManagerHost.records.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
         managed.lastOrNull { it.trade.family == "solo" }?.let { Note(com.optionslab.ira.TradeManager.cardLine(it)) }
         // Why it switched itself off: said once - the glance's own line when it shows one, else the kept note.
-        if (shown?.glance?.offLine == null) com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
+        if (glance?.glance?.offLine == null) com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
     }
 }
+
+/** Solo (midday)'s rules (its name's dialog). */
+internal const val SOLO_RULES = "Paper account only - never real money, never Zerodha. At 12:00 it buys the index (NIFTY, BANKNIFTY or FINNIFTY) that has moved " +
+    "half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one, 1 lot, 4 strikes in the money, " +
+    "one trade a day, never on that index's expiry day. Out on a 1-minute close 0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30."
 
 /**
  * Jarvis's health (the owner's wish, 2026-10-03): everything it does by itself, each with its own switch and when it
@@ -1184,18 +1216,30 @@ private fun SoloCard() {
  */
 /** A behaviour with its own switch beneath its group (e.g. Market alerts → skipped Liquidity breaks): on only while the group is. */
 @Composable
-private fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupOn: Boolean) {
+internal fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupOn: Boolean) {
     val p = LocalPalette.current
     var own by remember { mutableStateOf(com.optionslab.app.ira.Automations.ownSwitch(a)) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 6.dp)) {
         Column(Modifier.weight(1f)) {
-            Text(a.label, style = Type.label.copy(color = if (groupOn) p.ink else p.inkSoft, fontSize = 13.sp))
+            // COMPACT (15 Oct, Boss): a tap on the setting's name shows only its explanation, in its own dialog with OK.
+            ExplainedName(a.label, listOf(a.what), style = Type.label.copy(color = if (groupOn) p.ink else p.inkSoft, fontSize = 13.sp))
             val group = com.optionslab.app.ira.Automations.groupOf(a)?.label ?: "Its group"
-            Text(a.what + (if (groupOn) "" else " ($group is off: this stays quiet.)"), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+            if (!groupOn) Text("($group is off: this stays quiet.)", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         }
         androidx.compose.material3.Switch(checked = own, onCheckedChange = { v -> own = v; com.optionslab.app.ira.Automations.set(a, v) })
     }
 }
+
+/** What the Jarvis switches' "How these switches work" opens (15 Oct, compact). */
+internal const val AUTOMATIONS_NOTE = "Each runs on its own while IraAlgo watches the market. Nothing here opens a trade without asking you, except on paper " +
+    "(Solo, and Jarvis's own ideas when that switch is on); the guard and the trailing stop only add or raise stops."
+internal const val AUTOMATIONS_ALWAYS = "Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice."
+
+/**
+ * The "AI trades go live" switch's vault writes (17 Oct): off the screen's thread, one at a time and in the order tapped, in a
+ * scope of the app's own (not the screen's), so leaving the page at once never drops the write.
+ */
+internal val AI_LIVE_WRITES = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
 
 @Composable
 private fun AutomationsCard() {
@@ -1205,24 +1249,33 @@ private fun AutomationsCard() {
         // in Live, once their record is proven, each trade still asks him first and needs the fingerprint.
         val act = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
         var aiLive by remember { mutableStateOf(!com.optionslab.app.ira.IraNewsTrades.paperFirst) }
+        // 17 Oct (Boss's diagnostics: the screen froze in Vault.encrypt): the switch's vault write - still straight to disk, never
+        // left in memory only - runs off the screen's thread ([AI_LIVE_WRITES]).
+        // Back to paper (lowering risk) is seen by every read at once; going live only once it is on disk.
+        fun paperFirst(v: Boolean) {
+            if (v) com.optionslab.app.ira.IraNewsTrades.paperNow()
+            AI_LIVE_WRITES.launch { runCatching { com.optionslab.app.ira.IraNewsTrades.paperFirst = v } }
+        }
         com.optionslab.app.ui.SettingSpot("jarvis.ailive") {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
                 Column(Modifier.weight(1f)) {
                     Text("AI trades go live", style = Type.label.copy(color = if (aiLive) p.oxblood else p.ink, fontSize = 14.sp))
-                    Text(if (aiLive) "On: in Live, Jarvis's trades go to Zerodha once their record is proven - each one asked first, approved with your fingerprint. Solo stays on paper always."
-                        else "Off: Jarvis's trades go on PAPER, even when the app is in Live (Solo always does).",
+                    Text(if (aiLive) "On: in Live, Jarvis's trades go to Zerodha once their record is proven - each one asked first, approved with your fingerprint. What he takes by himself stays on paper always."
+                        else "Off: Jarvis's trades go on PAPER, even when the app is in Live. It turns on with the switch to Live (your PIN), or here.",
                         style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
                 }
                 androidx.compose.material3.Switch(checked = aiLive, onCheckedChange = { v ->
-                    if (!v) { aiLive = false; com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
+                    if (!v) { aiLive = false; paperFirst(true) }
                     else if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
                         com.optionslab.app.work.Alerts.error("AI trades go live is switched on with your fingerprint: set one up on the phone first.")
                     else com.optionslab.app.security.BiometricGate.verify(act, "AI trades go live", "Jarvis's trades may go to Zerodha, each after your approval (Solo stays on paper)") { ok ->
-                        if (ok) { aiLive = true; com.optionslab.app.ira.IraNewsTrades.paperFirst = false } }
+                        if (ok) { aiLive = true; paperFirst(false) } }
                 })
             }
         }
-        Note("Each runs on its own while IraAlgo watches the market. Nothing here opens a trade without asking you, except on paper (Solo, and Jarvis's own ideas when that switch is on); the guard and the trailing stop only add or raise stops.")
+        // COMPACT (15 Oct): how these switches work, in a small dialog.
+        ExplainedName("How these switches work", listOf(AUTOMATIONS_NOTE, AUTOMATIONS_ALWAYS),
+            style = Type.label.copy(color = p.ink, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
         com.optionslab.app.ira.Automations.Group.entries.forEach { g ->
             var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(g)) }
             val last = remember(on) { com.optionslab.app.ira.Automations.last(g) }
@@ -1230,8 +1283,7 @@ private fun AutomationsCard() {
             com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.groupKey(g)) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                     Column(Modifier.weight(1f)) {
-                        Text(g.label, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                        Text(g.what, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                        ExplainedName(g.label, listOf(g.what), style = Type.label.copy(color = p.ink, fontSize = 14.sp))
                         Text(last?.let { (t, w) -> "Last: ${t.toLocalDate()} ${"%02d:%02d".format(t.hour, t.minute)} - $w" } ?: "Has not acted yet.",
                             style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
                     }
@@ -1248,6 +1300,13 @@ private fun AutomationsCard() {
             }
             g.subs.forEach { a -> com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.subKey(a)) { AutomationSubRow(a, groupOn = on) } }
         }
-        Note("Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice.")
+
     }
+}
+
+/** "Listen for 'Jarvis'" (14 Oct): Always (the default), only when unlocked or charging, or market hours only. */
+@Composable
+internal fun ListenWhenPicker(current: com.optionslab.ira.ListenWhen.Mode, onPick: (com.optionslab.ira.ListenWhen.Mode) -> Unit) {
+    val modes = com.optionslab.ira.ListenWhen.Mode.entries
+    ParamTokens("Listen for \"Jarvis\"", modes.map { it.label to (it == current) }) { i -> onPick(modes[i]) }
 }

@@ -2,51 +2,51 @@
  "index_daily_yahoo_NIFTY": {
   "symbol": "NIFTY",
   "source": "Yahoo",
-  "dhan_range": "2006-01-02..2026-10-14",
+  "dhan_range": "2006-01-02..2026-10-19",
   "compared": 4679,
   "match <=0.05%": "99.98%",
   "match <=0.5%": "99.98%",
   ">2% (bad)": 0,
-  "days only in Dhan": 47,
+  "days only in Dhan": 50,
   "days only in Yahoo": 0
  },
  "index_daily_yahoo_BANKNIFTY": {
   "symbol": "BANKNIFTY",
   "source": "Yahoo",
-  "dhan_range": "2006-01-02..2026-10-14",
+  "dhan_range": "2006-01-02..2026-10-19",
   "compared": 4693,
   "match <=0.05%": "99.83%",
   "match <=0.5%": "99.98%",
   ">2% (bad)": 0,
-  "days only in Dhan": 32,
+  "days only in Dhan": 35,
   "days only in Yahoo": 1
  },
  "index_daily_yahoo_INDIAVIX": {
   "symbol": "INDIAVIX",
   "source": "Yahoo",
-  "dhan_range": "2007-11-01..2026-10-14",
+  "dhan_range": "2007-11-01..2026-10-19",
   "compared": 4542,
   "match <=0.05%": "98.83%",
   "match <=0.5%": "99.58%",
   ">2% (bad)": 14,
-  "days only in Dhan": 49,
+  "days only in Dhan": 52,
   "days only in Yahoo": 18
  },
  "index_daily_yahoo_SENSEX": {
   "symbol": "SENSEX",
   "source": "Yahoo",
-  "dhan_range": "2006-01-02..2026-10-14",
+  "dhan_range": "2006-01-02..2026-10-19",
   "compared": 5105,
   "match <=0.05%": "99.96%",
   "match <=0.5%": "99.98%",
   ">2% (bad)": 0,
-  "days only in Dhan": 46,
+  "days only in Dhan": 49,
   "days only in Yahoo": 1
  },
  "index_daily_nse_BANKNIFTY": {
   "symbol": "BANKNIFTY",
   "source": "NSE ind_close_all (sample)",
-  "dhan_range": "2006-01-02..2026-10-14",
+  "dhan_range": "2006-01-02..2026-10-19",
   "compared": 260,
   "match <=0.05%": "100.00%",
   "match <=0.5%": "100.00%",
@@ -57,7 +57,7 @@
  "index_daily_nse_FINNIFTY": {
   "symbol": "FINNIFTY",
   "source": "NSE ind_close_all (sample)",
-  "dhan_range": "2006-01-02..2026-10-14",
+  "dhan_range": "2006-01-02..2026-10-19",
   "compared": 260,
   "match <=0.05%": "99.62%",
   "match <=0.5%": "100.00%",
@@ -68,7 +68,7 @@
  "index_daily_nse_INDIAVIX": {
   "symbol": "INDIAVIX",
   "source": "NSE ind_close_all (sample)",
-  "dhan_range": "2007-11-01..2026-10-14",
+  "dhan_range": "2007-11-01..2026-10-19",
   "compared": 260,
   "match <=0.05%": "100.00%",
   "match <=0.5%": "100.00%",
@@ -79,7 +79,7 @@
  "index_daily_nse_MIDCPNIFTY": {
   "symbol": "MIDCPNIFTY",
   "source": "NSE ind_close_all (sample)",
-  "dhan_range": "2022-01-31..2026-10-14",
+  "dhan_range": "2022-01-31..2026-10-19",
   "compared": 243,
   "match <=0.05%": "100.00%",
   "match <=0.5%": "100.00%",
@@ -90,7 +90,7 @@
  "index_daily_nse_NIFTY": {
   "symbol": "NIFTY",
   "source": "NSE ind_close_all (sample)",
-  "dhan_range": "2006-01-02..2026-10-14",
+  "dhan_range": "2006-01-02..2026-10-19",
   "compared": 260,
   "match <=0.05%": "100.00%",
   "match <=0.5%": "100.00%",
@@ -100,58 +100,58 @@
  },
  "index_1m_BANKEX": {
   "symbol": "BANKEX",
-  "range": "2021-08-04..2026-10-14",
-  "days": 1284,
-  "rows": 473863,
-  "days with 375 bars": "79.36%",
+  "range": "2021-08-04..2026-10-19",
+  "days": 1287,
+  "rows": 474988,
+  "days with 375 bars": "79.41%",
   "days <300 bars": 34,
   "daily dates missing in 1m": 5,
-  "1m high = daily high (<=0.05%)": "96.57%",
+  "1m high = daily high (<=0.05%)": "96.58%",
   "1m low = daily low (<=0.05%)": "96.81%",
   "15:29 close vs daily close, median": "0.056%"
  },
  "index_1m_BANKNIFTY": {
   "symbol": "BANKNIFTY",
-  "range": "2021-08-04..2026-10-14",
-  "days": 1285,
-  "rows": 478067,
+  "range": "2021-08-04..2026-10-19",
+  "days": 1288,
+  "rows": 479192,
   "days with 375 bars": "96.58%",
   "days <300 bars": 22,
   "daily dates missing in 1m": 4,
-  "1m high = daily high (<=0.05%)": "97.43%",
-  "1m low = daily low (<=0.05%)": "97.51%",
+  "1m high = daily high (<=0.05%)": "97.44%",
+  "1m low = daily low (<=0.05%)": "97.52%",
   "15:29 close vs daily close, median": "0.055%"
  },
  "index_1m_FINNIFTY": {
   "symbol": "FINNIFTY",
-  "range": "2021-08-04..2026-10-14",
-  "days": 1285,
-  "rows": 478652,
-  "days with 375 bars": "95.95%",
+  "range": "2021-08-04..2026-10-19",
+  "days": 1288,
+  "rows": 479777,
+  "days with 375 bars": "95.96%",
   "days <300 bars": 11,
   "daily dates missing in 1m": 4,
-  "1m high = daily high (<=0.05%)": "96.73%",
+  "1m high = daily high (<=0.05%)": "96.74%",
   "1m low = daily low (<=0.05%)": "97.28%",
   "15:29 close vs daily close, median": "0.060%"
  },
  "index_1m_INDIAVIX": {
   "symbol": "INDIAVIX",
-  "range": "2021-08-04..2026-10-14",
-  "days": 1285,
-  "rows": 478299,
-  "days with 375 bars": "95.56%",
+  "range": "2021-08-04..2026-10-19",
+  "days": 1288,
+  "rows": 479424,
+  "days with 375 bars": "95.57%",
   "days <300 bars": 19,
   "daily dates missing in 1m": 4,
   "1m high = daily high (<=0.05%)": "98.60%",
-  "1m low = daily low (<=0.05%)": "96.96%",
+  "1m low = daily low (<=0.05%)": "96.89%",
   "15:29 close vs daily close, median": "0.378%"
  },
  "index_1m_MIDCPNIFTY": {
   "symbol": "MIDCPNIFTY",
-  "range": "2022-01-31..2026-10-14",
-  "days": 1164,
-  "rows": 435545,
-  "days with 375 bars": "96.22%",
+  "range": "2022-01-31..2026-10-19",
+  "days": 1167,
+  "rows": 436670,
+  "days with 375 bars": "96.23%",
   "days <300 bars": 3,
   "daily dates missing in 1m": 3,
   "1m high = daily high (<=0.05%)": "99.31%",
@@ -160,22 +160,22 @@
  },
  "index_1m_NIFTY": {
   "symbol": "NIFTY",
-  "range": "2017-04-03..2026-10-14",
-  "days": 2356,
-  "rows": 883133,
+  "range": "2017-04-03..2026-10-19",
+  "days": 2359,
+  "rows": 884258,
   "days with 375 bars": "99.32%",
   "days <300 bars": 4,
   "daily dates missing in 1m": 7,
-  "1m high = daily high (<=0.05%)": "98.17%",
+  "1m high = daily high (<=0.05%)": "98.18%",
   "1m low = daily low (<=0.05%)": "99.45%",
   "15:29 close vs daily close, median": "0.046%"
  },
  "index_1m_SENSEX": {
   "symbol": "SENSEX",
-  "range": "2021-08-04..2026-10-14",
-  "days": 1285,
-  "rows": 479031,
-  "days with 375 bars": "80.70%",
+  "range": "2021-08-04..2026-10-19",
+  "days": 1288,
+  "rows": 480156,
+  "days with 375 bars": "80.75%",
   "days <300 bars": 6,
   "daily dates missing in 1m": 4,
   "1m high = daily high (<=0.05%)": "98.91%",
@@ -719,93 +719,93 @@
   }
  ],
  "stkopt_ADANIENT_bars": {
-  "series_days": 12246,
-  "full_375": 0.6611138330883554
+  "series_days": 15777,
+  "full_375": 0.6131710718133992
  },
  "opt_ADANIENT_MONTH": {
   "underlying": "ADANIENT",
   "flag": "MONTH",
-  "days": 144,
-  "contract-days": 709,
-  "found in bhavcopy": "99.72%",
-  "high match": "75.32%",
-  "low match": "75.04%",
-  "open match": "92.38%",
-  "last price <=0.5% (2024-07+)": "61.90%",
-  "last price <=2% (2024-07+)": "82.42%",
+  "days": 226,
+  "contract-days": 1532,
+  "found in bhavcopy": "98.65%",
+  "high match": "68.99%",
+  "low match": "65.67%",
+  "open match": "81.79%",
+  "last price <=0.5% (2024-07+)": "67.95%",
+  "last price <=2% (2024-07+)": "82.98%",
   "OI Dhan/NSE median": "1.003",
-  "OI within 1%": "65.73%",
-  "high&low match on expiry days": "58.33%"
+  "OI within 1%": "57.64%",
+  "high&low match on expiry days": "39.36%"
  },
  "opt_ADANIENT_MONTH_worst": [
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2500.0",
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "1660.0",
    "side": "P",
-   "high": "67.2",
-   "high_n": "12.7",
-   "low": "3.25",
+   "high": "57.85",
+   "high_n": "69.75",
+   "low": "9.6",
    "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2550.0",
-   "side": "C",
-   "high": "68.0",
-   "high_n": "7.9",
-   "low": "0.05",
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "1620.0",
+   "side": "P",
+   "high": "40.85",
+   "high_n": "40.85",
+   "low": "9.5",
    "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2500.0",
-   "side": "C",
-   "high": "90.4",
-   "high_n": "41.0",
-   "low": "0.05",
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "1600.0",
+   "side": "P",
+   "high": "29.95",
+   "high_n": "29.95",
+   "low": "8.0",
    "low_n": "0.05"
   },
   {
-   "date": "2024-06-27",
-   "expiry": "2024-06-27",
-   "strike": "3200.0",
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "1640.0",
    "side": "P",
-   "high": "79.0",
-   "high_n": "59.25",
-   "low": "0.05",
-   "low_n": "20.0"
+   "high": "51.1",
+   "high_n": "51.1",
+   "low": "7.75",
+   "low_n": "0.05"
   },
   {
-   "date": "2024-07-25",
-   "expiry": "2024-07-25",
-   "strike": "3000.0",
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "1650.0",
    "side": "P",
-   "high": "74.65",
-   "high_n": "56.0",
-   "low": "0.05",
-   "low_n": "11.3"
+   "high": "33.4",
+   "high_n": "59.0",
+   "low": "5.75",
+   "low_n": "0.05"
   }
  ],
  "stkopt_ADANIPORTS_bars": {
-  "series_days": 12717,
-  "full_375": 0.7187229692537548
+  "series_days": 16183,
+  "full_375": 0.6692207872458753
  },
  "opt_ADANIPORTS_MONTH": {
   "underlying": "ADANIPORTS",
   "flag": "MONTH",
-  "days": 208,
-  "contract-days": 1034,
+  "days": 254,
+  "contract-days": 1440,
   "found in bhavcopy": "100.00%",
-  "high match": "72.92%",
-  "low match": "68.67%",
-  "open match": "96.71%",
-  "last price <=0.5% (2024-07+)": "62.85%",
-  "last price <=2% (2024-07+)": "85.18%",
+  "high match": "71.60%",
+  "low match": "67.01%",
+  "open match": "92.64%",
+  "last price <=0.5% (2024-07+)": "64.77%",
+  "last price <=2% (2024-07+)": "86.07%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "69.34%",
+  "OI within 1%": "66.11%",
   "high&low match on expiry days": "56.25%"
  },
  "opt_ADANIPORTS_MONTH_worst": [
@@ -820,6 +820,16 @@
    "low_n": "0.05"
   },
   {
+   "date": "2023-01-25",
+   "expiry": "2023-01-25",
+   "strike": "760.0",
+   "side": "C",
+   "high": "2.25",
+   "high_n": "2.25",
+   "low": "0.45",
+   "low_n": "0.05"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "1400.0",
@@ -827,6 +837,16 @@
    "high": "39.6",
    "high_n": "4.5",
    "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2023-01-25",
+   "expiry": "2023-01-25",
+   "strike": "750.0",
+   "side": "C",
+   "high": "5.05",
+   "high_n": "5.05",
+   "low": "0.4",
    "low_n": "0.05"
   },
   {
@@ -838,48 +858,48 @@
    "high_n": "21.0",
    "low": "8.15",
    "low_n": "9.2"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1400.0",
-   "side": "P",
-   "high": "27.55",
-   "high_n": "12.3",
-   "low": "0.15",
-   "low_n": "0.15"
-  },
-  {
-   "date": "2022-12-28",
-   "expiry": "2022-12-29",
-   "strike": "820.0",
-   "side": "P",
-   "high": "31.05",
-   "high_n": "15.4",
-   "low": "3.7",
-   "low_n": "8.7"
   }
  ],
  "stkopt_APOLLOHOSP_bars": {
-  "series_days": 12632,
-  "full_375": 0.5054623179227359
+  "series_days": 16073,
+  "full_375": 0.47004292913581786
  },
  "opt_APOLLOHOSP_MONTH": {
   "underlying": "APOLLOHOSP",
   "flag": "MONTH",
-  "days": 189,
-  "contract-days": 945,
+  "days": 240,
+  "contract-days": 1430,
   "found in bhavcopy": "100.00%",
-  "high match": "66.14%",
-  "low match": "60.32%",
-  "open match": "88.47%",
-  "last price <=0.5% (2024-07+)": "69.17%",
-  "last price <=2% (2024-07+)": "82.31%",
+  "high match": "66.36%",
+  "low match": "60.70%",
+  "open match": "83.71%",
+  "last price <=0.5% (2024-07+)": "73.66%",
+  "last price <=2% (2024-07+)": "84.23%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "58.20%",
-  "high&low match on expiry days": "30.00%"
+  "OI within 1%": "55.10%",
+  "high&low match on expiry days": "31.58%"
  },
  "opt_APOLLOHOSP_MONTH_worst": [
+  {
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "6200.0",
+   "side": "P",
+   "high": "53.45",
+   "high_n": "53.45",
+   "low": "1.8",
+   "low_n": "0.1"
+  },
+  {
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "6150.0",
+   "side": "P",
+   "high": "29.05",
+   "high_n": "29.05",
+   "low": "4.85",
+   "low_n": "0.35"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -889,16 +909,6 @@
    "high_n": "10.95",
    "low": "0.1",
    "low_n": "0.1"
-  },
-  {
-   "date": "2025-10-28",
-   "expiry": "2025-10-28",
-   "strike": "7850.0",
-   "side": "C",
-   "high": "55.0",
-   "high_n": "58.0",
-   "low": "5.0",
-   "low_n": "0.7"
   },
   {
    "date": "2025-09-30",
@@ -919,36 +929,26 @@
    "high_n": "7.6",
    "low": "0.05",
    "low_n": "0.05"
-  },
-  {
-   "date": "2023-06-28",
-   "expiry": "2023-06-28",
-   "strike": "5100.0",
-   "side": "P",
-   "high": "44.7",
-   "high_n": "8.5",
-   "low": "0.05",
-   "low_n": "0.05"
   }
  ],
  "stkopt_ASIANPAINT_bars": {
-  "series_days": 12547,
-  "full_375": 0.6670120347493425
+  "series_days": 16052,
+  "full_375": 0.6358709195115874
  },
  "opt_ASIANPAINT_MONTH": {
   "underlying": "ASIANPAINT",
   "flag": "MONTH",
-  "days": 166,
-  "contract-days": 849,
-  "found in bhavcopy": "99.77%",
-  "high match": "66.90%",
-  "low match": "63.02%",
-  "open match": "92.70%",
-  "last price <=0.5% (2024-07+)": "64.89%",
-  "last price <=2% (2024-07+)": "80.32%",
+  "days": 239,
+  "contract-days": 1505,
+  "found in bhavcopy": "99.34%",
+  "high match": "65.85%",
+  "low match": "60.86%",
+  "open match": "87.84%",
+  "last price <=0.5% (2024-07+)": "67.81%",
+  "last price <=2% (2024-07+)": "81.62%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "63.02%",
-  "high&low match on expiry days": "47.73%"
+  "OI within 1%": "59.80%",
+  "high&low match on expiry days": "48.33%"
  },
  "opt_ASIANPAINT_MONTH_worst": [
   {
@@ -1003,23 +1003,23 @@
   }
  ],
  "stkopt_AUBANK_bars": {
-  "series_days": 10857,
-  "full_375": 0.4577691811734365
+  "series_days": 14338,
+  "full_375": 0.4190961082438276
  },
  "opt_AUBANK_MONTH": {
   "underlying": "AUBANK",
   "flag": "MONTH",
-  "days": 168,
-  "contract-days": 802,
-  "found in bhavcopy": "99.88%",
-  "high match": "60.22%",
-  "low match": "54.61%",
-  "open match": "89.28%",
-  "last price <=0.5% (2024-07+)": "65.75%",
-  "last price <=2% (2024-07+)": "82.04%",
+  "days": 210,
+  "contract-days": 1181,
+  "found in bhavcopy": "99.92%",
+  "high match": "63.00%",
+  "low match": "58.59%",
+  "open match": "88.74%",
+  "last price <=0.5% (2024-07+)": "65.98%",
+  "last price <=2% (2024-07+)": "84.74%",
   "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "61.97%",
-  "high&low match on expiry days": "47.73%"
+  "OI within 1%": "61.05%",
+  "high&low match on expiry days": "45.16%"
  },
  "opt_AUBANK_MONTH_worst": [
   {
@@ -1053,6 +1053,16 @@
    "low_n": "0.05"
   },
   {
+   "date": "2026-02-24",
+   "expiry": "2026-02-24",
+   "strike": "990.0",
+   "side": "C",
+   "high": "13.0",
+   "high_n": "13.0",
+   "low": "0.15",
+   "low_n": "0.05"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "730.0",
@@ -1061,48 +1071,28 @@
    "high_n": "10.75",
    "low": "0.1",
    "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "740.0",
-   "side": "P",
-   "high": "24.85",
-   "high_n": "9.9",
-   "low": "2.05",
-   "low_n": "2.05"
   }
  ],
  "stkopt_AXISBANK_bars": {
-  "series_days": 12669,
-  "full_375": 0.8589470360723025
+  "series_days": 16222,
+  "full_375": 0.8042781407964492
  },
  "opt_AXISBANK_MONTH": {
   "underlying": "AXISBANK",
   "flag": "MONTH",
-  "days": 199,
-  "contract-days": 990,
+  "days": 255,
+  "contract-days": 1482,
   "found in bhavcopy": "100.00%",
-  "high match": "75.86%",
-  "low match": "77.98%",
-  "open match": "96.87%",
-  "last price <=0.5% (2024-07+)": "68.05%",
-  "last price <=2% (2024-07+)": "86.10%",
+  "high match": "74.56%",
+  "low match": "74.97%",
+  "open match": "94.40%",
+  "last price <=0.5% (2024-07+)": "67.40%",
+  "last price <=2% (2024-07+)": "87.46%",
   "OI Dhan/NSE median": "1.003",
-  "OI within 1%": "65.66%",
-  "high&low match on expiry days": "46.77%"
+  "OI within 1%": "63.70%",
+  "high&low match on expiry days": "47.50%"
  },
  "opt_AXISBANK_MONTH_worst": [
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1130.0",
-   "side": "P",
-   "high": "3.3",
-   "high_n": "6.1",
-   "low": "1.65",
-   "low_n": "0.05"
-  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -1110,6 +1100,16 @@
    "side": "C",
    "high": "26.35",
    "high_n": "1.8",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-12-30",
+   "expiry": "2025-12-30",
+   "strike": "1250.0",
+   "side": "C",
+   "high": "35.5",
+   "high_n": "2.6",
    "low": "0.05",
    "low_n": "0.05"
   },
@@ -1124,13 +1124,13 @@
    "low_n": "0.05"
   },
   {
-   "date": "2025-12-30",
-   "expiry": "2025-12-30",
-   "strike": "1250.0",
-   "side": "C",
-   "high": "15.9",
-   "high_n": "2.6",
-   "low": "0.05",
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "1090.0",
+   "side": "P",
+   "high": "10.9",
+   "high_n": "10.9",
+   "low": "0.25",
    "low_n": "0.05"
   },
   {
@@ -1145,23 +1145,23 @@
   }
  ],
  "stkopt_BAJAJ-AUTO_bars": {
-  "series_days": 12281,
-  "full_375": 0.512498982167576
+  "series_days": 15448,
+  "full_375": 0.49883480062143964
  },
  "opt_BAJAJ-AUTO_MONTH": {
   "underlying": "BAJAJ-AUTO",
   "flag": "MONTH",
-  "days": 176,
-  "contract-days": 923,
-  "found in bhavcopy": "99.78%",
-  "high match": "67.06%",
-  "low match": "63.81%",
-  "open match": "87.43%",
-  "last price <=0.5% (2024-07+)": "69.40%",
-  "last price <=2% (2024-07+)": "83.84%",
+  "days": 228,
+  "contract-days": 1407,
+  "found in bhavcopy": "98.20%",
+  "high match": "64.32%",
+  "low match": "58.92%",
+  "open match": "81.38%",
+  "last price <=0.5% (2024-07+)": "71.91%",
+  "last price <=2% (2024-07+)": "86.12%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "60.89%",
-  "high&low match on expiry days": "32.73%"
+  "OI within 1%": "53.87%",
+  "high&low match on expiry days": "33.80%"
  },
  "opt_BAJAJ-AUTO_MONTH_worst": [
   {
@@ -1185,56 +1185,76 @@
    "low_n": "0.05"
   },
   {
-   "date": "2026-02-24",
-   "expiry": "2026-02-24",
-   "strike": "9700.0",
-   "side": "C",
-   "high": "150.25",
-   "high_n": "151.7",
-   "low": "47.5",
-   "low_n": "9.55"
-  },
-  {
-   "date": "2026-02-24",
-   "expiry": "2026-02-24",
-   "strike": "9900.0",
-   "side": "C",
-   "high": "20.05",
-   "high_n": "20.05",
-   "low": "0.2",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2024-05-30",
-   "expiry": "2024-05-30",
-   "strike": "8900.0",
+   "date": "2023-12-27",
+   "expiry": "2023-12-28",
+   "strike": "6500.0",
    "side": "P",
-   "high": "39.9",
-   "high_n": "12.05",
-   "low": "0.15",
-   "low_n": "0.15"
+   "high": "69.35",
+   "high_n": "69.35",
+   "low": "8.2",
+   "low_n": "1.25"
+  },
+  {
+   "date": "2023-12-27",
+   "expiry": "2023-12-28",
+   "strike": "6750.0",
+   "side": "C",
+   "high": "22.7",
+   "high_n": "22.7",
+   "low": "4.3",
+   "low_n": "1.0"
+  },
+  {
+   "date": "2022-01-24",
+   "expiry": "2022-01-27",
+   "strike": "3440.0",
+   "side": "C",
+   "high": "46.95",
+   "high_n": "46.95",
+   "low": "20.4",
+   "low_n": "4.95"
   }
  ],
  "stkopt_BAJAJFINSV_bars": {
-  "series_days": 10391,
-  "full_375": 0.5947454527956886
+  "series_days": 13854,
+  "full_375": 0.5569510610653963
  },
  "opt_BAJAJFINSV_MONTH": {
   "underlying": "BAJAJFINSV",
   "flag": "MONTH",
-  "days": 161,
-  "contract-days": 770,
+  "days": 198,
+  "contract-days": 1082,
   "found in bhavcopy": "100.00%",
-  "high match": "66.88%",
-  "low match": "63.38%",
-  "open match": "92.60%",
-  "last price <=0.5% (2024-07+)": "60.91%",
-  "last price <=2% (2024-07+)": "81.14%",
+  "high match": "65.80%",
+  "low match": "62.66%",
+  "open match": "88.91%",
+  "last price <=0.5% (2024-07+)": "65.56%",
+  "last price <=2% (2024-07+)": "84.27%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "70.65%",
-  "high&low match on expiry days": "32.35%"
+  "OI within 1%": "67.93%",
+  "high&low match on expiry days": "36.49%"
  },
  "opt_BAJAJFINSV_MONTH_worst": [
+  {
+   "date": "2024-05-30",
+   "expiry": "2024-05-30",
+   "strike": "1520.0",
+   "side": "C",
+   "high": "25.45",
+   "high_n": "0.6",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "1680.0",
+   "side": "C",
+   "high": "10.0",
+   "high_n": "0.6",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -1256,54 +1276,34 @@
    "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2020.0",
-   "side": "C",
-   "high": "51.45",
-   "high_n": "14.0",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2020.0",
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1580.0",
    "side": "P",
-   "high": "50.25",
-   "high_n": "17.2",
-   "low": "1.65",
-   "low_n": "1.65"
-  },
-  {
-   "date": "2024-06-27",
-   "expiry": "2024-06-27",
-   "strike": "1620.0",
-   "side": "C",
-   "high": "11.5",
-   "high_n": "4.25",
-   "low": "0.05",
-   "low_n": "0.05"
+   "high": "14.8",
+   "high_n": "14.8",
+   "low": "4.1",
+   "low_n": "1.0"
   }
  ],
  "stkopt_BAJFINANCE_bars": {
-  "series_days": 5079,
-  "full_375": 0.5420358338255562
+  "series_days": 7086,
+  "full_375": 0.5410668924640135
  },
  "opt_BAJFINANCE_MONTH": {
   "underlying": "BAJFINANCE",
   "flag": "MONTH",
-  "days": 61,
-  "contract-days": 269,
+  "days": 75,
+  "contract-days": 387,
   "found in bhavcopy": "100.00%",
-  "high match": "67.66%",
-  "low match": "72.49%",
-  "open match": "92.94%",
-  "last price <=0.5% (2024-07+)": "63.94%",
-  "last price <=2% (2024-07+)": "85.50%",
+  "high match": "66.93%",
+  "low match": "70.28%",
+  "open match": "89.66%",
+  "last price <=0.5% (2024-07+)": "62.53%",
+  "last price <=2% (2024-07+)": "81.14%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "69.52%",
-  "high&low match on expiry days": "42.31%"
+  "OI within 1%": "64.60%",
+  "high&low match on expiry days": "47.06%"
  },
  "opt_BAJFINANCE_MONTH_worst": [
   {
@@ -1358,23 +1358,23 @@
   }
  ],
  "stkopt_BANKBARODA_bars": {
-  "series_days": 12268,
-  "full_375": 0.6031137919791327
+  "series_days": 15632,
+  "full_375": 0.5514329580348004
  },
  "opt_BANKBARODA_MONTH": {
   "underlying": "BANKBARODA",
   "flag": "MONTH",
-  "days": 192,
-  "contract-days": 857,
-  "found in bhavcopy": "98.85%",
-  "high match": "66.74%",
-  "low match": "70.71%",
-  "open match": "92.30%",
-  "last price <=0.5% (2024-07+)": "64.27%",
-  "last price <=2% (2024-07+)": "86.13%",
+  "days": 234,
+  "contract-days": 1227,
+  "found in bhavcopy": "98.56%",
+  "high match": "64.96%",
+  "low match": "67.24%",
+  "open match": "88.75%",
+  "last price <=0.5% (2024-07+)": "65.62%",
+  "last price <=2% (2024-07+)": "86.95%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "72.11%",
-  "high&low match on expiry days": "29.55%"
+  "OI within 1%": "67.16%",
+  "high&low match on expiry days": "39.47%"
  },
  "opt_BANKBARODA_MONTH_worst": [
   {
@@ -1429,35 +1429,25 @@
   }
  ],
  "stkopt_BEL_bars": {
-  "series_days": 10556,
-  "full_375": 0.6372679045092838
+  "series_days": 14116,
+  "full_375": 0.6239727968262964
  },
  "opt_BEL_MONTH": {
   "underlying": "BEL",
   "flag": "MONTH",
-  "days": 160,
-  "contract-days": 774,
+  "days": 201,
+  "contract-days": 1137,
   "found in bhavcopy": "100.00%",
-  "high match": "67.05%",
-  "low match": "72.22%",
-  "open match": "94.44%",
-  "last price <=0.5% (2024-07+)": "57.59%",
-  "last price <=2% (2024-07+)": "85.65%",
+  "high match": "64.12%",
+  "low match": "65.79%",
+  "open match": "90.15%",
+  "last price <=0.5% (2024-07+)": "60.68%",
+  "last price <=2% (2024-07+)": "87.72%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "71.45%",
-  "high&low match on expiry days": "46.55%"
+  "OI within 1%": "66.93%",
+  "high&low match on expiry days": "48.53%"
  },
  "opt_BEL_MONTH_worst": [
-  {
-   "date": "2025-11-25",
-   "expiry": "2025-11-25",
-   "strike": "410.0",
-   "side": "C",
-   "high": "1.2",
-   "high_n": "2.4",
-   "low": "0.45",
-   "low_n": "0.05"
-  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -1489,6 +1479,16 @@
    "low_n": "0.05"
   },
   {
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "185.0",
+   "side": "P",
+   "high": "2.5",
+   "high_n": "2.5",
+   "low": "0.65",
+   "low_n": "0.25"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "400.0",
@@ -1500,25 +1500,35 @@
   }
  ],
  "stkopt_BHARTIARTL_bars": {
-  "series_days": 12450,
-  "full_375": 0.7970281124497992
+  "series_days": 15953,
+  "full_375": 0.7432457844919451
  },
  "opt_BHARTIARTL_MONTH": {
   "underlying": "BHARTIARTL",
   "flag": "MONTH",
-  "days": 222,
-  "contract-days": 1038,
-  "found in bhavcopy": "100.00%",
-  "high match": "78.61%",
-  "low match": "74.28%",
-  "open match": "95.95%",
-  "last price <=0.5% (2024-07+)": "72.85%",
-  "last price <=2% (2024-07+)": "88.87%",
+  "days": 251,
+  "contract-days": 1296,
+  "found in bhavcopy": "99.69%",
+  "high match": "75.46%",
+  "low match": "71.76%",
+  "open match": "92.28%",
+  "last price <=0.5% (2024-07+)": "74.48%",
+  "last price <=2% (2024-07+)": "89.31%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "67.34%",
-  "high&low match on expiry days": "45.65%"
+  "OI within 1%": "64.74%",
+  "high&low match on expiry days": "45.95%"
  },
  "opt_BHARTIARTL_MONTH_worst": [
+  {
+   "date": "2021-11-15",
+   "expiry": "2021-11-25",
+   "strike": "745.0",
+   "side": "P",
+   "high": "14.7",
+   "high_n": "21.2",
+   "low": "10.25",
+   "low_n": "0.05"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -1530,63 +1540,53 @@
    "low_n": "0.05"
   },
   {
-   "date": "2023-03-29",
-   "expiry": "2023-03-29",
-   "strike": "740.0",
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1150.0",
    "side": "P",
-   "high": "5.95",
-   "high_n": "3.0",
-   "low": "0.05",
+   "high": "12.4",
+   "high_n": "12.4",
+   "low": "0.7",
    "low_n": "0.05"
   },
   {
-   "date": "2025-08-26",
-   "expiry": "2025-08-28",
-   "strike": "1900.0",
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1140.0",
+   "side": "P",
+   "high": "7.15",
+   "high_n": "7.15",
+   "low": "0.7",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2026-02-24",
+   "expiry": "2026-02-24",
+   "strike": "1940.0",
    "side": "C",
-   "high": "29.6",
-   "high_n": "21.6",
-   "low": "13.35",
-   "low_n": "6.95"
-  },
-  {
-   "date": "2022-11-23",
-   "expiry": "2022-11-24",
-   "strike": "840.0",
-   "side": "P",
-   "high": "1.0",
-   "high_n": "1.0",
-   "low": "0.05",
-   "low_n": "0.45"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1900.0",
-   "side": "P",
-   "high": "41.0",
-   "high_n": "21.85",
-   "low": "2.35",
-   "low_n": "2.15"
+   "high": "53.15",
+   "high_n": "24.2",
+   "low": "0.5",
+   "low_n": "0.1"
   }
  ],
  "stkopt_BSE_bars": {
-  "series_days": 3660,
-  "full_375": 0.7560109289617486
+  "series_days": 5740,
+  "full_375": 0.689198606271777
  },
  "opt_BSE_MONTH": {
   "underlying": "BSE",
   "flag": "MONTH",
-  "days": 64,
-  "contract-days": 278,
+  "days": 72,
+  "contract-days": 346,
   "found in bhavcopy": "100.00%",
-  "high match": "82.01%",
-  "low match": "82.73%",
-  "open match": "91.01%",
-  "last price <=0.5% (2024-07+)": "71.22%",
-  "last price <=2% (2024-07+)": "86.69%",
+  "high match": "82.95%",
+  "low match": "82.66%",
+  "open match": "91.04%",
+  "last price <=0.5% (2024-07+)": "71.10%",
+  "last price <=2% (2024-07+)": "88.15%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "61.87%",
+  "OI within 1%": "66.18%",
   "high&low match on expiry days": "39.29%"
  },
  "opt_BSE_MONTH_worst": [
@@ -1642,96 +1642,126 @@
   }
  ],
  "stkopt_CANBK_bars": {
-  "series_days": 7079,
-  "full_375": 0.47111173894617886
+  "series_days": 10577,
+  "full_375": 0.4556112319183133
  },
  "opt_CANBK_MONTH": {
   "underlying": "CANBK",
   "flag": "MONTH",
-  "days": 60,
-  "contract-days": 280,
-  "found in bhavcopy": "99.29%",
-  "high match": "72.86%",
-  "low match": "74.29%",
-  "open match": "91.43%",
-  "last price <=0.5% (2024-07+)": "64.29%",
-  "last price <=2% (2024-07+)": "80.95%",
+  "days": 110,
+  "contract-days": 758,
+  "found in bhavcopy": "99.74%",
+  "high match": "70.84%",
+  "low match": "72.56%",
+  "open match": "87.86%",
+  "last price <=0.5% (2024-07+)": "66.85%",
+  "last price <=2% (2024-07+)": "80.06%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "67.14%",
-  "high&low match on expiry days": "44.44%"
+  "OI within 1%": "61.08%",
+  "high&low match on expiry days": "47.22%"
  },
  "opt_CANBK_MONTH_worst": [
   {
-   "date": "2026-03-25",
-   "expiry": "2026-03-30",
-   "strike": "138.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "121.0",
    "side": "P",
-   "high": "5.67",
-   "high_n": "3.46",
-   "low": "2.4",
-   "low_n": "2.4"
+   "high": "2.55",
+   "high_n": "0.45",
+   "low": "0.05",
+   "low_n": "0.05"
   },
   {
-   "date": "2024-05-30",
-   "expiry": "2024-05-30",
-   "strike": "117.0",
+   "date": "2026-01-27",
+   "expiry": "2026-01-27",
+   "strike": "154.0",
    "side": "P",
-   "high": "2.75",
-   "high_n": "2.05",
-   "low": "0.3",
-   "low_n": "0.6"
+   "high": "2.92",
+   "high_n": "2.31",
+   "low": "0.05",
+   "low_n": "0.01"
   },
   {
-   "date": "2025-07-29",
-   "expiry": "2025-07-31",
-   "strike": "111.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "122.0",
    "side": "P",
-   "high": "1.9",
-   "high_n": "1.8",
-   "low": "0.6",
-   "low_n": "0.9"
+   "high": "2.9",
+   "high_n": "0.65",
+   "low": "0.05",
+   "low_n": "0.05"
   },
   {
-   "date": "2025-11-18",
-   "expiry": "2025-11-25",
-   "strike": "150.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "124.0",
    "side": "C",
-   "high": "2.81",
-   "high_n": "2.82",
-   "low": "1.82",
-   "low_n": "1.37"
+   "high": "4.4",
+   "high_n": "1.0",
+   "low": "0.05",
+   "low_n": "0.05"
   },
   {
-   "date": "2026-04-15",
-   "expiry": "2026-04-28",
-   "strike": "143.0",
-   "side": "P",
-   "high": "6.09",
-   "high_n": "4.82",
-   "low": "3.47",
-   "low_n": "3.47"
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "123.0",
+   "side": "C",
+   "high": "4.95",
+   "high_n": "1.65",
+   "low": "0.05",
+   "low_n": "0.05"
   }
  ],
  "stkopt_CIPLA_bars": {
-  "series_days": 8209,
-  "full_375": 0.5986112803021074
+  "series_days": 13361,
+  "full_375": 0.5458423770675848
  },
  "opt_CIPLA_MONTH": {
   "underlying": "CIPLA",
   "flag": "MONTH",
-  "days": 206,
-  "contract-days": 1019,
-  "found in bhavcopy": "100.00%",
-  "high match": "58.98%",
-  "low match": "49.85%",
-  "open match": "84.59%",
-  "last price <=0.5% (2024-07+)": "53.72%",
-  "last price <=2% (2024-07+)": "75.62%",
+  "days": 250,
+  "contract-days": 1402,
+  "found in bhavcopy": "99.86%",
+  "high match": "60.56%",
+  "low match": "51.00%",
+  "open match": "82.03%",
+  "last price <=0.5% (2024-07+)": "59.47%",
+  "last price <=2% (2024-07+)": "81.24%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "60.06%",
-  "high&low match on expiry days": "61.11%"
+  "OI within 1%": "56.99%",
+  "high&low match on expiry days": "54.10%"
  },
  "opt_CIPLA_MONTH_worst": [
+  {
+   "date": "2023-07-26",
+   "expiry": "2023-07-27",
+   "strike": "1040.0",
+   "side": "P",
+   "high": "10.5",
+   "high_n": "10.5",
+   "low": "4.15",
+   "low_n": "0.25"
+  },
+  {
+   "date": "2025-10-28",
+   "expiry": "2025-10-28",
+   "strike": "1570.0",
+   "side": "C",
+   "high": "13.5",
+   "high_n": "12.7",
+   "low": "0.55",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2023-01-25",
+   "expiry": "2023-01-25",
+   "strike": "1060.0",
+   "side": "C",
+   "high": "6.7",
+   "high_n": "4.75",
+   "low": "0.45",
+   "low_n": "0.05"
+  },
   {
    "date": "2026-02-24",
    "expiry": "2026-02-24",
@@ -1751,56 +1781,26 @@
    "high_n": "19.9",
    "low": "11.1",
    "low_n": "2.25"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1500.0",
-   "side": "C",
-   "high": "39.25",
-   "high_n": "9.6",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2024-06-27",
-   "expiry": "2024-06-27",
-   "strike": "1460.0",
-   "side": "P",
-   "high": "11.45",
-   "high_n": "3.0",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2023-05-24",
-   "expiry": "2023-05-25",
-   "strike": "940.0",
-   "side": "C",
-   "high": "6.5",
-   "high_n": "3.0",
-   "low": "0.75",
-   "low_n": "0.75"
   }
  ],
  "stkopt_COALINDIA_bars": {
-  "series_days": 7573,
-  "full_375": 0.7337910999603856
+  "series_days": 12810,
+  "full_375": 0.6588602654176424
  },
  "opt_COALINDIA_MONTH": {
   "underlying": "COALINDIA",
   "flag": "MONTH",
-  "days": 141,
-  "contract-days": 514,
-  "found in bhavcopy": "99.61%",
-  "high match": "72.18%",
-  "low match": "69.07%",
-  "open match": "97.28%",
-  "last price <=0.5% (2024-07+)": "59.44%",
-  "last price <=2% (2024-07+)": "85.00%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "74.51%",
-  "high&low match on expiry days": "35.00%"
+  "days": 242,
+  "contract-days": 1228,
+  "found in bhavcopy": "97.69%",
+  "high match": "64.50%",
+  "low match": "62.21%",
+  "open match": "87.46%",
+  "last price <=0.5% (2024-07+)": "58.93%",
+  "last price <=2% (2024-07+)": "81.10%",
+  "OI Dhan/NSE median": "1.002",
+  "OI within 1%": "64.25%",
+  "high&low match on expiry days": "41.18%"
  },
  "opt_COALINDIA_MONTH_worst": [
   {
@@ -1844,34 +1844,34 @@
    "low_n": "0.05"
   },
   {
-   "date": "2024-05-30",
-   "expiry": "2024-05-30",
-   "strike": "480.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "385.0",
    "side": "P",
-   "high": "3.3",
-   "high_n": "0.95",
+   "high": "4.45",
+   "high_n": "1.2",
    "low": "0.05",
    "low_n": "0.05"
   }
  ],
  "stkopt_DRREDDY_bars": {
-  "series_days": 3683,
-  "full_375": 0.5468368178115667
+  "series_days": 9069,
+  "full_375": 0.5119638328371375
  },
  "opt_DRREDDY_MONTH": {
   "underlying": "DRREDDY",
   "flag": "MONTH",
-  "days": 31,
-  "contract-days": 117,
-  "found in bhavcopy": "99.15%",
-  "high match": "64.10%",
-  "low match": "63.25%",
-  "open match": "79.49%",
-  "last price <=0.5% (2024-07+)": "46.55%",
-  "last price <=2% (2024-07+)": "64.66%",
+  "days": 86,
+  "contract-days": 531,
+  "found in bhavcopy": "99.81%",
+  "high match": "64.22%",
+  "low match": "63.28%",
+  "open match": "87.19%",
+  "last price <=0.5% (2024-07+)": "60.94%",
+  "last price <=2% (2024-07+)": "78.49%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "49.57%",
-  "high&low match on expiry days": "37.50%"
+  "OI within 1%": "65.16%",
+  "high&low match on expiry days": "39.29%"
  },
  "opt_DRREDDY_MONTH_worst": [
   {
@@ -1882,6 +1882,16 @@
    "high": "13.35",
    "high_n": "13.35",
    "low": "4.5",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "1240.0",
+   "side": "C",
+   "high": "28.2",
+   "high_n": "4.9",
+   "low": "0.05",
    "low_n": "0.05"
   },
   {
@@ -1905,115 +1915,105 @@
    "low_n": "0.45"
   },
   {
-   "date": "2025-08-26",
-   "expiry": "2025-08-28",
+   "date": "2026-05-13",
+   "expiry": "2026-05-26",
    "strike": "1280.0",
-   "side": "P",
-   "high": "20.55",
-   "high_n": "22.05",
-   "low": "11.2",
-   "low_n": "6.25"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1220.0",
    "side": "C",
-   "high": "38.3",
-   "high_n": "22.0",
-   "low": "3.0",
-   "low_n": "2.95"
+   "high": "45.05",
+   "high_n": "45.05",
+   "low": "15.75",
+   "low_n": "7.05"
   }
  ],
  "stkopt_EICHERMOT_bars": {
-  "series_days": 7369,
-  "full_375": 0.5331795358936083
+  "series_days": 12806,
+  "full_375": 0.48110260815242856
  },
  "opt_EICHERMOT_MONTH": {
   "underlying": "EICHERMOT",
   "flag": "MONTH",
-  "days": 87,
-  "contract-days": 329,
-  "found in bhavcopy": "100.00%",
-  "high match": "72.95%",
-  "low match": "60.49%",
-  "open match": "93.92%",
-  "last price <=0.5% (2024-07+)": "62.88%",
-  "last price <=2% (2024-07+)": "82.58%",
+  "days": 227,
+  "contract-days": 1394,
+  "found in bhavcopy": "97.96%",
+  "high match": "60.19%",
+  "low match": "53.73%",
+  "open match": "72.96%",
+  "last price <=0.5% (2024-07+)": "71.58%",
+  "last price <=2% (2024-07+)": "84.47%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "59.27%",
-  "high&low match on expiry days": "45.45%"
+  "OI within 1%": "46.77%",
+  "high&low match on expiry days": "30.14%"
  },
  "opt_EICHERMOT_MONTH_worst": [
   {
-   "date": "2024-05-30",
-   "expiry": "2024-05-30",
-   "strike": "4800.0",
+   "date": "2025-10-28",
+   "expiry": "2025-10-28",
+   "strike": "7000.0",
+   "side": "P",
+   "high": "100.2",
+   "high_n": "94.2",
+   "low": "4.95",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "7050.0",
    "side": "C",
-   "high": "35.0",
-   "high_n": "15.0",
+   "high": "178.75",
+   "high_n": "17.2",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
-   "date": "2023-04-26",
-   "expiry": "2023-04-27",
-   "strike": "3250.0",
-   "side": "C",
-   "high": "79.45",
-   "high_n": "35.6",
-   "low": "8.0",
-   "low_n": "10.0"
-  },
-  {
-   "date": "2021-12-27",
-   "expiry": "2021-12-30",
-   "strike": "2400.0",
+   "date": "2026-01-27",
+   "expiry": "2026-01-27",
+   "strike": "6950.0",
    "side": "P",
-   "high": "33.15",
-   "high_n": "33.15",
-   "low": "12.25",
-   "low_n": "5.75"
+   "high": "49.0",
+   "high_n": "49.0",
+   "low": "0.85",
+   "low_n": "0.1"
   },
   {
-   "date": "2024-06-27",
-   "expiry": "2024-06-27",
-   "strike": "4700.0",
-   "side": "C",
-   "high": "80.0",
-   "high_n": "80.0",
-   "low": "1.0",
-   "low_n": "21.1"
-  },
-  {
-   "date": "2023-01-25",
-   "expiry": "2023-01-25",
-   "strike": "3250.0",
+   "date": "2026-01-27",
+   "expiry": "2026-01-27",
+   "strike": "7150.0",
    "side": "P",
-   "high": "75.0",
-   "high_n": "59.1",
-   "low": "2.05",
-   "low_n": "25.85"
+   "high": "222.55",
+   "high_n": "222.55",
+   "low": "4.0",
+   "low_n": "0.5"
+  },
+  {
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "4500.0",
+   "side": "P",
+   "high": "18.75",
+   "high_n": "18.75",
+   "low": "0.3",
+   "low_n": "0.05"
   }
  ],
  "stkopt_ETERNAL_bars": {
-  "series_days": 2215,
-  "full_375": 0.8519187358916479
+  "series_days": 5877,
+  "full_375": 0.6814701378254211
  },
  "opt_ETERNAL_MONTH": {
   "underlying": "ETERNAL",
   "flag": "MONTH",
-  "days": 41,
-  "contract-days": 152,
+  "days": 77,
+  "contract-days": 406,
   "found in bhavcopy": "100.00%",
-  "high match": "66.45%",
-  "low match": "73.03%",
-  "open match": "89.47%",
-  "last price <=0.5% (2024-07+)": "50.00%",
-  "last price <=2% (2024-07+)": "75.66%",
+  "high match": "71.43%",
+  "low match": "73.15%",
+  "open match": "92.61%",
+  "last price <=0.5% (2024-07+)": "57.39%",
+  "last price <=2% (2024-07+)": "81.03%",
   "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "65.79%",
-  "high&low match on expiry days": "37.50%"
+  "OI within 1%": "69.21%",
+  "high&low match on expiry days": "36.67%"
  },
  "opt_ETERNAL_MONTH_worst": [
   {
@@ -2037,6 +2037,16 @@
    "low_n": "0.05"
   },
   {
+   "date": "2025-12-30",
+   "expiry": "2025-12-30",
+   "strike": "280.0",
+   "side": "C",
+   "high": "16.35",
+   "high_n": "2.9",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "325.0",
@@ -2047,44 +2057,34 @@
    "low_n": "0.9"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "330.0",
-   "side": "P",
-   "high": "13.4",
-   "high_n": "6.0",
-   "low": "2.7",
-   "low_n": "2.6"
-  },
-  {
-   "date": "2025-08-26",
-   "expiry": "2025-08-28",
-   "strike": "320.0",
-   "side": "P",
-   "high": "5.65",
-   "high_n": "5.65",
-   "low": "1.2",
-   "low_n": "0.7"
+   "date": "2025-12-30",
+   "expiry": "2025-12-30",
+   "strike": "275.0",
+   "side": "C",
+   "high": "16.35",
+   "high_n": "4.95",
+   "low": "0.95",
+   "low_n": "0.95"
   }
  ],
  "stkopt_FEDERALBNK_bars": {
-  "series_days": 7518,
-  "full_375": 0.5578611332801277
+  "series_days": 12641,
+  "full_375": 0.4905466339688316
  },
  "opt_FEDERALBNK_MONTH": {
   "underlying": "FEDERALBNK",
   "flag": "MONTH",
-  "days": 85,
-  "contract-days": 320,
+  "days": 239,
+  "contract-days": 1488,
   "found in bhavcopy": "100.00%",
-  "high match": "65.00%",
-  "low match": "64.38%",
-  "open match": "90.31%",
-  "last price <=0.5% (2024-07+)": "59.81%",
-  "last price <=2% (2024-07+)": "78.97%",
+  "high match": "50.94%",
+  "low match": "51.55%",
+  "open match": "73.79%",
+  "last price <=0.5% (2024-07+)": "62.26%",
+  "last price <=2% (2024-07+)": "81.13%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "64.69%",
-  "high&low match on expiry days": "33.33%"
+  "OI within 1%": "52.42%",
+  "high&low match on expiry days": "41.03%"
  },
  "opt_FEDERALBNK_MONTH_worst": [
   {
@@ -2098,6 +2098,16 @@
    "low_n": "0.05"
   },
   {
+   "date": "2023-08-30",
+   "expiry": "2023-08-31",
+   "strike": "146.0",
+   "side": "C",
+   "high": "0.85",
+   "high_n": "0.85",
+   "low": "0.3",
+   "low_n": "0.05"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "192.5",
@@ -2108,6 +2118,16 @@
    "low_n": "0.2"
   },
   {
+   "date": "2025-11-25",
+   "expiry": "2025-11-25",
+   "strike": "252.5",
+   "side": "P",
+   "high": "4.32",
+   "high_n": "0.98",
+   "low": "0.01",
+   "low_n": "0.01"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "190.0",
@@ -2116,119 +2136,109 @@
    "high_n": "0.65",
    "low": "0.05",
    "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "190.0",
-   "side": "C",
-   "high": "6.9",
-   "high_n": "2.9",
-   "low": "1.15",
-   "low_n": "1.45"
-  },
-  {
-   "date": "2024-12-23",
-   "expiry": "2024-12-26",
-   "strike": "200.0",
-   "side": "C",
-   "high": "3.15",
-   "high_n": "1.45",
-   "low": "0.25",
-   "low_n": "0.65"
   }
  ],
  "stkopt_GRASIM_bars": {
-  "series_days": 7573,
-  "full_375": 0.42281790571768124
+  "series_days": 12964,
+  "full_375": 0.3745757482258562
  },
  "opt_GRASIM_MONTH": {
   "underlying": "GRASIM",
   "flag": "MONTH",
-  "days": 68,
-  "contract-days": 268,
+  "days": 235,
+  "contract-days": 1455,
   "found in bhavcopy": "100.00%",
-  "high match": "56.72%",
-  "low match": "45.90%",
-  "open match": "87.31%",
-  "last price <=0.5% (2024-07+)": "65.00%",
-  "last price <=2% (2024-07+)": "78.33%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "50.37%",
-  "high&low match on expiry days": "18.75%"
+  "high match": "56.29%",
+  "low match": "46.80%",
+  "open match": "74.85%",
+  "last price <=0.5% (2024-07+)": "58.35%",
+  "last price <=2% (2024-07+)": "71.64%",
+  "OI Dhan/NSE median": "1.001",
+  "OI within 1%": "46.67%",
+  "high&low match on expiry days": "41.77%"
  },
  "opt_GRASIM_MONTH_worst": [
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2760.0",
-   "side": "C",
-   "high": "3.65",
-   "high_n": "22.95",
-   "low": "3.05",
-   "low_n": "0.15"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2740.0",
+   "date": "2024-06-27",
+   "expiry": "2024-06-27",
+   "strike": "2560.0",
    "side": "P",
-   "high": "43.5",
-   "high_n": "8.75",
-   "low": "0.15",
-   "low_n": "0.15"
-  },
-  {
-   "date": "2023-03-29",
-   "expiry": "2023-03-29",
-   "strike": "1640.0",
-   "side": "C",
-   "high": "16.0",
-   "high_n": "4.5",
-   "low": "0.05",
+   "high": "11.15",
+   "high_n": "11.15",
+   "low": "1.45",
    "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2740.0",
+   "date": "2024-05-30",
+   "expiry": "2024-05-30",
+   "strike": "2400.0",
    "side": "C",
-   "high": "77.55",
-   "high_n": "22.7",
-   "low": "9.05",
-   "low_n": "9.05"
+   "high": "12.05",
+   "high_n": "12.05",
+   "low": "1.0",
+   "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2760.0",
+   "date": "2024-05-30",
+   "expiry": "2024-05-30",
+   "strike": "2380.0",
+   "side": "C",
+   "high": "17.95",
+   "high_n": "13.0",
+   "low": "0.7",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2026-02-24",
+   "expiry": "2026-02-24",
+   "strike": "2840.0",
    "side": "P",
-   "high": "52.75",
-   "high_n": "20.0",
-   "low": "5.0",
-   "low_n": "5.0"
+   "high": "12.0",
+   "high_n": "12.0",
+   "low": "0.6",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2023-02-22",
+   "expiry": "2023-02-23",
+   "strike": "1640.0",
+   "side": "C",
+   "high": "26.0",
+   "high_n": "26.0",
+   "low": "4.4",
+   "low_n": "0.5"
   }
  ],
  "stkopt_HCLTECH_bars": {
-  "series_days": 7629,
-  "full_375": 0.7441342246690261
+  "series_days": 13051,
+  "full_375": 0.6763466401042065
  },
  "opt_HCLTECH_MONTH": {
   "underlying": "HCLTECH",
   "flag": "MONTH",
-  "days": 101,
-  "contract-days": 394,
-  "found in bhavcopy": "100.00%",
-  "high match": "58.88%",
-  "low match": "63.20%",
-  "open match": "94.42%",
-  "last price <=0.5% (2024-07+)": "68.75%",
-  "last price <=2% (2024-07+)": "85.23%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "69.04%",
-  "high&low match on expiry days": "43.33%"
+  "days": 251,
+  "contract-days": 1469,
+  "found in bhavcopy": "99.59%",
+  "high match": "59.29%",
+  "low match": "54.46%",
+  "open match": "83.59%",
+  "last price <=0.5% (2024-07+)": "62.56%",
+  "last price <=2% (2024-07+)": "82.06%",
+  "OI Dhan/NSE median": "1.001",
+  "OI within 1%": "58.07%",
+  "high&low match on expiry days": "37.88%"
  },
  "opt_HCLTECH_MONTH_worst": [
+  {
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1530.0",
+   "side": "P",
+   "high": "14.6",
+   "high_n": "14.6",
+   "low": "2.5",
+   "low_n": "0.25"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -2240,6 +2250,26 @@
    "low_n": "0.05"
   },
   {
+   "date": "2024-06-27",
+   "expiry": "2024-06-27",
+   "strike": "1460.0",
+   "side": "C",
+   "high": "10.8",
+   "high_n": "1.45",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1540.0",
+   "side": "P",
+   "high": "22.25",
+   "high_n": "22.25",
+   "low": "2.7",
+   "low_n": "0.5"
+  },
+  {
    "date": "2024-05-30",
    "expiry": "2024-05-30",
    "strike": "1320.0",
@@ -2248,56 +2278,26 @@
    "high_n": "2.25",
    "low": "0.1",
    "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1400.0",
-   "side": "C",
-   "high": "31.25",
-   "high_n": "6.1",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-12-30",
-   "expiry": "2025-12-30",
-   "strike": "1620.0",
-   "side": "C",
-   "high": "15.35",
-   "high_n": "15.4",
-   "low": "0.15",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1400.0",
-   "side": "P",
-   "high": "47.4",
-   "high_n": "16.0",
-   "low": "1.5",
-   "low_n": "1.5"
   }
  ],
  "stkopt_HDFCBANK_bars": {
-  "series_days": 7613,
-  "full_375": 0.9557336135557599
+  "series_days": 12684,
+  "full_375": 0.8932513402712078
  },
  "opt_HDFCBANK_MONTH": {
   "underlying": "HDFCBANK",
   "flag": "MONTH",
-  "days": 89,
-  "contract-days": 340,
+  "days": 204,
+  "contract-days": 1188,
   "found in bhavcopy": "100.00%",
-  "high match": "92.94%",
-  "low match": "91.47%",
-  "open match": "97.65%",
-  "last price <=0.5% (2024-07+)": "68.18%",
-  "last price <=2% (2024-07+)": "87.88%",
+  "high match": "75.34%",
+  "low match": "74.24%",
+  "open match": "83.08%",
+  "last price <=0.5% (2024-07+)": "78.31%",
+  "last price <=2% (2024-07+)": "89.54%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "70.88%",
-  "high&low match on expiry days": "0.00%"
+  "OI within 1%": "60.61%",
+  "high&low match on expiry days": "39.13%"
  },
  "opt_HDFCBANK_MONTH_worst": [
   {
@@ -2311,6 +2311,26 @@
    "low_n": "0.05"
   },
   {
+   "date": "2026-03-18",
+   "expiry": "2026-03-30",
+   "strike": "845.0",
+   "side": "C",
+   "high": "14.0",
+   "high_n": "14.0",
+   "low": "0.4",
+   "low_n": "0.1"
+  },
+  {
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1460.0",
+   "side": "C",
+   "high": "15.5",
+   "high_n": "15.5",
+   "low": "5.0",
+   "low_n": "1.35"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "950.0",
@@ -2321,56 +2341,46 @@
    "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "950.0",
-   "side": "C",
-   "high": "22.9",
-   "high_n": "9.15",
-   "low": "0.35",
-   "low_n": "0.35"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "960.0",
+   "date": "2023-11-29",
+   "expiry": "2023-11-30",
+   "strike": "1530.0",
    "side": "P",
-   "high": "20.9",
-   "high_n": "12.7",
-   "low": "5.7",
-   "low_n": "5.55"
-  },
-  {
-   "date": "2025-07-22",
-   "expiry": "2025-07-31",
-   "strike": "2000.0",
-   "side": "P",
-   "high": "19.8",
-   "high_n": "19.8",
-   "low": "8.6",
-   "low_n": "13.1"
+   "high": "4.5",
+   "high_n": "4.5",
+   "low": "1.05",
+   "low_n": "0.3"
   }
  ],
  "stkopt_HDFCLIFE_bars": {
-  "series_days": 7625,
-  "full_375": 0.5841311475409836
+  "series_days": 12289,
+  "full_375": 0.5362519326226707
  },
  "opt_HDFCLIFE_MONTH": {
   "underlying": "HDFCLIFE",
   "flag": "MONTH",
-  "days": 94,
-  "contract-days": 366,
+  "days": 231,
+  "contract-days": 1333,
   "found in bhavcopy": "100.00%",
-  "high match": "59.84%",
-  "low match": "55.74%",
-  "open match": "85.52%",
-  "last price <=0.5% (2024-07+)": "62.24%",
-  "last price <=2% (2024-07+)": "81.12%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "64.21%",
-  "high&low match on expiry days": "46.43%"
+  "high match": "53.34%",
+  "low match": "49.51%",
+  "open match": "79.07%",
+  "last price <=0.5% (2024-07+)": "60.25%",
+  "last price <=2% (2024-07+)": "78.60%",
+  "OI Dhan/NSE median": "1.001",
+  "OI within 1%": "54.39%",
+  "high&low match on expiry days": "37.50%"
  },
  "opt_HDFCLIFE_MONTH_worst": [
+  {
+   "date": "2024-05-30",
+   "expiry": "2024-05-30",
+   "strike": "565.0",
+   "side": "C",
+   "high": "4.4",
+   "high_n": "4.4",
+   "low": "0.55",
+   "low_n": "0.05"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -2392,56 +2402,66 @@
    "low_n": "0.05"
   },
   {
-   "date": "2022-10-25",
-   "expiry": "2022-10-27",
-   "strike": "530.0",
+   "date": "2024-07-25",
+   "expiry": "2024-07-25",
+   "strike": "670.0",
    "side": "P",
+   "high": "4.85",
+   "high_n": "4.85",
+   "low": "0.25",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "495.0",
+   "side": "C",
    "high": "6.5",
-   "high_n": "2.45",
-   "low": "0.85",
-   "low_n": "0.85"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "750.0",
-   "side": "C",
-   "high": "23.95",
-   "high_n": "9.45",
-   "low": "1.0",
-   "low_n": "1.0"
-  },
-  {
-   "date": "2025-12-30",
-   "expiry": "2025-12-30",
-   "strike": "740.0",
-   "side": "C",
-   "high": "17.95",
-   "high_n": "7.15",
+   "high_n": "1.5",
    "low": "0.05",
    "low_n": "0.05"
   }
  ],
  "stkopt_HINDALCO_bars": {
-  "series_days": 7636,
-  "full_375": 0.8483499214248298
+  "series_days": 12329,
+  "full_375": 0.7606456322491686
  },
  "opt_HINDALCO_MONTH": {
   "underlying": "HINDALCO",
   "flag": "MONTH",
-  "days": 116,
-  "contract-days": 442,
-  "found in bhavcopy": "100.00%",
-  "high match": "74.89%",
-  "low match": "71.49%",
-  "open match": "96.15%",
-  "last price <=0.5% (2024-07+)": "51.35%",
-  "last price <=2% (2024-07+)": "77.48%",
+  "days": 252,
+  "contract-days": 1355,
+  "found in bhavcopy": "99.85%",
+  "high match": "65.17%",
+  "low match": "61.03%",
+  "open match": "85.39%",
+  "last price <=0.5% (2024-07+)": "62.19%",
+  "last price <=2% (2024-07+)": "83.92%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "66.97%",
-  "high&low match on expiry days": "50.00%"
+  "OI within 1%": "60.81%",
+  "high&low match on expiry days": "41.98%"
  },
  "opt_HINDALCO_MONTH_worst": [
+  {
+   "date": "2024-02-21",
+   "expiry": "2024-02-29",
+   "strike": "510.0",
+   "side": "P",
+   "high": "10.6",
+   "high_n": "10.6",
+   "low": "6.65",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2024-07-25",
+   "expiry": "2024-07-25",
+   "strike": "630.0",
+   "side": "P",
+   "high": "3.8",
+   "high_n": "3.8",
+   "low": "1.0",
+   "low_n": "0.05"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -2463,56 +2483,46 @@
    "low_n": "0.05"
   },
   {
-   "date": "2023-07-26",
-   "expiry": "2023-07-27",
-   "strike": "445.0",
+   "date": "2024-02-21",
+   "expiry": "2024-02-29",
+   "strike": "520.0",
    "side": "P",
-   "high": "3.8",
-   "high_n": "1.35",
-   "low": "0.1",
-   "low_n": "0.3"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "760.0",
-   "side": "C",
-   "high": "24.0",
-   "high_n": "9.05",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "770.0",
-   "side": "P",
-   "high": "20.75",
-   "high_n": "10.4",
-   "low": "3.1",
-   "low_n": "2.7"
+   "high": "14.4",
+   "high_n": "16.25",
+   "low": "7.8",
+   "low_n": "1.5"
   }
  ],
  "stkopt_HINDUNILVR_bars": {
-  "series_days": 7636,
-  "full_375": 0.7155578837087481
+  "series_days": 12329,
+  "full_375": 0.6503366047530214
  },
  "opt_HINDUNILVR_MONTH": {
   "underlying": "HINDUNILVR",
   "flag": "MONTH",
-  "days": 100,
-  "contract-days": 384,
+  "days": 251,
+  "contract-days": 1414,
   "found in bhavcopy": "100.00%",
-  "high match": "66.15%",
-  "low match": "61.72%",
-  "open match": "92.97%",
-  "last price <=0.5% (2024-07+)": "62.37%",
-  "last price <=2% (2024-07+)": "83.87%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "68.75%",
-  "high&low match on expiry days": "20.00%"
+  "high match": "62.80%",
+  "low match": "56.51%",
+  "open match": "82.81%",
+  "last price <=0.5% (2024-07+)": "63.68%",
+  "last price <=2% (2024-07+)": "86.49%",
+  "OI Dhan/NSE median": "1.002",
+  "OI within 1%": "59.26%",
+  "high&low match on expiry days": "36.76%"
  },
  "opt_HINDUNILVR_MONTH_worst": [
+  {
+   "date": "2022-10-25",
+   "expiry": "2022-10-27",
+   "strike": "2580.0",
+   "side": "C",
+   "high": "18.0",
+   "high_n": "18.0",
+   "low": "7.2",
+   "low_n": "0.8"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -2522,6 +2532,16 @@
    "high_n": "8.8",
    "low": "0.05",
    "low_n": "0.05"
+  },
+  {
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "2380.0",
+   "side": "P",
+   "high": "21.8",
+   "high_n": "21.8",
+   "low": "5.45",
+   "low_n": "1.1"
   },
   {
    "date": "2025-09-30",
@@ -2534,54 +2554,34 @@
    "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2500.0",
+   "date": "2022-10-25",
+   "expiry": "2022-10-27",
+   "strike": "2560.0",
    "side": "C",
-   "high": "71.0",
-   "high_n": "25.0",
-   "low": "5.55",
-   "low_n": "5.2"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "2520.0",
-   "side": "P",
-   "high": "47.3",
-   "high_n": "23.25",
-   "low": "2.7",
-   "low_n": "2.7"
-  },
-  {
-   "date": "2023-08-30",
-   "expiry": "2023-08-31",
-   "strike": "2540.0",
-   "side": "C",
-   "high": "13.0",
-   "high_n": "6.75",
-   "low": "2.0",
-   "low_n": "2.0"
+   "high": "20.0",
+   "high_n": "20.0",
+   "low": "7.45",
+   "low_n": "1.9"
   }
  ],
  "stkopt_ICICIBANK_bars": {
-  "series_days": 7630,
-  "full_375": 0.9347313237221494
+  "series_days": 12337,
+  "full_375": 0.8655264651049688
  },
  "opt_ICICIBANK_MONTH": {
   "underlying": "ICICIBANK",
   "flag": "MONTH",
-  "days": 124,
-  "contract-days": 472,
+  "days": 252,
+  "contract-days": 1346,
   "found in bhavcopy": "100.00%",
-  "high match": "81.57%",
-  "low match": "83.26%",
-  "open match": "96.19%",
-  "last price <=0.5% (2024-07+)": "65.35%",
-  "last price <=2% (2024-07+)": "86.63%",
-  "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "64.41%",
-  "high&low match on expiry days": "45.83%"
+  "high match": "71.62%",
+  "low match": "72.66%",
+  "open match": "87.96%",
+  "last price <=0.5% (2024-07+)": "67.68%",
+  "last price <=2% (2024-07+)": "88.42%",
+  "OI Dhan/NSE median": "1.003",
+  "OI within 1%": "60.92%",
+  "high&low match on expiry days": "42.11%"
  },
  "opt_ICICIBANK_MONTH_worst": [
   {
@@ -2595,66 +2595,86 @@
    "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1350.0",
-   "side": "C",
-   "high": "32.1",
-   "high_n": "6.8",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1350.0",
+   "date": "2023-11-29",
+   "expiry": "2023-11-30",
+   "strike": "925.0",
    "side": "P",
-   "high": "23.7",
-   "high_n": "7.75",
-   "low": "0.15",
+   "high": "3.95",
+   "high_n": "3.95",
+   "low": "1.05",
    "low_n": "0.15"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1340.0",
+   "date": "2023-01-25",
+   "expiry": "2023-01-25",
+   "strike": "880.0",
    "side": "C",
-   "high": "37.9",
-   "high_n": "16.25",
-   "low": "6.75",
-   "low_n": "6.75"
+   "high": "2.2",
+   "high_n": "2.2",
+   "low": "0.35",
+   "low_n": "0.05"
   },
   {
-   "date": "2024-05-30",
-   "expiry": "2024-05-30",
-   "strike": "1110.0",
+   "date": "2024-02-28",
+   "expiry": "2024-02-29",
+   "strike": "1065.0",
    "side": "C",
-   "high": "16.5",
-   "high_n": "11.6",
-   "low": "0.05",
-   "low_n": "1.85"
+   "high": "4.8",
+   "high_n": "4.8",
+   "low": "2.7",
+   "low_n": "0.5"
+  },
+  {
+   "date": "2023-10-25",
+   "expiry": "2023-10-26",
+   "strike": "930.0",
+   "side": "C",
+   "high": "8.0",
+   "high_n": "8.0",
+   "low": "2.35",
+   "low_n": "0.45"
   }
  ],
  "stkopt_IDFCFIRSTB_bars": {
-  "series_days": 7624,
-  "full_375": 0.5747639034627492
+  "series_days": 12310,
+  "full_375": 0.5263200649878148
  },
  "opt_IDFCFIRSTB_MONTH": {
   "underlying": "IDFCFIRSTB",
   "flag": "MONTH",
-  "days": 135,
-  "contract-days": 516,
+  "days": 243,
+  "contract-days": 1234,
   "found in bhavcopy": "100.00%",
-  "high match": "55.43%",
-  "low match": "60.66%",
-  "open match": "91.47%",
-  "last price <=0.5% (2024-07+)": "72.22%",
-  "last price <=2% (2024-07+)": "80.16%",
+  "high match": "54.86%",
+  "low match": "59.97%",
+  "open match": "86.87%",
+  "last price <=0.5% (2024-07+)": "71.60%",
+  "last price <=2% (2024-07+)": "82.75%",
   "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "75.78%",
-  "high&low match on expiry days": "33.33%"
+  "OI within 1%": "68.31%",
+  "high&low match on expiry days": "35.71%"
  },
  "opt_IDFCFIRSTB_MONTH_worst": [
+  {
+   "date": "2023-11-29",
+   "expiry": "2023-11-30",
+   "strike": "84.0",
+   "side": "P",
+   "high": "0.65",
+   "high_n": "0.1",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "55.0",
+   "side": "C",
+   "high": "0.3",
+   "high_n": "0.05",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -2676,56 +2696,76 @@
    "low_n": "0.05"
   },
   {
-   "date": "2024-05-30",
-   "expiry": "2024-05-30",
-   "strike": "78.0",
-   "side": "C",
-   "high": "0.8",
-   "high_n": "0.3",
-   "low": "0.05",
+   "date": "2022-08-23",
+   "expiry": "2022-08-25",
+   "strike": "43.0",
+   "side": "P",
+   "high": "0.5",
+   "high_n": "0.5",
+   "low": "0.2",
    "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "70.0",
-   "side": "P",
-   "high": "1.85",
-   "high_n": "0.7",
-   "low": "0.1",
-   "low_n": "0.1"
-  },
-  {
-   "date": "2022-07-25",
-   "expiry": "2022-07-28",
-   "strike": "35.0",
-   "side": "P",
-   "high": "0.85",
-   "high_n": "0.35",
-   "low": "0.15",
-   "low_n": "0.15"
   }
  ],
  "stkopt_INDIGO_bars": {
-  "series_days": 7561,
-  "full_375": 0.5474143631794736
+  "series_days": 12252,
+  "full_375": 0.5400750897812602
  },
  "opt_INDIGO_MONTH": {
   "underlying": "INDIGO",
   "flag": "MONTH",
-  "days": 81,
-  "contract-days": 315,
-  "found in bhavcopy": "100.00%",
-  "high match": "61.27%",
-  "low match": "60.00%",
-  "open match": "89.21%",
-  "last price <=0.5% (2024-07+)": "67.05%",
-  "last price <=2% (2024-07+)": "80.68%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "59.68%",
-  "high&low match on expiry days": "25.00%"
+  "days": 227,
+  "contract-days": 1371,
+  "found in bhavcopy": "99.50%",
+  "high match": "55.43%",
+  "low match": "48.87%",
+  "open match": "73.23%",
+  "last price <=0.5% (2024-07+)": "72.04%",
+  "last price <=2% (2024-07+)": "86.67%",
+  "OI Dhan/NSE median": "1.002",
+  "OI within 1%": "49.23%",
+  "high&low match on expiry days": "30.65%"
  },
  "opt_INDIGO_MONTH_worst": [
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "5700.0",
+   "side": "C",
+   "high": "94.0",
+   "high_n": "12.8",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2024-06-27",
+   "expiry": "2024-06-27",
+   "strike": "4150.0",
+   "side": "P",
+   "high": "22.75",
+   "high_n": "22.75",
+   "low": "0.65",
+   "low_n": "0.1"
+  },
+  {
+   "date": "2022-11-23",
+   "expiry": "2022-11-24",
+   "strike": "1820.0",
+   "side": "P",
+   "high": "17.0",
+   "high_n": "17.0",
+   "low": "3.25",
+   "low_n": "0.85"
+  },
+  {
+   "date": "2023-04-26",
+   "expiry": "2023-04-27",
+   "strike": "1980.0",
+   "side": "P",
+   "high": "18.25",
+   "high_n": "8.0",
+   "low": "2.05",
+   "low_n": "0.55"
+  },
   {
    "date": "2024-04-25",
    "expiry": "2024-04-25",
@@ -2735,137 +2775,97 @@
    "high_n": "2.8",
    "low": "0.05",
    "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "5600.0",
-   "side": "C",
-   "high": "138.7",
-   "high_n": "52.05",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2023-03-29",
-   "expiry": "2023-03-29",
-   "strike": "1840.0",
-   "side": "C",
-   "high": "16.25",
-   "high_n": "7.4",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2023-03-29",
-   "expiry": "2023-03-29",
-   "strike": "1820.0",
-   "side": "P",
-   "high": "19.4",
-   "high_n": "16.5",
-   "low": "0.05",
-   "low_n": "1.0"
-  },
-  {
-   "date": "2024-04-25",
-   "expiry": "2024-04-25",
-   "strike": "3800.0",
-   "side": "C",
-   "high": "37.1",
-   "high_n": "28.0",
-   "low": "0.1",
-   "low_n": "1.05"
   }
  ],
  "stkopt_INDUSINDBK_bars": {
-  "series_days": 7632,
-  "full_375": 0.7448899371069182
+  "series_days": 12322,
+  "full_375": 0.6649894497646486
  },
  "opt_INDUSINDBK_MONTH": {
   "underlying": "INDUSINDBK",
   "flag": "MONTH",
-  "days": 97,
-  "contract-days": 368,
+  "days": 251,
+  "contract-days": 1450,
   "found in bhavcopy": "100.00%",
-  "high match": "70.38%",
-  "low match": "67.12%",
-  "open match": "96.47%",
-  "last price <=0.5% (2024-07+)": "60.13%",
-  "last price <=2% (2024-07+)": "84.81%",
-  "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "72.83%",
-  "high&low match on expiry days": "55.00%"
+  "high match": "62.41%",
+  "low match": "57.79%",
+  "open match": "83.31%",
+  "last price <=0.5% (2024-07+)": "60.03%",
+  "last price <=2% (2024-07+)": "84.57%",
+  "OI Dhan/NSE median": "1.003",
+  "OI within 1%": "60.41%",
+  "high&low match on expiry days": "45.31%"
  },
  "opt_INDUSINDBK_MONTH_worst": [
   {
-   "date": "2024-07-25",
-   "expiry": "2024-07-25",
-   "strike": "1380.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "740.0",
    "side": "C",
-   "high": "31.05",
-   "high_n": "14.05",
+   "high": "23.25",
+   "high_n": "2.1",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
-   "date": "2024-06-27",
-   "expiry": "2024-06-27",
-   "strike": "1480.0",
-   "side": "C",
-   "high": "32.75",
-   "high_n": "23.3",
-   "low": "1.0",
-   "low_n": "9.95"
-  },
-  {
-   "date": "2024-06-27",
-   "expiry": "2024-06-27",
-   "strike": "1500.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "720.0",
    "side": "P",
-   "high": "28.0",
-   "high_n": "14.85",
+   "high": "15.0",
+   "high_n": "2.65",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
-   "date": "2024-07-25",
-   "expiry": "2024-07-25",
-   "strike": "1400.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "740.0",
    "side": "P",
-   "high": "29.15",
-   "high_n": "29.15",
-   "low": "2.75",
-   "low_n": "10.15"
+   "high": "23.95",
+   "high_n": "16.9",
+   "low": "4.0",
+   "low_n": "1.0"
   },
   {
-   "date": "2023-02-22",
-   "expiry": "2023-02-23",
-   "strike": "1080.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "730.0",
    "side": "C",
-   "high": "30.6",
-   "high_n": "18.5",
-   "low": "4.55",
-   "low_n": "8.85"
+   "high": "28.35",
+   "high_n": "8.0",
+   "low": "0.75",
+   "low_n": "0.5"
+  },
+  {
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1440.0",
+   "side": "P",
+   "high": "17.1",
+   "high_n": "17.1",
+   "low": "3.5",
+   "low_n": "1.0"
   }
  ],
  "stkopt_INFY_bars": {
-  "series_days": 7632,
-  "full_375": 0.9416928721174004
+  "series_days": 12296,
+  "full_375": 0.8659726740403383
  },
  "opt_INFY_MONTH": {
   "underlying": "INFY",
   "flag": "MONTH",
-  "days": 144,
-  "contract-days": 542,
-  "found in bhavcopy": "100.00%",
-  "high match": "87.82%",
-  "low match": "85.98%",
-  "open match": "96.31%",
-  "last price <=0.5% (2024-07+)": "73.58%",
-  "last price <=2% (2024-07+)": "88.62%",
+  "days": 254,
+  "contract-days": 1277,
+  "found in bhavcopy": "99.92%",
+  "high match": "78.00%",
+  "low match": "74.78%",
+  "open match": "88.49%",
+  "last price <=0.5% (2024-07+)": "74.28%",
+  "last price <=2% (2024-07+)": "88.95%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "69.56%",
-  "high&low match on expiry days": "69.05%"
+  "OI within 1%": "61.24%",
+  "high&low match on expiry days": "68.52%"
  },
  "opt_INFY_MONTH_worst": [
   {
@@ -2879,6 +2879,16 @@
    "low_n": "0.05"
   },
   {
+   "date": "2023-10-25",
+   "expiry": "2023-10-26",
+   "strike": "1400.0",
+   "side": "C",
+   "high": "9.05",
+   "high_n": "9.05",
+   "low": "2.6",
+   "low_n": "0.25"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "1440.0",
@@ -2889,56 +2899,76 @@
    "low_n": "0.05"
   },
   {
-   "date": "2023-01-25",
-   "expiry": "2023-01-25",
-   "strike": "1560.0",
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1680.0",
    "side": "C",
-   "high": "7.85",
-   "high_n": "2.1",
-   "low": "0.05",
-   "low_n": "0.05"
+   "high": "6.3",
+   "high_n": "6.3",
+   "low": "2.0",
+   "low_n": "0.4"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1440.0",
-   "side": "C",
-   "high": "42.7",
-   "high_n": "15.05",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1460.0",
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1640.0",
    "side": "P",
-   "high": "51.25",
-   "high_n": "20.95",
-   "low": "10.7",
-   "low_n": "10.4"
+   "high": "8.0",
+   "high_n": "8.0",
+   "low": "3.05",
+   "low_n": "0.65"
   }
  ],
  "stkopt_ITC_bars": {
-  "series_days": 7627,
-  "full_375": 0.7950701455355972
+  "series_days": 12271,
+  "full_375": 0.7292804172439084
  },
  "opt_ITC_MONTH": {
   "underlying": "ITC",
   "flag": "MONTH",
-  "days": 145,
-  "contract-days": 544,
-  "found in bhavcopy": "100.00%",
-  "high match": "76.10%",
-  "low match": "78.49%",
-  "open match": "96.69%",
-  "last price <=0.5% (2024-07+)": "49.07%",
-  "last price <=2% (2024-07+)": "82.41%",
+  "days": 235,
+  "contract-days": 1162,
+  "found in bhavcopy": "98.31%",
+  "high match": "68.24%",
+  "low match": "72.72%",
+  "open match": "88.12%",
+  "last price <=0.5% (2024-07+)": "49.49%",
+  "last price <=2% (2024-07+)": "77.21%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "75.74%",
-  "high&low match on expiry days": "15.00%"
+  "OI within 1%": "66.18%",
+  "high&low match on expiry days": "37.50%"
  },
  "opt_ITC_MONTH_worst": [
+  {
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "440.0",
+   "side": "C",
+   "high": "2.35",
+   "high_n": "0.15",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2023-06-28",
+   "expiry": "2023-06-28",
+   "strike": "445.0",
+   "side": "P",
+   "high": "0.8",
+   "high_n": "1.05",
+   "low": "0.45",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2026-02-24",
+   "expiry": "2026-02-24",
+   "strike": "322.5",
+   "side": "C",
+   "high": "2.8",
+   "high_n": "2.8",
+   "low": "0.4",
+   "low_n": "0.05"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -2958,58 +2988,38 @@
    "high_n": "0.6",
    "low": "0.05",
    "low_n": "0.05"
-  },
-  {
-   "date": "2024-03-27",
-   "expiry": "2024-03-28",
-   "strike": "425.0",
-   "side": "P",
-   "high": "3.3",
-   "high_n": "0.6",
-   "low": "0.1",
-   "low_n": "0.25"
-  },
-  {
-   "date": "2024-06-27",
-   "expiry": "2024-06-27",
-   "strike": "420.0",
-   "side": "P",
-   "high": "2.25",
-   "high_n": "0.5",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "405.0",
-   "side": "C",
-   "high": "6.55",
-   "high_n": "1.8",
-   "low": "0.05",
-   "low_n": "0.05"
   }
  ],
  "stkopt_JIOFIN_bars": {
-  "series_days": 2760,
-  "full_375": 0.7576086956521739
+  "series_days": 7112,
+  "full_375": 0.6067210348706412
  },
  "opt_JIOFIN_MONTH": {
   "underlying": "JIOFIN",
   "flag": "MONTH",
-  "days": 52,
-  "contract-days": 194,
+  "days": 93,
+  "contract-days": 466,
   "found in bhavcopy": "100.00%",
-  "high match": "73.71%",
-  "low match": "76.29%",
-  "open match": "88.66%",
-  "last price <=0.5% (2024-07+)": "57.22%",
-  "last price <=2% (2024-07+)": "78.35%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "69.07%",
-  "high&low match on expiry days": "42.86%"
+  "high match": "69.10%",
+  "low match": "74.46%",
+  "open match": "92.70%",
+  "last price <=0.5% (2024-07+)": "59.44%",
+  "last price <=2% (2024-07+)": "81.12%",
+  "OI Dhan/NSE median": "1.001",
+  "OI within 1%": "74.25%",
+  "high&low match on expiry days": "46.43%"
  },
  "opt_JIOFIN_MONTH_worst": [
+  {
+   "date": "2025-06-24",
+   "expiry": "2025-06-26",
+   "strike": "305.0",
+   "side": "C",
+   "high": "18.0",
+   "high_n": "3.1",
+   "low": "0.85",
+   "low_n": "0.85"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -3021,6 +3031,26 @@
    "low_n": "0.05"
   },
   {
+   "date": "2025-07-29",
+   "expiry": "2025-07-31",
+   "strike": "310.0",
+   "side": "P",
+   "high": "17.5",
+   "high_n": "4.85",
+   "low": "0.6",
+   "low_n": "0.65"
+  },
+  {
+   "date": "2026-01-27",
+   "expiry": "2026-01-27",
+   "strike": "252.5",
+   "side": "P",
+   "high": "2.9",
+   "high_n": "3.15",
+   "low": "0.35",
+   "low_n": "0.1"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "295.0",
@@ -3029,269 +3059,239 @@
    "high_n": "2.7",
    "low": "0.65",
    "low_n": "0.4"
-  },
-  {
-   "date": "2025-11-25",
-   "expiry": "2025-11-25",
-   "strike": "300.0",
-   "side": "C",
-   "high": "3.3",
-   "high_n": "3.3",
-   "low": "0.25",
-   "low_n": "0.1"
-  },
-  {
-   "date": "2025-04-22",
-   "expiry": "2025-04-24",
-   "strike": "245.0",
-   "side": "C",
-   "high": "6.6",
-   "high_n": "6.6",
-   "low": "0.55",
-   "low_n": "2.1"
-  },
-  {
-   "date": "2025-08-05",
-   "expiry": "2025-08-28",
-   "strike": "335.0",
-   "side": "P",
-   "high": "10.05",
-   "high_n": "10.9",
-   "low": "10.05",
-   "low_n": "6.9"
   }
  ],
  "stkopt_JSWSTEEL_bars": {
-  "series_days": 7638,
-  "full_375": 0.6906258182770358
+  "series_days": 12314,
+  "full_375": 0.6129608575605002
  },
  "opt_JSWSTEEL_MONTH": {
   "underlying": "JSWSTEEL",
   "flag": "MONTH",
-  "days": 105,
-  "contract-days": 404,
+  "days": 247,
+  "contract-days": 1366,
   "found in bhavcopy": "100.00%",
-  "high match": "66.58%",
-  "low match": "58.91%",
-  "open match": "96.29%",
-  "last price <=0.5% (2024-07+)": "53.64%",
-  "last price <=2% (2024-07+)": "77.27%",
+  "high match": "62.23%",
+  "low match": "57.98%",
+  "open match": "84.33%",
+  "last price <=0.5% (2024-07+)": "60.68%",
+  "last price <=2% (2024-07+)": "81.88%",
   "OI Dhan/NSE median": "1.003",
-  "OI within 1%": "60.64%",
-  "high&low match on expiry days": "37.50%"
+  "OI within 1%": "56.37%",
+  "high&low match on expiry days": "41.03%"
  },
  "opt_JSWSTEEL_MONTH_worst": [
   {
-   "date": "2023-08-30",
-   "expiry": "2023-08-31",
-   "strike": "780.0",
+   "date": "2026-02-24",
+   "expiry": "2026-02-24",
+   "strike": "1250.0",
    "side": "P",
-   "high": "7.0",
-   "high_n": "2.85",
-   "low": "0.7",
-   "low_n": "0.7"
-  },
-  {
-   "date": "2023-08-30",
-   "expiry": "2023-08-31",
-   "strike": "790.0",
-   "side": "P",
-   "high": "15.3",
-   "high_n": "7.7",
-   "low": "2.0",
-   "low_n": "3.4"
-  },
-  {
-   "date": "2023-11-29",
-   "expiry": "2023-11-30",
-   "strike": "790.0",
-   "side": "P",
-   "high": "15.4",
-   "high_n": "7.9",
-   "low": "1.3",
-   "low_n": "1.3"
-  },
-  {
-   "date": "2023-01-25",
-   "expiry": "2023-01-25",
-   "strike": "730.0",
-   "side": "P",
-   "high": "14.3",
-   "high_n": "14.3",
-   "low": "0.4",
-   "low_n": "6.0"
-  },
-  {
-   "date": "2023-08-30",
-   "expiry": "2023-08-31",
-   "strike": "780.0",
-   "side": "C",
-   "high": "13.25",
-   "high_n": "13.25",
+   "high": "11.6",
+   "high_n": "11.6",
    "low": "2.1",
-   "low_n": "6.65"
-  }
- ],
- "stkopt_KOTAKBANK_bars": {
-  "series_days": 7632,
-  "full_375": 0.8197064989517819
- },
- "opt_KOTAKBANK_MONTH": {
-  "underlying": "KOTAKBANK",
-  "flag": "MONTH",
-  "days": 46,
-  "contract-days": 180,
-  "found in bhavcopy": "100.00%",
-  "high match": "77.22%",
-  "low match": "80.00%",
-  "open match": "92.78%",
-  "last price <=0.5% (2024-07+)": "57.89%",
-  "last price <=2% (2024-07+)": "79.61%",
-  "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "70.56%",
-  "high&low match on expiry days": "33.33%"
- },
- "opt_KOTAKBANK_MONTH_worst": [
-  {
-   "date": "2025-10-28",
-   "expiry": "2025-10-28",
-   "strike": "2160.0",
-   "side": "P",
-   "high": "17.45",
-   "high_n": "17.45",
-   "low": "0.3",
-   "low_n": "0.2"
+   "low_n": "0.1"
   },
   {
-   "date": "2025-11-25",
-   "expiry": "2025-11-25",
-   "strike": "2060.0",
-   "side": "P",
-   "high": "3.75",
-   "high_n": "7.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "1150.0",
+   "side": "C",
+   "high": "29.7",
+   "high_n": "3.15",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
-   "date": "2025-10-28",
-   "expiry": "2025-10-28",
-   "strike": "2160.0",
+   "date": "2022-05-23",
+   "expiry": "2022-05-26",
+   "strike": "550.0",
+   "side": "P",
+   "high": "25.5",
+   "high_n": "25.5",
+   "low": "10.1",
+   "low_n": "2.0"
+  },
+  {
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "790.0",
+   "side": "P",
+   "high": "13.2",
+   "high_n": "13.2",
+   "low": "2.5",
+   "low_n": "0.6"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "1130.0",
+   "side": "P",
+   "high": "21.7",
+   "high_n": "5.65",
+   "low": "0.05",
+   "low_n": "0.05"
+  }
+ ],
+ "stkopt_KOTAKBANK_bars": {
+  "series_days": 12316,
+  "full_375": 0.726940565118545
+ },
+ "opt_KOTAKBANK_MONTH": {
+  "underlying": "KOTAKBANK",
+  "flag": "MONTH",
+  "days": 106,
+  "contract-days": 600,
+  "found in bhavcopy": "100.00%",
+  "high match": "72.33%",
+  "low match": "74.00%",
+  "open match": "88.50%",
+  "last price <=0.5% (2024-07+)": "61.90%",
+  "last price <=2% (2024-07+)": "83.27%",
+  "OI Dhan/NSE median": "1.002",
+  "OI within 1%": "69.50%",
+  "high&low match on expiry days": "33.33%"
+ },
+ "opt_KOTAKBANK_MONTH_worst": [
+  {
+   "date": "2024-06-27",
+   "expiry": "2024-06-27",
+   "strike": "1800.0",
+   "side": "P",
+   "high": "16.9",
+   "high_n": "16.9",
+   "low": "1.1",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "1980.0",
+   "side": "P",
+   "high": "32.25",
+   "high_n": "2.9",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "2020.0",
    "side": "C",
-   "high": "10.4",
-   "high_n": "14.4",
-   "low": "1.0",
+   "high": "36.7",
+   "high_n": "11.0",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "2000.0",
+   "side": "P",
+   "high": "40.5",
+   "high_n": "13.9",
+   "low": "1.45",
    "low_n": "1.0"
   },
   {
-   "date": "2023-08-23",
-   "expiry": "2023-08-31",
-   "strike": "1780.0",
-   "side": "P",
-   "high": "33.0",
-   "high_n": "33.0",
-   "low": "12.5",
-   "low_n": "17.0"
-  },
-  {
-   "date": "2025-11-25",
-   "expiry": "2025-11-25",
-   "strike": "2080.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "2000.0",
    "side": "C",
-   "high": "13.2",
-   "high_n": "10.95",
+   "high": "46.15",
+   "high_n": "16.5",
    "low": "0.05",
    "low_n": "0.05"
   }
  ],
  "stkopt_LT_bars": {
-  "series_days": 7435,
-  "full_375": 0.754808338937458
+  "series_days": 11899,
+  "full_375": 0.6934196150937053
  },
  "opt_LT_MONTH": {
   "underlying": "LT",
   "flag": "MONTH",
-  "days": 77,
-  "contract-days": 300,
-  "found in bhavcopy": "100.00%",
-  "high match": "77.00%",
-  "low match": "70.00%",
-  "open match": "97.33%",
-  "last price <=0.5% (2024-07+)": "63.49%",
-  "last price <=2% (2024-07+)": "87.30%",
+  "days": 226,
+  "contract-days": 1366,
+  "found in bhavcopy": "99.71%",
+  "high match": "65.74%",
+  "low match": "58.93%",
+  "open match": "79.36%",
+  "last price <=0.5% (2024-07+)": "71.38%",
+  "last price <=2% (2024-07+)": "83.75%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "72.00%",
-  "high&low match on expiry days": "25.00%"
+  "OI within 1%": "60.18%",
+  "high&low match on expiry days": "29.41%"
  },
  "opt_LT_MONTH_worst": [
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "3650.0",
+   "date": "2024-07-25",
+   "expiry": "2024-07-25",
+   "strike": "3540.0",
    "side": "P",
-   "high": "64.15",
-   "high_n": "7.7",
-   "low": "0.05",
-   "low_n": "0.05"
+   "high": "29.35",
+   "high_n": "29.35",
+   "low": "11.75",
+   "low_n": "0.1"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "3650.0",
-   "side": "C",
-   "high": "95.05",
-   "high_n": "39.7",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2024-05-30",
-   "expiry": "2024-05-30",
-   "strike": "3620.0",
-   "side": "C",
-   "high": "34.45",
-   "high_n": "28.0",
-   "low": "1.55",
-   "low_n": "9.0"
-  },
-  {
-   "date": "2022-12-28",
-   "expiry": "2022-12-29",
-   "strike": "2120.0",
-   "side": "C",
-   "high": "32.1",
-   "high_n": "18.0",
-   "low": "5.9",
-   "low_n": "5.9"
-  },
-  {
-   "date": "2022-12-28",
-   "expiry": "2022-12-29",
-   "strike": "2140.0",
+   "date": "2024-07-25",
+   "expiry": "2024-07-25",
+   "strike": "3560.0",
    "side": "P",
-   "high": "33.9",
-   "high_n": "27.0",
-   "low": "4.5",
-   "low_n": "13.25"
+   "high": "33.7",
+   "high_n": "35.25",
+   "low": "11.05",
+   "low_n": "0.1"
+  },
+  {
+   "date": "2024-07-25",
+   "expiry": "2024-07-25",
+   "strike": "3550.0",
+   "side": "P",
+   "high": "30.55",
+   "high_n": "30.55",
+   "low": "9.4",
+   "low_n": "0.1"
+  },
+  {
+   "date": "2024-07-25",
+   "expiry": "2024-07-25",
+   "strike": "3580.0",
+   "side": "P",
+   "high": "26.0",
+   "high_n": "42.9",
+   "low": "5.25",
+   "low_n": "0.1"
+  },
+  {
+   "date": "2024-07-25",
+   "expiry": "2024-07-25",
+   "strike": "3600.0",
+   "side": "P",
+   "high": "22.35",
+   "high_n": "69.85",
+   "low": "0.75",
+   "low_n": "0.05"
   }
  ],
  "stkopt_M&M_bars": {
-  "series_days": 7518,
-  "full_375": 0.773610002660282
+  "series_days": 12210,
+  "full_375": 0.7068796068796068
  },
  "opt_M&M_MONTH": {
   "underlying": "M&M",
   "flag": "MONTH",
-  "days": 110,
-  "contract-days": 426,
-  "found in bhavcopy": "100.00%",
-  "high match": "77.93%",
-  "low match": "71.36%",
-  "open match": "94.84%",
-  "last price <=0.5% (2024-07+)": "71.72%",
-  "last price <=2% (2024-07+)": "86.48%",
+  "days": 242,
+  "contract-days": 1382,
+  "found in bhavcopy": "99.78%",
+  "high match": "64.98%",
+  "low match": "57.89%",
+  "open match": "80.10%",
+  "last price <=0.5% (2024-07+)": "75.45%",
+  "last price <=2% (2024-07+)": "86.74%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "69.95%",
-  "high&low match on expiry days": "37.50%"
+  "OI within 1%": "59.84%",
+  "high&low match on expiry days": "41.07%"
  },
  "opt_M&M_MONTH_worst": [
   {
@@ -3305,6 +3305,16 @@
    "low_n": "0.05"
   },
   {
+   "date": "2023-11-29",
+   "expiry": "2023-11-30",
+   "strike": "1620.0",
+   "side": "C",
+   "high": "11.0",
+   "high_n": "11.0",
+   "low": "3.85",
+   "low_n": "0.6"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "3400.0",
@@ -3315,56 +3325,86 @@
    "low_n": "0.1"
   },
   {
-   "date": "2022-12-28",
-   "expiry": "2022-12-29",
-   "strike": "1260.0",
-   "side": "C",
-   "high": "12.7",
-   "high_n": "3.0",
-   "low": "0.75",
-   "low_n": "0.75"
-  },
-  {
-   "date": "2022-11-23",
-   "expiry": "2022-11-24",
-   "strike": "1220.0",
-   "side": "P",
-   "high": "11.65",
-   "high_n": "4.4",
-   "low": "0.55",
-   "low_n": "0.65"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
+   "date": "2026-01-27",
+   "expiry": "2026-01-27",
    "strike": "3400.0",
    "side": "C",
-   "high": "128.7",
-   "high_n": "53.4",
-   "low": "8.95",
-   "low_n": "8.25"
+   "high": "65.9",
+   "high_n": "65.9",
+   "low": "0.95",
+   "low_n": "0.2"
+  },
+  {
+   "date": "2023-11-29",
+   "expiry": "2023-11-30",
+   "strike": "1580.0",
+   "side": "P",
+   "high": "15.0",
+   "high_n": "15.0",
+   "low": "3.0",
+   "low_n": "0.65"
   }
  ],
  "stkopt_MARUTI_bars": {
-  "series_days": 7626,
-  "full_375": 0.8501180173092053
+  "series_days": 12327,
+  "full_375": 0.7623103755982802
  },
  "opt_MARUTI_MONTH": {
   "underlying": "MARUTI",
   "flag": "MONTH",
-  "days": 96,
-  "contract-days": 366,
+  "days": 246,
+  "contract-days": 1419,
   "found in bhavcopy": "100.00%",
-  "high match": "87.98%",
-  "low match": "84.97%",
-  "open match": "98.36%",
-  "last price <=0.5% (2024-07+)": "65.52%",
-  "last price <=2% (2024-07+)": "85.34%",
+  "high match": "74.77%",
+  "low match": "72.59%",
+  "open match": "83.30%",
+  "last price <=0.5% (2024-07+)": "79.04%",
+  "last price <=2% (2024-07+)": "90.12%",
   "OI Dhan/NSE median": "1.003",
-  "OI within 1%": "63.66%",
-  "high&low match on expiry days": "58.33%"
+  "OI within 1%": "61.59%",
+  "high&low match on expiry days": "41.67%"
  },
  "opt_MARUTI_MONTH_worst": [
+  {
+   "date": "2024-06-27",
+   "expiry": "2024-06-27",
+   "strike": "12000.0",
+   "side": "P",
+   "high": "60.35",
+   "high_n": "60.35",
+   "low": "1.0",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2024-05-30",
+   "expiry": "2024-05-30",
+   "strike": "12800.0",
+   "side": "C",
+   "high": "36.3",
+   "high_n": "36.3",
+   "low": "0.7",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "12700.0",
+   "side": "P",
+   "high": "14.9",
+   "high_n": "14.9",
+   "low": "0.4",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2026-01-27",
+   "expiry": "2026-01-27",
+   "strike": "15100.0",
+   "side": "C",
+   "high": "1610.0",
+   "high_n": "210.95",
+   "low": "39.75",
+   "low_n": "39.75"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -3374,65 +3414,25 @@
    "high_n": "59.9",
    "low": "0.05",
    "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "15900.0",
-   "side": "P",
-   "high": "294.85",
-   "high_n": "55.0",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "15900.0",
-   "side": "C",
-   "high": "500.1",
-   "high_n": "130.05",
-   "low": "32.6",
-   "low_n": "32.6"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "16000.0",
-   "side": "P",
-   "high": "334.9",
-   "high_n": "120.0",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2024-07-25",
-   "expiry": "2024-07-25",
-   "strike": "12400.0",
-   "side": "C",
-   "high": "146.9",
-   "high_n": "139.2",
-   "low": "1.95",
-   "low_n": "35.15"
   }
  ],
  "stkopt_MAXHEALTH_bars": {
-  "series_days": 2753,
-  "full_375": 0.5049037413730476
+  "series_days": 6903,
+  "full_375": 0.4001158916413154
  },
  "opt_MAXHEALTH_MONTH": {
   "underlying": "MAXHEALTH",
   "flag": "MONTH",
-  "days": 41,
-  "contract-days": 156,
-  "found in bhavcopy": "100.00%",
-  "high match": "66.03%",
-  "low match": "69.23%",
-  "open match": "75.00%",
-  "last price <=0.5% (2024-07+)": "66.03%",
-  "last price <=2% (2024-07+)": "78.85%",
+  "days": 82,
+  "contract-days": 438,
+  "found in bhavcopy": "97.79%",
+  "high match": "64.38%",
+  "low match": "65.07%",
+  "open match": "80.59%",
+  "last price <=0.5% (2024-07+)": "57.99%",
+  "last price <=2% (2024-07+)": "74.20%",
   "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "65.38%",
+  "OI within 1%": "58.68%",
   "high&low match on expiry days": "35.00%"
  },
  "opt_MAXHEALTH_MONTH_worst": [
@@ -3467,44 +3467,44 @@
    "low_n": "0.1"
   },
   {
-   "date": "2025-08-05",
-   "expiry": "2025-08-28",
-   "strike": "1280.0",
+   "date": "2025-01-27",
+   "expiry": "2025-01-30",
+   "strike": "1060.0",
    "side": "C",
-   "high": "36.2",
-   "high_n": "39.95",
-   "low": "36.2",
-   "low_n": "19.5"
+   "high": "16.0",
+   "high_n": "8.25",
+   "low": "4.05",
+   "low_n": "5.3"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1100.0",
+   "date": "2025-08-26",
+   "expiry": "2025-08-28",
+   "strike": "1180.0",
    "side": "C",
-   "high": "45.0",
-   "high_n": "25.5",
-   "low": "15.4",
-   "low_n": "11.0"
+   "high": "40.55",
+   "high_n": "21.0",
+   "low": "9.5",
+   "low_n": "9.25"
   }
  ],
  "stkopt_NESTLEIND_bars": {
-  "series_days": 2914,
-  "full_375": 0.3287577213452299
+  "series_days": 5546,
+  "full_375": 0.3541291020555355
  },
  "opt_NESTLEIND_MONTH": {
   "underlying": "NESTLEIND",
   "flag": "MONTH",
-  "days": 27,
-  "contract-days": 78,
+  "days": 69,
+  "contract-days": 372,
   "found in bhavcopy": "100.00%",
-  "high match": "57.69%",
-  "low match": "64.10%",
-  "open match": "74.36%",
-  "last price <=0.5% (2024-07+)": "48.72%",
-  "last price <=2% (2024-07+)": "65.38%",
+  "high match": "62.37%",
+  "low match": "66.13%",
+  "open match": "76.61%",
+  "last price <=0.5% (2024-07+)": "56.72%",
+  "last price <=2% (2024-07+)": "72.85%",
   "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "57.69%",
-  "high&low match on expiry days": "12.50%"
+  "OI within 1%": "61.56%",
+  "high&low match on expiry days": "35.29%"
  },
  "opt_NESTLEIND_MONTH_worst": [
   {
@@ -3538,117 +3538,127 @@
    "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1160.0",
+   "date": "2025-12-30",
+   "expiry": "2025-12-30",
+   "strike": "1270.0",
    "side": "P",
-   "high": "22.6",
-   "high_n": "12.1",
-   "low": "3.75",
-   "low_n": "3.75"
+   "high": "8.6",
+   "high_n": "8.6",
+   "low": "1.0",
+   "low_n": "0.4"
   },
   {
-   "date": "2025-08-05",
-   "expiry": "2025-08-28",
-   "strike": "2260.0",
+   "date": "2025-12-23",
+   "expiry": "2025-12-30",
+   "strike": "1250.0",
    "side": "P",
-   "high": "31.35",
-   "high_n": "39.4",
-   "low": "31.35",
-   "low_n": "27.9"
+   "high": "22.5",
+   "high_n": "9.5",
+   "low": "5.35",
+   "low_n": "5.25"
   }
  ],
  "stkopt_NTPC_bars": {
-  "series_days": 6361,
-  "full_375": 0.6461248231410156
+  "series_days": 11074,
+  "full_375": 0.6095358497381254
  },
  "opt_NTPC_MONTH": {
   "underlying": "NTPC",
   "flag": "MONTH",
-  "days": 55,
-  "contract-days": 209,
+  "days": 132,
+  "contract-days": 730,
   "found in bhavcopy": "100.00%",
-  "high match": "77.03%",
-  "low match": "84.69%",
-  "open match": "95.22%",
-  "last price <=0.5% (2024-07+)": "53.30%",
-  "last price <=2% (2024-07+)": "72.08%",
+  "high match": "68.49%",
+  "low match": "75.34%",
+  "open match": "88.90%",
+  "last price <=0.5% (2024-07+)": "58.23%",
+  "last price <=2% (2024-07+)": "79.46%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "65.55%",
-  "high&low match on expiry days": "66.67%"
+  "OI within 1%": "63.29%",
+  "high&low match on expiry days": "52.86%"
  },
  "opt_NTPC_MONTH_worst": [
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "340.0",
-   "side": "P",
-   "high": "5.9",
-   "high_n": "0.9",
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "175.0",
+   "side": "C",
+   "high": "13.9",
+   "high_n": "0.1",
+   "low": "7.1",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2024-06-27",
+   "expiry": "2024-06-27",
+   "strike": "380.0",
+   "side": "C",
+   "high": "2.75",
+   "high_n": "0.05",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
-   "strike": "340.0",
+   "strike": "345.0",
    "side": "C",
-   "high": "8.8",
-   "high_n": "2.5",
-   "low": "0.3",
-   "low_n": "0.3"
-  },
-  {
-   "date": "2025-12-30",
-   "expiry": "2025-12-30",
-   "strike": "322.5",
-   "side": "P",
-   "high": "0.65",
-   "high_n": "1.45",
+   "high": "6.25",
+   "high_n": "0.4",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
-   "date": "2024-12-16",
-   "expiry": "2024-12-26",
-   "strike": "355.0",
+   "date": "2022-05-30",
+   "expiry": "2022-06-30",
+   "strike": "135.0",
    "side": "P",
-   "high": "9.15",
-   "high_n": "6.6",
-   "low": "4.0",
-   "low_n": "4.0"
+   "high": "5.6",
+   "high_n": "1.5",
+   "low": "5.6",
+   "low_n": "0.75"
   },
   {
-   "date": "2024-12-16",
-   "expiry": "2024-12-26",
-   "strike": "350.0",
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "170.0",
    "side": "C",
-   "high": "10.9",
-   "high_n": "10.9",
-   "low": "5.15",
-   "low_n": "7.55"
+   "high": "12.9",
+   "high_n": "4.25",
+   "low": "12.0",
+   "low_n": "1.75"
   }
  ],
  "stkopt_ONGC_bars": {
-  "series_days": 7438,
-  "full_375": 0.7222371605270234
+  "series_days": 11663,
+  "full_375": 0.6500042870616479
  },
  "opt_ONGC_MONTH": {
   "underlying": "ONGC",
   "flag": "MONTH",
-  "days": 139,
-  "contract-days": 496,
-  "found in bhavcopy": "100.00%",
-  "high match": "70.97%",
-  "low match": "72.98%",
-  "open match": "96.37%",
-  "last price <=0.5% (2024-07+)": "60.31%",
-  "last price <=2% (2024-07+)": "86.08%",
-  "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "70.36%",
-  "high&low match on expiry days": "45.00%"
+  "days": 223,
+  "contract-days": 1092,
+  "found in bhavcopy": "99.00%",
+  "high match": "65.57%",
+  "low match": "64.74%",
+  "open match": "86.36%",
+  "last price <=0.5% (2024-07+)": "54.96%",
+  "last price <=2% (2024-07+)": "80.82%",
+  "OI Dhan/NSE median": "1.000",
+  "OI within 1%": "64.01%",
+  "high&low match on expiry days": "50.00%"
  },
  "opt_ONGC_MONTH_worst": [
+  {
+   "date": "2022-02-14",
+   "expiry": "2022-02-24",
+   "strike": "165.0",
+   "side": "P",
+   "high": "5.1",
+   "high_n": "5.1",
+   "low": "1.0",
+   "low_n": "0.05"
+  },
   {
    "date": "2023-01-25",
    "expiry": "2023-01-25",
@@ -3688,38 +3698,38 @@
    "high_n": "0.3",
    "low": "0.05",
    "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "240.0",
-   "side": "P",
-   "high": "4.95",
-   "high_n": "1.55",
-   "low": "0.1",
-   "low_n": "0.1"
   }
  ],
  "stkopt_PNB_bars": {
-  "series_days": 7450,
-  "full_375": 0.567248322147651
+  "series_days": 12104,
+  "full_375": 0.5285029742233972
  },
  "opt_PNB_MONTH": {
   "underlying": "PNB",
   "flag": "MONTH",
-  "days": 107,
-  "contract-days": 384,
-  "found in bhavcopy": "100.00%",
-  "high match": "58.33%",
-  "low match": "60.42%",
-  "open match": "93.23%",
-  "last price <=0.5% (2024-07+)": "82.14%",
-  "last price <=2% (2024-07+)": "90.18%",
+  "days": 233,
+  "contract-days": 1268,
+  "found in bhavcopy": "99.84%",
+  "high match": "60.65%",
+  "low match": "63.96%",
+  "open match": "84.31%",
+  "last price <=0.5% (2024-07+)": "66.72%",
+  "last price <=2% (2024-07+)": "81.69%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "76.56%",
-  "high&low match on expiry days": "25.00%"
+  "OI within 1%": "64.27%",
+  "high&low match on expiry days": "46.05%"
  },
  "opt_PNB_MONTH_worst": [
+  {
+   "date": "2026-02-03",
+   "expiry": "2026-02-24",
+   "strike": "126.0",
+   "side": "C",
+   "high": "4.2",
+   "high_n": "4.2",
+   "low": "2.27",
+   "low_n": "0.02"
+  },
   {
    "date": "2024-07-25",
    "expiry": "2024-07-25",
@@ -3741,66 +3751,46 @@
    "low_n": "0.05"
   },
   {
-   "date": "2024-08-23",
-   "expiry": "2024-08-29",
-   "strike": "115.0",
-   "side": "P",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "114.0",
+   "side": "C",
    "high": "3.2",
-   "high_n": "0.8",
-   "low": "0.6",
-   "low_n": "0.6"
-  },
-  {
-   "date": "2023-04-26",
-   "expiry": "2023-04-27",
-   "strike": "49.0",
-   "side": "P",
-   "high": "0.75",
-   "high_n": "0.25",
+   "high_n": "0.5",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
-   "date": "2024-07-25",
-   "expiry": "2024-07-25",
-   "strike": "115.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "110.0",
    "side": "P",
-   "high": "2.65",
-   "high_n": "1.0",
+   "high": "1.8",
+   "high_n": "0.3",
    "low": "0.05",
    "low_n": "0.05"
   }
  ],
  "stkopt_POWERGRID_bars": {
-  "series_days": 5323,
-  "full_375": 0.6223933871876761
+  "series_days": 10004,
+  "full_375": 0.5444822071171531
  },
  "opt_POWERGRID_MONTH": {
   "underlying": "POWERGRID",
   "flag": "MONTH",
-  "days": 70,
-  "contract-days": 264,
-  "found in bhavcopy": "100.00%",
-  "high match": "68.94%",
-  "low match": "70.08%",
-  "open match": "89.77%",
-  "last price <=0.5% (2024-07+)": "66.83%",
-  "last price <=2% (2024-07+)": "80.69%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "68.18%",
-  "high&low match on expiry days": "41.67%"
+  "days": 170,
+  "contract-days": 795,
+  "found in bhavcopy": "98.93%",
+  "high match": "63.90%",
+  "low match": "64.78%",
+  "open match": "86.42%",
+  "last price <=0.5% (2024-07+)": "64.34%",
+  "last price <=2% (2024-07+)": "82.35%",
+  "OI Dhan/NSE median": "1.001",
+  "OI within 1%": "62.77%",
+  "high&low match on expiry days": "38.78%"
  },
  "opt_POWERGRID_MONTH_worst": [
-  {
-   "date": "2025-12-30",
-   "expiry": "2025-12-30",
-   "strike": "260.0",
-   "side": "C",
-   "high": "1.3",
-   "high_n": "1.65",
-   "low": "1.3",
-   "low_n": "0.05"
-  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -3810,6 +3800,26 @@
    "high_n": "1.1",
    "low": "0.05",
    "low_n": "0.05"
+  },
+  {
+   "date": "2024-07-25",
+   "expiry": "2024-07-25",
+   "strike": "330.0",
+   "side": "P",
+   "high": "3.4",
+   "high_n": "2.05",
+   "low": "0.25",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-01-27",
+   "expiry": "2025-01-30",
+   "strike": "295.0",
+   "side": "C",
+   "high": "18.3",
+   "high_n": "3.8",
+   "low": "0.9",
+   "low_n": "0.9"
   },
   {
    "date": "2024-04-25",
@@ -3822,44 +3832,34 @@
    "low_n": "0.05"
   },
   {
-   "date": "2024-04-25",
-   "expiry": "2024-04-25",
-   "strike": "295.0",
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "235.0",
    "side": "P",
-   "high": "7.7",
-   "high_n": "2.7",
-   "low": "0.45",
-   "low_n": "1.2"
-  },
-  {
-   "date": "2024-03-27",
-   "expiry": "2024-03-28",
-   "strike": "275.0",
-   "side": "C",
-   "high": "3.3",
-   "high_n": "1.4",
+   "high": "2.55",
+   "high_n": "2.55",
    "low": "0.2",
-   "low_n": "0.5"
+   "low_n": "0.05"
   }
  ],
  "stkopt_RELIANCE_bars": {
-  "series_days": 3980,
-  "full_375": 0.7153266331658291
+  "series_days": 8602,
+  "full_375": 0.7912113461985585
  },
  "opt_RELIANCE_MONTH": {
   "underlying": "RELIANCE",
   "flag": "MONTH",
-  "days": 36,
-  "contract-days": 136,
-  "found in bhavcopy": "94.44%",
-  "high match": "80.88%",
-  "low match": "81.62%",
-  "open match": "92.65%",
-  "last price <=0.5% (2024-07+)": "71.64%",
-  "last price <=2% (2024-07+)": "85.82%",
+  "days": 101,
+  "contract-days": 589,
+  "found in bhavcopy": "98.17%",
+  "high match": "82.51%",
+  "low match": "80.14%",
+  "open match": "94.06%",
+  "last price <=0.5% (2024-07+)": "75.60%",
+  "last price <=2% (2024-07+)": "91.13%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "72.06%",
-  "high&low match on expiry days": "56.25%"
+  "OI within 1%": "72.84%",
+  "high&low match on expiry days": "50.00%"
  },
  "opt_RELIANCE_MONTH_worst": [
   {
@@ -3914,25 +3914,45 @@
   }
  ],
  "stkopt_SBILIFE_bars": {
-  "series_days": 7603,
-  "full_375": 0.4878337498355912
+  "series_days": 12176,
+  "full_375": 0.45491130091984233
  },
  "opt_SBILIFE_MONTH": {
   "underlying": "SBILIFE",
   "flag": "MONTH",
-  "days": 94,
-  "contract-days": 361,
-  "found in bhavcopy": "99.73%",
-  "high match": "61.77%",
-  "low match": "61.50%",
-  "open match": "90.30%",
-  "last price <=0.5% (2024-07+)": "60.75%",
-  "last price <=2% (2024-07+)": "76.34%",
+  "days": 235,
+  "contract-days": 1304,
+  "found in bhavcopy": "99.85%",
+  "high match": "52.61%",
+  "low match": "45.94%",
+  "open match": "76.53%",
+  "last price <=0.5% (2024-07+)": "60.85%",
+  "last price <=2% (2024-07+)": "77.91%",
   "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "67.59%",
-  "high&low match on expiry days": "31.25%"
+  "OI within 1%": "52.76%",
+  "high&low match on expiry days": "43.06%"
  },
  "opt_SBILIFE_MONTH_worst": [
+  {
+   "date": "2022-04-25",
+   "expiry": "2022-04-28",
+   "strike": "1080.0",
+   "side": "P",
+   "high": "14.75",
+   "high_n": "10.95",
+   "low": "8.0",
+   "low_n": "0.95"
+  },
+  {
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "1370.0",
+   "side": "P",
+   "high": "14.6",
+   "high_n": "14.6",
+   "low": "4.0",
+   "low_n": "0.5"
+  },
   {
    "date": "2023-03-29",
    "expiry": "2023-03-29",
@@ -3944,66 +3964,86 @@
    "low_n": "0.05"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1780.0",
-   "side": "C",
-   "high": "56.8",
-   "high_n": "14.0",
-   "low": "3.45",
-   "low_n": "3.45"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1800.0",
-   "side": "C",
-   "high": "45.75",
-   "high_n": "11.95",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1780.0",
+   "date": "2023-10-25",
+   "expiry": "2023-10-26",
+   "strike": "1310.0",
    "side": "P",
-   "high": "32.05",
-   "high_n": "9.7",
-   "low": "0.05",
-   "low_n": "0.05"
+   "high": "9.65",
+   "high_n": "6.3",
+   "low": "1.95",
+   "low_n": "0.45"
   },
   {
-   "date": "2026-01-27",
-   "expiry": "2026-01-27",
-   "strike": "2020.0",
+   "date": "2022-03-28",
+   "expiry": "2022-03-31",
+   "strike": "1090.0",
    "side": "C",
-   "high": "20.85",
-   "high_n": "25.6",
-   "low": "3.65",
-   "low_n": "1.15"
+   "high": "21.6",
+   "high_n": "21.6",
+   "low": "6.1",
+   "low_n": "1.5"
   }
  ],
  "stkopt_SBIN_bars": {
-  "series_days": 7632,
-  "full_375": 0.9454926624737946
+  "series_days": 12337,
+  "full_375": 0.8806030639539596
  },
  "opt_SBIN_MONTH": {
   "underlying": "SBIN",
   "flag": "MONTH",
-  "days": 96,
-  "contract-days": 364,
+  "days": 248,
+  "contract-days": 1434,
   "found in bhavcopy": "100.00%",
-  "high match": "80.49%",
-  "low match": "81.32%",
-  "open match": "97.80%",
-  "last price <=0.5% (2024-07+)": "66.00%",
-  "last price <=2% (2024-07+)": "88.00%",
-  "OI Dhan/NSE median": "1.003",
-  "OI within 1%": "73.08%",
-  "high&low match on expiry days": "41.67%"
+  "high match": "67.78%",
+  "low match": "66.32%",
+  "open match": "84.03%",
+  "last price <=0.5% (2024-07+)": "70.23%",
+  "last price <=2% (2024-07+)": "90.29%",
+  "OI Dhan/NSE median": "1.004",
+  "OI within 1%": "60.74%",
+  "high&low match on expiry days": "44.74%"
  },
  "opt_SBIN_MONTH_worst": [
+  {
+   "date": "2023-01-25",
+   "expiry": "2023-01-25",
+   "strike": "590.0",
+   "side": "C",
+   "high": "3.65",
+   "high_n": "3.65",
+   "low": "0.4",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "880.0",
+   "side": "C",
+   "high": "17.5",
+   "high_n": "2.3",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2023-01-25",
+   "expiry": "2023-01-25",
+   "strike": "585.0",
+   "side": "C",
+   "high": "5.0",
+   "high_n": "5.0",
+   "low": "0.35",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2023-01-25",
+   "expiry": "2023-01-25",
+   "strike": "575.0",
+   "side": "P",
+   "high": "9.1",
+   "high_n": "9.1",
+   "low": "0.3",
+   "low_n": "0.05"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -4013,66 +4053,26 @@
    "high_n": "2.95",
    "low": "0.05",
    "low_n": "0.05"
-  },
-  {
-   "date": "2023-06-28",
-   "expiry": "2023-06-28",
-   "strike": "575.0",
-   "side": "C",
-   "high": "3.7",
-   "high_n": "1.1",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "870.0",
-   "side": "C",
-   "high": "22.75",
-   "high_n": "6.9",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2023-11-29",
-   "expiry": "2023-11-30",
-   "strike": "565.0",
-   "side": "P",
-   "high": "4.0",
-   "high_n": "2.35",
-   "low": "0.4",
-   "low_n": "0.55"
-  },
-  {
-   "date": "2023-11-29",
-   "expiry": "2023-11-30",
-   "strike": "565.0",
-   "side": "C",
-   "high": "7.95",
-   "high_n": "5.0",
-   "low": "1.45",
-   "low_n": "2.6"
   }
  ],
  "stkopt_SHRIRAMFIN_bars": {
-  "series_days": 3296,
-  "full_375": 0.6219660194174758
+  "series_days": 7512,
+  "full_375": 0.5788072417465389
  },
  "opt_SHRIRAMFIN_MONTH": {
   "underlying": "SHRIRAMFIN",
   "flag": "MONTH",
-  "days": 39,
-  "contract-days": 150,
+  "days": 84,
+  "contract-days": 446,
   "found in bhavcopy": "100.00%",
-  "high match": "64.00%",
-  "low match": "70.00%",
-  "open match": "92.67%",
-  "last price <=0.5% (2024-07+)": "50.00%",
-  "last price <=2% (2024-07+)": "75.33%",
+  "high match": "68.39%",
+  "low match": "72.42%",
+  "open match": "91.70%",
+  "last price <=0.5% (2024-07+)": "64.57%",
+  "last price <=2% (2024-07+)": "84.98%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "59.33%",
-  "high&low match on expiry days": "33.33%"
+  "OI within 1%": "67.71%",
+  "high&low match on expiry days": "34.38%"
  },
  "opt_SHRIRAMFIN_MONTH_worst": [
   {
@@ -4127,25 +4127,35 @@
   }
  ],
  "stkopt_SUNPHARMA_bars": {
-  "series_days": 7630,
-  "full_375": 0.7428571428571429
+  "series_days": 12261,
+  "full_375": 0.6682978549873583
  },
  "opt_SUNPHARMA_MONTH": {
   "underlying": "SUNPHARMA",
   "flag": "MONTH",
-  "days": 115,
-  "contract-days": 452,
+  "days": 249,
+  "contract-days": 1360,
   "found in bhavcopy": "100.00%",
-  "high match": "65.27%",
-  "low match": "61.95%",
-  "open match": "94.91%",
-  "last price <=0.5% (2024-07+)": "52.10%",
-  "last price <=2% (2024-07+)": "72.69%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "70.80%",
-  "high&low match on expiry days": "25.00%"
+  "high match": "59.78%",
+  "low match": "55.59%",
+  "open match": "83.38%",
+  "last price <=0.5% (2024-07+)": "62.88%",
+  "last price <=2% (2024-07+)": "80.11%",
+  "OI Dhan/NSE median": "1.001",
+  "OI within 1%": "60.37%",
+  "high&low match on expiry days": "44.59%"
  },
  "opt_SUNPHARMA_MONTH_worst": [
+  {
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "1490.0",
+   "side": "P",
+   "high": "9.5",
+   "high_n": "4.5",
+   "low": "1.2",
+   "low_n": "0.05"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -4177,54 +4187,74 @@
    "low_n": "0.05"
   },
   {
-   "date": "2023-09-27",
-   "expiry": "2023-09-28",
-   "strike": "1150.0",
-   "side": "C",
-   "high": "2.9",
-   "high_n": "1.65",
-   "low": "0.3",
-   "low_n": "0.1"
-  },
-  {
-   "date": "2022-11-23",
-   "expiry": "2022-11-24",
-   "strike": "1020.0",
-   "side": "C",
-   "high": "7.75",
-   "high_n": "3.6",
-   "low": "1.15",
-   "low_n": "1.15"
+   "date": "2023-11-29",
+   "expiry": "2023-11-30",
+   "strike": "1190.0",
+   "side": "P",
+   "high": "9.0",
+   "high_n": "9.0",
+   "low": "1.05",
+   "low_n": "0.35"
   }
  ],
  "stkopt_TATACONSUM_bars": {
-  "series_days": 7383,
-  "full_375": 0.5203846674793444
+  "series_days": 12075,
+  "full_375": 0.4792546583850932
  },
  "opt_TATACONSUM_MONTH": {
   "underlying": "TATACONSUM",
   "flag": "MONTH",
-  "days": 79,
-  "contract-days": 307,
-  "found in bhavcopy": "99.68%",
-  "high match": "60.59%",
-  "low match": "52.77%",
-  "open match": "91.21%",
-  "last price <=0.5% (2024-07+)": "49.09%",
-  "last price <=2% (2024-07+)": "75.45%",
-  "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "63.84%",
-  "high&low match on expiry days": "30.77%"
+  "days": 228,
+  "contract-days": 1334,
+  "found in bhavcopy": "99.93%",
+  "high match": "56.07%",
+  "low match": "49.70%",
+  "open match": "78.19%",
+  "last price <=0.5% (2024-07+)": "59.86%",
+  "last price <=2% (2024-07+)": "80.45%",
+  "OI Dhan/NSE median": "1.000",
+  "OI within 1%": "53.52%",
+  "high&low match on expiry days": "34.33%"
  },
  "opt_TATACONSUM_MONTH_worst": [
   {
-   "date": "2026-02-24",
-   "expiry": "2026-02-24",
-   "strike": "1170.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "1110.0",
+   "side": "P",
+   "high": "16.9",
+   "high_n": "1.25",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "1080.0",
+   "side": "P",
+   "high": "6.2",
+   "high_n": "4.75",
+   "low": "0.5",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "1130.0",
    "side": "C",
-   "high": "7.0",
-   "high_n": "7.0",
-   "low": "2.5",
+   "high": "32.05",
+   "high_n": "5.25",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "1120.0",
+   "side": "P",
+   "high": "21.2",
+   "high_n": "4.9",
+   "low": "0.05",
    "low_n": "0.05"
   },
   {
@@ -4236,56 +4266,26 @@
    "high_n": "1.9",
    "low": "0.05",
    "low_n": "0.05"
-  },
-  {
-   "date": "2024-06-27",
-   "expiry": "2024-06-27",
-   "strike": "1090.0",
-   "side": "P",
-   "high": "15.9",
-   "high_n": "13.2",
-   "low": "0.05",
-   "low_n": "3.5"
-  },
-  {
-   "date": "2023-01-25",
-   "expiry": "2023-01-25",
-   "strike": "740.0",
-   "side": "P",
-   "high": "15.6",
-   "high_n": "9.5",
-   "low": "0.05",
-   "low_n": "0.05"
-  },
-  {
-   "date": "2022-12-28",
-   "expiry": "2022-12-29",
-   "strike": "770.0",
-   "side": "C",
-   "high": "13.0",
-   "high_n": "13.0",
-   "low": "3.45",
-   "low_n": "7.0"
   }
  ],
  "stkopt_TATASTEEL_bars": {
-  "series_days": 6370,
-  "full_375": 0.8072213500784929
+  "series_days": 10703,
+  "full_375": 0.7133513968046342
  },
  "opt_TATASTEEL_MONTH": {
   "underlying": "TATASTEEL",
   "flag": "MONTH",
-  "days": 78,
-  "contract-days": 281,
-  "found in bhavcopy": "97.23%",
-  "high match": "72.24%",
-  "low match": "76.51%",
-  "open match": "96.44%",
-  "last price <=0.5% (2024-07+)": "56.07%",
-  "last price <=2% (2024-07+)": "76.88%",
-  "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "74.73%",
-  "high&low match on expiry days": "41.67%"
+  "days": 181,
+  "contract-days": 1022,
+  "found in bhavcopy": "97.71%",
+  "high match": "63.70%",
+  "low match": "67.81%",
+  "open match": "83.76%",
+  "last price <=0.5% (2024-07+)": "60.94%",
+  "last price <=2% (2024-07+)": "82.83%",
+  "OI Dhan/NSE median": "1.002",
+  "OI within 1%": "63.70%",
+  "high&low match on expiry days": "45.16%"
  },
  "opt_TATASTEEL_MONTH_worst": [
   {
@@ -4309,6 +4309,26 @@
    "low_n": "0.05"
   },
   {
+   "date": "2023-02-22",
+   "expiry": "2023-02-23",
+   "strike": "114.0",
+   "side": "C",
+   "high": "0.65",
+   "high_n": "0.65",
+   "low": "0.35",
+   "low_n": "0.1"
+  },
+  {
+   "date": "2023-08-30",
+   "expiry": "2023-08-31",
+   "strike": "120.0",
+   "side": "P",
+   "high": "0.8",
+   "high_n": "0.8",
+   "low": "0.15",
+   "low_n": "0.05"
+  },
+  {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
    "strike": "170.0",
@@ -4317,119 +4337,109 @@
    "high_n": "1.55",
    "low": "0.4",
    "low_n": "0.35"
-  },
-  {
-   "date": "2024-12-23",
-   "expiry": "2024-12-26",
-   "strike": "140.0",
-   "side": "P",
-   "high": "2.8",
-   "high_n": "1.2",
-   "low": "0.3",
-   "low_n": "0.3"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "167.5",
-   "side": "C",
-   "high": "5.95",
-   "high_n": "2.6",
-   "low": "1.0",
-   "low_n": "1.0"
   }
  ],
  "stkopt_TCS_bars": {
-  "series_days": 7435,
-  "full_375": 0.8103564223268326
+  "series_days": 12147,
+  "full_375": 0.7499794187865316
  },
  "opt_TCS_MONTH": {
   "underlying": "TCS",
   "flag": "MONTH",
-  "days": 60,
-  "contract-days": 236,
-  "found in bhavcopy": "100.00%",
-  "high match": "77.97%",
-  "low match": "80.93%",
-  "open match": "90.25%",
-  "last price <=0.5% (2024-07+)": "72.67%",
-  "last price <=2% (2024-07+)": "86.67%",
+  "days": 218,
+  "contract-days": 1410,
+  "found in bhavcopy": "98.74%",
+  "high match": "63.62%",
+  "low match": "61.28%",
+  "open match": "77.38%",
+  "last price <=0.5% (2024-07+)": "73.12%",
+  "last price <=2% (2024-07+)": "87.66%",
   "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "72.46%",
-  "high&low match on expiry days": "58.33%"
+  "OI within 1%": "57.02%",
+  "high&low match on expiry days": "38.46%"
  },
  "opt_TCS_MONTH_worst": [
   {
-   "date": "2024-07-25",
-   "expiry": "2024-07-25",
-   "strike": "4350.0",
-   "side": "C",
-   "high": "17.55",
-   "high_n": "7.65",
-   "low": "0.05",
+   "date": "2021-11-08",
+   "expiry": "2021-11-25",
+   "strike": "3480.0",
+   "side": "P",
+   "high": "68.95",
+   "high_n": "64.3",
+   "low": "44.75",
+   "low_n": "0.25"
+  },
+  {
+   "date": "2024-06-27",
+   "expiry": "2024-06-27",
+   "strike": "3800.0",
+   "side": "P",
+   "high": "7.2",
+   "high_n": "7.2",
+   "low": "0.65",
    "low_n": "0.05"
   },
   {
-   "date": "2024-04-18",
-   "expiry": "2024-04-25",
-   "strike": "3850.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "2880.0",
    "side": "P",
-   "high": "52.7",
-   "high_n": "52.7",
-   "low": "42.5",
-   "low_n": "20.25"
+   "high": "65.2",
+   "high_n": "6.55",
+   "low": "0.1",
+   "low_n": "0.1"
   },
   {
-   "date": "2024-04-18",
-   "expiry": "2024-04-25",
-   "strike": "3860.0",
-   "side": "P",
-   "high": "57.9",
-   "high_n": "57.9",
-   "low": "46.65",
-   "low_n": "22.75"
-  },
-  {
-   "date": "2024-07-25",
-   "expiry": "2024-07-25",
-   "strike": "4350.0",
-   "side": "P",
-   "high": "83.05",
-   "high_n": "79.6",
-   "low": "0.15",
-   "low_n": "24.85"
-  },
-  {
-   "date": "2024-07-25",
-   "expiry": "2024-07-25",
-   "strike": "4300.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "2920.0",
    "side": "C",
-   "high": "66.55",
-   "high_n": "35.85",
-   "low": "0.05",
-   "low_n": "5.2"
+   "high": "64.85",
+   "high_n": "7.2",
+   "low": "0.1",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2023-02-22",
+   "expiry": "2023-02-23",
+   "strike": "3445.0",
+   "side": "C",
+   "high": "20.7",
+   "high_n": "20.7",
+   "low": "9.9",
+   "low_n": "2.25"
   }
  ],
  "stkopt_TECHM_bars": {
-  "series_days": 7637,
-  "full_375": 0.689275893675527
+  "series_days": 12293,
+  "full_375": 0.6227121125843976
  },
  "opt_TECHM_MONTH": {
   "underlying": "TECHM",
   "flag": "MONTH",
-  "days": 105,
-  "contract-days": 404,
-  "found in bhavcopy": "100.00%",
-  "high match": "64.85%",
-  "low match": "61.39%",
-  "open match": "93.56%",
-  "last price <=0.5% (2024-07+)": "69.61%",
-  "last price <=2% (2024-07+)": "88.24%",
-  "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "70.54%",
-  "high&low match on expiry days": "43.75%"
+  "days": 235,
+  "contract-days": 1304,
+  "found in bhavcopy": "99.01%",
+  "high match": "58.67%",
+  "low match": "53.22%",
+  "open match": "81.83%",
+  "last price <=0.5% (2024-07+)": "60.50%",
+  "last price <=2% (2024-07+)": "80.25%",
+  "OI Dhan/NSE median": "1.002",
+  "OI within 1%": "56.13%",
+  "high&low match on expiry days": "35.71%"
  },
  "opt_TECHM_MONTH_worst": [
+  {
+   "date": "2023-01-25",
+   "expiry": "2023-01-25",
+   "strike": "1070.0",
+   "side": "C",
+   "high": "2.8",
+   "high_n": "2.8",
+   "low": "0.5",
+   "low_n": "0.05"
+  },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
@@ -4451,269 +4461,279 @@
    "low_n": "0.5"
   },
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1420.0",
-   "side": "C",
-   "high": "36.4",
-   "high_n": "10.25",
-   "low": "0.05",
-   "low_n": "0.05"
+   "date": "2024-02-28",
+   "expiry": "2024-02-29",
+   "strike": "1270.0",
+   "side": "P",
+   "high": "6.7",
+   "high_n": "6.7",
+   "low": "5.0",
+   "low_n": "0.65"
   },
   {
-   "date": "2022-11-23",
-   "expiry": "2022-11-24",
-   "strike": "1040.0",
+   "date": "2024-04-25",
+   "expiry": "2024-04-25",
+   "strike": "1170.0",
    "side": "P",
-   "high": "11.1",
-   "high_n": "3.6",
-   "low": "0.6",
-   "low_n": "1.2"
-  },
-  {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "1420.0",
-   "side": "P",
-   "high": "47.65",
-   "high_n": "19.5",
-   "low": "1.05",
-   "low_n": "1.05"
+   "high": "5.75",
+   "high_n": "4.85",
+   "low": "1.3",
+   "low_n": "0.2"
   }
  ],
  "stkopt_TITAN_bars": {
-  "series_days": 7456,
-  "full_375": 0.658530042918455
+  "series_days": 11983,
+  "full_375": 0.6027705916715347
  },
  "opt_TITAN_MONTH": {
   "underlying": "TITAN",
   "flag": "MONTH",
-  "days": 65,
-  "contract-days": 252,
-  "found in bhavcopy": "100.00%",
-  "high match": "74.60%",
-  "low match": "63.10%",
-  "open match": "96.03%",
-  "last price <=0.5% (2024-07+)": "64.79%",
-  "last price <=2% (2024-07+)": "82.39%",
-  "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "69.44%",
-  "high&low match on expiry days": "25.00%"
+  "days": 217,
+  "contract-days": 1378,
+  "found in bhavcopy": "98.57%",
+  "high match": "56.24%",
+  "low match": "50.22%",
+  "open match": "73.29%",
+  "last price <=0.5% (2024-07+)": "68.34%",
+  "last price <=2% (2024-07+)": "79.41%",
+  "OI Dhan/NSE median": "1.003",
+  "OI within 1%": "53.05%",
+  "high&low match on expiry days": "31.40%"
  },
  "opt_TITAN_MONTH_worst": [
   {
-   "date": "2023-01-25",
-   "expiry": "2023-01-25",
-   "strike": "2340.0",
-   "side": "C",
-   "high": "25.25",
-   "high_n": "25.25",
-   "low": "0.6",
-   "low_n": "5.15"
-  },
-  {
-   "date": "2023-03-29",
-   "expiry": "2023-03-29",
-   "strike": "2500.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "3350.0",
    "side": "P",
-   "high": "15.0",
-   "high_n": "8.0",
+   "high": "69.3",
+   "high_n": "3.4",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
-   "date": "2025-02-24",
-   "expiry": "2025-02-27",
-   "strike": "3200.0",
+   "date": "2024-02-28",
+   "expiry": "2024-02-29",
+   "strike": "3660.0",
    "side": "C",
-   "high": "48.3",
-   "high_n": "26.45",
-   "low": "10.45",
-   "low_n": "10.45"
+   "high": "27.1",
+   "high_n": "27.1",
+   "low": "9.35",
+   "low_n": "2.05"
   },
   {
-   "date": "2025-08-05",
-   "expiry": "2025-08-28",
-   "strike": "3400.0",
-   "side": "C",
-   "high": "96.05",
-   "high_n": "115.0",
-   "low": "96.05",
-   "low_n": "61.05"
-  },
-  {
-   "date": "2022-10-25",
-   "expiry": "2022-10-27",
-   "strike": "2660.0",
+   "date": "2023-12-27",
+   "expiry": "2023-12-28",
+   "strike": "3640.0",
    "side": "P",
-   "high": "21.0",
-   "high_n": "13.65",
-   "low": "2.7",
-   "low_n": "2.7"
+   "high": "15.75",
+   "high_n": "15.75",
+   "low": "4.55",
+   "low_n": "1.2"
+  },
+  {
+   "date": "2022-05-23",
+   "expiry": "2022-05-26",
+   "strike": "2150.0",
+   "side": "P",
+   "high": "31.9",
+   "high_n": "45.45",
+   "low": "17.8",
+   "low_n": "5.05"
+  },
+  {
+   "date": "2026-01-27",
+   "expiry": "2026-01-27",
+   "strike": "3980.0",
+   "side": "P",
+   "high": "21.45",
+   "high_n": "25.75",
+   "low": "0.15",
+   "low_n": "0.05"
   }
  ],
  "stkopt_TMPV_bars": {
-  "series_days": 7479,
-  "full_375": 0.9280652493648883
+  "series_days": 12240,
+  "full_375": 0.8486928104575163
  },
  "opt_TMPV_MONTH": {
   "underlying": "TMPV",
   "flag": "MONTH",
-  "days": 26,
-  "contract-days": 92,
+  "days": 48,
+  "contract-days": 234,
   "found in bhavcopy": "100.00%",
-  "high match": "67.39%",
-  "low match": "70.65%",
-  "open match": "86.96%",
-  "last price <=0.5% (2024-07+)": "61.96%",
-  "last price <=2% (2024-07+)": "80.43%",
+  "high match": "72.22%",
+  "low match": "70.51%",
+  "open match": "94.87%",
+  "last price <=0.5% (2024-07+)": "59.83%",
+  "last price <=2% (2024-07+)": "83.76%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "70.65%",
-  "high&low match on expiry days": "87.50%"
+  "OI within 1%": "77.78%",
+  "high&low match on expiry days": "65.00%"
  },
  "opt_TMPV_MONTH_worst": [
   {
-   "date": "2026-02-10",
-   "expiry": "2026-02-24",
-   "strike": "380.0",
+   "date": "2026-01-06",
+   "expiry": "2026-01-27",
+   "strike": "370.0",
    "side": "C",
-   "high": "8.05",
-   "high_n": "10.1",
-   "low": "7.4",
-   "low_n": "7.35"
+   "high": "10.95",
+   "high_n": "10.95",
+   "low": "5.4",
+   "low_n": "3.85"
   },
   {
-   "date": "2026-05-13",
-   "expiry": "2026-05-26",
+   "date": "2026-01-27",
+   "expiry": "2026-01-27",
    "strike": "340.0",
    "side": "C",
-   "high": "11.05",
-   "high_n": "12.95",
-   "low": "9.55",
-   "low_n": "9.4"
+   "high": "4.6",
+   "high_n": "4.6",
+   "low": "0.2",
+   "low_n": "0.15"
   },
   {
-   "date": "2025-11-25",
-   "expiry": "2025-11-25",
-   "strike": "350.0",
+   "date": "2026-02-24",
+   "expiry": "2026-02-24",
+   "strike": "375.0",
    "side": "C",
-   "high": "9.75",
-   "high_n": "9.0",
-   "low": "2.0",
-   "low_n": "1.9"
+   "high": "4.95",
+   "high_n": "5.0",
+   "low": "0.6",
+   "low_n": "0.45"
   },
   {
-   "date": "2026-08-26",
-   "expiry": "2026-09-29",
-   "strike": "315.0",
+   "date": "2026-02-24",
+   "expiry": "2026-02-24",
+   "strike": "370.0",
+   "side": "C",
+   "high": "9.7",
+   "high_n": "9.7",
+   "low": "3.3",
+   "low_n": "2.65"
+  },
+  {
+   "date": "2026-02-24",
+   "expiry": "2026-02-24",
+   "strike": "370.0",
    "side": "P",
-   "high": "8.0",
-   "high_n": "8.6",
-   "low": "6.9",
-   "low_n": "6.85"
-  },
-  {
-   "date": "2026-05-13",
-   "expiry": "2026-05-26",
-   "strike": "335.0",
-   "side": "C",
-   "high": "15.6",
-   "high_n": "15.6",
-   "low": "12.35",
-   "low_n": "11.7"
+   "high": "1.35",
+   "high_n": "1.5",
+   "low": "0.05",
+   "low_n": "0.05"
   }
  ],
  "stkopt_TRENT_bars": {
-  "series_days": 7432,
-  "full_375": 0.452502691065662
+  "series_days": 12089,
+  "full_375": 0.4696004632310365
  },
  "opt_TRENT_MONTH": {
   "underlying": "TRENT",
   "flag": "MONTH",
-  "days": 122,
-  "contract-days": 453,
-  "found in bhavcopy": "99.79%",
-  "high match": "66.45%",
-  "low match": "56.51%",
-  "open match": "85.21%",
-  "last price <=0.5% (2024-07+)": "64.22%",
-  "last price <=2% (2024-07+)": "84.91%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "50.11%",
-  "high&low match on expiry days": "42.86%"
+  "days": 240,
+  "contract-days": 1282,
+  "found in bhavcopy": "99.70%",
+  "high match": "62.56%",
+  "low match": "51.40%",
+  "open match": "76.44%",
+  "last price <=0.5% (2024-07+)": "76.72%",
+  "last price <=2% (2024-07+)": "90.32%",
+  "OI Dhan/NSE median": "1.001",
+  "OI within 1%": "48.21%",
+  "high&low match on expiry days": "32.31%"
  },
  "opt_TRENT_MONTH_worst": [
   {
-   "date": "2025-09-30",
-   "expiry": "2025-09-30",
-   "strike": "4700.0",
+   "date": "2024-02-07",
+   "expiry": "2024-02-29",
+   "strike": "3600.0",
    "side": "C",
-   "high": "165.1",
-   "high_n": "39.55",
+   "high": "188.1",
+   "high_n": "188.1",
+   "low": "130.05",
+   "low_n": "12.35"
+  },
+  {
+   "date": "2023-03-29",
+   "expiry": "2023-03-29",
+   "strike": "1360.0",
+   "side": "C",
+   "high": "2.55",
+   "high_n": "0.25",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2024-02-07",
+   "expiry": "2024-02-29",
+   "strike": "3000.0",
+   "side": "P",
+   "high": "155.0",
+   "high_n": "155.0",
+   "low": "117.55",
+   "low_n": "11.65"
+  },
+  {
+   "date": "2024-01-24",
+   "expiry": "2024-01-25",
+   "strike": "3140.0",
+   "side": "P",
+   "high": "32.0",
+   "high_n": "32.0",
+   "low": "11.5",
+   "low_n": "1.2"
+  },
+  {
+   "date": "2024-02-07",
+   "expiry": "2024-02-29",
+   "strike": "3080.0",
+   "side": "P",
+   "high": "140.1",
+   "high_n": "45.0",
+   "low": "140.1",
+   "low_n": "15.55"
+  }
+ ],
+ "stkopt_ULTRACEMCO_bars": {
+  "series_days": 12224,
+  "full_375": 0.5395942408376964
+ },
+ "opt_ULTRACEMCO_MONTH": {
+  "underlying": "ULTRACEMCO",
+  "flag": "MONTH",
+  "days": 245,
+  "contract-days": 1394,
+  "found in bhavcopy": "100.00%",
+  "high match": "65.21%",
+  "low match": "55.81%",
+  "open match": "81.28%",
+  "last price <=0.5% (2024-07+)": "75.67%",
+  "last price <=2% (2024-07+)": "83.67%",
+  "OI Dhan/NSE median": "1.002",
+  "OI within 1%": "55.67%",
+  "high&low match on expiry days": "43.86%"
+ },
+ "opt_ULTRACEMCO_MONTH_worst": [
+  {
+   "date": "2024-05-30",
+   "expiry": "2024-05-30",
+   "strike": "9800.0",
+   "side": "P",
+   "high": "73.75",
+   "high_n": "6.05",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
    "date": "2025-09-30",
    "expiry": "2025-09-30",
-   "strike": "4700.0",
-   "side": "P",
-   "high": "154.95",
-   "high_n": "42.3",
-   "low": "3.3",
-   "low_n": "3.3"
-  },
-  {
-   "date": "2023-07-26",
-   "expiry": "2023-07-27",
-   "strike": "1700.0",
-   "side": "P",
-   "high": "11.6",
-   "high_n": "5.0",
-   "low": "0.65",
-   "low_n": "1.5"
-  },
-  {
-   "date": "2023-07-26",
-   "expiry": "2023-07-27",
-   "strike": "1720.0",
-   "side": "P",
-   "high": "16.0",
-   "high_n": "16.0",
-   "low": "2.35",
-   "low_n": "9.5"
-  },
-  {
-   "date": "2023-05-24",
-   "expiry": "2023-05-25",
-   "strike": "1480.0",
+   "strike": "12300.0",
    "side": "C",
-   "high": "30.5",
-   "high_n": "24.6",
-   "low": "3.25",
-   "low_n": "13.1"
-  }
- ],
- "stkopt_ULTRACEMCO_bars": {
-  "series_days": 7625,
-  "full_375": 0.5829508196721311
- },
- "opt_ULTRACEMCO_MONTH": {
-  "underlying": "ULTRACEMCO",
-  "flag": "MONTH",
-  "days": 97,
-  "contract-days": 378,
-  "found in bhavcopy": "100.00%",
-  "high match": "65.34%",
-  "low match": "56.61%",
-  "open match": "91.53%",
-  "last price <=0.5% (2024-07+)": "83.58%",
-  "last price <=2% (2024-07+)": "88.81%",
-  "OI Dhan/NSE median": "1.002",
-  "OI within 1%": "68.25%",
-  "high&low match on expiry days": "50.00%"
- },
- "opt_ULTRACEMCO_MONTH_worst": [
+   "high": "268.15",
+   "high_n": "25.0",
+   "low": "0.2",
+   "low_n": "0.1"
+  },
   {
    "date": "2025-11-25",
    "expiry": "2025-11-25",
@@ -4725,120 +4745,100 @@
    "low_n": "0.1"
   },
   {
-   "date": "2025-10-28",
-   "expiry": "2025-10-28",
-   "strike": "12000.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "12200.0",
    "side": "C",
-   "high": "80.5",
-   "high_n": "63.1",
-   "low": "1.0",
-   "low_n": "0.5"
-  },
-  {
-   "date": "2023-02-22",
-   "expiry": "2023-02-23",
-   "strike": "7200.0",
-   "side": "P",
-   "high": "74.8",
-   "high_n": "45.0",
-   "low": "21.6",
-   "low_n": "21.6"
-  },
-  {
-   "date": "2022-11-23",
-   "expiry": "2022-11-24",
-   "strike": "6800.0",
-   "side": "P",
-   "high": "34.0",
-   "high_n": "34.0",
-   "low": "5.8",
-   "low_n": "15.5"
-  },
-  {
-   "date": "2021-12-27",
-   "expiry": "2021-12-30",
-   "strike": "7300.0",
-   "side": "C",
-   "high": "105.0",
-   "high_n": "64.65",
-   "low": "26.7",
-   "low_n": "36.0"
-  }
- ],
- "stkopt_UNIONBANK_bars": {
-  "series_days": 2736,
-  "full_375": 0.5281432748538012
- },
- "opt_UNIONBANK_MONTH": {
-  "underlying": "UNIONBANK",
-  "flag": "MONTH",
-  "days": 38,
-  "contract-days": 130,
-  "found in bhavcopy": "100.00%",
-  "high match": "77.69%",
-  "low match": "81.54%",
-  "open match": "80.77%",
-  "last price <=0.5% (2024-07+)": "66.92%",
-  "last price <=2% (2024-07+)": "83.08%",
-  "OI Dhan/NSE median": "1.000",
-  "OI within 1%": "72.31%",
-  "high&low match on expiry days": "37.50%"
- },
- "opt_UNIONBANK_MONTH_worst": [
-  {
-   "date": "2025-10-28",
-   "expiry": "2025-10-28",
-   "strike": "147.5",
-   "side": "P",
-   "high": "3.0",
-   "high_n": "1.4",
+   "high": "321.7",
+   "high_n": "49.95",
    "low": "0.1",
    "low_n": "0.1"
   },
   {
-   "date": "2025-10-28",
-   "expiry": "2025-10-28",
-   "strike": "145.0",
+   "date": "2023-10-25",
+   "expiry": "2023-10-26",
+   "strike": "8400.0",
+   "side": "C",
+   "high": "37.95",
+   "high_n": "37.95",
+   "low": "17.65",
+   "low_n": "3.7"
+  }
+ ],
+ "stkopt_UNIONBANK_bars": {
+  "series_days": 6932,
+  "full_375": 0.4072417772648586
+ },
+ "opt_UNIONBANK_MONTH": {
+  "underlying": "UNIONBANK",
+  "flag": "MONTH",
+  "days": 90,
+  "contract-days": 500,
+  "found in bhavcopy": "99.80%",
+  "high match": "71.80%",
+  "low match": "73.80%",
+  "open match": "84.20%",
+  "last price <=0.5% (2024-07+)": "67.60%",
+  "last price <=2% (2024-07+)": "81.80%",
+  "OI Dhan/NSE median": "1.000",
+  "OI within 1%": "59.00%",
+  "high&low match on expiry days": "54.84%"
+ },
+ "opt_UNIONBANK_MONTH_worst": [
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "135.0",
    "side": "P",
-   "high": "1.2",
-   "high_n": "0.6",
+   "high": "2.9",
+   "high_n": "0.2",
    "low": "0.05",
    "low_n": "0.05"
   },
   {
-   "date": "2025-06-24",
-   "expiry": "2025-06-26",
-   "strike": "150.0",
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "140.0",
+   "side": "C",
+   "high": "4.55",
+   "high_n": "0.35",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "137.5",
+   "side": "C",
+   "high": "5.9",
+   "high_n": "1.8",
+   "low": "0.1",
+   "low_n": "0.1"
+  },
+  {
+   "date": "2026-04-01",
+   "expiry": "2026-04-28",
+   "strike": "167.5",
+   "side": "C",
+   "high": "36.98",
+   "high_n": "11.61",
+   "low": "8.37",
+   "low_n": "8.08"
+  },
+  {
+   "date": "2025-09-30",
+   "expiry": "2025-09-30",
+   "strike": "137.5",
    "side": "P",
-   "high": "7.4",
-   "high_n": "4.5",
-   "low": "0.5",
-   "low_n": "2.25"
-  },
-  {
-   "date": "2025-10-28",
-   "expiry": "2025-10-28",
-   "strike": "145.0",
-   "side": "C",
-   "high": "2.65",
-   "high_n": "2.75",
-   "low": "0.25",
-   "low_n": "0.15"
-  },
-  {
-   "date": "2025-07-15",
-   "expiry": "2025-07-31",
-   "strike": "145.0",
-   "side": "C",
-   "high": "9.25",
-   "high_n": "6.1",
-   "low": "3.0",
-   "low_n": "4.75"
+   "high": "3.9",
+   "high_n": "1.25",
+   "low": "0.05",
+   "low_n": "0.05"
   }
  ],
  "stkopt_YESBANK_bars": {
-  "series_days": 2710,
-  "full_375": 0.6656826568265682
+  "series_days": 6399,
+  "full_375": 0.5308641975308642
  },
  "opt_YESBANK_MONTH": {
   "underlying": "YESBANK",
@@ -4849,8 +4849,8 @@
   "high match": "90.94%",
   "low match": "90.94%",
   "open match": "94.88%",
-  "last price <=0.5% (2024-07+)": "65.35%",
-  "last price <=2% (2024-07+)": "74.41%",
+  "last price <=0.5% (2024-07+)": "65.75%",
+  "last price <=2% (2024-07+)": "74.80%",
   "OI Dhan/NSE median": "1.000",
   "OI within 1%": "82.28%",
   "high&low match on expiry days": "71.43%"
@@ -4910,17 +4910,17 @@
  "stkopt_median": {
   "underlying": "59 stocks (median of per-stock rates)",
   "flag": "MONTH",
-  "days": 96,
-  "contract-days": 25627,
-  "found in bhavcopy": "100.00%",
-  "high match": "67.66%",
-  "low match": "70.00%",
-  "open match": "92.70%",
-  "last price <=0.5% (2024-07+)": "64.22%",
-  "last price <=2% (2024-07+)": "82.41%",
+  "days": 228,
+  "contract-days": 65252,
+  "found in bhavcopy": "99.92%",
+  "high match": "64.98%",
+  "low match": "63.96%",
+  "open match": "84.31%",
+  "last price <=0.5% (2024-07+)": "64.77%",
+  "last price <=2% (2024-07+)": "82.98%",
   "OI Dhan/NSE median": "1.001",
-  "OI within 1%": "68.25%",
-  "high&low match on expiry days": "41.67%"
+  "OI within 1%": "60.92%",
+  "high&low match on expiry days": "41.07%"
  },
  "fut_NIFTY_c0": {
   "underlying": "NIFTY",
@@ -4949,5 +4949,1802 @@
   "compared days": 221,
   "close match (<=0.05%)": "85.97%",
   "OI exact": "88.69%"
+ },
+ "spikes_per_file": {
+  "opt_BANKNIFTY_MONTH_2021.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1523018,
+   "spikes": 465,
+   "share": 0.00030531,
+   "early_minutes": 328501,
+   "early_spikes": 35,
+   "early_share": 0.00010654,
+   "late_minutes": 1194517,
+   "late_spikes": 430,
+   "late_share": 0.00035998,
+   "same_contract_as": null
+  },
+  "opt_BANKNIFTY_MONTH_2022.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3847747,
+   "spikes": 443,
+   "share": 0.00011513,
+   "early_minutes": 919817,
+   "early_spikes": 34,
+   "early_share": 3.696e-05,
+   "late_minutes": 2927930,
+   "late_spikes": 409,
+   "late_share": 0.00013969,
+   "same_contract_as": null
+  },
+  "opt_BANKNIFTY_MONTH_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3835538,
+   "spikes": 323,
+   "share": 8.421e-05,
+   "early_minutes": 917939,
+   "early_spikes": 1,
+   "early_share": 1.09e-06,
+   "late_minutes": 2917599,
+   "late_spikes": 322,
+   "late_share": 0.00011036,
+   "same_contract_as": null
+  },
+  "opt_BANKNIFTY_MONTH_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3795098,
+   "spikes": 367,
+   "share": 9.67e-05,
+   "early_minutes": 900714,
+   "early_spikes": 4,
+   "early_share": 4.44e-06,
+   "late_minutes": 2894384,
+   "late_spikes": 363,
+   "late_share": 0.00012542,
+   "same_contract_as": null
+  },
+  "opt_BANKNIFTY_MONTH_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3908844,
+   "spikes": 315,
+   "share": 8.059e-05,
+   "early_minutes": 936091,
+   "early_spikes": 2,
+   "early_share": 2.14e-06,
+   "late_minutes": 2972753,
+   "late_spikes": 313,
+   "late_share": 0.00010529,
+   "same_contract_as": "opt_BANKNIFTY_WEEK_2025.parquet"
+  },
+  "opt_BANKNIFTY_MONTH_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3097561,
+   "spikes": 243,
+   "share": 7.845e-05,
+   "early_minutes": 741146,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 2356415,
+   "late_spikes": 243,
+   "late_share": 0.00010312,
+   "same_contract_as": null
+  },
+  "opt_BANKNIFTY_WEEK_2021.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1543497,
+   "spikes": 487,
+   "share": 0.00031552,
+   "early_minutes": 335184,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 1208313,
+   "late_spikes": 487,
+   "late_share": 0.00040304,
+   "same_contract_as": null
+  },
+  "opt_BANKNIFTY_WEEK_2022.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3890188,
+   "spikes": 1408,
+   "share": 0.00036194,
+   "early_minutes": 933602,
+   "early_spikes": 12,
+   "early_share": 1.285e-05,
+   "late_minutes": 2956586,
+   "late_spikes": 1396,
+   "late_share": 0.00047217,
+   "same_contract_as": null
+  },
+  "opt_BANKNIFTY_WEEK_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3858663,
+   "spikes": 1631,
+   "share": 0.00042269,
+   "early_minutes": 926013,
+   "early_spikes": 2,
+   "early_share": 2.16e-06,
+   "late_minutes": 2932650,
+   "late_spikes": 1629,
+   "late_share": 0.00055547,
+   "same_contract_as": null
+  },
+  "opt_BANKNIFTY_WEEK_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3894335,
+   "spikes": 1450,
+   "share": 0.00037234,
+   "early_minutes": 935404,
+   "early_spikes": 3,
+   "early_share": 3.21e-06,
+   "late_minutes": 2958931,
+   "late_spikes": 1447,
+   "late_share": 0.00048903,
+   "same_contract_as": null
+  },
+  "opt_BANKNIFTY_WEEK_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3908844,
+   "spikes": 315,
+   "share": 8.059e-05,
+   "early_minutes": 936091,
+   "early_spikes": 2,
+   "early_share": 2.14e-06,
+   "late_minutes": 2972753,
+   "late_spikes": 313,
+   "late_share": 0.00010529,
+   "same_contract_as": "opt_BANKNIFTY_MONTH_2025.parquet"
+  },
+  "opt_BANKNIFTY_WEEK_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3097561,
+   "spikes": 243,
+   "share": 7.845e-05,
+   "early_minutes": 741146,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 2356415,
+   "late_spikes": 243,
+   "late_share": 0.00010312,
+   "same_contract_as": null
+  },
+  "opt_CRUDEOIL_MONTH_2025.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 1236719,
+   "spikes": 102,
+   "share": 8.248e-05,
+   "early_minutes": 142627,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 1094092,
+   "late_spikes": 102,
+   "late_share": 9.323e-05,
+   "same_contract_as": null
+  },
+  "opt_CRUDEOIL_MONTH_2026.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 2426118,
+   "spikes": 136,
+   "share": 5.606e-05,
+   "early_minutes": 283009,
+   "early_spikes": 1,
+   "early_share": 3.53e-06,
+   "late_minutes": 2143109,
+   "late_spikes": 135,
+   "late_share": 6.299e-05,
+   "same_contract_as": null
+  },
+  "opt_FINNIFTY_MONTH_2021.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 151939,
+   "spikes": 996,
+   "share": 0.00655526,
+   "early_minutes": 20614,
+   "early_spikes": 183,
+   "early_share": 0.00887746,
+   "late_minutes": 131325,
+   "late_spikes": 813,
+   "late_share": 0.00619075,
+   "same_contract_as": null
+  },
+  "opt_FINNIFTY_MONTH_2022.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1012706,
+   "spikes": 3922,
+   "share": 0.00387279,
+   "early_minutes": 195671,
+   "early_spikes": 625,
+   "early_share": 0.00319414,
+   "late_minutes": 817035,
+   "late_spikes": 3297,
+   "late_share": 0.00403532,
+   "same_contract_as": null
+  },
+  "opt_FINNIFTY_MONTH_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1949676,
+   "spikes": 1379,
+   "share": 0.0007073,
+   "early_minutes": 409229,
+   "early_spikes": 91,
+   "early_share": 0.00022237,
+   "late_minutes": 1540447,
+   "late_spikes": 1288,
+   "late_share": 0.00083612,
+   "same_contract_as": null
+  },
+  "opt_FINNIFTY_MONTH_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2031372,
+   "spikes": 946,
+   "share": 0.0004657,
+   "early_minutes": 430908,
+   "early_spikes": 66,
+   "early_share": 0.00015316,
+   "late_minutes": 1600464,
+   "late_spikes": 880,
+   "late_share": 0.00054984,
+   "same_contract_as": null
+  },
+  "opt_FINNIFTY_MONTH_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3528323,
+   "spikes": 925,
+   "share": 0.00026216,
+   "early_minutes": 799939,
+   "early_spikes": 64,
+   "early_share": 8.001e-05,
+   "late_minutes": 2728384,
+   "late_spikes": 861,
+   "late_share": 0.00031557,
+   "same_contract_as": "opt_FINNIFTY_WEEK_2025.parquet"
+  },
+  "opt_FINNIFTY_MONTH_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2398888,
+   "spikes": 468,
+   "share": 0.00019509,
+   "early_minutes": 504059,
+   "early_spikes": 12,
+   "early_share": 2.381e-05,
+   "late_minutes": 1894829,
+   "late_spikes": 456,
+   "late_share": 0.00024065,
+   "same_contract_as": "opt_FINNIFTY_WEEK_2026.parquet"
+  },
+  "opt_FINNIFTY_WEEK_2021.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 402400,
+   "spikes": 3548,
+   "share": 0.0088171,
+   "early_minutes": 60872,
+   "early_spikes": 808,
+   "early_share": 0.01327375,
+   "late_minutes": 341528,
+   "late_spikes": 2740,
+   "late_share": 0.00802277,
+   "same_contract_as": null
+  },
+  "opt_FINNIFTY_WEEK_2022.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2587292,
+   "spikes": 13534,
+   "share": 0.00523095,
+   "early_minutes": 539426,
+   "early_spikes": 2288,
+   "early_share": 0.00424155,
+   "late_minutes": 2047866,
+   "late_spikes": 11246,
+   "late_share": 0.00549157,
+   "same_contract_as": null
+  },
+  "opt_FINNIFTY_WEEK_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3831418,
+   "spikes": 3495,
+   "share": 0.00091219,
+   "early_minutes": 909291,
+   "early_spikes": 13,
+   "early_share": 1.43e-05,
+   "late_minutes": 2922127,
+   "late_spikes": 3482,
+   "late_share": 0.0011916,
+   "same_contract_as": null
+  },
+  "opt_FINNIFTY_WEEK_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3875875,
+   "spikes": 2622,
+   "share": 0.00067649,
+   "early_minutes": 924091,
+   "early_spikes": 51,
+   "early_share": 5.519e-05,
+   "late_minutes": 2951784,
+   "late_spikes": 2571,
+   "late_share": 0.000871,
+   "same_contract_as": null
+  },
+  "opt_FINNIFTY_WEEK_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3528323,
+   "spikes": 925,
+   "share": 0.00026216,
+   "early_minutes": 799939,
+   "early_spikes": 64,
+   "early_share": 8.001e-05,
+   "late_minutes": 2728384,
+   "late_spikes": 861,
+   "late_share": 0.00031557,
+   "same_contract_as": "opt_FINNIFTY_MONTH_2025.parquet"
+  },
+  "opt_FINNIFTY_WEEK_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2398888,
+   "spikes": 468,
+   "share": 0.00019509,
+   "early_minutes": 504059,
+   "early_spikes": 12,
+   "early_share": 2.381e-05,
+   "late_minutes": 1894829,
+   "late_spikes": 456,
+   "late_share": 0.00024065,
+   "same_contract_as": "opt_FINNIFTY_MONTH_2026.parquet"
+  },
+  "opt_GOLDM_MONTH_2025.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 1083764,
+   "spikes": 56,
+   "share": 5.167e-05,
+   "early_minutes": 120403,
+   "early_spikes": 6,
+   "early_share": 4.983e-05,
+   "late_minutes": 963361,
+   "late_spikes": 50,
+   "late_share": 5.19e-05,
+   "same_contract_as": null
+  },
+  "opt_GOLDM_MONTH_2026.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 1924960,
+   "spikes": 123,
+   "share": 6.39e-05,
+   "early_minutes": 208991,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 1715969,
+   "late_spikes": 123,
+   "late_share": 7.168e-05,
+   "same_contract_as": null
+  },
+  "opt_GOLD_MONTH_2025.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 989431,
+   "spikes": 16,
+   "share": 1.617e-05,
+   "early_minutes": 113663,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 875768,
+   "late_spikes": 16,
+   "late_share": 1.827e-05,
+   "same_contract_as": null
+  },
+  "opt_GOLD_MONTH_2026.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 727449,
+   "spikes": 87,
+   "share": 0.0001196,
+   "early_minutes": 64682,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 662767,
+   "late_spikes": 87,
+   "late_share": 0.00013127,
+   "same_contract_as": null
+  },
+  "opt_MIDCPNIFTY_MONTH_2022.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 13296,
+   "spikes": 29,
+   "share": 0.00218111,
+   "early_minutes": 951,
+   "early_spikes": 2,
+   "early_share": 0.00210305,
+   "late_minutes": 12345,
+   "late_spikes": 27,
+   "late_share": 0.00218712,
+   "same_contract_as": "opt_MIDCPNIFTY_WEEK_2022.parquet"
+  },
+  "opt_MIDCPNIFTY_MONTH_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 811697,
+   "spikes": 1674,
+   "share": 0.00206235,
+   "early_minutes": 167296,
+   "early_spikes": 85,
+   "early_share": 0.00050808,
+   "late_minutes": 644401,
+   "late_spikes": 1589,
+   "late_share": 0.00246586,
+   "same_contract_as": null
+  },
+  "opt_MIDCPNIFTY_MONTH_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1979530,
+   "spikes": 1105,
+   "share": 0.00055821,
+   "early_minutes": 427944,
+   "early_spikes": 82,
+   "early_share": 0.00019161,
+   "late_minutes": 1551586,
+   "late_spikes": 1023,
+   "late_share": 0.00065933,
+   "same_contract_as": null
+  },
+  "opt_MIDCPNIFTY_MONTH_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3887861,
+   "spikes": 565,
+   "share": 0.00014532,
+   "early_minutes": 919260,
+   "early_spikes": 21,
+   "early_share": 2.284e-05,
+   "late_minutes": 2968601,
+   "late_spikes": 544,
+   "late_share": 0.00018325,
+   "same_contract_as": "opt_MIDCPNIFTY_WEEK_2025.parquet"
+  },
+  "opt_MIDCPNIFTY_MONTH_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2989949,
+   "spikes": 468,
+   "share": 0.00015652,
+   "early_minutes": 694894,
+   "early_spikes": 48,
+   "early_share": 6.908e-05,
+   "late_minutes": 2295055,
+   "late_spikes": 420,
+   "late_share": 0.000183,
+   "same_contract_as": "opt_MIDCPNIFTY_WEEK_2026.parquet"
+  },
+  "opt_MIDCPNIFTY_WEEK_2022.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 13296,
+   "spikes": 29,
+   "share": 0.00218111,
+   "early_minutes": 951,
+   "early_spikes": 2,
+   "early_share": 0.00210305,
+   "late_minutes": 12345,
+   "late_spikes": 27,
+   "late_share": 0.00218712,
+   "same_contract_as": "opt_MIDCPNIFTY_MONTH_2022.parquet"
+  },
+  "opt_MIDCPNIFTY_WEEK_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2011702,
+   "spikes": 6294,
+   "share": 0.00312869,
+   "early_minutes": 458219,
+   "early_spikes": 303,
+   "early_share": 0.00066126,
+   "late_minutes": 1553483,
+   "late_spikes": 5991,
+   "late_share": 0.0038565,
+   "same_contract_as": null
+  },
+  "opt_MIDCPNIFTY_WEEK_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3879991,
+   "spikes": 4047,
+   "share": 0.00104304,
+   "early_minutes": 928728,
+   "early_spikes": 60,
+   "early_share": 6.46e-05,
+   "late_minutes": 2951263,
+   "late_spikes": 3987,
+   "late_share": 0.00135095,
+   "same_contract_as": null
+  },
+  "opt_MIDCPNIFTY_WEEK_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3887861,
+   "spikes": 565,
+   "share": 0.00014532,
+   "early_minutes": 919260,
+   "early_spikes": 21,
+   "early_share": 2.284e-05,
+   "late_minutes": 2968601,
+   "late_spikes": 544,
+   "late_share": 0.00018325,
+   "same_contract_as": "opt_MIDCPNIFTY_MONTH_2025.parquet"
+  },
+  "opt_MIDCPNIFTY_WEEK_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2989949,
+   "spikes": 468,
+   "share": 0.00015652,
+   "early_minutes": 694894,
+   "early_spikes": 48,
+   "early_share": 6.908e-05,
+   "late_minutes": 2295055,
+   "late_spikes": 420,
+   "late_share": 0.000183,
+   "same_contract_as": "opt_MIDCPNIFTY_MONTH_2026.parquet"
+  },
+  "opt_NATURALGAS_MONTH_2025.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 1235905,
+   "spikes": 433,
+   "share": 0.00035035,
+   "early_minutes": 141856,
+   "early_spikes": 9,
+   "early_share": 6.344e-05,
+   "late_minutes": 1094049,
+   "late_spikes": 424,
+   "late_share": 0.00038755,
+   "same_contract_as": null
+  },
+  "opt_NATURALGAS_MONTH_2026.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 2429463,
+   "spikes": 831,
+   "share": 0.00034205,
+   "early_minutes": 285332,
+   "early_spikes": 24,
+   "early_share": 8.411e-05,
+   "late_minutes": 2144131,
+   "late_spikes": 807,
+   "late_share": 0.00037638,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_MONTH_2021.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1636647,
+   "spikes": 244,
+   "share": 0.00014909,
+   "early_minutes": 391928,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 1244719,
+   "late_spikes": 244,
+   "late_share": 0.00019603,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_MONTH_2022.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3886906,
+   "spikes": 659,
+   "share": 0.00016954,
+   "early_minutes": 930651,
+   "early_spikes": 5,
+   "early_share": 5.37e-06,
+   "late_minutes": 2956255,
+   "late_spikes": 654,
+   "late_share": 0.00022123,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_MONTH_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3854411,
+   "spikes": 644,
+   "share": 0.00016708,
+   "early_minutes": 921895,
+   "early_spikes": 1,
+   "early_share": 1.08e-06,
+   "late_minutes": 2932516,
+   "late_spikes": 643,
+   "late_share": 0.00021927,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_MONTH_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3887423,
+   "spikes": 561,
+   "share": 0.00014431,
+   "early_minutes": 931232,
+   "early_spikes": 16,
+   "early_share": 1.718e-05,
+   "late_minutes": 2956191,
+   "late_spikes": 545,
+   "late_share": 0.00018436,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_MONTH_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3899574,
+   "spikes": 521,
+   "share": 0.0001336,
+   "early_minutes": 932017,
+   "early_spikes": 14,
+   "early_share": 1.502e-05,
+   "late_minutes": 2967557,
+   "late_spikes": 507,
+   "late_share": 0.00017085,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_MONTH_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3093742,
+   "spikes": 392,
+   "share": 0.00012671,
+   "early_minutes": 739624,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 2354118,
+   "late_spikes": 392,
+   "late_share": 0.00016652,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_WEEK_2021.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1636969,
+   "spikes": 885,
+   "share": 0.00054063,
+   "early_minutes": 392110,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 1244859,
+   "late_spikes": 885,
+   "late_share": 0.00071092,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_WEEK_2022.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3889779,
+   "spikes": 2803,
+   "share": 0.00072061,
+   "early_minutes": 933193,
+   "early_spikes": 4,
+   "early_share": 4.29e-06,
+   "late_minutes": 2956586,
+   "late_spikes": 2799,
+   "late_share": 0.0009467,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_WEEK_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3857901,
+   "spikes": 3344,
+   "share": 0.00086679,
+   "early_minutes": 925253,
+   "early_spikes": 9,
+   "early_share": 9.73e-06,
+   "late_minutes": 2932648,
+   "late_spikes": 3335,
+   "late_share": 0.0011372,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_WEEK_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3893623,
+   "spikes": 2697,
+   "share": 0.00069267,
+   "early_minutes": 935080,
+   "early_spikes": 5,
+   "early_share": 5.35e-06,
+   "late_minutes": 2958543,
+   "late_spikes": 2692,
+   "late_share": 0.00090991,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_WEEK_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3910207,
+   "spikes": 2801,
+   "share": 0.00071633,
+   "early_minutes": 937238,
+   "early_spikes": 4,
+   "early_share": 4.27e-06,
+   "late_minutes": 2972969,
+   "late_spikes": 2797,
+   "late_share": 0.00094081,
+   "same_contract_as": null
+  },
+  "opt_NIFTY_WEEK_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3102285,
+   "spikes": 1902,
+   "share": 0.0006131,
+   "early_minutes": 744311,
+   "early_spikes": 3,
+   "early_share": 4.03e-06,
+   "late_minutes": 2357974,
+   "late_spikes": 1899,
+   "late_share": 0.00080535,
+   "same_contract_as": null
+  },
+  "opt_SENSEX_MONTH_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1082031,
+   "spikes": 727,
+   "share": 0.00067188,
+   "early_minutes": 214735,
+   "early_spikes": 82,
+   "early_share": 0.00038187,
+   "late_minutes": 867296,
+   "late_spikes": 645,
+   "late_share": 0.00074369,
+   "same_contract_as": null
+  },
+  "opt_SENSEX_MONTH_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1626963,
+   "spikes": 676,
+   "share": 0.0004155,
+   "early_minutes": 343857,
+   "early_spikes": 29,
+   "early_share": 8.434e-05,
+   "late_minutes": 1283106,
+   "late_spikes": 647,
+   "late_share": 0.00050425,
+   "same_contract_as": null
+  },
+  "opt_SENSEX_MONTH_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3102139,
+   "spikes": 937,
+   "share": 0.00030205,
+   "early_minutes": 672075,
+   "early_spikes": 149,
+   "early_share": 0.0002217,
+   "late_minutes": 2430064,
+   "late_spikes": 788,
+   "late_share": 0.00032427,
+   "same_contract_as": null
+  },
+  "opt_SENSEX_MONTH_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2251200,
+   "spikes": 306,
+   "share": 0.00013593,
+   "early_minutes": 495375,
+   "early_spikes": 6,
+   "early_share": 1.211e-05,
+   "late_minutes": 1755825,
+   "late_spikes": 300,
+   "late_share": 0.00017086,
+   "same_contract_as": null
+  },
+  "opt_SENSEX_WEEK_2023.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2132740,
+   "spikes": 2204,
+   "share": 0.00103341,
+   "early_minutes": 485382,
+   "early_spikes": 170,
+   "early_share": 0.00035024,
+   "late_minutes": 1647358,
+   "late_spikes": 2034,
+   "late_share": 0.0012347,
+   "same_contract_as": null
+  },
+  "opt_SENSEX_WEEK_2024.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3703085,
+   "spikes": 1932,
+   "share": 0.00052173,
+   "early_minutes": 887768,
+   "early_spikes": 99,
+   "early_share": 0.00011152,
+   "late_minutes": 2815317,
+   "late_spikes": 1833,
+   "late_share": 0.00065108,
+   "same_contract_as": null
+  },
+  "opt_SENSEX_WEEK_2025.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3893399,
+   "spikes": 1305,
+   "share": 0.00033518,
+   "early_minutes": 935793,
+   "early_spikes": 27,
+   "early_share": 2.885e-05,
+   "late_minutes": 2957606,
+   "late_spikes": 1278,
+   "late_share": 0.00043211,
+   "same_contract_as": null
+  },
+  "opt_SENSEX_WEEK_2026.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3100741,
+   "spikes": 1367,
+   "share": 0.00044086,
+   "early_minutes": 743699,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 2357042,
+   "late_spikes": 1367,
+   "late_share": 0.00057996,
+   "same_contract_as": null
+  },
+  "opt_SILVERM_MONTH_2025.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 1069117,
+   "spikes": 71,
+   "share": 6.641e-05,
+   "early_minutes": 119513,
+   "early_spikes": 3,
+   "early_share": 2.51e-05,
+   "late_minutes": 949604,
+   "late_spikes": 68,
+   "late_share": 7.161e-05,
+   "same_contract_as": null
+  },
+  "opt_SILVERM_MONTH_2026.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 1476873,
+   "spikes": 88,
+   "share": 5.959e-05,
+   "early_minutes": 155357,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 1321516,
+   "late_spikes": 88,
+   "late_share": 6.659e-05,
+   "same_contract_as": null
+  },
+  "opt_SILVER_MONTH_2025.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 1006574,
+   "spikes": 33,
+   "share": 3.278e-05,
+   "early_minutes": 114395,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 892179,
+   "late_spikes": 33,
+   "late_share": 3.699e-05,
+   "same_contract_as": null
+  },
+  "opt_SILVER_MONTH_2026.parquet": {
+   "early_window": "09:00-10:44",
+   "minutes": 600332,
+   "spikes": 65,
+   "share": 0.00010827,
+   "early_minutes": 53337,
+   "early_spikes": 0,
+   "early_share": 0.0,
+   "late_minutes": 546995,
+   "late_spikes": 65,
+   "late_share": 0.00011883,
+   "same_contract_as": null
+  },
+  "stkopt_ADANIENT_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 5698414,
+   "spikes": 3145,
+   "share": 0.00055191,
+   "early_minutes": 1334556,
+   "early_spikes": 526,
+   "early_share": 0.00039414,
+   "late_minutes": 4363858,
+   "late_spikes": 2619,
+   "late_share": 0.00060016,
+   "same_contract_as": null
+  },
+  "stkopt_ADANIPORTS_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 5953357,
+   "spikes": 4229,
+   "share": 0.00071036,
+   "early_minutes": 1392095,
+   "early_spikes": 709,
+   "early_share": 0.0005093,
+   "late_minutes": 4561262,
+   "late_spikes": 3520,
+   "late_share": 0.00077172,
+   "same_contract_as": null
+  },
+  "stkopt_APOLLOHOSP_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 5754879,
+   "spikes": 5220,
+   "share": 0.00090706,
+   "early_minutes": 1315477,
+   "early_spikes": 1074,
+   "early_share": 0.00081643,
+   "late_minutes": 4439402,
+   "late_spikes": 4146,
+   "late_share": 0.00093391,
+   "same_contract_as": null
+  },
+  "stkopt_ASIANPAINT_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 5842859,
+   "spikes": 3941,
+   "share": 0.0006745,
+   "early_minutes": 1367171,
+   "early_spikes": 792,
+   "early_share": 0.0005793,
+   "late_minutes": 4475688,
+   "late_spikes": 3149,
+   "late_share": 0.00070358,
+   "same_contract_as": null
+  },
+  "stkopt_AUBANK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4764052,
+   "spikes": 4851,
+   "share": 0.00101825,
+   "early_minutes": 1095421,
+   "early_spikes": 946,
+   "early_share": 0.00086359,
+   "late_minutes": 3668631,
+   "late_spikes": 3905,
+   "late_share": 0.00106443,
+   "same_contract_as": null
+  },
+  "stkopt_AXISBANK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 6022379,
+   "spikes": 4128,
+   "share": 0.00068544,
+   "early_minutes": 1430859,
+   "early_spikes": 847,
+   "early_share": 0.00059195,
+   "late_minutes": 4591520,
+   "late_spikes": 3281,
+   "late_share": 0.00071458,
+   "same_contract_as": null
+  },
+  "stkopt_BAJAJ-AUTO_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 5514361,
+   "spikes": 4592,
+   "share": 0.00083273,
+   "early_minutes": 1258231,
+   "early_spikes": 903,
+   "early_share": 0.00071767,
+   "late_minutes": 4256130,
+   "late_spikes": 3689,
+   "late_share": 0.00086675,
+   "same_contract_as": null
+  },
+  "stkopt_BAJAJFINSV_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4986168,
+   "spikes": 4408,
+   "share": 0.00088405,
+   "early_minutes": 1138244,
+   "early_spikes": 795,
+   "early_share": 0.00069844,
+   "late_minutes": 3847924,
+   "late_spikes": 3613,
+   "late_share": 0.00093895,
+   "same_contract_as": null
+  },
+  "stkopt_BAJFINANCE_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2457748,
+   "spikes": 529,
+   "share": 0.00021524,
+   "early_minutes": 533391,
+   "early_spikes": 154,
+   "early_share": 0.00028872,
+   "late_minutes": 1924357,
+   "late_spikes": 375,
+   "late_share": 0.00019487,
+   "same_contract_as": null
+  },
+  "stkopt_BANKBARODA_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 5654661,
+   "spikes": 6802,
+   "share": 0.0012029,
+   "early_minutes": 1301996,
+   "early_spikes": 1756,
+   "early_share": 0.0013487,
+   "late_minutes": 4352665,
+   "late_spikes": 5046,
+   "late_share": 0.00115929,
+   "same_contract_as": null
+  },
+  "stkopt_BEL_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 5113733,
+   "spikes": 4181,
+   "share": 0.0008176,
+   "early_minutes": 1185013,
+   "early_spikes": 1015,
+   "early_share": 0.00085653,
+   "late_minutes": 3928720,
+   "late_spikes": 3166,
+   "late_share": 0.00080586,
+   "same_contract_as": null
+  },
+  "stkopt_BHARTIARTL_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 5881126,
+   "spikes": 5181,
+   "share": 0.00088095,
+   "early_minutes": 1382654,
+   "early_spikes": 1142,
+   "early_share": 0.00082595,
+   "late_minutes": 4498472,
+   "late_spikes": 4039,
+   "late_share": 0.00089786,
+   "same_contract_as": null
+  },
+  "stkopt_BSE_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2098337,
+   "spikes": 715,
+   "share": 0.00034075,
+   "early_minutes": 489093,
+   "early_spikes": 112,
+   "early_share": 0.000229,
+   "late_minutes": 1609244,
+   "late_spikes": 603,
+   "late_share": 0.00037471,
+   "same_contract_as": null
+  },
+  "stkopt_CANBK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3720711,
+   "spikes": 1863,
+   "share": 0.00050071,
+   "early_minutes": 832305,
+   "early_spikes": 442,
+   "early_share": 0.00053106,
+   "late_minutes": 2888406,
+   "late_spikes": 1421,
+   "late_share": 0.00049197,
+   "same_contract_as": null
+  },
+  "stkopt_CIPLA_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4859052,
+   "spikes": 3572,
+   "share": 0.00073512,
+   "early_minutes": 1123723,
+   "early_spikes": 698,
+   "early_share": 0.00062115,
+   "late_minutes": 3735329,
+   "late_spikes": 2874,
+   "late_share": 0.00076941,
+   "same_contract_as": null
+  },
+  "stkopt_COALINDIA_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4705330,
+   "spikes": 4437,
+   "share": 0.00094297,
+   "early_minutes": 1102196,
+   "early_spikes": 946,
+   "early_share": 0.00085829,
+   "late_minutes": 3603134,
+   "late_spikes": 3491,
+   "late_share": 0.00096888,
+   "same_contract_as": null
+  },
+  "stkopt_DRREDDY_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3193590,
+   "spikes": 1660,
+   "share": 0.00051979,
+   "early_minutes": 710659,
+   "early_spikes": 365,
+   "early_share": 0.00051361,
+   "late_minutes": 2482931,
+   "late_spikes": 1295,
+   "late_share": 0.00052156,
+   "same_contract_as": null
+  },
+  "stkopt_EICHERMOT_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4545692,
+   "spikes": 3270,
+   "share": 0.00071936,
+   "early_minutes": 1029694,
+   "early_spikes": 622,
+   "early_share": 0.00060406,
+   "late_minutes": 3515998,
+   "late_spikes": 2648,
+   "late_share": 0.00075313,
+   "same_contract_as": null
+  },
+  "stkopt_ETERNAL_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2155525,
+   "spikes": 1822,
+   "share": 0.00084527,
+   "early_minutes": 506738,
+   "early_spikes": 429,
+   "early_share": 0.00084659,
+   "late_minutes": 1648787,
+   "late_spikes": 1393,
+   "late_share": 0.00084486,
+   "same_contract_as": null
+  },
+  "stkopt_FEDERALBNK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4534628,
+   "spikes": 4148,
+   "share": 0.00091474,
+   "early_minutes": 1037178,
+   "early_spikes": 863,
+   "early_share": 0.00083207,
+   "late_minutes": 3497450,
+   "late_spikes": 3285,
+   "late_share": 0.00093926,
+   "same_contract_as": null
+  },
+  "stkopt_GRASIM_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4579005,
+   "spikes": 4185,
+   "share": 0.00091395,
+   "early_minutes": 1022116,
+   "early_spikes": 847,
+   "early_share": 0.00082867,
+   "late_minutes": 3556889,
+   "late_spikes": 3338,
+   "late_share": 0.00093846,
+   "same_contract_as": null
+  },
+  "stkopt_HCLTECH_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4783890,
+   "spikes": 3602,
+   "share": 0.00075294,
+   "early_minutes": 1121951,
+   "early_spikes": 789,
+   "early_share": 0.00070324,
+   "late_minutes": 3661939,
+   "late_spikes": 2813,
+   "late_share": 0.00076817,
+   "same_contract_as": null
+  },
+  "stkopt_HDFCBANK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4711259,
+   "spikes": 2555,
+   "share": 0.00054232,
+   "early_minutes": 1124760,
+   "early_spikes": 395,
+   "early_share": 0.00035119,
+   "late_minutes": 3586499,
+   "late_spikes": 2160,
+   "late_share": 0.00060226,
+   "same_contract_as": null
+  },
+  "stkopt_HDFCLIFE_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4450023,
+   "spikes": 3820,
+   "share": 0.00085842,
+   "early_minutes": 1029632,
+   "early_spikes": 828,
+   "early_share": 0.00080417,
+   "late_minutes": 3420391,
+   "late_spikes": 2992,
+   "late_share": 0.00087475,
+   "same_contract_as": null
+  },
+  "stkopt_HINDALCO_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4555013,
+   "spikes": 3280,
+   "share": 0.00072009,
+   "early_minutes": 1075450,
+   "early_spikes": 786,
+   "early_share": 0.00073086,
+   "late_minutes": 3479563,
+   "late_spikes": 2494,
+   "late_share": 0.00071676,
+   "same_contract_as": null
+  },
+  "stkopt_HINDUNILVR_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4547160,
+   "spikes": 3710,
+   "share": 0.00081589,
+   "early_minutes": 1068141,
+   "early_spikes": 746,
+   "early_share": 0.00069841,
+   "late_minutes": 3479019,
+   "late_spikes": 2964,
+   "late_share": 0.00085196,
+   "same_contract_as": null
+  },
+  "stkopt_ICICIBANK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4594684,
+   "spikes": 2324,
+   "share": 0.0005058,
+   "early_minutes": 1096554,
+   "early_spikes": 397,
+   "early_share": 0.00036204,
+   "late_minutes": 3498130,
+   "late_spikes": 1927,
+   "late_share": 0.00055087,
+   "same_contract_as": null
+  },
+  "stkopt_IDFCFIRSTB_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4509370,
+   "spikes": 6163,
+   "share": 0.00136671,
+   "early_minutes": 1049205,
+   "early_spikes": 1458,
+   "early_share": 0.00138962,
+   "late_minutes": 3460165,
+   "late_spikes": 4705,
+   "late_share": 0.00135976,
+   "same_contract_as": null
+  },
+  "stkopt_INDIGO_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4434573,
+   "spikes": 3188,
+   "share": 0.0007189,
+   "early_minutes": 1022041,
+   "early_spikes": 600,
+   "early_share": 0.00058706,
+   "late_minutes": 3412532,
+   "late_spikes": 2588,
+   "late_share": 0.00075838,
+   "same_contract_as": null
+  },
+  "stkopt_INDUSINDBK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4548860,
+   "spikes": 3056,
+   "share": 0.00067182,
+   "early_minutes": 1071496,
+   "early_spikes": 593,
+   "early_share": 0.00055343,
+   "late_minutes": 3477364,
+   "late_spikes": 2463,
+   "late_share": 0.0007083,
+   "same_contract_as": null
+  },
+  "stkopt_INFY_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4577894,
+   "spikes": 2769,
+   "share": 0.00060486,
+   "early_minutes": 1092027,
+   "early_spikes": 520,
+   "early_share": 0.00047618,
+   "late_minutes": 3485867,
+   "late_spikes": 2249,
+   "late_share": 0.00064518,
+   "same_contract_as": null
+  },
+  "stkopt_ITC_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4527420,
+   "spikes": 3981,
+   "share": 0.00087931,
+   "early_minutes": 1069851,
+   "early_spikes": 891,
+   "early_share": 0.00083283,
+   "late_minutes": 3457569,
+   "late_spikes": 3090,
+   "late_share": 0.00089369,
+   "same_contract_as": null
+  },
+  "stkopt_JIOFIN_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2592790,
+   "spikes": 1837,
+   "share": 0.0007085,
+   "early_minutes": 604017,
+   "early_spikes": 469,
+   "early_share": 0.00077647,
+   "late_minutes": 1988773,
+   "late_spikes": 1368,
+   "late_share": 0.00068786,
+   "same_contract_as": null
+  },
+  "stkopt_JSWSTEEL_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4503861,
+   "spikes": 2654,
+   "share": 0.00058927,
+   "early_minutes": 1050568,
+   "early_spikes": 629,
+   "early_share": 0.00059872,
+   "late_minutes": 3453293,
+   "late_spikes": 2025,
+   "late_share": 0.0005864,
+   "same_contract_as": null
+  },
+  "stkopt_KOTAKBANK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4552188,
+   "spikes": 2475,
+   "share": 0.00054369,
+   "early_minutes": 1074214,
+   "early_spikes": 417,
+   "early_share": 0.00038819,
+   "late_minutes": 3477974,
+   "late_spikes": 2058,
+   "late_share": 0.00059172,
+   "same_contract_as": null
+  },
+  "stkopt_LT_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4329244,
+   "spikes": 3028,
+   "share": 0.00069943,
+   "early_minutes": 1022593,
+   "early_spikes": 506,
+   "early_share": 0.00049482,
+   "late_minutes": 3306651,
+   "late_spikes": 2522,
+   "late_share": 0.00076271,
+   "same_contract_as": null
+  },
+  "stkopt_M&M_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4505241,
+   "spikes": 3174,
+   "share": 0.00070451,
+   "early_minutes": 1061487,
+   "early_spikes": 661,
+   "early_share": 0.00062271,
+   "late_minutes": 3443754,
+   "late_spikes": 2513,
+   "late_share": 0.00072973,
+   "same_contract_as": null
+  },
+  "stkopt_MARUTI_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4574044,
+   "spikes": 2415,
+   "share": 0.00052798,
+   "early_minutes": 1083683,
+   "early_spikes": 287,
+   "early_share": 0.00026484,
+   "late_minutes": 3490361,
+   "late_spikes": 2128,
+   "late_share": 0.00060968,
+   "same_contract_as": null
+  },
+  "stkopt_MAXHEALTH_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2401011,
+   "spikes": 1107,
+   "share": 0.00046106,
+   "early_minutes": 531259,
+   "early_spikes": 296,
+   "early_share": 0.00055717,
+   "late_minutes": 1869752,
+   "late_spikes": 811,
+   "late_share": 0.00043375,
+   "same_contract_as": null
+  },
+  "stkopt_NESTLEIND_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 1848971,
+   "spikes": 242,
+   "share": 0.00013088,
+   "early_minutes": 386130,
+   "early_spikes": 50,
+   "early_share": 0.00012949,
+   "late_minutes": 1462841,
+   "late_spikes": 192,
+   "late_share": 0.00013125,
+   "same_contract_as": null
+  },
+  "stkopt_NTPC_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4000947,
+   "spikes": 5861,
+   "share": 0.0014649,
+   "early_minutes": 922969,
+   "early_spikes": 1202,
+   "early_share": 0.00130232,
+   "late_minutes": 3077978,
+   "late_spikes": 4659,
+   "late_share": 0.00151366,
+   "same_contract_as": null
+  },
+  "stkopt_ONGC_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4237145,
+   "spikes": 4770,
+   "share": 0.00112576,
+   "early_minutes": 989813,
+   "early_spikes": 1046,
+   "early_share": 0.00105677,
+   "late_minutes": 3247332,
+   "late_spikes": 3724,
+   "late_share": 0.00114679,
+   "same_contract_as": null
+  },
+  "stkopt_PNB_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4397892,
+   "spikes": 5545,
+   "share": 0.00126083,
+   "early_minutes": 1012588,
+   "early_spikes": 1239,
+   "early_share": 0.0012236,
+   "late_minutes": 3385304,
+   "late_spikes": 4306,
+   "late_share": 0.00127197,
+   "same_contract_as": null
+  },
+  "stkopt_POWERGRID_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3540835,
+   "spikes": 3350,
+   "share": 0.0009461,
+   "early_minutes": 797791,
+   "early_spikes": 785,
+   "early_share": 0.00098397,
+   "late_minutes": 2743044,
+   "late_spikes": 2565,
+   "late_share": 0.00093509,
+   "same_contract_as": null
+  },
+  "stkopt_RELIANCE_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3133062,
+   "spikes": 1522,
+   "share": 0.00048579,
+   "early_minutes": 724985,
+   "early_spikes": 355,
+   "early_share": 0.00048967,
+   "late_minutes": 2408077,
+   "late_spikes": 1167,
+   "late_share": 0.00048462,
+   "same_contract_as": null
+  },
+  "stkopt_SBILIFE_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4330582,
+   "spikes": 5153,
+   "share": 0.00118991,
+   "early_minutes": 975889,
+   "early_spikes": 1079,
+   "early_share": 0.00110566,
+   "late_minutes": 3354693,
+   "late_spikes": 4074,
+   "late_share": 0.00121442,
+   "same_contract_as": null
+  },
+  "stkopt_SBIN_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4602209,
+   "spikes": 2433,
+   "share": 0.00052866,
+   "early_minutes": 1099752,
+   "early_spikes": 460,
+   "early_share": 0.00041828,
+   "late_minutes": 3502457,
+   "late_spikes": 1973,
+   "late_share": 0.00056332,
+   "same_contract_as": null
+  },
+  "stkopt_SHRIRAMFIN_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2674207,
+   "spikes": 827,
+   "share": 0.00030925,
+   "early_minutes": 603649,
+   "early_spikes": 186,
+   "early_share": 0.00030813,
+   "late_minutes": 2070558,
+   "late_spikes": 641,
+   "late_share": 0.00030958,
+   "same_contract_as": null
+  },
+  "stkopt_SUNPHARMA_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4492861,
+   "spikes": 3896,
+   "share": 0.00086715,
+   "early_minutes": 1050306,
+   "early_spikes": 696,
+   "early_share": 0.00066266,
+   "late_minutes": 3442555,
+   "late_spikes": 3200,
+   "late_share": 0.00092954,
+   "same_contract_as": null
+  },
+  "stkopt_TATACONSUM_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4339252,
+   "spikes": 3448,
+   "share": 0.00079461,
+   "early_minutes": 989118,
+   "early_spikes": 726,
+   "early_share": 0.00073399,
+   "late_minutes": 3350134,
+   "late_spikes": 2722,
+   "late_share": 0.0008125,
+   "same_contract_as": null
+  },
+  "stkopt_TATASTEEL_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 3880601,
+   "spikes": 3215,
+   "share": 0.00082848,
+   "early_minutes": 904748,
+   "early_spikes": 792,
+   "early_share": 0.00087538,
+   "late_minutes": 2975853,
+   "late_spikes": 2423,
+   "late_share": 0.00081422,
+   "same_contract_as": null
+  },
+  "stkopt_TCS_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4450861,
+   "spikes": 2064,
+   "share": 0.00046373,
+   "early_minutes": 1054564,
+   "early_spikes": 304,
+   "early_share": 0.00028827,
+   "late_minutes": 3396297,
+   "late_spikes": 1760,
+   "late_share": 0.00051821,
+   "same_contract_as": null
+  },
+  "stkopt_TECHM_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4488541,
+   "spikes": 2942,
+   "share": 0.00065545,
+   "early_minutes": 1047463,
+   "early_spikes": 588,
+   "early_share": 0.00056136,
+   "late_minutes": 3441078,
+   "late_spikes": 2354,
+   "late_share": 0.00068409,
+   "same_contract_as": null
+  },
+  "stkopt_TITAN_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4287701,
+   "spikes": 2500,
+   "share": 0.00058306,
+   "early_minutes": 1000516,
+   "early_spikes": 474,
+   "early_share": 0.00047376,
+   "late_minutes": 3287185,
+   "late_spikes": 2026,
+   "late_share": 0.00061633,
+   "same_contract_as": null
+  },
+  "stkopt_TMPV_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4560040,
+   "spikes": 2411,
+   "share": 0.00052872,
+   "early_minutes": 1087219,
+   "early_spikes": 421,
+   "early_share": 0.00038723,
+   "late_minutes": 3472821,
+   "late_spikes": 1990,
+   "late_share": 0.00057302,
+   "same_contract_as": null
+  },
+  "stkopt_TRENT_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4316701,
+   "spikes": 3627,
+   "share": 0.00084022,
+   "early_minutes": 973560,
+   "early_spikes": 676,
+   "early_share": 0.00069436,
+   "late_minutes": 3343141,
+   "late_spikes": 2951,
+   "late_share": 0.0008827,
+   "same_contract_as": null
+  },
+  "stkopt_ULTRACEMCO_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 4435027,
+   "spikes": 3299,
+   "share": 0.00074385,
+   "early_minutes": 1026974,
+   "early_spikes": 643,
+   "early_share": 0.00062611,
+   "late_minutes": 3408053,
+   "late_spikes": 2656,
+   "late_share": 0.00077933,
+   "same_contract_as": null
+  },
+  "stkopt_UNIONBANK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2430636,
+   "spikes": 1817,
+   "share": 0.00074754,
+   "early_minutes": 542268,
+   "early_spikes": 531,
+   "early_share": 0.00097922,
+   "late_minutes": 1888368,
+   "late_spikes": 1286,
+   "late_share": 0.00068101,
+   "same_contract_as": null
+  },
+  "stkopt_YESBANK_MONTH.parquet": {
+   "early_window": "09:15-10:44",
+   "minutes": 2245432,
+   "spikes": 1487,
+   "share": 0.00066223,
+   "early_minutes": 497785,
+   "early_spikes": 520,
+   "early_share": 0.00104463,
+   "late_minutes": 1747647,
+   "late_spikes": 967,
+   "late_share": 0.00055332,
+   "same_contract_as": null
+  }
+ },
+ "spikes_CRUDEOIL_MONTH": {
+  "book": "CRUDEOIL MONTH",
+  "exchange": "MCX",
+  "files": 2,
+  "contract-minutes": 3662837,
+  "spikes": 238,
+  "share": "0.006%",
+  "share early": "0.000%",
+  "share late": "0.007%"
+ },
+ "spikes_GOLD_MONTH": {
+  "book": "GOLD MONTH",
+  "exchange": "MCX",
+  "files": 2,
+  "contract-minutes": 1716880,
+  "spikes": 103,
+  "share": "0.006%",
+  "share early": "0.000%",
+  "share late": "0.007%"
+ },
+ "spikes_GOLDM_MONTH": {
+  "book": "GOLDM MONTH",
+  "exchange": "MCX",
+  "files": 2,
+  "contract-minutes": 3008724,
+  "spikes": 179,
+  "share": "0.006%",
+  "share early": "0.002%",
+  "share late": "0.006%"
+ },
+ "spikes_NATURALGAS_MONTH": {
+  "book": "NATURALGAS MONTH",
+  "exchange": "MCX",
+  "files": 2,
+  "contract-minutes": 3665368,
+  "spikes": 1264,
+  "share": "0.034%",
+  "share early": "0.008%",
+  "share late": "0.038%"
+ },
+ "spikes_SILVER_MONTH": {
+  "book": "SILVER MONTH",
+  "exchange": "MCX",
+  "files": 2,
+  "contract-minutes": 1606906,
+  "spikes": 98,
+  "share": "0.006%",
+  "share early": "0.000%",
+  "share late": "0.007%"
+ },
+ "spikes_SILVERM_MONTH": {
+  "book": "SILVERM MONTH",
+  "exchange": "MCX",
+  "files": 2,
+  "contract-minutes": 2545990,
+  "spikes": 159,
+  "share": "0.006%",
+  "share early": "0.001%",
+  "share late": "0.007%"
+ },
+ "spikes_BANKNIFTY_MONTH": {
+  "book": "BANKNIFTY MONTH",
+  "exchange": "NSE/BSE",
+  "files": 6,
+  "contract-minutes": 20007806,
+  "spikes": 2156,
+  "share": "0.011%",
+  "share early": "0.002%",
+  "share late": "0.014%"
+ },
+ "spikes_BANKNIFTY_WEEK": {
+  "book": "BANKNIFTY WEEK",
+  "exchange": "NSE/BSE",
+  "files": 6,
+  "contract-minutes": 20193088,
+  "spikes": 5534,
+  "share": "0.027%",
+  "share early": "0.000%",
+  "share late": "0.036%"
+ },
+ "spikes_FINNIFTY_MONTH": {
+  "book": "FINNIFTY MONTH",
+  "exchange": "NSE/BSE",
+  "files": 6,
+  "contract-minutes": 11072904,
+  "spikes": 8636,
+  "share": "0.078%",
+  "share early": "0.044%",
+  "share late": "0.087%"
+ },
+ "spikes_FINNIFTY_WEEK": {
+  "book": "FINNIFTY WEEK",
+  "exchange": "NSE/BSE",
+  "files": 6,
+  "contract-minutes": 16624196,
+  "spikes": 24592,
+  "share": "0.148%",
+  "share early": "0.087%",
+  "share late": "0.166%"
+ },
+ "spikes_MIDCPNIFTY_MONTH": {
+  "book": "MIDCPNIFTY MONTH",
+  "exchange": "NSE/BSE",
+  "files": 5,
+  "contract-minutes": 9682333,
+  "spikes": 3841,
+  "share": "0.040%",
+  "share early": "0.011%",
+  "share late": "0.048%"
+ },
+ "spikes_MIDCPNIFTY_WEEK": {
+  "book": "MIDCPNIFTY WEEK",
+  "exchange": "NSE/BSE",
+  "files": 5,
+  "contract-minutes": 12782799,
+  "spikes": 11403,
+  "share": "0.089%",
+  "share early": "0.014%",
+  "share late": "0.112%"
+ },
+ "spikes_NIFTY_MONTH": {
+  "book": "NIFTY MONTH",
+  "exchange": "NSE/BSE",
+  "files": 6,
+  "contract-minutes": 20258703,
+  "spikes": 3021,
+  "share": "0.015%",
+  "share early": "0.001%",
+  "share late": "0.019%"
+ },
+ "spikes_NIFTY_WEEK": {
+  "book": "NIFTY WEEK",
+  "exchange": "NSE/BSE",
+  "files": 6,
+  "contract-minutes": 20290764,
+  "spikes": 14432,
+  "share": "0.071%",
+  "share early": "0.001%",
+  "share late": "0.093%"
+ },
+ "spikes_SENSEX_MONTH": {
+  "book": "SENSEX MONTH",
+  "exchange": "NSE/BSE",
+  "files": 4,
+  "contract-minutes": 8062333,
+  "spikes": 2646,
+  "share": "0.033%",
+  "share early": "0.015%",
+  "share late": "0.038%"
+ },
+ "spikes_SENSEX_WEEK": {
+  "book": "SENSEX WEEK",
+  "exchange": "NSE/BSE",
+  "files": 4,
+  "contract-minutes": 12829965,
+  "spikes": 6808,
+  "share": "0.053%",
+  "share early": "0.010%",
+  "share late": "0.067%"
+ },
+ "spikes_stock_options_MONTH": {
+  "book": "stock options MONTH",
+  "exchange": "NSE/BSE",
+  "files": 59,
+  "contract-minutes": 252427635,
+  "spikes": 192426,
+  "share": "0.076%",
+  "share early": "0.068%",
+  "share late": "0.079%"
  }
 }

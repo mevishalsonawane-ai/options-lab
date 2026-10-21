@@ -3,6 +3,7 @@ package com.optionslab.app.ui.screens
 import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -216,7 +217,11 @@ class TradeScreenTest {
         kite.sessionExpired = true
         val m = show()
         pump(20_000) { m.account.value is Load.Failed }
-        assertTrue((m.account.value as Load.Failed).why.contains("session ended"))
+        // 21 Oct (failed once in a local run): the account's six reads go at once; the first refused one ends the session, and
+        // the positions read can then be the one that finds it ended ("Log in to Zerodha for today first") - both are the
+        // session over, and the screen says the same either way (below).
+        val why = (m.account.value as Load.Failed).why
+        assertTrue(why, why.contains("session ended") || why.contains("Log in to Zerodha for today"))
         waitText("Log in to Zerodha for today to see your account.")
     }
 
@@ -275,6 +280,75 @@ class TradeScreenTest {
         showAccount()
         waitText("Nothing open.")
         assertTrue(!exists("Square off"))
+    }
+
+    // ---- 18 Oct (Boss: "same as paper, directly placing order with pin"): Close goes straight after the PIN -------------
+
+    /** The Trade tab with the app's order dialog over it, as the app's root shows it. */
+    private fun showWithOrders(): AppModel {
+        val m = holder.model
+        compose.setContent { IraAlgoTheme("light") { Box(Modifier.fillMaxSize()) { TradeScreen(m); RowActionPopup(m); OrderReviewDialog(m) } } }
+        compose.waitForIdle()
+        frames()
+        pump(20_000) { m.account.value is Load.Done<*> }
+        return m
+    }
+
+    @Test fun liveSquareOffAsksThePinAndSendsExactlyTheHeldQuantityWithNoReviewCard() {
+        loginConfigured()
+        PinLock.setPin(pin.toCharArray())
+        kite.position(sym, 75, 100.0)
+        showWithOrders()
+        waitText(sym)
+        // Cancel at the PIN: nothing goes, and the dialog closes.
+        tap("Square off")
+        waitText("Confirm it is you")
+        assertFalse("no review card: no swipe to send", exists("Swipe to send to Zerodha"))
+        inDialog("Cancel").performClick().also { frames() }
+        pump(5_000) { !exists("Confirm it is you") }
+        assertTrue("cancelled: nothing sent", kite.placed.isEmpty())
+        // A wrong PIN sends nothing.
+        tap("Square off")
+        enterPin("111111")
+        waitText("Not the right PIN.")
+        assertTrue("wrong PIN: nothing sent", kite.placed.isEmpty())
+        inDialog("Cancel").performClick().also { frames() }
+        pump(5_000) { !exists("Confirm it is you") }
+        // Taps: Square off, the PIN, Confirm - then the exit is at Zerodha.
+        tap("Square off")
+        val t0 = System.nanoTime()
+        enterPin()
+        pump(20_000) { kite.placed.isNotEmpty() }
+        println("LIVEFLOW square-off: PIN confirmed -> SELL at Zerodha ${(kite.placed.single().atNanos - t0) / 1_000_000} ms (taps: Square off, PIN, Confirm)")
+        val post = kite.placed.single()
+        assertEquals("SELL", post.form["transaction_type"]); assertEquals("75", post.form["quantity"]); assertEquals(sym, post.form["tradingsymbol"])
+    }
+
+    @Test fun inPaperModeAZerodhaPositionStillOpenIsListedAndClosesOnlyWithThePin() {
+        loginConfigured()
+        SecurePrefs.putAll(mapOf("k.mode" to "sandbox", "k.allow" to false))
+        PinLock.setPin(pin.toCharArray())
+        kite.position(sym, -75, 100.0)                         // a short: the exit is a BUY
+        val m = holder.model
+        compose.setContent { IraAlgoTheme("light") { Box(Modifier.fillMaxSize()) {
+            val rows by m.livePositions.collectAsState(); ZerodhaLeftoverCard(m, rows.filter { it.open }); OrderReviewDialog(m) } } }
+        compose.waitForIdle(); frames()
+        m.loadLivePositions()
+        waitText("Still open at Zerodha (real money)")
+        waitText(sym)
+        tap("Close")
+        enterPin("111111")
+        waitText("Not the right PIN.")
+        assertTrue("wrong PIN: nothing sent", kite.placed.isEmpty())
+        inDialog("Cancel").performClick().also { frames() }
+        pump(5_000) { !exists("Confirm it is you") }
+        assertTrue("cancelled: nothing sent", kite.placed.isEmpty())
+        tap("Close")
+        enterPin()
+        pump(20_000) { kite.placed.isNotEmpty() }
+        val post = kite.placed.single()
+        assertEquals("BUY", post.form["transaction_type"]); assertEquals("75", post.form["quantity"]); assertEquals(sym, post.form["tradingsymbol"])
+        assertFalse("still Paper mode", m.settings.value.live)
     }
 
     // ---- orders: cancel and modify go through the PIN ---------------------------------------------

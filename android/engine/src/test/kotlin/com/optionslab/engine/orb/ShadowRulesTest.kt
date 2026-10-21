@@ -318,4 +318,23 @@ class ShadowRulesTest {
             "from the start (2 of 2 losers)."), a)
         assertTrue(a.contains("ORB: Shadow (OP10, no orders): 0 trades since 06 Oct, net ₹0. A shadow"), a)
     }
+
+    /** 18 Oct review fix (D3): every -40 variant's live stop comes from its own rule, and so does its lock. */
+    @Test fun everyMinus40VariantGivesItsLiveStopAndItsLock() {
+        val minus40 = ShadowRules.ALL.filter { it.description.contains("-40") }.map { it.id }.toSet()
+        assertEquals(8, minus40.size)
+        assertEquals(setOf("orb_v43", "sweep_s17", "fade_r20", "orb_p10", "orbf_p10", "sweep_h1", "sweep_14", "fade_p10"), minus40)
+        for (id in minus40) assertEquals(160.0, ShadowRules.premiumStop(id, 200.0)!!, 1e-9, id)
+        assertNull(ShadowRules.premiumStop(ShadowRules.MOMO_O08.id, 200.0), "O08's stop is on the index")
+        assertNull(ShadowRules.premiumStop("unknown", 200.0))
+        assertNull(ShadowRules.premiumStop("orb_v43", 30.0), "no stop at or under 0")
+        // R20's ladder on +40: +10 locks the price paid, +20 locks +10, +30 locks +20.
+        assertNull(ShadowRules.lockLevel("fade_r20", 200.0, 205.0))
+        assertEquals(200.0, ShadowRules.lockLevel("fade_r20", 200.0, 210.0)!!, 1e-9)
+        assertEquals(220.0, ShadowRules.lockLevel("fade_r20", 200.0, 231.0)!!, 1e-9)
+        assertEquals(210.0, ShadowRules.lockLevel("orb_p10", 200.0, 221.0)!!, 1e-9, "a study shadow's own ladder")
+        assertNull(ShadowRules.lockLevel("sweep_h1", 200.0, 260.0), "no ladder in its rule")
+        assertNull(ShadowRules.lockLevel("orb_v43", 200.0, 260.0), "no lock in V43")
+        assertNull(ShadowRules.lockLevel(ShadowRules.MOMO_O08.id, 200.0, 260.0))
+    }
 }

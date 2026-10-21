@@ -25,7 +25,7 @@ object Graduation {
         val steps = when {
             aiLiveOn && appLive -> " \"AI trades go live\" is on and the app is in Live, so the next one comes to you as a real Zerodha order - it goes only if you approve it with your fingerprint."
             aiLiveOn -> " \"AI trades go live\" is already on; they stay on paper while the app is in Paper. In Live, with Zerodha logged in, each one would come to you first and go only with your fingerprint."
-            else -> " To let them go live you would switch on \"AI trades go live\" in Jarvis settings, What Jarvis does by itself (with your fingerprint), keep the app in Live with Zerodha logged in - and each trade still comes to you first and goes only with your fingerprint."
+            else -> " To let them go live you would switch on \"AI trades go live\" in Jarvis settings, What Jarvis does by itself (with your fingerprint), keep the app in Live with Zerodha logged in - and each trade still comes to you first and goes only with your fingerprint. Switching the app to Live with your PIN turns \"AI trades go live\" on with it."
         }
         return head + steps + " If the paper record turns down, they go back to paper. I have switched nothing."
     }

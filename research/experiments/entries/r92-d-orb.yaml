@@ -1,0 +1,29 @@
+id: r92-d-orb
+title: 'R92 ORB day type: does a time make the ORB family pay?'
+family: orb
+date: '2026-10-21'
+doc: research/HUNT_R92_ORB_TIME.md
+hypothesis: 'Pre-registered (research/hunt/r92_orb_time/PREREG.md): the ORB family''s app rules (signal on the index, ATM option of the 09:20 bar, -P / +P (Sweep +2P), the ladder, out 15:10 / 15:05, 1 entry a side a day) make money after real charges and slippage in this day type cell: net > 0 with >= 100 trades, money q <= 0.10 (BH over 257 cells), random-entry twin at other minutes p < 0.05, >= 3 of 4 years and >= 3 of 5 indices > 0, > 0 without the top 5, worst month per index >= -Rs 13k; then holdout net > 0, >= 30 trades, twin p < 0.10.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): options_rolling_1m opt_<UND>_WEEK_2021-2026 (real 1-minute prints, nearest expiry, ATM+-10) + index_1m incl. INDIAVIX, to 19 Oct 2026; R3 session builder with R49 lots and expiry fix'
+period:
+  design: 1 Aug 2021 - 31 Mar 2026
+  holdout: 1 Apr - 19 Oct 2026 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the underlying (index spot 1-minute bars, 5-minute bars built from it); the ATM option is only the instrument; no option chart, no option-chain data'
+- 'cells: ORB Mon; ORB Tue; ORB Wed; ORB Thu; ORB Fri; ORB expiry day; ORB 1 day to expiry; ORB 2 days to expiry; ORB 3+ days to expiry; ORB month first3; ORB month mid; ORB month last3'
+model_or_rule: 'ORB app rules sliced by day type'
+settings: research/hunt/r92_orb_time/r92cfg.py, r92engine.py (cells()), PREREG.md
+prereg: research/hunt/r92_orb_time/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design (1 lot, real prints, dated charges, R17 fills): 13249 trades summed over the cells (cells overlap). 12 cells; 0 with design net > 0; design passers 0. least-bad: ORB 2 days to expiry 798 tr, net Rs -37,696, Rs -47/trade, win 41%, q 1.00, twin p 0.844, index +7.5 pts/trade. worst: ORB Tue 887 tr, Rs -94/trade. holdout (read once) of the least-bad: 63 tr, net Rs +5,372, Rs +85/trade, twin p 0.176. holdout cells net > 0: 5 of 12.'
+  costs: obuy/costs.py Costs(dated) (STT 0.1% to 31 Mar 2026, 0.15% after; BSE rates for SENSEX), R17 liq fills (+-5 bps + 1-4 ticks; stops 10 bps, double ticks), 1 lot of the day's contract
+holdout_read: true
+verdict: rejected
+notes: 'One idea of 20 (257 cells, one BH family m = 257). Per-cell numbers: research/hunt/r92_orb_time/results/report.md.'

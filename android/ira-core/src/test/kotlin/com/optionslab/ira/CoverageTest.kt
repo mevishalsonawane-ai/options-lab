@@ -18,6 +18,11 @@ class CoverageTest {
     enum class Kind { MARKET, ACCOUNT, JARVIS, INFO, CHAT, ACT, SUGGESTED, MISSED, HONEST }
 
     private val today: LocalDate = LocalDate.of(2026, 10, 5)
+    /** The shipped concept book (IraHub keeps it in memory from the start-up). */
+    private val conceptBook: Concepts.Book by lazy {
+        listOf(java.io.File("../app/src/main/assets/${Concepts.ASSET}"), java.io.File("android/app/src/main/assets/${Concepts.ASSET}"))
+            .first { it.isFile }.let { Concepts.parse(it.readText()) }
+    }
 
     /**
      * The kind of each question [said] is understood as, in the order the app's hub takes them (IraHub.ask). Boss's learned
@@ -31,8 +36,8 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || AgentLessons.asked(said) != null || AutoChange.asked(said) != null || LabTalk.asked(said) != null || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             HealthBook.asked(said) != null || LearningGoals.asked(said) || GrowthReport.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || LiquidityWhyNot.asked(said) != null || SoloDay.asked(said) != null || HeroDay.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || WeeklyReview.asked(said) != null || LotsWhatIf.asked(said) != null || LiquidityInsight.asked(said) != null || LiquidityHold.asked(said) != null || LiquidityDrawdown.asked(said) || LiquidityWhen.asked(said) != null || LiquidityRecord.asked(said) != null || TomorrowPlan.asked(said) || OpeningRead.asked(said) || TodayNotes.asked(said) || CatchUp.asked(said) || ForwardWatch.asked(said) || ForwardWatch.armAsked(said) != null || DayRecap.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
-            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WhatsNew.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || SettingWhere.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || SundayReview.asked(said) || WeeklyReview.asked(said) != null || LotsWhatIf.asked(said) != null || LiquidityInsight.asked(said) != null || LiquidityHold.asked(said) != null || LiquidityDrawdown.asked(said) || LiquidityWhen.asked(said) != null || LiquidityRecord.asked(said) != null || TomorrowPlan.asked(said) || OpeningRead.asked(said) || TodayNotes.asked(said) || CatchUp.asked(said) || ForwardWatch.asked(said) || ForwardWatch.armAsked(said) != null || DayRecap.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
+            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || CandleAgent.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WhatsNew.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || SettingWhere.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
             ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null || Requests.listAsked(said)
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
@@ -104,6 +109,8 @@ class CoverageTest {
             if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
             if (WeekAhead.asked(q) != null) return Kind.INFO
             // (Jarvis's weekly review: the week's paper trading, his strategies and shadows, the market - Boss's own record.)
+            // (20 Oct, round 2: the spoken Sunday review - paper and live apart, Boss's own record.)
+            if (SundayReview.asked(q)) return Kind.ACCOUNT
             if (WeeklyReview.asked(q) != null) return Kind.ACCOUNT
             // (A what-if on Liquidity 15+5's lots, from the arm's own book and its research - Boss's own record; nothing changes.)
             if (LotsWhatIf.asked(q) != null) return Kind.ACCOUNT
@@ -169,7 +176,7 @@ class CoverageTest {
             // (Liquidity 15+5's map of the market - its levels, what it waits for: the market's, information only.)
             if (LiquidityMap.asked(q) != null) return Kind.MARKET
             if (Consistency.asked(q)) return Kind.JARVIS
-            if (CoPilot.asked(q) || SinceMorning.asked(q) || ExpiryPin.asked(q) != null || ExpiryHour.asked(q) != null || StraddleDecay.asked(q) != null || AtmBuy.asked(q) != null || OtmReach.asked(q) != null || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || SplitDays.asked(q) != null || RoundCloses.asked(q) != null || MonthTurns.asked(q) != null || LunchRange.asked(q) != null || OpenHighLow.asked(q) != null || BigCandles.asked(q) != null || ExtremeCloses.asked(q) != null || WeekRange.asked(q) != null || RelativeMove.asked(q) != null || Comebacks.asked(q) != null || VixBand.asked(q) != null || Overnight.asked(q) != null || DayAfter.asked(q) != null || OpenReach.asked(q) != null || MultiDay.asked(q) != null || MoveTime.asked(q) != null || GiveBack.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || LikeToday.asked(q) || Structure.asked(q) != null ||
+            if (CoPilot.asked(q) || SinceMorning.asked(q) || ExpiryPin.asked(q) != null || ExpiryHour.asked(q) != null || StraddleDecay.asked(q) != null || AtmBuy.asked(q) != null || OtmReach.asked(q) != null || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || SplitDays.asked(q) != null || RoundCloses.asked(q) != null || MonthTurns.asked(q) != null || LunchRange.asked(q) != null || OpenHighLow.asked(q) != null || CandleAgent.asked(q) != null || BigCandles.asked(q) != null || ExtremeCloses.asked(q) != null || WeekRange.asked(q) != null || RelativeMove.asked(q) != null || Comebacks.asked(q) != null || VixBand.asked(q) != null || Overnight.asked(q) != null || DayAfter.asked(q) != null || OpenReach.asked(q) != null || MultiDay.asked(q) != null || MoveTime.asked(q) != null || GiveBack.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || LikeToday.asked(q) || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
             // (The app's own health, what Jarvis tries to learn next, how he grew this week: his own records, nothing acts.)
@@ -181,6 +188,8 @@ class CoverageTest {
         if (Honest.asked(q) != null) return Kind.HONEST
         if (Chat.smallTalk(q, 0) != null) return Kind.CHAT
         if (Agenda.asked(q) || Improve.asked(q) || Latency.asked(q)) return Kind.JARVIS
+        // (What the research found - findings, strategy cards, h42's answers: market knowledge, nothing of the account.)
+        if (Knowledge.asked(q)) return Kind.MARKET
         if (ReminderBook.cancelOne(q) != null) return Kind.ACT
         if (ReminderBook.listAsked(q)) return Kind.ACCOUNT
         if (Reminder.cancelAsked(q) || Reminder.asked(q)) return Kind.ACT
@@ -193,6 +202,7 @@ class CoverageTest {
         if (Goals.asked(q) || SelfWhy.asked(q) || Vetting.asked(q) || SelfCalibration.asked(q) || Lessons.asked(q) || Sources.asked(q)) return Kind.JARVIS
         if (Habits.asked(q)) return Kind.MARKET
         if (depth == 0 && p.command?.kind.let { it == null || it == Command.Kind.STOP_ONE }) Intents.quick(q)?.let { return kind(it, 1) }
+        if (p.order == null && p.command == null && Topic.EXPLAIN !in p.topics && Concepts.answer(conceptBook, q) != null) return Kind.INFO
         if ((Topic.ACCOUNT !in p.topics || !Regex("(?i)\\b(my|mine|our|me|i)\\b").containsMatchIn(q)) && Topic.EXPLAIN !in p.topics && Glossary.explain(q) != null) return Kind.INFO
         if (Topic.ACCOUNT !in p.topics && !Regex("(?i)\\b(i|me|my|mine)\\b").containsMatchIn(q) && OptionQuote.asked(p.text.ifBlank { q }) != null) return Kind.MARKET
         if (Topic.BACKTEST in p.topics) return Kind.MARKET
@@ -522,6 +532,9 @@ class CoverageTest {
         "how much market data have we recorded" to J, "market recorder status" to J, "kitna market data record hua hai" to J,
         // ---- GIFT Nifty's gap and the FIIs' positioning from the market recorder (MorningCues): the market's ----
         "fii position" to M, "fii kya kar rahe hain" to M, "are fiis long or short" to M, "what is gift nifty saying" to M, "morning cues" to M,
+        // ---- What the research found (Knowledge, L5 Level 4): market knowledge ----
+        "what did research say about orb" to M, "is liquidity profitable" to M, "research kya kehta hai liquidity ke baare me" to M,
+        "how does banknifty behave on expiry after a gap down" to M,
         // ---- Majority Rule 14 on weekly NIFTY (MajorityRule, research R13): the market's, context only ----
         "what about majority rule" to M, "majority rule 14" to M, "mr 14 kya hai" to M,
         // ---- How likely a big 5-minute candle is now (BigMoveRisk): the market's ----
@@ -532,6 +545,7 @@ class CoverageTest {
         // ---- Liquidity 15+5's map of the market (LiquidityMap): the market's ----
         "where are the liquidity levels" to M, "liquidity level kahan hai" to M, "how far is the next pool" to M,
         // ---- Jarvis's weekly review (WeeklyReview): the week's paper trading and his strategies - Boss's own record ----
+        "sunday review" to A, "read me the weekly review" to A, "weekly review aloud" to A,
         "weekly review" to A, "is hafte ka review" to A, "how did this week go" to A, "last week's review" to A, "weekly report" to A,
         // ---- Liquidity 15+5's paper record over time (LiquidityRecord): the arm's own book - Boss's own record ----
         "how did liquidity do this week" to A, "liquidity on 3 oct" to A, "liquidity last 10 trades" to A, "which index works best for liquidity" to A,
@@ -696,7 +710,7 @@ class CoverageTest {
      * ([Conditional], said with something to do or not), then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
      * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades, DayIndex, CheckTimes, CondNeeds, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, ArmDay, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, NetLean, ExpiryEve, BeforeTomorrow, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SaidAbout, WeekAhead, WeeklyReview, LotsWhatIf, LiquidityInsight, LiquidityHold, LiquidityDrawdown, LiquidityWhen, LiquidityRecord, TomorrowPlan, OpeningRead, TodayNotes, CatchUp, ForwardWatch, DataAge, Honest, Thinking,
-     * Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, DayAfter, OpenReach, MultiDay, MoveTime, GiveBack, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth, TradeCase,
+     * Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, CandleAgent, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, DayAfter, OpenReach, MultiDay, MoveTime, GiveBack, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
      * BOTS and NEED; HeardBack is the voice path's own read-back, never a branch of the hub), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
@@ -716,7 +730,7 @@ class CoverageTest {
             PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || OrderFlow.asked(said) != null || MoveEvents.asked(said) != null || FlowShadow.helpAsked(said) || Findings.asked(said) != null || TradeManager.asked(said) != null || MorningCues.asked(said) != null || BigMoveRisk.asked(said) || MajorityRule.asked(said) || LiquidityMap.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || AgentLessons.asked(said) != null || AutoChange.asked(said) != null || LabTalk.asked(said) != null || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) || HealthBook.asked(said) != null || LearningGoals.asked(said) || GrowthReport.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || LiquidityWhyNot.asked(said) != null || SoloDay.asked(said) != null || HeroDay.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || WeeklyReview.asked(said) != null || LotsWhatIf.asked(said) != null || LiquidityInsight.asked(said) != null || LiquidityHold.asked(said) != null || LiquidityDrawdown.asked(said) || LiquidityWhen.asked(said) != null || LiquidityRecord.asked(said) != null || TomorrowPlan.asked(said) || OpeningRead.asked(said) || TodayNotes.asked(said) || CatchUp.asked(said) || ForwardWatch.asked(said) || ForwardWatch.armAsked(said) != null || DayRecap.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WhatsNew.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || SettingWhere.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || SundayReview.asked(said) || WeeklyReview.asked(said) != null || LotsWhatIf.asked(said) != null || LiquidityInsight.asked(said) != null || LiquidityHold.asked(said) != null || LiquidityDrawdown.asked(said) || LiquidityWhen.asked(said) != null || LiquidityRecord.asked(said) != null || TomorrowPlan.asked(said) || OpeningRead.asked(said) || TodayNotes.asked(said) || CatchUp.asked(said) || ForwardWatch.asked(said) || ForwardWatch.armAsked(said) != null || DayRecap.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || CandleAgent.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WhatsNew.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || SettingWhere.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
             ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null || Requests.listAsked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
@@ -784,13 +798,18 @@ class CoverageTest {
         if (alone && ExpiryEve.asked(q)) return "ExpiryEve"
         if (alone && BeforeTomorrow.asked(q)) return "BeforeTomorrow"
         if (alone && LiquidityWhyNot.asked(q) != null) return "LiquidityWhyNot"
+        if (alone && SignalTalk.asked(q) != null) return "SignalTalk"
+        if (alone && TrendTalk.asked(q)) return "TrendWatch"
+        if (alone && PassedArmsTalk.asked(q) != null) return "PassedArms"
         if (alone && SoloDay.asked(q) != null) return "SoloDay"
+        if (alone && HeroTicketTalk.asked(q)) return "HeroTicket"
         if (alone && HeroDay.asked(q) != null) return "HeroDay"
         if (alone && PortfolioRisk.asked(q) != null) return "PortfolioRisk"
         if (alone && BotTrades.asked(q) != null) return "BotTrades"
         if (alone && SwitchOff.asked(q) != null) return "SwitchOff"
         if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
         if (alone && WeekAhead.asked(q) != null) return "WeekAhead"
+        if (alone && SundayReview.asked(q)) return "SundayReview"
         if (alone && WeeklyReview.asked(q) != null) return "WeeklyReview"
         if (alone && LotsWhatIf.asked(q) != null) return "LotsWhatIf"
         if (alone && LiquidityInsight.asked(q) != null) return "LiquidityInsight"
@@ -809,6 +828,7 @@ class CoverageTest {
         if (alone && Slippage.asked(q) != null) return "Slippage"
         if (alone && PositionSync.asked(q)) return "PositionSync"
         if (alone && RelayHealth.asked(q) != null) return "RelayHealth"
+        if (alone && LiveCheck.asked(q)) return "LiveCheck"
         if (alone && StreamHealth.asked(q)) return "StreamHealth"
         if (alone && BatteryUse.asked(q)) return "BatteryUse"
         if (alone && WatchAsk.asked(q) != null) return "WatchAsk"
@@ -856,6 +876,7 @@ class CoverageTest {
         if (alone && MonthTurns.asked(q) != null) return "MonthTurns"
         if (alone && LunchRange.asked(q) != null) return "LunchRange"
         if (alone && OpenHighLow.asked(q) != null) return "OpenHighLow"
+        if (alone && CandleAgent.asked(q) != null) return "CandleAgent"
         if (alone && BigCandles.asked(q) != null) return "BigCandles"
         if (alone && ExtremeCloses.asked(q) != null) return "ExtremeCloses"
         if (alone && WeekRange.asked(q) != null) return "WeekRange"
@@ -879,6 +900,7 @@ class CoverageTest {
         if (alone && Causes.asked(q) != null) return "Causes"
         if (alone && Agenda.asked(q)) return "Agenda"
         if (alone && Improve.asked(q)) return "Improve"
+        if (alone && Knowledge.asked(q)) return "Knowledge"
         if (ReminderBook.listAsked(q) || ReminderBook.cancelOne(q) != null) return "ReminderBook"
         if (Reminder.cancelAsked(q) || Reminder.asked(q)) return "Reminder"
         // The app's own health and Jarvis's growth (11 Oct): just before the self-check, as in the hub.
@@ -909,6 +931,8 @@ class CoverageTest {
         if (Sources.asked(q)) return "Sources"
         if (!understood && Habits.asked(q)) return "Habits"
         if (!understood && p.order == null && (p.command == null || p.command?.kind == Command.Kind.STOP_ONE)) Intents.quick(q)?.let { return feature(it, understood = true) }
+        // 15 Oct: a market concept's meaning (IraHub: the concept book, just before the glossary).
+        if (plain && p.order == null && p.command == null && Topic.EXPLAIN !in p.topics && Concepts.answer(conceptBook, q) != null) return "Concepts"
         if (plain && (Topic.ACCOUNT !in p.topics || !Regex("(?i)\\b(my|mine|our|me|i)\\b").containsMatchIn(q)) && Topic.EXPLAIN !in p.topics &&
             Glossary.explain(q) != null) return "Glossary"
         if (plain && Topic.ACCOUNT !in p.topics && !Regex("(?i)\\b(i|me|my|mine)\\b").containsMatchIn(q) && OptionQuote.asked(p.text.ifBlank { q }) != null) return "OptionQuote"
@@ -1029,6 +1053,8 @@ class CoverageTest {
         // ---- LiquidityMap: Liquidity 15+5's levels and what it waits for ----
         "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "how far is the next pool" to "LiquidityMap",
         "what is liquidity waiting for" to "LiquidityWhyNot", "banknifty liquidity levels" to "LiquidityMap",
+        // ---- SundayReview: the spoken Sunday review (20 Oct, round 2), asked before the written one ----
+        "sunday review" to "SundayReview", "read me the weekly review" to "SundayReview", "say the weekly review aloud" to "SundayReview",
         // ---- WeeklyReview: Jarvis's review of the week (made after its last session, kept 12 weeks) ----
         "weekly review" to "WeeklyReview", "is hafte ka review" to "WeeklyReview", "how did this week go" to "WeeklyReview",
         "how was this week" to "WeeklyReview", "review of the week" to "WeeklyReview", "last week's review" to "WeeklyReview",
@@ -1081,12 +1107,24 @@ class CoverageTest {
         // ---- LiquidityWhyNot: why Liquidity 15+5 did or did not trade today, and what it waits for ----
         "why no liquidity trade today" to "LiquidityWhyNot", "why didn't liquidity trade" to "LiquidityWhyNot",
         "liquidity ne trade kyu nahi liya" to "LiquidityWhyNot", "why is liquidity not trading" to "LiquidityWhyNot",
+        // ---- PassedArms: the paper arms that passed research (15 Oct) and the shadow Watchlist, from their own books (before SoloDay) ----
+        "how is the donchian arm doing" to "PassedArms", "what did the r51 donchian arm do today" to "PassedArms",
+        "how is open outside value doing" to "PassedArms", "how is solo 2.0 doing" to "PassedArms", "solo 2.0 kaisa chal raha hai" to "PassedArms",
+        "what did solo two do today" to "PassedArms", "what's on the watchlist" to "PassedArms", "how are the near misses doing" to "PassedArms",
+        "how are the passed arms doing" to "PassedArms", "how is the watchlist doing" to "PassedArms",
+        // ---- TrendWatch: has the trend turned against my trades (16 Oct, research R63), from the Trend watch's own log ----
+        "has the trend turned on my trades" to "TrendWatch", "did the trend change against my positions" to "TrendWatch",
+        "kya mere trades par trend badla" to "TrendWatch",
         // ---- SoloDay: what Solo (midday) did today and why, from its own records ----
         "what did solo do today" to "SoloDay", "why didn't solo trade" to "SoloDay", "solo ne aaj kya kiya" to "SoloDay",
         "how did solo decide" to "SoloDay", "why no solo trade today" to "SoloDay", "solo ne trade kyu nahi liya" to "SoloDay",
         // ---- HeroDay: the Hero arm's day (expiry days, paper only) and why, from its own records ----
         "what did hero do today" to "HeroDay", "why no hero trade" to "HeroDay", "hero ne aaj kya kiya" to "HeroDay",
         "is today a hero day" to "HeroDay", "when is the next hero day" to "HeroDay", "hero ne trade kyu nahi liya" to "HeroDay",
+        // ---- HeroTicket: the Hero ₹1,000 ticket (15 Oct, Boss's choice, paper only), from its own book (before HeroDay) ----
+        "how is the hero ticket doing" to "HeroTicket", "what did the hero ticket do today" to "HeroTicket",
+        "how did the 1000 ticket do" to "HeroTicket", "hero ticket kaisa chal raha hai" to "HeroTicket",
+        "tell me about the hero 1000 ticket" to "HeroTicket",
         // ---- DataAge: how old his data is ----
         "is your data fresh" to "DataAge", "how old is your data" to "DataAge", "is the data stale" to "DataAge", "is your data live" to "DataAge",
         "is the feed delayed" to "DataAge", "how fresh is the data" to "DataAge", "is the option chain fresh" to "DataAge",
@@ -1098,6 +1136,10 @@ class CoverageTest {
         "help me journal" to "DayJournal", "draft my journal" to "DayJournal", "journal my day" to "DayJournal", "my journal entry" to "DayJournal",
         "aaj ka journal likhne mein madad karo" to "DayJournal", "journal likhne mein help karo" to "DayJournal",
         "mera journal likhwao" to "DayJournal",
+        // ---- Knowledge: what the research found (L5 Level 4) ----
+        "what did research say about orb" to "Knowledge", "is liquidity profitable" to "Knowledge", "does orb make money" to "Knowledge",
+        "research kya kehta hai liquidity ke baare me" to "Knowledge", "how does banknifty behave after a gap down" to "Knowledge",
+        "what does the research say about gann and fibonacci" to "Knowledge", "is the vix divergence strategy profitable" to "Knowledge",
         // ---- Improve and Lessons ----
         "how are you improving" to "Improve", "tum kaise improve ho rahe ho" to "Improve", "are you getting better" to "Improve",
         "how are you getting better" to "Improve", "what are you improving" to "Improve", "what have you learned this week" to "Learnings",
@@ -1240,6 +1282,10 @@ class CoverageTest {
         "how do open high days close for banknifty" to "OpenHighLow", "open low wale din nifty kaisa chalta hai" to "OpenHighLow",
         "open high open low record" to "OpenHighLow", "how often has nifty opened at the high" to "OpenHighLow",
         "how often does sensex open at the day's high or low" to "OpenHighLow", "o=h o=l record for finnifty" to "OpenHighLow",
+        // ---- CandleAgent: the Candle agent's newest read - why green or red, what it means, its support (20 Oct) ----
+        "why was that candle green" to "CandleAgent", "why is the last candle red" to "CandleAgent", "what does this candle mean" to "CandleAgent",
+        "explain the last candle on banknifty" to "CandleAgent", "where is support for this candle" to "CandleAgent",
+        "where did this candle get support" to "CandleAgent", "what is the candle agent saying" to "CandleAgent", "ye candle green kyun hai" to "CandleAgent",
         // ---- BigCandles: what followed a big 5-minute candle in the first hour (round 28) ----
         "after a big 5-minute candle in the first hour does the day continue" to "BigCandles", "big candle record for banknifty" to "BigCandles",
         "how often does a big green candle in the morning follow through" to "BigCandles", "subah bada candle aane ke baad nifty kya karta hai" to "BigCandles",

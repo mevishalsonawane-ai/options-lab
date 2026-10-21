@@ -1,0 +1,44 @@
+id: r42-silverm-spikes
+title: 'R42: bad-tick census of the MCX/NSE option lake and the SILVERM morning-call arm (M4) re-run on cleaned prices'
+family: mcx-crypto
+date: '2026-10-14'
+doc: research/HUNT_R42_SILVERM_SPIKES.md
+hypothesis: M4's SILVERM morning OTM2-3 call profit (holdout 51 trades, +Rs 454/trade) is made by bad one-minute option
+  prints; removing them leaves no edge.
+data_version: Dhan lake on Google Drive (options_rolling_1m, near monthly MCX + NIFTY weekly / BANKNIFTY monthly, ATM-3..+3,
+  5 Aug 2025 - 12 Oct 2026; sha256 in research/hunt/r42/results/lake_files_sha256.txt); M4 inputs rebuilt from it
+period:
+  design: 2025-08-05..2026-07-07 (M4's design)
+  holdout: 2026-07-08..2026-10-08 (M4's holdout, a re-run of its frozen rule); extra 2026-10-09..2026-10-12 labelled
+    extra
+# Instruments (14 Oct: the knowledge pack's names): SILVERM options (M4); SILVER, GOLDM, GOLD, CRUDEOIL and NATURALGAS
+# options (census, M4 walk-forward books); NIFTY weekly and BANKNIFTY monthly options (census comparison).
+instruments:
+- SILVER
+- GOLD
+- CRUDE
+- NATURALGAS
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: clock (15-minute grid 09:15-13:45), strike from the SILVERM futures price; option premium only for
+  P&L'
+- 'bad-tick filters F1 (close >1.5x / <1/1.5 of both one-sided neighbour medians, 5 priced minutes within 15 min) and
+  F2 (F1 + high/low)'
+model_or_rule: M4 frozen rule unchanged (buy SILVERM ATM+2/+3 call, 11-20 business days to expiry, morning grid, 240-minute
+  exit, 1 lot, one position at a time) on raw, F1-clean and F2-clean data; random-twin baseline (same day, random morning
+  minute, same cell); M4's walk-forward procedure re-run
+settings: research/hunt/r42/PREREG.md
+prereg: research/hunt/r42/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Bad prints are rare (F1: 0.02-0.08% of traded metal-option minutes, SILVERM morning 5 of 120,739); 98-99% of naive
+    >50% jumps in metals are strike rolls of the rolling series. 0 of M4''s 51 holdout trades touched a flagged price; cleaning
+    changed no trade. Cleaned holdout (8 Jul - 8 Oct) 53 trades +Rs 336/trade +Rs 17.8k, twin p 0.079 (M4-style p 0.066),
+    2x spread +Rs 62/trade; design 95 trades +Rs 871/trade (twin p 0.33); walk-forward -Rs 44.6k on 129 trades (M4 had
+    -Rs 3.5k on its gappier data). Extra 9-12 Oct: 4 trades -Rs 3.8k.'
+  costs: M4's Zerodha MCX fees + half M4's estimated spread per side (x2 before 17:00); stress 2x spread
+holdout_read: true
+verdict: rejected
+notes: 'Pre-registered decision rule (twin p >= 0.05) says switch the M4 SILVERM paper arm off (risk-lowering paper change;
+  Boss decides; the app is not changed by R42). The reason is not bad prices but no edge over random morning entries.'

@@ -11,6 +11,7 @@ import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.security.SessionLock
 import com.optionslab.app.work.Jobs
 import com.optionslab.app.work.Notifier
+import kotlinx.coroutines.launch
 
 class IraAlgoApp : Application() {
     companion object {
@@ -72,6 +73,14 @@ class IraAlgoApp : Application() {
         // Speed, round 6: the settings decrypted first, before the pine scripts' and gold books' background reads queue
         // in the Keystore ahead of them (see SecurePrefs.warm). An unreadable vault is marked exactly as on a later read.
         timed("settings") { runCatching { SecurePrefs.warm() } }
+        // The danger meter's half-size switch (paper arms, off by default) into the entry path's memory copy before any
+        // arm can run: read from the settings just decrypted above (13 Oct; it no longer waits for the morning check or the card).
+        runCatching { com.optionslab.app.data.AppSettings.syncDangerHalf() }
+        // 18 Oct (Boss): the paper-only period into memory before any order can be asked for, from the settings just decrypted
+        // above (as the half-size switch): the order door reads it from memory only and, until it is read, refuses new live
+        // entries (never an exit). A failed read is tried again in the background ([PaperOnly.loadSoon]).
+        runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() }
+        com.optionslab.app.data.PaperOnly.loadSoon()
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)
@@ -82,11 +91,27 @@ class IraAlgoApp : Application() {
         Broker.init(this)
         com.optionslab.app.data.StaticIp.init(this)
         com.optionslab.app.data.Paper.init(this)
+        // 19 Oct: the same-direction cap's switches and record, read on a background thread (the order path reads memory only).
+        com.optionslab.app.data.ExposureCapHost.init(this)
+        // 20 Oct, enhancement round 1 (idea 4): the account stop rule (in shadow by default), read in the background.
+        com.optionslab.app.data.AccountStopHost.init(this)
+        // 20 Oct, enhancement round 2 (idea 1): the exit coordinator's switch (in shadow by default), read in the background.
+        com.optionslab.app.data.ExitCoordinator.init(this)
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)
+        // 18 Oct (Boss: every paper strategy present for live too): the paper strategies' live path, before the arms register with it.
+        com.optionslab.app.data.ArmLive.init(this)
         com.optionslab.app.data.OrbArms.init(this)
         com.optionslab.app.data.NightArm.init(this)
         com.optionslab.app.data.VixDivArm.init(this)
+        com.optionslab.app.data.HeroTicketArm.init(this)
+        // 15 Oct (Boss: "Both"): the passed-research paper arms (R51, R52, Solo 2.0) and the shadow Watchlist (files only; no I/O here).
+        com.optionslab.app.data.PassedArmsHost.init(this)
+        com.optionslab.app.data.WatchlistHost.init(this)
+        com.optionslab.app.data.TrendWatchHost.init(this)
+        com.optionslab.app.data.SignalTesterHost.init(this)
+        com.optionslab.app.data.SignalPaperArm.init(this)
+        com.optionslab.app.data.TelegramCapture.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.ShadowArms.init(this)
@@ -96,15 +121,36 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Protections.init(this)
         com.optionslab.app.data.TradeBook.init(this)
         com.optionslab.app.data.FillSlippage.init(this)
-        com.optionslab.app.data.LiquidityTest.init(this)
-        com.optionslab.app.data.Journal.init(this)
+        // OPEN POSITIONS AND ORDERS COME FIRST (14 Oct, memory audit): every position book is read now on a thread of its own
+        // at the top priority, the watch started when anything is open, then the stream - before the rest of the start's
+        // background work (the shared knowledge waits for both). Every position store's init above only names its file.
+        // The diary and the stream's context first (each only names its file or keeps the context): the positions' lines are kept.
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.KiteStream.init(this)
+        com.optionslab.app.data.PositionsFirst.start(this)
+        // Boss's 15 Oct arms cleanup: its small file read on its own worker; its first pass waits for the positions step above.
+        com.optionslab.app.data.HiddenArms.init(this)
+        com.optionslab.app.data.LiveRecorder.init(this)
+        // The OI-wall shadow log (14 Oct, Boss approved; R26): names its encrypted file only (a record, never an order).
+        com.optionslab.app.data.OiWallShadowHost.init(this)
+        // The tick zone (12 Oct): the watch-list's order flow every second, from the stream's memory, written in the background.
+        com.optionslab.app.data.TickZoneRecorder.init(this)
+        // GitHub sync (13 Oct, TODO G1/G2): the context only; its worker uploads after the MCX evening close (15:45 without
+        // MCX; G4) on Wi-Fi while charging.
+        com.optionslab.app.data.GitHubSync.init(this)
+        com.optionslab.app.data.LiquidityTest.init(this)
+        com.optionslab.app.data.Journal.init(this)
+        // Battery (14 Oct): the minutes each background loop ran today, for the diagnostics and the Health page.
+        com.optionslab.app.work.BatteryMeter.init()
         // The live order flow (shown, logged beside each signal; it can only ever skip an entry where Boss set CONFIRM).
         com.optionslab.app.data.FlowGate.init(this)
         com.optionslab.app.data.SmartWorkers.init(this)
+        // The market context (TODO I6, I10-I13, 13 Oct): event warnings, the expiry card, days like today, the level map.
+        com.optionslab.app.data.MarketContext.init(this)
         // Jarvis's lessons from the agents (11 Oct): his small file read on a background thread; learned once a day after the close.
         com.optionslab.app.ira.JarvisLearning.init(this)
+        // The shared knowledge (13 Oct): research + Jarvis's lessons + recent findings, built once in the background for every agent.
+        com.optionslab.app.data.SharedKnowledgeHost.init(this)
         com.optionslab.app.data.OrderReviewHost.init(this)
         // 12 Oct: the open problems any agent found (the Automation card shows them).
         com.optionslab.app.data.ProblemsHost.init(this)
@@ -143,17 +189,39 @@ class IraAlgoApp : Application() {
             }
             SecurePrefs.put(com.optionslab.app.data.Backup.DISARM, null)
         }
+        // The restore-disarm above is done: a watch started by the positions-first thread may tick now.
+        com.optionslab.app.data.PositionsFirst.appReady()
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
+        // 21 Oct, enhancement round 3 (idea 7): the phone unlocked - a Sunday review not said at 18:00 is said now (Sunday
+        // evening only, once; IraSundayReview.catchUp). A receiver of this process only (Android delivers the unlock to running apps).
+        if (com.optionslab.app.BuildConfig.JARVIS) runCatching {
+            androidx.core.content.ContextCompat.registerReceiver(this, UnlockReceiver,
+                android.content.IntentFilter(android.content.Intent.ACTION_USER_PRESENT), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        }
         // Keystore work stays off the main thread.
         Thread { runCatching { Jobs.scheduleAll(this) } }.start()
         com.optionslab.app.data.Speed.startMs = android.os.SystemClock.uptimeMillis() - startAt
         com.optionslab.app.data.Speed.startSlowest = slowest?.let { (n, ms) -> "$n $ms ms" }
     }
 
+    /** 21 Oct, enhancement round 3 (idea 7): the phone was unlocked; the Sunday review's catch-up, off the main thread. */
+    internal object UnlockReceiver : android.content.BroadcastReceiver() {
+        private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+            if (intent.action != android.content.Intent.ACTION_USER_PRESENT) return
+            val app = context.applicationContext
+            scope.launch { runCatching { com.optionslab.app.ira.IraSundayReview.catchUp(app) } }
+        }
+    }
+
     /** Android asks for memory back: counted in the app's health, and the caches that are safe to drop are dropped. */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        // Memory audit (14 Oct): counted, and what [com.optionslab.ira.MemoryPlan] lists for the level freed on a background
+        // thread - never the position watch, its prices, its checks or their cadence.
         runCatching { com.optionslab.app.data.AppHealth.trim(level) }
+        // 18 Oct, review: the settings still in memory go to disk first, on a background thread (a low-memory kill may follow).
+        runCatching { SecurePrefs.flushSoon() }
     }
 
     /**

@@ -1,0 +1,29 @@
+id: r83-e4
+title: 'R83: NG storage release: follow the break of the post-release range'
+family: calendar-events
+date: '2026-10-18'
+doc: research/HUNT_R83_MCX_ENERGY.md
+hypothesis: 'NG storage release: follow the break of the post-release range earns after strict MCX costs on 1 mini lot, beating
+  its baseline in walk-forward and final.'
+data_version: Dukascopy 1-min BID WTI/Henry Hub proxies 2016-2026 (/dev/shm, not committed); Drive lake options_rolling_1m
+  MCX for the real replay
+period:
+  design: 2016-01-01..2022-12-31
+  holdout: 2023-01-01..2026-10-13 (final, read once)
+instruments:
+- NATURALGAS
+features:
+- 'signal source: US benchmark proxy future (WTI / Henry Hub), labelled proxy'
+model_or_rule: as E2 on the Thursday EIA storage release
+settings: research/hunt/r83/PREREG.md section 4
+prereg: research/hunt/r83/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Frozen R15. Final 2023-01-01..2026-10-13: 157 trades, net Rs -8,681 (baseline Rs +0); walk-forward 2019-22 Rs
+    -10,354 (baseline Rs +0); twin p 0.020; BH q 0.66 across 33 variants; net without the top 5 trades Rs -15,511. Real MCX
+    replay Aug 2025 - Oct 2026: futures: 51 trades, Rs +4,003; option_1itm: 49 trades, Rs +20,781; proxy_same_window: 51 trades,
+    Rs +1,674. Gates failed: final_pos_and_beats_base, wf_pos_and_beats_base, bh_q<0.10, not_top5.'
+  costs: McxCosts.kt charges; futures half-spread CRUDEOILM 0.03%, NATGASMINI 0.06%, COPPER 0.05% each side, +0.02% on stops;
+    options CRUDEOIL 0.30/0.60%, NATURALGAS 0.45/0.90% half-spread
+holdout_read: true
+verdict: rejected

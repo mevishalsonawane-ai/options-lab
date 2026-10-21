@@ -434,12 +434,12 @@ private fun BuilderCard(model: AppModel, c: ChainSnapshot, live: Boolean) {
                 LedgerLine(if (net >= 0) "Net credit" else "Net debit", rs(kotlin.math.abs(net)))
                 Payoff.probabilityOfProfit(result.samples, c.spot, iv, c.tYears)?.let { LedgerLine("Probability of profit", "%.1f%%".format(100 * it)) }
                 Spacer(Modifier.height(8.dp))
-                if (live) BrassButton("Review as Zerodha orders", Modifier.fillMaxWidth(), tone = p.oxblood) {
-                    model.planBasket("${t.name} · ${c.underlying} ${c.expiry}", c.underlying, c.expiry, legs)
+                if (live) BrassButton("Send as Zerodha orders", Modifier.fillMaxWidth(), tone = p.oxblood) {
+                    model.planBasket("${t.name} · ${c.underlying} ${c.expiry}", c.underlying, c.expiry, legs, direct = true)
                 } else BrassButton("Paper-trade these legs", Modifier.fillMaxWidth(), tone = p.verdigris) {
                     model.paperBasket(c.underlying, c.expiry, legs)
                 }
-                if (live) Note("Opens the usual review on the Trade tab: wings are bought before any leg is sold, each at the best bid/offer, then hold-to-send and your PIN.")
+                if (live) Note("Your PIN or fingerprint, then the legs go to Zerodha: wings are bought before any leg is sold, each at the best bid/offer, and each only after the one before it filled.")
             }
         }
     }

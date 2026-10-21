@@ -1,0 +1,30 @@
+id: r82-l1
+title: 'R82 L1: Liquidity 1h (gold arm rule) on MCX hours, GOLDM / SILVERM futures, buys only, 1-ATR stop'
+family: mcx-crypto
+date: '2026-10-18'
+doc: research/HUNT_R82_MCX_PRECIOUS.md
+hypothesis: 'Boss, 18 Oct: enhance the MCX precious-metal strategies. Liquidity 1h (gold arm rule) on MCX hours, GOLDM / SILVERM
+  futures, buys only, 1-ATR stop beats its baseline (no trade) in walk-forward and final, after the app''s MCX costs.'
+data_version: 'Yahoo GC=F / SI=F 1-hour (20 Oct 2024 - 16 Oct 2026) x INR=X x duty factor (rupee proxy of the MCX future).
+  No real MCX price: the Drive lake was unreachable'
+period:
+  design: 21 Oct 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 16 Oct 2026, read once (R82 final)
+instruments:
+- GOLDM
+- SILVERM
+features:
+- 'signal source: COMEX GC=F / SI=F 1h (MCX future proxy); trade the future (no option chart)'
+model_or_rule: Liquidity 1h (gold arm rule) on MCX hours, GOLDM / SILVERM futures, buys only, 1-ATR stop
+settings: research/hunt/r82/PREREG.md section 4; research/hunt/r82/intraday.py
+prereg: research/hunt/r82/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 99 trades, win 0.414, net -Rs 59,990, max DD -Rs 115,208; walk-forward net -Rs 12,926 (2/4 blocks green);
+    design twin p 0.188, BH q 0.334 (16 tests). Final: 36 trades, win 0.361, net -Rs 34,031, max DD -Rs 65,823, twin p 0.363,
+    net without the top 5 -Rs 98,251; baseline: no trade (a new rule). Money: Rs per 1 lot of GOLDM and 1 lot of SILVERM (rupee
+    proxies). Verdict: fail (positive, beats_baseline, design_twin, final_twin, not_top5).'
+  costs: McxCosts futures charges, 0.03% slippage a fill, 0.10% on stops; flat daily
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing changes paper or live. Prices are proxies (spot / COMEX x USDINR), not MCX prints.

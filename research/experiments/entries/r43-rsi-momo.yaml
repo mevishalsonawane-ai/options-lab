@@ -1,0 +1,54 @@
+id: r43-rsi-momo
+title: 'Sweep signal as zero-to-hero expiry trade: RSI(14) momentum: CE on a cross above 55, PE on a cross below 45'
+family: patterns-indicators
+date: '2026-10-14'
+doc: research/HUNT_R43_SWEEP_SIGNALS_HERO.md
+hypothesis: 'Boss''s sweep signal, read on the 5-minute INDEX close (signal source: the index spot), buying a cheap OTM option
+  (Rs 5-30) or the OTM2 strike at the next 5-minute bar''s open on the index''s own expiry day and holding for a big multiple
+  with a -50% stop, catches zero-to-hero trades better than random entries after costs.'
+data_version: 'Dhan lake on Drive: opt_{NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX}_WEEK (ATM+-10, 1-minute), index_1m of
+  the same; 5-minute index bars built from the 1-minute data; expiry days from the data (R25 rule); lake ends 12 Oct 2026'
+period:
+  design: expiry days 5 Aug 2021 - 31 Dec 2024 (per-year results = walk-forward of a fixed rule)
+  holdout: expiry days 1 Jan 2025 - 12 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 5-minute index EMA / RSI / ADX / Donchian (signal on the underlying)
+model_or_rule: 'RSI(14) momentum: CE on a cross above 55, PE on a cross below 45'
+settings: research/hunt/r43/r43cfg.py
+prereg: research/hunt/r43/PREREG.md
+variants_tried: 12
+results:
+  summary: '12 variants (strike cheap Rs 5-30 / OTM2 x window all-day / 12:30-14:45 x exit), Rs 5,000 a trade, 1 trade per
+    index-expiry-day max, on 670 design and 245 holdout index-expiry-days. 0 of 12 pass. Best holdout variant: rsi_momo-cheap-all-hold:
+    design 648 trades net Rs -171,189; holdout 243 trades, win 10.3%, peak 5x/10x 26/9, net Rs +69,282 (+283 a day), max DD
+    Rs -141,481, p 0.0579, q 0.4142: fail. All variants: rsi_momo-cheap-all-hold: design 648 trades net Rs -171,189; holdout
+    243 trades, win 10.3%, peak 5x/10x 26/9, net Rs +69,282 (+283 a day), max DD Rs -141,481, p 0.0579, q 0.4142: fail; rsi_momo-cheap-all-trail:
+    design 648 trades net Rs -135,715; holdout 243 trades, win 17.3%, peak 5x/10x 22/6, net Rs +14,751 (+60 a day), max DD
+    Rs -106,749, p 0.2196, q 0.773: fail; rsi_momo-cheap-all-time: design 648 trades net Rs -74,312; holdout 243 trades, win
+    21.0%, peak 5x/10x 12/2, net Rs -121,747 (-497 a day), max DD Rs -127,182, p 0.6806, q 0.8141: fail; rsi_momo-cheap-hero-hold:
+    design 586 trades net Rs -397,010; holdout 218 trades, win 12.4%, peak 5x/10x 15/5, net Rs +4,546 (+19 a day), max DD
+    Rs -190,854, p 0.4271, q 0.7812: fail; rsi_momo-cheap-hero-trail: design 586 trades net Rs -397,581; holdout 218 trades,
+    win 16.1%, peak 5x/10x 14/5, net Rs -62,706 (-256 a day), max DD Rs -194,653, p 0.4271, q 0.7812: fail; rsi_momo-cheap-hero-time:
+    design 586 trades net Rs -252,048; holdout 218 trades, win 15.6%, peak 5x/10x 12/4, net Rs -68,066 (-278 a day), max DD
+    Rs -178,292, p 0.481, q 0.7812: fail; rsi_momo-otm2-all-hold: design 656 trades net Rs -91,168; holdout 242 trades, win
+    13.2%, peak 5x/10x 23/3, net Rs +4,730 (+19 a day), max DD Rs -111,839, p 0.0479, q 0.4142: fail; rsi_momo-otm2-all-trail:
+    design 656 trades net Rs +23,849; holdout 242 trades, win 18.2%, peak 5x/10x 18/2, net Rs -1,771 (-7 a day), max DD Rs
+    -104,666, p 0.1337, q 0.6059: fail; rsi_momo-otm2-all-time: design 656 trades net Rs +45,874; holdout 242 trades, win
+    26.4%, peak 5x/10x 8/1, net Rs -42,475 (-173 a day), max DD Rs -126,289, p 0.2435, q 0.7812: fail; rsi_momo-otm2-hero-hold:
+    design 613 trades net Rs -217,964; holdout 222 trades, win 13.1%, peak 5x/10x 16/2, net Rs -91,422 (-373 a day), max DD
+    Rs -148,563, p 0.525, q 0.7812: fail; rsi_momo-otm2-hero-trail: design 613 trades net Rs -226,107; holdout 222 trades,
+    win 17.6%, peak 5x/10x 14/1, net Rs -100,396 (-410 a day), max DD Rs -162,676, p 0.3293, q 0.7812: fail; rsi_momo-otm2-hero-time:
+    design 613 trades net Rs -77,411; holdout 222 trades, win 18.0%, peak 5x/10x 10/1, net Rs -136,731 (-558 a day), max DD
+    Rs -156,676, p 0.5709, q 0.7812: fail.'
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; entry limit 1.2x + 0.10 for 3 min;
+    x2 spread stress reported
+holdout_read: true
+verdict: rejected
+notes: 'One family of the R43 BH family of 88 tests (BH over all 88 holdout p-values). Random-entry twins: 500 per rule, same
+  index-day, side, window, strike rule and exit. Signal source: the index spot.'

@@ -1,0 +1,25 @@
+id: r89
+title: 'R89: long straddle (buy ATM call + put) when R88''s size model expects a big 15-minute candle; 9 instruments x 2 holds'
+family: option-structure
+date: '2026-10-20'
+doc: research/HUNT_R89_SIZE_STRADDLE.md
+hypothesis: R88's predictable candle size can be bought as a straddle at a profit after real costs (no direction needed).
+data_version: Drive lake as of 20 Oct 2026 (index_1m, options_rolling_1m 1-minute option bars to 19 Oct); R88 candle cache
+period:
+  design: 2025-06-01..2026-05-31 index, 2026-02-01..2026-05-31 MCX (walk-forward, monthly refits from Nov 2024 / Aug 2025)
+  holdout: 2026-06-01..2026-10-19 (out of sample for this P&L; R88's size model was already scored there)
+instruments: [NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, GOLDM, SILVERM, CRUDEOIL, NATURALGAS]
+features: [R88 size forecast (F01-F22b), 'signal source: the underlying']
+model_or_rule: enter when the walk-forward size forecast is in the top 10% of its training forecasts; buy 1 lot ATM call
+  + 1 lot ATM put; exit after 15 or 60 minutes; one at a time
+settings: research/hunt/r89/PREREG.md
+prereg: research/hunt/r89/PREREG.md
+variants_tried: 18
+results:
+  summary: 'Design: 0 of 18 profitable, 4,302 straddles, total -Rs 12.8 lakh, win rate 2-40%; random-entry twins lose about
+    the same (p 0.28-1.0 for 17 of 18, CRUDEOIL 15m p 0.016 but q 0.29). Out of sample: 0 of 18, 2,214 straddles, total
+    -Rs 4.4 lakh, win rate 3-35% (NIFTY 15m 25%, -Rs 9,945 on 159; SENSEX 15m 29%, -Rs 16,920 on 176). Gross before costs
+    about 0: the option market prices the expected size.'
+  costs: index obuy Fills('liq') + Costs('dated'); MCX R85 half-spreads + Zerodha MCX option charges; 4 orders a straddle
+holdout_read: true
+verdict: rejected

@@ -35,8 +35,8 @@ object Ic {
 
         fun format(): String {
             if (!controlled) throw UncontrolledIC(
-                "$feature: refusing to report a raw IC of %.4f with no partial beside it.".format(ic))
-            return ("$feature h=$horizon n=$nObs sessions=$nSessionsMeasured/$nSessions ic=%+.4f partial_ic=%+.4f " +
+                "%s: refusing to report a raw IC of %.4f with no partial beside it.".format(feature, ic))
+            return "$feature h=$horizon n=$nObs sessions=$nSessionsMeasured/$nSessions " + ("ic=%+.4f partial_ic=%+.4f " +
                 "daily[%+.4f,%+.4f] iid[%+.4f,%+.4f] null_hi=%.4f spread=%+.2fpts leg=%+.2fpts breakeven=%.2fpts " +
                 "edge_over_cost=%.2fx").format(ic, partialIc, dailyIcLo, dailyIcHi, icIidLo, icIidHi, nullIcHi,
                 decileSpreadPts, singleLegEdgePts, breakevenPts, edgeOverCost) +

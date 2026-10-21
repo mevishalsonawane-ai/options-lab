@@ -1,0 +1,38 @@
+id: r52-r4-1
+title: 'R52 re-test on Nov 2024+: R4-1 Fibonacci floor pivots'
+family: patterns-indicators
+date: '2026-10-15'
+doc: research/HUNT_R52_OLD_CATALOGUE_RECENT.md
+hypothesis: 'The older rejected rule R4-1 (old verdict: BN bnc OPT 702 tr +63/day, p twin 0.01, q 1.0; hold 155 tr -153/day.
+  NIFTY -7 / -238) makes money net of real costs on the recent market (Nov 2024+) at its original setting or a small design-only
+  re-tune.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK series = nearest expiry, ATM+-10, index_daily
+  VIX), laid out for research/obuy by research/hunt/r52/lake2obuy.py; held contracts re-keyed by strike
+period:
+  design: '20 Nov 2024 - 31 Mar 2026 (walk-forward: 4 quarters Apr 2025 - Mar 2026)'
+  holdout: final test 1 Apr - 13 Oct 2026, read once
+instruments:
+- BANKNIFTY
+- FINNIFTY
+features:
+- 'signal source: index'
+model_or_rule: '{''unds'': [''BANKNIFTY'', ''FINNIFTY''], ''var'': ''F1_FIBPIV|bnc|OPT''} | ITM1/near | exits stop_pct=0.25,tgt_pct=0.5
+  | expiry allow'
+settings: research/hunt/r52/results/rules_prereg.json
+prereg: research/hunt/r52/PREREG.md
+variants_tried: 7
+results:
+  summary: 'Design original: 393 trades, win 38%, net Rs -92,563 (Rs -275/day), worst day Rs -24,810, max DD Rs -138,332,
+    p 0.194 (coin-flip p 0.541); walk-forward Rs -91,823. Re-tune pick g06 ({''var'': ''F1_FIBPIV|brk|T30'', ''unds'': (''BANKNIFTY'',
+    ''FINNIFTY'')} · ITM1/near · exits default): design 506 trades, win 48%, net Rs +60,213 (Rs +179/day), worst day Rs -14,782,
+    max DD Rs -36,563, p 0.064 (coin-flip p 0.001); walk-forward Rs +37,899. FINAL original: 145 trades, win 37%, net Rs -55,173
+    (Rs -418/day), worst day Rs -17,722, max DD Rs -94,664, p 0.692 (coin-flip p 0.682), q 1.00 -> FAIL. FINAL pick: 164 trades,
+    win 39%, net Rs -47,430 (Rs -359/day), worst day Rs -9,551, max DD Rs -49,513, p 0.912 (coin-flip p 0.764), q 1.00 ->
+    FAIL.'
+  costs: Costs('dated') = charges in force on each date (STT 0.1% to Mar 2026, 0.15% after); Fills('liq') = app bps + 1/2/4-tick
+    half-spread by 5-minute volume, stops x2; next-minute fills; gap-through stops at the open; 1 lot in force
+holdout_read: true
+verdict: rejected
+notes: 'Signal source: index. Why this original: original = R4''s frozen pick (research/hunt/r4/results/frozen.json, HUNT_R4_GANN_FIB_MAGIC.md)
+  BANKNIFTY + FINNIFTY F1_FIBPIV|bnc|OPT (both frozen); NIFTY''s frozen bnc|T30 is grid 1. Gates: final net > 0, p < 0.05,
+  q <= 0.10 (BH over every final read), 40+ final trades, top-5 < 100% of net, design walk-forward > 0.'

@@ -1,0 +1,24 @@
+id: r94-gap-g2
+title: 'R94 idea 5 G2: follow the US overnight move from 09:06 to 14:00 on MCX'
+family: overnight
+date: '2026-10-21'
+doc: research/HUNT_R94_MCX_ADVANCED.md
+hypothesis: 'Pre-registered (research/hunt/r94_mcx_advanced/PREREG.md): R94 idea 5 G2: follow the US overnight move from 09:06 to 14:00 on MCX; after real MCX costs on every leg it beats random entry (or zero for every-day option selling), p <= 0.05 and BH q <= 0.10 over all R94 cells, walk-forward, worst month >= -Rs 13k, then holds on the locked holdout read once; Boss risk rules: hard stop, 2% of Rs 1 lakh, liquid contracts. Signal source: US benchmark CFD proxy (Dukascopy).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 21 Oct 2026: fut_1m_live_mcx (contracts live on 19 Oct, 1-minute), fut_daily_continuous (near month, 2012 - 16 Oct 2026), options_rolling_1m MCX MONTH books (ATM-3..+3, 5 Aug 2025 - 19 Oct 2026); Dukascopy 1-minute BID CFDs (XAUUSD, XAGUSD, LIGHTCMDUSD, GASCMDUSD) for idea 5'
+period:
+  design: 5 Aug 2025 - 31 Mar 2026
+  holdout: 1 Apr - 19 Oct 2026 (read once)
+instruments:
+- 'GOLDM, SILVERM, CRUDEOILM, NATGASMINI'
+features:
+- 'signal source: US benchmark CFD proxy (Dukascopy)'
+model_or_rule: 'R94 idea 5 G2: follow the US overnight move from 09:06 to 14:00 on MCX'
+settings: research/hunt/r94_mcx_advanced/ (PREREG.md, NOTES.md, the idea module)
+prereg: research/hunt/r94_mcx_advanced/PREREG.md
+variants_tried: 4
+results:
+  summary: '4 cells (one BH family of 152 R94 cells). Design net after costs per cell, twin / bootstrap p and BH q, then the one holdout read: g-G2-CRUDEOILM 58 tr +8,827 (p 0.084, q 1.00) -> holdout 57 tr +6,707; g-G2-GOLDM 67 tr +113,304 (p 0.037, q 0.70) -> holdout 64 tr -21,031; g-G2-NATGASMINI 29 tr +73,995 (p 0.003, q 0.23) -> holdout 68 tr +3,249; g-G2-SILVERM 56 tr +65,688 (p 0.245, q 1.00) -> holdout 62 tr +4,467. Design passers 0, design + holdout passers 0.'
+  costs: 'Zerodha MCX charges on every leg (McxCosts.kt), half-spread on every fill (futures R53 rule, far month 3x; options R85 strict ATM rate x (1 + 0.5 |offset|), >= 1 tick); 1 lot; margins without spread benefit'
+holdout_read: true
+verdict: rejected
+notes: 'Cells: g-G2-CRUDEOILM, g-G2-GOLDM, g-G2-NATGASMINI, g-G2-SILVERM'

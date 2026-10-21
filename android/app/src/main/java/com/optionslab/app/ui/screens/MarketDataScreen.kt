@@ -54,6 +54,7 @@ import com.optionslab.ira.MarketRecord
 import com.optionslab.ira.NewsImpact
 import com.optionslab.ira.RecorderStats
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -114,20 +115,27 @@ fun MarketDataBody() {
     var view by remember { mutableStateOf<DayView?>(null) }
     var summaries by remember { mutableStateOf<List<RecorderStats.Summary>?>(null) }
     var read by remember { mutableIntStateOf(0) }
+    // 18 Oct (CI's MarketDataScreenTest flake): every read's state is set on the main thread, never from the I/O thread's
+    // continuation (under the compose tests' unconfined effect dispatcher the frame it started ran on the I/O thread).
     LaunchedEffect(Unit) {
         val d = withContext(Dispatchers.IO) { RecordedData.days() }
-        days = d
-        if (pick == null) pick = d.firstOrNull()?.first
+        withContext(Dispatchers.Main.immediate) {
+            days = d
+            if (pick == null) pick = d.firstOrNull()?.first
+        }
     }
     LaunchedEffect(pick, days) {
         val d = pick ?: return@LaunchedEffect
         val size = days?.firstOrNull { it.first == d }?.second ?: return@LaunchedEffect
         if (view?.date != d) view = null
-        view = withContext(Dispatchers.IO) { DayView.of(d, RecordedData.day(d, size)) }
+        val v = withContext(Dispatchers.IO) { DayView.of(d, RecordedData.day(d, size)) }
+        withContext(Dispatchers.Main.immediate) { view = v }
     }
     LaunchedEffect(days) {
         val d = days ?: return@LaunchedEffect
-        summaries = withContext(Dispatchers.IO) { RecordedData.summaries(d) { n -> read = n } }
+        val scope = this
+        val s = withContext(Dispatchers.IO) { RecordedData.summaries(d) { n -> scope.launch(Dispatchers.Main.immediate) { read = n } } }
+        withContext(Dispatchers.Main.immediate) { summaries = s }
     }
     MarketDataContent(days, pick, { pick = it }, view?.takeIf { it.date == pick }, CrossDays(summaries, read, days?.size ?: 0))
 }

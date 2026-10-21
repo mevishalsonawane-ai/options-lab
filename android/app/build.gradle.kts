@@ -119,6 +119,9 @@ android {
     }
     packaging {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "DebugProbesKt.bin", "kotlin-tooling-metadata.json")
+        // Native libraries compressed in the APK (15 Oct 2026: TDLib for the Signal tester's Telegram login is 23 MB, about 10 MB
+        // compressed), unpacked once at install - a smaller download for Boss's phone.
+        jniLibs.useLegacyPackaging = true
     }
     lint {
         abortOnError = false
@@ -295,9 +298,37 @@ abstract class CheckSandbox : DefaultTask() {
     }
 }
 
+// ---- The knowledge index (memory audit, 14 Oct 2026) ---------------------------
+//
+// ira-core's :knowledgeIndex builds the research pack's index once per build; each variant's assets get it as
+// knowledge/index.bin, beside the pack it was made from. The phone opens it at once (no unzip, no JSON parse, no
+// tokenising at start); a build without it, or a file for another pack, builds the index from the pack as before.
+
+abstract class KnowledgeIndexAsset : DefaultTask() {
+    @get:InputFile
+    abstract val index: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val out: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val dir = out.get().asFile
+        dir.deleteRecursively()
+        val target = File(dir, "knowledge/index.bin")
+        target.parentFile.mkdirs()
+        index.get().asFile.copyTo(target, overwrite = true)
+    }
+}
+
 androidComponents {
     onVariants { variant ->
         val cap = variant.name.replaceFirstChar { it.uppercase() }
+        val knowledgeAsset = tasks.register<KnowledgeIndexAsset>("${variant.name}KnowledgeIndexAsset") {
+            index.set(rootProject.layout.projectDirectory.file("ira-core/build/generated/knowledgeIndex/index.bin"))
+            dependsOn(":ira-core:knowledgeIndex")
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(knowledgeAsset, KnowledgeIndexAsset::out)
         val guard = tasks.register<CheckSandbox>("check${cap}Sandbox") {
             manifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
             allowed.set(allowedPermissions(jarvis = true))

@@ -158,7 +158,7 @@ class IraSoloTest : RobolectricTest() {
         reload()
         assertEquals(done, IraSolo.all().single())
         val card = IraSolo.card()
-        assertEquals("Not proven: paper only, never Zerodha.", card[0])
+        assertEquals("Not proven: paper only; its live copy stays in shadow (records, never sends) until it is.", card[0])
         assertTrue(card[1], card[1].startsWith("Trades since start ("))
         assertEquals("1 of 60 trades of the forward test.", card[2])
         assertEquals(SoloMidday.RESEARCH, card[4])
@@ -166,6 +166,34 @@ class IraSoloTest : RobolectricTest() {
         assertTrue(IraSolo.record().startsWith("Solo (midday) so far: 1 trade, 0 won"))
         assertTrue(IraSolo.on)
         assertNotNull(IraSolo.provenWhy())
+    }
+
+    /**
+     * 18 Oct, review D8: its paper trades reach the live path. The 12:01 paper buy tells [com.optionslab.app.data.ArmLive] it
+     * entered (Solo (midday)'s own key, 1 lot of 30) and the 12:31 index-stop exit tells it the trade closed; its paper legs show
+     * it at 0. (The SOLO family is registered only in Jarvis builds: its registered legs are checked there only.)
+     */
+    @Test fun aSoloPaperTradeReachesTheLivePath() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        com.optionslab.app.data.ArmLive.testHeard = heard
+        upstox.price(ceKey, 400.0)
+        IraSolo.on = true
+        pass(LocalTime.of(12, 1))
+        val t = IraSolo.all().single()
+        val ref = IraSolo.managerId(t)
+        val key = com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY
+        assertTrue(heard.toString(), heard.any { it.startsWith("entered|$key|$ref|30|") })
+        assertEquals(listOf(com.optionslab.app.data.ArmLive.PaperLeg(ref, key, 30)), IraSolo.mirrorLegs())
+        upstox.price(ceKey, 380.0)
+        pass(LocalTime.of(12, 31), seconds = 5)
+        assertTrue(IraSolo.all().single().closed)
+        assertTrue(heard.toString(), heard.any { it == "closed|$ref|paper_exit" })
+        assertEquals(listOf(com.optionslab.app.data.ArmLive.PaperLeg(ref, key, 0)), IraSolo.mirrorLegs())
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            assertEquals(listOf(com.optionslab.app.data.ArmLive.PaperLeg(ref, key, 0)),
+                com.optionslab.app.data.ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.SOLO))
+        }
+        assertNoKite()
     }
 
     @Test fun aDrawdownBeyondTheBarSwitchesSoloOff() {
@@ -298,9 +326,9 @@ class IraSoloTest : RobolectricTest() {
     @Test fun aSoloTradeIsRecordedEvenWhenItsOrderLabelCannotBeSaved() {
         upstox.price(ceKey, 400.0)
         IraSolo.on = true
-        // The strategies vault cannot be written now: its temp file's name is a directory.
-        val blocker = java.io.File(context.filesDir, "strategies.vault.tmp").apply { mkdirs() }
-        try { pass(LocalTime.of(12, 1)) } finally { blocker.deleteRecursively() }
+        // The strategies vault cannot be written now (a Keystore or disk fault).
+        com.optionslab.app.security.Vault.testFailWrites = setOf("strategies.vault")
+        try { pass(LocalTime.of(12, 1)) } finally { com.optionslab.app.security.Vault.testFailWrites = emptySet() }
         val t = IraSolo.all().single()
         assertFalse(t.closed)
         assertTrue(Paper.state.positions.any { it.symbol == t.symbol && it.quantity == 30 })

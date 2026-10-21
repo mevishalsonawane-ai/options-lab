@@ -1,0 +1,39 @@
+id: r39-p3
+title: 'Zero-to-hero anatomy P3: the best 2-3 signal tercile pattern mined on earlier years; first matching row; 25% trail'
+family: ml
+hypothesis: Combining every signal family (OI, VWAP/TWAP, EMA, Supertrend, ADX, 2/3/4-candle patterns, volume, IV, gamma exposure,
+  iv_rv, heavyweights) at 1-minute level predicts zero-to-hero launches well enough to pay.
+features:
+- pricing (iv_rv, distance, time, price)
+- index trend (returns, EMA, ADX, TWAP)
+- chain OI (PCR, walls, max pain)
+- EMA / Supertrend / VWAP (option)
+- option momentum
+- option IV
+- option OI
+- heavyweights
+- candles (2/3/4 patterns)
+- index volatility / VIX
+- option volume
+- gamma exposure
+model_or_rule: the best 2-3 signal tercile pattern mined on earlier years; first matching row; 25% trail
+variants_tried: 4
+results:
+  summary: '119 trades on 446 expiries (test years 2023-26), hit 16.0%, >= 10x 0.8%, net Rs -37,413 (-165 per Rs 1,000); by
+    year {''2023'': -11758.0, ''2024'': -16987.0, ''2025'': -8151.0, ''2026'': -516.0}; max DD Rs -38,250; random-time twin
+    mean Rs -20,821, p 0.799, BH q 1.0 (family 82). FAILED the gates.'
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; x2 spread
+verdict: rejected
+notes: BH across R21-R26 and R34-R39 (82). Amendment 1 (tau from out-of-sample scores) made before any P1/P2 outcome.
+date: '2026-10-14'
+doc: research/HUNT_R39_ZERO_TO_HERO_ANATOMY.md
+data_version: 'Dhan lake on Drive: opt_{NIFTY,SENSEX}_WEEK (ATM+-10 with OI, IV, volume), index_1m, INDIAVIX, equity_1m HDFCBANK/RELIANCE/ICICIBANK;
+  R26 day files; 936,286 one-minute rows'
+period:
+  design: 'anchored walk-forward: test years 2023-2026, each fitted on earlier NIFTY / SENSEX expiries only'
+instruments:
+- NIFTY
+- SENSEX
+prereg: research/hunt/r39/PREREG.md
+settings: research/hunt/r39/r39study.py
+holdout_read: null

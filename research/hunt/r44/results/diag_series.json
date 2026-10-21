@@ -1,0 +1,142 @@
+[
+ {
+  "cell": "ema821_adx15_plock|BANKNIFTY|CE",
+  "boss_trades": 1330,
+  "boss_net": -52483,
+  "boss_per_session": 1.928,
+  "week": {
+   "trades": 513,
+   "net_boss": -14301,
+   "net_real": -17696,
+   "per_session": 0.908,
+   "sessions": 565
+  },
+  "week_incl_expiry": {
+   "trades": 589,
+   "net_boss": -28279,
+   "net_real": -29043,
+   "per_session": 1.042,
+   "sessions": 565
+  },
+  "month": {
+   "trades": 547,
+   "net_boss": -23661,
+   "net_real": -33283,
+   "per_session": 0.968,
+   "sessions": 565
+  },
+  "month_incl_expiry": {
+   "trades": 583,
+   "net_boss": -20692,
+   "net_real": -29080,
+   "per_session": 1.032,
+   "sessions": 565
+  },
+  "week+month_incl_expiry_per_session": 2.074
+ },
+ {
+  "cell": "ema921_adx20|BANKNIFTY|CE",
+  "boss_trades": 710,
+  "boss_net": -34313,
+  "boss_per_session": 1.029,
+  "week": {
+   "trades": 283,
+   "net_boss": -4659,
+   "net_real": -6982,
+   "per_session": 0.501,
+   "sessions": 565
+  },
+  "week_incl_expiry": {
+   "trades": 326,
+   "net_boss": -18544,
+   "net_real": -19360,
+   "per_session": 0.577,
+   "sessions": 565
+  },
+  "month": {
+   "trades": 306,
+   "net_boss": -22445,
+   "net_real": -28096,
+   "per_session": 0.542,
+   "sessions": 565
+  },
+  "month_incl_expiry": {
+   "trades": 324,
+   "net_boss": -27519,
+   "net_real": -32557,
+   "per_session": 0.573,
+   "sessions": 565
+  },
+  "week+month_incl_expiry_per_session": 1.15
+ },
+ {
+  "cell": "ema821_adx15_plock|FINNIFTY|CE",
+  "boss_trades": 451,
+  "boss_net": -33714,
+  "boss_per_session": 0.654,
+  "week": {
+   "trades": 525,
+   "net_boss": -18118,
+   "net_real": -12356,
+   "per_session": 0.929,
+   "sessions": 565
+  },
+  "week_incl_expiry": {
+   "trades": 600,
+   "net_boss": -33346,
+   "net_real": -24857,
+   "per_session": 1.062,
+   "sessions": 565
+  },
+  "month": {
+   "trades": 520,
+   "net_boss": -24569,
+   "net_real": -23260,
+   "per_session": 0.92,
+   "sessions": 565
+  },
+  "month_incl_expiry": {
+   "trades": 546,
+   "net_boss": -27102,
+   "net_real": -24847,
+   "per_session": 0.966,
+   "sessions": 565
+  },
+  "week+month_incl_expiry_per_session": 2.028
+ },
+ {
+  "cell": "ema921_adx20|NIFTY|CE",
+  "boss_trades": 768,
+  "boss_net": -58515,
+  "boss_per_session": 1.113,
+  "week": {
+   "trades": 292,
+   "net_boss": -70613,
+   "net_real": -67697,
+   "per_session": 0.517,
+   "sessions": 565
+  },
+  "week_incl_expiry": {
+   "trades": 370,
+   "net_boss": -87957,
+   "net_real": -82813,
+   "per_session": 0.655,
+   "sessions": 565
+  },
+  "month": {
+   "trades": 345,
+   "net_boss": -62098,
+   "net_real": -69694,
+   "per_session": 0.611,
+   "sessions": 565
+  },
+  "month_incl_expiry": {
+   "trades": 365,
+   "net_boss": -62113,
+   "net_real": -69170,
+   "per_session": 0.646,
+   "sessions": 565
+  },
+  "week+month_incl_expiry_per_session": 1.301
+ }
+]

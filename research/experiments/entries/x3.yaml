@@ -1,0 +1,24 @@
+id: x3
+title: 'Audit: is a bug hiding a winner'
+family: diagnosis
+date: '2026-10-08'
+doc: research/X3_AUDIT.md
+hypothesis: Look for bugs or biases that hide an edge.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: see doc
+instruments:
+- BANKNIFTY
+features:
+- research code
+model_or_rule: audit
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: No bug or bias turns a loser into a winner.
+  costs: n/a
+holdout_read: null
+verdict: not-a-test
+backfilled: true

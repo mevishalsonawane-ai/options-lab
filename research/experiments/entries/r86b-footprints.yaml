@@ -1,0 +1,29 @@
+id: r86b-footprints
+title: 'R86b Part 1: how the big players'' trading shows in index and constituent minutes'
+family: market-facts
+date: '2026-10-19'
+doc: research/HUNT_R86B_HOW_BIG_PLAYERS_TRADE.md
+hypothesis: 'Describe (not a test): where in the day the move is made on FII/Client big-buy and big-sell days, expiry and
+  month-end days; turnover profile; basket bursts and what follows them.'
+data_version: Drive lake gdrive:IraAlgo-data-lake index_1m (NIFTY 2019-, BANKNIFTY Aug 2021-) and equity_1m (59 current NIFTY
+  50 + NIFTY BANK stocks, 2019 - 12 Oct 2026), files of 13-15 Oct 2026; NSE participant OI as labels only
+period:
+  design: 2019 - 2024 (descriptive, design years only)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- participant OI labels (after the close)
+- index minutes
+- constituent minute turnover and direction
+model_or_rule: bootstrap means by day label
+settings: research/hunt/r86/PREREG_B.md section 2
+prereg: research/hunt/r86/PREREG_B.md
+variants_tried: null
+results:
+  summary: 'See the doc: FII-sell days make ~61% of NIFTY''s move by 10:15 (gap 37% + first hour 24%, 169 days); FII-buy days
+    40% (gap 36% + first hour 4%, 179 days) and 16% in the last hour; month-end last-30-minute turnover 26.7% vs 16.1% on
+    all days (72 / 1,479 days); basket bursts follow-through no better than random minutes.'
+  costs: none (description)
+holdout_read: null
+verdict: not-a-test
