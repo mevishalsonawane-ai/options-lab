@@ -81,6 +81,10 @@ class IraAlgoApp : Application() {
         // entries (never an exit). A failed read is tried again in the background ([PaperOnly.loadSoon]).
         runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() }
         com.optionslab.app.data.PaperOnly.loadSoon()
+        // 22 Oct (the overnight kills, "excessive binder traffic during cached"): the start's heavy work that never trades waits
+        // until the screen or the market watch starts (or a job asks for it) - an hourly night job starts the app for a second.
+        // The open positions' steps below never wait for it.
+        com.optionslab.app.data.StartGate.hold(this)
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)
@@ -199,14 +203,18 @@ class IraAlgoApp : Application() {
         // The restore-disarm above is done: a watch started by the positions-first thread may tick now.
         com.optionslab.app.data.PositionsFirst.appReady()
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
+        // 22 Oct: the screen starting opens the start's waiting heavy work and arms every alarm in full once (StartGate).
+        ProcessLifecycleOwner.get().lifecycle.addObserver(com.optionslab.app.data.StartGate)
         // 21 Oct, enhancement round 3 (idea 7): the phone unlocked - a Sunday review not said at 18:00 is said now (Sunday
         // evening only, once; IraSundayReview.catchUp). A receiver of this process only (Android delivers the unlock to running apps).
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching {
             androidx.core.content.ContextCompat.registerReceiver(this, UnlockReceiver,
                 android.content.IntentFilter(android.content.Intent.ACTION_USER_PRESENT), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
         }
-        // Keystore work stays off the main thread.
-        Thread { runCatching { Jobs.scheduleAll(this) } }.start()
+        // Keystore work stays off the main thread. 22 Oct: only the alarms whose time changed (an hourly night job starts the app;
+        // each alarm armed again cost four calls into Android); the dead-man check is armed as always, and the screen's first
+        // start arms everything in full (StartGate).
+        com.optionslab.app.data.StartGate.startArm = Thread { runCatching { Jobs.scheduleAll(this, onlyChanged = true) } }.apply { start() }
         com.optionslab.app.data.Speed.startMs = android.os.SystemClock.uptimeMillis() - startAt
         com.optionslab.app.data.Speed.startSlowest = slowest?.let { (n, ms) -> "$n $ms ms" }
     }
@@ -236,11 +244,30 @@ class IraAlgoApp : Application() {
      * What they left on this phone goes, off the main thread: the stored data and its import/pack folders, the learned graph,
      * the Dhan client ID, access token and choices in the settings vault, any queued download/import/graph work, and the
      * read grants kept on picked pack files (nothing else in the app keeps such grants). Each step is harmless when there is
-     * nothing to remove.
+     * nothing to remove. 22 Oct (the overnight kills): once per installed app, not at every start (an hourly night job starts
+     * the app; six WorkManager cancels and a settings scan each time) - nothing makes these again once they are gone.
      */
     private fun removeOldMarketDataStore() {
         val c = applicationContext
-        Thread {
+        Thread { runCatching { OldStore.removeOnce(c) } }.start()
+    }
+
+    /** The old Dhan store's clean-up (22 Oct: once per installed app). Internal: the tests run it. */
+    internal object OldStore {
+        private const val DONE = "cleanup.dhan"
+
+        /** The clean-up, unless it was done for this installed app; true when it ran. Off the main thread only. */
+        fun removeOnce(c: android.content.Context): Boolean {
+            val installed = com.optionslab.app.work.NightMarks.installed(c).toString()
+            if (com.optionslab.app.work.NightMarks.get(c, DONE) == installed) return false
+            // Marked done only once the old Dhan settings are really gone from the disk (an unreadable vault or a failed write:
+            // tried again at the next start).
+            if (removeNow(c)) com.optionslab.app.work.NightMarks.put(c, DONE, installed)
+            return true
+        }
+
+        /** True when no old Dhan setting is left. */
+        private fun removeNow(c: android.content.Context): Boolean {
             runCatching { java.io.File(c.filesDir, "dhan").deleteRecursively() }
             runCatching { java.io.File(c.filesDir, "dhan.import").deleteRecursively() }
             runCatching { java.io.File(c.filesDir, "neuro").deleteRecursively() }
@@ -254,6 +281,9 @@ class IraAlgoApp : Application() {
                 listOf("dhan.download.now", "dhan.download.auto", "dhan.import", "neuro.after", "neuro.full", "neuro.now")
                     .forEach { runCatching { wm.cancelUniqueWork(it) } }
             }
-        }.start()
+            // Done only when the settings were read (an unreadable vault shows no keys at all) and the removal is on disk.
+            return runCatching { !SecurePrefs.unreadable && SecurePrefs.keys("dhan.").isEmpty() && SecurePrefs.flush() && !SecurePrefs.unreadable }
+                .getOrDefault(false)
+        }
     }
 }

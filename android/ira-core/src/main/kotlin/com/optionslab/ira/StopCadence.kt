@@ -1,6 +1,7 @@
 package com.optionslab.ira
 
 import java.time.LocalDate
+import kotlinx.coroutines.isActive
 
 /**
  * 20 Oct, enhancement round 1 (idea 6): the real gap between two looks at the stops while anything is held.
@@ -24,8 +25,76 @@ object StopCadence {
      * When the next look is due: [windowMs] after the last look started ([lastStartMs]; 0 or in the future: unknown, so a full
      * window from now), never sooner than [MIN_GAP_MS] from [nowMs] (never later than the old way: 15 s after the last ended).
      */
-    fun windowEnd(lastStartMs: Long, nowMs: Long, windowMs: Long = WINDOW_MS): Long =
-        if (lastStartMs <= 0L || lastStartMs > nowMs) nowMs + windowMs else minOf(nowMs + windowMs, maxOf(nowMs + MIN_GAP_MS, lastStartMs + windowMs))
+    // 22 Oct: [minGapMs] - the stop lane ([Ticker]) rests [LANE_REST_MS] after a slow look, not 5 s (its looks are bounded and
+    // never wait on the full pass, so a 5 s rest would only stretch the gap).
+    fun windowEnd(lastStartMs: Long, nowMs: Long, windowMs: Long = WINDOW_MS, minGapMs: Long = MIN_GAP_MS): Long =
+        if (lastStartMs <= 0L || lastStartMs > nowMs) nowMs + windowMs else minOf(nowMs + windowMs, maxOf(nowMs + minGapMs, lastStartMs + windowMs))
+
+    /** 22 Oct: how often the stop lane re-reads "is anything held?" (memory only) and its stop flag. */
+    const val LANE_POLL_MS = 1_000L
+    /** 22 Oct: the stop lane's rest after a look that ran past its window (a slow broker is still never hit back to back). */
+    const val LANE_REST_MS = 1_000L
+    /** 22 Oct: how long past its 15 s the stop lane waits for another look that runs on its own clock (MCX's pass) to start. */
+    const val OUTSIDE_GRACE_MS = 1_000L
+
+    /**
+     * 22 Oct (the 21 Oct diagnostics: "the stops were looked at N s or more apart while a position was held", twice, with the
+     * phone hot and at 15% battery): the stop lane's own clock. The 15-second stop check ran INSIDE the watch loop, after the
+     * full pass (p95 5.5 s, max 20.2 s) and after each bar-close entry check (which waited up to 45 s for the arms), so either
+     * pushed the look past 15 s. Now the look runs on its own coroutine, on this clock, beside them and never after them:
+     *  - while [run]'s `held` says something is held, a look starts every [windowMs], timed from the last look's START;
+     *  - a look that itself ran past the window is followed [restMs] after it ends (never back to back);
+     *  - nothing held: no look at all, `held` re-read every [pollMs] (a new position gets its first look within [pollMs]); the
+     *    first time nothing is held after a held look, `idle` runs once (the drift guard starts its count again);
+     *  - a wall clock moved back is never waited out: a due time more than one window ahead is due now.
+     * No battery, saver, heat or memory input: nothing here can stretch the wait. Pure (the caller passes the clock and the sleep).
+     */
+    class Ticker(
+        private val now: () -> Long,
+        private val sleep: suspend (Long) -> Unit,
+        private val windowMs: Long = WINDOW_MS,
+        private val pollMs: Long = LANE_POLL_MS,
+        private val restMs: Long = LANE_REST_MS,
+    ) {
+        /**
+         * Runs until [stop] says so (read between looks: a look under way is finished, never cut). [look] gets its start time; a
+         * failure in it (not a cancellation) goes to [failed] and the lane goes on. [outside]: when another look at the same stops
+         * last STARTED (0: none counted; MCX's own pass, which runs these checks itself): a newer one than the lane's moves the
+         * lane's window to it plus [OUTSIDE_GRACE_MS] (that pass comes back on its own 15 s; the second lets it start first), so the
+         * lane looks only when that other look is late - never twice in one window - and the gap stays within [DRIFT_MS].
+         */
+        suspend fun run(stop: () -> Boolean, held: () -> Boolean, look: suspend (Long) -> Unit, idle: () -> Unit = {},
+                        failed: (Throwable) -> Unit = {}, outside: () -> Long = { 0L }) {
+            var due = 0L          // 0: the first held look is due at once
+            var lastStart = 0L
+            var wasHeld = false
+            while (!stop()) {
+                if (!runCatching(held).getOrDefault(true)) {
+                    if (wasHeld) { wasHeld = false; runCatching(idle) }
+                    due = 0L
+                    lastStart = 0L
+                    sleep(pollMs)
+                    continue
+                }
+                wasHeld = true
+                val t = now()
+                val other = runCatching(outside).getOrDefault(0L)
+                if (other > lastStart && other <= t) { lastStart = other; due = other + windowMs + OUTSIDE_GRACE_MS }
+                if (due != 0L && t < due && due - t <= windowMs + OUTSIDE_GRACE_MS) { sleep(minOf(due - t, pollMs)); continue }
+                lastStart = t
+                try {
+                    look(t)
+                } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                    // Only the lane's own cancellation ends it: one escaped from inside a look (a timeout) is a failure like any.
+                    if (!kotlinx.coroutines.currentCoroutineContext().isActive) throw e
+                    runCatching { failed(e) }
+                } catch (e: Throwable) {
+                    runCatching { failed(e) }
+                }
+                due = windowEnd(t, now(), windowMs, restMs)
+            }
+        }
+    }
 
     /** One drift: the gap and when the late look started. */
     data class Gap(val gapMs: Long, val atMs: Long) {

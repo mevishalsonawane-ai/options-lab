@@ -29,7 +29,10 @@ class DiscoveryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(
         val now = Market.now()
         if (allowed(charging(applicationContext), idle(applicationContext), now.hour * 60 + now.minute, Market.isTradingDay(now.toLocalDate())))
             try {
-                guarded { VariantRunner.forgeIfDue(now.toLocalDate()) { isStopped || !BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.FORGE) } }
+                // 22 Oct: the battery / heat budget asked at most every 5 s (it was asked on every twin of every backtest: thousands of
+                // calls into Android a night, "excessive binder traffic"); WorkManager's stop is still seen at once.
+                val budget = BackgroundBudget.allowEvery(com.optionslab.ira.BudgetRule.Job.FORGE)
+                guarded { VariantRunner.forgeIfDue(now.toLocalDate()) { isStopped || !budget() } }
             } finally { runCatching { BackgroundBudget.done(com.optionslab.ira.BudgetRule.Job.FORGE) } }
         return Result.success()
     }

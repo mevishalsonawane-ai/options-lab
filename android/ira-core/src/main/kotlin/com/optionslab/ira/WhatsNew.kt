@@ -64,6 +64,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 22 Oct (Boss: "Check why other arms did not trigger today"): fixes from the 22 Oct diagnostics.
+        Entry("2026-10-22-diagnostics-fixes", OCT22, "Fixes from your 22 Oct diagnostics",
+            "R72 Breadth Donchian, your primary arm, decides first and keeps one same-direction place at each bar close. " +
+                "A passed arm whose option another paper arm holds keeps a would-be trade that names that arm. " +
+                "A missed break now says why, and each passed arm has its own line in the uploaded diagnostics. " +
+                "The passed arms follow their indices from 09:16, so 09:20 breaks are judged at 09:20. " +
+                "Open positions' stops are looked at every 15 seconds on their own, never waiting behind other work. " +
+                "Liquidity and ORB read the option's price at the signal and try once more when it is missing. " +
+                "The Hero ₹1,000 ticket's diary says who switched it: you from its row, or an Undo. " +
+                "Night start-ups are lighter, the night forge asks the battery far less, and the watch never runs past midnight.",
+            "Home → Strategies → the passed arms' rows; Home → Strategies → Hero ₹1,000 ticket"),
         // 22 Oct (Boss: "if the 10% is received, make the stoploss to the start point"): their own paper switch (R100 A4 did not pass).
         Entry("2026-10-22-liquidity-breakeven", OCT22, "Your own Liquidity switch: breakeven at +10%",
             "A new switch can move a Liquidity paper trade's stop to the price paid once it is up 10%. " +

@@ -30,8 +30,12 @@ object WatchWorkers {
 
     /** How long a pass waits for its arms (they finish by themselves after that). */
     const val ARMS_WAIT_MS = 45_000L
-    /** How long the 15-second stop check waits for the arms' exits. */
-    const val EXITS_WAIT_MS = 20_000L
+    /**
+     * How long the 15-second stop check ([StopLane]) waits for the arms' exits. 22 Oct: 8 s (was 20 s, which pushed the next look
+     * past its 15 s window): the sweep and the stops and targets after them still start inside the window. An exit still running
+     * then is left to finish by itself (never cut mid-order) and is not started again beside itself.
+     */
+    const val EXITS_WAIT_MS = 8_000L
     /**
      * How long a full pass waits for each arms group while anything is held (18 Oct, review): the stops and targets after
      * the first group, and the 15-second stop check after the pass, waited behind a slow arm's 45 s twice. A step still

@@ -120,7 +120,8 @@ object LiquidityWhyNot {
         verdict == "liquidity_history_loading" -> Kind.LOADING
         com.optionslab.engine.orb.IndexData.isNone(verdict) -> Kind.NO_DATA      // named by index since 13 Oct
         verdict == "no_contract" -> Kind.NO_CONTRACT
-        verdict == "refused: no quote" -> Kind.NO_QUOTE
+        // 22 Oct: the verdict now names the option and the reads ("refused: no quote for <option> after 2 reads").
+        verdict == "refused: no quote" || verdict.startsWith("refused: no quote for ") -> Kind.NO_QUOTE
         verdict.startsWith("guard_refused") -> Kind.GUARD
         AutoSide.refused(verdict) -> Kind.EXPOSURE
         verdict.startsWith("order_refused") -> Kind.ORDER_REFUSED
@@ -201,7 +202,8 @@ object LiquidityWhyNot {
             Kind.LAPSED -> cap("$what waited for your approval and lapsed - nothing was bought")
             Kind.SKIPPED_BY_YOU -> "You skipped $what"
             Kind.NO_CONTRACT -> cap("$what was not entered: its option contract could not be loaded")
-            Kind.NO_QUOTE -> cap("$what was not entered: there was no option price to buy at")
+            Kind.NO_QUOTE -> cap("$what was not entered: there was no option price to buy at" +
+                v.removePrefix("refused: no quote").trim().takeIf { it.isNotEmpty() }?.let { " ($it)" }.orEmpty())
             Kind.GUARD -> cap("$what was refused by Bot settings (your daily limits): ${v.removePrefix("guard_refused").removePrefix(":").trim()}")
             Kind.EXPOSURE -> cap("$what was not entered: " + AutoSide.describe(v).removePrefix("Not entered: ").trimEnd('.'))
             Kind.ORDER_REFUSED -> cap("$what was not entered: the order was refused (${v.removePrefix("order_refused").removePrefix(":").trim()})")

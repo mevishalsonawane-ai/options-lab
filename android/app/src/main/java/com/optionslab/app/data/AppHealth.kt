@@ -159,8 +159,8 @@ object AppHealth {
         val ctx = appContext ?: return
         val seen = ArrayList<HealthBook.Exit>()
         if (android.os.Build.VERSION.SDK_INT >= 30) runCatching {
-            val am = ctx.getSystemService(android.app.ActivityManager::class.java) ?: return@runCatching
-            for (x in am.getHistoricalProcessExitReasons(ctx.packageName, 0, 16)) {
+            // 22 Oct: Android's record asked once per process, shared with the diary's process endings (ProcessExits).
+            for (x in com.optionslab.app.work.ProcessExits.records(ctx)) {
                 val kind = when (x.reason) {
                     android.app.ApplicationExitInfo.REASON_ANR -> HealthBook.ExitKind.ANR
                     android.app.ApplicationExitInfo.REASON_CRASH -> HealthBook.ExitKind.CRASH

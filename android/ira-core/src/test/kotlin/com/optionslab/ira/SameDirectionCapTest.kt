@@ -137,6 +137,35 @@ class SameDirectionCapTest {
         assertEquals("calls", SameDirectionCap.words(1, 3))
     }
 
+    /**
+     * 22 Oct (Boss: "reserve R72's place"): at R72's bar close one place each way is kept for it - the 22 Oct morning, Liquidity's
+     * MIDCPNIFTY put and R52's FINNIFTY put took both put places and R72's puts were refused.
+     */
+    @Test fun theLastPlaceEachWayIsKeptForR72AtItsBarClose() {
+        val r72 = "R72 Breadth Donchian"
+        val liq = SameDirectionCap.Open("1", "MIDCPNIFTY27OCT2613250PE", -1, "Liquidity 5m MIDCPNIFTY")
+        // The first put: room for another arm (one place left for R72).
+        assertNull(SameDirectionCap.refusal(emptyList(), -1, 2, "Liquidity 5m MIDCPNIFTY", r72))
+        // The second put: R52 is refused, the place kept for R72; R72 itself takes it.
+        val why = SameDirectionCap.refusal(listOf(liq), -1, 2, "R52 Open outside value", r72)!!
+        assertEquals("same-direction cap: the last put place is kept for R72 Breadth Donchian at its bar close (1 put already open: " +
+            "MIDCPNIFTY27OCT2613250PE by Liquidity 5m MIDCPNIFTY)", why)
+        assertNull(SameDirectionCap.refusal(listOf(liq), -1, 2, r72, r72))
+        // The other way is free; once R72 holds one that way, nothing is kept any more.
+        assertNull(SameDirectionCap.refusal(listOf(liq), 1, 2, "R52 Open outside value", r72))
+        val withR72 = listOf(SameDirectionCap.Open("2", "NIFTY27OCT2622950PE", -1, r72))
+        assertNull(SameDirectionCap.refusal(withR72, -1, 2, "R52 Open outside value", r72))
+        // Outside its bar close (nothing kept) the plain cap, as before; full is full for R72 too.
+        assertNull(SameDirectionCap.refusal(listOf(liq), -1, 2, "R52 Open outside value", null))
+        assertNull(SameDirectionCap.refusal(listOf(liq), -1, 2, null, r72), "an entry with no owner is never held back")
+        assertTrue(SameDirectionCap.refusal(listOf(liq, liq.copy(orderId = "3")), -1, 2, r72, r72)!!.contains("2 puts already open"))
+        // A cap of 1: at R72's bar close the only place is kept for it; a cap of 3 keeps only the third.
+        assertEquals("same-direction cap: the last call place is kept for R72 Breadth Donchian at its bar close",
+            SameDirectionCap.refusal(emptyList(), 1, 1, "ORB", r72))
+        assertNull(SameDirectionCap.refusal(listOf(liq, liq.copy(orderId = "4")).map { it.copy(dir = 1) }.take(1), 1, 3, "ORB", r72))
+        assertNotNull(SameDirectionCap.refusal(listOf(liq, liq.copy(orderId = "4")).map { it.copy(dir = 1) }, 1, 3, "ORB", r72))
+    }
+
     @Test fun aBadNumberNeverBlocksEverything() {
         val one = listOf(SameDirectionCap.Open("A", "NIFTY25000PE", -1, "arm"))
         assertNull(SameDirectionCap.refusal(emptyList(), -1, 0), "0 is read as 1: the first still goes")
