@@ -368,6 +368,12 @@ internal object Autopilot {
                 val id = c.target.removePrefix(AutoChange.TELEGRAM_PAPER)
                 if (id.isEmpty() || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.SignalPaperArm.setOnId(id, c.to == AutoChange.ON, log = false) }
+            } else if (c.target == AutoChange.FT3_TARGET) {
+                // 21 Oct: FT3 near-ATM morning ([logFt3On]): its Undo switches the arm off (or, undone twice, back on) - on paper,
+                // never Zerodha itself (its live path is the standard one, behind the PIN and Shadow), so no PIN either way.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.Ft3Arm.setArmed(c.to == AutoChange.ON, log = false) }
+                said.takeIf { !it.contains("not ready") }
             } else if (c.target != AutoChange.TICKET_TARGET) {
                 val source = c.target.removePrefix(AutoChange.PAPER_ARM)
                 // 19 Oct: "record only" (Boss: "Yes, keep only breadth donchain") is the arm's third state: its Undo puts back what it was.
@@ -882,6 +888,42 @@ internal object Autopilot {
     fun logBossTicketOn() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.heroTicketOn(), "your choice, 15 Oct; paper only - it never trades on Zerodha; its trades are kept in their own record")
+    }
+
+    /**
+     * 21 Oct (Boss: "Add FT3 to the app paper bot until live, when live is started then it should move to live"): FT3 near-ATM
+     * morning, the R98 forward test that did not pass research, just switched on once by its book's one-time change
+     * ([com.optionslab.app.data.Ft3Arm]). Logged as Boss's (kept, never Autopilot's), and one tap undoes it (the arm off). Once.
+     */
+    fun logFt3On() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.ft3On(), "your choice, 21 Oct; on paper - live only the standard way (Live with your PIN, AI trades live, " +
+            "its Trade live switch, Shadow off with your PIN); its trades are the FT3 forward test's own record")
+    }
+
+    /**
+     * Boss switched FT3 from its own row: as [heroTicketSwitchedByBoss] - off closes the newest "off → on" entry as undone; on logs
+     * it as Boss's again.
+     */
+    fun ft3SwitchedByBoss(on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): FT3 ${if (on) "on" else "off"}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == AutoChange.FT3_TARGET }
+                    if (!on && e != null && e.status == AutoChange.Status.KEPT) { _book.value = AutoChange.undone(_book.value, e.id, today); save() }
+                    if (on && e?.status != AutoChange.Status.KEPT) {
+                        _book.value = AutoChange.record(_book.value, AutoChange.ft3On(), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                            by = "your choice", note = "switched on from its row; on paper - live only the standard way").first
+                        save()
+                    }
+                }
+            }
+        }
     }
 
     /**

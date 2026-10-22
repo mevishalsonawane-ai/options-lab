@@ -193,6 +193,7 @@ object FastPath {
         val minuteArms = NightArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
             VixDivArm.view.value.let { it.armed || it.open.isNotEmpty() } ||
             HeroTicketArm.holding() ||
+            Ft3Arm.holding() ||
             PassedArmsHost.holding() ||
             SignalPaperArm.holding() ||
             McxPaperArms.view.value.let { v -> v.armed.values.any { it } || v.open.isNotEmpty() } ||
@@ -348,6 +349,8 @@ object FastPath {
                     // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) before their exits.
                     step("unwatched positions") { OrphanWatch.run(ctx) }
                     step(HERO_TICKET) { HeroTicketArm.manageOnly() }
+                    // 21 Oct: FT3 (paper): its open ticket's 15:05 exit every minute (exits only - its chain reads run in the arms passes).
+                    step(FT3) { Ft3Arm.manageOnly() }
                     // 15 Oct: the passed-research paper arms (R51, R52, Solo 2.0): their open trades' stops, targets, locks, time exits
                     // and square-offs every minute (exits only - their entries' reads run in the watch's arms passes).
                     step(PASSED_ARMS) { PassedArmsHost.manageOnly() }
@@ -375,6 +378,8 @@ object FastPath {
      * it only when it needs a pass ([HeroTicketArm.wantsPass]), and then it always runs.
      */
     const val HERO_TICKET = "Hero 1000 ticket"
+    /** FT3's step name (as [HERO_TICKET]: in the rounds only when it needs a pass, [Ft3Arm.wantsPass]). */
+    const val FT3 = "FT3 near-ATM morning"
     /** The passed-research paper arms' step name (as [HERO_TICKET]: in the rounds only when they need a pass, [PassedArmsHost.wantsPass]). */
     const val PASSED_ARMS = "Passed-research arms"
     /** The Telegram calls' paper arm's step name (as [HERO_TICKET]: in the rounds only when it needs a pass, [SignalPaperArm.wantsPass]). */

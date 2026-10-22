@@ -25,7 +25,7 @@ class LiveMirrorTest {
     @Test fun everyPaperOnlyStrategyHasALivePathAndJarvisOwnIdeasHaveNone() {
         val keys = LiveMirror.ARMS.map { it.key }
         for (k in listOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, LiveMirror.SOLO_MIDDAY,
-                SweepRules.ARM.source, RangeFadeRules.ARM.source, HeroRules.ARM.source, HeroTicketRules.SOURCE, VixDivRules.SOURCE,
+                SweepRules.ARM.source, RangeFadeRules.ARM.source, HeroRules.ARM.source, HeroTicketRules.SOURCE, Ft3Rules.SOURCE, VixDivRules.SOURCE,
                 NightRules.SOURCE, LiveMirror.TELEGRAM_CALLS, LiveMirror.SHADOW_PROMOTED, "mcx_ng_eve", "mcx_silverm_am", "mcx_trend12", "mcx_us_silver"))
             assertTrue(k in keys, k)
         assertEquals(keys.size, keys.toSet().size, "no key twice")
@@ -84,6 +84,10 @@ class LiveMirrorTest {
         assertEquals(60, LiveMirror.liveQty(2, 30))
         assertEquals(30, LiveMirror.liveQty(2, 30, maxLots = 1))
         assertEquals(60, LiveMirror.liveQty(2, 30, maxLots = 5))
+        // 21 Oct: the words for an entry cut to the lot cap - only when it is smaller than the paper's lots.
+        assertEquals(" · 2 of the paper's 9 lots (your lot cap)", LiveMirror.cutWords(9, 60, 30))
+        assertEquals("", LiveMirror.cutWords(2, 60, 30)); assertEquals("", LiveMirror.cutWords(9, 270, 30))
+        assertEquals("", LiveMirror.cutWords(9, 0, 30)); assertEquals("", LiveMirror.cutWords(9, 60, 0))
         assertEquals(0, LiveMirror.liveQty(0, 30))
         assertEquals(0, LiveMirror.liveQty(1, 0))
     }
@@ -321,7 +325,16 @@ class LiveMirrorTest {
     }
 
     @Test fun closeJudgedArmsRestOnlyADisasterStop() {
-        assertEquals(setOf(HeroRules.ARM.source, HeroTicketRules.SOURCE), LiveMirror.ARMS.filter { it.closeStop }.map { it.key }.toSet())
+        assertEquals(setOf(HeroRules.ARM.source, HeroTicketRules.SOURCE, Ft3Rules.SOURCE), LiveMirror.ARMS.filter { it.closeStop }.map { it.key }.toSet())
+        // 21 Oct: only FT3's live size is cut to the lot cap; every other arm's over-cap order stays refused by the order gates.
+        assertEquals(setOf(Ft3Rules.SOURCE), LiveMirror.ARMS.filter { it.capLots }.map { it.key }.toSet())
+        // 21 Oct: FT3 is mirrored like every paper arm - "Trade live" on (Boss asked for it live), its Shadow on until Boss's PIN.
+        val ft3 = LiveMirror.spec(Ft3Rules.SOURCE)!!
+        assertEquals(LiveMirror.FT3, ft3.family); assertEquals(Ft3Rules.LABEL, ft3.label)
+        assertTrue(ft3.defaultOn && LiveMirror.on(Ft3Rules.SOURCE, emptyMap()))
+        assertTrue(LiveMirror.shadowOn(Ft3Rules.SOURCE, emptyMap()))
+        assertEquals("MIS", ft3.product); assertEquals(LiveMirror.Rest.SL, ft3.rest); assertFalse(ft3.safety)
+        assertTrue("option chain" in ft3.signal)
         assertEquals(4.0, LiveMirror.disasterLevel(20.0, 1, 0.05)!!, 1e-9)
         assertEquals(36.0, LiveMirror.disasterLevel(20.0, -1, 0.05)!!, 1e-9)
         assertNull(LiveMirror.disasterLevel(0.1, 1, 0.05))

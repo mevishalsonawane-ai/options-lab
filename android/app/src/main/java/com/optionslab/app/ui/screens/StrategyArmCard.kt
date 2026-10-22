@@ -94,7 +94,10 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         // failed): the NSE paper-only arms under the ORB rows.
         // MCX is its own Home card (11 Oct, Boss: "it should separate"); the trade manager, order flow and the Brain are lines of
         // Home's Automation card, each opening its section ([AutomationHomeCard]).
-        nightRow = { NightRow(); VixDivRow(); HeroTicketRow(); PassedArmRows(); WatchlistCard()
+        nightRow = { NightRow(); VixDivRow(); HeroTicketRow()
+            // 21 Oct (Boss: "Add FT3 to the app paper bot until live ..."): the R98 forward test FT3, under the Hero ticket. Not in IraGoldAlgo.
+            if (!com.optionslab.app.BuildConfig.GOLD) Ft3Row()
+            PassedArmRows(); WatchlistCard()
             // The Trend watch (16 Oct, research R63): every open position judged on its underlying's trend. Not in IraGoldAlgo.
             if (!com.optionslab.app.BuildConfig.GOLD) TrendWatchRow()
             // The Signal tester (15 Oct, shadow - never trades): the allow-listed Telegram channels scored. Not in IraGoldAlgo.

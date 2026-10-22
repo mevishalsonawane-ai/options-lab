@@ -547,6 +547,8 @@ object Tasks {
             com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
             // 15 Oct: the Hero ₹1,000 ticket only when it needs a pass (a ticket held, or 12:25-12:33 switched on): never a round by itself.
             if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
+            // 21 Oct: FT3 (paper, Boss's choice; R98e failed): its exit, and its 5-minute marks 11:00-12:55 on expiry days (only when it needs a pass).
+            if (com.optionslab.app.data.Ft3Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FT3) { com.optionslab.app.data.Ft3Arm.tick() } else null,
             if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
             // 15 Oct: a Telegram chat's calls on paper (Boss's choice, paper only): only when it needs a pass (a trade held, or a call in its window).
             if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
@@ -884,6 +886,8 @@ object Tasks {
             // The Hero ₹1,000 ticket, paper only (15 Oct, Boss's choice; R50 failed): its exits, and its 12:30 tickets on expiry days
             // (only when it needs a pass: a ticket held, or 12:25-12:33 switched on).
             if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
+            // 21 Oct: FT3 (paper, Boss's choice; R98e failed): its exit, and its 5-minute marks 11:00-12:55 on expiry days (only when it needs a pass).
+            if (com.optionslab.app.data.Ft3Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FT3) { com.optionslab.app.data.Ft3Arm.tick() } else null,
             if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
             // 15 Oct: a Telegram chat's calls on paper (Boss's choice, paper only): only when it needs a pass (a trade held, or a call in its window).
             if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
@@ -1810,6 +1814,7 @@ class WatchService : Service() {
                             // full pass (which waits behind their own entries' reads): their exits only, every 15 s while held.
                             if (com.optionslab.app.data.PassedArmsHost.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.PASSED_ARMS}") { com.optionslab.app.data.PassedArmsHost.manageOnly() } else null,
                             if (com.optionslab.app.data.HeroTicketArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.HERO_TICKET}") { com.optionslab.app.data.HeroTicketArm.manageOnly() } else null,
+                            if (com.optionslab.app.data.Ft3Arm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.FT3}") { com.optionslab.app.data.Ft3Arm.manageOnly() } else null,
                             if (com.optionslab.app.data.SignalPaperArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.SIGNAL_PAPER}") { com.optionslab.app.data.SignalPaperArm.manageOnly() } else null,
                             // 18 Oct: the paper strategies' live trades ([com.optionslab.app.data.ArmLive]): their Zerodha stops, the paper
                             // exits they follow and the 15:15 square-off, every 15 s while held.

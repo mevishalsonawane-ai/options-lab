@@ -104,7 +104,7 @@ class ArmsCleanupTest {
 
     @Test fun theKeptArmsAreNeverHidden() {
         for (k in listOf("liquidity", "liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin", "liquidity15_mid", "liquidity5_mid",
-            "hero_ticket", DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, BreadthDonchianArm.SOURCE, "watchlist", "solo_midday", "mcx")) {
+            "hero_ticket", Ft3Rules.SOURCE, DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, BreadthDonchianArm.SOURCE, "watchlist", "solo_midday", "mcx")) {
             assertFalse(ArmsCleanup.covers(k), k)
             val (s, _) = ArmsCleanup.pass(State(), flat())
             assertTrue(ArmsCleanup.visible(s, k), k)
@@ -112,6 +112,7 @@ class ArmsCleanupTest {
         }
         assertTrue(ArmsCleanup.KEPT.any { it.label.startsWith("Liquidity 15+5") })
         assertTrue(ArmsCleanup.KEPT.any { it.label == "Hero ₹1,000 ticket" })
+        assertTrue(ArmsCleanup.KEPT.any { it.label.startsWith(Ft3Rules.LABEL) && "Ft3Arm.kt" in it.where })
         assertEquals(12, ArmsCleanup.HIDDEN.size)
         assertEquals(keys.toSet().size, keys.size)
         assertEquals("ORB", ArmsCleanup.of(ArmsCleanup.ORB)?.label)

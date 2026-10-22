@@ -150,6 +150,14 @@ object Diag {
         return synchronized(this) { diary().toList() }
     }
 
+    /**
+     * The Hero ₹1,000 ticket's and FT3's lines (21 Oct: one call from [report] - each line it holds adds to that suspend
+     * function's size, which the compiler can no longer take). Memory only.
+     */
+    private fun ticketArmLines(): String =
+        runCatching { HeroTicketArm.diagLine() }.getOrElse { "Hero ₹1,000 ticket: could not read" } + "\n" +
+            runCatching { Ft3Arm.diagLine() }.getOrElse { "FT3 near-ATM morning: could not read" } + "\n"
+
     /** The report the owner copies: the app's state (no identities, no keys), then the latest events and bot notes. */
     suspend fun report(): String = buildString {
         flush()
@@ -232,7 +240,7 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { NightArm.diagLine() }.getOrElse { "Night (R3): could not read" }).append('\n')
         // VIX divergence (9 Oct, paper only, not proven): on or off, what it holds, each index's last decision (the "[vix-div]" lines below carry each signal's bid/ask).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { VixDivArm.diagLine() }.getOrElse { "VIX divergence: could not read" }).append('\n')
-        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { HeroTicketArm.diagLine() }.getOrElse { "Hero ₹1,000 ticket: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(ticketArmLines())
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { PassedArmsHost.diagLine() }.getOrElse { "Passed-research arms: could not read" }).append('\n')
         // 18 Oct: the paper strategies' live trades and their switches ([ArmLive]; memory only).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { ArmLive.diagLine() }.getOrElse { "Arms live: could not read" }).append('\n')

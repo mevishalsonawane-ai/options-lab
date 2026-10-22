@@ -1,0 +1,36 @@
+id: r98e-search
+title: 'R98e: 18 new features (GEX, walls, pin, strike demand, breadth, cross-index, events), a model and an 8,280-variant
+  rule search'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R98_HERO_ALL_INDEX.md
+hypothesis: New point-in-time information lifts the hero model, and a rule from an 8,280-variant search survives Hansen SPA,
+  White RC, PBO and walk-forward.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): Dhan rollingoption WEEK/MONTH ATM+-10 1-minute (NIFTY,
+  BANKNIFTY, FINNIFTY from 18 Oct 2021, MIDCPNIFTY, SENSEX), index_1m, index_daily official closes, INDIAVIX; R98 loader research/hunt/r98/r98data.py'
+period:
+  design: expiry days 2021-23
+  holdout: walk-forward 2023-26 and the 2024-26 half
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the option chain (GEX, walls, pin, IV against ATM, volume share, residual return), index breadth, the other
+  indices, events; labelled (option prices)'
+model_or_rule: HGB / logistic walk-forward; single conditions and pairs x 2 windows x 3 price buckets x 4 exits
+settings: research/hunt/r98/features_e.py, model_e.py, search_e.py
+prereg: research/hunt/r98/PREREG_E.md
+variants_tried: 8280
+results:
+  summary: '10x AUC 0.659 -> 0.675; one pick a day +Rs 1,282 (-Rs 774 without the 5 best days). IV against ATM does the work;
+    GEX adds nothing. Search: Hansen SPA p 0.963, White RC p 0.341, PBO 0.33, walk-forward 2023-26 -Rs 65,760 (1/4 years).
+    Best: IV ratio <= 1.03, distance <= 1.55 straddles, Rs 6-10, 11:00-12:55, held: 474 tickets +Rs 2,571 (+Rs 1,032 without
+    the 5 best days). Not found.'
+  costs: Rs 20 an order + 18% GST, STT 0.15% on the sell, exchange 0.0355% NSE / 0.0325% BSE, stamp 0.003% on the buy, 1-tick
+    spread, next-minute open + 1 tick entry; under Rs 0.10 at exit expires worthless; Rs 5,000 a ticket, fractional quantity
+holdout_read: true
+verdict: rejected
+notes: 'SPA calibrated: noise p 0.26, planted edge p 0.00. The best rule is frozen as FT3 (FORWARD_TEST.md).'

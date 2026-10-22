@@ -1,0 +1,33 @@
+id: r98c-continuation
+title: 'R98c: trading the continuation after a 1.5 / 2-straddle index move with nearer strikes and index exits'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R98_HERO_ALL_INDEX.md
+hypothesis: After the index moves k in {1.5, 2} straddles from its 13:00 level (13:15-14:45), an ATM / 1 ITM / 1 OTM / Rs
+  5 option with index-based exits makes money on the holdout.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): Dhan rollingoption WEEK/MONTH ATM+-10 1-minute (NIFTY,
+  BANKNIFTY, FINNIFTY from 18 Oct 2021, MIDCPNIFTY, SENSEX), index_1m, index_daily official closes, INDIAVIX; R98 loader research/hunt/r98/r98data.py'
+period:
+  design: expiry days 2021-23
+  holdout: 'expiry days 2024-26 (semi-clean: the continuation rate was known there)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (its move in ATM straddles from 13:00); trade the option'
+model_or_rule: 2 triggers x 4 strikes x 6 index exits; and an index-only futures-like check
+settings: research/hunt/r98/conf.py
+prereg: research/hunt/r98/PREREG_C.md
+variants_tried: 48
+results:
+  summary: 'Design pick (k 1.5, 1 OTM, 0.5-straddle stop, +1-straddle target) +Rs 1,063 on 75 design tickets; holdout -Rs
+    613 on 74 tickets (95% -1,915 .. +866). 4 of 48 rules positive in both halves, as chance gives. The continuation is a
+    random-walk distance effect: +1 straddle before -0.5 on 34.5% of 152 triggers against 33.3% for a driftless walk.'
+  costs: Rs 20 an order + 18% GST, STT 0.15% on the sell, exchange 0.0355% NSE / 0.0325% BSE, stamp 0.003% on the buy, 1-tick
+    spread, next-minute open + 1 tick entry; under Rs 0.10 at exit expires worthless; Rs 5,000 a ticket, fractional quantity;
+    index-only check 0.05% round trip
+holdout_read: true
+verdict: rejected

@@ -1606,3 +1606,23 @@ Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-N
   Order flow: no usable pre-move signal (AUC <= 0.57); 13 Oct = quiet -> ignition (volume + OI build) -> squeeze
   (call OI collapse). Ignition entries: SPA p 0.37; best +Rs 998/ticket both halves but -Rs 684 w/o 5 best days.
   Search closed; 4 near-misses frozen in hunt/r98/FORWARD_TEST.md for a forward paper test.
+- FT3 in the app (Boss's choice, 21 Oct): re-frozen the app's way before any forward day (Black-76 IV with forward =
+  spot, cut-offs 1.0333 / 1.5466, the LIMIT cap and 3-minute window, out at 15:05). Replay 2021-26 from the raw minutes
+  (`hunt/r98/ft3_app.py`): 478 tickets, win 16.3%, +Rs 1,805 a ticket, +Rs 293 without the 5 best days, 4/6 years;
+  filled a minute later +Rs 1,579 (+Rs 62). The same index-day as the research version on 470 of 474. Signal source:
+  the clock and the option chain at the mark (the option's own close and volume: labelled). Its paper record is the test.
+
+## GOLDM intraday option buying, "catch the 100-point moves" (R99, 21-22 Oct 2026) - no rule found
+Full study: `HUNT_R99_GOLD_OBUY.md` (code `hunt/r99_gold_obuy/`, pre-registered `PREREG.md` 5396b7d7 and
+`PREREG_ROUND2.md` ddcd3497). Signal source: the GOLDM future; the option is only bought (ATM / 1-ITM, 1 lot).
+- Gold does move 100+ points many times a day (median 68 legs of >= 100 a day), but a GOLDM option cannot be paid by
+  one: on those trades (median hold 4 minutes) the option moved 0.33 x the future, lost ~14 points on the fill and ~37
+  points of charges. Break-even needs roughly 150-200 future points in the trade's favour.
+- Round 1 (104 rules: fade / follow the 100-300 point impulses, range breaks): SPA p 0.715, 0 past the cheap gates;
+  fade and follow lost before costs. Best: the 09:00-10:00 range break, +Rs 40,034 on 124 trades, -Rs 3,847 at 2x.
+- Round 2 (44 rules, at most one trade a day, held for hours: ORBs, the day's trend at 17:00 / 19:00, big impulses):
+  0 past the cheap gates; rounds 1-2 together SPA p 0.982 (148 rules).
+- Near-miss: at 17:00, if the move since 09:00 >= half the 20-session median daily range, buy the ATM option that way,
+  stop at half the move, out at the square-off. Design 36 trades, 47% win, +Rs 20,741 (+Rs 12,154 at 2x, 4/4 folds);
+  holdout (read once, description only) 15 trades, 53%, +Rs 22,889; but negative without the 3 best trades in both and
+  no better than random-timed twins on the holdout (p 0.87). Forward paper test only if Boss asks; nothing in the app.

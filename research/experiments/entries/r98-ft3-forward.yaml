@@ -1,0 +1,39 @@
+id: r98-ft3-forward
+title: 'FT3 near-ATM morning: the R98e near-miss as the app runs it (Black-76 IV, out at 15:05), on paper from 21 Oct 2026'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R98_HERO_ALL_INDEX.md
+hypothesis: 'Forward test, fixed in advance: FT3 (first 5-minute mark 11:00-12:55 with an OTM option at Rs 6-10, Black-76
+  IV <= 1.0333 x ATM IV, within 1.5466 straddles; Rs 5,000 of whole lots, a LIMIT worked 3 minutes; out at 15:05) has a mean
+  > 0, a day-bootstrap 95% lower bound > 0, > 0 without its 3 best days and Holm p < 0.05 over the four forward tests, read
+  once at 12 months and >= 100 tickets.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): Dhan rollingoption WEEK/MONTH ATM+-10 1-minute (NIFTY,
+  BANKNIFTY, FINNIFTY from 18 Oct 2021, MIDCPNIFTY, SENSEX), index_1m, index_daily official closes, INDIAVIX; R98 loader research/hunt/r98/r98data.py'
+period:
+  design: replay 2021-26 (no new fit)
+  holdout: paper forward test from 21 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the clock and the option chain at the mark (a strike''s price, IV against the ATM''s, distance in ATM straddles);
+  no chart signal'
+model_or_rule: Ft3Rules (android engine orb/Ft3Rules.kt); research replay research/hunt/r98/ft3_app.py
+settings: research/hunt/r98/FORWARD_TEST.md (21 Oct amendment)
+prereg: research/hunt/r98/FORWARD_TEST.md
+variants_tried: 1
+results:
+  summary: 'Replay 2021-26 as the app runs it (raw minutes, no look-ahead, LIMIT cap and 3-minute window, out at 15:05): 478
+    tickets, win 16.3%, mean +Rs 1,805, total +Rs 8.6 lakh, +Rs 293 without the 5 best days, 4 of 6 years > 0 (2025 -Rs 1.75
+    lakh); filled a minute later +Rs 1,579 (+Rs 62); same index-day as the research version on 470 of 474. The forward record
+    is not read yet.'
+  costs: Rs 20 an order + 18% GST, STT 0.15% on the sell, exchange 0.0355% NSE / 0.0325% BSE, stamp 0.003% on the buy, 1-tick
+    spread, next-minute open + 1 tick entry; under Rs 0.10 at exit expires worthless; Rs 5,000 a ticket, fractional quantity;
+    the app's paper fills for the forward record
+holdout_read: false
+verdict: paper-only
+notes: 'Boss''s choice (21 Oct): in the app on paper; live only the standard way (PIN, AI trades live, its Trade live switch,
+  Shadow off). It did not pass research (R98e SPA p 0.96).'

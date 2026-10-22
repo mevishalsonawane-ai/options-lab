@@ -86,6 +86,9 @@ class TestApp : Application() {
         com.optionslab.app.data.HeroTicketArm.init(this)
         // 15 Oct: the Hero ₹1,000 ticket's one-time switch-on stays out of every other test (its own tests turn it back on).
         com.optionslab.app.data.HeroTicketArm.testNoAutoOn = true
+        // 21 Oct: FT3's one-time switch-on too (its own tests turn it back on).
+        com.optionslab.app.data.Ft3Arm.init(this)
+        com.optionslab.app.data.Ft3Arm.testNoAutoOn = true
         com.optionslab.app.data.PassedArmsHost.init(this)
         com.optionslab.app.data.PassedArmsHost.testNoAutoOn = true
         com.optionslab.app.data.WatchlistHost.init(this)
@@ -146,6 +149,7 @@ class TestApp : Application() {
         com.optionslab.app.data.LossBreaker.testPaperDay = null
         com.optionslab.app.data.VixDivArm.wipe()
         com.optionslab.app.data.HeroTicketArm.wipe()
+        com.optionslab.app.data.Ft3Arm.wipe()
         // 15 Oct: the earlier sessions' history is empty unless a test gives its own - the watch's Watchlist step starts its
         // background reads (JobsTest's "a test reached the internet: api.upstox.com" on main came from them).
         com.optionslab.app.data.PassedArmsHost.wipe(); com.optionslab.app.data.PassedArmsHost.testHistory = { emptyList() }

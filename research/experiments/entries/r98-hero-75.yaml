@@ -1,0 +1,37 @@
+id: r98-hero-75
+title: 'R98: hero-zero candles on all five indices, the pre-registered 75% accuracy test'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R98_HERO_ALL_INDEX.md
+hypothesis: A model on 40 point-in-time features (index, VIX, straddle, OI, IV, volume, time) picks expiry-day Rs 1-10 OTM
+  options that double / reach 5x / reach 10x by 15:20 with >= 75% precision on >= 100 picks over >= 30 days, with a positive
+  mean net, walk-forward 2023-26.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): Dhan rollingoption WEEK/MONTH ATM+-10 1-minute (NIFTY,
+  BANKNIFTY, FINNIFTY from 18 Oct 2021, MIDCPNIFTY, SENSEX), index_1m, index_daily official closes, INDIAVIX; R98 loader research/hunt/r98/r98data.py'
+period:
+  design: expiry days 2021-22 (each test year trained only on earlier years)
+  holdout: walk-forward test years 2023, 2024, 2025, 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index, VIX, the ATM straddle, the option chain (OI, IV, volume) and the option''s own price; labelled'
+- 40 point-in-time features (PREREG section 5), look-ahead guard test
+model_or_rule: gradient boosting and logistic regression; labels 2x / 5x / 10x; 60 target x stop exits
+settings: research/hunt/r98/rows.py, model.py, report.py
+prereg: research/hunt/r98/PREREG.md
+variants_tried: 72
+results:
+  summary: '394,956 decision rows on 911 expiries. 0 of the pre-registered checks pass. AUC 0.64-0.69; best precision at any
+    threshold: 2x 29.5%, 5x 8.7%, 10x 6.0%; day-level 13:00 AUC 0.40-0.44. Highest win rate of any exit 56% (sell at +10%),
+    72% on the model''s top decile at -Rs 1,119 a ticket; every one of the 60 exits loses. Exploratory one pick a day (10x
+    logistic, held): +Rs 714 on 716 tickets, -Rs 808 without the 5 best days.'
+  costs: Rs 20 an order + 18% GST, STT 0.15% on the sell, exchange 0.0355% NSE / 0.0325% BSE, stamp 0.003% on the buy, 1-tick
+    spread, next-minute open + 1 tick entry; under Rs 0.10 at exit expires worthless; Rs 5,000 a ticket, fractional quantity
+holdout_read: true
+verdict: rejected
+notes: 6 model x label cells x 60 exits counted as 72 variants (12 model cells + 60 exits). The one-pick-a-day lead is frozen
+  as FT4 (FORWARD_TEST.md).

@@ -66,6 +66,7 @@ object ArmsCleanup {
     val KEPT: List<Kept> = listOf(
         Kept("Liquidity 15+5 (BANKNIFTY, FINNIFTY, MIDCPNIFTY)", "android/app/.../data/OrbArms.kt, engine orb/LiquidityRules.kt"),
         Kept("Hero ₹1,000 ticket", "android/app/.../data/HeroTicketArm.kt, engine orb/HeroTicketRules.kt"),
+        Kept("FT3 near-ATM morning (21 Oct)", "android/app/.../data/Ft3Arm.kt, engine orb/Ft3Rules.kt"),
         Kept("R51 Donchian 20", "android/app/.../data/PassedArmsHost.kt, engine orb/DonchianArm.kt"),
         Kept("R52 Open outside value", "android/app/.../data/PassedArmsHost.kt, engine orb/OovArm.kt"),
         Kept("Solo 2.0", "android/app/.../data/PassedArmsHost.kt, engine orb/Solo2.kt"),

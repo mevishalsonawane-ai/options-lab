@@ -234,3 +234,78 @@ def test_ignition_trigger_on_the_synthetic_day():
     assert trg[(3.0, 1.3)][:3] == (R.minute(14, 0), 10100.0, "C")
     assert trg[(3.0, 1.5)][:3] == (R.minute(14, 0), 10100.0, "C")
     assert trg[(5.0, 1.3)][0] == R.minute(14, 1)
+
+
+# ---- FT3 as the app runs it (ft3_app.py): Black-76 IV, the IV clock, the frozen cut-offs, the LIMIT, no look-ahead ---------
+
+def test_ft3_app_black76_iv_inverts_and_refuses_no_time_value():
+    import ft3_app as F
+    t = F.years_to_1530(R.minute(11, 0))
+    assert t == pytest.approx(270 / (365 * 24 * 60))
+    assert F.years_to_1530(R.minute(15, 30)) == pytest.approx(1 / (365 * 24 * 60))     # at least a minute
+    for call, k in ((True, 22600.0), (False, 22400.0), (True, 22500.0)):
+        p = F.b76(22510.0, k, t, 0.2, call)
+        assert F.iv(p, 22510.0, k, t, call) == pytest.approx(0.2, abs=1e-6)
+    assert np.isnan(F.iv(5.0, 22600.0, 22500.0, t, True))          # an ITM call under intrinsic
+    assert np.isnan(F.iv(0.0, 22510.0, 22600.0, t, True))
+    assert np.isnan(F.iv(np.nan, 22510.0, 22600.0, t, True))
+    # The frozen cut-offs are the design 10th percentiles to 4 decimals (FORWARD_TEST.md, 21 Oct amendment).
+    assert (F.IV_REL_MAX, F.DIST_EM_MAX, F.PX_LO, F.PX_HI) == (1.0333, 1.5466, 6.0, 10.0)
+    assert F.MARKS[0] == R.minute(11, 0) and F.MARKS[-1] == R.minute(12, 55) and len(F.MARKS) == 24
+    assert F.T_EXIT == R.minute(15, 4)
+
+
+def ft3_day(seed: int = 3) -> R.Day:
+    """A NIFTY expiry day whose index walks; every option Black-76 priced at 20% vol (the 22,600 call at 22% from 11:20,
+    so its IV ratio is 1.10 then) and traded every minute."""
+    import ft3_app as F
+    rng = np.random.default_rng(seed)
+    s = 22510.0 + np.cumsum(rng.normal(0, 3, R.N))
+    ix = np.full((R.N, 4), np.nan)
+    ix[:, 0] = ix[:, 1] = ix[:, 2] = ix[:, 3] = s
+    opts = {}
+    for k in range(22300, 22751, 50):
+        for side in "CP":
+            a = np.full((R.N, 7), np.nan)
+            for t in range(R.N):
+                sig = 0.22 if (k == 22600 and side == "C" and t >= R.minute(11, 20)) else 0.20
+                a[t, R.C] = F.b76(s[t], float(k), F.years_to_1530(t), sig, side == "C")
+            a[:, R.O] = a[:, R.C]
+            a[:, R.V] = 100
+            opts[(float(k), side)] = a
+    return R.Day(date(2026, 10, 27), "NIFTY", ix, opts)
+
+
+def test_ft3_app_pick_reads_only_its_minute():
+    """The pick at every mark is the same when every later bar is replaced by an absurd value (1e6), on a moving day."""
+    import ft3_app as F
+    day = ft3_day()
+    seen = 0
+    for t in F.MARKS:
+        a = F.pick_at(day, t)
+        b = F.pick_at(masked(day, t, 1e6), t)
+        assert a == b, t
+        seen += a is not None
+    assert seen > 0, "the synthetic day must give picks for the guard to mean something"
+
+
+def test_ft3_app_pick_filters_and_the_limit_cap():
+    import ft3_app as F
+    day = ft3_day()
+    for t in F.MARKS:
+        p = F.pick_at(day, t)
+        if p is None:
+            continue
+        k, side, px, dist, r = p
+        assert 6.0 <= px <= 10.0 and dist <= 1.5466 + 1e-9 and r <= 1.0333 + 1e-9
+        assert (k > day.ix[t, 3]) if side == "C" else (k < day.ix[t, 3])
+        if t >= R.minute(11, 20):
+            assert not (k == 22600.0 and side == "C"), "IV 1.10x the ATM's is out"
+    # The LIMIT: the first of the next 3 opens + 1 tick within price x 1.2 + 0.10.
+    a = np.full((R.N, 7), np.nan)
+    t = R.minute(11, 0)
+    a[t + 1, R.O], a[t + 2, R.O], a[t + 3, R.O] = 12.0, 9.60, 8.0
+    assert F.fill(a, t, 8.0) == (pytest.approx(9.65), t + 2)        # cap 9.70: 12.05 no, 9.65 yes
+    assert F.fill(a, t, 8.0, start=3) == (pytest.approx(8.05), t + 3)
+    a[t + 2, R.O] = 9.70
+    assert F.fill(a, t, 6.0) is None                                # cap 7.30: none of 12.05 / 9.75 / 8.05

@@ -63,6 +63,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 21 Oct (Boss: "Add FT3 to the app paper bot until live, when live is started then it should move to live").
+        Entry("2026-10-21-ft3-paper", OCT21, "FT3 forward test trades on paper",
+            "FT3, the strongest hero-zero near-miss from research, now trades on paper on each index's expiry day. " +
+                "From 11:00 to 12:55 it buys ₹5,000 of one cheap option near the money when its rule fits. " +
+                "It sells at 15:05 and has no stop on paper. " +
+                "It did not pass research, so its paper record is the forward test. " +
+                "Live goes the usual way: Live with your PIN, AI trades live, its own switch, and Shadow off. " +
+                "Live buys at most your lot cap and rests a disaster stop 80% below the price paid.",
+            "Home → Strategies → FT3 near-ATM morning; Settings → Zerodha for its Trade live and Shadow",
+            ask = "how is FT3 doing"),
         // 21 Oct (Boss: "Yes, give commodities their own day lock"), with fixes from his 21 Oct diagnostics.
         Entry("2026-10-21-commodities-own-lock", OCT21, "Commodities get their own paper day lock",
             "MCX paper bots now have their own day lock and daily loss limit on paper. " +
