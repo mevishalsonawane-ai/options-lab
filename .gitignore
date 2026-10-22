@@ -24,3 +24,4 @@ apk/
 # crypto_options_lake.py: catalog lock file and temp
 research/data/crypto/*.lock
 research/data/crypto/*.tmp
+.venv-r102/
