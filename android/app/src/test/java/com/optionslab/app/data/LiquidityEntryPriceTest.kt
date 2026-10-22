@@ -191,6 +191,19 @@ class LiquidityEntryPriceTest : RobolectricTest() {
         awaitValue("the retry's diagnostics line") { Diag.lines().firstOrNull { it.contains("$sym had no price to fill at; priced again, still not filled") } }
     }
 
+    /**
+     * 22 Oct, review (CLAUDE.md: open positions come first): while the book holds a position, its stop looks share the arms' lock,
+     * so the one more read (up to 3 s) is never made then - the entry is refused at once, said so.
+     */
+    @Test fun withAPositionOfTheseArmsOpenThePriceIsNeverReadAgain() {
+        beforeTheSignal()
+        upstox.scriptNext(ceKey, FakeUpstox.Scripted(null), FakeUpstox.Scripted(null))
+        val from = upstox.requests.size
+        val got = runBlocking { OrbArms.entryQuote(theCall(), mayRetry = false) }
+        assertNull(got.quote); assertFalse(got.retried)
+        assertEquals("only the signal's own read (its two tries), never the one more", 2, callReads(from))
+    }
+
     @Test fun noPriceAtAllIsRefusedNamingTheOptionAndNothingIsPlaced() {
         beforeTheSignal()
         upstox.prices.remove(ceKey)                                          // the feed has no candle for the call today

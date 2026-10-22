@@ -1891,9 +1891,9 @@ object OrbArms {
         if (flow.skip) return flow.pausedWhy ?: FlowGate.SKIPPED
         if (live) return enterLive(b, arm, c, signalBar).also { FlowGate.outcome(flow, it) }
         // 22 Oct: the price at the signal, handed to the fill; never enter blind.
-        val price = entryQuote(c)
+        val price = entryQuote(c, mayRetryPrice(b))
         val q = price.quote
-        val ltp = q?.ltp ?: return "refused: no quote for ${c.symbol} after 2 reads"
+        val ltp = q?.ltp ?: return noQuote(c, price)
         // The Upstox feed has no bid/ask, so the paper fill is the LTP slipped 5 bps: price the checks the same way.
         val expected = ltp * 1.0005
         // The paper account's parameters today (its stop): this position is managed with them to its exit.
@@ -1904,7 +1904,7 @@ object OrbArms {
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, expected), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
-        val entry = buyPaperEntry(arm.label, c, 1, q, ownerOf(arm)) { nq ->
+        val entry = buyPaperEntry(arm.label, c, 1, q, ownerOf(arm), mayRetryPrice(b)) { nq ->
             val again = nq.ltp * 1.0005
             if (OrbRules.stopTrigger(again, pp.stopPoints) == null) "refused: premium %.2f is at or below %s, a %s-point stop has no level"
                 .format(Locale.ENGLISH, again, pts(pp.stopPoints), pts(pp.stopPoints))
@@ -2898,10 +2898,20 @@ object OrbArms {
      * the last [Paper.FILL_FRESH_MS] (another book on the same bar), else one read ([Paper.recentQuote]: memory or the network,
      * never the disk or the vault). None: one more read ([retryQuote]).
      */
-    internal suspend fun entryQuote(c: Paper.Contract): SignalPrice {
+    internal suspend fun entryQuote(c: Paper.Contract, mayRetry: Boolean = true): SignalPrice {
         runCatching { Paper.recentQuote(c, Paper.FILL_FRESH_MS) }.getOrNull()?.takeIf { it.ltp > 0 }?.let { return SignalPrice(it, false) }
+        // 22 Oct, review (CLAUDE.md: open positions come first): the one more read waits up to 3 s under the arms' lock, which
+        // this book's open positions' stop looks share - so only when this book holds nothing.
+        if (!mayRetry) return SignalPrice(null, false)
         return SignalPrice(retryQuote(c), true)
     }
+
+    /** 22 Oct, review: an entry may wait for one more price read or order only while [b] holds nothing (its stops share the lock). */
+    private fun mayRetryPrice(b: Book): Boolean = b.positions.none { it.open }
+
+    /** The words of an entry with no price at its signal ([SignalPrice.retried]: after the one more read). */
+    private fun noQuote(c: Paper.Contract, p: SignalPrice): String =
+        if (p.retried) "refused: no quote for ${c.symbol} after 2 reads" else "refused: no quote for ${c.symbol} (not read again: a position of these arms is open)"
 
     /** One more fresh price for [c] ([Paper.quote]: the stream's tick, else one read), [ENTRY_RETRY_MS] at most; null: none. */
     internal suspend fun retryQuote(c: Paper.Contract): com.optionslab.engine.sandbox.Quote? =
@@ -2925,13 +2935,14 @@ object OrbArms {
      * order unless the first is confirmed cancelled; a refused order is never retried.
      */
     private suspend fun buyPaperEntry(label: String, c: Paper.Contract, lots: Int, known: com.optionslab.engine.sandbox.Quote?, auto: String?,
-                                      recheck: suspend (com.optionslab.engine.sandbox.Quote) -> String?): EntryBuy {
+                                      mayRetry: Boolean, recheck: suspend (com.optionslab.engine.sandbox.Quote) -> String?): EntryBuy {
         val sent1 = System.currentTimeMillis()
         val first = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, known = known, auto = auto)
         filledOrCancelled(first)?.let { return EntryBuy(first, it, 1, sent1) }
         val id = first.orderId
         val cancelled = first.ok && id != null && Paper.state.orders.firstOrNull { it.orderId == id }?.status == "cancelled"
-        if (!cancelled) return EntryBuy(first, null, 1, sent1)
+        // 22 Oct, review: never a second order while this book holds a position (its stop looks wait on the same lock).
+        if (!cancelled || !mayRetry) return EntryBuy(first, null, 1, sent1)
         val q = retryQuote(c)
         // The checks made before the first order, made again at the new price (a check that fails to run refuses).
         val refusal = q?.let { nq -> runCatching { recheck(nq) }.getOrElse { e -> "refused: the checks could not be made again (${e.message})" } }
@@ -3131,14 +3142,14 @@ object OrbArms {
                 }
         }
         // 22 Oct: the option's price at the signal ([entryQuote]: one more read if the first finds none), handed to the fill.
-        val price = entryQuote(c)
+        val price = entryQuote(c, mayRetryPrice(b))
         val q = price.quote
-        val ltp = q?.ltp ?: return "refused: no quote for ${c.symbol} after 2 reads"
+        val ltp = q?.ltp ?: return noQuote(c, price)
         if (Strategies.stoppedToday()) return "stopped_for_today"
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
-        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm)) { nq -> paperRecheck(c, lots, nq) }
+        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b)) { nq -> paperRecheck(c, lots, nq) }
         val buy = entry.result
         val fill = entry.fill ?: return unfilled(c, entry)
         // The fill against the signal's price (the stream's last at the signal, else the price read just before the order); timed
