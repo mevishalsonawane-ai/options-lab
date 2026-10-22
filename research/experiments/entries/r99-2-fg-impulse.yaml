@@ -9,7 +9,7 @@ period:
   design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
   holdout: 2026-07-15..2026-10-19 (locked; R99 read it once, for the round-2 E near-miss only)
 instruments:
-- GOLDM
+- GOLD
 hypothesis: A big impulse followed (stop at its origin, held 120 min or to the square-off) or faded (target and stop half
   the impulse, 60 / 120 min), at most once a day, passes the R99 gates.
 features:

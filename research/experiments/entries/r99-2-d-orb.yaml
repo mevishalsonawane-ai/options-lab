@@ -9,7 +9,7 @@ period:
   design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
   holdout: 2026-07-15..2026-10-19 (locked; R99 read it once, for the round-2 E near-miss only)
 instruments:
-- GOLDM
+- GOLD
 hypothesis: Morning (09:00-09:30/10:00/11:00) or evening (15:00-17:00, 17:00-17:30) range breaks, at most one a day, stop
   at the range's other side, held for hours, pass the R99 gates over 148 variants.
 features:

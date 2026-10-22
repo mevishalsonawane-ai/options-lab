@@ -9,7 +9,7 @@ period:
   design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
   holdout: 2026-07-15..2026-10-19 (locked; R99 read it once, for the round-2 E near-miss only)
 instruments:
-- GOLDM
+- GOLD
 hypothesis: The first break of the morning or US-pre-market range, held for a 1-2x range target, earns after costs and passes
   the R99 gates.
 features:

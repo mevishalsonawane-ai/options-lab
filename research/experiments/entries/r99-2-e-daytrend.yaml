@@ -9,7 +9,7 @@ period:
   design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
   holdout: 2026-07-15..2026-10-19 (read once for R99 rounds 1-2, for the cumulative SPA-best only)
 instruments:
-- GOLDM
+- GOLD
 hypothesis: When the move since 09:00 is >= k (0.25, 0.5) x the 20-session median daily range at 17:00 or 19:00, buying with
   it and holding to the square-off passes the R99 gates.
 features:

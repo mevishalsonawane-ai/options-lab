@@ -9,7 +9,7 @@ period:
   design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
   holdout: 2026-07-15..2026-10-19 (locked; R99 read it once, for the round-2 E near-miss only)
 instruments:
-- GOLDM
+- GOLD
 hypothesis: After >= X points in W minutes ((100,5),(150,15),(200,15),(300,30)) a GOLDM option bought AGAINST the move (fading
   beats a random walk on the future line, 0.37-0.44 vs 0.33 on design) earns after costs, beats random-minute twins and passes
   the R99 gates.
