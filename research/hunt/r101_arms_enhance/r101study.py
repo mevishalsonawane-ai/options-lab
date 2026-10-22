@@ -332,6 +332,7 @@ def run(phase: str, arms=K.ARMS) -> dict:
         out, tr = evaluate(arm, units, phase, design_b0)
         out["parity"] = parity
         _save(f"{arm}_{phase}", tr)
+        _save(f"{arm}_{phase}_units", units)              # the priced candidates (so a report never needs a re-run)
         # one file per arm (the arms run in parallel processes), merged into {phase}.json by merge()
         (K.RESULTS / f"{phase}_{arm}.json").write_text(json.dumps(out, indent=1, default=str))
     return merge(phase)
