@@ -64,6 +64,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 22 Oct (Boss: "Check each and every arm also hidden arms"): the arms audit's fixes, and research R101 (0 of 20 pass).
+        Entry("2026-10-22-arms-audit", OCT22, "Every arm checked; 16 bugs fixed",
+            "The NG evening breakout sold every put a minute after buying it, a wrong exit side, now fixed. " +
+                "Liquidity skips the index's own expiry day and any bar seen over 3 minutes after its close. " +
+                "Day-lock skips are kept as would-be rows, and the day-lock line now shows the day's P&L and the limit. " +
+                "Hidden arms can no longer open a trade before their list is read or from a waiting script or shadow. " +
+                "Research R101 tried 20 ways to raise profit or win rate on Liquidity, R72, R51 and R52: none passed.",
+            "Home → Strategies (each arm's row and the Hidden arms list); the report RESULT.md in the repo"),
         // 22 Oct (Boss: "if the 10% is received, make the stoploss to the start point"): their own paper switch (R100 A4 did not pass).
         Entry("2026-10-22-liquidity-breakeven", OCT22, "Your own Liquidity switch: breakeven at +10%",
             "A new switch can move a Liquidity paper trade's stop to the price paid once it is up 10%. " +
