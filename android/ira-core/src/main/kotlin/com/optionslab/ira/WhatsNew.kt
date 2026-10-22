@@ -64,6 +64,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 22 Oct (Boss: "if the 10% is received, make the stoploss to the start point"): their own paper switch (R100 A4 did not pass).
+        Entry("2026-10-22-liquidity-breakeven", OCT22, "Your own Liquidity switch: breakeven at +10%",
+            "A new switch can move a Liquidity paper trade's stop to the price paid once it is up 10%. " +
+                "The stop also covers the charges, so a sale there loses nothing. " +
+                "It is off until you switch it on, and live trades never use it. " +
+                "It did not pass research: 1,238 past trades made ₹2,45,083 with it and ₹2,68,404 without. " +
+                "Its trades are labelled and kept apart from the plain-rules record. " +
+                "Each flip shows in the Autopilot change timeline, and one tap undoes it.",
+            "Home → Automation card → Strategy lab (Liquidity's breakeven at +10%); Autopilot → change timeline"),
         // 22 Oct (Boss: a Liquidity trade went up to about +Rs 4,500 and closed about -Rs 1,000): two exit fixes and research R100.
         Entry("2026-10-22-liquidity-exit-fixes", OCT22, "Liquidity exits keep working when one feed fails",
             "One index's failed candle read no longer stops the other Liquidity positions' exits. " +

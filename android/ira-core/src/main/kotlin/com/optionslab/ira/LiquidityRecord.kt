@@ -137,6 +137,8 @@ object LiquidityRecord {
         val day: LocalDate get() = trade.entryTime.toLocalDate()
         /** Entered under Boss's opt-in Rs 500 give-back trail ([BotTrades.Trade.trail]): not the plain rules' trade. */
         val trailed: Boolean get() = trade.trail
+        /** The own rules a [trailed] trade ran on, in words (22 Oct: the trail or Boss's breakeven at +10%, or both). */
+        val rules: String get() = trade.rules ?: com.optionslab.engine.orb.LiquidityTrail.TRAILED
         val win: Boolean get() = net > 0
         val why: String get() = trade.why ?: "exit"
     }
@@ -381,9 +383,20 @@ object LiquidityRecord {
         val shown = pick(q, trailed.filter { it.trailed }, today)
         if (shown.isEmpty()) return null
         val t = tally(shown)
-        return "With your ₹500 trail (${com.optionslab.engine.orb.LiquidityTrail.NOTE}), kept apart from the plain-rules record above: " +
+        val head = when (val l = ownLabel(shown)) {
+            com.optionslab.engine.orb.LiquidityTrail.TRAILED -> "With your ₹500 trail (${com.optionslab.engine.orb.LiquidityTrail.NOTE})"
+            com.optionslab.engine.orb.LiquidityBreakeven.LABEL -> "With your breakeven at +10% (${com.optionslab.engine.orb.LiquidityBreakeven.NOTE})"
+            else -> "On your own exit rules (your ₹500 trail and your breakeven at +10%; your choice)"
+        }
+        return "$head, kept apart from the plain-rules record above: " +
             "${s(t.trades, "trade")}, ${t.wins} won, net ${rs(t.perLot)} a lot after charges (${rs(t.net)} in all)."
     }
+
+    /**
+     * 22 Oct: the own rules of [rows] (trades not on the plain rules, [Row.trailed]) in words: their one label when they share it
+     * ("with ₹500 trail", "with breakeven at +10%"), else "on your own exit rules".
+     */
+    fun ownLabel(rows: List<Row>): String = rows.map { it.rules }.distinct().singleOrNull() ?: "on your own exit rules"
 
     /**
      * The answer to [q] from the PLAIN-RULES record [all] ([rows]); [trailed]: the trades under Boss's opt-in trail, said on a

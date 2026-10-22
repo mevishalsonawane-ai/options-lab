@@ -146,6 +146,27 @@ object LiquidityTest {
         return said
     }
 
+    /**
+     * Boss's own breakeven at +10% on the Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityBreakeven]; 22 Oct, research
+     * R100 A4 did not pass, so it is their choice and off by default). Memory only: the order path reads it at a paper entry.
+     */
+    fun breakevenOn(): Boolean = _state.value.breakeven
+
+    /**
+     * Boss's switch from the Strategy lab card (one tap on, one tap off): new paper entries carry the breakeven or plain rules;
+     * open trades keep the rule they entered with. Live trades never use it. Said back and kept in the diagnostics. When it
+     * really changes it is logged in the Autopilot change timeline as Boss's own choice ([com.optionslab.app.ira.Autopilot.logBossBreakeven]:
+     * shown to Boss, undone in one tap, never counted as Autopilot's change); [log] false: that Undo itself flipping it back.
+     */
+    fun setBreakeven(on: Boolean, log: Boolean = true): String {
+        val was = edit { it.copy(breakeven = on) }.breakeven
+        saveSoon()
+        val said = LiquidityFreeze.breakevenSaid(on)
+        runCatching { Diag.record("liquidity", "$said (by you${if (log) "" else ", undone from the change timeline"})") }
+        if (log && was != on) runCatching { com.optionslab.app.ira.Autopilot.logBossBreakeven(on) }
+        return said
+    }
+
     // ---- 20 Oct, enhancement round 1 (idea 3): the no-twin rule ([com.optionslab.ira.LiquidityTwin]) -----------------------------
 
     /** Whether the no-twin rule is on for the paper books (on by this update). Memory only: the order path reads it. */

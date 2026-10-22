@@ -151,6 +151,12 @@ object AutoChange {
          * shared paper lock). Paper only, never live: no PIN either way. Never proposed or applied by Autopilot.
          */
         SEGMENT_SPLIT("risk guards", "commodities' own paper limits"),
+        /**
+         * 22 Oct (Boss: "if the 10% is received, make the stoploss to the start point"): Boss's own breakeven at +10% on the Liquidity
+         * PAPER books switched on or off from the Strategy lab card ([liqBreakeven]; research R100 A4 did not pass, so it is their
+         * choice): logged so the change timeline shows it and its Undo flips the switch back. Never proposed or applied by Autopilot.
+         */
+        LIQ_BREAKEVEN("strategies", "your breakeven at +10% on Liquidity paper"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -323,6 +329,8 @@ object AutoChange {
             Kind.ARM_SHADOW -> if (c.to == ON) Risk.LOWER else Risk.RAISE
             // 21 Oct: on, MCX paper arms are no longer stopped by NSE's paper results (more paper trades); off puts the shared lock back.
             Kind.SEGMENT_SPLIT -> if (c.to == ON) Risk.RAISE else Risk.LOWER
+            // 22 Oct: the breakeven only ever adds an earlier exit, on paper: on lowers risk, off takes that away.
+            Kind.LIQ_BREAKEVEN -> if (c.to == ON) Risk.LOWER else Risk.RAISE
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -363,7 +371,7 @@ object AutoChange {
      */
     fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
         k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK || k == Kind.PAPER_FILTER || k == Kind.ARM_LIVE ||
-        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT
+        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT || k == Kind.LIQ_BREAKEVEN
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -434,6 +442,20 @@ object AutoChange {
         else "your choice: new Liquidity paper trades are back on plain rules",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "Liquidity's ₹500 trail (paper)")
+
+    /** The target of Boss's Liquidity paper breakeven switch ([Kind.LIQ_BREAKEVEN]; no "liquidity" in it, as [TRAIL_TARGET]). */
+    const val BREAKEVEN_TARGET = "breakeven:liq_paper"
+
+    /**
+     * 22 Oct: Boss switching their own breakeven at +10% on the Liquidity PAPER books [on] or off ([Kind.LIQ_BREAKEVEN]), for the
+     * change timeline: on lowers paper risk (it only ever adds an earlier exit), off takes that away. Paper only.
+     */
+    fun liqBreakeven(on: Boolean): Change = Change(Kind.LIQ_BREAKEVEN, BREAKEVEN_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your choice (22 Oct): once a new Liquidity paper trade is +10%, its stop moves to the price paid plus charges - did not " +
+            "pass research (R100 A4); those trades are kept apart from the plain-rules record for the 26 Oct decision"
+        else "your choice: new Liquidity paper trades are back on plain rules",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "Liquidity's breakeven at +10% (paper)")
 
     /** The target of the commodities' own paper limits ([Kind.SEGMENT_SPLIT]; no safety word in it, so its Undo is never held). */
     const val SPLIT_TARGET = "split:mcx_paper"
@@ -1098,7 +1120,7 @@ object AutoChange {
         // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) and the passed arms' lock ([Kind.PAPER_LOCK]) likewise - the
         // switch flipped since is the one to undo.
         if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER, Kind.ARM_LIVE,
-                Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT)) return false
+                Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT, Kind.LIQ_BREAKEVEN)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
         return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
     }

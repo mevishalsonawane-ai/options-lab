@@ -358,6 +358,11 @@ internal object Autopilot {
                 if (c.target != AutoChange.TRAIL_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
                 com.optionslab.app.data.LiquidityTest.setTrail(c.to == AutoChange.ON, log = false)
             }
+            // 22 Oct: Boss's own Liquidity paper breakeven switch ([logBossBreakeven]): only its Undo applies here, as the trail's.
+            AutoChange.Kind.LIQ_BREAKEVEN -> {
+                if (c.target != AutoChange.BREAKEVEN_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                com.optionslab.app.data.LiquidityTest.setBreakeven(c.to == AutoChange.ON, log = false)
+            }
             // 15 Oct: Boss's Hero ₹1,000 ticket switched on by the update on their choice ([logBossTicketOn]): its Undo switches the
             // arm off (or, undone twice, back on) - a PAPER arm, never Zerodha, so no PIN either way; the flip is not logged again.
             // 15 Oct (Boss's "Both"): a passed-research paper arm ("paperarm:<source>": R51, R52, Solo 2.0) - its Undo switches it
@@ -1304,6 +1309,27 @@ internal object Autopilot {
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 // Every call is a real change ([com.optionslab.app.data.LiquidityTest.setTrail] logs only those): each is kept, and the
                 // older flips are no longer undoable ([AutoChange.superseded]), so the newest entry always matches the switch.
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * 22 Oct: Boss switched their own breakeven at +10% on the Liquidity PAPER books [on] or off
+     * ([com.optionslab.app.data.LiquidityTest.setBreakeven], the Strategy lab card): logged as Boss's, exactly as [logBossTrail]
+     * (kept, never counted as Autopilot's change, one tap undoes the newest flip), in the background on the same lane.
+     */
+    fun logBossBreakeven(on: Boolean) {
+        if (!enabled()) return
+        val c = AutoChange.liqBreakeven(on)
+        val note = if (on) "your choice; live trades never use it" else "your choice"
+        scope.launch(trailLane) {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                     save()

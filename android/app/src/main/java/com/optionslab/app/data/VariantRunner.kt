@@ -2,6 +2,7 @@ package com.optionslab.app.data
 
 import android.content.Context
 import com.optionslab.engine.orb.Arm
+import com.optionslab.engine.orb.LiquidityBreakeven
 import com.optionslab.engine.orb.LiquidityParams
 import com.optionslab.engine.orb.OrbParams
 import com.optionslab.engine.orb.VixDivParams
@@ -315,8 +316,9 @@ object VariantRunner {
         runCatching {
             val closed = OrbArms.closedPaper() + OrbArms.closedLive()
             for (p in closed) {
-                // Boss's opt-in Liquidity give-back trail (R19b) is not the rules' own result: left out of the baseline.
-                if (p.day != d || p.exit == null || p.trail != null) continue
+                // Boss's opt-in Liquidity give-back trail (R19b) or breakeven at +10% (R100 A4, 22 Oct) is not the rules' own
+                // result: left out of the baseline.
+                if (p.day != d || p.exit == null || LiquidityBreakeven.ownRules(p.trail, p.be)) continue
                 val key = lab(p.arm)
                 val run = runs[key] ?: continue
                 if (run == VariantLab.Run.OFF || p.live != (run == VariantLab.Run.LIVE)) continue

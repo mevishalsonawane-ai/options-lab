@@ -444,7 +444,7 @@ object DayRecap {
 
     private fun liqTrade(r: LiquidityRecord.Row): String =
         "${hm(r.trade.entryTime.toLocalTime())} ${r.book} ${if (r.trade.right.equals("PE", true)) "PE" else "CE"} ${rs(r.perLot)} a lot" +
-            if (r.trailed) " (${com.optionslab.engine.orb.LiquidityTrail.TRAILED})" else ""
+            if (r.trailed) " (${r.rules})" else ""
 
     /**
      * Liquidity 15+5's line: its trades that day - the count, net after charges per lot, best and worst. Trades under Boss's
@@ -453,7 +453,7 @@ object DayRecap {
     fun liquidityLine(f: Facts): String {
         val trailed = f.liquidity.orEmpty().filter { it.trailed }
         val apart = if (trailed.isEmpty() || f.liquidity.orEmpty().size < 2) ""
-            else " Of them, ${trailed.size} ${com.optionslab.engine.orb.LiquidityTrail.TRAILED} (not the plain rules): net ${rs(LiquidityRecord.tally(trailed).perLot)} a lot."
+            else " Of them, ${trailed.size} ${LiquidityRecord.ownLabel(trailed)} (not the plain rules): net ${rs(LiquidityRecord.tally(trailed).perLot)} a lot."
         return liquidityTrades(f) + apart
     }
 

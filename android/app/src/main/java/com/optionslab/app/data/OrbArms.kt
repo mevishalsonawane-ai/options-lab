@@ -12,6 +12,7 @@ import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.FamilyPark
 import com.optionslab.engine.orb.HeroRules
 import com.optionslab.engine.orb.IndexData
+import com.optionslab.engine.orb.LiquidityBreakeven
 import com.optionslab.engine.orb.LiquidityLots
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.engine.orb.LiquidityShadow
@@ -173,6 +174,12 @@ object OrbArms {
          * trail: a trade entered before it, which keeps R19b's first rule (from +Rs 500).
          */
         val trailFrom: Double? = null,
+        /**
+         * 22 Oct: Liquidity 15+5 on PAPER under Boss's own breakeven ([LiquidityBreakeven], research R100 A4: did not pass, their
+         * choice, off by default): the gain that moves the stop to the price paid plus charges (+10%). Null: plain rules (every
+         * live trade, every other arm).
+         */
+        val be: Double? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -307,7 +314,8 @@ object OrbArms {
                         targetPts = if (p.has("targetPts")) p.getDouble("targetPts") else null,
                         liq = p.optString("liq").ifEmpty { null }?.let { liqOf(it) },
                         trail = if (p.has("trail")) p.getDouble("trail") else null,
-                        trailFrom = if (p.has("trailFrom")) p.getDouble("trailFrom") else null)
+                        trailFrom = if (p.has("trailFrom")) p.getDouble("trailFrom") else null,
+                        be = if (p.has("breakeven")) p.getDouble("breakeven") else null)
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -441,7 +449,7 @@ object OrbArms {
      * the plain-rules trades only (Boss's opt-in give-back trail, R19b, is kept apart).
      */
     private fun bnClosed(b: Book, live: Boolean): List<com.optionslab.ira.LiquidityStopRule.Trade> =
-        b.positions.filter { it.arm in com.optionslab.engine.orb.ArmPriority.BN_BOOKS && !it.open && it.live == live && it.exitTime != null && it.trail == null }
+        b.positions.filter { it.arm in com.optionslab.engine.orb.ArmPriority.BN_BOOKS && !it.open && it.live == live && it.exitTime != null && !LiquidityBreakeven.ownRules(it.trail, it.be) }
             .map { p -> com.optionslab.ira.LiquidityStopRule.Trade(epochMs(p.exitTime!!), p.exitTime.toLocalDate(), (p.grossPnl ?: 0.0) - p.charges) }
 
     private fun stopHints(b: Book) {
@@ -867,7 +875,7 @@ object OrbArms {
                         if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)); p.lot?.let { put("lot", it) }; p.low?.let { put("low", it) }
                         p.mgrStop?.let { put("mgrStop", it) }
                         p.stopPts?.let { put("stopPts", it) }; p.targetPts?.let { put("targetPts", it) }; p.liq?.let { put("liq", liqText(it)) }
-                        p.trail?.let { put("trail", it) }; p.trailFrom?.let { put("trailFrom", it) } })
+                        p.trail?.let { put("trail", it) }; p.trailFrom?.let { put("trailFrom", it) }; p.be?.let { put("breakeven", it) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -962,10 +970,22 @@ object OrbArms {
     /** Why a position's resting stop filled: the trade manager's lock (R12, ORB Fresh paper), the profit lock, or its stop. */
     private fun stopWhy(p: Position): String = when {
         p.mgrStop != null && p.stopTrigger != null && kotlin.math.abs(p.stopTrigger - p.mgrStop) < 1e-9 -> MANAGER_LOCK
+        // 22 Oct: Boss's paper breakeven raised the stop to the price paid plus charges (checked first: its level is its own).
+        beStopped(p) -> LiquidityBreakeven.WHY
         // Boss's paper trail raised the stop to its own level (13 Oct review: a lab lock variant's stop is the lock's, not the trail's).
         trailStopped(p) -> LiquidityTrail.WHY
         lockedStop(p) -> "profit_lock"
         else -> "stop"
+    }
+
+    /**
+     * 22 Oct: was [p]'s resting stop put where it is by Boss's paper breakeven at +10% ([LiquidityBreakeven])? Its trigger is the
+     * breakeven's own level (the price paid plus charges, on the tick) - a stop the trail or a lock raised elsewhere is theirs.
+     */
+    private fun beStopped(p: Position): Boolean {
+        val at = p.stopTrigger ?: return false
+        val own = LiquidityBreakeven.level(p.entry, p.peak, ProfitLock.roundTripPerUnit(p.entry, p.qty), p.be) ?: return false
+        return kotlin.math.abs(at - own) < 1e-6
     }
 
     /**
@@ -1176,8 +1196,8 @@ object OrbArms {
         // only: trades under Boss's paper give-back trail (R19b) are kept apart, so the 26 Oct decision reads the rules alone.
         val closed = paper.filter { !it.open && it.exitTime != null }
         val perLot = { p: Position -> ((p.grossPnl ?: 0.0) - p.charges) / p.lots.coerceAtLeast(1.0) }
-        val trades = closed.filter { it.trail == null }.map { p -> com.optionslab.ira.Vetting.Trade(p.exitTime!!.toLocalDate(), perLot(p)) }
-        val trailed = closed.filter { it.trail != null }
+        val trades = closed.filter { !LiquidityBreakeven.ownRules(it.trail, it.be) }.map { p -> com.optionslab.ira.Vetting.Trade(p.exitTime!!.toLocalDate(), perLot(p)) }
+        val trailed = closed.filter { LiquidityBreakeven.ownRules(it.trail, it.be) }
         val entries = paper.map { p ->
             com.optionslab.ira.LiquidityGoLive.PaperEntry(p.arm, p.signalBar, if (p.right == "CE") 1 else -1,
                 runCatching { Paper.contractOf(p.symbol)?.strike?.toInt() }.getOrNull(), p.entryTime, p.exitTime, LiquidityRules.minutesOf(armOf(p.arm)))
@@ -1194,7 +1214,10 @@ object OrbArms {
             if (liveArmed || liquidityStopHint.trades > 0) com.optionslab.ira.LiquidityStopRule.line(liquidityStopHint, live = true) else null,
             com.optionslab.ira.LiquidityStopRule.line(liquidityStopPaperHint, live = false))
         val recent = x.fills.filter { it.bankNifty }.takeLast(8).reversed().map { com.optionslab.ira.FillQuality.line(it) }
-        val trailWords = if (trailed.isEmpty()) "" else " Kept apart, ${LiquidityTrail.TRAILED} (${LiquidityTrail.NOTE}): ${trailed.size} trade" +
+        // 22 Oct: Boss's breakeven at +10% too; the trail-only words as before.
+        val ownLabel = trailed.map { LiquidityBreakeven.label(it.trail, it.be) }.distinct().singleOrNull() ?: "on your own exit rules"
+        val ownNote = if (ownLabel == LiquidityTrail.TRAILED) LiquidityTrail.NOTE else LiquidityBreakeven.NOTE
+        val trailWords = if (trailed.isEmpty()) "" else " Kept apart, $ownLabel ($ownNote): ${trailed.size} trade" +
             "${if (trailed.size == 1) "" else "s"}, ${"%+,.0f".format(java.util.Locale.ENGLISH, trailed.sumOf { perLot(it) })} rupees a lot."
         return LiquidityTestView(x.note, x.frozen, com.optionslab.ira.Vetting.judge(com.optionslab.ira.LiquiditySplit.name("BANKNIFTY"), trades, day).text() + trailWords,
             lines, com.optionslab.ira.LiquidityGoLive.head(lines), stop, liquidityStopHint.stopped, com.optionslab.ira.FillQuality.summary(x.fills), recent,
@@ -1957,10 +1980,12 @@ object OrbArms {
             if (ltp == null) continue                                               // no price at all: hold
             // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms and
             // Boss's paper give-back trail only.
-            val highs = if (ladderTarget(cur) != null || cur.trail != null) bestSince(cur, c, t, mayRead = regular) else Highs(null, null)
+            val highs = if (ladderTarget(cur) != null || cur.trail != null || cur.be != null) bestSince(cur, c, t, mayRead = regular) else Highs(null, null)
             val (laddered, locked) = ladder(cur, ltp, highs.lock)
             // The trail's give-back from the best price BEFORE this look (a new best counts from the next look, as the ladder).
             val trailHit = LiquidityTrail.exits(cur.entry, cur.peak ?: cur.entry, ltp, cur.lot, cur.trail, cur.trailFrom)
+            // 22 Oct: Boss's breakeven at +10% (paper), from the best BEFORE this look as the trail.
+            val beHit = LiquidityBreakeven.exits(cur.entry, cur.peak ?: cur.entry, ltp, ProfitLock.roundTripPerUnit(cur.entry, cur.qty), cur.be)
             val seen = heldRange(trailPeak(laddered, ltp, highs.lock), ltp)
             if (seen !== cur) b.positions[i] = seen
             // The Hero arm's own exits (HeroRules.exitStep: half at 5x, the rest at 20x or 15:05, the -60% stop on a minute's
@@ -1978,8 +2003,9 @@ object OrbArms {
                     atStop = cur.stopTrigger?.let { ltp <= it } == true, locked = locked, lockResting = false)
                     // Boss's paper trail given back to: sold as an earned lock is (its raised stop rests too, below). A stop the
                     // trail raised that the app sells itself is the trail's exit too.
-                    ?.let { if (it == "stop" && trailStopped(cur)) LiquidityTrail.WHY else it }
+                    ?.let { if (it == "stop" && beStopped(cur)) LiquidityBreakeven.WHY else if (it == "stop" && trailStopped(cur)) LiquidityTrail.WHY else it }
                     ?: LiquidityTrail.WHY.takeIf { trailHit }
+                    ?: LiquidityBreakeven.WHY.takeIf { beHit }
                 // The lock rests as the paper stop (moved up below), which the paper book fills; this sells at market only
                 // when that stop is not there or has not filled (no fresh price in the book's own pass).
                 locked -> "profit_lock"
@@ -2070,9 +2096,11 @@ object OrbArms {
     }
 
     /** Where a laddered position's stop belongs now: the higher of its trigger and the lock its best price earned (F3). */
-    private fun lockOrStop(p: Position, tick: Double = OrbRules.TICK): Double? = LiquidityTrail.restingStop(p.entry,
+    private fun lockOrStop(p: Position, tick: Double = OrbRules.TICK): Double? = listOfNotNull(LiquidityTrail.restingStop(p.entry,
         ProfitLock.restingStop(p.entry, p.stopTrigger, ladderTarget(p), p.peak ?: p.entry, ProfitLock.roundTripPerUnit(p.entry, p.qty), tick),
-        p.peak, p.lot, p.trail, tick, p.trailFrom)
+        p.peak, p.lot, p.trail, tick, p.trailFrom),
+        // 22 Oct: Boss's paper breakeven, once earned (never back at the -15% after +10%).
+        LiquidityBreakeven.level(p.entry, p.peak, ProfitLock.roundTripPerUnit(p.entry, p.qty), p.be, tick)).maxOrNull()
 
     /** The profit-lock ladder's target for a laddered position ([ProfitLock.targetOf] its arm), or null for none. */
     private fun ladderTarget(p: Position): Double? = if (!p.ladder) null else runCatching {
@@ -2099,12 +2127,14 @@ object OrbArms {
      */
     private fun raisePaperStop(p: Position, ltp: Double): Position {
         val target = ladderTarget(p)
-        if (target == null && p.trail == null) return p
+        if (target == null && p.trail == null && p.be == null) return p
         val id = p.stopOrderId ?: return p
-        // The higher of the ladder's lock and Boss's paper give-back trail ([LiquidityTrail.raise]: up only, below the price).
+        // The higher of the ladder's lock, Boss's paper give-back trail ([LiquidityTrail.raise]) and, 22 Oct, Boss's paper breakeven
+        // at +10% ([LiquidityBreakeven.raise]): up only, below the price.
         val to = listOfNotNull(
             target?.let { ProfitLock.raise(p.entry, it, p.peak ?: p.entry, p.stopTrigger, ltp, ProfitLock.roundTripPerUnit(p.entry, p.qty)) },
             LiquidityTrail.raise(p.entry, p.peak, p.lot, p.trail, p.stopTrigger, ltp, activateRs = p.trailFrom),
+            LiquidityBreakeven.raise(p.entry, p.peak, ProfitLock.roundTripPerUnit(p.entry, p.qty), p.be, p.stopTrigger, ltp),
         ).maxOrNull() ?: return p
         val r = runCatching { Paper.modify(id, null, null, to) }
         if (r.getOrNull()?.ok == true) {
@@ -2113,7 +2143,8 @@ object OrbArms {
             return p.copy(stopTrigger = to)
         }
         val why = r.getOrNull()?.message ?: r.exceptionOrNull()?.javaClass?.simpleName ?: "an error"
-        com.optionslab.app.work.Alerts.post("${armOf(p.arm).label}: the ${if (target == null) "₹500 trail" else "profit lock"} could not move the paper stop up to " +
+        val rule = when { target != null -> "profit lock"; p.trail != null -> "₹500 trail"; else -> "breakeven at +10%" }
+        com.optionslab.app.work.Alerts.post("${armOf(p.arm).label}: the $rule could not move the paper stop up to " +
             "%.2f (%s). The stop stays at %s; it is tried again on the next check.".format(Locale.ENGLISH, to, why,
                 p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"),
             com.optionslab.app.work.Alerts.Kind.ERROR, "ORB", throttle = true)
@@ -2155,7 +2186,7 @@ object OrbArms {
      * stream tick, else the 1-minute candles' highs), as the ladder's ([ladder]). Every other position comes back as it is.
      */
     private fun trailPeak(p: Position, ltp: Double, high: Double?): Position {
-        if (p.trail == null) return p
+        if (p.trail == null && p.be == null) return p                       // 22 Oct: Boss's paper breakeven reads the best too
         val before = p.peak ?: p.entry
         val peak = ProfitLock.nextPeak(before, ltp, high)
         return if (peak > before) p.copy(peak = peak) else p
@@ -3089,7 +3120,9 @@ object OrbArms {
         b.positions += stamped(Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
             charges = chargesOf(buy.orderId), level = s.level, target = s.target, near = near, volSkip = volSkip, strong = strong,
             lot = c.lotSize.takeIf { it > 0 }, ladder = lq.lockPct > 0,
-            trail = trail, trailFrom = LiquidityTrail.forEntryFrom(trail)))
+            trail = trail, trailFrom = LiquidityTrail.forEntryFrom(trail),
+            // 22 Oct: Boss's own breakeven at +10% (R100 A4 did not pass: their opt-in switch, off by default): paper entries only.
+            be = LiquidityBreakeven.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.breakevenOn() }.getOrDefault(false))))
         marks[c.symbol] = fill.price
         return "entered"
     }
@@ -3152,7 +3185,7 @@ object OrbArms {
                 val e = com.optionslab.ira.LiquidityNotice.Entry(book, p.live, p.right, strike, p.symbol, p.qty + p.sold, lots, p.entry,
                     p.entryTime, level, p.target, bars.firstOrNull { it.start == p.signalBar }?.close, p.stopTrigger,
                     LiquidityRules.indexStopPoints(und), liqParams(p).timeStopMinutes, liqParams(p).timeStopGain,
-                    label = if (p.live) null else LiquidityTrail.label(p.trail))
+                    label = if (p.live) null else LiquidityBreakeven.label(p.trail, p.be))
                 com.optionslab.app.work.LiquidityNotices.entry(app, key, e) { w, h ->
                     com.optionslab.ira.LiquidityNotice.chart(bars, tf, level, p.target, p.entryTime, null, w, h)
                 }
@@ -3163,7 +3196,7 @@ object OrbArms {
                     .map { (it.grossPnl ?: 0.0) - it.charges })
                 val x = com.optionslab.ira.LiquidityNotice.Exit(book, p.live, p.right, strike, p.symbol, p.qty + p.sold, lots, p.entry, exit,
                     p.entryTime, exitTime, p.why ?: "exit", level, p.target, LiquidityRules.indexStopPoints(und),
-                    p.grossPnl ?: 0.0, p.charges, tally, label = if (p.live) null else LiquidityTrail.label(p.trail))
+                    p.grossPnl ?: 0.0, p.charges, tally, label = if (p.live) null else LiquidityBreakeven.label(p.trail, p.be))
                 com.optionslab.app.work.LiquidityNotices.exit(app, key, x) { w, h ->
                     com.optionslab.ira.LiquidityNotice.chart(bars, tf, level, p.target, p.entryTime, exitTime, w, h)
                 }

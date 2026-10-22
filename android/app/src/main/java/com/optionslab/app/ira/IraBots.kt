@@ -167,7 +167,10 @@ internal object IraBots {
     /** An arm position as [com.optionslab.ira.BotTrades] reads it (also [IraTradeLessons]'s, so both say the same lesson). */
     internal fun tradeOf(p: com.optionslab.app.data.OrbArms.Position): com.optionslab.ira.BotTrades.Trade =
         com.optionslab.ira.BotTrades.Trade(p.arm, p.symbol, p.right, p.qty, p.entry, p.entryTime, p.signalBar, p.exit, p.exitTime, p.why,
-            p.charges, p.live, p.level, p.target, p.ladder, p.peak, trough = p.low, lot = p.lot, trail = p.trail != null)
+            p.charges, p.live, p.level, p.target, p.ladder, p.peak, trough = p.low, lot = p.lot,
+            // 22 Oct: Boss's own rules (the ₹500 trail, the breakeven at +10%) keep a trade out of the plain-rules record, labelled.
+            trail = com.optionslab.engine.orb.LiquidityBreakeven.ownRules(p.trail, p.be),
+            rules = if (com.optionslab.engine.orb.LiquidityBreakeven.ownRules(p.trail, p.be)) com.optionslab.engine.orb.LiquidityBreakeven.label(p.trail, p.be) else null)
 
     /**
      * "Explain my bots' trades today" ([com.optionslab.ira.BotTrades]): today's arm trades from the arms' own book, their
@@ -272,7 +275,8 @@ internal object IraBots {
             val out = p.exitTime ?: return@mapNotNull null
             val gross = p.grossPnl ?: return@mapNotNull null
             // Boss's opt-in Liquidity paper trail (13 Oct): its trades as a group of their own, never mixed into the book's.
-            val name = com.optionslab.ira.BotTrades.label(p.arm) + if (p.trail != null) " (${com.optionslab.engine.orb.LiquidityTrail.TRAILED})" else ""
+            val name = com.optionslab.ira.BotTrades.label(p.arm) +
+                if (com.optionslab.engine.orb.LiquidityBreakeven.ownRules(p.trail, p.be)) " (${com.optionslab.engine.orb.LiquidityBreakeven.label(p.trail, p.be)})" else ""
             com.optionslab.ira.WeakLink.Trade(name, p.entryTime, out, p.why, gross - p.charges)
         }
         return com.optionslab.ira.WeakLink.answer(closed, bankNifty)

@@ -1,6 +1,7 @@
 package com.optionslab.app.data
 
 import com.optionslab.engine.orb.HeroRules
+import com.optionslab.engine.orb.LiquidityBreakeven
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.ira.DiagDay
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,8 @@ object DiagDayHost {
 
     private fun trade(p: OrbArms.Position, label: String): DiagDay.Trade = DiagDay.Trade(
         arm = p.arm, live = p.live, right = p.right, entryAt = p.entryTime, entry = p.entry, exitAt = p.exitTime, exit = p.exit,
-        why = p.why?.let(::r), lots = p.lots, source = Origins.display(label).first, unconfirmed = p.unconfirmed, trail = p.trail != null)
+        why = p.why?.let(::r), lots = p.lots, source = Origins.display(label).first, unconfirmed = p.unconfirmed,
+        trail = LiquidityBreakeven.ownRules(p.trail, p.be))
 
     /** What [DiagDay] reads for [day]. Each part on its own ([runCatching]): a part that fails is left out. */
     internal suspend fun input(day: LocalDate): DiagDay.Input {

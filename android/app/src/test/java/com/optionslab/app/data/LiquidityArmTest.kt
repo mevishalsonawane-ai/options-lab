@@ -817,6 +817,8 @@ class LiquidityArmTest : RobolectricTest() {
         passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
         val p = row().today.single()
         assertNull("plain rules", p.trail)
+        assertFalse("22 Oct: Boss's breakeven is off unless they switch it on", LiquidityTest.breakevenOn())
+        assertNull("no breakeven either", p.be)
         upstox.price(ceKey, p.entry * 1.10)
         tick(LocalTime.of(13, 6))
         assertEquals("no trail: the 15% stop stays where it was", com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), row().today.single().stopTrigger)
@@ -964,6 +966,181 @@ class LiquidityArmTest : RobolectricTest() {
         assertFalse(closed.open)
         assertEquals("profit_lock", closed.why)
     } }
+
+    // ---- Boss's own breakeven at +10% on paper (22 Oct, R100 A4: did not pass research, their opt-in switch, off by default) ----
+
+    /** [body] with Boss's paper breakeven switch on; the state put back after. */
+    private fun <T> withBreakeven(body: () -> T): T {
+        val before = LiquidityTest.state.value
+        LiquidityTest.setStateForTest(before.copy(breakeven = true))
+        try { return body() } finally { LiquidityTest.setStateForTest(before) }
+    }
+
+    private val be = com.optionslab.engine.orb.LiquidityBreakeven
+
+    /** The breakeven level of [p]: the price paid plus the round trip's charges, on the tick. */
+    private fun beLevel(p: OrbArms.Position): Double =
+        be.level(p.entry, p.entry * 1.5, com.optionslab.engine.orb.ProfitLock.roundTripPerUnit(p.entry, p.qty), be.TRIGGER)!!
+
+    @Test fun withTheBreakevenTheRestingStopMovesToThePricePaidAtTenPercentAndFillsAsTheBreakeven() = withBreakeven {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("entered under Boss's breakeven", be.TRIGGER, p.be!!, 0.0)
+        assertNull("the ₹500 trail is its own switch", p.trail)
+        assertFalse(p.live)
+        val own = com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry)
+        val want = beLevel(p)
+        assertTrue("at the price paid or a little above it (charges)", want >= p.entry && want < p.entry * 1.02)
+        // +9%: not yet, the stop stays at -15%.
+        upstox.price(ceKey, p.entry * 1.09)
+        tick(LocalTime.of(13, 6))
+        assertEquals(own, row().today.single().stopTrigger)
+        // +12%: the resting stop moves up to the start point, and the paper book's stop order with it.
+        upstox.price(ceKey, p.entry * 1.12)
+        tick(LocalTime.of(13, 7))
+        val up = row().today.single()
+        assertTrue(up.open)
+        assertEquals(want, up.stopTrigger!!, 1e-9)
+        assertEquals("the paper book's stop order moved too", want, Paper.state.orders.single { it.orderId == up.stopOrderId }.triggerPrice!!.toDouble(), 1e-9)
+        // A new best never moves it further (a breakeven, not a trail) and a dip above it never sells.
+        upstox.price(ceKey, p.entry * 1.20)
+        tick(LocalTime.of(13, 8))
+        upstox.price(ceKey, p.entry * 1.04)
+        tick(LocalTime.of(13, 9))
+        assertTrue(row().today.single().open)
+        assertEquals(want, row().today.single().stopTrigger!!, 1e-9)
+        // Saved and read back: the trade keeps its rule over a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(be.TRIGGER, row().today.single().be!!, 0.0)
+        // Back under the price paid: the paper book fills the resting stop, booked as the breakeven.
+        upstox.price(ceKey, p.entry - 1.0)
+        at(LocalTime.of(13, 10))
+        runBlocking { Paper.tick() }
+        tick(LocalTime.of(13, 10))
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals(be.WHY, closed.why)
+        assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
+    }
+
+    @Test fun withTheBreakevenAndNoRestingStopTheAppSellsItAtThePricePaid() = withBreakeven {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        runBlocking { Paper.cancel(checkNotNull(p.stopOrderId), "test") }   // its resting stop is gone
+        upstox.price(ceKey, p.entry * 1.12)                                // +12%: Boss's breakeven is earned
+        tick(LocalTime.of(13, 6))
+        assertTrue(row().today.single().open)
+        upstox.price(ceKey, p.entry)                                       // back to the price paid, far above the 15% stop
+        tick(LocalTime.of(13, 7))
+        val closed = row().today.single()
+        assertFalse("sold at the start point, not held down to the 15% stop", closed.open)
+        assertEquals(be.WHY, closed.why)
+    }
+
+    @Test fun withTheBreakevenATradeThatNeverMadeTenPercentKeepsItsOwnStop() = withBreakeven {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        runBlocking { Paper.cancel(checkNotNull(p.stopOrderId), "test") }
+        upstox.price(ceKey, p.entry * 1.09)                                // +9%: under Boss's +10%
+        tick(LocalTime.of(13, 6))
+        upstox.price(ceKey, p.entry * 0.97)                                // a small loss, above the 15% stop
+        tick(LocalTime.of(13, 7))
+        val held = row().today.single()
+        assertTrue("not sold: the breakeven was never earned", held.open)
+        assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), held.stopTrigger)
+    }
+
+    /** A spike to +12% inside a minute, closed back at +3%: the minute's high earns the breakeven (as the trail and the lock). */
+    @Test fun withTheBreakevenASpikeInsideAMinuteEarnsItFromTheMinutesHigh() = withBreakeven {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        upstox.minutes[ceKey] = listOf(FakeUpstox.Candle(LocalTime.of(13, 6), p.entry + 1, p.entry * 1.12, p.entry, p.entry * 1.03))
+        upstox.price(ceKey, p.entry * 1.03)
+        tick(LocalTime.of(13, 7))
+        val held = row().today.single()
+        assertTrue(held.open)
+        assertEquals("the best price is the minute's high", p.entry * 1.12, held.peak!!, 1e-6)
+        assertEquals("the resting stop moved up to the start point", beLevel(p), held.stopTrigger!!, 1e-9)
+    }
+
+    /** Switched on while a trade is open: that trade keeps the plain rules it entered with; the next entry carries it. */
+    @Test fun anOpenTradeKeepsTheRulesItEnteredWith() {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertNull(p.be)
+        withBreakeven {
+            upstox.price(ceKey, p.entry * 1.12)
+            tick(LocalTime.of(13, 6))
+            upstox.price(ceKey, p.entry)
+            tick(LocalTime.of(13, 7))
+            val held = row().today.single()
+            assertTrue("plain rules: not sold at the price paid", held.open)
+            assertNull(held.be)
+            assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), held.stopTrigger)
+        }
+    }
+
+    /** Both of Boss's switches on: the entry carries both, the higher stop rests, and the trade is labelled with both. */
+    @Test fun withTheTrailAndTheBreakevenTheHigherStopRestsAndTheLabelSaysBoth() = withTrail { withBreakeven {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals(500.0, p.trail!!, 0.0); assertEquals(be.TRIGGER, p.be!!, 0.0)
+        assertEquals("with ₹500 trail and breakeven at +10%", be.label(p.trail, p.be))
+        // +12% (+36 points, +Rs 1,080 a lot): the trail (from +Rs 1,000) rests higher than the breakeven, so its level rests.
+        upstox.price(ceKey, p.entry * 1.12)
+        tick(LocalTime.of(13, 6))
+        val trail = com.optionslab.engine.orb.LiquidityTrail.level(p.entry, p.entry * 1.12, 30, 500.0, activateRs = 1000.0)!!
+        val up = row().today.single()
+        assertEquals(maxOf(trail, beLevel(p)), up.stopTrigger!!, 1e-9)
+        assertEquals(com.optionslab.engine.orb.LiquidityBreakeven.label(500.0, be.TRIGGER), com.optionslab.app.ira.IraBots.tradeOf(up).rules)
+    } }
+
+    /**
+     * A breakeven trade is kept out of the plain-rules records the 26 Oct decision reads (the paper test's judge, the paper stop
+     * rule, the forward check and the record chart) and labelled as Boss's own wherever it is said.
+     */
+    @Test fun aBreakevenTradeIsKeptOutOfThePlainRulesRecordsAndLabelled() = withBreakeven {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        upstox.price(ceKey, p.entry * 1.12)
+        tick(LocalTime.of(13, 6))
+        upstox.price(ceKey, p.entry - 1.0)
+        at(LocalTime.of(13, 7))
+        runBlocking { Paper.tick() }
+        tick(LocalTime.of(13, 7))
+        val closed = row().today.single()
+        assertFalse(closed.open); assertEquals(be.WHY, closed.why); assertNull(closed.trail)
+        assertEquals("the paper stop rule counts plain-rules trades only", 0, OrbArms.liquidityStopPaperHint.trades)
+        val view = row().test
+        if (com.optionslab.app.BuildConfig.GOLD) assertNull(view) else {
+            org.junit.Assert.assertNotNull("the paper test's view is read", view)
+            val t = view!!
+            assertTrue(t.paperTest, t.paperTest.contains("0 trades since 13 Oct"))
+            assertTrue(t.paperTest, t.paperTest.contains("Kept apart, with breakeven at +10% (did not pass research, your choice): 1 trade,"))
+        }
+        val book = runBlocking { OrbArms.closedPaper() }
+        assertTrue("not in the forward check", ForwardRecords.liquidity(book).isEmpty())
+        assertTrue("not in the record chart", ForwardRecords.liquidityEquityTrades(book).isEmpty())
+        val trade = com.optionslab.app.ira.IraBots.tradeOf(closed)
+        assertTrue(trade.trail); assertEquals(be.LABEL, trade.rules)
+        val said = runBlocking { com.optionslab.app.ira.IraBots.liquidityRecord(com.optionslab.ira.LiquidityRecord.Q()) }
+        assertTrue(said, said.startsWith("Liquidity 15+5 has no closed paper trade on plain rules in its book yet"))
+        assertTrue(said, said.contains("With your breakeven at +10% (did not pass research, your choice), kept apart from the plain-rules record above: 1 trade, "))
+    }
 
     // ---- review G2-4 / G2-8 (11 Oct): Liquidity under a paper profit-lock variant ----
 

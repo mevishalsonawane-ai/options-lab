@@ -32,7 +32,13 @@ object LiquidityFreeze {
                       * 20 Oct, enhancement round 1 ([LiquidityTwin]): the no-twin rule on the paper books - on by this update (logged in the
                       * Autopilot timeline, one tap undoes it). A file from before it has no line: on.
                       */
-                     val noTwin: Boolean = true)
+                     val noTwin: Boolean = true,
+                     /**
+                      * 22 Oct (Boss: "if the 10% is received, make the stoploss to the start point"): Boss's own breakeven at +10% on the
+                      * Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityBreakeven], research R100 A4: did not pass, so off unless
+                      * they switch it on; see [breakevenNote]). A file from before it has no line: off.
+                      */
+                     val breakeven: Boolean = false)
 
     fun frozen(s: State, today: LocalDate): Boolean = !s.unfrozen && !today.isAfter(UNTIL)
 
@@ -50,13 +56,13 @@ object LiquidityFreeze {
     fun touches(target: String): Boolean = target.contains("liquidity", ignoreCase = true)
 
     fun encode(s: State): String = "v1\nunfrozen=${s.unfrozen}\nstopResetAt=${s.stopResetAtMs}\nstopTold=${s.stopTold.replace('\n', ' ')}\nwatched=${s.watched}\n" +
-        "trail=${s.trail}\nnoTwin=${s.noTwin}\n"
+        "trail=${s.trail}\nnoTwin=${s.noTwin}\nbreakeven=${s.breakeven}\n"
 
     fun decode(text: String?): State {
         if (text.isNullOrBlank()) return State()
         val m = text.lineSequence().mapNotNull { l -> l.indexOf('=').takeIf { it > 0 }?.let { l.substring(0, it) to l.substring(it + 1) } }.toMap()
         return State(m["unfrozen"] == "true", m["stopResetAt"]?.toLongOrNull() ?: 0L, m["stopTold"].orEmpty(), m["watched"] == "true",
-            m["trail"] == "true", m["noTwin"] != "false")
+            m["trail"] == "true", m["noTwin"] != "false", m["breakeven"] == "true")
     }
 
     // ---- Boss's Rs 500 give-back trail (R19b, 13 Oct): his own choice, on paper only -----------------------------------------
@@ -87,4 +93,29 @@ object LiquidityFreeze {
             "is labelled \"with ₹500 trail\". " +
             "Live trades never use it. Switch it off on the Strategy lab card at any time."
     else "Your trail off: new Liquidity paper trades run on plain rules again (open trades keep the rule they entered with)."
+
+    // ---- Boss's breakeven at +10% (22 Oct, R100 A4): their own choice, on paper only ------------------------------------------
+
+    /** The switch's name on the Strategy lab card. */
+    const val BREAKEVEN_ON = "Move the stop to the price paid at +10% (paper)"
+    const val BREAKEVEN_OFF = "Back to plain rules (breakeven off)"
+
+    /**
+     * The switch's line: what it does, that it did NOT pass the research (with its numbers) and is Boss's choice, that it is paper
+     * only and labels each trade, and whether it is on.
+     */
+    fun breakevenNote(s: State): String = "Your breakeven: once a trade is +10%, its stop moves to the price paid plus charges " +
+        "(${com.optionslab.engine.orb.LiquidityBreakeven.NOTE}): " +
+        (if (s.breakeven) "ON for new Liquidity PAPER trades - each one is labelled \"${com.optionslab.engine.orb.LiquidityBreakeven.LABEL}\" " +
+            "and kept apart from the plain-rules record; live trades never use it."
+        else "off. Liquidity trades on plain rules.") +
+        " Research R100 (1,238 past trades, 20 Nov 2024 - 13 Oct 2026, 1 lot, after charges): Rs 2,45,083 at a 38% win rate, " +
+        "against Rs 2,68,404 at 42% on the plain rules. On 22 Oct's MIDCPNIFTY trade it would have closed about Rs 0 instead of -Rs 1,168."
+
+    /** What Boss's switch does, said back to Boss (and to the diagnostics) when they flip it. */
+    fun breakevenSaid(on: Boolean): String = if (on)
+        "Your breakeven at +10% ON for new Liquidity PAPER trades (${com.optionslab.engine.orb.LiquidityBreakeven.NOTE}): once a trade is " +
+            "+10%, its stop moves to the price paid plus charges. Each trade is labelled \"${com.optionslab.engine.orb.LiquidityBreakeven.LABEL}\". " +
+            "Live trades never use it. Switch it off on the Strategy lab card at any time."
+    else "Your breakeven off: new Liquidity paper trades run on plain rules again (open trades keep the rule they entered with)."
 }

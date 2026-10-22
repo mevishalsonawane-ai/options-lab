@@ -149,6 +149,39 @@ class LiquidityTestCardTest {
         assertEquals(listOf(false), set)
     }
 
+    /** 22 Oct (Boss: "if the 10% is received, make the stoploss to the start point"): their breakeven switch, off by default. */
+    @Test fun bossesBreakevenSwitchIsOffSaysItDidNotPassWithItsNumbersAndFlipsInOneTap() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val set = ArrayList<Boolean>()
+        compose.setContent { IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
+            LiquidityBreakevenRow(LiquidityFreeze.State()) { set += it }
+        } } }
+        compose.waitForIdle()
+        compose.onNodeWithTag("lab-liq-breakeven").assertExists()
+        assertTrue(shows("once a trade is +10%, its stop moves to the price paid plus charges", sub = true))
+        assertTrue(shows("did not pass research, your choice", sub = true))
+        assertTrue(shows("off. Liquidity trades on plain rules.", sub = true))
+        assertTrue(shows("Rs 2,45,083 at a 38% win rate", sub = true))
+        compose.onNodeWithText(LiquidityFreeze.BREAKEVEN_ON).performClick()
+        compose.waitForIdle()
+        assertEquals("one tap on, no PIN (paper only)", listOf(true), set)
+    }
+
+    @Test fun bossesBreakevenSwitchWhenOnSaysPaperOnlyLabelledAndGoesBackInOneTap() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val set = ArrayList<Boolean>()
+        compose.setContent { IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
+            LiquidityBreakevenRow(LiquidityFreeze.State(breakeven = true)) { set += it }
+        } } }
+        compose.waitForIdle()
+        assertTrue(shows("ON for new Liquidity PAPER trades", sub = true))
+        assertTrue(shows("labelled \"with breakeven at +10%\"", sub = true))
+        assertTrue(shows("live trades never use it", sub = true))
+        compose.onNodeWithText(LiquidityFreeze.BREAKEVEN_OFF).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(false), set)
+    }
+
     @Test fun afterTheTenthDayNoButton() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         compose.setContent { IraAlgoTheme("light") { Column { LiquidityFreezeRow(LiquidityFreeze.State(), LocalDate.of(2026, 11, 2)) {} } } }

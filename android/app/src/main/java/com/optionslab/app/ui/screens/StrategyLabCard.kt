@@ -65,6 +65,7 @@ internal fun StrategyLabSection(model: AppModel) {
     val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() } }
     LiquidityFreezeRow(liq, today) { model.liquidityFreeze(it) }
     LiquidityTrailRow(liq) { model.liquidityTrail(it) }
+    LiquidityBreakevenRow(liq) { model.liquidityBreakeven(it) }
     // 20 Oct, enhancement round 1: Liquidity's no-twin rule on paper - its count read off the main thread (the record's file).
     var twinLine by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(liq.noTwin) {
@@ -126,6 +127,22 @@ internal fun LiquidityTrailRow(state: com.optionslab.ira.LiquidityFreeze.State, 
         modifier = Modifier.padding(top = 4.dp).testTag("lab-liq-trail-record"))
     BrassButton(if (state.trail) com.optionslab.ira.LiquidityFreeze.TRAIL_OFF else com.optionslab.ira.LiquidityFreeze.TRAIL_ON,
         Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { onSet(!state.trail) }
+}
+
+/**
+ * 22 Oct (Boss: "if the 10% is received, make the stoploss to the start point"): Boss's own breakeven at +10% on the Liquidity
+ * PAPER books ([com.optionslab.engine.orb.LiquidityBreakeven]): research R100 A4 did not pass, so it is off by default and said as
+ * "did not pass research, your choice" with its numbers. One tap switches it on (new paper trades carry it, each labelled and
+ * kept apart from the plain-rules record), one tap back to plain rules. [onSet] true: on. Live trades never use it.
+ */
+@Composable
+internal fun LiquidityBreakevenRow(state: com.optionslab.ira.LiquidityFreeze.State, onSet: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Text(com.optionslab.ira.LiquidityFreeze.breakevenNote(state),
+        style = Type.label.copy(color = if (state.breakeven) p.amber else p.inkSoft, fontSize = 12.sp),
+        modifier = Modifier.padding(top = 6.dp).testTag("lab-liq-breakeven"))
+    BrassButton(if (state.breakeven) com.optionslab.ira.LiquidityFreeze.BREAKEVEN_OFF else com.optionslab.ira.LiquidityFreeze.BREAKEVEN_ON,
+        Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { onSet(!state.breakeven) }
 }
 
 internal const val NO_TWIN_OFF = "Let both books buy the same option (paper)"

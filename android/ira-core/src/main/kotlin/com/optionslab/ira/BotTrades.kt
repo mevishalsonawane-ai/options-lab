@@ -45,6 +45,11 @@ object BotTrades {
         val charges: Double = 0.0, val live: Boolean = false, val level: Double? = null, val target: Double? = null,
         val ladder: Boolean = false, val peak: Double? = null, val trough: Double? = null, val lot: Int? = null,
         val trail: Boolean = false,
+        /**
+         * 22 Oct: the label of Boss's own rules this trade ran on when [trail] ("with ₹500 trail", "with breakeven at +10%", both;
+         * [com.optionslab.engine.orb.LiquidityBreakeven.label]); null: plain rules, or a trailed trade from before the label (the trail).
+         */
+        val rules: String? = null,
     )
 
     /** An arm's switch as the app shows it ([label] "ORB", "Liquidity 15+5"...). */

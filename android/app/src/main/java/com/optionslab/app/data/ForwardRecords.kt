@@ -1,6 +1,7 @@
 package com.optionslab.app.data
 
 import com.optionslab.engine.orb.HeroRules
+import com.optionslab.engine.orb.LiquidityBreakeven
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.ira.ForwardCheck
 import com.optionslab.ira.LiquidityEquity
@@ -24,11 +25,12 @@ object ForwardRecords {
 
     /**
      * Liquidity 15+5's closed paper trades on plain rules, per lot (its books). Trades under Boss's opt-in Rs 500 give-back
-     * trail (R19b, [OrbArms.Position.trail]) are left out: this record is the rules' own.
+     * trail (R19b, [OrbArms.Position.trail]) or breakeven at +10% (R100 A4, 22 Oct, [OrbArms.Position.be]) are left out: this
+     * record is the rules' own.
      */
     fun liquidity(closed: List<OrbArms.Position>): List<ForwardCheck.Trade> {
         val books = LiquidityRules.BOOKS.map { it.source }.toSet()
-        return closed.filter { it.arm in books && !it.open && !it.live && it.trail == null }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
+        return closed.filter { it.arm in books && !it.open && !it.live && !LiquidityBreakeven.ownRules(it.trail, it.be) }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
     }
 
     /** Liquidity 15+5's closed LIVE (Zerodha) trades, per lot - the self-review judges them apart from paper. */
@@ -43,7 +45,7 @@ object ForwardRecords {
      */
     fun liquidityEquityTrades(closed: List<OrbArms.Position>): List<LiquidityEquity.Trade> {
         val books = LiquidityRules.BOOKS.associateBy { it.source }
-        return closed.filter { it.arm in books && !it.open && !it.live && it.trail == null }.map { p ->
+        return closed.filter { it.arm in books && !it.open && !it.live && !LiquidityBreakeven.ownRules(it.trail, it.be) }.map { p ->
             LiquidityEquity.Trade(p.day, net(p, perLot = true), books[p.arm]?.let { LiquidityRules.underlyingOf(it) } ?: "", p.entryTime.toLocalTime())
         }
     }
