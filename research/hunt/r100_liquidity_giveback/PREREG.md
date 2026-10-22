@@ -147,3 +147,13 @@ Boss, 22 Oct: *"And what if we also add trailing stop loss"*.
   tested the first rung alone on Liquidity (L25: noise); the full ladder was never tested on Liquidity.
 - Same trades, engine, costs and gates. BH over the 11 tests (G1-G11). Its own one final read, guarded by
   `results/A3_FINAL_READ`. Results in `results/amend3_*.json` and `results/amend_A3.json`.
+
+## Amendment A4 (22 Oct 2026, Boss: "Keep it as is. Just ... if the 10% is received, make the stoploss to the start point"; written before any A4 number)
+
+- **G12 BE@10:** Liquidity's own exits, plus: once the option's best gain over the raw fill is >= +10%, the stop rises to
+  breakeven after charges (real entry + round-trip charges, as the app's breakeven rungs since 06 Oct), set at a minute's
+  end and acting from the next minute. Nothing else changes. (G1 / G2 were the same rule at +20% / +15%.)
+- Same trades, engine, costs and gates. BH over the 12 tests (G1-G12). Its own one final read, guarded by
+  `results/A4_FINAL_READ`. Results in `results/amend4_*.json` and `results/amend_A4.json`.
+- Whatever the result, Boss asked for it: if it fails the gates it can only be Boss's own opt-in paper switch (off by
+  default, labelled, its trades counted apart from the plain-rules record), as R19b's trail; never live.
