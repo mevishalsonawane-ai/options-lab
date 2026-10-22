@@ -29,7 +29,7 @@ MIN_SHIFT = 10              # a circular shift of at least this many rows keeps 
 # Cost of expressing a daily-horizon call in one ATM option, in bps of the index: R16's round trip (research/knowledge/
 # baselines.yaml: NIFTY Rs 98, BANKNIFTY Rs 133 per lot, charges and spread) through an ATM delta of 0.5 and the lot.
 ROUND_TRIP_RS = {"NIFTY": 98.0, "BANKNIFTY": 133.0}
-LOT = {"NIFTY": 65, "BANKNIFTY": 35}      # research/obuy/config.py LOT_SCHEDULE, lots in force in 2026
+LOT = {"NIFTY": 65, "BANKNIFTY": 30}      # NSE/FAOP/70616 (3 Oct 2025): 65 / 30 from the Jan 2026 expiries (the repo's LOT_SCHEDULE still says 35)
 
 
 def cost_bps(und: str, spot: float) -> float:

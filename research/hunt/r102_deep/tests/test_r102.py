@@ -94,14 +94,15 @@ def lake(tmp_path_factory):
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         for i, d in enumerate(days):
-            fii_long = 100000 + 1000 * i
+            fii_long = 100000 + 1000 * i + int(rng.integers(-800, 800))
+            cl, fo, fp = int(rng.integers(48000, 52000)), int(rng.integers(10, 40)), int(rng.integers(10, 40))
             text = ('"Participant wise Open Interest (no. of contracts) in Equity Derivatives as on X",,,,,,,,,,,,,,\n'
                     "Client Type,Future Index Long,Future Index Short,Future Stock Long,Future Stock Short,Option Index Call Long,"
                     "Option Index Put Long,Option Index Call Short,Option Index Put Short,Option Stock Call Long,Option Stock Put Long,"
                     "Option Stock Call Short,Option Stock Put Short,Total Long Contracts,Total Short Contracts\n"
-                    f"Client,50000,60000,1,1,10,10,10,10,1,1,1,1,1,1\nDII,100,100,1,1,0,0,0,0,0,0,0,0,1,1\n"
-                    f"FII,{fii_long},80000,1,1,20,30,10,10,1,1,1,1,1,1\nPro,20000,{30000 + 500 * (i % 3)},1,1,5,5,5,5,1,1,1,1,1,1\n"
-                    f"TOTAL,{50000 + 100 + fii_long + 20000},{60000 + 100 + 80000 + 30000 + 500 * (i % 3)},4,4,35,45,25,25,3,3,3,3,4,4\n")
+                    f"Client,{cl},60000,1,1,10,10,10,10,1,1,1,1,1,1\nDII,100,100,1,1,0,0,0,0,0,0,0,0,1,1\n"
+                    f"FII,{fii_long},80000,1,1,{fo},{fp},10,10,1,1,1,1,1,1\nPro,20000,{30000 + 500 * (i % 3)},1,1,5,5,5,5,1,1,1,1,1,1\n"
+                    f"TOTAL,{cl + 100 + fii_long + 20000},{60000 + 100 + 80000 + 30000 + 500 * (i % 3)},4,4,{fo + 15},{fp + 15},25,25,3,3,3,3,4,4\n")
             z.writestr(f"fao_participant_oi_{d.strftime('%d%m%Y')}.csv", text)
             fpi_rows.append({"report_date": d.isoformat(), "eq_exch_buy_cr": 100.0, "eq_exch_sell_cr": 90.0 + (i % 2) * 20,
                              "eq_exch_net_cr": 10.0 - (i % 2) * 20, "eq_total_net_cr": 0.0})
@@ -131,7 +132,7 @@ def test_loaders_shapes(lake):
     o = D.options("BANKNIFTY", 2026, offsets=[0], minutes_=[5])
     assert set(o.offset) == {0} and set(o.m) == {5} and set(o.side) == {"C", "P"}
     p = D.participants()
-    assert len(p) == len(days) and p["FII_fut_idx_long"].iloc[1] - p["FII_fut_idx_long"].iloc[0] == 1000
+    assert len(p) == len(days) and 1000 - 1600 <= p["FII_fut_idx_long"].iloc[1] - p["FII_fut_idx_long"].iloc[0] <= 1000 + 1600
     assert len(D.fpi()) == len(days)
 
 
@@ -253,7 +254,7 @@ def test_predictive_design_runs_and_counts_70(lake, tmp_path, monkeypatch):
 
 def test_cost_bps():
     assert B.cost_bps("NIFTY", 25000.0) == pytest.approx(98 / (65 * 0.5) / 25000 * 1e4)
-    assert B.cost_bps("BANKNIFTY", 56000.0) > B.cost_bps("NIFTY", 25000.0)
+    assert B.cost_bps("BANKNIFTY", 56000.0) == pytest.approx(133 / (30 * 0.5) / 56000 * 1e4)
 
 
 # ---- the facts file for Jarvis ---------------------------------------------------------------------------------------
