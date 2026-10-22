@@ -267,3 +267,14 @@ def test_stale_holdout_lock(tmp_path, monkeypatch):
     monkeypatch.setattr(S, "HOLDOUT_FLAG", tmp_path / "HOLDOUT_READ")
     with pytest.raises(PermissionError):
         ST.run("holdout")
+
+
+def test_tail_exit_price_floors_a_frozen_deep_short_at_intrinsic():
+    import r103tail as T
+    D = flat_day()
+    D.con[("P", 25000.0)][:, 100:] = np.nan            # the ATM put stops printing (left the window) ...
+    D.idx[3, 100:] = 23500.0                           # ... while the index falls 1,500 points
+    p, rep = T.exit_price(D, "P", 25000.0, E.SQ_ROW, date(2026, 5, 4), date(2026, 5, 5))
+    assert rep and p >= 1500.0                          # never the frozen 100
+    p2, rep2 = T.exit_price(D, "C", 25000.0, E.SQ_ROW, date(2026, 5, 4), date(2026, 5, 5))
+    assert not rep2 and p2 == 100.0                     # a leg that traded keeps the engine's fill

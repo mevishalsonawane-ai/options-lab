@@ -1,0 +1,439 @@
+{
+ "part": "holdout",
+ "read": true,
+ "confirmed": [],
+ "tests": [
+  {
+   "id": "BANKNIFTY-N-IC-X1",
+   "holdout": {
+    "n": 64,
+    "net": 37363,
+    "mean": 583.8,
+    "win": 0.828,
+    "avg_win": 801.5,
+    "avg_loss": -465.0,
+    "pf": 8.305,
+    "worst_day": -2704,
+    "best_day": 2353,
+    "max_dd": 3012,
+    "worst_month": 5301,
+    "months_below_stop": 0,
+    "days_below_stop": 0,
+    "mean_margin": 85064,
+    "rom": 0.4392,
+    "rom_per_year": 1.6711,
+    "ex_best5": 28363,
+    "by_year": {
+     "2026": 37363
+    },
+    "post_regime_net": 37363,
+    "post_regime_n": 64,
+    "mean_credit": 6053,
+    "mean_max_loss": 5103,
+    "exits": {
+     "stop": 1,
+     "lock": 0,
+     "target": 0,
+     "time": 63
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   },
+   "confirmed": false,
+   "buy": {
+    "n": 64,
+    "net": -82787,
+    "mean": -1293.5,
+    "win": 0.016,
+    "avg_win": 1241.8,
+    "avg_loss": -1333.8,
+    "pf": 0.015,
+    "worst_day": -3019,
+    "best_day": 1242,
+    "max_dd": 82787,
+    "worst_month": -23610,
+    "months_below_stop": 4,
+    "days_below_stop": 0,
+    "mean_margin": 6101,
+    "rom": -13.5694,
+    "rom_per_year": -51.6271,
+    "ex_best5": -83404,
+    "by_year": {
+     "2026": -82787
+    },
+    "post_regime_net": -82787,
+    "post_regime_n": 64,
+    "mean_credit": -6101,
+    "mean_max_loss": 6101,
+    "exits": {
+     "stop": 8,
+     "lock": 0,
+     "target": 0,
+     "time": 56
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IC-X2",
+   "holdout": {
+    "n": 64,
+    "net": 34254,
+    "mean": 535.2,
+    "win": 0.812,
+    "avg_win": 758.2,
+    "avg_loss": -431.2,
+    "pf": 7.62,
+    "worst_day": -2704,
+    "best_day": 2353,
+    "max_dd": 3012,
+    "worst_month": 5665,
+    "months_below_stop": 0,
+    "days_below_stop": 0,
+    "mean_margin": 85064,
+    "rom": 0.4027,
+    "rom_per_year": 1.5321,
+    "ex_best5": 25509,
+    "by_year": {
+     "2026": 34254
+    },
+    "post_regime_net": 34254,
+    "post_regime_n": 64,
+    "mean_credit": 6053,
+    "mean_max_loss": 5103,
+    "exits": {
+     "stop": 1,
+     "lock": 11,
+     "target": 0,
+     "time": 52
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   },
+   "confirmed": false,
+   "buy": {
+    "n": 64,
+    "net": -82787,
+    "mean": -1293.5,
+    "win": 0.016,
+    "avg_win": 1241.8,
+    "avg_loss": -1333.8,
+    "pf": 0.015,
+    "worst_day": -3019,
+    "best_day": 1242,
+    "max_dd": 82787,
+    "worst_month": -23610,
+    "months_below_stop": 4,
+    "days_below_stop": 0,
+    "mean_margin": 6101,
+    "rom": -13.5694,
+    "rom_per_year": -51.6271,
+    "ex_best5": -83404,
+    "by_year": {
+     "2026": -82787
+    },
+    "post_regime_net": -82787,
+    "post_regime_n": 64,
+    "mean_credit": -6101,
+    "mean_max_loss": 6101,
+    "exits": {
+     "stop": 8,
+     "lock": 0,
+     "target": 0,
+     "time": 56
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IF-X1",
+   "holdout": {
+    "n": 64,
+    "net": 48969,
+    "mean": 765.1,
+    "win": 0.859,
+    "avg_win": 950.5,
+    "avg_loss": -367.6,
+    "pf": 15.8,
+    "worst_day": -1209,
+    "best_day": 2801,
+    "max_dd": 1602,
+    "worst_month": 7457,
+    "months_below_stop": 0,
+    "days_below_stop": 0,
+    "mean_margin": 85064,
+    "rom": 0.5757,
+    "rom_per_year": 2.1903,
+    "ex_best5": 35777,
+    "by_year": {
+     "2026": 48969
+    },
+    "post_regime_net": 48969,
+    "post_regime_n": 64,
+    "mean_credit": 20866,
+    "mean_max_loss": 6978,
+    "exits": {
+     "stop": 0,
+     "lock": 0,
+     "target": 0,
+     "time": 64
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   },
+   "confirmed": false,
+   "buy": {
+    "n": 64,
+    "net": -97537,
+    "mean": -1524.0,
+    "win": 0.016,
+    "avg_win": 688.8,
+    "avg_loss": -1559.1,
+    "pf": 0.007,
+    "worst_day": -3746,
+    "best_day": 689,
+    "max_dd": 97537,
+    "worst_month": -28461,
+    "months_below_stop": 4,
+    "days_below_stop": 0,
+    "mean_margin": 20930,
+    "rom": -4.6602,
+    "rom_per_year": -17.7307,
+    "ex_best5": -97403,
+    "by_year": {
+     "2026": -97537
+    },
+    "post_regime_net": -97537,
+    "post_regime_n": 64,
+    "mean_credit": -20930,
+    "mean_max_loss": 20930,
+    "exits": {
+     "stop": 0,
+     "lock": 0,
+     "target": 0,
+     "time": 64
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IF-X2",
+   "holdout": {
+    "n": 64,
+    "net": 48969,
+    "mean": 765.1,
+    "win": 0.859,
+    "avg_win": 950.5,
+    "avg_loss": -367.6,
+    "pf": 15.8,
+    "worst_day": -1209,
+    "best_day": 2801,
+    "max_dd": 1602,
+    "worst_month": 7457,
+    "months_below_stop": 0,
+    "days_below_stop": 0,
+    "mean_margin": 85064,
+    "rom": 0.5757,
+    "rom_per_year": 2.1903,
+    "ex_best5": 35777,
+    "by_year": {
+     "2026": 48969
+    },
+    "post_regime_net": 48969,
+    "post_regime_n": 64,
+    "mean_credit": 20866,
+    "mean_max_loss": 6978,
+    "exits": {
+     "stop": 0,
+     "lock": 0,
+     "target": 0,
+     "time": 64
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   },
+   "confirmed": false,
+   "buy": {
+    "n": 64,
+    "net": -97537,
+    "mean": -1524.0,
+    "win": 0.016,
+    "avg_win": 688.8,
+    "avg_loss": -1559.1,
+    "pf": 0.007,
+    "worst_day": -3746,
+    "best_day": 689,
+    "max_dd": 97537,
+    "worst_month": -28461,
+    "months_below_stop": 4,
+    "days_below_stop": 0,
+    "mean_margin": 20930,
+    "rom": -4.6602,
+    "rom_per_year": -17.7307,
+    "ex_best5": -97403,
+    "by_year": {
+     "2026": -97537
+    },
+    "post_regime_net": -97537,
+    "post_regime_n": 64,
+    "mean_credit": -20930,
+    "mean_max_loss": 20930,
+    "exits": {
+     "stop": 0,
+     "lock": 0,
+     "target": 0,
+     "time": 64
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IFW-X1",
+   "holdout": {
+    "n": 64,
+    "net": 53623,
+    "mean": 837.9,
+    "win": 0.859,
+    "avg_win": 1047.0,
+    "avg_loss": -440.2,
+    "pf": 14.536,
+    "worst_day": -1941,
+    "best_day": 2801,
+    "max_dd": 2156,
+    "worst_month": 7436,
+    "months_below_stop": 0,
+    "days_below_stop": 0,
+    "mean_margin": 85064,
+    "rom": 0.6304,
+    "rom_per_year": 2.3984,
+    "ex_best5": 40431,
+    "by_year": {
+     "2026": 53623
+    },
+    "post_regime_net": 53623,
+    "post_regime_n": 64,
+    "mean_credit": 21383,
+    "mean_max_loss": 8054,
+    "exits": {
+     "stop": 0,
+     "lock": 0,
+     "target": 0,
+     "time": 64
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   },
+   "confirmed": false,
+   "buy": {
+    "n": 64,
+    "net": -102038,
+    "mean": -1594.3,
+    "win": 0.016,
+    "avg_win": 1434.8,
+    "avg_loss": -1642.4,
+    "pf": 0.014,
+    "worst_day": -3746,
+    "best_day": 1435,
+    "max_dd": 102038,
+    "worst_month": -31466,
+    "months_below_stop": 4,
+    "days_below_stop": 0,
+    "mean_margin": 21447,
+    "rom": -4.7577,
+    "rom_per_year": -18.1017,
+    "ex_best5": -102621,
+    "by_year": {
+     "2026": -102038
+    },
+    "post_regime_net": -102038,
+    "post_regime_n": 64,
+    "mean_credit": -21447,
+    "mean_max_loss": 21447,
+    "exits": {
+     "stop": 0,
+     "lock": 0,
+     "target": 0,
+     "time": 64
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IFW-X2",
+   "holdout": {
+    "n": 64,
+    "net": 53623,
+    "mean": 837.9,
+    "win": 0.859,
+    "avg_win": 1047.0,
+    "avg_loss": -440.2,
+    "pf": 14.536,
+    "worst_day": -1941,
+    "best_day": 2801,
+    "max_dd": 2156,
+    "worst_month": 7436,
+    "months_below_stop": 0,
+    "days_below_stop": 0,
+    "mean_margin": 85064,
+    "rom": 0.6304,
+    "rom_per_year": 2.3984,
+    "ex_best5": 40431,
+    "by_year": {
+     "2026": 53623
+    },
+    "post_regime_net": 53623,
+    "post_regime_n": 64,
+    "mean_credit": 21383,
+    "mean_max_loss": 8054,
+    "exits": {
+     "stop": 0,
+     "lock": 0,
+     "target": 0,
+     "time": 64
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   },
+   "confirmed": false,
+   "buy": {
+    "n": 64,
+    "net": -102038,
+    "mean": -1594.3,
+    "win": 0.016,
+    "avg_win": 1434.8,
+    "avg_loss": -1642.4,
+    "pf": 0.014,
+    "worst_day": -3746,
+    "best_day": 1435,
+    "max_dd": 102038,
+    "worst_month": -31466,
+    "months_below_stop": 4,
+    "days_below_stop": 0,
+    "mean_margin": 21447,
+    "rom": -4.7577,
+    "rom_per_year": -18.1017,
+    "ex_best5": -102621,
+    "by_year": {
+     "2026": -102038
+    },
+    "post_regime_net": -102038,
+    "post_regime_n": 64,
+    "mean_credit": -21447,
+    "mean_max_loss": 21447,
+    "exits": {
+     "stop": 0,
+     "lock": 0,
+     "target": 0,
+     "time": 64
+    },
+    "first": "2026-07-15",
+    "last": "2026-10-19"
+   }
+  }
+ ]
+}

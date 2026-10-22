@@ -21,15 +21,39 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import r103data as RD  # noqa: E402
 import r103engine as E  # noqa: E402
+import r103stale as ST  # noqa: E402
 import r103study as S  # noqa: E402
 
 TOP = 10
 MEDIAN_STRADDLE_PCT = {"NIFTY": 0.0096, "BANKNIFTY": 0.0149}      # R102 3.1, for the pre-lake estimate only
 
 
-def straddle_loss(D, und: str, d: date, expiry: bool) -> dict | None:
-    """The naked 09:20 ATM short straddle (both ATM legs sold at the 09:21 open, bought back at the square-off open, the
-    engine's slippage and dated charges) and the IF held to the square-off, on one day. None without a 09:20 straddle."""
+def exit_price(D, side: str, k: float, sq: int, d: date, expiry_date: date | None) -> tuple[float, bool]:
+    """(price, repriced) of one leg at the square-off: the engine's fill when the leg traded within FILL_LOOK minutes;
+    else (Amendment 2) Black-Scholes at its last print's implied volatility with the index at the square-off, floored at
+    intrinsic value (a deep in-the-money short that left the lake's ATM +-10 window is worth at least its intrinsic)."""
+    con = D.con[(side, float(k))]
+    s1 = float(D.idx[3, min(sq, E.NROWS - 1)])
+    intr = max(s1 - k, 0.0) if side == "C" else max(k - s1, 0.0)
+    if np.isfinite(con[0, sq: sq + E.FILL_LOOK + 1]).any():
+        p, _ = E.fill_px(con, sq)
+        return p, False
+    ok = np.flatnonzero(np.isfinite(con[3, : sq + 1]))
+    if not len(ok):
+        return float("nan"), True
+    r0 = int(ok[-1])
+    p0 = float(con[3, r0])
+    if expiry_date is not None and np.isfinite(s1):
+        v = ST.implied_vol(p0, float(D.idx[3, r0]), float(k), ST.years_left(d, expiry_date, r0), side == "C")
+        if v is not None:
+            return max(ST.bs(s1, float(k), ST.years_left(d, expiry_date, sq), v, side == "C"), intr, E.TICK), True
+    return max(p0, intr), True
+
+
+def straddle_loss(D, und: str, d: date, expiry: bool, expiry_date: date | None = None) -> dict | None:
+    """The naked 09:20 ATM short straddle (both ATM legs sold at the 09:21 open, bought back at the square-off, the
+    engine's slippage and dated charges) and the IF held to the square-off, on one day. None without a 09:20 straddle.
+    Exit legs with no trade near the square-off are repriced (exit_price)."""
     st = E.setup(D, und, "IF", E.DECIDE_ROW)
     if st is None:
         return None
@@ -37,11 +61,12 @@ def straddle_loss(D, und: str, d: date, expiry: bool) -> dict | None:
     sq = E.SQ_ROW_EXPIRY if expiry else E.SQ_ROW
     er = E.ENTRY_ROW
     out = dict(und=und, day=str(d), expiry=bool(expiry), k0=st.k0, straddle_pts=round(st.s, 2), lot=q)
-    gross, ch = 0.0, 0.0
+    gross, ch, rep_ = 0.0, 0.0, 0
     for side, k, _ in st.legs[:2]:
         con = D.con[(side, float(k))]
         p0, _ = E.fill_px(con, er)
-        p1, _ = E.fill_px(con, sq)
+        p1, r1 = exit_price(D, side, k, sq, d, expiry_date)
+        rep_ += r1
         if not (np.isfinite(p0) and np.isfinite(p1)):
             return None
         f0 = E.slip(p0, False, E.vol5_lots(con, er, q))
@@ -55,7 +80,8 @@ def straddle_loss(D, und: str, d: date, expiry: bool) -> dict | None:
     for side, k, sg in st.legs:
         con = D.con[(side, float(k))]
         p0, _ = E.fill_px(con, er)
-        p1, _ = E.fill_px(con, sq)
+        p1, r1 = exit_price(D, side, k, sq, d, expiry_date)
+        rep_ += r1
         if not (np.isfinite(p0) and np.isfinite(p1)):
             return None
         f0 = E.slip(p0, sg > 0, E.vol5_lots(con, er, q))
@@ -63,6 +89,7 @@ def straddle_loss(D, und: str, d: date, expiry: bool) -> dict | None:
         gross += sg * (f1 - f0) * q
         ch += E.charges(f0, q, sg > 0, d) + E.charges(f1, q, sg < 0, d)
     out["if_net"] = round(gross - ch)
+    out["legs_repriced"] = rep_
     out["if_wing_pts"] = float(st.legs[2][1] - st.k0)
     px0, px1 = D.idx[3, E.DECIDE_ROW], D.idx[3, sq]
     out["move_pct"] = round(float(px1 / px0 - 1) * 100, 2) if np.isfinite(px0) and np.isfinite(px1) and px0 > 0 else None
@@ -71,15 +98,22 @@ def straddle_loss(D, und: str, d: date, expiry: bool) -> dict | None:
 
 
 def lake_table() -> list[dict]:
+    import os
+    os.environ.setdefault("R102_LAKE", str(RD.LAKE))
+    sys.path.insert(0, str(HERE.parent / "r102_deep"))
+    import r102data as B
+    B.LAKE = RD.LAKE
     rows = []
     for u in RD.UNDS:
         days = RD.load(u)
         exp = S.expiry_days(u, days)
+        e = B.expiries(u)
+        exp_of = dict(zip(e.day, e.expiry.dt.date))
         per = []
         for d, D in days.items():
             if d < RD.START or D.atm is None:
                 continue
-            r = straddle_loss(D, u, d, d in exp)
+            r = straddle_loss(D, u, d, d in exp, exp_of.get(d))
             if r is not None and r["move_pct"] is not None:
                 per.append(r)
         per.sort(key=lambda r: -abs(r["move_pct"]))
@@ -127,13 +161,14 @@ def write() -> dict:
     S.RESULTS.mkdir(parents=True, exist_ok=True)
     (S.RESULTS / "tail.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     md = ["# R103 tail table (descriptive)", "", "## Largest close-to-09:20 moves in the option lake (Aug 2021 - 19 Oct 2026), 1 lot, net of slippage and charges", "",
-          "| index | day | expiry | move 09:20 -> square-off | move / straddle | 09:20 straddle (pts) | naked short straddle net | iron fly (no stop) net | IF wing (pts) |", "|---|---|---|---|---|---|---|---|---|"]
+          "Exit legs that did not trade near the square-off (they had left the lake's ATM +-10 window) are repriced with Black-Scholes at their last print's IV, floored at intrinsic (PREREG Amendment 2).", "",
+          "| index | day | expiry | move 09:20 -> square-off | move / straddle | 09:20 straddle (pts) | naked short straddle net | iron fly (no stop) net | IF wing (pts) | legs repriced |", "|---|---|---|---|---|---|---|---|---|---|"]
     for r in res["lake"]:
         if r["day"] == "ALL":
             md.append(f"| {r['und']} | all {r['n_days']:,} days | | | | | net {r['straddle_net']:,}, win {r['straddle_win'] * 100:.0f}%, worst {r['straddle_worst']:,} | "
-                      f"net {r['if_net']:,}, win {r['if_win'] * 100:.0f}%, worst {r['if_worst']:,} | |")
+                      f"net {r['if_net']:,}, win {r['if_win'] * 100:.0f}%, worst {r['if_worst']:,} | | |")
         else:
-            md.append(f"| {r['und']} | {r['day']} | {'E' if r['expiry'] else ''} | {r['move_pct']:+.2f}% | {r['move_over_straddle']} | {r['straddle_pts']} | {r['straddle_net']:,} | {r['if_net']:,} | {r['if_wing_pts']:.0f} |")
+            md.append(f"| {r['und']} | {r['day']} | {'E' if r['expiry'] else ''} | {r['move_pct']:+.2f}% | {r['move_over_straddle']} | {r['straddle_pts']} | {r['straddle_net']:,} | {r['if_net']:,} | {r['if_wing_pts']:.0f} | {r['legs_repriced']} |")
     md += ["", "## Largest daily moves since 2019 (index_daily; before Aug 2021 the straddle loss is an ESTIMATE from the median 09:20 straddle)", "",
            "| index | day | close to close | gap | open to close | lot | option lake? | naked straddle loss estimate (pre-lake only) |", "|---|---|---|---|---|---|---|---|"]
     for r in res["daily"]:

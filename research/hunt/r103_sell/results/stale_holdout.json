@@ -1,0 +1,80 @@
+{
+ "BANKNIFTY-N-IC-X1": {
+  "n": 64,
+  "net_as_run": 37363,
+  "net_repriced": -20954,
+  "win_repriced": 0.328,
+  "post_regime_repriced": -20954,
+  "legs_repriced": 58,
+  "legs_not_repriceable": 2,
+  "trades_with_stale_leg": 52,
+  "fresh_only_n": 12,
+  "fresh_only_net": 450,
+  "fresh_only_win": 0.583
+ },
+ "BANKNIFTY-N-IC-X2": {
+  "n": 64,
+  "net_as_run": 34254,
+  "net_repriced": -19652,
+  "win_repriced": 0.328,
+  "post_regime_repriced": -19652,
+  "legs_repriced": 54,
+  "legs_not_repriceable": 2,
+  "trades_with_stale_leg": 50,
+  "fresh_only_n": 14,
+  "fresh_only_net": 989,
+  "fresh_only_win": 0.643
+ },
+ "BANKNIFTY-N-IF-X1": {
+  "n": 64,
+  "net_as_run": 48969,
+  "net_repriced": -18785,
+  "win_repriced": 0.391,
+  "post_regime_repriced": -18785,
+  "legs_repriced": 43,
+  "legs_not_repriceable": 2,
+  "trades_with_stale_leg": 45,
+  "fresh_only_n": 19,
+  "fresh_only_net": 2230,
+  "fresh_only_win": 0.737
+ },
+ "BANKNIFTY-N-IF-X2": {
+  "n": 64,
+  "net_as_run": 48969,
+  "net_repriced": -18785,
+  "win_repriced": 0.391,
+  "post_regime_repriced": -18785,
+  "legs_repriced": 43,
+  "legs_not_repriceable": 2,
+  "trades_with_stale_leg": 45,
+  "fresh_only_n": 19,
+  "fresh_only_net": 2230,
+  "fresh_only_win": 0.737
+ },
+ "BANKNIFTY-N-IFW-X1": {
+  "n": 64,
+  "net_as_run": 53623,
+  "net_repriced": -18607,
+  "win_repriced": 0.375,
+  "post_regime_repriced": -18607,
+  "legs_repriced": 49,
+  "legs_not_repriceable": 2,
+  "trades_with_stale_leg": 51,
+  "fresh_only_n": 13,
+  "fresh_only_net": 1030,
+  "fresh_only_win": 0.692
+ },
+ "BANKNIFTY-N-IFW-X2": {
+  "n": 64,
+  "net_as_run": 53623,
+  "net_repriced": -18607,
+  "win_repriced": 0.375,
+  "post_regime_repriced": -18607,
+  "legs_repriced": 49,
+  "legs_not_repriceable": 2,
+  "trades_with_stale_leg": 51,
+  "fresh_only_n": 13,
+  "fresh_only_net": 1030,
+  "fresh_only_win": 0.692
+ }
+}

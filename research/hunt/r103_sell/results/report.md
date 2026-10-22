@@ -28,3 +28,54 @@ Design to 2026-07-14; 1 lot; net after slippage and dated charges. Passed design
 | BANKNIFTY-N-IFW-X2 | 996 | 70% | Rs 532,885 | Rs 535 | Rs 1,224 / -Rs 1,042 | 2.688 | -Rs 6,156 | -Rs 8,982 | Rs 48,506 | 0 | Rs 60,198 | +183.2% | Rs 41,305 / -Rs 34,753 / Rs 48,736 / Rs 214,153 | Rs 487,971 (383) | Rs 489,899 | Rs 520,371 | 0.000 | 0.000 | 0.00 | none | 17% / -Rs 1,133,203 |
 | BANKNIFTY-N-IC-X1 | 942 | 66% | Rs 192,142 | Rs 204 | Rs 744 / -Rs 860 | 1.705 | -Rs 4,338 | -Rs 5,927 | Rs 37,140 | 0 | Rs 58,953 | +67.5% | Rs 38,002 / -Rs 26,867 / Rs 16,387 / Rs 110,323 | Rs 164,721 (329) | Rs 172,699 | Rs 179,824 | 0.000 | 0.000 | 0.00 | none | 16% / -Rs 724,648 |
 | BANKNIFTY-N-IC-X2 | 942 | 66% | Rs 188,928 | Rs 201 | Rs 745 / -Rs 858 | 1.689 | -Rs 4,338 | -Rs 5,927 | Rs 39,417 | 0 | Rs 58,953 | +66.3% | Rs 35,375 / -Rs 24,941 / Rs 16,853 / Rs 113,459 | Rs 166,073 (329) | Rs 168,497 | Rs 177,738 | 0.000 | 0.000 | 0.00 | none | 18% / -Rs 724,760 |
+
+## Holdout (15 Jul - 19 Oct 2026, read once)
+
+| test | trades | win | net | worst day | worst month | confirmed | BUY mirror: win / net |
+|---|---|---|---|---|---|---|---|
+| BANKNIFTY-N-IC-X1 | 64 | 83% | Rs 37,363 | -Rs 2,704 | Rs 5,301 | no | 2% / -Rs 82,787 |
+| BANKNIFTY-N-IC-X2 | 64 | 81% | Rs 34,254 | -Rs 2,704 | Rs 5,665 | no | 2% / -Rs 82,787 |
+| BANKNIFTY-N-IF-X1 | 64 | 86% | Rs 48,969 | -Rs 1,209 | Rs 7,457 | no | 2% / -Rs 97,537 |
+| BANKNIFTY-N-IF-X2 | 64 | 86% | Rs 48,969 | -Rs 1,209 | Rs 7,457 | no | 2% / -Rs 97,537 |
+| BANKNIFTY-N-IFW-X1 | 64 | 86% | Rs 53,623 | -Rs 1,941 | Rs 7,436 | no | 2% / -Rs 102,038 |
+| BANKNIFTY-N-IFW-X2 | 64 | 86% | Rs 53,623 | -Rs 1,941 | Rs 7,436 | no | 2% / -Rs 102,038 |
+
+## Stale-leg check, design (PREREG Amendment 2: exit legs with no trade within 5 minutes repriced with Black-Scholes at their last print's IV)
+
+| test | trades | net as pre-registered | net repriced | win repriced | after 20 Nov 2024, repriced | trades with a stale exit leg | fresh-only trades: n / net / win |
+|---|---|---|---|---|---|---|---|
+| NIFTY-E-IF-X1 | 249 | -Rs 58,984 | -Rs 59,429 | 37% | -Rs 24,862 | 6 | 243 / -Rs 41,215 / 38% |
+| NIFTY-E-IF-X2 | 249 | -Rs 54,575 | -Rs 55,325 | 43% | -Rs 12,808 | 5 | 244 / -Rs 37,977 / 43% |
+| NIFTY-E-IFW-X1 | 249 | -Rs 36,518 | -Rs 36,882 | 41% | -Rs 7,111 | 7 | 242 / -Rs 19,395 / 41% |
+| NIFTY-E-IFW-X2 | 249 | -Rs 53,770 | -Rs 54,160 | 47% | -Rs 9,671 | 5 | 244 / -Rs 29,214 / 48% |
+| NIFTY-E-IC-X1 | 249 | Rs 28,347 | Rs 28,178 | 43% | Rs 26,367 | 3 | 246 / Rs 22,985 / 43% |
+| NIFTY-E-IC-X2 | 249 | -Rs 7,064 | -Rs 7,237 | 52% | Rs 3,232 | 1 | 248 / -Rs 3,694 / 52% |
+| NIFTY-N-IF-X1 | 959 | -Rs 115,087 | -Rs 207,035 | 43% | -Rs 47,718 | 104 | 855 / -Rs 80,887 / 46% |
+| NIFTY-N-IF-X2 | 959 | -Rs 116,301 | -Rs 205,547 | 43% | -Rs 47,718 | 104 | 855 / -Rs 80,887 / 46% |
+| NIFTY-N-IFW-X1 | 958 | -Rs 35,377 | -Rs 209,159 | 52% | -Rs 46,692 | 260 | 698 / Rs 41,363 / 59% |
+| NIFTY-N-IFW-X2 | 958 | -Rs 36,591 | -Rs 207,672 | 52% | -Rs 46,692 | 260 | 698 / Rs 41,363 / 59% |
+| NIFTY-N-IC-X1 | 958 | -Rs 59,562 | -Rs 215,487 | 49% | -Rs 62,354 | 255 | 703 / Rs 2,572 / 57% |
+| NIFTY-N-IC-X2 | 958 | -Rs 55,147 | -Rs 209,326 | 49% | -Rs 60,370 | 253 | 705 / Rs 5,887 / 57% |
+| BANKNIFTY-E-IF-X1 | 175 | -Rs 3,475 | -Rs 1,207 | 40% | Rs 4,879 | 9 | 166 / Rs 5,147 / 41% |
+| BANKNIFTY-E-IF-X2 | 175 | -Rs 17,761 | -Rs 18,817 | 46% | Rs 7,296 | 8 | 167 / Rs 1,060 / 47% |
+| BANKNIFTY-E-IFW-X1 | 175 | Rs 15,097 | Rs 13,657 | 46% | Rs 7,409 | 17 | 158 / Rs 61,917 / 50% |
+| BANKNIFTY-E-IFW-X2 | 175 | -Rs 12,454 | -Rs 16,360 | 50% | Rs 4,781 | 16 | 159 / Rs 42,382 / 55% |
+| BANKNIFTY-E-IC-X1 | 175 | -Rs 1,528 | -Rs 4,513 | 41% | Rs 5,363 | 15 | 160 / Rs 23,132 / 44% |
+| BANKNIFTY-E-IC-X2 | 175 | -Rs 18,670 | -Rs 20,687 | 51% | -Rs 427 | 14 | 161 / -Rs 14,420 / 51% |
+| BANKNIFTY-N-IF-X1 | 998 | Rs 439,888 | -Rs 317,955 | 42% | -Rs 154,183 | 429 | 569 / Rs 12,445 / 56% |
+| BANKNIFTY-N-IF-X2 | 998 | Rs 434,383 | -Rs 325,651 | 42% | -Rs 156,755 | 429 | 569 / Rs 12,445 / 56% |
+| BANKNIFTY-N-IFW-X1 | 996 | Rs 542,746 | -Rs 320,777 | 47% | -Rs 156,685 | 627 | 369 / Rs 125,730 / 72% |
+| BANKNIFTY-N-IFW-X2 | 996 | Rs 532,885 | -Rs 330,842 | 47% | -Rs 159,258 | 627 | 369 / Rs 125,730 / 72% |
+| BANKNIFTY-N-IC-X1 | 942 | Rs 192,142 | -Rs 292,571 | 44% | -Rs 140,085 | 580 | 362 / Rs 86,964 / 69% |
+| BANKNIFTY-N-IC-X2 | 942 | Rs 188,928 | -Rs 286,978 | 44% | -Rs 132,148 | 564 | 378 / Rs 84,998 / 68% |
+
+## Stale-leg check, holdout (PREREG Amendment 2: exit legs with no trade within 5 minutes repriced with Black-Scholes at their last print's IV)
+
+| test | trades | net as pre-registered | net repriced | win repriced | after 20 Nov 2024, repriced | trades with a stale exit leg | fresh-only trades: n / net / win |
+|---|---|---|---|---|---|---|---|
+| BANKNIFTY-N-IF-X1 | 64 | Rs 48,969 | -Rs 18,785 | 39% | -Rs 18,785 | 45 | 19 / Rs 2,230 / 74% |
+| BANKNIFTY-N-IF-X2 | 64 | Rs 48,969 | -Rs 18,785 | 39% | -Rs 18,785 | 45 | 19 / Rs 2,230 / 74% |
+| BANKNIFTY-N-IFW-X1 | 64 | Rs 53,623 | -Rs 18,607 | 38% | -Rs 18,607 | 51 | 13 / Rs 1,030 / 69% |
+| BANKNIFTY-N-IFW-X2 | 64 | Rs 53,623 | -Rs 18,607 | 38% | -Rs 18,607 | 51 | 13 / Rs 1,030 / 69% |
+| BANKNIFTY-N-IC-X1 | 64 | Rs 37,363 | -Rs 20,954 | 33% | -Rs 20,954 | 52 | 12 / Rs 450 / 58% |
+| BANKNIFTY-N-IC-X2 | 64 | Rs 34,254 | -Rs 19,652 | 33% | -Rs 19,652 | 50 | 14 / Rs 989 / 64% |

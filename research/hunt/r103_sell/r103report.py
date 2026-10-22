@@ -51,6 +51,22 @@ def write() -> str:
                 buy = f"{b['win'] * 100:.0f}% / {rs(b['net'])}" if b.get("n") else ""
                 out.append(f"| {r['id']} | {s.get('n', 0)} | {s.get('win', 0) * 100:.0f}% | {rs(s.get('net'))} | {rs(s.get('worst_day'))} | "
                            f"{rs(s.get('worst_month'))} | {'yes' if r['confirmed'] else 'no'} | {buy} |")
+    for part, title in (("design", "design"), ("holdout", "holdout")):         # Amendment 2: the stale-leg check
+        f = RES / f"stale_{part}.json"
+        if not f.exists():
+            continue
+        st = json.loads(f.read_text())
+        out += ["", f"## Stale-leg check, {title} (PREREG Amendment 2: exit legs with no trade within 5 minutes repriced with "
+                "Black-Scholes at their last print's IV)", "",
+                "| test | trades | net as pre-registered | net repriced | win repriced | after 20 Nov 2024, repriced | trades with a stale exit leg | "
+                "fresh-only trades: n / net / win |", "|---|---|---|---|---|---|---|---|"]
+        for tid in [r["id"] for r in d["tests"]]:
+            v = st.get(tid)
+            if not v:
+                continue
+            fw = "" if v["fresh_only_win"] is None else f"{v['fresh_only_win'] * 100:.0f}%"
+            out.append(f"| {tid} | {v['n']:,} | {rs(v['net_as_run'])} | {rs(v['net_repriced'])} | {v['win_repriced'] * 100:.0f}% | "
+                       f"{rs(v['post_regime_repriced'])} | {v['trades_with_stale_leg']:,} | {v['fresh_only_n']:,} / {rs(v['fresh_only_net'])} / {fw} |")
     text = "\n".join(out) + "\n"
     (RES / "report.md").write_text(text)
     return text
