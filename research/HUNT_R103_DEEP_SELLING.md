@@ -251,6 +251,22 @@ On these 12 days (RBI decisions and the 2026 budget) the naked sellers made mone
 crushed and the moves stayed inside it. Twelve days are too few to say more; the counting day of 2024 (4 Jun 2024,
 Design B) is the counter-example, in the tail table of the guide.
 
+## Follow-up (exploratory, after the holdout read): does a profit lock help?
+
+Boss asked whether a stop-loss plus a profit lock rescues the NIFTY expiry-day strangle. Not pre-registered; the holdout
+was not read again. 54 variants (3 entries x 3 stops x 6 locks: once the profit reaches 30 / 40 / 50% of the credit,
+close if it falls back to 10-25%), 86 expiry days in Design A and the same rules on Design B
+(`results/lock_explore.csv`, entry `r103-deep-lock-explore`):
+
+- The lock beat the same cell without a lock in only **23 of 54** variants in Design A and **23 of 54** in Design B.
+- It raises the win rate and lowers the profit: at 09:20 with the combined stop, a 30/20 lock took wins from 67% to 79%
+  and the net from +Rs 63,930 to +Rs 28,651. It closes good days early and does nothing on the bad ones, which the stop
+  already handles.
+- The 18 variants with q <= 0.10 are all the 09:45 combined-stop cell, whose pre-registered version lost in the holdout.
+- In Design B, 13 of the 54 lock variants lose money.
+
+**Verdict: a profit lock does not rescue it.** Rejected.
+
 ## Caveats, stated plainly
 
 1. **The lake keeps only ATM±10 strikes.** A leg that drifts out of that window has no price. The first run valued such

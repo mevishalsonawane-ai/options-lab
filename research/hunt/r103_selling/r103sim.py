@@ -323,9 +323,12 @@ def fill_open(leg: Leg, r: int) -> float:
 
 
 def simulate(day: R.Day, t: int, struct: str, stop: str, target: str, legs: list[Leg] | None = None,
-             sell: bool = True, buy_rules: tuple | None = None) -> Trade | None:
+             sell: bool = True, buy_rules: tuple | None = None, lock: tuple | None = None) -> Trade | None:
     """One trade: enter at row t (fills at t + 1), run the stop / target rules, close at 15:10 (15:05 on expiry).
-    buy_rules (BUY side only): (combined stop as a share of the debit, target as a share of the debit) or None."""
+    buy_rules (BUY side only): (combined stop as a share of the debit, target as a share of the debit) or None.
+    lock (SELL side, exploratory follow-up of 22 Oct 2026, not in the pre-registered 480 cells): (trigger, keep) as
+    shares of the credit: once the profit on minute closes has reached trigger x credit, close everything when it
+    falls back to keep x credit (next minute's open, normal slippage)."""
     legs = structure(day, t, struct, sell) if legs is None else legs
     if legs is None or t + 1 >= N:
         return None
@@ -395,6 +398,13 @@ def simulate(day: R.Day, t: int, struct: str, stop: str, target: str, legs: list
             cand.append((int(watch[hit[0]]), 2))
     if thr_gain is not None and thr_gain > 0:
         hit = np.where(np.isfinite(path) & (path >= thr_gain))[0]
+        if hit.size:
+            cand.append((int(watch[hit[0]]), 3))
+    if sell and lock is not None and credit > 0:
+        trig, keep = lock
+        fin = np.where(np.isfinite(path), path, -np.inf)
+        armed = np.maximum.accumulate(fin) >= trig * credit
+        hit = np.where(armed & np.isfinite(path) & (path <= keep * credit))[0]
         if hit.size:
             cand.append((int(watch[hit[0]]), 3))
     if cand:

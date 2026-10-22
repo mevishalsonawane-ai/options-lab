@@ -1,0 +1,32 @@
+id: r103-deep-lock-explore
+title: 'R103 deep follow-up: a profit lock on the NIFTY expiry-day short strangle (exploratory, after the holdout read)'
+family: option-structure
+date: '2026-10-22'
+doc: research/HUNT_R103_DEEP_SELLING.md
+hypothesis: 'Boss asked (22 Oct) whether a stop-loss plus profit lock rescues the R103-deep winner. Exploratory, NOT pre-registered:
+  the NIFTY expiry-day short strangle (09:20 / 09:45 / 10:15, stops X1 / X2 / X3) with a lock (trigger / keep as shares of
+  the credit: 30/10, 30/20, 40/10, 40/20, 50/10, 50/25) makes more than the same cell without a lock, in Design A and in Design
+  B. Signal source: none.'
+data_version: as r103-deep-nifty-strangle
+period:
+  design: 20 Nov 2024 - 14 Jul 2026 (A); 5 Aug 2021 - 19 Nov 2024 (B)
+  holdout: 15 Jul - 19 Oct 2026 (not read for this follow-up)
+instruments:
+- NIFTY
+features:
+- 'signal source: none'
+- option premium (stop, lock)
+model_or_rule: r103sim.simulate(..., lock=(trigger, keep)) on top of the pre-registered cells
+settings: research/hunt/r103_selling/results/lock_explore.csv
+prereg: null
+variants_tried: 54
+results:
+  summary: '54 lock variants, 86 expiry days each in A: all 54 net > 0 (the base cells already were), 18 with BH q <= 0.10
+    over the 54, all of them the 09:45 combined-stop cell whose pre-registered twin (50% target) lost in the holdout. The
+    lock beat the same cell without it in only 23 of 54 (A) and 23 of 54 (B). It lifts the win rate (09:20 combined stop 67%
+    -> 79% with 30/20) but cuts the net (Rs +63,930 -> +28,651). Design B: 13 of 54 lock variants lose.'
+  costs: as r103-deep (dated charges, measured-spread slippage, double on stops)
+holdout_read: false
+verdict: rejected
+notes: Post-hoc follow-up on a family whose holdout was already read; any positive result could only justify a new forward
+  test.

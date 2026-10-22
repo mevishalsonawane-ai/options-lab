@@ -413,3 +413,25 @@ def test_trades_do_not_look_ahead_real_days(und, value):
                 assert tr2 is not None and tr2.net == pytest.approx(tr.net) and tr2.exit_row == tr.exit_row
                 checked += 1
     assert checked > 0
+
+
+def test_profit_lock_arms_then_exits_on_give_back():
+    """Lock (0.4, 0.2): the pair decays to 50% of the credit (profit 50% >= 40%: armed), then rises back to 85% of
+    the credit (profit 15% <= 20%): exit at the next open. Never armed: no lock exit."""
+    c, p = flat(100.0), flat(100.0)
+    c[T + 20:] = 50.0
+    p[T + 20:] = 50.0
+    c[T + 40:] = 85.0
+    p[T + 40:] = 85.0
+    d = make_day({(22250.0, "C"): c, (22250.0, "P"): p})
+    tr = S.simulate(d, T, "STR", "X0", "T0", lock=(0.4, 0.2))
+    assert tr.reason == "target" and tr.exit_row == T + 41
+    e = 100.0 - S.half_spread(100.0, 0)
+    assert tr.gross == pytest.approx(2 * (e - (85 + S.half_spread(85.0, 0))) * 75)
+    c2, p2 = flat(100.0), flat(100.0)
+    c2[T + 20:] = 75.0                                       # profit 25% < 40%: never armed
+    p2[T + 20:] = 75.0
+    c2[T + 40:] = 95.0
+    p2[T + 40:] = 95.0
+    assert S.simulate(make_day({(22250.0, "C"): c2, (22250.0, "P"): p2}), T, "STR", "X0", "T0", lock=(0.4, 0.2)).reason == "close"
+    assert S.simulate(d, T, "STR", "X0", "T0").reason == "close"   # no lock given: unchanged
