@@ -119,3 +119,29 @@ no rule, exit, structure or gate changes, and the 24 tests and the BH family are
    crashes are described from the daily index and the median straddle only (an estimate, labelled).
 
 Timing twins (reported, not gated) stay as written. The random-day twin remains the rule itself.
+
+## Amendment 2 (22 Oct 2026, about 15:35 IST; written AFTER the design results were committed and BEFORE the holdout read)
+
+**What was found.** Six tests passed every design gate (BANKNIFTY non-expiry, IF / IFW / IC x X1 / X2). Checking them
+before the holdout showed a data artefact. The lake keeps only the ATM +-10 strikes at each minute, so a held wing that
+drifts outside that window stops printing. As pre-registered, the engine marks such a leg at its last close and exits it
+at that close when no open exists within 5 minutes. On the BANKNIFTY passers 11-18% of exit legs had no print in the 5
+minutes before the exit and 9-15% none in the 30 minutes before (430-628 stale long wings in about 1,000 trades). On
+NIFTY it was 3%. A long wing frozen at an old, higher price overstates the seller's profit and hides losses from the stop
+(the IF's stop fired on 6 of 998 BANKNIFTY days).
+
+**The check (a stricter gate, added before the holdout).** `r103stale.py` reprices every exit leg with no open within 5
+minutes of its exit order: Black-Scholes at the implied volatility of the leg's last print (6.5% rate), the index at the
+exit minute and the calendar time to 15:30 on the expiry day (bhavcopy calendar), filled with thin-contract slippage
+(4 ticks + 5 bps) and the same charges. The exit minute is the engine's (the stop path is not re-run; with fresh marks
+some stops would fire earlier, which this check does not credit or charge).
+
+* **Gate 8 (design):** the repriced design net > 0. **Holdout confirmation** now also needs the repriced holdout net > 0,
+  besides the pre-registered holdout gate.
+* The pre-registered numbers stay the headline numbers in every table; the repriced numbers sit beside them.
+* The holdout is still read once, for the six design passers exactly as pre-registered (`r103study.py holdout`), and
+  `r103stale.py holdout` reprices the same trades.
+
+A stricter gate added after a design result can only reject more; it cannot manufacture a pass. The first repriced
+design numbers (computed while diagnosing, before this note) were already negative for all six passers, so this
+amendment is expected to reject them; it is written down so that the holdout read cannot change that verdict quietly.

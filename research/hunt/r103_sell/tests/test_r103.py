@@ -231,3 +231,39 @@ def test_tail_straddle_loss_on_a_hand_made_day(tmp_path, monkeypatch):
     monkeypatch.setattr(S, "HOLDOUT_FLAG", tmp_path / "HOLDOUT_READ")
     with pytest.raises(PermissionError):
         T.write()
+
+
+# ---- Amendment 2 (22 Oct 2026): the stale-leg check -------------------------------------------------------------------
+
+def test_bs_and_implied_vol_round_trip():
+    import r103stale as ST
+    p = ST.bs(25000.0, 25200.0, 5 / 365, 0.15, True)
+    assert 90 < p < 110                                         # the illustration in DEEP_OPTIONS_SELLING.md: about 101
+    assert ST.implied_vol(p, 25000.0, 25200.0, 5 / 365, True) == pytest.approx(0.15, abs=1e-4)
+    assert ST.implied_vol(0.01, 25000.0, 24000.0, 5 / 365, True) is None     # below intrinsic
+    assert ST.bs(25000.0, 24800.0, 0.0, 0.2, False) == 0.0
+    assert ST.years_left(date(2026, 5, 4), date(2026, 5, 5), 0) == pytest.approx((1440 + 375) / (365 * 1440))
+
+
+def test_reprice_only_touches_stale_legs_and_lowers_a_frozen_long_wing():
+    import r103stale as ST
+    D = flat_day()
+    t = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X1", False)
+    net, fixed, fail = ST.reprice(t, D, date(2026, 5, 5))
+    assert (net, fixed, fail) == (t["net"], 0, 0)              # every leg printed at exit: unchanged
+    # the long call wing stops printing at minute 100 and the index has fallen 300 points by the exit: its frozen price
+    # (100 + 4 x 50 points over the strike... flat_day gives it 200 - 4 x 10 = 60) is too high; repriced it is lower
+    w = D.con[("C", 25200.0)]
+    w[:, 100:] = np.nan
+    D.idx[3, 100:] = 24700.0
+    t2 = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X1", False)
+    net2, fixed2, fail2 = ST.reprice(t2, D, date(2026, 5, 5))
+    assert fixed2 == 1 and fail2 == 0 and net2 < t2["net"]
+    assert ST.reprice(t2, D, None)[2] == 1                       # no expiry date: counted, not repriced
+
+
+def test_stale_holdout_lock(tmp_path, monkeypatch):
+    import r103stale as ST
+    monkeypatch.setattr(S, "HOLDOUT_FLAG", tmp_path / "HOLDOUT_READ")
+    with pytest.raises(PermissionError):
+        ST.run("holdout")
