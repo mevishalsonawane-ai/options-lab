@@ -54,6 +54,7 @@ internal object AutomationFixtures {
         orderFlow = "Order flow: shadow only, no entry skipped",
         brain = "Brain: busy day · 1 strategy paused on paper",
         frozen = "Learning frozen (paper): nothing is applied until you unfreeze it.",
+        flatBy = "Flat-by: index options 15:25 · stock and fund 15:20 · MCX 23:20 (10 min before its close) · expiry day 15:05 first.",
     )
 
     /** A section's stand-in: its title and a few lines and buttons, as long as the real ones. */

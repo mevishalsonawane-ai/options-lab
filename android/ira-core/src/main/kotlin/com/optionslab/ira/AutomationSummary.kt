@@ -19,6 +19,8 @@ object AutomationSummary {
         ORDERS("orders", "Order review"),
         ORDER_FLOW("orderflow", "Order flow"),
         BRAIN("brain", "Brain"),
+        /** 22 Oct: the hard flat-by minutes per segment (every intraday arm position closed by then). */
+        FLAT_BY("flatby", "Flat-by"),
     }
 
     /** The card's lines (null: that section is not in this build); [frozen] the warning while learning is frozen. */
@@ -30,6 +32,8 @@ object AutomationSummary {
         val orders: String? = null,
         val orderFlow: String? = null,
         val brain: String? = null,
+        /** 22 Oct: "Flat-by: index options 15:25 · stock and fund 15:20 · MCX 23:20 ..." (the engine's FlatBy.line). */
+        val flatBy: String? = null,
         val frozen: String? = null,
         /**
          * The open problems any agent found (12 Oct, [OpenProblems]): [problemsHead] "Problems found: 1 serious, 2 warnings" (null:
@@ -43,6 +47,7 @@ object AutomationSummary {
         fun rows(): List<Pair<Section, String>> = listOfNotNull(
             manager?.let { Section.MANAGER to it }, autopilot?.let { Section.AUTOPILOT to it }, lab?.let { Section.LAB to it },
             orders?.let { Section.ORDERS to it }, orderFlow?.let { Section.ORDER_FLOW to it }, brain?.let { Section.BRAIN to it },
+            flatBy?.let { Section.FLAT_BY to it },
         )
     }
 

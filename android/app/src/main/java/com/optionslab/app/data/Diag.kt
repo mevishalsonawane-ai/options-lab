@@ -392,7 +392,16 @@ object Diag {
     /** The MCX paper arms' line and NR7 crude's record-only line (21 Oct). Its own function: the report's one is near the compiler's limit. */
     private fun mcxArmLines(): String =
         (runCatching { McxPaperArms.diagLine() }.getOrElse { "MCX paper arms: could not read" }) + "\n" +
-            (runCatching { McxNr7Record.diagLine() }.getOrElse { "NR7 crude (record only): could not read" }) + "\n"
+            (runCatching { McxNr7Record.diagLine() }.getOrElse { "NR7 crude (record only): could not read" }) + "\n" + borrowedLines()
+
+    /**
+     * 22 Oct (borrowed from the day-trader skill): the flat-by's line, the order fingerprint verdicts and the time machine's
+     * checks. Its own function, chained after [mcxArmLines] (the report's function is at the compiler's limit). Memory only.
+     */
+    private fun borrowedLines(): String =
+        (runCatching { FlatBySquareOff.diagLine() }.getOrElse { "Flat-by: could not read" }) + "\n" +
+            (runCatching { OrderVerdicts.diagLine() }.getOrElse { "Order fingerprints: could not read" }) + "\n" +
+            (runCatching { TimeMachineHost.diagLine() }.getOrElse { "Time machine: could not read" }) + "\n"
 
     /** 20 Oct, enhancement round 1: the 15-second stop check's real gaps (idea 6) and what counts as held now (idea 7). */
     private fun round1Watch(): String = buildString {

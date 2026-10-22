@@ -945,6 +945,9 @@ object Tasks {
             step("expiry square-off") { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
             // MCX (9 Oct): options closed by 23:00 the day before expiry, delivery futures 5 trading days before (paper and live).
             step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
+            // 22 Oct: the hard flat-by per segment (NSE index 15:25, stock 15:20, MCX ten minutes before its close): every intraday
+            // arm position still open after the arms' own exits, paper and live; the kill switch never stops it.
+            step("flat-by") { com.optionslab.app.data.FlatBySquareOff.maybeRun(context, s) }
         }
         // After the square-off (so what it closed is booked as closed), side by side as above: the MCX paper arms (9 Oct,
         // research M3/M4/M2; paper only, off by default), the Strategy Module (schedules, prices, per-leg and basket risk,
@@ -1156,6 +1159,8 @@ object Tasks {
             step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
             step("stops and targets") { com.optionslab.app.data.Protections.tick() }
             step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
+            // 22 Oct: MCX's flat-by, ten minutes before its close (the arms' NRML futures are held by design; MIS only).
+            step("flat-by") { com.optionslab.app.data.FlatBySquareOff.maybeRun(context, s) }
             // The MCX paper arms (paper only): after the expiry exit, so a position it closed is booked as closed there.
             step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
             step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
