@@ -151,3 +151,23 @@ def test_holdout_lock_and_count(tmp_path, monkeypatch):
     with pytest.raises(SystemExit):
         S.holdout()
     assert len(S.TESTS) == 16 and len({S.test_id(*t) for t in S.TESTS}) == 16
+
+
+def test_late_momentum_rows_and_stats(tmp_path, monkeypatch):
+    import r104late as L
+    days = {}
+    p1 = np.full(N, 25000.0)                                        # 4 May closes at 25,000
+    p2 = np.full(N, 25200.0); p2[326:] = 25220.0                    # 5 May: up on the day at 14:40, +20 after
+    p3 = np.full(N, 25300.0); p3[326:] = 25280.0                    # 6 May: up again, then -20 late
+    for d, path in zip([date(2026, 5, 4), date(2026, 5, 5), date(2026, 5, 6)], (p1, p2, p3)):
+        days[d] = SimpleNamespace(idx=np.vstack([path] * 4))
+    out = L.rows_for(days, set(), "design")
+    assert len(out["N"]) == 2 and "E" not in out
+    r = out["N"][0]                                                 # 5 May: r1 > 0, late +20 -> pnl = r2 - cost > 0
+    assert r["r1"] > 0 and r["pnl"] == pytest.approx(20.0 / 25200.0 - L.COST)
+    s = L.stats(out["N"])
+    assert s["n"] == 2 and s["hit"] == 0.5
+    monkeypatch.setattr(L, "FLAG", tmp_path / "LATE_HOLDOUT_READ")
+    (tmp_path / "LATE_HOLDOUT_READ").write_text("x")
+    with pytest.raises(SystemExit):
+        L.run("holdout")
