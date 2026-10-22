@@ -71,7 +71,7 @@ object DiagDay {
         /** Who placed it, as the order screens say ("Strategy: ORB"). */
         val source: String = "",
         val unconfirmed: Boolean = false,
-        /** Entered under Boss's paper give-back trail (R19b/c): kept apart from the plain-rules record. */
+        /** Entered under Boss's own paper rules (the give-back trail, R19b/c; or, 22 Oct, the breakeven at +10%): kept apart from the plain-rules record. */
         val trail: Boolean = false,
     ) {
         val points: Double? get() = exit?.let { it - entry }

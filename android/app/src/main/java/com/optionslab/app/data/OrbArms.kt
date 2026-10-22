@@ -981,11 +981,17 @@ object OrbArms {
     /**
      * 22 Oct: was [p]'s resting stop put where it is by Boss's paper breakeven at +10% ([LiquidityBreakeven])? Its trigger is the
      * breakeven's own level (the price paid plus charges, on the tick) - a stop the trail or a lock raised elsewhere is theirs.
+     * Under a lab lock variant a stop the lock's own ladder reaches too (its breakeven rung is the same level) is the profit
+     * lock's, as the trail's ([trailStopped], 13 Oct review).
      */
     private fun beStopped(p: Position): Boolean {
+        if (p.be == null) return false
         val at = p.stopTrigger ?: return false
-        val own = LiquidityBreakeven.level(p.entry, p.peak, ProfitLock.roundTripPerUnit(p.entry, p.qty), p.be) ?: return false
-        return kotlin.math.abs(at - own) < 1e-6
+        val cost = ProfitLock.roundTripPerUnit(p.entry, p.qty)
+        val own = LiquidityBreakeven.level(p.entry, p.peak, cost, p.be) ?: return false
+        if (kotlin.math.abs(at - own) >= 1e-6) return false
+        val lock = ProfitLock.restingStop(p.entry, null, ladderTarget(p), p.peak ?: p.entry, cost)
+        return lock == null || lock < at - 1e-6
     }
 
     /**
@@ -1985,7 +1991,8 @@ object OrbArms {
             // The trail's give-back from the best price BEFORE this look (a new best counts from the next look, as the ladder).
             val trailHit = LiquidityTrail.exits(cur.entry, cur.peak ?: cur.entry, ltp, cur.lot, cur.trail, cur.trailFrom)
             // 22 Oct: Boss's breakeven at +10% (paper), from the best BEFORE this look as the trail.
-            val beHit = LiquidityBreakeven.exits(cur.entry, cur.peak ?: cur.entry, ltp, ProfitLock.roundTripPerUnit(cur.entry, cur.qty), cur.be)
+            val beHit = cur.be != null &&
+                LiquidityBreakeven.exits(cur.entry, cur.peak ?: cur.entry, ltp, ProfitLock.roundTripPerUnit(cur.entry, cur.qty), cur.be)
             val seen = heldRange(trailPeak(laddered, ltp, highs.lock), ltp)
             if (seen !== cur) b.positions[i] = seen
             // The Hero arm's own exits (HeroRules.exitStep: half at 5x, the rest at 20x or 15:05, the -60% stop on a minute's
@@ -2131,11 +2138,14 @@ object OrbArms {
         val id = p.stopOrderId ?: return p
         // The higher of the ladder's lock, Boss's paper give-back trail ([LiquidityTrail.raise]) and, 22 Oct, Boss's paper breakeven
         // at +10% ([LiquidityBreakeven.raise]): up only, below the price.
-        val to = listOfNotNull(
-            target?.let { ProfitLock.raise(p.entry, it, p.peak ?: p.entry, p.stopTrigger, ltp, ProfitLock.roundTripPerUnit(p.entry, p.qty)) },
-            LiquidityTrail.raise(p.entry, p.peak, p.lot, p.trail, p.stopTrigger, ltp, activateRs = p.trailFrom),
-            LiquidityBreakeven.raise(p.entry, p.peak, ProfitLock.roundTripPerUnit(p.entry, p.qty), p.be, p.stopTrigger, ltp),
-        ).maxOrNull() ?: return p
+        // Each rule's level with its name, so a refused move names the rule that asked for it (22 Oct review).
+        val asks = listOfNotNull(
+            target?.let { ProfitLock.raise(p.entry, it, p.peak ?: p.entry, p.stopTrigger, ltp, ProfitLock.roundTripPerUnit(p.entry, p.qty)) }?.let { it to "profit lock" },
+            LiquidityTrail.raise(p.entry, p.peak, p.lot, p.trail, p.stopTrigger, ltp, activateRs = p.trailFrom)?.let { it to "₹500 trail" },
+            p.be?.let { LiquidityBreakeven.raise(p.entry, p.peak, ProfitLock.roundTripPerUnit(p.entry, p.qty), it, p.stopTrigger, ltp) }
+                ?.let { it to "breakeven at +10%" },
+        )
+        val (to, rule) = asks.maxByOrNull { it.first } ?: return p
         val r = runCatching { Paper.modify(id, null, null, to) }
         if (r.getOrNull()?.ok == true) {
             // 18 Oct: a paper-only arm's live trade moves its Zerodha stop to the same lock ([ArmLive]; memory only).
@@ -2143,7 +2153,6 @@ object OrbArms {
             return p.copy(stopTrigger = to)
         }
         val why = r.getOrNull()?.message ?: r.exceptionOrNull()?.javaClass?.simpleName ?: "an error"
-        val rule = when { target != null -> "profit lock"; p.trail != null -> "₹500 trail"; else -> "breakeven at +10%" }
         com.optionslab.app.work.Alerts.post("${armOf(p.arm).label}: the $rule could not move the paper stop up to " +
             "%.2f (%s). The stop stays at %s; it is tried again on the next check.".format(Locale.ENGLISH, to, why,
                 p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"),

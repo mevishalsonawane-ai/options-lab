@@ -1071,6 +1071,30 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals("the resting stop moved up to the start point", beLevel(p), held.stopTrigger!!, 1e-9)
     }
 
+    /**
+     * The look that first sees +10% never sells on it, even with the price already back at the price paid: the best counts from
+     * the NEXT look (as the trail and the lock). That look sells it at the breakeven.
+     */
+    @Test fun withTheBreakevenTheLookThatFirstSeesTenPercentDoesNotSellTheNextOneDoes() = withBreakeven {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        // 13:06 spiked to +12% inside the minute and is back at the price paid now.
+        upstox.minutes[ceKey] = listOf(FakeUpstox.Candle(LocalTime.of(13, 6), p.entry + 1, p.entry * 1.12, p.entry, p.entry))
+        upstox.price(ceKey, p.entry)
+        tick(LocalTime.of(13, 7))
+        val first = row().today.single()
+        assertTrue("not sold on the look that saw the spike", first.open)
+        assertEquals(p.entry * 1.12, first.peak!!, 1e-6)
+        assertEquals("not raised to or above the price now", com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), first.stopTrigger)
+        // The next look: the breakeven is earned, the price is under it - sold as the breakeven.
+        tick(LocalTime.of(13, 8))
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals(be.WHY, closed.why)
+    }
+
     /** Switched on while a trade is open: that trade keeps the plain rules it entered with; the next entry carries it. */
     @Test fun anOpenTradeKeepsTheRulesItEnteredWith() {
         failDay = false

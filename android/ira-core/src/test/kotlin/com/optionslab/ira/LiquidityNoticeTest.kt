@@ -102,6 +102,8 @@ class LiquidityNoticeTest {
             "closed_by_you" to ("closed by you" to "Closed by you"),
             "profit_lock" to ("profit lock" to "Exit: profit lock"),
             "give_back_trail" to ("₹500 trail" to "₹500 trail: the option gave back ₹500 a lot from its best (your paper choice)"),
+            // 22 Oct: Boss's breakeven at +10% (paper).
+            "breakeven_lock" to ("breakeven at +10%" to "Breakeven: up 10% earlier, it came back to the price paid (your paper choice)"),
         )
         for ((why, w) in words) {
             assertEquals(w.first, LiquidityNotice.short(why), why)

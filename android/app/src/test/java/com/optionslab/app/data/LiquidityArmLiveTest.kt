@@ -164,6 +164,23 @@ class LiquidityArmLiveTest : RobolectricTest() {
         } finally { LiquidityTest.setStateForTest(before) }
     }
 
+    /** 22 Oct: Boss's breakeven at +10% is PAPER only - a live entry with the switch on (and the trail's too) carries neither. */
+    @Test fun aLiveEntryWithBosssPaperBreakevenSwitchOnCarriesNoBreakeven() {
+        val before = LiquidityTest.state.value
+        LiquidityTest.setStateForTest(before.copy(trail = true, breakeven = true))
+        try {
+            assertTrue(LiquidityTest.breakevenOn())
+            state()
+            assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+            val p = row().open!!
+            assertTrue(p.live)
+            assertNull("never on a live trade", p.be)
+            assertNull(p.trail)
+            // Its resting stop is the plain 15% one (170 under the 200 fill), not moved by any of Boss's paper rules.
+            assertEquals(170.0, p.stopTrigger!!, 0.0)
+        } finally { LiquidityTest.setStateForTest(before) }
+    }
+
     @Test fun twoLotsAtZerodhaBuyTwiceTheLotAndTheStopCoversThemAll() {
         state(lots = 2)
         assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })

@@ -135,7 +135,7 @@ object LiquidityRecord {
     /** One closed paper trade of the arm, as read from its book: [net] rupees after charges in all, [perLot] per lot. */
     data class Row(val trade: BotTrades.Trade, val index: String, val book: String, val lots: Double, val net: Double, val perLot: Double) {
         val day: LocalDate get() = trade.entryTime.toLocalDate()
-        /** Entered under Boss's opt-in Rs 500 give-back trail ([BotTrades.Trade.trail]): not the plain rules' trade. */
+        /** Entered under Boss's own opt-in rules (the Rs 500 give-back trail or, 22 Oct, the breakeven at +10%; [BotTrades.Trade.trail]): not the plain rules' trade. */
         val trailed: Boolean get() = trade.trail
         /** The own rules a [trailed] trade ran on, in words (22 Oct: the trail or Boss's breakeven at +10%, or both). */
         val rules: String get() = trade.rules ?: com.optionslab.engine.orb.LiquidityTrail.TRAILED

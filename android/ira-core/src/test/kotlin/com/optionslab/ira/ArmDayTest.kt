@@ -69,6 +69,9 @@ class ArmDayTest {
         // Boss's opt-in paper trail (R19b): its exit said in words, not as a code.
         val g = ArmDay.hold(liq.copy(why = com.optionslab.engine.orb.LiquidityTrail.WHY), ones, range, now)
         assertTrue(g.text.contains("out at your ₹500 give-back trail (paper)"), g.text)
+        // 22 Oct: Boss's breakeven at +10% (paper) too.
+        val b = ArmDay.hold(liq.copy(why = com.optionslab.engine.orb.LiquidityBreakeven.WHY), ones, range, now)
+        assertTrue(b.text.contains("out at your breakeven at +10% (paper)"), b.text)
     }
 
     @Test fun theAnswerTiesTheLosingTradesTogether() {

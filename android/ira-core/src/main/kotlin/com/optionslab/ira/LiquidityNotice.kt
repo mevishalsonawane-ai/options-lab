@@ -115,6 +115,7 @@ object LiquidityNotice {
         "operator_stop" -> "stopped for today"
         "closed_by_you" -> "closed by you"
         com.optionslab.engine.orb.LiquidityTrail.WHY -> "₹500 trail"
+        com.optionslab.engine.orb.LiquidityBreakeven.WHY -> "breakeven at +10%"
         else -> why.replace('_', ' ')
     }
 
@@ -134,6 +135,8 @@ object LiquidityNotice {
             "operator_stop" -> "You stopped the strategies for today"
             "closed_by_you" -> "Closed by you"
             com.optionslab.engine.orb.LiquidityTrail.WHY -> "₹500 trail: the option gave back ₹500 a lot from its best (your paper choice)"
+            // 22 Oct: Boss's breakeven at +10% (paper).
+            com.optionslab.engine.orb.LiquidityBreakeven.WHY -> "Breakeven: up 10% earlier, it came back to the price paid (your paper choice)"
             else -> "Exit: ${x.why.replace('_', ' ')}"
         }
     }

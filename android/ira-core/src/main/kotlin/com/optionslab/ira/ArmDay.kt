@@ -175,6 +175,7 @@ object ArmDay {
         "target" -> "out at its target"
         "profit_lock" -> "out at the profit lock"
         com.optionslab.engine.orb.LiquidityTrail.WHY -> "out at your ₹500 give-back trail (paper)"
+        com.optionslab.engine.orb.LiquidityBreakeven.WHY -> "out at your breakeven at +10% (paper)"
         "trade_manager" -> "out early on the trade manager's word"
         "trade_manager_lock" -> "out at the trade manager's lock"
         "session_end" -> "out at the ${"%02d:%02d".format(Locale.ENGLISH, OrbRules.SQUARE_OFF.hour, OrbRules.SQUARE_OFF.minute)} square-off"
