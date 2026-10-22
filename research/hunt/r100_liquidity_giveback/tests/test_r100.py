@@ -317,3 +317,33 @@ def test_the_amendments_final_is_read_once(tmp_path, monkeypatch):
     (tmp_path / "A1_FINAL_READ").write_text("x")
     with pytest.raises(SystemExit):
         S.amend("final")                    # a second read refused
+
+
+# ---- amendment A3 (Boss: "trailing stop loss like breath donchain") -------------------------------------------------
+
+def test_breadth_donchian_ladder_is_the_apps_and_locks_from_the_next_minute():
+    assert S.AMEND3["G11"][0] == (0.25, 0.05) and np.isnan(S.AMEND3["G11"][1][1])
+    assert S.AMEND3["G11"][2:] == ((0.60, 0.30), (1.00, 0.60))
+    steps = np.array(S.AMEND3["G11"], dtype=np.float64)
+    C = _flat()
+    C[:4, 12] = 126.0                       # +26%: +5% locked from minute 13
+    C[:4, 13:] = 110.0
+    C[2, 16] = 104.0
+    out = _sim(C, steps=steps, be=101.0)
+    assert R[out[6]] == "lock" and out[5] == 16 and out[1] == pytest.approx(105.0)
+    C2 = _flat()
+    C2[:4, 12] = 131.0                      # +31%: breakeven 101 is under the +5% already locked: +5% stays
+    C2[:4, 13:] = 110.0
+    C2[2, 16] = 104.0
+    assert _sim(C2, steps=steps, be=101.0)[1] == pytest.approx(105.0)
+
+
+def test_the_a3_final_is_read_once(tmp_path, monkeypatch):
+    monkeypatch.setattr(S, "RESULTS", tmp_path)
+    monkeypatch.setattr(S, "AMEND3_FLAG", tmp_path / "A3_FINAL_READ")
+    with pytest.raises(SystemExit):
+        S.amend3("final")
+    (tmp_path / "amend3_design.json").write_text("{}")
+    (tmp_path / "A3_FINAL_READ").write_text("x")
+    with pytest.raises(SystemExit):
+        S.amend3("final")
