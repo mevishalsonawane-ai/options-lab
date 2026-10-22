@@ -98,6 +98,7 @@ class LiquidityWhyNotTest {
             "stopped_for_today" to Kind.STOPPED, "flat_after_square_off" to Kind.SQUARED_OFF, "liquidity_history_loading" to Kind.LOADING,
             "no_index_data" to Kind.NO_DATA, "no_index_data: MIDCPNIFTY" to Kind.NO_DATA, "no_index_data: FINNIFTY" to Kind.NO_DATA,
             "no_index_datax" to Kind.OTHER, "no_contract" to Kind.NO_CONTRACT, "refused: no quote" to Kind.NO_QUOTE,
+            "refused: no quote for BANKNIFTY27OCT2655700CE after 2 reads" to Kind.NO_QUOTE, "refused: no quotes" to Kind.REFUSED,
             "guard_refused: daily loss limit reached" to Kind.GUARD, "${AutoSide.OPPOSITE}: ORB holds a put" to Kind.EXPOSURE,
             "${AutoSide.SAME_SIDE}: Solo holds a call" to Kind.EXPOSURE, "order_refused: no price to fill at" to Kind.ORDER_REFUSED,
             "refused: something" to Kind.REFUSED, "error" to Kind.ERROR, "error: timeout" to Kind.ERROR, "whatever" to Kind.OTHER)
@@ -122,6 +123,11 @@ class LiquidityWhyNotTest {
             .startsWith("The 10:15 break above 54,180 was not entered: ORB holds a put the other way on this index"))
         assertEquals("The 10:15 break above 54,180 was not entered: there was no option price to buy at",
             LiquidityWhyNot.notTakenWords(d("refused: no quote"), "BANKNIFTY"))
+        // 22 Oct: the verdict names the option and the reads; the sentence keeps them.
+        assertEquals("The 10:15 break above 54,180 was not entered: there was no option price to buy at (for BANKNIFTY27OCT2655700CE after 2 reads)",
+            LiquidityWhyNot.notTakenWords(d("refused: no quote for BANKNIFTY27OCT2655700CE after 2 reads"), "BANKNIFTY"))
+        assertEquals("The 10:15 break above 54,180 was not entered: the order was refused (no price to fill at for X after 2 orders; both were cancelled)",
+            LiquidityWhyNot.notTakenWords(d("order_refused: no price to fill at for X after 2 orders; both were cancelled"), "BANKNIFTY"))
         assertEquals("The 10:15 break above 54,180 was not entered: its option contract could not be loaded",
             LiquidityWhyNot.notTakenWords(d("no_contract"), "BANKNIFTY"))
         assertEquals("The 10:15 break above 54,180 was not entered: the order was refused (no price to fill at)",
