@@ -347,3 +347,29 @@ def test_the_a3_final_is_read_once(tmp_path, monkeypatch):
     (tmp_path / "A3_FINAL_READ").write_text("x")
     with pytest.raises(SystemExit):
         S.amend3("final")
+
+
+# ---- amendment A4 (Boss: "if the 10% is received, make the stoploss to the start point") ----------------------------
+
+def test_breakeven_once_10pct_is_the_preregistered_rule():
+    rows = S.rows_of("G12")
+    assert rows[0, :2].tolist() == [0, 0.10] and np.isnan(rows[0, 2]) and rows[0, 3] == 0
+    assert X.keep_level(rows, 100.0, 109.9, 30.0, 100.6, 0.0) == -1.0
+    assert X.keep_level(rows, 100.0, 110.0, 30.0, 100.6, 0.0) == pytest.approx(100.6)   # breakeven after charges
+    C = _flat()
+    C[:4, 12] = 111.0
+    C[:4, 13:] = 104.0
+    C[2, 15] = 100.0                        # back under breakeven: sold at it, from the next minute on
+    out = _sim(C, rows, be=100.6)
+    assert R[out[6]] == "lock" and out[5] == 15 and out[1] == pytest.approx(100.6)
+
+
+def test_the_a4_final_is_read_once(tmp_path, monkeypatch):
+    monkeypatch.setattr(S, "RESULTS", tmp_path)
+    monkeypatch.setattr(S, "AMEND4_FLAG", tmp_path / "A4_FINAL_READ")
+    with pytest.raises(SystemExit):
+        S.amend4("final")
+    (tmp_path / "amend4_design.json").write_text("{}")
+    (tmp_path / "A4_FINAL_READ").write_text("x")
+    with pytest.raises(SystemExit):
+        S.amend4("final")

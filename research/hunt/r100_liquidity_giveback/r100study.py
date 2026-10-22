@@ -64,6 +64,10 @@ AMEND_FLAG = RESULTS / "A1_FINAL_READ"
 AMEND3 = {"G11": ((0.25, 0.05), (0.30, NAN), (0.60, 0.30), (1.00, 0.60))}
 NAMES["G11"] = "Breadth Donchian's lock: +5% once +25%, breakeven once +30%, +30% once +60%, +60% once +100% (Boss, A3)"
 AMEND3_FLAG = RESULTS / "A3_FINAL_READ"
+# Amendment A4 (PREREG.md, Boss: "if the 10% is received, make the stoploss to the start point"): breakeven once +10%.
+AMEND4 = {"G12": ([(0, 0.10, NAN, 0)], None)}
+NAMES["G12"] = "breakeven (after charges) once +10% (Boss, A4)"
+AMEND4_FLAG = RESULTS / "A4_FINAL_READ"
 REFS = ("R19C",)
 ALL = ("B0",) + TESTS + REFS
 TWINS, SEED, BOOT = 500, 100, 2000
@@ -75,7 +79,7 @@ B0_EXPECT = {"design": (881, 257249), "final": (357, 11155)}       # R76 / R81's
 
 # ================================================================================================ pure
 def rows_of(v: str) -> np.ndarray:
-    r = VARIANTS[v][0] if v in VARIANTS else AMEND[v][0] if v in AMEND else []
+    r = VARIANTS[v][0] if v in VARIANTS else AMEND[v][0] if v in AMEND else AMEND4[v][0] if v in AMEND4 else []
     return np.array(r, dtype=np.float64).reshape(-1, 4)
 
 
@@ -355,6 +359,20 @@ def amend3(phase: str):
         amend_summary(tuple(AMEND3), "amend3", "amend_A3.json")
 
 
+def amend4(phase: str):
+    """Amendment A4 (G12): its design phase, then its one final read (guarded by results/A4_FINAL_READ) and summary."""
+    path = RESULTS / f"amend4_{phase}.json"
+    if phase == "final":
+        if AMEND4_FLAG.exists():
+            raise SystemExit("R100 A4: the final period was already read for G12 (results/A4_FINAL_READ). One read only.")
+        if not (RESULTS / "amend4_design.json").exists():
+            raise SystemExit("R100 A4: run and commit the amendment's design phase first")
+        AMEND4_FLAG.write_text(f"A4 final period read on {datetime.now(timezone.utc).isoformat()}\n")
+    path.write_text(json.dumps(amend_phase(phase, tuple(AMEND4), SEED + 4), indent=1, default=str))
+    if phase == "final":
+        amend_summary(tuple(AMEND4), "amend4", "amend_A4.json")
+
+
 def amend(phase: str):
     path = RESULTS / f"amend_{phase}.json"
     if phase == "final":
@@ -373,8 +391,10 @@ def amend_summary(ids: tuple = tuple(AMEND), stem: str = "amend", name: str = "a
     earlier amendments' p-values unchanged; their verdicts not re-opened): 10 tests for A1 / A2, 11 with A3."""
     base = json.loads((RESULTS / "summary.json").read_text())
     earlier = {}
-    if ids != tuple(AMEND):
-        earlier = json.loads((RESULTS / "amend_A1.json").read_text())["res"]
+    for prior in ("amend_A1.json", "amend_A3.json"):          # the amendments read before this one (their p-values only)
+        q = RESULTS / prior
+        if q.exists() and q.name != name:
+            earlier.update({k: v for k, v in json.loads(q.read_text())["res"].items() if k not in ids})
     d, f = (json.loads((RESULTS / f"{stem}_{ph}.json").read_text()) for ph in ("design", "final"))
     T = {v: {ph: _load(f"{v}_{ph}") for ph in ("design", "final")} for v in ("B0",) + tuple(ids)}
     out = {"names": {v: NAMES[v] for v in ids}, "res": {}}
@@ -420,5 +440,7 @@ if __name__ == "__main__":
         amend(sys.argv[2])
     elif cmd == "amend3" and len(sys.argv) == 3 and sys.argv[2] in ("design", "final"):
         amend3(sys.argv[2])
+    elif cmd == "amend4" and len(sys.argv) == 3 and sys.argv[2] in ("design", "final"):
+        amend4(sys.argv[2])
     else:
         print(__doc__)

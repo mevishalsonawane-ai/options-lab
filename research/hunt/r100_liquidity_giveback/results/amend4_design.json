@@ -1,0 +1,133 @@
+{
+ "G12": {
+  "design": {
+   "trades": 881,
+   "days": 282,
+   "win": 0.402,
+   "net": 239684,
+   "per_trade": 272,
+   "avg_win": 1969,
+   "avg_loss": -868,
+   "biggest_loss": -5165,
+   "worst_day": -8416,
+   "max_dd": 28373,
+   "green_days": 0.426,
+   "top5_share": 0.34,
+   "ex_top5": 158148,
+   "stops": 21,
+   "locks": 70,
+   "targets": 0,
+   "time": 222,
+   "squareoff": 18,
+   "rule_exit": 550,
+   "big_movers": 222,
+   "big_kept": 29,
+   "big_cut": 193,
+   "big_net": 408474,
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 336,
+     "net": 107151
+    },
+    "FINNIFTY": {
+     "trades": 252,
+     "net": 93500
+    },
+    "MIDCPNIFTY": {
+     "trades": 293,
+     "net": 39033
+    }
+   }
+  },
+  "wf": {
+   "trades": 657,
+   "days": 209,
+   "win": 0.412,
+   "net": 212010,
+   "per_trade": 323,
+   "avg_win": 2001,
+   "avg_loss": -856,
+   "biggest_loss": -4757,
+   "worst_day": -6363,
+   "max_dd": 18001,
+   "green_days": 0.435,
+   "top5_share": 0.385,
+   "ex_top5": 130474,
+   "stops": 17,
+   "locks": 46,
+   "targets": 0,
+   "time": 176,
+   "squareoff": 13,
+   "rule_exit": 405,
+   "big_movers": 167,
+   "big_kept": 23,
+   "big_cut": 144,
+   "big_net": 316752,
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 242,
+     "net": 65214
+    },
+    "FINNIFTY": {
+     "trades": 189,
+     "net": 83481
+    },
+    "MIDCPNIFTY": {
+     "trades": 226,
+     "net": 63315
+    }
+   }
+  },
+  "wf_quarters": [
+   {
+    "lo": "2025-04-01",
+    "hi": "2025-06-30",
+    "trades": 171,
+    "win": 0.444,
+    "net": 91538,
+    "worst_day": -3882
+   },
+   {
+    "lo": "2025-07-01",
+    "hi": "2025-09-30",
+    "trades": 142,
+    "win": 0.408,
+    "net": 7519,
+    "worst_day": -6363
+   },
+   {
+    "lo": "2025-10-01",
+    "hi": "2025-12-31",
+    "trades": 158,
+    "win": 0.392,
+    "net": 6457,
+    "worst_day": -5218
+   },
+   {
+    "lo": "2026-01-01",
+    "hi": "2026-03-31",
+    "trades": 186,
+    "win": 0.403,
+    "net": 106495,
+    "worst_day": -5535
+   }
+  ],
+  "by_index": {
+   "BANKNIFTY": {
+    "trades": 336,
+    "net": 107151
+   },
+   "FINNIFTY": {
+    "trades": 252,
+    "net": 93500
+   },
+   "MIDCPNIFTY": {
+    "trades": 293,
+    "net": 39033
+   }
+  },
+  "changed": 70,
+  "exit_p": 0.9301,
+  "twin_mean": 261542
+ }
+}
