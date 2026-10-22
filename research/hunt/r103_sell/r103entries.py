@@ -40,6 +40,8 @@ def main() -> int:
     d = json.loads((RES / "design.json").read_text())
     h = json.loads((RES / "holdout.json").read_text()) if (RES / "holdout.json").exists() else {"tests": []}
     hm = {r["id"]: r for r in h.get("tests", [])}
+    sd = json.loads((RES / "stale_design.json").read_text()) if (RES / "stale_design.json").exists() else {}
+    sh = json.loads((RES / "stale_holdout.json").read_text()) if (RES / "stale_holdout.json").exists() else {}
     for old in ENT.glob("r103-*.yaml"):
         old.unlink()
     for r in d["tests"]:
@@ -52,10 +54,18 @@ def main() -> int:
                 f"after 20 Nov 2024 {rs(ds.get('post_regime_net'))} on {ds.get('post_regime_n', 0)}; days <= -Rs 13k {ds.get('days_below_stop', 0)}; "
                 f"margin estimate {rs(ds.get('mean_margin'))}, net / margin a year {100 * (ds.get('rom_per_year') or 0):+.1f}%. "
                 f"Gates failed: {', '.join(failed) or 'none'}. BUY mirror (same legs bought): {summ(b)}.")
+        if r["id"] in sd:
+            v = sd[r["id"]]
+            text += (f" Stale-leg check (Amendment 2, gate 8): {v['trades_with_stale_leg']} trades had an exit leg with no trade "
+                     f"within 5 minutes; repriced, design net {rs(v['net_repriced'])}, win {100 * v['win_repriced']:.0f}%.")
         if r["id"] in hm:
             hr = hm[r["id"]]
-            text += f" Holdout (15 Jul - 19 Oct 2026, read once): {summ(hr['holdout'])}; {'confirmed' if hr['confirmed'] else 'not confirmed'}."
-            verdict = "paper-only" if hr["confirmed"] else "rejected"
+            v = sh.get(r["id"], {})
+            ok = hr["confirmed"] and v.get("net_repriced", -1) > 0 and sd.get(r["id"], {}).get("net_repriced", -1) > 0
+            text += (f" Holdout (15 Jul - 19 Oct 2026, read once): {summ(hr['holdout'])}; pre-registered gate "
+                     f"{'met' if hr['confirmed'] else 'not met (win rate moved more than 15 points from design)'}; repriced "
+                     f"holdout net {rs(v.get('net_repriced'))}. {'Confirmed' if ok else 'Not confirmed'}.")
+            verdict = "paper-only" if ok else "rejected"
             hread = True
         else:
             text += " Holdout not read for this test (it failed design)."

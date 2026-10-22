@@ -1,69 +1,106 @@
-# R102: Deep learn NIFTY and BANKNIFTY (22 Oct 2026)
+# R103: how option selling works, and does it work for us? (22 Oct 2026)
 
-Boss asked: "Deep learn nifty and banknifty." The study is `research/DEEP_NIFTY_BANKNIFTY.md`; Jarvis's facts are in
-`research/knowledge/index_facts.yaml` (27 cards, each with its sample size); the code, pre-registration and results are in
-`research/hunt/r102_deep/`. Every number is from our Drive lake or a public source checked on 22 Oct 2026. Research only:
-nothing in `android/**` or `.github/**` changed; the knowledge pack is rebuilt in the next app session.
+Boss asked: "understand deeply how options selling work." The full guide is `research/DEEP_OPTIONS_SELLING.md`, with
+every rule checked online against SEBI, NSE and Zerodha on 22 Oct 2026. The pre-registered test is
+`research/HUNT_R103_OPTIONS_SELLING.md` (code and tables in `research/hunt/r103_sell/`). Research only: nothing in the
+app changed, and nothing goes to paper or live.
 
-## The 20 facts (descriptive, not trading rules; n = sample size)
+## The 15 things to know before selling an option
 
-1. BANKNIFTY is NIFTY times 1.16: daily correlation 0.877, beta 1.157 (n 5,086 days, 2006-2026); on 5-minute bars 0.842 and 1.094
-   (n 89,575). The five big banks are 63% of BANKNIFTY and 29.5% of NIFTY 50.
-2. A normal NIFTY day moves 0.74-1.05% (daily sd; 0.744% in 2025, 1.051% in 2026 to July), a BANKNIFTY day 0.79-1.36%. Over 20
-   years NIFTY's sd is 1.316% and BANKNIFTY's 1.734% (n 5,087).
-3. The drift is overnight: NIFTY's close-to-close mean is +0.051% a day and its open-to-close mean -0.035% (n 5,087); BANKNIFTY
-   +0.065% / -0.039%. An intraday-only trader does not get the drift.
-4. The median day range is 0.91% on NIFTY (n 2,288 minute days) and 1.13% on BANKNIFTY (n 1,185). By 10:30 the day has made 61% /
-   65% of it, by 13:00 82% / 87%; at 14:30 the range is already complete on 44% / 53% of days.
-5. The first minute spans 0.21% (NIFTY) / 0.30% (BANKNIFTY), the first five 0.27% / 0.38%. Minute for minute, 09:15-09:30 is 8x
-   the 10:30-13:00 rate.
-6. The open (first five minutes) is the day's high or low on 41% of NIFTY days and 46% of BANKNIFTY days.
-7. Gaps of 0.5% or more open 20% of NIFTY days and 34% of BANKNIFTY days (n 5,086). A 0.5-1% gap fills by the close 42% (NIFTY) /
-   53% (BANKNIFTY) of the time; a 2%-plus NIFTY gap closes on its own side 94-96% of the time.
-8. When a gap fills it fills early: median 52 minutes after the open on NIFTY (n 1,245 gaps of 0.25%+), 32 on BANKNIFTY (n 694).
-9. Direction is a coin at every horizon: the next bar carries the previous bar's sign 48% of the time at 5 and 15 minutes and 49-51%
-   at one hour (n 167,082 / 52,640 / 9,154 NIFTY pairs); the first 30 minutes' direction holds to the close 53% / 50% of the time.
-10. The 20-year daily momentum (+5.8 bps NIFTY, +12.4 bps BANKNIFTY per day, n 5,086) is gone: +2 to +6 bps in 2018-2026 and -9.4 /
-    -24.6 bps in the Jul-Oct 2026 holdout (n 65).
-11. Weekday means nothing: NIFTY's median range is 0.89-0.94% on every weekday (n 451-459 each); no weekday survives BH (best q 0.43).
-12. Expiry day is not a bigger day: NIFTY range 0.92% on 289 expiry days vs 0.91% on 1,999 others; BANKNIFTY 1.17% (185) vs 1.12%.
-13. Budget day doubles the range (2.13% / 2.62%, n 6). RBI days have been up days (+0.36% / +0.50%, n 30) with a normal range. FOMC
-    (n 39) and US CPI (n 58) sessions look like any other day.
-14. VIX is the range dial, not a direction dial: VIX 9-15 means a 0.75% / 1.01% median day, VIX above 20 means 1.72% / 2.37%
-    (n 1,509 each). VIX over-states NIFTY's next month on 81% of days (n 4,507).
-15. The 09:20 ATM straddle is a median 0.96% of spot on NIFTY (n 1,222) and 1.49% on BANKNIFTY (2.15% in 2025, 2.78% in 2026 as a
-    monthly). The close beats it on 7.1% / 6.5% of non-expiry days and 40.5% / 37.8% of expiry days (n 259 / 185).
-16. The expiry-day decay clock: 84% of the 09:20 ATM straddle is left at 10:30, 70% at 12:00, 61% at 13:00, 40% at 14:30, 22% at
-    15:00, 13% at 15:15 (NIFTY, n 259; BANKNIFTY 85 / 73 / 61 / 38 / 23 / 11%, n 186). A normal day: 96.5% at 10:30, 86% at 15:29.
-17. The straddle falls 09:15 -> 09:30 on 69% of normal NIFTY days (median -1.8%; expiry -8.0%) and 14:30 -> 15:29 on 77% (median
-    -3.6%; expiry -59%). One ATM option moves 3.3% a minute in the first 15 minutes and 13.5% a minute in expiry's last hour.
-18. The chain always prices the crash: the ATM-5 put is dearer than the ATM+5 call by 2.56 IV points on NIFTY (91% of days) and 2.11
-    on BANKNIFTY (90%). PCR of OI is 0.86 on both (n 1,363 days).
-19. Max pain is not a magnet: the expiry close lands a median 0.60% (NIFTY) / 0.68% (BANKNIFTY) from the previous day's max pain,
-    within one strike only 18% / 21% of the time.
-20. Who is positioned (2025 - Jul 2026): FIIs net short index futures by 61-72% of their book, clients net long by 30-46%; clients hold
-    58% of index-option longs, prop desks write 23-24% of the shorts (n 3,577 days). None of 36 participant rules was confirmed.
+1. **A seller is an insurer.** They take the premium now. The most they can make is that premium. The most they can lose
+   is unlimited when naked, or the wing width minus the premium when hedged.
+2. **Selling wins often by design.** The 09:20 ATM straddle is beaten by the close on only 7% of normal NIFTY days
+   (n 961), and India VIX over-states NIFTY's next month 81% of the time (n 4,507). A 60-80% win rate is normal, and on
+   its own it means nothing.
+3. **The rare day decides everything.** On expiry day the close beats the 09:20 straddle 40% of the time (n 259). Of
+   cheap expiry options, 97% die, but 1% go 10x and one went 178x. Selling that 178x option for Rs 5,000 on 13 Oct 2026
+   lost about Rs 95,000.
+4. **Theta is the pay, gamma is the bill.** A normal day burns 12-14% of the 09:20 straddle. Expiry day burns 87% by 15:15,
+   most of it after 14:30. That is the same hour when one 100-point move swings a neutral short straddle by 0.8 of a
+   futures lot.
+5. **Naked selling breaks your account rule.** A naked 09:20 BANKNIFTY straddle lost Rs 29,257 on one lot on 4 Jun 2024.
+   That is more than two months of your -Rs 13k stop in one afternoon. Only hedged structures (iron fly, condor, credit
+   spreads) are even eligible.
+6. **Holding overnight is a different risk.** On 23 Mar 2020 NIFTY opened 9.1% down. A short straddle held from the
+   Friday lost about Rs 74,000 a lot at 2020 prices, about Rs 1.9 lakh at today's. Intraday-only and hedged are the two
+   rules that are never negotiable.
+7. **Margin is the real capital.** A hedged lot needs about 2.5% of the short legs' value: Rs 75k on NIFTY and Rs 83k on
+   BANKNIFTY today. On expiry day it is 4.5%, because of SEBI's extra 2% from Nov 2024. A naked lot needs about Rs 1.5 lakh.
+8. **Costs are the same per round trip for a buyer and a seller.** STT is 0.15% of every sell. A hedged four-leg trade is
+   eight orders, about Rs 250-300 a trade on one lot. That is the single biggest reason our hedged tests lost.
+9. **The rules changed in 2024-26:**
+   - one weekly expiry per exchange: NIFTY on Tuesday, SENSEX on Thursday, BANKNIFTY monthly only;
+   - lots of 65 for NIFTY and 30 for BANKNIFTY;
+   - the expiry-day 2% margin, no calendar-spread benefit on expiry day, and buyers pay the premium upfront;
+   - delta-based position limits with intraday snapshots;
+   - STT up to 0.15% from 1 Apr 2026.
+10. **Order of legs matters.** Buy the wings first and close the shorts first. Exiting the hedge first breaks the margin
+    benefit, and Zerodha then doubles the margin as a penalty. The app already closes shorts first.
+11. **A stop must sit inside the structure's worst case.** Our stop at 50% of the credit was beyond the iron fly's max loss
+    on most days, so it fired on 6 of 998. On a hedged trade, set the stop on the max loss.
+12. **Puts always cost more than calls**, by 2.6 IV points on NIFTY on 91% of days (n 1,222). The market prices the crash.
+    The extra credit on the put side is that price, not free money.
+13. **Selling into an event is selling insurance just before the claim.** Budget day doubles the day's range, and the
+    2024 election count moved NIFTY -5.9%. Those days need a blackout.
+14. **The data can lie on far strikes.** Our lake keeps only ATM +-10 strikes. A far wing that the market moves away from
+    stops printing, and an old price makes a seller look rich. That is exactly what happened here (item 15).
+15. **One hedged lot is the most this account can carry.** Its worst day is Rs 7-15k on NIFTY and its margin Rs 75k. Your
+    -Rs 40k drawdown stop is about half of one lot's margin.
 
-## What it means for our trading
+## The test results (pre-registered; 1 lot; after real charges and slippage)
 
-* **Direction cannot be called**, at one minute, five, fifteen, an hour, a day or a week, from the participant file, the weekday,
-  the expiry or the gap. 70 pre-registered rules, 8 passed design, 1 confirmed on the holdout, and that one is the cash index's
-  1-minute staleness (0.1 bps, below the 1.25-1.54 bps cost of one ATM round trip). This agrees with forty earlier studies.
-* **Size can be called**: VIX regime, the front-loaded day (the first 15 minutes make 40-55% of the range), the expiry decay clock,
-  R16's 30-60-minute range forecast. Stops, targets and whether to trade at all should come from these; entries should not pretend
-  to know the side.
-* **Costs are lower than the repo assumes**: lots are 65 (NIFTY) and 30 (BANKNIFTY) since January 2026, a round trip is about Rs 70-76
-  in charges. The lot table in `research/obuy/config.py` still says BANKNIFTY 35 and should get its Jan 2026 row in a later change.
-* **BANKNIFTY's chain is a monthly chain now**: its 09:20 straddle is 2.8% of spot and the close beats it on 2% of days; its expiry
-  comes once a month (last Tuesday). Weekly-expiry habits (hero tickets, expiry scalps) belong to NIFTY (Tuesday) and SENSEX
-  (Thursday) only.
-* **Nothing here changes paper or live.** Liquidity BANKNIFTY's plain-rules record for the 26 Oct decision is untouched. The one
-  untested idea the facts point at is defined-risk selling of expiry-day decay, already an open question in the knowledge pack.
+We tested 24 versions: NIFTY and BANKNIFTY, expiry days and other days, three structures (iron fly, wide iron fly, iron
+condor), and two exits (a stop alone, or the stop plus a profit lock and a target). Every trade sells at 09:21 around the
+index's ATM strike and is closed by 15:10, or 15:05 on expiry day.
 
-## What was checked before pushing
+| group | tests | win rate | net, as first priced | net, far wings priced fairly | verdict |
+|---|---|---|---|---|---|
+| BANKNIFTY, normal days | 6 | 62-70% | +Rs 1.9 to +Rs 5.4 lakh (design, about 1,000 trades each) | **-Rs 2.9 to -Rs 3.3 lakh** | rejected |
+| ... the same six, holdout quarter | 6 | 81-86% | +Rs 34k to +Rs 54k (64 trades) | **-Rs 18.6k to -Rs 21.0k** | rejected |
+| NIFTY, normal days | 6 | 45-56% | -Rs 35k to -Rs 1.16 lakh (about 960 trades each) | -Rs 2.1 lakh | rejected |
+| NIFTY, expiry days | 6 | 37-52% | -Rs 59k to +Rs 28k (249 trades each) | about the same | rejected |
+| BANKNIFTY, expiry days | 6 | 40-51% | -Rs 19k to +Rs 15k (175 trades each) | about the same | rejected |
+| buying the same four legs instead | 24 | 2-59% | loses on all 24 | | rejected |
 
-`python -m pytest research/hunt/r102_deep/tests -q` (13 tests: synthetic lake, expiry calendar, holdout lock, look-ahead guard,
-BH, the 70-test count, the facts file's numbers against the study, the pack loader), `python -m pytest research/brain/tests -q`,
-`python -m research.brain.features catalog --check`, `python -m research.experiments.validate` (5 new r102 entries), an in-memory
-`build_pack.build()` (0 errors, 27 index facts, 1.84 MB), the CLAUDE.md secret grep (nothing), no raw data or `__pycache__` in git
-(results under 160 KB each), and an adversarial self-review of the diff.
+- **Win rate and net side by side tell the story.** The best-looking test won 70% of days and still lost money once the
+  far wings were priced fairly.
+- **Why the first BANKNIFTY profits were wrong.** On about half those days, a wing the index moved away from stopped
+  printing in our data, and it was valued at an old, higher price. We caught this before reading the holdout and wrote
+  the extra check down first.
+- **The repricing errs in the seller's favour.** Tested on wings that did keep printing, the method runs 1-5 points high.
+- **The holdout failed even as first priced.** Its win rate jumped by more than the allowed 15 points.
+
+## Verdict
+
+**No option-selling rule is ready for the app.** Before costs, these hedged structures roughly break even. The eight
+orders a trade make them losers, and naked selling makes money only by risking days that break your account stop.
+Nothing goes to paper.
+
+## What a selling arm would need in the app before any paper trade
+
+This applies only if a future pre-registered test passes:
+
+1. A basket margin check before the first leg goes. It must use the hedge benefit and the 2% expiry-day margin, and it
+   must refuse the whole basket if any leg would be refused.
+2. Wings bought first on entry, so a half-filled basket is never a naked short. Shorts closed first on exit already
+   works.
+3. A basket stop and profit lock read on the credit received, with the stop set inside the structure's max loss.
+4. Broker-resting stop orders on the short legs, so a dead phone cannot miss a stop. A resting order is cancelled when
+   the app closes that leg itself.
+5. An event and VIX blackout: no entry on Budget, election-result or RBI days, after a Fed or US CPI print, or above a
+   set VIX.
+6. Expiry-day rules: no new short after 14:30, plus the existing 15:05 square-off.
+7. Restart recovery that restores the four legs as one position with its stop and lock, watched first, as CLAUDE.md
+   requires for open positions.
+8. A credit-position P&L view: credit minus the cost to close, with the margin shown separately.
+
+## Checks run
+
+- **R103 tests:** 19 tests in `research/hunt/r103_sell/tests/test_r103.py`, covering leg pricing and charges, stop, lock
+  and target paths, the look-ahead guard, both holdout locks, BH, the bootstrap, the BUY mirror, the margin estimate, the
+  stale-leg repricing and the tail table.
+- **Experiment log:** `python -m research.experiments.validate` passes with the 24 new r103 entries.
+- **Secrets and data:** the CLAUDE.md secret grep prints nothing. No raw data or `__pycache__` is in git, and the
+  results folder is 116 KB.
+- **Not run:** `research/brain/tests` and `features catalog --check`. Boss declined those runs in this session, and R103
+  does not touch `research/brain`.

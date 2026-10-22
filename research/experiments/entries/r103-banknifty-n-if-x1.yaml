@@ -1,0 +1,43 @@
+id: r103-banknifty-n-if-x1
+title: 'R103 BANKNIFTY every other trading day: short iron fly, wings 1.0 x the 09:20 straddle; stop at a loss of 50% of the
+  credit, else the square-off'
+family: option-structure
+date: '2026-10-22'
+doc: research/HUNT_R103_OPTIONS_SELLING.md
+hypothesis: 'Pre-registered (PREREG.md): selling the defined-risk structure at the 09:21 open, centred on the index''s 09:20
+  ATM, makes money after real charges and slippage on held contracts: mean net > 0 with day-bootstrap p < 0.05, BH q <= 0.10
+  over 24, 3 of 4 years 2022-2025 and after 20 Nov 2024 > 0, 40+ trades, > 0 without the 5 best days, worst month >= -Rs 13,000,
+  > 0 at 2x slippage; then the holdout.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 22 Oct 2026 (index_1m, options_rolling_1m WEEK files, participants/bhav_index),
+  R51 held-contract stores with Amendment A cleaning
+period:
+  design: first option day (Aug 2021) - 2026-07-14
+  holdout: 2026-07-15 - 2026-10-19, read once
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: none directional; the structure is centred on the index''s 09:20 ATM strike (underlying)'
+- 09:20 ATM straddle (C + P close) sets the strike distances
+- exits on the position's premium
+model_or_rule: sell iron fly, wings 1.0 x the 09:20 straddle on every other trading day; stop at a loss of 50% of the credit,
+  else the square-off; square-off 15:10 (15:05 on expiry)
+settings: research/hunt/r103_sell/r103engine.py (STRUCTS, EXITS), r103study.py
+prereg: research/hunt/r103_sell/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design (Aug 2021 - 14 Jul 2026): 998 trades, win 62%, net Rs 439,888 (Rs 441 a trade), avg win Rs 1,095 / loss
+    -Rs 633, worst day -Rs 3,374, worst month -Rs 9,240, max DD Rs 64,610; boot p 0.000, BH q 0.000 (24 tests); 2x slippage
+    Rs 428,097; years 2022-2025 Rs 7,467, -Rs 41,108, Rs 40,778, Rs 188,800; after 20 Nov 2024 Rs 460,289 on 383; days <=
+    -Rs 13k 0; margin estimate Rs 60,157, net / margin a year +151.3%. Gates failed: none. BUY mirror (same legs bought):
+    998 trades, win 16%, net -Rs 1,035,334 (-Rs 1,037 a trade), avg win Rs 696 / loss -Rs 1,371, worst day -Rs 14,500, worst
+    month -Rs 88,884, max DD Rs 1,035,334. Stale-leg check (Amendment 2, gate 8): 429 trades had an exit leg with no trade
+    within 5 minutes; repriced, design net -Rs 317,955, win 42%. Holdout (15 Jul - 19 Oct 2026, read once): 64 trades, win
+    86%, net Rs 48,969 (Rs 765 a trade), avg win Rs 950 / loss -Rs 368, worst day -Rs 1,209, worst month Rs 7,457, max DD
+    Rs 1,602; pre-registered gate not met (win rate moved more than 15 points from design); repriced holdout net -Rs 18,785.
+    Not confirmed.'
+  costs: dated charges (STT on every sell, 0.15% from 1 Apr 2026; exchange, SEBI, stamp, GST, Rs 20 an order, 8 orders a trade),
+    'liq' slippage 5 bps + 1-4 ticks by 5-minute volume (stops 2x), next-minute open fills, the lot in force
+holdout_read: true
+verdict: rejected
+notes: Amendment 1 (dated, before any number) added the BUY mirror, margin estimate, return on margin and the one-day tail
+  count as report columns only; no gate changed.

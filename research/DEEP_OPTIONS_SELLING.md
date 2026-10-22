@@ -43,7 +43,12 @@ what is sold or bought. Stops, locks and targets are read on the premium, which 
 8. **Naked selling is not for this account.** The naked 09:20 short straddle on BANKNIFTY made +Rs 33k and +Rs 37k in
    two years (NONDIRECTIONAL.md) with a worst day of -Rs 65,483 and a drawdown of -Rs 1.05 lakh: both beyond the
    -Rs 40k / -Rs 13k stops. Only defined-risk structures are even eligible, and R103 tests exactly those.
-9. **R103's answer (24 pre-registered tests, design to 14 Jul 2026):** {{R103_SHORT}}
+9. **R103's answer (24 pre-registered tests, design to 14 Jul 2026):** **nothing passes.** Six BANKNIFTY non-expiry tests passed
+   the design gates (+Rs 1.9 to +Rs 5.4 lakh, 62-70% wins), but the profit came from far wings priced at stale
+   prices (the lake only keeps ATM +-10 strikes). Repriced, all six lose (-Rs 2.9 to -Rs 3.3 lakh in design, about
+   -Rs 19k to -Rs 21k in the 64-day holdout), and the holdout's pre-registered gate rejected them anyway. Every NIFTY
+   and every expiry-day test failed. Before costs the hedged structures roughly break even; eight orders a trade
+   (about Rs 300) make them losers.
 10. **What the app lacks before any selling arm goes to paper** (section 8): a basket margin check with the hedge
     benefit and the expiry-day ELM, long wings filled first and shorts closed first (the app already orders exits that
     way), a credit-based stop and lock on the basket, broker-resting stops on the short legs, an event blackout, and
@@ -91,9 +96,9 @@ day: ATM call 40, put 39; 25,200 call under 1 point. This is R102's decay clock 
 |---|---|---|---|---|---|---|---|
 | **short straddle** (naked) | sell 25,000 C and P | +350 (Rs 22,750) | the credit | unlimited | 24,650 / 25,350 | about Rs 1.5-1.7 lakh for the pair with cross-margin, 1.5 lakh per naked lot | the close stays inside +-350 (1.4%); on a normal NIFTY day the move beats the straddle 7.1% of the time, on expiry day 40.5% |
 | **short strangle** (naked) | sell 24,800 P and 25,200 C | +186 (Rs 12,090) | the credit | unlimited | 24,614 / 25,386 | about the same as the straddle | wider room, half the pay; the same tail |
-| **iron fly** (R103 IF) | straddle + buy 24,650 P and 25,350 C (wings = 1 straddle out) | about +180 after the wings | the credit | wing 350 - credit 180 = 170 points (Rs 11,050) | 24,820 / 25,180 | about Rs 75k (Rs 1.35 lakh on expiry day) | the close is within about half a straddle; the wings turn the 178x day into -Rs 11k |
-| **wide iron fly** (R103 IFW) | wings 1.5 straddles out (24,475 / 25,525) | about +250 | the credit | 525 - 250 = 275 points (Rs 17,875) | 24,750 / 25,250 | as above | more credit, more room, bigger worst day |
-| **iron condor** (R103 IC) | sell 24,800 P and 25,200 C, buy 24,450 P and 25,550 C (shorts 0.5, wings 1.0 straddle beyond) | about +115 | the credit | 350 - 115 = 235 points (Rs 15,275) | 24,685 / 25,315 | as above | a wider flat zone, a smaller credit; the classic "90% win rate" structure, and the one that lost most in NONDIRECTIONAL.md (costs and the minute-worst pricing ate the small credit) |
+| **iron fly** (R103 IF) | straddle + buy 24,650 P and 25,350 C (wings = 1 straddle out) | about +243 after the wings (about 107 points paid for them) | the credit | wing 350 - credit 243 = 107 points (Rs 6,955) | 24,757 / 25,243 | about Rs 75k (Rs 1.35 lakh on expiry day) | the close is within about half a straddle; the wings turn the 178x day into -Rs 11k |
+| **wide iron fly** (R103 IFW) | wings 1.5 straddles out (24,475 / 25,525) | about +300 | the credit | 525 - 300 = 225 points (Rs 14,625) | 24,700 / 25,300 | as above | more credit, more room, bigger worst day |
+| **iron condor** (R103 IC) | sell 24,800 P and 25,200 C, buy 24,450 P and 25,550 C (shorts 0.5, wings 1.0 straddle beyond) | about +141 | the credit | 350 - 141 = 209 points (Rs 13,585) | 24,659 / 25,341 | as above | a wider flat zone, a smaller credit; the classic "90% win rate" structure, and the one that lost most in NONDIRECTIONAL.md (costs and the minute-worst pricing ate the small credit) |
 | **bull put spread** (credit spread) | sell 24,900 P, buy 24,700 P | +62 | the credit | 200 - 62 = 138 points (Rs 8,970) | 24,838 | about Rs 35-40k | the index does not fall more than 0.4%; a directional bet with theta on your side |
 | **bear call spread** | sell 25,100 C, buy 25,300 C | +68 | the credit | 132 points (Rs 8,580) | 25,168 | about Rs 35-40k | the mirror for a fall |
 | **covered call** | long 1 NIFTY future (or 65 x index ETF units) + sell 25,200 C | +101 on top of the future | 200 + 101 points up | the future's whole downside minus 101 | 24,899 | the future's margin (about 11-12% of notional, Rs 1.8 lakh) less a small benefit | a slow rise; it is a long position with a cap, not a neutral trade |
@@ -103,11 +108,11 @@ day: ATM call 40, put 39; 25,200 call under 1 point. This is R102's decay clock 
 
 Reading the table:
 
-* The credit falls as the structure gets safer: straddle 350, iron fly 180, condor 115, credit spread 62. The max loss
-  falls faster (unlimited, 170, 235, 138 points), and the margin falls from about Rs 1.5 lakh to Rs 35-75k. That is the
+* The credit falls as the structure gets safer: straddle 350, iron fly 243, condor 141, credit spread 62. The max loss
+  falls faster (unlimited, 107, 209, 138 points), and the margin falls from about Rs 1.5 lakh to Rs 35-75k. That is the
   trade-off a seller is actually choosing: **return on margin against the worst day**.
 * Every hedged structure buys its wings from a cheaper, further strike. The wing is insurance; it costs theta of its
-  own (the 25,350 call loses about 10 points a day in the example) and it is what makes the max loss a number.
+  own (the 25,350 call loses about 13 points a day in the example) and it is what makes the max loss a number.
 * "Covered" and "cash-secured" are stock ideas. On an index there is no stock to deliver, so a cash-secured put is a
   naked put with idle cash, and a covered call is a long future (or ETF) with a sold call: both are directional
   positions, not income.
@@ -117,9 +122,10 @@ Reading the table:
 **Delta** is how many points the position moves per index point. A short straddle starts near zero (the call's +0.52
 and the put's -0.48 cancel). It does not stay there: when the index rises the call's delta grows and the put's shrinks,
 so the seller becomes short the market exactly when it is rising. That is **gamma**: the seller is short gamma, and
-the loss grows with the square of the move. In the illustration the ATM gamma is 0.09 delta per point with five days
-left, 0.20 on expiry morning and **0.41 at 13:30 on expiry day**: a 100-point move at 13:30 turns a neutral straddle
-into a 41-delta position, i.e. it behaves like 27 lots of index per lot of straddle. R102 measured the same thing in
+the loss grows with the square of the move. In the illustration one ATM option's delta moves by 0.09 for every 100
+index points with five days left, 0.20 on expiry morning and **0.41 at 13:30 on expiry day**. So a 100-point move at
+13:30 turns a neutral short straddle (two options) into a position about 0.8 delta against you: it now behaves like
+0.8 of a short or long index-future lot, and another 100 points adds the same again. R102 measured the same thing in
 premium: one ATM option moves a median 3.3% a minute in the first 15 minutes and 13.5% a minute in expiry's last hour.
 
 **Delta hedging** is how professionals carry short gamma: when the position's delta reaches, say, +-0.2 per lot, they
@@ -185,7 +191,8 @@ shorts [Zerodha Z-Connect 2021; Varsity, iron condor chapter].
 | ... one BANKNIFTY lot at 55,488 x 30 | Rs 83k normal, Rs 1.50 lakh on expiry day | estimate |
 
 The broker's calculator decides on the day; these are planning numbers. Note the ratio: the iron fly's max loss is
-Rs 11-18k, its margin is Rs 75k-1.5 lakh. Margin is 5-10x the worst case, so return on margin is small even when the
+Rs 7-15k in the illustration (a mean Rs 2-8k a trade in R103), its margin is Rs 75k-1.5 lakh. Margin is 5-15x the
+worst case, so return on margin is small even when the
 trade works.
 
 **The mechanics that cost real money if ignored.**
@@ -251,15 +258,66 @@ kurtosis 14 and 8.5 (a normal distribution has 3). By year, the worst and best d
 | 2026 to 14 Jul | -3.26 (19 Mar) | +3.78 (8 Apr) | -3.82 | +5.67 |
 
 **What a 09:20 short straddle lost on them.** Before Aug 2021 there is no option data in the lake, so the loss is an
-estimate: (open-to-close move - the median 09:20 straddle) x index x lot. 23 Mar 2020: NIFTY opened down and lost
-about another 8% from the open; with a straddle of even 3% of spot in that regime the naked straddle lost about
-(8 - 3)% x 7,600 x 75 = Rs 28,000 a lot on top of the gap it never saw, and a seller who was short from the previous
-Friday lost the whole 12.98%: about Rs 70,000 a lot at 2020's lot of 75 and level of 7,600 (a lot of 65 at today's
-22,900 would be Rs 1.9 lakh). After Aug 2021 the lake prices the real contracts; the table below is from
-`research/hunt/r103_sell/results/tail.md` (naked 09:20 ATM short straddle and the IF with its 1-straddle wings, both
-held to the 15:10 / 15:05 square-off with no stop, 1 lot, the engine's slippage and dated charges):
+estimate: (the open-to-close move - the median 09:20 straddle) x index x lot, which overstates it in a crash, when the
+straddle was much dearer. On 23 Mar 2020 NIFTY gapped -9.1% and fell another 4.2% from the open: the intraday
+09:20 seller lost about Rs 18,600 a lot (lot 75, index about 7,600) by that estimate, but a seller who was short from
+the Friday close took the gap too, about 13% x 7,600 x 75 = Rs 74,000 a lot (at today's 22,900 x 65, about Rs 1.9
+lakh). That is why intraday-only and defined-risk are the two non-negotiables. After Aug 2021 the lake prices the
+real contracts; the table below is from `research/hunt/r103_sell/results/tail.md` (naked 09:20 ATM short straddle
+and the IF with its 1-straddle wings, both held to the 15:10 / 15:05 square-off with no stop, 1 lot, the engine's
+slippage and dated charges):
 
-{{R103_TAIL}}
+Exit legs that did not trade near the square-off (they had left the lake's ATM +-10 window) are repriced with Black-Scholes at their last print's IV, floored at intrinsic (PREREG Amendment 2).
+
+| index | day | expiry | move 09:20 -> square-off | move / straddle | 09:20 straddle (pts) | naked short straddle net | iron fly (no stop) net | IF wing (pts) | legs repriced |
+|---|---|---|---|---|---|---|---|---|---|
+| NIFTY | 2024-06-04 |  | -3.78% | 1.17 | 736.8 | -10,846 | -3,828 | 500 | 5 |
+| NIFTY | 2024-06-05 |  | +3.41% | 1.58 | 473.4 | -7,575 | -4,206 | 450 | 5 |
+| NIFTY | 2022-06-16 | E | -3.00% | 4.24 | 112.05 | -18,617 | -1,641 | 100 | 1 |
+| NIFTY | 2022-02-24 | E | -2.63% | 2.08 | 210.65 | -11,592 | -3,116 | 200 | 1 |
+| NIFTY | 2026-04-02 |  | +2.33% | 0.85 | 606.25 | -6,958 | -3,348 | 500 | 1 |
+| NIFTY | 2022-01-25 |  | +2.27% | 1.09 | 353.15 | -3,280 | -2,976 | 350 | 1 |
+| NIFTY | 2022-01-24 |  | -2.26% | 1.4 | 283.0 | -9,109 | -2,535 | 300 | 1 |
+| NIFTY | 2024-01-23 |  | -2.26% | 2.33 | 210.5 | -18,125 | -3,124 | 200 | 1 |
+| NIFTY | 2022-05-04 |  | -2.25% | 1.83 | 209.4 | -9,425 | -2,680 | 200 | 1 |
+| NIFTY | 2024-11-22 |  | +2.18% | 1.38 | 369.25 | -6,598 | -1,828 | 350 | 1 |
+| NIFTY | all 1,272 days | | | | | net 63,792, win 62%, worst -28,876 | net -304,449, win 42%, worst -6,280 | | |
+| BANKNIFTY | 2024-06-04 |  | -6.46% | 2.19 | 1477.85 | -29,257 | -2,889 | 1000 | 6 |
+| BANKNIFTY | 2024-06-05 | E | +4.52% | 2.53 | 839.9 | -19,395 | -3,705 | 800 | 6 |
+| BANKNIFTY | 2022-06-16 | E | -3.04% | 4.02 | 254.75 | -19,500 | -3,010 | 300 | 1 |
+| BANKNIFTY | 2022-02-24 | E | -3.02% | 1.97 | 559.45 | -13,311 | -7,553 | 600 | 1 |
+| BANKNIFTY | 2022-01-25 |  | +2.96% | 1.2 | 903.2 | -7,117 | -4,514 | 900 | 5 |
+| BANKNIFTY | 2024-01-23 |  | -2.91% | 2.28 | 593.6 | -12,089 | -1,100 | 600 | 5 |
+| BANKNIFTY | 2022-02-15 |  | +2.89% | 1.23 | 868.95 | -9,209 | -4,007 | 900 | 5 |
+| BANKNIFTY | 2022-09-30 |  | +2.78% | 0.91 | 1144.7 | -6,732 | -3,086 | 1000 | 1 |
+| BANKNIFTY | 2022-05-04 |  | -2.75% | 1.96 | 509.15 | -15,871 | -4,026 | 500 | 1 |
+| BANKNIFTY | 2021-10-28 | E | -2.61% | 3.13 | 338.55 | -18,926 | -3,129 | 300 | 5 |
+| BANKNIFTY | all 1,234 days | | | | | net 150,543, win 65%, worst -29,257 | net -377,930, win 41%, worst -7,553 | | |
+
+The largest daily moves since 2019 (estimates before Aug 2021, see above):
+
+| index | day | close to close | gap | open to close | lot | option lake? | naked straddle loss estimate (pre-lake only) |
+|---|---|---|---|---|---|---|---|
+| NIFTY | 2020-03-23 | -12.98% | -9.14% | -4.22% | 75 | no | about Rs 18,617 |
+| NIFTY | 2020-04-07 | +8.76% | +4.48% | +4.10% | 75 | no | about Rs 20,675 |
+| NIFTY | 2020-03-12 | -8.30% | -4.00% | -4.48% | 75 | no | about Rs 25,319 |
+| NIFTY | 2020-03-16 | -7.61% | -3.69% | -4.07% | 75 | no | about Rs 21,466 |
+| NIFTY | 2020-03-25 | +6.62% | -0.84% | +7.53% | 75 | no | about Rs 41,006 |
+| NIFTY | 2024-06-04 | -5.93% | -0.36% | -5.59% | 25 | yes |  |
+| NIFTY | 2020-03-20 | +5.83% | +0.25% | +5.56% | 75 | no | about Rs 30,202 |
+| NIFTY | 2020-05-04 | -5.74% | -3.31% | -2.52% | 75 | no | about Rs 10,856 |
+| NIFTY | 2020-03-18 | -5.56% | +1.35% | -6.82% | 75 | no | about Rs 37,208 |
+| NIFTY | 2019-09-20 | +5.32% | +0.39% | +4.91% | 75 | no | about Rs 33,379 |
+| BANKNIFTY | 2020-03-23 | -16.73% | -9.87% | -7.61% | 25 | no | about Rs 25,888 |
+| BANKNIFTY | 2020-04-07 | +10.51% | +6.99% | +3.29% | 25 | no | about Rs 8,599 |
+| BANKNIFTY | 2020-03-12 | -9.50% | -4.95% | -4.79% | 25 | no | about Rs 19,748 |
+| BANKNIFTY | 2020-05-04 | -8.32% | -4.74% | -3.76% | 25 | no | about Rs 11,196 |
+| BANKNIFTY | 2019-09-20 | +8.31% | +0.45% | +7.82% | 25 | no | about Rs 45,890 |
+| BANKNIFTY | 2021-02-01 | +8.26% | +1.34% | +6.82% | 25 | no | about Rs 44,094 |
+| BANKNIFTY | 2020-03-16 | -8.21% | -4.39% | -3.99% | 25 | no | about Rs 14,448 |
+| BANKNIFTY | 2020-03-25 | +8.03% | -2.03% | +10.27% | 25 | no | about Rs 40,562 |
+| BANKNIFTY | 2024-06-04 | -7.95% | -0.61% | -7.38% | 15 | yes |  |
+| BANKNIFTY | 2020-05-27 | +7.28% | +0.93% | +6.29% | 25 | no | about Rs 22,450 |
 
 **R98's lesson from the buyer's side is the seller's warning.** Of expiry-day options at Rs 1-10 (911 expiries, five
 indices), 97% end below their price and 85% near zero: whoever sold them was "right" 97% of the time. But 1% end at
@@ -274,7 +332,51 @@ worst days of -Rs 29,503 and -Rs 12,348 and drawdowns of -Rs 63,854 and -Rs 31,9
 lost (-Rs 62k to -Rs 478k a year), because the wings were priced at their worst minute and the stop fired on noise.
 R103 prices the same structures on held contracts at the next minute's open, which is the fair test; its results:
 
-{{R103_RESULTS}}
+| index | days | structure | exit | trades | win | net (pre-registered) | net, stale legs repriced | win, repriced | worst day | worst month | max DD | days <= -Rs 13k | margin (est.) | net / margin a year | boot p | BH q | gates failed (pre-registered) | BUY mirror: win / net |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| NIFTY | expiry | iron fly | stop | 249 | 37% | -Rs 58,984 | **-Rs 59,429** | 37% | -Rs 5,989 | -Rs 9,230 | -Rs 62,617 | 0 | Rs 80,226 | -14.9% | 0.966 | 1.000 | 1, 2, 3, 5, 7 | 54% / -Rs 52,765 |
+| NIFTY | expiry | iron fly | stop+lock+target | 249 | 43% | -Rs 54,575 | **-Rs 55,325** | 43% | -Rs 5,989 | -Rs 9,230 | -Rs 63,660 | 0 | Rs 80,226 | -13.8% | 0.964 | 1.000 | 1, 2, 3, 5, 7 | 59% / -Rs 53,329 |
+| NIFTY | expiry | wide iron fly | stop | 249 | 41% | -Rs 36,518 | **-Rs 36,882** | 41% | -Rs 8,422 | -Rs 11,069 | -Rs 48,164 | 0 | Rs 80,226 | -9.2% | 0.793 | 1.000 | 1, 2, 3, 5, 7 | 44% / -Rs 62,640 |
+| NIFTY | expiry | wide iron fly | stop+lock+target | 249 | 47% | -Rs 53,770 | **-Rs 54,160** | 47% | -Rs 8,422 | -Rs 11,069 | -Rs 64,694 | 0 | Rs 80,226 | -13.6% | 0.908 | 1.000 | 1, 2, 3, 5, 7 | 51% / -Rs 88,478 |
+| NIFTY | expiry | iron condor | stop | 249 | 43% | Rs 28,347 | **Rs 28,178** | 43% | -Rs 3,676 | -Rs 5,284 | -Rs 18,222 | 0 | Rs 80,226 | +7.1% | 0.183 | 0.627 | 1, 2, 3, 5 | 33% / -Rs 46,659 |
+| NIFTY | expiry | iron condor | stop+lock+target | 249 | 52% | -Rs 7,064 | **-Rs 7,237** | 52% | -Rs 3,676 | -Rs 5,314 | -Rs 20,307 | 0 | Rs 80,226 | -1.8% | 0.628 | 1.000 | 1, 2, 3, 5, 7 | 47% / -Rs 78,290 |
+| NIFTY | other days | iron fly | stop | 959 | 45% | -Rs 115,087 | **-Rs 207,035** | 43% | -Rs 3,584 | -Rs 11,422 | -Rs 132,656 | 0 | Rs 57,819 | -40.3% | 1.000 | 1.000 | 1, 2, 3, 5, 7 | 24% / -Rs 385,091 |
+| NIFTY | other days | iron fly | stop+lock+target | 959 | 45% | -Rs 116,301 | **-Rs 205,547** | 43% | -Rs 3,584 | -Rs 11,422 | -Rs 133,870 | 0 | Rs 57,819 | -40.7% | 1.000 | 1.000 | 1, 2, 3, 5, 7 | 24% / -Rs 381,452 |
+| NIFTY | other days | wide iron fly | stop | 958 | 56% | -Rs 35,377 | **-Rs 209,159** | 52% | -Rs 9,293 | -Rs 19,352 | -Rs 104,311 | 0 | Rs 57,790 | -12.4% | 0.782 | 1.000 | 1, 2, 3, 5, 6, 7 | 27% / -Rs 462,387 |
+| NIFTY | other days | wide iron fly | stop+lock+target | 958 | 56% | -Rs 36,592 | **-Rs 207,672** | 52% | -Rs 9,293 | -Rs 19,352 | -Rs 105,525 | 0 | Rs 57,790 | -12.8% | 0.788 | 1.000 | 1, 2, 3, 5, 6, 7 | 27% / -Rs 466,928 |
+| NIFTY | other days | iron condor | stop | 958 | 54% | -Rs 59,562 | **-Rs 215,487** | 49% | -Rs 5,313 | -Rs 15,352 | -Rs 101,937 | 0 | Rs 57,790 | -20.8% | 0.948 | 1.000 | 1, 2, 3, 5, 6, 7 | 26% / -Rs 413,648 |
+| NIFTY | other days | iron condor | stop+lock+target | 958 | 54% | -Rs 55,147 | **-Rs 209,326** | 49% | -Rs 5,313 | -Rs 15,352 | -Rs 97,577 | 0 | Rs 57,790 | -19.3% | 0.930 | 1.000 | 1, 2, 3, 5, 6, 7 | 27% / -Rs 412,350 |
+| BANKNIFTY | expiry | iron fly | stop | 175 | 40% | -Rs 3,475 | **-Rs 1,207** | 40% | -Rs 5,040 | -Rs 10,542 | -Rs 41,999 | 0 | Rs 55,806 | -1.3% | 0.545 | 1.000 | 1, 2, 3, 5, 7 | 50% / -Rs 50,445 |
+| BANKNIFTY | expiry | iron fly | stop+lock+target | 175 | 46% | -Rs 17,761 | **-Rs 18,817** | 46% | -Rs 5,040 | -Rs 9,602 | -Rs 44,663 | 0 | Rs 55,806 | -6.8% | 0.742 | 1.000 | 1, 2, 3, 5, 7 | 55% / -Rs 55,877 |
+| BANKNIFTY | expiry | wide iron fly | stop | 175 | 46% | Rs 15,097 | **Rs 13,657** | 46% | -Rs 7,839 | -Rs 13,782 | -Rs 43,635 | 0 | Rs 55,806 | +5.7% | 0.363 | 1.000 | 1, 2, 3, 5, 6 | 45% / -Rs 52,255 |
+| BANKNIFTY | expiry | wide iron fly | stop+lock+target | 175 | 51% | -Rs 12,454 | **-Rs 16,360** | 50% | -Rs 7,839 | -Rs 13,782 | -Rs 54,376 | 0 | Rs 55,806 | -4.7% | 0.627 | 1.000 | 1, 2, 3, 5, 6, 7 | 53% / -Rs 55,930 |
+| BANKNIFTY | expiry | iron condor | stop | 175 | 41% | -Rs 1,528 | **-Rs 4,513** | 41% | -Rs 4,520 | -Rs 7,044 | -Rs 23,377 | 0 | Rs 55,806 | -0.6% | 0.527 | 1.000 | 1, 2, 3, 5, 7 | 34% / -Rs 56,741 |
+| BANKNIFTY | expiry | iron condor | stop+lock+target | 175 | 50% | -Rs 18,670 | **-Rs 20,687** | 51% | -Rs 3,167 | -Rs 6,168 | -Rs 32,534 | 0 | Rs 55,806 | -7.1% | 0.834 | 1.000 | 1, 2, 3, 5, 7 | 53% / -Rs 42,158 |
+| BANKNIFTY | other days | iron fly | stop | 998 | 62% | Rs 439,888 | **-Rs 317,955** | 42% | -Rs 3,374 | -Rs 9,240 | -Rs 64,610 | 0 | Rs 60,157 | +151.3% | 0.000 | 0.000 | none | 16% / -Rs 1,035,334 |
+| BANKNIFTY | other days | iron fly | stop+lock+target | 998 | 62% | Rs 434,383 | **-Rs 325,651** | 42% | -Rs 3,374 | -Rs 9,240 | -Rs 68,598 | 0 | Rs 60,157 | +149.4% | 0.000 | 0.000 | none | 16% / -Rs 1,037,059 |
+| BANKNIFTY | other days | wide iron fly | stop | 996 | 70% | Rs 542,746 | **-Rs 320,777** | 47% | -Rs 6,156 | -Rs 8,982 | -Rs 43,614 | 0 | Rs 60,198 | +186.6% | 0.000 | 0.000 | none | 17% / -Rs 1,131,789 |
+| BANKNIFTY | other days | wide iron fly | stop+lock+target | 996 | 70% | Rs 532,885 | **-Rs 330,842** | 47% | -Rs 6,156 | -Rs 8,982 | -Rs 48,506 | 0 | Rs 60,198 | +183.2% | 0.000 | 0.000 | none | 17% / -Rs 1,133,203 |
+| BANKNIFTY | other days | iron condor | stop | 942 | 66% | Rs 192,142 | **-Rs 292,571** | 44% | -Rs 4,338 | -Rs 5,927 | -Rs 37,140 | 0 | Rs 58,953 | +67.5% | 0.000 | 0.000 | none | 16% / -Rs 724,648 |
+| BANKNIFTY | other days | iron condor | stop+lock+target | 942 | 66% | Rs 188,928 | **-Rs 286,978** | 44% | -Rs 4,338 | -Rs 5,927 | -Rs 39,417 | 0 | Rs 58,953 | +66.3% | 0.000 | 0.000 | none | 18% / -Rs 724,760 |
+
+
+The holdout (15 Jul - 19 Oct 2026, read once, the six design passers):
+
+| test | trades | win | net (pre-registered) | net, stale legs repriced | win, repriced | worst day | worst month | pre-registered holdout gate | BUY mirror: win / net |
+|---|---|---|---|---|---|---|---|---|---|
+| BANKNIFTY-N-IC-X1 | 64 | 83% | Rs 37,363 | **-Rs 20,954** | 33% | -Rs 2,704 | Rs 5,301 | not met | 2% / -Rs 82,787 |
+| BANKNIFTY-N-IC-X2 | 64 | 81% | Rs 34,254 | **-Rs 19,652** | 33% | -Rs 2,704 | Rs 5,665 | not met | 2% / -Rs 82,787 |
+| BANKNIFTY-N-IF-X1 | 64 | 86% | Rs 48,969 | **-Rs 18,785** | 39% | -Rs 1,209 | Rs 7,457 | not met | 2% / -Rs 97,537 |
+| BANKNIFTY-N-IF-X2 | 64 | 86% | Rs 48,969 | **-Rs 18,785** | 39% | -Rs 1,209 | Rs 7,457 | not met | 2% / -Rs 97,537 |
+| BANKNIFTY-N-IFW-X1 | 64 | 86% | Rs 53,623 | **-Rs 18,607** | 38% | -Rs 1,941 | Rs 7,436 | not met | 2% / -Rs 102,038 |
+| BANKNIFTY-N-IFW-X2 | 64 | 86% | Rs 53,623 | **-Rs 18,607** | 38% | -Rs 1,941 | Rs 7,436 | not met | 2% / -Rs 102,038 |
+
+
+Read it as: a seller wins 40-86% of days whatever the structure; what decides the result is the price of the far
+wings and the eight orders' costs. The as-run BANKNIFTY profits were an artefact of wings frozen at old prices
+(research/HUNT_R103_OPTIONS_SELLING.md has the check). The naked straddle, held to the close without a stop, was the
+one thing that made money over the whole lake (+Rs 64k NIFTY, +Rs 1.51 lakh BANKNIFTY, one lot, 4-5 years), and
+its worst days (-Rs 29k) break the account stop in one afternoon.
 
 ## 6. Costs per lot: selling against buying (2026 rates, the repo's dated cost model)
 
@@ -305,7 +407,11 @@ stamp 0.003% on buys, GST 18% on brokerage and exchange charges. Two things foll
   tail table's hold-to-close numbers are descriptive only.
 * **-Rs 40k drawdown, -Rs 13k a month.** Gate 6 rejects any test whose worst calendar month is below -Rs 13,000 at
   one lot; the report also counts trades at or below -Rs 13,000 in a day and the maximum drawdown. One hedged lot's
-  max loss (Rs 11-18k on NIFTY) is already most of a month's allowance, so even a passing test is a one-lot test.
+  max loss (Rs 7-15k on NIFTY in the illustration) is already most of a month's allowance, so even a passing test is a
+  one-lot test.
+* **A stop must sit inside the structure's max loss.** R103's stop at a loss of 50% of the credit was beyond the iron
+  fly's worst case on most normal days (BANKNIFTY: credit Rs 13,968, max loss Rs 5,308, mean of 998 trades), so it
+  fired on 6 of 998 days. On a hedged structure the stop belongs on the max loss (say 50% of it), not on the credit.
 * **Paper first, and separately labelled.** A pass is a paper candidate only. It would run beside, not inside, the
   Liquidity BANKNIFTY record, so the 26 Oct plain-rules decision is untouched.
 * **Signal on the underlying.** The structure is centred on the index's ATM at 09:20; nothing is read from an option's
