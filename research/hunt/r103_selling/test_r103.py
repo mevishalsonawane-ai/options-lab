@@ -531,3 +531,35 @@ def test_twin_p():
     assert V.twin_p(x, 10, 10.0, 1) < 0.01                    # picking all the winners is rare
     assert V.twin_p(x, 10, -10.0, 1) > 0.99
     assert V.twin_p(x, 0, 0.0, 1) == 1.0
+
+
+# ------------------------------------------------------------------------------------------------ idea 2 (PREREG_DIR)
+import r103dir as DR  # noqa: E402
+
+
+def test_credit_spread_legs_by_direction():
+    paths = straddle_paths(110.0, 90.0, {(22150.0, "P"): flat(60.0), (21950.0, "P"): flat(20.0), (21750.0, "P"): flat(8.0),
+                                         (22350.0, "C"): flat(60.0), (22550.0, "C"): flat(22.0), (22750.0, "C"): flat(9.0)})
+    d = make_day(paths)
+    bull = DR.spread_legs(d, T, True, 0)
+    assert bull is None                                     # the ATM spread's long put (22050) is not in the day: no trade
+    bull2 = DR.spread_legs(d, T, True, 2)
+    assert [(l.strike, l.side, l.short) for l in bull2] == [(22150.0, "P", True), (21950.0, "P", False)]
+    bear2 = DR.spread_legs(d, T, False, 2)
+    assert [(l.strike, l.side, l.short) for l in bear2] == [(22350.0, "C", True), (22550.0, "C", False)]
+    tr = DR.one_trade(d, DR.Signal(d.day, T + 1, True, -1), True, 2, "E1")
+    assert tr.credit == pytest.approx((60 - S.half_spread(60.0, 2)) - (20 + S.half_spread(20.0, 6)))
+    assert tr.margin == pytest.approx(max(1.25 * (200 - tr.credit) * 75, 0.02 * 22250 * 75))
+    e3 = DR.one_trade(d, DR.Signal(d.day, T + 1, True, T + 31), True, 2, "E3")
+    assert e3.exit_row == T + 31
+
+
+def test_one_position_at_a_time_and_direction_twin():
+    paths = straddle_paths(110.0, 90.0, {(22150.0, "P"): flat(60.0), (21950.0, "P"): flat(20.0),
+                                         (22350.0, "C"): flat(60.0), (22550.0, "C"): flat(20.0)})
+    d = make_day(paths)
+    sigs = [DR.Signal(d.day, T + 1, True, T + 21), DR.Signal(d.day, T + 10, False, -1), DR.Signal(d.day, T + 40, False, T + 60)]
+    real, flip = DR.run_cell({d.day: d}, sigs, 2, "E3")
+    assert len(real) == 2 and len(flip) == 2                 # the second signal arrives while the first is open
+    assert DR.twin_p(np.array([5.0] * 30), np.array([-5.0] * 30), 1) < 0.01
+    assert DR.twin_p(np.array([-5.0] * 30), np.array([5.0] * 30), 1) > 0.99
