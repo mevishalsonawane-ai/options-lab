@@ -356,6 +356,73 @@ class Ft3ArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 22 Oct (review): a gap in the index's feed at one mark (no index price within 5 minutes of it, the feed past it) is no
+     * ticket at that mark, as the research replay, and the later marks are still judged - never every later mark blocked.
+     */
+    @Test fun aGapInTheIndexFeedAtOneMarkNeverBlocksTheLaterMarks() {
+        market(LocalTime.of(11, 21))
+        // No index candles starting 11:10-11:15: the 11:15 mark (its bar closes 11:16) has no spot; the feed resumes at 11:16.
+        upstox.minutes[niftyKey] = upstox.minutes.getValue(niftyKey).filter { it.at.isBefore(LocalTime.of(11, 10)) || !it.at.isBefore(LocalTime.of(11, 16)) }
+        tick(LocalTime.of(11, 21), seconds = 30)
+        val p = Ft3Arm.view.value.open.single()
+        assertEquals("the 11:20 mark is judged and bought", "11:20", p.mark)
+        assertTrue(view().log.toString(), view().log.any { "no index price at the 11:15 mark" in it })
+        assertNothingAtZerodha()
+    }
+
+    /** 22 Oct (review): while the index's own feed has not reached the mark yet, the mark waits (it is never written off). */
+    @Test fun anIndexFeedThatHasNotReachedTheMarkIsStillWaitedFor() {
+        market(LocalTime.of(11, 21), indexUntil = LocalTime.of(11, 14))
+        tick(LocalTime.of(11, 21), seconds = 30)
+        assertTrue(Ft3Arm.view.value.open.isEmpty())
+        assertFalse(view().log.toString(), view().log.any { "no index price" in it })
+        market(LocalTime.of(11, 22)); tick(LocalTime.of(11, 22))
+        assertEquals("11:20", Ft3Arm.view.value.open.single().mark)
+    }
+
+    /**
+     * 22 Oct (review): a ticket's row price with no stream comes from its minute bars, read by the arms pass outside the lock;
+     * the minute lane ([Ft3Arm.manageOnly]) never reads the network for it.
+     */
+    @Test fun theRowsPriceIsReadByTheArmsPassAndTheMinuteLaneReadsNoNetwork() {
+        market(LocalTime.of(11, 21)); tick(LocalTime.of(11, 21))
+        val p = Ft3Arm.view.value.open.single()
+        market(LocalTime.of(13, 0), held = { 9.5 }); tick(LocalTime.of(13, 0))
+        assertEquals(9.5, Ft3Arm.view.value.marks.getValue(p.symbol), 1e-9)
+        market(LocalTime.of(13, 30), held = { 9.9 })
+        val before = upstox.requests.size
+        at(LocalTime.of(13, 30)); runBlocking { Ft3Arm.manageOnly() }
+        assertEquals("no read in the minute lane", before, upstox.requests.size)
+        assertEquals(9.5, Ft3Arm.view.value.marks.getValue(p.symbol), 1e-9)
+        assertEquals(1, Ft3Arm.view.value.open.size)
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * 22 Oct (review): an entry order a cancel could not take out keeps the watch's pass coming until it is settled, even after
+     * 13:06; an earlier day's is forgotten, also with the arm switched off.
+     */
+    @Test fun aPendingEntryOrderKeepsThePassComingUntilSettled() {
+        fun book(armed: Boolean, pendingKey: String) {
+            Ft3Arm.wipe()
+            Vault.writeFile(bookFile, JSONObject().put("armed", armed).put("migrated", org.json.JSONArray().put(Ft3Arm.AUTO_ON))
+                .put("pending", JSONObject().put(pendingKey, "PX-GONE")).toString().toByteArray(Charsets.UTF_8))
+            view()
+        }
+        book(true, "$day|NIFTY")
+        assertTrue(Ft3Arm.wantsPass(14 * 60))
+        market(LocalTime.of(14, 0)); tick(LocalTime.of(14, 0))
+        assertFalse("settled (the order is gone): no pass wanted", Ft3Arm.wantsPass(14 * 60))
+        book(false, "${day.minusDays(1)}|NIFTY")
+        assertTrue(Ft3Arm.wantsPass(14 * 60))
+        tick(LocalTime.of(14, 0))
+        assertFalse("an earlier day's is forgotten", Ft3Arm.wantsPass(14 * 60))
+        AutomationSupport.reloadFromDisk(Ft3Arm); view()
+        assertFalse("and stays forgotten after a restart", Ft3Arm.wantsPass(14 * 60))
+        assertNothingAtZerodha()
+    }
+
     @Test fun theMinuteLaneOnlyManagesWhatIsHeldAndTheWatchWakesItOnlyWhenNeeded() {
         assertTrue(view().armed)
         assertFalse(Ft3Arm.wantsPass(10 * 60))

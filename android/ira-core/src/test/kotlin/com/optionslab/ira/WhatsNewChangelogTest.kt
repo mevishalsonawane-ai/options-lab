@@ -903,7 +903,7 @@ class WhatsNewChangelogTest {
             "what went wrong today" to "OrderReview", "how is the hero ticket doing" to "HeroTicket",
             "how are the passed arms doing" to "PassedArms", "what's on the watchlist" to "PassedArms", "what is a bull trap" to "Concepts",
             "has the trend turned on my trades" to "TrendWatch", "how is breadth donchian doing" to "PassedArms", "how is the donchian arm doing" to "PassedArms",
-            "why was that candle green" to "CandleAgent")
+            "why was that candle green" to "CandleAgent", "how is FT3 doing" to "Ft3")
         val asks = WhatsNew.ENTRIES.mapNotNull { it.ask }
         assertEquals(want.keys, asks.toSet())
         for (a in asks) {

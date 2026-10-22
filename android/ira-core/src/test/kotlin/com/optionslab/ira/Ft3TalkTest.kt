@@ -114,10 +114,13 @@ class Ft3TalkTest {
             Ft3Talk.Ticket("SENSEX", "S2", 500, 8.0, exit = 6.0, why = "operator_stop", net = -1_050.0),
             Ft3Talk.Ticket("SENSEX", "S3", 500, 8.0, exit = 6.0, why = "closed_elsewhere", net = -1_050.0),
             Ft3Talk.Ticket("SENSEX", "S4", 500, 8.0, exit = 6.0, net = -1_050.0),
+            Ft3Talk.Ticket("SENSEX", "S5", 500, 8.0, exit = 6.0, why = "kill", net = -1_050.0),
             Ft3Talk.Ticket("FINNIFTY", "F1", 60, 9.0))))
         assertTrue("NIFTY27OCT2622750CE 650 @ 7.05, now 9.00 (+₹1,268 before charges)" in a, a)
         assertTrue("S1 bought @ 8.00, sold @ 0.50 at 15:05, −₹3,820 after charges" in a, a)
-        assertTrue("on your stop for today" in a && "closed elsewhere (closed_elsewhere)" in a && "S4 bought @ 8.00, sold @ 6.00 sold" in a, a)
+        assertTrue("on your stop for today" in a && "closed by the paper book (its square-off, the loss limit or you)" in a && "closed elsewhere (kill)" in a && "S4 bought @ 8.00, sold @ 6.00 sold" in a, a)
+        // 22 Oct (review): the paper book's own close is said in words, never its code.
+        assertFalse("closed_elsewhere" in a, a)
         assertTrue("F1 60 @ 9.00, held" in a, a)
         assertTrue("12 tickets, 2 won, +₹41,250 after charges" in a, a)
         assertTrue("1 ticket, 0 won, −₹50 after charges" in Ft3Talk.answer(facts(closed = 1, net = -50.0)))

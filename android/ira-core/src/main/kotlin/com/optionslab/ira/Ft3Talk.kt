@@ -42,6 +42,8 @@ object Ft3Talk {
     private fun whyWords(why: String?): String = when (why) {
         Ft3Rules.EXIT_WHY -> "at 15:05"
         "operator_stop" -> "on your stop for today"
+        // 22 Oct (review): the paper book closed it first (its 15:05 square-off, the loss limit or you): said in words, not its code.
+        "closed_elsewhere" -> "closed by the paper book (its square-off, the loss limit or you)"
         null -> "sold"
         else -> "closed elsewhere ($why)"
     }

@@ -231,6 +231,7 @@ object Ft3Arm {
         decidedNow = b.decided.toSet()
         checkedNow = b.checked.toMap()
         picksNow = b.picks.keys.toSet()
+        pendingNow = b.pending.isNotEmpty()
         val closed = b.positions.filter { !it.open }
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         _view.value = View(b.armed, b.status.shown(), b.positions.filter { it.open }, closed.takeLast(20),
@@ -259,7 +260,8 @@ object Ft3Arm {
      * 10:55 .. 13:05 and some index's day is not decided yet. Outside that it costs the watch nothing.
      */
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean {
-        if (holding()) return true
+        // 22 Oct (review): an entry order a cancel could not take out keeps the pass coming until it is settled (it may fill late).
+        if (holding() || pendingNow) return true
         if (!_view.value.armed || minute !in WAKE_FROM until WAKE_UNTIL) return false
         val today = runCatching { Market.today() }.getOrNull() ?: return true
         val decided = decidedNow
@@ -318,15 +320,19 @@ object Ft3Arm {
         if (cache == null) lock.withLock { book() }
         val reads = if (_view.value.armed && Ft3Rules.phase(now.toLocalTime()) != Ft3Rules.Phase.BEFORE)
             runCatching { prefetch(now) }.getOrDefault(emptyMap()) else emptyMap()
+        // 22 Oct (review): the row's price for a ticket the stream has no price for, read here, outside the lock, so the minute
+        // lane's and the 15-second check's exits ([manageOnly]) never wait behind a network read.
+        val barMarks = runCatching { barMarks(now) }.getOrDefault(emptyMap())
         lock.withLock {
             // The clock read again after the reads (review: they can take tens of seconds; the order window and the entry
             // time are judged on the minute the decision is made).
             val now = Market.now().toLocalDateTime().withNano(0)
             val b = book()
-            if (!b.armed && b.positions.none { it.open }) return@withLock
-            // An earlier day's unsettled entry order is the paper book's (its MIS square-off ended it): forgotten.
+            // An earlier day's unsettled entry order is the paper book's (its MIS square-off ended it): forgotten (before the
+            // switched-off return, so a forgotten one never keeps the pass coming - 22 Oct).
             var changed = b.pending.keys.removeAll { !it.startsWith("${now.toLocalDate()}|") }
-            changed = runCatching { exits(b, now, readMarks = true) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true } || changed
+            if (!b.armed && b.positions.none { it.open }) { if (changed) save(b); return@withLock }
+            changed = runCatching { exits(b, now, barMarks) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true } || changed
             if (b.armed) for (u in Ft3Rules.UNDERLYINGS) {
                 changed = runCatching { decide(b, u, now, reads[u]) }.getOrElse { b.status[u] = "error: ${it.javaClass.simpleName}"; true } || changed
             }
@@ -402,7 +408,13 @@ object Ft3Arm {
      * One index's reads for the marks still to judge: each mark's chain (null: not judged this pass - a read failed, or the
      * feed has not reached the mark's minute yet ([waiting]); judged again on the next pass).
      */
-    private class IndexRead(val chains: Map<LocalTime, Ft3Rules.Chain?>, val waiting: Set<LocalTime> = emptySet())
+    private class IndexRead(val chains: Map<LocalTime, Ft3Rules.Chain?>, val waiting: Set<LocalTime> = emptySet(),
+                            /**
+                             * 22 Oct (review): the marks with no index price although the index's feed has gone past them (a gap of
+                             * more than [Ft3Rules.SPOT_FRESH] minutes): no ticket at that mark, and the later marks are judged (as the
+                             * research replay, which skips a mark with no spot) - never every later mark blocked behind it.
+                             */
+                            val noSpot: Set<LocalTime> = emptySet())
 
     /**
      * The candle feed lags its newest minute by up to this many minutes ([com.optionslab.engine.orb.BarClose]; options are not
@@ -415,6 +427,7 @@ object Ft3Arm {
     @Volatile private var decidedNow: Set<String> = emptySet()
     @Volatile private var checkedNow: Map<String, String> = emptyMap()
     @Volatile private var picksNow: Set<String> = emptySet()
+    @Volatile private var pendingNow: Boolean = false
 
     /**
      * The reads, outside the lock: for each index whose expiry is today and whose day is still open with no pick yet, the marks
@@ -457,11 +470,13 @@ object Ft3Arm {
             val atms = HashMap<LocalTime, Pair<Double?, Double?>>()
             val incomplete = HashSet<LocalTime>()
             val waiting = HashSet<LocalTime>()
+            val noSpot = HashSet<LocalTime>()
             for (m in marks) {
                 val at = Ft3Rules.barClose(m)
                 // The index's own bar of the mark first (its forward fill only once that minute is long gone).
                 if (!idx.containsKey(at) && t.isBefore(at.plusMinutes(Ft3Rules.SPOT_FRESH))) { waiting += m; continue }
-                val s = spots[m] ?: continue
+                val s = spots[m]
+                if (s == null) { if (idx.keys.any { !it.isBefore(at) }) noSpot += m; continue }
                 val k = atmOf(m)!!
                 val ce = todays[k to Right.CE]; val pe = todays[k to Right.PE]
                 if ((ce != null && bars[ce.instrumentKey] == null) || (pe != null && bars[pe.instrumentKey] == null)) { incomplete += m; continue }
@@ -490,7 +505,7 @@ object Ft3Arm {
                 }
                 chains[m] = Ft3Rules.Chain(u, s, c, p, legs)
             }
-            out[u] = IndexRead(chains, waiting)
+            out[u] = IndexRead(chains, waiting, noSpot)
         }
         return out
     }
@@ -524,6 +539,12 @@ object Ft3Arm {
         }
         val r = read
         if (r != null) for ((m, chain) in r.chains.toSortedMap()) {
+            // A mark with no index price though the feed has passed it: no ticket there, the next mark is judged (22 Oct review).
+            if (chain == null && m in r.noSpot) {
+                b.checked[dayKey] = m.toString(); changed = true
+                note(b, "$u: no index price at the ${hm(m)} mark (a gap in the feed): no ticket there, as the research replay")
+                continue
+            }
             // A mark whose chain could not be read is judged again on the next pass (and the later ones wait behind it).
             if (chain == null) break
             val pick = Ft3Rules.pick(m, chain)
@@ -659,11 +680,26 @@ object Ft3Arm {
     }
 
     /**
-     * Each open ticket's exit, when due: 15:05 (or an earlier day's at once), Boss's stop for today. True when [b] changed.
-     * [readMarks]: a ticket not due may read its minute bars for the row's price when the stream has none (the arms pass
-     * only; never the minute lane or the 15-second check, and never before an exit that is due - review).
+     * The row's price, from one read of its minute bars, for each of today's open tickets that is not due to sell and that the
+     * stream has no price for (the arms pass only, before the lock is taken; memory reads otherwise).
      */
-    private suspend fun exits(b: Book, now: LocalDateTime, readMarks: Boolean = false): Boolean {
+    private suspend fun barMarks(now: LocalDateTime): Map<String, Double> {
+        val out = HashMap<String, Double>()
+        for (p in _view.value.open) {
+            if (p.day != now.toLocalDate() || Ft3Rules.exitDue(now.toLocalTime(), false)) continue
+            val c = Paper.contractOf(p.symbol) ?: continue
+            if (runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } != null) continue
+            runCatching { closes(c.feedKey, now) }.getOrNull()?.maxByOrNull { it.key }?.value?.close?.takeIf { it > 0 }?.let { out[p.symbol] = it }
+        }
+        return out
+    }
+
+    /**
+     * Each open ticket's exit, when due: 15:05 (or an earlier day's at once), Boss's stop for today. True when [b] changed.
+     * No network here (22 Oct review): a ticket not due takes the stream's price, else [barMarks] (read by the arms pass outside
+     * the lock).
+     */
+    private suspend fun exits(b: Book, now: LocalDateTime, barMarks: Map<String, Double> = emptyMap()): Boolean {
         var changed = false
         val stopped = stoppedToday()
         for ((i, p) in b.positions.withIndex().toList()) {
@@ -677,20 +713,16 @@ object Ft3Arm {
                     charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
                 b.positions[i] = done; closed(b, done); changed = true; continue
             }
-            // The stream's last price when it has one (memory only).
-            runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 }?.let { b.marks[p.symbol] = it }
+            // The stream's last price when it has one (memory only); else the minute bar read outside the lock.
+            val streamed = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 }
+            (streamed ?: barMarks[p.symbol])?.let { b.marks[p.symbol] = it }
             val why = when {
                 Ft3Rules.exitDue(now.toLocalTime(), p.day.isBefore(now.toLocalDate())) -> Ft3Rules.EXIT_WHY
                 // Boss's stop for today (or the daily loss limit) sells what is held: it only lowers risk.
                 stopped -> "operator_stop"
                 else -> null
             }
-            if (why == null) {
-                // Not due: the row's price from one read of the minute bars when the stream has none (the arms pass only).
-                if (readMarks && p.day == now.toLocalDate())
-                    runCatching { closes(c.feedKey, now) }.getOrNull()?.maxByOrNull { it.key }?.value?.close?.let { b.marks[p.symbol] = it }
-                continue
-            }
+            if (why == null) continue
             val next = sell(b, p, c, why)
             if (next != p) { b.positions[i] = next; changed = true }
         }
