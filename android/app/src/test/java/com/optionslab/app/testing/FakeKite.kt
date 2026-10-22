@@ -1,6 +1,7 @@
 package com.optionslab.app.testing
 
 import com.optionslab.app.data.Broker
+import com.optionslab.app.data.AppSettings
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.engine.IST
 import okhttp3.mockwebserver.Dispatcher
@@ -305,7 +306,8 @@ class FakeKite : Closeable {
     fun login(live: Boolean = true) {
         SecurePrefs.putAll(mapOf("kite.apiKey" to "testkey", "kite.accessToken" to "test-token-not-real",
             "kite.loginAt" to loginAt(System.currentTimeMillis()), "kite.userId" to "AB1234", "kite.userName" to "Test User"))
-        if (live) SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true))
+        // 22 Oct: the typed-"yes" gate off here (its own tests turn it on): these tests drive the paths behind it.
+        if (live) SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true, AppSettings.TYPED_YES_KEY to false))
     }
 
     companion object {

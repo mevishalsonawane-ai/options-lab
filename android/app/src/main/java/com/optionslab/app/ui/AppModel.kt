@@ -143,6 +143,9 @@ internal const val LIVE_PIN_ASK = "Enter your PIN to switch to Live. Your own or
 /** 18 Oct (review): an entry whose price is too old at the PIN ([AppModel.confirmDirect]). */
 internal val PRICE_TOO_OLD = "Not sent: its price is more than ${com.optionslab.engine.Kite.PRICE_MAX_AGE_MS / 1000} seconds old. Tap Buy or Sell again for a fresh price."
 /** 18 Oct: a new position never goes to Zerodha in Paper mode. */
+/** 22 Oct: the typed-"yes" gate held a real entry. */
+internal const val YES_FIRST = "Not sent: type yes for this order first (the three gates; Settings → Zerodha → Real orders)."
+
 internal const val PAPER_NO_ENTRY = "This is Paper mode: switch to Live with the badge at the top (and your PIN) to send real orders."
 
 class AppModel(app: Application) : AndroidViewModel(app) {
@@ -1303,6 +1306,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * for each new one, even while it stays open, and passes the generation it was opened for to [confirmDirect].
      */
     val directOrder = MutableStateFlow(0L)
+    /**
+     * 22 Oct (the three gates): the generation of the plan "yes" was typed for. [sendPlan] holds a real entry of Boss's own
+     * until it is this plan's, when his "Type yes" setting is on: the gate lives here, so no path around the screen (a test, a
+     * later caller) sends a real entry without it. Jarvis's approved trades carry Boss's own approval card instead.
+     */
+    private val yesGen = java.util.concurrent.atomic.AtomicLong(-1)
+
+    /** "yes" was typed for the order being prepared now (the review card or the direct order's box). */
+    fun yesTyped() { yesGen.set(planGen.get()) }
+
+    /** Why the typed-"yes" gate holds [cur] now, or null when it does not apply or is open. */
+    private fun yesRefusal(cur: OrderPlan): String? {
+        val s = _settings.value
+        if (!s.typedYes || !(s.live && s.allowRealOrders) || cur.exit) return null
+        if (cur.source == com.optionslab.app.data.Origins.manual("Jarvis")) return null
+        return if (yesGen.get() == planGen.get()) null else YES_FIRST
+    }
 
     /**
      * The priced plan, only while it is still the order being prepared: a cancelled order's late answer never replaces the next
@@ -1503,6 +1523,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (!(cur.exit && reauthed)) { say(why); return why }
             com.optionslab.app.data.Diag.record("mode", "Paper mode: exit of a Zerodha position sent with the PIN (${cur.title})")
         }
+        // 22 Oct: the typed-"yes" gate (Boss's setting, on by default) on a real entry of his own, whoever calls this.
+        yesRefusal(cur)?.let { why -> com.optionslab.app.data.Diag.record("tap", "Not sent: yes not typed for ${cur.title}"); say(why); return why }
         val again = gate(cur.legs, cur.holdToSettlement, cur.exit)
         if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(stamped(cur.copy(refusals = again))); return again.flatten().distinct().joinToString(" ") }
         stuck.value = null

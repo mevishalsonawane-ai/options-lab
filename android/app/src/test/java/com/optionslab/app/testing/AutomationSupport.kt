@@ -46,7 +46,8 @@ object AutomationSupport {
 
     /** Live mode with real orders on, no entry cut-off (tests run at any hour). */
     fun liveSettings(live: Boolean = true) {
-        SecurePrefs.putAll(mapOf("k.mode" to if (live) "live" else "sandbox", "k.allow" to live, "g.cutoff" to -1))
+        // 22 Oct: the typed-"yes" gate off here (its own tests turn it on): these tests drive the paths behind it.
+        SecurePrefs.putAll(mapOf("k.mode" to if (live) "live" else "sandbox", "k.allow" to live, "g.cutoff" to -1, com.optionslab.app.data.AppSettings.TYPED_YES_KEY to false))
     }
 
     /** The security check as the app last saw it: clean, or a device that failed it. */

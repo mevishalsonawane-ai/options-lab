@@ -35,6 +35,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Text
 import com.optionslab.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
@@ -235,6 +237,10 @@ fun LoginPinDialog(model: AppModel) {
  * "Live orders without PIN", as Settings → Zerodha says it (18 Oct review: plainly, since with the direct send one tap is the
  * whole order, a basket too). It was reset to off once with that update; turning it on asks the PIN.
  */
+/** 22 Oct: the typed "yes" gate's words. */
+internal const val TYPED_YES_SUB = "In Live, each real order of your own asks you to type yes before the PIN, so one order is confirmed at a time " +
+    "(the three gates: checks and fingerprint, yes, PIN). Closing a position never asks it. Turning it off asks for your PIN; the PIN gate itself stays."
+
 internal const val ONE_TAP_SUB = "In Live, one tap sends a real order with no PIN and no review: Buy, Sell, Close or a whole basket go to " +
     "Zerodha at once (also Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. " +
     "Turning it on asks for your PIN."
@@ -423,6 +429,13 @@ internal fun ArmsLiveList(model: AppModel) {
                         Text(com.optionslab.app.data.ArmLive.stateWords(on, shadow) +
                             (if (open > 0) " · $open open live" else "") + (if (n > 0) " · live record $n, ${com.optionslab.engine.orb.LiveMirror.rs(net)}" else ""),
                             style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                        // 22 Oct: the arm's three gates on a live trade, each with its tick ([com.optionslab.engine.risk.OrderGates.arm]): its
+                        // Trade-live switch with "AI trades go live" (memory: the kept flags), the PIN at arming (on only with it), the
+                        // fingerprint at the door (the last live entry's).
+                        val gates = com.optionslab.engine.risk.OrderGates.arm(on, com.optionslab.app.data.ArmLive.liveFlagsKept()?.second, armedWithPin = on,
+                            fingerprint = com.optionslab.app.data.OrderVerdicts.lastMatched("arm:${spec.key}"), refusal = com.optionslab.app.data.OrderVerdicts.lastRefused("arm:${spec.key}"))
+                        Text("Gates: " + gates.joinToString(" · ") { it.line() }, style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp),
+                            modifier = Modifier.semantics { contentDescription = "Gates: ${spec.label}" })
                     }
                     androidx.compose.material3.Switch(checked = on, onCheckedChange = { want ->
                         if (want) askOn = spec.key
@@ -556,7 +569,8 @@ private fun OrderReviewBody(model: AppModel) {
             if (pl.value.source.startsWith(com.optionslab.app.data.Origins.MANUAL)) BossRuleNote(!pl.value.exit)
             AgainstArmsNote(pl.value)
             // 18 Oct: in Paper mode an exit of a real Zerodha position may be sent too (with the PIN); an entry never.
-            PlanCard(pl.value, (s.allowRealOrders && s.live) || pl.value.exit, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
+            PlanCard(pl.value, (s.allowRealOrders && s.live) || pl.value.exit, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan,
+                yesRequired = s.typedYes && s.live && s.allowRealOrders, onYes = model::yesTyped)
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
         }
     }
@@ -589,10 +603,23 @@ private fun DirectOrderBody(model: AppModel) {
     var stuckAction by remember { mutableStateOf<String?>(null) }
     val live = s.live && s.allowRealOrders
     val title = (plan as? Load.Done<OrderPlan>)?.value?.title
+    // 22 Oct: the three gates on a real entry: with Boss's "type yes" setting on, "yes" is typed for this one order before the
+    // PIN is asked (keyed on the order: a new one asks afresh) - while the order is still being priced too (review: the PIN
+    // given before the price came in would have sent it with nothing typed). An exit never asks it; the PIN stays whatever
+    // the setting says. The model holds the same gate ([AppModel.yesTyped]), so nothing around the screen sends without it.
+    val loaded = plan is Load.Done
+    val entryPlan = (plan as? Load.Done<OrderPlan>)?.value?.takeIf { !it.exit }
+    val yesRequired = live && s.typedYes && (!loaded || entryPlan != null)
+    var typed by remember(order) { mutableStateOf("") }
+    val yesOk = !yesRequired || com.optionslab.engine.risk.OrderGates.yesTyped(typed)
+    LaunchedEffect(yesOk, order) { if (yesRequired && yesOk) model.yesTyped() }
     // Jarvis's word before an opening order, and Boss's order against an automatic position: words only, as on the review.
     (plan as? Load.Done<OrderPlan>)?.value?.let { PreTradeNote(it); AgainstArmsNote(it) }
     LedgerCard(title = if (live) "Real order · Zerodha" else "Closing at Zerodha (real money)", accent = p.oxblood) {
         title?.let { Text(it, style = Type.title.copy(color = p.ink, fontSize = 14.sp)) }
+        if (live && entryPlan != null && sending !is Load.Done) OrderGatesCard(entryPlan, yesRequired, typed, onTyped = { typed = it }, pinDone = sending is Load.Busy)
+        else if (yesRequired && !loaded) OutlinedTextField(typed, { typed = it }, singleLine = true, label = { Text("Type yes to confirm this order") },
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).testTag("order-yes"))
         val pv = plan
         val sv = sending
         when {
@@ -614,7 +641,7 @@ private fun DirectOrderBody(model: AppModel) {
     // "Live orders without PIN" (the owner's setting) applies in Live only: a Paper-mode exit always asks the PIN.
     // 18 Oct review: the PIN is bound to the order it was asked for ([order], its generation): a PIN typed for one order never
     // sends a later one (the prompt starts afresh for each), and a second confirm of it (fingerprint and PIN) sends nothing.
-    if (asking) androidx.compose.runtime.key(order) {
+    if (asking && yesOk) androidx.compose.runtime.key(order) {
         Reauth(model, onOk = { asking = false; model.confirmDirect(order) }, onCancel = { asking = false; model.dismissPlan() },
             orderAction = live,
             why = if (live) "Enter your app PIN to send this order to Zerodha." else "Enter your app PIN to close this real position at Zerodha.")
@@ -683,8 +710,15 @@ internal fun StuckCard(st: com.optionslab.app.ui.AppModel.StuckLeg, onAction: (S
 internal fun PlanCard(
     plan: OrderPlan, allowed: Boolean, sending: Load<List<Broker.Fill>>,
     onPrice: (Int, Double) -> Unit, onSend: () -> Unit, onClose: () -> Unit,
+    /** 22 Oct: the three gates on a real entry ([OrderGatesCard]); "yes" must be typed when [yesRequired] (Boss's setting), told to [onYes]. */
+    yesRequired: Boolean = false, onYes: () -> Unit = {},
 ) {
     val p = LocalPalette.current
+    // 22 Oct: the typed "yes" for this one order (keyed on the legs: a new order asks afresh).
+    var typed by remember(plan.legs) { mutableStateOf("") }
+    val gated = allowed && !plan.exit
+    val yesOk = !yesRequired || com.optionslab.engine.risk.OrderGates.yesTyped(typed)
+    LaunchedEffect(yesOk, plan.legs) { if (gated && yesRequired && yesOk) onYes() }
     LedgerCard(title = "Real Order · Zerodha", accent = p.oxblood) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(plan.title, style = Type.title.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
@@ -739,11 +773,33 @@ internal fun PlanCard(
             Load.Idle -> {
                 if (!allowed) Note("This is Paper mode. To send real orders, tap the PAPER TRADING badge at the top and switch to Live.")
                 if (priceMismatch) Note("A limit price box does not hold a valid price; fix it before sending.")
-                com.optionslab.app.ui.components.SwipeToConfirm("Swipe to send to Zerodha", p.oxblood, enabled = allowed && plan.sendable && !priceMismatch, onConfirm = onSend)
+                if (gated) OrderGatesCard(plan, yesRequired, typed, onTyped = { typed = it }, pinDone = false)
+                com.optionslab.app.ui.components.SwipeToConfirm("Swipe to send to Zerodha", p.oxblood, enabled = allowed && plan.sendable && !priceMismatch && (!gated || yesOk), onConfirm = onSend)
             }
         }
         Spacer(Modifier.height(8.dp))
         BrassButton("Close", Modifier.fillMaxWidth(), tone = p.inkFaint, onClick = onClose)
+    }
+}
+
+/**
+ * The three gates on a real order of Boss's own (22 Oct, [com.optionslab.engine.risk.OrderGates]): the checks and the
+ * fingerprint, "yes" typed for this one order (when [yesRequired]), the PIN. Each with its tick; the "yes" box below them.
+ * Words and one text box: nothing here sends, and nothing here weakens a gate.
+ */
+@Composable
+internal fun OrderGatesCard(plan: OrderPlan, yesRequired: Boolean, typed: String, onTyped: (String) -> Unit, pinDone: Boolean) {
+    val p = LocalPalette.current
+    val today = com.optionslab.app.data.Market.today()
+    val gates = com.optionslab.engine.risk.OrderGates.manual(plan.sendable, plan.fingerprintsMatch(today), yesRequired, typed, pinDone)
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp).testTag("order-gates")) {
+        Text("Three gates: " + com.optionslab.engine.risk.OrderGates.summary(gates), style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold))
+        gates.forEachIndexed { i, g ->
+            Text(g.line(), style = Type.label.copy(color = if (g.done) p.verdigris else p.oxblood, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp).testTag("order-gate-$i"))
+        }
+        plan.verdicts.firstOrNull()?.let { Text("Fingerprint ${it.fingerprint}", style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.padding(top = 2.dp)) }
+        if (yesRequired) OutlinedTextField(typed, onTyped, singleLine = true, label = { Text("Type yes to confirm this order") },
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).testTag("order-yes"))
     }
 }
 
@@ -944,6 +1000,9 @@ fun BrokerPage(
     // Switching "Live orders without PIN" on lowers the protection, so it asks for the PIN itself (as the security
     // switches do); switching it off is free.
     var noPinAuth by remember { mutableStateOf(false) }
+    var yesOffAuth by remember { mutableStateOf(false) }
+    if (yesOffAuth) Reauth(model, onOk = { yesOffAuth = false; model.update { it.copy(typedYes = false) } }, onCancel = { yesOffAuth = false },
+        pinOnly = true, why = "Enter your app PIN to stop asking for a typed \"yes\" before each real order. Your PIN is still asked for every one.")
     if (noPinAuth) Reauth(model, onOk = { noPinAuth = false; model.update { it.copy(oneTapOrders = true) } }, onCancel = { noPinAuth = false },
         pinOnly = true, why = "Enter your app PIN to turn this on: in Live, one tap then sends a real order with no PIN and no review.")
     // 12 Oct: going Live inside Boss's paper-only period asks his PIN, its reason and end date said first.
@@ -1007,6 +1066,10 @@ fun BrokerPage(
                     }
                     ToggleRow("Live orders without PIN", ONE_TAP_SUB, s.oneTapOrders, keepSub = true) { on ->
                         if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
+                    }
+                    // 22 Oct: the typed "yes" gate (on by default); turning it off loosens a gate, so it asks the PIN. The PIN gate stays.
+                    ToggleRow("Type \"yes\" before a real order", TYPED_YES_SUB, s.typedYes, keepSub = true) { on ->
+                        if (on) model.update { it.copy(typedYes = true) } else yesOffAuth = true
                     }
                     ToggleRow("Keep a stop-loss order at the exchange for live positions",
                         "The bots already rest each live position's stop at Zerodha after the buy. With this on, a stop that could not be " +
