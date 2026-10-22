@@ -244,10 +244,12 @@ def bhav_check(und: str, trades: list) -> dict:
     contract), with the same entry, slippage model at 1 tick and dated charges. Stops, locks and targets keep their
     minute fills. Returns totals over the trades that have a bhavcopy price for all four legs."""
     try:
+        sys.path.insert(0, str(HERE.parent / "r102_deep"))
         import r102data as B
         B.LAKE = RD.LAKE
         b = B.bhav(und)
-    except Exception:  # pragma: no cover
+    except Exception as ex:  # pragma: no cover
+        print(f"bhavcopy check unavailable: {ex}", file=sys.stderr)
         return dict(n=0)
     b = b[b.oi_qty > 0]
     near = b.groupby("date").expiry.min()

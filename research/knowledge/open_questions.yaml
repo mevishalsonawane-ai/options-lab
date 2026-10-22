@@ -17,9 +17,9 @@
   sec: "Daily filters on Liquidity BANKNIFTY (R15, 12 Oct 2026)"
 - id: defined-risk-selling
   topics: [option-selling, theta]
-  text: "Defined-risk premium selling (credit spreads / iron fly), which has time decay on its side, is not yet tested."
-  src: research/FINDINGS.md
-  sec: "Conclusions"
+  text: "Defined-risk premium selling held within the day was tested by R103 (iron fly, wide iron fly and iron condor sold at 09:21 and closed by 15:10, 24 tests) and lost after costs; selling held overnight or for several days is not yet tested."
+  src: research/HUNT_R103_SELLING.md
+  sec: "Gates, and what was not done"
 - id: signal-time-spread
   topics: [costs, time-of-day]
   exec: true

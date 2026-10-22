@@ -1701,3 +1701,19 @@ trading rule, unless marked. Signal on the underlying throughout.
 - Public facts verified 22 Oct 2026: lots NIFTY 65 / BANKNIFTY 30 since the Jan 2026 expiries (NSE/FAOP/70616; the repo's lot
   table still says 35), NIFTY weekly on Tuesday since 2 Sep 2025, BANKNIFTY monthly only since 20 Nov 2024, hours 09:15-15:40
   since 3 Aug 2026, STT 0.15% of the sell premium since 1 Apr 2026, one round trip about Rs 70 (NIFTY) / Rs 76 (BANKNIFTY).
+
+## Defined-risk option selling, intraday (R103, 22 Oct 2026) - 0 of 24 pass; a high win rate before charges, a loss after
+Full study: `HUNT_R103_SELLING.md` (pre-registered `hunt/r103_sell/PREREG.md`; design Aug 2021 - 14 Jul 2026; holdout
+15 Jul - 19 Oct 2026 not read because nothing passed). Signal on the underlying: the structure is centred on the index's
+ATM strike at 09:20; stops, locks and targets are on the premium.
+- Tested: iron fly, wide iron fly and iron condor sold at 09:21, out at 15:10 (15:05 on expiry), with a 50%-of-credit
+  stop or the stop plus a lock and target, on NIFTY and BANKNIFTY, expiry and other days: 24 tests, BH over all.
+- Before charges about 60% of non-expiry trades end positive, but the gross is about zero (-Rs 117 to +Rs 2 a trade) and
+  eight orders cost Rs 196-255 a trade: every non-expiry version loses Rs 217-344 a trade (NIFTY 958-959 trades,
+  BANKNIFTY 942-998). Expiry days earn between -Rs 37 and +Rs 309 a trade gross; the best, the NIFTY iron condor with the stop, made +Rs 28,163 on
+  249 expiries (bootstrap p 0.19, q 1.00), not enough.
+- **Data artefact caught before the holdout:** the rolling ATM +-10 book stops printing a wing once the index moves away,
+  and the first run sold such wings back at their stale last price (39% of BANKNIFTY monthly-era wing exits; a median 41
+  points too high against the bhavcopy close). That turned a loss into "+Rs 5.4 lakh, 70% win" for the BANKNIFTY wide
+  iron fly. Any study pricing strikes away from ATM on the rolling book must check how old each leg's last print is.
+- Not tested: overnight or multi-day selling, later entries, high-VIX-only days. Nothing changes on paper or live.

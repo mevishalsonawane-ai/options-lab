@@ -1,3 +1,47 @@
+# R103: can we get a high win rate AND profit by selling options? (22 Oct 2026)
+
+Boss asked: "Find strategies with best winrate and more profit", then "Can you enhance it". The study is
+`research/HUNT_R103_SELLING.md`; code, pre-registration and tables are in `research/hunt/r103_sell/`. Research only:
+nothing in `android/**` or `.github/**` changed and nothing changes on paper or live.
+
+## The answer
+
+* **No.** Selling the 09:20 straddle with protective wings (iron fly, wide iron fly, iron condor) and closing the same
+  day loses money on NIFTY and BANKNIFTY after costs. 0 of 24 versions passed (n 175-998 trades each, Aug 2021 - Jul 2026).
+* **The win rate is high before charges, as you hoped:** about 60% of normal-day trades end positive. But a day's decay
+  is about equal to the slippage, so the gross is near zero (-Rs 117 to +Rs 2 a trade), and the charges on eight orders
+  (Rs 196-255 a trade) make every normal-day version lose Rs 217-344 a trade.
+* **Expiry days are the closest:** the NIFTY iron condor with a 50% stop made +Rs 28,163 on 249 expiries (+Rs 113 a
+  trade, win 43%), but it is not significant (p 0.19) and lost in 2022 and 2023.
+* **A warning we caught in time:** the first run showed the BANKNIFTY wide iron fly at +Rs 5.4 lakh with a 70% win rate
+  and no losing month since Nov 2024. It was false: our option data stops printing a far strike once the index moves
+  away, and the test sold those wings back at their old, too-high prices. Fixed for every test before the final check;
+  both runs are published.
+
+## Why the Donchian books were not re-tuned
+
+R75 already tried 40 "less loss, more win rate" changes on them (VIX filter, narrow-opening skip, time windows, expiry
+skips, loss caps, sizing) and none passed; the repo froze them. Every new re-tune reads the same final window again, so
+it would prove nothing. They stay on paper as they are.
+
+## What it means for our trading
+
+* A high win rate is easy to get and says little: R48 (buying, 6.6 million setups) and now R103 (selling) both found
+  win rates of 60%+ that lose money once costs and the occasional big loss are counted.
+* With today's charges, a four-leg trade needs an edge of about Rs 200-250 a trade at 1 lot before it can make money.
+* Untested and still open: selling held overnight or for several days (an older test found the naked overnight straddle
+  positive in both of its years, with big worst days). It would need its own pre-registered study; the Jul-Oct 2026
+  holdout is still unread for selling.
+
+## Checks before pushing
+
+`python -m pytest research/hunt/r103_sell/tests -q` (14 tests: legs, fills, charges, stop / lock / target, the stale-leg
+repair, the look-ahead guard, the holdout lock), the R102 tests, `python -m pytest research/brain/tests -q`,
+`python -m research.brain.features catalog --check`, `python -m research.experiments.validate` (4 new r103 entries), an
+in-memory knowledge-pack build (0 errors), the CLAUDE.md secret grep, no raw data or caches in git, and a self-review.
+
+---
+
 # R102: Deep learn NIFTY and BANKNIFTY (22 Oct 2026)
 
 Boss asked: "Deep learn nifty and banknifty." The study is `research/DEEP_NIFTY_BANKNIFTY.md`; Jarvis's facts are in

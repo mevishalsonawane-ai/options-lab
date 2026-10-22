@@ -1,0 +1,39 @@
+id: r103-banknifty-other
+title: 'R103 defined-risk selling at 09:20 on BANKNIFTY non-expiry days: iron fly, wide iron fly, iron condor; stop, or stop
+  + lock + target; out 15:10 (15:05 expiry)'
+family: option-structure
+date: '2026-10-22'
+doc: research/HUNT_R103_SELLING.md
+hypothesis: 'Pre-registered (research/hunt/r103_sell/PREREG.md): selling the 09:20 ATM straddle with wings on BANKNIFTY non-expiry
+  days, closed the same day, earns more than its costs: bootstrap p < 0.05, BH q <= 0.10 over 24, positive in 3 of 4 years
+  2022-2025 and after 20 Nov 2024, >= 40 trades, positive without the best 5 days, worst month >= -Rs 13,000, positive at
+  2x slippage.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK, participants/bhav_index), copied 22
+  Oct 2026; held contracts via R51's store builder (Amendment A cleaning), Aug 2021 - 19 Oct 2026
+period:
+  design: Aug 2021 - 14 Jul 2026
+  holdout: 15 Jul - 19 Oct 2026, NOT read (no design passer)
+instruments:
+- BANKNIFTY
+features:
+- the index's ATM strike and the ATM straddle at 09:20 (no directional signal); stops, locks and targets on the position premium
+model_or_rule: '4-leg short structure: IF wings 1.0 x S, IFW wings 1.5 x S, IC shorts 0.5 x S and wings 1.0 x S beyond (S
+  = 09:20 straddle, 1-10 strikes); X1 stop at 50% of credit, X2 + lock 40/20 and target 60%'
+settings: research/hunt/r103_sell/r103engine.py, r103study.py; results/design.json, report.md
+prereg: research/hunt/r103_sell/PREREG.md
+variants_tried: 6
+results:
+  summary: '0 of 6 pass. iron fly X1: 998 trades, win 42%, net Rs -314,609 (bhavcopy-close check Rs -206,396), boot p 1.00;
+    iron fly X2: 998 trades, win 42%, net Rs -321,993 (bhavcopy-close check Rs -211,173), boot p 1.00; wide iron fly X1: 996
+    trades, win 47%, net Rs -317,010 (bhavcopy-close check Rs -197,275), boot p 1.00; wide iron fly X2: 996 trades, win 47%,
+    net Rs -327,075 (bhavcopy-close check Rs -204,826), boot p 1.00; iron condor X1: 942 trades, win 44%, net Rs -323,612
+    (bhavcopy-close check Rs -268,157), boot p 1.00; iron condor X2: 942 trades, win 46%, net Rs -297,368 (bhavcopy-close
+    check Rs -240,337), boot p 1.00. First run (before amendment 1, stale wing prices): 6 passed, best BANKNIFTY-N-IF-X1 Rs
+    439,888; an artefact.'
+  costs: dated charges on 8 orders (Rs 196-255 a trade), 'liq' slippage on every fill (5 bps + 1-4 ticks), next-minute fills,
+    1 lot (dated lots; 65 / 30 from Jan 2026)
+holdout_read: null
+verdict: rejected
+notes: 'Amendment 1 (before the holdout): legs with no print for 5 minutes re-priced from their own last IV; the first run
+  sold stale wings back at old prices. Amendment 2: run time only. Signal on the underlying (ATM of the index); nothing changes
+  paper or live.'
