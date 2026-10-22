@@ -67,8 +67,9 @@ def expiry_days(und: str, days: dict) -> set:
     return out
 
 
-def trades_for(part: str, mult: float = 1.0, only: set | None = None) -> dict:
-    """{test id: [trade, ...]} for every test (or the ids in `only`), one trade per eligible day."""
+def trades_for(part: str, mult: float = 1.0, only: set | None = None, mirror: bool = False) -> dict:
+    """{test id: [trade, ...]} for every test (or the ids in `only`), one trade per eligible day. mirror=True is the
+    BUY-side mirror of every test (Amendment 1, reported only)."""
     if part == "holdout" and not HOLDOUT_FLAG.exists():
         raise PermissionError("the holdout is locked: only `r103study.py holdout` may read it (PREREG.md)")
     out = defaultdict(list)
@@ -86,7 +87,7 @@ def trades_for(part: str, mult: float = 1.0, only: set | None = None) -> dict:
                 tid = test_id(uu, tt, s, x)
                 if only is not None and tid not in only:
                     continue
-                tr = E.run(D, u, d, s, x, t == "E", mult)
+                tr = E.run(D, u, d, s, x, t == "E", mult, mirror=mirror)
                 if tr is not None:
                     out[tid].append(tr)
     return out
@@ -151,12 +152,19 @@ def summary(tr: list, rng=None) -> dict:
     order = sorted(tr, key=lambda t: t["day"])
     daily = [t["net"] for t in order]
     best5 = float(np.sort(nets)[-5:].sum()) if len(nets) >= 5 else float(nets.sum())
+    margins = np.array([t.get("margin", 0.0) for t in tr], float)
+    mean_margin = float(margins.mean()) if len(margins) else 0.0
+    span_years = max((order[-1]["day"] - order[0]["day"]).days, 1) / 365.25
     out = dict(n=int(len(nets)), net=round(float(nets.sum())), mean=round(float(nets.mean()), 1),
                win=round(float((nets > 0).mean()), 3), avg_win=round(float(w.mean()), 1) if len(w) else 0.0,
                avg_loss=round(float(l.mean()), 1) if len(l) else 0.0,
                pf=round(float(w.sum() / -l.sum()), 3) if len(l) and l.sum() < 0 else None,
                worst_day=round(float(nets.min())), best_day=round(float(nets.max())), max_dd=round(max_dd(daily)),
                worst_month=round(min(months.values())), months_below_stop=int(sum(v < MONTH_STOP for v in months.values())),
+               days_below_stop=int((nets <= MONTH_STOP).sum()),                 # Amendment 1: one-day tail count
+               mean_margin=round(mean_margin),                                     # Amendment 1: stated estimate
+               rom=round(float(nets.sum()) / mean_margin, 4) if mean_margin else None,
+               rom_per_year=round(float(nets.sum()) / mean_margin / span_years, 4) if mean_margin else None,
                ex_best5=round(float(nets.sum() - best5)), by_year={int(y): round(v) for y, v in sorted(years.items())},
                post_regime_net=round(float(sum(t["net"] for t in tr if t["day"] >= NEW_REGIME))),
                post_regime_n=int(sum(t["day"] >= NEW_REGIME for t in tr)),
@@ -193,12 +201,14 @@ def design() -> dict:
     rng = np.random.default_rng(SEED)
     tr = trades_for("design")
     tr2 = trades_for("design", mult=2.0)
+    trb = trades_for("design", mirror=True)                                 # Amendment 1: the BUY-side mirror
     _save("trades_design", dict(tr))
+    _save("trades_design_buy", dict(trb))
     rows = []
     for tid in [test_id(*t) for t in TESTS]:
         s = summary(tr.get(tid, []), rng)
         s2 = summary(tr2.get(tid, []))
-        rows.append(dict(id=tid, design=s, slip2x_net=s2.get("net", 0)))
+        rows.append(dict(id=tid, design=s, slip2x_net=s2.get("net", 0), buy=summary(trb.get(tid, []))))
     qs = bh([r["design"].get("boot_p", 1.0) for r in rows])
     for r, q in zip(rows, qs):
         r["q_bh"] = round(q, 4)
@@ -229,13 +239,15 @@ def holdout() -> dict:
         print("holdout: no design passer, nothing read")
         return res
     tr = trades_for("holdout", only=passed)
+    trb = trades_for("holdout", only=passed, mirror=True)
     _save("trades_holdout", dict(tr))
+    _save("trades_holdout_buy", dict(trb))
     rows = []
     for tid in sorted(passed):
         s = summary(tr.get(tid, []))
         dsg = next(r["design"] for r in dz["tests"] if r["id"] == tid)
         ok = s.get("n", 0) > 0 and s["net"] > 0 and s["worst_month"] >= MONTH_STOP and abs(s["win"] - dsg["win"]) <= 0.15
-        rows.append(dict(id=tid, holdout=s, confirmed=bool(ok)))
+        rows.append(dict(id=tid, holdout=s, confirmed=bool(ok), buy=summary(trb.get(tid, []))))
     res = dict(part="holdout", read=True, confirmed=[r["id"] for r in rows if r["confirmed"]], tests=rows)
     _json(res, RESULTS / "holdout.json")
     print(f"holdout: confirmed {res['confirmed']}")

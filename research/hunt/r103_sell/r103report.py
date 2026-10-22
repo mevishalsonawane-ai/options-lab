@@ -21,30 +21,36 @@ def write() -> str:
     hmap = {r["id"]: r for r in (h or {}).get("tests", [])}
     out = ["# R103 report: defined-risk option selling (tables)", "",
            f"Design to {d['design_end']}; 1 lot; net after slippage and dated charges. Passed design: {d['passed'] or 'none'}.", "",
-           "| test | trades | win | net | per trade | avg win / loss | PF | worst day | worst month | max DD | 2022 / 2023 / 2024 / 2025 | after 20 Nov 2024 | ex best 5 | 2x slip | boot p | BH q | timing twin p | gates failed |",
-           "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+           "| test | trades | win | net | per trade | avg win / loss | PF | worst day | worst month | max DD | days <= -13k | margin (est.) | net / margin, a year | 2022 / 2023 / 2024 / 2025 | after 20 Nov 2024 | ex best 5 | 2x slip | boot p | BH q | timing twin p | gates failed | BUY mirror: win / net |",
+           "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in d["tests"]:
         s = r["design"]
+        b = r.get("buy", {})
         if not s.get("n"):
-            out.append(f"| {r['id']} | 0 | | | | | | | | | | | | | | | | no trades |")
+            out.append(f"| {r['id']} | 0 | | | | | | | | | | | | | | | | | | | no trades | |")
             continue
+        buy = f"{b['win'] * 100:.0f}% / {rs(b['net'])}" if b.get("n") else ""
         yrs = " / ".join(rs(s["by_year"].get(str(y), s["by_year"].get(y, 0))) for y in (2022, 2023, 2024, 2025))
         failed = ", ".join(k for k, v in r["gates"].items() if k != "pass" and not v) or "none"
         tw = r.get("timing_twin", {}).get("p_twin_ge_real")
+        rom = f"{s['rom_per_year'] * 100:+.1f}%" if s.get("rom_per_year") is not None else ""
         out.append(f"| {r['id']} | {s['n']:,} | {s['win'] * 100:.0f}% | {rs(s['net'])} | {rs(s['mean'])} | {rs(s['avg_win'])} / {rs(s['avg_loss'])} | "
-                   f"{s['pf'] if s['pf'] is not None else ''} | {rs(s['worst_day'])} | {rs(s['worst_month'])} | {rs(s['max_dd'])} | {yrs} | "
+                   f"{s['pf'] if s['pf'] is not None else ''} | {rs(s['worst_day'])} | {rs(s['worst_month'])} | {rs(s['max_dd'])} | "
+                   f"{s.get('days_below_stop', 0)} | {rs(s.get('mean_margin'))} | {rom} | {yrs} | "
                    f"{rs(s['post_regime_net'])} ({s['post_regime_n']}) | {rs(s['ex_best5'])} | {rs(r['slip2x_net'])} | {s.get('boot_p', 1):.3f} | {r['q_bh']:.3f} | "
-                   f"{'' if tw is None else f'{tw:.2f}'} | {failed} |")
+                   f"{'' if tw is None else f'{tw:.2f}'} | {failed} | {buy} |")
     if h is not None:
         out += ["", "## Holdout (15 Jul - 19 Oct 2026, read once)", ""]
         if not h.get("read"):
             out.append(h.get("note", "not read"))
         else:
-            out += ["| test | trades | win | net | worst day | worst month | confirmed |", "|---|---|---|---|---|---|---|"]
+            out += ["| test | trades | win | net | worst day | worst month | confirmed | BUY mirror: win / net |", "|---|---|---|---|---|---|---|---|"]
             for r in h["tests"]:
                 s = r["holdout"]
+                b = r.get("buy", {})
+                buy = f"{b['win'] * 100:.0f}% / {rs(b['net'])}" if b.get("n") else ""
                 out.append(f"| {r['id']} | {s.get('n', 0)} | {s.get('win', 0) * 100:.0f}% | {rs(s.get('net'))} | {rs(s.get('worst_day'))} | "
-                           f"{rs(s.get('worst_month'))} | {'yes' if r['confirmed'] else 'no'} |")
+                           f"{rs(s.get('worst_month'))} | {'yes' if r['confirmed'] else 'no'} | {buy} |")
     text = "\n".join(out) + "\n"
     (RES / "report.md").write_text(text)
     return text

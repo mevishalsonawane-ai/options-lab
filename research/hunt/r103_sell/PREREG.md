@@ -89,3 +89,33 @@ about its wing width x lot), and is not built here. Nothing changes in paper or 
 `research/hunt/r103_sell/tests/test_r103.py`: the leg pricing and charges on hand-made days, the stop / lock / target
 paths, the strike rounding and the 10-step cap, the look-ahead guard (nothing after a decision minute changes it), the
 holdout lock, BH and the bootstrap. Plus the repo's research checks.
+
+## Amendment 1 (22 Oct 2026, 15:05 IST; written after the lake copy and BEFORE the stores were built or any R103 number existed)
+
+Boss's brief for the write-up asks for columns the rules above do not produce. They are added as **report columns only**:
+no rule, exit, structure or gate changes, and the 24 tests and the BH family are unchanged.
+
+1. **Margin and return on margin.** There is no SPAN file in the lake, so margin is a stated estimate, the same for every
+   trade: **2.5% of the short legs' notional (2 x K0 x lot) on a normal day, 4.5% on the index's expiry day from 20 Nov
+   2024** (SEBI's 2% expiry-day ELM on short options, circular of 1 Oct 2024). The 2.5% is calibrated on Zerodha
+   Varsity's worked NIFTY iron condor (Rs 44,303 on two short legs of Rs 7.48 lakh notional each, 2.96%, with the
+   pre-2024 ELM) and a Nov 2024 forum example (Rs 35 lakh -> Rs 62 lakh on the same condor when the 2% ELM came in,
+   i.e. about 2.5% -> 4.5%). Reported: mean margin per trade and **net / mean margin**, in total and per calendar
+   year. It is a planning number; the broker's calculator decides on the day.
+2. **Days beyond the account stop:** the count of trades with net <= -Rs 13,000 (CLAUDE.md's monthly stop, applied to one
+   day as a tail count). Gate 6 (worst calendar month) is unchanged.
+3. **The BUY-side mirror**, reported beside every test and not gated: the same four legs with every sign reversed (a long
+   iron fly / long iron condor, a debit), the same 09:21 fills, slippage and dated charges, and the same exits read on the
+   debit instead of the credit (X1: stop at a loss of 50% of the debit; X2: that stop, lock armed at +40% out at +20%,
+   target +60%). Before charges the mirror's gross is the seller's gross with the sign flipped; after charges both sides
+   pay, so the pair shows what the structure itself does and what the costs do.
+4. **Data as copied (22 Oct 2026, about 14:55 IST):** `index_1m_<UND>_<YEAR>.parquet` (NIFTY 2017-2026, BANKNIFTY
+   2021-2026), `opt_<UND>_WEEK_2021..2026.parquet`, `participants/bhav_index/bhav_index_*.parquet` (the expiry calendar),
+   `index_daily/index_daily.parquet` (for the descriptive tail table below). rclone was not in the session image; the
+   Ubuntu package (rclone 1.60.1) was installed and used with the session's remote. Nothing else was read.
+5. **A descriptive table, not a test** (for `research/DEEP_OPTIONS_SELLING.md`): the largest close-to-09:20 index moves
+   in the option lake and what the naked 09:20 ATM short straddle and the IF (held to the square-off, no stop) lost on
+   them, computed over the whole lake AFTER the holdout read, so the holdout stays unread until then. The pre-Aug-2021
+   crashes are described from the daily index and the median straddle only (an estimate, labelled).
+
+Timing twins (reported, not gated) stay as written. The random-day twin remains the rule itself.
