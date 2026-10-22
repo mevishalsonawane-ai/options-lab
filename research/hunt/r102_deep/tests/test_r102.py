@@ -281,3 +281,34 @@ def test_facts_file_schema_and_numbers():
         missing = [x for x in BP.numbers(f["text"]) if x not in BP.source_numbers(f["src"], cache)]
         assert not missing, f"{f['id']}: {missing} not in {f['src']}"
     assert BP.checked(facts, FACTS, {}, "index fact") == []
+    pack, shared = BP.Pack(), []
+    assert BP.add_index_facts(pack, shared) == []
+    assert len(pack.facts) == len(facts) == len(shared)
+    f = pack.facts[0]
+    assert f["kind"] == "index_fact" and f["n"] > 0 and f["w"] == 2.5 and "n = " in f["text"]
+    assert shared[0]["k"] == "research" and shared[0]["n"] == f["n"] and shared[0]["id"].startswith("index:")
+
+
+def test_index_facts_loader_rejects_bad_cards(tmp_path, monkeypatch):
+    import yaml
+    sys.path.insert(0, str(ROOT / "research" / "knowledge"))
+    import build_pack as BP
+    monkeypatch.setattr(BP, "RESEARCH", tmp_path)
+    (tmp_path / "knowledge").mkdir()
+    doc = tmp_path / "doc.md"
+    doc.write_text("# x\nThe range is 1.23% on 400 days.\n")
+    src = doc.relative_to(ROOT).as_posix() if str(doc).startswith(str(ROOT)) else str(doc)
+    monkeypatch.setattr(BP, "ROOT", Path("/"))
+    cards = [
+        {"id": "ok", "inst": "NIFTY", "kind": "descriptive", "n": 400, "period": "2021-2026", "text": "The range is 1.23% on 400 days.", "src": str(doc).lstrip("/"), "sec": "x"},
+        {"id": "bad-n", "inst": "NIFTY", "kind": "descriptive", "n": 0, "period": "p", "text": "Nothing.", "src": str(doc).lstrip("/"), "sec": "x"},
+        {"id": "bad-num", "inst": "BOTH", "kind": "descriptive", "n": 5, "period": "p", "text": "The range is 9.99%.", "src": str(doc).lstrip("/"), "sec": "x"},
+        {"id": "bad-inst", "inst": "GOLD", "kind": "rule", "n": 5, "period": "p", "text": "No numbers.", "src": str(doc).lstrip("/"), "sec": "x", "verdict": "maybe"},
+    ]
+    (tmp_path / "knowledge" / "index_facts.yaml").write_text(yaml.safe_dump(cards))
+    pack, shared = BP.Pack(), []
+    errors = BP.add_index_facts(pack, shared)
+    assert any("bad-n" in e for e in errors) and any("bad-num" in e for e in errors) and any("bad-inst" in e for e in errors)
+    assert [f["id"] for f in pack.facts] == ["index.ok", "index.bad-num", "index.bad-inst"]   # a bad n is skipped, the rest are reported
+    monkeypatch.setattr(BP, "RESEARCH", tmp_path / "none")
+    assert BP.add_index_facts(BP.Pack(), []) == []

@@ -106,3 +106,11 @@ Disclosed, not hidden:
    which keeps both series' autocorrelation and breaks only the link. The B1 effects themselves are unchanged.
 3. The B2 wording "32 minus the 4 slots ... no: 36" means 36 tests: 4 participant signals x level / change x 2 indices
    x 2 horizons = 32, plus the FPI cash sign x 2 indices x 2 horizons = 4. Total stays 70.
+
+## Amendment 2 (22 Oct 2026, after the holdout read; changes no verdict)
+
+B4's twins were circular shifts of the fade signal. After amendment 1 the signal inside each B4 test is one-sided
+(every gap-up day is faded the same way), so a shifted twin is the signal itself and every twin p came out 1.00. B4
+now uses the same twins as B3: random day sets of the same size, the fade sign applied the same way. None of the 8 B4
+tests passed design under either twin, so no B4 rule reached the holdout; the holdout file keeps the B4 rows as they
+were read (effects and CIs only, their twin p of 1.00 is void). The design file is regenerated with the new twins.

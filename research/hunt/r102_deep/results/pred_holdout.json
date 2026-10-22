@@ -1,0 +1,1857 @@
+{
+ "part": "holdout",
+ "n_tests": 70,
+ "twins": 1000,
+ "seed": 102,
+ "bh_q": 0.1,
+ "passed_design": [
+  "B1-BANKNIFTY-1d",
+  "B1-NIFTY-1d",
+  "B1-NIFTY-1h",
+  "B1-NIFTY-1m",
+  "B2-BANKNIFTY-Client-fut-change-r1",
+  "B2-BANKNIFTY-FII-fut-change-r1",
+  "B2-NIFTY-Client-fut-change-r1",
+  "B2-NIFTY-FII-opt-level-r1"
+ ],
+ "tests": [
+  {
+   "n": 24991,
+   "effect_bps": 0.084,
+   "ci95_bps": [
+    0.055,
+    0.113
+   ],
+   "t": 5.73,
+   "hit_rate": 0.4945,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 24991,
+     "effect_bps": 0.084
+    }
+   },
+   "p_twin": 0.0,
+   "twin_sd_bps": 0.016,
+   "id": "B1-NIFTY-1m",
+   "group": "B1",
+   "und": "NIFTY",
+   "horizon": "1m",
+   "rule": "follow the previous 1m bar's sign (negative effect = reversal)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-19",
+   "q_bh": 0.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": true,
+   "confirmed": true
+  },
+  {
+   "n": 4891,
+   "effect_bps": 0.033,
+   "ci95_bps": [
+    -0.114,
+    0.18
+   ],
+   "t": 0.44,
+   "hit_rate": 0.4766,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 4891,
+     "effect_bps": 0.033
+    }
+   },
+   "p_twin": 0.686,
+   "twin_sd_bps": 0.081,
+   "id": "B1-NIFTY-5m",
+   "group": "B1",
+   "und": "NIFTY",
+   "horizon": "5m",
+   "rule": "follow the previous 5m bar's sign (negative effect = reversal)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 1541,
+   "effect_bps": -0.12,
+   "ci95_bps": [
+    -0.588,
+    0.349
+   ],
+   "t": -0.5,
+   "hit_rate": 0.4951,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 1541,
+     "effect_bps": -0.12
+    }
+   },
+   "p_twin": 0.603,
+   "twin_sd_bps": 0.237,
+   "id": "B1-NIFTY-15m",
+   "group": "B1",
+   "und": "NIFTY",
+   "horizon": "15m",
+   "rule": "follow the previous 15m bar's sign (negative effect = reversal)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 268,
+   "effect_bps": 0.42,
+   "ci95_bps": [
+    -1.706,
+    2.545
+   ],
+   "t": 0.39,
+   "hit_rate": 0.4627,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 268,
+     "effect_bps": 0.42
+    }
+   },
+   "p_twin": 0.691,
+   "twin_sd_bps": 1.103,
+   "id": "B1-NIFTY-1h",
+   "group": "B1",
+   "und": "NIFTY",
+   "horizon": "1h",
+   "rule": "follow the previous 1h bar's sign (negative effect = reversal)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": true,
+   "confirmed": false
+  },
+  {
+   "n": 65,
+   "effect_bps": -9.436,
+   "ci95_bps": [
+    -27.094,
+    8.221
+   ],
+   "t": -1.05,
+   "hit_rate": 0.4769,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 65,
+     "effect_bps": -9.436
+    }
+   },
+   "p_twin": 0.433,
+   "twin_sd_bps": 10.587,
+   "id": "B1-NIFTY-1d",
+   "group": "B1",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "follow the previous 1d return's sign (negative effect = reversal)",
+   "first_day": "2026-07-17",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": true,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B1-NIFTY-1w",
+   "group": "B1",
+   "und": "NIFTY",
+   "horizon": "1w",
+   "rule": "follow the previous 1w return's sign (negative effect = reversal)",
+   "first_day": "2026-07-31",
+   "last_day": "2026-10-23",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 24991,
+   "effect_bps": 0.064,
+   "ci95_bps": [
+    0.027,
+    0.1
+   ],
+   "t": 3.37,
+   "hit_rate": 0.4829,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 24991,
+     "effect_bps": 0.064
+    }
+   },
+   "p_twin": 0.002,
+   "twin_sd_bps": 0.02,
+   "id": "B1-BANKNIFTY-1m",
+   "group": "B1",
+   "und": "BANKNIFTY",
+   "horizon": "1m",
+   "rule": "follow the previous 1m bar's sign (negative effect = reversal)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-19",
+   "q_bh": 0.07,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 4891,
+   "effect_bps": 0.068,
+   "ci95_bps": [
+    -0.112,
+    0.248
+   ],
+   "t": 0.74,
+   "hit_rate": 0.4729,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 4891,
+     "effect_bps": 0.068
+    }
+   },
+   "p_twin": 0.475,
+   "twin_sd_bps": 0.099,
+   "id": "B1-BANKNIFTY-5m",
+   "group": "B1",
+   "und": "BANKNIFTY",
+   "horizon": "5m",
+   "rule": "follow the previous 5m bar's sign (negative effect = reversal)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 1541,
+   "effect_bps": -0.038,
+   "ci95_bps": [
+    -0.609,
+    0.533
+   ],
+   "t": -0.13,
+   "hit_rate": 0.4964,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 1541,
+     "effect_bps": -0.038
+    }
+   },
+   "p_twin": 0.855,
+   "twin_sd_bps": 0.278,
+   "id": "B1-BANKNIFTY-15m",
+   "group": "B1",
+   "und": "BANKNIFTY",
+   "horizon": "15m",
+   "rule": "follow the previous 15m bar's sign (negative effect = reversal)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 268,
+   "effect_bps": -0.166,
+   "ci95_bps": [
+    -2.669,
+    2.337
+   ],
+   "t": -0.13,
+   "hit_rate": 0.4328,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 268,
+     "effect_bps": -0.166
+    }
+   },
+   "p_twin": 0.867,
+   "twin_sd_bps": 1.282,
+   "id": "B1-BANKNIFTY-1h",
+   "group": "B1",
+   "und": "BANKNIFTY",
+   "horizon": "1h",
+   "rule": "follow the previous 1h bar's sign (negative effect = reversal)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 65,
+   "effect_bps": -24.592,
+   "ci95_bps": [
+    -41.903,
+    -7.281
+   ],
+   "t": -2.78,
+   "hit_rate": 0.3538,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 65,
+     "effect_bps": -24.592
+    }
+   },
+   "p_twin": 0.07,
+   "twin_sd_bps": 12.954,
+   "id": "B1-BANKNIFTY-1d",
+   "group": "B1",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "follow the previous 1d return's sign (negative effect = reversal)",
+   "first_day": "2026-07-17",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": true,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B1-BANKNIFTY-1w",
+   "group": "B1",
+   "und": "BANKNIFTY",
+   "horizon": "1w",
+   "rule": "follow the previous 1w return's sign (negative effect = reversal)",
+   "first_day": "2026-07-31",
+   "last_day": "2026-10-23",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": 6.629,
+   "ci95_bps": [
+    -10.453,
+    23.712
+   ],
+   "t": 0.76,
+   "hit_rate": 0.6032,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": 6.629
+    }
+   },
+   "p_twin": 0.534,
+   "twin_sd_bps": 6.365,
+   "id": "B2-NIFTY-FII-fut-level-r1",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FII-fut-level (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": 13.481,
+   "ci95_bps": [
+    -26.436,
+    53.399
+   ],
+   "t": 0.66,
+   "hit_rate": 0.5806,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": 13.481
+    }
+   },
+   "p_twin": 0.694,
+   "twin_sd_bps": 23.298,
+   "id": "B2-NIFTY-FII-fut-level-r5",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FII-fut-level (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -8.828,
+   "ci95_bps": [
+    -25.848,
+    8.193
+   ],
+   "t": -1.02,
+   "hit_rate": 0.4762,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -8.828
+    }
+   },
+   "p_twin": 0.36,
+   "twin_sd_bps": 7.6,
+   "id": "B2-NIFTY-FII-fut-change-r1",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FII-fut-change (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": 1.232,
+   "ci95_bps": [
+    -38.827,
+    41.292
+   ],
+   "t": 0.06,
+   "hit_rate": 0.5645,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": 1.232
+    }
+   },
+   "p_twin": 0.975,
+   "twin_sd_bps": 19.748,
+   "id": "B2-NIFTY-FII-fut-change-r5",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FII-fut-change (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -9.661,
+   "ci95_bps": [
+    -26.654,
+    7.331
+   ],
+   "t": -1.11,
+   "hit_rate": 0.3968,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -9.661
+    }
+   },
+   "p_twin": 1.0,
+   "twin_sd_bps": 0.0,
+   "id": "B2-NIFTY-Client-fut-level-r1",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of Client-fut-level (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -43.549,
+   "ci95_bps": [
+    -82.09,
+    -5.008
+   ],
+   "t": -2.21,
+   "hit_rate": 0.2903,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -43.549
+    }
+   },
+   "p_twin": 1.0,
+   "twin_sd_bps": 0.0,
+   "id": "B2-NIFTY-Client-fut-level-r5",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of Client-fut-level (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": 3.584,
+   "ci95_bps": [
+    -13.555,
+    20.722
+   ],
+   "t": 0.41,
+   "hit_rate": 0.5556,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": 3.584
+    }
+   },
+   "p_twin": 0.656,
+   "twin_sd_bps": 8.541,
+   "id": "B2-NIFTY-Client-fut-change-r1",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of Client-fut-change (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": true,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -15.579,
+   "ci95_bps": [
+    -55.448,
+    24.29
+   ],
+   "t": -0.77,
+   "hit_rate": 0.5,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -15.579
+    }
+   },
+   "p_twin": 0.593,
+   "twin_sd_bps": 21.83,
+   "id": "B2-NIFTY-Client-fut-change-r5",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of Client-fut-change (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -10.35,
+   "ci95_bps": [
+    -27.317,
+    6.618
+   ],
+   "t": -1.2,
+   "hit_rate": 0.4286,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -10.35
+    }
+   },
+   "p_twin": 0.156,
+   "twin_sd_bps": 8.074,
+   "id": "B2-NIFTY-Pro-fut-level-r1",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of Pro-fut-level (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -28.484,
+   "ci95_bps": [
+    -67.902,
+    10.934
+   ],
+   "t": -1.42,
+   "hit_rate": 0.4194,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -28.484
+    }
+   },
+   "p_twin": 0.566,
+   "twin_sd_bps": 44.179,
+   "id": "B2-NIFTY-Pro-fut-level-r5",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of Pro-fut-level (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -12.242,
+   "ci95_bps": [
+    -29.131,
+    4.647
+   ],
+   "t": -1.42,
+   "hit_rate": 0.4286,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -12.242
+    }
+   },
+   "p_twin": 0.116,
+   "twin_sd_bps": 7.714,
+   "id": "B2-NIFTY-Pro-fut-change-r1",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of Pro-fut-change (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -14.476,
+   "ci95_bps": [
+    -54.372,
+    25.419
+   ],
+   "t": -0.71,
+   "hit_rate": 0.5161,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -14.476
+    }
+   },
+   "p_twin": 0.454,
+   "twin_sd_bps": 17.562,
+   "id": "B2-NIFTY-Pro-fut-change-r5",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of Pro-fut-change (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": 7.519,
+   "ci95_bps": [
+    -9.54,
+    24.579
+   ],
+   "t": 0.86,
+   "hit_rate": 0.5714,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": 7.519
+    }
+   },
+   "p_twin": 0.737,
+   "twin_sd_bps": 2.37,
+   "id": "B2-NIFTY-FII-opt-level-r1",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FII-opt-level (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": true,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": 35.976,
+   "ci95_bps": [
+    -3.054,
+    75.006
+   ],
+   "t": 1.81,
+   "hit_rate": 0.6774,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": 35.976
+    }
+   },
+   "p_twin": 0.765,
+   "twin_sd_bps": 5.904,
+   "id": "B2-NIFTY-FII-opt-level-r5",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FII-opt-level (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -0.092,
+   "ci95_bps": [
+    -17.254,
+    17.07
+   ],
+   "t": -0.01,
+   "hit_rate": 0.4762,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -0.092
+    }
+   },
+   "p_twin": 0.985,
+   "twin_sd_bps": 9.118,
+   "id": "B2-NIFTY-FII-opt-change-r1",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FII-opt-change (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -13.884,
+   "ci95_bps": [
+    -53.793,
+    26.025
+   ],
+   "t": -0.68,
+   "hit_rate": 0.4194,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -13.884
+    }
+   },
+   "p_twin": 0.621,
+   "twin_sd_bps": 9.047,
+   "id": "B2-NIFTY-FII-opt-change-r5",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FII-opt-change (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": 4.29,
+   "ci95_bps": [
+    -13.049,
+    21.63
+   ],
+   "t": 0.48,
+   "hit_rate": 0.5645,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": 4.29
+    }
+   },
+   "p_twin": 0.639,
+   "twin_sd_bps": 8.521,
+   "id": "B2-NIFTY-FPI-cash-sign-r1",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FPI-cash-sign (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 61,
+   "effect_bps": -10.638,
+   "ci95_bps": [
+    -51.081,
+    29.806
+   ],
+   "t": -0.52,
+   "hit_rate": 0.4918,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 61,
+     "effect_bps": -10.638
+    }
+   },
+   "p_twin": 0.575,
+   "twin_sd_bps": 26.457,
+   "id": "B2-NIFTY-FPI-cash-sign-r5",
+   "group": "B2",
+   "und": "NIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FPI-cash-sign (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -1.381,
+   "ci95_bps": [
+    -20.001,
+    17.24
+   ],
+   "t": -0.15,
+   "hit_rate": 0.4921,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -1.381
+    }
+   },
+   "p_twin": 0.915,
+   "twin_sd_bps": 6.087,
+   "id": "B2-BANKNIFTY-FII-fut-level-r1",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FII-fut-level (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": 0.195,
+   "ci95_bps": [
+    -34.435,
+    34.826
+   ],
+   "t": 0.01,
+   "hit_rate": 0.4516,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": 0.195
+    }
+   },
+   "p_twin": 1.0,
+   "twin_sd_bps": 21.654,
+   "id": "B2-BANKNIFTY-FII-fut-level-r5",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FII-fut-level (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -14.103,
+   "ci95_bps": [
+    -32.393,
+    4.187
+   ],
+   "t": -1.51,
+   "hit_rate": 0.4286,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -14.103
+    }
+   },
+   "p_twin": 0.082,
+   "twin_sd_bps": 8.068,
+   "id": "B2-BANKNIFTY-FII-fut-change-r1",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FII-fut-change (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": true,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -5.221,
+   "ci95_bps": [
+    -39.826,
+    29.385
+   ],
+   "t": -0.3,
+   "hit_rate": 0.5,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -5.221
+    }
+   },
+   "p_twin": 0.771,
+   "twin_sd_bps": 15.392,
+   "id": "B2-BANKNIFTY-FII-fut-change-r5",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FII-fut-change (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -6.576,
+   "ci95_bps": [
+    -25.128,
+    11.975
+   ],
+   "t": -0.69,
+   "hit_rate": 0.4127,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -6.576
+    }
+   },
+   "p_twin": 1.0,
+   "twin_sd_bps": 0.0,
+   "id": "B2-BANKNIFTY-Client-fut-level-r1",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of Client-fut-level (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -32.291,
+   "ci95_bps": [
+    -65.96,
+    1.378
+   ],
+   "t": -1.88,
+   "hit_rate": 0.4194,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -32.291
+    }
+   },
+   "p_twin": 1.0,
+   "twin_sd_bps": 0.0,
+   "id": "B2-BANKNIFTY-Client-fut-level-r5",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of Client-fut-level (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": 2.674,
+   "ci95_bps": [
+    -15.938,
+    21.286
+   ],
+   "t": 0.28,
+   "hit_rate": 0.4762,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": 2.674
+    }
+   },
+   "p_twin": 0.659,
+   "twin_sd_bps": 9.11,
+   "id": "B2-BANKNIFTY-Client-fut-change-r1",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of Client-fut-change (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": true,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -6.708,
+   "ci95_bps": [
+    -41.297,
+    27.882
+   ],
+   "t": -0.38,
+   "hit_rate": 0.5,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -6.708
+    }
+   },
+   "p_twin": 0.745,
+   "twin_sd_bps": 20.927,
+   "id": "B2-BANKNIFTY-Client-fut-change-r5",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of Client-fut-change (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -9.74,
+   "ci95_bps": [
+    -28.205,
+    8.725
+   ],
+   "t": -1.03,
+   "hit_rate": 0.4762,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -9.74
+    }
+   },
+   "p_twin": 0.185,
+   "twin_sd_bps": 6.444,
+   "id": "B2-BANKNIFTY-Pro-fut-level-r1",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of Pro-fut-level (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -33.299,
+   "ci95_bps": [
+    -66.906,
+    0.308
+   ],
+   "t": -1.94,
+   "hit_rate": 0.4516,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -33.299
+    }
+   },
+   "p_twin": 0.192,
+   "twin_sd_bps": 25.948,
+   "id": "B2-BANKNIFTY-Pro-fut-level-r5",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of Pro-fut-level (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -10.604,
+   "ci95_bps": [
+    -29.04,
+    7.832
+   ],
+   "t": -1.13,
+   "hit_rate": 0.5397,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -10.604
+    }
+   },
+   "p_twin": 0.202,
+   "twin_sd_bps": 8.927,
+   "id": "B2-BANKNIFTY-Pro-fut-change-r1",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of Pro-fut-change (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -10.332,
+   "ci95_bps": [
+    -44.865,
+    24.202
+   ],
+   "t": -0.59,
+   "hit_rate": 0.4839,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -10.332
+    }
+   },
+   "p_twin": 0.459,
+   "twin_sd_bps": 14.242,
+   "id": "B2-BANKNIFTY-Pro-fut-change-r5",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of Pro-fut-change (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": 2.216,
+   "ci95_bps": [
+    -16.4,
+    20.831
+   ],
+   "t": 0.23,
+   "hit_rate": 0.5556,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": 2.216
+    }
+   },
+   "p_twin": 0.918,
+   "twin_sd_bps": 3.238,
+   "id": "B2-BANKNIFTY-FII-opt-level-r1",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FII-opt-level (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": 26.104,
+   "ci95_bps": [
+    -7.901,
+    60.11
+   ],
+   "t": 1.5,
+   "hit_rate": 0.5806,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": 26.104
+    }
+   },
+   "p_twin": 0.723,
+   "twin_sd_bps": 5.855,
+   "id": "B2-BANKNIFTY-FII-opt-level-r5",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FII-opt-level (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 63,
+   "effect_bps": -10.059,
+   "ci95_bps": [
+    -28.513,
+    8.396
+   ],
+   "t": -1.07,
+   "hit_rate": 0.4286,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 63,
+     "effect_bps": -10.059
+    }
+   },
+   "p_twin": 0.258,
+   "twin_sd_bps": 8.644,
+   "id": "B2-BANKNIFTY-FII-opt-change-r1",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FII-opt-change (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": -12.96,
+   "ci95_bps": [
+    -47.437,
+    21.518
+   ],
+   "t": -0.74,
+   "hit_rate": 0.4839,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": -12.96
+    }
+   },
+   "p_twin": 0.55,
+   "twin_sd_bps": 9.683,
+   "id": "B2-BANKNIFTY-FII-opt-change-r5",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FII-opt-change (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 62,
+   "effect_bps": 11.773,
+   "ci95_bps": [
+    -6.861,
+    30.406
+   ],
+   "t": 1.24,
+   "hit_rate": 0.5806,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "effect_bps": 11.773
+    }
+   },
+   "p_twin": 0.149,
+   "twin_sd_bps": 7.707,
+   "id": "B2-BANKNIFTY-FPI-cash-sign-r1",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "go with the sign of FPI-cash-sign (participant file of day t; return from close t to close t+1)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-13",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 61,
+   "effect_bps": 2.085,
+   "ci95_bps": [
+    -32.946,
+    37.117
+   ],
+   "t": 0.12,
+   "hit_rate": 0.459,
+   "years_same_sign": "1/1",
+   "by_year": {
+    "2026": {
+     "n": 61,
+     "effect_bps": 2.085
+    }
+   },
+   "p_twin": 0.89,
+   "twin_sd_bps": 20.565,
+   "id": "B2-BANKNIFTY-FPI-cash-sign-r5",
+   "group": "B2",
+   "und": "BANKNIFTY",
+   "horizon": "5d",
+   "rule": "go with the sign of FPI-cash-sign (participant file of day t; return from close t to close t+5)",
+   "first_day": "2026-07-15",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": true,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-NIFTY-Mon",
+   "group": "B3",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "Mon close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-NIFTY-Tue",
+   "group": "B3",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "Tue close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-NIFTY-Wed",
+   "group": "B3",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "Wed close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 14,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-NIFTY-Thu",
+   "group": "B3",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "Thu close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-NIFTY-Fri",
+   "group": "B3",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "Fri close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-NIFTY-expiry",
+   "group": "B3",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "expiry-day close-to-close return",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 5,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-NIFTY-us-event",
+   "group": "B3",
+   "und": "NIFTY",
+   "horizon": "1d",
+   "rule": "the NSE session after a FOMC decision or a US CPI print",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-15",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-BANKNIFTY-Mon",
+   "group": "B3",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "Mon close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-BANKNIFTY-Tue",
+   "group": "B3",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "Tue close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-BANKNIFTY-Wed",
+   "group": "B3",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "Wed close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 14,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-BANKNIFTY-Thu",
+   "group": "B3",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "Thu close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-BANKNIFTY-Fri",
+   "group": "B3",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "Fri close-to-close return (sign = direction)",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 3,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-BANKNIFTY-expiry",
+   "group": "B3",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "expiry-day close-to-close return",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-19",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 5,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B3-BANKNIFTY-us-event",
+   "group": "B3",
+   "und": "BANKNIFTY",
+   "horizon": "1d",
+   "rule": "the NSE session after a FOMC decision or a US CPI print",
+   "first_day": "2026-07-16",
+   "last_day": "2026-10-15",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 10,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B4-NIFTY-gapup0.3",
+   "group": "B4",
+   "und": "NIFTY",
+   "horizon": "open-to-close",
+   "rule": "fade a gap up of at least 0.3% (positive effect = the day moves back toward the previous close)",
+   "first_day": "2026-07-27",
+   "last_day": "2026-10-12",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 11,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B4-NIFTY-gapdown0.3",
+   "group": "B4",
+   "und": "NIFTY",
+   "horizon": "open-to-close",
+   "rule": "fade a gap down of at least 0.3% (positive effect = the day moves back toward the previous close)",
+   "first_day": "2026-07-20",
+   "last_day": "2026-10-07",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 5,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B4-NIFTY-gapup0.6",
+   "group": "B4",
+   "und": "NIFTY",
+   "horizon": "open-to-close",
+   "rule": "fade a gap up of at least 0.6% (positive effect = the day moves back toward the previous close)",
+   "first_day": "2026-07-27",
+   "last_day": "2026-09-15",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 4,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B4-NIFTY-gapdown0.6",
+   "group": "B4",
+   "und": "NIFTY",
+   "horizon": "open-to-close",
+   "rule": "fade a gap down of at least 0.6% (positive effect = the day moves back toward the previous close)",
+   "first_day": "2026-07-24",
+   "last_day": "2026-09-24",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.25,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 11,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B4-BANKNIFTY-gapup0.3",
+   "group": "B4",
+   "und": "BANKNIFTY",
+   "horizon": "open-to-close",
+   "rule": "fade a gap up of at least 0.3% (positive effect = the day moves back toward the previous close)",
+   "first_day": "2026-07-27",
+   "last_day": "2026-10-09",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 13,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B4-BANKNIFTY-gapdown0.3",
+   "group": "B4",
+   "und": "BANKNIFTY",
+   "horizon": "open-to-close",
+   "rule": "fade a gap down of at least 0.3% (positive effect = the day moves back toward the previous close)",
+   "first_day": "2026-07-20",
+   "last_day": "2026-09-29",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 3,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B4-BANKNIFTY-gapup0.6",
+   "group": "B4",
+   "und": "BANKNIFTY",
+   "horizon": "open-to-close",
+   "rule": "fade a gap up of at least 0.6% (positive effect = the day moves back toward the previous close)",
+   "first_day": "2026-07-27",
+   "last_day": "2026-10-05",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  },
+  {
+   "n": 6,
+   "effect_bps": null,
+   "p_twin": null,
+   "id": "B4-BANKNIFTY-gapdown0.6",
+   "group": "B4",
+   "und": "BANKNIFTY",
+   "horizon": "open-to-close",
+   "rule": "fade a gap down of at least 0.6% (positive effect = the day moves back toward the previous close)",
+   "first_day": "2026-07-20",
+   "last_day": "2026-09-24",
+   "q_bh": 1.0,
+   "cost_bps_one_atm_option": 1.54,
+   "beats_cost": false,
+   "passed_design": false,
+   "confirmed": false
+  }
+ ],
+ "confirmed": [
+  "B1-NIFTY-1m"
+ ],
+ "note": "read once on 2026-10-22; keys renamed afterwards (pass_design dropped, passed_design = the design verdicts), no statistic recomputed; B4 twin p is void (PREREG amendment 2)"
+}

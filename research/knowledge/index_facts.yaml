@@ -1,0 +1,284 @@
+# How NIFTY and BANKNIFTY behave: Jarvis's field guide from R102 (22 Oct 2026, research/DEEP_NIFTY_BANKNIFTY.md).
+# One card per fact. Required: id, inst (NIFTY / BANKNIFTY / BOTH), kind (descriptive / rule / contract), n (the sample
+# size), period, text, src, sec. Optional: topics, tod, verdict (rules). build_pack.py checks every number in `text`
+# against `src`; a mismatch fails the build. Descriptive cards are context only: "descriptive, not a trading rule".
+
+- id: bn-is-nifty-times-1-16
+  inst: BOTH
+  kind: descriptive
+  topics: [breadth, direction]
+  n: 5086
+  period: "Jan 2006 - 14 Jul 2026"
+  text: "BANKNIFTY moves with NIFTY: daily correlation 0.877 and beta 1.157 over 5,086 days (2006-2026); on 5-minute bars 0.842 and 1.094 (89,575 bars, Aug 2021 - Jul 2026). The five big banks are 62.98% of BANKNIFTY and 29.52% of NIFTY 50."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "1.4 Correlation and beta from our lake"
+
+- id: nifty-daily-sd-by-year
+  inst: NIFTY
+  kind: descriptive
+  topics: [vix]
+  n: 5087
+  period: "Jan 2006 - 14 Jul 2026"
+  text: "NIFTY's daily return sd is 1.316% over 2006-2026 (5,087 days; 20.9% annualised), 0.744% in 2025 (249 days) and 1.051% in 2026 to 14 Jul (130 days). Up on 53.7% of days; a move of 1% or more on 29.8% of days."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.1 Daily returns"
+
+- id: bn-daily-sd-by-year
+  inst: BANKNIFTY
+  kind: descriptive
+  topics: [vix]
+  n: 5086
+  period: "Jan 2006 - 14 Jul 2026"
+  text: "BANKNIFTY's daily return sd is 1.734% over 2006-2026 (5,086 days; 27.5% annualised), 0.789% in 2025 (249 days) and 1.356% in 2026 to 14 Jul (130 days). Up on 52.8% of days; a move of 1% or more on 41.1% of days, 2% or more on 17.4%."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.1 Daily returns"
+
+- id: drift-is-overnight
+  inst: BOTH
+  kind: descriptive
+  topics: [overnight, gap]
+  n: 5087
+  period: "Jan 2006 - 14 Jul 2026"
+  text: "The drift is overnight: NIFTY's close-to-close mean is +0.051% a day and its open-to-close mean is -0.035% (5,087 days); BANKNIFTY +0.065% and -0.039% (5,086 days). An intraday-only trader does not get the drift."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.1 Daily returns"
+
+- id: day-range-and-when-made
+  inst: BOTH
+  kind: descriptive
+  topics: [time-of-day]
+  n: 2288
+  period: "NIFTY Apr 2017 - 14 Jul 2026 (2,288 days); BANKNIFTY Sep 2021 - 14 Jul 2026 (1,185 days)"
+  text: "The median day range is 0.907% on NIFTY (2,288 days) and 1.131% on BANKNIFTY (1,185 days). By 10:30 the day has made a median 61% (NIFTY) / 65% (BANKNIFTY) of its final range, by 13:00 82% / 87%; the range is already complete at 14:30 on 44% / 53% of days."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.3 The day's shape"
+
+- id: first-minutes-are-8x-midday
+  inst: BOTH
+  kind: descriptive
+  topics: [time-of-day]
+  tod: morning
+  n: 2288
+  period: "NIFTY Apr 2017 - 14 Jul 2026 (2,288 days); BANKNIFTY Sep 2021 - 14 Jul 2026 (1,185 days)"
+  text: "The 09:15 minute alone spans a median 0.213% on NIFTY and 0.295% on BANKNIFTY; the first five minutes 0.271% / 0.377%. Minute for minute, 09:15-09:30 moves 2.32 / 3.09 bp and 10:30-13:00 moves 0.29 / 0.38 bp: about 8x (2,288 / 1,185 days)."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.3 The day's shape"
+
+- id: open-is-the-extreme
+  inst: BOTH
+  kind: descriptive
+  topics: [time-of-day, pattern]
+  tod: morning
+  n: 2288
+  period: "NIFTY Apr 2017 - 14 Jul 2026 (2,288 days); BANKNIFTY Sep 2021 - 14 Jul 2026 (1,185 days)"
+  text: "The open (first five minutes) is the day's high or low on 41% of NIFTY days (2,288) and 46% of BANKNIFTY days (1,185). The day's high falls in the first 15 minutes 28.7% of the time and in the last hour 29.4% (NIFTY; BANKNIFTY 28.9% and 24.5%); the high comes before the low on 52% / 50% of days."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.3 The day's shape"
+
+- id: bn-at-0920
+  inst: BANKNIFTY
+  kind: descriptive
+  topics: [time-of-day, straddle]
+  tod: morning
+  n: 1185
+  period: "Sep 2021 - 14 Jul 2026"
+  text: "BANKNIFTY at 09:20: the first five minutes have already spanned a median 0.377% (1,185 days) and 43% of the day's range is made by 09:30. The 09:20 ATM straddle is priced at a median 1.49% of spot (1,190 days; 2.15% in 2025 and 2.78% in 2026 as a monthly) and the close beats it on 6.5% of non-expiry days (1,000) and 37.8% of expiry days (185)."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "3.1 What the 09:20 ATM straddle prices"
+
+- id: nifty-at-0920
+  inst: NIFTY
+  kind: descriptive
+  topics: [time-of-day, straddle]
+  tod: morning
+  n: 2288
+  period: "Apr 2017 - 14 Jul 2026"
+  text: "NIFTY at 09:20: the first five minutes have spanned a median 0.271% (2,288 days) and 40% of the day's range is made by 09:30. The 09:20 ATM weekly straddle is priced at a median 0.96% of spot (1,222 days; 0.50% on expiry day, 1.37% six days out) and the close-to-09:20 move beats it on 7.1% of non-expiry days (961) and 40.5% of expiry days (259)."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "3.1 What the 09:20 ATM straddle prices"
+
+- id: gap-sizes-and-fills
+  inst: BOTH
+  kind: descriptive
+  topics: [gap]
+  n: 5086
+  period: "Jan 2006 - 14 Jul 2026"
+  text: "A gap of 0.5% or more opens 20% of NIFTY days (5,086) and 34% of BANKNIFTY days (5,085). A 0.5-1% gap up fills by the close 42% of the time on NIFTY (484 gaps) and 53% on BANKNIFTY (687); a 2%-plus NIFTY gap closes on its own side of the previous close 94-96% of the time (27 / 32 gaps)."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.4 Gaps"
+
+- id: gap-fill-timing
+  inst: BOTH
+  kind: descriptive
+  topics: [gap, time-of-day]
+  tod: morning
+  n: 1245
+  period: "NIFTY 2017 - 14 Jul 2026 (1,245 gaps); BANKNIFTY 2021 - 2026 (694 gaps)"
+  text: "Of gaps of at least 0.25%, 48% (NIFTY, 1,245 gaps) and 52% (BANKNIFTY, 694) fill at some point in the day; when they fill, the median fill comes 52 / 32 minutes after the open, and 27% / 32% of all such gaps are filled by 10:30, 38% / 45% by 13:00."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.4 Gaps"
+
+- id: direction-is-a-coin-by-horizon
+  inst: BOTH
+  kind: descriptive
+  topics: [momentum, reversal, direction]
+  n: 167082
+  period: "NIFTY 2017 - 14 Jul 2026; BANKNIFTY 2021 - 14 Jul 2026"
+  text: "The next bar carries the previous bar's sign 48.4% of the time at 5 minutes (167,082 pairs), 48.6% at 15 minutes (52,640) and 50.6% at 1 hour (9,154) on NIFTY; 48.3% / 48.2% / 49.3% on BANKNIFTY (88,643 / 27,929 / 4,869). The first 30 minutes' direction holds to the close 53.0% (NIFTY, 2,286 days) / 50.4% (BANKNIFTY, 1,185) of the time."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.5 Trend or mean reversion, by horizon"
+
+- id: daily-momentum-is-gone
+  inst: BOTH
+  kind: rule
+  verdict: negative
+  topics: [momentum, holdout]
+  n: 5086
+  period: "design Jan 2006 - 14 Jul 2026; holdout 15 Jul - 19 Oct 2026"
+  text: "Following yesterday's sign made +5.8 bps a day on NIFTY and +12.4 bps on BANKNIFTY over 2006-2026 (5,086 days, positive in 18 and 21 of 21 years) but only +2 to +6 bps in 2018-2026 and -9.4 / -24.6 bps in the Jul-Oct 2026 holdout (65 days). Not confirmed: a fact about the past, not a rule."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "4.2 Does any of it predict?"
+
+- id: one-minute-momentum-is-staleness
+  inst: BOTH
+  kind: rule
+  verdict: negative
+  topics: [momentum, costs]
+  n: 853718
+  period: "NIFTY 2017 - 2026 (853,718 pairs); BANKNIFTY 2021 - 2026 (451,625)"
+  text: "Consecutive 1-minute index returns share a sign more than chance (+0.11 bps on NIFTY, 853,718 pairs; +0.04 on BANKNIFTY, 451,625) and this held on the holdout, but it is the cash index's staleness (constituents update at different moments), 0.1 bps against a 1.25-1.54 bps cost: worth nothing."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "4.2 Does any of it predict?"
+
+- id: weekday-means-nothing
+  inst: BOTH
+  kind: rule
+  verdict: negative
+  topics: [day-of-week]
+  n: 1019
+  period: "Jan 2006 - 14 Jul 2026"
+  text: "Weekday is not a rule: NIFTY's median range is 0.89-0.94% on every weekday (451-459 days each), the mean return +0.006% to +0.095% (about 1,000 days each), and no weekday survives BH (best q 0.43, NIFTY Wednesday)."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.6 Calendar"
+
+- id: expiry-day-not-bigger
+  inst: BOTH
+  kind: descriptive
+  topics: [expiry]
+  n: 289
+  period: "Jan 2021 - 14 Jul 2026"
+  text: "Expiry day is not a bigger day: NIFTY's median range is 0.92% on 289 expiry days vs 0.91% on 1,999 others; BANKNIFTY 1.17% (185) vs 1.12% (1,000). BANKNIFTY's expiry-day mean return is -0.079% (222 days) against +0.076% on other days, but the pre-registered test gives q 0.80: noise."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.6 Calendar"
+
+- id: event-days
+  inst: BOTH
+  kind: descriptive
+  topics: [news, time-of-day]
+  n: 30
+  period: "2021 - 14 Jul 2026 (R98's event list)"
+  text: "Budget day doubles the range (median 2.13% NIFTY, 2.62% BANKNIFTY, 6 days). RBI policy days have been up days (+0.36% NIFTY, +0.50% BANKNIFTY, 30 days) with a normal range. The session after FOMC (39) or US CPI (58) looks like any other day."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.6 Calendar"
+
+- id: vix-is-the-range-dial
+  inst: BOTH
+  kind: descriptive
+  topics: [vix, filter]
+  n: 1509
+  period: "Nov 2007 - 14 Jul 2026"
+  text: "VIX is the range dial, not a direction dial: with VIX 9-15 the median day range is 0.75% (NIFTY) / 1.01% (BANKNIFTY), with VIX above 20 it is 1.72% / 2.37% (1,509 days per regime). VIX over-states NIFTY's next 21 days on 81% of days (median ratio 1.28, 4,507 days) and under-states BANKNIFTY's on 60% (0.93)."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "2.2 Realised vs implied volatility"
+
+- id: expiry-decay-clock
+  inst: BOTH
+  kind: descriptive
+  topics: [expiry, theta, straddle, time-of-day]
+  n: 259
+  period: "Aug 2021 - 14 Jul 2026 (NIFTY 259 expiries, BANKNIFTY 186)"
+  text: "On expiry day the ATM straddle is a median 84% of its 09:20 value at 10:30, 70% at 12:00, 61% at 13:00, 40% at 14:30, 22% at 15:00 and 13% at 15:15 (NIFTY, 259 expiries; BANKNIFTY 85 / 73 / 61 / 38 / 23 / 11%, 186). On a normal day it is 96.5% at 10:30 and 86% at 15:29 (NIFTY, 963 days)."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "3.2 Theta by hour"
+
+- id: premium-first-15-and-last-hour
+  inst: BOTH
+  kind: descriptive
+  topics: [theta, time-of-day, option-buying]
+  n: 962
+  period: "Aug 2021 - 14 Jul 2026"
+  text: "The ATM straddle falls from 09:15 to 09:30 on 69% of normal NIFTY days (median -1.83%; expiry -8.04%) and from 14:30 to 15:29 on 77% (median -3.57%; expiry -59.3%), 962 / 259 days. One ATM option moves a median 3.3% a minute in the first 15 minutes (36,652 contract-minutes) and 13.5% a minute in expiry's last hour (30,562); BANKNIFTY 2.6% and 15.9%."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "3.3 The first 15 minutes and the last hour, in premium"
+
+- id: skew-and-pcr
+  inst: BOTH
+  kind: descriptive
+  topics: [iv, oi]
+  n: 1222
+  period: "Aug 2021 - 14 Jul 2026 (IV); Jan 2021 - 14 Jul 2026 (PCR, 1,363 days)"
+  text: "The chain always prices the crash: at 09:20 the ATM-5 put is dearer than the ATM+5 call by a median 2.56 IV points on NIFTY (91% of 1,222 days) and 2.11 on BANKNIFTY (90% of 1,190). PCR of OI on the nearest expiry is 0.86 on both (p5-p95 0.52-1.34, 1,363 days). Nearest-expiry ATM IV is 7.7 points above VIX on NIFTY expiry day, 16.2 on BANKNIFTY's."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "3.4 Skew, ATM IV and the (crude) term structure"
+
+- id: max-pain-not-a-magnet
+  inst: BOTH
+  kind: descriptive
+  topics: [expiry, oi]
+  n: 289
+  period: "Jan 2021 - 14 Jul 2026"
+  text: "Max pain is not a magnet: the expiry close lands a median 0.60% from the previous day's max pain on NIFTY (289 expiries) and 0.68% on BANKNIFTY (222), within one strike step only 17.6% / 21.2% of the time. Spot sits between the largest call-OI and put-OI strikes on 92% / 77% of days (1,363)."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "3.5 PCR, max pain, OI walls"
+
+- id: who-is-positioned
+  inst: BOTH
+  kind: descriptive
+  topics: [fii, big-players]
+  n: 3577
+  period: "Jan 2012 - 14 Jul 2026 (NSE participant file)"
+  text: "In 2025 and the first half of 2026 FIIs were net short index futures by 61% and 72% of their book while clients were net long by 30% and 46%; clients hold 58% of index-option longs and prop desks write 23-24% of the shorts (3,577 days). FPIs sold Rs 240,193 crore of cash equity in 2025 and Rs 288,081 crore in 2026 to July."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "4.1 Who holds what"
+
+- id: participants-do-not-predict
+  inst: BOTH
+  kind: rule
+  verdict: negative
+  topics: [fii, big-players, holdout]
+  n: 3575
+  period: "design Jan 2012 - 14 Jul 2026; holdout 15 Jul - 19 Oct 2026"
+  text: "None of 36 pre-registered participant rules was confirmed. The strongest in design, clients adding index-futures longs predicting a down day (-5.2 bps NIFTY, -8.2 bps BANKNIFTY, 3,575 days, q 0.000), had a CI through zero on the holdout (63 days); FII levels, five-day horizons and the FPI cash sign never passed."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "4.2 Does any of it predict?"
+
+- id: no-simple-sign-rule
+  inst: BOTH
+  kind: rule
+  verdict: negative
+  topics: [direction, holdout, multiple-testing]
+  n: 70
+  period: "design to 14 Jul 2026; holdout 15 Jul - 19 Oct 2026"
+  text: "R102 ran 70 pre-registered sign rules (horizon momentum, participants, weekday, expiry, US events, gap fade) on NIFTY and BANKNIFTY: 8 passed design, 1 was confirmed on the holdout and that one is the 1-minute index-staleness artefact. There is no simple sign rule on either index."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "4.2 Does any of it predict?"
+
+- id: contract-facts-2026
+  inst: BOTH
+  kind: contract
+  topics: [costs, expiry, sizing]
+  n: 1
+  period: "verified 22 Oct 2026"
+  text: "Lots since the Jan 2026 expiries: NIFTY 65, BANKNIFTY 30 (NSE/FAOP/70616). NIFTY expires weekly on Tuesday since 2 Sep 2025; BANKNIFTY has monthly expiries only since 20 Nov 2024, on the last Tuesday. Trading hours 09:15-15:40 since 3 Aug 2026 (15:45 from 7 Dec 2026). Charges on one round trip at a discount broker: about Rs 70.32 (NIFTY ATM Rs 150 x 65) and Rs 75.65 (BANKNIFTY ATM Rs 400 x 30), STT 0.15% of the sell-side premium since 1 Apr 2026."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "1.5 Contracts, lots, expiries, hours, charges"
+
+- id: constituents-2026
+  inst: BOTH
+  kind: contract
+  topics: [breadth]
+  n: 1
+  period: "NSE Indices factsheets 30 Sep 2026"
+  text: "NIFTY 50 is 50 uncapped free-float stocks, Financial Services 37.45%; its top three are HDFC Bank 10.38%, ICICI Bank 9.05%, Reliance 7.58%. BANKNIFTY has 14 banks since 31 Dec 2025 with the top three capped at 19% / 14% / 10%: HDFC Bank 18.61%, ICICI Bank 14.18%, Kotak 10.20%, Axis 10.06%, SBI 9.93%."
+  src: research/DEEP_NIFTY_BANKNIFTY.md
+  sec: "1.1 NIFTY 50"

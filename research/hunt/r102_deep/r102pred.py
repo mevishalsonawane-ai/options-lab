@@ -207,15 +207,17 @@ def b3(und: str, part: str, rng: np.random.Generator) -> list[dict]:
 # ---- B4 gap fade -----------------------------------------------------------------------------------------------------
 
 def b4(und: str, part: str, rng: np.random.Generator) -> list[dict]:
-    """Gap fade: 2 thresholds x gap up / gap down x index = 8 tests (amendment 1: the pooled 4 were run first)."""
+    """Gap fade: 2 thresholds x gap up / gap down x index = 8 tests (amendment 1: the pooled 4 were run first).
+    Twins (amendment 2): random day sets of the same size from all days, the fade sign applied the same way; a circular
+    shift of a one-sided signal is the signal itself and says nothing."""
     tests = []
     d = daily_frame(und, part).dropna(subset=["gap", "oc"])
+    oc = d.oc * 100
     for thr in (0.3, 0.6):
-        for side, mask in (("up", d.gap >= thr), ("down", d.gap <= -thr)):
+        for side, mask, fade in (("up", (d.gap >= thr).values, -1.0), ("down", (d.gap <= -thr).values, 1.0)):
+            s_, y, tw = _dayset_test(oc, mask, rng)
+            res = summarise(fade * s_, y, fade * tw)
             x = d[mask]
-            sig, ret = -np.sign(x.gap.values), x.oc.values * 100
-            tw = shift_twins(rng, sig, ret, TWINS)
-            res = summarise(sig * ret, x.index.year.values, tw)
             res.update({"id": f"B4-{und}-gap{side}{thr}", "group": "B4", "und": und, "horizon": "open-to-close",
                         "rule": f"fade a gap {side} of at least {thr}% (positive effect = the day moves back toward the previous close)",
                         "first_day": str(x.day.min()) if len(x) else None, "last_day": str(x.day.max()) if len(x) else None})
@@ -261,7 +263,9 @@ def main(argv) -> int:
     if part == "holdout":
         design = json.loads((D.OUT / "pred_design.json").read_text())
         passed = set(design["passed_design"])
+        res["passed_design"] = sorted(passed)           # the design verdicts, not a re-judgement on the holdout
         for t in res["tests"]:
+            t.pop("pass_design", None)                   # the design gate is not applied to the holdout rows
             t["passed_design"] = t["id"] in passed
             t["confirmed"] = bool(t["passed_design"] and t.get("p_twin") is not None and t["p_twin"] <= 0.10
                                   and np.sign(t["effect_bps"] or 0) == np.sign(next(x["effect_bps"] for x in design["tests"] if x["id"] == t["id"]) or 0))

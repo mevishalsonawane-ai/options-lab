@@ -18,6 +18,9 @@ Sources (all in the repo, nothing fetched):
     effects only, never Boss's money)
   * research/knowledge/open_questions.yaml and baselines.yaml - the questions not settled yet and the execution baselines
     (every number checked against its source, like strategy cards)
+  * research/knowledge/index_facts.yaml - R102's field guide (22 Oct 2026): how NIFTY and BANKNIFTY behave, one fact per
+    entry with its sample size, period and instrument, so Jarvis can answer "how does BankNifty behave at 09:20?"
+    (every number checked against its source, like strategy cards)
 
 The pack also carries a "shared" section (13 Oct 2026, Boss: "all the agents should learn from whatever findings we have"):
 compact, tagged items for ira-core's SharedKnowledge - each with its topics, strategy (arm), instrument, time of day,
@@ -767,6 +770,57 @@ def add_open_questions(pack: Pack, shared: list[dict]) -> list[str]:
     return errors
 
 
+INDEX_FACT_KINDS = ("descriptive", "rule", "contract")
+
+
+def add_index_facts(pack: Pack, shared: list[dict]) -> list[str]:
+    """R102's facts file (22 Oct 2026): every entry needs id, inst (NIFTY / BANKNIFTY / BOTH), kind (descriptive / rule /
+    contract), n (sample size > 0), period, text, src and sec; `topics`, `tod`, `verdict` (rules only) are optional.
+    Numbers in the text are checked against the cited source. Returns the errors (an empty list when the file is absent)."""
+    path = RESEARCH / "knowledge/index_facts.yaml"
+    if not path.is_file():
+        return []
+    cards = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+    errors = checked(cards, path, {}, "index fact")
+    written = parse_date(" ".join(path.read_text(encoding="utf-8").splitlines()[:3]))
+    seen: set[str] = set()
+    for c in cards:
+        cid = str(c.get("id", ""))
+        if not cid or cid in seen:
+            errors.append(f"index fact {cid or '?'}: missing or duplicate id")
+            continue
+        seen.add(cid)
+        if c.get("inst") not in ("NIFTY", "BANKNIFTY", "BOTH"):
+            errors.append(f"index fact {cid}: inst must be NIFTY, BANKNIFTY or BOTH")
+        if c.get("kind") not in INDEX_FACT_KINDS:
+            errors.append(f"index fact {cid}: kind must be one of {INDEX_FACT_KINDS}")
+        n = c.get("n")
+        if not isinstance(n, int) or isinstance(n, bool) or n <= 0:
+            errors.append(f"index fact {cid}: n must be a positive integer (the sample size)")
+            continue
+        if not c.get("period") or not c.get("sec"):
+            errors.append(f"index fact {cid}: period and sec are required")
+        text = clean_md(f"{c.get('text', '')} (n = {n:,}; {c.get('period', '')}.)")
+        topics = sorted(set(c.get("topics", []) + tags(text)))
+        insts = ["NIFTY", "BANKNIFTY"] if c.get("inst") == "BOTH" else [c.get("inst")]
+        if c.get("kind") == "rule":
+            verdict = c.get("verdict", "weak")
+            if verdict not in ("positive", "weak", "negative"):
+                errors.append(f"index fact {cid}: a rule needs verdict positive / weak / negative")
+        else:
+            verdict = "context"
+        conf = "high" if n >= 100 else "medium"
+        pack.add(id_=f"index.{slug(cid, 40)}", kind="index_fact", title="How NIFTY and BANKNIFTY behave (R102 field guide)", text=text,
+                 src=c["src"], sec=c.get("sec", ""), date_=written, insts=insts, tags_=topics, verdict=verdict, conf=conf,
+                 weight=2.5, personal=False, extra={"n": n, "fact_kind": c.get("kind"), "period": c.get("period", "")})
+        shared.append(shared_item(id_=f"index:{cid}", topics=topics, text=text, src=c["src"], source="research", date_=written,
+                                  verdict=verdict, gate="none" if verdict == "context" else None,
+                                  inst=c.get("inst") if c.get("inst") != "BOTH" else None, n=n, sec=c.get("sec", "")))
+        if c.get("tod"):
+            shared[-1]["tod"] = c["tod"]
+    return errors
+
+
 def baselines() -> tuple[dict, list[str]]:
     path = RESEARCH / "knowledge/baselines.yaml"
     b = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -825,6 +879,7 @@ def build() -> tuple[dict, list[str]]:
     experiments = add_experiments(pack, shared)
     app_lessons = add_app_lessons(pack, shared)
     add_strategies_errors += add_open_questions(pack, shared)
+    add_strategies_errors += add_index_facts(pack, shared)
     base, base_errors = baselines()
     add_strategies_errors += base_errors
     # Exact duplicates (the same sentence copied into several docs): the first (highest-weight source) is kept.

@@ -1,0 +1,25 @@
+id: r102-b1-horizon-momentum
+title: 'R102 B1: follow the previous bar''s sign at 1m, 5m, 15m, 1h, 1d, 1w on NIFTY and BANKNIFTY (trend vs mean reversion by horizon)'
+family: market-facts
+date: '2026-10-22'
+doc: research/DEEP_NIFTY_BANKNIFTY.md
+hypothesis: 'Pre-registered (PREREG.md B1): at some horizon the index trends or mean-reverts enough that a sign rule (go with, or against, the previous bar) earns more than one ATM option round trip (1.25-1.54 bps of the index) with BH q <= 0.10 across all 70 R102 tests, the sign in >= 70% of years, and the same sign with twin p <= 0.10 on the holdout.'
+data_version: Drive lake (index_1m NIFTY 2017 ->, BANKNIFTY 2021 ->; index_daily 2006 ->), copied 22 Oct 2026
+period:
+  design: to 14 Jul 2026
+  holdout: 15 Jul - 19 Oct 2026, read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'sign of the previous non-overlapping h-bar index return (inside the session for intraday bars)'
+model_or_rule: 'sign rule, no parameter; 1,000 circular-shift twins; BH over 70'
+settings: research/hunt/r102_deep/r102pred.py (b1); results/pred_design.json, pred_holdout.json
+prereg: research/hunt/r102_deep/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design: 1m +0.107 bps NIFTY (853,718 pairs, t 26) and +0.043 BANKNIFTY (451,625) pass but are below cost; 5m / 15m nothing (CI through 0); 1h NIFTY +0.88 bps (9,154 pairs, q 0.044, 10/10 years) below cost; 1d NIFTY +5.77 bps (5,086 days, q 0.030, 18/21 years) and BANKNIFTY +12.39 bps (q 0.000, 21/21) pass; 1w nothing. Holdout: 1m confirmed (+0.084 / +0.064 bps, an index-staleness artefact worth nothing after costs); 1h +0.42 (CI -1.7 to +2.5); 1d REVERSED: NIFTY -9.4 bps, BANKNIFTY -24.6 bps (65 days). 0 of 12 tradeable.'
+  costs: 'one ATM option round trip in index bps (R16 Rs 98 / Rs 133 through delta 0.5, lots 65 / 30): 1.25 NIFTY, 1.54 BANKNIFTY'
+holdout_read: true
+verdict: rejected
+notes: 'Amendment 1 (disclosed before the holdout): twins changed from a within-day shuffle, which could hand a twin the sign of its own bar, to circular shifts. The 2006-2026 daily momentum had already faded to +2-6 bps in 2018-2026; it is a fact about the past.'

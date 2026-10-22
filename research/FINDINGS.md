@@ -1672,3 +1672,32 @@ R99 above. Signal source: the NIFTY index (and Solo 2.0's own index entry); the 
 - Lead (R99C): on Solo 2.0's 166 design trades, letting winners run made +Rs 89,242, +Rs 33,333 more than Solo's own
   exits, but all of the gain came in Jan-Mar 2026 and bootstrap p 0.245. It failed the gates, so it stays a note;
   the final period was not opened.
+
+## Deep learn NIFTY and BANKNIFTY (R102, 22 Oct 2026) - how they move, with numbers; 1 of 70 sign rules confirmed and it is an artefact
+Full study: `DEEP_NIFTY_BANKNIFTY.md` (pre-registered `hunt/r102_deep/PREREG.md`, design to 14 Jul 2026, holdout 15 Jul -
+19 Oct 2026 read once). Facts for Jarvis with sample sizes: `knowledge/index_facts.yaml` (27 cards). Descriptive, not a
+trading rule, unless marked. Signal on the underlying throughout.
+- BANKNIFTY is NIFTY times 1.16: daily correlation 0.877, beta 1.157 (5,086 days 2006-2026); 0.842 / 1.094 on 5-minute bars
+  (89,575). The big five banks are 62.98% of BANKNIFTY (14 members, capped 19 / 14 / 10% since Dec 2025) and 29.52% of NIFTY 50.
+- Daily sd NIFTY 1.316% over 2006-2026 (5,087 days), 0.744% in 2025, 1.051% in 2026 to July; BANKNIFTY 1.734% / 0.789% / 1.356%.
+  The drift is overnight: close-to-close mean +0.051% a day, open-to-close -0.035% (NIFTY); +0.065% / -0.039% (BANKNIFTY).
+- The day is front-loaded: median day range 0.907% (NIFTY, 2,288 minute days) / 1.131% (BANKNIFTY, 1,185); 61% / 65% of it made by
+  10:30, 82% / 87% by 13:00; the 09:15 minute alone spans 0.213% / 0.295%; 09:15-09:30 moves 2.32 / 3.09 bp a minute against
+  0.29 / 0.38 at 10:30-13:00. The open is the day's high or low on 41% / 46% of days. Weekday and expiry day change none of it.
+- Gaps >= 0.5% on 20% of NIFTY days and 34% of BANKNIFTY days (5,086); a 0.5-1% gap fills by the close 42% / 53%; a 2%-plus
+  NIFTY gap closes on its own side 94-96% of the time. Filled gaps fill early: median 52 / 32 minutes after the open.
+- VIX is the range dial: low VIX (9-15) median day range 0.75% / 1.01%, high VIX (above 20) 1.72% / 2.37% (1,509 days each).
+  VIX over-states NIFTY's next 21 days on 81% of days (median ratio 1.28, 4,507 days) and under-states BANKNIFTY's on 60%.
+- The 09:20 ATM straddle is a median 0.96% of spot on NIFTY (1,222 days) and 1.49% on BANKNIFTY (2.78% in 2026 as a monthly);
+  the close beats it on 7.1% / 6.5% of non-expiry days and 40.5% / 37.8% of expiry days. Expiry decay clock: 84% of the 09:20
+  straddle left at 10:30, 61% at 13:00, 40% at 14:30, 22% at 15:00, 13% at 15:15 (NIFTY, 259 expiries; BANKNIFTY the same).
+  Put skew +2.56 / +2.11 IV points on 91% / 90% of days; PCR 0.86; the expiry close lands 0.60% / 0.68% from max pain.
+- Participants: FIIs net short index futures by 61% (2025) and 72% (2026) of their book, clients net long 30% / 46%; clients hold
+  58% of index-option longs, prop desks write 23-24% of the shorts (3,577 days).
+- Predictive (70 pre-registered sign rules, BH over all): 8 passed design, 1 confirmed, and that one (1-minute "momentum",
+  +0.11 bps, 853,718 pairs) is the cash index's staleness, below cost. The 2006-2026 daily momentum (+5.8 / +12.4 bps a day)
+  reversed in the holdout (-9.4 / -24.6 bps, 65 days); the client-futures-change rule (-5.2 / -8.2 bps in design, q 0.000) had
+  a CI through zero on the holdout (63 days); weekday, expiry, US events and gap fades never passed. No simple sign rule exists.
+- Public facts verified 22 Oct 2026: lots NIFTY 65 / BANKNIFTY 30 since the Jan 2026 expiries (NSE/FAOP/70616; the repo's lot
+  table still says 35), NIFTY weekly on Tuesday since 2 Sep 2025, BANKNIFTY monthly only since 20 Nov 2024, hours 09:15-15:40
+  since 3 Aug 2026, STT 0.15% of the sell premium since 1 Apr 2026, one round trip about Rs 70 (NIFTY) / Rs 76 (BANKNIFTY).

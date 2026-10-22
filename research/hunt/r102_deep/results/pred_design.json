@@ -142,7 +142,7 @@
    "rule": "follow the previous 5m bar's sign (negative effect = reversal)",
    "first_day": "2017-04-03",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": false
@@ -208,7 +208,7 @@
    "rule": "follow the previous 15m bar's sign (negative effect = reversal)",
    "first_day": "2017-04-03",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
+   "q_bh": 0.9317,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": false
@@ -494,7 +494,7 @@
    "rule": "follow the previous 1w return's sign (negative effect = reversal)",
    "first_day": "2006-01-20",
    "last_day": "2026-07-17",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -545,7 +545,7 @@
    "first_day": "2021-08-04",
    "last_day": "2026-07-14",
    "q_bh": 0.0,
-   "cost_bps_one_atm_option": 1.32,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   },
@@ -594,8 +594,8 @@
    "rule": "follow the previous 5m bar's sign (negative effect = reversal)",
    "first_day": "2021-08-04",
    "last_day": "2026-07-14",
-   "q_bh": 0.5267,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.5265,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   },
@@ -644,8 +644,8 @@
    "rule": "follow the previous 15m bar's sign (negative effect = reversal)",
    "first_day": "2021-08-04",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   },
@@ -695,7 +695,7 @@
    "first_day": "2021-08-04",
    "last_day": "2026-07-14",
    "q_bh": 0.4282,
-   "cost_bps_one_atm_option": 1.32,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   },
@@ -805,7 +805,7 @@
    "first_day": "2006-01-04",
    "last_day": "2026-07-14",
    "q_bh": 0.0,
-   "cost_bps_one_atm_option": 1.32,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": true,
    "beats_cost": true
   },
@@ -914,8 +914,8 @@
    "rule": "follow the previous 1w return's sign (negative effect = reversal)",
    "first_day": "2006-01-20",
    "last_day": "2026-07-17",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -1000,7 +1000,7 @@
    "rule": "go with the sign of FII-fut-level (participant file of day t; return from close t to close t+1)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-13",
-   "q_bh": 0.6462,
+   "q_bh": 0.5775,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -1086,7 +1086,7 @@
    "rule": "go with the sign of FII-fut-level (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-07",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -1258,7 +1258,7 @@
    "rule": "go with the sign of FII-fut-change (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-01-04",
    "last_day": "2026-07-07",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": false
@@ -1344,7 +1344,7 @@
    "rule": "go with the sign of Client-fut-level (participant file of day t; return from close t to close t+1)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-13",
-   "q_bh": 1.0,
+   "q_bh": 0.9317,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": false
@@ -1430,7 +1430,7 @@
    "rule": "go with the sign of Client-fut-level (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-07",
-   "q_bh": 0.816,
+   "q_bh": 0.7516,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -1602,7 +1602,7 @@
    "rule": "go with the sign of Client-fut-change (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-01-04",
    "last_day": "2026-07-07",
-   "q_bh": 1.0,
+   "q_bh": 0.99,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": false
@@ -1688,7 +1688,7 @@
    "rule": "go with the sign of Pro-fut-level (participant file of day t; return from close t to close t+1)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-13",
-   "q_bh": 0.6462,
+   "q_bh": 0.5793,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -1774,7 +1774,7 @@
    "rule": "go with the sign of Pro-fut-level (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-07",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -1860,7 +1860,7 @@
    "rule": "go with the sign of Pro-fut-change (participant file of day t; return from close t to close t+1)",
    "first_day": "2012-01-04",
    "last_day": "2026-07-13",
-   "q_bh": 0.6462,
+   "q_bh": 0.5775,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -2376,7 +2376,7 @@
    "rule": "go with the sign of FPI-cash-sign (participant file of day t; return from close t to close t+1)",
    "first_day": "2012-01-02",
    "last_day": "2026-07-13",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": false
@@ -2462,7 +2462,7 @@
    "rule": "go with the sign of FPI-cash-sign (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-01-02",
    "last_day": "2026-07-07",
-   "q_bh": 0.6452,
+   "q_bh": 0.5708,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -2549,7 +2549,7 @@
    "first_day": "2012-06-27",
    "last_day": "2026-07-13",
    "q_bh": 0.4795,
-   "cost_bps_one_atm_option": 1.32,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -2634,8 +2634,8 @@
    "rule": "go with the sign of FII-fut-level (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-07",
-   "q_bh": 0.9197,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.8277,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -2721,7 +2721,7 @@
    "first_day": "2012-01-04",
    "last_day": "2026-07-13",
    "q_bh": 0.07,
-   "cost_bps_one_atm_option": 1.32,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": true,
    "beats_cost": true
   },
@@ -2806,10 +2806,10 @@
    "rule": "go with the sign of FII-fut-change (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-01-04",
    "last_day": "2026-07-07",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
-   "beats_cost": true
+   "beats_cost": false
   },
   {
    "n": 3456,
@@ -2892,8 +2892,8 @@
    "rule": "go with the sign of Client-fut-level (participant file of day t; return from close t to close t+1)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-13",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   },
@@ -2978,8 +2978,8 @@
    "rule": "go with the sign of Client-fut-level (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-07",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -3065,7 +3065,7 @@
    "first_day": "2012-01-04",
    "last_day": "2026-07-13",
    "q_bh": 0.0,
-   "cost_bps_one_atm_option": 1.32,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": true,
    "beats_cost": true
   },
@@ -3150,8 +3150,8 @@
    "rule": "go with the sign of Client-fut-change (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-01-04",
    "last_day": "2026-07-07",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9739,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   },
@@ -3236,8 +3236,8 @@
    "rule": "go with the sign of Pro-fut-level (participant file of day t; return from close t to close t+1)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-13",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   },
@@ -3322,8 +3322,8 @@
    "rule": "go with the sign of Pro-fut-level (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-07",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -3408,8 +3408,8 @@
    "rule": "go with the sign of Pro-fut-change (participant file of day t; return from close t to close t+1)",
    "first_day": "2012-01-04",
    "last_day": "2026-07-13",
-   "q_bh": 0.7271,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.6629,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -3494,8 +3494,8 @@
    "rule": "go with the sign of Pro-fut-change (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-01-04",
    "last_day": "2026-07-07",
-   "q_bh": 0.6741,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.6067,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -3581,7 +3581,7 @@
    "first_day": "2012-06-27",
    "last_day": "2026-07-13",
    "q_bh": 0.0862,
-   "cost_bps_one_atm_option": 1.32,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -3666,8 +3666,8 @@
    "rule": "go with the sign of FII-opt-level (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-06-27",
    "last_day": "2026-07-07",
-   "q_bh": 0.5345,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.5265,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -3753,7 +3753,7 @@
    "first_day": "2012-01-04",
    "last_day": "2026-07-13",
    "q_bh": 0.063,
-   "cost_bps_one_atm_option": 1.32,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -3839,7 +3839,7 @@
    "first_day": "2012-01-04",
    "last_day": "2026-07-07",
    "q_bh": 0.4394,
-   "cost_bps_one_atm_option": 1.32,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -3924,8 +3924,8 @@
    "rule": "go with the sign of FPI-cash-sign (participant file of day t; return from close t to close t+1)",
    "first_day": "2012-01-02",
    "last_day": "2026-07-13",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   },
@@ -4010,8 +4010,8 @@
    "rule": "go with the sign of FPI-cash-sign (participant file of day t; return from close t to close t+5)",
    "first_day": "2012-01-02",
    "last_day": "2026-07-07",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -4120,7 +4120,7 @@
    "rule": "Mon close-to-close return (sign = direction)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
+   "q_bh": 0.9739,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": false
@@ -4230,7 +4230,7 @@
    "rule": "Tue close-to-close return (sign = direction)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 0.6903,
+   "q_bh": 0.6256,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -4450,7 +4450,7 @@
    "rule": "Thu close-to-close return (sign = direction)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -4560,7 +4560,7 @@
    "rule": "Fri close-to-close return (sign = direction)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 0.7742,
+   "q_bh": 0.7097,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -4610,7 +4610,7 @@
    "rule": "expiry-day close-to-close return",
    "first_day": "2021-01-01",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -4656,7 +4656,7 @@
    "rule": "the NSE session after a FOMC decision or a US CPI print",
    "first_day": "2021-08-12",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -4766,8 +4766,8 @@
    "rule": "Mon close-to-close return (sign = direction)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -4876,8 +4876,8 @@
    "rule": "Tue close-to-close return (sign = direction)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 0.816,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.7516,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -4986,8 +4986,8 @@
    "rule": "Wed close-to-close return (sign = direction)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 0.6903,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.6256,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -5096,8 +5096,8 @@
    "rule": "Thu close-to-close return (sign = direction)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -5206,8 +5206,8 @@
    "rule": "Fri close-to-close return (sign = direction)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 0.7271,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.6629,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -5252,8 +5252,8 @@
    "rule": "expiry-day close-to-close return",
    "first_day": "2021-01-01",
    "last_day": "2026-07-14",
-   "q_bh": 0.7742,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.7097,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -5298,10 +5298,10 @@
    "rule": "the NSE session after a FOMC decision or a US CPI print",
    "first_day": "2021-08-12",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
-   "beats_cost": true
+   "beats_cost": false
   },
   {
    "n": 1262,
@@ -5387,8 +5387,8 @@
      "effect_bps": 4.533
     }
    },
-   "p_twin": 1.0,
-   "twin_sd_bps": 0.0,
+   "p_twin": 0.173,
+   "twin_sd_bps": 2.948,
    "id": "B4-NIFTY-gapup0.3",
    "group": "B4",
    "und": "NIFTY",
@@ -5396,7 +5396,7 @@
    "rule": "fade a gap up of at least 0.3% (positive effect = the day moves back toward the previous close)",
    "first_day": "2006-04-07",
    "last_day": "2026-07-10",
-   "q_bh": 1.0,
+   "q_bh": 0.5265,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -5477,8 +5477,8 @@
      "effect_bps": -5.399
     }
    },
-   "p_twin": 1.0,
-   "twin_sd_bps": 0.0,
+   "p_twin": 0.846,
+   "twin_sd_bps": 4.746,
    "id": "B4-NIFTY-gapdown0.3",
    "group": "B4",
    "und": "NIFTY",
@@ -5486,7 +5486,7 @@
    "rule": "fade a gap down of at least 0.3% (positive effect = the day moves back toward the previous close)",
    "first_day": "2006-01-18",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
+   "q_bh": 0.9737,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -5571,8 +5571,8 @@
      "effect_bps": 14.571
     }
    },
-   "p_twin": 1.0,
-   "twin_sd_bps": 0.0,
+   "p_twin": 0.182,
+   "twin_sd_bps": 5.192,
    "id": "B4-NIFTY-gapup0.6",
    "group": "B4",
    "und": "NIFTY",
@@ -5580,7 +5580,7 @@
    "rule": "fade a gap up of at least 0.6% (positive effect = the day moves back toward the previous close)",
    "first_day": "2006-11-27",
    "last_day": "2026-07-10",
-   "q_bh": 1.0,
+   "q_bh": 0.5308,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -5649,8 +5649,8 @@
      "effect_bps": 12.232
     }
    },
-   "p_twin": 1.0,
-   "twin_sd_bps": 0.0,
+   "p_twin": 0.206,
+   "twin_sd_bps": 6.751,
    "id": "B4-NIFTY-gapdown0.6",
    "group": "B4",
    "und": "NIFTY",
@@ -5658,7 +5658,7 @@
    "rule": "fade a gap down of at least 0.6% (positive effect = the day moves back toward the previous close)",
    "first_day": "2006-01-18",
    "last_day": "2026-07-13",
-   "q_bh": 1.0,
+   "q_bh": 0.5708,
    "cost_bps_one_atm_option": 1.25,
    "pass_design": false,
    "beats_cost": true
@@ -5759,8 +5759,8 @@
      "effect_bps": -16.787
     }
    },
-   "p_twin": 1.0,
-   "twin_sd_bps": 0.0,
+   "p_twin": 0.657,
+   "twin_sd_bps": 2.934,
    "id": "B4-BANKNIFTY-gapup0.3",
    "group": "B4",
    "und": "BANKNIFTY",
@@ -5768,8 +5768,8 @@
    "rule": "fade a gap up of at least 0.3% (positive effect = the day moves back toward the previous close)",
    "first_day": "2006-01-04",
    "last_day": "2026-07-10",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -5869,8 +5869,8 @@
      "effect_bps": -7.254
     }
    },
-   "p_twin": 1.0,
-   "twin_sd_bps": 0.0,
+   "p_twin": 0.43,
+   "twin_sd_bps": 4.273,
    "id": "B4-BANKNIFTY-gapdown0.3",
    "group": "B4",
    "und": "BANKNIFTY",
@@ -5878,8 +5878,8 @@
    "rule": "fade a gap down of at least 0.3% (positive effect = the day moves back toward the previous close)",
    "first_day": "2006-01-03",
    "last_day": "2026-07-14",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.7718,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": true
   },
@@ -5979,8 +5979,8 @@
      "effect_bps": -25.155
     }
    },
-   "p_twin": 1.0,
-   "twin_sd_bps": 0.0,
+   "p_twin": 0.921,
+   "twin_sd_bps": 4.651,
    "id": "B4-BANKNIFTY-gapup0.6",
    "group": "B4",
    "und": "BANKNIFTY",
@@ -5988,8 +5988,8 @@
    "rule": "fade a gap up of at least 0.6% (positive effect = the day moves back toward the previous close)",
    "first_day": "2006-01-20",
    "last_day": "2026-06-15",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   },
@@ -6085,8 +6085,8 @@
      "effect_bps": -7.613
     }
    },
-   "p_twin": 1.0,
-   "twin_sd_bps": 0.0,
+   "p_twin": 0.878,
+   "twin_sd_bps": 5.811,
    "id": "B4-BANKNIFTY-gapdown0.6",
    "group": "B4",
    "und": "BANKNIFTY",
@@ -6094,8 +6094,8 @@
    "rule": "fade a gap down of at least 0.6% (positive effect = the day moves back toward the previous close)",
    "first_day": "2006-01-18",
    "last_day": "2026-07-13",
-   "q_bh": 1.0,
-   "cost_bps_one_atm_option": 1.32,
+   "q_bh": 0.9737,
+   "cost_bps_one_atm_option": 1.54,
    "pass_design": false,
    "beats_cost": false
   }
