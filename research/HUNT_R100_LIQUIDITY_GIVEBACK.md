@@ -8,8 +8,10 @@ Boss, 22 Oct: *"do something for liquidity strategy, it went up to 4.5k, and set
 
 ## Answer
 
-**None of the 7 give-back protections passed, and neither did Boss's three follow-ups (keep half once +10%; a
-trailing stop; Breadth Donchian's lock), so the Liquidity paper and live exits stay as they are.** Trades like
+**None of the 7 give-back protections passed, and neither did Boss's eight follow-ups (keep half once +10%; a
+trailing stop, with and without it; Breadth Donchian's lock; breakeven once +10%; half off at +15%; a spread at +20%;
+an early +20% take-profit), so the Liquidity paper and live rules stay as they are.** Breakeven once +10% is in the app
+only as Boss's own paper switch, off by default (Amendment A4 below). Trades like
 Boss's are rare: of 881 design trades, 9 reached +20% or more and still closed at a loss (they lost Rs 15,030 together).
 In the final period it was 5 of 357 trades (Rs 4,846). Any lock that would save them also cuts some of the runners that
 make Liquidity's money.
@@ -194,6 +196,60 @@ Liquidity keeps its own other exits.
 - **Today's trade:** it peaked near +22%, so this ladder would never have armed. The result would have been the same
   -Rs 1,074.
 
+## Amendment A4: breakeven once +10% (22 Oct, pre-registered before its number)
+
+Boss: *"Keep it as is. Just can we do one thing, if the 10% is received, make the stoploss to the start point"*. G12:
+once the option has traded +10% above the price paid, the stop moves to the price paid plus the round trip's charges.
+Everything else is Liquidity's own.
+
+| id | design (881) | walk-forward (657) | final (357) | win design / final | changed d / f | twin p d / f | BH q (12 tests) |
+|---|---|---|---|---|---|---|---|
+| B0 | Rs 2,57,249 | Rs 2,38,064 | Rs 11,155 | 44% / 37% | | | |
+| G12 | Rs 2,39,684 | Rs 2,12,010 | Rs 5,399 | 40% / 34% | 70 / 29 | 0.93 / 0.91 | 1.0 / 1.0 |
+
+**Result:** fail (net, twins, top 5; the sample gate passed).
+- **All 1,238 trades:** Rs 2,45,083 at a 38% win rate, against Rs 2,68,404 at 42% on the plain rules.
+- **Design:** it saved Rs 49,379 on 39 trades and cut 31 winners short (Rs 66,945). Without its 5 best trades it is
+  -Rs 33,962.
+- **Final:** max drawdown Rs 67,632 (Rs 61,062 on the plain rules).
+- **Today's trade:** it would have closed at about Rs 0 instead of -Rs 1,168.
+- **In the app (Boss's word, 22 Oct):** built only as Boss's own opt-in PAPER switch, off by default, like the Rs 500
+  trail: labelled "with breakeven at +10%", kept out of the plain-rules record, logged in the change timeline and undone
+  in one tap. Live trades never use it.
+
+## Amendment A5: "keep the profit and make it not lose money" (22 Oct, pre-registered before any number)
+
+Boss: *"Think out of the box, and find a way to keep the profit and make it does not loss money"*. Three new kinds of
+exit, each on the same trades, with every leg's own fills, slippage and dated charges:
+- **G13, two lots:** one lot sold at a +15% limit, the other on Liquidity's own exits (per lot).
+- **G14, a spread:** once the option is +20%, sell 1 lot of the same-side option 2 strikes further out of the money
+  (paper only), bought back with the long.
+- **G15, early take-profit:** sell at +20% if it comes within the first 15 minutes; otherwise the own exits.
+
+| id | design (881) | walk-forward (657) | final (357) | all 1,238 | win (all) | changed d / f | twin p d / f | BH q (15 tests) |
+|---|---|---|---|---|---|---|---|---|
+| B0 | Rs 2,57,249 | Rs 2,38,064 | Rs 11,155 | Rs 2,68,404 | 42% | | | |
+| G13 | Rs 1,82,449 | Rs 1,66,151 | -Rs 18,318 | Rs 1,64,131 | 43% | 122 / 41 | 1.0 / 1.0 | 1.0 / 1.0 |
+| G14 | Rs 1,54,826 | Rs 1,42,508 | -Rs 26,316 | Rs 1,28,510 | 43% | 80 / 28 | 1.0 / 1.0 | 1.0 / 1.0 |
+| G15 | Rs 2,06,148 | Rs 1,70,915 | -Rs 29,699 | Rs 1,76,449 | 43% | 36 / 17 | 1.0 / 1.0 | 1.0 / 1.0 |
+
+**Result:** all three fail every gate but the sample, already in design.
+- **What they do well:** the 9 design trades that gave back +20% to a loss (-Rs 15,030 on the own exits) end at
+  +Rs 1,826 (G13), +Rs 20,562 (G14) and +Rs 13,923 (G15).
+- **What it costs:** each saves Rs 2,000-4,000 of losses for every Rs 10,000 of winnings it cuts. Design: G13 saved
+  Rs 53,703 on 47 trades and gave up Rs 1,28,503 on 75; G14 Rs 71,099 on 29 and Rs 1,73,522 on 51; G15 Rs 40,807 on 14
+  and Rs 91,908 on 22.
+- **G13:** the +15% lot alone made Rs 1,07,649 in design, against Rs 2,57,249 for the lot on the own exits.
+- **G14:** the 80 short legs lost Rs 1,02,423 together (29 made money): once the long is +20%, the move usually goes on.
+- **Worst trade, worst day and the final period's drawdown (Rs 61,062-62,190) do not improve:** the big losses come
+  from trades that never went into profit.
+
+**Why nothing passes:** Liquidity's money comes from a few runners. Over 881 design trades, the 384 winners made
+Rs 7,58,736 and the 497 losers lost Rs 5,01,487. The 36 winners of Rs 5,000 or more made Rs 3,38,862; the other 845
+trades together lost Rs 81,613. Any rule that
+takes profit early or caps the run loses more on those than it saves on the rare give-backs (9 in 881). No exit rule
+tested here keeps the profit and also stops the losses.
+
 ## "But it also loses less": losses and wins side by side
 
 Yes: every lock loses less. It also wins less, and the wins it gives up are bigger than the losses it saves.
@@ -233,7 +289,8 @@ Rs 500 trail.
 ## What Boss can switch on knowingly (nothing is switched on by this study)
 
 1. **G1, breakeven once +20%**, as a labelled paper-only opt-in switch, off by default. It is not built: ideas that
-   failed the gates stay notes (CLAUDE.md). It can be built on Boss's word.
+   failed the gates stay notes (CLAUDE.md). It can be built on Boss's word. (Boss chose +10% instead: G12, built as
+   their own paper switch, off by default; see Amendment A4.)
    - **What it costs:** about nothing either way so far. Over 1,238 trades it was +Rs 3,287 in design, -Rs 2,641 in the
      walk-forward year and +Rs 1,341 in the final period.
    - **What it does:** a trade that reached +20% can no longer finish as a loss (barring a gap through the stop). That
@@ -300,9 +357,12 @@ A separate reviewer read the whole Liquidity exit path. Neither bug below change
 Boss asked on 22 Oct why a Liquidity trade went from about +Rs 4,500 to -Rs 1,168 (Liquidity 5m MIDCPNIFTY put,
 22 Oct, sold by the 20-minute time stop). Answer:
 - Liquidity has no profit lock by design. The time stop only checks +5% at minute 20.
-- R100 tested 7 give-back locks on 1,238 trades; none passed.
-- Breakeven once +20% (G1) was about neutral: +Rs 3.3k design, -Rs 2.6k walk-forward, +Rs 1.3k final. It is Boss's
-  choice to switch on, and it is not built yet.
+- R100 tested 7 give-back locks on 1,238 trades, then 8 of Boss's follow-ups; none passed.
+- Breakeven once +20% (G1) was about neutral: +Rs 3.3k design, -Rs 2.6k walk-forward, +Rs 1.3k final. It is not built.
+- Boss's eight follow-ups failed too (keep half once +10%, trailing stops, Breadth Donchian's lock, breakeven once +10%,
+  half off at +15%, a spread at +20%, an early +20% take-profit). Breakeven once +10% made Rs 2,45,083 at 38% against
+  Rs 2,68,404 at 42% (1,238 trades); it is Boss's own paper switch on the Strategy lab card, off by default, labelled
+  "with breakeven at +10%", and live trades never use it.
 - The Rs 500 trail switch would have cost Rs 1.79 lakh.
 - Two exit-path bugs were fixed: a failed index read no longer skips the other positions' exits, and a lock reads the
   candles after a restart.

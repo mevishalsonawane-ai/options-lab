@@ -1,0 +1,38 @@
+id: r100-liquidity-g12
+title: 'R100 Liquidity give-back (amendment A4): breakeven (price paid plus round-trip charges) once the option is +10% (Boss)'
+family: trade-management
+date: '2026-10-22'
+doc: research/HUNT_R100_LIQUIDITY_GIVEBACK.md
+hypothesis: 'Boss (22 Oct, after the R100 results: "if the 10% is received, make the stoploss to the start point"): moving the
+  stop to the price paid plus charges once the option has traded +10% above it, added to Liquidity''s own exits, keeps open
+  profit without cutting the runners; same gates as G1-G7 (net at least B0''s in design, walk-forward and final; BH q <= 0.10
+  against random early exits in design and final; not carried by its 5 best trades; at least 30 changed design trades).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m), copied 22 Oct; R51 Amendment A clean stores,
+  20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for this amendment; already read by R100 G1-G11 and R51 / R63 / R70 / R76 / R81 (weak)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal: index bars (liquidity levels); breakeven stop: option premium'
+model_or_rule: 'Liquidity 15+5 (index level breaks on 15/5-min bars BANKNIFTY and MIDCPNIFTY, 30/5 FINNIFTY; 1-ITM); exits: own
+  exits + breakeven (after charges) once +10% (Boss)'
+settings: research/hunt/r100_liquidity_giveback/r100study.py (amend4); r100engine.py
+prereg: research/hunt/r100_liquidity_giveback/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Design: 881 trades, win 40%, net Rs 239,684 against B0 Rs 257,249; walk-forward Rs 212,010 against Rs 238,064; final:
+    357 trades, win 34%, net Rs 5,399 against Rs 11,155. All 1,238 trades: Rs 245,083 at a 38% win rate against Rs 268,404 at
+    42%. Changed 70 design / 29 final trades (design: Rs 49,379 saved on 39, Rs 66,945 given up on 31). Random early-exit twin
+    p 0.9301 design / 0.9142 final (BH q 1.0 / 1.0 over 12). Design gain without its 5 best trades -Rs 33,962. Failed gates:
+    never_less, twins_bh, not_top5.'
+  costs: dated charges, R17 liquidity fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, breakeven = real entry + round-trip charges, one held contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Did not pass, so it changes no rule; at Boss's request (22 Oct) it is in the app only as their
+  own opt-in PAPER switch, off by default, labelled "with breakeven at +10%", logged in the change timeline and kept out of the
+  plain-rules record. Live trades never use it.

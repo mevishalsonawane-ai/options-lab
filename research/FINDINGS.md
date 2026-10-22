@@ -1572,7 +1572,7 @@ Signal source: the underlying in every rule (CCI 25 of hlc3 on index spot / MCX 
 - EX (the cross as an early exit): lowered the Liquidity arm (5m -Rs 70,223 on 171 changed trades) and Breadth Donchian
   (5m -Rs 1.39 lakh on 1,368) in the design; 0 of 4 pass. The arms keep their own exits.
 
-## Liquidity 15+5 give-back protection (R100, 22 Oct 2026) - 0 of 7 pass; keep the own exits
+## Liquidity 15+5 give-back protection (R100, 22 Oct 2026) - 0 of 15 pass; keep the own exits
 Full study: `HUNT_R100_LIQUIDITY_GIVEBACK.md` (pre-registered `hunt/r100_liquidity_giveback/PREREG.md`; final 1 Apr - 13 Oct
 2026 read once, already read by earlier studies, so weak). Boss, 22 Oct: a Liquidity 5m MIDCPNIFTY put went to about
 +Rs 4,500 and was sold at -Rs 1,168 by the 20-minute time stop. Signal on the index in every rule; locks on the premium.
@@ -1588,3 +1588,12 @@ Full study: `HUNT_R100_LIQUIDITY_GIVEBACK.md` (pre-registered `hunt/r100_liquidi
 - Amendment A3 (Boss): Breadth Donchian's lock ladder on Liquidity (+5% once +25%, breakeven once +30%, +30% once +60%,
   +60% once +100%): Rs 2,43,190 against Rs 2,57,249 in design (23 changed), -Rs 16.8k walk-forward, +Rs 3.2k final
   (5 changed). Fail. It would not have armed on the 22 Oct trade (peak about +22%).
+- Amendment A4 (Boss): breakeven after charges once +10% (G12): Rs 2,45,083 at a 38% win rate against Rs 2,68,404 at 42%
+  on all 1,238 trades (design -Rs 17.6k on 70 changed; final -Rs 5.8k on 29; twin p 0.93 / 0.91). Fail. In the app only
+  as Boss's own opt-in paper switch (off by default, labelled, kept out of the plain-rules record; never live).
+- Amendment A5 (Boss: "keep the profit and make it not lose money"): two lots with one sold at +15% (G13), a spread sold
+  2 strikes further out once +20% (G14), an early +20% take-profit in the first 15 minutes (G15). All 1,238 trades:
+  Rs 1,64,131 / Rs 1,28,510 / Rs 1,76,449 against Rs 2,68,404; each fails every gate but the sample, in design already.
+  They rescue the 9 design give-backs (-Rs 15,030 to between +Rs 1.8k and +Rs 20.6k) but give up Rs 0.9-1.7 lakh of
+  winners. Why: the 36 design winners of Rs 5,000+ made Rs 3,38,862 and the other 845 trades lost Rs 81,613 together;
+  any early profit-taking cuts those runners. Signal on the index in every rule.
