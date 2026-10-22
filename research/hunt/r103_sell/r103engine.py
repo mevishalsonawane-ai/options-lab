@@ -103,6 +103,21 @@ def spot_at(D, r: int) -> float:
     return float(c[ok[-1]]) if len(ok) else float("nan")
 
 
+_IV: dict = {}
+
+
+def last_iv(D, side: str, k: float, pr: int, d: date, expiry: date) -> float:
+    """IV of the leg's print at minute pr (cached per day, leg and print minute)."""
+    key = (id(D), d, side, float(k), pr, expiry)
+    if key not in _IV:
+        if len(_IV) > 200_000:
+            _IV.clear()
+        px = float(D.con[(side, float(k))][3, pr])
+        _IV[key] = float(BS.implied_vol(np.array([px]), np.array([spot_at(D, pr)]), np.array([float(k)]),
+                                        np.array([t_years(d, pr, expiry)]), np.array([side == "C"]), RATE)[0])
+    return _IV[key]
+
+
 def repaired(D, side: str, k: float, r: int, d: date, expiry: date | None) -> float:
     """The leg's value at minute r: its close if it printed within STALE_AGE minutes, else Black-Scholes at the minute's
     index level with the IV of its last print (sticky strike); the last close if no IV can be found."""
@@ -110,8 +125,7 @@ def repaired(D, side: str, k: float, r: int, d: date, expiry: date | None) -> fl
     px, pr = last_print(con, r)
     if pr < 0 or r - pr <= STALE_AGE or expiry is None:
         return px
-    iv = BS.implied_vol(np.array([px]), np.array([spot_at(D, pr)]), np.array([k]), np.array([t_years(d, pr, expiry)]),
-                        np.array([side == "C"]), RATE)[0]
+    iv = last_iv(D, side, k, pr, d, expiry)
     if not np.isfinite(iv):
         return px
     return float(BS.price(spot_at(D, r), k, t_years(d, r, expiry), iv, side == "C", RATE))
@@ -207,10 +221,25 @@ def marks(D, legs, r0: int, r1: int, d: date | None = None, expiry: date | None 
         c = con[3, : r1 + 1]
         idx = np.where(np.isfinite(c), np.arange(len(c)), -1)
         np.maximum.accumulate(idx, out=idx)
-        age = np.arange(len(c)) - idx
-        for j, r in enumerate(range(r0, r1 + 1)):
-            if idx[r] >= 0 and age[r] > STALE_AGE:
-                out[i, j] = repaired(D, side, k, r, d, expiry)
+        rows = np.arange(r0, r1 + 1)
+        pr = idx[r0: r1 + 1]
+        stale = (pr >= 0) & (rows - pr > STALE_AGE)
+        if not stale.any():
+            continue
+        cl = D.idx[3, : r1 + 1]
+        sidx = np.where(np.isfinite(cl), np.arange(len(cl)), -1)
+        np.maximum.accumulate(sidx, out=sidx)
+        for p0 in np.unique(pr[stale]):
+            iv = last_iv(D, side, k, int(p0), d, expiry)
+            if not np.isfinite(iv):
+                continue
+            sel = stale & (pr == p0)
+            rr = rows[sel]
+            ok = sidx[rr] >= 0
+            spot = np.where(ok, cl[np.clip(sidx[rr], 0, None)], np.nan)
+            T = np.array([t_years(d, int(r), expiry) for r in rr])
+            val = BS.price(spot, np.full(len(rr), float(k)), T, np.full(len(rr), iv), np.full(len(rr), side == "C"), RATE)
+            out[i, np.flatnonzero(sel)] = np.where(np.isfinite(val), val, out[i, np.flatnonzero(sel)])
     return out
 
 

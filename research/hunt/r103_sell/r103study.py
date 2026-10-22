@@ -85,6 +85,37 @@ def next_expiry(und: str, d: date) -> date:
     return lt
 
 
+def _one_test(args):
+    part, mult, tid = args
+    return tid, _trades_one(part, mult, tid)
+
+
+def _trades_one(part: str, mult: float, tid: str) -> list:
+    u, t, s, x = tid.split("-")
+    days = RD.load(u)
+    exp, near = expiry_info(u, days)
+    out = []
+    for d in sorted(days):
+        if d < RD.START or period_of(d) != part or days[d].atm is None:
+            continue
+        if ("E" if d in exp else "N") != t:
+            continue
+        tr = E.run(days[d], u, d, s, x, t == "E", mult, expiry_date=near.get(d))
+        if tr is not None:
+            out.append(tr)
+    return out
+
+
+def trades_parallel(part: str, mult: float = 1.0, only: set | None = None, procs: int = 4) -> dict:
+    """As trades_for, one process per test (same trades; the order of days inside a test is kept)."""
+    if part == "holdout" and not HOLDOUT_FLAG.exists():
+        raise PermissionError("the holdout is locked: only `r103study.py holdout` may read it (PREREG.md)")
+    import multiprocessing as mp
+    ids = [test_id(*t) for t in TESTS if only is None or test_id(*t) in only]
+    with mp.get_context("fork").Pool(procs) as pool:
+        return dict(pool.map(_one_test, [(part, mult, i) for i in ids]))
+
+
 def trades_for(part: str, mult: float = 1.0, only: set | None = None) -> dict:
     """{test id: [trade, ...]} for every test (or the ids in `only`), one trade per eligible day."""
     if part == "holdout" and not HOLDOUT_FLAG.exists():
@@ -252,8 +283,8 @@ def bhav_check(und: str, trades: list) -> dict:
 
 def design() -> dict:
     rng = np.random.default_rng(SEED)
-    tr = trades_for("design")
-    tr2 = trades_for("design", mult=2.0)
+    tr = trades_parallel("design")
+    tr2 = trades_parallel("design", mult=2.0)
     _save("trades_design", dict(tr))
     rows = []
     for tid in [test_id(*t) for t in TESTS]:
@@ -266,8 +297,8 @@ def design() -> dict:
         r["gates"] = gates(r["design"], dict(net=r["slip2x_net"]), q)
         r["high_win_label"] = bool(r["design"].get("win", 0) >= 0.60 and (r["design"].get("pf") or 0) >= 1.1)
         r["bhav_check"] = bhav_check(r["id"].split("-")[0], tr.get(r["id"], []))
-    for r in rows:                                    # timing twins, reported only
-        if r["design"]["n"]:
+    for r in rows:                                    # timing twins, reported only (amendment 2: design passers only)
+        if r["design"]["n"] and r["gates"]["pass"]:
             tw = twin_means("design", r["id"], tr[r["id"]], rng)
             r["timing_twin"] = dict(mean_total=round(float(tw.mean())), p_twin_ge_real=round(float((tw >= r["design"]["net"]).mean()), 3))
     res = dict(part="design", design_end=str(DESIGN_END), n_tests=len(rows), passed=[r["id"] for r in rows if r["gates"]["pass"]],
@@ -290,7 +321,7 @@ def holdout() -> dict:
         _json(res, RESULTS / "holdout.json")
         print("holdout: no design passer, nothing read")
         return res
-    tr = trades_for("holdout", only=passed)
+    tr = trades_parallel("holdout", only=passed)
     _save("trades_holdout", dict(tr))
     rows = []
     for tid in sorted(passed):

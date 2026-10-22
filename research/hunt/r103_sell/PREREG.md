@@ -111,3 +111,12 @@ and to fills that find no open within 5 minutes. The nearest expiry date comes f
 **Then.** The 24 tests are re-run on design with the same gates, BH and seeds. The first run's numbers stay recorded
 here. Independent check, reported for every test: time exits re-priced at the bhavcopy close of every leg. The
 holdout is still unread and is read once, only for tests that pass every gate after this fix.
+
+## Amendment 2 (22 Oct 2026, run time only; before the corrected design results and the holdout)
+
+The corrected design run was stopped at the 2-hour job limit before writing any result: the repair solved an implied
+volatility at every stale minute, and timing twins ran for all 24 tests. Changes, none of which alters a trade or a
+gate: (1) the implied volatility of a stale stretch is solved once and the stretch is priced in one vectorised step;
+(2) the tests run in 4 processes; (3) timing twins, reported and never gated, are computed for design passers only.
+The code uses 20 twin entries per traded day and 200 resampled totals; the "200 per day" in the text above should have
+read "200 resampled totals".
