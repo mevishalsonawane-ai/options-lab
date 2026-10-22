@@ -1367,7 +1367,14 @@ object Broker {
      * Sends ONE order. Callers must have passed Kite.refusals and the owner's confirmation. [arm]: a bot's strategy key (the one
      * its entry check asked the portfolio guard with), so the door refuses only that arm's entry; null for any other order.
      */
-    suspend fun placeOrder(o: Kite.Order, exit: Boolean = false, arm: String? = null, intended: Double? = null): String {
+    suspend fun placeOrder(o: Kite.Order, exit: Boolean = false, arm: String? = null, intended: Double? = null,
+                           verdict: com.optionslab.engine.risk.OrderFingerprint.Verdict? = null, stop: Double? = null, target: Double? = null): String {
+        // 22 Oct: the order fingerprint ([OrderVerdicts]): a NEW entry goes only with a verdict that cleared this exact order today
+        // ([verdict], stamped by the check that cleared it; [stop] / [target] what the sender rests, as the check saw them). The
+        // fingerprint of what is about to be sent is computed here, in memory, and a difference, a verdict from another day or
+        // none at all refuses the order and says which field changed. An exit never asks: closing lowers risk.
+        if (!exit) OrderVerdicts.refusal(verdict, OrderVerdicts.liveFields(o, Market.today(), OrderVerdicts.sourceOf(o, arm), stop, target))
+            ?.let { why -> throw KiteError("fingerprint", why) }
         // 18 Oct (Boss): the paper-only period refuses every NEW live entry, from every source (Boss's own, the arms, Pine, the
         // strategies, Jarvis, MCX), even when the app is already Live. Memory only ([PaperOnly.entryRefusal]); an exit never asks.
         if (!exit) PaperOnly.entryRefusal()?.let { why -> paperOnlyRefused(o, why); throw KiteError("paper_only", why) }

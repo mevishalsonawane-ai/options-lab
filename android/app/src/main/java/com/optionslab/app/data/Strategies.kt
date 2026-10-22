@@ -587,8 +587,10 @@ object Strategies {
                         ?.let { return@runBlocking StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
                     val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = exit, refPrice = last)
                     if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
+                    // 22 Oct: the checks above cleared this order: stamped with its fingerprint, recomputed at the door ([OrderVerdicts]).
+                    val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), OrderVerdicts.sourceOf(o, null)), "strategy checks")
                     try {
-                        Broker.placeOrder(o, exit)
+                        Broker.placeOrder(o, exit, verdict = verdict)
                     } catch (e: Exception) {
                         if (Broker.definite(e)) return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
                         // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.

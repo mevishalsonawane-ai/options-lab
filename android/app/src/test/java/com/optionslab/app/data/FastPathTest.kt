@@ -1,5 +1,6 @@
 package com.optionslab.app.data
 
+import com.optionslab.app.testing.Cleared
 import com.optionslab.app.testing.FakeKite
 import com.optionslab.app.testing.FakeUpstox
 import com.optionslab.app.testing.NetworkGuard
@@ -90,7 +91,7 @@ class FastPathTest : RobolectricTest() {
         k.login()
         // Zerodha's book keeps saying OPEN: only the stream's update can say it filled.
         k.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.OPEN))
-        val id = Broker.placeOrder(Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iratest"))
+        val id = Broker.placeOrder(Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iratest"), verdict = Cleared.live(Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iratest")))
         val t0 = System.currentTimeMillis()
         val waiting = async(kotlinx.coroutines.Dispatchers.IO) { Broker.awaitOrder(id, 10_000) }
         delay(300)
@@ -106,7 +107,7 @@ class FastPathTest : RobolectricTest() {
         assertNotNull(KiteStream.orderUpdate(id))
         // An update for another order, or a non-terminal one, answers nothing: the reads go on until the timeout.
         k.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.OPEN))
-        val id2 = Broker.placeOrder(Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iratest"))
+        val id2 = Broker.placeOrder(Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iratest"), verdict = Cleared.live(Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iratest")))
         KiteStream.textForTest("""{"type":"order","data":{"order_id":"$id2","status":"OPEN"}}""")
         assertEquals("OPEN", Broker.awaitOrder(id2, 800).status)
         assertTrue(OrderTiming.card().lines.any { it.startsWith("Live fills first seen on Zerodha's stream: 1 of") })

@@ -1,5 +1,6 @@
 package com.optionslab.app.data
 
+import com.optionslab.app.testing.Cleared
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.FakeKite
 import com.optionslab.app.testing.NetworkGuard
@@ -55,19 +56,19 @@ class SmartWorkersTest : RobolectricTest() {
         // Waiting for Boss's approval: logged, not decided (his approval decides it later).
         assertFalse(FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:02", what = "CE", decide = false).skip)
         // The entry door: a bot's live entry is refused inside it; nothing is sent.
-        try { Broker.placeOrder(order()); fail("a bot's entry went through a news window") } catch (e: Broker.KiteError) {
+        try { Broker.placeOrder(order(), verdict = Cleared.live(order())); fail("a bot's entry went through a news window") } catch (e: Broker.KiteError) {
             assertEquals("entry_gate", e.type)
             assertTrue(e.message, e.message!!.contains("RBI policy"))
         }
         assertTrue(kite.placed.isEmpty())
         // An exit always goes; Boss's own order is his call.
         Broker.placeOrder(order(side = Kite.Side.SELL), exit = true)
-        Broker.placeOrder(order(tag = "iraalgo"))
+        Broker.placeOrder(order(tag = "iraalgo"), verdict = Cleared.live(order(tag = "iraalgo")))
         assertEquals(2, kite.placed.size)
         // News windows OFF: the bots' entries go again.
         SmartWorkers.setPause(MarketBrain.Cause.NEWS, MarketBrain.Mode.OFF)
         assertFalse(FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:03", what = "CE").skip)
-        Broker.placeOrder(order())
+        Broker.placeOrder(order(), verdict = Cleared.live(order()))
         assertEquals(3, kite.placed.size)
     }
 

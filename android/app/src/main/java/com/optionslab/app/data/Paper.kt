@@ -870,7 +870,13 @@ object Paper {
      * entry could also be mirrored live (19 Oct review).
      */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
-                      known: Quote? = null, auto: String? = null, mirror: String? = null): Result {
+                      known: Quote? = null, auto: String? = null, mirror: String? = null,
+                      verdict: com.optionslab.engine.risk.OrderFingerprint.Verdict? = null, stop: Double? = null, target: Double? = null): Result {
+        // 22 Oct: the order fingerprint ([OrderVerdicts]): a paper order whose check stamped a [verdict] goes only when the
+        // fingerprint of what is placed now (these arguments, [stop] / [target] what the caller rests) is the one the check
+        // cleared, today. Refusing only lowers risk; an order placed with no verdict (a stop or target resting, an exit) is as before.
+        if (verdict != null) OrderVerdicts.refusal(verdict, OrderVerdicts.paperFields(c, action, lots, priceType, product, price, trigger, Market.today(),
+                verdict.fields.source, stop, target))?.let { return Result(false, "Not sent: $it", emptyList()) }
         // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
         // exchange stamp of this contract's last stream tick, when it streams.
         // 16 Oct (Boss's diagnostics: "Prices were up to 3.6 s old when used"): a fill never uses a quote older than

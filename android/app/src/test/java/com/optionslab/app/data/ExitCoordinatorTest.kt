@@ -1,5 +1,6 @@
 package com.optionslab.app.data
 
+import com.optionslab.app.testing.Cleared
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.FakeKite
@@ -85,7 +86,7 @@ class ExitCoordinatorTest : RobolectricTest() {
         kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "Quantity exceeds the freeze limit.")
         runCatching { bossSells(75) }
         assertTrue(ExitCoordinator.pendingForTest().isEmpty())
-        Broker.placeOrder(Kite.Order(ce, Kite.Side.BUY, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", ""))
+        Broker.placeOrder(Kite.Order(ce, Kite.Side.BUY, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", ""), verdict = Cleared.live(Kite.Order(ce, Kite.Side.BUY, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", "")))
         assertTrue("an entry is no exit", ExitCoordinator.pendingForTest().isEmpty())
         assertEquals(1, ExitCoordinator.countsForTest().sent)
     }

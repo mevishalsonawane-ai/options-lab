@@ -106,6 +106,22 @@ data class OrderPlan(
     val pricedAt: Long = System.currentTimeMillis(),
 ) {
     val sendable: Boolean get() = legs.isNotEmpty() && refusals.all { it.isEmpty() } && margin?.short != true
+
+    /**
+     * 22 Oct: each leg's verdict with the fingerprint of the exact leg the checks judged ([com.optionslab.app.data.OrderVerdicts]):
+     * stamped whenever the checks run (the plan priced, a limit price typed, the final check at the send; [AppModel.stamped]). The
+     * sender recomputes the fingerprint of what it sends and refuses a difference. Derived from the legs and the refusals, so not
+     * part of the plan's equality (a stuck leg's plan is still the plan on the screen); empty until stamped, and on every copy.
+     */
+    @Volatile var verdicts: List<com.optionslab.engine.risk.OrderFingerprint.Verdict> = emptyList()
+
+    /** The fields of leg [i] as it would be sent now (the fingerprint the review shows against its verdict's). */
+    fun fieldsNow(i: Int, day: java.time.LocalDate): com.optionslab.engine.risk.OrderFingerprint.Fields =
+        com.optionslab.app.data.OrderVerdicts.liveFields(legs[i], day, com.optionslab.app.data.OrderVerdicts.sourceOf(legs[i], null), protect?.stop, protect?.target)
+
+    /** Every leg's verdict passed and still matches the leg as it stands today (gate 1 of the three gates). */
+    fun fingerprintsMatch(day: java.time.LocalDate): Boolean =
+        legs.isNotEmpty() && verdicts.size == legs.size && legs.indices.all { i -> com.optionslab.engine.risk.OrderFingerprint.refusal(verdicts[i], fieldsNow(i, day)) == null }
 }
 
 data class SignalResult(
@@ -1292,7 +1308,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * The priced plan, only while it is still the order being prepared: a cancelled order's late answer never replaces the next
      * one's (18 Oct review: a PIN given for one order could otherwise send an earlier one).
      */
-    private fun publish(gen: Long, v: Load<OrderPlan>) { if (planGen.get() == gen) plan.value = v }
+    private fun publish(gen: Long, v: Load<OrderPlan>) { if (planGen.get() == gen) plan.value = if (v is Load.Done) Load.Done(stamped(v.value)) else v }
+
+    /**
+     * 22 Oct: the plan with each leg's verdict stamped from its refusals as the checks ([gate]) just found them: the fingerprint
+     * of the leg the checks judged, today, with the bracket's stop and target. Memory only.
+     */
+    private fun stamped(p: OrderPlan): OrderPlan {
+        val day = com.optionslab.app.data.Market.today()
+        return p.copy().also { q -> q.verdicts = p.legs.indices.map { i ->
+            com.optionslab.app.data.OrderVerdicts.stamp(p.fieldsNow(i, day), p.refusals.getOrNull(i).orEmpty(), if (p.exit) "exit review" else "order review") } }
+    }
 
     /** A new order is being prepared: its generation (what [publish] and [confirmDirect] check it by). */
     private fun startPlan(isDirect: Boolean): Long {
@@ -1418,7 +1444,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (sending.value !is Load.Idle || stuck.value != null) return
         val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: return
         val legs = cur.legs.mapIndexed { j, o -> if (j == i) o.copy(price = price) else o }
-        plan.value = Load.Done(cur.copy(legs = legs, refusals = gate(legs, cur.holdToSettlement, cur.exit)))
+        // 22 Oct: the typed price is another order: judged again and stamped again (the old verdict's fingerprint would refuse it).
+        plan.value = Load.Done(stamped(cur.copy(legs = legs, refusals = gate(legs, cur.holdToSettlement, cur.exit))))
     }
 
     /**
@@ -1477,9 +1504,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             com.optionslab.app.data.Diag.record("mode", "Paper mode: exit of a Zerodha position sent with the PIN (${cur.title})")
         }
         val again = gate(cur.legs, cur.holdToSettlement, cur.exit)
-        if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(cur.copy(refusals = again)); return again.flatten().distinct().joinToString(" ") }
+        if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(stamped(cur.copy(refusals = again))); return again.flatten().distinct().joinToString(" ") }
         stuck.value = null
-        sendFrom(cur, 0, emptyList(), checks = true)
+        // 22 Oct: this final check is the verdict that clears the order: stamped with the fingerprint of these very legs, and
+        // handed to the send, which recomputes it for each leg right before Zerodha ([com.optionslab.app.data.Broker.placeOrder]).
+        val cleared = stamped(cur.copy(refusals = again))
+        plan.value = Load.Done(cleared)
+        sendFrom(cleared, 0, emptyList(), checks = true)
         return null
     }
 
@@ -1506,7 +1537,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     val leg = cur.legs[i]
                     sending.value = Load.Busy("Leg ${i + 1} of ${cur.legs.size}: ${leg.side} ${leg.tradingSymbol}")
                     val id = try {
-                        b.placeOrder(leg, exit = cur.exit)
+                        b.placeOrder(leg, exit = cur.exit, verdict = cur.verdicts.getOrNull(i), stop = cur.protect?.stop, target = cur.protect?.target)
                     } catch (e: Exception) {
                         if (b.definite(e)) throw e
                         // The reply was lost, not necessarily the order: look for it (the book can trail the POST) before saying "not sent".
@@ -1647,10 +1678,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             // 18 Oct: an exit's remaining legs still go in Paper mode (this is called after the PIN); an entry's never do.
             if ((!s.live || !s.allowRealOrders) && !st.plan.exit) { say("This is Paper mode now: the remaining legs were not sent."); return@launch }
             val rest = st.plan.legs.drop(st.index + 1)
-            val why = gate(rest, st.plan.holdToSettlement, st.plan.exit).flatten()
+            val again = gate(rest, st.plan.holdToSettlement, st.plan.exit)
+            val why = again.flatten()
             if (why.isNotEmpty()) { say("The remaining legs were not sent: " + why.distinct().joinToString(" ")); return@launch }
             stuck.value = null
-            withContext(Dispatchers.Main) { sendFrom(st.plan, st.index + 1, done, checks = true) }
+            // 22 Oct: this check is the one that clears the remaining legs now: stamped afresh with their fingerprints (the sent legs keep theirs).
+            val fresh = stamped(st.plan.copy(refusals = List(st.index + 1) { st.plan.refusals.getOrNull(it).orEmpty() } + again))
+            withContext(Dispatchers.Main) { sendFrom(fresh, st.index + 1, done, checks = true) }
         }
     }
 
@@ -2215,8 +2249,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // Paper is practice: the owner's own paper orders are never refused by the account guard, the kill switch
         // included (it guards Zerodha orders and halts the bots). The one price read serves the fill.
         val quote = runCatching { com.optionslab.app.data.Paper.quote(c) }.getOrNull()
-        val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger, quote)
         val source = com.optionslab.app.data.Origins.manual(area)
+        // 22 Oct: the paper order's own verdict (nothing refuses a paper order, so it passes), stamped with its fingerprint: the
+        // paper book refuses it if what it places differs from this ([com.optionslab.app.data.OrderVerdicts]).
+        val v = com.optionslab.app.data.OrderVerdicts.cleared(com.optionslab.app.data.OrderVerdicts.paperFields(c, action, lots, priceType, product, price, trigger,
+            com.optionslab.app.data.Market.today(), source, protect?.stop, protect?.target), "paper order")
+        val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger, quote, verdict = v, stop = protect?.stop, target = protect?.target)
         r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", source) }
         val fills = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()
         fills.forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", source, it.orderId) }

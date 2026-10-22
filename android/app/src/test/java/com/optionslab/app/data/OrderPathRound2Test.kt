@@ -1,5 +1,6 @@
 package com.optionslab.app.data
 
+import com.optionslab.app.testing.Cleared
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.FakeKite
@@ -297,10 +298,10 @@ class OrderPathRound2Test : RobolectricTest() {
     @Test fun placingAndFollowingAnOrderReadsNothingFromTheSettingsVault() = runBlocking {
         val o = Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iratest")
         // Warm: the first order after login reads the session once (it is then kept in memory).
-        Broker.awaitOrder(Broker.placeOrder(o), 2_000)
+        Broker.awaitOrder(Broker.placeOrder(o, verdict = Cleared.live(o)), 2_000)
         SecurePrefs.readsForTest.set(0)
         SecurePrefs.countedThread = Thread.currentThread()
-        val id = Broker.placeOrder(o)
+        val id = Broker.placeOrder(o, verdict = Cleared.live(o))
         val f = Broker.awaitOrder(id, 2_000)
         SecurePrefs.countedThread = null
         assertEquals("COMPLETE", f.status)
@@ -409,10 +410,10 @@ class OrderPathRound2Test : RobolectricTest() {
     @Test fun aBotsEntryThroughTheDoorReadsNothingFromTheSettingsVault() = runBlocking {
         val o = Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
         // Warm: the first entry after login reads the session and the guards once (then kept in memory).
-        Broker.awaitOrder(Broker.placeOrder(o, arm = "orb"), 2_000)
+        Broker.awaitOrder(Broker.placeOrder(o, arm = "orb", verdict = Cleared.live(o, "orb")), 2_000)
         SecurePrefs.readsForTest.set(0)
         SecurePrefs.countedThread = Thread.currentThread()
-        val id = Broker.placeOrder(o, arm = "orb")
+        val id = Broker.placeOrder(o, arm = "orb", verdict = Cleared.live(o, "orb"))
         assertNull(Broker.entryRecheck(o, "orb"))
         SecurePrefs.countedThread = null
         assertEquals("COMPLETE", Broker.awaitOrder(id, 2_000).status)

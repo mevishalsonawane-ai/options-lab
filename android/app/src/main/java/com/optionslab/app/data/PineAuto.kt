@@ -1080,7 +1080,9 @@ object PineAuto {
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = quote)
         if (why.isNotEmpty()) { note(b, id, "Refused: ${why.joinToString("; ")}"); return }
         val known = knownKite()
-        val orderId: String? = try { Broker.placeOrder(o, arm = "pine") } catch (e: Exception) {
+        // 22 Oct: the checks above cleared this order: stamped with its fingerprint, recomputed at the door ([OrderVerdicts]).
+        val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), "pine"), "Pine live checks")
+        val orderId: String? = try { Broker.placeOrder(o, arm = "pine", verdict = verdict) } catch (e: Exception) {
             if (Broker.definite(e)) { note(b, id, "Zerodha refused the buy: ${e.message}"); return }
             // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
             try { Broker.findRecentRetrying(o, known) ?: run { note(b, id, "Zerodha did not answer the buy (${e.message}) and no such order is in its book: nothing bought"); return } }

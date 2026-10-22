@@ -1,5 +1,6 @@
 package com.optionslab.app.ui
 
+import com.optionslab.app.testing.Cleared
 import android.app.Application
 import android.os.Looper
 import com.optionslab.app.data.Broker
@@ -169,7 +170,7 @@ class OrderLatencyTest : RobolectricTest() {
         k.keepAlive = true
         k.login()
         k.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.FILL_AFTER_POLLS, polls = 3))
-        val id = Broker.placeOrder(Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iratest"))
+        val id = Broker.placeOrder(Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iratest"), verdict = Cleared.live(Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iratest")))
         val t0 = System.nanoTime()
         val f = Broker.awaitOrder(id, 10_000)
         val ms = (System.nanoTime() - t0) / 1_000_000
