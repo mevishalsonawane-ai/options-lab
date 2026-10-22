@@ -885,6 +885,14 @@ object PassedArmsHost {
 
     private const val FOLLOW_UNTIL = 15 * 60 + 12
 
+    /**
+     * 22 Oct (Boss: "reserve R72's place"): the arm the same-direction cap keeps its last place for at [t] - R72 Breadth Donchian,
+     * when it is on (not record only) and a 5-minute bar has just closed (its fill window, [entryMinute]'s 09:20 .. 15:12); else
+     * null. Memory only (the paper book's entry door asks it under its lock).
+     */
+    fun placeKeptFor(t: LocalTime): String? =
+        if (_view.value.on(BreadthDonchianArm.SOURCE) && entryMinute(t) && t.isBefore(LocalTime.of(15, 13))) BreadthDonchianArm.LABEL else null
+
     /** Whether an entry decision may be due at [t]: a 5-minute bar has just closed (its first 3 minutes), or Solo's 12:00. */
     internal fun entryMinute(t: LocalTime): Boolean {
         val m = t.hour * 60 + t.minute

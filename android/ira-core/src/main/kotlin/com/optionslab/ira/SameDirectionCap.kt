@@ -90,15 +90,21 @@ object SameDirectionCap {
     }
 
     /**
-     * Why an automatic entry betting [dir] may not open now, or null when it may: "same-direction cap: 2 puts already open
-     * (NIFTY... by R51 Donchian 20; ...)". [max] below 1 is read as 1 (the cap never blocks everything by a bad number).
+     * Why an automatic entry by [owner] betting [dir] may not open now, or null when it may: "same-direction cap: 2 puts already
+     * open (NIFTY... by R51 Donchian 20; ...)". [max] below 1 is read as 1 (the cap never blocks everything by a bad number).
+     * [keptFor]: the arm whose place is kept now (22 Oct: R72 Breadth Donchian at its bar closes), or null.
      */
-    fun refusal(open: List<Open>, dir: Int, max: Int): String? {
+    fun refusal(open: List<Open>, dir: Int, max: Int, owner: String? = null, keptFor: String? = null): String? {
         val same = open.filter { it.dir == dir }
         val cap = max.coerceAtLeast(1)
-        if (same.size < cap) return null
         val who = same.take(4).joinToString("; ") { "${it.symbol} by ${it.owner}" } + if (same.size > 4) "; and ${same.size - 4} more" else ""
-        return "same-direction cap: ${same.size} ${words(dir, same.size)} already open ($who)"
+        if (same.size >= cap) return "same-direction cap: ${same.size} ${words(dir, same.size)} already open ($who)"
+        // 22 Oct (Boss: "reserve R72's place"): while [keptFor] is due to decide, one place each way is kept for it - another arm
+        // may take only the places before the last, unless [keptFor] already holds one that way. It only ever refuses (lower risk).
+        if (keptFor != null && owner != null && owner != keptFor && same.none { it.owner == keptFor } && same.size >= cap - 1)
+            return "same-direction cap: the last ${words(dir, 1)} place is kept for $keptFor at its bar close" +
+                (if (same.isEmpty()) "" else " (${same.size} ${words(dir, same.size)} already open: $who)")
+        return null
     }
 
     // ---- the would-be (shadow) record ----------------------------------------------------------------------------------

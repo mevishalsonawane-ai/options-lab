@@ -28,9 +28,17 @@ object Diag {
     private val SECRETISH = Regex("[A-Za-z0-9_\\-+/=]{24,}")
     private val TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(com.optionslab.engine.IST)
 
+    /**
+     * 22 Oct (the 22 Oct file showed "‹redacted› by Liquidity 5m MIDCPNIFTY" and Liquidity's afternoon reasons as "‹redacted›"):
+     * an option or future's trading symbol (MIDCPNIFTY27OCT2613250PE is 24 characters) and a reason code of lowercase words and
+     * underscores are never a key, so they are kept. Anything else this long still is replaced.
+     */
+    private val TRADING_SYMBOL = Regex("[A-Z]{2,20}\\d{2}[A-Z]{3}\\d{2}(?:\\d+(?:\\.\\d+)?(?:CE|PE)|FUT)")
+    private val REASON_CODE = Regex("[a-z]+(?:_[a-z]+)+")
+
     /** Anything that could be a key, token, secret or password is replaced; the rest is kept as said. */
     fun redact(s: String): String {
-        var out = SECRETISH.replace(s, "‹redacted›")
+        var out = SECRETISH.replace(s) { m -> if (TRADING_SYMBOL.matches(m.value) || REASON_CODE.matches(m.value)) m.value else "‹redacted›" }
         // The account holder's name (Zerodha's welcome line) never reaches the report the owner shares.
         runCatching { Broker.userName }.getOrNull()?.takeIf { it.length >= 3 }?.let { out = out.replace(it, "‹name›", ignoreCase = true) }
         return out

@@ -1234,6 +1234,35 @@ class PassedArmsHostTest : RobolectricTest() {
      * same pass took the same-direction cap's place and R72's break was kept only as a would-be trade. Now R72 decides first: with
      * room for one call, R72 buys it and R52's call is the would-be one.
      */
+    /**
+     * 22 Oct (Boss: "reserve R72's place"): with R72 on, at its bar close (09:20-09:22, ...) another arm may take only the first
+     * call place of two; the last is kept for R72 and the refusal says so. Outside its bar close (09:23) the plain cap; R72 off, the
+     * plain cap too.
+     */
+    @Test fun atR72sBarCloseTheLastPlaceIsKeptForItAndOnlyThen() {
+        ExposureCapHost.resetForTest(paperOn = true); ExposureCapHost.setMax(2)
+        only(BreadthDonchianArm.SOURCE)
+        market(LocalTime.of(9, 25))
+        val other = Paper.contractFor("NIFTY", day.plusDays(14), 25_000.0, Right.CE)!!
+        fun buy(owner: String) = runBlocking { Paper.place(other, "BUY", 1, "MARKET", "MIS", null, null, com.optionslab.engine.sandbox.Quote(50.0), auto = owner) }
+        at(LocalTime.of(9, 20), 2)
+        assertEquals(BreadthDonchianArm.LABEL, PassedArmsHost.placeKeptFor(LocalTime.of(9, 20, 2)))
+        assertTrue(buy("ORB").ok)
+        val kept = buy("Liquidity 5m")
+        assertTrue(kept.capped); assertTrue(kept.message, kept.message.contains("kept for ${BreadthDonchianArm.LABEL}"))
+        // 09:23 is not a bar close: the second place goes to whoever comes.
+        at(LocalTime.of(9, 23), 0)
+        assertNull(PassedArmsHost.placeKeptFor(LocalTime.of(9, 23)))
+        assertTrue(buy("Liquidity 5m").ok)
+        // R72 off: nothing is kept at any bar close; nor after 15:12.
+        runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false, log = false) }
+        assertNull(PassedArmsHost.placeKeptFor(LocalTime.of(9, 25)))
+        runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, true, log = false) }
+        assertNull(PassedArmsHost.placeKeptFor(LocalTime.of(15, 15)))
+        assertNull(PassedArmsHost.placeKeptFor(LocalTime.of(9, 15)))
+        assertNothingAtZerodha()
+    }
+
     @Test fun breadthDonchianTakesTheCapsPlaceBeforeOpenOutsideValueInTheSamePass() {
         ExposureCapHost.resetForTest(paperOn = true); ExposureCapHost.setMax(1)
         only(BreadthDonchianArm.SOURCE)
