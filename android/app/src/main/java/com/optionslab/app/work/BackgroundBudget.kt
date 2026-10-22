@@ -101,6 +101,29 @@ object BackgroundBudget {
     }
 
     /**
+     * 22 Oct (the overnight kills, "excessive binder traffic during cached"): [allow] for a check asked very often - the forge asks
+     * its stop check on every one of a backtest's 199 twins, for up to 20 ideas: thousands of battery and power-manager reads (each a
+     * call into Android) a night. This one asks [allow] at most once every [everyMs] and answers from the last ask in between.
+     * Memory only.
+     */
+    fun allowEvery(job: BudgetRule.Job, everyMs: Long = CHECK_EVERY_MS, clock: () -> Long = { android.os.SystemClock.elapsedRealtime() }): () -> Boolean =
+        Throttled(everyMs, clock) { allow(job) }
+
+    const val CHECK_EVERY_MS = 5_000L
+
+    /** [check]'s answer, asked again only once [everyMs] have passed on [clock] since the last ask (the first call always asks). */
+    internal class Throttled(private val everyMs: Long, private val clock: () -> Long, private val check: () -> Boolean) : () -> Boolean {
+        private var at = 0L
+        private var asked = false
+        private var last = true
+        @Synchronized override fun invoke(): Boolean {
+            val now = clock()
+            if (!asked || now - at >= everyMs) { last = check(); at = now; asked = true }
+            return last
+        }
+    }
+
+    /**
      * The budget now ([BudgetRule.budgetOf]) and what it has spent so far (the health check, 12 Oct): memory only - nothing is
      * asked or counted by this.
      */

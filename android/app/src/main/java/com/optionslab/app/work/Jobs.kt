@@ -196,6 +196,17 @@ object Jobs {
         Market.isTradingDay(day) && minute in (Market.OPEN - 1)..Market.foClose(day)
 
     /**
+     * NSE's hours as the running watch judges them at [minute] ([foClose]: F&O's close; [running]: a strategy run still open, asked
+     * only in the quarter-hour after the close). 22 Oct (the overnight kills): from 09:00, never from midnight - with no lower bound
+     * a watch still running at 00:00 of a trading day (an MCX evening look past midnight) counted NSE as open and stayed all night
+     * in its before-the-open loop. 09:00 is before the 09:14 start ([Kind.LIVE]) and its pre-open minutes.
+     */
+    internal inline fun nseHoursAt(minute: Int, foClose: Int, running: () -> Boolean): Boolean =
+        minute >= NSE_WATCH_FROM && (minute <= foClose || (minute <= foClose + 15 && running()))
+
+    internal const val NSE_WATCH_FROM = 9 * 60
+
+    /**
      * [watchDue] for the main thread (ANR fix, 9 Oct): NSE's hours, else MCX's from memory only
      * ([com.optionslab.app.data.McxMarket.watchDueQuick]); null when MCX's part cannot be told without a vault read.
      */
@@ -1601,8 +1612,8 @@ class WatchService : Service() {
      * NSE's part of the watch: F&O's hours (to 15:40 from 3 Aug 2026), and a quarter-hour past that close while a strategy
      * run is still open.
      */
-    private suspend fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.foClose() ||
-        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning())) || eveningLookDue() || mcxEveningLookDue()
+    private suspend fun nseWindow(): Boolean = Market.isTradingDay() && Jobs.nseHoursAt(Market.minuteNow(), Market.foClose()) {
+        com.optionslab.app.data.Strategies.anyRunning() } || eveningLookDue() || mcxEveningLookDue()
 
     /**
      * 20 Oct, enhancement round 2 (idea 3): up to half an hour past MCX's close (23:30, or 23:55 in US winter time; past midnight

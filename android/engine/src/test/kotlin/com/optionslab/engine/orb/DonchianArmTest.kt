@@ -75,6 +75,32 @@ class DonchianArmTest {
         assertTrue(!DonchianArm.mayFill(s, day.atTime(9, 48)) && !DonchianArm.mayFill(s, day.atTime(9, 44, 59)))
     }
 
+    /** 22 Oct: a break whose fill window passed with nothing bought says why, never only "missed". */
+    @Test fun aMissedBreakSaysWhyItsFillWindowPassed() {
+        // The 09:15 bar (row 0): it closes at 09:20, its last minute is 09:19, its window 09:20-09:22.
+        val s = DonchianArm.Signal("FINNIFTY", -1, b5(day, 0, 1.0, 1.0, 1.0, 1.0), 24_550)
+        fun look(h: Int, m: Int, sec: Int, last: LocalTime?) = DonchianArm.Look(day.atTime(h, m, sec), last)
+        // Tried and refused (another arm held the option, a guard, no price): that reason, never "missed".
+        val tried = DonchianArm.missedWhy(s, "refused: the kill switch is on", listOf(look(9, 21, 24, LocalTime.of(9, 20))))
+        assertEquals("09:20 put break not bought: refused: the kill switch is on (tried until 09:22, the end of its fill window)", tried)
+        // No entry check inside 09:20-09:22 (a check at 09:19 and one at 09:23 only): our own pace.
+        assertEquals("09:20 put break missed: no entry check ran in its fill window (09:20-09:22)",
+            DonchianArm.missedWhy(s, null, listOf(look(9, 19, 50, LocalTime.of(9, 18)), look(9, 23, 0, LocalTime.of(9, 22)))))
+        assertEquals("09:20 put break missed: no entry check ran in its fill window (09:20-09:22)", DonchianArm.missedWhy(s, null, emptyList()), "no look at all")
+        // Every check inside lacked 09:19 (the feed late): said with the last check's minutes; a read with no minute today too.
+        val late = DonchianArm.missedWhy(s, null, listOf(look(9, 22, 40, LocalTime.of(9, 18)), look(9, 20, 3, null)))
+        assertEquals("09:20 put break missed: the index's 09:19 minute had not reached the phone in its fill window (09:20-09:22; " +
+            "the last check, 09:22:40, had minutes to 09:18)", late)
+        assertTrue(DonchianArm.missedWhy(s, null, listOf(look(9, 20, 3, null))).endsWith("had minutes to none)"))
+        // A check inside had the whole bar, yet the break showed only later: the minutes were corrected after.
+        assertEquals("09:20 put break missed: the bar read in its fill window (09:20-09:22) did not break; the index's minutes were corrected after",
+            DonchianArm.missedWhy(s, null, listOf(look(9, 20, 3, LocalTime.of(9, 18)), look(9, 21, 10, LocalTime.of(9, 20)))))
+        // The window's edges: 09:22:59 is inside, 09:23:00 is not; a call says "call".
+        val c = s.copy(side = 1)
+        assertTrue(DonchianArm.missedWhy(c, null, listOf(look(9, 22, 59, LocalTime.of(9, 21)))).startsWith("09:20 call break missed: the bar read"))
+        assertTrue(DonchianArm.missedWhy(c, null, listOf(look(9, 23, 0, LocalTime.of(9, 22)))).contains("no entry check ran"))
+    }
+
     @Test fun itsSettingsAreR51s() {
         assertEquals(PassedArms.PremiumExits(0.15, 0.30, 30, emptyList(), LocalTime.of(15, 15)), DonchianArm.EXITS)
         assertEquals(listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"), DonchianArm.UNDERLYINGS)

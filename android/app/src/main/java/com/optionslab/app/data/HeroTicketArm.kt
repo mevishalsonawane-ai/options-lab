@@ -232,13 +232,18 @@ object HeroTicketArm {
             val b = book()
             if (b.armed == on) return@withLock "${HeroTicketRules.LABEL} is already ${if (on) "on" else "off"} (paper only)."
             b.armed = on
-            note(b, if (on) "switched on, paper only (${HeroTicketRules.BOSS_CHOICE})" else "switched off" +
-                if (b.positions.any { it.open }) "; what it holds still closes by its own exits" else "")
+            // 22 Oct ("switched off" at 13:02 right after the Trend watch sold both tickets: who did it?): the line says which door
+            // switched it - its own row (Boss's switch) or the Undo in Autopilot's change log. Nothing else in the app switches it.
+            note(b, (if (on) "switched on, paper only (${HeroTicketRules.BOSS_CHOICE})" else "switched off" +
+                if (b.positions.any { it.open }) "; what it holds still closes by its own exits" else "") + " - ${byWords(log)}")
             save(b)
             if (log) runCatching { com.optionslab.app.ira.Autopilot.heroTicketSwitchedByBoss(on) }
             if (on) "${HeroTicketRules.LABEL} on, paper only. ${HeroTicketRules.BOSS_CHOICE}." else "${HeroTicketRules.LABEL} off."
         }
     }
+
+    /** Who switched it ([setArmed]'s [log]: true from its row, false from the change log's Undo). */
+    internal fun byWords(log: Boolean): String = if (log) "by you, from its row on Home" else "by the Undo in Autopilot's change log"
 
     /** Boss's exit pick for NEW tickets (2x, 3x or the trail alone); an open ticket keeps the one it was bought with. Kept. */
     suspend fun setTarget(t: HeroTicketRules.Target): String {

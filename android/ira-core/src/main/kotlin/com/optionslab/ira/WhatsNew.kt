@@ -59,10 +59,20 @@ object WhatsNew {
     private val OCT19: LocalDate = LocalDate.of(2026, 10, 19)
     private val OCT20: LocalDate = LocalDate.of(2026, 10, 20)
     private val OCT21: LocalDate = LocalDate.of(2026, 10, 21)
+    private val OCT22: LocalDate = LocalDate.of(2026, 10, 22)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 22 Oct (Boss: "Check why other arms did not trigger today"): fixes from the 22 Oct diagnostics.
+        Entry("2026-10-22-diagnostics-fixes", OCT22, "Fixes from your 22 Oct diagnostics",
+            "When another paper arm already holds the option a passed arm wants, that trade is now kept as a would-be trade naming the holder. " +
+                "It used to be lost and said \"missed\". " +
+                "A break whose two-minute window passed now says why: refused and the reason, no check in time, or the index's minute came late. " +
+                "The passed arms follow their five indices on the live stream from 09:16, so the 09:20 breaks are judged at 09:20. " +
+                "The Hero ₹1,000 ticket's diary says who switched it: you from its row, or an Undo in the change log. " +
+                "The night strategy forge asks the battery far less often, and the watch no longer counts NSE as open after midnight.",
+            "Home → Strategies → the passed arms' rows; Home → Strategies → Hero ₹1,000 ticket"),
         // 21 Oct (Boss: "Add FT3 to the app paper bot until live, when live is started then it should move to live").
         Entry("2026-10-21-ft3-paper", OCT21, "FT3 forward test trades on paper",
             "FT3, the strongest hero-zero near-miss from research, now trades on paper on each index's expiry day. " +

@@ -199,7 +199,7 @@ object PassedArmsHost {
         /**
          * 19 Oct: a WOULD-BE trade, never on the paper account - [SHADOW_TWIN]: R51 Donchian 20 or R72 Breadth Donchian already
          * held this very option (Boss: no duplicate Donchian contracts); [SHADOW_CAP]: the same-direction cap refused it;
-         * [SHADOW_OFF]: the arm is set to record only. Bought
+         * [SHADOW_OFF]: the arm is set to record only; [SHADOW_HELD] (22 Oct): another of these arms held the option. Bought
          * and sold at the prices seen, with estimated charges, by the arm's own exits, so its record (and the R72-vs-R51
          * comparison) still counts it; labelled apart everywhere; never mirrored live. Null: a real paper trade.
          */
@@ -591,13 +591,14 @@ object PassedArmsHost {
     fun holding(): Boolean = _view.value.open.isNotEmpty()
 
     /**
-     * The watch needs this host's pass now (memory only): a position is held, or an arm is on (or record only, 19 Oct) and the time is 09:19 .. 15:16
-     * (the entries run 09:20 .. 15:10; the 15:15 square-off). Outside that it costs the watch nothing.
+     * The watch needs this host's pass now (memory only): a position is held, or an arm is on (or record only, 19 Oct) and the time is 09:16 .. 15:16
+     * (the entries run 09:20 .. 15:10; the 15:15 square-off). Outside that it costs the watch nothing. 22 Oct: from 09:16, not 09:19, so the
+     * indices are followed on the stream ([follow]) before 09:19 starts: the 09:15 bar is whole at the 09:20 check.
      */
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean =
         holding() || ((_view.value.armed.values.any { it } || _view.value.recordOnly.isNotEmpty()) && minute in WAKE_FROM until WAKE_UNTIL)
 
-    private const val WAKE_FROM = 9 * 60 + 19
+    private const val WAKE_FROM = 9 * 60 + 16
     private const val WAKE_UNTIL = 15 * 60 + 17
 
     /**
@@ -838,6 +839,45 @@ object PassedArmsHost {
     /** The minute each index was last read for entries (each index at most once a minute). */
     private val lastRead = java.util.concurrent.ConcurrentHashMap<String, Pair<LocalDateTime, List<Bar>>>()
 
+    /**
+     * 22 Oct (a break said only "missed"): each index's last entry checks - when, and the last whole minute it had - for the words
+     * of a break whose fill window passed ([DonchianArm.missedWhy]). Memory only, [LOOKS_KEPT] an index.
+     */
+    private val looks = java.util.concurrent.ConcurrentHashMap<String, java.util.ArrayDeque<DonchianArm.Look>>()
+    private const val LOOKS_KEPT = 12
+
+    private fun looked(u: String, at: LocalDateTime, bars: List<Bar>?) {
+        val q = looks.getOrPut(u) { java.util.ArrayDeque() }
+        synchronized(q) {
+            q.addLast(DonchianArm.Look(at, bars?.lastOrNull { it.start.toLocalDate() == at.toLocalDate() }?.start?.toLocalTime()))
+            while (q.size > LOOKS_KEPT) q.removeFirst()
+        }
+    }
+
+    private fun looksOf(u: String): List<DonchianArm.Look> = looks[u]?.let { q -> synchronized(q) { q.toList() } }.orEmpty()
+
+    /** 22 Oct: why a due break could not be bought at its last try ("day|arm|index|bar|side" -> why), for [DonchianArm.missedWhy]. Memory only. */
+    private val tried = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private const val TRIED_KEPT = 50
+
+    /**
+     * 22 Oct (R72's 09:20 breaks waited to 09:21:24): the stream builds an index's minutes only while it follows the index, and a
+     * minute it joined part-way is never used ([com.optionslab.ira.LiveCandles]). FINNIFTY, MIDCPNIFTY and SENSEX were followed only
+     * from the first entry check's read (09:20:03), so their 09:19 minute was never whole there, the feed's came later, and breadth
+     * (four of five breaking) could not be judged until the next minute's check. Now each pass from 09:16 to 15:12 touches the
+     * armed arms' indices (a touch lasts 3 minutes; each pass renews it), so every bar's last minute is whole when it closes.
+     * Memory and the stream's own subscription only: no disk, no network read, never on the order path.
+     */
+    private fun follow(now: LocalDateTime, v: View) {
+        val m = now.hour * 60 + now.minute
+        if (m < WAKE_FROM || m > FOLLOW_UNTIL) return
+        val tokens = SOURCES.filter { v.on(it) || v.recording(it) }.flatMap { underlyings(it) }.distinct()
+            .mapNotNull { u -> runCatching { LocalCandles.tokenOf(upKey(u)) }.getOrNull() }
+        if (tokens.isNotEmpty()) KiteStream.touch(tokens)
+    }
+
+    private const val FOLLOW_UNTIL = 15 * 60 + 12
+
     /** Whether an entry decision may be due at [t]: a 5-minute bar has just closed (its first 3 minutes), or Solo's 12:00. */
     internal fun entryMinute(t: LocalTime): Boolean {
         val m = t.hour * 60 + t.minute
@@ -862,6 +902,7 @@ object PassedArmsHost {
             }
             val out = HashMap<String, List<Bar>?>()
             for ((u, d) in reads) out[u] = d.await()
+            for ((u, d) in out) looked(u, now, d)
             Reads(out, vix.await())
         }
     }
@@ -903,7 +944,9 @@ object PassedArmsHost {
             if (changed) save(b) else publish(b)
         }
         val v = _view.value
-        if ((!v.armed.values.any { it } && v.recordOnly.isEmpty()) || !entryMinute(now.toLocalTime())) return
+        if (!v.armed.values.any { it } && v.recordOnly.isEmpty()) return
+        runCatching { follow(now, v) }
+        if (!entryMinute(now.toLocalTime())) return
         if (!entryLock.tryLock()) return
         try {
             val reads = runCatching { reads(now, v) }.getOrNull() ?: return
@@ -1075,10 +1118,12 @@ object PassedArmsHost {
             val c = Paper.ticketContract(u, expiry, k.toDouble(), right) ?: run { why = "$k ${right.name} not listed"; null } ?: continue
             if (c.lotSize <= 0) { why = "lot size unknown"; continue }
             // One contract, one arm: never two of these arms holding the same option (each one's exits read its own lot); a
-            // would-be trade holds nothing, so it never blocks one.
-            b.positions.firstOrNull { it.open && it.shadow == null && it.symbol == c.symbol && !mayShare(arm, it.arm) }?.let { why = "${c.symbol} is held by ${label(it.arm)}"; return null to why }
-            // (and the book itself: one the safety net took back since this pass's copy was made)
-            if (_view.value.open.any { it.shadow == null && it.symbol == c.symbol && !mayShare(arm, it.arm) }) { why = "${c.symbol} is held by these arms"; return null to why }
+            // would-be trade holds nothing, so it never blocks one. (And the book itself: one the safety net took back since this
+            // pass's copy was made.) 22 Oct (R72 FINNIFTY's 09:20 put lost to R52, which had just bought that very put, then
+            // said "missed"): the entry is kept as a would-be trade, labelled with the arm that holds it ([SHADOW_HELD]), so the
+            // arm's record still counts its signal - nothing is bought, never mirrored live (it was refused before, live too).
+            val held = b.positions.firstOrNull { it.open && it.shadow == null && it.symbol == c.symbol && !mayShare(arm, it.arm) }
+                ?: _view.value.open.firstOrNull { it.shadow == null && it.symbol == c.symbol && !mayShare(arm, it.arm) }
             // 19 Oct (Boss: no duplicate Donchian contracts): R51 Donchian 20 and R72 Breadth Donchian no longer both buy one option -
             // the second is kept as a would-be trade (its record and the R72-vs-R51 comparison still count it). R51 decides
             // first on a bar both break, so R51 holds it and R72 records the would-be; the other way round when R72 held it first.
@@ -1088,9 +1133,11 @@ object PassedArmsHost {
                 else b.positions.firstOrNull { it.open && it.shadow == null && it.symbol == c.symbol && mayShare(arm, it.arm) }
                     ?: _view.value.open.firstOrNull { it.shadow == null && it.symbol == c.symbol && mayShare(arm, it.arm) }
             // 19 Oct (order speed): each order timed from its own decision ([OrderTiming.ownDecision]), not the run's first.
-            val step = OrderTiming.ownDecision { buyOne(b, arm, u, c, right, now, setup, idx, atr, keys, breadth, twin) }
+            val step = OrderTiming.ownDecision { buyOne(b, arm, u, c, right, now, setup, idx, atr, keys, breadth, twin, held) }
             why = step.why
             if (step.pos != null || step.stop) return step.pos to step.why
+            // Held by another arm and no price for its would-be: never another strike instead (as before), said with the holder.
+            if (held != null) return null to "${c.symbol} is held by ${label(held.arm)} (${step.why})"
         }
         return null to why
     }
@@ -1103,7 +1150,7 @@ object PassedArmsHost {
      * may refuse it: a would-be trade), and the trade booked at once. Run as its own decision ([buy]).
      */
     private suspend fun buyOne(b: Book, arm: String, u: String, c: Paper.Contract, right: Right, now: LocalDateTime, setup: String?, idx: Double?,
-                               atr: Double?, keys: List<String>, breadth: Boolean?, twin: Pos?): BuyStep {
+                               atr: Double?, keys: List<String>, breadth: Boolean?, twin: Pos?, held: Pos? = null): BuyStep {
         // 19 Oct: the price read in the last few seconds when there is one ([prewarm] read this bar's options side by side before
         // the entries); the fill itself is priced fresh in Paper.place (2 s at most), as before.
         val q = runCatching { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) }.getOrNull()
@@ -1114,6 +1161,13 @@ object PassedArmsHost {
         if (arm in b.recordOnly && b.armed[arm] != true)
             return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth, SHADOW_OFF,
                 "switched to record only"), "would-be", true)
+        // 22 Oct: another of these arms holds this option (not R51 / R72's twin): a would-be trade at the ask (a buyer pays it), else
+        // the last price, as the cap's; the line names the arm.
+        if (held != null) {
+            val p = wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth, SHADOW_HELD,
+                "${c.symbol} is held by ${label(held.arm)}")
+            return BuyStep(p, "would-be", true)
+        }
         if (twin != null) {
             // Priced at the twin's own real fill (its spread and slippage paid), never a better price than the account got.
             val p = wouldBe(b, arm, u, c, right, twin.entry, now, setup, idx, atr, keys, breadth, SHADOW_TWIN, "${label(twin.arm)} already holds ${c.symbol}")
@@ -1170,12 +1224,15 @@ object PassedArmsHost {
     const val SHADOW_CAP = "cap"
     /** [Pos.shadow]: the arm is set to record only (19 Oct, Boss: "Yes, keep only breadth donchain"). */
     const val SHADOW_OFF = "off"
+    /** [Pos.shadow]: another of these arms (not its Donchian twin) already held the option (22 Oct). */
+    const val SHADOW_HELD = "held"
 
     /** Why a would-be trade was not bought, in words. */
     fun shadowWords(p: Pos): String = when (p.shadow) {
         SHADOW_TWIN -> "would-be: the other Donchian arm already held this option"
         SHADOW_CAP -> "would-be: refused by the same-direction cap"
         SHADOW_OFF -> "would-be: switched to record only"
+        SHADOW_HELD -> "would-be: another arm already held this option"
         else -> ""
     }
 
@@ -1312,11 +1369,14 @@ object PassedArmsHost {
             true -> return say(b, key, "its expiry day: no trades")
             false -> Unit
         }
+        // An earlier day's tries are dropped (memory only; a few a day at most).
+        if (tried.size > TRIED_KEPT) tried.keys.removeAll { !it.startsWith("$today|") }
         for (s in sigs) {
             val dk = "$today|$src|$u|${s.bar.b}|${s.side}"
             if (dk in b.decided) continue
             if (now.isBefore(s.entryTime)) continue
-            if (!DonchianArm.mayFill(s, now)) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break missed (the fill window passed)", final = true) || changed; continue }
+            // 22 Oct: why the window passed, in words (tried and refused, no check in time, the feed late, the minutes corrected).
+            if (!DonchianArm.mayFill(s, now)) { b.decided += dk; changed = say(b, key, DonchianArm.missedWhy(s, tried.remove(dk), looksOf(u)), final = true) || changed; continue }
             // 16 Oct (R73 T7): with the filter on, a break is taken only when Supertrend (10, 3) agrees; one it is against, or
             // cannot judge (no earlier session in, or no direction yet), is skipped - it only ever skips (lowers risk), never
             // adds. Decided once, before the day's caps, as the research filtered the signals before taking them.
@@ -1336,8 +1396,8 @@ object PassedArmsHost {
             if (skip != null) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} break skipped: $skip") || changed; continue }
             val (p, why) = buy(b, src, u, s.side, listOf(s.strike), now, keys = listOf(dk), breadth = confirm(s))
             changed = true
-            if (p != null) { b.decided += dk; say(b, key, takenWords(p, "${s.entryTime.toLocalTime()} break")) }
-            else say(b, key, "${s.entryTime.toLocalTime()} break: $why; tried again until ${s.entryTime.plusMinutes(DonchianArm.FILL_SLACK_MINUTES).toLocalTime()}")
+            if (p != null) { b.decided += dk; tried.remove(dk); say(b, key, takenWords(p, "${s.entryTime.toLocalTime()} break")) }
+            else { tried[dk] = why; say(b, key, "${s.entryTime.toLocalTime()} break: $why; tried again until ${s.entryTime.plusMinutes(DonchianArm.FILL_SLACK_MINUTES).toLocalTime()}") }
         }
         return changed
     }
@@ -1751,7 +1811,7 @@ object PassedArmsHost {
     /** For tests: the book forgotten (its file goes with the test's directory), and the day's memory. */
     internal fun wipe() {
         synchronized(writeLock) { pendingBytes.set(null) }
-        cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear()
+        cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear()
     }
 
     /** TEST ONLY: closed trades added to the book as if traded (the forward bars' tests). Debug builds only. */
