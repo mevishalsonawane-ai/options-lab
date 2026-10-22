@@ -80,6 +80,89 @@ object PayoutDrawdown {
         else "$head. Shadow: logged only; nothing changes."
     }
 
+    // ---- 21 Oct, enhancement round 5 (idea 5): did the payout really leave? -------------------------------------------------
+
+    /**
+     * One day's balances as Kite's margins read them: [opening], the day's opening balance (the first read of the day), and
+     * [expectedNext], what the NEXT day's opening balance should be if no money left or came in: the opening plus the day's
+     * realised P&L, less the premium of options bought and still held, plus money added in the day (the day's last read). Both
+     * NaN when not known. Approximate: charges are not in it (they make the next opening a little lower).
+     */
+    data class Balance(val day: LocalDate, val opening: Double, val expectedNext: Double)
+
+    /** Days of balances kept (review: as long as the payouts, so a confirmed payout under a peak that stands for weeks stays confirmed). */
+    const val KEEP_BALANCES = KEEP + 10
+
+    /** [list] with [day]'s read: its first opening balance kept, its expected next opening the latest. A bad figure changes nothing. */
+    fun recordBalance(list: List<Balance>, day: LocalDate, opening: Double, expectedNext: Double): List<Balance> {
+        val okOpen = opening.isFinite() && opening > 0.0
+        val okNext = expectedNext.isFinite()
+        if (!okOpen && !okNext) return list
+        val old = list.firstOrNull { it.day == day }
+        val next = Balance(day, if (old != null && old.opening.isFinite()) old.opening else if (okOpen) opening else Double.NaN,
+            if (okNext) expectedNext else old?.expectedNext ?: Double.NaN)
+        return (list.filter { it.day != day } + next).sortedBy { it.day }.takeLast(KEEP_BALANCES)
+    }
+
+    /** What the balances say of one payout. */
+    enum class Left { CONFIRMED, NOT_SEEN, UNKNOWN }
+
+    /** Slack for rounding only (review: one-sided - charges make the drop bigger, never smaller). */
+    const val LEFT_TOLERANCE_RS = 1.0
+
+    /**
+     * Whether payout [p] really left the account: the first opening balance read AFTER its day is lower than its day's
+     * [Balance.expectedNext] by at least the whole payout (less [LEFT_TOLERANCE_RS] for rounding). A loss after the day's last read
+     * also lowers the next opening, so it can still confirm a payout that did not leave: the offer stays Boss's call, with the PIN. A payout cancelled or
+     * rejected after its day's last read leaves the next opening where it was: [Left.NOT_SEEN]. No read of its day's balances or
+     * of a later opening yet (today's payout, the app not opened since): [Left.UNKNOWN]. Money added the next morning before the
+     * read, or a profit the realised figure missed, can hide a real payout (then it is NOT_SEEN: the offer waits, never the reverse).
+     */
+    fun left(p: Payout, balances: List<Balance>): Left {
+        val d = balances.firstOrNull { it.day == p.day }?.takeIf { it.expectedNext.isFinite() } ?: return Left.UNKNOWN
+        val n = balances.filter { it.day.isAfter(p.day) && it.opening.isFinite() && it.opening > 0.0 }.minByOrNull { it.day }
+            ?: return Left.UNKNOWN
+        val drop = d.expectedNext - n.opening
+        return if (drop >= p.amount - LEFT_TOLERANCE_RS) Left.CONFIRMED else Left.NOT_SEEN
+    }
+
+    /** The payouts [paidOutSince] counts, split by [left]: (confirmed, not seen leaving, not known yet), in rupees. */
+    data class Split(val confirmed: Double, val notSeen: Double, val unknown: Double) {
+        val all: Double get() = confirmed + notSeen + unknown
+    }
+
+    fun paidOutSplit(list: List<Payout>, balances: List<Balance>, peak: Double, today: LocalDate): Split {
+        if (!peak.isFinite() || peak <= 0.0) return Split(0.0, 0.0, 0.0)
+        val counted = list.filter { it.day.isBefore(today) && it.peak.isFinite() && abs(it.peak - peak) < 0.5 }
+        val by = counted.groupBy { left(it, balances) }.mapValues { (_, ps) -> ps.sumOf { it.amount } }
+        return Split(by[Left.CONFIRMED] ?: 0.0, by[Left.NOT_SEEN] ?: 0.0, by[Left.UNKNOWN] ?: 0.0)
+    }
+
+    /**
+     * Plain words when the payouts would explain the drawdown ([all], every payout counted) but those confirmed by the next
+     * opening balance do not ([confirmed]): nothing is offered until they are. Null when there is nothing to say.
+     */
+    fun waitingWords(all: Judged?, confirmed: Judged?, split: Split, on: Boolean): String? {
+        if (all == null || !all.explained || (confirmed != null && confirmed.explained)) return null
+        val head = "Payouts of Rs %,.0f since the peak would explain this drawdown, but the next day's opening balance has not shown ".format(all.paidOut) +
+            (if (split.notSeen > 0) "Rs %,.0f of them leaving".format(split.notSeen) else "them leaving yet") +
+            (if (split.unknown > 0 && split.notSeen > 0) " (Rs %,.0f not read yet)".format(split.unknown) else "")
+        return if (on) "$head. Nothing is offered until it does; the kill switch stays on." else "$head. Shadow: logged only; nothing changes."
+    }
+
+    /** "day|opening|expectedNext;..." for the settings vault; [decodeBalances] reads it back (a bad row is skipped). */
+    fun encodeBalances(list: List<Balance>): String = list.joinToString(";") { "${it.day}|${it.opening}|${it.expectedNext}" }
+
+    fun decodeBalances(s: String?): List<Balance> = s.orEmpty().split(';').mapNotNull { row ->
+        val f = row.split('|')
+        if (f.size != 3) return@mapNotNull null
+        val day = runCatching { LocalDate.parse(f[0]) }.getOrNull() ?: return@mapNotNull null
+        val o = f[1].toDoubleOrNull() ?: Double.NaN
+        val e = f[2].toDoubleOrNull() ?: Double.NaN
+        if (!o.isFinite() && !e.isFinite()) return@mapNotNull null
+        Balance(day, o, e)
+    }.sortedBy { it.day }.takeLast(KEEP_BALANCES)
+
     /** "day|amount|peak;..." for the settings vault; [decode] reads it back (a bad row is skipped). */
     fun encode(list: List<Payout>): String = list.joinToString(";") { "${it.day}|${it.amount}|${it.peak}" }
 

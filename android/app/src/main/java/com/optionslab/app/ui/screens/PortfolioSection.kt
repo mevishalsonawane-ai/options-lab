@@ -310,6 +310,8 @@ internal fun DayOcoCardContent(view: com.optionslab.app.data.DayOco.View, said: 
             view.on, keepSub = true, onChange = onSwitch)
         Note("The trade-off: a GTT's stop is checked by Zerodha's server and then sends a limit order, which can miss in a sharp gap. " +
             "Switching it on takes your PIN.", Modifier.padding(top = 2.dp))
+        // 21 Oct, enhancement round 5 (idea 1): today's and the last week's counts, to judge it after a week on.
+        if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }
 }
@@ -340,7 +342,8 @@ internal fun payoutLowerLabel(rs: Double): String = "Lower the peak by Rs %,.0f 
 internal fun PayoutDrawdownCardContent(view: com.optionslab.app.data.PayoutWatch.View, said: String?, onSwitch: (Boolean) -> Unit, onLower: () -> Unit) {
     LedgerCard(title = "Payouts and the drawdown") {
         Note("Money taken out of Zerodha lowers the next day's opening balance, which reads as a drawdown from the peak and can turn " +
-            "the kill switch on. The app keeps each day's payout and counts those made since the peak.")
+            "the kill switch on. The app keeps each day's payout and counts those made since the peak, once the next day's opening " +
+            "balance shows the money left.")
         ToggleRow("Count payouts in the drawdown", if (view.on) "On: said beside the refusal, and offered to you" else "Off: only logs what it would say",
             view.on, keepSub = true, onChange = onSwitch)
         Note("It never clears the kill switch or keeps it off by itself: on, it offers to lower the peak by the payouts, with your PIN.",

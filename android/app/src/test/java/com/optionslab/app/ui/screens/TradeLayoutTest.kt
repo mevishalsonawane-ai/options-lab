@@ -288,8 +288,12 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     protected fun liveOrders() {
         live(working = true)
         showLive()
+        // 21 Oct, round 5: the Book chip is built from the account read on a background job and may still read "Orders" (or be
+        // settling into its merged row) on the first frame: wait for "Orders 1" itself, as Modify below does (CI failed once here).
+        compose.waitUntil(20_000) { compose.onAllNodesWithText("Orders 1").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
         compose.onNodeWithText("Orders 1").performClick()
-        compose.waitUntil(5_000) { exists("WORKING") }
+        compose.waitUntil(20_000) { exists("WORKING") }
         snap("trade-live-orders", known())
     }
 
@@ -297,9 +301,10 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
         live(working = true)
         showLive()
         // The Book chip may still be settling into its merged row on the first frame (as Modify below): wait for it.
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Orders 1").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(20_000) { compose.onAllNodesWithText("Orders 1").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
         compose.onNodeWithText("Orders 1").performClick()
-        compose.waitUntil(5_000) { exists("Modify") }
+        compose.waitUntil(20_000) { exists("Modify") }
         paused {
             compose.onNodeWithText("Modify").performClick(); frames()
             tapText("SL"); frames()

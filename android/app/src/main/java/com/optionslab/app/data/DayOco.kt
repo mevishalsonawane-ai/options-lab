@@ -2,6 +2,7 @@ package com.optionslab.app.data
 
 import android.content.Context
 import com.optionslab.app.security.SecurePrefs
+import com.optionslab.ira.DayGttTally
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,14 +26,21 @@ import kotlinx.coroutines.launch
  */
 object DayOco {
     private const val K_ON = "g.dayOco.on"
+    /** 21 Oct, enhancement round 5 (idea 1): the last week's counts ([DayGttTally]). */
+    private const val K_TALLY = "g.dayOco.tally"
 
     @Volatile private var on = false
     @Volatile private var loaded = false
     /** Boss changed the switch in this process (the start's late read never overrides it). */
     @Volatile private var switched = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** 21 Oct, enhancement round 5 (idea 1): the day GTT's counts, the last week (memory; written on a worker thread). */
+    @Volatile private var tally: List<DayGttTally.Day> = emptyList()
+    @Volatile private var tallyLoaded = false
+    private val tallyLock = Any()
 
-    data class View(val on: Boolean = false)
+    /** [line]: 21 Oct, round 5 - today's and the last week's counts ([line]). */
+    data class View(val on: Boolean = false, val line: String = "")
     private val _view = MutableStateFlow(View())
     /** Bot settings' card. */
     val view: StateFlow<View> = _view
@@ -46,8 +54,40 @@ object DayOco {
             if (!switched) on = saved
             loaded = true
         }
-        _view.value = View(on)
+        // 21 Oct, enhancement round 5 (idea 1): the week's counts; those seen before this read are added to them.
+        runCatching {
+            val saved = DayGttTally.decode(SecurePrefs.getString(K_TALLY))
+            synchronized(tallyLock) { if (!tallyLoaded) { tally = DayGttTally.merge(saved, tally); tallyLoaded = true } }
+            // Review: counts seen before this read were not written (nothing is, until it): written now.
+            scope.launch { save() }
+        }
+        publish()
     }
+
+    /**
+     * 21 Oct, enhancement round 5 (idea 1): one day-GTT event counted for the diagnostics ([line]). Returns at once: memory here,
+     * written on a worker thread (the protections' watch calls it; it never touches the disk or the settings itself).
+     */
+    fun note(e: DayGttTally.Event) {
+        runCatching {
+            val day = Market.today()
+            synchronized(tallyLock) { tally = DayGttTally.add(tally, day, e) }
+            publish()
+            scope.launch { save() }
+        }
+    }
+
+    private fun save() {
+        runCatching {
+            // Review: written under the lock, so two notes close together never save in reverse order.
+            synchronized(tallyLock) { if (tallyLoaded) SecurePrefs.putAllSoon(mapOf(K_TALLY to DayGttTally.encode(tally))) }
+        }
+    }
+
+    private fun publish() { runCatching { _view.value = View(on, line()) } }
+
+    /** The diagnostics' line (round 5): the switch, today's counts and the last seven days'. Memory only. */
+    fun line(): String = DayGttTally.line(on, tally, runCatching { Market.today() }.getOrElse { java.time.LocalDate.now(com.optionslab.engine.IST) })
 
     fun isOn(): Boolean = on
 
@@ -58,7 +98,7 @@ object DayOco {
     fun isKnownOff(): Boolean = loaded && !on
 
     /** Read once if the start's read has not landed (a worker thread only: Bot settings' card). */
-    fun refresh() { if (!loaded) load() else _view.value = View(on) }
+    fun refresh() { if (!loaded) load() else publish() }
 
     /**
      * Boss's switch (Bot settings). Switching it on takes the PIN ([pinConfirmed]: the card asks first); off never does. Each
@@ -71,7 +111,7 @@ object DayOco {
         switched = true
         runCatching { SecurePrefs.putAllSoon(mapOf(K_ON to on)) }
         runCatching { Diag.record("protection", "Stop and target as one GTT in the day: ${if (on) "on" else "off"} (by you)") }
-        _view.value = View(on)
+        publish()
         return if (on) "On: a carried (NRML) position's stop and target rest at Zerodha as one GTT all day, from the next open (or " +
             "when set). Whichever fires, Zerodha cancels the other, even with the phone off. A GTT's stop sends a limit order, which " +
             "can miss in a gap."
@@ -79,5 +119,12 @@ object DayOco {
     }
 
     /** TEST ONLY: the switch as given, nothing saved. */
-    internal fun resetForTest(on: Boolean = false, loaded: Boolean = true) { this.on = on; this.loaded = loaded; switched = false; _view.value = View(on) }
+    internal fun resetForTest(on: Boolean = false, loaded: Boolean = true) {
+        this.on = on; this.loaded = loaded; switched = false
+        synchronized(tallyLock) { tally = emptyList(); tallyLoaded = loaded }
+        publish()
+    }
+
+    /** TEST ONLY: today's count of [e]. */
+    internal fun countForTest(e: DayGttTally.Event): Int = tally.firstOrNull { it.day == Market.today() }?.get(e) ?: 0
 }

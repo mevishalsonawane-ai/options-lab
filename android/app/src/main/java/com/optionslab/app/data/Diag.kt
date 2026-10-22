@@ -364,7 +364,8 @@ object Diag {
     private fun round2Exits(): String = (runCatching { ExitCoordinator.line() }.getOrElse { "Exit coordinator: could not read" }) + "\n" + round3Lag()
     private fun round3Lag(): String = (runCatching { ExitCoordinator.lagLine() }.getOrElse { "Positions-lag guard: could not read" }) + "\n" + round4Lines()
     /** 21 Oct, enhancement round 4: the day OCO's switch and the payout-aware drawdown's line (in this chain, as round 3's line). */
-    private fun round4Lines(): String = "Stop and target as one GTT in the day: ${if (runCatching { DayOco.isOn() }.getOrDefault(false)) "on" else "off"}\n" +
+    // 21 Oct, enhancement round 5 (idea 1): the day GTT's line carries today's and the last week's counts ([DayOco.line]).
+    private fun round4Lines(): String = (runCatching { DayOco.line() }.getOrElse { "Stop and target as one GTT in the day: could not read" }) + "\n" +
         (runCatching { PayoutWatch.line() }.getOrElse { "Payout-aware drawdown: could not read" }) + "\n"
 
     /** The MCX paper arms' line and NR7 crude's record-only line (21 Oct). Its own function: the report's one is near the compiler's limit. */

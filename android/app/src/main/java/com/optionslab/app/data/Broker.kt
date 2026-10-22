@@ -665,7 +665,16 @@ object Broker {
                      val openingBalance: Double = 0.0, val collateral: Double = 0.0, val span: Double = 0.0,
                      val exposure: Double = 0.0, val optionPremium: Double = 0.0, val realised: Double = 0.0, val m2m: Double = 0.0,
                      /** 21 Oct, enhancement round 4 (idea 3): the day's payout (money taken out; Kite's utilised.payout). */
-                     val payout: Double = 0.0)
+                     val payout: Double = 0.0,
+                     /** 21 Oct, enhancement round 5 (idea 5): money added in the day (Kite's available.intraday_payin). */
+                     val payin: Double = 0.0) {
+        /**
+         * 21 Oct, round 5: what the next day's opening balance should be if no money left or came in overnight: the opening plus
+         * the day's realised P&L, less the premium of options bought, plus money added today. Approximate (charges not in it);
+         * NaN when the opening balance is not known.
+         */
+        val expectedNextOpening: Double get() = if (openingBalance > 0.0) openingBalance + realised - optionPremium + payin else Double.NaN
+    }
 
     /** One row of GET /portfolio/positions (net or day book). */
     data class Position(
@@ -717,11 +726,12 @@ object Broker {
             Funds(a.optDouble("live_balance", a.optDouble("cash", 0.0)), u.optDouble("debits", 0.0), eq.optDouble("net", 0.0),
                 a.optDouble("opening_balance", 0.0), a.optDouble("collateral", 0.0), u.optDouble("span", 0.0), u.optDouble("exposure", 0.0),
                 u.optDouble("option_premium", 0.0), u.optDouble("m2m_realised", 0.0), u.optDouble("m2m_unrealised", 0.0),
-                u.optDouble("payout", 0.0))
+                u.optDouble("payout", 0.0), a.optDouble("intraday_payin", 0.0))
         }
         fundsKept = r.startedAt to r.value
         // 21 Oct, enhancement round 4 (idea 3): the day's payout kept for the payout-aware drawdown (recorded on a worker thread).
-        runCatching { PayoutWatch.seen(r.value.payout) }
+        // 21 Oct, enhancement round 5 (idea 5): with the day's balances, to confirm the next day that a payout really left.
+        runCatching { PayoutWatch.seen(r.value.payout, r.value.openingBalance, r.value.expectedNextOpening) }
         runCatching { AppState.publishFunds(r.value, r.startedAt) }
         return r.value
     }
@@ -865,10 +875,14 @@ object Broker {
             it.optString("fill_timestamp", it.optString("exchange_timestamp", "")))
     }.sortedByDescending { it.at }
 
-    suspend fun orders(): List<OrderRow> {
+    /**
+     * [fresh]: 21 Oct, enhancement round 5 - never joins a read already on its way (one begun before the caller's last positions
+     * read could miss a fill the positions show): the positions-lag guard's check of a suspected conversion.
+     */
+    suspend fun orders(fresh: Boolean = false): List<OrderRow> {
         val gen = writes.get()
         // Workers asking at once share one read (10 Oct, [SHARE_MS]): never one begun before an order, change or cancel.
-        val r = ordersShared.run(shareKey(gen), SHARE_MS, shareContext()) {
+        val r = ordersShared.run(shareKey(gen), if (fresh) 0L else SHARE_MS, shareContext()) {
             rows(call("GET", "/orders") as JSONArray).map(::orderRow).sortedByDescending { it.placedAt }
         }
         val list = r.value

@@ -562,4 +562,81 @@ class ExitCoordinatorTest : RobolectricTest() {
         assertEquals("as before this round: the pass sells the trailing read again", 75, sells())
         assertTrue(ExitCoordinator.countsForTest().lagShadow >= 1)
     }
+
+    // ---- 21 Oct, enhancement round 5 (idea 3): a same-day NRML/MIS conversion ------------------------------------------------
+
+    /**
+     * Boss's NRML sell of 75 filled, then a conversion: Kite shows that sell's day quantity in the MIS row (the orders keep NRML).
+     * The NRML row alone reads as trailing a fill it never will show.
+     */
+    private fun soldThenConverted() {
+        kite.position(ce, 150, 20.0)
+        bossSells(75)                                              // filled at once; NRML now 75 held, day sells 75
+        synchronized(kite) {
+            kite.daySold["NFO:$ce:NRML"] = 0
+            kite.position(ce, 0, 20.0, product = "MIS")
+            kite.daySold["NFO:$ce:MIS"] = 75
+            kite.dayBought["NFO:$ce:MIS"] = 75
+        }
+        kite.requests.clear()
+    }
+
+    @Test fun onAFillMovedByAConversionIsNeverCountedAsSold() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        soldThenConverted()
+        assertEquals("75 still held as NRML: nothing counted as sold", 75, heldFor())
+        assertEquals("no trailing read: read once", 1, positionReads())
+        val c = ExitCoordinator.countsForTest()
+        assertEquals(0, c.lagReadAgain + c.lagSubtracted + c.lagShadow)
+        assertEquals(1, c.lagConversion)
+        assertTrue(ExitCoordinator.lagLine(), ExitCoordinator.lagLine().contains("by a conversion (not counted as trailing) 1"))
+    }
+
+    @Test fun inShadowAFillMovedByAConversionIsNotLoggedAsTrailing() {
+        soldThenConverted()
+        assertEquals(75, heldFor())
+        assertEquals(0, ExitCoordinator.countsForTest().lagShadow)
+        assertEquals(1, ExitCoordinator.countsForTest().lagConversion)
+    }
+
+    @Test fun aRealLagBesideAnotherProductsRowIsStillCaught() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 150, 20.0)
+        kite.position(ce, 0, 20.0, product = "MIS")                // an MIS row of its own, nothing moved
+        kite.positionsTrailReads = 50
+        bossSells(75)
+        kite.requests.clear()
+        assertEquals("150 shown, 75 of it sold: 75", 75, heldFor())
+        assertEquals(1, ExitCoordinator.countsForTest().lagSubtracted)
+        assertEquals(0, ExitCoordinator.countsForTest().lagConversion)
+    }
+
+    /**
+     * Review (round 5): NOT a conversion - our NRML exit filled and its row trails, and an MIS sell of the same contract filled AFTER
+     * the orders were read: its day sell in the MIS row would hide the NRML lag. The orders are read again and the lag stands.
+     */
+    @Test fun onAnotherProductsFillAfterTheOrdersReadNeverHidesARealLag() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        kite.position(ce, 150, 20.0)
+        kite.position(ce, 75, 20.0, product = "MIS")
+        bossSells(75)                                              // NRML sell filled ...
+        kite.position(ce, 150, 20.0)                               // ... and the NRML row trails it
+        kite.daySold["NFO:$ce:NRML"] = 0
+        val book = runBlocking { Broker.orders() }                 // the sender's orders read
+        runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "MIS", "MARKET", null, 0.05, "NFO", ""), exit = true) }
+        kite.requests.clear()
+        val held = runBlocking { ExitCoordinator.held("NFO", ce, "NRML", "test", book) }
+        assertEquals("150 shown, 75 of it sold by our NRML exit: 75", 75, held)
+        assertEquals("the orders read again", 1, kite.requests.count { it.method == "GET" && it.path == "/orders" })
+        assertEquals(0, ExitCoordinator.countsForTest().lagConversion)
+        assertEquals(1, ExitCoordinator.countsForTest().lagSubtracted)
+    }
+
+    @Test fun onAConversionIsConfirmedOnAFreshOrdersRead() {
+        ExitCoordinator.resetForTest(lagOn = true)
+        soldThenConverted()
+        assertEquals(75, heldFor())
+        assertEquals("the sender's read and the confirming read", 2, kite.requests.count { it.method == "GET" && it.path == "/orders" })
+    }
 }
+
