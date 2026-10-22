@@ -52,12 +52,30 @@ class DayLockTest {
 
     @Test fun itIsSaidInPlainWords() {
         val r = DayLock.Reached(day, LocalTime.of(14, 11), 8_001.0, 8_000.0)
-        assertEquals("Day lock: reached +Rs 8,000 at 14:11, no new entries", DayLock.line(r))
-        assertEquals("Day lock (paper): reached +Rs 8,000 at 14:11, no new entries", DayLock.line(r, "paper"))
-        assertEquals("Day lock (Zerodha): reached +Rs 8,000 at 14:11, no new entries today (open positions keep their own exits)",
+        assertEquals("Day lock: reached +Rs 8,001 (limit +Rs 8,000) at 14:11, no new entries", DayLock.line(r))
+        assertEquals("Day lock (paper): reached +Rs 8,001 (limit +Rs 8,000) at 14:11, no new entries", DayLock.line(r, "paper"))
+        assertEquals("Day lock (Zerodha): reached +Rs 8,001 (limit +Rs 8,000) at 14:11, no new entries today (open positions keep their own exits)",
             DayLock.refusal(r, "Zerodha"))
         assertEquals("+Rs 8,000", DayLock.describe(8_000.0))
         assertEquals("off", DayLock.describe(0.0))
+    }
+
+    /** 22 Oct audit: the line said "reached +Rs 8,000" whatever the P&L was; now it names the P&L and the limit, signed. */
+    @Test fun lineNamesBothThePnlAndTheLimit() {
+        val r = DayLock.Reached(day, LocalTime.of(14, 11), 8_412.0, 8_000.0)
+        assertEquals("Day lock (paper): reached +Rs 8,412 (limit +Rs 8,000) at 14:11, no new entries", DayLock.line(r, "paper"))
+        // Fractions round to whole rupees; the P&L well above the limit is printed as it was, not as the limit.
+        val big = DayLock.Reached(day, LocalTime.of(11, 0), 11_514.49, 8_000.0)
+        assertEquals("Day lock: reached +Rs 11,514 (limit +Rs 8,000) at 11:00, no new entries", DayLock.line(big))
+        assertEquals("+Rs 8,413", DayLock.signed(8_412.6))
+        // The P&L survives the kept line, so the words after a restart are the same words.
+        assertEquals(DayLock.line(big), DayLock.line(DayLock.decode(DayLock.encode(big))!!))
+        // The sign: positive, negative, zero (never "-Rs 0").
+        assertEquals("+Rs 8,412", DayLock.signed(8_412.0))
+        assertEquals("-Rs 6,210", DayLock.signed(-6_210.0))
+        assertEquals("+Rs 0", DayLock.signed(0.0))
+        assertEquals("+Rs 0", DayLock.signed(-0.4))
+        assertEquals("+Rs 1,000,000", DayLock.signed(1_000_000.0))
     }
 
     @Test fun itIsKeptAsOneLine() {

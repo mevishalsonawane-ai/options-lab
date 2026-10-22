@@ -40,7 +40,6 @@ class WhatsNewChangelogTest {
         }
     }
 
-    /** 22 Oct (Boss: "Check why other arms did not trigger today"): the 22 Oct diagnostics fixes, newest of all, plain words. */
     /** 22 Oct (Boss: "Check each and every arm also hidden arms"): the arms audit's fixes, newest of all, plain words. */
     @Test fun theArmsAuditFixesAreSaidPlainly() {
         val x = WhatsNew.ENTRIES.first()
@@ -51,7 +50,7 @@ class WhatsNewChangelogTest {
         for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
         for (t in listOf(x.what, x.title, x.where)) assertFalse(Regex("[a-z][A-Z]").containsMatchIn(t), t)
         for (w in listOf("hidden ones too", "sell into a short", "15:05 square-off", "opens nothing new", "cannot be read", "read again",
-            "even when no price can be read", "rests in the paper book", "stay on paper, always", "Would-be trades no longer count"))
+            "even when no price can be read", "rests in the paper book", "stay on paper, always", "would-be trades no longer count", "P&L beside its limit"))
             assertTrue(w in x.what, w)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
         // The 22 Oct diagnostics fixes are the one under it.

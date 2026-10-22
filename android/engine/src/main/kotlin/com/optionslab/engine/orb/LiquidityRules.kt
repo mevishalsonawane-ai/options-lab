@@ -308,4 +308,69 @@ object LiquidityRules {
     }
 
     fun mayEnterAt(entry: LocalDateTime): Boolean { val t = entry.toLocalTime(); return !t.isBefore(FIRST_ENTRY) && !t.isAfter(LAST_ENTRY) }
+
+    // ---- 22 Oct audit (F1, F3, F6): the fill window, the expiry-day skip, the would-be rows and the index notes ---------
+
+    /**
+     * 22 Oct audit F1: the research fills a signal bar at its close or up to 2 minutes after it ([DonchianArm.mayFill] keeps the
+     * same slack); the app saw the 21 Oct 13:00 bar at 13:09 (it was holding, then the pass came late) and bought a price the
+     * research never had. A bar seen later than that is a would-be row, counted apart, never bought - on paper and live alike
+     * (live: a refusal only, so it can only lower risk).
+     */
+    const val FILL_SLACK_MINUTES = 2L
+
+    /** Where [now] sits against a signal bar's fill window: [OK] inside it, [LATE] after it. */
+    enum class Window { OK, LATE }
+
+    /** The window of the bar starting at [barStart] on a [minutes]-minute chart at [now]: OK in [close, close + 3 min), LATE after. */
+    fun window(barStart: LocalDateTime, minutes: Int, now: LocalDateTime): Window {
+        val close = barStart.plusMinutes(minutes.toLong())
+        return if (now.isBefore(close.plusMinutes(FILL_SLACK_MINUTES + 1))) Window.OK else Window.LATE
+    }
+
+    /**
+     * Whether a position entered at [entry] and sold at [exit] (null: still open) was held at a bar's [close] - words only (the
+     * missed row says whether the book was holding then). An exit at the close counts as flat: the book was free to buy.
+     */
+    fun heldAt(close: LocalDateTime, entry: LocalDateTime, exit: LocalDateTime?): Boolean =
+        !entry.isAfter(close) && (exit == null || exit.isAfter(close))
+
+    /** The verdict word of a signal bar seen after its fill window (a would-be row, never bought). */
+    const val MISSED = "liquidity_signal_missed"
+
+    /** How a missed row's reason begins (its tally counts rows by it). */
+    const val MISSED_PREFIX = "missed: "
+
+    /** A missed row's reason: [held] names what the book held at the bar's close ("SYMBOL (why at hh:mm)"), null when the app was away. */
+    fun missedWords(held: String?): String =
+        MISSED_PREFIX + "its fill window passed (" + (if (held != null) "held: $held" else "the app was away") + ")"
+
+    /**
+     * 22 Oct audit F3: the research rule skips an index's own expiry day (research/liquidity_break.py: no entry on the expiry);
+     * the app took the 21 Oct FINNIFTY entry on FINNIFTY's expiry. Now a book takes no entry on its index's expiry day (open
+     * positions keep their exits). Note: 27 Oct 2026 is the monthly expiry of all three indices (BANKNIFTY, FINNIFTY,
+     * MIDCPNIFTY), the day after Boss's 26 Oct live decision - every book skips it.
+     */
+    const val EXPIRY_DAY = "liquidity_expiry_day"
+    const val EXPIRY_DAY_WORDS = "expiry day: the research rule skips it"
+
+    /** The would-be row's reason under the paper account's day lock (the entry door's refusal, kept as a row and counted apart). */
+    const val DAY_LOCK = "day lock"
+
+    /**
+     * The would-be row's reason while Boss (or the loss limit) stopped the bot for today: a different gate from the day lock
+     * (review), so its rows are tallied on their own.
+     */
+    const val BOT_STOPPED = "bot stopped for today"
+
+    /**
+     * 22 Oct audit F6: each index's own verdict, said on the row and in the arming words, so FINNIFTY's and MIDCPNIFTY's paper
+     * trades are never read as part of the BANKNIFTY decision.
+     */
+    val INDEX_NOTES: Map<String, String> = mapOf(
+        "FINNIFTY" to "paper only, Boss's choice (15 Oct): it failed its final research read, research says parked",
+        "MIDCPNIFTY" to "paper only, Boss's choice (07 Oct): it passed H4's gates (research h4)")
+
+    /** [INDEX_NOTES] for [und], or null (BANKNIFTY: the 26 Oct decision's own index has none). */
+    fun indexNote(und: String): String? = INDEX_NOTES[und]
 }

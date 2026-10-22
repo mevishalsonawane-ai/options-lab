@@ -72,8 +72,8 @@ object WhatsNew {
                 "While the hidden-arms list cannot be read, Jarvis's and the forge's ideas stay blocked and the list is read again. " +
                 "An ORB time exit or your Stop for today sells even when no price can be read. " +
                 "The US-night silver short's stop now rests in the paper book, and never trades against the trend arm's leg. " +
-                "Jarvis's own trade ideas stay on paper, always. " +
-                "Would-be trades no longer count in the passed arms' 40-trade test.",
+                "Jarvis's own trade ideas stay on paper, always, and would-be trades no longer count in the 40-trade test. " +
+                "The day-lock line now shows the day's P&L beside its limit, not the limit alone.",
             "Home → Strategies → each arm's row; the audit table is in the repository's RESULT.md"),
         // 22 Oct (Boss: "Check why other arms did not trigger today"): fixes from the 22 Oct diagnostics.
         Entry("2026-10-22-diagnostics-fixes", OCT22, "Fixes from your 22 Oct diagnostics",

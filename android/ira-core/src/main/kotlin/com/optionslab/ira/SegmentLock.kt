@@ -115,22 +115,30 @@ object SegmentLock {
     enum class Side { PAPER, PAPER_NSE, ZERODHA, MCX }
 
     /**
-     * Home's, Bot settings' and the diagnostics' line for a reached day lock: "Day lock reached (paper NSE) +Rs 8,000 at 11:00:
-     * no new NSE entries today", "Commodities day lock reached +Rs 8,000 at 18:05: no new MCX entries today".
+     * The P&L that reached a limit and the limit itself, signed: "+Rs 11,514 (limit +Rs 8,000)"; a loss limit ([loss], kept as a
+     * positive amount) "-Rs 6,210 (limit -Rs 6,000)". 22 Oct audit: the lines printed the limit alone as if it were the P&L.
+     */
+    private fun figures(r: DayLock.Reached, loss: Boolean): String =
+        if (loss) "${DayLock.signed(r.pnl)} (limit -Rs ${rs(r.limit)})" else "${DayLock.signed(r.pnl)} (limit ${DayLock.signed(r.limit)})"
+
+    /**
+     * Home's, Bot settings' and the diagnostics' line for a reached day lock: "Day lock reached (paper NSE) +Rs 11,514 (limit
+     * +Rs 8,000) at 11:00: no new NSE entries today", "Commodities day lock reached +Rs 8,400 (limit +Rs 8,000) at 18:05: no new
+     * MCX entries today".
      */
     fun lockLine(r: DayLock.Reached, side: Side): String = when (side) {
-        Side.MCX -> "Commodities day lock reached +Rs ${rs(r.limit)} at ${hm(r)}: no new MCX entries today"
-        Side.PAPER_NSE -> "Day lock reached (paper NSE) +Rs ${rs(r.limit)} at ${hm(r)}: no new NSE entries today"
-        Side.PAPER -> "Day lock reached (paper) +Rs ${rs(r.limit)} at ${hm(r)}: no new entries today"
-        Side.ZERODHA -> "Day lock reached (Zerodha) +Rs ${rs(r.limit)} at ${hm(r)}: no new entries today"
+        Side.MCX -> "Commodities day lock reached ${figures(r, false)} at ${hm(r)}: no new MCX entries today"
+        Side.PAPER_NSE -> "Day lock reached (paper NSE) ${figures(r, false)} at ${hm(r)}: no new NSE entries today"
+        Side.PAPER -> "Day lock reached (paper) ${figures(r, false)} at ${hm(r)}: no new entries today"
+        Side.ZERODHA -> "Day lock reached (Zerodha) ${figures(r, false)} at ${hm(r)}: no new entries today"
     }
 
     /** An MCX arm's refusal while its day lock holds. */
     fun mcxLockRefusal(r: DayLock.Reached): String = lockLine(r, Side.MCX) + " (open positions keep their own exits)"
 
-    /** The MCX loss limit reached ([r]: its day, time, P&L and limit). */
+    /** The MCX loss limit reached ([r]: its day, time, P&L and limit): "... reached -Rs 6,210 (limit -Rs 6,000) at 19:12: ...". */
     fun mcxLossLine(r: DayLock.Reached): String =
-        "Commodities daily loss limit reached -Rs ${rs(r.limit)} at ${hm(r)}: no new MCX entries today; the MCX arms sold what they held"
+        "Commodities daily loss limit reached ${figures(r, true)} at ${hm(r)}: no new MCX entries today; the MCX arms sold what they held"
 
     /** Said beside the day stop's bar while only the NSE paper loss limit stopped the bot (the split on). */
     const val NSE_LOSS_ONLY = "The NSE paper daily loss limit stopped the NSE arms today; the MCX paper arms keep their own limit and trade on."

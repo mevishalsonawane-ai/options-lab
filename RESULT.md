@@ -60,6 +60,11 @@ risk. The plain-rules Liquidity record stays separable for the 26 Oct decision.
 17. **A Liquidity approval could buy up to an hour late**, after 14:00. It now lapses at the next bar's close, or 10 minutes at most.
 18. **Smaller fixes.** The Hero ticket now keeps watching an entry order it could not cancel. Liquidity's arming words now describe the strike, the index stop and the time stop correctly. SENSEX expiry is now Thursday in the "days like today" context.
 
+19. **The day-lock line printed the limit as if it were the day's P&L** (from a parallel session's work, merged here). It now says "reached +Rs 11,514 (limit +Rs 8,000)".
+20. **The lot table knew only NIFTY and BANKNIFTY** (same parallel session). It now has FINNIFTY, MIDCPNIFTY and SENSEX rows too. Those rows are not yet checked against NSE's bhavcopy; every trade still reads its lot from the contract list first, so the table is only a fallback.
+
+A parallel session also wrote the rule text for skipping Liquidity on an index's own expiry day and for a 2-minute fill window. It is not wired into the arm yet, so Liquidity still trades expiry days (see "Needs Boss").
+
 ## What changed on paper
 
 Nothing from the R101 study: no arm's entry, stop, target or lot changed. The fixes above change how exits are sent, how hidden arms are gated and how records are labelled. All of them only lower risk. They are listed in What's New as "Fixes from the arms audit".
