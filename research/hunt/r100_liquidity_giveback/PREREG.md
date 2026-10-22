@@ -108,3 +108,20 @@ B0 equal to R64's engine line for line when no rule is set.
 ## 8. Costs
 
 Dated charges (`hunt/r51/engine.py charges`), R17 liquidity slippage (`E.SLIP`), next-minute fills, 1 lot.
+
+## Amendment A1 (22 Oct 2026, Boss's question; written before any A1 number)
+
+Boss, 22 Oct (after the R100 results): *"What about if the price goes 50% of its high, then add a stop ... and this 50%
+condition should be checked after 10% profit gained"*.
+
+- **G8 KEEP50@10:** once the option's best gain over the raw fill is >= +10%, keep 0.50 of the best gain: a lock at
+  `E + 0.5 x (peak - E)`, floored at breakeven after charges, set at a minute's end and acting from the next minute
+  (as G4, which arms at +20%). Example: bought at 100, best 130 -> sold at 115. Signal on the index, lock on the premium.
+  The other reading ("a stop at 50% of the high's price") would sit below the -15% stop and never act, so it is not
+  tested.
+- Same trades, engine, costs and gates as section 4. BH is re-run over the 8 tests (G1-G7's p-values unchanged); G1-G7's
+  verdicts are not re-opened.
+- The final period was already read once by R100 (G1-G7) and by earlier studies: G8's final read is a second look at
+  the same days for a new rule, so it is weak evidence. It is read once, guarded by `results/A1_FINAL_READ`.
+- Results go to `results/amend_A1.json`; the code (`r100study.py amend design|final`) is committed with the design
+  result before the final read.
