@@ -6,6 +6,7 @@ import com.optionslab.ira.LessonsBundle
 import com.optionslab.ira.OrderReview
 import com.optionslab.ira.SharedKnowledge
 import com.optionslab.ira.VariantLab
+import kotlinx.coroutines.async
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -48,6 +49,50 @@ class SharedKnowledgeHostTest : RobolectricTest() {
         val v = FlowGate.researchVerdict()
         assertNotNull(v)
         assertTrue(v!!, "still unproven" in v)
+    }
+
+    /**
+     * 22 Oct (the overnight kills): at a start in the background (an hourly night job) the first build waits until the app is
+     * used - the screen, the market watch, or a job asking for it - and then runs as before. Once open, nothing waits.
+     */
+    @Test fun atAStartInTheBackgroundTheFirstBuildWaitsForTheAppsUse() = kotlinx.coroutines.runBlocking {
+        PositionsFirst.resetForTest(started = false)
+        StartGate.resetForTest(held = true)
+        try {
+            val first = async(kotlinx.coroutines.Dispatchers.IO) { SharedKnowledgeHost.afterStart() }
+            kotlinx.coroutines.delay(300)
+            assertFalse("held: nothing built", first.isCompleted)
+            assertEquals(0, SharedKnowledgeHost.snapshot.size)
+            assertTrue(StartGate.open("the app opened"))
+            kotlinx.coroutines.withTimeout(60_000) { first.await() }
+            assertTrue(SharedKnowledgeHost.snapshot.size > 100)
+            // Open (the screen, the watch, a job's ask): a job asking does not wait.
+            kotlinx.coroutines.withTimeout(5_000) { SharedKnowledgeHost.awaitFirstBuild("the strategy forge") }
+        } finally { StartGate.resetForTest() }
+    }
+
+    /** 22 Oct: the forge at a night start asks for the held first build, opens the gate and waits for it (Jarvis builds only). */
+    @Test fun aNightJobAsksForTheHeldFirstBuildAndWaitsForIt() = kotlinx.coroutines.runBlocking {
+        org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+        PositionsFirst.resetForTest(started = false)
+        StartGate.resetForTest(held = true)
+        try {
+            SharedKnowledgeHost.startingForTest()
+            val first = async(kotlinx.coroutines.Dispatchers.IO) { SharedKnowledgeHost.afterStart() }
+            kotlinx.coroutines.withTimeout(60_000) { SharedKnowledgeHost.awaitFirstBuild("the strategy forge") }
+            assertEquals("the strategy forge", StartGate.openedBy)
+            assertTrue(SharedKnowledgeHost.snapshot.size > 100)
+            first.await()
+        } finally { StartGate.resetForTest() }
+    }
+
+    /** 22 Oct: no start launched a build (the unit tests' app): a job asking goes on at once, gate held or not. */
+    @Test fun withNoFirstBuildLaunchedAJobDoesNotWait() = kotlinx.coroutines.runBlocking {
+        StartGate.resetForTest(held = true)
+        try {
+            kotlinx.coroutines.withTimeout(5_000) { SharedKnowledgeHost.awaitFirstBuild("the strategy forge") }
+            assertFalse("not opened for nothing", StartGate.isOpen)
+        } finally { StartGate.resetForTest() }
     }
 
     @Test fun theShadowSwitchIsOffByDefault() {

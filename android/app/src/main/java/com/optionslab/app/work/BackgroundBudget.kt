@@ -29,7 +29,10 @@ object BackgroundBudget {
     @Volatile internal var testNow: LocalDateTime? = null
     @Volatile internal var testWallMs: (() -> Long)? = null
 
-    fun init(context: Context) { appContext = context.applicationContext }
+    fun init(context: Context) { appContext = context.applicationContext; marksContext = context.applicationContext }
+
+    /** 22 Oct: where the spent CPU is kept ([NightMarks]); set by [init] only (the tests that do not init keep nothing). */
+    @Volatile private var marksContext: Context? = null
 
     /** The battery now from its sticky broadcast and the power manager (unknown parts null). */
     fun phone(c: Context? = appContext): BudgetRule.Phone {
@@ -69,7 +72,7 @@ object BackgroundBudget {
     private fun spent(job: BudgetRule.Job): Long {
         roll()
         meter().ask(job, cpuMs(), wallMs())
-        return meters.values.sumOf { it.spentMs }
+        return total().also { keep(it, force = false) }
     }
 
     private fun wallMs(): Long = testWallMs?.invoke() ?: System.currentTimeMillis()
@@ -78,7 +81,43 @@ object BackgroundBudget {
     private fun roll() {
         val now = testNow ?: runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrElse { LocalDateTime.now() }
         val n = BudgetRule.budgetOf(now)
-        if (night != n) { night = n; meters.clear(); lastSaid = null }
+        if (night != n) { night = n; meters.clear(); lastSaid = null; carried = 0L; carryRead = false; savedMs = 0L }
+    }
+
+    // ---- 22 Oct (the overnight kills): what the budget spent survives a restart ---------------------------------------------
+    // Android ended the app at 02:43 and 02:51; each restart began tonight's 10 minutes afresh (the meters are memory only),
+    // so a job killed for its CPU could run again on a whole new budget. What this budget has spent is kept now ([NightMarks]:
+    // the budget's name and its milliseconds) every few seconds of CPU and at the end of every run, and read back once per
+    // budget by the first job thread that asks. Never on the main thread, never on the order or tick path.
+
+    private const val K_SPENT = "budget.spent"
+    /** What this budget spent before this process started (read back; 0 for a new budget). */
+    @Volatile private var carried = 0L
+    @Volatile private var carryRead = false
+    /** The total last kept. */
+    @Volatile private var savedMs = 0L
+
+    /** This budget's spent CPU: before this process ([carried]) and in it (the meters). */
+    private fun total(): Long {
+        if (!carryRead) {
+            val n = night
+            // Read only where the marks can be (a job's thread, the place known): never a 0 taken for "nothing kept".
+            if (n != null && marksContext != null && NightMarks.usable()) {
+                carried = com.optionslab.ira.NightStart.carried(n, NightMarks.get(marksContext, K_SPENT))
+                savedMs = maxOf(savedMs, carried)
+                carryRead = true
+            }
+        }
+        return carried + meters.values.sumOf { it.spentMs }
+    }
+
+    /** [spentMs] kept for this budget when it grew enough since the last time ([force]: at the end of a run, whenever it grew). */
+    private fun keep(spentMs: Long, force: Boolean) {
+        val n = night ?: return
+        if (!carryRead) return          // never written over a kept figure not yet read back
+        if (!(if (force) spentMs > savedMs else com.optionslab.ira.NightStart.saveDue(savedMs, spentMs))) return
+        savedMs = spentMs
+        NightMarks.put(marksContext, K_SPENT, com.optionslab.ira.NightStart.carryEncode(n, spentMs))
     }
 
     /**
@@ -88,6 +127,7 @@ object BackgroundBudget {
     fun done(job: BudgetRule.Job) {
         roll()
         meter().done(job, cpuMs())
+        keep(total(), force = true)
     }
 
     /** May [job] run (or go on) now? Each call is cheap: one sticky-broadcast read and the CPU clock. */
@@ -124,11 +164,17 @@ object BackgroundBudget {
     }
 
     /**
-     * The budget now ([BudgetRule.budgetOf]) and what it has spent so far (the health check, 12 Oct): memory only - nothing is
-     * asked or counted by this.
+     * The budget now ([BudgetRule.budgetOf]) and what it has spent so far (the health check, 12 Oct): nothing is asked or counted
+     * by this. 22 Oct: with what it spent before a restart (read back once, off the main thread only).
      */
-    fun spentNow(): Pair<String, Long> { roll(); return (night ?: "") to meters.values.sumOf { it.spentMs } }
+    fun spentNow(): Pair<String, Long> { roll(); return (night ?: "") to total() }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { night = null; meters.clear(); lastSaid = null; testPhone = null; testCpuMs = null; testNow = null; testWallMs = null }
+    internal fun resetForTest() {
+        night = null; meters.clear(); lastSaid = null; testPhone = null; testCpuMs = null; testNow = null; testWallMs = null
+        carried = 0L; carryRead = false; savedMs = 0L; marksContext = null
+    }
+
+    /** TEST ONLY: as after Android ended the app - the meters and what was read back gone, what was kept on disk still there. */
+    internal fun restartForTest() { night = null; meters.clear(); lastSaid = null; carried = 0L; carryRead = false; savedMs = 0L }
 }

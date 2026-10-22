@@ -70,77 +70,77 @@ object DailyReports {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    fun scheduleAll(context: Context) = Kind.entries.forEach { schedule(context, it) }
+    /** [onlyChanged] (22 Oct, the app's start in the background): only the reports whose time changed ([Jobs.scheduleAll]). */
+    fun scheduleAll(context: Context, onlyChanged: Boolean = false) = Kind.entries.forEach { schedule(context, it, onlyChanged) }
 
-    fun schedule(context: Context, k: Kind) {
-        val am = context.getSystemService(AlarmManager::class.java)
-        val pi = intent(context, k)
-        am.cancel(pi)
+    /** [intent] only when Android still holds it (null: never made, or dropped by a force stop or a reboot). */
+    private fun intentIfAny(context: Context, k: Kind): PendingIntent? = PendingIntent.getBroadcast(
+        context, 180 + k.ordinal, Intent(context, AlarmReceiver::class.java).setAction(k.action),
+        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+    )
+
+    /**
+     * When [k]'s alarm is next due (epoch ms), or [com.optionslab.ira.NightStart.OFF] when it is not armed. 22 Oct: the times
+     * exactly as [schedule] armed them before, worked out first so an unchanged one can be left as it is.
+     */
+    internal fun nextAt(k: Kind): Long {
+        val off = com.optionslab.ira.NightStart.OFF
         if (k == Kind.WEEKLY) {
-            if (!weekOn()) return
+            if (!weekOn()) return off
             val now = Market.now()
             var d = now.toLocalDate()
             if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
             // The week's last session (at most three weeks ahead: a calendar with no session at all arms nothing).
             var n = 0
             while (!com.optionslab.ira.WeeklyReview.isLastSession(d) { Market.isTradingDay(it) } && n < 21) { d = d.plusDays(1); n++ }
-            if (n >= 21) return
-            val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
-            try {
-                if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-            } catch (_: SecurityException) {
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-            }
-            return
+            if (n >= 21) return off
+            return d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
         }
         if (k == Kind.WEEK) {
-            if (!weekOn()) return
+            if (!weekOn()) return off
             val now = Market.now()
             var d = now.toLocalDate()
             if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
             while (d.dayOfWeek != java.time.DayOfWeek.SUNDAY) d = d.plusDays(1)
-            val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
-            try {
-                if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-            } catch (_: SecurityException) {
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-            }
-            return
+            return d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
         }
         if (k == Kind.DANGER) {
             // The next trading day's 09:16 (at most three weeks ahead), whether or not Zerodha is set up: the arms trade on paper.
-            if (!dangerOn()) return
+            if (!dangerOn()) return off
             val now = Market.now()
             var d = now.toLocalDate()
             if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
             var n = 0
             while (!Market.isTradingDay(d) && n < 21) { d = d.plusDays(1); n++ }
-            if (n >= 21) return
-            val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
-            try {
-                if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-            } catch (_: SecurityException) {
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-            }
-            return
+            if (n >= 21) return off
+            return d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
         }
         // Jarvis's morning check runs whether or not Zerodha is set up (it says so); the rest need Zerodha.
-        if (!Broker.linked && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
+        if (!Broker.linked && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return off
         val now = Market.now()
         var d = now.toLocalDate()
         if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
         // Jarvis's morning comes every day (a closed day gets its own short morning); the rest only on trading days.
         if (!(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) while (!Market.isTradingDay(d)) d = d.plusDays(1)
-        val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
+        return d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
+    }
+
+    fun schedule(context: Context, k: Kind, onlyChanged: Boolean = false) {
+        val at = nextAt(k)
+        val mark = "report.${k.name}"
+        // 22 Oct: a start in the background leaves a report's alarm armed for the same time as it is (while Android holds it).
+        if (onlyChanged && !AlarmMarks.needsArm(context, mark, at) { intentIfAny(context, k) != null }) return
+        val am = context.getSystemService(AlarmManager::class.java)
+        val pi = intent(context, k)
+        am.cancel(pi)
+        if (at == com.optionslab.ira.NightStart.OFF) { AlarmMarks.armed(context, mark, at); return }
         try {
             if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
             else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         } catch (_: SecurityException) {
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         }
+        AlarmMarks.armed(context, mark, at)
     }
 
     /** The alarm fired: re-arm, then hand the work to a worker. */
