@@ -73,6 +73,19 @@ class FakeUpstox : Closeable {
     /** A key's own candles of today (oldest first), served instead of the three made from [price]: highs and lows that matter. */
     val minutes = ConcurrentHashMap<String, List<Candle>>()
 
+    /** 22 Oct: one scripted intraday reply - [candles] served as they are, or a 503 when null. */
+    data class Scripted(val candles: List<Candle>?)
+
+    /**
+     * 22 Oct: per key, replies served BEFORE the usual ones, one per intraday request, oldest first (a read that fails, a
+     * price the sandbox sees as stale); once used up, the key is answered from [minutes] / [price] again.
+     */
+    val script = ConcurrentHashMap<String, java.util.concurrent.ConcurrentLinkedQueue<Scripted>>()
+
+    fun scriptNext(key: String, vararg replies: Scripted) {
+        script.getOrPut(key) { java.util.concurrent.ConcurrentLinkedQueue() }.addAll(replies)
+    }
+
     private val server = MockWebServer()
 
     init {
@@ -106,6 +119,12 @@ class FakeUpstox : Closeable {
         val i = parts.indexOf("intraday")
         if (i >= 0 && i + 1 < parts.size) {
             val key = URLDecoder.decode(parts[i + 1], "UTF-8")
+            script[key]?.poll()?.let { s ->
+                val c = s.candles ?: return MockResponse().setResponseCode(503)
+                ownCandles(c).forEach { candles.put(it) }
+                return MockResponse().setResponseCode(200).addHeader("Content-Type", "application/json")
+                    .setBody(JSONObject().put("status", "success").put("data", JSONObject().put("candles", candles)).toString())
+            }
             val own = minutes[key]
             if (own != null) ownCandles(own).forEach { candles.put(it) }
             else prices[key]?.let { last -> todayCandles(last).forEach { candles.put(it) } }
