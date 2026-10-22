@@ -2025,7 +2025,7 @@ object OrbArms {
                 val tryKey = "${cur.arm}|${cur.symbol}|${cur.entryTime}"
                 val minute = t.withSecond(0).withNano(0)
                 if (noPriceTried.put(tryKey, minute) == minute) continue
-                if (noPriceSaid.add("$tryKey|${t.toLocalDate()}"))
+                if (noPriceSaid.add("$tryKey|$due|${t.toLocalDate()}"))
                     runCatching { Diag.record("orb", "${armOf(cur.arm).label}: ${cur.symbol} has no price now; its $due exit is sent anyway (tried once a minute)") }
                 b.positions[i] = if (armOf(cur.arm).hero) heroExit(cur, c, due) else exit(cur, c, due)
                 continue
@@ -3885,6 +3885,7 @@ object OrbArms {
         cache = null; holdingHint = false; armedLabelsHint = emptyList(); liveHint = false; liveSymbolsHint = emptyList(); restoppedAt.clear(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
         shownParams.clear()
         lastLook.clear(); gapTried.clear(); indexReadSaid.clear(); exitCheckSaid.clear()
+        noPriceTried.clear(); noPriceSaid.clear(); liquidityLag.clear(); liquidityHistoryMiss.clear()
         if (::file.isInitialized) file.delete()
     }
 }

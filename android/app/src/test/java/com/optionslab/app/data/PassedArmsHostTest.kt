@@ -992,7 +992,8 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(com.optionslab.ira.PassedArmsTalk.armWords(said).startsWith("${DonchianArm.LABEL}: record only (would-be trades, nothing bought)."))
         // On again: its forward bar counts from now, so would-be trades (never bought) can never switch it off at once; they stay in its record.
         assertTrue(runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, true, log = false) }.contains("paper only"))
-        assertEquals(1, view().base[DonchianArm.SOURCE])
+        // 22 Oct (arms audit): the bar and its starting point count real trades only - the would-be trade is in neither.
+        assertEquals(0, view().base[DonchianArm.SOURCE])
         assertEquals(1, view().closedOf(DonchianArm.SOURCE).size)
         assertNothingAtZerodha()
     }
