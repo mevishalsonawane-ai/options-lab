@@ -59,10 +59,19 @@ object WhatsNew {
     private val OCT19: LocalDate = LocalDate.of(2026, 10, 19)
     private val OCT20: LocalDate = LocalDate.of(2026, 10, 20)
     private val OCT21: LocalDate = LocalDate.of(2026, 10, 21)
+    private val OCT22: LocalDate = LocalDate.of(2026, 10, 22)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 22 Oct (Boss: a Liquidity trade went up to about +Rs 4,500 and closed about -Rs 1,000): two exit fixes and research R100.
+        Entry("2026-10-22-liquidity-exit-fixes", OCT22, "Liquidity exits keep working when one feed fails",
+            "One index's failed candle read no longer stops the other Liquidity positions' exits. " +
+                "Its own positions still get their 20-minute time stop, their -15% stop and 15:10. " +
+                "After a restart or a long stall, a lock or trail now counts the highest price traded in the gap. " +
+                "Research R100 tested seven ways to keep a big open profit on Liquidity, and none passed. " +
+                "Liquidity's paper and live rules stay as they were.",
+            "Home → Dashboard → Strategies card → Liquidity 15+5 row; Copy diagnostics (Settings → Zerodha)"),
         // 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features in the application"): round 5.
         Entry("2026-10-21-enhance-round-5", OCT21, "One GTT counted; payouts checked next morning",
             "Bot settings now counts what the one GTT did, today and over the last week. " +

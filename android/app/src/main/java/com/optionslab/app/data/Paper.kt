@@ -347,12 +347,17 @@ object Paper {
      * tick of Zerodha's stream while it streams this contract, else the highs of the 1-minute candles that started after
      * [since]'s minute (the paper feed's; read again when the copy [quote] kept is older than [maxAgeMs]). Null: no price.
      */
-    suspend fun highSince(c: Contract, since: java.time.LocalDateTime, maxAgeMs: Long = SHARED_QUOTE_MS): Double? {
-        runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
-            ?.let { tok -> KiteStream.highSince(tok, epochMs(since))?.let { return it } }
+    suspend fun highSince(c: Contract, since: java.time.LocalDateTime, maxAgeMs: Long = SHARED_QUOTE_MS, candles: Boolean = false): Double? {
+        val tok = runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
+        val streamHigh = tok?.let { KiteStream.highSince(it, epochMs(since)) }
+        if (streamHigh != null && !candles) return streamHigh
+        // [candles] (22 Oct, R100 audit C: after a gap longer than the stream keeps, [com.optionslab.engine.orb.ProfitLock.needsCandles]):
+        // the candles' highs too, so a high traded while the app was not looking still counts. A streamed contract's candles are
+        // read by [minutes] ([quote] would hand back the stream's tick and read no candles).
         val kept = candleBars[c.symbol]
-        if (kept == null || System.currentTimeMillis() - kept.first !in 0..maxAgeMs) runCatching { quote(c) }
-        return barsAfter(c, since)?.filter { it.istDate == Market.today() }?.maxOfOrNull { it.high }
+        if (kept == null || System.currentTimeMillis() - kept.first !in 0..maxAgeMs) runCatching { if (tok != null && candles) minutes(c) else quote(c) }
+        val candleHigh = barsAfter(c, since)?.filter { it.istDate == Market.today() }?.maxOfOrNull { it.high }
+        return listOfNotNull(streamHigh, candleHigh).maxOrNull()
     }
 
     /**
@@ -433,6 +438,15 @@ object Paper {
 
     /** Zerodha's instrument token per paper symbol (0 = not listed there), looked up once. */
     private val kiteTokens = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /**
+     * TEST SEAM (JVM tests only): [symbol]'s Zerodha token as the instrument list would give it (null: forgotten), so a test can
+     * stream a paper contract without a Zerodha session. Its use throws in a release build.
+     */
+    internal fun tokenForTest(symbol: String, token: Long?) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "the token seam exists only in debug builds" }
+        if (token == null) kiteTokens.remove(symbol) else kiteTokens[symbol] = token
+    }
 
     private fun kiteToken(c: Contract): Long? {
         kiteTokens[c.symbol]?.let { return it.takeIf { t -> t > 0 } }

@@ -106,6 +106,21 @@ object ProfitLock {
         listOfNotNull(peakBefore, ltp?.takeIf { it.isFinite() }, high?.takeIf { it.isFinite() }).max()
 
     /**
+     * How long a look may come after the last one and still trust the stream alone for the best price: the stream keeps only
+     * the last 5 minutes of prices ([com.optionslab.engine.TickPath]), so 4 minutes leaves a margin.
+     */
+    const val STREAM_GAP_MS: Long = 4 * 60_000L
+
+    /**
+     * 22 Oct (R100 audit C): must this look also read the 1-minute candles' highs for the best price? True when more than
+     * [gapMs] passed since the position's last look ([lastLookMs]; null: none in this process, e.g. after a restart, then since
+     * its entry [entryMs]): the stream's kept prices no longer reach back that far, so a high in the gap (a restart, a stall)
+     * would be missed and a lock or trail it earned never set. A clock that stepped back (now before the reference) is no gap.
+     */
+    fun needsCandles(lastLookMs: Long?, entryMs: Long, nowMs: Long, gapMs: Long = STREAM_GAP_MS): Boolean =
+        nowMs - (lastLookMs ?: entryMs) > gapMs
+
+    /**
      * The stop resting for a laddered buy: the higher of its own stop ([base], -40; null: none) and the lock its best
      * price [peak] has earned ([level] on [target], on the [tick]); null when it has neither. What the backtests rest, and
      * where a failed exit puts the stop back (never the -40 once a rung is earned).

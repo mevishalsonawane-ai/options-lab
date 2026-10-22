@@ -213,4 +213,27 @@ class ProfitLockTrailTest {
         assertEquals("from +5% breakeven after charges", ProfitLock.Trail(5.0, listOf(ProfitLock.Trail.Step(0.0, 40.0))).describe())
         assertEquals("trail off", ProfitLock.Trail(0.0, emptyList()).describe())
     }
+
+    // ---- 22 Oct (R100 audit C): the candles' highs after a gap longer than the stream keeps -------------------------------
+
+    @Test fun aLookWithinFourMinutesOfTheLastTrustsTheStream() {
+        val entry = 1_000_000L
+        assertEquals(false, ProfitLock.needsCandles(entry + 60_000, entry, entry + 120_000))
+        assertEquals(false, ProfitLock.needsCandles(entry, entry, entry + ProfitLock.STREAM_GAP_MS))        // exactly 4 minutes: still covered
+    }
+
+    @Test fun aGapLongerThanTheStreamKeepsReadsTheCandles() {
+        val entry = 1_000_000L
+        assertEquals(true, ProfitLock.needsCandles(entry + 60_000, entry, entry + 60_000 + ProfitLock.STREAM_GAP_MS + 1))   // a stall
+        // The first look in a new process (a restart mid-trade): measured from the entry.
+        assertEquals(true, ProfitLock.needsCandles(null, entry, entry + 10 * 60_000))
+        assertEquals(false, ProfitLock.needsCandles(null, entry, entry + 30_000))                                   // just bought
+    }
+
+    @Test fun aClockThatSteppedBackIsNoGap() {
+        val entry = 1_000_000L
+        assertEquals(false, ProfitLock.needsCandles(entry + 600_000, entry, entry + 300_000))
+        assertEquals(false, ProfitLock.needsCandles(null, entry, entry - 60_000))
+        assertTrue(ProfitLock.STREAM_GAP_MS < 5 * 60_000L, "the margin is under the stream's 5 minutes")
+    }
 }

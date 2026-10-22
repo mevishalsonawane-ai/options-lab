@@ -250,4 +250,19 @@ class LiquidityRulesTest {
         assertTrue(LiquidityRules.MID15.liquidity && LiquidityRules.MID5.liquidity)
         assertEquals("Liquidity 5m MIDCPNIFTY", LiquidityRules.MID5.label)
     }
+
+    // 22 Oct (R100 audit A): when an index's candles cannot be read, the app judges its open positions with NO index bars. Then no
+    // index exit can fire (nothing to judge it by), but the time stop - which reads only the option's price - still decides.
+    @Test fun withNoIndexBarsOnlyTheTimeStopCanDecide() {
+        val entryT = LocalDateTime.of(2026, 10, 22, 9, 20)
+        val sig = entryT.minusMinutes(5)
+        val none = emptyList<Bar>()
+        fun look(min: Long, fresh: Double?, timed: Boolean = false) =
+            LiquidityRules.exitNow(-1, 13_300.0, 13_200.0, sig, 172.95, entryT, entryT.plusMinutes(min), none, none, "MIDCPNIFTY", fresh, timed)
+        assertEquals(LiquidityRules.Look(null, false), look(5, 160.0))                    // before 20 minutes: nothing to decide
+        assertEquals(LiquidityRules.Look("time_stop", false), look(20, 164.0))           // 22 Oct's trade: under +5% at 20 minutes
+        assertEquals(LiquidityRules.Look(null, true), look(20, 182.0))                   // +5.2%: held, decided once
+        assertEquals(LiquidityRules.Look(null, false), look(20, null))                   // no fresh price: waits
+        assertEquals(LiquidityRules.Look(null, true), look(40, 120.0, timed = true))     // decided earlier: never asked again
+    }
 }

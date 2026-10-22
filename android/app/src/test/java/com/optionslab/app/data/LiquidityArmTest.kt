@@ -485,6 +485,44 @@ class LiquidityArmTest : RobolectricTest() {
         for (u in listOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")) assertTrue(status, status.contains("$u 5-min: No $u bars yet."))
     }
 
+    // ---- 22 Oct (R100 audit A): a failed index read mid-trade never skips the exits that do not need it ---------------------
+
+    /** Its own index's feed goes down mid-trade: the time stop (the option's price only) still sells at 20 minutes. */
+    @Test fun theIndexFeedFailingMidTradeStillLetsTheTimeStopSell() {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(13, 0), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue(p.open)
+        upstox.price(ceKey, p.entry * 1.03)                                 // +3% only: short of the time stop's +5%
+        passes(LocalTime.of(13, 6), LocalTime.of(13, 20))
+        assertTrue(row().today.single().open)
+        OrbArms.testIndexBars = { down("BANKNIFTY") }                       // BANKNIFTY's candles cannot be read from here on
+        passes(LocalTime.of(13, 21), LocalTime.of(13, 25))
+        val closed = row().today.single()
+        assertFalse("the time stop sold it although the index could not be read", closed.open)
+        assertEquals("time_stop", closed.why)
+    }
+
+    /** BANKNIFTY's feed fails while BANKNIFTY and FINNIFTY each hold a call: FINNIFTY's exits still run (they used to be skipped). */
+    @Test fun oneIndexFeedFailingLeavesTheOtherIndexsPositionsExits() {
+        finniftyDay()
+        bankFlat = false; failDay = false                                   // BANKNIFTY breaks at 13:00 too
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertEquals("both indices hold a call", setOf("liquidity5", "liquidity5_fin"), row().today.filter { it.open }.map { it.arm }.toSet())
+        val fin = row().today.single { it.arm == "liquidity5_fin" }
+        val bank = row().today.single { it.arm == "liquidity5" }
+        upstox.price("NSE_FO|LIQFINCE", fin.entry * 1.03)                   // both short of +5% at 20 minutes
+        upstox.price(ceKey, bank.entry * 1.03)
+        passes(LocalTime.of(13, 6), LocalTime.of(13, 20))
+        OrbArms.testIndexBars = { down("BANKNIFTY") }                       // the first position's index fails
+        passes(LocalTime.of(13, 21), LocalTime.of(13, 25))
+        val after = row().today
+        assertEquals("FINNIFTY's time stop ran although BANKNIFTY's read failed first", "time_stop", after.single { it.arm == "liquidity5_fin" }.why)
+        assertEquals("and BANKNIFTY's own time stop too", "time_stop", after.single { it.arm == "liquidity5" }.why)
+    }
+
     /** Research h4 (07 Oct): a book saved with the switch on takes the MIDCPNIFTY books on paper, once; never cleared for Zerodha. */
     @Test fun theMidcpniftyBooksJoinAnArmedSwitchOnPaperOnce() {
         val books = listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin")

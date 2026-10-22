@@ -1956,7 +1956,7 @@ object OrbArms {
             if (ltp == null) continue                                               // no price at all: hold
             // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms and
             // Boss's paper give-back trail only.
-            val high = if (ladderTarget(cur) != null || cur.trail != null) runCatching { Paper.highSince(c, cur.entryTime) }.getOrNull() else null
+            val high = if (ladderTarget(cur) != null || cur.trail != null) bestSince(cur, c, t, mayRead = regular) else null
             val (laddered, locked) = ladder(cur, ltp, high)
             // The trail's give-back from the best price BEFORE this look (a new best counts from the next look, as the ladder).
             val trailHit = LiquidityTrail.exits(cur.entry, cur.peak ?: cur.entry, ltp, cur.lot, cur.trail, cur.trailFrom)
@@ -1997,6 +1997,27 @@ object OrbArms {
             if (why == MANAGER_EXIT) runCatching { Diag.record("orb", "${armOf(cur.arm).label}: exited early by the trade manager - ${mgr?.first}") }
             b.positions[i] = if (armOf(cur.arm).hero) heroExit(seen, c, why) else exit(seen, c, why)
         }
+    }
+
+    /** When each open position's best price was last read (memory only; by [managerId]): the gap rule of [bestSince]. */
+    private val lastLook = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
+
+    /**
+     * The highest price [c] traded since [p]'s entry, for its lock or trail ([Paper.highSince]; null: none known). 22 Oct (R100
+     * audit C): after a gap longer than the stream keeps prices ([ProfitLock.needsCandles]: the first look after a restart, or a
+     * stall), the 1-minute candles' highs are read too, once, so a high reached while nothing looked still earns its lock. That
+     * read is made only on the regular pass ([mayRead]): the stream's fast look never reaches the network for it, and leaves the
+     * gap for the next regular pass. A read that finds nothing is tried again on the next regular pass. Only ever raises the
+     * best price: a lock or trail can only sell sooner.
+     */
+    private suspend fun bestSince(p: Position, c: Paper.Contract, t: LocalDateTime, mayRead: Boolean): Double? {
+        val id = managerId(p)
+        val gap = ProfitLock.needsCandles(lastLook[id]?.let { epochMs(it) }, epochMs(p.entryTime), epochMs(t))
+        val candles = gap && mayRead
+        val high = runCatching { Paper.highSince(c, p.entryTime, candles = candles) }.getOrNull()
+        if (!gap || (candles && high != null)) lastLook[id] = t
+        if (lastLook.size > 200) lastLook.entries.removeIf { it.value.isBefore(t.minusDays(1)) }
+        return high
     }
 
     /** Take the resting stop out of the book first, then sell; if the stop filled meanwhile, that is the exit. */
@@ -2660,7 +2681,7 @@ object OrbArms {
             val runThrough = cur.stopTrigger?.let { ltp < stopLimit(it, tick) } == true
             // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms only.
             val leg = b.legs?.let { l -> listOf(l.ce, l.pe) }?.firstOrNull { it.symbol == cur.symbol }
-            val high = if (ladderTarget(cur) != null && leg != null) runCatching { Paper.highSince(leg, cur.entryTime) }.getOrNull() else null
+            val high = if (ladderTarget(cur) != null && leg != null) bestSince(cur, leg, t, mayRead = regular) else null
             // The lock the best price BEFORE this look earned, on the tick: when the stop already rests there, Zerodha sells it.
             val lockNow = ladderTarget(cur)?.let { ProfitLock.level(cur.entry, it, cur.peak ?: cur.entry, ProfitLock.roundTripPerUnit(cur.entry, cur.qty)) }
                 ?.let { ProfitLock.onTick(it, tick) }
@@ -3146,9 +3167,17 @@ object OrbArms {
         val open = b.positions.withIndex().filter { it.value.open && !it.value.unconfirmed && armOf(it.value.arm).liquidity }
         if (open.isEmpty()) return
         val minutes = HashMap<String, List<Bar>>()
-        for ((i, p) in open) {
+        for ((i, p) in open) try {
             val und = LiquidityRules.underlyingOf(armOf(p.arm))
-            val ones = minutes.getOrPut(und) { liquidityMinutes(t, und).filter { !it.start.plusMinutes(1).isAfter(t) } }
+            // 22 Oct (R100 audit A): one index's failed candle read used to escape this loop, so every Liquidity position after it
+            // (other indices too) got no index exit and no time stop on that pass. Now a failed read stops only the index exits of
+            // that index's own positions ([indexReadFailed]: no bars, so no index stop, target, failed break or new level can be
+            // judged); their time stop, which reads only the option's price, still decides, and the other indices go on as before.
+            val ones = minutes.getOrPut(und) {
+                (try { liquidityMinutes(t, und) } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (e: Exception) { indexReadFailed(und, t, e); emptyList() })
+                    .filter { !it.start.plusMinutes(1).isAfter(t) }
+            }
             val tf = LiquidityRules.minutesOf(armOf(p.arm))
             val bars = liquidityBars(ones, tf, t)
             val side = if (p.right == "CE") 1 else -1
@@ -3183,7 +3212,26 @@ object OrbArms {
             b.positions[i] = done
             if (done.exit != null) runCatching { LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.EXIT, System.currentTimeMillis(),
                 armOf(p.arm), p.symbol, false, done.exit, fresh, Paper.bookNow(c), null, sentMs, done.qty)) }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            // One position's error never skips the others' exits (22 Oct, R100 audit A); it is looked at again on the next pass.
+            runCatching { Diag.record("orb", "${runCatching { armOf(p.arm).label }.getOrDefault(p.arm)}: the index exits could not be checked this pass " +
+                "(${e.javaClass.simpleName}); tried again next pass") }
         }
+    }
+
+    /** When each index's failed candle read was last said (memory only), so a feed that stays down is said once a minute. */
+    private val indexReadSaid = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
+
+    /**
+     * A Liquidity index's candles could not be read for the open positions' exits (22 Oct, R100 audit A): said in the diagnostics
+     * (at most once a minute per index; memory and the diary's own thread only). Its positions keep their resting -15% stop, their
+     * time stop and 15:10; their index exits wait for the next read.
+     */
+    private fun indexReadFailed(und: String, t: LocalDateTime, e: Exception) {
+        val minute = t.withSecond(0).withNano(0)
+        if (indexReadSaid.put(und, minute) == minute) return
+        runCatching { Diag.record("orb", "Liquidity $und: its candles could not be read (${e.javaClass.simpleName}); its open positions' index exits " +
+            "wait for the next read (the -15% stop, the time stop and 15:10 still act; the other indices are not affected)") }
     }
 
     /**
