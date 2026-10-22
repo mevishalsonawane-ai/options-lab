@@ -271,7 +271,8 @@ class ResearchScreensTest {
             scrollTo(u).assertIsDisplayed()
             // Several underlyings start on the same day: their "from" lines have the same text.
             val from = "from ${rows.first().first}"
-            val same = Lots.LOT_HISTORY.count { it.value.first().first == rows.first().first }
+            // 22 Oct audit: any row anywhere in the table on that date (BANKNIFTY's 30 shares 2025-01-31 with three first rows).
+            val same = Lots.LOT_HISTORY.values.sumOf { r -> r.count { it.first == rows.first().first } }
             assertTrue("$u's history starts $from", compose.onAllNodesWithText(from).fetchSemanticsNodes().size in 1..same)
         }
         assertTrue(shows("Today", sub = false))

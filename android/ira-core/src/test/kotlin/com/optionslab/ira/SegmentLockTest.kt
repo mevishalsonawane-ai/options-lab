@@ -120,14 +120,21 @@ class SegmentLockTest {
     }
 
     @Test fun theLinesSayEachSegmentPlainlyWithTheAmountAndTheTime() {
+        // 22 Oct audit: each line names the P&L that reached the limit and the limit, signed (before: the limit alone, as if the P&L).
         val r = DayLock.Reached(day, LocalTime.of(18, 5), 8_400.0, 8_000.0)
-        assertEquals("Commodities day lock reached +Rs 8,000 at 18:05: no new MCX entries today", seg.lockLine(r, SegmentLock.Side.MCX))
-        assertEquals("Day lock reached (paper NSE) +Rs 8,000 at 18:05: no new NSE entries today", seg.lockLine(r, SegmentLock.Side.PAPER_NSE))
-        assertEquals("Day lock reached (paper) +Rs 8,000 at 18:05: no new entries today", seg.lockLine(r, SegmentLock.Side.PAPER))
-        assertEquals("Day lock reached (Zerodha) +Rs 8,000 at 18:05: no new entries today", seg.lockLine(r, SegmentLock.Side.ZERODHA))
+        assertEquals("Commodities day lock reached +Rs 8,400 (limit +Rs 8,000) at 18:05: no new MCX entries today", seg.lockLine(r, SegmentLock.Side.MCX))
+        assertEquals("Day lock reached (paper NSE) +Rs 8,400 (limit +Rs 8,000) at 18:05: no new NSE entries today", seg.lockLine(r, SegmentLock.Side.PAPER_NSE))
+        assertEquals("Day lock reached (paper) +Rs 8,400 (limit +Rs 8,000) at 18:05: no new entries today", seg.lockLine(r, SegmentLock.Side.PAPER))
+        assertEquals("Day lock reached (Zerodha) +Rs 8,400 (limit +Rs 8,000) at 18:05: no new entries today", seg.lockLine(r, SegmentLock.Side.ZERODHA))
+        assertTrue(seg.mcxLockRefusal(r).startsWith("Commodities day lock reached +Rs 8,400 (limit +Rs 8,000) at 18:05"))
         assertTrue(seg.mcxLockRefusal(r).endsWith("(open positions keep their own exits)"))
+        // The 21 Oct day: R52 MIDCPNIFTY +11,514 at 11:00 reached the paper NSE lock of 8,000.
+        val oct21 = DayLock.Reached(day, LocalTime.of(11, 0), 11_514.0, 8_000.0)
+        assertEquals("Day lock reached (paper NSE) +Rs 11,514 (limit +Rs 8,000) at 11:00: no new NSE entries today", seg.lockLine(oct21, SegmentLock.Side.PAPER_NSE))
         val loss = seg.lossReached(day, LocalTime.of(19, 12), -6_210.0, 6_000.0)
-        assertEquals("Commodities daily loss limit reached -Rs 6,000 at 19:12: no new MCX entries today; the MCX arms sold what they held", seg.mcxLossLine(loss))
+        assertEquals("Commodities daily loss limit reached -Rs 6,210 (limit -Rs 6,000) at 19:12: no new MCX entries today; the MCX arms sold what they held", seg.mcxLossLine(loss))
+        // The loss line reads the same from the kept record (a restart between the stop and Home's next look).
+        assertEquals(seg.mcxLossLine(loss), seg.mcxLossLine(DayLock.decode(DayLock.encode(loss))!!))
         assertEquals("Commodities keep their own paper day lock (+Rs 8,000) and daily loss limit (-Rs 6,000), on the MCX paper day only.",
             seg.idleLine(true, 8_000.0, 6_000.0))
         assertTrue(seg.idleLine(true, 0.0, 0.0).contains("day lock (off) and daily loss limit (off)"))
