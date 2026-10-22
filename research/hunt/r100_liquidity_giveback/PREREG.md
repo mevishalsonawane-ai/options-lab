@@ -125,3 +125,15 @@ condition should be checked after 10% profit gained"*.
   the same days for a new rule, so it is weak evidence. It is read once, guarded by `results/A1_FINAL_READ`.
 - Results go to `results/amend_A1.json`; the code (`r100study.py amend design|final`) is committed with the design
   result before the final read.
+
+## Amendment A2 (22 Oct 2026, Boss's next question; written before any A1 or A2 number)
+
+Boss, 22 Oct: *"And what if we also add trailing stop loss"*.
+
+- **G9 KEEP50@10 + TRAIL15:** G8, plus the -15% premium stop trails the best price from the fill: the stop is
+  `0.85 x peak` (it starts at the own -15% stop and only rises; not floored at breakeven, it is a stop-loss). Before
+  +10% only the trail acts (the stop rises from -15% to about -6.5% of the fill at +10%); above +10% the higher of the
+  two counts (the keep-half lock is higher from about +17.6%).
+- **G10 TRAIL15:** the trailing stop alone (own exits + `0.85 x peak`), to show what each part adds.
+- Same trades, engine, costs, gates, one final read (guarded by `results/A1_FINAL_READ`, shared with G8). BH is over the
+  10 tests (G1-G10). G1-G7's verdicts are not re-opened. Results in `results/amend_A1.json`.
