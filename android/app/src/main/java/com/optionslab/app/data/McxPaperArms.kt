@@ -290,8 +290,7 @@ object McxPaperArms {
      */
     private fun managed(p: Pos, cal: McxSession.Calendar, today: LocalDate): TradeManagerHost.ArmTrade? {
         val fam = familyOf(p.arm) ?: return null
-        val put = p.option && p.symbol.endsWith("PE")
-        val dir = if (p.option) (if (put) -1 else 1) * p.side else p.side
+        val dir = betOf(p)
         val at = p.entryTime.atZone(IST).toInstant().toEpochMilli()
         val day = if (p.arm == McxTrendRules.SOURCE && today.isAfter(p.entryDay)) today else p.entryDay
         val offMin = McxArmRules.squareOffMinute(p.arm, p.entryMinute, p.flatBy, runCatching { cal.window(day) }.getOrNull(), day)
@@ -488,9 +487,18 @@ object McxPaperArms {
      * Whether the bot is stopped for today for these arms (Boss's stop, the tile, Zerodha's loss limit; 21 Oct: with commodities on
      * their own limits, their own loss limit and not the NSE paper one, [LossBreaker.mcxStopped]). Unknown counts as stopped.
      */
-    private suspend fun stoppedToday(): Boolean = runCatching {
-        LossBreaker.mcxStopped(Strategies.stoppedWhy())
-    }.getOrDefault(true)
+    private suspend fun stoppedToday(): Boolean = stoppedKnown() ?: true
+
+    /**
+     * The stop for today as read, or null when it could not be read. An entry treats null as stopped ([stoppedToday]); an EXIT
+     * never acts on it (22 Oct audit: a failed read sold every held MCX position as "operator_stop", which is not a stop
+     * Boss made). TEST ONLY: [testStoppedWhy] replaces the read.
+     */
+    private suspend fun stoppedKnown(): Boolean? = runCatching {
+        LossBreaker.mcxStopped(testStoppedWhy?.invoke() ?: Strategies.stoppedWhy())
+    }.getOrNull()
+
+    @Volatile internal var testStoppedWhy: (() -> com.optionslab.ira.DayStop.Why?)? = null
 
     /** The MCX arms' refusal words while their own loss stop holds (else the bot's stop for today). */
     private fun stoppedWords(): String? = if (runCatching { LossBreaker.mcxTrippedToday() }.getOrDefault(false))
@@ -544,7 +552,7 @@ object McxPaperArms {
 
     private suspend fun manage(b: Book, now: LocalDateTime, cal: McxSession.Calendar, window: McxSession.Window?): Boolean {
         var changed = false
-        val stopped = stoppedToday()
+        val stopped = stoppedKnown() == true            // unknown: never a reason to sell what is held
         val cfg = McxGuard.config(AppSettings.load())
         val minute = minuteOf(now)
         for ((i, p) in b.positions.withIndex().toList()) {
@@ -587,10 +595,18 @@ object McxPaperArms {
         return changed
     }
 
+    /**
+     * The way [p] bets on its underlying: a bought call +1, a bought put -1 (the position's own [Pos.side] is the OPTION's side,
+     * +1 for every bought option); a future its own side. 22 Oct audit: the evening break's exit read [Pos.side] as the break's
+     * side, so every down-break PUT (side +1, a break of -1) was judged "future back at the range middle" on its first finished
+     * minute and sold within a minute of the buy (20 Oct 290 PE, 21 Oct 275 PE in the diagnostics).
+     */
+    private fun betOf(p: Pos): Int = if (p.option && p.symbol.endsWith("PE")) -p.side else p.side
+
     /** The evening break's exit at [now]: every finished minute since the entry, in order (the option's LOW, the future's close). */
     private suspend fun eveExit(p: Pos, c: Paper.Contract, now: LocalDateTime): String? {
         if (now.toLocalDate().isAfter(p.entryDay)) return "flat_2315"
-        val held = McxEveRules.Held(p.side, p.entry, p.entryMinute, p.stopF ?: return "flat_2315", p.targetF ?: return "flat_2315",
+        val held = McxEveRules.Held(betOf(p), p.entry, p.entryMinute, p.stopF ?: return "flat_2315", p.targetF ?: return "flat_2315",
             p.flatBy ?: McxEveRules.FLAT_BY)
         val fut = p.futureKey?.let { k -> runCatching { minutes(k, now) }.getOrNull() }.orEmpty().associateBy { it.istMinute }
         val opt = runCatching { minutes(c.feedKey, now) }.getOrNull().orEmpty().associateBy { it.istMinute }

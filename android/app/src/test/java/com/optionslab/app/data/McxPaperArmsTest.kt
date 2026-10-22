@@ -90,12 +90,12 @@ class McxPaperArmsTest : RobolectricTest() {
         upstox.minutes[futKey] = out
     }
 
-    /** The 305 CE's minutes 19:30 to [until] (exclusive), at [px] with a low 1% under it (never near its -15% stop). */
-    private fun optionMinutes(until: LocalTime, px: (LocalTime) -> Double) {
+    /** The 305 CE's minutes ([key]: another option's) 19:30 to [until] (exclusive), at [px] with a low 1% under it (never near its -15% stop). */
+    private fun optionMinutes(until: LocalTime, key: String = ceKey, px: (LocalTime) -> Double) {
         val out = ArrayList<FakeUpstox.Candle>()
         var t = LocalTime.of(19, 30)
         while (t.isBefore(until)) { val p = px(t); out += FakeUpstox.Candle(t, p, p * 1.01, p * 0.99, p); t = t.plusMinutes(1) }
-        upstox.minutes[ceKey] = out
+        upstox.minutes[key] = out
     }
 
     @Before fun up() {
@@ -114,6 +114,7 @@ class McxPaperArmsTest : RobolectricTest() {
     @After fun down() {
         Market.testClock = null
         McxPaperArms.testDaily = null
+        McxPaperArms.testStoppedWhy = null
         UsCues.testFetch = null
         UsCues.resetForTest()
         kite.close(); upstox.close()
@@ -181,6 +182,76 @@ class McxPaperArmsTest : RobolectricTest() {
         // Restart: the record is read back from its encrypted file.
         AutomationSupport.reloadFromDisk(McxPaperArms)
         assertEquals(done, runBlocking { McxPaperArms.refresh() }.closed.single())
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * 22 Oct audit: a DOWN break buys the 1-ITM PUT, and its exit is judged with the BREAK's side (-1), not the option's (+1).
+     * Before the fix every down-break put was sold "range_mid_stop" on its first finished minute, because the future (below the
+     * range middle after a down break) looked like "back at the middle" to a +1 holder (20 and 21 Oct in the diagnostics).
+     */
+    @Test fun theEveningDownBreakBuysAPutAndHoldsItWhileTheFutureStaysBelowTheMiddle() {
+        val peKey = "MCX_FO|910305"                      // NATURALGAS 305 PE: 1-ITM when the future breaks down at 299
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        // 19:31 closes at 299, below the 300-310 range: at 19:32 the 1-ITM put (305 PE) is bought on paper, 1 lot.
+        futureMinutes(LocalTime.of(19, 32)) { 299.0 }
+        optionMinutes(LocalTime.of(19, 32), peKey) { 20.0 }
+        tick(LocalTime.of(19, 32))
+        val pos = McxPaperArms.view.value.open.single()
+        assertEquals("NATURALGAS26OCT26305PE", pos.symbol)
+        assertEquals(305.0, pos.stopF!!, 1e-9); assertEquals(290.0, pos.targetF!!, 1e-9)
+        // 19:32 and 19:33 close at 298, still below the middle (305): the put is HELD (the bug sold it here).
+        futureMinutes(LocalTime.of(19, 34)) { t -> if (t.isBefore(LocalTime.of(19, 32))) 299.0 else 298.0 }
+        optionMinutes(LocalTime.of(19, 34), peKey) { 21.0 }
+        tick(LocalTime.of(19, 34))
+        assertEquals("held while the future stays below the middle", 1, McxPaperArms.view.value.open.size)
+        assertTrue(McxPaperArms.view.value.closed.isEmpty())
+        // 19:35 closes at 289: the target (edge - one width, 290) is reached; the 19:36 pass sells on paper.
+        futureMinutes(LocalTime.of(19, 36)) { t -> if (t.isBefore(LocalTime.of(19, 35))) 298.0 else 289.0 }
+        optionMinutes(LocalTime.of(19, 36), peKey) { t -> if (t.isBefore(LocalTime.of(19, 35))) 21.0 else 28.0 }
+        tick(LocalTime.of(19, 36))
+        assertTrue(McxPaperArms.view.value.open.isEmpty())
+        assertEquals("target", McxPaperArms.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    /** 22 Oct audit: a down-break put sold "range_mid_stop" only when the future comes BACK UP to the middle. */
+    @Test fun theEveningDownBreaksPutIsSoldWhenTheFutureComesBackToTheMiddle() {
+        val peKey = "MCX_FO|910305"
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        futureMinutes(LocalTime.of(19, 32)) { 299.0 }
+        optionMinutes(LocalTime.of(19, 32), peKey) { 20.0 }
+        tick(LocalTime.of(19, 32))
+        assertEquals("NATURALGAS26OCT26305PE", McxPaperArms.view.value.open.single().symbol)
+        futureMinutes(LocalTime.of(19, 36)) { t -> if (t.isBefore(LocalTime.of(19, 35))) 299.0 else 305.0 }
+        optionMinutes(LocalTime.of(19, 36), peKey) { 19.0 }
+        tick(LocalTime.of(19, 36))
+        assertEquals("range_mid_stop", McxPaperArms.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * 22 Oct audit: when the stop-for-today cannot be read, a held position is NOT sold as "operator_stop" (an entry still
+     * treats the unknown as stopped). Before, an unreadable stop sold every held MCX position.
+     */
+    @Test fun anUnreadableStopForTodayNeverSellsAHeldPositionButRefusesANewEntry() {
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        futureMinutes(LocalTime.of(19, 32)) { 311.0 }
+        optionMinutes(LocalTime.of(19, 32)) { 20.0 }
+        tick(LocalTime.of(19, 32))
+        assertEquals(1, McxPaperArms.view.value.open.size)
+        McxPaperArms.testStoppedWhy = { throw IllegalStateException("the stop could not be read") }
+        futureMinutes(LocalTime.of(19, 34)) { 312.0 }
+        optionMinutes(LocalTime.of(19, 34)) { 21.0 }
+        tick(LocalTime.of(19, 34))
+        assertEquals("still held", 1, McxPaperArms.view.value.open.size)
+        assertTrue(McxPaperArms.view.value.closed.none { it.why == "operator_stop" })
+        // A real stop for today still sells it.
+        McxPaperArms.testStoppedWhy = { com.optionslab.ira.DayStop.Why.BOSS }
+        futureMinutes(LocalTime.of(19, 35)) { 312.0 }
+        optionMinutes(LocalTime.of(19, 35)) { 21.0 }
+        tick(LocalTime.of(19, 35))
+        assertEquals("operator_stop", McxPaperArms.view.value.closed.single().why)
         assertNothingAtZerodha()
     }
 
