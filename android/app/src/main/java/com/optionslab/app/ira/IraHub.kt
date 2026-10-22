@@ -1097,6 +1097,7 @@ object IraHub {
         runCatching { com.optionslab.app.data.NightArm.view.value.open.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.VixDivArm.view.value.open.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.HeroTicketArm.view.value.open.forEach { bots += it.symbol } }
+        runCatching { com.optionslab.app.data.Ft3Arm.view.value.open.forEach { bots += it.symbol } }
         runCatching {
             val owners = com.optionslab.app.data.Strategies.owners()
             val trades = com.optionslab.app.data.Paper.state.trades
@@ -3504,6 +3505,20 @@ object IraHub {
             if (phoneLocked()) { reply(com.optionslab.ira.SoloDay.LOCKED); return true }
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { IraSolo.day(soloDayAsk) }.getOrElse { "I could not read Solo's day just now, Boss." } + liveLine(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY))
+            }
+            return true
+        }
+        // "How is FT3 doing", "ft3 kaisa chal raha hai" ([com.optionslab.ira.Ft3Talk], 21 Oct): FT3 near-ATM morning's own book - its
+        // switch (on paper; live only the standard way), today's tickets with their P&L, the forward test so far, always with R98e's
+        // verdict (Boss's choice, it did not pass). Its paper trades are in it, so never on a locked phone; reads only. (Not in IraGoldAlgo.)
+        val ft3Ask = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.Ft3Talk.asked(q) }.getOrDefault(false) else false
+        if (ft3Ask) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.HeroTicketTalk.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraHero.ft3() }.getOrElse { "I could not read FT3 just now, Boss." } + liveLine(com.optionslab.engine.orb.Ft3Rules.SOURCE) +
+                    com.optionslab.ira.Ft3Talk.SIZE_NOTE)
             }
             return true
         }

@@ -1,0 +1,33 @@
+id: r98b-exits-entries
+title: 'R98b: 26 new exits and two new entries for hero tickets (free roll, give-back trails, index trails, time stops, confirmation)'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R98_HERO_ALL_INDEX.md
+hypothesis: A pre-registered exit (free roll, give-back trail, index trail, time stop) on every ticket, a fixed daily basket,
+  or a confirmation entry (index already 1 / 1.5 straddles from 13:00) makes money on the 2024-26 holdout.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): Dhan rollingoption WEEK/MONTH ATM+-10 1-minute (NIFTY,
+  BANKNIFTY, FINNIFTY from 18 Oct 2021, MIDCPNIFTY, SENSEX), index_1m, index_daily official closes, INDIAVIX; R98 loader research/hunt/r98/r98data.py'
+period:
+  design: expiry days 2021-23
+  holdout: expiry days 2024-26, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (confirmation entries, index trails) and the option premium (trails, time stops)'
+model_or_rule: E1-E4, E12 exits x universes U-A / U-B / U-C
+settings: research/hunt/r98/hero2.py
+prereg: research/hunt/r98/PREREG_B.md
+variants_tried: 104
+results:
+  summary: '0 of 4 pre-registered tests pass. Holdout: every ticket (30-min time stop) 230,678 tickets -Rs 1,579; daily basket
+    1,909 tickets -Rs 990; confirmation 1 straddle 193 tickets -Rs 862; confirmation 1.5 straddles 71 tickets +Rs 190 (95%
+    -1,998 .. +3,287, -Rs 2,170 without the 5 best days, 1/3 years). Break-even needs 6-8% heroes against 2.2%.'
+  costs: Rs 20 an order + 18% GST, STT 0.15% on the sell, exchange 0.0355% NSE / 0.0325% BSE, stamp 0.003% on the buy, 1-tick
+    spread, next-minute open + 1 tick entry; under Rs 0.10 at exit expires worthless; Rs 5,000 a ticket, fractional quantity
+holdout_read: true
+verdict: rejected
+notes: 26 exits x 4 universes = 104 cells. Its 'continuation' pattern was corrected by R98c (random-walk distance).

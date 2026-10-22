@@ -1597,3 +1597,78 @@ Full study: `HUNT_R100_LIQUIDITY_GIVEBACK.md` (pre-registered `hunt/r100_liquidi
   They rescue the 9 design give-backs (-Rs 15,030 to between +Rs 1.8k and +Rs 20.6k) but give up Rs 0.9-1.7 lakh of
   winners. Why: the 36 design winners of Rs 5,000+ made Rs 3,38,862 and the other 845 trades lost Rs 81,613 together;
   any early profit-taking cuts those runners. Signal on the index in every rule.
+
+## Hero-zero candles on all five indices (R98, 21 Oct 2026) - why they happen, and why 75% accuracy is not reachable
+Full study: `HUNT_R98_HERO_ALL_INDEX.md` (code `hunt/r98/`, pre-registered `hunt/r98/PREREG.md`, commit `8f82415`).
+Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-Nov-2024 monthlies and 13 Oct 2026.
+- 911 expiries (NIFTY 273, BANKNIFTY 195, FINNIFTY 167, MIDCPNIFTY 100, SENSEX 176). On 38% some Rs 1-10 option
+  closed 10x by 15:20, among a median 21 cheap options a day; 3 of them per 10x day, usually neighbouring strikes.
+- Why: a hero needs the index to run a median 2.9 ATM straddles one way (the straddle is the market's own forecast);
+  the index ends a median 0.70 straddles away. Moves >= 2.5 straddles: about 10% of cases; then a 10x is 47-88% likely.
+- When: peaks are late (48% at 15:00-15:20); nothing in the morning flags the afternoon (base 7.7%; VIX, gap, range,
+  weekday, index give 0-19% in small cells).
+- 75%: no. Walk-forward models (AUC 0.64-0.69): best precision 29% (doubles), 9% (5x), 6% (10x); at 13:00 "will this
+  afternoon give a 10x" AUC 0.40-0.44. Best win rate of 60 exits 56% (72% on the model's top decile with a +10% target,
+  -Rs 1,119 a Rs 5,000 ticket); every exit loses. Held to 15:20 a cheap ticket loses -Rs 3,213 of Rs 5,000 on average.
+- High accuracy lives on the zero side: 97% end below their price (85% near zero), but 1% end >= 10x and the worst 178x
+  (13 Oct: selling the 22700 CE at 13:30 for Rs 5,000 = about -Rs 95,000). Selling was not tested.
+- Exploratory lead only (not pre-registered): one top-scored ticket per index-day, held, +Rs 714 a ticket, but the 5
+  best days are 213% of it and the 95% range spans 0. Paper-test forward if wanted; nothing goes in the app.
+- Follow-ups (21 Oct, post hoc): removing the stop nearly doubles the loss (-Rs 3,213 vs -Rs 1,745 with -50%, -Rs 889
+  with -20%; the -50% stop kills only 1-3.5% of later winners). A +30%-step profit lock (app ProfitLock fills) lifts
+  the win rate 3% -> 19% and the loss to -Rs 2,139 (-Rs 594 with a -20% stop, the least bad tested, 0 of 6 years > 0),
+  but cuts the 10x tickets from +Rs 43,742 to +Rs 4,977 (13 Oct 22650 CE: +Rs 84k held, +Rs 1.4k locked).
+- R98b (pre-registered PREREG_B, design 2021-23 / holdout 2024-26): 26 new exits (free roll, late give-back trail,
+  index trail, time stop) x every ticket / daily basket / confirmation entries: 0 of 4 pass on the holdout. Several
+  exits keep all of 13 Oct's Rs 84k, but every exit loses overall: break-even needs 6-8% of tickets to be 10x
+  heroes, the base is 2.2% and the best model ~5%. Real pattern: after a 1.5-straddle move from 13:00 the index
+  reaches 2.5 straddles 30% of days (vs 6.9%), but R98c shows that is distance, not momentum (next line).
+- R98c (PREREG_C, semi-clean holdout): buying ATM / ITM / OTM / Rs 5 options after a 1.5 / 2-straddle move with
+  index exits: the design pick lost on the holdout (-Rs 613 a ticket); 4 of 48 rules positive in both halves (chance).
+  After a 1.5-straddle move the index hits +1 before -0.5 straddle 34.5% of the time vs 33.3% for a random walk, and
+  the index-only trade has no edge. Hero-zero buying is closed; only new information (event calendar, order flow) or a
+  forward paper test could reopen it.
+- R98d event days (PREREG_D; calendar events.csv with sources: RBI, Budget, election, Fed, US CPI): domestic
+  events add nothing (Budget / election straddles are priced 3-5x; RBI basket lost on all 27 tickets). The session
+  after a Fed decision or US CPI print: afternoon hero 14% vs 7%, 09:20 CE+PE basket +Rs 1,666 held / +Rs 3,354 with
+  a -20% stop per Rs 5,000, but BH q 0.29, every CI includes 0, negative without the 3 best days (16 Jun 2022,
+  12 Sep 2024). Best lead found; only a frozen forward paper test (10-20 days a year) can confirm it.
+- R98e-g (pre-registered): 18 new features (gamma exposure / OI walls / strike demand / breadth / cross-index /
+  events): GEX adds no predictive value; 8,280-variant search SPA p 0.96, RC 0.34, PBO 0.33, walk-forward 1/4.
+  Order flow: no usable pre-move signal (AUC <= 0.57); 13 Oct = quiet -> ignition (volume + OI build) -> squeeze
+  (call OI collapse). Ignition entries: SPA p 0.37; best +Rs 998/ticket both halves but -Rs 684 w/o 5 best days.
+  Search closed; 4 near-misses frozen in hunt/r98/FORWARD_TEST.md for a forward paper test.
+- FT3 in the app (Boss's choice, 21 Oct): re-frozen the app's way before any forward day (Black-76 IV with forward =
+  spot, cut-offs 1.0333 / 1.5466, the LIMIT cap and 3-minute window, out at 15:05). Replay 2021-26 from the raw minutes
+  (`hunt/r98/ft3_app.py`): 478 tickets, win 16.3%, +Rs 1,805 a ticket, +Rs 293 without the 5 best days, 4/6 years;
+  filled a minute later +Rs 1,579 (+Rs 62). The same index-day as the research version on 470 of 474. Signal source:
+  the clock and the option chain at the mark (the option's own close and volume: labelled). Its paper record is the test.
+
+## GOLDM intraday option buying, "catch the 100-point moves" (R99, 21-22 Oct 2026) - no rule found
+Full study: `HUNT_R99_GOLD_OBUY.md` (code `hunt/r99_gold_obuy/`, pre-registered `PREREG.md` 5396b7d7 and
+`PREREG_ROUND2.md` ddcd3497). Signal source: the GOLDM future; the option is only bought (ATM / 1-ITM, 1 lot).
+- Two studies carry the name R99 (22 Oct note): this GOLDM one (entries `r99-a-fade`, `r99-b-follow`, `r99-c-range`,
+  `r99-2-*`) and the NIFTY "+100 on index options" one below (`HUNT_R99_NIFTY100.md`, entries `r99-a`, `r99-b`,
+  `r99-c`, `r99-scan`). No entry id or file name collides, so neither was renamed.
+- Gold does move 100+ points many times a day (median 68 legs of >= 100 a day), but a GOLDM option cannot be paid by
+  one: on those trades (median hold 4 minutes) the option moved 0.33 x the future, lost ~14 points on the fill and ~37
+  points of charges. Break-even needs roughly 150-200 future points in the trade's favour.
+- Round 1 (104 rules: fade / follow the 100-300 point impulses, range breaks): SPA p 0.715, 0 past the cheap gates;
+  fade and follow lost before costs. Best: the 09:00-10:00 range break, +Rs 40,034 on 124 trades, -Rs 3,847 at 2x.
+- Round 2 (44 rules, at most one trade a day, held for hours: ORBs, the day's trend at 17:00 / 19:00, big impulses):
+  0 past the cheap gates; rounds 1-2 together SPA p 0.982 (148 rules).
+- Near-miss: at 17:00, if the move since 09:00 >= half the 20-session median daily range, buy the ATM option that way,
+  stop at half the move, out at the square-off. Design 36 trades, 47% win, +Rs 20,741 (+Rs 12,154 at 2x, 4/4 folds);
+  holdout (read once, description only) 15 trades, 53%, +Rs 22,889; but negative without the 3 best trades in both and
+  no better than random-timed twins on the holdout (p 0.87). Forward paper test only if Boss asks; nothing in the app.
+
+## Catching the +100 premium move on index options (R99, NIFTY, 21 Oct 2026) - 0 of 3 pass; one lead, a note only
+Full study: `HUNT_R99_NIFTY100.md` (code `hunt/r99_nifty100/`, pre-registered `PREREG.md` 543fc366). Not the GOLDM
+R99 above. Signal source: the NIFTY index (and Solo 2.0's own index entry); the ATM option is only bought.
+- Buying the ATM option at a random moment for +100 (stop -40) loses Rs 161 a trade (42,334 moments, 336 sessions):
+  +100 comes 9.2% of the time, the stop 29%, and 62% decay into the square-off. Charges are only Rs 60-75 a lot.
+- No single index condition fixes it (0 of 218 significant); a model on all of them lost (R99A: 238 trades,
+  -Rs 43,085). A fixed +100 / -40 on Solo 2.0's trades made it worse (R99B: 166 trades, -Rs 12,284).
+- Lead (R99C): on Solo 2.0's 166 design trades, letting winners run made +Rs 89,242, +Rs 33,333 more than Solo's own
+  exits, but all of the gain came in Jan-Mar 2026 and bootstrap p 0.245. It failed the gates, so it stays a note;
+  the final period was not opened.

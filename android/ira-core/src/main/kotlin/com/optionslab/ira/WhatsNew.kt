@@ -81,6 +81,16 @@ object WhatsNew {
                 "Research R100 tested seven ways to keep a big open profit on Liquidity, and none passed. " +
                 "Liquidity's paper and live rules stay as they were.",
             "Home → Dashboard → Strategies card → Liquidity 15+5 row; Copy diagnostics (Settings → Zerodha)"),
+        // 21 Oct (Boss: "Add FT3 to the app paper bot until live, when live is started then it should move to live").
+        Entry("2026-10-21-ft3-paper", OCT21, "FT3 forward test trades on paper",
+            "FT3, the strongest hero-zero near-miss from research, now trades on paper on each index's expiry day. " +
+                "From 11:00 to 12:55 it buys ₹5,000 of one cheap option near the money when its rule fits. " +
+                "It sells at 15:05 and has no stop on paper. " +
+                "It did not pass research, so its paper record is the forward test. " +
+                "Live goes the usual way: Live with your PIN, AI trades live, its own switch, and Shadow off. " +
+                "Live buys at most your lot cap and rests a disaster stop 80% below the price paid.",
+            "Home → Strategies → FT3 near-ATM morning; Settings → Zerodha for its Trade live and Shadow",
+            ask = "how is FT3 doing"),
         // 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features in the application"): round 5.
         Entry("2026-10-21-enhance-round-5", OCT21, "One GTT counted; payouts checked next morning",
             "Bot settings now counts what the one GTT did, today and over the last week. " +

@@ -1135,6 +1135,13 @@ class LiquidityArmTest : RobolectricTest() {
         val book = runBlocking { OrbArms.closedPaper() }
         assertTrue("not in the forward check", ForwardRecords.liquidity(book).isEmpty())
         assertTrue("not in the record chart", ForwardRecords.liquidityEquityTrades(book).isEmpty())
+        // The arm cutoff and the weekly review judge the plain rules only; the spoken Sunday review counts Boss's whole week.
+        val cut = runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }.first { it.first.name == "Liquidity 15+5" }.first
+        assertTrue("not in the arm cutoff's record", cut.paper.isEmpty())
+        val monday = day.with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY))
+        val liq = com.optionslab.ira.WeeklyReview.Group.LIQUIDITY
+        assertTrue("not in the weekly review", runBlocking { com.optionslab.app.ira.IraWeekly.trades(monday) }.none { it.group == liq })
+        assertTrue("in Boss's whole paper week", runBlocking { com.optionslab.app.ira.IraWeekly.trades(monday, whole = true) }.any { it.group == liq })
         val trade = com.optionslab.app.ira.IraBots.tradeOf(closed)
         assertTrue(trade.trail); assertEquals(be.LABEL, trade.rules)
         val said = runBlocking { com.optionslab.app.ira.IraBots.liquidityRecord(com.optionslab.ira.LiquidityRecord.Q()) }

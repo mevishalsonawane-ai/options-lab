@@ -34,7 +34,7 @@ object OrphanWatch {
     private val pending = OrphanAudit.Pending()
 
     /** The arms whose orphans get a protection (their open records are read from memory, [claims]). */
-    private val NET_OWNERS = setOf(HeroTicketRules.OWNER, VixDivRules.LABEL, SignalPaperRules.OWNER)
+    private val NET_OWNERS = setOf(HeroTicketRules.OWNER, com.optionslab.engine.orb.Ft3Rules.OWNER, VixDivRules.LABEL, SignalPaperRules.OWNER)
 
     /** One look at a time (the 15-second check, the minute lane and the full pass can overlap): a second one returns at once. */
     private val busy = kotlinx.coroutines.sync.Mutex()
@@ -48,6 +48,7 @@ object OrphanWatch {
     /** The options the arms above hold or are buying now (memory only). */
     private fun claims(): Set<String> = runCatching { PassedArmsHost.claims() }.getOrDefault(emptySet()) +
         runCatching { HeroTicketArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
+        runCatching { Ft3Arm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
         runCatching { VixDivArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
         runCatching { SignalPaperArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList())
 

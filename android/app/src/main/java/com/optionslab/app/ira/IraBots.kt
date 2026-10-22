@@ -404,8 +404,10 @@ internal object IraBots {
             // ORB, ORB Fresh, ORB Sweep and Range Fade, un-retired on paper by Boss on 07 Oct: judged only on their trades from
             // then (their record from before is what he already weighed), from the same 15 trades as any arm.
             val back = com.optionslab.engine.orb.RetiredArms.of(a.arm.source)?.let { com.optionslab.engine.orb.RetiredArms.UNRETIRED_ON }
-            // Liquidity on its plain rules only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) are not the rules' record.
-            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since) && it.trail == null
+            // Liquidity on its plain rules only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) or breakeven at +10%
+            // (22 Oct) are not the rules' record.
+            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since) &&
+                    !com.optionslab.engine.orb.LiquidityBreakeven.ownRules(it.trail, it.be)
                     else it.arm == a.arm.source && (back == null || !it.day.isBefore(back)) }
                 .sortedBy { it.exitTime }.map { (it.grossPnl ?: 0.0) - it.charges }
             val src = a.arm.source; val auto = a.automatic

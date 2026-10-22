@@ -802,6 +802,7 @@ class CoverageTest {
         if (alone && TrendTalk.asked(q)) return "TrendWatch"
         if (alone && PassedArmsTalk.asked(q) != null) return "PassedArms"
         if (alone && SoloDay.asked(q) != null) return "SoloDay"
+        if (alone && Ft3Talk.asked(q)) return "Ft3"
         if (alone && HeroTicketTalk.asked(q)) return "HeroTicket"
         if (alone && HeroDay.asked(q) != null) return "HeroDay"
         if (alone && PortfolioRisk.asked(q) != null) return "PortfolioRisk"
@@ -1125,6 +1126,9 @@ class CoverageTest {
         "how is the hero ticket doing" to "HeroTicket", "what did the hero ticket do today" to "HeroTicket",
         "how did the 1000 ticket do" to "HeroTicket", "hero ticket kaisa chal raha hai" to "HeroTicket",
         "tell me about the hero 1000 ticket" to "HeroTicket",
+        // ---- Ft3: FT3 near-ATM morning (21 Oct, Boss's choice, on paper; live the standard way), from its own book (before HeroTicket) ----
+        "how is FT3 doing" to "Ft3", "what did ft3 do today" to "Ft3", "ft3 kaisa chal raha hai" to "Ft3",
+        "tell me about the near ATM morning" to "Ft3", "how is forward test 3" to "Ft3",
         // ---- DataAge: how old his data is ----
         "is your data fresh" to "DataAge", "how old is your data" to "DataAge", "is the data stale" to "DataAge", "is your data live" to "DataAge",
         "is the feed delayed" to "DataAge", "how fresh is the data" to "DataAge", "is the option chain fresh" to "DataAge",

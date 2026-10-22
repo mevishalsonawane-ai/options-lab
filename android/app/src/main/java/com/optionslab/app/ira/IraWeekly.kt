@@ -167,7 +167,8 @@ internal object IraWeekly {
      */
     internal suspend fun trades(monday: LocalDate, whole: Boolean = false): List<WeeklyReview.Trade> {
         // 20 Oct, enhancement round 2 (review): [whole] (the spoken Sunday review): a book that cannot be read throws (said as unread,
-        // never as "no trades"), and trades under Boss's opt-in paper trail count too (it is Boss's whole paper week).
+        // never as "no trades"), and trades under Boss's opt-in paper trail (and, 22 Oct, breakeven) count too (it is Boss's whole
+        // paper week).
         fun <T> read(f: () -> List<T>): List<T> = if (whole) f() else runCatching(f).getOrDefault(emptyList())
         val from = monday.minusWeeks(1)
         val out = ArrayList<WeeklyReview.Trade>()
@@ -175,8 +176,9 @@ internal object IraWeekly {
         (if (whole) com.optionslab.app.data.OrbArms.closedPaper() else runCatching { com.optionslab.app.data.OrbArms.closedPaper() }.getOrDefault(emptyList())).forEach { p ->
             val exit = p.exitTime?.toLocalDate() ?: return@forEach
             if (exit.isBefore(from)) return@forEach
-            // Liquidity's plain-rules record only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) are left out of it.
-            if (p.trail != null && !whole) return@forEach
+            // Liquidity's plain-rules record only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) or breakeven at +10%
+            // (22 Oct) are left out of it.
+            if (com.optionslab.engine.orb.LiquidityBreakeven.ownRules(p.trail, p.be) && !whole) return@forEach
             val net = (p.grossPnl ?: 0.0) - p.charges
             val book = books[p.arm]
             when {

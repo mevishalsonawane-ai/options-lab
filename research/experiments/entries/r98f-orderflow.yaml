@@ -1,0 +1,30 @@
+id: r98f-orderflow
+title: 'R98f: order flow at the hero move (option volume, tick rule, OI, IV; index futures)'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R98_HERO_ALL_INDEX.md
+hypothesis: 'Descriptive: a pre-move order-flow metric separates heroes from matched duds (AUC >= 0.65 and Mann-Whitney p
+  < 0.001).'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): Dhan rollingoption WEEK/MONTH ATM+-10 1-minute (NIFTY,
+  BANKNIFTY, FINNIFTY from 18 Oct 2021, MIDCPNIFTY, SENSEX), index_1m, index_daily official closes, INDIAVIX; R98 loader research/hunt/r98/r98data.py'
+period:
+  design: expiry days 2021-26 (options); 29 Jul - 19 Oct 2026 (index futures)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the option''s own volume, OI and IV (labelled) and index-futures volume and OI'
+model_or_rule: 6 metrics x 2 windows, hero against matched controls
+settings: research/hunt/r98/orderflow.py
+prereg: research/hunt/r98/PREREG_F.md
+variants_tried: null
+results:
+  summary: No PRE-window metric reaches AUC 0.65 (all <= 0.57). The run's first 10 minutes show up-tick volume 60% vs 37%
+    (AUC 0.81, circular). Futures OI rose in all 9 hero runs of 2026; 13 Oct was an ignition then a short squeeze (CE OI 26.8M
+    -> 10.3M).
+  costs: none (descriptive)
+holdout_read: null
+verdict: not-a-test

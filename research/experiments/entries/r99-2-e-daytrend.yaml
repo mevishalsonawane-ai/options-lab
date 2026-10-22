@@ -1,0 +1,33 @@
+id: r99-2-e-daytrend
+title: 'R99 round 2 E: the day''s trend at 17:00 / 19:00 (GOLDM options)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R99_GOLD_OBUY.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): GOLDM options_rolling_1m MONTH book (near future +
+  ATM-3..+3 real 1-minute prints) to 19 Oct 2026; R96 book loader'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (read once for R99 rounds 1-2, for the cumulative SPA-best only)
+instruments:
+- GOLD
+hypothesis: When the move since 09:00 is >= k (0.25, 0.5) x the 20-session median daily range at 17:00 or 19:00, buying with
+  it and holding to the square-off passes the R99 gates.
+features:
+- 'signal source: the GOLDM future (minute closes); the option''s own price is never a signal; only the -40% hard premium
+  stop'
+model_or_rule: buy ATM / 1-ITM with the day's move; stop at half that move given back; out at the square-off
+settings: research/hunt/r99_gold_obuy/study2.py, sim.py
+prereg: research/hunt/r99_gold_obuy/PREREG_ROUND2.md
+variants_tried: 8
+results:
+  summary: '8 variants, 5 net <= 0, 0 passed the cheap gates. Best: E day trend at 17:00 | k 0.5 | ATM: 36 trades, win 47%,
+    net Rs 20,741 (2x Rs 12,154), gross Rs 32,952, folds 4/4, worst month -Rs 5,589, max DD -Rs 18,685, w/o top 3 -Rs 34,530.
+    round 2 SPA p 0.971 (44); rounds 1-2 SPA p 0.982 (148). Not found. Holdout (read once, the cumulative SPA-best, description
+    only): 15 trades, win 53%, net Rs 22,889 (2x Rs 20,349), twin p 0.866, w/o top 3 -Rs 9,613.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before each fill (R85 strict), 2x on model-priced
+    exits; every gate also at 2x spreads; 1 lot
+holdout_read: true
+verdict: rejected
+notes: 'Near-miss (E 17:00 k 0.5 ATM): positive at 1x and 2x in 4/4 folds and on the holdout, but negative without its 3 best
+  trades in both periods and no better than random-timed twins on the holdout. A forward paper test only if Boss asks; not
+  in the app.'

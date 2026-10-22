@@ -1,0 +1,33 @@
+id: r98-nostop-lock
+title: 'R98 follow-ups: no stop-loss, and a +30% profit-lock ladder, on every hero ticket'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R98_HERO_ALL_INDEX.md
+hypothesis: 'Post hoc (Boss): removing the stop-loss, or locking profit every +30%, turns R98''s cheap expiry tickets profitable
+  or lifts their win rate toward 75%.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): Dhan rollingoption WEEK/MONTH ATM+-10 1-minute (NIFTY,
+  BANKNIFTY, FINNIFTY from 18 Oct 2021, MIDCPNIFTY, SENSEX), index_1m, index_daily official closes, INDIAVIX; R98 loader research/hunt/r98/r98data.py'
+period:
+  design: 'expiry days 2021-26 (all, no holdout: post-hoc questions)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: none new (R98''s tickets); exits on the option premium'
+model_or_rule: no stop held to 15:20 / to settlement; -20% / -50% stops; +30% lock ladder and x1.3 compounding lock, with
+  and without stops
+settings: research/hunt/r98/nostop.py, lock.py
+prereg: null
+variants_tried: 10
+results:
+  summary: '394,956 tickets. No stop: win 2.9%, -Rs 3,213 a ticket (settlement -Rs 3,505); -20% stop -Rs 889. +30% lock, no
+    stop: win 18.7%, -Rs 2,139; +30% lock with a -20% stop -Rs 594 (least bad), 0 of 6 years > 0. The lock kills the heroes
+    (10x+ tickets +Rs 43,742 -> +Rs 4,977).'
+  costs: Rs 20 an order + 18% GST, STT 0.15% on the sell, exchange 0.0355% NSE / 0.0325% BSE, stamp 0.003% on the buy, 1-tick
+    spread, next-minute open + 1 tick entry; under Rs 0.10 at exit expires worthless; Rs 5,000 a ticket, fractional quantity
+holdout_read: null
+verdict: rejected
+notes: Not pre-registered; reported as answers to Boss's questions.

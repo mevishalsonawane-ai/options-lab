@@ -485,6 +485,21 @@ object AutoChange {
             "apart from the arms that passed and from the plain-rules record for 26 Oct",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Hero ₹1,000 ticket's switch (paper)")
 
+    /** The target of Boss's FT3 forward-test switch ([Kind.PAPER_ARM_ON]). */
+    const val FT3_TARGET = "paperarm:ft3"
+
+    /**
+     * 21 Oct (Boss: "Add FT3 to the app paper bot until live, when live is started then it should move to live"): FT3 near-ATM
+     * morning, the R98 forward test that did not pass research, switched on once by the update on Boss's own choice - "off → on"
+     * on paper, logged as Boss's (kept, never Autopilot's), undone in one tap (the arm off; paper, no PIN either way). Its live path
+     * is the standard one every paper arm has: nothing here touches Live, "AI trades go live", its "Trade live" switch or its Shadow.
+     */
+    fun ft3On(): Change = Change(Kind.PAPER_ARM_ON, FT3_TARGET, SWITCHED_OFF, ON,
+        "your choice (21 Oct): FT3 near-ATM morning on, on paper - a forward test that did not pass research (R98e: the best of " +
+            "8,280 variants, SPA p 0.96); its trades are kept in their own record, the forward test. Live goes only the standard " +
+            "way: Live with your PIN, \"AI trades go live\", its own \"Trade live\" switch, and its Shadow off with your PIN",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "FT3 near-ATM morning's switch (paper)")
+
     /** The target of a passed-research paper arm's switch ([Kind.PAPER_ARM_ON]): "paperarm:" + its source. */
     const val PAPER_ARM = "paperarm:"
     /**

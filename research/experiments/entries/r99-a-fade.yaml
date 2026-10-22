@@ -1,0 +1,33 @@
+id: r99-a-fade
+title: 'R99 A: fade the 100-300 point impulses (GOLDM options)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R99_GOLD_OBUY.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): GOLDM options_rolling_1m MONTH book (near future +
+  ATM-3..+3 real 1-minute prints) to 19 Oct 2026; R96 book loader'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (locked; R99 read it once, for the round-2 E near-miss only)
+instruments:
+- GOLD
+hypothesis: After >= X points in W minutes ((100,5),(150,15),(200,15),(300,30)) a GOLDM option bought AGAINST the move (fading
+  beats a random walk on the future line, 0.37-0.44 vs 0.33 on design) earns after costs, beats random-minute twins and passes
+  the R99 gates.
+features:
+- 'signal source: the GOLDM future (minute closes); the option''s own price is never a signal; only the -40% hard premium
+  stop'
+model_or_rule: buy ATM / 1-ITM against the impulse; out at T in {100,200,300} back, T/2 further or 60 min; all-day or evening;
+  one position at a time, W-minute cool-down
+settings: research/hunt/r99_gold_obuy/study.py, sim.py
+prereg: research/hunt/r99_gold_obuy/PREREG.md
+variants_tried: 48
+results:
+  summary: '48 variants, 48 net <= 0, 0 passed the cheap gates. Best: A fade | 300 in 30m | T 200 | evening | 1-ITM: 811 trades,
+    win 29%, net -Rs 397,653 (2x -Rs 568,558), gross -Rs 145,756, folds 0/4, worst month -Rs 85,658, max DD -Rs 408,714, w/o
+    top 3 -Rs 448,516. round 1 SPA p 0.715 (104). Not found.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before each fill (R85 strict), 2x on model-priced
+    exits; every gate also at 2x spreads; 1 lot
+holdout_read: false
+verdict: rejected
+notes: 'Held a median 4 minutes; the option moved 0.33 x the future and lost ~14 points on the fill before ~37 points of costs:
+  a 100-point move cannot pay for a GOLDM option.'

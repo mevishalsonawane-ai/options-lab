@@ -1,0 +1,680 @@
+{
+ "census": [
+  {
+   "index": "NIFTY",
+   "expiries": 273,
+   "range": "2021-08-05 .. 2026-10-19",
+   "days >= 5x": "70%",
+   "days >= 10x": "38%",
+   "days >= 20x": "17%",
+   "days >= 33x": "8%",
+   "median best x": "7.7",
+   "avg options >= 10x / day": "1.32"
+  },
+  {
+   "index": "BANKNIFTY",
+   "expiries": 195,
+   "range": "2021-08-05 .. 2026-09-29",
+   "days >= 5x": "62%",
+   "days >= 10x": "35%",
+   "days >= 20x": "17%",
+   "days >= 33x": "11%",
+   "median best x": "6.3",
+   "avg options >= 10x / day": "1.31"
+  },
+  {
+   "index": "FINNIFTY",
+   "expiries": 167,
+   "range": "2021-11-09 .. 2026-09-29",
+   "days >= 5x": "71%",
+   "days >= 10x": "44%",
+   "days >= 20x": "26%",
+   "days >= 33x": "13%",
+   "median best x": "8.5",
+   "avg options >= 10x / day": "1.47"
+  },
+  {
+   "index": "MIDCPNIFTY",
+   "expiries": 100,
+   "range": "2023-06-07 .. 2026-09-29",
+   "days >= 5x": "68%",
+   "days >= 10x": "42%",
+   "days >= 20x": "20%",
+   "days >= 33x": "9%",
+   "median best x": "7.2",
+   "avg options >= 10x / day": "2.24"
+  },
+  {
+   "index": "SENSEX",
+   "expiries": 176,
+   "range": "2023-05-19 .. 2026-10-15",
+   "days >= 5x": "62%",
+   "days >= 10x": "36%",
+   "days >= 20x": "20%",
+   "days >= 33x": "10%",
+   "median best x": "7.0",
+   "avg options >= 10x / day": "1.23"
+  },
+  {
+   "index": "ALL",
+   "expiries": 911,
+   "range": "2021-08-05 .. 2026-10-19",
+   "days >= 5x": "67%",
+   "days >= 10x": "38%",
+   "days >= 20x": "20%",
+   "days >= 33x": "10%",
+   "median best x": "7.3",
+   "avg options >= 10x / day": "1.43"
+  }
+ ],
+ "anatomy_median": [
+  {
+   "index": "NIFTY",
+   "days": 103,
+   "entry price Rs": "2.60",
+   "multiple": "18.63",
+   "index move %": "0.80",
+   "index move in straddles": "2.77",
+   "strike distance in straddles": "1.95",
+   "strikes OTM": "2.32",
+   "straddle % of spot": "0.29",
+   "minutes to peak": "88.00",
+   "minutes at >= half the gain": "23.00",
+   "give-back peak -> 15:20": "0.34",
+   "VIX": "14.15"
+  },
+  {
+   "index": "BANKNIFTY",
+   "days": 68,
+   "entry price Rs": "5.65",
+   "multiple": "19.69",
+   "index move %": "1.17",
+   "index move in straddles": "2.97",
+   "strike distance in straddles": "2.33",
+   "strikes OTM": "3.98",
+   "straddle % of spot": "0.38",
+   "minutes to peak": "53.00",
+   "minutes at >= half the gain": "17.50",
+   "give-back peak -> 15:20": "0.74",
+   "VIX": "14.65"
+  },
+  {
+   "index": "FINNIFTY",
+   "days": 73,
+   "entry price Rs": "1.90",
+   "multiple": "22.63",
+   "index move %": "1.05",
+   "index move in straddles": "3.11",
+   "strike distance in straddles": "2.23",
+   "strikes OTM": "2.50",
+   "straddle % of spot": "0.30",
+   "minutes to peak": "84.00",
+   "minutes at >= half the gain": "20.00",
+   "give-back peak -> 15:20": "0.31",
+   "VIX": "14.15"
+  },
+  {
+   "index": "MIDCPNIFTY",
+   "days": 42,
+   "entry price Rs": "1.65",
+   "multiple": "18.95",
+   "index move %": "0.83",
+   "index move in straddles": "2.96",
+   "strike distance in straddles": "1.96",
+   "strikes OTM": "2.78",
+   "straddle % of spot": "0.32",
+   "minutes to peak": "51.00",
+   "minutes at >= half the gain": "22.50",
+   "give-back peak -> 15:20": "0.37",
+   "VIX": "13.50"
+  },
+  {
+   "index": "SENSEX",
+   "days": 64,
+   "entry price Rs": "5.95",
+   "multiple": "23.23",
+   "index move %": "0.62",
+   "index move in straddles": "2.66",
+   "strike distance in straddles": "2.34",
+   "strikes OTM": "3.77",
+   "straddle % of spot": "0.23",
+   "minutes to peak": "39.00",
+   "minutes at >= half the gain": "17.00",
+   "give-back peak -> 15:20": "0.86",
+   "VIX": "12.75"
+  },
+  {
+   "index": "ALL",
+   "days": 350,
+   "entry price Rs": "3.10",
+   "multiple": "20.21",
+   "index move %": "0.83",
+   "index move in straddles": "2.88",
+   "strike distance in straddles": "2.18",
+   "strikes OTM": "2.83",
+   "straddle % of spot": "0.30",
+   "minutes to peak": "60.00",
+   "minutes at >= half the gain": "21.00",
+   "give-back peak -> 15:20": "0.42",
+   "VIX": "13.82"
+  }
+ ],
+ "times": {
+  "start (cheapest point)": {
+   "10:00": 51,
+   "10:30": 22,
+   "11:00": 22,
+   "11:30": 19,
+   "12:00": 20,
+   "12:30": 23,
+   "13:00": 24,
+   "13:30": 31,
+   "14:00": 44,
+   "14:30": 87,
+   "15:00": 7
+  },
+  "peak": {
+   "10:00": 1,
+   "10:30": 5,
+   "11:00": 6,
+   "11:30": 5,
+   "12:00": 11,
+   "12:30": 8,
+   "13:00": 7,
+   "13:30": 23,
+   "14:00": 40,
+   "14:30": 77,
+   "15:00": 167
+  }
+ },
+ "end_ge2x": 0.6342857142857142,
+ "reversal_share": 0.4714285714285714,
+ "why": [
+  {
+   "best one-way move, in straddles": "< 1",
+   "cases": 1748,
+   "share of cases": "33%",
+   "P(some cheap option 10x)": "0.0%",
+   "P(calls 10x | move that way)": "0.0%",
+   "P(puts 10x | move that way)": "0.1%"
+  },
+  {
+   "best one-way move, in straddles": "1-1.5",
+   "cases": 1673,
+   "share of cases": "31%",
+   "P(some cheap option 10x)": "0.2%",
+   "P(calls 10x | move that way)": "0.5%",
+   "P(puts 10x | move that way)": "0.2%"
+  },
+  {
+   "best one-way move, in straddles": "1.5-2",
+   "cases": 945,
+   "share of cases": "18%",
+   "P(some cheap option 10x)": "2.6%",
+   "P(calls 10x | move that way)": "4.0%",
+   "P(puts 10x | move that way)": "1.7%"
+  },
+  {
+   "best one-way move, in straddles": "2-2.5",
+   "cases": 484,
+   "share of cases": "9%",
+   "P(some cheap option 10x)": "17.4%",
+   "P(calls 10x | move that way)": "22.5%",
+   "P(puts 10x | move that way)": "12.1%"
+  },
+  {
+   "best one-way move, in straddles": "2.5-3",
+   "cases": 228,
+   "share of cases": "4%",
+   "P(some cheap option 10x)": "47.4%",
+   "P(calls 10x | move that way)": "64.8%",
+   "P(puts 10x | move that way)": "32.0%"
+  },
+  {
+   "best one-way move, in straddles": "3-4",
+   "cases": 193,
+   "share of cases": "4%",
+   "P(some cheap option 10x)": "71.0%",
+   "P(calls 10x | move that way)": "75.2%",
+   "P(puts 10x | move that way)": "64.0%"
+  },
+  {
+   "best one-way move, in straddles": ">= 4",
+   "cases": 84,
+   "share of cases": "2%",
+   "P(some cheap option 10x)": "88.1%",
+   "P(calls 10x | move that way)": "93.5%",
+   "P(puts 10x | move that way)": "84.9%"
+  }
+ ],
+ "term_median": 0.7026430488459422,
+ "term_mean": 0.9414977300357658,
+ "pm_base": 0.07709497206703911,
+ "when": {
+  "VIX at the previous close": {
+   "< 12": [
+    0.07729468599033816,
+    207
+   ],
+   "12-14": [
+    0.07462686567164178,
+    268
+   ],
+   "14-17": [
+    0.05829596412556054,
+    223
+   ],
+   "17-22": [
+    0.10967741935483871,
+    155
+   ],
+   ">= 22": [
+    0.07142857142857142,
+    42
+   ]
+  },
+  "opening gap %": {
+   "<= -1": [
+    0.18518518518518517,
+    27
+   ],
+   "-1..-0.5": [
+    0.0,
+    53
+   ],
+   "-0.5..-0.25": [
+    0.06593406593406594,
+    91
+   ],
+   "flat": [
+    0.0891566265060241,
+    415
+   ],
+   "0.25..0.5": [
+    0.09036144578313253,
+    166
+   ],
+   "0.5..1": [
+    0.036036036036036036,
+    111
+   ],
+   ">= 1": [
+    0.07407407407407407,
+    27
+   ]
+  },
+  "09:15-13:00 range % of spot": {
+   "< 0.4": [
+    0.08620689655172414,
+    58
+   ],
+   "0.4-0.6": [
+    0.06726457399103139,
+    223
+   ],
+   "0.6-0.8": [
+    0.08585858585858586,
+    198
+   ],
+   "0.8-1.1": [
+    0.07179487179487179,
+    195
+   ],
+   ">= 1.1": [
+    0.08333333333333333,
+    216
+   ]
+  },
+  "13:00 straddle % of spot": {
+   "< 0.15": [
+    0.05555555555555555,
+    36
+   ],
+   "0.15-0.25": [
+    0.07009345794392523,
+    214
+   ],
+   "0.25-0.35": [
+    0.07291666666666667,
+    288
+   ],
+   "0.35-0.5": [
+    0.07929515418502203,
+    227
+   ],
+   ">= 0.5": [
+    0.1,
+    130
+   ]
+  },
+  "weekday": {
+   "Fri": [
+    0.06976744186046512,
+    86
+   ],
+   "Mon": [
+    0.11538461538461539,
+    78
+   ],
+   "Sat": [
+    0.0,
+    1
+   ],
+   "Thu": [
+    0.08673469387755102,
+    392
+   ],
+   "Tue": [
+    0.06299212598425197,
+    254
+   ],
+   "Wed": [
+    0.047619047619047616,
+    84
+   ]
+  },
+  "monthly expiry": {
+   "False": [
+    0.081377151799687,
+    639
+   ],
+   "True": [
+    0.06640625,
+    256
+   ]
+  },
+  "index": {
+   "BANKNIFTY": [
+    0.07731958762886598,
+    194
+   ],
+   "FINNIFTY": [
+    0.07142857142857142,
+    154
+   ],
+   "MIDCPNIFTY": [
+    0.09183673469387756,
+    98
+   ],
+   "NIFTY": [
+    0.09523809523809523,
+    273
+   ],
+   "SENSEX": [
+    0.045454545454545456,
+    176
+   ]
+  }
+ },
+ "tickets": [
+  {
+   "index": "NIFTY",
+   "tickets": 117131,
+   "days": 273,
+   "P(2x)": "16.3%",
+   "P(5x)": "5.8%",
+   "P(10x)": "2.5%",
+   "held to 15:20: profitable": "4.0%",
+   "held: mean net Rs per Rs 5,000": "-3,041",
+   "ends near zero": "85%"
+  },
+  {
+   "index": "BANKNIFTY",
+   "tickets": 109028,
+   "days": 195,
+   "P(2x)": "9.6%",
+   "P(5x)": "3.0%",
+   "P(10x)": "1.4%",
+   "held to 15:20: profitable": "1.1%",
+   "held: mean net Rs per Rs 5,000": "-4,194",
+   "ends near zero": "84%"
+  },
+  {
+   "index": "FINNIFTY",
+   "tickets": 55653,
+   "days": 167,
+   "P(2x)": "18.0%",
+   "P(5x)": "6.2%",
+   "P(10x)": "3.3%",
+   "held to 15:20: profitable": "4.2%",
+   "held: mean net Rs per Rs 5,000": "-1,434",
+   "ends near zero": "87%"
+  },
+  {
+   "index": "MIDCPNIFTY",
+   "tickets": 37646,
+   "days": 100,
+   "P(2x)": "19.4%",
+   "P(5x)": "6.7%",
+   "P(10x)": "3.6%",
+   "held to 15:20: profitable": "5.3%",
+   "held: mean net Rs per Rs 5,000": "-1,907",
+   "ends near zero": "87%"
+  },
+  {
+   "index": "SENSEX",
+   "tickets": 75498,
+   "days": 176,
+   "P(2x)": "11.3%",
+   "P(5x)": "3.2%",
+   "P(10x)": "1.5%",
+   "held to 15:20: profitable": "2.0%",
+   "held: mean net Rs per Rs 5,000": "-4,025",
+   "ends near zero": "84%"
+  },
+  {
+   "index": "ALL",
+   "tickets": 394956,
+   "days": 911,
+   "P(2x)": "14.0%",
+   "P(5x)": "4.7%",
+   "P(10x)": "2.2%",
+   "held to 15:20: profitable": "2.9%",
+   "held: mean net Rs per Rs 5,000": "-3,213",
+   "ends near zero": "85%"
+  }
+ ],
+ "frontier_max_win": 0.5566620079198695,
+ "frontier_max_mean": -675.60107421875,
+ "models": [
+  {
+   "model / label": "hgb_y2",
+   "AUC (2023-26)": "0.691",
+   "base rate": "14.0%",
+   "top 1%: precision": "24.2%",
+   "top 5%": "26.9%",
+   "best threshold (>= 100 picks, 30 days)": "29.5% (363 picks, 47 days)",
+   "one pick per index-day": "32.8%",
+   "75%?": "no"
+  },
+  {
+   "model / label": "logit_y2",
+   "AUC (2023-26)": "0.679",
+   "base rate": "14.0%",
+   "top 1%: precision": "24.4%",
+   "top 5%": "25.2%",
+   "best threshold (>= 100 picks, 30 days)": "26.3% (3614 picks, 157 days)",
+   "one pick per index-day": "26.7%",
+   "75%?": "no"
+  },
+  {
+   "model / label": "hgb_y5",
+   "AUC (2023-26)": "0.655",
+   "base rate": "4.6%",
+   "top 1%: precision": "4.7%",
+   "top 5%": "6.6%",
+   "best threshold (>= 100 picks, 30 days)": "7.4% (74673 picks, 708 days)",
+   "one pick per index-day": "10.2%",
+   "75%?": "no"
+  },
+  {
+   "model / label": "logit_y5",
+   "AUC (2023-26)": "0.650",
+   "base rate": "4.6%",
+   "top 1%: precision": "6.7%",
+   "top 5%": "8.6%",
+   "best threshold (>= 100 picks, 30 days)": "8.7% (14111 picks, 457 days)",
+   "one pick per index-day": "10.5%",
+   "75%?": "no"
+  },
+  {
+   "model / label": "hgb_y10",
+   "AUC (2023-26)": "0.659",
+   "base rate": "2.2%",
+   "top 1%: precision": "2.2%",
+   "top 5%": "3.9%",
+   "best threshold (>= 100 picks, 30 days)": "4.1% (243 picks, 33 days)",
+   "one pick per index-day": "5.0%",
+   "75%?": "no"
+  },
+  {
+   "model / label": "logit_y10",
+   "AUC (2023-26)": "0.639",
+   "base rate": "2.2%",
+   "top 1%: precision": "3.4%",
+   "top 5%": "5.2%",
+   "best threshold (>= 100 picks, 30 days)": "6.0% (5537 picks, 245 days)",
+   "one pick per index-day": "5.3%",
+   "75%?": "no"
+  }
+ ],
+ "one_per_day": [
+  {
+   "pick": "logit_y10",
+   "exit": "hold to 15:20",
+   "tickets": 716,
+   "mean net Rs": "714",
+   "bootstrap 95%": "-926 .. 2,630",
+   "without the 5 best days": "-808",
+   "years > 0 (of 4)": 3,
+   "random pick, same days": "-2,865",
+   "hit 10x": "5.3%"
+  },
+  {
+   "pick": "logit_y10",
+   "exit": "hold, -50% stop (best of 60, post hoc)",
+   "tickets": 716,
+   "mean net Rs": "1,718",
+   "bootstrap 95%": "150 .. 3,506",
+   "without the 5 best days": "196",
+   "years > 0 (of 4)": 3,
+   "random pick, same days": "-1,562",
+   "hit 10x": "5.3%"
+  },
+  {
+   "pick": "hgb_y10",
+   "exit": "hold to 15:20",
+   "tickets": 716,
+   "mean net Rs": "-311",
+   "bootstrap 95%": "-2,084 .. 1,802",
+   "without the 5 best days": "-2,129",
+   "years > 0 (of 4)": 1,
+   "random pick, same days": "-2,809",
+   "hit 10x": "5.0%"
+  },
+  {
+   "pick": "hgb_y5",
+   "exit": "hold to 15:20",
+   "tickets": 716,
+   "mean net Rs": "-376",
+   "bootstrap 95%": "-1,869 .. 1,242",
+   "without the 5 best days": "-1,693",
+   "years > 0 (of 4)": 1,
+   "random pick, same days": "-2,906",
+   "hit 10x": "4.5%"
+  },
+  {
+   "pick": "logit_y5",
+   "exit": "hold to 15:20",
+   "tickets": 716,
+   "mean net Rs": "-228",
+   "bootstrap 95%": "-1,668 .. 1,464",
+   "without the 5 best days": "-1,475",
+   "years > 0 (of 4)": 2,
+   "random pick, same days": "-2,889",
+   "hit 10x": "5.0%"
+  }
+ ],
+ "zero": {
+  "below_entry": 0.9695485066690973,
+  "ge1x": 0.02271645449113319,
+  "ge2x": 0.019624970882832517,
+  "ge5x": 0.014095240988869646,
+  "ge9x": 0.00977830441872006,
+  "ge19x": 0.004648619086683074,
+  "doubles_intraday": 0.1402308105206656,
+  "worst": 177.57142857142858
+ },
+ "oct13": [
+  {
+   "side": "C",
+   "strike": 22650.0,
+   "entry Rs": 4.15,
+   "best x": 20.9,
+   "15:20 Rs": 74.4,
+   "held net Rs / 5k": "84,357",
+   "15-min move to its side %": -0.09,
+   "straddle vs its low": 0.04
+  },
+  {
+   "side": "C",
+   "strike": 22700.0,
+   "entry Rs": 1.6,
+   "best x": 30.41,
+   "15:20 Rs": 32.25,
+   "held net Rs / 5k": "95,382",
+   "15-min move to its side %": -0.09,
+   "straddle vs its low": 0.04
+  },
+  {
+   "side": "P",
+   "strike": 22250.0,
+   "entry Rs": 1.3,
+   "best x": 0.92,
+   "15:20 Rs": 0.2,
+   "held net Rs / 5k": "-4,474",
+   "15-min move to its side %": 0.09,
+   "straddle vs its low": 0.04
+  },
+  {
+   "side": "P",
+   "strike": 22300.0,
+   "entry Rs": 1.9,
+   "best x": 0.92,
+   "15:20 Rs": 0.2,
+   "held net Rs / 5k": "-4,655",
+   "15-min move to its side %": 0.09,
+   "straddle vs its low": 0.04
+  },
+  {
+   "side": "P",
+   "strike": 22350.0,
+   "entry Rs": 2.8,
+   "best x": 0.96,
+   "15:20 Rs": 0.3,
+   "held net Rs / 5k": "-4,604",
+   "15-min move to its side %": 0.09,
+   "straddle vs its low": 0.04
+  },
+  {
+   "side": "P",
+   "strike": 22400.0,
+   "entry Rs": 5.0,
+   "best x": 0.94,
+   "15:20 Rs": 0.25,
+   "held net Rs / 5k": "-4,850",
+   "15-min move to its side %": 0.09,
+   "straddle vs its low": 0.04
+  },
+  {
+   "side": "P",
+   "strike": 22450.0,
+   "entry Rs": 9.4,
+   "best x": 0.96,
+   "15:20 Rs": 0.2,
+   "held net Rs / 5k": "-4,970",
+   "15-min move to its side %": 0.09,
+   "straddle vs its low": 0.04
+  }
+ ]
+}

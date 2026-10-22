@@ -371,7 +371,8 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
     }
 
     @Test fun everyPaperOnlyArmIsRefusedAtZerodhaAndTheLiveArmsAreNot() {
-        val paperOnly = listOf(com.optionslab.engine.orb.HeroRules.ARM, com.optionslab.engine.orb.HeroTicketRules.ARM, com.optionslab.engine.orb.SweepRules.ARM,
+        val paperOnly = listOf(com.optionslab.engine.orb.HeroRules.ARM, com.optionslab.engine.orb.HeroTicketRules.ARM, com.optionslab.engine.orb.Ft3Rules.ARM,
+            com.optionslab.engine.orb.SweepRules.ARM,
             com.optionslab.engine.orb.RangeFadeRules.ARM, com.optionslab.engine.orb.DonchianArm.ARM, com.optionslab.engine.orb.BreadthDonchianArm.ARM,
             com.optionslab.engine.orb.Solo2.ARM, com.optionslab.engine.orb.OovArm.ARM)
         for (a in paperOnly) assertNotNull("${a.label} must never reach Zerodha", OrbArms.liveRefusal(a.source))

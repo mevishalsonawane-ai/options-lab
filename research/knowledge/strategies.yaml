@@ -201,6 +201,24 @@
       src: android/app/src/main/assets/study/pages.txt
       sec: Expiry Hero
 
+- id: ft3-near-atm
+  name: FT3 near-ATM morning (forward test)
+  instruments: [NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX]
+  tags: [expiry, option-buying, iv]
+  what: "On each index's own expiry day, at the first 5-minute mark from 11:00 to 12:55 with an OTM option at Rs 6-10, its IV at most 1.0333x the ATM's and within 1.5466 straddles of spot, it buys Rs 5,000 of it and sells at 15:05. On paper as a forward test (Boss's choice); it did not pass research."
+  verdict: weak
+  facts:
+    - text: "FT3 is the best of 8,280 hero-zero rules searched, and the luck test says the best of so many looks like this by chance (Hansen SPA p = 0.963, PBO 0.33)."
+      period: "expiry days 2021-26, five indices"
+      costs: "Rs 5,000 a ticket, R98 charges and a 1-tick spread"
+      src: research/hunt/r98/results/search_e.md
+      sec: "R98e Part B: the rule search, judged for data-snooping"
+    - text: "Replayed as the app runs it (its own IV, LIMIT and out at 15:05): 478 tickets, win 16.3%, mean Rs 1,805 a ticket, Rs 293 without the 5 best days, 4/6 years positive."
+      period: "expiry days 2021-26, five indices"
+      costs: "Rs 5,000 a ticket, R98 charges and a 1-tick spread"
+      src: research/hunt/r98/results/ft3_app.md
+      sec: "FT3 as the app runs it"
+
 - id: night-r3
   name: Night (R3)
   instruments: [NIFTY, BANKNIFTY]

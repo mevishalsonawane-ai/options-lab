@@ -1,0 +1,30 @@
+id: r99-2-fg-impulse
+title: 'R99 round 2 F/G: big impulses (400 in 30 / 600 in 60 min) followed or faded, once a day (GOLDM options)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R99_GOLD_OBUY.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): GOLDM options_rolling_1m MONTH book (near future +
+  ATM-3..+3 real 1-minute prints) to 19 Oct 2026; R96 book loader'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (locked; R99 read it once, for the round-2 E near-miss only)
+instruments:
+- GOLD
+hypothesis: A big impulse followed (stop at its origin, held 120 min or to the square-off) or faded (target and stop half
+  the impulse, 60 / 120 min), at most once a day, passes the R99 gates.
+features:
+- 'signal source: the GOLDM future (minute closes); the option''s own price is never a signal; only the -40% hard premium
+  stop'
+model_or_rule: buy ATM / 1-ITM with (F) or against (G) the first filled big impulse of the day
+settings: research/hunt/r99_gold_obuy/study2.py, sim.py
+prereg: research/hunt/r99_gold_obuy/PREREG_ROUND2.md
+variants_tried: 16
+results:
+  summary: '16 variants, 15 net <= 0, 0 passed the cheap gates. Best: F follow 600 in 60m | square-off | 1-ITM: 173 trades,
+    win 32%, net Rs 25,187 (2x -Rs 33,893), gross Rs 101,405, folds 3/4, worst month -Rs 50,663, max DD -Rs 115,204, w/o top
+    3 -Rs 123,263. round 2 SPA p 0.971 (44); rounds 1-2 SPA p 0.982 (148). Not found.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before each fill (R85 strict), 2x on model-priced
+    exits; every gate also at 2x spreads; 1 lot
+holdout_read: false
+verdict: rejected
+notes: ''
