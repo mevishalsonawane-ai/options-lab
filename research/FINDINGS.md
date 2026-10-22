@@ -1701,3 +1701,23 @@ trading rule, unless marked. Signal on the underlying throughout.
 - Public facts verified 22 Oct 2026: lots NIFTY 65 / BANKNIFTY 30 since the Jan 2026 expiries (NSE/FAOP/70616; the repo's lot
   table still says 35), NIFTY weekly on Tuesday since 2 Sep 2025, BANKNIFTY monthly only since 20 Nov 2024, hours 09:15-15:40
   since 3 Aug 2026, STT 0.15% of the sell premium since 1 Apr 2026, one round trip about Rs 70 (NIFTY) / Rs 76 (BANKNIFTY).
+
+## Defined-risk option selling on NIFTY and BANKNIFTY (R103, 22 Oct 2026) - 0 of 24 confirmed; the 6 design passes were stale wing prices
+Full study: `HUNT_R103_OPTIONS_SELLING.md` (pre-registered `hunt/r103_sell/PREREG.md`, two dated amendments; design to 14 Jul
+2026, holdout 15 Jul - 19 Oct 2026 read once). Plain-English guide: `DEEP_OPTIONS_SELLING.md`. Signal source: none
+directional; structures centred on the index's 09:20 ATM; exits on the premium.
+- 24 tests (NIFTY / BANKNIFTY x expiry / other days x iron fly / wide fly / condor x stop / stop+lock+target), 1 lot, 09:21
+  fills, dated charges (8 orders, Rs 228-256 a trade), liq slippage. Design: 6 BANKNIFTY non-expiry tests passed every gate
+  (+Rs 1.9 to +Rs 5.4 lakh, 942-998 trades, 62-70% win, q 0.000); every NIFTY and every expiry-day test failed.
+- The passes are an artefact: the lake keeps only ATM +-10 strikes, so a far wing the index moves away from stops printing
+  and is marked at a stale (higher) close. 43-63% of those trades had such a leg at exit. Repriced (Black-Scholes at the
+  leg's last IV; the model runs 1-5 points high on legs that did print), all six lose: -Rs 2.9 to -Rs 3.3 lakh in design,
+  -Rs 18.6k to -Rs 21.0k in the holdout (64 trades). As pre-registered the holdout also rejected them (win 81-86% vs 62-70%).
+- Before costs the hedged structures roughly break even; costs make them losers. The BUY mirror loses on all 24.
+- A 50%-of-credit stop sat beyond the iron fly's max loss on most normal days (fired 6 of 998): stops on hedged structures
+  belong on the max loss.
+- Descriptive (whole lake, stale legs repriced): the naked 09:20 short straddle held to 15:10 made +Rs 64k NIFTY (1,272 days,
+  62% win) and +Rs 1.51 lakh BANKNIFTY (1,234 days, 65%), worst day -Rs 28.9k / -Rs 29.3k on one lot (4 Jun 2024
+  BANKNIFTY -6.46% after 09:20); the same days with 1-straddle wings lost -Rs 3.0 / -Rs 3.8 lakh.
+- Warning for other studies: any rule that holds a strike more than about 6 steps from ATM on the rolling lake can be
+  marked at stale prices when the index moves away. Check the share of exit legs without a print before trusting it.

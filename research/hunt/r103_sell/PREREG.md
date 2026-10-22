@@ -89,3 +89,59 @@ about its wing width x lot), and is not built here. Nothing changes in paper or 
 `research/hunt/r103_sell/tests/test_r103.py`: the leg pricing and charges on hand-made days, the stop / lock / target
 paths, the strike rounding and the 10-step cap, the look-ahead guard (nothing after a decision minute changes it), the
 holdout lock, BH and the bootstrap. Plus the repo's research checks.
+
+## Amendment 1 (22 Oct 2026, 15:05 IST; written after the lake copy and BEFORE the stores were built or any R103 number existed)
+
+Boss's brief for the write-up asks for columns the rules above do not produce. They are added as **report columns only**:
+no rule, exit, structure or gate changes, and the 24 tests and the BH family are unchanged.
+
+1. **Margin and return on margin.** There is no SPAN file in the lake, so margin is a stated estimate, the same for every
+   trade: **2.5% of the short legs' notional (2 x K0 x lot) on a normal day, 4.5% on the index's expiry day from 20 Nov
+   2024** (SEBI's 2% expiry-day ELM on short options, circular of 1 Oct 2024). The 2.5% is calibrated on Zerodha
+   Varsity's worked NIFTY iron condor (Rs 44,303 on two short legs of Rs 7.48 lakh notional each, 2.96%, with the
+   pre-2024 ELM) and a Nov 2024 forum example (Rs 35 lakh -> Rs 62 lakh on the same condor when the 2% ELM came in,
+   i.e. about 2.5% -> 4.5%). Reported: mean margin per trade and **net / mean margin**, in total and per calendar
+   year. It is a planning number; the broker's calculator decides on the day.
+2. **Days beyond the account stop:** the count of trades with net <= -Rs 13,000 (CLAUDE.md's monthly stop, applied to one
+   day as a tail count). Gate 6 (worst calendar month) is unchanged.
+3. **The BUY-side mirror**, reported beside every test and not gated: the same four legs with every sign reversed (a long
+   iron fly / long iron condor, a debit), the same 09:21 fills, slippage and dated charges, and the same exits read on the
+   debit instead of the credit (X1: stop at a loss of 50% of the debit; X2: that stop, lock armed at +40% out at +20%,
+   target +60%). Before charges the mirror's gross is the seller's gross with the sign flipped; after charges both sides
+   pay, so the pair shows what the structure itself does and what the costs do.
+4. **Data as copied (22 Oct 2026, about 14:55 IST):** `index_1m_<UND>_<YEAR>.parquet` (NIFTY 2017-2026, BANKNIFTY
+   2021-2026), `opt_<UND>_WEEK_2021..2026.parquet`, `participants/bhav_index/bhav_index_*.parquet` (the expiry calendar),
+   `index_daily/index_daily.parquet` (for the descriptive tail table below). rclone was not in the session image; the
+   Ubuntu package (rclone 1.60.1) was installed and used with the session's remote. Nothing else was read.
+5. **A descriptive table, not a test** (for `research/DEEP_OPTIONS_SELLING.md`): the largest close-to-09:20 index moves
+   in the option lake and what the naked 09:20 ATM short straddle and the IF (held to the square-off, no stop) lost on
+   them, computed over the whole lake AFTER the holdout read, so the holdout stays unread until then. The pre-Aug-2021
+   crashes are described from the daily index and the median straddle only (an estimate, labelled).
+
+Timing twins (reported, not gated) stay as written. The random-day twin remains the rule itself.
+
+## Amendment 2 (22 Oct 2026, about 15:35 IST; written AFTER the design results were committed and BEFORE the holdout read)
+
+**What was found.** Six tests passed every design gate (BANKNIFTY non-expiry, IF / IFW / IC x X1 / X2). Checking them
+before the holdout showed a data artefact. The lake keeps only the ATM +-10 strikes at each minute, so a held wing that
+drifts outside that window stops printing. As pre-registered, the engine marks such a leg at its last close and exits it
+at that close when no open exists within 5 minutes. On the BANKNIFTY passers 11-18% of exit legs had no print in the 5
+minutes before the exit and 9-15% none in the 30 minutes before (430-628 stale long wings in about 1,000 trades). On
+NIFTY it was 3%. A long wing frozen at an old, higher price overstates the seller's profit and hides losses from the stop
+(the IF's stop fired on 6 of 998 BANKNIFTY days).
+
+**The check (a stricter gate, added before the holdout).** `r103stale.py` reprices every exit leg with no open within 5
+minutes of its exit order: Black-Scholes at the implied volatility of the leg's last print (6.5% rate), the index at the
+exit minute and the calendar time to 15:30 on the expiry day (bhavcopy calendar), filled with thin-contract slippage
+(4 ticks + 5 bps) and the same charges. The exit minute is the engine's (the stop path is not re-run; with fresh marks
+some stops would fire earlier, which this check does not credit or charge).
+
+* **Gate 8 (design):** the repriced design net > 0. **Holdout confirmation** now also needs the repriced holdout net > 0,
+  besides the pre-registered holdout gate.
+* The pre-registered numbers stay the headline numbers in every table; the repriced numbers sit beside them.
+* The holdout is still read once, for the six design passers exactly as pre-registered (`r103study.py holdout`), and
+  `r103stale.py holdout` reprices the same trades.
+
+A stricter gate added after a design result can only reject more; it cannot manufacture a pass. The first repriced
+design numbers (computed while diagnosing, before this note) were already negative for all six passers, so this
+amendment is expected to reject them; it is written down so that the holdout read cannot change that verdict quietly.

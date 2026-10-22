@@ -173,3 +173,108 @@ def test_holdout_lock(tmp_path, monkeypatch):
     assert S.period_of(date(2026, 7, 14)) == "design" and S.period_of(date(2026, 7, 15)) == "holdout"
     assert S.period_of(date(2026, 10, 20)) == "after"
     assert len(S.TESTS) == 24 and len({S.test_id(*t) for t in S.TESTS}) == 24
+
+
+# ---- Amendment 1 (22 Oct 2026): the BUY mirror, the margin estimate, the one-day tail count -------------------------
+
+def test_mirror_is_the_buy_side_with_the_exits_on_the_debit():
+    D = flat_day()
+    sell = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X1", False)
+    buy = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X1", False, mirror=True)
+    assert buy["mirror"] and not sell["mirror"]
+    assert [c for _, _, c in buy["legs"]] == [-c for _, _, c in sell["legs"]]
+    assert buy["credit"] < 0 < sell["credit"] and buy["max_loss"] == pytest.approx(-buy["credit"])
+    assert buy["margin"] == pytest.approx(-buy["credit"])                   # a buyer's margin is the debit paid
+    assert buy["why"] == "time" and buy["net"] < 0 and sell["net"] < 0        # a flat day costs both sides
+    # the seller's stop day is the buyer's winning day: the call side jumps from minute 50
+    for k, add in ((25000.0, 150.0), (25200.0, 60.0)):
+        D.con[("C", k)][0:4, 50:] += add
+    sell = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X2", False)
+    buy = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X2", False, mirror=True)
+    assert sell["why"] == "stop" and buy["why"] == "target" and buy["xr"] == 51 and buy["net"] > 0
+    # look-ahead: later prices never change the mirror's exit minute either
+    for c in D.con.values():
+        c[0:4, buy["xr"] + 1:] *= 3.0
+    again = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X2", False, mirror=True)
+    assert again["why"] == buy["why"] and again["xr"] == buy["xr"]
+
+
+def test_margin_estimate():
+    assert E.margin_est(25000.0, 65, date(2026, 5, 4), False) == pytest.approx(0.025 * 2 * 25000 * 65)
+    assert E.margin_est(25000.0, 65, date(2026, 5, 5), True) == pytest.approx(0.045 * 2 * 25000 * 65)
+    assert E.margin_est(45000.0, 15, date(2024, 5, 8), True) == pytest.approx(0.025 * 2 * 45000 * 15)   # before the ELM
+    D = flat_day()
+    t = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X1", True)
+    assert t["margin"] == E.margin_est(25000.0, 65, date(2026, 5, 4), True)
+
+
+def test_summary_tail_and_return_on_margin():
+    tr = [dict(day=date(2025, 1, i + 1), net=v, credit=100, max_loss=200, why="time", margin=50000.0)
+          for i, v in enumerate([100, -13000, 200, -20000, 300, 50])]
+    s = S.summary(tr)
+    assert s["days_below_stop"] == 2 and s["mean_margin"] == 50000
+    assert s["rom"] == pytest.approx(sum(t["net"] for t in tr) / 50000, abs=1e-4)
+    assert s["rom_per_year"] == pytest.approx(s["rom"] / (5 / 365.25), rel=1e-3)
+    assert S.summary([])["n"] == 0
+
+
+def test_tail_straddle_loss_on_a_hand_made_day(tmp_path, monkeypatch):
+    import r103tail as T
+    D = flat_day()
+    r = T.straddle_loss(D, "NIFTY", date(2026, 5, 4), False)
+    assert r["straddle_pts"] == 200 and r["lot"] == 65 and r["move_pct"] == 0.0
+    assert r["straddle_net"] < 0 and r["if_net"] < 0 and r["if_net"] > r["straddle_net"] - 2000   # costs only on a flat day
+    for side in ("C", "P"):                          # the ATM legs double at minute 100: the naked straddle loses ~2 x 100 x 65
+        D.con[(side, 25000.0)][0:4, 100:] *= 2.0
+    r2 = T.straddle_loss(D, "NIFTY", date(2026, 5, 4), False)
+    assert -14500 < r2["straddle_net"] < -12500 and r2["if_net"] == pytest.approx(r2["straddle_net"] + (r["if_net"] - r["straddle_net"]), abs=1)
+    monkeypatch.setattr(S, "HOLDOUT_FLAG", tmp_path / "HOLDOUT_READ")
+    with pytest.raises(PermissionError):
+        T.write()
+
+
+# ---- Amendment 2 (22 Oct 2026): the stale-leg check -------------------------------------------------------------------
+
+def test_bs_and_implied_vol_round_trip():
+    import r103stale as ST
+    p = ST.bs(25000.0, 25200.0, 5 / 365, 0.15, True)
+    assert 90 < p < 110                                         # the illustration in DEEP_OPTIONS_SELLING.md: about 101
+    assert ST.implied_vol(p, 25000.0, 25200.0, 5 / 365, True) == pytest.approx(0.15, abs=1e-4)
+    assert ST.implied_vol(0.01, 25000.0, 24000.0, 5 / 365, True) is None     # below intrinsic
+    assert ST.bs(25000.0, 24800.0, 0.0, 0.2, False) == 0.0
+    assert ST.years_left(date(2026, 5, 4), date(2026, 5, 5), 0) == pytest.approx((1440 + 375) / (365 * 1440))
+
+
+def test_reprice_only_touches_stale_legs_and_lowers_a_frozen_long_wing():
+    import r103stale as ST
+    D = flat_day()
+    t = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X1", False)
+    net, fixed, fail = ST.reprice(t, D, date(2026, 5, 5))
+    assert (net, fixed, fail) == (t["net"], 0, 0)              # every leg printed at exit: unchanged
+    # the long call wing stops printing at minute 100 and the index has fallen 300 points by the exit: its frozen price
+    # (100 + 4 x 50 points over the strike... flat_day gives it 200 - 4 x 10 = 60) is too high; repriced it is lower
+    w = D.con[("C", 25200.0)]
+    w[:, 100:] = np.nan
+    D.idx[3, 100:] = 24700.0
+    t2 = E.run(D, "NIFTY", date(2026, 5, 4), "IF", "X1", False)
+    net2, fixed2, fail2 = ST.reprice(t2, D, date(2026, 5, 5))
+    assert fixed2 == 1 and fail2 == 0 and net2 < t2["net"]
+    assert ST.reprice(t2, D, None)[2] == 1                       # no expiry date: counted, not repriced
+
+
+def test_stale_holdout_lock(tmp_path, monkeypatch):
+    import r103stale as ST
+    monkeypatch.setattr(S, "HOLDOUT_FLAG", tmp_path / "HOLDOUT_READ")
+    with pytest.raises(PermissionError):
+        ST.run("holdout")
+
+
+def test_tail_exit_price_floors_a_frozen_deep_short_at_intrinsic():
+    import r103tail as T
+    D = flat_day()
+    D.con[("P", 25000.0)][:, 100:] = np.nan            # the ATM put stops printing (left the window) ...
+    D.idx[3, 100:] = 23500.0                           # ... while the index falls 1,500 points
+    p, rep = T.exit_price(D, "P", 25000.0, E.SQ_ROW, date(2026, 5, 4), date(2026, 5, 5))
+    assert rep and p >= 1500.0                          # never the frozen 100
+    p2, rep2 = T.exit_price(D, "C", 25000.0, E.SQ_ROW, date(2026, 5, 4), date(2026, 5, 5))
+    assert not rep2 and p2 == 100.0                     # a leg that traded keeps the engine's fill

@@ -31,6 +31,9 @@ BPS = 5                           # 'liq' fills: 5 bps on every order ...
 THIN_LOTS = 20.0                  # ... plus 1 tick (>= 20 lots traded in the 5 minutes before), 2 (some), 4 (none)
 MAX_STEPS = 10
 FILL_LOOK = 5                     # minutes to look ahead for an open when the fill minute has none
+# Amendment 1 (22 Oct 2026): margin is a stated estimate, 2.5% of the short legs' notional (2 x K0 x lot) on a normal
+# day and 4.5% on the index's expiry day from 20 Nov 2024 (SEBI's 2% expiry-day ELM). The BUY mirror's margin is its debit.
+MARGIN_PCT, ELM_PCT, ELM_FROM = 0.025, 0.02, date(2024, 11, 20)
 STEP = {"NIFTY": 50.0, "BANKNIFTY": 100.0}
 COSTS = Costs("dated")
 
@@ -161,11 +164,21 @@ def marks(D, legs, r0: int, r1: int) -> np.ndarray:
     return out
 
 
-def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float = 1.0, decide: int = DECIDE_ROW) -> dict | None:
-    """One trade: entry orders at decide + 1, exits checked on each minute close, filled at the next minute's open."""
+def margin_est(k0: float, q: int, d: date, expiry: bool) -> float:
+    """Amendment 1: the seller's margin estimate for the two short legs, Rs."""
+    pct = MARGIN_PCT + (ELM_PCT if expiry and d >= ELM_FROM else 0.0)
+    return round(pct * 2 * k0 * q, 2)
+
+
+def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float = 1.0, decide: int = DECIDE_ROW,
+        mirror: bool = False) -> dict | None:
+    """One trade: entry orders at decide + 1, exits checked on each minute close, filled at the next minute's open.
+    mirror=True (Amendment 1) is the BUY side: every leg's sign reversed, the exits read on the debit paid."""
     st = setup(D, und, struct, decide)
     if st is None:
         return None
+    if mirror:
+        st = Setup(st.k0, st.s, tuple((a, b, -c) for a, b, c in st.legs))
     q = lot(und, d)
     er = decide + 1
     sq = SQ_ROW_EXPIRY if expiry else SQ_ROW
@@ -180,10 +193,11 @@ def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float
         f = slip(p, sg > 0, vol5_lots(con, er, q), mult)
         entry.append(f)
         ch += charges(f, q, sg > 0, d)
-    credit_pts = sum(-sg * f for (_, _, sg), f in zip(st.legs, entry))
-    if credit_pts <= 0:
+    credit_pts = sum(-sg * f for (_, _, sg), f in zip(st.legs, entry))     # negative for the mirror (a debit)
+    if (credit_pts <= 0) != mirror or credit_pts == 0:
         return None
     credit = credit_pts * q
+    base = abs(credit)                                                     # the exits' yardstick: credit or debit
     m = marks(D, st.legs, er, sq)
     sg = np.array([l[2] for l in st.legs], float)
     pnl = ((m - np.array(entry)[:, None]) * sg[:, None]).sum(axis=0) * q        # gross, at each minute close er..sq
@@ -192,16 +206,16 @@ def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float
     armed = False
     for j in range(0, len(pnl) - 1):                                           # decisions at er..sq-1, fills next minute
         v = pnl[j]
-        if v <= -ex["stop"] * credit:
+        if v <= -ex["stop"] * base:
             why, xr = "stop", er + j + 1
             break
-        if ex["target"] is not None and v >= ex["target"] * credit:
+        if ex["target"] is not None and v >= ex["target"] * base:
             why, xr = "target", er + j + 1
             break
         if ex["arm"] is not None:
-            if v >= ex["arm"] * credit:
+            if v >= ex["arm"] * base:
                 armed = True
-            elif armed and v <= ex["keep"] * credit:
+            elif armed and v <= ex["keep"] * base:
                 why, xr = "lock", er + j + 1
                 break
     exit_px = []
@@ -215,7 +229,9 @@ def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float
         ch += charges(x, q, s_ < 0, d)
     gross = sum(s_ * (x - f) for (_, _, s_), f, x in zip(st.legs, entry, exit_px)) * q
     wing = max(abs(st.legs[2][1] - st.legs[0][1]), abs(st.legs[1][1] - st.legs[3][1]))
+    max_loss = base if mirror else wing * q - credit
+    margin = base if mirror else margin_est(st.k0, q, d, expiry)
     return dict(und=und, day=d, struct=struct, exit=exit_, expiry=expiry, k0=st.k0, s=round(st.s, 2), lot=q,
                 legs=[(a, b, c) for a, b, c in st.legs], entry=entry, exitpx=exit_px, er=er, xr=xr, why=why,
-                credit=round(credit, 2), max_loss=round(wing * q - credit, 2), gross=round(gross, 2),
+                credit=round(credit, 2), max_loss=round(max_loss, 2), margin=margin, mirror=mirror, gross=round(gross, 2),
                 charges=round(ch, 2), net=round(gross - ch, 2))
