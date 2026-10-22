@@ -5,6 +5,7 @@ big open profit, each against Liquidity's own exits (B0), on the same trades as 
     python research/hunt/r100_liquidity_giveback/r100study.py design
     python research/hunt/r100_liquidity_giveback/r100study.py final        # the ONE final read (refuses a second)
     python research/hunt/r100_liquidity_giveback/r100study.py summary
+    python research/hunt/r100_liquidity_giveback/r100study.py amend5 design  # Amendment A5 (G13-G15); `amend5 final` = its one read
 
 Trades go to $R100_OUT (default ~/.cache/iraalgo/r100; never git); results/ holds small JSON only.
 """
@@ -68,6 +69,18 @@ AMEND3_FLAG = RESULTS / "A3_FINAL_READ"
 AMEND4 = {"G12": ([(0, 0.10, NAN, 0)], None)}
 NAMES["G12"] = "breakeven (after charges) once +10% (Boss, A4)"
 AMEND4_FLAG = RESULTS / "A4_FINAL_READ"
+# Amendment A5 (PREREG.md, Boss: "find a way to keep the profit and make it does not loss money"; fixed before any number)
+AMEND5 = {
+    "G13": dict(kind="half", target=0.15),                  # 2 lots: lot A sold at a +15% limit, lot B own exits; per lot
+    "G14": dict(kind="spread", gain=0.20, otm=2),           # once +20%, sell 1 lot 2 strikes further OTM (paper only)
+    "G15": dict(kind="spike", target=0.20, minutes=15),     # a +20% limit resting only in the first 15 minutes
+}
+NAMES.update({"G13": "2 lots: half sold at +15%, the other on its own exits; per lot (A5)",
+              "G14": "once +20%, sell 1 lot 2 strikes further out of the money (a spread; paper only) (A5)",
+              "G15": "take profit at +20% within the first 15 minutes after the fill (A5)"})
+AMEND5_FLAG = RESULTS / "A5_FINAL_READ"
+# The amendments in the order they were read: each one's BH family is G1-G7 plus the earlier ones and itself.
+AMEND_ORDER = ("amend_A1.json", "amend_A3.json", "amend_A4.json", "amend_A5.json")
 REFS = ("R19C",)
 ALL = ("B0",) + TESTS + REFS
 TWINS, SEED, BOOT = 500, 100, 2000
@@ -81,6 +94,11 @@ B0_EXPECT = {"design": (881, 257249), "final": (357, 11155)}       # R76 / R81's
 def rows_of(v: str) -> np.ndarray:
     r = VARIANTS[v][0] if v in VARIANTS else AMEND[v][0] if v in AMEND else AMEND4[v][0] if v in AMEND4 else []
     return np.array(r, dtype=np.float64).reshape(-1, 4)
+
+
+def priors_of(name: str) -> tuple:
+    """The amendment summaries read before `name` (AMEND_ORDER), whose p-values join its BH family. Pure."""
+    return AMEND_ORDER[:AMEND_ORDER.index(name)] if name in AMEND_ORDER else AMEND_ORDER
 
 
 def changed(b0: list, v: list) -> list:
@@ -298,9 +316,25 @@ def summarise() -> dict:
 
 
 # ================================================================================================ amendments A1 / A2
+def _price5(v: str, t: dict, D, X, ex_b0):
+    """One saved B0 trade `t` under an A5 rule (PREREG Amendment A5): (trade, how). G13 two lots per lot (lot B must be B0
+    trade by trade), G14 the B0 trade plus the short leg, G15 B0's exits plus the early +20% limit."""
+    spec = AMEND5[v]
+    assert ex_b0.target < 0, "B0 has no target of its own: a 'target' exit below is the A5 rule's"
+    if spec["kind"] == "half":
+        r = X.price_half(t["und"], D, t, ex_b0, spec["target"])
+        assert r is not None and abs(r["net_b"] - t["net"]) < 1e-6, "G13's lot B is not the B0 trade"
+        return r, ("lot_a_target" if r["why_a"] == "target" else "b0")
+    if spec["kind"] == "spread":
+        return X.price_spread(t["und"], D, t, ex_b0, spec["gain"], spec["otm"])
+    r = X.price_trade(t["und"], D, t, ex_b0, X.NOKEEP, None, tgt2=spec["target"], tgt2_win=spec["minutes"])
+    return r, ("spike_target" if r is not None and r["why"] == "target" else "b0")
+
+
 def amend_phase(phase: str, ids: tuple = tuple(AMEND), seed: int = SEED + 1) -> dict:
-    """G8-G10 (PREREG amendments A1 / A2; A3's G11 with [ids]) priced from the saved B0 trades of [phase] (the same trades,
-    entry and index-exit rows), with their own random early-exit twins."""
+    """G8-G10 (PREREG amendments A1 / A2; A3's G11, A4's G12 and A5's G13-G15 with [ids]) priced from the saved B0 trades
+    of [phase] (the same trades, entry and index-exit rows), with their own random early-exit twins. A5's rules also
+    report `how` (how many trades each rule changed and why the rest stayed B0's)."""
     os.environ["R51_CLEAN"] = "1"
     sys.path.insert(0, str(HUNT / "r51"))
     import r51cfg as K
@@ -319,15 +353,22 @@ def amend_phase(phase: str, ids: tuple = tuple(AMEND), seed: int = SEED + 1) -> 
     out = {}
     for v in ids:
         ex = E.Exits(**dict(_fields(ex_b0), steps=AMEND3[v])) if v in AMEND3 else ex_b0
-        tr = []
+        tr, how = [], defaultdict(int)
         for t in b0:
-            r = X.price_trade(t["und"], load(t["und"])[t["day"]], t, ex, rows_of(v), None)
+            D = load(t["und"])[t["day"]]
+            if v in AMEND5:
+                r, h = _price5(v, t, D, X, ex_b0)
+                how[h] += 1
+            else:
+                r = X.price_trade(t["und"], D, t, ex, rows_of(v), None)
             assert r is not None and r["er"] == t["er"]
             r.update({k: t[k] for k in ("e0", "fx0", "sgn", "close", "book") if k in t})
             tr.append(r)
         _save(f"{v}_{phase}", tr)
         res = P.periods(tr, "Liquidity", phase)
         res["by_index"] = by_index(tr)
+        if how:
+            res["how"] = dict(sorted(how.items()))
         k = len(changed(b0, tr))
         res["changed"] = k
 
@@ -373,6 +414,21 @@ def amend4(phase: str):
         amend_summary(tuple(AMEND4), "amend4", "amend_A4.json")
 
 
+def amend5(phase: str):
+    """Amendment A5 (G13-G15): its design phase, then its one final read (guarded by results/A5_FINAL_READ) and summary
+    (BH over the 15 tests G1-G15)."""
+    path = RESULTS / f"amend5_{phase}.json"
+    if phase == "final":
+        if AMEND5_FLAG.exists():
+            raise SystemExit("R100 A5: the final period was already read for G13-G15 (results/A5_FINAL_READ). One read only.")
+        if not (RESULTS / "amend5_design.json").exists():
+            raise SystemExit("R100 A5: run and commit the amendment's design phase first")
+        AMEND5_FLAG.write_text(f"A5 final period read on {datetime.now(timezone.utc).isoformat()}\n")
+    path.write_text(json.dumps(amend_phase(phase, tuple(AMEND5), SEED + 5), indent=1, default=str))
+    if phase == "final":
+        amend_summary(tuple(AMEND5), "amend5", "amend_A5.json")
+
+
 def amend(phase: str):
     path = RESULTS / f"amend_{phase}.json"
     if phase == "final":
@@ -388,10 +444,11 @@ def amend(phase: str):
 
 def amend_summary(ids: tuple = tuple(AMEND), stem: str = "amend", name: str = "amend_A1.json") -> dict:
     """The amendment's tests summarised as G1-G7 (summary.json), BH over every test so far in each period (G1-G7 and the
-    earlier amendments' p-values unchanged; their verdicts not re-opened): 10 tests for A1 / A2, 11 with A3."""
+    earlier amendments' p-values unchanged; their verdicts not re-opened): 10 tests for A1 / A2, 11 with A3, 12 with A4,
+    15 with A5."""
     base = json.loads((RESULTS / "summary.json").read_text())
     earlier = {}
-    for prior in ("amend_A1.json", "amend_A3.json"):          # the amendments read before this one (their p-values only)
+    for prior in priors_of(name):                             # the amendments read before this one (their p-values only)
         q = RESULTS / prior
         if q.exists() and q.name != name:
             earlier.update({k: v for k, v in json.loads(q.read_text())["res"].items() if k not in ids})
@@ -442,5 +499,7 @@ if __name__ == "__main__":
         amend3(sys.argv[2])
     elif cmd == "amend4" and len(sys.argv) == 3 and sys.argv[2] in ("design", "final"):
         amend4(sys.argv[2])
+    elif cmd == "amend5" and len(sys.argv) == 3 and sys.argv[2] in ("design", "final"):
+        amend5(sys.argv[2])
     else:
         print(__doc__)

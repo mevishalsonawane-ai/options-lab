@@ -373,3 +373,313 @@ def test_the_a4_final_is_read_once(tmp_path, monkeypatch):
     (tmp_path / "A4_FINAL_READ").write_text("x")
     with pytest.raises(SystemExit):
         S.amend4("final")
+
+
+# ---- amendment A5 (Boss: "find a way to keep the profit and make it does not loss money") ----------------------------
+# G13 two lots (half sold at a +15% limit), G14 a short leg 2 strikes further out of the money once +20%, G15 a +20%
+# limit resting only for the first 15 minutes. Synthetic days: a stand-in Day with only what the engine reads.
+E5 = G.E
+EX5 = E5.Exits(stop=0.15, tmax=20, need=0.05)                 # Liquidity's own exits (hunt/r51/fam_liq.py EX)
+D5 = date(2025, 6, 2)                                         # BANKNIFTY lot 30, step 100
+
+
+class _Day:
+    def __init__(self, con, d=D5, expiry=False):
+        E5._STACKS.clear()                                    # the day-stack cache is keyed by (index, date): a new day
+        self.d, self.con, self.expiry, self.idx, self.atm = d, con, expiry, np.full((4, N), 100.0), None
+
+
+def _plain(side="C", strike=50000.0, e0=10, fx0=-1):
+    return dict(side=side, strike=strike, e0=e0, fx0=fx0, sgn=1 if side == "C" else -1, close=0.0)
+
+
+def _b0(con, t=None, **kw):
+    t = t or _plain(**kw)
+    return X.price_trade("BANKNIFTY", _Day(con), t, EX5)
+
+
+def _sim2(C, tgt2, win, fx=-1, tmax=20, need=0.05, tgt=-1.0):
+    return X.simulate(C, 10, K.SQ_ROW, fx, 0.15, tgt, -1.0, 0.0, 0.0, NOSTEP, tmax, need, -1.0, K.TICK, 30.0, 0.0,
+                      X.NOKEEP, *E5.SLIP, tgt2, win)
+
+
+def _rise(C, row, hi, rest=110.0, upto=None):
+    """Minute `row` trades up to `hi` (open 105, low 104, close 110); the minutes after it sit at `rest`."""
+    C[0, row], C[1, row], C[2, row], C[3, row] = 105.0, hi, 104.0, 110.0
+    C[:4, row + 1:upto] = rest
+    return C
+
+
+# ---- G15: the early take-profit
+def test_spike_target_fills_only_in_the_first_15_minutes():
+    C = _rise(_flat(), 24, 121.0)                             # fill row 10: minute 14 after it
+    out = _sim2(C, 0.20, 15, fx=40)
+    assert R[out[6]] == "target" and out[5] == 24 and out[1] == pytest.approx(120.0) and out[3] == pytest.approx(120.0)
+    C2 = _rise(_flat(), 25, 121.0)                            # minute 15 after the fill: own exits only
+    out2 = _sim2(C2, 0.20, 15, fx=40)
+    assert R[out2[6]] == "rule_exit" and out2[5] == 40
+    assert out2 == pytest.approx(_sim(C2, fx=40, tmax=20, need=0.05), nan_ok=True)
+    C3 = _rise(_flat(), 10, 121.0)                            # the fill minute itself counts (minute 0)
+    C3[0, 10] = 100.0
+    assert R[_sim2(C3, 0.20, 15, fx=40)[6]] == "target"
+
+
+def test_spike_target_edges_exact_level_stop_first_and_forced_exit_minute():
+    C = _rise(_flat(), 14, 120.0)                             # exactly +20% fills
+    assert R[_sim2(C, 0.20, 15, fx=40)[6]] == "target"
+    C2 = _rise(_flat(), 14, 119.9)                            # just under: never
+    assert R[_sim2(C2, 0.20, 15, fx=40)[6]] == "rule_exit"
+    C3 = _rise(_flat(), 14, 125.0)
+    C3[2, 14] = 84.0                                          # the stop (85) in the same minute acts first
+    out3 = _sim2(C3, 0.20, 15, fx=40)
+    assert R[out3[6]] == "stop" and out3[5] == 14
+    C4 = _rise(_flat(), 20, 125.0)                            # an index exit at row 20's open: the trade is gone
+    out4 = _sim2(C4, 0.20, 15, fx=20)
+    assert R[out4[6]] == "rule_exit" and out4[5] == 20
+    C5 = _flat()
+    C5[:, 12] = np.nan                                        # a NaN minute triggers nothing
+    _rise(C5, 13, 121.0)
+    assert _sim2(C5, 0.20, 15, fx=40)[5] == 13
+
+
+def test_spike_target_off_by_default_and_lower_target_wins():
+    for seed in range(8):
+        C = _walk(seed)
+        base = _sim(C, tmax=20, need=0.05)
+        assert _sim2(C, -1.0, 15) == pytest.approx(base, nan_ok=True)          # no level
+        assert _sim2(C, 0.20, 0) == pytest.approx(base, nan_ok=True)           # no window
+    C = _rise(_flat(), 14, 121.0)
+    out = _sim2(C, 0.20, 15, fx=40, tgt=0.10)                 # the own +10% target is lower: it fills
+    assert out[1] == pytest.approx(110.0)
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_spike_target_lookahead(seed):
+    C = _walk(seed)
+    a = _sim2(C, 0.20, 15)
+    xr = a[5]
+    if xr < 0 or xr >= N - 2:
+        return
+    C2 = C.copy()
+    C2[:4, xr + 1:] = C2[:4, xr + 1:] * 3.0
+    assert _sim2(C2, 0.20, 15) == pytest.approx(a, nan_ok=True)
+
+
+def test_g15_price_trade_passes_the_window_through():
+    C = _rise(_flat(), 20, 122.0)
+    con = {("C", 50000.0): C}
+    t = _plain(fx0=40)
+    b0 = _b0(con, t)
+    r = X.price_trade("BANKNIFTY", _Day(con), t, EX5, X.NOKEEP, None, tgt2=0.20, tgt2_win=15)
+    assert b0["why"] == "rule_exit" and r["why"] == "target" and r["xr"] == 20 and r["X"] == pytest.approx(120.0)
+    assert r["net"] > b0["net"]
+
+
+# ---- G13: two lots, lot A sold at +15%
+def test_half_lot_a_sells_at_15pct_and_the_trade_is_the_mean_of_two_lots():
+    C = _rise(_flat(), 12, 116.0)
+    con = {("C", 50000.0): C}
+    t = _plain(fx0=40)
+    r = X.price_half("BANKNIFTY", _Day(con), t, EX5, 0.15)
+    b0 = _b0(con, t)
+    qty = float(K.lot("BANKNIFTY", D5))
+    assert qty == 30.0
+    rE = 100.10                                               # 100 x 1.0005 + 1 tick (heavy volume)
+    net_a = (115.0 - rE) * qty - float(E5.charges("BANKNIFTY", np.array([rE]), np.array([115.0]), qty, D5)[0])
+    assert r["why_a"] == "target" and r["xr_a"] == 12 and r["X_a"] == pytest.approx(115.0)
+    assert r["net_a"] == pytest.approx(net_a)
+    assert r["net_b"] == pytest.approx(b0["net"]) and r["why"] == b0["why"] == "rule_exit" and r["xr"] == 40
+    assert r["net"] == pytest.approx((net_a + b0["net"]) / 2.0)                 # per lot: each lot's own fills and charges
+    assert r["gross"] == pytest.approx(((115.0 - 100.0) * qty + b0["gross"]) / 2.0)
+
+
+def test_half_trades_that_never_reach_15pct_are_b0s():
+    C = _rise(_flat(), 12, 114.9)
+    con = {("C", 50000.0): C}
+    t = _plain(fx0=40)
+    r = X.price_half("BANKNIFTY", _Day(con), t, EX5, 0.15)
+    b0 = _b0(con, t)
+    assert r["why_a"] == "rule_exit" and r["net"] == pytest.approx(b0["net"]) and r["net_a"] == pytest.approx(r["net_b"])
+    C2 = _rise(_flat(), 12, 115.0)                            # +15% (100 x 1.15 is 114.99999999999999 in floats) fills
+    assert X.price_half("BANKNIFTY", _Day({("C", 50000.0): C2}), t, EX5, 0.15)["why_a"] == "target"
+
+
+def test_half_edges_stop_first_exit_minute_and_no_fill():
+    C = _rise(_flat(), 12, 120.0)
+    C[2, 12] = 80.0                                           # the stop in the same minute: both lots stop
+    con = {("C", 50000.0): C}
+    r = X.price_half("BANKNIFTY", _Day(con), _plain(fx0=40), EX5, 0.15)
+    assert r["why_a"] == r["why"] == "stop" and r["net"] == pytest.approx(r["net_b"])
+    C2 = _flat()                                              # the time-stop minute (fill + 19) touches +15% but closes
+    C2[:4, 11:] = 103.0                                       # under +5%: lot B leaves on the time stop at its close,
+    C2[1, 29] = 116.0                                         # lot A's limit fills inside that minute
+    r2 = X.price_half("BANKNIFTY", _Day({("C", 50000.0): C2}), _plain(), EX5, 0.15)
+    assert r2["why"] == "time" and r2["xr"] == 29 and r2["why_a"] == "target" and r2["xr_a"] == 29
+    C3 = _flat()
+    C3[:, 10:13] = np.nan                                     # no fill
+    assert X.price_half("BANKNIFTY", _Day({("C", 50000.0): C3}), _plain(), EX5, 0.15) is None
+    assert X.price_half("BANKNIFTY", _Day({("C", 50100.0): C}), _plain(), EX5, 0.15) is None    # no contract
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_half_lookahead(seed):
+    C = _walk(seed)
+    con = {("C", 50000.0): C}
+    t = _plain()
+    r = X.price_half("BANKNIFTY", _Day(con), t, EX5, 0.15)
+    if r is None:
+        return
+    last = max(r["xr"], r["xr_a"])
+    if last >= N - 2:
+        return
+    C2 = C.copy()
+    C2[:4, last + 1:] = C2[:4, last + 1:] * 3.0
+    r2 = X.price_half("BANKNIFTY", _Day({("C", 50000.0): C2}), t, EX5, 0.15)
+    for k in ("net", "net_a", "net_b", "xr", "xr_a", "why", "why_a"):
+        assert r2[k] == pytest.approx(r[k]) if isinstance(r[k], float) else r2[k] == r[k]
+
+
+# ---- G14: the spread once +20%
+def test_spread_arm_row_edges():
+    C = _rise(_flat(), 12, 119.9)
+    assert X.spread_arm_row(C, 10, 40, 0.20) == -1                             # never +20%
+    C = _rise(_flat(), 12, 120.0)
+    assert X.spread_arm_row(C, 10, 40, 0.20) == 12                             # exactly +20%, judged at 12's end
+    assert X.spread_arm_row(C, 10, 12, 0.20) == -1                             # in the exit minute: too late
+    assert X.spread_arm_row(C, -1, 40, 0.20) == -1                             # no fill
+    C2 = _rise(_flat(), 13, 121.0)
+    C2[2, 12] = np.nan                                                         # a minute with no trade is skipped
+    C2[1, 12] = 130.0
+    assert X.spread_arm_row(C2, 10, 40, 0.20) == 13
+    C3 = C.copy()
+    C3[:4, 13:] = 999.0                                                        # later bars never change it
+    assert X.spread_arm_row(C3, 10, 40, 0.20) == 12
+
+
+def test_buyback_row_open_or_next_minute():
+    sq = K.SQ_ROW
+    assert X.buyback_row("rule_exit", 30, 30, sq) == 30                        # long sold at 30's open
+    assert X.buyback_row("squareoff", sq, -1, sq) == sq
+    for why in ("stop", "lock", "target", "time"):                             # left inside minute 30
+        assert X.buyback_row(why, 30, 40, sq) == 31
+    assert X.buyback_row("missing", 40, 40, sq) == 40                          # forced row with no price: its row
+    assert X.buyback_row("missing", 29, 40, sq) == 30                          # time-stop minute with no trade
+
+
+def _short(p=60.0):
+    C = _flat(p)
+    return C
+
+
+def test_short_leg_fills_slippage_and_edges():
+    C2 = _short(60.0)
+    C2[0, 30] = 40.0
+    leg = X.short_leg(C2, 12, 30, 30, 30.0, K.TICK)
+    assert leg == pytest.approx((60.0, 59.92, 13, 40.0, 40.07))               # bid side -5 bps - 1 tick; ask +5 bps + 1
+    C3 = C2.copy()
+    C3[0, 13] = np.nan                                                         # no trade at 13: sold at 14's open
+    assert X.short_leg(C3, 12, 30, 30, 30.0, K.TICK)[2] == 14
+    C4 = C2.copy()
+    C4[0, 13:16] = np.nan                                                      # nothing in 13-15: no sale
+    assert X.short_leg(C4, 12, 30, 30, 30.0, K.TICK) is None
+    assert X.short_leg(C2, 12, 14, 14, 30.0, K.TICK)[2] == 13                  # the sale must come before the long's exit
+    assert X.short_leg(C2, 12, 13, 13, 30.0, K.TICK) is None
+    C5 = C2.copy()
+    C5[0, 30] = np.nan
+    C5[0, 31] = 41.0                                                           # buy-back row has no trade: the next open
+    assert X.short_leg(C5, 12, 30, 30, 30.0, K.TICK)[3] == pytest.approx(41.0)
+    C6 = C2.copy()
+    C6[0, 30:34] = np.nan
+    C6[3, 29] = 45.0                                                           # none within 3: its last close
+    assert X.short_leg(C6, 12, 30, 30, 30.0, K.TICK)[3] == pytest.approx(45.0)
+    C7 = C2.copy()
+    C7[:4, 31:] = 999.0                                                        # bars after the buy-back never matter
+    assert X.short_leg(C7, 12, 30, 30, 30.0, K.TICK) == pytest.approx(leg)
+
+
+def _spread_day(long_hi_row=14, short_buy=55.0, side="C", short_k=50200.0, fx0=30):
+    L = _rise(_flat(), long_hi_row, 121.0)
+    S2 = _short(50.0)
+    S2[0, fx0] = short_buy
+    return {(side, 50000.0): L, (side, short_k): S2}
+
+
+def test_spread_adds_the_short_leg_with_its_own_fills_and_charges():
+    con = _spread_day()
+    t = _b0(con, fx0=30)
+    assert t["why"] == "rule_exit" and t["xr"] == 30
+    r, how = X.price_spread("BANKNIFTY", _Day(con), t, EX5, 0.20, 2)
+    assert how == "spread" and r["arm_row"] == 14 and r["short_strike"] == 50200.0
+    assert r["short_sell_row"] == 15 and r["short_buy_row"] == 30
+    qty = 30.0
+    s_real = float(E5._r2(50.0 * 0.9995)) - 0.05              # bid side: -5 bps - 1 tick (heavy volume)
+    b_real = float(E5._r2(55.0 * 1.0005)) + 0.05              # ask side: +5 bps + 1 tick
+    ch = float(E5.charges("BANKNIFTY", np.array([b_real]), np.array([s_real]), qty, D5)[0])
+    net_s = (s_real - b_real) * qty - ch
+    assert r["short_net"] == pytest.approx(net_s) and r["net"] == pytest.approx(t["net"] + net_s)
+    assert r["why"] == t["why"] and r["xr"] == t["xr"] and r["held_peak"] == t["held_peak"]
+
+
+def test_spread_no_short_strike_late_arm_and_put_side():
+    con = _spread_day(short_k=50300.0)                        # the 2-OTM call (50200) is not in the stack
+    t = _b0(con, fx0=30)
+    r, how = X.price_spread("BANKNIFTY", _Day(con), t, EX5, 0.20, 2)
+    assert how == "no_strike" and r["net"] == t["net"]
+    con = _spread_day(long_hi_row=29)                         # armed at 29: its sale (30) is the long's exit row
+    t = _b0(con, fx0=30)
+    r, how = X.price_spread("BANKNIFTY", _Day(con), t, EX5, 0.20, 2)
+    assert how == "no_arm" and r["net"] == t["net"]
+    con = _spread_day(long_hi_row=30)                         # the high is in the exit minute (sold at its open)
+    t = _b0(con, fx0=30)
+    assert X.price_spread("BANKNIFTY", _Day(con), t, EX5, 0.20, 2)[1] == "no_arm"
+    con = _spread_day(side="P", short_k=49800.0)              # a put: 2 strikes further OTM is 200 points lower
+    t = _b0(con, side="P", fx0=30)
+    r, how = X.price_spread("BANKNIFTY", _Day(con), t, EX5, 0.20, 2)
+    assert how == "spread" and r["short_strike"] == 49800.0
+    assert X.short_strike("MIDCPNIFTY", "C", 12000.0, 2) == 12050.0
+
+
+def test_spread_buys_back_the_minute_after_a_stop_inside_a_minute():
+    con = _spread_day(fx0=40)
+    con[("C", 50000.0)][:4, 15:] = 100.0
+    con[("C", 50000.0)][2, 20] = 84.0                         # the long stops inside minute 20
+    con[("C", 50200.0)][0, 21] = 44.0
+    t = _b0(con, fx0=40)
+    assert t["why"] == "stop" and t["xr"] == 20
+    r, how = X.price_spread("BANKNIFTY", _Day(con), t, EX5, 0.20, 2)
+    assert how == "spread" and r["short_buy_row"] == 21 and r["short_buy"] == pytest.approx(44.0)
+
+
+def test_spread_lookahead_bars_after_the_buyback_never_matter():
+    con = _spread_day()
+    t = _b0(con, fx0=30)
+    r, _ = X.price_spread("BANKNIFTY", _Day(con), t, EX5, 0.20, 2)
+    con2 = {k: v.copy() for k, v in con.items()}
+    for v in con2.values():
+        v[:4, 31:] = 777.0
+    t2 = _b0(con2, fx0=30)
+    r2, _ = X.price_spread("BANKNIFTY", _Day(con2), t2, EX5, 0.20, 2)
+    assert r2["net"] == pytest.approx(r["net"]) and r2["short_net"] == pytest.approx(r["short_net"])
+
+
+# ---- A5's study plumbing
+def test_a5_rules_are_the_preregistered_ones_and_leave_the_earlier_tests_alone():
+    assert S.AMEND5 == {"G13": dict(kind="half", target=0.15), "G14": dict(kind="spread", gain=0.20, otm=2),
+                        "G15": dict(kind="spike", target=0.20, minutes=15)}
+    assert S.TESTS == ("G1", "G2", "G3", "G4", "G5", "G6", "G7")
+    assert S.rows_of("G13").shape == (0, 4)
+    assert S.priors_of("amend_A5.json") == ("amend_A1.json", "amend_A3.json", "amend_A4.json")   # BH over 15
+    assert S.priors_of("amend_A4.json") == ("amend_A1.json", "amend_A3.json")                    # as A4 was read
+    assert S.priors_of("amend_A1.json") == ()
+
+
+def test_the_a5_final_is_read_once(tmp_path, monkeypatch):
+    monkeypatch.setattr(S, "RESULTS", tmp_path)
+    monkeypatch.setattr(S, "AMEND5_FLAG", tmp_path / "A5_FINAL_READ")
+    with pytest.raises(SystemExit):
+        S.amend5("final")
+    assert not (tmp_path / "A5_FINAL_READ").exists()
+    (tmp_path / "amend5_design.json").write_text("{}")
+    (tmp_path / "A5_FINAL_READ").write_text("x")
+    with pytest.raises(SystemExit):
+        S.amend5("final")
