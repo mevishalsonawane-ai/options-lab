@@ -494,3 +494,40 @@ def test_forward_scorer_refuses_history_and_scores_forward():
     out2 = F.score(days=[old, new], rules=[F.BASE.name])
     assert out2.trades.iloc[0] == 1 and not out2.decision_due.iloc[0]
     assert F.binom_p(26, 40) == pytest.approx(0.0403, abs=1e-3) and F.binom_p(0, 0) == 1.0
+
+
+# ------------------------------------------------------------------------------------------------ idea 1 (PREREG_VRP)
+import r103vrp as V  # noqa: E402
+
+
+def test_rv20_uses_only_previous_closes(tmp_path):
+    days = pd.bdate_range("2025-01-01", periods=40)
+    closes = 100 * np.exp(np.cumsum(np.r_[0, np.tile([0.01, -0.01], 19), 0.5]))      # a huge jump on the last day
+    df = pd.DataFrame(dict(symbol="NIFTY", date=days, open=closes, high=closes, low=closes, close=closes, volume=0))
+    (tmp_path / "index_daily").mkdir()
+    df.to_parquet(tmp_path / "index_daily" / "index_daily.parquet")
+    rv = V.rv20("NIFTY", tmp_path)
+    last = days[-1].date()
+    assert rv[last] == pytest.approx(np.std(np.tile([0.01, -0.01], 10), ddof=1) * np.sqrt(252))   # the jump is not in it
+    assert np.isnan(rv[days[5].date()])
+
+
+def test_implied_sources_and_ratio():
+    d = make_day(straddle_paths(110.0, 90.0))
+    d.dte = 2
+    t = V.ENTRY
+    T2 = S.years_left(2)[t]
+    want = np.mean([S.implied_vol(110.0, 22250.0, 22250.0, T2, True), S.implied_vol(90.0, 22250.0, 22250.0, T2, False)])
+    assert V.implied(d, t, "ATMIV") == pytest.approx(want)
+    assert V.implied(d, t, "VIX") == pytest.approx(0.14)
+    assert V.ratio(d, t, "VIX", {d.day: 0.10}) == pytest.approx(1.4)
+    assert np.isnan(V.ratio(d, t, "VIX", {}))
+    m = masked(d, t, 1e6)                                     # nothing after the entry minute is read
+    assert V.implied(m, t, "ATMIV") == pytest.approx(want) and V.implied(m, t, "VIX") == pytest.approx(0.14)
+
+
+def test_twin_p():
+    x = np.array([1.0] * 10 + [-1.0] * 10)
+    assert V.twin_p(x, 10, 10.0, 1) < 0.01                    # picking all the winners is rare
+    assert V.twin_p(x, 10, -10.0, 1) > 0.99
+    assert V.twin_p(x, 0, 0.0, 1) == 1.0
