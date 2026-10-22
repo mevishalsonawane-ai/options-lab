@@ -1542,6 +1542,12 @@ NATGASMINI, GOLDM, SILVERM, hard stop + profit lock. Design 5 Aug 2025 - 14 Jul 
   ledger. Sold only at real prints (no model marks), the NR7 breakout makes -Rs 4,067 on 65 (round 1's profit was the
   model-priced silver exits). Lead: NR7 on CRUDEOIL options +Rs 45,170 on 23 (with NATURALGAS +Rs 30,767 on 43, 3 of 4
   folds, twin p 0.076). Wider strikes (a fresh Dhan token) would settle NR7 on every book.
+- Rounds 3-6 (R96, 21 Oct; `HUNT_R96_ROUND3..6.md`, summary `HUNT_R96_SUMMARY.md`): 46 ideas in all, 0 pass, holdout
+  never read. Crude NR7 is the only lead: R3A +Rs 48,875 on 46 (twin p 0.014, q 0.161) and R4G on cheap-IV days
+  +Rs 49,381 on 28 (14 signal days, p 0.002, q 0.046). Both fail the family gate (q 0.177). The fresh-book test failed:
+  NR7 on COPPER lost -Rs 84,978 on 13, and ZINC options never filled (33 signals). Natural-gas storage days, the
+  pre-event straddle, gold / silver ratio, first-half-hour momentum and the 20-day channel on copper all lose after
+  costs. Next: the pre-registered forward read-out of crude NR7 (from 20 Oct 2026), wider MCX strikes, real bid / ask.
 
 ## The "Mo3ty CCI Signals" indicator (R95, 21 Oct 2026) - 0 of 288 for the indicator as given; 2 of 328 survive (FINNIFTY MO, thin)
 Full study: `HUNT_R95_CCI_SIGNALS.md` (pre-registered `hunt/r95_cci_signals/PREREG.md` + amendment A1; notes N0-N5).
