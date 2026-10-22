@@ -612,4 +612,74 @@ class McxPaperArmsTest : RobolectricTest() {
         at(LocalTime.of(16, 30))
         assertFalse(McxPaperArms.wantsWatch())
     }
+
+    // ---- 22 Oct (arms audit) ------------------------------------------------------------------------------------------------
+
+    /**
+     * The 12-month trend arm (hidden since 21 Oct, its legs still held) and US-night silver can both want the near SILVERMIC
+     * future. The paper book nets by symbol, so a silver SELL against the trend's long closed the trend's leg instead of opening
+     * a trade (both then "closed elsewhere", silver's at Rs 0). Now silver lets that day go, says why, and the leg stays open.
+     */
+    @Test fun usNightSilverNeverTradesAgainstTheTrendArmsLegOnTheSameFuture() {
+        mcxList(silver = true)
+        val days = generateSequence(LocalDate.of(2026, 9, 30)) { it.minusDays(1) }.filter { it.dayOfWeek.value <= 5 }.take(253).toList().reversed()
+        val closes = days.mapIndexed { i, d -> d to 60_000.0 + i * 10 }
+        McxPaperArms.testDaily = { leg -> if (leg == "SILVERMIC") closes else emptyList() }
+        silverMinutes(LocalTime.of(9, 4))
+        runBlocking { McxPaperArms.setArmed(McxTrendRules.SOURCE, true) }
+        tick(LocalTime.of(9, 4))
+        val leg = McxPaperArms.view.value.open.single()
+        assertEquals(McxTrendRules.SOURCE, leg.arm); assertEquals(1, leg.side)
+        // The US night was down: silver would SELL the same future.
+        usFeed(siPrev = 30.0, siNow = 29.4)
+        silverMinutes(LocalTime.of(9, 5))
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        val orders = Paper.state.orders.size
+        tick(LocalTime.of(9, 5))
+        assertEquals("no silver order", orders, Paper.state.orders.size)
+        val status = McxPaperArms.view.value.status[McxUsSilverRules.SOURCE].orEmpty()
+        assertTrue(status, status.startsWith("silver_symbol_held_by_"))
+        assertEquals("the trend's leg is still open", leg.symbol, McxPaperArms.view.value.open.single().symbol)
+        assertEquals(1, Paper.state.positions.filter { it.symbol == leg.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
+    /** An exit that cannot fill (no price) leaves the disaster stop resting in the paper book at its trigger, never none. */
+    @Test fun anExitThatDoesNotFillLeavesTheStopRestingAtItsTrigger() {
+        mcxList(silver = true)
+        usFeed(siPrev = 30.0, siNow = 30.6)
+        silverMinutes(LocalTime.of(9, 5))
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        tick(LocalTime.of(9, 5))
+        val pos = McxPaperArms.view.value.open.single()
+        val trigger = Paper.state.orders.single { it.orderId == pos.stopOrderId }.triggerPrice!!.toDouble()
+        // 23:20, the clock's exit: no price at all, so the market sale does not fill.
+        upstox.minutes[silverKey] = emptyList()
+        tick(LocalTime.of(23, 20))
+        val still = McxPaperArms.view.value.open.single()
+        val stop = Paper.state.orders.single { it.orderId == still.stopOrderId }
+        assertEquals("trigger pending", stop.status)
+        assertEquals(trigger, stop.triggerPrice!!.toDouble(), 1e-9)
+        assertEquals(1, Paper.state.positions.filter { it.symbol == pos.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
+    /** A position the paper book no longer holds (the expiry exit, the sweeper or Boss closed it) is booked closed elsewhere. */
+    @Test fun aPositionClosedOutsideTheArmIsBookedClosedElsewhereNeverReversed() {
+        mcxList(silver = true)
+        usFeed(siPrev = 30.0, siNow = 29.4)
+        silverMinutes(LocalTime.of(9, 5))
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        tick(LocalTime.of(9, 5))
+        val pos = McxPaperArms.view.value.open.single()
+        assertEquals(-1, pos.side)
+        silverMinutes(LocalTime.of(10, 1))
+        at(LocalTime.of(10, 0))
+        assertTrue(runBlocking { Paper.close(pos.symbol, "NRML") }.ok)
+        tick(LocalTime.of(10, 1))
+        assertEquals("closed_elsewhere", McxPaperArms.view.value.closed.single().why)
+        assertEquals("flat, never long", 0, Paper.state.positions.filter { it.symbol == pos.symbol }.sumOf { it.quantity })
+        assertTrue("its stop is out of the book", Paper.state.orders.none { it.symbol == pos.symbol && it.status == "trigger pending" })
+        assertNothingAtZerodha()
+    }
 }

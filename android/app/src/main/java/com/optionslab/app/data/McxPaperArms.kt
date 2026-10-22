@@ -539,9 +539,20 @@ object McxPaperArms {
     /** The net quantity the paper book holds of [symbol] (all products). */
     private fun heldQty(symbol: String): Int = Paper.state.positions.filter { it.symbol == symbol }.sumOf { it.quantity }
 
-    /** Buy (or sell, [action]) 1 lot of [c] at market on paper; the fill and its order id, or the reason it did not fill. */
-    private suspend fun paperOrder(c: Paper.Contract, action: String, tag: String): Pair<SandboxEvent.Fill?, Paper.Result> {
-        val r = Paper.place(c, action, McxArmRules.LOTS, "MARKET", "NRML", null, null)
+    /**
+     * 22 Oct (arms audit): another arm's open position in [symbol] the other way from [side] (the paper book nets positions by
+     * symbol, so an entry against it would close that arm's leg instead of opening one); null when none.
+     */
+    private fun heldOtherWay(b: Book, arm: String, symbol: String, side: Int): Pos? =
+        b.positions.firstOrNull { it.open && it.arm != arm && it.symbol == symbol && it.side == -side }
+
+    /**
+     * Buy (or sell, [action]) 1 lot of [c] at market on paper; the fill and its order id, or the reason it did not fill. 22 Oct
+     * (arms audit): an [exit] only ever reduces what the paper book holds ([Paper.place]'s exit rule) - never a position the
+     * other way when the position was already closed by the expiry exit, the sweeper or Boss.
+     */
+    private suspend fun paperOrder(c: Paper.Contract, action: String, tag: String, exit: Boolean = false): Pair<SandboxEvent.Fill?, Paper.Result> {
+        val r = Paper.place(c, action, McxArmRules.LOTS, "MARKET", "NRML", null, null, exit = exit)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
         else r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", tag) } }
@@ -618,9 +629,18 @@ object McxPaperArms {
         return McxEveRules.exit(held, null, null, minuteOf(now))
     }
 
-    /** Close [p] at market on paper (its resting stop taken out first; if that stop filled meanwhile, that is the exit). */
+    /**
+     * Close [p] at market on paper (its resting stop taken out first; if that stop filled meanwhile, that is the exit). 22 Oct
+     * (arms audit): a market exit that does not fill (no fresh price) used to leave the position with NO resting stop until the
+     * next pass; now the stop goes back into the paper book at its trigger at once (or stays, when its cancel failed). An exit
+     * refused because the paper book no longer holds the position (the expiry exit, the sweeper or Boss closed it) is booked
+     * "closed_elsewhere" here, as [manage] would on its next look.
+     */
     private suspend fun exit(b: Book, p: Pos, c: Paper.Contract, why: String): Pos {
+        var stopId = p.stopOrderId
+        var trigger: Double? = null
         p.stopOrderId?.let { id ->
+            trigger = Paper.state.orders.firstOrNull { it.orderId == id }?.triggerPrice?.toDouble()
             runCatching { Paper.cancel(id, "exit:$why") }
             val so = Paper.state.orders.firstOrNull { it.orderId == id }
             if (so?.status == "complete") {
@@ -628,11 +648,27 @@ object McxPaperArms {
                     charges = p.charges + chargesOf(id))
                 closed(b, done); return done
             }
+            // Cancelled (or gone): no stop rests now. Still trigger-pending (the cancel failed): it rests on, under the same id.
+            if (so == null || so.status != "trigger pending") stopId = null
         }
-        val (fill, r) = paperOrder(c, if (p.side > 0) "SELL" else "BUY", "${label(p.arm)} · exit")
+        val (fill, r) = paperOrder(c, if (p.side > 0) "SELL" else "BUY", "${label(p.arm)} · exit", exit = true)
         if (fill == null) {
+            if (!r.ok && heldQty(p.symbol) * p.side <= 0) {
+                // Already flat in the paper book: closed by the expiry exit, the sweeper or Boss - booked at that sale's price.
+                val closing = if (p.side > 0) "SELL" else "BUY"
+                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == closing && !it.timestamp.isBefore(p.entryTime) }
+                val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: McxMarket.now().withNano(0), why = "closed_elsewhere",
+                    stopOrderId = null, charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
+                closed(b, done); return done
+            }
             if (!b.status.sameToday(p.arm, "exit_retry")) { b.status[p.arm] = "exit_retry"; note(b, p.arm, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
-            return p.copy(stopOrderId = null)
+            // The stop back in the book at its trigger (a stop the position had): the wick guard holds until the next pass sells.
+            val level = trigger ?: p.stopOrderId?.let { stopFallback(p) }
+            if (stopId == null && level != null) {
+                stopId = runCatching { Paper.place(c, if (p.side > 0) "SELL" else "BUY", McxArmRules.LOTS, "SL-M", "NRML", null, level) }.getOrNull()
+                    ?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${label(p.arm)} · stop") } }
+            }
+            return p.copy(stopOrderId = stopId)
         }
         val done = p.copy(exit = fill.price, exitTime = McxMarket.now().withNano(0), why = why, stopOrderId = null, charges = p.charges + chargesOf(r.orderId))
         closed(b, done)
@@ -826,9 +862,14 @@ object McxPaperArms {
             if (HiddenArms.blocks(arm)) { notes += "$leg: no new leg (hidden on your request, 21 Oct)"; continue }
             val fc = futures.firstOrNull { it.expiry == hold } ?: continue
             val pc = McxMarket.paperContract(fc)
+            val buy = step.open > 0
+            // 22 Oct (arms audit): the US-night silver arm may hold this same future the other way (the paper book nets by symbol).
+            heldOtherWay(b, arm, pc.symbol, step.open)?.let { other ->
+                val w = "${pc.symbol} is held ${if (other.side > 0) "long" else "short"} by ${label(other.arm)}: no new leg (it would only close that one)"
+                note(b, arm, "$leg: $w"); notes += "$leg: $w"; continue
+            }
             val bars = runCatching { minutes(fc.upstoxKey, now) }.getOrNull().orEmpty()
             val fresh = bars.lastOrNull()?.let { McxArmRules.fresh(it.epochSecond, nowSec()) } == true
-            val buy = step.open > 0
             val refused = refusal(pc, buy = buy, fresh = fresh)
             if (refused != null) { note(b, arm, "$leg: ${step.why} refused: $refused"); notes += "$leg: $refused"; continue }
             // The order flow on this leg's future (9 Oct; paper only): logged; under CONFIRM the opening is skipped unless it agrees.
@@ -918,6 +959,10 @@ object McxPaperArms {
         val side = McxUsSilverRules.side(s)
         if (side == 0) { decide(b, arm, key, "silver_flat ($facts)"); return true }
         val pc = McxMarket.paperContract(near)
+        // 22 Oct (arms audit): the 12-month trend arm may hold this same near SILVERMIC future the other way; the paper book nets
+        // by symbol, so this entry would close the trend's leg instead of opening a trade (both were then booked "closed elsewhere",
+        // this one at its entry with Rs 0). Held the other way by another arm: no trade today, said plainly.
+        heldOtherWay(b, arm, pc.symbol, side)?.let { decide(b, arm, key, "silver_symbol_held_by_${label(it.arm)}: ${pc.symbol} is held ${if (it.side > 0) "long" else "short"} by ${label(it.arm)}; a ${if (side > 0) "buy" else "sell"} would only close its leg ($facts)"); return true }
         val bars = runCatching { minutes(near.upstoxKey, now) }.getOrNull().orEmpty()
         val fresh = bars.lastOrNull()?.let { McxArmRules.fresh(it.epochSecond, nowSec()) } == true
         refusal(pc, buy = side > 0, fresh = fresh)?.let { decide(b, arm, key, "silver_$it ($facts)"); return true }

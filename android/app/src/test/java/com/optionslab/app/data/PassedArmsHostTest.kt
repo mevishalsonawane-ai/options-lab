@@ -673,6 +673,28 @@ class PassedArmsHostTest : RobolectricTest() {
         assertNull(view().paused[DonchianArm.SOURCE])
     }
 
+    /**
+     * 22 Oct (arms audit): a would-be trade (the cap, a twin, record only) was never bought and books no entry spread, so it no
+     * longer counts toward the 40-trade bar: 35 real losers and 5 would-be ones are 35 of 40, not a failed bar.
+     */
+    @Test fun wouldBeTradesNeverCountTowardTheFortyTradeBar() {
+        only(DonchianArm.SOURCE)
+        val t0 = day.minusDays(3).atTime(10, 0)
+        runBlocking { PassedArmsHost.addClosedForTest(List(40) { i ->
+            PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "X$i", "CE", 65, 100.0, t0.plusMinutes(i.toLong()), null, exit = 98.0, exitTime = t0,
+                why = "stop", shadow = if (i < 5) PassedArmsHost.SHADOW_CAP else null) }) }
+        tick(LocalTime.of(9, 0))
+        val v = view()
+        assertTrue("not judged on 35 real trades", v.on(DonchianArm.SOURCE))
+        assertNull(v.paused[DonchianArm.SOURCE])
+        assertTrue(v.forwardLine(DonchianArm.SOURCE), v.forwardLine(DonchianArm.SOURCE).startsWith("Forward test: 35 of 40"))
+        // Five more REAL losers: now the bar is judged and fails.
+        runBlocking { PassedArmsHost.addClosedForTest(List(5) { i ->
+            PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "Y$i", "CE", 65, 100.0, t0.plusMinutes(60L + i), null, exit = 98.0, exitTime = t0, why = "stop") }) }
+        tick(LocalTime.of(9, 1))
+        assertFalse(view().on(DonchianArm.SOURCE))
+    }
+
     @Test fun soloTwoBreachingItsDrawdownSwitchesItselfOff() {
         only(Solo2.SOURCE)
         val t0 = day.minusDays(3).atTime(12, 0)

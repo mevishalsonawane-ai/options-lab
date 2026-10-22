@@ -538,4 +538,23 @@ class Ft3ArmTest : RobolectricTest() {
         // The uploaded day file never holds its rupee record.
         assertTrue(Ft3Arm.diagLine(hideNet = true).contains(PassedArmsHost.NET_HIDDEN))
     }
+
+    /**
+     * 22 Oct (arms audit): the expiry square-off sold the ticket first (another coroutine, the same 15:05 minute): the arm books
+     * it closed elsewhere and never sells again - the paper book is flat, never short.
+     */
+    @Test fun aTicketTheSquareOffSoldFirstIsBookedClosedElsewhereNeverShort() {
+        market(LocalTime.of(11, 21)); tick(LocalTime.of(11, 21))
+        val p = Ft3Arm.view.value.open.single()
+        market(LocalTime.of(15, 5))
+        at(LocalTime.of(15, 5), seconds = 1)
+        assertTrue(runBlocking { Paper.close(p.symbol, "MIS") }.ok)
+        val sells = Paper.state.trades.count { it.symbol == p.symbol && it.action == "SELL" }
+        tick(LocalTime.of(15, 5), seconds = 2)
+        assertTrue(Ft3Arm.view.value.open.isEmpty())
+        assertEquals("closed_elsewhere", Ft3Arm.view.value.closed.single { it.symbol == p.symbol }.why)
+        assertEquals("the arm sold nothing more", sells, Paper.state.trades.count { it.symbol == p.symbol && it.action == "SELL" })
+        assertEquals("flat, never short", 0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
 }

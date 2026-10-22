@@ -64,6 +64,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 22 Oct (Boss: "Check each and every arm also hidden arms"): the arms audit's bug fixes, newest of all.
+        Entry("2026-10-22-arms-audit-fixes", OCT22, "Fixes from the arms audit",
+            "Every arm, the hidden ones too, was checked line by line against its research. " +
+                "An arm's exit can no longer sell into a short when the 15:05 square-off got there first. " +
+                "A hidden Pine script or shadow waiting for its exit opens nothing new. " +
+                "While the hidden-arms list cannot be read, every hidden arm stays blocked and the list is read again. " +
+                "An ORB time exit or your Stop for today sells even when no price can be read. " +
+                "The US-night silver short's stop now rests in the paper book, and never trades against the trend arm's leg. " +
+                "Jarvis's own trade ideas stay on paper, always. " +
+                "Would-be trades no longer count in the passed arms' 40-trade test.",
+            "Home → Strategies → each arm's row; the audit table is in the repository's RESULT.md"),
         // 22 Oct (Boss: "Check why other arms did not trigger today"): fixes from the 22 Oct diagnostics.
         Entry("2026-10-22-diagnostics-fixes", OCT22, "Fixes from your 22 Oct diagnostics",
             "R72 Breadth Donchian, your primary arm, decides first and keeps one same-direction place at each bar close. " +

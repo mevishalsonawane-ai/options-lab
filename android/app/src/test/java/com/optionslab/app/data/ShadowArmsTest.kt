@@ -14,6 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -287,6 +288,47 @@ class ShadowArmsTest : RobolectricTest() {
             synchronized(heard) { heard.contains("closed|$ref|profit_lock") })
         val leg = ArmLive.legsForTest(com.optionslab.engine.orb.LiveMirror.SHADOW)!!.single { it.ref == ref }
         assertEquals(key, leg.key); assertEquals(0, leg.qty)
+    }
+
+    /**
+     * 22 Oct (arms audit): the re-armed shadows are hidden (Boss's 15 Oct cleanup). A re-armed variant's signal while hidden is
+     * recorded as a virtual trade, never placed on paper; one already holding a paper position keeps its own exit.
+     */
+    @Test fun aHiddenReArmedVariantRecordsVirtuallyAndAHeldPaperTradeStillExits() {
+        bankFeed()
+        upstox.price(bankCe, 290.0)
+        HiddenArms.resetForTest(context)
+        try {
+            val said = runBlocking { ShadowArms.promote(ShadowRules.ORB_P10.id) }
+            assertTrue(said, said.contains("re-armed with OP10 on paper"))
+            val paperOrders = Paper.state.orders.size
+            // Hidden before its signal: the trade is virtual, nothing on paper, the variant still armed (the cleanup disarms it).
+            runBlocking { HiddenArms.hideAgain(com.optionslab.engine.orb.ArmsCleanup.SHADOW) }
+            assertTrue(HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.SHADOW))
+            tick(LocalTime.of(10, 10)); tick(LocalTime.of(10, 11)); tick(LocalTime.of(10, 12))
+            val open = row(ShadowRules.ORB_P10).trades.single()
+            assertTrue(open.open); assertFalse("virtual while hidden", open.paper)
+            assertNoBankOrders(paperOrders)
+            assertTrue(row(ShadowRules.ORB_P10).armed)
+        } finally { HiddenArms.resetForTest(context) }
+    }
+
+    @Test fun aPaperTradeHeldWhenTheShadowsAreHiddenKeepsItsOwnExit() {
+        bankFeed()
+        upstox.price(bankCe, 290.0)
+        HiddenArms.resetForTest(context)
+        try {
+            runBlocking { ShadowArms.promote(ShadowRules.ORB_P10.id) }
+            val paperOrders = Paper.state.orders.size
+            tick(LocalTime.of(10, 10)); tick(LocalTime.of(10, 11)); tick(LocalTime.of(10, 12))
+            assertTrue("on paper before the cleanup", row(ShadowRules.ORB_P10).trades.single().paper)
+            runBlocking { HiddenArms.hideAgain(com.optionslab.engine.orb.ArmsCleanup.SHADOW) }
+            tick(LocalTime.of(10, 14))
+            val done = row(ShadowRules.ORB_P10).trades.single()
+            assertFalse("sold on paper by its own exit while hidden", done.open)
+            assertEquals("profit_lock", done.why)
+            assertTrue(Paper.state.orders.drop(paperOrders).any { it.action == "SELL" && it.status == "complete" })
+        } finally { HiddenArms.resetForTest(context) }
     }
 
     private fun assertNoBankOrders(paperOrders: Int) {

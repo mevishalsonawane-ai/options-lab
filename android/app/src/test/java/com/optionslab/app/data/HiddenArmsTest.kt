@@ -158,6 +158,32 @@ class HiddenArmsTest : RobolectricTest() {
         assertFalse(HiddenArms.state.value.done)
     }
 
+    /**
+     * 22 Oct (arms audit): while the file could not be read, every arm the cleanup covers takes nothing new ([HiddenArms.blocks],
+     * as [HiddenArms.mayArm] already refused) - before, the gate-only arms (Jarvis's ideas, the forge) traded on the empty state.
+     * Once the file reads again, the cleanup goes on from where it was.
+     */
+    @Test fun whileTheFileCannotBeReadEveryHiddenArmIsBlockedAndALaterReadIsPickedUp() {
+        File(context.filesDir, "hidden_arms.vault").writeText("not a vault")
+        HiddenArms.reloadForTest()
+        HiddenArms.loadForTest()
+        assertTrue(HiddenArms.unread)
+        for (k in listOf(ArmsCleanup.FORGE, ArmsCleanup.JARVIS, ArmsCleanup.ORB, ArmsCleanup.PINE, ArmsCleanup.SHADOW, ArmsCleanup.MCX_TREND))
+            assertTrue("$k takes nothing new while unread", HiddenArms.blocks(k))
+        assertFalse(HiddenArms.mayArm(ArmsCleanup.ORB))
+        assertFalse("an arm the cleanup never covers (Liquidity) is not blocked", HiddenArms.blocks("liquidity"))
+        assertTrue(HiddenArms.refusal("ORB").contains("could not be read yet"))
+        assertTrue("a pass on the unreadable file fails without switching anything", runCatching { pass() }.isFailure)
+        assertTrue(fakes.values.all { it.calls.isEmpty() })
+        // The file readable again (here: gone, a fresh start): the next pass reads it and the cleanup runs as normal.
+        File(context.filesDir, "hidden_arms.vault").delete()
+        pass()
+        assertFalse(HiddenArms.unread)
+        assertTrue(HiddenArms.state.value.done)
+        assertTrue(HiddenArms.blocks(ArmsCleanup.FORGE))
+        assertFalse(HiddenArms.blocks("liquidity"))
+    }
+
     // ---- the timeline, the restore, a restart ---------------------------------------------------------------------------------
 
     @Test fun oneTapRestoresAnArmOnPaperWithTheMembersItHadAndBothAreInTheTimeline() {

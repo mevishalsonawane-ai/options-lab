@@ -248,7 +248,8 @@ object NightArm {
                 continue
             }
             val lots = (sellQty(p.qty, held) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-            val r = Paper.place(c, "SELL", lots, "MARKET", "NRML", null, null)
+            // 22 Oct (arms audit): an exit, so the paper book too only ever reduces what it holds (the clamp above kept, the book's check beside it).
+            val r = Paper.place(c, "SELL", lots, "MARKET", "NRML", null, null, exit = true)
             val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
             if (fill == null) {
                 r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }

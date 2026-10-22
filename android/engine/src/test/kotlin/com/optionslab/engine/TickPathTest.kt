@@ -32,6 +32,20 @@ class TickPathTest {
         assertEquals(305.0, p.sellStopFill(5_500, 310.0))
     }
 
+    /** 22 Oct (arms audit): a short's stop is a resting BUY SL-M; it fills on a high the same way the sell stop fills on a low. */
+    @Test fun aRestingBuyStopFillsAtItsTriggerOrTheFirstPriceOverIt() {
+        val p = TickPath()
+        p.record(300.0, 1_000)
+        p.record(309.0, 2_000)
+        p.record(311.0, 2_500)        // touched 310 inside a second that opened under it
+        p.record(290.0, 5_000)
+        assertEquals(310.0, p.buyStopFill(0, 310.0))
+        assertNull(p.buyStopFill(3_000, 310.0), "after the spike: not reached")
+        p.record(315.0, 6_000)        // a second that opened over the stop: filled at that price (a gap through it)
+        assertEquals(315.0, p.buyStopFill(5_500, 310.0))
+        assertNull(TickPath().buyStopFill(0, 310.0), "no ticks: not reached")
+    }
+
     @Test fun aWholeMinuteIsBuiltFromItsTicks() {
         val p = TickPath()
         assertNull(p.minute(0), "nothing kept")

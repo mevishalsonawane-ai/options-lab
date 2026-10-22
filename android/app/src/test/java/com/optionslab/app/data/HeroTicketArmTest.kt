@@ -506,4 +506,45 @@ class HeroTicketArmTest : RobolectricTest() {
         assertTrue(o.getJSONArray("migrated").toString().contains(HeroTicketArm.AUTO_ON))
         assertFalse("not plain text on disk", bookFile.readText(Charsets.ISO_8859_1).contains("\"armed\""))
     }
+
+    // ---- 22 Oct (arms audit) ------------------------------------------------------------------------------------------------
+
+    /** An entry order a cancel could not take out keeps the pass coming after 12:34 (as FT3), until it is settled. */
+    @Test fun aPendingEntryOrderKeepsThePassComingAfterTheWindow() {
+        fun book(pendingKey: String) {
+            HeroTicketArm.wipe()
+            Vault.writeFile(bookFile, JSONObject().put("armed", true).put("migrated", org.json.JSONArray().put(HeroTicketArm.AUTO_ON))
+                .put("pending", JSONObject().put(pendingKey, "PX-GONE")).toString().toByteArray(Charsets.UTF_8))
+            view()
+        }
+        book("$day|NIFTY|CE")
+        assertTrue("12:40, nothing held, an entry order still working", HeroTicketArm.wantsPass(12 * 60 + 40))
+        assertTrue(HeroTicketArm.wantsPass(14 * 60))
+        // An earlier day's is the paper book's own (its square-off ended it): forgotten on the next pass, no pass wanted after.
+        book("${day.minusDays(1)}|NIFTY|CE")
+        assertTrue(HeroTicketArm.wantsPass(14 * 60))
+        market(LocalTime.of(14, 0)); tick(LocalTime.of(14, 0))
+        assertFalse(HeroTicketArm.wantsPass(14 * 60))
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * The expiry square-off sold the tickets first (another coroutine, the same 15:05 minute): the arm books them closed
+     * elsewhere and never sells again - the paper book is flat, never short.
+     */
+    @Test fun ticketsTheSquareOffSoldFirstAreBookedClosedElsewhereNeverShort() {
+        market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
+        val open = HeroTicketArm.view.value.open
+        assertEquals(2, open.size)
+        market(LocalTime.of(15, 5), call = { 12.5 }, put = { 11.2 })
+        at(LocalTime.of(15, 5), seconds = 1)
+        for (p in open) assertTrue(runBlocking { Paper.close(p.symbol, "MIS") }.ok)
+        val sells = Paper.state.trades.count { it.action == "SELL" }
+        tick(LocalTime.of(15, 5), seconds = 2)
+        assertTrue(HeroTicketArm.view.value.open.isEmpty())
+        assertTrue(HeroTicketArm.view.value.closed.all { it.why == "closed_elsewhere" })
+        assertEquals("the arm sold nothing more", sells, Paper.state.trades.count { it.action == "SELL" })
+        for (p in open) assertEquals("flat, never short", 0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
 }

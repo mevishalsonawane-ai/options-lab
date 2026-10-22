@@ -407,7 +407,11 @@ object PineAuto {
             runCatching { exit(b, id, item, h, "no longer auto-trading") }
         }
         val stopped = dayStopped()
-        for (item in on) runCatching { one(b, item, stopped) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
+        // 22 Oct (arms audit): a hidden script still holding an option (the cleanup waits for its exit) is managed to that exit
+        // and buys nothing more - before, a signal flip sold the call and bought the put from an arm the Hidden arms list said
+        // was off. The exits below run as before; only new entries are held back ([HiddenArms.blocks]: memory only).
+        val hidden = HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.PINE)
+        for (item in on) runCatching { one(b, item, stopped, entries = !hidden) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
         for (item in winding) runCatching { one(b, item, stopped, entries = false) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
         save(b)
     }
@@ -1168,7 +1172,12 @@ object PineAuto {
             val net = Paper.state.positions.filter { it.symbol == h.symbol && it.product == "MIS" }.sumOf { it.quantity }
             if (net <= 0) { b.held.remove(id); managerClosed(id, h, null, "already closed"); note(b, id, "${h.symbol} already closed"); return }
             val lots = (minOf(net, h.qty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-            val sell = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
+            // 22 Oct (arms audit): an exit only reduces what the book holds - closed by the square-off between the read above
+            // and this sale, it is refused (never a short), and the holding is booked as already closed.
+            val sell = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
+            if (!sell.ok && sell.message.contains("already closed")) {
+                b.held.remove(id); managerClosed(id, h, null, "already closed"); note(b, id, "${h.symbol} already closed"); return
+            }
             val fill = filledOrCancelled(sell) ?: run {
                 // Nothing sold (no price): the stop goes back in the book where it was, so the holding is never left without
                 // one; the sale is tried again on the next pass.

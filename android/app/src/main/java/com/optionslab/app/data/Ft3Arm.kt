@@ -732,8 +732,17 @@ object Ft3Arm {
     /** Sell all of [p] on paper at market. */
     private suspend fun sell(b: Book, p: Pos, c: Paper.Contract, why: String): Pos {
         val lots = (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-        val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
+        // 22 Oct (arms audit): an exit only ever reduces the ticket - never a short when the 15:05 expiry square-off sold it first.
+        val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
+        if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
+            val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: Market.now().toLocalDateTime().withNano(0),
+                why = "closed_elsewhere", charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
+            b.marks.remove(p.symbol)
+            closed(b, done)
+            return done
+        }
         if (fill == null) {
             r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
             if (!b.status.sameToday(p.index, "exit_retry")) { b.status[p.index] = "exit_retry"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }

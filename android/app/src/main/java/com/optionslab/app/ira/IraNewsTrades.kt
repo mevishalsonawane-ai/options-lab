@@ -255,12 +255,13 @@ internal object IraNewsTrades {
 
     fun record(): String {
         val c = all().filter { it.closed && it.result != null }
-        val where = if (paperFirst) "on paper until proven" else "in the app's mode"
+        // 22 Oct (arms audit): Jarvis's own trades go on paper always (CLAUDE.md), proven or not.
+        val where = "on paper, always"
         val limit = " Daily loss limit for my trades: ${com.optionslab.ira.AppFacts.rs(dailyLimit).removePrefix("+")}" + if (lossLimitHit()) ", hit today." else "."
         if (c.isEmpty()) return "No trades of mine closed yet (they go $where).$limit"
         fun line(name: String, l: List<Pos>) = if (l.isEmpty()) null else "$name ${l.size} closed, ${l.count { it.result!! > 0 }} won, net ${com.optionslab.ira.AppFacts.rs(l.sumOf { it.result!! })}"
         return "My trades (they go $where): " + listOfNotNull(line("news", c.filter { !it.headline.startsWith("pattern:") }), line("patterns", c.filter { it.headline.startsWith("pattern:") }))
-            .joinToString("; ") + "." + (JarvisTrades.proven(closedRecord())?.let { " $it" } ?: " The paper record has earned live trading.") +
+            .joinToString("; ") + "." + (JarvisTrades.proven(closedRecord())?.let { " $it" } ?: " The paper record is making money; ${OWN_TRADES_PAPER}.") +
             (com.optionslab.ira.ActAlone.say(byConfidence())?.let { " $it" } ?: "") + limit
     }
 
@@ -333,7 +334,7 @@ internal object IraNewsTrades {
             IraActivity.add("Bought ${c.symbol} on paper at ${"%.2f".format(fill.price)} ($headline).$oid")
             IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis news · entry", r.orderId) }
             if (!guarded) unguarded(c.symbol, prot)
-            return "Bought ${c.symbol} at ${"%.2f".format(fill.price)} on paper${if (s.live) " (my trades stay on paper until proven)" else ""}.$oid $prot" +
+            return "Bought ${c.symbol} at ${"%.2f".format(fill.price)} on paper${if (s.live) " (my own trades stay on paper, always)" else ""}.$oid $prot" +
                 if (guarded) " Profit lock on." else ""
         }
         // Never real money without Boss's yes: a trade Jarvis took by itself that would now reach Zerodha is dropped.
@@ -512,9 +513,18 @@ internal object IraNewsTrades {
     /** Will Jarvis's next trade go to Zerodha with real money (Live mode, paper-first off, the paper record proven)? */
     fun goesLive(solo: Boolean = false): Boolean = AppSettings.load().live && earned(solo)
 
-    /** Has the record earned real orders: Solo's own paper record for its setups, else Jarvis's (and paper-first off). */
+    /**
+     * Has the record earned real orders: only Solo's own paper record for its setups (and paper-first off). 22 Oct (arms
+     * audit): Jarvis's OWN ideas (news, patterns) never - CLAUDE.md's safety rule says "Jarvis's own trades stay on paper", and
+     * the research row (FINDINGS.md, Solo 2.0) "Paper only, forever: Jarvis's own trades never go live"; the live branch below
+     * them could be reached once Live, AI-live, a proven record and the fingerprint lined up. Their record is still judged
+     * ([JarvisTrades.proven]) and said, but it earns nothing at Zerodha.
+     */
     private fun earned(solo: Boolean): Boolean =
-        !paperFirst && if (solo) IraSolo.provenWhy() == null else JarvisTrades.proven(closedRecord()) == null
+        !paperFirst && solo && IraSolo.provenWhy() == null
+
+    /** 22 Oct: what Jarvis says about where its own trades go - paper, always (Boss's rule), whatever the record. */
+    const val OWN_TRADES_PAPER = "my own trades stay on paper, always (your rule); only Solo's setups could ever earn Zerodha"
 
     /** Why each of Jarvis's recent losing trades lost (the last five), in words. */
     fun lossReasons(): List<String> {
@@ -542,7 +552,8 @@ internal object IraNewsTrades {
         if (p.live) return IraActions.closeLiveSymbol(p.symbol)
         val c = Paper.contractOf(p.symbol) ?: return "The paper contract was not found."
         val lots = (p.qty / maxOf(1, c.lotSize)).coerceAtLeast(1)
-        val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, runCatching { Paper.quote(c) }.getOrNull())
+        // 22 Oct (arms audit): an exit only reduces what is held - never a paper short when the position was closed meanwhile.
+        val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, runCatching { Paper.quote(c) }.getOrNull(), exit = true)
         r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis news · exit") }
         return "Paper: ${r.message}" + (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "")
     }

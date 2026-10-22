@@ -496,9 +496,17 @@ object GrammarArm {
                 closed(b, done); return done
             }
         }
-        val r = Paper.place(c, "SELL", (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), "MARKET", "MIS", null, null)
+        // 22 Oct (arms audit): an exit only reduces what is held - never a paper short when the square-off got there first.
+        val r = Paper.place(c, "SELL", (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), "MARKET", "MIS", null, null, exit = true)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
+            if (!r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
+                // Already flat in the paper book (the 15:15 square-off, the sweeper or Boss): booked at that sale's price.
+                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+                val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: Market.now().toLocalDateTime().withNano(0),
+                    why = "closed_elsewhere", stopOrderId = null, charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
+                closed(b, done); return done
+            }
             r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
             note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass")
             return p.copy(stopOrderId = null)

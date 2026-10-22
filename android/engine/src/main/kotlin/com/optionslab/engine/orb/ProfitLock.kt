@@ -149,6 +149,13 @@ object ProfitLock {
     fun sellStopFill(trigger: Double, open: Double, low: Double): Double? =
         if (low <= trigger + EPS) minOf(trigger, open) else null
 
+    /**
+     * A resting BUY stop (a short's stop; 22 Oct, arms audit) at [trigger] over one bar ([open], [high]): filled at the trigger,
+     * or at the open when the bar opened over it (a gap through the stop); null when the bar never reached it.
+     */
+    fun buyStopFill(trigger: Double, open: Double, high: Double): Double? =
+        if (high >= trigger - EPS) maxOf(trigger, open) else null
+
     // ---- the percentage trail (2026-10-06): every Pine script, with or without a stop or target ----------------------
 
     /**

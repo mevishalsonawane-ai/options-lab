@@ -290,7 +290,7 @@ object PassedArmsHost {
         fun todayPnl(source: String): Double = todayOf(source).sumOf { p -> p.net ?: marks[p.symbol]?.let { (it - p.entry) * p.qty } ?: 0.0 }
         /** The forward test's line. */
         fun forwardLine(source: String): String {
-            val c = closedOf(source)
+            val c = closedOf(source).filter { it.shadow == null }         // 22 Oct: the bar counts real trades only
             return if (source == Solo2.SOURCE) SoloMidday.forwardLine(SoloMidday.record(c.map { it.net ?: 0.0 })).replace("Forward test", "Forward test (60 trades)").removeSuffix(".")
             else PassedArms.ForwardBar.line(PassedArms.ForwardBar.judge(c.map { it.net ?: 0.0 }, c.map { it.spread }, base[source] ?: 0))
         }
@@ -625,7 +625,7 @@ object PassedArmsHost {
             // 19 Oct (review): on again from record only, the forward bar also counts from now - its would-be trades were never
             // bought, so they never switch it off the moment it is back on (they stay in its record, labelled).
             if (mode == Mode.ON && (b.paused.remove(source) != null || was == Mode.RECORD)) {
-                val nets = b.positions.filter { it.arm == source && !it.open }.map { it.net ?: 0.0 }
+                val nets = b.positions.filter { it.arm == source && !it.open && it.shadow == null }.map { it.net ?: 0.0 }
                 if (source == Solo2.SOURCE) SoloMidday.baseline(nets).let { b.soloBase = "${it.from}|${it.peak}" } else b.base[source] = nets.size
             }
             val holds = if (b.positions.any { it.arm == source && it.open && it.shadow == null }) "; what it holds still closes by its own exits" else ""
@@ -978,7 +978,9 @@ object PassedArmsHost {
             // the cap's places and its options first; the others follow (one R72 already holds becomes their would-be trade).
             // 22 Oct, merge review (CLAUDE.md's LIVE rule): first only while none of the other arms' entries could also be mirrored
             // live - R72 (paper only) taking an option first would skip that arm's live trade; then the order stays as before (R72 last).
-            val r72First = SOURCES.none { it != BreadthDonchianArm.SOURCE && work.active(it) && ExposureCapHost.liveMirrorPossible(it) }
+            // 22 Oct (arms audit): a record-only arm is never mirrored live ([aRecordOnlyBreakIsNeverMirroredLiveEvenWithItsTradeLiveOn]),
+            // so only an arm that is ON counts here - record-only R51 with its "Trade live" on no longer puts R72 last for nothing.
+            val r72First = SOURCES.none { it != BreadthDonchianArm.SOURCE && work.armed[it] == true && ExposureCapHost.liveMirrorPossible(it) }
             if (r72First && work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(DonchianArm.SOURCE)) changed = runCatching { donchian(work, now, reads) }.getOrElse { work.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(OovArm.SOURCE)) changed = runCatching { oov(work, now, reads) }.getOrElse { work.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
@@ -1079,7 +1081,10 @@ object PassedArmsHost {
         var changed = false
         for (s in SOURCES) {
             if (b.armed[s] != true) continue
-            val c = b.positions.filter { it.arm == s && !it.open }
+            // 22 Oct (arms audit): only the trades really bought count toward the 40-trade bar and its twice-the-spread test; a
+            // would-be trade (the cap, a twin, record only) was never bought and books no entry spread, so it could neither
+            // switch the arm off nor pass it. They stay in the record, labelled.
+            val c = b.positions.filter { it.arm == s && !it.open && it.shadow == null }
             val nets = c.map { it.net ?: 0.0 }
             val (fail, key, why) = if (s == Solo2.SOURCE) {
                 val base = soloBase(b)
@@ -1547,7 +1552,8 @@ object PassedArmsHost {
      */
     private suspend fun exits(b: Book, now: LocalDateTime): Boolean {
         var changed = false
-        val stopped = stoppedToday()
+        // 22 Oct (arms audit): an unreadable stop flag is never a reason to sell what is held (entries keep "unknown is stopped").
+        val stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(false) || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
         if (sharedSoldElsewhere(b, now)) changed = true
         for ((i, p) in b.positions.withIndex().toList()) {
             if (!p.open) continue
@@ -1680,8 +1686,11 @@ object PassedArmsHost {
     /** Sells all of [p] at market on paper (a target is booked at the target at most; a stop or lock never above its walk's price). */
     private suspend fun sell(b: Book, p: Pos, c: Paper.Contract, why: String, ltp: Double?, walkPx: Double? = null): Pos {
         val lots = (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-        val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
+        // 22 Oct (arms audit): an exit only ever reduces what the book holds; refused as already closed (a square-off or Boss got
+        // there first between the held read and this sale), the trade is booked closed elsewhere on the next look, never sold short.
+        val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
+        if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) return p
         if (fill == null) {
             r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
             val k = "${p.arm}|exit"

@@ -75,6 +75,19 @@ class TickPath(private val keepMs: Long = 5 * 60_000L, private val bucketMs: Lon
     }
 
     /**
+     * Where a resting BUY stop at [trigger] (a short's stop, 22 Oct arms audit), resting since [sinceMs], filled: the first
+     * bucket after it that traded at or over the trigger, at the trigger or at that bucket's first price when it was already
+     * over it. Null: not reached.
+     */
+    @Synchronized fun buyStopFill(sinceMs: Long, trigger: Double): Double? {
+        for (i in firstAfter(sinceMs) until buckets.size) {
+            val b = buckets[i]
+            if (b.high >= trigger - 1e-9) return maxOf(trigger, b.open)
+        }
+        return null
+    }
+
+    /**
      * The 1-minute candle that started at [startMs] (epoch ms), from the prices kept: open, high, low, close; null when
      * none of its prices is kept (a bar-close decision then waits for the candle feed, [com.optionslab.engine.orb.BarClose]).
      */

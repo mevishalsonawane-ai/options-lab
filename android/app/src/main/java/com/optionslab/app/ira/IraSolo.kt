@@ -640,7 +640,8 @@ internal object IraSolo {
         val net = runCatching { Paper.state.positions.filter { it.symbol == t.symbol && it.product == "MIS" }.sumOf { it.quantity } }.getOrDefault(0)
         if (c == null || net <= 0) return Paper.close(t.symbol, "MIS")
         val lots = (minOf(net, t.qty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-        return Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
+        // 22 Oct (arms audit): an exit only reduces what is held now (the read above and this sale are not atomic).
+        return Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
     }
 
     /**

@@ -192,6 +192,7 @@ object HeroTicketArm {
 
     private fun publish(b: Book) {
         decidedNow = b.decided.toSet()
+        pendingNow = b.pending.isNotEmpty()
         val closed = b.positions.filter { !it.open }
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         _view.value = View(b.armed, b.target, b.status.shown(), b.positions.filter { it.open }, closed.takeLast(20),
@@ -216,7 +217,15 @@ object HeroTicketArm {
      * the watch nothing - no wake, no minute lane, no safety-net round.
      */
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean =
-        holding() || (_view.value.armed && minute in WAKE_FROM until WAKE_UNTIL)
+        // 22 Oct (arms audit, as FT3): an entry order a cancel could not take out keeps the pass coming until it is settled - it
+        // may fill late, and a ticket the arm never booked would have no trail and no place in the day's budget.
+        holding() || pendingNow || (_view.value.armed && minute in WAKE_FROM until WAKE_UNTIL)
+
+    /** An entry order is still working (memory only: the book as last read). */
+    @Volatile private var pendingNow: Boolean = false
+
+    /** A stream tick older than this is not the ticket's price now (the minute bars are read instead). */
+    private const val FRESH_TICK_MS = 5_000L
 
     private const val WAKE_FROM = 12 * 60 + 25
     private const val WAKE_UNTIL = 12 * 60 + 34
@@ -508,6 +517,10 @@ object HeroTicketArm {
         runCatching { LiveRecorder.signal(HeroTicketRules.LABEL, c.symbol, u, right.name, limit, paper = true) }
         // A LIMIT BUY on the PAPER account; not filled at once, it is cancelled and tried again on the next pass until 12:33.
         val r = Paper.place(c, "BUY", HeroTicketRules.LOTS, "LIMIT", "MIS", limit, null, known = q, auto = HeroTicketRules.OWNER)
+        // 22 Oct (arms audit; the 22 Oct diagnostics showed the SENSEX 73,800 CE's two cancelled 12:30 orders as "IraAlgo-Android"):
+        // the order carries this arm's name from the moment it is placed, filled or not, so a cancelled chase order is never
+        // mistaken for one of Boss's own in Orders, the order review or the uploaded diagnostics.
+        r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${HeroTicketRules.OWNER} · entry") } }
         val filled = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (filled != null) return bought(b, u, right, key, c, r.orderId, filled.quantity, filled.price, now)
         val id = r.orderId?.takeIf { r.ok }
@@ -553,7 +566,7 @@ object HeroTicketArm {
         runCatching { Notifier.orderFilled(app, "BUY", qty, c.symbol, price, "Paper", "${HeroTicketRules.OWNER} · entry", orderId) }
         // Boss's 2x / 3x: the target rests in the paper book as a LIMIT SELL, so any tick through it fills it there - at the target.
         val targetId = HeroTicketRules.targetLevel(price, b.target)?.let { lv ->
-            runCatching { Paper.place(c, "SELL", HeroTicketRules.LOTS, "LIMIT", "MIS", lv, null) }.getOrNull()?.takeIf { it.ok }?.orderId
+            runCatching { Paper.place(c, "SELL", HeroTicketRules.LOTS, "LIMIT", "MIS", lv, null, exit = true) }.getOrNull()?.takeIf { it.ok }?.orderId
                 ?.also { runCatching { Strategies.tagOwner("paper:$it", "${HeroTicketRules.OWNER} · target") } }
         }
         val pos = Pos(u, c.symbol, right.name, qty, price, now, orderId, b.target.key, charges = chargesOf(orderId), targetOrderId = targetId,
@@ -609,7 +622,8 @@ object HeroTicketArm {
             }
             val bars = if (p.day == now.toLocalDate()) runCatching { closes(c.feedKey, now) }.getOrNull().orEmpty() else emptyMap()
             // The stream's last price when it has one (memory only), else the minute bars just read: one read a ticket a pass.
-            val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.maxByOrNull { it.key }?.value?.close
+            // 22 Oct (arms audit): the stream's tick only while fresh (a tick left from a stream that stopped is not the price now).
+            val ltp = runCatching { Paper.bookNow(c)?.takeIf { it.ageMs <= FRESH_TICK_MS }?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.maxByOrNull { it.key }?.value?.close
             ltp?.let { b.marks[p.symbol] = it }
             val trail = HeroTicketRules.trail(p.entry, p.entryTime.toLocalTime(), bars.mapValues { it.value.close }, HeroTicketRules.TrailStart.of(p.trailStart))
             // 18 Oct: the trail's level once armed, told to its live path ([ArmLive]; memory only) - which, the ticket being close-judged,
@@ -644,8 +658,19 @@ object HeroTicketArm {
             p0.copy(targetOrderId = null)
         } ?: p0
         val lots = (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-        val r = if (limit != null) Paper.place(c, "SELL", lots, "LIMIT", "MIS", limit, null) else Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
+        // 22 Oct (arms audit): an exit, so it only ever reduces the ticket - the 15:05 expiry square-off ([ExpirySquareOff]) runs
+        // in the same minute as the arm's own 15:05 sale, on another coroutine; when it got there first the arm's SELL used to open
+        // a paper SHORT. Now that sale is refused as already closed and the ticket is booked closed elsewhere, at that sale.
+        val r = if (limit != null) Paper.place(c, "SELL", lots, "LIMIT", "MIS", limit, null, exit = true) else Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
+        if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
+            val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: Market.now().toLocalDateTime().withNano(0),
+                why = "closed_elsewhere", charges = p.charges + (t?.charges?.toDouble() ?: 0.0), targetOrderId = null)
+            b.marks.remove(p.symbol)
+            closed(b, done)
+            return done
+        }
         if (fill == null) {
             r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, if (limit != null) "unfilled_limit" else "unfilled_market") } }
             if (!b.status.sameToday(p.index, "exit_retry")) { b.status[p.index] = "exit_retry"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
