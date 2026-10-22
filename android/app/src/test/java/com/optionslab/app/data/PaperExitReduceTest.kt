@@ -45,6 +45,8 @@ class PaperExitReduceTest : RobolectricTest() {
         kite.instruments += FakeKite.Ins(token, sym, "NIFTY", TradeFixtures.nearExpiry, 24_400.0, "PE", 75)
         runBlocking { Broker.instruments() }
         c = Paper.contractFor("NIFTY", TradeFixtures.nearExpiry, 24_400.0, Right.PE) ?: throw AssertionError("contract not listed")
+        // The contract's own symbol (from the day's list) and its stream token, as PaperHighSinceTest pins them.
+        Paper.tokenForTest(c.symbol, token)
         Paper.testSkipFeedChecks = true
         KiteStream.resetForTest()
     }
@@ -56,7 +58,7 @@ class PaperExitReduceTest : RobolectricTest() {
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
-    private fun held() = Paper.state.positions.filter { it.symbol == sym }.sumOf { it.quantity }
+    private fun held() = Paper.state.positions.filter { it.symbol == c.symbol }.sumOf { it.quantity }
 
     private fun buy(lots: Int = 1): Paper.Result = runBlocking { Paper.place(c, "BUY", lots, "MARKET", "NRML", null, null, Quote(100.0, bid = 99.95, ask = 100.05)) }
 
@@ -75,7 +77,7 @@ class PaperExitReduceTest : RobolectricTest() {
     /** The square-off (or Boss) closed it first: the arm's exit is refused as already closed, and nothing goes short. */
     @Test fun anExitOfAFlatPositionIsRefusedNeverAShort() {
         assertTrue(buy().ok)
-        assertTrue(runBlocking { Paper.close(sym, "NRML") }.ok)
+        assertTrue(runBlocking { Paper.close(c.symbol, "NRML") }.ok)
         assertEquals(0, held())
         val orders = Paper.state.orders.size
         val r = exitSell()
@@ -112,10 +114,10 @@ class PaperExitReduceTest : RobolectricTest() {
     /** The pure rule behind it. */
     @Test fun theReduceRuleIsPure() {
         assertTrue(buy(2).ok)
-        assertEquals(150, Paper.reduceQtyNow(sym, "NRML", "SELL", 300))
-        assertEquals(75, Paper.reduceQtyNow(sym, "NRML", "SELL", 75))
-        assertNull(Paper.reduceQtyNow(sym, "NRML", "BUY", 75))
-        assertNull(Paper.reduceQtyNow(sym, "MIS", "SELL", 75))
+        assertEquals(150, Paper.reduceQtyNow(c.symbol, "NRML", "SELL", 300))
+        assertEquals(75, Paper.reduceQtyNow(c.symbol, "NRML", "SELL", 75))
+        assertNull(Paper.reduceQtyNow(c.symbol, "NRML", "BUY", 75))
+        assertNull(Paper.reduceQtyNow(c.symbol, "MIS", "SELL", 75))
         assertNull(Paper.reduceQtyNow("NOTHELD", "NRML", "SELL", 75))
     }
 
@@ -125,11 +127,11 @@ class PaperExitReduceTest : RobolectricTest() {
         val stop = runBlocking { Paper.place(c, "SELL", 1, "SL-M", "NRML", null, 85.0, Quote(100.0)) }
         val target = runBlocking { Paper.place(c, "SELL", 1, "LIMIT", "NRML", 130.0, null, Quote(100.0)) }
         assertTrue(stop.ok && target.ok)
-        assertEquals(2, Paper.state.orders.count { it.symbol == sym && (it.status == "trigger pending" || it.status == "open") })
-        val r = runBlocking { Paper.close(sym, "NRML") }
+        assertEquals(2, Paper.state.orders.count { it.symbol == c.symbol && (it.status == "trigger pending" || it.status == "open") })
+        val r = runBlocking { Paper.close(c.symbol, "NRML") }
         assertTrue(r.message, r.ok)
         assertEquals(0, held())
-        assertEquals("no resting exit left", 0, Paper.state.orders.count { it.symbol == sym && (it.status == "trigger pending" || it.status == "open") })
+        assertEquals("no resting exit left", 0, Paper.state.orders.count { it.symbol == c.symbol && (it.status == "trigger pending" || it.status == "open") })
         assertEquals("cancelled", Paper.state.orders.single { it.orderId == stop.orderId }.status)
         assertEquals("position_closed", Paper.cancelReason(stop.orderId!!))
         // A stop fill after the close finds nothing to fill: still flat.
