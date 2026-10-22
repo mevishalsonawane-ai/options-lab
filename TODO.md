@@ -475,5 +475,6 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
 - [ ] X7. The gap read (a lock's or trail's best price after a restart or a stall longer than the stream keeps) is paper
       only; a live laddered position still reads only the stream's last five minutes after a restart (its resting SL at
       Zerodha is unaffected). Extend it to live once it has run on paper, with the read off the arms' lock.
-- [ ] X6. Boss's choice (R100): a paper-only "breakeven once +20%" switch, off by default, labelled "did not pass
-      research, your choice" (about neutral on 1,238 trades). Build only on Boss's word.
+- [x] X6. Boss's choice (R100): Boss chose breakeven once +10% (A4, 22 Oct; did not pass: 38% win rate, Rs 2,45,083 on
+      1,238 trades). Built as their own paper switch, off by default, labelled "with breakeven at +10%", kept out of the
+      plain-rules record; live never. The +20% version (G1) stays unbuilt.

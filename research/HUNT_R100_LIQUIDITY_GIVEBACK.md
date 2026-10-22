@@ -212,7 +212,9 @@ Everything else is Liquidity's own.
 - **Design:** it saved Rs 49,379 on 39 trades and cut 31 winners short (Rs 66,945). Without its 5 best trades it is
   -Rs 33,962.
 - **Final:** max drawdown Rs 67,632 (Rs 61,062 on the plain rules).
-- **Today's trade:** it would have closed at about Rs 0 instead of -Rs 1,168.
+- **Its breakeven exits:** 100 of the 1,238 trades were sold at the breakeven; slippage left every one at Rs 0 or a little
+  below (about -Rs 100 on average), so they count as losses, which is why the win rate falls to 38%.
+- **Today's trade:** it would have closed at about -Rs 100 instead of -Rs 1,168.
 - **In the app (Boss's word, 22 Oct):** built only as Boss's own opt-in PAPER switch, off by default, like the Rs 500
   trail: labelled "with breakeven at +10%", kept out of the plain-rules record, logged in the change timeline and undone
   in one tap. Live trades never use it.
@@ -294,7 +296,7 @@ Rs 500 trail.
    - **What it costs:** about nothing either way so far. Over 1,238 trades it was +Rs 3,287 in design, -Rs 2,641 in the
      walk-forward year and +Rs 1,341 in the final period.
    - **What it does:** a trade that reached +20% can no longer finish as a loss (barring a gap through the stop). That
-     is exactly the 22 Oct case: about Rs 0 instead of -Rs 1,168.
+     is exactly the 22 Oct case: about Rs 0 (a little under, after slippage) instead of -Rs 1,168.
    - **What it gives up:** about 1 trade in 55 is changed. Roughly half of those are runners sold at breakeven.
 2. **Leave the existing Rs 500 trail switch off.** On these trades it costs about Rs 1.79 lakh over 17 months.
 

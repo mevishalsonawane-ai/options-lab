@@ -23,22 +23,66 @@ Boss, 22 Oct: *"do something for liquidity strategy, it went up to 4.5k, and set
      gap.** The live stream keeps only 5 minutes of prices. Now the first check after such a gap also reads the minute
      candles once, so a lock or trail earned in the gap is set (and sells if the price already fell back to it). Paper
      positions only for now.
-- **New research (R100): 7 ways to keep a big open profit, plus your three follow-ups (keep half once +10%; a trailing
-  stop; Breadth Donchian's lock), were tested on 1,238 past Liquidity trades. None passed.**
-  **So nothing changes on the paper or live Liquidity books.**
+- **New research (R100): 7 ways to keep a big open profit, plus 8 of your follow-ups, were tested on 1,238 past
+  Liquidity trades. None passed.** The follow-ups were: keep half once +10%; a trailing stop, with and without that;
+  Breadth Donchian's lock; breakeven at +10%; half off at +15%; a spread at +20%; an early take-profit.
+  **So Liquidity's own rules stay as they are on paper and live.**
   - Trades like today's are rare: 9 of 881 design trades went +20% and still lost (Rs 15,030 together), and 5 of 357
     in the final period.
   - Every lock saves those trades. Every lock but one also sells winners early, and that costs much more than it saves.
+- **Your breakeven at +10% is built as your own paper switch, off by default** (Strategy lab card). You asked for it,
+  so it is there even though it did not pass. On 1,238 past trades it gives a 38% win rate and Rs 2,45,083. Live trades
+  never use it.
 - **What you can switch on knowingly** (nothing is switched on for you):
   - **Breakeven once +20%** (G1) is about free either way: +Rs 3,287 in design, -Rs 2,641 in the walk-forward year,
     +Rs 1,341 in the final period. It changes about 1 trade in 55.
-    - **The effect:** a trade that reached +20% can no longer end as a loss. Today's trade would have closed at about
-      Rs 0 instead of -Rs 1,168.
-    - **Not proven:** random early exits did as well. Say the word and it can be built as a paper-only switch, off by
-      default, labelled "did not pass research, your choice".
+    - **The effect:** a trade that reached +20% can no longer end as more than a small loss (slippage). Today's trade
+      would have closed at about Rs 0 (a little under) instead of -Rs 1,168.
+    - **Not proven:** random early exits did as well. Not built: you chose breakeven at +10% instead (below).
   - **Keep your Rs 500 trail switch off.** On the same trades it would have cost **Rs 1.79 lakh** over 17 months (881
     trades) and Rs 45,326 in the final period (357 trades).
 - **BANKNIFTY's 26 Oct decision:** its plain-rules record is untouched (no rule changed, nothing new is labelled).
+
+## Your breakeven at +10% (built as your own paper switch)
+
+You asked: *"if the 10% is received, make the stoploss to the start point"*. Results on 1,238 past Liquidity trades
+(Nov 2024 - 13 Oct 2026, 1 lot, after charges and slippage):
+
+| | with your breakeven at +10% |
+|---|---|
+| win rate | **38%** (476 of 1,238 trades) |
+| net profit | **Rs 2,45,083** |
+| trades sold at the breakeven | 100, each about Rs 100 down after slippage |
+| max drawdown, newer 357 trades | Rs 67,632 |
+| 22 Oct's trade | about -Rs 100 instead of -Rs 1,168 |
+
+- **Why the win rate is 38%:** a sale at the breakeven is not a win. Slippage leaves it a little under Rs 0, so those 100
+  trades count as small losses. Some of them would have gone on to be winners.
+- **Research verdict:** did not pass (random early exits did as well).
+- **In the app:** Home → Automation card → Strategy lab → "Move the stop to the price paid at +10% (paper)".
+  - Off until you switch it on. Only new Liquidity PAPER trades use it; live trades never do.
+  - Each trade under it is labelled "with breakeven at +10%" and kept out of the plain-rules record (the 26 Oct
+    BANKNIFTY decision reads the plain rules only).
+  - Every flip shows in the Autopilot change timeline, and one tap undoes it.
+
+## "Keep the profit and make it not lose money": three new ideas
+
+You asked me to think out of the box. Three new kinds of exit were written down first, then tested on the same 1,238
+trades with every order's own fills, slippage and charges:
+
+| idea | win rate | net profit | max drawdown, newer 357 trades |
+|---|---|---|---|
+| 2 lots: sell one at +15%, the other on the normal exits | 43% | Rs 1,64,131 | Rs 62,153 |
+| at +20%, also sell an option 2 strikes further out (a spread; paper only) | 43% | Rs 1,28,510 | Rs 61,062 |
+| take profit at +20% if it comes in the first 15 minutes | 43% | Rs 1,76,449 | Rs 62,190 |
+
+**None passed.** Each one fixes the trades that went +20% and then lost. But for every Rs 10,000 of winnings it cuts,
+it saves only Rs 2,000-4,000 of losses.
+
+**Why no exit rule can do both:** Liquidity's money comes from a few big runners. In the older 881 trades, the 36
+winners of Rs 5,000 or more made Rs 3,38,862, and the other 845 trades together lost Rs 81,613. Any rule that takes
+profit early cuts those runners. The worst losses come from trades that never went into profit, so a profit rule never
+touches them; the -15% stop and the index stop handle those.
 
 ## Your follow-up questions: "keep half once +10%", a trailing stop, and Breadth Donchian's lock
 
@@ -183,10 +227,18 @@ Both sides, design:
     tried again once a minute.
   - A target is still judged as before (no late "target" sale).
   - Live positions are unchanged (TODO X7).
-- **What's New:** one entry ("Liquidity exits keep working when one feed fails").
+- **Your breakeven at +10% switch** (paper only, off by default; see above).
+  - The stop moves up only and never to or above the price now. If the resting stop is gone, the app sells at the
+    breakeven itself.
+  - It reads the best price the same way as the trail, including the minute candles' highs after a gap.
+  - An open trade keeps the rule it was bought with.
+  - Its trades are left out of every plain-rules record: the paper test, the paper stop rule, the forward check, the
+    record chart, the lab, the arm cutoff, the weekly review, the day's list and the evening note.
+- **What's New:** two entries ("Liquidity exits keep working when one feed fails", then "Your own Liquidity switch:
+  breakeven at +10%" newest).
 - **Unchanged:**
   - Liquidity's rules on paper and live;
-  - the Rs 500 trail switch (still off);
+  - the Rs 500 trail switch (still off), and your new breakeven switch (off until you switch it on);
   - every switch, PIN and safety rule;
   - BANKNIFTY's plain-rules record.
 - **Found, not changed here** (reported for a later fix):
@@ -200,13 +252,16 @@ Both sides, design:
 ## Checks
 
 - **Research:**
-  - R100 tests: 51 passed (look-ahead guard and edge cases).
+  - R100 tests: 92 passed (look-ahead guard and edge cases).
   - `research/brain/tests`: 183 passed.
   - Features catalogue: up to date.
-  - Experiment log validator: OK (7 new entries `r100-liquidity-g1..g7`).
+  - Experiment log validator: OK (15 new entries `r100-liquidity-g1..g15`).
 - **App and engine:**
   - New tests:
     - engine: the gap rule, and the time stop with no index bars;
     - app (Robolectric, market clock pinned): the time stop still sells when the index feed fails, another index's
-      position still exits, and the candles' high after a gap.
+      position still exits, and the candles' high after a gap;
+    - the breakeven switch: engine rules, the switch's file, timeline and Undo, the card (Compose), and trading tests
+      (the stop moves at +10% and fills as the breakeven, the app sells it itself, a spike inside a minute arms it, an
+      open trade keeps its rules, both switches on, and its trades kept out of every plain-rules record).
   - The engine and core test runs, and CI's results, are in the session report.

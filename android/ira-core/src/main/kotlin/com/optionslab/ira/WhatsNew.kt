@@ -67,7 +67,7 @@ object WhatsNew {
         // 22 Oct (Boss: "if the 10% is received, make the stoploss to the start point"): their own paper switch (R100 A4 did not pass).
         Entry("2026-10-22-liquidity-breakeven", OCT22, "Your own Liquidity switch: breakeven at +10%",
             "A new switch can move a Liquidity paper trade's stop to the price paid once it is up 10%. " +
-                "The stop also covers the charges, so a sale there loses nothing. " +
+                "The stop also covers the charges, so a sale there loses only slippage, about ₹100 a lot. " +
                 "It is off until you switch it on, and live trades never use it. " +
                 "It did not pass research: 1,238 past trades made ₹2,45,083 with it and ₹2,68,404 without. " +
                 "Its trades are labelled and kept apart from the plain-rules record. " +

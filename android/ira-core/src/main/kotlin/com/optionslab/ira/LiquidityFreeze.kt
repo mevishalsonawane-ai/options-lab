@@ -110,7 +110,8 @@ object LiquidityFreeze {
             "and kept apart from the plain-rules record; live trades never use it."
         else "off. Liquidity trades on plain rules.") +
         " Research R100 (1,238 past trades, 20 Nov 2024 - 13 Oct 2026, 1 lot, after charges): Rs 2,45,083 at a 38% win rate, " +
-        "against Rs 2,68,404 at 42% on the plain rules. On 22 Oct's MIDCPNIFTY trade it would have closed about Rs 0 instead of -Rs 1,168."
+        "against Rs 2,68,404 at 42% on the plain rules. A sale at the breakeven ends about Rs 100 down after slippage (100 such exits); on 22 Oct's MIDCPNIFTY trade that is about -Rs 100 " +
+        "instead of -Rs 1,168."
 
     /** What Boss's switch does, said back to Boss (and to the diagnostics) when they flip it. */
     fun breakevenSaid(on: Boolean): String = if (on)
