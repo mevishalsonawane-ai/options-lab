@@ -502,6 +502,8 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {},
                         if (replayable(a, t)) Text(line, style = small.copy(color = p.verdigris),
                             modifier = Modifier.heightIn(min = 48.dp).clickable(onClickLabel = "Replay this trade") { replaying = t }.padding(vertical = 4.dp))
                         else Text(line, style = small)
+                        // 22 Oct: the time machine's odds of this entry, once checked (shadow only).
+                        TimeMachineLine(t.entryOrderId)
                         // The Hero arm: the half sold at 5x, and the book (bid / ask / quantities, or the last price) at the signal and each exit.
                         t.soldAt?.takeIf { t.sold > 0 }?.let { s ->
                             Text(keepNumbersWhole("  ${t.sold} sold @ ${px(s)} at 5×" + (t.soldTime?.let { " (%02d:%02d)".format(it.hour, it.minute) } ?: "") +

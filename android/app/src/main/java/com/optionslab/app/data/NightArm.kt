@@ -369,6 +369,9 @@ object NightArm {
         b.positions += pos
         // 18 Oct: its live path ([ArmLive]): the same option and lot, NRML, sold at 09:16 with its paper trade (the rule has no stop).
         runCatching { ArmLive.entered(ArmLive.Ask(NightRules.SOURCE, mirrorRef(pos), c, 1, fill.quantity, fill.price)) }
+        // 22 Oct: the time machine replays intraday entries only; an overnight trade is noted as such (shadow only; background).
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(NightRules.SOURCE, NightRules.LABEL, mirrorRef(pos), u, if (right == Right.CE) 1 else -1, now,
+            null, null, exitAt = null, skip = "held overnight by design: no intraday replay")) }
         runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(u), Notifier.BUY, "${NightRules.LABEL} bought ${c.symbol} · Paper",
             "Bought ${fill.quantity} @ %.2f on a strong close (%s). Sells at 09:16 next session. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts), "almanac") }
         // Text goes in as %s arguments (14 Oct: [facts] always holds a "%" - "day +1.20%" - and broke this line on every buy).

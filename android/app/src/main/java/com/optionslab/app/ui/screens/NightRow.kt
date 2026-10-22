@@ -76,6 +76,7 @@ internal fun NightRowContent(v: NightArm.View, onArm: (Boolean) -> Unit) {
             v.open.forEach { o ->
                 Text(keepNumbersWhole("${o.symbol} · ${o.qty} @ %.2f · sells 09:16".format(Locale.ENGLISH, o.entry)),
                     style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+                TimeMachineLine(o.orderId)
             }
         }
         Switch(

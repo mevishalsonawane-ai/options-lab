@@ -146,6 +146,10 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   - rerun `python3 -I research/hunt/of1/fetch.py --from <last day>` then build/analyze `summary` to refresh the
     who-profited tables (the holdout of OF1 is spent: any new test needs a new pre-registration and a new holdout).
 - [ ] R4. Before/after report for Boss (owner, 13 Oct: "show me before and after results after everything is done").
+- [ ] R21. (record only, 22 Oct; research/experiments/entries/app-time-machine.yaml) Time machine verdicts: after 30 signal
+  days, join the app's forward log (the encrypted timemachine.vault: date, arm, ref, verdict, odds, outcome) with each arm's
+  closed trades and compare the net of entries called "edge" vs "against", real charges and slippage. Until then it is words
+  on the ticket only; it never skips, resizes or delays a trade, paper or live.
   When R3, R19c and the 13–26 Oct paper run are finished, show one page with every arm and the whole portfolio on the
   same days, BEFORE (today's plain rules) and AFTER (every change that passed):
   - total P&L, P&L per day, % green days, win rate, average win and average loss;

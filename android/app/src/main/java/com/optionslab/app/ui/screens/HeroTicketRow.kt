@@ -104,6 +104,7 @@ private fun HeroTicketControls(v: HeroTicketArm.View, onTarget: (HeroTicketRules
                 (v.marks[o.symbol]?.let { m -> " · now %.2f".format(Locale.ENGLISH, m) } ?: "") + " · paper"
                 else "${o.symbol} · ${o.qty} @ %.2f → %.2f (%s) · %s".format(Locale.ENGLISH, o.entry, o.exit ?: 0.0, o.why ?: "", rs(o.net ?: 0.0))
             Text(keepNumbersWhole(line), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+            TimeMachineLine(o.orderId)
         }
         // Its exit for new tickets, kept: the trail alone (the default) or a 2× / 3× target beside it.
         Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -1052,6 +1052,9 @@ object PineAuto {
             val stop = placePaperStop(item, c, (fill.first / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), fill.second)
             b.held[id] = Held(c.symbol, right.name, fill.first, c.lotSize, fill.second, today.toString(), false, null,
                 stop = stop?.first, stopAt = stop?.second, at = System.currentTimeMillis())
+            // 22 Oct: the time machine's reality check (shadow only; background): the script's premium stop, out by 15:15.
+            runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry("pine", label(item), "pine:$id:${buy.orderId}", c.underlying, if (right == Right.CE) 1 else -1,
+                Market.now().toLocalDateTime(), stop?.second?.let { fill.second - it }?.takeIf { it > 0 }, null, premium = true, exitAt = java.time.LocalTime.of(15, 15))) }
             note(b, id, "Bought ${fill.first} ${c.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, fill.second)} (paper)" +
                 (stop?.let { " · stop resting at ${"%.2f".format(java.util.Locale.ENGLISH, it.second)}" } ?: ""))
             return

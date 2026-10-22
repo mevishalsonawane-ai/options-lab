@@ -97,6 +97,7 @@ private fun Ft3Tickets(v: Ft3Arm.View) {
                 (v.marks[o.symbol]?.let { m -> " · now %.2f".format(Locale.ENGLISH, m) } ?: "") + " · ${o.mark} mark · paper"
                 else "${o.symbol} · ${o.qty} @ %.2f → %.2f (%s) · %s".format(Locale.ENGLISH, o.entry, o.exit ?: 0.0, o.why ?: "", rs(o.net ?: 0.0))
             Text(keepNumbersWhole(line), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+            TimeMachineLine(o.orderId)
         }
     }
 }

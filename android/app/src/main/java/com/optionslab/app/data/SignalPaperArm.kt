@@ -397,6 +397,10 @@ object SignalPaperArm {
         val pos = Pos(chat, r.id, d.underlying!!, c.symbol, d.right!!.name, lots, qty, price, now, orderId, stop, ours, stopId, s.exit.key,
             SignalPaperRules.target(s.exit, d.targets), d.targets.lastOrNull(), r.expiry == now.toLocalDate(), charges = chargesOf(orderId))
         b.positions += pos
+        // 22 Oct: the time machine's reality check (shadow only; background): the call's stop and first target as premium, out by 15:15.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(com.optionslab.engine.orb.LiveMirror.TELEGRAM_CALLS, SignalPaperRules.OWNER, mirrorRef(pos),
+            d.underlying!!, if (d.right!!.name == "CE") 1 else -1, now, (price - stop).takeIf { it > 0 }, d.targets.firstOrNull()?.let { it - price }?.takeIf { it > 0 },
+            premium = true, exitAt = com.optionslab.engine.signals.CallEval.SQ)) }
         // 18 Oct: its live path ([ArmLive], off until Boss switches it on): the same option and lots, a LIMIT 1% over the fill at most,
         // the call's stop (or ours) resting at Zerodha and moved to cost at T1; targets stay the app's.
         runCatching { ArmLive.entered(ArmLive.Ask(com.optionslab.engine.orb.LiveMirror.TELEGRAM_CALLS, mirrorRef(pos), c, 1, qty, price, stop = stop,

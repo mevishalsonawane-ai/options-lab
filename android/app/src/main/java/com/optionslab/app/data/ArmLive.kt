@@ -266,6 +266,8 @@ object ArmLive {
     fun closed(ref: String, why: String) {
         testHeard?.add("closed|$ref|$why")
         closedRefs[ref] = (runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() }) to why
+        // 22 Oct: the time machine's forward log learns how the trade ended (one queue add; the write runs on its own scope).
+        runCatching { TimeMachineHost.settle(ref, why) }
         if (closedRefs.size > NOTES_KEPT) prune()
         if (holdingHint || shadowHint) nudge()
     }

@@ -1229,6 +1229,12 @@ object PassedArmsHost {
                 // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
                 // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
                 runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos))) }
+                // 22 Oct: the time machine's reality check (shadow only; background): the arm's premium stop and target, out by its square-off.
+                runCatching {
+                    val x = exitsOf(pos)
+                    TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm, label(arm), mirrorRef(pos), u, if (right == Right.CE) 1 else -1, now,
+                        x.stop?.let { it * pos.entry }, x.target?.let { it * pos.entry }, premium = true, exitAt = x.squareOff))
+                }
                 r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(arm)} · entry") } }
                 runCatching { Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${label(arm)} · entry", r.orderId) }
                 pos

@@ -23,5 +23,7 @@ object SelfAnswers {
             SelfTalk.Kind.STUDY -> StudyLibrary.answer(context, a.subject.orEmpty())
             SelfTalk.Kind.LESSON -> SelfJobs.answerLesson(locked)
             SelfTalk.Kind.REPLAY -> BotReplayStore.answer(a.subject)
+            // 22 Oct: the time machine's checks of today's arm entries (memory only; nothing about the account's rupees).
+            SelfTalk.Kind.TIME_MACHINE -> com.optionslab.app.data.TimeMachineHost.jarvisLine(com.optionslab.app.data.Market.today())
         }
 }

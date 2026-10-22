@@ -639,6 +639,10 @@ object McxPaperArms {
             val c = Paper.contractOf(p.symbol) ?: return@runCatching
             val stop = p.stopOrderId?.let { id -> Paper.state.orders.firstOrNull { it.orderId == id }?.triggerPrice?.toDouble() }
             ArmLive.entered(ArmLive.Ask(p.arm, mirrorRef(p), c, p.side, p.qty, p.entry, stop = stop))
+            // 22 Oct: the time machine's reality check on the future's own recent bars (shadow only; background): the stop in points,
+            // out by its flat-by minute. The history keeper keeps about five days, so it says "too few sessions" honestly.
+            TimeMachineHost.afterEntry(TimeMachineHost.Entry(p.arm, label(p.arm), mirrorRef(p), McxMarket.find(p.symbol)?.tradingSymbol ?: p.symbol, p.side,
+                Market.now().toLocalDateTime(), stop?.let { kotlin.math.abs(p.entry - it) }, null, exitAt = p.flatBy?.let { java.time.LocalTime.of(it / 60, it % 60) }))
         }
         runCatching { LiveRecorder.signal(label(p.arm), p.symbol, null, if (p.side > 0) "BUY" else "SELL", p.entry, paper = true, exchange = "MCX") }
         val verb = if (p.side > 0) "bought" else "sold"

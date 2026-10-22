@@ -665,6 +665,9 @@ object Ft3Arm {
             charges = chargesOf(orderId))
         b.positions += pos
         b.marks[c.symbol] = price
+        // 22 Oct: the time machine's reality check (shadow only; background). FT3 has no stop or target on paper: the check says so (R not told).
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(Ft3Rules.SOURCE, Ft3Rules.LABEL, mirrorRef(pos), u, if (s.pick.right.toString() == "CE") 1 else -1, now,
+            null, null, premium = true, exitAt = Ft3Rules.EXIT_AT)) }
         // Its live path ([ArmLive], the standard one): the same option and quantity, a LIMIT at the paper fill (it never chases).
         // No stop on paper; the mirror rests only its labelled -80% disaster stop at Zerodha (close-judged, [LiveMirror.Spec.closeStop]).
         runCatching { ArmLive.entered(ArmLive.Ask(Ft3Rules.SOURCE, mirrorRef(pos), c, 1, qty, price, stop = null, limit = price)) }

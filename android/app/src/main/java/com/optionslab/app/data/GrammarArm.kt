@@ -432,6 +432,9 @@ object GrammarArm {
         }.getOrNull()?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${x.id} (forge, paper) · stop") } }
         b.positions += Pos(x.id, u, c.symbol, right.name, fill.quantity, fill.price, today, now, sig.decisionMin, sig.indexClose, expiry,
             placed.orderId, stopId, charges = chargesOf(placed.orderId))
+        // 22 Oct: the time machine's reality check (shadow only; background): the forge idea's premium stop and target.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(x.id, "$LABEL ${x.id}", "grammar:${x.id}:${placed.orderId}", u, if (right == Right.CE) 1 else -1, now,
+            (fill.price - stopLevel).takeIf { stopLevel > 0 }, GrammarPaper.levels(r, fill.price).second.let { if (it > 0) it - fill.price else null }, premium = true, exitAt = null)) }
         b.ideas[i] = b.ideas[i].copy(status = "bought ${c.symbol} @ ${"%.2f".format(Locale.ENGLISH, fill.price)}")
         note(b, "${x.id} $facts: bought ${c.symbol} ${fill.quantity} @ ${"%.2f".format(Locale.ENGLISH, fill.price)} · paper")
         runCatching { Notifier.post(app, 6995 + i, Notifier.BUY, "${x.id} bought ${c.symbol} · Paper",

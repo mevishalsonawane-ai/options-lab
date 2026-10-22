@@ -1957,6 +1957,10 @@ object OrbArms {
             charges = chargesOf(buy.orderId), ladder = ProfitLock.targetOf(arm) != null, priceRetry = retried))
         b.positions += pos
         marks[c.symbol] = fill.price
+        // 22 Oct: the time machine's reality check, in the background (shadow only; one queue add here): the premium stop and
+        // target against the index's own past sessions at this slot, and the ORB rule re-run on them.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, arm.label, mirrorRef(pos), OrbRules.UNDERLYING, if (c.right == Right.CE) 1 else -1,
+            signalBar.plusMinutes(5), pp.stopPoints, pp.targetPoints, premium = true, exitAt = OrbRules.SQUARE_OFF)) }
         // 18 Oct: a paper-only arm's (ORB Sweep, Range Fade) live path: the same contract, lot and stop at Zerodha ([ArmLive]).
         // 22 Oct: not for an entry that needed the one more price read or order - before, it was not taken at all, so the live
         // path stays exactly as it was (paper only; said in the diagnostics).
@@ -2415,6 +2419,9 @@ object OrbArms {
             charges = chargesOf(buy.orderId), seen = listOf(heroSeen("signal", q, pick.ltp)))
         b.positions += pos
         marks[c.symbol] = fill.price
+        // 22 Oct: the time machine's reality check on NIFTY's 1-minute bars (shadow only; background): the -60% stop and the 5x target as premium.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(src, HeroRules.ARM.label, mirrorRef(pos), HeroRules.UNDERLYING, scan.signal, day.atTime(at),
+            fill.price - HeroRules.stopLevel(fill.price), HeroRules.target1(fill.price) - fill.price, premium = true, exitAt = HeroRules.EXIT_AT, barMinutes = 1)) }
         // 18 Oct: its live path ([ArmLive]): the same option and lots, a LIMIT at the same limit. Its -60% stop is judged on a minute's
         // close on paper, so the paper exit sells the live trade; only a labelled -80% disaster stop rests at Zerodha (review D2).
         mirror(pos, c, HeroRules.stopLevel(fill.price), limit)
@@ -2652,6 +2659,11 @@ object OrbArms {
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
             ladder = ladderOn(arm, today0, true), near = near, volSkip = volSkip, strong = strong,
             lot = ins.lotSize.takeIf { liquidity != null && it > 0 }))
+        // 22 Oct: the time machine's reality check on the live entry too (shadow only; background).
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, arm.label, "orb:${arm.source}:$id", c.underlying, if (c.right == Right.CE) 1 else -1,
+            signalBar.plusMinutes(5), if (liquidity == null) lp.stopPoints else LiquidityRules.indexStopPoints(c.underlying),
+            if (liquidity == null) lp.targetPoints else liquidity.target?.let { kotlin.math.abs(it - liquidity.level) }, premium = liquidity == null,
+            exitAt = OrbRules.SQUARE_OFF, live = true)) }
         runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         marks[c.symbol] = fill
         return "entered_live"
@@ -3262,6 +3274,10 @@ object OrbArms {
             be = LiquidityBreakeven.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.breakevenOn() }.getOrDefault(false)),
             priceRetry = price.retried || entry.retried))
         marks[c.symbol] = fill.price
+        // 22 Oct: the time machine's reality check (shadow only; background): the index stop and the level-to-target distance in index points.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, LiquidityRules.ARM.label, "orb:${arm.source}:${buy.orderId ?: now()}", c.underlying,
+            if (c.right == Right.CE) 1 else -1, signalBar.plusMinutes(5), LiquidityRules.indexStopPoints(c.underlying), s.target?.let { kotlin.math.abs(it - s.level) },
+            exitAt = OrbRules.SQUARE_OFF)) }
         return "entered"
     }
 

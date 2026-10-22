@@ -560,6 +560,9 @@ object HeroTicketArm {
             trailStart = b.trailStart.key)
         b.positions += pos
         b.marks[c.symbol] = price
+        // 22 Oct: the time machine's reality check (shadow only; background): the 25% trail as the stop and the 2x / 3x target, as premium.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(HeroTicketRules.SOURCE, HeroTicketRules.LABEL, mirrorRef(pos), u, if (right == Right.CE) 1 else -1, now,
+            price * HeroTicketRules.TRAIL, HeroTicketRules.targetLevel(price, b.target)?.let { it - price }, premium = true, exitAt = HeroTicketRules.EXIT_AT)) }
         // 18 Oct: its live path ([ArmLive]): the same option and lot, a LIMIT at the paper fill (it never chases). Its 25% trail is judged
         // on minute closes on paper, so the paper exit sells the live trade; only a labelled -80% disaster stop rests at Zerodha (review
         // D2: a tick stop at the trail would sell on a wick the paper ticket holds through). The 2x / 3x target stays the app's.
