@@ -194,6 +194,42 @@ Liquidity keeps its own other exits.
 - **Today's trade:** it peaked near +22%, so this ladder would never have armed. The result would have been the same
   -Rs 1,074.
 
+## "But it also loses less": losses and wins side by side
+
+Yes: every lock loses less. It also wins less, and the wins it gives up are bigger than the losses it saves.
+
+Older 881 trades (Nov 2024 - Mar 2026), 1 lot, after charges:
+
+| rule | losing trades | lost on losers | won on winners | winners of Rs 5,000+ | worst trade | worst day | max drawdown | net |
+|---|---|---|---|---|---|---|---|---|
+| **today's rules** | 497 | -Rs 5,01,487 | Rs 7,58,736 | 36 | -Rs 5,165 | -Rs 8,416 | Rs 32,537 | **Rs 2,57,249** |
+| breakeven once +20% | 504 | -Rs 4,87,532 | Rs 7,48,068 | 36 | -Rs 5,165 | -Rs 8,416 | Rs 28,137 | Rs 2,60,537 |
+| keep half once +10% (yours) | 460 | -Rs 4,50,022 | Rs 5,55,077 | 13 | -Rs 5,165 | -Rs 8,416 | Rs 27,404 | Rs 1,05,055 |
+| yours + 15% trailing stop | 461 | -Rs 4,46,896 | Rs 5,51,644 | 13 | -Rs 5,165 | -Rs 8,720 | Rs 32,697 | Rs 1,04,749 |
+| 15% trailing stop alone | 498 | -Rs 4,72,225 | Rs 6,91,233 | 31 | -Rs 5,165 | -Rs 8,720 | Rs 29,369 | Rs 2,19,008 |
+| Breadth Donchian's lock | 490 | -Rs 4,89,570 | Rs 7,32,760 | 32 | -Rs 5,165 | -Rs 8,416 | Rs 28,137 | Rs 2,43,190 |
+| your Rs 500 trail switch | 402 | -Rs 3,74,938 | Rs 4,52,843 | 0 | -Rs 5,165 | -Rs 6,363 | Rs 22,331 | Rs 77,904 |
+
+Newer 357 trades (Apr - 13 Oct 2026): max drawdown Rs 61,062 today, Rs 61,062 with breakeven once +20%, Rs 67,500
+with your rule, Rs 63,405 with the trailing stop alone, Rs 61,062 with Breadth Donchian's lock, Rs 55,868 with the
+Rs 500 trail.
+
+**What this shows:**
+- **Your rule** loses Rs 51,465 less on losing trades, but wins Rs 2,03,659 less on winning ones. It keeps only 13 of
+  the 36 big winners.
+- **The worst trade (-Rs 5,165) and, for most rules, the worst day do not change.** The biggest losses come from trades
+  that never went into profit, so a profit lock never touches them. The -15% stop and the index stop handle those.
+- **Drawdown is lower in the older period** for most locks, by about Rs 3,000-5,000 (not with the trailing stop added
+  to your rule). It is not lower in the newer period, where your rule's drawdown is higher (Rs 67,500).
+- **Breakeven once +20%** is the only rule that loses less, keeps the big winners and does not lower profit:
+  - lower drawdown in the older period (Rs 28,137 against Rs 32,537);
+  - the same 36 winners of Rs 5,000+;
+  - +Rs 3,287 net.
+  
+  It is not proven (16 trades changed). If lower drawdown matters more to you than the last rupee, it is the one to
+  try on paper.
+- **The Rs 500 trail** has the lowest drawdown and worst day, but it makes Rs 1.79 lakh less.
+
 ## What Boss can switch on knowingly (nothing is switched on by this study)
 
 1. **G1, breakeven once +20%**, as a labelled paper-only opt-in switch, off by default. It is not built: ideas that
