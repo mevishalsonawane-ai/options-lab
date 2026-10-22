@@ -99,6 +99,13 @@ days), one BH family of 480.
 - **Stops trade profit for survival.** A 2x per-leg stop cut NIFTY's straddle from +Rs 71,535 to +Rs 27,467; a combined stop
   at 100% of the credit kept the profit and cut the worst day to -Rs 17,929, but still left a month below -Rs 13k.
 
+**Follow-ups at Boss's request (22 Oct).** A profit lock did not raise the profit (it beat the plain cell in 23 of 54
+versions). With win rate as the goal, one version holds at least 70% wins and a profit in both periods: the NIFTY
+expiry-day strangle at 10:15 with a combined stop and a 30/20 lock (74% / 70% win, +Rs 123 / +Rs 75 a trade). A
+pre-registered search of 90 enhancements added only 1-3 win-rate points at half the profit. The base and three finalists
+now go to a forward test from 20 Oct 2026, with a decision after 40 expiries (`research/hunt/r103_selling/PREREG_FWD.md`).
+Nothing trades meanwhile.
+
 ## Verdict
 
 **No option-selling rule is ready for the app, and both tests say so.** Before costs, these hedged structures roughly

@@ -435,3 +435,62 @@ def test_profit_lock_arms_then_exits_on_give_back():
     p2[T + 40:] = 95.0
     assert S.simulate(make_day({(22250.0, "C"): c2, (22250.0, "P"): p2}), T, "STR", "X0", "T0", lock=(0.4, 0.2)).reason == "close"
     assert S.simulate(d, T, "STR", "X0", "T0").reason == "close"   # no lock given: unchanged
+
+
+# ------------------------------------------------------------------------------------------------ forward test (PREREG_FWD)
+import pandas as pd  # noqa: E402
+import r103fwd as F  # noqa: E402
+
+
+def test_width_mult_and_close_row():
+    paths = straddle_paths(110.0, 90.0, {(22550.0, "C"): flat(10.0), (21950.0, "P"): flat(10.0),
+                                         (22450.0, "C"): flat(20.0), (22050.0, "P"): flat(20.0)})
+    d = make_day(paths)
+    assert [l.strike for l in S.structure(d, T, "STG")] == [22450.0, 22050.0]                 # EM 200 -> 4 strikes
+    assert [l.strike for l in S.structure(d, T, "STG", width_mult=1.5, max_w=10)] == [22550.0, 21950.0]   # 6 strikes
+    tr = S.simulate(d, T, "STR", "X0", "T0", close_row=R.minute(14, 30))
+    assert tr.exit_row == R.minute(14, 30)
+    assert S.simulate(make_day(straddle_paths(), expiry=True), T, "STR", "X0", "T0", close_row=R.minute(15, 20)).exit_row == R.minute(15, 5)
+
+
+def test_skip_filters_read_only_the_past():
+    d = make_day(straddle_paths(110.0, 90.0))
+    d.prev_close = 22250.0
+    t = F.ENTRIES["1015"]
+    assert not F.skip(d, t, "ALL")
+    g = copy.deepcopy(d)
+    g.ix[0, 0] = 22250.0 * 1.01                                  # a 1% gap at the open
+    assert F.skip(g, t, "GAP") and F.skip(g, t, "ALL") and not F.skip(g, t, "VIX")
+    r = copy.deepcopy(d)
+    r.ix[10, 1] = 22250.0 + 250.0                                # range 250 > the 200-point straddle
+    assert F.skip(r, t, "RANGE") and not F.skip(r, t, "GAP")
+    late = copy.deepcopy(d)
+    late.ix[t + 5, 1] = 30000.0                                  # after the entry minute: ignored
+    late.vix[t + 5:] = 99.0
+    assert not F.skip(late, t, "ALL")
+    v = copy.deepcopy(d)
+    v.vix[:] = 14.0 * 1.06                                       # VIX 6% above its previous close
+    assert F.skip(v, t, "VIX")
+
+
+def test_rules_and_selection():
+    rules = F.all_rules()
+    assert len(rules) == 90 and F.BASE in rules and len({r.name for r in rules}) == 90
+    assert F.parse(F.BASE.name) == F.BASE and F.parse("w1.25-1100-1430-RANGE") == F.Rule(1.25, "1100", "1430", "RANGE")
+    base = dict(trades_A=50, trades_B=80, win_rate_A=0.75, win_rate_B=0.72, net_A=1.0, net_B=1.0, worst_month_A=0.0,
+                worst_month_B=0.0, per_trade_A=10.0, per_trade_B=10.0)
+    df = pd.DataFrame([dict(base, rule=F.BASE.name), dict(base, rule="a"), dict(base, rule="b", win_rate_B=0.80),
+                       dict(base, rule="c", net_B=-1.0), dict(base, rule="d", win_rate_A=0.71),
+                       dict(base, rule="e", trades_A=39), dict(base, rule="f", worst_month_A=-13001.0)])
+    assert F.select(df) == ["b", "a", "d"]        # ranked by the lower of the two win rates (b 75%, a 72%, d 71%)
+
+
+def test_forward_scorer_refuses_history_and_scores_forward():
+    legs = {(22500.0, "C"): flat(30.0), (22000.0, "P"): flat(30.0)}         # EM 250 -> the strangle 5 strikes out
+    old = make_day(straddle_paths(extra=legs), day=date(2026, 10, 13), expiry=True)
+    new = make_day(straddle_paths(extra=legs), day=date(2026, 10, 27), expiry=True)
+    out = F.score(days=[old], rules=[F.BASE.name])
+    assert out.trades.iloc[0] == 0 and not out.passes.iloc[0]
+    out2 = F.score(days=[old, new], rules=[F.BASE.name])
+    assert out2.trades.iloc[0] == 1 and not out2.decision_due.iloc[0]
+    assert F.binom_p(26, 40) == pytest.approx(0.0403, abs=1e-3) and F.binom_p(0, 0) == 1.0

@@ -228,9 +228,11 @@ def traded(day: R.Day, k: float, side: str, t: int) -> bool:
     return bool(np.nansum(v) > 0) and np.isfinite(ffill(a[:, R.C])[t])
 
 
-def structure(day: R.Day, t: int, struct: str, sell: bool = True) -> list[Leg] | None:
+def structure(day: R.Day, t: int, struct: str, sell: bool = True, width_mult: float = 1.0,
+              max_w: int = STRANGLE_MAX_W) -> list[Leg] | None:
     """The legs of `struct` chosen at row t (PREREG 3), or None when any leg is not priced / traded at t.
-    sell=False flips every sign (the BUY side mirror)."""
+    sell=False flips every sign (the BUY side mirror). width_mult / max_w (PREREG_FWD section 2 only) scale the strangle
+    distance: w = round(width_mult x ATM straddle / step), 1..max_w; the defaults are the pre-registered 480 cells."""
     step = R.STEP[day.und]
     s = spot_at(day, t)
     if not np.isfinite(s):
@@ -243,7 +245,7 @@ def structure(day: R.Day, t: int, struct: str, sell: bool = True) -> list[Leg] |
     ivs = [float(implied_vol(ffill(day.opts[(k0, sd)][:, R.C])[t], s, k0, T0, sd == "C")) for sd in ("C", "P")]
     ivs = [x for x in ivs if np.isfinite(x)]
     iv_atm = float(np.mean(ivs)) if ivs else (day.vix_prev / 100.0 if np.isfinite(day.vix_prev) else np.nan)
-    w = int(min(max(round(em / step), 1), STRANGLE_MAX_W))
+    w = int(min(max(round(width_mult * em / step), 1), max_w))
     if struct == "STR":
         spec = [(k0, "C", True, 0), (k0, "P", True, 0)]
     elif struct == "STG":
@@ -323,16 +325,19 @@ def fill_open(leg: Leg, r: int) -> float:
 
 
 def simulate(day: R.Day, t: int, struct: str, stop: str, target: str, legs: list[Leg] | None = None,
-             sell: bool = True, buy_rules: tuple | None = None, lock: tuple | None = None) -> Trade | None:
+             sell: bool = True, buy_rules: tuple | None = None, lock: tuple | None = None,
+             close_row: int | None = None) -> Trade | None:
     """One trade: enter at row t (fills at t + 1), run the stop / target rules, close at 15:10 (15:05 on expiry).
     buy_rules (BUY side only): (combined stop as a share of the debit, target as a share of the debit) or None.
     lock (SELL side, exploratory follow-up of 22 Oct 2026, not in the pre-registered 480 cells): (trigger, keep) as
     shares of the credit: once the profit on minute closes has reached trigger x credit, close everything when it
-    falls back to keep x credit (next minute's open, normal slippage)."""
+    falls back to keep x credit (next minute's open, normal slippage). close_row (PREREG_FWD only): the row whose
+    open is the square-off fill, earlier than the default 15:10 / 15:05."""
     legs = structure(day, t, struct, sell) if legs is None else legs
     if legs is None or t + 1 >= N:
         return None
-    close_row = CLOSE_ROW_EXPIRY if day.expiry else CLOSE_ROW
+    default_close = CLOSE_ROW_EXPIRY if day.expiry else CLOSE_ROW
+    close_row = default_close if close_row is None else min(close_row, default_close)
     if t + 1 >= close_row:
         return None
     lot = R.lot(day.und, day.day)

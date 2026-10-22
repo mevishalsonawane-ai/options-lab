@@ -267,6 +267,28 @@ close if it falls back to 10-25%), 86 expiry days in Design A and the same rules
 
 **Verdict: a profit lock does not rescue it.** Rejected.
 
+## Follow-up 2: Boss prefers win rate to profit; the enhancement search and the forward test
+
+Boss (22 Oct): "Less profit works for me, but the win rate is more important. Ok, and try to enhance it." The one lock
+variant with a win rate of at least 70% and a profit in both periods (10:15, combined stop at 100% of the credit, lock
+30/20) became the base rule. A search of 90 enhancements and a forward test were pre-registered before anything was run
+(`research/hunt/r103_selling/PREREG_FWD.md`). Results (`results/fwd_search.csv`), one lot, after costs:
+
+| rule | 2024-26: trades, win, net, a trade | 2021-24: trades, win, net, a trade | avg loss / avg win (2024-26) |
+|---|---|---|---|
+| base: 10:15, 1x width, exit 15:05, no filter | 86, 74%, +Rs 10,607, +Rs 123 | 165, 70%, +Rs 12,418, +Rs 75 | 2.5 |
+| 11:00 entry, skip a gap open > 0.6% | 74, 77%, +Rs 1,168, +Rs 16 | 132, 73%, +Rs 7,659, +Rs 58 | 3.3 |
+| 10:15, exit 14:30 | 86, 76%, +Rs 4,533, +Rs 53 | 165, 72%, +Rs 8,348, +Rs 51 | 2.9 |
+| 10:15, exit 14:30, skip a gap open | 74, 76%, +Rs 4,377, +Rs 59 | 132, 72%, +Rs 6,650, +Rs 50 | 2.9 |
+
+- Only 6 of 90 variants won at least 70% and made money in both periods. The finalists, chosen by the fixed rule, add
+  1-3 points of win rate and give up half or more of the profit a trade. Later entries, wider strikes and the RANGE / ALL
+  filters mostly hurt. The base rule is still the best balance.
+- All four rules go to the forward test unchanged: NIFTY expiry days from 20 Oct 2026, scored by `r103fwd.py score` from
+  the lake. The decision comes after 40 forward expiries (about nine months): a win rate of at least 65% that beats a coin
+  toss (binomial p <= 0.05, BH across the four), a profit, no month below -Rs 13k, and an average loss no more than 3x the
+  average win. Nothing trades meanwhile.
+
 ## Caveats, stated plainly
 
 1. **The lake keeps only ATM±10 strikes.** A leg that drifts out of that window has no price. The first run valued such
