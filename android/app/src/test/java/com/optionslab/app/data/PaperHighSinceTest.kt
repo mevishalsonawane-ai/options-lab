@@ -23,7 +23,7 @@ import java.time.LocalTime
  * 22 Oct (R100 audit C): the best price a lock or trail reads for a contract Zerodha's stream streams. [Paper.highSince] reads the
  * stream alone, as before (no network). The stream keeps only its last five minutes of prices, so after a longer gap (a restart
  * mid-trade, a stall) the arms also ask [Paper.gapHighSince] for the 1-minute candles' highs: a spike inside the gap still counts,
- * a failed read is a failure (tried again later), and the caller is never held past its wait. The market's clock is pinned
+ * a read that did not come is said ([Paper.GapHigh.read] false: tried again later), and the caller is never held past its wait. The market's clock is pinned
  * ([RobolectricTest]'s MarketClockRule).
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
@@ -78,33 +78,35 @@ class PaperHighSinceTest : RobolectricTest() {
         val (c, token) = contract(2)
         tick(token, 120.0)
         val r = runBlocking { Paper.gapHighSince(c, since) }
-        assertTrue(r.isSuccess)
-        assertEquals("the 10:00 spike to 150", 150.0, r.getOrNull()!!, 1e-9)
-        // Only candles that started after the given minute count: none after 10:01.
-        assertNull(runBlocking { Paper.gapHighSince(c, Market.today().atTime(10, 1)) }.getOrThrow())
+        assertTrue(r.read)
+        assertEquals("the 10:00 spike to 150", 150.0, r.high!!, 1e-9)
+        // Only candles that started after the given minute count: none after 10:01 (read, no high).
+        val later = runBlocking { Paper.gapHighSince(c, Market.today().atTime(10, 1)) }
+        assertTrue(later.read)
+        assertNull(later.high)
     }
 
     @Test fun aGapReadWithTheFeedDownFailsSoTheCallerTriesAgain() {
         val (c, token) = contract(3)
         tick(token, 120.0)
         upstox.down = true
-        assertTrue(runBlocking { Paper.gapHighSince(c, since, waitMs = 20_000) }.isFailure)
+        assertFalse(runBlocking { Paper.gapHighSince(c, since, waitMs = 20_000) }.read)
         upstox.down = false
-        assertEquals(150.0, runBlocking { Paper.gapHighSince(c, since, waitMs = 20_000) }.getOrThrow()!!, 1e-9)
+        assertEquals(150.0, runBlocking { Paper.gapHighSince(c, since, waitMs = 20_000) }.high!!, 1e-9)
     }
 
     @Test fun aSlowGapReadNeverHoldsTheCallerAndItsCandlesAreKeptForTheNextTry() {
         val (c, token) = contract(4)
         tick(token, 120.0)
         val t0 = System.nanoTime()
-        assertTrue("no wait at all: not read in time", runBlocking { Paper.gapHighSince(c, since, waitMs = 0) }.isFailure)
+        assertFalse("no wait at all: not read in time", runBlocking { Paper.gapHighSince(c, since, waitMs = 0) }.read)
         assertTrue("returned at once", System.nanoTime() - t0 < 2_000_000_000L)
         // The read went on in the background, once (tries while it runs wait on it again), and kept its candles: a later try
         // answers from them without a new read.
         val end = System.currentTimeMillis() + 15_000
         var r = runBlocking { Paper.gapHighSince(c, since, waitMs = 0) }
-        while (r.isFailure && System.currentTimeMillis() < end) { Thread.sleep(20); r = runBlocking { Paper.gapHighSince(c, since, waitMs = 0) } }
-        assertEquals(150.0, r.getOrThrow()!!, 1e-9)
+        while (!r.read && System.currentTimeMillis() < end) { Thread.sleep(20); r = runBlocking { Paper.gapHighSince(c, since, waitMs = 0) } }
+        assertEquals(150.0, r.high!!, 1e-9)
         assertEquals("one read in all", 1, upstox.requests.count { it.contains("HS4") })
     }
 

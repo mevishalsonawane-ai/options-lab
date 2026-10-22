@@ -375,14 +375,14 @@ object Paper {
     /**
      * 22 Oct (R100 audit C, review): the highest 1-minute candle high of [c] today that started after [since]'s minute, for a
      * lock's or trail's best price after a gap longer than the stream keeps ([com.optionslab.engine.orb.ProfitLock.needsCandles]).
-     * Success: the candles were read (null inside: none after [since]). Failure: none came within [waitMs].
+     * [GapHigh.read]: the candles were read ([GapHigh.high] null: none after [since]); false: none came within [waitMs].
      *
      * The caller is never held longer than [waitMs]: the feed's own read (two tries, up to about 30 s) runs in the background,
      * one per symbol at a time (a try while it is still running waits on it again rather than starting another), and keeps its
      * candles when it ends; the caller's next try (once a minute) then answers from them, up to [GAP_KEPT_MS] old, without a
      * new read. Candles [quote] kept in the last [SHARED_QUOTE_MS] answer too.
      */
-    suspend fun gapHighSince(c: Contract, since: java.time.LocalDateTime, waitMs: Long = GAP_READ_WAIT_MS): Result<Double?> {
+    suspend fun gapHighSince(c: Contract, since: java.time.LocalDateTime, waitMs: Long = GAP_READ_WAIT_MS): GapHigh {
         val now = System.currentTimeMillis()
         val kept = candleBars[c.symbol]
         val from = gapReadFrom[c.symbol]
@@ -394,10 +394,13 @@ object Paper {
                 gapReads.async { runCatching { minutes(c) }.getOrDefault(emptyList()) }.also { gapInFlight[c.symbol] = it }
             }
             val bars = kotlinx.coroutines.withTimeoutOrNull(waitMs) { read.await() }
-            if (bars.isNullOrEmpty()) return Result.failure(java.io.IOException("no candles for ${c.symbol} within $waitMs ms"))
+            if (bars.isNullOrEmpty()) return GapHigh(false, null)
         }
-        return Result.success(barsAfter(c, since)?.filter { it.istDate == Market.today() }?.maxOfOrNull { it.high })
+        return GapHigh(true, barsAfter(c, since)?.filter { it.istDate == Market.today() }?.maxOfOrNull { it.high })
     }
+
+    /** A gap read's answer ([gapHighSince]): whether the candles were read, and their highest high after the minute asked (null: none). */
+    data class GapHigh(val read: Boolean, val high: Double?)
 
     /**
      * Where a resting SELL SL-M at [trigger], resting since [since] (placed or last moved), filled between two looks, as an

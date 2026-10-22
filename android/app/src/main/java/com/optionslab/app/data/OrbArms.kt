@@ -2034,9 +2034,9 @@ object OrbArms {
         if (gapTried.size > 200) gapTried.entries.removeIf { it.value.isBefore(t.minusDays(1)) }
         if (!gap) { lastLook[id] = t; return Highs(plain, plain) }
         if (!mayRead || !ProfitLock.gapRetryDue(gapTried[id]?.let { epochMs(it) }, epochMs(t))) return Highs(plain, plain)
-        val read: Result<Double?> = runCatching { Paper.gapHighSince(c, p.entryTime) }.getOrElse { Result.failure<Double?>(it) }
-        if (read.isSuccess) { lastLook[id] = t; gapTried.remove(id) } else gapTried[id] = t
-        return Highs(plain, listOfNotNull(plain, read.getOrNull()).maxOrNull())
+        val read = runCatching { Paper.gapHighSince(c, p.entryTime) }.getOrNull() ?: Paper.GapHigh(false, null)
+        if (read.read) { lastLook[id] = t; gapTried.remove(id) } else gapTried[id] = t
+        return Highs(plain, listOfNotNull(plain, read.high).maxOrNull())
     }
 
     /** Take the resting stop out of the book first, then sell; if the stop filled meanwhile, that is the exit. */
