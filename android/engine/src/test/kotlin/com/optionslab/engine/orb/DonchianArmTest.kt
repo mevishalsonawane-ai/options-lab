@@ -95,6 +95,16 @@ class DonchianArmTest {
         // A check inside had the whole bar, yet the break showed only later: the minutes were corrected after.
         assertEquals("09:20 put break missed: the bar read in its fill window (09:20-09:22) did not break; the index's minutes were corrected after",
             DonchianArm.missedWhy(s, null, listOf(look(9, 20, 3, LocalTime.of(9, 18)), look(9, 21, 10, LocalTime.of(9, 20)))))
+        // A read that failed is said as such.
+        assertTrue(DonchianArm.missedWhy(s, null, listOf(DonchianArm.Look(day.atTime(9, 21, 5), null, failed = true))).endsWith("09:21:05, could not read it)"))
+        // R72's breadth: FINNIFTY's own bar was whole, but SENSEX's 09:19 minute was late in the window - SENSEX is named; another
+        // index late only outside the window, or whole inside, is not.
+        val whole = listOf(look(9, 20, 3, LocalTime.of(9, 19)))
+        assertEquals("09:20 put break missed: SENSEX's 09:19 minute had not reached the phone in its fill window (09:20-09:22; " +
+            "the last check, 09:21:24, had minutes to 09:18)",
+            DonchianArm.missedWhy(s, null, whole, linkedMapOf("NIFTY" to whole, "SENSEX" to listOf(look(9, 20, 3, LocalTime.of(9, 18)), look(9, 21, 24, LocalTime.of(9, 18))))))
+        assertTrue(DonchianArm.missedWhy(s, null, whole, mapOf("SENSEX" to listOf(look(9, 25, 3, LocalTime.of(9, 18))), "NIFTY" to whole))
+            .contains("minutes were corrected after"))
         // The window's edges: 09:22:59 is inside, 09:23:00 is not; a call says "call".
         val c = s.copy(side = 1)
         assertTrue(DonchianArm.missedWhy(c, null, listOf(look(9, 22, 59, LocalTime.of(9, 21)))).startsWith("09:20 call break missed: the bar read"))

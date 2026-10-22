@@ -66,12 +66,13 @@ object WhatsNew {
     val ENTRIES: List<Entry> = listOf(
         // 22 Oct (Boss: "Check why other arms did not trigger today"): fixes from the 22 Oct diagnostics.
         Entry("2026-10-22-diagnostics-fixes", OCT22, "Fixes from your 22 Oct diagnostics",
-            "When another paper arm already holds the option a passed arm wants, that trade is now kept as a would-be trade naming the holder. " +
-                "It used to be lost and said \"missed\". " +
-                "A break whose two-minute window passed now says why: refused and the reason, no check in time, or the index's minute came late. " +
-                "The passed arms follow their five indices on the live stream from 09:16, so the 09:20 breaks are judged at 09:20. " +
+            "A passed arm whose option another paper arm holds now keeps a would-be trade that names the arm. " +
+                "Before, that trade was lost and said \"missed\". " +
+                "A break whose two-minute window passed now says why: refused, no check in time, or the minute came late. " +
+                "The passed arms follow their indices on the live stream from 09:16, so 09:20 breaks are judged at 09:20. " +
                 "The Hero ₹1,000 ticket's diary says who switched it: you from its row, or an Undo in the change log. " +
-                "The night strategy forge asks the battery far less often, and the watch no longer counts NSE as open after midnight.",
+                "The night strategy forge asks the battery far less often. " +
+                "The watch no longer counts NSE as open after midnight.",
             "Home → Strategies → the passed arms' rows; Home → Strategies → Hero ₹1,000 ticket"),
         // 21 Oct (Boss: "Add FT3 to the app paper bot until live, when live is started then it should move to live").
         Entry("2026-10-21-ft3-paper", OCT21, "FT3 forward test trades on paper",

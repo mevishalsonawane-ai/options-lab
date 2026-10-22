@@ -849,12 +849,16 @@ object PassedArmsHost {
     private fun looked(u: String, at: LocalDateTime, bars: List<Bar>?) {
         val q = looks.getOrPut(u) { java.util.ArrayDeque() }
         synchronized(q) {
-            q.addLast(DonchianArm.Look(at, bars?.lastOrNull { it.start.toLocalDate() == at.toLocalDate() }?.start?.toLocalTime()))
+            q.addLast(DonchianArm.Look(at, bars?.lastOrNull { it.start.toLocalDate() == at.toLocalDate() }?.start?.toLocalTime(), failed = bars == null))
             while (q.size > LOOKS_KEPT) q.removeFirst()
         }
     }
 
     private fun looksOf(u: String): List<DonchianArm.Look> = looks[u]?.let { q -> synchronized(q) { q.toList() } }.orEmpty()
+
+    /** R72's breadth reads all five indices: the others' looks, so a late one is named (R51 reads its own index only). */
+    private fun othersOf(src: String, u: String): Map<String, List<DonchianArm.Look>> =
+        if (src != BreadthDonchianArm.SOURCE) emptyMap() else BreadthDonchianArm.UNDERLYINGS.filter { it != u }.associateWith { looksOf(it) }
 
     /** 22 Oct: why a due break could not be bought at its last try ("day|arm|index|bar|side" -> why), for [DonchianArm.missedWhy]. Memory only. */
     private val tried = java.util.concurrent.ConcurrentHashMap<String, String>()
@@ -1376,7 +1380,7 @@ object PassedArmsHost {
             if (dk in b.decided) continue
             if (now.isBefore(s.entryTime)) continue
             // 22 Oct: why the window passed, in words (tried and refused, no check in time, the feed late, the minutes corrected).
-            if (!DonchianArm.mayFill(s, now)) { b.decided += dk; changed = say(b, key, DonchianArm.missedWhy(s, tried.remove(dk), looksOf(u)), final = true) || changed; continue }
+            if (!DonchianArm.mayFill(s, now)) { b.decided += dk; changed = say(b, key, DonchianArm.missedWhy(s, tried.remove(dk), looksOf(u), othersOf(src, u)), final = true) || changed; continue }
             // 16 Oct (R73 T7): with the filter on, a break is taken only when Supertrend (10, 3) agrees; one it is against, or
             // cannot judge (no earlier session in, or no direction yet), is skipped - it only ever skips (lowers risk), never
             // adds. Decided once, before the day's caps, as the research filtered the signals before taking them.

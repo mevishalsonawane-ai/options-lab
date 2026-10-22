@@ -820,8 +820,8 @@ class PassedArmsHostTest : RobolectricTest() {
         at(LocalTime.of(9, 31)); runBlocking { PassedArmsHost.manageOnly() }
         val shut = view().closed.single { it.arm == DonchianArm.SOURCE }
         assertEquals("stop", shut.why); assertEquals(PassedArmsHost.SHADOW_HELD, shut.shadow)
-        assertEquals(0, Paper.state.trades.count { it.symbol == c.symbol && it.action == "SELL" && it.orderId != null &&
-            PassedArmsHost.view.value.closed.any { p -> p.arm == DonchianArm.SOURCE && p.orderId == it.orderId } })
+        assertNull("nothing was ever sold for it", shut.orderId)
+        assertEquals("the only BUY on the account is R52's", listOf(r.orderId), Paper.state.orders.filter { it.symbol == c.symbol && it.action == "BUY" }.map { it.orderId })
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertEquals(PassedArmsHost.SHADOW_HELD, view().closedOf(DonchianArm.SOURCE).single().shadow)
         assertNothingAtZerodha()
@@ -874,7 +874,7 @@ class PassedArmsHostTest : RobolectricTest() {
     @Test fun theArmsIndicesAreFollowedOnTheStreamFrom0916ToTheLastEntry() {
         only(BreadthDonchianArm.SOURCE)
         val tokens = BreadthDonchianArm.UNDERLYINGS.mapNotNull { u -> runCatching { LocalCandles.tokenOf(ChartFeed.instrumentKey(u)) }.getOrNull() }
-        org.junit.Assume.assumeTrue("the index tokens are known in this build", tokens.isNotEmpty())
+        assertEquals("all five, SENSEX too", BreadthDonchianArm.UNDERLYINGS.size, tokens.distinct().size)
         assertFalse(PassedArmsHost.wantsPass(9 * 60 + 15))
         assertTrue(PassedArmsHost.wantsPass(9 * 60 + 16))
         KiteStream.resetForTest(); tick(LocalTime.of(9, 15), 5)

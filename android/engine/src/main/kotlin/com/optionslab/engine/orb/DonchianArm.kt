@@ -187,17 +187,21 @@ object DonchianArm {
     fun mayFill(s: Signal, now: java.time.LocalDateTime): Boolean =
         !now.isBefore(s.entryTime) && now.isBefore(s.entryTime.plusMinutes(FILL_SLACK_MINUTES + 1))
 
-    /** One entry check's read of an index (22 Oct): when it read, and the last whole minute it had (null: none today). */
-    data class Look(val at: java.time.LocalDateTime, val lastMinute: LocalTime?)
+    /**
+     * One entry check's read of an index (22 Oct): when it read, and the last whole minute it had (null: none today); [failed]: the
+     * read itself failed (nothing came back).
+     */
+    data class Look(val at: java.time.LocalDateTime, val lastMinute: LocalTime?, val failed: Boolean = false)
 
     /**
      * 22 Oct (Boss: "check why other arms did not trigger"): why [s]'s fill window passed with nothing bought, in words, so a lost
      * break is never only "missed". [tried]: the last reason an entry check inside the window could not buy it (null: none tried);
      * [looks]: the entry checks' reads of its index. In order: tried and refused; no check ran inside the window (our own pace);
      * every check inside the window lacked the bar's last minute (the feed was late); or the bar read inside the window did not
-     * break and the minutes were corrected after. Words only: it never changes a decision.
+     * break and the minutes were corrected after. [others]: for a rule that reads other indices too (R72's breadth), their looks by
+     * name - the first of them whose minute was late inside the window is named instead. Words only: it never changes a decision.
      */
-    fun missedWhy(s: Signal, tried: String?, looks: List<Look>): String {
+    fun missedWhy(s: Signal, tried: String?, looks: List<Look>, others: Map<String, List<Look>> = emptyMap()): String {
         val from = s.entryTime
         val last = from.plusMinutes(FILL_SLACK_MINUTES)
         val window = "${hm(from.toLocalTime())}-${hm(last.toLocalTime())}"
@@ -206,10 +210,17 @@ object DonchianArm {
         val inside = looks.filter { mayFill(s, it.at) }.sortedBy { it.at }
         if (inside.isEmpty()) return "$head missed: no entry check ran in its fill window ($window)"
         val barLast = from.minusMinutes(1).toLocalTime()
-        if (inside.all { it.lastMinute == null || it.lastMinute.isBefore(barLast) }) {
-            val l = inside.last()
-            return "$head missed: the index's ${hm(barLast)} minute had not reached the phone in its fill window ($window; the last check, " +
-                "${l.at.toLocalTime().withNano(0)}, had minutes to ${l.lastMinute?.let { hm(it) } ?: "none"})"
+        fun late(l: List<Look>) = l.isNotEmpty() && l.all { it.lastMinute == null || it.lastMinute.isBefore(barLast) }
+        fun lateWords(who: String, l: List<Look>): String {
+            val x = l.last()
+            val had = if (x.failed) "could not read it" else "had minutes to ${x.lastMinute?.let { hm(it) } ?: "none"}"
+            return "$head missed: $who ${hm(barLast)} minute had not reached the phone in its fill window ($window; the last check, " +
+                "${x.at.toLocalTime().withNano(0)}, $had)"
+        }
+        if (late(inside)) return lateWords("the index's", inside)
+        for ((name, l) in others) {
+            val inOther = l.filter { mayFill(s, it.at) }.sortedBy { it.at }
+            if (late(inOther)) return lateWords("$name's", inOther)
         }
         return "$head missed: the bar read in its fill window ($window) did not break; the index's minutes were corrected after"
     }
