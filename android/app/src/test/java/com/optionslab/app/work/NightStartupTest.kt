@@ -56,7 +56,7 @@ class NightStartupTest : RobolectricTest() {
     private fun alarms(action: String) = am.scheduledAlarms.filter { shadowOf(it.operation).savedIntent.action == action }
     private fun at(day: LocalDate, t: LocalTime) = day.atTime(t).atZone(IST).toInstant().toEpochMilli()
     /** The alarm taken out behind the app's back: only to see whether the next start arms it again (its intent stays). */
-    private fun drop(action: String) = alarms(action).forEach { alarmManager.cancel(it.operation) }
+    private fun drop(action: String) = alarms(action).forEach { a -> a.operation?.let { alarmManager.cancel(it) } }
     private fun startedServices(): List<android.content.Intent> {
         val out = ArrayList<android.content.Intent>()
         while (true) out += shadowOf(app).nextStartedService ?: break
