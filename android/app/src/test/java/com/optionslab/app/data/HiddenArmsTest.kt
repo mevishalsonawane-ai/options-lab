@@ -288,7 +288,7 @@ class HiddenArmsTest : RobolectricTest() {
         // The gated arms: no new entry or idea.
         assertTrue(HiddenArms.blocks(ArmsCleanup.FORGE) && HiddenArms.blocks(ArmsCleanup.JARVIS))
         // Liquidity and the kept arms: never.
-        for (k in listOf("liquidity", "liquidity15", "hero_ticket")) assertTrue(k, HiddenArms.mayArm(k) && !HiddenArms.blocks(k))
+        for (k in listOf("liquidity", "liquidity15", "hero_ticket", "ft3")) assertTrue(k, HiddenArms.mayArm(k) && !HiddenArms.blocks(k))
     }
 
     // ---- 21 Oct: the two MCX paper arms Boss asked to remove ------------------------------------------------------------------

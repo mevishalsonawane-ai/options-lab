@@ -166,7 +166,7 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(LiveMirror.ARMS.none { it.family in setOf("jarvis", "news", "forge") })
         fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/$f"), java.io.File("app/src/main/java/com/optionslab/app/$f")).first { it.isFile }.readText()
         // Every mirrored host does: its entry, and its close or its book for the exits.
-        for (f in listOf("data/PassedArmsHost.kt", "data/OrbArms.kt", "data/HeroTicketArm.kt", "data/VixDivArm.kt", "data/NightArm.kt",
+        for (f in listOf("data/PassedArmsHost.kt", "data/OrbArms.kt", "data/HeroTicketArm.kt", "data/Ft3Arm.kt", "data/VixDivArm.kt", "data/NightArm.kt",
                 "data/SignalPaperArm.kt", "data/McxPaperArms.kt", "data/ShadowArms.kt", "ira/IraSolo.kt")) {
             val t = src(f)
             assertTrue("$f enters", t.contains("ArmLive.entered("))
@@ -405,6 +405,70 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("paper_exit", c.why); assertEquals("a MARKET sale gets the bid", 229.95, c.exit!!, 1e-9)
         assertEquals(1.0, view().shadowRecord(donchian).winRate, 1e-9)
         assertTrue(kite.placed.isEmpty())
+    }
+
+    /**
+     * 21 Oct (review): FT3 buys Rs 5,000 of lots (9 lots here). Its live and its shadow trade are the Bot settings' lot cap (2,
+     * the default), never refused whole by the order gates. Only FT3 is cut ([LiveMirror.Spec.capLots]): another arm's over-cap
+     * trade stays refused.
+     */
+    @Test fun aManyLotPaperTicketIsMirroredAtTheLotCapInShadowAndLive() {
+        val ft3 = com.optionslab.engine.orb.Ft3Rules.SOURCE
+        assertEquals(2, AppSettings.load().guardMaxLots)
+        val o1 = other(1)
+        val (c1, c2) = o1.first to other(2).first
+        java.io.File(context.filesDir, "kite_instruments.json").delete()          // the day's list read again, with them
+        runBlocking { Broker.instruments() }
+        runBlocking { ArmLive.setShadow(ft3, true, pinConfirmed = false) }
+        ArmLive.entered(ask(ft3, "ft3:sh", qty = 9 * 30, stop = null, limit = 201.0))
+        assertTrue("nothing sent in shadow", kite.placed.isEmpty())
+        val p = view().openShadow.singleOrNull() ?: error("not mirrored: ${view().notMirrored} ${view().log}")
+        assertEquals(60, p.qty); assertEquals(270, p.paperQty)
+        assertEquals("the -80% disaster stop of a close-judged arm", 40.0, p.stopTrigger!!, 0.05)
+        // Out of shadow (Boss's PIN): the live order is 2 lots, not 9.
+        runBlocking { ArmLive.setShadow(ft3, false, pinConfirmed = true, log = false) }
+        ArmLive.entered(ask(ft3, "ft3:live", qty = 9 * 30, stop = null, limit = 201.0, c = c1))
+        val o = kite.placed.singleOrNull { it.form["tag"] == com.optionslab.engine.orb.LiveMirror.TAG && it.form["transaction_type"] == "BUY" }
+            ?: error("not placed: ${kite.placed.map { it.form }} ${view().notMirrored} ${view().refused}")
+        assertEquals("60", o.form["quantity"])
+        // Its -80% disaster stop rests for the live 60, and the cut is said on its own lines (shadow and live).
+        val stop = kite.placed.single { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "SL" }
+        assertEquals("60", stop.form["quantity"])
+        val lines = view().log.filter { "FT3" in it }
+        assertTrue(lines.toString(), lines.count { "2 of the paper's 9 lots (your lot cap)" in it } == 2)
+        // The paper ticket sold: the live 60 are sold (the stop out first), never the paper's 270.
+        watch()
+        legs["ft3:live"] = ft3 to 0
+        watch()
+        val sell = kite.placed.single { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }
+        assertEquals("60", sell.form["quantity"])
+        assertEquals("flat", 0, kite.positions["NFO:${o1.second}:MIS"]?.first ?: 0)
+        assertEquals("paper_exit", view().closed.single { it.ref == "ft3:live" }.why)
+        // Another arm is not cut: its 9 lots are refused whole by the account guard, as before (no live size is invented for it).
+        val oov = com.optionslab.engine.orb.OovArm.SOURCE
+        runBlocking { ArmLive.setShadow(oov, true, pinConfirmed = false) }
+        ArmLive.entered(ask(oov, "oov:sh", qty = 9 * 30, stop = null, limit = 201.0, c = c2))
+        assertNull(view().openShadow.singleOrNull { it.ref == "oov:sh" })
+        val why = view().notMirrored.single { it.ref == "oov:sh" }.why
+        assertTrue(why, why.contains("9 lots (limit 2)"))
+    }
+
+    /** 21 Oct (review): FT3 at or under the lot cap keeps its paper size with no cut words; with the cap off (0) it is all its lots. */
+    @Test fun ft3UnderTheCapIsItsPaperSizeAndWithTheCapOffAllItsLots() {
+        val ft3 = com.optionslab.engine.orb.Ft3Rules.SOURCE
+        val c = other(3).first
+        java.io.File(context.filesDir, "kite_instruments.json").delete()          // the day's list read again, with it
+        runBlocking { Broker.instruments() }
+        runBlocking { ArmLive.setShadow(ft3, true, pinConfirmed = false) }
+        ArmLive.entered(ask(ft3, "ft3:two", qty = 2 * 30, stop = null, limit = 201.0))
+        assertEquals(60, (view().openShadow.singleOrNull { it.ref == "ft3:two" } ?: error("${view().notMirrored}")).qty)
+        assertTrue(view().log.toString(), view().log.none { "lot cap" in it })
+        SecurePrefs.putAll(mapOf("g.lots" to 0))                                 // Bot settings: max lots "off"
+        assertEquals(0, AppSettings.load().guardMaxLots)
+        ArmLive.entered(ask(ft3, "ft3:off", qty = 9 * 30, stop = null, limit = 201.0, c = c))
+        assertEquals(270, (view().openShadow.singleOrNull { it.ref == "ft3:off" } ?: error("${view().notMirrored}")).qty)
+        assertTrue(view().log.toString(), view().log.none { "lot cap" in it })
+        assertTrue("nothing sent in shadow", kite.placed.isEmpty())
     }
 
     @Test fun shadowOffNeedsThePinOnIsFreeAndSoloStaysInShadow() {

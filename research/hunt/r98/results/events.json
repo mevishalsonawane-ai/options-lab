@@ -1,0 +1,613 @@
+{
+ "metrics": [
+  {
+   "group": "RBI",
+   "expiry-index-days": 18,
+   "M1 hero day (event / other)": "28% / 39%",
+   "M2 afternoon hero": "0% / 8%",
+   "M3 move at 13:00, straddles (median)": "1.22 / 1.23",
+   "M3 share >= 2.5": "6% / 7%",
+   "M4 straddle % of spot 11:00": "0.41 / 0.41",
+   "M5 P(10x) a ticket": "0.2% / 2.3%",
+   "M5 held, Rs per 5k": "-4,592 / -3,184",
+   "M5 -20% stop": "-1,297 / -881",
+   "p (M1 / M2 / M3)": "0.47 / 0.39 / 0.96",
+   "BH q (min)": "0.84"
+  },
+  {
+   "group": "BUDGET",
+   "expiry-index-days": 3,
+   "M1 hero day (event / other)": "67% / 38%",
+   "M2 afternoon hero": "0% / 8%",
+   "M3 move at 13:00, straddles (median)": "1.31 / 1.23",
+   "M3 share >= 2.5": "0% / 7%",
+   "M4 straddle % of spot 11:00": "1.29 / 0.41",
+   "M5 P(10x) a ticket": "0.9% / 2.2%",
+   "M5 held, Rs per 5k": "-4,821 / -3,210",
+   "M5 -20% stop": "-1,573 / -888",
+   "p (M1 / M2 / M3)": "0.56 / 1.00 / 0.85",
+   "BH q (min)": "0.84"
+  },
+  {
+   "group": "ELECTION",
+   "expiry-index-days": 2,
+   "M1 hero day (event / other)": "0% / 39%",
+   "M2 afternoon hero": "0% / 8%",
+   "M3 move at 13:00, straddles (median)": "0.84 / 1.23",
+   "M3 share >= 2.5": "0% / 7%",
+   "M4 straddle % of spot 11:00": "2.07 / 0.41",
+   "M5 P(10x) a ticket": "0.0% / 2.3%",
+   "M5 held, Rs per 5k": "-4,967 / -3,211",
+   "M5 -20% stop": "-1,406 / -889",
+   "p (M1 / M2 / M3)": "0.53 / 1.00 / 1.00",
+   "BH q (min)": "0.84"
+  },
+  {
+   "group": "FOMC",
+   "expiry-index-days": 61,
+   "M1 hero day (event / other)": "51% / 38%",
+   "M2 afternoon hero": "15% / 7%",
+   "M3 move at 13:00, straddles (median)": "1.24 / 1.23",
+   "M3 share >= 2.5": "13% / 6%",
+   "M4 straddle % of spot 11:00": "0.42 / 0.41",
+   "M5 P(10x) a ticket": "2.3% / 2.2%",
+   "M5 held, Rs per 5k": "-3,667 / -3,176",
+   "M5 -20% stop": "-895 / -889",
+   "p (M1 / M2 / M3)": "0.04 / 0.04 / 0.75",
+   "BH q (min)": "0.32"
+  },
+  {
+   "group": "USCPI",
+   "expiry-index-days": 52,
+   "M1 hero day (event / other)": "31% / 39%",
+   "M2 afternoon hero": "13% / 7%",
+   "M3 move at 13:00, straddles (median)": "0.99 / 1.23",
+   "M3 share >= 2.5": "10% / 7%",
+   "M4 straddle % of spot 11:00": "0.43 / 0.41",
+   "M5 P(10x) a ticket": "2.9% / 2.2%",
+   "M5 held, Rs per 5k": "-2,196 / -3,279",
+   "M5 -20% stop": "-768 / -897",
+   "p (M1 / M2 / M3)": "0.30 / 0.11 / 0.11",
+   "BH q (min)": "0.44"
+  },
+  {
+   "group": "DOMESTIC",
+   "expiry-index-days": 23,
+   "M1 hero day (event / other)": "30% / 39%",
+   "M2 afternoon hero": "0% / 8%",
+   "M3 move at 13:00, straddles (median)": "1.21 / 1.23",
+   "M3 share >= 2.5": "4% / 7%",
+   "M4 straddle % of spot 11:00": "0.45 / 0.41",
+   "M5 P(10x) a ticket": "0.3% / 2.3%",
+   "M5 held, Rs per 5k": "-4,633 / -3,178",
+   "M5 -20% stop": "-1,327 / -879",
+   "p (M1 / M2 / M3)": "0.52 / 0.25 / 0.68",
+   "BH q (min)": "0.84"
+  },
+  {
+   "group": "US",
+   "expiry-index-days": 112,
+   "M1 hero day (event / other)": "42% / 38%",
+   "M2 afternoon hero": "14% / 7%",
+   "M3 move at 13:00, straddles (median)": "1.20 / 1.23",
+   "M3 share >= 2.5": "12% / 6%",
+   "M4 straddle % of spot 11:00": "0.43 / 0.40",
+   "M5 P(10x) a ticket": "2.6% / 2.2%",
+   "M5 held, Rs per 5k": "-2,997 / -3,247",
+   "M5 -20% stop": "-834 / -898",
+   "p (M1 / M2 / M3)": "0.41 / 0.01 / 0.46",
+   "BH q (min)": "0.29"
+  },
+  {
+   "group": "ANY",
+   "expiry-index-days": 134,
+   "M1 hero day (event / other)": "40% / 38%",
+   "M2 afternoon hero": "12% / 7%",
+   "M3 move at 13:00, straddles (median)": "1.21 / 1.23",
+   "M3 share >= 2.5": "10% / 6%",
+   "M4 straddle % of spot 11:00": "0.43 / 0.40",
+   "M5 P(10x) a ticket": "2.2% / 2.2%",
+   "M5 held, Rs per 5k": "-3,232 / -3,209",
+   "M5 -20% stop": "-904 / -887",
+   "p (M1 / M2 / M3)": "0.63 / 0.05 / 0.47",
+   "BH q (min)": "0.32"
+  }
+ ],
+ "bh_min": 0.2896699033985952,
+ "domestic_days": [
+  {
+   "day": "2022-02-01",
+   "index": "FINNIFTY",
+   "event": "BUDGET",
+   "best x (10:00-15:20)": "11.2",
+   "move at 11:00 (straddles)": "-",
+   "straddle % 11:00": "-"
+  },
+  {
+   "day": "2022-02-10",
+   "index": "NIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "6.6",
+   "move at 11:00 (straddles)": "0.82",
+   "straddle % 11:00": "0.44"
+  },
+  {
+   "day": "2022-02-10",
+   "index": "BANKNIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "5.5",
+   "move at 11:00 (straddles)": "0.60",
+   "straddle % 11:00": "0.71"
+  },
+  {
+   "day": "2023-04-06",
+   "index": "NIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "7.6",
+   "move at 11:00 (straddles)": "1.02",
+   "straddle % 11:00": "0.32"
+  },
+  {
+   "day": "2023-04-06",
+   "index": "BANKNIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "3.9",
+   "move at 11:00 (straddles)": "1.40",
+   "straddle % 11:00": "0.47"
+  },
+  {
+   "day": "2023-06-08",
+   "index": "NIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "13.0",
+   "move at 11:00 (straddles)": "2.82",
+   "straddle % 11:00": "0.29"
+  },
+  {
+   "day": "2023-06-08",
+   "index": "BANKNIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "15.8",
+   "move at 11:00 (straddles)": "2.89",
+   "straddle % 11:00": "0.40"
+  },
+  {
+   "day": "2023-08-10",
+   "index": "BANKNIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "8.8",
+   "move at 11:00 (straddles)": "0.86",
+   "straddle % 11:00": "0.52"
+  },
+  {
+   "day": "2023-08-10",
+   "index": "NIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "6.6",
+   "move at 11:00 (straddles)": "0.72",
+   "straddle % 11:00": "0.41"
+  },
+  {
+   "day": "2023-10-06",
+   "index": "SENSEX",
+   "event": "RBI",
+   "best x (10:00-15:20)": "2.8",
+   "move at 11:00 (straddles)": "0.99",
+   "straddle % 11:00": "0.26"
+  },
+  {
+   "day": "2023-12-08",
+   "index": "SENSEX",
+   "event": "RBI",
+   "best x (10:00-15:20)": "18.6",
+   "move at 11:00 (straddles)": "1.86",
+   "straddle % 11:00": "0.21"
+  },
+  {
+   "day": "2024-02-01",
+   "index": "NIFTY",
+   "event": "BUDGET,FOMC",
+   "best x (10:00-15:20)": "3.3",
+   "move at 11:00 (straddles)": "0.72",
+   "straddle % 11:00": "0.85"
+  },
+  {
+   "day": "2024-02-08",
+   "index": "NIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "25.9",
+   "move at 11:00 (straddles)": "1.60",
+   "straddle % 11:00": "0.47"
+  },
+  {
+   "day": "2024-04-05",
+   "index": "SENSEX",
+   "event": "RBI",
+   "best x (10:00-15:20)": "2.2",
+   "move at 11:00 (straddles)": "0.45",
+   "straddle % 11:00": "0.33"
+  },
+  {
+   "day": "2024-06-03",
+   "index": "MIDCPNIFTY",
+   "event": "ELECTION",
+   "best x (10:00-15:20)": "4.0",
+   "move at 11:00 (straddles)": "0.80",
+   "straddle % 11:00": "0.71"
+  },
+  {
+   "day": "2024-06-04",
+   "index": "FINNIFTY",
+   "event": "ELECTION",
+   "best x (10:00-15:20)": "5.4",
+   "move at 11:00 (straddles)": "1.38",
+   "straddle % 11:00": "3.42"
+  },
+  {
+   "day": "2024-06-07",
+   "index": "SENSEX",
+   "event": "RBI",
+   "best x (10:00-15:20)": "8.6",
+   "move at 11:00 (straddles)": "1.52",
+   "straddle % 11:00": "0.84"
+  },
+  {
+   "day": "2024-07-23",
+   "index": "FINNIFTY",
+   "event": "BUDGET",
+   "best x (10:00-15:20)": "17.2",
+   "move at 11:00 (straddles)": "1.15",
+   "straddle % 11:00": "1.73"
+  },
+  {
+   "day": "2024-08-08",
+   "index": "NIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "6.1",
+   "move at 11:00 (straddles)": "1.07",
+   "straddle % 11:00": "0.72"
+  },
+  {
+   "day": "2024-10-09",
+   "index": "BANKNIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "8.4",
+   "move at 11:00 (straddles)": "2.00",
+   "straddle % 11:00": "0.69"
+  },
+  {
+   "day": "2024-12-06",
+   "index": "SENSEX",
+   "event": "RBI",
+   "best x (10:00-15:20)": "2.7",
+   "move at 11:00 (straddles)": "0.80",
+   "straddle % 11:00": "0.29"
+  },
+  {
+   "day": "2025-04-09",
+   "index": "NIFTY",
+   "event": "RBI",
+   "best x (10:00-15:20)": "2.8",
+   "move at 11:00 (straddles)": "1.26",
+   "straddle % 11:00": "0.22"
+  },
+  {
+   "day": "2025-10-01",
+   "index": "SENSEX",
+   "event": "RBI",
+   "best x (10:00-15:20)": "15.9",
+   "move at 11:00 (straddles)": "2.43",
+   "straddle % 11:00": "0.28"
+  }
+ ],
+ "m6": [
+  {
+   "group": "DOMESTIC",
+   "exit": "B_hold",
+   "tickets": 28,
+   "days": 15,
+   "win": "0.0%",
+   "mean Rs": "-4,863",
+   "bootstrap 95%": "-5,014 .. -4,657",
+   "w/o 3 best days": "-4,223",
+   "years > 0": "0/4",
+   "P(10x)": "3.6%",
+   "passes": "no"
+  },
+  {
+   "group": "DOMESTIC",
+   "exit": "B_stop20",
+   "tickets": 28,
+   "days": 15,
+   "win": "0.0%",
+   "mean Rs": "-1,160",
+   "bootstrap 95%": "-1,264 .. -1,105",
+   "w/o 3 best days": "-1,003",
+   "years > 0": "0/4",
+   "P(10x)": "3.6%",
+   "passes": "no"
+  },
+  {
+   "group": "DOMESTIC",
+   "exit": "E1_half2x_s0.5",
+   "tickets": 28,
+   "days": 15,
+   "win": "0.0%",
+   "mean Rs": "-2,244",
+   "bootstrap 95%": "-2,517 .. -1,913",
+   "w/o 3 best days": "-2,053",
+   "years > 0": "0/4",
+   "P(10x)": "3.6%",
+   "passes": "no"
+  },
+  {
+   "group": "US",
+   "exit": "B_hold",
+   "tickets": 182,
+   "days": 98,
+   "win": "7.1%",
+   "mean Rs": "1,666",
+   "bootstrap 95%": "-2,451 .. 6,823",
+   "w/o 3 best days": "-2,031",
+   "years > 0": "3/6",
+   "P(10x)": "6.0%",
+   "passes": "no"
+  },
+  {
+   "group": "US",
+   "exit": "B_stop20",
+   "tickets": 182,
+   "days": 98,
+   "win": "3.3%",
+   "mean Rs": "3,354",
+   "bootstrap 95%": "-322 .. 8,296",
+   "w/o 3 best days": "-256",
+   "years > 0": "2/6",
+   "P(10x)": "6.0%",
+   "passes": "no"
+  },
+  {
+   "group": "US",
+   "exit": "E1_half2x_s0.5",
+   "tickets": 182,
+   "days": 98,
+   "win": "8.8%",
+   "mean Rs": "775",
+   "bootstrap 95%": "-1,239 .. 3,261",
+   "w/o 3 best days": "-1,043",
+   "years > 0": "2/6",
+   "P(10x)": "6.0%",
+   "passes": "no"
+  },
+  {
+   "group": "ANY",
+   "exit": "B_hold",
+   "tickets": 210,
+   "days": 113,
+   "win": "6.2%",
+   "mean Rs": "795",
+   "bootstrap 95%": "-2,683 .. 5,212",
+   "w/o 3 best days": "-2,409",
+   "years > 0": "3/6",
+   "P(10x)": "5.7%",
+   "passes": "no"
+  },
+  {
+   "group": "ANY",
+   "exit": "B_stop20",
+   "tickets": 210,
+   "days": 113,
+   "win": "2.9%",
+   "mean Rs": "2,752",
+   "bootstrap 95%": "-503 .. 7,074",
+   "w/o 3 best days": "-377",
+   "years > 0": "2/6",
+   "P(10x)": "5.7%",
+   "passes": "no"
+  },
+  {
+   "group": "ANY",
+   "exit": "E1_half2x_s0.5",
+   "tickets": 210,
+   "days": 113,
+   "win": "7.6%",
+   "mean Rs": "372",
+   "bootstrap 95%": "-1,366 .. 2,540",
+   "w/o 3 best days": "-1,203",
+   "years > 0": "2/6",
+   "P(10x)": "5.7%",
+   "passes": "no"
+  },
+  {
+   "group": "RBI",
+   "exit": "B_hold",
+   "tickets": 27,
+   "days": 14,
+   "win": "0.0%",
+   "mean Rs": "-4,857",
+   "bootstrap 95%": "-5,012 .. -4,644",
+   "w/o 3 best days": "-4,076",
+   "years > 0": "0/4",
+   "P(10x)": "3.7%",
+   "passes": "no"
+  },
+  {
+   "group": "RBI",
+   "exit": "B_stop20",
+   "tickets": 27,
+   "days": 14,
+   "win": "0.0%",
+   "mean Rs": "-1,162",
+   "bootstrap 95%": "-1,269 .. -1,107",
+   "w/o 3 best days": "-959",
+   "years > 0": "0/4",
+   "P(10x)": "3.7%",
+   "passes": "no"
+  },
+  {
+   "group": "RBI",
+   "exit": "E1_half2x_s0.5",
+   "tickets": 27,
+   "days": 14,
+   "win": "0.0%",
+   "mean Rs": "-2,231",
+   "bootstrap 95%": "-2,514 .. -1,925",
+   "w/o 3 best days": "-2,029",
+   "years > 0": "0/4",
+   "P(10x)": "3.7%",
+   "passes": "no"
+  },
+  {
+   "group": "FOMC",
+   "exit": "B_hold",
+   "tickets": 96,
+   "days": 52,
+   "win": "9.4%",
+   "mean Rs": "3,849",
+   "bootstrap 95%": "-2,976 .. 13,144",
+   "w/o 3 best days": "-2,660",
+   "years > 0": "2/6",
+   "P(10x)": "5.2%",
+   "passes": "no"
+  },
+  {
+   "group": "FOMC",
+   "exit": "B_stop20",
+   "tickets": 96,
+   "days": 52,
+   "win": "4.2%",
+   "mean Rs": "6,013",
+   "bootstrap 95%": "-625 .. 14,379",
+   "w/o 3 best days": "-563",
+   "years > 0": "2/6",
+   "P(10x)": "5.2%",
+   "passes": "no"
+  },
+  {
+   "group": "FOMC",
+   "exit": "E1_half2x_s0.5",
+   "tickets": 96,
+   "days": 52,
+   "win": "11.5%",
+   "mean Rs": "2,335",
+   "bootstrap 95%": "-1,157 .. 6,872",
+   "w/o 3 best days": "-977",
+   "years > 0": "3/6",
+   "P(10x)": "5.2%",
+   "passes": "no"
+  },
+  {
+   "group": "USCPI",
+   "exit": "B_hold",
+   "tickets": 86,
+   "days": 46,
+   "win": "4.7%",
+   "mean Rs": "-771",
+   "bootstrap 95%": "-4,562 .. 4,525",
+   "w/o 3 best days": "-4,209",
+   "years > 0": "2/6",
+   "P(10x)": "7.0%",
+   "passes": "no"
+  },
+  {
+   "group": "USCPI",
+   "exit": "B_stop20",
+   "tickets": 86,
+   "days": 46,
+   "win": "2.3%",
+   "mean Rs": "387",
+   "bootstrap 95%": "-1,129 .. 3,431",
+   "w/o 3 best days": "-1,040",
+   "years > 0": "1/6",
+   "P(10x)": "7.0%",
+   "passes": "no"
+  },
+  {
+   "group": "USCPI",
+   "exit": "E1_half2x_s0.5",
+   "tickets": 86,
+   "days": 46,
+   "win": "5.8%",
+   "mean Rs": "-966",
+   "bootstrap 95%": "-2,077 .. 955",
+   "w/o 3 best days": "-1,893",
+   "years > 0": "1/6",
+   "P(10x)": "7.0%",
+   "passes": "no"
+  }
+ ],
+ "m6_best": [
+  {
+   "day": "2022-06-16",
+   "index": "NIFTY",
+   "event": "FOMC",
+   "option": "15600 PE",
+   "entry": "4.40",
+   "best x": "57.7",
+   "held Rs": "269,933"
+  },
+  {
+   "day": "2022-06-16",
+   "index": "BANKNIFTY",
+   "event": "FOMC",
+   "option": "32900 PE",
+   "entry": "5.40",
+   "best x": "56.7",
+   "held Rs": "265,033"
+  },
+  {
+   "day": "2024-09-12",
+   "index": "NIFTY",
+   "event": "USCPI",
+   "option": "25200 CE",
+   "entry": "6.20",
+   "best x": "35.3",
+   "held Rs": "147,158"
+  },
+  {
+   "day": "2026-09-15",
+   "index": "NIFTY",
+   "event": "USCPI",
+   "option": "23250 PE",
+   "entry": "5.50",
+   "best x": "26.2",
+   "held Rs": "125,472"
+  },
+  {
+   "day": "2022-12-15",
+   "index": "NIFTY",
+   "event": "FOMC",
+   "option": "18500 PE",
+   "entry": "3.90",
+   "best x": "22.5",
+   "held Rs": "99,685"
+  },
+  {
+   "day": "2023-05-04",
+   "index": "NIFTY",
+   "event": "FOMC",
+   "option": "18200 CE",
+   "entry": "5.35",
+   "best x": "11.7",
+   "held Rs": "48,213"
+  },
+  {
+   "day": "2023-07-27",
+   "index": "NIFTY",
+   "event": "FOMC",
+   "option": "19700 PE",
+   "entry": "5.15",
+   "best x": "19.1",
+   "held Rs": "37,248"
+  },
+  {
+   "day": "2023-04-13",
+   "index": "BANKNIFTY",
+   "event": "USCPI",
+   "option": "42100 CE",
+   "entry": "4.70",
+   "best x": "10.7",
+   "held Rs": "34,821"
+  }
+ ]
+}

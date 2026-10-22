@@ -1,0 +1,32 @@
+id: r98g-ignition
+title: 'R98g: buying the order-flow ignition (volume burst, lift-off, up-ticks) on every expiry'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R98_HERO_ALL_INDEX.md
+hypothesis: Buying a cheap option at its first ignition (5-minute volume >= 3x / 5x its mean since 11:00, price >= 1.3x /
+  1.5x its low, >= 60% up-tick volume) passes SPA across the 16 variants with both halves > 0 and > 0 without the 5 best days.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): Dhan rollingoption WEEK/MONTH ATM+-10 1-minute (NIFTY,
+  BANKNIFTY, FINNIFTY from 18 Oct 2021, MIDCPNIFTY, SENSEX), index_1m, index_daily official closes, INDIAVIX; R98 loader research/hunt/r98/r98data.py'
+period:
+  design: expiry days 2021-23 (half)
+  holdout: expiry days 2024-26 (half)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the option''s own price and volume (labelled: not the default kind)'
+model_or_rule: 2 bursts x 2 lift-offs x 4 exits
+settings: research/hunt/r98/ignition.py
+prereg: research/hunt/r98/PREREG_G.md
+variants_tried: 16
+results:
+  summary: 'Hansen SPA p 0.37: no pass. Best (5x burst, 1.5x lift-off, -20% stop): 405 tickets +Rs 998 a ticket, halves +1,171
+    / +912, 4/6 years, -Rs 684 without the 5 best days.'
+  costs: Rs 20 an order + 18% GST, STT 0.15% on the sell, exchange 0.0355% NSE / 0.0325% BSE, stamp 0.003% on the buy, 1-tick
+    spread, next-minute open + 1 tick entry; under Rs 0.10 at exit expires worthless; Rs 5,000 a ticket, fractional quantity
+holdout_read: true
+verdict: rejected
+notes: Frozen as FT2 (FORWARD_TEST.md).

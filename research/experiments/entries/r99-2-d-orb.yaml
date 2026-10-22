@@ -1,0 +1,31 @@
+id: r99-2-d-orb
+title: 'R99 round 2 D1/D2: opening-range breaks held to the square-off (GOLDM options)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R99_GOLD_OBUY.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): GOLDM options_rolling_1m MONTH book (near future +
+  ATM-3..+3 real 1-minute prints) to 19 Oct 2026; R96 book loader'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (locked; R99 read it once, for the round-2 E near-miss only)
+instruments:
+- GOLD
+hypothesis: Morning (09:00-09:30/10:00/11:00) or evening (15:00-17:00, 17:00-17:30) range breaks, at most one a day, stop
+  at the range's other side, held for hours, pass the R99 gates over 148 variants.
+features:
+- 'signal source: the GOLDM future (minute closes); the option''s own price is never a signal; only the -40% hard premium
+  stop'
+model_or_rule: buy ATM / 1-ITM on the first filled break; stop the other side of the range; out at the square-off or 2x range
+settings: research/hunt/r99_gold_obuy/study2.py, sim.py
+prereg: research/hunt/r99_gold_obuy/PREREG_ROUND2.md
+variants_tried: 20
+results:
+  summary: '20 variants, 20 net <= 0, 0 passed the cheap gates. Best: D2 ORB 17:00-17:30 | square-off | ATM: 223 trades, win
+    30%, net -Rs 109,820 (2x -Rs 153,175), gross -Rs 46,473, folds 1/4, worst month -Rs 42,492, max DD -Rs 128,386, w/o top
+    3 -Rs 243,738. round 2 SPA p 0.971 (44); rounds 1-2 SPA p 0.982 (148). Not found.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before each fill (R85 strict), 2x on model-priced
+    exits; every gate also at 2x spreads; 1 lot
+holdout_read: false
+verdict: rejected
+notes: Morning signals often could not fill (ATM options print rarely before 17:00), so many breaks were taken late or not
+  at all.

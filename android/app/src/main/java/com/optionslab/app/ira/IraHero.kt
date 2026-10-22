@@ -39,6 +39,19 @@ internal object IraHero {
     }
 
     /**
+     * "How is FT3 doing" (21 Oct, [com.optionslab.ira.Ft3Talk]): FT3 near-ATM morning's own book (read off the main thread, its own
+     * lock), today's tickets at their last price, and the forward test so far. Read only.
+     */
+    suspend fun ft3(): String {
+        val v = com.optionslab.app.data.Ft3Arm.refresh()
+        val today = v.today.map { p ->
+            com.optionslab.ira.Ft3Talk.Ticket(p.index, p.symbol, p.qty, p.entry, p.exit, p.why, p.net, if (p.open) v.marks[p.symbol] else null)
+        }
+        val status = v.status.filterKeys { it in com.optionslab.engine.orb.Ft3Rules.UNDERLYINGS }
+        return com.optionslab.ira.Ft3Talk.answer(com.optionslab.ira.Ft3Talk.Facts(v.armed, today, status, v.nets.size, v.nets.sum(), v.won))
+    }
+
+    /**
      * "What did hero do today", "why no hero trade", "is today a hero day", "when is the next hero day": its switch, status
      * and today's trades ([com.optionslab.app.data.OrbArms.view], a short wait on the arms' lock, else said as not read), the
      * decisions it kept in memory ([com.optionslab.app.data.OrbArms.heroDecisions], no lock), NIFTY's expiries, and its closed

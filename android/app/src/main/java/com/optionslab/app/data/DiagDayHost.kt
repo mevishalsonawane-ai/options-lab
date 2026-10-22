@@ -111,7 +111,7 @@ object DiagDayHost {
             com.optionslab.app.work.WatchWorkers.diagLines() + com.optionslab.app.work.WatchWorkers.slowestLine(8)
         }.getOrDefault(emptyList()).map(::r)
         val others = if (GOLD) emptyList() else listOf(
-            { NightArm.diagLine() }, { VixDivArm.diagLine() }, { HeroTicketArm.diagLine() }, { PassedArmsHost.diagLine(hideNet = true) }, { WatchlistHost.diagLine() }, { TrendWatchHost.diagLine() }, { McxPaperArms.diagLine() }, { McxNr7Record.diagLine() }, { GrammarArm.diagLine() },
+            { NightArm.diagLine() }, { VixDivArm.diagLine() }, { HeroTicketArm.diagLine() }, { Ft3Arm.diagLine(hideNet = true) }, { PassedArmsHost.diagLine(hideNet = true) }, { WatchlistHost.diagLine() }, { TrendWatchHost.diagLine() }, { McxPaperArms.diagLine() }, { McxNr7Record.diagLine() }, { GrammarArm.diagLine() },
             // 20 Oct: the passed arms' line with every rupee net written "(net hidden)" (its counts kept).
             // 14 Oct (Boss approved): the morning gamma line (signs and strikes) and the OI-wall shadow log (points only).
             { GammaMorningHost.diagLine(day) }, { OiWallShadowHost.diagLine(day) },

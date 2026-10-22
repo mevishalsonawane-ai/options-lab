@@ -711,8 +711,13 @@ object ArmLive {
         if (ins == null) { notMirrored(a, insWhy ?: "no contract"); return@withLock }
         LiveMirror.tooLate(now(), ins.exchange, spec.product, a.contract.expiry)?.let { notMirrored(a, it); return@withLock }
         val lots = LiveMirror.lots(a.paperQty, a.contract.lotSize)
-        val qty = LiveMirror.liveQty(lots, ins.lot)
+        val s = AppSettings.load()
+        // 21 Oct (review): an arm with [LiveMirror.Spec.capLots] (FT3: Rs 5,000 of a Rs 6-10 option, 3-41 lots by index, which the
+        // order gates would refuse whole) goes live at the Bot settings' lot cap (all its lots with the cap off), said on its own
+        // entry line; every other arm keeps its paper lots.
+        val qty = LiveMirror.liveQty(lots, ins.lot, if (spec.capLots) s.guardMaxLots else 0)
         if (qty <= 0) { notMirrored(a, "the paper trade is under one lot"); return@withLock }
+        val cut = LiveMirror.cutWords(lots, qty, ins.lot)
         val qkey = "${ins.exchange}:${ins.symbol}"
         val quote = runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
@@ -720,7 +725,6 @@ object ArmLive {
         val net = runCatching { Broker.positionBook().net.filter { it.symbol == ins.symbol && it.exchange == ins.exchange && it.product == spec.product }.sumOf { it.qty } }
             .getOrElse { notMirrored(a, "Zerodha's positions could not be read"); return@withLock }
         LiveMirror.againstNet(a.side, net)?.let { notMirrored(a, it); return@withLock }
-        val s = AppSettings.load()
         val side = if (a.side >= 0) Kite.Side.BUY else Kite.Side.SELL
         // The paper arm's own order type: a LIMIT entry pays at most its paper limit (never chases), else MARKET.
         val o = if (a.limit != null) Kite.Order(ins.symbol, side, qty, ins.lot, spec.product, "LIMIT",
@@ -736,7 +740,7 @@ object ArmLive {
             try { lock.withLock { LiveMirror.shadowOn(a.key, book().shadow) } } catch (e: Unreadable) {
                 note(a.key, "not mirrored: the live book could not be read"); return@withLock
             }
-        if (shadowNow) { enterShadow(spec, a, base, o, quote); return@withLock }
+        if (shadowNow) { enterShadow(spec, a, base, o, quote, cut); return@withLock }
         val known = known()
         // (The entry door asks the switches again inside it, from memory: [doorRefusal].)
         testHeard?.add("door|${a.key}|${a.ref}")
@@ -778,7 +782,7 @@ object ArmLive {
             val b = book()
             b.positions += p
             b.refused.remove(a.key)
-            line(b, "%s: %s %s %d @ %.2f live%s".format(Locale.ENGLISH, spec.label, if (p.side > 0) "bought" else "sold", ins.symbol, p.qty, fill,
+            line(b, "%s: %s %s %d @ %.2f live%s%s".format(Locale.ENGLISH, spec.label, if (p.side > 0) "bought" else "sold", ins.symbol, p.qty, fill, cut,
                 p.stopTrigger?.let { " · %s %.2f %s".format(Locale.ENGLISH, stopWords(p), it, if (p.stopOrderId != null) "at Zerodha" else "watched by the app (not rested yet)") }
                     ?: " · no stop on the premium (the app follows its paper exits)"))
             save(b)
@@ -794,7 +798,7 @@ object ArmLive {
      * Final review F4: a MARKET buy pays Zerodha's ask (a sale gets the bid), never better than the app's measured live slippage
      * ([LiveMirror.shadowFill]); a LIMIT fills at the touch only when it is within its limit.
      */
-    private suspend fun enterShadow(spec: LiveMirror.Spec, a: Ask, base: Pos, o: Kite.Order, quote: Broker.Quote?) {
+    private suspend fun enterShadow(spec: LiveMirror.Spec, a: Ask, base: Pos, o: Kite.Order, quote: Broker.Quote?, cut: String = "") {
         val buy = base.side > 0
         val limit = o.price?.takeIf { o.orderType == "LIMIT" }
         val px = LiveMirror.shadowFill(buy, base.entry, quote?.bid, quote?.ask, base.tick, halfSpreadOf(base),
@@ -809,8 +813,8 @@ object ArmLive {
             val b = book()
             b.positions += p
             if (b.shadowSince[a.key] == null) b.shadowSince[a.key] = now()
-            line(b, "%s: SHADOW %s %s %d @ %.2f (nothing sent)%s".format(Locale.ENGLISH, spec.label, if (p.side > 0) "would buy" else "would sell",
-                p.symbol, p.qty, px, stop?.let { " · %s %.2f".format(Locale.ENGLISH, stopWords(p), it) } ?: ""))
+            line(b, "%s: SHADOW %s %s %d @ %.2f (nothing sent)%s%s".format(Locale.ENGLISH, spec.label, if (p.side > 0) "would buy" else "would sell",
+                p.symbol, p.qty, px, cut, stop?.let { " · %s %.2f".format(Locale.ENGLISH, stopWords(p), it) } ?: ""))
             save(b)
         }
         shadowSeen[p.ref] = System.currentTimeMillis() to nowMs()

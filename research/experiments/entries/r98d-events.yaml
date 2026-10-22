@@ -1,0 +1,32 @@
+id: r98d-events
+title: 'R98d: event days (RBI, Budget, elections, the session after a Fed decision or US CPI) for hero tickets'
+family: calendar-events
+date: '2026-10-21'
+doc: research/HUNT_R98_HERO_ALL_INDEX.md
+hypothesis: Expiry days on known-in-advance events have more heroes than the straddle prices, and a CE + PE basket near Rs
+  5 bought before the event (09:20 for overnight US events) makes money.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): Dhan rollingoption WEEK/MONTH ATM+-10 1-minute (NIFTY,
+  BANKNIFTY, FINNIFTY from 18 Oct 2021, MIDCPNIFTY, SENSEX), index_1m, index_daily official closes, INDIAVIX; R98 loader research/hunt/r98/r98data.py'
+period:
+  design: 'expiry days 2021-26 (143 sourced events; no holdout: a fixed calendar)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the event calendar (research/hunt/r98/events.csv) and the clock; trade the option'
+model_or_rule: 24 pre-registered metric tests (BH) and the M6 basket rule, held / -20% stop
+settings: research/hunt/r98/make_events.py, events.py
+prereg: research/hunt/r98/PREREG_D.md
+variants_tried: 30
+results:
+  summary: 'Domestic events are priced (Budget / election straddles 3-5x normal); the RBI basket lost on all 27 tickets. US:
+    after a Fed decision 61 days, hero day 51% vs 38% (p 0.04); both US 112 days, 09:20 basket with -20% stop +Rs 3,354 (95%
+    -322 .. +8,296). Smallest BH q 0.29: nothing passes; every basket negative without its 3 best days.'
+  costs: Rs 20 an order + 18% GST, STT 0.15% on the sell, exchange 0.0355% NSE / 0.0325% BSE, stamp 0.003% on the buy, 1-tick
+    spread, next-minute open + 1 tick entry; under Rs 0.10 at exit expires worthless; Rs 5,000 a ticket, fractional quantity
+holdout_read: null
+verdict: rejected
+notes: The US-event basket is frozen as FT1 (FORWARD_TEST.md).

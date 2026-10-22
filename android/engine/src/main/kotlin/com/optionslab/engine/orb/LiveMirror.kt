@@ -76,12 +76,20 @@ object LiveMirror {
          * close-exit drives the live exit instead, and only a labelled "disaster stop" [DISASTER_PCT] beyond the fill rests at Zerodha.
          */
         val closeStop: Boolean = false,
+        /**
+         * 21 Oct (FT3): the live size is cut to the Bot settings' lot cap instead of the whole order being refused by the order
+         * gates - for an arm that buys a rupee budget of cheap options (many lots). Off for every other arm, whose over-cap order
+         * stays refused as before.
+         */
+        val capLots: Boolean = false,
     )
 
     const val PASSED = "passed"
     const val SOLO = "solo"
     const val ORB = "orb"
     const val HERO_TICKET = "hero_ticket"
+    /** 21 Oct (Boss: "Add FT3 to the app paper bot until live, when live is started then it should move to live"). */
+    const val FT3 = "ft3"
     const val VIX = "vix"
     const val NIGHT = "night"
     const val TELEGRAM = "telegram"
@@ -108,6 +116,9 @@ object LiveMirror {
         Spec(SHADOW_PROMOTED, "Shadow variants re-armed", SHADOW, Scale.POINTS, signal = "BANKNIFTY or NIFTY (each variant's own rule)",
             safety = true),
         Spec(HeroTicketRules.SOURCE, HeroTicketRules.LABEL, HERO_TICKET, signal = "the expiry day at 12:30 (NIFTY, SENSEX)", closeStop = true),
+        // 21 Oct: FT3 holds to 15:05 with no stop on paper; live rests only the labelled -80% disaster stop.
+        Spec(Ft3Rules.SOURCE, Ft3Rules.LABEL, FT3, signal = "the expiry day's 5-minute marks 11:00-12:55 and the option chain at the mark " +
+            "(a strike's price, IV against the ATM's, distance in straddles; five indices)", closeStop = true, capLots = true),
         Spec(VixDivRules.SOURCE, VixDivRules.LABEL, VIX, signal = "the index against India VIX", safety = true),
         Spec(NightRules.SOURCE, NightRules.LABEL, NIGHT, product = "NRML", rest = Rest.GTT, signal = "the index's close and the day-end OI build-up",
             safety = true),
@@ -265,6 +276,16 @@ object LiveMirror {
         if (paperLots <= 0 || lot <= 0) return 0
         val lots = if (maxLots > 0) minOf(paperLots, maxLots) else paperLots
         return lots * lot
+    }
+
+    /**
+     * 21 Oct (review): the words for a live / shadow entry cut to the lot cap ([Spec.capLots]) - " · 2 of the paper's 9 lots (your
+     * lot cap)" - or "" when it is the paper's size. Said on the arm's own entry line, so its record is read at its own size.
+     */
+    fun cutWords(paperLots: Int, liveQty: Int, lot: Int): String {
+        if (lot <= 0 || liveQty <= 0) return ""
+        val live = liveQty / lot
+        return if (live < paperLots) " · $live of the paper's $paperLots lots (your lot cap)" else ""
     }
 
     // ---- levels ---------------------------------------------------------------------------------------------------------------

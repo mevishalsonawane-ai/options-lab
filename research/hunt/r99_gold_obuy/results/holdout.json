@@ -1,0 +1,18 @@
+{
+ "kind": "the cumulative SPA-best variant, descriptive only (no design passer)",
+ "rows": [
+  {
+   "variant": "E day trend at 17:00 | k 0.5 | ATM",
+   "trades": 15,
+   "win": 0.5333333333333333,
+   "net": 22889.195230958445,
+   "net2": 20348.662589718795,
+   "gross": 26710.106873275014,
+   "twin_p": 0.8656716417910447,
+   "worst_month": -1070.6969461999997,
+   "max_dd": -11229.008262619998,
+   "wo_top3": -9612.75009950373,
+   "passes": false
+  }
+ ]
+}

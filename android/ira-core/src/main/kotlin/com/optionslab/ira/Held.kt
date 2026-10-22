@@ -27,6 +27,8 @@ object Held {
         val armLiveRecovering: Boolean = false,
         val passed: Boolean = false,
         val hero: Boolean = false,
+        /** 21 Oct: the FT3 forward test's paper ticket. */
+        val ft3: Boolean = false,
         val signal: Boolean = false,
         val night: Boolean = false,
         val vixDiv: Boolean = false,
@@ -45,6 +47,7 @@ object Held {
         "arms' live trades" to (s.armLive || s.armLiveRecovering),
         "passed-research arms" to s.passed,
         "Hero ticket" to s.hero,
+        "FT3" to s.ft3,
         "Telegram calls" to s.signal,
         "Night (R3)" to s.night,
         "VIX divergence" to s.vixDiv,

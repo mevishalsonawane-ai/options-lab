@@ -1,0 +1,31 @@
+id: r99-c-range
+title: 'R99 C: first break of the 09:00-10:00 / 17:00-18:30 range (GOLDM options)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R99_GOLD_OBUY.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): GOLDM options_rolling_1m MONTH book (near future +
+  ATM-3..+3 real 1-minute prints) to 19 Oct 2026; R96 book loader'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (locked; R99 read it once, for the round-2 E near-miss only)
+instruments:
+- GOLD
+hypothesis: The first break of the morning or US-pre-market range, held for a 1-2x range target, earns after costs and passes
+  the R99 gates.
+features:
+- 'signal source: the GOLDM future (minute closes); the option''s own price is never a signal; only the -40% hard premium
+  stop'
+model_or_rule: buy ATM / 1-ITM in the break direction; T = k x range (k 1, 2), stop T/2; out at the square-off
+settings: research/hunt/r99_gold_obuy/study.py, sim.py
+prereg: research/hunt/r99_gold_obuy/PREREG.md
+variants_tried: 8
+results:
+  summary: '8 variants, 5 net <= 0, 0 passed the cheap gates. Best: C C1 09:00-10:00 | T 1x range | ATM: 124 trades, win 32%,
+    net Rs 40,034 (2x -Rs 3,847), gross Rs 95,207, folds 2/4, worst month -Rs 16,879, max DD -Rs 41,263, w/o top 3 -Rs 74,674.
+    round 1 SPA p 0.715 (104). Not found.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before each fill (R85 strict), 2x on model-priced
+    exits; every gate also at 2x spreads; 1 lot
+holdout_read: false
+verdict: rejected
+notes: The only round-1 family positive before costs (median hold 82 min, option 0.57 x the future); puts +Rs 43,617 (63),
+  calls -Rs 3,584 (61). It suggested round 2.

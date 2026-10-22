@@ -1,0 +1,83 @@
+{
+ "same": 470,
+ "table": [
+  {
+   "version": "app (LIMIT, 3-minute window, out 15:05)",
+   "signals": 478,
+   "unfilled": 0,
+   "tickets": 478,
+   "win": "16.3%",
+   "mean Rs": "1,805",
+   "total Rs": "862,909",
+   "w/o 5 best days": "293",
+   "years > 0": "4/6",
+   "2021": "-19,603",
+   "2022": "309,889",
+   "2023": "226,439",
+   "2024": "443,221",
+   "2025": "-175,093",
+   "2026": "78,056"
+  },
+  {
+   "version": "app, filled a bar later (feed lag)",
+   "signals": 478,
+   "unfilled": 5,
+   "tickets": 473,
+   "win": "16.7%",
+   "mean Rs": "1,579",
+   "total Rs": "747,048",
+   "w/o 5 best days": "62",
+   "years > 0": "4/6",
+   "2021": "-15,515",
+   "2022": "306,840",
+   "2023": "221,078",
+   "2024": "316,512",
+   "2025": "-165,098",
+   "2026": "83,231"
+  },
+  {
+   "version": "research (vendor IV, R98 rows, held to 15:20)",
+   "signals": 474,
+   "unfilled": 0,
+   "tickets": 474,
+   "win": "17.5%",
+   "mean Rs": "2,571",
+   "total Rs": "1,218,886",
+   "w/o 5 best days": "1,032",
+   "years > 0": "4/6",
+   "2021": "-29,498",
+   "2022": "366,542",
+   "2023": "487,114",
+   "2024": "367,437",
+   "2025": "-93,223",
+   "2026": "120,516"
+  }
+ ],
+ "by_index": [
+  {
+   "index": "BANKNIFTY",
+   "tickets": 9,
+   "mean Rs": "6,748"
+  },
+  {
+   "index": "FINNIFTY",
+   "tickets": 124,
+   "mean Rs": "3,941"
+  },
+  {
+   "index": "MIDCPNIFTY",
+   "tickets": 92,
+   "mean Rs": "-108"
+  },
+  {
+   "index": "NIFTY",
+   "tickets": 236,
+   "mean Rs": "999"
+  },
+  {
+   "index": "SENSEX",
+   "tickets": 17,
+   "mean Rs": "5,162"
+  }
+ ]
+}

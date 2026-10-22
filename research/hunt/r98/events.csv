@@ -1,0 +1,144 @@
+category,event_date,event_time,session,source
+RBI,2021-08-06,10:00,2021-08-06,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=51350
+RBI,2021-10-08,10:00,2021-10-08,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=51350
+RBI,2021-12-08,10:00,2021-12-08,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=51350
+RBI,2022-02-10,10:00,2022-02-10,rescheduled from Feb 7-9 (Maharashtra holiday): https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=53228
+RBI,2022-04-08,10:00,2022-04-08,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=53486
+RBI,2022-06-08,10:00,2022-06-08,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=53486
+RBI,2022-08-05,10:00,2022-08-05,"rescheduled from Aug 2-4 to Aug 3-5 (RBI, 21 Jul 2022; resolution 'today (August 5, 2022)')"
+RBI,2022-09-30,10:00,2022-09-30,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=53486
+RBI,2022-12-07,10:00,2022-12-07,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=53486
+RBI,2023-02-08,10:00,2023-02-08,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=53486
+RBI,2023-04-06,10:00,2023-04-06,https://rbi.org.in/scripts/BS_PressReleaseDisplay.aspx?prid=55410
+RBI,2023-06-08,10:00,2023-06-08,https://rbi.org.in/scripts/BS_PressReleaseDisplay.aspx?prid=55410
+RBI,2023-08-10,10:00,2023-08-10,https://rbi.org.in/scripts/BS_PressReleaseDisplay.aspx?prid=55410
+RBI,2023-10-06,10:00,2023-10-06,https://rbi.org.in/scripts/BS_PressReleaseDisplay.aspx?prid=55410
+RBI,2023-12-08,10:00,2023-12-08,https://rbi.org.in/scripts/BS_PressReleaseDisplay.aspx?prid=55410
+RBI,2024-02-08,10:00,2024-02-08,https://rbi.org.in/scripts/BS_PressReleaseDisplay.aspx?prid=55410
+RBI,2024-04-05,10:00,2024-04-05,https://website.rbi.org.in/web/rbi/-/press-releases/meeting-schedule-of-the-monetary-policy-committee-for-2024-2025
+RBI,2024-06-07,10:00,2024-06-07,https://website.rbi.org.in/web/rbi/-/press-releases/meeting-schedule-of-the-monetary-policy-committee-for-2024-2025
+RBI,2024-08-08,10:00,2024-08-08,https://website.rbi.org.in/web/rbi/-/press-releases/meeting-schedule-of-the-monetary-policy-committee-for-2024-2025
+RBI,2024-10-09,10:00,2024-10-09,https://website.rbi.org.in/web/rbi/-/press-releases/meeting-schedule-of-the-monetary-policy-committee-for-2024-2025
+RBI,2024-12-06,10:00,2024-12-06,https://website.rbi.org.in/web/rbi/-/press-releases/meeting-schedule-of-the-monetary-policy-committee-for-2024-2025
+RBI,2025-02-07,10:00,2025-02-07,https://website.rbi.org.in/web/rbi/-/press-releases/meeting-schedule-of-the-monetary-policy-committee-for-2024-2025
+RBI,2025-04-09,10:00,2025-04-09,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=60062
+RBI,2025-06-06,10:00,2025-06-06,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=60062
+RBI,2025-08-06,10:00,2025-08-06,"held Aug 4-6 (resolution of 6 Aug 2025, RBI Bulletin Aug 2025: https://www.rbi.org.in/Scripts/BS_ViewBulletin.aspx?Id=23576)"
+RBI,2025-10-01,10:00,2025-10-01,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=60062
+RBI,2025-12-05,10:00,2025-12-05,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=60062
+RBI,2026-02-06,10:00,2026-02-06,https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=60062
+RBI,2026-04-08,10:00,2026-04-08,https://www.rbi.org.in/scripts/annualpolicy.aspx
+RBI,2026-06-05,10:00,2026-06-05,https://www.rbi.org.in/scripts/annualpolicy.aspx
+RBI,2026-08-05,10:00,2026-08-05,https://www.rbi.org.in/scripts/annualpolicy.aspx
+RBI,2026-10-07,10:00,2026-10-07,https://www.rbi.org.in/scripts/annualpolicy.aspx
+BUDGET,2022-02-01,11:00,2022-02-01,https://www.indiabudget.gov.in/ (Union Budget speeches); 2025-02-01 Saturday and 2026-02-01 Sunday special sessions: https://www.business-standard.com/budget/news/budget-2026-bse-nse-trading-session-sunday-february-1-time-126011601035_1.html
+BUDGET,2023-02-01,11:00,2023-02-01,https://www.indiabudget.gov.in/ (Union Budget speeches); 2025-02-01 Saturday and 2026-02-01 Sunday special sessions: https://www.business-standard.com/budget/news/budget-2026-bse-nse-trading-session-sunday-february-1-time-126011601035_1.html
+BUDGET,2024-02-01,11:00,2024-02-01,https://www.indiabudget.gov.in/ (Union Budget speeches); 2025-02-01 Saturday and 2026-02-01 Sunday special sessions: https://www.business-standard.com/budget/news/budget-2026-bse-nse-trading-session-sunday-february-1-time-126011601035_1.html
+BUDGET,2024-07-23,11:00,2024-07-23,https://www.indiabudget.gov.in/ (Union Budget speeches); 2025-02-01 Saturday and 2026-02-01 Sunday special sessions: https://www.business-standard.com/budget/news/budget-2026-bse-nse-trading-session-sunday-february-1-time-126011601035_1.html
+BUDGET,2025-02-01,11:00,2025-02-01,https://www.indiabudget.gov.in/ (Union Budget speeches); 2025-02-01 Saturday and 2026-02-01 Sunday special sessions: https://www.business-standard.com/budget/news/budget-2026-bse-nse-trading-session-sunday-february-1-time-126011601035_1.html
+BUDGET,2026-02-01,11:00,2026-02-01,https://www.indiabudget.gov.in/ (Union Budget speeches); 2025-02-01 Saturday and 2026-02-01 Sunday special sessions: https://www.business-standard.com/budget/news/budget-2026-bse-nse-trading-session-sunday-february-1-time-126011601035_1.html
+ELECTION,2024-06-03,first session after the 1 Jun 2024 exit polls,2024-06-03,https://results.eci.gov.in/ (counting on 4 June 2024)
+ELECTION,2024-06-04,Lok Sabha 2024 result day,2024-06-04,https://results.eci.gov.in/ (counting on 4 June 2024)
+FOMC,2021-09-22,14:00 ET (23:30 / 00:30 IST),2021-09-23,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2021-11-03,14:00 ET (23:30 / 00:30 IST),2021-11-04,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2021-12-15,14:00 ET (23:30 / 00:30 IST),2021-12-16,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2022-01-26,14:00 ET (23:30 / 00:30 IST),2022-01-27,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2022-03-16,14:00 ET (23:30 / 00:30 IST),2022-03-17,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2022-05-04,14:00 ET (23:30 / 00:30 IST),2022-05-05,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2022-06-15,14:00 ET (23:30 / 00:30 IST),2022-06-16,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2022-07-27,14:00 ET (23:30 / 00:30 IST),2022-07-28,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2022-09-21,14:00 ET (23:30 / 00:30 IST),2022-09-22,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2022-11-02,14:00 ET (23:30 / 00:30 IST),2022-11-03,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2022-12-14,14:00 ET (23:30 / 00:30 IST),2022-12-15,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2023-02-01,14:00 ET (23:30 / 00:30 IST),2023-02-02,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2023-03-22,14:00 ET (23:30 / 00:30 IST),2023-03-23,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2023-05-03,14:00 ET (23:30 / 00:30 IST),2023-05-04,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2023-06-14,14:00 ET (23:30 / 00:30 IST),2023-06-15,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2023-07-26,14:00 ET (23:30 / 00:30 IST),2023-07-27,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2023-09-20,14:00 ET (23:30 / 00:30 IST),2023-09-21,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2023-11-01,14:00 ET (23:30 / 00:30 IST),2023-11-02,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2023-12-13,14:00 ET (23:30 / 00:30 IST),2023-12-14,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2024-01-31,14:00 ET (23:30 / 00:30 IST),2024-02-01,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2024-03-20,14:00 ET (23:30 / 00:30 IST),2024-03-21,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2024-05-01,14:00 ET (23:30 / 00:30 IST),2024-05-02,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2024-06-12,14:00 ET (23:30 / 00:30 IST),2024-06-13,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2024-07-31,14:00 ET (23:30 / 00:30 IST),2024-08-01,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2024-09-18,14:00 ET (23:30 / 00:30 IST),2024-09-19,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2024-11-07,14:00 ET (23:30 / 00:30 IST),2024-11-08,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2024-12-18,14:00 ET (23:30 / 00:30 IST),2024-12-19,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2025-01-29,14:00 ET (23:30 / 00:30 IST),2025-01-30,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2025-03-19,14:00 ET (23:30 / 00:30 IST),2025-03-20,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2025-05-07,14:00 ET (23:30 / 00:30 IST),2025-05-08,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2025-06-18,14:00 ET (23:30 / 00:30 IST),2025-06-19,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2025-07-30,14:00 ET (23:30 / 00:30 IST),2025-07-31,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2025-09-17,14:00 ET (23:30 / 00:30 IST),2025-09-18,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2025-10-29,14:00 ET (23:30 / 00:30 IST),2025-10-30,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2025-12-10,14:00 ET (23:30 / 00:30 IST),2025-12-11,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2026-01-28,14:00 ET (23:30 / 00:30 IST),2026-01-29,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2026-03-18,14:00 ET (23:30 / 00:30 IST),2026-03-19,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2026-04-29,14:00 ET (23:30 / 00:30 IST),2026-04-30,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2026-06-17,14:00 ET (23:30 / 00:30 IST),2026-06-18,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2026-07-29,14:00 ET (23:30 / 00:30 IST),2026-07-30,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+FOMC,2026-09-16,14:00 ET (23:30 / 00:30 IST),2026-09-17,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+USCPI,2021-08-11,08:30 ET (18:00 / 19:00 IST),2021-08-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2021-09-14,08:30 ET (18:00 / 19:00 IST),2021-09-15,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2021-10-13,08:30 ET (18:00 / 19:00 IST),2021-10-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2021-11-10,08:30 ET (18:00 / 19:00 IST),2021-11-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2021-12-10,08:30 ET (18:00 / 19:00 IST),2021-12-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-01-12,08:30 ET (18:00 / 19:00 IST),2022-01-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-02-10,08:30 ET (18:00 / 19:00 IST),2022-02-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-03-10,08:30 ET (18:00 / 19:00 IST),2022-03-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-04-12,08:30 ET (18:00 / 19:00 IST),2022-04-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-05-11,08:30 ET (18:00 / 19:00 IST),2022-05-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-06-10,08:30 ET (18:00 / 19:00 IST),2022-06-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-07-13,08:30 ET (18:00 / 19:00 IST),2022-07-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-08-10,08:30 ET (18:00 / 19:00 IST),2022-08-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-09-13,08:30 ET (18:00 / 19:00 IST),2022-09-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-10-13,08:30 ET (18:00 / 19:00 IST),2022-10-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-11-10,08:30 ET (18:00 / 19:00 IST),2022-11-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2022-12-13,08:30 ET (18:00 / 19:00 IST),2022-12-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-01-12,08:30 ET (18:00 / 19:00 IST),2023-01-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-02-14,08:30 ET (18:00 / 19:00 IST),2023-02-15,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-03-14,08:30 ET (18:00 / 19:00 IST),2023-03-15,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-04-12,08:30 ET (18:00 / 19:00 IST),2023-04-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-05-10,08:30 ET (18:00 / 19:00 IST),2023-05-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-06-13,08:30 ET (18:00 / 19:00 IST),2023-06-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-07-12,08:30 ET (18:00 / 19:00 IST),2023-07-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-08-10,08:30 ET (18:00 / 19:00 IST),2023-08-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-09-13,08:30 ET (18:00 / 19:00 IST),2023-09-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-10-12,08:30 ET (18:00 / 19:00 IST),2023-10-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-11-14,08:30 ET (18:00 / 19:00 IST),2023-11-15,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2023-12-12,08:30 ET (18:00 / 19:00 IST),2023-12-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-01-11,08:30 ET (18:00 / 19:00 IST),2024-01-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-02-13,08:30 ET (18:00 / 19:00 IST),2024-02-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-03-12,08:30 ET (18:00 / 19:00 IST),2024-03-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-04-10,08:30 ET (18:00 / 19:00 IST),2024-04-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-05-15,08:30 ET (18:00 / 19:00 IST),2024-05-16,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-06-12,08:30 ET (18:00 / 19:00 IST),2024-06-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-07-11,08:30 ET (18:00 / 19:00 IST),2024-07-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-08-14,08:30 ET (18:00 / 19:00 IST),2024-08-16,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-09-11,08:30 ET (18:00 / 19:00 IST),2024-09-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-10-10,08:30 ET (18:00 / 19:00 IST),2024-10-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-11-13,08:30 ET (18:00 / 19:00 IST),2024-11-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2024-12-11,08:30 ET (18:00 / 19:00 IST),2024-12-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-01-15,08:30 ET (18:00 / 19:00 IST),2025-01-16,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-02-12,08:30 ET (18:00 / 19:00 IST),2025-02-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-03-12,08:30 ET (18:00 / 19:00 IST),2025-03-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-04-10,08:30 ET (18:00 / 19:00 IST),2025-04-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-05-13,08:30 ET (18:00 / 19:00 IST),2025-05-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-06-11,08:30 ET (18:00 / 19:00 IST),2025-06-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-07-15,08:30 ET (18:00 / 19:00 IST),2025-07-16,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-08-12,08:30 ET (18:00 / 19:00 IST),2025-08-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-09-11,08:30 ET (18:00 / 19:00 IST),2025-09-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-10-24,08:30 ET (18:00 / 19:00 IST),2025-10-27,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2025-12-18,08:30 ET (18:00 / 19:00 IST),2025-12-19,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-01-13,08:30 ET (18:00 / 19:00 IST),2026-01-14,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-02-13,08:30 ET (18:00 / 19:00 IST),2026-02-16,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-03-11,08:30 ET (18:00 / 19:00 IST),2026-03-12,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-04-10,08:30 ET (18:00 / 19:00 IST),2026-04-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-05-12,08:30 ET (18:00 / 19:00 IST),2026-05-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-06-10,08:30 ET (18:00 / 19:00 IST),2026-06-11,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-07-14,08:30 ET (18:00 / 19:00 IST),2026-07-15,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-08-12,08:30 ET (18:00 / 19:00 IST),2026-08-13,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-09-11,08:30 ET (18:00 / 19:00 IST),2026-09-15,https://www.bls.gov/bls/news-release/cpi.htm
+USCPI,2026-10-14,08:30 ET (18:00 / 19:00 IST),2026-10-15,https://www.bls.gov/bls/news-release/cpi.htm
