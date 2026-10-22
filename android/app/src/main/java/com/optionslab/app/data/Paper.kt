@@ -882,7 +882,8 @@ object Paper {
         // same check is made again inside the book's lock below, with the place, where it counts.
         if (auto != null && action.equals("BUY", true) && runCatching { opens(c.symbol, action) }.getOrDefault(false)) {
             val d = com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name)
-            val why = d?.let { capCheck(book(), it) }
+            // 22 Oct, merge review: with its owner, so R72's kept place refuses here too, before any price read.
+            val why = d?.let { capCheck(book(), it, auto) }
             // 19 Oct review: while this entry could also be mirrored live, the cap only logs (a refusal here would skip the live
             // mirror too); the live door applies the cap to the live order itself.
             if (d != null && why != null && ExposureCapHost.liveMirrorPossible(mirror)) {
@@ -930,7 +931,7 @@ object Paper {
             val b0 = book()
             // The cap asked inside the book's lock, with the place: the first entry to reach it is the one that goes (two arms
             // on the same bar can never both take the last place). Memory only.
-            if (capDir != null) capCheck(b0, capDir)?.let { why -> return@locked Result(false, why, emptyList(), capped = true) }
+            if (capDir != null) capCheck(b0, capDir, auto)?.let { why -> return@locked Result(false, why, emptyList(), capped = true) }
             val b = if (b0.contracts[c.symbol] == c) b0 else b0.copy(contracts = b0.contracts + (c.symbol to c))
             val out = engine(b.capital, b.contracts).place(b.state,
                 OrderRequest(c.symbol, c.exchange, action, lots * c.lotSize, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
@@ -955,9 +956,11 @@ object Paper {
      * from [b] itself: its fills first in, first out, what it holds, and its working automatic BUY orders. Memory only; called
      * under the book's lock. A failure to judge lets the entry go (the cap only ever refuses).
      */
-    private fun capCheck(b: Book, dir: Int): String? = runCatching {
+    private fun capCheck(b: Book, dir: Int, owner: String? = null): String? = runCatching {
         val max = ExposureCapHost.paperMax() ?: return@runCatching null
-        com.optionslab.ira.SameDirectionCap.refusal(capOpen(b), dir, max)
+        // 22 Oct (Boss: "reserve R72's place"): at R72 Breadth Donchian's bar close the last place each way is kept for it.
+        val kept = runCatching { PassedArmsHost.placeKeptFor(Market.now().toLocalTime()) }.getOrNull()
+        com.optionslab.ira.SameDirectionCap.refusal(capOpen(b), dir, max, owner, kept)
     }.getOrNull()
 
     /** The automatic index-option entries open in [b] ([com.optionslab.ira.SameDirectionCap.openEntries]). */

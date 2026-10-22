@@ -163,8 +163,13 @@ class HeroTicketArmTest : RobolectricTest() {
         val off = Autopilot.apply(AutoChange.inverse(on, "undone by you"), false)
         assertEquals("${HeroTicketRules.LABEL} off.", off)
         assertFalse(view().armed)
+        // 22 Oct: the diary says which door switched it (the Undo here; Boss's row below).
+        assertTrue(view().log.toString(), view().log.last().endsWith("switched off - by the Undo in Autopilot's change log"))
         assertTrue(Autopilot.apply(on, false)!!.contains("paper only"))
         assertTrue(view().armed)
+        assertTrue(view().log.last(), view().log.last().endsWith("- by the Undo in Autopilot's change log"))
+        runBlocking { HeroTicketArm.setArmed(false) }
+        assertTrue(view().log.last(), view().log.last().endsWith("switched off - by you, from its row on Home"))
     }
 
     // ---- a day of trading: paper only, its own record --------------------------------------------------------------------
@@ -315,6 +320,11 @@ class HeroTicketArmTest : RobolectricTest() {
             assertTrue(Autopilot.undo(e.id).contains("The leg sold stays sold"))
             assertFalse(TrendWatchHost.switches().acts(com.optionslab.engine.trend.TrendWatch.Source.HERO_TICKET))
         }
+        // 22 Oct ("switched off" at 13:02 right after the Trend watch sold both tickets): neither the sale nor its Undo ever switches
+        // the arm itself off; the later passes leave it on.
+        at(LocalTime.of(12, 53)); runBlocking { HeroTicketArm.manageOnly(); HeroTicketArm.tick() }
+        assertTrue("the arm stays on", HeroTicketArm.view.value.armed)
+        assertTrue(HeroTicketArm.view.value.log.toString(), HeroTicketArm.view.value.log.none { "switched off" in it })
         TrendWatchHost.resetForTest()
     }
 

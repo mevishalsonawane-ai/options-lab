@@ -23,6 +23,8 @@ object LocalCandles {
         val index = (Upstox.INDEX_KEYS.entries + com.optionslab.engine.orb.LiquidityRules.INDEX_KEYS.entries)
             .firstOrNull { it.value == feedKey }?.key
         if (index != null) return@runCatching Broker.indexToken(index)
+        // 22 Oct: SENSEX (BSE's index, R51 / R72 read it) too - it was never followed, so its minutes were never built locally.
+        ChartFeed.EXTRA_INDICES.entries.firstOrNull { it.value == feedKey }?.key?.let { return@runCatching Broker.indexToken(it) }
         if (feedKey.startsWith("MCX_FO|")) return@runCatching McxMarket.cached().firstOrNull { it.upstoxKey == feedKey }?.token?.takeIf { it > 0 }
         null
     }.getOrNull()

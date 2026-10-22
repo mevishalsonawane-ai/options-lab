@@ -9,6 +9,7 @@ import com.optionslab.ira.MemoryPlan
 import com.optionslab.ira.StartOrder
 import com.optionslab.ira.LessonsBundle
 import com.optionslab.ira.SharedKnowledge
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -76,7 +77,7 @@ object SharedKnowledgeHost {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        if (enabled()) background.launch { runCatching { afterStart() } }
+        if (enabled()) { starting = true; background.launch { runCatching { afterStart() } } }
     }
 
     /**
@@ -93,11 +94,33 @@ object SharedKnowledgeHost {
      * runs after the close). Answers that need it before then say they are still loading; nothing waits on it.
      */
     internal suspend fun afterStart() {
-        PositionsFirst.awaitPositions()
-        PositionsFirst.awaitStream()
-        while (!loadNow()) kotlinx.coroutines.delay(60_000L)
-        refresh()
-        PositionsFirst.order.done(StartOrder.Step.KNOWLEDGE, android.os.SystemClock.uptimeMillis())
+        try {
+            // 22 Oct (the overnight kills): not at a start in the background (an hourly night job) - only once the app's screen
+            // or the market watch starts, or a job asks for it ([awaitFirstBuild]); see [StartGate].
+            StartGate.await()
+            PositionsFirst.awaitPositions()
+            PositionsFirst.awaitStream()
+            while (!loadNow()) kotlinx.coroutines.delay(60_000L)
+            refresh()
+            PositionsFirst.order.done(StartOrder.Step.KNOWLEDGE, android.os.SystemClock.uptimeMillis())
+        } finally { firstBuilt.complete(Unit) }
+    }
+
+    /** The first build of this process ended (built or failed). */
+    @Volatile private var firstBuilt = CompletableDeferred<Unit>()
+    /** This process's start launched the first build ([init]; never in the unit tests' app, which builds by hand). */
+    @Volatile private var starting = false
+
+    /**
+     * 22 Oct (the overnight kills): a night job about to read [snapshot] (the strategy forge, the market study, the order review).
+     * At a start in the background the first build waits ([StartGate]): it is asked for now; and the job waits for it (built
+     * or failed) at most [maxMs] - then goes on with what there is ([SharedKnowledge.EMPTY]: no opinion), as before. At once
+     * when the build is done, or when no start launched one (the unit tests' app). A worker thread only.
+     */
+    suspend fun awaitFirstBuild(reason: String, maxMs: Long = 60_000L) {
+        if (!enabled() || !starting || firstBuilt.isCompleted) return
+        StartGate.open(reason)
+        kotlinx.coroutines.withTimeoutOrNull(maxMs) { firstBuilt.await() }
     }
 
     private fun loadNow(): Boolean {
@@ -320,5 +343,11 @@ object SharedKnowledgeHost {
     internal fun setForTest(s: SharedKnowledge.Snapshot) { current = s; tallies.clear(); nightOf = null; shadowKept = null; publish() }
 
     /** TEST ONLY: as a fresh start. */
-    internal fun resetForTest() { current = SharedKnowledge.EMPTY; tallies.clear(); nightOf = null; shadowKept = null; skippedIdeas.clear(); _lines.value = emptyList() }
+    internal fun resetForTest() {
+        current = SharedKnowledge.EMPTY; tallies.clear(); nightOf = null; shadowKept = null; skippedIdeas.clear(); _lines.value = emptyList()
+        firstBuilt = CompletableDeferred(); starting = false
+    }
+
+    /** TEST ONLY: as if this process's start had launched the first build ([init] without its thread). */
+    internal fun startingForTest() { starting = true }
 }

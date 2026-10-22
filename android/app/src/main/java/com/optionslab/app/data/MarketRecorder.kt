@@ -345,21 +345,35 @@ object MarketRecorder {
      * evening's retries while a participant file is missing, 23:30 on trading days; 08:00 on a closed day while one is
      * missing). Off: cancelled. No service: each firing hands one short run to WorkManager ([fired]).
      */
-    fun scheduleOffHours(context: Context) {
+    fun scheduleOffHours(context: Context, onlyChanged: Boolean = false) {
         if (com.optionslab.app.BuildConfig.GOLD) return
         val am = context.getSystemService(android.app.AlarmManager::class.java) ?: return
+        val at = if (!on) com.optionslab.ira.NightStart.OFF else {
+            val now = now().toLocalDateTime()
+            RecorderFeeds.nextSlot(now, isTrading, oiPending(now)).atZone(MarketRecord.IST).toInstant().toEpochMilli()
+        }
+        // 22 Oct (the overnight kills): the app's start in the background leaves the alarm as it is when its slot is unchanged
+        // and Android still holds it ([com.optionslab.app.work.Jobs.scheduleAll]'s onlyChanged).
+        if (onlyChanged && !com.optionslab.app.work.AlarmMarks.needsArm(context, MARK, at) { alarmIntentIfAny(context) != null }) return
         val pi = alarmIntent(context)
         am.cancel(pi)
-        if (!on) return
-        val now = now().toLocalDateTime()
-        val at = RecorderFeeds.nextSlot(now, isTrading, oiPending(now)).atZone(MarketRecord.IST).toInstant().toEpochMilli()
+        if (at == com.optionslab.ira.NightStart.OFF) { com.optionslab.app.work.AlarmMarks.armed(context, MARK, at); return }
         try {
             if (com.optionslab.app.work.Jobs.canExact(context)) am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
             else am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
         } catch (_: SecurityException) {
             am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
         }
+        com.optionslab.app.work.AlarmMarks.armed(context, MARK, at)
     }
+
+    private const val MARK = "recorder.offhours"
+
+    /** [alarmIntent] only when Android still holds it (null: never made, or dropped by a force stop or a reboot). */
+    private fun alarmIntentIfAny(context: Context): android.app.PendingIntent? = android.app.PendingIntent.getBroadcast(
+        context, 196, android.content.Intent(context, com.optionslab.app.work.AlarmReceiver::class.java).setAction(ACTION),
+        android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE,
+    )
 
     /** The off-hours alarm fired: re-arm, then one short run in WorkManager (with a network; never two at once). */
     fun fired(context: Context) {

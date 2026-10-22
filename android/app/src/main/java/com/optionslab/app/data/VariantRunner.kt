@@ -514,6 +514,8 @@ object VariantRunner {
         val t0 = System.nanoTime()
         // 13 Oct (the shared knowledge): the plain form of an idea the research or the experiment log rejected is not tested again,
         // and the blocks are seeded from the findings (a prior beside their own record; the gates never read it).
+        // 22 Oct: at a start in the background the knowledge's first build waits for the app's use; the forge asks for it here.
+        SharedKnowledgeHost.awaitFirstBuild("the strategy forge")
         val sk = SharedKnowledgeHost.snapshot
         val prior = runCatching { com.optionslab.ira.SharedKnowledge.forgePrior(sk) }.getOrDefault(emptyMap())
         val avoid: (StrategyForge.Candidate) -> String? = { c ->

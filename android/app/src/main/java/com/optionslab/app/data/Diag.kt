@@ -28,9 +28,22 @@ object Diag {
     private val SECRETISH = Regex("[A-Za-z0-9_\\-+/=]{24,}")
     private val TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(com.optionslab.engine.IST)
 
+    /**
+     * 22 Oct (the 22 Oct file showed "‹redacted› by Liquidity 5m MIDCPNIFTY" and Liquidity's afternoon reasons as "‹redacted›"):
+     * an option or future's trading symbol (MIDCPNIFTY27OCT2613250PE is 24 characters) and a reason code of lowercase words and
+     * underscores are never a key, so they are kept. Anything else this long still is replaced.
+     */
+    private val TRADING_SYMBOL = Regex("[A-Z]{2,20}\\d{2}[A-Z]{3}\\d{2}(?:\\d+(?:\\.\\d+)?(?:CE|PE)|FUT)")
+    private val REASON_CODE = Regex("[a-z]+(?:_[a-z]+)+")
+    /** 22 Oct, review: a reason code is kept only when one of its words is a decision word (a passphrase of plain words is not). */
+    private val REASON_WORDS = setOf("no", "not", "after", "before", "outside", "entry", "entries", "window", "break", "liquidity", "room",
+        "square", "off", "flat", "refused", "skipped", "signal", "cap", "lock", "day", "time", "hours", "new", "now", "waiting", "closed",
+        "open", "expiry", "quote", "price", "stop", "target", "trail", "guard", "held", "holding", "missed")
+    private fun reasonCode(s: String): Boolean = REASON_CODE.matches(s) && s.split('_').any { it in REASON_WORDS }
+
     /** Anything that could be a key, token, secret or password is replaced; the rest is kept as said. */
     fun redact(s: String): String {
-        var out = SECRETISH.replace(s, "‹redacted›")
+        var out = SECRETISH.replace(s) { m -> if (TRADING_SYMBOL.matches(m.value) || reasonCode(m.value)) m.value else "‹redacted›" }
         // The account holder's name (Zerodha's welcome line) never reaches the report the owner shares.
         runCatching { Broker.userName }.getOrNull()?.takeIf { it.length >= 3 }?.let { out = out.replace(it, "‹name›", ignoreCase = true) }
         return out

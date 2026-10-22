@@ -101,6 +101,8 @@ internal object IraStudy {
         val events = ArrayList<Pair<String, String>>()
         // 13 Oct (the shared knowledge): the setups the research already settled are not counted again, and the ones that touch an
         // open question go first ([com.optionslab.ira.SharedKnowledge.studyPlan]). Before the knowledge is built: every setup, as before.
+        // 22 Oct: at a start in the background the knowledge's first build waits for the app's use; the study asks for it here.
+        com.optionslab.app.data.SharedKnowledgeHost.awaitFirstBuild("the market study")
         val plan = plan()
         if (plan.skipped.isNotEmpty() || plan.open.isNotEmpty()) com.optionslab.app.data.SharedKnowledgeHost.read("Market study",
             "the research's settled and open questions (${plan.skipped.size} setups skipped, ${plan.open.size} open questions first)")

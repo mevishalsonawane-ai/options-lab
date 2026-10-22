@@ -112,34 +112,61 @@ object Jobs {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    fun scheduleAll(context: Context) {
+    /**
+     * Every alarm and periodic job armed. 22 Oct (the overnight kills, "excessive binder traffic during cached"): [onlyChanged] -
+     * the app's own start, which an hourly night job may cause - leaves an alarm whose time is unchanged as it is ([AlarmMarks]);
+     * each one cost four calls into Android at every start. The 09:14 market watch's alarm and the dead-man check ([Heartbeat]) -
+     * they watch the open positions - are armed at every start as before; a boot, an app update, a settings change and the
+     * screen's first start arm everything.
+     */
+    fun scheduleAll(context: Context, onlyChanged: Boolean = false) {
         // IraGoldAlgo has one clock of its own and none of IraAlgo's NSE jobs.
         if (com.optionslab.app.BuildConfig.GOLD) { GoldAlarm.schedule(context); return }
         val s = AppSettings.load()
-        Kind.entries.forEach { schedule(context, it, s) }
+        Kind.entries.forEach { schedule(context, it, s, onlyChanged) }
         Heartbeat.schedule(context)
-        DailyReports.scheduleAll(context)
-        com.optionslab.app.ira.StudyWorker.schedule(context)
+        DailyReports.scheduleAll(context, onlyChanged)
         // The market recorder's off-hours alarm: GIFT Nifty before the open and at night, NSE's participant files after 18:30.
-        runCatching { com.optionslab.app.data.MarketRecorder.scheduleOffHours(context) }
+        runCatching { com.optionslab.app.data.MarketRecorder.scheduleOffHours(context, onlyChanged) }
+        // 22 Oct: the periodic jobs below are kept by WorkManager itself (KEEP: enqueuing again changes nothing); a start in the
+        // background enqueues them once a day only.
+        val day = runCatching { Market.today().toString() }.getOrNull()
+        if (onlyChanged && day != null && NightMarks.get(context, PERIODIC_DAY) == day) return
+        com.optionslab.app.ira.StudyWorker.schedule(context)
         // GitHub sync (13 Oct, TODO G1/G2): the evening upload (Wi-Fi and charging, after the MCX evening close, 15:45 without
         // MCX; G4) and its twice-daily check.
         runCatching { GitHubSyncWorker.schedule(context) }
+        if (day != null) NightMarks.put(context, PERIODIC_DAY, day)
     }
 
-    fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
+    /** The day the periodic jobs were last enqueued ([NightMarks]). */
+    private const val PERIODIC_DAY = "periodic.day"
+
+    fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load(), onlyChanged: Boolean = false) {
+        val at = if (enabled(k, s)) nextRun(k).toInstant().toEpochMilli() else com.optionslab.ira.NightStart.OFF
+        val mark = "job.${k.name}"
+        // 22 Oct: a start in the background leaves an alarm armed for the same time as it is (while Android still holds it) -
+        // never the 09:14 market watch's: it is armed at every start, as before (the open positions' watch; one alarm).
+        if (onlyChanged && k != Kind.LIVE && !AlarmMarks.needsArm(context, mark, at) { alarmIntentIfAny(context, k) != null }) return
         val am = context.getSystemService(AlarmManager::class.java)
         val pi = alarmIntent(context, k)
         am.cancel(pi)
-        if (!enabled(k, s)) return
-        val at = nextRun(k).toInstant().toEpochMilli()
+        if (at == com.optionslab.ira.NightStart.OFF) { AlarmMarks.armed(context, mark, at); return }
         try {
             if (canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
             else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         } catch (_: SecurityException) {
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         }
+        AlarmMarks.armed(context, mark, at)
     }
+
+    /** [alarmIntent] only when Android still holds it (null: never made, or dropped by a force stop or a reboot). */
+    private fun alarmIntentIfAny(context: Context, k: Kind): PendingIntent? = PendingIntent.getBroadcast(
+        context, 100 + k.ordinal,
+        Intent(context, AlarmReceiver::class.java).setAction("ol.job.${k.name}").putExtra(EXTRA_KIND, k.name),
+        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+    )
 
     /** The harvest in WorkManager: a silent low-importance notice while it runs, no "complete" notice. */
     fun enqueueHarvest(context: Context, session: java.time.LocalDate, manual: Boolean) {
@@ -161,6 +188,8 @@ object Jobs {
             .putExtra(EXTRA_SESSION, session.toString())
         try {
             ContextCompat.startForegroundService(context, i)
+            // 22 Oct: the market watch runs - the start-up's waiting heavy work may run too ([com.optionslab.app.data.StartGate]).
+            if (k == Kind.LIVE) com.optionslab.app.data.StartGate.open("the market watch")
         } catch (_: Exception) {
             // Not permitted from here (Android 12+ background start). Hand
             // the one-shot jobs to WorkManager; the watch cannot run that way.
@@ -194,6 +223,17 @@ object Jobs {
     /** [nseWatchDue] on [day] at [minute] (the clock given; NSE's calendar only). */
     internal fun nseWatchDueAt(day: java.time.LocalDate, minute: Int): Boolean =
         Market.isTradingDay(day) && minute in (Market.OPEN - 1)..Market.foClose(day)
+
+    /**
+     * NSE's hours as the running watch judges them at [minute] ([foClose]: F&O's close; [running]: a strategy run still open, asked
+     * only in the quarter-hour after the close). 22 Oct (the overnight kills): from 09:00, never from midnight - with no lower bound
+     * a watch still running at 00:00 of a trading day (an MCX evening look past midnight) counted NSE as open and stayed all night
+     * in its before-the-open loop. 09:00 is before the 09:14 start ([Kind.LIVE]) and its pre-open minutes.
+     */
+    internal inline fun nseHoursAt(minute: Int, foClose: Int, running: () -> Boolean): Boolean =
+        minute >= NSE_WATCH_FROM && (minute <= foClose || (minute <= foClose + 15 && running()))
+
+    internal const val NSE_WATCH_FROM = 9 * 60
 
     /**
      * [watchDue] for the main thread (ANR fix, 9 Oct): NSE's hours, else MCX's from memory only
@@ -507,13 +547,15 @@ object Tasks {
      * may be placing an order) and the pass goes on. [inOrder] (a test's pass), or no watch running: one after another in
      * the given order, exactly as before.
      */
-    internal suspend fun together(group: String, steps: List<com.optionslab.ira.Supervisor.Step>, waitMs: Long, inOrder: Boolean) {
+    // 22 Oct: [named] false - the stop lane ([StopLane]) runs beside the watch loop, so it never names (or clears) the loop's step.
+    internal suspend fun together(group: String, steps: List<com.optionslab.ira.Supervisor.Step>, waitMs: Long, inOrder: Boolean,
+                                  named: Boolean = true) {
         val sup = WatchWorkers.supervisor
         if (inOrder || sup == null) {
             for (st in steps) step(st.name) { st.body() }
             return
         }
-        Heartbeat.stepBegin("$group, side by side: " + steps.joinToString(", ") { it.name })
+        if (named) Heartbeat.stepBegin("$group, side by side: " + steps.joinToString(", ") { it.name })
         val t0 = System.currentTimeMillis()
         try {
             val late = sup.group(group, steps, waitMs)
@@ -524,7 +566,7 @@ object Tasks {
             }
         } finally {
             WatchWorkers.timed("$group (together)", System.currentTimeMillis() - t0)
-            Heartbeat.stepEnd()
+            if (named) Heartbeat.stepEnd()
         }
     }
 
@@ -1227,14 +1269,16 @@ class WatchService : Service() {
          * began) or [due] turns false - so nothing opened meanwhile waits longer for its first pass than before. [cadence] and
          * [due] read memory (and the settings vault's cached values), never the network. Returns the first cadence.
          */
+        // 22 Oct: timed from the pass's START ([startedAt]; it ran from the pass's end, so a 5 s pass came every 20 s and MCX's
+        // stops were looked at 20 s apart), at least a second after its end. Called without it: from now, as before.
         internal suspend fun mcxWait(cadence: () -> Long = { com.optionslab.app.data.McxMarket.watchCadenceMs() }, due: () -> Boolean,
-                                     now: () -> Long = System::currentTimeMillis): Long {
+                                     now: () -> Long = System::currentTimeMillis, startedAt: Long = now()): Long {
             val held = com.optionslab.ira.McxRest.HELD_MS
             val first = cadence()
             stepSec = (first / 1000).toInt()
             runCatching { BatteryMeter.meter.count(if (first <= held) com.optionslab.ira.LoopMeter.MCX_FAST else com.optionslab.ira.LoopMeter.MCX_SLOW) }
-            val end = now() + first
-            delay(held)
+            val end = startedAt + first
+            delay((startedAt + held - now()).coerceIn(com.optionslab.ira.StopCadence.LANE_REST_MS, held))
             while (now() < end && due() && cadence() > held) delay(minOf(held, end - now()).coerceAtLeast(1L))
             return first
         }
@@ -1573,20 +1617,24 @@ class WatchService : Service() {
         // stops, exits and bar-close entries at once ([com.optionslab.app.data.FastPath]); these passes stay as the safety net.
         com.optionslab.app.data.FastPath.start(this)
         try {
-            // 17 Oct: the same rule Session coverage judges gaps by ([com.optionslab.app.data.McxMarket.coverage]).
-            while (com.optionslab.ira.SessionCoverage.watchShouldRun(nseWindow()) { listOf(mcxCoverage()) }) {
-                try {
-                    watchPass(fired)
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Throwable) {
-                    // One bad pass (a Keystore or disk hiccup, even an Error) must not end the watch: note it and go on.
-                    // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
-                    Tasks.stepFailed(Heartbeat.busy, e)
-                    Heartbeat.stepEnd()
-                    runCatching { Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.") }
-                    delay(15_000)
+            // 22 Oct: the stop lane ([StopLane]) looks at the open positions' stops every 15 s on its own coroutine, beside the
+            // passes below and never after them (the full pass or a bar-close entry check held it back on 21 Oct). The passes
+            // say which market's look is due ([StopLane.Control.mode]); the day's normal end lets a look under way finish (a
+            // minute at most). This run's own switches: an old run ending late never stops a newer run's lane.
+            val lane = StopLane.Control()
+            kotlinx.coroutines.coroutineScope {
+                val me = this@WatchService
+                val laneJob = launch {
+                    StopLane.run(stop = { lane.ended }, mode = { lane.mode }, held = { m -> StopLane.heldFor(m, nseHeldSeen) },
+                        look = { m, t -> StopLane.look(me, m, t) }, mcxPassAt = { lane.mcxPassAt })
                 }
+                try {
+                    passes(fired, lane)
+                } finally {
+                    lane.mode = StopLane.Mode.OFF
+                    lane.ended = true
+                }
+                if (kotlinx.coroutines.withTimeoutOrNull(60_000L) { laneJob.join() } == null) laneJob.cancel()
             }
             // The day's end (not a stop): an arm still finishing an entry or an exit gets a minute before its worker ends.
             WatchWorkers.drain(workers)
@@ -1598,11 +1646,33 @@ class WatchService : Service() {
     }
 
     /**
+     * The watch's passes, one after another, while the watch should run (17 Oct: the same rule Session coverage judges gaps by).
+     * Each pass tells [lane] which market's stop look is due.
+     */
+    private suspend fun passes(fired: HashSet<String>, lane: StopLane.Control) {
+        while (com.optionslab.ira.SessionCoverage.watchShouldRun(nseWindow()) { listOf(mcxCoverage()) }) {
+            try {
+                watchPass(fired, lane)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                // One bad pass (a Keystore or disk hiccup, even an Error) must not end the watch: note it and go on.
+                // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
+                // 22 Oct: the stop lane keeps its looks meanwhile (the last pass's market).
+                Tasks.stepFailed(Heartbeat.busy, e)
+                Heartbeat.stepEnd()
+                runCatching { Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.") }
+                delay(15_000)
+            }
+        }
+    }
+
+    /**
      * NSE's part of the watch: F&O's hours (to 15:40 from 3 Aug 2026), and a quarter-hour past that close while a strategy
      * run is still open.
      */
-    private suspend fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.foClose() ||
-        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning())) || eveningLookDue() || mcxEveningLookDue()
+    private suspend fun nseWindow(): Boolean = Market.isTradingDay() && Jobs.nseHoursAt(Market.minuteNow(), Market.foClose()) {
+        com.optionslab.app.data.Strategies.anyRunning() } || eveningLookDue() || mcxEveningLookDue()
 
     /**
      * 20 Oct, enhancement round 2 (idea 3): up to half an hour past MCX's close (23:30, or 23:55 in US winter time; past midnight
@@ -1632,8 +1702,13 @@ class WatchService : Service() {
      * The 60 s wait is looked at every 15 s from what is already in memory, so a position or order opened meanwhile gets the
      * next full pass within 15 s, as before ([mcxWait]).
      */
-    private suspend fun mcxPass() {
+    private suspend fun mcxPass(lane: StopLane.Control) {
         val started = System.currentTimeMillis()
+        // 22 Oct: this pass looks at MCX's stops itself (paper fills, stops and targets, the sweep): its start is a look, and the
+        // stop lane looks only when the next pass is late (a slow Zerodha read in it, or a slow wait), 15 s after this start.
+        runCatching { com.optionslab.app.data.WatchClock.looked(held = StopLane.heldFor(StopLane.Mode.MCX, false), now = started) }
+        lane.mcxPassAt = started
+        lane.mode = StopLane.Mode.MCX
         Heartbeat.beat(this)
         val t = Tasks.mcxTick(this, AppSettings.load())
         // 18 Oct, review: a live MCX position kept as held with no Zerodha login to confirm it: Boss told once a day.
@@ -1641,7 +1716,7 @@ class WatchService : Service() {
         Tasks.publishWatch(Tasks.LiveState(true, t.title, -1f, System.currentTimeMillis()))
         show(t.title, t.lines.joinToString("\n"), t.progress, t.dest)
         // The wait also ends at NSE's open, so the first NSE pass is not held back by a 60 s MCX wait.
-        mcxWait(due = { mcxDue() && !(Market.isTradingDay() && Market.minuteNow() in Market.OPEN until Market.foClose()) })
+        mcxWait(due = { mcxDue() && !(Market.isTradingDay() && Market.minuteNow() in Market.OPEN until Market.foClose()) }, startedAt = started)
         if (Market.minuteNow() >= Market.foClose())
             runCatching { BatteryMeter.meter.add(com.optionslab.ira.LoopMeter.WATCH_EVENING, System.currentTimeMillis() - started) }
     }
@@ -1669,7 +1744,9 @@ class WatchService : Service() {
     @Volatile private var nseHeldSeen = false
 
     /** One pass of the watch loop and the wait until the next one. */
-    private suspend fun watchPass(fired: HashSet<String>) {
+    // 22 Oct: each branch tells the stop lane ([lane]) which market's look is due: NSE's while its session's passes run, MCX's
+    // while MCX's pass runs (mcxPass), none before the open, in the evening look or on a closed day (as before: no stop check there).
+    private suspend fun watchPass(fired: HashSet<String>, lane: StopLane.Control) {
         run {
             Heartbeat.beat(this)
             // Outside NSE's session (before its open, after its close, an NSE holiday): MCX's pass when it is due (9 Oct).
@@ -1682,7 +1759,8 @@ class WatchService : Service() {
             val nseTrading = Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose()
             if ((Market.minuteNow() > Market.foClose() && eveningLookDue() && !runCatching { com.optionslab.app.data.Strategies.anyRunning() }.getOrDefault(false)) ||
                 (mcxEveningLookDue() && !mcxDue() && !nseTrading)) {
-                if (mcxDue()) { mcxPass(); return }
+                if (mcxDue()) { mcxPass(lane); return }
+                lane.mode = StopLane.Mode.OFF
                 Heartbeat.stepBegin("evening stops and targets")
                 try { com.optionslab.app.data.Protections.tick() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                     Tasks.stepFailed("evening stops and targets", e)
@@ -1692,11 +1770,12 @@ class WatchService : Service() {
             }
             val nseOpen = nseWindow() && Market.minuteNow() >= Market.OPEN
             if (!nseOpen) {
-                if (mcxDue()) { mcxPass(); return }
+                if (mcxDue()) { mcxPass(lane); return }
                 // Past NSE's session (or an NSE holiday) with nothing due on MCX either: no NSE step runs; the loop ends next look.
-                if (!Market.isTradingDay() || Market.minuteNow() >= Market.OPEN) { delay(15_000); return }
+                if (!Market.isTradingDay() || Market.minuteNow() >= Market.OPEN) { lane.mode = StopLane.Mode.OFF; delay(15_000); return }
             }
             if (Market.minuteNow() < Market.OPEN) {
+                lane.mode = StopLane.Mode.OFF
                 stepSec = 30
                 show(Tasks.WATCH_TITLE, Tasks.WATCH_IDLE)
                 // Before the open: the recorder keeps the morning's news (its own scope, never awaited).
@@ -1706,8 +1785,10 @@ class WatchService : Service() {
             }
             // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
             // Jarvis's words-only checks run beside it in the service's scope, never awaited ([Tasks.watchTick]).
-            // The full pass looks at the stops too (its exits): its start is a look for the drift guard (idea 6).
-            runCatching { com.optionslab.app.data.WatchClock.looked(held = nseHeldSeen || com.optionslab.app.data.HeldNow.any()) }
+            // 22 Oct: NSE's stop looks are the stop lane's from here, beside this pass (it was looked at only after the pass ended,
+            // so a 20 s pass was a 20 s gap). The pass's start is no longer counted as a look by the drift guard: its stops come
+            // after its arms, so the guard now measures the lane's own looks.
+            lane.mode = StopLane.Mode.NSE
             val t = Tasks.watchTick(this, AppSettings.load(), fired, scope)
             Tasks.publishWatch(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
             show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress, t.dest)
@@ -1725,12 +1806,9 @@ class WatchService : Service() {
                 val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
                     com.optionslab.app.data.VixDivArm.view.value.armed || com.optionslab.app.data.HeroTicketArm.wantsPass() ||
                     com.optionslab.app.data.PassedArmsHost.wantsPass() || com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
-                // 20 Oct, enhancement round 1 (idea 6): while holding, the window ends 15 s after the last look at the stops STARTED
-                // ([WatchClock.windowEnd]); it ran from the end of the last check, so a 3 s check made the gap 18 s.
+                // While holding, this loop's own wait (the cards' refresh) follows the stop lane's looks ([WatchClock.windowEnd]:
+                // 15 s after the last look started). 22 Oct: the stops themselves are the lane's; nothing here holds them up.
                 val waitEnd = if (holding) com.optionslab.app.data.WatchClock.windowEnd() else next
-                // 18 Oct, review: while holding, a bar-close check in this window is followed straight by the stop check (it
-                // went back to the top and waited another 15 s, so the stops were looked at about 30 s apart at each bar close).
-                var barCloseRan = false
                 if (wake <= waitEnd && wake < next) {
                     delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
                     Heartbeat.stepBegin("bar-close entry check")
@@ -1760,12 +1838,12 @@ class WatchService : Service() {
                         runCatching { com.optionslab.app.data.SmartWorkers.ranByLane(listOf("Night (R3)", "VIX divergence")) }
                     } } finally { Heartbeat.stepEnd() }
                     Heartbeat.beat(this)
-                    if (!holding) continue
-                    barCloseRan = true
+                    // 22 Oct: back to the top whether holding or not (the stop lane looked at the stops meanwhile, on its own clock).
+                    continue
                 }
                 // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
-                if (barCloseRan) Unit else if (holding && streaming) {
+                if (holding && streaming) {
                     val until = waitEnd
                     // The cards are for the eye: on a low battery (not charging) they move less often (stops are not affected).
                     // 20 Oct, review: never waited past the 15 s window (a 6 s or 12 s step waited 18 s or 24 s before the stops).
@@ -1787,75 +1865,9 @@ class WatchService : Service() {
                         } finally { WatchWorkers.timed("safety-net round (total)", System.currentTimeMillis() - roundAt) }
                     }
                 }
-                if (holding) {
-                    Heartbeat.stepBegin("15-second stop check")
-                    val checkAt = System.currentTimeMillis()
-                    // The drift guard: the gap since the last look at the stops, counted and logged when over 16 s (never a wait).
-                    runCatching { com.optionslab.app.data.WatchClock.looked(held = true, now = checkAt) }
-                    // Each in its own try: a paper or ORB failure never skips the stops and targets.
-                    try { Tasks.safely {
-                        try {
-                            com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("15-second stop check: paper orders", e)
-                        }
-                        // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) first.
-                        try {
-                            com.optionslab.app.data.OrphanWatch.run(this)
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("15-second stop check: unwatched positions", e)
-                        }
-                        // The arms' exits side by side (10 Oct): ORB's (with Liquidity's index exits), and every money exit run
-                        // here too (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3) - the Pine scripts' stops and locks, Solo's exits,
-                        // Jarvis's own trades' profit-lock stop and exits. Each under its own lock, as in the full pass, so a
-                        // holding never has two sells in flight; each in its own try. Jarvis's words stay in the full pass.
-                        Tasks.together("15-second stop check", listOfNotNull(
-                            com.optionslab.ira.Supervisor.Step("15-second stop check: ORB arms") { com.optionslab.app.data.OrbArms.priceCheckOnly() },
-                            com.optionslab.ira.Supervisor.Step("15-second stop check: Pine scripts") { com.optionslab.app.data.PineAuto.watchOnly() },
-                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Solo") { com.optionslab.app.ira.IraSolo.manageOnly() } else null,
-                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
-                            // 16 Oct: the paper arms whose exits ran only in the minute lane (which needs the stream's ticks) and the
-                            // full pass (which waits behind their own entries' reads): their exits only, every 15 s while held.
-                            if (com.optionslab.app.data.PassedArmsHost.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.PASSED_ARMS}") { com.optionslab.app.data.PassedArmsHost.manageOnly() } else null,
-                            if (com.optionslab.app.data.HeroTicketArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.HERO_TICKET}") { com.optionslab.app.data.HeroTicketArm.manageOnly() } else null,
-                            if (com.optionslab.app.data.Ft3Arm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.FT3}") { com.optionslab.app.data.Ft3Arm.manageOnly() } else null,
-                            if (com.optionslab.app.data.SignalPaperArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.SIGNAL_PAPER}") { com.optionslab.app.data.SignalPaperArm.manageOnly() } else null,
-                            // 18 Oct: the paper strategies' live trades ([com.optionslab.app.data.ArmLive]): their Zerodha stops, the paper
-                            // exits they follow and the 15:15 square-off, every 15 s while held.
-                            if (com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch() } else null,
-                            // 18 Oct, review: the Strategy Module's open runs - their per-leg and basket stops, targets and trails
-                            // (no scheduled starts or square-offs: those stay in the full pass). Its leg stops were checked once a minute.
-                            if (com.optionslab.app.data.Strategies.runningHint) com.optionslab.ira.Supervisor.Step("15-second stop check: strategies") {
-                                val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(this@WatchService, 60_000))
-                                com.optionslab.app.data.Strategies.manageOnly(bad)
-                            } else null,
-                        ), WatchWorkers.EXITS_WAIT_MS, inOrder = false)
-                        // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the
-                        // bots' live stops, and the no-price failsafe (REST quotes; a loud warning after two minutes).
-                        try {
-                            com.optionslab.app.data.Sweeper.run(this)
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("15-second stop check: missed-lock sweep", e)
-                        }
-                        try {
-                            com.optionslab.app.data.Protections.tick()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("15-second stop check: stops and targets", e)
-                        }
-                    } } finally {
-                        WatchWorkers.timed("15-second stop check (total)", System.currentTimeMillis() - checkAt)
-                        Heartbeat.stepEnd()
-                    }
-                    runCatching { PositionCards.refresh(this) }
-                }
+                // 22 Oct: the 15-second stop check that ran here is the stop lane's now ([StopLane], beside this loop); the
+                // position cards are still refreshed here at the same pace.
+                if (holding) runCatching { PositionCards.refresh(this) }
                 Heartbeat.beat(this)
             }
         }

@@ -193,13 +193,6 @@ object IraHub {
 
     fun init(context: Context) {
         app = context.applicationContext
-        // Jarvis: the home-screen widget follows what Jarvis says and what waits for an answer.
-        if (com.optionslab.app.BuildConfig.JARVIS) scope.launch {
-            _state.collect { st ->
-                val key = (st.messages.lastOrNull { it.fromIra }?.text ?: "") + "|" + st.pending.joinToString()
-                if (key != widgetKey) { widgetKey = key; runCatching { com.optionslab.app.widget.JarvisWidget.refresh(context.applicationContext) } }
-            }
-        }
         IraModel.init(context)
         // The concept book (15 Oct) read once in the background, after the open positions are restored (they come first).
         scope.launch(Dispatchers.IO) { runCatching { com.optionslab.app.data.PositionsFirst.awaitPositions(); ConceptLibrary.load(context.applicationContext) } }
@@ -244,6 +237,16 @@ object IraHub {
             } finally {
                 synchronized(loadLock) { if (loaded === gate) _ready.value = true }
                 gate.complete(Unit)
+            }
+        }
+        // Jarvis: the home-screen widget follows what Jarvis says and what waits for an answer. 22 Oct (the overnight kills):
+        // drawn only once his memory is read (started after the read is marked as under way above) - every start drew it twice
+        // (two calls into Android each), the first time from the empty memory before the read.
+        if (com.optionslab.app.BuildConfig.JARVIS) scope.launch {
+            kotlinx.coroutines.flow.combine(_state, _ready) { st, ready -> if (ready) st else null }.collect { st ->
+                if (st == null) return@collect
+                val key = (st.messages.lastOrNull { it.fromIra }?.text ?: "") + "|" + st.pending.joinToString()
+                if (key != widgetKey) { widgetKey = key; runCatching { com.optionslab.app.widget.JarvisWidget.refresh(context.applicationContext) } }
             }
         }
         if (keeper == null) keeper = scope.launch {

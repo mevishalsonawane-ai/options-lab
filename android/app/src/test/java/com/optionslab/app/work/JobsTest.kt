@@ -314,6 +314,25 @@ class JobsTest : RobolectricTest() {
         assertTrue(Jobs.nseWatchDueAt(july, 15 * 60 + 30))
     }
 
+    /**
+     * 22 Oct (the overnight kills): the running watch's NSE hours start at 09:00, never at midnight - a watch still running at
+     * 00:00 of a trading day (an MCX evening look past midnight) no longer counts NSE as open and stays all night. The close, the
+     * quarter-hour for an open strategy run (asked only then) and the 09:14 start's pre-open minutes are as before.
+     */
+    @Test fun theRunningWatchsNseHoursStartAtNineNeverAtMidnight() {
+        val close = 15 * 60 + 40
+        var asked = 0
+        val running = { asked++; true }
+        for (m in listOf(0, 1, 2 * 60 + 43, 6 * 60, 8 * 60 + 59)) assertFalse("$m", Jobs.nseHoursAt(m, close) { asked++; true })
+        assertEquals("a strategy run is not asked at night", 0, asked)
+        for (m in listOf(9 * 60, 9 * 60 + 14, 9 * 60 + 15, 12 * 60, close)) assertTrue("$m", Jobs.nseHoursAt(m, close) { false })
+        assertTrue("an open run keeps it a quarter-hour", Jobs.nseHoursAt(close + 15, close, running))
+        assertFalse(Jobs.nseHoursAt(close + 1, close) { false })
+        assertFalse(Jobs.nseHoursAt(close + 16, close, running))
+        assertFalse(Jobs.nseHoursAt(23 * 60 + 59, close, running))
+        assertTrue(Jobs.NSE_WATCH_FROM < Jobs.Kind.LIVE.at.hour * 60 + Jobs.Kind.LIVE.at.minute)
+    }
+
     // ---- the watch service -------------------------------------------------------------------------
 
     @Test fun theWatchGoesForegroundAtOnceAndStopsCleanly() {
