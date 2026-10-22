@@ -320,6 +320,8 @@ def run(phase: str, arms=K.ARMS) -> dict:
             raise SystemExit("R101 final period already read once: " + K.FINAL_FLAG.read_text())
         K.RESULTS.mkdir(parents=True, exist_ok=True)
         K.FINAL_FLAG.write_text(datetime.now(timezone.utc).isoformat() + "\n")
+        import common as C
+        C.open_final()            # R51's own guard: final days are readable only from a final run
         lo, hi = K.FINAL_START, K.END
     else:
         lo, hi = K.START, K.DESIGN_END
