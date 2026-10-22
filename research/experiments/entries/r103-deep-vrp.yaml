@@ -1,0 +1,36 @@
+id: r103-deep-vrp
+title: 'R103 deep idea 1: sell only when implied volatility is rich against the index''s realised volatility (144 cells)'
+family: option-structure
+date: '2026-10-22'
+doc: research/HUNT_R103_DEEP_SELLING.md
+hypothesis: 'Pre-registered (research/hunt/r103_selling/PREREG_VRP.md): selling the straddle / strangle / condor at 09:20
+  only when IV / RV20 >= 1.0, 1.25 or 1.5 (IV = the ATM implied vol or India VIX at the entry minute; RV20 = the index''s
+  last 20 daily returns to the previous close) makes money, beats a random-subset twin, and holds in 2021-24 too. Signal source:
+  implied vs realised volatility as a context filter; entry at a fixed time on the index''s ATM strike.'
+data_version: as r103-deep-nifty-strangle, plus index_daily for RV20
+period:
+  design: 20 Nov 2024 - 14 Jul 2026 (A); 5 Aug 2021 - 19 Nov 2024 (B)
+  holdout: '15 Jul - 19 Oct 2026 (not read: no passer)'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- ATM implied volatility at entry
+- India VIX at entry
+- RV20 of the index to the previous close
+model_or_rule: 'r103vrp.py: 2 indices x 3 structures x 2 exits (combined stop; stop + 30/20 lock) x all / expiry days x 6
+  filters'
+settings: research/hunt/r103_selling/results/vrp_cells.csv
+prereg: research/hunt/r103_selling/PREREG_VRP.md
+variants_tried: 144
+results:
+  summary: '0 of 144 pass. Design A: 99 net > 0; the filter raised the net a trade over the unfiltered cell in 105 of 144;
+    27 beat the random-subset twin (p <= 0.05); only 3 have net > 0 with BH q <= 0.10. Design B: only 20 of 144 are net >
+    0 with >= 20 trades. Example: NIFTY straddle, combined stop, ATM IV / RV20 >= 1.0, all days: A 192 trades, 64% win, +Rs
+    115,619 (+Rs 602 a trade vs +Rs 225 unfiltered, twin p 0.042, q 0.24, worst month -Rs 13,400); B 373 trades, -Rs 38,672.
+    The filter adds value in 2024-26 and not in 2021-24.'
+  costs: as r103-deep
+holdout_read: false
+verdict: rejected
+notes: 'A regime-dependent effect: worth re-testing forward only if a reason is found why 2021-24 differed (small lots, both
+  indices weekly).'

@@ -289,6 +289,21 @@ variant with a win rate of at least 70% and a profit in both periods (10:15, com
   toss (binomial p <= 0.05, BH across the four), a profit, no month below -Rs 13k, and an average loss no more than 3x the
   average win. Nothing trades meanwhile.
 
+## Idea 1: sell only when options are expensive (pre-registered `PREREG_VRP.md`, 144 cells)
+
+Sell the straddle, strangle or condor at 09:20 only when the options' implied volatility (the ATM option's, or India
+VIX) is at least 1.0, 1.25 or 1.5 times the index's realised volatility over the last 20 sessions. Combined stop, with
+and without the 30/20 lock, all days and expiry days, both indices. `results/vrp_cells.csv`.
+
+- **0 of 144 pass.** The holdout was not read.
+- **In 2024-26 the filter is real.** It raised the profit a trade in 105 of 144 cells, and 27 beat a random choice of the
+  same number of days. Example: NIFTY straddle, combined stop, ATM IV at least the realised volatility: 192 trades, 64%
+  wins, +Rs 115,619, Rs 602 a trade against Rs 225 without the filter (twin p 0.04).
+- **In 2021-24 it is not.** That same cell lost -Rs 38,672 over 373 trades, worse a trade than without the filter. Only
+  20 of 144 cells made money in the earlier period, and only 3 cells survive the multiple-testing correction in 2024-26.
+- Verdict: rejected. The effect depends on the period; it would be worth a forward test only with a reason why 2021-24
+  behaved differently.
+
 ## Caveats, stated plainly
 
 1. **The lake keeps only ATM±10 strikes.** A leg that drifts out of that window has no price. The first run valued such
