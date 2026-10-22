@@ -68,7 +68,7 @@ object WhatsNew {
         Entry("2026-10-22-liquidity-exit-fixes", OCT22, "Liquidity exits keep working when one feed fails",
             "One index's failed candle read no longer stops the other Liquidity positions' exits. " +
                 "Its own positions still get their 20-minute time stop, their -15% stop and 15:10. " +
-                "After a restart or a long stall, a lock or trail now counts the highest price traded in the gap. " +
+                "On paper, after a restart or long stall, a lock or trail now counts the highest price in the gap. " +
                 "Research R100 tested seven ways to keep a big open profit on Liquidity, and none passed. " +
                 "Liquidity's paper and live rules stay as they were.",
             "Home → Dashboard → Strategies card → Liquidity 15+5 row; Copy diagnostics (Settings → Zerodha)"),

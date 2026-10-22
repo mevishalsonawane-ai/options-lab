@@ -472,5 +472,8 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
 - [ ] X4. Disarming Liquidity while a FINNIFTY or MIDCPNIFTY position is open drops that index from the stream; its
       exits then run on the slower candle feed.
 - [ ] X5. The per-bar diagnostics line shows the BANKNIFTY ORB's range and bar for every Liquidity book (display only).
+- [ ] X7. The gap read (a lock's or trail's best price after a restart or a stall longer than the stream keeps) is paper
+      only; a live laddered position still reads only the stream's last five minutes after a restart (its resting SL at
+      Zerodha is unaffected). Extend it to live once it has run on paper, with the read off the arms' lock.
 - [ ] X6. Boss's choice (R100): a paper-only "breakeven once +20%" switch, off by default, labelled "did not pass
       research, your choice" (about neutral on 1,238 trades). Build only on Boss's word.

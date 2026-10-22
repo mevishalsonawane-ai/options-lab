@@ -112,13 +112,24 @@ object ProfitLock {
     const val STREAM_GAP_MS: Long = 4 * 60_000L
 
     /**
-     * 22 Oct (R100 audit C): must this look also read the 1-minute candles' highs for the best price? True when more than
-     * [gapMs] passed since the position's last look ([lastLookMs]; null: none in this process, e.g. after a restart, then since
-     * its entry [entryMs]): the stream's kept prices no longer reach back that far, so a high in the gap (a restart, a stall)
-     * would be missed and a lock or trail it earned never set. A clock that stepped back (now before the reference) is no gap.
+     * 22 Oct (R100 audit C): must this look also read the 1-minute candles' highs for the best price? True when
+     *  - the position has had no look in this process ([lastLookMs] null) and was entered before this process began
+     *    watching ([watchFromMs]): a restart, whose stream holds only the ticks since it reconnected, however soon after
+     *    the entry it came; or
+     *  - more than [gapMs] passed since its last look (or, with none yet, since its entry [entryMs]): a stall longer than
+     *    the stream keeps prices.
+     * Else a high in the gap would be missed and a lock or trail it earned never set. A clock that stepped back (now before
+     * the reference) is no gap.
      */
-    fun needsCandles(lastLookMs: Long?, entryMs: Long, nowMs: Long, gapMs: Long = STREAM_GAP_MS): Boolean =
-        nowMs - (lastLookMs ?: entryMs) > gapMs
+    fun needsCandles(lastLookMs: Long?, entryMs: Long, nowMs: Long, watchFromMs: Long, gapMs: Long = STREAM_GAP_MS): Boolean =
+        (lastLookMs == null && entryMs < watchFromMs) || nowMs - (lastLookMs ?: entryMs) > gapMs
+
+    /** How often a gap's candle read that failed (or came too late) is tried again: once a minute. */
+    const val GAP_RETRY_MS: Long = 60_000L
+
+    /** May a gap's candle read be tried now ([lastTryMs]: the last try, null: none)? Once a [everyMs]; a clock that stepped back may. */
+    fun gapRetryDue(lastTryMs: Long?, nowMs: Long, everyMs: Long = GAP_RETRY_MS): Boolean =
+        lastTryMs == null || nowMs - lastTryMs >= everyMs || nowMs < lastTryMs
 
     /**
      * The stop resting for a laddered buy: the higher of its own stop ([base], -40; null: none) and the lock its best

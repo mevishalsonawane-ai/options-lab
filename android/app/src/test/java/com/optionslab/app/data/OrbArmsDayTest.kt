@@ -337,6 +337,63 @@ class OrbArmsDayTest : RobolectricTest() {
         assertTrue(arm().open != null)
     }
 
+    // ---- 22 Oct (R100 audit C): a restart mid-trade - the lock counts the high the stream never saw -----------------------
+
+    /** The open position's contract streams from now on (a new process's stream: only the ticks from now), at [last]. */
+    private fun streamsNow(symbol: String, last: Double): Long {
+        val token = 55_000_001L
+        Paper.tokenForTest(symbol, token)
+        KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(token, last, exchangeTime = System.currentTimeMillis() / 1000)))
+        return token
+    }
+
+    private fun ceReads() = upstox.requests.count { it.contains("ORBDAYCE") }
+
+    @Test fun afterARestartMidTradeTheLockCountsTheSpikeInTheGapOnce() {
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val p = arm().open!!
+        val be = com.optionslab.engine.orb.ProfitLock.onTick(p.entry + com.optionslab.engine.orb.ProfitLock.roundTripPerUnit(p.entry, p.qty))
+        // 10:36-10:44 the phone was off: the option spiked to +15 at 10:40 (past a quarter of the +40 target) and is +6 now.
+        upstox.minutes[ceKey] = listOf(FakeUpstox.Candle(LocalTime.of(10, 40), p.entry + 1, p.entry + 15, p.entry, p.entry + 6))
+        try {
+            OrbArms.forgetMemoryForTest(); Paper.forgetCandlesForTest()          // a new process
+            streamsNow(p.symbol, p.entry + 6)
+            tick(LocalTime.of(10, 45))
+            val held = arm().open!!
+            assertEquals("the gap's high counts", p.entry + 15, held.peak!!, 1e-6)
+            assertEquals("the resting stop moved up to breakeven after charges", be, held.stopTrigger!!, 1e-9)
+            // Read once: the next looks trust the stream again (no candle read every 15 s).
+            val reads = ceReads()
+            streamsNow(p.symbol, p.entry + 7)
+            tick(LocalTime.of(10, 46))
+            assertEquals(reads, ceReads())
+            assertTrue("held above the lock", arm().open != null)
+        } finally {
+            Paper.tokenForTest(p.symbol, null); KiteStream.resetForTest()
+        }
+    }
+
+    @Test fun theStreamsFastLookNeverReadsTheGapItLeavesItForTheRegularPass() {
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val p = arm().open!!
+        upstox.minutes[ceKey] = listOf(FakeUpstox.Candle(LocalTime.of(10, 40), p.entry + 1, p.entry + 15, p.entry, p.entry + 6))
+        try {
+            OrbArms.forgetMemoryForTest(); Paper.forgetCandlesForTest()
+            streamsNow(p.symbol, p.entry + 6)
+            at(LocalTime.of(10, 45))
+            val reads = ceReads()
+            runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) }
+            assertEquals("no network on the fast look", reads, ceReads())
+            assertTrue("the gap's high not counted yet", (arm().open!!.peak ?: p.entry) < p.entry + 15 - 1e-6)
+            tick(LocalTime.of(10, 45))                                              // the regular pass reads it
+            assertEquals(p.entry + 15, arm().open!!.peak!!, 1e-6)
+        } finally {
+            Paper.tokenForTest(p.symbol, null); KiteStream.resetForTest()
+        }
+    }
+
     @Test fun aSpikeInsideAMinuteEarnsTheRungFromItsHighAndThePaperStopFillsAtTheLock() {
         armOrb(LocalTime.of(9, 50))
         passes(LocalTime.of(9, 50), LocalTime.of(10, 35))

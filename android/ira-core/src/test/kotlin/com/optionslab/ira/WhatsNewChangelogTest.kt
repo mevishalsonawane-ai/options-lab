@@ -49,7 +49,7 @@ class WhatsNewChangelogTest {
         assertTrue(sentences.size <= 8, "${sentences.size}")
         for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
         for (t in listOf(x.what, x.title, x.where)) assertFalse(Regex("[a-z][A-Z]").containsMatchIn(t), t)
-        for (w in listOf("no longer stops the other Liquidity positions' exits", "20-minute time stop", "highest price traded in the gap",
+        for (w in listOf("no longer stops the other Liquidity positions' exits", "20-minute time stop", "On paper, after a restart or long stall", "highest price in the gap",
             "none passed", "stay as they were"))
             assertTrue(w in x.what, w)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)

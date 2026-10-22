@@ -1917,6 +1917,7 @@ object OrbArms {
 
     /** Resting stop, +40 target, 15:10 exit, the 15:15 backstop and the operator stop, for every open position. */
     private suspend fun priceCheck(b: Book, t: LocalDateTime, stream: Boolean = false, regular: Boolean = true) {
+        if (watchFrom == null) watchFrom = t                                        // this process's first check ([bestSince])
         val stopped = Strategies.stoppedToday()
         val liveOpen = b.positions.withIndex().filter { it.value.open && it.value.live }
         if (liveOpen.isNotEmpty()) runCatching { priceCheckLive(b, t, liveOpen, stopped, stream, regular) }
@@ -1956,11 +1957,11 @@ object OrbArms {
             if (ltp == null) continue                                               // no price at all: hold
             // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms and
             // Boss's paper give-back trail only.
-            val high = if (ladderTarget(cur) != null || cur.trail != null) bestSince(cur, c, t, mayRead = regular) else null
-            val (laddered, locked) = ladder(cur, ltp, high)
+            val highs = if (ladderTarget(cur) != null || cur.trail != null) bestSince(cur, c, t, mayRead = regular) else Highs(null, null)
+            val (laddered, locked) = ladder(cur, ltp, highs.lock)
             // The trail's give-back from the best price BEFORE this look (a new best counts from the next look, as the ladder).
             val trailHit = LiquidityTrail.exits(cur.entry, cur.peak ?: cur.entry, ltp, cur.lot, cur.trail, cur.trailFrom)
-            val seen = heldRange(trailPeak(laddered, ltp, high), ltp)
+            val seen = heldRange(trailPeak(laddered, ltp, highs.lock), ltp)
             if (seen !== cur) b.positions[i] = seen
             // The Hero arm's own exits (HeroRules.exitStep: half at 5x, the rest at 20x or 15:05, the -60% stop on a minute's
             // close), checked here every pass; the operator's stop still sells it all at once below.
@@ -1983,7 +1984,7 @@ object OrbArms {
                 // when that stop is not there or has not filled (no fresh price in the book's own pass).
                 locked -> "profit_lock"
                 // The arm's own target (ORB Sweep +80), reached on the price now or on a high since the entry (F2).
-                targetHit(cur, ltp, high) -> "target"
+                targetHit(cur, ltp, highs.target) -> "target"
                 else -> OrbRules.exitReasonFor(armOf(cur.arm), cur.entry, ltp, t, paramsOf(cur)).takeIf { it == "stop" && cur.stopOrderId == null }
                     // Where its own rules hold, the trade manager's early exit, through the arm's own paper exit.
                     ?: mgr?.first?.let { MANAGER_EXIT }
@@ -1999,25 +2000,43 @@ object OrbArms {
         }
     }
 
-    /** When each open position's best price was last read (memory only; by [managerId]): the gap rule of [bestSince]. */
+    /** When each open position's best price was last read in this process (memory only; by [managerId]): [bestSince]'s gap rule. */
     private val lastLook = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
+    /** When each position's gap read was last tried and found nothing (memory only): tried again once a minute. */
+    private val gapTried = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
+    /** When this process began watching the positions (its first price check): a position bought before it had a restart. */
+    @Volatile private var watchFrom: LocalDateTime? = null
+
+    /** The two best prices one look reads for a position: [target]'s (as before this fix) and the one its lock or trail uses. */
+    private data class Highs(val target: Double?, val lock: Double?)
 
     /**
-     * The highest price [c] traded since [p]'s entry, for its lock or trail ([Paper.highSince]; null: none known). 22 Oct (R100
-     * audit C): after a gap longer than the stream keeps prices ([ProfitLock.needsCandles]: the first look after a restart, or a
-     * stall), the 1-minute candles' highs are read too, once, so a high reached while nothing looked still earns its lock. That
-     * read is made only on the regular pass ([mayRead]): the stream's fast look never reaches the network for it, and leaves the
-     * gap for the next regular pass. A read that finds nothing is tried again on the next regular pass. Only ever raises the
-     * best price: a lock or trail can only sell sooner.
+     * The highest price [c] traded since [p]'s entry ([Paper.highSince]: every stream tick, else the 1-minute candles' highs).
+     *
+     * 22 Oct (R100 audit C and its review): a streamed contract's stream keeps only its last five minutes of prices, so after a
+     * gap - a restart (the position was bought before this process began watching) or a stall longer than 4 minutes
+     * ([ProfitLock.needsCandles]) - the 1-minute candles' highs since the entry are read too ([Paper.gapHighSince], at most
+     * 3 s, so the arms' check is never held by the feed), and the higher of the two is the lock's or trail's best price
+     * ([Highs.lock]). Only on the regular pass ([mayRead]): the stream's fast look never reads it and leaves the gap for the next
+     * regular pass. A read that finds no candles is tried again once a minute ([ProfitLock.gapRetryDue]) until one succeeds.
+     *
+     * The candles' high only ever raises a lock's or trail's best price (so they can only sell sooner); the arm's own target is
+     * still judged on [Highs.target], as before: a target that traded while nothing looked is not sold late at another price.
+     * Paper positions only ([priceCheck]); a live position keeps the stream's best price as before (TODO.md X7).
      */
-    private suspend fun bestSince(p: Position, c: Paper.Contract, t: LocalDateTime, mayRead: Boolean): Double? {
+    private suspend fun bestSince(p: Position, c: Paper.Contract, t: LocalDateTime, mayRead: Boolean): Highs {
+        val plain = runCatching { Paper.highSince(c, p.entryTime) }.getOrNull()
+        if (!Paper.streams(c)) return Highs(plain, plain)            // no stream: [Paper.highSince] read the candles already
         val id = managerId(p)
-        val gap = ProfitLock.needsCandles(lastLook[id]?.let { epochMs(it) }, epochMs(p.entryTime), epochMs(t))
-        val candles = gap && mayRead
-        val high = runCatching { Paper.highSince(c, p.entryTime, candles = candles) }.getOrNull()
-        if (!gap || (candles && high != null)) lastLook[id] = t
+        val from = watchFrom ?: t
+        val gap = ProfitLock.needsCandles(lastLook[id]?.let { epochMs(it) }, epochMs(p.entryTime), epochMs(t), epochMs(from))
         if (lastLook.size > 200) lastLook.entries.removeIf { it.value.isBefore(t.minusDays(1)) }
-        return high
+        if (gapTried.size > 200) gapTried.entries.removeIf { it.value.isBefore(t.minusDays(1)) }
+        if (!gap) { lastLook[id] = t; return Highs(plain, plain) }
+        if (!mayRead || !ProfitLock.gapRetryDue(gapTried[id]?.let { epochMs(it) }, epochMs(t))) return Highs(plain, plain)
+        val read: Result<Double?> = runCatching { Paper.gapHighSince(c, p.entryTime) }.getOrElse { Result.failure<Double?>(it) }
+        if (read.isSuccess) { lastLook[id] = t; gapTried.remove(id) } else gapTried[id] = t
+        return Highs(plain, listOfNotNull(plain, read.getOrNull()).maxOrNull())
     }
 
     /** Take the resting stop out of the book first, then sell; if the stop filled meanwhile, that is the exit. */
@@ -2681,7 +2700,8 @@ object OrbArms {
             val runThrough = cur.stopTrigger?.let { ltp < stopLimit(it, tick) } == true
             // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms only.
             val leg = b.legs?.let { l -> listOf(l.ce, l.pe) }?.firstOrNull { it.symbol == cur.symbol }
-            val high = if (ladderTarget(cur) != null && leg != null) bestSince(cur, leg, t, mayRead = regular) else null
+            // Live keeps the stream's best price only (22 Oct: [bestSince]'s gap read is paper only for now; TODO.md X7).
+            val high = if (ladderTarget(cur) != null && leg != null) runCatching { Paper.highSince(leg, cur.entryTime) }.getOrNull() else null
             // The lock the best price BEFORE this look earned, on the tick: when the stop already rests there, Zerodha sells it.
             val lockNow = ladderTarget(cur)?.let { ProfitLock.level(cur.entry, it, cur.peak ?: cur.entry, ProfitLock.roundTripPerUnit(cur.entry, cur.qty)) }
                 ?.let { ProfitLock.onTick(it, tick) }
@@ -3214,10 +3234,16 @@ object OrbArms {
                 armOf(p.arm), p.symbol, false, done.exit, fresh, Paper.bookNow(c), null, sentMs, done.qty)) }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
             // One position's error never skips the others' exits (22 Oct, R100 audit A); it is looked at again on the next pass.
-            runCatching { Diag.record("orb", "${runCatching { armOf(p.arm).label }.getOrDefault(p.arm)}: the index exits could not be checked this pass " +
-                "(${e.javaClass.simpleName}); tried again next pass") }
+            // Said at most once a minute per position (the fast looks run several times a second).
+            val minute = t.withSecond(0).withNano(0)
+            if (exitCheckSaid.put(p.symbol + "|" + p.entryTime, minute) != minute)
+                runCatching { Diag.record("orb", "${runCatching { armOf(p.arm).label }.getOrDefault(p.arm)} ${p.symbol}: its exit check failed this pass " +
+                    "(${e.javaClass.simpleName}); tried again next pass") }
         }
     }
+
+    /** When each position's failed exit check was last said (memory only): once a minute. */
+    private val exitCheckSaid = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
 
     /** When each index's failed candle read was last said (memory only), so a feed that stays down is said once a minute. */
     private val indexReadSaid = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
@@ -3561,11 +3587,13 @@ object OrbArms {
     @Synchronized internal fun forgetMemoryForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
         cache = null; writtenText = null; writtenStat = null
+        lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
     }
 
     @Synchronized fun wipe() {
         cache = null; holdingHint = false; armedLabelsHint = emptyList(); liveHint = false; liveSymbolsHint = emptyList(); restoppedAt.clear(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
         shownParams.clear()
+        lastLook.clear(); gapTried.clear(); indexReadSaid.clear(); exitCheckSaid.clear()
         if (::file.isInitialized) file.delete()
     }
 }

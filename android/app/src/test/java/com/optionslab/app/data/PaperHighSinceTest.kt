@@ -10,6 +10,9 @@ import com.optionslab.engine.Upstox
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.robolectric.annotation.ConscryptMode
@@ -17,10 +20,11 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
- * 22 Oct (R100 audit C): the best price a lock or trail reads ([Paper.highSince]) for a contract Zerodha's stream streams. The
- * stream keeps only its last five minutes of prices, so after a longer gap (a restart mid-trade, a stall) the look asks for the
- * 1-minute candles' highs too ([com.optionslab.engine.orb.ProfitLock.needsCandles]): a spike inside the gap still counts. A look
- * the stream covers reads nothing from the network, as before. The market's clock is pinned ([RobolectricTest]'s MarketClockRule).
+ * 22 Oct (R100 audit C): the best price a lock or trail reads for a contract Zerodha's stream streams. [Paper.highSince] reads the
+ * stream alone, as before (no network). The stream keeps only its last five minutes of prices, so after a longer gap (a restart
+ * mid-trade, a stall) the arms also ask [Paper.gapHighSince] for the 1-minute candles' highs: a spike inside the gap still counts,
+ * a failed read is a failure (tried again later), and the caller is never held past its wait. The market's clock is pinned
+ * ([RobolectricTest]'s MarketClockRule).
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class PaperHighSinceTest : RobolectricTest() {
@@ -48,10 +52,11 @@ class PaperHighSinceTest : RobolectricTest() {
         TradeFixtures.paperSettings()
         KiteStream.resetForTest()
         val expiry = Market.today().plusDays(7)
-        AutomationSupport.contracts(context, (1..3).map { n ->
+        AutomationSupport.contracts(context, (1..5).map { n ->
             Upstox.Contract("BANKNIFTY", expiry, 54_000.0 + 100 * n, Right.CE, 30, "NSE_FO|HS$n", "BANKNIFTY-HS-${54_000 + 100 * n}CE")
         })
-        since = Market.today().atTime(9, 30)
+        // The start of the market's day: the stream's tick (stamped by the real clock) is after it at any hour CI runs.
+        since = Market.today().atStartOfDay()
     }
 
     @After fun down() {
@@ -60,25 +65,45 @@ class PaperHighSinceTest : RobolectricTest() {
         upstox.close()
     }
 
-    @Test fun aLookTheStreamCoversReadsOnlyTheStream() {
+    @Test fun aStreamedContractsBestPriceIsTheStreamsAsBeforeAndReadsNothing() {
         val (c, token) = contract(1)
         tick(token, 120.0)
+        assertTrue(Paper.streams(c))
         val before = upstox.requests.size
         assertEquals(120.0, runBlocking { Paper.highSince(c, since) }!!, 1e-9)
         assertEquals("no candle read for a look the stream covers", before, upstox.requests.size)
     }
 
-    @Test fun afterAGapTheCandlesHighCountsToo() {
+    @Test fun theGapReadFindsTheHighTheStreamNoLongerHolds() {
         val (c, token) = contract(2)
         tick(token, 120.0)
-        assertEquals("the 10:00 spike to 150, which the stream no longer holds", 150.0,
-            runBlocking { Paper.highSince(c, since, candles = true) }!!, 1e-9)
+        val r = runBlocking { Paper.gapHighSince(c, since) }
+        assertTrue(r.isSuccess)
+        assertEquals("the 10:00 spike to 150", 150.0, r.getOrNull()!!, 1e-9)
+        // Only candles that started after the given minute count: none after 10:01.
+        assertNull(runBlocking { Paper.gapHighSince(c, Market.today().atTime(10, 1)) }.getOrThrow())
     }
 
-    @Test fun afterAGapWithTheCandleFeedDownTheStreamStillAnswers() {
+    @Test fun aGapReadWithTheFeedDownFailsSoTheCallerTriesAgain() {
         val (c, token) = contract(3)
         tick(token, 120.0)
         upstox.down = true
-        assertEquals(120.0, runBlocking { Paper.highSince(c, since, candles = true) }!!, 1e-9)
+        assertTrue(runBlocking { Paper.gapHighSince(c, since, waitMs = 20_000) }.isFailure)
+        upstox.down = false
+        assertEquals(150.0, runBlocking { Paper.gapHighSince(c, since, waitMs = 20_000) }.getOrThrow()!!, 1e-9)
+    }
+
+    @Test fun aSlowGapReadNeverHoldsTheCallerAndItsCandlesAreKeptForTheNextTry() {
+        val (c, token) = contract(4)
+        tick(token, 120.0)
+        val t0 = System.nanoTime()
+        assertTrue("no wait at all: not read in time", runBlocking { Paper.gapHighSince(c, since, waitMs = 0) }.isFailure)
+        assertTrue("returned at once", System.nanoTime() - t0 < 2_000_000_000L)
+        assertEquals(150.0, runBlocking { Paper.gapHighSince(c, since, waitMs = 20_000) }.getOrThrow()!!, 1e-9)
+    }
+
+    @Test fun aContractWithoutTheStreamDoesNotStream() {
+        val c = Paper.contractFor("BANKNIFTY", Market.today().plusDays(7), 54_500.0, Right.CE)!!
+        assertFalse(Paper.streams(c))
     }
 }

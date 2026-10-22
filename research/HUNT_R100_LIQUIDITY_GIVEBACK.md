@@ -185,7 +185,8 @@ A separate reviewer read the whole Liquidity exit path. Neither bug below change
    failed read stops only that index's index exits. Its positions keep their time stop, the -15% stop and 15:10.
 2. **Fixed: after a gap longer than 5 minutes, a lock's or trail's best price ignored the candles.** A gap is a restart
    mid-trade or a stall. The stream keeps only 5 minutes of prices. Now the first regular look after such a gap also
-   reads the 1-minute candles' highs, once, so a lock or trail earned in the gap is set.
+   reads the 1-minute candles' highs, once (at most 3 s; retried once a minute if it fails), so a lock or trail earned
+   in the gap is set. Paper positions only; live unchanged (TODO X7).
 3. **Reported, not changed:**
    - The Liquidity exits read the index candles over the network inside the arms' lock, so a slow feed delays the other
      position checks.

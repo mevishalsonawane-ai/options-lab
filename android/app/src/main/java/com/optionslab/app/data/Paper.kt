@@ -347,17 +347,41 @@ object Paper {
      * tick of Zerodha's stream while it streams this contract, else the highs of the 1-minute candles that started after
      * [since]'s minute (the paper feed's; read again when the copy [quote] kept is older than [maxAgeMs]). Null: no price.
      */
-    suspend fun highSince(c: Contract, since: java.time.LocalDateTime, maxAgeMs: Long = SHARED_QUOTE_MS, candles: Boolean = false): Double? {
-        val tok = runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
-        val streamHigh = tok?.let { KiteStream.highSince(it, epochMs(since)) }
-        if (streamHigh != null && !candles) return streamHigh
-        // [candles] (22 Oct, R100 audit C: after a gap longer than the stream keeps, [com.optionslab.engine.orb.ProfitLock.needsCandles]):
-        // the candles' highs too, so a high traded while the app was not looking still counts. A streamed contract's candles are
-        // read by [minutes] ([quote] would hand back the stream's tick and read no candles).
+    suspend fun highSince(c: Contract, since: java.time.LocalDateTime, maxAgeMs: Long = SHARED_QUOTE_MS): Double? {
+        runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
+            ?.let { tok -> KiteStream.highSince(tok, epochMs(since))?.let { return it } }
         val kept = candleBars[c.symbol]
-        if (kept == null || System.currentTimeMillis() - kept.first !in 0..maxAgeMs) runCatching { if (tok != null && candles) minutes(c) else quote(c) }
-        val candleHigh = barsAfter(c, since)?.filter { it.istDate == Market.today() }?.maxOfOrNull { it.high }
-        return listOfNotNull(streamHigh, candleHigh).maxOrNull()
+        if (kept == null || System.currentTimeMillis() - kept.first !in 0..maxAgeMs) runCatching { quote(c) }
+        return barsAfter(c, since)?.filter { it.istDate == Market.today() }?.maxOfOrNull { it.high }
+    }
+
+    /**
+     * Does Zerodha's stream stream [c] now (a fresh tick)? Then [highSince] reads only the stream's kept prices (its last five
+     * minutes); without it, [highSince] already reads the 1-minute candles since the entry. No network.
+     */
+    fun streams(c: Contract): Boolean = runCatching { kiteToken(c) }.getOrNull()?.let { KiteStream.tick(it) != null } == true
+
+    /** How long a gap's candle read may hold the caller (the arms' check, under its lock): the read itself goes on in the background. */
+    const val GAP_READ_WAIT_MS = 3_000L
+
+    /** The background reads of [gapHighSince] (they outlive a caller that stopped waiting; each keeps its candles when done). */
+    private val gapReads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /**
+     * 22 Oct (R100 audit C, review): the highest 1-minute candle high of [c] today that started after [since]'s minute, for a
+     * lock's or trail's best price after a gap longer than the stream keeps ([com.optionslab.engine.orb.ProfitLock.needsCandles]).
+     * Success: the candles were read (null inside: none after [since]). Failure: none could be read within [waitMs] - the read
+     * goes on in the background and keeps its candles, so the caller's next try (once a minute) finds them. The caller is never
+     * held longer than [waitMs]: the feed's own read (two tries, up to about 30 s) never blocks the arms' check.
+     */
+    suspend fun gapHighSince(c: Contract, since: java.time.LocalDateTime, waitMs: Long = GAP_READ_WAIT_MS): Result<Double?> {
+        val kept = candleBars[c.symbol]
+        if (kept == null || System.currentTimeMillis() - kept.first !in 0..SHARED_QUOTE_MS) {
+            val read = gapReads.async { runCatching { minutes(c) }.getOrDefault(emptyList()) }
+            val bars = kotlinx.coroutines.withTimeoutOrNull(waitMs) { read.await() }
+            if (bars.isNullOrEmpty()) return Result.failure(java.io.IOException("no candles for ${c.symbol} within $waitMs ms"))
+        }
+        return Result.success(barsAfter(c, since)?.filter { it.istDate == Market.today() }?.maxOfOrNull { it.high })
     }
 
     /**
@@ -446,6 +470,12 @@ object Paper {
     internal fun tokenForTest(symbol: String, token: Long?) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the token seam exists only in debug builds" }
         if (token == null) kiteTokens.remove(symbol) else kiteTokens[symbol] = token
+    }
+
+    /** TEST SEAM (JVM tests only): forget the 1-minute candles [quote] kept, as a new process starts without them. */
+    internal fun forgetCandlesForTest() {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "the candle seam exists only in debug builds" }
+        candleBars.clear()
     }
 
     private fun kiteToken(c: Contract): Long? {

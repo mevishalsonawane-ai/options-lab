@@ -216,24 +216,38 @@ class ProfitLockTrailTest {
 
     // ---- 22 Oct (R100 audit C): the candles' highs after a gap longer than the stream keeps -------------------------------
 
+    private val entry = 1_000_000L
+    private val earlier = entry - 3_600_000L                   // this process began watching an hour before the entry
+
     @Test fun aLookWithinFourMinutesOfTheLastTrustsTheStream() {
-        val entry = 1_000_000L
-        assertEquals(false, ProfitLock.needsCandles(entry + 60_000, entry, entry + 120_000))
-        assertEquals(false, ProfitLock.needsCandles(entry, entry, entry + ProfitLock.STREAM_GAP_MS))        // exactly 4 minutes: still covered
+        assertEquals(false, ProfitLock.needsCandles(entry + 60_000, entry, entry + 120_000, earlier))
+        assertEquals(false, ProfitLock.needsCandles(entry, entry, entry + ProfitLock.STREAM_GAP_MS, earlier))  // exactly 4 minutes: covered
+        assertEquals(false, ProfitLock.needsCandles(null, entry, entry + 30_000, earlier))                        // bought in this process
     }
 
     @Test fun aGapLongerThanTheStreamKeepsReadsTheCandles() {
-        val entry = 1_000_000L
-        assertEquals(true, ProfitLock.needsCandles(entry + 60_000, entry, entry + 60_000 + ProfitLock.STREAM_GAP_MS + 1))   // a stall
-        // The first look in a new process (a restart mid-trade): measured from the entry.
-        assertEquals(true, ProfitLock.needsCandles(null, entry, entry + 10 * 60_000))
-        assertEquals(false, ProfitLock.needsCandles(null, entry, entry + 30_000))                                   // just bought
+        assertEquals(true, ProfitLock.needsCandles(entry + 60_000, entry, entry + 60_000 + ProfitLock.STREAM_GAP_MS + 1, earlier)) // a stall
+        assertEquals(true, ProfitLock.needsCandles(null, entry, entry + 10 * 60_000, earlier))     // no look for 10 minutes since the entry
+    }
+
+    @Test fun aRestartSoonAfterTheEntryStillReadsTheCandles() {
+        // Bought at 10:00, the process killed at 10:01:30, the new one watching from 10:02: its stream knows nothing before 10:02.
+        val watchFrom = entry + 120_000
+        assertEquals(true, ProfitLock.needsCandles(null, entry, entry + 180_000, watchFrom))
+        // Once looked at in this process, the usual 4-minute rule.
+        assertEquals(false, ProfitLock.needsCandles(entry + 180_000, entry, entry + 200_000, watchFrom))
     }
 
     @Test fun aClockThatSteppedBackIsNoGap() {
-        val entry = 1_000_000L
-        assertEquals(false, ProfitLock.needsCandles(entry + 600_000, entry, entry + 300_000))
-        assertEquals(false, ProfitLock.needsCandles(null, entry, entry - 60_000))
+        assertEquals(false, ProfitLock.needsCandles(entry + 600_000, entry, entry + 300_000, earlier))
+        assertEquals(false, ProfitLock.needsCandles(null, entry, entry - 60_000, earlier))
         assertTrue(ProfitLock.STREAM_GAP_MS < 5 * 60_000L, "the margin is under the stream's 5 minutes")
+    }
+
+    @Test fun aFailedGapReadIsTriedAgainOnceAMinute() {
+        assertTrue(ProfitLock.gapRetryDue(null, entry))
+        assertFalse(ProfitLock.gapRetryDue(entry, entry + 59_999))
+        assertTrue(ProfitLock.gapRetryDue(entry, entry + ProfitLock.GAP_RETRY_MS))
+        assertTrue(ProfitLock.gapRetryDue(entry, entry - 1_000), "a clock that stepped back may try")
     }
 }

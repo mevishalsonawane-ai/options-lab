@@ -19,9 +19,10 @@ Boss, 22 Oct: *"do something for liquidity strategy, it went up to 4.5k, and set
   1. **One index's failed candle read skipped every Liquidity position's exits on that pass.** That meant no index
      stop, no target and no time stop, for other indices too. Now a failed read affects only that index's index exits.
      Its positions keep their time stop, the -15% stop and 15:10.
-  2. **After a restart or a stall longer than 5 minutes, a lock or trail missed the highest price reached in the
+  2. **After a restart or a stall longer than 5 minutes, a paper lock or trail missed the highest price reached in the
      gap.** The live stream keeps only 5 minutes of prices. Now the first check after such a gap also reads the minute
-     candles once, so a lock or trail earned in the gap is set (and sells if the price already fell back to it).
+     candles once, so a lock or trail earned in the gap is set (and sells if the price already fell back to it). Paper
+     positions only for now.
 - **New research (R100): 7 ways to keep a big open profit were tested on 1,238 past Liquidity trades. None passed.**
   **So nothing changes on the paper or live Liquidity books.**
   - Trades like today's are rare: 9 of 881 design trades went +20% and still lost (Rs 15,030 together), and 5 of 357
@@ -111,8 +112,12 @@ Both sides, design:
 - **Exit fix 1:** a failed index read no longer skips the other Liquidity positions' exits. Its own positions keep their
   time stop. The diagnostics say it once a minute.
 - **Exit fix 2:** after a gap longer than the stream keeps (a restart mid-trade, a stall), the first regular check reads
-  the minute candles' highs once. A lock or trail then counts the high reached in the gap. This applies to every laddered
-  or trailed position (ORB arms too), only ever sells sooner, and is never done on the stream's fast check.
+  the minute candles' highs once. A lock or trail then counts the high reached in the gap.
+  - It applies to every laddered or trailed paper position (ORB arms too), and only ever sells sooner.
+  - It is never done on the stream's fast check, and the read never holds the check more than 3 s; a failed read is
+    tried again once a minute.
+  - A target is still judged as before (no late "target" sale).
+  - Live positions are unchanged (TODO X7).
 - **What's New:** one entry ("Liquidity exits keep working when one feed fails").
 - **Unchanged:**
   - Liquidity's rules on paper and live;
