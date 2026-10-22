@@ -1,0 +1,230 @@
+{
+ "LIQ:L1": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10"
+  ],
+  "q_arm": 0.9202
+ },
+ "LIQ:L2": {
+  "q": 0.4,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "BH q >= 0.10"
+  ],
+  "q_arm": 0.1
+ },
+ "LIQ:L3": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.9202
+ },
+ "LIQ:L3b": {
+  "q": 0.739,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10"
+  ],
+  "q_arm": 0.1847
+ },
+ "LIQ:L4": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10"
+  ],
+  "q_arm": 0.4723
+ },
+ "R72:B1": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.986
+ },
+ "R72:B1b": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.986
+ },
+ "R72:B2": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.986
+ },
+ "R72:B3": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.986
+ },
+ "R72:B4": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.986
+ },
+ "R72:B5": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "twin p >= 0.05",
+   "BH q >= 0.10"
+  ],
+  "q_arm": 0.986
+ },
+ "R51:C1": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 1.0
+ },
+ "R51:C1b": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 1.0
+ },
+ "R51:C2": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 1.0
+ },
+ "R51:C3": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 1.0
+ },
+ "R51:C4": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 1.0
+ },
+ "R52:D1": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.8277
+ },
+ "R52:D1b": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.8277
+ },
+ "R52:D2": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.8277
+ },
+ "R52:D3": {
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "walk-forward not above B0",
+   "final not above B0",
+   "twin p >= 0.05",
+   "BH q >= 0.10",
+   "carried by its 5 best trades"
+  ],
+  "q_arm": 0.9481
+ }
+}

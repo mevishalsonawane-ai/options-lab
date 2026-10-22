@@ -1,0 +1,123 @@
+{
+ "B0": {
+  "all": {
+   "trades": 357,
+   "win": 0.3725,
+   "net": 11155,
+   "per_trade": 31,
+   "worst_day": -11405,
+   "max_dd": 61062,
+   "ex_top5": -51376,
+   "top5_share": 5.606,
+   "days": 113
+  }
+ },
+ "n_candidates": 371,
+ "L1": {
+  "all": {
+   "trades": 303,
+   "win": 0.3696,
+   "net": 115,
+   "per_trade": 0,
+   "worst_day": -7193,
+   "max_dd": 48652,
+   "ex_top5": -49010,
+   "top5_share": 427.134,
+   "days": 108
+  },
+  "removed_trades": 54,
+  "removed_signals": 59,
+  "diff": -11040,
+  "top5_diff": 2366,
+  "twin_p": 0.7445,
+  "twin_mean": 9124
+ },
+ "L2": {
+  "all": {
+   "trades": 244,
+   "win": 0.4016,
+   "net": 49067,
+   "per_trade": 201,
+   "worst_day": -11405,
+   "max_dd": 35155,
+   "ex_top5": -13464,
+   "top5_share": 1.274,
+   "days": 90
+  },
+  "removed_trades": 113,
+  "removed_signals": 117,
+  "diff": 37912,
+  "top5_diff": 37912,
+  "twin_p": 0.02,
+  "twin_mean": 8394
+ },
+ "L3": {
+  "all": {
+   "trades": 243,
+   "win": 0.3539,
+   "net": -21162,
+   "per_trade": -87,
+   "worst_day": -11405,
+   "max_dd": 61062,
+   "ex_top5": -69324,
+   "top5_share": null,
+   "days": 84
+  },
+  "removed_trades": 114,
+  "removed_signals": 118,
+  "diff": -32317,
+  "top5_diff": -17948,
+  "twin_p": 0.9202,
+  "twin_mean": 7172
+ },
+ "L3b": {
+  "all": {
+   "trades": 114,
+   "win": 0.4123,
+   "net": 32317,
+   "per_trade": 283,
+   "worst_day": -3985,
+   "max_dd": 14380,
+   "ex_top5": -12981,
+   "top5_share": 1.402,
+   "days": 51
+  },
+  "removed_trades": 243,
+  "removed_signals": 253,
+  "diff": 21162,
+  "top5_diff": 38395,
+  "twin_p": 0.0739,
+  "twin_mean": 3165
+ },
+ "L4": {
+  "all": {
+   "trades": 288,
+   "win": 0.3958,
+   "net": 18997,
+   "per_trade": 66,
+   "worst_day": -11405,
+   "max_dd": 46892,
+   "ex_top5": -34677,
+   "top5_share": 2.825,
+   "days": 91
+  },
+  "removed_trades": 69,
+  "removed_signals": 75,
+  "diff": 7842,
+  "top5_diff": 16699,
+  "dow_picks": {
+   "2026-04-01..2026-10-13": 2
+  },
+  "twin_p": 0.2834,
+  "twin_mean": 8546
+ },
+ "parity": {
+  "trades": 357,
+  "net": 11155,
+  "published": [
+   357,
+   11155
+  ],
+  "reproduced": true
+ }
+}
