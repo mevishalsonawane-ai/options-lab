@@ -366,18 +366,33 @@ object Paper {
 
     /** The background reads of [gapHighSince] (they outlive a caller that stopped waiting; each keeps its candles when done). */
     private val gapReads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    /** Each symbol's gap read in flight (one at a time: a slow feed never piles reads up) and when it started (memory only). */
+    private val gapInFlight = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Deferred<List<Upstox.Bar>>>()
+    private val gapReadFrom = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** How old candles a gap read brought may be and still answer the caller's next try (it tries once a minute). */
+    const val GAP_KEPT_MS = 120_000L
 
     /**
      * 22 Oct (R100 audit C, review): the highest 1-minute candle high of [c] today that started after [since]'s minute, for a
      * lock's or trail's best price after a gap longer than the stream keeps ([com.optionslab.engine.orb.ProfitLock.needsCandles]).
-     * Success: the candles were read (null inside: none after [since]). Failure: none could be read within [waitMs] - the read
-     * goes on in the background and keeps its candles, so the caller's next try (once a minute) finds them. The caller is never
-     * held longer than [waitMs]: the feed's own read (two tries, up to about 30 s) never blocks the arms' check.
+     * Success: the candles were read (null inside: none after [since]). Failure: none came within [waitMs].
+     *
+     * The caller is never held longer than [waitMs]: the feed's own read (two tries, up to about 30 s) runs in the background,
+     * one per symbol at a time (a try while it is still running waits on it again rather than starting another), and keeps its
+     * candles when it ends; the caller's next try (once a minute) then answers from them, up to [GAP_KEPT_MS] old, without a
+     * new read. Candles [quote] kept in the last [SHARED_QUOTE_MS] answer too.
      */
     suspend fun gapHighSince(c: Contract, since: java.time.LocalDateTime, waitMs: Long = GAP_READ_WAIT_MS): Result<Double?> {
+        val now = System.currentTimeMillis()
         val kept = candleBars[c.symbol]
-        if (kept == null || System.currentTimeMillis() - kept.first !in 0..SHARED_QUOTE_MS) {
-            val read = gapReads.async { runCatching { minutes(c) }.getOrDefault(emptyList()) }
+        val from = gapReadFrom[c.symbol]
+        val usable = kept != null && (now - kept.first in 0..SHARED_QUOTE_MS ||
+            (from != null && kept.first >= from && now - kept.first in 0..GAP_KEPT_MS))
+        if (!usable) {
+            val read = gapInFlight[c.symbol]?.takeIf { it.isActive } ?: run {
+                gapReadFrom[c.symbol] = now
+                gapReads.async { runCatching { minutes(c) }.getOrDefault(emptyList()) }.also { gapInFlight[c.symbol] = it }
+            }
             val bars = kotlinx.coroutines.withTimeoutOrNull(waitMs) { read.await() }
             if (bars.isNullOrEmpty()) return Result.failure(java.io.IOException("no candles for ${c.symbol} within $waitMs ms"))
         }
@@ -475,7 +490,7 @@ object Paper {
     /** TEST SEAM (JVM tests only): forget the 1-minute candles [quote] kept, as a new process starts without them. */
     internal fun forgetCandlesForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the candle seam exists only in debug builds" }
-        candleBars.clear()
+        candleBars.clear(); gapInFlight.clear(); gapReadFrom.clear()
     }
 
     private fun kiteToken(c: Contract): Long? {

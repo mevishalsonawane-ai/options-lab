@@ -99,7 +99,13 @@ class PaperHighSinceTest : RobolectricTest() {
         val t0 = System.nanoTime()
         assertTrue("no wait at all: not read in time", runBlocking { Paper.gapHighSince(c, since, waitMs = 0) }.isFailure)
         assertTrue("returned at once", System.nanoTime() - t0 < 2_000_000_000L)
-        assertEquals(150.0, runBlocking { Paper.gapHighSince(c, since, waitMs = 20_000) }.getOrThrow()!!, 1e-9)
+        // The read went on in the background, once (tries while it runs wait on it again), and kept its candles: a later try
+        // answers from them without a new read.
+        val end = System.currentTimeMillis() + 15_000
+        var r = runBlocking { Paper.gapHighSince(c, since, waitMs = 0) }
+        while (r.isFailure && System.currentTimeMillis() < end) { Thread.sleep(20); r = runBlocking { Paper.gapHighSince(c, since, waitMs = 0) } }
+        assertEquals(150.0, r.getOrThrow()!!, 1e-9)
+        assertEquals("one read in all", 1, upstox.requests.count { it.contains("HS4") })
     }
 
     @Test fun aContractWithoutTheStreamDoesNotStream() {
