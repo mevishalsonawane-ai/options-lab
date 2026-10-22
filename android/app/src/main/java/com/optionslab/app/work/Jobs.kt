@@ -112,34 +112,61 @@ object Jobs {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    fun scheduleAll(context: Context) {
+    /**
+     * Every alarm and periodic job armed. 22 Oct (the overnight kills, "excessive binder traffic during cached"): [onlyChanged] -
+     * the app's own start, which an hourly night job may cause - leaves an alarm whose time is unchanged as it is ([AlarmMarks]);
+     * each one cost four calls into Android at every start. The 09:14 market watch's alarm and the dead-man check ([Heartbeat]) -
+     * they watch the open positions - are armed at every start as before; a boot, an app update, a settings change and the
+     * screen's first start arm everything.
+     */
+    fun scheduleAll(context: Context, onlyChanged: Boolean = false) {
         // IraGoldAlgo has one clock of its own and none of IraAlgo's NSE jobs.
         if (com.optionslab.app.BuildConfig.GOLD) { GoldAlarm.schedule(context); return }
         val s = AppSettings.load()
-        Kind.entries.forEach { schedule(context, it, s) }
+        Kind.entries.forEach { schedule(context, it, s, onlyChanged) }
         Heartbeat.schedule(context)
-        DailyReports.scheduleAll(context)
-        com.optionslab.app.ira.StudyWorker.schedule(context)
+        DailyReports.scheduleAll(context, onlyChanged)
         // The market recorder's off-hours alarm: GIFT Nifty before the open and at night, NSE's participant files after 18:30.
-        runCatching { com.optionslab.app.data.MarketRecorder.scheduleOffHours(context) }
+        runCatching { com.optionslab.app.data.MarketRecorder.scheduleOffHours(context, onlyChanged) }
+        // 22 Oct: the periodic jobs below are kept by WorkManager itself (KEEP: enqueuing again changes nothing); a start in the
+        // background enqueues them once a day only.
+        val day = runCatching { Market.today().toString() }.getOrNull()
+        if (onlyChanged && day != null && NightMarks.get(context, PERIODIC_DAY) == day) return
+        com.optionslab.app.ira.StudyWorker.schedule(context)
         // GitHub sync (13 Oct, TODO G1/G2): the evening upload (Wi-Fi and charging, after the MCX evening close, 15:45 without
         // MCX; G4) and its twice-daily check.
         runCatching { GitHubSyncWorker.schedule(context) }
+        if (day != null) NightMarks.put(context, PERIODIC_DAY, day)
     }
 
-    fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
+    /** The day the periodic jobs were last enqueued ([NightMarks]). */
+    private const val PERIODIC_DAY = "periodic.day"
+
+    fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load(), onlyChanged: Boolean = false) {
+        val at = if (enabled(k, s)) nextRun(k).toInstant().toEpochMilli() else com.optionslab.ira.NightStart.OFF
+        val mark = "job.${k.name}"
+        // 22 Oct: a start in the background leaves an alarm armed for the same time as it is (while Android still holds it) -
+        // never the 09:14 market watch's: it is armed at every start, as before (the open positions' watch; one alarm).
+        if (onlyChanged && k != Kind.LIVE && !AlarmMarks.needsArm(context, mark, at) { alarmIntentIfAny(context, k) != null }) return
         val am = context.getSystemService(AlarmManager::class.java)
         val pi = alarmIntent(context, k)
         am.cancel(pi)
-        if (!enabled(k, s)) return
-        val at = nextRun(k).toInstant().toEpochMilli()
+        if (at == com.optionslab.ira.NightStart.OFF) { AlarmMarks.armed(context, mark, at); return }
         try {
             if (canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
             else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         } catch (_: SecurityException) {
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         }
+        AlarmMarks.armed(context, mark, at)
     }
+
+    /** [alarmIntent] only when Android still holds it (null: never made, or dropped by a force stop or a reboot). */
+    private fun alarmIntentIfAny(context: Context, k: Kind): PendingIntent? = PendingIntent.getBroadcast(
+        context, 100 + k.ordinal,
+        Intent(context, AlarmReceiver::class.java).setAction("ol.job.${k.name}").putExtra(EXTRA_KIND, k.name),
+        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+    )
 
     /** The harvest in WorkManager: a silent low-importance notice while it runs, no "complete" notice. */
     fun enqueueHarvest(context: Context, session: java.time.LocalDate, manual: Boolean) {
@@ -161,6 +188,8 @@ object Jobs {
             .putExtra(EXTRA_SESSION, session.toString())
         try {
             ContextCompat.startForegroundService(context, i)
+            // 22 Oct: the market watch runs - the start-up's waiting heavy work may run too ([com.optionslab.app.data.StartGate]).
+            if (k == Kind.LIVE) com.optionslab.app.data.StartGate.open("the market watch")
         } catch (_: Exception) {
             // Not permitted from here (Android 12+ background start). Hand
             // the one-shot jobs to WorkManager; the watch cannot run that way.

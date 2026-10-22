@@ -164,6 +164,10 @@ class CandleAgentHostTest : RobolectricTest() {
         // Once a day.
         CandleAgentHost.studyOffHours(context)
         assertEquals(3, calls)
+        // 22 Oct (the overnight kills): once a day after Android ended the app too - the day is kept on disk.
+        CandleAgentHost.restartDayForTest()
+        CandleAgentHost.studyOffHours(context)
+        assertEquals(3, calls)
         // The next night: the sessions before the ones already counted - never the same candle twice, never today's.
         Market.testClock = java.time.Clock.fixed(day.plusDays(2).atTime(6, 0).atZone(zone).toInstant(), zone)
         CandleAgentHost.studyOffHours(context)

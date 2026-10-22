@@ -140,6 +140,9 @@ object OrderReviewHost {
             val (day, morning) = due(now, _book.value) ?: return false
             val nowMs = now.toInstant().toEpochMilli()
             if (nowMs < retryAtMs) return false
+            // 22 Oct: at a start in the background the shared knowledge's first build waits for the app's use; the review cites
+            // it and its variants are checked against it ([VariantRunner.ask]): asked for here, before the budget's meter starts.
+            SharedKnowledgeHost.awaitFirstBuild("the order review")
             asked = true
             if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.ORDER_REVIEW)) return false
             if (run(day, morning, nowMs) == null) { retryAtMs = nowMs + RETRY_MS; return false }

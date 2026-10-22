@@ -26,7 +26,49 @@ class BackgroundBudgetRunTest : RobolectricTest() {
         BackgroundBudget.testWallMs = { wall }
     }
 
-    @After fun down() { BackgroundBudget.resetForTest() }
+    @After fun down() { BackgroundBudget.resetForTest(); NightMarks.testOffMain = false }
+
+    /**
+     * 22 Oct (the overnight kills at 02:43 and 02:51): Android ending the app mid-run no longer hands the night a fresh 10 minutes.
+     * What the budget spent is kept every few seconds of CPU and read back by the next process; a new night starts afresh.
+     */
+    @Test fun whatTheNightSpentSurvivesTheAppBeingEnded() {
+        NightMarks.testOffMain = true
+        BackgroundBudget.init(context)
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.FORGE))
+        cpu += 6 * 60_000L
+        wall += 60_000L
+        assertTrue("6 of the forge's 7 minutes", BackgroundBudget.allow(BudgetRule.Job.FORGE))
+        // Ended by Android mid-run (no done): a new process, its CPU clock from 0 again.
+        BackgroundBudget.restartForTest()
+        cpu = 0L
+        wall += 10 * 60_000L
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.FORGE))
+        assertEquals(6 * 60_000L, BackgroundBudget.spentNow().second)
+        cpu += 2 * 60_000L
+        wall += 60_000L
+        assertFalse("6 kept + 2 now: past the forge's share", BackgroundBudget.allow(BudgetRule.Job.FORGE))
+        BackgroundBudget.done(BudgetRule.Job.FORGE)
+        // The next night: afresh.
+        BackgroundBudget.restartForTest()
+        BackgroundBudget.testNow = LocalDateTime.of(2026, 10, 13, 21, 0)
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.FORGE))
+        assertEquals(0L, BackgroundBudget.spentNow().second)
+    }
+
+    /** The end of a run is kept whatever it spent since the last write (a run of under 5 s of CPU is not lost to a kill). */
+    @Test fun theEndOfARunIsKept() {
+        NightMarks.testOffMain = true
+        BackgroundBudget.init(context)
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.HISTORY))
+        cpu += 3_000L
+        BackgroundBudget.done(BudgetRule.Job.HISTORY)
+        BackgroundBudget.restartForTest()
+        cpu = 0L
+        wall += 30 * 60_000L
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.HISTORY))
+        assertEquals(3_000L, BackgroundBudget.spentNow().second)
+    }
 
     /**
      * 22 Oct (the overnight kills, "excessive binder traffic during cached"): the forge's stop check asks the budget (the battery's

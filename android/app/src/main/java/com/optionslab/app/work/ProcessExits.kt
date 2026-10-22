@@ -20,11 +20,39 @@ object ProcessExits {
     @Volatile var last: String? = null
         private set
 
+    /** How many of Android's records are read (the app's health keeps the ANRs and crashes among them too). */
+    private const val MAX_RECORDS = 16
+    /** This process's one read of Android's record (22 Oct; a List of ApplicationExitInfo: typed Any for Android 10 and older). */
+    @Volatile private var kept: List<Any>? = null
+
+    /**
+     * Android's record of the app's last [MAX_RECORDS] process endings, asked of Android once per process (22 Oct, the overnight
+     * kills: this and the app's health each asked at every start). A failed ask is not kept (the next caller asks again).
+     */
+    @Synchronized
+    internal fun records(context: Context): List<android.app.ApplicationExitInfo> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyList()
+        @Suppress("UNCHECKED_CAST")
+        val have = kept as List<android.app.ApplicationExitInfo>?
+        if (have != null) return have
+        val all = testAsk?.invoke() ?: run {
+            val am = context.getSystemService(ActivityManager::class.java) ?: return emptyList()
+            am.getHistoricalProcessExitReasons(context.packageName, 0, MAX_RECORDS).toList()
+        }
+        kept = all
+        return all
+    }
+
+    /** TEST ONLY: Android's answer instead of asking it (the tests count the asks). */
+    @Volatile internal var testAsk: (() -> List<android.app.ApplicationExitInfo>)? = null
+
+    /** TEST ONLY: the next [records] asks Android again. */
+    internal fun resetForTest() { kept = null; last = null; testAsk = null }
+
     fun read(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         runCatching {
-            val am = context.getSystemService(ActivityManager::class.java) ?: return
-            val all = am.getHistoricalProcessExitReasons(context.packageName, 0, 10).map { it.timestamp to it }
+            val all = records(context).map { it.timestamp to it }
             val zone = Market.now().zone
             fun words(e: android.app.ApplicationExitInfo) = ExitReason.line(e.timestamp, zone, e.reason, e.importance, e.pss, e.rss, e.description)
             all.maxByOrNull { it.first }?.let { last = words(it.second) }

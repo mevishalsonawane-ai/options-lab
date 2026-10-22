@@ -85,6 +85,9 @@ object CandleAgentHost {
     @Volatile internal var mcxSettles = 0
     @Volatile private var settledDay: LocalDate? = null
     @Volatile private var deepDay: LocalDate? = null
+    /** 22 Oct: the kept study day ([K_DEEP]) was read back this process. */
+    @Volatile private var deepRead = false
+    private const val K_DEEP = "candle.deep.day"
 
     /** An MCX future's minutes as last fetched: when ([ms] the phone's clock, [at] the market's) and the finished minutes then. */
     private class Fetched(val ms: Long, val at: LocalDateTime, val bars: List<CandleRead.Bar>)
@@ -183,6 +186,15 @@ object CandleAgentHost {
         val today = runCatching { Market.today() }.getOrElse { return }
         // Never in NSE's or MCX's session (MCX positions may be open in its evening: the study's CPU waits for the close).
         val open = runCatching { Market.isOpen() || McxMarket.isOpen() }.getOrDefault(true)
+        // 22 Oct (the overnight kills): the day of the last study is kept on disk too, so a restart (Android ended the app) does
+        // not study the same day again ([com.optionslab.app.work.NightMarks]; read once a process, off the main thread).
+        if (!deepRead) withContext(Dispatchers.IO) {
+            com.optionslab.ira.NightStart.dayOf(com.optionslab.app.work.NightMarks.get(context, K_DEEP))?.let { kept ->
+                val mine = deepDay
+                if (mine == null || kept.isAfter(mine)) deepDay = kept
+            }
+            deepRead = true
+        }
         if (open || deepDay == today || MemoryTrim.underPressure()) return
         val a = withContext(Dispatchers.IO) { agentOrLoad(context) }
         val series = ArrayList<CandleAgent.Series>()
@@ -207,12 +219,15 @@ object CandleAgentHost {
             }
         }
         deepDay = today
+        // 22 Oct: kept on disk once the budget let the study start - so a study Android ends midway is not begun again by the
+        // next start the same day. Nothing to study (the history not in memory yet) or a "no" from the budget: the next start may try.
         if (series.isEmpty()) return
         val now = Market.now().toLocalDateTime()
         // The budget is asked and charged on the thread that does the work (it meters that thread's CPU).
         val step = withContext(Dispatchers.Default) {
             val budget = com.optionslab.ira.BudgetRule.Job.CANDLE_STUDY
             if (!runCatching { com.optionslab.app.work.BackgroundBudget.allow(budget) }.getOrDefault(false)) return@withContext null
+            runCatching { com.optionslab.app.work.NightMarks.put(context, K_DEEP, today.toString()) }
             try { runCatching { a.study(series, emptyList(), System.currentTimeMillis(), now, false) }.onFailure { a.failed(it) }.getOrNull() }
             finally { runCatching { com.optionslab.app.work.BackgroundBudget.done(budget) } }
         } ?: return
@@ -385,10 +400,13 @@ object CandleAgentHost {
     /** TEST ONLY: the next batch's study fails (as a real error would). */
     @Volatile internal var failNextForTest = false
 
+    /** TEST ONLY: as after Android ended the app - the study day in memory gone, the one kept on disk still there. */
+    internal fun restartDayForTest() { deepDay = null; deepRead = false }
+
     /** TEST ONLY. */
     internal fun resetForTest(a: CandleAgent? = null) {
         failNextForTest = false
-        agent = a; lastBatchAt = 0L; settledDay = null; deepDay = null; mcxBars.clear(); lastOi.clear(); mcxSettles = 0
+        agent = a; lastBatchAt = 0L; settledDay = null; deepDay = null; deepRead = false; mcxBars.clear(); lastOi.clear(); mcxSettles = 0
         _view.value = View()
         if (a != null) publish(a)
     }
