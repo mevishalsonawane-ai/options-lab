@@ -1,0 +1,27 @@
+id: r102-b2-participants
+title: 'R102 B2: FII / Client / Pro index-futures and FII index-option positioning (level vs trailing median, 1-day change) and the FPI cash sign predicting the next 1 and 5 days'
+family: flow-oi
+date: '2026-10-22'
+doc: research/DEEP_NIFTY_BANKNIFTY.md
+hypothesis: 'Pre-registered (PREREG.md B2): the NSE participant file of day t (usable from the open of t+1) or the NSDL FPI cash sign predicts the next 1- or 5-day close-to-close return of NIFTY or BANKNIFTY with BH q <= 0.10 across the 70 R102 tests, the sign in >= 70% of years, and the same sign with twin p <= 0.10 on the holdout.'
+data_version: Drive lake participants/oi 2012 ->, participants/fpi, index_daily; copied 22 Oct 2026
+period:
+  design: 2 Jan 2012 - 14 Jul 2026
+  holdout: 15 Jul - 13 Oct 2026 (the participant file ends 13 Oct), read once
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'FII / Client / Pro net index-futures share (long-short over long+short): level vs trailing-250-day median of past days, 1-day change'
+- 'FII net index-option share (call long + put short - call short - put long): level, change'
+- 'NSDL FPI net cash flow sign'
+model_or_rule: 'sign rules, no fitted parameter; 1,000 circular-shift twins; BH over 70'
+settings: research/hunt/r102_deep/r102pred.py (b2); results/pred_design.json, pred_holdout.json
+prereg: research/hunt/r102_deep/PREREG.md
+variants_tried: 36
+results:
+  summary: 'Design: 4 of 36 pass: Client futures 1-day change -> next day DOWN, NIFTY -5.15 bps (3,575 days, q 0.000, 11/15 years) and BANKNIFTY -8.20 bps (q 0.000, 13/15); FII futures change -> up, BANKNIFTY +6.02 bps (q 0.070); FII option level -> up, NIFTY +4.80 bps (q 0.070). Levels, 5-day horizons and the FPI cash sign never pass. Holdout (63 days): every passed rule has a CI through zero (NIFTY client +3.6 bps, BANKNIFTY client +2.7, FII option +7.5) and the FII-futures one has the wrong sign (-14.1 bps). 0 of 36 confirmed.'
+  costs: one ATM option round trip in index bps, 1.25 NIFTY / 1.54 BANKNIFTY; an overnight hold's theta and signal-time spread not counted
+holdout_read: true
+verdict: rejected
+notes: 'Agrees with OF1 (0 of 15 held on the locked year) and R86 P1-P3. The holdout is one quiet quarter; a yearly re-read with a fresh pre-registration is the honest next step for the client-change rule, not a paper arm.'

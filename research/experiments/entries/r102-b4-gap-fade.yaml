@@ -1,0 +1,25 @@
+id: r102-b4-gap-fade
+title: 'R102 B4: fade a gap up or a gap down of at least 0.3% / 0.6% from the open to the close, NIFTY and BANKNIFTY'
+family: market-facts
+date: '2026-10-22'
+doc: research/DEEP_NIFTY_BANKNIFTY.md
+hypothesis: 'Pre-registered (PREREG.md B4): on a gap of at least 0.3% (or 0.6%) the open-to-close return signed against the gap is positive (the gap fills) with BH q <= 0.10 across the 70 R102 tests, in >= 70% of years, and on the holdout.'
+data_version: Drive lake index_daily 2006 ->; copied 22 Oct 2026
+period:
+  design: 2006 - 14 Jul 2026
+  holdout: 15 Jul - 19 Oct 2026, read once (3-13 gaps per cell, too few)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- gap = open / previous close - 1
+model_or_rule: 'fade sign rule; 1,000 random day-set twins (amendment 2); BH over 70'
+settings: research/hunt/r102_deep/r102pred.py (b4); results/pred_design.json
+prereg: research/hunt/r102_deep/PREREG.md
+variants_tried: 8
+results:
+  summary: '0 of 8 pass. Best: fade a NIFTY gap up >= 0.3%, +6.3 bps a day (1,262 gaps, 14/18 years, twin p 0.17, q 0.53); NIFTY gap up >= 0.6% +8.3 bps (457, q 0.53); BANKNIFTY gap down >= 0.3% -4.9 bps (1,029, q 0.77). The pooled fade-any-gap version run first (amendment 1): NIFTY +4.7 / +8.9 bps (p 0.067 / 0.038), BANKNIFTY -0.1 / -0.8 bps, none passing.'
+  costs: none traded; the fill statistics themselves are in the study (a 0.5-1% gap fills 42% NIFTY / 53% BANKNIFTY)
+holdout_read: true
+verdict: rejected
+notes: 'Amendment 1 split the pooled 4 tests by gap side (the count the pre-registration gave); amendment 2 replaced circular-shift twins (meaningless on a one-sided signal) by random day sets. Both disclosed in PREREG.md before and after the holdout respectively; no verdict changed.'

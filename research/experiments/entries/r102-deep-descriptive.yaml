@@ -1,0 +1,25 @@
+id: r102-deep-descriptive
+title: 'R102 Deep learn NIFTY and BANKNIFTY: the descriptive study (daily and intraday distributions, gaps, range timing, VIX, straddle, theta clock, skew, PCR, max pain, participants)'
+family: market-facts
+date: '2026-10-22'
+doc: research/DEEP_NIFTY_BANKNIFTY.md
+hypothesis: 'Boss (22 Oct): "Deep learn nifty and banknifty". Describe how the two indices move and how their chains behave, every number with a sample size, as a study for Boss and a facts file for Jarvis. No trading rule is derived (descriptive, not a trading rule).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK, participants, bhavcopy index rows), copied 22 Oct 2026; data to 19 Oct 2026
+period:
+  design: to 14 Jul 2026 (daily 2006 ->, minutes 2017 / 2021 ->, options Aug 2021 ->, participants 2012 ->)
+  holdout: 15 Jul - 19 Oct 2026, full-lake descriptive tables written after the one holdout read (desc_all.json)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'index daily and 1-minute OHLC; rolling ATM +-5 option closes and IV; bhavcopy OI by strike; NSE participant OI; NSDL FPI flows; India VIX'
+model_or_rule: 'none: descriptive tables (research/hunt/r102_deep/r102desc.py)'
+settings: research/hunt/r102_deep/r102desc.py; results/desc_design.json, desc_all.json
+prereg: research/hunt/r102_deep/PREREG.md
+variants_tried: null
+results:
+  summary: 'NIFTY daily sd 1.316% over 5,087 days (0.744% in 2025); BANKNIFTY 1.734% (0.789%); daily corr 0.877, beta 1.157. Median day range 0.907% / 1.131% (2,288 / 1,185 days), 61% / 65% of it made by 10:30; the 09:15 minute spans 0.213% / 0.295%. Gaps >= 0.5% on 20% / 34% of days; a 0.5-1% gap fills 42% / 53%. 09:20 ATM straddle 0.96% / 1.49% of spot, beaten by the close on 7.1% / 6.5% of non-expiry and 40.5% / 37.8% of expiry days; expiry straddle 40% of its 09:20 value at 14:30, 13% at 15:15. Put skew +2.56 / +2.11 IV points; PCR 0.86; expiry close a median 0.60% / 0.68% from max pain. FIIs net short index futures 61-72% of their book in 2025-26, clients net long 30-46%.'
+  costs: none (no trades); charges on one lot verified publicly (Rs 70.32 NIFTY, Rs 75.65 BANKNIFTY round trip)
+holdout_read: null
+verdict: not-a-test
+notes: 'Facts for Jarvis in research/knowledge/index_facts.yaml (26 cards, each with n), read by build_pack.py add_index_facts. Signal on the underlying throughout. Research only: no android/** change; the pack is rebuilt in an app session.'
