@@ -1,0 +1,60 @@
+{
+ "G11": {
+  "final": {
+   "trades": 357,
+   "days": 113,
+   "win": 0.378,
+   "net": 14342,
+   "per_trade": 40,
+   "avg_win": 1738,
+   "avg_loss": -992,
+   "biggest_loss": -4639,
+   "worst_day": -11405,
+   "max_dd": 61062,
+   "green_days": 0.416,
+   "top5_share": 4.36,
+   "ex_top5": -48189,
+   "stops": 12,
+   "locks": 5,
+   "targets": 0,
+   "time": 99,
+   "squareoff": 11,
+   "rule_exit": 230,
+   "big_movers": 62,
+   "big_kept": 13,
+   "big_cut": 49,
+   "big_net": 115329,
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 131,
+     "net": 12787
+    },
+    "FINNIFTY": {
+     "trades": 95,
+     "net": 6874
+    },
+    "MIDCPNIFTY": {
+     "trades": 131,
+     "net": -5319
+    }
+   }
+  },
+  "by_index": {
+   "BANKNIFTY": {
+    "trades": 131,
+    "net": 12787
+   },
+   "FINNIFTY": {
+    "trades": 95,
+    "net": 6874
+   },
+   "MIDCPNIFTY": {
+    "trades": 131,
+    "net": -5319
+   }
+  },
+  "changed": 5,
+  "exit_p": 0.1317,
+  "twin_mean": 11695
+ }
+}

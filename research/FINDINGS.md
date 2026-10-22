@@ -1582,3 +1582,9 @@ Full study: `HUNT_R100_LIQUIDITY_GIVEBACK.md` (pre-registered `hunt/r100_liquidi
 - Nearest: breakeven once +20% (G1), about neutral (+Rs 3.3k design on 16 changed trades, -Rs 2.6k walk-forward,
   +Rs 1.3k final; twin p 0.41 / 0.51). Not passed; Boss's choice to switch on (not built).
 - Boss's Rs 500 trail switch on the same trades: -Rs 1.79 lakh design, -Rs 45k final against the own exits. Leave it off.
+- Amendments A1 / A2 (Boss, same day): keep half the best gain once +10% (G8) wins more often (48% vs 44%) but made
+  Rs 1,05,055 against Rs 2,57,249 in design (881 trades; 145 changed); final +Rs 475 (p 0.76). Adding a 15% trailing
+  stop (G9) or the trailing stop alone (G10) lost in both periods. 0 of 3 pass.
+- Amendment A3 (Boss): Breadth Donchian's lock ladder on Liquidity (+5% once +25%, breakeven once +30%, +30% once +60%,
+  +60% once +100%): Rs 2,43,190 against Rs 2,57,249 in design (23 changed), -Rs 16.8k walk-forward, +Rs 3.2k final
+  (5 changed). Fail. It would not have armed on the 22 Oct trade (peak about +22%).

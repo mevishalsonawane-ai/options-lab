@@ -1,0 +1,37 @@
+id: r100-liquidity-g9
+title: 'R100 Liquidity give-back (amendment A2): keep half the best gain once +10%, plus the -15% stop trailing 15% under the best
+  price (Boss)'
+family: trade-management
+date: '2026-10-22'
+doc: research/HUNT_R100_LIQUIDITY_GIVEBACK.md
+hypothesis: 'Boss (22 Oct, after the R100 results): keep half the best gain once +10%, plus the -15% stop trailing 15% under the
+  best price (Boss) added to Liquidity''s own exits keeps open profit without cutting the runners; same gates as G1-G7 (net at
+  least B0''s in design, walk-forward and final; BH q <= 0.10 against random early exits in design and final; not carried by its
+  5 best trades; at least 30 changed design trades).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m), copied 22 Oct; R51 Amendment A clean stores,
+  20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for this amendment; already read by R100 G1-G7 and R51 / R63 / R70 / R76 / R81 (weak)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal: index bars (liquidity levels); lock / trailing stop: option premium'
+model_or_rule: 'Liquidity 15+5 (index level breaks on 15/5-min bars BANKNIFTY and MIDCPNIFTY, 30/5 FINNIFTY; 1-ITM); exits: own
+  exits + keep half the best gain once +10%, plus the -15% stop trailing 15% under the best price (Boss)'
+settings: research/hunt/r100_liquidity_giveback/r100study.py (amend / amend3); r100engine.py
+prereg: research/hunt/r100_liquidity_giveback/PREREG.md
+variants_tried: 10
+results:
+  summary: 'Design: 881 trades, win 48%, net Rs 104,749 against B0 Rs 257,249; walk-forward Rs 88,345 against Rs 238,064; final:
+    357 trades, net -Rs 5,518 against Rs 11,155. Changed 186 design / 60 final trades (design: Rs 146,472 saved on 93, Rs 298,973
+    given up on 93). Random early-exit twin p 1.0 design / 0.992 final (BH q 1.0 / 1.0 over 10). Design gain without its 5 best
+    trades -Rs 182,230. Failed gates: never_less, twins_bh, not_top5.'
+  costs: dated charges, R17 liquidity fills, next-minute fills, stops on the minute low with gap fills at the worse open, locks
+    from the next minute, breakeven = real entry + round-trip charges, one held contract, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes paper or live. Liquidity BANKNIFTY's plain-rules record for the 26 Oct decision
+  is untouched.

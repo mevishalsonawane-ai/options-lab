@@ -23,7 +23,8 @@ Boss, 22 Oct: *"do something for liquidity strategy, it went up to 4.5k, and set
      gap.** The live stream keeps only 5 minutes of prices. Now the first check after such a gap also reads the minute
      candles once, so a lock or trail earned in the gap is set (and sells if the price already fell back to it). Paper
      positions only for now.
-- **New research (R100): 7 ways to keep a big open profit were tested on 1,238 past Liquidity trades. None passed.**
+- **New research (R100): 7 ways to keep a big open profit, plus your three follow-ups (keep half once +10%; a trailing
+  stop; Breadth Donchian's lock), were tested on 1,238 past Liquidity trades. None passed.**
   **So nothing changes on the paper or live Liquidity books.**
   - Trades like today's are rare: 9 of 881 design trades went +20% and still lost (Rs 15,030 together), and 5 of 357
     in the final period.
@@ -38,6 +39,34 @@ Boss, 22 Oct: *"do something for liquidity strategy, it went up to 4.5k, and set
   - **Keep your Rs 500 trail switch off.** On the same trades it would have cost **Rs 1.79 lakh** over 17 months (881
     trades) and Rs 45,326 in the final period (357 trades).
 - **BANKNIFTY's 26 Oct decision:** its plain-rules record is untouched (no rule changed, nothing new is labelled).
+
+## Your follow-up questions: "keep half once +10%", a trailing stop, and Breadth Donchian's lock
+
+Both were tested the same way: written down first, the same 1,238 trades, real costs, one read of the newer period.
+**Neither passed.**
+
+| rule | profit, older 881 trades | profit, newer 357 trades | win rate older / newer |
+|---|---|---|---|
+| **today's rules** | **Rs 2,57,249** | **Rs 11,155** | 44% / 37% |
+| once +10%, sell if half the best gain is given back (yours) | Rs 1,05,055 | Rs 11,630 | 48% / 42% |
+| the same + a 15% trailing stop | Rs 1,04,749 | -Rs 5,518 | 48% / 42% |
+| a 15% trailing stop alone | Rs 2,19,008 | -Rs 12,972 | 44% / 38% |
+
+- **Your rule wins more often but makes much less:** Rs 1.52 lakh less over 17 months.
+  - It fires on about 1 trade in 6.
+  - It saved Rs 1,29,285 on 69 trades and cut 76 winners short, giving up Rs 2,81,479.
+  - In the newer period it was +Rs 475, which random early exits matched.
+- **The trailing stop made it worse:** -Rs 17,148 more in the newer period. On its own it cost Rs 38,241 (older) and
+  Rs 24,127 (newer).
+- **Today's trade under your rule:** sold near 191.7, about +Rs 2,250 instead of -Rs 1,074 (before charges). On today's
+  trade it would have helped. Over history it costs more than it saves.
+
+**And Breadth Donchian's lock** (+5% once +25%, breakeven once +30%, +30% once +60%, +60% once +100%) on Liquidity:
+- **Older 881 trades:** Rs 2,43,190 against Rs 2,57,249, with only 23 trades changed.
+- **2025-26 check year:** Rs 16,754 less.
+- **Newer 357 trades:** +Rs 3,187, from only 5 trades.
+- **Verdict:** did not pass.
+- **Today's trade:** it would not have helped. Its first rung needs +25%, and today's trade peaked near +22%.
 
 ## The trade, minute by minute
 

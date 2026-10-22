@@ -8,7 +8,8 @@ Boss, 22 Oct: *"do something for liquidity strategy, it went up to 4.5k, and set
 
 ## Answer
 
-**None of the 7 give-back protections passed, so the Liquidity paper and live exits stay as they are.** Trades like
+**None of the 7 give-back protections passed, and neither did Boss's three follow-ups (keep half once +10%; a
+trailing stop; Breadth Donchian's lock), so the Liquidity paper and live exits stay as they are.** Trades like
 Boss's are rare: of 881 design trades, 9 reached +20% or more and still closed at a loss (they lost Rs 15,030 together).
 In the final period it was 5 of 357 trades (Rs 4,846). Any lock that would save them also cuts some of the runners that
 make Liquidity's money.
@@ -128,6 +129,70 @@ the past did not beat the plain exits.
 Win rate, worst day and max drawdown (design / final). B0: 44% / 37%, -Rs 8,416 / -Rs 11,405, Rs 32,537 / Rs 61,062.
 G1: 43% / 36%, the same worst days, Rs 28,137 / Rs 61,062. The locks lift the win rate a little and barely move the
 worst day.
+
+## Amendments A1 / A2: Boss's "keep half once +10%" and a trailing stop (22 Oct, pre-registered before their numbers)
+
+Boss, after the results:
+- *"What about if the price goes 50% of its high, then add a stop ... checked after 10% profit gained"*.
+- *"And what if we also add trailing stop loss"*.
+
+The rules (same trades and costs; final period read once more for these, so weak):
+- **G8:** once the option is +10%, sell if it gives back half its best gain. Bought at 100, best 130: sold at 115.
+- **G9:** G8, plus the -15% stop trailing 15% under the best price from the entry.
+- **G10:** that trailing stop alone.
+
+**Results:** none passed. All three lose far more on cut winners than they save.
+
+| id | rule | design (881) | walk-forward (657) | final (357) | win design / final | changed d / f | twin p d / f | BH q (10 tests) |
+|---|---|---|---|---|---|---|---|---|
+| **B0** | own exits (today) | **Rs 2,57,249** | **Rs 2,38,064** | **Rs 11,155** | 44% / 37% | | | |
+| G8 | keep half the best gain once +10% (Boss) | Rs 1,05,055 | Rs 87,875 | Rs 11,630 | 48% / 42% | 145 / 46 | 1.00 / 0.76 | 1.0 / 1.0 |
+| G9 | G8 + a 15% trailing stop (Boss) | Rs 1,04,749 | Rs 88,345 | -Rs 5,518 | 48% / 42% | 186 / 60 | 1.00 / 0.99 | 1.0 / 1.0 |
+| G10 | a 15% trailing stop alone | Rs 2,19,008 | Rs 1,85,585 | -Rs 12,972 | 44% / 38% | 117 / 39 | 1.00 / 1.00 | 1.0 / 1.0 |
+
+Both sides of each rule, trade by trade against B0:
+
+| id | design: saved | design: winners cut short | final: saved / cut |
+|---|---|---|---|
+| G8 | 69 trades, Rs 1,29,285 | 76 trades, Rs 2,81,479 | 28, Rs 39,331 / 18, Rs 38,855 |
+| G9 | 93 trades, Rs 1,46,472 | 93 trades, Rs 2,98,973 | 36, Rs 39,591 / 24, Rs 56,264 |
+| G10 | 63 trades, Rs 77,423 | 54 trades, Rs 1,15,664 | 22, Rs 14,753 / 17, Rs 38,880 |
+
+**G8, Boss's rule:**
+- **Design:** it wins more often (48% against 44%), but it made Rs 1.52 lakh less (-59%) over 17 months.
+- **Why:** a +10% start fires on about 1 trade in 6 (145 of 881). About half of those (76) were runners that dipped and
+  then went on, and they gave up more than twice what the other 69 saved.
+- **Final:** +Rs 475 against B0, from 46 changed trades. Random early exits did as well (p 0.76).
+
+**The trailing stop:**
+- On its own (G10) it cost Rs 38,241 in design and Rs 24,127 in the final period.
+- Added to G8 (G9), it cost a further Rs 17,148 in the final period.
+
+**Today's trade under them** (before charges, assuming a smooth fall from 210):
+- G8 and G9: sold about 191.7, about +Rs 2,250.
+- G10: sold about 178.9, about +Rs 700.
+
+## Amendment A3: Breadth Donchian's lock on Liquidity (22 Oct, pre-registered before its number)
+
+Boss: *"What about trailing stop loss like breath donchain?"* G11 is Breadth Donchian's lock as the app runs it:
+- +5% locked once the option is +25%;
+- breakeven after charges once +30% (never below the +5%);
+- +30% locked once +60%;
+- +60% locked once +100%.
+
+Liquidity keeps its own other exits.
+
+| id | design (881) | walk-forward (657) | final (357) | win design / final | changed d / f | twin p d / f | BH q (11 tests) |
+|---|---|---|---|---|---|---|---|
+| B0 | Rs 2,57,249 | Rs 2,38,064 | Rs 11,155 | 44% / 37% | | | |
+| G11 | Rs 2,43,190 | Rs 2,21,310 | Rs 14,342 | 44% / 38% | 23 / 5 | 0.96 / 0.13 | 1.0 / 1.0 |
+
+**Result:** fail, in every gate.
+- **Design:** it changes few trades (23 of 881). It saved Rs 20,451 on 13 and cut 10 winners short (Rs 34,510).
+- **Final:** +Rs 3,187 against B0, from 5 trades.
+- **Why it acts so rarely:** its first rung needs +25%, and most Liquidity trades end before that.
+- **Today's trade:** it peaked near +22%, so this ladder would never have armed. The result would have been the same
+  -Rs 1,074.
 
 ## What Boss can switch on knowingly (nothing is switched on by this study)
 
