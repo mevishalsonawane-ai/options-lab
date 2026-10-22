@@ -726,7 +726,10 @@ object PassedArmsHost {
         val v = _view.value
         fun m(x: Double) = if (hideNet) NET_HIDDEN else "%,.0f".format(Locale.ENGLISH, x)
         fun rupees(text: String) = if (hideNet) RUPEE_FIGURE.replace(text, NET_HIDDEN) else text
-        return SOURCES.joinToString("\n") { s ->
+        // 22 Oct (the uploaded file cut each line at 300 characters: R72, R52 and Solo 2.0 never reached it): R72, the primary
+        // arm, first; each arm's line, then each index's status and R72's comparison on lines of their own (the upload splits
+        // this text at its line breaks).
+        return (listOf(BreadthDonchianArm.SOURCE) + SOURCES.filter { it != BreadthDonchianArm.SOURCE }).joinToString("\n") { s ->
             val c = v.closedOf(s)
             val ap = c.filter { it.index == apart(s) }
             val wb = v.wouldBeOf(s)
@@ -744,8 +747,8 @@ object PassedArmsHost {
                         "${c.count { it.st }} closed on it ${m(c.filter { it.st }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.st }} on the plain rules ${m(c.filter { !it.st }.sumOf { it.net ?: 0.0 })}" else "") +
                     (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
                 // (16 Oct, R73 review: the unjudged count is said once above, today's only; its kept line is not repeated.)
-                v.status.filterKeys { it.startsWith("$s|") && it != ST_UNJUDGED_KEY }.toSortedMap().entries.joinToString("") { (k, x) -> " · ${k.substringAfter('|')} ${rupees(x)}" } +
-                if (s == BreadthDonchianArm.SOURCE) " · ${rupees(v.comparison())}" else ""
+                v.status.filterKeys { it.startsWith("$s|") && it != ST_UNJUDGED_KEY }.toSortedMap().entries.joinToString("") { (k, x) -> "\n${label(s)} · ${k.substringAfter('|')} ${rupees(x)}" } +
+                if (s == BreadthDonchianArm.SOURCE) "\n${label(s)} · ${rupees(v.comparison())}" else ""
         } + " · ${PassedArms.PASSED}"
     }
 

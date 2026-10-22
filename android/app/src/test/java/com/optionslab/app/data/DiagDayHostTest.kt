@@ -85,6 +85,21 @@ class DiagDayHostTest : RobolectricTest() {
         for (l in others) assertFalse(l, Regex("\\d\\s*after charges").containsMatchIn(l))
     }
 
+    /**
+     * 22 Oct (Boss: "No breadth donchain ran today"): the uploaded file cut the passed arms' one long line at 300 characters, so
+     * R72 Breadth Donchian, R52 and Solo 2.0 never reached it. Now each arm has its own line, R72 first, each under the cut.
+     */
+    @Test fun everyPassedArmHasItsOwnLineR72FirstNoneCut() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val others = (report()["other_arms"] as List<*>).map { it.toString() }
+        val heads = PassedArmsHost.SOURCES.map { PassedArmsHost.label(it) + ": " }
+        for (h in heads) assertTrue(h + others, others.any { it.startsWith(h) })
+        val firstPassed = others.indexOfFirst { l -> heads.any { l.startsWith(it) } }
+        assertTrue(others[firstPassed], others[firstPassed].startsWith(com.optionslab.engine.orb.BreadthDonchianArm.LABEL + ": "))
+        // Each arm's own line starts with its switch and what it holds (the part the cut never reaches).
+        for (h in heads) assertTrue(others.first { it.startsWith(h) }, Regex("^.+: (on|off|record only)").containsMatchIn(others.first { it.startsWith(h) }))
+    }
+
     @Test fun anotherDayReadsNothingOfToday() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         Diag.record("orb", "ORB: guard_refused: kill switch is on")

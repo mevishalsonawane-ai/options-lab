@@ -115,7 +115,9 @@ object DiagDayHost {
             // 20 Oct: the passed arms' line with every rupee net written "(net hidden)" (its counts kept).
             // 14 Oct (Boss approved): the morning gamma line (signs and strikes) and the OI-wall shadow log (points only).
             { GammaMorningHost.diagLine(day) }, { OiWallShadowHost.diagLine(day) },
-        ).mapNotNull { f -> runCatching { r(f()) }.getOrNull() }
+        // 22 Oct: a text of several lines (the passed arms: one per arm, then each index's status) is split into lines, each
+        // kept whole under the report's 300-character cut (one line cut R72, R52 and Solo 2.0 out of the 22 Oct file).
+        ).mapNotNull { f -> runCatching { r(f()) }.getOrNull() }.flatMap { it.split('\n') }.filter { it.isNotBlank() }
 
         // The holder's name whole and word by word, the Zerodha user id, the GitHub login and the repository owner (a personal
         // handle). 14 Oct review: every name word of 2 letters or more ("Om", "Raj"), not only the long ones; DiagDay.scrub
