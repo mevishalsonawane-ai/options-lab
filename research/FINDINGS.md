@@ -1571,3 +1571,14 @@ Signal source: the underlying in every rule (CCI 25 of hlc3 on index spot / MCX 
   holdout (17 trades, -Rs 1,014 / +Rs 4,916, p 0.41 / 0.15).
 - EX (the cross as an early exit): lowered the Liquidity arm (5m -Rs 70,223 on 171 changed trades) and Breadth Donchian
   (5m -Rs 1.39 lakh on 1,368) in the design; 0 of 4 pass. The arms keep their own exits.
+
+## Liquidity 15+5 give-back protection (R100, 22 Oct 2026) - 0 of 7 pass; keep the own exits
+Full study: `HUNT_R100_LIQUIDITY_GIVEBACK.md` (pre-registered `hunt/r100_liquidity_giveback/PREREG.md`; final 1 Apr - 13 Oct
+2026 read once, already read by earlier studies, so weak). Boss, 22 Oct: a Liquidity 5m MIDCPNIFTY put went to about
++Rs 4,500 and was sold at -Rs 1,168 by the 20-minute time stop. Signal on the index in every rule; locks on the premium.
+- Trades like it are rare: 9 of 881 design trades reached +20% and closed at a loss (-Rs 15,030); 5 of 357 in the final.
+- Tested: breakeven once +20% / +15%, a step lock, keep half the gain from +20%, an index breakeven, time-tightening,
+  keep half the profit from +Rs 3,000 a lot. All save the give-back trades and all but one lose more on cut winners.
+- Nearest: breakeven once +20% (G1), about neutral (+Rs 3.3k design on 16 changed trades, -Rs 2.6k walk-forward,
+  +Rs 1.3k final; twin p 0.41 / 0.51). Not passed; Boss's choice to switch on (not built).
+- Boss's Rs 500 trail switch on the same trades: -Rs 1.79 lakh design, -Rs 45k final against the own exits. Leave it off.

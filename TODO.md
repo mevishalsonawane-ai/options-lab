@@ -457,3 +457,20 @@ nothing trades crypto.
       else from C1 or C2 earns a holdout read.
 - [ ] C4. Wire in what exists but is not in the cube: ETH DVOL (no file yet), Deribit option surfaces, on-chain and
       ETF flows (`crypto/data_more`), liquidation prints if a source appears.
+
+## X. Liquidity exit path (22 Oct audit, R100; found while answering Boss's "it went up to 4.5k, and settled at -1k")
+
+Fixed on 22 Oct: a failed index read no longer skips the other Liquidity positions' exits; a lock or trail reads the
+candles' high after a gap longer than the stream keeps. Still open (each waits for a go-ahead):
+- [ ] X1. Liquidity's index exits read the index candles over the network inside the arms' lock (in the 15-second check
+      and the stream's fast look); a slow or failing feed holds every position check behind it. Read them off the lock
+      (or from the stream's own minute candles) and pass them in.
+- [ ] X2. A live position under the lab's Liquidity lock variant never reads a candle high (`priceCheckLive` takes the
+      ORB's legs, not the held contract), so its lock rests on sampled prices only.
+- [ ] X3. The time stop can be decided "held" on a thin option's old candle close (no age check on the paper quote's
+      candle fallback).
+- [ ] X4. Disarming Liquidity while a FINNIFTY or MIDCPNIFTY position is open drops that index from the stream; its
+      exits then run on the slower candle feed.
+- [ ] X5. The per-bar diagnostics line shows the BANKNIFTY ORB's range and bar for every Liquidity book (display only).
+- [ ] X6. Boss's choice (R100): a paper-only "breakeven once +20%" switch, off by default, labelled "did not pass
+      research, your choice" (about neutral on 1,238 trades). Build only on Boss's word.
