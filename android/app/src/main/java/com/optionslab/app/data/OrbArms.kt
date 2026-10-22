@@ -1937,7 +1937,8 @@ object OrbArms {
             val again = nq.ltp * 1.0005
             if (OrbRules.stopTrigger(again, pp.stopPoints) == null) "refused: premium %.2f is at or below %s, a %s-point stop has no level"
                 .format(Locale.ENGLISH, again, pts(pp.stopPoints), pts(pp.stopPoints))
-            else paperRecheck(c, 1, nq)
+            // 22 Oct, merge review: the one index, one side rule again too (another arm may have entered on its own lock meanwhile).
+            else exposureRefusal(b, c, arm) ?: paperRecheck(c, 1, nq)
         }
         val buy = entry.result
         val fill = entry.fill ?: return unfilled(c, entry)
@@ -2992,7 +2993,7 @@ object OrbArms {
 
     /** The words of an entry with no price at its signal ([SignalPrice.retried]: after the one more read). */
     private fun noQuote(c: Paper.Contract, p: SignalPrice): String =
-        if (p.retried) "refused: no quote for ${c.symbol} after 2 reads" else "refused: no quote for ${c.symbol} (not read again: a position of these arms is open)"
+        if (p.retried) "refused: no quote for ${c.symbol} after 2 reads" else "refused: no quote for ${c.symbol}; not read again while a position of these arms is open"
 
     /** One more fresh price for [c] ([Paper.quote]: the stream's tick, else one read), [ENTRY_RETRY_MS] at most; null: none. */
     internal suspend fun retryQuote(c: Paper.Contract): com.optionslab.engine.sandbox.Quote? =
@@ -3230,7 +3231,7 @@ object OrbArms {
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
-        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b)) { nq -> paperRecheck(c, lots, nq) }
+        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b)) { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
         val buy = entry.result
         val fill = entry.fill ?: return unfilled(c, entry)
         // The fill against the signal's price (the stream's last at the signal, else the price read just before the order); timed

@@ -976,10 +976,14 @@ object PassedArmsHost {
             // It decided last, so at 09:21:24 R52 had already bought its puts in the same pass, the same-direction cap (2 a side)
             // was full, and R72's three puts were kept as would-be trades - its FINNIFTY put held by R52. Now the primary arm takes
             // the cap's places and its options first; the others follow (one R72 already holds becomes their would-be trade).
-            if (work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            // 22 Oct, merge review (CLAUDE.md's LIVE rule): first only while none of the other arms' entries could also be mirrored
+            // live - R72 (paper only) taking an option first would skip that arm's live trade; then the order stays as before (R72 last).
+            val r72First = SOURCES.none { it != BreadthDonchianArm.SOURCE && work.active(it) && ExposureCapHost.liveMirrorPossible(it) }
+            if (r72First && work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(DonchianArm.SOURCE)) changed = runCatching { donchian(work, now, reads) }.getOrElse { work.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(OovArm.SOURCE)) changed = runCatching { oov(work, now, reads) }.getOrElse { work.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(Solo2.SOURCE)) changed = runCatching { solo2(work, now, reads) }.getOrElse { work.status["${Solo2.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            if (!r72First && work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (!changed) return
             lock.withLock {
                 val b = book()

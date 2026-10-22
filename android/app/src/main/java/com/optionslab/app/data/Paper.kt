@@ -882,7 +882,8 @@ object Paper {
         // same check is made again inside the book's lock below, with the place, where it counts.
         if (auto != null && action.equals("BUY", true) && runCatching { opens(c.symbol, action) }.getOrDefault(false)) {
             val d = com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name)
-            val why = d?.let { capCheck(book(), it) }
+            // 22 Oct, merge review: with its owner, so R72's kept place refuses here too, before any price read.
+            val why = d?.let { capCheck(book(), it, auto) }
             // 19 Oct review: while this entry could also be mirrored live, the cap only logs (a refusal here would skip the live
             // mirror too); the live door applies the cap to the live order itself.
             if (d != null && why != null && ExposureCapHost.liveMirrorPossible(mirror)) {

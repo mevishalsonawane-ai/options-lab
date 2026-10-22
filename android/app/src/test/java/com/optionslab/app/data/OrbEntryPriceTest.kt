@@ -135,4 +135,37 @@ class OrbEntryPriceTest : RobolectricTest() {
         assertEquals("two failed tries, then one more read", 3, callReads(from))
         assertEquals(listOf("complete"), Paper.state.orders.filter { it.action == "BUY" }.map { it.status })
     }
+
+    /**
+     * 22 Oct, merge review: the second order's checks include the one index, one side rule again - another automatic trader (a
+     * Pine script, its own lock) let through for a BANKNIFTY put while the first order was being priced and cancelled refuses
+     * the retry: nothing more is placed, and the verdict is the side rule's.
+     */
+    @Test fun aRetryIsRefusedWhenAnotherTraderTookTheOtherSideMeanwhile() {
+        upToTheBreak()
+        upstox.scriptNext(ceKey, FakeUpstox.Scripted(listOf(FakeUpstox.Candle(LocalTime.of(10, 34), 300.0, 301.0, 299.0, 320.0))))
+        // The other trader's put is let through once the first order has been cancelled (the retry first waits half a second).
+        val done = java.util.concurrent.atomic.AtomicBoolean(false)
+        val claimed = java.util.concurrent.atomic.AtomicBoolean(false)
+        val watcher = Thread {
+            while (!done.get()) {
+                if (Paper.state.orders.any { it.action == "BUY" && it.status == "cancelled" }) {
+                    // (The ORB entry's own claim is dropped first, as if its 30 s had run out: else the put would be refused.)
+                    AutoExposure.resetForTest()
+                    claimed.set(AutoExposure.check(AutoExposure.Source.PINE, "BANKNIFTY", -1, emptyList()) == null); return@Thread
+                }
+                Thread.sleep(2)
+            }
+        }.apply { start() }
+        try {
+            tick(LocalTime.of(10, 35))
+        } finally { done.set(true); watcher.join(2_000); AutoExposure.resetForTest() }
+        assertTrue("the other trader's put was let through", claimed.get())
+        assertTrue("nothing held", arm().today.isEmpty())
+        assertEquals("one order only: the retry was refused before it was placed", listOf("cancelled"),
+            Paper.state.orders.filter { it.action == "BUY" }.map { it.status })
+        awaitValue("the retry's diagnostics line") {
+            Diag.lines().firstOrNull { it.contains("had no price to fill at; priced again, not bought: ${com.optionslab.ira.AutoSide.OPPOSITE}") }
+        }
+    }
 }

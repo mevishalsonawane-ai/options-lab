@@ -1309,6 +1309,32 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     /**
+     * 22 Oct, merge review (CLAUDE.md's LIVE rule): R72 decides first only while no other arm's entry could also go live. Here R51
+     * could (Live, AI trades on, its "Trade live" on, out of shadow): R72 deciding first would take the option and skip R51's live
+     * trade, so the order stays as before - R51 buys, R72 (paper only) keeps the would-be.
+     */
+    @Test fun whileAnotherArmCanGoLiveR72DoesNotDecideFirstSoThatLiveTradeIsNeverSkipped() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        runBlocking {
+            com.optionslab.app.data.ArmLive.setLive(DonchianArm.SOURCE, true, pinConfirmed = true, log = false)
+            com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, false, pinConfirmed = true, log = false)
+        }
+        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
+        com.optionslab.app.data.ArmLive.liveFlags()
+        assertTrue(ExposureCapHost.liveMirrorPossible(DonchianArm.SOURCE))
+        assertFalse("R72 is still in shadow", ExposureCapHost.liveMirrorPossible(BreadthDonchianArm.SOURCE))
+        bothDonchians()
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val open = PassedArmsHost.view.value.open
+        assertEquals(open.toString(), 2, open.size)
+        val dn = open.single { it.arm == DonchianArm.SOURCE }
+        assertTrue("R51's own trade is real (its live trade is never skipped)", dn.shadow == null && dn.orderId != null)
+        assertEquals("R72, deciding after it, keeps the would-be", PassedArmsHost.SHADOW_TWIN, open.single { it.arm == BreadthDonchianArm.SOURCE }.shadow)
+        assertEquals(65, Paper.state.positions.filter { it.symbol == dn.symbol }.sumOf { it.quantity })
+    }
+
+    /**
      * A book carried over from before 19 Oct: R51's trade (bought by the arm at 09:20) and R72's own lot of the very same option
      * (each with its own paper lot), as the arms bought them then. Today the arms never buy one option twice (the test above).
      */
