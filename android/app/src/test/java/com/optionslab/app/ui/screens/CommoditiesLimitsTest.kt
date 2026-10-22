@@ -27,6 +27,8 @@ import org.junit.runner.RunWith
 @org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 class CommoditiesLimitsTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    // 22 Oct: the market clock pinned to noon IST on a trading day, as in every app test (round 4's rule).
+    @get:Rule val marketClock = com.optionslab.app.testing.MarketClockRule()
 
     private fun rupees(x: Double) = "₹%,.0f".format(java.util.Locale.ENGLISH, x)
 
