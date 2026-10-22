@@ -137,3 +137,13 @@ Boss, 22 Oct: *"And what if we also add trailing stop loss"*.
 - **G10 TRAIL15:** the trailing stop alone (own exits + `0.85 x peak`), to show what each part adds.
 - Same trades, engine, costs, gates, one final read (guarded by `results/A1_FINAL_READ`, shared with G8). BH is over the
   10 tests (G1-G10). G1-G7's verdicts are not re-opened. Results in `results/amend_A1.json`.
+
+## Amendment A3 (22 Oct 2026, Boss: "What about trailing stop loss like breath donchain?"; written before any A3 number)
+
+- **G11 BD-LADDER:** Breadth Donchian's lock (the passed arms' "30-60-100 lock" with "L25", as the app runs it): +5%
+  locked once the option is +25%; breakeven after charges once +30% (never below the +5%); +30% locked once +60%; +60%
+  locked once +100%. Locks only rise, set at a minute's end, acting from the next minute (R64's steps). Only the lock is
+  taken from Breadth Donchian: its own 30-minute exit and 15:15 square-off are not (Liquidity keeps its own exits). R70
+  tested the first rung alone on Liquidity (L25: noise); the full ladder was never tested on Liquidity.
+- Same trades, engine, costs and gates. BH over the 11 tests (G1-G11). Its own one final read, guarded by
+  `results/A3_FINAL_READ`. Results in `results/amend3_*.json` and `results/amend_A3.json`.
