@@ -21,7 +21,7 @@ class DiagTest : RobolectricTest() {
         for (sym in listOf("MIDCPNIFTY27OCT2613250PE", "MIDCPNIFTY27OCT2613262.5CE", "NATURALGAS23OCT26275PE", "SILVERMIC30NOV26FUT", "SENSEX22OCT2672600PE"))
             assertTrue(sym, Diag.redact("cap: $sym by Liquidity 5m MIDCPNIFTY").contains(sym))
         assertTrue(Diag.redact("Liquidity 5m: no_new_entries_after_the_liquidity_window").contains("no_new_entries_after_the_liquidity_window"))
-        for (secret in listOf("a1B2c3D4e5F6g7H8i9J0k1L2m3N4", "github_pat_11ABCDEFG0123456789abcdefXYZ", "abcdefghijklmnopqrstuvwxyz0123", "ABCDEFGHIJKLMNOPQRSTUVWX12CE"))
+        for (secret in listOf("correct_horse_battery_staple_purple", "a1B2c3D4e5F6g7H8i9J0k1L2m3N4", "github_pat_11ABCDEFG0123456789abcdefXYZ", "abcdefghijklmnopqrstuvwxyz0123", "ABCDEFGHIJKLMNOPQRSTUVWX12CE"))
             assertFalse(secret, Diag.redact("key $secret here").contains(secret))
     }
 
