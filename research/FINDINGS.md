@@ -1621,6 +1621,9 @@ Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-N
 ## GOLDM intraday option buying, "catch the 100-point moves" (R99, 21-22 Oct 2026) - no rule found
 Full study: `HUNT_R99_GOLD_OBUY.md` (code `hunt/r99_gold_obuy/`, pre-registered `PREREG.md` 5396b7d7 and
 `PREREG_ROUND2.md` ddcd3497). Signal source: the GOLDM future; the option is only bought (ATM / 1-ITM, 1 lot).
+- Two studies carry the name R99 (22 Oct note): this GOLDM one (entries `r99-a-fade`, `r99-b-follow`, `r99-c-range`,
+  `r99-2-*`) and the NIFTY "+100 on index options" one below (`HUNT_R99_NIFTY100.md`, entries `r99-a`, `r99-b`,
+  `r99-c`, `r99-scan`). No entry id or file name collides, so neither was renamed.
 - Gold does move 100+ points many times a day (median 68 legs of >= 100 a day), but a GOLDM option cannot be paid by
   one: on those trades (median hold 4 minutes) the option moved 0.33 x the future, lost ~14 points on the fill and ~37
   points of charges. Break-even needs roughly 150-200 future points in the trade's favour.
@@ -1632,3 +1635,14 @@ Full study: `HUNT_R99_GOLD_OBUY.md` (code `hunt/r99_gold_obuy/`, pre-registered 
   stop at half the move, out at the square-off. Design 36 trades, 47% win, +Rs 20,741 (+Rs 12,154 at 2x, 4/4 folds);
   holdout (read once, description only) 15 trades, 53%, +Rs 22,889; but negative without the 3 best trades in both and
   no better than random-timed twins on the holdout (p 0.87). Forward paper test only if Boss asks; nothing in the app.
+
+## Catching the +100 premium move on index options (R99, NIFTY, 21 Oct 2026) - 0 of 3 pass; one lead, a note only
+Full study: `HUNT_R99_NIFTY100.md` (code `hunt/r99_nifty100/`, pre-registered `PREREG.md` 543fc366). Not the GOLDM
+R99 above. Signal source: the NIFTY index (and Solo 2.0's own index entry); the ATM option is only bought.
+- Buying the ATM option at a random moment for +100 (stop -40) loses Rs 161 a trade (42,334 moments, 336 sessions):
+  +100 comes 9.2% of the time, the stop 29%, and 62% decay into the square-off. Charges are only Rs 60-75 a lot.
+- No single index condition fixes it (0 of 218 significant); a model on all of them lost (R99A: 238 trades,
+  -Rs 43,085). A fixed +100 / -40 on Solo 2.0's trades made it worse (R99B: 166 trades, -Rs 12,284).
+- Lead (R99C): on Solo 2.0's 166 design trades, letting winners run made +Rs 89,242, +Rs 33,333 more than Solo's own
+  exits, but all of the gain came in Jan-Mar 2026 and bootstrap p 0.245. It failed the gates, so it stays a note;
+  the final period was not opened.
