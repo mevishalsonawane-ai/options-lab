@@ -1,0 +1,30 @@
+id: r99-b-follow
+title: 'R99 B: follow the 100-300 point impulses (GOLDM options)'
+family: mcx-crypto
+date: '2026-10-21'
+doc: research/HUNT_R99_GOLD_OBUY.md
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (21 Oct 2026 copy): GOLDM options_rolling_1m MONTH book (near future +
+  ATM-3..+3 real 1-minute prints) to 19 Oct 2026; R96 book loader'
+period:
+  design: 2025-08-05..2026-07-14 (folds Aug-Oct, Nov-Jan, Feb-Apr, May-14 Jul)
+  holdout: 2026-07-15..2026-10-19 (locked; R99 read it once, for the round-2 E near-miss only)
+instruments:
+- GOLDM
+hypothesis: The same impulses followed (buy WITH the move) earn after costs and pass the R99 gates.
+features:
+- 'signal source: the GOLDM future (minute closes); the option''s own price is never a signal; only the -40% hard premium
+  stop'
+model_or_rule: buy ATM / 1-ITM with the impulse; out at +T, -T/2 or 60 min
+settings: research/hunt/r99_gold_obuy/study.py, sim.py
+prereg: research/hunt/r99_gold_obuy/PREREG.md
+variants_tried: 48
+results:
+  summary: '48 variants, 48 net <= 0, 0 passed the cheap gates. Best: B follow | 300 in 30m | T 200 | evening | ATM: 937 trades,
+    win 31%, net -Rs 322,126 (2x -Rs 516,394), gross -Rs 34,584, folds 0/4, worst month -Rs 69,297, max DD -Rs 335,319, w/o
+    top 3 -Rs 354,761. round 1 SPA p 0.715 (104). Not found.'
+  costs: Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before each fill (R85 strict), 2x on model-priced
+    exits; every gate also at 2x spreads; 1 lot
+holdout_read: false
+verdict: rejected
+notes: 'Held a median 4 minutes; the option moved 0.33 x the future and lost ~14 points on the fill before ~37 points of costs:
+  a 100-point move cannot pay for a GOLDM option.'
