@@ -961,10 +961,14 @@ object PassedArmsHost {
             runCatching { prewarm(work, now, reads) }
             val st0 = HashMap<String, String>(work.status)
             var changed = false
+            // 22 Oct (Boss: "No breadth donchain ran today, which is our primary arm right now"): R72 Breadth Donchian decides FIRST.
+            // It decided last, so at 09:21:24 R52 had already bought its puts in the same pass, the same-direction cap (2 a side)
+            // was full, and R72's three puts were kept as would-be trades - its FINNIFTY put held by R52. Now the primary arm takes
+            // the cap's places and its options first; the others follow (one R72 already holds becomes their would-be trade).
+            if (work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(DonchianArm.SOURCE)) changed = runCatching { donchian(work, now, reads) }.getOrElse { work.status["${DonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(OovArm.SOURCE)) changed = runCatching { oov(work, now, reads) }.getOrElse { work.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(Solo2.SOURCE)) changed = runCatching { solo2(work, now, reads) }.getOrElse { work.status["${Solo2.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
-            if (work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (!changed) return
             lock.withLock {
                 val b = book()
@@ -1129,8 +1133,8 @@ object PassedArmsHost {
             val held = b.positions.firstOrNull { it.open && it.shadow == null && it.symbol == c.symbol && !mayShare(arm, it.arm) }
                 ?: _view.value.open.firstOrNull { it.shadow == null && it.symbol == c.symbol && !mayShare(arm, it.arm) }
             // 19 Oct (Boss: no duplicate Donchian contracts): R51 Donchian 20 and R72 Breadth Donchian no longer both buy one option -
-            // the second is kept as a would-be trade (its record and the R72-vs-R51 comparison still count it). R51 decides
-            // first on a bar both break, so R51 holds it and R72 records the would-be; the other way round when R72 held it first.
+            // the second is kept as a would-be trade (its record and the R72-vs-R51 comparison still count it). R72 decides
+            // first on a bar both break (22 Oct: the primary arm), so R72 holds it and R51 records the would-be.
             // 19 Oct review (CLAUDE.md's LIVE rule): only while this arm's entry cannot also be mirrored live - skipping it would
             // skip its live trade too; then both buy, as before.
             val twin = if (ExposureCapHost.liveMirrorPossible(arm)) null

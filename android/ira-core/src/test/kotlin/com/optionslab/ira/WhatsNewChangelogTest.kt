@@ -49,7 +49,7 @@ class WhatsNewChangelogTest {
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
         assertTrue(sentences.size <= 8, "${sentences.size}")
         for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
-        for (w in listOf("would-be trade", "names the arm", "says why", "from 09:16", "who switched it", "battery far less often", "after midnight"))
+        for (w in listOf("primary arm, now decides first", "would-be trade", "names the arm", "says why", "from 09:16", "who switched it", "battery far less often", "after midnight"))
             assertTrue(w in x.what, w)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
     }

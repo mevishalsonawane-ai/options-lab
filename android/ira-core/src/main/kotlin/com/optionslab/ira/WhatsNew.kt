@@ -66,7 +66,8 @@ object WhatsNew {
     val ENTRIES: List<Entry> = listOf(
         // 22 Oct (Boss: "Check why other arms did not trigger today"): fixes from the 22 Oct diagnostics.
         Entry("2026-10-22-diagnostics-fixes", OCT22, "Fixes from your 22 Oct diagnostics",
-            "A passed arm whose option another paper arm holds now keeps a would-be trade that names the arm. " +
+            "R72 Breadth Donchian, your primary arm, now decides first, so it takes the cap's places before the other passed arms. " +
+                "A passed arm whose option another paper arm holds now keeps a would-be trade that names the arm. " +
                 "Before, that trade was lost and said \"missed\". " +
                 "A break whose two-minute window passed now says why: refused, no check in time, or the minute came late. " +
                 "The passed arms follow their indices on the live stream from 09:16, so 09:20 breaks are judged at 09:20. " +

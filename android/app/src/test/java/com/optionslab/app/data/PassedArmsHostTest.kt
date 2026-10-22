@@ -1175,11 +1175,11 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     /**
-     * 19 Oct (Boss: no duplicate Donchian contracts): four indices breaking together - R51 buys the 1-ITM call; R72 does NOT buy the
-     * same option again: its trade is a would-be one (nothing on the account), run by its own exits, so its record and the
-     * R72-vs-R51 comparison still count it.
+     * 19 Oct (Boss: no duplicate Donchian contracts): four indices breaking together - the option is bought once. 22 Oct (Boss: R72
+     * is "our primary arm"): R72 decides first, so R72 buys the 1-ITM call and R51 does NOT buy it again: its trade is a would-be
+     * one (nothing on the account), run by its own exits, so its record and the R72-vs-R51 comparison still count it.
      */
-    @Test fun fourIndicesBreakingTogetherBuyDonchiansCallOnceAndKeepBreadthsAsAWouldBeTrade() {
+    @Test fun fourIndicesBreakingTogetherBuyBreadthsCallOnceAndKeepDonchiansAsAWouldBeTrade() {
         bothDonchians()
         runBlocking { PassedArmsHost.setLock(true); PassedArmsHost.setL25(true) }
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
@@ -1188,9 +1188,10 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(open.toString(), 2, open.size)
         val br = open.single { it.arm == BreadthDonchianArm.SOURCE }
         val dn = open.single { it.arm == DonchianArm.SOURCE }
-        assertNull("R51's is a real paper trade", dn.shadow)
-        assertEquals("R72's is a would-be trade", PassedArmsHost.SHADOW_TWIN, br.shadow)
-        assertNull("never a paper order", br.orderId)
+        assertNull("R72's is a real paper trade", br.shadow)
+        assertTrue(br.orderId != null)
+        assertEquals("R51's is a would-be trade", PassedArmsHost.SHADOW_TWIN, dn.shadow)
+        assertNull("never a paper order", dn.orderId)
         // The same 1-ITM call, one lot on the account only; breadth's with Donchian's exits plus the lock and L25 (the book's switches).
         assertEquals(dn.symbol, br.symbol); assertTrue(br.symbol, br.symbol.contains("25050")); assertEquals("CE", br.right); assertEquals(65, br.qty)
         assertTrue(br.lock && br.l25)
@@ -1199,26 +1200,28 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(1, Paper.state.orders.count { it.symbol == br.symbol && it.action == "BUY" })
         val x = PassedArmsHost.exitsOf(br, null)
         assertEquals(br.entry * 0.85, x.stop!!, 1e-9); assertNull(x.target); assertEquals("+5% locked once +25%", x.note)
-        assertTrue(PassedArmsHost.tradeLine(br, emptyMap()).contains("would-be"))
-        assertTrue(PassedArmsHost.view.value.status["${BreadthDonchianArm.SOURCE}|NIFTY"].orEmpty().startsWith("would-be "))
+        assertTrue(PassedArmsHost.tradeLine(dn, emptyMap()).contains("would-be"))
+        assertTrue(PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"].orEmpty().startsWith("would-be "))
+        assertTrue(PassedArmsHost.view.value.status["${BreadthDonchianArm.SOURCE}|NIFTY"].orEmpty().startsWith("bought "))
         assertNothingAtZerodha()
         // The bar is decided once: the next pass buys nothing more.
         market(LocalTime.of(9, 21)); breadthMarket(setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
         assertEquals(2, PassedArmsHost.view.value.open.size)
         assertEquals(65, Paper.state.positions.filter { it.symbol == br.symbol }.sumOf { it.quantity })
-        // 09:24 trades at 84 (under -15%): R51's stop sells its lot; R72's would-be trade closes on its own stop at the price seen.
+        // 09:24 trades at 84 (under -15%): R72's stop sells its lot; R51's would-be trade closes on its own stop at the price seen.
         market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
         at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
         val closed = view().closed
         assertEquals(setOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE), closed.map { it.arm }.toSet())
         assertTrue(closed.toString(), closed.all { it.why == "stop" && it.qty == 65 })
-        val wb = closed.single { it.arm == BreadthDonchianArm.SOURCE }
+        val wb = closed.single { it.arm == DonchianArm.SOURCE }
         assertEquals(84.0, wb.exit!!, 1e-9)
         assertTrue("estimated charges of a real round trip", wb.charges > 0)
         assertEquals(0, Paper.state.positions.filter { it.symbol == br.symbol }.sumOf { it.quantity })
         // Its own record, from its own rows (read back from its file); the comparison for Boss still counts both.
         AutomationSupport.reloadFromDisk(PassedArmsHost)
-        assertEquals(PassedArmsHost.SHADOW_TWIN, view().closedOf(BreadthDonchianArm.SOURCE).single().shadow)
+        assertEquals(PassedArmsHost.SHADOW_TWIN, view().closedOf(DonchianArm.SOURCE).single().shadow)
+        assertNull(view().closedOf(BreadthDonchianArm.SOURCE).single().shadow)
         assertTrue(view().forwardLine(BreadthDonchianArm.SOURCE).startsWith("Forward test: 1 of 40"))
         val cmp = view().comparison()
         assertTrue(cmp, cmp.contains("R72 Breadth Donchian 1 trade, −₹") && cmp.contains("R51 Donchian 20 1 trade, −₹") &&
@@ -1227,9 +1230,33 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     /**
+     * 22 Oct (Boss: "No breadth donchain ran today, which is our primary arm right now"): R72 decided last, so R52's entry in the
+     * same pass took the same-direction cap's place and R72's break was kept only as a would-be trade. Now R72 decides first: with
+     * room for one call, R72 buys it and R52's call is the would-be one.
+     */
+    @Test fun breadthDonchianTakesTheCapsPlaceBeforeOpenOutsideValueInTheSamePass() {
+        ExposureCapHost.resetForTest(paperOn = true); ExposureCapHost.setMax(1)
+        only(BreadthDonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, true, log = false) }
+        breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
+        // NIFTY opens above yesterday's value (R52's call) and breaks its 20-bar high (R72's call), in the same 09:20 pass.
+        market(LocalTime.of(9, 20), firstOpen = 25_100.0); tick(LocalTime.of(9, 20))
+        val open = PassedArmsHost.view.value.open
+        val br = open.single { it.arm == BreadthDonchianArm.SOURCE }
+        assertNull("the primary arm's trade is real", br.shadow)
+        assertTrue(br.orderId != null)
+        val oov = open.single { it.arm == OovArm.SOURCE }
+        assertTrue(oov.toString(), oov.shadow == PassedArmsHost.SHADOW_CAP || oov.shadow == PassedArmsHost.SHADOW_HELD)
+        assertNull(oov.orderId)
+        assertEquals("one call on the account: R72's", 1, Paper.state.orders.count { it.action == "BUY" })
+        assertNothingAtZerodha()
+    }
+
+    /**
      * 19 Oct review (CLAUDE.md's LIVE rule): while R72's own entry could also go live (Live, AI trades on, its "Trade live" on and
      * out of shadow), the no-twin rule steps aside - keeping R72 off the option would skip its live trade too - so both buy, as
-     * before. An arm still in shadow (R51 here) is never live-mirrored, so the rule (and the cap) apply to it.
+     * before. An arm still in shadow (R51 here) is never live-mirrored, so the rule (and the cap) apply to it: 22 Oct, with R72
+     * deciding first, R72 buys (its live trade never skipped) and R51 keeps the would-be.
      */
     @Test fun whileBreadthCanGoLiveItsTwinIsBoughtAsBeforeSoItsLiveTradeIsNeverSkipped() {
         com.optionslab.app.data.ArmLive.testDefaultOff = false
@@ -1246,8 +1273,10 @@ class PassedArmsHostTest : RobolectricTest() {
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
         val open = PassedArmsHost.view.value.open
         assertEquals(open.toString(), 2, open.size)
-        assertTrue("both real paper trades", open.all { it.shadow == null && it.orderId != null })
-        assertEquals(130, Paper.state.positions.filter { it.symbol == open.first().symbol }.sumOf { it.quantity })
+        val br = open.single { it.arm == BreadthDonchianArm.SOURCE }
+        assertTrue("R72's own trade is real (its live trade is never skipped)", br.shadow == null && br.orderId != null)
+        assertEquals("R51, in shadow, keeps the would-be", PassedArmsHost.SHADOW_TWIN, open.single { it.arm == DonchianArm.SOURCE }.shadow)
+        assertEquals(65, Paper.state.positions.filter { it.symbol == br.symbol }.sumOf { it.quantity })
     }
 
     /**
