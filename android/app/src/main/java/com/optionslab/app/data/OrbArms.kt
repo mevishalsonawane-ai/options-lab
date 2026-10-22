@@ -2021,7 +2021,12 @@ object OrbArms {
                 // its own exit price, or it rests unfilled and is tried again next pass). The price exits (stop, target, lock,
                 // trail) still wait for a price, as before.
                 val due = noPriceExit(armOf(cur.arm).hero, stopped, t.toLocalTime(), cur.day.isBefore(t.toLocalDate())) ?: continue
-                runCatching { Diag.record("orb", "${armOf(cur.arm).label}: ${cur.symbol} has no price now; its $due exit is sent anyway") }
+                // Review: once a minute per position (each try cancels and puts back the resting stop), said once a day.
+                val tryKey = "${cur.arm}|${cur.symbol}|${cur.entryTime}"
+                val minute = t.withSecond(0).withNano(0)
+                if (noPriceTried.put(tryKey, minute) == minute) continue
+                if (noPriceSaid.add("$tryKey|${t.toLocalDate()}"))
+                    runCatching { Diag.record("orb", "${armOf(cur.arm).label}: ${cur.symbol} has no price now; its $due exit is sent anyway (tried once a minute)") }
                 b.positions[i] = if (armOf(cur.arm).hero) heroExit(cur, c, due) else exit(cur, c, due)
                 continue
             }
@@ -2094,6 +2099,10 @@ object OrbArms {
         day.isBefore(now.toLocalDate()) || !now.toLocalTime().isBefore(LocalTime.of(15, 15)) -> "backstop_square_off"
         else -> "closed_by_you"
     }
+
+    /** 22 Oct (arms audit, review): the minute each position's no-price exit was last tried, and the days it was said (memory only). */
+    private val noPriceTried = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
+    private val noPriceSaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /** 22 Oct (arms audit): a Liquidity approval lasts at most this long after its signal bar closed. */
     internal const val APPROVAL_MINUTES = 10L

@@ -47,7 +47,7 @@ risk. The plain-rules Liquidity record stays separable for the 26 Oct decision.
 4. **ORB's Stop-for-today and 15:10 exits waited for a price.** With the feed down they held until the 15:15 backstop. They now sell at market.
 5. **ORB's expiry close was booked "closed by you"**, and live raised a false "stop at Zerodha was cancelled" alert. Now it says "expiry square-off".
 6. **A hidden Pine script or re-armed shadow could buy again** while it waited for its last exit. Now it only exits.
-7. **While the hidden-arms list could not be read, nothing was blocked** (Jarvis's ideas and Forge ideas could enter) and the list was never read again. Now every hidden arm stays blocked and the list is re-read every 20 seconds.
+7. **While the hidden-arms list could not be read, nothing was blocked** (Jarvis's ideas and Forge ideas could enter) and the list was never read again. Now those two stay blocked, no hidden arm can be switched on, and the list is re-read every 20 seconds.
 8. **A hidden ORB arm could still post an "approve BUY" notification** in the seconds after its exit. Not any more.
 9. **The US-night silver short's 3% stop never filled in the paper book.** The arm's own minute check still covered it. It now rests and fills like a real stop.
 10. **US-night silver could trade against the hidden trend arm's leg** on the same SILVERMIC future, closing both with wrong records. It now skips that day and says why.

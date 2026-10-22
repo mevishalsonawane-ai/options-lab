@@ -658,9 +658,9 @@ object HeroTicketArm {
             p0.copy(targetOrderId = null)
         } ?: p0
         val lots = (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-        // 22 Oct (arms audit): an exit, so it only ever reduces the ticket - the 15:05 expiry square-off ([ExpirySquareOff]) runs
-        // in the same minute as the arm's own 15:05 sale, on another coroutine; when it got there first the arm's SELL used to open
-        // a paper SHORT. Now that sale is refused as already closed and the ticket is booked closed elsewhere, at that sale.
+        // 22 Oct (arms audit): an exit, so it only ever reduces the ticket - when something else closed it between the held read and
+        // this sale (the sweeper, Boss, or the 15:15 square-off), the arm's SELL used to open a paper SHORT. Now that sale is refused
+        // as already closed and the ticket is booked closed elsewhere, at that sale.
         val r = if (limit != null) Paper.place(c, "SELL", lots, "LIMIT", "MIS", limit, null, exit = true) else Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {

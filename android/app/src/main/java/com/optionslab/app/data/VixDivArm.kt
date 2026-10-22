@@ -270,7 +270,7 @@ object VixDivArm {
      * ENTRY treats unknown as stopped ([stoppedToday]); an EXIT never sells a held position on an unreadable flag.
      */
     private suspend fun stoppedKnown(): Boolean? = runCatching {
-        (testStoppedWhy?.invoke() ?: Strategies.stoppedWhy()) != null || LossBreaker.trippedToday()
+        testStoppedWhy.let { h -> if (h != null) h() else Strategies.stoppedWhy() } != null || LossBreaker.trippedToday()
     }.getOrNull()
 
     /** TEST ONLY: the stop-for-today read ([Strategies.stoppedWhy]), or a throw. */

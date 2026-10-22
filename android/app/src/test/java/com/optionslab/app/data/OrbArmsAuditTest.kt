@@ -195,7 +195,11 @@ class OrbArmsAuditTest : RobolectricTest() {
         assertEquals("closed_by_you", arm().today.single().why)
     }
 
-    /** The exit's sale only reduces what is held: closed meanwhile, it is refused and nothing goes short. */
+    /**
+     * Closed by a square-off before the arm's own 15:10 sale: the arm books it from the book's close and sells nothing more, so
+     * nothing goes short. (The sale's refusal itself, for a close landing between the held read and the sale, is
+     * [PaperExitReduceTest.anExitOfAFlatPositionIsRefusedNeverAShort].)
+     */
     @Test fun anExitAfterTheBookWasClosedNeverOpensAShort() {
         upToTheBreak()
         val p = bought()

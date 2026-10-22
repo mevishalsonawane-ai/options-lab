@@ -102,11 +102,15 @@ object HiddenArms {
      */
     fun blocks(key: String): Boolean {
         // 22 Oct (arms audit): while the cleanup's file could not be read its state is empty, so a hidden arm read as "not
-        // blocked" and the gate-only arms (Jarvis's ideas, the forge's paper ideas) took new entries again. Until it reads, every
-        // arm the cleanup covers takes nothing new (nothing is sold or switched off on it: risk only lowered), as [mayArm] does.
-        if (unread && ArmsCleanup.covers(key)) return true
+        // blocked" and the gate-only arms (Jarvis's ideas, the forge's paper ideas) took new entries again. Until it reads, those
+        // two take nothing new (nothing is sold or switched off: risk only lowered). They are paper only, so no live trade is ever
+        // skipped by this (CLAUDE.md's LIVE rule); the switch-based arms are already held by [mayArm] (none is switched on).
+        if (unread && key in UNREAD_BLOCKED) return true
         return key in _state.value.hidden
     }
+
+    /** The paper-only gate arms held back while the file cannot be read ([blocks]); none of them has a live path. */
+    private val UNREAD_BLOCKED = setOf(ArmsCleanup.FORGE, ArmsCleanup.JARVIS)
 
     /** The ORB family's or the expiry Hero's key for an arms' book source, or null for any other arm (Liquidity's books among them). */
     fun keyOfSource(source: String): String? = source.takeIf { it in ORB_SOURCES }

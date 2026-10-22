@@ -1078,7 +1078,11 @@ object Paper {
         val held = heldIn(b, symbol, product)
         val closing = if (held > 0) "SELL" else if (held < 0) "BUY" else return null
         if (!closing.equals(action, ignoreCase = true)) return null
-        return minOf(qty, kotlin.math.abs(held)).takeIf { it > 0 }
+        // A close of the whole position still working (a square-off's MARKET order resting for a price) is already on its way:
+        // an arm's exit sells only what it leaves, so the two can never add up to a short.
+        val closingNow = b.state.orders.filter { it.symbol == symbol && it.product.equals(product, ignoreCase = true) &&
+            it.action.equals(closing, ignoreCase = true) && it.status == "open" && it.strategy == "AUTO_SQUARE_OFF" }.sumOf { it.pendingQuantity }
+        return minOf(qty, kotlin.math.abs(held) - closingNow).takeIf { it > 0 }
     }
 
     /** What a close of a position that is not open says (never the engine's "Missing required field: quantity"). */
@@ -1120,6 +1124,8 @@ object Paper {
                 (it.status == "open" || it.status == "trigger pending") }.map { it.orderId }
             for (id in taken) e.cancel(s, id, now, q).also { if (it.result.ok) s = it.state }
             val out = e.closePosition(s, symbol, exchangeOf(symbol), product, q, now)
+            // The close refused (no price, margin): nothing is kept of it - the stop and target stay resting, as they were.
+            if (!out.result.ok) return describe(out.result, out.events)
             save(b.copy(state = out.state, why = if (taken.isEmpty()) b.why else noted(b.why, taken.associateWith { "position_closed" })))
             describe(out.result, out.events)
         }

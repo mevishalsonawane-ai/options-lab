@@ -159,17 +159,19 @@ class HiddenArmsTest : RobolectricTest() {
     }
 
     /**
-     * 22 Oct (arms audit): while the file could not be read, every arm the cleanup covers takes nothing new ([HiddenArms.blocks],
-     * as [HiddenArms.mayArm] already refused) - before, the gate-only arms (Jarvis's ideas, the forge) traded on the empty state.
-     * Once the file reads again, the cleanup goes on from where it was.
+     * 22 Oct (arms audit): while the file could not be read, the paper-only gate arms (Jarvis's ideas, the forge) take nothing
+     * new ([HiddenArms.blocks]) and no covered arm may be switched on ([HiddenArms.mayArm]) - before, the gate arms traded on the
+     * empty state. Arms with a live path are not skipped by it (CLAUDE.md's LIVE rule). Once the file reads, the cleanup goes on.
      */
     @Test fun whileTheFileCannotBeReadEveryHiddenArmIsBlockedAndALaterReadIsPickedUp() {
         File(context.filesDir, "hidden_arms.vault").writeText("not a vault")
         HiddenArms.reloadForTest()
         HiddenArms.loadForTest()
         assertTrue(HiddenArms.unread)
-        for (k in listOf(ArmsCleanup.FORGE, ArmsCleanup.JARVIS, ArmsCleanup.ORB, ArmsCleanup.PINE, ArmsCleanup.SHADOW, ArmsCleanup.MCX_TREND))
+        for (k in listOf(ArmsCleanup.FORGE, ArmsCleanup.JARVIS))
             assertTrue("$k takes nothing new while unread", HiddenArms.blocks(k))
+        for (k in listOf(ArmsCleanup.ORB, ArmsCleanup.PINE))
+            assertFalse("$k (it has a live path) is not skipped by an unreadable file, only refused a switch-on", HiddenArms.blocks(k))
         assertFalse(HiddenArms.mayArm(ArmsCleanup.ORB))
         assertFalse("an arm the cleanup never covers (Liquidity) is not blocked", HiddenArms.blocks("liquidity"))
         assertTrue(HiddenArms.refusal("ORB").contains("could not be read yet"))

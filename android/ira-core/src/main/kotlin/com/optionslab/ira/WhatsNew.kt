@@ -69,7 +69,7 @@ object WhatsNew {
             "Every arm, the hidden ones too, was checked line by line against its research. " +
                 "An arm's exit can no longer sell into a short when the 15:05 square-off got there first. " +
                 "A hidden Pine script or shadow waiting for its exit opens nothing new. " +
-                "While the hidden-arms list cannot be read, every hidden arm stays blocked and the list is read again. " +
+                "While the hidden-arms list cannot be read, Jarvis's and the forge's ideas stay blocked and the list is read again. " +
                 "An ORB time exit or your Stop for today sells even when no price can be read. " +
                 "The US-night silver short's stop now rests in the paper book, and never trades against the trend arm's leg. " +
                 "Jarvis's own trade ideas stay on paper, always. " +

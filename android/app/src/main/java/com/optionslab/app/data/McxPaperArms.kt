@@ -495,7 +495,7 @@ object McxPaperArms {
      * Boss made). TEST ONLY: [testStoppedWhy] replaces the read.
      */
     private suspend fun stoppedKnown(): Boolean? = runCatching {
-        LossBreaker.mcxStopped(testStoppedWhy?.invoke() ?: Strategies.stoppedWhy())
+        LossBreaker.mcxStopped(testStoppedWhy.let { h -> if (h != null) h() else Strategies.stoppedWhy() })
     }.getOrNull()
 
     @Volatile internal var testStoppedWhy: (() -> com.optionslab.ira.DayStop.Why?)? = null
