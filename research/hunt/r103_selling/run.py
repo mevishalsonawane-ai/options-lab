@@ -298,7 +298,7 @@ def write_report(A, B, buyA, desc, hold, twins):
     if len(hold):
         L.append("\n## Holdout (read once)\n\n")
         L.append(fmt_cells(hold, ["und", "struct", "entry", "stop", "target", "dayset", "trades", "win_rate", "net", "worst_day", "max_dd", "holds"]))
-    (RESULTS / "report.md").write_text("".join(L), encoding="utf-8")
+    (RESULTS / "report.md").write_text("".join(L), encoding="utf-8")       # not committed (it repeats cells_A.csv)
     print("report written", RESULTS / "report.md")
 
 

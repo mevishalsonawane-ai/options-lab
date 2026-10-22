@@ -304,6 +304,33 @@ and without the 30/20 lock, all days and expiry days, both indices. `results/vrp
 - Verdict: rejected. The effect depends on the period; it would be worth a forward test only with a reason why 2021-24
   behaved differently.
 
+## Idea 2: a credit spread in the direction of Boss's own signals (pre-registered `PREREG_DIR.md`, 18 cells)
+
+On each Liquidity 15+5 BANKNIFTY signal (the live arm) and each Donchian 20 signal on NIFTY and BANKNIFTY (the paper arm),
+sell a 4-strike credit spread on the side the signal favours (a put spread on a bullish signal), short strike at the money
+or 2 strikes out, with a combined stop, the 30/20 lock, or the arm's own exit. `results/dir_cells.csv`.
+
+| signal | trades | win rate | net, one lot |
+|---|---|---|---|
+| Liquidity 15+5, BANKNIFTY | 238-339 | 17-35% | -Rs 75k to -Rs 125k |
+| Donchian 20, BANKNIFTY | 375-1,185 | 16-39% | -Rs 98k to -Rs 460k |
+| Donchian 20, NIFTY | 320-1,068 | 36-64% | -Rs 187k to +Rs 11k (best: at the money with the lock, 62% win, p 0.79) |
+
+- **0 of 18 pass; 17 lose.**
+- The signals do carry some direction: trading the opposite side lost more in every cell, and in 5 cells the real side
+  beat a random side (p <= 0.05). But the spread cannot turn that into money.
+- **Why: an intraday spread on an ordinary day earns almost no decay.** The theta table above shows the 09:20 straddle
+  still worth 96-99% of its value at 15:05 three or more sessions before expiry. With so little decay, four orders of
+  charges and spreads decide the result, and the win rate falls below 40% on BANKNIFTY.
+
+## What the four tests together say
+
+Every intraday version of selling has now been tried: at a fixed time, with stops and locks, with a volatility filter,
+and in the direction of Boss's signals. The consistent finding is that **an option seller is paid for holding time,
+especially overnight and over weekends, and intraday trades collect very little of it** except on expiry day, where the
+gamma risk is largest. The one untested idea with a strong reason left is a hedged multi-day hold (for example a NIFTY
+weekly iron condor or credit spread held to expiry), which earns the overnight decay and caps the gap risk with the wings.
+
 ## Caveats, stated plainly
 
 1. **The lake keeps only ATM±10 strikes.** A leg that drifts out of that window has no price. The first run valued such

@@ -106,6 +106,13 @@ pre-registered search of 90 enhancements added only 1-3 win-rate points at half 
 now go to a forward test from 20 Oct 2026, with a decision after 40 expiries (`research/hunt/r103_selling/PREREG_FWD.md`).
 Nothing trades meanwhile.
 
+**Two more ideas, tested after Boss said selling has many routes (22 Oct).** Selling only when options are expensive
+(implied volatility above the index's recent realised volatility) helped in 2024-26 but not in 2021-24: 0 of 144 pass.
+Selling a credit spread in the direction of the Liquidity and Donchian signals lost in 17 of 18 versions. The lesson
+from all four tests: an option seller is paid for holding time, mostly overnight, and intraday selling collects very
+little of it except on expiry day. The one strong idea left untested is a hedged multi-day hold
+(`research/HUNT_R103_DEEP_SELLING.md`).
+
 ## Verdict
 
 **No option-selling rule is ready for the app, and both tests say so.** Before costs, these hedged structures roughly

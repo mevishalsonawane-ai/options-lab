@@ -1,0 +1,34 @@
+id: r103-deep-dir
+title: 'R103 deep idea 2: sell a credit spread in the direction of the Liquidity 15+5 and Donchian 20 signals (18 cells)'
+family: option-structure
+date: '2026-10-22'
+doc: research/HUNT_R103_DEEP_SELLING.md
+hypothesis: 'Pre-registered (research/hunt/r103_selling/PREREG_DIR.md): selling a 4-strike credit spread (short at ATM or
+  2 strikes OTM) on the side the signal favours, with a combined stop at 100% of the credit, the 30/20 lock, or the arm''s
+  own exit, makes money and beats a random-direction twin. Signal source: the index (Liquidity 15+5 BANKNIFTY, the live arm;
+  Donchian 20 on NIFTY and BANKNIFTY, the paper arm), research/hunt/r51 code unchanged.'
+data_version: as r103-deep-nifty-strangle; R51 stores rebuilt from the same lake copy (22 Oct 2026)
+period:
+  design: 20 Nov 2024 - 14 Jul 2026
+  holdout: '15 Jul - 19 Oct 2026 (not read: no passer)'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- Liquidity 15+5 signals (index)
+- Donchian 20 signals (index, 5-minute)
+- option premium (stop, lock)
+model_or_rule: 'r103dir.py: 3 signal sources x 2 placements x 3 exits'
+settings: research/hunt/r103_selling/results/dir_cells.csv
+prereg: research/hunt/r103_selling/PREREG_DIR.md
+variants_tried: 18
+results:
+  summary: '0 of 18 pass; 17 of 18 lose. Liquidity BANKNIFTY: 238-339 trades, 17-35% win, -Rs 75k to -Rs 125k. Donchian BANKNIFTY:
+    375-1,185 trades, 16-39% win, -Rs 98k to -Rs 460k. Donchian NIFTY: the only positive cell, ATM + lock, 368 trades, 62%
+    win, +Rs 11,027 (p 0.79). The signals carry some direction (the flipped side loses more; twin p <= 0.05 in 5 cells), but
+    an intraday spread on a non-expiry day collects almost no decay, so charges and spreads on 4 orders decide the result.'
+  costs: as r103-deep
+holdout_read: false
+verdict: rejected
+notes: 'Points to holding time, not entry selection, as what an option seller is paid for: see the theta-by-hour table (the
+  09:20 straddle keeps 96-99% of its value at 15:05 three or more sessions before expiry).'
