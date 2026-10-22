@@ -1662,8 +1662,6 @@ object OrbArms {
         val p = b.pending.remove(key) ?: return "Nothing is waiting for approval."
         save(b)
         if (now().isAfter(p.expires)) return "The ${LiquidityRules.ARM.label} signal expired at ${hhmm(p.expires)}; a new break will ask again."
-        // 22 Oct (arms audit): the entry window holds at the approval too - a signal approved after 14:00 is not bought.
-        if (!LiquidityRules.mayEnterAt(now())) return "The ${LiquidityRules.ARM.label} signal came in its window, but entries end at 14:00; nothing was bought."
         if (live == null) {
             val was = if (p.live == true) "Zerodha (live)" else "the paper account"
             val msg = "account_changed: the signal was for $was and its account changed since (the app's Live switch, or its self-review " +
