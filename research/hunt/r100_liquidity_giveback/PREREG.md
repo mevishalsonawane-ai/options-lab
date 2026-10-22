@@ -157,3 +157,26 @@ Boss, 22 Oct: *"And what if we also add trailing stop loss"*.
   `results/A4_FINAL_READ`. Results in `results/amend4_*.json` and `results/amend_A4.json`.
 - Whatever the result, Boss asked for it: if it fails the gates it can only be Boss's own opt-in paper switch (off by
   default, labelled, its trades counted apart from the plain-rules record), as R19b's trail; never live.
+
+## Amendment A5 (22 Oct 2026, Boss: "Think out of the box, and find a way to keep the profit and make it does not loss money"; written before any A5 number)
+
+No exit can make every trade a winner (a trade can be stopped before it ever rises). The aim tested: make a trade that has
+already shown a good profit very hard to turn into a loss, while giving up as little of the runners as possible. Three
+mechanisms not tried before on Liquidity (signal on the index; exits on the premium):
+
+- **G13 HALF@15 (free trade):** 2 lots; lot A is sold at +15% over the raw fill (a limit at that price, filled when a
+  minute's high reaches it); lot B keeps Liquidity's own exits UNCHANGED (its -15% stop included). Reported per lot,
+  (A + B) / 2, each lot with its own fills and charges. Once +15% has traded, the pair's worst case is about breakeven
+  before charges. (R81 X5 also moved lot B to breakeven; that is not repeated.) Trades that never reach +15% are B0's.
+- **G14 SPREAD@20:** 1 lot; once the option's best gain is >= +20% (judged at a minute's end), at the next minute's open
+  SELL 1 lot of the same-side option 2 strikes further out of the money (call: +2 steps; put: -2 steps), same expiry,
+  from the same day stack (no option -> no sale, the trade is B0's). The short leg is bought back at the long leg's exit
+  row, at that row's open (or the long leg's own exit price row's open when it left inside a minute), with the same
+  slippage model (sell = bid side, buy back = ask side) and charges. Net = long + short. Paper-only idea (the short
+  leg needs margin).
+- **G15 SPIKE@20/15:** Liquidity's own exits plus a take-profit at +20% over the raw fill that acts only within the first
+  15 minutes after the fill row (a limit at +20%, filled when a minute's high reaches it); after minute 15, own exits only.
+
+- Same trades, B0, engine conventions, costs, gates and both-sides accounting. BH over the 15 tests (G1-G15). One final
+  read for A5, guarded by `results/A5_FINAL_READ`; results in `results/amend5_*.json` and `results/amend_A5.json`.
+  The design phase is run and committed before that read.
