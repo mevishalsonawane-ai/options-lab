@@ -49,7 +49,13 @@ what is sold or bought. Stops, locks and targets are read on the premium, which 
    -Rs 19k to -Rs 21k in the 64-day holdout), and the holdout's pre-registered gate rejected them anyway. Every NIFTY
    and every expiry-day test failed. Before costs the hedged structures roughly break even; eight orders a trade
    (about Rs 300) make them losers.
-10. **What the app lacks before any selling arm goes to paper** (section 8): a basket margin check with the hedge
+10. **A second test agrees (section 10, `research/HUNT_R103_DEEP_SELLING.md`).** The brief's own list, 480 cells:
+    naked straddle and strangle as well as hedged, entries at 09:20 / 09:45 / 10:15, per-leg and combined stops, a 50%
+    target, expiry days, random-entry twins and the buy side. The naked straddle made money in most cells (NIFTY
+    +Rs 71,535 at 09:20, 63% wins, 394 days) but none significantly, with a worst day of -Rs 30,676 and months below
+    -Rs 13k; every hedged all-days cell lost; every buy mirror lost. Three NIFTY expiry-day strangles passed the design
+    gates; in the locked holdout one lost and two made Rs 50-92 a trade over 14 trades (noise). Nothing is confirmed.
+11. **What the app lacks before any selling arm goes to paper** (section 8): a basket margin check with the hedge
     benefit and the expiry-day ELM, long wings filled first and shorts closed first (the app already orders exits that
     way), a credit-based stop and lock on the basket, broker-resting stops on the short legs, an event blackout, and
     expiry-day rules.
@@ -468,6 +474,98 @@ pre-registered test, ever passes.
 * The pre-Aug-2021 straddle losses are estimates from the daily index and the median straddle; they are labelled so.
 * The public rules were checked on 22 Oct 2026 against the sources below. Rules move; the broker's calculator and the
   exchange circular decide on the day.
+
+## 10. A second test: the brief's own list (R103 deep, `research/hunt/r103_selling/`)
+
+Boss's brief asked for more than the defined-risk test above: the naked short straddle and strangle at 09:20, 09:45 and
+10:15, closed at 15:10 or by a stop; expiry-day variants; iron condor versions; per-leg stops at 1.5× and 2× the premium,
+a combined stop as a share of margin, a 50% profit target, an event blackout, random-entry twins and the BUY side. A
+second session ran exactly that, pre-registered separately (`research/hunt/r103_selling/PREREG.md`), with its own code,
+cost model (dated charges, 0.16% half-spread from h24 growing away from the money, double on stops) and BH family of
+**480 cells** on Design A (20 Nov 2024 - 14 Jul 2026, 395 sessions per index after 12 event days). Full tables:
+`research/HUNT_R103_DEEP_SELLING.md`. The two studies agree wherever they overlap.
+
+**What it found**
+
+- **219 of 480 cells made money; 8 of those have BH q ≤ 0.10; 3 pass every gate**, all NIFTY short strangles on expiry
+  days (09:45 with a combined stop and 50% target; 10:15 with per-leg stops). In the locked holdout (read once, 14 expiry
+  days) the 09:45 cell lost −Rs 3,987 and the two 10:15 cells made +Rs 694 and +Rs 1,293: Rs 50-92 a trade, p 0.83-0.85.
+  **Nothing is confirmed.**
+- **Win rate and net, side by side** (09:20, all days, one lot, after costs):
+
+| index | structure | stop | trades | win rate | net | worst day | months below −Rs 13k | p | BH q |
+|---|---|---|---|---|---|---|---|---|---|
+| NIFTY | naked straddle | none | 394 | 63% | +Rs 71,535 | −Rs 30,676 | 3 | 0.43 | 0.73 |
+| NIFTY | naked straddle | combined, 1× credit | 394 | 62% | +Rs 88,578 | −Rs 17,929 | 1 | 0.28 | 0.59 |
+| NIFTY | naked straddle | per leg, 2× | 394 | 58% | +Rs 27,467 | −Rs 27,657 | 4 | 0.72 | 0.90 |
+| NIFTY | naked strangle | combined, 1× credit | 394 | 64% | +Rs 80,641 | −Rs 10,101 | 1 | 0.12 | 0.34 |
+| NIFTY | iron condor | combined, 1× credit | 394 | 48% | −Rs 102,929 | −Rs 5,777 | 2 | 0.001 | 0.008 |
+| NIFTY | iron fly | combined, 1× credit | 394 | 54% | −Rs 64,629 | −Rs 17,187 | 2 | 0.30 | 0.62 |
+| BANKNIFTY | naked straddle | none | 394 | 61% | +Rs 77,090 | −Rs 12,079 | 3 | 0.20 | 0.50 |
+| BANKNIFTY | naked straddle | combined, 1× credit | 394 | 60% | +Rs 65,586 | −Rs 12,079 | 3 | 0.28 | 0.59 |
+| BANKNIFTY | naked strangle | combined, 1× credit | 394 | 56% | −Rs 47,309 | −Rs 11,844 | 4 | 0.36 | 0.68 |
+| BANKNIFTY | iron condor | combined, 1× credit | 390 | 12% | −Rs 346,991 | −Rs 4,766 | 15 | 0.000 | 0.001 |
+| BANKNIFTY | iron fly | combined, 1× credit | 390 | 21% | −Rs 250,260 | −Rs 9,847 | 11 | 0.000 | 0.001 |
+| NIFTY | BUY straddle (the mirror) | none | 394 | 33% | −Rs 216,050 | −Rs 12,838 | - | 0.016 | - |
+| BANKNIFTY | BUY straddle (the mirror) | none | 394 | 30% | −Rs 314,375 | −Rs 14,111 | - | 0.000 | - |
+
+  BANKNIFTY's hedged cells are mostly model-priced (its monthly straddle is wider than the lake's ATM±10 window), so they
+  are the least reliable rows; restricted to the last 5 sessions before expiry, where the window is wide enough, they
+  still lose. The naked straddle's Design A profit did not hold in the earlier regime: NIFTY's 09:20 straddle lost
+  −Rs 60,282 over Aug 2021 - Nov 2024 (786 days).
+- **Stops trade profit for survival.** A per-leg 2× stop on the straddle buys back the losing leg near the top of a move
+  that often comes back, and cut NIFTY's result from +Rs 71,535 to +Rs 27,467. A combined stop at 100% of the credit kept
+  the profit and cut the worst day from −Rs 30,676 to −Rs 17,929. No stopped naked cell kept every month above −Rs 13k
+  with a significant edge.
+- **The decay a seller actually keeps is much less than the decay of "the ATM straddle".** Sections 0 and 3 quote the
+  ROLLING ATM straddle (re-centred on each minute's ATM strike): on NIFTY expiry days it shrinks 87% by 15:15. A seller
+  does not hold the rolling straddle; they hold the 09:20 strikes, and buying those back costs whatever the index's move
+  has added to one leg. Measured on the fixed 09:20 strikes, the NIFTY straddle was still worth a median **83% of its 09:20
+  value at 15:05 on expiry days** (quartiles 45-120%, n 87) and BANKNIFTY's 49% (n 20). EXPIRY_PLAYBOOK found the same
+  (81% / 33% at 15:20). On ordinary days the fixed 09:20 straddle is still worth a median 90-98% at 15:05. Both numbers
+  are right; the second is the one that pays.
+
+*The 09:20 straddle's value later in the day, as a share of its 09:20 value (Design A; median, quartiles, n days)*
+
+
+*NIFTY, Design A: the 09:20 ATM straddle's value as a share of its 09:20 value, median (quartiles), n days*
+
+| days to expiry | 10:15 | 11:15 | 12:15 | 13:15 | 14:15 | 15:05 |
+|---|---|---|---|---|---|---|
+| 3+ | 99% (96-103), n 147 | 98% (94-103), n 147 | 97% (92-105), n 147 | 97% (92-105), n 147 | 96% (91-104), n 147 | 96% (89-104), n 147 |
+| 2 | 98% (94-103), n 86 | 97% (93-104), n 86 | 96% (90-104), n 86 | 96% (89-105), n 86 | 95% (88-107), n 86 | 94% (85-109), n 86 |
+| 1 | 96% (93-102), n 86 | 95% (90-102), n 86 | 93% (87-104), n 86 | 94% (85-104), n 86 | 92% (83-103), n 86 | 90% (81-104), n 86 |
+| expiry | 97% (85-110), n 87 | 86% (77-102), n 87 | 83% (68-109), n 87 | 79% (60-119), n 87 | 78% (54-116), n 87 | 83% (45-120), n 87 |
+
+*NIFTY expiry days: median share of the 09:20 straddle left in the last 90 minutes*
+
+| 14:00 | 14:10 | 14:20 | 14:30 | 14:40 | 14:50 | 15:00 | 15:05 | 15:10 | 15:15 | 15:20 | 15:25 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 85% | 84% | 79% | 79% | 74% | 76% | 78% | 83% | 79% | 82% | 81% | 82% |
+
+*BANKNIFTY, Design A: the 09:20 ATM straddle's value as a share of its 09:20 value, median (quartiles), n days*
+
+| days to expiry | 10:15 | 11:15 | 12:15 | 13:15 | 14:15 | 15:05 |
+|---|---|---|---|---|---|---|
+| 3+ | 100% (98-101), n 346 | 99% (98-101), n 346 | 99% (97-102), n 346 | 99% (97-102), n 346 | 99% (96-102), n 346 | 98% (95-102), n 346 |
+| 2 | 100% (95-103), n 20 | 99% (91-110), n 20 | 98% (89-113), n 20 | 98% (86-106), n 20 | 101% (91-110), n 20 | 96% (90-104), n 20 |
+| 1 | 96% (91-100), n 20 | 92% (89-100), n 20 | 94% (84-106), n 20 | 89% (82-103), n 20 | 89% (81-98), n 20 | 87% (76-99), n 20 |
+| expiry | 96% (90-108), n 20 | 83% (75-99), n 20 | 78% (65-88), n 20 | 63% (55-85), n 20 | 66% (48-102), n 20 | 49% (35-88), n 20 |
+
+*BANKNIFTY expiry days: median share of the 09:20 straddle left in the last 90 minutes*
+
+| 14:00 | 14:10 | 14:20 | 14:30 | 14:40 | 14:50 | 15:00 | 15:05 | 15:10 | 15:15 | 15:20 | 15:25 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 67% | 65% | 72% | 60% | 56% | 56% | 56% | 49% | 43% | 40% | 40% | 41% |
+
+**Event days.** On the 12 RBI and budget days the blackout removed, the naked straddle made +Rs 30,827 (NIFTY) and
++Rs 6,916 (BANKNIFTY): the event's premium was crushed and the moves stayed inside it. Twelve days are too few to rely on,
+and 4 Jun 2024 (counting day, section 5) is the counter-example. The blackout stays in any rule.
+
+**Verdict of the second test:** the same as the first. **No option-selling rule is ready**, naked or hedged. The naked
+straddle has a real but small and unstable premium, carried by days that break Boss's account stop. The hedged
+structures pay more in costs and wing spreads than the tail they insure. Nothing goes to paper; any future selling arm
+needs Boss's explicit decision and the rails in section 8 first.
 
 ## Sources (checked 22 Oct 2026)
 

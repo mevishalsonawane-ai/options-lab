@@ -17,7 +17,9 @@ app changed, and nothing goes to paper or live.
    lost about Rs 95,000.
 4. **Theta is the pay, gamma is the bill.** A normal day burns 12-14% of the 09:20 straddle. Expiry day burns 87% by 15:15,
    most of it after 14:30. That is the same hour when one 100-point move swings a neutral short straddle by 0.8 of a
-   futures lot.
+   futures lot. Those figures are for the rolling ATM straddle. The 09:20 strikes a seller actually holds were still worth
+   a median 83% of their value at 15:05 on NIFTY expiry days (n 87), because the move adds to one leg what time takes
+   from both.
 5. **Naked selling breaks your account rule.** A naked 09:20 BANKNIFTY straddle lost Rs 29,257 on one lot on 4 Jun 2024.
    That is more than two months of your -Rs 13k stop in one afternoon. Only hedged structures (iron fly, condor, credit
    spreads) are even eligible.
@@ -70,10 +72,38 @@ index's ATM strike and is closed by 15:10, or 15:05 on expiry day.
 - **The repricing errs in the seller's favour.** Tested on wings that did keep printing, the method runs 1-5 points high.
 - **The holdout failed even as first priced.** Its win rate jumped by more than the allowed 15 points.
 
+## A second test: the list in Boss's brief (480 cells, `research/HUNT_R103_DEEP_SELLING.md`)
+
+A second session tested what the brief listed: the NAKED short straddle and strangle as well as the iron condor and iron
+fly; entries at 09:20, 09:45 and 10:15; per-leg stops at 1.5x and 2x, a combined stop at 100% of the credit or 3% of
+margin; a 50% target; expiry-day variants; random-entry twins; and the buy side. It was pre-registered separately, with
+its own code and costs, on 20 Nov 2024 - 14 Jul 2026 (394 trades a cell on all days, 86 NIFTY and 20 BANKNIFTY expiry
+days), one BH family of 480.
+
+| 09:20, all days, 1 lot | win rate | net | worst day | months below -Rs 13k | significant? |
+|---|---|---|---|---|---|
+| NIFTY naked straddle, no stop | 63% | +Rs 71,535 | -Rs 30,676 | 3 | no (p 0.43) |
+| NIFTY naked straddle, stop at 1x credit | 62% | +Rs 88,578 | -Rs 17,929 | 1 | no (p 0.28) |
+| NIFTY naked strangle, stop at 1x credit | 64% | +Rs 80,641 | -Rs 10,101 | 1 | no (p 0.12) |
+| NIFTY iron condor, stop at 1x credit | 48% | -Rs 102,929 | -Rs 5,777 | 2 | yes, a loss |
+| BANKNIFTY naked straddle, no stop | 61% | +Rs 77,090 | -Rs 12,079 | 3 | no (p 0.20) |
+| BANKNIFTY iron fly, stop at 1x credit | 21% | -Rs 250,260 | -Rs 9,847 | 11 | yes, a loss |
+| NIFTY straddle BOUGHT instead, no stop | 33% | -Rs 216,050 | -Rs 12,838 | - | yes, a loss (p 0.02) |
+
+- **219 of 480 cells made money, 8 of them significantly after BH, and 3 passed every gate:** NIFTY short strangles on
+  expiry days (09:45 and 10:15). In the locked holdout, read once (14 expiry days): -Rs 3,987, +Rs 694 and +Rs 1,293.
+  That is Rs 50-92 a trade for the two that stayed positive, which is noise (p 0.83-0.85). **Nothing is confirmed.**
+- **The naked straddle's profit is not stable.** The same NIFTY 09:20 straddle lost -Rs 60,282 over Aug 2021 - Nov 2024
+  (786 days).
+- **Every hedged cell on all days lost, in both periods; every buy-side mirror lost.** Both studies agree.
+- **Stops trade profit for survival.** A 2x per-leg stop cut NIFTY's straddle from +Rs 71,535 to +Rs 27,467; a combined stop
+  at 100% of the credit kept the profit and cut the worst day to -Rs 17,929, but still left a month below -Rs 13k.
+
 ## Verdict
 
-**No option-selling rule is ready for the app.** Before costs, these hedged structures roughly break even. The eight
-orders a trade make them losers, and naked selling makes money only by risking days that break your account stop.
+**No option-selling rule is ready for the app, and both tests say so.** Before costs, these hedged structures roughly
+break even. The eight orders a trade make them losers, and naked selling makes money only by risking days that break your
+account stop.
 Nothing goes to paper.
 
 ## What a selling arm would need in the app before any paper trade
@@ -104,3 +134,6 @@ This applies only if a future pre-registered test passes:
   results folder is 116 KB.
 - **Not run:** `research/brain/tests` and `features catalog --check`. Boss declined those runs in this session, and R103
   does not touch `research/brain`.
+- **Second study (`research/hunt/r103_selling/`):** 31 tests in `test_r103.py`, including the look-ahead guard on synthetic
+  and real lake days. `research/brain/tests` (183 passed), `features catalog --check`, the experiment-log validator with 8
+  new `r103-deep-*` entries, and the secret grep were all run and clean. The results folder is under 1 MB.

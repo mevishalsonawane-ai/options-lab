@@ -1,5 +1,5 @@
 """Turns results/*.csv and results/descriptives.json into the markdown tables that research/DEEP_OPTIONS_SELLING.md
-quotes (theta table, tail table, distribution, cell tables). Writes results/fragments.md.
+quotes (theta table, tail table, distribution, cell tables). Writes results/fragments.json.
 
     python3 -I research/hunt/r103_selling/write_doc.py
 """
@@ -140,8 +140,7 @@ def main():
         summ.append(f"- positive stop cells failing {gate}: {int((~fails[gate].astype(bool)).sum())} of {len(fails)}")
     f["SUMMARY"] = "\n".join(summ) + "\n"
     (RESULTS / "fragments.json").write_text(json.dumps(f, indent=1), encoding="utf-8")
-    (RESULTS / "fragments.md").write_text("".join(f"\n<<{k}>>\n{v}" for k, v in f.items()), encoding="utf-8")
-    print("fragments written", RESULTS / "fragments.md")
+    print("fragments written", RESULTS / "fragments.json")
 
 
 if __name__ == "__main__":

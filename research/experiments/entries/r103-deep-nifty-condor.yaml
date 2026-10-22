@@ -1,0 +1,42 @@
+id: r103-deep-nifty-condor
+title: 'R103 deep: NIFTY iron condor at 09:20 / 09:45 / 10:15, five stops, two targets, all days and expiry days (research
+  only)'
+family: option-structure
+date: '2026-10-22'
+doc: research/HUNT_R103_DEEP_SELLING.md
+hypothesis: 'Pre-registered (research/hunt/r103_selling/PREREG.md): selling the iron condor intraday on NIFTY, closed at 15:10
+  (15:05 on expiry) or by a stop, makes money after real charges and slippage: net > 0, sign-flip p <= 0.05 and BH q <= 0.10
+  over 480 cells, >= 3 of 4 walk-forward blocks positive, max DD >= -Rs 40k and no month < -Rs 13k, a stop on; then holds
+  on the locked holdout read once. Signal source: none (time-of-day entry centred on the index''s ATM strike); stops and targets
+  on the premium.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 22 Oct 2026: options_rolling_1m opt_NIFTY_WEEK_2021-2026, opt_BANKNIFTY_WEEK_2021-2024
+  and MONTH_2025-2026 (ATM+-10, 1-minute), index_1m NIFTY / BANKNIFTY / INDIAVIX, index_daily'
+period:
+  design: 20 Nov 2024 - 14 Jul 2026 (Design A; Design B 5 Aug 2021 - 19 Nov 2024 as context)
+  holdout: '15 Jul - 19 Oct 2026 (not read: no design passer)'
+instruments:
+- NIFTY
+features:
+- 'signal source: none (non-directional, time-of-day entry)'
+- ATM strike and ATM straddle at the entry minute
+- option premium for stops and targets
+- event calendar (blackout)
+model_or_rule: iron condor (PREREG section 3), entries 09:20 / 09:45 / 10:15, stops X0-X4, targets T0 / T1, day sets ALL /
+  EXPIRY
+settings: research/hunt/r103_selling/ (PREREG.md, r103sim.py, run.py; results/cells_A.csv)
+prereg: research/hunt/r103_selling/PREREG.md
+variants_tried: 60
+results:
+  summary: 'Design A (20 Nov 2024 - 14 Jul 2026), 60 cells (3 entries x 5 stops x 2 targets x all / expiry days), 1 lot, after
+    costs: 14 of 60 net > 0, 0 with net > 0 and BH q <= 0.10 (family of 480), 0 pass every gate. 09:20 all days no stop: 394
+    trades, win 52%, net Rs -91,000, worst day Rs -13,420, max DD Rs -94,506, 3 months < -Rs 13k, p 0.04, q 0.14, twin p 0.27.
+    Same with the combined stop at 1x credit: win 48%, net Rs -102,929, worst day Rs -5,777, p 0.00. Best cell (chosen after
+    the fact): 0920 X4/T0 EXPIRY, 86 trades, net Rs +12,382, q 0.82. Design B (5 Aug 2021 - 19 Nov 2024, context, no gate)
+    09:20 no stop: 786 trades, net Rs -216,720.'
+  costs: dated charges per order per leg (Rs 20 brokerage, STT on sells 0.1% then 0.15% from 1 Apr 2026, exchange, SEBI, stamp,
+    GST); half-spread 0.16% of the premium at ATM (h24), +50% per strike away, >= 1 tick, doubled on stop fills
+holdout_read: false
+verdict: rejected
+notes: 'A separate study from the r103-<index>-<day>-<structure> entries (research/hunt/r103_sell, another session''s defined-risk
+  study); separate BH family. Legs outside the lake''s ATM+-10 window are valued by a calibrated model (PREREG amendment 1).
+  Nothing goes to paper or live: selling is not in the app.'

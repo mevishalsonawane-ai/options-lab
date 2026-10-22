@@ -1721,3 +1721,22 @@ directional; structures centred on the index's 09:20 ATM; exits on the premium.
   BANKNIFTY -6.46% after 09:20); the same days with 1-straddle wings lost -Rs 3.0 / -Rs 3.8 lakh.
 - Warning for other studies: any rule that holds a strike more than about 6 steps from ATM on the rolling lake can be
   marked at stale prices when the index moves away. Check the share of exit legs without a print before trusting it.
+
+## The brief's own selling list, naked and hedged (R103 deep, 22 Oct 2026) - 3 of 480 passed design, none confirmed
+Full study: `HUNT_R103_DEEP_SELLING.md` (pre-registered `hunt/r103_selling/PREREG.md`, two dated amendments; Design A 20 Nov
+2024 - 14 Jul 2026, holdout 15 Jul - 19 Oct 2026 read once). Summary in `DEEP_OPTIONS_SELLING.md` section 10. A separate
+study and BH family from the one above. Signal source: none (time-of-day entry at the index's ATM strike).
+- 480 cells: NIFTY / BANKNIFTY x naked straddle / naked strangle / iron condor / iron fly x 09:20 / 09:45 / 10:15 x five
+  stops x two targets x all / expiry days; 1 lot, dated charges, 0.16% half-spread (h24) growing away from ATM, doubled on
+  stops; event days blacked out. 219 net > 0, 8 of them with q <= 0.10, 3 pass every gate (NIFTY expiry-day strangles at
+  09:45 / 10:15). Holdout, 14 expiry days each: -Rs 3,987, +Rs 694, +Rs 1,293 (p 0.53 / 0.85 / 0.83): not confirmed.
+- Naked 09:20 straddle, no stop, 394 days: NIFTY +Rs 71.5k (63% win, worst day -Rs 30.7k, 3 months < -Rs 13k, p 0.43),
+  BANKNIFTY +Rs 77.1k (61%, p 0.20). The same NIFTY trade lost -Rs 60.3k over Aug 2021 - Nov 2024 (786 days). Positive
+  in most cells, significant in none, and not stable across regimes.
+- All 120 hedged all-days cells lose, in both periods; all 32 buy mirrors at 09:20 lose. A 2x per-leg stop cuts the
+  naked straddle's profit by more than half; a combined stop at 100% of the credit keeps it and cuts the worst day.
+- The fixed 09:20 strikes keep a median 83% of their value at 15:05 on NIFTY expiry days (n 87; BANKNIFTY 49%, n 20),
+  although the rolling ATM straddle shrinks 87%: the move adds to one leg what time takes from both.
+- On the 12 blacked-out RBI / budget days of Design A the naked straddle made money (IV crush); too few days to use.
+- The same stale-strike trap as above: a leg outside the lake's window was first valued at its entry price, which
+  invented hedged profits. The final model scales the leg's last IV by a printed neighbour's IV change (calibrated 0.98-1.00).
