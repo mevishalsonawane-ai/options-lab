@@ -227,7 +227,7 @@ class BatteryRestTest {
         // (19 Oct: the paper order speed and same-direction cap entry on top of all, then R51's record only above it.)
         // (20 Oct: the Candle agent's entry, then the 19 Oct diagnostics fixes newest of all.)
         // (20 Oct: the whole-app review's entry, then enhancement round 1's, then round 2's; 21 Oct: round 3's, the commodities' own lock, then round 4's, then round 5's, then FT3's; 22 Oct: the Liquidity exit fixes, then Boss's breakeven switch, then the 22 Oct diagnostics fixes newest of all.)
-        assertEquals(35, o)
+        assertEquals(36, o)
         assertTrue(WhatsNew.ENTRIES.take(o).all { it.date > java.time.LocalDate.of(2026, 10, 14) })
         assertEquals("2026-10-14-gamma-line-oi-wall-shadow", WhatsNew.ENTRIES[o + 1].id)
         assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[o + 2].id)

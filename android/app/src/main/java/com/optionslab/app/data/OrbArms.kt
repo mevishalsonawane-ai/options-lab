@@ -1532,11 +1532,12 @@ object OrbArms {
             return@withLock if (on) "${LiquidityRules.ARM.label} armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
                 (if (automatic) "fully automatic" else "you approve each entry") + ": on the BANKNIFTY 15- and 5-minute, FINNIFTY 30- and 5-minute " +
                 "and MIDCPNIFTY 15- and 5-minute charts, " +
-                "when a close takes a liquidity pool that sits on a swing zone, it buys the ATM call (up) or put (down), ${LiquidityLots.words(lotsOf(b))}, with a stop " +
+                // 22 Oct (arms audit): the words say the rule as it runs (one strike in the money, the index stop, the time stop).
+                "when a close takes a liquidity pool that sits on a swing zone, it buys the call (up) or put (down) one strike in the money, ${LiquidityLots.words(lotsOf(b))}, with a stop " +
                 // (The stop of the variant in force today for that account, review G2-6: 15% on its constants.)
                 "${pts(runCatching { liqParams(today(), live).stopPct }.getOrDefault(LiquidityRules.PREMIUM_STOP) * 100)}% below the price paid, " +
-                "and sells at the next liquidity level, when new liquidity forms, when the break fails, or at " +
-                "15:10. Entries 09:20-14:00, one position per chart." +
+                "an index stop back through the broken level, a 20-minute time stop unless it is 5% up, and sells at the next liquidity " +
+                "level, when new liquidity forms, when the break fails, or at 15:10. Entries 09:20-14:00, one position per chart." +
                 (if (b.parked.isEmpty()) "" else " ${b.parked.sorted().joinToString(" and ")} stays parked (switch it back on under the row).")
             else "${LiquidityRules.ARM.label} disarmed." + if (holding) " Its open position is still managed to its exit." else ""
         }
@@ -1661,6 +1662,8 @@ object OrbArms {
         val p = b.pending.remove(key) ?: return "Nothing is waiting for approval."
         save(b)
         if (now().isAfter(p.expires)) return "The ${LiquidityRules.ARM.label} signal expired at ${hhmm(p.expires)}; a new break will ask again."
+        // 22 Oct (arms audit): the entry window holds at the approval too - a signal approved after 14:00 is not bought.
+        if (!LiquidityRules.mayEnterAt(now())) return "The ${LiquidityRules.ARM.label} signal came in its window, but entries end at 14:00; nothing was bought."
         if (live == null) {
             val was = if (p.live == true) "Zerodha (live)" else "the paper account"
             val msg = "account_changed: the signal was for $was and its account changed since (the app's Live switch, or its self-review " +
@@ -1807,6 +1810,10 @@ object OrbArms {
         if (b.positions.any { it.arm == arm.source && it.open }) { watching(); return "holding" }
         if (!t.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) return "flat_after_square_off"
         if (Strategies.stoppedToday()) { b.watched.remove(watchKey); return "stopped_for_today" }
+        // 22 Oct (arms audit): a hidden arm (Boss's cleanup) decides nothing new - also in the seconds between its exit and the
+        // cleanup's switch-off, when a break could still create an approval and post "approve BUY" for an arm the list says is
+        // off (the buy itself was refused, the notification was not). Memory only.
+        if (HiddenArms.keyOfSource(arm.source)?.let { HiddenArms.blocks(it) } == true) { b.watched.remove(watchKey); return HIDDEN_NO_ENTRY }
         if (arm.hero) return heroCycle(b, t)
         b.pending[arm.source]?.let { pd -> if (t.isAfter(pd.expires)) { b.pending.remove(arm.source); lapsed(arm, pd) } else { watching(); return "awaiting_approval" } }
         if (arm.liquidity) return liquidityCycle(b, arm, t, appLive, reads)
@@ -1998,15 +2005,26 @@ object OrbArms {
             // Its resting stop comes out of the book at once, so it can never fill as a short.
             if (net <= 0) {
                 cur.stopOrderId?.let { runCatching { Paper.cancel(it, "position_closed") } }
-                val backstop = cur.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15))
                 // Book the actual closing fill (slippage and charges included) when there is one.
                 val sq = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && it.strategy == "AUTO_SQUARE_OFF" && !it.timestamp.isBefore(cur.entryTime) }
+                // 22 Oct (arms audit): the app's 15:05 expiry square-off (its close carries that owner) is said as such, never
+                // "closed by you".
+                val expiryClose = sq != null && runCatching { Strategies.owners()["paper:${sq.orderId}"] }.getOrNull() == Origins.EXPIRY
                 b.positions[i] = cur.copy(exit = sq?.price?.toDouble() ?: ltp ?: cur.entry, exitTime = sq?.timestamp ?: t,
-                    why = if (backstop) "backstop_square_off" else "closed_by_you",
+                    why = goneWhy(cur.day, t, expiryClose),
                     stopOrderId = null, charges = cur.charges + (sq?.charges?.toDouble() ?: 0.0))
                 continue
             }
-            if (ltp == null) continue                                               // no price at all: hold
+            if (ltp == null) {
+                // 22 Oct (arms audit): no price at all used to hold everything, the 15:10 square-off, Boss's Stop for today and the
+                // Hero arm's 15:05 sale included. Those exits need no price: the sale goes at market (the paper book fills it on
+                // its own exit price, or it rests unfilled and is tried again next pass). The price exits (stop, target, lock,
+                // trail) still wait for a price, as before.
+                val due = noPriceExit(armOf(cur.arm).hero, stopped, t.toLocalTime(), cur.day.isBefore(t.toLocalDate())) ?: continue
+                runCatching { Diag.record("orb", "${armOf(cur.arm).label}: ${cur.symbol} has no price now; its $due exit is sent anyway") }
+                b.positions[i] = if (armOf(cur.arm).hero) heroExit(cur, c, due) else exit(cur, c, due)
+                continue
+            }
             // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms and
             // Boss's paper give-back trail only.
             val highs = if (ladderTarget(cur) != null || cur.trail != null || cur.be != null) bestSince(cur, c, t, mayRead = regular) else Highs(null, null)
@@ -2054,6 +2072,48 @@ object OrbArms {
             if (why == MANAGER_EXIT) runCatching { Diag.record("orb", "${armOf(cur.arm).label}: exited early by the trade manager - ${mgr?.first}") }
             b.positions[i] = if (armOf(cur.arm).hero) heroExit(seen, c, why) else exit(seen, c, why)
         }
+    }
+
+    /**
+     * 22 Oct (arms audit): the exits that need no price - Boss's Stop for today ([stopped]), the 15:10 square-off, and the Hero
+     * arm's 15:05 sale (or a Hero position carried from an earlier day, [carried]) - or null. Pure.
+     */
+    internal fun noPriceExit(hero: Boolean, stopped: Boolean, t: LocalTime, carried: Boolean): String? = when {
+        stopped -> "operator_stop"
+        !t.isBefore(OrbRules.SQUARE_OFF) -> "session_end"
+        hero && (carried || HeroRules.exitDue(t)) -> HeroRules.ExitKind.TIME.why
+        else -> null
+    }
+
+    /**
+     * 22 Oct (arms audit): why a position gone from its book without the arm selling it closed: the app's 15:05 expiry square-off
+     * ([expiryClose]), else the 15:15 backstop (or a later day), else Boss's own close. Pure.
+     */
+    internal fun goneWhy(day: LocalDate, now: LocalDateTime, expiryClose: Boolean): String = when {
+        expiryClose -> "expiry_square_off"
+        day.isBefore(now.toLocalDate()) || !now.toLocalTime().isBefore(LocalTime.of(15, 15)) -> "backstop_square_off"
+        else -> "closed_by_you"
+    }
+
+    /** 22 Oct (arms audit): a Liquidity approval lasts at most this long after its signal bar closed. */
+    internal const val APPROVAL_MINUTES = 10L
+
+    /** When a Liquidity approval for the [tf]-minute bar that started at [barStart] lapses: the next bar's close, [APPROVAL_MINUTES] at most. Pure. */
+    internal fun approvalExpiry(barStart: LocalDateTime, tf: Int): LocalDateTime =
+        barStart.plusMinutes(tf.toLong()).plusMinutes(minOf(tf.toLong(), APPROVAL_MINUTES))
+
+    /** A paper exit refused because nothing is held any more ([Paper.place]'s exit rule): the position was closed elsewhere. */
+    private fun alreadyClosed(r: Paper.Result): Boolean = !r.ok && "already closed" in r.message
+
+    /**
+     * 22 Oct (arms audit): the app's expiry square-off is closing [symbol] (Zerodha's [kite]) now - its contract expires today, it
+     * is 15:05 or later and the square-off is on, or one of its orders ("iraalgoexpiry") is already there. The orders as read.
+     */
+    private fun expiryClosing(symbol: String, kite: String, t: LocalDateTime, orders: Collection<Broker.OrderRow>): Boolean {
+        if (orders.any { it.tag == "iraalgoexpiry" && it.symbol == kite }) return true
+        val expiry = runCatching { Paper.contractOf(symbol)?.expiry }.getOrNull() ?: return false
+        val on = runCatching { AppSettings.load().expirySquareOff }.getOrDefault(true)
+        return on && expiry == t.toLocalDate() && t.hour * 60 + t.minute >= com.optionslab.engine.NseHours.EXPIRY_SQUARE_OFF
     }
 
     /** When each open position's best price was last read in this process (memory only; by [managerId]): [bestSince]'s gap rule. */
@@ -2104,7 +2164,11 @@ object OrbArms {
             if (so?.status == "complete") return p.copy(exit = so.averagePrice?.toDouble(), exitTime = so.updateTimestamp,
                 why = stopWhy(p), charges = p.charges + chargesOf(id))
         }
-        val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null)
+        // 22 Oct (arms audit): an exit only ever reduces what the paper book holds. Already closed (the 15:05 expiry square-off or
+        // Boss got there first) it is refused - never a short - and no stop goes back on a flat book: the next look books the
+        // position from the paper book's own close ([priceCheck]'s "gone" path).
+        val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null, exit = true)
+        if (alreadyClosed(sell)) return p.copy(stopOrderId = null)
         // Nothing sold (no price): the resting stop goes back in the book so the position is never left without one; the
         // sale is tried again on the next pass.
         val fill = filledOrCancelled(sell) ?: return p.stopOrderId?.let { restop(p, c) } ?: p.copy(stopOrderId = null)
@@ -2120,7 +2184,7 @@ object OrbArms {
      */
     private suspend fun restop(p: Position, c: Paper.Contract): Position {
         val trigger = lockOrStop(p) ?: return p.copy(stopOrderId = null)
-        val r = runCatching { Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "SL-M", "MIS", null, trigger) }.getOrNull()
+        val r = runCatching { Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "SL-M", "MIS", null, trigger, exit = true) }.getOrNull()
         val id = r?.takeIf { it.ok }?.orderId?.also { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · stop") }
         return if (id == null) p.copy(stopOrderId = null) else p.copy(stopOrderId = id, stopTrigger = trigger)
     }
@@ -2398,6 +2462,8 @@ object OrbArms {
         // Never a market order on these strikes: a LIMIT BUY on the PAPER account. Not filled at once, it is cancelled
         // (nothing held), and the arm may decide again on a later bar until 14:45.
         val buy = Paper.place(c, "BUY", lots, "LIMIT", "MIS", limit, null, known = q, auto = HeroRules.OWNER)
+        // 22 Oct (arms audit): its name on the order at once, filled or not (a cancelled limit is never taken for Boss's own).
+        buy.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · entry") } }
         val fill = filledOrCancelled(buy) ?: return kept("order_refused: " +
             (if (buy.ok) "the limit %.2f did not fill; the order was cancelled".format(Locale.ENGLISH, limit) else buy.message), pick, limit, lots)
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · entry") }
@@ -2433,7 +2499,9 @@ object OrbArms {
         // A stale feed at the exit: the last known price stands in for the bid.
         val bid = q?.bid?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 } ?: marks[p.symbol]
         if (bid != null) {
-            val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "LIMIT", "MIS", HeroRules.exitLimit(bid), null, known = q)
+            // 22 Oct (arms audit): an exit, reduce-only - the expiry square-off runs in the same minute as this 15:05 sale.
+            val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "LIMIT", "MIS", HeroRules.exitLimit(bid), null, known = q, exit = true)
+            if (alreadyClosed(sell)) return p0
             val fill = filledOrCancelled(sell)
             if (fill != null) {
                 sell.orderId?.let { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · $why") }
@@ -2484,7 +2552,7 @@ object OrbArms {
      */
     private suspend fun heroTarget(p: Position, c: Paper.Contract, step: HeroRules.ExitStep, limit: Double): Position? {
         val q = runCatching { Paper.quote(c) }.getOrNull()
-        val sell = Paper.place(c, "SELL", step.lots, "LIMIT", "MIS", limit, null, known = q)
+        val sell = Paper.place(c, "SELL", step.lots, "LIMIT", "MIS", limit, null, known = q, exit = true)
         val fill = filledOrCancelled(sell) ?: return null
         val why = step.kind.why
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · $why") }
@@ -2729,7 +2797,9 @@ object OrbArms {
                 continue
             }
             // A stop taken out at Zerodha (refused, or cancelled by hand or by Zerodha) leaves the position without one: say so.
-            if (so != null && so.status in setOf("REJECTED", "CANCELLED")) com.optionslab.app.work.Alerts.error(
+            // 22 Oct (arms audit): not when the app's own 15:05 expiry square-off took it out to sell the position (it cancels an
+            // arm's stop first): that is no stop lost, and the square-off sells it.
+            if (so != null && so.status in setOf("REJECTED", "CANCELLED") && !expiryClosing(p.symbol, sym, t, orders.values)) com.optionslab.app.work.Alerts.error(
                 "${armOf(p.arm).label}: the stop at Zerodha was ${so.status.lowercase()} (${so.message.ifBlank { "no reason given" }}). " +
                     "The app now watches " + (p.stopTrigger?.let { "the stop at %.2f".format(Locale.ENGLISH, it) } ?: "the stop") + " itself.", "ORB live")
             val cur = if (so != null && (so.status == "CANCELLED" || so.status == "REJECTED")) p.copy(stopOrderId = null).also { b.positions[i] = it } else p
@@ -2744,13 +2814,22 @@ object OrbArms {
                     runCatching { Broker.cancel(sid) }
                     if (runCatching { Broker.orderState(sid)?.status }.getOrNull() !in DONE) continue
                 }
-                val backstop = cur.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15))
+                // 22 Oct (arms audit): the app's expiry square-off ("iraalgoexpiry") sold it: said so, never "closed by you".
+                val expiryClose = orders.values.any { it.symbol == sym && it.tag == "iraalgoexpiry" && it.filled > 0 }
                 val px = ltp ?: cur.entry
-                b.positions[i] = cur.copy(exit = px, exitTime = t, why = if (backstop) "backstop_square_off" else "closed_by_you",
+                b.positions[i] = cur.copy(exit = px, exitTime = t, why = goneWhy(cur.day, t, expiryClose),
                     stopOrderId = null, charges = cur.charges + kiteCharge("SELL", px, cur.qty))
                 continue
             }
-            if (ltp == null) continue
+            if (ltp == null) {
+                // 22 Oct (arms audit): no quote at all used to hold everything, the 15:10 square-off and Boss's Stop for today
+                // included (Zerodha's MIS auto square-off and the resting SL were then all that remained). Those go at market.
+                val due = noPriceExit(armOf(cur.arm).hero, stopped, t.toLocalTime(), cur.day.isBefore(t.toLocalDate())) ?: continue
+                val (done, rest) = exitLive(b, cur, sym, due)
+                b.positions[i] = done
+                rest?.let { b.positions += it }
+                continue
+            }
             // The price ran through the stop's limit without it filling: sell at market instead.
             val tick = runCatching { Broker.spec("NFO", sym).tickSize }.getOrDefault(0.05)
             // "Keep a stop-loss order at the exchange" (Settings → Zerodha, off unless chosen): a position whose stop is not
@@ -3017,9 +3096,14 @@ object OrbArms {
      * order unless the first is confirmed cancelled; a refused order is never retried.
      */
     private suspend fun buyPaperEntry(label: String, c: Paper.Contract, lots: Int, known: com.optionslab.engine.sandbox.Quote?, auto: String?,
-                                      mayRetry: Boolean, recheck: suspend (com.optionslab.engine.sandbox.Quote) -> String?): EntryBuy {
+                                      mayRetry: Boolean, tag: String = "$label · entry",
+                                      recheck: suspend (com.optionslab.engine.sandbox.Quote) -> String?): EntryBuy {
         val sent1 = System.currentTimeMillis()
         val first = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, known = known, auto = auto)
+        // 22 Oct (arms audit; the 21 Oct diagnostics showed Liquidity 5m's cancelled 09:30 entry as "IraAlgo-Android"): every
+        // order carries its arm's name from the moment it is placed, filled or not, so a cancelled entry is never taken for one
+        // of Boss's own in Orders, the order review or the uploaded diagnostics.
+        first.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", tag) } }
         filledOrCancelled(first)?.let { return EntryBuy(first, it, 1, sent1) }
         val id = first.orderId
         val cancelled = first.ok && id != null && Paper.state.orders.firstOrNull { it.orderId == id }?.status == "cancelled"
@@ -3030,6 +3114,7 @@ object OrbArms {
         val refusal = q?.let { nq -> runCatching { recheck(nq) }.getOrElse { e -> "refused: the checks could not be made again (${e.message})" } }
         val sent2 = System.currentTimeMillis()
         val again = if (q != null && refusal == null) Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, known = q, auto = auto) else null
+        again?.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", tag) } }
         val fill = again?.let { filledOrCancelled(it) }
         // Logged either way (the diagnostics' "orb" lines): an execution retry, never a change to what the arm trades.
         runCatching {
@@ -3130,7 +3215,9 @@ object OrbArms {
         // As the ORB: automatic unless the owner chose approvals, or it was armed in Paper and now finds the app in Live.
         if (b.auto[arm.source] == false || (live && b.liveOk[arm.source] != true)) {
             val right = if (s.side > 0) "CE" else "PE"
-            val expires = last.start.plusMinutes(2L * tf)                    // until the next bar completes
+            // 22 Oct (arms audit): until the next bar completes, but never more than [APPROVAL_MINUTES] after the signal bar's close
+            // (the research buys at the next bar's open; a 30-minute book's approval could otherwise buy half an hour late).
+            val expires = approvalExpiry(last.start, tf)
             // The order flow at the signal, logged while it waits (decided at the approval, if Boss approves).
             FlowGate.outcome(FlowGate.gate(FlowShadow.liquidityKey(und), und, s.side, live, last.start.toString(), arm.source, decide = false), "awaiting_approval")
             b.pending[arm.source] = Pending(arm.source, right, last.start, expires, strike, s.level, s.target, near, volSkip, strong, live = live)
@@ -3231,7 +3318,7 @@ object OrbArms {
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
-        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b)) { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
+        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b), tag = "${LiquidityRules.ARM.label} · entry") { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
         val buy = entry.result
         val fill = entry.fill ?: return unfilled(c, entry)
         // The fill against the signal's price (the stream's last at the signal, else the price read just before the order); timed
@@ -3447,6 +3534,17 @@ object OrbArms {
 
     /** Earlier sessions' minutes per index, fetched once a day (the levels need a few days of 15-minute bars). */
     private val liquidityHistory = java.util.concurrent.ConcurrentHashMap<String, Pair<java.time.LocalDate, List<Bar>>>()
+
+    /** 22 Oct (arms audit): a lagging read of an index's minutes (read at, its minute, the bars), kept [LAG_KEEP_MS]. */
+    private val liquidityLag = java.util.concurrent.ConcurrentHashMap<String, Triple<Long, LocalDateTime, List<Bar>>>()
+    /** 22 Oct (arms audit): when an index's history read last came back empty (epoch ms): tried again after [HISTORY_MISS_MS]. */
+    private val liquidityHistoryMiss = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    internal const val LAG_KEEP_MS = 5_000L
+    internal const val HISTORY_MISS_MS = 60_000L
+
+    /** A lagging read made at [readMs] for [readMinute] still stands at [nowMs] in [minute]: same minute, under [LAG_KEEP_MS]. Pure. */
+    internal fun lagFresh(readMs: Long, readMinute: LocalDateTime, nowMs: Long, minute: LocalDateTime): Boolean =
+        readMinute == minute && nowMs - readMs in 0 until LAG_KEEP_MS
     /** The minutes read on this pass per index (its books and the exits share one fetch). */
     private val liquidityPass = java.util.concurrent.ConcurrentHashMap<String, Pair<LocalDateTime, List<Bar>>>()
 
@@ -3485,13 +3583,23 @@ object OrbArms {
         // The test feeds are read fresh every time (a cached pass must never carry one test's bars into another).
         val testing = testIndexBars != null || testHistoryBars != null || testOtherIndexBars != null
         if (!testing) liquidityPass[underlying]?.let { if (it.first == minute) return it.second }
+        // 22 Oct (arms audit): while the feed lags (the minute just closed is not in it yet, so the read above is not kept), every
+        // look of the stream lane read the index candles again under the arms' lock, the open positions' 15-second stop looks
+        // waiting behind it. That read is now kept a few seconds ([LAG_KEEP_MS]) within its minute.
+        val nowMs = System.currentTimeMillis()
+        if (!testing && keep) liquidityLag[underlying]?.let { if (lagFresh(it.first, it.second, nowMs, minute)) return it.third }
         val day = t.toLocalDate()
         val bank = underlying == OrbRules.UNDERLYING
         val key = LiquidityRules.INDEX_KEYS.getValue(underlying)
-        val hist = (if (!testing) liquidityHistory[underlying]?.takeIf { it.first == day }?.second else null) ?: run {
+        // 22 Oct (arms audit): a history read that came back empty is not tried again (6 tries) on every look: once a minute.
+        val missFresh = !testing && liquidityHistoryMiss[underlying]?.let { nowMs - it < HISTORY_MISS_MS } == true
+        val hist = (if (!testing) liquidityHistory[underlying]?.takeIf { it.first == day }?.second else null) ?: if (missFresh) emptyList() else run {
             val raw = if (testing) (if (bank) testHistoryBars?.invoke(day) else null).orEmpty()
                 else runCatching { Net.history(key, day.minusDays(10), day.minusDays(1)) }.getOrDefault(emptyList())
-            toBars(raw).filter { it.start.toLocalDate().isBefore(day) }.also { if (!testing && it.isNotEmpty()) liquidityHistory[underlying] = day to it }
+            toBars(raw).filter { it.start.toLocalDate().isBefore(day) }.also {
+                if (!testing && it.isNotEmpty()) { liquidityHistory[underlying] = day to it; liquidityHistoryMiss.remove(underlying) }
+                else if (!testing) liquidityHistoryMiss[underlying] = nowMs
+            }
         }
         // [reads] (the arms pass): today's candles shared with the pass's other books on this index, read once (13 Oct).
         val raw = reads?.readOrThrow(underlying) { todayMinutes(underlying, t) } ?: todayMinutes(underlying, t)
@@ -3499,7 +3607,10 @@ object OrbArms {
         // Kept as this minute's read only once it has the minute just closed (round 2: a look at the close itself, before the
         // feed or the stream has that minute, is read again by the next look rather than kept for the rest of the minute).
         val whole = today.lastOrNull()?.start?.let { !it.isBefore(minute.minusMinutes(1)) } == true
-        return (hist + today).distinctBy { it.start }.sortedBy { it.start }.also { if (!testing && keep && whole) liquidityPass[underlying] = minute to it }
+        return (hist + today).distinctBy { it.start }.sortedBy { it.start }.also {
+            if (!testing && keep && whole) liquidityPass[underlying] = minute to it
+            else if (!testing && keep) liquidityLag[underlying] = Triple(nowMs, minute, it)
+        }
     }
 
     // ---- data ------------------------------------------------------------------
