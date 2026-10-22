@@ -90,3 +90,19 @@ only, each with its sample size.
 `tests/test_r102.py`: loaders on synthetic data, the look-ahead guard (every signal at day t is unchanged when the data
 after t is removed), the holdout lock, BH, and the facts-file schema. `python -m pytest research/brain/tests -q`,
 `python -m research.brain.features catalog --check`, `python -m research.experiments.validate`, the secret grep.
+
+## Amendment 1 (22 Oct 2026, after the first design run, before the holdout)
+
+Disclosed, not hidden:
+
+1. **B4 count.** The text above describes 4 gap tests (2 thresholds x 2 indices) but counts 8. The first design run
+   computed the pooled 4 (fade any gap): NIFTY +4.7 bps (>= 0.3%, n 1,863, twin p 0.067) and +8.9 bps (>= 0.6%, n 743,
+   p 0.038), BANKNIFTY -0.1 and -0.8 bps (p 0.96 / 0.85); none passed BH. The 8 tests are now gap UP and gap DOWN
+   separately (2 thresholds x 2 sides x 2 indices), which is what the count meant. The pooled numbers stay recorded
+   here so the split is not mistaken for a search.
+2. **B1 twins.** The first run shuffled the previous-bar sign inside each day. With only 5 pairs a day at the 1h
+   horizon a twin can receive the sign of the bar's OWN return (look-ahead), which made every 1h twin "better" than
+   the real rule (twin p 1.00 at a t of 2.9). All B1 twins now use the same circular shift as B2 (at least 10 rows),
+   which keeps both series' autocorrelation and breaks only the link. The B1 effects themselves are unchanged.
+3. The B2 wording "32 minus the 4 slots ... no: 36" means 36 tests: 4 participant signals x level / change x 2 indices
+   x 2 horizons = 32, plus the FPI cash sign x 2 indices x 2 horizons = 4. Total stays 70.
