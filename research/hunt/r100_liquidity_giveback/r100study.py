@@ -50,6 +50,15 @@ NAMES = {"B0": "own exits (today)", "G1": "breakeven once +20%", "G2": "breakeve
          "G5": "index breakeven once 2 index stops in favour", "G6": "once +20% keep 25% / 50% after 30 min / 75% after 60",
          "G7": "once +Rs 3,000 a lot keep half the best profit", "R19C": "Boss's Rs 500 trail switch (reference)"}
 TESTS = tuple(VARIANTS)
+# Amendments A1 / A2 (PREREG.md, 22 Oct, Boss's questions after the results; written before any of their numbers)
+AMEND = {
+    "G8": ([(0, 0.10, 0.50, 0)], None),                         # keep half the best gain once +10%
+    "G9": ([(0, 0.10, 0.50, 0), (0, 0.0, 0.15, 2)], None),       # G8 + the stop trailing 15% under the best price
+    "G10": ([(0, 0.0, 0.15, 2)], None),                          # the 15% trailing stop alone
+}
+NAMES.update({"G8": "keep 50% of the best gain once +10% (Boss, A1)", "G9": "G8 + a 15% trailing stop (Boss, A2)",
+              "G10": "a 15% trailing stop alone (A2)"})
+AMEND_FLAG = RESULTS / "A1_FINAL_READ"
 REFS = ("R19C",)
 ALL = ("B0",) + TESTS + REFS
 TWINS, SEED, BOOT = 500, 100, 2000
@@ -61,7 +70,7 @@ B0_EXPECT = {"design": (881, 257249), "final": (357, 11155)}       # R76 / R81's
 
 # ================================================================================================ pure
 def rows_of(v: str) -> np.ndarray:
-    r = VARIANTS[v][0] if v in VARIANTS else []
+    r = VARIANTS[v][0] if v in VARIANTS else AMEND[v][0] if v in AMEND else []
     return np.array(r, dtype=np.float64).reshape(-1, 4)
 
 
@@ -279,6 +288,97 @@ def summarise() -> dict:
     return out
 
 
+# ================================================================================================ amendments A1 / A2
+def amend_phase(phase: str) -> dict:
+    """G8-G10 (PREREG amendments A1 / A2) priced from the saved B0 trades of [phase] (the same trades, entry and index-exit
+    rows), with their own random early-exit twins."""
+    os.environ["R51_CLEAN"] = "1"
+    sys.path.insert(0, str(HUNT / "r51"))
+    import r51cfg as K
+    import fam_liq
+    import r51data
+    import r64engine as G
+    import r100engine as X
+
+    assert K.CLEAN
+    b0 = _load(f"B0_{phase}")
+    n_exp, net_exp = B0_EXPECT[phase]
+    assert len(b0) == n_exp and round(sum(t["net"] for t in b0)) == net_exp, "the saved B0 trades are not R100's"
+    load, ex_b0 = r51data.load, fam_liq.EX
+    rng = np.random.default_rng(SEED + 1)
+    out = {}
+    for v in AMEND:
+        tr = []
+        for t in b0:
+            r = X.price_trade(t["und"], load(t["und"])[t["day"]], t, ex_b0, rows_of(v), None)
+            assert r is not None and r["er"] == t["er"]
+            r.update({k: t[k] for k in ("e0", "fx0", "sgn", "close", "book") if k in t})
+            tr.append(r)
+        _save(f"{v}_{phase}", tr)
+        res = P.periods(tr, "Liquidity", phase)
+        res["by_index"] = by_index(tr)
+        k = len(changed(b0, tr))
+        res["changed"] = k
+
+        def nf(t, rows_):
+            D = load(t["und"])[t["day"]]
+            m = len(rows_)
+            return G.twin_nets(t["und"], D, [t["side"]] * m, [t["strike"]] * m, [t["er"]] * m, ex_b0,
+                               Q.forced_rows(rows_, t["fx0"]))
+        tw = Q.exit_twin_totals(b0, k, TWINS, rng, nf)
+        res["exit_p"] = Q.p_of(tw, sum(t["net"] for t in tr))
+        res["twin_mean"] = round(float(tw.mean()))
+        out[v] = res
+    key = "final" if phase == "final" else "design"
+    print("amend", phase, {v: round(out[v][key]["net"]) for v in AMEND}, flush=True)
+    return out
+
+
+def amend(phase: str):
+    path = RESULTS / f"amend_{phase}.json"
+    if phase == "final":
+        if AMEND_FLAG.exists():
+            raise SystemExit("R100 A1: the final period was already read for G8-G10 (results/A1_FINAL_READ). One read only.")
+        if not (RESULTS / "amend_design.json").exists():
+            raise SystemExit("R100 A1: run and commit the amendment's design phase first")
+        AMEND_FLAG.write_text(f"A1 / A2 final period read on {datetime.now(timezone.utc).isoformat()}\n")
+    path.write_text(json.dumps(amend_phase(phase), indent=1, default=str))
+    if phase == "final":
+        amend_summary()
+
+
+def amend_summary() -> dict:
+    """G8-G10 summarised as G1-G7 (summary.json), BH over all 10 tests in each period (G1-G7's verdicts not re-opened)."""
+    base = json.loads((RESULTS / "summary.json").read_text())
+    d, f = (json.loads((RESULTS / f"amend_{ph}.json").read_text()) for ph in ("design", "final"))
+    T = {v: {ph: _load(f"{v}_{ph}") for ph in ("design", "final")} for v in ("B0",) + tuple(AMEND)}
+    out = {"names": {v: NAMES[v] for v in AMEND}, "res": {}}
+    for v in AMEND:
+        a, b = d[v], f[v]
+        A = out["res"][v] = dict(design=a["design"], wf=a["wf"], wf_quarters=a["wf_quarters"], final=b["final"],
+                                 by_index=dict(design=a["by_index"], final=b["by_index"]),
+                                 changed=dict(design=a["changed"], final=b["changed"]),
+                                 p_design=a["exit_p"], p_final=b["exit_p"],
+                                 twin_mean=dict(design=a["twin_mean"], final=b["twin_mean"]))
+        A["giveback"] = {ph: giveback(T["B0"][ph], T[v][ph]) for ph in ("design", "final")}
+        A["account"] = {ph: account(T["B0"][ph], T[v][ph]) for ph in ("design", "final")}
+        A["paired"] = {ph: dict(zip(("p", "diff"), P.paired_boot(T["B0"][ph], T[v][ph], BOOT, SEED)))
+                       for ph in ("design", "final")}
+        A["top_removed_design"] = round(top_removed(T["B0"]["design"], T[v]["design"]))
+        A["top_removed_final"] = round(top_removed(T["B0"]["final"], T[v]["final"]))
+    ids = TESTS + tuple(AMEND)
+    for ph in ("design", "final"):
+        ps = [base["res"][v][f"p_{ph}"] if v in TESTS else out["res"][v][f"p_{ph}"] for v in ids]
+        for v, q in zip(ids, P.bh(ps)):
+            if v in AMEND:
+                out["res"][v][f"q_{ph}"] = round(float(q), 4)
+    for v in AMEND:
+        out["res"][v]["decision"] = decide(out["res"][v], base["res"]["B0"])
+    out["passed"] = [v for v in AMEND if out["res"][v]["decision"]["passed"]]
+    (RESULTS / "amend_A1.json").write_text(json.dumps(out, indent=1, default=str))
+    return out
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "run" and len(sys.argv) == 3 and sys.argv[2] in ("design", "final"):
@@ -289,5 +389,7 @@ if __name__ == "__main__":
         final()
     elif cmd == "summary":
         summarise()
+    elif cmd == "amend" and len(sys.argv) == 3 and sys.argv[2] in ("design", "final"):
+        amend(sys.argv[2])
     else:
         print(__doc__)

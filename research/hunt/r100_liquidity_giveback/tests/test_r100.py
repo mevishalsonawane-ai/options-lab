@@ -269,3 +269,51 @@ def test_variants_are_the_preregistered_ones():
     assert S.rows_of("G7").tolist() == [[0, 3000.0, 0.5, 1]]
     assert S.VARIANTS["G5"] == ([], 2.0)
     assert S.rows_of("G6")[:, 0].tolist() == [0, 30, 60]
+
+
+# ---- amendments A1 / A2 (22 Oct, Boss: keep half once +10%; a trailing stop-loss) ------------------------------------
+
+def test_trailing_stop_kind_follows_the_best_price_and_is_not_floored():
+    rows = _rows((0, 0.0, 0.15, 2))
+    assert X.keep_level(rows, 100.0, 100.0, 30.0, 101.0, 0.0) == pytest.approx(85.0)      # starts at the own -15%
+    assert X.keep_level(rows, 100.0, 110.0, 30.0, 101.0, 0.0) == pytest.approx(93.5)      # rises with the best price
+    # Not floored at breakeven: a stop-loss under the price paid stays there.
+    assert X.keep_level(rows, 100.0, 105.0, 30.0, 101.0, 0.0) == pytest.approx(89.25)
+
+
+def test_trailing_stop_sells_on_a_pullback_from_the_next_minute_only():
+    C = _flat()
+    C[:4, 12] = 110.0                       # best 110 -> trail 93.5 from minute 13
+    C[2, 12] = 90.0                         # the same minute's dip is not judged against its own high
+    C[:4, 13:] = 100.0
+    C[2, 15] = 93.0
+    out = _sim(C, _rows((0, 0.0, 0.15, 2)), be=101.0)
+    assert out[5] == 15 and out[1] == pytest.approx(93.5)
+    plain = _sim(C, X.NOKEEP)
+    assert R[plain[6]] != "lock"
+
+
+def test_keep_half_once_10pct_and_the_trail_together_take_the_higher():
+    rows = S.rows_of("G9")
+    assert X.keep_level(rows, 100.0, 108.0, 30.0, 100.5, 0.0) == pytest.approx(91.8)      # under +10%: the trail only
+    assert X.keep_level(rows, 100.0, 112.0, 30.0, 100.5, 0.0) == pytest.approx(106.0)     # +12%: keep half = 106 > 95.2
+    assert X.keep_level(S.rows_of("G8"), 100.0, 109.9, 30.0, 100.5, 0.0) == -1.0          # G8 alone waits for +10%
+    assert X.keep_level(S.rows_of("G8"), 100.0, 130.0, 30.0, 100.5, 0.0) == pytest.approx(115.0)  # Boss's example
+
+
+def test_amendments_are_the_preregistered_ones_and_leave_g1_g7_alone():
+    assert tuple(S.AMEND) == ("G8", "G9", "G10")
+    assert S.rows_of("G8").tolist() == [[0, 0.10, 0.50, 0]]
+    assert S.rows_of("G10").tolist() == [[0, 0.0, 0.15, 2]]
+    assert S.TESTS == ("G1", "G2", "G3", "G4", "G5", "G6", "G7")
+
+
+def test_the_amendments_final_is_read_once(tmp_path, monkeypatch):
+    monkeypatch.setattr(S, "RESULTS", tmp_path)
+    monkeypatch.setattr(S, "AMEND_FLAG", tmp_path / "A1_FINAL_READ")
+    with pytest.raises(SystemExit):
+        S.amend("final")                    # no design results yet
+    (tmp_path / "amend_design.json").write_text("{}")
+    (tmp_path / "A1_FINAL_READ").write_text("x")
+    with pytest.raises(SystemExit):
+        S.amend("final")                    # a second read refused

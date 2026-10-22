@@ -3,11 +3,14 @@ input, KEEP ROWS, and an index-breakeven exit row. 22 Oct 2026.
 
 A keep row is (from_minute, start, keep, kind):
     from_minute  the row counts only from this many minutes after the fill row (0 = from the fill)
-    start        kind 0: the option's best gain over the raw fill (0.20 = +20%); kind 1: the best open profit in rupees
-                 for the trade's quantity before charges ((peak - fill) x qty >= start)
-    keep         the share of the best gain kept: the lock is fill + keep x (peak - fill); NaN = breakeven (`be`)
-Every keep lock is floored at `be` (breakeven after charges, R64's level), so a give-back lock never books a certain
-small loss as a "lock". As R64's steps, a lock is set at the END of a minute (after that minute's high updates the
+    start        kind 0 and 2: the option's best gain over the raw fill (0.20 = +20%); kind 1: the best open profit in
+                 rupees for the trade's quantity before charges ((peak - fill) x qty >= start)
+    keep         kinds 0 / 1: the share of the best gain kept: the lock is fill + keep x (peak - fill); NaN = breakeven
+                 (`be`). Kind 2 (amendment A2, a trailing stop-loss): the stop trails the best price by this share,
+                 `peak x (1 - keep)` (0.15: 15% under the best price).
+Every kind 0 / 1 lock is floored at `be` (breakeven after charges, R64's level), so a give-back lock never books a
+certain small loss as a "lock". A kind 2 trailing stop is a stop-loss and is not floored.
+As R64's steps, a lock is set at the END of a minute (after that minute's high updates the
 best price) and acts from the NEXT minute: hit on a later minute's low, a gap through it fills at the worse open, and
 locks only ever rise. With no keep rows the numbers are R64's, line for line (tests/test_r100.py proves it).
 
@@ -36,16 +39,19 @@ def keep_level(rows, E_, peak, qty, be, minutes):
     for j in range(rows.shape[0]):
         if minutes < rows[j, 0]:
             continue
-        if rows[j, 3] == 0:
-            ok = peak / E_ - 1.0 >= rows[j, 1] - 1e-12
-        else:
+        if rows[j, 3] == 1:
             ok = (peak - E_) * qty >= rows[j, 1] - 1e-9
+        else:
+            ok = peak / E_ - 1.0 >= rows[j, 1] - 1e-12
         if not ok:
             continue
         k = rows[j, 2]
-        lv = be if not (k == k) else E_ + k * (peak - E_)
-        if be > lv:
-            lv = be
+        if rows[j, 3] == 2:                         # A2: a trailing stop-loss, peak x (1 - k), not floored
+            lv = peak * (1.0 - k)
+        else:
+            lv = be if not (k == k) else E_ + k * (peak - E_)
+            if be > lv:
+                lv = be
         if lv > lock:
             lock = lv
     return lock
