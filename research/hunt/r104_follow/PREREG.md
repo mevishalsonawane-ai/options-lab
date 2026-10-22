@@ -98,3 +98,22 @@ nothing for live. Every test gets an experiment entry (r104-*), failures include
 look-ahead guard (prices after a decision minute never change it), XI / XP paths, the stale-mark model (intrinsic floor,
 unchanged when the leg prints), the fade twin's same minutes, the continuation counter against a hand-made path, the
 holdout lock, and the 16-test count. Plus the repo's research checks.
+
+## Amendment 1 (22 Oct 2026; written while the design run was still computing, before any R104 number was seen)
+
+The literature has a direct test of the "sellers' hedging pushes the index" idea. Baltussen, Da, Lammers and Martens,
+"Hedging Demand and Market Intraday Momentum" (Journal of Financial Economics 142, 2021): option dealers who are short
+gamma must hedge in the direction of the move, so the return of the day so far predicts the return into the close
+(60+ futures markets, 1974-2020). Gao, Han, Li and Zhou ("Market Intraday Momentum", JFE 2018) found the first half hour
+predicts the last half hour on the S&P 500. R102 measured "the first 30 minutes' direction holds to the close" (53% /
+50%), not this. Added, index-only (no option), 4 tests in their own BH family:
+
+* **L (late momentum), NIFTY / BANKNIFTY x E / N:** at the 14:40 minute close, R1 = index / previous day's close - 1
+  (the day so far, gap included). R2 = the 15:10 close / the 14:40 close - 1 (the last window the app may hold, square-off
+  15:10; 14:35 -> 15:05 on expiry day). Trade the sign of R1 on the index, 1 unit, cost 0.05% a round trip (R98c's
+  futures-like cost).
+* **Gates (design):** the mean of sign(R1) x R2 - cost > 0 with a day-bootstrap p < 0.05 (10,000, seed 1041); BH q <= 0.10
+  over the 4; > 0 in 3 of 4 years 2022-2025 and after 20 Nov 2024; > 0 without its 5 best days. Also reported: the
+  regression slope of R2 on R1 and the hit rate. Holdout as in the main rules, read once for passers, the same
+  semi-clean caveat.
+* A pass would be a lead for an option version (pre-registered separately), not a rule.
