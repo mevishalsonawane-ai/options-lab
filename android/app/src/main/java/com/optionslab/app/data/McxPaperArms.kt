@@ -864,7 +864,9 @@ object McxPaperArms {
             val pc = McxMarket.paperContract(fc)
             val buy = step.open > 0
             // 22 Oct (arms audit): the US-night silver arm may hold this same future the other way (the paper book nets by symbol).
-            heldOtherWay(b, arm, pc.symbol, step.open)?.let { other ->
+            // (22 Oct CI fix: a plain if, because `continue` inside a `let` lambda needs an experimental compiler flag.)
+            val other = heldOtherWay(b, arm, pc.symbol, step.open)
+            if (other != null) {
                 val w = "${pc.symbol} is held ${if (other.side > 0) "long" else "short"} by ${label(other.arm)}: no new leg (it would only close that one)"
                 note(b, arm, "$leg: $w"); notes += "$leg: $w"; continue
             }
