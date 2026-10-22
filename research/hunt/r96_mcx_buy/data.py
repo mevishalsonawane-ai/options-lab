@@ -54,6 +54,18 @@ def load_daily(sig: str) -> pd.DataFrame:
     return R93.daily_series(d).reset_index(drop=True)
 
 
+def share_expiries(m, other_days) -> None:
+    """PREREG_ROUND6 s1 (N11): ZINC's thin book misses one expiry (23 Apr 2026) in the straddle-jump detector; COPPER and
+    ZINC options expire on the same days in every other month, so ZINC uses the union of both detected sets. Updates the
+    Market's expiry days, contract segments and expiry flags in place."""
+    m.exp_days = np.unique(np.r_[m.exp_days, np.asarray(other_days, dtype="datetime64[ns]")]).astype("datetime64[ns]")
+    m.seg = np.searchsorted(m.exp_days, m.day, side="left").astype(np.int32)
+    m.is_exp = np.isin(m.day, m.exp_days)
+
+
+EXPIRY_FROM = {"ZINC": "COPPER"}
+
+
 def load_book(name: str, rebuild: bool = False) -> Book:
     from research.hunt.r53.mcx import data as D53
     from research.hunt.r96_mcx_buy import rules as R
@@ -66,6 +78,8 @@ def load_book(name: str, rebuild: bool = False) -> Book:
         return b
     sig, ck, units, ev = K.BOOKS[name]
     m = D53.load_market(name)
+    if name in EXPIRY_FROM:
+        share_expiries(m, D53.load_market(EXPIRY_FROM[name]).exp_days)
     raw = D53.lake_options(name)
     iv = iv_grid(m, raw[["ts", "side", "offset", "iv"]])
     daily = R.daily_ind(load_daily(sig))

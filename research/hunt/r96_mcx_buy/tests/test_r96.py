@@ -1040,3 +1040,158 @@ def test_round5_history_thursday_long():
     assert h["n"] == int(thu.sum()) and h["mean"] == pytest.approx(0.01 - H.COST)
     assert h["twin_mean"] == pytest.approx(-H.COST) and h["p"] < 0.01
     assert H.trade_day_long(x.assign(roll=True), 3) is None
+
+
+# ------------------------------------------------------------------------------------------------ round 6
+def test_round6_rules_registered_books_costs_and_families():
+    assert R.ORDER6 == ("R6A", "R6B", "R6C", "R6D") and all(r in R.RULES for r in R.ORDER6)
+    assert K.BASE == ("COPPER", "ZINC") and all(R.RULES[r].books == K.BASE for r in R.ORDER6)
+    assert not R.RULES["R6A"].iv_cheap and R.RULES["R6B"].iv_cheap and R.RULES["R6A"].edge
+    assert R.RULES["R6D"].katr == 1.5 and R.RULES["R6D"].n == 5 and R.RULES["R6D"].edge
+    assert K.BOOKS["COPPER"][2] == 2500.0 and K.BOOKS["ZINC"][2] == 5000.0
+    assert K.BOOKS["COPPER"][3] == () and K.BOOKS["ZINC"][3] == ()
+    # the base metals do not leak into the round 1-5 book sets (R2F's six books stay six)
+    assert "COPPER" not in K.ALL_BOOKS and R.RULES["R2F"].books == K.ALL_BOOKS and len(K.ALL_BOOKS) == 6
+    base = E.opt_cost("copper", 1000, 1000, 18 * 60, 18 * 60)
+    assert E.opt_cost("copper", 1000, 1000, 10 * 60, 10 * 60) - base == pytest.approx(0.005 * 2000)
+    zb = E.opt_cost("zinc", 1000, 1000, 18 * 60, 18 * 60)
+    assert zb - base == pytest.approx((0.0125 - 0.005) * 2000)
+    assert E.opt_cost("zinc", 1000, 1000, 18 * 60, 18 * 60, mult=2.0) - zb == pytest.approx(0.0125 * 2000)
+    assert R.NR7_BASE_FAMILY in R.FAMILIES and len(R.FAMILIES) == 3
+    assert R.HISTORY_RULES["R6A"] == "nr7" and R.HISTORY_RULES["R6D"] == "dir"
+    assert "R6B" not in R.HISTORY_RULES and "R6C" not in R.HISTORY_RULES
+
+
+def test_round6_family_qs_three_families():
+    rows = [dict(round=1, id="X", p=0.5), dict(round=3, id="R3A", p=0.01), dict(round=6, id="R6A", p=0.03),
+            dict(round=6, id="R6B", p=0.2), dict(round=6, id="R6C", p=0.7)]
+    q = S.family_qs(rows, R.FAMILIES)
+    ref = S.bh([0.5, 0.7, min(1.0, 0.01 * 1), 0.03 * 2])                # X, R6C, NR7 crude (1 member), base (2)
+    assert q[0] == pytest.approx(ref[2]) and np.isnan(q[1]) and q[2] == pytest.approx(ref[3])
+
+
+def test_round6_donchian_first_day_sign_and_lookahead_guard():
+    base = daily_frame(n=300, seed=11)
+    full = R.daily_ind(base)
+    s, ac = full.dc_side.values, full.ac.values
+    assert (s[:K.R6_DC_LOOK] == 0).all()                                  # fewer than 20 earlier closes
+    raw = np.zeros(len(ac), int)
+    for j in range(K.R6_DC_LOOK, len(ac)):
+        w = ac[j - K.R6_DC_LOOK:j]
+        raw[j] = 1 if ac[j] > w.max() else (-1 if ac[j] < w.min() else 0)
+    exp = np.where(raw != np.r_[0, raw[:-1]], raw, 0)
+    assert (s == exp).all() and (s != 0).sum() > 3
+    assert not ((s[1:] != 0) & (s[1:] == s[:-1])).any()                   # never two signals in a row on one side
+    for cut in (150, 250):                                                # later rows change nothing earlier
+        for mode in ("perturb", "delete"):
+            d = base.copy()
+            if mode == "perturb":
+                d.loc[cut + 1:, ["open", "high", "low", "close"]] *= 1.25
+            else:
+                d = d.iloc[:cut + 1]
+            assert (R.daily_ind(d).dc_side.values[:cut + 1] == s[:cut + 1]).all(), (mode, cut)
+
+
+def test_round6_donchian_rule_trades_next_session_with_a_stop():
+    bk = make_book(days=8)
+    bk.daily = pd.DataFrame(dict(date=bk.m.days - np.timedelta64(1, "D"), dc_side=[0, -1, 0, 0, 0, 0, 0, 0],
+                                 atr=np.full(8, 100.0)))
+    c = R.RULES["R6D"].candidates(bk, (date_(2025, 11, 1), date_(2025, 11, 30)))
+    assert len(c) == 1 and c[0]["side"] == -1 and c[0]["day"] == bk.m.days[1]
+    assert bk.m.tod[c[0]["i_from"]] == K.ENTRY_TOD and c[0]["ustop"] == pytest.approx(5000.0 + 1.5 * 100.0)
+    t = S.simulate(bk, c[0], None)
+    assert t is not None and t["side"] == -1 and t["why"] == "time"         # flat future: out after 5 sessions
+    assert pd.Timestamp(t["exit_ts"]).normalize() == pd.Timestamp(bk.m.days[5])
+
+
+def _open_book(sizes, late_jump=0.0, days=None):
+    """Each session: the future sits at 5000 + sizes[k] from 09:10 to 21:59 (+ late_jump from 10:00), else 5000."""
+    n = days or len(sizes)
+
+    def f(k, tod):
+        s = np.asarray(sizes, float)[np.minimum(k, len(sizes) - 1)]
+        mid = (tod >= 9 * 60 + 10) & (tod < 22 * 60)
+        return 5000.0 + np.where(mid, s + np.where(tod >= 10 * 60, late_jump, 0.0), 0.0)
+    bk = make_book(days=n, path=_tod_path(f))
+    bk.daily = pd.DataFrame(dict(date=bk.m.days, atr=np.full(n, 100.0)))
+    return bk
+
+
+def test_round6_open_half_hour_window_reads_09_29_and_enters_at_close_minus_45(monkeypatch):
+    monkeypatch.setattr(K, "R3_LH_PAST", 2)
+    # calendar offsets of 3-7 Nov, 10 Nov 2025 -> session sizes
+    sizes = np.zeros(8)
+    sizes[[0, 1, 2, 3, 4, 7]] = [5, 1, 2, 30, 3, -40]
+    bk = _open_book(sizes, days=6)
+    rule = R.RULES["R6C"]
+    w = rule.window(bk, bk.m.days[3])
+    assert w is not None and np.isclose(w[1], 5030.0 / 5000.0 - 1.0)
+    assert bk.m.tod[w[0]] == 22 * 60 + 44                                  # close 23:30 - 45 -> 22:44 signal minute
+    assert rule.window(bk, bk.m.days[0]) is None                          # no previous session
+    c = rule.candidates(bk, (date_(2025, 11, 1), date_(2025, 11, 30)))
+    got = {pd.Timestamp(x["day"]).day: x["side"] for x in c}
+    assert got.get(6) == 1 and got.get(10) == -1 and 4 not in got
+    sp = [x for x in c if pd.Timestamp(x["day"]).day == 10][0]
+    assert sp["ustop"] == pytest.approx(5000.0 + 0.25 * 100.0) and sp["edge"] and sp["n_sessions"] is None
+    t = S.simulate(bk, sp, None)
+    assert t is not None and t["exit_ts"] <= pd.Timestamp(bk.m.ts[E.sq_ix(bk.m, sp["day"])])
+    # a move after 09:29 does not change the signal (it is read at 09:29)
+    bk2 = _open_book(sizes, late_jump=500.0, days=6)
+    assert np.isclose(rule.window(bk2, bk2.m.days[3])[1], w[1])
+
+
+def test_round6_open_half_hour_is_causal_and_needs_the_0929_minute(monkeypatch):
+    monkeypatch.setattr(K, "R3_LH_PAST", 2)
+    sizes = np.zeros(15)
+    sizes[[0, 1, 2, 3, 4, 7, 8, 9, 10, 11, 14]] = [5, 1, 2, 30, 3, -40, 2, 1, 3, 2, 900]
+    per = (date_(2025, 11, 1), date_(2025, 11, 30))
+    short = R.RULES["R6C"].candidates(_open_book(sizes, days=6), per)
+    long = R.RULES["R6C"].candidates(_open_book(sizes, days=11), per)
+    key = lambda c: [(str(x["day"]), x["side"], x["i_sig"]) for x in c]       # noqa: E731
+    assert key(long)[:len(short)] == key(short)                          # later sessions change nothing earlier
+    # no minute within 09:25..09:29 -> no window
+    bk = make_book(days=3, drop_prints=None, minutes=(9 * 60 + 40, 23 * 60 + 29))
+    bk.daily = pd.DataFrame(dict(date=bk.m.days, atr=np.full(3, 100.0)))
+    assert R.RULES["R6C"].window(bk, bk.m.days[1]) is None
+
+
+def test_round6_open_half_hour_needs_the_same_contract_segment():
+    bk = _open_book([0, 30, 0], days=3)
+    m = bk.m
+    assert R.RULES["R6C"].window(bk, m.days[1]) is not None
+    m.seg = np.where(m.day >= m.days[1], 1, 0).astype(np.int32)        # an expiry between the two sessions
+    assert R.RULES["R6C"].window(bk, m.days[1]) is None
+
+
+def test_round6_share_expiries_union_and_segments():
+    from research.hunt.r96_mcx_buy import data as D
+    bk = make_book(days=6)
+    m = bk.m
+    m.exp_days = np.array([m.days[4]], dtype="datetime64[ns]")
+    D.share_expiries(m, np.array([m.days[1], m.days[4]], dtype="datetime64[ns]"))
+    assert list(m.exp_days) == [m.days[1], m.days[4]]
+    assert m.is_exp[m.day_first[m.days[1]]] and not m.is_exp[m.day_first[m.days[2]]]
+    assert m.seg[m.day_first[m.days[0]]] == 0 and m.seg[m.day_first[m.days[2]]] == 1
+    assert m.seg[m.day_first[m.days[5]]] == 2
+    D.share_expiries(m, np.array([], dtype="datetime64[ns]"))           # nothing new: unchanged
+    assert len(m.exp_days) == 2
+    assert D.EXPIRY_FROM == {"ZINC": "COPPER"}
+
+
+def test_round6_report_books_of_keeps_old_rounds_and_adds_base_metals():
+    from research.hunt.r96_mcx_buy import report as REP
+    old = dict(rules={"R5B": dict(summary=dict(by_book={"GOLDM": {}}), history=None)})
+    assert REP.books_of(old) == list(K.ALL_BOOKS)
+    new = dict(rules={"R6A": dict(summary=dict(by_book={"COPPER": {}}), history={"ZINC": {}, "pooled": {}})})
+    assert REP.books_of(new) == ["COPPER", "ZINC"]
+    assert all(r in REP.NAMES for r in R.ORDER6)
+
+
+def test_round6_q_with_other_mcx_hunts_only_adds_tests():
+    rows = [dict(round=1, id="X", p=0.5), dict(round=6, id="R6A", p=0.01), dict(round=6, id="R6B", p=0.04)]
+    other = {"A": 0.3, "B": 0.02}
+    q = S.q_with_other(rows, (6, "R6A"), other)
+    assert q == pytest.approx(S.bh([0.5, 0.01, 0.04, 0.3, 0.02])[1])
+    assert q >= S.bh([0.5, 0.01, 0.04])[1] - 1e-12
+    assert np.isnan(S.q_with_other(rows, (6, "R6Z"), other))
+    assert len(K.OTHER_MCX_P) == 13 and all(0 < v <= 1 for v in K.OTHER_MCX_P.values())

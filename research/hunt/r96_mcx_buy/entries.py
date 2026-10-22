@@ -91,10 +91,18 @@ RULE_TEXT = {
            "stop -25%, short event ladder",
     "R5F": "gold-minus-silver daily return index above / below its previous 20 values' max / min -> 1-ITM SILVERM put / "
            "call next session 09:15; stop -40% / 1.5 ATR14, lock ladder, edge, 5 sessions",
+    "R6A": "as R3A (NR7 break -> 1-ITM, stop -40% / the NR7 opposite extreme, lock ladder, edge, 3 sessions) on the "
+           "COPPER and ZINC option books, never used by R96 before",
+    "R6B": "as R6A, only when R4G's cheap-IV filter (option-chain context) holds",
+    "R6C": "the future's move from the previous session's last minute to 09:30 IST, if >= the 67th percentile of the "
+           "last 60 sessions' moves -> 1-ITM that way at close - 45 min; stop -40% / 0.25 ATR14, out at close - 15; "
+           "COPPER, ZINC",
+    "R6D": "first back-adjusted close above / below the previous 20 closes' max / min -> 1-ITM next session 09:15; "
+           "stop -40% / 1.5 ATR14, lock ladder, edge, 5 sessions; COPPER, ZINC",
 }
 PREREG = {1: "research/hunt/r96_mcx_buy/PREREG_ROUND1.md", 2: "research/hunt/r96_mcx_buy/PREREG_ROUND2.md",
           3: "research/hunt/r96_mcx_buy/PREREG_ROUND3.md", 4: "research/hunt/r96_mcx_buy/PREREG_ROUND4.md",
-          5: "research/hunt/r96_mcx_buy/PREREG_ROUND5.md"}
+          5: "research/hunt/r96_mcx_buy/PREREG_ROUND5.md", 6: "research/hunt/r96_mcx_buy/PREREG_ROUND6.md"}
 
 
 def main(round_no: int = 1):
@@ -131,13 +139,14 @@ def main(round_no: int = 1):
                         holdout="2026-07-15..2026-10-19 (locked; read once only for a design pass)"),
             instruments=sorted(r["summary"].get("by_book", {})) or ["CRUDEOILM", "NATGASMINI", "GOLDM", "SILVERM"],
             features=["signal source: the MCX future (near future minute closes; daily: the near-month daily "
-                      "continuous future, back-adjusted)", "ATM IV as a filter only (V1, R4G, R5B, R5C)"],
+                      "continuous future, back-adjusted)", "ATM IV as a filter only (V1, R4G, R5B, R5C, R6B)"],
             model_or_rule=RULE_TEXT[rid],
             settings=f"research/hunt/r96_mcx_buy/cfg.py; {PREREG[round_no].split('/')[-1]}",
             prereg=PREREG[round_no], variants_tried=1,
             results=dict(summary=summ, costs="Zerodha MCX option charges + half-spread 0.30% from 17:00 / 0.60% before "
-                                             "(NATGASMINI / NATURALGAS 0.45% / 0.90%) each fill, 2x on model-priced exits; gates "
-                                             "also at 2x spreads"),
+                                             "(NATGASMINI / NATURALGAS 0.45% / 0.90%"
+                                             + ("; COPPER 0.50% / 1.00%, ZINC 1.25% / 2.50%" if round_no >= 6 else "")
+                                             + ") each fill, 2x on model-priced exits; gates also at 2x spreads"),
             holdout_read=bool(hj is not None),
             verdict=("paper-only" if (hj and hj["pass_"]) else ("inconclusive" if r.get("lead") else "rejected")),
             notes=(f"lead for round {round_no + 1}" if r.get("lead") and not r.get("pass") else ""))
