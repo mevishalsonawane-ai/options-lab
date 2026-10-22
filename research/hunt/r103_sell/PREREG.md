@@ -89,3 +89,25 @@ about its wing width x lot), and is not built here. Nothing changes in paper or 
 `research/hunt/r103_sell/tests/test_r103.py`: the leg pricing and charges on hand-made days, the stop / lock / target
 paths, the strike rounding and the 10-step cap, the look-ahead guard (nothing after a decision minute changes it), the
 holdout lock, BH and the bootstrap. Plus the repo's research checks.
+
+## Amendment 1 (22 Oct 2026, after the first design run, BEFORE any holdout read): stale wing prices
+
+**What happened.** The first design run passed 6 tests, all BANKNIFTY non-expiry days (best: the wide iron fly, 996
+trades, 70% win, Rs 5,42,746). An audit before the holdout found the result was a data artefact:
+- Dhan's rolling book (`options_rolling_1m`) only carries strikes within 10 steps of the ATM. A wing sold 10 steps out
+  stops printing when the index moves away from it. In the BANKNIFTY monthly era 39% of the long-wing exits had no print
+  at the exit minute and 31% had a last print more than 60 minutes old.
+- The engine then sold the wing back at its stale last close. Re-pricing every time exit at the F&O bhavcopy close of
+  the same contract (real prints for all four legs, 15:30): legs that were printing match the bhavcopy within a median
+  0.4 to 1.0 point, but stale wings were a median 41 points too high, which added Rs 5.66 lakh to the wide iron fly in
+  the monthly era alone. At bhavcopy closes that test made -Rs 67,837 (win 42%), not +Rs 4,82,374 (win 75%), on the
+  same 381 time exits; every BANKNIFTY non-expiry test turned negative.
+
+**Fix, applied to all 24 tests alike (no setting chosen from results).** A leg with no print in the last 5 minutes is
+re-priced with Black-Scholes at the minute's index level and time to expiry, using the implied volatility of its own
+last print (sticky strike; r = 6.5%, research/brain/config.py). This applies to the marks the stop / lock / target read
+and to fills that find no open within 5 minutes. The nearest expiry date comes from the bhavcopy calendar.
+
+**Then.** The 24 tests are re-run on design with the same gates, BH and seeds. The first run's numbers stay recorded
+here. Independent check, reported for every test: time exits re-priced at the bhavcopy close of every leg. The
+holdout is still unread and is read once, only for tests that pass every gate after this fix.

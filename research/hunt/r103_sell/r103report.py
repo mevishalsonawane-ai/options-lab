@@ -21,8 +21,8 @@ def write() -> str:
     hmap = {r["id"]: r for r in (h or {}).get("tests", [])}
     out = ["# R103 report: defined-risk option selling (tables)", "",
            f"Design to {d['design_end']}; 1 lot; net after slippage and dated charges. Passed design: {d['passed'] or 'none'}.", "",
-           "| test | trades | win | net | per trade | avg win / loss | PF | worst day | worst month | max DD | 2022 / 2023 / 2024 / 2025 | after 20 Nov 2024 | ex best 5 | 2x slip | boot p | BH q | timing twin p | gates failed |",
-           "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+           "| test | trades | win | net | per trade | avg win / loss | PF | worst day | worst month | max DD | 2022 / 2023 / 2024 / 2025 | after 20 Nov 2024 | ex best 5 | 2x slip | boot p | BH q | timing twin p | bhavcopy-close check: net (win) | gates failed |",
+           "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in d["tests"]:
         s = r["design"]
         if not s.get("n"):
@@ -31,10 +31,12 @@ def write() -> str:
         yrs = " / ".join(rs(s["by_year"].get(str(y), s["by_year"].get(y, 0))) for y in (2022, 2023, 2024, 2025))
         failed = ", ".join(k for k, v in r["gates"].items() if k != "pass" and not v) or "none"
         tw = r.get("timing_twin", {}).get("p_twin_ge_real")
+        b = r.get("bhav_check", {})
+        bc = f"{rs(b.get('net_bhav'))} ({b['win_bhav'] * 100:.0f}%) on {b['n']}" if b.get("n") else ""
         out.append(f"| {r['id']} | {s['n']:,} | {s['win'] * 100:.0f}% | {rs(s['net'])} | {rs(s['mean'])} | {rs(s['avg_win'])} / {rs(s['avg_loss'])} | "
                    f"{s['pf'] if s['pf'] is not None else ''} | {rs(s['worst_day'])} | {rs(s['worst_month'])} | {rs(s['max_dd'])} | {yrs} | "
                    f"{rs(s['post_regime_net'])} ({s['post_regime_n']}) | {rs(s['ex_best5'])} | {rs(r['slip2x_net'])} | {s.get('boot_p', 1):.3f} | {r['q_bh']:.3f} | "
-                   f"{'' if tw is None else f'{tw:.2f}'} | {failed} |")
+                   f"{'' if tw is None else f'{tw:.2f}'} | {bc} | {failed} |")
     if h is not None:
         out += ["", "## Holdout (15 Jul - 19 Oct 2026, read once)", ""]
         if not h.get("read"):

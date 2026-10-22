@@ -20,6 +20,7 @@ if str(ROOT / "research") not in sys.path:
     sys.path.insert(0, str(ROOT / "research"))
 
 from obuy.costs import Costs  # noqa: E402
+from brain import bs as BS  # noqa: E402
 
 NROWS = 375
 DECIDE_ROW = 5                    # 09:20 minute close
@@ -33,6 +34,13 @@ MAX_STEPS = 10
 FILL_LOOK = 5                     # minutes to look ahead for an open when the fill minute has none
 STEP = {"NIFTY": 50.0, "BANKNIFTY": 100.0}
 COSTS = Costs("dated")
+# Amendment 1 (PREREG.md, before the holdout): a leg with no print in the last STALE_AGE minutes is re-priced from its
+# own last print's implied volatility (sticky strike) at the index level and time of the minute. Dhan's rolling book
+# only carries strikes within 10 steps of ATM, so a wing that the index moves away from stops printing and its last
+# price is stale (too high for a wing that has become cheaper).
+STALE_AGE = 5
+RATE = 0.065                      # research/brain/config.py RISK_FREE
+YEAR_MIN = 365.0 * 24 * 60
 
 # The lot in force on a day: research/obuy/config.py LOT_SCHEDULE, plus the Jan 2026 BANKNIFTY change to 30
 # (NSE/FAOP/70616, 3 Oct 2025; first contracts expiring Jan 2026), which that table does not carry yet.
@@ -72,6 +80,41 @@ def last_close(con: np.ndarray, r: int) -> float:
     c = con[3, : r + 1]
     ok = np.flatnonzero(np.isfinite(c))
     return float(c[ok[-1]]) if len(ok) else float("nan")
+
+
+def last_print(con: np.ndarray, r: int) -> tuple[float, int]:
+    """(close, minute) of the contract's last print at or before minute r; (NaN, -1) if none."""
+    c = con[3, : r + 1]
+    ok = np.flatnonzero(np.isfinite(c))
+    return (float(c[ok[-1]]), int(ok[-1])) if len(ok) else (float("nan"), -1)
+
+
+def t_years(d: date, r: int, expiry: date | None) -> float:
+    """Calendar time from minute r of day d to 15:30 on the expiry day, in years (NaN without an expiry)."""
+    if expiry is None:
+        return float("nan")
+    mins = (expiry - d).days * 24 * 60 + (15 * 60 + 30) - (9 * 60 + 15 + r)
+    return max(mins, 1) / YEAR_MIN
+
+
+def spot_at(D, r: int) -> float:
+    c = D.idx[3, : r + 1]
+    ok = np.flatnonzero(np.isfinite(c))
+    return float(c[ok[-1]]) if len(ok) else float("nan")
+
+
+def repaired(D, side: str, k: float, r: int, d: date, expiry: date | None) -> float:
+    """The leg's value at minute r: its close if it printed within STALE_AGE minutes, else Black-Scholes at the minute's
+    index level with the IV of its last print (sticky strike); the last close if no IV can be found."""
+    con = D.con[(side, float(k))]
+    px, pr = last_print(con, r)
+    if pr < 0 or r - pr <= STALE_AGE or expiry is None:
+        return px
+    iv = BS.implied_vol(np.array([px]), np.array([spot_at(D, pr)]), np.array([k]), np.array([t_years(d, pr, expiry)]),
+                        np.array([side == "C"]), RATE)[0]
+    if not np.isfinite(iv):
+        return px
+    return float(BS.price(spot_at(D, r), k, t_years(d, r, expiry), iv, side == "C", RATE))
 
 
 def fill_px(con: np.ndarray, r: int) -> tuple[float, int]:
@@ -152,16 +195,27 @@ def ffill_row(c: np.ndarray, start: float) -> np.ndarray:
     return out
 
 
-def marks(D, legs, r0: int, r1: int) -> np.ndarray:
-    """(legs, minutes r0..r1) closes, each forward-filled from its last close at or before the minute."""
+def marks(D, legs, r0: int, r1: int, d: date | None = None, expiry: date | None = None) -> np.ndarray:
+    """(legs, minutes r0..r1) closes, each forward-filled from its last close at or before the minute; with an expiry,
+    a leg stale for more than STALE_AGE minutes is re-priced (Amendment 1)."""
     out = np.empty((len(legs), r1 - r0 + 1))
     for i, (side, k, _) in enumerate(legs):
         con = D.con[(side, float(k))]
         out[i] = ffill_row(con[3, r0: r1 + 1].astype(float), last_close(con, r0))
+        if expiry is None:
+            continue
+        c = con[3, : r1 + 1]
+        idx = np.where(np.isfinite(c), np.arange(len(c)), -1)
+        np.maximum.accumulate(idx, out=idx)
+        age = np.arange(len(c)) - idx
+        for j, r in enumerate(range(r0, r1 + 1)):
+            if idx[r] >= 0 and age[r] > STALE_AGE:
+                out[i, j] = repaired(D, side, k, r, d, expiry)
     return out
 
 
-def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float = 1.0, decide: int = DECIDE_ROW) -> dict | None:
+def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float = 1.0, decide: int = DECIDE_ROW,
+        expiry_date: date | None = None) -> dict | None:
     """One trade: entry orders at decide + 1, exits checked on each minute close, filled at the next minute's open."""
     st = setup(D, und, struct, decide)
     if st is None:
@@ -174,7 +228,9 @@ def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float
     entry, ch = [], 0.0
     for side, k, sg in st.legs:
         con = D.con[(side, float(k))]
-        p, _ = fill_px(con, er)
+        p, fr = fill_px(con, er)
+        if fr == er and not (np.isfinite(con[0, er]) and con[0, er] > 0):       # no open within FILL_LOOK: stale price
+            p = repaired(D, side, k, er, d, expiry_date)
         if not np.isfinite(p) or p <= 0:
             return None
         f = slip(p, sg > 0, vol5_lots(con, er, q), mult)
@@ -184,7 +240,7 @@ def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float
     if credit_pts <= 0:
         return None
     credit = credit_pts * q
-    m = marks(D, st.legs, er, sq)
+    m = marks(D, st.legs, er, sq, d, expiry_date)
     sg = np.array([l[2] for l in st.legs], float)
     pnl = ((m - np.array(entry)[:, None]) * sg[:, None]).sum(axis=0) * q        # gross, at each minute close er..sq
     ex = EXITS[exit_]
@@ -207,7 +263,9 @@ def run(D, und: str, d: date, struct: str, exit_: str, expiry: bool, mult: float
     exit_px = []
     for (side, k, s_), f in zip(st.legs, entry):
         con = D.con[(side, float(k))]
-        p, _ = fill_px(con, xr)
+        p, fr = fill_px(con, xr)
+        if fr == xr and not (np.isfinite(con[0, xr]) and con[0, xr] > 0):       # no open within FILL_LOOK: stale price
+            p = repaired(D, side, k, xr, d, expiry_date)
         if not np.isfinite(p) or p < 0:
             p = last_close(con, xr)
         x = slip(p, s_ < 0, vol5_lots(con, xr, q), mult * (2.0 if why == "stop" else 1.0))

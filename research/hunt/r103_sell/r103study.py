@@ -12,7 +12,7 @@ import os
 import pickle
 import sys
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -48,9 +48,10 @@ def period_of(d: date) -> str:
     return "after"
 
 
-def expiry_days(und: str, days: dict) -> set:
-    """The bhavcopy calendar (R102) where it reaches; R51's straddle flag after its last day."""
-    out, last = set(), None
+def expiry_info(und: str, days: dict) -> tuple[set, dict]:
+    """(expiry days, {day: nearest expiry date}) from the bhavcopy calendar (R102) where it reaches; after its last day,
+    R51's straddle flag and the 2025-26 rule (NIFTY: next Tuesday; BANKNIFTY: the month's last Tuesday)."""
+    out, near, last = set(), {}, None
     try:
         sys.path.insert(0, str(HERE.parent / "r102_deep"))
         os.environ.setdefault("R102_LAKE", str(RD.LAKE))
@@ -58,13 +59,30 @@ def expiry_days(und: str, days: dict) -> set:
         B.LAKE = RD.LAKE
         e = B.expiries(und)
         out = set(e[e.is_expiry].day)
+        near = {d: x.date() for d, x in zip(e.day, e.expiry)}
         last = max(e.day)
     except Exception as ex:  # pragma: no cover - only without the bhavcopy files
         print(f"bhavcopy calendar unavailable ({ex}); using R51's flag", file=sys.stderr)
     for d, D in days.items():
-        if (last is None or d > last) and D.expiry:
-            out.add(d)
-    return out
+        if last is None or d > last:
+            if D.expiry:
+                out.add(d)
+            near[d] = next_expiry(und, d)
+    return out, near
+
+
+def next_expiry(und: str, d: date) -> date:
+    """The 2025-26 calendar rule, for days past the bhavcopy (holidays ignored)."""
+    if und == "NIFTY":
+        return d + timedelta(days=(1 - d.weekday()) % 7)
+    y, m = d.year, d.month
+    for _ in range(2):
+        last = date(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1)
+        lt = last - timedelta(days=(last.weekday() - 1) % 7)
+        if lt >= d:
+            return lt
+        y, m = y + (m == 12), m % 12 + 1
+    return lt
 
 
 def trades_for(part: str, mult: float = 1.0, only: set | None = None) -> dict:
@@ -74,7 +92,7 @@ def trades_for(part: str, mult: float = 1.0, only: set | None = None) -> dict:
     out = defaultdict(list)
     for u in RD.UNDS:
         days = RD.load(u)
-        exp = expiry_days(u, days)
+        exp, near = expiry_info(u, days)
         for d in sorted(days):
             if d < RD.START or period_of(d) != part or days[d].atm is None:
                 continue
@@ -86,7 +104,7 @@ def trades_for(part: str, mult: float = 1.0, only: set | None = None) -> dict:
                 tid = test_id(uu, tt, s, x)
                 if only is not None and tid not in only:
                     continue
-                tr = E.run(D, u, d, s, x, t == "E", mult)
+                tr = E.run(D, u, d, s, x, t == "E", mult, expiry_date=near.get(d))
                 if tr is not None:
                     out[tid].append(tr)
     return out
@@ -97,12 +115,13 @@ def twin_means(part: str, tid: str, real: list, rng) -> np.ndarray:
     exits; TWIN_DRAWS totals, each one random twin per day."""
     u, t, s, x = tid.split("-")
     days = RD.load(u)
+    _, near = expiry_info(u, days)
     per_day = []
     for tr in real:
         D = days[tr["day"]]
         nets = []
         for r in rng.integers(E.DECIDE_ROW, TWIN_LAST_DECIDE + 1, size=TWIN_PER_DAY):
-            z = E.run(D, u, tr["day"], s, x, t == "E", 1.0, decide=int(r))
+            z = E.run(D, u, tr["day"], s, x, t == "E", 1.0, decide=int(r), expiry_date=near.get(tr["day"]))
             if z is not None:
                 nets.append(z["net"])
         per_day.append(nets or [0.0])
@@ -189,6 +208,48 @@ def _save(name: str, obj):
         pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
+def bhav_check(und: str, trades: list) -> dict:
+    """Independent check (Amendment 1): the time exits re-priced at the F&O bhavcopy close of every leg (15:30, the same
+    contract), with the same entry, slippage model at 1 tick and dated charges. Stops, locks and targets keep their
+    minute fills. Returns totals over the trades that have a bhavcopy price for all four legs."""
+    try:
+        import r102data as B
+        B.LAKE = RD.LAKE
+        b = B.bhav(und)
+    except Exception:  # pragma: no cover
+        return dict(n=0)
+    b = b[b.oi_qty > 0]
+    near = b.groupby("date").expiry.min()
+    key = b.set_index(["date", "expiry", "kind", "strike"]).close
+    key = key[~key.index.duplicated()]
+    import pandas as pd
+    n, net_min, net_bh, win_min, win_bh = 0, 0.0, 0.0, 0, 0
+    for t in trades:
+        d = pd.Timestamp(t["day"])
+        if d not in near.index:
+            continue
+        net = t["net"]
+        if t["why"] == "time":
+            px = [key.get((d, near[d], "CE" if s_ == "C" else "PE", float(k)), np.nan) for s_, k, _ in t["legs"]]
+            if not np.all(np.isfinite(px)):
+                continue
+            q = t["lot"]
+            exit_ch = sum(E.charges(x, q, sg < 0, t["day"]) for (_, _, sg), x in zip(t["legs"], t["exitpx"]))
+            gross, ch = 0.0, t["charges"] - exit_ch
+            for (_, _, sg), f, p in zip(t["legs"], t["entry"], px):
+                x = E.slip(float(p), sg < 0, E.THIN_LOTS)
+                gross += sg * (x - f) * q
+                ch += E.charges(x, q, sg < 0, t["day"])
+            net = gross - ch
+        n += 1
+        net_min += t["net"]
+        net_bh += net
+        win_min += t["net"] > 0
+        win_bh += net > 0
+    return dict(n=n, net_minute=round(net_min), net_bhav=round(net_bh), win_minute=round(win_min / n, 3) if n else None,
+                win_bhav=round(win_bh / n, 3) if n else None)
+
+
 def design() -> dict:
     rng = np.random.default_rng(SEED)
     tr = trades_for("design")
@@ -204,6 +265,7 @@ def design() -> dict:
         r["q_bh"] = round(q, 4)
         r["gates"] = gates(r["design"], dict(net=r["slip2x_net"]), q)
         r["high_win_label"] = bool(r["design"].get("win", 0) >= 0.60 and (r["design"].get("pf") or 0) >= 1.1)
+        r["bhav_check"] = bhav_check(r["id"].split("-")[0], tr.get(r["id"], []))
     for r in rows:                                    # timing twins, reported only
         if r["design"]["n"]:
             tw = twin_means("design", r["id"], tr[r["id"]], rng)

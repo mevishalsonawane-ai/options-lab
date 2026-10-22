@@ -1,0 +1,1359 @@
+{
+ "part": "design",
+ "design_end": "2026-07-14",
+ "n_tests": 24,
+ "passed": [
+  "BANKNIFTY-N-IF-X1",
+  "BANKNIFTY-N-IF-X2",
+  "BANKNIFTY-N-IFW-X1",
+  "BANKNIFTY-N-IFW-X2",
+  "BANKNIFTY-N-IC-X1",
+  "BANKNIFTY-N-IC-X2"
+ ],
+ "tests": [
+  {
+   "id": "NIFTY-E-IF-X1",
+   "design": {
+    "n": 249,
+    "net": -58984,
+    "mean": -236.9,
+    "win": 0.373,
+    "avg_win": 1912.3,
+    "avg_loss": -1518.1,
+    "pf": 0.751,
+    "worst_day": -5989,
+    "best_day": 8258,
+    "max_dd": 62617,
+    "worst_month": -9230,
+    "months_below_stop": 0,
+    "ex_best5": -90464,
+    "by_year": {
+     "2021": -7252,
+     "2022": -24296,
+     "2023": -9146,
+     "2024": -421,
+     "2025": -9489,
+     "2026": -8382
+    },
+    "post_regime_net": -24083,
+    "post_regime_n": 81,
+    "mean_credit": 4002,
+    "mean_max_loss": 2033,
+    "exits": {
+     "stop": 79,
+     "lock": 0,
+     "target": 0,
+     "time": 170
+    },
+    "first": "2021-08-05",
+    "last": "2026-07-14",
+    "boot_p": 0.9658
+   },
+   "slip2x_net": -64307,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -40804,
+    "p_twin_ge_real": 0.825
+   }
+  },
+  {
+   "id": "NIFTY-E-IF-X2",
+   "design": {
+    "n": 249,
+    "net": -54575,
+    "mean": -219.2,
+    "win": 0.426,
+    "avg_win": 1522.1,
+    "avg_loss": -1509.9,
+    "pf": 0.747,
+    "worst_day": -5989,
+    "best_day": 8356,
+    "max_dd": 63660,
+    "worst_month": -9230,
+    "months_below_stop": 0,
+    "ex_best5": -88150,
+    "by_year": {
+     "2021": -7667,
+     "2022": -21286,
+     "2023": -8656,
+     "2024": -11264,
+     "2025": -10791,
+     "2026": 5089
+    },
+    "post_regime_net": -12029,
+    "post_regime_n": 81,
+    "mean_credit": 4002,
+    "mean_max_loss": 2033,
+    "exits": {
+     "stop": 73,
+     "lock": 39,
+     "target": 47,
+     "time": 90
+    },
+    "first": "2021-08-05",
+    "last": "2026-07-14",
+    "boot_p": 0.9644
+   },
+   "slip2x_net": -59968,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -41660,
+    "p_twin_ge_real": 0.79
+   }
+  },
+  {
+   "id": "NIFTY-E-IFW-X1",
+   "design": {
+    "n": 249,
+    "net": -36518,
+    "mean": -146.7,
+    "win": 0.406,
+    "avg_win": 2665.7,
+    "avg_loss": -2065.9,
+    "pf": 0.881,
+    "worst_day": -8422,
+    "best_day": 10573,
+    "max_dd": 48164,
+    "worst_month": -11069,
+    "months_below_stop": 0,
+    "ex_best5": -79738,
+    "by_year": {
+     "2021": -6770,
+     "2022": -25809,
+     "2023": -6496,
+     "2024": 3012,
+     "2025": -66,
+     "2026": -389
+    },
+    "post_regime_net": -6725,
+    "post_regime_n": 81,
+    "mean_credit": 4930,
+    "mean_max_loss": 4164,
+    "exits": {
+     "stop": 107,
+     "lock": 0,
+     "target": 0,
+     "time": 142
+    },
+    "first": "2021-08-05",
+    "last": "2026-07-14",
+    "boot_p": 0.793
+   },
+   "slip2x_net": -40746,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -24682,
+    "p_twin_ge_real": 0.68
+   }
+  },
+  {
+   "id": "NIFTY-E-IFW-X2",
+   "design": {
+    "n": 249,
+    "net": -53770,
+    "mean": -215.9,
+    "win": 0.47,
+    "avg_win": 1917.2,
+    "avg_loss": -2106.7,
+    "pf": 0.807,
+    "worst_day": -8422,
+    "best_day": 9243,
+    "max_dd": 64694,
+    "worst_month": -11069,
+    "months_below_stop": 0,
+    "ex_best5": -92041,
+    "by_year": {
+     "2021": -6305,
+     "2022": -26342,
+     "2023": -5821,
+     "2024": -12076,
+     "2025": -4726,
+     "2026": 1499
+    },
+    "post_regime_net": -9280,
+    "post_regime_n": 81,
+    "mean_credit": 4930,
+    "mean_max_loss": 4164,
+    "exits": {
+     "stop": 100,
+     "lock": 44,
+     "target": 55,
+     "time": 50
+    },
+    "first": "2021-08-05",
+    "last": "2026-07-14",
+    "boot_p": 0.9081
+   },
+   "slip2x_net": -58919,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -49480,
+    "p_twin_ge_real": 0.585
+   }
+  },
+  {
+   "id": "NIFTY-E-IC-X1",
+   "design": {
+    "n": 249,
+    "net": 28347,
+    "mean": 113.8,
+    "win": 0.43,
+    "avg_win": 1970.7,
+    "avg_loss": -1285.4,
+    "pf": 1.155,
+    "worst_day": -3676,
+    "best_day": 8486,
+    "max_dd": 18222,
+    "worst_month": -5284,
+    "months_below_stop": 0,
+    "ex_best5": -6489,
+    "by_year": {
+     "2021": -2354,
+     "2022": -3239,
+     "2023": -4558,
+     "2024": 7823,
+     "2025": 17607,
+     "2026": 13068
+    },
+    "post_regime_net": 26536,
+    "post_regime_n": 81,
+    "mean_credit": 2434,
+    "mean_max_loss": 3601,
+    "exits": {
+     "stop": 126,
+     "lock": 0,
+     "target": 0,
+     "time": 123
+    },
+    "first": "2021-08-05",
+    "last": "2026-07-14",
+    "boot_p": 0.1828
+   },
+   "slip2x_net": 15304,
+   "q_bh": 0.6267,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": true,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -12479,
+    "p_twin_ge_real": 0.005
+   }
+  },
+  {
+   "id": "NIFTY-E-IC-X2",
+   "design": {
+    "n": 249,
+    "net": -7064,
+    "mean": -28.4,
+    "win": 0.518,
+    "avg_win": 1067.4,
+    "avg_loss": -1206.3,
+    "pf": 0.951,
+    "worst_day": -3676,
+    "best_day": 5246,
+    "max_dd": 20307,
+    "worst_month": -5314,
+    "months_below_stop": 0,
+    "ex_best5": -28810,
+    "by_year": {
+     "2021": -4346,
+     "2022": -3633,
+     "2023": -6030,
+     "2024": -2257,
+     "2025": 4908,
+     "2026": 4293
+    },
+    "post_regime_net": 3405,
+    "post_regime_n": 81,
+    "mean_credit": 2434,
+    "mean_max_loss": 3601,
+    "exits": {
+     "stop": 99,
+     "lock": 49,
+     "target": 95,
+     "time": 6
+    },
+    "first": "2021-08-05",
+    "last": "2026-07-14",
+    "boot_p": 0.6281
+   },
+   "slip2x_net": -18547,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -47195,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "NIFTY-N-IF-X1",
+   "design": {
+    "n": 959,
+    "net": -115087,
+    "mean": -120.0,
+    "win": 0.45,
+    "avg_win": 545.0,
+    "avg_loss": -665.2,
+    "pf": 0.672,
+    "worst_day": -3584,
+    "best_day": 6277,
+    "max_dd": 132656,
+    "worst_month": -11422,
+    "months_below_stop": 0,
+    "ex_best5": -141441,
+    "by_year": {
+     "2021": -10796,
+     "2022": -41660,
+     "2023": -47088,
+     "2024": -24578,
+     "2025": 17791,
+     "2026": -8756
+    },
+    "post_regime_net": 13234,
+    "post_regime_n": 318,
+    "mean_credit": 8978,
+    "mean_max_loss": 4238,
+    "exits": {
+     "stop": 1,
+     "lock": 0,
+     "target": 0,
+     "time": 958
+    },
+    "first": "2021-08-02",
+    "last": "2026-07-13",
+    "boot_p": 1.0
+   },
+   "slip2x_net": -136735,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -158115,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "NIFTY-N-IF-X2",
+   "design": {
+    "n": 959,
+    "net": -116301,
+    "mean": -121.3,
+    "win": 0.45,
+    "avg_win": 542.2,
+    "avg_loss": -665.2,
+    "pf": 0.668,
+    "worst_day": -3584,
+    "best_day": 6277,
+    "max_dd": 133870,
+    "worst_month": -11422,
+    "months_below_stop": 0,
+    "ex_best5": -142655,
+    "by_year": {
+     "2021": -10796,
+     "2022": -41660,
+     "2023": -47088,
+     "2024": -25792,
+     "2025": 17791,
+     "2026": -8756
+    },
+    "post_regime_net": 13234,
+    "post_regime_n": 318,
+    "mean_credit": 8978,
+    "mean_max_loss": 4238,
+    "exits": {
+     "stop": 1,
+     "lock": 0,
+     "target": 1,
+     "time": 957
+    },
+    "first": "2021-08-02",
+    "last": "2026-07-13",
+    "boot_p": 1.0
+   },
+   "slip2x_net": -137949,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -156642,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "NIFTY-N-IFW-X1",
+   "design": {
+    "n": 958,
+    "net": -35377,
+    "mean": -36.9,
+    "win": 0.564,
+    "avg_win": 833.8,
+    "avg_loss": -1161.8,
+    "pf": 0.927,
+    "worst_day": -9293,
+    "best_day": 9766,
+    "max_dd": 104311,
+    "worst_month": -19352,
+    "months_below_stop": 3,
+    "ex_best5": -69563,
+    "by_year": {
+     "2021": -4277,
+     "2022": -27582,
+     "2023": -46320,
+     "2024": -11537,
+     "2025": 59735,
+     "2026": -5396
+    },
+    "post_regime_net": 65100,
+    "post_regime_n": 317,
+    "mean_credit": 10694,
+    "mean_max_loss": 8227,
+    "exits": {
+     "stop": 12,
+     "lock": 0,
+     "target": 0,
+     "time": 946
+    },
+    "first": "2021-08-02",
+    "last": "2026-07-13",
+    "boot_p": 0.7816
+   },
+   "slip2x_net": -58302,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": false,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -94801,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "NIFTY-N-IFW-X2",
+   "design": {
+    "n": 958,
+    "net": -36592,
+    "mean": -38.2,
+    "win": 0.564,
+    "avg_win": 831.6,
+    "avg_loss": -1161.8,
+    "pf": 0.925,
+    "worst_day": -9293,
+    "best_day": 9766,
+    "max_dd": 105525,
+    "worst_month": -19352,
+    "months_below_stop": 3,
+    "ex_best5": -70777,
+    "by_year": {
+     "2021": -4277,
+     "2022": -27582,
+     "2023": -46320,
+     "2024": -12752,
+     "2025": 59735,
+     "2026": -5396
+    },
+    "post_regime_net": 65100,
+    "post_regime_n": 317,
+    "mean_credit": 10694,
+    "mean_max_loss": 8227,
+    "exits": {
+     "stop": 12,
+     "lock": 0,
+     "target": 1,
+     "time": 945
+    },
+    "first": "2021-08-02",
+    "last": "2026-07-13",
+    "boot_p": 0.7877
+   },
+   "slip2x_net": -59517,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": false,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -97757,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "NIFTY-N-IC-X1",
+   "design": {
+    "n": 958,
+    "net": -59562,
+    "mean": -62.2,
+    "win": 0.542,
+    "avg_win": 672.3,
+    "avg_loss": -930.5,
+    "pf": 0.854,
+    "worst_day": -5313,
+    "best_day": 7997,
+    "max_dd": 101937,
+    "worst_month": -15352,
+    "months_below_stop": 1,
+    "ex_best5": -87862,
+    "by_year": {
+     "2021": -7014,
+     "2022": -25647,
+     "2023": -36760,
+     "2024": -22964,
+     "2025": 33342,
+     "2026": -518
+    },
+    "post_regime_net": 39457,
+    "post_regime_n": 317,
+    "mean_credit": 5162,
+    "mean_max_loss": 7074,
+    "exits": {
+     "stop": 71,
+     "lock": 0,
+     "target": 0,
+     "time": 887
+    },
+    "first": "2021-08-02",
+    "last": "2026-07-13",
+    "boot_p": 0.9483
+   },
+   "slip2x_net": -82487,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": false,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -109295,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "NIFTY-N-IC-X2",
+   "design": {
+    "n": 958,
+    "net": -55147,
+    "mean": -57.6,
+    "win": 0.544,
+    "avg_win": 673.5,
+    "avg_loss": -929.1,
+    "pf": 0.864,
+    "worst_day": -5313,
+    "best_day": 6918,
+    "max_dd": 97577,
+    "worst_month": -15352,
+    "months_below_stop": 1,
+    "ex_best5": -82365,
+    "by_year": {
+     "2021": -7014,
+     "2022": -25647,
+     "2023": -36472,
+     "2024": -18892,
+     "2025": 32259,
+     "2026": 619
+    },
+    "post_regime_net": 39512,
+    "post_regime_n": 317,
+    "mean_credit": 5162,
+    "mean_max_loss": 7074,
+    "exits": {
+     "stop": 71,
+     "lock": 5,
+     "target": 5,
+     "time": 877
+    },
+    "first": "2021-08-02",
+    "last": "2026-07-13",
+    "boot_p": 0.9299
+   },
+   "slip2x_net": -78055,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": false,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -110335,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "BANKNIFTY-E-IF-X1",
+   "design": {
+    "n": 175,
+    "net": -3475,
+    "mean": -19.9,
+    "win": 0.4,
+    "avg_win": 2431.1,
+    "avg_loss": -1653.8,
+    "pf": 0.98,
+    "worst_day": -5040,
+    "best_day": 9740,
+    "max_dd": 41999,
+    "worst_month": -10542,
+    "months_below_stop": 0,
+    "ex_best5": -33971,
+    "by_year": {
+     "2021": 6820,
+     "2022": -26413,
+     "2023": -6107,
+     "2024": 20506,
+     "2025": 6359,
+     "2026": -4639
+    },
+    "post_regime_net": 4934,
+    "post_regime_n": 19,
+    "mean_credit": 4519,
+    "mean_max_loss": 2304,
+    "exits": {
+     "stop": 61,
+     "lock": 0,
+     "target": 0,
+     "time": 114
+    },
+    "first": "2021-09-09",
+    "last": "2026-05-26",
+    "boot_p": 0.5453
+   },
+   "slip2x_net": -6238,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -26675,
+    "p_twin_ge_real": 0.08
+   }
+  },
+  {
+   "id": "BANKNIFTY-E-IF-X2",
+   "design": {
+    "n": 175,
+    "net": -17761,
+    "mean": -101.5,
+    "win": 0.457,
+    "avg_win": 1834.3,
+    "avg_loss": -1731.6,
+    "pf": 0.892,
+    "worst_day": -5040,
+    "best_day": 6111,
+    "max_dd": 44663,
+    "worst_month": -9602,
+    "months_below_stop": 0,
+    "ex_best5": -43300,
+    "by_year": {
+     "2021": 2634,
+     "2022": -21313,
+     "2023": -12569,
+     "2024": 8123,
+     "2025": 12294,
+     "2026": -6929
+    },
+    "post_regime_net": 7350,
+    "post_regime_n": 19,
+    "mean_credit": 4519,
+    "mean_max_loss": 2304,
+    "exits": {
+     "stop": 60,
+     "lock": 29,
+     "target": 39,
+     "time": 47
+    },
+    "first": "2021-09-09",
+    "last": "2026-05-26",
+    "boot_p": 0.742
+   },
+   "slip2x_net": -20517,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -25605,
+    "p_twin_ge_real": 0.295
+   }
+  },
+  {
+   "id": "BANKNIFTY-E-IFW-X1",
+   "design": {
+    "n": 175,
+    "net": 15097,
+    "mean": 86.3,
+    "win": 0.463,
+    "avg_win": 3003.6,
+    "avg_loss": -2427.6,
+    "pf": 1.066,
+    "worst_day": -7839,
+    "best_day": 10728,
+    "max_dd": 43635,
+    "worst_month": -13782,
+    "months_below_stop": 1,
+    "ex_best5": -23332,
+    "by_year": {
+     "2021": 13233,
+     "2022": -26938,
+     "2023": -1197,
+     "2024": 26967,
+     "2025": 13531,
+     "2026": -10499
+    },
+    "post_regime_net": 7647,
+    "post_regime_n": 19,
+    "mean_credit": 5492,
+    "mean_max_loss": 4616,
+    "exits": {
+     "stop": 71,
+     "lock": 0,
+     "target": 0,
+     "time": 104
+    },
+    "first": "2021-09-09",
+    "last": "2026-05-26",
+    "boot_p": 0.3632
+   },
+   "slip2x_net": 13294,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": false,
+    "7_slip_2x": true,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -11609,
+    "p_twin_ge_real": 0.08
+   }
+  },
+  {
+   "id": "BANKNIFTY-E-IFW-X2",
+   "design": {
+    "n": 175,
+    "net": -12454,
+    "mean": -71.2,
+    "win": 0.509,
+    "avg_win": 2287.1,
+    "avg_loss": -2511.7,
+    "pf": 0.942,
+    "worst_day": -7839,
+    "best_day": 7790,
+    "max_dd": 54376,
+    "worst_month": -13782,
+    "months_below_stop": 2,
+    "ex_best5": -42761,
+    "by_year": {
+     "2021": 8558,
+     "2022": -29043,
+     "2023": -3817,
+     "2024": 10318,
+     "2025": 14351,
+     "2026": -12820
+    },
+    "post_regime_net": 5019,
+    "post_regime_n": 19,
+    "mean_credit": 5492,
+    "mean_max_loss": 4616,
+    "exits": {
+     "stop": 68,
+     "lock": 26,
+     "target": 46,
+     "time": 35
+    },
+    "first": "2021-09-09",
+    "last": "2026-05-26",
+    "boot_p": 0.6269
+   },
+   "slip2x_net": -14218,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": false,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -8859,
+    "p_twin_ge_real": 0.585
+   }
+  },
+  {
+   "id": "BANKNIFTY-E-IC-X1",
+   "design": {
+    "n": 175,
+    "net": -1528,
+    "mean": -8.7,
+    "win": 0.411,
+    "avg_win": 2215.3,
+    "avg_loss": -1563.4,
+    "pf": 0.991,
+    "worst_day": -4520,
+    "best_day": 5658,
+    "max_dd": 23377,
+    "worst_month": -7044,
+    "months_below_stop": 0,
+    "ex_best5": -24581,
+    "by_year": {
+     "2021": 7723,
+     "2022": -11111,
+     "2023": -7083,
+     "2024": 6292,
+     "2025": 5003,
+     "2026": -2352
+    },
+    "post_regime_net": 5580,
+    "post_regime_n": 19,
+    "mean_credit": 2782,
+    "mean_max_loss": 4024,
+    "exits": {
+     "stop": 99,
+     "lock": 0,
+     "target": 0,
+     "time": 76
+    },
+    "first": "2021-09-09",
+    "last": "2026-05-26",
+    "boot_p": 0.5273
+   },
+   "slip2x_net": -3625,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -6219,
+    "p_twin_ge_real": 0.38
+   }
+  },
+  {
+   "id": "BANKNIFTY-E-IC-X2",
+   "design": {
+    "n": 175,
+    "net": -18670,
+    "mean": -106.7,
+    "win": 0.503,
+    "avg_win": 1152.3,
+    "avg_loss": -1380.1,
+    "pf": 0.845,
+    "worst_day": -3167,
+    "best_day": 4460,
+    "max_dd": 32534,
+    "worst_month": -6168,
+    "months_below_stop": 0,
+    "ex_best5": -35167,
+    "by_year": {
+     "2021": -928,
+     "2022": -1627,
+     "2023": -10704,
+     "2024": -4530,
+     "2025": -4323,
+     "2026": 3441
+    },
+    "post_regime_net": -210,
+    "post_regime_n": 19,
+    "mean_credit": 2782,
+    "mean_max_loss": 4024,
+    "exits": {
+     "stop": 77,
+     "lock": 37,
+     "target": 58,
+     "time": 3
+    },
+    "first": "2021-09-09",
+    "last": "2026-05-26",
+    "boot_p": 0.8339
+   },
+   "slip2x_net": -21709,
+   "q_bh": 1.0,
+   "gates": {
+    "1_mean_gt_0_boot": false,
+    "2_bh": false,
+    "3_years_and_regime": false,
+    "4_trades": true,
+    "5_ex_best5": false,
+    "6_account_stop": true,
+    "7_slip_2x": false,
+    "pass": false
+   },
+   "high_win_label": false,
+   "timing_twin": {
+    "mean_total": -19756,
+    "p_twin_ge_real": 0.48
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IF-X1",
+   "design": {
+    "n": 998,
+    "net": 439888,
+    "mean": 440.8,
+    "win": 0.621,
+    "avg_win": 1095.3,
+    "avg_loss": -632.8,
+    "pf": 2.839,
+    "worst_day": -3374,
+    "best_day": 12852,
+    "max_dd": 64610,
+    "worst_month": -9240,
+    "months_below_stop": 0,
+    "ex_best5": 396183,
+    "by_year": {
+     "2021": 10348,
+     "2022": 7467,
+     "2023": -41108,
+     "2024": 40778,
+     "2025": 188800,
+     "2026": 233604
+    },
+    "post_regime_net": 460289,
+    "post_regime_n": 383,
+    "mean_credit": 13968,
+    "mean_max_loss": 5308,
+    "exits": {
+     "stop": 6,
+     "lock": 0,
+     "target": 0,
+     "time": 992
+    },
+    "first": "2021-09-13",
+    "last": "2026-07-14",
+    "boot_p": 0.0
+   },
+   "slip2x_net": 428097,
+   "q_bh": 0.0,
+   "gates": {
+    "1_mean_gt_0_boot": true,
+    "2_bh": true,
+    "3_years_and_regime": true,
+    "4_trades": true,
+    "5_ex_best5": true,
+    "6_account_stop": true,
+    "7_slip_2x": true,
+    "pass": true
+   },
+   "high_win_label": true,
+   "timing_twin": {
+    "mean_total": 232325,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IF-X2",
+   "design": {
+    "n": 998,
+    "net": 434383,
+    "mean": 435.3,
+    "win": 0.62,
+    "avg_win": 1092.7,
+    "avg_loss": -638.5,
+    "pf": 2.795,
+    "worst_day": -3374,
+    "best_day": 12852,
+    "max_dd": 68598,
+    "worst_month": -9240,
+    "months_below_stop": 0,
+    "ex_best5": 391397,
+    "by_year": {
+     "2021": 10348,
+     "2022": 7467,
+     "2023": -45096,
+     "2024": 41833,
+     "2025": 188800,
+     "2026": 231032
+    },
+    "post_regime_net": 457716,
+    "post_regime_n": 383,
+    "mean_credit": 13968,
+    "mean_max_loss": 5308,
+    "exits": {
+     "stop": 6,
+     "lock": 0,
+     "target": 3,
+     "time": 989
+    },
+    "first": "2021-09-13",
+    "last": "2026-07-14",
+    "boot_p": 0.0
+   },
+   "slip2x_net": 422592,
+   "q_bh": 0.0,
+   "gates": {
+    "1_mean_gt_0_boot": true,
+    "2_bh": true,
+    "3_years_and_regime": true,
+    "4_trades": true,
+    "5_ex_best5": true,
+    "6_account_stop": true,
+    "7_slip_2x": true,
+    "pass": true
+   },
+   "high_win_label": true,
+   "timing_twin": {
+    "mean_total": 231847,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IFW-X1",
+   "design": {
+    "n": 996,
+    "net": 542746,
+    "mean": 544.9,
+    "win": 0.697,
+    "avg_win": 1228.5,
+    "avg_loss": -1025.9,
+    "pf": 2.752,
+    "worst_day": -6156,
+    "best_day": 12852,
+    "max_dd": 43614,
+    "worst_month": -8982,
+    "months_below_stop": 0,
+    "ex_best5": 499041,
+    "by_year": {
+     "2021": 29891,
+     "2022": 41305,
+     "2023": -27466,
+     "2024": 48736,
+     "2025": 214153,
+     "2026": 236126
+    },
+    "post_regime_net": 490543,
+    "post_regime_n": 383,
+    "mean_credit": 15048,
+    "mean_max_loss": 7728,
+    "exits": {
+     "stop": 17,
+     "lock": 0,
+     "target": 0,
+     "time": 979
+    },
+    "first": "2021-09-13",
+    "last": "2026-07-14",
+    "boot_p": 0.0
+   },
+   "slip2x_net": 530239,
+   "q_bh": 0.0,
+   "gates": {
+    "1_mean_gt_0_boot": true,
+    "2_bh": true,
+    "3_years_and_regime": true,
+    "4_trades": true,
+    "5_ex_best5": true,
+    "6_account_stop": true,
+    "7_slip_2x": true,
+    "pass": true
+   },
+   "high_win_label": true,
+   "timing_twin": {
+    "mean_total": 313836,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IFW-X2",
+   "design": {
+    "n": 996,
+    "net": 532885,
+    "mean": 535.0,
+    "win": 0.696,
+    "avg_win": 1224.5,
+    "avg_loss": -1041.8,
+    "pf": 2.688,
+    "worst_day": -6156,
+    "best_day": 12852,
+    "max_dd": 48506,
+    "worst_month": -8982,
+    "months_below_stop": 0,
+    "ex_best5": 489899,
+    "by_year": {
+     "2021": 29891,
+     "2022": 41305,
+     "2023": -34753,
+     "2024": 48736,
+     "2025": 214153,
+     "2026": 233554
+    },
+    "post_regime_net": 487971,
+    "post_regime_n": 383,
+    "mean_credit": 15048,
+    "mean_max_loss": 7728,
+    "exits": {
+     "stop": 17,
+     "lock": 1,
+     "target": 1,
+     "time": 977
+    },
+    "first": "2021-09-13",
+    "last": "2026-07-14",
+    "boot_p": 0.0
+   },
+   "slip2x_net": 520371,
+   "q_bh": 0.0,
+   "gates": {
+    "1_mean_gt_0_boot": true,
+    "2_bh": true,
+    "3_years_and_regime": true,
+    "4_trades": true,
+    "5_ex_best5": true,
+    "6_account_stop": true,
+    "7_slip_2x": true,
+    "pass": true
+   },
+   "high_win_label": true,
+   "timing_twin": {
+    "mean_total": 318074,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IC-X1",
+   "design": {
+    "n": 942,
+    "net": 192142,
+    "mean": 204.0,
+    "win": 0.663,
+    "avg_win": 743.5,
+    "avg_loss": -859.7,
+    "pf": 1.705,
+    "worst_day": -4338,
+    "best_day": 4488,
+    "max_dd": 37140,
+    "worst_month": -5927,
+    "months_below_stop": 0,
+    "ex_best5": 172699,
+    "by_year": {
+     "2021": 19132,
+     "2022": 38002,
+     "2023": -26867,
+     "2024": 16387,
+     "2025": 110323,
+     "2026": 35165
+    },
+    "post_regime_net": 164721,
+    "post_regime_n": 329,
+    "mean_credit": 5324,
+    "mean_max_loss": 6054,
+    "exits": {
+     "stop": 62,
+     "lock": 0,
+     "target": 0,
+     "time": 880
+    },
+    "first": "2021-09-13",
+    "last": "2026-07-14",
+    "boot_p": 0.0
+   },
+   "slip2x_net": 179824,
+   "q_bh": 0.0,
+   "gates": {
+    "1_mean_gt_0_boot": true,
+    "2_bh": true,
+    "3_years_and_regime": true,
+    "4_trades": true,
+    "5_ex_best5": true,
+    "6_account_stop": true,
+    "7_slip_2x": true,
+    "pass": true
+   },
+   "high_win_label": true,
+   "timing_twin": {
+    "mean_total": 95958,
+    "p_twin_ge_real": 0.0
+   }
+  },
+  {
+   "id": "BANKNIFTY-N-IC-X2",
+   "design": {
+    "n": 942,
+    "net": 188928,
+    "mean": 200.6,
+    "win": 0.66,
+    "avg_win": 744.9,
+    "avg_loss": -857.5,
+    "pf": 1.689,
+    "worst_day": -4338,
+    "best_day": 5257,
+    "max_dd": 39417,
+    "worst_month": -5927,
+    "months_below_stop": 0,
+    "ex_best5": 168497,
+    "by_year": {
+     "2021": 17700,
+     "2022": 35375,
+     "2023": -24941,
+     "2024": 16853,
+     "2025": 113459,
+     "2026": 30482
+    },
+    "post_regime_net": 166073,
+    "post_regime_n": 329,
+    "mean_credit": 5324,
+    "mean_max_loss": 6054,
+    "exits": {
+     "stop": 61,
+     "lock": 56,
+     "target": 37,
+     "time": 788
+    },
+    "first": "2021-09-13",
+    "last": "2026-07-14",
+    "boot_p": 0.0
+   },
+   "slip2x_net": 177738,
+   "q_bh": 0.0,
+   "gates": {
+    "1_mean_gt_0_boot": true,
+    "2_bh": true,
+    "3_years_and_regime": true,
+    "4_trades": true,
+    "5_ex_best5": true,
+    "6_account_stop": true,
+    "7_slip_2x": true,
+    "pass": true
+   },
+   "high_win_label": true,
+   "timing_twin": {
+    "mean_total": 89122,
+    "p_twin_ge_real": 0.0
+   }
+  }
+ ]
+}

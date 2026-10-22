@@ -173,3 +173,45 @@ def test_holdout_lock(tmp_path, monkeypatch):
     assert S.period_of(date(2026, 7, 14)) == "design" and S.period_of(date(2026, 7, 15)) == "holdout"
     assert S.period_of(date(2026, 10, 20)) == "after"
     assert len(S.TESTS) == 24 and len({S.test_id(*t) for t in S.TESTS}) == 24
+
+
+# ---- Amendment 1: stale legs re-priced from their own last IV --------------------------------------------------------
+
+def test_t_years_and_next_expiry():
+    assert E.t_years(date(2026, 5, 4), 0, date(2026, 5, 4)) == pytest.approx((15 * 60 + 30 - (9 * 60 + 15)) / E.YEAR_MIN)
+    assert E.t_years(date(2026, 5, 4), 5, date(2026, 5, 5)) > E.t_years(date(2026, 5, 4), 300, date(2026, 5, 5))
+    assert np.isnan(E.t_years(date(2026, 5, 4), 0, None))
+    assert S.next_expiry("NIFTY", date(2026, 10, 14)) == date(2026, 10, 20)       # Wed -> next Tue
+    assert S.next_expiry("NIFTY", date(2026, 10, 20)) == date(2026, 10, 20)
+    assert S.next_expiry("BANKNIFTY", date(2026, 10, 14)) == date(2026, 10, 27)   # last Tue of Oct 2026
+    assert S.next_expiry("BANKNIFTY", date(2026, 10, 28)) == date(2026, 11, 24)
+
+
+def stale_wing_day():
+    """A day whose put wing (K0 - 4 steps) stops printing at minute 60 while the index rises 300 points."""
+    D = flat_day()
+    D.idx[3, 60:] = 25300.0
+    w = D.con[("P", 24800.0)]
+    w[:, 60:] = np.nan
+    return D
+
+
+def test_stale_leg_repriced_lower_when_index_moves_away():
+    D = stale_wing_day()
+    d, ex = date(2026, 5, 4), date(2026, 5, 7)
+    assert E.repaired(D, "P", 24800.0, 63, d, ex) == pytest.approx(D.con[("P", 24800.0)][3, 59])   # within 5 minutes
+    later = E.repaired(D, "P", 24800.0, 200, d, ex)
+    assert later < D.con[("P", 24800.0)][3, 59]                                                       # away -> cheaper
+    assert E.repaired(D, "P", 24800.0, 200, d, None) == D.con[("P", 24800.0)][3, 59]                # no expiry: as before
+    m = E.marks(D, E.setup(D, "NIFTY", "IF").legs, 6, 355, d, ex)
+    assert m[3, 200 - 6] == pytest.approx(later) and m[0, 200 - 6] == D.con[("C", 25000.0)][3, 200]
+
+
+def test_exit_fill_uses_the_repair_and_lowers_the_wing_sale():
+    D = stale_wing_day()
+    d, ex = date(2026, 5, 4), date(2026, 5, 7)
+    old = E.run(D, "NIFTY", d, "IF", "X1", False)                       # stale last close at the exit
+    new = E.run(D, "NIFTY", d, "IF", "X1", False, expiry_date=ex)
+    assert new["exitpx"][3] < old["exitpx"][3] and new["net"] < old["net"]
+    # the stale wing hid the loss from the stop: repaired, the stop sees it and fires
+    assert old["why"] == "time" and new["why"] == "stop" and new["xr"] < old["xr"]
