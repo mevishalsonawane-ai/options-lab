@@ -149,7 +149,7 @@ books:
     title: Quantitative Trading
   fm-ross-math-finance:
     author: Sheldon Ross
-    title: An Elementary Introduction to Mathematical Finance
+    title: 'An Introduction to Mathematical Finance: Options and Other Topics'
   fm-karatzas-shreve:
     author: Karatzas and Shreve
     title: Methods of Mathematical Finance
@@ -6088,3 +6088,96 @@ cards:
   tested_src: research/HUNT_R83_MCX_ENERGY.md
   tested_text: 'Our R83 traded natural-gas month-of-year seasonality on MCX NATGASMINI: 14 trades, -37,413, worse than simply
     staying short (+14,687).'
+- id: book.fm-ross-math-finance.1
+  book: fm-ross-math-finance
+  title: 'Arbitrage theorem: fair odds or a sure win'
+  chapter: Ch. 6.1, The Arbitrage Theorem
+  text: For any set of bets, either some probabilities make every bet fair or a combination wins in every outcome; it is a
+    linear-programming check. Odds of 1, 2 and 3 to 1 against three outcomes give a sum of 1/(1+odds) of 1.083, above 1, so
+    betting against all three wins whatever happens.
+  tags:
+  - filter
+- id: book.fm-ross-math-finance.2
+  book: fm-ross-math-finance
+  title: Put-call parity and forwards by arbitrage
+  chapter: Ch. 5.2, Other Examples of Pricing via Arbitrage
+  text: Spot plus put minus call must equal the present value of the strike, or a conversion or reversal locks in a profit.
+    Commodity futures need not equal spot grown at interest, because of storage, insurance and the inability to deliver short.
+  tags:
+  - filter
+  - mcx
+- id: book.fm-ross-math-finance.3
+  book: fm-ross-math-finance
+  title: Model price is not a sure win
+  chapter: Ch. 7.5.1, When the Option Cost Differs from the Black-Scholes Formula
+  text: 'Buying options below the Black-Scholes value and selling the underlying (or the reverse) is probably not a sure win:
+    continuous re-hedging is impossible, hedging costs can exceed the gap, volatility can change and the model is only approximate.'
+  tags:
+  - iv
+  - costs
+- id: book.fm-ross-math-finance.4
+  book: fm-ross-math-finance
+  title: 'Skew: low strikes carry higher IV'
+  chapter: Ch. 7.5.1, implied volatility
+  text: Different strikes and expiries give different implied volatilities; in-the-money (low-strike) calls tend to show higher
+    IV than out-of-the-money calls. The suggested reason is that the market expects volatility to fall after prices rise.
+  tags:
+  - iv
+- id: book.fm-ross-math-finance.5
+  book: fm-ross-math-finance
+  title: Log utility gives Kelly sizing
+  chapter: Ch. 8.2, Valuing Investments by Expected Utility
+  text: 'Log utility means staking 2p - 1 of capital on an even-money bet won with probability p: .6 gives 20%, .7 gives 40%.
+    A delayed payoff with a bank rate of .05 cuts the .6 case to about 15.8%.'
+  tags:
+  - sizing
+  verdict: weak
+  tested_src: research/HUNT_H15.md
+  tested_text: Our H15 found half-Kelly carried a 63% chance of a 30% drawdown and the Kelly fraction ranged from 1.29 to
+    0.14 across windows.
+- id: book.fm-ross-math-finance.6
+  book: fm-ross-math-finance
+  title: Crude oil days depend on the day before
+  chapter: Ch. 10.2, Crude Oil Data
+  text: In NYMEX crude 1995-97, a daily drop of more than 1% was followed by another such drop 31% of the time, against 15%
+    after a small rise; a chi-square test rejected independence at p .00526, so crude did not follow geometric Brownian motion.
+  tags:
+  - mcx
+  - momentum
+  - reversal
+  inst:
+  - CRUDE
+- id: book.fm-ross-math-finance.7
+  book: fm-ross-math-finance
+  title: Crude volatility depends on yesterday's move
+  chapter: Ch. 10.2-10.3, Models for the Crude Oil Data
+  text: Next-day standard deviation of crude's log change was .0194 after a big drop and .0208 after a big rise, against .0165
+    after a small rise; the book prices options with a volatility that depends on the last day's move.
+  tags:
+  - mcx
+  - iv
+  inst:
+  - CRUDE
+- id: book.fm-ross-math-finance.8
+  book: fm-ross-math-finance
+  title: AR(1) mean reversion halves option value
+  chapter: Ch. 11.2-11.3, Autoregressive Models and Mean Reversion
+  text: An AR(1) fit on crude log prices gave b .9838 and a reversion level of 20.44; a 50-day call struck at 21 was worth
+    44.42 cents under AR(1) against 79 cents under Black-Scholes, because mean reversion roughly halves horizon variance.
+  tags:
+  - mcx
+  - reversal
+  - iv
+  inst:
+  - CRUDE
+- id: book.fm-ross-math-finance.9
+  book: fm-ross-math-finance
+  title: Stock plus short calls when your drift view differs
+  chapter: Ch. 8.5, Mean Variance Analysis of Risk-Neutral-Priced Call Options
+  text: If your drift estimate exceeds the risk-neutral drift, fairly priced stock and calls both have positive expected gain;
+    buying 2.93 shares and selling 1.34 calls (about .46 calls per share) minimised risk for a target gain, versus an sd of
+    15.56 for stock alone.
+  tags:
+  - option-selling
+  - direction
+  - sizing

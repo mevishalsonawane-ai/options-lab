@@ -1,0 +1,34 @@
+id: book-fmchan-06
+title: Lot cap from the worst historical day (Chan's worst-loss leverage cap) (Ernest Chan, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ernest Chan''s rule from Quantitative Trading (Ch. 6, Risk management (Black Monday example)) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: the arm''s own historical P&L (sizing).
+  Entry: Unchanged (each arm''s own signal). Stop: Unchanged. Exit: Unchanged.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+features:
+- the arm's own historical P&L (sizing)
+- set monthly
+model_or_rule: 'Unchanged (each arm''s own signal). | stop: Unchanged. | exit: Unchanged. | filters: Max lots per arm per
+  day = floor( Rs 13,000 / worst single-day loss per lot over the arm''s full history, including design ), minimum 0; when
+  several arms run, share the Rs 13,000 in proportion to each arm''s base lots.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-06; trade: As the arm trades.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R72: C1''s worst design day was -Rs 58,613 at 1 lot on five indices, beyond the account stop; R82:
+  the MCX trend arm sat through -Rs 13.4 lakh. Not tested as a sizing rule by us.. Assumptions: Rs 13,000 is the monthly account
+  stop used as the one-period tolerance (Chan uses the tolerable one-day loss). Only lowers risk. Measure how often it binds
+  and what it costs in net vs how many account-stop breaches it removes.'

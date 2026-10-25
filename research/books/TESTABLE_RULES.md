@@ -1856,3 +1856,598 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book calls 3:1 ideal, not required; using it as an entry filter is our most literal mechanical reading. Only arms with an index target or level (Liquidity, ORB-type) can use it.
 - Data: have
 - Our nearest test: A fixed 3:1 premium rule (target +10%, stop -3.3%) won 19-31% vs about 28% needed (MANUAL_METHOD.md). R80: 0 of 10 entry filters on Liquidity passed. An index-level 3:1 filter is not tested by us.
+
+## Paul Wilmott on Quantitative Finance - Paul Wilmott ([write-up](fm-wilmott.md))
+### `book-fmwilmott-01` Sell the NIFTY monthly ATM straddle when implied vol is above forecast realised vol, delta-hedge with futures on a band
+- Source: Paul Wilmott on Quantitative Finance, Ch. 12, How to delta hedge (hedging with implied vol); Ch. 48, Transaction costs (delta-tolerance band); Ch. 43/58 (worst-case gap check). Family: `option-structure`. Signal source: volatility / options structure (chain ATM IV vs a realised-vol forecast from the underlying); the hedge is on the underlying future.
+- Timeframe: daily decision at 15:20; hedge checked on 5-minute bars; one position per monthly expiry. Instruments: NIFTY.
+- Entry: On the first trading day after a monthly expiry, at 15:20, compute the next monthly ATM straddle's implied vol (average of call and put IV) and a realised-vol forecast for the same days to expiry (EWMA lambda 0.94 on daily close-to-close NIFTY returns, as Ch. 42). Sell 1 ATM call + 1 ATM put if implied vol / forecast >= 1.15. Otherwise no trade this cycle.
+- Stop: None in the book (the hedge is the risk control). Research variants: B closes everything if the position (options + futures) loses Rs 13,000; C pre-checks the worst case of a 3% overnight gap with IV +5 points and skips entry if it exceeds Rs 40,000.
+- Exit: Hold to 15:05 on expiry day (square-off) or close early on a variant-B stop.
+- Filters: Skip entry if a pre-listed event (Budget, RBI policy, general-election result) falls inside the life of the trade, since implied vol then carries an event premium (Ch. 50).
+- Trade: Short 1 lot ATM CE + 1 lot ATM PE; hedge with NIFTY futures using the Black-Scholes delta at the ENTRY implied vol (Ch. 12's 'hedge with implied' choice); rebalance on 5-minute closes only when the net option delta differs from the futures held by more than 0.5 lot (Ch. 48 band); report a fractional-hedge (theoretical) version alongside.
+- Assumptions (our reading where the book is vague): The book states the P&L mechanics, not a threshold; 1.15 is our literal choice near R102's median VIX / forward-realised ratio of 1.28 and must be pre-registered with alternatives (1.0, 1.3) under Benjamini-Hochberg. One futures lot equals one option lot, so at 1 lot the hedge is coarse (DEEP_OPTIONS_SELLING.md); the band avoids churning. Naked short margin is about Rs 1.5 lakh, so this is research only; R103 rejected naked selling for this account.
+- Data: have: NIFTY futures and index 1-minute bars, India VIX daily, ATM option prices and IV in the lake for the nearest monthly; lack: clean monthly-expiry ATM IV every day of older years (the lake rolls nearest expiry), real futures fills
+- Our nearest test: not tested by us as a hedged trade. R102: VIX over-states NIFTY's next 21 days on 81% of days (median 1.28, 4,507 days). DEEP_OPTIONS_SELLING.md: naked 09:20 BANKNIFTY short straddle worst day -Rs 65,483; R103 defined-risk selling 0 of 24 confirmed.
+
+## Inside Volatility Arbitrage - Alireza Javaheri ([write-up](fm-javaheri-vol-arb.md))
+### `book-fmjavaheri-01` Skew trade: buy OTM call, sell OTM put, vega-neutral and delta-hedged, on the NIFTY monthly
+- Source: Inside Volatility Arbitrage, Ch. 3, Skewness Trades; An Example of the Skewness Trade; Multiple Trades. Family: `option-structure`. Signal source: volatility / options structure (no direction; the delta hedge is on the underlying future).
+- Timeframe: daily (EOD bhavcopy prices, daily delta hedge at the close); one trade per monthly expiry. Instruments: NIFTY, BANKNIFTY.
+- Entry: On the first trading day after a monthly expiry, take the next monthly expiry (about 20-25 trading days). Buy the call with strike nearest S x (1 + 0.10 x sqrt(T / 0.25)) and sell the put nearest S x (1 - 0.10 x sqrt(T / 0.25)), T in years (the book's 10% OTM at three months scaled by square-root of time). Size calls per put = put vega / call vega at entry (vega-neutral); 1 put lot.
+- Stop: None in the book. Research variant B adds a basket stop: close everything if the position (options + hedge) loses Rs 13,000 (Boss's month stop).
+- Exit: Unwind 5 trading days before expiry (the book unwinds about 20 business days before a three-month expiry, i.e. at roughly the last quarter of the trade's life). Variant C holds to expiry.
+- Filters: None in the unconditional version (the book's multiple-trade test was unconditional). The conditional version is the next rule.
+- Trade: Long OTM CE, short OTM PE (1 lot), short/long NIFTY future rebalanced daily at the close to the net Black-Scholes delta computed with the entry-day implied vols (as the book did); report results at mid (close) prices and with a modelled half-spread on each option fill, as the book's main finding is that the spread decides the sign.
+- Assumptions (our reading where the book is vague): Book trades 3-month SPX options; NSE liquidity is in the nearest monthly, so T is shortened and the OTM distance scaled by sqrt(time). The futures hedge must be in whole lots: rebalance only when the net delta differs from the held futures by more than 0.5 lot, and also report a fractional-hedge (theoretical) version. The short put is naked: margin about Rs 1.5 lakh; research only.
+- Data: **needs data we lack** - lack: bid-ask for 5-10% OTM monthly strikes (the 1-minute lake keeps only ATM +-10 strikes; the EOD bhavcopy has all strikes but only closes); have: NIFTY futures daily bars, bhavcopy closes for the strikes
+- Our nearest test: not tested by us as a risk reversal. R102: NIFTY puts five strikes out dearer than calls by 2.56 IV points on 91% of 1,222 days. R103: defined-risk short premium 0 of 24 confirmed; costs turn a near-zero gross into losses.
+### `book-fmjavaheri-02` Skew trade only when the chain's skew exceeds the skew implied by the index's own history
+- Source: Inside Volatility Arbitrage, Ch. 3, The Consistency Test; Financial Interpretation; footnote 12 (conclusive test). Family: `option-structure`. Signal source: volatility / options structure (option chain skew vs a model fitted on underlying price history).
+- Timeframe: daily; history model refit monthly on daily (or 1-minute) index returns, chain skew at 15:20. Instruments: NIFTY, BANKNIFTY.
+- Entry: Each day at 15:20 compute chain skew = IV(put at ATM-5) - IV(call at ATM+5) on the next monthly expiry (average of bid/ask or close IVs). Compute history skew = the same IV difference produced by a model fitted only on past index returns (NGARCH with leverage, or a 1-D Kalman-filtered Heston on 1-minute returns), priced at the same strikes and expiry, using the chain's ATM IV as the variance level. Gap = chain skew - history skew. Enter the skew-risk-reversal-monthly position on the first day the gap is above the 95th percentile of the history skew's simulated sampling distribution (book: call a mispricing only when it lies outside the range of history estimates).
+- Stop: As skew-risk-reversal-monthly (none; variant B basket stop Rs 13,000).
+- Exit: Unwind 5 trading days before expiry, or earlier if the gap closes to below its 50th percentile (variant).
+- Filters: Skip if the index fell more than 3% in the past 5 days (peso logic: after a fall the option skew is likely right); skip pre-listed event days (Budget, RBI, election results).
+- Trade: Same legs and daily futures hedge as skew-risk-reversal-monthly.
+- Assumptions (our reading where the book is vague): The book gives the comparison (Heston xi and rho from options vs filtered MLE on history) but no threshold; the 95th-percentile-of-sampling-distribution threshold is our literal reading of its footnote; ATM-5 / ATM+5 replaces 10% OTM so the measurement stays inside the 1-minute lake; the history model and its sampling distribution are refit with data up to the day before only (look-ahead guard).
+- Data: have: 1-minute index bars, nearest/next-expiry chain IV within ATM +-10 (rolling lake); lack: next-monthly chain in the 1-minute lake on most days (h29 had the monthly only while both were listed) and bid-ask for the far legs
+- Our nearest test: not tested by us. IV1 and h29: skew carries no direction (h29 skew IC about 0; option-only models lost on all 5 indices), but neither traded skew as a price.
+### `book-fmjavaheri-03` Kurtosis trade: sell ATM and far-OTM options, buy near-OTM options, delta-hedged
+- Source: Inside Volatility Arbitrage, Ch. 3, Kurtosis Trades (Figure 3.8). Family: `option-structure`. Signal source: volatility / options structure (no direction).
+- Timeframe: 1-minute chain; one decision a day at 09:20 on the nearest weekly; or daily on the monthly. Instruments: NIFTY, BANKNIFTY.
+- Entry: At 09:20 sell 1 ATM CE and 1 ATM PE, buy 1 CE and 1 PE at ATM +-1 straddle-width (near OTM), sell 1 CE and 1 PE at ATM +-2 straddle-widths (far OTM).
+- Stop: None in the book; research variant: basket loss of 100% of the net credit, or the structure's loss at the account stop.
+- Exit: 15:10 square-off (non-expiry day) or 15:05 on expiry day (app rule); book holds to expiry.
+- Filters: Book: take it when the chain's implied tails are fatter than history's (higher implied vol-of-vol); literal filter: ATM IV / HAR realised forecast above its rolling 70th percentile.
+- Trade: Six legs, 1 lot each; longs filled first, shorts closed first; far shorts are naked beyond the far strike (unlimited loss) - research only.
+- Assumptions (our reading where the book is vague): The book draws a generic payoff without strike distances; we use straddle-width multiples so the far legs stay inside ATM +-10 on most days; the 70th percentile filter is ours.
+- Data: have (ATM +-10 within the lake on most days; reprice any leg that stops printing, per R103)
+- Our nearest test: R103: the nearest structure (short ATM straddle with long wings, iron fly) lost on all 6 NIFTY non-expiry tests; 0 of 24 selling tests confirmed. h29: ATM IV / HAR forecast median 1.2-1.36.
+
+## Neural Networks in Finance - Paul McNelis ([write-up](fm-mcnelis-neural-nets.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Applied Quantitative Finance - Härdle, Kleinow and Stahl ([write-up](fm-applied-quant-finance.md))
+### `book-fmaqf-01` Skewness trade S1: sell OTM puts, buy OTM calls when implied skew is richer than historical
+- Source: Applied Quantitative Finance, Ch. 9.5 (also Table 7.1). Family: `option-structure`. Signal source: volatility / options structure (implied density skew vs skew of a density simulated from the index's own last 3 months); implicit long-index exposure.
+- Timeframe: end-of-day; one entry a month, held to expiry. Instruments: NIFTY, BANKNIFTY.
+- Entry: On the first trading day after the monthly expiry, compute implied skewness of the next-month (or second-month, closest to the book's 3 months) risk-neutral density from settlement prices (smile smoothed, Breeden-Litzenberger) and the skewness of a density simulated from a local-volatility function fitted to the last 63 daily closes (10,000 paths, drift = risk-free rate, mean shifted to the futures price, variance matched). If implied skew < historical skew: sell 1 lot of every put with strike/forward in [0.86, 0.95] and buy 1 lot of every call in [1.05, 1.14]. If implied > historical: the mirror (S2).
+- Stop: None in the book. Research variant: close all legs if the index falls 5% below the entry forward (to stay inside the account stop).
+- Exit: Hold to expiry, cash settled.
+- Filters: None beyond the density comparison.
+- Trade: Multi-leg on monthly options; book used 1 contract per strike across the whole band. Measure net with real charges (each strike is an order) plus slippage at bid/ask.
+- Assumptions (our reading where the book is vague): Book used 3-month DAX options and 5% of premium as cost; NSE monthlies are 1 month. Simple version: replace the density comparison by 'put 0.95 IV minus call 1.05 IV above its median', since the book's switch said S1 in 29 of 30 months. Strike band may be cut to strikes with non-zero OI.
+- Data: have for end-of-day (NSE bhavcopy, every strike, Jan 2021+); lack: intraday prints beyond ATM +-10 and reliable far-OTM liquidity history
+- Our nearest test: R102: puts five strikes out dearer than calls on 91% of NIFTY days (n 1,222). R103: short premium breaks even before costs intraday (0 of 24 defined-risk). The risk-reversal hold-to-expiry trade is not tested by us.
+### `book-fmaqf-02` Kurtosis trade K1: sell ATM and far-OTM, buy near-OTM when implied tails are fatter than historical
+- Source: Applied Quantitative Finance, Ch. 9.6. Family: `option-structure`. Signal source: volatility / options structure (implied vs historical density kurtosis); no direction.
+- Timeframe: end-of-day; one entry a month, held to expiry. Instruments: NIFTY, BANKNIFTY.
+- Entry: Same day and densities as the skew trade. If implied kurtosis > historical: sell every put with strike/forward < 0.90 (book used 0.86-0.90), buy puts 0.91-0.95, sell puts 0.96-1.00 and calls 1.00-1.04, buy calls 1.05-1.09, sell calls 1.10-1.14. If implied < historical: the mirror (K2).
+- Stop: None in the book (naked far wings). Research variant: stop when the basket loss reaches 2x the net credit.
+- Exit: Hold to expiry, cash settled.
+- Filters: None beyond the density comparison.
+- Trade: Multi-leg on monthly options, 1 lot per strike; report net, worst month and margin.
+- Assumptions (our reading where the book is vague): Moneyness bands from Table 9.3 (FOTM-NOTM-ATM-K1 column). The payoff shape depends on which strikes exist; record the strike count per month.
+- Data: have for end-of-day (NSE bhavcopy, every strike, Jan 2021+); lack: far-OTM liquidity / bid-ask history
+- Our nearest test: R103: naked short straddle +Rs 64k on NIFTY over 1,272 days with a worst day of -Rs 28.9k on one lot; with wings bought it lost. K1 sells the far wings instead, i.e. more tail risk. Not tested by us as specified.
+### `book-fmaqf-03` Long-memory spread reversal: fade new M-day extremes of a two-asset log spread
+- Source: Applied Quantitative Finance, Ch. 14.5. Family: `outside-strategies`. Signal source: underlying price (log spread of two underlyings).
+- Timeframe: daily closes. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER.
+- Entry: X = log(A) - log(B) at the daily close (pairs: NIFTY vs BANKNIFTY futures; GOLD vs SILVER futures). If X < min(X over the previous M days): long A, short B, equal rupee value. If X > max over the previous M days: short A, long B. M in {50, 100, 150}, pre-registered.
+- Stop: None (always in the market; the opposite signal reverses). Research variant: stop if the spread moves a further 2 sd of its 60-day changes against the position.
+- Exit: Reverse on the opposite signal.
+- Filters: Trade a pair only if its Hurst exponent (R/S on the design period) is below the 5th percentile of the same statistic on simulated random walks of equal length.
+- Trade: Futures pair (both legs), or for index pairs buy the ATM call of the index bought and the ATM put of the index sold (monthly expiry, rolled). Costs per leg from baselines.yaml.
+- Assumptions (our reading where the book is vague): Book used German voting / non-voting share pairs (near-identical claims) where reversion is structural; index or metal pairs are looser. Cash-neutral sizing by the book; we use equal notional per lot rounding.
+- Data: have (index futures daily since 2006; MCX GOLD/SILVER futures)
+- Our nearest test: R72 C2 laggard catch-up (intraday convergence across indices) lost -Rs 1,00,746 final (613 trades). A daily spread-extreme fade is not tested by us.
+### `book-fmaqf-04` Pause or size down an arm when a CUSUM chart of its trade results alarms
+- Source: Applied Quantitative Finance, Ch. 11. Family: `trade-management`. Signal source: none (monitoring of the arm's own per-trade net results).
+- Timeframe: per trade. Instruments: NIFTY, BANKNIFTY.
+- Entry: Not an entry rule. For each arm, standardise each trade's net by the mean and sd of its design-period trades. Run a one-sided lower CUSUM: S = max(0, S - z - k) with k = 0.5; alarm when S > h, h set so the in-control average run length is 300 trades (book's value 3.8929 for normal data; re-derive by simulation on the arm's own bootstrapped design trades because of fat tails).
+- Stop: On alarm: skip the arm's next N trades or halve its size (shadow first); resume when a parallel upper CUSUM returns S to 0 or after N trades.
+- Exit: n/a
+- Filters: Apply only to arms with at least 200 design trades.
+- Trade: Compare the arm's net, worst drawdown and worst day with and without the pause on the holdout; a risk-lowering change only.
+- Assumptions (our reading where the book is vague): The book's CUSUM targets a mean shift of normal data; trade P&L is fat-tailed and skewed, so h must come from bootstrap simulation. N (e.g. 20 trades) is our choice and must be pre-registered.
+- Data: have (arm trade logs: Liquidity 15+5, R51 / R72 Donchian, R52 OOV)
+- Our nearest test: R101: 0 of 20 entry filters and sizing changes on the arms passed (best q 0.40). A results-based pause is not tested by us.
+
+## Bayesian Methods in Finance - Rachev, Hsu, Bagasheva and Fabozzi ([write-up](fm-bayesian-methods.md))
+### `book-fmbayes-01` Cross-sectional momentum: long the top half, short the bottom half on volatility-scaled 9-month return
+- Source: Bayesian Methods in Finance, Ch. 8, Incorporating trading strategies into the Black-Litterman model. Family: `mcx-crypto`. Signal source: underlying price (each future's own daily closes).
+- Timeframe: daily bars, monthly rebalance. Instruments: GOLD, SILVER, CRUDE, NATURALGAS.
+- Entry: On the first trading day of each month, for each instrument compute z = (close one day ago / close 190 days ago - 1) / annualised daily-return volatility over the same window. Rank by z; go long the near-month future of the top half and short the bottom half.
+- Stop: Not stated in the book. Research variant: none for the book-literal test; a second variant adds a per-leg stop at 2.5 x the 20-day ATR from entry (our choice).
+- Exit: Hold one month; close at the next month's rebalance (roll the futures at expiry inside the month).
+- Filters: None. Weights proportional to 1/volatility within each side, scaled so the book's ex-ante volatility is 20% a year.
+- Trade: Futures long/short (MCX allows both). For the option-buying app variant: buy ATM CE on the long legs and ATM PE on the short legs of the nearest monthly expiry, rolled monthly; report separately.
+- Assumptions (our reading where the book is vague): Book's universe was MSCI country indices (24 years); 189 trading days for 9 months and a 1-day skip are the book's. With only 4 MCX majors the halves are 2 and 2; adding base metals (COPPER, ZINC, ALUMINIUM, LEAD, NICKEL) if bars exist gives a wider cross-section. Costs: MCX futures charges and slippage from baselines.yaml.
+- Data: have for GOLD/SILVER/CRUDE/NATURALGAS futures daily bars; lack: long daily histories for MCX base metals (to check)
+- Our nearest test: not tested by us as a cross-sectional ranking. R96 (HUNT_R96_SUMMARY.md) tested only intraday / time-series momentum on MCX (US-session momentum U1 died; ZINC untradeable, 0 fills); R72 breadth Donchian is time-series, not cross-sectional.
+
+## Copula Methods in Finance - Cherubini, Luciano and Vecchiato ([write-up](fm-copula-methods.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## The Mathematics of Financial Modeling and Investment Management - Focardi and Fabozzi ([write-up](fm-fabozzi-modelling.md))
+### `book-fmfabozzi-01` Filter rule on NIFTY/BANKNIFTY daily closes, buy the option
+- Source: The Mathematics of Financial Modeling and Investment Management, Ch. 19, Technical analysis (filter rule). Family: `patterns-indicators`. Signal source: underlying price.
+- Timeframe: daily closes of index spot; stop checks on 1-minute bars. Instruments: NIFTY, BANKNIFTY.
+- Entry: Track the running low and high of daily closes. Long when the close is at least x% above the lowest close since the last short signal; short when the close is at least x% below the highest close since the last long signal. Grid x in {1, 2, 3, 5}% fixed before testing. Enter at the next session's 09:20 price.
+- Stop: The book's stop is the reverse signal (close x% below the high since entry). Add a hard stop of 50% of the option premium to bound option-buying losses (our addition).
+- Exit: Reverse signal; also roll or exit 5 sessions before the monthly expiry.
+- Filters: none in the book
+- Trade: buy the 1-ITM CE on a long signal, 1-ITM PE on a short, nearest monthly (next monthly if fewer than 10 sessions left); futures mirror to separate signal from theta
+- Assumptions (our reading where the book is vague): The book gives no value of x, no instrument and no timeframe; the grid and the premium stop are our literal choices. Always-in-market as written.
+- Data: have
+- Our nearest test: R102: daily momentum reversed in the holdout and 1 of 70 sign rules confirmed (an artefact); the book itself says profitability after costs is unclear. Not tested by us in this exact form.
+### `book-fmfabozzi-02` 200-day moving-average band on index daily closes, buy the option
+- Source: The Mathematics of Financial Modeling and Investment Management, Ch. 19, Technical analysis (moving-average rule). Family: `patterns-indicators`. Signal source: underlying price.
+- Timeframe: daily closes of index spot. Instruments: NIFTY, BANKNIFTY.
+- Entry: Long when the close rises above (1 + b) x SMA(200) of daily closes; short when it falls below (1 - b) x SMA(200). Band b in {0, 1, 2}% fixed before testing. Enter next session at 09:20.
+- Stop: Opposite band cross (book); plus a 50% premium hard stop on the option (our addition).
+- Exit: Opposite band cross, or 5 sessions before the monthly expiry (roll if the signal still holds).
+- Filters: none in the book; EMA(200) as a pre-registered variant since the book names both
+- Trade: buy the 1-ITM CE (long) or PE (short), nearest monthly; futures mirror
+- Assumptions (our reading where the book is vague): The book only says buy above some percentage of a long average such as 200 days; band values and expiry handling are ours. Few signals a year, so the sample is small.
+- Data: have
+- Our nearest test: R102 daily momentum reversed in the holdout; swing studies of multi-day trend holds sat inside the coin-flip band. The 200-day band itself is not tested by us.
+### `book-fmfabozzi-03` NIFTY/BANKNIFTY log-spread z-score reversion (pairs trading)
+- Source: The Mathematics of Financial Modeling and Investment Management, Ch. 10, 12, 18, 19 (Ornstein-Uhlenbeck, cointegration, pairs trading). Family: `outside-strategies`. Signal source: underlying price.
+- Timeframe: 5-minute bars of both index spots, intraday; daily variant on closes. Instruments: NIFTY, BANKNIFTY.
+- Entry: Spread = ln(BANKNIFTY) - beta x ln(NIFTY), beta from a rolling 60-session regression using only past data. z = (spread - rolling mean) / rolling sd over the past 20 sessions of 5-minute bars. When z > +2: BANKNIFTY rich, buy the NIFTY ATM CE and the BANKNIFTY ATM PE in beta-matched premium-delta amounts; when z < -2: the mirror. Only enter if the past window passes an ADF test on the spread at 5%.
+- Stop: z beyond +/-3.5, or combined option P&L below -1 x the total premium paid x 0.5.
+- Exit: z back inside +/-0.5, or 15:15 square-off (intraday); daily variant: 10 sessions max hold.
+- Filters: no entries 09:15-09:30 or after 14:30 (intraday); skip expiry day of either index.
+- Trade: long one index's ATM call and the other's ATM put (or a long/short futures pair as the mirror); stops on the spread z
+- Assumptions (our reading where the book is vague): The book gives the method (pairs beyond a threshold back to the mean, formalised by cointegration) but no thresholds, windows or instruments; all numbers are ours. Long options on both legs pay two thetas; the futures mirror isolates the signal. Correct across every variant (BH).
+- Data: have
+- Our nearest test: R72: C2 laggard catch-up lost (-Rs 1,00,746 final period) and C6 SMT divergence failed; R102 correlation 0.877, beta 1.157 over 5,086 days, so the spread is mostly BANKNIFTY's extra beta. The book warns cointegration is unstable and often spurious.
+
+## Introduction to Quantitative Finance: A Math Tool Kit - Robert Reitano ([write-up](fm-intro-quant-finance.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Financial Engineering and Computation - Yuh-Dauh Lyuu ([write-up](fm-lyuu-fin-engineering.md))
+### `book-fmlyuu-01` Index arbitrage when the future strays from cost-of-carry fair value
+- Source: Financial Engineering and Computation, Ch. 12.3.3, Stock index futures (Eq. 12.9). Family: `outside-strategies`. Signal source: underlying price (index spot vs index future); a carry arbitrage, not an option trade.
+- Timeframe: 1-minute bars, 09:20-15:00. Instruments: NIFTY, BANKNIFTY.
+- Entry: At a minute close compute fair = S x e^((r - q) x T) for the nearest index future (S index spot, r 91-day T-bill rate, q trailing 12-month index dividend yield, T years to expiry). If future - fair > cost band, sell the future and buy the spot basket (index ETF as proxy); if fair - future > cost band, buy the future and sell the basket.
+- Stop: None in the book (the position converges at expiry); for the test, close if the gap widens to 3 x the cost band (basis risk of the ETF proxy).
+- Exit: Close both legs when the gap returns to within 0.25 x the cost band, or hold to expiry settlement.
+- Filters: Cost band = charges plus half-spreads of the future and the basket/ETF plus the ETF's tracking error; skip the last 30 minutes of expiry day and dividend ex-dates of heavyweights.
+- Trade: 1 lot index future against an equal notional of index ETF (no options).
+- Assumptions (our reading where the book is vague): The book states the rule for the full stock basket and a continuous dividend yield; we read 'basket' as an index ETF and q as the trailing yield. Short selling the basket is restricted in India, so the 'future rich' side is the only practical one.
+- Data: **needs data we lack** - lack: executable index ETF / basket prices aligned to the minute, dividend schedule, and bid-ask quotes for the future
+- Our nearest test: not tested by us as an arbitrage; HUNT_H39.md stage A found futures returns and basis changes tied to the index in the same minute and no lead from 2 minutes on (every |t| below 2.5)
+
+## From Stochastic Calculus to Mathematical Finance - Kabanov, Liptser and Stoyanov (eds.) ([write-up](fm-kabanov-stochastic-calculus.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Numerical Methods in Finance and Economics - Paolo Brandimarte ([write-up](fm-brandimarte-numerical.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Mathematical Finance - Christian Fries ([write-up](fm-fries-math-finance.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Arbitrage Theory in Continuous Time - Tomas Björk ([write-up](fm-bjork-arbitrage.md))
+### `book-fmbjork-01` Short ATM straddle, delta-hedged with the index future (sell implied, pay realised)
+- Source: Arbitrage Theory in Continuous Time, Ch. 9.3, Delta and gamma hedging (discrete rebalanced delta hedge); Ch. 7.3 (hedged book earns the risk-free rate). Family: `option-structure`. Signal source: volatility / options structure (no direction; hedge deltas computed from the index future and Black-76 at the leg's own IV).
+- Timeframe: 1-minute bars, one entry a day. Instruments: NIFTY.
+- Entry: At 09:20 on non-expiry days, sell N = 5 lots of the nearest-expiry ATM call and ATM put; immediately sell or buy whole NIFTY futures lots to bring the book's net delta (in index units) as close to zero as whole lots allow.
+- Stop: Basket stop: close everything if the book's mark-to-market loss reaches Rs 13,000 (Boss's monthly account stop) or 100% of the credit, whichever is smaller.
+- Exit: Rebalance the futures hedge whenever the net delta exceeds +-1 futures lot (65 index units) or every 15 minutes, whichever comes first; square off options and futures at 15:10.
+- Filters: Skip pre-listed event days (Budget, RBI, election result) and expiry days (version A); version B trades expiry days with exit 15:05.
+- Trade: Options short 5 lots each side, hedge in NIFTY futures; all orders at market with the app cost model plus h24 spreads.
+- Assumptions (our reading where the book is vague): Bjork gives the hedge procedure, not a trade. The lot count (5), the delta band (1 futures lot), the 15-minute clock and the stops are ours. Deltas use Black-76 on the future with each option's own implied volatility. Because the NIFTY futures lot equals the option lot, fewer than about 5 option lots cannot be hedged at a useful granularity (DEEP_OPTIONS_SELLING.md).
+- Data: have (1-minute index, futures and ATM+-10 option bars with IV; reprice any leg without a print, per R103 Amendment 2)
+- Our nearest test: R103: defined-risk selling 0 of 24 confirmed; the naked 09:20 short straddle held to 15:10 made +Rs 64k on NIFTY (1,272 days) with worst day -Rs 28,876. R102: VIX over-states NIFTY's next 21 days on 81% of days (n 4,507). A futures-hedged straddle was not tested by us.
+### `book-fmbjork-02` Long ATM straddle on BANKNIFTY, delta-hedged with the future (gamma scalping) when implied is cheap against forecast realised
+- Source: Arbitrage Theory in Continuous Time, Ch. 9.3 (discrete delta hedge), Ch. 7.7 (historic vs implied volatility). Family: `option-structure`. Signal source: volatility / options structure (BANKNIFTY ATM IV against a realised-volatility forecast on the index; no direction).
+- Timeframe: 1-minute bars; daily bars for the realised-vol forecast. Instruments: BANKNIFTY.
+- Entry: At 09:20, if the nearest-expiry ATM IV (mean of call and put IV) is below the forecast realised volatility to 15:10 (forecast = R16-style 60-minute range model scaled to the session, or 20-day realised if unavailable), buy N = 5 lots ATM straddle (call + put) and hedge net delta to zero with whole BANKNIFTY futures lots.
+- Stop: Close everything if the book loses 40% of the premium paid.
+- Exit: Re-hedge whenever net delta exceeds +-1 futures lot (30 index units) or every 15 minutes; square off at 15:10 (15:05 on expiry day).
+- Filters: Skip if ATM IV >= forecast realised. Skip the first trading day after a gap above 2% (forecast unreliable).
+- Trade: Long 5 lots each of ATM CE and PE, futures hedge, app cost model plus h24 spreads.
+- Assumptions (our reading where the book is vague): Bjork only describes the hedge; the cheapness filter, lot count, band, clock and stop are ours. BANKNIFTY is chosen because R102 found VIX under-states its realised volatility on 60% of days; VIX is a NIFTY number, so the filter uses BANKNIFTY's own IV.
+- Data: have (1-minute index, futures and ATM+-10 option bars with IV)
+- Our nearest test: MCX_OPTIONS.md: delta-hedged long-option P&L was about zero in the best cells and mostly negative in the holdout. R16: next 30-60 minute range predictable. A delta-hedged NSE straddle was not tested by us.
+### `book-fmbjork-03` Put-call parity conversion / reversal on NIFTY options against the future
+- Source: Arbitrage Theory in Continuous Time, Ch. 9.1, Parity relations; Ch. 7.6 (forward price). Family: `option-structure`. Signal source: volatility / options structure (pure no-arbitrage identity).
+- Timeframe: 1-minute (ideally tick) quotes. Instruments: NIFTY, BANKNIFTY.
+- Entry: For each strike within ATM+-3, compute gap = (C - P) - (F - K) x exp(-r T) using the same minute's prints. If gap > total round-trip cost of 3 legs (calls, puts, futures charges plus half-spreads) by a margin of 20%, sell the call, buy the put, buy the future (conversion); if gap < -(cost x 1.2), do the reverse (reversal).
+- Stop: None needed in theory (locked at entry); practical stop: unwind if any leg cannot be filled within 1 minute.
+- Exit: Hold to expiry (cash settlement) or unwind early when the gap returns to zero.
+- Filters: All three legs must have traded in the same minute; skip the last 30 minutes of expiry day.
+- Trade: 1 lot each leg; three orders to enter, three to exit or settle.
+- Assumptions (our reading where the book is vague): Bjork gives the identity, not thresholds; the 20% margin, ATM+-3 window and same-minute rule are ours. Last-trade prices overstate opportunities; a fair test needs synchronous bid/ask. Doubles as a stale-print detector for every option backtest.
+- Data: **needs data we lack** - lack: synchronous bid/ask quotes for the three legs (we have 1-minute last prints and one chain snapshot, h24)
+- Our nearest test: not tested by us; R103's passers were an artefact of stale wing prices (43-63% of design trades had a stale leg), which a parity check would have flagged.
+### `book-fmbjork-04` Constant-fraction (fractional Merton/Kelly) sizing for an arm with a record
+- Source: Arbitrage Theory in Continuous Time, Ch. 19.6, Optimal consumption and investment (constant optimal fraction). Family: `sizing-execution`. Signal source: none (sizing on the arm's own past trade returns).
+- Timeframe: per trade; fraction re-estimated monthly. Instruments: BANKNIFTY, NIFTY.
+- Entry: Entries are the arm's own (Liquidity 15+5). Lots = floor(c x f x capital / (premium x lot size)), where f = mean / variance of the arm's per-trade return on premium over the trailing 12 months (walk-forward only), and c = 0.25 (quarter) and 0.5 (half) as two variants.
+- Stop: The arm's own stops; plus a capital floor: if capital falls below 75% of its running peak, size drops to 1 lot until it recovers.
+- Exit: The arm's own exits.
+- Filters: f set to 0 (no trade above 1 lot) when the trailing mean is not positive with at least 60 trades.
+- Trade: buy ATM/1-ITM option as the arm does; only the lot count changes
+- Assumptions (our reading where the book is vague): Bjork's fraction is for a lognormal asset; applying it to per-trade option returns is our translation. The 12-month window, c values and the 75% floor are ours. LIVE would need shadow mode first (CLAUDE.md: sizing up is not risk-lowering).
+- Data: have (arm trade logs from h14-h17)
+- Our nearest test: h15: half-Kelly grew fastest but P(drawdown >= 30%) 63%, quarter-Kelly P(drawdown >= 50%) 1%; the Kelly fraction was unstable (0.48 / 0.14 vs 1.29) and SPA p = 0.14. HUNT_FINAL chose fixed lots.
+### `book-fmbjork-05` Mean-variance (Merton mutual fund) capital split across the arms with a record
+- Source: Arbitrage Theory in Continuous Time, Ch. 19.7, The mutual fund theorems. Family: `sizing-execution`. Signal source: none (allocation on the arms' daily P&L).
+- Timeframe: daily P&L; weights re-set monthly. Instruments: NIFTY, BANKNIFTY.
+- Entry: Each month, estimate the arms' daily P&L means mu and covariance S over the trailing 250 sessions (walk-forward), shrink S 50% toward its diagonal, set raw weights w = S^-1 mu, zero any negative weight, scale so total margin used <= capital, and convert each weight to whole lots (minimum 0, maximum 3) for Liquidity 15+5, R72 Breadth Donchian, R51 Donchian and R52 OOV.
+- Stop: Each arm's own stops; account stop -Rs 40k drawdown or -Rs 13k a month halts all.
+- Exit: Each arm's own exits.
+- Filters: An arm with fewer than 120 sessions of history gets 1 lot; R72 and R51 share a cap (their daily correlation is 0.80, R72).
+- Trade: as each arm trades; only lots per arm change
+- Assumptions (our reading where the book is vague): Bjork's theorem assumes known constant means and covariances; the shrinkage, windows and lot caps are ours. Compare against equal 1 lot per arm on the same days (net, worst month, max drawdown).
+- Data: have (arm replays from R101 / R72)
+- Our nearest test: not tested by us (HUNT_R74_STRATEGY_MAP.md: volatility-targeted sizing not tried for the index arms; R72: Breadth Donchian overlaps Donchian, 77% shared trades).
+
+## Computational Finance: Numerical Methods - George Levy ([write-up](fm-comp-finance-numerical.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Mathematics of Financial Markets - Elliott and Kopp ([write-up](fm-elliott-fin-markets.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Structured Finance: The Object-Oriented Approach - Cherubini and Della Lunga ([write-up](fm-structured-finance.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Mathematics for Finance - Capinski and Zastawniak ([write-up](fm-capinski-math-finance.md))
+### `book-fmcapinski-01` Trade put-call parity violations against the index future (conversion / reversal)
+- Source: Mathematics for Finance, Ch. 7.2, Theorem 7.1 and its arbitrage proof; Ex 7.4. Family: `option-structure`. Signal source: volatility / options structure (option prices vs the futures-implied forward); reads option premiums only as a consistency check, no direction.
+- Timeframe: 1-minute bars, nearest expiry. Instruments: NIFTY, BANKNIFTY.
+- Entry: Each minute 09:20-15:00, for each strike K within ATM +-3: gap = (C - P) - (F - K) x exp(-r x T), with C, P the minute's call and put closes, F the same-expiry index future's close, r a 6.5% continuous rate, T years to expiry. If gap > threshold: sell the call, buy the put, buy 1 lot future (conversion). If gap < -threshold: buy the call, sell the put, sell 1 lot future (reversal). threshold = all-in round-trip charges of the three legs (about Rs 70 + Rs 70 + futures charges, in points per unit) plus 2 points of slippage per leg.
+- Stop: None in the book (riskless at expiry if all three legs fill at the signal prices); research variant: exit all legs if the basket's mark-to-market loss exceeds 3 x the expected edge (protects against a bad print being the 'signal').
+- Exit: Close all three legs when |gap| falls below 1 point, else hold to expiry (cash settled; the payoff is locked except for the futures-vs-spot settlement difference and STT on exercise).
+- Filters: Both options and the future must have traded in the same minute (no stale prints: HUNT_LAKE_STALE_PRINTS rule); skip expiry day after 13:00; skip strikes with fewer than 20 contracts traded in the minute.
+- Trade: Three legs, 1 lot each: option pair at strike K plus 1 index futures lot; longs filled first. Margin is the futures plus short-option margin, mostly offset.
+- Assumptions (our reading where the book is vague): The book's arbitrage uses the stock and a loan; for an index we use the same-expiry future, so the rate term almost cancels. Threshold and the 3-strike window are our choices. Last-trade prices are not executable quotes, so a backtest on the lake can only give an upper bound.
+- Data: **needs data we lack** - lack: executable bid/ask quotes for options and futures (the lake has last prices only); have futures and chain minutes
+- Our nearest test: not tested by us; R103 showed that apparent profits in the chain came from stale wing prices (six BANKNIFTY passes turned into -Rs 2.9 to -Rs 3.3 lakh when repriced), so most 'violations' in last-price data are likely stale prints
+### `book-fmcapinski-02` Buy a butterfly priced below zero (convexity violation across strikes)
+- Source: Mathematics for Finance, Ch. 7.4.1, Proposition 7.8 (call and put prices are convex in strike); Ch. 9.3.1 butterfly. Family: `option-structure`. Signal source: volatility / options structure (option prices across strikes); no direction.
+- Timeframe: 1-minute bars, nearest expiry. Instruments: NIFTY, BANKNIFTY.
+- Entry: Each minute 09:20-15:00, for consecutive strikes K1 < K2 < K3 equally spaced within ATM +-10: fly = C(K1) - 2 x C(K2) + C(K3) (same with puts). If fly < -(charges of four option legs in points + 2 points slippage per leg), buy the fly (1 lot of K1 and K3, sell 2 lots of K2).
+- Stop: None needed at expiry (payoff of a long fly is never negative); research variant exits at 15:05 on expiry day per app rule.
+- Exit: Hold to expiry, or close when fly >= 0.
+- Filters: All three strikes traded in the same minute; no stale-print flags; skip if any leg has fewer than 20 contracts that minute.
+- Trade: Long call (or put) butterfly, 1-2-1 lots; long wings filled first.
+- Assumptions (our reading where the book is vague): The book proves convexity but gives no trading rule; the cost threshold and liquidity filter are ours. Signals on last prices are an upper bound.
+- Data: **needs data we lack** - lack: executable bid/ask quotes (last prices only); have chain minutes within ATM +-10
+- Our nearest test: not tested by us; R103 found far-wing stale prices create fake edges, so expect most signals to be data errors - useful mainly as a lake cleaning check
+
+## Binomial Models in Finance - van der Hoek and Elliott ([write-up](fm-binomial-models.md))
+### `book-fmbinomial-01` Conversion / reversal when put-call parity breaks by more than costs
+- Source: Binomial Models in Finance, Ch. 2.5 (model-independent proof), Exercise 2.45. Family: `option-structure`. Signal source: option premium (the chain's own call and put prices against the index future); an options-structure arbitrage, not our default.
+- Timeframe: 1-minute bars, 09:20-15:00. Instruments: NIFTY, BANKNIFTY.
+- Entry: At a minute close, for each strike K in ATM +-5 of the nearest expiry, compute gap = (C - P) - (F - K) x e^(-rT), with F the same-expiry index future. If gap > round-trip cost of 3 legs, sell the call, buy the put, buy the future (reversal of a rich call); if gap < -cost, buy the call, sell the put, sell the future.
+- Stop: None (the position is locked in by construction).
+- Exit: Hold to expiry cash settlement, or unwind early if the gap returns to within 0.25 x cost of zero.
+- Filters: All three legs must have traded in the same minute (no stale prints); skip the last 30 minutes of expiry day.
+- Trade: 3-leg position: 1 lot call, 1 lot put, 1 lot future; payoff fixed at entry.
+- Assumptions (our reading where the book is vague): The book states parity for spot plus a riskless loan; we use the future instead of spot (NSE index options are European and cash-settled on the index, the future settles to the same index). r = 91-day T-bill rate. Costs = charges plus half the bid-ask spread per leg; the lake has last prints only, so the literal test overstates opportunities.
+- Data: **needs data we lack** - lack: simultaneous bid-ask quotes (the lake keeps last-traded prices, ATM +-10 only)
+- Our nearest test: not tested by us; R103 showed far-leg prices in the lake are often stale (repriced legs moved -Rs 711 to -Rs 1,698), which would create false parity breaks
+### `book-fmbinomial-02` Buy a butterfly that the chain prices at or below zero (convexity break)
+- Source: Binomial Models in Finance, Ch. 12.6 and Exercise 2.44 (butterfly price must be positive); App. D (Farkas). Family: `option-structure`. Signal source: option premium (prices of three calls or three puts of one expiry); options-structure arbitrage, not our default.
+- Timeframe: 1-minute bars, 09:20-15:00. Instruments: NIFTY, BANKNIFTY.
+- Entry: At a minute close, for evenly spaced strikes K-step, K, K+step within ATM +-10 of the nearest expiry, if C(K-step) - 2 C(K) + C(K+step) < -(cost of 4 lots of legs), buy the K-step and K+step calls and sell two K calls. Same check on puts.
+- Stop: None (payoff is never negative at expiry).
+- Exit: Hold to expiry cash settlement.
+- Filters: All three strikes must have traded in the same minute; skip the last 30 minutes of expiry day.
+- Trade: Long call (or put) butterfly, 1 lot per wing.
+- Assumptions (our reading where the book is vague): The book's statement is that a butterfly's price must be positive under no arbitrage; we add a cost hurdle and a same-minute trade filter to avoid stale prints.
+- Data: **needs data we lack** - lack: simultaneous bid-ask quotes (last prints only in the lake)
+- Our nearest test: not tested by us; R103 found the lake's wing prices often stale, the likely source of most apparent breaks
+### `book-fmbinomial-03` Sell the ATM straddle when implied volatility exceeds forecast realised volatility, delta-hedged with futures
+- Source: Binomial Models in Finance, Ch. 5.1 (sell an overpriced option and hedge), App. C (historical vs implied volatility). Family: `option-structure`. Signal source: volatility / options structure (chain ATM IV against realised volatility of the index); maps to NSE index options.
+- Timeframe: daily entry at 09:20; hedge checked on 5-minute bars. Instruments: NIFTY, BANKNIFTY.
+- Entry: At 09:20, if the nearest-expiry ATM IV exceeds the 20-day close-to-close realised volatility of the index (annualised by the square root of 252) by at least 2 IV points, sell 1 lot ATM call and 1 lot ATM put.
+- Stop: The book's method has no stop (the hedge is the control); for the test add one: close options and hedge if the straddle's mark-to-market loss reaches 1.5x the premium collected.
+- Exit: Rebalance with index futures whenever the position's Black-Scholes delta passes +-0.2 lot; close the options and the hedge at the 15:05 expiry square-off.
+- Filters: Skip event days (budget, RBI, election results) from our event calendar.
+- Trade: short ATM straddle plus futures delta hedge; option chosen by the strike rule (ATM).
+- Assumptions (our reading where the book is vague): The book's literal rule is 'market price above model price'; we read the model price as Black-Scholes at 20-day realised volatility, i.e. IV above HV. The 2-point margin, the +-0.2 delta band and the 1.5x premium stop are our choices to make it testable.
+- Data: have
+- Our nearest test: R103 (HUNT_R103_OPTIONS_SELLING.md): unhedged defined-risk selling 0 of 24 confirmed; R102: VIX above NIFTY's forward realised on 81% of days but below BANKNIFTY's on 60%; never tested with a futures hedge
+
+## Financial Econometrics Modeling - Gregoriou and Pascalau (eds.) ([write-up](fm-fin-econometrics-derivs.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Nonlinear Optimization with Financial Applications - Bartholomew-Biggs ([write-up](fm-nonlinear-optimization.md))
+### `book-fmoptim-01` Break of a least-width sloped trend channel fitted to the last 20 closes
+- Source: Nonlinear Optimization with Financial Applications, Ch. 21. Family: `patterns-indicators`. Signal source: underlying price.
+- Timeframe: daily closes (book); a 5-minute-bar version is our extension. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE.
+- Entry: At each close, fit two parallel lines with a common slope to the previous 20 closes so every close lies between them and the vertical gap is as small as possible. Project both lines one bar ahead. Close above the projected upper (resistance) line: long signal. Close below the projected lower (support) line: short signal.
+- Stop: not stated by the book; assumed: the opposite projected line, or a close back inside the channel
+- Exit: not stated by the book; assumed: exit at the first close back inside the projected channel or after 5 sessions, whichever comes first
+- Filters: none in the book (it says the severity of the break needs judgement); assumed: none, plus a pre-registered variant requiring the close to exceed the line by 0.25 x the channel width
+- Trade: buy ATM CE on a long signal, ATM PE on a short; one lot; stops/targets on the underlying as assumed above; MCX: the future or the ATM option
+- Assumptions (our reading where the book is vague): Window length 20 from the book's 20-day channels; the book refits on fixed windows (days 1-20, 20-40, 40-60), we refit every bar to avoid look-ahead. The book only says sell on a downward break and buy on an upward break and gives no stop, exit or size. Uses closes only, as the book does.
+- Data: have
+- Our nearest test: Not tested in this form. Nearest: R51 / R72 flat 20-bar Donchian breaks (R72 Breadth Donchian passed, twin p 0.008, BH q 0.032); R71 squeeze-release channel break lost in the final (-Rs 41,281 on 305 trades, twin p 0.91); R20b / R20c levels and level breaks no better than random lines.
+### `book-fmoptim-02` Allocate lots across the live-record arms by trailing minimum-variance weights
+- Source: Nonlinear Optimization with Financial Applications, Ch. 1, 3, 9, 10 and 16. Family: `sizing-execution`. Signal source: none (sizing only; each arm keeps its own underlying signal).
+- Timeframe: daily P&L of each arm, trailing 60 sessions, re-estimated monthly. Instruments: NIFTY, BANKNIFTY.
+- Entry: Each arm's own entries unchanged (Liquidity 15+5, R72 Breadth Donchian, R51 Donchian, R52 OOV).
+- Stop: each arm's own
+- Exit: each arm's own
+- Filters: Weights: least-variance weights of the arms' daily P&L over the trailing 60 sessions, no negative weights, each arm between 0% and 50%; rebalance only when a weight changes by more than 10 percentage points (the book's 'only big changes are worth the cost').
+- Trade: lots per arm = round(total lot budget x weight), at least 0; compare against equal lots and against random weight vectors of the same budget
+- Assumptions (our reading where the book is vague): The book optimises share weights from returns; mapping 'assets' to our arms' daily P&L is our adaptation. Window 60, monthly refit, 50% cap and 10-point threshold are our choices (the book shows 50-80 day windows, a 25% cap example and no numeric threshold). Downside-risk and worst-day variants (Ch. 22) are pre-registered alongside.
+- Data: have
+- Our nearest test: R84 cutting correlated Breadth positions lowered the worst day 32-77% but beat no random subset (best p 0.13); R101 sizing by breadth earned what any extra lot earns (p 0.475); R72 Breadth Donchian vs Donchian daily correlation 0.80; H15 Kelly fractions unstable across windows.
+
+## Financial Mathematics - Hughston and Hunter ([write-up](fm-financial-mathematics.md))
+### `book-fmhughston-01` Conversion / reversal when call minus put strays from the futures-implied value
+- Source: Financial Mathematics, Ch. 17.3 (put-call parity); App. F.6.1 (b) arbitrage strategy. Family: `option-structure`. Signal source: volatility / options structure (option prices against the same-expiry index future); reads option premiums only as a consistency check, no direction; not our default signal type.
+- Timeframe: 1-minute bars, nearest expiry, 09:20-15:00. Instruments: NIFTY, BANKNIFTY.
+- Entry: Each minute, for each strike K within ATM +-3: gap = (C - P) - (F - K) x exp(-r x T), with C, P the minute's call and put closes, F the same-expiry future's close, r 6.5% continuous, T years to expiry. If gap > threshold: sell the call, buy the put, buy 1 lot future. If gap < -threshold: buy the call, sell the put, sell 1 lot future. threshold = all-in charges of the three legs in points plus 2 points slippage per leg.
+- Stop: None in the book (locked payoff); research variant: close all legs if the basket's mark-to-market loss exceeds 3 x the expected edge (guards against a bad print being the signal).
+- Exit: Close all legs when |gap| < 1 point, else hold to expiry cash settlement.
+- Filters: Both options and the future traded in the same minute (no stale-print flag per HUNT_LAKE_STALE_PRINTS); skip expiry day after 13:00; skip strikes with fewer than 20 contracts in the minute.
+- Trade: Three legs, 1 lot each: option pair at strike K plus 1 index futures lot.
+- Assumptions (our reading where the book is vague): The book's arbitrage uses the underlying share plus a loan; for an index we use the same-expiry future as the forward, so the rate term nearly cancels. Window, threshold and filters are ours. Same rule as written up from fm-capinski-math-finance (same slug).
+- Data: **needs data we lack** - lack: executable bid/ask quotes for options and futures (the lake keeps last prices, ATM +-10 only)
+- Our nearest test: not tested by us; R103 showed apparent profits in the chain came from stale wing prices (six BANKNIFTY passes became -Rs 2.9 to -Rs 3.3 lakh when repriced), so most violations in last-price data are likely stale prints
+
+## Quantitative Finance for Physicists - Anatoly Schmidt ([write-up](fm-qf-physicists.md))
+### `book-fmschmidt-01` Buy on a turn up after a dip, sell on a turn down after a top
+- Source: Quantitative Finance for Physicists, Ch. 12.4.3. Family: `patterns-indicators`. Signal source: underlying price.
+- Timeframe: 5-minute bars (book: abstract simulation steps). Instruments: NIFTY, BANKNIFTY.
+- Entry: Long when close[k] > close[k-1] and close[k-1] < close[k-2]; short when close[k] < close[k-1] and close[k-1] > close[k-2]; enter at the next bar's open
+- Stop: not stated by the book; assume a stop at the extreme of the last two bars (the dip low for longs, the top high for shorts)
+- Exit: the opposite signal, or 15:05 square-off on expiry day / end of session otherwise
+- Filters: none in the book
+- Trade: buy ATM CE on a long signal, ATM PE on a short; stop and exit on the underlying as above
+- Assumptions (our reading where the book is vague): The book uses this only as the strategy of simulated 'technical traders' in an agent-based model and shows it moves prices when those traders are big enough; it never claims a real-market profit. Bar size, stop and session handling are ours.
+- Data: have
+- Our nearest test: R102 2.5: at 5 minutes the next bar follows the previous bar's sign 48.4% of the time (n 167,082); R88 0 of 8 direction findings held; R87 candle shapes and R71 patterns failed. Not tested in this exact form.
+
+## Mathematical Economics and Finance - Harrison and Waldron ([write-up](fm-harrison-waldron.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## The Basics of Financial Mathematics - Richard Bass ([write-up](fm-basics-fin-math.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Optimal Control Models in Finance - Chen and Islam ([write-up](fm-optimal-control.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Introduction to Computational Finance without Agonizing Pain - Peter Forsyth ([write-up](fm-comp-finance-no-pain.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## An Introduction to the Mathematics of Financial Derivatives - Salih Neftci ([write-up](fm-neftci-derivatives.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## The Mathematics of Financial Derivatives - Wilmott, Howison and Dewynne ([write-up](fm-wilmott-howison-dewynne.md))
+### `book-fmwhd-01` Buy the lowest-IV option and sell the highest-IV option of one expiry, delta-hedged, until the IVs converge
+- Source: The Mathematics of Financial Derivatives, Ch. 3.10, technical point 'Trading volatility'. Family: `option-structure`. Signal source: option premium (implied volatilities read from the chain's own prices); a volatility-structure trade, NOT our default: must be labelled and switched on only by Boss.
+- Timeframe: 5-minute bars, 09:30-14:45. Instruments: NIFTY, BANKNIFTY.
+- Entry: At each 5-minute close, compute Black-Scholes IV (same-expiry future as the underlying) for every call and put in ATM +-5 strikes of the nearest expiry. Fit the median IV-by-moneyness curve of the previous 20 sessions at the same time of day; for each strike take the residual (today's IV minus that curve). If the largest residual minus the smallest exceeds 3 IV points, sell 1 lot of the most positive-residual option and buy 1 lot of the most negative-residual option, then delta-hedge the pair to the nearest whole lot with the same-expiry future.
+- Stop: Close everything if the pair's mark-to-market loss reaches Rs 3,000 per pair (not stated in the book).
+- Exit: Close when the residual gap falls below 1 IV point, or at 15:05 on expiry day, or after 3 sessions, whichever comes first.
+- Filters: Both legs and the future must have traded in the same minute (no stale prints); skip event days (RBI, Budget, election results).
+- Trade: 1 lot short the rich option, 1 lot long the cheap option, futures hedge in whole lots; option legs chosen by the residual rule.
+- Assumptions (our reading where the book is vague): The book says only 'buy the lowest IV, sell the highest, hope they converge'. Comparing raw IVs across strikes would just trade the permanent skew (puts dearer on 91% of NIFTY days, R102), so we read 'converge' as relative to the normal smile shape (residual vs a 20-session curve). The 3-point entry, 1-point exit, 3-session limit, Rs 3,000 stop and whole-lot hedge are our choices.
+- Data: have (lake chain ATM +-10 with IV and last prints); lack: simultaneous bid-ask, so stale-print risk is high
+- Our nearest test: not tested by us; R102 measured the skew as persistent (91% / 90% of days); R103 found apparent wing mispricing in the lake was mostly stale prices; IV1 found skew alone useless as a direction signal
+### `book-fmwhd-02` Buy the ATM straddle before a scheduled policy event, sell after it
+- Source: The Mathematics of Financial Derivatives, Ch. 3, exercise 1 (option portfolio for an election expected to move the share about 10% either way). Family: `calendar-events`. Signal source: volatility / options structure (a calendar event; no price signal); maps to NSE index options.
+- Timeframe: daily: entry 15:15 the session before, exit 15:15 on the event day. Instruments: BANKNIFTY, NIFTY.
+- Entry: At 15:15 on the session before an RBI policy announcement or the Union Budget, buy 1 lot ATM call and 1 lot ATM put of the nearest expiry that is at least 2 sessions away.
+- Stop: None (risk is the premium paid); the book gives none.
+- Exit: Sell both legs at 15:15 on the event day.
+- Filters: Event calendar from EVENT_SHIELD.md (RBI policy, Budget); skip if the straddle costs more than the median event-day range of the previous events (the move is already priced).
+- Trade: long ATM straddle, 1 lot each leg
+- Assumptions (our reading where the book is vague): The exercise only asks for a portfolio that profits from a large move either way and lists straddles and strangles; we fix the event set, the timing, the ATM strikes and the 'already priced' filter.
+- Data: have
+- Our nearest test: EVENT_SHIELD.md: BANKNIFTY day range 1.48x normal on RBI/Budget days (15 sessions, confirmed on 7 holdout sessions), NIFTY 1.28x not significant; R89: straddles bought when a big candle was forecast lost (0 of 18 profitable, gross about zero, costs decide). Event-day straddles themselves: not tested by us.
+
+## Modelling Financial Derivatives with Mathematica - William Shaw ([write-up](fm-shaw-mathematica.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Financial Calculus - Baxter and Rennie ([write-up](fm-baxter-financial-calculus.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Martingale Methods in Financial Modelling - Musiela and Rutkowski ([write-up](fm-musiela-martingale.md))
+### `book-fmmusiela-01` Trade (or flag) chain prices that break model-free no-arbitrage bounds
+- Source: Martingale Methods in Financial Modelling, Ch. 1.8, Universal no-arbitrage inequalities; Ch. 7.1.5 (calendar total variance). Family: `option-structure`. Signal source: volatility / options structure (model-free identities on the option chain; no direction).
+- Timeframe: 1-minute (ideally tick) quotes. Instruments: NIFTY, BANKNIFTY.
+- Entry: Each minute, for strikes ATM+-5 of the nearest expiry, check: (a) call spread: C(K1) - C(K2) > (K2 - K1) x exp(-rT) or < 0; (b) butterfly: C(K-step) - 2 C(K) + C(K+step) < 0 (same for puts); (c) calendar: the next expiry's ATM total variance (IV squared x T) below the near expiry's. When a violation exceeds the full round-trip cost of all legs (charges plus h24 half-spreads) by 20%, buy the cheap side and sell the dear side of that combination.
+- Stop: None in theory (locked at entry); unwind if any leg cannot be filled within 1 minute.
+- Exit: Hold to expiry (cash settled) or unwind when the violation closes.
+- Filters: All legs must have traded in the same minute; skip the last 30 minutes of expiry day.
+- Trade: 1 lot per leg; 2-4 legs per combination.
+- Assumptions (our reading where the book is vague): The book gives the inequalities, not thresholds; the ATM+-5 window, the 20% margin and the same-minute rule are ours. Last-trade prints overstate violations; the main expected use is as a stale-print filter for every option backtest (count how many R103-type trades it would remove).
+- Data: **needs data we lack** - lack: synchronous bid/ask for all legs (we have 1-minute last prints and one chain snapshot, h24)
+- Our nearest test: not tested by us; R103's six design passers were stale wing prices, which such a check would flag (HUNT_R103_OPTIONS_SELLING.md).
+### `book-fmmusiela-02` Delta-hedge an ATM straddle with smile-adjusted delta vs plain Black-Scholes delta (hedge-error test)
+- Source: Martingale Methods in Financial Modelling, Ch. 7.1.8 (modified delta), Ch. 7.2.1 (CEV delta), Ch. 7.4.5 (smile dynamics). Family: `trade-management`. Signal source: volatility / options structure (hedge ratios from the option chain's IV-vs-spot slope; no direction).
+- Timeframe: 1-minute bars, one structure a day. Instruments: NIFTY.
+- Entry: At 09:20 on non-expiry days, sell 5 lots of the nearest-expiry ATM call and put. Hedge with whole NIFTY futures lots in two parallel books: A uses Black-Scholes delta at each leg's own IV; B uses delta + vega x s, where s = the slope of ATM IV against spot estimated by regression over the previous 20 days' 09:20-15:10 minute data.
+- Stop: Close a book if its loss reaches Rs 13,000.
+- Exit: Re-hedge each book when its net delta passes +-1 futures lot or every 15 minutes; square off at 15:10.
+- Filters: Skip pre-listed event days and expiry days.
+- Trade: Options short 5 lots each side; futures hedge; app cost model plus h24 spreads. The outcome is the difference in daily hedge error (variance of book P&L about implied minus realised) between A and B, then net P&L.
+- Assumptions (our reading where the book is vague): The book defines the modified delta but gives no procedure; the 20-day regression for the IV-spot slope, the bands and lot counts are ours. Book A is the Bjork rule 'delta-hedged-short-straddle'; this test only asks whether B hedges better.
+- Data: have (1-minute index, futures and ATM+-10 option bars with IV)
+- Our nearest test: not tested by us; MCX_OPTIONS.md delta-hedged long options at about zero P&L at best; R102 puts dearer on 91% of NIFTY days (skew exists).
+### `book-fmmusiela-03` 09:20 short ATM straddle only when ATM IV is rich against recent realised volatility
+- Source: Martingale Methods in Financial Modelling, Ch. 7.1.1-7.1.3, Historical vs implied volatility; Ch. 3.5 (hedger earns implied minus realised). Family: `option-structure`. Signal source: volatility / options structure (ATM IV from the chain against realised volatility of the index).
+- Timeframe: daily decision at 09:20, 1-minute bars to manage. Instruments: NIFTY, BANKNIFTY.
+- Entry: At 09:20 on non-expiry days compute R = nearest-expiry ATM IV / 20-day close-to-close realised volatility of the index (annualised). If R is in the top quintile of its trailing 250-day distribution, sell 1 lot ATM call and 1 lot ATM put.
+- Stop: Close both legs if the combined premium rises 50% above the credit, or the loss reaches Rs 13,000, whichever is first.
+- Exit: Square off at 15:10.
+- Filters: Skip expiry days and pre-listed event days; skip if the 09:15-09:20 move exceeds 0.5%.
+- Trade: Short 1 lot each of ATM CE and PE; app cost model plus h24 spreads; stale exit legs repriced as in R103 Amendment 2.
+- Assumptions (our reading where the book is vague): The book reports that implied-minus-historical reflects hedging cost and that historical-volatility pricing is biased; it gives no trade. The ratio, quintile, stop and filters are ours. This is a filter on R103's naked 09:20 straddle, not a new structure.
+- Data: have (1-minute index and ATM option bars with IV; daily index closes since 2006)
+- Our nearest test: R103: the naked 09:20 short straddle held to 15:10 made +Rs 64k on NIFTY (1,272 days, 62% win) with worst day -Rs 28,876; defined-risk versions 0 of 24. R88: options priced rich vs recent movement predict a 0.85-0.9x smaller next candle. An IV/realised filter was not tested by us.
+### `book-fmmusiela-04` MCX GOLD vs COMEX gold x USDINR fair-value gap, mean reversion
+- Source: Martingale Methods in Financial Modelling, Ch. 4.3-4.4, Foreign equity forwards and foreign market futures (COMEX vs Tokyo gold example). Family: `mcx-crypto`. Signal source: underlying price (MCX GOLD future against COMEX gold future converted at USDINR, plus duty and carry).
+- Timeframe: 5-minute bars during overlapping hours. Instruments: GOLD.
+- Entry: Fair value F = COMEX GC (USD/oz) x USDINR x (10 / 31.1035) x (1 + import duty + GST as applicable) x carry adjustment to MCX expiry. Gap z = (MCX GOLD - F) / F, standardised by its trailing 20-day mean and sd. Short MCX GOLD when z > +2, long when z < -2.
+- Stop: Exit if z moves a further 1.5 sd against the trade or after a loss of Rs 13,000.
+- Exit: Exit when z returns to 0, or at the MCX session close.
+- Filters: Skip the 30 minutes around Indian duty announcements and US data releases; skip when USDINR is not trading.
+- Trade: Trade the MCX GOLD future (or GOLDM) itself; costs per app model.
+- Assumptions (our reading where the book is vague): The book gives the no-arbitrage link between one asset priced in two currencies (and the quanto covariance term), not a trade; the duty/carry formula, thresholds and stops are ours. An Indian trader cannot arbitrage both legs, so this is a one-legged mean-reversion bet on the gap.
+- Data: **needs data we lack** - lack: intraday USDINR and a dated history of import duty; COMEX 1h is available as a proxy (R82)
+- Our nearest test: R82 used COMEX as a lead for MCX and rejected it (O1 overnight move: design +Rs 85k on 398 trades, failed the final period). A fair-value gap was not tested by us.
+
+## Monte Carlo Methods in Finance - Peter Jäckel ([write-up](fm-jackel-monte-carlo.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+
+## Quantitative Trading - Ernest Chan ([write-up](fm-chan-quantitative-trading.md))
+### `book-fmchan-01` Chan's 5-minute Bollinger fade, replicated on index futures with real costs
+- Source: Quantitative Trading, Ch. 2, How will transaction costs affect the strategy (ES example). Family: `patterns-indicators`. Signal source: underlying price (index futures 5-minute closes).
+- Timeframe: 5-minute bars, intraday, flat by 15:10. Instruments: NIFTY, BANKNIFTY.
+- Entry: At each 5-minute close from 09:30 to 14:55: if close > MA20 + 2 x SD20 (20-bar moving mean and sd of closes, today's and yesterday's bars), go short; if close < MA20 - 2 x SD20, go long. One position per index at a time.
+- Stop: None in the book. Research variant: index stop at 1 x SD20 beyond the entry band (close-based), because live arms must carry a stop.
+- Exit: When the 5-minute close is back within MA20 +- 1 x SD20; else at 15:10.
+- Filters: None (book). Skip expiry day after 14:30 (app rule: expiry square-off 15:05).
+- Trade: Primary: 1 lot of the near-month future (Chan traded the future). Secondary (labelled): buy the 1-ITM nearest-expiry CE on a long, PE on a short, same exits read on the index.
+- Assumptions (our reading where the book is vague): Chan gives no lookback; 20 bars is the Bollinger default. His Sharpe 3 -> -3 came from a 1 bp cost; our futures round trip is charges + one tick each side, options per baselines.yaml (NIFTY ATM about Rs 98). Report gross and net side by side, since the point is the cost wedge.
+- Data: have
+- Our nearest test: F1: Bollinger %B / RSI / MACD lean to a 15-minute reversal (IC ~ -0.05) gone by 60 minutes; 0 of 20 indicator rules pass. R102 2.5: next 5-minute bar repeats the sign 48.4% of the time (NIFTY, n 167,082). Expect gross > 0, net < 0.
+### `book-fmchan-02` NIFTY vs BANKNIFTY futures pair with a cointegration gate and half-life exit
+- Source: Quantitative Trading, Ch. 3 Example 3.6; Ch. 7 Examples 7.2 and 7.5. Family: `outside-strategies`. Signal source: underlying price (both index futures; the hedged log spread).
+- Timeframe: daily closes (signal at 15:20 from 15:15-15:20 prices), positions held over days. Instruments: NIFTY, BANKNIFTY.
+- Entry: Each day, on the trailing 252 sessions: OLS of log(BANKNIFTY fut) on log(NIFTY fut) -> hedge h; spread = log BN - h x log N; CADF t-stat of the spread; OU half-life from regressing the daily change in spread on the lagged spread minus its mean. Trade only if CADF t < the 5% critical value and 3 <= half-life <= 30 sessions. z = (spread - 252-day mean) / 252-day sd. z >= +2: short BN fut, long N fut (notional ratio h); z <= -2: the reverse.
+- Stop: |z| >= 3.5 at a close, or the pair's loss reaches 2% of gross notional (CLAUDE.md account stop also applies).
+- Exit: z crosses 0 (the mean), or after 2 x half-life sessions, whichever first; also exit if the CADF gate fails for 5 consecutive days.
+- Filters: No new entry on the session before a scheduled RBI policy, Budget or election result (events.csv).
+- Trade: Futures both legs, lots rounded to the nearest notional match (BANKNIFTY lot vs NIFTY lot); roll 3 sessions before expiry. Options are not used (H6: two bought options is a structural loser).
+- Assumptions (our reading where the book is vague): Chan uses price levels and a fixed training window; logs and a rolling window keep the hedge point-in-time. Gates (5% CADF, half-life 3-30) are our choice from his text. Margin: two futures legs need about Rs 3-4 lakh, above Boss's Rs 1 lakh; a research question, not an arm.
+- Data: have
+- Our nearest test: H6 (intraday divergence of NIFTY vs BANKNIFTY with bought options): all 24 variants lost; the 60-minute spread moves about 13 bps. R72 C2 laggard catch-up failed. R102: daily correlation 0.877, beta 1.157 (says nothing about cointegration). The daily futures pair with a CADF gate: not tested by us.
+### `book-fmchan-03` GOLD/SILVER spread trade only when cointegrated, exit on the OU half-life
+- Source: Quantitative Trading, Ch. 3 Example 3.6; Ch. 7 Examples 7.2 and 7.5. Family: `mcx-crypto`. Signal source: underlying price (MCX GOLD and SILVER roll-adjusted futures; the hedged spread).
+- Timeframe: daily closes, held over days. Instruments: GOLD, SILVER.
+- Entry: Daily on the trailing 252 sessions: OLS of log GOLD on log SILVER -> h; spread = log GOLD - h x log SILVER; CADF t-stat; OU half-life. Trade only if CADF t < 5% critical value AND half-life between 5 and 40 sessions. z = (spread - 252-day mean) / sd. z >= +2: short GOLD, long SILVER (notional ratio h); z <= -2: the reverse.
+- Stop: |z| >= 3.5 at a close (R94's stop), and a hard loss cap of 2% of the pair's gross notional.
+- Exit: z reaches 0, or 2 x half-life sessions (instead of R94's fixed 20), whichever first.
+- Filters: Liquid contracts only (GOLDM / SILVERM minis, Boss's liquidity rule).
+- Trade: Futures both legs (GOLDM + SILVERM minis, sized to h); no options (no MCX option history, R82).
+- Assumptions (our reading where the book is vague): The CADF gate and half-life exit are what R94 lacked; everything else copies R94 idea 2 so the only change is Chan's two additions. If the gate is rarely open the rule is reported as 'too few trades' rather than tuned.
+- Data: have
+- Our nearest test: R94 idea 2: GOLD/SILVER log-ratio z-score lost in design (68 trades, -Rs 6,26,347 at W60) and holdout; only 14 of 68 reverted to z = 0, 40 timed out. R82 G1 and R96 R5F (27 trades, -Rs 47,162) also failed. Low prior.
+### `book-fmchan-04` Natural gas long from late February to mid-April (Chan's exact window)
+- Source: Quantitative Trading, Ch. 7, Seasonal trading strategies (natural gas sidebar). Family: `calendar-events`. Signal source: calendar (no price signal); trades the underlying future.
+- Timeframe: daily; one trade a year. Instruments: NATURALGAS.
+- Entry: Buy 1 lot NATGASMINI at the close of 25 February (next MCX session if a holiday), in the contract that expires latest while still before 15 April's roll (normally the April contract; roll into May if April expires before 15 April).
+- Stop: 2.5 x ATR14 on the daily close (R83 E9's stop) - the book has none.
+- Exit: Close of 15 April (previous session if a holiday).
+- Filters: None (book).
+- Trade: NATGASMINI future (signal and trade on the future). Option variant (labelled): buy the 1-ITM call of the nearest monthly expiry at entry, rolled once.
+- Assumptions (our reading where the book is vague): Chan buys the NYMEX June contract; MCX NG contracts track the nearby Henry Hub month, so the June leg is not tradeable on MCX; the nearby contract carries contango roll costs Chan's June leg avoided. Test on Henry Hub history (2000+, as R83) for the window itself and on MCX 2012-2026 for the tradeable version; compare with random 35-session windows of the same years (R94's twin) and with always-short (carry). Vary the dates +-5 sessions as Chan advises.
+- Data: have
+- Our nearest test: R83 E9: NG month-of-year seasonality on MCX NATGASMINI: 14 trades, -37,413; always short +14,687. MCX_GUIDE: Feb -5.7%, Dec -10.7% monthly means 2012-2026. R94: bullion seasonals do not beat same-year random windows. Low prior.
+### `book-fmchan-05` Trailing half-Kelly throttle that can only cut an arm's size
+- Source: Quantitative Trading, Ch. 6, Optimal capital allocation and leverage; Risk management. Family: `sizing-execution`. Signal source: the arm's own realised trade P&L (sizing; the arm's signals stay on the underlying).
+- Timeframe: re-estimated each evening; applied to the next day's signals. Instruments: NIFTY, BANKNIFTY.
+- Entry: Unchanged: each arm's own signal (Liquidity 15+5, R72 Breadth Donchian, R51 Donchian, R52 OOV).
+- Stop: Unchanged (the arm's own).
+- Exit: Unchanged (the arm's own).
+- Filters: Size multiplier = clip( f_trail / f_design , 0, 1 ), where f = mean / variance of the arm's daily net P&L per lot, f_trail on the trailing 126 sessions and f_design on the arm's design period; lots = floor(base lots x multiplier), 0 = skip. Never above base lots.
+- Trade: As the arm trades (1-ITM / ATM option per its strike rule).
+- Assumptions (our reading where the book is vague): Chan: six-month lookback for day-long holds, half-Kelly, and gradual de-leveraging instead of shutdown. Because the multiplier is capped at 1, it only lowers risk (CLAUDE.md LIVE rule: shadow first). Compare on the holdout: net, worst month, max drawdown and the account-stop breaches (-Rs 40k / -Rs 13k a month) vs the unthrottled arm and vs a random throttle with the same average size.
+- Data: have
+- Our nearest test: H15: half-Kelly from Rs 1 lakh -> Rs 7.41 L holdout with a -44% drawdown; Kelly fraction unstable (BN 1.29 vs 0.48 / 0.14). R101: 2 lots on 5-of-5 breadth earned what any lot earns (p 0.475). R74: volatility-targeted sizing not tried for the index arms. A cut-only throttle: not tested by us.
+### `book-fmchan-06` Lot cap from the worst historical day (Chan's worst-loss leverage cap)
+- Source: Quantitative Trading, Ch. 6, Risk management (Black Monday example). Family: `sizing-execution`. Signal source: the arm's own historical P&L (sizing).
+- Timeframe: set monthly. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER.
+- Entry: Unchanged (each arm's own signal).
+- Stop: Unchanged.
+- Exit: Unchanged.
+- Filters: Max lots per arm per day = floor( Rs 13,000 / worst single-day loss per lot over the arm's full history, including design ), minimum 0; when several arms run, share the Rs 13,000 in proportion to each arm's base lots.
+- Trade: As the arm trades.
+- Assumptions (our reading where the book is vague): Rs 13,000 is the monthly account stop used as the one-period tolerance (Chan uses the tolerable one-day loss). Only lowers risk. Measure how often it binds and what it costs in net vs how many account-stop breaches it removes.
+- Data: have
+- Our nearest test: R72: C1's worst design day was -Rs 58,613 at 1 lot on five indices, beyond the account stop; R82: the MCX trend arm sat through -Rs 13.4 lakh. Not tested as a sizing rule by us.
+### `book-fmchan-07` Turning point: a 1% day against a fresh 10-day extreme (Chan's GS rule, simplest form)
+- Source: Quantitative Trading, Ch. 7, Regime switching, Example 7.1. Family: `patterns-indicators`. Signal source: underlying price (index daily bars).
+- Timeframe: daily; enter at the next open, hold a fixed number of sessions. Instruments: NIFTY, BANKNIFTY.
+- Entry: Long if today's close-to-close change >= +1% AND today's low (or yesterday's) was the lowest low of the last 10 sessions; short if change <= -1% AND today's or yesterday's high was the highest high of the last 10 sessions. Enter at the next session's 09:20 price.
+- Stop: None in the book. Research variant: 1.5 x ATR14 on the index (close-based).
+- Exit: After 10 sessions (Chan's best single rule); variants 5 and 20; an opposite signal also exits (Chan's 'latest entry signal' exit).
+- Filters: None. The perceptron re-weighting over 1/5/10/20/40/60-day holds is not reproduced (settings not given).
+- Trade: Primary: near-month future. Secondary (labelled): 1-ITM monthly option, CE on long, PE on short (10 sessions of theta is a heavy cost; report separately).
+- Assumptions (our reading where the book is vague): The OCR of the rule box reads '>= -1' for the short side; read as '<= -1'. 'N-day low just before the big up day' is read as today or yesterday. Thresholds +-3% are a variant.
+- Data: have
+- Our nearest test: R102: index direction at 1 day follows the previous sign 53.2% (NIFTY, n 5,086) and no sign rule confirmed (1 of 70, an artefact). R87 candle shapes and R71 chart patterns gave no direction. R78 (gold daily high/low reversal) is the nearest MCX cousin. This exact rule: not tested by us.
+### `book-fmchan-08` ETH vs BTC hourly spread reversion inside Boss's crypto window, with stop and profit lock
+- Source: Quantitative Trading, Ch. 3 Example 3.6; Ch. 7 Examples 7.2 and 7.5 (method applied to crypto). Family: `mcx-crypto`. Signal source: underlying price (ETH and BTC perpetuals; the hedged log spread).
+- Timeframe: 1-hour bars; trades only 00:00-09:00 IST, flat by 09:00. Instruments: CRYPTO.
+- Entry: Each hour in the window: on the trailing 720 hours, OLS of log ETH on log BTC -> h; spread = log ETH - h x log BTC; CADF t-stat and OU half-life (in hours). Trade only if CADF t < 5% critical value and half-life between 2 and 12 hours. z = (spread - 720-hour mean) / sd. z >= +2: short ETH perp, long BTC perp (notional ratio h); z <= -2: the reverse.
+- Stop: Pair loss of 1.0% of gross notional, or |z| >= 3.5, whichever first (always on).
+- Exit: Profit lock: once open profit reaches +0.4% of gross notional, the stop moves to break-even plus costs and then trails at 50% of peak open profit. Target: z back to 0. Time exit: 2 x half-life or 09:00 IST, whichever first.
+- Filters: Skip the hour of a scheduled US CPI / FOMC release (events.csv).
+- Trade: Perpetuals both legs, small notional; funding counted. Research only (nothing in the app trades crypto).
+- Assumptions (our reading where the book is vague): Chan's daily method moved to hourly bars so the trade fits Boss's 00:00-09:00 IST window and 'no long holding' rule; the 1.0% stop, 0.4% lock trigger and 50% trail are our choices, sized from C1's median BTC next-hour range 0.546%. Costs: 12 bps a round trip per leg (two legs = 24 bps).
+- Data: have
+- Our nearest test: C1/C2: crypto hourly direction reverses slightly (AUC 0.535-0.550) but nets -10 to -13 bps a trade after costs; RC1: 0 of 8 active ideas pass; ETH/BTC as a pair not tested by us. Two legs double the cost hurdle: low prior.
+### `book-fmchan-09` BTC 5-minute Bollinger fade (Chan's cost lesson) with stop and profit lock
+- Source: Quantitative Trading, Ch. 2, How will transaction costs affect the strategy (ES example). Family: `mcx-crypto`. Signal source: underlying price (BTC and ETH perpetual 5-minute closes).
+- Timeframe: 5-minute bars; 00:00-09:00 IST, flat by 09:00. Instruments: CRYPTO.
+- Entry: At a 5-minute close: close > MA20 + 2 x SD20 -> short; close < MA20 - 2 x SD20 -> long. One position per coin.
+- Stop: 0.6% of entry price against the trade (always on).
+- Exit: Profit lock: at +0.3% open profit the stop moves to break-even plus costs, then trails at 50% of peak open profit. Target: close back within MA20 +- 1 x SD20. Time exit 09:00 IST.
+- Filters: None (book).
+- Trade: Perpetual, small notional; research only.
+- Assumptions (our reading where the book is vague): The 0.6% stop is about C1's median BTC next-hour range (0.546%); the lock values are our choices. Report gross vs net to show the cost wedge Chan describes; 12 bps round trip.
+- Data: have
+- Our nearest test: C1: next-hour reversal AUC 0.535 BTC / 0.543 ETH but about 0 bps gross vs 12 bps round trip (net -11.74 / -13.16 bps); C2: same in Boss's window. Expected to fail; it is the cost check.
+
+## An Introduction to Mathematical Finance: Options and Other Topics - Sheldon Ross ([write-up](fm-ross-math-finance.md))
+### `book-fmross-01` Crude next-day continuation after a >1% down day (Ross four-state table)
+- Source: An Introduction to Mathematical Finance: Options and Other Topics, Ch. 10.2. Family: `mcx-crypto`. Signal source: underlying price.
+- Timeframe: daily bars (close-to-close log change of the nearest-month future). Instruments: CRUDE, NATURALGAS, GOLD, SILVER.
+- Entry: If today's close-to-close log change of the nearest-month future is below -1% (state 1), go short at the next session's open (buy the 1-ITM PE, or sell the future).
+- Stop: Underlying stop 1.0 x the 20-day ATR from the entry price (assumption; the book gives none).
+- Exit: Exit at that session's close (one-day hold, as the book's table is next-day).
+- Filters: None in the book. Pre-register: no entry on the expiry day of the option or future; roll to next month 3 sessions before expiry.
+- Trade: buy 1-ITM PE on MCX (or short the future); stop and exit on the underlying
+- Assumptions (our reading where the book is vague): The book only reports statistics (big drop followed by big drop 31%, next-day mean -.0036 after state 1 on 1995-97 NYMEX crude); it proposes no trade. The most literal trade is a one-day continuation short. The mirror ('after state 2 or 3 go long', next-day mean +.0024/+.0025) is a second variant, pre-registered alongside, with BH across both and across instruments. First run the 4x4 chi-square table on our MCX daily data as the descriptive gate.
+- Data: have
+- Our nearest test: not tested by us on MCX; NIFTY daily lag-1 autocorrelation +0.028 (DEEP_NIFTY_BANKNIFTY.md 2.5) was not tradeable
+### `book-fmross-02` Buy the ATM straddle when the state-conditional volatility forecast exceeds ATM IV
+- Source: An Introduction to Mathematical Finance: Options and Other Topics, Ch. 10.3. Family: `option-structure`. Signal source: volatility / options structure (vol forecast from the underlying vs the chain's ATM IV).
+- Timeframe: daily; decision at the close, trade next open. Instruments: CRUDE, NATURALGAS, NIFTY, BANKNIFTY.
+- Entry: Classify today by the future's (or index's) close-to-close log change into Ross's four states (<-1%, -1..0, 0..+1%, >+1%). Forecast tomorrow's vol as the sd of next-day log changes that followed the same state over the trailing 500 sessions, annualised by sqrt(252). If forecast exceeds the nearest-expiry ATM IV by 2 vol points, buy the ATM straddle at the next open.
+- Stop: Exit if the straddle loses 30% of its entry premium (assumption).
+- Exit: Session close (one-day hold).
+- Filters: Skip the last 2 sessions before option expiry (event-vol distortion, R102 3.4). Trailing window only (no look-ahead).
+- Trade: buy ATM CE + ATM PE; stop on the option premium
+- Assumptions (our reading where the book is vague): The book uses state sds to price options by Monte Carlo, not to trade; the 2-point threshold, 500-session window and 30% stop are ours. Six-state version (+/-1%, +/-2%) as a pre-registered variant.
+- Data: have
+- Our nearest test: R89 straddles on a forecast big candle: 0 of 18 profitable (FINDINGS.md); R16 found the size of the next move predictable
+### `book-fmross-03` Fade deviations from the AR(1) reversion level of the log price
+- Source: An Introduction to Mathematical Finance: Options and Other Topics, Ch. 11.1, 11.3. Family: `mcx-crypto`. Signal source: underlying price.
+- Timeframe: daily bars. Instruments: CRUDE, NATURALGAS, GOLD, SILVER, NIFTY, BANKNIFTY.
+- Entry: Each day fit L(n) = a + b L(n-1) + e by least squares on the trailing 250 daily log closes of the continuous future. If b < 0.98 and the fitted model's one-day-ahead expected price is above today's close by more than 1 residual sd (price below the reversion level s* = exp((a + s^2/2)/(1-b))), go long at the next open; mirror for short.
+- Stop: 1.5 x 20-day ATR from entry on the underlying (assumption).
+- Exit: Price reaches s*, or 10 sessions, whichever first.
+- Filters: Require b significantly below 1 by an augmented Dickey-Fuller test at 5% on the same window (the book does not test b = 1; we add it). No entry within 3 sessions of contract expiry.
+- Trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short (monthly on MCX); stops on the underlying
+- Assumptions (our reading where the book is vague): The book gives the model and the reversion level, not a trading rule; it fits the whole sample in-sample. Window, b threshold, 1-sd trigger, stop and time exit are ours. Crypto version would need a stop and a profit lock per CLAUDE.md.
+- Data: have
+- Our nearest test: SWING_DEEP.md 'Mean reversion: buy after big down day' on NIFTY futures did not pass (no index swing rule passed walk-forward); R59 mean-reversion dip buy 0 of 84
+### `book-fmross-04` Sell defined-risk premium when AR(1) horizon variance is well below the GBM variance in ATM IV
+- Source: An Introduction to Mathematical Finance: Options and Other Topics, Ch. 11.2. Family: `option-structure`. Signal source: volatility / options structure (AR(1) fit on the underlying vs ATM IV).
+- Timeframe: daily; options with 10-30 sessions to expiry. Instruments: CRUDE, NATURALGAS, GOLD, SILVER, NIFTY, BANKNIFTY.
+- Entry: Fit AR(1) on the trailing 250 daily log closes. Compute the AR(1) variance of the log price at expiry (closed form) and the GBM variance from ATM IV (IV^2 x T). If the ratio AR/GBM is below 0.6 and b < 1 passes an ADF test at 5%, sell an ATM iron butterfly with wings 2 strikes out at the next open.
+- Stop: Close if the structure's mark-to-market loss reaches 1.0 x the credit received (assumption).
+- Exit: Hold to 1 session before expiry, then close.
+- Filters: Skip if an exchange holiday or a scheduled event (EIA, RBI, budget) falls inside the window; reprice wings from live quotes (R103 stale-leg rule).
+- Trade: sell ATM CE + PE, buy wings 2 strikes out (defined risk)
+- Assumptions (our reading where the book is vague): The book only compares option values (44.42 cents AR(1) vs 79 cents Black-Scholes for crude); the 0.6 ratio, iron-fly structure and stop are ours. Unit-root bias makes b look below 1 in short samples; the ADF filter is required.
+- Data: have
+- Our nearest test: R103 defined-risk option selling: 0 of 24 confirmed, the design passes were stale prices
+
+## Methods of Mathematical Finance - Karatzas and Shreve ([write-up](fm-karatzas-shreve.md))
+No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).

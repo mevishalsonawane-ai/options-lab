@@ -1,0 +1,44 @@
+id: book-fmross-04
+title: Sell defined-risk premium when AR(1) horizon variance is well below the GBM variance in ATM IV (Sheldon Ross, book
+  rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Sheldon Ross''s rule from An Introduction to Mathematical Finance: Options and Other Topics (Ch. 11.2) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options
+  structure (AR(1) fit on the underlying vs ATM IV). Entry: Fit AR(1) on the trailing 250 daily log closes. Compute the AR(1)
+  variance of the log price at expiry (closed form) and the GBM variance from ATM IV (IV^2 x T). If the ratio AR/GBM is below
+  0.6 and b < 1 passes an ADF test at 5%, sell an ATM iron butterfly with wings 2 strikes out at the next open. Stop: Close
+  if the structure''s mark-to-market loss reaches 1.0 x the credit received (assumption). Exit: Hold to 1 session before expiry,
+  then close.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- CRUDE
+- NATURALGAS
+- GOLD
+- SILVER
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (AR(1) fit on the underlying vs ATM IV)
+- daily; options with 10-30 sessions to expiry
+model_or_rule: 'Fit AR(1) on the trailing 250 daily log closes. Compute the AR(1) variance of the log price at expiry (closed
+  form) and the GBM variance from ATM IV (IV^2 x T). If the ratio AR/GBM is below 0.6 and b < 1 passes an ADF test at 5%,
+  sell an ATM iron butterfly with wings 2 strikes out at the next open. | stop: Close if the structure''s mark-to-market loss
+  reaches 1.0 x the credit received (assumption). | exit: Hold to 1 session before expiry, then close. | filters: Skip if
+  an exchange holiday or a scheduled event (EIA, RBI, budget) falls inside the window; reprice wings from live quotes (R103
+  stale-leg rule).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmross-04; trade: sell ATM CE + PE, buy wings 2 strikes out (defined
+  risk)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R103 defined-risk option selling: 0 of 24 confirmed, the design passes were stale prices. Assumptions:
+  The book only compares option values (44.42 cents AR(1) vs 79 cents Black-Scholes for crude); the 0.6 ratio, iron-fly structure
+  and stop are ours. Unit-root bias makes b look below 1 in short samples; the ADF filter is required.'

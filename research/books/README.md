@@ -126,6 +126,85 @@ consolidation-box breakout beside Donchian (the Advanced Trading Book, `book-atb
 `book-lswing-06`), Smith's step trailing stop as an exit module on our multi-day holds (`book-smith-03`), and a 52-week-level
 filter (Porwal, `book-porwal-07`).
 
-## The FinMathematics textbooks
+## The FinMathematics textbooks (35 books, 40 PDFs)
 
-Being read in full (Boss, 25 Oct: all 40 PDFs). This section is completed when the last one is in.
+The fourth link Boss sent (github.com/PlamenStilyianov/FinMathematics) holds 40 PDFs: 35 books, one of them (Neftci)
+split into six files (cover, introduction, contents, main text, bibliography, solution manual). About 13,250 pages, read in
+full on 25 Oct 2026 as Boss asked (all 40). Nine books (14 PDFs) were scans with no text layer and were OCR'd page by page (marked OCR);
+in every book most displayed formulas and all charts came out garbled or as images, so the write-ups follow the prose and
+the worked numbers. The CD-ROM code in the repository (Shaw's Mathematica notebooks) was not opened or run.
+
+These are pricing, statistics and numerical-methods textbooks, not trading manuals: most have no trading rule at all, and
+no performance claims. Their value to us is in what to measure and how to price, not in new signals.
+
+| Book | Author, year | What it teaches | Pages | Cards (tested) | Rules |
+|---|---|---|---|---|---|
+| [Paul Wilmott on Quantitative Finance](fm-wilmott.md) | Paul Wilmott, 2006 | The practitioner's bible: hedging with the wrong vol, vol arbitrage, discrete hedging, costs, crash risk, model risk | 1,401 | 9 (7) | 1 |
+| [Quantitative Trading](fm-chan-quantitative-trading.md) (OCR) | Ernest Chan, 2008 | Building a quant strategy: pairs and cointegration, half-life, Kelly, backtest pitfalls | 203 | 10 (4) | 9 |
+| [Inside Volatility Arbitrage](fm-javaheri-vol-arb.md) | Alireza Javaheri, 2005 | Filtering stochastic vol; skew and kurtosis trades that pay only at mid prices | 272 | 10 (1) | 3 |
+| [Neural Networks in Finance](fm-mcnelis-neural-nets.md) | Paul McNelis, 2005 | Network forecasts with proper out-of-sample tests; nets help on volatility, not returns | 261 | 9 (3) | 0 |
+| [Applied Quantitative Finance](fm-applied-quant-finance.md) | Härdle, Kleinow, Stahl (eds.), 2002 | VaR, implied-vol surfaces, a DAX skew / kurtosis trade, Hurst-filtered spread fades | 423 | 9 (2) | 4 |
+| [Bayesian Methods in Finance](fm-bayesian-methods.md) | Rachev, Hsu, Bagasheva, Fabozzi, 2008 | Shrinkage of small-sample estimates, Bayesian GARCH / SV / regimes, priors from design data only | 352 | 10 (1) | 1 |
+| [Copula Methods in Finance](fm-copula-methods.md) | Cherubini, Luciano, Vecchiato, 2004 | Joint-crash (tail) dependence beyond correlation; multi-asset risk | 308 | 9 (1) | 0 |
+| [The Mathematics of Financial Modeling and Investment Management](fm-fabozzi-modelling.md) | Focardi and Fabozzi, 2004 | Broad survey: time series, cointegration, VaR vs expected shortfall, optimisation | 801 | 8 (3) | 3 |
+| [Introduction to Quantitative Finance: A Math Tool Kit](fm-intro-quant-finance.md) | Robert Reitano, 2010 | Maths tool kit; error bounds for tail and volatility estimates | 748 | 8 (0) | 0 |
+| [Financial Engineering and Computation](fm-lyuu-fin-engineering.md) | Yuh-Dauh Lyuu, 2002 | Pricing algorithms; no-arbitrage bounds; drift precision depends on span, not sampling | 648 | 10 (2) | 1 |
+| [From Stochastic Calculus to Mathematical Finance](fm-kabanov-stochastic-calculus.md) | Kabanov, Liptser, Stoyanov (eds.), 2006 | 30 research papers; bipower variation (jump-free vol), basis risk of cross-hedges | 658 | 8 (3) | 0 |
+| [Numerical Methods in Finance and Economics](fm-brandimarte-numerical.md) | Paolo Brandimarte, 2006 | MATLAB numerics, Monte Carlo hygiene; stop-loss hedging does not converge | 694 | 9 (2) | 0 |
+| [Mathematical Finance](fm-fries-math-finance.md) | Christian Fries, 2007 | Monte Carlo pricing; no-arbitrage checks across strikes; foresight bias | 405 | 10 (1) | 0 |
+| [Arbitrage Theory in Continuous Time](fm-bjork-arbitrage.md) | Tomas Björk, 2003 | Standard pricing theory; delta hedging as a volatility trade; Merton / Kelly sizing | 481 | 10 (4) | 5 |
+| [Computational Finance: Numerical Methods](fm-comp-finance-numerical.md) | George Levy, 2004 | Pricing numerics, GARCH, non-synchronous trading and Roll's spread | 459 | 9 (4) | 0 |
+| [Mathematics of Financial Markets](fm-elliott-fin-markets.md) | Elliott and Kopp, 2005 | Theory; touch probability; expected shortfall vs VaR | 356 | 10 (3) | 0 |
+| [Structured Finance: The Object-Oriented Approach](fm-structured-finance.md) | Cherubini and Della Lunga, 2007 | Software design for structured and credit products; filtered historical simulation | 301 | 9 (3) | 0 |
+| [Mathematics for Finance](fm-capinski-math-finance.md) | Capinski and Zastawniak, 2003 | Intro pricing and portfolios; parity and strike bounds; Greek P&L split | 321 | 10 (0) | 2 |
+| [Binomial Models in Finance](fm-binomial-models.md) | van der Hoek and Elliott, 2006 | Trees fitted to the smile; implied odds of the expiry close from butterflies | 308 | 10 (1) | 3 |
+| [Financial Econometrics Modeling](fm-fin-econometrics-derivs.md) | Gregoriou and Pascalau (eds.), 2011 | Academic papers: implied trees, two-speed GARCH, hedge funds, term structure | 231 | 8 (2) | 0 |
+| [Nonlinear Optimization with Financial Applications](fm-nonlinear-optimization.md) | Bartholomew-Biggs, 2005 | Portfolio optimisation; fitted settings drift and are poorly pinned down | 276 | 8 (2) | 2 |
+| [Financial Mathematics](fm-financial-mathematics.md) | Hughston and Hunter, 2000 | Pricing primer; Black on the forward; no drift, no edge for a bought option | 234 | 8 (3) | 1 |
+| [Quantitative Finance for Physicists](fm-qf-physicists.md) | Anatoly Schmidt, 2005 | Stylised facts (fat tails, vol clustering, no autocorrelation), agent models, ETL | 179 | 9 (3) | 1 |
+| [Mathematical Economics and Finance](fm-harrison-waldron.md) | Harrison and Waldron, 1998 draft | Lecture notes: utility, Kelly, state prices from butterflies | 153 | 9 (1) | 0 |
+| [The Basics of Financial Mathematics](fm-basics-fin-math.md) | Richard Bass, 2003 | Lecture notes: exits cannot create an edge; touch probability; theta pays for gamma | 106 | 10 (5) | 0 |
+| [Optimal Control Models in Finance](fm-optimal-control.md) | Chen and Islam, 2005 | Optimal-control numerics; switching costs and hysteresis bands | 220 | 7 (0) | 0 |
+| [Introduction to Computational Finance without Agonizing Pain](fm-comp-finance-no-pain.md) | Peter Forsyth, 2007 | Course notes: discrete delta-hedging error grows with the square root of the gap | 77 | 8 (4) | 0 |
+| [An Introduction to the Mathematics of Financial Derivatives](fm-neftci-derivatives.md) (OCR; 6 PDFs) | Salih Neftci, 2000 | Stochastic calculus for pricing; normal vs rare (jump) events | 345 | 10 (0) | 0 |
+| [The Mathematics of Financial Derivatives](fm-wilmott-howison-dewynne.md) (OCR) | Wilmott, Howison, Dewynne, 1995 | Student PDE pricing; a trailing stop is worth exactly the asset | 339 | 9 (2) | 2 |
+| [Modelling Financial Derivatives with Mathematica](fm-shaw-mathematica.md) (OCR) | William Shaw, 1998 | Pricing code; when an implied vol cannot be trusted; Black-76 | 547 | 9 (0) | 0 |
+| [Financial Calculus](fm-baxter-financial-calculus.md) (OCR) | Baxter and Rennie, 1996 | Martingale pricing; price off the forward; quantos | 242 | 8 (3) | 0 |
+| [Martingale Methods in Financial Modelling](fm-musiela-martingale.md) (OCR) | Musiela and Rutkowski, 2005 | Rigorous pricing; volatility risk; chain-wide no-arbitrage checks | 327 | 10 (3) | 4 |
+| [Monte Carlo Methods in Finance](fm-jackel-monte-carlo.md) (OCR) | Peter Jäckel, 2002 | Random numbers, variance reduction, Greeks by simulation, simulation error | 232 | 10 (0) | 0 |
+| [An Introduction to Mathematical Finance](fm-ross-math-finance.md) (OCR) | Sheldon Ross, 1999 | Elementary pricing; arbitrage examples; crude oil not a random walk; AR(1) | 102 | 9 (1) | 4 |
+| [Methods of Mathematical Finance](fm-karatzas-shreve.md) (OCR) | Karatzas and Shreve, 1998 | Research monograph: complete markets, optimal investment, constraints | 215 | KS_CARDS | KS_RULES |
+
+### What the textbooks agree on, and what it means for us
+
+1. **No drift, no edge from the exit.** Bass, Elliott and Kopp, Björk, Kabanov (Paper 25) and Wilmott-Howison-Dewynne all
+   show that on a driftless price no stop, target, trail or lock can make the expected result positive; a trailing stop
+   priced as a contract is worth exactly the asset. This is the theory behind our failed exit and lock studies (R18 0 of
+   60, R19, R19b, R100).
+2. **Options are dear; the seller earns implied minus realised, weighted by gamma, and carries the jump.** Wilmott,
+   Javaheri, Musiela, Applied Quantitative Finance, Bennett. Matches R102 (VIX above NIFTY's realised on 81% of 4,507 days)
+   and R103 (selling every day still lost after costs and stale prices). The textbooks' version of the trade is
+   delta-hedged with the future, which we have never tested (one lot cannot be hedged finely: Forsyth, Björk).
+3. **Size is predictable, direction is not.** McNelis (nets help on volatility, not returns), Schmidt (stylised facts),
+   Lyuu (drift precision depends on the span, not the sampling), Levy and Bayesian Methods (GARCH). Matches R16, R41, R88.
+4. **Fat tails and joint crashes.** Copula Methods, Neftci (rare events), Schmidt, Elliott and Kopp, Fabozzi: report
+   expected shortfall beside VaR, and measure the chance that several arms lose on the same day. Our NIFTY daily kurtosis
+   is 14.1 (R102); we have never reported expected shortfall or tail dependence.
+5. **Check prices before trusting them.** Put-call parity against the future, strikes falling and convex (butterflies never
+   negative), implied vol only where vega is real (Capinski, Lyuu, Fries, Musiela, Shaw, Hughston). These checks would have
+   caught R103's stale wing prices automatically.
+6. **Price index and MCX options off the future (Black-76), not spot** (Baxter, Hughston, Lyuu, Shaw).
+7. **Fitting and judging on the same sample is biased; Kelly is fragile when the edge is estimated** (Fries "foresight
+   bias", Brandimarte, Jäckel, Chan, Nonlinear Optimization, Bayesian Methods). Agrees with our walk-forward and holdout
+   rules and with H15 (an unstable Kelly fraction). Jäckel adds: report the simulation error of every random-twin p-value.
+
+**Rejected or covered by our research:** buying straddles or "cheap" vol (R89, h29), skew or the chain as a direction signal
+(IV1, h29), gold/silver ratio and index-pair mean reversion (R94, H6, R72), natural gas seasonals (R83), defined-risk
+selling without a hedge (R103).
+
+**Worth testing from the textbooks (proposed, none run):** a chain-wide no-arbitrage filter on the lake (a data-quality
+step, not a strategy; Musiela `book-fmmusiela-01`); the volatility-premium filter for selling, now with a futures delta
+hedge (Wilmott `book-fmwilmott-01`, Björk, Musiela); Chan's cointegration-gated pairs with a half-life exit on GOLD/SILVER and
+NIFTY/BANKNIFTY futures (`book-fmchan-03`, `book-fmchan-02`); Ross's next-day state table and AR(1) reversion on MCX crude (`book-fmross-01`, `book-fmross-03`);
+and measurement work with no trading rule at all: expected shortfall and joint-loss odds for the arms, a GARCH baseline for
+move size, bipower variation for jump days, and the implied odds of the expiry close from butterflies as Jarvis context.
