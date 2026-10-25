@@ -204,7 +204,7 @@ def cut_series(s, cut):
                      s.days[:ns[-1] + 1], s0, s1, s.sq[:ns[-1] + 1], s.open_tod, s.expiry[:ns[-1] + 1] if len(s.expiry) else s.expiry)
 
 
-FAMILIES = ["f3_patterns", "f10_indicators", "f6_porwal", "f7_aziz", "f1f2_wyckoff_volume", "f4_carli", "f5_swing"]
+FAMILIES = ["f3_patterns", "f10_indicators", "f6_porwal", "f7_aziz", "f1f2_wyckoff_volume", "f4_carli", "f5_swing", "f12_quant"]
 
 
 @pytest.mark.parametrize("fam", FAMILIES)
@@ -215,7 +215,7 @@ def test_no_look_ahead_in_any_rule(fam):
     rng = np.random.default_rng(3)
     cuts = sorted(rng.integers(1500, s.n - 10, size=3))
     for (rid, mk), imp in R.IMPL.items():
-        if imp["_family"] != fam or mk not in ("IDX", "MCXI", "CRY"):
+        if imp["_family"] != fam or mk not in ("IDX", "MCXI", "CRY") or imp.get("custom") is not None:
             continue
         for vn, var in imp["variants"].items():
             kw = {k: v for k, v in var.items() if not k.startswith("_")}
@@ -264,7 +264,7 @@ def test_no_look_ahead_daily_rules(fam):
     importlib.import_module(fam)
     df = synth_daily()
     for (rid, mk), imp in R.IMPL.items():
-        if imp["_family"] != fam or mk not in ("DLY", "MCXD", "STK"):
+        if imp["_family"] != fam or mk not in ("DLY", "MCXD", "STK") or imp.get("custom") is not None:
             continue
         for vn, var in imp["variants"].items():
             kw = {k: v for k, v in var.items() if not k.startswith("_")}
@@ -277,3 +277,15 @@ def test_no_look_ahead_daily_rules(fam):
                 fa = sorted(key(t) for t in full if t[0] <= cut)
                 pa = sorted(key(t) for t in part if t[0] <= cut)
                 assert fa == pa, (rid, vn, cut)
+
+
+def test_adf_and_half_life_on_known_series():
+    import f12_quant as Q
+    rng = np.random.default_rng(5)
+    e = np.zeros(800)
+    for i in range(1, 800):
+        e[i] = 0.8 * e[i - 1] + rng.normal()
+    assert Q.adf_t(e) < -3.34
+    assert 2.0 < Q.half_life(e) < 5.0
+    rw = np.cumsum(rng.normal(size=800))
+    assert Q.adf_t(rw) > -3.34 or Q.half_life(rw) > 30

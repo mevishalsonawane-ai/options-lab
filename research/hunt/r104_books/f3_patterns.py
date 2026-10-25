@@ -682,11 +682,10 @@ def tom08(ctx):
             if abs(line_at(line, X[1][0]) - X[1][2]) > 0.0005 * X[1][2]:
                 continue
             # fake-down: after the last line touch, price traded below the prior opposite swing and turned
-            opp = (ls if side > 0 else hs)
-            prior = [x for x in opp if x[1] <= k and x[0] < X[2][0]]
+            prior = [x for x in P.recent(k + 1, "L" if side > 0 else "H", limit=20) if x[0] < X[2][0]]
             if not prior:
                 continue
-            pl = prior[-1][2]
+            pl = prior[0][2]
             seg = slice(X[2][0], k + 1)
             ext = b.l[seg].min() if side > 0 else b.h[seg].max()
             faked = ext < pl if side > 0 else ext > pl

@@ -153,7 +153,7 @@ class Pat:
     @staticmethod
     def after_fill(minutes: int) -> int:
         """A time exit `minutes` bars after the fill (the executor resolves it)."""
-        return -(int(minutes) + 1)
+        return -(int(minutes) + 2)
 
     def tmax_minutes(self, k, minutes):
         """The row at whose open a time exit `minutes` after the decision happens (same session or the square-off)."""

@@ -7,7 +7,8 @@ An INTENT (one position or one sub-lot of it) is a tuple
   side       +1 long / call, -1 short / put
   kind       0 market at start's open; 1 stop order at lvl; 2 limit order at lvl (valid start..valid_end inclusive)
   stop, tgt  underlying levels (NaN = none)
-  tmax       exit at the open of this bar at the latest (-1 = none; -(m + 1) = m bars after the fill)
+  tmax       exit at the open of this bar at the latest (-1 = none; -2 = at the fill bar's close;
+             -(m + 2) = at the open m bars after the fill)
   be         move the stop to the entry once the price is be x R in favour (NaN = never)
   grp, w     sub-lots of one position share grp; w = its share of the position (results are per position)
   ref        the underlying price the strike rule reads (option markets)
@@ -31,7 +32,8 @@ EMPTY_B = np.zeros(0, np.bool_)
 
 
 @njit(cache=True)
-def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, trail, xflag, tab=False, tmode=0):
+def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, trail, xflag, tab=False, tmode=0,
+         cl=np.zeros(0)):
     """Returns (fill bar, fill price, exit bar, exit price, reason, touch). touch = 1 when the exit was a stop / target
     touch inside the exit bar (an option is then sold at the next bar's open), 0 when it was at the bar's open."""
     n = len(o)
@@ -64,8 +66,9 @@ def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, 
                     break
     if f < 0:
         return -1, np.nan, -1, np.nan, 0, 0
-    if tmax < -1:                        # relative time exit: -(minutes + 1) after the fill
-        tmax = f + (-tmax - 1)
+    close_exit = tmax == -2 and cl.shape[0] > 0     # -2: out at the close of the fill bar (daily one-day holds)
+    if tmax < -2:                        # relative time exit: -(bars + 2) = that many bars after the fill
+        tmax = f + (-tmax - 2)
     stop = stop0
     risk = abs(fpx - stop0) if stop0 == stop0 else np.nan
     m0 = f if kind == 0 else f + 1
@@ -87,6 +90,8 @@ def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, 
                     t = np.nan
             if tmode == 2 and t == t:            # chandelier: trail[m] is a distance from the extreme since the fill
                 t = (ext - t) if side > 0 else (ext + t)
+            if tmode == 3 and t == t:            # profit lock: keep (1 - trail[m]) of the best open profit
+                t = fpx + (1.0 - t) * (ext - fpx)
             if t == t:
                 if side > 0:
                     if stop != stop or t > stop:
@@ -113,6 +118,8 @@ def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, 
                 armed = True
                 if stop != stop or stop > fpx:
                     stop = fpx
+        if close_exit and m == f:
+            return f, fpx, f, cl[f], 3, 1
         # the extreme since the fill INCLUDING this bar: at the next bar, h[m] >= ext means bar m made a new extreme
         if side > 0 and h[m] > ext:
             ext = h[m]
@@ -132,7 +139,8 @@ def per_bar_to_rows(b, arr, n_rows: int, dtype=float):
     return out
 
 
-def execute(o, h, l, intents, end_of, trail=None, xflag=None, max_side_day=2, day_of=None, one_pos=True, tab=False, tmode=0):
+def execute(o, h, l, intents, end_of, trail=None, xflag=None, max_side_day=2, day_of=None, one_pos=True, tab=False, tmode=0,
+            c=None):
     """Walk every intent (orders rest independently), then accept positions in FILL order: one open position at a time
     when one_pos, at most max_side_day positions a side per day (day_of(bar)). Sub-lots share grp (the position fills
     at its earliest filled sub-lot); groups named 'key|x' are one-cancels-other with every group of the same key (the
@@ -150,7 +158,7 @@ def execute(o, h, l, intents, end_of, trail=None, xflag=None, max_side_day=2, da
             start, sd, kind, lvl, vend, stop, tgt, tmax, be, _g, w, ref = t
             end = end_of(start)
             r = walk(o, h, l, int(start), int(sd), int(kind), float(lvl), int(vend), float(stop), float(tgt), int(tmax),
-                     float(be), int(end), tr, xf, tab, tmode)
+                     float(be), int(end), tr, xf, tab, tmode, EMPTY_F if c is None else c)
             if r[0] >= 0:
                 res.append((t, r))
         if res:

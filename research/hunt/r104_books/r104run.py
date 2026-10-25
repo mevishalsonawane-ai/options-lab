@@ -140,11 +140,17 @@ def run_inst(rid: str, market: str, inst: str, var: dict, part: str, ctx: Ctx | 
     ctx = ctx or make_ctx(market, inst)
     intents, trail, xflag = imp["fn"](ctx, **{k: v for k, v in var.items() if not k.startswith("_")})
     s = ctx.s
-    keep = [t for t in intents if 0 <= t[0] < s.n and K.period_of(market, ctx.day(int(t[0]))) == part]
     one_pos = var.get("_one_pos", True)
+    tab, tmode = var.get("_tab", False), var.get("_tmode", 0)
+    if market == "CRY" and trail is None:
+        # CLAUDE.md: every crypto trade has a stop and a profit lock: break-even at +1R, then keep 50% of the best profit
+        intents = [t[:8] + ((1.0 if t[8] != t[8] else t[8]),) + t[9:] for t in intents]
+        trail = {1: np.full(s.n, 0.5), -1: np.full(s.n, 0.5)}
+        tab, tmode = True, 3
+    keep = [t for t in intents if 0 <= t[0] < s.n and K.period_of(market, ctx.day(int(t[0]))) == part]
     ex = SIM.execute(s.o, s.h, s.l, keep, _end_of(ctx, var.get("_multiday", False)), trail, xflag, max_side_day=var.get("_max_side_day", 2),
                      day_of=lambda i: s.ses[i], one_pos=one_pos,
-                      tab=var.get("_tab", False), tmode=var.get("_tmode", 0))
+                      tab=tab, tmode=tmode, c=s.c)
     rows = []
     for e in ex:
         d_in = ctx.day(e["f"])
@@ -199,6 +205,8 @@ def run_rule(rid: str, market: str, part: str = "design") -> dict:
     """{variant: positions over all instruments}."""
     imp = IMPL[(rid, market)]
     out = {}
+    if imp.get("custom") is not None:
+        return {vn: imp["custom"](part, **var) for vn, var in imp["variants"].items()}
     ctxs = {i: make_ctx(market, i) for i in instruments(market, imp["insts"])}
     for vn, var in imp["variants"].items():
         parts = [run_inst(rid, market, i, var, part, ctxs[i]) for i in ctxs]

@@ -28,6 +28,7 @@ from r104pat import NAN, Pat, gid
 from r104run import rule
 
 MCX_ALL = ("GOLD", "SILVER", "CRUDE", "NATURALGAS")
+P_AFTER_20D = Pat.after_fill(20 * 375)      # 20 sessions of NSE minutes
 
 
 def DP(ctx, n_sw=2):
@@ -562,9 +563,9 @@ def lswing06(ctx, mode):
                 lvl = (s.h[m0:start].max() + 0.07 * at) if side > 0 else (s.l[m0:start].min() - 0.07 * at)
             stop = max(lvl - 1.3 * at, prev_l - 0.07 * at) if side > 0 else min(lvl + 1.3 * at, prev_h + 0.07 * at)
             key = f"{g}|{j}"
-            out.append((start, side, 1, float(lvl), m1, float(stop), float(lvl + side * 2.3 * at), -(20 * 375 + 1), NAN,
+            out.append((start, side, 1, float(lvl), m1, float(stop), float(lvl + side * 2.3 * at), P_AFTER_20D, NAN,
                         key, 0.5, float(lvl)))
-            out.append((start, side, 1, float(lvl), m1, float(stop), NAN, -(20 * 375 + 1), NAN, key, 0.5, float(lvl)))
+            out.append((start, side, 1, float(lvl), m1, float(stop), NAN, P_AFTER_20D, NAN, key, 0.5, float(lvl)))
     return out, {1: day_low_trail, -1: day_high_trail}, None
 
 
