@@ -634,6 +634,11 @@ private fun HolidaysCard(model: AppModel) {
                 com.optionslab.app.ui.components.TextButton({ model.removeHoliday(d) }) { Text("✕", style = Type.label.copy(color = p.oxblood)) }
             }
         }
+        // 25 Oct (the arms audit): NSE's special sessions with their own short window (Diwali's Muhurat hour): named, never a trading day for the arms.
+        com.optionslab.engine.NseHours.specialsFrom(com.optionslab.app.data.Market.today()).take(3).forEach { (d, sp) ->
+            Text("${d.format(DateTimeFormatter.ofPattern("EEE d MMM yyyy"))} · ${sp.text} (special session: no arm trades it)",
+                style = Type.bodySmall.copy(color = p.inkSoft))
+        }
         LedgerLine("Updated online", h.fetched?.let { "on $it" } ?: "never")
         BrassButton("Update holidays now", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { model.refreshHolidays() }
         androidx.compose.material3.OutlinedTextField(text, { text = it.filter { c -> c.isDigit() || c == '-' }.take(10) },
@@ -689,6 +694,8 @@ fun RiskPage(model: AppModel) {
             item { SameDirectionCapCard() }
             // 20 Oct, enhancement round 1: Boss's account stop rule over the whole account (in shadow until switched on).
             item { AccountStopCard(model) }
+            // 25 Oct (Boss's decisions on the app audit): the new risk rules - paper on, live in shadow until switched on.
+            item { BossRiskCard(model) }
             // 21 Oct, enhancement round 4: payouts counted in the drawdown (in shadow until switched on; acts only on Boss's PIN).
             item { PayoutDrawdownCard(model) }
             // 20 Oct, enhancement round 2: one exit at a time per contract (in shadow until switched on).
@@ -771,6 +778,12 @@ private fun GuardCard(model: AppModel) {
         val paperLoss = listOf(5_000.0, 10_000.0, 20_000.0, 0.0)
         ParamTokens("Paper bots' daily loss limit (sells what the NSE paper bots hold and stops them for the day)", paperLoss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardPaperDailyLoss) }) { i ->
             loosen(looser(s.guardPaperDailyLoss, paperLoss[i]), ASK_PAPER_LOSS) { model.update { it.copy(guardPaperDailyLoss = paperLoss[i]) } }
+        }
+        // 25 Oct (Boss's decision on the app audit, R7): the paper weekly loss stop - no new paper entry for the rest of the week once the
+        // paper week is down by it. Loosening it (more, or off) takes the PIN, as the paper daily loss limit does; tightening goes at once.
+        val paperWeek = com.optionslab.ira.BossRisk.WEEKLY_CHOICES
+        ParamTokens("Paper bots' weekly loss stop (no new paper entries until Monday)", paperWeek.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.paperWeeklyLoss) }) { i ->
+            loosen(looser(s.paperWeeklyLoss, paperWeek[i]), ASK_PAPER_WEEK) { model.update { it.copy(paperWeeklyLoss = paperWeek[i]) } }
         }
         // The day lock (08 Oct): only ever stops new automatic entries; set here alone (never by voice or a backup).
         val dayLocks = com.optionslab.engine.risk.DayLock.CHOICES
@@ -1064,3 +1077,4 @@ internal fun CommoditiesLimits(s: com.optionslab.app.data.AppSettings, rupees: (
 
 /** 25 Oct (app audit): what the PIN dialog says when the paper bots' daily loss limit is loosened. */
 internal const val ASK_PAPER_LOSS = "Enter your app PIN to loosen the paper bots' daily loss limit."
+internal const val ASK_PAPER_WEEK = "Enter your app PIN to loosen the paper bots' weekly loss stop."

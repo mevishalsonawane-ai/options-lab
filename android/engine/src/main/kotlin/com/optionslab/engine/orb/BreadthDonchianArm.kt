@@ -98,6 +98,16 @@ object BreadthDonchianArm {
     }
 
     /**
+     * 25 Oct (Boss's decision on the arms audit: keep R72's place under the same-direction cap only when it has a break due, not
+     * on every bar): the sides (+1 calls, -1 puts) R72 has a break due on at [now] - one of [signals] inside its fill window
+     * ([DonchianArm.mayFill]) that is not decided yet ([decided]: bought, refused or let go) - each with the end of the latest
+     * such window. Empty when nothing is due. Pure.
+     */
+    fun dueSides(signals: List<DonchianArm.Signal>, now: java.time.LocalDateTime, decided: (DonchianArm.Signal) -> Boolean): Map<Int, java.time.LocalDateTime> =
+        signals.filter { DonchianArm.mayFill(it, now) && !decided(it) }.groupBy { it.side }
+            .mapValues { (_, xs) -> xs.maxOf { it.entryTime.plusMinutes(DonchianArm.FILL_SLACK_MINUTES + 1) } }
+
+    /**
      * Boss's comparison (the point of running both): since [since] (the switch-on day), this arm's closed paper trades
      * ([breadthNets]) next to Donchian's ([donchianNets]), and Donchian's trades that breadth did not confirm ([unconfirmedNets];
      * null: not known yet). Nets after charges, in words. 16 Oct (R73 T7 on R51 only): [stSplit], Donchian's trades split into

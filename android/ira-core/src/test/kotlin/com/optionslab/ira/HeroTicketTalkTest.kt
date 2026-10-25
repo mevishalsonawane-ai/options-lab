@@ -29,10 +29,11 @@ class HeroTicketTalkTest {
     @Test fun theAnswerAlwaysSaysItDidNotPassResearchAndKeepsItsOwnRecord() {
         val a = HeroTicketTalk.answer(facts(status = mapOf("NIFTY" to "not its expiry day", "SENSEX" to "not its expiry day")))
         assertTrue(a.startsWith("Hero ₹1,000 ticket: on, paper only. ${HeroTicketRules.RECORD}."), a)
-        assertTrue("your 25% trail (once it has closed at 2× its price, no stop before that), else 15:05 (no fixed target)" in a, a)
+        // 25 Oct: the default is the trail from the fill (R55), said with its note.
+        assertTrue("your 25% trail (from the fill, so it is also a 25% stop), else 15:05 (no fixed target)" in a, a)
         assertTrue(HeroTicketRules.TRAIL_START_NOTE in a, a)
-        val fill = HeroTicketTalk.answer(HeroTicketTalk.Facts(true, HeroTicketRules.Target.TRAIL_ONLY, emptyList(), emptyMap(), 0, 0.0, HeroTicketRules.TrailStart.AT_FILL))
-        assertTrue("from the fill, so it is also a 25% stop" in fill && HeroTicketRules.TRAIL_START_NOTE !in fill, fill)
+        val two = HeroTicketTalk.answer(HeroTicketTalk.Facts(true, HeroTicketRules.Target.TRAIL_ONLY, emptyList(), emptyMap(), 0, 0.0, HeroTicketRules.TrailStart.AFTER_2X))
+        assertTrue("once it has closed at 2× its price, no stop before that" in two && HeroTicketRules.TRAIL_START_NOTE !in two, two)
         assertTrue("closed at 3× its price" in HeroTicketTalk.answer(HeroTicketTalk.Facts(true, HeroTicketRules.Target.TRAIL_ONLY, emptyList(), emptyMap(), 0, 0.0, HeroTicketRules.TrailStart.AFTER_3X)))
         assertTrue("No ticket today (NIFTY not its expiry day; SENSEX not its expiry day)." in a, a)
         assertTrue("no closed ticket yet" in a && "plain-rules record for 26 Oct" in a, a)
@@ -51,7 +52,7 @@ class HeroTicketTalkTest {
             HeroTicketTalk.Ticket("SENSEX", "Z", 20, 10.0, exit = 9.0, why = "closed_elsewhere", net = -30.0),
             HeroTicketTalk.Ticket("SENSEX", "W", 20, 10.0, exit = 9.0, net = -30.0),
             HeroTicketTalk.Ticket("NIFTY", "V", 65, 10.0))))
-        assertTrue("a 2× target or your 25% trail (once it has closed at 2× its price, no stop before that), whichever comes first, else 15:05" in a, a)
+        assertTrue("a 2× target or your 25% trail (from the fill, so it is also a 25% stop), whichever comes first, else 15:05" in a, a)
         assertTrue("SENSEX15OCT2672500CE 20 @ 24.95, now 30.00 (+₹101 before charges)" in a, a)
         assertTrue("SENSEX15OCT2672400PE bought @ 22.00, sold @ 16.00 on the 25% trail, −₹150 after charges" in a, a)
         assertTrue("sold @ 20.00 at its target" in a && "at 15:05" in a && "closed elsewhere (closed_elsewhere)" in a && "W bought @ 10.00, sold @ 9.00 sold" in a, a)

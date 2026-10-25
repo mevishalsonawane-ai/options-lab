@@ -1630,7 +1630,7 @@ class WatchService : Service() {
                 val me = this@WatchService
                 val laneJob = launch {
                     StopLane.run(stop = { lane.ended }, mode = { lane.mode }, held = { m -> StopLane.heldFor(m, nseHeldSeen) },
-                        look = { m, t -> StopLane.look(me, m, t) }, mcxPassAt = { lane.mcxPassAt })
+                        look = { m, t -> StopLane.look(me, m, t) }, mcxPassAt = { lane.mcxPassAt }, quiet = { m -> StopLane.quietFor(m) })
                 }
                 try {
                     passes(fired, lane)

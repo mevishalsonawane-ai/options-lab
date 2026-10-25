@@ -129,6 +129,12 @@ data class AppSettings(
     val mcxDayLock: Double = com.optionslab.engine.risk.DayLock.DEFAULT_RUPEES,
     /** The commodities' own paper daily loss limit, rupees (0 = off); unset, the paper daily loss limit. Bot settings only. */
     val mcxPaperDailyLoss: Double = 10_000.0,           // 25 Oct: with the NSE paper limit (Boss: "Make it 10k")
+    /**
+     * 25 Oct (Boss's decision on the app audit, R7): the paper weekly loss stop, rupees (0 = off): once the paper week (Monday to
+     * Sunday, after charges) is down by it, the bots open no new paper position for the rest of the week ([BossRiskHost]). Loosening
+     * it takes the PIN (the Account guard page, and by voice), as the paper daily loss limit does. A new key: nothing stored before.
+     */
+    val paperWeeklyLoss: Double = com.optionslab.ira.BossRisk.PAPER_WEEKLY_DEFAULT,
     /** Home's paper running total counts from this day (ISO date; Boss's 08 Oct wish, [com.optionslab.engine.risk.PaperSince]). Words only. */
     val paperSince: String = com.optionslab.engine.risk.PaperSince.DEFAULT_START.toString(),
 ) {
@@ -243,6 +249,7 @@ data class AppSettings(
                 mcxDayLock = com.optionslab.engine.risk.DayLock.clean(p.getDouble("g.mcxDayLock", p.getDouble("g.dayLock", d.dayLock))),
                 mcxPaperDailyLoss = p.getDouble("g.mcxPLoss", p.getDouble("g.pLoss", d.guardPaperDailyLoss)).let { if (it.isFinite() && it >= 0) it else d.mcxPaperDailyLoss }
                     .let { if (p.getInt(PAPER_LOSS_VERSION_KEY, 0) < 1 && it == OLD_PAPER_LOSS) d.mcxPaperDailyLoss else it },
+                paperWeeklyLoss = p.getDouble("g.pWeek", d.paperWeeklyLoss).let { if (it.isFinite() && it >= 0) it else d.paperWeeklyLoss },
                 paperSince = com.optionslab.engine.risk.PaperSince.startOf(p.getString("ui.paperSince", d.paperSince)).toString(),
             )
         }
@@ -320,7 +327,7 @@ data class AppSettings(
                 "g.pLoss" to s.guardPaperDailyLoss, PAPER_LOSS_VERSION_KEY to 1, "g.pDd" to s.guardPaperDrawdownPct, "g.v" to 2, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
                 "g.mcxExit" to s.mcxExpiryExit, "g.mcxOptAt" to s.mcxOptionExitMinute, "g.mcxFutDays5" to s.mcxFutureExitDays,
                 "g.dayLock" to com.optionslab.engine.risk.DayLock.clean(s.dayLock),
-                "g.mcxOwn" to s.mcxOwnLimits, "g.mcxDayLock" to com.optionslab.engine.risk.DayLock.clean(s.mcxDayLock), "g.mcxPLoss" to s.mcxPaperDailyLoss,
+                "g.mcxOwn" to s.mcxOwnLimits, "g.mcxDayLock" to com.optionslab.engine.risk.DayLock.clean(s.mcxDayLock), "g.mcxPLoss" to s.mcxPaperDailyLoss, "g.pWeek" to s.paperWeeklyLoss,
                 "ui.paperSince" to com.optionslab.engine.risk.PaperSince.startOf(s.paperSince).toString(),
             )
 

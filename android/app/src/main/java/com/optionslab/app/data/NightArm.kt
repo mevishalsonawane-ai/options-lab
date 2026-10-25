@@ -209,7 +209,11 @@ object NightArm {
             var changed = runCatching { exits(b, now) }.getOrElse { runCatching { Diag.record("night", "exit check failed: ${it.javaClass.simpleName}") }; true }
             // The strategy lab (11 Oct): Night ran today, on paper (one map write: no setting, no I/O).
             if (b.armed) VariantRunner.saw(NightRules.SOURCE, live = false)
-            if (b.armed && NightRules.entryWindow(now.toLocalTime())) {
+            // 25 Oct (Boss's decision on the arms audit): while hidden (switched off by the 15 Oct cleanup) it still reads the day's
+            // OI build-up at 15:20 and keeps its history ([decide] returns before any entry), so a restore is judged against a current
+            // window, not a stale one. It buys nothing while hidden.
+            val hidden = !b.armed && runCatching { HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.NIGHT) }.getOrDefault(false)
+            if ((b.armed || hidden) && NightRules.entryWindow(now.toLocalTime())) {
                 for (u in NightRules.UNDERLYINGS) {
                     val key = "${now.toLocalDate()}|$u"
                     if (key in b.decided) continue
@@ -304,13 +308,24 @@ object NightArm {
         return n
     }
 
+    /** TEST ONLY: the day's OI build-up for an index instead of the option feed's (null in the app; debug builds only). */
+    @Volatile internal var testBuildUp: ((String) -> Double?)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** TEST ONLY: [u]'s OI history length (the seed plus each day recorded). */
+    internal suspend fun historySizeForTest(u: String): Int = lock.withLock { book().history[u]?.size ?: NightRules.SEED.getValue(u).size }
+
+    /** 25 Oct: the day's verdict while hidden: no entry, the OI history kept up to date. */
+    internal const val HIDDEN_OI = "hidden (your 15 Oct cleanup): no new entry; its OI history was updated"
+
     /** [decide]'s word for "the 15:19 minute is not in yet": nothing decided, looked at again (until 15:20:30). */
     private const val WAITING = "night_waiting_for_1519"
 
     /** 15:20's decision for [u]: what it did, in a few words. Records the day's build-up once. */
     private suspend fun decide(b: Book, u: String, now: LocalDateTime): String {
         // 15 Oct (Boss's cleanup): hidden, it buys nothing new; what it holds is still sold at 09:16 (memory only).
-        if (HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.NIGHT)) return "hidden (your 15 Oct cleanup): no new entry"
+        // 25 Oct (the arms audit): but its OI history is still updated (below), so it is never judged against a stale window.
+        val hidden = runCatching { HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.NIGHT) }.getOrDefault(true)
         val today = now.toLocalDate()
         // The index's minutes to 15:19, and the previous session's close.
         val key = Upstox.INDEX_KEYS[u] ?: return "night_no_index_data"
@@ -320,6 +335,14 @@ object NightArm {
         val mins = LocalCandles.overlay(key, feedMins, nowSec).filter { it.istDate == today && it.istMinute <= 15 * 60 + 19 }
         val last = mins.lastOrNull() ?: return "night_no_index_data"
         if (last.istMinute < 15 * 60 + 19 && now.toLocalTime().isBefore(java.time.LocalTime.of(15, 20, 30))) return WAITING
+        // 25 Oct (the arms audit): hidden, the day's OI build-up is still recorded (its history kept current), then nothing more.
+        if (hidden) {
+            val listedH = Market.contracts().filter { it.underlying == u }
+            val nearH = com.optionslab.engine.orb.OrbRules.expiryOnOrAfter(today, listedH.map { it.expiry }.distinct())
+            val buH = nearH?.let { testBuildUp?.invoke(u) ?: buildUp(listedH.filter { c -> c.expiry == it }, last.close, u, today) }
+            if (buH != null) b.history.getOrPut(u) { NightRules.SEED.getValue(u).toMutableList() } += buH
+            return HIDDEN_OI + (if (buH == null) " (no build-up read today)" else "")
+        }
         val prev = Net.history(key, today.minusDays(10), today.minusDays(1)).filter { it.istDate.isBefore(today) }.maxByOrNull { it.epochSecond }
             ?: return "night_no_previous_close"
         val x = last.close
@@ -328,7 +351,7 @@ object NightArm {
         // The day-end build-up of the nearest series, z-scored against the sessions before (recorded once a day, traded or not).
         val listed = Market.contracts().filter { it.underlying == u }
         val near = com.optionslab.engine.orb.OrbRules.expiryOnOrAfter(today, listed.map { it.expiry }.distinct())
-        val bu = near?.let { buildUp(listed.filter { c -> c.expiry == it }, x, u, today) }
+        val bu = near?.let { testBuildUp?.invoke(u) ?: buildUp(listed.filter { c -> c.expiry == it }, x, u, today) }
         val hist = b.history.getOrPut(u) { NightRules.SEED.getValue(u).toMutableList() }
         val z = bu?.let { NightRules.z(it, hist) }
         if (bu != null) hist += bu

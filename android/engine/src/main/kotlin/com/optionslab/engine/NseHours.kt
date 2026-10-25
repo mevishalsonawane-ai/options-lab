@@ -56,5 +56,31 @@ object NseHours {
     /** The index (cash) session is on at [minute]. */
     fun indexOpen(minute: Int): Boolean = minute in OPEN until INDEX_CLOSE
 
+    /** A special session: its own short window instead of 09:15 to the close (Diwali's Muhurat hour). */
+    data class Special(val open: LocalTime, val close: LocalTime, val name: String) {
+        val text: String get() = "$name, ${open.toString().take(5)}-${close.toString().take(5)} IST"
+    }
+
+    /**
+     * 25 Oct 2026 (the arms audit's last item): NSE's special sessions. Sunday 8 Nov 2026 is Diwali's Muhurat trading, an
+     * evening hour on a Sunday (MCX's own table, [com.optionslab.engine.mcx.McxSession.BUILT_IN], has the same 18:00-19:00 from
+     * MCX's circular; NSE's circular gives the exact minutes nearer the day, so this window is the expected one). No arm trades it:
+     * every arm's clock is the 09:15-15:30 session, so the day is NOT a regular trading day, even if it is added by hand as a
+     * special session ([regular]); the screens name it.
+     */
+    val SPECIAL_SESSIONS: Map<LocalDate, Special> = mapOf(
+        LocalDate.of(2026, 11, 8) to Special(LocalTime.of(18, 0), LocalTime.of(19, 0), "Diwali Muhurat trading"),
+    )
+
+    /** [day]'s special session, or null for an ordinary day. */
+    fun special(day: LocalDate): Special? = SPECIAL_SESSIONS[day]
+
+    /** Whether [day] may run the regular 09:15 session's clock: not a special session (the trading-day calendar is the caller's). */
+    fun regular(day: LocalDate): Boolean = day !in SPECIAL_SESSIONS
+
+    /** The special sessions on or after [from], oldest first. */
+    fun specialsFrom(from: LocalDate): List<Pair<LocalDate, Special>> =
+        SPECIAL_SESSIONS.entries.filter { !it.key.isBefore(from) }.sortedBy { it.key }.map { it.key to it.value }
+
     private fun time(m: Int): LocalTime = LocalTime.of(m / 60, m % 60)
 }

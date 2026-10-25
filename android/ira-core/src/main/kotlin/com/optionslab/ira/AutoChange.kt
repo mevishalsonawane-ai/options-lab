@@ -753,6 +753,88 @@ object AutoChange {
         Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "the same-direction cap on automatic paper entries")
 
+    // ---- 25 Oct (Boss: "Do whatever you think better for application", on the app audit's open decisions) ----------------
+    // Each new PAPER rule is logged once as Boss's decision (kept), shown in the timeline, and undone in one tap. None has
+    // "liquidity" in its target, so the Liquidity paper-test freeze never holds its Undo. Paper only: live stays in shadow.
+
+    /** The account stop rule's paper copy (-Rs 40,000 from the best, -Rs 13,000 a month; [BossRisk], R6). */
+    const val ACCOUNT_STOP_PAPER_TARGET = "filter:account_stop_paper"
+    /** The weekly loss stop on paper (Rs 20,000 a week; R7). */
+    const val WEEKLY_STOP_PAPER_TARGET = "filter:weekly_stop_paper"
+    /** The 2% per-trade risk cap on paper (R1). */
+    const val RISK_CAP_PAPER_TARGET = "filter:risk_cap_paper"
+    /** Opposite bets between arms on the same index refused on paper (R5). */
+    const val OPPOSITE_PAPER_TARGET = "filter:opposite_bets_paper"
+    /** Research h14's capped marketable limit on Liquidity's paper entries (E1). */
+    const val CAPPED_LIMIT_PAPER_TARGET = "filter:liq_capped_limit_paper"
+    /** Liquidity's paper books skip their index's own expiry day (the research rule; the arms audit). */
+    const val EXPIRY_SKIP_PAPER_TARGET = "filter:liq_expiry_skip_paper"
+    /** The Hero Rs 1,000 ticket's trail from the fill (R55's recommended cell; the arms audit). */
+    const val TICKET_TRAIL_TARGET = "filter:ticket_trail_from_fill"
+
+    /**
+     * The risk limits whose switch-off LOOSENS a limit: their Undo asks the app PIN, as loosening the paper loss limit does
+     * (CLAUDE.md: no bypass of the guard; Boss, 25 Oct: loosening any new limit asks the PIN).
+     */
+    val PIN_TO_LOOSEN: Set<String> = setOf(ACCOUNT_STOP_PAPER_TARGET, WEEKLY_STOP_PAPER_TARGET, RISK_CAP_PAPER_TARGET, OPPOSITE_PAPER_TARGET)
+
+    /** All of 25 Oct's paper rules. */
+    val BOSS_PAPER_RULES: List<String> = listOf(ACCOUNT_STOP_PAPER_TARGET, WEEKLY_STOP_PAPER_TARGET, RISK_CAP_PAPER_TARGET,
+        OPPOSITE_PAPER_TARGET, CAPPED_LIMIT_PAPER_TARGET, EXPIRY_SKIP_PAPER_TARGET, TICKET_TRAIL_TARGET)
+
+    /** Does undoing [c] loosen one of 25 Oct's paper risk limits (so it takes the PIN)? */
+    fun undoLoosensLimit(c: Change): Boolean = c.kind == Kind.PAPER_FILTER && c.target in PIN_TO_LOOSEN && c.to == ON
+
+    /**
+     * 25 Oct: one of the new paper rules ([target], one of [BOSS_PAPER_RULES]) switched [on] or off, for the change timeline; null
+     * for any other target. Each only skips, sizes down or exits sooner on paper, so on lowers risk and off takes that away.
+     */
+    fun bossPaperRule(target: String, on: Boolean, weeklyLimit: Double = BossRisk.PAPER_WEEKLY_DEFAULT): Change? {
+        val (onWords, offWords, what) = when (target) {
+            ACCOUNT_STOP_PAPER_TARGET -> Triple(
+                "your decision on the app audit (25 Oct, R6): the account stop rule's paper copy - once the paper account is -Rs 40,000 " +
+                    "from its best or -Rs 13,000 in a calendar month, the bots open no new paper position and say why; open positions keep " +
+                    "their exits; live stays in shadow (logged only, its own switch off)",
+                "the account stop rule's paper copy is off: paper entries are no longer stopped by it",
+                "the account stop rule on paper")
+            WEEKLY_STOP_PAPER_TARGET -> Triple(
+                "your decision on the app audit (25 Oct, R7): once the paper week (Monday to Sunday) is down ${BossRisk.rs(weeklyLimit)}, the " +
+                    "bots open no new paper position for the rest of the week; open positions keep their exits; loosening it takes your PIN; " +
+                    "live stays in shadow",
+                "the weekly loss stop is off for paper",
+                "the weekly loss stop on paper")
+            RISK_CAP_PAPER_TARGET -> Triple(
+                "your decision on the app audit (25 Oct, R1, Aziz's 2%): a paper entry whose risk to its stop is over 2% of the account " +
+                    "is sized down to the lots that fit, or skipped when one lot is over it (logged, kept as a would-be entry); never sized " +
+                    "up; live stays in shadow",
+                "the 2% risk cap is off for paper",
+                "the 2% per-trade risk cap on paper")
+            OPPOSITE_PAPER_TARGET -> Triple(
+                "your decision on the app audit (25 Oct, R5; 23 Oct's R52 call against Solo 2.0's put): a later arm's paper entry that " +
+                    "bets the other way on an index another arm already holds is skipped (logged, kept as a would-be entry); live stays in shadow",
+                "opposite bets between arms are allowed again on paper",
+                "opposite bets between arms (paper)")
+            CAPPED_LIMIT_PAPER_TARGET -> Triple(
+                "your decision on the app audit (25 Oct, E1; research h14 passed every gate): Liquidity's paper entries buy with a limit " +
+                    "0.5% over the signal's price, worked 3 minutes and never moved; unfilled by then, the entry is let go (logged); its " +
+                    "trades are labelled apart from the plain-rules record; live stays in shadow",
+                "Liquidity's paper entries are plain market orders again",
+                "h14's capped limit on Liquidity's paper entries")
+            EXPIRY_SKIP_PAPER_TARGET -> Triple(
+                "your decision on the arms audit (25 Oct): Liquidity's paper books skip their index's own expiry day, as every study they " +
+                    "rest on did (research/liquidity_break.py), so the 26 Oct comparison is like for like; open positions keep their exits",
+                "Liquidity's paper books trade their index's expiry day again",
+                "Liquidity's expiry-day skip (paper)")
+            TICKET_TRAIL_TARGET -> Triple(
+                com.optionslab.engine.orb.HeroTicketRules.TRAIL_FILL_REASON,
+                "the Hero ₹1,000 ticket's trail starts after 2× again (new tickets)",
+                "the Hero ₹1,000 ticket's trail from the fill (paper)")
+            else -> return null
+        }
+        return Change(Kind.PAPER_FILTER, target, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF, if (on) onWords else offWords,
+            Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER, what = what)
+    }
+
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
         val back = c.copy(from = c.to, to = c.from, reason = reason, risk = Risk.NEUTRAL_SHADOW, revert = true)

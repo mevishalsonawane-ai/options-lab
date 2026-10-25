@@ -65,7 +65,18 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
-        // 25 Oct (Boss: "find out what all the issues we have in the application", after the books): the app audit's fixes, newest of all.
+        // 25 Oct (Boss: "Do whatever you think better for application", on the audits' open decisions): newest of all.
+        Entry("2026-10-25-boss-decisions", OCT25, "Your risk decisions are in",
+            "Your account stop rule now also stops new paper entries, and a paper week down ₹20,000 stops them until Monday. " +
+                "A paper trade risking over 2% of the account to its stop is sized down or skipped. " +
+                "A second arm betting the other way on the same index is skipped on paper. " +
+                "Liquidity buys on paper with a limit 0.5% over the signal price, and skips its index's expiry day. " +
+                "The Hero ticket's trail starts at the fill; NG evening breakout is off; Night keeps its history while hidden. " +
+                "Stops are looked at every 5 seconds while prices are quiet, and each entry's implied volatility is recorded. " +
+                "R72 keeps a place under the cap only when it has a break due, and the Muhurat Sunday is listed. " +
+                "Live trades only log these rules for now, and each paper change undoes in one tap.",
+            "Bot settings → Risk rules; Autopilot → change timeline; the weekly stop's amount is on the Account guard card"),
+        // 25 Oct (Boss: "find out what all the issues we have in the application", after the books): the app audit's fixes.
         Entry("2026-10-25-app-audit-fixes", OCT25, "Fixes from the app audit against the books",
             "Paper fills are now measured, stops against their trigger, and the diagnostics show them. " +
                 "A moment's failed read can no longer switch the passed arms off or forget what they hold. " +

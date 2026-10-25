@@ -129,6 +129,9 @@ object LossBreaker {
                 snap.positions.positions.filter { it.exchange != "MCX" }.map { it.symbol to it.totalPnlToday })
         }
         val paper = day?.total
+        // 25 Oct (Boss's decisions on the app audit): the paper account stop's copy and the weekly loss stop read the paper days and
+        // today's figure here, in the watch pass (memory for the order path afterwards, [BossRiskHost]).
+        runCatching { BossRiskHost.refresh(context, paper, s) }
         // 21 Oct: the MCX positions' day after charges, apart (memory: the snapshot just read).
         val parts = if (!split || day == null) null else runCatching { com.optionslab.ira.SegmentLock.split(day.total, day.rows, day.charges) }.getOrNull()
         // 16 Oct: waited 5 s at most - this runs before the arms' exits and entries in each pass, and one hung read of

@@ -114,3 +114,18 @@ measurement, or restore an arm's own exit rule on paper (H9).
    paper loss budget so one arm's morning does not stop the others.
 6. **Weekly loss stop (R7)** and the 6% month (Aziz).
 7. **IV logging at entry, then research on an IV filter (V1, V2):** measurement first; any filter needs the research gates.
+
+## Boss's decisions (25 Oct: "Do whatever you think better for application")
+
+Implemented on branch `claude/boss-decisions` (see its `RESULT.md`). In short:
+
+- **Paper, acting now** (each logged in the Autopilot change timeline as Boss's decision, undone in one tap; loosening a risk
+  limit takes the PIN): the account stop rule's paper copy (R6), a ₹20,000 weekly loss stop (R7), the 2% risk cap per trade
+  (R1), no opposite bets between arms on one index (R5), h14's capped limit on Liquidity's entries (E1), Liquidity's
+  expiry-day skip, the Hero ticket's trail from the fill (R55), NG evening breakout switched off (R53, R83).
+- **Live, shadow only** (logged, nothing changes; a switch off by default where one exists): the weekly stop, the 2% cap and
+  opposite bets; the capped limit and the spread check (E2) are logged with no switch.
+- **Everywhere**: stop looks every 5 s while a held position's stream price is quiet (H4; it only adds looks), with the gaps
+  measured; the implied volatility of each automatic entry recorded (V1, record only).
+- **Also**: R72 keeps its place under the same-direction cap only while it has a break due; Night (R3) keeps its OI history
+  while hidden; NSE's Muhurat Sunday (8 Nov 2026) is a special session no arm trades.

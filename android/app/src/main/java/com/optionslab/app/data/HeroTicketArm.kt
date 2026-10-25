@@ -71,6 +71,19 @@ object HeroTicketArm {
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /**
+     * TEST ONLY: the book as an older build left it - [start] saved and the 25 Oct trail change not run yet ([HeroTicketRules.TRAIL_FILL_MIGRATION]
+     * taken out of its marks); written, and forgotten from memory, so the next read runs the one-time change. Debug builds only.
+     */
+    internal fun asBefore25OctForTest(start: HeroTicketRules.TrailStart) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        val b = book()
+        b.trailStart = start
+        b.migrated -= HeroTicketRules.TRAIL_FILL_MIGRATION
+        save(b)
+        cache = null
+    }
+
+    /**
      * One paper ticket. [target] Boss's exit pick when it was bought; [paperFill] the paper sale's own price when booked apart;
      * [targetOrderId] its 2x / 3x target resting in the paper book as a LIMIT SELL (filled there on any tick, at the target).
      */
@@ -147,6 +160,7 @@ object HeroTicketArm {
         cache = b
         // 15 Oct, Boss's choice: on once, on paper. A book that could not be read is never switched on by itself (Boss may have
         // switched it off): it is only marked done. Never in IraGoldAlgo.
+        var changed = false
         if (AUTO_ON !in b.migrated) {
             b.migrated += AUTO_ON
             val on = !unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD
@@ -155,8 +169,23 @@ object HeroTicketArm {
                 note(b, "switched on once by the 15 Oct update, on your choice - paper only; ${HeroTicketRules.BOSS_CHOICE}")
                 runCatching { com.optionslab.app.ira.Autopilot.logBossTicketOn() }
             }
-            save(b)
-        } else publish(b)
+            changed = true
+        }
+        // 25 Oct (Boss's decision on the arms audit; research R55): a book still on the old "after 2x" placeholder starts new tickets'
+        // trail at the fill, once. "After 3x" (a choice of Boss's own) stays; an open ticket keeps the start it was bought with. A book
+        // that could not be read is only marked done (its setting is not known). Logged in the Autopilot timeline, one tap back.
+        if (HeroTicketRules.TRAIL_FILL_MIGRATION !in b.migrated) {
+            b.migrated += HeroTicketRules.TRAIL_FILL_MIGRATION
+            if (!unreadable && b.trailStart == HeroTicketRules.TrailStart.AFTER_2X) {
+                b.trailStart = HeroTicketRules.TrailStart.AT_FILL
+                note(b, "trail for new tickets: from the fill - ${HeroTicketRules.TRAIL_FILL_REASON}")
+                if (!com.optionslab.app.BuildConfig.GOLD) runCatching {
+                    com.optionslab.ira.AutoChange.bossPaperRule(com.optionslab.ira.AutoChange.TICKET_TRAIL_TARGET, true)?.let { com.optionslab.app.ira.Autopilot.logBossRuleOnce(it) }
+                }
+            }
+            changed = true
+        }
+        if (changed) save(b) else publish(b)
         return b
     }
 
@@ -167,7 +196,8 @@ object HeroTicketArm {
         if (p.has("exit")) p.getDouble("exit") else null, p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
         p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), if (p.has("paperFill")) p.getDouble("paperFill") else null,
         p.optString("targetOrderId").ifEmpty { null },
-        p.optString("trailStart").ifEmpty { HeroTicketRules.TrailStart.DEFAULT.key },
+        // A ticket saved before 15 Oct's field: the start then in force (25 Oct: no longer the default).
+        p.optString("trailStart").ifEmpty { HeroTicketRules.TrailStart.LEGACY.key },
     )
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("index", p.index).put("symbol", p.symbol).put("right", p.right).put("qty", p.qty)

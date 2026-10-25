@@ -181,9 +181,12 @@ class HeroTicketRulesTest {
     @Test fun whereTheTrailStartsAtTheFillAfter2xOrAfter3x() {
         val e = 10.0
         val at = t(12, 31).plusSeconds(20)
-        assertEquals(HeroTicketRules.TrailStart.AFTER_2X, HeroTicketRules.TrailStart.DEFAULT, "the placeholder until Boss chooses (R55)")
-        assertEquals(HeroTicketRules.TrailStart.AFTER_2X, HeroTicketRules.TrailStart.of(null)); assertEquals(HeroTicketRules.TrailStart.AFTER_2X, HeroTicketRules.TrailStart.of("x")); assertEquals(HeroTicketRules.TrailStart.AT_FILL, HeroTicketRules.TrailStart.of("fill")); assertEquals(HeroTicketRules.TrailStart.AFTER_3X, HeroTicketRules.TrailStart.of("3x"))
-        assertTrue("R55" in HeroTicketRules.TRAIL_START_NOTE && "after 2×" in HeroTicketRules.TRAIL_START_NOTE)
+        // 25 Oct (Boss's decision on the arms audit): R55's recommended cell, the trail from the fill, is the default now.
+        assertEquals(HeroTicketRules.TrailStart.AT_FILL, HeroTicketRules.TrailStart.DEFAULT, "R55's recommended cell")
+        assertEquals(HeroTicketRules.TrailStart.AFTER_2X, HeroTicketRules.TrailStart.LEGACY, "an old record without the field reads as the placeholder then in force")
+        assertEquals(HeroTicketRules.TrailStart.AT_FILL, HeroTicketRules.TrailStart.of(null)); assertEquals(HeroTicketRules.TrailStart.AT_FILL, HeroTicketRules.TrailStart.of("x")); assertEquals(HeroTicketRules.TrailStart.AFTER_2X, HeroTicketRules.TrailStart.of("2x")); assertEquals(HeroTicketRules.TrailStart.AFTER_3X, HeroTicketRules.TrailStart.of("3x"))
+        assertTrue("R55" in HeroTicketRules.TRAIL_START_NOTE && "from the fill" in HeroTicketRules.TRAIL_START_NOTE)
+        assertTrue("-Rs 59,286" in HeroTicketRules.TRAIL_FILL_REASON && "paper only" in HeroTicketRules.TRAIL_FILL_REASON)
         // A ticket that never rises: the fill trail is also a 25% stop; after 2x / 3x there is no stop (held to 15:05).
         val fall = bars(t(12, 33) to 9.0, t(12, 34) to 7.0, t(12, 40) to 2.0)
         assertEquals(t(12, 34), HeroTicketRules.trail(e, at, fall, HeroTicketRules.TrailStart.AT_FILL).hitAt)

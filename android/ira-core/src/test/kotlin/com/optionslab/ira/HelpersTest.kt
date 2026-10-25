@@ -130,6 +130,13 @@ class SettingsTalkTest {
         assertEquals("DAILY_LOSS" to 10000.0, set("increase the loss limit to 10,000"))
         assertEquals("DAILY_LOSS" to 0.0, set("turn off the daily loss limit"))
         assertEquals("PAPER_DAILY_LOSS" to 8000.0, set("set paper daily loss to 8000"))
+        // 25 Oct (Boss's decision on the app audit): the paper weekly loss stop has its own name; "your weekly loss limit" stays
+        // Jarvis's own trades' cap, and "paper daily" is never the weekly one.
+        assertEquals("PAPER_WEEKLY_LOSS" to 15000.0, set("set paper weekly loss stop to 15000"))
+        assertEquals("PAPER_WEEKLY_LOSS" to 30000.0, set("change the paper weekly loss limit to 30k"))
+        assertEquals("PAPER_WEEKLY_LOSS" to 0.0, set("turn off the weekly paper loss stop"))
+        assertEquals(Command.Kind.JTRADES_WEEKLY, c("set your weekly loss limit to 10000")?.kind)
+        assertEquals("PAPER_DAILY_LOSS" to 6000.0, set("set paper daily loss limit to 6000"))
         assertEquals("ORDER_VALUE" to 100000.0, set("set order value to 1 lakh"))
         assertEquals("MAX_OPEN" to 2.0, set("set max open positions to 2"))
         assertEquals("MAX_TRADES" to 20.0, set("set max trades per day to 20"))

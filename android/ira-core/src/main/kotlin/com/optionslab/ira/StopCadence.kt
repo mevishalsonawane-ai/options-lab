@@ -55,7 +55,19 @@ object StopCadence {
         private val windowMs: Long = WINDOW_MS,
         private val pollMs: Long = LANE_POLL_MS,
         private val restMs: Long = LANE_REST_MS,
+        /**
+         * 25 Oct (Boss's decision on the app audit, H4): whether the held positions' prices are quiet now (the stream has no fresh
+         * tick for them), read before every wait (memory only). While quiet, the window is [quietWindowMs] (5 s), not [windowMs]:
+         * it only ever adds looks, never removes one. Off (false) by default: the old 15 s clock exactly.
+         */
+        private val quiet: () -> Boolean = { false },
+        private val quietWindowMs: Long = QUIET_WINDOW_MS,
+        /** Each look's start and whether it was a quiet one (the quiet-gap measure, [QuietGaps]). */
+        private val started: (Long, Boolean) -> Unit = { _, _ -> },
     ) {
+        /** The window now: [quietWindowMs] while [quiet] says so (a failure to read it counts as quiet: more looks, never fewer). */
+        private fun window(): Long = if (runCatching(quiet).getOrDefault(true)) minOf(quietWindowMs, windowMs) else windowMs
+
         /**
          * Runs until [stop] says so (read between looks: a look under way is finished, never cut). [look] gets its start time; a
          * failure in it (not a cancellation) goes to [failed] and the lane goes on. [outside]: when another look at the same stops
@@ -67,21 +79,28 @@ object StopCadence {
                         failed: (Throwable) -> Unit = {}, outside: () -> Long = { 0L }) {
             var due = 0L          // 0: the first held look is due at once
             var lastStart = 0L
+            var lastEnd = 0L
             var wasHeld = false
             while (!stop()) {
                 if (!runCatching(held).getOrDefault(true)) {
                     if (wasHeld) { wasHeld = false; runCatching(idle) }
                     due = 0L
                     lastStart = 0L
+                    lastEnd = 0L
                     sleep(pollMs)
                     continue
                 }
                 wasHeld = true
                 val t = now()
+                // 25 Oct: the window read again before every wait, so a stream that goes quiet brings the next look forward at
+                // once (5 s after the last look started, or [restMs] after a slow one ended), never later than before.
+                val w = window()
+                if (due != 0L && lastStart > 0L && lastEnd > 0L) due = minOf(due, windowEnd(lastStart, lastEnd, w, restMs))
                 val other = runCatching(outside).getOrDefault(0L)
-                if (other > lastStart && other <= t) { lastStart = other; due = other + windowMs + OUTSIDE_GRACE_MS }
-                if (due != 0L && t < due && due - t <= windowMs + OUTSIDE_GRACE_MS) { sleep(minOf(due - t, pollMs)); continue }
+                if (other > lastStart && other <= t) { lastStart = other; due = other + w + OUTSIDE_GRACE_MS; lastEnd = 0L }
+                if (due != 0L && t < due && due - t <= w + OUTSIDE_GRACE_MS) { sleep(minOf(due - t, pollMs)); continue }
                 lastStart = t
+                runCatching { started(t, w < windowMs) }
                 try {
                     look(t)
                 } catch (e: kotlin.coroutines.cancellation.CancellationException) {
@@ -91,8 +110,56 @@ object StopCadence {
                 } catch (e: Throwable) {
                     runCatching { failed(e) }
                 }
-                due = windowEnd(t, now(), windowMs, restMs)
+                lastEnd = now()
+                due = windowEnd(t, lastEnd, window(), restMs)
             }
+        }
+    }
+
+    /** 25 Oct (H4): the stop lane's window while the held positions' prices are quiet (no fresh stream tick). */
+    const val QUIET_WINDOW_MS = 5_000L
+    /** A quiet-time gap over this between two looks is counted (the promise is about 5 s; a second's grace for the look itself). */
+    const val QUIET_DRIFT_MS = 6_000L
+
+    /**
+     * 25 Oct (Boss's decision, H4: "measure that stop checks never run more than about 5 s apart while a position is held and the
+     * stream is quiet"): the gaps between looks that both started on the quiet clock, the same day. Thread-safe; memory only.
+     */
+    class QuietGaps {
+        private var day: LocalDate? = null
+        private var lastMs = 0L
+        private var lastQuiet = false
+        private var looks = 0
+        private var over = 0
+        private var worst = 0L
+
+        /** A look started at [startMs] on [today]; [quiet]: on the quiet clock. Returns the gap when it is over [QUIET_DRIFT_MS], else null. */
+        @Synchronized fun look(startMs: Long, quiet: Boolean, today: LocalDate): Long? {
+            if (day != today) { day = today; lastMs = 0L; lastQuiet = false; looks = 0; over = 0; worst = 0L }
+            val prev = lastMs
+            val both = quiet && lastQuiet && prev > 0L && startMs >= prev
+            lastMs = startMs; lastQuiet = quiet
+            if (!both) return null
+            looks++
+            val gap = startMs - prev
+            if (gap > worst) worst = gap
+            if (gap <= QUIET_DRIFT_MS) return null
+            over++
+            return gap
+        }
+
+        /** Nothing held any more: the next quiet look starts a new count (a gap with nothing held is no gap). */
+        @Synchronized fun idle() { lastMs = 0L; lastQuiet = false }
+
+        /** (gaps measured, gaps over 6 s, the worst gap in ms) today. */
+        @Synchronized fun today(today: LocalDate): Triple<Int, Int, Long> = if (day == today) Triple(looks, over, worst) else Triple(0, 0, 0L)
+
+        /** The diagnostics' line. */
+        fun line(today: LocalDate): String {
+            val (n, o, w) = today(today)
+            return if (n == 0) "Quiet-stream stop checks: none measured today (the stream kept every held price fresh, or nothing was held)."
+            else if (o == 0) "Quiet-stream stop checks: all $n gaps while holding were 6 s or less today (worst ${"%.1f".format(java.util.Locale.ENGLISH, w / 1000.0)} s)."
+            else "Quiet-stream stop checks: $o of $n gaps while holding were over 6 s today (worst ${w / 1000} s)."
         }
     }
 

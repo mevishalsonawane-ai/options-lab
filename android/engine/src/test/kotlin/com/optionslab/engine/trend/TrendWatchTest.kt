@@ -93,7 +93,8 @@ class TrendWatchTest {
     @Test
     fun heroTestedSettingOnly() {
         assertTrue(TrendWatch.heroTested("2x", "trail"))
-        assertTrue(TrendWatch.heroTested(null, null))           // the defaults: after 2x, trail only
+        // 25 Oct: the default trail start is the fill now (R55), which R63 did not test with the trend exit: notes only.
+        assertFalse(TrendWatch.heroTested(null, null))
         assertFalse(TrendWatch.heroTested("fill", "trail"))
         assertFalse(TrendWatch.heroTested("2x", "3x"))
     }

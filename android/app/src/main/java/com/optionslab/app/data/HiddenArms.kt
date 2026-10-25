@@ -330,6 +330,12 @@ object HiddenArms {
     /** TEST ONLY: as after a restart - the state read again from its file on the next pass. */
     internal fun reloadForTest() { loaded = false; unread = false; _state.value = ArmsCleanup.State(); ids.clear() }
 
+    /** TEST ONLY: [key] hidden (as the cleanup would leave it), memory only. Debug builds only. */
+    internal fun hideForTest(key: String) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        _state.value = _state.value.copy(hidden = _state.value.hidden + key)
+    }
+
     /** TEST ONLY: the file read now, as the start does (a failure leaves [unread] set). */
     internal fun loadForTest() { runCatching { load() } }
 

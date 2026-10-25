@@ -150,7 +150,7 @@ object Broker {
         return on
     }
 
-    internal fun entryRecheck(o: Kite.Order, arm: String? = null): String? {
+    internal fun entryRecheck(o: Kite.Order, arm: String? = null, intended: Double? = null, stop: Double? = null): String? {
         // The kill switch kept in memory and read again only when a kept-elsewhere setting changed (g.kill is one of them):
         // the door reads nothing from the settings store on the order path (round 2's rule), yet sees a flip at once.
         if (killOn()) return "refused: the kill switch is on"
@@ -181,6 +181,12 @@ object Broker {
             // saved strategy's basket leg is never asked (one leg refused could leave the rest unhedged): its automatic start is.
             if (o.tag != "iraalgostrat")
                 runCatching { AccountStopHost.doorCheck(o.tradingSymbol, arm ?: o.tag) }.getOrNull()?.let { return it }
+            // 25 Oct (Boss's decisions on the app audit, [BossRiskHost]): the weekly loss stop, opposite bets, the 2% risk cap and h14's
+            // capped limit on the bots' live BUYs - each in SHADOW (logged only) unless Boss switches its live switch on; the spread
+            // check is shadow only. Memory only; they only ever refuse. A saved strategy's basket leg is never asked.
+            if (o.tag != "iraalgostrat" && o.side == Kite.Side.BUY)
+                runCatching { BossRiskHost.liveDoor(o.tradingSymbol, o.exchange, arm ?: o.tag, o.quantity * o.multiplier.coerceAtLeast(1),
+                    o.lotSize * o.multiplier.coerceAtLeast(1), intended ?: o.price, stop) }.getOrNull()?.let { return it }
         }
         return null
     }
@@ -1403,8 +1409,13 @@ object Broker {
         // queued on one signal each passed the cap's check before the one ahead of it was counted. A reply lost on the way (the
         // order may exist) counts too: counting one too many only lowers risk, and the next positions read corrects it.
         val counted = o.tag in BOT_TAGS && o.tag != "iraalgostrat"
-        fun count() = ExposureCapHost.liveEntered(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag)
-        return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm) }) {
+        fun count() {
+            ExposureCapHost.liveEntered(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag)
+            // 25 Oct (Boss's decision on the app audit, V1): the IV of each bot's live entry, record only (worked out in the background).
+            if (o.side == Kite.Side.BUY && o.exchange != com.optionslab.engine.mcx.Mcx.EXCHANGE)
+                runCatching { BossRiskHost.liveEntryIv(o.tradingSymbol, arm ?: o.tag, intended ?: o.price ?: tokenKnown("${o.exchange}:${o.tradingSymbol}")?.let { KiteStream.tick(it)?.last }) }
+        }
+        return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm, intended, stop) }) {
             com.optionslab.app.work.TradingBusy.during {
                 try { sendChecked(o, false, arm, intended).also { if (counted) count() } }
                 catch (e: Exception) { if (counted && e !is kotlinx.coroutines.CancellationException && !definite(e)) runCatching { count() }; throw e }

@@ -127,7 +127,8 @@ internal fun mcxExplanation(arm: String, v: McxPaperArms.View): List<String> = l
     McxPaperArms.rules(arm),
     com.optionslab.ira.Vetting.judge(McxPaperArms.label(arm), v.trades[arm].orEmpty(), runCatching { com.optionslab.app.data.Market.today() }.getOrNull()).text(),
     v.status[arm]?.takeIf { v.isArmed(arm) },
-    com.optionslab.engine.mcx.McxMorningPark.ROW.takeIf { !v.isArmed(arm) && arm in v.parked },
+    (if (arm == com.optionslab.engine.mcx.McxEvePark.SOURCE) com.optionslab.engine.mcx.McxEvePark.ROW else com.optionslab.engine.mcx.McxMorningPark.ROW)
+        .takeIf { !v.isArmed(arm) && arm in v.parked },
 )
 
 /** Its key numbers: its closed paper trades and their net after charges. */

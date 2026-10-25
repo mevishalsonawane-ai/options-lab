@@ -375,6 +375,10 @@ object Diag {
         append(runCatching { AccountStopHost.line() }.getOrElse { "Account stop rule: could not read" }).append('\n')
         // 21 Oct: each segment's day lock and the commodities' own loss stop, said plainly with the amount and the time.
         append(runCatching { DayLockGuard.diagLine() }.getOrElse { "Day lock: could not read" }).append('\n')
+        // 25 Oct (Boss's decisions on the app audit): the new risk rules (paper on, live in shadow), the IV at entry record, and how
+        // far apart the stops were looked at while the held prices were quiet.
+        runCatching { BossRiskHost.lines() }.getOrElse { listOf("New risk rules: could not read") }.forEach { append(it).append('\n') }
+        append(runCatching { com.optionslab.app.work.StopLane.quietLine() }.getOrElse { "Quiet-stream stop checks: could not read" }).append('\n')
     }
 
     /** 20 Oct, enhancement round 2 (idea 1): the exit coordinator's day. Its own function (the report's one is near the compiler's limit). */

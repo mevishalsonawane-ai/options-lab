@@ -85,6 +85,22 @@ class IraKillSwitchTest : RobolectricTest() {
         assertNotNull(paperTighter)
     }
 
+    /** 25 Oct (Boss's decision on the app audit): the paper weekly loss stop asks the PIN to loosen, by voice as on its page. */
+    @Test fun jarvisCannotLoosenThePaperWeeklyStopWithoutThePinAndTighteningIsConfirmed() {
+        stored { it.copy(mode = "live", paperWeeklyLoss = 20_000.0) }
+        PinLock.setPin("246813".toCharArray())
+        for (v in listOf(30_000.0, 0.0)) {
+            val (said, act) = runBlocking { IraActions.prepare(Command(Command.Kind.SET_LIMIT, target = "PAPER_WEEKLY_LOSS", level = v)) }
+            assertEquals(IraActions.LIMIT_PIN, said)
+            assertNull(act)
+        }
+        assertEquals(20_000.0, AppSettings.load().paperWeeklyLoss, 0.0)
+        val (said, tighter) = runBlocking { IraActions.prepare(Command(Command.Kind.SET_LIMIT, target = "PAPER_WEEKLY_LOSS", level = 10_000.0)) }
+        assertTrue(said, said.contains("the paper weekly loss stop"))
+        assertEquals("Done: the paper weekly loss stop is now Rs 10,000.", runBlocking { tighter!!() })
+        assertEquals(10_000.0, AppSettings.load().paperWeeklyLoss, 0.0)
+    }
+
     @Test fun aChangeWithNoScreenOpenKeepsAKillSwitchTheGuardSetMeanwhile() {
         stored { it.copy(guardDrawdownPct = 10.0) }
         IraActions.setStored { s ->

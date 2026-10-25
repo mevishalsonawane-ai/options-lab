@@ -59,6 +59,10 @@ class TestApp : Application() {
         com.optionslab.app.data.ExposureCapHost.resetForTest(paperOn = false)
         // 20 Oct, enhancement round 1: the account stop rule in shadow with no days, the drift guard with no looks.
         com.optionslab.app.data.AccountStopHost.resetForTest()
+        // 25 Oct: the new paper risk rules off for every other test (their arms' entries are not what they test); their own tests
+        // switch them on ([com.optionslab.app.data.BossRiskHost]).
+        com.optionslab.app.data.BossRiskHost.resetForTest(paperOn = false)
+        com.optionslab.app.work.StopLane.quietNow = false
         com.optionslab.app.data.WatchClock.resetForTest()
         IdleSampler.install()
         NetworkGuard.install()

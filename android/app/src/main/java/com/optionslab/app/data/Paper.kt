@@ -697,7 +697,9 @@ object Paper {
 
     /** [capped]: refused by the same-direction cap (19 Oct): nothing was placed; the caller may keep it as a would-be entry. */
     data class Result(val ok: Boolean, val message: String, val events: List<SandboxEvent>, val orderId: String? = null,
-                      val capped: Boolean = false)
+                      val capped: Boolean = false,
+                      /** 25 Oct: refused (or sized down) by one of Boss's new risk rules ([BossRiskHost]); null: not by them. */
+                      val rule: BossRiskHost.Rule? = null)
 
     private fun describe(r: OrderResult, events: List<SandboxEvent>): Result {
         val fill = events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
@@ -918,6 +920,17 @@ object Paper {
                 return Result(false, why, emptyList(), capped = true)
             }
         }
+        // 25 Oct (Boss's decisions on the app audit, [BossRiskHost]): an automatic entry the paper account stop, the weekly loss stop
+        // or the opposite-bets rule refuses is refused here, before any price read (memory only); the arm keeps it as a would-be entry.
+        // While the entry could also be mirrored live, they only log (a new rule that could skip a live trade starts in shadow).
+        val bossEntry = auto != null && action.equals("BUY", true) && runCatching { opens(c.symbol, action) }.getOrDefault(false)
+        if (bossEntry) {
+            val d = com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name)
+            val bets = if (d == null) emptyList() else runCatching { bossBets(book()) }.getOrDefault(emptyList())
+            BossRiskHost.paperEarly(auto!!, c.symbol, c.underlying, d, bets, mirror)?.let { why ->
+                return Result(false, why, emptyList(), capped = true, rule = BossRiskHost.Rule.entries.firstOrNull { r -> why.contains(r.words) })
+            }
+        }
         val token = runCatching { kiteToken(c) }.getOrNull()
         val freshTick = token?.let { tok -> runCatching { KiteStream.touch(listOf(tok)); KiteStream.freshTick(tok) }.getOrNull() }?.takeIf { it.last > 0 }
         val reRead = freshTick == null && token != null && Broker.loggedIn && runCatching { opens(c.symbol, action) }.getOrDefault(false)
@@ -942,6 +955,18 @@ object Paper {
         val q = x.quote
         x.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
         val entry = runCatching { opens(c.symbol, action) }.getOrDefault(true)
+        // 25 Oct: the 2% risk cap on the price just read (a LIMIT's own price when it has one): over it, sized down to the lots that
+        // fit, or refused when one lot is over it. The spread check is shadow only (logged, never changes the entry). Memory only.
+        var placeLots = lots
+        var sized: BossRiskHost.Rule? = null
+        if (bossEntry) {
+            val px = (if (priceType.equals("LIMIT", true)) price else null) ?: q?.ask?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 }
+            val v = BossRiskHost.paperSize(auto!!, c.symbol, lots, c.lotSize, px, stop, runCatching { book().capital.toDouble() }.getOrDefault(Double.NaN), mirror)
+            v.refusal?.let { return Result(false, it, emptyList(), capped = true, rule = v.rule) }
+            if (v.lots in 1 until lots) { placeLots = v.lots; sized = v.rule }
+            // Only on a quote with a book (the stream's): a candle price has none, and "no book" there says nothing about the market.
+            if (!c.isMcx && ((q?.bid ?: 0.0) > 0 || (q?.ask ?: 0.0) > 0)) BossRiskHost.spreadShadow(auto, c.symbol, q?.bid, q?.ask, live = false)
+        }
         // 19 Oct: an automatic BUY that opens an index option is counted by the same-direction cap ([capCheck]); its way (+1 a
         // call, -1 a put). Exits, sells, Boss's own orders and anything but the index options: null, never asked.
         // 20 Oct, review: the entry is COUNTED ([capWay]) even while the cap only logs it (an entry that may also go live): it is
@@ -957,7 +982,7 @@ object Paper {
             if (capDir != null) capCheck(b0, capDir, auto)?.let { why -> return@locked Result(false, why, emptyList(), capped = true) }
             val b = if (b0.contracts[c.symbol] == c) b0 else b0.copy(contracts = b0.contracts + (c.symbol to c))
             // An exit reduces only: never more than is held now, never a short from a flat book (22 Oct, arms audit).
-            val qty = if (exit) (reduceQty(b, c.symbol, product, action, lots * c.lotSize) ?: return@locked notOpen(c.symbol)) else lots * c.lotSize
+            val qty = if (exit) (reduceQty(b, c.symbol, product, action, lots * c.lotSize) ?: return@locked notOpen(c.symbol)) else placeLots * c.lotSize
             val out = engine(b.capital, b.contracts).place(b.state,
                 OrderRequest(c.symbol, c.exchange, action, qty, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
             val id = out.result.orderId
@@ -969,9 +994,14 @@ object Paper {
         // A refused automatic entry is kept as a would-be entry (its arm, option, way and the price it would have filled at).
         if (r.capped && capDir != null) runCatching { ExposureCapHost.refused(auto!!, c.symbol, capDir, q?.ltp, live = false, applied = true, why = r.message) }
         timed(r, t0)
+        // 25 Oct: the IV of each automatic entry that filled (V1: record only, worked out in the background).
+        if (bossEntry && r.ok) r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()?.let { f -> BossRiskHost.entryIv(auto!!, c, f.price, live = false) }
+            ?: r.orderId?.let { BossRiskHost.ivRest(it, auto!!, c) }
         // The sandbox's modelled slippage (kept apart as paper): a LIMIT from its price, else from the price it read.
         val limit = priceType.equals("LIMIT", true) && price != null
         modelled(r, entry, if (limit) price else q?.ltp?.takeIf { it > 0 }, limit)
+        // 25 Oct: an entry the 2% cap sized down says so (its fill is recorded above, as every fill).
+        if (sized != null && r.ok) return r.copy(rule = sized)
         return r
     }
 
@@ -984,7 +1014,8 @@ object Paper {
     private fun capCheck(b: Book, dir: Int, owner: String? = null): String? = runCatching {
         val max = ExposureCapHost.paperMax() ?: return@runCatching null
         // 22 Oct (Boss: "reserve R72's place"): at R72 Breadth Donchian's bar close the last place each way is kept for it.
-        val kept = runCatching { PassedArmsHost.placeKeptFor(Market.now().toLocalTime()) }.getOrNull()
+        // 25 Oct (Boss's decision on the arms audit): only while R72 has a break due that way, not on every bar.
+        val kept = runCatching { PassedArmsHost.placeKeptFor(Market.now().toLocalDateTime(), dir) }.getOrNull()
         com.optionslab.ira.SameDirectionCap.refusal(capOpen(b), dir, max, owner, kept)
     }.getOrNull()
 
@@ -1000,6 +1031,23 @@ object Paper {
             b.contracts[s]?.let { c -> com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name) }
         }) { b.auto[it] }
     }
+
+    /** 25 Oct: the automatic index-option entries open in [b] with their index, for the opposite-bets rule ([BossRiskHost]). */
+    private fun bossBets(b: Book): List<com.optionslab.ira.BossRisk.Bet> = capOpen(b).mapNotNull { o ->
+        b.contracts[o.symbol]?.let { com.optionslab.ira.BossRisk.Bet(o.owner, it.underlying, o.dir, o.symbol) }
+    }
+
+    /**
+     * 25 Oct (Boss's decision on the app audit, H4): whether a position the paper book holds on [mcx]'s side (MCX, or everything
+     * else) has no fresh stream tick ([maxAgeMs]): the stop lane then looks every 5 s instead of 15 s. Memory only (the tokens
+     * already looked up; one not looked up yet counts as quiet - more looks, never fewer). False before the book is read, or with
+     * nothing held on that side.
+     */
+    fun heldQuiet(mcx: Boolean, maxAgeMs: Long = 5_000L): Boolean = runCatching {
+        val b = cache ?: return@runCatching false
+        val syms = b.state.positions.filter { it.quantity != 0 && (b.contracts[it.symbol]?.isMcx == true) == mcx }.map { it.symbol }.toSet()
+        syms.any { s -> val tok = kiteTokens[s]?.takeIf { it > 0 } ?: return@any true; KiteStream.tick(tok, maxAgeMs) == null }
+    }.getOrDefault(false)
 
     /** The automatic index-option entries open now in the paper book, from memory (Bot settings' line; empty before it is read). */
     fun capOpenNow(): List<com.optionslab.ira.SameDirectionCap.Open> = cache?.let { runCatching { capOpen(it) }.getOrNull() }.orEmpty()
@@ -1170,6 +1218,8 @@ object Paper {
             runCatching { LiveRecorder.fill(f.symbol, f.action, f.action.equals("SELL", true), f.quantity, f.price, null, paper = true, arm = null, note = "resting") }
         }
         measureResting(events)
+        // 25 Oct: a resting automatic entry that filled on this pass has its IV recorded (record only; memory, then the background).
+        runCatching { BossRiskHost.ivFills(events) }
         // The engine's own 15:15 MIS square-off is named on the order it placed.
         events.filterIsInstance<SandboxEvent.SquareOff>().mapNotNull { it.result.orderId }
             .forEach { runCatching { Strategies.tagOwner("paper:$it", Origins.AUTO_SQUARE_OFF) } }

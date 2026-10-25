@@ -143,13 +143,14 @@ class HeroTicketRowTest {
         compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.TRAIL_START_NOTE + ".")).assertDoesNotExist()
         compose.onNodeWithContentDescription("About ${HeroTicketRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail after 2×").assertIsSelected()
+        // 25 Oct: the default is the trail from the fill (R55's recommended cell).
+        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail from the fill (R50)").assertIsSelected()
         compose.onNodeWithText(keepNumbersWhole(HeroTicketRules.TRAIL_START_NOTE + ".")).assertExists()
-        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail from the fill (R50)").assertIsNotSelected().performClick()
+        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail after 2×").assertIsNotSelected().performClick()
         compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail after 3×").performClick()
-        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail after 2×").performClick()
+        compose.onNodeWithContentDescription("${HeroTicketRules.LABEL} trail start: trail from the fill (R50)").performClick()
         compose.waitForIdle()
-        assertEquals(listOf(HeroTicketRules.TrailStart.AT_FILL, HeroTicketRules.TrailStart.AFTER_3X), picked)
+        assertEquals(listOf(HeroTicketRules.TrailStart.AFTER_2X, HeroTicketRules.TrailStart.AFTER_3X), picked)
     }
 
     @Test fun aChosenTargetShowsAsSelected() {

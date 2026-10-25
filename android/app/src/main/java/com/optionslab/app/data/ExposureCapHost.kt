@@ -228,6 +228,9 @@ object ExposureCapHost {
         if (on) "refused: $why" else null
     }.getOrNull()
 
+    /** 25 Oct: the bots' live index-option entries open now (the live opposite-bets shadow, [BossRiskHost]). Memory only. */
+    fun liveOpen(): List<SameDirectionCap.Open> = runCatching { ledgerToday(); ledger.open() }.getOrDefault(emptyList())
+
     /** A bot's live BUY went through the door: counted until it closes. Memory only. */
     fun liveEntered(symbol: String, exchange: String, buy: Boolean, owner: String) {
         runCatching {

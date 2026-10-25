@@ -619,6 +619,7 @@ internal object IraActions {
     fun setting(k: SettingsTalk.Key, s: AppSettings): Double = when (k) {
         SettingsTalk.Key.DAILY_LOSS -> s.guardDailyLoss
         SettingsTalk.Key.PAPER_DAILY_LOSS -> s.guardPaperDailyLoss
+        SettingsTalk.Key.PAPER_WEEKLY_LOSS -> s.paperWeeklyLoss
         SettingsTalk.Key.MAX_LOTS -> s.guardMaxLots.toDouble()
         SettingsTalk.Key.LOTS_PER_ORDER -> s.maxLotsPerOrder.toDouble()
         SettingsTalk.Key.MAX_OPEN -> s.guardMaxOpen.toDouble()
@@ -661,6 +662,7 @@ internal object IraActions {
     private fun applySetting(k: SettingsTalk.Key, v: Double, s: AppSettings): AppSettings = when (k) {
         SettingsTalk.Key.DAILY_LOSS -> s.copy(guardDailyLoss = v)
         SettingsTalk.Key.PAPER_DAILY_LOSS -> s.copy(guardPaperDailyLoss = v)
+        SettingsTalk.Key.PAPER_WEEKLY_LOSS -> s.copy(paperWeeklyLoss = v)
         SettingsTalk.Key.MAX_LOTS -> s.copy(guardMaxLots = v.toInt())
         SettingsTalk.Key.LOTS_PER_ORDER -> s.copy(maxLotsPerOrder = v.toInt())
         SettingsTalk.Key.MAX_OPEN -> s.copy(guardMaxOpen = v.toInt())
@@ -692,9 +694,11 @@ internal object IraActions {
         SettingsTalk.Key.MAX_TRADES, SettingsTalk.Key.ORDER_VALUE, SettingsTalk.Key.MAX_LOTS, SettingsTalk.Key.EXPOSURE,
         SettingsTalk.Key.CUTOFF,
         // 25 Oct (merge review): the paper bots' daily loss limit asks the PIN to loosen on the Account guard page; by voice too.
-        SettingsTalk.Key.PAPER_DAILY_LOSS)
+        SettingsTalk.Key.PAPER_DAILY_LOSS,
+        // 25 Oct (Boss's decision on the app audit): the paper weekly loss stop, the same way.
+        SettingsTalk.Key.PAPER_WEEKLY_LOSS)
 
-    const val LIMIT_PIN = "Loosening the account guard or the paper loss limit needs your app PIN, Boss. Change it on the Account guard page and enter your PIN there. Nothing changed."
+    const val LIMIT_PIN = "Loosening the account guard or the paper loss limits needs your app PIN, Boss. Change it on the Account guard page and enter your PIN there. Nothing changed."
 
     const val KILL_OFF_PIN = "Clearing the kill switch needs your app PIN, Boss. Tap Clear kill switch on Home, or turn it off on the Account guard page, and enter your PIN there. It stays on."
 

@@ -13,6 +13,8 @@ object SettingsTalk {
     enum class Key(val label: String, val unit: Unit, /** 0 (or -1 for times) switches it off. */ val canOff: Boolean = true) {
         DAILY_LOSS("the daily loss limit", Unit.RUPEES),
         PAPER_DAILY_LOSS("the paper daily loss limit", Unit.RUPEES, canOff = false),
+        /** 25 Oct (Boss's decision on the app audit, R7): the paper bots' weekly loss stop; loosening it takes the PIN. */
+        PAPER_WEEKLY_LOSS("the paper weekly loss stop", Unit.RUPEES),
         MAX_LOTS("max lots per instrument", Unit.COUNT),
         LOTS_PER_ORDER("max lots per order", Unit.COUNT, canOff = false),
         MAX_OPEN("max open positions", Unit.COUNT),
@@ -39,6 +41,9 @@ object SettingsTalk {
 
     /** Words naming each setting, most specific first (so "paper daily loss" is not "daily loss"). */
     private val NAMES: List<Pair<Key, String>> = listOf(
+        // 25 Oct: before the daily ones ("paper weekly loss limit" is not "paper ... loss limit"); "paper" is needed ("your weekly loss
+        // limit" is Jarvis's own trades' cap).
+        Key.PAPER_WEEKLY_LOSS to "paper (bots )?weekly (stop ?loss|loss( stop| limit)?|max loss)|weekly paper loss( stop| limit)?",
         Key.PAPER_DAILY_LOSS to "paper (daily )?(stop ?loss|sl|loss|loss limit|max loss)( (for|per) (the |a )?day)?",
         Key.PAPER_TRADES to "paper (max )?(orders|trades)( per day| a day)?",
         Key.LOSS_ALERT to "(p l |pnl )?loss alert",
