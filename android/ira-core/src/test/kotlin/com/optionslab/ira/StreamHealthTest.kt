@@ -71,6 +71,20 @@ class StreamHealthTest {
         assertFalse(StreamHealth.stalled(live = true, marketOpen = false, lastFrameAt = 1_000, now = 60_000))
         assertFalse(StreamHealth.stalled(live = false, marketOpen = true, lastFrameAt = 1_000, now = 60_000))
         assertFalse(StreamHealth.stalled(live = true, marketOpen = true, lastFrameAt = 0, now = 60_000))
+        // 25 Oct (app audit; 23 Oct's 19 quiet minutes): heartbeats but no price for 20 s in NSE's session drops the socket too.
+        assertFalse(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 25, lastTickAt = 1_000, openedAt = 500, now = 20_999))
+        assertTrue(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 25, lastTickAt = 1_000, openedAt = 500, now = 21_000))
+        assertFalse(StreamHealth.pricesStalled(live = true, nseSession = false, tokens = 25, lastTickAt = 1_000, openedAt = 500, now = 60_000), "outside NSE's session")
+        assertFalse(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 0, lastTickAt = 1_000, openedAt = 500, now = 60_000), "nothing subscribed")
+        assertFalse(StreamHealth.pricesStalled(live = false, nseSession = true, tokens = 25, lastTickAt = 1_000, openedAt = 500, now = 60_000), "not opened")
+        assertFalse(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 25, lastTickAt = 0, openedAt = 0, now = 60_000))
+        // No price since it opened: counted from the open, so a fresh socket gets its 20 s.
+        assertFalse(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 25, lastTickAt = 0, openedAt = 50_000, now = 69_999))
+        assertTrue(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 25, lastTickAt = 0, openedAt = 50_000, now = 70_000))
+        assertFalse(StreamHealth.nseTicking(9 * 60 + 15)); assertTrue(StreamHealth.nseTicking(9 * 60 + 16))
+        assertTrue(StreamHealth.nseTicking(15 * 60 + 29)); assertFalse(StreamHealth.nseTicking(15 * 60 + 30))
+        assertEquals("dropped: no data from Zerodha for 20 s · up 5m 0s · ticks 9 · tokens 25 · heartbeats only, no prices",
+            StreamHealth.diary(Drop(forced = Cause.SILENT, silentSec = 20, message = "heartbeats only, no prices", upMs = 300_000, ticks = 9, tokens = 25)))
         assertNull(StreamHealth.paused(1_000, 3_100))
         assertEquals(240L, StreamHealth.paused(1_000, 241_000))
         assertNull(StreamHealth.paused(0, 241_000))

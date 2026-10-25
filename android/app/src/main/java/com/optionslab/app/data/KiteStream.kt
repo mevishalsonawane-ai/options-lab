@@ -195,6 +195,8 @@ object KiteStream {
         val ticks = AtomicLong()
         @Volatile var openedAt = 0L
         @Volatile var lastFrame = 0L
+        /** 25 Oct (app audit): the last frame that carried a price (a heartbeat does not), for [StreamHealth.pricesStalled]. */
+        @Volatile var lastTick = 0L
         @Volatile var tokens = 0
         @Volatile var pausedSec: Long? = null
         @Volatile var network: String? = null
@@ -202,6 +204,8 @@ object KiteStream {
         @Volatile var byCheck = false
     }
     @Volatile private var conn: Conn? = null
+    /** 25 Oct: the price-silence drops in a row ([StreamHealth.pricesStalled]); a connection that sees a price starts it again. */
+    @Volatile private var priceSilentDrops = 0
 
     /**
      * Start or stop to match the app's state: a Zerodha session and market day hours. It runs in Paper mode too:
@@ -428,6 +432,19 @@ object KiteStream {
                 c.done.complete(Unit)
                 return
             }
+            // 25 Oct (app audit): heartbeats but no price for 20 s in NSE's cash session: opened again (a fresh subscription). At most
+            // [StreamHealth.MAX_PRICE_SILENT_DROPS] such drops in a row (a market halt or a holiday session prints no price at all:
+            // no endless reconnects); a price seen starts the count again.
+            val nseSession = runCatching { Market.isOpen() && StreamHealth.nseTicking(Market.minuteNow()) }.getOrDefault(false)
+            if (c.lastTick > 0) priceSilentDrops = 0
+            if (priceSilentDrops < StreamHealth.MAX_PRICE_SILENT_DROPS && StreamHealth.pricesStalled(c.opened.get(), nseSession, c.tokens, c.lastTick, c.openedAt, now)) {
+                priceSilentDrops += 1
+                val sec = (now - maxOf(c.lastTick, c.openedAt)) / 1000
+                c.end.compareAndSet(null, StreamHealth.Drop(forced = StreamHealth.Cause.SILENT, silentSec = sec, message = "heartbeats only, no prices"))
+                ws.cancel()
+                c.done.complete(Unit)
+                return
+            }
         }
     }
 
@@ -502,6 +519,7 @@ object KiteStream {
         val now = System.currentTimeMillis()
         val got = runCatching { KiteTicks.parse(message) }.getOrDefault(emptyList())
         if (got.isEmpty()) return
+        c.lastTick = now
         c.ticks.addAndGet(got.size.toLong())
         record(got, now)
     }
