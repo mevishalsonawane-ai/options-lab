@@ -64,3 +64,23 @@ CI: see the bottom of this file.
 - **Account stop paper copy:** it counts from the day it came on (25 Oct), not from 13 Oct. Counting back would have stopped every paper arm on the 26 Oct decision day, on figures from before the rule existed. Boss can see the figure on the card.
 - **R72's kept place:** if another arm's pass reaches the cap before R72 has looked at the just-closed bar, the place is still kept for that moment, as before. R72 normally looks within seconds.
 - **Data Brain research tests:** 6 tests fail and 3 error in this container, from library versions here. I did not touch `research/brain/`. The `FEATURES.md` catalog check passes.
+
+## CI
+
+All checks green on `ae62ba9`: Engine parity with the PC (engine + ira-core tests and engine coverage), PC harness tests,
+App tests 0/4, 1/4, 2/4 and 3/4 (JVM, Robolectric, Compose UI), and Build APK. The research workflow's checks were green on
+`1f6f382` (this branch's earlier push). The emulator workflow runs only on the main development branch, so it did not run
+here.
+
+- **The first push failed two of the app-test shards** (45 tests). My new step that records a live entry's implied volatility
+  could download the contract list, and the tests forbid any network access. It now reads only the list already saved,
+  fixed in `ae62ba9`.
+- **A separate reviewer read the whole diff, and its findings were fixed in `1f6f382`:**
+  - the MCX paper loss limit's one-time move from ₹6,000 to ₹10,000 had been attached to the new weekly setting;
+  - entries that the 2% cap sized down were left out of the fill record;
+  - when R72 had not yet looked at a bar, other arms could take its place;
+  - the 3-minute capped-limit wait now ends if the app goes Live or entry hours end;
+  - the live weekly stop now has its own limit;
+  - missing locks around the account stop rule's figures;
+  - last week's "reached" could still hold on a Monday;
+  - the trend-exit note on the Hero ticket.
