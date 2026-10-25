@@ -498,6 +498,15 @@ object McxPaperArms {
         LossBreaker.mcxStopped(testStoppedWhy.let { h -> if (h != null) h() else Strategies.stoppedWhy() })
     }.getOrNull()
 
+    /**
+     * 25 Oct (app audit): whether today's stop SELLS what the MCX arms hold - only a stop known to apply to MCX
+     * ([LossBreaker.mcxExitStop]); an unreadable read is never one. 23 Oct: the US-night silver short was bought back at 14:39
+     * at market, nine hours before its rule's exit, after the NSE paper loss stop and amid failing reads.
+     */
+    private suspend fun stopSells(): Boolean = runCatching {
+        LossBreaker.mcxExitStop(testStoppedWhy.let { h -> if (h != null) h() else Strategies.stoppedWhy() })
+    }.getOrDefault(false)
+
     @Volatile internal var testStoppedWhy: (() -> com.optionslab.ira.DayStop.Why?)? = null
 
     /** The MCX arms' refusal words while their own loss stop holds (else the bot's stop for today). */
@@ -563,7 +572,7 @@ object McxPaperArms {
 
     private suspend fun manage(b: Book, now: LocalDateTime, cal: McxSession.Calendar, window: McxSession.Window?): Boolean {
         var changed = false
-        val stopped = stoppedKnown() == true            // unknown: never a reason to sell what is held
+        val stopped = stopSells()                       // unknown: never a reason to sell what is held (25 Oct: nor an unknown account)
         val cfg = McxGuard.config(AppSettings.load())
         val minute = minuteOf(now)
         for ((i, p) in b.positions.withIndex().toList()) {

@@ -73,6 +73,13 @@ object LossBreaker {
     fun mcxStopped(stoppedWhy: com.optionslab.ira.DayStop.Why?): Boolean = com.optionslab.ira.SegmentLock.mcxStopped(
         DayLockGuard.splitOn(), stoppedWhy, bossStoppedToday(), trippedToday(), tripToday(), mcxTrippedToday())
 
+    /**
+     * 25 Oct (app audit): whether the MCX paper arms SELL what they hold for today's stop ([com.optionslab.ira.SegmentLock.mcxExitStop]):
+     * only a stop known to apply to MCX; an unknown split setting or an unknown loss account never sells. Memory only once read.
+     */
+    fun mcxExitStop(stoppedWhy: com.optionslab.ira.DayStop.Why?): Boolean = com.optionslab.ira.SegmentLock.mcxExitStop(
+        DayLockGuard.splitKnown(), stoppedWhy, bossStoppedToday(), trippedToday(), tripToday(), mcxTrippedToday())
+
     /** Boss's or the tile's stop for today, kept (21 Oct); [on] false: lifted by "start all" or Start bot. */
     internal fun noteBossStop(on: Boolean) {
         val today = Market.today().toString()
