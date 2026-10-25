@@ -2516,8 +2516,10 @@ object OrbArms {
                 return p.copy(exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(sell.orderId))
             }
         }
-        // (Not sold at all: the next pass tries again with a fresh look, so this one is not kept.)
-        return exit(p, c, why).let { if (it.open) p0 else it }
+        // (Not sold at all: the next pass tries again with a fresh look, so this one is not kept - except the stop [exit] put back
+        // in the book, whose id must be kept or that stop would rest on with no record and could sell after the position is gone;
+        // 25 Oct, merge review.)
+        return exit(p, c, why).let { if (it.open) p0.copy(stopOrderId = it.stopOrderId, stopTrigger = it.stopTrigger) else it }
     }
 
     /** One look at the option's book for the Hero trade's log ([Position.seen]); without depth, the last price alone. */

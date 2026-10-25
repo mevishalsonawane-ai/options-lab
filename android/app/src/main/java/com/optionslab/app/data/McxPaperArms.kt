@@ -664,7 +664,10 @@ object McxPaperArms {
             if (!b.status.sameToday(p.arm, "exit_retry")) { b.status[p.arm] = "exit_retry"; note(b, p.arm, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }
             // The stop back in the book at its trigger (a stop the position had): the wick guard holds until the next pass sells.
             val level = trigger ?: p.stopOrderId?.let { stopFallback(p) }
-            if (stopId == null && level != null) {
+            // 25 Oct (merge review): while a closing order already works for this symbol (the expiry exit's or Boss's market order
+            // waiting for a price), no second stop goes in: when that order fills the book is flat and a stop left behind would
+            // open a position the other way, with no arm managing it.
+            if (stopId == null && level != null && !closingWorks(p, stopId)) {
                 stopId = runCatching { Paper.place(c, if (p.side > 0) "SELL" else "BUY", McxArmRules.LOTS, "SL-M", "NRML", null, level) }.getOrNull()
                     ?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${label(p.arm)} · stop") } }
             }
@@ -673,6 +676,12 @@ object McxPaperArms {
         val done = p.copy(exit = fill.price, exitTime = McxMarket.now().withNano(0), why = why, stopOrderId = null, charges = p.charges + chargesOf(r.orderId))
         closed(b, done)
         return done
+    }
+
+    /** A closing order for [p]'s symbol (other than [stopId]) still working in the paper book: open, or a trigger-pending stop. */
+    private fun closingWorks(p: Pos, stopId: String?): Boolean {
+        val closing = if (p.side > 0) "SELL" else "BUY"
+        return Paper.state.orders.any { it.symbol == p.symbol && it.action == closing && it.orderId != stopId && (it.status == "open" || it.status == "trigger pending") }
     }
 
     private fun closed(b: Book, p: Pos) {

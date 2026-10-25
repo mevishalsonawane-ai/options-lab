@@ -19,6 +19,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -661,6 +662,35 @@ class McxPaperArmsTest : RobolectricTest() {
         assertEquals("trigger pending", stop.status)
         assertEquals(trigger, stop.triggerPrice!!.toDouble(), 1e-9)
         assertEquals(1, Paper.state.positions.filter { it.symbol == pos.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * 25 Oct (merge review): a sale already working for the symbol (here a resting limit sell, as the expiry exit's market order
+     * waiting for a price would be) makes the arm's exit a refusal - and then NO second stop goes into the book beside it: when
+     * that sale fills the book is flat, and a stop left behind would have sold a second time, short.
+     */
+    @Test fun aRefusedExitBesideAWorkingSalePutsNoSecondStopIn() {
+        mcxList(silver = true)
+        usFeed(siPrev = 30.0, siNow = 30.6)
+        silverMinutes(LocalTime.of(9, 5))
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        tick(LocalTime.of(9, 5))
+        val pos = McxPaperArms.view.value.open.single()
+        assertEquals(1, pos.side)
+        val c = Paper.contractOf(pos.symbol)!!
+        at(LocalTime.of(23, 19))
+        val resting = runBlocking { Paper.place(c, "SELL", McxArmRules.LOTS, "LIMIT", "NRML", 999_999.0, null) }
+        assertTrue(resting.message, resting.ok)
+        assertEquals("open", Paper.state.orders.single { it.orderId == resting.orderId }.status)
+        // 23:20, the clock's exit, with no price: the sale is refused (that limit already covers the lot) and no stop is put back.
+        upstox.minutes[silverKey] = emptyList()
+        tick(LocalTime.of(23, 20))
+        val still = McxPaperArms.view.value.open.single()
+        assertNull("no stop rests beside the working sale", still.stopOrderId)
+        assertTrue(Paper.state.orders.none { it.symbol == pos.symbol && it.status == "trigger pending" })
+        assertEquals("the one working sale", 1, Paper.state.orders.count { it.symbol == pos.symbol && it.action == "SELL" && it.status == "open" })
+        assertEquals("still held, never short", 1, Paper.state.positions.filter { it.symbol == pos.symbol }.sumOf { it.quantity })
         assertNothingAtZerodha()
     }
 

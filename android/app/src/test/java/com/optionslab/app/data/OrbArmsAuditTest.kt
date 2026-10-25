@@ -14,6 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -156,7 +157,8 @@ class OrbArmsAuditTest : RobolectricTest() {
         awaitValue("the exit's diagnostics line") { Diag.lines().firstOrNull { it.contains("${p.symbol} has no price now; its operator_stop exit is sent anyway") } }
         // Not sold yet (no price to fill at): the position is never left without a resting stop meanwhile.
         val open = arm().open
-        if (open != null) assertTrue("a stop rests again", Paper.state.orders.any { it.orderId == open.stopOrderId && it.status == "trigger pending" })
+        assertNotNull("still held: no price to sell at", open)
+        assertTrue("a stop rests again", Paper.state.orders.any { it.orderId == open!!.stopOrderId && it.status == "trigger pending" })
         assertTrue("never short", Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } >= 0)
     }
 

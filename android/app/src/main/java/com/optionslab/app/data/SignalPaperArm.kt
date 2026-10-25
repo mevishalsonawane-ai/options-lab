@@ -450,7 +450,9 @@ object SignalPaperArm {
         if (!stopResting(p.stopOrderId)) {
             if (ltp <= p.stop) return sellRest(p, c, if (p.halfDone) "stop at cost" else if (p.ourStop) "our stop" else "stop")
             val lots = ((p.qty - p.soldQty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-            val again = runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, p.stop) }.getOrNull()?.takeIf { it.ok }?.orderId
+            // 25 Oct (merge review): not while a sale already works for the symbol (the square-off's market order waiting for a
+            // price): a stop put in beside it would be left behind on a flat book and could open a short.
+            val again = if (closingWorks(p.symbol)) null else runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, p.stop) }.getOrNull()?.takeIf { it.ok }?.orderId
                 ?.also { runCatching { Strategies.tagOwner("paper:$it", "${SignalPaperRules.OWNER} · stop") } }
             if (again != null) p = p.copy(stopOrderId = again)
         }
@@ -473,6 +475,10 @@ object SignalPaperArm {
         return sellRest(p, c, if (p.halfDone) "last target" else "target")
     }
 
+    /** A SELL for [symbol] still working in the paper book (open, or a trigger-pending stop): a second stop is never put in beside it. */
+    private fun closingWorks(symbol: String): Boolean =
+        Paper.state.orders.any { it.symbol == symbol && it.action == "SELL" && (it.status == "open" || it.status == "trigger pending") }
+
     /** Sell what is left of [p] at market (its resting stop taken out first; if it filled meanwhile, that is the exit). */
     private suspend fun sellRest(p: Pos, c: Paper.Contract, why: String): Pos {
         p.stopOrderId?.let { id ->
@@ -491,7 +497,9 @@ object SignalPaperArm {
             }
             // Not filled (no fresh price): the stop goes back into the paper book at once, and the exit is tried next pass.
             r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
-            val again = runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, p.stop) }.getOrNull()?.takeIf { it.ok }?.orderId
+            // 25 Oct (merge review): refused because a sale already works (the square-off's order waiting for a price): no stop
+            // goes in beside it - it would be left behind on a flat book and could open a short.
+            val again = if (closingWorks(p.symbol)) null else runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, p.stop) }.getOrNull()?.takeIf { it.ok }?.orderId
             return p.copy(stopOrderId = again)
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${SignalPaperRules.OWNER} · exit") } }

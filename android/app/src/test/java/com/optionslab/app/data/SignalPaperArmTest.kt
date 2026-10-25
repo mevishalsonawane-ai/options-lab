@@ -210,6 +210,30 @@ class SignalPaperArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 25 Oct (merge review): with a sale already working for the option (a resting limit sell, as the square-off's market order
+     * waiting for a price would be), the arm puts no stop back beside it - that stop would be left behind on a flat book and
+     * could sell short. Once that sale is gone, the stop goes back as usual.
+     */
+    @Test fun noStopGoesBackBesideAWorkingSale() {
+        runBlocking { SignalPaperArm.setOn(chat, true) }
+        message()
+        tick(LocalTime.of(9, 30), 10)
+        val p = v().open.single()
+        runBlocking { Paper.cancel(p.stopOrderId!!, "test") }
+        val c = Paper.contractOf(p.symbol)!!
+        val resting = runBlocking { Paper.place(c, "SELL", 1, "LIMIT", "MIS", 999.0, null) }
+        assertTrue(resting.message, resting.ok)
+        at(LocalTime.of(9, 31)); market(LocalTime.of(9, 31), rally); runBlocking { SignalPaperArm.manageOnly() }
+        assertEquals("no second stop beside the working sale", 0, Paper.state.orders.count { it.priceType == "SL-M" && it.status == "trigger pending" })
+        assertEquals("still held", 65, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        runBlocking { Paper.cancel(resting.orderId!!, "test") }
+        at(LocalTime.of(9, 32)); market(LocalTime.of(9, 32), rally); runBlocking { SignalPaperArm.manageOnly() }
+        val back = v().open.single()
+        assertEquals("the stop is back once the sale is gone", "trigger pending", Paper.state.orders.single { it.orderId == back.stopOrderId }.status)
+        assertNothingAtZerodha()
+    }
+
     @Test fun halfAtT1MovesTheStopToCostAndTheLastTargetSellsTheRest() {
         runBlocking { SignalPaperArm.setOn(chat, true); SignalPaperArm.setExit(SignalPaperRules.Exit.HALF_COST) }
         message()
