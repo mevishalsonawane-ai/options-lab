@@ -78,6 +78,11 @@ class StreamHealthTest {
         assertFalse(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 0, lastTickAt = 1_000, openedAt = 500, now = 60_000), "nothing subscribed")
         assertFalse(StreamHealth.pricesStalled(live = false, nseSession = true, tokens = 25, lastTickAt = 1_000, openedAt = 500, now = 60_000), "not opened")
         assertFalse(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 25, lastTickAt = 0, openedAt = 0, now = 60_000))
+        // 25 Oct (merge review): the count of such drops starts again only when prices kept coming past the first 20 s.
+        assertFalse(StreamHealth.pricesResumed(lastTickAt = 50_300, openedAt = 50_000), "one quote on subscribe")
+        assertFalse(StreamHealth.pricesResumed(lastTickAt = 69_999, openedAt = 50_000))
+        assertTrue(StreamHealth.pricesResumed(lastTickAt = 70_000, openedAt = 50_000))
+        assertFalse(StreamHealth.pricesResumed(lastTickAt = 0, openedAt = 50_000), "no price at all")
         // No price since it opened: counted from the open, so a fresh socket gets its 20 s.
         assertFalse(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 25, lastTickAt = 0, openedAt = 50_000, now = 69_999))
         assertTrue(StreamHealth.pricesStalled(live = true, nseSession = true, tokens = 25, lastTickAt = 0, openedAt = 50_000, now = 70_000))

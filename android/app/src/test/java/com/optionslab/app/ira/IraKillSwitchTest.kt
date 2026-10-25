@@ -75,9 +75,14 @@ class IraKillSwitchTest : RobolectricTest() {
         // Tightening never asks.
         val (_, tighter) = runBlocking { IraActions.prepare(Command(Command.Kind.SET_LIMIT, target = "DAILY_LOSS", level = 3_000.0)) }
         assertNotNull(tighter)
-        // A paper limit is not the Zerodha guard: no PIN asked (as on the Account guard page).
-        val (_, paper) = runBlocking { IraActions.prepare(Command(Command.Kind.SET_LIMIT, target = "PAPER_DAILY_LOSS", level = 8_000.0)) }
-        assertNotNull(paper)
+        // 25 Oct (merge review): the paper bots' loss limit asks the PIN to loosen on the Account guard page, so by voice too.
+        val (paperSaid, paper) = runBlocking { IraActions.prepare(Command(Command.Kind.SET_LIMIT, target = "PAPER_DAILY_LOSS", level = 8_000.0)) }
+        assertEquals(IraActions.LIMIT_PIN, paperSaid)
+        assertNull(paper)
+        assertEquals(5_000.0, AppSettings.load().guardPaperDailyLoss, 0.0)
+        // Tightening it never asks.
+        val (_, paperTighter) = runBlocking { IraActions.prepare(Command(Command.Kind.SET_LIMIT, target = "PAPER_DAILY_LOSS", level = 3_000.0)) }
+        assertNotNull(paperTighter)
     }
 
     @Test fun aChangeWithNoScreenOpenKeepsAKillSwitchTheGuardSetMeanwhile() {

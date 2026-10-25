@@ -185,6 +185,12 @@ object StreamHealth {
     fun pricesStalled(live: Boolean, nseSession: Boolean, tokens: Int, lastTickAt: Long, openedAt: Long, now: Long): Boolean =
         live && nseSession && tokens > 0 && openedAt > 0 && now - maxOf(lastTickAt, openedAt) >= TICK_SILENCE_MS
 
+    /**
+     * 25 Oct (merge review): whether the [MAX_PRICE_SILENT_DROPS] count starts again - only when prices kept coming for
+     * [TICK_SILENCE_MS] after the socket opened. One quote sent on subscribe does not: a stall would else reconnect every 20 s all day.
+     */
+    fun pricesResumed(lastTickAt: Long, openedAt: Long): Boolean = lastTickAt > 0 && openedAt > 0 && lastTickAt - openedAt >= TICK_SILENCE_MS
+
     /** [pricesStalled]'s silence: no price for this long while NSE's indices tick every second. */
     const val TICK_SILENCE_MS = 20_000L
     /** At most this many [pricesStalled] drops in a row with no price between them (a halt prints none: no endless reconnects). */

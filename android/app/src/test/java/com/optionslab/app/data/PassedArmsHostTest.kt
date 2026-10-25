@@ -174,6 +174,25 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(context.filesDir.listFiles().orEmpty().any { it.name.startsWith("passed_arms.vault.unreadable") })
     }
 
+    /**
+     * 25 Oct (merge review): a book whose read failed is not read yet, and the watch must still come back for it (outside the
+     * trading window too), or the set-aside after [PassedArmsHost.READ_FAILS_BEFORE_ASIDE] failures is never reached and the
+     * arms stay unread all day. Once it reads, an idle book with nothing held wants no pass out of hours.
+     */
+    @Test fun aBookNotReadYetWantsAPassUntilItReads() {
+        only(OovArm.SOURCE)
+        assertTrue(PassedArmsHost.awaitWrites(20_000L))
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        PassedArmsHost.testRead = { throw java.security.ProviderException("keystore busy") }
+        try {
+            assertTrue(runCatching { runBlocking { PassedArmsHost.refresh() } }.isFailure)
+            assertTrue("unread: the watch comes back for it, even at midnight", PassedArmsHost.wantsPass(minute = 0))
+        } finally { PassedArmsHost.testRead = null }
+        runBlocking { PassedArmsHost.refresh() }
+        assertTrue(view().on(OovArm.SOURCE))
+        assertFalse("read, nothing held, out of hours: no pass", PassedArmsHost.wantsPass(minute = 0))
+    }
+
     @Test fun theChangeLogsUndoSwitchesAnArmOffAndOnlyIt() {
         only(DonchianArm.SOURCE)
         val on = AutoChange.passedArmOn(DonchianArm.SOURCE, DonchianArm.LABEL, DonchianArm.RESEARCH_ID)

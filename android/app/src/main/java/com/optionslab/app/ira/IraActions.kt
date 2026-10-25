@@ -690,9 +690,11 @@ internal object IraActions {
     /** The limits the Account guard page asks the PIN to loosen (its Zerodha limits; paper limits and alerts are not). */
     private val GUARD_KEYS = setOf(SettingsTalk.Key.DAILY_LOSS, SettingsTalk.Key.DRAWDOWN, SettingsTalk.Key.MAX_OPEN,
         SettingsTalk.Key.MAX_TRADES, SettingsTalk.Key.ORDER_VALUE, SettingsTalk.Key.MAX_LOTS, SettingsTalk.Key.EXPOSURE,
-        SettingsTalk.Key.CUTOFF)
+        SettingsTalk.Key.CUTOFF,
+        // 25 Oct (merge review): the paper bots' daily loss limit asks the PIN to loosen on the Account guard page; by voice too.
+        SettingsTalk.Key.PAPER_DAILY_LOSS)
 
-    const val LIMIT_PIN = "Loosening the Zerodha account guard needs your app PIN, Boss. Change it on the Account guard page and enter your PIN there. Nothing changed."
+    const val LIMIT_PIN = "Loosening the account guard or the paper loss limit needs your app PIN, Boss. Change it on the Account guard page and enter your PIN there. Nothing changed."
 
     const val KILL_OFF_PIN = "Clearing the kill switch needs your app PIN, Boss. Tap Clear kill switch on Home, or turn it off on the Account guard page, and enter your PIN there. It stays on."
 

@@ -436,7 +436,9 @@ object KiteStream {
             // [StreamHealth.MAX_PRICE_SILENT_DROPS] such drops in a row (a market halt or a holiday session prints no price at all:
             // no endless reconnects); a price seen starts the count again.
             val nseSession = runCatching { Market.isOpen() && StreamHealth.nseTicking(Market.minuteNow()) }.getOrDefault(false)
-            if (c.lastTick > 0) priceSilentDrops = 0
+            // (25 Oct, merge review: only prices that kept coming past the first 20 s reset the count - one quote sent on subscribe
+            // does not, or a stall would reconnect every 20 s all day and the cap of 3 would never hold.)
+            if (StreamHealth.pricesResumed(c.lastTick, c.openedAt)) priceSilentDrops = 0
             if (priceSilentDrops < StreamHealth.MAX_PRICE_SILENT_DROPS && StreamHealth.pricesStalled(c.opened.get(), nseSession, c.tokens, c.lastTick, c.openedAt, now)) {
                 priceSilentDrops += 1
                 val sec = (now - maxOf(c.lastTick, c.openedAt)) / 1000

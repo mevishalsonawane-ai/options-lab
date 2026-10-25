@@ -626,7 +626,9 @@ object PassedArmsHost {
      * indices are followed on the stream ([follow]) before 09:19 starts: the 09:15 bar is whole at the 09:20 check.
      */
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean =
-        holding() || ((_view.value.armed.values.any { it } || _view.value.recordOnly.isNotEmpty()) && minute in WAKE_FROM until WAKE_UNTIL)
+        // 25 Oct (merge review): a book not read yet (a read that failed at start-up) wants a pass, so each watch pass reads it again
+        // ([tick] does) and the set-aside after 5 failures is reached - else the arms sat unread all day until the rows were opened.
+        (ready() && cache == null) || holding() || ((_view.value.armed.values.any { it } || _view.value.recordOnly.isNotEmpty()) && minute in WAKE_FROM until WAKE_UNTIL)
 
     private const val WAKE_FROM = 9 * 60 + 16
     private const val WAKE_UNTIL = 15 * 60 + 17
