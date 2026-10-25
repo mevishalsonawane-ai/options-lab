@@ -44,7 +44,7 @@ class CommoditiesLimitsTest {
         compose.onNodeWithText("Commodities keep their own paper limits").assertIsDisplayed()
         compose.onNodeWithText("COMMODITIES DAY LOCK (PAPER)").assertIsDisplayed()
         compose.onNodeWithText("COMMODITIES DAILY LOSS LIMIT (PAPER)").assertIsDisplayed()
-        compose.onNodeWithText("Commodities keep their own paper day lock (+Rs 8,000) and daily loss limit (-Rs 6,000)", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Commodities keep their own paper day lock (+Rs 8,000) and daily loss limit (-Rs 10,000)", substring = true).assertIsDisplayed()
         compose.onNodeWithText("still stop both", substring = true).assertIsDisplayed()
         compose.onAllNodesWithText("₹10,000")[0].performClick()          // the day lock's row comes first
         compose.onNodeWithText("₹2,000").performClick()
