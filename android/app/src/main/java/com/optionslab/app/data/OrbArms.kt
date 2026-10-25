@@ -188,13 +188,17 @@ object OrbArms {
         val priceRetry: Boolean = false,
         /**
          * 25 Oct (Boss's decision on the app audit, E1; research h14): a Liquidity paper entry bought with h14's capped limit - the
-         * cap it was bought under (0.5% over the signal's price). A label: these trades are kept apart from the plain-rules record.
+         * cap it was bought under (0.5% over the signal's price). A label, so these trades can be told apart from market-order ones.
          */
         val capped: Double? = null,
     ) {
         val open: Boolean get() = exit == null
-        /** 25 Oct: a paper trade on rules Boss's switches added (a trail, the breakeven, h14's capped limit): kept out of the plain-rules record. */
-        val ownRules: Boolean get() = LiquidityBreakeven.ownRules(trail, be) || capped != null
+        /**
+         * A paper trade on exit rules Boss's switches added (a trail, the breakeven): kept out of the plain-rules record. 25 Oct (review):
+         * h14's capped limit changes only how the entry is bought (never above the cap), not the rules, so a capped trade stays in the
+         * record (and in its stop rule's count), labelled by [capped] so it can always be told apart.
+         */
+        val ownRules: Boolean get() = LiquidityBreakeven.ownRules(trail, be)
         val day: LocalDate get() = entryTime.toLocalDate()
         val points: Double? get() = exit?.let { it - entry }
         /** The whole trade's P&L before charges: what is held now at [exit], plus any part sold early at [soldAt]. */
@@ -1840,7 +1844,7 @@ object OrbArms {
         b.pending[arm.source]?.let { pd -> if (t.isAfter(pd.expires)) { b.pending.remove(arm.source); lapsed(arm, pd) } else { watching(); return "awaiting_approval" } }
         // 25 Oct (h14's capped limit, paper): a signal waiting for its price to come back under the cap is worked first, until its
         // 3 minutes are up (never chased: the cap never moves).
-        if (arm.liquidity) capWaits[arm.source]?.let { w -> watching(); return capStep(b, arm, w, t) }
+        if (arm.liquidity) capWaits[arm.source]?.let { w -> watching(); return capStep(b, arm, w, t, appLive) }
         if (arm.liquidity) return liquidityCycle(b, arm, t, appLive, reads)
         // The account this arm's new entries go to (review G2-3): the app's Live switch (the paper-only arms: paper). The
         // signal's parameters, the order and the position's stamped exits all use it - never one account's entry rule with
@@ -3411,10 +3415,15 @@ object OrbArms {
     internal const val CAP_WAITING = "capped_limit_waiting"
 
     /** One look at a waiting signal ([w]): bought once its price is under the cap, let go once its 3 minutes are up. */
-    private suspend fun capStep(b: Book, arm: Arm, w: CapWait, t: LocalDateTime): String {
-        if (t.isAfter(w.until) || !BossRiskHost.cappedPaper() || Strategies.stoppedToday()) {
+    private suspend fun capStep(b: Book, arm: Arm, w: CapWait, t: LocalDateTime, appLive: Boolean?): String {
+        // 25 Oct (review): the wait ends too if the account changed (the app went Live: never bought on paper by an old paper
+        // signal), the entry hours ended, the switch went off or the bot stopped for today.
+        val goesLive = runCatching { ArmAccount.entry(arm, appLive ?: liveNow(), SmartWorkers.parkedToPaperNow("liquidity")) }.getOrDefault(true)
+        val hours = LiquidityRules.mayEnterAt(w.signalBar.plusMinutes(LiquidityRules.minutesOf(arm).toLong()))
+        if (t.isAfter(w.until) || !BossRiskHost.cappedPaper() || Strategies.stoppedToday() || goesLive || !hours) {
             capWaits.remove(arm.source)
-            val why = "capped limit (h14): ${w.contract.symbol} did not come back to %.2f or less within 3 minutes; let go (never chased)".format(Locale.ENGLISH, w.cap)
+            val why = (if (t.isAfter(w.until)) "capped limit (h14): ${w.contract.symbol} did not come back to %.2f or less within 3 minutes; let go (never chased)"
+                else "capped limit (h14): the wait for ${w.contract.symbol} under %.2f ended (the account, the entry hours or a stop changed); let go").format(Locale.ENGLISH, w.cap)
             runCatching { BossRiskHost.cappedNote(arm.label, w.contract.symbol, why) }
             FlowGate.outcome(w.flow, "refused: $why")
             return "refused: $why"
@@ -3447,7 +3456,10 @@ object OrbArms {
         }
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, cap ?: (ltp * 1.0005)), snap?.let { Guard.paperAccount(it) }, paper = true)
-        if (refusals.isNotEmpty()) { capWaits.remove(arm.source); return "guard_refused: " + refusals.joinToString(" ") }
+        if (refusals.isNotEmpty()) {
+            capWaits.remove(arm.source)
+            return ("guard_refused: " + refusals.joinToString(" ")).also { if (wait != null) FlowGate.outcome(flow, it) }
+        }
         // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]).
         val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, if (cap != null) "LIMIT" else "MARKET", "MIS", cap, null, Market.today(), arm.source), refusals, "paper guard")
         val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b) && cap == null, tag = "${LiquidityRules.ARM.label} · entry", verdict = verdict, limit = cap) { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too

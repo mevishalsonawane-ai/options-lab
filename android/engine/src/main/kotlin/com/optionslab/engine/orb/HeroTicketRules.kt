@@ -83,7 +83,8 @@ object HeroTicketRules {
     /** Why, for the change timeline and the book's log (R55, sample sizes in research/HUNT_R55*). */
     const val TRAIL_FILL_REASON = "your decision on the arms audit (25 Oct): research R55 found the trail \"after 2×\" the worst of its five " +
         "cells (design 248 tickets: from the fill -Rs 14,507, after 2× -Rs 59,286; final 107 tickets: +Rs 1,559 vs -Rs 9,680) and " +
-        "recommends it from the fill (R50's own rule: also a 25% stop); new tickets only, an open ticket keeps its own; paper only"
+        "recommends it from the fill (R50's own rule: also a 25% stop); new tickets only, an open ticket keeps its own; the trend-turn exit, " +
+        "tested with the trail after 2×, only takes notes on these tickets; paper only"
     /** Its trades are kept apart from every other record (the arms that passed, the plain-rules record for 26 Oct). */
     const val SEPARATE = "Its trades are kept in its own record, apart from the arms that passed and from the plain-rules record for 26 Oct"
 

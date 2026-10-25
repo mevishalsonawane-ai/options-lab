@@ -1325,11 +1325,14 @@ class PassedArmsHostTest : RobolectricTest() {
         fun buy(owner: String) = runBlocking { Paper.place(other, "BUY", 1, "MARKET", "MIS", null, null, com.optionslab.engine.sandbox.Quote(50.0), auto = owner) }
         at(LocalTime.of(9, 20), 2)
         assertEquals(BreadthDonchianArm.LABEL, PassedArmsHost.placeKeptFor(LocalTime.of(9, 20, 2)))
-        // 25 Oct (Boss's decision on the arms audit): kept only while R72 has a break due that way. None due: nothing kept.
+        // 25 Oct (Boss's decision on the arms audit): kept only while R72 has a break due that way. Before R72 has looked at this
+        // bar: kept, as before (its break may be due). Looked, none due: nothing kept.
         PassedArmsHost.r72DueForTest(emptyMap())
+        assertEquals(BreadthDonchianArm.LABEL, PassedArmsHost.placeKeptFor(day.atTime(9, 20, 2), 1))
+        PassedArmsHost.r72DueForTest(emptyMap(), day.atTime(9, 20))
         assertNull(PassedArmsHost.placeKeptFor(day.atTime(9, 20, 2), 1))
         // A call break due until 09:23 (its fill window): the last call place is kept; a put is not.
-        PassedArmsHost.r72DueForTest(mapOf(1 to day.atTime(9, 23)))
+        PassedArmsHost.r72DueForTest(mapOf(1 to day.atTime(9, 23)), day.atTime(9, 20))
         assertEquals(BreadthDonchianArm.LABEL, PassedArmsHost.placeKeptFor(day.atTime(9, 20, 2), 1))
         assertNull(PassedArmsHost.placeKeptFor(day.atTime(9, 20, 2), -1))
         assertTrue(buy("ORB").ok)
@@ -1357,14 +1360,14 @@ class PassedArmsHostTest : RobolectricTest() {
         ExposureCapHost.resetForTest(paperOn = true); ExposureCapHost.setMax(2)
         only(BreadthDonchianArm.SOURCE)
         market(LocalTime.of(9, 30))
-        PassedArmsHost.r72DueForTest(emptyMap())
+        PassedArmsHost.r72DueForTest(emptyMap(), day.atTime(9, 30))
         val other = Paper.contractFor("NIFTY", day.plusDays(14), 25_000.0, Right.CE)!!
         fun buy(owner: String) = runBlocking { Paper.place(other, "BUY", 1, "MARKET", "MIS", null, null, com.optionslab.engine.sandbox.Quote(50.0), auto = owner) }
         at(LocalTime.of(9, 30), 3)
         assertTrue(buy("ORB").ok)
         assertTrue("the second place goes: R72 has no break due", buy("Liquidity 15m").ok)
         // A put break due: the call places are still free for others (the full cap refuses the third call as before).
-        PassedArmsHost.r72DueForTest(mapOf(-1 to day.atTime(9, 33)))
+        PassedArmsHost.r72DueForTest(mapOf(-1 to day.atTime(9, 33)), day.atTime(9, 30))
         assertTrue(buy("Liquidity 5m").message.startsWith("same-direction cap: 2 calls already open"))
         assertNothingAtZerodha()
     }

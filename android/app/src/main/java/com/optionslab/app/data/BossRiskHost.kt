@@ -147,8 +147,7 @@ object BossRiskHost {
             weekReachedOn = SecurePrefs.getString(K_WEEK_REACHED)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
             weekLimit = AppSettings.load().paperWeeklyLoss
             val saved = SecurePrefs.getString(K_LOG).orEmpty().lines().mapNotNull { decode(it) }
-            synchronized(lock) { log = (saved + log).distinct().sortedBy { it.atMs }.takeLast(LOG_KEPT) }
-            recompute(today())
+            synchronized(lock) { log = (saved + log).distinct().sortedBy { it.atMs }.takeLast(LOG_KEPT); recompute(today()) }
         }
         loaded = true
         publish()
@@ -166,7 +165,7 @@ object BossRiskHost {
             if (!loaded) load()
             weekLimit = s.paperWeeklyLoss
             val d = today()
-            if (nowMs - daysReadAt >= REFRESH_DAYS_MS || paperDays.isEmpty()) {
+            if (nowMs - daysReadAt >= REFRESH_DAYS_MS) {
                 val all = runCatching { DailyPnl.all(false) }.getOrDefault(emptyMap())
                 synchronized(lock) { paperDays = all.values.filter { it.date != d }.map { AccountStop.Day(it.date, it.net) }.sortedBy { it.day } }
                 daysReadAt = nowMs
@@ -175,7 +174,7 @@ object BossRiskHost {
                 synchronized(lock) { paperDays = AccountStop.record(paperDays, d, paperToday) }
             val wasAcct = acctStatus.stopped
             val wasWeek = week.reached
-            recompute(d)
+            synchronized(lock) { recompute(d) }
             if (acctStatus.stopped && !wasAcct) said(context, "Account stop rule reached on paper",
                 "The paper account reached the account stop rule (${acctStatus.why}). " +
                     (if (paperOn[Rule.ACCOUNT] == true) "The bots open no new paper position until you restart the count with your PIN (Account guard page); open positions keep their exits."
@@ -188,7 +187,7 @@ object BossRiskHost {
         publish()
     }
 
-    /** The statuses from the figures in memory, latched once reached (kept in the background). */
+    /** The statuses from the figures in memory, latched once reached (kept in the background). Called under [lock]. */
     private fun recompute(d: LocalDate) {
         val days = synchronized(lock) { paperDays }
         val st = AccountStop.status(days, d, acctSince)
@@ -228,7 +227,9 @@ object BossRiskHost {
             return if (applied) "refused: $why" else null
         }
         hit(Rule.ACCOUNT, AccountStop.refusal(acctStatus)?.removePrefix("refused: ")?.let { "$it on paper" })?.let { return@runCatching it }
-        hit(Rule.WEEKLY, BossRisk.weeklyRefusal(week))?.let { return@runCatching it }
+        // The week worked out now from the days in memory (review: on a Monday last week's "reached" never holds an entry made
+        // before the first watch pass of the day).
+        hit(Rule.WEEKLY, BossRisk.weeklyRefusal(BossRisk.weekly(synchronized(lock) { paperDays }, today(), weekLimit, weekReachedOn)))?.let { return@runCatching it }
         if (dir != null) hit(Rule.OPPOSITE, BossRisk.opposite(open, owner, underlying, dir))?.let { return@runCatching it }
         null
     }.getOrNull()
@@ -288,7 +289,8 @@ object BossRiskHost {
             return if (on) "refused: $why" else null
         }
         val days = runCatching { AccountStopHost.daysNow() }.getOrDefault(emptyList())
-        gate(Rule.WEEKLY, BossRisk.weeklyRefusal(BossRisk.weekly(days, today(), weekLimit)))?.let { return@runCatching it }
+        // Live's own limit (review: never the paper setting, so switching the paper stop off never switches live's off).
+        gate(Rule.WEEKLY, BossRisk.weeklyRefusal(BossRisk.weekly(days, today(), BossRisk.LIVE_WEEKLY)))?.let { return@runCatching it }
         val u = com.optionslab.engine.Kite.underlyingOf(symbol)
         val dir = u?.let { com.optionslab.ira.SameDirectionCap.direction(it, exchange, symbol.takeLast(2)) }
         if (u != null && dir != null) {
@@ -494,9 +496,12 @@ object BossRiskHost {
         if (!pinConfirmed) return "Restarting the paper account stop rule's count takes your PIN."
         if (!acctStatus.stopped) return "The paper account stop rule is not reached: nothing to restart."
         val from = AccountStop.restartFrom(today())
-        acctSince = from; acctReached = null
-        runCatching { SecurePrefs.putAllSoon(mapOf(K_ACCT_SINCE to from.toString(), K_ACCT_REACHED to null)) }
-        recompute(today())
+        // Under the figures' lock, so a watch pass recomputing at the same moment never latches it again (review).
+        synchronized(lock) {
+            acctSince = from; acctReached = null
+            runCatching { SecurePrefs.putAllSoon(mapOf(K_ACCT_SINCE to from.toString(), K_ACCT_REACHED to null)) }
+            recompute(today())
+        }
         runCatching { Diag.record("risk", "Paper account stop rule: count restarted by you with your PIN (from $from)") }
         publish()
         return "The paper account stop rule counts again from $from."
@@ -526,6 +531,6 @@ object BossRiskHost {
     internal fun setPaperDaysForTest(days: List<AccountStop.Day>, since: LocalDate? = null) {
         synchronized(lock) { paperDays = days.sortedBy { it.day } }
         acctSince = since; daysReadAt = Long.MAX_VALUE / 2
-        recompute(today()); publish()
+        synchronized(lock) { recompute(today()) }; publish()
     }
 }

@@ -34,6 +34,8 @@ object BossRisk {
 
     /** The paper weekly loss stop's default (Boss's decision, 25 Oct): Rs 20,000 a week. */
     const val PAPER_WEEKLY_DEFAULT = 20_000.0
+    /** The live weekly loss stop's limit (shadow unless its live switch is on): its own, never the paper setting. */
+    const val LIVE_WEEKLY = 20_000.0
     /** The choices on the Account guard page (0 = off). */
     val WEEKLY_CHOICES = listOf(10_000.0, 20_000.0, 30_000.0, 0.0)
 

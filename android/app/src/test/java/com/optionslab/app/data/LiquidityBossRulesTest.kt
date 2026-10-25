@@ -131,7 +131,7 @@ class LiquidityBossRulesTest : RobolectricTest() {
         val p = row().today.single()
         assertEquals("the cap: the signal's price (300) + 0.5%", 301.5, p.capped!!, 1e-9)
         assertTrue("never above the cap: ${p.entry}", p.entry <= 301.5 + 1e-9)
-        assertTrue("kept out of the plain-rules record", p.ownRules)
+        assertFalse("the rules are the plain ones (only the entry's order differs): it stays in the record, labelled", p.ownRules)
         val buy = Paper.state.orders.single { it.action == "BUY" }
         assertEquals("LIMIT", buy.priceType)
         assertEquals(301.5, buy.price!!.toDouble(), 1e-9)

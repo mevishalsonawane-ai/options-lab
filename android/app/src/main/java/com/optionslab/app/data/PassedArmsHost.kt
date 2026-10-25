@@ -934,23 +934,35 @@ object PassedArmsHost {
      */
     fun placeKeptFor(at: LocalDateTime, dir: Int): String? {
         placeKeptFor(at.toLocalTime()) ?: return null
+        // Review: R72 has not looked at this bar yet (another arm's pass came first): kept, as before - its break may be due.
+        if (r72DueBar != barCloseOf(at)) return BreadthDonchianArm.LABEL
         val until = r72Due[dir] ?: return null
         return if (at.isBefore(until)) BreadthDonchianArm.LABEL else null
     }
 
+    /** The 5-minute bar close (09:20, 09:25, ...) at or before [at]. */
+    internal fun barCloseOf(at: LocalDateTime): LocalDateTime {
+        val m = at.hour * 60 + at.minute
+        val close = 9 * 60 + 15 + ((m - (9 * 60 + 15)).coerceAtLeast(0) / 5) * 5
+        return at.toLocalDate().atTime(close / 60, close % 60)
+    }
+
     /** R72's breaks due now by side, with the end of their fill window (25 Oct; [noteR72Due]). Memory only. */
     @Volatile private var r72Due: Map<Int, LocalDateTime> = emptyMap()
+    /** The bar close [r72Due] was worked out at (null: none yet). */
+    @Volatile private var r72DueBar: LocalDateTime? = null
 
     /** R72's due breaks from this entry check's reads ([BreadthDonchianArm.dueSides]): kept for [placeKeptFor]. */
     private fun noteR72Due(b: Book, now: LocalDateTime, reads: Reads) {
-        if (!b.active(BreadthDonchianArm.SOURCE)) { r72Due = emptyMap(); return }
+        if (!b.active(BreadthDonchianArm.SOURCE)) { r72Due = emptyMap(); r72DueBar = barCloseOf(now); return }
         val today = now.toLocalDate()
         val sigs = runCatching { BreadthDonchianArm.signals(seriesAll(today, reads), today) }.getOrNull() ?: return
         r72Due = BreadthDonchianArm.dueSides(sigs, now) { x -> "$today|${BreadthDonchianArm.SOURCE}|${x.underlying}|${x.bar.b}|${x.side}" in b.decided }
+        r72DueBar = barCloseOf(now)
     }
 
-    /** TEST ONLY: R72's due breaks as its entry check would have found them. */
-    internal fun r72DueForTest(due: Map<Int, LocalDateTime>) { r72Due = due }
+    /** TEST ONLY: R72's due breaks as its entry check would have found them at [bar] (null: it has not looked at this bar). */
+    internal fun r72DueForTest(due: Map<Int, LocalDateTime>, bar: LocalDateTime? = null) { r72Due = due; r72DueBar = bar }
 
     /** Whether an entry decision may be due at [t]: a 5-minute bar has just closed (its first 3 minutes), or Solo's 12:00. */
     internal fun entryMinute(t: LocalTime): Boolean {
@@ -1918,7 +1930,7 @@ object PassedArmsHost {
     /** For tests: the book forgotten (its file goes with the test's directory), and the day's memory. */
     internal fun wipe() {
         synchronized(writeLock) { pendingBytes.set(null) }
-        cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap()
+        cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
     }
 
     /** TEST ONLY: closed trades added to the book as if traded (the forward bars' tests). Debug builds only. */

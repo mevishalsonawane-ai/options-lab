@@ -247,9 +247,9 @@ data class AppSettings(
                 mcxOwnLimits = p.getBoolean("g.mcxOwn", d.mcxOwnLimits),
                 // Unset: the same amounts as the paper ones (Boss, 21 Oct).
                 mcxDayLock = com.optionslab.engine.risk.DayLock.clean(p.getDouble("g.mcxDayLock", p.getDouble("g.dayLock", d.dayLock))),
-                mcxPaperDailyLoss = p.getDouble("g.mcxPLoss", p.getDouble("g.pLoss", d.guardPaperDailyLoss)).let { if (it.isFinite() && it >= 0) it else d.mcxPaperDailyLoss },
-                paperWeeklyLoss = p.getDouble("g.pWeek", d.paperWeeklyLoss).let { if (it.isFinite() && it >= 0) it else d.paperWeeklyLoss }
+                mcxPaperDailyLoss = p.getDouble("g.mcxPLoss", p.getDouble("g.pLoss", d.guardPaperDailyLoss)).let { if (it.isFinite() && it >= 0) it else d.mcxPaperDailyLoss }
                     .let { if (p.getInt(PAPER_LOSS_VERSION_KEY, 0) < 1 && it == OLD_PAPER_LOSS) d.mcxPaperDailyLoss else it },
+                paperWeeklyLoss = p.getDouble("g.pWeek", d.paperWeeklyLoss).let { if (it.isFinite() && it >= 0) it else d.paperWeeklyLoss },
                 paperSince = com.optionslab.engine.risk.PaperSince.startOf(p.getString("ui.paperSince", d.paperSince)).toString(),
             )
         }

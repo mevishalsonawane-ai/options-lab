@@ -997,10 +997,11 @@ object Paper {
         // 25 Oct: the IV of each automatic entry that filled (V1: record only, worked out in the background).
         if (bossEntry && r.ok) r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()?.let { f -> BossRiskHost.entryIv(auto!!, c, f.price, live = false) }
             ?: r.orderId?.let { BossRiskHost.ivRest(it, auto!!, c) }
-        if (sized != null && r.ok) return r.copy(rule = sized)
         // The sandbox's modelled slippage (kept apart as paper): a LIMIT from its price, else from the price it read.
         val limit = priceType.equals("LIMIT", true) && price != null
         modelled(r, entry, if (limit) price else q?.ltp?.takeIf { it > 0 }, limit)
+        // 25 Oct: an entry the 2% cap sized down says so (its fill is recorded above, as every fill).
+        if (sized != null && r.ok) return r.copy(rule = sized)
         return r
     }
 
