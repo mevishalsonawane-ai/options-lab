@@ -90,7 +90,9 @@ object LossBreaker {
     }
 
     /** The paper day as the limit reads it: after charges, with each position row's and trade's exchange (21 Oct). */
-    internal data class PaperDay(val total: Double, val rows: List<Pair<String, Double>>, val charges: List<Pair<String, Double>>)
+    internal data class PaperDay(val total: Double, val rows: List<Pair<String, Double>>, val charges: List<Pair<String, Double>>,
+                                 /** 25 Oct (app audit): the NSE paper positions by symbol and their P&L today, for the stop's words. */
+                                 val symbols: List<Pair<String, Double>> = emptyList())
 
     /** TEST SEAM: the paper day instead of the paper book's (null in the app). */
     @Volatile internal var testPaperDay: (() -> PaperDay)? = null
@@ -123,7 +125,8 @@ object LossBreaker {
         // The paper day AFTER charges (Paper.Snapshot.dayPnl), never the before-charges figure the screens show: the limit
         // keeps the safer, net figure (Boss, 5 Oct). Zerodha's is its own m2m, as it always was.
         val day = testPaperDay?.invoke() ?: runCatching { Paper.snapshot() }.getOrNull()?.let { snap ->
-            PaperDay(snap.dayPnl, snap.positions.positions.map { it.exchange to it.totalPnlToday }, snap.trades.map { it.exchange to it.charges })
+            PaperDay(snap.dayPnl, snap.positions.positions.map { it.exchange to it.totalPnlToday }, snap.trades.map { it.exchange to it.charges },
+                snap.positions.positions.filter { it.exchange != "MCX" }.map { it.symbol to it.totalPnlToday })
         }
         val paper = day?.total
         // 21 Oct: the MCX positions' day after charges, apart (memory: the snapshot just read).
@@ -173,7 +176,11 @@ object LossBreaker {
         val msg = runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS) }.getOrElse { it.message ?: "" }
         val text = "Today's %s P&L Rs %,.0f reached the Rs %,.0f daily loss limit. The bot sold what it held and stopped for today. %s"
             .format(hit.who, hit.pnl, hit.limit, msg) +
-            if (hit.trip == com.optionslab.ira.SegmentLock.Trip.PAPER) " The MCX paper arms keep their own limit." else ""
+            (if (hit.trip == com.optionslab.ira.SegmentLock.Trip.PAPER) " The MCX paper arms keep their own limit." else "") +
+            // 25 Oct (app audit; 23 Oct's stop after R52's call and Solo 2.0's put both lost): which positions made the day, and
+            // whether they were opposite bets on related indices. Words only.
+            (day?.takeIf { hit.trip != com.optionslab.ira.SegmentLock.Trip.LIVE }?.let { d -> com.optionslab.ira.LossBreakdown.words(d.symbols)?.let { " NSE paper: $it" } } ?: "")
+        runCatching { Diag.record("risk", "daily loss stop: " + text) }
         // Also the in-app banner (Notifier.post drops it in): one call, one banner.
         Notifier.post(context, 2040, Notifier.RISK, "Daily loss limit reached", text, "almanac", setting = "risk.guards")
     }

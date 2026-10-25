@@ -133,6 +133,22 @@ class SegmentLimitsTest : RobolectricTest() {
         assertTrue(DayLockGuard.statusLine()!!.contains("Commodities daily loss limit reached -Rs 6,100 (limit -Rs 6,000) at 20:10"))
     }
 
+    /**
+     * 25 Oct (app audit; 23 Oct 09:49): the stop's message names the positions that made the day and says when they were opposite
+     * bets (R52's NIFTY call, Solo 2.0's MIDCPNIFTY put). Words only.
+     */
+    @Test fun theNseLossStopsMessageNamesThePositionsAndOppositeBets() {
+        at(day, 9, 49)
+        LossBreaker.testPaperDay = {
+            LossBreaker.PaperDay(-6_300.0, listOf("NFO" to -6_300.0), listOf("NFO" to 0.0),
+                listOf("NIFTY27OCT2622700CE" to -3_300.0, "MIDCPNIFTY27OCT2613225PE" to -3_000.0))
+        }
+        check()
+        assertTrue(LossBreaker.trippedToday())
+        val said = AutomationSupport.alerts().first { it.startsWith("Daily loss limit") }
+        assertTrue(said, said.contains("NSE paper: By position: NIFTY call -Rs 3,300, MIDCPNIFTY put -Rs 3,000.") && said.contains("opposite bets"))
+    }
+
     @Test fun aLossInMcxStopsMcxOnlyAndNseTradesOn() {
         at(day, 19, 12)
         paper(nse = 2_000.0, mcx = -6_200.0)
