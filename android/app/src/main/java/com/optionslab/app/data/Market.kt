@@ -69,8 +69,16 @@ object Market {
 
     fun isWeekday(d: LocalDate = today()) = d.dayOfWeek != DayOfWeek.SATURDAY && d.dayOfWeek != DayOfWeek.SUNDAY
 
-    /** A weekday that is not an NSE trading holiday, or a special session NSE called (see [Holidays]). */
-    fun isTradingDay(d: LocalDate = today()) = Holidays.isExtraSession(d) || (isWeekday(d) && !Holidays.isHoliday(d))
+    /**
+     * A weekday that is not an NSE trading holiday, or a special session NSE called (see [Holidays]). 25 Oct (the arms audit): never a
+     * built-in special session with its own short window (Diwali's Muhurat hour, Sunday 8 Nov 2026, [specialSession]): every arm's
+     * clock is the 09:15 session, so that day is not a regular trading day even if it is added by hand.
+     */
+    fun isTradingDay(d: LocalDate = today()) = com.optionslab.engine.NseHours.regular(d) &&
+        (Holidays.isExtraSession(d) || (isWeekday(d) && !Holidays.isHoliday(d)))
+
+    /** 25 Oct: [d]'s NSE special session (its own window, e.g. the Muhurat hour), or null. No arm trades it. */
+    fun specialSession(d: LocalDate = today()): com.optionslab.engine.NseHours.Special? = com.optionslab.engine.NseHours.special(d)
     /** NSE F&O trades now: a trading day, 09:15 to [foClose] (15:40 from 3 Aug 2026). The app's "Market open". */
     fun isOpen(): Boolean = now().let { isOpenAt(it.toLocalDate(), it.hour * 60 + it.minute) }
 

@@ -19,6 +19,8 @@ import kotlinx.coroutines.isActive
  * which already run these same functions beside the watch), never after them:
  *  - its clock is [com.optionslab.ira.StopCadence.Ticker]: a look 15 s after the last one STARTED, 1 s after a look that itself
  *    ran long, at once when something is first held; no battery, saver, heat or memory input;
+ *  - 25 Oct (Boss's decision on the app audit, H4): every 5 s instead while a held position's price is quiet ([quietFor]: no fresh
+ *    stream tick); such a look waits for the arms' exits [QUIET_EXITS_WAIT_MS] at most, and the gaps are measured ([quietGaps]);
  *  - "is anything held?" from memory only ([heldFor]: never a lock, a vault read or the network);
  *  - every step runs under its book's own lock, as before (each arm's lock, Paper's, Protections', the sweep's and the orphan
  *    watch's try-locks, ArmLive's one look at a time), so two lanes never sell one holding twice;
@@ -59,16 +61,19 @@ internal object StopLane {
         mcxPassAt: () -> Long,
         now: () -> Long = System::currentTimeMillis,
         sleep: suspend (Long) -> Unit = { kotlinx.coroutines.delay(it) },
+        /** 25 Oct (H4): whether the held prices for [Mode] are quiet now ([quietFor]); the lane then looks every 5 s. */
+        quiet: (Mode) -> Boolean = { false },
     ) {
         var m = Mode.OFF
         val heldIn = held
         val lookIn = look
-        com.optionslab.ira.StopCadence.Ticker(now, sleep).run(
+        com.optionslab.ira.StopCadence.Ticker(now, sleep, quiet = { quiet(m) }, started = { t, q -> quietNow = q
+            runCatching { quietGaps.look(t, q, com.optionslab.app.data.Market.today()) } }).run(
             stop = stop,
             held = { m = mode(); m != Mode.OFF && heldIn(m) },
             look = { t -> lookIn(m, t) },
             // Nothing held any more: the drift guard starts its count again (a gap from a look with nothing held is no drift).
-            idle = { com.optionslab.app.data.WatchClock.looked(held = false, now = now()) },
+            idle = { com.optionslab.app.data.WatchClock.looked(held = false, now = now()); quietGaps.idle() },
             failed = { e -> Tasks.stepFailed("stop lane", e) },
             // MCX's own pass runs these checks itself (its start is noted as a look): the lane looks only when that pass is late.
             // NSE's full pass is not counted (its stops come after its arms): the lane keeps its own 15 s there.
@@ -86,6 +91,30 @@ internal object StopLane {
         Mode.NSE -> nseSeen || com.optionslab.app.data.HeldNow.any()
         Mode.MCX -> runCatching { com.optionslab.app.data.McxMarket.heldQuick() }.getOrDefault(true)
     }
+
+    /**
+     * 25 Oct (Boss's decision on the app audit, H4: "faster stop checks while the price stream is quiet and a position is open"):
+     * whether [mode]'s held prices are quiet now - logged in to Zerodha (the stream is expected) and a held paper position on that
+     * side has no fresh tick, or the stream is not live while the bots hold a live position. Memory only; it only ever adds looks.
+     */
+    fun quietFor(mode: Mode): Boolean = runCatching {
+        if (mode == Mode.OFF || !com.optionslab.app.data.Broker.loggedIn) return@runCatching false
+        if (com.optionslab.app.data.Paper.heldQuiet(mcx = mode == Mode.MCX)) return@runCatching true
+        val liveHeld = com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.OrbArms.liveHint
+        liveHeld && com.optionslab.app.data.KiteStream.status.value != com.optionslab.app.data.KiteStream.Status.LIVE
+    }.getOrDefault(false)
+
+    /** The look under way is on the quiet clock (its exits are waited on [QUIET_EXITS_WAIT_MS], so the next look is on time). */
+    @Volatile internal var quietNow = false
+
+    /** 25 Oct: how long a quiet look waits for the arms' exits (each still running finishes by itself, never cut mid-order). */
+    const val QUIET_EXITS_WAIT_MS = 3_000L
+
+    /** The day's quiet-stream gaps ([com.optionslab.ira.StopCadence.QuietGaps]); memory only. */
+    val quietGaps = com.optionslab.ira.StopCadence.QuietGaps()
+
+    /** The diagnostics' line. */
+    fun quietLine(): String = quietGaps.line(com.optionslab.app.data.Market.today())
 
     /** One look, started at [startMs]: the drift guard notes it, then [mode]'s checks run. */
     suspend fun look(context: Context, mode: Mode, startMs: Long) {
@@ -140,7 +169,7 @@ internal object StopLane {
                 val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
                 com.optionslab.app.data.Strategies.manageOnly(bad)
             } else null,
-        ), WatchWorkers.EXITS_WAIT_MS, inOrder = false, named = false)
+        ), if (quietNow) QUIET_EXITS_WAIT_MS else WatchWorkers.EXITS_WAIT_MS, inOrder = false, named = false)
         // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the bots' live stops,
         // and the no-price failsafe (REST quotes; a loud warning after two minutes).
         guarded("15-second stop check: missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }

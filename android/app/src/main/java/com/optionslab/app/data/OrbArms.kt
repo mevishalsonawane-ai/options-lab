@@ -186,8 +186,15 @@ object OrbArms {
          * rules asked for), so these entries can be told apart from the plain record.
          */
         val priceRetry: Boolean = false,
+        /**
+         * 25 Oct (Boss's decision on the app audit, E1; research h14): a Liquidity paper entry bought with h14's capped limit - the
+         * cap it was bought under (0.5% over the signal's price). A label: these trades are kept apart from the plain-rules record.
+         */
+        val capped: Double? = null,
     ) {
         val open: Boolean get() = exit == null
+        /** 25 Oct: a paper trade on rules Boss's switches added (a trail, the breakeven, h14's capped limit): kept out of the plain-rules record. */
+        val ownRules: Boolean get() = LiquidityBreakeven.ownRules(trail, be) || capped != null
         val day: LocalDate get() = entryTime.toLocalDate()
         val points: Double? get() = exit?.let { it - entry }
         /** The whole trade's P&L before charges: what is held now at [exit], plus any part sold early at [soldAt]. */
@@ -322,7 +329,8 @@ object OrbArms {
                         trail = if (p.has("trail")) p.getDouble("trail") else null,
                         trailFrom = if (p.has("trailFrom")) p.getDouble("trailFrom") else null,
                         be = if (p.has("breakeven")) p.getDouble("breakeven") else null,
-                        priceRetry = p.optBoolean("priceRetry", false))
+                        priceRetry = p.optBoolean("priceRetry", false),
+                        capped = if (p.has("capped")) p.getDouble("capped") else null)
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -456,7 +464,7 @@ object OrbArms {
      * the plain-rules trades only (Boss's opt-in give-back trail, R19b, is kept apart).
      */
     private fun bnClosed(b: Book, live: Boolean): List<com.optionslab.ira.LiquidityStopRule.Trade> =
-        b.positions.filter { it.arm in com.optionslab.engine.orb.ArmPriority.BN_BOOKS && !it.open && it.live == live && it.exitTime != null && !LiquidityBreakeven.ownRules(it.trail, it.be) }
+        b.positions.filter { it.arm in com.optionslab.engine.orb.ArmPriority.BN_BOOKS && !it.open && it.live == live && it.exitTime != null && !it.ownRules }
             .map { p -> com.optionslab.ira.LiquidityStopRule.Trade(epochMs(p.exitTime!!), p.exitTime.toLocalDate(), (p.grossPnl ?: 0.0) - p.charges) }
 
     private fun stopHints(b: Book) {
@@ -883,7 +891,7 @@ object OrbArms {
                         p.mgrStop?.let { put("mgrStop", it) }
                         p.stopPts?.let { put("stopPts", it) }; p.targetPts?.let { put("targetPts", it) }; p.liq?.let { put("liq", liqText(it)) }
                         p.trail?.let { put("trail", it) }; p.trailFrom?.let { put("trailFrom", it) }; p.be?.let { put("breakeven", it) }
-                        if (p.priceRetry) put("priceRetry", true) })
+                        if (p.priceRetry) put("priceRetry", true); p.capped?.let { put("capped", it) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -1210,8 +1218,8 @@ object OrbArms {
         // only: trades under Boss's paper give-back trail (R19b) are kept apart, so the 26 Oct decision reads the rules alone.
         val closed = paper.filter { !it.open && it.exitTime != null }
         val perLot = { p: Position -> ((p.grossPnl ?: 0.0) - p.charges) / p.lots.coerceAtLeast(1.0) }
-        val trades = closed.filter { !LiquidityBreakeven.ownRules(it.trail, it.be) }.map { p -> com.optionslab.ira.Vetting.Trade(p.exitTime!!.toLocalDate(), perLot(p)) }
-        val trailed = closed.filter { LiquidityBreakeven.ownRules(it.trail, it.be) }
+        val trades = closed.filter { !it.ownRules }.map { p -> com.optionslab.ira.Vetting.Trade(p.exitTime!!.toLocalDate(), perLot(p)) }
+        val trailed = closed.filter { it.ownRules }
         val entries = paper.map { p ->
             com.optionslab.ira.LiquidityGoLive.PaperEntry(p.arm, p.signalBar, if (p.right == "CE") 1 else -1,
                 runCatching { Paper.contractOf(p.symbol)?.strike?.toInt() }.getOrNull(), p.entryTime, p.exitTime, LiquidityRules.minutesOf(armOf(p.arm)))
@@ -1830,6 +1838,9 @@ object OrbArms {
         if (HiddenArms.keyOfSource(arm.source)?.let { HiddenArms.blocks(it) } == true) { b.watched.remove(watchKey); return HIDDEN_NO_ENTRY }
         if (arm.hero) return heroCycle(b, t)
         b.pending[arm.source]?.let { pd -> if (t.isAfter(pd.expires)) { b.pending.remove(arm.source); lapsed(arm, pd) } else { watching(); return "awaiting_approval" } }
+        // 25 Oct (h14's capped limit, paper): a signal waiting for its price to come back under the cap is worked first, until its
+        // 3 minutes are up (never chased: the cap never moves).
+        if (arm.liquidity) capWaits[arm.source]?.let { w -> watching(); return capStep(b, arm, w, t) }
         if (arm.liquidity) return liquidityCycle(b, arm, t, appLive, reads)
         // The account this arm's new entries go to (review G2-3): the app's Live switch (the paper-only arms: paper). The
         // signal's parameters, the order and the position's stamped exits all use it - never one account's entry rule with
@@ -3145,11 +3156,13 @@ object OrbArms {
     private suspend fun buyPaperEntry(label: String, c: Paper.Contract, lots: Int, known: com.optionslab.engine.sandbox.Quote?, auto: String?,
                                       mayRetry: Boolean, tag: String = "$label · entry",
                                       verdict: com.optionslab.engine.risk.OrderFingerprint.Verdict? = null,
+                                      /** 25 Oct: h14's capped limit (Liquidity's paper entries): a LIMIT at it instead of MARKET. */
+                                      limit: Double? = null,
                                       recheck: suspend (com.optionslab.engine.sandbox.Quote) -> String?): EntryBuy {
         val sent1 = System.currentTimeMillis()
         // 22 Oct: [verdict] the guard's verdict on this exact order (the paper book refuses a different one); the same order again
         // on a retry for its price is the same fingerprint.
-        val first = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, known = known, auto = auto, verdict = verdict)
+        val first = Paper.place(c, "BUY", lots, if (limit != null) "LIMIT" else "MARKET", "MIS", limit, null, known = known, auto = auto, verdict = verdict)
         // 22 Oct (arms audit; the 21 Oct diagnostics showed Liquidity 5m's cancelled 09:30 entry as "IraAlgo-Android"): every
         // order carries its arm's name from the moment it is placed, filled or not, so a cancelled entry is never taken for one
         // of Boss's own in Orders, the order review or the uploaded diagnostics.
@@ -3163,7 +3176,7 @@ object OrbArms {
         // The checks made before the first order, made again at the new price (a check that fails to run refuses).
         val refusal = q?.let { nq -> runCatching { recheck(nq) }.getOrElse { e -> "refused: the checks could not be made again (${e.message})" } }
         val sent2 = System.currentTimeMillis()
-        val again = if (q != null && refusal == null) Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, known = q, auto = auto, verdict = verdict) else null
+        val again = if (q != null && refusal == null) Paper.place(c, "BUY", lots, if (limit != null) "LIMIT" else "MARKET", "MIS", limit, null, known = q, auto = auto, verdict = verdict) else null
         again?.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", tag) } }
         val fill = again?.let { filledOrCancelled(it) }
         // Logged either way (the diagnostics' "orb" lines): an execution retry, never a change to what the arm trades.
@@ -3232,6 +3245,21 @@ object OrbArms {
         }
         if (!LiquidityRules.mayEnterAt(last.start.plusMinutes(tf.toLong()))) return kept("liquidity_outside_entry_hours")
         val s = LiquidityRules.signal(bars, LiquidityRules.zones(bars)) ?: return kept("no_liquidity_break")
+        // 25 Oct (Boss's decision on the arms audit; the 22 Oct audit's F3 rule): every study Liquidity rests on skipped its index's
+        // own expiry day, so on PAPER a book takes no entry that day (open positions keep their exits) - the 26 Oct comparison is like
+        // for like. Its switch is on the Account guard page, logged in the Autopilot timeline (one tap back). A LIVE entry is only
+        // logged (a new rule that skips a live trade starts in shadow). Memory only (the day's contract list).
+        val expiryToday = runCatching {
+            HeroRules.isExpiryDay(day, Market.contracts().filter { it.underlying == und }.map { it.expiry }.distinct())
+        }.getOrDefault(false)
+        if (expiryToday) {
+            val goesLive = ArmAccount.entry(arm, appLive ?: liveNow(), SmartWorkers.parkedToPaperNow("liquidity"))
+            if (!goesLive && BossRiskHost.expirySkipPaper()) {
+                runCatching { BossRiskHost.expiryNote(arm.label, und, LiquidityRules.EXPIRY_DAY_WORDS) }
+                return kept("refused: ${LiquidityRules.EXPIRY_DAY_WORDS}", s)
+            }
+            if (goesLive) runCatching { BossRiskHost.expiryNote(arm.label, und, LiquidityRules.EXPIRY_DAY_WORDS, live = true) }
+        }
         // The room filter and the 1-ITM strike (research liq2, adopted on paper 06 Oct by Boss's choice).
         if (!LiquidityRules.hasRoom(s, last.close, und)) {
             // Information only (its own switch, off by default): the skip is told, the decision above is unchanged.
@@ -3360,19 +3388,80 @@ object OrbArms {
                     }
                 }
         }
+        return liquidityPaperBuy(b, arm, s, signalBar, strike, c, lots, flow, atSignal, barCloseMs, near, volSkip, strong, null)
+    }
+
+    // ---- 25 Oct: research h14's capped limit on Liquidity's paper entries (Boss's decision on the app audit, E1) -------------
+
+    /** A Liquidity paper signal waiting up to 3 minutes for its option to come back under the cap (memory only: a restart lets it go). */
+    internal class CapWait(val arm: String, val signal: LiquidityRules.Signal, val signalBar: LocalDateTime, val strike: Int, val contract: Paper.Contract,
+                           val lots: Int, val flow: FlowGate.Ticket, val atSignal: Paper.BookNow?, val barCloseMs: Long, val near: Boolean?,
+                           val volSkip: Boolean?, val strong: Boolean?, val cap: Double, val until: LocalDateTime)
+
+    private val capWaits = java.util.concurrent.ConcurrentHashMap<String, CapWait>()
+
+    /** TEST ONLY: the signal's price the cap is set from (null in the app: the stream's last at the signal, else the price read). */
+    @Volatile internal var testCapRef: Double? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** TEST ONLY: no signal waiting (a new process). */
+    internal fun forgetCapWaitsForTest() { capWaits.clear() }
+
+    /** The verdict while a signal waits for its price to come back under the cap. */
+    internal const val CAP_WAITING = "capped_limit_waiting"
+
+    /** One look at a waiting signal ([w]): bought once its price is under the cap, let go once its 3 minutes are up. */
+    private suspend fun capStep(b: Book, arm: Arm, w: CapWait, t: LocalDateTime): String {
+        if (t.isAfter(w.until) || !BossRiskHost.cappedPaper() || Strategies.stoppedToday()) {
+            capWaits.remove(arm.source)
+            val why = "capped limit (h14): ${w.contract.symbol} did not come back to %.2f or less within 3 minutes; let go (never chased)".format(Locale.ENGLISH, w.cap)
+            runCatching { BossRiskHost.cappedNote(arm.label, w.contract.symbol, why) }
+            FlowGate.outcome(w.flow, "refused: $why")
+            return "refused: $why"
+        }
+        return liquidityPaperBuy(b, arm, w.signal, w.signalBar, w.strike, w.contract, w.lots, w.flow, w.atSignal, w.barCloseMs, w.near, w.volSkip, w.strong, w)
+    }
+
+    /**
+     * Liquidity's paper buy of [lots] of [c] for signal [s] (the part of [enterLiquidity] after its checks): priced, the guard, the
+     * order and the booking. With h14's capped limit on ([BossRiskHost.cappedPaper]) the order is a LIMIT at the cap - the signal's
+     * price ([atSignal], else the price read now) + 0.5% - and, while the option's price is above it, the signal waits ([capWaits],
+     * [capStep]) up to 3 minutes; [wait]: this look is that wait's.
+     */
+    private suspend fun liquidityPaperBuy(b: Book, arm: Arm, s: LiquidityRules.Signal, signalBar: LocalDateTime, strike: Int, c: Paper.Contract,
+                                          lots: Int, flow: FlowGate.Ticket, atSignal: Paper.BookNow?, barCloseMs: Long, near: Boolean?, volSkip: Boolean?,
+                                          strong: Boolean?, wait: CapWait?): String {
         // 22 Oct: the option's price at the signal ([entryQuote]: one more read if the first finds none), handed to the fill.
         val price = entryQuote(c, mayRetryPrice(b))
-        val q = price.quote
-        val ltp = q?.ltp ?: return noQuote(c, price)
-        if (Strategies.stoppedToday()) return "stopped_for_today"
+        val q = price.quote ?: return if (wait != null) CAP_WAITING else noQuote(c, price)
+        val ltp = q.ltp
+        if (Strategies.stoppedToday()) { capWaits.remove(arm.source); return "stopped_for_today" }
+        val cap = wait?.cap ?: if (BossRiskHost.cappedPaper()) com.optionslab.ira.BossRisk.cap(testCapRef ?: atSignal?.last?.takeIf { it > 0 } ?: ltp) else null
+        if (cap != null && !com.optionslab.ira.BossRisk.underCap(q.ask.takeIf { it > 0 } ?: ltp, cap)) {
+            if (wait == null) {
+                capWaits[arm.source] = CapWait(arm.source, s, signalBar, strike, c, lots, flow, atSignal, barCloseMs, near, volSkip, strong, cap,
+                    now().plusMinutes(com.optionslab.ira.BossRisk.CAP_WAIT_MIN))
+                runCatching { BossRiskHost.cappedNote(arm.label, c.symbol, "capped limit (h14): %s at %.2f is over the cap %.2f; waiting up to 3 minutes, never chasing".format(Locale.ENGLISH, c.symbol, q.ask.takeIf { it > 0 } ?: ltp, cap)) }
+            }
+            return CAP_WAITING
+        }
         val snap = runCatching { Paper.snapshot() }.getOrNull()
-        val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
-        if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
+        val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, cap ?: (ltp * 1.0005)), snap?.let { Guard.paperAccount(it) }, paper = true)
+        if (refusals.isNotEmpty()) { capWaits.remove(arm.source); return "guard_refused: " + refusals.joinToString(" ") }
         // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]).
-        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, "MARKET", "MIS", null, null, Market.today(), arm.source), refusals, "paper guard")
-        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b), tag = "${LiquidityRules.ARM.label} · entry", verdict = verdict) { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
+        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, if (cap != null) "LIMIT" else "MARKET", "MIS", cap, null, Market.today(), arm.source), refusals, "paper guard")
+        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b) && cap == null, tag = "${LiquidityRules.ARM.label} · entry", verdict = verdict, limit = cap) { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
         val buy = entry.result
+        // The capped LIMIT not filled at once (the price moved over the cap meanwhile; the book cancelled it): the signal waits on
+        // within its 3 minutes, never chasing. A refusal (a rule, the guard) ends the wait.
+        if (cap != null && entry.fill == null && buy.ok) {
+            if (wait == null) capWaits[arm.source] = CapWait(arm.source, s, signalBar, strike, c, lots, flow, atSignal, barCloseMs, near, volSkip, strong, cap,
+                now().plusMinutes(com.optionslab.ira.BossRisk.CAP_WAIT_MIN))
+            return CAP_WAITING
+        }
+        capWaits.remove(arm.source)
         val fill = entry.fill ?: return unfilled(c, entry)
+        if (cap != null) runCatching { BossRiskHost.cappedNote(arm.label, c.symbol, "capped limit (h14): bought at %.2f under the cap %.2f".format(Locale.ENGLISH, fill.price, cap)) }
         // The fill against the signal's price (the stream's last at the signal, else the price read just before the order); timed
         // from the order that filled (22 Oct: a second order's own send time, so the retry's wait is not counted as fill speed).
         runCatching { LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.ENTRY, System.currentTimeMillis(), arm, c.symbol, false, fill.price,
@@ -3399,7 +3488,7 @@ object OrbArms {
             trail = trail, trailFrom = LiquidityTrail.forEntryFrom(trail),
             // 22 Oct: Boss's own breakeven at +10% (R100 A4 did not pass: their opt-in switch, off by default): paper entries only.
             be = LiquidityBreakeven.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.breakevenOn() }.getOrDefault(false)),
-            priceRetry = price.retried || entry.retried))
+            priceRetry = price.retried || entry.retried, capped = cap))
         marks[c.symbol] = fill.price
         // 22 Oct: the time machine's reality check (shadow only; background): the index stop and the level-to-target distance in index points.
         runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, LiquidityRules.ARM.label, "orb:${arm.source}:${buy.orderId ?: now()}", c.underlying,
@@ -3908,6 +3997,7 @@ object OrbArms {
         s == FlowGate.SKIPPED -> "Skipped by the order flow (CONFIRM): the flow did not agree with this entry at the decision."
         s.startsWith(com.optionslab.ira.LiquidityTwin.SKIPPED) -> "Not bought (a would-be trade, counted apart): " +
             s.substringAfter(": ").substringAfter("no-twin rule: ") + "."
+        s == CAP_WAITING -> "A liquidity break is waiting up to 3 minutes for its option to come back under the capped limit (research h14: 0.5% over the signal's price, never chasing)."
         s == "liquidity_no_room" -> "Skipped a liquidity break: the next level ahead was closer than one index stop " +
             "(30 BANKNIFTY / 15 FINNIFTY / 8 MIDCPNIFTY points)."
         s.startsWith("hero_") -> describeHero(s) + " ${HeroRules.NOT_PROVEN}."
@@ -3932,7 +4022,7 @@ object OrbArms {
         cache = null; holdingHint = false; armedLabelsHint = emptyList(); liveHint = false; liveSymbolsHint = emptyList(); restoppedAt.clear(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
         shownParams.clear()
         lastLook.clear(); gapTried.clear(); indexReadSaid.clear(); exitCheckSaid.clear()
-        noPriceTried.clear(); noPriceSaid.clear(); liquidityLag.clear(); liquidityHistoryMiss.clear()
+        noPriceTried.clear(); noPriceSaid.clear(); liquidityLag.clear(); liquidityHistoryMiss.clear(); capWaits.clear()
         if (::file.isInitialized) file.delete()
     }
 }

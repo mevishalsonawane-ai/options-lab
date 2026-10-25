@@ -101,6 +101,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.ExposureCapHost.init(this)
         // 20 Oct, enhancement round 1 (idea 4): the account stop rule (in shadow by default), read in the background.
         com.optionslab.app.data.AccountStopHost.init(this)
+        // 25 Oct (Boss's decisions on the app audit): the new risk rules' switches and record, read in the background.
+        com.optionslab.app.data.BossRiskHost.init(this)
         // 20 Oct, enhancement round 2 (idea 1): the exit coordinator's switch (in shadow by default), read in the background.
         com.optionslab.app.data.ExitCoordinator.init(this)
         // 21 Oct, enhancement round 4 (idea 1): stop and target as one GTT in the day too (off by default), read in the background.

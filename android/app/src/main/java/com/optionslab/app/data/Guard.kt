@@ -66,6 +66,8 @@ object Guard {
         // drawdown and turned the kill switch on for a network glitch. Unknown (NaN) gives the guard's "Equity is unknown"
         // refusal instead (see [judge]): the entry waits, the kill switch stays off, and the peak is not touched.
         val capital = (funds?.openingBalance?.takeIf { it > 0 } ?: funds?.net)?.takeIf { it > 0 } ?: Double.NaN
+        // 25 Oct: kept in memory for the live 2% risk cap's shadow in the entry door ([BossRiskHost.liveDoor]); never read from disk there.
+        if (capital.isFinite()) BossRiskHost.liveCapital = capital
         val equity = capital + dayPnl
         return AccountGuard.Account(
             capital = capital, equity = equity, peakEquity = if (capital.isNaN()) Double.NaN else peak(true, equity), dayPnl = dayPnl,

@@ -661,6 +661,31 @@ class ControlPagesTest {
         waitSettings { it.guardPaperDailyLoss == 20_000.0 }
     }
 
+    /** 25 Oct (Boss's decision on the app audit): the paper weekly loss stop's row - loosening it takes the PIN, tightening never waits. */
+    @Test fun looseningThePaperWeeklyStopAsksForThePinTighteningDoesNot() {
+        com.optionslab.app.testing.BrokerArea.saveKeys(pin)
+        show { RiskPage(model) }
+        compose.waitForText("Bot settings")
+        compose.reveal("NO NEW PAPER ENTRIES UNTIL MONDAY", substring = true)
+        fun chipIn(row: Int, text: String) { compose.reveal(text); compose.onAllNodesWithText(text)[row].performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
+        assertEquals(20_000.0, model.settings.value.paperWeeklyLoss, 0.0)
+        // Tighter (₹20,000 -> ₹10,000): at once. "₹10,000" is also a chip of the Zerodha and the paper daily loss rows above it:
+        // the weekly row's is the third.
+        chipIn(2, "₹10,000")
+        waitSettings { it.paperWeeklyLoss == 10_000.0 }
+        assertFalse(compose.has("Confirm it is you"))
+        // Looser (₹10,000 -> ₹30,000): the PIN first.
+        chipIn(0, "₹30,000")
+        reauth(pin, ASK_PAPER_WEEK)
+        waitSettings { it.paperWeeklyLoss == 30_000.0 }
+    }
+
+    @Test fun theMuhuratSundayIsNamedOnTheHolidayCard() {
+        show { SchedulePage(model) }
+        compose.reveal("Diwali Muhurat trading", substring = true)
+        assertTrue(compose.has("Diwali Muhurat trading, 18:00-19:00 IST (special session: no arm trades it)", substring = true))
+    }
+
     @Test fun expirySquareOffAndNakedShortSwitches() {
         show { RiskPage(model) }
         val keep = "Keep the Expiry Put to settlement"

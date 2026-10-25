@@ -68,11 +68,22 @@ object HeroTicketRules {
     /**
      * 15 Oct (research R54): R50's "tr25" trail starts at the fill, so it is also a 25% stop, and these options swing 18-25% inside
      * a minute - it sold the 2 Apr 2026 SENSEX 72,500 CE at 2.7x (+Rs 280) where holding to 15:05 made +Rs 13,958. Boss was told
-     * the trail starts once the option has run up: so where it starts is a setting ([TrailStart]); "after 2x" is a placeholder
-     * default until Boss chooses after the follow-up comparison (research R55).
+     * the trail starts once the option has run up: so where it starts is a setting ([TrailStart]); "after 2x" was a placeholder
+     * default until Boss chose after the follow-up comparison (research R55).
+     * 25 Oct (Boss: "Do whatever you think better for application"; the arms audit): R55 found "after 2x" the worst of its five
+     * cells and recommends the trail from the fill, so the default is now [TrailStart.AT_FILL] (paper only; a one-time change,
+     * [TRAIL_FILL_MIGRATION], logged in the Autopilot change timeline, one tap back). Until a ticket doubles, the old default
+     * left no stop below it but the 15:05 sale.
      */
-    const val TRAIL_START_NOTE = "Where the trail starts: after 2× for now - your choice pending the follow-up comparison (R55); " +
-        "R50 measured it from the fill"
+    const val TRAIL_START_NOTE = "Where the trail starts: from the fill since 25 Oct (research R55's recommended cell; \"after 2×\" " +
+        "was its worst); R50 measured it from the fill"
+
+    /** 25 Oct: the one-time change of a book still on the old "after 2x" placeholder to the trail from the fill (kept in its marks). */
+    const val TRAIL_FILL_MIGRATION = "ticket_trail_from_fill_2026_10_25"
+    /** Why, for the change timeline and the book's log (R55, sample sizes in research/HUNT_R55*). */
+    const val TRAIL_FILL_REASON = "your decision on the arms audit (25 Oct): research R55 found the trail \"after 2×\" the worst of its five " +
+        "cells (design 248 tickets: from the fill -Rs 14,507, after 2× -Rs 59,286; final 107 tickets: +Rs 1,559 vs -Rs 9,680) and " +
+        "recommends it from the fill (R50's own rule: also a 25% stop); new tickets only, an open ticket keeps its own; paper only"
     /** Its trades are kept apart from every other record (the arms that passed, the plain-rules record for 26 Oct). */
     const val SEPARATE = "Its trades are kept in its own record, apart from the arms that passed and from the plain-rules record for 26 Oct"
 
@@ -114,8 +125,9 @@ object HeroTicketRules {
     }
 
     /**
-     * Where Boss's 25% trail starts ([trail]): at the fill (R50's "tr25": also a 25% stop), or only once the option has closed at
-     * or above 2x / 3x its fill (no stop below that: until then it holds to 15:05, and the most it can lose is the ticket).
+     * Where Boss's 25% trail starts ([trail]): at the fill (R50's "tr25": also a 25% stop; the default from 25 Oct), or only once
+     * the option has closed at or above 2x / 3x its fill (no stop below that: until then it holds to 15:05, and the most it can
+     * lose is the ticket).
      */
     enum class TrailStart(val key: String, val mult: Double?, val words: String) {
         AT_FILL("fill", null, "trail from the fill (R50)"), AFTER_2X("2x", 2.0, "trail after 2×"), AFTER_3X("3x", 3.0, "trail after 3×");
@@ -123,8 +135,10 @@ object HeroTicketRules {
         companion object {
             /** The saved [key]'s start; anything unknown (or nothing saved) is the default. */
             fun of(key: String?): TrailStart = entries.firstOrNull { it.key == key } ?: DEFAULT
-            /** A placeholder until Boss chooses after research R55 (15 Oct). */
-            val DEFAULT = AFTER_2X
+            /** 25 Oct: from the fill (R55's recommended cell); it was "after 2x", a placeholder, from 15 Oct. */
+            val DEFAULT = AT_FILL
+            /** The start a ticket record saved before 15 Oct's field reads as (the placeholder then in force). */
+            val LEGACY = AFTER_2X
         }
     }
 

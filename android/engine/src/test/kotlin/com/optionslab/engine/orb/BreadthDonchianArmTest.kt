@@ -165,4 +165,25 @@ class BreadthDonchianArmTest {
         for (d in days) for (s in BreadthDonchianArm.signals(series, d))
             assertTrue(DonchianArm.signals(s.underlying, series.getValue(s.underlying), d).any { it.bar == s.bar && it.side == s.side })
     }
+
+    /** 25 Oct: R72's place is kept only while it has a break due (in its fill window, not decided yet), and only on that side. */
+    @Test fun aBreakIsDueOnlyInsideItsFillWindowUntilDecidedAndOnlyOnItsSide() {
+        val sigs = BreadthDonchianArm.signals(market(3, up = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX")), day)
+        val closes = sigs.first().entryTime
+        // Before the bar closes: nothing due; at its close and through its 2-minute slack: calls due; after it: nothing.
+        assertTrue(BreadthDonchianArm.dueSides(sigs, closes.minusSeconds(1)) { false }.isEmpty())
+        val due = BreadthDonchianArm.dueSides(sigs, closes.plusSeconds(3)) { false }
+        assertEquals(setOf(1), due.keys, "calls only: no put place is kept")
+        assertEquals(closes.plusMinutes(DonchianArm.FILL_SLACK_MINUTES + 1), due.getValue(1))
+        assertTrue(BreadthDonchianArm.dueSides(sigs, closes.plusMinutes(3)) { false }.isEmpty(), "its fill window has passed")
+        // Decided (bought, or refused) on every index: nothing due any more; one left: still due.
+        assertTrue(BreadthDonchianArm.dueSides(sigs, closes.plusSeconds(3)) { true }.isEmpty())
+        assertEquals(setOf(1), BreadthDonchianArm.dueSides(sigs, closes.plusSeconds(3)) { it.underlying != "SENSEX" }.keys)
+        // No breadth break on the bar (3 of 5): nothing due at all; no data: nothing due.
+        assertTrue(BreadthDonchianArm.dueSides(BreadthDonchianArm.signals(market(3, up = setOf("NIFTY", "BANKNIFTY", "FINNIFTY")), day), closes) { false }.isEmpty())
+        assertTrue(BreadthDonchianArm.dueSides(emptyList(), closes) { false }.isEmpty())
+        // A put break is due on its own side.
+        val puts = BreadthDonchianArm.signals(market(4, down = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")), day)
+        assertEquals(setOf(-1), BreadthDonchianArm.dueSides(puts, puts.first().entryTime) { false }.keys)
+    }
 }

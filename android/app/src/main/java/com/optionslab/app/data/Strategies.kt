@@ -843,7 +843,10 @@ object Strategies {
                             }
                             // 20 Oct, enhancement round 1 (idea 4): an automatic LIVE start asks the account stop rule first (in shadow by
                             // default: only recorded). Boss's own start from the app is never asked.
-                            val acct = if (d.mode == RunMode.LIVE) runCatching { AccountStopHost.doorCheck(def.underlying.uppercase(), def.name) }.getOrNull() else null
+                            // 25 Oct (Boss's decisions on the app audit): an automatic PAPER start asks the paper account stop and the weekly
+                            // loss stop ([BossRiskHost]; memory only); refused, it does not start and says why.
+                            val acct = if (d.mode == RunMode.LIVE) runCatching { AccountStopHost.doorCheck(def.underlying.uppercase(), def.name) }.getOrNull()
+                                else runCatching { BossRiskHost.paperStartRefusal(def.name, def.underlying.uppercase()) }.getOrNull()
                             if (acct != null) {
                                 record(b, def.name, Event("start_refused", "Scheduled start refused: $acct", "warn"), true)
                                 notes += "${def.name}: $acct"

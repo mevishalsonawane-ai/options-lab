@@ -145,6 +145,8 @@ object McxPaperArms {
     @Volatile private var cache: Book? = null
     /** The one-time switch-off's notification ([parkMorning]); the arms' own trades use 6970 + their index. */
     private const val NOTICE_ID = 6949
+    /** 25 Oct: the NG evening breakout's one-time switch-off notice ([McxEvePark]). */
+    private const val EVE_NOTICE_ID = 6947
     /** A mark "parked:<arm>" (its day): switched off once on Boss's OK, until Boss switches it back on ([setArmed]). */
     private const val PARKED_MARK = "parked:"
     private const val LOG_KEPT = 200
@@ -182,9 +184,36 @@ object McxPaperArms {
             o.optJSONObject("marks")?.let { m -> m.keys().forEach { b.marks[it] = m.getString(it) } }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
         val parked = runCatching { parkMorning(b, newBook = !existed) }.getOrDefault(false)
+        // 25 Oct (Boss's decision on the arms audit; research R53 and R83): the NG evening breakout switched off once, the same way.
+        val parkedEve = runCatching { parkEvening(b, newBook = !existed) }.getOrDefault(false)
         cache = b
-        if (parked) save(b) else publish(b)
+        if (parked || parkedEve) save(b) else publish(b)
         return b
+    }
+
+    /**
+     * 25 Oct (Boss: "Do whatever you think better for application", on the arms audit; research R53 and R83, [McxEvePark]): the NG
+     * evening breakout is switched off once if it is on, exactly as the SILVERM morning call was ([parkMorning]): paper only, NEW
+     * entries only (what it holds still closes by its own exits), told once (the arm log, the diagnostics, a notification and the
+     * Autopilot change log, where one tap switches it back on). Never runs again. True when [b] must be saved.
+     */
+    private fun parkEvening(b: Book, newBook: Boolean): Boolean {
+        val off = com.optionslab.engine.mcx.McxEvePark.switchOff(b.armed, done = com.optionslab.engine.mcx.McxEvePark.MIGRATION in b.marks) ?: return false
+        b.marks[com.optionslab.engine.mcx.McxEvePark.MIGRATION] = McxMarket.now().toLocalDate().toString()
+        if (newBook) return false
+        if (!off) return true
+        val arm = com.optionslab.engine.mcx.McxEvePark.SOURCE
+        val holding = b.positions.any { it.arm == arm && it.open }
+        b.armed[arm] = false
+        b.status[arm] = com.optionslab.engine.mcx.McxEvePark.PARKED
+        b.marks[PARKED_MARK + arm] = b.marks.getValue(com.optionslab.engine.mcx.McxEvePark.MIGRATION)
+        note(b, arm, com.optionslab.engine.mcx.McxEvePark.PARKED + if (holding) "; what it holds still closes by its own exit" else "")
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            runCatching { com.optionslab.app.ira.Autopilot.logMcxEvePark(arm, label(arm), holding) }
+            runCatching { Diag.record("mcx-arms", com.optionslab.engine.mcx.McxEvePark.NOTICE) }
+            runCatching { Notifier.post(app, EVE_NOTICE_ID, Notifier.SCHEDULE, "NG evening breakout switched off", com.optionslab.engine.mcx.McxEvePark.NOTICE, "almanac") }
+        }
+        return true
     }
 
     /**
@@ -256,7 +285,7 @@ object McxPaperArms {
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
         // 21 Oct, review: this book's arms only (the NR7 record keeps its own key, [McxMarket.noteNr7On]).
         runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
-        _view.value = View(b.armed.toMap(), b.status.shown({ _, x -> x == McxMorningPark.PARKED }), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
+        _view.value = View(b.armed.toMap(), b.status.shown({ _, x -> x == McxMorningPark.PARKED || x == com.optionslab.engine.mcx.McxEvePark.PARKED }), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
             b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } },
             b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) ->
                 l.map { com.optionslab.ira.Vetting.Trade((it.exitTime ?: it.entryTime).toLocalDate(), it.net ?: 0.0) } },
@@ -331,7 +360,7 @@ object McxPaperArms {
             // Back on after the 14 Oct switch-off ([McxMorningPark]): no longer parked, its row no longer says why, and the
             // change log's entry is closed (its Undo can no longer switch it on later, after Boss switched it off by hand).
             if (on && b.marks.remove(PARKED_MARK + arm) != null) {
-                if (b.status[arm] == McxMorningPark.PARKED) b.status.remove(arm)
+                if (b.status[arm] == McxMorningPark.PARKED || b.status[arm] == com.optionslab.engine.mcx.McxEvePark.PARKED) b.status.remove(arm)
                 if (!com.optionslab.app.BuildConfig.GOLD) runCatching { com.optionslab.app.ira.Autopilot.mcxUnparkedByBoss(arm) }
             }
             note(b, arm, if (on) "switched on, paper only (${McxArmRules.NOT_PROVEN}; ${record(arm)})" else "switched off" +
@@ -560,7 +589,12 @@ object McxPaperArms {
      * (arms audit): an [exit] only ever reduces what the paper book holds ([Paper.place]'s exit rule) - never a position the
      * other way when the position was already closed by the expiry exit, the sweeper or Boss.
      */
-    private suspend fun paperOrder(c: Paper.Contract, action: String, tag: String, exit: Boolean = false): Pair<SandboxEvent.Fill?, Paper.Result> {
+    private suspend fun paperOrder(c: Paper.Contract, action: String, tag: String, exit: Boolean = false, entry: Boolean = false): Pair<SandboxEvent.Fill?, Paper.Result> {
+        // 25 Oct (Boss's decisions on the app audit): a new MCX paper entry asks the paper account stop's copy and the weekly loss stop
+        // ([BossRiskHost]; memory only). Refused, nothing is placed and the arm says why; an exit never asks.
+        if (entry && !exit) runCatching { BossRiskHost.paperStartRefusal(tag.substringBefore(" ·"), c.symbol) }.getOrNull()?.let { why ->
+            return null to Paper.Result(false, why, emptyList(), capped = true, rule = BossRiskHost.Rule.entries.firstOrNull { why.contains(it.words) })
+        }
         val r = Paper.place(c, action, McxArmRules.LOTS, "MARKET", "NRML", null, null, exit = exit)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
@@ -762,7 +796,7 @@ object McxPaperArms {
         val flow = FlowGate.gate(arm, McxEveRules.UNDERLYING, sig.side, false, "$today ${hhmm(sig.minute)}", right.name, contract = pc)
         if (flow.skip) { decide(b, arm, key, "eve_${FlowGate.SKIPPED} ($facts)"); return true }
         b.decided += key
-        val (fill, r) = paperOrder(pc, "BUY", "${McxEveRules.LABEL} · entry")
+        val (fill, r) = paperOrder(pc, "BUY", "${McxEveRules.LABEL} · entry", entry = true)
         if (fill == null) { decideLine(b, arm, "eve_not_filled: ${r.message} ($facts)"); return true }
         FlowGate.taken(flow, r.orderId)
         // The -15% stop rests in the paper book, so it fills on a minute's low (the wick) between passes.
@@ -815,7 +849,7 @@ object McxPaperArms {
             val flow = FlowGate.gate(arm, McxMorningRules.UNDERLYING, 1, false, "$today ${hhmm(slot)}", "CE", contract = pc)
             if (flow.skip) { decide(b, arm, key, "am_${FlowGate.SKIPPED} ($facts)"); return true }
             b.decided += key
-            val (fill, r) = paperOrder(pc, "BUY", "${McxMorningRules.LABEL} · entry")
+            val (fill, r) = paperOrder(pc, "BUY", "${McxMorningRules.LABEL} · entry", entry = true)
             if (fill == null) { decideLine(b, arm, "am_not_filled: ${r.message} ($facts)"); return true }
             FlowGate.taken(flow, r.orderId)
             opened(b, Pos(arm, pc.symbol, 1, fill.quantity, fill.price, today, now, slot, oc.expiry, true, r.orderId,
@@ -993,7 +1027,7 @@ object McxPaperArms {
         val flow = FlowGate.gate(arm, McxUsSilverRules.UNDERLYING, side, false, "$today silver", if (side > 0) "BUY" else "SELL", contract = pc)
         if (flow.skip) { decide(b, arm, key, "silver_${FlowGate.SKIPPED} ($facts)"); return true }
         b.decided += key
-        val (fill, r) = paperOrder(pc, if (side > 0) "BUY" else "SELL", "${McxUsSilverRules.LABEL} · entry")
+        val (fill, r) = paperOrder(pc, if (side > 0) "BUY" else "SELL", "${McxUsSilverRules.LABEL} · entry", entry = true)
         if (fill == null) { decideLine(b, arm, "silver_not_filled: ${r.message} ($facts)"); return true }
         FlowGate.taken(flow, r.orderId)
         // The disaster stop (not part of the research) rests in the paper book, so it fills on a minute's high or low.

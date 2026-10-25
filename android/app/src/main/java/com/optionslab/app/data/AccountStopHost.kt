@@ -140,6 +140,9 @@ object AccountStopHost {
         null
     }.getOrNull()
 
+    /** 25 Oct: the Zerodha days recorded (the live weekly loss stop's shadow, [BossRiskHost]). Memory only. */
+    fun daysNow(): List<AccountStop.Day> = synchronized(lock) { days }
+
     /** Today's would-be refusals in shadow. */
     private fun shadowToday(): Int = synchronized(lock) { if (shadowDay == today()) shadowSeen.size else 0 }
 

@@ -925,6 +925,33 @@ object PassedArmsHost {
     fun placeKeptFor(t: LocalTime): String? =
         if (_view.value.on(BreadthDonchianArm.SOURCE) && entryMinute(t) && t.isBefore(LocalTime.of(15, 13))) BreadthDonchianArm.LABEL else null
 
+    /**
+     * 25 Oct (Boss's decision on the arms audit: "keep it only when R72 has a break due, not on every bar"): the arm the cap keeps its
+     * last place for, for an entry betting [dir] at [at] - R72 Breadth Donchian only while it is on, inside its bar-close window
+     * ([placeKeptFor]) AND one of its breaks that way is due and not decided yet ([r72Due], from its last entry check). Before R72 has
+     * looked at a bar, or when its bar has no breadth break, nothing is kept: another arm's entry is never refused for a break R72
+     * does not have. Memory only (the paper book's entry door asks it under its lock).
+     */
+    fun placeKeptFor(at: LocalDateTime, dir: Int): String? {
+        placeKeptFor(at.toLocalTime()) ?: return null
+        val until = r72Due[dir] ?: return null
+        return if (at.isBefore(until)) BreadthDonchianArm.LABEL else null
+    }
+
+    /** R72's breaks due now by side, with the end of their fill window (25 Oct; [noteR72Due]). Memory only. */
+    @Volatile private var r72Due: Map<Int, LocalDateTime> = emptyMap()
+
+    /** R72's due breaks from this entry check's reads ([BreadthDonchianArm.dueSides]): kept for [placeKeptFor]. */
+    private fun noteR72Due(b: Book, now: LocalDateTime, reads: Reads) {
+        if (!b.active(BreadthDonchianArm.SOURCE)) { r72Due = emptyMap(); return }
+        val today = now.toLocalDate()
+        val sigs = runCatching { BreadthDonchianArm.signals(seriesAll(today, reads), today) }.getOrNull() ?: return
+        r72Due = BreadthDonchianArm.dueSides(sigs, now) { x -> "$today|${BreadthDonchianArm.SOURCE}|${x.underlying}|${x.bar.b}|${x.side}" in b.decided }
+    }
+
+    /** TEST ONLY: R72's due breaks as its entry check would have found them. */
+    internal fun r72DueForTest(due: Map<Int, LocalDateTime>) { r72Due = due }
+
     /** Whether an entry decision may be due at [t]: a 5-minute bar has just closed (its first 3 minutes), or Solo's 12:00. */
     internal fun entryMinute(t: LocalTime): Boolean {
         val m = t.hour * 60 + t.minute
@@ -998,6 +1025,8 @@ object PassedArmsHost {
         try {
             val reads = runCatching { reads(now, v) }.getOrNull() ?: return
             val (work, n0, log0, sc0) = lock.withLock { val b = book(); Quad(b.copy(), b.positions.size, b.log.size, b.scores.size) }
+            // 25 Oct: R72's due breaks noted first, so the cap keeps its place only for a break it really has ([placeKeptFor]).
+            runCatching { noteR72Due(work, now, reads) }
             // 19 Oct: an arm set to record only runs here too (its breaks become would-be trades in [buyOne]).
             // 19 Oct (order speed): this bar's due Donchian options priced side by side first, not one after another inside each
             // index's entry (each a network wait when the stream does not have the option yet). Memory and reads only.
@@ -1018,6 +1047,8 @@ object PassedArmsHost {
             if (work.active(OovArm.SOURCE)) changed = runCatching { oov(work, now, reads) }.getOrElse { work.status["${OovArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (work.active(Solo2.SOURCE)) changed = runCatching { solo2(work, now, reads) }.getOrElse { work.status["${Solo2.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             if (!r72First && work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
+            // R72 has decided its breaks (bought, refused or let go): the place is no longer kept for them.
+            runCatching { noteR72Due(work, now, reads) }
             if (!changed) return
             lock.withLock {
                 val b = book()
@@ -1247,8 +1278,9 @@ object PassedArmsHost {
             val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = label(arm), mirror = arm, verdict = verdict)
             // 19 Oct: the same-direction cap refused it: nothing was bought; kept as a would-be trade at the price seen.
             // Priced at the ask when the quote has one (a buyer pays it), else the last price.
+            // 25 Oct: one of Boss's new risk rules refused it ([BossRiskHost]): kept the same way, labelled with that rule.
             if (r.capped) return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth,
-                SHADOW_CAP, r.message), r.message, true)
+                if (r.rule != null) SHADOW_RULE else SHADOW_CAP, r.message), r.message, true)
             val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
             if (fill == null) {
                 r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
@@ -1294,6 +1326,8 @@ object PassedArmsHost {
     const val SHADOW_OFF = "off"
     /** [Pos.shadow]: another of these arms (not its Donchian twin) already held the option (22 Oct). */
     const val SHADOW_HELD = "held"
+    /** [Pos.shadow]: one of 25 Oct's risk rules refused the entry (the account or weekly stop, opposite bets, the 2% cap). */
+    const val SHADOW_RULE = "rule"
 
     /** Why a would-be trade was not bought, in words. */
     fun shadowWords(p: Pos): String = when (p.shadow) {
@@ -1301,6 +1335,7 @@ object PassedArmsHost {
         SHADOW_CAP -> "would-be: refused by the same-direction cap"
         SHADOW_OFF -> "would-be: switched to record only"
         SHADOW_HELD -> "would-be: another arm already held this option"
+        SHADOW_RULE -> "would-be: refused by a risk rule (account or weekly stop, opposite bets or the 2% cap)"
         else -> ""
     }
 
@@ -1883,7 +1918,7 @@ object PassedArmsHost {
     /** For tests: the book forgotten (its file goes with the test's directory), and the day's memory. */
     internal fun wipe() {
         synchronized(writeLock) { pendingBytes.set(null) }
-        cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear()
+        cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap()
     }
 
     /** TEST ONLY: closed trades added to the book as if traded (the forward bars' tests). Debug builds only. */

@@ -335,7 +335,8 @@ internal object Autopilot {
             // back on - the MCX arms are paper only, always (nothing there can reach Zerodha). Only the SILVERM morning call.
             AutoChange.Kind.ARM_PARK -> if (c.target.startsWith(AutoChange.MCX_ARM)) {
                 val source = c.target.removePrefix(AutoChange.MCX_ARM)
-                if (c.to != AutoChange.ON || source != com.optionslab.engine.mcx.McxMorningPark.SOURCE) return null
+                // 25 Oct: the NG evening breakout's switch-off ([logMcxEvePark]) is undone the same way.
+                if (c.to != AutoChange.ON || (source != com.optionslab.engine.mcx.McxMorningPark.SOURCE && source != com.optionslab.engine.mcx.McxEvePark.SOURCE)) return null
                 val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.McxPaperArms.setArmed(source, true) }
                 said.takeIf { it.contains("on, paper only") || it.contains("already on") }
             } else {
@@ -445,7 +446,22 @@ internal object Autopilot {
             // switches it off for new breaks (back to the plain rules). Paper only, never Zerodha: no PIN either way; not logged again.
             // 19 Oct (Boss: "Resolve the issues"): the same-direction cap on the automatic paper entries ([logSameDirCapOn]): its Undo
             // switches it off for paper (or back on). Paper only (live stays in shadow behind its own switch): no PIN; not logged again.
-            AutoChange.Kind.PAPER_FILTER -> if (c.target == AutoChange.SAME_DIR_TARGET) {
+            // 25 Oct (Boss's decisions on the app audit): the new paper rules' Undo flips their paper switch back (loosening a risk
+            // limit takes the PIN: checked in [undo] through [needsPin] and again by the setter); the Hero ticket's trail start
+            // goes back to "after 2x" for new tickets. Paper only; not logged again.
+            AutoChange.Kind.PAPER_FILTER -> if (c.target in AutoChange.BOSS_PAPER_RULES) {
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                val on = c.to == AutoChange.ON
+                if (c.target == AutoChange.TICKET_TRAIL_TARGET) {
+                    kotlinx.coroutines.runBlocking { com.optionslab.app.data.HeroTicketArm.setTrailStart(
+                        if (on) com.optionslab.engine.orb.HeroTicketRules.TrailStart.AT_FILL else com.optionslab.engine.orb.HeroTicketRules.TrailStart.AFTER_2X) }
+                        .takeIf { !it.contains("not ready") }
+                } else {
+                    val rule = com.optionslab.app.data.BossRiskHost.Rule.ofTarget(c.target) ?: return null
+                    com.optionslab.app.data.BossRiskHost.setPaper(rule, on, pinConfirmed = pinConfirmed || on, log = false)
+                        .takeIf { it != com.optionslab.app.data.BossRiskHost.PIN_LOOSEN }
+                }
+            } else if (c.target == AutoChange.SAME_DIR_TARGET) {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 com.optionslab.app.data.ExposureCapHost.setPaperOn(c.to == AutoChange.ON, log = false)
             } else if (c.target == AutoChange.NO_TWIN_TARGET) {
@@ -576,6 +592,9 @@ internal object Autopilot {
                 runCatching { ManagerSpecialists.liveActs(p[1]) }.getOrDefault(true)
             AutoChange.Kind.FLOW_MODE -> inverse.to == OrderFlow.Mode.CONFIRM.name &&
                 runCatching { FlowGate.needsPin(inverse.target.removePrefix("flow:"), OrderFlow.Mode.CONFIRM) }.getOrDefault(true)
+            // 25 Oct: switching one of the new paper risk limits off loosens it: the PIN, as loosening the paper loss limit takes it.
+            AutoChange.Kind.PAPER_FILTER -> inverse.target in AutoChange.PIN_TO_LOOSEN && inverse.to == AutoChange.SWITCHED_OFF &&
+                runCatching { com.optionslab.app.security.GuardPin.asks(true, runCatching { AppSettings.load().live }.getOrDefault(true)) }.getOrDefault(true)
             else -> false
         }
     }
@@ -835,6 +854,18 @@ internal object Autopilot {
     }
 
     /**
+     * 25 Oct (Boss's decision on the arms audit; research R53 and R83, [com.optionslab.engine.mcx.McxEvePark]): the NG evening
+     * breakout, an MCX PAPER arm, switched off by the MCX arms' one-time change. Logged as Boss's (kept), once; one tap undoes it (back
+     * on, paper only - no PIN: the MCX arms never reach Zerodha). [holding]: its open position still closes by its own exit.
+     */
+    fun logMcxEvePark(source: String, label: String, holding: Boolean) {
+        if (!enabled()) return
+        val ep = com.optionslab.engine.mcx.McxEvePark
+        val c = AutoChange.mcxArmPark(source, label, ep.REASON, ep.R83_TRADES, ep.R83_RS.toDouble())
+        logBossOwnOnce(c, "your decision, 25 Oct (research R53 and R83); paper only" + (if (holding) "; its open position still closes by its own exit" else ""))
+    }
+
+    /**
      * 21 Oct (Boss: "Yes, give commodities their own day lock"): commodities on their own PAPER day lock and loss limit by this
      * update ([AutoChange.segmentSplit]), logged once as Boss's choice (kept, not on probation) so the timeline shows it and one
      * tap puts the shared lock back. Never logged twice (a restart, an undone entry): Bot settings' switch logs later flips.
@@ -1003,6 +1034,34 @@ internal object Autopilot {
     fun logSameDirCapOn(max: Int) {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.sameDirCap(true, max), "the 19 Oct update (your ask: \"Resolve the issues\"); paper only - live only logs what it would refuse")
+    }
+
+    /**
+     * 25 Oct (Boss: "Do whatever you think better for application", on the app audit's decisions): one of the new paper rules
+     * ([AutoChange.bossPaperRule]: the account stop's paper copy, the weekly stop, the 2% cap, opposite bets, h14's capped limit,
+     * Liquidity's expiry-day skip, the Hero ticket's trail from the fill) on by this update - logged once (kept) as Boss's decision,
+     * so the change log and "Today's changes" show it; one tap undoes it (the risk limits' Undo takes the PIN). Paper only.
+     */
+    fun logBossRuleOnce(c: AutoChange.Change) {
+        if (!enabled()) return
+        logBossOwnOnce(c, "your decision on the app audit (25 Oct); paper only - live stays in shadow, logged only")
+    }
+
+    /** Boss flipped one of 25 Oct's paper rules on the Account guard page: logged (kept); one tap undoes it. Paper only. */
+    fun logBossRule(c: AutoChange.Change) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                if (appContext == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                        by = "your choice", note = "from the Account guard page; paper only").first
+                    save()
+                }
+            }
+        }
     }
 
     /**

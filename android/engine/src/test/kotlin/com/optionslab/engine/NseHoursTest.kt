@@ -52,4 +52,20 @@ class NseHoursTest {
         assertEquals(15 * 60 + 40, NseHours.squareOffMinute(oct12, 16 * 60, expiresToday = false))
         assertEquals(15 * 60 + 30, NseHours.squareOffMinute(LocalDate.of(2026, 7, 31), 16 * 60, expiresToday = false))
     }
+
+    @Test fun `25 Oct - the Muhurat Sunday is a special session, never a regular day`() {
+        val muhurat = LocalDate.of(2026, 11, 8)
+        val s = NseHours.special(muhurat)!!
+        assertEquals(LocalTime.of(18, 0), s.open)
+        assertEquals(LocalTime.of(19, 0), s.close)
+        assertEquals("Diwali Muhurat trading, 18:00-19:00 IST", s.text)
+        assertFalse(NseHours.regular(muhurat), "no arm's 09:15 clock runs that day")
+        assertTrue(NseHours.regular(muhurat.plusDays(1)), "the Monday after is ordinary")
+        assertEquals(null, NseHours.special(aug3))
+        // The same window as MCX's own table (its circular).
+        val mcx = com.optionslab.engine.mcx.McxSession.BUILT_IN.getValue(muhurat)!!
+        assertEquals(mcx.open, s.open); assertEquals(mcx.close, s.close)
+        assertEquals(listOf(muhurat), NseHours.specialsFrom(LocalDate.of(2026, 10, 25)).map { it.first })
+        assertTrue(NseHours.specialsFrom(muhurat.plusDays(1)).isEmpty(), "past it, none listed")
+    }
 }

@@ -91,6 +91,9 @@ class McxMorningParkMigrationTest : RobolectricTest() {
     private fun bookFromBeforeTheUpdate(base: JSONObject? = null) {
         val o = base ?: JSONObject(String(Vault.readFileSteady(armsFile)!!, Charsets.UTF_8))
         o.optJSONObject("marks")?.remove(McxMorningPark.MIGRATION)
+        // 25 Oct: the NG evening breakout's own one-time change is McxEveParkMigrationTest's: marked done here, so this test reads the
+        // 14 Oct change alone.
+        (o.optJSONObject("marks") ?: JSONObject().also { o.put("marks", it) }).put(com.optionslab.engine.mcx.McxEvePark.MIGRATION, "2026-10-25")
         Vault.writeFile(armsFile, o.toString().toByteArray(Charsets.UTF_8))
         AutomationSupport.reloadFromDisk(McxPaperArms)
     }
@@ -256,7 +259,9 @@ class McxMorningParkMigrationTest : RobolectricTest() {
         val park = AutoChange.mcxArmPark(m4, McxMorningRules.LABEL, McxMorningPark.REASON, McxMorningPark.WALK_FORWARD_TRADES,
             McxMorningPark.WALK_FORWARD_RS.toDouble())
         // Never another arm, and never a park by itself (only Boss's undo puts it back).
-        assertEquals(null, Autopilot.apply(AutoChange.inverse(AutoChange.mcxArmPark(McxEveRules.SOURCE, McxEveRules.LABEL, "x", 0, 0.0), "undone by you"), false))
+        // (25 Oct: the NG evening breakout's own switch-off is undone the same way: McxEveParkMigrationTest.)
+        assertEquals(null, Autopilot.apply(AutoChange.inverse(AutoChange.mcxArmPark(com.optionslab.engine.mcx.McxUsSilverRules.SOURCE,
+            com.optionslab.engine.mcx.McxUsSilverRules.LABEL, "x", 0, 0.0), "undone by you"), false))
         assertEquals(null, Autopilot.apply(park, false))
         val said = Autopilot.apply(AutoChange.inverse(park, "undone by you"), pinConfirmed = false)
         assertNotNull(said); assertTrue(said!!, said.contains("on, paper only"))

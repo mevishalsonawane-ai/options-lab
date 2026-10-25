@@ -177,8 +177,8 @@ class HeroTicketArmTest : RobolectricTest() {
 
     @Test fun onNiftysExpiryDayItBuysBothTicketsAt1230OnPaperOnlyAndTheTrailSellsThem() {
         assertTrue(view().armed)
-        // R50's trail from the fill (the default is after 2x, a placeholder until Boss chooses: tested below).
-        assertTrue(runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AT_FILL) }.contains("from the fill"))
+        // R50's trail from the fill: the default since 25 Oct (R55's recommended cell).
+        assertEquals(HeroTicketRules.TrailStart.AT_FILL, view().trailStart)
         // Before 12:30: waiting; SENSEX is not on its expiry day.
         market(LocalTime.of(11, 0)); tick(LocalTime.of(11, 0))
         assertTrue(HeroTicketArm.view.value.open.isEmpty())
@@ -287,6 +287,8 @@ class HeroTicketArmTest : RobolectricTest() {
      * the trend, is kept; nothing reaches Zerodha; the sale is in Autopilot's change log, and its Undo switches the exit off.
      */
     @Test fun theTrendWatchSellsTheLegTheIndexTurnedAgainstThroughTheArmsOwnExit() {
+        // R63 tested the trend exit with the trail after 2x (25 Oct: the default is the fill now, where it only takes notes).
+        runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AFTER_2X) }
         market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
         val call = HeroTicketArm.view.value.open.single { it.right == "CE" }
         val put = HeroTicketArm.view.value.open.single { it.right == "PE" }
@@ -373,7 +375,8 @@ class HeroTicketArmTest : RobolectricTest() {
     }
 
     @Test fun afterTwoTimesTheTrailHasNoStopBelowAndArmsOnlyOnceTheTicketHasDoubled() {
-        // The default (a placeholder until Boss chooses, R55): the trail starts after 2x. Each ticket keeps its own start.
+        // Boss's own pick "after 2x" (the default until 25 Oct): each ticket keeps its own start.
+        assertTrue(runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AFTER_2X) }.contains("after 2×"))
         assertEquals(HeroTicketRules.TrailStart.AFTER_2X, view().trailStart)
         market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
         val put = HeroTicketArm.view.value.open.single { it.right == "PE" }
@@ -546,6 +549,24 @@ class HeroTicketArmTest : RobolectricTest() {
         assertTrue(HeroTicketArm.view.value.closed.all { it.why == "closed_elsewhere" })
         assertEquals("the arm sold nothing more", sells, Paper.state.trades.count { it.action == "SELL" })
         for (p in open) assertEquals("flat, never short", 0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * 25 Oct (Boss's decision on the arms audit; research R55): a book still on the old "after 2x" placeholder starts new tickets'
+     * trail at the fill, once; "after 3x" (Boss's own pick) stays; it never runs twice, and Boss can pick "after 2x" again.
+     */
+    @Test fun theOld2xPlaceholderMovesToTheFillOnceAnd3xStays() {
+        HeroTicketArm.asBefore25OctForTest(HeroTicketRules.TrailStart.AFTER_2X)
+        assertEquals(HeroTicketRules.TrailStart.AT_FILL, view().trailStart)
+        assertTrue(view().log.last(), view().log.last().contains("trail for new tickets: from the fill") && view().log.last().contains("R55"))
+        // Never again: Boss's own "after 2x" later stays.
+        runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AFTER_2X) }
+        AutomationSupport.reloadFromDisk(HeroTicketArm)
+        assertEquals(HeroTicketRules.TrailStart.AFTER_2X, view().trailStart)
+        // A book on "after 3x" (Boss's own pick before the change) keeps it.
+        HeroTicketArm.asBefore25OctForTest(HeroTicketRules.TrailStart.AFTER_3X)
+        assertEquals(HeroTicketRules.TrailStart.AFTER_3X, view().trailStart)
         assertNothingAtZerodha()
     }
 }
