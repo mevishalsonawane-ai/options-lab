@@ -204,7 +204,7 @@ def cut_series(s, cut):
                      s.days[:ns[-1] + 1], s0, s1, s.sq[:ns[-1] + 1], s.open_tod, s.expiry[:ns[-1] + 1] if len(s.expiry) else s.expiry)
 
 
-FAMILIES = ["f3_patterns", "f10_indicators", "f6_porwal", "f7_aziz", "f1f2_wyckoff_volume", "f4_carli"]
+FAMILIES = ["f3_patterns", "f10_indicators", "f6_porwal", "f7_aziz", "f1f2_wyckoff_volume", "f4_carli", "f5_swing"]
 
 
 @pytest.mark.parametrize("fam", FAMILIES)
