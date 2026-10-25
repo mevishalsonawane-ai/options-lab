@@ -476,25 +476,34 @@ object NtfyArm {
     /**
      * The highest and lowest traded price of [c] since [from] (the option's own minutes), or nulls. 25 Oct (review): never a network
      * read here (this runs under the lock, and the 15-second stop check waits on it): the minutes come from [prefetch], read before
-     * the lock; the first pass that needs them asks for them ([rangeWanted]) and reads the price alone until they arrive.
+     * the lock.
      */
     private fun rangeSince(c: Paper.Contract, from: LocalDateTime): Pair<Double?, Double?> {
-        rangeWanted += c.feedKey
         val since = from.withSecond(0).atZone(com.optionslab.engine.IST).toEpochSecond()
         val bars = barsNow[c.feedKey].orEmpty().filter { it.epochSecond >= since }
         return bars.maxOfOrNull { it.high } to bars.minOfOrNull { it.low }
     }
 
-    /** The option feed keys a waiting "near" / "above" buy asked minutes for ([rangeSince]), read by the next [prefetch]. */
-    private val rangeWanted: MutableSet<String> = java.util.Collections.synchronizedSet(LinkedHashSet())
-    /** Those options' minutes, read for this pass before the lock ([prefetch]). */
+    /** The waiting buys' options' minutes ("near" / "above" only) and quotes, read for this pass before the lock ([prefetch]). */
     @Volatile private var barsNow: Map<String, List<Upstox.Bar>> = emptyMap()
-
-    /** TEST SEAM (JVM tests only; null in the app): the minutes of a feed key, in place of the quick read (e.g. a slow one). */
-    @Volatile internal var testBars: (suspend (String) -> List<Upstox.Bar>)? = null
+    @Volatile private var quotesNow: Map<String, com.optionslab.engine.sandbox.Quote> = emptyMap()
 
     /** The minutes of [key] (the quick read: 5 s connect, one retry). Network: only ever called OFF the lock ([prefetch]). */
-    private suspend fun bars(key: String): List<Upstox.Bar> = testBars?.invoke(key) ?: Net.intradayQuick(key)
+    private suspend fun bars(key: String): List<Upstox.Bar> = Net.intradayQuick(key)
+
+    /**
+     * The contract buy [p] would take on [today] (the message's expiry and strike, else the strike rule at [spot]), or null when
+     * anything is missing. Memory and the phone's saved lists only - the same choice [entry] makes, with its reasons.
+     */
+    private fun contractFor(p: Parsed.Buy, today: LocalDate, s: NtfyRules.Settings, spot: Double?): Paper.Contract? {
+        val list = listed(p.index, p.stock).takeIf { it.isNotEmpty() } ?: return null
+        val exp = NtfyRules.expiryFor(list.map { it.expiry }, today, p.expiry) ?: return null
+        val strikes = list.filter { it.expiry == exp && it.right == p.right }.map { it.strike }
+        if (p.strike != null && p.strike !in strikes) return null
+        val strike = p.strike ?: NtfyRules.strikeFor(strikes, spot ?: return null, p.right, p.pick ?: s.strikeRule) ?: return null
+        return if (p.stock) list.firstOrNull { it.expiry == exp && it.right == p.right && it.strike == strike }?.let { Paper.stockContract(it) }
+            else Paper.ticketContract(p.index, exp, strike, p.right)
+    }
 
     /** TEST SEAM: the listed contracts and the index price (JVM tests only; null in the app). */
     @Volatile internal var testListed: ((String) -> List<Upstox.Contract>)? = null
@@ -527,13 +536,17 @@ object NtfyArm {
         }
         val out = HashMap<String, Double>()
         for (u in wanted) runCatching { spot(u) }.getOrNull()?.let { out[u] = it }
-        // 25 Oct (review): the options' minutes the waiting "near" / "above" buys need, read here, never under the lock. Only
-        // while one is still waiting (each pass asks again; the rest are dropped).
-        val keys = synchronized(rangeWanted) { rangeWanted.toList().also { rangeWanted.clear() } }
-        val pending = v.alerts.any { it.state == PENDING }
-        val bars = HashMap<String, List<Upstox.Bar>>()
-        if (pending) for (k in keys) runCatching { bars(k) }.getOrNull()?.let { bars[k] = it }
-        barsNow = bars
+        // 25 Oct (review): each waiting buy's option quote (and, for "near" / "above", its minutes) read HERE, never under the lock:
+        // the 15-second stop check never waits behind a network read.
+        val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+        val quotes = HashMap<String, com.optionslab.engine.sandbox.Quote>(); val bars = HashMap<String, List<Upstox.Bar>>()
+        for (a in v.alerts) if (a.state == PENDING) (NtfyParser.read(a.title, a.body, a.at.toLocalDate()) as? Parsed.Buy)?.let { p ->
+            val c = runCatching { contractFor(p, today, v.settings, out[p.index]) }.getOrNull() ?: return@let
+            if (c.feedKey in quotes) return@let
+            runCatching { Paper.quote(c) }.getOrNull()?.let { quotes[c.feedKey] = it }
+            if (p.trig == NtfyParser.Trig.ZONE || p.trig == NtfyParser.Trig.ABOVE) runCatching { bars(c.feedKey) }.getOrNull()?.let { bars[c.feedKey] = it }
+        }
+        quotesNow = quotes; barsNow = bars
         return out
     }
 
@@ -598,7 +611,8 @@ object NtfyArm {
         if (c.lotSize <= 0) return done("not traded: lot size unknown")
         if (b.positions.any { it.open && it.symbol == c.symbol } || Paper.state.positions.any { it.symbol == c.symbol && it.quantity != 0 })
             return done("not traded: ${c.symbol} is already held - never two positions on one contract")
-        val q = runCatching { Paper.quote(c) }.getOrNull()
+        // 25 Oct (review): the quote read before the lock ([prefetch]); never a network read here.
+        val q = quotesNow[c.feedKey]
         val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 }
         val (hi, lo) = if (p.trig == NtfyParser.Trig.ZONE || p.trig == NtfyParser.Trig.ABOVE) rangeSince(c, maxOf(sent, today.atTime(9, 15))) else null to null
         if (!NtfyRules.triggered(p.trig, p.entry, ltp, hi, lo))
@@ -763,5 +777,5 @@ object NtfyArm {
         p.copy(exit = price, exitTime = at, why = why, charges = p.charges + charges, stopOrderId = null)
 
     /** For tests: the book forgotten (its file goes with the test's directory). */
-    internal fun wipe() { cache = null; _view.value = View(); testListed = null; testSpot = null; testBars = null }
+    internal fun wipe() { cache = null; _view.value = View(); testListed = null; testSpot = null; barsNow = emptyMap(); quotesNow = emptyMap() }
 }

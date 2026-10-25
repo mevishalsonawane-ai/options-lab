@@ -259,17 +259,23 @@ class NtfyArmTest : RobolectricTest() {
         assertEquals(NtfyArm.PENDING, alert("w1").state)
         // The next pass's read of the option's minutes hangs.
         val entered = java.util.concurrent.CountDownLatch(1); val release = java.util.concurrent.CountDownLatch(1)
-        NtfyArm.testBars = { key -> if (key == pe) { entered.countDown(); kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { release.await(20, java.util.concurrent.TimeUnit.SECONDS) } }
-            Net.intradayQuick(key) }
+        // The pass may read the waiting option twice before the lock (its quote and its minutes); any later read of it in the same
+        // pass is one under the lock - held there, as a slow network would.
+        val reads = java.util.concurrent.atomic.AtomicInteger()
+        upstox.gate = { key -> if (key == pe && reads.incrementAndGet() > 2) { entered.countDown(); release.await(8, java.util.concurrent.TimeUnit.SECONDS) } }
         at(LocalTime.of(9, 29))
         val pass = Thread { runBlocking { NtfyArm.tick() } }.apply { start() }
         try {
-            assertTrue("the pass reached the slow read", entered.await(10, java.util.concurrent.TimeUnit.SECONDS))
-            val t0 = System.nanoTime()
-            val done = runBlocking { kotlinx.coroutines.withTimeoutOrNull(5_000) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { NtfyArm.manageOnly() }; true } }
-            assertEquals("the stop check never waits behind a network read", true, done)
-            assertTrue((System.nanoTime() - t0) / 1_000_000 < 5_000)
-        } finally { release.countDown(); pass.join(20_000) }
+            val end = System.currentTimeMillis() + 15_000
+            while (pass.isAlive && entered.count > 0 && System.currentTimeMillis() < end) Thread.sleep(10)
+            if (entered.count == 0L) {
+                // A read under the lock happened: the stop check must still not wait behind it.
+                val done = runBlocking { kotlinx.coroutines.withTimeoutOrNull(5_000) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { NtfyArm.manageOnly() }; true } }
+                assertEquals("the stop check never waits behind a network read", true, done)
+            }
+        } finally { release.countDown(); upstox.gate = null; pass.join(30_000) }
+        assertEquals("no read of the option under the lock (its quote and minutes come from before it)", 1L, entered.count)
+        assertTrue("the option was read before the lock", reads.get() in 1..2)
         assertFalse(pass.isAlive)
         assertNothingAtZerodha()
     }

@@ -67,6 +67,9 @@ class FakeUpstox : Closeable {
 
     fun price(key: String, last: Double) { prices[key] = last }
 
+    /** 25 Oct: called with the key of each intraday request before it is answered (a test holds it there: a slow read). */
+    @Volatile var gate: ((String) -> Unit)? = null
+
     /** One 1-minute candle of today, by its start (IST). */
     data class Candle(val at: LocalTime, val open: Double, val high: Double, val low: Double, val close: Double)
 
@@ -119,6 +122,7 @@ class FakeUpstox : Closeable {
         val i = parts.indexOf("intraday")
         if (i >= 0 && i + 1 < parts.size) {
             val key = URLDecoder.decode(parts[i + 1], "UTF-8")
+            gate?.invoke(key)
             script[key]?.poll()?.let { s ->
                 val c = s.candles ?: return MockResponse().setResponseCode(503)
                 ownCandles(c).forEach { candles.put(it) }
