@@ -17,9 +17,9 @@
   sec: "Daily filters on Liquidity BANKNIFTY (R15, 12 Oct 2026)"
 - id: defined-risk-selling
   topics: [option-selling, theta]
-  text: "Defined-risk premium selling (credit spreads / iron fly), which has time decay on its side, is not yet tested."
+  text: "Defined-risk ATM selling (iron fly, wide fly, condor) was tested in R103: 0 of 24 confirmed. Selling the cheap expiry-day tickets themselves is still untested."
   src: research/FINDINGS.md
-  sec: "Conclusions"
+  sec: "Defined-risk option selling on NIFTY and BANKNIFTY (R103, 22 Oct 2026) - 0 of 24 confirmed; the 6 design passes were stale wing prices"
 - id: signal-time-spread
   topics: [costs, time-of-day]
   exec: true

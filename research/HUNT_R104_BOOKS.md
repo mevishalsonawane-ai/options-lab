@@ -425,6 +425,9 @@ Bennett is right: once ATM IV is known, skew adds almost nothing.
 1. **One pre-registered R105 test of Graeme-Smith's SST** on daily bars (index futures proxy and MCX futures, fixed
    book settings, no variants), judged on a FRESH forward period from 26 Oct 2026, as a shadow / paper note only. It was
    the one family positive in design and holdout on three markets; in R104 it lost to the size of the test family.
+   Cross-check (25 Oct 2026): it is a daily rule held overnight, not an option-buying result; the same rule bought as
+   intraday options lost (`book-smith-02` IDX: 383 trades -Rs 6,265 design, 48 trades -Rs 38,057 holdout), and the
+   index's drift is overnight (R102). So for Boss's intraday option buying it is not a lead.
 2. Do not add bar patterns, Aziz setups, Carli divergence or indicator crosses to any arm: tested as the books state
    them, they lose after option costs.
 3. Keep the arms' exits and sizing as they are: none of the 20 overlays / filters or 12 sizing rules passed.

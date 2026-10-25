@@ -42,6 +42,7 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
    costs (~Rs 70 a trip incl. slippage) plus time decay exceed what direction calls recover.
 2. One month of data is not evidence; test every idea on the year file first, walk-forward, out of sample.
 3. Not yet tested: defined-risk premium selling (credit spreads / iron fly), which has time decay on its side.
+   [Cross-check 25 Oct 2026: since tested: SELL_LEVELS, NONDIRECTIONAL and R103, 0 of 24 defined-risk tests confirmed.]
 
 ## Green candles (green_candles.py, full stats in GREEN_CANDLES.md)
 - During green candles put OI rises and call OI falls (big green 15-min: calls -0.7%, puts +1.9%); big red is the
@@ -65,6 +66,8 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   same distance (5-min: ~49% still unbroken after 15 min, ~23% after 2 h; the open, being closer, breaks sooner).
   BIG 15-min candles (top 20% body, ~150 pts) are different: the green's low is still unbroken after 2 h in ~70% of
   cases vs ~47% for an equally distant level (1st/2nd half 68%/73%), the red's high ~60% vs ~38% (62%/59%).
+  [Cross-check 25 Oct 2026: HOLD_LEVELS.md's matched baselines for BIG candles are 51% (green low) and 47% (red high) at 2 h, so the edge
+  is 70% vs 51% and 59% vs 47% (615 / 578 candles), smaller than stated above.]
   Big 15-min candles are rarely fully retraced - but the follow-through test shows no reliable continuation either.
 - Volatility (VOLATILITY.md; IV from the ATM straddle, median 12%, 10-90% range 10-17%): big candles come with higher
   IV (~12.8-13 vs ~11.9) and higher recent realised vol, and are ~1.2x the recent average candle range; IV barely moves
@@ -78,6 +81,7 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   the close it is gone. Buying ATM options on it: best version (3 HH/HL, -40/+40, sideways filter on) breaks even
   (-Rs 126 on 462 trades, +11k / -11k by half); every other version loses; the 9-EMA trend exit wins only 32%.
   The sideways (VWAP-chop) filter is the useful part: it cuts losses by Rs 16-23k in every pairing.
+  [Cross-check 25 Oct 2026: not every pairing: with the trend exit it made 3 HH/HL worse, -Rs 30,470 vs -Rs 18,459 (TREND_FILTER.md).]
 - 1-minute "institutional" scalp (SCALP_1MIN.md; bank_stocks_year.parquet on the research-data release holds the 12
   constituents' 1-minute bars): HMA(21) turns + VWAP + candle colour + swing-low/high stop with a 1:2 target lose in
   every combination (-Rs 20k to -128k, 27-34% winners). Advance-decline 8:4 makes it worse (27% winners); with HDFC &
@@ -202,6 +206,7 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
 - LIQUIDITY + WAIT 5 CANDLES (LIQUIDITY_WAIT5.md): after a liquidity level is found or broken, wait 5 candles, read
   the direction (net move / candle colours / higher highs-lows / held beyond the level), buy the call or put, sell at
   the next liquidity. 3, 5 and 15-minute, swings / pools / either / both: 0 of 88 versions make money in both years
+  [Cross-check 25 Oct 2026: the file holds 84 versions besides the controls; 0 of 84 make money in both years.]
   (most lose -Rs 0.2 to -3 lakh a year); win rates 36-60%, index move per trade around 0. The same 5-candle read
   after an ordinary candle (control) does about as well or badly: the liquidity event adds nothing to the read.
 - LIQUIDITY, MORE TRADES (LIQUIDITY_MORE.md): shorter swing lookback (5/10), faster pool confirmation (5), 3-minute
@@ -463,6 +468,7 @@ family of 58 with R20 / R20b / R20c).
 - Re-run on the 6-year lake: `R22_SOURCE=lake python3 research/hunt/r22/r22trades.py design` (and `r22study.py events`).
 
 ## Which morning range helps the ORB (R23, 13 Oct 2026) - none on the release; the verdict waits for the fresh lake
+[Cross-check 25 Oct 2026: settled by R49: the finalists lost -Rs 57,452 / -Rs 61,789 on the fresh lake.]
 Full study: `HUNT_R23_ORB_RANGE.md` (pre-registered `hunt/r23/PREREG.md`; parts A / B / C in ddc9e8a / 5c342af / a9a21ed;
 22 range configurations, BH family of 80 now, 89 at the lake read).
 - The release (2 years) was already read by R16-R22, so R23 used it all as design data. The fresh test is the Dhan
@@ -873,6 +879,8 @@ relaxed: one fixed contract per leg, R17 fills, dated charges, gap fills, no loo
   - C9, C10 and C1 look good in design (p 0.012-0.018, q 0.098-0.10), and all three lose in the final test.
   - C4 (BANKNIFTY PCR follow) is the only candidate positive in both: 146 trades at +Rs 322, then 55 at +Rs 1,125
     (p 0.07, q 0.76).
+    [Cross-check 25 Oct 2026: not the only one: the study's own table also has C6 (+Rs 158 on 33, then +Rs 1,154 on 17) and C7 (+Rs 646
+    on 149, then +Rs 355 on 62) positive in both; none passes.]
   - Re-selecting inside Nov 2024+ only (101,136 variants in 27 groups) gives no pick with 40+ final-test trades and
     p < 0.05.
 
@@ -1005,6 +1013,9 @@ at the worse price. The ORB family (R49) and zero-to-hero rules (R50) are not in
   - It is thin. At 2x spread and slippage it is about zero (-Rs 670 final, -Rs 85,770 design). It lost on NIFTY and
     MIDCPNIFTY in both periods, and its puts lost in both periods.
   - The whole final profit came from FINNIFTY (+Rs 49,040); without FINNIFTY it is -Rs 351.
+    [Cross-check 25 Oct 2026: these two numbers are not in HUNT_R51 or its results files (it gives FINNIFTY +Rs 51,255 raw, +Rs 41,263
+    cleaned); the whole-design net was only +Rs 33,681 (+Rs 8,281 cleaned, 4,518 trades) and negative without its
+    top 5 design trades.]
   - A separate review after the read found two small issues (13 Oct expiry not flagged; time-stop spread volume).
     Together they change the final net to +Rs 47,563, and it still passes.
   - A paper forward test at most, if Boss wants it. R51 changes nothing in the app.
@@ -1037,6 +1048,7 @@ Full study: `HUNT_R52_OLD_CATALOGUE_RECENT.md`. Pre-registered in `hunt/r52/PRER
   - Rule: the previous day's 70% value area; open and the first 5-minute bar above VAH -> buy 1-ITM CE, below VAL ->
     PE, at 09:21; sell 60 minutes later; 5 indices.
   - Final: 294 trades, +Rs 48,772, +Rs 367 a day, win 50%, max DD -Rs 46,363, p 0.001, q 0.03, top 5 = 82% of net.
+    [Cross-check 25 Oct 2026: that drawdown at 1 lot x 5 indices is beyond Boss's -Rs 40k account stop.]
   - Caveats:
     - the 60-minute exit was a design re-tune; the original +15 / -10 point exit lost (-29k design, -1.9k final);
     - MIDCPNIFTY made +46k of the final, while FINNIFTY led on design;
@@ -1341,6 +1353,7 @@ Full study: `HUNT_R86C_CATCH_THEM.md` (pre-registered `hunt/r86/PREREG_C.md`, co
   India VIX up >= 5% 2.3x / 2.2x (87 / 87). Closing at the lows, failed bounces, breadth and volume signs are 1.0-1.7x.
 - After a gap down NIFTY tends to bounce from 09:45 (+7 to +21 bps to 11:15); BANKNIFTY keeps falling when the gap is
   not recovered (-17 bps to 11:15, -23 bps to 15:15, 45 days).
+  [Cross-check 25 Oct 2026: design only (2023-24); R86d found this continuation did not hold in 2025-26, and C6 failed its fresh test.]
 - Seller detector at 09:45 (C6): BANKNIFTY +Rs 36,188 on 13 shorts, twin p 0.002, q 0.024, but -Rs 12,654 without its
   top 5: fails. FII-buyer detector at 12:00 (C5): AUC 0.75-0.90 on NIFTY, trade +Rs 28,842 on 40 (q 0.23, carried by
   the top 5). Both not proven; C6 is worth a fresh pre-registered test on new data.
@@ -1357,6 +1370,7 @@ committed a9624bc before the one read of 1 Jan 2025 - 14 Oct 2026). Signal on th
 - Bought as an ATM put, three versions were +Rs 7.5k to +Rs 17.7k, all negative without their top 5. Rejected: a seller
   at work at 09:45 has usually finished its push; the bounce hits the stop.
 ## MCX Data Brain, 5 levels (MB1, 20 Oct 2026) - size of the next hour predictable on 5 of 6 (holdout 8-13%), direction not; 0 of 16 brain rules pass
+[Cross-check 25 Oct 2026: 5 of 6 passed design (crude failed); on the holdout 4 of those 5 held (natural gas fell to 3.5%, p 0.10).]
 Full study: `BRAIN_MCX.md`, rules `HUNT_MB1_MCX_BRAIN.md` (pre-registered `brain/mcx/PREREG.md`, commit 8f1d9f5b). Signal
 source: the MCX future's minute closes (the near future from the 6 option books, Aug 2025 - Oct 2026); ATM IV as
 context. Data stored as Parquet zstd cube / features and float32 tensors (memmap .npy, Arrow, joint [11 x minute x 56],
@@ -1384,6 +1398,8 @@ A0-A3). Signal source: the index's own 1m / 5m / 15m candle (NIFTY, BANKNIFTY, S
   distance (NIFTY 5m 59% vs 57%, n 3,314). Only the green marubozu's low holds a little better (NIFTY 15m 38% vs 42%).
 - "Reversal" shapes at trend extremes mostly mark continuation (NIFTY 15m hammer: -0.47 ATR after 20 candles vs +0.19
   matched); stop runs above the day's high are followed by more upside, not a reversal (agrees with R86).
+  [Cross-check 25 Oct 2026: the "more upside" did not hold out of sample: NIFTY 15m +0.129 ATR in design (1,666) but -0.001 in the
+  holdout (372). Only "not a reversal" stands.]
 - 4,049 shape x context cells (trend, day/prior-day levels, VWAP, opening range, gap, time, ATM OI, gamma proxy, value
   area, expiry): 0 pass. 2 of 17 design findings held out of sample, both 1-minute and worth 1.6-1.8 points (< an
   option round trip of 1.9 NIFTY / 6.4 SENSEX points).
@@ -1612,6 +1628,7 @@ Builds on R25 (branch `claude/r25-hero-deep`); adds FINNIFTY, MIDCPNIFTY, post-N
   -Rs 1,119 a Rs 5,000 ticket); every exit loses. Held to 15:20 a cheap ticket loses -Rs 3,213 of Rs 5,000 on average.
 - High accuracy lives on the zero side: 97% end below their price (85% near zero), but 1% end >= 10x and the worst 178x
   (13 Oct: selling the 22700 CE at 13:30 for Rs 5,000 = about -Rs 95,000). Selling was not tested.
+  [Cross-check 25 Oct 2026: defined-risk ATM selling was tested since in R103 (0 of 24); selling cheap 10x-risk tickets is still untested.]
 - Exploratory lead only (not pre-registered): one top-scored ticket per index-day, held, +Rs 714 a ticket, but the 5
   best days are 213% of it and the 95% range spans 0. Paper-test forward if wanted; nothing goes in the app.
 - Follow-ups (21 Oct, post hoc): removing the stop nearly doubles the loss (-Rs 3,213 vs -Rs 1,745 with -50%, -Rs 889
@@ -1696,6 +1713,8 @@ trading rule, unless marked. Signal on the underlying throughout.
 - The day is front-loaded: median day range 0.907% (NIFTY, 2,288 minute days) / 1.131% (BANKNIFTY, 1,185); 61% / 65% of it made by
   10:30, 82% / 87% by 13:00; the 09:15 minute alone spans 0.213% / 0.295%; 09:15-09:30 moves 2.32 / 3.09 bp a minute against
   0.29 / 0.38 at 10:30-13:00. The open is the day's high or low on 41% / 46% of days. Weekday and expiry day change none of it.
+  [Cross-check 25 Oct 2026: "the open" is the first five minutes; the 42% / 53% gap fill is up-gaps (down-gaps 41% / 49%); the 52 / 32-minute
+  fill time is for gaps of 0.25% or more (1,245 / 694 gaps), not 0.5-1% gaps.]
 - Gaps >= 0.5% on 20% of NIFTY days and 34% of BANKNIFTY days (5,086); a 0.5-1% gap fills by the close 42% / 53%; a 2%-plus
   NIFTY gap closes on its own side 94-96% of the time. Filled gaps fill early: median 52 / 32 minutes after the open.
 - VIX is the range dial: low VIX (9-15) median day range 0.75% / 1.01%, high VIX (above 20) 1.72% / 2.37% (1,509 days each).
@@ -1710,6 +1729,7 @@ trading rule, unless marked. Signal on the underlying throughout.
   +0.11 bps, 853,718 pairs) is the cash index's staleness, below cost. The 2006-2026 daily momentum (+5.8 / +12.4 bps a day)
   reversed in the holdout (-9.4 / -24.6 bps, 65 days); the client-futures-change rule (-5.2 / -8.2 bps in design, q 0.000) had
   a CI through zero on the holdout (63 days); weekday, expiry, US events and gap fades never passed. No simple sign rule exists.
+  [Cross-check 25 Oct 2026: the client-futures rule REVERSED on the holdout (+3.6 / +2.7 bps against -5.2 / -8.2 in design).]
 - Public facts verified 22 Oct 2026: lots NIFTY 65 / BANKNIFTY 30 since the Jan 2026 expiries (NSE/FAOP/70616; the repo's lot
   table still says 35), NIFTY weekly on Tuesday since 2 Sep 2025, BANKNIFTY monthly only since 20 Nov 2024, hours 09:15-15:40
   since 3 Aug 2026, STT 0.15% of the sell premium since 1 Apr 2026, one round trip about Rs 70 (NIFTY) / Rs 76 (BANKNIFTY).
@@ -1746,6 +1766,9 @@ BTC/ETH perp, the stock); options bought by the strike rule, chain only as conte
   66 trades, Rs 168,395 holdout (q 0.81); MCX futures 175 holdout trades, Rs 588,190 (a negative design fold); BTC/ETH 10
   holdout trades, Rs 32,164. Inverse head and shoulders on daily index bars: 94 trades, win 55%, Rs 214,631 design; 32
   trades, Rs 139,562 holdout (a negative fold, q 0.81).
+  [Cross-check 25 Oct 2026: both leads are DAILY rules held overnight on a futures stand-in, not option buying. Bought as intraday options
+  the same books lost: SST intraday 383 trades -Rs 6,265 design, 48 trades -Rs 38,057 holdout; inverse H&S 459 trades
+  -Rs 46,244, 57 trades -Rs 75,273. The index's drift is overnight (R102), which an intraday option buyer never holds.]
 - Intraday bar patterns, Aziz setups, Carli divergence and indicator crosses lose after option costs as the books state them
   (e.g. woods-19 IDX 3,804 trades, win 29%, -Rs 727,169 design).
 - Design stars that reversed: Larry Swing's exits (1,584 trades Rs 1,409,446 -> -Rs 330,423), Fabozzi's filter rule
