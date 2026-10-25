@@ -154,3 +154,14 @@ each family. After the design results of all families, **Amendment 1** (new stra
 has not tried, each with its hypothesis written first) is committed before the holdout is read; its tests join the BH
 family. Then the holdout is read once for every test, and `HUNT_R104_BOOKS.md`, `FINDINGS.md`, the experiment entries,
 the book notes, the knowledge pack and `RESULT.md` are written.
+
+## Amendment 0 (25 Oct 2026, about 11:40 IST; a data fact found while loading, BEFORE any R104 result)
+
+The MCX 1-minute futures file (`fut_1m_mcx_continuous`) is shorter than section 4 says: SILVERM runs 20 Oct 2025 -
+19 Oct 2026, but GOLDM starts 6 May 2026, NATGASMINI 29 Apr 2026, CRUDEOILM 21 May 2026 (GOLD 14 May, SILVER 6 May,
+CRUDEOIL 19 Jun, NATURALGAS 27 May). The section 6 MCXI split (design to 31 Mar 2026) would leave only SILVERM in design.
+MCXI periods are therefore changed to: **design = each instrument's first session - 31 Jul 2026; walk-forward folds
+first session - 31 Mar 2026 (SILVERM only), Apr-May 2026, Jun-Jul 2026; locked holdout 1 Aug - 19 Oct 2026.**
+Minimum trades stay 40 / 20. Earlier MCX intraday studies (R53 / R96) used a close-only futures proxy from the option
+rows' `spot`, which has no volume and no true high / low; R104 keeps the real futures bars because most MCXI rules need
+volume, highs and lows. Everything else is unchanged.
