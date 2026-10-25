@@ -269,7 +269,7 @@
   topics: [costs, expiry, sizing]
   n: 1
   period: "verified 22 Oct 2026"
-  text: "Lots since the Jan 2026 expiries: NIFTY 65, BANKNIFTY 30 (NSE/FAOP/70616). NIFTY expires weekly on Tuesday since 2 Sep 2025; BANKNIFTY has monthly expiries only since 20 Nov 2024, on the last Tuesday. Trading hours 09:15-15:40 since 3 Aug 2026 (15:45 from 7 Dec 2026). Charges on one round trip at a discount broker: about Rs 70.32 (NIFTY ATM Rs 150 x 65) and Rs 75.65 (BANKNIFTY ATM Rs 400 x 30), STT 0.15% of the sell-side premium since 1 Apr 2026."
+  text: "Lot sizes since the Jan 2026 expiries: NIFTY 65, BANKNIFTY 30 (NSE/FAOP/70616). NIFTY expires weekly on Tuesday since 2 Sep 2025; BANKNIFTY has monthly expiries only since 20 Nov 2024, on the last Tuesday. Trading hours 09:15-15:40 since 3 Aug 2026 (15:45 from 7 Dec 2026). Charges on one round trip at a discount broker: about Rs 70.32 (NIFTY ATM Rs 150 x 65) and Rs 75.65 (BANKNIFTY ATM Rs 400 x 30), STT 0.15% of the sell-side premium since 1 Apr 2026."
   src: research/DEEP_NIFTY_BANKNIFTY.md
   sec: "1.5 Contracts, lots, expiries, hours, charges"
 
