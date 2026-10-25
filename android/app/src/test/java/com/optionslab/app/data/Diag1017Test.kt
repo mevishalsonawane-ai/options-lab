@@ -33,7 +33,7 @@ import java.time.LocalTime
  *     keys and caller;
  *  2. the MCX coverage problem lingered after MCX closed: cleared once the watch runs (or a check finds no gap), MCX's
  *     coverage and the watch's own rule are one reading, and the watch keeps the processor awake while it runs;
- *  3. the Telegram line said "not in this build · not logged in" unless the card had been opened.
+ *  3. (25 Oct: the Telegram line went with the Telegram feature; ntfy alerts' line never shows its topic or token.)
  */
 class Diag1017Test : RobolectricTest() {
     @Before fun up() { MainWrites.resetForTest(); ProblemsHost.resetForTest(); WatchWake.resetForTest() }
@@ -240,40 +240,18 @@ class Diag1017Test : RobolectricTest() {
         assertTrue(WatchWake.HOLD_MS in 60_000L..5 * 60_000L)
     }
 
-    // ---- 3. the Telegram line --------------------------------------------------------------------------------------------------
+    // ---- 3. ntfy alerts' line (25 Oct) ------------------------------------------------------------------------------------------
 
-    /** [f] on a thread that is not the screen's (the diagnostics are built on IO). */
-    private fun <T> offMain(f: () -> T): T {
-        var out: Result<T>? = null
-        val t = Thread { out = runCatching(f) }
-        t.start(); t.join(10_000)
-        return out!!.getOrThrow()
-    }
-
-    @Test fun theTelegramLineSaysTheStoredLoginWithoutTheCardOpened() {
-        SecurePrefs.put(TelegramCapture.K_LOGGED_IN, true)
-        SecurePrefs.put(TelegramCapture.K_CAPTURE, true)
-        SignalTesterHost.allow("Sensex Kings"); SignalTesterHost.allow("Other Calls"); SignalTesterHost.allow("Pasted Chat")
-        // The card never opened: the view knows nothing; the line reads the settings itself.
-        assertFalse(TelegramCapture.view.value.loggedIn)
-        val line = offMain { TelegramCapture.diagLine() }
-        assertTrue(line, "· logged in ·" in line)
-        assertTrue(line, "· capture on " in line)
-        assertTrue(line, line.endsWith("· the Signal tester follows 3 chats in all · stopped · 0 channels selected"))
-        // The library is said as it is: loaded with this build's transport...
-        TelegramCapture.resetForTest()
-        TelegramCapture.testTransport = { error("not opened for the line") }
-        assertTrue(offMain { TelegramCapture.diagLine() }.startsWith("Telegram login (Signal tester, read-only): in this build · logged in"))
-    }
-
-    @Test fun theLibrarysWordsSayWhatIsKnown() {
-        assertEquals("in this build", TelegramCapture.libWords(gold = false, ok = true, failed = false, why = null, packaged = null))
-        assertEquals("Not on this phone", TelegramCapture.libWords(false, ok = false, failed = true, why = "Not on this phone", packaged = true))
-        assertEquals("not in this build", TelegramCapture.libWords(false, ok = false, failed = true, why = null, packaged = null))
-        assertEquals("in this build (library not loaded yet)", TelegramCapture.libWords(false, ok = false, failed = false, why = null, packaged = true))
-        assertEquals("not in this build", TelegramCapture.libWords(false, ok = false, failed = false, why = null, packaged = false))
-        assertEquals("library not loaded yet", TelegramCapture.libWords(false, ok = false, failed = false, why = null, packaged = null))
-        assertEquals("not in this build", TelegramCapture.libWords(gold = true, ok = true, failed = false, why = null, packaged = true))
+    @Test fun theNtfyLineNeverShowsTheTopicOrTheToken() {
+        SecurePrefs.put(NtfyReader.K_TOPIC, "my-secret-topic-xyz")
+        SecurePrefs.put(NtfyReader.K_TOKEN, "tk_secret_token")
+        val line = NtfyArm.diagLine()
+        assertTrue(line, line.startsWith("ntfy alerts: off"))
+        assertTrue(line, "topic set (****)" in line && "token set (****)" in line)
+        assertFalse(line, "my-secret-topic-xyz" in line || "tk_secret_token" in line)
+        val report = kotlinx.coroutines.runBlocking { Diag.report() }
+        assertTrue(report.contains("ntfy alerts: off"))
+        assertFalse(report.contains("my-secret-topic-xyz") || report.contains("tk_secret_token"))
     }
 
     @Test fun backToPaperFromTheScreenIsSeenAtOnce() {
@@ -285,11 +263,4 @@ class Diag1017Test : RobolectricTest() {
         assertTrue(SecurePrefs.flush())
     }
 
-    @Test fun onTheScreensThreadTheLineNeverLoadsTheLibraryOrSaysItIsMissing() {
-        TelegramCapture.resetForTest()
-        MainWrites.testMainThread = Thread.currentThread()
-        val line = TelegramCapture.diagLine()
-        assertTrue(line, line.startsWith("Telegram login (Signal tester, read-only): library not loaded yet ·"))
-        assertFalse(line, "not in this build" in line)
-    }
 }

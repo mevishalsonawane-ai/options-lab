@@ -38,11 +38,24 @@ Fixed download link: `https://github.com/mevishalsonawane-ai/options-lab/release
 | `DHAN_ACCESS_TOKEN`, `DHAN_CLIENT_ID` | historical data downloads | Claude environment → Edit → Environment variables; for the nightly GitHub job (when built): GitHub → Settings → Secrets and variables → Actions | when Dhan says it expired (up to ~30 days) |
 | GitHub token (fine-grained, **IraAlgo data repository only**) | the phone's GitHub sync: recorded days and phone backups | inside the app, sealed with your PIN (Settings → Data & Harvest → GitHub sync) | every 90 days; the app reminds you 7 days before (see "GitHub token" below) |
 | Backup passphrase | opens the phone backups and the recorded days uploaded to GitHub | only in your head or your password manager (the phone keeps a key made from it, never the passphrase) | never; if you change it, older uploads keep the old one |
+| ntfy alerts topic and access token (25 Oct) | the trade messages the app reads (Settings → Automation → ntfy alerts) | inside the app, encrypted; shown only as "topic set (****)", never in a backup, upload or the diagnostics | when you think someone else knows it: make a new long random topic and type it again |
 | `NTFY_TOPIC` | APK-ready notifications | GitHub → Settings → Secrets and variables → Actions | never (delete it to stop notifications) |
 | `OL_KEYSTORE_B64`, `OL_KEYSTORE_PASSWORD`, `OL_KEY_ALIAS`, `OL_KEY_PASSWORD` | signing the APK so updates install over the old app | GitHub Actions secrets | never; **if lost, new APKs won't install over the old app**. Keep your offline copy (github-secrets.txt) safe |
 
 **Never** paste a token into a chat, an issue or a file in the repo. If one leaks, revoke it on that service and create a
 new one.
+
+### ntfy alerts (trade messages, 25 Oct 2026)
+
+The Telegram feature is gone (its login, the Signal tester and its paper arm); its data on the phone is deleted on the first
+start after the update, and any open paper trade it held is still watched until it closes. In its place the app reads your
+ntfy topic: Settings → Automation → **ntfy alerts**. Type the topic once (it works like a password: anyone who knows it can
+post a message the app would trade, so use a long random one, 20 characters or more, and an access token if your server has
+them), tap **Test** (it fetches the last hour and shows how each message would be read; nothing is traded or marked read),
+then switch **On**. It stays on paper; **Trade live** is a separate switch that asks your PIN and works only in Live with AI
+trades on. Each message is read once (its id is saved, encrypted, before anything is decided) and listed under **Alerts**
+with what was decided and why. It is an external message, not a researched strategy. The `NTFY_TOPIC` GitHub secret below is
+a different topic (APK-ready notifications); never reuse it for trade messages.
 
 ### Renewing the Dhan token
 

@@ -2,6 +2,4 @@
 <resources>
     <!-- IraGoldAlgo has no Zerodha books: the "Open" widget is not offered. -->
     <bool name="open_widget_enabled">false</bool>
-    <!-- No Signal tester in IraGoldAlgo. -->
-    <bool name="signal_tester_enabled">false</bool>
 </resources>

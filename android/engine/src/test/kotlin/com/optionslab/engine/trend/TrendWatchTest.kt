@@ -34,7 +34,7 @@ class TrendWatchTest {
             "Liquidity 15+5 · entry" to Source.LIQUIDITY, "Liquidity 5m FINNIFTY · entry" to Source.LIQUIDITY,
             "R51 Donchian 20 · entry" to Source.DONCHIAN, "R52 Open outside value · entry" to Source.OOV,
             "Solo 2.0 · entry" to Source.SOLO2, "Jarvis solo · entry" to Source.SOLO, "Jarvis news · entry" to Source.OTHER_ARM,
-            "Signal tester (paper) · entry" to Source.TELEGRAM, "NG evening breakout" to Source.MCX, "SILVERM morning call · entry" to Source.MCX,
+            "ntfy alerts (paper) · entry" to Source.NTFY, "NG evening breakout" to Source.MCX, "SILVERM morning call · entry" to Source.MCX,
             "MCX 12-month trend · entry" to Source.MCX, "US-night silver (not proven, futures) · disaster stop" to Source.MCX,
             "Protection · stop" to Source.EXIT_RULE, "Expiry square-off" to Source.EXIT_RULE, "Missed-lock sweep" to Source.EXIT_RULE,
             "Auto square-off 15:15" to Source.EXIT_RULE, "GTT" to Source.EXIT_RULE, "GTT trigger" to Source.EXIT_RULE,

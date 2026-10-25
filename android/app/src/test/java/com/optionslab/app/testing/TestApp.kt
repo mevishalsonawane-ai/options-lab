@@ -95,9 +95,8 @@ class TestApp : Application() {
         com.optionslab.app.data.PassedArmsHost.init(this)
         com.optionslab.app.data.PassedArmsHost.testNoAutoOn = true
         com.optionslab.app.data.WatchlistHost.init(this)
-        com.optionslab.app.data.SignalTesterHost.init(this)
-        com.optionslab.app.data.SignalPaperArm.init(this)
-        com.optionslab.app.data.TelegramCapture.init(this)
+        com.optionslab.app.data.NtfyArm.init(this)
+        com.optionslab.app.data.StockOptions.init(this)
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.MarketRecorder.init(this)
         PineAuto.init(this)
@@ -168,9 +167,9 @@ class TestApp : Application() {
         com.optionslab.app.data.ArmLive.testDefaultOff = true
         com.optionslab.app.data.PassedArmsHost.testDaily = { emptyList() }
         com.optionslab.app.data.WatchlistHost.resetForTest()
-        com.optionslab.app.data.SignalTesterHost.resetForTest()
-        com.optionslab.app.data.SignalPaperArm.wipe()
-        com.optionslab.app.data.TelegramCapture.resetForTest()
+        com.optionslab.app.data.NtfyArm.wipe()
+        com.optionslab.app.data.NtfyReader.wipe()
+        com.optionslab.app.data.StockOptions.wipe()
         com.optionslab.app.data.GrammarArm.wipe()
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()
         com.optionslab.app.work.PositionCards.forgetPostedForTest()

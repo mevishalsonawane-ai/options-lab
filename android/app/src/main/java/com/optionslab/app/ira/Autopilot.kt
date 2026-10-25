@@ -367,12 +367,13 @@ internal object Autopilot {
             // arm off (or, undone twice, back on) - a PAPER arm, never Zerodha, so no PIN either way; the flip is not logged again.
             // 15 Oct (Boss's "Both"): a passed-research paper arm ("paperarm:<source>": R51, R52, Solo 2.0) - its Undo switches it
             // off (or back on after its forward bar switched it off). Paper only, never Zerodha: no PIN either way; not logged again.
-            // 15 Oct (Boss's choice): a Telegram chat's paper trading in the Signal tester ("paperarm:telegram:<chat id>") - its
-            // Undo switches that chat's paper trading off (or back on). Paper only, never Zerodha: no PIN either way; not logged again.
-            AutoChange.Kind.PAPER_ARM_ON -> if (c.target.startsWith(AutoChange.TELEGRAM_PAPER)) {
-                val id = c.target.removePrefix(AutoChange.TELEGRAM_PAPER)
-                if (id.isEmpty() || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
-                kotlinx.coroutines.runBlocking { com.optionslab.app.data.SignalPaperArm.setOnId(id, c.to == AutoChange.ON, log = false) }
+            // 25 Oct: ntfy alerts' paper trading ("paperarm:ntfy") - its Undo switches it off (or back on). Paper only, never
+            // Zerodha: no PIN either way; not logged again. The removed Telegram chats' old entries: nothing to undo now.
+            AutoChange.Kind.PAPER_ARM_ON -> if (c.target.startsWith(AutoChange.REMOVED_CHAT_PAPER)) {
+                null
+            } else if (c.target == AutoChange.NTFY_PAPER) {
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                kotlinx.coroutines.runBlocking { com.optionslab.app.data.NtfyArm.setOn(c.to == AutoChange.ON, log = false) }
             } else if (c.target == AutoChange.FT3_TARGET) {
                 // 21 Oct: FT3 near-ATM morning ([logFt3On]): its Undo switches the arm off (or, undone twice, back on) - on paper,
                 // never Zerodha itself (its live path is the standard one, behind the PIN and Shadow), so no PIN either way.
@@ -1127,10 +1128,10 @@ internal object Autopilot {
     }
 
     /**
-     * Boss switched paper trading of the Telegram chat [id] (the Signal tester) from its row: off closes the newest kept entry of
-     * that chat (so its Undo can never flip it later); on records "off → on" as Boss's (kept, undone in one tap). Paper only.
+     * Boss switched ntfy alerts' paper trading (25 Oct) from its page: off closes the newest kept entry (so its Undo can never flip
+     * it later); on records "off → on" as Boss's (kept, undone in one tap). Paper only.
      */
-    fun telegramPaperSwitchedByBoss(id: String, on: Boolean) {
+    fun ntfyPaperSwitchedByBoss(on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
             runCatching {
@@ -1139,11 +1140,11 @@ internal object Autopilot {
                 ensureLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
-                    val target = AutoChange.TELEGRAM_PAPER + id
+                    val target = AutoChange.NTFY_PAPER
                     val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target }
                     if (e != null && e.status == AutoChange.Status.KEPT) _book.value = AutoChange.undone(_book.value, e.id, today)
-                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.telegramPaperOn(id), AutoChange.Status.KEPT,
-                        System.currentTimeMillis(), today, by = "your choice", note = "switched on from the Signal tester; paper only - never live").first
+                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.ntfyPaperOn(), AutoChange.Status.KEPT,
+                        System.currentTimeMillis(), today, by = "your choice", note = "switched on from Settings → ntfy alerts; paper only").first
                     save()
                 }
             }

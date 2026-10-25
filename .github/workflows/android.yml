@@ -55,53 +55,10 @@ jobs:
       # No Android SDK on purpose: the engine must build on a bare JDK.
       - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test :engine:jacocoTestCoverageVerification :ira-core:test
 
-  # TDLib, Telegram's official client library, for the Signal tester's read-only Telegram login (15 Oct 2026): built here from
-  # tdlib/td's own source at a pinned commit, with OpenSSL from its official release checked against its SHA-256
-  # (android/tools/tdlib/build-tdlib.sh) - never a prebuilt binary. arm64-v8a only. The first build takes about half an hour;
-  # it is cached by the script's hash (a new pin builds again), and the library is checked against its recorded checksum and
-  # the script's pinned commit before the APK takes it.
-  tdlib:
-    name: TDLib from source (pinned)
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        id: cache
-        with:
-          path: tdlib-out
-          key: tdlib-${{ hashFiles('android/tools/tdlib/build-tdlib.sh') }}-ndk-27.0.12077973
-      - name: Build TDLib (only when not cached)
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          sudo apt-get update -q && sudo apt-get install -y -q gperf ninja-build > /dev/null
-          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
-          yes | "$SDKM" --licenses > /dev/null || true
-          for i in 1 2 3; do
-            "$SDKM" --install "ndk;27.0.12077973" > /dev/null && test -f "$ANDROID_HOME/ndk/27.0.12077973/source.properties" && break
-            echo "NDK install failed (try $i); clearing and retrying"
-            rm -rf "$ANDROID_HOME/ndk/27.0.12077973" "$HOME/.android/cache" ; sleep $((i * 15))
-          done
-          start=$(date +%s)
-          ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/27.0.12077973" JOBS=$(nproc) android/tools/tdlib/build-tdlib.sh tdlib-out "$RUNNER_TEMP/tdlib-work"
-          echo "TDLib built in $(( ($(date +%s) - start) / 60 )) minutes on $(nproc) cores" | tee -a "$GITHUB_STEP_SUMMARY"
-      - name: Check the library (checksum and pinned commit)
-        run: |
-          (cd tdlib-out && sha256sum -c SHA256SUMS)
-          pin=$(sed -n 's/^TD_COMMIT=\([0-9a-f]*\).*/\1/p' android/tools/tdlib/build-tdlib.sh)
-          grep -qx "tdlib/td $pin" tdlib-out/VERSION || { echo "::error::The cached TDLib is not the pinned commit $pin"; exit 1; }
-          { echo "TDLib: $(head -1 tdlib-out/VERSION)"; echo "$(cat tdlib-out/SHA256SUMS)"; echo "size $(du -h tdlib-out/arm64-v8a/libtdjsonjava.so | cut -f1)"; } | tee -a "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tdlib
-          retention-days: 3
-          path: tdlib-out/
-          if-no-files-found: error
-
   apk:
     name: Build APK
     runs-on: ubuntu-latest
-    needs: [engine, tdlib]
+    needs: [engine]
     permissions:
       contents: write   # only to publish the signed APK on the latest-apk release
     defaults:
@@ -129,16 +86,6 @@ jobs:
             rm -rf "$ANDROID_HOME/ndk/27.0.12077973" "$HOME/.android/cache" ; sleep $((i * 15))
           done
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a   # v4.4.3 (20 Oct: pinned to its commit)
-      # The TDLib library built above (IraAlgo only: its own flavour's folder, so IraGoldAlgo carries none), checked again.
-      - uses: actions/download-artifact@v4
-        with:
-          name: tdlib
-          path: ${{ runner.temp }}/tdlib
-      - name: TDLib into the IraAlgo build
-        run: |
-          (cd "$RUNNER_TEMP/tdlib" && sha256sum -c SHA256SUMS)
-          mkdir -p app/src/ira/jniLibs/arm64-v8a
-          cp "$RUNNER_TEMP/tdlib/arm64-v8a/libtdjsonjava.so" app/src/ira/jniLibs/arm64-v8a/
       - name: Release keystore (optional)
         env:
           KEYSTORE_B64: ${{ secrets.OL_KEYSTORE_B64 }}
@@ -191,11 +138,9 @@ jobs:
           else ./gradlew --no-daemon --max-workers=2 :app:assembleIraDebug :app:assembleRelease; fi
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
-      - name: APK sizes (TDLib in IraAlgo only)
+      - name: APK sizes
         run: |
           for a in app/build/outputs/apk/*/release/*.apk; do echo "$a: $(du -h "$a" | cut -f1)"; unzip -l "$a" | grep -E "lib/.*\.so" || true; done | tee -a "$GITHUB_STEP_SUMMARY"
-          unzip -l app/build/outputs/apk/ira/release/*.apk | grep -q "lib/arm64-v8a/libtdjsonjava.so" || { echo "::error::TDLib is missing from IraAlgo"; exit 1; }
-          if unzip -l app/build/outputs/apk/gold/release/*.apk | grep -q libtdjsonjava; then echo "::error::TDLib must not be in IraGoldAlgo"; exit 1; fi
       # The microphone is for "Jarvis": both apps hold it (on-device recognition only).
       - name: Microphone for Jarvis
         run: |

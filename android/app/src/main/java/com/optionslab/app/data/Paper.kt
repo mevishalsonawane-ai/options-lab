@@ -724,6 +724,9 @@ object Paper {
         return Contract(symbolOf(c), c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey, exchange = "BFO")
     }
 
+    /** 25 Oct (ntfy alerts' stock signals): a listed NSE stock option as a paper contract (its list is [StockOptions]'). */
+    fun stockContract(c: Upstox.Contract): Contract = Contract(symbolOf(c), c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey)
+
     /** Resolve a listed option into a paper contract (and remember it). An MCX name resolves on MCX's list (9 Oct). */
     fun contractFor(underlying: String, expiry: LocalDate, strike: Double, right: Right): Contract? {
         if (com.optionslab.engine.mcx.Mcx.isMcxName(underlying))

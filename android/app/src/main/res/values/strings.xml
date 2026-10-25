@@ -5,6 +5,5 @@
     <string name="open_widget_description">Today\'s P&amp;L and only what is open: positions and pending orders. Shown only if you allow it.</string>
     <string name="open_widget_title">IraAlgo · Open</string>
     <string name="open_widget_off">Turn on \'Show my P&amp;L on the widget\' in More → Security</string>
-    <string name="signal_share_label">Signal tester (shadow)</string>
     <string name="jarvis_widget_description">Jarvis: its last message, and Approve or Reject for a trade waiting for you.</string>
 </resources>

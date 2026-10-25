@@ -78,7 +78,7 @@ class Ft3TalkTest {
             "ExpiryEve" to { q: String -> claimed(ExpiryEve.asked(q)) },
             "BeforeTomorrow" to { q: String -> claimed(BeforeTomorrow.asked(q)) },
             "LiquidityWhyNot" to { q: String -> claimed(LiquidityWhyNot.asked(q)) },
-            "SignalTalk" to { q: String -> claimed(SignalTalk.asked(q)) },
+            "NtfyTalk" to { q: String -> claimed(NtfyTalk.asked(q)) },
             "TrendTalk" to { q: String -> claimed(TrendTalk.asked(q)) },
             "PassedArmsTalk" to { q: String -> claimed(PassedArmsTalk.asked(q)) },
             "SoloDay" to { q: String -> claimed(SoloDay.asked(q)) })

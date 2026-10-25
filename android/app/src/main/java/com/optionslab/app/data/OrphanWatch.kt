@@ -5,7 +5,7 @@ import com.optionslab.app.work.Notifier
 import com.optionslab.engine.orb.HeroTicketRules
 import com.optionslab.engine.orb.OrphanAudit
 import com.optionslab.engine.orb.VixDivRules
-import com.optionslab.engine.signals.SignalPaperRules
+import com.optionslab.engine.signals.NtfyRules
 import java.util.Locale
 
 /**
@@ -19,7 +19,7 @@ import java.util.Locale
  * 20 s apart:
  *  - the passed-research arms' (R51, R52, Solo 2.0): taken back by their host as its trade, from its real fill and fill
  *    time, with its arm's own exits ([PassedArmsHost.adopt]);
- *  - the Hero ₹1,000 ticket's, VIX divergence's and the Signal tester's: a protection rests on it at once (a
+ *  - the Hero ₹1,000 ticket's, VIX divergence's and ntfy alerts': a protection rests on it at once (a
  *    stop at -15% and a target at +30% of its fill, [OrphanAudit.netStop] / [OrphanAudit.netTarget]); the paper account's own
  *    square-off still closes an MIS one; one already beyond a level is sold at market.
  * Each is said plainly to Boss (a notice) and in Diag. The other automatic arms (ORB, Liquidity, the Hero ORB, MCX, Forge,
@@ -34,7 +34,7 @@ object OrphanWatch {
     private val pending = OrphanAudit.Pending()
 
     /** The arms whose orphans get a protection (their open records are read from memory, [claims]). */
-    private val NET_OWNERS = setOf(HeroTicketRules.OWNER, com.optionslab.engine.orb.Ft3Rules.OWNER, VixDivRules.LABEL, SignalPaperRules.OWNER)
+    private val NET_OWNERS = setOf(HeroTicketRules.OWNER, com.optionslab.engine.orb.Ft3Rules.OWNER, VixDivRules.LABEL, NtfyRules.OWNER)
 
     /** One look at a time (the 15-second check, the minute lane and the full pass can overlap): a second one returns at once. */
     private val busy = kotlinx.coroutines.sync.Mutex()
@@ -50,7 +50,7 @@ object OrphanWatch {
         runCatching { HeroTicketArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
         runCatching { Ft3Arm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
         runCatching { VixDivArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
-        runCatching { SignalPaperArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList())
+        runCatching { NtfyArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList())
 
     private fun nowMs(): Long = runCatching { Market.now().toInstant().toEpochMilli() }.getOrElse { System.currentTimeMillis() }
 

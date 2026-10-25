@@ -228,6 +228,69 @@ object Net {
         }
     }
 
+    /**
+     * 25 Oct (ntfy alerts, Boss: "add normal stocks"): the NSE F&O stocks' options (the [keep] nearest expiries of each) and each
+     * of those stocks' cash key (for its price), from the same public master as [fetchMaster]. A background download, never in a pass.
+     */
+    fun fetchStockMaster(keep: Int = 2): Pair<List<Upstox.Contract>, Map<String, String>> {
+        val c = open(Upstox.MASTER_URL, 300_000)
+        c.setRequestProperty("Accept", "*/*")
+        try {
+            if (c.responseCode != 200) throw HttpFailure(c.responseCode)
+            return c.inputStream.use { parseStockMaster(GZIPInputStream(it, 1 shl 16), keep, java.time.LocalDate.now(com.optionslab.engine.IST)) }
+        } catch (e: HttpFailure) {
+            throw e
+        } catch (_: IOException) {
+            throw Offline()
+        } finally {
+            c.disconnect()
+        }
+    }
+
+    /** [fetchStockMaster]'s reading of the master [input] on [today]: the stocks' options (not the indices') and their cash keys. */
+    internal fun parseStockMaster(input: InputStream, keep: Int, today: java.time.LocalDate): Pair<List<Upstox.Contract>, Map<String, String>> {
+        val opts = ArrayList<Upstox.Contract>()
+        val eq = HashMap<String, String>()
+        val indices = com.optionslab.engine.signals.NtfyParser.INDICES.toSet() + setOf("BANKEX", "NIFTYNXT50")
+        JsonReader(InputStreamReader(input, Charsets.UTF_8)).use { r ->
+            r.beginArray()
+            while (r.hasNext()) {
+                var seg: String? = null; var type: String? = null; var und: String? = null; var asset: String? = null
+                var expiry = 0L; var strike = 0.0; var lot = 0; var key: String? = null; var sym: String? = null
+                r.beginObject()
+                while (r.hasNext()) {
+                    val name = r.nextName()
+                    if (r.peek() == JsonToken.NULL) { r.nextNull(); continue }
+                    when (name) {
+                        "segment" -> seg = r.nextString()
+                        "instrument_type" -> type = r.nextString()
+                        "underlying_symbol" -> und = r.nextString()
+                        "asset_symbol" -> asset = r.nextString()
+                        "expiry" -> expiry = r.nextLong()
+                        "strike_price" -> strike = r.nextDouble()
+                        "lot_size" -> lot = r.nextInt()
+                        "instrument_key" -> key = r.nextString()
+                        "trading_symbol" -> sym = r.nextString()
+                        else -> r.skipValue()
+                    }
+                }
+                r.endObject()
+                val u = und ?: asset
+                if (seg == "NSE_FO" && (type == "CE" || type == "PE") && u != null && u !in indices && key != null) {
+                    val exp = Instant.ofEpochMilli(expiry).atZone(com.optionslab.engine.IST).toLocalDate()
+                    if (!exp.isBefore(today)) opts += Upstox.Contract(u, exp, strike, if (type == "CE") Right.CE else Right.PE, lot, key, sym ?: "")
+                } else if (seg == "NSE_EQ" && type == "EQ" && sym != null && key != null) eq[sym] = key
+            }
+            r.endArray()
+        }
+        val kept = opts.groupBy { it.underlying }.flatMap { (_, l) ->
+            val near = l.map { it.expiry }.distinct().sorted().take(keep).toSet()
+            l.filter { it.expiry in near }
+        }
+        val names = kept.map { it.underlying }.toSet()
+        return kept to eq.filterKeys { it in names }
+    }
+
     /** Upstox's public MCX list (MCX.json.gz, about 0.3 MB zipped): unzipped JSON text for [com.optionslab.engine.mcx.McxInstruments.parseUpstox]. */
     const val MCX_MASTER_URL = "https://assets.upstox.com/market-quote/instruments/exchange/MCX.json.gz"
 

@@ -26,7 +26,7 @@ object HeldNow {
             passed = q { PassedArmsHost.holding() },
             hero = q { HeroTicketArm.holding() },
             ft3 = q { Ft3Arm.holding() },
-            signal = q { SignalPaperArm.holding() },
+            signal = q { NtfyArm.holding() },
             night = q { NightArm.view.value.open.isNotEmpty() },
             vixDiv = q { VixDivArm.view.value.open.isNotEmpty() },
             mcxArms = q { McxPaperArms.view.value.open.isNotEmpty() },

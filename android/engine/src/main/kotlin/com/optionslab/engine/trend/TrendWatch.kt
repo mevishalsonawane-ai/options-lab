@@ -19,7 +19,7 @@ import java.util.Locale
  *  - LIVE never acts: a note (and a quiet alert) only, and only with [Switches.live] on - OFF by default.
  *  - PAPER acts only where the rule PASSED ([PASSED]): the Hero ticket's legs, with T3, for the setting R63 tested
  *    ([heroTested]), behind its own switch (on: the PAPER rule lets a passed idea act at once). Non-replayed sources (manual,
- *    Jarvis, Telegram, MCX, restored arms) could act only if the POOLED rule had passed ([POOLED_PASSED], null) and Boss
+ *    Jarvis, ntfy alerts, MCX, restored arms) could act only if the POOLED rule had passed ([POOLED_PASSED], null) and Boss
  *    switched that source on: so today they never act.
  *  - Everything else: a shadow note with the pooled design-best rule ([SHADOW_RULE], T2, chosen on design only).
  *  - A pending entry order whose side the trend has turned against: a "would cancel" note only, never a cancel.
@@ -41,7 +41,7 @@ object TrendWatch {
         MCX("mcx", "MCX paper arms", false),
         MANUAL("manual", "Your own orders", false),
         JARVIS("jarvis", "Jarvis's orders for you", false),
-        TELEGRAM("telegram", "Signal tester (paper)", false),
+        NTFY("ntfy", "ntfy alerts (paper)", false),
         OTHER_ARM("other", "Other arms (restored / Pine / baskets)", false),
         /** Protections, square-offs and sweeps: they are exits already, never watched. */
         EXIT_RULE("exit_rule", "Protections and square-offs", false);
@@ -76,7 +76,7 @@ object TrendWatch {
             l.startsWith("R52 Open outside value") -> Source.OOV
             l.startsWith("Solo 2.0") -> Source.SOLO2
             l.startsWith("Jarvis solo") -> Source.SOLO
-            l.startsWith("Signal tester") -> Source.TELEGRAM
+            l.startsWith("ntfy alerts") -> Source.NTFY
             MCX_LABELS.any { l.startsWith(it) } -> Source.MCX
             EXIT_LABELS.any { l == it || l.startsWith("$it ·") || l.startsWith("$it ") } -> Source.EXIT_RULE
             else -> Source.OTHER_ARM

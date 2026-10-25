@@ -19,7 +19,7 @@ class ExitReasonTest {
             "foreground watch · memory 412 MB (rss 655 MB) · Android: lmk", l)
         // A native crash (the Java crash handler never sees one), no memory figures, no description.
         val n = ExitReason.line(ms("2026-10-16T11:13:20"), ist, ExitReason.CRASH_NATIVE, 125, 0, 0, null)
-        assertTrue(n.endsWith("a native crash (the language model or Telegram's library) · it was running the foreground watch"), n)
+        assertTrue(n.endsWith("a native crash (the language model or a native library) · it was running the foreground watch"), n)
         assertTrue(ExitReason.appFault(ExitReason.CRASH_NATIVE) && ExitReason.appFault(ExitReason.ANR) && ExitReason.appFault(ExitReason.CRASH))
         assertFalse(ExitReason.appFault(ExitReason.LOW_MEMORY))
         assertTrue("too much CPU or battery" in ExitReason.reason(ExitReason.EXCESSIVE_RESOURCE_USAGE))

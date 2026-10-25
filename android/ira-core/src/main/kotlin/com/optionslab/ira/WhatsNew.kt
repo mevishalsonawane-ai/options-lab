@@ -60,10 +60,23 @@ object WhatsNew {
     private val OCT20: LocalDate = LocalDate.of(2026, 10, 20)
     private val OCT21: LocalDate = LocalDate.of(2026, 10, 21)
     private val OCT22: LocalDate = LocalDate.of(2026, 10, 22)
+    private val OCT25: LocalDate = LocalDate.of(2026, 10, 25)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 25 Oct (Boss: "remove telegram full feature and add a new feature which will read message from ntfy"): newest of all.
+        Entry("2026-10-25-ntfy-alerts", OCT25, "ntfy alerts replace Telegram",
+            "Telegram is gone: its login, the Signal tester, its paper arm and their data on the phone. " +
+                "Any open paper trade it held is still watched until it closes. " +
+                "New: the app reads your ntfy topic, each message once, and shows it under Alerts with what it decided. " +
+                "A clear buy message buys that index or stock option on paper, with a stop always. " +
+                "Your signal messages are read too; test signals are shown, never traded. " +
+                "Unclear, old or out-of-hours messages are not traded, and the reason is shown. " +
+                "It is off until you switch it on, and live needs its own switch and your PIN. " +
+                "It is an outside message, not a tested strategy.",
+            "Settings → Automation → ntfy alerts (type your topic, then Test)",
+            ask = "what did ntfy say"),
         // 22 Oct (Boss: borrow four ideas from Jake Schincariol's day-trader skill): the time machine, the order fingerprint, the three gates, the flat-by.
         Entry("2026-10-22-day-trader-borrow", OCT22, "Four safety ideas from a day-trader kit",
             "Every bot entry now gets a reality check from the index's own past days. " +
@@ -311,7 +324,7 @@ object WhatsNew {
                 "The clock warning now checks Zerodha's server time and allows for the network delay. " +
                 "Paper fills use a price at most 2 seconds old, and a slow Zerodha read waits 5 seconds at most. " +
                 "The fingerprint unlock no longer freezes the screen.",
-            "Copy diagnostics (Settings → Zerodha); Home → Strategies → tap Signal tester's name → Telegram login"),
+            "Copy diagnostics (Settings → Zerodha). The Telegram login was removed on 25 Oct (ntfy alerts replace it)"),
         Entry("2026-10-16-passed-arms-lock", OCT16, "The 30-60-100 lock on three paper arms (your choice)",
             "New paper trades of R51 Donchian 20, R52 Open outside value and Solo 2.0 have no fixed target now. " +
                 "Each keeps its own stop and time exit. " +
@@ -329,7 +342,7 @@ object WhatsNew {
                 "If Telegram does not answer within 20 seconds, it says what to check and offers Try again. " +
                 "After you save your api keys, the login starts by itself. " +
                 "Leaving the app to read the login code no longer closes the login.",
-            "Home → Strategies → tap Signal tester's name → Telegram login"),
+            "Removed on 25 Oct: the Telegram login is gone (ntfy alerts replace it)"),
         Entry("2026-10-16-open-trade-change", OCT16, "A position's change is now its open trade only",
             "A position's change now shows only the open trade's move on its average price, not earlier trades on the same option. " +
                 "Below it, Exits shows the stop, target and exit time its strategy is holding it to.",

@@ -482,3 +482,14 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
 - [x] X6. Boss's choice (R100): Boss chose breakeven once +10% (A4, 22 Oct; did not pass: 38% win rate, Rs 2,45,083 on
       1,238 trades). Built as their own paper switch, off by default, labelled "with breakeven at +10%", kept out of the
       plain-rules record; live never. The +20% version (G1) stays unbuilt.
+
+## N. ntfy alerts (owner, 25 Oct 2026: "remove telegram full feature and add a new feature which will read message from ntfy")
+
+- [x] N1. Telegram removed (TDLib and its CI job, login, Signal tester, its paper arm); its phone data deleted once at the
+      first start; an open paper trade of its arm is moved into ntfy alerts' book and managed until it closes.
+- [x] N2. ntfy alerts: read once, strict parser (text and IraThinker JSON signals), index options and (owner, 25 Oct: "add
+      normal stocks") NSE F&O stock options from JSON signals; paper by default, live only with its own switch and the PIN.
+- [ ] N3. Stock options are not counted by the same-direction cap (index options only today); add them if the owner trades
+      many stock signals.
+- [ ] N4. A JSON signal's target2 is shown but not used (target1 closes the trade); a half-at-T1 exit could use it.
+- [ ] N5. An exit message for a stock ("side":"EXIT" with "X.NS") closes that stock's trade; words alone cannot name a stock.

@@ -50,9 +50,8 @@ object MemoryTrim {
                 MemoryPlan.Item.MODEL -> com.optionslab.app.ira.IraModel.releaseForMemory()
                 // 20 Oct: the Candle agent goes early (knowledge only); its counts are on disk already.
                 MemoryPlan.Item.CANDLE_AGENT -> CandleAgentHost.releaseForMemory()
-                // 15 Oct: the Signal tester's Telegram reader closes (its next round starts it again once the pressure has passed).
-                // 16 Oct: a login Boss is in the middle of is kept through a mild trim (then it is not counted as let go).
-                MemoryPlan.Item.TELEGRAM -> if (!TelegramCapture.releaseForMemory(level)) return@runCatching
+                // 25 Oct: ntfy alerts' reader closes (its next round starts it again and catches up by its poll).
+                MemoryPlan.Item.NTFY -> NtfyReader.releaseForMemory()
                 MemoryPlan.Item.KNOWLEDGE_INDEX -> com.optionslab.app.ira.KnowledgeLibrary.drop()
                 MemoryPlan.Item.CONCEPTS -> com.optionslab.app.ira.ConceptLibrary.drop()
                 MemoryPlan.Item.SHARED_FINDINGS -> SharedKnowledgeHost.dropCounts()

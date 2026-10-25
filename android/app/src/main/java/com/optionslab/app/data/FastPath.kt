@@ -195,7 +195,7 @@ object FastPath {
             HeroTicketArm.holding() ||
             Ft3Arm.holding() ||
             PassedArmsHost.holding() ||
-            SignalPaperArm.holding() ||
+            NtfyArm.holding() ||
             McxPaperArms.view.value.let { v -> v.armed.values.any { it } || v.open.isNotEmpty() } ||
             (jarvis && runCatching { com.optionslab.app.ira.IraSolo.holding() }.getOrDefault(false)) ||
             holding || liveHolding || anyLive
@@ -354,8 +354,8 @@ object FastPath {
                     // 15 Oct: the passed-research paper arms (R51, R52, Solo 2.0): their open trades' stops, targets, locks, time exits
                     // and square-offs every minute (exits only - their entries' reads run in the watch's arms passes).
                     step(PASSED_ARMS) { PassedArmsHost.manageOnly() }
-                    // 15 Oct: a Telegram chat's calls on paper (Boss's choice): their stops, targets and square-off every minute (exits only).
-                    step(SIGNAL_PAPER) { SignalPaperArm.manageOnly() }
+                    // 25 Oct: ntfy alerts on paper: their stops, targets and square-off every minute (exits only).
+                    step(NTFY) { NtfyArm.manageOnly() }
                     // 18 Oct: after the paper exits above, their live trades follow at once ([ArmLive]; nothing held: returns at once).
                     // (A shadow trade or a damaged book's recovery too: no order for a shadow, its record checked every minute.)
                     if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
@@ -385,8 +385,8 @@ object FastPath {
     const val FT3 = "FT3 near-ATM morning"
     /** The passed-research paper arms' step name (as [HERO_TICKET]: in the rounds only when they need a pass, [PassedArmsHost.wantsPass]). */
     const val PASSED_ARMS = "Passed-research arms"
-    /** The Telegram calls' paper arm's step name (as [HERO_TICKET]: in the rounds only when it needs a pass, [SignalPaperArm.wantsPass]). */
-    const val SIGNAL_PAPER = "Telegram calls (paper)"
+    /** ntfy alerts' step name (as [HERO_TICKET]: in the rounds only when it needs a pass, [NtfyArm.wantsPass]). */
+    const val NTFY = "ntfy alerts (paper)"
 
     private suspend inline fun step(name: String, block: () -> Unit) {
         // Measured (10 Oct): each check's time today, beside the watch's steps.

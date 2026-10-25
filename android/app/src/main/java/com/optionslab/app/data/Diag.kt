@@ -259,10 +259,8 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { ArmLive.diagLine() }.getOrElse { "Arms live: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { WatchlistHost.diagLine() }.getOrElse { "Watchlist: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { TrendWatchHost.diagLine() }.getOrElse { "Trend watch: could not read" }).append('\n')
-        // The Signal tester (15 Oct, shadow): counts only - never a channel name or a message.
-        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { SignalTesterHost.diagLine() }.getOrElse { "Signal tester: could not read" }).append('\n')
-        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { SignalPaperArm.diagLine() }.getOrElse { "Telegram calls (paper): could not read" }).append('\n')
-        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { TelegramCapture.diagLine() }.getOrElse { "Telegram login: could not read" }).append('\n')
+        // 25 Oct: ntfy alerts - the topic shown as "topic set (****)" only, never its words; the token likewise.
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { NtfyArm.diagLine() }.getOrElse { "ntfy alerts: could not read" }).append('\n')
         // The MCX paper arms (9 Oct, paper only, not proven): on or off, what each holds, its last decision (the "[mcx-arms]" lines below).
         // 21 Oct: with NR7 crude's record line, in their own function (the report's one is near the compiler's limit).
         if (!com.optionslab.app.BuildConfig.GOLD) append(mcxArmLines())

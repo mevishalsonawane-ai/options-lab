@@ -132,8 +132,9 @@ object PositionsFirst {
         one("FT3") { Ft3Arm.refresh().open.isNotEmpty() }
         // 15 Oct: the passed-research paper arms (R51, R52, Solo 2.0; their own book) - restored here, with their stops, first.
         one("passed arms") { PassedArmsHost.refresh().open.isNotEmpty() }
-        // 15 Oct: a Telegram chat's calls on paper (Boss's choice; its own book) - restored here, with their stops, first.
-        one("Telegram calls") { SignalPaperArm.refresh().open.isNotEmpty() }
+        // 25 Oct: ntfy alerts on paper (its own book, with any trade moved from the removed Telegram calls arm) - restored here,
+        // with their stops, first.
+        one("ntfy alerts") { NtfyArm.refresh().open.isNotEmpty() }
         one("ticket") { Ledger.openTicket() != null }
         one("MCX live") { McxMarket.liveExposureOrThrow() }
         // Jarvis's own paper trades (review, 14 Oct; the fast exits' minute lane counts them).

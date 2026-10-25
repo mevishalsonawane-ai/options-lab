@@ -121,9 +121,9 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.PassedArmsHost.init(this)
         com.optionslab.app.data.WatchlistHost.init(this)
         com.optionslab.app.data.TrendWatchHost.init(this)
-        com.optionslab.app.data.SignalTesterHost.init(this)
-        com.optionslab.app.data.SignalPaperArm.init(this)
-        com.optionslab.app.data.TelegramCapture.init(this)
+        // 25 Oct: ntfy alerts (paper by default; its file only, no I/O here).
+        com.optionslab.app.data.NtfyArm.init(this)
+        com.optionslab.app.data.StockOptions.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.McxNr7Record.init(this)          // 21 Oct: NR7 crude, record only (no orders)
         com.optionslab.app.data.GrammarArm.init(this)
@@ -143,6 +143,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.PositionsFirst.start(this)
         // Boss's 15 Oct arms cleanup: its small file read on its own worker; its first pass waits for the positions step above.
         com.optionslab.app.data.HiddenArms.init(this)
+        // 25 Oct: the removed Telegram feature's data deleted once, in the background, after the positions step above.
+        if (!com.optionslab.app.BuildConfig.GOLD) com.optionslab.app.data.RemovedFeatureCleanup.init(this)
         com.optionslab.app.data.LiveRecorder.init(this)
         // The OI-wall shadow log (14 Oct, Boss approved; R26): names its encrypted file only (a record, never an order).
         com.optionslab.app.data.OiWallShadowHost.init(this)

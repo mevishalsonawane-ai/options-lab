@@ -1,0 +1,97 @@
+package com.optionslab.app.ui.screens
+
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.optionslab.app.data.NtfyArm
+import com.optionslab.app.data.NtfyReader
+import com.optionslab.app.ui.theme.IraAlgoTheme
+import com.optionslab.engine.signals.NtfyParser
+import com.optionslab.engine.signals.NtfyRules
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.ConscryptMode
+import java.time.LocalDateTime
+
+/**
+ * Settings → Automation → ntfy alerts (25 Oct): the security advice, the topic masked (never shown), the weak-topic warning, the
+ * On and Trade live switches off by default, the limits and strike rule, Test, and the Alerts list with what was decided and why.
+ */
+@RunWith(AndroidJUnit4::class)
+@ConscryptMode(ConscryptMode.Mode.OFF)
+class NtfyPageTest {
+    @get:Rule val compose = createComposeRule()
+
+    private val calls = ArrayList<String>()
+    private val at = LocalDateTime.of(2026, 10, 26, 9, 28, 4)
+
+    private fun show(v: NtfyArm.View, cfg: NtfyReader.Config?, liveOn: Boolean = false, said: String? = null) {
+        compose.setContent {
+            IraAlgoTheme("light") {
+                NtfyContent(v, NtfyReader.Status(said = "connected"), cfg, liveOn, said,
+                    onTopic = { calls += "topic:${it.length}" }, onServer = { calls += "server:$it" }, onToken = { calls += "token:${it.length}" },
+                    onPrefix = { calls += "prefix:$it" }, onOn = { calls += "on:$it" }, onSettings = { calls += "settings:${it.lots}/${it.maxPerDay}/${it.staleMin}/${it.strikeRule.key}" },
+                    onLive = { calls += "live:$it" }, onTest = { calls += "test" })
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun exists(t: String) = compose.onAllNodesWithText(t, substring = true).fetchSemanticsNodes().isNotEmpty()
+
+    @Test fun theSetupSaysTheSecurityAndNeverShowsTheTopic() {
+        show(NtfyArm.View(), NtfyReader.Config("alerts1", NtfyRules.DEFAULT_SERVER, null, ""))
+        assertTrue(exists("works like a password"))
+        assertTrue(exists("Topic: topic set (****)"))
+        assertTrue("a short topic is warned about", exists("short or plain"))
+        assertTrue(exists("An external message - not a researched or proven strategy"))
+        compose.onNodeWithTag("ntfy-on").performScrollTo().assertIsOff()
+        compose.onNodeWithTag("ntfy-live").performScrollTo().assertIsOff()
+        compose.onNodeWithTag("ntfy-topic").performScrollTo().performTextInput("k3J9-q2Lm_8xZpV4rT7wYb")
+        compose.onNodeWithTag("ntfy-topic-save").performScrollTo().performClick()
+        compose.onNodeWithTag("ntfy-test").performScrollTo().performClick()
+        compose.onNodeWithTag("ntfy-on").performScrollTo().performClick()
+        compose.onNodeWithTag("ntfy-live").performScrollTo().performClick()
+        compose.onNodeWithTag("ntfy-lots-plus").performScrollTo().performClick()
+        compose.onNodeWithTag("ntfy-strike-itm1").performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("topic:22", "test", "on:true", "live:true", "settings:2/3/5/atm", "settings:1/3/5/itm1"), calls)
+        // The typed topic is never shown as text.
+        assertTrue(!exists("k3J9-q2Lm_8xZpV4rT7wYb"))
+    }
+
+    @Test fun noTopicMeansTestIsOffAndNoWarning() {
+        show(NtfyArm.View(), NtfyReader.Config(null, NtfyRules.DEFAULT_SERVER, null, ""), said = "Type your topic first.")
+        assertTrue(exists("Topic: no topic set"))
+        assertTrue(!exists("short or plain"))
+        compose.onNodeWithTag("ntfy-test").performScrollTo().performClick()
+        assertTrue(calls.isEmpty())
+        assertTrue(exists("Type your topic first."))
+    }
+
+    @Test fun theAlertsListShowsWhatWasDecidedAndWhy() {
+        val alerts = listOf(
+            NtfyArm.Alert("m2", at.plusMinutes(2), "NIFTY CE PE", NtfyArm.NOT_TRADED, "both CE and PE (call and put) in one message"),
+            NtfyArm.Alert("m1", at, "BUY NIFTY 25000 CE", NtfyArm.TRADED, "bought NIFTY 25000CE 65 @ 121 · paper · stop 100, target 140"))
+        val open = NtfyArm.Pos("ntfy", "m1", "NIFTY", "NIFTY26N0225000CE", "CE", 1, 65, 121.0, at, "o1", 100.0, false, "s1", "t1", 140.0, 140.0, false)
+        show(NtfyArm.View(on = true, open = listOf(open), alerts = alerts, settings = NtfyRules.Settings(strikeRule = NtfyParser.StrikeRule.OTM1)),
+            NtfyReader.Config("k3J9-q2Lm_8xZpV4rT7wYb", NtfyRules.DEFAULT_SERVER, "t", ""), liveOn = false)
+        compose.onNodeWithTag("ntfy-on").performScrollTo().assertIsOn()
+        assertTrue(exists("09:30 2026-10-26 · not traded"))
+        assertTrue(exists("both CE and PE"))
+        assertTrue(exists("09:28 2026-10-26 · traded"))
+        assertTrue(exists("NIFTY26N0225000CE 65 @ 121 · stop 100 · target 140"))
+        assertTrue(exists("● 1 OTM"))
+        assertTrue(exists("Access token: set (****)"))
+        assertTrue(exists("Reader: connected"))
+    }
+}

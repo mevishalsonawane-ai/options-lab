@@ -48,7 +48,7 @@ object Held {
         "passed-research arms" to s.passed,
         "Hero ticket" to s.hero,
         "FT3" to s.ft3,
-        "Telegram calls" to s.signal,
+        "ntfy alerts" to s.signal,
         "Night (R3)" to s.night,
         "VIX divergence" to s.vixDiv,
         "MCX arms" to s.mcxArms,

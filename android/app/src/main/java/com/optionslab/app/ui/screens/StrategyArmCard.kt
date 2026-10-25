@@ -99,9 +99,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
             if (!com.optionslab.app.BuildConfig.GOLD) Ft3Row()
             PassedArmRows(); WatchlistCard()
             // The Trend watch (16 Oct, research R63): every open position judged on its underlying's trend. Not in IraGoldAlgo.
-            if (!com.optionslab.app.BuildConfig.GOLD) TrendWatchRow()
-            // The Signal tester (15 Oct, shadow - never trades): the allow-listed Telegram channels scored. Not in IraGoldAlgo.
-            if (!com.optionslab.app.BuildConfig.GOLD) SignalTesterCard() },
+            if (!com.optionslab.app.BuildConfig.GOLD) TrendWatchRow() },
         basketsVisible = com.optionslab.engine.orb.ArmsCleanup.visible(hidden, com.optionslab.engine.orb.ArmsCleanup.BASKETS),
         hiddenArms = { HiddenArmsEntry() },
     )

@@ -51,10 +51,6 @@
 # secret is in a name (the repository is public).
 -keepnames,allowoptimization class com.optionslab.** { <methods>; }
 
-# TDLib (the Signal tester's read-only Telegram login, 15 Oct 2026): libtdjsonjava.so registers its native methods on
-# org.drinkless.tdlib.JsonClient (and its LogMessageHandler) by these exact names when it loads.
--keep class org.drinkless.tdlib.** { *; }
-
 # The vault's write doors kept as real frames (17 Oct: Boss's diagnostics said only "BinderProxy.transactNative in
 # Vault.encrypt" - no caller - because allowoptimization above let R8 fold the settings and vault write paths into the
 # calling lambdas, which it renames). Without allowoptimization these few methods are never inlined, so the screen
