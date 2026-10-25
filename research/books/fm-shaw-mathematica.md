@@ -101,8 +101,8 @@ show assorted Greek and IV oddities. Context only (no listed log contracts in In
   spike at the strike and its gamma into the derivative of a spike, so a hedger near the strike buys and sells huge
   amounts as the price wanders across it; with costs this wrecks the hedge. The vega-gamma identity still holds.
 - How we could use it: this is the mathematical face of what R102 measured empirically: an ATM option moves 13.5%
-  (NIFTY) / 15.9% (BANKNIFTY) a minute in the last hour of expiry day (R102 3.3) and the straddle loses 82-88% by
-  15:09 (EXPIRY_PLAYBOOK). Any expiry-day logic that uses delta or gamma (sizing, hedge ratios) should cap them near the
+  (NIFTY) / 15.9% (BANKNIFTY) a minute in the last hour of expiry day (R102 3.3), and fixed strikes lose 82-88% of
+  their value by 15:09 on expiry (EXPIRY_PLAYBOOK and h42, as summarised in DEEP_NIFTY_BANKNIFTY 3.2). Any expiry-day logic that uses delta or gamma (sizing, hedge ratios) should cap them near the
   strike in the last hour.
 - Signal source: volatility / options structure. Maps to: NSE weekly expiry yes (NIFTY Tuesday, SENSEX Thursday);
   MCX option expiries; crypto daily expiries even more so.
