@@ -165,3 +165,22 @@ first session - 31 Mar 2026 (SILVERM only), Apr-May 2026, Jun-Jul 2026; locked h
 Minimum trades stay 40 / 20. Earlier MCX intraday studies (R53 / R96) used a close-only futures proxy from the option
 rows' `spot`, which has no volume and no true high / low; R104 keeps the real futures bars because most MCXI rules need
 volume, highs and lows. Everything else is unchanged.
+
+## Amendment 1 (25 Oct 2026; NEW strategies the books suggest; written after the design runs of the 221 tests had
+## started and BEFORE any holdout read; each hypothesis is stated before its own numbers exist)
+
+Six combinations of book ideas that our research has not tried. Each is one test, joins the same BH family as the 221
+(227 tests in all), and faces the same gates as its kind (ARM filter, MM bar, VOL entry). Signal source: the index for
+every entry; option volume and implied volatility are used only as CONTEXT filters (CLAUDE.md allows chain data as
+context), never as the entry signal.
+
+| id | idea (books) | rule | hypothesis | kind |
+|---|---|---|---|---|
+| N1 | volume confirms the break (Wyckoff, Aziz, Porwal) on our Donchian arms | keep an R72 / R51 candidate only if the ATM call + put volume in the signal's 5-minute bar is >= 2x their mean over the previous 20 five-minute bars (option volume stands in for the index's missing volume) | breaks carried by a volume burst follow through more often: Delta net > 0 | ARM filter |
+| N2 | Wyckoff effort vs result on the 09:20 bar | effort = ATM call + put volume 09:15-09:20 over its 20-session median; result = the 09:15-09:20 index range over its 20-session median; on an "absorption" morning (effort >= 1.5, result <= 0.7) skip every arm entry in the direction of the first 5-minute bar | heavy volume without progress is absorption; trading its direction loses | ARM filter (all arms) |
+| N3 | options are dear (Bennett, Javaheri, Wilmott) applied to BUYING | skip arm entries on days whose 09:20 ATM IV / HAR forecast is in the top third of its trailing 252 sessions | a bought option on a vol-rich day loses more to implied-vol decay | ARM filter (all arms) |
+| N4 | Douglas fixed risk + Aziz monthly stop on Boss's account frame | the four arms together pause for the rest of the month once the month's realised P&L <= -Rs 13,000, and for the rest of the week once the week's <= -Rs 6,500 | stopping after a bad stretch cuts the drawdown with little cost | MM (risk-lowering bar) |
+| N5 | trade with the daily trend (Graeme-Smith, Larry Swing, Hougaard) as the arms' direction filter | keep a call only when yesterday's close > SMA(50) and DMI(8) +DI > -DI on daily bars (puts: the mirror) | arm trades with the daily swing direction do better | ARM filter (all arms) |
+| N6 | sell vol only when it is rich (Bennett) + hedge it (Bjork) | Bjork's 09:20 5-lot NIFTY short straddle hedged with futures, taken only when ATM IV / HAR forecast >= its trailing 252-day 67th percentile | the hedged short straddle earns the volatility premium only when the premium is large | VOL entry |
+
+Periods, costs, gates and the one holdout read are unchanged (ARM / MM: R101's final period; VOL: 1 Apr - 19 Oct 2026).
