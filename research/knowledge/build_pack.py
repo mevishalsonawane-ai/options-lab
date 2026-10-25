@@ -21,6 +21,10 @@ Sources (all in the repo, nothing fetched):
   * research/knowledge/index_facts.yaml - R102's field guide (22 Oct 2026): how NIFTY and BANKNIFTY behave, one fact per
     entry with its sample size, period and instrument, so Jarvis can answer "how does BankNifty behave at 09:20?"
     (every number checked against its source, like strategy cards)
+  * research/knowledge/book_facts.yaml - what the books Boss gave teach (25 Oct 2026, research/books/): short cards in our own
+    words, each the BOOK's claim and said as such ("<author>'s book says (the book's claim, not our tested result): ..."),
+    with our own test's result beside it where our research tested the idea. Fact index only (kind book_fact, weight 0.8, low
+    confidence), never the shared section: a book's claim must not crowd out or outrank what our research tested.
 
 The pack also carries a "shared" section (13 Oct 2026, Boss: "all the agents should learn from whatever findings we have"):
 compact, tagged items for ira-core's SharedKnowledge - each with its topics, strategy (arm), instrument, time of day,
@@ -33,7 +37,7 @@ every entry for Jarvis. The build fails if the section still passes the cap (not
 
 Weights (the retrieval's prior, 25 Oct 2026): FINDINGS and strategy cards 3.0; index facts 2.5; a doc's verdict / answer /
 honest-count sections 2.2, its other priority sections (caveats, limits, lessons) 2.0; study pages, the h42 answers and the
-experiment entries 2.0; the phone's lessons 1.5; plain doc prose 1.0.
+experiment entries 2.0; the phone's lessons 1.5; plain doc prose 1.0; a proposed experiment (never run) 1.0; book cards 0.8.
 
 Each fact: id, kind, title, text (plain English with its numbers), tags, instruments, source doc + section, date,
 verdict (positive / weak / negative / context, a keyword heuristic except for strategy cards and h42), confidence
@@ -679,7 +683,11 @@ VERDICT_GATE = {"positive": "pass", "negative": "fail", "weak": "none", "context
 EXP_VERDICT = {  # experiment-log verdict -> (pack verdict, gate)
     "adopted": ("positive", "pass"), "paper-only": ("weak", "pass"), "shadow": ("open", "open"), "rejected": ("negative", "fail"),
     "inconclusive": ("open", "open"), "superseded": ("context", "none"), "not-a-test": ("context", "none"),
+    "proposed": ("context", "none"),
 }
+# A proposed entry (25 Oct 2026: the books' testable rules) is an idea written down and never run: it goes in the fact index,
+# so Jarvis can say what is queued, but never in the shared section, where its fresh date would rank it above real results.
+EXP_UNRUN = {"proposed"}
 # Words of the method, not of the idea: a hypothesis saying "makes money after real costs, read once on the holdout, BH q <= 0.1"
 # is not about costs, the holdout or multiple testing. These topics come from an entry's title or family only.
 EXP_METHOD_TAGS = {"costs", "holdout", "multiple-testing", "random-baseline", "ml"}
@@ -836,10 +844,17 @@ def add_experiments(pack: Pack, shared: list[dict], entries: list[dict] | None =
         # The strategy the entry's words name ("Liquidity 15+5 on GOLDM" is the Liquidity arm's result, on gold); an MCX-only
         # entry naming none is the MCX bots'; a crypto-only one is nobody's (shared_item); else its family's default.
         arm = arm_of(text) or ("mcx" if insts and set(insts) <= MCX_INSTRUMENTS else None) or (fam if fam in ("liquidity", "orb") else None)
+        unrun = str(e.get("verdict")) in EXP_UNRUN
+        if unrun:
+            title = f"Proposed, not run yet: {title}"
         pack.add(id_=f"exp.{slug(str(e['id']), 40)}", kind="experiment", title=title, text=text[:MAX_CHARS * 2],
                  src=src, sec=f"experiment {e['id']} ({fam})", date_=str(e.get("date", "")) or None, insts=insts, tags_=topics,
-                 verdict="weak" if verdict == "open" else verdict, conf="high" if e.get("holdout_read") else "medium", weight=2.0,
+                 verdict="weak" if verdict == "open" else verdict,
+                 conf="low" if unrun else "high" if e.get("holdout_read") else "medium", weight=1.0 if unrun else 2.0,
                  personal=False, extra={"exp": str(e["id"]), "family": fam, "tries": e.get("variants_tried")})
+        n += 1
+        if unrun:
+            continue
         # The sample size is what was tested (the results' "540 trades"), never a bar set beforehand ("at least 100 trades").
         n_ = e.get("variants_tried") if app else sample_size(clean_md(str(res)))
         shared.append(shared_item(id_=f"exp:{e['id']}", topics=topics, text=text, src=src,
@@ -847,7 +862,6 @@ def add_experiments(pack: Pack, shared: list[dict], entries: list[dict] | None =
                                   arm=arm, inst=insts[0] if len(insts) == 1 else None, n=n_ or 0, sec=fam))
         if entries is not None:
             entries.append(e)
-        n += 1
     return n
 
 
@@ -956,6 +970,63 @@ def add_index_facts(pack: Pack, shared: list[dict]) -> list[str]:
     return errors
 
 
+BOOK_VERDICTS = ("negative", "weak", "positive")
+
+
+def add_book_facts(pack: Pack) -> list[str]:
+    """The books' cards (25 Oct 2026, research/knowledge/book_facts.yaml): `books` maps a short name to its author, title and
+    year; each card needs id book.<short>.<n>, book, title, chapter, text and tags (from TAGS); `inst` is optional. Every
+    number in the text must be in the book's write-up research/books/<short>.md. A card whose idea our research tested sets
+    verdict to that test's result (negative / weak / positive) with tested_src (the study) and tested_text (one sentence,
+    its numbers checked against the study); every other card is context. Fact index only, never the shared section (a
+    book's claim must not crowd out or outrank a tested result): kind book_fact, weight 0.8, low confidence, and the text
+    says it is the book's claim. Returns the errors (an empty list when the file is absent)."""
+    path = RESEARCH / "knowledge/book_facts.yaml"
+    if not path.is_file():
+        return []
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    books, cards = data.get("books") or {}, data.get("cards") or []
+    errors: list[str] = []
+    cache: dict = {}
+    written = parse_date(" ".join(path.read_text(encoding="utf-8").splitlines()[:3]))
+    seen: set[str] = set()
+    for c in cards:
+        cid, short = str(c.get("id", "")), str(c.get("book", ""))
+        if not re.fullmatch(r"book\.[a-z0-9-]+\.\d+", cid) or cid in seen:
+            errors.append(f"book fact {cid or '?'}: id must be book.<short>.<n> and unique")
+            continue
+        seen.add(cid)
+        meta = books.get(short)
+        if not meta or cid.split(".")[1] != short:
+            errors.append(f"book fact {cid}: book {short!r} not in books, or not the id's book")
+            continue
+        src = f"research/books/{short}.md"
+        if not c.get("title") or not c.get("chapter") or not c.get("text"):
+            errors.append(f"book fact {cid}: title, chapter and text are required")
+            continue
+        bad = [t for t in c.get("tags") or [] if t not in TAGS]
+        if bad:
+            errors.append(f"book fact {cid}: unknown tags {bad}")
+        errors += checked([{"id": cid, "src": src, "text": c["text"]}], path, cache, "book fact")
+        verdict = c.get("verdict", "context")
+        tested = ""
+        if verdict != "context":
+            if verdict not in BOOK_VERDICTS or not c.get("tested_src") or not c.get("tested_text"):
+                errors.append(f"book fact {cid}: a tested card needs verdict {BOOK_VERDICTS}, tested_src and tested_text")
+                continue
+            errors += checked([{"id": cid, "src": c["tested_src"], "text": c["tested_text"]}], path, cache, "book fact (tested)")
+            tested = f" Our research tested it: {c['tested_text']}"
+        author = meta.get("author", short)
+        text = clean_md(f"{author}'s book says (the book's claim, not our tested result): {c['text']}{tested}")
+        insts = canon_instruments(c.get("inst") or [])
+        insts += [i for i in instruments(c["text"]) if i not in insts]
+        pack.add(id_=cid, kind="book_fact", title=f"{author}, {meta.get('title', short)}: {c['title']}", text=text, src=src,
+                 sec=str(c["chapter"]), date_=written, insts=insts, tags_=sorted(set((c.get("tags") or []) + tags(c["text"]))),
+                 verdict=verdict, conf="low", weight=0.8, personal=False,
+                 extra={"book": short, "tested_src": c["tested_src"]} if tested else {"book": short})
+    return errors
+
+
 def baselines() -> tuple[dict, list[str]]:
     path = RESEARCH / "knowledge/baselines.yaml"
     b = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -1021,6 +1092,7 @@ def build() -> tuple[dict, list[str]]:
     app_lessons = add_app_lessons(pack, app_items)
     add_strategies_errors += add_open_questions(pack, shared)
     add_strategies_errors += add_index_facts(pack, shared)
+    add_strategies_errors += add_book_facts(pack)
     base, base_errors = baselines()
     add_strategies_errors += base_errors
     # Exact duplicates (the same sentence copied into several docs): the first (highest-weight source) is kept.

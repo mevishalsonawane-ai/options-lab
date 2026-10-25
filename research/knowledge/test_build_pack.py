@@ -224,6 +224,87 @@ def test_index_facts_are_titled_by_kind_name_the_markets_their_text_names_and_a_
     assert [it["id"] for it in shared] == ["index:vix-dial", "index:lots", "index:momentum"]
 
 
+# ---- the books' cards and the proposed (never run) entries, 25 Oct 2026 ----------------------------------------------
+
+BOOK_YAML = """
+    # 25 Oct 2026
+    books:
+      wyck: {author: Wyckoff, title: "The Day Trader's Bible"}
+    cards:
+    - id: book.wyck.1
+      book: wyck
+      title: "Volume at the top"
+      chapter: "Ch. 7"
+      text: "Heavy volume after a 3-day rise warns that the rise is ending."
+      tags: [volume, reversal]
+    - id: book.wyck.2
+      book: wyck
+      title: "Divergence"
+      chapter: "Ch. 9"
+      text: "A divergence on BANKNIFTY warns of a turn."
+      tags: [reversal]
+      verdict: negative
+      tested_src: research/R.md
+      tested_text: "Our test found 0 of 12 pass."
+"""
+
+
+def book_repo(tmp_path: Path, cards: str = BOOK_YAML, book_md: str = "Wyckoff says 3 days.", study: str = "0 of 12 pass") -> Path:
+    (tmp_path / "research/knowledge").mkdir(parents=True)
+    (tmp_path / "research/books").mkdir()
+    (tmp_path / "research/knowledge/book_facts.yaml").write_text(textwrap.dedent(cards), encoding="utf-8")
+    (tmp_path / "research/books/wyck.md").write_text(book_md, encoding="utf-8")
+    (tmp_path / "research/R.md").write_text(study, encoding="utf-8")
+    return tmp_path
+
+
+def test_book_cards_say_they_are_the_books_claim_weigh_least_and_carry_our_tested_result(tmp_path, monkeypatch):
+    root = book_repo(tmp_path)
+    monkeypatch.setattr(bp, "ROOT", root)
+    monkeypatch.setattr(bp, "RESEARCH", root / "research")
+    pack = bp.Pack()
+    assert bp.add_book_facts(pack) == []
+    f1, f2 = pack.facts
+    assert f1["id"] == "book.wyck.1" and f1["kind"] == "book_fact" and f1["src"] == "research/books/wyck.md" and f1["sec"] == "Ch. 7"
+    assert f1["text"].startswith("Wyckoff's book says (the book's claim, not our tested result): Heavy volume")
+    assert f1["verdict"] == "context" and f1["conf"] == "low" and f1["w"] == 0.8 and f1["date"] == "2026-10-25"
+    assert f1["title"] == "Wyckoff, The Day Trader's Bible: Volume at the top" and {"volume", "reversal"} <= set(f1["tags"])
+    # A tested card keeps the book's claim and adds our result; its verdict is OUR test's, its markets the ones its text names.
+    assert f2["verdict"] == "negative" and f2["text"].endswith("Our research tested it: Our test found 0 of 12 pass.")
+    assert f2["inst"] == ["BANKNIFTY"] and f2["tested_src"] == "research/R.md"
+
+
+def test_book_cards_fail_the_build_on_a_number_not_in_the_write_up_or_the_study_a_bad_tag_or_id(tmp_path, monkeypatch):
+    root = book_repo(tmp_path, book_md="Wyckoff says nothing numeric.", study="nothing here")
+    monkeypatch.setattr(bp, "ROOT", root)
+    monkeypatch.setattr(bp, "RESEARCH", root / "research")
+    errors = bp.add_book_facts(bp.Pack())
+    assert any("book.wyck.1" in e and "'3'" in e for e in errors), errors
+    assert any("book.wyck.2" in e and "research/R.md" in e for e in errors), errors
+    bad = BOOK_YAML.replace("tags: [volume, reversal]", "tags: [volume, astrology]").replace("id: book.wyck.2", "id: book.other.2")
+    (root / "research/knowledge/book_facts.yaml").write_text(textwrap.dedent(bad), encoding="utf-8")
+    errors = bp.add_book_facts(bp.Pack())
+    assert any("unknown tags ['astrology']" in e for e in errors) and any("book.other.2" in e for e in errors), errors
+    untested = BOOK_YAML.replace("      tested_src: research/R.md\n", "")
+    (root / "research/knowledge/book_facts.yaml").write_text(textwrap.dedent(untested), encoding="utf-8")
+    assert any("a tested card needs" in e for e in bp.add_book_facts(bp.Pack()))
+
+
+def test_a_proposed_entry_is_in_the_fact_index_but_never_a_shared_candidate(tmp_path, monkeypatch):
+    monkeypatch.setattr(bp, "EXPERIMENTS", tmp_path)
+    write_entry(tmp_path, id="book-wyck-01", title="Wyckoff volume climax", family="patterns-indicators", date="2026-10-25",
+                doc="research/FINDINGS.md", verdict="proposed", instruments=["NIFTY"], hypothesis="It pays after costs.",
+                results={"summary": "Not run."}, holdout_read=None)
+    write_entry(tmp_path, id="r14", title="ORB re-entry churn", family="orb", date="2026-10-10", doc="research/FINDINGS.md",
+                verdict="adopted", instruments=["BANKNIFTY"], hypothesis="Capping re-entries cuts ORB's loss.", results={"summary": "cut"})
+    pack, shared, entries = bp.Pack(), [], []
+    assert bp.add_experiments(pack, shared, entries) == 2
+    facts = {f["id"]: f for f in pack.facts}
+    prop = facts["exp.book-wyck-01"]
+    assert prop["title"].startswith("Proposed, not run yet: ") and prop["verdict"] == "context" and prop["conf"] == "low" and prop["w"] == 1.0
+    assert [it["id"] for it in shared] == ["exp:r14"] and [e["id"] for e in entries] == ["r14"]
+
+
 # ---- the whole pack, read as the phone reads it ----------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
