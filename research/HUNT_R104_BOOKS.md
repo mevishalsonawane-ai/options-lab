@@ -123,6 +123,10 @@ Bennett is right: once ATM IV is known, skew adds almost nothing.
   daily tests re-run); the event straddle (`book-fmwhd-02`) could be priced past its weekly expiry on the next contract
   (design +Rs 2.04 lakh on 18 trades became -Rs 7,709 on 5 after the fix); 5 of 1,150 `book-fmwhd-01` trades had no
   price and were dropped. Engine speed-ups changed no rule.
+- After the holdout read, only bookkeeping changed: the entry ids of N1-N6 were lower-cased for the validator, the book
+  cards became re-run safe, and a test fixture was given its expiry day (the walker's expiry guard had made it return
+  nothing). No rule, number or verdict changed. The rebuilt knowledge pack (`android/app/src/main/assets/knowledge/`)
+  is the only file outside `research/` and is generated; it is about 2 MB, as it already was before R104.
 - The MCX intraday sample is short (Amendment 0), so most MCXI tests had 15-100 trades.
 - Index volume rules (Wyckoff 01 / 03, Porwal 10 / 11) could not be tested: the index has no volume and index-futures
   minutes exist only from 29 Jul 2026 (57 sessions).
