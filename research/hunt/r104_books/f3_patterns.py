@@ -126,13 +126,13 @@ def woods06(ctx, tf):
         if a != a:
             continue
         if lw >= 2 / 3 * P.rng[k]:
-            lv = [v for bar, conf, v in ls if conf < k and b.ses[bar] >= ses - 1]
-            if any(abs(b.l[k] - v) <= 0.1 * a for v in lv[-10:]):
+            lv = [x[2] for x in P.recent(k, "L", sessions=1, limit=10)]
+            if any(abs(b.l[k] - v) <= 0.1 * a for v in lv):
                 lvl = b.h[k] + P.tick
                 out.append(P.stop_order(k, 1, lvl, 1, b.l[k], P.target_swing(k, 1, lvl)))
         if uw >= 2 / 3 * P.rng[k]:
-            hv = [v for bar, conf, v in hs if conf < k and b.ses[bar] >= ses - 1]
-            if any(abs(b.h[k] - v) <= 0.1 * a for v in hv[-10:]):
+            hv = [x[2] for x in P.recent(k, "H", sessions=1, limit=10)]
+            if any(abs(b.h[k] - v) <= 0.1 * a for v in hv):
                 lvl = b.l[k] - P.tick
                 out.append(P.stop_order(k, -1, lvl, 1, b.h[k], P.target_swing(k, -1, lvl)))
     return out, None, None
@@ -484,30 +484,36 @@ def woods19(ctx, tf):
     b, out = P.b, []
     hs, ls = P.swing_lists()
     ph, pl = P.prev_session_hl()
-    k0 = 0
+    # per session: the previous session's swing levels confirmed before this session's first bar
+    first = {}
+    for k in range(P.n):
+        first.setdefault(int(b.ses[k]), k)
+    lev_h, lev_l = {}, {}
+    for s, k0 in first.items():
+        lev_h[s] = [x[2] for x in P.recent(k0, "H", limit=30) if b.ses[x[0]] == s - 1][:3]
+        lev_l[s] = [x[2] for x in P.recent(k0, "L", limit=30) if b.ses[x[0]] == s - 1][:3]
+    run_hi, run_lo = -np.inf, np.inf
     for k in range(1, P.n - 1):
-        if not P.same_ses(k - 1, k):
-            k0 = k
+        s = int(b.ses[k])
+        if first[s] == k:
+            run_hi, run_lo = -np.inf, np.inf
             continue
-        ses = b.ses[k]
+        run_hi, run_lo = max(run_hi, b.c[k - 1]), min(run_lo, b.c[k - 1])   # closes of earlier bars this session
+        prev_hi, prev_lo = run_hi, run_lo
         a = P.atr[k]
         if a != a or not P.ok_time(k):
             continue
-        lv_h = [v for bar, conf, v in hs if b.ses[bar] == ses - 1 and conf < k0 + 1]
-        lv_l = [v for bar, conf, v in ls if b.ses[bar] == ses - 1 and conf < k0 + 1]
-        for L in lv_h[-3:]:
-            broke = np.flatnonzero(b.c[k0:k] > L)
-            if len(broke) and b.l[k] <= L + 0.1 * a and P.green[k] and b.c[k] > L:
+        for L in lev_h[s]:
+            if prev_hi > L and b.l[k] <= L + 0.1 * a and P.green[k] and b.c[k] > L:
                 lvl = b.h[k] + P.tick
-                t = ph[k] if ph[k] > lvl else P.target_swing(k, 1, lvl)
-                out.append(P.stop_order(k, 1, lvl, 1, L - 0.25 * a, t))
+                t_ = ph[k] if ph[k] > lvl else P.target_swing(k, 1, lvl)
+                out.append(P.stop_order(k, 1, lvl, 1, L - 0.25 * a, t_))
                 break
-        for L in lv_l[-3:]:
-            broke = np.flatnonzero(b.c[k0:k] < L)
-            if len(broke) and b.h[k] >= L - 0.1 * a and P.red[k] and b.c[k] < L:
+        for L in lev_l[s]:
+            if prev_lo < L and b.h[k] >= L - 0.1 * a and P.red[k] and b.c[k] < L:
                 lvl = b.l[k] - P.tick
-                t = pl[k] if pl[k] < lvl else P.target_swing(k, -1, lvl)
-                out.append(P.stop_order(k, -1, lvl, 1, L + 0.25 * a, t))
+                t_ = pl[k] if pl[k] < lvl else P.target_swing(k, -1, lvl)
+                out.append(P.stop_order(k, -1, lvl, 1, L + 0.25 * a, t_))
                 break
     return out, None, None
 
@@ -888,15 +894,11 @@ def tom16(ctx, tf):
 
 # ================================================================================================ Advanced Trading Book
 def _swing_low_near(P, k, price, tol, sessions=5):
-    hs, ls = P.swing_lists()
-    s = P.b.ses[k]
-    return any(abs(v - price) <= tol for bar, conf, v in ls if conf < k and s - sessions <= P.b.ses[bar] <= s)
+    return any(abs(x[2] - price) <= tol for x in P.recent(k, "L", sessions=sessions, limit=400))
 
 
 def _swing_high_near(P, k, price, tol, sessions=5):
-    hs, ls = P.swing_lists()
-    s = P.b.ses[k]
-    return any(abs(v - price) <= tol for bar, conf, v in hs if conf < k and s - sessions <= P.b.ses[bar] <= s)
+    return any(abs(x[2] - price) <= tol for x in P.recent(k, "H", sessions=sessions, limit=400))
 
 
 @both("book-atb-01", mcx=("GOLD", "CRUDE"), variants={"15m": dict(tf=15), "5m": dict(tf=5)})

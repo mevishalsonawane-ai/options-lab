@@ -116,9 +116,20 @@ def instruments(market: str, insts: tuple) -> list:
 
 
 # ================================================================================================ run one rule
-def _end_of(ctx: Ctx):
+def _end_of(ctx: Ctx, multiday: bool = False):
     s = ctx.s
     if ctx.market in ("DLY", "MCXD", "STK"):
+        return lambda i: s.n
+    if multiday:
+        if ctx.market == "MCXI":
+            # never hold an MCX future across a contract roll: out at the last minute before the roll session
+            rolls = sorted(i for i, d in enumerate(s.days) if d in s.meta.get("roll_days", set()))
+
+            def end_mcx(i):
+                ses = s.ses[min(i, s.n - 1)]
+                nxt = [r for r in rolls if r > ses]
+                return int(s.s1[nxt[0] - 1]) if nxt else s.n
+            return end_mcx
         return lambda i: s.n
     return lambda i: int(s.sq[s.ses[min(i, s.n - 1)]])
 
@@ -131,9 +142,9 @@ def run_inst(rid: str, market: str, inst: str, var: dict, part: str, ctx: Ctx | 
     s = ctx.s
     keep = [t for t in intents if 0 <= t[0] < s.n and K.period_of(market, ctx.day(int(t[0]))) == part]
     one_pos = var.get("_one_pos", True)
-    ex = SIM.execute(s.o, s.h, s.l, keep, _end_of(ctx), trail, xflag, max_side_day=var.get("_max_side_day", 2),
+    ex = SIM.execute(s.o, s.h, s.l, keep, _end_of(ctx, var.get("_multiday", False)), trail, xflag, max_side_day=var.get("_max_side_day", 2),
                      day_of=lambda i: s.ses[i], one_pos=one_pos,
-                      tab=var.get("_tab", False))
+                      tab=var.get("_tab", False), tmode=var.get("_tmode", 0))
     rows = []
     for e in ex:
         d_in = ctx.day(e["f"])
@@ -230,6 +241,8 @@ def run_family(mod: str, only=()):
     for rid, mk in keys:
         if IMPL[(rid, mk)]["_family"] != mod:
             continue
+        if f"{rid}|{mk}" in allres and not only:      # resume: a finished test is not re-run unless named
+            continue
         r = evaluate_design(rid, mk)
         allres[f"{rid}|{mk}"] = r
         w = r["wf"]
@@ -242,6 +255,7 @@ def run_family(mod: str, only=()):
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "design":
-        run_family(sys.argv[2], tuple(sys.argv[3:]))
+        import r104run as _self                     # the module the families register into (not __main__)
+        _self.run_family(sys.argv[2], tuple(sys.argv[3:]))
     else:
         raise SystemExit(__doc__)

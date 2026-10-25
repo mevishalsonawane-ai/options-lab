@@ -204,7 +204,7 @@ def cut_series(s, cut):
                      s.days[:ns[-1] + 1], s0, s1, s.sq[:ns[-1] + 1], s.open_tod, s.expiry[:ns[-1] + 1] if len(s.expiry) else s.expiry)
 
 
-FAMILIES = ["f3_patterns"]
+FAMILIES = ["f3_patterns", "f10_indicators", "f6_porwal", "f7_aziz", "f1f2_wyckoff_volume", "f4_carli"]
 
 
 @pytest.mark.parametrize("fam", FAMILIES)
@@ -223,9 +223,57 @@ def test_no_look_ahead_in_any_rule(fam):
             for cut in cuts:
                 sc = cut_series(s, int(cut))
                 part = imp["fn"](R.Ctx("IDX", "SYN", sc, daily), **kw)[0]
-                key = lambda t: (t[0], t[1], t[2], round(t[3], 6) if t[3] == t[3] else None,
-                                 round(t[5], 6) if t[5] == t[5] else None, round(t[6], 6) if t[6] == t[6] else None)
+                key = lambda t: (t[0], t[1], t[2], round(t[3], 6) if t[3] == t[3] else -1e18,
+                                 round(t[5], 6) if t[5] == t[5] else -1e18, round(t[6], 6) if t[6] == t[6] else -1e18)
                 # every decision made up to the cut (start <= cut) must be identical
+                fa = sorted(key(t) for t in full if t[0] <= cut)
+                pa = sorted(key(t) for t in part if t[0] <= cut)
+                assert fa == pa, (rid, vn, cut)
+
+
+def test_smith_trail_only_after_new_extreme_and_chandelier():
+    o = arr(100, 101, 103, 102.5, 101, 100)
+    h = arr(100, 102, 104, 103, 102, 101)
+    l = arr(100, 100.5, 102, 102.2, 100.2, 99)
+    tr = arr(NAN, NAN, 100.4, 101.9, 102.1, 100.1)      # candidate = previous bar's low - 0.1
+    # tmode 1: bar 1 new high -> 100.4 at bar 2; bar 2 new high -> 101.9 at bar 3; bar 3 NOT new -> 102.1 ignored
+    r = SIM.walk(o, h, l, 0, 1, 0, NAN, -1, 99.5, NAN, -1, NAN, 6, tr, E_B, False, 1)
+    assert (r[2], r[3], r[4]) == (4, 101.0, 1)          # bar 4 opens 101 below the 101.9 stop: fills at the open
+    # tmode 0 would have taken 102.1 at bar 4 too (same exit bar, at the open)
+    r0 = SIM.walk(o, h, l, 0, 1, 0, NAN, -1, 99.5, NAN, -1, NAN, 6, tr, E_B, False, 0)
+    assert r0[2] == 4
+    # chandelier: distance 1.5 from the highest high since the fill (104 after bar 2) -> 102.5 from bar 3
+    ch = arr(NAN, 1.5, 1.5, 1.5, 1.5, 1.5)
+    r2 = SIM.walk(o, h, l, 0, 1, 0, NAN, -1, 99.0, NAN, -1, NAN, 6, ch, E_B, False, 2)
+    assert (r2[2], r2[3]) == (3, 102.5)
+
+
+def synth_daily(n=900, seed=11):
+    rng = np.random.default_rng(seed)
+    c = 10000 * np.exp(np.cumsum(rng.normal(0, 0.01, n)))
+    o = c * (1 + rng.normal(0, 0.003, n))
+    h = np.maximum(o, c) * (1 + np.abs(rng.normal(0, 0.004, n)))
+    l = np.minimum(o, c) * (1 - np.abs(rng.normal(0, 0.004, n)))
+    d0 = date(2010, 1, 4)
+    idx = [d0 + timedelta(days=i) for i in range(n)]
+    return pd.DataFrame(dict(open=o, high=h, low=l, close=c, volume=rng.integers(1000, 5000, n).astype(float)), index=idx)
+
+
+@pytest.mark.parametrize("fam", FAMILIES)
+def test_no_look_ahead_daily_rules(fam):
+    importlib.import_module(fam)
+    df = synth_daily()
+    for (rid, mk), imp in R.IMPL.items():
+        if imp["_family"] != fam or mk not in ("DLY", "MCXD", "STK"):
+            continue
+        for vn, var in imp["variants"].items():
+            kw = {k: v for k, v in var.items() if not k.startswith("_")}
+            full = imp["fn"](R.Ctx(mk, "SYN", R.daily_series(df, "SYN", mk), df), **kw)[0]
+            for cut in (300, 555, 800):
+                dc = df.iloc[:cut + 1]
+                part = imp["fn"](R.Ctx(mk, "SYN", R.daily_series(dc, "SYN", mk), dc), **kw)[0]
+                key = lambda t: (t[0], t[1], t[2], round(t[3], 6) if t[3] == t[3] else -1e18,
+                                 round(t[5], 6) if t[5] == t[5] else -1e18)
                 fa = sorted(key(t) for t in full if t[0] <= cut)
                 pa = sorted(key(t) for t in part if t[0] <= cut)
                 assert fa == pa, (rid, vn, cut)

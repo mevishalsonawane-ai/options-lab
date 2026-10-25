@@ -63,6 +63,28 @@ class Pat:
             self.sw[key] = ([tuple(x) for x in zip(*hs)], [tuple(x) for x in zip(*ls)])
         return self.sw[key]
 
+    def recent(self, k: int, kind: str, n: int | None = None, sessions: int | None = None, limit: int = 50):
+        """Swings ('H' / 'L') confirmed strictly before bar k, most recent first, optionally only those whose bar lies in
+        the last `sessions` sessions (inclusive of k's session); at most `limit`."""
+        import bisect
+        n = n or self.swing_n
+        key = ("conf", n, kind)
+        if key not in self.sw:
+            hs, ls = self.swing_lists(n)
+            src = hs if kind == "H" else ls
+            self.sw[key] = ([x[1] for x in src], src)
+        confs, src = self.sw[key]
+        j = bisect.bisect_left(confs, k)
+        out = []
+        s = self.b.ses[k]
+        while j > 0 and len(out) < limit:
+            j -= 1
+            x = src[j]
+            if sessions is not None and self.b.ses[x[0]] < s - sessions:
+                break
+            out.append(x)
+        return out
+
     def confirmed(self, k: int, n: int | None = None):
         """Swings confirmed at or before bar k: (highs, lows) lists."""
         hs, ls = self.swing_lists(n)
@@ -107,6 +129,8 @@ class Pat:
     def end_row(self, k: int, nbars: int) -> int:
         """Last 1-minute row of bar k + nbars (clamped to the session)."""
         j = min(k + nbars, self.n - 1)
+        if self.ctx.market in ("DLY", "MCXD", "STK"):          # daily bars: one bar per session, no clamp
+            return int(self.b.i1[j])
         while j > k and self.b.ses[j] != self.b.ses[k]:
             j -= 1
         return int(self.b.i1[j])
@@ -125,6 +149,11 @@ class Pat:
 
     def r_target(self, side, entry, stop, r):
         return entry + side * r * abs(entry - stop)
+
+    @staticmethod
+    def after_fill(minutes: int) -> int:
+        """A time exit `minutes` bars after the fill (the executor resolves it)."""
+        return -(int(minutes) + 1)
 
     def tmax_minutes(self, k, minutes):
         """The row at whose open a time exit `minutes` after the decision happens (same session or the square-off)."""

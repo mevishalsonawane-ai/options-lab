@@ -7,7 +7,7 @@ An INTENT (one position or one sub-lot of it) is a tuple
   side       +1 long / call, -1 short / put
   kind       0 market at start's open; 1 stop order at lvl; 2 limit order at lvl (valid start..valid_end inclusive)
   stop, tgt  underlying levels (NaN = none)
-  tmax       exit at the open of this bar at the latest (-1 = none)
+  tmax       exit at the open of this bar at the latest (-1 = none; -(m + 1) = m bars after the fill)
   be         move the stop to the entry once the price is be x R in favour (NaN = never)
   grp, w     sub-lots of one position share grp; w = its share of the position (results are per position)
   ref        the underlying price the strike rule reads (option markets)
@@ -31,7 +31,7 @@ EMPTY_B = np.zeros(0, np.bool_)
 
 
 @njit(cache=True)
-def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, trail, xflag, tab=False):
+def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, trail, xflag, tab=False, tmode=0):
     """Returns (fill bar, fill price, exit bar, exit price, reason, touch). touch = 1 when the exit was a stop / target
     touch inside the exit bar (an option is then sold at the next bar's open), 0 when it was at the bar's open."""
     n = len(o)
@@ -64,9 +64,12 @@ def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, 
                     break
     if f < 0:
         return -1, np.nan, -1, np.nan, 0, 0
+    if tmax < -1:                        # relative time exit: -(minutes + 1) after the fill
+        tmax = f + (-tmax - 1)
     stop = stop0
     risk = abs(fpx - stop0) if stop0 == stop0 else np.nan
     m0 = f if kind == 0 else f + 1
+    ext = fpx
     has_t = trail.shape[0] > 0
     has_x = xflag.shape[0] > 0
     armed = not tab                      # tab: the trail starts only after the break-even move
@@ -77,6 +80,13 @@ def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, 
             return f, fpx, m, o[m], 4, 0
         if has_t and m > f and armed:
             t = trail[m]
+            if tmode == 1 and t == t:            # Smith: only after a bar that made a new extreme since the fill
+                if side > 0 and not (h[m - 1] >= ext):
+                    t = np.nan
+                if side < 0 and not (l[m - 1] <= ext):
+                    t = np.nan
+            if tmode == 2 and t == t:            # chandelier: trail[m] is a distance from the extreme since the fill
+                t = (ext - t) if side > 0 else (ext + t)
             if t == t:
                 if side > 0:
                     if stop != stop or t > stop:
@@ -103,6 +113,11 @@ def walk(o, h, l, start, side, kind, lvl, valid_end, stop0, tgt, tmax, be, end, 
                 armed = True
                 if stop != stop or stop > fpx:
                     stop = fpx
+        # the extreme since the fill INCLUDING this bar: at the next bar, h[m] >= ext means bar m made a new extreme
+        if side > 0 and h[m] > ext:
+            ext = h[m]
+        if side < 0 and l[m] < ext:
+            ext = l[m]
     if end < n:
         return f, fpx, end, o[end], 5, 0
     return f, fpx, n - 1, np.nan, 5, 0
@@ -117,7 +132,7 @@ def per_bar_to_rows(b, arr, n_rows: int, dtype=float):
     return out
 
 
-def execute(o, h, l, intents, end_of, trail=None, xflag=None, max_side_day=2, day_of=None, one_pos=True, tab=False):
+def execute(o, h, l, intents, end_of, trail=None, xflag=None, max_side_day=2, day_of=None, one_pos=True, tab=False, tmode=0):
     """Walk every intent (orders rest independently), then accept positions in FILL order: one open position at a time
     when one_pos, at most max_side_day positions a side per day (day_of(bar)). Sub-lots share grp (the position fills
     at its earliest filled sub-lot); groups named 'key|x' are one-cancels-other with every group of the same key (the
@@ -135,7 +150,7 @@ def execute(o, h, l, intents, end_of, trail=None, xflag=None, max_side_day=2, da
             start, sd, kind, lvl, vend, stop, tgt, tmax, be, _g, w, ref = t
             end = end_of(start)
             r = walk(o, h, l, int(start), int(sd), int(kind), float(lvl), int(vend), float(stop), float(tgt), int(tmax),
-                     float(be), int(end), tr, xf, tab)
+                     float(be), int(end), tr, xf, tab, tmode)
             if r[0] >= 0:
                 res.append((t, r))
         if res:
@@ -152,15 +167,19 @@ def execute(o, h, l, intents, end_of, trail=None, xflag=None, max_side_day=2, da
     done.sort(key=lambda it: (it[0], str(it[1])))
     out = []
     busy = -1
+    busy_open = False                    # the open position exited at a bar's OPEN (a new one may fill in that bar)
     count = {}
     for f, g, side, res in done:
-        if one_pos and f <= busy:
+        if one_pos and (f < busy or (f == busy and not busy_open)):
             continue
         dk = (day_of(f) if day_of else 0, side)
         if count.get(dk, 0) >= max_side_day:
             continue
         count[dk] = count.get(dk, 0) + 1
-        busy = max(busy, max(r[2] for _t, r in res))
+        last = max(res, key=lambda tr_: tr_[1][2])[1]
+        if last[2] >= busy:
+            busy = last[2]
+            busy_open = last[5] == 0
         for t, r in res:
             out.append(dict(start=int(t[0]), side=side, kind=int(t[2]), stop0=float(t[5]), tgt=float(t[6]), w=float(t[10]),
                             ref=float(t[11]), grp=g, f=int(r[0]), fpx=float(r[1]), x=int(r[2]), xpx=float(r[3]),
