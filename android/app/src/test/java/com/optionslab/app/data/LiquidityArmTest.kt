@@ -340,6 +340,15 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals(1, Paper.state.orders.count { it.action == "BUY" })
     }
 
+    /** 22 Oct (arms audit): the arming words say the rule as it runs - one strike in the money, the index stop, the time stop. */
+    @Test fun theArmingWordsSayTheRuleAsItRuns() {
+        val msg = runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
+        assertTrue(msg, "one strike in the money" in msg)
+        assertTrue(msg, "an index stop back through the broken level" in msg)
+        assertTrue(msg, "a 20-minute time stop unless it is 5% up" in msg)
+        assertFalse(msg, "ATM" in msg)
+    }
+
     @Test fun aSkippedSignalBuysNothing() {
         armLiquidity(automatic = false)
         passes(LocalTime.of(12, 50), LocalTime.of(13, 5))

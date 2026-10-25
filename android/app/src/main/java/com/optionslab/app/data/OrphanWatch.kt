@@ -112,7 +112,8 @@ object OrphanWatch {
         if (ltp <= stop || ltp >= target) {
             // Already beyond a level: sold now (it only lowers risk).
             val lots = (row.quantity / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-            val r = Paper.place(c, "SELL", lots, "MARKET", row.product, null, null)
+            // 22 Oct (arms audit): an exit only reduces what is held - never a paper short when the position closed meanwhile.
+            val r = Paper.place(c, "SELL", lots, "MARKET", row.product, null, null, exit = true)
             if (r.events.none { it is com.optionslab.engine.sandbox.SandboxEvent.Fill }) {
                 r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
                 runCatching { Diag.record("orphans", "${o.symbol} (${o.owner}): the safety net's sale did not fill (${r.message}); tried again next look") }

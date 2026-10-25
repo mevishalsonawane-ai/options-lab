@@ -415,6 +415,14 @@ object Paper {
         return bars.firstNotNullOfOrNull { com.optionslab.engine.orb.ProfitLock.sellStopFill(trigger, it.open, it.low) }
     }
 
+    /** [restingFill] for a resting BUY stop (a short's; 22 Oct, arms audit): the stream's ticks, else the minutes' highs. */
+    private fun restingBuyFill(c: Contract, since: java.time.LocalDateTime, trigger: Double): Double? {
+        val tok = runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
+        if (tok != null) return KiteStream.buyStopFill(tok, epochMs(since), trigger)
+        val bars = barsAfter(c, since)?.filter { it.istDate == Market.today() } ?: return null
+        return bars.firstNotNullOfOrNull { com.optionslab.engine.orb.ProfitLock.buyStopFill(trigger, it.open, it.high) }
+    }
+
     /** The last price per symbol read from the day's candles (not the stream), and when: what [tick] may hand on. */
     private val candleQuotes = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Quote>>()
 
@@ -870,7 +878,13 @@ object Paper {
      * entry could also be mirrored live (19 Oct review).
      */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
-                      known: Quote? = null, auto: String? = null, mirror: String? = null): Result {
+                      known: Quote? = null, auto: String? = null, mirror: String? = null, exit: Boolean = false): Result {
+        // 22 Oct (arms audit): an arm's EXIT ([exit]) only ever reduces what the book holds in [product]. An arm reads "held" and
+        // then sells a moment later; the expiry square-off (15:05), the 15:15 square-off, the sweeper or Boss may have closed the
+        // position in between, and a plain SELL on a flat book opened a paper SHORT nothing managed (the Hero tickets' and ORB's
+        // 15:05 sales). Now such an exit is refused as "already closed" (the arm books it closed elsewhere), and one for more
+        // than is held sells only what is held. Checked here before any price read, and again inside the book's lock, with the place.
+        if (exit && reduceQty(book(), c.symbol, product, action, lots * c.lotSize) == null) return notOpen(c.symbol)
         // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
         // exchange stamp of this contract's last stream tick, when it streams.
         // 16 Oct (Boss's diagnostics: "Prices were up to 3.6 s old when used"): a fill never uses a quote older than
@@ -933,8 +947,10 @@ object Paper {
             // on the same bar can never both take the last place). Memory only.
             if (capDir != null) capCheck(b0, capDir, auto)?.let { why -> return@locked Result(false, why, emptyList(), capped = true) }
             val b = if (b0.contracts[c.symbol] == c) b0 else b0.copy(contracts = b0.contracts + (c.symbol to c))
+            // An exit reduces only: never more than is held now, never a short from a flat book (22 Oct, arms audit).
+            val qty = if (exit) (reduceQty(b, c.symbol, product, action, lots * c.lotSize) ?: return@locked notOpen(c.symbol)) else lots * c.lotSize
             val out = engine(b.capital, b.contracts).place(b.state,
-                OrderRequest(c.symbol, c.exchange, action, lots * c.lotSize, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
+                OrderRequest(c.symbol, c.exchange, action, qty, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
             val id = out.result.orderId
             val autoNow = if (capWay != null && out.result.ok && id != null) (b.auto + (id to auto!!)).let { m ->
                 if (m.size > AUTO_KEPT) m.entries.drop(m.size - AUTO_KEPT).associate { it.key to it.value } else m } else b.auto
@@ -1050,6 +1066,25 @@ object Paper {
     private fun heldIn(b: Book, symbol: String, product: String): Int =
         b.state.positions.filter { it.symbol == symbol && it.product.equals(product, ignoreCase = true) }.sumOf { it.quantity }
 
+    /**
+     * The quantity an arm's exit of [qty] may send (22 Oct, arms audit): [action] must close what [b] holds in [product] (a SELL
+     * a long, a BUY a short), and never more than is held; null when nothing is held that way (the exit is refused: the position
+     * was closed by the square-off, the sweeper or Boss, and the arm books it closed elsewhere). Pure on the book.
+     */
+    /** [reduceQty] on the book as it is now (tests). */
+    internal fun reduceQtyNow(symbol: String, product: String, action: String, qty: Int): Int? = reduceQty(book(), symbol, product, action, qty)
+
+    private fun reduceQty(b: Book, symbol: String, product: String, action: String, qty: Int): Int? {
+        val held = heldIn(b, symbol, product)
+        val closing = if (held > 0) "SELL" else if (held < 0) "BUY" else return null
+        if (!closing.equals(action, ignoreCase = true)) return null
+        // A close of the whole position still working (a square-off's MARKET order resting for a price) is already on its way:
+        // an arm's exit sells only what it leaves, so the two can never add up to a short.
+        val closingNow = b.state.orders.filter { it.symbol == symbol && it.product.equals(product, ignoreCase = true) &&
+            it.action.equals(closing, ignoreCase = true) && it.status == "open" && it.strategy == "AUTO_SQUARE_OFF" }.sumOf { it.pendingQuantity }
+        return minOf(qty, kotlin.math.abs(held) - closingNow).takeIf { it > 0 }
+    }
+
     /** What a close of a position that is not open says (never the engine's "Missing required field: quantity"). */
     private fun notOpen(symbol: String) = Result(false, "No open paper position in $symbol: it is already closed.", emptyList())
 
@@ -1076,9 +1111,22 @@ object Paper {
         x?.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
         val r = locked {
             val b = book()
-            if (heldIn(b, symbol, product) == 0) return notOpen(symbol)
-            val out = engine(b.capital, b.contracts).closePosition(b.state, symbol, exchangeOf(symbol), product, q, Market.now())
-            save(b.copy(state = out.state))
+            val held = heldIn(b, symbol, product)
+            if (held == 0) return notOpen(symbol)
+            val e = engine(b.capital, b.contracts)
+            val now = Market.now()
+            // 22 Oct (arms audit): the position's resting exits (an arm's SL-M stop, a LIMIT target) come out of the book first.
+            // Left resting after the close, a stop touched before the arm's next look filled - as a short (the expiry square-off's
+            // close of an ORB or Hero option; the engine's own 15:15 square-off already cancels first).
+            var s = b.state
+            val closingSide = if (held > 0) "SELL" else "BUY"
+            val taken = s.orders.filter { it.symbol == symbol && it.product.equals(product, ignoreCase = true) && it.action.equals(closingSide, true) &&
+                (it.status == "open" || it.status == "trigger pending") }.map { it.orderId }
+            for (id in taken) e.cancel(s, id, now, q).also { if (it.result.ok) s = it.state }
+            val out = e.closePosition(s, symbol, exchangeOf(symbol), product, q, now)
+            // The close refused (no price, margin): nothing is kept of it - the stop and target stay resting, as they were.
+            if (!out.result.ok) return describe(out.result, out.events)
+            save(b.copy(state = out.state, why = if (taken.isEmpty()) b.why else noted(b.why, taken.associateWith { "position_closed" })))
             describe(out.result, out.events)
         }
         timed(r, t0)
@@ -1125,11 +1173,12 @@ object Paper {
             e.catchUp(s, now).also { s = it.state; events += it.events }
             // A resting SELL SL-M (a stop, or one the profit lock moved up) touched between two looks fills where it would
             // have at the exchange - its trigger, or the price already under it - not at whatever the price is now.
-            for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }) {
+            // 22 Oct (arms audit): a resting BUY SL-M - a short's stop (the US-night silver future) - the same way, on a high.
+            for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && (it.action == "SELL" || it.action == "BUY") }) {
                 val c = b.contracts[o.symbol] ?: continue
                 if (q[Sandbox.key(o.symbol, o.exchange)] == null) continue          // only on a pass that read this contract's price
                 val trig = o.triggerPrice?.toDouble() ?: continue
-                val px = runCatching { restingFill(c, o.updateTimestamp, trig) }.getOrNull() ?: continue
+                val px = runCatching { if (o.action == "BUY") restingBuyFill(c, o.updateTimestamp, trig) else restingFill(c, o.updateTimestamp, trig) }.getOrNull() ?: continue
                 e.fillRestingStop(s, o.orderId, px, now, q[Sandbox.key(o.symbol, o.exchange)]).also { if (it.result.ok) { s = it.state; events += it.events } }
             }
             e.onQuotes(s, fill.quotes, now, fill.hold).also { s = it.state; events += it.events }

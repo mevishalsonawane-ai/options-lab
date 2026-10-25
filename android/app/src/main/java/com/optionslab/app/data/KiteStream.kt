@@ -150,6 +150,9 @@ object KiteStream {
     /** Where a resting SELL stop at [trigger] on [token], resting since [sinceMs], filled on the stream's ticks, or null. */
     fun sellStopFill(token: Long, sinceMs: Long, trigger: Double): Double? = paths[token]?.sellStopFill(sinceMs, trigger)
 
+    /** Where a resting BUY stop (a short's) at [trigger] on [token], resting since [sinceMs], filled on the stream's ticks, or null. */
+    fun buyStopFill(token: Long, sinceMs: Long, trigger: Double): Double? = paths[token]?.buyStopFill(sinceMs, trigger)
+
     /** The 1-minute candle of [token] that started at [startMs] built from the stream's ticks (open, high, low, close), or null. */
     fun minuteBar(token: Long, startMs: Long): DoubleArray? = paths[token]?.minute(startMs)
 

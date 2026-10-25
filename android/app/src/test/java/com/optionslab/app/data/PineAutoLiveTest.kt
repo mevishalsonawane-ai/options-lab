@@ -410,6 +410,29 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals("already off", runBlocking { PineAuto.windDown(id, "again") })
     }
 
+    /**
+     * 22 Oct (arms audit): Pine is hidden (Boss's 15 Oct cleanup) while a script still holds an option, so the cleanup waits for
+     * its exit. The exit runs as before; the signal's flip buys nothing more (before, it sold the call and bought the put).
+     */
+    @Test fun aHiddenScriptWaitingForItsExitSellsOnTheFlipAndBuysNothingMore() {
+        bought()
+        HiddenArms.resetForTest(context)
+        try {
+            runBlocking { HiddenArms.hideAgain(com.optionslab.engine.orb.ArmsCleanup.PINE) }
+            assertTrue(HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.PINE))
+            pass(52_020.0)
+            assertEquals("held to its own exit", 1, side("BUY").size)
+            assertNotNull(held())
+            pass(51_900.0)                                         // the signal turns: its exit sells
+            assertEquals(1, side("SELL").size)
+            assertNull(held())
+            pass(52_010.0)                                         // and turns again: nothing new is bought while hidden
+            assertEquals("nothing bought while hidden", 1, side("BUY").size)
+            assertNull(held())
+            assertTrue("the script's own switch is untouched here (the cleanup switches it off once flat)", PineScripts.get(id)!!.auto.on)
+        } finally { HiddenArms.resetForTest(context) }
+    }
+
     @Test fun aHoldingClosedOutsideTheAppIsForgotten() {
         bought()
         kite.position(ce, 0, 0.0, product = "MIS")                 // closed in the Kite app

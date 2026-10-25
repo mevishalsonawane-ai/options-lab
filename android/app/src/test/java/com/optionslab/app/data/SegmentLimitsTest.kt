@@ -68,7 +68,7 @@ class SegmentLimitsTest : RobolectricTest() {
         assertNotNull("NSE paper entries are refused", DayLockGuard.refusal(false))
         assertNull("the MCX arms are not", DayLockGuard.mcxRefusal())
         assertNull(DayLockGuard.mcxActive())
-        assertEquals("Day lock reached (paper NSE) +Rs 8,000 at 11:00: no new NSE entries today", DayLockGuard.statusLine())
+        assertEquals("Day lock reached (paper NSE) +Rs 11,514 (limit +Rs 8,000) at 11:00: no new NSE entries today", DayLockGuard.statusLine())
         assertNull(DayLockGuard.mcxLine())
         assertTrue(DayLockGuard.diagLine().contains("Day lock reached (paper NSE)"))
         // Zerodha's lock is its own: untouched.
@@ -77,7 +77,7 @@ class SegmentLimitsTest : RobolectricTest() {
         at(day, 18, 5)
         paper(nse = 11_514.0, mcx = 9_000.0)
         check()
-        assertEquals("Commodities day lock reached +Rs 8,000 at 18:05: no new MCX entries today", DayLockGuard.mcxLine())
+        assertEquals("Commodities day lock reached +Rs 9,000 (limit +Rs 8,000) at 18:05: no new MCX entries today", DayLockGuard.mcxLine())
         assertTrue(DayLockGuard.mcxRefusal()!!.startsWith("Commodities day lock reached"))
         assertEquals(2, DayLockGuard.statusLine()!!.lines().size)
     }
@@ -109,7 +109,7 @@ class SegmentLimitsTest : RobolectricTest() {
         check()
         assertTrue(LossBreaker.mcxTrippedToday())
         assertTrue(mcxStopped())
-        assertTrue(DayLockGuard.statusLine()!!.contains("Commodities daily loss limit reached -Rs 6,000 at 20:10"))
+        assertTrue(DayLockGuard.statusLine()!!.contains("Commodities daily loss limit reached -Rs 6,100 (limit -Rs 6,000) at 20:10"))
     }
 
     @Test fun aLossInMcxStopsMcxOnlyAndNseTradesOn() {
@@ -121,7 +121,7 @@ class SegmentLimitsTest : RobolectricTest() {
         assertFalse("NSE trades on", nseStopped())
         assertTrue(mcxStopped())
         assertTrue(LossBreaker.liveDoorTripped())
-        assertEquals("Commodities daily loss limit reached -Rs 6,000 at 19:12: no new MCX entries today; the MCX arms sold what they held", DayLockGuard.mcxLine())
+        assertEquals("Commodities daily loss limit reached -Rs 6,200 (limit -Rs 6,000) at 19:12: no new MCX entries today; the MCX arms sold what they held", DayLockGuard.mcxLine())
         // MCX recovers: its stop holds for the day; a NSE gain never lifts it.
         paper(nse = 9_000.0, mcx = 1_000.0)
         check()

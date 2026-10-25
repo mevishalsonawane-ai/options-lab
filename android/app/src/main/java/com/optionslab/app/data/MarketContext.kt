@@ -233,9 +233,17 @@ object MarketContext {
         "NIFTY" -> IraMarket.NIFTY; "BANKNIFTY" -> IraMarket.BANKNIFTY; "FINNIFTY" -> IraMarket.FINNIFTY; "SENSEX" -> IraMarket.SENSEX; else -> null
     }
 
-    /** Past expiry days by NSE's rule from 1 Sep 2025 (NIFTY weekly Tuesday, BANKNIFTY the month's last Tuesday); a holiday's shift is not applied. */
-    private fun ruleExpiry(und: String, d: LocalDate): Boolean = d.dayOfWeek == DayOfWeek.TUESDAY &&
-        (und != "BANKNIFTY" || d.with(TemporalAdjusters.lastInMonth(DayOfWeek.TUESDAY)) == d)
+    /**
+     * Past expiry days by the exchanges' rule from 1 Sep 2025, for the "days like today" context only (no order reads this):
+     * NIFTY weekly on Tuesday; SENSEX weekly on Thursday (BSE's day); BANKNIFTY, FINNIFTY and MIDCPNIFTY monthly only, the month's
+     * last Tuesday. A holiday's shift is not applied. 22 Oct (arms audit): every index was Tuesday before - SENSEX's Thursdays and
+     * FINNIFTY's non-expiry Tuesdays were flagged wrong.
+     */
+    internal fun ruleExpiry(und: String, d: LocalDate): Boolean = when (und) {
+        "SENSEX" -> d.dayOfWeek == DayOfWeek.THURSDAY
+        "NIFTY" -> d.dayOfWeek == DayOfWeek.TUESDAY
+        else -> d.dayOfWeek == DayOfWeek.TUESDAY && d.with(TemporalAdjusters.lastInMonth(DayOfWeek.TUESDAY)) == d
+    }
 
     private suspend fun daysBrief(und: String, d: LocalDate): List<String>? {
         val m = market(und) ?: return null

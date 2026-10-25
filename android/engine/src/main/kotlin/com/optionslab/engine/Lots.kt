@@ -8,6 +8,18 @@ import java.time.LocalDate
  *
  * READ FROM NSE BHAVCOPY (`NewBrdLotQty`), not assumed. Dates before coverage
  * RAISE rather than extrapolate backwards; a silently wrong lot is a 2.6x error.
+ *
+ * The dating judgement (docs/lot-history.md): a row's date is the first session on which the NEAREST expiry - the series
+ * the phone trades - carried the new lot, not the circular's date and not the day the farthest new contract was listed
+ * (NSE revises lots prospectively, so a bhavcopy holds two lots at once for weeks). The NIFTY rows and BANKNIFTY's 15 and
+ * 30 are verified against the bhavcopy (`tools/verify_lot_history.py`).
+ *
+ * 22 Oct audit (r51): the table had only NIFTY and BANKNIFTY, and BANKNIFTY stopped at 30 - so a BANKNIFTY ticket after
+ * June 2025 was sized at the wrong lot and FINNIFTY, MIDCPNIFTY and SENSEX tickets raised [NoLotSize] on every day. The rows
+ * added here (BANKNIFTY 35 from 2025-06-27 and back to 30 from 2025-12-31; FINNIFTY 65 then 60; MIDCPNIFTY 120, 140, 120;
+ * SENSEX 20) follow the exchanges' revision circulars dated by the same nearest-expiry judgement, and are NOT YET verified
+ * against the bhavcopy: run `tools/verify_lot_history.py` and correct a date here if it disagrees. Everything that sizes a
+ * trade still asks the chain's own open interest first ([lotFromChain]); this table is the fallback.
  */
 object Lots {
     const val MIN_MOVE_AGREEMENT = 0.95
@@ -25,6 +37,21 @@ object Lots {
         "BANKNIFTY" to listOf(
             LocalDate.of(2024, 1, 1) to 15,
             LocalDate.of(2025, 1, 31) to 30,
+            LocalDate.of(2025, 6, 27) to 35,      // 22 Oct audit: not yet bhavcopy-verified
+            LocalDate.of(2025, 12, 31) to 30,     // 22 Oct audit: not yet bhavcopy-verified
+        ),
+        // 22 Oct audit: the three indices below are new rows, none yet bhavcopy-verified (see the KDoc above).
+        "FINNIFTY" to listOf(
+            LocalDate.of(2025, 1, 31) to 65,
+            LocalDate.of(2025, 12, 31) to 60,
+        ),
+        "MIDCPNIFTY" to listOf(
+            LocalDate.of(2025, 1, 31) to 120,
+            LocalDate.of(2025, 6, 27) to 140,
+            LocalDate.of(2025, 12, 31) to 120,
+        ),
+        "SENSEX" to listOf(
+            LocalDate.of(2025, 1, 31) to 20,
         ),
     )
 

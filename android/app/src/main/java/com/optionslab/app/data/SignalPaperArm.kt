@@ -462,7 +462,8 @@ object SignalPaperArm {
             val half = SignalPaperRules.halfLots(p.lots)
             var sold = 0; var value = 0.0; var ch = 0.0
             if (half > 0) {
-                val r = Paper.place(c, "SELL", half, "MARKET", "MIS", null, null)
+                // 22 Oct (arms audit): an exit only reduces what is held.
+                val r = Paper.place(c, "SELL", half, "MARKET", "MIS", null, null, exit = true)
                 val f = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull() ?: return p
                 sold = f.quantity; value = f.price * f.quantity; ch = chargesOf(r.orderId)
             }
@@ -480,8 +481,14 @@ object SignalPaperArm {
             if (o != null && o.status == "complete") return closed(p, o.averagePrice?.toDouble() ?: p.stop, o.updateTimestamp, "stop", chargesOf(id))
         }
         val lots = ((p.qty - p.soldQty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-        val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
+        // 22 Oct (arms audit): an exit only reduces what is held - never a paper short when the square-off got there first.
+        val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
         val f = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull() ?: run {
+            // Already flat in the paper book (the square-off, the sweeper or Boss): closed elsewhere, at that sale's price.
+            if (!r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
+                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+                return closed(p.copy(stopOrderId = null), t?.price?.toDouble() ?: p.entry, t?.timestamp ?: now(), "closed_elsewhere", t?.charges?.toDouble() ?: 0.0)
+            }
             // Not filled (no fresh price): the stop goes back into the paper book at once, and the exit is tried next pass.
             r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
             val again = runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, p.stop) }.getOrNull()?.takeIf { it.ok }?.orderId

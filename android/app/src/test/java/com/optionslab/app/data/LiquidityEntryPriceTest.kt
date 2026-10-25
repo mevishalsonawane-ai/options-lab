@@ -182,6 +182,9 @@ class LiquidityEntryPriceTest : RobolectricTest() {
         assertEquals("no more than one retry", 2, callReads(from))
         val buys = Paper.state.orders.filter { it.action == "BUY" }
         assertEquals(listOf("cancelled", "cancelled"), buys.map { it.status })
+        // 22 Oct (arms audit; the 21 Oct diagnostics showed this order as "IraAlgo-Android"): both cancelled orders carry the arm's name.
+        val owners = runBlocking { Strategies.owners() }
+        for (o in buys) assertEquals("Liquidity 15+5 · entry", owners["paper:${o.orderId}"])
         assertTrue("nothing filled", Paper.state.trades.isEmpty())
         assertEquals(0, Paper.state.positions.sumOf { it.quantity })
         assertTrue(row().status, row().status.contains("The order was refused: no price to fill at for $sym after 2 orders; both were cancelled"))

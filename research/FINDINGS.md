@@ -1673,6 +1673,18 @@ R99 above. Signal source: the NIFTY index (and Solo 2.0's own index entry); the 
   exits, but all of the gain came in Jan-Mar 2026 and bootstrap p 0.245. It failed the gates, so it stays a note;
   the final period was not opened.
 
+## R101: entry filters and sizing on the arms with a real record (HUNT_R101_ARMS_ENHANCE.md, 22 Oct 2026)
+- Boss asked whether profit or win rate could be raised; 20 pre-registered variants on Liquidity 15+5 (bar breadth,
+  intraday VIX direction, realised-vol regime, weekday), R72 Breadth Donchian and R51 Donchian (VIX regime, gap,
+  no opening bar, mornings only, 2 lots on 5-of-5), R52 OOV (VIX regime, distance from value, opening breadth). Every
+  B0 reproduced to the rupee first. **0 of 20 pass** (best BH q 0.40); win rate and net shown side by side for each.
+- The opening bar's break (09:15-09:19, bought at 09:20) is the most valuable part of both Donchian arms: without it
+  R72 loses Rs 1,49,195 of its Rs 2,16,929 design net (final -Rs 76,078 of 1,71,366) and R51 Rs 87,186 / 97,444.
+- Filters that raise the win rate lower the net (L2 VIX-confirmed Liquidity: 48% vs 44% and 40% vs 37% but -Rs 54,136
+  in design, +37,912 in the final, twin p 0.02, q 0.40; B4 mornings only on R72: 47-48% but -Rs 81,567 final).
+- Sizing by breadth (2 lots on 5-of-5) earned in the final what any extra lot earns (Rs 161 a lot vs random 160,
+  p 0.475) with twice the worst day. Nothing changes on paper or live.
+
 ## Deep learn NIFTY and BANKNIFTY (R102, 22 Oct 2026) - how they move, with numbers; 1 of 70 sign rules confirmed and it is an artefact
 Full study: `DEEP_NIFTY_BANKNIFTY.md` (pre-registered `hunt/r102_deep/PREREG.md`, design to 14 Jul 2026, holdout 15 Jul -
 19 Oct 2026 read once). Facts for Jarvis with sample sizes: `knowledge/index_facts.yaml` (27 cards). Descriptive, not a

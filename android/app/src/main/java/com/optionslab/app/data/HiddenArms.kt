@@ -100,7 +100,17 @@ object HiddenArms {
      * takes it in - also while it still holds a position and waits for its exit: that position keeps its own stop, target,
      * trail and square-off at full cadence, but nothing new is opened (that only lowers risk). Memory only: the entry paths read it.
      */
-    fun blocks(key: String): Boolean = key in _state.value.hidden
+    fun blocks(key: String): Boolean {
+        // 22 Oct (arms audit): while the cleanup's file could not be read its state is empty, so a hidden arm read as "not
+        // blocked" and the gate-only arms (Jarvis's ideas, the forge's paper ideas) took new entries again. Until it reads, those
+        // two take nothing new (nothing is sold or switched off: risk only lowered). They are paper only, so no live trade is ever
+        // skipped by this (CLAUDE.md's LIVE rule); the switch-based arms are already held by [mayArm] (none is switched on).
+        if (unread && key in UNREAD_BLOCKED) return true
+        return key in _state.value.hidden
+    }
+
+    /** The paper-only gate arms held back while the file cannot be read ([blocks]); none of them has a live path. */
+    private val UNREAD_BLOCKED = setOf(ArmsCleanup.FORGE, ArmsCleanup.JARVIS)
 
     /** The ORB family's or the expiry Hero's key for an arms' book source, or null for any other arm (Liquidity's books among them). */
     fun keyOfSource(source: String): String? = source.takeIf { it in ORB_SOURCES }
@@ -142,7 +152,9 @@ object HiddenArms {
         runCatching { OrbArms.keepLiquidityFour() }.onFailure { runCatching { Diag.record("arms", "Liquidity's FINNIFTY / MIDCPNIFTY books: not changed now (${it.javaClass.simpleName})") } }
         while (true) {
             runCatching { passNow() }
-            if (_state.value.waiting.isEmpty()) poke.receive() else withTimeoutOrNull(WAIT_MS) { poke.receive() }
+            // 22 Oct (arms audit): a file that could not be read ([unread]) is read again every [WAIT_MS], as the refusal
+            // promises ("tried again shortly") - before, the worker parked here until a poke and never read it again.
+            if (_state.value.waiting.isEmpty() && !unread) poke.receive() else withTimeoutOrNull(WAIT_MS) { poke.receive() }
         }
     }
 

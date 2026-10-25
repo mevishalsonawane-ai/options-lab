@@ -103,8 +103,9 @@ class Sandbox(
             val o = order(orderId)
             when {
                 o == null -> err("Order $orderId not found", 404)
-                o.status != OrderStatus.TRIGGER_PENDING || o.priceType != "SL-M" || o.action != "SELL" ->
-                    err("Only a resting SELL SL-M can be filled at its stop")
+                // 22 Oct (arms audit): a resting BUY SL-M (a short's stop) fills the same way, on a high touched between looks.
+                o.status != OrderStatus.TRIGGER_PENDING || o.priceType != "SL-M" || (o.action != "SELL" && o.action != "BUY") ->
+                    err("Only a resting SL-M can be filled at its stop")
                 !(price.isFinite() && price > 0) -> err("Invalid fill price")
                 else -> { executeOrder(orderId, pyDec(price), quote = quote); OrderResult(true, 200, orderId, "Stop filled") }
             }

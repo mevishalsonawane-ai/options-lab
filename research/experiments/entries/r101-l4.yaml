@@ -1,0 +1,32 @@
+id: r101-l4
+title: 'R101 L4 on Liquidity 15+5: DOW: drop the weekday worst in design (walk-forward pick)'
+family: liquidity
+date: '2026-10-22'
+doc: research/HUNT_R101_ARMS_ENHANCE.md
+hypothesis: 'DOW: drop the weekday worst in design (walk-forward pick) raises Liquidity 15+5''s net (and is shown with its
+  win rate): above B0 in the design walk-forward and the final, random-skip twins p < 0.05, BH q <= 0.10 over 20, >= 40 final
+  trades, above B0 without its 5 best trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, index_daily, options_rolling_1m WEEK), copied
+  22 Oct; R51 Amendment A clean stores (R51_CLEAN=1)
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 (read once; already read by about twenty earlier studies)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the index (the option is only bought)'
+- weekday
+model_or_rule: 'Liquidity 15+5 B0 (its own exits) with DOW: drop the weekday worst in design (walk-forward pick) as an entry
+  filter removed before the one-position walk'
+settings: research/hunt/r101_arms_enhance/r101cfg.py; r101study.py
+prereg: research/hunt/r101_arms_enhance/PREREG.md
+variants_tried: 20
+results:
+  summary: 'Design: 815 trades (B0 881), win 43% vs 44%, net Rs 247,812 vs Rs 257,249 (Rs -9,438), walk-forward Rs -9,438
+    vs B0. Final: 288 trades (B0 357), win 40% vs 37%, net Rs 18,997 vs Rs 11,155 (Rs 7,842), without 5 best Rs -34,677 vs
+    Rs -51,376, twin p 0.2834, BH q 1.0 over 20 (arm 0.4723). Fails: walk-forward not above B0; twin p >= 0.05; BH q >= 0.10.'
+  costs: 'R51 engine: dated Zerodha charges, R17 fills (1-4 ticks + 5 bps), 1 lot'
+holdout_read: true
+verdict: rejected

@@ -505,7 +505,7 @@ object ShadowArms {
     private suspend fun record(b: Book, v: ShadowRules.Variant, q: Pull, fill: Double, at: LocalDateTime): String {
         val right = Right.valueOf(q.right)
         val base = Trade(v.id, q.symbol, q.feedKey, q.underlying, q.expiry, q.strike, q.right, q.qty, fill, at, q.signalBar, peak = fill, last = fill)
-        if (b.armed[v.id] == true) {
+        if (b.armed[v.id] == true && !hiddenNow()) {
             val c = Paper.contractFor(q.underlying, q.expiry, q.strike.toDouble(), right)
                 ?: Paper.Contract(q.symbol, q.underlying, q.expiry, q.strike.toDouble(), right, q.qty, q.feedKey)
             val placed = enterPaper(v, c, base) ?: return "paper_entry_refused"
@@ -591,7 +591,7 @@ object ShadowArms {
         runCatching { LiveRecorder.signal(v.name, c.symbol, c.underlying, right.name, ltp, paper = true) }
         val base = Trade(v.id, c.symbol, c.feedKey, c.underlying, c.expiry, e.strike, right.name, c.lotSize, fill, t, e.signalBar,
             e.extreme, e.mid, e.indexStop, fill, ltp)
-        if (b.armed[v.id] == true) {
+        if (b.armed[v.id] == true && !hiddenNow()) {
             val placed = enterPaper(v, c, base) ?: return "paper_entry_refused"
             b.trades += placed
             return "entered_on_paper"
@@ -668,6 +668,13 @@ object ShadowArms {
         rowsHint = rowsOf(b)
     }
 
+    /**
+     * 22 Oct (arms audit): the re-armed shadows are hidden (Boss's 15 Oct cleanup). While hidden - also while a re-armed variant
+     * still holds a paper position and the cleanup waits for its exit - a signal is recorded as a virtual trade, never placed on
+     * paper; the open paper trade keeps its own exits. Memory only ([HiddenArms.blocks]).
+     */
+    private fun hiddenNow(): Boolean = HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.SHADOW)
+
     /** A paper MARKET buy of 1 lot (the guard, the day's stop and the one-index-one-side rule first); null when refused or unfilled. */
     private suspend fun enterPaper(v: ShadowRules.Variant, c: Paper.Contract, base: Trade): Trade? {
         if (Strategies.stoppedToday()) return null
@@ -693,7 +700,13 @@ object ShadowArms {
         val held = Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity }
         // Gone from the paper book without this selling it (the 15:15 square-off, or Boss closed it): booked at the price seen.
         if (held <= 0) { runCatching { ArmLive.closed(mirrorRef(p), "closed_outside") }; return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp) }
-        val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null)
+        // 22 Oct (arms audit): the sale only reduces what the book holds; closed between the read above and the sale (the
+        // square-off), it is refused and booked as closed outside - never a short.
+        val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null, exit = true)
+        if (!sell.ok && sell.message.contains("already closed")) {
+            runCatching { ArmLive.closed(mirrorRef(p), "closed_outside") }
+            return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp)
+        }
         val (_, px) = filled(sell) ?: return null
         val v = ShadowRules.of(p.variant)
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${v?.let { x -> "${ShadowRules.armName(x)} (${x.name})" } ?: p.variant} · $why") }

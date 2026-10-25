@@ -265,6 +265,17 @@ object VixDivArm {
     private suspend fun stoppedToday(): Boolean =
         runCatching { Strategies.stoppedToday() }.getOrDefault(true) || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
 
+    /**
+     * 22 Oct (arms audit, as the MCX arms): whether the bot is stopped for today, or null when that could not be read. An
+     * ENTRY treats unknown as stopped ([stoppedToday]); an EXIT never sells a held position on an unreadable flag.
+     */
+    private suspend fun stoppedKnown(): Boolean? = runCatching {
+        testStoppedWhy.let { h -> if (h != null) h() else Strategies.stoppedWhy() } != null || LossBreaker.trippedToday()
+    }.getOrNull()
+
+    /** TEST ONLY: the stop-for-today read ([Strategies.stoppedWhy]), or a throw. */
+    @Volatile internal var testStoppedWhy: (() -> com.optionslab.ira.DayStop.Why?)? = null
+
     /** The check's decision for [u] at [now]. */
     private suspend fun decide(b: Book, u: String, now: LocalDateTime): Decision {
         // 15 Oct (Boss's cleanup): hidden, it buys nothing new; what it holds still closes by its own exits (memory only).
@@ -348,7 +359,7 @@ object VixDivArm {
     /** Each open position's exit, when due. True when [b] changed. */
     private suspend fun exits(b: Book, now: LocalDateTime): Boolean {
         var changed = false
-        val stopped = stoppedToday()
+        val stopped = stoppedKnown() == true            // unknown: never a reason to sell what is held (22 Oct, arms audit)
         val minute = minuteOf(now)
         for ((i, p) in b.positions.withIndex().toList()) {
             if (!p.open) continue
@@ -395,8 +406,16 @@ object VixDivArm {
                 closed(b, done); return done
             }
         }
-        val r = Paper.place(c, "SELL", (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), "MARKET", "MIS", null, null)
+        // 22 Oct (arms audit): an exit only ever reduces what the book holds (never more than is held, never a short from a
+        // flat book); refused as already closed (the 15:15 or expiry square-off, or Boss, got there first), it is booked so.
+        val r = Paper.place(c, "SELL", (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), "MARKET", "MIS", null, null, exit = true)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
+        if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
+            val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: Market.now().toLocalDateTime().withNano(0),
+                why = "closed_elsewhere", stopOrderId = null, charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
+            closed(b, done); return done
+        }
         if (fill == null) {
             r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
             if (!b.status.sameToday(p.index, "exit_retry")) { b.status[p.index] = "exit_retry"; note(b, "${p.symbol}: the $why exit did not fill (${r.message}); tried again next pass") }

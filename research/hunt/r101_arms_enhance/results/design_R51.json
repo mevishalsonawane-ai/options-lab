@@ -1,0 +1,227 @@
+{
+ "B0": {
+  "all": {
+   "trades": 4498,
+   "win": 0.4473,
+   "net": 9998,
+   "per_trade": 2,
+   "worst_day": -56647,
+   "max_dd": 224592,
+   "ex_top5": -57344,
+   "top5_share": 6.735,
+   "days": 337
+  },
+  "wf": {
+   "trades": 3266,
+   "win": 0.4596,
+   "net": 175789,
+   "per_trade": 54,
+   "worst_day": -31959,
+   "max_dd": 103931,
+   "ex_top5": 108447,
+   "top5_share": 0.383,
+   "days": 247
+  },
+  "wf_q": [
+   2043,
+   55325,
+   19508,
+   98913
+  ]
+ },
+ "n_candidates": 13341,
+ "C1": {
+  "all": {
+   "trades": 2311,
+   "win": 0.4466,
+   "net": -4386,
+   "per_trade": -2,
+   "worst_day": -29576,
+   "max_dd": 147311,
+   "ex_top5": -60408,
+   "top5_share": null,
+   "days": 173
+  },
+  "removed_trades": 2187,
+  "removed_signals": 6504,
+  "diff": -14384,
+  "top5_diff": -3064,
+  "wf": {
+   "trades": 1721,
+   "win": 0.4573,
+   "net": 50266,
+   "per_trade": 29,
+   "worst_day": -29576,
+   "max_dd": 75273,
+   "ex_top5": -3616,
+   "top5_share": 1.072,
+   "days": 129
+  },
+  "wf_diff": -125523,
+  "wf_q_diff": [
+   -53541,
+   0,
+   -16002,
+   -55979
+  ],
+  "twin_p": 0.0539,
+  "twin_mean": -122970
+ },
+ "C1b": {
+  "all": {
+   "trades": 2187,
+   "win": 0.4481,
+   "net": 14384,
+   "per_trade": 7,
+   "worst_day": -56647,
+   "max_dd": 134424,
+   "ex_top5": -46955,
+   "top5_share": 4.264,
+   "days": 164
+  },
+  "removed_trades": 2311,
+  "removed_signals": 6837,
+  "diff": 4386,
+  "top5_diff": 10389,
+  "wf": {
+   "trades": 1545,
+   "win": 0.4621,
+   "net": 125523,
+   "per_trade": 81,
+   "worst_day": -31959,
+   "max_dd": 103931,
+   "ex_top5": 64184,
+   "top5_share": 0.489,
+   "days": 118
+  },
+  "wf_diff": -50266,
+  "wf_q_diff": [
+   51498,
+   -55325,
+   -3505,
+   -42934
+  ],
+  "twin_p": 0.0419,
+  "twin_mean": -126553
+ },
+ "C2": {
+  "all": {
+   "trades": 3602,
+   "win": 0.4467,
+   "net": 43012,
+   "per_trade": 12,
+   "worst_day": -56647,
+   "max_dd": 123379,
+   "ex_top5": -23924,
+   "top5_share": 1.556,
+   "days": 297
+  },
+  "removed_trades": 896,
+  "removed_signals": 2601,
+  "diff": 33014,
+  "top5_diff": 33420,
+  "wf": {
+   "trades": 2644,
+   "win": 0.458,
+   "net": 129309,
+   "per_trade": 49,
+   "worst_day": -31959,
+   "max_dd": 102575,
+   "ex_top5": 62373,
+   "top5_share": 0.518,
+   "days": 217
+  },
+  "wf_diff": -46480,
+  "wf_q_diff": [
+   20325,
+   -57044,
+   -27214,
+   17453
+  ],
+  "twin_p": 0.0559,
+  "twin_mean": -37616
+ },
+ "C3": {
+  "all": {
+   "trades": 4291,
+   "win": 0.4372,
+   "net": -77188,
+   "per_trade": -18,
+   "worst_day": -56647,
+   "max_dd": 175120,
+   "ex_top5": -145505,
+   "top5_share": null,
+   "days": 337
+  },
+  "removed_trades": 207,
+  "removed_signals": 826,
+  "diff": -87186,
+  "top5_diff": -88161,
+  "wf": {
+   "trades": 3114,
+   "win": 0.4461,
+   "net": 70461,
+   "per_trade": 23,
+   "worst_day": -31959,
+   "max_dd": 142836,
+   "ex_top5": 2144,
+   "top5_share": 0.97,
+   "days": 247
+  },
+  "wf_diff": -105328,
+  "wf_q_diff": [
+   34519,
+   -44097,
+   -74884,
+   -20866
+  ],
+  "twin_p": 0.996,
+  "twin_mean": -2719
+ },
+ "C4": {
+  "all": {
+   "trades": 2769,
+   "win": 0.4626,
+   "net": 56693,
+   "per_trade": 20,
+   "worst_day": -34807,
+   "max_dd": 166692,
+   "ex_top5": -8463,
+   "top5_share": 1.149,
+   "days": 335
+  },
+  "removed_trades": 1729,
+  "removed_signals": 7117,
+  "diff": 46694,
+  "top5_diff": 48881,
+  "wf": {
+   "trades": 1990,
+   "win": 0.4789,
+   "net": 140952,
+   "per_trade": 71,
+   "worst_day": -29631,
+   "max_dd": 66838,
+   "ex_top5": 76200,
+   "top5_share": 0.459,
+   "days": 246
+  },
+  "wf_diff": -34837,
+  "wf_q_diff": [
+   23355,
+   -13199,
+   24403,
+   -69396
+  ],
+  "twin_p": 0.012,
+  "twin_mean": -132104
+ },
+ "parity": {
+  "trades": 4498,
+  "net": 9998,
+  "published": [
+   4498,
+   9998
+  ],
+  "reproduced": true
+ }
+}

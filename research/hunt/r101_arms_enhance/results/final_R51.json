@@ -1,0 +1,120 @@
+{
+ "B0": {
+  "all": {
+   "trades": 1781,
+   "win": 0.4402,
+   "net": 81845,
+   "per_trade": 46,
+   "worst_day": -23012,
+   "max_dd": 91626,
+   "ex_top5": 29590,
+   "top5_share": 0.638,
+   "days": 133
+  }
+ },
+ "n_candidates": 5207,
+ "C1": {
+  "all": {
+   "trades": 1265,
+   "win": 0.4372,
+   "net": 28538,
+   "per_trade": 23,
+   "worst_day": -17259,
+   "max_dd": 92648,
+   "ex_top5": -23717,
+   "top5_share": 1.831,
+   "days": 93
+  },
+  "removed_trades": 516,
+  "removed_signals": 1674,
+  "diff": -53307,
+  "top5_diff": -53307,
+  "twin_p": 0.8802,
+  "twin_mean": 71042
+ },
+ "C1b": {
+  "all": {
+   "trades": 516,
+   "win": 0.4477,
+   "net": 53307,
+   "per_trade": 103,
+   "worst_day": -23012,
+   "max_dd": 29918,
+   "ex_top5": 21291,
+   "top5_share": 0.601,
+   "days": 40
+  },
+  "removed_trades": 1265,
+  "removed_signals": 3533,
+  "diff": -28538,
+  "top5_diff": -8299,
+  "twin_p": 0.3932,
+  "twin_mean": 38614
+ },
+ "C2": {
+  "all": {
+   "trades": 1199,
+   "win": 0.4279,
+   "net": 48703,
+   "per_trade": 41,
+   "worst_day": -17259,
+   "max_dd": 87424,
+   "ex_top5": 13877,
+   "top5_share": 0.715,
+   "days": 108
+  },
+  "removed_trades": 582,
+  "removed_signals": 1709,
+  "diff": -33142,
+  "top5_diff": -15713,
+  "twin_p": 0.6866,
+  "twin_mean": 68972
+ },
+ "C3": {
+  "all": {
+   "trades": 1672,
+   "win": 0.4252,
+   "net": -15599,
+   "per_trade": -9,
+   "worst_day": -21178,
+   "max_dd": 114672,
+   "ex_top5": -67854,
+   "top5_share": null,
+   "days": 133
+  },
+  "removed_trades": 109,
+  "removed_signals": 410,
+  "diff": -97444,
+  "top5_diff": -97444,
+  "twin_p": 1.0,
+  "twin_mean": 80177
+ },
+ "C4": {
+  "all": {
+   "trades": 1061,
+   "win": 0.4486,
+   "net": 17487,
+   "per_trade": 16,
+   "worst_day": -15054,
+   "max_dd": 81955,
+   "ex_top5": -16336,
+   "top5_share": 1.934,
+   "days": 133
+  },
+  "removed_trades": 720,
+  "removed_signals": 3028,
+  "diff": -64358,
+  "top5_diff": -45926,
+  "twin_p": 0.7345,
+  "twin_mean": 45856
+ },
+ "parity": {
+  "trades": 1781,
+  "net": 81845,
+  "published": [
+   1781,
+   81845
+  ],
+  "reproduced": true
+ }
+}

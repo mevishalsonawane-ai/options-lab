@@ -1,0 +1,35 @@
+id: r101-b1b
+title: 'R101 B1b on R72 Breadth Donchian: VIXHI: previous VIX close > 60-session median'
+family: daily-filters
+date: '2026-10-22'
+doc: research/HUNT_R101_ARMS_ENHANCE.md
+hypothesis: 'VIXHI: previous VIX close > 60-session median raises R72 Breadth Donchian''s net (and is shown with its win rate):
+  above B0 in the design walk-forward and the final, random-skip twins p < 0.05, BH q <= 0.10 over 20, >= 40 final trades,
+  above B0 without its 5 best trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, index_daily, options_rolling_1m WEEK), copied
+  22 Oct; R51 Amendment A clean stores (R51_CLEAN=1)
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 (read once; already read by about twenty earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the option is only bought)'
+- India VIX (daily regime)
+model_or_rule: 'R72 Breadth Donchian B0 (its own exits) with VIXHI: previous VIX close > 60-session median as an entry filter
+  removed before the one-position walk'
+settings: research/hunt/r101_arms_enhance/r101cfg.py; r101study.py
+prereg: research/hunt/r101_arms_enhance/PREREG.md
+variants_tried: 20
+results:
+  summary: 'Design: 1536 trades (B0 3071), win 47% vs 47%, net Rs 97,774 vs Rs 216,929 (Rs -119,155), walk-forward Rs -74,211
+    vs B0. Final: 405 trades (B0 1202), win 48% vs 46%, net Rs 60,179 vs Rs 171,366 (Rs -111,187), without 5 best Rs 21,774
+    vs Rs 112,623, twin p 0.8403, BH q 1.0 over 20 (arm 0.986). Fails: walk-forward not above B0; final not above B0; twin
+    p >= 0.05; BH q >= 0.10; carried by its 5 best trades.'
+  costs: 'R51 engine: dated Zerodha charges, R17 fills (1-4 ticks + 5 bps), 1 lot'
+holdout_read: true
+verdict: rejected

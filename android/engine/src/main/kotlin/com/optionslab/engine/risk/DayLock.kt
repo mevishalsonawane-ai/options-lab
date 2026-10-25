@@ -46,9 +46,19 @@ object DayLock {
     /** True when [r] locks new entries on [day] with the amount set now ([limit]; 0 = off lifts it). */
     fun active(r: Reached?, day: LocalDate, limit: Double): Boolean = r != null && r.day == day && clean(limit) > 0
 
-    /** "Day lock: reached +Rs 8,000 at 14:11, no new entries" ([account]: "paper", "Zerodha"; null: not said). */
+    /**
+     * "Day lock (paper): reached +Rs 8,412 (limit +Rs 8,000) at 14:11, no new entries" ([account]: "paper", "Zerodha"; null: not
+     * said). 22 Oct audit: the line names the P&L that reached it AND the limit, both signed - before it printed the limit alone
+     * as if it were the P&L.
+     */
     fun line(r: Reached, account: String? = null): String =
-        "Day lock" + (account?.let { " ($it)" } ?: "") + ": reached +Rs ${rupees(r.limit)} at %02d:%02d, no new entries".format(Locale.ENGLISH, r.at.hour, r.at.minute)
+        "Day lock" + (account?.let { " ($it)" } ?: "") + ": reached ${signed(r.pnl)} (limit ${signed(r.limit)}) at %02d:%02d, no new entries".format(Locale.ENGLISH, r.at.hour, r.at.minute)
+
+    /** A rupee figure with its sign, whole rupees: "+Rs 8,412", "-Rs 6,210", "+Rs 0" (22 Oct audit). */
+    fun signed(x: Double): String {
+        val whole = rupees(kotlin.math.abs(x))
+        return (if (x < 0 && whole != "0") "-Rs " else "+Rs ") + whole
+    }
 
     /** An automatic entry's refusal while [r] locks the [account]: the line, and that open positions keep their exits. */
     fun refusal(r: Reached, account: String): String =

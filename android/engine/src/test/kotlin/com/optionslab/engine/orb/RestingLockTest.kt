@@ -31,6 +31,15 @@ class RestingLockTest {
         assertEquals("+7.5 → breakeven, +15 → +7.5, +22.5 → +15", ProfitLock.describeRungs(30.0))
     }
 
+    /** 22 Oct (arms audit): a short's resting BUY stop over one bar - the mirror of [ProfitLock.sellStopFill]. */
+    @Test fun aBuyStopFillsAtItsTriggerOrTheOpenOverIt() {
+        assertEquals(310.0, ProfitLock.buyStopFill(310.0, 300.0, 312.0))
+        assertEquals(315.0, ProfitLock.buyStopFill(310.0, 315.0, 320.0), "a gap through the stop fills at the open")
+        assertNull(ProfitLock.buyStopFill(310.0, 300.0, 309.9))
+        assertEquals(310.0, ProfitLock.buyStopFill(310.0, 305.0, 310.0), "touched exactly")
+        assertEquals(310.0, ProfitLock.sellStopFill(310.0, 320.0, 310.0), "the sell side is unchanged")
+    }
+
     @Test fun aLockLevelIsPutOnTheTickRoundedUp() {
         assertEquals(302.1, ProfitLock.onTick(302.07))
         assertEquals(310.0, ProfitLock.onTick(310.0))
@@ -163,7 +172,12 @@ class RestingLockTest {
         assertFalse(sb.fillRestingStop(lim, lim.orders.last().orderId, 400.0, t).result.ok, "a resting limit")
         val slmBuy = sb.place(s, OrderRequest(sym, "NFO", "BUY", 30, "SL-M", "MIS", null, 350.0), Quote(300.0), t).state
         assertEquals(OrderStatus.TRIGGER_PENDING, slmBuy.orders.last().status)
-        assertFalse(sb.fillRestingStop(slmBuy, slmBuy.orders.last().orderId, 350.0, t).result.ok, "a buy stop")
+        // 22 Oct (arms audit): a resting BUY SL-M (a short's stop) fills at its stop too - on a high touched between two looks.
+        val buyFilled = sb.fillRestingStop(slmBuy, slmBuy.orders.last().orderId, 350.0, t.plusMinutes(1))
+        assertTrue(buyFilled.result.ok, "a buy stop fills on its high")
+        val bo = buyFilled.state.orders.single { it.orderId == slmBuy.orders.last().orderId }
+        assertEquals(OrderStatus.COMPLETE, bo.status)
+        assertTrue(bo.averagePrice!! >= BigDecimal("350"), "never under its trigger: ${bo.averagePrice}")
         val sl = sb.place(s, OrderRequest(sym, "NFO", "SELL", 30, "SL", "MIS", 250.0, 255.0), Quote(300.0), t).state
         assertFalse(sb.fillRestingStop(sl, sl.orders.last().orderId, 255.0, t).result.ok, "an SL (with a limit)")
     }

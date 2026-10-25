@@ -54,6 +54,9 @@ class ArmLiveTest : RobolectricTest() {
         if (com.optionslab.app.ira.Autopilot.enabled()) { com.optionslab.app.ira.Autopilot.resetForTest(); com.optionslab.app.ira.Autopilot.init(context); com.optionslab.app.ira.Autopilot.testLive = false }
         // Every arm out of shadow (Boss's PIN), so these tests are about the live orders; Solo (midday) cannot leave it (not proven).
         for (a in LiveMirror.ARMS) if (a.key != LiveMirror.SOLO_MIDDAY) runBlocking { ArmLive.setShadow(a.key, false, pinConfirmed = true, log = false) }
+        // 22 Oct audit (A-F4): the expiry Hero's live copy now starts OFF (its signal reads the option's own price); these tests
+        // are about the live orders of every arm, so Boss's PIN turns it on here.
+        runBlocking { ArmLive.setLive(com.optionslab.engine.orb.HeroRules.ARM.source, true, pinConfirmed = true) }
         for (f in LiveMirror.ARMS.map { it.family }.distinct())
             ArmLive.register(f) { legs.entries.filter { e -> LiveMirror.spec(e.value.first)?.family == f }.map { ArmLive.PaperLeg(it.key, it.value.first, it.value.second) } }
         kite.requests.clear()

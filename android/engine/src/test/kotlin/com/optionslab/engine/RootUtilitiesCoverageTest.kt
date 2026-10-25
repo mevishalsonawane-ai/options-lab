@@ -288,8 +288,9 @@ class RootUtilitiesCoverageTest {
         assertEquals(65, Lots.lotSizeOn("NIFTY", LocalDate.of(2030, 1, 1)))
         assertEquals(15, Lots.lotSizeOn("BankNifty", LocalDate.of(2025, 1, 30)))
         assertFailsWith<Lots.NoLotSize> { Lots.lotSizeOn("NIFTY", LocalDate.of(2023, 12, 31)) }
-        val e = assertFailsWith<Lots.NoLotSize> { Lots.lotSizeOn("FINNIFTY", d) }
-        assertTrue(e.message!!.contains("known: BANKNIFTY, NIFTY"))
+        // 22 Oct audit: FINNIFTY, MIDCPNIFTY and SENSEX are known now (LotsTest); NIFTYNXT50 is not, and says who is.
+        val e = assertFailsWith<Lots.NoLotSize> { Lots.lotSizeOn("NIFTYNXT50", d) }
+        assertTrue(e.message!!.contains("known: BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTY, SENSEX"))
         assertEquals(LocalDate.of(2024, 1, 1), Lots.coverageStart("BANKNIFTY"))
         assertFailsWith<Lots.NoLotSize> { Lots.coverageStart("X") }
     }
