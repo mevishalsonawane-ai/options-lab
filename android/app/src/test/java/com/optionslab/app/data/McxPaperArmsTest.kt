@@ -9,6 +9,7 @@ import com.optionslab.app.testing.NetworkGuard
 import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.app.testing.TradeFixtures
 import com.optionslab.engine.IST
+import com.optionslab.engine.mcx.McxArmRules
 import com.optionslab.engine.mcx.McxEveRules
 import com.optionslab.engine.mcx.McxMorningRules
 import com.optionslab.engine.mcx.McxTrendRules
