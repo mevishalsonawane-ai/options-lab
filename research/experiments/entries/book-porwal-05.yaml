@@ -32,7 +32,7 @@ model_or_rule: 'Box = the high / low of the last N bars (N = 20 and 40) when (hi
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-05; trade: buy 1-ITM CE / PE nearest expiry, stops on the index;
   compare with the R51 Donchian arm on the same days'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 3
 results:
   summary: 'MCXI (MCX mini future (own bars)), variant N20: design 3 trades, win 33%, net -Rs 6, folds Rs 0, -Rs 6; p 1.000,
     BH q 1.000; holdout 1 trades, win 0%, net -Rs 233. R104 verdict: fail.'
@@ -41,10 +41,6 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). with real volume on MCX; the index price-only box is the R51 Donchian arm (covered)
-  and its volume part lacks data R104 (227 tests, BH across all). with real volume on MCX; the index price-only box is the
-  R51 Donchian arm (covered) and its volume part lacks data R104 (227 tests, BH across all). with real volume on MCX; the
-  index price-only box is the R51 Donchian arm (covered) and its volume part lacks data R104 (227 tests, BH across all). with
-  real volume on MCX; the index price-only box is the R51 Donchian arm (covered) and its volume part lacks data Our nearest
-  test: nearest R51 Donchian 20 5-minute: final +Rs 55,439 on 1,787 trades (our real arm); R71 P3 squeeze release lost; R73
-  confirmation wait lost; volume filter not tested by us. Assumptions: The box definition, quiet-box width test, body and
-  volume thresholds are ours; the book gives no numbers.'
+  and its volume part lacks data Our nearest test: nearest R51 Donchian 20 5-minute: final +Rs 55,439 on 1,787 trades (our
+  real arm); R71 P3 squeeze release lost; R73 confirmation wait lost; volume filter not tested by us. Assumptions: The box
+  definition, quiet-box width test, body and volume thresholds are ours; the book gives no numbers.'

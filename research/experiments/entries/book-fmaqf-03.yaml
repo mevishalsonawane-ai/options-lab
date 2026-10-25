@@ -31,7 +31,7 @@ model_or_rule: 'X = log(A) - log(B) at the daily close (pairs: NIFTY vs BANKNIFT
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmaqf-03; trade: Futures pair (both legs), or for index pairs buy the
   ATM call of the index bought and the ATM put of the index sold (monthly expiry, rolled). Costs per leg from baselines.yaml.'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 6
 results:
   summary: 'DLY (index daily, futures proxy), variant M50: design 0 trades, win -, net Rs 0, folds Rs 0, Rs 0, Rs 0; p 1.000,
     BH q 1.000; holdout 0 trades, win -, net Rs 0. R104 verdict: fail. | MCXD (MCX future daily), variant M50: design 0 trades,
@@ -40,10 +40,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). NIFTY vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures R104 (227 tests,
-  BH across all). NIFTY vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures R104 (227 tests, BH across all). NIFTY
-  vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures R104 (227 tests, BH across all). NIFTY vs BANKNIFTY and GOLD
-  vs SILVER, spot / back-adjusted futures Our nearest test: R72 C2 laggard catch-up (intraday convergence across indices)
-  lost -Rs 1,00,746 final (613 trades). A daily spread-extreme fade is not tested by us.. Assumptions: Book used German voting
-  / non-voting share pairs (near-identical claims) where reversion is structural; index or metal pairs are looser. Cash-neutral
-  sizing by the book; we use equal notional per lot rounding.'
+notes: 'R104 (227 tests, BH across all). NIFTY vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures Our nearest test:
+  R72 C2 laggard catch-up (intraday convergence across indices) lost -Rs 1,00,746 final (613 trades). A daily spread-extreme
+  fade is not tested by us.. Assumptions: Book used German voting / non-voting share pairs (near-identical claims) where reversion
+  is structural; index or metal pairs are looser. Cash-neutral sizing by the book; we use equal notional per lot rounding.'

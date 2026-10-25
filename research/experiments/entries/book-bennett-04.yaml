@@ -28,7 +28,7 @@ model_or_rule: 'At 09:20 if nearest-expiry ATM IV / forecast intraday realised v
 settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-04; trade: 1 lot ATM CE + PE plus 0 or +-1 NIFTY / BANKNIFTY
   future lot.'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'VOL (option structure (chain as context)), variant B: design 557 trades, win 27%, net -Rs 279,847, folds -Rs 82,575,
     -Rs 72,347, -Rs 124,924; p 1.000, BH q 1.000; holdout 59 trades, win 27%, net -Rs 35,441. R104 verdict: fail.'
@@ -36,9 +36,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). hedge on the spot as a futures proxy R104 (227 tests, BH across all). hedge on the
-  spot as a futures proxy R104 (227 tests, BH across all). hedge on the spot as a futures proxy R104 (227 tests, BH across
-  all). hedge on the spot as a futures proxy Our nearest test: R89: unhedged straddles 0 of 18 (4,302 design straddles); h29:
-  buying when IV is cheap, 16 variants all lost. A futures-hedged version was never tested.. Assumptions: A one-lot hedge
-  is coarse (NIFTY future 65 units = option lot), so the hedge only switches in whole lots; thresholds are ours. Futures costs
-  added per hedge.'
+notes: 'R104 (227 tests, BH across all). hedge on the spot as a futures proxy Our nearest test: R89: unhedged straddles 0
+  of 18 (4,302 design straddles); h29: buying when IV is cheap, 16 variants all lost. A futures-hedged version was never tested..
+  Assumptions: A one-lot hedge is coarse (NIFTY future 65 units = option lot), so the hedge only switches in whole lots; thresholds
+  are ours. Futures costs added per hedge.'

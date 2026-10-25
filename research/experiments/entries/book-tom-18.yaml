@@ -34,9 +34,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). events.csv (2024+, India and US); the MCX clause has no MCX arm R104 (227 tests,
-  BH across all). events.csv (2024+, India and US); the MCX clause has no MCX arm R104 (227 tests, BH across all). events.csv
-  (2024+, India and US); the MCX clause has no MCX arm R104 (227 tests, BH across all). events.csv (2024+, India and US);
-  the MCX clause has no MCX arm Our nearest test: EVENT_SHIELD: BANKNIFTY policy-day range 1.48x (15 sessions); pausing arms
-  on event days not an edge; R83 EIA fade/follow failed. Assumptions: Window width is ours; ''red-flagged'' mapped to the
-  events in our calendar.'
+notes: 'R104 (227 tests, BH across all). events.csv (2024+, India and US); the MCX clause has no MCX arm Our nearest test:
+  EVENT_SHIELD: BANKNIFTY policy-day range 1.48x (15 sessions); pausing arms on event days not an edge; R83 EIA fade/follow
+  failed. Assumptions: Window width is ours; ''red-flagged'' mapped to the events in our calendar.'

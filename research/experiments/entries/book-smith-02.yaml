@@ -38,9 +38,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). intraday variant (15:15 out) bought options R104 (227 tests, BH across all). intraday
-  variant (15:15 out) bought options R104 (227 tests, BH across all). intraday variant (15:15 out) bought options R104 (227
-  tests, BH across all). intraday variant (15:15 out) bought options Our nearest test: OBUY_GB TI-09 (ADX/DMI + set-up candle
-  break, 5/15-minute): walk-forward Rs -345,311, 0/5 years, 48 variants; R73 ADX filters failed; R89 previous-day high/low
-  break 0 of 180.. Assumptions: The book is end-of-day only; the hourly version is our mapping and should be labelled as such.
-  Buffer and ''big bar'' scaled to ATR because the book''s 0.5% / 5% are share-sized.'
+notes: 'R104 (227 tests, BH across all). intraday variant (15:15 out) bought options Our nearest test: OBUY_GB TI-09 (ADX/DMI
+  + set-up candle break, 5/15-minute): walk-forward Rs -345,311, 0/5 years, 48 variants; R73 ADX filters failed; R89 previous-day
+  high/low break 0 of 180.. Assumptions: The book is end-of-day only; the hourly version is our mapping and should be labelled
+  as such. Buffer and ''big bar'' scaled to ATR because the book''s 0.5% / 5% are share-sized.'

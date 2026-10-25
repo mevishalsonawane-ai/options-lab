@@ -29,7 +29,7 @@ model_or_rule: 'As sst-six-rules-index-daily on the future''s daily bars (SMA 50
 settings: 'research/books/TESTABLE_RULES.md, rule book-smith-04; trade: futures mirror (1 mini lot) and 1-ITM option on the
   near future; stops on the future'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'MCXD (MCX future daily), variant pct: design 224 trades, win 35%, net Rs 29,933, folds -Rs 38,177, Rs 68,110;
     p 0.364, BH q 1.000; holdout 175 trades, win 46%, net Rs 588,190. R104 verdict: fail.'
@@ -37,7 +37,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: MCX_TREND: trend edge real but small, zero variants pass BH, buying options the worst
-  way; R96: 0 of 46 MCX option-buying ideas pass; R93 breadth Donchian on MCX 0 of 5.. Assumptions: Book trades UK shares;
-  mapping its company-results blackout to commodity data releases and its 2 weeks to 2 sessions is our reading.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: MCX_TREND: trend edge real but small, zero variants pass BH, buying
+  options the worst way; R96: 0 of 46 MCX option-buying ideas pass; R93 breadth Donchian on MCX 0 of 5.. Assumptions: Book
+  trades UK shares; mapping its company-results blackout to commodity data releases and its 2 weeks to 2 sessions is our reading.'

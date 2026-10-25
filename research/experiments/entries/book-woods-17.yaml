@@ -24,7 +24,7 @@ model_or_rule: 'After an uptrend (close above a rising EMA 50), a range of >= 8 
   break (optional).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-17; trade: buy 1-ITM CE / PE'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'IDX (index spot, bought option), variant 15m_mid: design 51 trades, win 29%, net -Rs 24,834, folds -Rs 1,354,
     -Rs 6,386, -Rs 17,094; p 1.000, BH q 1.000; holdout 7 trades, win 57%, net -Rs 945. R104 verdict: fail.'
@@ -32,6 +32,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: Nearest: Donchian breakout arms (R51, R72) are positive; R20c S/R breaks a coin toss
-  (51%, 7,548 breaks).. Assumptions: Range geometry ours.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: Nearest: Donchian breakout arms (R51, R72) are positive; R20c
+  S/R breaks a coin toss (51%, 7,548 breaks).. Assumptions: Range geometry ours.'

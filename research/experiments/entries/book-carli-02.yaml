@@ -37,10 +37,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). half-session bars, held overnight: index as a futures proxy R104 (227 tests, BH across
-  all). half-session bars, held overnight: index as a futures proxy R104 (227 tests, BH across all). half-session bars, held
-  overnight: index as a futures proxy R104 (227 tests, BH across all). half-session bars, held overnight: index as a futures
-  proxy Our nearest test: R95: CCI fade and divergence variants on 60m failed the holdout (BANKNIFTY 60m B passed design on
-  48 trades, holdout 17 trades -Rs 1,014); this exact setup not tested by us. Assumptions: The book says ''rarely'' 4-hour
-  and never lower; NSE has no natural 4-hour bar, so two bars a session stand in. Same pivot, buffer and leg assumptions as
-  the daily rule.'
+notes: 'R104 (227 tests, BH across all). half-session bars, held overnight: index as a futures proxy Our nearest test: R95:
+  CCI fade and divergence variants on 60m failed the holdout (BANKNIFTY 60m B passed design on 48 trades, holdout 17 trades
+  -Rs 1,014); this exact setup not tested by us. Assumptions: The book says ''rarely'' 4-hour and never lower; NSE has no
+  natural 4-hour bar, so two bars a session stand in. Same pivot, buffer and leg assumptions as the daily rule.'

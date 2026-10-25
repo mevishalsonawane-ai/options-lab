@@ -30,9 +30,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). 15-minute time stop on R51/R72 (R18 V3 was 45 minutes on other arms) R104 (227 tests,
-  BH across all). 15-minute time stop on R51/R72 (R18 V3 was 45 minutes on other arms) R104 (227 tests, BH across all). 15-minute
-  time stop on R51/R72 (R18 V3 was 45 minutes on other arms) R104 (227 tests, BH across all). 15-minute time stop on R51/R72
-  (R18 V3 was 45 minutes on other arms) Our nearest test: R18 V3 45-minute time stop on other arms: 0 of 60 overlays pass;
-  R81 X4 no-progress stop -Rs 85k design. Assumptions: The book''s 3 x timeframe applied to the arm''s 5-minute bars; risk-lowering
-  (earlier exit), paper only.'
+notes: 'R104 (227 tests, BH across all). 15-minute time stop on R51/R72 (R18 V3 was 45 minutes on other arms) Our nearest
+  test: R18 V3 45-minute time stop on other arms: 0 of 60 overlays pass; R81 X4 no-progress stop -Rs 85k design. Assumptions:
+  The book''s 3 x timeframe applied to the arm''s 5-minute bars; risk-lowering (earlier exit), paper only.'

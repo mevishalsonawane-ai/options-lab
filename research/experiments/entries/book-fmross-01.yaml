@@ -36,10 +36,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: not tested by us on MCX; NIFTY daily lag-1 autocorrelation +0.028 (DEEP_NIFTY_BANKNIFTY.md
-  2.5) was not tradeable. Assumptions: The book only reports statistics (big drop followed by big drop 31%, next-day mean
-  -.0036 after state 1 on 1995-97 NYMEX crude); it proposes no trade. The most literal trade is a one-day continuation short.
-  The mirror (''after state 2 or 3 go long'', next-day mean +.0024/+.0025) is a second variant, pre-registered alongside,
-  with BH across both and across instruments. First run the 4x4 chi-square table on our MCX daily data as the descriptive
-  gate.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us on MCX; NIFTY daily lag-1 autocorrelation +0.028
+  (DEEP_NIFTY_BANKNIFTY.md 2.5) was not tradeable. Assumptions: The book only reports statistics (big drop followed by big
+  drop 31%, next-day mean -.0036 after state 1 on 1995-97 NYMEX crude); it proposes no trade. The most literal trade is a
+  one-day continuation short. The mirror (''after state 2 or 3 go long'', next-day mean +.0024/+.0025) is a second variant,
+  pre-registered alongside, with BH across both and across instruments. First run the 4x4 chi-square table on our MCX daily
+  data as the descriptive gate.'

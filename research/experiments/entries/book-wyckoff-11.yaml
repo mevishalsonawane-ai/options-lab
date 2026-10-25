@@ -21,7 +21,7 @@ model_or_rule: 'On days after >= 4 consecutive up closes, skip the arms'' long e
   skip short entries | stop: the arm''s own | exit: the arm''s own | filters: also test 3 days'
 settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-11; trade: skip-only filter on the arms (risk-lowering)'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'ARM (the arm''s index signal (overlay / filter)), variant 3d: design 7830 trades, win 46% (B0 46%), net Rs 644,734
     vs B0 Rs 774,750 (delta -Rs 130,016), quarters -Rs 50,762, -Rs 43,123, -Rs 6,011, Rs 981; p 1.000, BH q 1.000; final delta
@@ -30,9 +30,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). 4-day streak skip filter (3-day variant chosen walk-forward) R104 (227 tests, BH
-  across all). 4-day streak skip filter (3-day variant chosen walk-forward) R104 (227 tests, BH across all). 4-day streak
-  skip filter (3-day variant chosen walk-forward) R104 (227 tests, BH across all). 4-day streak skip filter (3-day variant
-  chosen walk-forward) Our nearest test: not tested by us as a streak rule; R102 daily sign continuation 53.2% (n 5,086);
-  R101 filters 0 of 20. Assumptions: Book: the market seldom runs more than three or four days one way without a reaction;
-  read as a skip filter, not a fade'
+notes: 'R104 (227 tests, BH across all). 4-day streak skip filter (3-day variant chosen walk-forward) Our nearest test: not
+  tested by us as a streak rule; R102 daily sign continuation 53.2% (n 5,086); R101 filters 0 of 20. Assumptions: Book: the
+  market seldom runs more than three or four days one way without a reaction; read as a skip filter, not a fade'

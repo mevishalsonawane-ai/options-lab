@@ -33,8 +33,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). R18''s post-hoc lead, now pre-registered R104 (227 tests, BH across all). R18''s
-  post-hoc lead, now pre-registered R104 (227 tests, BH across all). R18''s post-hoc lead, now pre-registered R104 (227 tests,
-  BH across all). R18''s post-hoc lead, now pre-registered Our nearest test: R18 post hoc (design only): exit at the next
-  support/resistance helped 9 of 10 losing arms (+Rs 64.8k on 4,964 trades) - never pre-registered. Assumptions: Round-number
-  steps and the 0.2 ATR minimum are ours (the book uses half / whole dollars on stocks).'
+notes: 'R104 (227 tests, BH across all). R18''s post-hoc lead, now pre-registered Our nearest test: R18 post hoc (design only):
+  exit at the next support/resistance helped 9 of 10 losing arms (+Rs 64.8k on 4,964 trades) - never pre-registered. Assumptions:
+  Round-number steps and the 0.2 ATR minimum are ours (the book uses half / whole dollars on stocks).'

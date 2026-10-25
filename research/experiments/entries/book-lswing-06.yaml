@@ -28,7 +28,7 @@ model_or_rule: 'Take the setups of forceswing-master-plan-index (or pullback-2lh
 settings: 'research/books/TESTABLE_RULES.md, rule book-lswing-06; trade: 1-ITM nearest-monthly CE / PE; stops/targets on the
   index.'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'IDXF (index spot, futures proxy), variant B: design 122 trades, win 29%, net -Rs 180,131, folds -Rs 18,099, -Rs
     84,874, -Rs 39,044, -Rs 38,115; p 1.000, BH q 1.000; holdout 12 trades, win 33%, net -Rs 19,537. R104 verdict: fail.'
@@ -36,10 +36,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) R104
-  (227 tests, BH across all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) R104 (227 tests,
-  BH across all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) R104 (227 tests, BH across
-  all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) Our nearest test: R102: 0.5-1% NIFTY
-  gaps fill by the close 42% (n 484), filled gaps fill a median 52 minutes after the open; R58 gap-go rules lost in the final
-  test. A gap delay on a daily setup: not tested by us.. Assumptions: The book''s ''a few minutes after the open'' read as
-  09:20; its 30-minute wait as 09:45.'
+notes: 'R104 (227 tests, BH across all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) Our
+  nearest test: R102: 0.5-1% NIFTY gaps fill by the close 42% (n 484), filled gaps fill a median 52 minutes after the open;
+  R58 gap-go rules lost in the final test. A gap delay on a daily setup: not tested by us.. Assumptions: The book''s ''a few
+  minutes after the open'' read as 09:20; its 30-minute wait as 09:45.'

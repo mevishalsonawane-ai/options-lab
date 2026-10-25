@@ -22,7 +22,7 @@ model_or_rule: 'After the close fell >= 3 ATR14 over the prior 20 bars: three bu
   The first soldier''s low. | exit: Nearest swing; else square-off. | filters: Prior decline (book: ''substantial'').'
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-15; trade: buy 1-ITM CE / PE'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'IDX (index spot, bought option), variant 15m: design 55 trades, win 45%, net Rs 340, folds -Rs 5,772, -Rs 3,126,
     Rs 9,238; p 0.412, BH q 1.000; holdout 12 trades, win 50%, net Rs 15,605. R104 verdict: fail.'
@@ -30,8 +30,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). adds R87-1''s missing prior-decline filter and the book''s stop R104 (227 tests,
-  BH across all). adds R87-1''s missing prior-decline filter and the book''s stop R104 (227 tests, BH across all). adds R87-1''s
-  missing prior-decline filter and the book''s stop R104 (227 tests, BH across all). adds R87-1''s missing prior-decline filter
-  and the book''s stop Our nearest test: R87-1 three white soldiers (no prior-decline filter) -> call: -Rs 3,910 on 160 trades..
-  Assumptions: ''Substantial decline'' = 3 ATR over 20 bars (ours).'
+notes: 'R104 (227 tests, BH across all). adds R87-1''s missing prior-decline filter and the book''s stop Our nearest test:
+  R87-1 three white soldiers (no prior-decline filter) -> call: -Rs 3,910 on 160 trades.. Assumptions: ''Substantial decline''
+  = 3 ATR over 20 bars (ours).'

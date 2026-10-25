@@ -38,7 +38,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R71 P5 double bottom / top (5-min swings): final -Rs 12,091 on 502, design -Rs 94,311;
-  the book''s stop and target differ from R71''s. Assumptions: The midway stop and measured target are read from the drawings;
-  R71 used the extreme as stop and Donchian''s exits.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R71 P5 double bottom / top (5-min swings): final -Rs 12,091 on
+  502, design -Rs 94,311; the book''s stop and target differ from R71''s. Assumptions: The midway stop and measured target
+  are read from the drawings; R71 used the extreme as stop and Donchian''s exits.'

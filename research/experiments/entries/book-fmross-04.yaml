@@ -42,9 +42,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). index only: BANKNIFTY near (monthly) and NIFTY monthly series R104 (227 tests, BH
-  across all). index only: BANKNIFTY near (monthly) and NIFTY monthly series R104 (227 tests, BH across all). index only:
-  BANKNIFTY near (monthly) and NIFTY monthly series R104 (227 tests, BH across all). index only: BANKNIFTY near (monthly)
-  and NIFTY monthly series Our nearest test: R103 defined-risk option selling: 0 of 24 confirmed, the design passes were stale
-  prices. Assumptions: The book only compares option values (44.42 cents AR(1) vs 79 cents Black-Scholes for crude); the 0.6
-  ratio, iron-fly structure and stop are ours. Unit-root bias makes b look below 1 in short samples; the ADF filter is required.'
+notes: 'R104 (227 tests, BH across all). index only: BANKNIFTY near (monthly) and NIFTY monthly series Our nearest test: R103
+  defined-risk option selling: 0 of 24 confirmed, the design passes were stale prices. Assumptions: The book only compares
+  option values (44.42 cents AR(1) vs 79 cents Black-Scholes for crude); the 0.6 ratio, iron-fly structure and stop are ours.
+  Unit-root bias makes b look below 1 in short samples; the ADF filter is required.'

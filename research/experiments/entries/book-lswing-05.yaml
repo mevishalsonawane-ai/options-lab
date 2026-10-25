@@ -34,10 +34,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits R104
-  (227 tests, BH across all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits R104 (227 tests,
-  BH across all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits R104 (227 tests, BH across
-  all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits Our nearest test: SWING_EXITS: the app''s
-  stop+target+ladder made stock swing portfolios worse in all 24 and futures stayed inside the coin band; MATRIX PINE: a TP1
-  half-exit + breakeven doubled the loss intraday. The prior-day-low trail itself is not tested by us.. Assumptions: ATR scaling
-  of the book''s 4% / 7% / $0.06 as in forceswing-master-plan-index.'
+notes: 'R104 (227 tests, BH across all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits Our
+  nearest test: SWING_EXITS: the app''s stop+target+ladder made stock swing portfolios worse in all 24 and futures stayed
+  inside the coin band; MATRIX PINE: a TP1 half-exit + breakeven doubled the loss intraday. The prior-day-low trail itself
+  is not tested by us.. Assumptions: ATR scaling of the book''s 4% / 7% / $0.06 as in forceswing-master-plan-index.'

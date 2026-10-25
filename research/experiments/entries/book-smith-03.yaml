@@ -34,7 +34,7 @@ model_or_rule: 'Unchanged: the entries of SWING_DEEP''s swing rules, the LV-05 m
 settings: 'research/books/TESTABLE_RULES.md, rule book-smith-03; trade: the host study''s instrument (1-ITM monthly option
   or futures mirror; MCX 1-ITM option on the near future); stops on the underlying'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'DLY (index daily, futures proxy), variant pct: design 895 trades, win 39%, net Rs 737,471, folds Rs 113,512, -Rs
     88,335, Rs 712,295, vs host Rs 243,767 (delta Rs 493,704); p 0.150, BH q 1.000; holdout 319 trades, win 34%, net Rs 62,799.
@@ -43,9 +43,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). exit swap on SWING_DEEP''s hosts R104 (227 tests, BH across all). exit swap on SWING_DEEP''s
-  hosts R104 (227 tests, BH across all). exit swap on SWING_DEEP''s hosts R104 (227 tests, BH across all). exit swap on SWING_DEEP''s
-  hosts Our nearest test: SWING_EXITS: the app''s stop/target/ladder cut drawdowns but no row beat coin-flip entries with
-  the same exits; LV-05 trailed the opposite N/2-day channel and lost. This trail itself is not tested by us.. Assumptions:
-  The book uses it on its own entry only; testing it on our existing entries isolates the exit. Compare with coin-flip entries
-  carrying the same exit (SWING_EXITS method).'
+notes: 'R104 (227 tests, BH across all). exit swap on SWING_DEEP''s hosts Our nearest test: SWING_EXITS: the app''s stop/target/ladder
+  cut drawdowns but no row beat coin-flip entries with the same exits; LV-05 trailed the opposite N/2-day channel and lost.
+  This trail itself is not tested by us.. Assumptions: The book uses it on its own entry only; testing it on our existing
+  entries isolates the exit. Compare with coin-flip entries carrying the same exit (SWING_EXITS method).'

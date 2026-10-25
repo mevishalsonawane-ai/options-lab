@@ -27,7 +27,7 @@ model_or_rule: 'Fake-down: a bar trades below the most recent confirmed swing lo
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-07; trade: buy 1-ITM CE after a fake-down, 1-ITM PE after a fake-out;
   stop and target on the underlying'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 4
 results:
   summary: 'IDX (index spot, bought option), variant 15m: design 5087 trades, win 33%, net -Rs 333,577, folds -Rs 62,970,
     -Rs 76,579, -Rs 194,028; p 1.000, BH q 1.000; holdout 369 trades, win 32%, net -Rs 4,813. R104 verdict: fail. | MCXI (MCX
@@ -37,8 +37,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). 15-minute 2-bar fractal swing, not R91''s 1-hour swing R104 (227 tests, BH across
-  all). 15-minute 2-bar fractal swing, not R91''s 1-hour swing R104 (227 tests, BH across all). 15-minute 2-bar fractal swing,
-  not R91''s 1-hour swing R104 (227 tests, BH across all). 15-minute 2-bar fractal swing, not R91''s 1-hour swing Our nearest
-  test: R3 ORB Sweep / Range Fade lost Rs 5,05,954 / 5,10,978; R91 swing-sweep fade 0 of 63; R89 break-and-reclaim lost. Assumptions:
-  Book gives only a diagram; swing definition, close-back confirmation and range minimum are ours.'
+notes: 'R104 (227 tests, BH across all). 15-minute 2-bar fractal swing, not R91''s 1-hour swing Our nearest test: R3 ORB Sweep
+  / Range Fade lost Rs 5,05,954 / 5,10,978; R91 swing-sweep fade 0 of 63; R89 break-and-reclaim lost. Assumptions: Book gives
+  only a diagram; swing definition, close-back confirmation and range minimum are ours.'

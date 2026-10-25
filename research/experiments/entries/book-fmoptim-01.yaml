@@ -33,7 +33,7 @@ model_or_rule: 'At each close, fit two parallel lines with a common slope to the
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmoptim-01; trade: buy ATM CE on a long signal, ATM PE on a short;
   one lot; stops/targets on the underlying as assumed above; MCX: the future or the ATM option'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 4
 results:
   summary: 'DLY (index daily, futures proxy), variant plain: design 996 trades, win 39%, net Rs 9,827, folds -Rs 26,567, -Rs
     41,435, Rs 77,829; p 0.459, BH q 1.000; holdout 404 trades, win 38%, net -Rs 214,333. R104 verdict: fail. | MCXD (MCX
@@ -43,10 +43,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: Not tested in this form. Nearest: R51 / R72 flat 20-bar Donchian breaks (R72 Breadth
-  Donchian passed, twin p 0.008, BH q 0.032); R71 squeeze-release channel break lost in the final (-Rs 41,281 on 305 trades,
-  twin p 0.91); R20b / R20c levels and level breaks no better than random lines.. Assumptions: Window length 20 from the book''s
-  20-day channels; the book refits on fixed windows (days 1-20, 20-40, 40-60), we refit every bar to avoid look-ahead. The
-  book only says sell on a downward break and buy on an upward break and gives no stop, exit or size. Uses closes only, as
-  the book does.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: Not tested in this form. Nearest: R51 / R72 flat 20-bar Donchian
+  breaks (R72 Breadth Donchian passed, twin p 0.008, BH q 0.032); R71 squeeze-release channel break lost in the final (-Rs
+  41,281 on 305 trades, twin p 0.91); R20b / R20c levels and level breaks no better than random lines.. Assumptions: Window
+  length 20 from the book''s 20-day channels; the book refits on fixed windows (days 1-20, 20-40, 40-60), we refit every bar
+  to avoid look-ahead. The book only says sell on a downward break and buy on an upward break and gives no stop, exit or size.
+  Uses closes only, as the book does.'

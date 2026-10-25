@@ -29,7 +29,7 @@ model_or_rule: 'Long if today''s close-to-close change >= +1% AND today''s low (
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-07; trade: Primary: near-month future. Secondary (labelled):
   1-ITM monthly option, CE on long, PE on short (10 sessions of theta is a heavy cost; report separately).'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 4
 results:
   summary: 'DLY (index daily, futures proxy), variant h10_stop: design 349 trades, win 53%, net -Rs 426,187, folds -Rs 21,410,
     Rs 144,127, -Rs 548,904; p 1.000, BH q 1.000; holdout 92 trades, win 46%, net Rs 219,315. R104 verdict: fail.'
@@ -37,9 +37,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R102: index direction at 1 day follows the previous sign 53.2% (NIFTY, n 5,086) and no
-  sign rule confirmed (1 of 70, an artefact). R87 candle shapes and R71 chart patterns gave no direction. R78 (gold daily
-  high/low reversal) is the nearest MCX cousin. This exact rule: not tested by us.. Assumptions: The OCR of the rule box reads
-  ''>= -1'' for the short side; read as ''<= -1''. ''N-day low just before the big up day'' is read as today or yesterday.
-  Thresholds +-3% are a variant.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R102: index direction at 1 day follows the previous sign 53.2%
+  (NIFTY, n 5,086) and no sign rule confirmed (1 of 70, an artefact). R87 candle shapes and R71 chart patterns gave no direction.
+  R78 (gold daily high/low reversal) is the nearest MCX cousin. This exact rule: not tested by us.. Assumptions: The OCR of
+  the rule box reads ''>= -1'' for the short side; read as ''<= -1''. ''N-day low just before the big up day'' is read as
+  today or yesterday. Thresholds +-3% are a variant.'

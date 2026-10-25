@@ -31,9 +31,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). skip NIFTY/BANKNIFTY longs while a secondary index bursts alone R104 (227 tests,
-  BH across all). skip NIFTY/BANKNIFTY longs while a secondary index bursts alone R104 (227 tests, BH across all). skip NIFTY/BANKNIFTY
-  longs while a secondary index bursts alone R104 (227 tests, BH across all). skip NIFTY/BANKNIFTY longs while a secondary
-  index bursts alone Our nearest test: not tested by us; R72 C3 lonely breakout (faded) lost Rs 1,60,188 on 499. Assumptions:
-  Book''s ''secondary leader bursts into activity while the leaders are distributed'' mapped to a mid-cap or financials index
-  running alone; thresholds are ours'
+notes: 'R104 (227 tests, BH across all). skip NIFTY/BANKNIFTY longs while a secondary index bursts alone Our nearest test:
+  not tested by us; R72 C3 lonely breakout (faded) lost Rs 1,60,188 on 499. Assumptions: Book''s ''secondary leader bursts
+  into activity while the leaders are distributed'' mapped to a mid-cap or financials index running alone; thresholds are
+  ours'

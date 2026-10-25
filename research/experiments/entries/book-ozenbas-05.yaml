@@ -37,9 +37,6 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). 1-minute spot close as the best-bid proxy (the book''s futures bid has no history)
-  R104 (227 tests, BH across all). 1-minute spot close as the best-bid proxy (the book''s futures bid has no history) R104
-  (227 tests, BH across all). 1-minute spot close as the best-bid proxy (the book''s futures bid has no history) R104 (227
-  tests, BH across all). 1-minute spot close as the best-bid proxy (the book''s futures bid has no history) Our nearest test:
-  Close to tested breakout rules: R89 previous-day high/low break 0 of 180, ORB family 0 of 257 (R92), F1/R30 direction coin
-  flip; R7 order flow 0.42x of cost.. Assumptions: The 15-minute lookback and the 1-minute-close proxy for the bid are ours;
-  the book''s exercise is discretionary and warns the spread is paid on every round trip.'
+  Our nearest test: Close to tested breakout rules: R89 previous-day high/low break 0 of 180, ORB family 0 of 257 (R92), F1/R30
+  direction coin flip; R7 order flow 0.42x of cost.. Assumptions: The 15-minute lookback and the 1-minute-close proxy for
+  the bid are ours; the book''s exercise is discretionary and warns the spread is paid on every round trip.'

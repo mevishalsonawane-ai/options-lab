@@ -32,7 +32,7 @@ model_or_rule: 'Uptrend: three consecutive bearish bars (close < open); the next
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-01; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short;
   stops/targets on the underlying as the book states; premium safety stop as in our standard engine'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 4
 results:
   summary: 'IDX (index spot, bought option), variant 15m: design 476 trades, win 47%, net -Rs 47,085, folds -Rs 6,104, -Rs
     16,216, -Rs 24,765; p 1.000, BH q 1.000; holdout 91 trades, win 42%, net -Rs 32,754. R104 verdict: fail. | MCXI (MCX mini
@@ -42,9 +42,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). the book''s wider pattern stop (README pick 3) R104 (227 tests, BH across all). the
-  book''s wider pattern stop (README pick 3) R104 (227 tests, BH across all). the book''s wider pattern stop (README pick
-  3) R104 (227 tests, BH across all). the book''s wider pattern stop (README pick 3) Our nearest test: Not tested in this
+notes: 'R104 (227 tests, BH across all). the book''s wider pattern stop (README pick 3) Our nearest test: Not tested in this
   form. R87B: green-green-red on SENSEX 15m held out of sample (+0.259 ATR, n 182) but the call rule with a stop under the
   red candle lost -Rs 21,127 on 162 trades; R96 P1 MCX pullback in trend Rs 1.08 lakh on 35, twin p 0.164 (lead only).. Assumptions:
   Book does not define the trend; EMA 20 slope chosen. Book does not state a stop for this pattern; Ch. 7 general pattern

@@ -35,7 +35,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R18: five early-exit overlays failed (0 of 60); R87B: candle exits against the trade
-  mostly hurt; R81 / R100: exits that cut runners lose on Liquidity. Assumptions: The book''s ''fails to make a new low and
-  turns to higher highs and higher lows'' fixed as two bars; overlay on paper arms only.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R18: five early-exit overlays failed (0 of 60); R87B: candle exits
+  against the trade mostly hurt; R81 / R100: exits that cut runners lose on Liquidity. Assumptions: The book''s ''fails to
+  make a new low and turns to higher highs and higher lows'' fixed as two bars; overlay on paper arms only.'

@@ -45,8 +45,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: HUNT_R71 P6 Heikin-Ashi flip (15-min, EMA filter): -Rs 79,173 on 357 trades, fail; OBUY_FINAL
-  TI-08 Heikin-Ashi -170,762 walk-forward; daily HA + stochastic not tested by us. Assumptions: The book''s stochastic sentence
-  has the colours swapped; we read it as oversold for longs. Pips converted to ATR fractions. ''Series of candles'' = at least
-  3. The AC sign for shorts is read as below zero.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: HUNT_R71 P6 Heikin-Ashi flip (15-min, EMA filter): -Rs 79,173
+  on 357 trades, fail; OBUY_FINAL TI-08 Heikin-Ashi -170,762 walk-forward; daily HA + stochastic not tested by us. Assumptions:
+  The book''s stochastic sentence has the colours swapped; we read it as oversold for longs. Pips converted to ATR fractions.
+  ''Series of candles'' = at least 3. The AC sign for shorts is read as below zero.'

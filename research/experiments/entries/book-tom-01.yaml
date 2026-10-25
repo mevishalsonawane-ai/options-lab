@@ -30,7 +30,7 @@ model_or_rule: 'Long when bar t closes above high[t-1] AND above high[t-3]; shor
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-01; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short;
   MCX: the near future or its 1-ITM option; stop on the underlying'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 8
 results:
   summary: 'IDX (index spot, bought option), variant 15m_bias: design 2075 trades, win 35%, net -Rs 421,025, folds -Rs 40,382,
     -Rs 171,160, -Rs 209,482; p 1.000, BH q 1.000; holdout 401 trades, win 31%, net -Rs 187,870. R104 verdict: fail. | MCXI
@@ -40,8 +40,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: not tested by us; nearest R71 P7 three-bar reversal at the day high/low lost (-Rs 1,67,689,
-  855 trades) and R4 G3 Gann 2-bar swing lost Rs 172 a trade net (6,227). Assumptions: The book gives no stop or exit; the
-  four-bar extreme as stop and the opposite signal as exit are our most literal choices. ''Bar three back'' read as high[t-3]
-  (the book numbers bars 1 = current, 2 = previous, 4 = three back).'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us; nearest R71 P7 three-bar reversal at the day
+  high/low lost (-Rs 1,67,689, 855 trades) and R4 G3 Gann 2-bar swing lost Rs 172 a trade net (6,227). Assumptions: The book
+  gives no stop or exit; the four-bar extreme as stop and the opposite signal as exit are our most literal choices. ''Bar
+  three back'' read as high[t-3] (the book numbers bars 1 = current, 2 = previous, 4 = three back).'

@@ -21,7 +21,7 @@ model_or_rule: 'No new entries for the rest of the day once two trades of the ar
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-12; trade: applies to an existing arm (risk-lowering; shadow
   first on live)'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'ARM (the arm''s index signal (overlay / filter)), variant losses: design 5151 trades, win 47% (B0 46%), net Rs
     738,821 vs B0 Rs 774,750 (delta -Rs 35,929), quarters -Rs 114,996, -Rs 63,512, Rs 27,204, -Rs 167,614; p 1.000, BH q 1.000;
@@ -30,6 +30,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R75 L1-K2 (no new Donchian entries after 2 losses in a row) failed; R19c daily loss cap
-  made things worse. Assumptions: ''Two stop-losses hit'' read per arm per day.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R75 L1-K2 (no new Donchian entries after 2 losses in a row) failed;
+  R19c daily loss cap made things worse. Assumptions: ''Two stop-losses hit'' read per arm per day.'

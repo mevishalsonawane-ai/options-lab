@@ -27,7 +27,7 @@ model_or_rule: 'Wilder ADX(14) with DI length 14: 20 < ADX < 50; +DI > -DI; clos
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-08; trade: buy ATM CE on a long, ATM PE on a short; stop on
   the index'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 3
 results:
   summary: 'IDX (index spot, bought option), variant adx30: design 1115 trades, win 25%, net -Rs 123,184, folds -Rs 924, -Rs
     51,622, -Rs 70,638; p 1.000, BH q 1.000; holdout 200 trades, win 24%, net -Rs 72,134. R104 verdict: fail.'
@@ -35,7 +35,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: OBUY_GB TI-09 ADX/DMI lost Rs -345,311 walk-forward; TI-03 EMA cross lost; R29 EMA pullbacks
-  no better than random; R73 ADX filter on Donchian failed. Assumptions: ''Greater than 20 or below 50'' read as a band; pullback
-  distance, stop offset and the entry window are ours.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: OBUY_GB TI-09 ADX/DMI lost Rs -345,311 walk-forward; TI-03 EMA
+  cross lost; R29 EMA pullbacks no better than random; R73 ADX filter on Donchian failed. Assumptions: ''Greater than 20 or
+  below 50'' read as a band; pullback distance, stop offset and the entry window are ours.'

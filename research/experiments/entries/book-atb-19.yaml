@@ -29,7 +29,7 @@ model_or_rule: 'Rim = a swing high; a cup of >= 15 bars whose lowest low is >= 1
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-19; trade: buy 1-ITM CE (PE for the inverse); CRYPTO: plus step
   profit lock'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 3
+variants_tried: 6
 results:
   summary: 'IDX (index spot, bought option), variant 60m: design 74 trades, win 35%, net -Rs 12,598, folds Rs 26,623, -Rs
     10,786, -Rs 28,435; p 1.000, BH q 1.000; holdout 17 trades, win 35%, net -Rs 12,197. R104 verdict: fail. | MCXI (MCX mini
@@ -41,6 +41,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: not tested by us. Assumptions: All geometry ours; the book draws only a resistance line
-  and the shape.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us. Assumptions: All geometry ours; the book draws
+  only a resistance line and the shape.'

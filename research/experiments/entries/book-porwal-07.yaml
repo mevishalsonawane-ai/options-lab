@@ -27,7 +27,7 @@ model_or_rule: 'Filter state at 09:15: LONG-ONLY if yesterday''s close is within
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-07; trade: the arm''s own 1-ITM option; this rule only removes
   trades (a risk-lowering change, shadow first on live per CLAUDE.md)'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'ARM (the arm''s index signal (overlay / filter)), variant neutral: design 6725 trades, win 46% (B0 46%), net Rs
     185,982 vs B0 Rs 226,928 (delta -Rs 40,946), quarters Rs 2,439, Rs 1,163, -Rs 21,524, -Rs 5,945; p 1.000, BH q 1.000;
@@ -36,8 +36,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). 52-week filter on R51/R72 R104 (227 tests, BH across all). 52-week filter on R51/R72
-  R104 (227 tests, BH across all). 52-week filter on R51/R72 R104 (227 tests, BH across all). 52-week filter on R51/R72 Our
-  nearest test: SWING_DEEP: 52-week momentum on NIFTY futures as a swing rule, about +Rs 2,175 a year over 11 years, inside
-  the coin-flip range; as an intraday filter not tested by us. Assumptions: The book uses it as a stock screener feeding any
-  intraday setup; turning it into an index direction filter, the 2% band and the 20-session breakout check are ours.'
+notes: 'R104 (227 tests, BH across all). 52-week filter on R51/R72 Our nearest test: SWING_DEEP: 52-week momentum on NIFTY
+  futures as a swing rule, about +Rs 2,175 a year over 11 years, inside the coin-flip range; as an intraday filter not tested
+  by us. Assumptions: The book uses it as a stock screener feeding any intraday setup; turning it into an index direction
+  filter, the 2% band and the 20-session breakout check are ours.'

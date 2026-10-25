@@ -44,7 +44,7 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-smith-01; trade: buy the 
   if fewer than 10 sessions left) on a long trigger, 1-ITM PE on a short; stops on the index as the book states; also run
   a futures mirror to separate signal from theta'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'DLY (index daily, futures proxy), variant pct: design 172 trades, win 42%, net Rs 347,212, folds Rs 60,784, Rs
     135,819, Rs 150,609; p 0.021, BH q 0.806; holdout 66 trades, win 42%, net Rs 168,395. R104 verdict: fail.'
@@ -52,10 +52,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: SWING_DEEP: NR7 / inside-day breakout on index futures sat inside the coin-flip band,
-  walk-forward lost Rs 45-58k a year; OBUY_LV05_MULTIDAY: multi-day Donchian option holds about -Rs 18,000 a year, p 0.68
-  vs random; OBUY_GB TI-09 intraday ADX/DMI 0/5 years. The exact daily rule is not tested by us.. Assumptions: Book is written
-  for UK small-cap shares with a 0.5% buffer and says major indices need a wider, judged buffer; the ATR variants and the
-  touch tolerance are our literal readings. ''Big move day'' 5% is almost never hit on NIFTY, hence the ATR-scaled variant.
-  Set-up expiry of 3 sessions makes ''do not enter late'' precise.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: SWING_DEEP: NR7 / inside-day breakout on index futures sat inside
+  the coin-flip band, walk-forward lost Rs 45-58k a year; OBUY_LV05_MULTIDAY: multi-day Donchian option holds about -Rs 18,000
+  a year, p 0.68 vs random; OBUY_GB TI-09 intraday ADX/DMI 0/5 years. The exact daily rule is not tested by us.. Assumptions:
+  Book is written for UK small-cap shares with a 0.5% buffer and says major indices need a wider, judged buffer; the ATR variants
+  and the touch tolerance are our literal readings. ''Big move day'' 5% is almost never hit on NIFTY, hence the ATR-scaled
+  variant. Set-up expiry of 3 sessions makes ''do not enter late'' precise.'

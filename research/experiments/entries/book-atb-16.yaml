@@ -25,7 +25,7 @@ model_or_rule: 'Pole >= 2 ATR within 5 bars; then 4-12 bars forming a converging
   Break in the pole''s direction only.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-16; trade: buy 1-ITM CE / PE in the pole''s direction'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 4
 results:
   summary: 'IDX (index spot, bought option), variant 5m: design 53 trades, win 23%, net -Rs 25,455, folds -Rs 6,175, Rs 236,
     -Rs 19,517; p 1.000, BH q 1.000; holdout 38 trades, win 34%, net Rs 10,793. R104 verdict: fail. | MCXI (MCX mini future
@@ -35,6 +35,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R71 P4 flag (nearest): 32 final trades, too rare. Assumptions: Pole, pennant size and
-  target ours, from the drawings.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R71 P4 flag (nearest): 32 final trades, too rare. Assumptions:
+  Pole, pennant size and target ours, from the drawings.'

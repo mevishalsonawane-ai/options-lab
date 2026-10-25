@@ -39,11 +39,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). MCX minis have real minute volume (Oct 2025+); the index version lacks volume (index-futures
-  minutes only from 29 Jul 2026, 57 sessions) R104 (227 tests, BH across all). MCX minis have real minute volume (Oct 2025+);
-  the index version lacks volume (index-futures minutes only from 29 Jul 2026, 57 sessions) R104 (227 tests, BH across all).
-  MCX minis have real minute volume (Oct 2025+); the index version lacks volume (index-futures minutes only from 29 Jul 2026,
-  57 sessions) R104 (227 tests, BH across all). MCX minis have real minute volume (Oct 2025+); the index version lacks volume
-  (index-futures minutes only from 29 Jul 2026, 57 sessions) Our nearest test: R87 absorption proxy 51.5% vs 51.5% (n 2,266);
-  R8 heavy-volume levels broke 58-68% vs 55%; R86b absorption at day extremes almost never seen. Assumptions: Book''s ''abnormally
-  large volume within a small radius'' made 3x volume within 0.5 ATR; ''the price starts to slip'' made a close below the
-  zone. Thresholds are ours.'
+  minutes only from 29 Jul 2026, 57 sessions) Our nearest test: R87 absorption proxy 51.5% vs 51.5% (n 2,266); R8 heavy-volume
+  levels broke 58-68% vs 55%; R86b absorption at day extremes almost never seen. Assumptions: Book''s ''abnormally large volume
+  within a small radius'' made 3x volume within 0.5 ATR; ''the price starts to slip'' made a close below the zone. Thresholds
+  are ours.'

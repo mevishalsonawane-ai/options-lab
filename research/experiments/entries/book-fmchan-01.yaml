@@ -27,7 +27,7 @@ model_or_rule: 'At each 5-minute close from 09:30 to 14:55: if close > MA20 + 2 
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-01; trade: Primary: 1 lot of the near-month future (Chan traded
   the future). Secondary (labelled): buy the 1-ITM nearest-expiry CE on a long, PE on a short, same exits read on the index.'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'IDXF (index spot, futures proxy), variant stop1sd: design 6113 trades, win 52%, net -Rs 2,649,139, folds -Rs 601,891,
     -Rs 413,106, -Rs 316,051, -Rs 1,318,092; p 1.000, BH q 1.000; holdout 735 trades, win 36%, net -Rs 1,004,805. R104 verdict:
@@ -36,11 +36,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). the book trades the futures: spot points with futures costs R104 (227 tests, BH across
-  all). the book trades the futures: spot points with futures costs R104 (227 tests, BH across all). the book trades the futures:
-  spot points with futures costs R104 (227 tests, BH across all). the book trades the futures: spot points with futures costs
-  Our nearest test: F1: Bollinger %B / RSI / MACD lean to a 15-minute reversal (IC ~ -0.05) gone by 60 minutes; 0 of 20 indicator
-  rules pass. R102 2.5: next 5-minute bar repeats the sign 48.4% of the time (NIFTY, n 167,082). Expect gross > 0, net < 0..
-  Assumptions: Chan gives no lookback; 20 bars is the Bollinger default. His Sharpe 3 -> -3 came from a 1 bp cost; our futures
-  round trip is charges + one tick each side, options per baselines.yaml (NIFTY ATM about Rs 98). Report gross and net side
-  by side, since the point is the cost wedge.'
+notes: 'R104 (227 tests, BH across all). the book trades the futures: spot points with futures costs Our nearest test: F1:
+  Bollinger %B / RSI / MACD lean to a 15-minute reversal (IC ~ -0.05) gone by 60 minutes; 0 of 20 indicator rules pass. R102
+  2.5: next 5-minute bar repeats the sign 48.4% of the time (NIFTY, n 167,082). Expect gross > 0, net < 0.. Assumptions: Chan
+  gives no lookback; 20 bars is the Bollinger default. His Sharpe 3 -> -3 came from a 1 bp cost; our futures round trip is
+  charges + one tick each side, options per baselines.yaml (NIFTY ATM about Rs 98). Report gross and net side by side, since
+  the point is the cost wedge.'

@@ -28,7 +28,7 @@ model_or_rule: 'Entries are the arm''s own (Liquidity 15+5). Lots = floor(c x f 
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmbjork-04; trade: buy ATM/1-ITM option as the arm does; only the lot
   count changes'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'MM (the arms'' trades (sizing)), variant c25: design net Rs 13,712,650 vs Rs 774,750, max drawdown -Rs 1,050,373
     vs -Rs 444,695 (cut -136%, net cut -1670%) - adds risk; p 1.000, BH q 1.000; final DD cut -95%, net cut -320%. R104 verdict:
@@ -37,8 +37,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: h15: half-Kelly grew fastest but P(drawdown >= 30%) 63%, quarter-Kelly P(drawdown >=
-  50%) 1%; the Kelly fraction was unstable (0.48 / 0.14 vs 1.29) and SPA p = 0.14. HUNT_FINAL chose fixed lots.. Assumptions:
-  Bjork''s fraction is for a lognormal asset; applying it to per-trade option returns is our translation. The 12-month window,
-  c values and the 75% floor are ours. LIVE would need shadow mode first (CLAUDE.md: sizing up is not risk-lowering).'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: h15: half-Kelly grew fastest but P(drawdown >= 30%) 63%, quarter-Kelly
+  P(drawdown >= 50%) 1%; the Kelly fraction was unstable (0.48 / 0.14 vs 1.29) and SPA p = 0.14. HUNT_FINAL chose fixed lots..
+  Assumptions: Bjork''s fraction is for a lognormal asset; applying it to per-trade option returns is our translation. The
+  12-month window, c values and the 75% floor are ours. LIVE would need shadow mode first (CLAUDE.md: sizing up is not risk-lowering).'

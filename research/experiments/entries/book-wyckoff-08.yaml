@@ -34,8 +34,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). swing-low trail overlay on R72, R51, LIQ R104 (227 tests, BH across all). swing-low
-  trail overlay on R72, R51, LIQ R104 (227 tests, BH across all). swing-low trail overlay on R72, R51, LIQ R104 (227 tests,
-  BH across all). swing-low trail overlay on R72, R51, LIQ Our nearest test: R19 breakeven / give-back locks 0 of 12; R90
-  swing stops 0 of 99; a swing-low trail on the arms is not tested by us. Assumptions: Book''s 1/4 point beyond the point
-  of resistance converted to 0.1 ATR; swing = 3-bar fractal'
+notes: 'R104 (227 tests, BH across all). swing-low trail overlay on R72, R51, LIQ Our nearest test: R19 breakeven / give-back
+  locks 0 of 12; R90 swing stops 0 of 99; a swing-low trail on the arms is not tested by us. Assumptions: Book''s 1/4 point
+  beyond the point of resistance converted to 0.1 ATR; swing = 3-bar fractal'

@@ -31,8 +31,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). account-level day rule on the combined arms R104 (227 tests, BH across all). account-level
-  day rule on the combined arms R104 (227 tests, BH across all). account-level day rule on the combined arms R104 (227 tests,
-  BH across all). account-level day rule on the combined arms Our nearest test: R19c: a day profit lock raised green days
-  but failed net / drawdown; the day loss cap lowered green days. Assumptions: US Open (to 10:30) mapped to NSE 10:15; ''switch
-  to the simulator'' read as no new entries.'
+notes: 'R104 (227 tests, BH across all). account-level day rule on the combined arms Our nearest test: R19c: a day profit
+  lock raised green days but failed net / drawdown; the day loss cap lowered green days. Assumptions: US Open (to 10:30) mapped
+  to NSE 10:15; ''switch to the simulator'' read as no new entries.'

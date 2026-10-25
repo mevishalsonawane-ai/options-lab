@@ -32,6 +32,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: not a research test; compare with Boss''s account stop (-Rs 40k drawdown or -Rs 13k a
-  month). Assumptions: Equity excludes margin; option stop distance = the arm''s premium stop.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not a research test; compare with Boss''s account stop (-Rs 40k
+  drawdown or -Rs 13k a month). Assumptions: Equity excludes margin; option stop distance = the arm''s premium stop.'

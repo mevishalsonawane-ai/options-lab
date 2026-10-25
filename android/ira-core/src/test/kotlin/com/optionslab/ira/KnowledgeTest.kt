@@ -139,8 +139,10 @@ class KnowledgeTest {
         "what does carli say about cci divergence" to listOf("book.carli-divergence.1", "book.carli-divergence.2", "book.carli-divergence.6"),
         "what does bennett say about implied and realised volatility" to listOf("book.bennett-trading-volatility.1",
             "book.bennett-trading-volatility.7"),
+        // 25 Oct 2026 (R104): Aziz's VWAP rules are now tested entries, so their results answer this as well as his cards.
         "what does aziz say about vwap" to listOf("book.aziz-advanced-day-trading.3", "book.aziz-advanced-day-trading.4",
-            "book.aziz-advanced-day-trading.5", "book.aziz-advanced-day-trading.6"),
+            "book.aziz-advanced-day-trading.5", "book.aziz-advanced-day-trading.6", "exp.book-aziz-02", "exp.book-aziz-03",
+            "exp.book-aziz-04"),
         "what does galen woods say about the pin bar" to listOf("book.woods-price-action.2"),
     )
 
@@ -173,7 +175,11 @@ class KnowledgeTest {
 
     @Test fun aProposedRuleIsSaidAsNotRunAndTheBookQuestionsReachTheResearch() {
         val proposed = index.pack.facts.filter { it.kind == "proposed" }
-        assertTrue(proposed.size >= 100, "${proposed.size} proposed rules")
+        // 25 Oct 2026 (R104): 185 of the books' 211 rules were run or matched to an earlier study and only the rules that need
+        // data we lack stay proposed, so the pack holds exactly the experiment log's proposed entries, none dropped.
+        val logged = File(repo, "research/experiments/entries").listFiles { f -> f.name.endsWith(".yaml") }!!
+            .count { f -> f.readLines().any { it.trim() == "verdict: proposed" } }
+        assertTrue(logged > 0 && proposed.size == logged, "${proposed.size} proposed rules in the pack, $logged in the log")
         for (f in proposed) assertTrue(f.text.startsWith("Not run yet") && f.verdict == "context", f.id)
         for (q in listOf("what does wyckoff say about volume", "what does trading in the zone say about thinking in probabilities",
                 "what does aziz say about vwap", "what does the book say about pin bars", "what do the books teach about divergence"))

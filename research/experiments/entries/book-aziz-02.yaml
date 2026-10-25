@@ -43,9 +43,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). MCX with real VWAP; index with a session TWAP proxy (labelled) R104 (227 tests, BH
-  across all). MCX with real VWAP; index with a session TWAP proxy (labelled) R104 (227 tests, BH across all). MCX with real
-  VWAP; index with a session TWAP proxy (labelled) R104 (227 tests, BH across all). MCX with real VWAP; index with a session
-  TWAP proxy (labelled) Our nearest test: not tested by us as a sequence; R10 V1 side-of-VWAP had no filter value; F1 found
-  no VWAP direction; R86: a midday VWAP stretch tends to continue. Assumptions: ''Sold off'', ''reclaimed'' and ''lost'' read
-  as 5-minute closes; US 10:30-12:00 mapped to NSE 10:15-11:45; the optional anticipation entry before the loss is not used.'
+notes: 'R104 (227 tests, BH across all). MCX with real VWAP; index with a session TWAP proxy (labelled) Our nearest test:
+  not tested by us as a sequence; R10 V1 side-of-VWAP had no filter value; F1 found no VWAP direction; R86: a midday VWAP
+  stretch tends to continue. Assumptions: ''Sold off'', ''reclaimed'' and ''lost'' read as 5-minute closes; US 10:30-12:00
+  mapped to NSE 10:15-11:45; the optional anticipation entry before the loss is not used.'

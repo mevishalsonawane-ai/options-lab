@@ -32,8 +32,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: C1: next-hour reversal AUC 0.535 BTC / 0.543 ETH but about 0 bps gross vs 12 bps round
-  trip (net -11.74 / -13.16 bps); C2: same in Boss''s window. Expected to fail; it is the cost check.. Assumptions: The 0.6%
-  stop is about C1''s median BTC next-hour range (0.546%); the lock values are our choices. Report gross vs net to show the
-  cost wedge Chan describes; 12 bps round trip.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: C1: next-hour reversal AUC 0.535 BTC / 0.543 ETH but about 0 bps
+  gross vs 12 bps round trip (net -11.74 / -13.16 bps); C2: same in Boss''s window. Expected to fail; it is the cost check..
+  Assumptions: The 0.6% stop is about C1''s median BTC next-hour range (0.546%); the lock values are our choices. Report gross
+  vs net to show the cost wedge Chan describes; 12 bps round trip.'

@@ -38,8 +38,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). hedge on the spot as a futures proxy R104 (227 tests, BH across all). hedge on the
-  spot as a futures proxy R104 (227 tests, BH across all). hedge on the spot as a futures proxy R104 (227 tests, BH across
-  all). hedge on the spot as a futures proxy Our nearest test: not tested by us; R102 measured the skew level only (ATM-5
-  put dearer than ATM+5 call by 2.56 IV points on 91% of 1,222 NIFTY days).. Assumptions: Bennett''s realised-skew definition
-  is made literal on daily ATM IV changes; strikes 5 out because 90% strikes are outside ATM +-10 on a weekly.'
+notes: 'R104 (227 tests, BH across all). hedge on the spot as a futures proxy Our nearest test: not tested by us; R102 measured
+  the skew level only (ATM-5 put dearer than ATM+5 call by 2.56 IV points on 91% of 1,222 NIFTY days).. Assumptions: Bennett''s
+  realised-skew definition is made literal on daily ATM IV changes; strikes 5 out because 90% strikes are outside ATM +-10
+  on a weekly.'

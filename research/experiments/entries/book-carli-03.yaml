@@ -27,7 +27,7 @@ model_or_rule: 'R95''s confirmed regular divergence (pivots 5/5, known at pivot 
 settings: 'research/books/TESTABLE_RULES.md, rule book-carli-03; trade: 1-ITM nearest-expiry CE on bullish, PE on bearish;
   real prints, real costs, 1 lot'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 4
 results:
   summary: 'IDX (index spot, bought option), variant 60A: design 11 trades, win 36%, net -Rs 11,019, folds Rs 3,313, -Rs 2,031,
     -Rs 12,302; p 1.000, BH q 1.000; holdout 0 trades, win -, net Rs 0. R104 verdict: fail.'
@@ -36,9 +36,6 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). R95''s confirmed divergences re-built on 15/60-minute bars with Carli''s three filters
-  R104 (227 tests, BH across all). R95''s confirmed divergences re-built on 15/60-minute bars with Carli''s three filters
-  R104 (227 tests, BH across all). R95''s confirmed divergences re-built on 15/60-minute bars with Carli''s three filters
-  R104 (227 tests, BH across all). R95''s confirmed divergences re-built on 15/60-minute bars with Carli''s three filters
   Our nearest test: R95 confirmed-divergence entries lost (index design 1,778 trades -Rs 3,37,415; holdout 691 trades -Rs
   37,156); DV variant 0-52 trades a cell. Assumptions: Tests the filters on intraday bars, which the author says he never
   uses; the point is a cheap check on existing R95 code of whether the filters separate good from bad divergences. Unfiltered

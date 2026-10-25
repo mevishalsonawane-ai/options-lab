@@ -29,7 +29,7 @@ model_or_rule: 'Yesterday''s daily range is the smallest of the last 4 (NR4) or 
   consecutive narrow days.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-08; trade: Buy the 1-ITM CE/PE; stop on the underlying.'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 4
 results:
   summary: 'IDX (index spot, bought option), variant NR4: design 223 trades, win 37%, net -Rs 26,984, folds -Rs 10,891, -Rs
     72,903, Rs 56,810; p 1.000, BH q 1.000; holdout 73 trades, win 42%, net -Rs 27,149. R104 verdict: fail. | MCXI (MCX mini
@@ -39,7 +39,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: OBUY_FINAL LV-04 NR7/inside day: 72 variants, -28,141 walk-forward; HUNT_R71 P2 15-min
-  NR7 -Rs 1,68,820; HUNT_R96 crude NR7 the only unproven MCX lead (failed on COPPER). Assumptions: ''Trailed to suit'' made
-  precise as the swing trail after +1R. Chubby = our definition.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: OBUY_FINAL LV-04 NR7/inside day: 72 variants, -28,141 walk-forward;
+  HUNT_R71 P2 15-min NR7 -Rs 1,68,820; HUNT_R96 crude NR7 the only unproven MCX lead (failed on COPPER). Assumptions: ''Trailed
+  to suit'' made precise as the swing trail after +1R. Chubby = our definition.'

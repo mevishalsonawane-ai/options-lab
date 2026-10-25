@@ -30,6 +30,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: Not tested; R71 squeeze release (nearest contraction break) final -Rs 41,281 on 305..
-  Assumptions: Lines fitted through fractal swings (ours).'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: Not tested; R71 squeeze release (nearest contraction break) final
+  -Rs 41,281 on 305.. Assumptions: Lines fitted through fractal swings (ours).'

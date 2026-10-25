@@ -29,7 +29,7 @@ model_or_rule: 'Doji: |close - open| <= 0.1 x (high - low). Long setup: doji who
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-02; trade: daily: buy the next-monthly ATM CE / PE with stops
   on the index; intraday: 1-ITM nearest expiry'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'DLY (index daily, futures proxy), variant confirm: design 80 trades, win 28%, net -Rs 136,157, folds -Rs 31,206,
     -Rs 43,938, -Rs 61,012; p 1.000, BH q 1.000; holdout 24 trades, win 46%, net -Rs 56,444. R104 verdict: fail.'
@@ -37,7 +37,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R87 / R87B: no candle shape predicts direction; daily shapes 0 of 25; OBUY_GB MR-03 RSI
-  30/70 reversal lost walk-forward. Assumptions: The oscillator is not named (default settings); RSI(14) 30/70 and stochastic
-  14,3,3 80/20 tested as two readings. Doji body threshold, 10-bar extreme, 3-bar window, EMA 20 trail are ours.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R87 / R87B: no candle shape predicts direction; daily shapes 0
+  of 25; OBUY_GB MR-03 RSI 30/70 reversal lost walk-forward. Assumptions: The oscillator is not named (default settings);
+  RSI(14) 30/70 and stochastic 14,3,3 80/20 tested as two readings. Doji body threshold, 10-bar extreme, 3-bar window, EMA
+  20 trail are ours.'

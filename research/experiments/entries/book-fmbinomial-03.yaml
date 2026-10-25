@@ -40,9 +40,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R103 (HUNT_R103_OPTIONS_SELLING.md): unhedged defined-risk selling 0 of 24 confirmed;
-  R102: VIX above NIFTY''s forward realised on 81% of days but below BANKNIFTY''s on 60%; never tested with a futures hedge.
-  Assumptions: The book''s literal rule is ''market price above model price''; we read the model price as Black-Scholes at
-  20-day realised volatility, i.e. IV above HV. The 2-point margin, the +-0.2 delta band and the 1.5x premium stop are our
-  choices to make it testable.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R103 (HUNT_R103_OPTIONS_SELLING.md): unhedged defined-risk selling
+  0 of 24 confirmed; R102: VIX above NIFTY''s forward realised on 81% of days but below BANKNIFTY''s on 60%; never tested
+  with a futures hedge. Assumptions: The book''s literal rule is ''market price above model price''; we read the model price
+  as Black-Scholes at 20-day realised volatility, i.e. IV above HV. The 2-point margin, the +-0.2 delta band and the 1.5x
+  premium stop are our choices to make it testable.'

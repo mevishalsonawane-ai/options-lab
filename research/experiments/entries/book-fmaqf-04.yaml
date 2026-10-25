@@ -37,7 +37,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R101: 0 of 20 entry filters and sizing changes on the arms passed (best q 0.40). A results-based
-  pause is not tested by us.. Assumptions: The book''s CUSUM targets a mean shift of normal data; trade P&L is fat-tailed
-  and skewed, so h must come from bootstrap simulation. N (e.g. 20 trades) is our choice and must be pre-registered.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R101: 0 of 20 entry filters and sizing changes on the arms passed
+  (best q 0.40). A results-based pause is not tested by us.. Assumptions: The book''s CUSUM targets a mean shift of normal
+  data; trade P&L is fat-tailed and skewed, so h must come from bootstrap simulation. N (e.g. 20 trades) is our choice and
+  must be pre-registered.'

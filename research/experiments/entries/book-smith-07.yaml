@@ -22,7 +22,7 @@ model_or_rule: 'Applied to any daily-level stop-entry rule (SST, NR7/inside-day 
   filters: variant: skip only if the gap beyond the trigger is >= 0.25% of price.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-smith-07; trade: host rule''s option (1-ITM monthly)'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'DLY (index daily, futures proxy), variant skip25: design 400 trades, win 41%, net Rs 588,417, folds -Rs 11,351,
     -Rs 171,558, Rs 771,327, vs host Rs 301,312 (delta Rs 287,104); p 0.151, BH q 1.000; holdout 147 trades, win 43%, net
@@ -31,9 +31,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). gap-skip filter on the daily stop-entry hosts R104 (227 tests, BH across all). gap-skip
-  filter on the daily stop-entry hosts R104 (227 tests, BH across all). gap-skip filter on the daily stop-entry hosts R104
-  (227 tests, BH across all). gap-skip filter on the daily stop-entry hosts Our nearest test: R102: a 0.5-1% NIFTY gap fills
-  by the close less than half the time (NIFTY 42%); SWING_DEEP and LV-05 found swing profit is made overnight, which this
-  filter discards. Not tested by us as a filter.. Assumptions: Book''s ''gaps through the trigger'' read as the open being
-  beyond the trigger level.'
+notes: 'R104 (227 tests, BH across all). gap-skip filter on the daily stop-entry hosts Our nearest test: R102: a 0.5-1% NIFTY
+  gap fills by the close less than half the time (NIFTY 42%); SWING_DEEP and LV-05 found swing profit is made overnight, which
+  this filter discards. Not tested by us as a filter.. Assumptions: Book''s ''gaps through the trigger'' read as the open
+  being beyond the trigger level.'

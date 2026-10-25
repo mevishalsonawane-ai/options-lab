@@ -21,7 +21,7 @@ model_or_rule: 'Outside bar closing in its top 20% (bottom 20%); buy stop above 
   bars. | stop: The outside bar''s low (high). | exit: Nearest swing; else square-off. | filters: None.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-11; trade: buy 1-ITM CE / PE'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'IDX (index spot, bought option), variant 15m: design 1221 trades, win 45%, net -Rs 53,374, folds -Rs 77,720, Rs
     834, Rs 23,512; p 1.000, BH q 1.000; holdout 185 trades, win 45%, net Rs 4,876. R104 verdict: fail.'
@@ -29,6 +29,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: Not tested by us as a rule; R87 marubozu momentum is small, below option cost.. Assumptions:
-  ''Near its top'' = top 20% (ours).'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: Not tested by us as a rule; R87 marubozu momentum is small, below
+  option cost.. Assumptions: ''Near its top'' = top 20% (ours).'

@@ -32,7 +32,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: not tested by us as an entry; R87B: after a strong candle against you price tends to
-  come back (exits on opposite engulfing hurt). Assumptions: Book shows one example with no stop or target; the 3-bar window,
-  stop buffer, 1.5R target and 30-minute time stop are ours.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us as an entry; R87B: after a strong candle against
+  you price tends to come back (exits on opposite engulfing hurt). Assumptions: Book shows one example with no stop or target;
+  the 3-bar window, stop buffer, 1.5R target and 30-minute time stop are ours.'

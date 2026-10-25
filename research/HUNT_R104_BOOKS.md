@@ -125,8 +125,11 @@ Bennett is right: once ATM IV is known, skew adds almost nothing.
   price and were dropped. Engine speed-ups changed no rule.
 - After the holdout read, only bookkeeping changed: the entry ids of N1-N6 were lower-cased for the validator, the book
   cards became re-run safe, and a test fixture was given its expiry day (the walker's expiry guard had made it return
-  nothing). No rule, number or verdict changed. The rebuilt knowledge pack (`android/app/src/main/assets/knowledge/`)
-  is the only file outside `research/` and is generated; it is about 2 MB, as it already was before R104.
+  nothing); tested entries lost their "proposed" titles, re-runs no longer repeat the notes, `variants_tried` counts
+  every variant; the pack puts an entry's result before a long hypothesis (it was being cut off); and two ira-core
+  knowledge tests that expected 100+ unrun rules now expect exactly the log's proposed entries. No rule, number or
+  verdict changed. The rebuilt knowledge pack (`android/app/src/main/assets/knowledge/`)
+  and that test file are the only files outside `research/`; the pack is generated; it is about 2 MB, as it already was before R104.
 - The MCX intraday sample is short (Amendment 0), so most MCXI tests had 15-100 trades.
 - Index volume rules (Wyckoff 01 / 03, Porwal 10 / 11) could not be tested: the index has no volume and index-futures
   minutes exist only from 29 Jul 2026 (57 sessions).

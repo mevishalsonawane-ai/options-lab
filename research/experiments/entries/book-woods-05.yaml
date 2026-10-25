@@ -26,7 +26,7 @@ model_or_rule: 'Bullish: today opens below yesterday''s low (gap down), closes i
   (index futures or MCX future volume).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-05; trade: buy ATM CE/PE next week, or the future'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 6
 results:
   summary: 'DLY (index daily, futures proxy), variant h1: design 36 trades, win 36%, net -Rs 121,797, folds -Rs 29,450, -Rs
     55,175, -Rs 37,172; p 1.000, BH q 1.000; holdout 18 trades, win 22%, net -Rs 155,711. R104 verdict: fail. | MCXD (MCX
@@ -36,9 +36,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). volume = the near future''s daily volume (index futures daily volume 2012+) R104
-  (227 tests, BH across all). volume = the near future''s daily volume (index futures daily volume 2012+) R104 (227 tests,
-  BH across all). volume = the near future''s daily volume (index futures daily volume 2012+) R104 (227 tests, BH across all).
-  volume = the near future''s daily volume (index futures daily volume 2012+) Our nearest test: Not tested by us.. Assumptions:
-  ''Gap remains unfilled'' read as today''s high below yesterday''s close (bullish case); ''near its top'' = top 25% of range;
-  volume on the near future.'
+notes: 'R104 (227 tests, BH across all). volume = the near future''s daily volume (index futures daily volume 2012+) Our nearest
+  test: Not tested by us.. Assumptions: ''Gap remains unfilled'' read as today''s high below yesterday''s close (bullish case);
+  ''near its top'' = top 25% of range; volume on the near future.'

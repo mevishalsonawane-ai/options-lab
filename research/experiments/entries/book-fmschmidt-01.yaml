@@ -33,9 +33,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R102 2.5: at 5 minutes the next bar follows the previous bar''s sign 48.4% of the time
-  (n 167,082); R88 0 of 8 direction findings held; R87 candle shapes and R71 patterns failed. Not tested in this exact form..
-  Assumptions: The book uses this only as the strategy of simulated ''technical traders'' in an agent-based model and shows
-  it moves prices when those traders are big enough; it never claims a real-market profit. Bar size, stop and session handling
-  are ours.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R102 2.5: at 5 minutes the next bar follows the previous bar''s
+  sign 48.4% of the time (n 167,082); R88 0 of 8 direction findings held; R87 candle shapes and R71 patterns failed. Not tested
+  in this exact form.. Assumptions: The book uses this only as the strategy of simulated ''technical traders'' in an agent-based
+  model and shows it moves prices when those traders are big enough; it never claims a real-market profit. Bar size, stop
+  and session handling are ours.'

@@ -31,7 +31,7 @@ model_or_rule: 'Uptrend line: anchor 1 = the session low so far; anchor 2 = the 
 settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-01; trade: buy 1-ITM CE on a long, 1-ITM PE on a short;
   stop and exit on the underlying as the book states'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'IDX (index spot, bought option), variant 15m: design 955 trades, win 29%, net -Rs 209,106, folds -Rs 57,255, -Rs
     41,003, -Rs 110,849; p 1.000, BH q 1.000; holdout 162 trades, win 37%, net Rs 7,491. R104 verdict: fail.'
@@ -39,8 +39,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: not tested by us; nearest R71 P8 swing structure (HH + HL) lost in the final period (-Rs
-  40,109 on 374 trades) and H25 break-of-structure families were 0 of 18 positive. Assumptions: The book draws lines by eye;
-  ''close to the lows'' made 0.15 x ATR14; entry trigger (break of the last swing high) and the 15:10 square-off are ours;
-  volume confirmation dropped (index spot has no volume; could use futures volume from 29 Jul 2026).'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us; nearest R71 P8 swing structure (HH + HL) lost
+  in the final period (-Rs 40,109 on 374 trades) and H25 break-of-structure families were 0 of 18 positive. Assumptions: The
+  book draws lines by eye; ''close to the lows'' made 0.15 x ATR14; entry trigger (break of the last swing high) and the 15:10
+  square-off are ours; volume confirmation dropped (index spot has no volume; could use futures volume from 29 Jul 2026).'

@@ -28,7 +28,7 @@ model_or_rule: 'Flag as in flag-channel-break. Candle A: first close above the h
   high before C cancels.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-12; trade: buy 1-ITM CE (PE for the mirror)'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 4
 results:
   summary: 'IDX (index spot, bought option), variant 15m: design 20 trades, win 10%, net -Rs 12,862, folds -Rs 4,493, -Rs
     3,143, -Rs 5,226; p 1.000, BH q 1.000; holdout 4 trades, win 25%, net Rs 1,017. R104 verdict: fail. | MCXI (MCX mini future
@@ -38,7 +38,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R71 P8 swing-high break: final -Rs 34,242 on 372; R87B green-green-red cluster held (+0.26
-  ATR, n 182) but its call with a stop under the red candle lost -Rs 21,127 (162). Assumptions: The book implies the stop
-  near the pullback (''a smaller stop''); exact level, waiting window and target are ours.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R71 P8 swing-high break: final -Rs 34,242 on 372; R87B green-green-red
+  cluster held (+0.26 ATR, n 182) but its call with a stop under the red candle lost -Rs 21,127 (162). Assumptions: The book
+  implies the stop near the pullback (''a smaller stop''); exact level, waiting window and target are ours.'

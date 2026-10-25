@@ -38,7 +38,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: not tested by us as a trendline; nearest R71 P8 swing structure (final -Rs 40,109 on
-  374), R90 BOS 0 of 99, R20c and R73 confirmation-wait costs. Assumptions: Chart angle depends on scaling, so it is replaced
-  by a slope band in ATR per bar; the band edges, fractal width, 10-bar span and volume multiple are ours.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us as a trendline; nearest R71 P8 swing structure
+  (final -Rs 40,109 on 374), R90 BOS 0 of 99, R20c and R73 confirmation-wait costs. Assumptions: Chart angle depends on scaling,
+  so it is replaced by a slope band in ATR per bar; the band edges, fractal width, 10-bar span and volume multiple are ours.'

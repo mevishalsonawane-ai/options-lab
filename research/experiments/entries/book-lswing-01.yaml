@@ -49,12 +49,10 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). Force Index on the near future''s daily volume (2012+) R104 (227 tests, BH across
-  all). Force Index on the near future''s daily volume (2012+) R104 (227 tests, BH across all). Force Index on the near future''s
-  daily volume (2012+) R104 (227 tests, BH across all). Force Index on the near future''s daily volume (2012+) Our nearest
-  test: SWING_DEEP: the 3-down-closes pullback above the 200DMA lost on NIFTY and BANKNIFTY futures 2016-2026 (NIFTY fixed
-  10d: 109 trades, -Rs 283,401); SWING.md: no daily rule right in both years for BANKNIFTY option holds; R102: daily momentum
-  reversed in the holdout. Force Index and ADX>30: not tested by us.. Assumptions: The book''s $ amounts are for $12-45 stocks
-  with ATR about 3%: $0.06 -> 0.07 ATR, $0.50 gap -> 0.6 ATR, 4% -> 1.3 ATR, 7% -> 2.3 ATR (the literal % would almost never
-  be hit on NIFTY, daily sd 1.316%). Force Index MA type not stated: simple. The short scan in Ch. 10 repeats the long Force
-  condition; Ch. 8.8''s mirror is used. ADX period 20 as the scan says (Wilder smoothing). 2 lots so ''half'' exists.'
+notes: 'R104 (227 tests, BH across all). Force Index on the near future''s daily volume (2012+) Our nearest test: SWING_DEEP:
+  the 3-down-closes pullback above the 200DMA lost on NIFTY and BANKNIFTY futures 2016-2026 (NIFTY fixed 10d: 109 trades,
+  -Rs 283,401); SWING.md: no daily rule right in both years for BANKNIFTY option holds; R102: daily momentum reversed in the
+  holdout. Force Index and ADX>30: not tested by us.. Assumptions: The book''s $ amounts are for $12-45 stocks with ATR about
+  3%: $0.06 -> 0.07 ATR, $0.50 gap -> 0.6 ATR, 4% -> 1.3 ATR, 7% -> 2.3 ATR (the literal % would almost never be hit on NIFTY,
+  daily sd 1.316%). Force Index MA type not stated: simple. The short scan in Ch. 10 repeats the long Force condition; Ch.
+  8.8''s mirror is used. ADX period 20 as the scan says (Wilder smoothing). 2 lots so ''half'' exists.'

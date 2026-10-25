@@ -28,7 +28,7 @@ model_or_rule: 'Squeeze = Bollinger band width (upper-lower)/middle is in its lo
   | filters: Squeeze percentile as above.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-07; trade: Buy the 1-ITM CE/PE; stop on the underlying.'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 4
 results:
   summary: 'IDX (index spot, bought option), variant 60m: design 189 trades, win 49%, net -Rs 30,443, folds -Rs 6,543, Rs
     4,214, -Rs 28,114; p 1.000, BH q 1.000; holdout 39 trades, win 44%, net -Rs 24,943. R104 verdict: fail. | MCXI (MCX mini
@@ -38,10 +38,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) R104
-  (227 tests, BH across all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) R104 (227 tests,
-  BH across all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) R104 (227 tests, BH across
-  all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) Our nearest test: HUNT_R71 P3 squeeze
-  release (band-close trigger): -Rs 41,281 on 305 trades, 67% overlap with Donchian; OBUY_FINAL MR-02 Bollinger alert -90,790.
-  Assumptions: The book''s absolute width (0.0100 on EURUSD) is replaced by a width percentile. ''A full candle above'' read
-  as open and close above the middle line.'
+notes: 'R104 (227 tests, BH across all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) Our
+  nearest test: HUNT_R71 P3 squeeze release (band-close trigger): -Rs 41,281 on 305 trades, 67% overlap with Donchian; OBUY_FINAL
+  MR-02 Bollinger alert -90,790. Assumptions: The book''s absolute width (0.0100 on EURUSD) is replaced by a width percentile.
+  ''A full candle above'' read as open and close above the middle line.'

@@ -22,7 +22,7 @@ model_or_rule: 'Bar 1 bearish with body >= 60% of range; bar 2 bullish with body
   7: only with the market bias (EMA 20 slope) as a variant.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-07; trade: buy 1-ITM CE / PE'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 4
 results:
   summary: 'IDX (index spot, bought option), variant 15m_bias: design 469 trades, win 50%, net -Rs 61,716, folds -Rs 32,206,
     -Rs 14,905, -Rs 14,605; p 1.000, BH q 1.000; holdout 74 trades, win 62%, net Rs 1,169. R104 verdict: fail.'
@@ -30,6 +30,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R87 engulfing/outside-type cells: none held at 5m/15m.. Assumptions: ''Strong'' = body
-  >= 60% of range (ours).'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R87 engulfing/outside-type cells: none held at 5m/15m.. Assumptions:
+  ''Strong'' = body >= 60% of range (ours).'

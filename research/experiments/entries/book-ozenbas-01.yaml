@@ -30,7 +30,7 @@ model_or_rule: 'Long when the daily close crosses from below to above its 65-day
 settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-01; trade: Trade the near-month future, or buy the nearest-monthly
   ATM CE on a long signal / ATM PE on a short, rolled 5 sessions before expiry; stops on the underlying.'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 2
+variants_tried: 4
 results:
   summary: 'DLY (index daily, futures proxy), variant ls: design 259 trades, win 25%, net Rs 750,943, folds -Rs 151,077, Rs
     249,146, Rs 652,875; p 0.099, BH q 1.000; holdout 146 trades, win 27%, net -Rs 239,991. R104 verdict: fail. | MCXD (MCX
@@ -40,9 +40,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: Not tested by us on daily index or MCX bars. Intraday EMA crosses lost (OBUY_FINAL TI-03
-  EMA cross, -Rs 369,856 over 2022-2026, 96 variants; R29 ribbons 0 pass). Crypto daily SMA/Donchian trend (RC1) made +24.4%
-  a year after tax vs +58.8% buy and hold.. Assumptions: Simple (not exponential) average; signal on the close, fill at next
-  open; 2 x ATR stop and the option roll are ours. The book gives the crossover only as an example of technical analysis and
-  neither supports nor denies it.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: Not tested by us on daily index or MCX bars. Intraday EMA crosses
+  lost (OBUY_FINAL TI-03 EMA cross, -Rs 369,856 over 2022-2026, 96 variants; R29 ribbons 0 pass). Crypto daily SMA/Donchian
+  trend (RC1) made +24.4% a year after tax vs +58.8% buy and hold.. Assumptions: Simple (not exponential) average; signal
+  on the close, fill at next open; 2 x ATR stop and the option roll are ours. The book gives the crossover only as an example
+  of technical analysis and neither supports nor denies it.'

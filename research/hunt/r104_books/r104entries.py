@@ -89,15 +89,12 @@ def update_entries(final):
             e["doc"] = DOC
             e["prereg"] = PREREG
             e["data_version"] = "Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)"
-            e["period"] = {r["market"]: dict(zip(("design", "holdout"), (str(K.PERIODS[r["market"]]["design"]),
-                                                                          str(K.PERIODS[r["market"]]["holdout"]))))
-                           for r in rows}
-            e["period"]["design"] = "; ".join(f"{r['market']} {K.PERIODS[r['market']]['design'][0]} - "
+            design = "; ".join(f"{r['market']} {K.PERIODS[r['market']]['design'][0]} - "
                                               f"{K.PERIODS[r['market']]['design'][1]}" for r in rows)
-            e["period"] = {"design": e["period"]["design"],
+            e["period"] = {"design": design,
                            "holdout": "; ".join(f"{r['market']} {K.PERIODS[r['market']]['holdout'][0]} - "
                                                 f"{K.PERIODS[r['market']]['holdout'][1]} (read once)" for r in rows)}
-            e["variants_tried"] = int(sum(len(_variants(r)) for r in rows))
+            e["variants_tried"] = int(sum(_n_variants(r) for r in rows))
             e["results"] = dict(summary=" | ".join(line(r) for r in rows),
                                 costs="dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills "
                                       "and dated charges; futures proxies dated futures charges, half-spreads, carry; "
@@ -106,8 +103,8 @@ def update_entries(final):
             # the books' write-up titled each rule "(..., book rule, proposed)"; once run it is a tested rule
             e["title"] = str(e.get("title", "")).replace("book rule, proposed)", "book rule, tested in R104)")
             e["verdict"] = "paper-only" if any(r["final_pass"] for r in rows) else "rejected"
-            e["notes"] = (f"R104 ({n_tests} tests, BH across all). " + (why or "") +
-                          (" " + e.get("notes", "") if e.get("notes") and not rid.startswith("new-") else ""))[:3000]
+            prior = "" if rid.startswith("new-") else _prior_notes(e.get("notes", ""), why)
+            e["notes"] = (f"R104 ({n_tests} tests, BH across all). " + (why or "") + (" " + prior if prior else ""))[:3000]
         elif st == "covered":
             e["verdict"] = "not-a-test"
             e["title"] = str(e.get("title", "")).replace("book rule, proposed)", "book rule, covered by an earlier study)")
@@ -125,8 +122,28 @@ def update_entries(final):
         p.write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
 
 
-def _variants(r):
-    return [r.get("variant")] if r["market"] in ("ARM", "MM") else [r.get("variant")] * 1
+def _prior_notes(notes, why):
+    """The entry's notes from before R104: re-runs strip the "R104 (...)" text an earlier run put in front."""
+    notes = str(notes or "")
+    head = re.compile(r"^R104 \(\d+ tests, BH across all\)\. " + re.escape(why or "") + r"\s*")
+    while head.match(notes):
+        notes = head.sub("", notes, count=1)
+    return notes.strip()
+
+
+_DESIGN = None
+
+
+def _n_variants(r):
+    """Variants tried for one rule-by-market test, from the design results (walk-forward picked among them)."""
+    global _DESIGN
+    if _DESIGN is None:
+        _DESIGN = {}
+        for f in sorted(K.RESULTS.glob("design_*.json")):
+            _DESIGN.update(json.loads(f.read_text()))
+    d = _DESIGN.get(f"{r['rule']}|{r['market']}") or {}
+    v = d.get("variants")
+    return max(1, len(v)) if isinstance(v, (dict, list)) else 1
 
 
 def book_lines(final):

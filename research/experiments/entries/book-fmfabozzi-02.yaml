@@ -26,7 +26,7 @@ model_or_rule: 'Long when the close rises above (1 + b) x SMA(200) of daily clos
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmfabozzi-02; trade: buy the 1-ITM CE (long) or PE (short), nearest
   monthly; futures mirror'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 4
 results:
   summary: 'DLY (index daily, futures proxy), variant b1: design 119 trades, win 15%, net Rs 2,592, folds -Rs 210,131, -Rs
     14,771, Rs 227,494; p 0.291, BH q 1.000; holdout 31 trades, win 19%, net -Rs 535,781. R104 verdict: fail.'
@@ -34,9 +34,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). futures proxy instead of the bought option R104 (227 tests, BH across all). futures
-  proxy instead of the bought option R104 (227 tests, BH across all). futures proxy instead of the bought option R104 (227
-  tests, BH across all). futures proxy instead of the bought option Our nearest test: R102 daily momentum reversed in the
-  holdout; swing studies of multi-day trend holds sat inside the coin-flip band. The 200-day band itself is not tested by
-  us.. Assumptions: The book only says buy above some percentage of a long average such as 200 days; band values and expiry
-  handling are ours. Few signals a year, so the sample is small.'
+notes: 'R104 (227 tests, BH across all). futures proxy instead of the bought option Our nearest test: R102 daily momentum
+  reversed in the holdout; swing studies of multi-day trend holds sat inside the coin-flip band. The 200-day band itself is
+  not tested by us.. Assumptions: The book only says buy above some percentage of a long average such as 200 days; band values
+  and expiry handling are ours. Few signals a year, so the sample is small.'

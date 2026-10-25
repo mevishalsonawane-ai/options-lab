@@ -24,7 +24,7 @@ model_or_rule: 'no new entry of its own; on a rising-window day (open > yesterda
 settings: 'research/books/TESTABLE_RULES.md, rule book-carli-04; trade: applied to Carli''s own divergence entries (the book''s
   intent); optionally as a shadow skip rule on the running arms (risk-lowering only)'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 1
+variants_tried: 2
 results:
   summary: 'ARM (the arm''s index signal (overlay / filter)), variant window: design 7928 trades, win 45% (B0 46%), net Rs
     256,280 vs B0 Rs 774,750 (delta -Rs 518,470), quarters -Rs 6,519, -Rs 181,194, -Rs 16,476, -Rs 231,287; p 1.000, BH q
@@ -33,8 +33,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). gap-direction skip filter R104 (227 tests, BH across all). gap-direction skip filter
-  R104 (227 tests, BH across all). gap-direction skip filter R104 (227 tests, BH across all). gap-direction skip filter Our
-  nearest test: not tested by us in this form; R87 found gap-day context did not make any candle shape predictive (0 of 4,049
-  shape x context cells). Assumptions: The book gives the advice for its own trades without a time limit; we apply it to the
-  gap day only.'
+notes: 'R104 (227 tests, BH across all). gap-direction skip filter Our nearest test: not tested by us in this form; R87 found
+  gap-day context did not make any candle shape predictive (0 of 4,049 shape x context cells). Assumptions: The book gives
+  the advice for its own trades without a time limit; we apply it to the gap day only.'

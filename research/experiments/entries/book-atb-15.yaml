@@ -31,7 +31,7 @@ model_or_rule: 'Falling wedge: >= 2 falling swing highs and >= 2 falling swing l
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-15; trade: buy 1-ITM CE on a falling-wedge break, 1-ITM PE on a
   rising-wedge break; CRYPTO: plus step profit lock'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 3
+variants_tried: 6
 results:
   summary: 'IDX (index spot, bought option), variant rev: design 477 trades, win 39%, net -Rs 95,017, folds -Rs 27,227, -Rs
     50,913, -Rs 16,878; p 1.000, BH q 1.000; holdout 74 trades, win 38%, net -Rs 37,705. R104 verdict: fail. | MCXI (MCX mini
@@ -43,5 +43,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: not tested by us. Assumptions: Wedge geometry and target from the drawings.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us. Assumptions: Wedge geometry and target from
+  the drawings.'

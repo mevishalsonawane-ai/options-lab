@@ -37,9 +37,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). TWAP proxy; volume test dropped (labelled) R104 (227 tests, BH across all). TWAP
-  proxy; volume test dropped (labelled) R104 (227 tests, BH across all). TWAP proxy; volume test dropped (labelled) R104 (227
-  tests, BH across all). TWAP proxy; volume test dropped (labelled) Our nearest test: not tested by us; nearest R87B pullback
-  continuation and R102 gap facts (a 0.5-1% NIFTY gap fills by the close 42% of the time). Assumptions: The book''s Angel
-  is a low-float US stock gapping on news with pre-market levels; the index has no comparable pre-market, so the previous
-  close stands in for the pre-market low and every threshold is ours.'
+notes: 'R104 (227 tests, BH across all). TWAP proxy; volume test dropped (labelled) Our nearest test: not tested by us; nearest
+  R87B pullback continuation and R102 gap facts (a 0.5-1% NIFTY gap fills by the close 42% of the time). Assumptions: The
+  book''s Angel is a low-float US stock gapping on news with pre-market levels; the index has no comparable pre-market, so
+  the previous close stands in for the pre-market low and every threshold is ours.'

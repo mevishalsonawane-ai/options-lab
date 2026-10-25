@@ -33,10 +33,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R84 cutting correlated Breadth positions lowered the worst day 32-77% but beat no random
-  subset (best p 0.13); R101 sizing by breadth earned what any extra lot earns (p 0.475); R72 Breadth Donchian vs Donchian
-  daily correlation 0.80; H15 Kelly fractions unstable across windows.. Assumptions: The book optimises share weights from
-  returns; mapping ''assets'' to our arms'' daily P&L is our adaptation. Window 60, monthly refit, 50% cap and 10-point threshold
-  are our choices (the book shows 50-80 day windows, a 25% cap example and no numeric threshold). Downside-risk and worst-day
-  variants (Ch. 22) are pre-registered alongside.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R84 cutting correlated Breadth positions lowered the worst day
+  32-77% but beat no random subset (best p 0.13); R101 sizing by breadth earned what any extra lot earns (p 0.475); R72 Breadth
+  Donchian vs Donchian daily correlation 0.80; H15 Kelly fractions unstable across windows.. Assumptions: The book optimises
+  share weights from returns; mapping ''assets'' to our arms'' daily P&L is our adaptation. Window 60, monthly refit, 50%
+  cap and 10-point threshold are our choices (the book shows 50-80 day windows, a 25% cap example and no numeric threshold).
+  Downside-risk and worst-day variants (Ch. 22) are pre-registered alongside.'

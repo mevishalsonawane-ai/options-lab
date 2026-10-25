@@ -40,10 +40,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: H6 (intraday divergence of NIFTY vs BANKNIFTY with bought options): all 24 variants lost;
-  the 60-minute spread moves about 13 bps. R72 C2 laggard catch-up failed. R102: daily correlation 0.877, beta 1.157 (says
-  nothing about cointegration). The daily futures pair with a CADF gate: not tested by us.. Assumptions: Chan uses price levels
-  and a fixed training window; logs and a rolling window keep the hedge point-in-time. Gates (5% CADF, half-life 3-30) are
-  our choice from his text. Margin: two futures legs need about Rs 3-4 lakh, above Boss''s Rs 1 lakh; a research question,
-  not an arm.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: H6 (intraday divergence of NIFTY vs BANKNIFTY with bought options):
+  all 24 variants lost; the 60-minute spread moves about 13 bps. R72 C2 laggard catch-up failed. R102: daily correlation 0.877,
+  beta 1.157 (says nothing about cointegration). The daily futures pair with a CADF gate: not tested by us.. Assumptions:
+  Chan uses price levels and a fixed training window; logs and a rolling window keep the hedge point-in-time. Gates (5% CADF,
+  half-life 3-30) are our choice from his text. Margin: two futures legs need about Rs 3-4 lakh, above Boss''s Rs 1 lakh;
+  a research question, not an arm.'

@@ -33,7 +33,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: SWING_DEEP: 3-down-closes pullback above 200DMA lost on both index futures; SWING.md
-  RSI(2) pullback in trend inconsistent (5-16 trades a year).. Assumptions: Isolates the book''s simplest trend+pullback definition
-  so the Force/ADX filters can be judged as add-ons (pre-register as a pair).'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: SWING_DEEP: 3-down-closes pullback above 200DMA lost on both index
+  futures; SWING.md RSI(2) pullback in trend inconsistent (5-16 trades a year).. Assumptions: Isolates the book''s simplest
+  trend+pullback definition so the Force/ADX filters can be judged as add-ons (pre-register as a pair).'

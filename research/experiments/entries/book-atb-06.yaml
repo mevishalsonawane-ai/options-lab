@@ -38,7 +38,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R22: break-and-retest of the morning range no better than the break (retest rule -20,547
-  design / -6,095 holdout); H35 retest-then-go on levels: 408 variants all lose after costs; trendlines themselves never tested.
-  Assumptions: Touch tolerance, retest window and stop are ours; the book gives no stop or target for this setup.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R22: break-and-retest of the morning range no better than the
+  break (retest rule -20,547 design / -6,095 holdout); H35 retest-then-go on levels: 408 variants all lose after costs; trendlines
+  themselves never tested. Assumptions: Touch tolerance, retest window and stop are ours; the book gives no stop or target
+  for this setup.'

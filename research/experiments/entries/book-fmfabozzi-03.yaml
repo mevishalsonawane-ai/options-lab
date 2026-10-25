@@ -38,10 +38,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). two bought options, intraday R104 (227 tests, BH across all). two bought options,
-  intraday R104 (227 tests, BH across all). two bought options, intraday R104 (227 tests, BH across all). two bought options,
-  intraday Our nearest test: R72: C2 laggard catch-up lost (-Rs 1,00,746 final period) and C6 SMT divergence failed; R102
-  correlation 0.877, beta 1.157 over 5,086 days, so the spread is mostly BANKNIFTY''s extra beta. The book warns cointegration
-  is unstable and often spurious.. Assumptions: The book gives the method (pairs beyond a threshold back to the mean, formalised
-  by cointegration) but no thresholds, windows or instruments; all numbers are ours. Long options on both legs pay two thetas;
-  the futures mirror isolates the signal. Correct across every variant (BH).'
+notes: 'R104 (227 tests, BH across all). two bought options, intraday Our nearest test: R72: C2 laggard catch-up lost (-Rs
+  1,00,746 final period) and C6 SMT divergence failed; R102 correlation 0.877, beta 1.157 over 5,086 days, so the spread is
+  mostly BANKNIFTY''s extra beta. The book warns cointegration is unstable and often spurious.. Assumptions: The book gives
+  the method (pairs beyond a threshold back to the mean, formalised by cointegration) but no thresholds, windows or instruments;
+  all numbers are ours. Long options on both legs pay two thetas; the futures mirror isolates the signal. Correct across every
+  variant (BH).'

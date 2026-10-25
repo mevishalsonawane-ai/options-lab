@@ -38,9 +38,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R103: the naked 09:20 short straddle held to 15:10 made +Rs 64k on NIFTY (1,272 days,
-  62% win) with worst day -Rs 28,876; defined-risk versions 0 of 24. R88: options priced rich vs recent movement predict a
-  0.85-0.9x smaller next candle. An IV/realised filter was not tested by us.. Assumptions: The book reports that implied-minus-historical
-  reflects hedging cost and that historical-volatility pricing is biased; it gives no trade. The ratio, quintile, stop and
-  filters are ours. This is a filter on R103''s naked 09:20 straddle, not a new structure.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R103: the naked 09:20 short straddle held to 15:10 made +Rs 64k
+  on NIFTY (1,272 days, 62% win) with worst day -Rs 28,876; defined-risk versions 0 of 24. R88: options priced rich vs recent
+  movement predict a 0.85-0.9x smaller next candle. An IV/realised filter was not tested by us.. Assumptions: The book reports
+  that implied-minus-historical reflects hedging cost and that historical-volatility pricing is biased; it gives no trade.
+  The ratio, quintile, stop and filters are ours. This is a filter on R103''s naked 09:20 straddle, not a new structure.'

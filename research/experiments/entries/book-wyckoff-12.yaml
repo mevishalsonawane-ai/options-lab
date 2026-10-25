@@ -31,8 +31,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). late-day tightening overlay R104 (227 tests, BH across all). late-day tightening
-  overlay R104 (227 tests, BH across all). late-day tightening overlay R104 (227 tests, BH across all). late-day tightening
-  overlay Our nearest test: locks on Liquidity 0 of 12 (R19) and 0 of 15 (R100); late-day squeeze alone not tested by us.
-  Assumptions: Book''s ''within a fraction of the extreme'' made 0.25x of a short-window ATR; times shifted to our 15:15 /
-  15:05 square-offs'
+notes: 'R104 (227 tests, BH across all). late-day tightening overlay Our nearest test: locks on Liquidity 0 of 12 (R19) and
+  0 of 15 (R100); late-day squeeze alone not tested by us. Assumptions: Book''s ''within a fraction of the extreme'' made
+  0.25x of a short-window ATR; times shifted to our 15:15 / 15:05 square-offs'

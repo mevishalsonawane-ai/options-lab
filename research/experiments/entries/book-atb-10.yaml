@@ -32,7 +32,7 @@ model_or_rule: 'Pole: a move of >= 2 ATR within 5 bars. Flag: 4-15 bars drifting
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-10; trade: buy 1-ITM PE on a bearish flag, 1-ITM CE on a bullish
   flag; CRYPTO: same stop plus the step profit lock'
 prereg: research/hunt/r104_books/PREREG.md
-variants_tried: 3
+variants_tried: 6
 results:
   summary: 'IDX (index spot, bought option), variant 15m: design 60 trades, win 32%, net -Rs 6,790, folds -Rs 5,174, Rs 16,650,
     -Rs 18,265; p 1.000, BH q 1.000; holdout 8 trades, win 12%, net -Rs 10,658. R104 verdict: fail. | MCXI (MCX mini future
@@ -44,6 +44,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
-  BH across all).  Our nearest test: R71 P4 flag: only 32 final trades (-Rs 442 with L25), design -Rs 27,378: too rare to
-  judge. Assumptions: Pole size, flag length, parallel tolerance, stop and target are ours.'
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R71 P4 flag: only 32 final trades (-Rs 442 with L25), design -Rs
+  27,378: too rare to judge. Assumptions: Pole size, flag length, parallel tolerance, stop and target are ours.'

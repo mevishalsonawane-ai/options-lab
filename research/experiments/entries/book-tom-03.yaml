@@ -38,9 +38,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). daily 3-bar swing bias filter R104 (227 tests, BH across all). daily 3-bar swing
-  bias filter R104 (227 tests, BH across all). daily 3-bar swing bias filter R104 (227 tests, BH across all). daily 3-bar
-  swing bias filter Our nearest test: not tested by us at 3 bars; R101 filters on the Donchian arms 0 of 20 (filters that
-  raised the win rate lowered the net); R89 daily+15m trend filter did not cut false breaks. Assumptions: Book says ''trade
-  below the 3-bar low'' turns the trend; we use intraday trade-through of the level (not a close). Book text says both ''last
-  3 bars'' and ''last 4 trading days''; we take the previous 3 completed bars.'
+notes: 'R104 (227 tests, BH across all). daily 3-bar swing bias filter Our nearest test: not tested by us at 3 bars; R101
+  filters on the Donchian arms 0 of 20 (filters that raised the win rate lowered the net); R89 daily+15m trend filter did
+  not cut false breaks. Assumptions: Book says ''trade below the 3-bar low'' turns the trend; we use intraday trade-through
+  of the level (not a close). Book text says both ''last 3 bars'' and ''last 4 trading days''; we take the previous 3 completed
+  bars.'

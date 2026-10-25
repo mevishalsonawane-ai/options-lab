@@ -45,12 +45,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). IV of each strike from its own minute price (BS on the spot plus carry) R104 (227
-  tests, BH across all). IV of each strike from its own minute price (BS on the spot plus carry) R104 (227 tests, BH across
-  all). IV of each strike from its own minute price (BS on the spot plus carry) R104 (227 tests, BH across all). IV of each
-  strike from its own minute price (BS on the spot plus carry) Our nearest test: not tested by us; R102 measured the skew
-  as persistent (91% / 90% of days); R103 found apparent wing mispricing in the lake was mostly stale prices; IV1 found skew
-  alone useless as a direction signal. Assumptions: The book says only ''buy the lowest IV, sell the highest, hope they converge''.
-  Comparing raw IVs across strikes would just trade the permanent skew (puts dearer on 91% of NIFTY days, R102), so we read
-  ''converge'' as relative to the normal smile shape (residual vs a 20-session curve). The 3-point entry, 1-point exit, 3-session
-  limit, Rs 3,000 stop and whole-lot hedge are our choices.'
+notes: 'R104 (227 tests, BH across all). IV of each strike from its own minute price (BS on the spot plus carry) Our nearest
+  test: not tested by us; R102 measured the skew as persistent (91% / 90% of days); R103 found apparent wing mispricing in
+  the lake was mostly stale prices; IV1 found skew alone useless as a direction signal. Assumptions: The book says only ''buy
+  the lowest IV, sell the highest, hope they converge''. Comparing raw IVs across strikes would just trade the permanent skew
+  (puts dearer on 91% of NIFTY days, R102), so we read ''converge'' as relative to the normal smile shape (residual vs a 20-session
+  curve). The 3-point entry, 1-point exit, 3-session limit, Rs 3,000 stop and whole-lot hedge are our choices.'
