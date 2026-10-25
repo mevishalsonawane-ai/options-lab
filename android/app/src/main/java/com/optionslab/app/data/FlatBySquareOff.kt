@@ -34,6 +34,9 @@ object FlatBySquareOff {
      * Which arm holds [symbol] live (memory only): the live mirror's arms ([ArmLive]), ORB's own live trades, Pine's.
      * Replaceable in tests. Null: not an arm's, so it is left alone.
      */
+    /** The owner look's answer: [name] null means "not an arm's position" (Boss's own), told apart from a look that never answered. */
+    private class Owner(val name: String?)
+
     @Volatile internal var liveOwner: suspend (String) -> String? = { sym ->
         ArmLive.ownerOf(sym)
             ?: runCatching { OrbArms.liveOpen().firstOrNull { it.second.kite == sym || it.second.symbol == sym }?.first }.getOrNull()
@@ -110,8 +113,12 @@ object FlatBySquareOff {
             val positions = Broker.positionBook()
             val book = positions.net.filter { it.qty != 0 && FlatBy.intraday(it.product) }.sortedBy { if (it.qty < 0) 0 else 1 }
             for (p in book) {
-                // (25 Oct review: the owner's look may wait on the arms' lock; two seconds at most, else the position is looked at next pass.)
-                val owner = runCatching { kotlinx.coroutines.withTimeoutOrNull(2_000) { liveOwner(p.symbol) } }.getOrNull() ?: continue
+                // (25 Oct review: the owner's look may wait on the arms' lock; two seconds at most, else the position is looked at next
+                // pass. A look that timed out or failed is NOT "not an arm's": the pass counts as unread, so the segment is not marked
+                // done for the day and the next pass looks again - merge review, 25 Oct: it was taken as Boss's own and the day closed.)
+                val look = runCatching { kotlinx.coroutines.withTimeoutOrNull(2_000) { Owner(liveOwner(p.symbol)) } }.getOrNull()
+                if (look == null) { unread = true; continue }
+                val owner = look.name ?: continue
                 val i = ins[p.symbol]
                 // An underlying the app's list does not know: judged by the exchange alone (MCX, else an NSE option is an index's
                 // only when its name says so).

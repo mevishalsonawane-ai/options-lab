@@ -173,6 +173,20 @@ class FlatBySquareOffTest : RobolectricTest() {
         assertEquals(listOf(Triple(ce, "SELL", "30")), sent())
     }
 
+    @Test fun anOwnerLookThatTimesOutIsTriedAgainAndTheDayIsNotDone() {
+        // 25 Oct (merge review): the owner's look waits on the arms' lock (an ORB tick sending its own exit). Past its two seconds
+        // the position is NOT taken for Boss's own: nothing is sent, the segment is not marked done, and the next pass closes it.
+        var slow = true
+        FlatBySquareOff.liveOwner = { if (slow) { kotlinx.coroutines.delay(5_000); "ORB" } else "ORB" }
+        kite.position(ce, 30, 200.0, product = "MIS")
+        at(15, 25); pass()
+        assertTrue(kite.placed.isEmpty())
+        assertFalse(FlatBySquareOff.diagLine().contains("done today"))
+        slow = false
+        at(15, 26); pass()
+        assertEquals(listOf(Triple(ce, "SELL", "30")), sent())
+    }
+
     @Test fun aShortIsBoughtBackAndAWorkingExitIsNeverDoubled() {
         FlatBySquareOff.liveOwner = { "arm" }
         kite.position(ce, -30, 200.0, product = "MIS")
