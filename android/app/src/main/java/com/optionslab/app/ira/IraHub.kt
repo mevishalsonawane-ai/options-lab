@@ -3438,17 +3438,16 @@ object IraHub {
             }
             return true
         }
-        // 15 Oct: "how is channel Sensex Kings doing", "how are the telegram channels doing" ([com.optionslab.ira.SignalTalk],
-        // [com.optionslab.app.data.SignalTesterHost.talk]): the Signal tester's scorecards, always "shadow — never trades". The
-        // channel names and their record are Boss's, so never on a locked phone; reads only - nothing is recorded, switched,
-        // bought or sold. (Not in IraGoldAlgo.)
-        val signalAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
-            runCatching { com.optionslab.ira.SignalTalk.asked(q) }.getOrNull() else null
-        if (signalAsk != null) {
+        // 25 Oct: "what did ntfy say", "last ntfy alerts" ([com.optionslab.ira.NtfyTalk]): ntfy alerts' last messages and what was
+        // decided, always "an external message, not a researched or proven strategy". The messages are Boss's, so never on a locked
+        // phone; reads only - nothing is switched, bought or sold. (Not in IraGoldAlgo.)
+        val ntfyAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null &&
+            parsed.command == null && runCatching { com.optionslab.ira.NtfyTalk.asked(q) }.getOrDefault(false)
+        if (ntfyAsk) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
-            if (phoneLocked()) { reply(com.optionslab.ira.SignalTalk.LOCKED); return true }
+            if (phoneLocked()) { reply(com.optionslab.ira.NtfyTalk.LOCKED); return true }
             scope.launch(Dispatchers.IO) {
-                reply(runCatching { com.optionslab.app.data.SignalTesterHost.talk(signalAsk) }.getOrElse { "I could not read the Signal tester just now, Boss." })
+                reply(runCatching { com.optionslab.app.data.NtfyArm.talk() }.getOrElse { "I could not read ntfy alerts just now, Boss." })
             }
             return true
         }

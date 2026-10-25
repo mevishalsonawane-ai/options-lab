@@ -219,21 +219,6 @@
                 android:resource="@xml/export_paths" />
         </provider>
 
-        <!-- The Signal tester (15 Oct 2026; its calls are shadow-scored, and paper-traded only for a chat Boss switches on - never
-             live): share a Telegram message's text to it. Nothing is recorded until Boss picks the chat and taps OK. -->
-        <activity
-            android:name=".data.SignalShareActivity"
-            android:enabled="@bool/signal_tester_enabled"
-            android:exported="true"
-            android:excludeFromRecents="true"
-            android:label="@string/signal_share_label"
-            android:theme="@style/Theme.IraAlgo">
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
-            </intent-filter>
-        </activity>
 
         <!-- Exported only because the system delivers these; it acts on nothing else. -->
         <receiver

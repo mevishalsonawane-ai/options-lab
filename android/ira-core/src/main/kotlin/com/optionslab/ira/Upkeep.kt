@@ -24,9 +24,9 @@ object Upkeep {
      */
     val PRIVATE: List<String> = listOf("jarvis.memory", "kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "g.",
         "sec.", "lock.", "ui.widgetPnl", "w.", "intent.", "relay.", "breaker.",
-        // The Signal tester's Telegram login (15 Oct): Boss's api_id / api_hash and the key of TDLib's encrypted database are
-        // this phone's alone - never in a backup, an upload or a log.
-        "telegram.",
+        // ntfy alerts (25 Oct): the topic (anyone who knows it can post), the access token and the server are this phone's alone -
+        // never in a backup, an upload or a log.
+        "ntfy.",
         // Jarvis: the owner's voice print never leaves the phone; its trades' safety (paper first - the "AI trades go live"
         // switch -, loss limit, risk) and the autopilot are this phone's alone, like the other limits. Its learning (the
         // study, records) is carried.

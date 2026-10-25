@@ -592,8 +592,8 @@ object Tasks {
             // 21 Oct: FT3 (paper, Boss's choice; R98e failed): its exit, and its 5-minute marks 11:00-12:55 on expiry days (only when it needs a pass).
             if (com.optionslab.app.data.Ft3Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FT3) { com.optionslab.app.data.Ft3Arm.tick() } else null,
             if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
-            // 15 Oct: a Telegram chat's calls on paper (Boss's choice, paper only): only when it needs a pass (a trade held, or a call in its window).
-            if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
+            // 25 Oct: ntfy alerts (paper by default): only when it needs a pass (a trade held, or a message waiting to be decided).
+            if (com.optionslab.app.data.NtfyArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.NTFY) { com.optionslab.app.data.NtfyArm.tick() } else null,
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
             // 21 Oct, review: started in its own job ([com.optionslab.app.data.McxNr7Record.kick]); this group never waits for its reads.
@@ -861,9 +861,8 @@ object Tasks {
         // The Watchlist in SHADOW (15 Oct, Boss: "Both"): research's near misses followed from 09:20, priced with the paper costs; a
         // record and one evening line, never an order or an alert.
         word("Watchlist (shadow)") { com.optionslab.app.data.WatchlistHost.watch() }
-        // The Signal tester in SHADOW (15 Oct): the allow-listed Telegram channels' calls priced from their options' minutes with
-        // the paper costs, each channel scored; never an order. Off (the default), one look at its switch.
-        word("Signal tester (shadow)") { com.optionslab.app.data.SignalTesterHost.watch() }
+        // 25 Oct: ntfy alerts' reader started (on, a topic set, in hours) or stopped - its own background coroutine; never here.
+        if (!com.optionslab.app.BuildConfig.GOLD) word("ntfy reader") { com.optionslab.app.data.NtfyReader.ensure() }
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }
         // Jarvis: a sharp move within minutes - what coincided with it (headlines, VIX, the other indices), timing only.
         word("sharp move") { com.optionslab.app.ira.IraCoach.sharpMoveWatch() }
@@ -933,8 +932,8 @@ object Tasks {
             // 21 Oct: FT3 (paper, Boss's choice; R98e failed): its exit, and its 5-minute marks 11:00-12:55 on expiry days (only when it needs a pass).
             if (com.optionslab.app.data.Ft3Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FT3) { com.optionslab.app.data.Ft3Arm.tick() } else null,
             if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
-            // 15 Oct: a Telegram chat's calls on paper (Boss's choice, paper only): only when it needs a pass (a trade held, or a call in its window).
-            if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.SIGNAL_PAPER) { com.optionslab.app.data.SignalPaperArm.tick() } else null,
+            // 25 Oct: ntfy alerts (paper by default): only when it needs a pass (a trade held, or a message waiting to be decided).
+            if (com.optionslab.app.data.NtfyArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.NTFY) { com.optionslab.app.data.NtfyArm.tick() } else null,
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
         )), armsWait, inOrder = lanes == null)
@@ -1800,7 +1799,7 @@ class WatchService : Service() {
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
-                // 16 Oct: the paper arms that sell from the app (the passed-research arms, the Hero ticket, the Signal tester) count
+                // 16 Oct: the paper arms that sell from the app (the passed-research arms, the Hero ticket, ntfy alerts) count
                 // too, so their stops, targets and time exits are looked at every 15 s even without the stream's minute lane.
                 val holding = holdingNse()
                 nseHeldSeen = holding
@@ -1810,7 +1809,7 @@ class WatchService : Service() {
                 // every guard applies; each bar is still decided once (the arms' own record of the bars decided).
                 val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
                     com.optionslab.app.data.VixDivArm.view.value.armed || com.optionslab.app.data.HeroTicketArm.wantsPass() ||
-                    com.optionslab.app.data.PassedArmsHost.wantsPass() || com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
+                    com.optionslab.app.data.PassedArmsHost.wantsPass() || com.optionslab.app.data.NtfyArm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
                 // While holding, this loop's own wait (the cards' refresh) follows the stop lane's looks ([WatchClock.windowEnd]:
                 // 15 s after the last look started). 22 Oct: the stops themselves are the lane's; nothing here holds them up.
                 val waitEnd = if (holding) com.optionslab.app.data.WatchClock.windowEnd() else next
@@ -1836,7 +1835,7 @@ class WatchService : Service() {
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
                             if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Hero 1000 ticket") { com.optionslab.app.data.HeroTicketArm.tick() } else null,
                             if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Passed-research arms") { com.optionslab.app.data.PassedArmsHost.tick() } else null,
-                            if (com.optionslab.app.data.SignalPaperArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Telegram calls (paper)") { com.optionslab.app.data.SignalPaperArm.tick() } else null,
+                            if (com.optionslab.app.data.NtfyArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ntfy alerts (paper)") { com.optionslab.app.data.NtfyArm.tick() } else null,
                         ), WatchWorkers.ARMS_WAIT_MS, inOrder = false)
                         // Smart scheduling: the minute arms just looked at this minute; the next pass need not look again for it.
                         // (Not the ORB arms: a bar the feed has not finished yet is looked at again on the next minute, as before.)

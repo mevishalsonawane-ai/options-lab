@@ -93,7 +93,7 @@ class ArmLiveTest : RobolectricTest() {
     // ---- entries --------------------------------------------------------------------------------------------------------------
 
     @Test fun everyIntradayArmsLiveEntryBuysItsPaperLotsThenRestsItsStopAtZerodha() {
-        runBlocking { ArmLive.setLive(LiveMirror.TELEGRAM_CALLS, true, pinConfirmed = true) }   // its switch starts off (Boss's own)
+        runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, true, pinConfirmed = true) }   // its switch starts off (Boss's own)
         SecurePrefs.putAll(mapOf("g.trades" to 0, "k.maxOrders" to 500))          // every arm once in one day: no day caps in this test
         // Solo (midday) stays in shadow (Jarvis's Solo, not proven): its own test below.
         val intraday = LiveMirror.ARMS.filter { it.exchange == "NFO" && it.product == "MIS" && it.key != LiveMirror.SOLO_MIDDAY }
@@ -170,7 +170,7 @@ class ArmLiveTest : RobolectricTest() {
         fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/$f"), java.io.File("app/src/main/java/com/optionslab/app/$f")).first { it.isFile }.readText()
         // Every mirrored host does: its entry, and its close or its book for the exits.
         for (f in listOf("data/PassedArmsHost.kt", "data/OrbArms.kt", "data/HeroTicketArm.kt", "data/Ft3Arm.kt", "data/VixDivArm.kt", "data/NightArm.kt",
-                "data/SignalPaperArm.kt", "data/McxPaperArms.kt", "data/ShadowArms.kt", "ira/IraSolo.kt")) {
+                "data/NtfyArm.kt", "data/McxPaperArms.kt", "data/ShadowArms.kt", "ira/IraSolo.kt")) {
             val t = src(f)
             assertTrue("$f enters", t.contains("ArmLive.entered("))
             assertTrue("$f exits", t.contains("ArmLive.closed(") || t.contains("ArmLive.register("))

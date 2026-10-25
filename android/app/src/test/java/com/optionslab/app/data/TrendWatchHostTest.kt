@@ -178,14 +178,14 @@ class TrendWatchHostTest : RobolectricTest() {
     @Test fun everySourceIsWatchedUnderItsOwnName() {
         TrendWatchHost.setOthers(true)
         val labels = listOf(24_300.0 to "Liquidity 15+5 · entry", 24_400.0 to "R52 Open outside value · entry", 24_500.0 to "Solo 2.0 · entry",
-            24_600.0 to "Jarvis solo · entry", 24_700.0 to "Signal tester (paper) · entry")
+            24_600.0 to "Jarvis solo · entry", 24_700.0 to "ntfy alerts (paper) · entry")
         for ((k, l) in labels) buy(k, Right.CE, l)
         val puts = listOf(24_300.0 to "Manual · Jarvis", 24_400.0 to "Manual · Option chart", 24_500.0 to "ORB · entry",
             24_600.0 to "Hero ₹1,000 · entry")
         for ((k, l) in puts) buy(k, Right.PE, l)
         round(LocalTime.of(11, 0))
         val got = TrendWatchHost.view.value.watched.map { it.source }.toSet()
-        assertEquals(setOf(Source.LIQUIDITY, Source.OOV, Source.SOLO2, Source.SOLO, Source.TELEGRAM, Source.JARVIS, Source.MANUAL,
+        assertEquals(setOf(Source.LIQUIDITY, Source.OOV, Source.SOLO2, Source.SOLO, Source.NTFY, Source.JARVIS, Source.MANUAL,
             Source.OTHER_ARM, Source.HERO_TICKET), got)
         // A Hero-labelled leg the Hero arm does not hold is not a tested ticket: never sold, only noted.
         assertTrue(TrendWatchHost.view.value.watched.all { it.act == "NOTE" })

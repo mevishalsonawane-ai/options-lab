@@ -32,8 +32,8 @@ object MemoryPlan {
         // 20 Oct: the Candle agent's reads, explanations and talk (its counts are on disk; it reads again from its next batch).
         // Second, right after the model, even at the mildest level: knowledge only, never part of what an open trade needs.
         CANDLE_AGENT("the Candle agent's reads"),
-        // 15 Oct: the Signal tester's Telegram reader (TDLib, read-only) - started again by its next round once the pressure passes.
-        TELEGRAM("the Telegram reader"),
+        // 25 Oct: ntfy alerts' reader (one connection) - started again by its next round, which catches up by its poll.
+        NTFY("the ntfy reader"),
         KNOWLEDGE_INDEX("the research index"),
         // 15 Oct: Jarvis's concept book (read again by the next concept question or the Market concepts screen).
         CONCEPTS("the concept book"),
@@ -68,7 +68,7 @@ object MemoryPlan {
         level >= BACKGROUND -> Item.entries
         level >= UI_HIDDEN -> listOf(Item.MODEL)
         level >= RUNNING_LOW -> Item.entries
-        level >= RUNNING_MODERATE -> listOf(Item.MODEL, Item.CANDLE_AGENT, Item.TELEGRAM, Item.ANSWER_CACHE, Item.MOVE_SUMMARIES)
+        level >= RUNNING_MODERATE -> listOf(Item.MODEL, Item.CANDLE_AGENT, Item.NTFY, Item.ANSWER_CACHE, Item.MOVE_SUMMARIES)
         else -> emptyList()
     }
 

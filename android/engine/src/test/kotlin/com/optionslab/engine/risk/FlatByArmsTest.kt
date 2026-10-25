@@ -17,7 +17,7 @@ import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.Solo2
 import com.optionslab.engine.orb.SoloMidday
 import com.optionslab.engine.orb.VixDivRules
-import com.optionslab.engine.signals.CallEval
+import com.optionslab.engine.signals.NtfyRules
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlin.test.Test
@@ -47,7 +47,7 @@ class FlatByArmsTest {
             "R52 OOV" to m(OovArm.SQUARE_OFF),
             "Solo 2.0 S3 / S4" to m(Solo2.exits(Solo2.Setup.S3).squareOff),
             "Solo 2.0 S1 and Jarvis Solo (midday)" to m(SoloMidday.EXIT),
-            "Telegram calls on paper" to m(CallEval.SQ),
+            "ntfy alerts on paper" to m(NtfyRules.SQ),
             "the live mirror's own MIS square-off" to m(LiveMirror.SQUARE_OFF),
             "the expiry-day square-off" to NseHours.EXPIRY_SQUARE_OFF,
         )

@@ -58,6 +58,12 @@ private val GROUPS = listOf(
     "Bot" to listOf(
         Drawer("risk", "Bot settings", "Kill switch, daily loss, drawdown, position and order limits"),
     ),
+) + (if (!com.optionslab.app.BuildConfig.GOLD) listOf(
+    // 25 Oct: ntfy alerts (NtfyPage): read your ntfy topic's messages, each once; paper by default. Not in IraGoldAlgo.
+    "Automation" to listOf(
+        Drawer("ntfy", NTFY_TITLE, "Trade messages from your ntfy topic, read once; paper by default"),
+    ),
+) else emptyList()) + listOf(
     "Research" to listOf(
         Drawer("signal", "Signal lab", "UT Bot and LinReg on a harvested day"),
         Drawer("ic", "IC table", "Is the data predictable, net of cost?"),
@@ -113,6 +119,7 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
             "broker" -> BrokerPage(model)
             "alarms" -> AlarmsPage(model)
             "risk" -> RiskPage(model)
+            "ntfy" -> NtfyPage(model)
             "signal" -> SignalPage(model)
             "ic" -> IcPage(model)
             "sizing" -> SizingPage(model)

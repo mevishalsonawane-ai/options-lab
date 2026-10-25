@@ -92,7 +92,8 @@ object LiveMirror {
     const val FT3 = "ft3"
     const val VIX = "vix"
     const val NIGHT = "night"
-    const val TELEGRAM = "telegram"
+    /** 25 Oct: ntfy alerts' paper book (an external message, traded on the index option by the strike rule). */
+    const val NTFY = "ntfy"
     const val MCX = "mcx"
     const val SHADOW = "shadow"
 
@@ -100,8 +101,14 @@ object LiveMirror {
     const val SOLO_MIDDAY = "solo_midday"
     /** The shadow variants Boss re-armed on paper ([ShadowRules]): one live switch for them all. */
     const val SHADOW_PROMOTED = "shadow_promoted"
-    /** A Telegram chat's calls, on paper by Boss's per-chat choice: one live switch for them all. */
-    const val TELEGRAM_CALLS = "telegram_calls"
+    /** ntfy alerts (25 Oct): one live switch, off until Boss turns it on with the PIN. */
+    const val NTFY_ALERTS = "ntfy_alerts"
+
+    /**
+     * 25 Oct: the Telegram calls arm was removed; a live trade it may still hold (its switch started off, and Boss was on paper only)
+     * is kept by ntfy alerts' switch and paper book, so it is still watched and closed - never orphaned.
+     */
+    fun migratedKey(key: String): String = if (key == "telegram_calls") NTFY_ALERTS else key
 
     /** Every arm that trades on paper with no live path of its own, given one here. */
     val ARMS: List<Spec> = listOf(
@@ -122,9 +129,8 @@ object LiveMirror {
         Spec(VixDivRules.SOURCE, VixDivRules.LABEL, VIX, signal = "the index against India VIX", safety = true),
         Spec(NightRules.SOURCE, NightRules.LABEL, NIGHT, product = "NRML", rest = Rest.GTT, signal = "the index's close and the day-end OI build-up",
             safety = true),
-        // Its trigger is the option's own price (CLAUDE.md: labelled, reported apart, on only by Boss): its live switch starts off.
-        Spec(TELEGRAM_CALLS, "Telegram calls", TELEGRAM, signal = "a chat's call, bought when the option trades at its entry (the option's own price: labelled)",
-            defaultOn = false),
+        // 25 Oct: an external message, not a researched rule: its live switch starts off (Boss turns it on with the PIN).
+        Spec(NTFY_ALERTS, "ntfy alerts", NTFY, signal = com.optionslab.engine.signals.NtfyRules.SIGNAL, defaultOn = false),
         Spec(McxEveRules.SOURCE, McxEveRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the NATURALGAS future's evening break"),
         Spec(McxMorningRules.SOURCE, McxMorningRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the SILVERM future's morning"),
         Spec(McxTrendRules.SOURCE, McxTrendRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the MCX future's 12-month trend",

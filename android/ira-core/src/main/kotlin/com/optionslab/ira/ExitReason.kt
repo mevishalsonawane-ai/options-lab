@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter
 /**
  * Why Android ended the app's process, in plain words (16 Oct). Boss's diagnostics showed "the app's process had ended while
  * the watch ran" four times in one session (09:14, 11:13, 12:28, 13:27) with "no crash seen, no ANR": the app's own crash
- * handler sees only Kotlin/Java crashes, never a native crash (the language model, Telegram's library), Android's
+ * handler sees only Kotlin/Java crashes, never a native crash (the language model, a native library), Android's
  * low-memory killer, a stop for excessive background use or a force stop. Android keeps its own record of each ending
  * (ApplicationExitInfo, Android 11+); the app reads it at its next start and the diary says which one it was.
  *
@@ -27,7 +27,7 @@ object ExitReason {
         2 -> "a system signal ended it"
         LOW_MEMORY -> "Android's low-memory killer (the phone was short of memory)"
         CRASH -> "a crash in the app"
-        CRASH_NATIVE -> "a native crash (the language model or Telegram's library)"
+        CRASH_NATIVE -> "a native crash (the language model or a native library)"
         ANR -> "Android closed it as not responding (ANR)"
         7 -> "it failed to start"
         8 -> "a permission was changed"

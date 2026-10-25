@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap
  * The Trend watch (16 Oct 2026, Boss: "check the current trend, and if the trend changes, sell the orders ... for all the
  * arms and orders"; research R63, research/HUNT_R63_TREND_TURN_EXIT.md; the rules and the policy are [TrendWatch] and
  * [TrendTurn]). Every open position and pending entry order of every source - every arm, Solo, Jarvis's orders, the
- * Telegram tester, the MCX arms and Boss's own orders, on paper and (with its switch) on Zerodha - is judged on its
+ * ntfy alerts, the MCX arms and Boss's own orders, on paper and (with its switch) on Zerodha - is judged on its
  * UNDERLYING's completed bars about once a minute:
  *
  *  - the Hero ₹1,000 ticket's paper legs: T3 PASSED, so a turn asks the arm to sell that leg ([sellRequested]: memory only;

@@ -9,7 +9,7 @@ import java.time.LocalDate
  * The hard flat-by (22 Oct 2026, Boss: "a hard flat-by minute per segment"; the rule is the engine's [FlatBy]): every open
  * INTRADAY (MIS) arm position still open at its segment's minute is closed - paper and live, NSE and MCX, hidden arms too -
  * after the arms' own exits have had their chance (ORB 15:10, Hero and FT3 15:05, the passed arms 15:10 / 15:15, Pine and the
- * Telegram calls 15:15, Solo 14:30, the paper book's own 15:15 MIS square-off, the live mirror's 15:15; MCX's evening call
+ * ntfy alerts 15:15, Solo 14:30, the paper book's own 15:15 MIS square-off, the live mirror's 15:15; MCX's evening call
  * 23:15 and the paper book's MIS cut). NSE index options 15:25, stock and fund 15:20, MCX ten minutes before its close.
  * On an expiry day the 15:05 square-off ([ExpirySquareOff]) still comes first.
  *

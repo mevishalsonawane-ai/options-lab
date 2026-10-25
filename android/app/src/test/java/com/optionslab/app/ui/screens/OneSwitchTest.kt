@@ -160,8 +160,8 @@ class OneSwitchTest {
         pump { exists(label) }
         assertTrue("on by default", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.DonchianArm.SOURCE))
         assertFalse("Jarvis's own ideas are not listed", exists("Forge ideas", substring = true))
-        assertTrue(exists("Telegram calls"))
-        assertFalse("an option-price rule starts off", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.LiveMirror.TELEGRAM_CALLS))
+        assertTrue(exists("ntfy alerts"))
+        assertFalse("an external message (ntfy alerts) starts off", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.LiveMirror.NTFY_ALERTS))
         // Every arm's row renders with both switches (Solo (midday) only in Jarvis builds).
         for (spec in com.optionslab.engine.orb.LiveMirror.ARMS) {
             if (spec.key == com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY && !com.optionslab.app.BuildConfig.JARVIS) {

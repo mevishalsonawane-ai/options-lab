@@ -579,18 +579,24 @@ object AutoChange {
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG, if (on) -1 else 1), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
         what = "$label's shadow switch")
 
-    /** The target prefix of a Telegram chat's paper trading in the Signal tester ([Kind.PAPER_ARM_ON]): + the chat's short id. */
-    const val TELEGRAM_PAPER = "paperarm:telegram:"
+    /** ntfy alerts' paper trading switch ([Kind.PAPER_ARM_ON], 25 Oct). */
+    const val NTFY_PAPER = "paperarm:ntfy"
 
     /**
-     * 15 Oct (Boss's explicit choice): paper-trading the calls of the Telegram chat [id] (the Signal tester; its name stays on the
-     * phone, the log carries its short id) switched [on] by Boss - "off → on" on paper, logged as Boss's (kept), undone in one tap
-     * (paper only, no PIN either way). Not proven; never live; it never carries over to live by itself.
+     * 25 Oct: the prefix of the removed Telegram chats' paper switches. Their old timeline entries stay as history; their Undo does
+     * nothing now (the feature is gone).
      */
-    fun telegramPaperOn(id: String): Change = Change(Kind.PAPER_ARM_ON, TELEGRAM_PAPER + id, SWITCHED_OFF, ON,
-        "your choice (15 Oct): paper-trade a Telegram chat's calls (Signal tester chat $id) - not proven, paper only; its trades are " +
-            "kept in their own record beside the chat's honest shadow scorecard",
-        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Telegram chat $id's paper trading")
+    const val REMOVED_CHAT_PAPER = "paperarm:telegram:"
+
+    /**
+     * 25 Oct (Boss: "add a new feature which will read message from ntfy"): ntfy alerts' paper trading switched [on] by Boss - "off →
+     * on" on paper, logged as Boss's (kept), undone in one tap (paper only, no PIN either way). An external message, not a researched
+     * or proven strategy; its live path is separate (its own Trade live switch, the PIN, AI trades go live).
+     */
+    fun ntfyPaperOn(): Change = Change(Kind.PAPER_ARM_ON, NTFY_PAPER, SWITCHED_OFF, ON,
+        "your choice (25 Oct): paper-trade the messages of your ntfy topic - an external message, not a researched or proven strategy; " +
+            "paper only (live needs its own Trade live switch and your PIN)",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "ntfy alerts' paper trading")
 
     /** The target prefix of an arm hidden by Boss's 15 Oct cleanup ([Kind.ARM_HIDE]): "hide:" + its key. */
     const val HIDE = "hide:"

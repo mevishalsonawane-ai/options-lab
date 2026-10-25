@@ -82,7 +82,7 @@ object LiveSelfTest {
         /**
          * Anything open anywhere, read again just before the forced drop: Zerodha's positions and working orders (a fresh read),
          * the paper account, a protection, and every arm's own book (ORB, the Strategy Module, Pine, MCX, night, VIX, Hero,
-         * passed arms, Telegram calls, the ticket, Jarvis's trades). True too when any of it could not be read. Reads only.
+         * passed arms, ntfy alerts, the ticket, Jarvis's trades). True too when any of it could not be read. Reads only.
          */
         suspend fun booksOpen(): Boolean
         /** Memory only, read again at the very moment before the drop (18 Oct, review: something may open during the reads). */

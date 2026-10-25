@@ -388,7 +388,7 @@ object ArmLive {
             o.optJSONObject("shadow")?.let { m -> m.keys().forEach { b.shadow[it] = m.getBoolean(it) } }
             o.optJSONObject("shadowSince")?.let { m -> m.keys().forEach { k -> runCatching { b.shadowSince[k] = LocalDateTime.parse(m.getString(k)) } } }
             o.optJSONArray("notMirrored")?.let { a -> for (i in 0 until a.length()) runCatching { a.getJSONObject(i).let { x ->
-                b.notMirrored += NotMirrored(x.getString("ref"), x.getString("key"), LocalDateTime.parse(x.getString("at")), x.getString("why")) } } }
+                b.notMirrored += NotMirrored(x.getString("ref"), LiveMirror.migratedKey(x.getString("key")), LocalDateTime.parse(x.getString("at")), x.getString("why")) } } }
         }.isSuccess
         if (!parsed) tampered(f)
         // No file (new, or set aside) or a rebuilt one: Boss's switches from their second copy, never fresh defaults.
@@ -417,7 +417,7 @@ object ArmLive {
     private fun readPos(p: JSONObject): Pos {
         fun s(k: String) = p.optString(k).ifEmpty { null }
         fun d(k: String) = if (p.has(k) && !p.isNull(k)) p.getDouble(k) else null
-        return Pos(p.getString("key"), p.getString("ref"), p.getString("symbol"), p.getString("exchange"), p.getString("product"),
+        return Pos(LiveMirror.migratedKey(p.getString("key")), p.getString("ref"), p.getString("symbol"), p.getString("exchange"), p.getString("product"),
             p.getInt("side"), p.getInt("qty"), p.getInt("entryQty"), p.getInt("lot"), p.getDouble("tick"), p.optInt("mult", 1),
             p.getDouble("entry"), LocalDateTime.parse(p.getString("entryTime")), p.getDouble("paperEntry"), p.getInt("paperQty"),
             s("expiry")?.let { LocalDate.parse(it) }, s("entryOrderId"), s("stopOrderId"), d("stopTrigger"), p.optBoolean("seen"),

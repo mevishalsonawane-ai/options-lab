@@ -26,7 +26,7 @@ class LiveMirrorTest {
         val keys = LiveMirror.ARMS.map { it.key }
         for (k in listOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, LiveMirror.SOLO_MIDDAY,
                 SweepRules.ARM.source, RangeFadeRules.ARM.source, HeroRules.ARM.source, HeroTicketRules.SOURCE, Ft3Rules.SOURCE, VixDivRules.SOURCE,
-                NightRules.SOURCE, LiveMirror.TELEGRAM_CALLS, LiveMirror.SHADOW_PROMOTED, "mcx_ng_eve", "mcx_silverm_am", "mcx_trend12", "mcx_us_silver"))
+                NightRules.SOURCE, LiveMirror.NTFY_ALERTS, LiveMirror.SHADOW_PROMOTED, "mcx_ng_eve", "mcx_silverm_am", "mcx_trend12", "mcx_us_silver"))
             assertTrue(k in keys, k)
         assertEquals(keys.size, keys.toSet().size, "no key twice")
         // Jarvis's own free-form ideas stay on paper (CLAUDE.md): the news trades and the forge ideas are never mirrored.
@@ -47,10 +47,10 @@ class LiveMirrorTest {
         assertFalse(LiveMirror.on(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to false)))
         assertTrue(LiveMirror.on(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to true)))
         assertFalse(LiveMirror.on("nope", mapOf("nope" to true)), "an unknown arm never")
-        // A rule triggered by the option's own price starts off: only Boss switches it on (CLAUDE.md).
-        assertFalse(LiveMirror.on(LiveMirror.TELEGRAM_CALLS, emptyMap()))
-        assertTrue(LiveMirror.on(LiveMirror.TELEGRAM_CALLS, mapOf(LiveMirror.TELEGRAM_CALLS to true)))
-        assertEquals(listOf(LiveMirror.TELEGRAM_CALLS), LiveMirror.ARMS.filter { !it.defaultOn }.map { it.key })
+        // An external message (ntfy alerts, 25 Oct) starts off: only Boss switches it on.
+        assertFalse(LiveMirror.on(LiveMirror.NTFY_ALERTS, emptyMap()))
+        assertTrue(LiveMirror.on(LiveMirror.NTFY_ALERTS, mapOf(LiveMirror.NTFY_ALERTS to true)))
+        assertEquals(listOf(LiveMirror.NTFY_ALERTS), LiveMirror.ARMS.filter { !it.defaultOn }.map { it.key })
     }
 
     // ---- the gate -----------------------------------------------------------------------------------------------------------------
@@ -234,7 +234,10 @@ class LiveMirrorTest {
     @Test fun rupees() {
         assertEquals("Rs 1,234", LiveMirror.rs(1234.4))
         assertEquals("-Rs 40,000", LiveMirror.rs(-40_000.0))
-        assertNotNull(LiveMirror.spec(LiveMirror.TELEGRAM_CALLS)?.signal?.takeIf { it.contains("labelled") })
+        assertNotNull(LiveMirror.spec(LiveMirror.NTFY_ALERTS)?.signal?.takeIf { it.contains("not researched") })
+        // 25 Oct: a live trade the removed Telegram calls arm held is kept by ntfy alerts' switch and book.
+        assertEquals(LiveMirror.NTFY_ALERTS, LiveMirror.migratedKey("telegram_calls"))
+        assertEquals(DonchianArm.SOURCE, LiveMirror.migratedKey(DonchianArm.SOURCE))
     }
 
     // ---- shadow and the safety stop (18 Oct) ----------------------------------------------------------------------------------

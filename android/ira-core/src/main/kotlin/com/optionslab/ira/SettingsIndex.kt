@@ -241,6 +241,13 @@ object SettingsIndex {
         Entry("risk", "risk.pretrade", "Pre-trade checks", "Charges check, smart stop and today's danger meter (shadow and advice); half size for paper arms on careful days, off by default.",
             listOf("Bot settings", "Pre-trade checks"), listOf("danger meter", "careful day", "charges check", "smart stop", "half size", "expected move")),
 
+        // ---- Settings → Automation → ntfy alerts (25 Oct; not in IraGoldAlgo) ----
+        page("ntfy", "ntfy alerts", "Read trade messages from your ntfy topic, each once; paper by default.", "ntfy", "alerts", "notify", "messages", "topic"),
+        Entry("ntfy", "ntfy.setup", "Save topic", "Type your topic once (kept encrypted), the server, an access token, a prefix; Test fetches without trading.",
+            listOf("ntfy alerts"), listOf("ntfy", "topic", "token", "server", "test")),
+        Entry("ntfy", "ntfy.switches", "On (paper)", "On (paper), Trade live (your PIN), lots, trades a day, stale minutes, strike rule.",
+            listOf("ntfy alerts"), listOf("ntfy", "alerts", "trade live", "strike"), guarded = true),
+
         // ---- Settings → Data and harvest ----
         Entry("data", "data.record", "Include this phone's captures", "The days this phone collected extend the record forward.",
             listOf("Data and harvest", "The Record"), listOf("captures", "record", "data")),
