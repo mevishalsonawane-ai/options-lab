@@ -5204,29 +5204,118 @@
   "test": "book-fmwhd-01|VOL",
   "rule": "book-fmwhd-01",
   "market": "VOL",
-  "status": "missing",
-  "q": 1.0
+  "kind": "entry",
+  "variant": "base",
+  "p": 1.0,
+  "n": 1145,
+  "win": 0.28034934497816594,
+  "net": -1542428.3568865804,
+  "folds": [
+   -307460.5160329917,
+   -349067.12397147785,
+   -240439.75815712684,
+   -645460.9587249839
+  ],
+  "gates": {
+   "design_net_pos": false,
+   "every_fold_pos": false,
+   "min_trades_design": true,
+   "not_top5": false,
+   "bh_q": "False"
+  },
+  "q": 1.0,
+  "design_pass": false
  },
  {
   "test": "book-fmwhd-02|VOL",
   "rule": "book-fmwhd-02",
   "market": "VOL",
-  "status": "missing",
-  "q": 1.0
+  "kind": "entry",
+  "variant": "base",
+  "p": 1.0,
+  "n": 5,
+  "win": 0.4,
+  "net": -7709.4000000000015,
+  "folds": [
+   0.0,
+   0.0,
+   -5437.580000000002,
+   -2271.82
+  ],
+  "gates": {
+   "design_net_pos": false,
+   "every_fold_pos": false,
+   "min_trades_design": false,
+   "not_top5": false,
+   "bh_q": "False"
+  },
+  "q": 1.0,
+  "design_pass": false
  },
  {
   "test": "book-fmmusiela-02|VOL",
   "rule": "book-fmmusiela-02",
   "market": "VOL",
-  "status": "missing",
-  "q": 1.0
+  "kind": "entry",
+  "variant": "B",
+  "p": 1.0,
+  "n": 879,
+  "win": 0.5893060295790671,
+  "net": 116775.16658259774,
+  "folds": [
+   201009.3065696485,
+   22717.6969803847,
+   -48401.70670065945,
+   -58550.13026677605
+  ],
+  "gates": {
+   "design_net_pos": true,
+   "every_fold_pos": false,
+   "min_trades_design": true,
+   "not_top5": false,
+   "bh_q": "False",
+   "beats_host": false
+  },
+  "cmp": {
+   "delta": -30274.877229801245,
+   "fold_delta": [
+    4886.690759010264,
+    -15226.75964120129,
+    -27511.20007830709,
+    7576.391730696778
+   ],
+   "p": 1.0,
+   "host_net": 147050.04381239912,
+   "host_n": 895
+  },
+  "q": 1.0,
+  "design_pass": false
  },
  {
   "test": "book-fmmusiela-03|VOL",
   "rule": "book-fmmusiela-03",
   "market": "VOL",
-  "status": "missing",
-  "q": 1.0
+  "kind": "entry",
+  "variant": "base",
+  "p": 0.0542945705429457,
+  "n": 307,
+  "win": 0.6612377850162866,
+  "net": 110473.66000000002,
+  "folds": [
+   40178.67,
+   16338.099999999999,
+   -19609.219999999994,
+   73566.10999999999
+  ],
+  "gates": {
+   "design_net_pos": true,
+   "every_fold_pos": false,
+   "min_trades_design": true,
+   "not_top5": true,
+   "bh_q": "False"
+  },
+  "q": 1.0,
+  "design_pass": false
  },
  {
   "test": "book-fmchan-01|IDXF",
@@ -5482,8 +5571,27 @@
   "test": "book-fmross-02|VOL",
   "rule": "book-fmross-02",
   "market": "VOL",
-  "status": "missing",
-  "q": 1.0
+  "kind": "entry",
+  "variant": "base",
+  "p": 1.0,
+  "n": 498,
+  "win": 0.3333333333333333,
+  "net": -110982.84999999998,
+  "folds": [
+   -49954.899999999994,
+   -35940.96999999999,
+   -18562.46,
+   -6524.519999999997
+  ],
+  "gates": {
+   "design_net_pos": false,
+   "every_fold_pos": false,
+   "min_trades_design": true,
+   "not_top5": false,
+   "bh_q": "False"
+  },
+  "q": 1.0,
+  "design_pass": false
  },
  {
   "test": "book-fmross-03|MCXD",
@@ -5540,8 +5648,27 @@
   "test": "book-fmross-04|VOL",
   "rule": "book-fmross-04",
   "market": "VOL",
-  "status": "missing",
-  "q": 1.0
+  "kind": "entry",
+  "variant": "base",
+  "p": 1.0,
+  "n": 3,
+  "win": 0.0,
+  "net": -1789.0000000000182,
+  "folds": [
+   -104.15000000000367,
+   0.0,
+   0.0,
+   -1684.8500000000145
+  ],
+  "gates": {
+   "design_net_pos": false,
+   "every_fold_pos": false,
+   "min_trades_design": false,
+   "not_top5": false,
+   "bh_q": "False"
+  },
+  "q": 1.0,
+  "design_pass": false
  },
  {
   "test": "book-fmkaratzas-01|MM",
