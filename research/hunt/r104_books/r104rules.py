@@ -36,6 +36,7 @@ FAMILIES = {
     "F10": "Indicator and intraday trend rules",
     "F11": "Exit overlays and entry filters on the arms",
     "F12": "Pairs, mean reversion, seasonals and crypto (quant books)",
+    "NEW": "Amendment 1: new strategies from combining book ideas",
 }
 
 # id: (status, family, markets, why / R104 note)
@@ -253,9 +254,19 @@ R = {
     "book-fmross-03": ("test", "F12", ("MCXD", "DLY"), ""),
     "book-fmross-04": ("test", "F8", ("VOL",), "index only: BANKNIFTY near (monthly) and NIFTY monthly series"),
     "book-fmkaratzas-01": ("test", "F9", ("MM",), ""),
+    # ---------------------------------------------------------------- Amendment 1 (new strategies)
+    "new-N1": ("test", "NEW", ("ARM",), "volume-confirmed Donchian breaks (option volume as the volume proxy)"),
+    "new-N2": ("test", "NEW", ("ARM",), "Wyckoff effort vs result on the 09:20 bar"),
+    "new-N3": ("test", "NEW", ("ARM",), "skip option buying on vol-rich days"),
+    "new-N4": ("test", "NEW", ("MM",), "month / week account pause on Boss's frame"),
+    "new-N5": ("test", "NEW", ("ARM",), "daily SMA50 + DMI(8) direction filter on the arms"),
+    "new-N6": ("test", "NEW", ("VOL",), "hedged short straddle only when vol is rich"),
 }
 
 ALL_IDS = tuple(R)
+
+
+BOOK_IDS = tuple(r for r in R if r.startswith("book-"))
 
 
 def tests() -> list[tuple[str, str]]:
