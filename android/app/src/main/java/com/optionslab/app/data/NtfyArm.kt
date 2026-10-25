@@ -425,8 +425,32 @@ object NtfyArm {
 
     /** "Sell / exit / close / book" [p]: what this arm holds on that index is sold at market - reduce-only, never a short. */
     private suspend fun exitMessage(b: Book, a: Alert, p: Parsed.Exit, now: LocalDateTime): Boolean {
+        // 25 Oct (review): every buy on that index (and right, when named) still WAITING ends first - its working order cancelled - so
+        // a buy read before the exit never fills after it ("NIFTY 24500 CE @ 120" pending, then "exit nifty", then the buy filled).
+        val at = b.alerts.indexOfFirst { it.id == a.id }
+        var cancelled = 0
+        for (w in b.alerts.filterIndexed { i, x -> x.state == PENDING && x.id != a.id && (at < 0 || i < at) }) {
+            val buy = runCatching { NtfyParser.read(w.title, w.body, w.at.toLocalDate()) }.getOrNull() as? Parsed.Buy ?: continue
+            if (buy.index != p.index || (p.right != null && buy.right != p.right)) continue
+            val id = b.pending[w.id]
+            if (id != null) {
+                runCatching { Paper.cancel(id, "exit message") }
+                val o = Paper.state.orders.firstOrNull { it.orderId == id }
+                when {
+                    o == null || o.status == "cancelled" || o.status == "rejected" -> Unit
+                    // Filled before the cancel: it is held now, recorded, and the exit below sells it.
+                    o.status == "complete" -> { b.pending.remove(w.id); Paper.contractOf(o.symbol)?.let { c ->
+                        bought(b, w, buy, c, id, o.quantity, o.averagePrice?.toDouble() ?: return@let, now) }; continue }
+                    // Still working: the exit waits for the next pass (never a fill after an exit, never a sale before it).
+                    else -> return say(b, "an exit message: a waiting ${buy.index} buy could not be cancelled yet; tried again")
+                }
+            }
+            finish(b, w, NOT_TRADED, "cancelled by a later exit")
+            cancelled++
+        }
+        val ended = if (cancelled > 0) "cancelled $cancelled waiting buy(s); " else ""
         val mine = b.positions.withIndex().filter { (_, x) -> x.open && !x.legacy && x.index == p.index && (p.right == null || x.right == p.right?.name) }
-        if (mine.isEmpty()) return finish(b, a, NOT_TRADED, "nothing held on ${p.index}${p.right?.let { " ${it.name}" } ?: ""} to close - no order (never a short)")
+        if (mine.isEmpty()) return finish(b, a, if (cancelled > 0) CLOSED else NOT_TRADED, ended + "nothing held on ${p.index}${p.right?.let { " ${it.name}" } ?: ""} to close - no order (never a short)")
         var sold = 0
         for ((i, x) in mine) {
             val c = Paper.contractOf(x.symbol) ?: continue
@@ -435,7 +459,7 @@ object NtfyArm {
             if (!next.open) { runCatching { ArmLive.closed(next.ref, next.why ?: "exit") }; sold++ }
             b.positions[i] = next
         }
-        return if (sold == mine.size) finish(b, a, CLOSED, "closed ${mine.joinToString { it.value.symbol }} (exit message) · paper")
+        return if (sold == mine.size) finish(b, a, CLOSED, ended + "closed ${mine.joinToString { it.value.symbol }} (exit message) · paper")
         else say(b, "an exit message: the sale is tried again on the next pass")
     }
 

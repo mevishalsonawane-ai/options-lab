@@ -199,6 +199,29 @@ class NtfyArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /** 25 Oct review: "NIFTY 25000 CE @ 100" waiting, then "exit nifty" said "nothing held" and the waiting buy filled later. */
+    @Test fun anExitCancelsTheBuysStillWaitingOnThatIndex() {
+        on()
+        msg("w1", "NIFTY 25000 CE @ 100")
+        tick(LocalTime.of(9, 28), 30)
+        assertEquals("121 is not near 100: it waits", NtfyArm.PENDING, alert("w1").state)
+        msg("x1", "exit nifty", LocalTime.of(9, 29))
+        tick(LocalTime.of(9, 29), 30)
+        assertEquals(NtfyArm.NOT_TRADED, alert("w1").state)
+        assertEquals("cancelled by a later exit", alert("w1").why)
+        assertTrue(alert("x1").why, alert("x1").why.contains("cancelled 1 waiting buy") && alert("x1").why.contains("never a short"))
+        // The premium comes down to 100 inside the old buy's window: nothing is bought.
+        tick(LocalTime.of(9, 31), px = { 100.0 })
+        assertTrue(v().open.isEmpty()); assertTrue(Paper.state.orders.none { it.action == "BUY" })
+        // An exit of the PE leaves a waiting CE buy alone.
+        msg("w2", "NIFTY 25000 CE @ 100", LocalTime.of(9, 32))
+        msg("x2", "exit nifty pe", LocalTime.of(9, 32), 20)
+        tick(LocalTime.of(9, 32), 30)
+        assertEquals(NtfyArm.PENDING, alert("w2").state)
+        assertFalse(NtfyArm.view.value.alerts.single { it.id == "x2" }.why.contains("cancelled"))
+        assertNothingAtZerodha()
+    }
+
     @Test fun aHolidayOrWeekendIsMarketClosed() {
         on()
         var d = day.plusDays(1)
