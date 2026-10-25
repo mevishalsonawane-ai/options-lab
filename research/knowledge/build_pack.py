@@ -25,7 +25,15 @@ Sources (all in the repo, nothing fetched):
 The pack also carries a "shared" section (13 Oct 2026, Boss: "all the agents should learn from whatever findings we have"):
 compact, tagged items for ira-core's SharedKnowledge - each with its topics, strategy (arm), instrument, time of day,
 regime, execution flag, source kind, date, sample size, effect and gate (pass / fail / open) - plus the execution baselines.
-Every agent on the phone reads it (context, explanation and ranking only; never a trade).
+Every agent on the phone reads it (context, explanation and ranking only; never a trade). It is capped at SHARED_CAP items
+(25 Oct 2026): the findings, cards, curated open questions and index facts always, then the experiment log ranked - every
+passed or open entry, one item per idea family of the rejected ones (a sweep's cells share a hypothesis; the same rule on two
+markets is two), newest and arm-tied first - so a 1,700-entry log does not crowd the phone's memory; the fact index keeps
+every entry for Jarvis. The build fails if the section still passes the cap (nothing is cut silently).
+
+Weights (the retrieval's prior, 25 Oct 2026): FINDINGS and strategy cards 3.0; index facts 2.5; a doc's verdict / answer /
+honest-count sections 2.2, its other priority sections (caveats, limits, lessons) 2.0; study pages, the h42 answers and the
+experiment entries 2.0; the phone's lessons 1.5; plain doc prose 1.0.
 
 Each fact: id, kind, title, text (plain English with its numbers), tags, instruments, source doc + section, date,
 verdict (positive / weak / negative / context, a keyword heuristic except for strategy cards and h42), confidence
@@ -62,9 +70,12 @@ MAX_BYTES = 4_000_000     # the pack ships in the APK: a few MB at most
 
 # Docs that are design notes or plans, not findings.
 SKIP_DOCS = {"research/data/ARCHITECTURE.md"}
-PRIORITY_SECTION = re.compile(
-    r"verdict|answer|conclusion|summary|what to do|recommend|result|headline|bottom line|for boss|what this means|"
-    r"limits|caveat|honest|lesson|takeaway|plain|key finding|findings|decision", re.I)
+# Of the priority sections, the ones that ARE the doc's answer (its verdict, its honest count, what it means for Boss) weigh a
+# little more (2.2) than its caveats, limits and lessons (2.0) - 25 Oct 2026: with 180 studies in the pack, a study's verdict
+# line must still beat another study's caveat on the same words. One word list, so the two patterns cannot drift apart.
+VERDICT_WORDS = r"verdict|answer|conclusion|summary|what to do|recommend|headline|bottom line|for boss|what this means|honest|key finding|decision"
+VERDICT_SECTION = re.compile(VERDICT_WORDS, re.I)
+PRIORITY_SECTION = re.compile(VERDICT_WORDS + r"|result|limits|caveat|lesson|takeaway|plain|findings", re.I)
 SKIP_SECTION = re.compile(r"^(files|sources|code|how to (re)?run|reproduce|scripts?|data files|references)\b", re.I)
 
 INSTRUMENTS = [
@@ -77,11 +88,23 @@ INSTRUMENTS = [
     ("INDIAVIX", r"\b(india )?vix\b"),
     ("GOLD", r"\bxauusd\b|\bgold(m)?\b"),
     ("SILVER", r"\bsilver(m|mic)?\b"),
-    ("CRUDE", r"\bcrude(oil)?\b"),
-    ("NATURALGAS", r"\bnatural ?gas\b|\bnatgas\b"),
+    ("CRUDE", r"\bcrude ?(oil)?m?\b"),                     # CRUDE, CRUDEOIL and the mini CRUDEOILM (25 Oct 2026)
+    ("NATURALGAS", r"\bnatural ?gas\b|\bnatgas(mini)?\b"),  # NATURALGAS and the mini NATGASMINI
     ("CRYPTO", r"\bcrypto\b|\bbitcoin\b|\bbtc\b|\beth(ereum)?\b"),
 ]
 INST_RX = [(n, re.compile(p, re.I)) for n, p in INSTRUMENTS]
+# The instrument names the pack may carry (ira-core's KnowledgeTest knows exactly these). An experiment entry names the
+# contracts it ran on (GOLDM, CRUDEOILM, NATGASMINI, "GOLD, SILVER (daily continuous)"); canon_instruments() maps each to
+# these, so the phone's readers see one name per market (25 Oct 2026).
+KNOWN_INSTRUMENTS = {n for n, _ in INSTRUMENTS} | {"F&O stocks", "NIFTYNXT50"}
+# Entry spellings of the two names that are not markets of INSTRUMENTS ("F&O stocks (top 50)", "Nifty Next 50"); read by
+# canon_instruments() only, never in prose (every doc that says "stocks" is not about the stocks' options).
+ENTRY_INST_RX = [("F&O stocks", re.compile(r"\bstocks?\b|\bf&o\b", re.I)), ("NIFTYNXT50", re.compile(r"nifty ?(nxt|next) ?50", re.I))]
+# The entry instrument names canon_instruments() could not read (COPPER, "the same 6 books"): main() prints them as a note, so
+# a new market is noticed rather than silently dropped.
+UNKNOWN_INSTRUMENTS: set[str] = set()
+# The MCX markets: an entry run only on these belongs to the app's MCX bots (the "mcx" arm), whatever its rule is called.
+MCX_INSTRUMENTS = {"GOLD", "SILVER", "CRUDE", "NATURALGAS"}
 
 TAGS = {
     "orb": r"\borb\b|opening range|range fade",
@@ -125,7 +148,9 @@ TAGS = {
     "time-of-day": r"\b(09|10|11|12|13|14|15):\d\d\b|first (15|30|hour)|midday|lunch|last hour",
     "day-of-week": r"monday|tuesday|wednesday|thursday|friday|weekday|day of week",
     "trade-manager": r"trade manager|specialists?",
-    "direction": r"\bdirection(al)?\b|up or down",
+    # "non-directional" (a straddle, a condor) is not about direction: without the lookbehind an open MCX condor question
+    # carried the "direction" topic and the study agent treated index direction as unsettled (25 Oct 2026).
+    "direction": r"(?<!non-)(?<!non )\bdirection(al)?\b|up or down",
     "traps": r"\btraps?\b|trap guard|stop hunt",
     # R86 (19 Oct 2026): footprints of the big players (FII/FPI positioning, CFTC managed money, dealers, stop runs)
     "big-players": r"big players?|\binstitution(al|s)?\b|\bfpis?\b|managed money|commitments of traders|\bcot\b|\bdealers?\b|market.makers?|stop.?runs?|participant.(wise|oi|data)",
@@ -216,6 +241,23 @@ def chunks(text: str, limit: int = MAX_CHARS) -> list[str]:
 
 def instruments(text: str) -> list[str]:
     return [n for n, rx in INST_RX if rx.search(text)]
+
+
+def canon_instruments(raw: list) -> list[str]:
+    """An entry's instrument names as the pack's names, in order, each once: a known name stays ("BANKNIFTY", "F&O stocks"),
+    a contract or a free-text list is read for the markets it names ("GOLDM" -> GOLD, "CRUDEOIL, NATURALGAS" -> CRUDE,
+    NATURALGAS), and a name of no pack market ("COPPER", "the same 6 books") is dropped - the fact's text still says it."""
+    out: list[str] = []
+    for r in raw:
+        if not isinstance(r, str):
+            continue
+        names = [r] if r in KNOWN_INSTRUMENTS else instruments(r) + [n for n, rx in ENTRY_INST_RX if rx.search(r)]
+        if not names:
+            UNKNOWN_INSTRUMENTS.add(r)
+        for n in names:
+            if n not in out:
+                out.append(n)
+    return out
 
 
 def tags(text: str) -> list[str]:
@@ -456,7 +498,7 @@ def add_markdown(pack: Pack, path: Path, *, findings: bool = False):
                 weight = 3.0
                 conf = "high" if re.search(r"both years|holdout|pre-registered|confirmed", t, re.I) else "medium"
             elif priority:
-                weight, conf = 2.0, ("high" if holdout_doc else "medium")
+                weight, conf = (2.2 if VERDICT_SECTION.search(sec) else 2.0), ("high" if holdout_doc else "medium")
             else:
                 weight, conf = 1.0, "medium"
             if claims_doc and re.search(r"claim|published|blog|youtube|forum|says", t, re.I):
@@ -475,6 +517,19 @@ H42_CAT_TAGS = {
     "ROUND": ["pattern"], "PIN": ["expiry", "oi"], "SEASON": ["day-of-week"], "OIPCR": ["oi"], "VOLUME": ["volume"],
 }
 H42_UND = {"BN": "BANKNIFTY", "FIN": "FINNIFTY", "MIDCP": "MIDCPNIFTY"}
+# Each h42 category in plain words, for the answers' titles ("How BANKNIFTY behaves: gaps (h42)"): the retrieval boosts a fact
+# whose title names what the question asks, so a "how does BankNifty behave after a gap down" finds the answers about
+# BANKNIFTY gaps before a study's gap rule (25 Oct 2026). The title is read by the retrieval only; Jarvis says the text.
+H42_CAT_WORDS = {
+    "TOD": "time of day", "GAP": "gaps", "MOMREV": "momentum and reversal", "VIX": "VIX", "OPTPREM": "option premium",
+    "PRIORDAY": "the prior day", "STREAK": "streaks", "JUMPS": "jumps", "TIMING": "timing", "DOW": "day of week", "THETA": "theta",
+    "CONSTIT": "constituents", "OPEN": "the open", "EXPIRY": "expiry", "FIRSTHOUR": "the first hour", "LEVELS": "levels",
+    "CROSS": "crosses", "TREND": "trend", "ROUND": "round numbers", "PIN": "pinning", "SEASON": "season", "OIPCR": "OI and PCR",
+    "VOLUME": "volume",
+}
+# The h42 answers weigh like a study's verdict section: 1,296 tested behaviour answers with a BH q-value each, the first source
+# for "how does X behave" (25 Oct 2026; they were 1.2 when nothing else in the pack described the indices' behaviour).
+H42_WEIGHT = 2.0
 
 
 def add_h42(pack: Pack):
@@ -502,10 +557,12 @@ def add_h42(pack: Pack):
         conf = "high" if qv < 0.05 and stable else ("medium" if qv < 0.2 else "low")
         und = H42_UND.get(r["und"], r["und"])
         cand = str(r.get("candidate_strict")).lower() == "true"
-        pack.add(id_=f"h42.{r['id'].lower()}", kind="answer", title="HUNT h42: 1,296 questions answered with numbers",
-                 text=text, src=src, sec=f"{r['id']} ({r['category']})", date_="2026-10-08",
-                 insts=[und] if und else instruments(q), tags_=sorted(set(tags(q) + H42_CAT_TAGS.get(r["category"], []))),
-                 verdict="weak" if cand else "context", conf=conf, weight=1.2, personal=False,
+        cat = r["category"]
+        pack.add(id_=f"h42.{r['id'].lower()}", kind="answer",
+                 title=f"How {und or 'the index'} behaves: {H42_CAT_WORDS.get(cat, cat.lower())} (h42)",
+                 text=text, src=src, sec=f"{r['id']} ({cat})", date_="2026-10-08",
+                 insts=[und] if und else instruments(q), tags_=sorted(set(tags(q) + H42_CAT_TAGS.get(cat, []))),
+                 verdict="weak" if cand else "context", conf=conf, weight=H42_WEIGHT, personal=False,
                  extra={"q": round(qv, 4)})
 
 
@@ -623,6 +680,9 @@ EXP_VERDICT = {  # experiment-log verdict -> (pack verdict, gate)
     "adopted": ("positive", "pass"), "paper-only": ("weak", "pass"), "shadow": ("open", "open"), "rejected": ("negative", "fail"),
     "inconclusive": ("open", "open"), "superseded": ("context", "none"), "not-a-test": ("context", "none"),
 }
+# Words of the method, not of the idea: a hypothesis saying "makes money after real costs, read once on the holdout, BH q <= 0.1"
+# is not about costs, the holdout or multiple testing. These topics come from an entry's title or family only.
+EXP_METHOD_TAGS = {"costs", "holdout", "multiple-testing", "random-baseline", "ml"}
 EXP_FAMILY_TOPIC = {
     "liquidity": "liquidity", "orb": "orb", "ml": "ml", "patterns-indicators": "pattern", "flow-oi": "order-flow",
     "overnight": "overnight", "calendar-events": "expiry", "sizing-execution": "costs", "option-structure": "straddle",
@@ -698,8 +758,56 @@ def checked(cards: list[dict], path: Path, cache: dict, label: str) -> list[str]
     return errors
 
 
-def add_experiments(pack: Pack, shared: list[dict]) -> int:
-    """The experiment log: one fact and one shared item per entry (every idea tried, failures included)."""
+# The shared section's size (25 Oct 2026). Every item is kept in the phone's memory and ira-core's SharedKnowledgeTest allows
+# 2,000; the experiment log passed that on its own (1,678 entries, most of them cells of one parameter sweep), so the
+# experiments are ranked and only the best fill the room left after the findings, cards, open questions and index facts.
+SHARED_CAP = 1_800
+# Entries every agent must see whatever the room: the ideas that passed (adopted, paper-only) and the ones still open
+# (shadow, inconclusive) - the study asks the open ones first, the arms cite the passed ones.
+EXP_ALWAYS = {"adopted", "paper-only", "shadow", "inconclusive"}
+
+
+def exp_rank(e: dict, item: dict) -> tuple:
+    """An experiment's place in the shared section, best first: passed or open, then tied to an app strategy, then the
+    newest, then the largest sample, then its id (deterministic)."""
+    day = re.sub(r"\D", "", str(item.get("d", "")))  # "2026-10-20" -> 20261020; an undated entry sorts last
+    return (0 if str(e.get("verdict")) in EXP_ALWAYS else 1, 0 if item.get("a") else 1, -int(day) if day.isdigit() else 0,
+            -(item.get("n") or 0), str(e.get("id")))
+
+
+def exp_family(e: dict, item: dict) -> tuple:
+    """The idea family an entry belongs to: its study doc, family, verdict, app strategy, markets and hypothesis with the numbers
+    taken out. One sweep's 70 cells share one hypothesis and differ in thresholds (the shared section keeps the best one of
+    them, the fact index keeps every cell for Jarvis); the same rule on NIFTY and on BANKNIFTY are two results, so the
+    markets are part of the key. The cells' titles are not: three selling structures of one R103 hypothesis are one family here."""
+    hyp = re.sub(r"[^a-z ]+", " ", str(e.get("hypothesis", "")).lower())
+    hyp = re.sub(r"\s+", " ", hyp).strip()[:160]
+    return (str(e.get("doc", "")), str(e.get("family", "")), str(e.get("verdict", "")), item.get("a") or "",
+            tuple(canon_instruments(e.get("instruments") or [])), hyp)
+
+
+def select_experiments(entries: list[dict], items: list[dict], room: int) -> list[dict]:
+    """The shared items of the experiment log ([items], one per entry of [entries], same order) that fit in [room]: every
+    passed or open entry, one item per idea family of the rest (the best by exp_rank), then by rank until the room is full.
+    The items come back in their entries' order."""
+    best: dict[tuple, tuple[tuple, dict]] = {}
+    always: list[dict] = []
+    for e, it in zip(entries, items):
+        if str(e.get("verdict")) in EXP_ALWAYS:
+            always.append(it)  # kept whatever the room (build() fails loudly if the section then passes its cap)
+            continue
+        key, rank = exp_family(e, it), exp_rank(e, it)
+        if key not in best or rank < best[key][0]:
+            best[key] = (rank, it)
+    rest = sorted(best.values(), key=lambda x: x[0])[:max(room - len(always), 0)]
+    ids = {it["id"] for it in always} | {it["id"] for _, it in rest}
+    return [it for it in items if it["id"] in ids]
+
+
+def add_experiments(pack: Pack, shared: list[dict], entries: list[dict] | None = None) -> int:
+    """The experiment log: one fact and one shared item per entry (every idea tried, failures included). The shared items are
+    candidates: build() keeps the ones select_experiments() ranks into the room; [entries], when given, collects each item's
+    entry (same order) for that ranking."""
     n = 0
     for p in sorted(EXPERIMENTS.glob("*.yaml")) if EXPERIMENTS.is_dir() else []:
         e = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
@@ -707,21 +815,38 @@ def add_experiments(pack: Pack, shared: list[dict]) -> int:
             continue
         verdict, gate = EXP_VERDICT.get(str(e.get("verdict")), ("context", "none"))
         res = (e.get("results") or {}).get("summary", "")
+        title = clean_md(str(e.get("title", e["id"])))
         text = clean_md(f"{e.get('title', '')}: {e.get('hypothesis', '')} Result: {res} Verdict: {e.get('verdict', '?')}.")
-        insts = [i for i in (e.get("instruments") or []) if isinstance(i, str)]
+        insts = canon_instruments(e.get("instruments") or [])
         fam = str(e.get("family", ""))
-        topics = sorted(set(tags(text) + [EXP_FAMILY_TOPIC.get(fam, fam)]))
-        src = e.get("doc") or rel(p)
+        # Topics from what the idea IS (its title, and its hypothesis less the method's words), not from its result summary:
+        # every summary and most hypotheses say "pays after costs", "holdout", "BH q", so tagging them gave every entry the
+        # costs, holdout and multiple-testing topics, and the order review cited an MCX natural-gas sweep, then an ORB
+        # time-of-day sweep, for an ORB charges flaw instead of R14's re-entry churn (25 Oct 2026).
+        topics = sorted(set(tags(title) + [t for t in tags(clean_md(str(e.get("hypothesis", "")))) if t not in EXP_METHOD_TAGS] +
+                            [EXP_FAMILY_TOPIC.get(fam, fam)] +
+                            # A crypto-only entry is about crypto whatever its title says ("CoinSwitch costs"): shared_item() then
+                            # keeps it off the NSE / MCX agents' topics.
+                            (["crypto"] if insts and set(insts) <= {"CRYPTO"} else [])))
+        # Cited by the study it belongs to (its doc), so Jarvis says "HUNT_R14_REENTRY_CHURN.md" rather than "r14.yaml" and the
+        # retrieval's two-per-doc rule counts a study's entries with its prose.
+        doc = str(e.get("doc") or "")
+        src = doc if doc and (ROOT / doc).is_file() else (rel(p) if p.resolve().is_relative_to(ROOT) else p.name)
         app = str(e["id"]).startswith("app-")
-        pack.add(id_=f"exp.{slug(str(e['id']), 40)}", kind="experiment", title=clean_md(str(e.get("title", e["id"]))), text=text[:MAX_CHARS * 2],
-                 src=rel(p), sec=f"experiment {e['id']} ({fam})", date_=str(e.get("date", "")) or None, insts=insts, tags_=topics,
-                 verdict="weak" if verdict == "open" else verdict, conf="high" if e.get("holdout_read") else "medium", weight=2.5,
+        # The strategy the entry's words name ("Liquidity 15+5 on GOLDM" is the Liquidity arm's result, on gold); an MCX-only
+        # entry naming none is the MCX bots'; a crypto-only one is nobody's (shared_item); else its family's default.
+        arm = arm_of(text) or ("mcx" if insts and set(insts) <= MCX_INSTRUMENTS else None) or (fam if fam in ("liquidity", "orb") else None)
+        pack.add(id_=f"exp.{slug(str(e['id']), 40)}", kind="experiment", title=title, text=text[:MAX_CHARS * 2],
+                 src=src, sec=f"experiment {e['id']} ({fam})", date_=str(e.get("date", "")) or None, insts=insts, tags_=topics,
+                 verdict="weak" if verdict == "open" else verdict, conf="high" if e.get("holdout_read") else "medium", weight=2.0,
                  personal=False, extra={"exp": str(e["id"]), "family": fam, "tries": e.get("variants_tried")})
+        # The sample size is what was tested (the results' "540 trades"), never a bar set beforehand ("at least 100 trades").
+        n_ = e.get("variants_tried") if app else sample_size(clean_md(str(res)))
         shared.append(shared_item(id_=f"exp:{e['id']}", topics=topics, text=text, src=src,
                                   source="app" if app else "experiment", date_=str(e.get("date", "")), verdict=verdict, gate=gate,
-                                  arm=arm_of(text) or (fam if fam in ("liquidity", "orb") else None),
-                                  inst=insts[0] if len(insts) == 1 else None, n=e.get("variants_tried") if app else None,
-                                  sec=fam))
+                                  arm=arm, inst=insts[0] if len(insts) == 1 else None, n=n_ or 0, sec=fam))
+        if entries is not None:
+            entries.append(e)
         n += 1
     return n
 
@@ -771,6 +896,13 @@ def add_open_questions(pack: Pack, shared: list[dict]) -> list[str]:
 
 
 INDEX_FACT_KINDS = ("descriptive", "rule", "contract")
+# One title per kind of index fact, naming what the facts answer (the retrieval boosts a fact whose title holds the question's
+# words): the behaviour facts, the sign rules R102 tested, and the contract facts (lot size, expiry day, hours, charges).
+INDEX_FACT_TITLES = {
+    "descriptive": "How NIFTY and BANKNIFTY behave (R102 field guide)",
+    "rule": "NIFTY and BANKNIFTY sign rules tested (R102 field guide)",
+    "contract": "NIFTY and BANKNIFTY contract facts: lot size, expiry day, strikes, hours, charges (R102 field guide)",
+}
 
 
 def add_index_facts(pack: Pack, shared: list[dict]) -> list[str]:
@@ -803,14 +935,17 @@ def add_index_facts(pack: Pack, shared: list[dict]) -> list[str]:
         text = clean_md(f"{c.get('text', '')} (n = {n:,}; {c.get('period', '')}.)")
         topics = sorted(set(c.get("topics", []) + tags(text)))
         insts = ["NIFTY", "BANKNIFTY"] if c.get("inst") == "BOTH" else [c.get("inst")]
+        # Plus the markets the text itself names (a fact about VIX and the indices' range is found when Boss asks about VIX).
+        insts += [i for i in instruments(text) if i not in insts]
         if c.get("kind") == "rule":
             verdict = c.get("verdict", "weak")
             if verdict not in ("positive", "weak", "negative"):
                 errors.append(f"index fact {cid}: a rule needs verdict positive / weak / negative")
         else:
             verdict = "context"
-        conf = "high" if n >= 100 else "medium"
-        pack.add(id_=f"index.{slug(cid, 40)}", kind="index_fact", title="How NIFTY and BANKNIFTY behave (R102 field guide)", text=text,
+        # A contract fact (lot size, expiry day, hours) is verified against the exchange, not sampled: high whatever its n.
+        conf = "high" if n >= 100 or c.get("kind") == "contract" else "medium"
+        pack.add(id_=f"index.{slug(cid, 40)}", kind="index_fact", title=INDEX_FACT_TITLES.get(c.get("kind"), INDEX_FACT_TITLES["descriptive"]), text=text,
                  src=c["src"], sec=c.get("sec", ""), date_=written, insts=insts, tags_=topics, verdict=verdict, conf=conf,
                  weight=2.5, personal=False, extra={"n": n, "fact_kind": c.get("kind"), "period": c.get("period", "")})
         shared.append(shared_item(id_=f"index:{cid}", topics=topics, text=text, src=c["src"], source="research", date_=written,
@@ -875,9 +1010,15 @@ def build() -> tuple[dict, list[str]]:
         add_markdown(pack, p)
     add_h42(pack)
     model_cards = add_model_cards(pack)
+    # The shared section, in the order the phone's readers walk it (25 Oct 2026): the findings and cards with a verdict, the
+    # curated open questions (the first open item on a topic is the one an agent cites: "S7: order flow is still unproven",
+    # never an experiment that happened to be filed first), the index facts, the experiment log, the phone's own lessons.
     shared: list[dict] = []
-    experiments = add_experiments(pack, shared)
-    app_lessons = add_app_lessons(pack, shared)
+    exp_items: list[dict] = []
+    exp_entries: list[dict] = []
+    experiments = add_experiments(pack, exp_items, exp_entries)
+    app_items: list[dict] = []
+    app_lessons = add_app_lessons(pack, app_items)
     add_strategies_errors += add_open_questions(pack, shared)
     add_strategies_errors += add_index_facts(pack, shared)
     base, base_errors = baselines()
@@ -890,11 +1031,15 @@ def build() -> tuple[dict, list[str]]:
             continue
         seen.add(key); facts.append(f)
     shared = shared_from_facts(facts) + shared
+    shared += select_experiments(exp_entries, exp_items, SHARED_CAP - len(shared) - len(app_items)) + app_items
     seen_ids, items = set(), []
     for it in shared:
         if it["id"] in seen_ids:
             continue
         seen_ids.add(it["id"]); items.append(it)
+    if len(items) > SHARED_CAP:  # the passed and open entries and the phone's lessons are never cut: say so instead
+        add_strategies_errors.append(f"shared section: {len(items)} items pass SHARED_CAP {SHARED_CAP} (every passed / open entry and "
+                                     f"app lesson is kept; raise the cap on purpose or settle some open entries)")
     shared_section = {"items": items, "baselines": base}
     body = json.dumps([facts, shared_section], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     version = hashlib.sha256(body.encode()).hexdigest()[:12]
@@ -934,6 +1079,8 @@ def main() -> int:
     if errors:
         print("cards with numbers not found in their sources:\n  " + "\n  ".join(errors), file=sys.stderr)
         return 1
+    if UNKNOWN_INSTRUMENTS:
+        print("note: entry instrument names of no pack market (kept in the text only): " + ", ".join(sorted(UNKNOWN_INSTRUMENTS)), file=sys.stderr)
     data = encode(pack)
     if len(data) > MAX_BYTES:
         print(f"pack too big: {len(data)} bytes", file=sys.stderr)

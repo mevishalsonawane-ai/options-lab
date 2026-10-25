@@ -120,6 +120,14 @@ class KnowledgeTest {
         "what did research find about pyramiding liquidity" to listOf("hunt-h7.verdict-plain-language.1", "hunt-h7.verdict-plain-language.2", "hunt-h7.caveats.3"),
         "how does banknifty behave in the first 30 minutes" to listOf("findings.green-candles-green-cand.4"),
         "does the profit lock help orb according to research" to listOf("findings.profit-lock-ladders.1", "study.orb.3"),
+        // R102's field guide (index_facts.yaml, 22 Oct 2026): the contract facts and how the indices behave.
+        "what is nifty's lot size" to listOf("index.contract-facts-2026"),
+        "what is the lot size of nifty and banknifty" to listOf("index.contract-facts-2026"),
+        "how does banknifty behave at 09:20" to listOf("index.bn-at-0920"),
+        "is max pain a magnet on expiry" to listOf("index.max-pain-not-a-magnet"),
+        "does the weekday matter for nifty" to listOf("index.weekday-means-nothing"),
+        "is vix a direction dial" to listOf("index.vix-is-the-range-dial"),
+        "is expiry day a bigger day for nifty" to listOf("index.expiry-day-not-bigger"),
     )
 
     @Test fun eachQuestionFindsItsFacts() {

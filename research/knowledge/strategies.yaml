@@ -223,7 +223,7 @@
   name: Night (R3)
   instruments: [NIFTY, BANKNIFTY]
   tags: [overnight, oi, option-buying]
-  what: "At 15:20 on a strong close the day-end OI build-up agrees with, buys a 1-ITM option and sells it at 09:16 next session."
+  what: "At 15:20 on a strong close the day-end OI build-up agrees with, buys a 1-ITM option, holds it overnight and sells it at 09:16 next session."
   verdict: weak
   facts:
     - text: "Night (R3) made about Rs 207 a day before the holdout and Rs 150 in it, and the holdout was not significant: small and decaying."
