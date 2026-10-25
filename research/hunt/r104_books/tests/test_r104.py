@@ -343,7 +343,22 @@ def test_struct_walker_stop_fires_on_loss():
     c = _con(5.0)
     c[:, 100:] = 20.0
     c[4] = 100.0
-    days = [_FakeDay(d0, 100.0, {("C", 100.0): c, ("P", 100.0): _con(5.0)})]
+    d1 = date(2024, 1, 2)
+    days = [_FakeDay(d0, 100.0, {("C", 100.0): c, ("P", 100.0): _con(5.0)}),
+            _FakeDay(d1, 100.0, {("C", 100.0): _con(5.0), ("P", 100.0): _con(5.0)}, expiry=True)]
     ch = _FakeChain(days)
     r = V.run_struct(ch, d0, [("C", 100.0, -1, 1)], 6, d0, 355, 50, stop=lambda pnl, info: pnl <= -500.0)
     assert r["why"] == "stop" and r["gross"] < -500
+
+
+def test_struct_walker_never_holds_past_expiry():
+    # 25 Oct 2026 (whd-02): a structure whose exit day is after its contract's expiry, or with no expiry ahead, is not
+    # priced at all (the store's held series rolls to the next contract after expiry)
+    import f8_vol as V
+    d0, d1, d2 = date(2024, 1, 1), date(2024, 1, 2), date(2024, 1, 3)
+    days = [_FakeDay(d0, 100.0, {("C", 100.0): _con(5.0)}), _FakeDay(d1, 100.0, {("C", 100.0): _con(5.0)}, expiry=True),
+            _FakeDay(d2, 100.0, {("C", 100.0): _con(5.0)})]
+    ch = _FakeChain(days)
+    assert V.run_struct(ch, d0, [("C", 100.0, -1, 1)], 6, d2, 300, 50) is None
+    assert V.run_struct(ch, d2, [("C", 100.0, -1, 1)], 6, d2, 300, 50) is None
+    assert V.run_struct(ch, d0, [("C", 100.0, -1, 1)], 6, d1, 300, 50) is not None

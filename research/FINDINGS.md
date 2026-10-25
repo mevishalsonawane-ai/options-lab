@@ -1733,3 +1733,26 @@ directional; structures centred on the index's 09:20 ATM; exits on the premium.
   BANKNIFTY -6.46% after 09:20); the same days with 1-straddle wings lost -Rs 3.0 / -Rs 3.8 lakh.
 - Warning for other studies: any rule that holds a strike more than about 6 steps from ATM on the rolling lake can be
   marked at stale prices when the index moves away. Check the share of exit legs without a print before trusting it.
+
+## Every testable rule from the 50 books (R104, 25 Oct 2026) - 0 of 227 tests pass; Graeme-Smith's daily SST is the one lead
+Full study: `HUNT_R104_BOOKS.md` (pre-registered `hunt/r104_books/PREREG.md`, Amendments 0 and 1 before the holdout; each
+market's holdout read once). Signal source: the underlying for every rule (index spot / daily index, the MCX future, the
+BTC/ETH perp, the stock); options bought by the strike rule, chain only as context; crypto always with stop + profit lock.
+- 211 book rules: 166 tested in 221 rule-by-market tests, 18 covered by earlier studies, 26 need data we lack, 1 descriptive;
+  plus 6 new combination strategies (Amendment 1). BH across all 227. Dated charges and liquidity slippage throughout.
+- 45 entry tests made money in design, 54 in the holdout, 22 in both; none of the 22 had q below 0.81 with enough trades.
+  The binding gates were the walk-forward folds and BH. Nothing goes to paper or live.
+- Lead: Graeme-Smith's Short Swing Trading on daily bars - index futures proxy 172 trades, win 42%, Rs 347,212 design and
+  66 trades, Rs 168,395 holdout (q 0.81); MCX futures 175 holdout trades, Rs 588,190 (a negative design fold); BTC/ETH 10
+  holdout trades, Rs 32,164. Inverse head and shoulders on daily index bars: 94 trades, win 55%, Rs 214,631 design; 32
+  trades, Rs 139,562 holdout (a negative fold, q 0.81).
+- Intraday bar patterns, Aziz setups, Carli divergence and indicator crosses lose after option costs as the books state them
+  (e.g. woods-19 IDX 3,804 trades, win 29%, -Rs 727,169 design).
+- Design stars that reversed: Larry Swing's exits (1,584 trades Rs 1,409,446 -> -Rs 330,423), Fabozzi's filter rule
+  (Rs 1,317,966 -> -Rs 505,996), Sadowski's daily RSI(2) (Rs 1,495,059 -> -Rs 878,745).
+- Arms' exits, filters and sizing: none of 20 overlays / filters or 12 risk-lowering sizing rules helped on R101's B0 trades
+  (B0 design Rs 774,750, DD -Rs 444,695). The CUSUM pause cut design DD to -Rs 178,421 (p 0.002, q 0.15) but made the final
+  DD worse (-Rs 201,250 vs -Rs 170,942). Fixed rupee risk of Rs 2,000 over 4 arms takes no trades at 1-lot minimum.
+- New strategies N1-N6 all failed: volume-confirmed breaks (N1) and a daily-trend filter (N5) made the Donchian arms worse;
+  skipping vol-rich days (N3) removed good trades; the hedged straddle on rich vol (N6) lost in the holdout (18 trades).
+- Bennett: the 09:20 skew adds almost nothing to ATM IV for the day's range (NIFTY R2 0.214 -> 0.216, 1,285 days).
