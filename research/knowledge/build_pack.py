@@ -37,7 +37,9 @@ every entry for Jarvis. The build fails if the section still passes the cap (not
 
 Weights (the retrieval's prior, 25 Oct 2026): FINDINGS and strategy cards 3.0; index facts 2.5; a doc's verdict / answer /
 honest-count sections 2.2, its other priority sections (caveats, limits, lessons) 2.0; study pages, the h42 answers and the
-experiment entries 2.0; the phone's lessons 1.5; plain doc prose 1.0; a proposed experiment (never run) 1.0; book cards 0.8.
+experiment entries 2.0; the phone's lessons 1.5; plain doc prose 1.0; a proposed experiment (never run, kind proposed) 1.0;
+book cards 0.8. ira-core's search also ranks the two claim kinds (book_fact, proposed) below every tested research hit when
+asked whether something works.
 
 Each fact: id, kind, title, text (plain English with its numbers), tags, instruments, source doc + section, date,
 verdict (positive / weak / negative / context, a keyword heuristic except for strategy cards and h42), confidence
@@ -846,15 +848,18 @@ def add_experiments(pack: Pack, shared: list[dict], entries: list[dict] | None =
         arm = arm_of(text) or ("mcx" if insts and set(insts) <= MCX_INSTRUMENTS else None) or (fam if fam in ("liquidity", "orb") else None)
         unrun = str(e.get("verdict")) in EXP_UNRUN
         if unrun:
+            # Its own kind, so ira-core's search never lets it lead a "does X work" answer, and said as not run first: the
+            # spoken text is cut at MAX_CHARS * 2, which on a long hypothesis fell before "Result: Not run" (25 Oct 2026).
             title = f"Proposed, not run yet: {title}"
-        pack.add(id_=f"exp.{slug(str(e['id']), 40)}", kind="experiment", title=title, text=text[:MAX_CHARS * 2],
+            text = clean_md(f"Not run yet (a proposed test, no result): {e.get('title', '')}. {e.get('hypothesis', '')}")
+        pack.add(id_=f"exp.{slug(str(e['id']), 40)}", kind="proposed" if unrun else "experiment", title=title, text=text[:MAX_CHARS * 2],
                  src=src, sec=f"experiment {e['id']} ({fam})", date_=str(e.get("date", "")) or None, insts=insts, tags_=topics,
                  verdict="weak" if verdict == "open" else verdict,
                  conf="low" if unrun else "high" if e.get("holdout_read") else "medium", weight=1.0 if unrun else 2.0,
                  personal=False, extra={"exp": str(e["id"]), "family": fam, "tries": e.get("variants_tried")})
-        n += 1
         if unrun:
             continue
+        n += 1
         # The sample size is what was tested (the results' "540 trades"), never a bar set beforehand ("at least 100 trades").
         n_ = e.get("variants_tried") if app else sample_size(clean_md(str(res)))
         shared.append(shared_item(id_=f"exp:{e['id']}", topics=topics, text=text, src=src,
@@ -1007,7 +1012,7 @@ def add_book_facts(pack: Pack) -> list[str]:
         bad = [t for t in c.get("tags") or [] if t not in TAGS]
         if bad:
             errors.append(f"book fact {cid}: unknown tags {bad}")
-        errors += checked([{"id": cid, "src": src, "text": c["text"]}], path, cache, "book fact")
+        errors += checked([{"id": cid, "src": src, "text": f"{c['title']} {c['text']}"}], path, cache, "book fact")
         verdict = c.get("verdict", "context")
         tested = ""
         if verdict != "context":

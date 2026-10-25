@@ -298,10 +298,13 @@ def test_a_proposed_entry_is_in_the_fact_index_but_never_a_shared_candidate(tmp_
     write_entry(tmp_path, id="r14", title="ORB re-entry churn", family="orb", date="2026-10-10", doc="research/FINDINGS.md",
                 verdict="adopted", instruments=["BANKNIFTY"], hypothesis="Capping re-entries cuts ORB's loss.", results={"summary": "cut"})
     pack, shared, entries = bp.Pack(), [], []
-    assert bp.add_experiments(pack, shared, entries) == 2
+    assert bp.add_experiments(pack, shared, entries) == 1  # the experiments run; the proposed one is not counted
     facts = {f["id"]: f for f in pack.facts}
     prop = facts["exp.book-wyck-01"]
+    assert prop["kind"] == "proposed" and facts["exp.r14"]["kind"] == "experiment"
     assert prop["title"].startswith("Proposed, not run yet: ") and prop["verdict"] == "context" and prop["conf"] == "low" and prop["w"] == 1.0
+    # Said as not run first, so a cut at MAX_CHARS * 2 can never drop it.
+    assert prop["text"].startswith("Not run yet (a proposed test, no result): Wyckoff volume climax.")
     assert [it["id"] for it in shared] == ["exp:r14"] and [e["id"] for e in entries] == ["r14"]
 
 

@@ -1,4 +1,4 @@
-# What 13 trading books teach, as short cards for Jarvis (25 Oct 2026; research/books/, one write-up per book).
+# What the books Boss gave teach (50 books: 15 trading books and 35 FinMathematics textbooks), as short cards for Jarvis (25 Oct 2026; research/books/, one write-up per book).
 # Each card is the BOOK's claim in our own words, never a tested result: build_pack.py says so in every card's text.
 # A card whose idea our research tested carries that test's result (verdict + tested_src + tested_text).
 # Numbers in `text` are checked against the book's write-up, numbers in `tested_text` against the study.
