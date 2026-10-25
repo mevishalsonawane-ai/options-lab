@@ -42,16 +42,22 @@ class SegmentLimitsTest : RobolectricTest() {
     private fun mcxStopped() = runBlocking { LossBreaker.mcxStopped(Strategies.stoppedWhy()) }
     private fun nseStopped() = runBlocking { Strategies.stoppedToday() } || LossBreaker.trippedToday()
 
-    @org.junit.Before fun up() { com.optionslab.app.testing.Background.clearAlerts() }   // and the banner's 20 s repeat filter
+    @org.junit.Before fun up() {
+        com.optionslab.app.testing.Background.clearAlerts()   // and the banner's 20 s repeat filter
+        // 25 Oct: these tests check how the NSE and MCX stops split, on a ₹6,000 paper loss limit (the default until 25 Oct, now
+        // ₹10,000): the limit is set here, saved (the version mark), so the figures below keep their meaning.
+        SecurePrefs.putAll(mapOf("g.pLoss" to 6_000.0, AppSettings.PAPER_LOSS_VERSION_KEY to 1))   // (MCX unset: it follows this one)
+    }
     @After fun down() { Market.testClock = null; LossBreaker.testPaperDay = null }
 
     /** 25 Oct (Boss: "Make it 10k"): the old ₹6,000 default saved on the phone becomes ₹10,000 once; another limit stays; then the saved one stands. */
     @Test fun thePaperDailyLossLimitMovesFromTheOld6000To10000Once() {
-        SecurePrefs.putAll(mapOf("g.pLoss" to 6_000.0))
+        // (A phone from before 25 Oct: the old default saved, no version mark yet.)
+        SecurePrefs.putAll(mapOf("g.pLoss" to 6_000.0, AppSettings.PAPER_LOSS_VERSION_KEY to 0))
         assertEquals(10_000.0, AppSettings.load().guardPaperDailyLoss, 0.0)
         assertEquals(10_000.0, AppSettings().guardLimits(paper = true).maxDailyLoss, 0.0)
         assertEquals("the commodities' own paper limit moves with it", 10_000.0, AppSettings.load().mcxPaperDailyLoss, 0.0)
-        SecurePrefs.putAll(mapOf("g.pLoss" to 4_000.0))
+        SecurePrefs.putAll(mapOf("g.pLoss" to 4_000.0))   // (still no version mark)
         assertEquals("a limit set on purpose stays", 4_000.0, AppSettings.load().guardPaperDailyLoss, 0.0)
         // Once saved (the version mark written), even 6,000 chosen again stands.
         SecurePrefs.putAll(mapOf("g.pLoss" to 6_000.0, AppSettings.PAPER_LOSS_VERSION_KEY to 1))
