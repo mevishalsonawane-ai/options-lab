@@ -42,6 +42,43 @@ class NtfyParserTest {
         assertEquals(Parsed.Buy("NIFTY", Right.CE, 24500.0), buy("NIFTY CE24500"))
     }
 
+    /**
+     * 25 Oct review: a FINNIFTY or MIDCPNIFTY alert bought a NIFTY option ("NIFTY_FIN_SERVICE.NS Tripwire Hit ..." -> NIFTY PE): the
+     * joins ran while "_" and "." were still in the text. Every Yahoo-style symbol, and a NIFTY sector index is refused, never NIFTY.
+     */
+    @Test fun yahooSymbolsAndSectorIndicesNeverBecomeNifty() {
+        fun alert(sym: String, dir: String = "DOWN") = NtfyParser.read("$sym Tripwire Hit: 23500.0! (Moving $dir)", "Tripwire Value: 23500.0", day)
+        assertEquals(Parsed.Buy("NIFTY", Right.PE), alert("^NSEI"))
+        assertEquals(Parsed.Buy("BANKNIFTY", Right.PE), alert("^NSEBANK"))
+        assertEquals(Parsed.Buy("FINNIFTY", Right.PE), alert("NIFTY_FIN_SERVICE.NS"))
+        assertEquals(Parsed.Buy("FINNIFTY", Right.CE), alert("NIFTY_FIN_SERVICE.NS", "UP"))
+        assertEquals(Parsed.Buy("MIDCPNIFTY", Right.PE), alert("NIFTY_MID_SELECT.NS"))
+        assertEquals(Parsed.Buy("SENSEX", Right.CE), alert("^BSESN", "UP"))
+        assertEquals(Parsed.Buy("BANKNIFTY", Right.PE), alert("NIFTY_BANK.NS"))
+        for (sym in listOf("NIFTY_IT.NS", "^CNXIT", "NIFTY_PHARMA.NS", "NIFTY_AUTO.NS", "NIFTY_METAL.NS", "NIFTY_REALTY.NS", "NIFTY_FMCG.NS",
+                "NIFTY_PSU_BANK.NS", "NIFTY_MEDIA.NS", "NIFTY_ENERGY.NS", "NIFTY_INFRA.NS", "NIFTY_SMALLCAP_100.NS", "NIFTY_MIDCAP_100.NS",
+                "NIFTY_MIDCAP_150.NS", "NIFTY_NEXT_50.NS", "NIFTY_100.NS", "NIFTY_200.NS", "NIFTY_500.NS", "NIFTY_FIN.NS")) {
+            val r = alert(sym)
+            assertIs<Parsed.Refused>(r, sym)
+            if (sym != "^CNXIT") assertTrue(r.reason.contains("unknown index"), "$sym: ${r.reason}")
+        }
+        // The plain-word forms.
+        assertEquals(Parsed.Buy("FINNIFTY", Right.CE), buy("Nifty Fin Service CE"))
+        assertEquals(Parsed.Buy("FINNIFTY", Right.PE), buy("NIFTY FINANCIAL SERVICES put"))
+        assertEquals(Parsed.Buy("FINNIFTY", Right.PE, 23500.0), buy("nifty fin services 23500 pe"))
+        assertEquals(Parsed.Buy("MIDCPNIFTY", Right.CE), buy("nifty midcap select call"))
+        assertEquals(Parsed.Buy("MIDCPNIFTY", Right.CE), buy("NIFTY MID SELECT CE"))
+        assertEquals(Parsed.Buy("BANKNIFTY", Right.PE), buy("NIFTY BANK PE"))
+        assertEquals(Parsed.Buy("NIFTY", Right.CE), buy("NIFTY 50 CE"))
+        assertEquals(Parsed.Buy("NIFTY", Right.CE, 24500.0), buy("NIFTY 24500 CE"))
+        assertEquals(Parsed.Buy("NIFTY", Right.CE, pick = StrikeRule.ITM1), buy("NIFTY ITM CE"))
+        assertEquals(Expiry.Next, buy("NIFTY next week CE").expiry)
+        for (t in listOf("NIFTY IT CE", "nifty fin pe", "Nifty Pharma call", "NIFTY AUTO PE", "nifty metal ce", "NIFTY NEXT 50 CE", "nifty realty put",
+                "NIFTY FMCG CE", "nifty psu bank pe", "NIFTY MEDIA CE", "nifty energy pe", "NIFTY INFRA CE", "nifty smallcap ce", "NIFTY MIDCAP 100 PE",
+                "nifty midcap 150 ce", "NIFTYIT CE", "exit nifty it"))
+            assertTrue(refused(t).contains("unknown index"), t)
+    }
+
     @Test fun hindi() {
         assertEquals(Parsed.Buy("NIFTY", Right.CE), buy("निफ्टी कॉल खरीदें"))
         assertEquals(Parsed.Buy("BANKNIFTY", Right.PE), buy("बैंक निफ्टी पुट"))

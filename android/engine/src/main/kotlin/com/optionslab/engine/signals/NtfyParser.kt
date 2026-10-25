@@ -13,7 +13,9 @@ import java.util.Locale
  * carries it out on the index option chosen by the strike rule, inside every guard.
  *
  * Accepted (any order, any case, extra spaces, a few Hindi words):
- *  - the index: NIFTY, BANKNIFTY (bank nifty, bnf, nifty bank), FINNIFTY (fin nifty), MIDCPNIFTY (midcap nifty), SENSEX;
+ *  - the index: NIFTY, BANKNIFTY (bank nifty, bnf, nifty bank), FINNIFTY (fin nifty, nifty fin service), MIDCPNIFTY (midcap nifty,
+ *    nifty midcap select), SENSEX, and Yahoo's symbols (^NSEI, ^NSEBANK, NIFTY_FIN_SERVICE.NS, NIFTY_MID_SELECT.NS, ^BSESN); any other
+ *    NIFTY index (NIFTY IT, PHARMA, NEXT 50 ...) is refused as an unknown index;
  *  - the direction: CE / call / bullish / long / up => buy a CE; PE / put / bearish / short / down => buy a PE;
  *  - a strike (a number of 1000 or more), else the strike rule picks one;
  *  - the expiry: "weekly" (the nearest, also the default), "next" (the one after), or a date ("30 oct", "oct 30", "30/10",
@@ -235,9 +237,23 @@ object NtfyParser {
 
     private val GROUPED_STRIKE = rx("\\b\\d{1,3}(?:,\\d{2})*,\\d{3}(?=\\s?(?:ce|pe|calls?|puts?)(?![a-z]))")
 
+    /** The marker a NIFTY sector index leaves in the text ([SECTOR]): such a message is refused, never read as NIFTY. */
+    private const val UNKNOWN_INDEX = "unknownindex"
+
+    /**
+     * 25 Oct (review): "nifty" followed by any other index's word - NIFTY IT, NIFTY FIN (alone), PHARMA, AUTO, METAL, NEXT 50, REALTY,
+     * FMCG, PSU BANK, MEDIA, ENERGY, INFRA, SMALLCAP, MIDCAP 100 / 150, NIFTY 100 / 200 / 500 ... - names an index that is not traded.
+     * Run after the traded indices' own joins (NIFTY FIN SERVICE, NIFTY MIDCAP SELECT, NIFTY BANK) and before "next week" is joined,
+     * so "NIFTY next week CE" stays a NIFTY trade. "NIFTY 50" is NIFTY; "NIFTY 24500 CE" a strike.
+     */
+    private val SECTOR = rx("\\bnifty\\s*(?:fin(?:ancial)?|it|pharma|auto|metal|next\\s*(?:50|fifty)|realty|fmcg|psu|media|energy|infra|" +
+        "small\\s*cap|smlcap|small|mid\\s*cap|mid|100|150|200|500|pvt|private|healthcare|oil|cpse|commodities|consumption|services?|serv)\\b")
+
     private val JOINS = listOf(
+        // 25 Oct (review): Yahoo's FINNIFTY and MIDCPNIFTY ("NIFTY_FIN_SERVICE.NS", "NIFTY_MID_SELECT.NS") before anything reads "nifty".
+        rx("\\bnifty\\s*fin(?:ancial)?\\s*serv\\w*") to "finnifty", rx("\\bnifty\\s*mid\\s*(?:cap)?\\s*select\\b") to "midcpnifty",
         rx("\\bbank\\s*nifty\\b") to "banknifty", rx("\\bnifty\\s*bank\\b") to "niftybank", rx("\\bfin\\s*nifty\\b") to "finnifty",
-        rx("\\bmid\\s*(?:cap|cp)\\s*nifty\\b") to "midcpnifty", rx("\\bnifty\\s*mid\\s*(?:cap)?\\s*select\\b") to "midcpnifty",
+        rx("\\bmid\\s*(?:cap|cp)\\s*nifty\\b") to "midcpnifty", SECTOR to " $UNKNOWN_INDEX ",
         rx("\\bnifty\\s*50\\b") to "nifty50", rx("\\bstop\\s*-?\\s*loss\\b") to "stoploss", rx("\\bs\\s*/\\s*l\\b") to "sl",
         rx("\\bsq(?:uare)?\\s*-?\\s*off\\b") to "squareoff", rx("\\bbuy\\s+above\\b") to "above", rx("\\bnext\\s+week(?:ly)?\\b") to "next",
         rx("\\b(?:this|current|curr)\\s+week\\b") to "weekly", rx("\\bdo\\s*n[o']?t\\b") to "dont", rx("\\bcan'?t\\b") to "not",
@@ -251,6 +267,8 @@ object NtfyParser {
         // Devanagari digits read as digits ("२४५००" -> 24500), never dropped.
         s = s.map { c -> if (c in '०'..'९') '0' + (c - '०') else c }.joinToString("")
         s = s.lowercase(Locale.ROOT)
+        // 25 Oct (review): Yahoo's symbols read as words ("nifty_fin_service.ns" -> "nifty fin service ns") BEFORE the joins below.
+        s = s.replace('_', ' ').replace(rx("(?<=[a-z])\\.ns\\b"), " ns")
         // Digit grouping only in a strike ("24,500 CE", "1,02,500 PE"): elsewhere a comma separates numbers ("tgt 180,220").
         s = s.replace(GROUPED_STRIKE) { m -> m.value.replace(",", "") }
         s = s.replace("don't", "dont").replace("’", "'")
@@ -289,6 +307,8 @@ object NtfyParser {
         val words = toks.map { it.t }.toSet()
         // 25 Oct (Boss's sender): "Status: ^NSEI is at 22600.0 / Regular check-in" is a status line, never a trade.
         if ("status" in words || "checkin" in words || ("check" in words && "in" in words)) return refuse("a status check-in, not a trade")
+        if (UNKNOWN_INDEX in words) return refuse("unknown index: a NIFTY sector or other index (IT, PHARMA, NEXT 50, MIDCAP 100 ...) is not traded; " +
+            "only NIFTY 50, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX")
         if (words.any { it in NEGATIVE }) return refuse("negative or conditional wording (don't, not, avoid, if, wait) - not traded")
         if (words.any { it in CRYPTO }) return refuse("crypto is not traded")
         if (words.any { it in MCX }) return refuse("MCX is not traded (index options only)")
