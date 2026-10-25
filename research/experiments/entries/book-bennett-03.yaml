@@ -1,5 +1,5 @@
 id: book-bennett-03
-title: Put underwriting as a defined-risk bull put spread at 25 delta (Colin Bennett, book rule, proposed)
+title: Put underwriting as a defined-risk bull put spread at 25 delta (Colin Bennett, book rule, tested in R104)
 family: option-structure
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -31,7 +31,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R103 tested symmetric credit
-  structures, not one-sided put spreads: 0 of 24. IV1''s put-writing OI rule was a buying signal, not put selling.. Assumptions:
-  Bennett''s naked short put at a support level is replaced by a 25-delta strike (support levels were random lines in R20b)
-  and a spread (no naked shorts).'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R103 tested symmetric credit structures, not one-sided put spreads: 0 of 24. IV1''s put-writing
+  OI rule was a buying signal, not put selling.. Assumptions: Bennett''s naked short put at a support level is replaced by
+  a 25-delta strike (support levels were random lines in R20b) and a spread (no naked shorts).'

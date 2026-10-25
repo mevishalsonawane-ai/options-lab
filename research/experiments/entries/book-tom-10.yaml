@@ -1,5 +1,5 @@
 id: book-tom-10
-title: Buy the 60-minute pullback in a daily uptrend (fade the short-term trend) (Trader Tom, book rule, proposed)
+title: Buy the 60-minute pullback in a daily uptrend (fade the short-term trend) (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,6 +38,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us as a fixed
-  rule; R89 daily+15m trend filter did not help PDHL breaks; direction at 15-60 min a coin flip (R16). Assumptions: The book
-  names the idea but no trigger; combining it with the book''s own 3-bar swing and 4-bar fractal is our reading.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: not tested by us as a fixed rule; R89 daily+15m trend filter did not help PDHL breaks;
+  direction at 15-60 min a coin flip (R16). Assumptions: The book names the idea but no trigger; combining it with the book''s
+  own 3-bar swing and 4-bar fractal is our reading.'

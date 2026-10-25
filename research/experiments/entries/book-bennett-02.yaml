@@ -1,5 +1,5 @@
 id: book-bennett-02
-title: 'NIFTY buy-write: long future, short weekly ~25-delta call (Colin Bennett, book rule, proposed)'
+title: 'NIFTY buy-write: long future, short weekly ~25-delta call (Colin Bennett, book rule, tested in R104)'
 family: option-structure
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -35,5 +35,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). future = spot + carry proxy; call held to expiry (cash settled) R104 (227 tests,
-  BH across all). future = spot + carry proxy; call held to expiry (cash settled) Our nearest test: not tested by us. Assumptions:
-  Weekly instead of monthly because NIFTY weeklies exist; 25-delta weekly strike is about 1-2% OTM, inside ATM +-10.'
+  BH across all). future = spot + carry proxy; call held to expiry (cash settled) R104 (227 tests, BH across all). future
+  = spot + carry proxy; call held to expiry (cash settled) R104 (227 tests, BH across all). future = spot + carry proxy; call
+  held to expiry (cash settled) Our nearest test: not tested by us. Assumptions: Weekly instead of monthly because NIFTY weeklies
+  exist; 25-delta weekly strike is about 1-2% OTM, inside ATM +-10.'

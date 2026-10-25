@@ -1,5 +1,5 @@
 id: book-atb-03
-title: Morning / evening star three-candle reversal (The Advanced Trading Book, book rule, proposed)
+title: Morning / evening star three-candle reversal (The Advanced Trading Book, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -32,6 +32,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87: SENSEX 1m morning star
-  +0.090 ATR design (n 3,466) reversed to -0.083 in the holdout (n 837). Assumptions: ''Long'', ''short-bodied'' and the third
-  candle''s reach are our numbers; the book''s evening-star drawing has bar 3 closing deep into bar 1''s body.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R87: SENSEX 1m morning star +0.090 ATR design (n 3,466) reversed to -0.083 in the holdout
+  (n 837). Assumptions: ''Long'', ''short-bodied'' and the third candle''s reach are our numbers; the book''s evening-star
+  drawing has bar 3 closing deep into bar 1''s body.'

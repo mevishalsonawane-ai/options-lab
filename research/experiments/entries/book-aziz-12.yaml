@@ -1,5 +1,5 @@
 id: book-aziz-12
-title: Stop for the day after giving back 30% of the first hour's profit (Andrew Aziz, book rule, proposed)
+title: Stop for the day after giving back 30% of the first hour's profit (Andrew Aziz, book rule, tested in R104)
 family: sizing-execution
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -32,6 +32,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). account-level day rule on the combined arms R104 (227 tests, BH across all). account-level
-  day rule on the combined arms Our nearest test: R19c: a day profit lock raised green days but failed net / drawdown; the
-  day loss cap lowered green days. Assumptions: US Open (to 10:30) mapped to NSE 10:15; ''switch to the simulator'' read as
-  no new entries.'
+  day rule on the combined arms R104 (227 tests, BH across all). account-level day rule on the combined arms R104 (227 tests,
+  BH across all). account-level day rule on the combined arms Our nearest test: R19c: a day profit lock raised green days
+  but failed net / drawdown; the day loss cap lowered green days. Assumptions: US Open (to 10:30) mapped to NSE 10:15; ''switch
+  to the simulator'' read as no new entries.'

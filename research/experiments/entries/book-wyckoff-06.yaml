@@ -1,5 +1,5 @@
 id: book-wyckoff-06
-title: Close an index trade when the other indices turn against it (Wyckoff, book rule, proposed)
+title: Close an index trade when the other indices turn against it (Wyckoff, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -32,6 +32,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). exit overlay on LIQ and R72 R104 (227 tests, BH across all). exit overlay on LIQ
+  and R72 R104 (227 tests, BH across all). exit overlay on LIQ and R72 R104 (227 tests, BH across all). exit overlay on LIQ
   and R72 Our nearest test: not tested by us as an exit; early exits made the profitable arms worse (R12, R18); R72 C6 SMT
   divergence failed. Assumptions: The book''s cue from ''other stocks failing'' made a breadth count against the position;
   3 of 4 and 20 bars are ours. Exit-only, so risk-lowering.'

@@ -1,5 +1,5 @@
 id: book-smith-02
-title: SST six rules on 1-hour index bars (intraday-to-few-days mapping) (David Graeme Smith, book rule, proposed)
+title: SST six rules on 1-hour index bars (intraday-to-few-days mapping) (David Graeme Smith, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,7 +39,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). intraday variant (15:15 out) bought options R104 (227 tests, BH across all). intraday
-  variant (15:15 out) bought options Our nearest test: OBUY_GB TI-09 (ADX/DMI + set-up candle break, 5/15-minute): walk-forward
-  Rs -345,311, 0/5 years, 48 variants; R73 ADX filters failed; R89 previous-day high/low break 0 of 180.. Assumptions: The
-  book is end-of-day only; the hourly version is our mapping and should be labelled as such. Buffer and ''big bar'' scaled
-  to ATR because the book''s 0.5% / 5% are share-sized.'
+  variant (15:15 out) bought options R104 (227 tests, BH across all). intraday variant (15:15 out) bought options R104 (227
+  tests, BH across all). intraday variant (15:15 out) bought options Our nearest test: OBUY_GB TI-09 (ADX/DMI + set-up candle
+  break, 5/15-minute): walk-forward Rs -345,311, 0/5 years, 48 variants; R73 ADX filters failed; R89 previous-day high/low
+  break 0 of 180.. Assumptions: The book is end-of-day only; the hourly version is our mapping and should be labelled as such.
+  Buffer and ''big bar'' scaled to ATR because the book''s 0.5% / 5% are share-sized.'

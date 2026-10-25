@@ -1,6 +1,6 @@
 id: book-bennett-09
 title: After a sharp fall, near-zero-cost 1x2 call spread made defined-risk (broken-wing butterfly) (Colin Bennett, book rule,
-  proposed)
+  tested in R104)
 family: option-structure
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -34,7 +34,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). rare signal (>= 4% fall in 3 sessions); min-trades gate likely binding R104 (227
-  tests, BH across all). rare signal (>= 4% fall in 3 sessions); min-trades gate likely binding Our nearest test: Direction
-  after falls is a coin flip; R102 daily momentum (+5.8 bps NIFTY) reversed in the holdout (-9.4 bps, 65 days). Not tested
-  as a structure.. Assumptions: ''Sharp drop'' and ''bounce to earlier levels'' are made literal as 4% over 3 sessions and
-  half the fall; the extra long call replaces the stock that covered the second short call in the book.'
+  tests, BH across all). rare signal (>= 4% fall in 3 sessions); min-trades gate likely binding R104 (227 tests, BH across
+  all). rare signal (>= 4% fall in 3 sessions); min-trades gate likely binding R104 (227 tests, BH across all). rare signal
+  (>= 4% fall in 3 sessions); min-trades gate likely binding Our nearest test: Direction after falls is a coin flip; R102
+  daily momentum (+5.8 bps NIFTY) reversed in the holdout (-9.4 bps, 65 days). Not tested as a structure.. Assumptions: ''Sharp
+  drop'' and ''bounce to earlier levels'' are made literal as 4% over 3 sessions and half the fall; the extra long call replaces
+  the stock that covered the second short call in the book.'

@@ -1,5 +1,5 @@
 id: book-tom-16
-title: Equal-size pullback limit buy (harmonic retracement) (Trader Tom, book rule, proposed)
+title: Equal-size pullback limit buy (harmonic retracement) (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,6 +37,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R4 ABCD on the touch of D: 10,927
-  trades, -Rs 227 a trade net; Fibonacci pullback entries no better than random (R4/h37). Assumptions: The book gives the
-  entry only; stop size, target and trend test are ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R4 ABCD on the touch of D: 10,927 trades, -Rs 227 a trade net; Fibonacci pullback entries
+  no better than random (R4/h37). Assumptions: The book gives the entry only; stop size, target and trend test are ours.'

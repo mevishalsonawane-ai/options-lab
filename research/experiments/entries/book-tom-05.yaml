@@ -1,5 +1,5 @@
 id: book-tom-05
-title: Body-engulfing bar on 10-minute index bars in the trend direction (Trader Tom, book rule, proposed)
+title: Body-engulfing bar on 10-minute index bars in the trend direction (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,8 +37,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87 tested engulfing among 43
-  shapes: no direction edge, 0 of 4,049 context cells; R87B exits on an opposite engulfing hurt. Assumptions: Book gives no
-  explicit stop; ''tells us how much to risk'' read as the bar''s far end. Trend filter not defined in the chapter; the book''s
-  89-period MA used. Breakeven trigger at +1R and the bar-low trail are our readings of ''runs immediately'' and ''move the
-  stop progressively''.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R87 tested engulfing among 43 shapes: no direction edge, 0 of 4,049 context cells; R87B
+  exits on an opposite engulfing hurt. Assumptions: Book gives no explicit stop; ''tells us how much to risk'' read as the
+  bar''s far end. Trend filter not defined in the chapter; the book''s 89-period MA used. Breakeven trigger at +1R and the
+  bar-low trail are our readings of ''runs immediately'' and ''move the stop progressively''.'

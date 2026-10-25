@@ -1,5 +1,5 @@
 id: book-heitkoetter-04
-title: Turtle 20-bar breakout on 15-minute bars with the book's exits (Markus Heitkoetter, book rule, proposed)
+title: Turtle 20-bar breakout on 15-minute bars with the book's exits (Markus Heitkoetter, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,6 +39,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). 15-minute bars with 0.27% / 0.41% / 45-minute exits differ from the 5-minute Donchian
+  arm R104 (227 tests, BH across all). 15-minute bars with 0.27% / 0.41% / 45-minute exits differ from the 5-minute Donchian
+  arm R104 (227 tests, BH across all). 15-minute bars with 0.27% / 0.41% / 45-minute exits differ from the 5-minute Donchian
   arm R104 (227 tests, BH across all). 15-minute bars with 0.27% / 0.41% / 45-minute exits differ from the 5-minute Donchian
   arm Our nearest test: R51/R73 Donchian 20 on 5-minute index bars: final Rs 81,845 on 1,781 trades (thin, R51 about zero
   at 2x costs); R83 crude daily Donchian-20 + Supertrend not proven. Assumptions: Book gives no exits for the turtle rule;

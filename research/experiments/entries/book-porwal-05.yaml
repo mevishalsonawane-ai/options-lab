@@ -1,5 +1,5 @@
 id: book-porwal-05
-title: Darvas box break with volume confirmation, stop outside the box (Nikhil Porwal, book rule, proposed)
+title: Darvas box break with volume confirmation, stop outside the box (Nikhil Porwal, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -42,6 +42,9 @@ holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). with real volume on MCX; the index price-only box is the R51 Donchian arm (covered)
   and its volume part lacks data R104 (227 tests, BH across all). with real volume on MCX; the index price-only box is the
-  R51 Donchian arm (covered) and its volume part lacks data Our nearest test: nearest R51 Donchian 20 5-minute: final +Rs
-  55,439 on 1,787 trades (our real arm); R71 P3 squeeze release lost; R73 confirmation wait lost; volume filter not tested
-  by us. Assumptions: The box definition, quiet-box width test, body and volume thresholds are ours; the book gives no numbers.'
+  R51 Donchian arm (covered) and its volume part lacks data R104 (227 tests, BH across all). with real volume on MCX; the
+  index price-only box is the R51 Donchian arm (covered) and its volume part lacks data R104 (227 tests, BH across all). with
+  real volume on MCX; the index price-only box is the R51 Donchian arm (covered) and its volume part lacks data Our nearest
+  test: nearest R51 Donchian 20 5-minute: final +Rs 55,439 on 1,787 trades (our real arm); R71 P3 squeeze release lost; R73
+  confirmation wait lost; volume filter not tested by us. Assumptions: The box definition, quiet-box width test, body and
+  volume thresholds are ours; the book gives no numbers.'

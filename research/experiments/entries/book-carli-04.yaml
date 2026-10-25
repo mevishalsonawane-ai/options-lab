@@ -1,5 +1,5 @@
 id: book-carli-04
-title: Skip a trade in the direction of today's opening gap (David Carli, book rule, proposed)
+title: Skip a trade in the direction of today's opening gap (David Carli, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -34,6 +34,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). gap-direction skip filter R104 (227 tests, BH across all). gap-direction skip filter
-  Our nearest test: not tested by us in this form; R87 found gap-day context did not make any candle shape predictive (0 of
-  4,049 shape x context cells). Assumptions: The book gives the advice for its own trades without a time limit; we apply it
-  to the gap day only.'
+  R104 (227 tests, BH across all). gap-direction skip filter R104 (227 tests, BH across all). gap-direction skip filter Our
+  nearest test: not tested by us in this form; R87 found gap-day context did not make any candle shape predictive (0 of 4,049
+  shape x context cells). Assumptions: The book gives the advice for its own trades without a time limit; we apply it to the
+  gap day only.'

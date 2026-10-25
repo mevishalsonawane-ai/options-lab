@@ -1,5 +1,5 @@
 id: book-lswing-03
-title: FORCESWING + Master Plan on the R58 stocks, bought monthly options (Larry Swing, book rule, proposed)
+title: FORCESWING + Master Plan on the R58 stocks, bought monthly options (Larry Swing, book rule, tested in R104)
 family: outside-strategies
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,8 +38,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). stock-future proxy (the 10 R58 names); the book''s monthly option not priced R104
-  (227 tests, BH across all). stock-future proxy (the 10 R58 names); the book''s monthly option not priced Our nearest test:
-  R58: 38 stock-option rules, 0 pass; F5 daily momentum / Donchian final -Rs 5.5 lakh on 970 trades; round trip about Rs 280
-  a lot (2% of premium). SWING_DEEP: stock pullbacks beat random stocks 9/11 years but not buy-and-hold.. Assumptions: $0.06
-  on a ~$27 stock -> 0.2%; $0.50 -> 1.8%; literal 4% / 7% kept because stock ATRs are close to the book''s. Lot sizes from
-  bhavcopy.'
+  (227 tests, BH across all). stock-future proxy (the 10 R58 names); the book''s monthly option not priced R104 (227 tests,
+  BH across all). stock-future proxy (the 10 R58 names); the book''s monthly option not priced R104 (227 tests, BH across
+  all). stock-future proxy (the 10 R58 names); the book''s monthly option not priced Our nearest test: R58: 38 stock-option
+  rules, 0 pass; F5 daily momentum / Donchian final -Rs 5.5 lakh on 970 trades; round trip about Rs 280 a lot (2% of premium).
+  SWING_DEEP: stock pullbacks beat random stocks 9/11 years but not buy-and-hold.. Assumptions: $0.06 on a ~$27 stock -> 0.2%;
+  $0.50 -> 1.8%; literal 4% / 7% kept because stock ATRs are close to the book''s. Lot sizes from bhavcopy.'

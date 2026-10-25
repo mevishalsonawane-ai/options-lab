@@ -1,5 +1,5 @@
 id: book-wyckoff-08
-title: Stop beyond the last point of resistance, raised under each new reaction low (Wyckoff, book rule, proposed)
+title: Stop beyond the last point of resistance, raised under each new reaction low (Wyckoff, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -35,6 +35,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). swing-low trail overlay on R72, R51, LIQ R104 (227 tests, BH across all). swing-low
-  trail overlay on R72, R51, LIQ Our nearest test: R19 breakeven / give-back locks 0 of 12; R90 swing stops 0 of 99; a swing-low
-  trail on the arms is not tested by us. Assumptions: Book''s 1/4 point beyond the point of resistance converted to 0.1 ATR;
-  swing = 3-bar fractal'
+  trail overlay on R72, R51, LIQ R104 (227 tests, BH across all). swing-low trail overlay on R72, R51, LIQ R104 (227 tests,
+  BH across all). swing-low trail overlay on R72, R51, LIQ Our nearest test: R19 breakeven / give-back locks 0 of 12; R90
+  swing stops 0 of 99; a swing-low trail on the arms is not tested by us. Assumptions: Book''s 1/4 point beyond the point
+  of resistance converted to 0.1 ATR; swing = 3-bar fractal'

@@ -1,5 +1,5 @@
 id: book-woods-06
-title: Pin bar rejected from a prior swing level (Galen Woods, book rule, proposed)
+title: Pin bar rejected from a prior swing level (Galen Woods, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -30,6 +30,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87: big tail 51% vs 52% matched
-  on NIFTY 15m (n 949), wick lows broken as often as distance implies; R20b levels no better than random; R91 sweep 0 of 63.
-  Expected negative.. Assumptions: ''Tail takes up most of the bar'' = >= 2/3; level = fractal swing.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R87: big tail 51% vs 52% matched on NIFTY 15m (n 949), wick lows broken as often as distance
+  implies; R20b levels no better than random; R91 sweep 0 of 63. Expected negative.. Assumptions: ''Tail takes up most of
+  the bar'' = >= 2/3; level = fractal swing.'

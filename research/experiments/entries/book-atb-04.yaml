@@ -1,5 +1,5 @@
 id: book-atb-04
-title: Three white soldiers after a downtrend, confirmed by RSI (The Advanced Trading Book, book rule, proposed)
+title: Three white soldiers after a downtrend, confirmed by RSI (The Advanced Trading Book, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -36,6 +36,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87-1 NIFTY 5m three white soldiers
-  -> call: -Rs 3,910 on 160 trades; GOLD_CANDLES 15m soldiers negative in the held-out year in every version. Assumptions:
-  RSI level 50 and the stop at the pattern''s start are ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R87-1 NIFTY 5m three white soldiers -> call: -Rs 3,910 on 160 trades; GOLD_CANDLES 15m
+  soldiers negative in the held-out year in every version. Assumptions: RSI level 50 and the stop at the pattern''s start
+  are ours.'

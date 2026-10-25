@@ -1,5 +1,6 @@
 id: book-fmross-02
-title: Buy the ATM straddle when the state-conditional volatility forecast exceeds ATM IV (Sheldon Ross, book rule, proposed)
+title: Buy the ATM straddle when the state-conditional volatility forecast exceeds ATM IV (Sheldon Ross, book rule, tested
+  in R104)
 family: option-structure
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -40,7 +41,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). index only (MCX options only from 2025) R104 (227 tests, BH across all). index only
-  (MCX options only from 2025) Our nearest test: R89 straddles on a forecast big candle: 0 of 18 profitable (FINDINGS.md);
-  R16 found the size of the next move predictable. Assumptions: The book uses state sds to price options by Monte Carlo, not
-  to trade; the 2-point threshold, 500-session window and 30% stop are ours. Six-state version (+/-1%, +/-2%) as a pre-registered
-  variant.'
+  (MCX options only from 2025) R104 (227 tests, BH across all). index only (MCX options only from 2025) R104 (227 tests, BH
+  across all). index only (MCX options only from 2025) Our nearest test: R89 straddles on a forecast big candle: 0 of 18 profitable
+  (FINDINGS.md); R16 found the size of the next move predictable. Assumptions: The book uses state sds to price options by
+  Monte Carlo, not to trade; the 2-point threshold, 500-session window and 30% stop are ours. Six-state version (+/-1%, +/-2%)
+  as a pre-registered variant.'

@@ -1,5 +1,5 @@
 id: book-woods-19
-title: 'Broken level flips: buy the pullback to old resistance (Galen Woods, book rule, proposed)'
+title: 'Broken level flips: buy the pullback to old resistance (Galen Woods, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -31,5 +31,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R22 break-and-retest: retested
-  82%, then further on 45% (-0.020 ATR, 442); R20c; H35 retest-then-go all lost.. Assumptions: Touch and stop distances ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R22 break-and-retest: retested 82%, then further on 45% (-0.020 ATR, 442); R20c; H35
+  retest-then-go all lost.. Assumptions: Touch and stop distances ours.'

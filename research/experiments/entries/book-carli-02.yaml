@@ -1,5 +1,5 @@
 id: book-carli-02
-title: Same Carli divergence setup on roughly 4-hour bars (David Carli, book rule, proposed)
+title: Same Carli divergence setup on roughly 4-hour bars (David Carli, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,7 +38,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). half-session bars, held overnight: index as a futures proxy R104 (227 tests, BH across
-  all). half-session bars, held overnight: index as a futures proxy Our nearest test: R95: CCI fade and divergence variants
-  on 60m failed the holdout (BANKNIFTY 60m B passed design on 48 trades, holdout 17 trades -Rs 1,014); this exact setup not
-  tested by us. Assumptions: The book says ''rarely'' 4-hour and never lower; NSE has no natural 4-hour bar, so two bars a
-  session stand in. Same pivot, buffer and leg assumptions as the daily rule.'
+  all). half-session bars, held overnight: index as a futures proxy R104 (227 tests, BH across all). half-session bars, held
+  overnight: index as a futures proxy R104 (227 tests, BH across all). half-session bars, held overnight: index as a futures
+  proxy Our nearest test: R95: CCI fade and divergence variants on 60m failed the holdout (BANKNIFTY 60m B passed design on
+  48 trades, holdout 17 trades -Rs 1,014); this exact setup not tested by us. Assumptions: The book says ''rarely'' 4-hour
+  and never lower; NSE has no natural 4-hour bar, so two bars a session stand in. Same pivot, buffer and leg assumptions as
+  the daily rule.'

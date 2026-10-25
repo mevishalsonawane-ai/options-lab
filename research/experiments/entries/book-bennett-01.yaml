@@ -1,6 +1,6 @@
 id: book-bennett-01
 title: Sell defined-risk premium only when implied is dear against forecast realised (volatility risk premium filter) (Colin
-  Bennett, book rule, proposed)
+  Bennett, book rule, tested in R104)
 family: option-structure
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -41,8 +41,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). version A (intraday iron fly); README pick 2 R104 (227 tests, BH across all). version
-  A (intraday iron fly); README pick 2 Our nearest test: R103 sold iron flies / condors every day: 0 of 24 confirmed. R102:
-  India VIX over-states NIFTY''s next 21 days on 81% of days (median 1.28, n 4,507) but under-states BANKNIFTY''s on 60%.
-  A VRP-timed filter was not tested.. Assumptions: Bennett gives no threshold for ''dear''; the 70th percentile and the 4-strike
-  wing are our choices. The forecast excludes the overnight gap for intraday holds because h29 found IV carries overnight
-  risk an intraday seller does not collect.'
+  A (intraday iron fly); README pick 2 R104 (227 tests, BH across all). version A (intraday iron fly); README pick 2 R104
+  (227 tests, BH across all). version A (intraday iron fly); README pick 2 Our nearest test: R103 sold iron flies / condors
+  every day: 0 of 24 confirmed. R102: India VIX over-states NIFTY''s next 21 days on 81% of days (median 1.28, n 4,507) but
+  under-states BANKNIFTY''s on 60%. A VRP-timed filter was not tested.. Assumptions: Bennett gives no threshold for ''dear'';
+  the 70th percentile and the 4-strike wing are our choices. The forecast excludes the overnight gap for intraday holds because
+  h29 found IV carries overnight risk an intraday seller does not collect.'

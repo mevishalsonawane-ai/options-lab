@@ -1,5 +1,5 @@
 id: book-fmoptim-01
-title: Break of a least-width sloped trend channel fitted to the last 20 closes (Bartholomew-Biggs, book rule, proposed)
+title: Break of a least-width sloped trend channel fitted to the last 20 closes (Bartholomew-Biggs, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -43,9 +43,10 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Not tested in this form. Nearest:
-  R51 / R72 flat 20-bar Donchian breaks (R72 Breadth Donchian passed, twin p 0.008, BH q 0.032); R71 squeeze-release channel
-  break lost in the final (-Rs 41,281 on 305 trades, twin p 0.91); R20b / R20c levels and level breaks no better than random
-  lines.. Assumptions: Window length 20 from the book''s 20-day channels; the book refits on fixed windows (days 1-20, 20-40,
-  40-60), we refit every bar to avoid look-ahead. The book only says sell on a downward break and buy on an upward break and
-  gives no stop, exit or size. Uses closes only, as the book does.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: Not tested in this form. Nearest: R51 / R72 flat 20-bar Donchian breaks (R72 Breadth
+  Donchian passed, twin p 0.008, BH q 0.032); R71 squeeze-release channel break lost in the final (-Rs 41,281 on 305 trades,
+  twin p 0.91); R20b / R20c levels and level breaks no better than random lines.. Assumptions: Window length 20 from the book''s
+  20-day channels; the book refits on fixed windows (days 1-20, 20-40, 40-60), we refit every bar to avoid look-ahead. The
+  book only says sell on a downward break and buy on an upward break and gives no stop, exit or size. Uses closes only, as
+  the book does.'

@@ -1,5 +1,5 @@
 id: book-carli-03
-title: Do Carli's three divergence filters improve R95's confirmed divergences? (David Carli, book rule, proposed)
+title: Do Carli's three divergence filters improve R95's confirmed divergences? (David Carli, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -36,6 +36,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). R95''s confirmed divergences re-built on 15/60-minute bars with Carli''s three filters
+  R104 (227 tests, BH across all). R95''s confirmed divergences re-built on 15/60-minute bars with Carli''s three filters
+  R104 (227 tests, BH across all). R95''s confirmed divergences re-built on 15/60-minute bars with Carli''s three filters
   R104 (227 tests, BH across all). R95''s confirmed divergences re-built on 15/60-minute bars with Carli''s three filters
   Our nearest test: R95 confirmed-divergence entries lost (index design 1,778 trades -Rs 3,37,415; holdout 691 trades -Rs
   37,156); DV variant 0-52 trades a cell. Assumptions: Tests the filters on intraday bars, which the author says he never

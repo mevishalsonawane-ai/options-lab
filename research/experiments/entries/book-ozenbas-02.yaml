@@ -1,5 +1,6 @@
 id: book-ozenbas-02
-title: Enter with a capped limit instead of a market order; never chase (Ozenbas, Pagano, Schwartz and Weber, book rule, proposed)
+title: Enter with a capped limit instead of a market order; never chase (Ozenbas, Pagano, Schwartz and Weber, book rule, covered
+  by an earlier study)
 family: sizing-execution
 date: '2026-10-25'
 doc: research/books/TESTABLE_RULES.md

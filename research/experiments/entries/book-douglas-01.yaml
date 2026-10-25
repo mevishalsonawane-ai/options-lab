@@ -1,6 +1,6 @@
 id: book-douglas-01
 title: Judge each arm in 20-trade blocks; pause an arm whose block falls outside its own expected range (Mark Douglas, book
-  rule, proposed)
+  rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,8 +39,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R75 L1-K2 (stop after 2 losses
-  in a row) and L7-DD20 (half size in a Rs 20k drawdown) both failed: the trades after a bad stretch paid. A 20-trade block
-  rule is a slower version of the same idea and is not tested by us.. Assumptions: The book says to judge in samples of at
-  least 20 and that 20 is small enough to catch a fading edge, but gives no stop criterion; the 5th-percentile bootstrap of
-  the arm''s own design trades and the 20-signal pause are ours. Risk-lowering only; would start in shadow for live per CLAUDE.md.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R75 L1-K2 (stop after 2 losses in a row) and L7-DD20 (half size in a Rs 20k drawdown)
+  both failed: the trades after a bad stretch paid. A 20-trade block rule is a slower version of the same idea and is not
+  tested by us.. Assumptions: The book says to judge in samples of at least 20 and that 20 is small enough to catch a fading
+  edge, but gives no stop criterion; the 5th-percentile bootstrap of the arm''s own design trades and the 20-signal pause
+  are ours. Risk-lowering only; would start in shadow for live per CLAUDE.md.'

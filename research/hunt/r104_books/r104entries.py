@@ -103,11 +103,14 @@ def update_entries(final):
                                       "and dated charges; futures proxies dated futures charges, half-spreads, carry; "
                                       "MCX R94 charges; crypto fees + GST")
             e["holdout_read"] = True
+            # the books' write-up titled each rule "(..., book rule, proposed)"; once run it is a tested rule
+            e["title"] = str(e.get("title", "")).replace("book rule, proposed)", "book rule, tested in R104)")
             e["verdict"] = "paper-only" if any(r["final_pass"] for r in rows) else "rejected"
             e["notes"] = (f"R104 ({n_tests} tests, BH across all). " + (why or "") +
                           (" " + e.get("notes", "") if e.get("notes") and not rid.startswith("new-") else ""))[:3000]
         elif st == "covered":
             e["verdict"] = "not-a-test"
+            e["title"] = str(e.get("title", "")).replace("book rule, proposed)", "book rule, covered by an earlier study)")
             e["results"] = dict(summary=f"Not re-run in R104: covered by an earlier study. {why}",
                                 costs=e.get("results", {}).get("costs", "n/a"))
             e["notes"] = f"R104: covered (no BH budget spent). {why}"
@@ -116,6 +119,7 @@ def update_entries(final):
             e["notes"] = f"R104: needs data we lack ({why})."
         elif st == "desc":
             e["verdict"] = "not-a-test"
+            e["title"] = str(e.get("title", "")).replace("book rule, proposed)", "book question, answered in R104)")
             e["results"] = dict(summary="R104: descriptive question only (no trade); see HUNT_R104_BOOKS.md",
                                 costs="n/a")
         p.write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))

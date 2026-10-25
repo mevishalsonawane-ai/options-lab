@@ -1,6 +1,6 @@
 id: book-atb-10
 title: Flag (parallel channel against a sharp pole), trade the channel break (Strategy 5, sheet p58) (The Advanced Trading
-  Book, book rule, proposed)
+  Book, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -44,6 +44,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R71 P4 flag: only 32 final trades
-  (-Rs 442 with L25), design -Rs 27,378: too rare to judge. Assumptions: Pole size, flag length, parallel tolerance, stop
-  and target are ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R71 P4 flag: only 32 final trades (-Rs 442 with L25), design -Rs 27,378: too rare to
+  judge. Assumptions: Pole size, flag length, parallel tolerance, stop and target are ours.'

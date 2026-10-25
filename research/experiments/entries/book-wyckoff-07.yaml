@@ -1,5 +1,5 @@
 id: book-wyckoff-07
-title: 'A rally that fails to recover half the drop: sell (Wyckoff, book rule, proposed)'
+title: 'A rally that fails to recover half the drop: sell (Wyckoff, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -32,6 +32,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R4: retracement levels turn
-  price 49.0% vs 49.1% for shifted ratios (25,000+ touches); h37 Fibonacci bounces Rs -125 a trade. Assumptions: Book says
-  a normal rally is one half to two thirds; ''falls short'' read as below 50%; target and ZigZag size are ours'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R4: retracement levels turn price 49.0% vs 49.1% for shifted ratios (25,000+ touches);
+  h37 Fibonacci bounces Rs -125 a trade. Assumptions: Book says a normal rally is one half to two thirds; ''falls short''
+  read as below 50%; target and ZigZag size are ours'

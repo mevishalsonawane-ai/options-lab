@@ -1,5 +1,5 @@
 id: book-fmchan-03
-title: GOLD/SILVER spread trade only when cointegrated, exit on the OU half-life (Ernest Chan, book rule, proposed)
+title: GOLD/SILVER spread trade only when cointegrated, exit on the OU half-life (Ernest Chan, book rule, tested in R104)
 family: mcx-crypto
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,8 +38,10 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). R94 idea 2 without the book''s cointegration gate and half-life exit R104 (227 tests,
-  BH across all). R94 idea 2 without the book''s cointegration gate and half-life exit Our nearest test: R94 idea 2: GOLD/SILVER
-  log-ratio z-score lost in design (68 trades, -Rs 6,26,347 at W60) and holdout; only 14 of 68 reverted to z = 0, 40 timed
-  out. R82 G1 and R96 R5F (27 trades, -Rs 47,162) also failed. Low prior.. Assumptions: The CADF gate and half-life exit are
-  what R94 lacked; everything else copies R94 idea 2 so the only change is Chan''s two additions. If the gate is rarely open
-  the rule is reported as ''too few trades'' rather than tuned.'
+  BH across all). R94 idea 2 without the book''s cointegration gate and half-life exit R104 (227 tests, BH across all). R94
+  idea 2 without the book''s cointegration gate and half-life exit R104 (227 tests, BH across all). R94 idea 2 without the
+  book''s cointegration gate and half-life exit Our nearest test: R94 idea 2: GOLD/SILVER log-ratio z-score lost in design
+  (68 trades, -Rs 6,26,347 at W60) and holdout; only 14 of 68 reverted to z = 0, 40 timed out. R82 G1 and R96 R5F (27 trades,
+  -Rs 47,162) also failed. Low prior.. Assumptions: The CADF gate and half-life exit are what R94 lacked; everything else
+  copies R94 idea 2 so the only change is Chan''s two additions. If the gate is rarely open the rule is reported as ''too
+  few trades'' rather than tuned.'

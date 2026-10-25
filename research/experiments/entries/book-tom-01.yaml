@@ -1,5 +1,5 @@
 id: book-tom-01
-title: 4-bar fractal momentum entry (David Paul) (Trader Tom, book rule, proposed)
+title: 4-bar fractal momentum entry (David Paul) (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -40,8 +40,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us; nearest R71
-  P7 three-bar reversal at the day high/low lost (-Rs 1,67,689, 855 trades) and R4 G3 Gann 2-bar swing lost Rs 172 a trade
-  net (6,227). Assumptions: The book gives no stop or exit; the four-bar extreme as stop and the opposite signal as exit are
-  our most literal choices. ''Bar three back'' read as high[t-3] (the book numbers bars 1 = current, 2 = previous, 4 = three
-  back).'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: not tested by us; nearest R71 P7 three-bar reversal at the day high/low lost (-Rs 1,67,689,
+  855 trades) and R4 G3 Gann 2-bar swing lost Rs 172 a trade net (6,227). Assumptions: The book gives no stop or exit; the
+  four-bar extreme as stop and the opposite signal as exit are our most literal choices. ''Bar three back'' read as high[t-3]
+  (the book numbers bars 1 = current, 2 = previous, 4 = three back).'

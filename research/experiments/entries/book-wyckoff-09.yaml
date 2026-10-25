@@ -1,5 +1,5 @@
 id: book-wyckoff-09
-title: Fixed-distance trail until costs are covered, then hand over to the arm's exit (Wyckoff, book rule, proposed)
+title: Fixed-distance trail until costs are covered, then hand over to the arm's exit (Wyckoff, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -35,7 +35,9 @@ holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). fixed-distance trail to cost cover, overlay on every arm; the crypto clause has no
   crypto arm to apply to R104 (227 tests, BH across all). fixed-distance trail to cost cover, overlay on every arm; the crypto
-  clause has no crypto arm to apply to Our nearest test: R19b Rs 500 give-back hurt Liquidity (holdout 15m +Rs 4,584 vs +Rs
-  14,633 plain); R100 0 of 15; LIQUIDITY_TRAIL halves the average winner. Assumptions: The book''s 1 point on a ~130-dollar
-  stock is about 0.8%, far too wide for an intraday index; we scale it to the expected range. Crypto use needs a stop and
-  a profit lock (CLAUDE.md), which this provides.'
+  clause has no crypto arm to apply to R104 (227 tests, BH across all). fixed-distance trail to cost cover, overlay on every
+  arm; the crypto clause has no crypto arm to apply to R104 (227 tests, BH across all). fixed-distance trail to cost cover,
+  overlay on every arm; the crypto clause has no crypto arm to apply to Our nearest test: R19b Rs 500 give-back hurt Liquidity
+  (holdout 15m +Rs 4,584 vs +Rs 14,633 plain); R100 0 of 15; LIQUIDITY_TRAIL halves the average winner. Assumptions: The book''s
+  1 point on a ~130-dollar stock is about 0.8%, far too wide for an intraday index; we scale it to the expected range. Crypto
+  use needs a stop and a profit lock (CLAUDE.md), which this provides.'

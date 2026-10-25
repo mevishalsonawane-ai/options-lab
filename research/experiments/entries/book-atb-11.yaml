@@ -1,5 +1,6 @@
 id: book-atb-11
-title: 'Sideways box after a move: break, retest, confirming candle (Strategy 6) (The Advanced Trading Book, book rule, proposed)'
+title: 'Sideways box after a move: break, retest, confirming candle (Strategy 6) (The Advanced Trading Book, book rule, tested
+  in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,7 +39,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Closest arm: Donchian plain
-  breakout, Rs 55,439 on 1,787 final trades (R71); retest not better on the morning range (R22); ORB family 0 of 257 (R92);
-  run it beside Donchian with and without the retest. Assumptions: Box size and length, retest window, stop and target are
-  ours; book gives only the retest-and-bullish-candle entry.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: Closest arm: Donchian plain breakout, Rs 55,439 on 1,787 final trades (R71); retest not
+  better on the morning range (R22); ORB family 0 of 257 (R92); run it beside Donchian with and without the retest. Assumptions:
+  Box size and length, retest window, stop and target are ours; book gives only the retest-and-bullish-candle entry.'

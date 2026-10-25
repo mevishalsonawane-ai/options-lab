@@ -1,6 +1,6 @@
 id: book-fmbjork-02
 title: Long ATM straddle on BANKNIFTY, delta-hedged with the future (gamma scalping) when implied is cheap against forecast
-  realised (Tomas Björk, book rule, proposed)
+  realised (Tomas Björk, book rule, tested in R104)
 family: option-structure
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,8 +39,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: MCX_OPTIONS.md: delta-hedged
-  long-option P&L was about zero in the best cells and mostly negative in the holdout. R16: next 30-60 minute range predictable.
-  A delta-hedged NSE straddle was not tested by us.. Assumptions: Bjork only describes the hedge; the cheapness filter, lot
-  count, band, clock and stop are ours. BANKNIFTY is chosen because R102 found VIX under-states its realised volatility on
-  60% of days; VIX is a NIFTY number, so the filter uses BANKNIFTY''s own IV.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: MCX_OPTIONS.md: delta-hedged long-option P&L was about zero in the best cells and mostly
+  negative in the holdout. R16: next 30-60 minute range predictable. A delta-hedged NSE straddle was not tested by us.. Assumptions:
+  Bjork only describes the hedge; the cheapness filter, lot count, band, clock and stop are ours. BANKNIFTY is chosen because
+  R102 found VIX under-states its realised volatility on 60% of days; VIX is a NIFTY number, so the filter uses BANKNIFTY''s
+  own IV.'

@@ -1,5 +1,5 @@
 id: book-woods-05
-title: 'Exhaustion bar: gap open, close near the far end, gap unfilled, high volume (Galen Woods, book rule, proposed)'
+title: 'Exhaustion bar: gap open, close near the far end, gap unfilled, high volume (Galen Woods, book rule, tested in R104)'
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,6 +37,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). volume = the near future''s daily volume (index futures daily volume 2012+) R104
-  (227 tests, BH across all). volume = the near future''s daily volume (index futures daily volume 2012+) Our nearest test:
-  Not tested by us.. Assumptions: ''Gap remains unfilled'' read as today''s high below yesterday''s close (bullish case);
-  ''near its top'' = top 25% of range; volume on the near future.'
+  (227 tests, BH across all). volume = the near future''s daily volume (index futures daily volume 2012+) R104 (227 tests,
+  BH across all). volume = the near future''s daily volume (index futures daily volume 2012+) R104 (227 tests, BH across all).
+  volume = the near future''s daily volume (index futures daily volume 2012+) Our nearest test: Not tested by us.. Assumptions:
+  ''Gap remains unfilled'' read as today''s high below yesterday''s close (bullish case); ''near its top'' = top 25% of range;
+  volume on the near future.'

@@ -1,5 +1,5 @@
 id: book-smith-07
-title: Skip swing entries whose trigger is hit by a gap (David Graeme Smith, book rule, proposed)
+title: Skip swing entries whose trigger is hit by a gap (David Graeme Smith, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -32,6 +32,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). gap-skip filter on the daily stop-entry hosts R104 (227 tests, BH across all). gap-skip
-  filter on the daily stop-entry hosts Our nearest test: R102: a 0.5-1% NIFTY gap fills by the close less than half the time
-  (NIFTY 42%); SWING_DEEP and LV-05 found swing profit is made overnight, which this filter discards. Not tested by us as
-  a filter.. Assumptions: Book''s ''gaps through the trigger'' read as the open being beyond the trigger level.'
+  filter on the daily stop-entry hosts R104 (227 tests, BH across all). gap-skip filter on the daily stop-entry hosts R104
+  (227 tests, BH across all). gap-skip filter on the daily stop-entry hosts Our nearest test: R102: a 0.5-1% NIFTY gap fills
+  by the close less than half the time (NIFTY 42%); SWING_DEEP and LV-05 found swing profit is made overnight, which this
+  filter discards. Not tested by us as a filter.. Assumptions: Book''s ''gaps through the trigger'' read as the open being
+  beyond the trigger level.'

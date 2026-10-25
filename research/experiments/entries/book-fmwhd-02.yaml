@@ -1,5 +1,6 @@
 id: book-fmwhd-02
-title: Buy the ATM straddle before a scheduled policy event, sell after it (Wilmott, Howison and Dewynne, book rule, proposed)
+title: Buy the ATM straddle before a scheduled policy event, sell after it (Wilmott, Howison and Dewynne, book rule, tested
+  in R104)
 family: calendar-events
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -34,9 +35,10 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). RBI / Budget events in events.csv (2024+); too few events to pass min trades R104
-  (227 tests, BH across all). RBI / Budget events in events.csv (2024+); too few events to pass min trades Our nearest test:
-  EVENT_SHIELD.md: BANKNIFTY day range 1.48x normal on RBI/Budget days (15 sessions, confirmed on 7 holdout sessions), NIFTY
-  1.28x not significant; R89: straddles bought when a big candle was forecast lost (0 of 18 profitable, gross about zero,
-  costs decide). Event-day straddles themselves: not tested by us.. Assumptions: The exercise only asks for a portfolio that
-  profits from a large move either way and lists straddles and strangles; we fix the event set, the timing, the ATM strikes
-  and the ''already priced'' filter.'
+  (227 tests, BH across all). RBI / Budget events in events.csv (2024+); too few events to pass min trades R104 (227 tests,
+  BH across all). RBI / Budget events in events.csv (2024+); too few events to pass min trades R104 (227 tests, BH across
+  all). RBI / Budget events in events.csv (2024+); too few events to pass min trades Our nearest test: EVENT_SHIELD.md: BANKNIFTY
+  day range 1.48x normal on RBI/Budget days (15 sessions, confirmed on 7 holdout sessions), NIFTY 1.28x not significant; R89:
+  straddles bought when a big candle was forecast lost (0 of 18 profitable, gross about zero, costs decide). Event-day straddles
+  themselves: not tested by us.. Assumptions: The exercise only asks for a portfolio that profits from a large move either
+  way and lists straddles and strangles; we fix the event set, the timing, the ATM strikes and the ''already priced'' filter.'

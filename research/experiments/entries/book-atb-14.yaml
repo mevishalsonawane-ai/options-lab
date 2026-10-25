@@ -1,5 +1,5 @@
 id: book-atb-14
-title: 'Head and shoulders / inverse: neckline break (The Advanced Trading Book, book rule, proposed)'
+title: 'Head and shoulders / inverse: neckline break (The Advanced Trading Book, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -41,5 +41,5 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us. Assumptions:
-  Symmetry tolerances, stop and target from the drawings.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: not tested by us. Assumptions: Symmetry tolerances, stop and target from the drawings.'

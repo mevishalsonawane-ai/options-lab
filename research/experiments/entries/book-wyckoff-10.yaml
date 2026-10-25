@@ -1,5 +1,5 @@
 id: book-wyckoff-10
-title: Abandon a trade that does not act right at once (Wyckoff, book rule, proposed)
+title: Abandon a trade that does not act right at once (Wyckoff, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -31,6 +31,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). no-progress exit at 20 minutes, overlay on every arm R104 (227 tests, BH across all).
-  no-progress exit at 20 minutes, overlay on every arm Our nearest test: R12 no-progress exit beat random exits on ORB Fresh
-  (holdout +Rs 14,365 over 474 trades, twin p 0.001) but did not help Liquidity. Assumptions: Book: ''it must act up to expectations
-  or be abandoned immediately''; R12 used the option''s +3% in 20 minutes; this version reads progress on the underlying'
+  no-progress exit at 20 minutes, overlay on every arm R104 (227 tests, BH across all). no-progress exit at 20 minutes, overlay
+  on every arm R104 (227 tests, BH across all). no-progress exit at 20 minutes, overlay on every arm Our nearest test: R12
+  no-progress exit beat random exits on ORB Fresh (holdout +Rs 14,365 over 474 trades, twin p 0.001) but did not help Liquidity.
+  Assumptions: Book: ''it must act up to expectations or be abandoned immediately''; R12 used the option''s +3% in 20 minutes;
+  this version reads progress on the underlying'

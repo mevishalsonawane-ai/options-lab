@@ -1,5 +1,5 @@
 id: book-woods-04
-title: Key reversal day (gap below prior low, close above prior high) (Galen Woods, book rule, proposed)
+title: Key reversal day (gap below prior low, close above prior high) (Galen Woods, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -35,6 +35,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Not tested by us; R87B daily
-  candle shapes 0 of 25.. Assumptions: ''Buy above'' read as a buy stop above the signal day''s high on the next session(s),
-  cancelled after 1 day.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: Not tested by us; R87B daily candle shapes 0 of 25.. Assumptions: ''Buy above'' read
+  as a buy stop above the signal day''s high on the next session(s), cancelled after 1 day.'

@@ -1,5 +1,5 @@
 id: book-heitkoetter-12
-title: Trail the stop at the previous 60-minute bar's high/low (Markus Heitkoetter, book rule, proposed)
+title: Trail the stop at the previous 60-minute bar's high/low (Markus Heitkoetter, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -33,6 +33,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us exactly; R81
-  X3 ATR trail cut runners (-Rs 62k design, -Rs 17k final); R19b Rs 500 trail failed. Assumptions: Book''s example is 60-minute
-  E-mini; a 15-minute version is the natural variant.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: not tested by us exactly; R81 X3 ATR trail cut runners (-Rs 62k design, -Rs 17k final);
+  R19b Rs 500 trail failed. Assumptions: Book''s example is 60-minute E-mini; a 15-minute version is the natural variant.'

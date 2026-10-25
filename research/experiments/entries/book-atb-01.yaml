@@ -1,5 +1,6 @@
 id: book-atb-01
-title: Hammer at a prior swing low, bought only after an up candle confirms (The Advanced Trading Book, book rule, proposed)
+title: Hammer at a prior swing low, bought only after an up candle confirms (The Advanced Trading Book, book rule, tested
+  in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -40,7 +41,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87: NIFTY 15m hammer followed
-  by -0.47 ATR over 20 candles vs +0.19 matched; wick lows not defended (59% vs 57%, n 3,314); GOLD_CANDLES 1h hammer buys-only
-  weak (t 0.84, 424 trades). Assumptions: Book gives no numbers for wick ratios, ''support'', ''confirmation'', stop or target;
-  we use the hammer''s low as stop and the glossary''s 1:3 as target.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R87: NIFTY 15m hammer followed by -0.47 ATR over 20 candles vs +0.19 matched; wick lows
+  not defended (59% vs 57%, n 3,314); GOLD_CANDLES 1h hammer buys-only weak (t 0.84, 424 trades). Assumptions: Book gives
+  no numbers for wick ratios, ''support'', ''confirmation'', stop or target; we use the hammer''s low as stop and the glossary''s
+  1:3 as target.'

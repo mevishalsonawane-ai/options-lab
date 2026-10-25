@@ -1,5 +1,5 @@
 id: book-porwal-01
-title: Inside bar, entry on the close beyond the mother bar, 1x/1.5x/2x targets (Nikhil Porwal, book rule, proposed)
+title: Inside bar, entry on the close beyond the mother bar, 1x/1.5x/2x targets (Nikhil Porwal, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -43,7 +43,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). thirds as three sub-lots R104 (227 tests, BH across all). thirds as three sub-lots
-  Our nearest test: R71 P1: 15-minute inside-bar breaks, 1-ITM, final -Rs 1,23,667 on 1,075 trades; R22 1x-extension target
-  lost; SWING_DEEP NR7/inside-day walk-forward lost. Assumptions: The book writes only the short side; long is the mirror.
-  Higher-timeframe trend definition, the 4-bar validity window, the breakeven step and the volume multiple are ours. Partial
-  exits at 1x/1.5x/2x as written.'
+  R104 (227 tests, BH across all). thirds as three sub-lots R104 (227 tests, BH across all). thirds as three sub-lots Our
+  nearest test: R71 P1: 15-minute inside-bar breaks, 1-ITM, final -Rs 1,23,667 on 1,075 trades; R22 1x-extension target lost;
+  SWING_DEEP NR7/inside-day walk-forward lost. Assumptions: The book writes only the short side; long is the mirror. Higher-timeframe
+  trend definition, the 4-bar validity window, the breakeven step and the volume multiple are ours. Partial exits at 1x/1.5x/2x
+  as written.'

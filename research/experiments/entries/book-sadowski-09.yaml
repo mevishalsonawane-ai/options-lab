@@ -1,5 +1,5 @@
 id: book-sadowski-09
-title: RSI(2) above 90 buy / below 10 sell, with adds (Roman Sadowski, book rule, proposed)
+title: RSI(2) above 90 buy / below 10 sell, with adds (Roman Sadowski, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -36,7 +36,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). momentum reading on NIFTY/BANKNIFTY not tested before R104 (227 tests, BH across
-  all). momentum reading on NIFTY/BANKNIFTY not tested before Our nearest test: GOLD_SCALP.md rsi2 follow on XAUUSD all negative
-  (-234,718 over 6629 trades, M5 buys only); the Connors reading (RSI(2)<10 buy) inside the coin band on NIFTY (SWING_EXITS.md);
-  momentum reading on NIFTY not tested by us. Assumptions: The stop and the 3-unit cap are ours. ''Moves above'' = a cross
-  at a bar close.'
+  all). momentum reading on NIFTY/BANKNIFTY not tested before R104 (227 tests, BH across all). momentum reading on NIFTY/BANKNIFTY
+  not tested before R104 (227 tests, BH across all). momentum reading on NIFTY/BANKNIFTY not tested before Our nearest test:
+  GOLD_SCALP.md rsi2 follow on XAUUSD all negative (-234,718 over 6629 trades, M5 buys only); the Connors reading (RSI(2)<10
+  buy) inside the coin band on NIFTY (SWING_EXITS.md); momentum reading on NIFTY not tested by us. Assumptions: The stop and
+  the 3-unit cap are ours. ''Moves above'' = a cross at a bar close.'

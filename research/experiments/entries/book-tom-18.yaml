@@ -1,5 +1,5 @@
 id: book-tom-18
-title: No new entries around high-impact scheduled news (Trader Tom, book rule, proposed)
+title: No new entries around high-impact scheduled news (Trader Tom, book rule, tested in R104)
 family: calendar-events
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -35,6 +35,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). events.csv (2024+, India and US); the MCX clause has no MCX arm R104 (227 tests,
-  BH across all). events.csv (2024+, India and US); the MCX clause has no MCX arm Our nearest test: EVENT_SHIELD: BANKNIFTY
-  policy-day range 1.48x (15 sessions); pausing arms on event days not an edge; R83 EIA fade/follow failed. Assumptions: Window
-  width is ours; ''red-flagged'' mapped to the events in our calendar.'
+  BH across all). events.csv (2024+, India and US); the MCX clause has no MCX arm R104 (227 tests, BH across all). events.csv
+  (2024+, India and US); the MCX clause has no MCX arm R104 (227 tests, BH across all). events.csv (2024+, India and US);
+  the MCX clause has no MCX arm Our nearest test: EVENT_SHIELD: BANKNIFTY policy-day range 1.48x (15 sessions); pausing arms
+  on event days not an edge; R83 EIA fade/follow failed. Assumptions: Window width is ours; ''red-flagged'' mapped to the
+  events in our calendar.'

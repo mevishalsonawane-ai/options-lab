@@ -1,6 +1,6 @@
 id: book-ozenbas-04
 title: Fade big moves on no-news days, follow them on scheduled-event days (Ozenbas, Pagano, Schwartz and Weber, book rule,
-  proposed)
+  tested in R104)
 family: calendar-events
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,6 +39,8 @@ holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). event days = events.csv (2024+); earlier days count as no-news days (calendar gap,
   labelled) R104 (227 tests, BH across all). event days = events.csv (2024+); earlier days count as no-news days (calendar
+  gap, labelled) R104 (227 tests, BH across all). event days = events.csv (2024+); earlier days count as no-news days (calendar
+  gap, labelled) R104 (227 tests, BH across all). event days = events.csv (2024+); earlier days count as no-news days (calendar
   gap, labelled) Our nearest test: R86: fading failed pokes lost on all 6 level x index tests (295-804 trades, Rs -2.3 to
   -5.5 lakh); fade to VWAP lost Rs 64,786 on 71 trades. h28: event days move more but 8,820 variants found no side.. Assumptions:
   The book gives only the principle (liquidity shocks revert, information shocks do not). The 3x threshold, windows, stop

@@ -1,6 +1,6 @@
 id: book-douglas-04
 title: 'Daily uptrend: buy a pullback to 30-minute support; daily downtrend: sell a rally to 30-minute resistance (Mark Douglas,
-  book rule, proposed)'
+  book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -44,8 +44,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Daily trend as an intraday filter:
-  with-trend better in one year, against-trend in the other, no consistent value (FINDINGS.md, SWING). R20b: support/resistance
-  no better than random lines (random levels beat real in 6 of 7). R73 / R79: trend checks before entries did not help.. Assumptions:
-  The book gives this only as an example and leaves ''support'' to the reader''s edge; swing-fractal support, the ATR buffer
-  and the 3:1 skip are ours. Intraday hold, no overnight.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: Daily trend as an intraday filter: with-trend better in one year, against-trend in the
+  other, no consistent value (FINDINGS.md, SWING). R20b: support/resistance no better than random lines (random levels beat
+  real in 6 of 7). R73 / R79: trend checks before entries did not help.. Assumptions: The book gives this only as an example
+  and leaves ''support'' to the reader''s edge; swing-fractal support, the ATR buffer and the 3:1 skip are ours. Intraday
+  hold, no overnight.'

@@ -1,5 +1,5 @@
 id: book-porwal-07
-title: 52-week high / low as a direction filter for intraday index trades (Nikhil Porwal, book rule, proposed)
+title: 52-week high / low as a direction filter for intraday index trades (Nikhil Porwal, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,6 +37,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). 52-week filter on R51/R72 R104 (227 tests, BH across all). 52-week filter on R51/R72
-  Our nearest test: SWING_DEEP: 52-week momentum on NIFTY futures as a swing rule, about +Rs 2,175 a year over 11 years, inside
+  R104 (227 tests, BH across all). 52-week filter on R51/R72 R104 (227 tests, BH across all). 52-week filter on R51/R72 Our
+  nearest test: SWING_DEEP: 52-week momentum on NIFTY futures as a swing rule, about +Rs 2,175 a year over 11 years, inside
   the coin-flip range; as an intraday filter not tested by us. Assumptions: The book uses it as a stock screener feeding any
   intraday setup; turning it into an index direction filter, the 2% band and the 20-session breakout check are ours.'

@@ -1,5 +1,5 @@
 id: book-sadowski-04
-title: Engulfing candle, enter the next open, stop at its extreme (Roman Sadowski, book rule, proposed)
+title: Engulfing candle, enter the next open, stop at its extreme (Roman Sadowski, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -33,7 +33,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: HUNT_R87 candle anatomy: shapes
-  do not predict direction (92% of 234 cells 45-55% up); HUNT_H25 61 TA-Lib patterns, 6 of 122 families positive walk-forward,
-  none passed. Assumptions: ''Covers'' = body high >= max of prior bodies and body low <= min of prior bodies. N swept 1..3
-  as the book''s ''one or more''.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: HUNT_R87 candle anatomy: shapes do not predict direction (92% of 234 cells 45-55% up);
+  HUNT_H25 61 TA-Lib patterns, 6 of 122 families positive walk-forward, none passed. Assumptions: ''Covers'' = body high >=
+  max of prior bodies and body low <= min of prior bodies. N swept 1..3 as the book''s ''one or more''.'

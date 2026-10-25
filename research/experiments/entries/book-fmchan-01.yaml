@@ -1,5 +1,5 @@
 id: book-fmchan-01
-title: Chan's 5-minute Bollinger fade, replicated on index futures with real costs (Ernest Chan, book rule, proposed)
+title: Chan's 5-minute Bollinger fade, replicated on index futures with real costs (Ernest Chan, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,8 +37,10 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). the book trades the futures: spot points with futures costs R104 (227 tests, BH across
-  all). the book trades the futures: spot points with futures costs Our nearest test: F1: Bollinger %B / RSI / MACD lean to
-  a 15-minute reversal (IC ~ -0.05) gone by 60 minutes; 0 of 20 indicator rules pass. R102 2.5: next 5-minute bar repeats
-  the sign 48.4% of the time (NIFTY, n 167,082). Expect gross > 0, net < 0.. Assumptions: Chan gives no lookback; 20 bars
-  is the Bollinger default. His Sharpe 3 -> -3 came from a 1 bp cost; our futures round trip is charges + one tick each side,
-  options per baselines.yaml (NIFTY ATM about Rs 98). Report gross and net side by side, since the point is the cost wedge.'
+  all). the book trades the futures: spot points with futures costs R104 (227 tests, BH across all). the book trades the futures:
+  spot points with futures costs R104 (227 tests, BH across all). the book trades the futures: spot points with futures costs
+  Our nearest test: F1: Bollinger %B / RSI / MACD lean to a 15-minute reversal (IC ~ -0.05) gone by 60 minutes; 0 of 20 indicator
+  rules pass. R102 2.5: next 5-minute bar repeats the sign 48.4% of the time (NIFTY, n 167,082). Expect gross > 0, net < 0..
+  Assumptions: Chan gives no lookback; 20 bars is the Bollinger default. His Sharpe 3 -> -3 came from a 1 bp cost; our futures
+  round trip is charges + one tick each side, options per baselines.yaml (NIFTY ATM about Rs 98). Report gross and net side
+  by side, since the point is the cost wedge.'

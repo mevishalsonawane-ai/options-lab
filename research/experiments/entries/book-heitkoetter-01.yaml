@@ -1,5 +1,5 @@
 id: book-heitkoetter-01
-title: Trade with an intraday trendline; exit when it breaks (Markus Heitkoetter, book rule, proposed)
+title: Trade with an intraday trendline; exit when it breaks (Markus Heitkoetter, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,8 +39,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us; nearest R71
-  P8 swing structure (HH + HL) lost in the final period (-Rs 40,109 on 374 trades) and H25 break-of-structure families were
-  0 of 18 positive. Assumptions: The book draws lines by eye; ''close to the lows'' made 0.15 x ATR14; entry trigger (break
-  of the last swing high) and the 15:10 square-off are ours; volume confirmation dropped (index spot has no volume; could
-  use futures volume from 29 Jul 2026).'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: not tested by us; nearest R71 P8 swing structure (HH + HL) lost in the final period (-Rs
+  40,109 on 374 trades) and H25 break-of-structure families were 0 of 18 positive. Assumptions: The book draws lines by eye;
+  ''close to the lows'' made 0.15 x ATR14; entry trigger (break of the last swing high) and the 15:10 square-off are ours;
+  volume confirmation dropped (index spot has no volume; could use futures volume from 29 Jul 2026).'

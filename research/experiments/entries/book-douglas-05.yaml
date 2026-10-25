@@ -1,5 +1,5 @@
 id: book-douglas-05
-title: Skip any arm signal whose first target is less than 3x its stop distance (Mark Douglas, book rule, proposed)
+title: Skip any arm signal whose first target is less than 3x its stop distance (Mark Douglas, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -30,7 +30,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: A fixed 3:1 premium rule (target
-  +10%, stop -3.3%) won 19-31% vs about 28% needed (MANUAL_METHOD.md). R80: 0 of 10 entry filters on Liquidity passed. An
-  index-level 3:1 filter is not tested by us.. Assumptions: The book calls 3:1 ideal, not required; using it as an entry filter
-  is our most literal mechanical reading. Only arms with an index target or level (Liquidity, ORB-type) can use it.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: A fixed 3:1 premium rule (target +10%, stop -3.3%) won 19-31% vs about 28% needed (MANUAL_METHOD.md).
+  R80: 0 of 10 entry filters on Liquidity passed. An index-level 3:1 filter is not tested by us.. Assumptions: The book calls
+  3:1 ideal, not required; using it as an entry filter is our most literal mechanical reading. Only arms with an index target
+  or level (Liquidity, ORB-type) can use it.'

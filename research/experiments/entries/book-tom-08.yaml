@@ -1,5 +1,5 @@
 id: book-tom-08
-title: 1-minute trendline break after a fake-down (Stanley) (Trader Tom, book rule, proposed)
+title: 1-minute trendline break after a fake-down (Stanley) (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -33,6 +33,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us exactly; fake-out
-  fades (R3, R91) failed. Assumptions: Line-fitting tolerance, the range-bound proxy, the event window and the exit are ours;
-  the book is discretionary on all of these.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: not tested by us exactly; fake-out fades (R3, R91) failed. Assumptions: Line-fitting
+  tolerance, the range-bound proxy, the event window and the exit are ours; the book is discretionary on all of these.'

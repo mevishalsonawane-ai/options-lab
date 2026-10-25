@@ -1,6 +1,6 @@
 id: book-fmmusiela-02
 title: Delta-hedge an ATM straddle with smile-adjusted delta vs plain Black-Scholes delta (hedge-error test) (Musiela and
-  Rutkowski, book rule, proposed)
+  Rutkowski, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -40,7 +40,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). hedge B vs hedge A on the same short straddles R104 (227 tests, BH across all). hedge
-  B vs hedge A on the same short straddles Our nearest test: not tested by us; MCX_OPTIONS.md delta-hedged long options at
-  about zero P&L at best; R102 puts dearer on 91% of NIFTY days (skew exists).. Assumptions: The book defines the modified
-  delta but gives no procedure; the 20-day regression for the IV-spot slope, the bands and lot counts are ours. Book A is
-  the Bjork rule ''delta-hedged-short-straddle''; this test only asks whether B hedges better.'
+  B vs hedge A on the same short straddles R104 (227 tests, BH across all). hedge B vs hedge A on the same short straddles
+  R104 (227 tests, BH across all). hedge B vs hedge A on the same short straddles Our nearest test: not tested by us; MCX_OPTIONS.md
+  delta-hedged long options at about zero P&L at best; R102 puts dearer on 91% of NIFTY days (skew exists).. Assumptions:
+  The book defines the modified delta but gives no procedure; the 20-day regression for the IV-spot slope, the bands and lot
+  counts are ours. Book A is the Bjork rule ''delta-hedged-short-straddle''; this test only asks whether B hedges better.'

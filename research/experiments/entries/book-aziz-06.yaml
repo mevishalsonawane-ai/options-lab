@@ -1,6 +1,6 @@
 id: book-aziz-06
 title: 'Bull flag: break of the first or second consolidation with a joint 1- and 5-minute new high (Andrew Aziz, book rule,
-  proposed)'
+  tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -42,6 +42,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). MCX with volume; index without the volume condition (labelled) R104 (227 tests, BH
-  across all). MCX with volume; index without the volume condition (labelled) Our nearest test: R71 P4 flag on index 5-minute
-  bars: too rare, 32 final trades -Rs 442, design -Rs 27,378. Assumptions: Pole and flag sizes are ours (the book is visual);
-  built for low-float stocks, so the index version is an analogue.'
+  across all). MCX with volume; index without the volume condition (labelled) R104 (227 tests, BH across all). MCX with volume;
+  index without the volume condition (labelled) R104 (227 tests, BH across all). MCX with volume; index without the volume
+  condition (labelled) Our nearest test: R71 P4 flag on index 5-minute bars: too rare, 32 final trades -Rs 442, design -Rs
+  27,378. Assumptions: Pole and flag sizes are ours (the book is visual); built for low-float stocks, so the index version
+  is an analogue.'

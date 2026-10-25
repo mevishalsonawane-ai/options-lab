@@ -1,6 +1,6 @@
 id: book-carli-01
 title: CCI(20) regular divergence, three qualifying rules, trendline-break entry, Fibonacci targets (daily bars) (David Carli,
-  book rule, proposed)
+  book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -53,10 +53,11 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). README pick 4 R104 (227 tests, BH across all). README pick 4 Our nearest test: R95
-  tested CCI(25) regular divergence on 3m-60m bars only (no trendline, no Fibonacci size rule, no +-150 zone): entered when
-  known, 1,778 index trades -Rs 3,37,415 design; not tested by us on daily bars or with this entry. Assumptions: The book
-  draws swings, trendlines and Fibonacci legs by eye and grants unquantified ''small exceptions'' to rules 1-2; we use swing
-  pivots of 3 bars each side (confirmed 3 bars later), no exceptions, the hlc3 CCI input, a 0.1%-of-price buffer for ''15-20
-  pips/ticks'', the trendline through the last two swing highs (lows), a 20-bar staleness limit, and our reading of the target
-  leg (Figure 42 unreadable). Rule 3 read as the second extreme lying 1.13-1.618 of the AB pullback beyond B.'
+notes: 'R104 (227 tests, BH across all). README pick 4 R104 (227 tests, BH across all). README pick 4 R104 (227 tests, BH
+  across all). README pick 4 R104 (227 tests, BH across all). README pick 4 Our nearest test: R95 tested CCI(25) regular divergence
+  on 3m-60m bars only (no trendline, no Fibonacci size rule, no +-150 zone): entered when known, 1,778 index trades -Rs 3,37,415
+  design; not tested by us on daily bars or with this entry. Assumptions: The book draws swings, trendlines and Fibonacci
+  legs by eye and grants unquantified ''small exceptions'' to rules 1-2; we use swing pivots of 3 bars each side (confirmed
+  3 bars later), no exceptions, the hlc3 CCI input, a 0.1%-of-price buffer for ''15-20 pips/ticks'', the trendline through
+  the last two swing highs (lows), a 20-bar staleness limit, and our reading of the target leg (Figure 42 unreadable). Rule
+  3 read as the second extreme lying 1.13-1.618 of the AB pullback beyond B.'

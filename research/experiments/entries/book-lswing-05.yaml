@@ -1,5 +1,6 @@
 id: book-lswing-05
-title: Master Plan exits (half at target, prior-low trail) on our existing daily swing signals (Larry Swing, book rule, proposed)
+title: Master Plan exits (half at target, prior-low trail) on our existing daily swing signals (Larry Swing, book rule, tested
+  in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -34,7 +35,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits R104
-  (227 tests, BH across all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits Our nearest test:
-  SWING_EXITS: the app''s stop+target+ladder made stock swing portfolios worse in all 24 and futures stayed inside the coin
-  band; MATRIX PINE: a TP1 half-exit + breakeven doubled the loss intraday. The prior-day-low trail itself is not tested by
-  us.. Assumptions: ATR scaling of the book''s 4% / 7% / $0.06 as in forceswing-master-plan-index.'
+  (227 tests, BH across all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits R104 (227 tests,
+  BH across all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits R104 (227 tests, BH across
+  all). exit swap on SWING_DEEP''s three hosts, judged against the hosts'' own exits Our nearest test: SWING_EXITS: the app''s
+  stop+target+ladder made stock swing portfolios worse in all 24 and futures stayed inside the coin band; MATRIX PINE: a TP1
+  half-exit + breakeven doubled the loss intraday. The prior-day-low trail itself is not tested by us.. Assumptions: ATR scaling
+  of the book''s 4% / 7% / $0.06 as in forceswing-master-plan-index.'

@@ -1,5 +1,5 @@
 id: book-atb-02
-title: Engulfing candle at the end of a trend (The Advanced Trading Book, book rule, proposed)
+title: Engulfing candle at the end of a trend (The Advanced Trading Book, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -34,6 +34,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87: engulfing among 12 patterns,
-  nothing held out of sample; GOLD_CANDLES: 144 versions, none with t above 1.1; R85 MCX: no tradable meaning. Assumptions:
-  Stop, target and entry timing are ours (book: ''leads to a reversal'').'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R87: engulfing among 12 patterns, nothing held out of sample; GOLD_CANDLES: 144 versions,
+  none with t above 1.1; R85 MCX: no tradable meaning. Assumptions: Stop, target and entry timing are ours (book: ''leads
+  to a reversal'').'

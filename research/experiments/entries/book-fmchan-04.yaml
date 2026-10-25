@@ -1,5 +1,5 @@
 id: book-fmchan-04
-title: Natural gas long from late February to mid-April (Chan's exact window) (Ernest Chan, book rule, proposed)
+title: Natural gas long from late February to mid-April (Chan's exact window) (Ernest Chan, book rule, tested in R104)
 family: calendar-events
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -34,10 +34,11 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). one trade a year: at most 14 trades, min-trades gate binds R104 (227 tests, BH across
-  all). one trade a year: at most 14 trades, min-trades gate binds Our nearest test: R83 E9: NG month-of-year seasonality
-  on MCX NATGASMINI: 14 trades, -37,413; always short +14,687. MCX_GUIDE: Feb -5.7%, Dec -10.7% monthly means 2012-2026. R94:
-  bullion seasonals do not beat same-year random windows. Low prior.. Assumptions: Chan buys the NYMEX June contract; MCX
-  NG contracts track the nearby Henry Hub month, so the June leg is not tradeable on MCX; the nearby contract carries contango
-  roll costs Chan''s June leg avoided. Test on Henry Hub history (2000+, as R83) for the window itself and on MCX 2012-2026
-  for the tradeable version; compare with random 35-session windows of the same years (R94''s twin) and with always-short
-  (carry). Vary the dates +-5 sessions as Chan advises.'
+  all). one trade a year: at most 14 trades, min-trades gate binds R104 (227 tests, BH across all). one trade a year: at most
+  14 trades, min-trades gate binds R104 (227 tests, BH across all). one trade a year: at most 14 trades, min-trades gate binds
+  Our nearest test: R83 E9: NG month-of-year seasonality on MCX NATGASMINI: 14 trades, -37,413; always short +14,687. MCX_GUIDE:
+  Feb -5.7%, Dec -10.7% monthly means 2012-2026. R94: bullion seasonals do not beat same-year random windows. Low prior..
+  Assumptions: Chan buys the NYMEX June contract; MCX NG contracts track the nearby Henry Hub month, so the June leg is not
+  tradeable on MCX; the nearby contract carries contango roll costs Chan''s June leg avoided. Test on Henry Hub history (2000+,
+  as R83) for the window itself and on MCX 2012-2026 for the tradeable version; compare with random 35-session windows of
+  the same years (R94''s twin) and with always-short (carry). Vary the dates +-5 sessions as Chan advises.'

@@ -1,5 +1,5 @@
 id: book-fmfabozzi-01
-title: Filter rule on NIFTY/BANKNIFTY daily closes, buy the option (Focardi and Fabozzi, book rule, proposed)
+title: Filter rule on NIFTY/BANKNIFTY daily closes, buy the option (Focardi and Fabozzi, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,7 +37,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). futures proxy instead of the bought option R104 (227 tests, BH across all). futures
-  proxy instead of the bought option Our nearest test: R102: daily momentum reversed in the holdout and 1 of 70 sign rules
-  confirmed (an artefact); the book itself says profitability after costs is unclear. Not tested by us in this exact form..
-  Assumptions: The book gives no value of x, no instrument and no timeframe; the grid and the premium stop are our literal
-  choices. Always-in-market as written.'
+  proxy instead of the bought option R104 (227 tests, BH across all). futures proxy instead of the bought option R104 (227
+  tests, BH across all). futures proxy instead of the bought option Our nearest test: R102: daily momentum reversed in the
+  holdout and 1 of 70 sign rules confirmed (an artefact); the book itself says profitability after costs is unclear. Not tested
+  by us in this exact form.. Assumptions: The book gives no value of x, no instrument and no timeframe; the grid and the premium
+  stop are our literal choices. Always-in-market as written.'

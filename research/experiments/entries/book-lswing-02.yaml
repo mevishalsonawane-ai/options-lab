@@ -1,5 +1,5 @@
 id: book-lswing-02
-title: FORCESWING + Master Plan on MCX futures daily bars (Larry Swing, book rule, proposed)
+title: FORCESWING + Master Plan on MCX futures daily bars (Larry Swing, book rule, tested in R104)
 family: mcx-crypto
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -36,8 +36,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R83: crude daily Donchian-20
-  + Supertrend final +Rs 21.8k on 27 trades but not proven (twin p 0.23); R82: daily Donchian on gold/silver proxies lost
-  in design; R96: NR7 breakout on crude is the only MCX daily lead (not passed). Force Index / pullback scan not tested by
-  us.. Assumptions: ATR scaling as in the index rule; rolls make continuous-future volume jump near expiry, so Force Index
-  uses the volume of the contract held.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R83: crude daily Donchian-20 + Supertrend final +Rs 21.8k on 27 trades but not proven
+  (twin p 0.23); R82: daily Donchian on gold/silver proxies lost in design; R96: NR7 breakout on crude is the only MCX daily
+  lead (not passed). Force Index / pullback scan not tested by us.. Assumptions: ATR scaling as in the index rule; rolls make
+  continuous-future volume jump near expiry, so Force Index uses the volume of the contract held.'

@@ -1,6 +1,6 @@
 id: book-lswing-06
 title: Gap delay on a daily breakout trigger (wait 30 min with the gap, 5 min against, re-base on today's high) (Larry Swing,
-  book rule, proposed)
+  book rule, tested in R104)
 family: overnight
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,7 +37,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) R104
-  (227 tests, BH across all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) Our nearest test:
-  R102: 0.5-1% NIFTY gaps fill by the close 42% (n 484), filled gaps fill a median 52 minutes after the open; R58 gap-go rules
-  lost in the final test. A gap delay on a daily setup: not tested by us.. Assumptions: The book''s ''a few minutes after
-  the open'' read as 09:20; its 30-minute wait as 09:45.'
+  (227 tests, BH across all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) R104 (227 tests,
+  BH across all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) R104 (227 tests, BH across
+  all). A vs B on the same setups, 1-minute execution (NIFTY 2017+, BANKNIFTY 2021+) Our nearest test: R102: 0.5-1% NIFTY
+  gaps fill by the close 42% (n 484), filled gaps fill a median 52 minutes after the open; R58 gap-go rules lost in the final
+  test. A gap delay on a daily setup: not tested by us.. Assumptions: The book''s ''a few minutes after the open'' read as
+  09:20; its 30-minute wait as 09:45.'

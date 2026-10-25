@@ -1,5 +1,5 @@
 id: book-fmchan-06
-title: Lot cap from the worst historical day (Chan's worst-loss leverage cap) (Ernest Chan, book rule, proposed)
+title: Lot cap from the worst historical day (Chan's worst-loss leverage cap) (Ernest Chan, book rule, tested in R104)
 family: sizing-execution
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -31,8 +31,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R72: C1''s worst design day
-  was -Rs 58,613 at 1 lot on five indices, beyond the account stop; R82: the MCX trend arm sat through -Rs 13.4 lakh. Not
-  tested as a sizing rule by us.. Assumptions: Rs 13,000 is the monthly account stop used as the one-period tolerance (Chan
-  uses the tolerable one-day loss). Only lowers risk. Measure how often it binds and what it costs in net vs how many account-stop
-  breaches it removes.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R72: C1''s worst design day was -Rs 58,613 at 1 lot on five indices, beyond the account
+  stop; R82: the MCX trend arm sat through -Rs 13.4 lakh. Not tested as a sizing rule by us.. Assumptions: Rs 13,000 is the
+  monthly account stop used as the one-period tolerance (Chan uses the tolerable one-day loss). Only lowers risk. Measure
+  how often it binds and what it costs in net vs how many account-stop breaches it removes.'

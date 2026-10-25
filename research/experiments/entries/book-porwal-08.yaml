@@ -1,5 +1,5 @@
 id: book-porwal-08
-title: ADX 20-50 + DI alignment + EMA(14) pullback with prior-day trend (Nikhil Porwal, book rule, proposed)
+title: ADX 20-50 + DI alignment + EMA(14) pullback with prior-day trend (Nikhil Porwal, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -35,6 +35,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: OBUY_GB TI-09 ADX/DMI lost Rs
-  -345,311 walk-forward; TI-03 EMA cross lost; R29 EMA pullbacks no better than random; R73 ADX filter on Donchian failed.
-  Assumptions: ''Greater than 20 or below 50'' read as a band; pullback distance, stop offset and the entry window are ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: OBUY_GB TI-09 ADX/DMI lost Rs -345,311 walk-forward; TI-03 EMA cross lost; R29 EMA pullbacks
+  no better than random; R73 ADX filter on Donchian failed. Assumptions: ''Greater than 20 or below 50'' read as a band; pullback
+  distance, stop offset and the entry window are ours.'

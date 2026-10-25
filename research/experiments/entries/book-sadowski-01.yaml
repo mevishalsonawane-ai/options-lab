@@ -1,5 +1,5 @@
 id: book-sadowski-01
-title: 20/60 SMA crossover with a 100 SMA trend read (Roman Sadowski, book rule, proposed)
+title: 20/60 SMA crossover with a 100 SMA trend read (Roman Sadowski, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,6 +37,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). daily; differs from OBUY TI-03 (intraday EMA crosses) R104 (227 tests, BH across
-  all). daily; differs from OBUY TI-03 (intraday EMA crosses) Our nearest test: OBUY_FINAL TI-03 EMA cross: 96 variants, walk-forward
-  -369,856, 1/5 years positive; HUNT_H25 MA crosses 0 of 28 EMA families positive walk-forward. Assumptions: MA type assumed
-  simple. Always-in-market reversal. The SMA100 filter is our reading of ''bars stay above the 100''.'
+  all). daily; differs from OBUY TI-03 (intraday EMA crosses) R104 (227 tests, BH across all). daily; differs from OBUY TI-03
+  (intraday EMA crosses) R104 (227 tests, BH across all). daily; differs from OBUY TI-03 (intraday EMA crosses) Our nearest
+  test: OBUY_FINAL TI-03 EMA cross: 96 variants, walk-forward -369,856, 1/5 years positive; HUNT_H25 MA crosses 0 of 28 EMA
+  families positive walk-forward. Assumptions: MA type assumed simple. Always-in-market reversal. The SMA100 filter is our
+  reading of ''bars stay above the 100''.'

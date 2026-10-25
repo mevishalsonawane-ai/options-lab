@@ -1,5 +1,5 @@
 id: book-woods-15
-title: Three white soldiers after a substantial decline (Galen Woods, book rule, proposed)
+title: Three white soldiers after a substantial decline (Galen Woods, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -31,5 +31,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). adds R87-1''s missing prior-decline filter and the book''s stop R104 (227 tests,
-  BH across all). adds R87-1''s missing prior-decline filter and the book''s stop Our nearest test: R87-1 three white soldiers
-  (no prior-decline filter) -> call: -Rs 3,910 on 160 trades.. Assumptions: ''Substantial decline'' = 3 ATR over 20 bars (ours).'
+  BH across all). adds R87-1''s missing prior-decline filter and the book''s stop R104 (227 tests, BH across all). adds R87-1''s
+  missing prior-decline filter and the book''s stop R104 (227 tests, BH across all). adds R87-1''s missing prior-decline filter
+  and the book''s stop Our nearest test: R87-1 three white soldiers (no prior-decline filter) -> call: -Rs 3,910 on 160 trades..
+  Assumptions: ''Substantial decline'' = 3 ATR over 20 bars (ours).'

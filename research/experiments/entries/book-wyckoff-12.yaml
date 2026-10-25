@@ -1,5 +1,5 @@
 id: book-wyckoff-12
-title: Tighten the stop in the last 15 minutes before square-off (Wyckoff, book rule, proposed)
+title: Tighten the stop in the last 15 minutes before square-off (Wyckoff, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -32,6 +32,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). late-day tightening overlay R104 (227 tests, BH across all). late-day tightening
+  overlay R104 (227 tests, BH across all). late-day tightening overlay R104 (227 tests, BH across all). late-day tightening
   overlay Our nearest test: locks on Liquidity 0 of 12 (R19) and 0 of 15 (R100); late-day squeeze alone not tested by us.
   Assumptions: Book''s ''within a fraction of the extreme'' made 0.25x of a short-window ATR; times shifted to our 15:15 /
   15:05 square-offs'

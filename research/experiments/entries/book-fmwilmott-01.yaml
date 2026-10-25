@@ -1,6 +1,6 @@
 id: book-fmwilmott-01
 title: Sell the NIFTY monthly ATM straddle when implied vol is above forecast realised vol, delta-hedge with futures on a
-  band (Paul Wilmott, book rule, proposed)
+  band (Paul Wilmott, book rule, tested in R104)
 family: option-structure
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -46,10 +46,11 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). NIFTY monthly series; hedge on the spot as a futures proxy R104 (227 tests, BH across
-  all). NIFTY monthly series; hedge on the spot as a futures proxy Our nearest test: not tested by us as a hedged trade. R102:
-  VIX over-states NIFTY''s next 21 days on 81% of days (median 1.28, 4,507 days). DEEP_OPTIONS_SELLING.md: naked 09:20 BANKNIFTY
-  short straddle worst day -Rs 65,483; R103 defined-risk selling 0 of 24 confirmed.. Assumptions: The book states the P&L
-  mechanics, not a threshold; 1.15 is our literal choice near R102''s median VIX / forward-realised ratio of 1.28 and must
-  be pre-registered with alternatives (1.0, 1.3) under Benjamini-Hochberg. One futures lot equals one option lot, so at 1
-  lot the hedge is coarse (DEEP_OPTIONS_SELLING.md); the band avoids churning. Naked short margin is about Rs 1.5 lakh, so
-  this is research only; R103 rejected naked selling for this account.'
+  all). NIFTY monthly series; hedge on the spot as a futures proxy R104 (227 tests, BH across all). NIFTY monthly series;
+  hedge on the spot as a futures proxy R104 (227 tests, BH across all). NIFTY monthly series; hedge on the spot as a futures
+  proxy Our nearest test: not tested by us as a hedged trade. R102: VIX over-states NIFTY''s next 21 days on 81% of days (median
+  1.28, 4,507 days). DEEP_OPTIONS_SELLING.md: naked 09:20 BANKNIFTY short straddle worst day -Rs 65,483; R103 defined-risk
+  selling 0 of 24 confirmed.. Assumptions: The book states the P&L mechanics, not a threshold; 1.15 is our literal choice
+  near R102''s median VIX / forward-realised ratio of 1.28 and must be pre-registered with alternatives (1.0, 1.3) under Benjamini-Hochberg.
+  One futures lot equals one option lot, so at 1 lot the hedge is coarse (DEEP_OPTIONS_SELLING.md); the band avoids churning.
+  Naked short margin is about Rs 1.5 lakh, so this is research only; R103 rejected naked selling for this account.'

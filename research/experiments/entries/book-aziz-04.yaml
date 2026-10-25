@@ -1,6 +1,6 @@
 id: book-aziz-04
 title: 'VWAP moving-average trend: below VWAP and riding the 5-minute 20 EMA after the Late-Morning (Andrew Aziz, book rule,
-  proposed)'
+  tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -41,6 +41,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). index TWAP proxy; MCX real VWAP R104 (227 tests, BH across all). index TWAP proxy;
-  MCX real VWAP Our nearest test: R29 EMA pullback patterns 0 of 55 pass; R86 continuation of midday VWAP stretches is descriptive
-  only. Assumptions: ''Lost VWAP in the Late-Morning'' fixed as 6 consecutive 5-minute closes on one side; ''touch'' = the
-  bar''s high/low reaches the EMA; the 1-ATR distance for the partial is ours.'
+  MCX real VWAP R104 (227 tests, BH across all). index TWAP proxy; MCX real VWAP R104 (227 tests, BH across all). index TWAP
+  proxy; MCX real VWAP Our nearest test: R29 EMA pullback patterns 0 of 55 pass; R86 continuation of midday VWAP stretches
+  is descriptive only. Assumptions: ''Lost VWAP in the Late-Morning'' fixed as 6 consecutive 5-minute closes on one side;
+  ''touch'' = the bar''s high/low reaches the EMA; the 1-ATR distance for the partial is ours.'

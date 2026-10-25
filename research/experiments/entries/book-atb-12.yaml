@@ -1,6 +1,6 @@
 id: book-atb-12
 title: 'Bullish flag: wait for the last swing high to break, buy the first bullish candle after one pullback candle (Strategy
-  7) (The Advanced Trading Book, book rule, proposed)'
+  7) (The Advanced Trading Book, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,7 +38,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R71 P8 swing-high break: final
-  -Rs 34,242 on 372; R87B green-green-red cluster held (+0.26 ATR, n 182) but its call with a stop under the red candle lost
-  -Rs 21,127 (162). Assumptions: The book implies the stop near the pullback (''a smaller stop''); exact level, waiting window
-  and target are ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R71 P8 swing-high break: final -Rs 34,242 on 372; R87B green-green-red cluster held (+0.26
+  ATR, n 182) but its call with a stop under the red candle lost -Rs 21,127 (162). Assumptions: The book implies the stop
+  near the pullback (''a smaller stop''); exact level, waiting window and target are ours.'

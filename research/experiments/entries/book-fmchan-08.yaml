@@ -1,6 +1,6 @@
 id: book-fmchan-08
 title: ETH vs BTC hourly spread reversion inside Boss's crypto window, with stop and profit lock (Ernest Chan, book rule,
-  proposed)
+  tested in R104)
 family: mcx-crypto
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,9 +39,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: C1/C2: crypto hourly direction
-  reverses slightly (AUC 0.535-0.550) but nets -10 to -13 bps a trade after costs; RC1: 0 of 8 active ideas pass; ETH/BTC
-  as a pair not tested by us. Two legs double the cost hurdle: low prior.. Assumptions: Chan''s daily method moved to hourly
-  bars so the trade fits Boss''s 00:00-09:00 IST window and ''no long holding'' rule; the 1.0% stop, 0.4% lock trigger and
-  50% trail are our choices, sized from C1''s median BTC next-hour range 0.546%. Costs: 12 bps a round trip per leg (two legs
-  = 24 bps).'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: C1/C2: crypto hourly direction reverses slightly (AUC 0.535-0.550) but nets -10 to -13
+  bps a trade after costs; RC1: 0 of 8 active ideas pass; ETH/BTC as a pair not tested by us. Two legs double the cost hurdle:
+  low prior.. Assumptions: Chan''s daily method moved to hourly bars so the trade fits Boss''s 00:00-09:00 IST window and
+  ''no long holding'' rule; the 1.0% stop, 0.4% lock trigger and 50% trail are our choices, sized from C1''s median BTC next-hour
+  range 0.546%. Costs: 12 bps a round trip per leg (two legs = 24 bps).'

@@ -1,6 +1,6 @@
 id: book-fmross-04
 title: Sell defined-risk premium when AR(1) horizon variance is well below the GBM variance in ATM IV (Sheldon Ross, book
-  rule, proposed)
+  rule, tested in R104)
 family: option-structure
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -43,7 +43,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). index only: BANKNIFTY near (monthly) and NIFTY monthly series R104 (227 tests, BH
-  across all). index only: BANKNIFTY near (monthly) and NIFTY monthly series Our nearest test: R103 defined-risk option selling:
-  0 of 24 confirmed, the design passes were stale prices. Assumptions: The book only compares option values (44.42 cents AR(1)
-  vs 79 cents Black-Scholes for crude); the 0.6 ratio, iron-fly structure and stop are ours. Unit-root bias makes b look below
-  1 in short samples; the ADF filter is required.'
+  across all). index only: BANKNIFTY near (monthly) and NIFTY monthly series R104 (227 tests, BH across all). index only:
+  BANKNIFTY near (monthly) and NIFTY monthly series R104 (227 tests, BH across all). index only: BANKNIFTY near (monthly)
+  and NIFTY monthly series Our nearest test: R103 defined-risk option selling: 0 of 24 confirmed, the design passes were stale
+  prices. Assumptions: The book only compares option values (44.42 cents AR(1) vs 79 cents Black-Scholes for crude); the 0.6
+  ratio, iron-fly structure and stop are ours. Unit-root bias makes b look below 1 in short samples; the ADF filter is required.'

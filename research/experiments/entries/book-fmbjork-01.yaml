@@ -1,5 +1,6 @@
 id: book-fmbjork-01
-title: Short ATM straddle, delta-hedged with the index future (sell implied, pay realised) (Tomas Björk, book rule, proposed)
+title: Short ATM straddle, delta-hedged with the index future (sell implied, pay realised) (Tomas Björk, book rule, tested
+  in R104)
 family: option-structure
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -41,9 +42,10 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R103: defined-risk selling 0
-  of 24 confirmed; the naked 09:20 short straddle held to 15:10 made +Rs 64k on NIFTY (1,272 days) with worst day -Rs 28,876.
-  R102: VIX over-states NIFTY''s next 21 days on 81% of days (n 4,507). A futures-hedged straddle was not tested by us.. Assumptions:
-  Bjork gives the hedge procedure, not a trade. The lot count (5), the delta band (1 futures lot), the 15-minute clock and
-  the stops are ours. Deltas use Black-76 on the future with each option''s own implied volatility. Because the NIFTY futures
-  lot equals the option lot, fewer than about 5 option lots cannot be hedged at a useful granularity (DEEP_OPTIONS_SELLING.md).'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R103: defined-risk selling 0 of 24 confirmed; the naked 09:20 short straddle held to
+  15:10 made +Rs 64k on NIFTY (1,272 days) with worst day -Rs 28,876. R102: VIX over-states NIFTY''s next 21 days on 81% of
+  days (n 4,507). A futures-hedged straddle was not tested by us.. Assumptions: Bjork gives the hedge procedure, not a trade.
+  The lot count (5), the delta band (1 futures lot), the 15-minute clock and the stops are ours. Deltas use Black-76 on the
+  future with each option''s own implied volatility. Because the NIFTY futures lot equals the option lot, fewer than about
+  5 option lots cannot be hedged at a useful granularity (DEEP_OPTIONS_SELLING.md).'

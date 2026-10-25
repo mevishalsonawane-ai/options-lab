@@ -1,6 +1,6 @@
 id: book-fmaqf-03
 title: 'Long-memory spread reversal: fade new M-day extremes of a two-asset log spread (Härdle, Kleinow and Stahl, book rule,
-  proposed)'
+  tested in R104)'
 family: outside-strategies
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -41,7 +41,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). NIFTY vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures R104 (227 tests,
-  BH across all). NIFTY vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures Our nearest test: R72 C2 laggard catch-up
-  (intraday convergence across indices) lost -Rs 1,00,746 final (613 trades). A daily spread-extreme fade is not tested by
-  us.. Assumptions: Book used German voting / non-voting share pairs (near-identical claims) where reversion is structural;
-  index or metal pairs are looser. Cash-neutral sizing by the book; we use equal notional per lot rounding.'
+  BH across all). NIFTY vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures R104 (227 tests, BH across all). NIFTY
+  vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures R104 (227 tests, BH across all). NIFTY vs BANKNIFTY and GOLD
+  vs SILVER, spot / back-adjusted futures Our nearest test: R72 C2 laggard catch-up (intraday convergence across indices)
+  lost -Rs 1,00,746 final (613 trades). A daily spread-extreme fade is not tested by us.. Assumptions: Book used German voting
+  / non-voting share pairs (near-identical claims) where reversion is structural; index or metal pairs are looser. Cash-neutral
+  sizing by the book; we use equal notional per lot rounding.'

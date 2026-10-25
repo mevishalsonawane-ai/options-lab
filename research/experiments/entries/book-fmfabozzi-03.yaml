@@ -1,5 +1,5 @@
 id: book-fmfabozzi-03
-title: NIFTY/BANKNIFTY log-spread z-score reversion (pairs trading) (Focardi and Fabozzi, book rule, proposed)
+title: NIFTY/BANKNIFTY log-spread z-score reversion (pairs trading) (Focardi and Fabozzi, book rule, tested in R104)
 family: outside-strategies
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,6 +39,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). two bought options, intraday R104 (227 tests, BH across all). two bought options,
+  intraday R104 (227 tests, BH across all). two bought options, intraday R104 (227 tests, BH across all). two bought options,
   intraday Our nearest test: R72: C2 laggard catch-up lost (-Rs 1,00,746 final period) and C6 SMT divergence failed; R102
   correlation 0.877, beta 1.157 over 5,086 days, so the spread is mostly BANKNIFTY''s extra beta. The book warns cointegration
   is unstable and often spurious.. Assumptions: The book gives the method (pairs beyond a threshold back to the mean, formalised

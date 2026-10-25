@@ -1,5 +1,5 @@
 id: book-wyckoff-04
-title: Break of a quiet range on a burst of volume (Wyckoff, book rule, proposed)
+title: Break of a quiet range on a burst of volume (Wyckoff, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,7 +38,9 @@ holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). CRUDE and NATURALGAS minis with real volume; price-only twin reported beside it (not
   gated); index version lacks volume R104 (227 tests, BH across all). CRUDE and NATURALGAS minis with real volume; price-only
-  twin reported beside it (not gated); index version lacks volume Our nearest test: ORB family 0 of 257 (R92); Donchian 20
-  on paper (R51); NR7 crude lead not passed (R96); the volume filter is not tested by us. Assumptions: ''Volume in thousands
-  instead of hundreds'' made a 3x burst; range length 12 bars (1 hour) is ours. Run the same rule without the volume filter
-  as the price-only twin.'
+  twin reported beside it (not gated); index version lacks volume R104 (227 tests, BH across all). CRUDE and NATURALGAS minis
+  with real volume; price-only twin reported beside it (not gated); index version lacks volume R104 (227 tests, BH across
+  all). CRUDE and NATURALGAS minis with real volume; price-only twin reported beside it (not gated); index version lacks volume
+  Our nearest test: ORB family 0 of 257 (R92); Donchian 20 on paper (R51); NR7 crude lead not passed (R96); the volume filter
+  is not tested by us. Assumptions: ''Volume in thousands instead of hundreds'' made a 3x burst; range length 12 bars (1 hour)
+  is ours. Run the same rule without the volume filter as the price-only twin.'

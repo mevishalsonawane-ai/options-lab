@@ -1,5 +1,5 @@
 id: book-tom-13
-title: Spinning top at the end of a pullback, enter on its break with the main trend (Trader Tom, book rule, proposed)
+title: Spinning top at the end of a pullback, enter on its break with the main trend (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -31,6 +31,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87: spinning top no edge; 0
-  of 4,049 shape x context cells. Assumptions: The book''s example uses 40-50 bars of downtrend and 8-10 bars of rally; thresholds,
-  target and trend proxy are ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R87: spinning top no edge; 0 of 4,049 shape x context cells. Assumptions: The book''s
+  example uses 40-50 bars of downtrend and 8-10 bars of rally; thresholds, target and trend proxy are ours.'

@@ -1,5 +1,6 @@
 id: book-tom-09
-title: Trend change on the break of the lower low (and continuation buy above the old high) (Trader Tom, book rule, proposed)
+title: Trend change on the break of the lower low (and continuation buy above the old high) (Trader Tom, book rule, tested
+  in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -33,5 +34,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R71 P8 swing structure HH+HL
-  lost Rs 40,109 on 374 final trades; R90 BOS entries 0 of 99. Assumptions: Pivot strength, timeframe, target are ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R71 P8 swing structure HH+HL lost Rs 40,109 on 374 final trades; R90 BOS entries 0 of
+  99. Assumptions: Pivot strength, timeframe, target are ours.'

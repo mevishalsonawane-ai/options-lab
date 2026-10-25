@@ -1,5 +1,5 @@
 id: book-aziz-05
-title: 'ABCD: new high of day, higher pullback that holds, buy the turn near C (Andrew Aziz, book rule, proposed)'
+title: 'ABCD: new high of day, higher pullback that holds, buy the turn near C (Andrew Aziz, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,7 +39,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). TWAP proxy; the 1-minute volume condition dropped on the index (no volume), labelled
-  R104 (227 tests, BH across all). TWAP proxy; the 1-minute volume condition dropped on the index (no volume), labelled Our
-  nearest test: R87B pullback continuation held on SENSEX but its call rule lost -Rs 21,127 on 162 trades (stop under the
-  pullback too tight); R71 P8 swing break lost in the final. Assumptions: Thresholds for B (0.5 ATR), C confirmation (3 bars)
-  and ''near C'' (25%) are ours; volume from index futures (spot has none).'
+  R104 (227 tests, BH across all). TWAP proxy; the 1-minute volume condition dropped on the index (no volume), labelled R104
+  (227 tests, BH across all). TWAP proxy; the 1-minute volume condition dropped on the index (no volume), labelled R104 (227
+  tests, BH across all). TWAP proxy; the 1-minute volume condition dropped on the index (no volume), labelled Our nearest
+  test: R87B pullback continuation held on SENSEX but its call rule lost -Rs 21,127 on 162 trades (stop under the pullback
+  too tight); R71 P8 swing break lost in the final. Assumptions: Thresholds for B (0.5 ATR), C confirmation (3 bars) and ''near
+  C'' (25%) are ours; volume from index futures (spot has none).'

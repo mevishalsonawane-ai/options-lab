@@ -1,5 +1,5 @@
 id: book-tom-02
-title: Stochastic hidden divergence in the trend, timed by a 4-bar fractal (Trader Tom, book rule, proposed)
+title: Stochastic hidden divergence in the trend, timed by a 4-bar fractal (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -40,7 +40,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R95 CCI divergence labels: +Rs
-  12.0 lakh where drawn, -Rs 3.4 lakh once known; stochastic only inside B2''s coin-flip model. Assumptions: The book gives
-  no stochastic settings, pivot rule, trend definition, stop or exit; 14,3 stochastic, 2-bar pivots, 89-SMA trend (the book''s
-  own trend MA) and a 10-bar window are our choices.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R95 CCI divergence labels: +Rs 12.0 lakh where drawn, -Rs 3.4 lakh once known; stochastic
+  only inside B2''s coin-flip model. Assumptions: The book gives no stochastic settings, pivot rule, trend definition, stop
+  or exit; 14,3 stochastic, 2-bar pivots, 89-SMA trend (the book''s own trend MA) and a 10-bar window are our choices.'

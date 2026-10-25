@@ -1,5 +1,6 @@
 id: book-bennett-10
-title: Is skew a risk indicator? Next-day range vs 09:20 skew, controlling for ATM IV (Colin Bennett, book rule, proposed)
+title: Is skew a risk indicator? Next-day range vs 09:20 skew, controlling for ATM IV (Colin Bennett, book question, answered
+  in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/books/TESTABLE_RULES.md

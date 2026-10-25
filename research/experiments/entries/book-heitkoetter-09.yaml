@@ -1,5 +1,5 @@
 id: book-heitkoetter-09
-title: 'Trend channel: enter at the trendline, exit at the channel line (Markus Heitkoetter, book rule, proposed)'
+title: 'Trend channel: enter at the trendline, exit at the channel line (Markus Heitkoetter, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -33,6 +33,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us; nearest OBUY_GB
-  MR-05 TWAP stretch fade Rs -91,856 walk-forward (713 trades). Assumptions: Stop buffer, width filter and channel construction
-  details are ours; the book gives only the idea.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: not tested by us; nearest OBUY_GB MR-05 TWAP stretch fade Rs -91,856 walk-forward (713
+  trades). Assumptions: Stop buffer, width filter and channel construction details are ours; the book gives only the idea.'

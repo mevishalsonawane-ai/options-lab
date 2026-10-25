@@ -1,5 +1,5 @@
 id: book-sadowski-07
-title: Bollinger 20,2 squeeze, enter on a close across the middle SMA (Roman Sadowski, book rule, proposed)
+title: Bollinger 20,2 squeeze, enter on a close across the middle SMA (Roman Sadowski, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,7 +39,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) R104
-  (227 tests, BH across all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) Our nearest
-  test: HUNT_R71 P3 squeeze release (band-close trigger): -Rs 41,281 on 305 trades, 67% overlap with Donchian; OBUY_FINAL
-  MR-02 Bollinger alert -90,790. Assumptions: The book''s absolute width (0.0100 on EURUSD) is replaced by a width percentile.
-  ''A full candle above'' read as open and close above the middle line.'
+  (227 tests, BH across all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) R104 (227 tests,
+  BH across all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) R104 (227 tests, BH across
+  all). 60-minute / 15-minute, entry across the middle SMA (R71 P3 used the band close) Our nearest test: HUNT_R71 P3 squeeze
+  release (band-close trigger): -Rs 41,281 on 305 trades, 67% overlap with Donchian; OBUY_FINAL MR-02 Bollinger alert -90,790.
+  Assumptions: The book''s absolute width (0.0100 on EURUSD) is replaced by a width percentile. ''A full candle above'' read
+  as open and close above the middle line.'

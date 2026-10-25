@@ -1,5 +1,5 @@
 id: book-sadowski-10
-title: Weekly + daily stochastic extreme at a swing level, intraday reversal entry (Roman Sadowski, book rule, proposed)
+title: Weekly + daily stochastic extreme at a swing level, intraday reversal entry (Roman Sadowski, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,7 +38,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). multi-session hold: index as a futures proxy R104 (227 tests, BH across all). multi-session
-  hold: index as a futures proxy Our nearest test: HUNT_H25 intraday stochastic within ''Other indicators'' 0 of 50 families
-  positive walk-forward; weekly+daily version not tested by us. Assumptions: The COT bias, the ''major'' level and the intraday
-  ''reversal pattern'' are discretionary in the book; all of these definitions are ours. Stochastic settings are borrowed
-  from the common 14,3,3.'
+  hold: index as a futures proxy R104 (227 tests, BH across all). multi-session hold: index as a futures proxy R104 (227 tests,
+  BH across all). multi-session hold: index as a futures proxy Our nearest test: HUNT_H25 intraday stochastic within ''Other
+  indicators'' 0 of 50 families positive walk-forward; weekly+daily version not tested by us. Assumptions: The COT bias, the
+  ''major'' level and the intraday ''reversal pattern'' are discretionary in the book; all of these definitions are ours.
+  Stochastic settings are borrowed from the common 14,3,3.'

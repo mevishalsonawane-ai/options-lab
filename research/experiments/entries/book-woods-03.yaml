@@ -1,5 +1,5 @@
 id: book-woods-03
-title: Reversal bar in the trend's direction (Galen Woods, book rule, proposed)
+title: Reversal bar in the trend's direction (Galen Woods, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -30,6 +30,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Not tested in this form; R87
-  stop-run-below-day-low on 1m held out of sample but is about 1.8 points, below option cost.. Assumptions: ''Closes higher
-  than the previous bar'' read as close > previous close. Trend definition ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: Not tested in this form; R87 stop-run-below-day-low on 1m held out of sample but is about
+  1.8 points, below option cost.. Assumptions: ''Closes higher than the previous bar'' read as close > previous close. Trend
+  definition ours.'

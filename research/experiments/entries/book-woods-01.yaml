@@ -1,5 +1,5 @@
 id: book-woods-01
-title: Three-bar pullback in a trend, buy above the next bar in the trend's direction (Galen Woods, book rule, proposed)
+title: Three-bar pullback in a trend, buy above the next bar in the trend's direction (Galen Woods, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -43,8 +43,9 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). the book''s wider pattern stop (README pick 3) R104 (227 tests, BH across all). the
-  book''s wider pattern stop (README pick 3) Our nearest test: Not tested in this form. R87B: green-green-red on SENSEX 15m
-  held out of sample (+0.259 ATR, n 182) but the call rule with a stop under the red candle lost -Rs 21,127 on 162 trades;
-  R96 P1 MCX pullback in trend Rs 1.08 lakh on 35, twin p 0.164 (lead only).. Assumptions: Book does not define the trend;
-  EMA 20 slope chosen. Book does not state a stop for this pattern; Ch. 7 general pattern stop applied to the whole pullback
-  (not just the signal bar, which R87B showed is too tight). Target from Ch. 7.3.'
+  book''s wider pattern stop (README pick 3) R104 (227 tests, BH across all). the book''s wider pattern stop (README pick
+  3) R104 (227 tests, BH across all). the book''s wider pattern stop (README pick 3) Our nearest test: Not tested in this
+  form. R87B: green-green-red on SENSEX 15m held out of sample (+0.259 ATR, n 182) but the call rule with a stop under the
+  red candle lost -Rs 21,127 on 162 trades; R96 P1 MCX pullback in trend Rs 1.08 lakh on 35, twin p 0.164 (lead only).. Assumptions:
+  Book does not define the trend; EMA 20 slope chosen. Book does not state a stop for this pattern; Ch. 7 general pattern
+  stop applied to the whole pullback (not just the signal bar, which R87B showed is too tight). Target from Ch. 7.3.'

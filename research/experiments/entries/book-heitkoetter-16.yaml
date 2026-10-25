@@ -1,5 +1,5 @@
 id: book-heitkoetter-16
-title: Skip holiday-adjacent and pre-major-release days (Markus Heitkoetter, book rule, proposed)
+title: Skip holiday-adjacent and pre-major-release days (Markus Heitkoetter, book rule, tested in R104)
 family: calendar-events
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -32,6 +32,9 @@ holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). events.csv covers the arms'' window (2024+); NSE holidays from the trading calendar;
   US payrolls not in the calendar (dropped, labelled) R104 (227 tests, BH across all). events.csv covers the arms'' window
-  (2024+); NSE holidays from the trading calendar; US payrolls not in the calendar (dropped, labelled) Our nearest test: not
-  tested by us; R15 pre-open day filters 0 of 5; R102 US-event sign rules never passed. Assumptions: US Thanksgiving / Christmas
-  and Fed / jobs-report days mapped to Indian holidays and the releases that move NIFTY; list fixed before any result.'
+  (2024+); NSE holidays from the trading calendar; US payrolls not in the calendar (dropped, labelled) R104 (227 tests, BH
+  across all). events.csv covers the arms'' window (2024+); NSE holidays from the trading calendar; US payrolls not in the
+  calendar (dropped, labelled) R104 (227 tests, BH across all). events.csv covers the arms'' window (2024+); NSE holidays
+  from the trading calendar; US payrolls not in the calendar (dropped, labelled) Our nearest test: not tested by us; R15 pre-open
+  day filters 0 of 5; R102 US-event sign rules never passed. Assumptions: US Thanksgiving / Christmas and Fed / jobs-report
+  days mapped to Indian holidays and the releases that move NIFTY; list fixed before any result.'

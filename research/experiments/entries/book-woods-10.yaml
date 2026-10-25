@@ -1,5 +1,5 @@
 id: book-woods-10
-title: Fade the breakout of a doji-like or counter-trend outside bar (Galen Woods, book rule, proposed)
+title: Fade the breakout of a doji-like or counter-trend outside bar (Galen Woods, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -33,5 +33,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Not tested by us; R87 outside-bar
-  cells no pass.. Assumptions: ''Fade'' read as entering on the close back inside; doji-like = body <= 30%.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: Not tested by us; R87 outside-bar cells no pass.. Assumptions: ''Fade'' read as entering
+  on the close back inside; doji-like = body <= 30%.'

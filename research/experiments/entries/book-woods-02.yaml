@@ -1,5 +1,5 @@
 id: book-woods-02
-title: 'Hikkake: failed breakout of an inside bar within three bars (Galen Woods, book rule, proposed)'
+title: 'Hikkake: failed breakout of an inside bar within three bars (Galen Woods, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,7 +37,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Not tested by us. R71 P1 inside-bar
-  break lost -Rs 1,23,667 on 1,075 trades (its failure is the mirror); R89 break-and-reclaim lost like break-and-go; R61b:
-  candidates after failed breaks did worse.. Assumptions: ''Failure'' read as price trading back beyond the inside bar''s
-  opposite end within 3 bars of C (the common Chesler definition); the book does not say which level marks the failure.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: Not tested by us. R71 P1 inside-bar break lost -Rs 1,23,667 on 1,075 trades (its failure
+  is the mirror); R89 break-and-reclaim lost like break-and-go; R61b: candidates after failed breaks did worse.. Assumptions:
+  ''Failure'' read as price trading back beyond the inside bar''s opposite end within 3 bars of C (the common Chesler definition);
+  the book does not say which level marks the failure.'

@@ -1,5 +1,5 @@
 id: book-tom-07
-title: Fake-out / fake-down of the previous swing, fade back into the range (Trader Tom, book rule, proposed)
+title: Fake-out / fake-down of the previous swing, fade back into the range (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,6 +38,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). 15-minute 2-bar fractal swing, not R91''s 1-hour swing R104 (227 tests, BH across
-  all). 15-minute 2-bar fractal swing, not R91''s 1-hour swing Our nearest test: R3 ORB Sweep / Range Fade lost Rs 5,05,954
-  / 5,10,978; R91 swing-sweep fade 0 of 63; R89 break-and-reclaim lost. Assumptions: Book gives only a diagram; swing definition,
-  close-back confirmation and range minimum are ours.'
+  all). 15-minute 2-bar fractal swing, not R91''s 1-hour swing R104 (227 tests, BH across all). 15-minute 2-bar fractal swing,
+  not R91''s 1-hour swing R104 (227 tests, BH across all). 15-minute 2-bar fractal swing, not R91''s 1-hour swing Our nearest
+  test: R3 ORB Sweep / Range Fade lost Rs 5,05,954 / 5,10,978; R91 swing-sweep fade 0 of 63; R89 break-and-reclaim lost. Assumptions:
+  Book gives only a diagram; swing definition, close-back confirmation and range minimum are ours.'

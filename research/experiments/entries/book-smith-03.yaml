@@ -1,5 +1,6 @@
 id: book-smith-03
-title: Significant-day trailing stop as an exit module on existing multi-day holds (David Graeme Smith, book rule, proposed)
+title: Significant-day trailing stop as an exit module on existing multi-day holds (David Graeme Smith, book rule, tested
+  in R104)
 family: trade-management
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -43,6 +44,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). exit swap on SWING_DEEP''s hosts R104 (227 tests, BH across all). exit swap on SWING_DEEP''s
+  hosts R104 (227 tests, BH across all). exit swap on SWING_DEEP''s hosts R104 (227 tests, BH across all). exit swap on SWING_DEEP''s
   hosts Our nearest test: SWING_EXITS: the app''s stop/target/ladder cut drawdowns but no row beat coin-flip entries with
   the same exits; LV-05 trailed the opposite N/2-day channel and lost. This trail itself is not tested by us.. Assumptions:
   The book uses it on its own entry only; testing it on our existing entries isolates the exit. Compare with coin-flip entries

@@ -1,5 +1,5 @@
 id: book-wyckoff-11
-title: Do not enter in the direction of a 4-day streak (Wyckoff, book rule, proposed)
+title: Do not enter in the direction of a 4-day streak (Wyckoff, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -31,6 +31,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). 4-day streak skip filter (3-day variant chosen walk-forward) R104 (227 tests, BH
-  across all). 4-day streak skip filter (3-day variant chosen walk-forward) Our nearest test: not tested by us as a streak
-  rule; R102 daily sign continuation 53.2% (n 5,086); R101 filters 0 of 20. Assumptions: Book: the market seldom runs more
-  than three or four days one way without a reaction; read as a skip filter, not a fade'
+  across all). 4-day streak skip filter (3-day variant chosen walk-forward) R104 (227 tests, BH across all). 4-day streak
+  skip filter (3-day variant chosen walk-forward) R104 (227 tests, BH across all). 4-day streak skip filter (3-day variant
+  chosen walk-forward) Our nearest test: not tested by us as a streak rule; R102 daily sign continuation 53.2% (n 5,086);
+  R101 filters 0 of 20. Assumptions: Book: the market seldom runs more than three or four days one way without a reaction;
+  read as a skip filter, not a fade'

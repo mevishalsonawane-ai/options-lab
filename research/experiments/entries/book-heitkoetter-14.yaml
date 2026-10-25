@@ -1,5 +1,5 @@
 id: book-heitkoetter-14
-title: Stop trading for the week once a weekly profit goal per lot is reached (Markus Heitkoetter, book rule, proposed)
+title: Stop trading for the week once a weekly profit goal per lot is reached (Markus Heitkoetter, book rule, tested in R104)
 family: sizing-execution
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -31,7 +31,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all). README pick 5 R104 (227 tests, BH across all). README pick 5 Our nearest test: not
-  tested by us; nearest R19c day profit lock raised green days (42% -> 49%) but failed net / drawdown. Assumptions: Conversion
-  of the book''s dollar goals to rupees per lot via the arm''s own median win; risk-lowering, so paper-eligible only after
-  it passes gates.'
+notes: 'R104 (227 tests, BH across all). README pick 5 R104 (227 tests, BH across all). README pick 5 R104 (227 tests, BH
+  across all). README pick 5 R104 (227 tests, BH across all). README pick 5 Our nearest test: not tested by us; nearest R19c
+  day profit lock raised green days (42% -> 49%) but failed net / drawdown. Assumptions: Conversion of the book''s dollar
+  goals to rupees per lot via the arm''s own median win; risk-lowering, so paper-eligible only after it passes gates.'

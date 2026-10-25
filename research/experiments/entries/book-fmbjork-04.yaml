@@ -1,5 +1,5 @@
 id: book-fmbjork-04
-title: Constant-fraction (fractional Merton/Kelly) sizing for an arm with a record (Tomas Björk, book rule, proposed)
+title: Constant-fraction (fractional Merton/Kelly) sizing for an arm with a record (Tomas Björk, book rule, tested in R104)
 family: sizing-execution
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,8 +37,8 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: h15: half-Kelly grew fastest
-  but P(drawdown >= 30%) 63%, quarter-Kelly P(drawdown >= 50%) 1%; the Kelly fraction was unstable (0.48 / 0.14 vs 1.29) and
-  SPA p = 0.14. HUNT_FINAL chose fixed lots.. Assumptions: Bjork''s fraction is for a lognormal asset; applying it to per-trade
-  option returns is our translation. The 12-month window, c values and the 75% floor are ours. LIVE would need shadow mode
-  first (CLAUDE.md: sizing up is not risk-lowering).'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: h15: half-Kelly grew fastest but P(drawdown >= 30%) 63%, quarter-Kelly P(drawdown >=
+  50%) 1%; the Kelly fraction was unstable (0.48 / 0.14 vs 1.29) and SPA p = 0.14. HUNT_FINAL chose fixed lots.. Assumptions:
+  Bjork''s fraction is for a lognormal asset; applying it to per-trade option returns is our translation. The 12-month window,
+  c values and the 75% floor are ours. LIVE would need shadow mode first (CLAUDE.md: sizing up is not risk-lowering).'

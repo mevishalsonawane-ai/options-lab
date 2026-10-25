@@ -1,5 +1,5 @@
 id: book-sadowski-08
-title: Daily NR4 / NR7 breakout (Roman Sadowski, book rule, proposed)
+title: Daily NR4 / NR7 breakout (Roman Sadowski, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,6 +39,7 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: OBUY_FINAL LV-04 NR7/inside
-  day: 72 variants, -28,141 walk-forward; HUNT_R71 P2 15-min NR7 -Rs 1,68,820; HUNT_R96 crude NR7 the only unproven MCX lead
-  (failed on COPPER). Assumptions: ''Trailed to suit'' made precise as the swing trail after +1R. Chubby = our definition.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: OBUY_FINAL LV-04 NR7/inside day: 72 variants, -28,141 walk-forward; HUNT_R71 P2 15-min
+  NR7 -Rs 1,68,820; HUNT_R96 crude NR7 the only unproven MCX lead (failed on COPPER). Assumptions: ''Trailed to suit'' made
+  precise as the swing trail after +1R. Chubby = our definition.'

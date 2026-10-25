@@ -1,5 +1,5 @@
 id: book-tom-03
-title: Daily / weekly 3-bar swing (3-bar Donchian) as the trend bias (Trader Tom, book rule, proposed)
+title: Daily / weekly 3-bar swing (3-bar Donchian) as the trend bias (Trader Tom, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -39,7 +39,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). daily 3-bar swing bias filter R104 (227 tests, BH across all). daily 3-bar swing
-  bias filter Our nearest test: not tested by us at 3 bars; R101 filters on the Donchian arms 0 of 20 (filters that raised
-  the win rate lowered the net); R89 daily+15m trend filter did not cut false breaks. Assumptions: Book says ''trade below
-  the 3-bar low'' turns the trend; we use intraday trade-through of the level (not a close). Book text says both ''last 3
-  bars'' and ''last 4 trading days''; we take the previous 3 completed bars.'
+  bias filter R104 (227 tests, BH across all). daily 3-bar swing bias filter R104 (227 tests, BH across all). daily 3-bar
+  swing bias filter Our nearest test: not tested by us at 3 bars; R101 filters on the Donchian arms 0 of 20 (filters that
+  raised the win rate lowered the net); R89 daily+15m trend filter did not cut false breaks. Assumptions: Book says ''trade
+  below the 3-bar low'' turns the trend; we use intraday trade-through of the level (not a close). Book text says both ''last
+  3 bars'' and ''last 4 trading days''; we take the previous 3 completed bars.'

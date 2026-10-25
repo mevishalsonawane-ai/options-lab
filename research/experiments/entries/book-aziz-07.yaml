@@ -1,5 +1,6 @@
 id: book-aziz-07
-title: 'Fallen Angel analogue: gap-up open spike, flush below VWAP, base, volume breakout (Andrew Aziz, book rule, proposed)'
+title: 'Fallen Angel analogue: gap-up open spike, flush below VWAP, base, volume breakout (Andrew Aziz, book rule, tested
+  in R104)'
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -37,7 +38,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). TWAP proxy; volume test dropped (labelled) R104 (227 tests, BH across all). TWAP
-  proxy; volume test dropped (labelled) Our nearest test: not tested by us; nearest R87B pullback continuation and R102 gap
-  facts (a 0.5-1% NIFTY gap fills by the close 42% of the time). Assumptions: The book''s Angel is a low-float US stock gapping
-  on news with pre-market levels; the index has no comparable pre-market, so the previous close stands in for the pre-market
-  low and every threshold is ours.'
+  proxy; volume test dropped (labelled) R104 (227 tests, BH across all). TWAP proxy; volume test dropped (labelled) R104 (227
+  tests, BH across all). TWAP proxy; volume test dropped (labelled) Our nearest test: not tested by us; nearest R87B pullback
+  continuation and R102 gap facts (a 0.5-1% NIFTY gap fills by the close 42% of the time). Assumptions: The book''s Angel
+  is a low-float US stock gapping on news with pre-market levels; the index has no comparable pre-market, so the previous
+  close stands in for the pre-market low and every threshold is ours.'

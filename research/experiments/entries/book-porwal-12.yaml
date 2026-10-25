@@ -1,5 +1,5 @@
 id: book-porwal-12
-title: Stop trading for the day after two stop-losses (Nikhil Porwal, book rule, proposed)
+title: Stop trading for the day after two stop-losses (Nikhil Porwal, book rule, tested in R104)
 family: sizing-execution
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -30,6 +30,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R75 L1-K2 (no new Donchian entries
-  after 2 losses in a row) failed; R19c daily loss cap made things worse. Assumptions: ''Two stop-losses hit'' read per arm
-  per day.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R75 L1-K2 (no new Donchian entries after 2 losses in a row) failed; R19c daily loss cap
+  made things worse. Assumptions: ''Two stop-losses hit'' read per arm per day.'

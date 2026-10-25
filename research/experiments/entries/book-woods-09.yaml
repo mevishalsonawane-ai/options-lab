@@ -1,5 +1,5 @@
 id: book-woods-09
-title: Inside bar breakout, trend side only (Galen Woods, book rule, proposed)
+title: Inside bar breakout, trend side only (Galen Woods, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -31,5 +31,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). differs from R71 P1 (two-sided) by taking the trend side only R104 (227 tests, BH
-  across all). differs from R71 P1 (two-sided) by taking the trend side only Our nearest test: R71 P1 two-sided: -Rs 1,23,667
-  on 1,075 trades (final). Trend-only not tested.. Assumptions: Trend definition ours; R71 ran the two-sided version.'
+  across all). differs from R71 P1 (two-sided) by taking the trend side only R104 (227 tests, BH across all). differs from
+  R71 P1 (two-sided) by taking the trend side only R104 (227 tests, BH across all). differs from R71 P1 (two-sided) by taking
+  the trend side only Our nearest test: R71 P1 two-sided: -Rs 1,23,667 on 1,075 trades (final). Trend-only not tested.. Assumptions:
+  Trend definition ours; R71 ran the two-sided version.'

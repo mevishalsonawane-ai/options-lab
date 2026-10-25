@@ -1,5 +1,5 @@
 id: book-ozenbas-01
-title: Daily close crosses its 65-day moving average (Ozenbas, Pagano, Schwartz and Weber, book rule, proposed)
+title: Daily close crosses its 65-day moving average (Ozenbas, Pagano, Schwartz and Weber, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -40,8 +40,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Not tested by us on daily index
-  or MCX bars. Intraday EMA crosses lost (OBUY_FINAL TI-03 EMA cross, -Rs 369,856 over 2022-2026, 96 variants; R29 ribbons
-  0 pass). Crypto daily SMA/Donchian trend (RC1) made +24.4% a year after tax vs +58.8% buy and hold.. Assumptions: Simple
-  (not exponential) average; signal on the close, fill at next open; 2 x ATR stop and the option roll are ours. The book gives
-  the crossover only as an example of technical analysis and neither supports nor denies it.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: Not tested by us on daily index or MCX bars. Intraday EMA crosses lost (OBUY_FINAL TI-03
+  EMA cross, -Rs 369,856 over 2022-2026, 96 variants; R29 ribbons 0 pass). Crypto daily SMA/Donchian trend (RC1) made +24.4%
+  a year after tax vs +58.8% buy and hold.. Assumptions: Simple (not exponential) average; signal on the close, fill at next
+  open; 2 x ATR stop and the option roll are ours. The book gives the crossover only as an example of technical analysis and
+  neither supports nor denies it.'

@@ -1,5 +1,5 @@
 id: book-heitkoetter-15
-title: Only one morning and one afternoon trade a day (Markus Heitkoetter, book rule, proposed)
+title: Only one morning and one afternoon trade a day (Markus Heitkoetter, book rule, tested in R104)
 family: sizing-execution
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -29,5 +29,6 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R80 V9 2-a-day cap led in design
-  and lost in the final; R14 1-a-side cap only limits ORB damage. Assumptions: Morning/afternoon split at 12:30 is ours.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: R80 V9 2-a-day cap led in design and lost in the final; R14 1-a-side cap only limits
+  ORB damage. Assumptions: Morning/afternoon split at 12:30 is ours.'

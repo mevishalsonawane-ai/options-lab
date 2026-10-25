@@ -1,6 +1,6 @@
 id: book-fmbayes-01
 title: 'Cross-sectional momentum: long the top half, short the bottom half on volatility-scaled 9-month return (Rachev, Hsu,
-  Bagasheva and Fabozzi, book rule, proposed)'
+  Bagasheva and Fabozzi, book rule, tested in R104)'
 family: mcx-crypto
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -41,9 +41,9 @@ results:
     dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
 holdout_read: true
 verdict: rejected
-notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us as a cross-sectional
-  ranking. R96 (HUNT_R96_SUMMARY.md) tested only intraday / time-series momentum on MCX (US-session momentum U1 died; ZINC
-  untradeable, 0 fills); R72 breadth Donchian is time-series, not cross-sectional.. Assumptions: Book''s universe was MSCI
-  country indices (24 years); 189 trading days for 9 months and a 1-day skip are the book''s. With only 4 MCX majors the halves
-  are 2 and 2; adding base metals (COPPER, ZINC, ALUMINIUM, LEAD, NICKEL) if bars exist gives a wider cross-section. Costs:
-  MCX futures charges and slippage from baselines.yaml.'
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  R104 (227 tests,
+  BH across all).  Our nearest test: not tested by us as a cross-sectional ranking. R96 (HUNT_R96_SUMMARY.md) tested only
+  intraday / time-series momentum on MCX (US-session momentum U1 died; ZINC untradeable, 0 fills); R72 breadth Donchian is
+  time-series, not cross-sectional.. Assumptions: Book''s universe was MSCI country indices (24 years); 189 trading days for
+  9 months and a 1-day skip are the book''s. With only 4 MCX majors the halves are 2 and 2; adding base metals (COPPER, ZINC,
+  ALUMINIUM, LEAD, NICKEL) if bars exist gives a wider cross-section. Costs: MCX futures charges and slippage from baselines.yaml.'

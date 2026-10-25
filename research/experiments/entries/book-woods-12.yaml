@@ -1,5 +1,5 @@
 id: book-woods-12
-title: NR7 break in the trend's direction only (Galen Woods, book rule, proposed)
+title: NR7 break in the trend's direction only (Galen Woods, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -38,5 +38,7 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). differs from R71 P2 (two-sided) by taking the trend side only R104 (227 tests, BH
-  across all). differs from R71 P2 (two-sided) by taking the trend side only Our nearest test: R71 P2 two-sided 15m: -Rs 1,68,820
-  on 1,341 trades; R96 crude NR7 lead (Rs 48,875 on 46) failed on COPPER.. Assumptions: Trend definition ours.'
+  across all). differs from R71 P2 (two-sided) by taking the trend side only R104 (227 tests, BH across all). differs from
+  R71 P2 (two-sided) by taking the trend side only R104 (227 tests, BH across all). differs from R71 P2 (two-sided) by taking
+  the trend side only Our nearest test: R71 P2 two-sided 15m: -Rs 1,68,820 on 1,341 trades; R96 crude NR7 lead (Rs 48,875
+  on 46) failed on COPPER.. Assumptions: Trend definition ours.'

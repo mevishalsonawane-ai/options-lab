@@ -1,5 +1,5 @@
 id: book-smith-06
-title: SST six rules on BTC/ETH daily, with the trail as the profit lock (David Graeme Smith, book rule, proposed)
+title: SST six rules on BTC/ETH daily, with the trail as the profit lock (David Graeme Smith, book rule, tested in R104)
 family: mcx-crypto
 date: '2026-10-25'
 doc: research/HUNT_R104_BOOKS.md
@@ -35,7 +35,8 @@ results:
 holdout_read: true
 verdict: rejected
 notes: 'R104 (227 tests, BH across all). the step trail is the profit lock; stop always on R104 (227 tests, BH across all).
-  the step trail is the profit lock; stop always on Our nearest test: RC1: 0 of 8 active ideas beat buy-and-hold after India''s
-  30% tax; R46: BTC EMA 8/21 + ADX(14) > 15 option calls, 0 of 14 variants pass.. Assumptions: Crypto never appears in the
-  book; mapping is ours. Stop and step lock are both present as CLAUDE.md requires; compare against lock/stop variants, never
-  ''no stop''.'
+  the step trail is the profit lock; stop always on R104 (227 tests, BH across all). the step trail is the profit lock; stop
+  always on R104 (227 tests, BH across all). the step trail is the profit lock; stop always on Our nearest test: RC1: 0 of
+  8 active ideas beat buy-and-hold after India''s 30% tax; R46: BTC EMA 8/21 + ADX(14) > 15 option calls, 0 of 14 variants
+  pass.. Assumptions: Crypto never appears in the book; mapping is ours. Stop and step lock are both present as CLAUDE.md
+  requires; compare against lock/stop variants, never ''no stop''.'
