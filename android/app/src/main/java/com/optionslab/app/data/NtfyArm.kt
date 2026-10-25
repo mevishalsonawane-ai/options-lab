@@ -433,6 +433,8 @@ object NtfyArm {
         // a buy read before the exit never fills after it ("NIFTY 24500 CE @ 120" pending, then "exit nifty", then the buy filled).
         val at = b.alerts.indexOfFirst { it.id == a.id }
         var cancelled = 0
+        // Review 2: anything ended or recorded below is saved even when the exit itself waits for the next pass.
+        var changed = false
         for (w in b.alerts.filterIndexed { i, x -> x.state == PENDING && x.id != a.id && (at < 0 || i < at) }) {
             val buy = runCatching { NtfyParser.read(w.title, w.body, w.at.toLocalDate()) }.getOrNull() as? Parsed.Buy ?: continue
             if (buy.index != p.index || (p.right != null && buy.right != p.right)) continue
@@ -443,14 +445,14 @@ object NtfyArm {
                 when {
                     o == null || o.status == "cancelled" || o.status == "rejected" -> Unit
                     // Filled before the cancel: it is held now, recorded, and the exit below sells it.
-                    o.status == "complete" -> { b.pending.remove(w.id); Paper.contractOf(o.symbol)?.let { c ->
+                    o.status == "complete" -> { b.pending.remove(w.id); changed = true; Paper.contractOf(o.symbol)?.let { c ->
                         bought(b, w, buy, c, id, o.quantity, o.averagePrice?.toDouble() ?: return@let, now) }; continue }
                     // Still working: the exit waits for the next pass (never a fill after an exit, never a sale before it).
-                    else -> return say(b, "an exit message: a waiting ${buy.index} buy could not be cancelled yet; tried again")
+                    else -> return say(b, "an exit message: a waiting ${buy.index} buy could not be cancelled yet; tried again") || changed
                 }
             }
             finish(b, w, NOT_TRADED, "cancelled by a later exit")
-            cancelled++
+            cancelled++; changed = true
         }
         val ended = if (cancelled > 0) "cancelled $cancelled waiting buy(s); " else ""
         val mine = b.positions.withIndex().filter { (_, x) -> x.open && !x.legacy && x.index == p.index && (p.right == null || x.right == p.right?.name) }
@@ -464,7 +466,7 @@ object NtfyArm {
             b.positions[i] = next
         }
         return if (sold == mine.size) finish(b, a, CLOSED, ended + "closed ${mine.joinToString { it.value.symbol }} (exit message) · paper")
-        else say(b, "an exit message: the sale is tried again on the next pass")
+        else say(b, "an exit message: the sale is tried again on the next pass") || changed || sold > 0
     }
 
     private suspend fun stoppedToday(): Boolean =
