@@ -1510,13 +1510,48 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals("${BreadthDonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
         assertTrue(runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, true) }.contains("paper only"))
         fun kept() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON &&
-            it.change.target == "paperarm:${BreadthDonchianArm.SOURCE}" && it.status == AutoChange.Status.KEPT }
+            it.change.target == "paperarm:${BreadthDonchianArm.SOURCE}" && it.status == AutoChange.Status.KEPT && it.change.to == AutoChange.ON }
         val deadline = System.currentTimeMillis() + 10_000
         while (kept().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
         val e = kept().single()
         assertEquals("your choice", e.by)
         assertTrue(e.change.reason, e.change.reason.startsWith("your \"Okay add it\" (16 Oct, after R72): "))
         assertFalse(e.change.reason, "Both" in e.change.reason)
+    }
+
+    /**
+     * 25 Oct (app audit; 23 Oct: R51, R52 and Solo 2.0 were switched off between 09:49 and 10:36 and the timeline showed only "off →
+     * on"): Boss's "off" from the row is logged too, dated today, as his choice; its Undo puts the arm back on; then "on" again closes
+     * that entry and logs its own. Every flip, both ways, with who and when.
+     */
+    @Test fun bossSwitchingAnArmOffFromItsRowIsInTheTimelineTooAndItsUndoPutsItBackOn() {
+        org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
+        only(OovArm.SOURCE)
+        val target = "paperarm:${OovArm.SOURCE}"
+        fun all() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target }
+        fun keptOff() = all().filter { it.status == AutoChange.Status.KEPT && it.change.to == AutoChange.SWITCHED_OFF }
+        assertEquals("${OovArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, false) })
+        var deadline = System.currentTimeMillis() + 10_000
+        while (keptOff().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        val off = keptOff().single()
+        assertEquals("your choice", off.by)
+        assertEquals(AutoChange.ON, off.change.from)
+        assertEquals(Market.today(), off.day)
+        assertTrue(off.change.reason, off.change.reason.startsWith("you switched it off from its row"))
+        val today = com.optionslab.ira.ChangeTimeline.fromAutopilot(Autopilot.book.value, Market.today())
+        assertTrue(today.toString(), today.any { it.what == "${OovArm.LABEL}'s switch (paper): on → off" && it.agent == "You (logged by Autopilot)" })
+        assertFalse("no PIN: paper only", Autopilot.undoNeedsPin(off.id))
+        assertTrue(Autopilot.undo(off.id).startsWith("Undone"))
+        assertTrue(view().on(OovArm.SOURCE))
+        // Off and on again from the row: the off entry is closed and the on one logged, each dated today.
+        assertEquals("${OovArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, false) })
+        assertTrue(runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, true) }.contains("paper only"))
+        fun keptOn() = all().filter { it.status == AutoChange.Status.KEPT && it.change.to == AutoChange.ON }
+        deadline = System.currentTimeMillis() + 10_000
+        while (keptOn().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertEquals(1, keptOn().size)
+        assertTrue("the second off is closed, not left to undo later", keptOff().isEmpty())
+        assertEquals(2, all().count { it.change.to == AutoChange.SWITCHED_OFF })
     }
 
     @Test fun threeIndicesBreakingIsNoBreadthTradeButDonchiansAndAFeedDownCountsAsNotBreaking() {

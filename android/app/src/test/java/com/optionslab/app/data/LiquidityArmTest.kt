@@ -129,6 +129,12 @@ class LiquidityArmTest : RobolectricTest() {
         val off = runBlocking { OrbArms.setArmed("liquidity", false, automatic = true) }
         assertTrue(off, off.startsWith("Liquidity 15+5 disarmed."))
         assertFalse(row().armed)
+        // 25 Oct (app audit): both flips are in the diary, timed (every switch flip written down with when).
+        val end = System.currentTimeMillis() + 10_000
+        fun has(t: String) = Diag.lines().any { it.contains("[switch] $t") }
+        while (!(has("Liquidity 15+5 switched on (paper; fully automatic)") && has("Liquidity 15+5 switched off")) && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertTrue(Diag.lines().takeLast(20).toString(), has("Liquidity 15+5 switched on (paper; fully automatic)"))
+        assertTrue(has("Liquidity 15+5 switched off"))
     }
 
     @Test fun buysTheCallWhenAPoolOnASwingHighIsTakenAndSellsWhenTheBreakFails() {

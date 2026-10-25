@@ -606,4 +606,19 @@ class AutoChangeTest {
         assertFalse(A.superseded(b, b.entries.last()))
         assertNull(A.lastUndoable(b), "Boss's own change is never Autopilot's last change")
     }
+
+    /** 25 Oct (app audit): Boss's "off" on a paper arm's row is a change of its own: his, lowering risk, paper, undone back on without a PIN. */
+    @Test fun bossTurningAPaperArmOffIsHisOwnLowerRiskChange() {
+        val c = A.paperArmOffByBoss(A.PAPER_ARM + "oov", "R52 Open outside value")
+        assertEquals(AutoChange.Kind.PAPER_ARM_ON, c.kind)
+        assertEquals(A.ON, c.from); assertEquals(A.SWITCHED_OFF, c.to)
+        assertEquals(AutoChange.Risk.LOWER, A.riskOf(c))
+        assertEquals(AutoChange.Scope.PAPER, c.scope)
+        assertTrue(A.bossOwn(c.kind))
+        assertEquals("R52 Open outside value's switch (paper)", c.what)
+        val back = A.inverse(c, "undone by you")
+        assertEquals(A.ON, back.to)
+        assertFalse(A.undoNeedsPin(c), "paper only: no PIN")
+        assertEquals(A.FT3_TARGET, A.paperArmOffByBoss(A.FT3_TARGET, "FT3").target)
+    }
 }

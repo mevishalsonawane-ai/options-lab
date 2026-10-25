@@ -1528,6 +1528,8 @@ object OrbArms {
             // Boss himself switched it on again (in Live with his PIN, or on paper): no longer parked or paused by its review.
             if (on && (!live || pinConfirmed)) runCatching { SmartWorkers.ownerRearmed("liquidity") }
             save(b)
+            // 25 Oct (app audit): every flip of an arm's switch is written down with when (the diary) - Liquidity's BANKNIFTY book included.
+            switchNote(LiquidityRules.ARM.label, on, live, automatic)
             val holding = b.positions.any { it.open && it.arm in LiquidityRules.BOOKS.map { a -> a.source } }
             return@withLock if (on) "${LiquidityRules.ARM.label} armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
                 (if (automatic) "fully automatic" else "you approve each entry") + ": on the BANKNIFTY 15- and 5-minute, FINNIFTY 30- and 5-minute " +
@@ -1558,6 +1560,7 @@ object OrbArms {
         val unparked = on && b.famParked.remove(source)
         if (unparked) b.status[source] = ""
         save(b)
+        switchNote(armOf(source).label, on, live, automatic)
         if (unparked) runCatching { Diag.record("orb", "${armOf(source).label}: switched back on by you after the 13 Oct park" + if (live) " (Live, with your PIN)" else ", on paper") }
         val label = armOf(source).label
         // What it is told it trades: the parameters in force today for the account it was armed on (review G2-6; its
@@ -1586,9 +1589,22 @@ object OrbArms {
         else "$label disarmed." + if (b.positions.any { it.arm == source && it.open }) " Its open position is still managed to its exit." else ""
     }
 
+    /**
+     * 25 Oct (app audit; 23 Oct's flips that left no record): one diary line for every flip of an arm's switch - which arm, on or
+     * off, paper or live, automatic or approved - timed by the diary. Off the order path (the switch's own coroutine).
+     */
+    internal fun switchNote(label: String, on: Boolean, live: Boolean, automatic: Boolean) {
+        runCatching { Diag.record("switch", switchWords(label, on, live, automatic)) }
+    }
+
+    internal fun switchWords(label: String, on: Boolean, live: Boolean, automatic: Boolean): String =
+        if (on) "$label switched on (${if (live) "live, with your PIN" else "paper"}; ${if (automatic) "fully automatic" else "you approve each entry"})"
+        else "$label switched off"
+
     /** After a restore: both arms off, nothing waiting for approval. */
     suspend fun disarmAll() = lock.withLock {
         val b = book(); b.armed.clear(); b.auto.clear(); b.liveOk.clear(); b.pending.clear(); save(b)
+        runCatching { Diag.record("switch", "every ORB-family and Liquidity arm switched off (a backup was restored)") }
         com.optionslab.app.ira.IraCoach.forgetParked()
     }
 

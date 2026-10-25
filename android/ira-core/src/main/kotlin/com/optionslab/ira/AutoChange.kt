@@ -551,6 +551,17 @@ object AutoChange {
         "its forward-test bar, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
 
+    /**
+     * 25 Oct (app audit; 23 Oct: R51, R52 and Solo 2.0 were switched off between 09:49 and 10:36 and the change timeline showed only
+     * their "off → on" at 10:36): a paper arm's switch turned OFF by Boss from its row ([target]: "paperarm:<source>", the FT3 or
+     * the Hero ticket target; [label] its name), logged as a change of its own, dated the day it was made, so the timeline shows
+     * every flip both ways with who and when. It only lowers risk (paper); its Undo switches the arm back on (paper only, no PIN).
+     */
+    fun paperArmOffByBoss(target: String, label: String): Change = Change(Kind.PAPER_ARM_ON, target, ON, SWITCHED_OFF,
+        "you switched it off from its row: no new paper entries; what it holds still closes by its own exits (that only lowers risk); " +
+            "switching it back on is your choice",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
+
     /** The target prefix of an arm's own live switch ([Kind.ARM_LIVE]): + its key ([com.optionslab.engine.orb.LiveMirror]). */
     const val ARM_LIVE = "armlive:"
 
