@@ -161,7 +161,7 @@ class TradeScreenTest {
     // ---- set-up and session states --------------------------------------------------------------
 
     @Test fun notSetUpSaysWhereToAddTheKeys() {
-        SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true))
+        SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true, com.optionslab.app.data.AppSettings.TYPED_YES_KEY to false))
         show()
         waitText("Set up your Kite API key and secret first (More → Zerodha).")
         assertTrue(!exists("Log in to Zerodha"))
@@ -170,7 +170,7 @@ class TradeScreenTest {
     }
 
     @Test fun loggedOutOffersTheLogin() {
-        SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true, "kite.apiKey" to "testkey", "kite.apiSecret" to "testsecretnotreal"))
+        SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true, "kite.apiKey" to "testkey", "kite.apiSecret" to "testsecretnotreal", com.optionslab.app.data.AppSettings.TYPED_YES_KEY to false))
         val m = show()
         waitText("Log in to Zerodha for today to see your account.")
         tap("Log in to Zerodha")
@@ -180,7 +180,7 @@ class TradeScreenTest {
 
     /** The saved strategies moved from Trade to Research (9 Oct): Trade is the account book alone, Research has the Strategies page. */
     @Test fun strategiesAreAResearchPageAndTradeHasNoChips() {
-        SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true))
+        SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true, com.optionslab.app.data.AppSettings.TYPED_YES_KEY to false))
         val m = holder.model
         var research by mutableStateOf(false)
         // Research → Strategies, as the "strategy" deep link opens it (the tokens themselves: LabScreensTest).

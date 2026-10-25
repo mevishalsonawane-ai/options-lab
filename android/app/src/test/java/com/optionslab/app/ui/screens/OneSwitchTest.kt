@@ -1,5 +1,6 @@
 package com.optionslab.app.ui.screens
 
+import com.optionslab.app.testing.Cleared
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -235,7 +236,7 @@ class OneSwitchTest {
         holder.model.goLive()
         pump { AppSettings.load().live }
         try {
-            Broker.placeOrder(Kite.Order("NIFTY26OCT24500CE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 100.0, 0.05, "NFO", "iraorb"))
+            Broker.placeOrder(Kite.Order("NIFTY26OCT24500CE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 100.0, 0.05, "NFO", "iraorb"), verdict = Cleared.live(Kite.Order("NIFTY26OCT24500CE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 100.0, 0.05, "NFO", "iraorb")))
             fail("an entry went in the paper-only period")
         } catch (e: Broker.KiteError) { assertEquals("paper_only", e.type) }
         assertTrue(k.placed.isEmpty())

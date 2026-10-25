@@ -16,6 +16,16 @@ class SelfTalkTest {
             assertEquals(SelfTalk.Kind.UNDO_ALL, kind(s), s)
     }
 
+    /** 22 Oct: the time machine's checks of today's arm entries, asked in plain words; said on a locked phone too (no rupees in it). */
+    @Test fun theTimeMachineIsAskedInPlainWords() {
+        for (s in listOf("What did the time machine say?", "Jarvis, what did the time machine find today", "time machine", "the time machine today",
+            "what are the odds of today's entries", "odds of the bots' trades today", "today's reality checks", "reality check"))
+            assertEquals(SelfTalk.Kind.TIME_MACHINE, kind(s), s)
+        assertEquals(SelfTalk.LOCKED_BOTS, SelfTalk.lockedRefusal(SelfTalk.Kind.TIME_MACHINE, locked = true))
+        assertNull(SelfTalk.lockedRefusal(SelfTalk.Kind.TIME_MACHINE, locked = false))
+        assertNull(kind("what time is it"))
+    }
+
     @Test fun theFreezeTheScorecardTheLessonAndHisHabitsAreTheirOwn() {
         assertEquals(SelfTalk.Kind.FREEZE, kind("Is learning frozen?"))
         assertEquals(SelfTalk.Kind.FREEZE, kind("why is learning frozen"))

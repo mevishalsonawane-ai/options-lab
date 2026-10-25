@@ -878,13 +878,19 @@ object Paper {
      * entry could also be mirrored live (19 Oct review).
      */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
-                      known: Quote? = null, auto: String? = null, mirror: String? = null, exit: Boolean = false): Result {
+                      known: Quote? = null, auto: String? = null, mirror: String? = null, exit: Boolean = false,
+                      verdict: com.optionslab.engine.risk.OrderFingerprint.Verdict? = null, stop: Double? = null, target: Double? = null): Result {
         // 22 Oct (arms audit): an arm's EXIT ([exit]) only ever reduces what the book holds in [product]. An arm reads "held" and
         // then sells a moment later; the expiry square-off (15:05), the 15:15 square-off, the sweeper or Boss may have closed the
         // position in between, and a plain SELL on a flat book opened a paper SHORT nothing managed (the Hero tickets' and ORB's
         // 15:05 sales). Now such an exit is refused as "already closed" (the arm books it closed elsewhere), and one for more
         // than is held sells only what is held. Checked here before any price read, and again inside the book's lock, with the place.
         if (exit && reduceQty(book(), c.symbol, product, action, lots * c.lotSize) == null) return notOpen(c.symbol)
+        // 22 Oct: the order fingerprint ([OrderVerdicts]): a paper order whose check stamped a [verdict] goes only when the
+        // fingerprint of what is placed now (these arguments, [stop] / [target] what the caller rests) is the one the check
+        // cleared, today. Refusing only lowers risk; an order placed with no verdict (a stop or target resting, an exit) is as before.
+        if (verdict != null) OrderVerdicts.refusal(verdict, OrderVerdicts.paperFields(c, action, lots, priceType, product, price, trigger, Market.today(),
+                verdict.fields.source, stop, target))?.let { return Result(false, "Not sent: $it", emptyList()) }
         // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
         // exchange stamp of this contract's last stream tick, when it streams.
         // 16 Oct (Boss's diagnostics: "Prices were up to 3.6 s old when used"): a fill never uses a quote older than

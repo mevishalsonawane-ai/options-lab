@@ -4,7 +4,6 @@ import android.content.Context
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.work.Notifier
 import com.optionslab.engine.Kite
-import kotlin.math.abs
 
 /**
  * TODO A5: on an expiry day, at 15:05, close every open option position that
@@ -125,61 +124,21 @@ object ExpirySquareOff {
             for (p in open) {
                 // 20 Oct, enhancement round 2: each contract in its one exit turn ([ExitCoordinator]); an exit sent from here since this
                 // pass read the orders (an arm's, a protection's, Boss's own) leaves the contract to the next pass, which reads again.
-                val pass = ExitCoordinator.enter(p.exchange, p.symbol, "expiry square-off")
-                try {
-                    if (ExitCoordinator.stale(p.exchange, p.symbol, "expiry square-off", read)) continue
-                    val i = ins.getValue(p.symbol)
-                    val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
-                    val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
-                    // Any other resting exit on it (a protection's stop or target, a strategy's stop) would keep the
-                    // market exit from ever going out: cancel them first; the exit goes on the next pass.
-                    // Second review: at the backstop, an arm's own exit still working on it (its market sell, or its stop it is about to
-                    // replace with one) is its closing in progress: never cancelled here (it would only rest it again, and the two
-                    // could both sell). The arm is left to finish; this pass sends nothing for it and says so once.
-                    if (backstop && runCatching { armOwns(p.symbol) }.getOrDefault(false) && same.any { it.tag == com.optionslab.engine.orb.LiveMirror.TAG }) {
-                        tellOnce(context, "arm closing ${p.symbol}", "${p.symbol} expires today and its arm is still closing it at Zerodha; watch it in Trade.")
-                        continue
-                    }
-                    val others = same.filter { it.tag != "iraalgoexpiry" }
-                    if (others.isNotEmpty()) {
-                        others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
-                        continue
-                    }
-                    // 21 Oct, enhancement round 4 (idea 1): a protection's stop and target resting as one GTT ([DayOco]) would still
-                    // fire after this exit sold the position: deleted first, confirmed (or the exit waits for the next pass).
-                    if (!Protections.dayGttsOut(p.exchange, p.symbol, "expiry square-off")) continue
-                    val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-                    // 21 Oct, enhancement round 3 (idea 1, review): what is held, checked against the orders read's fills: an exit sent
-                    // from here that filled a moment ago (an arm's, a protection's, Boss's own) is never sold again while the
-                    // positions catch up ([ExitCoordinator.held]; this pass's own read first, so nothing more is read otherwise).
-                    val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, "expiry square-off", read, positions) }.getOrNull() ?: continue
-                    if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) continue          // closed meanwhile: the next pass sees it
-                    val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), i.lotSize)
-                    if (qty <= 0) continue                                      // still closing; checked again next pass
-                    // Above the exchange freeze quantity the exit goes as several orders, each one the exchange accepts.
-                    val orders = Kite.slices(qty, i.lotSize, Kite.freezeQuantity(p.exchange, p.symbol))
-                        .map { Kite.Order(p.symbol, side, it, i.lotSize, p.product, "MARKET", null, i.tickSize, p.exchange, "iraalgoexpiry") }
-                    val bad = orders.flatMap { Kite.refusals(it, s.limits(), Broker.sentToday(), false, exit = true) }.distinct()
-                    if (bad.isNotEmpty()) {
-                        tellOnce(context, "refused ${p.symbol}", "${p.symbol} expires today and its exit was not sent (${bad.joinToString("; ")}). Close it yourself in Trade.")
-                        continue
-                    }
-                    val placed = ArrayList<String>()
-                    for (o in orders) {
-                        try {
-                            placed += Broker.placeOrder(o, exit = true).also { runCatching { Strategies.tagOwner("kite:$it", Origins.EXPIRY) } }
-                        } catch (e: Exception) {
-                            if (Broker.definite(e)) {
-                                tellOnce(context, "rejected ${p.symbol} ${e.message}", "Zerodha refused the expiry exit of ${p.symbol}: ${e.message}. Retrying every pass until 15:30; close it yourself if it keeps failing.")
-                                break
-                            }
-                            // The reply was lost, not necessarily the order: look for it before trying again.
-                            runCatching { Broker.findRecentRetrying(o, placed + working.map { it.id }) }.getOrNull()?.let { placed += it }
-                            break
-                        }
-                    }
-                    if (placed.isNotEmpty()) closed += "live ${p.symbol}"
-                } finally { pass.leave() }
+                val i = ins.getValue(p.symbol)
+                val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
+                val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
+                // Second review: at the backstop, an arm's own exit still working on it (its market sell, or its stop it is about to
+                // replace with one) is its closing in progress: never cancelled here (it would only rest it again, and the two
+                // could both sell). The arm is left to finish; this pass sends nothing for it and says so once.
+                if (backstop && runCatching { armOwns(p.symbol) }.getOrDefault(false) && same.any { it.tag == com.optionslab.engine.orb.LiveMirror.TAG }) {
+                    tellOnce(context, "arm closing ${p.symbol}", "${p.symbol} expires today and its arm is still closing it at Zerodha; watch it in Trade.")
+                    continue
+                }
+                // 22 Oct: the exit itself as the flat-by sends it too ([SquareOffExit]: one exit turn, other resting exits cancelled
+                // first, the day's GTT out first, fills checked, freeze slices, refusals said once, a lost reply looked for).
+                val placed = SquareOffExit.send(p, i.lotSize, i.tickSize, read, working, positions, s.limits(), "expiry square-off", "iraalgoexpiry",
+                    Origins.EXPIRY, "expires today", "expiry") { key, text -> tellOnce(context, key, text) }
+                if (placed) closed += "live ${p.symbol}"
             }
         }.onFailure { unread = true }
         // 18 Oct, review: a linked account with no session now (the morning's token not renewed yet, or dropped by Zerodha)

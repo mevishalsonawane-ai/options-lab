@@ -1,5 +1,6 @@
 package com.optionslab.app.data
 
+import com.optionslab.app.testing.Cleared
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.FakeKite
 import com.optionslab.app.testing.NetworkGuard
@@ -98,7 +99,7 @@ class PortfolioGuardHostTest : RobolectricTest() {
         SecurePrefs.countedThread = null
         assertEquals(0L, SecurePrefs.readsForTest.get())
         assertNotNull(why)
-        try { Broker.placeOrder(order(), arm = "orb_fresh"); fail("a bot's entry its arm was blocked from went through") } catch (e: Broker.KiteError) {
+        try { Broker.placeOrder(order(), arm = "orb_fresh", verdict = Cleared.live(order(), "orb_fresh")); fail("a bot's entry its arm was blocked from went through") } catch (e: Broker.KiteError) {
             assertEquals("entry_gate", e.type)
             assertTrue(e.message, e.message!!.contains("portfolio guard"))
         }
@@ -106,17 +107,17 @@ class PortfolioGuardHostTest : RobolectricTest() {
         // A put (the other direction), an exit and Boss's own order all go.
         assertNull(PortfolioHost.doorRefusal("orb_fresh", "BANKNIFTY26OCT52000PE", buy = true))
         Broker.placeOrder(order(side = Kite.Side.SELL), exit = true)
-        Broker.placeOrder(order(tag = "iraalgo"))
+        Broker.placeOrder(order(tag = "iraalgo"), verdict = Cleared.live(order(tag = "iraalgo")))
         assertEquals(2, kite.placed.size)
         // Review R1: only the blocked arm is refused - ORB's own entry, an uncorrelated arm's, an order with no arm, and every
         // leg of a saved strategy's basket go through the door.
         assertNull(PortfolioHost.doorRefusal("orb", "BANKNIFTY26OCT52000CE", buy = true))
         assertNull(PortfolioHost.doorRefusal(null, "BANKNIFTY26OCT52000CE", buy = true))
-        Broker.placeOrder(order(), arm = "orb")
-        Broker.placeOrder(order(), arm = "hero")
-        Broker.placeOrder(order())
-        Broker.placeOrder(order(tag = "iraalgostrat"), arm = "orb_fresh")
-        Broker.placeOrder(order(tag = "iraalgostrat"))
+        Broker.placeOrder(order(), arm = "orb", verdict = Cleared.live(order(), "orb"))
+        Broker.placeOrder(order(), arm = "hero", verdict = Cleared.live(order(), "hero"))
+        Broker.placeOrder(order(), verdict = Cleared.live(order()))
+        Broker.placeOrder(order(tag = "iraalgostrat"), arm = "orb_fresh", verdict = Cleared.live(order(tag = "iraalgostrat"), "orb_fresh"))
+        Broker.placeOrder(order(tag = "iraalgostrat"), verdict = Cleared.live(order(tag = "iraalgostrat")))
         assertEquals(7, kite.placed.size)
     }
 

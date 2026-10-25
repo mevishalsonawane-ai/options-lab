@@ -1,5 +1,6 @@
 package com.optionslab.app.data
 
+import com.optionslab.app.testing.Cleared
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.FakeKite
@@ -62,14 +63,14 @@ class FillSlippageTest : RobolectricTest() {
         // Warm: the first order after login reads the session once (it is then kept in memory).
         tick(200.0)
         kite.nextPlace(FakeKite.Scenario(fillPrice = 200.0))
-        Broker.awaitOrder(Broker.placeOrder(buy(), arm = "orb"), 2_000)
+        Broker.awaitOrder(Broker.placeOrder(buy(), arm = "orb", verdict = Cleared.live(buy(), "orb")), 2_000)
         awaitFills(1)
         tick(200.0)
         kite.nextPlace(FakeKite.Scenario(fillPrice = 200.5))
         val before = kite.requests.size
         SecurePrefs.readsForTest.set(0)
         SecurePrefs.countedThread = Thread.currentThread()
-        val id = Broker.placeOrder(buy(), arm = "orb")
+        val id = Broker.placeOrder(buy(), arm = "orb", verdict = Cleared.live(buy(), "orb"))
         val f = Broker.awaitOrder(id, 2_000)
         SecurePrefs.countedThread = null
         assertEquals("COMPLETE", f.status)
@@ -109,7 +110,7 @@ class FillSlippageTest : RobolectricTest() {
     @Test fun anUnfilledOrderIsNotMeasured() = runBlocking {
         tick(200.0)
         kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.REJECT))
-        val f = Broker.awaitOrder(Broker.placeOrder(buy(), arm = "orb"), 2_000)
+        val f = Broker.awaitOrder(Broker.placeOrder(buy(), arm = "orb", verdict = Cleared.live(buy(), "orb")), 2_000)
         assertEquals("REJECTED", f.status)
         Thread.sleep(100)
         assertTrue(FillSlippage.fills().isEmpty())

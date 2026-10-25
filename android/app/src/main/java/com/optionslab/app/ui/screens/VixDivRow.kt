@@ -80,6 +80,7 @@ internal fun VixDivRowContent(v: VixDivArm.View, onArm: (Boolean) -> Unit) {
             v.open.forEach { o ->
                 Text(keepNumbersWhole("${o.symbol} · ${o.qty} @ %.2f · paper".format(Locale.ENGLISH, o.entry)),
                     style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+                TimeMachineLine(o.orderId)
             }
         }
         Switch(

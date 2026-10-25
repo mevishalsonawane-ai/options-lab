@@ -42,6 +42,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
@@ -51,6 +52,7 @@ import com.optionslab.app.data.LiveSelfTest
 import com.optionslab.app.data.Relay
 import com.optionslab.app.data.StaticIp
 import com.optionslab.app.security.PinLock
+import com.optionslab.app.ui.YES_FIRST
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.BrokerArea
 import com.optionslab.app.testing.BrokerScreenBase
@@ -1109,6 +1111,33 @@ class BrokerScreensTest {
         until("filled") { m.sending.value is Load.Done || m.plan.value == Load.Idle }
         frames(30); Thread.sleep(300); frames(30)
         assertEquals("one order, the second one", listOf("100.50"), kite.placed.map { it.form["price"] })
+    }
+
+    /** 22 Oct (the three gates): with "Type yes" on (the default), a direct real entry asks for yes before the PIN, and the model holds it too. */
+    @Test fun theTypedYesGateHoldsADirectOrderUntilYesIsTyped() {
+        PinLock.setPin(BrokerArea.PIN.toCharArray())
+        kite.login()
+        SecurePrefs.put(com.optionslab.app.data.AppSettings.TYPED_YES_KEY, true)
+        BrokerArea.listNifty(kite, listOf(e1))
+        val sym = BrokerArea.symbol("NIFTY", e1, 24_500.0, "CE")
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        val m = model()
+        m.loadAccount(quiet = true)
+        BrokerArea.await("the account") { m.account.value as? Load.Done }
+        pausedShow { OrderReviewDialog(m) }
+        m.planManual("NIFTY", e1, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null, direct = true)
+        until("priced") { m.plan.value is Load.Done }
+        frames(10)
+        assertFalse("no PIN prompt before yes", shown("Confirm it is you"))
+        // The model holds it too, whoever calls it.
+        assertEquals(YES_FIRST, m.sendPlan(reauthed = true))
+        assertTrue(kite.placed.isEmpty())
+        compose.onNodeWithTag("order-yes").performTextInput("yes")
+        until("the PIN asked once yes is typed") { shown("Confirm it is you") }
+        field("PIN").performTextInput(BrokerArea.PIN)
+        compose.onNodeWithText("Confirm").performClick()
+        until("the order at Zerodha") { kite.placed.isNotEmpty() }
+        assertEquals(1, kite.placed.size)
     }
 
     @Test fun inPaperModeTheReviewCannotSend() {

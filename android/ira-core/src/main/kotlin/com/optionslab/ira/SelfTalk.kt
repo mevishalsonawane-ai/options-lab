@@ -27,6 +27,8 @@ object SelfTalk {
         LESSON,
         /** "Replay my last Liquidity trade" ([Ask.subject]: the strategy's words, or null for the last bot trade). */
         REPLAY,
+        /** 22 Oct: "What did the time machine say?" / "what are the odds of today's entries?" (the bootstrap reality check on each arm ticket). */
+        TIME_MACHINE,
     }
 
     data class Ask(val kind: Kind, val subject: String? = null)
@@ -75,6 +77,10 @@ object SelfTalk {
         "ideas fail|most ideas)")
 
     /** Never a study page: Boss's own positions and trades, today's market ("explain my liquidity trade" is the bots' trades). */
+    private val TIME_MACHINE = Regex(LEAD + "(?:what (?:did|does|has) the time machine (?:say|said|find|found|think)(?: today)?|" +
+        "(?:the )?time machine(?: today| check| checks| verdict| verdicts| odds)?|(?:what are |whats )?(?:the )?(?:odds|chances|reality check)s? (?:of|on|for) (?:todays|the|that|this|my|the bots|the arms) (?:entry|entries|trade|trades|ticket|tickets)(?: today)?|" +
+        "(?:todays |the )?reality checks?(?: today)?)" + TAIL)
+
     private val NOT_STUDY = Regex(" (my|mine|meri|mera|today|todays|yesterday|this|that|it|position|positions|trade|trades|move|moves|order|orders|pnl|p l) ")
 
     /** What Boss asked of these, or null. */
@@ -82,6 +88,7 @@ object SelfTalk {
         val t = Spaced.joined(text)
         if (UNDO_ALL.containsMatchIn(t)) return Ask(Kind.UNDO_ALL)
         if (TIMELINE.containsMatchIn(t)) return Ask(Kind.TIMELINE)
+        if (TIME_MACHINE.containsMatchIn(t)) return Ask(Kind.TIME_MACHINE)
         if (FREEZE.containsMatchIn(t)) return Ask(Kind.FREEZE)
         if (SCORECARD.containsMatchIn(t)) return Ask(Kind.SCORECARD)
         if (LESSON.containsMatchIn(t)) return Ask(Kind.LESSON)
@@ -114,7 +121,8 @@ object SelfTalk {
      */
     fun lockedRefusal(kind: Kind, locked: Boolean): String? = if (!locked) null else when (kind) {
         Kind.HABITS, Kind.RULES, Kind.REPLAY -> LOCKED
-        Kind.SCORECARD, Kind.TIMELINE -> LOCKED_BOTS
+        // 22 Oct: the time machine names the bots' entries of the day: the bots' business, refused on a locked phone too.
+        Kind.SCORECARD, Kind.TIMELINE, Kind.TIME_MACHINE -> LOCKED_BOTS
         else -> null
     }
 }

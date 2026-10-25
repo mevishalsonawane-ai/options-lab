@@ -59,6 +59,11 @@ data class AppSettings(
      */
     val oneTapOrders: Boolean = false,
     /**
+     * 22 Oct (the three gates on a real order): "yes" typed for each real order of Boss's own before the PIN. On by default;
+     * turning it off asks the PIN (it loosens a gate). The PIN gate stays whatever this says. Exits never ask it.
+     */
+    val typedYes: Boolean = true,
+    /**
      * "Keep a stop-loss order at the exchange for live positions" (Settings → Zerodha; off unless the owner chooses it):
      * a live arm position whose stop is not resting at Zerodha (it could not be placed, or was refused or cancelled) gets
      * it placed again at the arm's own level, so Zerodha triggers it with no phone in the loop. Only lowers risk; live only.
@@ -156,6 +161,8 @@ data class AppSettings(
          * review card; it is never read again, so the setting starts off once with this update).
          */
         const val ONE_TAP_KEY = "k.oneTap2"
+        /** 22 Oct: "yes" typed before a real order (on by default). */
+        const val TYPED_YES_KEY = "k.typedYes"
         /** The danger meter's half-size switch (paper arms; off by default). */
         const val DANGER_HALF_KEY = "r.dangerHalf"
 
@@ -203,6 +210,7 @@ data class AppSettings(
                 // meaning than Boss switched on. Reset to off once with this update (a new key: the old "k.oneTap" is never read
                 // again), so it is on only after he turns it on again knowingly, with his PIN.
                 oneTapOrders = p.getBoolean(ONE_TAP_KEY, d.oneTapOrders),
+                typedYes = p.getBoolean(TYPED_YES_KEY, d.typedYes),
                 exchangeStops = p.getBoolean("k.exStop", d.exchangeStops),
                 dangerHalfSize = p.getBoolean(DANGER_HALF_KEY, d.dangerHalfSize),
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
@@ -296,7 +304,7 @@ data class AppSettings(
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
                 "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,
-                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, ONE_TAP_KEY to s.oneTapOrders, "k.exStop" to s.exchangeStops, DANGER_HALF_KEY to s.dangerHalfSize, "k.maxOrders" to s.maxOrdersPerDay,
+                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, ONE_TAP_KEY to s.oneTapOrders, TYPED_YES_KEY to s.typedYes, "k.exStop" to s.exchangeStops, DANGER_HALF_KEY to s.dangerHalfSize, "k.maxOrders" to s.maxOrdersPerDay,
                 "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue,
                 "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,

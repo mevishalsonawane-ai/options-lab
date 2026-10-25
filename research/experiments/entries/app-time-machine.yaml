@@ -1,0 +1,36 @@
+id: app-time-machine
+title: 'Time machine on every arm ticket: bootstrap odds of each entry from the underlying (record only)'
+family: diagnosis
+date: '2026-10-22'
+doc: android/app/src/main/java/com/optionslab/app/data/TimeMachineHost.kt
+hypothesis: 'A bootstrap replay of an arm entry (2,000 draws from the underlying''s own last 60 sessions at the same time-of-day
+  slot ±2 bars, the arm''s stop and target in underlying points, the stop checked before the target inside a bar) gives a
+  verdict (edge / coin flip / against, vs the break-even win rate 1/(1+R)) that tells winning entries from losing ones.
+  Borrowed from Jake Schincariol''s day-trader skill (MIT, Oct 2026). Not yet tested - logged before any test.'
+data_version: the phone's own harvested index bars (Store, 1-minute, never pruned) and the history keeper's recent days
+period:
+  design: none yet; forward log from 22 Oct 2026 on paper and live (30 signal days before it is judged)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- the underlying's intraday bars at the entry's time-of-day slot
+- the arm's stop and target (premium stops converted at the at-the-money delta 0.5, said so)
+model_or_rule: 'engine risk/TimeMachine.kt: bootstrap odds and the ORB rule re-run on the same sessions; app TimeMachineHost
+  runs it in the background after each entry and keeps a forward log (date, arm, ref, verdict, odds, outcome) in the
+  encrypted store'
+settings: shadow only on every arm, paper and live, hidden arms too; it never skips, resizes or delays a trade
+prereg: null
+variants_tried: null
+results:
+  summary: 'no result yet. Planned test after 30 signal days: join the forward log with each arm''s closed trades, compare
+    the net of entries called edge vs against (real charges and slippage); only then decide whether a verdict may ever
+    act on paper (never live by itself).'
+  costs: n/a
+holdout_read: null
+verdict: not-a-test
+notes: A reality check in words, not an edge claim. Verdicts need at least 10 past sessions and 100 decided draws; fewer
+  are said as unknown with their sample size.

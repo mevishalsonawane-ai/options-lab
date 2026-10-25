@@ -1206,11 +1206,13 @@ object PassedArmsHost {
         val snap = runCatching { Paper.snapshot(reuseQuotesMs = Paper.SHARED_QUOTE_MS) }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, ref), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return BuyStep(null, "refused by the account guard: " + refusals.joinToString(" "), true)
+        // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]; the premium stop rests on the fill).
+        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", 1, "MARKET", "MIS", null, null, now.toLocalDate(), arm), refusals, "paper guard")
         runCatching { LiveRecorder.signal(label(arm), c.symbol, u, right.name, ref, paper = true) }
         inFlight += c.symbol
         var why = ""
         val p: Pos = (try {
-            val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = label(arm), mirror = arm)
+            val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = label(arm), mirror = arm, verdict = verdict)
             // 19 Oct: the same-direction cap refused it: nothing was bought; kept as a would-be trade at the price seen.
             // Priced at the ask when the quote has one (a buyer pays it), else the last price.
             if (r.capped) return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth,
@@ -1234,6 +1236,12 @@ object PassedArmsHost {
                 // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
                 // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
                 runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos))) }
+                // 22 Oct: the time machine's reality check (shadow only; background): the arm's premium stop and target, out by its square-off.
+                runCatching {
+                    val x = exitsOf(pos)
+                    TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm, label(arm), mirrorRef(pos), u, if (right == Right.CE) 1 else -1, now,
+                        x.stop?.let { it * pos.entry }, x.target?.let { it * pos.entry }, premium = true, exitAt = x.squareOff))
+                }
                 r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(arm)} · entry") } }
                 runCatching { Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${label(arm)} · entry", r.orderId) }
                 pos

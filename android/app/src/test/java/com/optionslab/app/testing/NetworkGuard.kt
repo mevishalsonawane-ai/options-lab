@@ -18,6 +18,8 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 object NetworkGuard : ProxySelector() {
     val blocked = CopyOnWriteArrayList<String>()
+    /** 25 Oct: where each blocked connection came from (host, thread and the first frames of ours), for the failure's log line. */
+    val traces = CopyOnWriteArrayList<String>()
     private val local = setOf("localhost", "127.0.0.1", "::1", "0:0:0:0:0:0:0:1")
     private val runner = setOf("repo1.maven.org", "repo.maven.apache.org")
     private val sink = listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress("127.0.0.1", 9)))
@@ -28,6 +30,12 @@ object NetworkGuard : ProxySelector() {
         val host = uri.host ?: return listOf(Proxy.NO_PROXY)
         if (host in local || host in runner) return listOf(Proxy.NO_PROXY)
         blocked += host
+        // Said at once on the test's error stream (the asserting test may be another one: a leaked background job's request).
+        val t = Thread.currentThread()
+        val frames = t.stackTrace.map { it.toString() }.filter { it.startsWith("com.optionslab") }.take(14)
+        val trace = "NetworkGuard: $host asked from thread '${t.name}'\n    " + frames.joinToString("\n    ")
+        traces += trace
+        System.err.println(trace)
         return sink
     }
 

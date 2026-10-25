@@ -341,6 +341,10 @@ object VixDivArm {
         }.getOrNull()?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${VixDivRules.LABEL} · stop") } }
         val pos = Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, minute, r.orderId, stopId, charges = chargesOf(r.orderId))
         b.positions += pos
+        // 22 Oct: the time machine's reality check (shadow only; background): NIFTY's -15% premium stop (BANKNIFTY: none, R not told), out by 15:10.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(VixDivRules.SOURCE, VixDivRules.LABEL, mirrorRef(pos), u, if (right == Right.CE) 1 else -1, now,
+            if (VixDivRules.liquidityExit(u)) fill.price - VixDivRules.stop(fill.price, vp.stopPct) else null, null, premium = true,
+            exitAt = java.time.LocalTime.of(VixDivRules.EOD / 60, VixDivRules.EOD % 60))) }
         // 18 Oct: its live path ([ArmLive]): the same option and lot; NIFTY's -15% stop rests at Zerodha (BANKNIFTY has none: held to 15:10).
         runCatching { ArmLive.entered(ArmLive.Ask(VixDivRules.SOURCE, mirrorRef(pos), c, 1, fill.quantity, fill.price,
             stop = if (VixDivRules.liquidityExit(u)) VixDivRules.stop(fill.price, vp.stopPct) else null)) }

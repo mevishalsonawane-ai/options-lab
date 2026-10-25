@@ -1,5 +1,6 @@
 package com.optionslab.app.data
 
+import com.optionslab.app.testing.Cleared
 import com.optionslab.app.testing.FakeKite
 import com.optionslab.app.testing.FakeKite.Outcome
 import com.optionslab.app.testing.FakeKite.Reply
@@ -32,7 +33,7 @@ class BrokerLiveTest : RobolectricTest() {
     @After fun down() { kite.close(); assertEquals("a test reached the internet", emptyList<String>(), NetworkGuard.blocked.toList()) }
 
     @Test fun placeSendsExactlyTheOrderFormWithAuth() = runBlocking {
-        val id = Broker.placeOrder(order())
+        val id = Broker.placeOrder(order(), verdict = Cleared.live(order()))
         val r = kite.placed.single()
         assertEquals("token testkey:test-token-not-real", r.auth)
         assertEquals(mapOf("tradingsymbol" to sym, "exchange" to "NFO", "transaction_type" to "BUY", "order_type" to "LIMIT",
@@ -51,20 +52,20 @@ class BrokerLiveTest : RobolectricTest() {
 
     @Test fun nothingIsSentWhenNotLoggedIn() = runBlocking {
         com.optionslab.app.security.SecurePrefs.put("kite.accessToken", null)
-        try { Broker.placeOrder(order()); fail() } catch (e: Broker.NotLoggedIn) { assertTrue(Broker.definite(e)) }
+        try { Broker.placeOrder(order(), verdict = Cleared.live(order())); fail() } catch (e: Broker.NotLoggedIn) { assertTrue(Broker.definite(e)) }
         assertTrue(kite.requests.isEmpty())
     }
 
     @Test fun anRmsRejectionIsReportedWithKitesMessage() = runBlocking {
         kite.nextPlace(outcome = Outcome.REJECT, message = "RMS:Margin Exceeds, Required:1,20,000.00, Available:40,000.00")
-        val f = Broker.awaitOrder(Broker.placeOrder(order()), 5_000)
+        val f = Broker.awaitOrder(Broker.placeOrder(order(), verdict = Cleared.live(order())), 5_000)
         assertEquals("REJECTED", f.status)
         assertTrue(f.message.startsWith("RMS:Margin Exceeds"))
     }
 
     @Test fun aFreezeQuantityRefusalIsDefinite() = runBlocking {
         kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "Quantity exceeds the freeze limit of 1800.")
-        try { Broker.placeOrder(order(qty = 1875)); fail() } catch (e: Broker.KiteError) {
+        try { Broker.placeOrder(order(qty = 1875), verdict = Cleared.live(order(qty = 1875))); fail() } catch (e: Broker.KiteError) {
             assertEquals("InputException", e.type); assertTrue(Broker.definite(e)); assertTrue(e.message!!.contains("freeze"))
         }
         assertTrue(kite.orders.isEmpty())
@@ -72,13 +73,13 @@ class BrokerLiveTest : RobolectricTest() {
 
     @Test fun kitesNetworkExceptionIsNotDefinite() = runBlocking {
         kite.nextPlace(reply = Reply.NETWORK_EXCEPTION)
-        try { Broker.placeOrder(order()); fail() } catch (e: Exception) { assertFalse(Broker.definite(e)) }
+        try { Broker.placeOrder(order(), verdict = Cleared.live(order())); fail() } catch (e: Exception) { assertFalse(Broker.definite(e)) }
     }
 
     @Test fun aLostReplyIsFoundInTheOrderBook() = runBlocking {
         kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
         val o = order()
-        val e = try { Broker.placeOrder(o); null } catch (e: Exception) { e }
+        val e = try { Broker.placeOrder(o, verdict = Cleared.live(o)); null } catch (e: Exception) { e }
         assertTrue("a dropped connection must surface as an error", e != null)
         assertFalse("a lost reply is not a refusal", Broker.definite(e!!))
         assertEquals("the POST must not be repeated by the HTTP stack", 1, kite.placed.size)
@@ -89,13 +90,13 @@ class BrokerLiveTest : RobolectricTest() {
 
     @Test fun a500AfterAcceptIsNotDefiniteEither() = runBlocking {
         kite.nextPlace(reply = Reply.ERROR_500_AFTER_ACCEPT)
-        try { Broker.placeOrder(order()); fail() } catch (e: Exception) { assertFalse(Broker.definite(e)) }
+        try { Broker.placeOrder(order(), verdict = Cleared.live(order())); fail() } catch (e: Exception) { assertFalse(Broker.definite(e)) }
         assertEquals(kite.orders.keys.single(), Broker.findRecentRetrying(order(), emptyList(), tries = 1, waitMs = 10))
     }
 
     @Test fun throttlingIsRetriedThenSucceeds() = runBlocking {
         kite.throttle = 1
-        Broker.placeOrder(order())
+        Broker.placeOrder(order(), verdict = Cleared.live(order()))
         assertEquals(2, kite.placed.size)
         assertEquals("placed once", 1, kite.orders.size)
     }
@@ -104,7 +105,7 @@ class BrokerLiveTest : RobolectricTest() {
         kite.sessionExpired = true
         try { Broker.positions(); fail() } catch (e: Broker.KiteError) { assertEquals("TokenException", e.type) }
         assertFalse(Broker.loggedIn)
-        try { Broker.placeOrder(order()); fail() } catch (_: Broker.NotLoggedIn) {}
+        try { Broker.placeOrder(order(), verdict = Cleared.live(order())); fail() } catch (_: Broker.NotLoggedIn) {}
         assertTrue("nothing was placed after the session ended", kite.placed.isEmpty())
     }
 
@@ -116,16 +117,16 @@ class BrokerLiveTest : RobolectricTest() {
 
     @Test fun partialAndLateFills() = runBlocking {
         kite.nextPlace(outcome = Outcome.PARTIAL, partialQty = 75)
-        val partial = Broker.awaitOrder(Broker.placeOrder(order(qty = 150)), 1_500)
+        val partial = Broker.awaitOrder(Broker.placeOrder(order(qty = 150), verdict = Cleared.live(order(qty = 150))), 1_500)
         assertEquals("OPEN", partial.status); assertEquals(75, partial.filled)
         kite.nextPlace(FakeKite.Scenario(outcome = Outcome.FILL_AFTER_POLLS, polls = 2))
-        val late = Broker.awaitOrder(Broker.placeOrder(order()), 10_000)
+        val late = Broker.awaitOrder(Broker.placeOrder(order(), verdict = Cleared.live(order())), 10_000)
         assertEquals("COMPLETE", late.status); assertEquals(75, late.filled)
     }
 
     @Test fun cancelAndModifyUseTheirOwnVerbsAndFields() = runBlocking {
         kite.nextPlace(outcome = Outcome.OPEN)
-        val id = Broker.placeOrder(order())
+        val id = Broker.placeOrder(order(), verdict = Cleared.live(order()))
         val row = Broker.orders().single()
         Broker.modify(row, 150, "LIMIT", 118.5, null)
         val put = kite.requests.last()

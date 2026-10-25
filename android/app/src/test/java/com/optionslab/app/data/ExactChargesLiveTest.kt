@@ -36,12 +36,14 @@ class ExactChargesLiveTest : RobolectricTest() {
         kite = FakeKite()
         kite.login()
         kite.tradesFromFills = true
-        // Two orders done today, one still open with nothing filled (not asked about).
+        // Two orders done today, one still open with nothing filled (not asked about). 25 Oct: placed on the market clock's day
+        // (the day the charges are asked for; at a weekend the fake's wall-clock default is a later day, and nothing was billable).
+        val at = Market.today().atTime(10, 0)
         kite.orders["251005000000001"] = FakeKite.Order("251005000000001", sym, "NFO", "BUY", 150, "NRML", "LIMIT", 100.0, 0.0, "iraalgo",
-            "COMPLETE", filled = 150, avg = 100.05)
+            "COMPLETE", filled = 150, avg = 100.05, at = at)
         kite.orders["251005000000002"] = FakeKite.Order("251005000000002", sym, "NFO", "SELL", 150, "NRML", "MARKET", 0.0, 0.0, "iraalgo",
-            "COMPLETE", filled = 150, avg = 120.4)
-        kite.orders["251005000000003"] = FakeKite.Order("251005000000003", sym, "NFO", "BUY", 75, "NRML", "LIMIT", 90.0, 0.0, "iraalgo", "OPEN")
+            "COMPLETE", filled = 150, avg = 120.4, at = at)
+        kite.orders["251005000000003"] = FakeKite.Order("251005000000003", sym, "NFO", "BUY", 75, "NRML", "LIMIT", 90.0, 0.0, "iraalgo", "OPEN", at = at)
     }
 
     private val store = androidx.lifecycle.ViewModelStore()

@@ -2,6 +2,7 @@ package com.optionslab.app.testing
 
 import android.content.Context
 import com.optionslab.app.data.ExpirySquareOff
+import com.optionslab.app.data.FlatBySquareOff
 import com.optionslab.app.data.Market
 import com.optionslab.app.data.OrbArms
 import com.optionslab.app.data.PineAuto
@@ -51,7 +52,8 @@ object AutomationSupport {
 
     /** Live mode with real orders on, no entry cut-off (tests run at any hour). */
     fun liveSettings(live: Boolean = true) {
-        SecurePrefs.putAll(mapOf("k.mode" to if (live) "live" else "sandbox", "k.allow" to live, "g.cutoff" to -1))
+        // 22 Oct: the typed-"yes" gate off here (its own tests turn it on): these tests drive the paths behind it.
+        SecurePrefs.putAll(mapOf("k.mode" to if (live) "live" else "sandbox", "k.allow" to live, "g.cutoff" to -1, com.optionslab.app.data.AppSettings.TYPED_YES_KEY to false))
     }
 
     /** The security check as the app last saw it: clean, or a device that failed it. */
@@ -73,7 +75,7 @@ object AutomationSupport {
 
     /** Every test clock back to the real one. */
     fun realClocks() {
-        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; OrbArms.testHeroBars = null; OrbArms.testOptionBars = null; OrbArms.testTwinHolders = null; ExpirySquareOff.testNow = null; PineAuto.testNow = null; PineAuto.testBars = null
+        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; OrbArms.testHeroBars = null; OrbArms.testOptionBars = null; OrbArms.testTwinHolders = null; ExpirySquareOff.testNow = null; FlatBySquareOff.testNow = null; FlatBySquareOff.resetForTest(); PineAuto.testNow = null; PineAuto.testBars = null
     }
 
     fun clearAlerts() = Alerts.queue.value.forEach { Alerts.dismiss(it.id) }

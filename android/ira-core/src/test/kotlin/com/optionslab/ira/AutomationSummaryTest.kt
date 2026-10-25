@@ -104,6 +104,8 @@ class AutomationSummaryTest {
         assertEquals(listOf(AutomationSummary.Section.MANAGER, AutomationSummary.Section.LAB, AutomationSummary.Section.ORDER_FLOW,
             AutomationSummary.Section.BRAIN), l.rows().map { it.first })
         assertTrue(AutomationSummary.Lines().rows().isEmpty())
+        // 22 Oct: the flat-by line is the last row when the card has it.
+        assertEquals(AutomationSummary.Section.FLAT_BY, l.copy(flatBy = "Flat-by: index options 15:25").rows().last().first)
         assertEquals(AutomationSummary.Section.values().size, AutomationSummary.Section.values().map { it.key }.distinct().size)
     }
 }

@@ -84,6 +84,7 @@ internal object AutomationFeed {
             orderFlow = AutomationSummary.orderFlowLine(FlowGate.modes.value),
             brain = AutomationSummary.brainLine(SmartWorkers.brain.value, SmartWorkers.reviews.value, s.paused, s.parked),
             frozen = if (LearningFreeze.enabled()) AutomationSummary.frozenLine(LearningFreeze.state.value) else null,
+            flatBy = com.optionslab.engine.risk.FlatBy.line(today),
         ).let { l -> if (ProblemsHost.enabled()) AutomationSummary.withProblems(l, ProblemsHost.board.value, System.currentTimeMillis()) else l }
     }
 
@@ -103,7 +104,9 @@ internal object AutomationFeed {
         }
         val frozen: Flow<String?> = if (!LearningFreeze.enabled()) none else LearningFreeze.state.map { AutomationSummary.frozenLine(it) }
         val lines = combine(listOf(manager, autopilot, lab, flow, brain, frozen, orders).map { it.distinctUntilChanged() }) { a ->
-            AutomationSummary.Lines(manager = a[0], autopilot = a[1], lab = a[2], orderFlow = a[3], brain = a[4], frozen = a[5], orders = a[6])
+            AutomationSummary.Lines(manager = a[0], autopilot = a[1], lab = a[2], orderFlow = a[3], brain = a[4], frozen = a[5], orders = a[6],
+                // 22 Oct: the flat-by minutes (pure, from the day alone: MCX's close moves with the US clocks).
+                flatBy = com.optionslab.engine.risk.FlatBy.line(today))
         }
         // 12 Oct: the open problems any agent found, in sight on the card (memory: the board as its agents report).
         val problems: Flow<com.optionslab.ira.OpenProblems.Board> =
@@ -180,6 +183,7 @@ internal fun AutomationSectionBody(model: AppModel, s: AutomationSummary.Section
         AutomationSummary.Section.ORDERS -> OrderReviewSection()
         AutomationSummary.Section.ORDER_FLOW -> OrderFlowSection(model, divider = false)
         AutomationSummary.Section.BRAIN -> BrainSection(divider = false, model = model)
+        AutomationSummary.Section.FLAT_BY -> FlatBySection()
     }
 }
 
@@ -275,5 +279,26 @@ internal fun AutomationSheet(section: AutomationSummary.Section, onClose: () -> 
                 content()
             }
         }
+    }
+}
+
+/**
+ * The Flat-by section (22 Oct): the hard minute per segment by which every intraday arm position still open is closed, after
+ * the arms' own exits ([com.optionslab.app.data.FlatBySquareOff]); what is held by design is left alone. Words only.
+ */
+@Composable
+internal fun FlatBySection() {
+    val p = LocalPalette.current
+    val today = rememberToday()
+    val mcx = com.optionslab.engine.risk.FlatBy.text(com.optionslab.engine.risk.FlatBy.minute(com.optionslab.engine.risk.FlatBy.Segment.MCX, today))
+    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("flatby-section")) {
+        Text("Flat-by", style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+        listOf("NSE index options and futures" to "15:25", "NSE stock and fund options and futures" to "15:20", "MCX (10 minutes before its close)" to mcx,
+            "Expiry day (the 15:05 square-off comes first)" to "15:05").forEachIndexed { i, (what, at) ->
+            Text("$what: $at", style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.padding(top = 4.dp).testTag("flatby-line-$i"))
+        }
+        Note("A last resort, after each bot's own exit. Any intraday (MIS) bot position still open at that minute is closed, on paper and live, " +
+            "hidden bots too. Positions held by design (overnight, NRML, the Expiry Put ticket) and your own trades are left alone. " +
+            "The kill switch never stops it: closing only lowers risk.", Modifier.padding(top = 6.dp))
     }
 }

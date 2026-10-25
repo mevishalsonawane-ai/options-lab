@@ -1,5 +1,6 @@
 package com.optionslab.app.data
 
+import com.optionslab.app.testing.Cleared
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.FakeKite
 import com.optionslab.app.testing.NetworkGuard
@@ -40,14 +41,14 @@ class EntryDoorTest : RobolectricTest() {
     @Test fun theKillSwitchFlippedBeforeTheDoorStopsAnEntryButNeverAnExit() = runBlocking {
         // The arm checked its gates a moment ago; Boss flips the kill switch before its order reaches the door.
         AppSettings.save(AppSettings.load().copy(guardKill = true))
-        try { Broker.placeOrder(order()); fail("an entry went through the kill switch") } catch (e: Broker.KiteError) {
+        try { Broker.placeOrder(order(), verdict = Cleared.live(order())); fail("an entry went through the kill switch") } catch (e: Broker.KiteError) {
             assertEquals("entry_gate", e.type)
             assertTrue(e.message, e.message!!.contains("kill switch"))
             assertTrue("a refusal at the door is definite: nothing was sent", Broker.definite(e))
         }
         assertTrue("nothing sent", kite.placed.isEmpty())
         // Boss's own order (another tag) is stopped too: the kill switch stops every new position.
-        try { Broker.placeOrder(order(tag = "iraalgo")); fail() } catch (e: Broker.KiteError) { assertEquals("entry_gate", e.type) }
+        try { Broker.placeOrder(order(tag = "iraalgo"), verdict = Cleared.live(order(tag = "iraalgo"))); fail() } catch (e: Broker.KiteError) { assertEquals("entry_gate", e.type) }
         // An exit always goes.
         Broker.placeOrder(order().copy(side = Kite.Side.SELL), exit = true)
         assertEquals(1, kite.placed.size)
@@ -56,17 +57,17 @@ class EntryDoorTest : RobolectricTest() {
 
     @Test fun theDailyLossLimitAndTheDayLockStopTheBotsEntriesAtTheDoorNotBosss() = runBlocking {
         SecurePrefs.put("breaker.day", Market.today().toString())
-        try { Broker.placeOrder(order(tag = "irapine")); fail() } catch (e: Broker.KiteError) {
+        try { Broker.placeOrder(order(tag = "irapine"), verdict = Cleared.live(order(tag = "irapine"))); fail() } catch (e: Broker.KiteError) {
             assertTrue(e.message, e.message!!.contains("daily loss limit"))
         }
         assertTrue(kite.placed.isEmpty())
         // Boss's own order is his call (the loss limit stops the bots).
-        Broker.placeOrder(order(tag = "iraalgo"))
+        Broker.placeOrder(order(tag = "iraalgo"), verdict = Cleared.live(order(tag = "iraalgo")))
         assertEquals(1, kite.placed.size)
     }
 
     @Test fun entriesFromTwoWorkersAtOnceGoOneAtATimeAndAllArrive() = runBlocking {
-        val r = (1..4).map { i -> async(Dispatchers.IO) { Broker.placeOrder(order(sym = "NIFTY26OCT2450${i}CE")) } }.awaitAll()
+        val r = (1..4).map { i -> async(Dispatchers.IO) { Broker.placeOrder(order(sym = "NIFTY26OCT2450${i}CE"), verdict = Cleared.live(order(sym = "NIFTY26OCT2450${i}CE"))) } }.awaitAll()
         assertEquals(4, r.distinct().size)
         assertEquals(4, kite.placed.size)
     }

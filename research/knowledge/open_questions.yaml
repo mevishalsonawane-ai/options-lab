@@ -60,3 +60,8 @@
   text: "Whether the busy-or-quiet rest of day can be called at 09:45 is open: the linear regime model's log-loss was below the base rate on 5 of 6 indices (AUC 0.575-0.666), but it was not the pre-registered test; it needs a new pre-registration."
   src: research/BRAIN_V1.md
   sec: "b) Day type and regime at 09:45: not predictable"
+- id: app-time-machine-verdicts
+  topics: [diagnosis, odds, bootstrap]
+  text: "The time machine's verdicts on each bot entry (edge, coin flip or against, from 2,000 bootstrap draws over the last 60 sessions of the index at the same time of day) are not judged yet: its forward log on paper and live is compared with each bot's closed trades after 30 signal days, and until then it is words only."
+  src: research/experiments/entries/app-time-machine.yaml
+  sec: "results"

@@ -152,6 +152,18 @@ SEBI requires live orders from your registered static IP. The app's relay uses y
 4. To close open positions now, say or type **"Jarvis, emergency exit"**. It asks for your fingerprint on the screen
    (or a yes in your own voice). You can also close each position by hand from its card.
 
+**Three gates, the fingerprint and the flat-by (22 Oct, borrowed from a day-trader kit).** A real order of your own now
+shows three gates with ticks before it goes: the checks passed and the order still matches what they cleared (its
+"fingerprint"), a typed **yes** for that one order (Settings → Zerodha → Real orders; on by default, turning it off asks
+your PIN), and your PIN. A bot's live trade has its own three: its Trade-live switch with AI trades live, the PIN it was
+armed with, and the fingerprint at the door (on its row under Settings → Zerodha). If an order changed after its check,
+or the check is from another day, the app refuses it, names the field and shows a banner; closing a position is never
+refused. Separately, any bot position still open at **15:25** (stock and fund options 15:20, MCX ten minutes before its
+close) is closed by the flat-by, after the bot's own exit and the 15:05 expiry square-off had their chance; positions held
+by design (overnight, NRML, the Expiry Put ticket) and your own trades are left alone, and the kill switch never stops it.
+Every bot entry also gets a **time machine** line: the odds that the target or the stop came first on the index's own
+past days at that time, with a one-word verdict. It only reports; ask Jarvis "what did the time machine say".
+
 ## 6. What common problems mean
 
 | You see | It means | Do this |

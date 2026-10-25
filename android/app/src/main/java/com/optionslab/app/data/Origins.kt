@@ -13,13 +13,15 @@ object Origins {
     const val MANUAL = "Manual"
     const val EXPIRY = "Expiry square-off"
     const val AUTO_SQUARE_OFF = "Auto square-off 15:15"
+    /** 22 Oct: the hard flat-by per segment ([FlatBySquareOff]). */
+    const val FLAT_BY = "Flat-by"
     const val OUTSIDE = "Outside IraAlgo (Kite)"
 
     /** A hand order and the screen it was sent from: "Manual · Option chart". */
     fun manual(area: String): String = "$MANUAL · $area"
 
     /** Labels of rules that act on their own (not a strategy, not a hand order). */
-    private val AUTOMATIC = listOf("Protection", EXPIRY, AUTO_SQUARE_OFF, "GTT")
+    private val AUTOMATIC = listOf("Protection", EXPIRY, AUTO_SQUARE_OFF, FLAT_BY, "GTT")
 
     /** The name a Zerodha tag stands for, when the phone kept no label (an order from before, or another install). */
     fun fromTag(tag: String?): String? = when (tag) {
@@ -31,6 +33,7 @@ object Origins {
         "iraarm" -> "Arm (live)"
         "iraprotect" -> "Protection"
         "iraalgoexpiry" -> EXPIRY
+        "iraalgoflat" -> FLAT_BY
         "iraalgo" -> MANUAL
         "" -> OUTSIDE
         else -> OUTSIDE

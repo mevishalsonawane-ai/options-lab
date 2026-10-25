@@ -535,6 +535,10 @@ internal object IraSolo {
             // the same option and lot; its stop is on the index (no premium stop rests), so the live trade follows these exits.
             runCatching { com.optionslab.app.data.ArmLive.entered(com.optionslab.app.data.ArmLive.Ask(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY,
                 managerId(trade), c, 1, trade.qty, trade.entry)) }
+            // 22 Oct: the time machine's reality check (shadow only; background): its index stop and target in index points, out by 14:30.
+            runCatching { com.optionslab.app.data.TimeMachineHost.afterEntry(com.optionslab.app.data.TimeMachineHost.Entry(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY,
+                "Jarvis Solo", managerId(trade), s.underlying, if (s.call) 1 else -1, com.optionslab.app.data.Market.now().toLocalDateTime(),
+                kotlin.math.abs(s.index - s.stop), kotlin.math.abs(s.target - s.index), exitAt = SoloMidday.EXIT)) }
             // Labelled once the trade is recorded: a label that cannot be saved never leaves the position untracked.
             r.orderId?.let { ownerTag("paper:$it", "Jarvis solo · entry") }
             val thinMoved = thinFirst != null

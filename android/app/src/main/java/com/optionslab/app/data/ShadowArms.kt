@@ -692,6 +692,10 @@ object ShadowArms {
         // 18 Oct: its live path ([ArmLive]): the same option and lot; the -40 stop rests at Zerodha where the variant's rule has it.
         runCatching { ArmLive.entered(ArmLive.Ask(com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED, mirrorRef(t), c, 1, qty, px,
             stop = ShadowRules.premiumStop(v.id, px))) }
+        // 22 Oct: the time machine's reality check (shadow only; background): the variant's premium stop, out by 15:10.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED, label, mirrorRef(t), c.underlying,
+            if (c.right == Right.CE) 1 else -1, Market.now().toLocalDateTime(), ShadowRules.premiumStop(v.id, px)?.let { px - it }, null, premium = true,
+            exitAt = com.optionslab.engine.orb.OrbRules.SQUARE_OFF)) }
         return t
     }
 

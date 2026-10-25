@@ -1,5 +1,6 @@
 package com.optionslab.app.data
 
+import com.optionslab.app.testing.Cleared
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.FakeKite
@@ -400,7 +401,7 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
         PaperOnly.resetForTest(period())
         assertTrue("the app is Live", AppSettings.load().live)
         for ((who, o) in entries()) {
-            try { Broker.placeOrder(o, arm = if (o.tag == "iraorb") "orb" else null); fail("$who: an entry went in the paper-only period") }
+            try { Broker.placeOrder(o, arm = if (o.tag == "iraorb") "orb" else null, verdict = Cleared.live(o, if (o.tag == "iraorb") "orb" else null)); fail("$who: an entry went in the paper-only period") }
             catch (e: Broker.KiteError) {
                 assertEquals(who, "paper_only", e.type)
                 assertTrue("$who: Boss is told why: ${e.message}", e.message!!.contains("paper-only period until") && e.message!!.contains("10 days on paper"))
@@ -445,23 +446,25 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
         // As at a cold start (or a low-memory kill): memory empty, the period not read yet.
         PaperOnly.unreadForTest(); Broker.resetForTest(); kite.login()
         assertEquals(PaperOnly.ENTRY_UNREAD, PaperOnly.entryRefusal())
-        try { Broker.placeOrder(order(side = Kite.Side.BUY)); fail("an entry went before the period was read") } catch (e: Broker.KiteError) { assertEquals("paper_only", e.type) }
+        try { Broker.placeOrder(order(side = Kite.Side.BUY), verdict = Cleared.live(order(side = Kite.Side.BUY))); fail("an entry went before the period was read") } catch (e: Broker.KiteError) { assertEquals("paper_only", e.type) }
         // An exit goes even then.
         kite.position(sym, 30, 200.0, product = "MIS")
         Broker.placeOrder(order(type = "LIMIT", price = 199.0), exit = true)
         // The start's read (a background thread in the app): the block is the period's own.
         PaperOnly.ensureLoaded()
         assertTrue(PaperOnly.entryRefusal()!!.contains("paper-only period until"))
-        try { Broker.placeOrder(order(side = Kite.Side.BUY)); fail("an entry went in the paper-only period") } catch (e: Broker.KiteError) { assertEquals("paper_only", e.type) }
+        try { Broker.placeOrder(order(side = Kite.Side.BUY), verdict = Cleared.live(order(side = Kite.Side.BUY))); fail("an entry went in the paper-only period") } catch (e: Broker.KiteError) { assertEquals("paper_only", e.type) }
         assertEquals("only the exit went", listOf("SELL"), kite.placed.map { it.form["transaction_type"] })
     }
 
     @Test fun afterThePaperOnlyPeriodEndsEntriesGoAgain() = runBlocking {
-        val ended = com.optionslab.ira.PaperOnlyPeriod.Period(now.toLocalDate().minusDays(1), "10 days on paper", now.toLocalDate().minusDays(11))
+        // (25 Oct: dated by the market clock the period is judged on - at a weekend the wall clock's day is later than it.)
+        val today = Market.today()
+        val ended = com.optionslab.ira.PaperOnlyPeriod.Period(today.minusDays(1), "10 days on paper", today.minusDays(11))
         SecurePrefs.put(PaperOnly.KEY, com.optionslab.ira.PaperOnlyPeriod.encode(ended))
         PaperOnly.unreadForTest(); PaperOnly.ensureLoaded()
         assertNull(PaperOnly.entryRefusal())
-        val id = Broker.placeOrder(order(side = Kite.Side.BUY))
+        val id = Broker.placeOrder(order(side = Kite.Side.BUY), verdict = Cleared.live(order(side = Kite.Side.BUY)))
         assertEquals(id, kite.orders.keys.single())
         // And with no period at all.
         PaperOnly.resetForTest(null)

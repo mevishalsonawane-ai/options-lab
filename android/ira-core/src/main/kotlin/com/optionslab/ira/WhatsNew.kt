@@ -64,6 +64,18 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 22 Oct (Boss: borrow four ideas from Jake Schincariol's day-trader skill): the time machine, the order fingerprint, the three gates, the flat-by.
+        Entry("2026-10-22-day-trader-borrow", OCT22, "Four safety ideas from a day-trader kit",
+            "Every bot entry now gets a reality check from the index's own past days. " +
+                "It says how often the target or the stop came first, and a one-word verdict. " +
+                "It only reports; no trade is skipped, resized or delayed. " +
+                "A real order goes only when it matches the exact order its checks cleared today. " +
+                "Your own real order shows three gates: the checks, a typed yes, and your PIN. " +
+                "The typed yes is on by default; turning it off asks your PIN. " +
+                "Any bot position still open at 15:25 (stocks 15:20, MCX 10 minutes before its close) is closed. " +
+                "Positions held by design are left alone.",
+            "Home → Strategies → each bot's row; Settings → Zerodha → Real orders; Home → Automation card → Flat-by",
+            ask = "what did the time machine say"),
         // 22 Oct (Boss: "Check each and every arm also hidden arms"): the arms audit's bug fixes, newest of all.
         Entry("2026-10-22-arms-audit-fixes", OCT22, "Fixes from the arms audit",
             "Every arm, the hidden ones too, was checked line by line against its research. " +

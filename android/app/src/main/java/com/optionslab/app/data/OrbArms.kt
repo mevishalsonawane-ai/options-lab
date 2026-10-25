@@ -1938,7 +1938,10 @@ object OrbArms {
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, expected), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
-        val entry = buyPaperEntry(arm.label, c, 1, q, ownerOf(arm), mayRetryPrice(b)) { nq ->
+        // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]; the stop rests on the fill, so it is not in it).
+        // (25 Oct: the verdict's day is the market clock's, the one the paper book's door reads back - so the arm's own test clock on another day never refuses an entry.)
+        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", 1, "MARKET", "MIS", null, null, Market.today(), arm.source), refusals, "paper guard")
+        val entry = buyPaperEntry(arm.label, c, 1, q, ownerOf(arm), mayRetryPrice(b), verdict = verdict) { nq ->
             val again = nq.ltp * 1.0005
             if (OrbRules.stopTrigger(again, pp.stopPoints) == null) "refused: premium %.2f is at or below %s, a %s-point stop has no level"
                 .format(Locale.ENGLISH, again, pts(pp.stopPoints), pts(pp.stopPoints))
@@ -1962,6 +1965,10 @@ object OrbArms {
             charges = chargesOf(buy.orderId), ladder = ProfitLock.targetOf(arm) != null, priceRetry = retried))
         b.positions += pos
         marks[c.symbol] = fill.price
+        // 22 Oct: the time machine's reality check, in the background (shadow only; one queue add here): the premium stop and
+        // target against the index's own past sessions at this slot, and the ORB rule re-run on them.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, arm.label, mirrorRef(pos), OrbRules.UNDERLYING, if (c.right == Right.CE) 1 else -1,
+            signalBar.plusMinutes(5), pp.stopPoints, pp.targetPoints, premium = true, exitAt = OrbRules.SQUARE_OFF)) }
         // 18 Oct: a paper-only arm's (ORB Sweep, Range Fade) live path: the same contract, lot and stop at Zerodha ([ArmLive]).
         // 22 Oct: not for an entry that needed the one more price read or order - before, it was not taken at all, so the live
         // path stays exactly as it was (paper only; said in the diagnostics).
@@ -2466,9 +2473,11 @@ object OrbArms {
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return kept("guard_refused: " + refusals.joinToString(" "), pick, limit, lots)
+        // 22 Oct: the guard's verdict stamped with this order's fingerprint, its -60% stop level with it ([OrderVerdicts]).
+        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, "LIMIT", "MIS", limit, null, Market.today(), src, stop = HeroRules.stopLevel(limit)), refusals, "paper guard")
         // Never a market order on these strikes: a LIMIT BUY on the PAPER account. Not filled at once, it is cancelled
         // (nothing held), and the arm may decide again on a later bar until 14:45.
-        val buy = Paper.place(c, "BUY", lots, "LIMIT", "MIS", limit, null, known = q, auto = HeroRules.OWNER)
+        val buy = Paper.place(c, "BUY", lots, "LIMIT", "MIS", limit, null, known = q, auto = HeroRules.OWNER, verdict = verdict, stop = HeroRules.stopLevel(limit))
         // 22 Oct (arms audit): its name on the order at once, filled or not (a cancelled limit is never taken for Boss's own).
         buy.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · entry") } }
         val fill = filledOrCancelled(buy) ?: return kept("order_refused: " +
@@ -2488,6 +2497,9 @@ object OrbArms {
             charges = chargesOf(buy.orderId), seen = listOf(heroSeen("signal", q, pick.ltp)))
         b.positions += pos
         marks[c.symbol] = fill.price
+        // 22 Oct: the time machine's reality check on NIFTY's 1-minute bars (shadow only; background): the -60% stop and the 5x target as premium.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(src, HeroRules.ARM.label, mirrorRef(pos), HeroRules.UNDERLYING, scan.signal, day.atTime(at),
+            fill.price - HeroRules.stopLevel(fill.price), HeroRules.target1(fill.price) - fill.price, premium = true, exitAt = HeroRules.EXIT_AT, barMinutes = 1)) }
         // 18 Oct: its live path ([ArmLive]): the same option and lots, a LIMIT at the same limit. Its -60% stop is judged on a minute's
         // close on paper, so the paper exit sells the live trade; only a labelled -80% disaster stop rests at Zerodha (review D2).
         mirror(pos, c, HeroRules.stopLevel(fill.price), limit)
@@ -2691,10 +2703,15 @@ object OrbArms {
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last)
         if (why.isNotEmpty()) return "refused: " + why.joinToString("; ")
         val known = knownKite(b)
+        val armKey = if (liquidity != null) FlowShadow.liquidityKey(c.underlying) else arm.source
+        // 22 Oct: the checks above cleared THIS order: stamped with its fingerprint (and the stop it rests), recomputed at the door.
+        val liveStop = if (liquidity == null) OrbRules.stopTrigger(last, lp.stopPoints) else LiquidityRules.stopTrigger(last, lq.stopPct)
+        // (25 Oct: dated by the market clock, the one the door ([Broker.placeOrder]) reads back; in the app both clocks are the same.)
+        val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), armKey, stop = liveStop), "ORB live checks")
         val id: String? = try {
             // The arm's key as its entry check asked the portfolio guard (the door refuses only this arm's blocked entry).
             // [last]: the price this entry decided on (its slippage is measured from it once it fills; nothing else changes).
-            Broker.placeOrder(o, arm = if (liquidity != null) FlowShadow.liquidityKey(c.underlying) else arm.source, intended = last)
+            Broker.placeOrder(o, arm = armKey, intended = last, verdict = verdict, stop = liveStop)
         } catch (e: Broker.NotLoggedIn) {
             return "refused: not logged in to Zerodha today"
         } catch (e: Exception) {
@@ -2729,6 +2746,11 @@ object OrbArms {
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
             ladder = ladderOn(arm, today0, true), near = near, volSkip = volSkip, strong = strong,
             lot = ins.lotSize.takeIf { liquidity != null && it > 0 }))
+        // 22 Oct: the time machine's reality check on the live entry too (shadow only; background).
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, arm.label, "orb:${arm.source}:$id", c.underlying, if (c.right == Right.CE) 1 else -1,
+            signalBar.plusMinutes(5), if (liquidity == null) lp.stopPoints else LiquidityRules.indexStopPoints(c.underlying),
+            if (liquidity == null) lp.targetPoints else liquidity.target?.let { kotlin.math.abs(it - liquidity.level) }, premium = liquidity == null,
+            exitAt = OrbRules.SQUARE_OFF, live = true)) }
         runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         marks[c.symbol] = fill
         return "entered_live"
@@ -3106,9 +3128,12 @@ object OrbArms {
      */
     private suspend fun buyPaperEntry(label: String, c: Paper.Contract, lots: Int, known: com.optionslab.engine.sandbox.Quote?, auto: String?,
                                       mayRetry: Boolean, tag: String = "$label · entry",
+                                      verdict: com.optionslab.engine.risk.OrderFingerprint.Verdict? = null,
                                       recheck: suspend (com.optionslab.engine.sandbox.Quote) -> String?): EntryBuy {
         val sent1 = System.currentTimeMillis()
-        val first = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, known = known, auto = auto)
+        // 22 Oct: [verdict] the guard's verdict on this exact order (the paper book refuses a different one); the same order again
+        // on a retry for its price is the same fingerprint.
+        val first = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, known = known, auto = auto, verdict = verdict)
         // 22 Oct (arms audit; the 21 Oct diagnostics showed Liquidity 5m's cancelled 09:30 entry as "IraAlgo-Android"): every
         // order carries its arm's name from the moment it is placed, filled or not, so a cancelled entry is never taken for one
         // of Boss's own in Orders, the order review or the uploaded diagnostics.
@@ -3122,7 +3147,7 @@ object OrbArms {
         // The checks made before the first order, made again at the new price (a check that fails to run refuses).
         val refusal = q?.let { nq -> runCatching { recheck(nq) }.getOrElse { e -> "refused: the checks could not be made again (${e.message})" } }
         val sent2 = System.currentTimeMillis()
-        val again = if (q != null && refusal == null) Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, known = q, auto = auto) else null
+        val again = if (q != null && refusal == null) Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, known = q, auto = auto, verdict = verdict) else null
         again?.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", tag) } }
         val fill = again?.let { filledOrCancelled(it) }
         // Logged either way (the diagnostics' "orb" lines): an execution retry, never a change to what the arm trades.
@@ -3327,7 +3352,9 @@ object OrbArms {
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
-        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b), tag = "${LiquidityRules.ARM.label} · entry") { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
+        // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]).
+        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, "MARKET", "MIS", null, null, Market.today(), arm.source), refusals, "paper guard")
+        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b), tag = "${LiquidityRules.ARM.label} · entry", verdict = verdict) { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
         val buy = entry.result
         val fill = entry.fill ?: return unfilled(c, entry)
         // The fill against the signal's price (the stream's last at the signal, else the price read just before the order); timed
@@ -3358,6 +3385,10 @@ object OrbArms {
             be = LiquidityBreakeven.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.breakevenOn() }.getOrDefault(false)),
             priceRetry = price.retried || entry.retried))
         marks[c.symbol] = fill.price
+        // 22 Oct: the time machine's reality check (shadow only; background): the index stop and the level-to-target distance in index points.
+        runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, LiquidityRules.ARM.label, "orb:${arm.source}:${buy.orderId ?: now()}", c.underlying,
+            if (c.right == Right.CE) 1 else -1, signalBar.plusMinutes(5), LiquidityRules.indexStopPoints(c.underlying), s.target?.let { kotlin.math.abs(it - s.level) },
+            exitAt = OrbRules.SQUARE_OFF)) }
         return "entered"
     }
 

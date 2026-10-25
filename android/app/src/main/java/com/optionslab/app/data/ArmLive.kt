@@ -266,6 +266,8 @@ object ArmLive {
     fun closed(ref: String, why: String) {
         testHeard?.add("closed|$ref|$why")
         closedRefs[ref] = (runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() }) to why
+        // 22 Oct: the time machine's forward log learns how the trade ended (one queue add; the write runs on its own scope).
+        runCatching { TimeMachineHost.settle(ref, why) }
         if (closedRefs.size > NOTES_KEPT) prune()
         if (holdingHint || shadowHint) nudge()
     }
@@ -733,6 +735,10 @@ object ArmLive {
         val acct = runCatching { Broker.accountNow(needed = last * qty * ins.multiplier) }.getOrNull()
         Guard.check(Guard.liveOrder(o).copy(price = last), acct).takeIf { it.isNotEmpty() }?.let { notMirrored(a, "account guard: " + it.joinToString(" ")); return@withLock }
         Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last).takeIf { it.isNotEmpty() }?.let { notMirrored(a, it.joinToString("; ")); return@withLock }
+        // 22 Oct: the gate's verdict stamped with this exact order's fingerprint (the paper stop it will rest with it); the door
+        // recomputes it right before Zerodha and refuses a difference ([OrderVerdicts]).
+        // (25 Oct: dated by the market clock, the one the door reads back; in the app the arms' clock is the same one.)
+        val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), "arm:${a.key}", stop = a.stop), "arm live gate")
         val base = Pos(a.key, a.ref, ins.symbol, ins.exchange, spec.product, if (a.side >= 0) 1 else -1, qty, qty, ins.lot, ins.tick, ins.multiplier,
             last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true)
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
@@ -745,7 +751,7 @@ object ArmLive {
         // (The entry door asks the switches again inside it, from memory: [doorRefusal].)
         testHeard?.add("door|${a.key}|${a.ref}")
         val id: String? = try {
-            Broker.placeOrder(o, arm = "arm:${a.key}", intended = last)
+            Broker.placeOrder(o, arm = "arm:${a.key}", intended = last, verdict = verdict, stop = a.stop)
         } catch (e: Broker.NotLoggedIn) {
             notMirrored(a, "not logged in to Zerodha today"); return@withLock
         } catch (e: Exception) {

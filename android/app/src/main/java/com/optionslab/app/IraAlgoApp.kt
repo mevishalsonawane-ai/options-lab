@@ -88,6 +88,8 @@ class IraAlgoApp : Application() {
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)
+        // 22 Oct: the time machine's forward log lives in the app's encrypted store.
+        com.optionslab.app.data.TimeMachineHost.init(this)
         removeOldMarketDataStore()
         Market.init(this)
         com.optionslab.app.data.Holidays.init(this)

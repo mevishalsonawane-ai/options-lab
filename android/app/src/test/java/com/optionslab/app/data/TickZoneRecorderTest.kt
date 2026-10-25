@@ -38,7 +38,8 @@ class TickZoneRecorderTest : RobolectricTest() {
         TickZone.Inst(vix, "INDIA VIX", "INDIAVIX", TickZone.Kind.VIX),
     )
     /** Today 10:00:00 IST (a minute's start). */
-    private val base = Market.today().atTime(10, 0).atZone(com.optionslab.ira.MarketRecord.IST).toEpochSecond()
+    // (25 Oct: read when used, not at construction - the market clock rule runs after the instance is built; at a weekend the two days differ.)
+    private val base: Long get() = Market.today().atTime(10, 0).atZone(com.optionslab.ira.MarketRecord.IST).toEpochSecond()
 
     @Before fun up() {
         kite = FakeKite()

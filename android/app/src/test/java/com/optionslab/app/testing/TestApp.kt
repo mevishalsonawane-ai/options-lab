@@ -132,6 +132,14 @@ class TestApp : Application() {
         com.optionslab.app.data.TradeManagerHost.resetForTest()
         com.optionslab.app.data.TradeManagerHost.init(this)
         com.optionslab.app.data.TradeManagerHost.resetForTest()
+        // 25 Oct: the time machine (22 Oct): the previous test's checks finished (they run on its own thread and would outlive the
+        // test), nothing kept, and its bars from memory - an empty phone, so an arm's entry here never reads the bundled
+        // sessions (tens of MB per entry); TimeMachineHostTest reads the real store. Its forward log is this test's own file.
+        com.optionslab.app.data.TimeMachineHost.resetForTest()
+        com.optionslab.app.data.TimeMachineHost.init(this)
+        com.optionslab.app.data.TimeMachineHost.bars = com.optionslab.app.data.TimeMachineHost.Bars { u, _, _ ->
+            emptyList<com.optionslab.engine.risk.TimeMachine.Session>() to com.optionslab.app.data.TimeMachineHost.noSessions(u) }
+        com.optionslab.app.data.OrderVerdicts.resetForTest()
         // The watch's workers (10 Oct): no claim, timing, shared state or busy mark left from an earlier test.
         com.optionslab.app.data.AutoExposure.resetForTest()
         com.optionslab.app.data.AppState.resetForTest()

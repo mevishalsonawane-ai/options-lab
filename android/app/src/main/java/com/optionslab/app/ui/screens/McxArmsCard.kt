@@ -154,6 +154,7 @@ private fun McxArmRow(arm: String, v: McxPaperArms.View, onArm: (String, Boolean
             open.forEach { o ->
                 Text(keepNumbersWhole("${if (o.side > 0) "Long" else "Short"} ${o.symbol} · ${o.qty} @ %.2f · paper".format(Locale.ENGLISH, o.entry)),
                     style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+                TimeMachineLine(o.orderId)
             }
         }
         Switch(

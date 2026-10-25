@@ -1056,6 +1056,9 @@ object PineAuto {
             val stop = placePaperStop(item, c, (fill.first / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), fill.second)
             b.held[id] = Held(c.symbol, right.name, fill.first, c.lotSize, fill.second, today.toString(), false, null,
                 stop = stop?.first, stopAt = stop?.second, at = System.currentTimeMillis())
+            // 22 Oct: the time machine's reality check (shadow only; background): the script's premium stop, out by 15:15.
+            runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry("pine", label(item), "pine:$id:${buy.orderId}", c.underlying, if (right == Right.CE) 1 else -1,
+                Market.now().toLocalDateTime(), stop?.second?.let { fill.second - it }?.takeIf { it > 0 }, null, premium = true, exitAt = java.time.LocalTime.of(15, 15))) }
             note(b, id, "Bought ${fill.first} ${c.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, fill.second)} (paper)" +
                 (stop?.let { " · stop resting at ${"%.2f".format(java.util.Locale.ENGLISH, it.second)}" } ?: ""))
             return
@@ -1081,7 +1084,9 @@ object PineAuto {
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = quote)
         if (why.isNotEmpty()) { note(b, id, "Refused: ${why.joinToString("; ")}"); return }
         val known = knownKite()
-        val orderId: String? = try { Broker.placeOrder(o, arm = "pine") } catch (e: Exception) {
+        // 22 Oct: the checks above cleared this order: stamped with its fingerprint, recomputed at the door ([OrderVerdicts]).
+        val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), "pine"), "Pine live checks")
+        val orderId: String? = try { Broker.placeOrder(o, arm = "pine", verdict = verdict) } catch (e: Exception) {
             if (Broker.definite(e)) { note(b, id, "Zerodha refused the buy: ${e.message}"); return }
             // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
             try { Broker.findRecentRetrying(o, known) ?: run { note(b, id, "Zerodha did not answer the buy (${e.message}) and no such order is in its book: nothing bought"); return } }

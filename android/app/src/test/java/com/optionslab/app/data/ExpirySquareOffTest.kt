@@ -274,15 +274,17 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertEquals("the resting exit is kept", "OPEN", kite.order(resting).status)
     }
 
-    @Test fun anotherRestingExitIsCancelledFirstAndTheMarketExitFollowsNextPass() {
+    /** 25 Oct review: the resting stop is cancelled, confirmed out, and the market exit goes in the SAME pass (not a minute later). */
+    @Test fun anotherRestingExitIsCancelledConfirmedAndTheMarketExitGoesInTheSamePass() {
         kite.position(ce, 75, 20.0)
         val stop = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "SL", 4.5, 0.05, "NFO", "iraprotect", triggerPrice = 5.0), exit = true) }
         kite.requests.clear()
         pass()
         assertTrue(kite.requests.any { it.method == "DELETE" && it.path == "/orders/regular/$stop" })
-        assertTrue("no market exit while the stop may still fill", kite.placed.isEmpty())
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertEquals("the exit in the same pass, once the stop is confirmed out", listOf(Triple(ce, "SELL", "75")), sent())
         pass()
-        assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
+        assertEquals("nothing more", 1, kite.placed.size)
     }
 
     @Test fun aLostReplyIsAdoptedNotSentAgain() {
