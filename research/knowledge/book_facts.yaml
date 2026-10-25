@@ -6181,3 +6181,79 @@ cards:
   - option-selling
   - direction
   - sizing
+- id: book.fm-karatzas-shreve.1
+  book: fm-karatzas-shreve
+  title: Doubling after losses needs unlimited credit
+  chapter: Ch. 1.2, Example 2.3 (doubling strategy)
+  text: Doubling the bet after every loss wins for sure only for someone who can carry unlimited losses; in continuous time
+    it can even be done on a finite horizon, so sound models must allow only strategies whose losses are bounded below.
+  tags:
+  - sizing
+  - stop
+- id: book.fm-karatzas-shreve.2
+  book: fm-karatzas-shreve
+  title: Option value ignores the expected return
+  chapter: Ch. 2.4, European options with constant coefficients
+  text: The fair price and hedge of a European option depend on the interest rate, dividend yield and volatility, not on the
+    underlying's mean return, which the authors call convenient because the mean return is hard to estimate.
+  tags:
+  - iv
+  - direction
+- id: book.fm-karatzas-shreve.3
+  book: fm-karatzas-shreve
+  title: Growth-optimal (Kelly-type) portfolio
+  chapter: Ch. 3.10, Maximization of the growth rate of wealth
+  text: The log-utility portfolio (fraction = excess mean return over variance for one asset) does not depend on the horizon
+    and maximises the realised long-run growth rate almost surely; the authors add the Merton-Samuelson warning that it is
+    not the best choice for other goals at a finite horizon.
+  tags:
+  - sizing
+  verdict: weak
+  tested_src: research/HUNT_H15.md
+  tested_text: Our h15 found half-Kelly sizing on Liquidity 15+5 grew fastest but had P(drawdown ≥ 30%) of 63%, and the Kelly
+    fraction was unstable (0.48 and 0.14 on other windows against 1.29).
+- id: book.fm-karatzas-shreve.4
+  book: fm-karatzas-shreve
+  title: Size only the cushion above a floor
+  chapter: Ch. 3.7, Examples 7.5 and 7.9 (portfolio insurance)
+  text: When wealth must never fall below a floor, the optimal plan keeps the present value of the floor in cash and invests
+    only the excess as a growth-optimal investor would, so the risky amount shrinks to zero as wealth nears the floor.
+  tags:
+  - sizing
+  - stop
+- id: book.fm-karatzas-shreve.5
+  book: fm-karatzas-shreve
+  title: Constraints clip the Kelly fraction
+  chapter: Ch. 6.4 Example 4.2; Ch. 6.8 Example 8.5
+  text: Under no-short-selling or borrowing limits the log-optimal fraction is the unconstrained one moved to the nearest
+    allowed value; if borrowing costs more than lending, there is a wide band where the best choice is exactly fully invested,
+    neither borrowing nor holding cash.
+  tags:
+  - sizing
+- id: book.fm-karatzas-shreve.6
+  book: fm-karatzas-shreve
+  title: Constrained sellers cannot hedge cheaply
+  chapter: Ch. 5.7, Examples 7.3-7.4 (upper hedging price)
+  text: With leverage or short-sale limits a short call may be impossible to hedge for sure at any price, or only by holding
+    the stock (covered call), and a short put without short selling is surely hedged only by holding the strike in cash; arbitrage
+    then gives a price band, not one price.
+  tags:
+  - option-selling
+- id: book.fm-karatzas-shreve.7
+  book: fm-karatzas-shreve
+  title: Costs wreck continuous hedging
+  chapter: Ch. 2.8 and 3.11, Notes (transaction costs)
+  text: With proportional costs the cheapest sure hedge of a short call is to buy and hold the share; practical answers are
+    discrete hedging with an adjusted volatility (Leland) or a no-trade band around the target, and optimal portfolios are
+    very sensitive to costs.
+  tags:
+  - costs
+  - option-selling
+- id: book.fm-karatzas-shreve.8
+  book: fm-karatzas-shreve
+  title: Chasing a target with too little capital
+  chapter: Ch. 1.8 and 3.11, Notes (goal problems)
+  text: When capital is below what a sure hedge of a target costs, one can at best maximise the probability of reaching it
+    by a date; the authors cite this as a separate control problem rather than solving it.
+  tags:
+  - sizing

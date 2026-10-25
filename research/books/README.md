@@ -173,7 +173,7 @@ no performance claims. Their value to us is in what to measure and how to price,
 | [Martingale Methods in Financial Modelling](fm-musiela-martingale.md) (OCR) | Musiela and Rutkowski, 2005 | Rigorous pricing; volatility risk; chain-wide no-arbitrage checks | 327 | 10 (3) | 4 |
 | [Monte Carlo Methods in Finance](fm-jackel-monte-carlo.md) (OCR) | Peter Jäckel, 2002 | Random numbers, variance reduction, Greeks by simulation, simulation error | 232 | 10 (0) | 0 |
 | [An Introduction to Mathematical Finance](fm-ross-math-finance.md) (OCR) | Sheldon Ross, 1999 | Elementary pricing; arbitrage examples; crude oil not a random walk; AR(1) | 102 | 9 (1) | 4 |
-| [Methods of Mathematical Finance](fm-karatzas-shreve.md) (OCR) | Karatzas and Shreve, 1998 | Research monograph: complete markets, optimal investment, constraints | 215 | KS_CARDS | KS_RULES |
+| [Methods of Mathematical Finance](fm-karatzas-shreve.md) (OCR) | Karatzas and Shreve, 1998 | Research monograph: complete markets, optimal investment, constraints | 215 | 8 (1) | 1 |
 
 ### What the textbooks agree on, and what it means for us
 

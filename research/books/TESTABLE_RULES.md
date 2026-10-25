@@ -2450,4 +2450,14 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Our nearest test: R103 defined-risk option selling: 0 of 24 confirmed, the design passes were stale prices
 
 ## Methods of Mathematical Finance - Karatzas and Shreve ([write-up](fm-karatzas-shreve.md))
-No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
+### `book-fmkaratzas-01` Size an arm's lots on the cushion above the account floor (growth-optimal with a wealth floor)
+- Source: Methods of Mathematical Finance, Ch. 3.7, Examples 7.5 and 7.9 (portfolio insurance); Ch. 3.10 (growth-optimal portfolio). Family: `sizing-execution`. Signal source: none (sizing only; entries and exits are the arm's own, signalled on the underlying).
+- Timeframe: per signal of the arm (Liquidity 15+5 runs on 1-minute index bars). Instruments: BANKNIFTY.
+- Entry: Take every Liquidity 15+5 signal exactly as the app does (1-ITM option of the nearest expiry, limit at entry print +0.5%, cancel after 3 minutes, as in HUNT_H15.md). Lots = floor(k x (realised capital - floor) / premium of 1 lot), recomputed at every signal, where floor = peak realised capital - Rs 40,000 (Boss's account drawdown stop).
+- Stop: The arm's own stop on the option premium. Account level: when realised capital reaches the floor the cushion is zero, lots are zero, and trading stops (the account stop).
+- Exit: The arm's own exits; square off by the arm's time rule.
+- Filters: Never pay more premium than the free cash (H15 rule 4). If the formula gives 0 lots, skip the signal (no minimum-1-lot allowance, unlike H15).
+- Trade: Buy the option chosen by the arm's strike rule; only the lot count changes.
+- Assumptions (our reading where the book is vague): The book gives the principle (keep the floor's present value aside, invest the cushion growth-optimally) for a continuous model with known parameters; the floor = peak - Rs 40,000 (a trailing floor), the cushion multiplier k and the use of H15's trade list are ours. Pre-register k = H15's quarter-Kelly value for BN (0.325) applied to the cushion, and compare with H15 fixed 1 lot, quarter-Kelly on full capital (A-K4) and half-Kelly (A-K2) on the same trades and holdout.
+- Data: have
+- Our nearest test: HUNT_H15.md: half-Kelly on full capital grew fastest but P(drawdown >= 30%) 63% and P(drawdown >= 50%) 14%; quarter-Kelly cut P(drawdown >= 50%) to 1%; the Kelly fraction was unstable (0.48 / 0.14 / 1.29). Cushion sizing itself not tested by us.
