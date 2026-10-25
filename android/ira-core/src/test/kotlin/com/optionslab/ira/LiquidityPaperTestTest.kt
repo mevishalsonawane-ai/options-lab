@@ -100,7 +100,7 @@ class LiquidityPaperTestTest {
         val bad = fill.copy(price = 212.0, atMs = close + 14_000)
         val notes = FillQuality.reviewNotes(listOf(sig.copy(ask = 212.0), bad), oct14)
         assertTrue(notes.first().startsWith("Liquidity fill quality today: 2 records"), notes.toString())
-        assertTrue(notes.any { it.contains("over its signal's price (limit +0.5%)") }, notes.toString())
+        assertTrue(notes.any { it.contains("over its signal's price (go-live check: at most +0.5%; the entry is a plain market order") }, notes.toString())
         assertTrue(notes.any { it.contains("half-spread (worry above 0.3%)") }, notes.toString())
         assertTrue(notes.any { it.contains("after the bar close (aim: within 10 s)") }, notes.toString())
         assertTrue(FillQuality.reviewNotes(recs, oct14.plusDays(1)).isEmpty())

@@ -57,7 +57,8 @@ index-option buyer.
 - Our research: h14 tested exactly this choice on the Liquidity arm: a marketable limit at the entry-bar price +0.5%,
   resting 3 minutes, never chasing, was the only one of the 9 policies to pass every gate (+Rs 288/day against a required
   +250 at the plan size; holdout +Rs 625/day at kappa 0.02). It works by refusing fills above about 0.5%. Not robust at
-  kappa 0.04. The app's Liquidity arm uses this entry.
+  kappa 0.04. Correction (app audit, 25 Oct): the app's Liquidity arm does NOT use this entry yet; it sends a plain
+  market order (research/APP_AUDIT_BOOKS.md). The capped limit is a proposal for Boss.
 
 ### 3. Trading costs: explicit, implicit, implementation shortfall (Ch. 2.2)
 - Explicit costs: commissions, fees, taxes. Implicit: the bid-ask spread (the price of immediacy; for a market-order
@@ -336,7 +337,8 @@ index-option buyer.
 - **Already tested and rejected (nearest form):** fading liquidity-shock moves (R86 stop runs and VWAP fades, all lost);
   following news days for a side (h28, h27); momentum/breakout chasing (ORB family 0 of 257 in R92; R89 0 of 180);
   intraday EMA crosses (OBUY_FINAL TI-03; R29).
-- **Already tested and adopted:** a capped marketable limit instead of a market order (h14 E2, used by Liquidity).
+- **Already tested, passed, not yet in the app:** a capped marketable limit instead of a market order (h14 E2; the
+  Liquidity arm still sends market orders, research/APP_AUDIT_BOOKS.md).
 - **Not tested by us:** the daily 65-day crossover on indices and MCX; passive (resting at the bid) option entries; a
   variance-ratio measure of NSE intraday friction; any use of the NSE pre-open book; fills vs VWAP; two-sided market
   making (not feasible for us).
