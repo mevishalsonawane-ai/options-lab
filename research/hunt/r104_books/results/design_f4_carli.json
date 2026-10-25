@@ -1,0 +1,269 @@
+{
+ "book-carli-01|DLY": {
+  "rule": "book-carli-01",
+  "market": "DLY",
+  "variants": {
+   "base": {
+    "n": 0,
+    "win": null,
+    "net": 0.0,
+    "per_trade": null,
+    "worst": null,
+    "best5": 0.0,
+    "maxdd": 0.0,
+    "folds": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "wf": {
+   "n": 0,
+   "win": null,
+   "net": 0.0,
+   "per_trade": null,
+   "worst": null,
+   "best5": 0.0,
+   "maxdd": 0.0,
+   "folds": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "picks": [
+    "base",
+    "base",
+    "base",
+    "base"
+   ],
+   "first_fold": 0
+  },
+  "p": 1.0,
+  "holdout_variant": "base"
+ },
+ "book-carli-01|MCXD": {
+  "rule": "book-carli-01",
+  "market": "MCXD",
+  "variants": {
+   "base": {
+    "n": 0,
+    "win": null,
+    "net": 0.0,
+    "per_trade": null,
+    "worst": null,
+    "best5": 0.0,
+    "maxdd": 0.0,
+    "folds": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "wf": {
+   "n": 0,
+   "win": null,
+   "net": 0.0,
+   "per_trade": null,
+   "worst": null,
+   "best5": 0.0,
+   "maxdd": 0.0,
+   "folds": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "picks": [
+    "base",
+    "base",
+    "base"
+   ],
+   "first_fold": 0
+  },
+  "p": 1.0,
+  "holdout_variant": "base"
+ },
+ "book-carli-02|IDXF": {
+  "rule": "book-carli-02",
+  "market": "IDXF",
+  "variants": {
+   "half": {
+    "n": 0,
+    "win": null,
+    "net": 0.0,
+    "per_trade": null,
+    "worst": null,
+    "best5": 0.0,
+    "maxdd": 0.0,
+    "folds": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "wf": {
+   "n": 0,
+   "win": null,
+   "net": 0.0,
+   "per_trade": null,
+   "worst": null,
+   "best5": 0.0,
+   "maxdd": 0.0,
+   "folds": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "picks": [
+    "half",
+    "half",
+    "half",
+    "half",
+    "half"
+   ],
+   "first_fold": 0
+  },
+  "p": 1.0,
+  "holdout_variant": "half"
+ },
+ "book-carli-02|MCXI": {
+  "rule": "book-carli-02",
+  "market": "MCXI",
+  "variants": {
+   "4h": {
+    "n": 0,
+    "win": null,
+    "net": 0.0,
+    "per_trade": null,
+    "worst": null,
+    "best5": 0.0,
+    "maxdd": 0.0,
+    "folds": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "wf": {
+   "n": 0,
+   "win": null,
+   "net": 0.0,
+   "per_trade": null,
+   "worst": null,
+   "best5": 0.0,
+   "maxdd": 0.0,
+   "folds": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "picks": [
+    "4h",
+    "4h",
+    "4h"
+   ],
+   "first_fold": 0
+  },
+  "p": 1.0,
+  "holdout_variant": "4h"
+ },
+ "book-carli-03|IDX": {
+  "rule": "book-carli-03",
+  "market": "IDX",
+  "variants": {
+   "15A": {
+    "n": 17,
+    "win": 0.4117647058823529,
+    "net": -8740.900000000005,
+    "per_trade": -514.1705882352944,
+    "worst": -7401.14,
+    "best5": 5054.209999999998,
+    "maxdd": -10952.960000000006,
+    "folds": [
+     -987.1200000000001,
+     2763.3599999999997,
+     -932.710000000001,
+     -9584.430000000004
+    ]
+   },
+   "15B": {
+    "n": 13,
+    "win": 0.46153846153846156,
+    "net": -10126.75,
+    "per_trade": -778.9807692307693,
+    "worst": -9551.999999999998,
+    "best5": 6920.700000000004,
+    "maxdd": -14332.409999999998,
+    "folds": [
+     892.4999999999984,
+     3313.1599999999994,
+     -2030.6400000000003,
+     -12301.769999999999
+    ]
+   },
+   "60A": {
+    "n": 5,
+    "win": 0.6,
+    "net": 249.74999999999804,
+    "per_trade": 49.949999999999605,
+    "worst": -1705.1800000000003,
+    "best5": 249.74999999999795,
+    "maxdd": -1705.1800000000003,
+    "folds": [
+     -352.1300000000001,
+     484.10999999999876,
+     117.76999999999938,
+     0.0
+    ]
+   },
+   "60B": {
+    "n": 5,
+    "win": 0.4,
+    "net": -2808.3900000000017,
+    "per_trade": -561.6780000000003,
+    "worst": -3932.66,
+    "best5": -2808.3900000000012,
+    "maxdd": -4161.440000000002,
+    "folds": [
+     -2579.6099999999997,
+     -131.3400000000015,
+     -97.44000000000054,
+     0.0
+    ]
+   }
+  },
+  "wf": {
+   "n": 11,
+   "win": 0.36363636363636365,
+   "net": -11019.25,
+   "per_trade": -1001.75,
+   "worst": -9551.999999999998,
+   "best5": 5897.680000000004,
+   "maxdd": -14332.41,
+   "folds": [
+    0.0,
+    3313.1599999999994,
+    -2030.6400000000003,
+    -12301.769999999999
+   ],
+   "picks": [
+    null,
+    "15B",
+    "15B",
+    "15B"
+   ],
+   "first_fold": 1
+  },
+  "p": 1.0,
+  "holdout_variant": "60A"
+ }
+}

@@ -64,7 +64,7 @@ def leg_cost(kind, sym, price, notional, d=None):
         hs = K.index_half_spread(price) / price
         return notional * hs * 2 + K.index_fut_charges(notional, notional, d or K.D(2020, 1, 1))
     if kind == "MCX":
-        import common as C94
+        C94 = K.mcx_costs()
         hs = C94.fut_half_spread(sym, price) / price
         return notional * hs * 2 + C94.fut_leg_charges(notional, notional) * 1.0
     if kind == "CRY":
@@ -239,7 +239,7 @@ def bayes01(part):
     rets = np.log(closes).diff()
     months = sorted({(d.year, d.month) for d in closes.index})
     out = []
-    import common as C94
+    C94 = K.mcx_costs()
     for (y, m) in months:
         days = [d for d in closes.index if (d.year, d.month) == (y, m)]
         if not days:

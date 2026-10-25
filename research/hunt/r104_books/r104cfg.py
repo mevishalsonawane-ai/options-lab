@@ -16,7 +16,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
-for p in (ROOT, ROOT / "research", HERE.parent / "r51", HERE.parent / "r94_mcx_advanced", HERE):
+for p in (ROOT, ROOT / "research", HERE.parent / "r51", HERE):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
@@ -103,6 +103,21 @@ CARRY = 0.05              # index future carry, a year of notional (r - q)
 
 
 # ------------------------------------------------------------------------------------------------ futures charges
+_C94 = None
+
+
+def mcx_costs():
+    """R94's MCX cost module (research/hunt/r94_mcx_advanced/common.py), loaded under its own name so it never shadows
+    R51's `common`."""
+    global _C94
+    if _C94 is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("r94_common", HERE.parent / "r94_mcx_advanced" / "common.py")
+        _C94 = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_C94)
+    return _C94
+
+
 def _dated(d: date, table):
     for until, r in table:
         if d < until:

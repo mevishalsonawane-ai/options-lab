@@ -243,7 +243,8 @@ def price_index_future(und: str, d_in: date, d_out: date, side: int, epx: float,
 
 
 def price_mcx_future(sym: str, side: int, epx: float, xpx: float, stop_exit: bool, stop_entry: bool, units: float):
-    import common as C94                       # research/hunt/r94_mcx_advanced/common.py
+    import r104cfg as K
+    C94 = K.mcx_costs()
     hs_e = C94.fut_half_spread(sym, epx) * (2 if stop_entry else 1)
     hs_x = C94.fut_half_spread(sym, xpx) * (2 if stop_exit else 1)
     e = epx + side * hs_e
