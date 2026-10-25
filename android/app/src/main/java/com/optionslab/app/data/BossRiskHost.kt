@@ -378,7 +378,8 @@ object BossRiskHost {
         scope.launch {
             runCatching {
                 val k = BossRisk.kiteOption(symbol) { u, y, m ->
-                    runCatching { Market.contracts() }.getOrDefault(emptyList()).filter { it.underlying == u && it.expiry.year == y && it.expiry.monthValue == m }
+                    // The list already saved (a file read in the background, never a download: review, CI's no-network rule).
+                    runCatching { Market.cachedContracts()?.second }.getOrNull().orEmpty().filter { it.underlying == u && it.expiry.year == y && it.expiry.monthValue == m }
                         .maxOfOrNull { it.expiry }
                 } ?: return@runCatching
                 val c = com.optionslab.app.data.Paper.Contract(symbol, k.underlying, k.expiry, k.strike,

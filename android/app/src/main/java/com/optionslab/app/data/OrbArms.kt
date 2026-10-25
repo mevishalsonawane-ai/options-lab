@@ -3252,9 +3252,9 @@ object OrbArms {
         // 25 Oct (Boss's decision on the arms audit; the 22 Oct audit's F3 rule): every study Liquidity rests on skipped its index's
         // own expiry day, so on PAPER a book takes no entry that day (open positions keep their exits) - the 26 Oct comparison is like
         // for like. Its switch is on the Account guard page, logged in the Autopilot timeline (one tap back). A LIVE entry is only
-        // logged (a new rule that skips a live trade starts in shadow). Memory only (the day's contract list).
+        // logged (a new rule that skips a live trade starts in shadow). From the day's saved contract list (never a download here).
         val expiryToday = runCatching {
-            HeroRules.isExpiryDay(day, Market.contracts().filter { it.underlying == und }.map { it.expiry }.distinct())
+            HeroRules.isExpiryDay(day, Market.cachedContracts()?.takeIf { it.first == day }?.second.orEmpty().filter { it.underlying == und }.map { it.expiry }.distinct())
         }.getOrDefault(false)
         if (expiryToday) {
             val goesLive = ArmAccount.entry(arm, appLive ?: liveNow(), SmartWorkers.parkedToPaperNow("liquidity"))
