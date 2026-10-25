@@ -764,6 +764,12 @@ private fun GuardCard(model: AppModel) {
             // The cut-off: -1 is off; a later time is looser.
             loosen(s.guardCutoff >= 0 && (cut[i] < 0 || cut[i] > s.guardCutoff), askLimit) { model.update { it.copy(guardCutoff = cut[i]) } }
         }
+        // 25 Oct (Boss: "Daily loss was off" - the Zerodha limit above was, but the paper bots' own limit, ₹6,000 then, was on no screen
+        // and stopped every paper bot on 23 Oct): the paper daily loss limit, shown and set here. Paper only, so no PIN.
+        val paperLoss = listOf(5_000.0, 10_000.0, 20_000.0, 0.0)
+        ParamTokens("Paper bots' daily loss limit (stops new paper entries for the day)", paperLoss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardPaperDailyLoss) }) { i ->
+            model.update { it.copy(guardPaperDailyLoss = paperLoss[i]) }
+        }
         // The day lock (08 Oct): only ever stops new automatic entries; set here alone (never by voice or a backup).
         val dayLocks = com.optionslab.engine.risk.DayLock.CHOICES
         ParamTokens("Day lock: no new automatic entries once the day is up by", dayLocks.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.dayLock) }) { i ->

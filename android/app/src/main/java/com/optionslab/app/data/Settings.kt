@@ -92,7 +92,8 @@ data class AppSettings(
     // The paper account's own loss, drawdown and order limits: the desktop raised these for its paper
     // forward test only (two ORB arms count entry, resting stop and exit orders). Live keeps the ones above.
     val guardPaperTrades: Int = 60,
-    val guardPaperDailyLoss: Double = 6_000.0,
+    /** The paper bots' daily loss limit (NSE paper; MCX keeps its own when split). 25 Oct (Boss: "Make it 10k"): ₹10,000, was ₹6,000. */
+    val guardPaperDailyLoss: Double = 10_000.0,
     val guardPaperDrawdownPct: Double = 30.0,
     val guardNakedShort: Boolean = true,
     /** TODO A5: close positions expiring today at 15:05 on expiry day. */
@@ -127,7 +128,7 @@ data class AppSettings(
     /** The commodities' own paper day lock, rupees (0 = off); unset, the paper day lock's amount. Bot settings only. */
     val mcxDayLock: Double = com.optionslab.engine.risk.DayLock.DEFAULT_RUPEES,
     /** The commodities' own paper daily loss limit, rupees (0 = off); unset, the paper daily loss limit. Bot settings only. */
-    val mcxPaperDailyLoss: Double = 6_000.0,
+    val mcxPaperDailyLoss: Double = 10_000.0,           // 25 Oct: with the NSE paper limit (Boss: "Make it 10k")
     /** Home's paper running total counts from this day (ISO date; Boss's 08 Oct wish, [com.optionslab.engine.risk.PaperSince]). Words only. */
     val paperSince: String = com.optionslab.engine.risk.PaperSince.DEFAULT_START.toString(),
 ) {
@@ -163,6 +164,10 @@ data class AppSettings(
         const val ONE_TAP_KEY = "k.oneTap2"
         /** 22 Oct: "yes" typed before a real order (on by default). */
         const val TYPED_YES_KEY = "k.typedYes"
+        /** 25 Oct: set once the paper daily loss limit moved to Boss's ₹10,000 ([load]); from then the saved value stands. */
+        const val PAPER_LOSS_VERSION_KEY = "g.pLossV"
+        /** The paper daily loss limit's default before 25 Oct. */
+        const val OLD_PAPER_LOSS = 6_000.0
         /** The danger meter's half-size switch (paper arms; off by default). */
         const val DANGER_HALF_KEY = "r.dangerHalf"
 
@@ -222,7 +227,9 @@ data class AppSettings(
                 guardMaxLots = p.getInt("g.lots", d.guardMaxLots), guardCutoff = p.getInt("g.cutoff", d.guardCutoff).let { if (old && it == 14 * 60 + 30) d.guardCutoff else it },
                 guardNakedShort = p.getBoolean("g.naked", d.guardNakedShort),
                 guardMaxExposure = p.getDouble("g.expo", d.guardMaxExposure), guardPaperTrades = p.getInt("g.pTrades", d.guardPaperTrades),
-                guardPaperDailyLoss = p.getDouble("g.pLoss", d.guardPaperDailyLoss), guardPaperDrawdownPct = p.getDouble("g.pDd", d.guardPaperDrawdownPct),
+                // 25 Oct (Boss: "Make it 10k"): the old ₹6,000 default saved before that day becomes ₹10,000 once; a limit Boss or
+                // Jarvis had set to anything else stays. From the first save on ("g.pLossV") the saved value always stands.
+                guardPaperDailyLoss = p.getDouble("g.pLoss", d.guardPaperDailyLoss).let { if (p.getInt(PAPER_LOSS_VERSION_KEY, 0) < 1 && it == OLD_PAPER_LOSS) d.guardPaperDailyLoss else it }, guardPaperDrawdownPct = p.getDouble("g.pDd", d.guardPaperDrawdownPct),
                 expirySquareOff = p.getBoolean("g.expSq", d.expirySquareOff), keepExpiryPut = p.getBoolean("g.keepPut", d.keepExpiryPut),
                 mcxExpiryExit = p.getBoolean("g.mcxExit", d.mcxExpiryExit),
                 mcxOptionExitMinute = p.getInt("g.mcxOptAt", d.mcxOptionExitMinute).coerceIn(9 * 60, 23 * 60 + 40),
@@ -234,7 +241,8 @@ data class AppSettings(
                 mcxOwnLimits = p.getBoolean("g.mcxOwn", d.mcxOwnLimits),
                 // Unset: the same amounts as the paper ones (Boss, 21 Oct).
                 mcxDayLock = com.optionslab.engine.risk.DayLock.clean(p.getDouble("g.mcxDayLock", p.getDouble("g.dayLock", d.dayLock))),
-                mcxPaperDailyLoss = p.getDouble("g.mcxPLoss", p.getDouble("g.pLoss", d.guardPaperDailyLoss)).let { if (it.isFinite() && it >= 0) it else d.mcxPaperDailyLoss },
+                mcxPaperDailyLoss = p.getDouble("g.mcxPLoss", p.getDouble("g.pLoss", d.guardPaperDailyLoss)).let { if (it.isFinite() && it >= 0) it else d.mcxPaperDailyLoss }
+                    .let { if (p.getInt(PAPER_LOSS_VERSION_KEY, 0) < 1 && it == OLD_PAPER_LOSS) d.mcxPaperDailyLoss else it },
                 paperSince = com.optionslab.engine.risk.PaperSince.startOf(p.getString("ui.paperSince", d.paperSince)).toString(),
             )
         }
@@ -309,7 +317,7 @@ data class AppSettings(
                 "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,
                 "g.naked" to s.guardNakedShort, "g.expo" to s.guardMaxExposure, "g.pTrades" to s.guardPaperTrades,
-                "g.pLoss" to s.guardPaperDailyLoss, "g.pDd" to s.guardPaperDrawdownPct, "g.v" to 2, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
+                "g.pLoss" to s.guardPaperDailyLoss, PAPER_LOSS_VERSION_KEY to 1, "g.pDd" to s.guardPaperDrawdownPct, "g.v" to 2, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
                 "g.mcxExit" to s.mcxExpiryExit, "g.mcxOptAt" to s.mcxOptionExitMinute, "g.mcxFutDays5" to s.mcxFutureExitDays,
                 "g.dayLock" to com.optionslab.engine.risk.DayLock.clean(s.dayLock),
                 "g.mcxOwn" to s.mcxOwnLimits, "g.mcxDayLock" to com.optionslab.engine.risk.DayLock.clean(s.mcxDayLock), "g.mcxPLoss" to s.mcxPaperDailyLoss,

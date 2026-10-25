@@ -24,7 +24,7 @@ class AppLogicTest {
         val live = s.guardLimits()
         val paper = s.guardLimits(paper = true)
         assertEquals(2_000.0, live.maxDailyLoss)
-        assertEquals(6_000.0, paper.maxDailyLoss)
+        assertEquals(10_000.0, paper.maxDailyLoss)                // 25 Oct: Boss's "Make it 10k"
         assertEquals(10, live.maxTradesPerDay)
         assertEquals(60, paper.maxTradesPerDay)
         assertEquals(200_000.0, live.maxSymbolExposure)

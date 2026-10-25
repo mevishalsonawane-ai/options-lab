@@ -45,6 +45,21 @@ class SegmentLimitsTest : RobolectricTest() {
     @org.junit.Before fun up() { com.optionslab.app.testing.Background.clearAlerts() }   // and the banner's 20 s repeat filter
     @After fun down() { Market.testClock = null; LossBreaker.testPaperDay = null }
 
+    /** 25 Oct (Boss: "Make it 10k"): the old ₹6,000 default saved on the phone becomes ₹10,000 once; another limit stays; then the saved one stands. */
+    @Test fun thePaperDailyLossLimitMovesFromTheOld6000To10000Once() {
+        SecurePrefs.putAll(mapOf("g.pLoss" to 6_000.0))
+        assertEquals(10_000.0, AppSettings.load().guardPaperDailyLoss, 0.0)
+        assertEquals(10_000.0, AppSettings().guardLimits(paper = true).maxDailyLoss, 0.0)
+        assertEquals("the commodities' own paper limit moves with it", 10_000.0, AppSettings.load().mcxPaperDailyLoss, 0.0)
+        SecurePrefs.putAll(mapOf("g.pLoss" to 4_000.0))
+        assertEquals("a limit set on purpose stays", 4_000.0, AppSettings.load().guardPaperDailyLoss, 0.0)
+        // Once saved (the version mark written), even 6,000 chosen again stands.
+        SecurePrefs.putAll(mapOf("g.pLoss" to 6_000.0, AppSettings.PAPER_LOSS_VERSION_KEY to 1))
+        assertEquals(6_000.0, AppSettings.load().guardPaperDailyLoss, 0.0)
+        SecurePrefs.putAll(mapOf("g.pLoss" to 0.0))
+        assertEquals("off", 0.0, AppSettings.load().guardPaperDailyLoss, 0.0)
+    }
+
     @Test fun commoditiesKeepTheirOwnLimitsByDefaultWithThePaperAmounts() {
         val s = AppSettings.load()
         assertTrue(s.mcxOwnLimits)
