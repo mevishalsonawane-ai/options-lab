@@ -473,12 +473,28 @@ object NtfyArm {
     private fun chargesOf(orderId: String?): Double =
         if (orderId == null) 0.0 else Paper.state.trades.filter { it.orderId == orderId }.sumOf { it.charges.toDouble() }
 
-    /** The highest and lowest traded price of [c] since [from] (the option's own minutes), or nulls. */
-    private suspend fun rangeSince(c: Paper.Contract, from: LocalDateTime): Pair<Double?, Double?> {
+    /**
+     * The highest and lowest traded price of [c] since [from] (the option's own minutes), or nulls. 25 Oct (review): never a network
+     * read here (this runs under the lock, and the 15-second stop check waits on it): the minutes come from [prefetch], read before
+     * the lock; the first pass that needs them asks for them ([rangeWanted]) and reads the price alone until they arrive.
+     */
+    private fun rangeSince(c: Paper.Contract, from: LocalDateTime): Pair<Double?, Double?> {
+        rangeWanted += c.feedKey
         val since = from.withSecond(0).atZone(com.optionslab.engine.IST).toEpochSecond()
-        val bars = runCatching { Net.intradayQuick(c.feedKey) }.getOrNull().orEmpty().filter { it.epochSecond >= since }
+        val bars = barsNow[c.feedKey].orEmpty().filter { it.epochSecond >= since }
         return bars.maxOfOrNull { it.high } to bars.minOfOrNull { it.low }
     }
+
+    /** The option feed keys a waiting "near" / "above" buy asked minutes for ([rangeSince]), read by the next [prefetch]. */
+    private val rangeWanted: MutableSet<String> = java.util.Collections.synchronizedSet(LinkedHashSet())
+    /** Those options' minutes, read for this pass before the lock ([prefetch]). */
+    @Volatile private var barsNow: Map<String, List<Upstox.Bar>> = emptyMap()
+
+    /** TEST SEAM (JVM tests only; null in the app): the minutes of a feed key, in place of the quick read (e.g. a slow one). */
+    @Volatile internal var testBars: (suspend (String) -> List<Upstox.Bar>)? = null
+
+    /** The minutes of [key] (the quick read: 5 s connect, one retry). Network: only ever called OFF the lock ([prefetch]). */
+    private suspend fun bars(key: String): List<Upstox.Bar> = testBars?.invoke(key) ?: Net.intradayQuick(key)
 
     /** TEST SEAM: the listed contracts and the index price (JVM tests only; null in the app). */
     @Volatile internal var testListed: ((String) -> List<Upstox.Contract>)? = null
@@ -511,6 +527,13 @@ object NtfyArm {
         }
         val out = HashMap<String, Double>()
         for (u in wanted) runCatching { spot(u) }.getOrNull()?.let { out[u] = it }
+        // 25 Oct (review): the options' minutes the waiting "near" / "above" buys need, read here, never under the lock. Only
+        // while one is still waiting (each pass asks again; the rest are dropped).
+        val keys = synchronized(rangeWanted) { rangeWanted.toList().also { rangeWanted.clear() } }
+        val pending = v.alerts.any { it.state == PENDING }
+        val bars = HashMap<String, List<Upstox.Bar>>()
+        if (pending) for (k in keys) runCatching { bars(k) }.getOrNull()?.let { bars[k] = it }
+        barsNow = bars
         return out
     }
 
@@ -518,7 +541,7 @@ object NtfyArm {
     private suspend fun spot(u: String): Double? {
         testSpot?.let { return it(u) }
         val key = Ft3Arm.indexKey(u) ?: StockOptions.eqKey(u) ?: return null
-        return runCatching { Net.intradayQuick(key) }.getOrNull().orEmpty().filter { it.istDate == Market.today() }
+        return runCatching { bars(key) }.getOrNull().orEmpty().filter { it.istDate == Market.today() }
             .maxByOrNull { it.epochSecond }?.close?.takeIf { it > 0 }
     }
 
@@ -740,5 +763,5 @@ object NtfyArm {
         p.copy(exit = price, exitTime = at, why = why, charges = p.charges + charges, stopOrderId = null)
 
     /** For tests: the book forgotten (its file goes with the test's directory). */
-    internal fun wipe() { cache = null; _view.value = View(); testListed = null; testSpot = null }
+    internal fun wipe() { cache = null; _view.value = View(); testListed = null; testSpot = null; testBars = null }
 }

@@ -238,6 +238,54 @@ class NtfyArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 25 Oct review: the 15-second stop check ([NtfyArm.manageOnly]) waited behind the pass's network read of a waiting "near" buy's
+     * option minutes (read under the lock, up to ~30 s). Now they are read before the lock: a slow read never holds the stop check.
+     */
+    @Test fun aSlowIntradayReadNeverBlocksTheStopCheck() {
+        // A trade held (the removed arm's, moved here), so the stop check has work; and a waiting "near" buy on another contract.
+        val c = Paper.contractFor("NIFTY", day.plusDays(6), 25_000.0, Right.CE)!!
+        market(LocalTime.of(9, 21), rally); at(LocalTime.of(9, 21))
+        assertTrue(runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null) }.ok)
+        val pos = JSONObject().put("chat", "c0").put("call", "r1").put("index", "BANKNIFTY").put("symbol", c.symbol).put("right", "CE")
+            .put("lots", 1).put("qty", 65).put("entry", 121.0).put("at", day.atTime(9, 21).toString()).put("stop", 90.0).put("ours", true)
+            .put("rule", "t1").put("exp", false).put("target", 300.0)
+        Vault.LastWrite().write(File(context.noBackupFilesDir, NtfyArm.OLD_FILE), JSONObject().put("positions", JSONArray().put(pos)).toString().toByteArray())
+        NtfyArm.wipe()
+        on()
+        assertTrue(NtfyArm.holding())
+        msg("w1", "NIFTY 25000 PE @ 100")
+        tick(LocalTime.of(9, 28), 20)
+        assertEquals(NtfyArm.PENDING, alert("w1").state)
+        // The next pass's read of the option's minutes hangs.
+        val entered = java.util.concurrent.CountDownLatch(1); val release = java.util.concurrent.CountDownLatch(1)
+        NtfyArm.testBars = { key -> if (key == pe) { entered.countDown(); kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { release.await(20, java.util.concurrent.TimeUnit.SECONDS) } }
+            Net.intradayQuick(key) }
+        at(LocalTime.of(9, 29))
+        val pass = Thread { runBlocking { NtfyArm.tick() } }.apply { start() }
+        try {
+            assertTrue("the pass reached the slow read", entered.await(10, java.util.concurrent.TimeUnit.SECONDS))
+            val t0 = System.nanoTime()
+            val done = runBlocking { kotlinx.coroutines.withTimeoutOrNull(5_000) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { NtfyArm.manageOnly() }; true } }
+            assertEquals("the stop check never waits behind a network read", true, done)
+            assertTrue((System.nanoTime() - t0) / 1_000_000 < 5_000)
+        } finally { release.countDown(); pass.join(20_000) }
+        assertFalse(pass.isAlive)
+        assertNothingAtZerodha()
+    }
+
+    /** 25 Oct review: the option's minutes come from the pass's read before the lock; a dip to the level between passes still counts. */
+    @Test fun aNearLevelTouchedBetweenPassesIsStillBought() {
+        on()
+        msg("w1", "NIFTY 25000 CE @ 100")
+        tick(LocalTime.of(9, 28), 30)
+        assertEquals(NtfyArm.PENDING, alert("w1").state)
+        // 09:29 traded 100, then back to 121 by the next pass: the range read before the lock shows the touch.
+        tick(LocalTime.of(9, 31), px = { t -> if (t == LocalTime.of(9, 29)) 100.0 else 121.0 })
+        assertEquals(alert("w1").why, NtfyArm.TRADED, alert("w1").state)
+        assertNothingAtZerodha()
+    }
+
     @Test fun aHolidayOrWeekendIsMarketClosed() {
         on()
         var d = day.plusDays(1)
