@@ -127,6 +127,8 @@ object NtfyReader {
         val want = runCatching { NtfyArm.view.value.on && config().topic != null && inHours() }.getOrDefault(false)
         val running = job?.isActive == true
         if (want && !running) start() else if (!want && running) stop("off")
+        // 25 Oct: today's stock options list, fetched in the background while stock signals may trade.
+        if (want && runCatching { NtfyArm.view.value.settings.stocks }.getOrDefault(false)) runCatching { StockOptions.refreshInBackground() }
     }
 
     private fun restart() { if (job?.isActive == true) stop("settings changed"); ensure() }

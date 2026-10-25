@@ -172,7 +172,7 @@ object NtfyArm {
             b.on = o.optBoolean("on")
             o.optJSONObject("settings")?.let { s ->
                 b.settings = NtfyRules.Settings(s.optInt("lots", 1), s.optInt("stale", 5), s.optInt("max", 3), s.optDouble("cap", 3_000.0),
-                    NtfyParser.StrikeRule.of(s.optString("strike")), exit = Exit.of(s.optString("exit"))).clean()
+                    NtfyParser.StrikeRule.of(s.optString("strike")), exit = Exit.of(s.optString("exit")), stocks = s.optBoolean("stocks", true)).clean()
             }
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += posOf(a.getJSONObject(i)) }
             o.optJSONArray("alerts")?.let { a -> for (i in 0 until a.length()) b.alerts += alertOf(a.getJSONObject(i)) }
@@ -221,7 +221,7 @@ object NtfyArm {
         val s = b.settings
         val o = JSONObject().put("on", b.on)
             .put("settings", JSONObject().put("lots", s.lots).put("stale", s.staleMin).put("max", s.maxPerDay).put("cap", s.lossCap)
-                .put("strike", s.strikeRule.key).put("exit", s.exit.key))
+                .put("strike", s.strikeRule.key).put("exit", s.exit.key).put("stocks", s.stocks))
             .put("positions", JSONArray(b.positions.map { posJson(it) })).put("alerts", JSONArray(b.alerts.map { alertJson(it) }))
             .put("ids", JSONArray(b.read.ids)).put("signals", JSONArray(b.signals.toList()))
             .put("log", JSONArray(b.log.takeLast(200)))
@@ -281,7 +281,7 @@ object NtfyArm {
         val b = book()
         val c = s.clean()
         if (c != b.settings) { b.settings = c; note(b, "settings: at most ${c.lots} lot(s), stale after ${c.staleMin} min, ${c.maxPerDay} a day, " +
-            "₹%,.0f loss cap, strike ${c.strikeRule.label}".format(Locale.ENGLISH, c.lossCap)); save(b) }
+            "₹%,.0f loss cap, strike ${c.strikeRule.label}, stock options ${if (c.stocks) "on" else "off"}".format(Locale.ENGLISH, c.lossCap)); save(b) }
         "At most ${c.lots} lot(s) a trade, ${c.maxPerDay} trades a day, messages older than ${c.staleMin} minutes not traded, strike ${c.strikeRule.label}."
     }
 
@@ -427,9 +427,10 @@ object NtfyArm {
     @Volatile internal var testListed: ((String) -> List<Upstox.Contract>)? = null
     @Volatile internal var testSpot: ((String) -> Double?)? = null
 
-    /** The index's listed options from the lists saved on the phone today: never a download in the pass (as FT3). */
-    private fun listed(u: String): List<Upstox.Contract> {
+    /** The index's (or an F&O stock's) listed options from the lists saved on the phone today: never a download in the pass (as FT3). */
+    private fun listed(u: String, stock: Boolean = false): List<Upstox.Contract> {
         testListed?.let { return it(u) }
+        if (stock) return StockOptions.listed(u).also { if (it.isEmpty() && !StockOptions.ready()) StockOptions.refreshInBackground() }
         val bfo = u == Paper.BFO_UNDERLYING
         val saved = runCatching { if (bfo) Market.cachedBfoContracts() else Market.cachedContracts() }.getOrNull()
         if (saved == null || saved.first != Market.today()) {
@@ -439,10 +440,10 @@ object NtfyArm {
         return saved.second.filter { it.underlying == u }
     }
 
-    /** The index's last price: its last finished minute (the quick read: 5 s connect, one retry), or null. */
+    /** The index's (or the stock's) last price: its last finished minute (the quick read: 5 s connect, one retry), or null. */
     private suspend fun spot(u: String): Double? {
         testSpot?.let { return it(u) }
-        val key = Ft3Arm.indexKey(u) ?: return null
+        val key = Ft3Arm.indexKey(u) ?: StockOptions.eqKey(u) ?: return null
         return runCatching { Net.intradayQuick(key) }.getOrNull().orEmpty().filter { it.istDate == Market.today() }
             .maxByOrNull { it.epochSecond }?.close?.takeIf { it > 0 }
     }
@@ -475,19 +476,24 @@ object NtfyArm {
         if (runCatching { AppSettings.load().guardKill }.getOrDefault(true)) return done("refused: the kill switch is on")
         if (stoppedToday()) return done("refused: the bot is stopped for today")
         runCatching { DayLockGuard.refusal(false) }.getOrNull()?.let { return done("refused: $it") }
+        if (p.stock && !s.stocks) return done("not traded: stock options are switched off (Settings → Automation → ntfy alerts)")
         // The contract: the message's expiry (else the nearest), its strike when listed (else the strike rule on the index's price).
-        val list = listed(p.index)
-        if (list.isEmpty()) return say(b, "waiting for today's ${p.index} options list")
+        val list = listed(p.index, p.stock)
+        if (list.isEmpty()) return if (p.stock && StockOptions.ready()) done("not traded: ${p.index} has no listed options today (not an F&O stock)")
+            else say(b, "waiting for today's ${p.index} options list")
         val exp = NtfyRules.expiryFor(list.map { it.expiry }, today, p.expiry) ?: return done("not traded: the expiry asked for is not listed today")
         val right = p.right
         val strikes = list.filter { it.expiry == exp && it.right == right }.map { it.strike }
+        // A stock signal names its strike: never another stock strike by a rule.
+        if (p.stock && p.strike !in strikes) return done("not traded: ${p.index} ${p.strike?.let { NtfyParser.num(it) }} ${right.name} is not listed for $exp")
         val strike = p.strike?.takeIf { it in strikes } ?: run {
             val px = spot(p.index) ?: return say(b, "waiting for ${p.index}'s price")
             NtfyRules.strikeFor(strikes, px, right, p.pick ?: s.strikeRule) ?: return done("not traded: no ${p.index} strike for the rule")
         }
         val expiryDay = exp == today
         NtfyRules.marketRefusal(now, tradingDay, expiryDay)?.let { return done("not traded: $it") }
-        val c = Paper.ticketContract(p.index, exp, strike, right) ?: return done("not traded: ${p.index} ${NtfyParser.num(strike)} ${right.name} is not in the phone's options list")
+        val c = (if (p.stock) list.firstOrNull { it.expiry == exp && it.right == right && it.strike == strike }?.let { Paper.stockContract(it) }
+            else Paper.ticketContract(p.index, exp, strike, right)) ?: return done("not traded: ${p.index} ${NtfyParser.num(strike)} ${right.name} is not in the phone's options list")
         if (c.lotSize <= 0) return done("not traded: lot size unknown")
         if (b.positions.any { it.open && it.symbol == c.symbol } || Paper.state.positions.any { it.symbol == c.symbol && it.quantity != 0 })
             return done("not traded: ${c.symbol} is already held - never two positions on one contract")

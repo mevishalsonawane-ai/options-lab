@@ -290,6 +290,43 @@ class NtfyArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /** 25 Oct (Boss: "add normal stocks"): Boss's own stock signal buys the option it names; the stock's own stop closes it. */
+    @Test fun aStockSignalBuysItsOptionAndTheStocksLevelClosesIt() {
+        val opt = "NSE_FO|ADANI2500PE"; val cash = "NSE_EQ|INE423A01024"
+        StockOptions.testFetch = { listOf(com.optionslab.engine.Upstox.Contract("ADANIENT", day.plusDays(2), 2500.0, Right.PE, 300, opt, "ADANIENT 2500 PE")) to
+            mapOf("ADANIENT" to cash) }
+        StockOptions.refreshNow()
+        on()
+        fun stock(px: Double, until: LocalTime) {
+            val o = ArrayList<FakeUpstox.Candle>(); val e = ArrayList<FakeUpstox.Candle>()
+            var t = LocalTime.of(9, 15)
+            while (t.isBefore(until)) { o += FakeUpstox.Candle(t, 26.0, 26.0, 26.0, 26.0); e += FakeUpstox.Candle(t, px, px, px, px); t = t.plusMinutes(1) }
+            upstox.minutes[opt] = o; upstox.minutes[cash] = e
+        }
+        val j = """{"type":"signal","test":false,"source":"IraThinker","version":51,"strategy":"MANUAL","signalId":"MANUAL|ADANIENT.NS|ORB_DOWN|1",""" +
+            """"tsIST":"${day.atTime(9, 28)}+05:30","symbol":"Adani Enterprises","yahooSymbol":"ADANIENT.NS","side":"BUY_PUT","entry":2503.0,""" +
+            """"stop":2522.9,"target1":2463.2,"target2":2443.3,"score":0.6,"option":{"strike":2500,"expiry":"${day.plusDays(2)}","kind":"PE","premium":26.4}}"""
+        msg("s1", j, title = "signal")
+        stock(2503.0, LocalTime.of(9, 29))
+        at(LocalTime.of(9, 28), 30); runBlocking { NtfyArm.tick() }
+        val p = v().open.single()
+        assertTrue(p.symbol, p.symbol.startsWith("ADANIENT") && p.symbol.endsWith("2500PE"))
+        assertEquals(300, p.qty); assertEquals(2522.9, p.idxStop!!, 1e-9)
+        // The stock rises through the signal's own stop (2522.9): sold.
+        stock(2525.0, LocalTime.of(9, 32)); at(LocalTime.of(9, 32)); runBlocking { NtfyArm.tick() }
+        assertEquals("index stop", v().closed.single().why)
+        // Stock options switched off: a stock signal is not traded; a strike not listed is not traded.
+        runBlocking { NtfyArm.setSettings(NtfyRules.Settings(stocks = false)) }
+        msg("s2", j.replace("|1\"", "|2\""), LocalTime.of(9, 33), title = "signal")
+        at(LocalTime.of(9, 33), 30); runBlocking { NtfyArm.tick() }
+        assertTrue(alert("s2").why, alert("s2").why.contains("stock options are switched off"))
+        runBlocking { NtfyArm.setSettings(NtfyRules.Settings(stocks = true)) }
+        msg("s3", j.replace("|1\"", "|3\"").replace("\"strike\":2500", "\"strike\":2600"), LocalTime.of(9, 34), title = "signal")
+        at(LocalTime.of(9, 34), 30); runBlocking { NtfyArm.tick() }
+        assertTrue(alert("s3").why, alert("s3").why.contains("not listed"))
+        assertNothingAtZerodha()
+    }
+
     @Test fun aPrefixFiltersMessages() {
         on()
         SecurePrefs.put(NtfyReader.K_PREFIX, "IRA:")

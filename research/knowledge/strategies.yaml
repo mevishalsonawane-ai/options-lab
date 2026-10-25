@@ -384,3 +384,19 @@
       costs: "perp taker 0.05% + 1 bp slippage a side, plus funding"
       src: research/CRYPTO_C2_WINDOW.md
       sec: "Verdict (read this first)"
+
+- id: ntfy-alerts
+  name: ntfy alerts (external messages)
+  instruments: [NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX]
+  tags: [external-signal, option-buying]
+  what: >-
+    Reads Boss's ntfy topic and buys the option a clear message names (or the index option the strike rule picks), on paper
+    by default. Its signal is an external message: it is not a researched or proven strategy, and no test has been run on it.
+  verdict: context
+  facts:
+    - text: "ntfy alerts: the stop always rests (the message's, else 20% under the fill); target the message's, else 40% over the fill; at most 3 trades a day; messages older than 5 minutes are not traded."
+      period: "rules since 25 Oct 2026 (no trades yet)"
+      costs: "paper fills and charges"
+      src: research/NTFY_ALERTS.md
+      sec: What the app does with a message (the rules, not evidence)
+

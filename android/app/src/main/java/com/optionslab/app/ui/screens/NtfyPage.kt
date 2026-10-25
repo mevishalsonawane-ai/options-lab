@@ -145,6 +145,8 @@ internal fun NtfyContent(v: NtfyArm.View, st: NtfyReader.Status, cfg: NtfyReader
             LedgerCard(Modifier.padding(top = 10.dp)) {
                 SwitchRow("On (paper)", "Off by default. Off buys nothing new; what is held still closes by its own exits.", v.on, "ntfy-on", onOn)
                 SwitchRow("Trade live", "Off by default. On asks your PIN, and trades live only in Live with AI trades on.", liveOn, "ntfy-live", onLive)
+                SwitchRow("Stock options too", "Your signals for NSE F&O stocks (\"X.NS\") buy the option they name. Off: index options only.",
+                    v.settings.stocks, "ntfy-stocks") { onSettings(v.settings.copy(stocks = it)) }
                 Text("Reader: ${st.said}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.testTag("ntfy-reader"))
                 Rule(Modifier.padding(vertical = 8.dp))
                 val s = v.settings

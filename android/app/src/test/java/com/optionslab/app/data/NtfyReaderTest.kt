@@ -37,10 +37,12 @@ class NtfyReaderTest : RobolectricTest() {
         Market.testClock = Clock.fixed(t.toInstant(), IST)
         nowSec = t.toEpochSecond()
         NtfyReader.testServer = server.url("/").toString().trimEnd('/')
-        NtfyReader.testInHours = true
+        // No stock list download in these tests (never the internet).
+        StockOptions.testFetch = { emptyList<com.optionslab.engine.Upstox.Contract>() to emptyMap() }
+        NtfyReader.testInHours = false
         SecurePrefs.put(NtfyReader.K_TOPIC, topic)
         runBlocking { NtfyArm.setOn(true, log = false) }
-        NtfyReader.stop("test")
+        NtfyReader.testInHours = true
     }
 
     @After fun down() {
