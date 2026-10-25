@@ -143,6 +143,26 @@ class NtfyReaderTest : RobolectricTest() {
         assertTrue(NtfyReader.status.value.said, NtfyReader.status.value.said.contains("outside market hours"))
     }
 
+    /** 25 Oct review: a new prefix applied only after a reconnect; it is read for each message now, and saving it restarts the reader. */
+    @Test fun aNewPrefixAppliesToTheNextMessageAtOnce() {
+        server.enqueue(MockResponse().setBody(""))
+        server.enqueue(MockResponse().setBody(line("m1", "BUY NIFTY 25000 CE")).setBodyDelay(1_500, TimeUnit.MILLISECONDS))
+        server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+        NtfyReader.ensure()
+        waitFor("connected") { NtfyReader.status.value.connected }
+        SecurePrefs.put(NtfyReader.K_PREFIX, "IRA:")
+        waitFor("the message") { NtfyArm.view.value.alerts.size == 1 }
+        assertTrue(NtfyArm.view.value.alerts.single().why, NtfyArm.view.value.alerts.single().why.contains("prefix"))
+        // Saving a prefix through the page restarts the reader (a new connection: the catch-up poll again).
+        val before = server.requestCount
+        server.enqueue(MockResponse().setBody(""))
+        server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+        NtfyReader.setPrefix("IRB:")
+        waitFor("reconnected") { server.requestCount > before }
+        assertTrue(NtfyReader.status.value.running)
+        NtfyReader.stop("test")
+    }
+
     @Test fun testFetchesWithoutTradingOrMarkingRead() {
         server.enqueue(MockResponse().setBody(line("m1", "BUY NIFTY 25000 CE") + line("m2", "NIFTY CE PE") + keepalive()))
         val said = runBlocking { NtfyReader.test() }

@@ -105,6 +105,8 @@ object NtfyReader {
     fun setPrefix(prefix: String): String {
         val p = prefix.trim().take(20)
         SecurePrefs.put(K_PREFIX, p.ifEmpty { null })
+        // 25 Oct (review): a new prefix applies at once (each message also reads it fresh, [read]).
+        restart()
         return if (p.isEmpty()) "No prefix: every message is read." else "Only messages starting with \"$p\" are read."
     }
 
@@ -208,7 +210,8 @@ object NtfyReader {
                 val e = NtfyRules.event(line) ?: continue
                 if (!e.isMessage) continue
                 _status.value = _status.value.copy(lastMessageAt = System.currentTimeMillis())
-                NtfyArm.receive(listOf(e), c.prefix)
+                // 25 Oct (review): the prefix read fresh for each message - a new one applies without a reconnect.
+                NtfyArm.receive(listOf(e), runCatching { SecurePrefs.getString(K_PREFIX).orEmpty() }.getOrDefault(c.prefix))
             }
         }
     }
