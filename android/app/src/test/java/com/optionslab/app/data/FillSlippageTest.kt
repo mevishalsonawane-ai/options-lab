@@ -116,6 +116,29 @@ class FillSlippageTest : RobolectricTest() {
         assertTrue(FillSlippage.fills().isEmpty())
     }
 
+    /**
+     * 25 Oct (app audit: "no fills measured yet" every day of 19-24 Oct): a resting paper stop that filled on a pass is measured
+     * against its trigger (an exit), a resting limit buy against its price (an entry); a market order is not measured here.
+     */
+    @Test fun restingPaperStopsAndLimitsAreMeasuredFromTheirTriggerAndPrice() {
+        val t = java.time.LocalDateTime.of(2026, 10, 23, 9, 26)
+        fun order(id: String, type: String, action: String, price: Double?, trigger: Double?) = com.optionslab.engine.sandbox.Order(id, null, sym, "NFO", action, 75,
+            price?.toBigDecimal(), trigger?.toBigDecimal(), type, "MIS", "complete", null, 75, 0, null, java.math.BigDecimal.ZERO, t, t)
+        fun fill(id: String, action: String, px: Double) = com.optionslab.engine.sandbox.SandboxEvent.Fill(id, "t$id", sym, "NFO", action, 75, px, "MIS")
+        FillSlippage.resting(fill("1", "SELL", 117.2), order("1", "SL-M", "SELL", null, 120.0))
+        FillSlippage.resting(fill("2", "BUY", 28.3), order("2", "LIMIT", "BUY", 28.5, null))
+        FillSlippage.resting(fill("3", "SELL", 150.0), order("3", "MARKET", "SELL", null, null))
+        FillSlippage.resting(fill("4", "SELL", 150.0), null)
+        val got = awaitFills(2)
+        Thread.sleep(100)
+        assertEquals(2, FillSlippage.fills().size)
+        val stop = got.single { it.basis == Slippage.Basis.TRIGGER }
+        assertTrue(stop.paper); assertEquals(Slippage.Leg.EXIT, stop.leg); assertEquals(2.8, stop.rupees, 1e-9)
+        val lim = got.single { it.basis == Slippage.Basis.LIMIT }
+        assertEquals(Slippage.Leg.ENTRY, lim.leg); assertEquals(-0.2, lim.rupees, 1e-9)
+        assertTrue(FillSlippage.diagLine().contains("paper (modelled) kept"))
+    }
+
     @Test fun paperFillsAreKeptApartAndTheFileReadsBackEncrypted() {
         FillSlippage.paper(sym, "BUY", entry = true, qty = 75, intended = 100.0, avg = 100.05, limit = false)
         val p = awaitFills(1).single()

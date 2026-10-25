@@ -1010,6 +1010,19 @@ object Paper {
         locked { val b = book(); if (b.contracts[c.symbol] != c) save(b.copy(contracts = b.contracts + (c.symbol to c))) }
     }
 
+    /**
+     * 25 Oct (app audit): the resting orders (stops, limits) that filled in [events] measured against their trigger or price
+     * ([FillSlippage.resting]): the orders read from memory, the fill kept in the background.
+     */
+    private fun measureResting(events: List<SandboxEvent>) {
+        val fills = events.filterIsInstance<SandboxEvent.Fill>()
+        if (fills.isEmpty()) return
+        runCatching {
+            val orders = book().state.orders.associateBy { it.orderId }
+            fills.forEach { f -> runCatching { FillSlippage.resting(f, orders[f.orderId]) } }
+        }
+    }
+
     /** Each paper fill in [r] measured against [intended] ([FillSlippage.paper]: kept in the background, never the book's). */
     private fun modelled(r: Result, entry: Boolean, intended: Double?, limit: Boolean) {
         if (!r.ok) return
@@ -1153,6 +1166,7 @@ object Paper {
         events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
             runCatching { LiveRecorder.fill(f.symbol, f.action, f.action.equals("SELL", true), f.quantity, f.price, null, paper = true, arm = null, note = "resting") }
         }
+        measureResting(events)
         // The engine's own 15:15 MIS square-off is named on the order it placed.
         events.filterIsInstance<SandboxEvent.SquareOff>().mapNotNull { it.result.orderId }
             .forEach { runCatching { Strategies.tagOwner("paper:$it", Origins.AUTO_SQUARE_OFF) } }
@@ -1248,6 +1262,7 @@ object Paper {
             if (s != b.state) save(b.copy(state = s))
         }
         noteStale(fill, events)
+        measureResting(events)
         return Sweep(out, failsafeHeld(held, book().contracts), q.keys)
     }
 
