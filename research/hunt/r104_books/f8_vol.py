@@ -210,6 +210,8 @@ def run_struct(ch, d0, legs, er, exit_day, exit_row, q, stop=None, hedge=None, s
     D0 = ch.D(d0)
     if D0 is None:
         return None
+    if ch.expiry_for(d0) is None or exit_day > ch.expiry_for(d0):
+        return None                         # never hold a contract past its own expiry (the store's series rolls)
     entry, cost = [], 0.0
     stale_n = 0
     for side, k, sg, lots in legs:
@@ -433,6 +435,7 @@ def frame(rows):
     t = pd.DataFrame(rows)
     if len(t) == 0:
         return pd.DataFrame(columns=["day", "net", "fold"])
+    t = t[np.isfinite(t.net.astype(float))]        # a trade with no price at all (no spot print) is dropped
     t["fold"] = [K.fold_of("VOL", d) for d in t.day]
     return t
 
@@ -805,29 +808,30 @@ def ross02(part):
 
 
 def whd02(part):
+    """Buy the ATM straddle at 15:15 the session before an RBI policy / Budget day, sell at 15:15 on the event day, in
+    the nearest expiry at least 2 sessions away (the weekly series, else the monthly series)."""
     rows = []
     ev = sorted(event_days())
     for und in UNDS:
-        ch = chain(und)
+        chw, chm = chain(und), chain(und, "MONTH")
         past_ranges = []
         for e in ev:
-            prev = [d for d in ch.dates if d < e]
-            if not prev or e not in ch.days:
+            prev = [d for d in chw.dates if d < e]
+            if not prev or chw.D(e) is None:
                 continue
             d = prev[-1]
-            D, De = ch.D(d), ch.D(e)
-            if De is None:
-                continue
+            De = chw.D(e)
             rr = (np.nanmax(De.idx[1]) - np.nanmin(De.idx[2]))
-            if not in_part(d, part):
+            ch = None
+            for c_ in (chw, chm):
+                x = c_.expiry_for(d)
+                if x is not None and c_.D(d) is not None and len([y for y in c_.dates if d < y <= x]) >= 2:
+                    ch = c_
+                    break
+            if ch is None or not in_part(d, part):
                 past_ranges.append(rr)
                 continue
-            exp = ch.expiry_for(d)
-            # the nearest expiry at least 2 sessions away
-            if exp is None or len([x for x in ch.dates if d < x <= exp]) < 2:
-                exp2 = [x for x in ch.exp if len([y for y in ch.dates if d < y <= x]) >= 2]
-                if not exp2:
-                    continue
+            D = ch.D(d)
             k0 = atm_strike(D, 360, ch.step)
             q = K.lot(und, d)
             cost_pts = spot_leg(D, "C", k0, 360) + spot_leg(D, "P", k0, 360)
