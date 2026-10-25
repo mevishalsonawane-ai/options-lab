@@ -514,6 +514,8 @@ object NtfyArm {
         val sent = p.sentAt?.let { minOf(it, a.at) } ?: a.at
         val tradingDay = runCatching { Market.isTradingDay(now.toLocalDate()) }.getOrDefault(false)
         NtfyRules.marketRefusal(now, tradingDay, false)?.let { return done("not traded: $it") }
+        // 25 Oct (review): a message sent before the open, or stale by now, is never bought (an 08:00 message was bought at 09:15).
+        NtfyRules.entryRefusal(sent, now, s.staleMin)?.let { return done(it) }
         if (NtfyRules.phase(sent, now, s, false) == NtfyRules.Phase.LATE)
             return done(NtfyRules.stale(sent, now, s.staleMin) ?: "not filled within ${s.staleMin} minutes - no order")
         val today = now.toLocalDate()

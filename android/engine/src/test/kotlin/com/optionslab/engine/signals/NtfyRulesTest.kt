@@ -64,11 +64,22 @@ class NtfyRulesTest {
         assertEquals(Phase.OPEN, NtfyRules.phase(at(10, 0), at(10, 4), s, false))
         assertEquals(Phase.LATE, NtfyRules.phase(at(10, 0), at(10, 5), s, false))
         assertEquals(Phase.LATE, NtfyRules.phase(at(10, 0), at(10, 1).plusDays(1), s, false))
-        // Before the open the window starts at 09:15.
-        assertEquals(Phase.OPEN, NtfyRules.phase(at(9, 10), at(9, 18), s, false))
+        // 25 Oct (review): a message sent before the open is never in its window (it was bought at 09:15, however old).
+        assertEquals(Phase.LATE, NtfyRules.phase(at(9, 10), at(9, 15), s, false))
+        assertEquals(Phase.LATE, NtfyRules.phase(at(8, 0), at(9, 15), s, false))
+        assertEquals(Phase.OPEN, NtfyRules.phase(at(9, 15), at(9, 16), s, false))
         // Never past the square-off (15:05 on expiry day).
         assertEquals(Phase.LATE, NtfyRules.phase(at(15, 3), at(15, 5), s, true))
         assertEquals(Phase.OPEN, NtfyRules.phase(at(15, 3), at(15, 5), s, false))
+    }
+
+    @Test fun aMessageSentBeforeTheOpenOrStaleIsNeverBought() {
+        assertEquals("not traded: sent before the open (09:15)", NtfyRules.entryRefusal(at(8, 0), at(9, 15), 5))
+        assertEquals("not traded: sent before the open (09:15)", NtfyRules.entryRefusal(at(9, 14), at(9, 15), 5))
+        assertTrue(NtfyRules.entryRefusal(at(9, 20), at(9, 30), 5)!!.startsWith("stale, not traded: 10 minutes old"))
+        assertTrue(NtfyRules.entryRefusal(at(15, 0).minusDays(1), at(9, 20), 5)!!.contains("earlier day"))
+        assertNull(NtfyRules.entryRefusal(at(9, 15), at(9, 16), 5))
+        assertNull(NtfyRules.entryRefusal(at(10, 0), at(10, 5), 5))
     }
 
     @Test fun triggers() {

@@ -76,10 +76,13 @@ object NtfyRules {
     /** The square-off of a day: 15:15, or 15:05 when the option expires that day. */
     fun squareOff(expiryDay: Boolean): LocalTime = if (expiryDay) LocalTime.of(NseHours.EXPIRY_SQUARE_OFF / 60, NseHours.EXPIRY_SQUARE_OFF % 60) else SQ
 
-    /** Where a message sent at [msgAt] stands at [now]: in its entry window, or past it (or past the square-off, or another day). */
+    /**
+     * Where a message sent at [msgAt] stands at [now]: in its entry window, or past it (or past the square-off, or another day).
+     * 25 Oct (review): the window starts at the SENDING time, never at 09:15 - a message sent before the open is never in it.
+     */
     fun phase(msgAt: LocalDateTime, now: LocalDateTime, s: Settings, expiryDay: Boolean): Phase {
-        val from = maxOf(msgAt, msgAt.toLocalDate().atTime(OPEN))
-        val end = minOf(from.plusMinutes(s.staleMin.toLong()), msgAt.toLocalDate().atTime(squareOff(expiryDay)))
+        if (msgAt.toLocalTime().isBefore(OPEN)) return Phase.LATE
+        val end = minOf(msgAt.plusMinutes(s.staleMin.toLong()), msgAt.toLocalDate().atTime(squareOff(expiryDay)))
         return if (!now.toLocalDate().isEqual(msgAt.toLocalDate()) || !now.isBefore(end)) Phase.LATE else Phase.OPEN
     }
 
@@ -137,6 +140,15 @@ object NtfyRules {
         msgAt.plusMinutes(staleMin.toLong()).isBefore(now) ->
             "stale, not traded: ${java.time.Duration.between(msgAt, now).toMinutes()} minutes old (the limit is $staleMin)"
         else -> null
+    }
+
+    /**
+     * 25 Oct (review): why a buy sent at [msgAt] may not be bought at [now] whatever the market: sent before the open (09:15; a
+     * message from 08:00 is never bought at the open), or stale ([stale]). Null: it may still be bought.
+     */
+    fun entryRefusal(msgAt: LocalDateTime, now: LocalDateTime, staleMin: Int): String? = when {
+        msgAt.toLocalDate() == now.toLocalDate() && msgAt.toLocalTime().isBefore(OPEN) -> "not traded: sent before the open (09:15)"
+        else -> stale(msgAt, now, staleMin)
     }
 
     /** Why nothing new may be bought at [now] on a day that is [tradingDay] (expiring today: [expiryDay]), or null. */

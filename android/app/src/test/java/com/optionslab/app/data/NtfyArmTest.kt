@@ -182,6 +182,23 @@ class NtfyArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /** 25 Oct review: "NIFTY 25000 CE" sent before the open was bought at 09:15, however old (the window started at 09:15). */
+    @Test fun aMessageSentBeforeTheOpenIsNeverBoughtAtTheOpen() {
+        on()
+        msg("pre", "BUY NIFTY 25000 CE", LocalTime.of(9, 12))
+        assertEquals(NtfyArm.PENDING, alert("pre").state)
+        tick(LocalTime.of(9, 15), 30)
+        assertEquals(NtfyArm.NOT_TRADED, alert("pre").state)
+        assertTrue(alert("pre").why, alert("pre").why.contains("sent before the open"))
+        // Sent in the session but old by the time the pass decides it: stale, never bought.
+        msg("slow", "BUY NIFTY 25000 CE", LocalTime.of(9, 16))
+        assertEquals(NtfyArm.PENDING, alert("slow").state)
+        tick(LocalTime.of(9, 23))
+        assertTrue(alert("slow").why, alert("slow").why.startsWith("stale, not traded"))
+        assertTrue(v().open.isEmpty() && Paper.state.orders.isEmpty())
+        assertNothingAtZerodha()
+    }
+
     @Test fun aHolidayOrWeekendIsMarketClosed() {
         on()
         var d = day.plusDays(1)
