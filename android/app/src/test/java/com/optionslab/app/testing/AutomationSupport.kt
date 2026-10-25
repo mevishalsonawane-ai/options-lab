@@ -38,10 +38,15 @@ object AutomationSupport {
         return d.atTime(LocalTime.of(h, m)).atZone(IST)
     }
 
-    /** Now, as a time today before 15:00 and never later than the real clock (Zerodha's order times come from it). */
+    /**
+     * Now by the MARKET's clock ([Market.now]: the test rule's noon on a trading day, or the test's own clock), five seconds back
+     * and never past 15:00. 25 Oct (the Sunday CI run): it read the wall clock before, so at a weekend the arms' "now" was two
+     * days after [Market.today] and their day counts came out empty; the fake Zerodha stamps its orders from the same clock
+     * ([FakeKite]), so the two can never drift apart again.
+     */
     fun earlierToday(): ZonedDateTime {
-        val real = ZonedDateTime.now(IST).minusSeconds(5)
-        return if (real.hour * 60 + real.minute >= 15 * 60) real.with(LocalTime.of(15, 0)) else real
+        val now = Market.now().minusSeconds(5)
+        return if (now.hour * 60 + now.minute >= 15 * 60) now.with(LocalTime.of(15, 0)) else now
     }
 
     /** Live mode with real orders on, no entry cut-off (tests run at any hour). */

@@ -64,7 +64,6 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZonedDateTime
 
 /** Fake state for the Strategies page, Home's strategy card and the ORB rows (no AppModel, no network). */
 internal object StrategyFakes {
@@ -73,7 +72,7 @@ internal object StrategyFakes {
             scheduler = armed?.let { SchedulerConfig(true, DayOfWeek.entries.take(5), LocalTime.of(9, 20), LocalTime.of(15, 15), it) })
 
     fun running(id: Long, name: String, mode: RunMode = RunMode.LIVE): Strategies.Entry {
-        val run = RunState(runId = 7, strategyId = id, mode = mode, status = RunStatus.ACTIVE, startedAt = ZonedDateTime.now(IST),
+        val run = RunState(runId = 7, strategyId = id, mode = mode, status = RunStatus.ACTIVE, startedAt = com.optionslab.app.data.Market.now(),
             pnlTotal = -1_250.0, pnlRealized = 0.0)
         run.legs["1"] = LegState(1, "S", "NIFTY26OCT24500CE", "NFO", 1, 75, entryStatus = "complete", entryAvg = 100.0, ltp = 116.0,
             mtm = -1_200.0, status = "open", effectiveSl = 130.0)
@@ -87,7 +86,7 @@ internal object StrategyFakes {
         Strategies.LogLine(System.currentTimeMillis(), "Straddle", "leg_entry_placed", "Entry SELL 75 NIFTY26OCT24500CE placed", "info"),
     )
 
-    private val today: LocalDate = LocalDate.now(IST)
+    private val today: LocalDate = com.optionslab.app.data.Market.today()
     private fun contract(r: Right) = Paper.Contract("BANKNIFTY-TEST-52000$r", "BANKNIFTY", today.plusDays(5), 52_000.0, r, 30, "NSE_FO|$r")
 
     /**

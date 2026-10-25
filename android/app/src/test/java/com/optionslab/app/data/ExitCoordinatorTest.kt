@@ -531,7 +531,7 @@ class ExitCoordinatorTest : RobolectricTest() {
         ExitCoordinator.resetForTest(lagOn = true)
         kite.position(ce, 150, 20.0)
         val id = restingStopFills(75, trail = 0)
-        kite.order(id).updated = java.time.LocalDateTime.now(com.optionslab.engine.IST).minusMinutes(10)
+        kite.order(id).updated = Market.now().toLocalDateTime().minusMinutes(10)
         assertEquals(75, heldFor())
         assertEquals("no exit of ours sent and no fresh fill: one read", 1, positionReads())
         assertEquals(0, ExitCoordinator.countsForTest().let { it.lagShadow + it.lagReadAgain + it.lagSubtracted })

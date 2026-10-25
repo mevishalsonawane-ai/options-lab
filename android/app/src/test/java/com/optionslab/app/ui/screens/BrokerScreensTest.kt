@@ -78,7 +78,6 @@ import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.ConscryptMode
 import org.robolectric.annotation.GraphicsMode
-import java.time.LocalDate
 
 /**
  * The Zerodha pages, driven as the owner drives them, over a real [AppModel] and the fake Kite
@@ -98,8 +97,8 @@ class BrokerScreensTest {
     private lateinit var kite: FakeKite
     private val store = androidx.lifecycle.ViewModelStore()
     private val app: Application get() = ApplicationProvider.getApplicationContext()
-    private val e1 = LocalDate.now().plusDays(9)
-    private val e2 = LocalDate.now().plusDays(16)
+    private val e1 = com.optionslab.app.data.Market.today().plusDays(9)
+    private val e2 = com.optionslab.app.data.Market.today().plusDays(16)
 
     @Before fun up() {
         kite = FakeKite()
@@ -1139,7 +1138,7 @@ abstract class BrokerLayoutBase(device: DeviceConfig) : BrokerScreenBase(device)
     private lateinit var kite: FakeKite
     private val store = androidx.lifecycle.ViewModelStore()
     private val app: Application get() = ApplicationProvider.getApplicationContext()
-    private val e1 = LocalDate.now().plusDays(9)
+    private val e1 = com.optionslab.app.data.Market.today().plusDays(9)
 
     @Before fun up() {
         kite = FakeKite()

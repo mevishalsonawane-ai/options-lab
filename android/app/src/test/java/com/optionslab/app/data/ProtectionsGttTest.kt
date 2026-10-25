@@ -29,7 +29,7 @@ class ProtectionsGttTest : RobolectricTest() {
     @Before fun up() {
         ExitCoordinator.resetForTest()
         kite = FakeKite()
-        kite.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", LocalDate.now().plusDays(20), 24_500.0, "CE", 75)
+        kite.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", Market.today().plusDays(20), 24_500.0, "CE", 75)
         kite.position(sym, 75, 100.0)
         kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
         kite.login()
@@ -39,7 +39,7 @@ class ProtectionsGttTest : RobolectricTest() {
 
     /** The clock at [h]:[m] IST on the [nth] trading day after today. */
     private fun session(h: Int, m: Int, nth: Int = 1) {
-        var d = LocalDate.now(com.optionslab.engine.IST)
+        var d = com.optionslab.app.testing.MarketClockRule.pinnedDay()
         repeat(nth) { d = d.plusDays(1); while (!Market.isTradingDay(d)) d = d.plusDays(1) }
         val at = d.atTime(h, m).atZone(com.optionslab.engine.IST).toInstant()
         Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), at))
@@ -336,11 +336,11 @@ class ProtectionsGttTest : RobolectricTest() {
      */
     @Test fun aCarriedMcxProtectionRestsAsAGttAfterMcxsCloseAndComesBackAtItsOpen() {
         val m = "CRUDEOIL26NOVFUT"
-        kite.instruments += FakeKite.Ins(55_001, m, "CRUDEOIL", LocalDate.now(com.optionslab.engine.IST).plusDays(30), 0.0, "FUT", 1, tick = 1.0, exchange = "MCX")
+        kite.instruments += FakeKite.Ins(55_001, m, "CRUDEOIL", Market.today().plusDays(30), 0.0, "FUT", 1, tick = 1.0, exchange = "MCX")
         kite.position(m, 2, 5_000.0, exchange = "MCX")
         kite.quote("MCX:$m", 5_000.0, 4_999.0, 5_001.0)
         val cal = McxMarket.calendar()
-        var d = LocalDate.now(com.optionslab.engine.IST).plusDays(1)
+        var d = com.optionslab.app.testing.MarketClockRule.pinnedDay().plusDays(1)
         // Review: a full evening session, then a next day that opens at 09:00 (an evening-only holiday session would not).
         while (cal.window(d)?.close?.let { it.hour == 23 } != true || cal.window(d.plusDays(1))?.open != com.optionslab.engine.mcx.McxSession.OPEN) d = d.plusDays(1)
         val close = cal.window(d)!!.close

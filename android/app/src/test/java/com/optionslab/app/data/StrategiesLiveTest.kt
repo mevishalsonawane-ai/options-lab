@@ -60,8 +60,9 @@ class StrategiesLiveTest : RobolectricTest() {
      * a fixed clock: the waits inside still see time pass).
      */
     private fun midSession() {
+        // 25 Oct: 11:00 on the MARKET's day (the test rule's trading day), not the wall clock's date (a Sunday in CI).
         val sys = java.time.Clock.system(com.optionslab.engine.IST)
-        val at = java.time.ZonedDateTime.now(sys).toLocalDate().atTime(11, 0).atZone(com.optionslab.engine.IST)
+        val at = Market.today().atTime(11, 0).atZone(com.optionslab.engine.IST)
         Market.testClock = java.time.Clock.offset(sys, java.time.Duration.between(java.time.ZonedDateTime.now(sys), at))
     }
 
@@ -250,7 +251,7 @@ class StrategiesLiveTest : RobolectricTest() {
     @Test fun theStopChecksOwnPassSellsTheLegThroughItsStopOnce() {
         // 18 Oct (CI after 15:15 IST): on the real clock the basket's own 15:15 exit time sold the leg on the first pass
         // ("nothing sold above the stop" failed on any run after 15:15). The clock reads 10:00 IST today, and moves.
-        val ten = java.time.LocalDate.now(com.optionslab.engine.IST).atTime(10, 0).atZone(com.optionslab.engine.IST).toInstant()
+        val ten = Market.today().atTime(10, 0).atZone(com.optionslab.engine.IST).toInstant()
         Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), ten))
         live()
         midSession()

@@ -12,7 +12,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.robolectric.annotation.ConscryptMode
-import java.time.LocalDate
 
 /** Live stop / target protection against the fake Kite: the orders sent, OCO, lost replies, refusals. */
 @ConscryptMode(ConscryptMode.Mode.OFF)
@@ -22,7 +21,7 @@ class ProtectionsLiveTest : RobolectricTest() {
 
     @Before fun up() {
         kite = FakeKite()
-        kite.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", LocalDate.now().plusDays(20), 24_500.0, "CE", 75)
+        kite.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", Market.today().plusDays(20), 24_500.0, "CE", 75)
         kite.position(sym, 75, 100.0)
         kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
     }
@@ -31,7 +30,7 @@ class ProtectionsLiveTest : RobolectricTest() {
 
     /** The clock at [h]:[m] IST on the next trading day after today (still ticking). */
     private fun nextSession(h: Int, m: Int, nth: Int = 1) {
-        var d = LocalDate.now(com.optionslab.engine.IST)
+        var d = com.optionslab.app.testing.MarketClockRule.pinnedDay()
         repeat(nth) { d = d.plusDays(1); while (!Market.isTradingDay(d)) d = d.plusDays(1) }
         val at = d.atTime(h, m).atZone(com.optionslab.engine.IST).toInstant()
         Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), at))

@@ -27,7 +27,7 @@ class LiquidityReplayCardTest {
     @get:Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
 
-    private val today: LocalDate = LocalDate.now(IST)
+    private val today: LocalDate = com.optionslab.app.data.Market.today()
     private val bar = today.atTime(10, 40)
     private val closed = OrbArms.Position("liquidity5", "BANKNIFTY-TEST-52000CE", "CE", 30, 210.0, bar.plusMinutes(6), bar, "E1", "S1", 178.5,
         exit = 250.0, exitTime = bar.plusMinutes(40), why = "next_liquidity", charges = 42.0, level = 52_010.0, target = 52_060.0,

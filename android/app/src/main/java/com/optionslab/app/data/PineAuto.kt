@@ -1099,7 +1099,9 @@ object PineAuto {
         if (f == null || f.status !in DONE) {
             // No answer: it may have filled, or still be working. Tracked as held (at most the full quantity) and
             // settled from the order book on the next passes, rather than left unwatched.
-            b.held[id] = Held(c.symbol, right.name, o.quantity, ins.lotSize, quote, today.toString(), true, sym, orderId, System.currentTimeMillis())
+            // 25 Oct: [since] is compared with Zerodha's order time ([settle]: [Broker.latestTagged]), so it reads [Market.now] (the
+            // system clock on the phone; in a test the market clock the fake Zerodha stamps its orders from), never another clock.
+            b.held[id] = Held(c.symbol, right.name, o.quantity, ins.lotSize, quote, today.toString(), true, sym, orderId, Market.now().toInstant().toEpochMilli())
             runCatching { save(b) }
             com.optionslab.app.work.Alerts.error("${label(item)}: Zerodha did not confirm the buy of $sym. It is treated as held until the order book shows what filled.", "Pine auto-trade")
             note(b, id, "Zerodha did not confirm the buy of $sym: tracked as held until checked")

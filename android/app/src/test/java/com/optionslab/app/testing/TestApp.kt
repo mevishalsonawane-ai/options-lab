@@ -37,6 +37,9 @@ class TestApp : Application() {
         super.onCreate()
         com.optionslab.app.ui.components.Splash.enabled = false
         com.optionslab.app.ui.LoginPrompt.enabled = false
+        // 25 Oct: the market clock is pinned to noon on a trading day before the test instance is built (Robolectric builds the
+        // Application first), so a test class's fields read the same day as its body (MarketClockRule), never the wall clock.
+        MarketClockRule.pinProcessDefault()
         // Screen tests place paper orders at whatever hour CI runs; PaperMarketHoursTest turns this off.
         Market.testOrdersAnyTime = true
         // The fake candle feeds are a few fixed minutes of the morning: the 08 Oct feed checks (a stale price never fills an

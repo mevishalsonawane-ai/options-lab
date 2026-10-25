@@ -18,7 +18,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.robolectric.annotation.ConscryptMode
-import java.time.LocalDate
 
 /**
  * GTT protection through the real [AppModel] and [Broker] against the fake Kite: pricing a GTT only
@@ -31,7 +30,7 @@ class GttLiveTest : RobolectricTest() {
     @get:org.junit.Rule val watchdog = com.optionslab.app.testing.Watchdog()
     private lateinit var kite: FakeKite
     private val store = androidx.lifecycle.ViewModelStore()
-    private val expiry = LocalDate.now().plusDays(9)
+    private val expiry = Market.today().plusDays(9)
     private val sym = BrokerArea.symbol("NIFTY", expiry, 24_500.0, "CE")
 
     @Before fun up() {

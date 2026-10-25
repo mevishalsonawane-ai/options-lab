@@ -1,6 +1,7 @@
 package com.optionslab.app.testing
 
 import com.optionslab.app.data.Broker
+import com.optionslab.app.data.Market
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.engine.IST
 import okhttp3.mockwebserver.Dispatcher
@@ -79,7 +80,9 @@ class FakeKite : Closeable {
         val id: String, val symbol: String, val exchange: String, val side: String, var qty: Int, val product: String,
         var type: String, var price: Double, var trigger: Double, val tag: String, var status: String,
         var filled: Int = 0, var avg: Double = 0.0, var message: String = "", var pollsLeft: Int = 0, var fillPrice: Double = 0.0,
-        val at: LocalDateTime = LocalDateTime.now(IST),
+        // 25 Oct: Zerodha's clock is the market's ([Market.now]: the test rule's trading day), never the wall clock, so an order placed
+        // "today" is on the same day the app's day counts, charges and books call today - on a Sunday too.
+        val at: LocalDateTime = Market.now().toLocalDateTime(),
         /** The rest is cancelled (not filled) when [pollsLeft] runs out ([Outcome.PARTIAL_THEN_CANCEL]). */
         var cancelRest: Boolean = false,
         /** 18 Oct: the price GET /trades shows for its fill when it is not [avg] (a trade book and an order book that differ). */
@@ -457,7 +460,7 @@ class FakeKite : Closeable {
 
     private fun move(o: Order, qty: Int) {
         if (qty == 0) return
-        o.updated = LocalDateTime.now(IST)
+        o.updated = Market.now().toLocalDateTime()
         val k = "${o.exchange}:${o.symbol}:${o.product}"
         if (positionsTrailReads > 0 && trailedPositions == null) { trailedPositions = positionsJson(); trailedLeft = positionsTrailReads; positionsTrailReads = 0 }
         if (o.side == "BUY") dayBought[k] = (dayBought[k] ?: 0) + qty else daySold[k] = (daySold[k] ?: 0) + qty
@@ -638,7 +641,7 @@ class FakeKite : Closeable {
     private fun placeGtt(f: Map<String, String>): MockResponse {
         val id = ++gttSeq
         val cond = JSONObject(f["condition"] ?: "{}")
-        gtts[id] = JSONObject().put("id", id).put("type", f["type"]).put("status", "active").put("created_at", LocalDateTime.now(IST).format(TS))
+        gtts[id] = JSONObject().put("id", id).put("type", f["type"]).put("status", "active").put("created_at", Market.now().toLocalDateTime().format(TS))
             .put("condition", cond).put("orders", JSONArray(f["orders"] ?: "[]"))
         // 21 Oct, enhancement round 4: the GTT is made but its answer lost (Kite's 500 NetworkException).
         if (gttRepliesLost > 0) { gttRepliesLost--; gttReadFailures += gttLostHides; return error(500, "NetworkException", "Gateway timed out.") }

@@ -15,7 +15,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.robolectric.annotation.ConscryptMode
-import java.time.LocalDate
 
 /**
  * 20 Oct, review of the tick path and open-position watching:
@@ -54,18 +53,18 @@ class TickPathReviewTest : RobolectricTest() {
         val sym = "SENSEX26OCT81000CE"
         assertNull("no list read today: unknown, never a guess", Broker.tokenOf("BFO:$sym"))
         setStatic("bfoOptions", Market.today() to listOf(
-            Kite.Instrument(1_234_567L, sym, "SENSEX", LocalDate.now().plusDays(3), 81_000.0, 20, Right.CE, 0.05)))
+            Kite.Instrument(1_234_567L, sym, "SENSEX", Market.today().plusDays(3), 81_000.0, 20, Right.CE, 0.05)))
         assertEquals(1_234_567L, Broker.tokenOf("BFO:$sym"))
         assertEquals("memory only, the same answer", 1_234_567L, Broker.tokenKnown("BFO:$sym"))
         assertNull("another symbol", Broker.tokenKnown("BFO:SENSEX26OCT82000CE"))
         assertNull("an NFO key is never answered from the BFO list", Broker.tokenKnown("NFO:$sym"))
         // Yesterday's list is not today's: not used.
         setStatic("bfoOptions", Market.today().minusDays(1) to listOf(
-            Kite.Instrument(1_234_567L, sym, "SENSEX", LocalDate.now().plusDays(3), 81_000.0, 20, Right.CE, 0.05)))
+            Kite.Instrument(1_234_567L, sym, "SENSEX", Market.today().plusDays(3), 81_000.0, 20, Right.CE, 0.05)))
         assertNull(Broker.tokenOf("BFO:$sym"))
         // And a live SENSEX trade's key now reaches the stream's live exits.
         setStatic("bfoOptions", Market.today() to listOf(
-            Kite.Instrument(1_234_567L, sym, "SENSEX", LocalDate.now().plusDays(3), 81_000.0, 20, Right.CE, 0.05)))
+            Kite.Instrument(1_234_567L, sym, "SENSEX", Market.today().plusDays(3), 81_000.0, 20, Right.CE, 0.05)))
         liveKeys(listOf("BFO:$sym"))
         assertTrue(1_234_567L in FastPath.liveTokens())
     }
@@ -78,7 +77,7 @@ class TickPathReviewTest : RobolectricTest() {
         val sym = "CRUDEOIL26NOVFUT"
         assertNull("no MCX list in memory: unknown", Broker.tokenKnown("MCX:$sym"))
         mcxMem(Market.today().toString() to listOf(
-            com.optionslab.engine.mcx.McxContract(7_654_321L, 29_899L, sym, "CRUDEOIL", LocalDate.now().plusDays(30), 0.0, null, 1.0, 100)))
+            com.optionslab.engine.mcx.McxContract(7_654_321L, 29_899L, sym, "CRUDEOIL", Market.today().plusDays(30), 0.0, null, 1.0, 100)))
         assertEquals(7_654_321L, Broker.tokenKnown("MCX:$sym"))
         assertNull("another contract", Broker.tokenKnown("MCX:GOLDM26NOVFUT"))
         liveKeys(listOf("MCX:$sym"))
@@ -107,12 +106,12 @@ class TickPathReviewTest : RobolectricTest() {
     @Test fun thePaperBookAndTheMinuteArmsCountAsHeldForTheFifteenSecondCheck() {
         val realNow = java.time.ZonedDateTime.now(com.optionslab.engine.IST)
         Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST),
-            java.time.Duration.between(realNow, realNow.toLocalDate().atTime(12, 0).atZone(com.optionslab.engine.IST)))
+            java.time.Duration.between(realNow, Market.today().atTime(12, 0).atZone(com.optionslab.engine.IST)))
         runBlocking { Paper.snapshot() }
         assertTrue("loaded", Paper.stateIfLoaded() != null)
         assertFalse("nothing open anywhere", com.optionslab.app.work.HeldBooks.paperOrMinuteArms())
         // A paper trade nobody's arm holds (Boss's own, or one only Night, VIX divergence or an MCX arm follows).
-        val exp = LocalDate.now().plusDays(6)
+        val exp = Market.today().plusDays(6)
         val sym = "NIFTY" + exp.format(java.time.format.DateTimeFormatter.ofPattern("ddMMMyy", java.util.Locale.ENGLISH))
             .uppercase(java.util.Locale.ENGLISH) + "25000PE"
         val c = Paper.Contract(sym, "NIFTY", exp, 25_000.0, Right.PE, 65, "NSE_FO|$sym", "NFO")

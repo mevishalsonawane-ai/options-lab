@@ -47,7 +47,7 @@ class AskGuideSheetTest {
     @Before fun up() {
         AreaE.resetGlobals()
         com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(
-            java.time.LocalDate.now(com.optionslab.engine.IST).atTime(16, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+            com.optionslab.app.data.Market.today().atTime(16, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
     }
 
     @After fun down() {

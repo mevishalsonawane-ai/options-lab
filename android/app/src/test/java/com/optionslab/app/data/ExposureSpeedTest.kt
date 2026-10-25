@@ -32,7 +32,7 @@ import java.util.Locale
  *    until its switch is on; the Autopilot entry's undo switches it off and on again; a capped order reads no setting.
  */
 class ExposureSpeedTest : RobolectricTest() {
-    private val exp: LocalDate = LocalDate.now().plusDays(6)
+    private val exp: LocalDate = Market.today().plusDays(6)
 
     private fun contract(u: String, strike: Int, right: Right): Paper.Contract {
         val sym = u + exp.format(DateTimeFormatter.ofPattern("ddMMMyy", Locale.ENGLISH)).uppercase(Locale.ENGLISH) + strike + right.name
@@ -50,7 +50,7 @@ class ExposureSpeedTest : RobolectricTest() {
         // had every MIS paper order refused (square-off time) and 8 of these tests failed in CI at 15:30.
         val realNow = java.time.ZonedDateTime.now(com.optionslab.engine.IST)
         Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST),
-            java.time.Duration.between(realNow, realNow.toLocalDate().atTime(12, 0).atZone(com.optionslab.engine.IST)))
+            java.time.Duration.between(realNow, Market.today().atTime(12, 0).atZone(com.optionslab.engine.IST)))
     }
 
     @After fun down() {

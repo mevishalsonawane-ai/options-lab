@@ -41,7 +41,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.ConscryptMode
-import java.time.LocalDate
 
 /**
  * The live money path beyond the first send (see [OrderFlowLiveTest]), through the real [AppModel] and
@@ -54,7 +53,7 @@ class OrderFlowLive2Test : RobolectricTest() {
     @get:org.junit.Rule val watchdog = com.optionslab.app.testing.Watchdog()
     private lateinit var kite: FakeKite
     private val store = androidx.lifecycle.ViewModelStore()
-    private val expiry = LocalDate.now().plusDays(9)
+    private val expiry = com.optionslab.app.data.Market.today().plusDays(9)
     private val ce = BrokerArea.symbol("NIFTY", expiry, 24_500.0, "CE")
     private val pe = BrokerArea.symbol("NIFTY", expiry, 24_500.0, "PE")
     private val wing = BrokerArea.symbol("NIFTY", expiry, 24_400.0, "PE")
@@ -434,7 +433,7 @@ class OrderReviewLiveGateTest {
     @get:Rule val compose = createComposeRule()
     private lateinit var kite: FakeKite
     private val store = androidx.lifecycle.ViewModelStore()
-    private val expiry = LocalDate.now().plusDays(9)
+    private val expiry = com.optionslab.app.data.Market.today().plusDays(9)
     private val ce = BrokerArea.symbol("NIFTY", expiry, 24_500.0, "CE")
     private val send = "Swipe to send to Zerodha  ›››"
 

@@ -280,6 +280,12 @@ arms' come from the diagnostics diary. A morning catch-up run reads the evening'
      is GitHub's limit: either upgrade, or keep merging only after the Actions tab shows green.
 - Free GitHub Actions minutes on private repos are limited each month. If builds stop with a "minutes" message, wait for
   the monthly reset or add billing.
+- **Tests never depend on the real calendar** (25 Oct 2026: ten app tests failed only when CI ran on a Sunday). Every app
+  test runs with the market's clock pinned to noon IST on a trading day (`MarketClockRule`, pinned from the moment a test
+  class loads, so a class's fields read the same day as its body), and the fake Zerodha stamps its orders from that clock.
+  A test that needs another day or hour sets `Market.testClock` itself from `Market.today()`, never from `LocalDate.now()`
+  or `ZonedDateTime.now()`. If a test is green on a weekday and red at the weekend, after 15:15 IST or on a holiday, it is
+  reading the wall clock somewhere: fix the test, not the calendar.
 
 ## 9. Long term
 

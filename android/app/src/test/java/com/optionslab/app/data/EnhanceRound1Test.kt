@@ -10,7 +10,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * 20 Oct, enhancement round 1: the account stop rule at the entry door (idea 4), the 15-second stop check's drift guard
@@ -22,7 +21,7 @@ class EnhanceRound1Test : RobolectricTest() {
 
     /** The clock at [h]:[m] IST on the next trading day (still ticking). */
     private fun session(h: Int, m: Int) {
-        var d = LocalDate.now(com.optionslab.engine.IST).plusDays(1)
+        var d = com.optionslab.app.testing.MarketClockRule.pinnedDay().plusDays(1)
         while (!Market.isTradingDay(d)) d = d.plusDays(1)
         val at = d.atTime(h, m).atZone(com.optionslab.engine.IST).toInstant()
         Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), at))

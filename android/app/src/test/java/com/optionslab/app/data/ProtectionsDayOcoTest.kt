@@ -13,7 +13,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.robolectric.annotation.ConscryptMode
-import java.time.LocalDate
 
 /**
  * 21 Oct, enhancement round 4 (idea 1): a carried (NRML) live protection's stop and target as ONE two-leg GTT in the day too
@@ -30,7 +29,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         ExitCoordinator.resetForTest()
         DayOco.resetForTest()
         kite = FakeKite()
-        kite.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", LocalDate.now().plusDays(20), 24_500.0, "CE", 75)
+        kite.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", Market.today().plusDays(20), 24_500.0, "CE", 75)
         kite.position(sym, 75, 100.0)
         kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
         kite.login()
@@ -42,7 +41,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
 
     /** The clock at [h]:[m] IST on the [nth] trading day after today (still ticking). */
     private fun session(h: Int, m: Int, nth: Int = 1) {
-        var d = LocalDate.now(com.optionslab.engine.IST)
+        var d = com.optionslab.app.testing.MarketClockRule.pinnedDay()
         repeat(nth) { d = d.plusDays(1); while (!Market.isTradingDay(d)) d = d.plusDays(1) }
         val at = d.atTime(h, m).atZone(com.optionslab.engine.IST).toInstant()
         Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), at))

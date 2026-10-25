@@ -1536,8 +1536,9 @@ object Broker {
         val rs = rows(call("GET", "/orders") as JSONArray)
         fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
         // "Now" by Kite's own clock when the book has a later order than the phone's clock says (a phone running
-        // slow would otherwise widen the window); never earlier than the phone's.
-        val now = rs.mapNotNull(::at).fold(java.time.LocalDateTime.now(IST)) { a, t -> if (t.isAfter(a)) t else a }
+        // slow would otherwise widen the window); never earlier than the phone's. 25 Oct: the phone's clock is [Market.now]
+        // (the system clock in the app; in a test the pinned market clock, which the fake Zerodha stamps its orders from too).
+        val now = rs.mapNotNull(::at).fold(Market.now().toLocalDateTime()) { a, t -> if (t.isAfter(a)) t else a }
         val since = now.minusMinutes(3)
         return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&

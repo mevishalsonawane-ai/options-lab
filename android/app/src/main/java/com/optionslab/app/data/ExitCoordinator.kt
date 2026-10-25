@@ -41,7 +41,11 @@ object ExitCoordinator {
     @Volatile private var switched = false
     @Volatile private var lagOn = false
     @Volatile private var lagSwitched = false
-    private val registry = ExitRegistry()
+    // 25 Oct: the registry's clock, the fill-recency check and the "sent N ms ago" words all read [Market.now] (the system clock
+    // in the app; in a test the pinned market clock, which the fake Zerodha stamps its orders from too), so an order's time from
+    // Zerodha and the phone's "now" are never on two different clocks (at a weekend the wall clock was two days after the market's).
+    private fun nowMs(): Long = Market.now().toInstant().toEpochMilli()
+    private val registry = ExitRegistry(clock = ::nowMs)
     @Volatile private var turns = ExitTurns()
     private val lock = Any()
     private var counts = ExitDesk.Counts()
@@ -209,7 +213,7 @@ object ExitCoordinator {
         // that filled a moment ago wakes the guard as an exit sent from here does (both behind the same switch; off: logged only).
         val fills = orders.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }
             .map { ExitDesk.Fill(it.id, it.side, it.filled, placedMs(it.updatedAt)) }
-        val now = System.currentTimeMillis()
+        val now = nowMs()
         fun rows(b: Broker.Positions) = b.net.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }
         // 21 Oct, enhancement round 5 (idea 3): every product's orders and rows on the contract too, so a fill whose quantity a
         // conversion moved to the other product's row is never read as the positions trailing it ([ExitDesk.positionsLagAcross]).
@@ -311,7 +315,7 @@ object ExitCoordinator {
     }
 
     private fun words(miss: List<ExitRegistry.Sent>): String = miss.joinToString(", ") { e ->
-        val age = System.currentTimeMillis() - e.at
+        val age = nowMs() - e.at
         "${e.by}'s ${e.side} ${e.qty} ${e.type} sent $age ms ago" + when (e.state) {
             ExitRegistry.State.SENDING -> " (still on its way)"
             ExitRegistry.State.LOST -> " (its reply lost)"

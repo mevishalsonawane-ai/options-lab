@@ -179,7 +179,7 @@ object MarketContext {
     private val briefs = ConcurrentHashMap<String, List<String>>()
 
     /** One pass (this object's thread): today's events, the card, and the morning brief once after 09:21. */
-    internal suspend fun refresh(now: LocalDateTime = LocalDateTime.now(IST)) {
+    internal suspend fun refresh(now: LocalDateTime = nowIst()) {
         val d = now.toLocalDate()
         today = d to eventsOn(d)
         // Shadow first: an event day counts only once Shadow actually watched it (a verdict logged in market hours, or on

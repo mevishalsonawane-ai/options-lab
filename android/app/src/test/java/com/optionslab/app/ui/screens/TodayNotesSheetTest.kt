@@ -47,7 +47,7 @@ class TodayNotesSheetTest {
     @get:Rule val watchdog = AreaEWatchdog()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private val day = java.time.LocalDate.now(com.optionslab.engine.IST)
+    private val day = com.optionslab.app.data.Market.today()
 
     @Before fun up() {
         AreaE.resetGlobals()

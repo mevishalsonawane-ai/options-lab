@@ -70,7 +70,7 @@ class TradeScreenTest {
     private val app: Application get() = ApplicationProvider.getApplicationContext()
     private val sym = "NIFTY26OCT24500PE"
     private val sym2 = "NIFTY26OCT24400CE"
-    private val expiry: LocalDate = LocalDate.now().plusDays(9)
+    private val expiry: LocalDate = com.optionslab.app.data.Market.today().plusDays(9)
     private val pin = "246813"
 
     @Before fun up() {

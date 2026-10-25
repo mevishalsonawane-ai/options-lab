@@ -16,7 +16,6 @@ import org.junit.Before
 import org.junit.Test
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.ConscryptMode
-import java.time.LocalDate
 
 /**
  * The manual live order, end to end through the real AppModel and Broker against the fake Kite:
@@ -26,7 +25,7 @@ import java.time.LocalDate
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class OrderFlowLiveTest : RobolectricTest() {
     private lateinit var kite: FakeKite
-    private val expiry = LocalDate.now().plusDays(9)
+    private val expiry = com.optionslab.app.data.Market.today().plusDays(9)
     private val sym = "NIFTY26OCT24500CE"
 
     @Before fun up() {
@@ -94,7 +93,7 @@ class OrderFlowLiveTest : RobolectricTest() {
         val model = model()
         model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null)
         val plan = await("the plan") { (model.plan.value as? Load.Done)?.value ?: (model.plan.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
-        model.plan.value = Load.Done(plan.copy(session = LocalDate.now()))
+        model.plan.value = Load.Done(plan.copy(session = com.optionslab.app.data.Market.today()))
         // The ledger's write after the fills fails (a disk or Keystore fault); every test starts with it off again (TestApp).
         com.optionslab.app.security.Vault.testFailWrites = setOf("ledger.vault")
         model.sendPlan()

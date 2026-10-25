@@ -54,7 +54,7 @@ class ArmGttProtectionDayTest : RobolectricTest() {
         for (f in LiveMirror.ARMS.map { it.family }.distinct())
             ArmLive.register(f) { legs.entries.filter { e -> LiveMirror.spec(e.value.first)?.family == f }.map { ArmLive.PaperLeg(it.key, it.value.first, it.value.second) } }
         ExitCoordinator.resetForTest(on = true)
-        var d = LocalDate.now(com.optionslab.engine.IST).plusDays(1)
+        var d = com.optionslab.app.testing.MarketClockRule.pinnedDay().plusDays(1)
         while (!Market.isTradingDay(d)) d = d.plusDays(1)
         day = d
         at(9, 20)

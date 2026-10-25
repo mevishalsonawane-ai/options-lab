@@ -49,7 +49,7 @@ class LiveSelfTestTest : RobolectricTest() {
         // stays on today's date. On the real clock, a run just after midnight IST put those bars on yesterday and failed.
         val realNow = java.time.ZonedDateTime.now(com.optionslab.engine.IST)
         Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST),
-            java.time.Duration.between(realNow, realNow.toLocalDate().atTime(12, 0).atZone(com.optionslab.engine.IST)))
+            java.time.Duration.between(realNow, Market.today().atTime(12, 0).atZone(com.optionslab.engine.IST)))
         kite = FakeKite()
         kite.keepAlive = true
         stream = FakeLiveSources()

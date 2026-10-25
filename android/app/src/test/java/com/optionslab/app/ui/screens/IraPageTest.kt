@@ -44,7 +44,7 @@ class IraPageTest {
     @Before fun up() {
         AreaE.resetGlobals()
         com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(
-            java.time.LocalDate.now(com.optionslab.engine.IST).atTime(16, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+            com.optionslab.app.data.Market.today().atTime(16, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
     }
 
     @After fun down() {
@@ -124,7 +124,7 @@ class IraPageTest {
         var live = false
         val paths = IraOrderPaths({ live }, { 2 }, { placed += it }, { reviewed += it })
         com.optionslab.app.ira.IraOrders.testListed = { _, _, _ ->
-            listOf(com.optionslab.app.ira.IraOrders.Listed(java.time.LocalDate.now().plusDays(3), 24_000.0, 75))
+            listOf(com.optionslab.app.ira.IraOrders.Listed(com.optionslab.app.data.Market.today().plusDays(3), 24_000.0, 75))
         }
         try {
             compose.setContent { IraAlgoTheme("light") { IraPage(paths) } }

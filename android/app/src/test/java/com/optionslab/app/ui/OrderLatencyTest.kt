@@ -19,7 +19,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.ConscryptMode
-import java.time.LocalDate
 
 /**
  * LATENCY BUDGETS for BUY / SELL, so a change that puts waiting back on the order path fails CI.
@@ -90,7 +89,7 @@ class OrderLatencyTest : RobolectricTest() {
         k.login()
         // No entry cut-off (any hour on CI), and room for the runs in the daily caps.
         SecurePrefs.putAll(mapOf("g.cutoff" to -1, "g.trades" to 50))
-        val expiry = LocalDate.now().plusDays(9)
+        val expiry = com.optionslab.app.data.Market.today().plusDays(9)
         val sym = "NIFTY26OCT24500CE"
         k.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", expiry, 24_500.0, "CE", 75)
         k.quote("NFO:$sym", 100.0, 99.95, 100.05)
@@ -126,7 +125,7 @@ class OrderLatencyTest : RobolectricTest() {
         k.keepAlive = true
         k.login()
         SecurePrefs.putAll(mapOf("g.cutoff" to -1, "g.trades" to 50))
-        val expiry = LocalDate.now().plusDays(9)
+        val expiry = com.optionslab.app.data.Market.today().plusDays(9)
         val sym = "NIFTY26OCT24500CE"
         k.instruments += FakeKite.Ins(12_345_678, sym, "NIFTY", expiry, 24_500.0, "CE", 75)
         k.quote("NFO:$sym", 100.0, 99.95, 100.05)
