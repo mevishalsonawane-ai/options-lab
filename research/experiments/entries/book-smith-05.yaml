@@ -30,10 +30,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-smith-05; trade: stock fu
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: no results / AGM calendar for F&O stocks'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: R58: 0 of 38 stock-option rules pass, round trip about Rs 280 a lot; SWING_DEEP: stock swing set-ups
-  did not beat holding the same stocks.. Assumptions: The book''s screen is by eye with a weed-out loop on past back-tests
-  (in-sample); we make it a frozen, walk-forward ranking. Thresholds above are our literal reading.'
+notes: 'R104: needs data we lack (no results / AGM calendar for F&O stocks).'

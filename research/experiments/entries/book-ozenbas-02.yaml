@@ -25,10 +25,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-02; trade: the ar
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. h14 capped limit +0.5%: the only execution policy to pass (+Rs
+    288/day), already the Liquidity arm''s entry'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: h14: the only one of 9 execution policies to pass every gate (+Rs 288/day vs +250 required); holdout
-  +Rs 625/day at kappa 0.02; not robust at kappa 0.04. Already used by the Liquidity arm.. Assumptions: The book only states
-  the trade-off (limit saves the spread but risks no fill); the +0.5% cap and 3-minute rest are h14''s pre-registered values.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). h14 capped limit +0.5%: the only execution policy to pass (+Rs 288/day), already
+  the Liquidity arm''s entry'

@@ -250,3 +250,20 @@ before real money.
 ## Could not read
 The chart figures (Fig 3.1 to Fig 5.3.8) are images; their drawn entries, stops, targets and oscillator names were not
 readable from the text layer (OCR covered only the cover pages 1 and 3). All rules above come from the text.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-porwal-01`: tested (R104): IDX: 671 trades, win 42%, net -Rs 164,067 design, holdout -Rs 71,837 (fail); MCXI: 326 trades, win 49%, net -Rs 235,896 design, holdout -Rs 40,867 (fail)
+- `book-porwal-02`: tested (R104): DLY: 80 trades, win 28%, net -Rs 136,157 design, holdout -Rs 56,444 (fail)
+- `book-porwal-03`: tested (R104): DLY: 124 trades, win 44%, net Rs 88,560 design, holdout -Rs 259,614 (fail); MCXD: 136 trades, win 33%, net Rs 3,047 design, holdout Rs 15,512 (fail)
+- `book-porwal-04`: tested (R104): DLY: 1 trades, win 0%, net -Rs 839 design, holdout Rs 0 (fail)
+- `book-porwal-05`: tested (R104): MCXI: 3 trades, win 33%, net -Rs 6 design, holdout -Rs 233 (fail)
+- `book-porwal-06`: not re-run (R104): covered: R23 first-15-minute break (-Rs 71,624 on 1,171) and R92 by day type (0 of 257); the prior-day trend and EMA bias are day-type filters R92 covered
+- `book-porwal-07`: tested (R104): ARM: delta vs the arm -Rs 40,946 design (fail)
+- `book-porwal-08`: tested (R104): IDX: 1115 trades, win 25%, net -Rs 123,184 design, holdout -Rs 72,134 (fail)
+- `book-porwal-09`: tested (R104): IDX: 756 trades, win 46%, net -Rs 34,592 design, holdout Rs 7,493 (fail); MCXI: 124 trades, win 57%, net Rs 117,287 design, holdout -Rs 90,018 (fail)
+- `book-porwal-10`: not testable (R104): index rule needs futures minute volume (57 sessions only); the price part (fade the day-high break) is covered by R86 (6 of 6 lost) and R91
+- `book-porwal-11`: not testable (R104): index rule needs futures minute volume (57 sessions only); the price part (day-low reclaim) is R87's held fact, below option cost
+- `book-porwal-12`: tested (R104): ARM: delta vs the arm -Rs 35,929 design (fail)

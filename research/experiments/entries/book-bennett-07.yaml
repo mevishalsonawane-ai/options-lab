@@ -31,10 +31,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-07; trade: 1 lot 
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: needs two expiries'' chains on event days'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: Event straddle buying lost (R1 rows 22-24: realised 0.69x implied); Budget day doubles the range
-  (2.13% NIFTY, n 6). The jump calendar was not tested.. Assumptions: Bennett''s stock earnings method moved to index macro
-  events; the 1.3x threshold is ours.'
+notes: 'R104: needs data we lack (needs two expiries'' chains on event days).'

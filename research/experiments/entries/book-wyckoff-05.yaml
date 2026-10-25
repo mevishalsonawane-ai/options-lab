@@ -23,10 +23,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-05; trade: buy 1-
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. is the R72 Breadth Donchian arm: PASS (final +Rs 1,71,366 on
+    1,202 trades), on paper'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R72 Breadth Donchian PASS: final Rs 1,71,366 on 1,202 trades vs Donchian Rs 55,439; on paper. Assumptions:
-  Book''s ''carries the rest of the market along'' read as the R72 breadth count; this is the existing arm, listed so the
-  book''s idea is linked to it'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). is the R72 Breadth Donchian arm: PASS (final +Rs 1,71,366 on 1,202 trades), on
+  paper'

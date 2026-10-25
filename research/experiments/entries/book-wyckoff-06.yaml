@@ -2,14 +2,15 @@ id: book-wyckoff-06
 title: Close an index trade when the other indices turn against it (Wyckoff, book rule, proposed)
 family: trade-management
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. III, IV, VI) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price (the other four index spots). Entry: Any open long on one
   index from an existing arm (Breadth Donchian, Liquidity 15+5) Stop: the arm''s own stop Exit: Exit early when >= 3 of the
   other 4 indices make a new 20-bar low on the same 5m bar while the trade is open (mirror for shorts)'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -20,13 +21,17 @@ model_or_rule: 'Any open long on one index from an existing arm (Breadth Donchia
   stop | exit: Exit early when >= 3 of the other 4 indices make a new 20-bar low on the same 5m bar while the trade is open
   (mirror for shorts) | filters: only after the trade has been open >= 2 bars'
 settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-06; trade: close the option bought by the arm'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us as an exit; early exits made the profitable arms worse (R12, R18); R72 C6 SMT divergence
-  failed. Assumptions: The book''s cue from ''other stocks failing'' made a breadth count against the position; 3 of 4 and
-  20 bars are ours. Exit-only, so risk-lowering.'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant base: design 3952 trades, win 46% (B0 46%), net Rs 459,201
+    vs B0 Rs 474,179 (delta -Rs 14,978), quarters Rs 4,396, Rs 7,827, -Rs 259, -Rs 12,954; p 1.000, BH q 1.000; final delta
+    -Rs 730. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). exit overlay on LIQ and R72 R104 (227 tests, BH across all). exit overlay on LIQ
+  and R72 Our nearest test: not tested by us as an exit; early exits made the profitable arms worse (R12, R18); R72 C6 SMT
+  divergence failed. Assumptions: The book''s cue from ''other stocks failing'' made a breadth count against the position;
+  3 of 4 and 20 bars are ours. Exit-only, so risk-lowering.'

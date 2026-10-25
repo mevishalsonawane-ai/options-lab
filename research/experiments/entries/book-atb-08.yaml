@@ -3,7 +3,7 @@ title: 'Rising wedge in a downtrend: lower-line break, previous-low break, retes
   Book, book rule, proposed)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 3, Strategy 3 (p28))
   makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
   Entry: Downtrend before the wedge; a wedge of at least 2 rising swing highs and 2 rising swing lows with the lower line
@@ -11,9 +11,10 @@ hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simp
   the wedge. Step 3: within 8 bars price trades back up to within 0.1 ATR of that broken low and a bar closes red below it:
   sell at the next open. Mirror (falling wedge in an uptrend) for longs. Stop: Above the last swing high inside the wedge
   (the book: ''above the previous high''). Exit: Measured move (wedge height at its start) or square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -28,12 +29,17 @@ model_or_rule: 'Downtrend before the wedge; a wedge of at least 2 rising swing h
   (the book: ''above the previous high''). | exit: Measured move (wedge height at its start) or square-off. | filters: All
   three steps in order; a close back above the broken low cancels.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-08; trade: buy 1-ITM PE (CE for the mirror)'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: Wedges not tested; previous-swing breaks failed in R90 (0 of 99) and R89 (0 of 180). Assumptions:
-  Wedge geometry, windows and target are ours; stop is the book''s.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 105 trades, win 44%, net -Rs 24,083, folds -Rs 5,611, -Rs
+    9,176, Rs 7,434, -Rs 16,730; p 1.000, BH q 1.000; holdout 15 trades, win 33%, net -Rs 7,966. R104 verdict: fail. | MCXI
+    (MCX mini future (own bars)), variant 15m: design 4 trades, win 50%, net -Rs 37, folds Rs 0, Rs 0, -Rs 37; p 1.000, BH
+    q 1.000; holdout 13 trades, win 62%, net Rs 3. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Wedges not tested; previous-swing
+  breaks failed in R90 (0 of 99) and R89 (0 of 180). Assumptions: Wedge geometry, windows and target are ours; stop is the
+  book''s.'

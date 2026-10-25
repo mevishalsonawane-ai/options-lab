@@ -2,16 +2,17 @@ id: book-fmwhd-02
 title: Buy the ATM straddle before a scheduled policy event, sell after it (Wilmott, Howison and Dewynne, book rule, proposed)
 family: calendar-events
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Wilmott, Howison and Dewynne''s rule from The Mathematics of Financial Derivatives (Ch. 3, exercise 1 (option
   portfolio for an election expected to move the share about 10% either way)) makes money after real charges and slippage,
   walk-forward, with BH across the rules tried. Signal source: volatility / options structure (a calendar event; no price
   signal); maps to NSE index options. Entry: At 15:15 on the session before an RBI policy announcement or the Union Budget,
   buy 1 lot ATM call and 1 lot ATM put of the nearest expiry that is at least 2 sessions away. Stop: None (risk is the premium
   paid); the book gives none. Exit: Sell both legs at 15:15 on the event day.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: VOL 2021-08-02 - 2026-03-31
+  holdout: VOL 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - BANKNIFTY
 - NIFTY
@@ -23,15 +24,19 @@ model_or_rule: 'At 15:15 on the session before an RBI policy announcement or the
   none. | exit: Sell both legs at 15:15 on the event day. | filters: Event calendar from EVENT_SHIELD.md (RBI policy, Budget);
   skip if the straddle costs more than the median event-day range of the previous events (the move is already priced).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmwhd-02; trade: long ATM straddle, 1 lot each leg'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: EVENT_SHIELD.md: BANKNIFTY day range 1.48x normal on RBI/Budget days (15 sessions, confirmed on
-  7 holdout sessions), NIFTY 1.28x not significant; R89: straddles bought when a big candle was forecast lost (0 of 18 profitable,
-  gross about zero, costs decide). Event-day straddles themselves: not tested by us.. Assumptions: The exercise only asks
-  for a portfolio that profits from a large move either way and lists straddles and strangles; we fix the event set, the timing,
-  the ATM strikes and the ''already priced'' filter.'
+  summary: 'VOL (option structure (chain as context)), variant base: design 5 trades, win 40%, net -Rs 7,709, folds Rs 0,
+    Rs 0, -Rs 5,438, -Rs 2,272; p 1.000, BH q 1.000; holdout 0 trades, win -, net Rs 0. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). RBI / Budget events in events.csv (2024+); too few events to pass min trades R104
+  (227 tests, BH across all). RBI / Budget events in events.csv (2024+); too few events to pass min trades Our nearest test:
+  EVENT_SHIELD.md: BANKNIFTY day range 1.48x normal on RBI/Budget days (15 sessions, confirmed on 7 holdout sessions), NIFTY
+  1.28x not significant; R89: straddles bought when a big candle was forecast lost (0 of 18 profitable, gross about zero,
+  costs decide). Event-day straddles themselves: not tested by us.. Assumptions: The exercise only asks for a portfolio that
+  profits from a large move either way and lists straddles and strangles; we fix the event set, the timing, the ATM strikes
+  and the ''already priced'' filter.'

@@ -405,3 +405,17 @@ beware despair and greed (both end in over-leverage), start small and scale slow
 - Example 7.7's printed "average annual return -0.9167" is in units of summed positions, not a percentage of capital;
   only its sign and the Sharpe (-0.1055) are meaningful.
 - Nothing else; every chapter, the appendix, bibliography and index were read.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmchan-01`: tested (R104): IDXF: 6113 trades, win 52%, net -Rs 2,649,139 design, holdout -Rs 1,004,805 (fail)
+- `book-fmchan-02`: tested (R104): DLY: 4 trades, win 50%, net Rs 53,482 design, holdout Rs 0 (fail)
+- `book-fmchan-03`: tested (R104): MCXD: 2 trades, win 0%, net -Rs 16,836 design, holdout Rs 0 (fail)
+- `book-fmchan-04`: tested (R104): MCXD: 10 trades, win 40%, net -Rs 4,026 design, holdout Rs 25,181 (fail)
+- `book-fmchan-05`: tested (R104): MM: drawdown cut 59%, net cut 27% design (fail)
+- `book-fmchan-06`: tested (R104): MM: drawdown cut 97%, net cut 101% design (fail)
+- `book-fmchan-07`: tested (R104): DLY: 349 trades, win 53%, net -Rs 426,187 design, holdout Rs 219,315 (fail)
+- `book-fmchan-08`: tested (R104): CRY: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail)
+- `book-fmchan-09`: tested (R104): CRY: 6346 trades, win 41%, net -Rs 834,590 design, holdout -Rs 171,924 (fail)

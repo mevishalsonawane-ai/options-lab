@@ -29,9 +29,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-08; trade: Short 
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: matched-maturity IVs need a second expiry; with the nearest only, a 10-session vol position
+    has to roll weekly, which the book''s trade is not'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us; R102: BANKNIFTY realised is about 1.3x NIFTY''s and beta 1.157.. Assumptions:
-  BANKNIFTY is monthly and NIFTY weekly, so the matched-expiry rule is ours; whole-lot weighting is coarse.'
+notes: 'R104: needs data we lack (matched-maturity IVs need a second expiry; with the nearest only, a 10-session vol position
+  has to roll weekly, which the book''s trade is not).'

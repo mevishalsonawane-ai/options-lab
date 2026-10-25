@@ -26,9 +26,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-10; trade: bu
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. R1 N11/N12 first-candle rules and the ORB family (R3, R92 0 of
+    257), PDH/PDL R89 0 of 180'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: ORB family lost everywhere (R3, R92 0 of 257); R1 N11 / N12 first-candle rules lost; R89 PDH/PDL
-  0 of 180. Assumptions: The book shows two single-chart examples, not a system; the stop rule and skip filter are ours.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). R1 N11/N12 first-candle rules and the ORB family (R3, R92 0 of 257), PDH/PDL R89
+  0 of 180'

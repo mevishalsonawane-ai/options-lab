@@ -2,15 +2,16 @@ id: book-tom-08
 title: 1-minute trendline break after a fake-down (Stanley) (Trader Tom, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Trader Tom''s rule from The First Trading Manual (Case Story: Stanley the Intraday Trader, p. 159-160) makes
   money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry:
   Long: at least 3 descending 1-minute swing highs (2-bar fractals) lie within 0.05% of one straight line through the first
   and last; price then trades below the prior swing low, turns, and a 1-minute close crosses above the line; buy next minute.
   Short mirror. Stop: below the low made by the fake-down Exit: not stated; ours: 2R target or 30 minutes, square-off 15:10'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -23,12 +24,15 @@ model_or_rule: 'Long: at least 3 descending 1-minute swing highs (2-bar fractals
   square-off 15:10 | filters: skip if the first-hour range is below its 20-day median (range-bound proxy); no entries 15 minutes
   before and after scheduled high-impact events; risk 1% of capital'
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-08; trade: buy ATM CE on long, ATM PE on short'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us exactly; fake-out fades (R3, R91) failed. Assumptions: Line-fitting tolerance,
-  the range-bound proxy, the event window and the exit are ours; the book is discretionary on all of these.'
+  summary: 'IDX (index spot, bought option), variant 1m: design 3709 trades, win 35%, net -Rs 427,331, folds -Rs 149,871,
+    -Rs 83,257, -Rs 69,678, -Rs 124,526; p 1.000, BH q 1.000; holdout 420 trades, win 33%, net -Rs 66,001. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us exactly; fake-out
+  fades (R3, R91) failed. Assumptions: Line-fitting tolerance, the range-bound proxy, the event window and the exit are ours;
+  the book is discretionary on all of these.'

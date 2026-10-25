@@ -512,3 +512,9 @@ The text layer is complete, but every formula, matrix and pseudocode block came 
 integrals and Greek letters scrambled; figures are captions only), so formulas above are rebuilt from the prose and
 standard results, and plotted figures (e.g. Figs. 9.10, 10.1-10.5, 29.6-29.20) could not be read. The answers chapter
 (Ch. 33) was read in full for Chs. 2-10 and 31 and scanned for the rest. The bibliography and index were not read.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmlyuu-01`: not testable (R104): no minute ETF/basket prices, dividend schedule or futures quotes

@@ -2,7 +2,7 @@ id: book-aziz-05
 title: 'ABCD: new high of day, higher pullback that holds, buy the turn near C (Andrew Aziz, book rule, proposed)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, Strategy 2: ABCD Pattern) makes money after
   real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume. Entry:
   A = the day''s low before the run; B = a new high of the day at least 0.5 x daily ATR14 above A; C = the lowest low after
@@ -11,9 +11,10 @@ hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6,
   25% of the B-C distance above C. Reverse ABCD mirrored for shorts. Stop: a 1-minute close below C Exit: Sell half at B (or
   the first new high of the day) and move the stop to entry; rest on the first 5-minute bar that makes a new low (lower than
   the prior 5-minute bar''s low), or 15:15.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -28,13 +29,17 @@ model_or_rule: 'A = the day''s low before the run; B = a new high of the day at 
   low (lower than the prior 5-minute bar''s low), or 15:15. | filters: Before 11:45 only; skip if C is below VWAP.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-05; trade: buy ATM CE on a long signal, ATM PE on a short; stops
   and targets on the index'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87B pullback continuation held on SENSEX but its call rule lost -Rs 21,127 on 162 trades (stop
-  under the pullback too tight); R71 P8 swing break lost in the final. Assumptions: Thresholds for B (0.5 ATR), C confirmation
-  (3 bars) and ''near C'' (25%) are ours; volume from index futures (spot has none).'
+  summary: 'IDX (index spot, bought option), variant 1m: design 820 trades, win 31%, net -Rs 47,515, folds -Rs 4,758, -Rs
+    8,529, -Rs 12,573, -Rs 21,656; p 1.000, BH q 1.000; holdout 70 trades, win 29%, net -Rs 4,205. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). TWAP proxy; the 1-minute volume condition dropped on the index (no volume), labelled
+  R104 (227 tests, BH across all). TWAP proxy; the 1-minute volume condition dropped on the index (no volume), labelled Our
+  nearest test: R87B pullback continuation held on SENSEX but its call rule lost -Rs 21,127 on 162 trades (stop under the
+  pullback too tight); R71 P8 swing break lost in the final. Assumptions: Thresholds for B (0.5 ATR), C confirmation (3 bars)
+  and ''near C'' (25%) are ours; volume from index futures (spot has none).'

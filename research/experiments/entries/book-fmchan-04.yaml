@@ -2,16 +2,17 @@ id: book-fmchan-04
 title: Natural gas long from late February to mid-April (Chan's exact window) (Ernest Chan, book rule, proposed)
 family: calendar-events
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Ernest Chan''s rule from Quantitative Trading (Ch. 7, Seasonal trading strategies (natural gas sidebar)) makes
   money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: calendar (no price signal);
   trades the underlying future. Entry: Buy 1 lot NATGASMINI at the close of 25 February (next MCX session if a holiday), in
   the contract that expires latest while still before 15 April''s roll (normally the April contract; roll into May if April
   expires before 15 April). Stop: 2.5 x ATR14 on the daily close (R83 E9''s stop) - the book has none. Exit: Close of 15 April
   (previous session if a holiday).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: MCXD 2012-01-01 - 2021-12-31
+  holdout: MCXD 2022-01-01 - 2026-10-16 (read once)
 instruments:
 - NATURALGAS
 features:
@@ -23,16 +24,20 @@ model_or_rule: 'Buy 1 lot NATGASMINI at the close of 25 February (next MCX sessi
   if a holiday). | filters: None (book).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-04; trade: NATGASMINI future (signal and trade on the future).
   Option variant (labelled): buy the 1-ITM call of the nearest monthly expiry at entry, rolled once.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R83 E9: NG month-of-year seasonality on MCX NATGASMINI: 14 trades, -37,413; always short +14,687.
-  MCX_GUIDE: Feb -5.7%, Dec -10.7% monthly means 2012-2026. R94: bullion seasonals do not beat same-year random windows. Low
-  prior.. Assumptions: Chan buys the NYMEX June contract; MCX NG contracts track the nearby Henry Hub month, so the June leg
-  is not tradeable on MCX; the nearby contract carries contango roll costs Chan''s June leg avoided. Test on Henry Hub history
-  (2000+, as R83) for the window itself and on MCX 2012-2026 for the tradeable version; compare with random 35-session windows
-  of the same years (R94''s twin) and with always-short (carry). Vary the dates +-5 sessions as Chan advises.'
+  summary: 'MCXD (MCX future daily), variant base: design 10 trades, win 40%, net -Rs 4,026, folds Rs 1,135, -Rs 391, -Rs
+    4,770; p 1.000, BH q 1.000; holdout 5 trades, win 20%, net Rs 25,181. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). one trade a year: at most 14 trades, min-trades gate binds R104 (227 tests, BH across
+  all). one trade a year: at most 14 trades, min-trades gate binds Our nearest test: R83 E9: NG month-of-year seasonality
+  on MCX NATGASMINI: 14 trades, -37,413; always short +14,687. MCX_GUIDE: Feb -5.7%, Dec -10.7% monthly means 2012-2026. R94:
+  bullion seasonals do not beat same-year random windows. Low prior.. Assumptions: Chan buys the NYMEX June contract; MCX
+  NG contracts track the nearby Henry Hub month, so the June leg is not tradeable on MCX; the nearby contract carries contango
+  roll costs Chan''s June leg avoided. Test on Henry Hub history (2000+, as R83) for the window itself and on MCX 2012-2026
+  for the tradeable version; compare with random 35-session windows of the same years (R94''s twin) and with always-short
+  (carry). Vary the dates +-5 sessions as Chan advises.'

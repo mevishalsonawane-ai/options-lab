@@ -29,10 +29,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-06; trade: 1 lot 
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: next-expiry ATM chain is mostly missing from the rolling lake'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: h29: term structure (monthly minus weekly ATM IV) did not sort the realised move; calendar trades
-  not tested by us (R94''s calendars were MCX futures spreads).. Assumptions: Bennett''s 0.5 power and his long/short rule;
-  the 0.3 / 0.7 bands are ours.'
+notes: 'R104: needs data we lack (next-expiry ATM chain is mostly missing from the rolling lake).'

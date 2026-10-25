@@ -3,7 +3,7 @@ title: CCI(20) regular divergence, three qualifying rules, trendline-break entry
   book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'David Carli''s rule from The Power of Divergence Trading (Ch. 4) makes money after real charges and slippage,
   walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Bullish: two confirmed swing lows
   L1 < ... with price low(L2) < low(L1) and CCI(L2) > CCI(L1); CCI(L2) <= -150; max CCI between L1 and L2 <= 0; with A = low(L1),
@@ -15,9 +15,10 @@ hypothesis: 'David Carli''s rule from The Power of Divergence Trading (Ch. 4) ma
   plus 0.1% for shorts). Exit: Target 1 at the 127.2% extension, Target 2 at the 161.8% extension of the leg from the second
   extreme L2 to the first opposite swing after it (projected from L2 in the trade direction); close half at T1 and move the
   stop to the entry price; close the rest at T2. Skip the trade if reward to T1 is less than 1:1 of the stop distance.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: DLY 2006-01-01 - 2021-12-31; MCXD 2012-01-01 - 2021-12-31
+  holdout: DLY 2022-01-01 - 2026-10-19 (read once); MCXD 2022-01-01 - 2026-10-16 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -41,17 +42,21 @@ model_or_rule: 'Bullish: two confirmed swing lows L1 < ... with price low(L2) < 
 settings: 'research/books/TESTABLE_RULES.md, rule book-carli-01; trade: on index: buy the next-month 1-ITM CE (long) / PE
   (short) or trade the future, at the next session''s 09:16 open; on MCX: the near future or a monthly ITM option; all stops
   and targets on the underlying as the book states'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R95 tested CCI(25) regular divergence on 3m-60m bars only (no trendline, no Fibonacci size rule,
-  no +-150 zone): entered when known, 1,778 index trades -Rs 3,37,415 design; not tested by us on daily bars or with this
-  entry. Assumptions: The book draws swings, trendlines and Fibonacci legs by eye and grants unquantified ''small exceptions''
-  to rules 1-2; we use swing pivots of 3 bars each side (confirmed 3 bars later), no exceptions, the hlc3 CCI input, a 0.1%-of-price
-  buffer for ''15-20 pips/ticks'', the trendline through the last two swing highs (lows), a 20-bar staleness limit, and our
-  reading of the target leg (Figure 42 unreadable). Rule 3 read as the second extreme lying 1.13-1.618 of the AB pullback
-  beyond B.'
+  summary: 'DLY (index daily, futures proxy), variant base: design 0 trades, win -, net Rs 0, folds Rs 0, Rs 0, Rs 0, Rs 0;
+    p 1.000, BH q 1.000; holdout 0 trades, win -, net Rs 0. R104 verdict: fail. | MCXD (MCX future daily), variant base: design
+    0 trades, win -, net Rs 0, folds Rs 0, Rs 0, Rs 0; p 1.000, BH q 1.000; holdout 1 trades, win 0%, net -Rs 284. R104 verdict:
+    fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). README pick 4 R104 (227 tests, BH across all). README pick 4 Our nearest test: R95
+  tested CCI(25) regular divergence on 3m-60m bars only (no trendline, no Fibonacci size rule, no +-150 zone): entered when
+  known, 1,778 index trades -Rs 3,37,415 design; not tested by us on daily bars or with this entry. Assumptions: The book
+  draws swings, trendlines and Fibonacci legs by eye and grants unquantified ''small exceptions'' to rules 1-2; we use swing
+  pivots of 3 bars each side (confirmed 3 bars later), no exceptions, the hlc3 CCI input, a 0.1%-of-price buffer for ''15-20
+  pips/ticks'', the trendline through the last two swing highs (lows), a 20-bar staleness limit, and our reading of the target
+  leg (Figure 42 unreadable). Rule 3 read as the second extreme lying 1.13-1.618 of the AB pullback beyond B.'

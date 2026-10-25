@@ -2,15 +2,16 @@ id: book-sadowski-08
 title: Daily NR4 / NR7 breakout (Roman Sadowski, book rule, proposed)
 family: daily-filters
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 8) makes money after real
   charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Yesterday''s
   daily range is the smallest of the last 4 (NR4) or 7 (NR7). Today, buy on the first 5-min close above yesterday''s high,
   sell on the first close below its low (first break only). Stop: The other end of the narrow day''s range, on the underlying.
   Exit: Trail the stop to the prior 5-min swing low/high after +1R; square-off 15:15 (NSE) / 23:00 (MCX).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -27,13 +28,17 @@ model_or_rule: 'Yesterday''s daily range is the smallest of the last 4 (NR4) or 
   (MCX). | filters: Variant: ''chubby'' narrow day (open and close both within 25% of the range from opposite ends), and 2+
   consecutive narrow days.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-08; trade: Buy the 1-ITM CE/PE; stop on the underlying.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: OBUY_FINAL LV-04 NR7/inside day: 72 variants, -28,141 walk-forward; HUNT_R71 P2 15-min NR7 -Rs 1,68,820;
-  HUNT_R96 crude NR7 the only unproven MCX lead (failed on COPPER). Assumptions: ''Trailed to suit'' made precise as the swing
-  trail after +1R. Chubby = our definition.'
+  summary: 'IDX (index spot, bought option), variant NR4: design 223 trades, win 37%, net -Rs 26,984, folds -Rs 10,891, -Rs
+    72,903, Rs 56,810; p 1.000, BH q 1.000; holdout 73 trades, win 42%, net -Rs 27,149. R104 verdict: fail. | MCXI (MCX mini
+    future (own bars)), variant NR4: design 49 trades, win 55%, net Rs 78,075, folds Rs 63,209, Rs 14,866; p 0.173, BH q 1.000;
+    holdout 54 trades, win 52%, net Rs 62,337. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: OBUY_FINAL LV-04 NR7/inside
+  day: 72 variants, -28,141 walk-forward; HUNT_R71 P2 15-min NR7 -Rs 1,68,820; HUNT_R96 crude NR7 the only unproven MCX lead
+  (failed on COPPER). Assumptions: ''Trailed to suit'' made precise as the swing trail after +1R. Chubby = our definition.'

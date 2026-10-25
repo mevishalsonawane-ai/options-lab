@@ -408,3 +408,9 @@ limits beyond portfolio constraints.
   13.2, 14.1-14.2) came through only as axis numbers and captions. Tables (e.g. 4.1, 5.2, 6.2-6.5, 7.1, 8.1-8.2, 11.2,
   11.5, 12.1, 13.1, 13.3) were readable.
 - References and index were skimmed only. Footnote 13 of Ch. 14 is a leftover editorial question, not content.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmbayes-01`: tested (R104): MCXD: 111 trades, win 57%, net Rs 1,354,524 design, holdout Rs 363,878 (fail)

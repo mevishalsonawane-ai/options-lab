@@ -429,3 +429,9 @@ balances interest and half vol squared times gamma; hedging error comes from the
 - Figures and most tables are absent or garbled (charts of VIX, hedging-error histograms, Monte Carlo spreadsheets); several
   newspaper figures in Ch. 44 are replaced by a note that online reproduction was not permitted.
 - The bibliography and index were skimmed, not read line by line.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmwilmott-01`: tested (R104): VOL: 14 trades, win 57%, net -Rs 47,767 design, holdout Rs 0 (fail)

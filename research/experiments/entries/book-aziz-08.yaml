@@ -2,15 +2,16 @@ id: book-aziz-08
 title: Exit when the 5-minute chart stops making new extremes in the trade's direction (Andrew Aziz, book rule, proposed)
 family: trade-management
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 5, Trade Management Based on Price Action) makes
   money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry:
   None (overlay on an arm''s open position). Stop: the arm''s own stop Exit: Long: exit at the close of the second consecutive
   5-minute bar that fails to make a new high above the trade''s best high AND whose low is below the prior bar''s low. Short:
   mirror. Only after the trade has been open for at least two 5-minute bars.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -23,13 +24,17 @@ model_or_rule: 'None (overlay on an arm''s open position). | stop: the arm''s ow
   to exits earlier than the arm''s own (risk-lowering).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-08; trade: applies to the arm''s option; triggers read on the
   index'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R18: five early-exit overlays failed (0 of 60); R87B: candle exits against the trade mostly hurt;
-  R81 / R100: exits that cut runners lose on Liquidity. Assumptions: The book''s ''fails to make a new low and turns to higher
-  highs and higher lows'' fixed as two bars; overlay on paper arms only.'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant base: design 9161 trades, win 44% (B0 46%), net Rs 737,006
+    vs B0 Rs 774,750 (delta -Rs 37,744), quarters -Rs 9,676, -Rs 13,402, Rs 16,227, Rs 3,986; p 1.000, BH q 1.000; final delta
+    Rs 54,648. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R18: five early-exit overlays
+  failed (0 of 60); R87B: candle exits against the trade mostly hurt; R81 / R100: exits that cut runners lose on Liquidity.
+  Assumptions: The book''s ''fails to make a new low and turns to higher highs and higher lows'' fixed as two bars; overlay
+  on paper arms only.'

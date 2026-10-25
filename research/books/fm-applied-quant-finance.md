@@ -408,3 +408,12 @@ across windows) and R74's note that volatility-targeted sizing fits the LIVE "on
   inversion error bounds (Ch. 1.4), the copula formulas in Table 2.1, the state-price-density derivatives (Ch. 8.3) and the
   empirical-likelihood asymptotics (Ch. 12); the surrounding prose and all result tables were readable.
 - Bibliographies were skimmed, not studied.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmaqf-01`: not testable (R104): implied density needs every strike on the entry day; the lake has ATM +-10 intraday and a weekly bhavcopy sample
+- `book-fmaqf-02`: not testable (R104): as fmaqf-01
+- `book-fmaqf-03`: tested (R104): DLY: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail); MCXD: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail)
+- `book-fmaqf-04`: tested (R104): MM: drawdown cut 60%, net cut -13% design (fail)

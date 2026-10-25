@@ -25,10 +25,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-06; trade: the ar
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: no option book-depth history'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: h10: capacity BANKNIFTY 129 lots in the holdout, FINNIFTY 0; costs ate 55-65% of gross at plan size.
-  h14: the capped limit keeps the cost curve from bending at large size.. Assumptions: The slicing schedule is ours; the book
-  only says slicing and patience beat one big market order and that VWAP is the yardstick. Only matters at size (tens of lots).'
+notes: 'R104: needs data we lack (no option book-depth history).'

@@ -2,16 +2,17 @@ id: book-porwal-03
 title: Engulfing reversal with trend, volume and stochastic filters (Nikhil Porwal, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 3.3) makes money after real charges and
   slippage, walk-forward, with BH across the rules tried. Signal source: underlying price and volume (futures volume). Entry:
   Bullish: close below SMA 20 and SMA 20 falling (downtrend); day 1 close < open; day 2 close > open with body covering day
   1''s body (open2 <= close1 and close2 >= open1). Buy when price trades above day 2''s high within the next 3 sessions. Bearish
   mirror, plus open2 > close1, close2 < open1 and day-2 volume > day-1 volume. Stop: Below day 2''s low (bullish) / above
   day 2''s high (bearish). Exit: Target 2R; else trail with EMA 20 close; max hold 10 sessions.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: DLY 2006-01-01 - 2021-12-31; MCXD 2012-01-01 - 2021-12-31
+  holdout: DLY 2022-01-01 - 2026-10-19 (read once); MCXD 2022-01-01 - 2026-10-16 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -29,13 +30,17 @@ model_or_rule: 'Bullish: close below SMA 20 and SMA 20 falling (downtrend); day 
   on day 1 or day 2 above 1.5x its 20-day average; stochastic 14,3,3 below 20 (bullish) / above 80 (bearish).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-03; trade: buy ATM CE / PE of the next monthly expiry (or 1-ITM
   weekly), stop and target on the index; MCX: the future'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87 engulfing among 2-candle patterns: no direction edge; R85 MCX engulfing no reliable edge; R87B
-  daily 0 of 25. Assumptions: Downtrend definition, the 3-session trigger window, the volume multiple and the stochastic settings
-  are ours; the book shows the trend ''visually''.'
+  summary: 'DLY (index daily, futures proxy), variant base: design 124 trades, win 44%, net Rs 88,560, folds -Rs 5,157, -Rs
+    3,911, Rs 5,766, Rs 91,862; p 0.273, BH q 1.000; holdout 50 trades, win 26%, net -Rs 259,614. R104 verdict: fail. | MCXD
+    (MCX future daily), variant base: design 136 trades, win 33%, net Rs 3,047, folds -Rs 18,326, -Rs 15,820, Rs 37,192; p
+    0.452, BH q 1.000; holdout 76 trades, win 51%, net Rs 15,512. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87 engulfing among 2-candle
+  patterns: no direction edge; R85 MCX engulfing no reliable edge; R87B daily 0 of 25. Assumptions: Downtrend definition,
+  the 3-session trigger window, the volume multiple and the stochastic settings are ours; the book shows the trend ''visually''.'

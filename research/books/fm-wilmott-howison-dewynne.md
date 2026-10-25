@@ -319,3 +319,10 @@ the American-call no-early-exercise proof, and model answers; read for completen
   smile Fig. 3.9, free boundaries, transaction-cost spreads Fig. 16.1-16.4, convertible bonds Fig. 18.1-18.3) survive only
   as axis labels; the numerical tables (Fig. 8.6, 8.12, 8.15, 9.4, 10.5-10.11, 15.3-15.4) were readable.
 - Duplicate scans: PDF pages 150, 171, 172, 174, 224, 311 and 312 repeat neighbouring pages; nothing appears to be missing.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmwhd-01`: tested (R104): VOL: 1145 trades, win 28%, net -Rs 1,542,428 design, holdout -Rs 391,601 (fail)
+- `book-fmwhd-02`: tested (R104): VOL: 5 trades, win 40%, net -Rs 7,709 design, holdout Rs 0 (fail)

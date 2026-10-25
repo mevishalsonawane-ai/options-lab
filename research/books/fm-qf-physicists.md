@@ -328,3 +328,9 @@ parameters) and their chaos may be an artefact.
 - Figures show only axis numbers and captions: Fig. 3.1 (SPY weekly return histogram vs normal and Cauchy), 5.1,
   6.1-6.3, 7.1-7.9, 9.1, 10.1, 11.1-11.2 and 12.1-12.4. Their captions and surrounding text were read.
 - Nothing else; the comments, references, answers to exercises and index were read.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmschmidt-01`: tested (R104): IDX: 9207 trades, win 30%, net -Rs 543,959 design, holdout -Rs 141,565 (fail)

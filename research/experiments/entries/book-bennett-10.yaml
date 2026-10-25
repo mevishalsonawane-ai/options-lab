@@ -25,9 +25,9 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-10; trade: none; 
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
+  summary: 'R104: descriptive question only (no trade); see HUNT_R104_BOOKS.md'
+  costs: n/a
 holdout_read: null
-verdict: proposed
+verdict: not-a-test
 notes: 'Our nearest test: R16 and R102: VIX / ATM IV is the range dial; IV1 and h29: skew carries no direction. Skew vs range
   given ATM IV not tested.. Assumptions: Fixed-strike skew uses ATM-5 vs ATM+5 because 90% strikes are outside ATM +-10.'

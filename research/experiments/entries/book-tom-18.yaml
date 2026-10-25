@@ -2,14 +2,15 @@ id: book-tom-18
 title: No new entries around high-impact scheduled news (Trader Tom, book rule, proposed)
 family: calendar-events
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Trader Tom''s rule from The First Trading Manual (The 24-Hour Trading Cycle; Stanley case study) makes money
   after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: none / calendar. Entry: Filter:
   no new entries from 15 minutes before to 15 minutes after a high-impact release (India: RBI policy, Budget, CPI; MCX: EIA
   crude/gas storage, US CPI, NFP, FOMC in MCX hours). Stop: the arm''s own Exit: the arm''s own'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -23,12 +24,17 @@ model_or_rule: 'Filter: no new entries from 15 minutes before to 15 minutes afte
   Budget, CPI; MCX: EIA crude/gas storage, US CPI, NFP, FOMC in MCX hours). | stop: the arm''s own | exit: the arm''s own
   | filters: event calendar (research/context/events.csv)'
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-18; trade: filter only (skip), shadow first for live'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: EVENT_SHIELD: BANKNIFTY policy-day range 1.48x (15 sessions); pausing arms on event days not an
-  edge; R83 EIA fade/follow failed. Assumptions: Window width is ours; ''red-flagged'' mapped to the events in our calendar.'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant base: design 9132 trades, win 46% (B0 46%), net Rs 829,822
+    vs B0 Rs 774,750 (delta Rs 55,072), quarters -Rs 3,980, Rs 5,738, Rs 42,726, Rs 2,615; p 0.100, BH q 1.000; final delta
+    Rs 0. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). events.csv (2024+, India and US); the MCX clause has no MCX arm R104 (227 tests,
+  BH across all). events.csv (2024+, India and US); the MCX clause has no MCX arm Our nearest test: EVENT_SHIELD: BANKNIFTY
+  policy-day range 1.48x (15 sessions); pausing arms on event days not an edge; R83 EIA fade/follow failed. Assumptions: Window
+  width is ours; ''red-flagged'' mapped to the events in our calendar.'

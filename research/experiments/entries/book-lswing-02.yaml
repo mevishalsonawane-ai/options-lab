@@ -2,16 +2,17 @@ id: book-lswing-02
 title: FORCESWING + Master Plan on MCX futures daily bars (Larry Swing, book rule, proposed)
 family: mcx-crypto
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Larry Swing''s rule from A Practical Guide to Swing Trading (Ch. 5.1, 6, 8.8, 8.9, 10.1.1) makes money after
   real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume (MCX continuous
   near-month future, daily, exchange volume). Entry: Same scan and trigger as forceswing-master-plan-index, on the MCX future;
   ''open'' = the MCX 09:00 open; gap waits 30 / 5 minutes as in the book. Stop: Same as forceswing-master-plan-index (higher
   of -1.3 ATR14 or reference low - 0.07 ATR14; daily trail under the prior low). Exit: Half at +2.3 ATR14, rest on the trail;
   20-session backstop; exit before the contract''s last 3 sessions (roll gap not modelled - assumption).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: MCXD 2012-01-01 - 2021-12-31
+  holdout: MCXD 2022-01-01 - 2026-10-16 (read once)
 instruments:
 - GOLD
 - SILVER
@@ -26,14 +27,17 @@ model_or_rule: 'Same scan and trigger as forceswing-master-plan-index, on the MC
   before the contract''s last 3 sessions (roll gap not modelled - assumption). | filters: none'
 settings: 'research/books/TESTABLE_RULES.md, rule book-lswing-02; trade: 2 mini futures lots (GOLDM, SILVERM, CRUDEOILM, NATGASMINI);
   option version: 1-ITM monthly CE/PE on the same trigger, stops on the future.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R83: crude daily Donchian-20 + Supertrend final +Rs 21.8k on 27 trades but not proven (twin p 0.23);
-  R82: daily Donchian on gold/silver proxies lost in design; R96: NR7 breakout on crude is the only MCX daily lead (not passed).
-  Force Index / pullback scan not tested by us.. Assumptions: ATR scaling as in the index rule; rolls make continuous-future
-  volume jump near expiry, so Force Index uses the volume of the contract held.'
+  summary: 'MCXD (MCX future daily), variant base: design 58 trades, win 40%, net Rs 80,627, folds Rs 15,096, -Rs 6,027, Rs
+    71,558; p 0.096, BH q 1.000; holdout 23 trades, win 30%, net Rs 105,286. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R83: crude daily Donchian-20
+  + Supertrend final +Rs 21.8k on 27 trades but not proven (twin p 0.23); R82: daily Donchian on gold/silver proxies lost
+  in design; R96: NR7 breakout on crude is the only MCX daily lead (not passed). Force Index / pullback scan not tested by
+  us.. Assumptions: ATR scaling as in the index rule; rolls make continuous-future volume jump near expiry, so Force Index
+  uses the volume of the contract held.'

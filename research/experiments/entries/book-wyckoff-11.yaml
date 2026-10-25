@@ -2,14 +2,15 @@ id: book-wyckoff-11
 title: Do not enter in the direction of a 4-day streak (Wyckoff, book rule, proposed)
 family: daily-filters
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. VI) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price (daily closes). Entry: On days after >= 4 consecutive up
   closes, skip the arms'' long entries; after >= 4 consecutive down closes, skip short entries Stop: the arm''s own Exit:
   the arm''s own'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -19,13 +20,17 @@ features:
 model_or_rule: 'On days after >= 4 consecutive up closes, skip the arms'' long entries; after >= 4 consecutive down closes,
   skip short entries | stop: the arm''s own | exit: the arm''s own | filters: also test 3 days'
 settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-11; trade: skip-only filter on the arms (risk-lowering)'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us as a streak rule; R102 daily sign continuation 53.2% (n 5,086); R101 filters 0
-  of 20. Assumptions: Book: the market seldom runs more than three or four days one way without a reaction; read as a skip
-  filter, not a fade'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant 3d: design 7830 trades, win 46% (B0 46%), net Rs 644,734
+    vs B0 Rs 774,750 (delta -Rs 130,016), quarters -Rs 50,762, -Rs 43,123, -Rs 6,011, Rs 981; p 1.000, BH q 1.000; final delta
+    Rs 70,169. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). 4-day streak skip filter (3-day variant chosen walk-forward) R104 (227 tests, BH
+  across all). 4-day streak skip filter (3-day variant chosen walk-forward) Our nearest test: not tested by us as a streak
+  rule; R102 daily sign continuation 53.2% (n 5,086); R101 filters 0 of 20. Assumptions: Book: the market seldom runs more
+  than three or four days one way without a reaction; read as a skip filter, not a fade'

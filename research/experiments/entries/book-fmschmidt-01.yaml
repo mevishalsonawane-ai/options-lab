@@ -2,15 +2,16 @@ id: book-fmschmidt-01
 title: Buy on a turn up after a dip, sell on a turn down after a top (Anatoly Schmidt, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Anatoly Schmidt''s rule from Quantitative Finance for Physicists (Ch. 12.4.3) makes money after real charges
   and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Long when close[k] >
   close[k-1] and close[k-1] < close[k-2]; short when close[k] < close[k-1] and close[k-1] > close[k-2]; enter at the next
   bar''s open Stop: not stated by the book; assume a stop at the extreme of the last two bars (the dip low for longs, the
   top high for shorts) Exit: the opposite signal, or 15:05 square-off on expiry day / end of session otherwise'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -23,14 +24,17 @@ model_or_rule: 'Long when close[k] > close[k-1] and close[k-1] < close[k-2]; sho
   of session otherwise | filters: none in the book'
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmschmidt-01; trade: buy ATM CE on a long signal, ATM PE on a short;
   stop and exit on the underlying as above'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R102 2.5: at 5 minutes the next bar follows the previous bar''s sign 48.4% of the time (n 167,082);
-  R88 0 of 8 direction findings held; R87 candle shapes and R71 patterns failed. Not tested in this exact form.. Assumptions:
-  The book uses this only as the strategy of simulated ''technical traders'' in an agent-based model and shows it moves prices
-  when those traders are big enough; it never claims a real-market profit. Bar size, stop and session handling are ours.'
+  summary: 'IDX (index spot, bought option), variant 5m: design 9207 trades, win 30%, net -Rs 543,959, folds -Rs 76,329, -Rs
+    127,540, -Rs 83,647, -Rs 256,443; p 1.000, BH q 1.000; holdout 1096 trades, win 29%, net -Rs 141,565. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R102 2.5: at 5 minutes the next
+  bar follows the previous bar''s sign 48.4% of the time (n 167,082); R88 0 of 8 direction findings held; R87 candle shapes
+  and R71 patterns failed. Not tested in this exact form.. Assumptions: The book uses this only as the strategy of simulated
+  ''technical traders'' in an agent-based model and shows it moves prices when those traders are big enough; it never claims
+  a real-market profit. Bar size, stop and session handling are ours.'

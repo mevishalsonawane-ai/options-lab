@@ -2,14 +2,16 @@ id: book-woods-12
 title: NR7 break in the trend's direction only (Galen Woods, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.10) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price. Entry: The last bar has the smallest high-low range of
   the last 7; uptrend: buy stop above its high; downtrend: sell stop below its low; valid 2 bars. Stop: The other end of the
   NR7 bar. Exit: Not stated; nearest swing or square-off (daily: 5 sessions).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; DLY 2006-01-01 - 2021-12-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); DLY 2022-01-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19
+    (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -22,12 +24,19 @@ model_or_rule: 'The last bar has the smallest high-low range of the last 7; uptr
   (daily: 5 sessions). | filters: Trend = EMA 20 slope (ours).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-12; trade: buy 1-ITM CE / PE (index); MCX 1-ITM option or the
   future'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 3
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R71 P2 two-sided 15m: -Rs 1,68,820 on 1,341 trades; R96 crude NR7 lead (Rs 48,875 on 46) failed
-  on COPPER.. Assumptions: Trend definition ours.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 3454 trades, win 37%, net -Rs 445,187, folds -Rs 110,500,
+    -Rs 54,990, -Rs 69,562, -Rs 210,135; p 1.000, BH q 1.000; holdout 397 trades, win 30%, net -Rs 150,047. R104 verdict:
+    fail. | DLY (index daily, futures proxy), variant base: design 579 trades, win 32%, net Rs 124,016, folds Rs 207,082,
+    -Rs 35,151, -Rs 163,933, Rs 116,018; p 0.351, BH q 1.000; holdout 182 trades, win 30%, net -Rs 310,727. R104 verdict:
+    fail. | MCXI (MCX mini future (own bars)), variant 15m: design 98 trades, win 24%, net -Rs 26,072, folds Rs 0, -Rs 4,033,
+    -Rs 22,040; p 1.000, BH q 1.000; holdout 165 trades, win 34%, net -Rs 16,801. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). differs from R71 P2 (two-sided) by taking the trend side only R104 (227 tests, BH
+  across all). differs from R71 P2 (two-sided) by taking the trend side only Our nearest test: R71 P2 two-sided 15m: -Rs 1,68,820
+  on 1,341 trades; R96 crude NR7 lead (Rs 48,875 on 46) failed on COPPER.. Assumptions: Trend definition ours.'

@@ -31,11 +31,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmbjork-03; trade: 1 lot 
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: needs synchronous bid/ask on three legs'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us; R103''s passers were an artefact of stale wing prices (43-63% of design trades
-  had a stale leg), which a parity check would have flagged.. Assumptions: Bjork gives the identity, not thresholds; the 20%
-  margin, ATM+-3 window and same-minute rule are ours. Last-trade prices overstate opportunities; a fair test needs synchronous
-  bid/ask. Doubles as a stale-print detector for every option backtest.'
+notes: 'R104: needs data we lack (needs synchronous bid/ask on three legs).'

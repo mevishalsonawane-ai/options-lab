@@ -2,7 +2,7 @@ id: book-bennett-05
 title: Sell skew (short ATM-5 put, long ATM+5 call, delta hedged) outside jumpy regimes (Colin Bennett, book rule, proposed)
 family: option-structure
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 7.5, Skew trading; Ch. 1.6 risk reversals) makes money after
   real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (skew
   level and realised skew); hedge on the underlying future. Entry: At 09:20 if skew = IV(ATM-5 put) - IV(ATM+5 call) is above
@@ -10,9 +10,10 @@ hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 7.5, Skew tradin
   and today''s spot <= 1, and India VIX up less than 10% on the day), sell the ATM-5 put, buy the ATM+5 call, and short futures
   to delta-neutral in whole lots. Stop: Basket loss of 1.5% of the index notional of one lot, or India VIX up 15% intraday.
   Exit: 15:10.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: VOL 2021-08-02 - 2026-03-31
+  holdout: VOL 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,13 +27,17 @@ model_or_rule: 'At 09:20 if skew = IV(ATM-5 put) - IV(ATM+5 call) is above its r
   days; skip if the index fell more than 2% the previous day (jumpy regimes cluster after falls).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-05; trade: 1 lot each leg plus futures hedge. Note: the short
   put is naked unless a further put is bought; research version adds a long ATM-9 put to keep risk defined.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us; R102 measured the skew level only (ATM-5 put dearer than ATM+5 call by 2.56 IV
-  points on 91% of 1,222 NIFTY days).. Assumptions: Bennett''s realised-skew definition is made literal on daily ATM IV changes;
-  strikes 5 out because 90% strikes are outside ATM +-10 on a weekly.'
+  summary: 'VOL (option structure (chain as context)), variant base: design 511 trades, win 49%, net -Rs 180,635, folds -Rs
+    25,772, -Rs 36,659, -Rs 39,322, -Rs 78,881; p 1.000, BH q 1.000; holdout 59 trades, win 51%, net -Rs 15,112. R104 verdict:
+    fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). hedge on the spot as a futures proxy R104 (227 tests, BH across all). hedge on the
+  spot as a futures proxy Our nearest test: not tested by us; R102 measured the skew level only (ATM-5 put dearer than ATM+5
+  call by 2.56 IV points on 91% of 1,222 NIFTY days).. Assumptions: Bennett''s realised-skew definition is made literal on
+  daily ATM IV changes; strikes 5 out because 90% strikes are outside ATM +-10 on a weekly.'

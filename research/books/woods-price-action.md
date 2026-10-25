@@ -405,3 +405,28 @@ General conventions the book uses for every pattern (Ch. 4, 5, 7):
 Every chart (about 70 example and diagram images) has no text layer; only their captions were read, and OCR of the
 six image-only pages (1, 86, 89, 95, 101, 106) gives captions and fragments only. The charts are illustrations of the
 rules already stated in the text, so no rule is lost. Hyperlinked follow-up articles ("Read: ...") are not in the book.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-woods-01`: tested (R104): IDX: 476 trades, win 47%, net -Rs 47,085 design, holdout -Rs 32,754 (fail); MCXI: 28 trades, win 29%, net -Rs 25,227 design, holdout -Rs 50,868 (fail)
+- `book-woods-02`: tested (R104): IDX: 1240 trades, win 46%, net -Rs 95,643 design, holdout -Rs 17,566 (fail); MCXI: 34 trades, win 21%, net -Rs 6,455 design, holdout -Rs 6,681 (fail)
+- `book-woods-03`: tested (R104): IDX: 2099 trades, win 44%, net -Rs 249,800 design, holdout -Rs 146,463 (fail)
+- `book-woods-04`: tested (R104): DLY: 115 trades, win 43%, net -Rs 116,147 design, holdout -Rs 273,480 (fail); MCXD: 23 trades, win 43%, net Rs 3,801 design, holdout Rs 24,281 (fail)
+- `book-woods-05`: tested (R104): DLY: 36 trades, win 36%, net -Rs 121,797 design, holdout -Rs 155,711 (fail); MCXD: 12 trades, win 33%, net -Rs 14,684 design, holdout -Rs 43,872 (fail)
+- `book-woods-06`: tested (R104): IDX: 283 trades, win 37%, net -Rs 57,502 design, holdout Rs 26,154 (fail)
+- `book-woods-07`: tested (R104): IDX: 469 trades, win 50%, net -Rs 61,716 design, holdout Rs 1,169 (fail)
+- `book-woods-08`: not re-run (R104): covered: R71 P7 three-bar reversal (final -Rs 1,67,689 on 855, twin p 0.002: timing real, below option cost); the book's stop/exit are R71's
+- `book-woods-09`: tested (R104): IDX: 2992 trades, win 40%, net -Rs 259,116 design, holdout -Rs 143,840 (fail)
+- `book-woods-10`: tested (R104): IDX: 1063 trades, win 42%, net -Rs 121,020 design, holdout -Rs 40,726 (fail)
+- `book-woods-11`: tested (R104): IDX: 1221 trades, win 45%, net -Rs 53,374 design, holdout Rs 4,876 (fail)
+- `book-woods-12`: tested (R104): IDX: 3454 trades, win 37%, net -Rs 445,187 design, holdout -Rs 150,047 (fail); DLY: 579 trades, win 32%, net Rs 124,016 design, holdout -Rs 310,727 (fail); MCXI: 98 trades, win 24%, net -Rs 26,072 design, holdout -Rs 16,801 (fail)
+- `book-woods-13`: tested (R104): IDX: 2790 trades, win 22%, net -Rs 378,844 design, holdout -Rs 98,293 (fail); DLY: 404 trades, win 41%, net Rs 486,756 design, holdout Rs 391 (fail)
+- `book-woods-14`: tested (R104): IDX: 1830 trades, win 50%, net -Rs 116,652 design, holdout -Rs 76,472 (fail)
+- `book-woods-15`: tested (R104): IDX: 55 trades, win 45%, net Rs 340 design, holdout Rs 15,605 (fail)
+- `book-woods-16`: tested (R104): IDX: 459 trades, win 33%, net -Rs 46,244 design, holdout -Rs 75,273 (fail); DLY: 94 trades, win 55%, net Rs 214,631 design, holdout Rs 139,562 (fail); MCXI: 26 trades, win 38%, net -Rs 1,899 design, holdout -Rs 11,073 (fail)
+- `book-woods-17`: tested (R104): IDX: 51 trades, win 29%, net -Rs 24,834 design, holdout -Rs 945 (fail)
+- `book-woods-18`: tested (R104): IDX: 85 trades, win 27%, net -Rs 41,080 design, holdout -Rs 1,848 (fail)
+- `book-woods-19`: tested (R104): IDX: 3804 trades, win 29%, net -Rs 727,169 design, holdout -Rs 90,506 (fail)
+- `book-woods-20`: tested (R104): IDX: 1221 trades, win 33%, net -Rs 76,440 design, holdout -Rs 59,374 (fail)

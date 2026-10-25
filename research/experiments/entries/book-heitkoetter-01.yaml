@@ -2,7 +2,7 @@ id: book-heitkoetter-01
 title: Trade with an intraday trendline; exit when it breaks (Markus Heitkoetter, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 3, Technical Indicators (Uptrend / Downtrend))
   makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
   Entry: Uptrend line: anchor 1 = the session low so far; anchor 2 = the low of the first later bar whose low is not higher
@@ -10,9 +10,10 @@ hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (St
   swing high after the line is drawn (the book''s example breaks a resistance level on high volume). Short mirrors with a
   downtrend line from the session high and the first higher high. Stop: A 5-minute close below the projected uptrend line
   (above the downtrend line for shorts). Exit: Trendline break (as the stop); square off 15:10 (15:05 on expiry).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -29,14 +30,17 @@ model_or_rule: 'Uptrend line: anchor 1 = the session low so far; anchor 2 = the 
   break the last condition the trend is over (no new entries that side).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-01; trade: buy 1-ITM CE on a long, 1-ITM PE on a short;
   stop and exit on the underlying as the book states'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us; nearest R71 P8 swing structure (HH + HL) lost in the final period (-Rs 40,109
-  on 374 trades) and H25 break-of-structure families were 0 of 18 positive. Assumptions: The book draws lines by eye; ''close
-  to the lows'' made 0.15 x ATR14; entry trigger (break of the last swing high) and the 15:10 square-off are ours; volume
-  confirmation dropped (index spot has no volume; could use futures volume from 29 Jul 2026).'
+  summary: 'IDX (index spot, bought option), variant 15m: design 955 trades, win 29%, net -Rs 209,106, folds -Rs 57,255, -Rs
+    41,003, -Rs 110,849; p 1.000, BH q 1.000; holdout 162 trades, win 37%, net Rs 7,491. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us; nearest R71
+  P8 swing structure (HH + HL) lost in the final period (-Rs 40,109 on 374 trades) and H25 break-of-structure families were
+  0 of 18 positive. Assumptions: The book draws lines by eye; ''close to the lows'' made 0.15 x ATR14; entry trigger (break
+  of the last swing high) and the 15:10 square-off are ours; volume confirmation dropped (index spot has no volume; could
+  use futures volume from 29 Jul 2026).'

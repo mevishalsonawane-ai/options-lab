@@ -245,3 +245,18 @@ generates 150% return". Neither chapter is in the 42 pages, so nothing about the
 The chart images (about 20 figures: USDJPY, EURUSD, GBPJPY examples and the HA trade screenshots) are not in the text or
 OCR files. Their captions and the text around them were read. The two chapters listed on the contents page ("RSI, 5
 systems + back test" and "binary options, 150% return") do not exist in this 42-page file.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-sadowski-01`: tested (R104): DLY: 65 trades, win 42%, net Rs 416,259 design, holdout -Rs 483,356 (fail); MCXD: 49 trades, win 35%, net Rs 95,346 design, holdout Rs 184,782 (fail)
+- `book-sadowski-02`: tested (R104): DLY: 324 trades, win 36%, net Rs 458,687 design, holdout Rs 49,026 (fail); MCXD: 241 trades, win 22%, net Rs 49,315 design, holdout Rs 68,655 (fail)
+- `book-sadowski-03`: tested (R104): IDX: 13 trades, win 54%, net Rs 11,240 design, holdout Rs 5,700 (fail)
+- `book-sadowski-04`: tested (R104): IDX: 603 trades, win 26%, net -Rs 85,097 design, holdout -Rs 30,566 (fail)
+- `book-sadowski-05`: tested (R104): IDX: 4038 trades, win 26%, net -Rs 498,476 design, holdout -Rs 112,977 (fail)
+- `book-sadowski-06`: tested (R104): IDX: 795 trades, win 42%, net Rs 92,562 design, holdout -Rs 14,601 (fail)
+- `book-sadowski-07`: tested (R104): IDX: 189 trades, win 49%, net -Rs 30,443 design, holdout -Rs 24,943 (fail); MCXI: 109 trades, win 35%, net -Rs 91,330 design, holdout Rs 1,487 (fail)
+- `book-sadowski-08`: tested (R104): IDX: 223 trades, win 37%, net -Rs 26,984 design, holdout -Rs 27,149 (fail); MCXI: 49 trades, win 55%, net Rs 78,075 design, holdout Rs 62,337 (fail)
+- `book-sadowski-09`: tested (R104): IDX: 5498 trades, win 35%, net -Rs 710,888 design, holdout -Rs 150,781 (fail); DLY: 949 trades, win 33%, net Rs 1,495,059 design, holdout -Rs 878,745 (fail)
+- `book-sadowski-10`: tested (R104): IDXF: 114 trades, win 33%, net Rs 43,629 design, holdout Rs 112,628 (fail)

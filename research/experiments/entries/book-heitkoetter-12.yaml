@@ -2,14 +2,15 @@ id: book-heitkoetter-12
 title: Trail the stop at the previous 60-minute bar's high/low (Markus Heitkoetter, book rule, proposed)
 family: trade-management
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 5, Trailing Stops) makes money after real
   charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: any trend arm''s
   entry (Donchian, Breadth Donchian) Stop: initial: the high (short) / low (long) of the entry bar; after each completed 60-minute
   bar move it to that bar''s high / low if tighter Exit: trail hit; 15:10 / MCX close'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -22,12 +23,16 @@ model_or_rule: 'any trend arm''s entry (Donchian, Breadth Donchian) | stop: init
   entry bar; after each completed 60-minute bar move it to that bar''s high / low if tighter | exit: trail hit; 15:10 / MCX
   close | filters: trending markets (book)'
 settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-12; trade: as the arm; stop on the underlying'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us exactly; R81 X3 ATR trail cut runners (-Rs 62k design, -Rs 17k final); R19b Rs
-  500 trail failed. Assumptions: Book''s example is 60-minute E-mini; a 15-minute version is the natural variant.'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant base: design 7574 trades, win 44% (B0 46%), net Rs 269,744
+    vs B0 Rs 226,928 (delta Rs 42,817), quarters -Rs 5,040, -Rs 43,361, -Rs 55,421, Rs 65,141; p 0.276, BH q 1.000; final
+    delta -Rs 95,358. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us exactly; R81
+  X3 ATR trail cut runners (-Rs 62k design, -Rs 17k final); R19b Rs 500 trail failed. Assumptions: Book''s example is 60-minute
+  E-mini; a 15-minute version is the natural variant.'

@@ -351,3 +351,21 @@ futures VWAP, `HUNT_R10_ORDERFLOW_TOOLS.md`).
 Pages 4, 8, 124, 164, 216, 386, 419 and 420 (image-only, the OCR found no text); the chart and Level 2 screenshots on the
 other image pages and throughout the book (only captions and axis labels readable); the Top / Bottom Reversal scanner
 settings (screenshots only). No prose was missing.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-aziz-01`: not re-run (R104): covered: ORB on VWAP's side with a narrow range: R10 V1 / T6 and R3 / R49 / R92 (0 of 16, 0 of 336, 0 of 257)
+- `book-aziz-02`: tested (R104): MCXI: 118 trades, win 36%, net -Rs 34,625 design, holdout -Rs 40,153 (fail); IDX: 1444 trades, win 29%, net -Rs 104,778 design, holdout -Rs 12,222 (fail)
+- `book-aziz-03`: tested (R104): IDX: 779 trades, win 30%, net -Rs 89,454 design, holdout -Rs 730 (fail)
+- `book-aziz-04`: tested (R104): IDX: 2677 trades, win 25%, net -Rs 327,740 design, holdout -Rs 48,469 (fail); MCXI: 61 trades, win 21%, net -Rs 39,218 design, holdout Rs 405 (fail)
+- `book-aziz-05`: tested (R104): IDX: 820 trades, win 31%, net -Rs 47,515 design, holdout -Rs 4,205 (fail)
+- `book-aziz-06`: tested (R104): MCXI: 5 trades, win 0%, net -Rs 994 design, holdout -Rs 1,063 (fail); IDX: 977 trades, win 31%, net -Rs 85,721 design, holdout -Rs 1,874 (fail)
+- `book-aziz-07`: tested (R104): IDX: 260 trades, win 32%, net -Rs 27,826 design, holdout -Rs 12,409 (fail)
+- `book-aziz-08`: tested (R104): ARM: delta vs the arm -Rs 37,744 design (fail)
+- `book-aziz-09`: not re-run (R104): covered: R81 X5 half at 1R + break-even (-Rs 79k design, -Rs 35k final), R100 G13
+- `book-aziz-10`: tested (R104): ARM: delta vs the arm -Rs 59,197 design (fail)
+- `book-aziz-11`: tested (R104): ARM: delta vs the arm -Rs 212,146 design (fail)
+- `book-aziz-12`: tested (R104): MM: drawdown cut 11%, net cut -14% design (fail)
+- `book-aziz-13`: tested (R104): MM: drawdown cut -219%, net cut -197% design (fail)

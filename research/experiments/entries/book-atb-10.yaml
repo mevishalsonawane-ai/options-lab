@@ -3,7 +3,7 @@ title: Flag (parallel channel against a sharp pole), trade the channel break (St
   Book, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 3, Strategy 5 (p30);
   Ch. 4 flags (p58)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source:
   underlying price. Entry: Pole: a move of >= 2 ATR within 5 bars. Flag: 4-15 bars drifting against the pole inside two parallel
@@ -11,9 +11,11 @@ hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simp
   at the open after the first close below the lower line. Bullish mirror: buy after the first close above the upper line.
   Stop: Beyond the opposite channel line at the break bar. Exit: Target = pole length from the break (drawn on p58), else
   square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31; CRY 2023-10-01 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once); CRY 2026-04-01 - 2026-12-31
+    (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -29,12 +31,19 @@ model_or_rule: 'Pole: a move of >= 2 ATR within 5 bars. Flag: 4-15 bars drifting
   | filters: None stated.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-10; trade: buy 1-ITM PE on a bearish flag, 1-ITM CE on a bullish
   flag; CRYPTO: same stop plus the step profit lock'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 3
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R71 P4 flag: only 32 final trades (-Rs 442 with L25), design -Rs 27,378: too rare to judge. Assumptions:
-  Pole size, flag length, parallel tolerance, stop and target are ours.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 60 trades, win 32%, net -Rs 6,790, folds -Rs 5,174, Rs 16,650,
+    -Rs 18,265; p 1.000, BH q 1.000; holdout 8 trades, win 12%, net -Rs 10,658. R104 verdict: fail. | MCXI (MCX mini future
+    (own bars)), variant 5m: design 32 trades, win 31%, net -Rs 2,108, folds Rs 0, -Rs 2,108; p 1.000, BH q 1.000; holdout
+    18 trades, win 33%, net -Rs 1,034. R104 verdict: fail. | CRY (BTC/ETH perp), variant 15m: design 285 trades, win 48%,
+    net -Rs 16,726, folds -Rs 10,341, -Rs 6,385; p 1.000, BH q 1.000; holdout 59 trades, win 41%, net -Rs 6,912. R104 verdict:
+    fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R71 P4 flag: only 32 final trades
+  (-Rs 442 with L25), design -Rs 27,378: too rare to judge. Assumptions: Pole size, flag length, parallel tolerance, stop
+  and target are ours.'

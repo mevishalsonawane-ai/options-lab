@@ -349,3 +349,9 @@ across lines in the text layer (fractions, integrals, sub- and superscripts) but
 prose and the worked numbers. A few printed formulas contain typos in the original (e.g. the FX parity in the Ex 17.4
 solution, the "kT" in rho, a garbled sign in the binary-call gamma); they do not affect anything above. Nothing else was
 unreadable.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmhughston-01`: not testable (R104): needs executable bid/ask

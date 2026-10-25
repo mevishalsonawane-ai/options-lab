@@ -2,14 +2,15 @@ id: book-carli-02
 title: Same Carli divergence setup on roughly 4-hour bars (David Carli, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'David Carli''s rule from The Power of Divergence Trading (Ch. 4) makes money after real charges and slippage,
   walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: as carli-cci-div-trendline-daily,
   computed on these bars; entry at the next minute''s open after the bar that closes beyond the trendline Stop: as carli-cci-div-trendline-daily
   Exit: as carli-cci-div-trendline-daily (half at 127.2%, stop to entry, rest at 161.8%); positions may be held overnight'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDXF 2017-01-01 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDXF 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -25,14 +26,19 @@ model_or_rule: 'as carli-cci-div-trendline-daily, computed on these bars; entry 
   stop to entry, rest at 161.8%); positions may be held overnight | filters: CCI length 20; staleness 20 bars'
 settings: 'research/books/TESTABLE_RULES.md, rule book-carli-02; trade: buy the 1-ITM CE / PE of the next-week (index) or
   monthly (MCX) expiry; stops and targets on the underlying'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R95: CCI fade and divergence variants on 60m failed the holdout (BANKNIFTY 60m B passed design on
-  48 trades, holdout 17 trades -Rs 1,014); this exact setup not tested by us. Assumptions: The book says ''rarely'' 4-hour
-  and never lower; NSE has no natural 4-hour bar, so two bars a session stand in. Same pivot, buffer and leg assumptions as
-  the daily rule.'
+  summary: 'IDXF (index spot, futures proxy), variant half: design 0 trades, win -, net Rs 0, folds Rs 0, Rs 0, Rs 0, Rs 0,
+    Rs 0; p 1.000, BH q 1.000; holdout 0 trades, win -, net Rs 0. R104 verdict: fail. | MCXI (MCX mini future (own bars)),
+    variant 4h: design 0 trades, win -, net Rs 0, folds Rs 0, Rs 0, Rs 0; p 1.000, BH q 1.000; holdout 1 trades, win 100%,
+    net Rs 2,646. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). half-session bars, held overnight: index as a futures proxy R104 (227 tests, BH across
+  all). half-session bars, held overnight: index as a futures proxy Our nearest test: R95: CCI fade and divergence variants
+  on 60m failed the holdout (BANKNIFTY 60m B passed design on 48 trades, holdout 17 trades -Rs 1,014); this exact setup not
+  tested by us. Assumptions: The book says ''rarely'' 4-hour and never lower; NSE has no natural 4-hour bar, so two bars a
+  session stand in. Same pivot, buffer and leg assumptions as the daily rule.'

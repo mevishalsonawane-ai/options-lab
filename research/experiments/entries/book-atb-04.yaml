@@ -2,16 +2,17 @@ id: book-atb-04
 title: Three white soldiers after a downtrend, confirmed by RSI (The Advanced Trading Book, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 2, Three white soldiers
   / three black crows (p14, p20)) makes money after real charges and slippage, walk-forward, with BH across the rules tried.
   Signal source: underlying price. Entry: Downtrend before bar 1; bars 1-3 green, each body >= 0.6 ATR, each open and close
   above the previous bar''s open and close, wicks <= 0.25x range; RSI(14) on the same bars crosses above 50 by bar 3. Enter
   at bar 4 open. Mirror (three black crows, RSI below 50) for shorts. Stop: Below bar 1''s low (above for crows). Exit: 3R
   or square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -24,12 +25,17 @@ model_or_rule: 'Downtrend before bar 1; bars 1-3 green, each body >= 0.6 ATR, ea
   black crows, RSI below 50) for shorts. | stop: Below bar 1''s low (above for crows). | exit: 3R or square-off. | filters:
   RSI(14) > 50 at bar 3 (the book names RSI without a level).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-04; trade: buy 1-ITM CE on soldiers, 1-ITM PE on crows'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87-1 NIFTY 5m three white soldiers -> call: -Rs 3,910 on 160 trades; GOLD_CANDLES 15m soldiers
-  negative in the held-out year in every version. Assumptions: RSI level 50 and the stop at the pattern''s start are ours.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 31 trades, win 39%, net -Rs 29,470, folds -Rs 19,034, Rs
+    4,468, -Rs 2,936, -Rs 11,968; p 1.000, BH q 1.000; holdout 4 trades, win 25%, net -Rs 8,905. R104 verdict: fail. | MCXI
+    (MCX mini future (own bars)), variant 15m: design 4 trades, win 25%, net -Rs 19,650, folds Rs 0, -Rs 7,678, -Rs 11,972;
+    p 1.000, BH q 1.000; holdout 0 trades, win -, net Rs 0. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87-1 NIFTY 5m three white soldiers
+  -> call: -Rs 3,910 on 160 trades; GOLD_CANDLES 15m soldiers negative in the held-out year in every version. Assumptions:
+  RSI level 50 and the stop at the pattern''s start are ours.'

@@ -2,16 +2,17 @@ id: book-porwal-08
 title: ADX 20-50 + DI alignment + EMA(14) pullback with prior-day trend (Nikhil Porwal, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 5.1) makes money after real charges and
   slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Wilder ADX(14) with DI length
   14: 20 < ADX < 50; +DI > -DI; close above EMA(14); prior-day trend up (as in porwal-turbo). Trigger: a bar whose low comes
   within 0.1% of EMA(14) and closes above it; buy at the next bar''s open. Short mirror. Entries 09:30-14:30. Stop: The lower
   of the last 5-bar swing low and EMA(14) minus 0.25 x ATR14 (book: ''some space'' below the EMA, or beyond the nearest swing).
   Exit: Exit on a 5-minute close below EMA(14); 2R minimum target as a variant; square-off 15:15 (15:05 on expiry).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -25,13 +26,15 @@ model_or_rule: 'Wilder ADX(14) with DI length 14: 20 < ADX < 50; +DI > -DI; clos
   a variant; square-off 15:15 (15:05 on expiry). | filters: Variant from the examples: ADX > 30 instead of > 20.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-08; trade: buy ATM CE on a long, ATM PE on a short; stop on
   the index'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: OBUY_GB TI-09 ADX/DMI lost Rs -345,311 walk-forward; TI-03 EMA cross lost; R29 EMA pullbacks no
-  better than random; R73 ADX filter on Donchian failed. Assumptions: ''Greater than 20 or below 50'' read as a band; pullback
-  distance, stop offset and the entry window are ours.'
+  summary: 'IDX (index spot, bought option), variant adx30: design 1115 trades, win 25%, net -Rs 123,184, folds -Rs 924, -Rs
+    51,622, -Rs 70,638; p 1.000, BH q 1.000; holdout 200 trades, win 24%, net -Rs 72,134. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: OBUY_GB TI-09 ADX/DMI lost Rs
+  -345,311 walk-forward; TI-03 EMA cross lost; R29 EMA pullbacks no better than random; R73 ADX filter on Donchian failed.
+  Assumptions: ''Greater than 20 or below 50'' read as a band; pullback distance, stop offset and the entry window are ours.'

@@ -2,14 +2,15 @@ id: book-woods-13
 title: 'ID/NR4: inside bar that is also the narrowest of 4 (Galen Woods, book rule, proposed)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.11) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price. Entry: Bar is inside the previous bar and has the smallest
   range of the last 4; OCO bracket 1 tick beyond its high and low, next bar. Stop: The opposite end of the bar. Exit: Not
   stated; session square-off (intraday) or 3 sessions (daily).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; DLY 2006-01-01 - 2021-12-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); DLY 2022-01-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -20,12 +21,17 @@ model_or_rule: 'Bar is inside the previous bar and has the smallest range of the
   and low, next bar. | stop: The opposite end of the bar. | exit: Not stated; session square-off (intraday) or 3 sessions
   (daily). | filters: None.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-13; trade: buy 1-ITM CE / PE'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R96 crude NR4 -Rs 886 on 77; Crabel inside-day NR7 -Rs 14,129 on 13. Index version not tested..
-  Assumptions: Bracket entry taken from the inside-bar section.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 2790 trades, win 22%, net -Rs 378,844, folds -Rs 100,600,
+    -Rs 27,929, -Rs 35,554, -Rs 214,762; p 1.000, BH q 1.000; holdout 347 trades, win 23%, net -Rs 98,293. R104 verdict: fail.
+    | DLY (index daily, futures proxy), variant base: design 404 trades, win 41%, net Rs 486,756, folds Rs 258,021, Rs 78,353,
+    -Rs 54,604, Rs 204,986; p 0.036, BH q 0.898; holdout 114 trades, win 43%, net Rs 391. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R96 crude NR4 -Rs 886 on 77;
+  Crabel inside-day NR7 -Rs 14,129 on 13. Index version not tested.. Assumptions: Bracket entry taken from the inside-bar
+  section.'

@@ -2,7 +2,7 @@ id: book-sadowski-02
 title: Daily Heikin-Ashi two-candle reversal with stochastic 14,7,3 (Roman Sadowski, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 3) makes money after real
   charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Setup long:
   two consecutive completed green HA candles after at least 3 red HA candles, and the stochastic(14,7,3) %K was below 30 within
@@ -11,9 +11,10 @@ hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strat
   x ATR14(daily) from entry (the book''s ''100 pips flat''), or the setup''s swing low/high if nearer. Exit: Move the stop
   to breakeven after +0.5 ATR14 (the book''s +50 pips); then trail to the latest 2-bar swing low/high; exit on an opposite
   HA setup.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: DLY 2006-01-01 - 2021-12-31; MCXD 2012-01-01 - 2021-12-31
+  holdout: DLY 2022-01-01 - 2026-10-19 (read once); MCXD 2022-01-01 - 2026-10-16 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -33,14 +34,18 @@ model_or_rule: 'Setup long: two consecutive completed green HA candles after at 
   Optional AC variant: require Accelerator Oscillator > 0 and rising for longs (< 0 and falling for shorts).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-02; trade: Buy the 1-ITM monthly CE (long) / PE (short); stops
   and trail on the underlying; max hold 10 sessions or 5 sessions before expiry.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: HUNT_R71 P6 Heikin-Ashi flip (15-min, EMA filter): -Rs 79,173 on 357 trades, fail; OBUY_FINAL TI-08
-  Heikin-Ashi -170,762 walk-forward; daily HA + stochastic not tested by us. Assumptions: The book''s stochastic sentence
-  has the colours swapped; we read it as oversold for longs. Pips converted to ATR fractions. ''Series of candles'' = at least
-  3. The AC sign for shorts is read as below zero.'
+  summary: 'DLY (index daily, futures proxy), variant base: design 324 trades, win 36%, net Rs 458,687, folds Rs 215,509,
+    -Rs 12,461, Rs 37,664, Rs 217,975; p 0.100, BH q 1.000; holdout 90 trades, win 39%, net Rs 49,026. R104 verdict: fail.
+    | MCXD (MCX future daily), variant base: design 241 trades, win 22%, net Rs 49,315, folds -Rs 96,356, Rs 100,354, Rs 45,317;
+    p 0.326, BH q 1.000; holdout 135 trades, win 24%, net Rs 68,655. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: HUNT_R71 P6 Heikin-Ashi flip
+  (15-min, EMA filter): -Rs 79,173 on 357 trades, fail; OBUY_FINAL TI-08 Heikin-Ashi -170,762 walk-forward; daily HA + stochastic
+  not tested by us. Assumptions: The book''s stochastic sentence has the colours swapped; we read it as oversold for longs.
+  Pips converted to ATR fractions. ''Series of candles'' = at least 3. The AC sign for shorts is read as below zero.'

@@ -494,3 +494,11 @@ back-tested by counting exceedances.
   22.1-22.11. Their captions and the surrounding text were read.
 - Equations came through the text layer with broken layout; they were followed from the text but not checked symbol by
   symbol.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmfabozzi-01`: tested (R104): DLY: 850 trades, win 39%, net Rs 1,317,966 design, holdout -Rs 505,997 (fail)
+- `book-fmfabozzi-02`: tested (R104): DLY: 119 trades, win 15%, net Rs 2,592 design, holdout -Rs 535,781 (fail)
+- `book-fmfabozzi-03`: tested (R104): IDX: 939 trades, win 30%, net -Rs 231,181 design, holdout -Rs 37,943 (fail)

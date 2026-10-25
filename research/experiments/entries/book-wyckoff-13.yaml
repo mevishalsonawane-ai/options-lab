@@ -2,14 +2,15 @@ id: book-wyckoff-13
 title: 'A sudden burst in a secondary index while the leaders stall: skip new longs (Wyckoff, book rule, proposed)'
 family: daily-filters
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. III) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price (index spots). Entry: When MIDCPNIFTY (or FINNIFTY) rises
   >= 1.0% in the last 60 minutes while NIFTY and BANKNIFTY each rise <= 0.2% and are below their session highs, skip new long
   entries on NIFTY / BANKNIFTY for the next 60 minutes Stop: n/a Exit: n/a'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -20,13 +21,17 @@ model_or_rule: 'When MIDCPNIFTY (or FINNIFTY) rises >= 1.0% in the last 60 minut
   0.2% and are below their session highs, skip new long entries on NIFTY / BANKNIFTY for the next 60 minutes | stop: n/a |
   exit: n/a | filters: after 10:15 only'
 settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-13; trade: skip-only filter on the arms (risk-lowering)'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us; R72 C3 lonely breakout (faded) lost Rs 1,60,188 on 499. Assumptions: Book''s ''secondary
-  leader bursts into activity while the leaders are distributed'' mapped to a mid-cap or financials index running alone; thresholds
-  are ours'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant base: design 9151 trades, win 46% (B0 46%), net Rs 778,831
+    vs B0 Rs 774,750 (delta Rs 4,081), quarters Rs 220, Rs 0, Rs 0, Rs 0; p 0.129, BH q 1.000; final delta Rs 0. R104 verdict:
+    fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). skip NIFTY/BANKNIFTY longs while a secondary index bursts alone R104 (227 tests,
+  BH across all). skip NIFTY/BANKNIFTY longs while a secondary index bursts alone Our nearest test: not tested by us; R72
+  C3 lonely breakout (faded) lost Rs 1,60,188 on 499. Assumptions: Book''s ''secondary leader bursts into activity while the
+  leaders are distributed'' mapped to a mid-cap or financials index running alone; thresholds are ours'

@@ -29,11 +29,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmaqf-02; trade: Multi-le
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: as fmaqf-01'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: R103: naked short straddle +Rs 64k on NIFTY over 1,272 days with a worst day of -Rs 28.9k on one
-  lot; with wings bought it lost. K1 sells the far wings instead, i.e. more tail risk. Not tested by us as specified.. Assumptions:
-  Moneyness bands from Table 9.3 (FOTM-NOTM-ATM-K1 column). The payoff shape depends on which strikes exist; record the strike
-  count per month.'
+notes: 'R104: needs data we lack (as fmaqf-01).'

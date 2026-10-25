@@ -2,13 +2,14 @@ id: book-porwal-12
 title: Stop trading for the day after two stop-losses (Nikhil Porwal, book rule, proposed)
 family: sizing-execution
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 2 / 3.1 rules) makes money after real charges
   and slippage, walk-forward, with BH across the rules tried. Signal source: none (account / trade state). Entry: No new entries
   for the rest of the day once two trades of the arm have exited at their stop. Stop: n/a Exit: n/a'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -19,12 +20,16 @@ model_or_rule: 'No new entries for the rest of the day once two trades of the ar
   exit: n/a | filters: Variant: count any two losing trades, not only stop exits.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-12; trade: applies to an existing arm (risk-lowering; shadow
   first on live)'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R75 L1-K2 (no new Donchian entries after 2 losses in a row) failed; R19c daily loss cap made things
-  worse. Assumptions: ''Two stop-losses hit'' read per arm per day.'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant losses: design 5151 trades, win 47% (B0 46%), net Rs
+    738,821 vs B0 Rs 774,750 (delta -Rs 35,929), quarters -Rs 114,996, -Rs 63,512, Rs 27,204, -Rs 167,614; p 1.000, BH q 1.000;
+    final delta -Rs 27,996. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R75 L1-K2 (no new Donchian entries
+  after 2 losses in a row) failed; R19c daily loss cap made things worse. Assumptions: ''Two stop-losses hit'' read per arm
+  per day.'

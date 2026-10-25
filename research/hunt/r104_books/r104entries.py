@@ -72,7 +72,7 @@ def update_entries(final):
         st, fam, mk, why = RR.R[rid]
         p = ENT / f"{rid}.yaml"
         if rid.startswith("new-"):
-            e = dict(id=f"r104-{rid}", title=f"R104 new strategy {rid[4:]}: {why}", family="patterns-indicators"
+            e = dict(id=f"r104-{rid.lower()}", title=f"R104 new strategy {rid[4:]}: {why}", family="patterns-indicators"
                      if "Donchian" in why else ("sizing-execution" if rid == "new-N4" else
                                                 ("option-structure" if rid == "new-N6" else "daily-filters")),
                      date="2026-10-25", doc=DOC, hypothesis="see PREREG.md Amendment 1, row " + rid[4:],
@@ -81,7 +81,7 @@ def update_entries(final):
                                  "2 Aug 2021 - 31 Mar 2026", holdout="read once (R104)"),
                      instruments=["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"], features=[why],
                      model_or_rule=why, settings="research/hunt/r104_books/f_new.py", prereg=PREREG, variants_tried=1)
-            p = ENT / f"r104-{rid}.yaml"
+            p = ENT / f"r104-{rid.lower()}.yaml"
         else:
             e = yaml.safe_load(p.read_text())
         rows = by_rule.get(rid, [])
@@ -158,11 +158,20 @@ def book_lines(final):
 
 def update_books(final):
     lines = book_lines(final)
+    # rule -> its book's write-up file, from the "([write-up](x.md))" section headings of TESTABLE_RULES.md
+    book_file, cur = {}, None
+    for ln in (BOOKS / "TESTABLE_RULES.md").read_text().splitlines():
+        m = re.search(r"\(\[write-up\]\(([^)]+\.md)\)\)", ln)
+        if ln.startswith("## ") and m:
+            cur = m.group(1)
+        m2 = re.match(r"### `([^`]+)`", ln)
+        if m2:
+            book_file[m2.group(1)] = cur
     for f in sorted(BOOKS.glob("*.md")):
         if f.name in ("README.md", "TESTABLE_RULES.md"):
             continue
         t = f.read_text()
-        ids = [rid for rid in lines if f"`{rid}`" in t]
+        ids = [rid for rid in lines if f"`{rid}`" in t or book_file.get(rid) == f.name]
         if not ids:
             continue
         t = re.sub(r"\n## R104 results \(25 Oct 2026\).*\Z", "", t, flags=re.S)

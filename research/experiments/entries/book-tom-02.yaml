@@ -2,7 +2,7 @@ id: book-tom-02
 title: Stochastic hidden divergence in the trend, timed by a 4-bar fractal (Trader Tom, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Trader Tom''s rule from The First Trading Manual (Divergence Strategies, p. 119-126) makes money after real charges
   and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Trend down (close below
   its 89-period SMA): price makes a lower confirmed swing high (2-bar fractal pivot) while slow stochastic %K(14,3) at that
@@ -10,9 +10,10 @@ hypothesis: 'Trader Tom''s rule from The First Trading Manual (Divergence Strate
   longs in an uptrend (higher low in price, lower low in %K). Stop: Above the divergence swing high (below the swing low for
   longs). Exit: Opposite 4-bar fractal, else stop, else square-off 15:10 (15:05 expiry) for intraday; 60-minute version may
   hold to 15:10 only.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -28,13 +29,18 @@ model_or_rule: 'Trend down (close below its 89-period SMA): price makes a lower 
   for intraday; 60-minute version may hold to 15:10 only. | filters: trend by the 89-period SMA on the trading timeframe'
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-02; trade: buy 1-ITM PE on the short signal, 1-ITM CE on the long;
   stop on the underlying'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R95 CCI divergence labels: +Rs 12.0 lakh where drawn, -Rs 3.4 lakh once known; stochastic only inside
-  B2''s coin-flip model. Assumptions: The book gives no stochastic settings, pivot rule, trend definition, stop or exit; 14,3
-  stochastic, 2-bar pivots, 89-SMA trend (the book''s own trend MA) and a 10-bar window are our choices.'
+  summary: 'IDX (index spot, bought option), variant 60m: design 203 trades, win 36%, net -Rs 75,101, folds -Rs 19,543, -Rs
+    4,059, -Rs 51,499; p 1.000, BH q 1.000; holdout 40 trades, win 42%, net -Rs 21,616. R104 verdict: fail. | MCXI (MCX mini
+    future (own bars)), variant 60m: design 33 trades, win 33%, net -Rs 3,457, folds Rs 5,142, -Rs 8,599; p 1.000, BH q 1.000;
+    holdout 32 trades, win 44%, net -Rs 20,261. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R95 CCI divergence labels: +Rs
+  12.0 lakh where drawn, -Rs 3.4 lakh once known; stochastic only inside B2''s coin-flip model. Assumptions: The book gives
+  no stochastic settings, pivot rule, trend definition, stop or exit; 14,3 stochastic, 2-bar pivots, 89-SMA trend (the book''s
+  own trend MA) and a 10-bar window are our choices.'

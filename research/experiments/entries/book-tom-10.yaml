@@ -2,16 +2,17 @@ id: book-tom-10
 title: Buy the 60-minute pullback in a daily uptrend (fade the short-term trend) (Trader Tom, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Trader Tom''s rule from The First Trading Manual (Price Behaviour Principle 2, p. 43-48) makes money after real
   charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Daily trend
   UP by the 3-bar swing (rule three-bar-swing-bias); the 60-minute chart has made a lower high and lower low since the last
   daily high; enter long on the first 15-minute 4-bar fractal buy. Mirror for daily DOWN. Stop: the lowest low of the 60-minute
   pullback Exit: the pullback''s starting high (prior 60-minute swing high) or square-off 15:10; futures variant may hold
   up to 3 sessions'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,13 +27,17 @@ model_or_rule: 'Daily trend UP by the 3-bar swing (rule three-bar-swing-bias); t
   15:10; futures variant may hold up to 3 sessions | filters: none beyond the daily trend'
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-10; trade: buy 1-ITM CE in a daily uptrend, 1-ITM PE in a daily
   downtrend'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us as a fixed rule; R89 daily+15m trend filter did not help PDHL breaks; direction
-  at 15-60 min a coin flip (R16). Assumptions: The book names the idea but no trigger; combining it with the book''s own 3-bar
-  swing and 4-bar fractal is our reading.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 340 trades, win 43%, net -Rs 92,085, folds -Rs 14,235, -Rs
+    16,797, -Rs 7,293, -Rs 53,760; p 1.000, BH q 1.000; holdout 42 trades, win 50%, net -Rs 15,950. R104 verdict: fail. |
+    MCXI (MCX mini future (own bars)), variant 15m: design 55 trades, win 40%, net -Rs 42,176, folds Rs 0, -Rs 19,381, -Rs
+    22,795; p 1.000, BH q 1.000; holdout 49 trades, win 41%, net -Rs 37,497. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested by us as a fixed
+  rule; R89 daily+15m trend filter did not help PDHL breaks; direction at 15-60 min a coin flip (R16). Assumptions: The book
+  names the idea but no trigger; combining it with the book''s own 3-bar swing and 4-bar fractal is our reading.'

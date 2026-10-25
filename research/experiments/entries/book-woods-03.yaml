@@ -2,14 +2,15 @@ id: book-woods-03
 title: Reversal bar in the trend's direction (Galen Woods, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.1) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price. Entry: Uptrend: a bar whose low is below the previous bar''s
   low and whose close is above the previous bar''s close; buy stop 1 tick above its high, next bar only. Downtrend mirror.
   Stop: The reversal bar''s low (high for shorts). Exit: Nearest opposing swing; else square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -20,13 +21,15 @@ model_or_rule: 'Uptrend: a bar whose low is below the previous bar''s low and wh
   buy stop 1 tick above its high, next bar only. Downtrend mirror. | stop: The reversal bar''s low (high for shorts). | exit:
   Nearest opposing swing; else square-off. | filters: Trend by EMA 20 slope as in three-bar-pullback-trend.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-03; trade: buy 1-ITM CE / PE'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: Not tested in this form; R87 stop-run-below-day-low on 1m held out of sample but is about 1.8 points,
-  below option cost.. Assumptions: ''Closes higher than the previous bar'' read as close > previous close. Trend definition
-  ours.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 2099 trades, win 44%, net -Rs 249,800, folds -Rs 56,819,
+    -Rs 86,277, -Rs 106,705; p 1.000, BH q 1.000; holdout 369 trades, win 35%, net -Rs 146,463. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: Not tested in this form; R87
+  stop-run-below-day-low on 1m held out of sample but is about 1.8 points, below option cost.. Assumptions: ''Closes higher
+  than the previous bar'' read as close > previous close. Trend definition ours.'

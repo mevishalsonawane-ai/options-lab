@@ -3,7 +3,7 @@ title: Delta-hedge an ATM straddle with smile-adjusted delta vs plain Black-Scho
   Rutkowski, book rule, proposed)
 family: trade-management
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Musiela and Rutkowski''s rule from Martingale Methods in Financial Modelling (Ch. 7.1.8 (modified delta), Ch.
   7.2.1 (CEV delta), Ch. 7.4.5 (smile dynamics)) makes money after real charges and slippage, walk-forward, with BH across
   the rules tried. Signal source: volatility / options structure (hedge ratios from the option chain''s IV-vs-spot slope;
@@ -12,9 +12,10 @@ hypothesis: 'Musiela and Rutkowski''s rule from Martingale Methods in Financial 
   s = the slope of ATM IV against spot estimated by regression over the previous 20 days'' 09:20-15:10 minute data. Stop:
   Close a book if its loss reaches Rs 13,000. Exit: Re-hedge each book when its net delta passes +-1 futures lot or every
   15 minutes; square off at 15:10.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: VOL 2021-08-02 - 2026-03-31
+  holdout: VOL 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 features:
@@ -28,14 +29,18 @@ model_or_rule: 'At 09:20 on non-expiry days, sell 5 lots of the nearest-expiry A
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmmusiela-02; trade: Options short 5 lots each side; futures hedge;
   app cost model plus h24 spreads. The outcome is the difference in daily hedge error (variance of book P&L about implied
   minus realised) between A and B, then net P&L.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us; MCX_OPTIONS.md delta-hedged long options at about zero P&L at best; R102 puts
-  dearer on 91% of NIFTY days (skew exists).. Assumptions: The book defines the modified delta but gives no procedure; the
-  20-day regression for the IV-spot slope, the bands and lot counts are ours. Book A is the Bjork rule ''delta-hedged-short-straddle'';
-  this test only asks whether B hedges better.'
+  summary: 'VOL (option structure (chain as context)), variant B: design 879 trades, win 59%, net Rs 116,775, folds Rs 201,009,
+    Rs 22,718, -Rs 48,402, -Rs 58,550, vs host Rs 147,050 (delta -Rs 30,275); p 1.000, BH q 1.000; holdout 105 trades, win
+    55%, net -Rs 79,347. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). hedge B vs hedge A on the same short straddles R104 (227 tests, BH across all). hedge
+  B vs hedge A on the same short straddles Our nearest test: not tested by us; MCX_OPTIONS.md delta-hedged long options at
+  about zero P&L at best; R102 puts dearer on 91% of NIFTY days (skew exists).. Assumptions: The book defines the modified
+  delta but gives no procedure; the 20-day regression for the IV-spot slope, the bands and lot counts are ours. Book A is
+  the Bjork rule ''delta-hedged-short-straddle''; this test only asks whether B hedges better.'

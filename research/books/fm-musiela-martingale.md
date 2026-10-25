@@ -441,3 +441,12 @@ Dupire's formula, Heston/SABR expressions, all of Part II's bond, cap and swapti
 only where standard and none is copied here. The book has almost no figures. One scan page of Ch. 14 (book pp. 527-529)
 appears twice in the OCR. Pages 300-326 are the reference list (skimmed) and page 327 the back cover; there is no index
 in the scan.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmmusiela-01`: not testable (R104): needs synchronous bid/ask for all legs
+- `book-fmmusiela-02`: tested (R104): VOL: 879 trades, win 59%, net Rs 116,775 design, holdout -Rs 79,347 (fail)
+- `book-fmmusiela-03`: tested (R104): VOL: 307 trades, win 66%, net Rs 110,474 design, holdout Rs 4,088 (fail)
+- `book-fmmusiela-04`: not testable (R104): no intraday USDINR or dated import-duty history

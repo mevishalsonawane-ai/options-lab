@@ -3,16 +3,17 @@ title: 'Long-memory spread reversal: fade new M-day extremes of a two-asset log 
   proposed)'
 family: outside-strategies
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Härdle, Kleinow and Stahl''s rule from Applied Quantitative Finance (Ch. 14.5) makes money after real charges
   and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price (log spread of two underlyings).
   Entry: X = log(A) - log(B) at the daily close (pairs: NIFTY vs BANKNIFTY futures; GOLD vs SILVER futures). If X < min(X
   over the previous M days): long A, short B, equal rupee value. If X > max over the previous M days: short A, long B. M in
   {50, 100, 150}, pre-registered. Stop: None (always in the market; the opposite signal reverses). Research variant: stop
   if the spread moves a further 2 sd of its 60-day changes against the position. Exit: Reverse on the opposite signal.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: DLY 2006-01-01 - 2021-12-31; MCXD 2012-01-01 - 2021-12-31
+  holdout: DLY 2022-01-01 - 2026-10-19 (read once); MCXD 2022-01-01 - 2026-10-16 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -29,14 +30,18 @@ model_or_rule: 'X = log(A) - log(B) at the daily close (pairs: NIFTY vs BANKNIFT
   on simulated random walks of equal length.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmaqf-03; trade: Futures pair (both legs), or for index pairs buy the
   ATM call of the index bought and the ATM put of the index sold (monthly expiry, rolled). Costs per leg from baselines.yaml.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R72 C2 laggard catch-up (intraday convergence across indices) lost -Rs 1,00,746 final (613 trades).
-  A daily spread-extreme fade is not tested by us.. Assumptions: Book used German voting / non-voting share pairs (near-identical
-  claims) where reversion is structural; index or metal pairs are looser. Cash-neutral sizing by the book; we use equal notional
-  per lot rounding.'
+  summary: 'DLY (index daily, futures proxy), variant M50: design 0 trades, win -, net Rs 0, folds Rs 0, Rs 0, Rs 0; p 1.000,
+    BH q 1.000; holdout 0 trades, win -, net Rs 0. R104 verdict: fail. | MCXD (MCX future daily), variant M50: design 0 trades,
+    win -, net Rs 0, folds Rs 0, Rs 0; p 1.000, BH q 1.000; holdout 0 trades, win -, net Rs 0. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). NIFTY vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures R104 (227 tests,
+  BH across all). NIFTY vs BANKNIFTY and GOLD vs SILVER, spot / back-adjusted futures Our nearest test: R72 C2 laggard catch-up
+  (intraday convergence across indices) lost -Rs 1,00,746 final (613 trades). A daily spread-extreme fade is not tested by
+  us.. Assumptions: Book used German voting / non-voting share pairs (near-identical claims) where reversion is structural;
+  index or metal pairs are looser. Cash-neutral sizing by the book; we use equal notional per lot rounding.'

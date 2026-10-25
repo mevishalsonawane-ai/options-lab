@@ -23,9 +23,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-13; trade: 3 
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. R81 X5 scale-out failed; thirds are the same partial-profit mechanism'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R81 X5 scale out half at 1R rejected (-Rs 79k design, -Rs 35k final). Assumptions: Which S/R level
-  and which trail are our choices.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). R81 X5 scale-out failed; thirds are the same partial-profit mechanism'

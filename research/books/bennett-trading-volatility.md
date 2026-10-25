@@ -426,3 +426,18 @@ eight orders (about Rs 244 in charges, DEEP_OPTIONS_SELLING.md section 0).
   section 1.6's text covers the same structures.
 - Some formulae lost their layout (square roots, sums, superscripts); they were reconstructed from context (e.g. the
   forward-vol and hedging-noise formulas) and are standard.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-bennett-01`: tested (R104): VOL: 537 trades, win 42%, net -Rs 144,620 design, holdout -Rs 38,545 (fail)
+- `book-bennett-02`: tested (R104): VOL: 168 trades, win 55%, net -Rs 160,226 design, holdout -Rs 63,992 (fail)
+- `book-bennett-03`: tested (R104): VOL: 222 trades, win 55%, net -Rs 28,552 design, holdout -Rs 6,907 (fail)
+- `book-bennett-04`: tested (R104): VOL: 557 trades, win 27%, net -Rs 279,847 design, holdout -Rs 35,441 (fail)
+- `book-bennett-05`: tested (R104): VOL: 511 trades, win 49%, net -Rs 180,635 design, holdout -Rs 15,112 (fail)
+- `book-bennett-06`: not testable (R104): next-expiry ATM chain is mostly missing from the rolling lake
+- `book-bennett-07`: not testable (R104): needs two expiries' chains on event days
+- `book-bennett-08`: not testable (R104): matched-maturity IVs need a second expiry; with the nearest only, a 10-session vol position has to roll weekly, which the book's trade is not
+- `book-bennett-09`: tested (R104): VOL: 23 trades, win 43%, net -Rs 29,762 design, holdout Rs 18,668 (fail)
+- `book-bennett-10`: descriptive only (R104)

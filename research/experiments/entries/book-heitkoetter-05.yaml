@@ -23,10 +23,9 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-05; trade: bu
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. H25 MACD signal / zero cross: 27,000 variants, 0 of 50 families
+    positive walk-forward'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: H25 MACD signal and zero cross in the ''other indicators'' family: 27,000 variants, Rs -146 a trade,
-  0 of 50 walk-forward families positive. Assumptions: The book''s wording of which line crosses which is ambiguous; the standard
-  reading is used.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). H25 MACD signal / zero cross: 27,000 variants, 0 of 50 families positive walk-forward'

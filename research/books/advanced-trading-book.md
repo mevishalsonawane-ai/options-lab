@@ -389,3 +389,27 @@ bearish), MCX futures / options and crypto (plus a profit lock).
   were identified from their drawings, which match the titled printable sheets (p53-p58) one to one. The label over
   the evening star's middle candle (p19) and the top edge of the p53 "Falling Wedge" title are cut off in the image.
   Example-chart price scales are too small to read (not needed: the book draws no numbers on them).
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-atb-01`: tested (R104): IDX: 122 trades, win 37%, net -Rs 35,394 design, holdout Rs 10,386 (fail); MCXI: 25 trades, win 28%, net Rs 6,907 design, holdout -Rs 5,786 (fail)
+- `book-atb-02`: tested (R104): IDX: 1650 trades, win 30%, net -Rs 182,714 design, holdout Rs 3,315 (fail); MCXI: 78 trades, win 23%, net -Rs 117,381 design, holdout -Rs 27,510 (fail)
+- `book-atb-03`: tested (R104): IDX: 123 trades, win 33%, net -Rs 57,418 design, holdout -Rs 4,727 (fail)
+- `book-atb-04`: tested (R104): IDX: 31 trades, win 39%, net -Rs 29,470 design, holdout -Rs 8,905 (fail); MCXI: 4 trades, win 25%, net -Rs 19,650 design, holdout Rs 0 (fail)
+- `book-atb-05`: tested (R104): IDX: 762 trades, win 38%, net -Rs 4,232 design, holdout -Rs 31,840 (fail)
+- `book-atb-06`: tested (R104): IDX: 69 trades, win 28%, net Rs 9,746 design, holdout -Rs 2,835 (fail); MCXI: 1 trades, win 0%, net -Rs 380 design, holdout -Rs 818 (fail)
+- `book-atb-07`: tested (R104): IDX: 106 trades, win 36%, net -Rs 35,473 design, holdout -Rs 13,798 (fail); MCXI: 9 trades, win 44%, net Rs 25 design, holdout -Rs 5,294 (fail)
+- `book-atb-08`: tested (R104): IDX: 105 trades, win 44%, net -Rs 24,083 design, holdout -Rs 7,966 (fail); MCXI: 4 trades, win 50%, net -Rs 37 design, holdout Rs 3 (fail)
+- `book-atb-09`: tested (R104): IDX: 254 trades, win 42%, net -Rs 70,878 design, holdout -Rs 17,450 (fail); MCXI: 5 trades, win 60%, net -Rs 1,060 design, holdout -Rs 3,873 (fail)
+- `book-atb-10`: tested (R104): IDX: 60 trades, win 32%, net -Rs 6,790 design, holdout -Rs 10,658 (fail); MCXI: 32 trades, win 31%, net -Rs 2,108 design, holdout -Rs 1,034 (fail); CRY: 285 trades, win 48%, net -Rs 16,726 design, holdout -Rs 6,912 (fail)
+- `book-atb-11`: tested (R104): IDX: 52 trades, win 25%, net -Rs 14,409 design, holdout -Rs 5,433 (fail); MCXI: 9 trades, win 33%, net -Rs 943 design, holdout -Rs 7,385 (fail)
+- `book-atb-12`: tested (R104): IDX: 20 trades, win 10%, net -Rs 12,862 design, holdout Rs 1,017 (fail); MCXI: 7 trades, win 43%, net -Rs 99 design, holdout -Rs 2,017 (fail)
+- `book-atb-13`: tested (R104): IDX: 498 trades, win 42%, net -Rs 113,257 design, holdout -Rs 7,864 (fail); MCXI: 39 trades, win 41%, net -Rs 31,359 design, holdout -Rs 6,932 (fail)
+- `book-atb-14`: tested (R104): IDX: 163 trades, win 29%, net -Rs 17,408 design, holdout Rs 7,532 (fail); MCXI: 18 trades, win 56%, net Rs 22,921 design, holdout -Rs 5,975 (fail)
+- `book-atb-15`: tested (R104): IDX: 477 trades, win 39%, net -Rs 95,017 design, holdout -Rs 37,705 (fail); MCXI: 24 trades, win 25%, net -Rs 6,262 design, holdout Rs 4,950 (fail); CRY: 1416 trades, win 47%, net -Rs 204,380 design, holdout -Rs 76,464 (fail)
+- `book-atb-16`: tested (R104): IDX: 53 trades, win 23%, net -Rs 25,455 design, holdout Rs 10,793 (fail); MCXI: 17 trades, win 12%, net -Rs 4,163 design, holdout Rs 153 (fail)
+- `book-atb-17`: tested (R104): IDX: 59 trades, win 39%, net -Rs 9,359 design, holdout -Rs 4,980 (fail); MCXI: 36 trades, win 3%, net -Rs 10,578 design, holdout -Rs 6,945 (fail)
+- `book-atb-18`: tested (R104): IDX: 82 trades, win 39%, net -Rs 36,895 design, holdout Rs 577 (fail); MCXI: 5 trades, win 40%, net -Rs 2,931 design, holdout -Rs 2,598 (fail)
+- `book-atb-19`: tested (R104): IDX: 74 trades, win 35%, net -Rs 12,598 design, holdout -Rs 12,197 (fail); MCXI: 5 trades, win 40%, net -Rs 606 design, holdout Rs 11,058 (fail); CRY: 250 trades, win 50%, net -Rs 26,734 design, holdout -Rs 9,105 (fail)

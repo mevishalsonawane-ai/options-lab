@@ -2,15 +2,16 @@ id: book-atb-02
 title: Engulfing candle at the end of a trend (The Advanced Trading Book, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 2, Bullish / bearish
   engulfing (p13, p18)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
   source: underlying price. Entry: Downtrend into bar 1; bar 1 red; bar 2 green with open <= bar 1 close and close >= bar
   1 open (body engulfs body), bar 2 body >= 1.5x bar 1 body. Enter at bar 3 open. Mirror for bearish engulfing after an uptrend.
   Stop: Beyond bar 2''s low (high for shorts). Exit: 3R target or square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -22,12 +23,17 @@ model_or_rule: 'Downtrend into bar 1; bar 1 red; bar 2 green with open <= bar 1 
   body), bar 2 body >= 1.5x bar 1 body. Enter at bar 3 open. Mirror for bearish engulfing after an uptrend. | stop: Beyond
   bar 2''s low (high for shorts). | exit: 3R target or square-off. | filters: None.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-02; trade: buy 1-ITM CE on bullish engulfing, 1-ITM PE on bearish'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87: engulfing among 12 patterns, nothing held out of sample; GOLD_CANDLES: 144 versions, none with
-  t above 1.1; R85 MCX: no tradable meaning. Assumptions: Stop, target and entry timing are ours (book: ''leads to a reversal'').'
+  summary: 'IDX (index spot, bought option), variant 15m: design 1650 trades, win 30%, net -Rs 182,714, folds Rs 45,008, -Rs
+    24,183, -Rs 78,337, -Rs 125,202; p 1.000, BH q 1.000; holdout 188 trades, win 33%, net Rs 3,315. R104 verdict: fail. |
+    MCXI (MCX mini future (own bars)), variant 15m: design 78 trades, win 23%, net -Rs 117,381, folds Rs 0, Rs 34,587, -Rs
+    151,968; p 1.000, BH q 1.000; holdout 123 trades, win 32%, net -Rs 27,510. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: R87: engulfing among 12 patterns,
+  nothing held out of sample; GOLD_CANDLES: 144 versions, none with t above 1.1; R85 MCX: no tradable meaning. Assumptions:
+  Stop, target and entry timing are ours (book: ''leads to a reversal'').'

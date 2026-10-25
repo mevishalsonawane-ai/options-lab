@@ -192,6 +192,10 @@ cards:
   tags:
   - volume
   - trend
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: MCXI 26 trades, win 35%, net -Rs 36,075 in design.
+    It did not pass the gates.'
 - id: book.wyckoff-day-traders-bible.4
   book: wyckoff-day-traders-bible
   title: The line of least resistance
@@ -292,6 +296,10 @@ cards:
   tags:
   - costs
   - scalp
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: on the arms Rs 611,583 vs Rs 774,750 without
+    it. It did not pass the gates.'
 - id: book.wyckoff-day-traders-bible.11
   book: wyckoff-day-traders-bible
   title: Small steady profits, compounded
@@ -342,6 +350,10 @@ cards:
   tags:
   - overnight
   - stop
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: on the arms Rs 513,233 vs Rs 484,177 without
+    it. It did not pass the gates.'
 - id: book.woods-price-action.1
   book: woods-price-action
   title: Market bias matters more than the pattern
@@ -433,6 +445,10 @@ cards:
   - traps
   - pattern
   - reversal
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 1240 trades, win 46%, net -Rs 95,643 in
+    design; MCXI 34 trades, win 21%, net -Rs 6,455 in design. It did not pass the gates.'
 - id: book.woods-price-action.8
   book: woods-price-action
   title: Reversal candles need a trend to reverse
@@ -527,6 +543,10 @@ cards:
   - trend
   - momentum
   - reversal
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 476 trades, win 47%, net -Rs 47,085 in design;
+    MCXI 28 trades, win 29%, net -Rs 25,227 in design. It did not pass the gates.'
 - id: book.woods-price-action.15
   book: woods-price-action
   title: Label trades mechanical or discretionary before the exit
@@ -559,6 +579,10 @@ cards:
   - reversal
   - filter
   - gann-fib
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDXF 0 trades, win -, net Rs 0 in design; MCXI
+    0 trades, win -, net Rs 0 in design. It did not pass the gates.'
 - id: book.carli-divergence.3
   book: carli-divergence
   title: Divergence alone is not an entry
@@ -568,6 +592,10 @@ cards:
   tags:
   - reversal
   - traps
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 0 trades, win -, net Rs 0 in design; MCXD
+    0 trades, win -, net Rs 0 in design. It did not pass the gates.'
 - id: book.carli-divergence.4
   book: carli-divergence
   title: Stop just beyond the divergence extreme
@@ -634,6 +662,10 @@ cards:
   tags:
   - gap
   - filter
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: on the arms Rs 256,280 vs Rs 774,750 without
+    it. It did not pass the gates.'
 - id: book.carli-divergence.10
   book: carli-divergence
   title: Size every trade from the stop
@@ -717,6 +749,10 @@ cards:
   - trend
   - filter
   - swing
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: on the arms Rs 578,879 vs Rs 484,177 without
+    it. It did not pass the gates.'
 - id: book.trader-tom-first-manual.6
   book: trader-tom-first-manual
   title: Four-bar fractal entry
@@ -726,6 +762,10 @@ cards:
   tags:
   - momentum
   - pattern
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 2075 trades, win 35%, net -Rs 421,025 in
+    design; MCXI 373 trades, win 33%, net -Rs 270,906 in design. It did not pass the gates.'
 - id: book.trader-tom-first-manual.7
   book: trader-tom-first-manual
   title: Stochastic hidden divergence plus fractal
@@ -873,6 +913,10 @@ cards:
   tags:
   - time-of-day
   - liquidity
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 259 trades, win 25%, net Rs 750,943 in design;
+    MCXD 346 trades, win 22%, net -Rs 258,066 in design. It did not pass the gates.'
 - id: book.ozenbas-liquidity-markets.7
   book: ozenbas-liquidity-markets
   title: Liquidity shocks revert, news shocks stay
@@ -1047,6 +1091,10 @@ cards:
   tags:
   - candles
   - filter
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 762 trades, win 38%, net -Rs 4,232 in design.
+    It did not pass the gates.'
 - id: book.advanced-trading-book.7
   book: advanced-trading-book
   title: Never buy the first break
@@ -1069,6 +1117,10 @@ cards:
   tags:
   - pattern
   - stop
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 122 trades, win 37%, net -Rs 35,394 in design;
+    MCXI 25 trades, win 28%, net Rs 6,907 in design. It did not pass the gates.'
 - id: book.advanced-trading-book.9
   book: advanced-trading-book
   title: Buy the pullback candle after a flag break
@@ -1079,6 +1131,10 @@ cards:
   - pattern
   - stop
   - momentum
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 69 trades, win 28%, net Rs 9,746 in design;
+    MCXI 1 trades, win 0%, net -Rs 380 in design. It did not pass the gates.'
 - id: book.advanced-trading-book.10
   book: advanced-trading-book
   title: Double top and double bottom
@@ -1112,6 +1168,10 @@ cards:
     are each shown with one winning chart and no statistics, costs or failed examples.
   tags:
   - pattern
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 163 trades, win 29%, net -Rs 17,408 in design;
+    MCXI 18 trades, win 56%, net Rs 22,921 in design. It did not pass the gates.'
 - id: book.advanced-trading-book.13
   book: advanced-trading-book
   title: The 1:3 reward-to-risk ratio
@@ -1130,6 +1190,10 @@ cards:
   tags:
   - pattern
   - momentum
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 106 trades, win 36%, net -Rs 35,473 in design;
+    MCXI 9 trades, win 44%, net Rs 25 in design. It did not pass the gates.'
 - id: book.bennett-trading-volatility.1
   book: bennett-trading-volatility
   title: Implied volatility is usually above realised
@@ -1175,6 +1239,10 @@ cards:
   tags:
   - option-selling
   - theta
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 168 trades, win 55%, net -Rs 160,226 in
+    design. It did not pass the gates.'
 - id: book.bennett-trading-volatility.4
   book: bennett-trading-volatility
   title: Put underwriting at a level you would buy
@@ -1185,6 +1253,10 @@ cards:
   tags:
   - option-selling
   - iv
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 222 trades, win 55%, net -Rs 28,552 in design.
+    It did not pass the gates.'
 - id: book.bennett-trading-volatility.5
   book: bennett-trading-volatility
   title: Volatility rules of thumb
@@ -1195,6 +1267,10 @@ cards:
   tags:
   - iv
   - theta
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 537 trades, win 42%, net -Rs 144,620 in
+    design. It did not pass the gates.'
 - id: book.bennett-trading-volatility.6
   book: bennett-trading-volatility
   title: 'Gamma scalping: when to re-hedge'
@@ -1261,6 +1337,10 @@ cards:
   tags:
   - iv
   - option-selling
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 511 trades, win 49%, net -Rs 180,635 in
+    design. It did not pass the gates.'
 - id: book.bennett-trading-volatility.11
   book: bennett-trading-volatility
   title: Skew is not a fear gauge
@@ -1270,6 +1350,10 @@ cards:
   tags:
   - iv
   - filter
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 557 trades, win 27%, net -Rs 279,847 in
+    design. It did not pass the gates.'
 - id: book.bennett-trading-volatility.12
   book: bennett-trading-volatility
   title: Term structure and the square-root-of-time rule
@@ -1331,6 +1415,10 @@ cards:
   - reversal
   - filter
   - swing
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 324 trades, win 36%, net Rs 458,687 in design;
+    MCXD 241 trades, win 22%, net Rs 49,315 in design. It did not pass the gates.'
 - id: book.sadowski-9-strategies.2
   book: sadowski-9-strategies
   title: 20/60/100 moving-average crossover
@@ -1372,6 +1460,10 @@ cards:
   - trend
   - swing
   - stop
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 13 trades, win 54%, net Rs 11,240 in design.
+    It did not pass the gates.'
 - id: book.sadowski-9-strategies.5
   book: sadowski-9-strategies
   title: Engulfing, long shadow and hammer candles
@@ -1482,6 +1574,10 @@ cards:
   tags:
   - trend
   - pattern
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 955 trades, win 29%, net -Rs 209,106 in
+    design. It did not pass the gates.'
 - id: book.heitkoetter-day-trading.2
   book: heitkoetter-day-trading
   title: Pick the tool for the regime
@@ -1623,6 +1719,10 @@ cards:
   tags:
   - sizing
   - profit-lock
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: on the arms Rs 269,744 vs Rs 226,928 without
+    it. It did not pass the gates.'
 - id: book.heitkoetter-day-trading.13
   book: heitkoetter-day-trading
   title: Skip thin and pre-news days
@@ -1633,6 +1733,10 @@ cards:
   - news
   - day-of-week
   - filter
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: on the arms Rs 698,314 vs Rs 774,750 without
+    it. It did not pass the gates.'
 - id: book.heitkoetter-day-trading.14
   book: heitkoetter-day-trading
   title: Back-test size and validity
@@ -1661,6 +1765,10 @@ cards:
   - swing
   - trend
   - reversal
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 30 trades, win 47%, net Rs 8,091 in design.
+    It did not pass the gates.'
 - id: book.swing-practical-guide.2
   book: swing-practical-guide
   title: The 3-day pullback scan
@@ -1686,6 +1794,10 @@ cards:
   - volume
   - swing
   - momentum
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 358 trades, win 42%, net Rs 235,028 in design.
+    It did not pass the gates.'
 - id: book.swing-practical-guide.4
   book: swing-practical-guide
   title: ADX above 30 means a real trend
@@ -1705,6 +1817,10 @@ cards:
   - gap
   - time-of-day
   - swing
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDXF 122 trades, win 29%, net -Rs 180,131 in
+    design. It did not pass the gates.'
 - id: book.swing-practical-guide.6
   book: swing-practical-guide
   title: 'Stop: the higher of -4% or the signal day''s low'
@@ -1726,6 +1842,10 @@ cards:
   - profit-lock
   - stop
   - swing
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 1584 trades, win 35%, net Rs 1,409,446 in
+    design. It did not pass the gates.'
 - id: book.swing-practical-guide.8
   book: swing-practical-guide
   title: An entry order lives up to 5 days
@@ -1806,6 +1926,10 @@ cards:
   - moving-average
   - stop
   - sizing
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 172 trades, win 42%, net Rs 347,212 in design.
+    It did not pass the gates.'
 - id: book.smith-short-swing.2
   book: smith-short-swing
   title: Trend side from the 50-day simple average
@@ -1869,6 +1993,10 @@ cards:
   - stop
   - swing
   - target
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 895 trades, win 39%, net Rs 737,471 in design.
+    It did not pass the gates.'
 - id: book.smith-short-swing.7
   book: smith-short-swing
   title: 'Big move day: lock half of it'
@@ -1890,6 +2018,10 @@ cards:
   - filter
   - swing
   - trend
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 383 trades, win 43%, net -Rs 6,265 in design.
+    It did not pass the gates.'
 - id: book.smith-short-swing.9
   book: smith-short-swing
   title: Two-week blackout before results
@@ -1910,6 +2042,10 @@ cards:
   - gap
   - filter
   - overnight
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 400 trades, win 41%, net Rs 588,417 in design.
+    It did not pass the gates.'
 - id: book.smith-short-swing.11
   book: smith-short-swing
   title: 200-day average as a barrier
@@ -2124,6 +2260,10 @@ cards:
   - pattern
   - trend
   - volume
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 80 trades, win 28%, net -Rs 136,157 in design.
+    It did not pass the gates.'
 - id: book.porwal-10-strategies.5
   book: porwal-10-strategies
   title: Darvas box breakout with volume
@@ -2135,6 +2275,10 @@ cards:
   - momentum
   - pattern
   - stop
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 1 trades, win 0%, net -Rs 839 in design.
+    It did not pass the gates.'
 - id: book.porwal-10-strategies.6
   book: porwal-10-strategies
   title: 'Turbocharged opening: 15-minute range break'
@@ -2277,6 +2421,10 @@ cards:
   - gap
   - volume
   - filter
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 260 trades, win 32%, net -Rs 27,826 in design.
+    It did not pass the gates.'
 - id: book.aziz-advanced-day-trading.2
   book: aziz-advanced-day-trading
   title: Opening Range Breakout with a VWAP stop
@@ -2321,6 +2469,10 @@ cards:
   - vwap
   - traps
   - time-of-day
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: MCXI 118 trades, win 36%, net -Rs 34,625 in
+    design; IDX 1444 trades, win 29%, net -Rs 104,778 in design. It did not pass the gates.'
 - id: book.aziz-advanced-day-trading.5
   book: aziz-advanced-day-trading
   title: 'VWAP Reversal: no new 5-minute low'
@@ -2331,6 +2483,10 @@ cards:
   - vwap
   - reversal
   - time-of-day
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 779 trades, win 30%, net -Rs 89,454 in design.
+    It did not pass the gates.'
 - id: book.aziz-advanced-day-trading.6
   book: aziz-advanced-day-trading
   title: 'Midday: a lost VWAP keeps trending'
@@ -2438,6 +2594,10 @@ cards:
   tags:
   - sizing
   - stop
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: on the arms Rs 45,103 vs Rs 257,249 without
+    it. It did not pass the gates.'
 - id: book.aziz-advanced-day-trading.13
   book: aziz-advanced-day-trading
   title: Risk/reward gate of at least 2:1
@@ -2448,6 +2608,10 @@ cards:
   - filter
   - target
   - stop
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: on the arms Rs 715,553 vs Rs 774,750 without
+    it. It did not pass the gates.'
 - id: book.aziz-advanced-day-trading.14
   book: aziz-advanced-day-trading
   title: Strategies by time of day, and the 30% rule
@@ -2457,6 +2621,10 @@ cards:
   tags:
   - time-of-day
   - profit-lock
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 2677 trades, win 25%, net -Rs 327,740 in
+    design; MCXI 61 trades, win 21%, net -Rs 39,218 in design. It did not pass the gates.'
 - id: book.aziz-advanced-day-trading.15
   book: aziz-advanced-day-trading
   title: Level 2 read backwards
@@ -2485,6 +2653,10 @@ cards:
   tags:
   - direction
   - sizing
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: drawdown -Rs 364,101 vs -Rs 444,695 on the arms.
+    It did not pass the gates.'
 - id: book.douglas-trading-in-the-zone.3
   book: douglas-trading-in-the-zone
   title: A losing streak says nothing about the next trade
@@ -2541,6 +2713,10 @@ cards:
   tags:
   - sizing
   - stop
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: drawdown Rs 0 vs -Rs 444,695 on the arms. It
+    did not pass the gates.'
 - id: book.douglas-trading-in-the-zone.9
   book: douglas-trading-in-the-zone
   title: Scale out in thirds, stop to entry
@@ -2687,6 +2863,10 @@ cards:
   - GOLD
   - SILVER
   - CRYPTO
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 14 trades, win 57%, net -Rs 47,767 in design.
+    It did not pass the gates.'
 - id: book.fm-wilmott.5
   book: fm-wilmott
   title: 'Fat tails: the 1987 day the Normal says never happens'
@@ -2800,6 +2980,10 @@ cards:
   inst:
   - NIFTY
   - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 358 trades, win 51%, net -Rs 29,272 in design.
+    It did not pass the gates.'
 - id: book.fm-javaheri-vol-arb.3
   book: fm-javaheri-vol-arb
   title: '40 skew trades: loss at bid/ask, profit only at mid'
@@ -3073,6 +3257,10 @@ cards:
   tags:
   - reversal
   - costs
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 0 trades, win -, net Rs 0 in design; MCXD
+    0 trades, win -, net Rs 0 in design. It did not pass the gates.'
 - id: book.fm-applied-quant-finance.9
   book: fm-applied-quant-finance
   title: Control charts tell when a model or arm has broken
@@ -3083,6 +3271,10 @@ cards:
   tags:
   - filter
   - sizing
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: drawdown -Rs 178,421 vs -Rs 444,695 on the arms.
+    It did not pass the gates.'
 - id: book.fm-bayesian-methods.1
   book: fm-bayesian-methods
   title: Shrink small-sample estimates toward a prior
@@ -3161,6 +3353,10 @@ cards:
   tags:
   - gap
   - option-selling
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: MCXD 111 trades, win 57%, net Rs 1,354,524 in
+    design. It did not pass the gates.'
 - id: book.fm-bayesian-methods.9
   book: fm-bayesian-methods
   title: A p-value is not the chance the idea is wrong
@@ -3393,6 +3589,10 @@ cards:
   inst:
   - NIFTY
   - BANKNIFTY
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 119 trades, win 15%, net Rs 2,592 in design.
+    It did not pass the gates.'
 - id: book.fm-intro-quant-finance.1
   book: fm-intro-quant-finance
   title: A 5-sigma move is not rare without a normal law
@@ -3955,6 +4155,10 @@ cards:
   tags:
   - costs
   - option-selling
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 130 trades, win 27%, net -Rs 288,787 in
+    design. It did not pass the gates.'
 - id: book.fm-bjork-arbitrage.4
   book: fm-bjork-arbitrage
   title: Theta is the price of gamma
@@ -3964,6 +4168,10 @@ cards:
   tags:
   - theta
   - option-selling
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 895 trades, win 59%, net Rs 147,050 in design.
+    It did not pass the gates.'
 - id: book.fm-bjork-arbitrage.5
   book: fm-bjork-arbitrage
   title: Implied prices carry a risk premium
@@ -4487,6 +4695,10 @@ cards:
   tags:
   - direction
   - iv
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 424 trades, win 58%, net Rs 372,595 in design.
+    It did not pass the gates.'
 - id: book.fm-binomial-models.2
   book: fm-binomial-models
   title: Put-call parity and the no-arbitrage bounds
@@ -4756,6 +4968,10 @@ cards:
   tags:
   - pattern
   - trend
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: DLY 996 trades, win 39%, net Rs 9,827 in design;
+    MCXD 409 trades, win 40%, net -Rs 101,013 in design. It did not pass the gates.'
 - id: book.fm-nonlinear-optimization.8
   book: fm-nonlinear-optimization
   title: Downside and worst-case risk give different answers
@@ -4766,6 +4982,10 @@ cards:
   tags:
   - sizing
   - stop
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: drawdown -Rs 183,381 vs -Rs 444,695 on the arms.
+    It did not pass the gates.'
 - id: book.fm-financial-mathematics.1
   book: fm-financial-mathematics
   title: The drift never enters an option's price
@@ -4980,6 +5200,10 @@ cards:
   - direction
   - reversal
   - big-players
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: IDX 9207 trades, win 30%, net -Rs 543,959 in
+    design. It did not pass the gates.'
 - id: book.fm-harrison-waldron.1
   book: fm-harrison-waldron
   title: 'No arbitrage: copies must cost the same'
@@ -5479,6 +5703,10 @@ cards:
   tags:
   - direction
   - iv
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 1145 trades, win 28%, net -Rs 1,542,428
+    in design. It did not pass the gates.'
 - id: book.fm-wilmott-howison-dewynne.2
   book: fm-wilmott-howison-dewynne
   title: 'Implied volatility differs by strike: the smile'
@@ -5837,6 +6065,10 @@ cards:
     the smile the right way.
   tags:
   - iv
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: VOL 879 trades, win 59%, net Rs 116,775 in design.
+    It did not pass the gates.'
 - id: book.fm-musiela-martingale.7
   book: fm-musiela-martingale
   title: Short expiries need jumps
@@ -6033,6 +6265,10 @@ cards:
   tags:
   - sizing
   - gap
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: drawdown -Rs 180,429 vs -Rs 444,695 on the arms.
+    It did not pass the gates.'
 - id: book.fm-chan-quantitative-trading.7
   book: fm-chan-quantitative-trading
   title: Gold vs gold-miners pair, z-score and half-life
@@ -6060,6 +6296,10 @@ cards:
   tags:
   - reversal
   - filter
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: MCXD 2 trades, win 0%, net -Rs 16,836 in design.
+    It did not pass the gates.'
 - id: book.fm-chan-quantitative-trading.9
   book: fm-chan-quantitative-trading
   title: Stops belong to momentum trades
@@ -6072,6 +6312,10 @@ cards:
   - reversal
   - momentum
   - news
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: CRY 0 trades, win -, net Rs 0 in design. It
+    did not pass the gates.'
 - id: book.fm-chan-quantitative-trading.10
   book: fm-chan-quantitative-trading
   title: 'Energy seasonals: natural gas and gasoline in spring'
@@ -6158,6 +6402,10 @@ cards:
   - iv
   inst:
   - CRUDE
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: MCXD 1166 trades, win 44%, net -Rs 161,038 in
+    design. It did not pass the gates.'
 - id: book.fm-ross-math-finance.8
   book: fm-ross-math-finance
   title: AR(1) mean reversion halves option value
@@ -6170,6 +6418,10 @@ cards:
   - iv
   inst:
   - CRUDE
+  verdict: weak
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: MCXD 1 trades, win 100%, net Rs 4,554 in design;
+    DLY 0 trades, win -, net Rs 0 in design. It did not pass the gates.'
 - id: book.fm-ross-math-finance.9
   book: fm-ross-math-finance
   title: Stock plus short calls when your drift view differs
@@ -6221,6 +6473,10 @@ cards:
   tags:
   - sizing
   - stop
+  verdict: negative
+  tested_src: research/HUNT_R104_BOOKS.md
+  tested_text: 'R104 tested this rule as written, after charges and slippage: drawdown -Rs 459,933 vs -Rs 444,695 on the arms.
+    It did not pass the gates.'
 - id: book.fm-karatzas-shreve.5
   book: fm-karatzas-shreve
   title: Constraints clip the Kelly fraction

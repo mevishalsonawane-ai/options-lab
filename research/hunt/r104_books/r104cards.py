@@ -70,6 +70,12 @@ def main():
     rb = rule_books()
     data = yaml.safe_load(CARDS.read_text())
     cards = data["cards"]
+    # re-runs start clean: a card that carries an R104 result from an earlier run goes back to context first
+    for c in cards:
+        if c.get("tested_src") == "research/HUNT_R104_BOOKS.md":
+            c["verdict"] = "context"
+            c.pop("tested_src", None)
+            c.pop("tested_text", None)
     used = set()
     n = 0
     for rid, rows in by_rule.items():

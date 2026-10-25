@@ -35,11 +35,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-01; trade: buy ATM C
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. ORB on VWAP''s side with a narrow range: R10 V1 / T6 and R3 /
+    R49 / R92 (0 of 16, 0 of 336, 0 of 257)'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R3 / R49 / R92: the ORB family lost on every index (0 of 16, 0 of 336, 0 of 257); R10 V1 (VWAP side)
-  and T6 (narrow first-30-min range) did not rescue it. Assumptions: ''Significantly smaller than ATR'' fixed at 0.5x; ''break''
-  read as a 1-minute close; NSE Open mapped to 09:15-10:15; ATR14 on daily bars; the half / break-even management from Ch.
-  5.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). ORB on VWAP''s side with a narrow range: R10 V1 / T6 and R3 / R49 / R92 (0 of
+  16, 0 of 336, 0 of 257)'

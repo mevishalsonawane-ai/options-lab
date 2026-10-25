@@ -371,3 +371,10 @@ the threshold cost little (0.2855% vs 0.2877%).
 - All figures (contour plots, Wolfe-condition sketches, the time-variation plots of Figures 10.1-10.4, the trend line and
   trend channel charts of Figures 11.1-11.3 and 21.1-21.5, the DIRECT diagrams) are images; only captions and some axis
   labels survived. The share-price series behind the trend-channel example is not listed in the text.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmoptim-01`: tested (R104): DLY: 996 trades, win 39%, net Rs 9,827 design, holdout -Rs 214,333 (fail); MCXD: 409 trades, win 40%, net -Rs 101,013 design, holdout -Rs 249,461 (fail)
+- `book-fmoptim-02`: tested (R104): MM: drawdown cut 59%, net cut -35% design (fail)

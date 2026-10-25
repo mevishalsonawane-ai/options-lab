@@ -2,15 +2,16 @@ id: book-tom-04
 title: Daily 3-bar breakout traded directly (Trader Tom, book rule, proposed)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Trader Tom''s rule from The First Trading Manual (Trend Indicators, p. 67-70) makes money after real charges
   and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Buy-stop at the highest
   high of the previous 3 daily bars, sell-stop at their lowest low; first trigger of the day only, 09:20-14:30. Stop: the
   opposite 3-bar level, capped at 1.0 x daily ATR14 from entry Exit: square-off 15:10 (15:05 expiry); variant: hold the future
   until the opposite 3-bar break'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -24,13 +25,17 @@ model_or_rule: 'Buy-stop at the highest high of the previous 3 daily bars, sell-
   (15:05 expiry); variant: hold the future until the opposite 3-bar break | filters: none'
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-04; trade: buy 1-ITM CE on an up-break, 1-ITM PE on a down-break;
   MCX: the near future'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested at 3 bars; R89 PDHL (1-bar daily levels) 0 of 180; R51 Donchian 20 on 5-minute passed
-  thin (+Rs 48,689, 1,775 trades). Assumptions: The book uses it as a trend tool, not an entry with stops; the entry, the
-  ATR cap and the exit are ours.'
+  summary: 'IDX (index spot, bought option), variant base: design 1352 trades, win 43%, net -Rs 197,505, folds -Rs 142,967,
+    Rs 34,863, -Rs 158,310, Rs 68,909; p 1.000, BH q 1.000; holdout 148 trades, win 45%, net -Rs 104,765. R104 verdict: fail.
+    | MCXI (MCX mini future (own bars)), variant base: design 44 trades, win 48%, net Rs 38,438, folds Rs 0, -Rs 18,483, Rs
+    56,921; p 0.315, BH q 1.000; holdout 66 trades, win 61%, net Rs 77,450. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  R104 (227 tests, BH across all).  Our nearest test: not tested at 3 bars; R89 PDHL
+  (1-bar daily levels) 0 of 180; R51 Donchian 20 on 5-minute passed thin (+Rs 48,689, 1,775 trades). Assumptions: The book
+  uses it as a trend tool, not an entry with stops; the entry, the ATR cap and the exit are ours.'

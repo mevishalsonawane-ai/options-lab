@@ -31,10 +31,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-06; trade: buy ATM
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. R23 first-15-minute break (-Rs 71,624 on 1,171) and R92 by day
+    type (0 of 257); the prior-day trend and EMA bias are day-type filters R92 covered'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R23 first-15-minute range break -Rs 71,624 on 1,171 trades; R3 ORB -Rs 2,23,040; R49 0 of 336; R92
-  0 of 257; R22 1x-extension target lost. Assumptions: Prior-day trend definition, the stop level, the entry window and the
-  range-width variant are ours.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). R23 first-15-minute break (-Rs 71,624 on 1,171) and R92 by day type (0 of 257);
+  the prior-day trend and EMA bias are day-type filters R92 covered'
