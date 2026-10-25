@@ -54,6 +54,12 @@ class UpkeepTest {
             .forEach { assertFalse(Upkeep.carried(it), it) }
     }
 
+    @Test fun ntfyAndLeftoverTelegramSecretsNeverTravel() {
+        // 25 Oct (review): the removed Telegram login's keys may still be on a phone the clean-up has not reached yet.
+        listOf("telegram.api_id", "telegram.api_hash", "telegram.db_key", "telegram.logged_in", "ntfy.topic", "ntfy.token", "ntfy.server", "ntfy.prefix")
+            .forEach { assertFalse(Upkeep.carried(it), it) }
+    }
+
     @Test fun learningAndWordsStillTravel() {
         listOf("jarvis.reminders", "jarvis.daybook", "jarvis.learned", "jarvis.study", "jarvis.routine.kept", "jarvis.thinking",
             "jarvis.alertSense", "jarvis.dataAge", "jarvis.askedKinds", "jarvis.improve", "jarvis.notes", "jarvis.goals", "ui.theme", "jarvis.hindi")

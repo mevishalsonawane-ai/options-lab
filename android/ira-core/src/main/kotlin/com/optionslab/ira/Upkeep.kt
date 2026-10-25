@@ -24,6 +24,10 @@ object Upkeep {
      */
     val PRIVATE: List<String> = listOf("jarvis.memory", "kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "g.",
         "sec.", "lock.", "ui.widgetPnl", "w.", "intent.", "relay.", "breaker.",
+        // The removed Signal tester's Telegram login (15 Oct): Boss's api_id / api_hash and the key of TDLib's encrypted database.
+        // 25 Oct (review): kept private after Telegram's removal - the clean-up that deletes them may not have run yet, and until
+        // then they must never reach a backup.
+        "telegram.",
         // ntfy alerts (25 Oct): the topic (anyone who knows it can post), the access token and the server are this phone's alone -
         // never in a backup, an upload or a log.
         "ntfy.",
