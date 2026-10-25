@@ -1,0 +1,31 @@
+id: book-atb-05
+title: Doji, then trade the direction that is clear three candles later (The Advanced Trading Book, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 2, Doji (p22)) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry:
+  Doji D: body <= 0.1x range, range >= 0.8 ATR. Wait 3 bars; if bar 3 after D closes above D''s high, enter long at the next
+  open; if below D''s low, short; else no trade. Stop: The opposite end of D. Exit: 3R or square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Doji D: body <= 0.1x range, range >= 0.8 ATR. Wait 3 bars; if bar 3 after D closes above D''s high, enter
+  long at the next open; if below D''s low, short; else no trade. | stop: The opposite end of D. | exit: 3R or square-off.
+  | filters: None.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-05; trade: buy 1-ITM CE on long, 1-ITM PE on short'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87-3 SENSEX 15m gravestone doji -> put: +Rs 14,373 on 71 but walk-forward -Rs 1,923: fail. Assumptions:
+  ''A few candles'' = 3; ''clear'' = a close beyond the doji''s range.'

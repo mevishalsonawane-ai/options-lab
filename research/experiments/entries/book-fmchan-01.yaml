@@ -1,0 +1,39 @@
+id: book-fmchan-01
+title: Chan's 5-minute Bollinger fade, replicated on index futures with real costs (Ernest Chan, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ernest Chan''s rule from Quantitative Trading (Ch. 2, How will transaction costs affect the strategy (ES example))
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price
+  (index futures 5-minute closes). Entry: At each 5-minute close from 09:30 to 14:55: if close > MA20 + 2 x SD20 (20-bar moving
+  mean and sd of closes, today''s and yesterday''s bars), go short; if close < MA20 - 2 x SD20, go long. One position per
+  index at a time. Stop: None in the book. Research variant: index stop at 1 x SD20 beyond the entry band (close-based), because
+  live arms must carry a stop. Exit: When the 5-minute close is back within MA20 +- 1 x SD20; else at 15:10.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (index futures 5-minute closes)
+- 5-minute bars, intraday, flat by 15:10
+model_or_rule: 'At each 5-minute close from 09:30 to 14:55: if close > MA20 + 2 x SD20 (20-bar moving mean and sd of closes,
+  today''s and yesterday''s bars), go short; if close < MA20 - 2 x SD20, go long. One position per index at a time. | stop:
+  None in the book. Research variant: index stop at 1 x SD20 beyond the entry band (close-based), because live arms must carry
+  a stop. | exit: When the 5-minute close is back within MA20 +- 1 x SD20; else at 15:10. | filters: None (book). Skip expiry
+  day after 14:30 (app rule: expiry square-off 15:05).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-01; trade: Primary: 1 lot of the near-month future (Chan traded
+  the future). Secondary (labelled): buy the 1-ITM nearest-expiry CE on a long, PE on a short, same exits read on the index.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: F1: Bollinger %B / RSI / MACD lean to a 15-minute reversal (IC ~ -0.05) gone by 60 minutes; 0 of
+  20 indicator rules pass. R102 2.5: next 5-minute bar repeats the sign 48.4% of the time (NIFTY, n 167,082). Expect gross
+  > 0, net < 0.. Assumptions: Chan gives no lookback; 20 bars is the Bollinger default. His Sharpe 3 -> -3 came from a 1 bp
+  cost; our futures round trip is charges + one tick each side, options per baselines.yaml (NIFTY ATM about Rs 98). Report
+  gross and net side by side, since the point is the cost wedge.'

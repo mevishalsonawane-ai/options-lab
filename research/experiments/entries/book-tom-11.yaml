@@ -1,0 +1,32 @@
+id: book-tom-11
+title: Buy-stop above a dragonfly doji (where the shorts' stops sit) (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (The Dragonfly Pattern, p. 89) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: After at least 5 lower
+  closes in the prior 8 bars, a dragonfly doji (body <= 10% of range, close in the top 10% of range); buy-stop 1 tick above
+  its high, valid 3 bars. Stop: the dragonfly''s low Exit: 2R or square-off 15:10 (15:05 expiry)'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'After at least 5 lower closes in the prior 8 bars, a dragonfly doji (body <= 10% of range, close in the top
+  10% of range); buy-stop 1 tick above its high, valid 3 bars. | stop: the dragonfly''s low | exit: 2R or square-off 15:10
+  (15:05 expiry) | filters: 09:30-14:30'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-11; trade: buy 1-ITM CE'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87: dragonfly/doji shapes no direction edge; stop runs above the day high are followed by more
+  upside (R87, R86). Assumptions: Downtrend definition, doji thresholds, validity and target are ours; the book gives the
+  stop-hunt tip only.'

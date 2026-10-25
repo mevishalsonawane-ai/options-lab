@@ -1,0 +1,41 @@
+id: book-fmmusiela-01
+title: Trade (or flag) chain prices that break model-free no-arbitrage bounds (Musiela and Rutkowski, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Musiela and Rutkowski''s rule from Martingale Methods in Financial Modelling (Ch. 1.8, Universal no-arbitrage
+  inequalities; Ch. 7.1.5 (calendar total variance)) makes money after real charges and slippage, walk-forward, with BH across
+  the rules tried. Signal source: volatility / options structure (model-free identities on the option chain; no direction).
+  Entry: Each minute, for strikes ATM+-5 of the nearest expiry, check: (a) call spread: C(K1) - C(K2) > (K2 - K1) x exp(-rT)
+  or < 0; (b) butterfly: C(K-step) - 2 C(K) + C(K+step) < 0 (same for puts); (c) calendar: the next expiry''s ATM total variance
+  (IV squared x T) below the near expiry''s. When a violation exceeds the full round-trip cost of all legs (charges plus h24
+  half-spreads) by 20%, buy the cheap side and sell the dear side of that combination. Stop: None in theory (locked at entry);
+  unwind if any leg cannot be filled within 1 minute. Exit: Hold to expiry (cash settled) or unwind when the violation closes.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: synchronous bid/ask for all legs (we have 1-minute
+  last prints and one chain snapshot, h24)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (model-free identities on the option chain; no direction)
+- 1-minute (ideally tick) quotes
+model_or_rule: 'Each minute, for strikes ATM+-5 of the nearest expiry, check: (a) call spread: C(K1) - C(K2) > (K2 - K1) x
+  exp(-rT) or < 0; (b) butterfly: C(K-step) - 2 C(K) + C(K+step) < 0 (same for puts); (c) calendar: the next expiry''s ATM
+  total variance (IV squared x T) below the near expiry''s. When a violation exceeds the full round-trip cost of all legs
+  (charges plus h24 half-spreads) by 20%, buy the cheap side and sell the dear side of that combination. | stop: None in theory
+  (locked at entry); unwind if any leg cannot be filled within 1 minute. | exit: Hold to expiry (cash settled) or unwind when
+  the violation closes. | filters: All legs must have traded in the same minute; skip the last 30 minutes of expiry day.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmmusiela-01; trade: 1 lot per leg; 2-4 legs per combination.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R103''s six design passers were stale wing prices, which such a check would flag
+  (HUNT_R103_OPTIONS_SELLING.md).. Assumptions: The book gives the inequalities, not thresholds; the ATM+-5 window, the 20%
+  margin and the same-minute rule are ours. Last-trade prints overstate violations; the main expected use is as a stale-print
+  filter for every option backtest (count how many R103-type trades it would remove).'

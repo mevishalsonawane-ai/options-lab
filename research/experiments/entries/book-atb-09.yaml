@@ -1,0 +1,36 @@
+id: book-atb-09
+title: 'Triangle in a downtrend: sell the lower-line break at once, stop at the last lower high (Strategy 4) (The Advanced
+  Trading Book, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 3, Strategy 4 (p29))
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
+  Entry: Downtrend; at least 2 falling swing highs and 2 swing lows within 0.3 ATR of each other (flat base); the first close
+  below the base: sell at the next open (no retest). Mirror (ascending triangle in an uptrend) for longs. Stop: Above the
+  LAST swing high inside the triangle (the book''s ''level 2'', the tighter of two). Exit: Measured move (triangle height)
+  or square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Downtrend; at least 2 falling swing highs and 2 swing lows within 0.3 ATR of each other (flat base); the first
+  close below the base: sell at the next open (no retest). Mirror (ascending triangle in an uptrend) for longs. | stop: Above
+  the LAST swing high inside the triangle (the book''s ''level 2'', the tighter of two). | exit: Measured move (triangle height)
+  or square-off. | filters: Prior downtrend; triangle at least 8 bars long.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-09; trade: buy 1-ITM PE (CE for the mirror)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R20c: two-close breaks of horizontal levels +0.02 ATR to the close, random levels the same (7,548
+  breaks). Assumptions: The book calls it ''symmetrical'' but draws a flat base; we follow the drawing. Target is ours.'

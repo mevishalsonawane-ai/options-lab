@@ -1,0 +1,43 @@
+id: book-aziz-02
+title: 'VWAP false breakout: sold off below VWAP, reclaimed, lost again in the Late-Morning -> short (Andrew Aziz, book rule,
+  proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, VWAP False Breakout) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume (index futures
+  VWAP or R10 proxy). Entry: Day state: at least one 5-minute close below VWAP after 09:15, later at least one 5-minute close
+  above VWAP. Between 10:15 and 11:45 (MCX: the second and third hours of the day session), the first 5-minute close back
+  below VWAP -> short at that close. Mirror for longs (above VWAP, lost, regained). Stop: a 5-minute close above VWAP Exit:
+  Half at the low of the day so far (stop to entry); rest at the next level below (previous day close, yesterday''s low, 5-minute
+  200 SMA) or a new 5-minute high; time exit 15:15 (MCX 23:00).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+- SILVER
+features:
+- underlying price/volume (index futures VWAP or R10 proxy)
+- 5-minute bars
+model_or_rule: 'Day state: at least one 5-minute close below VWAP after 09:15, later at least one 5-minute close above VWAP.
+  Between 10:15 and 11:45 (MCX: the second and third hours of the day session), the first 5-minute close back below VWAP ->
+  short at that close. Mirror for longs (above VWAP, lost, regained). | stop: a 5-minute close above VWAP | exit: Half at
+  the low of the day so far (stop to entry); rest at the next level below (previous day close, yesterday''s low, 5-minute
+  200 SMA) or a new 5-minute high; time exit 15:15 (MCX 23:00). | filters: One trade a day; skip if the distance to the low
+  of the day is under 2 x the distance to VWAP.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-02; trade: buy ATM PE on the short signal (ATM CE on the mirror);
+  stops and targets on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us as a sequence; R10 V1 side-of-VWAP had no filter value; F1 found no VWAP direction;
+  R86: a midday VWAP stretch tends to continue. Assumptions: ''Sold off'', ''reclaimed'' and ''lost'' read as 5-minute closes;
+  US 10:30-12:00 mapped to NSE 10:15-11:45; the optional anticipation entry before the loss is not used.'

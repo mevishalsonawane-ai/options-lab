@@ -1,0 +1,40 @@
+id: book-tom-02
+title: Stochastic hidden divergence in the trend, timed by a 4-bar fractal (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Divergence Strategies, p. 119-126) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Trend down (close below
+  its 89-period SMA): price makes a lower confirmed swing high (2-bar fractal pivot) while slow stochastic %K(14,3) at that
+  pivot is higher than at the previous swing high; then the first 4-bar fractal sell within 10 bars enters short. Mirror for
+  longs in an uptrend (higher low in price, lower low in %K). Stop: Above the divergence swing high (below the swing low for
+  longs). Exit: Opposite 4-bar fractal, else stop, else square-off 15:10 (15:05 expiry) for intraday; 60-minute version may
+  hold to 15:10 only.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- CRUDE
+features:
+- underlying price
+- 60-minute bars (book uses 4-hour FX and 5-minute Dow); 15-minute variant
+model_or_rule: 'Trend down (close below its 89-period SMA): price makes a lower confirmed swing high (2-bar fractal pivot)
+  while slow stochastic %K(14,3) at that pivot is higher than at the previous swing high; then the first 4-bar fractal sell
+  within 10 bars enters short. Mirror for longs in an uptrend (higher low in price, lower low in %K). | stop: Above the divergence
+  swing high (below the swing low for longs). | exit: Opposite 4-bar fractal, else stop, else square-off 15:10 (15:05 expiry)
+  for intraday; 60-minute version may hold to 15:10 only. | filters: trend by the 89-period SMA on the trading timeframe'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-02; trade: buy 1-ITM PE on the short signal, 1-ITM CE on the long;
+  stop on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R95 CCI divergence labels: +Rs 12.0 lakh where drawn, -Rs 3.4 lakh once known; stochastic only inside
+  B2''s coin-flip model. Assumptions: The book gives no stochastic settings, pivot rule, trend definition, stop or exit; 14,3
+  stochastic, 2-bar pivots, 89-SMA trend (the book''s own trend MA) and a 10-bar window are our choices.'

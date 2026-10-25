@@ -1,0 +1,39 @@
+id: book-sadowski-10
+title: Weekly + daily stochastic extreme at a swing level, intraday reversal entry (Roman Sadowski, book rule, proposed)
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 1) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Setup short:
+  weekly and daily stochastic(14,3,3) %K both above 70, the index up more than 2 x ATR14(daily) over the last 10 sessions,
+  and price within 0.5 ATR of a 60-session swing high. Over the next 5 sessions, sell on a 60-min close below the prior 60-min
+  bar''s low. Long is the mirror (below 30, near a 60-session swing low). Stop: Above the setup''s swing high + 0.25 ATR (short),
+  below the swing low (long). Exit: Not stated; we use 2R or 10 sessions.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- CRUDE
+features:
+- underlying price
+- weekly and daily bars for the setup, 60-minute bars for entry
+model_or_rule: 'Setup short: weekly and daily stochastic(14,3,3) %K both above 70, the index up more than 2 x ATR14(daily)
+  over the last 10 sessions, and price within 0.5 ATR of a 60-session swing high. Over the next 5 sessions, sell on a 60-min
+  close below the prior 60-min bar''s low. Long is the mirror (below 30, near a 60-session swing low). | stop: Above the setup''s
+  swing high + 0.25 ATR (short), below the swing low (long). | exit: Not stated; we use 2R or 10 sessions. | filters: The
+  book''s COT bias is replaced (variant) by the 50-day trend: take only setups in its direction; counter-trend setups at half
+  size.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-10; trade: Buy the 1-ITM monthly PE (short) / CE (long).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: HUNT_H25 intraday stochastic within ''Other indicators'' 0 of 50 families positive walk-forward;
+  weekly+daily version not tested by us. Assumptions: The COT bias, the ''major'' level and the intraday ''reversal pattern''
+  are discretionary in the book; all of these definitions are ours. Stochastic settings are borrowed from the common 14,3,3.'

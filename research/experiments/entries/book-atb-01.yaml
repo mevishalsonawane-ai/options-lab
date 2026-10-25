@@ -1,0 +1,41 @@
+id: book-atb-01
+title: Hammer at a prior swing low, bought only after an up candle confirms (The Advanced Trading Book, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 2, Hammer (p11)) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry:
+  Hammer bar H: lower wick >= 2x body, upper wick <= 0.25x range, range >= 0.8 ATR; downtrend into H; H''s low within 0.25
+  ATR of a swing low from the last 5 sessions. Confirmation: the next bar closes above H''s high. Enter at the open of the
+  bar after the confirmation bar. Mirror (shooting star / hanging man at a swing high, confirmation close below H''s low)
+  for shorts. Stop: Underlying 1 tick beyond H''s low (high for shorts). Exit: Target 3R on the underlying (the book''s 1:3
+  ratio); else square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- CRUDE
+features:
+- underlying price
+- 15-minute bars (5-minute as a variant)
+model_or_rule: 'Hammer bar H: lower wick >= 2x body, upper wick <= 0.25x range, range >= 0.8 ATR; downtrend into H; H''s low
+  within 0.25 ATR of a swing low from the last 5 sessions. Confirmation: the next bar closes above H''s high. Enter at the
+  open of the bar after the confirmation bar. Mirror (shooting star / hanging man at a swing high, confirmation close below
+  H''s low) for shorts. | stop: Underlying 1 tick beyond H''s low (high for shorts). | exit: Target 3R on the underlying (the
+  book''s 1:3 ratio); else square-off. | filters: None stated beyond prior decline and support.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-01; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short;
+  stop and target on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87: NIFTY 15m hammer followed by -0.47 ATR over 20 candles vs +0.19 matched; wick lows not defended
+  (59% vs 57%, n 3,314); GOLD_CANDLES 1h hammer buys-only weak (t 0.84, 424 trades). Assumptions: Book gives no numbers for
+  wick ratios, ''support'', ''confirmation'', stop or target; we use the hammer''s low as stop and the glossary''s 1:3 as
+  target.'

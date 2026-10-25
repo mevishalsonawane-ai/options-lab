@@ -1,0 +1,42 @@
+id: book-ozenbas-01
+title: Daily close crosses its 65-day moving average (Ozenbas, Pagano, Schwartz and Weber, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ozenbas, Pagano, Schwartz and Weber''s rule from Liquidity, Markets and Trading in Action (Ch. 3.7 (footnote
+  7)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying
+  price. Entry: Long when the daily close crosses from below to above its 65-day simple moving average; short (or flat, for
+  a long-only test) when it crosses from above to below. Act at the next session''s open. Stop: Not stated by the book. Assumption:
+  initial stop 2 x ATR(14) daily from the entry price on the underlying. Exit: The opposite cross (literal reading of the
+  book''s buy/sell pair), or the stop.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+features:
+- underlying price
+- daily bars
+model_or_rule: 'Long when the daily close crosses from below to above its 65-day simple moving average; short (or flat, for
+  a long-only test) when it crosses from above to below. Act at the next session''s open. | stop: Not stated by the book.
+  Assumption: initial stop 2 x ATR(14) daily from the entry price on the underlying. | exit: The opposite cross (literal reading
+  of the book''s buy/sell pair), or the stop. | filters: The book puts a top-down macro view and a fundamental value check
+  first; neither is mechanical, so none is applied.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-01; trade: Trade the near-month future, or buy the nearest-monthly
+  ATM CE on a long signal / ATM PE on a short, rolled 5 sessions before expiry; stops on the underlying.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Not tested by us on daily index or MCX bars. Intraday EMA crosses lost (OBUY_FINAL TI-03 EMA cross,
+  -Rs 369,856 over 2022-2026, 96 variants; R29 ribbons 0 pass). Crypto daily SMA/Donchian trend (RC1) made +24.4% a year after
+  tax vs +58.8% buy and hold.. Assumptions: Simple (not exponential) average; signal on the close, fill at next open; 2 x
+  ATR stop and the option roll are ours. The book gives the crossover only as an example of technical analysis and neither
+  supports nor denies it.'

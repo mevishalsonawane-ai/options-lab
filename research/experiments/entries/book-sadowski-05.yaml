@@ -1,0 +1,33 @@
+id: book-sadowski-05
+title: Long shadow / hammer candle, enter the next open (Roman Sadowski, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 5) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: A candle whose
+  lower wick >= 2 x its real body and whose body sits in the top third of the range: buy at the next open. Mirror (upper wick,
+  body in the bottom third) for shorts. Stop: The wick''s extreme. Exit: Trail the stop to the prior candle''s low/high; square-off
+  at 15:15.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'A candle whose lower wick >= 2 x its real body and whose body sits in the top third of the range: buy at the
+  next open. Mirror (upper wick, body in the bottom third) for shorts. | stop: The wick''s extreme. | exit: Trail the stop
+  to the prior candle''s low/high; square-off at 15:15. | filters: None.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-05; trade: Buy the 1-ITM nearest-expiry CE/PE.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: HUNT_R87: hammers mostly mark continuation (NIFTY 15m: a further -0.47 ATR over 20 candles); a big
+  tail''s low is broken within 10 candles 59% of the time. Assumptions: ''Body at one end'' = top/bottom third; the 2x rule
+  is the book''s.'

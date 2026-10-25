@@ -1,0 +1,57 @@
+id: book-smith-01
+title: SST six rules on NIFTY/BANKNIFTY daily bars, buy the monthly option (David Graeme Smith, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 7-9) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Set-up on day t close: (a) close above SMA(50) of
+  daily closes for longs (below for shorts); (b) Wilder DMI with period 8: +DI crosses above -DI on day t, or the two touch
+  (|+DI - -DI| <= 1.0 after having been apart by > 3.0 within the last 5 days) and then widen in the long direction (mirror
+  for shorts). Reference day = the most recent day at or before t that is not an inside day (inside day: high <= previous
+  high and low >= previous low). From day t+1, enter long when the index trades above reference high (short: below reference
+  low). Set-up expires after 3 sessions without a trigger (book: late entries usually skipped). Stop: Initial: reference day
+  low minus a buffer (long) / high plus buffer (short); buffer = 0.5% of price as written, plus a pre-registered index variant
+  of 0.25 x ATR(14). Exit: Trailing: after each daily close, if that day made a new high since entry and is not an inside
+  day, raise the stop to its low minus buffer (short mirror). If a day''s favourable open-to-close or high-low move is >=
+  5% (book) or >= 2.5 x ATR(14) (index variant), raise the stop to that day''s midpoint minus buffer. No target. Stops checked
+  intraday on the index; exit the option at the next minute''s open after the index trades through the stop. Hard time cap:
+  exit 5 sessions before the monthly expiry.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- daily bars (index spot), entry and stops checked on 1-minute bars
+model_or_rule: 'Set-up on day t close: (a) close above SMA(50) of daily closes for longs (below for shorts); (b) Wilder DMI
+  with period 8: +DI crosses above -DI on day t, or the two touch (|+DI - -DI| <= 1.0 after having been apart by > 3.0 within
+  the last 5 days) and then widen in the long direction (mirror for shorts). Reference day = the most recent day at or before
+  t that is not an inside day (inside day: high <= previous high and low >= previous low). From day t+1, enter long when the
+  index trades above reference high (short: below reference low). Set-up expires after 3 sessions without a trigger (book:
+  late entries usually skipped). | stop: Initial: reference day low minus a buffer (long) / high plus buffer (short); buffer
+  = 0.5% of price as written, plus a pre-registered index variant of 0.25 x ATR(14). | exit: Trailing: after each daily close,
+  if that day made a new high since entry and is not an inside day, raise the stop to its low minus buffer (short mirror).
+  If a day''s favourable open-to-close or high-low move is >= 5% (book) or >= 2.5 x ATR(14) (index variant), raise the stop
+  to that day''s midpoint minus buffer. No target. Stops checked intraday on the index; exit the option at the next minute''s
+  open after the index trades through the stop. Hard time cap: exit 5 sessions before the monthly expiry. | filters: Skip
+  if the trigger is hit by the open gapping through it (book Ch. 13.1); skip if SMA(200) lies between entry and entry + (entry
+  - stop) (book''s 200-day barrier); if the DI cross and the SMA(50) cross happen within 2 sessions of each other, both must
+  have happened before entry.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-smith-01; trade: buy the 1-ITM CE of the nearest monthly (next monthly
+  if fewer than 10 sessions left) on a long trigger, 1-ITM PE on a short; stops on the index as the book states; also run
+  a futures mirror to separate signal from theta'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: SWING_DEEP: NR7 / inside-day breakout on index futures sat inside the coin-flip band, walk-forward
+  lost Rs 45-58k a year; OBUY_LV05_MULTIDAY: multi-day Donchian option holds about -Rs 18,000 a year, p 0.68 vs random; OBUY_GB
+  TI-09 intraday ADX/DMI 0/5 years. The exact daily rule is not tested by us.. Assumptions: Book is written for UK small-cap
+  shares with a 0.5% buffer and says major indices need a wider, judged buffer; the ATR variants and the touch tolerance are
+  our literal readings. ''Big move day'' 5% is almost never hit on NIFTY, hence the ATR-scaled variant. Set-up expiry of 3
+  sessions makes ''do not enter late'' precise.'

@@ -1,0 +1,43 @@
+id: book-fmross-03
+title: Fade deviations from the AR(1) reversion level of the log price (Sheldon Ross, book rule, proposed)
+family: mcx-crypto
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Sheldon Ross''s rule from An Introduction to Mathematical Finance: Options and Other Topics (Ch. 11.1, 11.3)
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
+  Entry: Each day fit L(n) = a + b L(n-1) + e by least squares on the trailing 250 daily log closes of the continuous future.
+  If b < 0.98 and the fitted model''s one-day-ahead expected price is above today''s close by more than 1 residual sd (price
+  below the reversion level s* = exp((a + s^2/2)/(1-b))), go long at the next open; mirror for short. Stop: 1.5 x 20-day ATR
+  from entry on the underlying (assumption). Exit: Price reaches s*, or 10 sessions, whichever first.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- CRUDE
+- NATURALGAS
+- GOLD
+- SILVER
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- daily bars
+model_or_rule: 'Each day fit L(n) = a + b L(n-1) + e by least squares on the trailing 250 daily log closes of the continuous
+  future. If b < 0.98 and the fitted model''s one-day-ahead expected price is above today''s close by more than 1 residual
+  sd (price below the reversion level s* = exp((a + s^2/2)/(1-b))), go long at the next open; mirror for short. | stop: 1.5
+  x 20-day ATR from entry on the underlying (assumption). | exit: Price reaches s*, or 10 sessions, whichever first. | filters:
+  Require b significantly below 1 by an augmented Dickey-Fuller test at 5% on the same window (the book does not test b =
+  1; we add it). No entry within 3 sessions of contract expiry.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmross-03; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short
+  (monthly on MCX); stops on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: SWING_DEEP.md ''Mean reversion: buy after big down day'' on NIFTY futures did not pass (no index
+  swing rule passed walk-forward); R59 mean-reversion dip buy 0 of 84. Assumptions: The book gives the model and the reversion
+  level, not a trading rule; it fits the whole sample in-sample. Window, b threshold, 1-sd trigger, stop and time exit are
+  ours. Crypto version would need a stop and a profit lock per CLAUDE.md.'

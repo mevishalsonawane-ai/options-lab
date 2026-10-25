@@ -1,0 +1,43 @@
+id: book-fmchan-08
+title: ETH vs BTC hourly spread reversion inside Boss's crypto window, with stop and profit lock (Ernest Chan, book rule,
+  proposed)
+family: mcx-crypto
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ernest Chan''s rule from Quantitative Trading (Ch. 3 Example 3.6; Ch. 7 Examples 7.2 and 7.5 (method applied
+  to crypto)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying
+  price (ETH and BTC perpetuals; the hedged log spread). Entry: Each hour in the window: on the trailing 720 hours, OLS of
+  log ETH on log BTC -> h; spread = log ETH - h x log BTC; CADF t-stat and OU half-life (in hours). Trade only if CADF t <
+  5% critical value and half-life between 2 and 12 hours. z = (spread - 720-hour mean) / sd. z >= +2: short ETH perp, long
+  BTC perp (notional ratio h); z <= -2: the reverse. Stop: Pair loss of 1.0% of gross notional, or |z| >= 3.5, whichever first
+  (always on). Exit: Profit lock: once open profit reaches +0.4% of gross notional, the stop moves to break-even plus costs
+  and then trails at 50% of peak open profit. Target: z back to 0. Time exit: 2 x half-life or 09:00 IST, whichever first.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- CRYPTO
+features:
+- underlying price (ETH and BTC perpetuals; the hedged log spread)
+- 1-hour bars; trades only 00:00-09:00 IST, flat by 09:00
+model_or_rule: 'Each hour in the window: on the trailing 720 hours, OLS of log ETH on log BTC -> h; spread = log ETH - h x
+  log BTC; CADF t-stat and OU half-life (in hours). Trade only if CADF t < 5% critical value and half-life between 2 and 12
+  hours. z = (spread - 720-hour mean) / sd. z >= +2: short ETH perp, long BTC perp (notional ratio h); z <= -2: the reverse.
+  | stop: Pair loss of 1.0% of gross notional, or |z| >= 3.5, whichever first (always on). | exit: Profit lock: once open
+  profit reaches +0.4% of gross notional, the stop moves to break-even plus costs and then trails at 50% of peak open profit.
+  Target: z back to 0. Time exit: 2 x half-life or 09:00 IST, whichever first. | filters: Skip the hour of a scheduled US
+  CPI / FOMC release (events.csv).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-08; trade: Perpetuals both legs, small notional; funding counted.
+  Research only (nothing in the app trades crypto).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: C1/C2: crypto hourly direction reverses slightly (AUC 0.535-0.550) but nets -10 to -13 bps a trade
+  after costs; RC1: 0 of 8 active ideas pass; ETH/BTC as a pair not tested by us. Two legs double the cost hurdle: low prior..
+  Assumptions: Chan''s daily method moved to hourly bars so the trade fits Boss''s 00:00-09:00 IST window and ''no long holding''
+  rule; the 1.0% stop, 0.4% lock trigger and 50% trail are our choices, sized from C1''s median BTC next-hour range 0.546%.
+  Costs: 12 bps a round trip per leg (two legs = 24 bps).'

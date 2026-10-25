@@ -1,0 +1,45 @@
+id: book-aziz-01
+title: Opening range breakout on VWAP's side, range narrower than ATR, VWAP stop, next-level target (Andrew Aziz, book rule,
+  proposed)
+family: orb
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, Strategy 4: Opening Range Breakout) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume
+  (index futures; VWAP from futures volume or R10''s option-volume proxy). Entry: Opening range = high/low of 09:15 to 09:15+R
+  (R = 5, 15 or 30 min). Long on the first 1-minute close above the range high while that close is above VWAP; short on the
+  first 1-minute close below the range low while below VWAP. One trade a side a day; no entries after 10:15 (the book''s Open).
+  Stop: Long: a 5-minute close below VWAP. Short: a 5-minute close above VWAP (the book is inconsistent between close and
+  break; use closes). Exit: First target = the nearest of previous day close, yesterday''s high/low, two-days-ago high/low,
+  daily 50/200 SMA beyond entry: sell half there and move the stop to entry. Rest: exit a long on a new 5-minute low (lower
+  than the prior 5-minute bar''s low), a short on a new 5-minute high, or at 15:05 expiry / 15:15 otherwise.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price/volume (index futures; VWAP from futures volume or R10's option-volume proxy)
+- 5-, 15- or 30-minute opening range; 1-minute bars for the break; 5-minute bars for the stop and exit
+model_or_rule: 'Opening range = high/low of 09:15 to 09:15+R (R = 5, 15 or 30 min). Long on the first 1-minute close above
+  the range high while that close is above VWAP; short on the first 1-minute close below the range low while below VWAP. One
+  trade a side a day; no entries after 10:15 (the book''s Open). | stop: Long: a 5-minute close below VWAP. Short: a 5-minute
+  close above VWAP (the book is inconsistent between close and break; use closes). | exit: First target = the nearest of previous
+  day close, yesterday''s high/low, two-days-ago high/low, daily 50/200 SMA beyond entry: sell half there and move the stop
+  to entry. Rest: exit a long on a new 5-minute low (lower than the prior 5-minute bar''s low), a short on a new 5-minute
+  high, or at 15:05 expiry / 15:15 otherwise. | filters: Range width < 0.5 x daily ATR14 (the book: significantly smaller
+  than ATR). Skip if the distance to the first target is under 2 x the distance to VWAP at entry.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-01; trade: buy ATM CE on a long signal, ATM PE on a short; stops
+  and targets on the index as the book states'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R3 / R49 / R92: the ORB family lost on every index (0 of 16, 0 of 336, 0 of 257); R10 V1 (VWAP side)
+  and T6 (narrow first-30-min range) did not rescue it. Assumptions: ''Significantly smaller than ATR'' fixed at 0.5x; ''break''
+  read as a 1-minute close; NSE Open mapped to 09:15-10:15; ATR14 on daily bars; the half / break-even management from Ch.
+  5.'

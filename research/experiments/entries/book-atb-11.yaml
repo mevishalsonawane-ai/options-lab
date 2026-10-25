@@ -1,0 +1,38 @@
+id: book-atb-11
+title: 'Sideways box after a move: break, retest, confirming candle (Strategy 6) (The Advanced Trading Book, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 3, Strategy 6 (p31))
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
+  Entry: Prior move >= 2 ATR within 10 bars; then >= 6 bars whose highs and lows all lie inside a band <= 1.2 ATR tall (box
+  top = highest high, bottom = lowest low). A 15m close above the top = break. Within 12 five-minute bars price returns to
+  within 0.1 ATR of the top and a 5m bar closes green above it: buy at the next open. Mirror below the bottom. Stop: Below
+  the box midpoint (variant: below the retest bar''s low). Exit: Measured move = box height from the break, else square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+features:
+- underlying price
+- 15-minute bars for the box, 5-minute for the retest
+model_or_rule: 'Prior move >= 2 ATR within 10 bars; then >= 6 bars whose highs and lows all lie inside a band <= 1.2 ATR tall
+  (box top = highest high, bottom = lowest low). A 15m close above the top = break. Within 12 five-minute bars price returns
+  to within 0.1 ATR of the top and a 5m bar closes green above it: buy at the next open. Mirror below the bottom. | stop:
+  Below the box midpoint (variant: below the retest bar''s low). | exit: Measured move = box height from the break, else square-off.
+  | filters: Box must start after the prior move (consolidation, not opening range).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-11; trade: buy 1-ITM CE above the box, 1-ITM PE below'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Closest arm: Donchian plain breakout, Rs 55,439 on 1,787 final trades (R71); retest not better on
+  the morning range (R22); ORB family 0 of 257 (R92); run it beside Donchian with and without the retest. Assumptions: Box
+  size and length, retest window, stop and target are ours; book gives only the retest-and-bullish-candle entry.'

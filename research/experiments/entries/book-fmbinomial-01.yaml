@@ -1,0 +1,41 @@
+id: book-fmbinomial-01
+title: Conversion / reversal when put-call parity breaks by more than costs (van der Hoek and Elliott, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'van der Hoek and Elliott''s rule from Binomial Models in Finance (Ch. 2.5 (model-independent proof), Exercise
+  2.45) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: option premium
+  (the chain''s own call and put prices against the index future); an options-structure arbitrage, not our default. Entry:
+  At a minute close, for each strike K in ATM +-5 of the nearest expiry, compute gap = (C - P) - (F - K) x e^(-rT), with F
+  the same-expiry index future. If gap > round-trip cost of 3 legs, sell the call, buy the put, buy the future (reversal of
+  a rich call); if gap < -cost, buy the call, sell the put, sell the future. Stop: None (the position is locked in by construction).
+  Exit: Hold to expiry cash settlement, or unwind early if the gap returns to within 0.25 x cost of zero.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: simultaneous bid-ask quotes (the lake keeps last-traded
+  prices, ATM +-10 only)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- option premium (the chain's own call and put prices against the index future); an options-structure arbitrage, not our default
+- 1-minute bars, 09:20-15:00
+model_or_rule: 'At a minute close, for each strike K in ATM +-5 of the nearest expiry, compute gap = (C - P) - (F - K) x e^(-rT),
+  with F the same-expiry index future. If gap > round-trip cost of 3 legs, sell the call, buy the put, buy the future (reversal
+  of a rich call); if gap < -cost, buy the call, sell the put, sell the future. | stop: None (the position is locked in by
+  construction). | exit: Hold to expiry cash settlement, or unwind early if the gap returns to within 0.25 x cost of zero.
+  | filters: All three legs must have traded in the same minute (no stale prints); skip the last 30 minutes of expiry day.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmbinomial-01; trade: 3-leg position: 1 lot call, 1 lot put, 1 lot
+  future; payoff fixed at entry.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R103 showed far-leg prices in the lake are often stale (repriced legs moved -Rs
+  711 to -Rs 1,698), which would create false parity breaks. Assumptions: The book states parity for spot plus a riskless
+  loan; we use the future instead of spot (NSE index options are European and cash-settled on the index, the future settles
+  to the same index). r = 91-day T-bill rate. Costs = charges plus half the bid-ask spread per leg; the lake has last prints
+  only, so the literal test overstates opportunities.'

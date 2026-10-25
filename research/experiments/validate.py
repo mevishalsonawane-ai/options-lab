@@ -28,7 +28,9 @@ FAMILIES = {
     "option-structure", "outside-strategies", "trade-management", "daily-filters", "market-facts", "mcx-crypto",
     "stocks", "diagnosis",
 }
-VERDICTS = {"adopted", "paper-only", "shadow", "rejected", "inconclusive", "superseded", "not-a-test"}
+VERDICTS = {"adopted", "paper-only", "shadow", "rejected", "inconclusive", "superseded", "not-a-test", "proposed"}
+# Written down, never run (25 Oct 2026: the books' testable rules): no variants, no holdout read, not counted as a test.
+UNRUN = {"not-a-test", "proposed"}
 REQUIRED = {
     "id": str, "title": str, "family": str, "date": str, "doc": str, "hypothesis": str, "data_version": str,
     "period": dict, "instruments": list, "features": list, "model_or_rule": str, "settings": str,
@@ -84,8 +86,10 @@ def check(path: Path, seen: set[str]) -> list[str]:
         errs.append(f"{path.name}: holdout_read true but no period.holdout")
     if e["variants_tried"] is not None and e["variants_tried"] < 1:
         errs.append(f"{path.name}: variants_tried must be >= 1")
-    if e["verdict"] == "not-a-test" and e["variants_tried"]:
-        errs.append(f"{path.name}: a not-a-test entry tries no variants")
+    if e["verdict"] in UNRUN and e["variants_tried"]:
+        errs.append(f"{path.name}: a {e['verdict']} entry tries no variants")
+    if e["verdict"] == "proposed" and e["holdout_read"]:
+        errs.append(f"{path.name}: a proposed entry was never run, so it read no holdout")
     return errs
 
 
@@ -99,7 +103,7 @@ def tries(entries: list[dict]) -> dict[str, dict]:
     for e in entries:
         f = out.setdefault(e["family"], {"experiments": 0, "tests": 0, "variants": 0, "variants_unknown": 0, "adopted": 0})
         f["experiments"] += 1
-        if e["verdict"] != "not-a-test":
+        if e["verdict"] not in UNRUN:
             f["tests"] += 1
             if e["variants_tried"] is None:
                 f["variants_unknown"] += 1

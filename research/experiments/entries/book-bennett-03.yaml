@@ -1,0 +1,33 @@
+id: book-bennett-03
+title: Put underwriting as a defined-risk bull put spread at 25 delta (Colin Bennett, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 1.2, Put underwriting benefits from selling expensive implied)
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options
+  structure (sell the vol premium and skew); no direction signal. Entry: Day after expiry 09:20: sell the nearest-expiry put
+  with delta closest to -0.25 and buy the put 3 strikes lower. Stop: Close if the spread''s value reaches 2x the credit. Exit:
+  Hold to 15:05 on expiry day (app square-off) or the stop.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (sell the vol premium and skew); no direction signal
+- daily; weekly (NIFTY) / monthly (BANKNIFTY) expiry cycle
+model_or_rule: 'Day after expiry 09:20: sell the nearest-expiry put with delta closest to -0.25 and buy the put 3 strikes
+  lower. | stop: Close if the spread''s value reaches 2x the credit. | exit: Hold to 15:05 on expiry day (app square-off)
+  or the stop. | filters: Optional (book): only when the put''s IV exceeds the index''s forecast realised vol (see vrp-filtered-iron-fly).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-03; trade: 1 lot bull put spread; long leg filled first.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R103 tested symmetric credit structures, not one-sided put spreads: 0 of 24. IV1''s put-writing
+  OI rule was a buying signal, not put selling.. Assumptions: Bennett''s naked short put at a support level is replaced by
+  a 25-delta strike (support levels were random lines in R20b) and a spread (no naked shorts).'

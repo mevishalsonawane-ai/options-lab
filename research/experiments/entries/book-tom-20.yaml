@@ -1,0 +1,30 @@
+id: book-tom-20
+title: Scale out in thirds (Mark Douglas) (Trader Tom, book rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Managing Your Risk, Scaling Out, p. 130) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price (the arm''s own
+  signal). Entry: the arm''s own, in 3 lots Stop: the arm''s own; after the second third, stop to entry Exit: one third at
+  +1R, one third at +2R (book: +20 and +40 points on 4-hour FX), last third on the arm''s own exit'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (the arm's own signal)
+- the arm's own
+model_or_rule: 'the arm''s own, in 3 lots | stop: the arm''s own; after the second third, stop to entry | exit: one third
+  at +1R, one third at +2R (book: +20 and +40 points on 4-hour FX), last third on the arm''s own exit | filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-20; trade: 3 lots of the arm''s option, sold in thirds'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R81 X5 scale out half at 1R rejected (-Rs 79k design, -Rs 35k final). Assumptions: Points mapped
+  to R multiples.'

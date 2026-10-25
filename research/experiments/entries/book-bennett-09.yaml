@@ -1,0 +1,35 @@
+id: book-bennett-09
+title: After a sharp fall, near-zero-cost 1x2 call spread made defined-risk (broken-wing butterfly) (Colin Bennett, book rule,
+  proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 1.4, 1x2 call spreads are useful when a bounce-back is expected)
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price
+  (the fall), then options structure. Entry: If the index fell 4% or more over the last 3 sessions, at 09:20 buy 1 ATM call,
+  sell 2 calls at the strike nearest half the fall above spot, buy 1 call 2 strikes above that. Stop: None beyond the structure''s
+  defined max loss. Exit: Expiry (15:05 on expiry day) or when spot reaches the short strike.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (the fall), then options structure
+- daily bars for the signal; option chain at 09:20 next day
+model_or_rule: 'If the index fell 4% or more over the last 3 sessions, at 09:20 buy 1 ATM call, sell 2 calls at the strike
+  nearest half the fall above spot, buy 1 call 2 strikes above that. | stop: None beyond the structure''s defined max loss.
+  | exit: Expiry (15:05 on expiry day) or when spot reaches the short strike. | filters: None stated.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-09; trade: 1-2-1 broken-wing call butterfly, 1 lot.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Direction after falls is a coin flip; R102 daily momentum (+5.8 bps NIFTY) reversed in the holdout
+  (-9.4 bps, 65 days). Not tested as a structure.. Assumptions: ''Sharp drop'' and ''bounce to earlier levels'' are made literal
+  as 4% over 3 sessions and half the fall; the extra long call replaces the stock that covered the second short call in the
+  book.'

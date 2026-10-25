@@ -1,0 +1,36 @@
+id: book-fmschmidt-01
+title: Buy on a turn up after a dip, sell on a turn down after a top (Anatoly Schmidt, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Anatoly Schmidt''s rule from Quantitative Finance for Physicists (Ch. 12.4.3) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Long when close[k] >
+  close[k-1] and close[k-1] < close[k-2]; short when close[k] < close[k-1] and close[k-1] > close[k-2]; enter at the next
+  bar''s open Stop: not stated by the book; assume a stop at the extreme of the last two bars (the dip low for longs, the
+  top high for shorts) Exit: the opposite signal, or 15:05 square-off on expiry day / end of session otherwise'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- '5-minute bars (book: abstract simulation steps)'
+model_or_rule: 'Long when close[k] > close[k-1] and close[k-1] < close[k-2]; short when close[k] < close[k-1] and close[k-1]
+  > close[k-2]; enter at the next bar''s open | stop: not stated by the book; assume a stop at the extreme of the last two
+  bars (the dip low for longs, the top high for shorts) | exit: the opposite signal, or 15:05 square-off on expiry day / end
+  of session otherwise | filters: none in the book'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmschmidt-01; trade: buy ATM CE on a long signal, ATM PE on a short;
+  stop and exit on the underlying as above'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R102 2.5: at 5 minutes the next bar follows the previous bar''s sign 48.4% of the time (n 167,082);
+  R88 0 of 8 direction findings held; R87 candle shapes and R71 patterns failed. Not tested in this exact form.. Assumptions:
+  The book uses this only as the strategy of simulated ''technical traders'' in an agent-based model and shows it moves prices
+  when those traders are big enough; it never claims a real-market profit. Bar size, stop and session handling are ours.'

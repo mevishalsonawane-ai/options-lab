@@ -1,0 +1,31 @@
+id: book-woods-13
+title: 'ID/NR4: inside bar that is also the narrowest of 4 (Galen Woods, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.11) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Bar is inside the previous bar and has the smallest
+  range of the last 4; OCO bracket 1 tick beyond its high and low, next bar. Stop: The opposite end of the bar. Exit: Not
+  stated; session square-off (intraday) or 3 sessions (daily).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- daily and 15-minute bars
+model_or_rule: 'Bar is inside the previous bar and has the smallest range of the last 4; OCO bracket 1 tick beyond its high
+  and low, next bar. | stop: The opposite end of the bar. | exit: Not stated; session square-off (intraday) or 3 sessions
+  (daily). | filters: None.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-woods-13; trade: buy 1-ITM CE / PE'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R96 crude NR4 -Rs 886 on 77; Crabel inside-day NR7 -Rs 14,129 on 13. Index version not tested..
+  Assumptions: Bracket entry taken from the inside-bar section.'

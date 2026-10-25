@@ -1,0 +1,34 @@
+id: book-tom-09
+title: Trend change on the break of the lower low (and continuation buy above the old high) (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Principles of Price Action & Trend, p. 56-62) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: With confirmed
+  2-bar fractal pivots: after an uptrend (last two swing highs and lows rising), a lower swing high then a lower swing low;
+  short when price trades below that lower low. If instead price trades above the last swing high first, buy (continuation).
+  Stop: the lower high (short) / the last swing low (continuation long) Exit: 2R target or square-off 15:10 (15:05 expiry)'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'With confirmed 2-bar fractal pivots: after an uptrend (last two swing highs and lows rising), a lower swing
+  high then a lower swing low; short when price trades below that lower low. If instead price trades above the last swing
+  high first, buy (continuation). | stop: the lower high (short) / the last swing low (continuation long) | exit: 2R target
+  or square-off 15:10 (15:05 expiry) | filters: 09:30-14:30'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-09; trade: buy 1-ITM PE on the short, 1-ITM CE on the continuation
+  long'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R71 P8 swing structure HH+HL lost Rs 40,109 on 374 final trades; R90 BOS entries 0 of 99. Assumptions:
+  Pivot strength, timeframe, target are ours.'

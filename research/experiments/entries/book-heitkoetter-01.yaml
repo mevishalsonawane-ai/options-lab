@@ -1,0 +1,42 @@
+id: book-heitkoetter-01
+title: Trade with an intraday trendline; exit when it breaks (Markus Heitkoetter, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 3, Technical Indicators (Uptrend / Downtrend))
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
+  Entry: Uptrend line: anchor 1 = the session low so far; anchor 2 = the low of the first later bar whose low is not higher
+  than the prior bar''s low (first retracement), provided anchor 2 > anchor 1. Long when a bar closes above the most recent
+  swing high after the line is drawn (the book''s example breaks a resistance level on high volume). Short mirrors with a
+  downtrend line from the session high and the first higher high. Stop: A 5-minute close below the projected uptrend line
+  (above the downtrend line for shorts). Exit: Trendline break (as the stop); square off 15:10 (15:05 on expiry).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute bars (book's example), also 15-minute
+model_or_rule: 'Uptrend line: anchor 1 = the session low so far; anchor 2 = the low of the first later bar whose low is not
+  higher than the prior bar''s low (first retracement), provided anchor 2 > anchor 1. Long when a bar closes above the most
+  recent swing high after the line is drawn (the book''s example breaks a resistance level on high volume). Short mirrors
+  with a downtrend line from the session high and the first higher high. | stop: A 5-minute close below the projected uptrend
+  line (above the downtrend line for shorts). | exit: Trendline break (as the stop); square off 15:10 (15:05 on expiry). |
+  filters: Line update rule: when a new lower low (higher high for downtrends) appears, re-anchor only if the new line is
+  flatter, no bar''s low lies below it, and every earlier anchor lies within 0.15 x ATR14(5-min) of it; if re-anchoring would
+  break the last condition the trend is over (no new entries that side).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-01; trade: buy 1-ITM CE on a long, 1-ITM PE on a short;
+  stop and exit on the underlying as the book states'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; nearest R71 P8 swing structure (HH + HL) lost in the final period (-Rs 40,109
+  on 374 trades) and H25 break-of-structure families were 0 of 18 positive. Assumptions: The book draws lines by eye; ''close
+  to the lows'' made 0.15 x ATR14; entry trigger (break of the last swing high) and the 15:10 square-off are ours; volume
+  confirmation dropped (index spot has no volume; could use futures volume from 29 Jul 2026).'

@@ -1,0 +1,44 @@
+id: book-fmchan-02
+title: NIFTY vs BANKNIFTY futures pair with a cointegration gate and half-life exit (Ernest Chan, book rule, proposed)
+family: outside-strategies
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ernest Chan''s rule from Quantitative Trading (Ch. 3 Example 3.6; Ch. 7 Examples 7.2 and 7.5) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price (both index futures;
+  the hedged log spread). Entry: Each day, on the trailing 252 sessions: OLS of log(BANKNIFTY fut) on log(NIFTY fut) -> hedge
+  h; spread = log BN - h x log N; CADF t-stat of the spread; OU half-life from regressing the daily change in spread on the
+  lagged spread minus its mean. Trade only if CADF t < the 5% critical value and 3 <= half-life <= 30 sessions. z = (spread
+  - 252-day mean) / 252-day sd. z >= +2: short BN fut, long N fut (notional ratio h); z <= -2: the reverse. Stop: |z| >= 3.5
+  at a close, or the pair''s loss reaches 2% of gross notional (CLAUDE.md account stop also applies). Exit: z crosses 0 (the
+  mean), or after 2 x half-life sessions, whichever first; also exit if the CADF gate fails for 5 consecutive days.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (both index futures; the hedged log spread)
+- daily closes (signal at 15:20 from 15:15-15:20 prices), positions held over days
+model_or_rule: 'Each day, on the trailing 252 sessions: OLS of log(BANKNIFTY fut) on log(NIFTY fut) -> hedge h; spread = log
+  BN - h x log N; CADF t-stat of the spread; OU half-life from regressing the daily change in spread on the lagged spread
+  minus its mean. Trade only if CADF t < the 5% critical value and 3 <= half-life <= 30 sessions. z = (spread - 252-day mean)
+  / 252-day sd. z >= +2: short BN fut, long N fut (notional ratio h); z <= -2: the reverse. | stop: |z| >= 3.5 at a close,
+  or the pair''s loss reaches 2% of gross notional (CLAUDE.md account stop also applies). | exit: z crosses 0 (the mean),
+  or after 2 x half-life sessions, whichever first; also exit if the CADF gate fails for 5 consecutive days. | filters: No
+  new entry on the session before a scheduled RBI policy, Budget or election result (events.csv).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-02; trade: Futures both legs, lots rounded to the nearest notional
+  match (BANKNIFTY lot vs NIFTY lot); roll 3 sessions before expiry. Options are not used (H6: two bought options is a structural
+  loser).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: H6 (intraday divergence of NIFTY vs BANKNIFTY with bought options): all 24 variants lost; the 60-minute
+  spread moves about 13 bps. R72 C2 laggard catch-up failed. R102: daily correlation 0.877, beta 1.157 (says nothing about
+  cointegration). The daily futures pair with a CADF gate: not tested by us.. Assumptions: Chan uses price levels and a fixed
+  training window; logs and a rolling window keep the hedge point-in-time. Gates (5% CADF, half-life 3-30) are our choice
+  from his text. Margin: two futures legs need about Rs 3-4 lakh, above Boss''s Rs 1 lakh; a research question, not an arm.'

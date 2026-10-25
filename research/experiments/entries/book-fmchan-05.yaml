@@ -1,0 +1,37 @@
+id: book-fmchan-05
+title: Trailing half-Kelly throttle that can only cut an arm's size (Ernest Chan, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ernest Chan''s rule from Quantitative Trading (Ch. 6, Optimal capital allocation and leverage; Risk management)
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: the arm''s own
+  realised trade P&L (sizing; the arm''s signals stay on the underlying). Entry: Unchanged: each arm''s own signal (Liquidity
+  15+5, R72 Breadth Donchian, R51 Donchian, R52 OOV). Stop: Unchanged (the arm''s own). Exit: Unchanged (the arm''s own).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- the arm's own realised trade P&L (sizing; the arm's signals stay on the underlying)
+- re-estimated each evening; applied to the next day's signals
+model_or_rule: 'Unchanged: each arm''s own signal (Liquidity 15+5, R72 Breadth Donchian, R51 Donchian, R52 OOV). | stop: Unchanged
+  (the arm''s own). | exit: Unchanged (the arm''s own). | filters: Size multiplier = clip( f_trail / f_design , 0, 1 ), where
+  f = mean / variance of the arm''s daily net P&L per lot, f_trail on the trailing 126 sessions and f_design on the arm''s
+  design period; lots = floor(base lots x multiplier), 0 = skip. Never above base lots.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-05; trade: As the arm trades (1-ITM / ATM option per its strike
+  rule).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: H15: half-Kelly from Rs 1 lakh -> Rs 7.41 L holdout with a -44% drawdown; Kelly fraction unstable
+  (BN 1.29 vs 0.48 / 0.14). R101: 2 lots on 5-of-5 breadth earned what any lot earns (p 0.475). R74: volatility-targeted sizing
+  not tried for the index arms. A cut-only throttle: not tested by us.. Assumptions: Chan: six-month lookback for day-long
+  holds, half-Kelly, and gradual de-leveraging instead of shutdown. Because the multiplier is capped at 1, it only lowers
+  risk (CLAUDE.md LIVE rule: shadow first). Compare on the holdout: net, worst month, max drawdown and the account-stop breaches
+  (-Rs 40k / -Rs 13k a month) vs the unthrottled arm and vs a random throttle with the same average size.'

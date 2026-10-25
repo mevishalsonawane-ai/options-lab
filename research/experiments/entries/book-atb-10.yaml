@@ -1,0 +1,40 @@
+id: book-atb-10
+title: Flag (parallel channel against a sharp pole), trade the channel break (Strategy 5, sheet p58) (The Advanced Trading
+  Book, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 3, Strategy 5 (p30);
+  Ch. 4 flags (p58)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source:
+  underlying price. Entry: Pole: a move of >= 2 ATR within 5 bars. Flag: 4-15 bars drifting against the pole inside two parallel
+  lines (slopes within 30% of each other), retracing <= 50% of the pole. Bearish flag (rising channel after a drop): sell
+  at the open after the first close below the lower line. Bullish mirror: buy after the first close above the upper line.
+  Stop: Beyond the opposite channel line at the break bar. Exit: Target = pole length from the break (drawn on p58), else
+  square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- CRYPTO
+features:
+- underlying price
+- 5-minute and 15-minute bars
+model_or_rule: 'Pole: a move of >= 2 ATR within 5 bars. Flag: 4-15 bars drifting against the pole inside two parallel lines
+  (slopes within 30% of each other), retracing <= 50% of the pole. Bearish flag (rising channel after a drop): sell at the
+  open after the first close below the lower line. Bullish mirror: buy after the first close above the upper line. | stop:
+  Beyond the opposite channel line at the break bar. | exit: Target = pole length from the break (drawn on p58), else square-off.
+  | filters: None stated.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-10; trade: buy 1-ITM PE on a bearish flag, 1-ITM CE on a bullish
+  flag; CRYPTO: same stop plus the step profit lock'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R71 P4 flag: only 32 final trades (-Rs 442 with L25), design -Rs 27,378: too rare to judge. Assumptions:
+  Pole size, flag length, parallel tolerance, stop and target are ours.'

@@ -1,0 +1,38 @@
+id: book-porwal-02
+title: Doji at an oversold / overbought extreme, traded on the break of its high / low (Nikhil Porwal, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 3.2) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Doji: |close - open| <=
+  0.1 x (high - low). Long setup: doji whose low is the lowest low of the last 10 bars and RSI(14) < 30 (or stochastic 14,3,3
+  < 20) on the doji. Buy when price trades above the doji high within the next 3 bars. Short is the mirror (highest high of
+  10 bars, RSI > 70). Stop: Below the doji low (long) / above the doji high (short). Exit: Trail with EMA(20): exit on a close
+  back through it; or a 2R target (book''s 1:2 minimum); max hold 10 sessions for the daily version.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- daily bars (the book's main timeframe); 15-minute as a variant
+model_or_rule: 'Doji: |close - open| <= 0.1 x (high - low). Long setup: doji whose low is the lowest low of the last 10 bars
+  and RSI(14) < 30 (or stochastic 14,3,3 < 20) on the doji. Buy when price trades above the doji high within the next 3 bars.
+  Short is the mirror (highest high of 10 bars, RSI > 70). | stop: Below the doji low (long) / above the doji high (short).
+  | exit: Trail with EMA(20): exit on a close back through it; or a 2R target (book''s 1:2 minimum); max hold 10 sessions
+  for the daily version. | filters: One extra confirmation is required by the book; we use a gap or a close beyond the doji
+  as that confirmation in a variant.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-02; trade: daily: buy the next-monthly ATM CE / PE with stops
+  on the index; intraday: 1-ITM nearest expiry'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87 / R87B: no candle shape predicts direction; daily shapes 0 of 25; OBUY_GB MR-03 RSI 30/70 reversal
+  lost walk-forward. Assumptions: The oscillator is not named (default settings); RSI(14) 30/70 and stochastic 14,3,3 80/20
+  tested as two readings. Doji body threshold, 10-bar extreme, 3-bar window, EMA 20 trail are ours.'

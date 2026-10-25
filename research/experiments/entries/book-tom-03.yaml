@@ -1,0 +1,40 @@
+id: book-tom-03
+title: Daily / weekly 3-bar swing (3-bar Donchian) as the trend bias (Trader Tom, book rule, proposed)
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Trend Indicators; Daily Work Routine, p. 67-74) makes money
+  after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: State
+  = UP after any trade above the highest high of the previous 3 completed daily bars; DOWN after any trade below their lowest
+  low; state persists until the opposite break. Used as a filter: allow an arm''s long (call) entries only in UP and short
+  (put) entries only in DOWN. Stop: the arm''s own stop Exit: the arm''s own exit'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+- NATURALGAS
+features:
+- underlying price
+- daily bars (weekly variant)
+model_or_rule: 'State = UP after any trade above the highest high of the previous 3 completed daily bars; DOWN after any trade
+  below their lowest low; state persists until the opposite break. Used as a filter: allow an arm''s long (call) entries only
+  in UP and short (put) entries only in DOWN. | stop: the arm''s own stop | exit: the arm''s own exit | filters: apply to
+  R51 Donchian 20, R72 Breadth Donchian, Liquidity 15+5; weekly variant uses the previous 3 weekly bars, set Sunday night'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-03; trade: filter only (skip entries against the bias); for live
+  this would start in shadow (logged only), switch off by default'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us at 3 bars; R101 filters on the Donchian arms 0 of 20 (filters that raised the win
+  rate lowered the net); R89 daily+15m trend filter did not cut false breaks. Assumptions: Book says ''trade below the 3-bar
+  low'' turns the trend; we use intraday trade-through of the level (not a close). Book text says both ''last 3 bars'' and
+  ''last 4 trading days''; we take the previous 3 completed bars.'

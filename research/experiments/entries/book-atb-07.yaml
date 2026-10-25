@@ -1,0 +1,40 @@
+id: book-atb-07
+title: 'Symmetrical triangle after a rise: break, retest, bullish candle, buy the next candle (Strategy 2) (The Advanced Trading
+  Book, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 3, Strategy 2 (p27))
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
+  Entry: Uptrend (close >= 2 ATR above the close 20 bars before the first triangle swing); at least 2 falling swing highs
+  and 2 rising swing lows whose lines converge; close above the upper line = break (no entry); within 8 bars a bar trades
+  back to within 0.1 ATR of the upper line and the next bar closes green above it; buy at the open of the bar after that green
+  bar. Mirror after a fall. Stop: Below the last swing low inside the triangle. Exit: Measured move: triangle height at its
+  widest, projected from the break (Chapter 4 drawings); else square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Uptrend (close >= 2 ATR above the close 20 bars before the first triangle swing); at least 2 falling swing
+  highs and 2 rising swing lows whose lines converge; close above the upper line = break (no entry); within 8 bars a bar trades
+  back to within 0.1 ATR of the upper line and the next bar closes green above it; buy at the open of the bar after that green
+  bar. Mirror after a fall. | stop: Below the last swing low inside the triangle. | exit: Measured move: triangle height at
+  its widest, projected from the break (Chapter 4 drawings); else square-off. | filters: Continuation only: trade in the direction
+  of the prior trend.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-07; trade: buy 1-ITM CE after a rise, 1-ITM PE after a fall'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Not tested by us as a triangle; nearest R71 P3 squeeze release: final -Rs 41,281 on 305 trades.
+  Assumptions: Swing count, trend test, retest window, stop and measured target are ours (book gives none).'

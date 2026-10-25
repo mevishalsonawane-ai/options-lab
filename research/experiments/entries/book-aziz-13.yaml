@@ -1,0 +1,32 @@
+id: book-aziz-13
+title: Per-trade risk 1% (max 2%) of equity; stop for the month at a 6% loss (Andrew Aziz, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 7, Position Sizing (2% and 6% rules)) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: none (account rule).
+  Entry: Lots = floor(1% of equity / (option stop distance x lot size)), at least 0 (skip the trade when one lot risks more
+  than 2%). Stop: Monthly: when realised losses plus open risk reach 6% of equity at the month''s start, no new entries until
+  the next month. Exit: unchanged'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none (account rule)
+- per trade and per calendar month
+model_or_rule: 'Lots = floor(1% of equity / (option stop distance x lot size)), at least 0 (skip the trade when one lot risks
+  more than 2%). | stop: Monthly: when realised losses plus open risk reach 6% of equity at the month''s start, no new entries
+  until the next month. | exit: unchanged | filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-13; trade: all arms'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not a research test; compare with Boss''s account stop (-Rs 40k drawdown or -Rs 13k a month). Assumptions:
+  Equity excludes margin; option stop distance = the arm''s premium stop.'

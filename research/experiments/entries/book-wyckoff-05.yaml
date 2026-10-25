@@ -1,0 +1,32 @@
+id: book-wyckoff-05
+title: Break only when the rest of the market breaks with it (Wyckoff, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. V, VIII) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price (five index spots). Entry: As R72 C1: a 20-bar Donchian
+  break on an index, taken only when >= 4 of NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX break their own 20-bar channel
+  in the same direction on the same bar Stop: R72''s exits Exit: R72''s exits'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (five index spots)
+- 5-minute bars
+model_or_rule: 'As R72 C1: a 20-bar Donchian break on an index, taken only when >= 4 of NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY,
+  SENSEX break their own 20-bar channel in the same direction on the same bar | stop: R72''s exits | exit: R72''s exits |
+  filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-05; trade: buy 1-ITM CE on an up break, PE on a down break'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R72 Breadth Donchian PASS: final Rs 1,71,366 on 1,202 trades vs Donchian Rs 55,439; on paper. Assumptions:
+  Book''s ''carries the rest of the market along'' read as the R72 breadth count; this is the existing arm, listed so the
+  book''s idea is linked to it'

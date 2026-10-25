@@ -1,0 +1,40 @@
+id: book-aziz-04
+title: 'VWAP moving-average trend: below VWAP and riding the 5-minute 20 EMA after the Late-Morning (Andrew Aziz, book rule,
+  proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, VWAP Moving Average Trend) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume. Entry:
+  From 11:00 to 13:30: the last 6 five-minute closes all below VWAP and the 20 EMA falling; a 5-minute bar''s high touches
+  the 9 or 20 EMA and the bar closes below both -> short at that close. Mirror long above VWAP. Stop: a 5-minute close above
+  the 20 EMA Exit: Exit on a 5-minute close above the 20 EMA; take a quarter when the close is more than 1 x the 14-bar 5-minute
+  ATR beyond the 20 EMA and move the stop to entry; time exit 15:00 (the book: trends end around 3 p.m.).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+features:
+- underlying price/volume
+- 5-minute bars
+model_or_rule: 'From 11:00 to 13:30: the last 6 five-minute closes all below VWAP and the 20 EMA falling; a 5-minute bar''s
+  high touches the 9 or 20 EMA and the bar closes below both -> short at that close. Mirror long above VWAP. | stop: a 5-minute
+  close above the 20 EMA | exit: Exit on a 5-minute close above the 20 EMA; take a quarter when the close is more than 1 x
+  the 14-bar 5-minute ATR beyond the 20 EMA and move the stop to entry; time exit 15:00 (the book: trends end around 3 p.m.).
+  | filters: None beyond the VWAP side; one trade a side a day.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-04; trade: buy ATM PE on a short signal, ATM CE on a long; stops
+  on the index'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R29 EMA pullback patterns 0 of 55 pass; R86 continuation of midday VWAP stretches is descriptive
+  only. Assumptions: ''Lost VWAP in the Late-Morning'' fixed as 6 consecutive 5-minute closes on one side; ''touch'' = the
+  bar''s high/low reaches the EMA; the 1-ATR distance for the partial is ours.'

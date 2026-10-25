@@ -1,0 +1,38 @@
+id: book-bennett-06
+title: Calendar trade when implied moves break the square-root-of-time rule (Colin Bennett, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 7.2-7.3, Square root of time rule; term structure trading)
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options
+  structure (term structure). Entry: Each day estimate the power p from the change in ATM IV of the nearest and next weekly
+  expiries: dIV_near / dIV_next = (T_next / T_near)^p. If ATM IV rose and p > 0.7, buy the calendar (sell nearest ATM, buy
+  next-expiry ATM, same strike); if IV rose and p < 0.3, sell the calendar. Mirror for falls. Stop: Close at a loss of 50%
+  of the debit (long calendar) or 2x the credit-equivalent risk. Exit: Close at 15:10 the day before the near expiry, or when
+  p returns to 0.4-0.6.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: next-expiry ATM chain is mostly missing from the
+  rolling lake (h29 had monthly-minus-weekly IV only while both were listed)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+features:
+- volatility / options structure (term structure)
+- daily, 09:20 and 15:10 snapshots
+model_or_rule: 'Each day estimate the power p from the change in ATM IV of the nearest and next weekly expiries: dIV_near
+  / dIV_next = (T_next / T_near)^p. If ATM IV rose and p > 0.7, buy the calendar (sell nearest ATM, buy next-expiry ATM, same
+  strike); if IV rose and p < 0.3, sell the calendar. Mirror for falls. | stop: Close at a loss of 50% of the debit (long
+  calendar) or 2x the credit-equivalent risk. | exit: Close at 15:10 the day before the near expiry, or when p returns to
+  0.4-0.6. | filters: Skip when the near expiry is the day after an event (event vol, not term structure).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-06; trade: 1 lot each leg; since 1 Feb 2025 calendar margin
+  benefit is removed on the near leg''s expiry day.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: h29: term structure (monthly minus weekly ATM IV) did not sort the realised move; calendar trades
+  not tested by us (R94''s calendars were MCX futures spreads).. Assumptions: Bennett''s 0.5 power and his long/short rule;
+  the 0.3 / 0.7 bands are ours.'

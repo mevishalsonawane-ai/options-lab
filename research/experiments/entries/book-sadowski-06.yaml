@@ -1,0 +1,38 @@
+id: book-sadowski-06
+title: Buy the retest of broken resistance, scaled in three parts (Roman Sadowski, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 6) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Uptrend = the
+  last two 15-min swing highs and lows (3 bars each side) both rising. When a close breaks above the last swing high, place
+  three equal limit orders for the pullback: 1/3 at EMA20, 1/3 at the broken swing high, 1/3 at the 50% retracement of the
+  leg from the last swing low to the new high. Orders live until 14:30 or a new high is made. Mirror for downtrends. Stop:
+  Not stated; we use the last swing low below the 50% level. Exit: Target = the new high plus 1 x the leg length, or square-off
+  at 15:15.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Uptrend = the last two 15-min swing highs and lows (3 bars each side) both rising. When a close breaks above
+  the last swing high, place three equal limit orders for the pullback: 1/3 at EMA20, 1/3 at the broken swing high, 1/3 at
+  the 50% retracement of the leg from the last swing low to the new high. Orders live until 14:30 or a new high is made. Mirror
+  for downtrends. | stop: Not stated; we use the last swing low below the 50% level. | exit: Target = the new high plus 1
+  x the leg length, or square-off at 15:15. | filters: Swing-structure trend as above; pivot points optional (not used).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-06; trade: Buy the 1-ITM CE in parts as each limit on the
+  index fills (PE for the mirror).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: OBUY_FINAL LV-01 PDH/PDL break-retest: 64 variants, -129,689 walk-forward; HUNT_R20C 2-close breaks
+  continue 51% of 7,548; HUNT_R20B levels no better than random. Assumptions: The book gives no stop, target or trend definition;
+  all are ours. ''Zone'' treated as the exact level for the limit.'

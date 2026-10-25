@@ -278,6 +278,9 @@ object Knowledge {
             if (verdictAsked) x *= when { f.kind == "strategy" -> 1.4; f.kind == "finding" -> 1.2; f.verdict == "context" -> 0.85; else -> 1.0 }
             if (x < MIN_SCORE) null else Hit(f, x)
         }.sortedWith(compareByDescending<Hit> { it.score }.thenBy { it.fact.id })
+            // Asked whether something works, a book's claim or a rule never run never leads a tested research verdict
+            // (25 Oct 2026): when any hit carries one, the claims follow every non-claim hit (a stable sort keeps the scores' order).
+            .let { r -> if (verdictAsked && r.any { it.fact.kind !in CLAIMS && it.fact.verdict != "context" }) r.sortedBy { if (it.fact.kind in CLAIMS) 1 else 0 } else r }
         val out = ArrayList<Hit>()
         val perDoc = HashMap<String, Int>()
         for (h in ranked) {
@@ -290,6 +293,9 @@ object Knowledge {
         return out
     }
 
+    /** Facts that are claims, not our results: a book's card, and a rule written down but never run (25 Oct 2026). */
+    private val CLAIMS = setOf("book_fact", "proposed")
+
     /** "Is X profitable", "does X work", "what was the verdict": strategy cards and findings first. */
     private val VERDICT_ASK = Regex(" (profitable|profit|worth|edge|work|works|pay|pays|verdict|lose|loses|money|munafa|fayda|faida|kaam) ")
 
@@ -297,7 +303,9 @@ object Knowledge {
 
     private val CUE = Regex(" (research|researched|study|studies|studied|findings|evidence|historically|in history|history says|" +
         "past data|the data say|data says|have we tested|did we test|was tested|been tested|hunt|shodh|anusandhan|" +
-        "what did (the )?(backtests?|tests?) (say|show|find)|backtests? (say|said|show|showed)) ")
+        "what did (the )?(backtests?|tests?) (say|show|find)|backtests? (say|said|show|showed)|" +
+        // "what does Wyckoff say about volume", "what does the book teach about pin bars" (the books' cards, 25 Oct 2026)
+        "what (does|do|did) ([a-z0-9]+ ){1,6}(say|says|teach|teaches|write|writes) (about|on)|(the |this |that )?books? (says?|teach(es)?)) ")
     private val PROFIT = Regex(" (is|are|was|were) ([a-z0-9]+ ){1,5}(profitable|worth (it|trading)|any good|a good strategy|an edge) |" +
         " (does|do|did) ([a-z0-9]+ ){1,5}(work|pay|help|hurt|make money|have an edge|lose money|beat random|beat the market) |" +
         " (any|is there an|is there any) edge (in|on|with|from) | (what is|whats|how big is) the edge (of|in|on|from) ")

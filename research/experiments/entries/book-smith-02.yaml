@@ -1,0 +1,41 @@
+id: book-smith-02
+title: SST six rules on 1-hour index bars (intraday-to-few-days mapping) (David Graeme Smith, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 7-9 (our timeframe mapping)) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Same as sst-six-rules-index-daily
+  with every ''day'' replaced by a completed 60-minute bar: SMA(50) of hourly closes, DMI(8) on hourly bars, reference bar
+  = last non-inside hourly bar, enter on a trade beyond its high/low within the next 3 hourly bars. Stop: Reference bar''s
+  low minus 0.25 x ATR(14, hourly) (long). Exit: Trail to each new non-inside hourly bar''s low minus the same buffer once
+  it makes a new high since entry; half-bar lock on a bar >= 2.5 x hourly ATR; no target; either square off at 15:15 (intraday
+  variant) or hold overnight up to 5 sessions (swing variant).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 60-minute bars of index spot (09:15-15:15 buckets), stops on 1-minute bars
+model_or_rule: 'Same as sst-six-rules-index-daily with every ''day'' replaced by a completed 60-minute bar: SMA(50) of hourly
+  closes, DMI(8) on hourly bars, reference bar = last non-inside hourly bar, enter on a trade beyond its high/low within the
+  next 3 hourly bars. | stop: Reference bar''s low minus 0.25 x ATR(14, hourly) (long). | exit: Trail to each new non-inside
+  hourly bar''s low minus the same buffer once it makes a new high since entry; half-bar lock on a bar >= 2.5 x hourly ATR;
+  no target; either square off at 15:15 (intraday variant) or hold overnight up to 5 sessions (swing variant). | filters:
+  No entries in the first hourly bar if it gapped through the trigger; no entries after 14:15 for the intraday variant; skip
+  expiry day for weekly contracts.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-smith-02; trade: intraday variant: 1-ITM weekly CE/PE; swing variant:
+  1-ITM monthly CE/PE; stops on the index'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: OBUY_GB TI-09 (ADX/DMI + set-up candle break, 5/15-minute): walk-forward Rs -345,311, 0/5 years,
+  48 variants; R73 ADX filters failed; R89 previous-day high/low break 0 of 180.. Assumptions: The book is end-of-day only;
+  the hourly version is our mapping and should be labelled as such. Buffer and ''big bar'' scaled to ATR because the book''s
+  0.5% / 5% are share-sized.'

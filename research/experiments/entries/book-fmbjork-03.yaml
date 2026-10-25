@@ -1,0 +1,41 @@
+id: book-fmbjork-03
+title: Put-call parity conversion / reversal on NIFTY options against the future (Tomas Björk, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Tomas Björk''s rule from Arbitrage Theory in Continuous Time (Ch. 9.1, Parity relations; Ch. 7.6 (forward price))
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options
+  structure (pure no-arbitrage identity). Entry: For each strike within ATM+-3, compute gap = (C - P) - (F - K) x exp(-r T)
+  using the same minute''s prints. If gap > total round-trip cost of 3 legs (calls, puts, futures charges plus half-spreads)
+  by a margin of 20%, sell the call, buy the put, buy the future (conversion); if gap < -(cost x 1.2), do the reverse (reversal).
+  Stop: None needed in theory (locked at entry); practical stop: unwind if any leg cannot be filled within 1 minute. Exit:
+  Hold to expiry (cash settlement) or unwind early when the gap returns to zero.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: synchronous bid/ask quotes for the three legs (we
+  have 1-minute last prints and one chain snapshot, h24)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (pure no-arbitrage identity)
+- 1-minute (ideally tick) quotes
+model_or_rule: 'For each strike within ATM+-3, compute gap = (C - P) - (F - K) x exp(-r T) using the same minute''s prints.
+  If gap > total round-trip cost of 3 legs (calls, puts, futures charges plus half-spreads) by a margin of 20%, sell the call,
+  buy the put, buy the future (conversion); if gap < -(cost x 1.2), do the reverse (reversal). | stop: None needed in theory
+  (locked at entry); practical stop: unwind if any leg cannot be filled within 1 minute. | exit: Hold to expiry (cash settlement)
+  or unwind early when the gap returns to zero. | filters: All three legs must have traded in the same minute; skip the last
+  30 minutes of expiry day.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmbjork-03; trade: 1 lot each leg; three orders to enter, three to
+  exit or settle.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R103''s passers were an artefact of stale wing prices (43-63% of design trades
+  had a stale leg), which a parity check would have flagged.. Assumptions: Bjork gives the identity, not thresholds; the 20%
+  margin, ATM+-3 window and same-minute rule are ours. Last-trade prices overstate opportunities; a fair test needs synchronous
+  bid/ask. Doubles as a stale-print detector for every option backtest.'

@@ -1,0 +1,40 @@
+id: book-aziz-06
+title: 'Bull flag: break of the first or second consolidation with a joint 1- and 5-minute new high (Andrew Aziz, book rule,
+  proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, Strategy 3: Bull Flag) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume. Entry:
+  Pole: the move to a new high of the day of at least 1 x the 14-bar 5-minute ATR within 3 five-minute bars. Flag: 3-12 one-minute
+  bars that stay below the pole high and retrace at most half the pole. Long when a 1-minute bar breaks the flag high in the
+  same minute that the current 5-minute bar exceeds the previous 5-minute bar''s high, with 1-minute volume above the average
+  of the flag bars. Only the first or second flag of the day. Stop: below the flag''s low Exit: Half at a new high of the
+  day (stop to entry); rest on a new 1-minute low (low below the prior 1-minute bar''s low) or 15:15.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- NATURALGAS
+features:
+- underlying price/volume
+- 1-minute and 5-minute bars
+model_or_rule: 'Pole: the move to a new high of the day of at least 1 x the 14-bar 5-minute ATR within 3 five-minute bars.
+  Flag: 3-12 one-minute bars that stay below the pole high and retrace at most half the pole. Long when a 1-minute bar breaks
+  the flag high in the same minute that the current 5-minute bar exceeds the previous 5-minute bar''s high, with 1-minute
+  volume above the average of the flag bars. Only the first or second flag of the day. | stop: below the flag''s low | exit:
+  Half at a new high of the day (stop to entry); rest on a new 1-minute low (low below the prior 1-minute bar''s low) or 15:15.
+  | filters: Before 10:15 (the book trades flags at the Open); skip the third and later flags.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-06; trade: buy ATM CE; stops on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R71 P4 flag on index 5-minute bars: too rare, 32 final trades -Rs 442, design -Rs 27,378. Assumptions:
+  Pole and flag sizes are ours (the book is visual); built for low-float stocks, so the index version is an analogue.'

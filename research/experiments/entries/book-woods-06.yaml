@@ -1,0 +1,32 @@
+id: book-woods-06
+title: Pin bar rejected from a prior swing level (Galen Woods, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.4) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Bullish pin: lower wick >= 2/3 of the bar''s range
+  and the low within 0.1 ATR14 of a confirmed swing low (2 bars each side) of today or the previous session; buy stop above
+  the pin''s high, next bar only. Mirror for bearish. Stop: The pin''s low (high). Exit: Nearest opposing swing; else square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute and 15-minute bars
+model_or_rule: 'Bullish pin: lower wick >= 2/3 of the bar''s range and the low within 0.1 ATR14 of a confirmed swing low (2
+  bars each side) of today or the previous session; buy stop above the pin''s high, next bar only. Mirror for bearish. | stop:
+  The pin''s low (high). | exit: Nearest opposing swing; else square-off. | filters: Must form at the level (book).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-woods-06; trade: buy 1-ITM CE / PE'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87: big tail 51% vs 52% matched on NIFTY 15m (n 949), wick lows broken as often as distance implies;
+  R20b levels no better than random; R91 sweep 0 of 63. Expected negative.. Assumptions: ''Tail takes up most of the bar''
+  = >= 2/3; level = fractal swing.'

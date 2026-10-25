@@ -1,0 +1,38 @@
+id: book-fmjavaheri-03
+title: 'Kurtosis trade: sell ATM and far-OTM options, buy near-OTM options, delta-hedged (Alireza Javaheri, book rule, proposed)'
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Alireza Javaheri''s rule from Inside Volatility Arbitrage (Ch. 3, Kurtosis Trades (Figure 3.8)) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (no
+  direction). Entry: At 09:20 sell 1 ATM CE and 1 ATM PE, buy 1 CE and 1 PE at ATM +-1 straddle-width (near OTM), sell 1 CE
+  and 1 PE at ATM +-2 straddle-widths (far OTM). Stop: None in the book; research variant: basket loss of 100% of the net
+  credit, or the structure''s loss at the account stop. Exit: 15:10 square-off (non-expiry day) or 15:05 on expiry day (app
+  rule); book holds to expiry.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (no direction)
+- 1-minute chain; one decision a day at 09:20 on the nearest weekly; or daily on the monthly
+model_or_rule: 'At 09:20 sell 1 ATM CE and 1 ATM PE, buy 1 CE and 1 PE at ATM +-1 straddle-width (near OTM), sell 1 CE and
+  1 PE at ATM +-2 straddle-widths (far OTM). | stop: None in the book; research variant: basket loss of 100% of the net credit,
+  or the structure''s loss at the account stop. | exit: 15:10 square-off (non-expiry day) or 15:05 on expiry day (app rule);
+  book holds to expiry. | filters: Book: take it when the chain''s implied tails are fatter than history''s (higher implied
+  vol-of-vol); literal filter: ATM IV / HAR realised forecast above its rolling 70th percentile.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmjavaheri-03; trade: Six legs, 1 lot each; longs filled first, shorts
+  closed first; far shorts are naked beyond the far strike (unlimited loss) - research only.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R103: the nearest structure (short ATM straddle with long wings, iron fly) lost on all 6 NIFTY non-expiry
+  tests; 0 of 24 selling tests confirmed. h29: ATM IV / HAR forecast median 1.2-1.36.. Assumptions: The book draws a generic
+  payoff without strike distances; we use straddle-width multiples so the far legs stay inside ATM +-10 on most days; the
+  70th percentile filter is ours.'

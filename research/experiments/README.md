@@ -29,7 +29,7 @@ python research/experiments/validate.py --json   # the same counts as JSON (inpu
 | `variants_tried` | int or null | how many versions were run (null: the doc does not say) |
 | `results` | map | `summary:` (with the numbers) and `costs:` (which costs were counted) |
 | `holdout_read` | true / false / null | the locked holdout was read for this idea (null: none existed) |
-| `verdict` | string | `adopted`, `paper-only`, `shadow`, `rejected`, `inconclusive`, `superseded` or `not-a-test` (a replay, audit or measurement) |
+| `verdict` | string | `adopted`, `paper-only`, `shadow`, `rejected`, `inconclusive`, `superseded`, `not-a-test` (a replay, audit or measurement) or `proposed` (written down, never run: `variants_tried` null, `holdout_read` null; not counted as a test, and kept out of the phone's shared section) |
 | `notes` | string, optional | |
 | `backfilled` | bool, optional | written after the fact from the doc (summary level only) |
 

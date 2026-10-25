@@ -1,0 +1,38 @@
+id: book-carli-02
+title: Same Carli divergence setup on roughly 4-hour bars (David Carli, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'David Carli''s rule from The Power of Divergence Trading (Ch. 4) makes money after real charges and slippage,
+  walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: as carli-cci-div-trendline-daily,
+  computed on these bars; entry at the next minute''s open after the bar that closes beyond the trendline Stop: as carli-cci-div-trendline-daily
+  Exit: as carli-cci-div-trendline-daily (half at 127.2%, stop to entry, rest at 161.8%); positions may be held overnight'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+- NATURALGAS
+features:
+- underlying price
+- 'half-session bars: NSE 09:15-12:15 and 12:15-15:30; MCX 4-hour bars from 09:00'
+model_or_rule: 'as carli-cci-div-trendline-daily, computed on these bars; entry at the next minute''s open after the bar that
+  closes beyond the trendline | stop: as carli-cci-div-trendline-daily | exit: as carli-cci-div-trendline-daily (half at 127.2%,
+  stop to entry, rest at 161.8%); positions may be held overnight | filters: CCI length 20; staleness 20 bars'
+settings: 'research/books/TESTABLE_RULES.md, rule book-carli-02; trade: buy the 1-ITM CE / PE of the next-week (index) or
+  monthly (MCX) expiry; stops and targets on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R95: CCI fade and divergence variants on 60m failed the holdout (BANKNIFTY 60m B passed design on
+  48 trades, holdout 17 trades -Rs 1,014); this exact setup not tested by us. Assumptions: The book says ''rarely'' 4-hour
+  and never lower; NSE has no natural 4-hour bar, so two bars a session stand in. Same pivot, buffer and leg assumptions as
+  the daily rule.'

@@ -1,0 +1,35 @@
+id: book-aziz-08
+title: Exit when the 5-minute chart stops making new extremes in the trade's direction (Andrew Aziz, book rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 5, Trade Management Based on Price Action) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry:
+  None (overlay on an arm''s open position). Stop: the arm''s own stop Exit: Long: exit at the close of the second consecutive
+  5-minute bar that fails to make a new high above the trade''s best high AND whose low is below the prior bar''s low. Short:
+  mirror. Only after the trade has been open for at least two 5-minute bars.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute bars
+model_or_rule: 'None (overlay on an arm''s open position). | stop: the arm''s own stop | exit: Long: exit at the close of
+  the second consecutive 5-minute bar that fails to make a new high above the trade''s best high AND whose low is below the
+  prior bar''s low. Short: mirror. Only after the trade has been open for at least two 5-minute bars. | filters: Applies only
+  to exits earlier than the arm''s own (risk-lowering).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-08; trade: applies to the arm''s option; triggers read on the
+  index'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R18: five early-exit overlays failed (0 of 60); R87B: candle exits against the trade mostly hurt;
+  R81 / R100: exits that cut runners lose on Liquidity. Assumptions: The book''s ''fails to make a new low and turns to higher
+  highs and higher lows'' fixed as two bars; overlay on paper arms only.'

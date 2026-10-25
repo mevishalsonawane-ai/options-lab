@@ -1,0 +1,32 @@
+id: book-aziz-09
+title: Sell half (or a quarter) at the first level, move the stop to break-even (Andrew Aziz, book rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 5, Trade Management; Ch. 6 strategy summaries)
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price
+  for the level; premium for the lots. Entry: None (overlay; 2 lots per signal). Stop: after the first partial, the stop on
+  the remaining lot moves to the entry price (plus charges) Exit: Lot 1 at the first pre-marked level (previous day close,
+  yesterday''s high/low, daily 50/200 SMA); lot 2 by the arm''s own exit.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price for the level; premium for the lots
+- any (overlay)
+model_or_rule: 'None (overlay; 2 lots per signal). | stop: after the first partial, the stop on the remaining lot moves to
+  the entry price (plus charges) | exit: Lot 1 at the first pre-marked level (previous day close, yesterday''s high/low, daily
+  50/200 SMA); lot 2 by the arm''s own exit. | filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-09; trade: two lots of the arm''s option'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R81 X5 (half at +15%, runner to breakeven) Rs 1,78,523 vs Rs 2,57,249 own exits; R100 G13 failed.
+  Assumptions: The book uses 1/4 with a hotkey or 1/2 in summaries; 2 lots = halves.'

@@ -1,0 +1,33 @@
+id: book-woods-16
+title: Head and shoulders neckline break with measured target (Galen Woods, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 6.1) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Bullish (inverse): three fractal swing lows (3 bars
+  each side), the middle lowest, both shoulders above it; neckline through the two swing highs between them; after a downtrend
+  (close below EMA 50), buy on the first close above the neckline. Stop: The right shoulder''s low (book states none). Exit:
+  Target = head-to-neckline distance projected up from the breakout point; else square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+features:
+- underlying price
+- 15-minute bars (intraday) and daily bars
+model_or_rule: 'Bullish (inverse): three fractal swing lows (3 bars each side), the middle lowest, both shoulders above it;
+  neckline through the two swing highs between them; after a downtrend (close below EMA 50), buy on the first close above
+  the neckline. | stop: The right shoulder''s low (book states none). | exit: Target = head-to-neckline distance projected
+  up from the breakout point; else square-off. | filters: Prior trend; volume rising on the break (futures volume, optional).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-woods-16; trade: buy 1-ITM CE / PE'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Not tested by us.. Assumptions: Swing degree, prior-trend test and stop are ours.'

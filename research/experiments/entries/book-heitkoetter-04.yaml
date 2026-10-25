@@ -1,0 +1,39 @@
+id: book-heitkoetter-04
+title: Turtle 20-bar breakout on 15-minute bars with the book's exits (Markus Heitkoetter, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 3, Turtle Trading; Step 5 exits) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry:
+  Long the first time price trades above the highest high of the previous 20 completed 15-minute bars; short below the lowest
+  low of the previous 20 bars. Stop: 0.27% of the underlying (index or MCX future) Exit: 0.41% target or a 45-minute time
+  stop, whichever first; 15:10 square-off on NSE, MCX session close on MCX'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Long the first time price trades above the highest high of the previous 20 completed 15-minute bars; short
+  below the lowest low of the previous 20 bars. | stop: 0.27% of the underlying (index or MCX future) | exit: 0.41% target
+  or a 45-minute time stop, whichever first; 15:10 square-off on NSE, MCX session close on MCX | filters: none; at most 2
+  trades a day a side (as our Donchian arm)'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-04; trade: buy 1-ITM CE on long, 1-ITM PE on short (MCX:
+  1-ITM option where it prints, else the mini future)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R51/R73 Donchian 20 on 5-minute index bars: final Rs 81,845 on 1,781 trades (thin, R51 about zero
+  at 2x costs); R83 crude daily Donchian-20 + Supertrend not proven. Assumptions: Book gives no exits for the turtle rule;
+  its generic $200/$300 and three-bar time stop are used. Our Donchian arm already covers 5-minute bars with -15%/+30% premium
+  exits; this is the book''s 15-minute version for comparison.'

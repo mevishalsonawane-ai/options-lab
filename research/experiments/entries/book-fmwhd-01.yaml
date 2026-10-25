@@ -1,0 +1,49 @@
+id: book-fmwhd-01
+title: Buy the lowest-IV option and sell the highest-IV option of one expiry, delta-hedged, until the IVs converge (Wilmott,
+  Howison and Dewynne, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Wilmott, Howison and Dewynne''s rule from The Mathematics of Financial Derivatives (Ch. 3.10, technical point
+  ''Trading volatility'') makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
+  source: option premium (implied volatilities read from the chain''s own prices); a volatility-structure trade, NOT our default:
+  must be labelled and switched on only by Boss. Entry: At each 5-minute close, compute Black-Scholes IV (same-expiry future
+  as the underlying) for every call and put in ATM +-5 strikes of the nearest expiry. Fit the median IV-by-moneyness curve
+  of the previous 20 sessions at the same time of day; for each strike take the residual (today''s IV minus that curve). If
+  the largest residual minus the smallest exceeds 3 IV points, sell 1 lot of the most positive-residual option and buy 1 lot
+  of the most negative-residual option, then delta-hedge the pair to the nearest whole lot with the same-expiry future. Stop:
+  Close everything if the pair''s mark-to-market loss reaches Rs 3,000 per pair (not stated in the book). Exit: Close when
+  the residual gap falls below 1 IV point, or at 15:05 on expiry day, or after 3 sessions, whichever comes first.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'option premium (implied volatilities read from the chain''s own prices); a volatility-structure trade, NOT our default:
+  must be labelled and switched on only by Boss'
+- 5-minute bars, 09:30-14:45
+model_or_rule: 'At each 5-minute close, compute Black-Scholes IV (same-expiry future as the underlying) for every call and
+  put in ATM +-5 strikes of the nearest expiry. Fit the median IV-by-moneyness curve of the previous 20 sessions at the same
+  time of day; for each strike take the residual (today''s IV minus that curve). If the largest residual minus the smallest
+  exceeds 3 IV points, sell 1 lot of the most positive-residual option and buy 1 lot of the most negative-residual option,
+  then delta-hedge the pair to the nearest whole lot with the same-expiry future. | stop: Close everything if the pair''s
+  mark-to-market loss reaches Rs 3,000 per pair (not stated in the book). | exit: Close when the residual gap falls below
+  1 IV point, or at 15:05 on expiry day, or after 3 sessions, whichever comes first. | filters: Both legs and the future must
+  have traded in the same minute (no stale prints); skip event days (RBI, Budget, election results).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmwhd-01; trade: 1 lot short the rich option, 1 lot long the cheap
+  option, futures hedge in whole lots; option legs chosen by the residual rule.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R102 measured the skew as persistent (91% / 90% of days); R103 found apparent
+  wing mispricing in the lake was mostly stale prices; IV1 found skew alone useless as a direction signal. Assumptions: The
+  book says only ''buy the lowest IV, sell the highest, hope they converge''. Comparing raw IVs across strikes would just
+  trade the permanent skew (puts dearer on 91% of NIFTY days, R102), so we read ''converge'' as relative to the normal smile
+  shape (residual vs a 20-session curve). The 3-point entry, 1-point exit, 3-session limit, Rs 3,000 stop and whole-lot hedge
+  are our choices.'

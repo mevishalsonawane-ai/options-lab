@@ -1,0 +1,39 @@
+id: book-ozenbas-04
+title: Fade big moves on no-news days, follow them on scheduled-event days (Ozenbas, Pagano, Schwartz and Weber, book rule,
+  proposed)
+family: calendar-events
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ozenbas, Pagano, Schwartz and Weber''s rule from Liquidity, Markets and Trading in Action (Ch. 2.3 (information
+  vs liquidity shocks)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
+  source: underlying price (plus an event calendar). Entry: Between 09:30 and 14:30, when a 5-minute index move exceeds 3x
+  the trailing 20-day average absolute 5-minute move for that time of day: on a day with no scheduled event, enter AGAINST
+  the move at the next bar; on an RBI / Budget / heavyweight-results day, enter WITH the move. Stop: Assumption: 1x the triggering
+  5-minute move beyond the entry, on the index. Exit: Assumption: 30 minutes after entry, or the stop; flat by 15:10.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (plus an event calendar)
+- 1-minute bars
+model_or_rule: 'Between 09:30 and 14:30, when a 5-minute index move exceeds 3x the trailing 20-day average absolute 5-minute
+  move for that time of day: on a day with no scheduled event, enter AGAINST the move at the next bar; on an RBI / Budget
+  / heavyweight-results day, enter WITH the move. | stop: Assumption: 1x the triggering 5-minute move beyond the entry, on
+  the index. | exit: Assumption: 30 minutes after entry, or the stop; flat by 15:10. | filters: No entries 09:15-09:30 (opening
+  discovery) or after 14:30.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-04; trade: buy ATM CE on a long signal, ATM PE on a short;
+  stops on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R86: fading failed pokes lost on all 6 level x index tests (295-804 trades, Rs -2.3 to -5.5 lakh);
+  fade to VWAP lost Rs 64,786 on 71 trades. h28: event days move more but 8,820 variants found no side.. Assumptions: The
+  book gives only the principle (liquidity shocks revert, information shocks do not). The 3x threshold, windows, stop and
+  holding time are our literal reading and must be pre-registered.'

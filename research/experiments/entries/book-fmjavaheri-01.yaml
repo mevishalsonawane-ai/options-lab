@@ -1,0 +1,51 @@
+id: book-fmjavaheri-01
+title: 'Skew trade: buy OTM call, sell OTM put, vega-neutral and delta-hedged, on the NIFTY monthly (Alireza Javaheri, book
+  rule, proposed)'
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Alireza Javaheri''s rule from Inside Volatility Arbitrage (Ch. 3, Skewness Trades; An Example of the Skewness
+  Trade; Multiple Trades) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
+  source: volatility / options structure (no direction; the delta hedge is on the underlying future). Entry: On the first
+  trading day after a monthly expiry, take the next monthly expiry (about 20-25 trading days). Buy the call with strike nearest
+  S x (1 + 0.10 x sqrt(T / 0.25)) and sell the put nearest S x (1 - 0.10 x sqrt(T / 0.25)), T in years (the book''s 10% OTM
+  at three months scaled by square-root of time). Size calls per put = put vega / call vega at entry (vega-neutral); 1 put
+  lot. Stop: None in the book. Research variant B adds a basket stop: close everything if the position (options + hedge) loses
+  Rs 13,000 (Boss''s month stop). Exit: Unwind 5 trading days before expiry (the book unwinds about 20 business days before
+  a three-month expiry, i.e. at roughly the last quarter of the trade''s life). Variant C holds to expiry.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: bid-ask for 5-10% OTM monthly strikes (the 1-minute
+  lake keeps only ATM +-10 strikes; the EOD bhavcopy has all strikes but only closes); have: NIFTY futures daily bars, bhavcopy
+  closes for the strikes'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (no direction; the delta hedge is on the underlying future)
+- daily (EOD bhavcopy prices, daily delta hedge at the close); one trade per monthly expiry
+model_or_rule: 'On the first trading day after a monthly expiry, take the next monthly expiry (about 20-25 trading days).
+  Buy the call with strike nearest S x (1 + 0.10 x sqrt(T / 0.25)) and sell the put nearest S x (1 - 0.10 x sqrt(T / 0.25)),
+  T in years (the book''s 10% OTM at three months scaled by square-root of time). Size calls per put = put vega / call vega
+  at entry (vega-neutral); 1 put lot. | stop: None in the book. Research variant B adds a basket stop: close everything if
+  the position (options + hedge) loses Rs 13,000 (Boss''s month stop). | exit: Unwind 5 trading days before expiry (the book
+  unwinds about 20 business days before a three-month expiry, i.e. at roughly the last quarter of the trade''s life). Variant
+  C holds to expiry. | filters: None in the unconditional version (the book''s multiple-trade test was unconditional). The
+  conditional version is the next rule.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmjavaheri-01; trade: Long OTM CE, short OTM PE (1 lot), short/long
+  NIFTY future rebalanced daily at the close to the net Black-Scholes delta computed with the entry-day implied vols (as the
+  book did); report results at mid (close) prices and with a modelled half-spread on each option fill, as the book''s main
+  finding is that the spread decides the sign.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us as a risk reversal. R102: NIFTY puts five strikes out dearer than calls by 2.56
+  IV points on 91% of 1,222 days. R103: defined-risk short premium 0 of 24 confirmed; costs turn a near-zero gross into losses..
+  Assumptions: Book trades 3-month SPX options; NSE liquidity is in the nearest monthly, so T is shortened and the OTM distance
+  scaled by sqrt(time). The futures hedge must be in whole lots: rebalance only when the net delta differs from the held futures
+  by more than 0.5 lot, and also report a fractional-hedge (theoretical) version. The short put is naked: margin about Rs
+  1.5 lakh; research only.'

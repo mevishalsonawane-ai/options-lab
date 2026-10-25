@@ -1,0 +1,43 @@
+id: book-fmlyuu-01
+title: Index arbitrage when the future strays from cost-of-carry fair value (Yuh-Dauh Lyuu, book rule, proposed)
+family: outside-strategies
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Yuh-Dauh Lyuu''s rule from Financial Engineering and Computation (Ch. 12.3.3, Stock index futures (Eq. 12.9))
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price
+  (index spot vs index future); a carry arbitrage, not an option trade. Entry: At a minute close compute fair = S x e^((r
+  - q) x T) for the nearest index future (S index spot, r 91-day T-bill rate, q trailing 12-month index dividend yield, T
+  years to expiry). If future - fair > cost band, sell the future and buy the spot basket (index ETF as proxy); if fair -
+  future > cost band, buy the future and sell the basket. Stop: None in the book (the position converges at expiry); for the
+  test, close if the gap widens to 3 x the cost band (basis risk of the ETF proxy). Exit: Close both legs when the gap returns
+  to within 0.25 x the cost band, or hold to expiry settlement.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: executable index ETF / basket prices aligned to the
+  minute, dividend schedule, and bid-ask quotes for the future'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (index spot vs index future); a carry arbitrage, not an option trade
+- 1-minute bars, 09:20-15:00
+model_or_rule: 'At a minute close compute fair = S x e^((r - q) x T) for the nearest index future (S index spot, r 91-day
+  T-bill rate, q trailing 12-month index dividend yield, T years to expiry). If future - fair > cost band, sell the future
+  and buy the spot basket (index ETF as proxy); if fair - future > cost band, buy the future and sell the basket. | stop:
+  None in the book (the position converges at expiry); for the test, close if the gap widens to 3 x the cost band (basis risk
+  of the ETF proxy). | exit: Close both legs when the gap returns to within 0.25 x the cost band, or hold to expiry settlement.
+  | filters: Cost band = charges plus half-spreads of the future and the basket/ETF plus the ETF''s tracking error; skip the
+  last 30 minutes of expiry day and dividend ex-dates of heavyweights.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmlyuu-01; trade: 1 lot index future against an equal notional of index
+  ETF (no options).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us as an arbitrage; HUNT_H39.md stage A found futures returns and basis changes tied
+  to the index in the same minute and no lead from 2 minutes on (every |t| below 2.5). Assumptions: The book states the rule
+  for the full stock basket and a continuous dividend yield; we read ''basket'' as an index ETF and q as the trailing yield.
+  Short selling the basket is restricted in India, so the ''future rich'' side is the only practical one.'

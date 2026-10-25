@@ -1,0 +1,34 @@
+id: book-lswing-04
+title: Plain 3-day pullback in a 10/20 SMA uptrend (no Force, no ADX) with Master Plan orders (Larry Swing, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Larry Swing''s rule from A Practical Guide to Swing Trading (Ch. 5.1 (first two indicators only), Ch. 6) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price (index
+  spot daily). Entry: LONG: close > SMA10 and close > SMA20 and SMA10 > SMA20 and high(D) < high(D-1) < high(D-2); SHORT mirror
+  (close below both, SMA10 < SMA20, two higher lows). Trigger and 5-session validity as forceswing-master-plan-index. Stop:
+  As forceswing-master-plan-index. Exit: As forceswing-master-plan-index.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (index spot daily)
+- daily bars; 1-minute bars for the trigger
+model_or_rule: 'LONG: close > SMA10 and close > SMA20 and SMA10 > SMA20 and high(D) < high(D-1) < high(D-2); SHORT mirror
+  (close below both, SMA10 < SMA20, two higher lows). Trigger and 5-session validity as forceswing-master-plan-index. | stop:
+  As forceswing-master-plan-index. | exit: As forceswing-master-plan-index. | filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-lswing-04; trade: 1-ITM nearest-monthly CE / PE, 2 lots, or 2 index
+  futures lots; stops/targets on the index.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: SWING_DEEP: 3-down-closes pullback above 200DMA lost on both index futures; SWING.md RSI(2) pullback
+  in trend inconsistent (5-16 trades a year).. Assumptions: Isolates the book''s simplest trend+pullback definition so the
+  Force/ADX filters can be judged as add-ons (pre-register as a pair).'

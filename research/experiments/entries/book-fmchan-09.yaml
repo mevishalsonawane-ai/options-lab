@@ -1,0 +1,35 @@
+id: book-fmchan-09
+title: BTC 5-minute Bollinger fade (Chan's cost lesson) with stop and profit lock (Ernest Chan, book rule, proposed)
+family: mcx-crypto
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ernest Chan''s rule from Quantitative Trading (Ch. 2, How will transaction costs affect the strategy (ES example))
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price
+  (BTC and ETH perpetual 5-minute closes). Entry: At a 5-minute close: close > MA20 + 2 x SD20 -> short; close < MA20 - 2
+  x SD20 -> long. One position per coin. Stop: 0.6% of entry price against the trade (always on). Exit: Profit lock: at +0.3%
+  open profit the stop moves to break-even plus costs, then trails at 50% of peak open profit. Target: close back within MA20
+  +- 1 x SD20. Time exit 09:00 IST.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- CRYPTO
+features:
+- underlying price (BTC and ETH perpetual 5-minute closes)
+- 5-minute bars; 00:00-09:00 IST, flat by 09:00
+model_or_rule: 'At a 5-minute close: close > MA20 + 2 x SD20 -> short; close < MA20 - 2 x SD20 -> long. One position per coin.
+  | stop: 0.6% of entry price against the trade (always on). | exit: Profit lock: at +0.3% open profit the stop moves to break-even
+  plus costs, then trails at 50% of peak open profit. Target: close back within MA20 +- 1 x SD20. Time exit 09:00 IST. | filters:
+  None (book).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-09; trade: Perpetual, small notional; research only.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: C1: next-hour reversal AUC 0.535 BTC / 0.543 ETH but about 0 bps gross vs 12 bps round trip (net
+  -11.74 / -13.16 bps); C2: same in Boss''s window. Expected to fail; it is the cost check.. Assumptions: The 0.6% stop is
+  about C1''s median BTC next-hour range (0.546%); the lock values are our choices. Report gross vs net to show the cost wedge
+  Chan describes; 12 bps round trip.'

@@ -1,0 +1,38 @@
+id: book-lswing-06
+title: Gap delay on a daily breakout trigger (wait 30 min with the gap, 5 min against, re-base on today's high) (Larry Swing,
+  book rule, proposed)
+family: overnight
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Larry Swing''s rule from A Practical Guide to Swing Trading (Ch. 6.3-6.4) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: underlying price (index spot daily setup, 1-minute
+  trigger). Entry: Take the setups of forceswing-master-plan-index (or pullback-2lh-sma-plain-index). Compare two pre-registered
+  entry modes on the SAME setups: (A) the book''s gap rule (|gap| >= 0.6 x ATR14 -> wait to 09:45 with / 09:20 against, trigger
+  = today''s high so far + 0.07 ATR); (B) no gap rule (buy-stop at previous high + 0.07 ATR from 09:16 every day). Stop: As
+  forceswing-master-plan-index. Exit: As forceswing-master-plan-index.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (index spot daily setup, 1-minute trigger)
+- daily setup, 1-minute execution
+model_or_rule: 'Take the setups of forceswing-master-plan-index (or pullback-2lh-sma-plain-index). Compare two pre-registered
+  entry modes on the SAME setups: (A) the book''s gap rule (|gap| >= 0.6 x ATR14 -> wait to 09:45 with / 09:20 against, trigger
+  = today''s high so far + 0.07 ATR); (B) no gap rule (buy-stop at previous high + 0.07 ATR from 09:16 every day). | stop:
+  As forceswing-master-plan-index. | exit: As forceswing-master-plan-index. | filters: only days with |gap| >= 0.6 x ATR14
+  differ between A and B; report them separately'
+settings: 'research/books/TESTABLE_RULES.md, rule book-lswing-06; trade: 1-ITM nearest-monthly CE / PE; stops/targets on the
+  index.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R102: 0.5-1% NIFTY gaps fill by the close 42% (n 484), filled gaps fill a median 52 minutes after
+  the open; R58 gap-go rules lost in the final test. A gap delay on a daily setup: not tested by us.. Assumptions: The book''s
+  ''a few minutes after the open'' read as 09:20; its 30-minute wait as 09:45.'

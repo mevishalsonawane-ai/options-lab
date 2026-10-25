@@ -111,7 +111,10 @@ class KnowledgeTest {
         "is gold liquidity profitable" to listOf("findings.liquidity-15-5-on-xauusd.1", "findings.xauusd-1-hour.1", "liquidity-gold.liquidity-15-5-on-xauusd.6"),
         "what did research say about candlestick patterns" to listOf("hunt-h25.summary-by-family-pre-ho.2"),
         "does order flow work" to listOf("hunt-r8-order-flow-traps.4-limits-honestly.5", "hunt-r7-order-flow.the-answer-in-plain-engl.5"),
-        "what does research say about costs and spread" to listOf("hunt-h30.verdict.11", "hunt-h42.verdict-read-this-first.12"),
+        // H30's verdict sat 5th of 5 already; the books' cards (25 Oct 2026) moved the word weights a hair and R102's and R7's
+        // cost lines, both answers about costs and spread, now tie or lead it.
+        "what does research say about costs and spread" to listOf("hunt-h30.verdict.11", "hunt-h42.verdict-read-this-first.12",
+            "deep-nifty-banknifty.8-method-limits-honesty.7", "hunt-r7-order-flow.the-answer-in-plain-engl.6"),
         "is orb fresh profitable" to listOf("strategy.orb-fresh.what", "strategy.orb-fresh.1"),
         "is range fade profitable" to listOf("strategy.range-fade.what", "strategy.range-fade.1"),
         "does orb sweep work" to listOf("strategy.orb-sweep.what", "strategy.orb-sweep.1"),
@@ -128,7 +131,56 @@ class KnowledgeTest {
         "does the weekday matter for nifty" to listOf("index.weekday-means-nothing"),
         "is vix a direction dial" to listOf("index.vix-is-the-range-dial"),
         "is expiry day a bigger day for nifty" to listOf("index.expiry-day-not-bigger"),
+        // The books' cards (book_facts.yaml, 25 Oct 2026): "what does <author> say about <topic>" finds the book's card.
+        "what does wyckoff say about volume" to listOf("book.wyckoff-day-traders-bible.2", "book.wyckoff-day-traders-bible.3",
+            "book.wyckoff-day-traders-bible.1"),
+        "what does trading in the zone say about thinking in probabilities" to listOf("book.douglas-trading-in-the-zone.1",
+            "book.douglas-trading-in-the-zone.2"),
+        "what does carli say about cci divergence" to listOf("book.carli-divergence.1", "book.carli-divergence.2", "book.carli-divergence.6"),
+        "what does bennett say about implied and realised volatility" to listOf("book.bennett-trading-volatility.1",
+            "book.bennett-trading-volatility.7"),
+        "what does aziz say about vwap" to listOf("book.aziz-advanced-day-trading.3", "book.aziz-advanced-day-trading.4",
+            "book.aziz-advanced-day-trading.5", "book.aziz-advanced-day-trading.6"),
+        "what does galen woods say about the pin bar" to listOf("book.woods-price-action.2"),
     )
+
+    @Test fun aBookCardSaysItIsTheBooksClaimAndNeverLeadsAVerdictQuestion() {
+        val books = index.pack.facts.filter { it.kind == "book_fact" }
+        assertTrue(books.size >= 100, "${books.size} book cards")
+        for (f in books) {
+            assertTrue(f.text.contains("(the book's claim, not our tested result)"), f.id)
+            assertTrue(f.src.startsWith("research/books/") && f.conf == "low", f.id)
+        }
+        // Asked whether something works, Jarvis leads with our research, never with what a book claims.
+        for (q in listOf("is orb profitable", "does vwap work", "does divergence work", "is selling straddles profitable",
+                "does the pin bar work", "do candlestick patterns work", "does volume predict direction")) {
+            val top = Knowledge.search(index, q, 5)
+            assertTrue(top.isNotEmpty(), q)
+            assertTrue(top.first().fact.kind != "book_fact", "\"$q\" led with ${top.first().fact.id}")
+        }
+        // Every card's own words as a verdict question (the review's probe, 25 Oct 2026: a card led 431 of 1,032 of these):
+        // a claim (a book card or a rule never run) never comes before a tested research hit in the answer.
+        val claims = setOf("book_fact", "proposed")
+        val led = ArrayList<String>()
+        for (f in books) for (q in listOf("does ${f.title.substringAfter(": ")} work", "is ${f.title.substringAfter(": ")} profitable")) {
+            val top = Knowledge.search(index, q, 5)
+            val firstTested = top.indexOfFirst { it.fact.kind !in claims && it.fact.verdict != "context" }
+            val firstClaim = top.indexOfFirst { it.fact.kind in claims }
+            if (firstTested >= 0 && firstClaim in 0 until firstTested) led += "\"$q\": ${top[firstClaim].fact.id} before ${top[firstTested].fact.id}"
+        }
+        assertTrue(led.isEmpty(), "${led.size} answers put a claim before a tested result: ${led.take(5)}")
+    }
+
+    @Test fun aProposedRuleIsSaidAsNotRunAndTheBookQuestionsReachTheResearch() {
+        val proposed = index.pack.facts.filter { it.kind == "proposed" }
+        assertTrue(proposed.size >= 100, "${proposed.size} proposed rules")
+        for (f in proposed) assertTrue(f.text.startsWith("Not run yet") && f.verdict == "context", f.id)
+        for (q in listOf("what does wyckoff say about volume", "what does trading in the zone say about thinking in probabilities",
+                "what does aziz say about vwap", "what does the book say about pin bars", "what do the books teach about divergence"))
+            assertTrue(Knowledge.asked(q), "should reach the research: $q")
+        for (q in listOf("what do you say about orb", "what does my book say about today"))
+            assertFalse(Knowledge.asked(q), "should not: $q")
+    }
 
     @Test fun eachQuestionFindsItsFacts() {
         assertTrue(EXPECT.size >= 30)

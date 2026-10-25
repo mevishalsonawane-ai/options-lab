@@ -1,0 +1,34 @@
+id: book-woods-10
+title: Fade the breakout of a doji-like or counter-trend outside bar (Galen Woods, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.9) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Outside bar (higher high and lower low than the
+  previous bar) with body <= 30% of range, or closing against the EMA 20 trend; when a later bar breaks its high, sell at
+  the first close back inside the outside bar''s range (mirror for a break of its low). Stop: The breakout bar''s extreme.
+  Exit: The opposite end of the outside bar; else square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute and 15-minute bars
+model_or_rule: 'Outside bar (higher high and lower low than the previous bar) with body <= 30% of range, or closing against
+  the EMA 20 trend; when a later bar breaks its high, sell at the first close back inside the outside bar''s range (mirror
+  for a break of its low). | stop: The breakout bar''s extreme. | exit: The opposite end of the outside bar; else square-off.
+  | filters: Doji-like or counter-trend outside bars only.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-woods-10; trade: buy 1-ITM PE after a failed upside break, CE after
+  a failed downside break'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Not tested by us; R87 outside-bar cells no pass.. Assumptions: ''Fade'' read as entering on the
+  close back inside; doji-like = body <= 30%.'

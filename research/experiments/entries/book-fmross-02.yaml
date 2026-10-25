@@ -1,0 +1,40 @@
+id: book-fmross-02
+title: Buy the ATM straddle when the state-conditional volatility forecast exceeds ATM IV (Sheldon Ross, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Sheldon Ross''s rule from An Introduction to Mathematical Finance: Options and Other Topics (Ch. 10.3) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options
+  structure (vol forecast from the underlying vs the chain''s ATM IV). Entry: Classify today by the future''s (or index''s)
+  close-to-close log change into Ross''s four states (<-1%, -1..0, 0..+1%, >+1%). Forecast tomorrow''s vol as the sd of next-day
+  log changes that followed the same state over the trailing 500 sessions, annualised by sqrt(252). If forecast exceeds the
+  nearest-expiry ATM IV by 2 vol points, buy the ATM straddle at the next open. Stop: Exit if the straddle loses 30% of its
+  entry premium (assumption). Exit: Session close (one-day hold).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- CRUDE
+- NATURALGAS
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (vol forecast from the underlying vs the chain's ATM IV)
+- daily; decision at the close, trade next open
+model_or_rule: 'Classify today by the future''s (or index''s) close-to-close log change into Ross''s four states (<-1%, -1..0,
+  0..+1%, >+1%). Forecast tomorrow''s vol as the sd of next-day log changes that followed the same state over the trailing
+  500 sessions, annualised by sqrt(252). If forecast exceeds the nearest-expiry ATM IV by 2 vol points, buy the ATM straddle
+  at the next open. | stop: Exit if the straddle loses 30% of its entry premium (assumption). | exit: Session close (one-day
+  hold). | filters: Skip the last 2 sessions before option expiry (event-vol distortion, R102 3.4). Trailing window only (no
+  look-ahead).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmross-02; trade: buy ATM CE + ATM PE; stop on the option premium'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R89 straddles on a forecast big candle: 0 of 18 profitable (FINDINGS.md); R16 found the size of
+  the next move predictable. Assumptions: The book uses state sds to price options by Monte Carlo, not to trade; the 2-point
+  threshold, 500-session window and 30% stop are ours. Six-state version (+/-1%, +/-2%) as a pre-registered variant.'

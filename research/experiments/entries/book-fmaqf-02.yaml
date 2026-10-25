@@ -1,0 +1,39 @@
+id: book-fmaqf-02
+title: 'Kurtosis trade K1: sell ATM and far-OTM, buy near-OTM when implied tails are fatter than historical (Härdle, Kleinow
+  and Stahl, book rule, proposed)'
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Härdle, Kleinow and Stahl''s rule from Applied Quantitative Finance (Ch. 9.6) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (implied vs historical
+  density kurtosis); no direction. Entry: Same day and densities as the skew trade. If implied kurtosis > historical: sell
+  every put with strike/forward < 0.90 (book used 0.86-0.90), buy puts 0.91-0.95, sell puts 0.96-1.00 and calls 1.00-1.04,
+  buy calls 1.05-1.09, sell calls 1.10-1.14. If implied < historical: the mirror (K2). Stop: None in the book (naked far wings).
+  Research variant: stop when the basket loss reaches 2x the net credit. Exit: Hold to expiry, cash settled.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (implied vs historical density kurtosis); no direction
+- end-of-day; one entry a month, held to expiry
+model_or_rule: 'Same day and densities as the skew trade. If implied kurtosis > historical: sell every put with strike/forward
+  < 0.90 (book used 0.86-0.90), buy puts 0.91-0.95, sell puts 0.96-1.00 and calls 1.00-1.04, buy calls 1.05-1.09, sell calls
+  1.10-1.14. If implied < historical: the mirror (K2). | stop: None in the book (naked far wings). Research variant: stop
+  when the basket loss reaches 2x the net credit. | exit: Hold to expiry, cash settled. | filters: None beyond the density
+  comparison.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmaqf-02; trade: Multi-leg on monthly options, 1 lot per strike; report
+  net, worst month and margin.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R103: naked short straddle +Rs 64k on NIFTY over 1,272 days with a worst day of -Rs 28.9k on one
+  lot; with wings bought it lost. K1 sells the far wings instead, i.e. more tail risk. Not tested by us as specified.. Assumptions:
+  Moneyness bands from Table 9.3 (FOTM-NOTM-ATM-K1 column). The payoff shape depends on which strikes exist; record the strike
+  count per month.'

@@ -1,0 +1,40 @@
+id: book-porwal-04
+title: Falling trendline break confirmed by a hold above the previous lower high (Nikhil Porwal, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 4.1) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: underlying price and volume (futures volume). Entry:
+  Find 3-bar fractal swing highs. A falling trendline joins the last two lower swing highs (H1 > H2) and its slope, in ATR14
+  per bar, is between 0.5 and 1.5 (stands in for ''about 45 degrees, never above 60''). After the close crosses above the
+  line, wait for a close above H2 (the previous lower high); buy at the next open. Stop: Below H2 minus 0.25 x ATR14 (book:
+  ''below the level''). Exit: Targets at the next older swing highs above entry (T1/T2/T3, a third each), at least 2R for
+  T1 or the trade is skipped; trail the rest with the last swing low.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price and volume (futures volume)
+- daily bars; 60-minute as a variant
+model_or_rule: 'Find 3-bar fractal swing highs. A falling trendline joins the last two lower swing highs (H1 > H2) and its
+  slope, in ATR14 per bar, is between 0.5 and 1.5 (stands in for ''about 45 degrees, never above 60''). After the close crosses
+  above the line, wait for a close above H2 (the previous lower high); buy at the next open. | stop: Below H2 minus 0.25 x
+  ATR14 (book: ''below the level''). | exit: Targets at the next older swing highs above entry (T1/T2/T3, a third each), at
+  least 2R for T1 or the trade is skipped; trail the rest with the last swing low. | filters: Signal bar range larger than
+  each of the previous 3 bars; futures volume on the signal bar above its 20-bar average; a prior downtrend (the line must
+  span at least 10 bars). Breakdown of a rising line is the mirror (close below the last higher low).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-04; trade: buy ATM monthly CE (PE for breakdowns), stops and
+  targets on the index'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us as a trendline; nearest R71 P8 swing structure (final -Rs 40,109 on 374), R90 BOS
+  0 of 99, R20c and R73 confirmation-wait costs. Assumptions: Chart angle depends on scaling, so it is replaced by a slope
+  band in ATR per bar; the band edges, fractal width, 10-bar span and volume multiple are ours.'

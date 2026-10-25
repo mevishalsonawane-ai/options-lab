@@ -1,0 +1,44 @@
+id: book-woods-01
+title: Three-bar pullback in a trend, buy above the next bar in the trend's direction (Galen Woods, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.7) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Uptrend: three consecutive bearish bars (close <
+  open); the next bullish bar is the signal bar; buy stop 1 tick above its high, valid for the next bar only. Downtrend mirror:
+  three bullish bars, then a bearish signal bar, sell stop 1 tick below its low. Stop: Pattern stop: the lowest low of the
+  three pullback bars and the signal bar (highest high for shorts), on the underlying. Exit: Book gives no target; use the
+  nearest opposing swing high/low (Ch. 7.3) as the target; else the session square-off (15:10, 15:05 on expiry; MCX 10 minutes
+  before close).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+features:
+- underlying price
+- 5-minute and 15-minute bars
+model_or_rule: 'Uptrend: three consecutive bearish bars (close < open); the next bullish bar is the signal bar; buy stop 1
+  tick above its high, valid for the next bar only. Downtrend mirror: three bullish bars, then a bearish signal bar, sell
+  stop 1 tick below its low. | stop: Pattern stop: the lowest low of the three pullback bars and the signal bar (highest high
+  for shorts), on the underlying. | exit: Book gives no target; use the nearest opposing swing high/low (Ch. 7.3) as the target;
+  else the session square-off (15:10, 15:05 on expiry; MCX 10 minutes before close). | filters: Trend up = close above EMA
+  20 and EMA 20 rising over the last 5 bars (Ch. 1.5 names the 20-period EMA as the usual price-action trend tool); mirror
+  for down. Entries 09:30-14:30.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-woods-01; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short;
+  stops/targets on the underlying as the book states; premium safety stop as in our standard engine'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Not tested in this form. R87B: green-green-red on SENSEX 15m held out of sample (+0.259 ATR, n 182)
+  but the call rule with a stop under the red candle lost -Rs 21,127 on 162 trades; R96 P1 MCX pullback in trend Rs 1.08 lakh
+  on 35, twin p 0.164 (lead only).. Assumptions: Book does not define the trend; EMA 20 slope chosen. Book does not state
+  a stop for this pattern; Ch. 7 general pattern stop applied to the whole pullback (not just the signal bar, which R87B showed
+  is too tight). Target from Ch. 7.3.'

@@ -1,0 +1,55 @@
+id: book-lswing-01
+title: FORCESWING pullback scan + Master Plan entry and exits on the index (Larry Swing, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Larry Swing''s rule from A Practical Guide to Swing Trading (Ch. 5.1, 6, 8.8, 8.9, 10.1.1) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume (index spot
+  daily OHLC; Force Index volume from the continuous near-month index future). Entry: Setup after the close on day D. LONG:
+  close > SMA10(close) and close > SMA20(close); high(D) < high(D-1) < high(D-2); SMA3(ForceIndex) <= 0 and SMA13(ForceIndex)
+  >= 0 where ForceIndex = futures volume x (close - previous close); ADX(20) > 30. SHORT: close < SMA10 and < SMA20; low(D)
+  > low(D-1) > low(D-2); SMA3(FI) >= 0 and SMA13(FI) <= 0 (Ch. 8.8 mirror); ADX(20) > 30. Trigger on day D+1 (re-armed daily
+  for up to 5 sessions while not filled): no gap (|open - previous close| < 0.6 x ATR14) -> from 09:20 a buy-stop at previous
+  high + 0.07 x ATR14 (short: sell-stop at previous low - 0.07 x ATR14). Gap in the trade''s direction -> wait until 09:45,
+  trigger = that day''s high so far + 0.07 x ATR14; gap against -> wait until 09:20, same re-based trigger. Stop: Initial:
+  the HIGHER (long) of entry - 1.3 x ATR14 and the low of the reference day (previous day, or today''s pre-entry low on a
+  gap day) - 0.07 x ATR14; mirror for shorts. Every morning (after the same gap waits) raise it to previous day''s low - 0.07
+  x ATR14 if that is higher; never lower it. Exit: Half the position at entry + 2.3 x ATR14 (limit); the rest only on the
+  trailing stop. No time stop in the book; add a 20-session max hold as a backstop (assumption).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price/volume (index spot daily OHLC; Force Index volume from the continuous near-month index future)
+- daily bars for the setup; 1-minute index bars for the intraday trigger and stops
+model_or_rule: 'Setup after the close on day D. LONG: close > SMA10(close) and close > SMA20(close); high(D) < high(D-1) <
+  high(D-2); SMA3(ForceIndex) <= 0 and SMA13(ForceIndex) >= 0 where ForceIndex = futures volume x (close - previous close);
+  ADX(20) > 30. SHORT: close < SMA10 and < SMA20; low(D) > low(D-1) > low(D-2); SMA3(FI) >= 0 and SMA13(FI) <= 0 (Ch. 8.8
+  mirror); ADX(20) > 30. Trigger on day D+1 (re-armed daily for up to 5 sessions while not filled): no gap (|open - previous
+  close| < 0.6 x ATR14) -> from 09:20 a buy-stop at previous high + 0.07 x ATR14 (short: sell-stop at previous low - 0.07
+  x ATR14). Gap in the trade''s direction -> wait until 09:45, trigger = that day''s high so far + 0.07 x ATR14; gap against
+  -> wait until 09:20, same re-based trigger. | stop: Initial: the HIGHER (long) of entry - 1.3 x ATR14 and the low of the
+  reference day (previous day, or today''s pre-entry low on a gap day) - 0.07 x ATR14; mirror for shorts. Every morning (after
+  the same gap waits) raise it to previous day''s low - 0.07 x ATR14 if that is higher; never lower it. | exit: Half the position
+  at entry + 2.3 x ATR14 (limit); the rest only on the trailing stop. No time stop in the book; add a 20-session max hold
+  as a backstop (assumption). | filters: none beyond the scan; only one open position per index per side'
+settings: 'research/books/TESTABLE_RULES.md, rule book-lswing-01; trade: Main: 1 lot of the index future (allows the half
+  exit with 2 lots). Option version: buy 2 lots of the 1-ITM nearest-MONTHLY CE (long) / PE (short) when the index trigger
+  fires; stops and target on the index as above; roll to the next monthly if fewer than 5 sessions to expiry at entry.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: SWING_DEEP: the 3-down-closes pullback above the 200DMA lost on NIFTY and BANKNIFTY futures 2016-2026
+  (NIFTY fixed 10d: 109 trades, -Rs 283,401); SWING.md: no daily rule right in both years for BANKNIFTY option holds; R102:
+  daily momentum reversed in the holdout. Force Index and ADX>30: not tested by us.. Assumptions: The book''s $ amounts are
+  for $12-45 stocks with ATR about 3%: $0.06 -> 0.07 ATR, $0.50 gap -> 0.6 ATR, 4% -> 1.3 ATR, 7% -> 2.3 ATR (the literal
+  % would almost never be hit on NIFTY, daily sd 1.316%). Force Index MA type not stated: simple. The short scan in Ch. 10
+  repeats the long Force condition; Ch. 8.8''s mirror is used. ADX period 20 as the scan says (Wilder smoothing). 2 lots so
+  ''half'' exists.'

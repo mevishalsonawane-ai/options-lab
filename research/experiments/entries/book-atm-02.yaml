@@ -1,0 +1,41 @@
+id: book-atm-02
+title: NIFTY/BANKNIFTY futures-spot basis snap-back (literal statistical arbitrage) (The Advanced Trading Methods book, book
+  rule, proposed)
+family: flow-oi
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Methods book''s rule from The Advanced Trading Methods in the Financial Markets (Sec. 3.1.3,
+  Statistical arbitrage) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
+  source: underlying price (index futures vs index spot). Entry: at the close of a 1-minute bar where (futures - spot) minus
+  its 60-minute rolling mean exceeds 2.5 rolling standard deviations: if the futures is rich, expect the spot to catch up
+  (buy ATM CE); if cheap, buy ATM PE, at the next bar open Stop: index spot moves 0.15% against the trade Exit: basis back
+  within 0.5 standard deviations of its mean, or 10 minutes, whichever first; square off by 15:05 on expiry day and 15:20
+  otherwise'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (index futures vs index spot)
+- 1-minute bars
+model_or_rule: 'at the close of a 1-minute bar where (futures - spot) minus its 60-minute rolling mean exceeds 2.5 rolling
+  standard deviations: if the futures is rich, expect the spot to catch up (buy ATM CE); if cheap, buy ATM PE, at the next
+  bar open | stop: index spot moves 0.15% against the trade | exit: basis back within 0.5 standard deviations of its mean,
+  or 10 minutes, whichever first; square off by 15:05 on expiry day and 15:20 otherwise | filters: 09:20-15:00 only; skip
+  the first 5 minutes after any gap of 0.5% or more'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atm-02; trade: buy ATM CE on a rich-futures signal, ATM PE on a cheap-futures
+  signal; stops on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: HUNT_H39.md: heavyweight futures, basis and synthetic forward move with the index in the same minute;
+  from 2 minutes ahead every |t| is below 2.5, and the index''s own future does not lead by a tradeable amount. FINDINGS.md
+  DIRECTION MODEL: basis rising right 50.4-51.6%. Expected to fail.. Assumptions: The paper gives no pair, threshold or holding
+  time. Thresholds (2.5 sd, 60-minute window, 10-minute hold, 0.15% stop) are ours. A true arbitrage would trade futures vs
+  spot basket at sub-second speed; this is the slow, single-leg version a retail phone can run.'

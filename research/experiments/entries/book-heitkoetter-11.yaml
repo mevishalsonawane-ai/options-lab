@@ -1,0 +1,31 @@
+id: book-heitkoetter-11
+title: Three-bar time stop on the Donchian arm (Markus Heitkoetter, book rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 5, Time-Stops) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Our Donchian 20 / Breadth
+  Donchian entries unchanged. Stop: arm''s own stop Exit: exit if neither stop nor target is hit within 3 signal bars (15
+  minutes) instead of the arm''s 30 minutes'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute Donchian signals; time stop 15 minutes (3 bars)
+model_or_rule: 'Our Donchian 20 / Breadth Donchian entries unchanged. | stop: arm''s own stop | exit: exit if neither stop
+  nor target is hit within 3 signal bars (15 minutes) instead of the arm''s 30 minutes | filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-11; trade: as the arm (1-ITM)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R18 V3 45-minute time stop on other arms: 0 of 60 overlays pass; R81 X4 no-progress stop -Rs 85k
+  design. Assumptions: The book''s 3 x timeframe applied to the arm''s 5-minute bars; risk-lowering (earlier exit), paper
+  only.'

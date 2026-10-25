@@ -1,0 +1,40 @@
+id: book-fmchan-07
+title: 'Turning point: a 1% day against a fresh 10-day extreme (Chan''s GS rule, simplest form) (Ernest Chan, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ernest Chan''s rule from Quantitative Trading (Ch. 7, Regime switching, Example 7.1) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price (index daily bars). Entry: Long
+  if today''s close-to-close change >= +1% AND today''s low (or yesterday''s) was the lowest low of the last 10 sessions;
+  short if change <= -1% AND today''s or yesterday''s high was the highest high of the last 10 sessions. Enter at the next
+  session''s 09:20 price. Stop: None in the book. Research variant: 1.5 x ATR14 on the index (close-based). Exit: After 10
+  sessions (Chan''s best single rule); variants 5 and 20; an opposite signal also exits (Chan''s ''latest entry signal'' exit).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (index daily bars)
+- daily; enter at the next open, hold a fixed number of sessions
+model_or_rule: 'Long if today''s close-to-close change >= +1% AND today''s low (or yesterday''s) was the lowest low of the
+  last 10 sessions; short if change <= -1% AND today''s or yesterday''s high was the highest high of the last 10 sessions.
+  Enter at the next session''s 09:20 price. | stop: None in the book. Research variant: 1.5 x ATR14 on the index (close-based).
+  | exit: After 10 sessions (Chan''s best single rule); variants 5 and 20; an opposite signal also exits (Chan''s ''latest
+  entry signal'' exit). | filters: None. The perceptron re-weighting over 1/5/10/20/40/60-day holds is not reproduced (settings
+  not given).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmchan-07; trade: Primary: near-month future. Secondary (labelled):
+  1-ITM monthly option, CE on long, PE on short (10 sessions of theta is a heavy cost; report separately).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R102: index direction at 1 day follows the previous sign 53.2% (NIFTY, n 5,086) and no sign rule
+  confirmed (1 of 70, an artefact). R87 candle shapes and R71 chart patterns gave no direction. R78 (gold daily high/low reversal)
+  is the nearest MCX cousin. This exact rule: not tested by us.. Assumptions: The OCR of the rule box reads ''>= -1'' for
+  the short side; read as ''<= -1''. ''N-day low just before the big up day'' is read as today or yesterday. Thresholds +-3%
+  are a variant.'

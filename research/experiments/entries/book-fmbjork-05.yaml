@@ -1,0 +1,39 @@
+id: book-fmbjork-05
+title: Mean-variance (Merton mutual fund) capital split across the arms with a record (Tomas Björk, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Tomas Björk''s rule from Arbitrage Theory in Continuous Time (Ch. 19.7, The mutual fund theorems) makes money
+  after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: none (allocation on the arms''
+  daily P&L). Entry: Each month, estimate the arms'' daily P&L means mu and covariance S over the trailing 250 sessions (walk-forward),
+  shrink S 50% toward its diagonal, set raw weights w = S^-1 mu, zero any negative weight, scale so total margin used <= capital,
+  and convert each weight to whole lots (minimum 0, maximum 3) for Liquidity 15+5, R72 Breadth Donchian, R51 Donchian and
+  R52 OOV. Stop: Each arm''s own stops; account stop -Rs 40k drawdown or -Rs 13k a month halts all. Exit: Each arm''s own
+  exits.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none (allocation on the arms' daily P&L)
+- daily P&L; weights re-set monthly
+model_or_rule: 'Each month, estimate the arms'' daily P&L means mu and covariance S over the trailing 250 sessions (walk-forward),
+  shrink S 50% toward its diagonal, set raw weights w = S^-1 mu, zero any negative weight, scale so total margin used <= capital,
+  and convert each weight to whole lots (minimum 0, maximum 3) for Liquidity 15+5, R72 Breadth Donchian, R51 Donchian and
+  R52 OOV. | stop: Each arm''s own stops; account stop -Rs 40k drawdown or -Rs 13k a month halts all. | exit: Each arm''s
+  own exits. | filters: An arm with fewer than 120 sessions of history gets 1 lot; R72 and R51 share a cap (their daily correlation
+  is 0.80, R72).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmbjork-05; trade: as each arm trades; only lots per arm change'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us (HUNT_R74_STRATEGY_MAP.md: volatility-targeted sizing not tried for the index arms;
+  R72: Breadth Donchian overlaps Donchian, 77% shared trades).. Assumptions: Bjork''s theorem assumes known constant means
+  and covariances; the shrinkage, windows and lot caps are ours. Compare against equal 1 lot per arm on the same days (net,
+  worst month, max drawdown).'

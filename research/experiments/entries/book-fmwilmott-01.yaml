@@ -1,0 +1,50 @@
+id: book-fmwilmott-01
+title: Sell the NIFTY monthly ATM straddle when implied vol is above forecast realised vol, delta-hedge with futures on a
+  band (Paul Wilmott, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Paul Wilmott''s rule from Paul Wilmott on Quantitative Finance (Ch. 12, How to delta hedge (hedging with implied
+  vol); Ch. 48, Transaction costs (delta-tolerance band); Ch. 43/58 (worst-case gap check)) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (chain ATM IV
+  vs a realised-vol forecast from the underlying); the hedge is on the underlying future. Entry: On the first trading day
+  after a monthly expiry, at 15:20, compute the next monthly ATM straddle''s implied vol (average of call and put IV) and
+  a realised-vol forecast for the same days to expiry (EWMA lambda 0.94 on daily close-to-close NIFTY returns, as Ch. 42).
+  Sell 1 ATM call + 1 ATM put if implied vol / forecast >= 1.15. Otherwise no trade this cycle. Stop: None in the book (the
+  hedge is the risk control). Research variants: B closes everything if the position (options + futures) loses Rs 13,000;
+  C pre-checks the worst case of a 3% overnight gap with IV +5 points and skips entry if it exceeds Rs 40,000. Exit: Hold
+  to 15:05 on expiry day (square-off) or close early on a variant-B stop.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+features:
+- volatility / options structure (chain ATM IV vs a realised-vol forecast from the underlying); the hedge is on the underlying
+  future
+- daily decision at 15:20; hedge checked on 5-minute bars; one position per monthly expiry
+model_or_rule: 'On the first trading day after a monthly expiry, at 15:20, compute the next monthly ATM straddle''s implied
+  vol (average of call and put IV) and a realised-vol forecast for the same days to expiry (EWMA lambda 0.94 on daily close-to-close
+  NIFTY returns, as Ch. 42). Sell 1 ATM call + 1 ATM put if implied vol / forecast >= 1.15. Otherwise no trade this cycle.
+  | stop: None in the book (the hedge is the risk control). Research variants: B closes everything if the position (options
+  + futures) loses Rs 13,000; C pre-checks the worst case of a 3% overnight gap with IV +5 points and skips entry if it exceeds
+  Rs 40,000. | exit: Hold to 15:05 on expiry day (square-off) or close early on a variant-B stop. | filters: Skip entry if
+  a pre-listed event (Budget, RBI policy, general-election result) falls inside the life of the trade, since implied vol then
+  carries an event premium (Ch. 50).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmwilmott-01; trade: Short 1 lot ATM CE + 1 lot ATM PE; hedge with
+  NIFTY futures using the Black-Scholes delta at the ENTRY implied vol (Ch. 12''s ''hedge with implied'' choice); rebalance
+  on 5-minute closes only when the net option delta differs from the futures held by more than 0.5 lot (Ch. 48 band); report
+  a fractional-hedge (theoretical) version alongside.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us as a hedged trade. R102: VIX over-states NIFTY''s next 21 days on 81% of days (median
+  1.28, 4,507 days). DEEP_OPTIONS_SELLING.md: naked 09:20 BANKNIFTY short straddle worst day -Rs 65,483; R103 defined-risk
+  selling 0 of 24 confirmed.. Assumptions: The book states the P&L mechanics, not a threshold; 1.15 is our literal choice
+  near R102''s median VIX / forward-realised ratio of 1.28 and must be pre-registered with alternatives (1.0, 1.3) under Benjamini-Hochberg.
+  One futures lot equals one option lot, so at 1 lot the hedge is coarse (DEEP_OPTIONS_SELLING.md); the band avoids churning.
+  Naked short margin is about Rs 1.5 lakh, so this is research only; R103 rejected naked selling for this account.'

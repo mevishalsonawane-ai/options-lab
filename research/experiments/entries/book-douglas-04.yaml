@@ -1,0 +1,45 @@
+id: book-douglas-04
+title: 'Daily uptrend: buy a pullback to 30-minute support; daily downtrend: sell a rally to 30-minute resistance (Mark Douglas,
+  book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Mark Douglas''s rule from Trading in the Zone (Ch. 11 (Time Frame)) makes money after real charges and slippage,
+  walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Daily trend up = the last two completed
+  daily swing highs and swing lows are each higher (swing = 3-bar fractal); then on 30-minute bars, buy when price trades
+  down to the most recent 30-minute swing low that lies above the daily trend''s last higher low, and a 30-minute bar closes
+  back above it. Mirror for the downtrend (sell = buy PE). Stop: On the index, a fixed buffer (0.25 x 30-minute ATR(14)) beyond
+  the 30-minute swing low/high used for entry. Exit: Target = the prior 30-minute swing high (low for shorts); skip the trade
+  if target distance < 3 x stop distance (the book''s 3:1 ideal). Else square-off at session end (15:10 NSE, 15:05 expiry;
+  MCX 10 minutes before close).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+features:
+- underlying price
+- daily trend filter, 30-minute entry bars
+model_or_rule: 'Daily trend up = the last two completed daily swing highs and swing lows are each higher (swing = 3-bar fractal);
+  then on 30-minute bars, buy when price trades down to the most recent 30-minute swing low that lies above the daily trend''s
+  last higher low, and a 30-minute bar closes back above it. Mirror for the downtrend (sell = buy PE). | stop: On the index,
+  a fixed buffer (0.25 x 30-minute ATR(14)) beyond the 30-minute swing low/high used for entry. | exit: Target = the prior
+  30-minute swing high (low for shorts); skip the trade if target distance < 3 x stop distance (the book''s 3:1 ideal). Else
+  square-off at session end (15:10 NSE, 15:05 expiry; MCX 10 minutes before close). | filters: Only with the daily trend;
+  one trade a side a day; entries 09:45-14:30 NSE.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-douglas-04; trade: buy 1-ITM CE in a daily uptrend, 1-ITM PE in a daily
+  downtrend; stops/targets on the index'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Daily trend as an intraday filter: with-trend better in one year, against-trend in the other, no
+  consistent value (FINDINGS.md, SWING). R20b: support/resistance no better than random lines (random levels beat real in
+  6 of 7). R73 / R79: trend checks before entries did not help.. Assumptions: The book gives this only as an example and leaves
+  ''support'' to the reader''s edge; swing-fractal support, the ATR buffer and the 3:1 skip are ours. Intraday hold, no overnight.'

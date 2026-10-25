@@ -1,0 +1,34 @@
+id: book-heitkoetter-09
+title: 'Trend channel: enter at the trendline, exit at the channel line (Markus Heitkoetter, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 3, Trendlines & Trend Channels) makes money
+  after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: With
+  a live downtrend line (hk-trendline-break-trend), draw the channel line parallel through the lowest low since anchor 1;
+  short when price touches the downtrend line and the bar closes below it. Mirror for uptrends. Stop: a close beyond the trendline
+  by 0.1 x ATR14 Exit: touch of the channel line; 15:10'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute bars
+model_or_rule: 'With a live downtrend line (hk-trendline-break-trend), draw the channel line parallel through the lowest low
+  since anchor 1; short when price touches the downtrend line and the bar closes below it. Mirror for uptrends. | stop: a
+  close beyond the trendline by 0.1 x ATR14 | exit: touch of the channel line; 15:10 | filters: channel at least 2 x ATR14
+  wide so the target exceeds the round-trip cost'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-09; trade: buy 1-ITM PE in a downtrend channel, CE in an
+  uptrend channel'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; nearest OBUY_GB MR-05 TWAP stretch fade Rs -91,856 walk-forward (713 trades).
+  Assumptions: Stop buffer, width filter and channel construction details are ours; the book gives only the idea.'

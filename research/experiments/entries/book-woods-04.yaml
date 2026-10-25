@@ -1,0 +1,34 @@
+id: book-woods-04
+title: Key reversal day (gap below prior low, close above prior high) (Galen Woods, book rule, proposed)
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.2) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Bullish: today opens below yesterday''s low and
+  closes above yesterday''s high; buy next day when price trades above today''s high. Bearish mirror. Stop: The key reversal
+  day''s low (high for shorts). Exit: Not stated; test 1, 3 and 5 day holds and the nearest swing target.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- CRUDE
+features:
+- underlying price
+- daily bars since 2006
+model_or_rule: 'Bullish: today opens below yesterday''s low and closes above yesterday''s high; buy next day when price trades
+  above today''s high. Bearish mirror. | stop: The key reversal day''s low (high for shorts). | exit: Not stated; test 1,
+  3 and 5 day holds and the nearest swing target. | filters: None in the book.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-woods-04; trade: buy next-week ATM CE/PE (or the future) on the signal;
+  underlying stop'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Not tested by us; R87B daily candle shapes 0 of 25.. Assumptions: ''Buy above'' read as a buy stop
+  above the signal day''s high on the next session(s), cancelled after 1 day.'

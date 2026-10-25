@@ -1,0 +1,38 @@
+id: book-tom-10
+title: Buy the 60-minute pullback in a daily uptrend (fade the short-term trend) (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Price Behaviour Principle 2, p. 43-48) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Daily trend
+  UP by the 3-bar swing (rule three-bar-swing-bias); the 60-minute chart has made a lower high and lower low since the last
+  daily high; enter long on the first 15-minute 4-bar fractal buy. Mirror for daily DOWN. Stop: the lowest low of the 60-minute
+  pullback Exit: the pullback''s starting high (prior 60-minute swing high) or square-off 15:10; futures variant may hold
+  up to 3 sessions'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- CRUDE
+features:
+- underlying price
+- daily trend, 60-minute pullback, 15-minute trigger
+model_or_rule: 'Daily trend UP by the 3-bar swing (rule three-bar-swing-bias); the 60-minute chart has made a lower high and
+  lower low since the last daily high; enter long on the first 15-minute 4-bar fractal buy. Mirror for daily DOWN. | stop:
+  the lowest low of the 60-minute pullback | exit: the pullback''s starting high (prior 60-minute swing high) or square-off
+  15:10; futures variant may hold up to 3 sessions | filters: none beyond the daily trend'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-10; trade: buy 1-ITM CE in a daily uptrend, 1-ITM PE in a daily
+  downtrend'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us as a fixed rule; R89 daily+15m trend filter did not help PDHL breaks; direction
+  at 15-60 min a coin flip (R16). Assumptions: The book names the idea but no trigger; combining it with the book''s own 3-bar
+  swing and 4-bar fractal is our reading.'

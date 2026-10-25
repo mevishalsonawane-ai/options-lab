@@ -1,0 +1,34 @@
+id: book-ozenbas-06
+title: Work a multi-lot entry in slices and score it against interval VWAP (Ozenbas, Pagano, Schwartz and Weber, book rule,
+  proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ozenbas, Pagano, Schwartz and Weber''s rule from Liquidity, Markets and Trading in Action (Ch. 2.8.2, 5.4 (Exercises
+  1-2)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: none (execution
+  overlay). Entry: When an arm buys N lots with N above the lots shown at the best ask, split the order into k = ceil(N /
+  top-of-book lots) child orders, one per minute, each a capped limit (+0.5%), instead of one order. Stop: Unchanged from
+  the arm. Exit: Unchanged; exits may be sliced the same way.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: option book depth history (have option 1-minute volume
+  for a VWAP benchmark; h10''s capacity model is the stand-in for depth)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- BANKNIFTY
+features:
+- none (execution overlay)
+- 1-minute bars over a 5-minute entry window
+model_or_rule: 'When an arm buys N lots with N above the lots shown at the best ask, split the order into k = ceil(N / top-of-book
+  lots) child orders, one per minute, each a capped limit (+0.5%), instead of one order. | stop: Unchanged from the arm. |
+  exit: Unchanged; exits may be sliced the same way. | filters: Only when N exceeds top-of-book size.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-06; trade: the arm''s own option'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: h10: capacity BANKNIFTY 129 lots in the holdout, FINNIFTY 0; costs ate 55-65% of gross at plan size.
+  h14: the capped limit keeps the cost curve from bending at large size.. Assumptions: The slicing schedule is ours; the book
+  only says slicing and patience beat one big market order and that VWAP is the yardstick. Only matters at size (tens of lots).'

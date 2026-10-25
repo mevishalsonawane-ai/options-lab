@@ -1,0 +1,39 @@
+id: book-sadowski-08
+title: Daily NR4 / NR7 breakout (Roman Sadowski, book rule, proposed)
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 8) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Yesterday''s
+  daily range is the smallest of the last 4 (NR4) or 7 (NR7). Today, buy on the first 5-min close above yesterday''s high,
+  sell on the first close below its low (first break only). Stop: The other end of the narrow day''s range, on the underlying.
+  Exit: Trail the stop to the prior 5-min swing low/high after +1R; square-off 15:15 (NSE) / 23:00 (MCX).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+- SILVER
+- NATURALGAS
+features:
+- underlying price
+- daily bars for the setup, 5-minute bars for the break
+model_or_rule: 'Yesterday''s daily range is the smallest of the last 4 (NR4) or 7 (NR7). Today, buy on the first 5-min close
+  above yesterday''s high, sell on the first close below its low (first break only). | stop: The other end of the narrow day''s
+  range, on the underlying. | exit: Trail the stop to the prior 5-min swing low/high after +1R; square-off 15:15 (NSE) / 23:00
+  (MCX). | filters: Variant: ''chubby'' narrow day (open and close both within 25% of the range from opposite ends), and 2+
+  consecutive narrow days.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-08; trade: Buy the 1-ITM CE/PE; stop on the underlying.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: OBUY_FINAL LV-04 NR7/inside day: 72 variants, -28,141 walk-forward; HUNT_R71 P2 15-min NR7 -Rs 1,68,820;
+  HUNT_R96 crude NR7 the only unproven MCX lead (failed on COPPER). Assumptions: ''Trailed to suit'' made precise as the swing
+  trail after +1R. Chubby = our definition.'

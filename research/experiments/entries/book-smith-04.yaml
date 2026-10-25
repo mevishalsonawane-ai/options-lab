@@ -1,0 +1,39 @@
+id: book-smith-04
+title: SST six rules on MCX near-month futures, daily (David Graeme Smith, book rule, proposed)
+family: mcx-crypto
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 7-9) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: As sst-six-rules-index-daily on the future''s daily
+  bars (SMA 50 side, DMI 8 cross or touch, break of last non-inside day). Stop: Reference day''s far end minus 0.5% of price
+  (book) and minus 0.25 x ATR(14) (variant). Exit: Significant-day trail; midpoint lock on a >= 5% day in the trade''s favour
+  (book''s number is usable on SILVER, NATURALGAS); no target; exit before the option''s or future''s last 3 sessions.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- GOLD
+- SILVER
+- CRUDE
+- NATURALGAS
+features:
+- underlying price
+- daily bars of the near-month continuous future (rolled 5 sessions before expiry)
+model_or_rule: 'As sst-six-rules-index-daily on the future''s daily bars (SMA 50 side, DMI 8 cross or touch, break of last
+  non-inside day). | stop: Reference day''s far end minus 0.5% of price (book) and minus 0.25 x ATR(14) (variant). | exit:
+  Significant-day trail; midpoint lock on a >= 5% day in the trade''s favour (book''s number is usable on SILVER, NATURALGAS);
+  no target; exit before the option''s or future''s last 3 sessions. | filters: skip gap-through triggers at the session open;
+  skip entries in the 2 sessions before EIA (CRUDE, Wednesdays), storage (NATURALGAS, Thursdays) and US CPI/NFP (GOLD, SILVER)
+  as the book''s scheduled-news blackout mapped to commodities.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-smith-04; trade: futures mirror (1 mini lot) and 1-ITM option on the
+  near future; stops on the future'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: MCX_TREND: trend edge real but small, zero variants pass BH, buying options the worst way; R96:
+  0 of 46 MCX option-buying ideas pass; R93 breadth Donchian on MCX 0 of 5.. Assumptions: Book trades UK shares; mapping its
+  company-results blackout to commodity data releases and its 2 weeks to 2 sessions is our reading.'

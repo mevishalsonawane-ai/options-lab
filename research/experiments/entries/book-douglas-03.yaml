@@ -1,0 +1,42 @@
+id: book-douglas-03
+title: 'Three lots: one off at a small first profit, one at the next level with stop to entry, last before the next swing
+  (Mark Douglas, book rule, proposed)'
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Mark Douglas''s rule from Trading in the Zone (Ch. 11 (Taking Profits)) makes money after real charges and slippage,
+  walk-forward, with BH across the rules tried. Signal source: underlying price (levels on the index); first-third profit
+  on the premium. Entry: The arm''s signal, 3 lots. Stop: The arm''s index stop on all lots until the second third is sold,
+  then the remaining lot''s stop moves to the entry price (premium). Exit: Lot 1 when the index has moved two-thirds of the
+  stop distance in favour (the book''s 4 ticks against a 6-tick stop). Lot 2 at the next index swing high/low or prior-day
+  high/low beyond entry (the arm''s target if it has one). Lot 3 just before the next significant higher-timeframe high/low
+  (60-minute swing), else session square-off (15:05 expiry / 15:10 NSE, MCX 10 minutes before close).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+features:
+- underlying price (levels on the index); first-third profit on the premium
+- the arm's own bars (5-minute / 15-minute)
+model_or_rule: 'The arm''s signal, 3 lots. | stop: The arm''s index stop on all lots until the second third is sold, then
+  the remaining lot''s stop moves to the entry price (premium). | exit: Lot 1 when the index has moved two-thirds of the stop
+  distance in favour (the book''s 4 ticks against a 6-tick stop). Lot 2 at the next index swing high/low or prior-day high/low
+  beyond entry (the arm''s target if it has one). Lot 3 just before the next significant higher-timeframe high/low (60-minute
+  swing), else session square-off (15:05 expiry / 15:10 NSE, MCX 10 minutes before close). | filters: None.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-douglas-03; trade: buy 3 lots of the arm''s CE/PE; stops and levels
+  on the index as the book states'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R81 X5 (half at +15% = 1R, runner to breakeven) failed: design Rs 1,78,523 vs Rs 2,57,249 (881 trades),
+  final -Rs 23,896 vs Rs 11,155 (357). R100 half off at +15% failed; R18 breakeven after +15% changed nothing. Expect worse,
+  since the first third is taken earlier than 1R.. Assumptions: Book gives tick numbers for T-bonds and points for S&P only;
+  translated as fractions of the stop distance. ''Most likely place for the market to stop'' read as the next 60-minute swing.'

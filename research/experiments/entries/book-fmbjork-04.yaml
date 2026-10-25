@@ -1,0 +1,39 @@
+id: book-fmbjork-04
+title: Constant-fraction (fractional Merton/Kelly) sizing for an arm with a record (Tomas Björk, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Tomas Björk''s rule from Arbitrage Theory in Continuous Time (Ch. 19.6, Optimal consumption and investment (constant
+  optimal fraction)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source:
+  none (sizing on the arm''s own past trade returns). Entry: Entries are the arm''s own (Liquidity 15+5). Lots = floor(c x
+  f x capital / (premium x lot size)), where f = mean / variance of the arm''s per-trade return on premium over the trailing
+  12 months (walk-forward only), and c = 0.25 (quarter) and 0.5 (half) as two variants. Stop: The arm''s own stops; plus a
+  capital floor: if capital falls below 75% of its running peak, size drops to 1 lot until it recovers. Exit: The arm''s own
+  exits.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- none (sizing on the arm's own past trade returns)
+- per trade; fraction re-estimated monthly
+model_or_rule: 'Entries are the arm''s own (Liquidity 15+5). Lots = floor(c x f x capital / (premium x lot size)), where f
+  = mean / variance of the arm''s per-trade return on premium over the trailing 12 months (walk-forward only), and c = 0.25
+  (quarter) and 0.5 (half) as two variants. | stop: The arm''s own stops; plus a capital floor: if capital falls below 75%
+  of its running peak, size drops to 1 lot until it recovers. | exit: The arm''s own exits. | filters: f set to 0 (no trade
+  above 1 lot) when the trailing mean is not positive with at least 60 trades.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmbjork-04; trade: buy ATM/1-ITM option as the arm does; only the lot
+  count changes'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: h15: half-Kelly grew fastest but P(drawdown >= 30%) 63%, quarter-Kelly P(drawdown >= 50%) 1%; the
+  Kelly fraction was unstable (0.48 / 0.14 vs 1.29) and SPA p = 0.14. HUNT_FINAL chose fixed lots.. Assumptions: Bjork''s
+  fraction is for a lognormal asset; applying it to per-trade option returns is our translation. The 12-month window, c values
+  and the 75% floor are ours. LIVE would need shadow mode first (CLAUDE.md: sizing up is not risk-lowering).'

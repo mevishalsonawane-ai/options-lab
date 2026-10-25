@@ -1,0 +1,33 @@
+id: book-heitkoetter-06
+title: Williams %R 14, sell above 80, buy below 20 (Markus Heitkoetter, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 3, Williams %R) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: %R on the book''s
+  0-100 scale = 100 x (close - lowest low 14) / (highest high 14 - lowest low 14). Short (buy PE) on the first bar close with
+  %R > 80; long (buy CE) on the first close with %R < 20; one signal per zone visit. Stop: 0.27% of the index Exit: 0.41%
+  target, 45-minute time stop, 15:10'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- '15-minute bars (book: intraday, 14 bars)'
+model_or_rule: '%R on the book''s 0-100 scale = 100 x (close - lowest low 14) / (highest high 14 - lowest low 14). Short (buy
+  PE) on the first bar close with %R > 80; long (buy CE) on the first close with %R < 20; one signal per zone visit. | stop:
+  0.27% of the index | exit: 0.41% target, 45-minute time stop, 15:10 | filters: sideways markets only (book); base test unfiltered'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-06; trade: buy 1-ITM PE on a sell signal, 1-ITM CE on a
+  buy signal'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: H25 Williams %R as given: family no better than random. Assumptions: Book''s scale is inverted from
+  the usual -100..0; ''one signal per zone visit'' added to stop repeats.'

@@ -1,0 +1,39 @@
+id: book-wyckoff-04
+title: Break of a quiet range on a burst of volume (Wyckoff, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. VII, X) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price (range on the index future), underlying volume (filter).
+  Entry: Quiet range = the last 12 bars'' high-low <= 1.0x ATR(14, 5m) of the prior 50 bars. Buy on a 5m close above the range
+  high (sell below the range low) when that bar''s volume is >= 3x the average of the 12 range bars and >= 1.5x the slot''s
+  20-day median. Stop: the opposite side of the range Exit: a close back inside the range, or 2x the range height in favour,
+  or 15:15 (15:05 on expiry)'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: index-futures minute volume only from 29 Jul 2026
+  (price side have since 2021)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- NATURALGAS
+features:
+- underlying price (range on the index future), underlying volume (filter)
+- 5-minute bars
+model_or_rule: 'Quiet range = the last 12 bars'' high-low <= 1.0x ATR(14, 5m) of the prior 50 bars. Buy on a 5m close above
+  the range high (sell below the range low) when that bar''s volume is >= 3x the average of the 12 range bars and >= 1.5x
+  the slot''s 20-day median. | stop: the opposite side of the range | exit: a close back inside the range, or 2x the range
+  height in favour, or 15:15 (15:05 on expiry) | filters: one trade per side per day; skip 09:15-09:30'
+settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-04; trade: buy ATM CE on an up break, ATM PE on a down break;
+  stops on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: ORB family 0 of 257 (R92); Donchian 20 on paper (R51); NR7 crude lead not passed (R96); the volume
+  filter is not tested by us. Assumptions: ''Volume in thousands instead of hundreds'' made a 3x burst; range length 12 bars
+  (1 hour) is ours. Run the same rule without the volume filter as the price-only twin.'

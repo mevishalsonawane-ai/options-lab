@@ -1,0 +1,39 @@
+id: book-atb-08
+title: 'Rising wedge in a downtrend: lower-line break, previous-low break, retest, sell (Strategy 3) (The Advanced Trading
+  Book, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 3, Strategy 3 (p28))
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
+  Entry: Downtrend before the wedge; a wedge of at least 2 rising swing highs and 2 rising swing lows with the lower line
+  rising faster (converging). Step 1: close below the lower line (no entry). Step 2: close below the last swing low inside
+  the wedge. Step 3: within 8 bars price trades back up to within 0.1 ATR of that broken low and a bar closes red below it:
+  sell at the next open. Mirror (falling wedge in an uptrend) for longs. Stop: Above the last swing high inside the wedge
+  (the book: ''above the previous high''). Exit: Measured move (wedge height at its start) or square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Downtrend before the wedge; a wedge of at least 2 rising swing highs and 2 rising swing lows with the lower
+  line rising faster (converging). Step 1: close below the lower line (no entry). Step 2: close below the last swing low inside
+  the wedge. Step 3: within 8 bars price trades back up to within 0.1 ATR of that broken low and a bar closes red below it:
+  sell at the next open. Mirror (falling wedge in an uptrend) for longs. | stop: Above the last swing high inside the wedge
+  (the book: ''above the previous high''). | exit: Measured move (wedge height at its start) or square-off. | filters: All
+  three steps in order; a close back above the broken low cancels.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-08; trade: buy 1-ITM PE (CE for the mirror)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Wedges not tested; previous-swing breaks failed in R90 (0 of 99) and R89 (0 of 180). Assumptions:
+  Wedge geometry, windows and target are ours; stop is the book''s.'

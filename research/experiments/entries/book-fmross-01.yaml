@@ -1,0 +1,40 @@
+id: book-fmross-01
+title: Crude next-day continuation after a >1% down day (Ross four-state table) (Sheldon Ross, book rule, proposed)
+family: mcx-crypto
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Sheldon Ross''s rule from An Introduction to Mathematical Finance: Options and Other Topics (Ch. 10.2) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry:
+  If today''s close-to-close log change of the nearest-month future is below -1% (state 1), go short at the next session''s
+  open (buy the 1-ITM PE, or sell the future). Stop: Underlying stop 1.0 x the 20-day ATR from the entry price (assumption;
+  the book gives none). Exit: Exit at that session''s close (one-day hold, as the book''s table is next-day).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- CRUDE
+- NATURALGAS
+- GOLD
+- SILVER
+features:
+- underlying price
+- daily bars (close-to-close log change of the nearest-month future)
+model_or_rule: 'If today''s close-to-close log change of the nearest-month future is below -1% (state 1), go short at the
+  next session''s open (buy the 1-ITM PE, or sell the future). | stop: Underlying stop 1.0 x the 20-day ATR from the entry
+  price (assumption; the book gives none). | exit: Exit at that session''s close (one-day hold, as the book''s table is next-day).
+  | filters: None in the book. Pre-register: no entry on the expiry day of the option or future; roll to next month 3 sessions
+  before expiry.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmross-01; trade: buy 1-ITM PE on MCX (or short the future); stop and
+  exit on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us on MCX; NIFTY daily lag-1 autocorrelation +0.028 (DEEP_NIFTY_BANKNIFTY.md 2.5)
+  was not tradeable. Assumptions: The book only reports statistics (big drop followed by big drop 31%, next-day mean -.0036
+  after state 1 on 1995-97 NYMEX crude); it proposes no trade. The most literal trade is a one-day continuation short. The
+  mirror (''after state 2 or 3 go long'', next-day mean +.0024/+.0025) is a second variant, pre-registered alongside, with
+  BH across both and across instruments. First run the 4x4 chi-square table on our MCX daily data as the descriptive gate.'

@@ -1,0 +1,30 @@
+id: book-porwal-12
+title: Stop trading for the day after two stop-losses (Nikhil Porwal, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 2 / 3.1 rules) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: none (account / trade state). Entry: No new entries
+  for the rest of the day once two trades of the arm have exited at their stop. Stop: n/a Exit: n/a'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none (account / trade state)
+- per session
+model_or_rule: 'No new entries for the rest of the day once two trades of the arm have exited at their stop. | stop: n/a |
+  exit: n/a | filters: Variant: count any two losing trades, not only stop exits.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-12; trade: applies to an existing arm (risk-lowering; shadow
+  first on live)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R75 L1-K2 (no new Donchian entries after 2 losses in a row) failed; R19c daily loss cap made things
+  worse. Assumptions: ''Two stop-losses hit'' read per arm per day.'
