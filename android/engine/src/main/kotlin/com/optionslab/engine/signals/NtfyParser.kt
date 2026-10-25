@@ -224,6 +224,17 @@ object NtfyParser {
     /** Words that make a number an index LEVEL ("NIFTY PE below 24400"), never a strike: such a message is refused. */
     private val LEVEL_WORDS = setOf("below", "under", "breaks", "break", "breakdown", "breakout", "support", "resistance", "spot", "level",
         "levels", "crosses", "cross", "sustains", "sustain", "holds")
+    /**
+     * 25 Oct (review 2): the words that may follow "nifty" (or "nifty50"): the reader's own words. Any other word there names another
+     * index ("NIFTY MNC", "NIFTY CONSUMER DURABLES", "NIFTY_TOTAL_MKT.NS" ...): refused as an unknown index, never read as NIFTY.
+     */
+    private val AFTER_NIFTY: Set<String> by lazy {
+        CE_WORDS + PE_WORDS + EXIT_WORDS + BUY_WORDS + NEGATIVE + FUTURES + ENTRY_ZONE + ENTRY_ABOVE + STOP_WORDS + TARGET_WORDS + LOT_WORDS +
+            BRIDGE + LEVEL_WORDS + setOf("atm", "itm", "otm", "weekly", "week", "next", "cmp", "market", "tripwire", "hit", "moving", "ns", "index",
+            "option", "options", "opt", "now", "today", "expiry", "exp", "for", "looks", "and", "or", "to", "the", "%", "status", "checkin", "check",
+            "intraday", "only", "nifty", "banknifty", "niftybank", "finnifty", "midcpnifty", "sensex", "bnf")
+    }
+
     private val MONTHS = listOf("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
 
     private val HINDI = listOf(
@@ -307,7 +318,17 @@ object NtfyParser {
         val words = toks.map { it.t }.toSet()
         // 25 Oct (Boss's sender): "Status: ^NSEI is at 22600.0 / Regular check-in" is a status line, never a trade.
         if ("status" in words || "checkin" in words || ("check" in words && "in" in words)) return refuse("a status check-in, not a trade")
-        if (UNKNOWN_INDEX in words) return refuse("unknown index: a NIFTY sector or other index (IT, PHARMA, NEXT 50, MIDCAP 100 ...) is not traded; " +
+        val unknown = UNKNOWN_INDEX in words || toks.indices.any { i ->
+            val nx = toks.getOrNull(i + 1) ?: return@any false
+            when (toks[i].t) {
+                "nifty", "nifty50" -> !nx.num && nx.t !in AFTER_NIFTY && !nx.t.startsWith("dm") && !Regex("d\\d{8}").matches(nx.t) &&
+                    MONTHS.none { nx.t.startsWith(it) }
+                // "Nifty Financial Services Ex-Bank" is another index than FINNIFTY.
+                "finnifty" -> nx.t == "ex"
+                else -> false
+            }
+        }
+        if (unknown) return refuse("unknown index: a NIFTY sector or other index (IT, PHARMA, NEXT 50, MIDCAP 100 ...) is not traded; " +
             "only NIFTY 50, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX")
         if (words.any { it in NEGATIVE }) return refuse("negative or conditional wording (don't, not, avoid, if, wait) - not traded")
         if (words.any { it in CRYPTO }) return refuse("crypto is not traded")

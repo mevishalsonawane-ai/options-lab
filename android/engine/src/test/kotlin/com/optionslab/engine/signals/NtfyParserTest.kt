@@ -75,8 +75,23 @@ class NtfyParserTest {
         assertEquals(Expiry.Next, buy("NIFTY next week CE").expiry)
         for (t in listOf("NIFTY IT CE", "nifty fin pe", "Nifty Pharma call", "NIFTY AUTO PE", "nifty metal ce", "NIFTY NEXT 50 CE", "nifty realty put",
                 "NIFTY FMCG CE", "nifty psu bank pe", "NIFTY MEDIA CE", "nifty energy pe", "NIFTY INFRA CE", "nifty smallcap ce", "NIFTY MIDCAP 100 PE",
-                "nifty midcap 150 ce", "NIFTYIT CE", "exit nifty it"))
+                "nifty midcap 150 ce", "NIFTYIT CE", "exit nifty it",
+                // Review 2: any index word the reader does not know, not only a listed one.
+                "NIFTY MIDSMALLCAP 400 PE", "NIFTY CONSUMER DURABLES CE", "NIFTY MNC PE", "NIFTY PSE CE", "NIFTY MICROCAP 250 CE", "NIFTY TOTAL MARKET PE",
+                "NIFTY ALPHA 50 CE", "NIFTY LARGEMIDCAP 250 PE", "NIFTY INDIA DEFENCE CE", "NIFTY HOUSING PE", "Nifty Financial Services Ex-Bank PE"))
             assertTrue(refused(t).contains("unknown index"), t)
+        for (sym in listOf("NIFTY_CONSR_DURBL.NS", "NIFTY_MICROCAP250.NS", "NIFTY_TOTAL_MKT.NS", "NIFTY_FINSRV25_50.NS", "NIFTY50_EQL_WGT.NS"))
+            assertTrue(assertIs<Parsed.Refused>(alert(sym), sym).reason.contains("unknown index"), sym)
+        // The reader's own words after NIFTY still read.
+        assertEquals(Parsed.Buy("NIFTY", Right.PE, 24500.0, trig = Trig.ZONE, entry = 120.0, stop = 90.0), buy("NIFTY PE 24500 @ 120 SL 90"))
+        assertEquals(Parsed.Buy("NIFTY", Right.CE), buy("buy nifty call"))
+        assertEquals(Parsed.Buy("NIFTY", Right.CE, pick = StrikeRule.ATM), buy("NIFTY ATM CE"))
+        assertEquals(Expiry.Next, buy("NIFTY next CE").expiry)
+        assertEquals(Parsed.Buy("NIFTY", Right.CE, 24500.0, expiry = Expiry.On(LocalDate.of(2026, 10, 30))), buy("NIFTY 30 oct 24500 CE"))
+        assertEquals(Parsed.Buy("NIFTY", Right.CE, 24500.0, expiry = Expiry.On(LocalDate.of(2026, 10, 30))), buy("NIFTY oct 30 24500 CE"))
+        assertEquals(Parsed.Buy("NIFTY", Right.PE), buy("NIFTY bearish"))
+        assertEquals(Parsed.Exit("NIFTY"), NtfyParser.parse("exit nifty", day))
+        assertTrue(refused("NIFTY and BANKNIFTY CE").contains("two indices"))
     }
 
     @Test fun hindi() {
