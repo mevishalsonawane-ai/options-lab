@@ -88,6 +88,17 @@ class SlippageTest {
         assertTrue(Slippage.diagLine(emptyList(), day).endsWith("no fills measured yet"))
     }
 
+    /** 25 Oct (app audit): the diagnostics are written the morning after; paper fills of earlier days are still said. */
+    @Test fun keptPaperFillsAreSaidOnADayWithoutFills() {
+        val xs = listOf(f("Paper", "BUY", 100.0, 100.10, d = "2026-10-09", paper = true), f("Paper", "SELL", 100.0, 99.70, d = "2026-10-09", paper = true))
+        val d = Slippage.diagLine(xs, day)
+        assertFalse(d.contains("no fills measured yet"), d)
+        assertFalse(d.contains("paper (modelled) today"), d)
+        assertTrue(d.contains("paper (modelled) kept 0.10/0.30 ₹ (2.0/6.0 ticks) n2"), d)
+        // Live only: no paper part at all.
+        assertFalse(Slippage.diagLine(listOf(f("ORB", "BUY", 100.0, 100.2)), day).contains("paper"))
+    }
+
     @Test fun jarvisHearsAndAnswers() {
         assertEquals(Slippage.Ask(null, false), Slippage.asked("what's my slippage"))
         assertEquals(Slippage.Ask("ORB", false), Slippage.asked("slippage on ORB"))

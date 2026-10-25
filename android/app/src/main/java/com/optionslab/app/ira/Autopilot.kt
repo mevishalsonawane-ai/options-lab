@@ -908,6 +908,20 @@ internal object Autopilot {
     }
 
     /**
+     * 25 Oct (app audit; 23 Oct: R51, R52 and Solo 2.0 switched off between 09:49 and 10:36 left no line in the change timeline):
+     * Boss's flip of the paper arm [target] from its row, [on] or off, logged BOTH ways as a new kept entry dated [today] (the
+     * timeline shows the day's entries only), with "your choice" and [note]. The newest kept entry of that switch is closed as
+     * undone first, so an older Undo can never flip it later. Paper only. Under [lock].
+     */
+    private fun bossPaperFlip(target: String, on: Boolean, today: LocalDate, change: AutoChange.Change, note: String) {
+        _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target && it.status == AutoChange.Status.KEPT }
+            ?.let { _book.value = AutoChange.undone(_book.value, it.id, today) }
+        _book.value = AutoChange.record(_book.value, change, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
+        save()
+        runCatching { Diag.record("autopilot", "logged: ${change.what} ${change.from} → ${change.to} (your choice, from its row)") }
+    }
+
+    /**
      * Boss switched FT3 from its own row: as [heroTicketSwitchedByBoss] - off closes the newest "off → on" entry as undone; on logs
      * it as Boss's again.
      */
@@ -920,13 +934,9 @@ internal object Autopilot {
                 ensureLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
-                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == AutoChange.FT3_TARGET }
-                    if (!on && e != null && e.status == AutoChange.Status.KEPT) { _book.value = AutoChange.undone(_book.value, e.id, today); save() }
-                    if (on && e?.status != AutoChange.Status.KEPT) {
-                        _book.value = AutoChange.record(_book.value, AutoChange.ft3On(), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
-                            by = "your choice", note = "switched on from its row; on paper - live only the standard way").first
-                        save()
-                    }
+                    // 25 Oct (app audit): both ways logged, each dated today ([bossPaperFlip]).
+                    bossPaperFlip(AutoChange.FT3_TARGET, on, today, if (on) AutoChange.ft3On() else AutoChange.paperArmOffByBoss(AutoChange.FT3_TARGET, "FT3 near-ATM morning"),
+                        if (on) "switched on from its row; on paper - live only the standard way" else "switched off from its row; paper only")
                 }
             }
         }
@@ -947,13 +957,9 @@ internal object Autopilot {
                 ensureLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
-                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == AutoChange.TICKET_TARGET }
-                    if (!on && e != null && e.status == AutoChange.Status.KEPT) { _book.value = AutoChange.undone(_book.value, e.id, today); save() }
-                    if (on && e?.status != AutoChange.Status.KEPT) {
-                        _book.value = AutoChange.record(_book.value, AutoChange.heroTicketOn(), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
-                            by = "your choice", note = "switched on from its row; paper only - it never trades on Zerodha").first
-                        save()
-                    }
+                    // 25 Oct (app audit): both ways logged, each dated today ([bossPaperFlip]).
+                    bossPaperFlip(AutoChange.TICKET_TARGET, on, today, if (on) AutoChange.heroTicketOn() else AutoChange.paperArmOffByBoss(AutoChange.TICKET_TARGET, "Hero ₹1,000 ticket"),
+                        if (on) "switched on from its row; paper only - it never trades on Zerodha" else "switched off from its row; paper only")
                 }
             }
         }
@@ -1166,12 +1172,11 @@ internal object Autopilot {
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     val target = AutoChange.PAPER_ARM + source
-                    val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target }
-                    if (e != null && e.status == AutoChange.Status.KEPT) _book.value = AutoChange.undone(_book.value, e.id, today)
-                    // 19 Oct: on from record only says so, so its Undo puts record only back.
-                    if (on) _book.value = AutoChange.record(_book.value, AutoChange.passedArmOn(source, label, research, AutoChange.passedArmChoice(source)).copy(from = from),
-                        AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = "switched on from its row; paper only - never live").first
-                    save()
+                    // 19 Oct: on from record only says so, so its Undo puts record only back. 25 Oct (app audit): off is logged too.
+                    bossPaperFlip(target, on, today,
+                        if (on) AutoChange.passedArmOn(source, label, research, AutoChange.passedArmChoice(source)).copy(from = from)
+                        else AutoChange.paperArmOffByBoss(target, label).copy(from = from),
+                        if (on) "switched on from its row; paper only - never live" else "switched off from its row; paper only")
                 }
             }
         }

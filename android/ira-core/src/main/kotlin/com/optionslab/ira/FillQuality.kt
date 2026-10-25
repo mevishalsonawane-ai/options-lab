@@ -167,7 +167,9 @@ object FillQuality {
         out += "Liquidity fill quality today: ${today.size} record${if (today.size == 1) "" else "s"}" +
             (s.halfSpread?.let { ", median half-spread ${pct0(it)}" } ?: "") + (s.entryLagS?.let { ", median entry %.1f s after the bar close".format(Locale.ENGLISH, it) } ?: "") +
             (s.fillVsSignal?.let { ", median fill ${pct(it)} against the signal" } ?: "") + "."
-        today.filter { it.kind == Kind.ENTRY && (it.vsSignalPct ?: 0.0) > 0.5 }.forEach { out += "Liquidity ${bookWords(it.book)} entry filled ${pct(it.vsSignalPct!!)} over its signal's price (limit +0.5%)." }
+        // 25 Oct (app audit): "+0.5%" is the go-live check (study h14's capped limit), not an order the app sends: every Liquidity
+        // entry is a MARKET order (OrbArms), so the words say so.
+        today.filter { it.kind == Kind.ENTRY && (it.vsSignalPct ?: 0.0) > 0.5 }.forEach { out += "Liquidity ${bookWords(it.book)} entry filled ${pct(it.vsSignalPct!!)} over its signal's price (go-live check: at most +0.5%; the entry is a plain market order, not a capped limit)." }
         today.filter { it.kind == Kind.SIGNAL && !it.stale && (it.halfSpreadPct ?: 0.0) > 0.3 }.forEach { out += "Liquidity ${bookWords(it.book)} signal saw a ${pct0(it.halfSpreadPct!!)} half-spread (worry above 0.3%)." }
         today.filter { it.kind == Kind.ENTRY && (it.lagMs ?: 0L) > 10_000L }.forEach { out += "Liquidity ${bookWords(it.book)} entry came ${secs(it.lagMs!!)} after the bar close (aim: within 10 s)." }
         if (s.stale > 0) out += "${s.stale} Liquidity record${if (s.stale == 1) "" else "s"} today had a stale or missing stream quote."

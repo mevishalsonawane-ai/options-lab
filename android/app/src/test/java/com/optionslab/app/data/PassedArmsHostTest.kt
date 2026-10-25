@@ -138,6 +138,42 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(PassedArmsHost.SOURCES.none { view().on(it) })
     }
 
+    /**
+     * 25 Oct (app audit): a read of the book that fails for a moment (a Keystore hiccup) is not a damaged file: the book is never
+     * set aside for it (that switched every arm off and forgot what they held), nothing is cached, and the next read finds the
+     * arms as they were. A file that fails authentication is still set aside.
+     */
+    @Test fun aReadThatFailsForAMomentNeverEmptiesTheBook() {
+        only(OovArm.SOURCE)
+        assertTrue(PassedArmsHost.awaitWrites(20_000L))
+        assertTrue(bookFile.exists())
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        PassedArmsHost.testRead = { throw java.security.ProviderException("keystore busy") }
+        try {
+            assertTrue("the read is thrown, not an empty book", runCatching { runBlocking { PassedArmsHost.refresh() } }.isFailure)
+            assertTrue("a switch flip waits for a readable book", runCatching { runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, true, log = false) } }.isFailure)
+        } finally { PassedArmsHost.testRead = null }
+        assertTrue("never set aside", bookFile.exists())
+        assertTrue(context.filesDir.listFiles().orEmpty().none { it.name.startsWith("passed_arms.vault.unreadable") })
+        val v = view()
+        assertTrue("the arm is still on", v.on(OovArm.SOURCE))
+        assertFalse(v.on(DonchianArm.SOURCE))
+        // A failure that does not clear: after a few in a row the book is set aside as before (the orphan watch takes back what is held).
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        PassedArmsHost.testRead = { throw java.security.ProviderException("the key is gone") }
+        try {
+            repeat(PassedArmsHost.READ_FAILS_BEFORE_ASIDE - 1) { assertTrue(runCatching { runBlocking { PassedArmsHost.refresh() } }.isFailure) }
+            assertTrue(bookFile.exists())
+            assertTrue("set aside on the last one", runCatching { runBlocking { PassedArmsHost.refresh() } }.isSuccess)
+        } finally { PassedArmsHost.testRead = null }
+        assertTrue(context.filesDir.listFiles().orEmpty().any { it.name.startsWith("passed_arms.vault.unreadable") })
+        assertTrue(PassedArmsHost.SOURCES.none { view().on(it) })
+        // Bytes that fail authentication: set aside, as before (and never switched on by themselves).
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(PassedArmsHost.SOURCES.none { view().on(it) })
+        assertTrue(context.filesDir.listFiles().orEmpty().any { it.name.startsWith("passed_arms.vault.unreadable") })
+    }
+
     @Test fun theChangeLogsUndoSwitchesAnArmOffAndOnlyIt() {
         only(DonchianArm.SOURCE)
         val on = AutoChange.passedArmOn(DonchianArm.SOURCE, DonchianArm.LABEL, DonchianArm.RESEARCH_ID)
@@ -1474,13 +1510,48 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals("${BreadthDonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
         assertTrue(runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, true) }.contains("paper only"))
         fun kept() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON &&
-            it.change.target == "paperarm:${BreadthDonchianArm.SOURCE}" && it.status == AutoChange.Status.KEPT }
+            it.change.target == "paperarm:${BreadthDonchianArm.SOURCE}" && it.status == AutoChange.Status.KEPT && it.change.to == AutoChange.ON }
         val deadline = System.currentTimeMillis() + 10_000
         while (kept().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
         val e = kept().single()
         assertEquals("your choice", e.by)
         assertTrue(e.change.reason, e.change.reason.startsWith("your \"Okay add it\" (16 Oct, after R72): "))
         assertFalse(e.change.reason, "Both" in e.change.reason)
+    }
+
+    /**
+     * 25 Oct (app audit; 23 Oct: R51, R52 and Solo 2.0 were switched off between 09:49 and 10:36 and the timeline showed only "off →
+     * on"): Boss's "off" from the row is logged too, dated today, as his choice; its Undo puts the arm back on; then "on" again closes
+     * that entry and logs its own. Every flip, both ways, with who and when.
+     */
+    @Test fun bossSwitchingAnArmOffFromItsRowIsInTheTimelineTooAndItsUndoPutsItBackOn() {
+        org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
+        only(OovArm.SOURCE)
+        val target = "paperarm:${OovArm.SOURCE}"
+        fun all() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target }
+        fun keptOff() = all().filter { it.status == AutoChange.Status.KEPT && it.change.to == AutoChange.SWITCHED_OFF }
+        assertEquals("${OovArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, false) })
+        var deadline = System.currentTimeMillis() + 10_000
+        while (keptOff().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        val off = keptOff().single()
+        assertEquals("your choice", off.by)
+        assertEquals(AutoChange.ON, off.change.from)
+        assertEquals(Market.today(), off.day)
+        assertTrue(off.change.reason, off.change.reason.startsWith("you switched it off from its row"))
+        val today = com.optionslab.ira.ChangeTimeline.fromAutopilot(Autopilot.book.value, Market.today())
+        assertTrue(today.toString(), today.any { it.what == "${OovArm.LABEL}'s switch (paper): on → off" && it.agent == "You (logged by Autopilot)" })
+        assertFalse("no PIN: paper only", Autopilot.undoNeedsPin(off.id))
+        assertTrue(Autopilot.undo(off.id).startsWith("Undone"))
+        assertTrue(view().on(OovArm.SOURCE))
+        // Off and on again from the row: the off entry is closed and the on one logged, each dated today.
+        assertEquals("${OovArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, false) })
+        assertTrue(runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, true) }.contains("paper only"))
+        fun keptOn() = all().filter { it.status == AutoChange.Status.KEPT && it.change.to == AutoChange.ON }
+        deadline = System.currentTimeMillis() + 10_000
+        while (keptOn().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertEquals(1, keptOn().size)
+        assertTrue("the second off is closed, not left to undo later", keptOff().isEmpty())
+        assertEquals(2, all().count { it.change.to == AutoChange.SWITCHED_OFF })
     }
 
     @Test fun threeIndicesBreakingIsNoBreadthTradeButDonchiansAndAFeedDownCountsAsNotBreaking() {

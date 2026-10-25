@@ -53,6 +53,9 @@ object DayLockGuard {
     /** Whether commodities keep their own paper lock and loss limit (21 Oct; memory only once read). False when unreadable. */
     fun splitOn(): Boolean = runCatching { kept().split }.getOrDefault(false)
 
+    /** 25 Oct (app audit): [splitOn] as read, or null when it could not be read (an MCX exit never sells for an unknown). */
+    fun splitKnown(): Boolean? = runCatching { kept().split }.getOrNull()
+
     /**
      * Commodities on their own paper limits [on] or back on the shared paper figure (21 Oct): the Autopilot timeline's Undo
      * (Bot settings' switch writes the setting itself). Paper only. The words said back.

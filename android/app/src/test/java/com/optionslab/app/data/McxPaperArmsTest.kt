@@ -258,6 +258,32 @@ class McxPaperArmsTest : RobolectricTest() {
     }
 
     /**
+     * 25 Oct (app audit; 23 Oct's US-night silver short bought back at 14:39, its rule holding it to 23:20): a loss stop whose
+     * account cannot be read (here no account kept at all) never sells a held MCX position - the commodities keep their own
+     * limit - while a new entry still counts it as stopped.
+     */
+    @Test fun aLossStopOfAnUnknownAccountNeverSellsAHeldPosition() {
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        futureMinutes(LocalTime.of(19, 32)) { 311.0 }
+        optionMinutes(LocalTime.of(19, 32)) { 20.0 }
+        tick(LocalTime.of(19, 32))
+        assertEquals(1, McxPaperArms.view.value.open.size)
+        McxPaperArms.testStoppedWhy = { com.optionslab.ira.DayStop.Why.LOSS }
+        futureMinutes(LocalTime.of(19, 34)) { 312.0 }
+        optionMinutes(LocalTime.of(19, 34)) { 21.0 }
+        tick(LocalTime.of(19, 34))
+        assertEquals("still held", 1, McxPaperArms.view.value.open.size)
+        assertTrue(McxPaperArms.view.value.closed.none { it.why == "operator_stop" })
+        // Boss's own stop still sells it.
+        McxPaperArms.testStoppedWhy = { com.optionslab.ira.DayStop.Why.BOSS }
+        futureMinutes(LocalTime.of(19, 35)) { 312.0 }
+        optionMinutes(LocalTime.of(19, 35)) { 21.0 }
+        tick(LocalTime.of(19, 35))
+        assertEquals("operator_stop", McxPaperArms.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    /**
      * 18 Oct, review D8: its paper trades reach the live path. The evening break's paper buy tells [ArmLive] it entered (its own
      * arm key, its paper quantity) and its paper target exit tells it the trade closed; the registered MCX book shows it at 0.
      */

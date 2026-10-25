@@ -139,7 +139,12 @@ object Slippage {
         return out
     }
 
-    /** One line for the diagnostics and the health export: live and paper apart, today and all kept. */
+    /**
+     * One line for the diagnostics and the health export: live and paper apart, today and all kept. 25 Oct (app audit, Boss's
+     * diagnostics 19-24 Oct: "no fills measured yet" every day): the diagnostics are written the next morning and Boss trades
+     * paper only, so "paper today" was always empty while the kept paper fills were never said; now the kept paper fills are
+     * said too.
+     */
     fun diagLine(fills: List<Fill>, today: String): String {
         fun part(label: String, xs: List<Fill>) = stats(xs)?.let { s ->
             "$label ${r2(s.median)}/${r2(s.p90)} ₹ (${t1(s.medianTicks)}/${t1(s.p90Ticks)} ticks) n${s.n}"
@@ -148,7 +153,7 @@ object Slippage {
         val paper = fills.filter { it.paper }
         val parts = listOfNotNull(
             part("live today", live.filter { it.day == today }), part("live kept", live),
-            part("paper (modelled) today", paper.filter { it.day == today }),
+            part("paper (modelled) today", paper.filter { it.day == today }), part("paper (modelled) kept", paper),
         ) + byStrategy(live).entries.sortedByDescending { it.value.n }.take(5).map { (k, s) -> "$k ${r2(s.median)}/${r2(s.p90)} n${s.n}" }
         return "Slippage (median/p90 a unit, a cost positive): " + parts.joinToString(" · ").ifEmpty { "no fills measured yet" }
     }

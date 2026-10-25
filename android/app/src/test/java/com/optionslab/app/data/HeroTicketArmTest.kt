@@ -137,7 +137,8 @@ class HeroTicketArmTest : RobolectricTest() {
     @Test fun itIsInTheChangeLogOnceAsBossOwnAndOneTapSwitchesItOff() {
         org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
         view()
-        fun entries() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON }
+        // 25 Oct: the ticket's own switch only (an "off" from another test's row is now its own entry).
+        fun entries() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == AutoChange.TICKET_TARGET && it.change.to == AutoChange.ON }
         val deadline = System.currentTimeMillis() + 10_000
         while (entries().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
         val e = entries().single()

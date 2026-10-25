@@ -635,6 +635,32 @@ class ControlPagesTest {
         waitSettings { !it.guardNakedShort }
     }
 
+    /**
+     * 25 Oct (app audit): the paper bots' daily loss limit says what it does (it sells what the NSE paper bots hold), and loosening
+     * it takes the PIN with Zerodha set up, as the commodities' own paper limit does; tightening goes at once.
+     */
+    @Test fun looseningThePaperBotsDailyLossLimitAsksForThePinAndItsWordsSayItSells() {
+        com.optionslab.app.testing.BrokerArea.saveKeys(pin)
+        assertFalse(model.settings.value.live)
+        show { RiskPage(model) }
+        compose.waitForText("Bot settings")
+        // (A row's title is shown in capitals.)
+        compose.reveal("SELLS WHAT THE NSE PAPER BOTS HOLD", substring = true)
+        assertTrue(compose.has("PAPER BOTS' DAILY LOSS LIMIT (SELLS WHAT THE NSE PAPER BOTS HOLD AND STOPS THEM FOR THE DAY)", substring = true))
+        fun chip(text: String) { compose.reveal(text); compose.onAllNodesWithText(text)[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
+        assertEquals(10_000.0, model.settings.value.guardPaperDailyLoss, 0.0)
+        // Looser (₹10,000 -> ₹20,000): the PIN first; Cancel keeps it.
+        chip("₹20,000")
+        compose.waitForText("Confirm it is you")
+        compose.onNodeWithText(ASK_PAPER_LOSS).assertExists()
+        tap("Cancel")
+        compose.waitForNoText("Confirm it is you")
+        assertEquals(10_000.0, model.settings.value.guardPaperDailyLoss, 0.0)
+        chip("₹20,000")
+        reauth(pin, ASK_PAPER_LOSS)
+        waitSettings { it.guardPaperDailyLoss == 20_000.0 }
+    }
+
     @Test fun expirySquareOffAndNakedShortSwitches() {
         show { RiskPage(model) }
         val keep = "Keep the Expiry Put to settlement"

@@ -158,6 +158,8 @@ object StreamHealth {
         parts += "tokens ${d.tokens}"
         d.code?.let { parts += ("close $it " + scrub(d.reason, secrets)).trim() }
         d.error?.let { parts += ("${scrub(it, secrets)}: " + scrub(d.message, secrets)).trimEnd(' ', ':') }
+        // 25 Oct: the watchdog's own words for a drop it made ([pricesStalled]: "heartbeats only, no prices").
+        if (d.error == null && d.forced != null && !d.message.isNullOrBlank()) parts += scrub(d.message, secrets)
         httpOf(d)?.let { parts += "http $it" }
         if (c == Cause.PAUSED && d.silentSec != null) parts += "silent ${d.silentSec} s"
         d.foreground?.let { parts += if (it) "foreground" else "background" }
@@ -171,6 +173,25 @@ object StreamHealth {
     /** The stall rule: [live] (opened) in market hours and no frame since [lastFrameAt] for [SILENCE_MS]. */
     fun stalled(live: Boolean, marketOpen: Boolean, lastFrameAt: Long, now: Long): Boolean =
         live && marketOpen && lastFrameAt > 0 && now - lastFrameAt >= SILENCE_MS
+
+    /**
+     * 25 Oct (app audit; 23 Oct 13:30-13:49, a "quiet" stream for 19 minutes with no reconnect): Kite's 1-byte heartbeat keeps
+     * [stalled] happy (any frame counts) while no PRICE comes at all - a lost subscription or a stall on Zerodha's side - so such a
+     * socket was never opened again and the stops ran on REST quotes alone. This is the second rule: an opened socket with
+     * instruments subscribed ([tokens]) during NSE's cash session ([nseSession]: index prices tick every second) that has had no
+     * price since [lastTickAt] (or since it opened, [openedAt]) for [TICK_SILENCE_MS] is dropped and opened again (a fresh
+     * subscription). Only ever reconnects; never touches an order.
+     */
+    fun pricesStalled(live: Boolean, nseSession: Boolean, tokens: Int, lastTickAt: Long, openedAt: Long, now: Long): Boolean =
+        live && nseSession && tokens > 0 && openedAt > 0 && now - maxOf(lastTickAt, openedAt) >= TICK_SILENCE_MS
+
+    /** [pricesStalled]'s silence: no price for this long while NSE's indices tick every second. */
+    const val TICK_SILENCE_MS = 20_000L
+    /** At most this many [pricesStalled] drops in a row with no price between them (a halt prints none: no endless reconnects). */
+    const val MAX_PRICE_SILENT_DROPS = 3
+
+    /** The NSE cash minutes in which index prices tick ([pricesStalled]): 09:16 to 15:29 (not the open's first minute or the close). */
+    fun nseTicking(minute: Int): Boolean = minute in (9 * 60 + 16)..(15 * 60 + 29)
 
     /** The watchdog's own clock jumped from [lastLook] to [now]: the seconds the app was frozen (or the phone slept), else null. */
     fun paused(lastLook: Long, now: Long): Long? = (now - lastLook).takeIf { lastLook > 0 && it >= PAUSE_MS }?.let { it / 1000 }

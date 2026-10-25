@@ -765,10 +765,12 @@ private fun GuardCard(model: AppModel) {
             loosen(s.guardCutoff >= 0 && (cut[i] < 0 || cut[i] > s.guardCutoff), askLimit) { model.update { it.copy(guardCutoff = cut[i]) } }
         }
         // 25 Oct (Boss: "Daily loss was off" - the Zerodha limit above was, but the paper bots' own limit, ₹6,000 then, was on no screen
-        // and stopped every paper bot on 23 Oct): the paper daily loss limit, shown and set here. Paper only, so no PIN.
+        // and stopped every paper bot on 23 Oct): the paper daily loss limit, shown and set here.
+        // 25 Oct (app audit): the words say what it does (it also sells what the NSE paper bots hold), and loosening it takes the
+        // PIN, as the commodities' own paper limit and the day lock already do; tightening never waits.
         val paperLoss = listOf(5_000.0, 10_000.0, 20_000.0, 0.0)
-        ParamTokens("Paper bots' daily loss limit (stops new paper entries for the day)", paperLoss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardPaperDailyLoss) }) { i ->
-            model.update { it.copy(guardPaperDailyLoss = paperLoss[i]) }
+        ParamTokens("Paper bots' daily loss limit (sells what the NSE paper bots hold and stops them for the day)", paperLoss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardPaperDailyLoss) }) { i ->
+            loosen(looser(s.guardPaperDailyLoss, paperLoss[i]), ASK_PAPER_LOSS) { model.update { it.copy(guardPaperDailyLoss = paperLoss[i]) } }
         }
         // The day lock (08 Oct): only ever stops new automatic entries; set here alone (never by voice or a backup).
         val dayLocks = com.optionslab.engine.risk.DayLock.CHOICES
@@ -788,7 +790,8 @@ private fun GuardCard(model: AppModel) {
         }, onLock = { v -> loosen(looser(s.mcxDayLock, v), askMcx) { model.update { it.copy(mcxDayLock = v) } } },
             onLoss = { v -> loosen(looser(s.mcxPaperDailyLoss, v), askMcx) { model.update { it.copy(mcxPaperDailyLoss = v) } } })
         Text("Paper account", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), modifier = Modifier.padding(top = 12.dp))
-        Note("Paper is practice: the limits above and the kill switch apply to Zerodha only. On paper your own orders and the bots (ORB, Pine, strategies) all go through, side by side; \"Stop for today\" still stops the bots.")
+        // 25 Oct (app audit): the note said every limit above was Zerodha's only, beside the paper bots' own loss limit and day lock.
+        Note("Paper is practice: the Zerodha limits above and the kill switch apply to Zerodha only; the paper bots keep their own daily loss limit and day lock (above). On paper your own orders and the bots (ORB, Pine, strategies) all go through, side by side; \"Stop for today\" still stops the bots.")
         Note("Hitting the Zerodha drawdown limit also turns the kill switch on, as the desktop does.")
         // Home's paper running total counts from this date (words only; nothing trades on it).
         val sinceCtx = LocalContext.current
@@ -1058,3 +1061,6 @@ internal fun CommoditiesLimits(s: com.optionslab.app.data.AppSettings, rupees: (
     Note(com.optionslab.ira.SegmentLock.idleLine(true, s.mcxDayLock, s.mcxPaperDailyLoss) +
         " Your stop for today, the kill switch, Zerodha's loss limit and the account stop rule still stop both.")
 }
+
+/** 25 Oct (app audit): what the PIN dialog says when the paper bots' daily loss limit is loosened. */
+internal const val ASK_PAPER_LOSS = "Enter your app PIN to loosen the paper bots' daily loss limit."

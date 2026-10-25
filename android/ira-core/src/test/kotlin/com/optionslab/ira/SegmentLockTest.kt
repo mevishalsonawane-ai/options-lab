@@ -66,6 +66,33 @@ class SegmentLockTest {
         assertNull(seg.losses(true, null, 2_000.0, -3_200.0, 6_000.0, SegmentLock.Split(3_000.0, -60_000.0), 0.0).mcx)
     }
 
+    /** 25 Oct (app audit): an MCX paper position is sold for today's stop only when that stop is known to apply to MCX. */
+    @Test fun anMcxExitSellsOnlyOnAStopKnownToApply() {
+        val loss = DayStop.Why.LOSS
+        // 23 Oct: the NSE paper loss stop (split on) never sells the silver future - with its account known or not.
+        assertFalse(seg.mcxExitStop(true, loss, false, true, SegmentLock.Trip.PAPER, false))
+        assertFalse(seg.mcxExitStop(true, loss, false, true, null, false), "an unknown account is no reason to sell")
+        assertFalse(seg.mcxExitStop(true, loss, false, false, null, false), "the loss stop read but not whose")
+        // ... while the entry side still counts the unknown as stopped (no new entry).
+        assertTrue(seg.mcxStopped(true, loss, false, false, null, false))
+        // The split setting unreadable: the NSE paper stop or an unknown account sells nothing; Zerodha's or the shared figure still sells.
+        assertFalse(seg.mcxExitStop(null, loss, false, true, SegmentLock.Trip.PAPER, false))
+        assertFalse(seg.mcxExitStop(null, loss, false, true, null, false))
+        assertTrue(seg.mcxExitStop(null, loss, false, true, SegmentLock.Trip.SHARED, false))
+        assertTrue(seg.mcxExitStop(null, loss, false, true, SegmentLock.Trip.LIVE, false))
+        // Stops that do apply: Boss's, the tile's, the commodities' own, Zerodha's or the shared paper figure, the split off.
+        assertTrue(seg.mcxExitStop(null, null, true, false, null, false))
+        assertTrue(seg.mcxExitStop(null, DayStop.Why.TILE, false, false, null, false))
+        assertTrue(seg.mcxExitStop(null, null, false, false, null, mcxTripped = true))
+        assertTrue(seg.mcxExitStop(true, loss, false, true, SegmentLock.Trip.LIVE, false))
+        assertTrue(seg.mcxExitStop(true, loss, false, true, SegmentLock.Trip.SHARED, false))
+        assertTrue(seg.mcxExitStop(false, loss, false, true, SegmentLock.Trip.PAPER, false))
+        assertTrue(seg.mcxExitStop(false, null, false, true, null, false))
+        // No stop at all: held.
+        assertFalse(seg.mcxExitStop(true, null, false, false, null, false))
+        assertFalse(seg.mcxExitStop(false, null, false, false, null, false))
+    }
+
     @Test fun theSplitOffIsExactlyTheSharedRule() {
         val l = seg.losses(false, null, 2_000.0, -6_100.0, 6_000.0, SegmentLock.Split(500.0, -6_600.0), 6_000.0)
         assertEquals("Paper", l.nse!!.who)

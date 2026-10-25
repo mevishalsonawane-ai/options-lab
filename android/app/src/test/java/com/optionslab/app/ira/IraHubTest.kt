@@ -486,6 +486,9 @@ class IraHubTest : RobolectricTest() {
         val l = v!!.lines
         assertTrue(l[com.optionslab.ira.Section.ORDERS]!!.toString(), l[com.optionslab.ira.Section.ORDERS]!!.first().let { it == "No orders on Paper today." || it.startsWith("The paper account") })
         assertTrue(l[com.optionslab.ira.Section.RISK]!!.first().startsWith("Kill switch: off"))
+        // 25 Oct (app audit): only the paper daily loss limit is enforced on paper, and Jarvis says so.
+        val paperLimits = l[com.optionslab.ira.Section.RISK]!!.single { it.startsWith("Paper limits:") }
+        assertTrue(paperLimits, paperLimits.contains("(enforced: it sells what the NSE paper bots hold") && paperLimits.contains("are not enforced on paper"))
         assertEquals(listOf("No price alarms are set."), l[com.optionslab.ira.Section.ALARMS])
         assertTrue(l[com.optionslab.ira.Section.SETTINGS]!!.first().startsWith("Mode: Paper"))
         assertTrue(l[com.optionslab.ira.Section.STATUS]!!.toString(), l[com.optionslab.ira.Section.STATUS]!!.any { it.startsWith("Zerodha: not set up") })

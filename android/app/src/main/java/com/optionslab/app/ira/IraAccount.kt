@@ -376,7 +376,10 @@ internal object IraAccount {
                 "Live limits: daily loss ${AppFacts.amt(s.guardDailyLoss)}, drawdown ${s.guardDrawdownPct}%, ${s.guardMaxOpen} open positions, " +
                     "${s.guardMaxTrades} trades a day, ${s.guardMaxLots} lots an order, order value ${AppFacts.amt(s.guardMaxValue)}, " +
                     "exposure ${AppFacts.amt(s.guardMaxExposure)}, no new positions after ${"%02d:%02d".format(s.guardCutoff / 60, s.guardCutoff % 60)}.",
-                "Paper limits: daily loss ${AppFacts.amt(s.guardPaperDailyLoss)}, drawdown ${s.guardPaperDrawdownPct}%, ${s.guardPaperTrades} trades a day.",
+                // 25 Oct (app audit): only the paper daily loss limit is enforced (LossBreaker); the paper guard checks nothing else
+                // (Guard: paper returns no refusal), so the drawdown and trade-count figures are said as not enforced.
+                "Paper limits: daily loss ${AppFacts.amt(s.guardPaperDailyLoss)} (enforced: it sells what the NSE paper bots hold and stops them for the day); " +
+                    "the paper drawdown ${s.guardPaperDrawdownPct}% and ${s.guardPaperTrades} trades a day are not enforced on paper.",
                 "Daily loss breaker: ${if (com.optionslab.app.data.LossBreaker.trippedToday()) "tripped today - the bots sold and stopped" else "not tripped today"}.",
                 "Naked shorts: ${if (s.guardNakedShort) "refused" else "allowed"}. Expiry-day square-off at 15:05: ${if (s.expirySquareOff) "on" else "off"}.",
             )

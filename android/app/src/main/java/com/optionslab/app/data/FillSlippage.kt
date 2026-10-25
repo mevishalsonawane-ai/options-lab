@@ -107,14 +107,33 @@ object FillSlippage {
      * A paper fill: the sandbox filled [qty] of [symbol] ([side]) at [avg] from [intended] (its limit, or the price it read).
      * Kept in the background as paper (the sandbox's modelled slippage, never mixed with Zerodha's).
      */
-    fun paper(symbol: String, side: String, entry: Boolean, qty: Int, intended: Double?, avg: Double, limit: Boolean) {
+    fun paper(symbol: String, side: String, entry: Boolean, qty: Int, intended: Double?, avg: Double, limit: Boolean,
+              basis: Slippage.Basis = if (limit) Slippage.Basis.LIMIT else Slippage.Basis.LTP) {
         if (intended == null) return
         val at = System.currentTimeMillis()
         scope.launch {
             val day = runCatching { Market.today().toString() }.getOrDefault(java.time.LocalDate.now().toString())
             Slippage.Fill.of(day, at, "Paper", symbol, side, if (entry) Slippage.Leg.ENTRY else Slippage.Leg.EXIT, qty, intended, avg, 0.05,
-                paper = true, basis = if (limit) Slippage.Basis.LIMIT else Slippage.Basis.LTP)?.let { keep(it) }
+                paper = true, basis = basis)?.let { keep(it) }
         }
+    }
+
+    /**
+     * 25 Oct (app audit: "no fills measured yet" in every diagnostics): a RESTING paper order that filled on a pass ([Paper.tick],
+     * the sweeper) - a stop measured against its trigger (what a stop-loss really costs past its level), a limit against its
+     * price. A stop is an exit; a resting limit BUY an entry, a SELL an exit. A market order is measured where it is placed, not
+     * here. Memory and a background write only.
+     */
+    fun resting(f: com.optionslab.engine.sandbox.SandboxEvent.Fill, o: com.optionslab.engine.sandbox.Order?) {
+        val o2 = o ?: return
+        val type = o2.priceType.uppercase(java.util.Locale.ENGLISH)
+        val (intended, basis) = when {
+            type == "SL-M" || type == "SL" -> o2.triggerPrice?.toDouble() to Slippage.Basis.TRIGGER
+            type == "LIMIT" -> o2.price?.toDouble() to Slippage.Basis.LIMIT
+            else -> return
+        }
+        val entry = type == "LIMIT" && f.action.equals("BUY", true)
+        paper(f.symbol, f.action, entry, f.quantity, intended, f.price, limit = basis == Slippage.Basis.LIMIT, basis = basis)
     }
 
     /** In memory, then one encrypted line appended to the file (trimmed to the newest [Slippage.KEEP] when it grows past twice that). */

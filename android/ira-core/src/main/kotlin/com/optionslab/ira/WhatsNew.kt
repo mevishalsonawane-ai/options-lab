@@ -65,7 +65,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
-        // 25 Oct (Boss: "remove telegram full feature and add a new feature which will read message from ntfy"): newest of all.
+        // 25 Oct (Boss: "find out what all the issues we have in the application", after the books): the app audit's fixes, newest of all.
+        Entry("2026-10-25-app-audit-fixes", OCT25, "Fixes from the app audit against the books",
+            "Paper fills are now measured, stops against their trigger, and the diagnostics show them. " +
+                "A moment's failed read can no longer switch the passed arms off or forget what they hold. " +
+                "An MCX position is sold for today's stop only when that stop applies to MCX. " +
+                "Switching an arm off from its row now shows in the change timeline, and one tap undoes it. " +
+                "The daily loss stop's message lists each position and says when two arms bet opposite ways. " +
+                "The paper loss limit's row says it sells what the bots hold, and loosening it asks your PIN. " +
+                "A price stream sending heartbeats but no prices is opened again after 20 seconds.",
+            "Autopilot → change timeline; Bot settings → Account guard; the full audit is in the repository's research folder"),
+        // 25 Oct (Boss: "remove telegram full feature and add a new feature which will read message from ntfy"): under the app audit's entry.
         Entry("2026-10-25-ntfy-alerts", OCT25, "ntfy alerts replace Telegram",
             "Telegram is gone: its login, the Signal tester, its paper arm and their data on the phone. " +
                 "Any open paper trade it held is still watched until it closes. " +

@@ -153,6 +153,18 @@ object PassedArmsHost {
     @Volatile internal var testNoAutoOn: Boolean = false
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
+    /** TEST SEAM: the book's bytes read this way instead of from the vault (a throw: a read that failed). Null in the app. */
+    @Volatile internal var testRead: (() -> ByteArray?)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /**
+     * Reads of the book that failed in a row ([book]). A failure that does not clear (the key itself gone, not a moment's hiccup)
+     * would leave what the arms hold with no exits and no safety net for good: after [READ_FAILS_BEFORE_ASIDE] in a row the book
+     * is set aside as before, and the paper account's positions are taken back by the orphan watch with their arm's exits.
+     */
+    @Volatile private var readFails = 0
+    internal const val READ_FAILS_BEFORE_ASIDE = 5
+
     /** TEST SEAM: an index's 1-minute bars of the earlier sessions (null in the app: Upstox's history). Debug builds only. */
     @Volatile internal var testHistory: ((String) -> List<Bar>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }; field = v }
@@ -327,8 +339,26 @@ object PassedArmsHost {
         cache?.let { return it }
         val b = Book()
         var unreadable = false
-        runCatching {
-            val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
+        // 25 Oct (app audit): a read that failed for a moment (a Keystore hiccup past readFileSteady's retries) is not a damaged
+        // file. It used to set the book aside and start an empty one: every arm off and what they held forgotten by their own
+        // exits, with nothing in the change timeline. Now it is thrown and nothing is cached, so the next call reads again (as
+        // Strategies and TradeBook do). Only bytes that fail authentication or do not parse are set aside.
+        val bytes: ByteArray? = try { (testRead?.invoke() ?: Vault.readFileSteady(file)).also { readFails = 0 } } catch (e: Vault.Tampered) {
+            readFails = 0
+            unreadable = true; if (file.exists()) Vault.setAside(file); null
+        } catch (e: Exception) {
+            readFails += 1
+            if (readFails < READ_FAILS_BEFORE_ASIDE) {
+                runCatching { Diag.record("passed-arms", "the arms' book could not be read now (${e.javaClass.simpleName}, $readFails in a row); read again on the next look") }
+                throw java.io.IOException("the passed arms' book could not be read now", e)
+            }
+            // It does not clear: set aside as before (an empty book; the orphan watch takes back what the paper account holds).
+            runCatching { Diag.record("passed-arms", "the arms' book could not be read $readFails times in a row (${e.javaClass.simpleName}): set aside; a fresh book starts") }
+            readFails = 0
+            unreadable = true; if (file.exists()) Vault.setAside(file); null
+        }
+        if (bytes != null) runCatching {
+            val o = JSONObject(String(bytes, Charsets.UTF_8))
             o.optJSONObject("armed")?.let { m -> m.keys().forEach { b.armed[it] = m.getBoolean(it) } }
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += readPos(a.getJSONObject(i)) }
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }

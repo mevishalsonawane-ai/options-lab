@@ -101,6 +101,26 @@ object SegmentLock {
     }
 
     /**
+     * 25 Oct (app audit): whether the MCX paper arms SELL what they hold because of today's stop - the exit side of [mcxStopped],
+     * which an entry reads with anything unknown counted as stopped. An exit sells only on a stop known to apply to MCX: Boss's
+     * own stop or the tile, the commodities' own loss stop, a stop that is not a loss stop, or a loss stop whose account is known
+     * and is not the NSE paper one ([nseTrip] null: not known, never a reason to sell). [splitOn] null: the split setting could not
+     * be read (an entry still refuses; only a loss stop known to stop both sells). On 23 Oct the US-night silver future, short from 09:05, was bought
+     * back at 14:39 at market while its rule holds it to 23:20, minutes after the NSE paper loss stop of 09:49 and amid failing
+     * reads: an unknown read counted as "shared" sold it as "operator_stop". Paper only (the MCX arms never trade live).
+     */
+    fun mcxExitStop(splitOn: Boolean?, stoppedWhy: DayStop.Why?, bossStop: Boolean, nseTripped: Boolean, nseTrip: Trip?, mcxTripped: Boolean): Boolean {
+        if (mcxTripped || bossStop) return true
+        if (stoppedWhy != null && stoppedWhy != DayStop.Why.LOSS) return true
+        val lossToday = stoppedWhy == DayStop.Why.LOSS || nseTripped
+        // The split setting unread: only a loss stop known to stop both (Zerodha's, or the one shared paper figure) sells.
+        val split = splitOn ?: return lossToday && nseTrip != null && nseTrip != Trip.PAPER
+        if (!split) return lossToday
+        val trip = nseTrip ?: return false
+        return lossToday && trip != Trip.PAPER
+    }
+
+    /**
      * The live entry door's loss stop, never weaker than before the split: the NSE side's (or Zerodha's) stop, the MCX paper
      * stop, or the whole paper day past the paper limit ([wholePaper]) - any of them refuses a bot's live entry.
      */

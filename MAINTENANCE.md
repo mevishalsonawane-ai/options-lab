@@ -192,9 +192,18 @@ past days at that time, with a one-word verdict. It only reports; ask Jarvis "wh
 | "Zerodha sync: mismatch" | app and Zerodha disagree on a position or stop | check Kite; fix the position there |
 | "GitHub upload failed …" / "Nothing uploaded to GitHub since …" | the evening upload did not run or GitHub refused it | leave the phone charging on Wi-Fi overnight (uploads start after the MCX evening close, 15:45 on days without MCX); if it says the token was refused, renew it (section 3) |
 | "Night study: not working" | the overnight study didn't run | phone online overnight, battery Unrestricted |
+| "dropped: no data from Zerodha … heartbeats only, no prices" (diary) | the stream answered but sent no prices for 20 s in NSE hours (25 Oct: the 23 Oct 19-minute quiet spell); the app reconnects by itself | nothing; tell Claude if it repeats all day |
+| "Daily loss limit reached … By position: … These were opposite bets" | the paper bots' loss stop sold and stopped the NSE paper arms; the line lists the day's positions and says when two arms bet opposite ways | look at which arms; changing the limit (Bot settings → Account guard) asks your PIN to loosen |
+| "the arms' book could not be read now" (diary) | a moment's phone-security hiccup reading the passed arms' book; it is read again on the next look and nothing is reset (25 Oct) | nothing; a file named `passed_arms.vault.unreadable.*` means a damaged book was set aside: tell Claude |
 
 **Copy diagnostics** (Settings → Diagnostics → Copy diagnostics) gives one text with everything a developer needs. Keys,
 tokens and passwords are never included.
+
+**App audit against the books (25 Oct 2026):** `research/APP_AUDIT_BOOKS.md` lists every issue found (risk, execution,
+volatility, health), what was fixed and what waits for your decision. The decisions with the most money at stake once live:
+the account stop rule (still in shadow), a per-trade risk cap, a spread check before entry, and faster stop looks while the
+stream is quiet. Every switch flip of an arm now shows in the change timeline (paper arms) or the diary (ORB family and
+Liquidity), with when.
 
 ## 7. Backups
 
