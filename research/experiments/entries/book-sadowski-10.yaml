@@ -1,17 +1,18 @@
 id: book-sadowski-10
-title: Weekly + daily stochastic extreme at a swing level, intraday reversal entry (Roman Sadowski, book rule, proposed)
+title: Weekly + daily stochastic extreme at a swing level, intraday reversal entry (Roman Sadowski, book rule, tested in R104)
 family: daily-filters
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 1) makes money after real
   charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Setup short:
   weekly and daily stochastic(14,3,3) %K both above 70, the index up more than 2 x ATR14(daily) over the last 10 sessions,
   and price within 0.5 ATR of a 60-session swing high. Over the next 5 sessions, sell on a 60-min close below the prior 60-min
   bar''s low. Long is the mirror (below 30, near a 60-session swing low). Stop: Above the setup''s swing high + 0.25 ATR (short),
   below the swing low (long). Exit: Not stated; we use 2R or 10 sessions.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDXF 2017-01-01 - 2026-03-31
+  holdout: IDXF 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -27,13 +28,16 @@ model_or_rule: 'Setup short: weekly and daily stochastic(14,3,3) %K both above 7
   book''s COT bias is replaced (variant) by the 50-day trend: take only setups in its direction; counter-trend setups at half
   size.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-10; trade: Buy the 1-ITM monthly PE (short) / CE (long).'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: HUNT_H25 intraday stochastic within ''Other indicators'' 0 of 50 families positive walk-forward;
-  weekly+daily version not tested by us. Assumptions: The COT bias, the ''major'' level and the intraday ''reversal pattern''
-  are discretionary in the book; all of these definitions are ours. Stochastic settings are borrowed from the common 14,3,3.'
+  summary: 'IDXF (index spot, futures proxy), variant base: design 114 trades, win 33%, net Rs 43,629, folds Rs 0, Rs 26,086,
+    Rs 125, Rs 17,418; p 0.387, BH q 1.000; holdout 7 trades, win 43%, net Rs 112,628. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). multi-session hold: index as a futures proxy Our nearest test: HUNT_H25 intraday
+  stochastic within ''Other indicators'' 0 of 50 families positive walk-forward; weekly+daily version not tested by us. Assumptions:
+  The COT bias, the ''major'' level and the intraday ''reversal pattern'' are discretionary in the book; all of these definitions
+  are ours. Stochastic settings are borrowed from the common 14,3,3.'

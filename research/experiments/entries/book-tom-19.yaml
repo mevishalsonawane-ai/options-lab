@@ -1,5 +1,5 @@
 id: book-tom-19
-title: Add one lot at +1R with the stop to entry (scaling in) (Trader Tom, book rule, proposed)
+title: Add one lot at +1R with the stop to entry (scaling in) (Trader Tom, book rule, covered by an earlier study)
 family: trade-management
 date: '2026-10-25'
 doc: research/books/TESTABLE_RULES.md
@@ -25,9 +25,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-tom-19; trade: a second 1
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. R81 X7 pyramid on Liquidity (+Rs 58k design, -Rs 20k final) and
+    H5: the same add-at-+1R mechanism'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R81 X7 pyramid on Liquidity +Rs 58k design, -Rs 20k final; H5 pyramiding raised gross not net. Assumptions:
-  Points mapped to R multiples of the arm''s stop.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). R81 X7 pyramid on Liquidity (+Rs 58k design, -Rs 20k final) and H5: the same add-at-+1R
+  mechanism'

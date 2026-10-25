@@ -427,3 +427,21 @@ The author does say his tape illustrations were taken as they printed, before he
   shares at 149 3/4-150; Ch. V), the pendulum and "dull market" diagrams and the 181 swing chart (Ch. VII), the Kansas
   City Southern chart (Ch. VII), the Amalgamated Copper figure chart and the volume figure chart (Ch. VIII), the two
   triangle diagrams (Ch. XII) and the full trade record table of Ch. XIII. The surrounding prose was read for each.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-wyckoff-01`: not testable (R104): index-futures tick prints exist only in the phone's recorder since 12 Oct 2026 (private repo); ~3 months needed
+- `book-wyckoff-02`: tested (R104): MCXI: 26 trades, win 35%, net -Rs 36,075 design, holdout -Rs 180 (fail)
+- `book-wyckoff-03`: not testable (R104): index only; needs index-futures minute volume, which exists only from 29 Jul 2026 (57 sessions, too few for design + holdout)
+- `book-wyckoff-04`: tested (R104): MCXI: 90 trades, win 14%, net -Rs 7,055 design, holdout -Rs 1,128 (fail)
+- `book-wyckoff-05`: not re-run (R104): covered: is the R72 Breadth Donchian arm: PASS (final +Rs 1,71,366 on 1,202 trades), on paper
+- `book-wyckoff-06`: tested (R104): ARM: delta vs the arm -Rs 14,978 design (fail)
+- `book-wyckoff-07`: tested (R104): IDX: 2057 trades, win 48%, net -Rs 300,751 design, holdout -Rs 57,198 (fail)
+- `book-wyckoff-08`: tested (R104): ARM: delta vs the arm Rs 29,056 design (fail)
+- `book-wyckoff-09`: tested (R104): ARM: delta vs the arm -Rs 269,502 design (fail)
+- `book-wyckoff-10`: tested (R104): ARM: delta vs the arm -Rs 163,167 design (fail)
+- `book-wyckoff-11`: tested (R104): ARM: delta vs the arm -Rs 130,016 design (fail)
+- `book-wyckoff-12`: tested (R104): ARM: delta vs the arm -Rs 439 design (fail)
+- `book-wyckoff-13`: tested (R104): ARM: delta vs the arm Rs 4,081 design (fail)

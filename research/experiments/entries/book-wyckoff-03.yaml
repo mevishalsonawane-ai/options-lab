@@ -27,9 +27,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-03; trade: buy 1-
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: index only; needs index-futures minute volume, which exists only from 29 Jul 2026 (57 sessions,
+    too few for design + holdout)'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us with true volume; R86b big selling fast / buying slow (169 / 179 days), following
-  it 0 of 8. Assumptions: Book gives no thresholds; 0.6x and 50% are ours. Volume must be the future''s, not the cash index.'
+notes: 'R104: needs data we lack (index only; needs index-futures minute volume, which exists only from 29 Jul 2026 (57 sessions,
+  too few for design + holdout)).'

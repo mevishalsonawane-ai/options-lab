@@ -1,17 +1,18 @@
 id: book-smith-06
-title: SST six rules on BTC/ETH daily, with the trail as the profit lock (David Graeme Smith, book rule, proposed)
+title: SST six rules on BTC/ETH daily, with the trail as the profit lock (David Graeme Smith, book rule, tested in R104)
 family: mcx-crypto
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 7-9) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price. Entry: As sst-six-rules-index-daily on BTC/ETH daily bars
   (SMA50 side, DMI 8 cross or touch, break of last non-inside day). Stop: Mandatory: reference day''s far end minus 0.5% of
   price, and a variant at 0.25 x ATR(14). Exit: Mandatory profit lock: the significant-day step trail (each new non-inside
   favourable day moves the stop to its far end minus buffer) plus the midpoint lock on a >= 5% favourable day; no target;
   max hold 20 days.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: CRY 2023-10-01 - 2026-03-31
+  holdout: CRY 2026-04-01 - 2026-12-31 (read once)
 instruments:
 - CRYPTO
 features:
@@ -24,13 +25,16 @@ model_or_rule: 'As sst-six-rules-index-daily on BTC/ETH daily bars (SMA50 side, 
   FOMC or US CPI (book''s scheduled-news blackout mapped); gap rule not applicable (24/7 market).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-smith-06; trade: spot or 1x perp, and Delta Exchange India ATM option
   on the trigger; stops on the underlying'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: RC1: 0 of 8 active ideas beat buy-and-hold after India''s 30% tax; R46: BTC EMA 8/21 + ADX(14) >
-  15 option calls, 0 of 14 variants pass.. Assumptions: Crypto never appears in the book; mapping is ours. Stop and step lock
-  are both present as CLAUDE.md requires; compare against lock/stop variants, never ''no stop''.'
+  summary: 'CRY (BTC/ETH perp), variant pct: design 53 trades, win 36%, net Rs 157,221, folds Rs 54,350, Rs 102,871; p 0.109,
+    BH q 1.000; holdout 10 trades, win 40%, net Rs 32,164. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). the step trail is the profit lock; stop always on Our nearest test: RC1: 0 of 8 active
+  ideas beat buy-and-hold after India''s 30% tax; R46: BTC EMA 8/21 + ADX(14) > 15 option calls, 0 of 14 variants pass.. Assumptions:
+  Crypto never appears in the book; mapping is ours. Stop and step lock are both present as CLAUDE.md requires; compare against
+  lock/stop variants, never ''no stop''.'

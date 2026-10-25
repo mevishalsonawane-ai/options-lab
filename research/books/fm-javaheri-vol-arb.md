@@ -340,3 +340,11 @@ kurtosis trade. For rates, the short rate is the initial slope of the yield curv
 - Figures (about 80): only captions, axis labels and legends survived (for example Figures 3.7/3.8, the skew and kurtosis
   payoff diagrams, are readable only from their captions and the text).
 - Nothing else missing; pp. 224-236 are references and index.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmjavaheri-01`: not testable (R104): 10% OTM monthly strikes are outside the lake's ATM +-10; bhavcopy in the lake is a weekly sample, closes only
+- `book-fmjavaheri-02`: not testable (R104): needs the next-monthly chain and far legs (see javaheri-01)
+- `book-fmjavaheri-03`: tested (R104): VOL: 358 trades, win 51%, net -Rs 29,272 design, holdout -Rs 21,176 (fail)

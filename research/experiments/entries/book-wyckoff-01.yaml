@@ -31,11 +31,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-01; trade: buy AT
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: index-futures tick prints exist only in the phone''s recorder since 12 Oct 2026 (private
+    repo); ~3 months needed'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: R7: signed option flow leads (IC +0.109 at 1 minute) but its edge is 0.42x of cost; R9 delta-divergence
-  proxy no. Assumptions: The book reads each print at the bid or offer; we only have retail snapshots, so the tick rule stands
-  in for the aggressor side (R7 found the quote rule fails on snapshots). ''Large lot'' is made relative to the median print,
-  as the book says lot size is relative. Horizon 15 minutes is ours.'
+notes: 'R104: needs data we lack (index-futures tick prints exist only in the phone''s recorder since 12 Oct 2026 (private
+  repo); ~3 months needed).'

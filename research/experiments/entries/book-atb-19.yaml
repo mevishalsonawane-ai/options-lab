@@ -1,17 +1,19 @@
 id: book-atb-19
-title: 'Cup and handle (and inverse): break of the rim after the handle (The Advanced Trading Book, book rule, proposed)'
+title: 'Cup and handle (and inverse): break of the rim after the handle (The Advanced Trading Book, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 4, Cup and handle (p51,
   p52, p57)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying
   price. Entry: Rim = a swing high; a cup of >= 15 bars whose lowest low is >= 1.5 ATR below the rim and whose right side
   returns within 0.25 ATR of the rim; a handle of 3-10 bars retracing <= 50% of the cup depth; buy at the open after the first
   close above the rim. Mirror below a support for the inverse. Stop: Below the handle''s low. Exit: Target = cup depth from
   the rim, else square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31; CRY 2023-10-01 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once); CRY 2026-04-01 - 2026-12-31
+    (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,12 +28,18 @@ model_or_rule: 'Rim = a swing high; a cup of >= 15 bars whose lowest low is >= 1
   from the rim, else square-off. | filters: None.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-19; trade: buy 1-ITM CE (PE for the inverse); CRYPTO: plus step
   profit lock'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 6
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us. Assumptions: All geometry ours; the book draws only a resistance line and the
-  shape.'
+  summary: 'IDX (index spot, bought option), variant 60m: design 74 trades, win 35%, net -Rs 12,598, folds Rs 26,623, -Rs
+    10,786, -Rs 28,435; p 1.000, BH q 1.000; holdout 17 trades, win 35%, net -Rs 12,197. R104 verdict: fail. | MCXI (MCX mini
+    future (own bars)), variant 60m: design 5 trades, win 40%, net -Rs 606, folds -Rs 10,113, Rs 9,507; p 1.000, BH q 1.000;
+    holdout 6 trades, win 50%, net Rs 11,058. R104 verdict: fail. | CRY (BTC/ETH perp), variant 60m: design 250 trades, win
+    50%, net -Rs 26,734, folds -Rs 32,796, Rs 6,063; p 1.000, BH q 1.000; holdout 86 trades, win 47%, net -Rs 9,105. R104
+    verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us. Assumptions: All geometry ours; the book draws
+  only a resistance line and the shape.'

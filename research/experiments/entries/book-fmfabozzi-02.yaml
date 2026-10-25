@@ -1,17 +1,18 @@
 id: book-fmfabozzi-02
-title: 200-day moving-average band on index daily closes, buy the option (Focardi and Fabozzi, book rule, proposed)
+title: 200-day moving-average band on index daily closes, buy the option (Focardi and Fabozzi, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Focardi and Fabozzi''s rule from The Mathematics of Financial Modeling and Investment Management (Ch. 19, Technical
   analysis (moving-average rule)) makes money after real charges and slippage, walk-forward, with BH across the rules tried.
   Signal source: underlying price. Entry: Long when the close rises above (1 + b) x SMA(200) of daily closes; short when it
   falls below (1 - b) x SMA(200). Band b in {0, 1, 2}% fixed before testing. Enter next session at 09:20. Stop: Opposite band
   cross (book); plus a 50% premium hard stop on the option (our addition). Exit: Opposite band cross, or 5 sessions before
   the monthly expiry (roll if the signal still holds).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: DLY 2006-01-01 - 2021-12-31
+  holdout: DLY 2022-01-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -24,13 +25,16 @@ model_or_rule: 'Long when the close rises above (1 + b) x SMA(200) of daily clos
   signal still holds). | filters: none in the book; EMA(200) as a pre-registered variant since the book names both'
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmfabozzi-02; trade: buy the 1-ITM CE (long) or PE (short), nearest
   monthly; futures mirror'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 4
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R102 daily momentum reversed in the holdout; swing studies of multi-day trend holds sat inside the
-  coin-flip band. The 200-day band itself is not tested by us.. Assumptions: The book only says buy above some percentage
-  of a long average such as 200 days; band values and expiry handling are ours. Few signals a year, so the sample is small.'
+  summary: 'DLY (index daily, futures proxy), variant b1: design 119 trades, win 15%, net Rs 2,592, folds -Rs 210,131, -Rs
+    14,771, Rs 227,494; p 0.291, BH q 1.000; holdout 31 trades, win 19%, net -Rs 535,781. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). futures proxy instead of the bought option Our nearest test: R102 daily momentum
+  reversed in the holdout; swing studies of multi-day trend holds sat inside the coin-flip band. The 200-day band itself is
+  not tested by us.. Assumptions: The book only says buy above some percentage of a long average such as 200 days; band values
+  and expiry handling are ours. Few signals a year, so the sample is small.'

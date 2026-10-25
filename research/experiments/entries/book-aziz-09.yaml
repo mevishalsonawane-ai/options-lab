@@ -1,5 +1,6 @@
 id: book-aziz-09
-title: Sell half (or a quarter) at the first level, move the stop to break-even (Andrew Aziz, book rule, proposed)
+title: Sell half (or a quarter) at the first level, move the stop to break-even (Andrew Aziz, book rule, covered by an earlier
+  study)
 family: trade-management
 date: '2026-10-25'
 doc: research/books/TESTABLE_RULES.md
@@ -24,9 +25,9 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-09; trade: two lots 
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. R81 X5 half at 1R + break-even (-Rs 79k design, -Rs 35k final),
+    R100 G13'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R81 X5 (half at +15%, runner to breakeven) Rs 1,78,523 vs Rs 2,57,249 own exits; R100 G13 failed.
-  Assumptions: The book uses 1/4 with a hotkey or 1/2 in summaries; 2 lots = halves.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). R81 X5 half at 1R + break-even (-Rs 79k design, -Rs 35k final), R100 G13'

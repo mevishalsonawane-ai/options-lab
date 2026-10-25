@@ -1,18 +1,19 @@
 id: book-aziz-04
 title: 'VWAP moving-average trend: below VWAP and riding the 5-minute 20 EMA after the Late-Morning (Andrew Aziz, book rule,
-  proposed)'
+  tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, VWAP Moving Average Trend) makes money after
   real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume. Entry:
   From 11:00 to 13:30: the last 6 five-minute closes all below VWAP and the 20 EMA falling; a 5-minute bar''s high touches
   the 9 or 20 EMA and the bar closes below both -> short at that close. Mirror long above VWAP. Stop: a 5-minute close above
   the 20 EMA Exit: Exit on a 5-minute close above the 20 EMA; take a quarter when the close is more than 1 x the 14-bar 5-minute
   ATR beyond the 20 EMA and move the stop to entry; time exit 15:00 (the book: trends end around 3 p.m.).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -28,13 +29,18 @@ model_or_rule: 'From 11:00 to 13:30: the last 6 five-minute closes all below VWA
   | filters: None beyond the VWAP side; one trade a side a day.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-04; trade: buy ATM PE on a short signal, ATM CE on a long; stops
   on the index'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R29 EMA pullback patterns 0 of 55 pass; R86 continuation of midday VWAP stretches is descriptive
-  only. Assumptions: ''Lost VWAP in the Late-Morning'' fixed as 6 consecutive 5-minute closes on one side; ''touch'' = the
-  bar''s high/low reaches the EMA; the 1-ATR distance for the partial is ours.'
+  summary: 'IDX (index spot, bought option), variant 5m: design 2677 trades, win 25%, net -Rs 327,740, folds -Rs 40,685, -Rs
+    13,024, -Rs 42,561, -Rs 231,470; p 1.000, BH q 1.000; holdout 325 trades, win 22%, net -Rs 48,469. R104 verdict: fail.
+    | MCXI (MCX mini future (own bars)), variant 5m: design 61 trades, win 21%, net -Rs 39,218, folds Rs 0, -Rs 6,485, -Rs
+    32,733; p 1.000, BH q 1.000; holdout 126 trades, win 33%, net Rs 405. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). index TWAP proxy; MCX real VWAP Our nearest test: R29 EMA pullback patterns 0 of
+  55 pass; R86 continuation of midday VWAP stretches is descriptive only. Assumptions: ''Lost VWAP in the Late-Morning'' fixed
+  as 6 consecutive 5-minute closes on one side; ''touch'' = the bar''s high/low reaches the EMA; the 1-ATR distance for the
+  partial is ours.'

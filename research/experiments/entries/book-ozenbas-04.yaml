@@ -1,18 +1,19 @@
 id: book-ozenbas-04
 title: Fade big moves on no-news days, follow them on scheduled-event days (Ozenbas, Pagano, Schwartz and Weber, book rule,
-  proposed)
+  tested in R104)
 family: calendar-events
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Ozenbas, Pagano, Schwartz and Weber''s rule from Liquidity, Markets and Trading in Action (Ch. 2.3 (information
   vs liquidity shocks)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
   source: underlying price (plus an event calendar). Entry: Between 09:30 and 14:30, when a 5-minute index move exceeds 3x
   the trailing 20-day average absolute 5-minute move for that time of day: on a day with no scheduled event, enter AGAINST
   the move at the next bar; on an RBI / Budget / heavyweight-results day, enter WITH the move. Stop: Assumption: 1x the triggering
   5-minute move beyond the entry, on the index. Exit: Assumption: 30 minutes after entry, or the stop; flat by 15:10.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,14 +27,18 @@ model_or_rule: 'Between 09:30 and 14:30, when a 5-minute index move exceeds 3x t
   discovery) or after 14:30.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-04; trade: buy ATM CE on a long signal, ATM PE on a short;
   stops on the underlying'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R86: fading failed pokes lost on all 6 level x index tests (295-804 trades, Rs -2.3 to -5.5 lakh);
-  fade to VWAP lost Rs 64,786 on 71 trades. h28: event days move more but 8,820 variants found no side.. Assumptions: The
-  book gives only the principle (liquidity shocks revert, information shocks do not). The 3x threshold, windows, stop and
-  holding time are our literal reading and must be pre-registered.'
+  summary: 'IDX (index spot, bought option), variant 1m: design 6395 trades, win 41%, net -Rs 575,827, folds -Rs 261,960,
+    -Rs 92,544, -Rs 102,555, -Rs 118,769; p 1.000, BH q 1.000; holdout 745 trades, win 44%, net -Rs 10,056. R104 verdict:
+    fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). event days = events.csv (2024+); earlier days count as no-news days (calendar gap,
+  labelled) Our nearest test: R86: fading failed pokes lost on all 6 level x index tests (295-804 trades, Rs -2.3 to -5.5
+  lakh); fade to VWAP lost Rs 64,786 on 71 trades. h28: event days move more but 8,820 variants found no side.. Assumptions:
+  The book gives only the principle (liquidity shocks revert, information shocks do not). The 3x threshold, windows, stop
+  and holding time are our literal reading and must be pre-registered.'

@@ -1,16 +1,17 @@
 id: book-heitkoetter-09
-title: 'Trend channel: enter at the trendline, exit at the channel line (Markus Heitkoetter, book rule, proposed)'
+title: 'Trend channel: enter at the trendline, exit at the channel line (Markus Heitkoetter, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 3, Trendlines & Trend Channels) makes money
   after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: With
   a live downtrend line (hk-trendline-break-trend), draw the channel line parallel through the lowest low since anchor 1;
   short when price touches the downtrend line and the bar closes below it. Mirror for uptrends. Stop: a close beyond the trendline
   by 0.1 x ATR14 Exit: touch of the channel line; 15:10'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -23,12 +24,15 @@ model_or_rule: 'With a live downtrend line (hk-trendline-break-trend), draw the 
   wide so the target exceeds the round-trip cost'
 settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-09; trade: buy 1-ITM PE in a downtrend channel, CE in an
   uptrend channel'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us; nearest OBUY_GB MR-05 TWAP stretch fade Rs -91,856 walk-forward (713 trades).
-  Assumptions: Stop buffer, width filter and channel construction details are ours; the book gives only the idea.'
+  summary: 'IDX (index spot, bought option), variant 5m: design 1259 trades, win 33%, net -Rs 4,494, folds Rs 31,246, Rs 1,777,
+    Rs 23,988, -Rs 61,505; p 1.000, BH q 1.000; holdout 142 trades, win 28%, net -Rs 25,975. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us; nearest OBUY_GB MR-05 TWAP stretch fade Rs -91,856
+  walk-forward (713 trades). Assumptions: Stop buffer, width filter and channel construction details are ours; the book gives
+  only the idea.'

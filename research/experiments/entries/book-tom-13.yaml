@@ -1,16 +1,17 @@
 id: book-tom-13
-title: Spinning top at the end of a pullback, enter on its break with the main trend (Trader Tom, book rule, proposed)
+title: Spinning top at the end of a pullback, enter on its break with the main trend (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Trader Tom''s rule from The First Trading Manual (Pattern Number 2, Spinning Top, p. 83-84) makes money after
   real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Main trend
   DOWN (close below 89-SMA on 15-minute, falling over the last 40 bars); a counter-rally of at least 5 bars; a spinning top
   (body <= 30% of range, both wicks >= 25%); sell-stop below its low, valid 5 bars. Mirror for uptrends. Stop: the rally''s
   high Exit: the low that started the rally, or square-off 15:10'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -21,12 +22,14 @@ model_or_rule: 'Main trend DOWN (close below 89-SMA on 15-minute, falling over t
   5 bars; a spinning top (body <= 30% of range, both wicks >= 25%); sell-stop below its low, valid 5 bars. Mirror for uptrends.
   | stop: the rally''s high | exit: the low that started the rally, or square-off 15:10 | filters: 09:30-14:30'
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-13; trade: buy 1-ITM PE (CE in the mirror)'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87: spinning top no edge; 0 of 4,049 shape x context cells. Assumptions: The book''s example uses
-  40-50 bars of downtrend and 8-10 bars of rally; thresholds, target and trend proxy are ours.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 857 trades, win 43%, net -Rs 152,612, folds -Rs 42,646, -Rs
+    22,992, -Rs 32,664, -Rs 54,310; p 1.000, BH q 1.000; holdout 103 trades, win 31%, net -Rs 44,250. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R87: spinning top no edge; 0 of 4,049 shape x context cells. Assumptions:
+  The book''s example uses 40-50 bars of downtrend and 8-10 bars of rally; thresholds, target and trend proxy are ours.'

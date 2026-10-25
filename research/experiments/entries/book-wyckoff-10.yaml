@@ -1,15 +1,16 @@
 id: book-wyckoff-10
-title: Abandon a trade that does not act right at once (Wyckoff, book rule, proposed)
+title: Abandon a trade that does not act right at once (Wyckoff, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. X) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: option premium progress (exit only) on an underlying signal. Entry: Any entry
   from an existing arm Stop: the arm''s own stop Exit: exit if, 20 minutes after entry, the index has never moved 0.25x the
   R16 expected 30-minute range in the trade''s favour'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -19,13 +20,17 @@ features:
 model_or_rule: 'Any entry from an existing arm | stop: the arm''s own stop | exit: exit if, 20 minutes after entry, the index
   has never moved 0.25x the R16 expected 30-minute range in the trade''s favour | filters: none'
 settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-10; trade: close the arm''s option'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R12 no-progress exit beat random exits on ORB Fresh (holdout +Rs 14,365 over 474 trades, twin p
-  0.001) but did not help Liquidity. Assumptions: Book: ''it must act up to expectations or be abandoned immediately''; R12
-  used the option''s +3% in 20 minutes; this version reads progress on the underlying'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant base: design 9159 trades, win 43% (B0 46%), net Rs 611,583
+    vs B0 Rs 774,750 (delta -Rs 163,167), quarters -Rs 16,477, -Rs 31,415, -Rs 13,889, -Rs 117,340; p 1.000, BH q 1.000; final
+    delta Rs 55,171. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). no-progress exit at 20 minutes, overlay on every arm Our nearest test: R12 no-progress
+  exit beat random exits on ORB Fresh (holdout +Rs 14,365 over 474 trades, twin p 0.001) but did not help Liquidity. Assumptions:
+  Book: ''it must act up to expectations or be abandoned immediately''; R12 used the option''s +3% in 20 minutes; this version
+  reads progress on the underlying'

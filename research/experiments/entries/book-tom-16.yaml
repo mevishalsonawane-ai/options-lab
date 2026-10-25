@@ -1,16 +1,17 @@
 id: book-tom-16
-title: Equal-size pullback limit buy (harmonic retracement) (Trader Tom, book rule, proposed)
+title: Equal-size pullback limit buy (harmonic retracement) (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Trader Tom''s rule from The First Trading Manual (Case Story: David the Swing Trader, p. 156-158) makes money
   after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: In
   a 60-minute uptrend, measure the last completed pullback (swing high to swing low, 2-bar fractals); after a new swing high,
   place a limit buy at new high minus that pullback size; fill on touch. Mirror in downtrends. Stop: 1.0 x the pullback size
   beyond the fill Exit: the new swing high, or square-off 15:10; futures variant may hold 3 sessions'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -25,12 +26,17 @@ model_or_rule: 'In a 60-minute uptrend, measure the last completed pullback (swi
   | filters: only when the 60-minute chart shows higher highs and higher lows'
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-16; trade: buy 1-ITM CE when the limit level is touched (option
   bought at that minute)'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R4 ABCD on the touch of D: 10,927 trades, -Rs 227 a trade net; Fibonacci pullback entries no better
-  than random (R4/h37). Assumptions: The book gives the entry only; stop size, target and trend test are ours.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 937 trades, win 36%, net -Rs 248,832, folds -Rs 83,293, -Rs
+    3,511, -Rs 14,999, -Rs 147,029; p 1.000, BH q 1.000; holdout 128 trades, win 30%, net -Rs 84,724. R104 verdict: fail.
+    | MCXI (MCX mini future (own bars)), variant 15m: design 98 trades, win 36%, net Rs 44,175, folds Rs 0, Rs 8,896, Rs 35,279;
+    p 0.019, BH q 0.806; holdout 128 trades, win 43%, net -Rs 16,889. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R4 ABCD on the touch of D: 10,927 trades, -Rs 227 a trade net;
+  Fibonacci pullback entries no better than random (R4/h37). Assumptions: The book gives the entry only; stop size, target
+  and trend test are ours.'

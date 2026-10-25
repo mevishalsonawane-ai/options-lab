@@ -1,5 +1,5 @@
 id: book-heitkoetter-08
-title: Bollinger 21 / 2 band fade (Markus Heitkoetter, book rule, proposed)
+title: Bollinger 21 / 2 band fade (Markus Heitkoetter, book rule, covered by an earlier study)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/books/TESTABLE_RULES.md
@@ -23,10 +23,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-08; trade: bu
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. OBUY_GB MR-02 Bollinger fade: -Rs 90,790 walk-forward on 2,136'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: OBUY_GB MR-02 Bollinger alert candle Rs -90,790 walk-forward (2136 trades); R71 P3 squeeze release
-  lost in the final. Assumptions: ''Moves below'' read as a trade beyond the band; middle-band exit added as the natural mean-reversion
-  target.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). OBUY_GB MR-02 Bollinger fade: -Rs 90,790 walk-forward on 2,136'

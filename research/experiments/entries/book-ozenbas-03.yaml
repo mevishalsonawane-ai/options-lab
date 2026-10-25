@@ -27,11 +27,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-03; trade: the ar
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: no historical bid/ask for index options (one snapshot, 6 Oct 2026)'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: Not tested by us. h24 measured the spread to be saved (half-spread 0.16% NIFTY/BANKNIFTY, one snapshot);
-  h14 tested only marketable limits.. Assumptions: The 2-minute window, one re-peg and the 0.15% threshold are ours. The test
-  must count missed trades at their market-order P&L (opportunity cost) and the adverse-selection bias (fills happen more
-  often when price moves against us).'
+notes: 'R104: needs data we lack (no historical bid/ask for index options (one snapshot, 6 Oct 2026)).'

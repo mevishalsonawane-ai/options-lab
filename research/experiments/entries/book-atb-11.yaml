@@ -1,17 +1,19 @@
 id: book-atb-11
-title: 'Sideways box after a move: break, retest, confirming candle (Strategy 6) (The Advanced Trading Book, book rule, proposed)'
+title: 'Sideways box after a move: break, retest, confirming candle (Strategy 6) (The Advanced Trading Book, book rule, tested
+  in R104)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 3, Strategy 6 (p31))
   makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
   Entry: Prior move >= 2 ATR within 10 bars; then >= 6 bars whose highs and lows all lie inside a band <= 1.2 ATR tall (box
   top = highest high, bottom = lowest low). A 15m close above the top = break. Within 12 five-minute bars price returns to
   within 0.1 ATR of the top and a 5m bar closes green above it: buy at the next open. Mirror below the bottom. Stop: Below
   the box midpoint (variant: below the retest bar''s low). Exit: Measured move = box height from the break, else square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,13 +28,18 @@ model_or_rule: 'Prior move >= 2 ATR within 10 bars; then >= 6 bars whose highs a
   Below the box midpoint (variant: below the retest bar''s low). | exit: Measured move = box height from the break, else square-off.
   | filters: Box must start after the prior move (consolidation, not opening range).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-11; trade: buy 1-ITM CE above the box, 1-ITM PE below'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 4
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: Closest arm: Donchian plain breakout, Rs 55,439 on 1,787 final trades (R71); retest not better on
-  the morning range (R22); ORB family 0 of 257 (R92); run it beside Donchian with and without the retest. Assumptions: Box
-  size and length, retest window, stop and target are ours; book gives only the retest-and-bullish-candle entry.'
+  summary: 'IDX (index spot, bought option), variant retest: design 52 trades, win 25%, net -Rs 14,409, folds -Rs 4,709, -Rs
+    2,903, -Rs 6,797; p 1.000, BH q 1.000; holdout 7 trades, win 14%, net -Rs 5,433. R104 verdict: fail. | MCXI (MCX mini
+    future (own bars)), variant retest: design 9 trades, win 33%, net -Rs 943, folds -Rs 1,086, Rs 143; p 1.000, BH q 1.000;
+    holdout 6 trades, win 17%, net -Rs 7,385. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: Closest arm: Donchian plain breakout, Rs 55,439 on 1,787 final
+  trades (R71); retest not better on the morning range (R22); ORB family 0 of 257 (R92); run it beside Donchian with and without
+  the retest. Assumptions: Box size and length, retest window, stop and target are ours; book gives only the retest-and-bullish-candle
+  entry.'

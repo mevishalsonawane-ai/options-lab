@@ -1,5 +1,5 @@
 id: book-woods-08
-title: Three-bar reversal (Galen Woods, book rule, proposed)
+title: Three-bar reversal (Galen Woods, book rule, covered by an earlier study)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/books/TESTABLE_RULES.md
@@ -22,9 +22,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-woods-08; trade: buy 1-IT
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. R71 P7 three-bar reversal (final -Rs 1,67,689 on 855, twin p
+    0.002: timing real, below option cost); the book''s stop/exit are R71''s'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R71 P7 at day high/low: final -Rs 1,67,689 on 855 trades, twin p 0.002 (timing real, below costs)..
-  Assumptions: Book''s literal rule; R71 tested a version restricted to the day''s high/low.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). R71 P7 three-bar reversal (final -Rs 1,67,689 on 855, twin p 0.002: timing real,
+  below option cost); the book''s stop/exit are R71''s'

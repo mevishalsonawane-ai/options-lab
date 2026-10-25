@@ -1,8 +1,8 @@
 id: book-sadowski-06
-title: Buy the retest of broken resistance, scaled in three parts (Roman Sadowski, book rule, proposed)
+title: Buy the retest of broken resistance, scaled in three parts (Roman Sadowski, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 6) makes money after real
   charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Uptrend = the
   last two 15-min swing highs and lows (3 bars each side) both rising. When a close breaks above the last swing high, place
@@ -10,9 +10,10 @@ hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strat
   leg from the last swing low to the new high. Orders live until 14:30 or a new high is made. Mirror for downtrends. Stop:
   Not stated; we use the last swing low below the 50% level. Exit: Target = the new high plus 1 x the leg length, or square-off
   at 15:15.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,13 +27,16 @@ model_or_rule: 'Uptrend = the last two 15-min swing highs and lows (3 bars each 
   x the leg length, or square-off at 15:15. | filters: Swing-structure trend as above; pivot points optional (not used).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-06; trade: Buy the 1-ITM CE in parts as each limit on the
   index fills (PE for the mirror).'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: OBUY_FINAL LV-01 PDH/PDL break-retest: 64 variants, -129,689 walk-forward; HUNT_R20C 2-close breaks
-  continue 51% of 7,548; HUNT_R20B levels no better than random. Assumptions: The book gives no stop, target or trend definition;
-  all are ours. ''Zone'' treated as the exact level for the limit.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 795 trades, win 42%, net Rs 92,562, folds -Rs 35,965, Rs
+    30,417, Rs 6,810, Rs 91,300; p 0.086, BH q 1.000; holdout 82 trades, win 39%, net -Rs 14,601. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). three limit parts modelled as three sub-lots Our nearest test: OBUY_FINAL LV-01 PDH/PDL
+  break-retest: 64 variants, -129,689 walk-forward; HUNT_R20C 2-close breaks continue 51% of 7,548; HUNT_R20B levels no better
+  than random. Assumptions: The book gives no stop, target or trend definition; all are ours. ''Zone'' treated as the exact
+  level for the limit.'

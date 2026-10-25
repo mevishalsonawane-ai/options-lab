@@ -347,3 +347,11 @@ from the fitted curve. Theory and curve fitting; E is the maths behind Method 12
 Nothing was unreadable in the prose. Many displayed formulas came through the text layer with broken layout (fractions
 and sub/superscripts split across lines), and the figures (payoff diagrams, Fig. 1.1, 1.2, B.1) are blank in the text;
 the surrounding text was enough to follow every method.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmbinomial-01`: not testable (R104): needs simultaneous bid/ask
+- `book-fmbinomial-02`: not testable (R104): needs simultaneous bid/ask
+- `book-fmbinomial-03`: tested (R104): VOL: 424 trades, win 58%, net Rs 372,595 design, holdout -Rs 28,900 (fail)

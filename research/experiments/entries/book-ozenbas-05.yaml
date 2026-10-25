@@ -1,18 +1,19 @@
 id: book-ozenbas-05
 title: Buy when the best bid steps to a new higher level (TraderEx Exercise 4) (Ozenbas, Pagano, Schwartz and Weber, book
-  rule, proposed)
+  rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Ozenbas, Pagano, Schwartz and Weber''s rule from Liquidity, Markets and Trading in Action (Ch. 5.4, Exercise
   4) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying
   price (index futures best bid; proxy: 1-minute high). Entry: Long when the index future''s best bid (proxy: the 1-minute
   close) makes a new high of the last 15 minutes; short on a new 15-minute low. One position at a time. Stop: Not stated.
   Assumption: the opposite 15-minute extreme on the future. Exit: Not stated beyond ''sell later at a higher price'' and ''flat
   by the close''. Assumption: exit on the opposite 15-minute extreme or at 15:10.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -25,13 +26,17 @@ model_or_rule: 'Long when the index future''s best bid (proxy: the 1-minute clos
   opposite 15-minute extreme or at 15:10. | filters: None in the book.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-05; trade: buy ATM CE on a long signal, ATM PE on a short;
   stops on the underlying'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: Close to tested breakout rules: R89 previous-day high/low break 0 of 180, ORB family 0 of 257 (R92),
-  F1/R30 direction coin flip; R7 order flow 0.42x of cost.. Assumptions: The 15-minute lookback and the 1-minute-close proxy
-  for the bid are ours; the book''s exercise is discretionary and warns the spread is paid on every round trip.'
+  summary: 'IDX (index spot, bought option), variant 1m: design 9206 trades, win 30%, net -Rs 1,017,788, folds -Rs 309,589,
+    -Rs 228,371, -Rs 134,356, -Rs 345,472; p 1.000, BH q 1.000; holdout 1096 trades, win 32%, net -Rs 176,349. R104 verdict:
+    fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). 1-minute spot close as the best-bid proxy (the book''s futures bid has no history)
+  Our nearest test: Close to tested breakout rules: R89 previous-day high/low break 0 of 180, ORB family 0 of 257 (R92), F1/R30
+  direction coin flip; R7 order flow 0.42x of cost.. Assumptions: The 15-minute lookback and the 1-minute-close proxy for
+  the bid are ours; the book''s exercise is discretionary and warns the spread is paid on every round trip.'

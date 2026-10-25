@@ -1,17 +1,18 @@
 id: book-bennett-04
 title: Long ATM straddle, gamma-scalped with futures at fixed index bands, only when implied is cheap (Colin Bennett, book
-  rule, proposed)
+  rule, tested in R104)
 family: option-structure
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 2.1 Delta hedging, Ch. 3.5 Discrete hedging) makes money after
   real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (implied
   vs forecast realised); hedge on the underlying future. Entry: At 09:20 if nearest-expiry ATM IV / forecast intraday realised
   vol <= its rolling 30th percentile, buy 1 lot ATM straddle. Stop: Close everything if the straddle plus hedge loses 40%
   of the premium paid. Exit: 15:10 (15:05 on expiry day).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: VOL 2021-08-02 - 2026-03-31
+  holdout: VOL 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,13 +27,16 @@ model_or_rule: 'At 09:20 if nearest-expiry ATM IV / forecast intraday realised v
   trends''.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-04; trade: 1 lot ATM CE + PE plus 0 or +-1 NIFTY / BANKNIFTY
   future lot.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R89: unhedged straddles 0 of 18 (4,302 design straddles); h29: buying when IV is cheap, 16 variants
-  all lost. A futures-hedged version was never tested.. Assumptions: A one-lot hedge is coarse (NIFTY future 65 units = option
-  lot), so the hedge only switches in whole lots; thresholds are ours. Futures costs added per hedge.'
+  summary: 'VOL (option structure (chain as context)), variant B: design 557 trades, win 27%, net -Rs 279,847, folds -Rs 82,575,
+    -Rs 72,347, -Rs 124,924; p 1.000, BH q 1.000; holdout 59 trades, win 27%, net -Rs 35,441. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). hedge on the spot as a futures proxy Our nearest test: R89: unhedged straddles 0
+  of 18 (4,302 design straddles); h29: buying when IV is cheap, 16 variants all lost. A futures-hedged version was never tested..
+  Assumptions: A one-lot hedge is coarse (NIFTY future 65 units = option lot), so the hedge only switches in whole lots; thresholds
+  are ours. Futures costs added per hedge.'

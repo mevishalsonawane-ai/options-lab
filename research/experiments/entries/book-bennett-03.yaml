@@ -1,16 +1,17 @@
 id: book-bennett-03
-title: Put underwriting as a defined-risk bull put spread at 25 delta (Colin Bennett, book rule, proposed)
+title: Put underwriting as a defined-risk bull put spread at 25 delta (Colin Bennett, book rule, tested in R104)
 family: option-structure
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 1.2, Put underwriting benefits from selling expensive implied)
   makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options
   structure (sell the vol premium and skew); no direction signal. Entry: Day after expiry 09:20: sell the nearest-expiry put
   with delta closest to -0.25 and buy the put 3 strikes lower. Stop: Close if the spread''s value reaches 2x the credit. Exit:
   Hold to 15:05 on expiry day (app square-off) or the stop.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: VOL 2021-08-02 - 2026-03-31
+  holdout: VOL 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -21,13 +22,15 @@ model_or_rule: 'Day after expiry 09:20: sell the nearest-expiry put with delta c
   lower. | stop: Close if the spread''s value reaches 2x the credit. | exit: Hold to 15:05 on expiry day (app square-off)
   or the stop. | filters: Optional (book): only when the put''s IV exceeds the index''s forecast realised vol (see vrp-filtered-iron-fly).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-03; trade: 1 lot bull put spread; long leg filled first.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R103 tested symmetric credit structures, not one-sided put spreads: 0 of 24. IV1''s put-writing
-  OI rule was a buying signal, not put selling.. Assumptions: Bennett''s naked short put at a support level is replaced by
-  a 25-delta strike (support levels were random lines in R20b) and a spread (no naked shorts).'
+  summary: 'VOL (option structure (chain as context)), variant plain: design 222 trades, win 55%, net -Rs 28,552, folds Rs
+    18,241, -Rs 19,846, -Rs 26,947; p 1.000, BH q 1.000; holdout 23 trades, win 43%, net -Rs 6,907. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R103 tested symmetric credit structures, not one-sided put spreads:
+  0 of 24. IV1''s put-writing OI rule was a buying signal, not put selling.. Assumptions: Bennett''s naked short put at a
+  support level is replaced by a 25-delta strike (support levels were random lines in R20b) and a spread (no naked shorts).'

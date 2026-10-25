@@ -266,3 +266,15 @@ Evidence is three hand-marked six-month chart exercises and one month of the aut
   only their captions and the author's surrounding text were readable. The January 2004 trade log (Figure 39, p. 112)
   is an image; only the author's summary of it was readable. Blank print-out forms (pp. 15, 37-39, 110) have no
   content. No text pages were missing.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-smith-01`: tested (R104): DLY: 172 trades, win 42%, net Rs 347,212 design, holdout Rs 168,395 (fail)
+- `book-smith-02`: tested (R104): IDX: 383 trades, win 43%, net -Rs 6,265 design, holdout -Rs 38,057 (fail)
+- `book-smith-03`: tested (R104): DLY: 895 trades, win 39%, net Rs 737,471 design, holdout Rs 62,799 (fail)
+- `book-smith-04`: tested (R104): MCXD: 224 trades, win 35%, net Rs 29,933 design, holdout Rs 588,190 (fail)
+- `book-smith-05`: not testable (R104): no results / AGM calendar for F&O stocks
+- `book-smith-06`: tested (R104): CRY: 53 trades, win 36%, net Rs 157,221 design, holdout Rs 32,164 (fail)
+- `book-smith-07`: tested (R104): DLY: 400 trades, win 41%, net Rs 588,417 design, holdout Rs 329,391 (fail)

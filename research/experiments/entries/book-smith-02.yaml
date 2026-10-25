@@ -1,8 +1,8 @@
 id: book-smith-02
-title: SST six rules on 1-hour index bars (intraday-to-few-days mapping) (David Graeme Smith, book rule, proposed)
+title: SST six rules on 1-hour index bars (intraday-to-few-days mapping) (David Graeme Smith, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 7-9 (our timeframe mapping)) makes money after real
   charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Same as sst-six-rules-index-daily
   with every ''day'' replaced by a completed 60-minute bar: SMA(50) of hourly closes, DMI(8) on hourly bars, reference bar
@@ -10,9 +10,10 @@ hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 7-9 (our t
   low minus 0.25 x ATR(14, hourly) (long). Exit: Trail to each new non-inside hourly bar''s low minus the same buffer once
   it makes a new high since entry; half-bar lock on a bar >= 2.5 x hourly ATR; no target; either square off at 15:15 (intraday
   variant) or hold overnight up to 5 sessions (swing variant).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -28,14 +29,16 @@ model_or_rule: 'Same as sst-six-rules-index-daily with every ''day'' replaced by
   expiry day for weekly contracts.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-smith-02; trade: intraday variant: 1-ITM weekly CE/PE; swing variant:
   1-ITM monthly CE/PE; stops on the index'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: OBUY_GB TI-09 (ADX/DMI + set-up candle break, 5/15-minute): walk-forward Rs -345,311, 0/5 years,
-  48 variants; R73 ADX filters failed; R89 previous-day high/low break 0 of 180.. Assumptions: The book is end-of-day only;
-  the hourly version is our mapping and should be labelled as such. Buffer and ''big bar'' scaled to ATR because the book''s
-  0.5% / 5% are share-sized.'
+  summary: 'IDX (index spot, bought option), variant 60m: design 383 trades, win 43%, net -Rs 6,265, folds -Rs 9,655, -Rs
+    26,927, Rs 25,355, Rs 4,961; p 1.000, BH q 1.000; holdout 48 trades, win 33%, net -Rs 38,057. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). intraday variant (15:15 out) bought options Our nearest test: OBUY_GB TI-09 (ADX/DMI
+  + set-up candle break, 5/15-minute): walk-forward Rs -345,311, 0/5 years, 48 variants; R73 ADX filters failed; R89 previous-day
+  high/low break 0 of 180.. Assumptions: The book is end-of-day only; the hourly version is our mapping and should be labelled
+  as such. Buffer and ''big bar'' scaled to ATR because the book''s 0.5% / 5% are share-sized.'

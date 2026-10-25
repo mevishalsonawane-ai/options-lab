@@ -209,3 +209,10 @@ means the paper says nothing; we add no rules the paper does not give.
 - Figure 2 (average score by product feature, 2015-2017) and Figure 3 (reasons for using algorithms) are bar charts with
   no text layer; only the numbers quoted in the prose (5.89, 5.85, 13.9%, 7.1%, 5.8%, 7%, 4.4%, 9.2%) could be read.
 - The Arabic abstract was not read separately; it mirrors the English abstract.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-atm-01`: not testable (R104): multi-lot exit fills need book depth
+- `book-atm-02`: not testable (R104): index-futures minutes only from 29 Jul 2026 (57 sessions)

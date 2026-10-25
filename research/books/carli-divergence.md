@@ -199,3 +199,12 @@ that the book never teaches; the Fibonacci size check in rule 3 is the only harm
 All 55 figures (screenshots with no text layer; OCR of figures 15-16 produced only fragments). In particular Figures 38
 (the Fibonacci size rule) and 42 (which leg the target extensions use) are explained only by the pictures, so those
 two rules are written here in their most literal reading. Nothing else.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-carli-01`: tested (R104): DLY: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail); MCXD: 0 trades, win -, net Rs 0 design, holdout -Rs 284 (fail)
+- `book-carli-02`: tested (R104): IDXF: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail); MCXI: 0 trades, win -, net Rs 0 design, holdout Rs 2,646 (fail)
+- `book-carli-03`: tested (R104): IDX: 11 trades, win 36%, net -Rs 11,019 design, holdout Rs 0 (fail)
+- `book-carli-04`: tested (R104): ARM: delta vs the arm -Rs 518,470 design (fail)

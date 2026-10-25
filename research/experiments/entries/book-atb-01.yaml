@@ -1,8 +1,9 @@
 id: book-atb-01
-title: Hammer at a prior swing low, bought only after an up candle confirms (The Advanced Trading Book, book rule, proposed)
+title: Hammer at a prior swing low, bought only after an up candle confirms (The Advanced Trading Book, book rule, tested
+  in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 2, Hammer (p11)) makes
   money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry:
   Hammer bar H: lower wick >= 2x body, upper wick <= 0.25x range, range >= 0.8 ATR; downtrend into H; H''s low within 0.25
@@ -10,9 +11,10 @@ hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simp
   bar after the confirmation bar. Mirror (shooting star / hanging man at a swing high, confirmation close below H''s low)
   for shorts. Stop: Underlying 1 tick beyond H''s low (high for shorts). Exit: Target 3R on the underlying (the book''s 1:3
   ratio); else square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -28,14 +30,18 @@ model_or_rule: 'Hammer bar H: lower wick >= 2x body, upper wick <= 0.25x range, 
   book''s 1:3 ratio); else square-off. | filters: None stated beyond prior decline and support.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-01; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short;
   stop and target on the underlying'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 4
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87: NIFTY 15m hammer followed by -0.47 ATR over 20 candles vs +0.19 matched; wick lows not defended
-  (59% vs 57%, n 3,314); GOLD_CANDLES 1h hammer buys-only weak (t 0.84, 424 trades). Assumptions: Book gives no numbers for
-  wick ratios, ''support'', ''confirmation'', stop or target; we use the hammer''s low as stop and the glossary''s 1:3 as
-  target.'
+  summary: 'IDX (index spot, bought option), variant 5m: design 122 trades, win 37%, net -Rs 35,394, folds -Rs 9,155, -Rs
+    14,868, -Rs 11,371; p 1.000, BH q 1.000; holdout 97 trades, win 32%, net Rs 10,386. R104 verdict: fail. | MCXI (MCX mini
+    future (own bars)), variant 15m: design 25 trades, win 28%, net Rs 6,907, folds -Rs 2,149, Rs 9,056; p 0.127, BH q 1.000;
+    holdout 30 trades, win 37%, net -Rs 5,786. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R87: NIFTY 15m hammer followed by -0.47 ATR over 20 candles vs
+  +0.19 matched; wick lows not defended (59% vs 57%, n 3,314); GOLD_CANDLES 1h hammer buys-only weak (t 0.84, 424 trades).
+  Assumptions: Book gives no numbers for wick ratios, ''support'', ''confirmation'', stop or target; we use the hammer''s
+  low as stop and the glossary''s 1:3 as target.'

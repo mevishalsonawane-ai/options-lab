@@ -1,17 +1,19 @@
 id: book-porwal-02
-title: Doji at an oversold / overbought extreme, traded on the break of its high / low (Nikhil Porwal, book rule, proposed)
+title: Doji at an oversold / overbought extreme, traded on the break of its high / low (Nikhil Porwal, book rule, tested in
+  R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 3.2) makes money after real charges and
   slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Doji: |close - open| <=
   0.1 x (high - low). Long setup: doji whose low is the lowest low of the last 10 bars and RSI(14) < 30 (or stochastic 14,3,3
   < 20) on the doji. Buy when price trades above the doji high within the next 3 bars. Short is the mirror (highest high of
   10 bars, RSI > 70). Stop: Below the doji low (long) / above the doji high (short). Exit: Trail with EMA(20): exit on a close
   back through it; or a 2R target (book''s 1:2 minimum); max hold 10 sessions for the daily version.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: DLY 2006-01-01 - 2021-12-31
+  holdout: DLY 2022-01-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,13 +28,16 @@ model_or_rule: 'Doji: |close - open| <= 0.1 x (high - low). Long setup: doji who
   as that confirmation in a variant.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-02; trade: daily: buy the next-monthly ATM CE / PE with stops
   on the index; intraday: 1-ITM nearest expiry'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87 / R87B: no candle shape predicts direction; daily shapes 0 of 25; OBUY_GB MR-03 RSI 30/70 reversal
-  lost walk-forward. Assumptions: The oscillator is not named (default settings); RSI(14) 30/70 and stochastic 14,3,3 80/20
-  tested as two readings. Doji body threshold, 10-bar extreme, 3-bar window, EMA 20 trail are ours.'
+  summary: 'DLY (index daily, futures proxy), variant confirm: design 80 trades, win 28%, net -Rs 136,157, folds -Rs 31,206,
+    -Rs 43,938, -Rs 61,012; p 1.000, BH q 1.000; holdout 24 trades, win 46%, net -Rs 56,444. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R87 / R87B: no candle shape predicts direction; daily shapes 0
+  of 25; OBUY_GB MR-03 RSI 30/70 reversal lost walk-forward. Assumptions: The oscillator is not named (default settings);
+  RSI(14) 30/70 and stochastic 14,3,3 80/20 tested as two readings. Doji body threshold, 10-bar extreme, 3-bar window, EMA
+  20 trail are ours.'

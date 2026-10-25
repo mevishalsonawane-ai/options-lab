@@ -1,17 +1,18 @@
 id: book-bennett-02
-title: 'NIFTY buy-write: long future, short weekly ~25-delta call (Colin Bennett, book rule, proposed)'
+title: 'NIFTY buy-write: long future, short weekly ~25-delta call (Colin Bennett, book rule, tested in R104)'
 family: option-structure
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 1.4, Call overwriting) makes money after real charges and
   slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (overwriting); the
   long future is a passive holding. Entry: Each Wednesday 09:20 (day after the Tuesday expiry): hold 1 lot NIFTY future (rolled
   monthly) and sell 1 lot of the nearest weekly call whose delta is closest to 0.25 (Bennett: one-month 103-104% strike or
   a fixed 25-delta). Stop: None in the book; research variant adds a stop on the future at -3% from entry to stay inside the
   account stop. Exit: Call held to expiry (cash settled); re-sell next Wednesday.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: VOL 2021-08-02 - 2026-03-31
+  holdout: VOL 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 features:
@@ -24,12 +25,15 @@ model_or_rule: 'Each Wednesday 09:20 (day after the Tuesday expiry): hold 1 lot 
   index rarely beats always overwriting).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-02; trade: Benchmark only; compare with long future alone on
   return, Sortino and worst month. Not an app arm (the app holds no index longs).'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us. Assumptions: Weekly instead of monthly because NIFTY weeklies exist; 25-delta
-  weekly strike is about 1-2% OTM, inside ATM +-10.'
+  summary: 'VOL (option structure (chain as context)), variant nostop: design 168 trades, win 55%, net -Rs 160,226, folds
+    Rs 86,307, Rs 16,916, -Rs 263,448; p 1.000, BH q 1.000; holdout 28 trades, win 46%, net -Rs 63,992. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). future = spot + carry proxy; call held to expiry (cash settled) Our nearest test:
+  not tested by us. Assumptions: Weekly instead of monthly because NIFTY weeklies exist; 25-delta weekly strike is about 1-2%
+  OTM, inside ATM +-10.'

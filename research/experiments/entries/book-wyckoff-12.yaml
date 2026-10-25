@@ -1,15 +1,16 @@
 id: book-wyckoff-12
-title: Tighten the stop in the last 15 minutes before square-off (Wyckoff, book rule, proposed)
+title: Tighten the stop in the last 15 minutes before square-off (Wyckoff, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. X) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price. Entry: Any open arm trade at 15:00 (14:50 on expiry days)
   Stop: from then on, trail the stop 0.25x the trailing 15-minute ATR(1m)-sum behind the best index price Exit: the trail
   or the 15:15 square-off (15:05 on expiry)'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -20,12 +21,16 @@ model_or_rule: 'Any open arm trade at 15:00 (14:50 on expiry days) | stop: from 
   15-minute ATR(1m)-sum behind the best index price | exit: the trail or the 15:15 square-off (15:05 on expiry) | filters:
   only trades in profit at the start of the window'
 settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-12; trade: manage the arm''s option'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: locks on Liquidity 0 of 12 (R19) and 0 of 15 (R100); late-day squeeze alone not tested by us. Assumptions:
-  Book''s ''within a fraction of the extreme'' made 0.25x of a short-window ATR; times shifted to our 15:15 / 15:05 square-offs'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant base: design 9156 trades, win 46% (B0 46%), net Rs 774,311
+    vs B0 Rs 774,750 (delta -Rs 439), quarters Rs 3,003, -Rs 1,737, Rs 0, Rs 1,089; p 1.000, BH q 1.000; final delta Rs 736.
+    R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). late-day tightening overlay Our nearest test: locks on Liquidity 0 of 12 (R19) and
+  0 of 15 (R100); late-day squeeze alone not tested by us. Assumptions: Book''s ''within a fraction of the extreme'' made
+  0.25x of a short-window ATR; times shifted to our 15:15 / 15:05 square-offs'

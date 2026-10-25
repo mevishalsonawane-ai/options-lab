@@ -31,11 +31,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmmusiela-01; trade: 1 lo
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: needs synchronous bid/ask for all legs'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us; R103''s six design passers were stale wing prices, which such a check would flag
-  (HUNT_R103_OPTIONS_SELLING.md).. Assumptions: The book gives the inequalities, not thresholds; the ATM+-5 window, the 20%
-  margin and the same-minute rule are ours. Last-trade prints overstate violations; the main expected use is as a stale-print
-  filter for every option backtest (count how many R103-type trades it would remove).'
+notes: 'R104: needs data we lack (needs synchronous bid/ask for all legs).'

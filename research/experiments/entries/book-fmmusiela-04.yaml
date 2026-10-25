@@ -29,11 +29,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmmusiela-04; trade: Trad
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: no intraday USDINR or dated import-duty history'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: R82 used COMEX as a lead for MCX and rejected it (O1 overnight move: design +Rs 85k on 398 trades,
-  failed the final period). A fair-value gap was not tested by us.. Assumptions: The book gives the no-arbitrage link between
-  one asset priced in two currencies (and the quanto covariance term), not a trade; the duty/carry formula, thresholds and
-  stops are ours. An Indian trader cannot arbitrage both legs, so this is a one-legged mean-reversion bet on the gap.'
+notes: 'R104: needs data we lack (no intraday USDINR or dated import-duty history).'

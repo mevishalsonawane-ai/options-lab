@@ -1,5 +1,5 @@
 id: book-heitkoetter-02
-title: Close crosses a 10-period SMA (Markus Heitkoetter, book rule, proposed)
+title: Close crosses a 10-period SMA (Markus Heitkoetter, book rule, covered by an earlier study)
 family: patterns-indicators
 date: '2026-10-25'
 doc: research/books/TESTABLE_RULES.md
@@ -26,10 +26,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-02; trade: bu
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. H25 price x SMA crosses (15,120 variants, Rs -145 a trade, 1
+    of 28 walk-forward families positive), exits of this kind included'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: H25 price x SMA crosses (SMA family 15,120 variants, Rs -145 a trade, 1 of 28 walk-forward families
-  positive). Assumptions: Book suggests 5 or 10 periods without picking; SMA(10) chosen, SMA(5) as the one variant. Stop/target
-  converted from the author''s own $200 / $300 per contract; time stop from the book''s three-bar rule.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). H25 price x SMA crosses (15,120 variants, Rs -145 a trade, 1 of 28 walk-forward
+  families positive), exits of this kind included'

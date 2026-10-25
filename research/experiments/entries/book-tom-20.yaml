@@ -1,5 +1,5 @@
 id: book-tom-20
-title: Scale out in thirds (Mark Douglas) (Trader Tom, book rule, proposed)
+title: Scale out in thirds (Mark Douglas) (Trader Tom, book rule, covered by an earlier study)
 family: trade-management
 date: '2026-10-25'
 doc: research/books/TESTABLE_RULES.md
@@ -22,9 +22,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-tom-20; trade: 3 lots of 
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. R81 X5 scale-out (half at 1R, -Rs 79k design / -Rs 35k final)
+    and R100: the same partial-profit mechanism'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R81 X5 scale out half at 1R rejected (-Rs 79k design, -Rs 35k final). Assumptions: Points mapped
-  to R multiples.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). R81 X5 scale-out (half at 1R, -Rs 79k design / -Rs 35k final) and R100: the same
+  partial-profit mechanism'

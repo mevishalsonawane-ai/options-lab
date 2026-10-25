@@ -1,8 +1,8 @@
 id: book-fmfabozzi-01
-title: Filter rule on NIFTY/BANKNIFTY daily closes, buy the option (Focardi and Fabozzi, book rule, proposed)
+title: Filter rule on NIFTY/BANKNIFTY daily closes, buy the option (Focardi and Fabozzi, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Focardi and Fabozzi''s rule from The Mathematics of Financial Modeling and Investment Management (Ch. 19, Technical
   analysis (filter rule)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
   source: underlying price. Entry: Track the running low and high of daily closes. Long when the close is at least x% above
@@ -10,9 +10,10 @@ hypothesis: 'Focardi and Fabozzi''s rule from The Mathematics of Financial Model
   long signal. Grid x in {1, 2, 3, 5}% fixed before testing. Enter at the next session''s 09:20 price. Stop: The book''s stop
   is the reverse signal (close x% below the high since entry). Add a hard stop of 50% of the option premium to bound option-buying
   losses (our addition). Exit: Reverse signal; also roll or exit 5 sessions before the monthly expiry.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: DLY 2006-01-01 - 2021-12-31
+  holdout: DLY 2022-01-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,14 +27,16 @@ model_or_rule: 'Track the running low and high of daily closes. Long when the cl
   (our addition). | exit: Reverse signal; also roll or exit 5 sessions before the monthly expiry. | filters: none in the book'
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmfabozzi-01; trade: buy the 1-ITM CE on a long signal, 1-ITM PE on
   a short, nearest monthly (next monthly if fewer than 10 sessions left); futures mirror to separate signal from theta'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 4
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R102: daily momentum reversed in the holdout and 1 of 70 sign rules confirmed (an artefact); the
-  book itself says profitability after costs is unclear. Not tested by us in this exact form.. Assumptions: The book gives
-  no value of x, no instrument and no timeframe; the grid and the premium stop are our literal choices. Always-in-market as
-  written.'
+  summary: 'DLY (index daily, futures proxy), variant x5: design 850 trades, win 39%, net Rs 1,317,966, folds Rs 178,101,
+    -Rs 128,309, Rs 1,268,174; p 0.032, BH q 0.898; holdout 56 trades, win 45%, net -Rs 505,997. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). futures proxy instead of the bought option Our nearest test: R102: daily momentum
+  reversed in the holdout and 1 of 70 sign rules confirmed (an artefact); the book itself says profitability after costs is
+  unclear. Not tested by us in this exact form.. Assumptions: The book gives no value of x, no instrument and no timeframe;
+  the grid and the premium stop are our literal choices. Always-in-market as written.'

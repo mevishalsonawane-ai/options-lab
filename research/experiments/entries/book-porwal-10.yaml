@@ -27,9 +27,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-10; trade: buy ATM
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: index rule needs futures minute volume (57 sessions only); the price part (fade the day-high
+    break) is covered by R86 (6 of 6 lost) and R91'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: R86 stop-run fades lost in 6 of 6 tests; R87 stop run above the 15-minute day high was followed
-  by more upside (n 1,666); R91 0 of 63. Assumptions: Volume thresholds, the 6-bar window and the trend check are ours.'
+notes: 'R104: needs data we lack (index rule needs futures minute volume (57 sessions only); the price part (fade the day-high
+  break) is covered by R86 (6 of 6 lost) and R91).'

@@ -1,17 +1,18 @@
 id: book-woods-02
-title: 'Hikkake: failed breakout of an inside bar within three bars (Galen Woods, book rule, proposed)'
+title: 'Hikkake: failed breakout of an inside bar within three bars (Galen Woods, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 5.10) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price. Entry: Bar B is an inside bar of bar A (lower high, higher
   low). Bar C has a lower high and a lower low than B (downside false break). Within the next 3 bars after C, if price trades
   above B''s high, buy at B''s high + 1 tick. Mirror for shorts (C higher high and higher low, then trade below B''s low).
   Stop: The lowest low from C to entry (the false break''s extreme), on the underlying. Exit: Not stated; nearest opposing
   swing as target, else session square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -25,14 +26,18 @@ model_or_rule: 'Bar B is an inside bar of bar A (lower high, higher low). Bar C 
   on the underlying. | exit: Not stated; nearest opposing swing as target, else session square-off. | filters: None in the
   book (it calls Hikkake a continuation pattern; optional variant: only in the direction of the EMA 20 slope).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-woods-02; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 4
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: Not tested by us. R71 P1 inside-bar break lost -Rs 1,23,667 on 1,075 trades (its failure is the
-  mirror); R89 break-and-reclaim lost like break-and-go; R61b: candidates after failed breaks did worse.. Assumptions: ''Failure''
-  read as price trading back beyond the inside bar''s opposite end within 3 bars of C (the common Chesler definition); the
-  book does not say which level marks the failure.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 1240 trades, win 46%, net -Rs 95,643, folds -Rs 67,470, -Rs
+    47,173, Rs 18,999; p 1.000, BH q 1.000; holdout 221 trades, win 50%, net -Rs 17,566. R104 verdict: fail. | MCXI (MCX mini
+    future (own bars)), variant 15m: design 34 trades, win 21%, net -Rs 6,455, folds Rs 0, -Rs 6,455; p 1.000, BH q 1.000;
+    holdout 105 trades, win 42%, net -Rs 6,681. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: Not tested by us. R71 P1 inside-bar break lost -Rs 1,23,667 on
+  1,075 trades (its failure is the mirror); R89 break-and-reclaim lost like break-and-go; R61b: candidates after failed breaks
+  did worse.. Assumptions: ''Failure'' read as price trading back beyond the inside bar''s opposite end within 3 bars of C
+  (the common Chesler definition); the book does not say which level marks the failure.'

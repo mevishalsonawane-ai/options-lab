@@ -369,3 +369,10 @@ The 75 figures (trees, payoff diagrams, the Markowitz bullet, VaR comparison cur
 Black-Scholes) are images; only captions and surrounding text came through. Some formulas in the text layer are broken
 across lines (fractions, sums, square roots), but every one could be reconstructed from context and the worked numbers.
 Nothing else was unreadable.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmcapinski-01`: not testable (R104): needs executable bid/ask; last prints in the lake are often stale (R103)
+- `book-fmcapinski-02`: not testable (R104): needs executable bid/ask

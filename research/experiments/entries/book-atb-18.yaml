@@ -1,16 +1,18 @@
 id: book-atb-18
-title: 'Triple top / bottom: break of the opposite side after three touches (The Advanced Trading Book, book rule, proposed)'
+title: 'Triple top / bottom: break of the opposite side after three touches (The Advanced Trading Book, book rule, tested
+  in R104)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 4, Triple top / triple
   bottom (p46, p47, p56)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
   source: underlying price. Entry: Three swing highs within 0.25 ATR of each other; support = lowest swing low between them;
   sell at the open after the first close below support. Mirror for triple bottoms. Stop: Above the midpoint of the pattern.
   Exit: Target = pattern height from the break, else square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -22,12 +24,16 @@ model_or_rule: 'Three swing highs within 0.25 ATR of each other; support = lowes
   after the first close below support. Mirror for triple bottoms. | stop: Above the midpoint of the pattern. | exit: Target
   = pattern height from the break, else square-off. | filters: None.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-18; trade: buy 1-ITM PE (CE for triple bottoms)'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R71 P5 (two touches) lost; R20b levels no better than random lines. Assumptions: Book draws only
-  the lines; stop and target are ours.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 82 trades, win 39%, net -Rs 36,895, folds -Rs 11,201, Rs
+    1,121, -Rs 8,549, -Rs 18,266; p 1.000, BH q 1.000; holdout 13 trades, win 31%, net Rs 577. R104 verdict: fail. | MCXI
+    (MCX mini future (own bars)), variant 15m: design 5 trades, win 40%, net -Rs 2,931, folds Rs 0, Rs 0, -Rs 2,931; p 1.000,
+    BH q 1.000; holdout 10 trades, win 50%, net -Rs 2,598. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R71 P5 (two touches) lost; R20b levels no better than random lines.
+  Assumptions: Book draws only the lines; stop and target are ours.'

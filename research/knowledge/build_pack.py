@@ -827,6 +827,11 @@ def add_experiments(pack: Pack, shared: list[dict], entries: list[dict] | None =
         res = (e.get("results") or {}).get("summary", "")
         title = clean_md(str(e.get("title", e["id"])))
         text = clean_md(f"{e.get('title', '')}: {e.get('hypothesis', '')} Result: {res} Verdict: {e.get('verdict', '?')}.")
+        if "Result:" not in text[:MAX_CHARS * 2]:
+            # A long hypothesis pushed the result past the cut, so the entry was said with no result at all (the R104 book
+            # rules, 25 Oct 2026): then the result and verdict go first and the hypothesis after.
+            text = clean_md(f"{e.get('title', '')}: Result: {res} Verdict: {e.get('verdict', '?')}. "
+                            f"Hypothesis: {e.get('hypothesis', '')}")
         insts = canon_instruments(e.get("instruments") or [])
         fam = str(e.get("family", ""))
         # Topics from what the idea IS (its title, and its hypothesis less the method's words), not from its result summary:

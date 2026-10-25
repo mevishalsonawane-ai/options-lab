@@ -34,11 +34,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-atm-01; trade: same optio
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: multi-lot exit fills need book depth'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us; nearest is HUNT_H14.md (entry execution: only a marketable limit at +0.5% passed,
-  +Rs 288/day vs +250 required); HUNT_H10.md suggests slicing exits in thin contracts. Assumptions: The paper only names TWAP.
-  The 3 slices, 1-minute spacing, the thin-contract filter and never slicing stops are ours (stops must not be delayed per
-  CLAUDE.md priority rules). Fills at bar open plus our usual spread model.'
+notes: 'R104: needs data we lack (multi-lot exit fills need book depth).'

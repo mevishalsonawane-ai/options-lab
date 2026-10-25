@@ -1,8 +1,8 @@
 id: book-smith-01
-title: SST six rules on NIFTY/BANKNIFTY daily bars, buy the monthly option (David Graeme Smith, book rule, proposed)
+title: SST six rules on NIFTY/BANKNIFTY daily bars, buy the monthly option (David Graeme Smith, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 7-9) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price. Entry: Set-up on day t close: (a) close above SMA(50) of
   daily closes for longs (below for shorts); (b) Wilder DMI with period 8: +DI crosses above -DI on day t, or the two touch
@@ -16,9 +16,10 @@ hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 7-9) makes
   5% (book) or >= 2.5 x ATR(14) (index variant), raise the stop to that day''s midpoint minus buffer. No target. Stops checked
   intraday on the index; exit the option at the next minute''s open after the index trades through the stop. Hard time cap:
   exit 5 sessions before the monthly expiry.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: DLY 2006-01-01 - 2021-12-31
+  holdout: DLY 2022-01-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -42,16 +43,18 @@ model_or_rule: 'Set-up on day t close: (a) close above SMA(50) of daily closes f
 settings: 'research/books/TESTABLE_RULES.md, rule book-smith-01; trade: buy the 1-ITM CE of the nearest monthly (next monthly
   if fewer than 10 sessions left) on a long trigger, 1-ITM PE on a short; stops on the index as the book states; also run
   a futures mirror to separate signal from theta'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: SWING_DEEP: NR7 / inside-day breakout on index futures sat inside the coin-flip band, walk-forward
-  lost Rs 45-58k a year; OBUY_LV05_MULTIDAY: multi-day Donchian option holds about -Rs 18,000 a year, p 0.68 vs random; OBUY_GB
-  TI-09 intraday ADX/DMI 0/5 years. The exact daily rule is not tested by us.. Assumptions: Book is written for UK small-cap
-  shares with a 0.5% buffer and says major indices need a wider, judged buffer; the ATR variants and the touch tolerance are
-  our literal readings. ''Big move day'' 5% is almost never hit on NIFTY, hence the ATR-scaled variant. Set-up expiry of 3
-  sessions makes ''do not enter late'' precise.'
+  summary: 'DLY (index daily, futures proxy), variant pct: design 172 trades, win 42%, net Rs 347,212, folds Rs 60,784, Rs
+    135,819, Rs 150,609; p 0.021, BH q 0.806; holdout 66 trades, win 42%, net Rs 168,395. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: SWING_DEEP: NR7 / inside-day breakout on index futures sat inside
+  the coin-flip band, walk-forward lost Rs 45-58k a year; OBUY_LV05_MULTIDAY: multi-day Donchian option holds about -Rs 18,000
+  a year, p 0.68 vs random; OBUY_GB TI-09 intraday ADX/DMI 0/5 years. The exact daily rule is not tested by us.. Assumptions:
+  Book is written for UK small-cap shares with a 0.5% buffer and says major indices need a wider, judged buffer; the ATR variants
+  and the touch tolerance are our literal readings. ''Big move day'' 5% is almost never hit on NIFTY, hence the ATR-scaled
+  variant. Set-up expiry of 3 sessions makes ''do not enter late'' precise.'

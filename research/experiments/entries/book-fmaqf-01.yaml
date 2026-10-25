@@ -36,12 +36,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmaqf-01; trade: Multi-le
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: implied density needs every strike on the entry day; the lake has ATM +-10 intraday and
+    a weekly bhavcopy sample'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: R102: puts five strikes out dearer than calls on 91% of NIFTY days (n 1,222). R103: short premium
-  breaks even before costs intraday (0 of 24 defined-risk). The risk-reversal hold-to-expiry trade is not tested by us.. Assumptions:
-  Book used 3-month DAX options and 5% of premium as cost; NSE monthlies are 1 month. Simple version: replace the density
-  comparison by ''put 0.95 IV minus call 1.05 IV above its median'', since the book''s switch said S1 in 29 of 30 months.
-  Strike band may be cut to strikes with non-zero OI.'
+notes: 'R104: needs data we lack (implied density needs every strike on the entry day; the lake has ATM +-10 intraday and
+  a weekly bhavcopy sample).'

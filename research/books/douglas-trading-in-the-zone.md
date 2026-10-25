@@ -296,3 +296,13 @@ and screen traders, any timeframe; no options, no Indian market.
   "all entry and exit signals have to be based on the same time frame" line); each is recoverable from context. No charts
   or figures in the book. The page numbers in the table of contents refer to the print edition; the 143 pages here are
   the PDF's pages.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-douglas-01`: tested (R104): MM: drawdown cut 18%, net cut -4% design (fail)
+- `book-douglas-02`: tested (R104): MM: drawdown cut 100%, net cut 100% design (fail)
+- `book-douglas-03`: not re-run (R104): covered: R81 X5 / R100 partial exits failed; the first third here is taken even earlier
+- `book-douglas-04`: tested (R104): IDX: 250 trades, win 25%, net -Rs 39,437 design, holdout Rs 807 (fail); MCXI: 14 trades, win 29%, net -Rs 8,502 design, holdout Rs 15,563 (fail)
+- `book-douglas-05`: tested (R104): ARM: delta vs the arm -Rs 269,657 design (fail)

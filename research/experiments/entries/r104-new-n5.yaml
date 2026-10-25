@@ -1,0 +1,31 @@
+id: r104-new-n5
+title: 'R104 new strategy N5: daily SMA50 + DMI(8) direction filter on the arms'
+family: daily-filters
+date: '2026-10-25'
+doc: research/HUNT_R104_BOOKS.md
+hypothesis: see PREREG.md Amendment 1, row N5
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
+period:
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- daily SMA50 + DMI(8) direction filter on the arms
+model_or_rule: daily SMA50 + DMI(8) direction filter on the arms
+settings: research/hunt/r104_books/f_new.py
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
+results:
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant base: design 3639 trades, win 48% (B0 46%), net Rs 647,832
+    vs B0 Rs 774,750 (delta -Rs 126,918), quarters -Rs 121,108, -Rs 217,693, -Rs 27,440, -Rs 160,268; p 1.000, BH q 1.000;
+    final delta -Rs 350,032. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: R104 (227 tests, BH across all). daily SMA50 + DMI(8) direction filter on the arms

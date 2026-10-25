@@ -379,3 +379,12 @@ psychology.
 - The cover page OCR is garbled ("SECOND EDITION" appears; the title and copyright pages say 1999 first edition).
 - Data tables 10.5 and 11.1 came through as numbers with scattered OCR digit errors; they were not used.
 - No page was rotated or missing, so no re-OCR was needed.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmross-01`: tested (R104): MCXD: 1166 trades, win 44%, net -Rs 161,038 design, holdout -Rs 317,905 (fail)
+- `book-fmross-02`: tested (R104): VOL: 498 trades, win 33%, net -Rs 110,983 design, holdout -Rs 46,248 (fail)
+- `book-fmross-03`: tested (R104): MCXD: 1 trades, win 100%, net Rs 4,554 design, holdout Rs 0 (fail); DLY: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail)
+- `book-fmross-04`: tested (R104): VOL: 3 trades, win 0%, net -Rs 1,789 design, holdout Rs 0 (fail)

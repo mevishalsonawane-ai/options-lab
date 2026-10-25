@@ -1,16 +1,17 @@
 id: book-wyckoff-07
-title: 'A rally that fails to recover half the drop: sell (Wyckoff, book rule, proposed)'
+title: 'A rally that fails to recover half the drop: sell (Wyckoff, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. VI, IX, X) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price. Entry: Swing legs by a ZigZag of 1.5 ATR(14). After a down-leg
   of size D, if the next rally tops out below 50% of D (confirmed when price makes a 0.5 ATR reversal from the rally high),
   short on the first close below the rally''s start bar low. Mirror for up-legs. Stop: the rally high + 0.1 ATR Exit: the
   down-leg low minus 0.5 D, or 15:15 (15:05 on expiry)'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -22,13 +23,15 @@ model_or_rule: 'Swing legs by a ZigZag of 1.5 ATR(14). After a down-leg of size 
   bar low. Mirror for up-legs. | stop: the rally high + 0.1 ATR | exit: the down-leg low minus 0.5 D, or 15:15 (15:05 on expiry)
   | filters: down-leg D >= 1.5 ATR'
 settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-07; trade: buy 1-ITM PE on a short, CE on the mirror long'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R4: retracement levels turn price 49.0% vs 49.1% for shifted ratios (25,000+ touches); h37 Fibonacci
-  bounces Rs -125 a trade. Assumptions: Book says a normal rally is one half to two thirds; ''falls short'' read as below
-  50%; target and ZigZag size are ours'
+  summary: 'IDX (index spot, bought option), variant 5m: design 2057 trades, win 48%, net -Rs 300,751, folds -Rs 51,543, -Rs
+    53,577, -Rs 12,165, -Rs 183,466; p 1.000, BH q 1.000; holdout 240 trades, win 48%, net -Rs 57,198. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R4: retracement levels turn price 49.0% vs 49.1% for shifted ratios
+  (25,000+ touches); h37 Fibonacci bounces Rs -125 a trade. Assumptions: Book says a normal rally is one half to two thirds;
+  ''falls short'' read as below 50%; target and ZigZag size are ours'

@@ -1,17 +1,18 @@
 id: book-porwal-09
-title: 'Quasimodo: higher high after a downtrend, buy the higher low (Nikhil Porwal, book rule, proposed)'
+title: 'Quasimodo: higher high after a downtrend, buy the higher low (Nikhil Porwal, book rule, tested in R104)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 5.2) makes money after real charges and
   slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: 3-bar fractal swings. Setup:
   swing highs H1 > H2 and swing lows L1 > L2 (downtrend), then a close above H2 (higher high, HH). Long when a later swing
   low L3 forms above L2 (higher low) and the next bar closes above L3''s bar high. Bearish mirror. Variant B (book''s second
   wording): buy the first close above HH. Stop: Below L2 (the head / QM zone) minus 1 tick. Exit: Target H1 (top of the first
   zig-zag) or 2R, whichever is nearer; 3R variant; trail by swing lows; square-off 15:15 for NSE, MCX by 23:15.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31; MCXI 2025-10-20 - 2026-07-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once); MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -28,13 +29,17 @@ model_or_rule: '3-bar fractal swings. Setup: swing highs H1 > H2 and swing lows 
   square-off 15:15 for NSE, MCX by 23:15. | filters: Volume above its 20-bar average on the HH break (futures volume).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-09; trade: buy 1-ITM CE / PE; MCX the future or 1-ITM option;
   stops on the underlying'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 6
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R90 BOS / CHoCH 0 of 99 (target too far for intraday options); R62b 0 of 16; R71 P8 final -Rs 40,109
-  on 374. Assumptions: Fractal width, the trigger bar and the target choice are ours; the book''s two descriptions disagree,
-  so both readings are pre-registered.'
+  summary: 'IDX (index spot, bought option), variant 15m_HL: design 756 trades, win 46%, net -Rs 34,592, folds -Rs 24,886,
+    Rs 14,213, -Rs 23,919; p 1.000, BH q 1.000; holdout 161 trades, win 46%, net Rs 7,493. R104 verdict: fail. | MCXI (MCX
+    mini future (own bars)), variant 30m_HL: design 124 trades, win 57%, net Rs 117,287, folds -Rs 72,448, Rs 189,735; p 0.265,
+    BH q 1.000; holdout 102 trades, win 47%, net -Rs 90,018. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R90 BOS / CHoCH 0 of 99 (target too far for intraday options);
+  R62b 0 of 16; R71 P8 final -Rs 40,109 on 374. Assumptions: Fractal width, the trigger bar and the target choice are ours;
+  the book''s two descriptions disagree, so both readings are pre-registered.'

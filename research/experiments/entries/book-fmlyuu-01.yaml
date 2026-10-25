@@ -33,11 +33,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmlyuu-01; trade: 1 lot i
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: no minute ETF/basket prices, dividend schedule or futures quotes'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us as an arbitrage; HUNT_H39.md stage A found futures returns and basis changes tied
-  to the index in the same minute and no lead from 2 minutes on (every |t| below 2.5). Assumptions: The book states the rule
-  for the full stock basket and a continuous dividend yield; we read ''basket'' as an index ETF and q as the trailing yield.
-  Short selling the basket is restricted in India, so the ''future rich'' side is the only practical one.'
+notes: 'R104: needs data we lack (no minute ETF/basket prices, dividend schedule or futures quotes).'

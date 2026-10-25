@@ -35,6 +35,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book reads each print at the bid or offer; we only have retail snapshots, so the tick rule stands in for the aggressor side (R7 found the quote rule fails on snapshots). 'Large lot' is made relative to the median print, as the book says lot size is relative. Horizon 15 minutes is ours.
 - Data: **needs data we lack** - lack: index-futures ticks exist only in the phone's TickZoneRecorder (from 12 Oct 2026, private IraAlgo repo); about 3 months needed (R61b)
 - Our nearest test: R7: signed option flow leads (IC +0.109 at 1 minute) but its edge is 0.42x of cost; R9 delta-divergence proxy no
+- R104: not testable (R104): index-futures tick prints exist only in the phone's recorder since 12 Oct 2026 (private repo); ~3 months needed
 ### `book-wyckoff-02` Heavy volume packed into a narrow band near a new high, then slipping: short
 - Source: The Day Trader's Bible, Ch. IV, V, X. Family: `flow-oi`. Signal source: underlying price/volume (index future volume, price on the future).
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD, SILVER.
@@ -46,6 +47,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's 'abnormally large volume within a small radius' made 3x volume within 0.5 ATR; 'the price starts to slip' made a close below the zone. Thresholds are ours.
 - Data: **needs data we lack** - lack: index-futures minute volume only from 29 Jul 2026; check MCX lake for per-minute futures volume (R89/R90 used close-only)
 - Our nearest test: R87 absorption proxy 51.5% vs 51.5% (n 2,266); R8 heavy-volume levels broke 58-68% vs 55%; R86b absorption at day extremes almost never seen
+- R104: tested (R104): MCXI: 26 trades, win 35%, net -Rs 36,075 design, holdout -Rs 180 (fail)
 ### `book-wyckoff-03` Buy the light-volume pullback in an up move whose advances carried more volume
 - Source: The Day Trader's Bible, Ch. V, IX, X. Family: `flow-oi`. Signal source: underlying price/volume (index future).
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -57,6 +59,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book gives no thresholds; 0.6x and 50% are ours. Volume must be the future's, not the cash index.
 - Data: **needs data we lack** - lack: index-futures minute volume only from 29 Jul 2026
 - Our nearest test: not tested by us with true volume; R86b big selling fast / buying slow (169 / 179 days), following it 0 of 8
+- R104: not testable (R104): index only; needs index-futures minute volume, which exists only from 29 Jul 2026 (57 sessions, too few for design + holdout)
 ### `book-wyckoff-04` Break of a quiet range on a burst of volume
 - Source: The Day Trader's Bible, Ch. VII, X. Family: `patterns-indicators`. Signal source: underlying price (range on the index future), underlying volume (filter).
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE, NATURALGAS.
@@ -68,6 +71,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Volume in thousands instead of hundreds' made a 3x burst; range length 12 bars (1 hour) is ours. Run the same rule without the volume filter as the price-only twin.
 - Data: **needs data we lack** - lack: index-futures minute volume only from 29 Jul 2026 (price side have since 2021)
 - Our nearest test: ORB family 0 of 257 (R92); Donchian 20 on paper (R51); NR7 crude lead not passed (R96); the volume filter is not tested by us
+- R104: tested (R104): MCXI: 90 trades, win 14%, net -Rs 7,055 design, holdout -Rs 1,128 (fail)
 ### `book-wyckoff-05` Break only when the rest of the market breaks with it
 - Source: The Day Trader's Bible, Ch. V, VIII. Family: `patterns-indicators`. Signal source: underlying price (five index spots).
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -79,6 +83,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's 'carries the rest of the market along' read as the R72 breadth count; this is the existing arm, listed so the book's idea is linked to it
 - Data: have
 - Our nearest test: R72 Breadth Donchian PASS: final Rs 1,71,366 on 1,202 trades vs Donchian Rs 55,439; on paper
+- R104: not re-run (R104): covered: is the R72 Breadth Donchian arm: PASS (final +Rs 1,71,366 on 1,202 trades), on paper
 ### `book-wyckoff-06` Close an index trade when the other indices turn against it
 - Source: The Day Trader's Bible, Ch. III, IV, VI. Family: `trade-management`. Signal source: underlying price (the other four index spots).
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -90,6 +95,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's cue from 'other stocks failing' made a breadth count against the position; 3 of 4 and 20 bars are ours. Exit-only, so risk-lowering.
 - Data: have
 - Our nearest test: not tested by us as an exit; early exits made the profitable arms worse (R12, R18); R72 C6 SMT divergence failed
+- R104: tested (R104): ARM: delta vs the arm -Rs 14,978 design (fail)
 ### `book-wyckoff-07` A rally that fails to recover half the drop: sell
 - Source: The Day Trader's Bible, Ch. VI, IX, X. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -101,6 +107,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book says a normal rally is one half to two thirds; 'falls short' read as below 50%; target and ZigZag size are ours
 - Data: have
 - Our nearest test: R4: retracement levels turn price 49.0% vs 49.1% for shifted ratios (25,000+ touches); h37 Fibonacci bounces Rs -125 a trade
+- R104: tested (R104): IDX: 2057 trades, win 48%, net -Rs 300,751 design, holdout -Rs 57,198 (fail)
 ### `book-wyckoff-08` Stop beyond the last point of resistance, raised under each new reaction low
 - Source: The Day Trader's Bible, Ch. IV. Family: `trade-management`. Signal source: underlying price.
 - Timeframe: 5-minute bars (index spot). Instruments: NIFTY, BANKNIFTY.
@@ -112,6 +119,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's 1/4 point beyond the point of resistance converted to 0.1 ATR; swing = 3-bar fractal
 - Data: have
 - Our nearest test: R19 breakeven / give-back locks 0 of 12; R90 swing stops 0 of 99; a swing-low trail on the arms is not tested by us
+- R104: tested (R104): ARM: delta vs the arm Rs 29,056 design (fail)
 ### `book-wyckoff-09` Fixed-distance trail until costs are covered, then hand over to the arm's exit
 - Source: The Day Trader's Bible, Ch. IV. Family: `trade-management`. Signal source: underlying price.
 - Timeframe: 1-minute bars. Instruments: NIFTY, BANKNIFTY, CRYPTO.
@@ -123,6 +131,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's 1 point on a ~130-dollar stock is about 0.8%, far too wide for an intraday index; we scale it to the expected range. Crypto use needs a stop and a profit lock (CLAUDE.md), which this provides.
 - Data: have
 - Our nearest test: R19b Rs 500 give-back hurt Liquidity (holdout 15m +Rs 4,584 vs +Rs 14,633 plain); R100 0 of 15; LIQUIDITY_TRAIL halves the average winner
+- R104: tested (R104): ARM: delta vs the arm -Rs 269,502 design (fail)
 ### `book-wyckoff-10` Abandon a trade that does not act right at once
 - Source: The Day Trader's Bible, Ch. X. Family: `trade-management`. Signal source: option premium progress (exit only) on an underlying signal.
 - Timeframe: 1-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -134,6 +143,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book: 'it must act up to expectations or be abandoned immediately'; R12 used the option's +3% in 20 minutes; this version reads progress on the underlying
 - Data: have
 - Our nearest test: R12 no-progress exit beat random exits on ORB Fresh (holdout +Rs 14,365 over 474 trades, twin p 0.001) but did not help Liquidity
+- R104: tested (R104): ARM: delta vs the arm -Rs 163,167 design (fail)
 ### `book-wyckoff-11` Do not enter in the direction of a 4-day streak
 - Source: The Day Trader's Bible, Ch. VI. Family: `daily-filters`. Signal source: underlying price (daily closes).
 - Timeframe: daily bars (filter on intraday arms). Instruments: NIFTY, BANKNIFTY.
@@ -145,6 +155,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book: the market seldom runs more than three or four days one way without a reaction; read as a skip filter, not a fade
 - Data: have
 - Our nearest test: not tested by us as a streak rule; R102 daily sign continuation 53.2% (n 5,086); R101 filters 0 of 20
+- R104: tested (R104): ARM: delta vs the arm -Rs 130,016 design (fail)
 ### `book-wyckoff-12` Tighten the stop in the last 15 minutes before square-off
 - Source: The Day Trader's Bible, Ch. X. Family: `trade-management`. Signal source: underlying price.
 - Timeframe: 1-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -156,6 +167,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's 'within a fraction of the extreme' made 0.25x of a short-window ATR; times shifted to our 15:15 / 15:05 square-offs
 - Data: have
 - Our nearest test: locks on Liquidity 0 of 12 (R19) and 0 of 15 (R100); late-day squeeze alone not tested by us
+- R104: tested (R104): ARM: delta vs the arm -Rs 439 design (fail)
 ### `book-wyckoff-13` A sudden burst in a secondary index while the leaders stall: skip new longs
 - Source: The Day Trader's Bible, Ch. III. Family: `daily-filters`. Signal source: underlying price (index spots).
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -167,6 +179,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's 'secondary leader bursts into activity while the leaders are distributed' mapped to a mid-cap or financials index running alone; thresholds are ours
 - Data: have
 - Our nearest test: not tested by us; R72 C3 lonely breakout (faded) lost Rs 1,60,188 on 499
+- R104: tested (R104): ARM: delta vs the arm Rs 4,081 design (fail)
 
 ## How to Trade Price Action - Galen Woods ([write-up](woods-price-action.md))
 ### `book-woods-01` Three-bar pullback in a trend, buy above the next bar in the trend's direction
@@ -180,6 +193,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book does not define the trend; EMA 20 slope chosen. Book does not state a stop for this pattern; Ch. 7 general pattern stop applied to the whole pullback (not just the signal bar, which R87B showed is too tight). Target from Ch. 7.3.
 - Data: have
 - Our nearest test: Not tested in this form. R87B: green-green-red on SENSEX 15m held out of sample (+0.259 ATR, n 182) but the call rule with a stop under the red candle lost -Rs 21,127 on 162 trades; R96 P1 MCX pullback in trend Rs 1.08 lakh on 35, twin p 0.164 (lead only).
+- R104: tested (R104): IDX: 476 trades, win 47%, net -Rs 47,085 design, holdout -Rs 32,754 (fail); MCXI: 28 trades, win 29%, net -Rs 25,227 design, holdout -Rs 50,868 (fail)
 ### `book-woods-02` Hikkake: failed breakout of an inside bar within three bars
 - Source: How to Trade Price Action, Ch. 5.10. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE.
@@ -191,6 +205,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Failure' read as price trading back beyond the inside bar's opposite end within 3 bars of C (the common Chesler definition); the book does not say which level marks the failure.
 - Data: have
 - Our nearest test: Not tested by us. R71 P1 inside-bar break lost -Rs 1,23,667 on 1,075 trades (its failure is the mirror); R89 break-and-reclaim lost like break-and-go; R61b: candidates after failed breaks did worse.
+- R104: tested (R104): IDX: 1240 trades, win 46%, net -Rs 95,643 design, holdout -Rs 17,566 (fail); MCXI: 34 trades, win 21%, net -Rs 6,455 design, holdout -Rs 6,681 (fail)
 ### `book-woods-03` Reversal bar in the trend's direction
 - Source: How to Trade Price Action, Ch. 4.1. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -202,6 +217,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Closes higher than the previous bar' read as close > previous close. Trend definition ours.
 - Data: have
 - Our nearest test: Not tested in this form; R87 stop-run-below-day-low on 1m held out of sample but is about 1.8 points, below option cost.
+- R104: tested (R104): IDX: 2099 trades, win 44%, net -Rs 249,800 design, holdout -Rs 146,463 (fail)
 ### `book-woods-04` Key reversal day (gap below prior low, close above prior high)
 - Source: How to Trade Price Action, Ch. 4.2. Family: `daily-filters`. Signal source: underlying price.
 - Timeframe: daily bars since 2006. Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -213,6 +229,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Buy above' read as a buy stop above the signal day's high on the next session(s), cancelled after 1 day.
 - Data: have
 - Our nearest test: Not tested by us; R87B daily candle shapes 0 of 25.
+- R104: tested (R104): DLY: 115 trades, win 43%, net -Rs 116,147 design, holdout -Rs 273,480 (fail); MCXD: 23 trades, win 43%, net Rs 3,801 design, holdout Rs 24,281 (fail)
 ### `book-woods-05` Exhaustion bar: gap open, close near the far end, gap unfilled, high volume
 - Source: How to Trade Price Action, Ch. 4.3. Family: `daily-filters`. Signal source: underlying price/volume.
 - Timeframe: daily bars. Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -224,6 +241,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Gap remains unfilled' read as today's high below yesterday's close (bullish case); 'near its top' = top 25% of range; volume on the near future.
 - Data: have (daily); lack: long index-futures volume history in our store (short), MCX futures volume partly
 - Our nearest test: Not tested by us.
+- R104: tested (R104): DLY: 36 trades, win 36%, net -Rs 121,797 design, holdout -Rs 155,711 (fail); MCXD: 12 trades, win 33%, net -Rs 14,684 design, holdout -Rs 43,872 (fail)
 ### `book-woods-06` Pin bar rejected from a prior swing level
 - Source: How to Trade Price Action, Ch. 4.4. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -235,6 +253,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Tail takes up most of the bar' = >= 2/3; level = fractal swing.
 - Data: have
 - Our nearest test: R87: big tail 51% vs 52% matched on NIFTY 15m (n 949), wick lows broken as often as distance implies; R20b levels no better than random; R91 sweep 0 of 63. Expected negative.
+- R104: tested (R104): IDX: 283 trades, win 37%, net -Rs 57,502 design, holdout Rs 26,154 (fail)
 ### `book-woods-07` Two-bar reversal: strong bar then opposite strong bar
 - Source: How to Trade Price Action, Ch. 4.5. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -246,6 +265,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Strong' = body >= 60% of range (ours).
 - Data: have
 - Our nearest test: R87 engulfing/outside-type cells: none held at 5m/15m.
+- R104: tested (R104): IDX: 469 trades, win 50%, net -Rs 61,716 design, holdout Rs 1,169 (fail)
 ### `book-woods-08` Three-bar reversal
 - Source: How to Trade Price Action, Ch. 4.6. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -257,6 +277,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's literal rule; R71 tested a version restricted to the day's high/low.
 - Data: have
 - Our nearest test: R71 P7 at day high/low: final -Rs 1,67,689 on 855 trades, twin p 0.002 (timing real, below costs).
+- R104: not re-run (R104): covered: R71 P7 three-bar reversal (final -Rs 1,67,689 on 855, twin p 0.002: timing real, below option cost); the book's stop/exit are R71's
 ### `book-woods-09` Inside bar breakout, trend side only
 - Source: How to Trade Price Action, Ch. 4.8. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -268,6 +289,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Trend definition ours; R71 ran the two-sided version.
 - Data: have
 - Our nearest test: R71 P1 two-sided: -Rs 1,23,667 on 1,075 trades (final). Trend-only not tested.
+- R104: tested (R104): IDX: 2992 trades, win 40%, net -Rs 259,116 design, holdout -Rs 143,840 (fail)
 ### `book-woods-10` Fade the breakout of a doji-like or counter-trend outside bar
 - Source: How to Trade Price Action, Ch. 4.9. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -279,6 +301,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Fade' read as entering on the close back inside; doji-like = body <= 30%.
 - Data: have
 - Our nearest test: Not tested by us; R87 outside-bar cells no pass.
+- R104: tested (R104): IDX: 1063 trades, win 42%, net -Rs 121,020 design, holdout -Rs 40,726 (fail)
 ### `book-woods-11` Outside bar closing at an extreme: trade its breakout
 - Source: How to Trade Price Action, Ch. 4.9. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -290,6 +313,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Near its top' = top 20% (ours).
 - Data: have
 - Our nearest test: Not tested by us as a rule; R87 marubozu momentum is small, below option cost.
+- R104: tested (R104): IDX: 1221 trades, win 45%, net -Rs 53,374 design, holdout Rs 4,876 (fail)
 ### `book-woods-12` NR7 break in the trend's direction only
 - Source: How to Trade Price Action, Ch. 4.10. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars; daily bars. Instruments: NIFTY, BANKNIFTY, CRUDE.
@@ -301,6 +325,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Trend definition ours.
 - Data: have
 - Our nearest test: R71 P2 two-sided 15m: -Rs 1,68,820 on 1,341 trades; R96 crude NR7 lead (Rs 48,875 on 46) failed on COPPER.
+- R104: tested (R104): IDX: 3454 trades, win 37%, net -Rs 445,187 design, holdout -Rs 150,047 (fail); DLY: 579 trades, win 32%, net Rs 124,016 design, holdout -Rs 310,727 (fail); MCXI: 98 trades, win 24%, net -Rs 26,072 design, holdout -Rs 16,801 (fail)
 ### `book-woods-13` ID/NR4: inside bar that is also the narrowest of 4
 - Source: How to Trade Price Action, Ch. 4.11. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: daily and 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -312,6 +337,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Bracket entry taken from the inside-bar section.
 - Data: have
 - Our nearest test: R96 crude NR4 -Rs 886 on 77; Crabel inside-day NR7 -Rs 14,129 on 13. Index version not tested.
+- R104: tested (R104): IDX: 2790 trades, win 22%, net -Rs 378,844 design, holdout -Rs 98,293 (fail); DLY: 404 trades, win 41%, net Rs 486,756 design, holdout Rs 391 (fail)
 ### `book-woods-14` Engulfing in the trend's direction (continuation)
 - Source: How to Trade Price Action, Ch. 5.4. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -323,6 +349,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Trend definition ours.
 - Data: have
 - Our nearest test: R87 engulfing cells: no pass (no trend-only rule run).
+- R104: tested (R104): IDX: 1830 trades, win 50%, net -Rs 116,652 design, holdout -Rs 76,472 (fail)
 ### `book-woods-15` Three white soldiers after a substantial decline
 - Source: How to Trade Price Action, Ch. 5.9. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -334,6 +361,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Substantial decline' = 3 ATR over 20 bars (ours).
 - Data: have
 - Our nearest test: R87-1 three white soldiers (no prior-decline filter) -> call: -Rs 3,910 on 160 trades.
+- R104: tested (R104): IDX: 55 trades, win 45%, net Rs 340 design, holdout Rs 15,605 (fail)
 ### `book-woods-16` Head and shoulders neckline break with measured target
 - Source: How to Trade Price Action, Ch. 6.1. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars (intraday) and daily bars. Instruments: NIFTY, BANKNIFTY, GOLD.
@@ -345,6 +373,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Swing degree, prior-trend test and stop are ours.
 - Data: have
 - Our nearest test: Not tested by us.
+- R104: tested (R104): IDX: 459 trades, win 33%, net -Rs 46,244 design, holdout -Rs 75,273 (fail); DLY: 94 trades, win 55%, net Rs 214,631 design, holdout Rs 139,562 (fail); MCXI: 26 trades, win 38%, net -Rs 1,899 design, holdout -Rs 11,073 (fail)
 ### `book-woods-17` Rectangle breakout in the prior trend's direction
 - Source: How to Trade Price Action, Ch. 6.6. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -356,6 +385,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Range geometry ours.
 - Data: have
 - Our nearest test: Nearest: Donchian breakout arms (R51, R72) are positive; R20c S/R breaks a coin toss (51%, 7,548 breaks).
+- R104: tested (R104): IDX: 51 trades, win 29%, net -Rs 24,834 design, holdout -Rs 945 (fail)
 ### `book-woods-18` Ascending / symmetrical triangle breakout with the trend
 - Source: How to Trade Price Action, Ch. 6.8. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -367,6 +397,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Lines fitted through fractal swings (ours).
 - Data: have
 - Our nearest test: Not tested; R71 squeeze release (nearest contraction break) final -Rs 41,281 on 305.
+- R104: tested (R104): IDX: 85 trades, win 27%, net -Rs 41,080 design, holdout -Rs 1,848 (fail)
 ### `book-woods-19` Broken level flips: buy the pullback to old resistance
 - Source: How to Trade Price Action, Ch. 8.2-8.3. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -378,6 +409,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Touch and stop distances ours.
 - Data: have
 - Our nearest test: R22 break-and-retest: retested 82%, then further on 45% (-0.020 ATR, 442); R20c; H35 retest-then-go all lost.
+- R104: tested (R104): IDX: 3804 trades, win 29%, net -Rs 727,169 design, holdout -Rs 90,506 (fail)
 ### `book-woods-20` Linear-regression channel: buy pullbacks to the lower line in a rising channel
 - Source: How to Trade Price Action, Ch. 9.1. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -389,6 +421,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book draws trend lines by hand; a regression channel is the mechanical stand-in it names.
 - Data: have
 - Our nearest test: Not tested by us.
+- R104: tested (R104): IDX: 1221 trades, win 33%, net -Rs 76,440 design, holdout -Rs 59,374 (fail)
 
 ## The Power of Divergence Trading - David Carli ([write-up](carli-divergence.md))
 ### `book-carli-01` CCI(20) regular divergence, three qualifying rules, trendline-break entry, Fibonacci targets (daily bars)
@@ -402,6 +435,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book draws swings, trendlines and Fibonacci legs by eye and grants unquantified 'small exceptions' to rules 1-2; we use swing pivots of 3 bars each side (confirmed 3 bars later), no exceptions, the hlc3 CCI input, a 0.1%-of-price buffer for '15-20 pips/ticks', the trendline through the last two swing highs (lows), a 20-bar staleness limit, and our reading of the target leg (Figure 42 unreadable). Rule 3 read as the second extreme lying 1.13-1.618 of the AB pullback beyond B.
 - Data: have
 - Our nearest test: R95 tested CCI(25) regular divergence on 3m-60m bars only (no trendline, no Fibonacci size rule, no +-150 zone): entered when known, 1,778 index trades -Rs 3,37,415 design; not tested by us on daily bars or with this entry
+- R104: tested (R104): DLY: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail); MCXD: 0 trades, win -, net Rs 0 design, holdout -Rs 284 (fail)
 ### `book-carli-02` Same Carli divergence setup on roughly 4-hour bars
 - Source: The Power of Divergence Trading, Ch. 4. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: half-session bars: NSE 09:15-12:15 and 12:15-15:30; MCX 4-hour bars from 09:00. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE, NATURALGAS.
@@ -413,6 +447,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book says 'rarely' 4-hour and never lower; NSE has no natural 4-hour bar, so two bars a session stand in. Same pivot, buffer and leg assumptions as the daily rule.
 - Data: have
 - Our nearest test: R95: CCI fade and divergence variants on 60m failed the holdout (BANKNIFTY 60m B passed design on 48 trades, holdout 17 trades -Rs 1,014); this exact setup not tested by us
+- R104: tested (R104): IDXF: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail); MCXI: 0 trades, win -, net Rs 0 design, holdout Rs 2,646 (fail)
 ### `book-carli-03` Do Carli's three divergence filters improve R95's confirmed divergences?
 - Source: The Power of Divergence Trading, Ch. 4. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute and 60-minute bars (R95's stores). Instruments: NIFTY, BANKNIFTY.
@@ -424,6 +459,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Tests the filters on intraday bars, which the author says he never uses; the point is a cheap check on existing R95 code of whether the filters separate good from bad divergences. Unfiltered R95 divergences are the control.
 - Data: have
 - Our nearest test: R95 confirmed-divergence entries lost (index design 1,778 trades -Rs 3,37,415; holdout 691 trades -Rs 37,156); DV variant 0-52 trades a cell
+- R104: tested (R104): IDX: 11 trades, win 36%, net -Rs 11,019 design, holdout Rs 0 (fail)
 ### `book-carli-04` Skip a trade in the direction of today's opening gap
 - Source: The Power of Divergence Trading, Ch. 2. Family: `daily-filters`. Signal source: underlying price.
 - Timeframe: daily gap (today's open vs yesterday's high / low), applied to any intraday or swing entry. Instruments: NIFTY, BANKNIFTY.
@@ -435,6 +471,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book gives the advice for its own trades without a time limit; we apply it to the gap day only.
 - Data: have
 - Our nearest test: not tested by us in this form; R87 found gap-day context did not make any candle shape predictive (0 of 4,049 shape x context cells)
+- R104: tested (R104): ARM: delta vs the arm -Rs 518,470 design (fail)
 
 ## The First Trading Manual - Trader Tom ([write-up](trader-tom-first-manual.md))
 ### `book-tom-01` 4-bar fractal momentum entry (David Paul)
@@ -448,6 +485,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book gives no stop or exit; the four-bar extreme as stop and the opposite signal as exit are our most literal choices. 'Bar three back' read as high[t-3] (the book numbers bars 1 = current, 2 = previous, 4 = three back).
 - Data: have
 - Our nearest test: not tested by us; nearest R71 P7 three-bar reversal at the day high/low lost (-Rs 1,67,689, 855 trades) and R4 G3 Gann 2-bar swing lost Rs 172 a trade net (6,227)
+- R104: tested (R104): IDX: 2075 trades, win 35%, net -Rs 421,025 design, holdout -Rs 187,870 (fail); MCXI: 373 trades, win 33%, net -Rs 270,906 design, holdout -Rs 142,668 (fail)
 ### `book-tom-02` Stochastic hidden divergence in the trend, timed by a 4-bar fractal
 - Source: The First Trading Manual, Divergence Strategies, p. 119-126. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 60-minute bars (book uses 4-hour FX and 5-minute Dow); 15-minute variant. Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -459,6 +497,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book gives no stochastic settings, pivot rule, trend definition, stop or exit; 14,3 stochastic, 2-bar pivots, 89-SMA trend (the book's own trend MA) and a 10-bar window are our choices.
 - Data: have
 - Our nearest test: R95 CCI divergence labels: +Rs 12.0 lakh where drawn, -Rs 3.4 lakh once known; stochastic only inside B2's coin-flip model
+- R104: tested (R104): IDX: 203 trades, win 36%, net -Rs 75,101 design, holdout -Rs 21,616 (fail); MCXI: 33 trades, win 33%, net -Rs 3,457 design, holdout -Rs 20,261 (fail)
 ### `book-tom-03` Daily / weekly 3-bar swing (3-bar Donchian) as the trend bias
 - Source: The First Trading Manual, Trend Indicators; Daily Work Routine, p. 67-74. Family: `daily-filters`. Signal source: underlying price.
 - Timeframe: daily bars (weekly variant). Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE, NATURALGAS.
@@ -470,6 +509,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book says 'trade below the 3-bar low' turns the trend; we use intraday trade-through of the level (not a close). Book text says both 'last 3 bars' and 'last 4 trading days'; we take the previous 3 completed bars.
 - Data: have
 - Our nearest test: not tested by us at 3 bars; R101 filters on the Donchian arms 0 of 20 (filters that raised the win rate lowered the net); R89 daily+15m trend filter did not cut false breaks
+- R104: tested (R104): ARM: delta vs the arm Rs 94,702 design (fail)
 ### `book-tom-04` Daily 3-bar breakout traded directly
 - Source: The First Trading Manual, Trend Indicators, p. 67-70. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: daily levels, entry on 1-minute trade-through. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD.
@@ -481,6 +521,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book uses it as a trend tool, not an entry with stops; the entry, the ATR cap and the exit are ours.
 - Data: have
 - Our nearest test: not tested at 3 bars; R89 PDHL (1-bar daily levels) 0 of 180; R51 Donchian 20 on 5-minute passed thin (+Rs 48,689, 1,775 trades)
+- R104: tested (R104): IDX: 1352 trades, win 43%, net -Rs 197,505 design, holdout -Rs 104,765 (fail); MCXI: 44 trades, win 48%, net Rs 38,438 design, holdout Rs 77,450 (fail)
 ### `book-tom-05` Body-engulfing bar on 10-minute index bars in the trend direction
 - Source: The First Trading Manual, Engulfing Patterns for Day-Trading, p. 105-110. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 10-minute bars built from 1-minute (5-minute variant). Instruments: NIFTY, BANKNIFTY.
@@ -492,6 +533,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book gives no explicit stop; 'tells us how much to risk' read as the bar's far end. Trend filter not defined in the chapter; the book's 89-period MA used. Breakeven trigger at +1R and the bar-low trail are our readings of 'runs immediately' and 'move the stop progressively'.
 - Data: have
 - Our nearest test: R87 tested engulfing among 43 shapes: no direction edge, 0 of 4,049 context cells; R87B exits on an opposite engulfing hurt
+- R104: tested (R104): IDX: 1809 trades, win 39%, net -Rs 209,879 design, holdout -Rs 61,435 (fail)
 ### `book-tom-06` Reverse after a failed engulfing trade (5-minute scalp)
 - Source: The First Trading Manual, A Special Note on Scalping, p. 114. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -503,6 +545,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book shows one example with no stop or target; the 3-bar window, stop buffer, 1.5R target and 30-minute time stop are ours.
 - Data: have
 - Our nearest test: not tested by us as an entry; R87B: after a strong candle against you price tends to come back (exits on opposite engulfing hurt)
+- R104: tested (R104): IDX: 1834 trades, win 38%, net -Rs 289,727 design, holdout -Rs 51,225 (fail)
 ### `book-tom-07` Fake-out / fake-down of the previous swing, fade back into the range
 - Source: The First Trading Manual, The Fake Moves, p. 103-104. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars (5-minute variant). Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -514,6 +557,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book gives only a diagram; swing definition, close-back confirmation and range minimum are ours.
 - Data: have
 - Our nearest test: R3 ORB Sweep / Range Fade lost Rs 5,05,954 / 5,10,978; R91 swing-sweep fade 0 of 63; R89 break-and-reclaim lost
+- R104: tested (R104): IDX: 5087 trades, win 33%, net -Rs 333,577 design, holdout -Rs 4,813 (fail); MCXI: 188 trades, win 32%, net -Rs 146,517 design, holdout -Rs 149,041 (fail)
 ### `book-tom-08` 1-minute trendline break after a fake-down (Stanley)
 - Source: The First Trading Manual, Case Story: Stanley the Intraday Trader, p. 159-160. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 1-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -525,6 +569,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Line-fitting tolerance, the range-bound proxy, the event window and the exit are ours; the book is discretionary on all of these.
 - Data: have
 - Our nearest test: not tested by us exactly; fake-out fades (R3, R91) failed
+- R104: tested (R104): IDX: 3709 trades, win 35%, net -Rs 427,331 design, holdout -Rs 66,001 (fail)
 ### `book-tom-09` Trend change on the break of the lower low (and continuation buy above the old high)
 - Source: The First Trading Manual, Principles of Price Action & Trend, p. 56-62. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -536,6 +581,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Pivot strength, timeframe, target are ours.
 - Data: have
 - Our nearest test: R71 P8 swing structure HH+HL lost Rs 40,109 on 374 final trades; R90 BOS entries 0 of 99
+- R104: tested (R104): IDX: 377 trades, win 37%, net -Rs 135,513 design, holdout -Rs 1,895 (fail)
 ### `book-tom-10` Buy the 60-minute pullback in a daily uptrend (fade the short-term trend)
 - Source: The First Trading Manual, Price Behaviour Principle 2, p. 43-48. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: daily trend, 60-minute pullback, 15-minute trigger. Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -547,6 +593,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book names the idea but no trigger; combining it with the book's own 3-bar swing and 4-bar fractal is our reading.
 - Data: have
 - Our nearest test: not tested by us as a fixed rule; R89 daily+15m trend filter did not help PDHL breaks; direction at 15-60 min a coin flip (R16)
+- R104: tested (R104): IDX: 340 trades, win 43%, net -Rs 92,085 design, holdout -Rs 15,950 (fail); MCXI: 55 trades, win 40%, net -Rs 42,176 design, holdout -Rs 37,497 (fail)
 ### `book-tom-11` Buy-stop above a dragonfly doji (where the shorts' stops sit)
 - Source: The First Trading Manual, The Dragonfly Pattern, p. 89. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -558,6 +605,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Downtrend definition, doji thresholds, validity and target are ours; the book gives the stop-hunt tip only.
 - Data: have
 - Our nearest test: R87: dragonfly/doji shapes no direction edge; stop runs above the day high are followed by more upside (R87, R86)
+- R104: tested (R104): IDX: 41 trades, win 37%, net -Rs 3,762 design, holdout -Rs 993 (fail)
 ### `book-tom-12` Short on the break of a gravestone doji's low after a rise
 - Source: The First Trading Manual, Gravestone Doji, p. 88. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -569,6 +617,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Trend count, thresholds and target are ours.
 - Data: have
 - Our nearest test: R87-3 SENSEX 15m gravestone -> put +Rs 14,373 on 71 trades but failed walk-forward; NIFTY 1m gravestone did not hold out of sample
+- R104: tested (R104): IDX: 29 trades, win 45%, net -Rs 4,794 design, holdout -Rs 1,233 (fail)
 ### `book-tom-13` Spinning top at the end of a pullback, enter on its break with the main trend
 - Source: The First Trading Manual, Pattern Number 2, Spinning Top, p. 83-84. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -580,6 +629,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's example uses 40-50 bars of downtrend and 8-10 bars of rally; thresholds, target and trend proxy are ours.
 - Data: have
 - Our nearest test: R87: spinning top no edge; 0 of 4,049 shape x context cells
+- R104: tested (R104): IDX: 857 trades, win 43%, net -Rs 152,612 design, holdout -Rs 44,250 (fail)
 ### `book-tom-14` Hanging man / hammer confirmed by a close beyond support within 3 bars
 - Source: The First Trading Manual, Pattern Number 4, Umbrella, p. 91-93. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute and daily bars. Instruments: NIFTY, BANKNIFTY.
@@ -591,6 +641,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's '2/3 times the body' read as 2-3x; 'support' read as the umbrella's low.
 - Data: have
 - Our nearest test: R87: NIFTY 15m hammer -0.47 ATR after 20 candles vs +0.19 matched (continuation, not reversal); daily shapes 0 pass (R87B)
+- R104: tested (R104): IDX: 24 trades, win 25%, net -Rs 13,829 design, holdout -Rs 1,967 (fail); DLY: 12 trades, win 17%, net -Rs 58,814 design, holdout Rs 22,388 (fail)
 ### `book-tom-15` Red marubozu after a failed push up in a downtrend
 - Source: The First Trading Manual, Pattern Number 7, Marabozu, p. 95-96. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -602,6 +653,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Wick tolerance, size threshold, trend filter and exit are ours.
 - Data: have
 - Our nearest test: R87: marubozu no direction edge out of sample on 5m/15m (NIFTY 1m red marubozu did not hold)
+- R104: tested (R104): IDX: 34 trades, win 32%, net Rs 3,688 design, holdout -Rs 11,218 (fail)
 ### `book-tom-16` Equal-size pullback limit buy (harmonic retracement)
 - Source: The First Trading Manual, Case Story: David the Swing Trader, p. 156-158. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars (60-minute trend filter). Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -613,6 +665,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book gives the entry only; stop size, target and trend test are ours.
 - Data: have
 - Our nearest test: R4 ABCD on the touch of D: 10,927 trades, -Rs 227 a trade net; Fibonacci pullback entries no better than random (R4/h37)
+- R104: tested (R104): IDX: 937 trades, win 36%, net -Rs 248,832 design, holdout -Rs 84,724 (fail); MCXI: 98 trades, win 36%, net Rs 44,175 design, holdout -Rs 16,889 (fail)
 ### `book-tom-17` Trade only the first busy hours after the open
 - Source: The First Trading Manual, The 24-Hour Trading Cycle, p. 15-19. Family: `daily-filters`. Signal source: none / clock.
 - Timeframe: intraday clock. Instruments: NIFTY, BANKNIFTY.
@@ -624,6 +677,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's London window (08:00 plus 2-3 hours) mapped to NSE's open; the cut at 12:15 is ours.
 - Data: have
 - Our nearest test: R92: every entry hour loses for the ORB arms (0 of 257); R101 B4 mornings only on R72 raised win rate but cut the final net (-Rs 81,567)
+- R104: not re-run (R104): covered: R101 B4/C4 'entries by 12:00' on R72/R51 (raised win rate, cut final net -Rs 81,567) and R92 entry-hour study; the book's 12:15 differs by 15 minutes
 ### `book-tom-18` No new entries around high-impact scheduled news
 - Source: The First Trading Manual, The 24-Hour Trading Cycle; Stanley case study. Family: `calendar-events`. Signal source: none / calendar.
 - Timeframe: intraday. Instruments: NIFTY, BANKNIFTY, CRUDE, NATURALGAS, GOLD.
@@ -635,6 +689,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Window width is ours; 'red-flagged' mapped to the events in our calendar.
 - Data: have (India events); lack: a verified historical calendar of US release times for every MCX date
 - Our nearest test: EVENT_SHIELD: BANKNIFTY policy-day range 1.48x (15 sessions); pausing arms on event days not an edge; R83 EIA fade/follow failed
+- R104: tested (R104): ARM: delta vs the arm Rs 55,072 design (fail)
 ### `book-tom-19` Add one lot at +1R with the stop to entry (scaling in)
 - Source: The First Trading Manual, Managing Your Risk, Scaling In, p. 131. Family: `trade-management`. Signal source: underlying price (the arm's own signal).
 - Timeframe: the arm's own. Instruments: NIFTY, BANKNIFTY.
@@ -646,6 +701,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Points mapped to R multiples of the arm's stop.
 - Data: have
 - Our nearest test: R81 X7 pyramid on Liquidity +Rs 58k design, -Rs 20k final; H5 pyramiding raised gross not net
+- R104: not re-run (R104): covered: R81 X7 pyramid on Liquidity (+Rs 58k design, -Rs 20k final) and H5: the same add-at-+1R mechanism
 ### `book-tom-20` Scale out in thirds (Mark Douglas)
 - Source: The First Trading Manual, Managing Your Risk, Scaling Out, p. 130. Family: `trade-management`. Signal source: underlying price (the arm's own signal).
 - Timeframe: the arm's own. Instruments: NIFTY, BANKNIFTY.
@@ -657,6 +713,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Points mapped to R multiples.
 - Data: have
 - Our nearest test: R81 X5 scale out half at 1R rejected (-Rs 79k design, -Rs 35k final)
+- R104: not re-run (R104): covered: R81 X5 scale-out (half at 1R, -Rs 79k design / -Rs 35k final) and R100: the same partial-profit mechanism
 
 ## Liquidity, Markets and Trading in Action - Ozenbas, Pagano, Schwartz and Weber ([write-up](ozenbas-liquidity-markets.md))
 ### `book-ozenbas-01` Daily close crosses its 65-day moving average
@@ -670,6 +727,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Simple (not exponential) average; signal on the close, fill at next open; 2 x ATR stop and the option roll are ours. The book gives the crossover only as an example of technical analysis and neither supports nor denies it.
 - Data: have
 - Our nearest test: Not tested by us on daily index or MCX bars. Intraday EMA crosses lost (OBUY_FINAL TI-03 EMA cross, -Rs 369,856 over 2022-2026, 96 variants; R29 ribbons 0 pass). Crypto daily SMA/Donchian trend (RC1) made +24.4% a year after tax vs +58.8% buy and hold.
+- R104: tested (R104): DLY: 259 trades, win 25%, net Rs 750,943 design, holdout -Rs 239,991 (fail); MCXD: 346 trades, win 22%, net -Rs 258,066 design, holdout Rs 1,100,931 (fail)
 ### `book-ozenbas-02` Enter with a capped limit instead of a market order; never chase
 - Source: Liquidity, Markets and Trading in Action, Ch. 2.1, 2.9.1, 5.4. Family: `sizing-execution`. Signal source: none (execution overlay on any underlying signal).
 - Timeframe: 1-minute bars (entry minute + 3 minutes). Instruments: NIFTY, BANKNIFTY.
@@ -681,6 +739,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book only states the trade-off (limit saves the spread but risks no fill); the +0.5% cap and 3-minute rest are h14's pre-registered values.
 - Data: have
 - Our nearest test: h14: the only one of 9 execution policies to pass every gate (+Rs 288/day vs +250 required); holdout +Rs 625/day at kappa 0.02; not robust at kappa 0.04. Already used by the Liquidity arm.
+- R104: not re-run (R104): covered: h14 capped limit +0.5%: the only execution policy to pass (+Rs 288/day), already the Liquidity arm's entry
 ### `book-ozenbas-03` Rest the entry at the best bid (maker) instead of crossing the spread
 - Source: Liquidity, Markets and Trading in Action, Ch. 2.1, 2.9.1 (limit orders save the spread; non-execution and pick-off risk). Family: `sizing-execution`. Signal source: none (execution overlay on any underlying signal).
 - Timeframe: tick / 1-second quotes, entry window 1-3 minutes. Instruments: NIFTY, BANKNIFTY.
@@ -692,6 +751,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The 2-minute window, one re-peg and the 0.15% threshold are ours. The test must count missed trades at their market-order P&L (opportunity cost) and the adverse-selection bias (fills happen more often when price moves against us).
 - Data: **needs data we lack** - lack: historical bid/ask and top-of-book quantity for index options (only one snapshot, 2026-10-06; the app recorder's quote log since 6 Oct 2026 is the source once long enough)
 - Our nearest test: Not tested by us. h24 measured the spread to be saved (half-spread 0.16% NIFTY/BANKNIFTY, one snapshot); h14 tested only marketable limits.
+- R104: not testable (R104): no historical bid/ask for index options (one snapshot, 6 Oct 2026)
 ### `book-ozenbas-04` Fade big moves on no-news days, follow them on scheduled-event days
 - Source: Liquidity, Markets and Trading in Action, Ch. 2.3 (information vs liquidity shocks). Family: `calendar-events`. Signal source: underlying price (plus an event calendar).
 - Timeframe: 1-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -703,6 +763,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book gives only the principle (liquidity shocks revert, information shocks do not). The 3x threshold, windows, stop and holding time are our literal reading and must be pre-registered.
 - Data: have
 - Our nearest test: R86: fading failed pokes lost on all 6 level x index tests (295-804 trades, Rs -2.3 to -5.5 lakh); fade to VWAP lost Rs 64,786 on 71 trades. h28: event days move more but 8,820 variants found no side.
+- R104: tested (R104): IDX: 6395 trades, win 41%, net -Rs 575,827 design, holdout -Rs 10,056 (fail)
 ### `book-ozenbas-05` Buy when the best bid steps to a new higher level (TraderEx Exercise 4)
 - Source: Liquidity, Markets and Trading in Action, Ch. 5.4, Exercise 4. Family: `patterns-indicators`. Signal source: underlying price (index futures best bid; proxy: 1-minute high).
 - Timeframe: 1-minute bars (tick data preferred). Instruments: NIFTY, BANKNIFTY.
@@ -714,6 +775,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The 15-minute lookback and the 1-minute-close proxy for the bid are ours; the book's exercise is discretionary and warns the spread is paid on every round trip.
 - Data: have for the 1-minute proxy (index futures minutes); lack for the literal best-bid version (no bid/ask history)
 - Our nearest test: Close to tested breakout rules: R89 previous-day high/low break 0 of 180, ORB family 0 of 257 (R92), F1/R30 direction coin flip; R7 order flow 0.42x of cost.
+- R104: tested (R104): IDX: 9206 trades, win 30%, net -Rs 1,017,788 design, holdout -Rs 176,349 (fail)
 ### `book-ozenbas-06` Work a multi-lot entry in slices and score it against interval VWAP
 - Source: Liquidity, Markets and Trading in Action, Ch. 2.8.2, 5.4 (Exercises 1-2). Family: `sizing-execution`. Signal source: none (execution overlay).
 - Timeframe: 1-minute bars over a 5-minute entry window. Instruments: BANKNIFTY.
@@ -725,6 +787,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The slicing schedule is ours; the book only says slicing and patience beat one big market order and that VWAP is the yardstick. Only matters at size (tens of lots).
 - Data: **needs data we lack** - lack: option book depth history (have option 1-minute volume for a VWAP benchmark; h10's capacity model is the stand-in for depth)
 - Our nearest test: h10: capacity BANKNIFTY 129 lots in the holdout, FINNIFTY 0; costs ate 55-65% of gross at plan size. h14: the capped limit keeps the cost curve from bending at large size.
+- R104: not testable (R104): no option book-depth history
 ### `book-ozenbas-07` Post a bid and an offer around the mid and capture the spread (TraderEx Exercise 3)
 - Source: Liquidity, Markets and Trading in Action, Ch. 5.4, Exercise 3. Family: `option-structure`. Signal source: none (order book, market making).
 - Timeframe: seconds. Instruments: NIFTY, BANKNIFTY.
@@ -736,6 +799,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Inventory cap and stop are ours. Listed for completeness: it needs co-location-level speed and queue position.
 - Data: **needs data we lack** - lack: tick-by-tick order book and queue position; retail latency (R7: 0.3-1 s to see a tick, 0.2-1 s to send an order) makes it infeasible
 - Our nearest test: Not tested by us. R7: the published order-flow edge belongs to co-located market makers; a phone app cannot compete.
+- R104: not testable (R104): needs tick-by-tick book and queue position
 
 ## Advanced Trading Book / Simple Trading Book - The Advanced Trading Book ([write-up](advanced-trading-book.md))
 ### `book-atb-01` Hammer at a prior swing low, bought only after an up candle confirms
@@ -749,6 +813,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book gives no numbers for wick ratios, 'support', 'confirmation', stop or target; we use the hammer's low as stop and the glossary's 1:3 as target.
 - Data: have
 - Our nearest test: R87: NIFTY 15m hammer followed by -0.47 ATR over 20 candles vs +0.19 matched; wick lows not defended (59% vs 57%, n 3,314); GOLD_CANDLES 1h hammer buys-only weak (t 0.84, 424 trades)
+- R104: tested (R104): IDX: 122 trades, win 37%, net -Rs 35,394 design, holdout Rs 10,386 (fail); MCXI: 25 trades, win 28%, net Rs 6,907 design, holdout -Rs 5,786 (fail)
 ### `book-atb-02` Engulfing candle at the end of a trend
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 2, Bullish / bearish engulfing (p13, p18). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, GOLD.
@@ -760,6 +825,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Stop, target and entry timing are ours (book: 'leads to a reversal').
 - Data: have
 - Our nearest test: R87: engulfing among 12 patterns, nothing held out of sample; GOLD_CANDLES: 144 versions, none with t above 1.1; R85 MCX: no tradable meaning
+- R104: tested (R104): IDX: 1650 trades, win 30%, net -Rs 182,714 design, holdout Rs 3,315 (fail); MCXI: 78 trades, win 23%, net -Rs 117,381 design, holdout -Rs 27,510 (fail)
 ### `book-atb-03` Morning / evening star three-candle reversal
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 2, Morning star / evening star (p12, p19). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -771,6 +837,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Long', 'short-bodied' and the third candle's reach are our numbers; the book's evening-star drawing has bar 3 closing deep into bar 1's body.
 - Data: have
 - Our nearest test: R87: SENSEX 1m morning star +0.090 ATR design (n 3,466) reversed to -0.083 in the holdout (n 837)
+- R104: tested (R104): IDX: 123 trades, win 33%, net -Rs 57,418 design, holdout -Rs 4,727 (fail)
 ### `book-atb-04` Three white soldiers after a downtrend, confirmed by RSI
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 2, Three white soldiers / three black crows (p14, p20). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, GOLD.
@@ -782,6 +849,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): RSI level 50 and the stop at the pattern's start are ours.
 - Data: have
 - Our nearest test: R87-1 NIFTY 5m three white soldiers -> call: -Rs 3,910 on 160 trades; GOLD_CANDLES 15m soldiers negative in the held-out year in every version
+- R104: tested (R104): IDX: 31 trades, win 39%, net -Rs 29,470 design, holdout -Rs 8,905 (fail); MCXI: 4 trades, win 25%, net -Rs 19,650 design, holdout Rs 0 (fail)
 ### `book-atb-05` Doji, then trade the direction that is clear three candles later
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 2, Doji (p22). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -793,6 +861,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'A few candles' = 3; 'clear' = a close beyond the doji's range.
 - Data: have
 - Our nearest test: R87-3 SENSEX 15m gravestone doji -> put: +Rs 14,373 on 71 but walk-forward -Rs 1,923: fail
+- R104: tested (R104): IDX: 762 trades, win 38%, net -Rs 4,232 design, holdout -Rs 31,840 (fail)
 ### `book-atb-06` Falling trendline (neckline) break, retest and bullish candle (Strategy 1)
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 3, Strategy 1 (p26). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars for the line, 5-minute bars for the retest candle. Instruments: NIFTY, BANKNIFTY, CRUDE.
@@ -804,6 +873,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Touch tolerance, retest window and stop are ours; the book gives no stop or target for this setup.
 - Data: have
 - Our nearest test: R22: break-and-retest of the morning range no better than the break (retest rule -20,547 design / -6,095 holdout); H35 retest-then-go on levels: 408 variants all lose after costs; trendlines themselves never tested
+- R104: tested (R104): IDX: 69 trades, win 28%, net Rs 9,746 design, holdout -Rs 2,835 (fail); MCXI: 1 trades, win 0%, net -Rs 380 design, holdout -Rs 818 (fail)
 ### `book-atb-07` Symmetrical triangle after a rise: break, retest, bullish candle, buy the next candle (Strategy 2)
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 3, Strategy 2 (p27). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD.
@@ -815,6 +885,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Swing count, trend test, retest window, stop and measured target are ours (book gives none).
 - Data: have
 - Our nearest test: Not tested by us as a triangle; nearest R71 P3 squeeze release: final -Rs 41,281 on 305 trades
+- R104: tested (R104): IDX: 106 trades, win 36%, net -Rs 35,473 design, holdout -Rs 13,798 (fail); MCXI: 9 trades, win 44%, net Rs 25 design, holdout -Rs 5,294 (fail)
 ### `book-atb-08` Rising wedge in a downtrend: lower-line break, previous-low break, retest, sell (Strategy 3)
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 3, Strategy 3 (p28). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE.
@@ -826,6 +897,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Wedge geometry, windows and target are ours; stop is the book's.
 - Data: have
 - Our nearest test: Wedges not tested; previous-swing breaks failed in R90 (0 of 99) and R89 (0 of 180)
+- R104: tested (R104): IDX: 105 trades, win 44%, net -Rs 24,083 design, holdout -Rs 7,966 (fail); MCXI: 4 trades, win 50%, net -Rs 37 design, holdout Rs 3 (fail)
 ### `book-atb-09` Triangle in a downtrend: sell the lower-line break at once, stop at the last lower high (Strategy 4)
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 3, Strategy 4 (p29). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE.
@@ -837,6 +909,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book calls it 'symmetrical' but draws a flat base; we follow the drawing. Target is ours.
 - Data: have
 - Our nearest test: R20c: two-close breaks of horizontal levels +0.02 ATR to the close, random levels the same (7,548 breaks)
+- R104: tested (R104): IDX: 254 trades, win 42%, net -Rs 70,878 design, holdout -Rs 17,450 (fail); MCXI: 5 trades, win 60%, net -Rs 1,060 design, holdout -Rs 3,873 (fail)
 ### `book-atb-10` Flag (parallel channel against a sharp pole), trade the channel break (Strategy 5, sheet p58)
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 3, Strategy 5 (p30); Ch. 4 flags (p58). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE, CRYPTO.
@@ -848,6 +921,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Pole size, flag length, parallel tolerance, stop and target are ours.
 - Data: have
 - Our nearest test: R71 P4 flag: only 32 final trades (-Rs 442 with L25), design -Rs 27,378: too rare to judge
+- R104: tested (R104): IDX: 60 trades, win 32%, net -Rs 6,790 design, holdout -Rs 10,658 (fail); MCXI: 32 trades, win 31%, net -Rs 2,108 design, holdout -Rs 1,034 (fail); CRY: 285 trades, win 48%, net -Rs 16,726 design, holdout -Rs 6,912 (fail)
 ### `book-atb-11` Sideways box after a move: break, retest, confirming candle (Strategy 6)
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 3, Strategy 6 (p31). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars for the box, 5-minute for the retest. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD.
@@ -859,6 +933,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Box size and length, retest window, stop and target are ours; book gives only the retest-and-bullish-candle entry.
 - Data: have
 - Our nearest test: Closest arm: Donchian plain breakout, Rs 55,439 on 1,787 final trades (R71); retest not better on the morning range (R22); ORB family 0 of 257 (R92); run it beside Donchian with and without the retest
+- R104: tested (R104): IDX: 52 trades, win 25%, net -Rs 14,409 design, holdout -Rs 5,433 (fail); MCXI: 9 trades, win 33%, net -Rs 943 design, holdout -Rs 7,385 (fail)
 ### `book-atb-12` Bullish flag: wait for the last swing high to break, buy the first bullish candle after one pullback candle (Strategy 7)
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 3, Strategy 7 (p32). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute bars (15-minute variant). Instruments: NIFTY, BANKNIFTY, CRUDE.
@@ -870,6 +945,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book implies the stop near the pullback ('a smaller stop'); exact level, waiting window and target are ours.
 - Data: have
 - Our nearest test: R71 P8 swing-high break: final -Rs 34,242 on 372; R87B green-green-red cluster held (+0.26 ATR, n 182) but its call with a stop under the red candle lost -Rs 21,127 (162)
+- R104: tested (R104): IDX: 20 trades, win 10%, net -Rs 12,862 design, holdout Rs 1,017 (fail); MCXI: 7 trades, win 43%, net -Rs 99 design, holdout -Rs 2,017 (fail)
 ### `book-atb-13` Double top / bottom neckline break with stop inside and measured target
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 4, Double top / double bottom (p34, p38, p53, p54). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -881,6 +957,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The midway stop and measured target are read from the drawings; R71 used the extreme as stop and Donchian's exits.
 - Data: have
 - Our nearest test: R71 P5 double bottom / top (5-min swings): final -Rs 12,091 on 502, design -Rs 94,311; the book's stop and target differ from R71's
+- R104: tested (R104): IDX: 498 trades, win 42%, net -Rs 113,257 design, holdout -Rs 7,864 (fail); MCXI: 39 trades, win 41%, net -Rs 31,359 design, holdout -Rs 6,932 (fail)
 ### `book-atb-14` Head and shoulders / inverse: neckline break
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 4, Head and shoulders (p36, p39, p53, p54). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars (daily variant for MCX and index). Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE, NATURALGAS.
@@ -892,6 +969,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Symmetry tolerances, stop and target from the drawings.
 - Data: have
 - Our nearest test: not tested by us
+- R104: tested (R104): IDX: 163 trades, win 29%, net -Rs 17,408 design, holdout Rs 7,532 (fail); MCXI: 18 trades, win 56%, net Rs 22,921 design, holdout -Rs 5,975 (fail)
 ### `book-atb-15` Falling wedge buy / rising wedge sell on the boundary break (no retest)
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 4, Falling wedge / rising wedge (p35, p37, p40, p42, p53-p55). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE, CRYPTO.
@@ -903,6 +981,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Wedge geometry and target from the drawings.
 - Data: have
 - Our nearest test: not tested by us
+- R104: tested (R104): IDX: 477 trades, win 39%, net -Rs 95,017 design, holdout -Rs 37,705 (fail); MCXI: 24 trades, win 25%, net -Rs 6,262 design, holdout Rs 4,950 (fail); CRY: 1416 trades, win 47%, net -Rs 204,380 design, holdout -Rs 76,464 (fail)
 ### `book-atb-16` Bullish / bearish pennant break
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 4, Pennants (p43, p45, p55). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute and 15-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE.
@@ -914,6 +993,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Pole, pennant size and target ours, from the drawings.
 - Data: have
 - Our nearest test: R71 P4 flag (nearest): 32 final trades, too rare
+- R104: tested (R104): IDX: 53 trades, win 23%, net -Rs 25,455 design, holdout Rs 10,793 (fail); MCXI: 17 trades, win 12%, net -Rs 4,163 design, holdout Rs 153 (fail)
 ### `book-atb-17` Bullish / bearish rectangle break with stop at the far side (chart-pattern version, no retest)
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 4, Rectangles (p41, p44, p54, p55). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -925,6 +1005,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Box definition ours; stop and target from the drawings.
 - Data: have
 - Our nearest test: Close cousin of the Donchian arm (positive record, R71/R72); compare head to head on the same days
+- R104: tested (R104): IDX: 59 trades, win 39%, net -Rs 9,359 design, holdout -Rs 4,980 (fail); MCXI: 36 trades, win 3%, net -Rs 10,578 design, holdout -Rs 6,945 (fail)
 ### `book-atb-18` Triple top / bottom: break of the opposite side after three touches
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 4, Triple top / triple bottom (p46, p47, p56). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, GOLD.
@@ -936,6 +1017,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book draws only the lines; stop and target are ours.
 - Data: have
 - Our nearest test: R71 P5 (two touches) lost; R20b levels no better than random lines
+- R104: tested (R104): IDX: 82 trades, win 39%, net -Rs 36,895 design, holdout Rs 577 (fail); MCXI: 5 trades, win 40%, net -Rs 2,931 design, holdout -Rs 2,598 (fail)
 ### `book-atb-19` Cup and handle (and inverse): break of the rim after the handle
 - Source: Advanced Trading Book / Simple Trading Book, Ch. 4, Cup and handle (p51, p52, p57). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute and 60-minute bars. Instruments: NIFTY, BANKNIFTY, GOLD, CRYPTO.
@@ -947,6 +1029,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): All geometry ours; the book draws only a resistance line and the shape.
 - Data: have
 - Our nearest test: not tested by us
+- R104: tested (R104): IDX: 74 trades, win 35%, net -Rs 12,598 design, holdout -Rs 12,197 (fail); MCXI: 5 trades, win 40%, net -Rs 606 design, holdout Rs 11,058 (fail); CRY: 250 trades, win 50%, net -Rs 26,734 design, holdout -Rs 9,105 (fail)
 
 ## Trading Volatility - Colin Bennett ([write-up](bennett-trading-volatility.md))
 ### `book-bennett-01` Sell defined-risk premium only when implied is dear against forecast realised (volatility risk premium filter)
@@ -960,6 +1043,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Bennett gives no threshold for 'dear'; the 70th percentile and the 4-strike wing are our choices. The forecast excludes the overnight gap for intraday holds because h29 found IV carries overnight risk an intraday seller does not collect.
 - Data: have (wings within ATM +-10; reprice any leg without a print, per R103's stale-wing warning)
 - Our nearest test: R103 sold iron flies / condors every day: 0 of 24 confirmed. R102: India VIX over-states NIFTY's next 21 days on 81% of days (median 1.28, n 4,507) but under-states BANKNIFTY's on 60%. A VRP-timed filter was not tested.
+- R104: tested (R104): VOL: 537 trades, win 42%, net -Rs 144,620 design, holdout -Rs 38,545 (fail)
 ### `book-bennett-02` NIFTY buy-write: long future, short weekly ~25-delta call
 - Source: Trading Volatility, Ch. 1.4, Call overwriting. Family: `option-structure`. Signal source: volatility / options structure (overwriting); the long future is a passive holding.
 - Timeframe: daily; weekly expiry cycle. Instruments: NIFTY.
@@ -971,6 +1055,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Weekly instead of monthly because NIFTY weeklies exist; 25-delta weekly strike is about 1-2% OTM, inside ATM +-10.
 - Data: have (futures bars, nearest-expiry chain with IV for delta)
 - Our nearest test: not tested by us
+- R104: tested (R104): VOL: 168 trades, win 55%, net -Rs 160,226 design, holdout -Rs 63,992 (fail)
 ### `book-bennett-03` Put underwriting as a defined-risk bull put spread at 25 delta
 - Source: Trading Volatility, Ch. 1.2, Put underwriting benefits from selling expensive implied. Family: `option-structure`. Signal source: volatility / options structure (sell the vol premium and skew); no direction signal.
 - Timeframe: daily; weekly (NIFTY) / monthly (BANKNIFTY) expiry cycle. Instruments: NIFTY, BANKNIFTY.
@@ -982,6 +1067,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Bennett's naked short put at a support level is replaced by a 25-delta strike (support levels were random lines in R20b) and a spread (no naked shorts).
 - Data: have (strikes within ATM +-10; BANKNIFTY monthly 25-delta put may sit near the edge of +-10 - reprice stale legs)
 - Our nearest test: R103 tested symmetric credit structures, not one-sided put spreads: 0 of 24. IV1's put-writing OI rule was a buying signal, not put selling.
+- R104: tested (R104): VOL: 222 trades, win 55%, net -Rs 28,552 design, holdout -Rs 6,907 (fail)
 ### `book-bennett-04` Long ATM straddle, gamma-scalped with futures at fixed index bands, only when implied is cheap
 - Source: Trading Volatility, Ch. 2.1 Delta hedging, Ch. 3.5 Discrete hedging. Family: `option-structure`. Signal source: volatility / options structure (implied vs forecast realised); hedge on the underlying future.
 - Timeframe: 1-minute bars, intraday. Instruments: NIFTY, BANKNIFTY.
@@ -993,6 +1079,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): A one-lot hedge is coarse (NIFTY future 65 units = option lot), so the hedge only switches in whole lots; thresholds are ours. Futures costs added per hedge.
 - Data: have (index futures 1-minute bars and option chain)
 - Our nearest test: R89: unhedged straddles 0 of 18 (4,302 design straddles); h29: buying when IV is cheap, 16 variants all lost. A futures-hedged version was never tested.
+- R104: tested (R104): VOL: 557 trades, win 27%, net -Rs 279,847 design, holdout -Rs 35,441 (fail)
 ### `book-bennett-05` Sell skew (short ATM-5 put, long ATM+5 call, delta hedged) outside jumpy regimes
 - Source: Trading Volatility, Ch. 7.5, Skew trading; Ch. 1.6 risk reversals. Family: `option-structure`. Signal source: volatility / options structure (skew level and realised skew); hedge on the underlying future.
 - Timeframe: 1-minute chain; daily decision at 09:20; held to 15:10. Instruments: NIFTY, BANKNIFTY.
@@ -1004,6 +1091,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Bennett's realised-skew definition is made literal on daily ATM IV changes; strikes 5 out because 90% strikes are outside ATM +-10 on a weekly.
 - Data: have
 - Our nearest test: not tested by us; R102 measured the skew level only (ATM-5 put dearer than ATM+5 call by 2.56 IV points on 91% of 1,222 NIFTY days).
+- R104: tested (R104): VOL: 511 trades, win 49%, net -Rs 180,635 design, holdout -Rs 15,112 (fail)
 ### `book-bennett-06` Calendar trade when implied moves break the square-root-of-time rule
 - Source: Trading Volatility, Ch. 7.2-7.3, Square root of time rule; term structure trading. Family: `option-structure`. Signal source: volatility / options structure (term structure).
 - Timeframe: daily, 09:20 and 15:10 snapshots. Instruments: NIFTY.
@@ -1015,6 +1103,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Bennett's 0.5 power and his long/short rule; the 0.3 / 0.7 bands are ours.
 - Data: **needs data we lack** - lack: next-expiry ATM chain is mostly missing from the rolling lake (h29 had monthly-minus-weekly IV only while both were listed)
 - Our nearest test: h29: term structure (monthly minus weekly ATM IV) did not sort the realised move; calendar trades not tested by us (R94's calendars were MCX futures spreads).
+- R104: not testable (R104): next-expiry ATM chain is mostly missing from the rolling lake
 ### `book-bennett-07` Sell an overpriced event jump: short the expiry after the event, long the expiry before
 - Source: Trading Volatility, Ch. 6.4, Trading earnings announcements / jumps. Family: `calendar-events`. Signal source: volatility / options structure around a calendar event.
 - Timeframe: daily, entry the session before the event. Instruments: NIFTY.
@@ -1026,6 +1115,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Bennett's stock earnings method moved to index macro events; the 1.3x threshold is ours.
 - Data: **needs data we lack** - lack: needs two expiries' chains on event days (rolling lake keeps the nearest expiry only); events.csv exists (R98d)
 - Our nearest test: Event straddle buying lost (R1 rows 22-24: realised 0.69x implied); Budget day doubles the range (2.13% NIFTY, n 6). The jump calendar was not tested.
+- R104: not testable (R104): needs two expiries' chains on event days
 ### `book-bennett-08` Relative-value vol: NIFTY vs BANKNIFTY ATM IV spread mean reversion (theta-weighted)
 - Source: Trading Volatility, Ch. 6.2, Relative value volatility trading. Family: `option-structure`. Signal source: volatility / options structure (spread of two indices' implieds).
 - Timeframe: daily at 09:20. Instruments: NIFTY, BANKNIFTY.
@@ -1037,6 +1127,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): BANKNIFTY is monthly and NIFTY weekly, so the matched-expiry rule is ours; whole-lot weighting is coarse.
 - Data: have for same-day ATM IV of both nearest expiries; lack for matched maturities
 - Our nearest test: not tested by us; R102: BANKNIFTY realised is about 1.3x NIFTY's and beta 1.157.
+- R104: not testable (R104): matched-maturity IVs need a second expiry; with the nearest only, a 10-session vol position has to roll weekly, which the book's trade is not
 ### `book-bennett-09` After a sharp fall, near-zero-cost 1x2 call spread made defined-risk (broken-wing butterfly)
 - Source: Trading Volatility, Ch. 1.4, 1x2 call spreads are useful when a bounce-back is expected. Family: `option-structure`. Signal source: underlying price (the fall), then options structure.
 - Timeframe: daily bars for the signal; option chain at 09:20 next day. Instruments: NIFTY, BANKNIFTY.
@@ -1048,6 +1139,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Sharp drop' and 'bounce to earlier levels' are made literal as 4% over 3 sessions and half the fall; the extra long call replaces the stock that covered the second short call in the book.
 - Data: have
 - Our nearest test: Direction after falls is a coin flip; R102 daily momentum (+5.8 bps NIFTY) reversed in the holdout (-9.4 bps, 65 days). Not tested as a structure.
+- R104: tested (R104): VOL: 23 trades, win 43%, net -Rs 29,762 design, holdout Rs 18,668 (fail)
 ### `book-bennett-10` Is skew a risk indicator? Next-day range vs 09:20 skew, controlling for ATM IV
 - Source: Trading Volatility, Ch. 7.1, Skew is often mistakenly used as a risk indicator. Family: `daily-filters`. Signal source: option chain as context (skew and ATM IV).
 - Timeframe: daily. Instruments: NIFTY, BANKNIFTY.
@@ -1059,6 +1151,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Fixed-strike skew uses ATM-5 vs ATM+5 because 90% strikes are outside ATM +-10.
 - Data: have
 - Our nearest test: R16 and R102: VIX / ATM IV is the range dial; IV1 and h29: skew carries no direction. Skew vs range given ATM IV not tested.
+- R104: descriptive only (R104)
 
 ## 9 Advanced and Profitable Trading Strategies - Roman Sadowski ([write-up](sadowski-9-strategies.md))
 ### `book-sadowski-01` 20/60 SMA crossover with a 100 SMA trend read
@@ -1072,6 +1165,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): MA type assumed simple. Always-in-market reversal. The SMA100 filter is our reading of 'bars stay above the 100'.
 - Data: have
 - Our nearest test: OBUY_FINAL TI-03 EMA cross: 96 variants, walk-forward -369,856, 1/5 years positive; HUNT_H25 MA crosses 0 of 28 EMA families positive walk-forward
+- R104: tested (R104): DLY: 65 trades, win 42%, net Rs 416,259 design, holdout -Rs 483,356 (fail); MCXD: 49 trades, win 35%, net Rs 95,346 design, holdout Rs 184,782 (fail)
 ### `book-sadowski-02` Daily Heikin-Ashi two-candle reversal with stochastic 14,7,3
 - Source: 9 Advanced and Profitable Trading Strategies, Strategy 3. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: daily bars. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE.
@@ -1083,6 +1177,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's stochastic sentence has the colours swapped; we read it as oversold for longs. Pips converted to ATR fractions. 'Series of candles' = at least 3. The AC sign for shorts is read as below zero.
 - Data: have
 - Our nearest test: HUNT_R71 P6 Heikin-Ashi flip (15-min, EMA filter): -Rs 79,173 on 357 trades, fail; OBUY_FINAL TI-08 Heikin-Ashi -170,762 walk-forward; daily HA + stochastic not tested by us
+- R104: tested (R104): DLY: 324 trades, win 36%, net Rs 458,687 design, holdout Rs 49,026 (fail); MCXD: 241 trades, win 22%, net Rs 49,315 design, holdout Rs 68,655 (fail)
 ### `book-sadowski-03` Break out of an overlapping correction in the trend direction
 - Source: 9 Advanced and Profitable Trading Strategies, Strategy 4. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 60-minute bars (book: 4-hour forex); 15-minute variant. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD.
@@ -1094,6 +1189,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Overlap, contraction and trend are all our definitions (8 bars, 1.5 ATR box, 50% overlap, EMA50); the book gives only examples.
 - Data: have
 - Our nearest test: HUNT_R71 P3 squeeze release -Rs 41,281 on 305 trades and P8 swing structure -Rs 34,242 on 372 trades, both fail; Donchian 20 breakout is our paper arm
+- R104: tested (R104): IDX: 13 trades, win 54%, net Rs 11,240 design, holdout Rs 5,700 (fail)
 ### `book-sadowski-04` Engulfing candle, enter the next open, stop at its extreme
 - Source: 9 Advanced and Profitable Trading Strategies, Strategy 5. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars (book: timeframe not stated). Instruments: NIFTY, BANKNIFTY.
@@ -1105,6 +1201,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Covers' = body high >= max of prior bodies and body low <= min of prior bodies. N swept 1..3 as the book's 'one or more'.
 - Data: have
 - Our nearest test: HUNT_R87 candle anatomy: shapes do not predict direction (92% of 234 cells 45-55% up); HUNT_H25 61 TA-Lib patterns, 6 of 122 families positive walk-forward, none passed
+- R104: tested (R104): IDX: 603 trades, win 26%, net -Rs 85,097 design, holdout -Rs 30,566 (fail)
 ### `book-sadowski-05` Long shadow / hammer candle, enter the next open
 - Source: 9 Advanced and Profitable Trading Strategies, Strategy 5. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1116,6 +1213,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Body at one end' = top/bottom third; the 2x rule is the book's.
 - Data: have
 - Our nearest test: HUNT_R87: hammers mostly mark continuation (NIFTY 15m: a further -0.47 ATR over 20 candles); a big tail's low is broken within 10 candles 59% of the time
+- R104: tested (R104): IDX: 4038 trades, win 26%, net -Rs 498,476 design, holdout -Rs 112,977 (fail)
 ### `book-sadowski-06` Buy the retest of broken resistance, scaled in three parts
 - Source: 9 Advanced and Profitable Trading Strategies, Strategy 6. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1127,6 +1225,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book gives no stop, target or trend definition; all are ours. 'Zone' treated as the exact level for the limit.
 - Data: have
 - Our nearest test: OBUY_FINAL LV-01 PDH/PDL break-retest: 64 variants, -129,689 walk-forward; HUNT_R20C 2-close breaks continue 51% of 7,548; HUNT_R20B levels no better than random
+- R104: tested (R104): IDX: 795 trades, win 42%, net Rs 92,562 design, holdout -Rs 14,601 (fail)
 ### `book-sadowski-07` Bollinger 20,2 squeeze, enter on a close across the middle SMA
 - Source: 9 Advanced and Profitable Trading Strategies, Strategy 7. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 60-minute bars (book: 4-hour forex); 15-minute variant. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD.
@@ -1138,6 +1237,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's absolute width (0.0100 on EURUSD) is replaced by a width percentile. 'A full candle above' read as open and close above the middle line.
 - Data: have
 - Our nearest test: HUNT_R71 P3 squeeze release (band-close trigger): -Rs 41,281 on 305 trades, 67% overlap with Donchian; OBUY_FINAL MR-02 Bollinger alert -90,790
+- R104: tested (R104): IDX: 189 trades, win 49%, net -Rs 30,443 design, holdout -Rs 24,943 (fail); MCXI: 109 trades, win 35%, net -Rs 91,330 design, holdout Rs 1,487 (fail)
 ### `book-sadowski-08` Daily NR4 / NR7 breakout
 - Source: 9 Advanced and Profitable Trading Strategies, Strategy 8. Family: `daily-filters`. Signal source: underlying price.
 - Timeframe: daily bars for the setup, 5-minute bars for the break. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD, SILVER, NATURALGAS.
@@ -1149,6 +1249,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Trailed to suit' made precise as the swing trail after +1R. Chubby = our definition.
 - Data: have
 - Our nearest test: OBUY_FINAL LV-04 NR7/inside day: 72 variants, -28,141 walk-forward; HUNT_R71 P2 15-min NR7 -Rs 1,68,820; HUNT_R96 crude NR7 the only unproven MCX lead (failed on COPPER)
+- R104: tested (R104): IDX: 223 trades, win 37%, net -Rs 26,984 design, holdout -Rs 27,149 (fail); MCXI: 49 trades, win 55%, net Rs 78,075 design, holdout Rs 62,337 (fail)
 ### `book-sadowski-09` RSI(2) above 90 buy / below 10 sell, with adds
 - Source: 9 Advanced and Profitable Trading Strategies, Strategy 9. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars (book: not stated); daily variant. Instruments: NIFTY, BANKNIFTY.
@@ -1160,6 +1261,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The stop and the 3-unit cap are ours. 'Moves above' = a cross at a bar close.
 - Data: have
 - Our nearest test: GOLD_SCALP.md rsi2 follow on XAUUSD all negative (-234,718 over 6629 trades, M5 buys only); the Connors reading (RSI(2)<10 buy) inside the coin band on NIFTY (SWING_EXITS.md); momentum reading on NIFTY not tested by us
+- R104: tested (R104): IDX: 5498 trades, win 35%, net -Rs 710,888 design, holdout -Rs 150,781 (fail); DLY: 949 trades, win 33%, net Rs 1,495,059 design, holdout -Rs 878,745 (fail)
 ### `book-sadowski-10` Weekly + daily stochastic extreme at a swing level, intraday reversal entry
 - Source: 9 Advanced and Profitable Trading Strategies, Strategy 1. Family: `daily-filters`. Signal source: underlying price.
 - Timeframe: weekly and daily bars for the setup, 60-minute bars for entry. Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -1171,6 +1273,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The COT bias, the 'major' level and the intraday 'reversal pattern' are discretionary in the book; all of these definitions are ours. Stochastic settings are borrowed from the common 14,3,3.
 - Data: have (lack: CFTC COT data for a literal MCX version)
 - Our nearest test: HUNT_H25 intraday stochastic within 'Other indicators' 0 of 50 families positive walk-forward; weekly+daily version not tested by us
+- R104: tested (R104): IDXF: 114 trades, win 33%, net Rs 43,629 design, holdout Rs 112,628 (fail)
 
 ## A Complete Guide to Day Trading - Markus Heitkoetter ([write-up](heitkoetter-day-trading.md))
 ### `book-heitkoetter-01` Trade with an intraday trendline; exit when it breaks
@@ -1184,6 +1287,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book draws lines by eye; 'close to the lows' made 0.15 x ATR14; entry trigger (break of the last swing high) and the 15:10 square-off are ours; volume confirmation dropped (index spot has no volume; could use futures volume from 29 Jul 2026).
 - Data: have
 - Our nearest test: not tested by us; nearest R71 P8 swing structure (HH + HL) lost in the final period (-Rs 40,109 on 374 trades) and H25 break-of-structure families were 0 of 18 positive
+- R104: tested (R104): IDX: 955 trades, win 29%, net -Rs 209,106 design, holdout Rs 7,491 (fail)
 ### `book-heitkoetter-02` Close crosses a 10-period SMA
 - Source: A Complete Guide to Day Trading, Step 3, Simple Moving Averages. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars (book's default timeframe); book's example 10-minute. Instruments: NIFTY, BANKNIFTY.
@@ -1195,6 +1299,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book suggests 5 or 10 periods without picking; SMA(10) chosen, SMA(5) as the one variant. Stop/target converted from the author's own $200 / $300 per contract; time stop from the book's three-bar rule.
 - Data: have
 - Our nearest test: H25 price x SMA crosses (SMA family 15,120 variants, Rs -145 a trade, 1 of 28 walk-forward families positive)
+- R104: not re-run (R104): covered: H25 price x SMA crosses (15,120 variants, Rs -145 a trade, 1 of 28 walk-forward families positive), exits of this kind included
 ### `book-heitkoetter-03` 14 / 20 moving-average crossover
 - Source: A Complete Guide to Day Trading, Step 3, Crossover of Moving Averages. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1206,6 +1311,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book does not say simple or exponential; simple used (book calls them moving averages in the SMA section). Exits from the book's generic $200/$300 and three-bar time stop.
 - Data: have
 - Our nearest test: OBUY_GB TI-03 EMA crosses Rs -369,856 walk-forward on 4,526 trades; R29 EMA 9 x 21 Rs -110 a trade (1,785 holdout trades); the 14/20 pair itself not tested
+- R104: not re-run (R104): covered: OBUY_GB TI-03 MA crosses (-Rs 3,69,856 walk-forward on 4,526) and R29
 ### `book-heitkoetter-04` Turtle 20-bar breakout on 15-minute bars with the book's exits
 - Source: A Complete Guide to Day Trading, Step 3, Turtle Trading; Step 5 exits. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE.
@@ -1217,6 +1323,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book gives no exits for the turtle rule; its generic $200/$300 and three-bar time stop are used. Our Donchian arm already covers 5-minute bars with -15%/+30% premium exits; this is the book's 15-minute version for comparison.
 - Data: have
 - Our nearest test: R51/R73 Donchian 20 on 5-minute index bars: final Rs 81,845 on 1,781 trades (thin, R51 about zero at 2x costs); R83 crude daily Donchian-20 + Supertrend not proven
+- R104: tested (R104): IDX: 3935 trades, win 42%, net -Rs 354,686 design, holdout -Rs 102,477 (fail); MCXI: 959 trades, win 34%, net -Rs 104,204 design, holdout -Rs 155,264 (fail)
 ### `book-heitkoetter-05` MACD 12/26/9 signal-line cross
 - Source: A Complete Guide to Day Trading, Step 3, MACD. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1228,6 +1335,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's wording of which line crosses which is ambiguous; the standard reading is used.
 - Data: have
 - Our nearest test: H25 MACD signal and zero cross in the 'other indicators' family: 27,000 variants, Rs -146 a trade, 0 of 50 walk-forward families positive
+- R104: not re-run (R104): covered: H25 MACD signal / zero cross: 27,000 variants, 0 of 50 families positive walk-forward
 ### `book-heitkoetter-06` Williams %R 14, sell above 80, buy below 20
 - Source: A Complete Guide to Day Trading, Step 3, Williams %R. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars (book: intraday, 14 bars). Instruments: NIFTY, BANKNIFTY.
@@ -1239,6 +1347,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's scale is inverted from the usual -100..0; 'one signal per zone visit' added to stop repeats.
 - Data: have
 - Our nearest test: H25 Williams %R as given: family no better than random
+- R104: not re-run (R104): covered: H25 Williams %R as given: no better than random
 ### `book-heitkoetter-07` RSI 14 crosses back through 30 / 70
 - Source: A Complete Guide to Day Trading, Step 3, Relative Strength Index. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1250,6 +1359,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Exits from the book's generic guidance.
 - Data: have
 - Our nearest test: OBUY_GB MR-03 RSI 30/70 reversal Rs -82,004 walk-forward over 1272 trades
+- R104: not re-run (R104): covered: OBUY_GB MR-03 RSI 30/70 reversal: -Rs 82,004 walk-forward on 1,272
 ### `book-heitkoetter-08` Bollinger 21 / 2 band fade
 - Source: A Complete Guide to Day Trading, Step 3, Bollinger Bands and Channels. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 10-minute bars (book's example) and 15-minute. Instruments: NIFTY, BANKNIFTY.
@@ -1261,6 +1371,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Moves below' read as a trade beyond the band; middle-band exit added as the natural mean-reversion target.
 - Data: have
 - Our nearest test: OBUY_GB MR-02 Bollinger alert candle Rs -90,790 walk-forward (2136 trades); R71 P3 squeeze release lost in the final
+- R104: not re-run (R104): covered: OBUY_GB MR-02 Bollinger fade: -Rs 90,790 walk-forward on 2,136
 ### `book-heitkoetter-09` Trend channel: enter at the trendline, exit at the channel line
 - Source: A Complete Guide to Day Trading, Step 3, Trendlines & Trend Channels. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1272,6 +1383,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Stop buffer, width filter and channel construction details are ours; the book gives only the idea.
 - Data: have
 - Our nearest test: not tested by us; nearest OBUY_GB MR-05 TWAP stretch fade Rs -91,856 walk-forward (713 trades)
+- R104: tested (R104): IDX: 1259 trades, win 33%, net -Rs 4,494 design, holdout -Rs 25,975 (fail)
 ### `book-heitkoetter-10` First 15-minute bar direction, previous-day high/low target, then reverse
 - Source: A Complete Guide to Day Trading, Step 5, Stop Losses (technical) and Profit-Taking (technical). Family: `orb`. Signal source: underlying price.
 - Timeframe: 15-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1283,6 +1395,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book shows two single-chart examples, not a system; the stop rule and skip filter are ours.
 - Data: have
 - Our nearest test: ORB family lost everywhere (R3, R92 0 of 257); R1 N11 / N12 first-candle rules lost; R89 PDH/PDL 0 of 180
+- R104: not re-run (R104): covered: R1 N11/N12 first-candle rules and the ORB family (R3, R92 0 of 257), PDH/PDL R89 0 of 180
 ### `book-heitkoetter-11` Three-bar time stop on the Donchian arm
 - Source: A Complete Guide to Day Trading, Step 5, Time-Stops. Family: `trade-management`. Signal source: underlying price.
 - Timeframe: 5-minute Donchian signals; time stop 15 minutes (3 bars). Instruments: NIFTY, BANKNIFTY.
@@ -1294,6 +1407,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's 3 x timeframe applied to the arm's 5-minute bars; risk-lowering (earlier exit), paper only.
 - Data: have
 - Our nearest test: R18 V3 45-minute time stop on other arms: 0 of 60 overlays pass; R81 X4 no-progress stop -Rs 85k design
+- R104: tested (R104): ARM: delta vs the arm Rs 6,153 design (fail)
 ### `book-heitkoetter-12` Trail the stop at the previous 60-minute bar's high/low
 - Source: A Complete Guide to Day Trading, Step 5, Trailing Stops. Family: `trade-management`. Signal source: underlying price.
 - Timeframe: 60-minute bars. Instruments: NIFTY, BANKNIFTY, GOLD, CRUDE.
@@ -1305,6 +1419,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's example is 60-minute E-mini; a 15-minute version is the natural variant.
 - Data: have
 - Our nearest test: not tested by us exactly; R81 X3 ATR trail cut runners (-Rs 62k design, -Rs 17k final); R19b Rs 500 trail failed
+- R104: tested (R104): ARM: delta vs the arm Rs 42,817 design (fail)
 ### `book-heitkoetter-13` Take profits in thirds
 - Source: A Complete Guide to Day Trading, Step 5, Taking Partial Profits. Family: `trade-management`. Signal source: underlying price.
 - Timeframe: arm's own. Instruments: NIFTY, BANKNIFTY.
@@ -1316,6 +1431,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Which S/R level and which trail are our choices.
 - Data: have
 - Our nearest test: R81 X5 scale out half at 1R rejected (-Rs 79k design, -Rs 35k final)
+- R104: not re-run (R104): covered: R81 X5 scale-out failed; thirds are the same partial-profit mechanism
 ### `book-heitkoetter-14` Stop trading for the week once a weekly profit goal per lot is reached
 - Source: A Complete Guide to Day Trading, Is It Really Possible to Make a Living; Tenets of Day Trading. Family: `sizing-execution`. Signal source: none / account rule.
 - Timeframe: weekly. Instruments: NIFTY, BANKNIFTY.
@@ -1327,6 +1443,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Conversion of the book's dollar goals to rupees per lot via the arm's own median win; risk-lowering, so paper-eligible only after it passes gates.
 - Data: have
 - Our nearest test: not tested by us; nearest R19c day profit lock raised green days (42% -> 49%) but failed net / drawdown
+- R104: tested (R104): MM: drawdown cut 6%, net cut 136% design (fail)
 ### `book-heitkoetter-15` Only one morning and one afternoon trade a day
 - Source: A Complete Guide to Day Trading, Tenets of Day Trading. Family: `sizing-execution`. Signal source: none / account rule.
 - Timeframe: intraday. Instruments: NIFTY, BANKNIFTY.
@@ -1338,6 +1455,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Morning/afternoon split at 12:30 is ours.
 - Data: have
 - Our nearest test: R80 V9 2-a-day cap led in design and lost in the final; R14 1-a-side cap only limits ORB damage
+- R104: tested (R104): ARM: delta vs the arm -Rs 76,436 design (fail)
 ### `book-heitkoetter-16` Skip holiday-adjacent and pre-major-release days
 - Source: A Complete Guide to Day Trading, Is It Really Possible to Make a Living. Family: `calendar-events`. Signal source: none / calendar.
 - Timeframe: daily filter. Instruments: NIFTY, BANKNIFTY.
@@ -1349,6 +1467,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): US Thanksgiving / Christmas and Fed / jobs-report days mapped to Indian holidays and the releases that move NIFTY; list fixed before any result.
 - Data: **needs data we lack** - lack: a dated event calendar for RBI / Budget / US releases 2021-2026 in the lake (holidays are in the NSE calendar)
 - Our nearest test: not tested by us; R15 pre-open day filters 0 of 5; R102 US-event sign rules never passed
+- R104: tested (R104): ARM: delta vs the arm -Rs 166,338 design (fail)
 
 ## A Practical Guide to Swing Trading - Larry Swing ([write-up](swing-practical-guide.md))
 ### `book-lswing-01` FORCESWING pullback scan + Master Plan entry and exits on the index
@@ -1362,6 +1481,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's $ amounts are for $12-45 stocks with ATR about 3%: $0.06 -> 0.07 ATR, $0.50 gap -> 0.6 ATR, 4% -> 1.3 ATR, 7% -> 2.3 ATR (the literal % would almost never be hit on NIFTY, daily sd 1.316%). Force Index MA type not stated: simple. The short scan in Ch. 10 repeats the long Force condition; Ch. 8.8's mirror is used. ADX period 20 as the scan says (Wilder smoothing). 2 lots so 'half' exists.
 - Data: have
 - Our nearest test: SWING_DEEP: the 3-down-closes pullback above the 200DMA lost on NIFTY and BANKNIFTY futures 2016-2026 (NIFTY fixed 10d: 109 trades, -Rs 283,401); SWING.md: no daily rule right in both years for BANKNIFTY option holds; R102: daily momentum reversed in the holdout. Force Index and ADX>30: not tested by us.
+- R104: tested (R104): DLY: 30 trades, win 47%, net Rs 8,091 design, holdout Rs 431 (fail)
 ### `book-lswing-02` FORCESWING + Master Plan on MCX futures daily bars
 - Source: A Practical Guide to Swing Trading, Ch. 5.1, 6, 8.8, 8.9, 10.1.1. Family: `mcx-crypto`. Signal source: underlying price/volume (MCX continuous near-month future, daily, exchange volume).
 - Timeframe: daily bars; MCX minute bars for the trigger where available (from Aug 2025), else a daily-bar fill model. Instruments: GOLD, SILVER, CRUDE, NATURALGAS.
@@ -1373,6 +1493,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): ATR scaling as in the index rule; rolls make continuous-future volume jump near expiry, so Force Index uses the volume of the contract held.
 - Data: have (daily futures since 2011/2012; MCX options only ATM-5..+5 from mid-2025)
 - Our nearest test: R83: crude daily Donchian-20 + Supertrend final +Rs 21.8k on 27 trades but not proven (twin p 0.23); R82: daily Donchian on gold/silver proxies lost in design; R96: NR7 breakout on crude is the only MCX daily lead (not passed). Force Index / pullback scan not tested by us.
+- R104: tested (R104): MCXD: 58 trades, win 40%, net Rs 80,627 design, holdout Rs 105,286 (fail)
 ### `book-lswing-03` FORCESWING + Master Plan on the R58 stocks, bought monthly options
 - Source: A Practical Guide to Swing Trading, Ch. 5.1, 6, 10.1.1. Family: `outside-strategies`. Signal source: underlying price/volume (the stock's daily OHLCV).
 - Timeframe: daily bars; stock 1-minute bars for the trigger. Instruments: RELIANCE, SBIN, MARUTI, ICICIBANK, INFY, LT, KOTAKBANK, M&M, TRENT, TATASTEEL.
@@ -1384,6 +1505,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): $0.06 on a ~$27 stock -> 0.2%; $0.50 -> 1.8%; literal 4% / 7% kept because stock ATRs are close to the book's. Lot sizes from bhavcopy.
 - Data: have (stock daily 2002+, 1-min 2017+, stock options ATM+-1 monthly; the lake has no +-2..5 strikes for these names)
 - Our nearest test: R58: 38 stock-option rules, 0 pass; F5 daily momentum / Donchian final -Rs 5.5 lakh on 970 trades; round trip about Rs 280 a lot (2% of premium). SWING_DEEP: stock pullbacks beat random stocks 9/11 years but not buy-and-hold.
+- R104: tested (R104): STK: 279 trades, win 35%, net -Rs 88,313 design, holdout -Rs 60,082 (fail)
 ### `book-lswing-04` Plain 3-day pullback in a 10/20 SMA uptrend (no Force, no ADX) with Master Plan orders
 - Source: A Practical Guide to Swing Trading, Ch. 5.1 (first two indicators only), Ch. 6. Family: `patterns-indicators`. Signal source: underlying price (index spot daily).
 - Timeframe: daily bars; 1-minute bars for the trigger. Instruments: NIFTY, BANKNIFTY.
@@ -1395,6 +1517,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Isolates the book's simplest trend+pullback definition so the Force/ADX filters can be judged as add-ons (pre-register as a pair).
 - Data: have
 - Our nearest test: SWING_DEEP: 3-down-closes pullback above 200DMA lost on both index futures; SWING.md RSI(2) pullback in trend inconsistent (5-16 trades a year).
+- R104: tested (R104): DLY: 358 trades, win 42%, net Rs 235,028 design, holdout -Rs 253,352 (fail)
 ### `book-lswing-05` Master Plan exits (half at target, prior-low trail) on our existing daily swing signals
 - Source: A Practical Guide to Swing Trading, Ch. 6.5-6.8. Family: `trade-management`. Signal source: underlying price (index spot daily).
 - Timeframe: daily bars. Instruments: NIFTY, BANKNIFTY.
@@ -1406,6 +1529,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): ATR scaling of the book's 4% / 7% / $0.06 as in forceswing-master-plan-index.
 - Data: have
 - Our nearest test: SWING_EXITS: the app's stop+target+ladder made stock swing portfolios worse in all 24 and futures stayed inside the coin band; MATRIX PINE: a TP1 half-exit + breakeven doubled the loss intraday. The prior-day-low trail itself is not tested by us.
+- R104: tested (R104): DLY: 1584 trades, win 35%, net Rs 1,409,446 design, holdout -Rs 330,423 (fail)
 ### `book-lswing-06` Gap delay on a daily breakout trigger (wait 30 min with the gap, 5 min against, re-base on today's high)
 - Source: A Practical Guide to Swing Trading, Ch. 6.3-6.4. Family: `overnight`. Signal source: underlying price (index spot daily setup, 1-minute trigger).
 - Timeframe: daily setup, 1-minute execution. Instruments: NIFTY, BANKNIFTY.
@@ -1417,6 +1541,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's 'a few minutes after the open' read as 09:20; its 30-minute wait as 09:45.
 - Data: have
 - Our nearest test: R102: 0.5-1% NIFTY gaps fill by the close 42% (n 484), filled gaps fill a median 52 minutes after the open; R58 gap-go rules lost in the final test. A gap delay on a daily setup: not tested by us.
+- R104: tested (R104): IDXF: 122 trades, win 29%, net -Rs 180,131 design, holdout -Rs 19,537 (fail)
 
 ## Short Swing Trading - David Graeme Smith ([write-up](smith-short-swing.md))
 ### `book-smith-01` SST six rules on NIFTY/BANKNIFTY daily bars, buy the monthly option
@@ -1430,6 +1555,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book is written for UK small-cap shares with a 0.5% buffer and says major indices need a wider, judged buffer; the ATR variants and the touch tolerance are our literal readings. 'Big move day' 5% is almost never hit on NIFTY, hence the ATR-scaled variant. Set-up expiry of 3 sessions makes 'do not enter late' precise.
 - Data: have
 - Our nearest test: SWING_DEEP: NR7 / inside-day breakout on index futures sat inside the coin-flip band, walk-forward lost Rs 45-58k a year; OBUY_LV05_MULTIDAY: multi-day Donchian option holds about -Rs 18,000 a year, p 0.68 vs random; OBUY_GB TI-09 intraday ADX/DMI 0/5 years. The exact daily rule is not tested by us.
+- R104: tested (R104): DLY: 172 trades, win 42%, net Rs 347,212 design, holdout Rs 168,395 (fail)
 ### `book-smith-02` SST six rules on 1-hour index bars (intraday-to-few-days mapping)
 - Source: Short Swing Trading, Ch. 7-9 (our timeframe mapping). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 60-minute bars of index spot (09:15-15:15 buckets), stops on 1-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1441,6 +1567,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book is end-of-day only; the hourly version is our mapping and should be labelled as such. Buffer and 'big bar' scaled to ATR because the book's 0.5% / 5% are share-sized.
 - Data: have
 - Our nearest test: OBUY_GB TI-09 (ADX/DMI + set-up candle break, 5/15-minute): walk-forward Rs -345,311, 0/5 years, 48 variants; R73 ADX filters failed; R89 previous-day high/low break 0 of 180.
+- R104: tested (R104): IDX: 383 trades, win 43%, net -Rs 6,265 design, holdout -Rs 38,057 (fail)
 ### `book-smith-03` Significant-day trailing stop as an exit module on existing multi-day holds
 - Source: Short Swing Trading, Ch. 8.3, 9.1. Family: `trade-management`. Signal source: underlying price.
 - Timeframe: daily bars for the trail, 1-minute bars for the stop check. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE, NATURALGAS.
@@ -1452,6 +1579,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book uses it on its own entry only; testing it on our existing entries isolates the exit. Compare with coin-flip entries carrying the same exit (SWING_EXITS method).
 - Data: have
 - Our nearest test: SWING_EXITS: the app's stop/target/ladder cut drawdowns but no row beat coin-flip entries with the same exits; LV-05 trailed the opposite N/2-day channel and lost. This trail itself is not tested by us.
+- R104: tested (R104): DLY: 895 trades, win 39%, net Rs 737,471 design, holdout Rs 62,799 (fail)
 ### `book-smith-04` SST six rules on MCX near-month futures, daily
 - Source: Short Swing Trading, Ch. 7-9. Family: `mcx-crypto`. Signal source: underlying price.
 - Timeframe: daily bars of the near-month continuous future (rolled 5 sessions before expiry). Instruments: GOLD, SILVER, CRUDE, NATURALGAS.
@@ -1463,6 +1591,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book trades UK shares; mapping its company-results blackout to commodity data releases and its 2 weeks to 2 sessions is our reading.
 - Data: have (MCX futures daily since our M2 study; MCX option prints only Aug 2025 on, ATM +-3 strikes)
 - Our nearest test: MCX_TREND: trend edge real but small, zero variants pass BH, buying options the worst way; R96: 0 of 46 MCX option-buying ideas pass; R93 breadth Donchian on MCX 0 of 5.
+- R104: tested (R104): MCXD: 224 trades, win 35%, net Rs 29,933 design, holdout Rs 588,190 (fail)
 ### `book-smith-05` SST six rules on F&O stocks chosen by a walk-forward 'step-ness' screen
 - Source: Short Swing Trading, Ch. 11, 7-9. Family: `daily-filters`. Signal source: underlying price.
 - Timeframe: daily bars of F&O stocks. Instruments: .
@@ -1474,6 +1603,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's screen is by eye with a weed-out loop on past back-tests (in-sample); we make it a frozen, walk-forward ranking. Thresholds above are our literal reading.
 - Data: **needs data we lack** - lack: corporate results / AGM calendar for F&O stocks (have daily bars and the R58 stock-option lake for 10 names)
 - Our nearest test: R58: 0 of 38 stock-option rules pass, round trip about Rs 280 a lot; SWING_DEEP: stock swing set-ups did not beat holding the same stocks.
+- R104: not testable (R104): no results / AGM calendar for F&O stocks
 ### `book-smith-06` SST six rules on BTC/ETH daily, with the trail as the profit lock
 - Source: Short Swing Trading, Ch. 7-9. Family: `mcx-crypto`. Signal source: underlying price.
 - Timeframe: daily bars (00:00 UTC close) of BTC and ETH spot/perp index. Instruments: CRYPTO.
@@ -1485,6 +1615,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Crypto never appears in the book; mapping is ours. Stop and step lock are both present as CLAUDE.md requires; compare against lock/stop variants, never 'no stop'.
 - Data: have (BTC/ETH history used in RC1; Delta India BTC option prints used in R46)
 - Our nearest test: RC1: 0 of 8 active ideas beat buy-and-hold after India's 30% tax; R46: BTC EMA 8/21 + ADX(14) > 15 option calls, 0 of 14 variants pass.
+- R104: tested (R104): CRY: 53 trades, win 36%, net Rs 157,221 design, holdout Rs 32,164 (fail)
 ### `book-smith-07` Skip swing entries whose trigger is hit by a gap
 - Source: Short Swing Trading, Ch. 13.1. Family: `daily-filters`. Signal source: underlying price.
 - Timeframe: daily trigger levels, first minute of the session. Instruments: NIFTY, BANKNIFTY.
@@ -1496,6 +1627,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book's 'gaps through the trigger' read as the open being beyond the trigger level.
 - Data: have
 - Our nearest test: R102: a 0.5-1% NIFTY gap fills by the close less than half the time (NIFTY 42%); SWING_DEEP and LV-05 found swing profit is made overnight, which this filter discards. Not tested by us as a filter.
+- R104: tested (R104): DLY: 400 trades, win 41%, net Rs 588,417 design, holdout Rs 329,391 (fail)
 
 ## The Advanced Trading Methods in the Financial Markets - The Advanced Trading Methods book ([write-up](advanced-trading-methods.md))
 ### `book-atm-01` TWAP-style sliced exit of multi-lot option positions vs one market order
@@ -1509,6 +1641,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The paper only names TWAP. The 3 slices, 1-minute spacing, the thin-contract filter and never slicing stops are ours (stops must not be delayed per CLAUDE.md priority rules). Fills at bar open plus our usual spread model.
 - Data: **needs data we lack** - lack: realistic fill depth for multi-lot exits needs 5-level book recordings; 1-minute bars alone overstate fills
 - Our nearest test: not tested by us; nearest is HUNT_H14.md (entry execution: only a marketable limit at +0.5% passed, +Rs 288/day vs +250 required); HUNT_H10.md suggests slicing exits in thin contracts
+- R104: not testable (R104): multi-lot exit fills need book depth
 ### `book-atm-02` NIFTY/BANKNIFTY futures-spot basis snap-back (literal statistical arbitrage)
 - Source: The Advanced Trading Methods in the Financial Markets, Sec. 3.1.3, Statistical arbitrage. Family: `flow-oi`. Signal source: underlying price (index futures vs index spot).
 - Timeframe: 1-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1520,6 +1653,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The paper gives no pair, threshold or holding time. Thresholds (2.5 sd, 60-minute window, 10-minute hold, 0.15% stop) are ours. A true arbitrage would trade futures vs spot basket at sub-second speed; this is the slow, single-leg version a retail phone can run.
 - Data: have
 - Our nearest test: HUNT_H39.md: heavyweight futures, basis and synthetic forward move with the index in the same minute; from 2 minutes ahead every |t| is below 2.5, and the index's own future does not lead by a tradeable amount. FINDINGS.md DIRECTION MODEL: basis rising right 50.4-51.6%. Expected to fail.
+- R104: not testable (R104): index-futures minutes only from 29 Jul 2026 (57 sessions)
 
 ## 10 Most Profitable Trading Strategies - Nikhil Porwal ([write-up](porwal-10-strategies.md))
 ### `book-porwal-01` Inside bar, entry on the close beyond the mother bar, 1x/1.5x/2x targets
@@ -1533,6 +1667,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book writes only the short side; long is the mirror. Higher-timeframe trend definition, the 4-bar validity window, the breakeven step and the volume multiple are ours. Partial exits at 1x/1.5x/2x as written.
 - Data: have
 - Our nearest test: R71 P1: 15-minute inside-bar breaks, 1-ITM, final -Rs 1,23,667 on 1,075 trades; R22 1x-extension target lost; SWING_DEEP NR7/inside-day walk-forward lost
+- R104: tested (R104): IDX: 671 trades, win 42%, net -Rs 164,067 design, holdout -Rs 71,837 (fail); MCXI: 326 trades, win 49%, net -Rs 235,896 design, holdout -Rs 40,867 (fail)
 ### `book-porwal-02` Doji at an oversold / overbought extreme, traded on the break of its high / low
 - Source: 10 Most Profitable Trading Strategies, Ch. 3.2. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: daily bars (the book's main timeframe); 15-minute as a variant. Instruments: NIFTY, BANKNIFTY.
@@ -1544,6 +1679,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The oscillator is not named (default settings); RSI(14) 30/70 and stochastic 14,3,3 80/20 tested as two readings. Doji body threshold, 10-bar extreme, 3-bar window, EMA 20 trail are ours.
 - Data: have
 - Our nearest test: R87 / R87B: no candle shape predicts direction; daily shapes 0 of 25; OBUY_GB MR-03 RSI 30/70 reversal lost walk-forward
+- R104: tested (R104): DLY: 80 trades, win 28%, net -Rs 136,157 design, holdout -Rs 56,444 (fail)
 ### `book-porwal-03` Engulfing reversal with trend, volume and stochastic filters
 - Source: 10 Most Profitable Trading Strategies, Ch. 3.3. Family: `patterns-indicators`. Signal source: underlying price and volume (futures volume).
 - Timeframe: daily bars. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE.
@@ -1555,6 +1691,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Downtrend definition, the 3-session trigger window, the volume multiple and the stochastic settings are ours; the book shows the trend 'visually'.
 - Data: have
 - Our nearest test: R87 engulfing among 2-candle patterns: no direction edge; R85 MCX engulfing no reliable edge; R87B daily 0 of 25
+- R104: tested (R104): DLY: 124 trades, win 44%, net Rs 88,560 design, holdout -Rs 259,614 (fail); MCXD: 136 trades, win 33%, net Rs 3,047 design, holdout Rs 15,512 (fail)
 ### `book-porwal-04` Falling trendline break confirmed by a hold above the previous lower high
 - Source: 10 Most Profitable Trading Strategies, Ch. 4.1. Family: `patterns-indicators`. Signal source: underlying price and volume (futures volume).
 - Timeframe: daily bars; 60-minute as a variant. Instruments: NIFTY, BANKNIFTY.
@@ -1566,6 +1703,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Chart angle depends on scaling, so it is replaced by a slope band in ATR per bar; the band edges, fractal width, 10-bar span and volume multiple are ours.
 - Data: have
 - Our nearest test: not tested by us as a trendline; nearest R71 P8 swing structure (final -Rs 40,109 on 374), R90 BOS 0 of 99, R20c and R73 confirmation-wait costs
+- R104: tested (R104): DLY: 1 trades, win 0%, net -Rs 839 design, holdout Rs 0 (fail)
 ### `book-porwal-05` Darvas box break with volume confirmation, stop outside the box
 - Source: 10 Most Profitable Trading Strategies, Ch. 4.2. Family: `patterns-indicators`. Signal source: underlying price and volume (futures volume).
 - Timeframe: 5-minute bars intraday; daily as a variant. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE, NATURALGAS.
@@ -1577,6 +1715,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The box definition, quiet-box width test, body and volume thresholds are ours; the book gives no numbers.
 - Data: have
 - Our nearest test: nearest R51 Donchian 20 5-minute: final +Rs 55,439 on 1,787 trades (our real arm); R71 P3 squeeze release lost; R73 confirmation wait lost; volume filter not tested by us
+- R104: tested (R104): MCXI: 3 trades, win 33%, net -Rs 6 design, holdout -Rs 233 (fail)
 ### `book-porwal-06` Turbocharged opening: first 15-minute range break with prior-day trend and EMA(14) bias
 - Source: 10 Most Profitable Trading Strategies, Ch. 4.3. Family: `orb`. Signal source: underlying price.
 - Timeframe: first 15-minute candle (09:15-09:29) as the range; 5-minute bars for the break. Instruments: NIFTY, BANKNIFTY.
@@ -1588,6 +1727,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Prior-day trend definition, the stop level, the entry window and the range-width variant are ours.
 - Data: have
 - Our nearest test: R23 first-15-minute range break -Rs 71,624 on 1,171 trades; R3 ORB -Rs 2,23,040; R49 0 of 336; R92 0 of 257; R22 1x-extension target lost
+- R104: not re-run (R104): covered: R23 first-15-minute break (-Rs 71,624 on 1,171) and R92 by day type (0 of 257); the prior-day trend and EMA bias are day-type filters R92 covered
 ### `book-porwal-07` 52-week high / low as a direction filter for intraday index trades
 - Source: 10 Most Profitable Trading Strategies, Ch. 4.4. Family: `daily-filters`. Signal source: underlying price (daily closes).
 - Timeframe: daily filter, intraday trades. Instruments: NIFTY, BANKNIFTY.
@@ -1599,6 +1739,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book uses it as a stock screener feeding any intraday setup; turning it into an index direction filter, the 2% band and the 20-session breakout check are ours.
 - Data: have
 - Our nearest test: SWING_DEEP: 52-week momentum on NIFTY futures as a swing rule, about +Rs 2,175 a year over 11 years, inside the coin-flip range; as an intraday filter not tested by us
+- R104: tested (R104): ARM: delta vs the arm -Rs 40,946 design (fail)
 ### `book-porwal-08` ADX 20-50 + DI alignment + EMA(14) pullback with prior-day trend
 - Source: 10 Most Profitable Trading Strategies, Ch. 5.1. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 5-minute bars (15-minute variant). Instruments: NIFTY, BANKNIFTY.
@@ -1610,6 +1751,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Greater than 20 or below 50' read as a band; pullback distance, stop offset and the entry window are ours.
 - Data: have
 - Our nearest test: OBUY_GB TI-09 ADX/DMI lost Rs -345,311 walk-forward; TI-03 EMA cross lost; R29 EMA pullbacks no better than random; R73 ADX filter on Donchian failed
+- R104: tested (R104): IDX: 1115 trades, win 25%, net -Rs 123,184 design, holdout -Rs 72,134 (fail)
 ### `book-porwal-09` Quasimodo: higher high after a downtrend, buy the higher low
 - Source: 10 Most Profitable Trading Strategies, Ch. 5.2. Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: 15-minute bars (30-minute variant); MCX also 60-minute. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE.
@@ -1621,6 +1763,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Fractal width, the trigger bar and the target choice are ours; the book's two descriptions disagree, so both readings are pre-registered.
 - Data: have
 - Our nearest test: R90 BOS / CHoCH 0 of 99 (target too far for intraday options); R62b 0 of 16; R71 P8 final -Rs 40,109 on 374
+- R104: tested (R104): IDX: 756 trades, win 46%, net -Rs 34,592 design, holdout Rs 7,493 (fail); MCXI: 124 trades, win 57%, net Rs 117,287 design, holdout -Rs 90,018 (fail)
 ### `book-porwal-10` Bull trap: failed break of the day high reclaimed with a volume spike, go short
 - Source: 10 Most Profitable Trading Strategies, Ch. 5.3. Family: `flow-oi`. Signal source: underlying price and volume (futures volume).
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1632,6 +1775,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Volume thresholds, the 6-bar window and the trend check are ours.
 - Data: have
 - Our nearest test: R86 stop-run fades lost in 6 of 6 tests; R87 stop run above the 15-minute day high was followed by more upside (n 1,666); R91 0 of 63
+- R104: not testable (R104): index rule needs futures minute volume (57 sessions only); the price part (fade the day-high break) is covered by R86 (6 of 6 lost) and R91
 ### `book-porwal-11` Bear trap: failed break of the day low / previous-day low, reclaimed on volume, buy above the reversal bar
 - Source: 10 Most Profitable Trading Strategies, Ch. 5.3. Family: `flow-oi`. Signal source: underlying price and volume (futures volume).
 - Timeframe: 1-minute and 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1643,6 +1787,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Level choice, volume multiple, the 3-bar reclaim window and the partial exit are ours.
 - Data: have
 - Our nearest test: R87: 1-minute stop run below NIFTY's day low followed by +0.20 ATR over 5 minutes, n 1,702 in the holdout, below option cost (weak positive base); fades in R86 lost
+- R104: not testable (R104): index rule needs futures minute volume (57 sessions only); the price part (day-low reclaim) is R87's held fact, below option cost
 ### `book-porwal-12` Stop trading for the day after two stop-losses
 - Source: 10 Most Profitable Trading Strategies, Ch. 2 / 3.1 rules. Family: `sizing-execution`. Signal source: none (account / trade state).
 - Timeframe: per session. Instruments: NIFTY, BANKNIFTY.
@@ -1654,6 +1799,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Two stop-losses hit' read per arm per day.
 - Data: have
 - Our nearest test: R75 L1-K2 (no new Donchian entries after 2 losses in a row) failed; R19c daily loss cap made things worse
+- R104: tested (R104): ARM: delta vs the arm -Rs 35,929 design (fail)
 
 ## Advanced Techniques in Day Trading - Andrew Aziz ([write-up](aziz-advanced-day-trading.md))
 ### `book-aziz-01` Opening range breakout on VWAP's side, range narrower than ATR, VWAP stop, next-level target
@@ -1667,6 +1813,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Significantly smaller than ATR' fixed at 0.5x; 'break' read as a 1-minute close; NSE Open mapped to 09:15-10:15; ATR14 on daily bars; the half / break-even management from Ch. 5.
 - Data: have (index spot, chains); VWAP needs index futures minutes (live contracts only) or the R10 proxy
 - Our nearest test: R3 / R49 / R92: the ORB family lost on every index (0 of 16, 0 of 336, 0 of 257); R10 V1 (VWAP side) and T6 (narrow first-30-min range) did not rescue it
+- R104: not re-run (R104): covered: ORB on VWAP's side with a narrow range: R10 V1 / T6 and R3 / R49 / R92 (0 of 16, 0 of 336, 0 of 257)
 ### `book-aziz-02` VWAP false breakout: sold off below VWAP, reclaimed, lost again in the Late-Morning -> short
 - Source: Advanced Techniques in Day Trading, Ch. 6, VWAP False Breakout. Family: `patterns-indicators`. Signal source: underlying price/volume (index futures VWAP or R10 proxy).
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD, SILVER.
@@ -1678,6 +1825,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Sold off', 'reclaimed' and 'lost' read as 5-minute closes; US 10:30-12:00 mapped to NSE 10:15-11:45; the optional anticipation entry before the loss is not used.
 - Data: have for MCX futures (real volume); index VWAP needs futures minutes or the R10 proxy
 - Our nearest test: not tested by us as a sequence; R10 V1 side-of-VWAP had no filter value; F1 found no VWAP direction; R86: a midday VWAP stretch tends to continue
+- R104: tested (R104): MCXI: 118 trades, win 36%, net -Rs 34,625 design, holdout -Rs 40,153 (fail); IDX: 1444 trades, win 29%, net -Rs 104,778 design, holdout -Rs 12,222 (fail)
 ### `book-aziz-03` VWAP reversal: opening move fails to make a new 5-minute extreme -> trade back to VWAP
 - Source: Advanced Techniques in Day Trading, Ch. 6, VWAP Reversals. Family: `patterns-indicators`. Signal source: underlying price/volume.
 - Timeframe: 5-minute bars for the setup, 1-minute bars for the trigger. Instruments: NIFTY, BANKNIFTY.
@@ -1689,6 +1837,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Fails to make a new low' = one 5-minute bar whose low is not below the previous bar's low; 1-minute 9 EMA close as the trigger (DLTR / AA examples); window ends at the NSE equivalent of the Late-Morning start.
 - Data: have (VWAP via futures or proxy)
 - Our nearest test: R71 P7 three-bar reversal at the day's high/low beat random timing (twin p 0.002) but lost after option costs; R86 V1 midday fade to VWAP lost Rs 64,786 on 71 trades
+- R104: tested (R104): IDX: 779 trades, win 30%, net -Rs 89,454 design, holdout -Rs 730 (fail)
 ### `book-aziz-04` VWAP moving-average trend: below VWAP and riding the 5-minute 20 EMA after the Late-Morning
 - Source: Advanced Techniques in Day Trading, Ch. 6, VWAP Moving Average Trend. Family: `patterns-indicators`. Signal source: underlying price/volume.
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD.
@@ -1700,6 +1849,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): 'Lost VWAP in the Late-Morning' fixed as 6 consecutive 5-minute closes on one side; 'touch' = the bar's high/low reaches the EMA; the 1-ATR distance for the partial is ours.
 - Data: have (VWAP via futures or proxy)
 - Our nearest test: R29 EMA pullback patterns 0 of 55 pass; R86 continuation of midday VWAP stretches is descriptive only
+- R104: tested (R104): IDX: 2677 trades, win 25%, net -Rs 327,740 design, holdout -Rs 48,469 (fail); MCXI: 61 trades, win 21%, net -Rs 39,218 design, holdout Rs 405 (fail)
 ### `book-aziz-05` ABCD: new high of day, higher pullback that holds, buy the turn near C
 - Source: Advanced Techniques in Day Trading, Ch. 6, Strategy 2: ABCD Pattern. Family: `patterns-indicators`. Signal source: underlying price/volume.
 - Timeframe: 1-minute and 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1711,6 +1861,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Thresholds for B (0.5 ATR), C confirmation (3 bars) and 'near C' (25%) are ours; volume from index futures (spot has none).
 - Data: have (volume needs index futures minutes)
 - Our nearest test: R87B pullback continuation held on SENSEX but its call rule lost -Rs 21,127 on 162 trades (stop under the pullback too tight); R71 P8 swing break lost in the final
+- R104: tested (R104): IDX: 820 trades, win 31%, net -Rs 47,515 design, holdout -Rs 4,205 (fail)
 ### `book-aziz-06` Bull flag: break of the first or second consolidation with a joint 1- and 5-minute new high
 - Source: Advanced Techniques in Day Trading, Ch. 6, Strategy 3: Bull Flag. Family: `patterns-indicators`. Signal source: underlying price/volume.
 - Timeframe: 1-minute and 5-minute bars. Instruments: NIFTY, BANKNIFTY, CRUDE, NATURALGAS.
@@ -1722,6 +1873,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Pole and flag sizes are ours (the book is visual); built for low-float stocks, so the index version is an analogue.
 - Data: have (volume needs futures minutes; MCX futures have it)
 - Our nearest test: R71 P4 flag on index 5-minute bars: too rare, 32 final trades -Rs 442, design -Rs 27,378
+- R104: tested (R104): MCXI: 5 trades, win 0%, net -Rs 994 design, holdout -Rs 1,063 (fail); IDX: 977 trades, win 31%, net -Rs 85,721 design, holdout -Rs 1,874 (fail)
 ### `book-aziz-07` Fallen Angel analogue: gap-up open spike, flush below VWAP, base, volume breakout
 - Source: Advanced Techniques in Day Trading, Ch. 6, Strategy 1: Fallen Angel. Family: `patterns-indicators`. Signal source: underlying price/volume.
 - Timeframe: 1-minute and 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1733,6 +1885,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's Angel is a low-float US stock gapping on news with pre-market levels; the index has no comparable pre-market, so the previous close stands in for the pre-market low and every threshold is ours.
 - Data: have (volume needs futures minutes); the book's own market (US low floats) is lacking
 - Our nearest test: not tested by us; nearest R87B pullback continuation and R102 gap facts (a 0.5-1% NIFTY gap fills by the close 42% of the time)
+- R104: tested (R104): IDX: 260 trades, win 32%, net -Rs 27,826 design, holdout -Rs 12,409 (fail)
 ### `book-aziz-08` Exit when the 5-minute chart stops making new extremes in the trade's direction
 - Source: Advanced Techniques in Day Trading, Ch. 5, Trade Management Based on Price Action. Family: `trade-management`. Signal source: underlying price.
 - Timeframe: 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1744,6 +1897,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book's 'fails to make a new low and turns to higher highs and higher lows' fixed as two bars; overlay on paper arms only.
 - Data: have
 - Our nearest test: R18: five early-exit overlays failed (0 of 60); R87B: candle exits against the trade mostly hurt; R81 / R100: exits that cut runners lose on Liquidity
+- R104: tested (R104): ARM: delta vs the arm -Rs 37,744 design (fail)
 ### `book-aziz-09` Sell half (or a quarter) at the first level, move the stop to break-even
 - Source: Advanced Techniques in Day Trading, Ch. 5, Trade Management; Ch. 6 strategy summaries. Family: `trade-management`. Signal source: underlying price for the level; premium for the lots.
 - Timeframe: any (overlay). Instruments: NIFTY, BANKNIFTY.
@@ -1755,6 +1909,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book uses 1/4 with a hotkey or 1/2 in summaries; 2 lots = halves.
 - Data: have
 - Our nearest test: R81 X5 (half at +15%, runner to breakeven) Rs 1,78,523 vs Rs 2,57,249 own exits; R100 G13 failed
+- R104: not re-run (R104): covered: R81 X5 half at 1R + break-even (-Rs 79k design, -Rs 35k final), R100 G13
 ### `book-aziz-10` Target the next pre-marked level instead of a fixed premium target
 - Source: Advanced Techniques in Day Trading, Ch. 4 and Ch. 6 (profit targets). Family: `trade-management`. Signal source: underlying price.
 - Timeframe: levels from daily bars; checked on 1-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -1766,6 +1921,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Round-number steps and the 0.2 ATR minimum are ours (the book uses half / whole dollars on stocks).
 - Data: have
 - Our nearest test: R18 post hoc (design only): exit at the next support/resistance helped 9 of 10 losing arms (+Rs 64.8k on 4,964 trades) - never pre-registered
+- R104: tested (R104): ARM: delta vs the arm -Rs 59,197 design (fail)
 ### `book-aziz-11` Skip entries whose reward to the next level is under 2x the risk to the technical stop
 - Source: Advanced Techniques in Day Trading, Ch. 7, Risk/Reward Analysis. Family: `daily-filters`. Signal source: underlying price.
 - Timeframe: at the signal bar. Instruments: NIFTY, BANKNIFTY.
@@ -1777,6 +1933,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Next level list as above; arms without an index stop use the book's VWAP stop for the risk distance.
 - Data: have
 - Our nearest test: not tested by us as an entry gate
+- R104: tested (R104): ARM: delta vs the arm -Rs 212,146 design (fail)
 ### `book-aziz-12` Stop for the day after giving back 30% of the first hour's profit
 - Source: Advanced Techniques in Day Trading, Ch. 6, One Stock in Play, All Strategies. Family: `sizing-execution`. Signal source: none (account P&L rule).
 - Timeframe: intraday. Instruments: NIFTY, BANKNIFTY.
@@ -1788,6 +1945,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): US Open (to 10:30) mapped to NSE 10:15; 'switch to the simulator' read as no new entries.
 - Data: have
 - Our nearest test: R19c: a day profit lock raised green days but failed net / drawdown; the day loss cap lowered green days
+- R104: tested (R104): MM: drawdown cut 11%, net cut -14% design (fail)
 ### `book-aziz-13` Per-trade risk 1% (max 2%) of equity; stop for the month at a 6% loss
 - Source: Advanced Techniques in Day Trading, Ch. 7, Position Sizing (2% and 6% rules). Family: `sizing-execution`. Signal source: none (account rule).
 - Timeframe: per trade and per calendar month. Instruments: NIFTY, BANKNIFTY.
@@ -1799,6 +1957,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Equity excludes margin; option stop distance = the arm's premium stop.
 - Data: have
 - Our nearest test: not a research test; compare with Boss's account stop (-Rs 40k drawdown or -Rs 13k a month)
+- R104: tested (R104): MM: drawdown cut -219%, net cut -197% design (fail)
 
 ## Trading in the Zone - Mark Douglas ([write-up](douglas-trading-in-the-zone.md))
 ### `book-douglas-01` Judge each arm in 20-trade blocks; pause an arm whose block falls outside its own expected range
@@ -1812,6 +1971,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book says to judge in samples of at least 20 and that 20 is small enough to catch a fading edge, but gives no stop criterion; the 5th-percentile bootstrap of the arm's own design trades and the 20-signal pause are ours. Risk-lowering only; would start in shadow for live per CLAUDE.md.
 - Data: have
 - Our nearest test: R75 L1-K2 (stop after 2 losses in a row) and L7-DD20 (half size in a Rs 20k drawdown) both failed: the trades after a bad stretch paid. A 20-trade block rule is a slower version of the same idea and is not tested by us.
+- R104: tested (R104): MM: drawdown cut 18%, net cut -4% design (fail)
 ### `book-douglas-02` Fixed rupee risk per trade so that 20 straight losses fit the account stop
 - Source: Trading in the Zone, Ch. 11 (Accepting the Risk). Family: `sizing-execution`. Signal source: none (sizing); stop distance from the arm's index-level stop.
 - Timeframe: per trade. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER, CRUDE.
@@ -1823,6 +1983,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book sizes so that 20 losses are acceptable but gives no formula; dividing CLAUDE.md's account stop by 20 is ours. The rupee loss of 1 lot at the stop is estimated from the option's delta at entry times the index stop distance plus charges (about Rs 70 NIFTY / Rs 76 BANKNIFTY a round trip).
 - Data: have
 - Our nearest test: Not tested by us as a sizing rule. R75: every Donchian book breaks the account stop at 1 lot on all five indices; its conclusion was that size, not filters, is the lever. R101: 2 lots on 5-of-5 breadth earned what any extra lot earns (Rs 161 vs random 160, p 0.475).
+- R104: tested (R104): MM: drawdown cut 100%, net cut 100% design (fail)
 ### `book-douglas-03` Three lots: one off at a small first profit, one at the next level with stop to entry, last before the next swing
 - Source: Trading in the Zone, Ch. 11 (Taking Profits). Family: `trade-management`. Signal source: underlying price (levels on the index); first-third profit on the premium.
 - Timeframe: the arm's own bars (5-minute / 15-minute). Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD.
@@ -1834,6 +1995,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book gives tick numbers for T-bonds and points for S&P only; translated as fractions of the stop distance. 'Most likely place for the market to stop' read as the next 60-minute swing.
 - Data: have
 - Our nearest test: R81 X5 (half at +15% = 1R, runner to breakeven) failed: design Rs 1,78,523 vs Rs 2,57,249 (881 trades), final -Rs 23,896 vs Rs 11,155 (357). R100 half off at +15% failed; R18 breakeven after +15% changed nothing. Expect worse, since the first third is taken earlier than 1R.
+- R104: not re-run (R104): covered: R81 X5 / R100 partial exits failed; the first third here is taken even earlier
 ### `book-douglas-04` Daily uptrend: buy a pullback to 30-minute support; daily downtrend: sell a rally to 30-minute resistance
 - Source: Trading in the Zone, Ch. 11 (Time Frame). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: daily trend filter, 30-minute entry bars. Instruments: NIFTY, BANKNIFTY, CRUDE, GOLD.
@@ -1845,6 +2007,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book gives this only as an example and leaves 'support' to the reader's edge; swing-fractal support, the ATR buffer and the 3:1 skip are ours. Intraday hold, no overnight.
 - Data: have
 - Our nearest test: Daily trend as an intraday filter: with-trend better in one year, against-trend in the other, no consistent value (FINDINGS.md, SWING). R20b: support/resistance no better than random lines (random levels beat real in 6 of 7). R73 / R79: trend checks before entries did not help.
+- R104: tested (R104): IDX: 250 trades, win 25%, net -Rs 39,437 design, holdout Rs 807 (fail); MCXI: 14 trades, win 29%, net -Rs 8,502 design, holdout Rs 15,563 (fail)
 ### `book-douglas-05` Skip any arm signal whose first target is less than 3x its stop distance
 - Source: Trading in the Zone, Ch. 11 (Taking Profits). Family: `daily-filters`. Signal source: underlying price (index distance to the arm's target vs its stop).
 - Timeframe: the arm's own bars. Instruments: NIFTY, BANKNIFTY.
@@ -1856,6 +2019,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book calls 3:1 ideal, not required; using it as an entry filter is our most literal mechanical reading. Only arms with an index target or level (Liquidity, ORB-type) can use it.
 - Data: have
 - Our nearest test: A fixed 3:1 premium rule (target +10%, stop -3.3%) won 19-31% vs about 28% needed (MANUAL_METHOD.md). R80: 0 of 10 entry filters on Liquidity passed. An index-level 3:1 filter is not tested by us.
+- R104: tested (R104): ARM: delta vs the arm -Rs 269,657 design (fail)
 
 ## Paul Wilmott on Quantitative Finance - Paul Wilmott ([write-up](fm-wilmott.md))
 ### `book-fmwilmott-01` Sell the NIFTY monthly ATM straddle when implied vol is above forecast realised vol, delta-hedge with futures on a band
@@ -1869,6 +2033,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book states the P&L mechanics, not a threshold; 1.15 is our literal choice near R102's median VIX / forward-realised ratio of 1.28 and must be pre-registered with alternatives (1.0, 1.3) under Benjamini-Hochberg. One futures lot equals one option lot, so at 1 lot the hedge is coarse (DEEP_OPTIONS_SELLING.md); the band avoids churning. Naked short margin is about Rs 1.5 lakh, so this is research only; R103 rejected naked selling for this account.
 - Data: have: NIFTY futures and index 1-minute bars, India VIX daily, ATM option prices and IV in the lake for the nearest monthly; lack: clean monthly-expiry ATM IV every day of older years (the lake rolls nearest expiry), real futures fills
 - Our nearest test: not tested by us as a hedged trade. R102: VIX over-states NIFTY's next 21 days on 81% of days (median 1.28, 4,507 days). DEEP_OPTIONS_SELLING.md: naked 09:20 BANKNIFTY short straddle worst day -Rs 65,483; R103 defined-risk selling 0 of 24 confirmed.
+- R104: tested (R104): VOL: 14 trades, win 57%, net -Rs 47,767 design, holdout Rs 0 (fail)
 
 ## Inside Volatility Arbitrage - Alireza Javaheri ([write-up](fm-javaheri-vol-arb.md))
 ### `book-fmjavaheri-01` Skew trade: buy OTM call, sell OTM put, vega-neutral and delta-hedged, on the NIFTY monthly
@@ -1882,6 +2047,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): Book trades 3-month SPX options; NSE liquidity is in the nearest monthly, so T is shortened and the OTM distance scaled by sqrt(time). The futures hedge must be in whole lots: rebalance only when the net delta differs from the held futures by more than 0.5 lot, and also report a fractional-hedge (theoretical) version. The short put is naked: margin about Rs 1.5 lakh; research only.
 - Data: **needs data we lack** - lack: bid-ask for 5-10% OTM monthly strikes (the 1-minute lake keeps only ATM +-10 strikes; the EOD bhavcopy has all strikes but only closes); have: NIFTY futures daily bars, bhavcopy closes for the strikes
 - Our nearest test: not tested by us as a risk reversal. R102: NIFTY puts five strikes out dearer than calls by 2.56 IV points on 91% of 1,222 days. R103: defined-risk short premium 0 of 24 confirmed; costs turn a near-zero gross into losses.
+- R104: not testable (R104): 10% OTM monthly strikes are outside the lake's ATM +-10; bhavcopy in the lake is a weekly sample, closes only
 ### `book-fmjavaheri-02` Skew trade only when the chain's skew exceeds the skew implied by the index's own history
 - Source: Inside Volatility Arbitrage, Ch. 3, The Consistency Test; Financial Interpretation; footnote 12 (conclusive test). Family: `option-structure`. Signal source: volatility / options structure (option chain skew vs a model fitted on underlying price history).
 - Timeframe: daily; history model refit monthly on daily (or 1-minute) index returns, chain skew at 15:20. Instruments: NIFTY, BANKNIFTY.
@@ -1893,6 +2059,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book gives the comparison (Heston xi and rho from options vs filtered MLE on history) but no threshold; the 95th-percentile-of-sampling-distribution threshold is our literal reading of its footnote; ATM-5 / ATM+5 replaces 10% OTM so the measurement stays inside the 1-minute lake; the history model and its sampling distribution are refit with data up to the day before only (look-ahead guard).
 - Data: have: 1-minute index bars, nearest/next-expiry chain IV within ATM +-10 (rolling lake); lack: next-monthly chain in the 1-minute lake on most days (h29 had the monthly only while both were listed) and bid-ask for the far legs
 - Our nearest test: not tested by us. IV1 and h29: skew carries no direction (h29 skew IC about 0; option-only models lost on all 5 indices), but neither traded skew as a price.
+- R104: not testable (R104): needs the next-monthly chain and far legs (see javaheri-01)
 ### `book-fmjavaheri-03` Kurtosis trade: sell ATM and far-OTM options, buy near-OTM options, delta-hedged
 - Source: Inside Volatility Arbitrage, Ch. 3, Kurtosis Trades (Figure 3.8). Family: `option-structure`. Signal source: volatility / options structure (no direction).
 - Timeframe: 1-minute chain; one decision a day at 09:20 on the nearest weekly; or daily on the monthly. Instruments: NIFTY, BANKNIFTY.
@@ -1904,6 +2071,7 @@ The entry id (`book-<book>-<nn>`) is the rule's name in the experiment log.
 - Assumptions (our reading where the book is vague): The book draws a generic payoff without strike distances; we use straddle-width multiples so the far legs stay inside ATM +-10 on most days; the 70th percentile filter is ours.
 - Data: have (ATM +-10 within the lake on most days; reprice any leg that stops printing, per R103)
 - Our nearest test: R103: the nearest structure (short ATM straddle with long wings, iron fly) lost on all 6 NIFTY non-expiry tests; 0 of 24 selling tests confirmed. h29: ATM IV / HAR forecast median 1.2-1.36.
+- R104: tested (R104): VOL: 358 trades, win 51%, net -Rs 29,272 design, holdout -Rs 21,176 (fail)
 
 ## Neural Networks in Finance - Paul McNelis ([write-up](fm-mcnelis-neural-nets.md))
 No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
@@ -1920,6 +2088,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Book used 3-month DAX options and 5% of premium as cost; NSE monthlies are 1 month. Simple version: replace the density comparison by 'put 0.95 IV minus call 1.05 IV above its median', since the book's switch said S1 in 29 of 30 months. Strike band may be cut to strikes with non-zero OI.
 - Data: have for end-of-day (NSE bhavcopy, every strike, Jan 2021+); lack: intraday prints beyond ATM +-10 and reliable far-OTM liquidity history
 - Our nearest test: R102: puts five strikes out dearer than calls on 91% of NIFTY days (n 1,222). R103: short premium breaks even before costs intraday (0 of 24 defined-risk). The risk-reversal hold-to-expiry trade is not tested by us.
+- R104: not testable (R104): implied density needs every strike on the entry day; the lake has ATM +-10 intraday and a weekly bhavcopy sample
 ### `book-fmaqf-02` Kurtosis trade K1: sell ATM and far-OTM, buy near-OTM when implied tails are fatter than historical
 - Source: Applied Quantitative Finance, Ch. 9.6. Family: `option-structure`. Signal source: volatility / options structure (implied vs historical density kurtosis); no direction.
 - Timeframe: end-of-day; one entry a month, held to expiry. Instruments: NIFTY, BANKNIFTY.
@@ -1931,6 +2100,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Moneyness bands from Table 9.3 (FOTM-NOTM-ATM-K1 column). The payoff shape depends on which strikes exist; record the strike count per month.
 - Data: have for end-of-day (NSE bhavcopy, every strike, Jan 2021+); lack: far-OTM liquidity / bid-ask history
 - Our nearest test: R103: naked short straddle +Rs 64k on NIFTY over 1,272 days with a worst day of -Rs 28.9k on one lot; with wings bought it lost. K1 sells the far wings instead, i.e. more tail risk. Not tested by us as specified.
+- R104: not testable (R104): as fmaqf-01
 ### `book-fmaqf-03` Long-memory spread reversal: fade new M-day extremes of a two-asset log spread
 - Source: Applied Quantitative Finance, Ch. 14.5. Family: `outside-strategies`. Signal source: underlying price (log spread of two underlyings).
 - Timeframe: daily closes. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER.
@@ -1942,6 +2112,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Book used German voting / non-voting share pairs (near-identical claims) where reversion is structural; index or metal pairs are looser. Cash-neutral sizing by the book; we use equal notional per lot rounding.
 - Data: have (index futures daily since 2006; MCX GOLD/SILVER futures)
 - Our nearest test: R72 C2 laggard catch-up (intraday convergence across indices) lost -Rs 1,00,746 final (613 trades). A daily spread-extreme fade is not tested by us.
+- R104: tested (R104): DLY: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail); MCXD: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail)
 ### `book-fmaqf-04` Pause or size down an arm when a CUSUM chart of its trade results alarms
 - Source: Applied Quantitative Finance, Ch. 11. Family: `trade-management`. Signal source: none (monitoring of the arm's own per-trade net results).
 - Timeframe: per trade. Instruments: NIFTY, BANKNIFTY.
@@ -1953,6 +2124,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book's CUSUM targets a mean shift of normal data; trade P&L is fat-tailed and skewed, so h must come from bootstrap simulation. N (e.g. 20 trades) is our choice and must be pre-registered.
 - Data: have (arm trade logs: Liquidity 15+5, R51 / R72 Donchian, R52 OOV)
 - Our nearest test: R101: 0 of 20 entry filters and sizing changes on the arms passed (best q 0.40). A results-based pause is not tested by us.
+- R104: tested (R104): MM: drawdown cut 60%, net cut -13% design (fail)
 
 ## Bayesian Methods in Finance - Rachev, Hsu, Bagasheva and Fabozzi ([write-up](fm-bayesian-methods.md))
 ### `book-fmbayes-01` Cross-sectional momentum: long the top half, short the bottom half on volatility-scaled 9-month return
@@ -1966,6 +2138,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Book's universe was MSCI country indices (24 years); 189 trading days for 9 months and a 1-day skip are the book's. With only 4 MCX majors the halves are 2 and 2; adding base metals (COPPER, ZINC, ALUMINIUM, LEAD, NICKEL) if bars exist gives a wider cross-section. Costs: MCX futures charges and slippage from baselines.yaml.
 - Data: have for GOLD/SILVER/CRUDE/NATURALGAS futures daily bars; lack: long daily histories for MCX base metals (to check)
 - Our nearest test: not tested by us as a cross-sectional ranking. R96 (HUNT_R96_SUMMARY.md) tested only intraday / time-series momentum on MCX (US-session momentum U1 died; ZINC untradeable, 0 fills); R72 breadth Donchian is time-series, not cross-sectional.
+- R104: tested (R104): MCXD: 111 trades, win 57%, net Rs 1,354,524 design, holdout Rs 363,878 (fail)
 
 ## Copula Methods in Finance - Cherubini, Luciano and Vecchiato ([write-up](fm-copula-methods.md))
 No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
@@ -1982,6 +2155,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book gives no value of x, no instrument and no timeframe; the grid and the premium stop are our literal choices. Always-in-market as written.
 - Data: have
 - Our nearest test: R102: daily momentum reversed in the holdout and 1 of 70 sign rules confirmed (an artefact); the book itself says profitability after costs is unclear. Not tested by us in this exact form.
+- R104: tested (R104): DLY: 850 trades, win 39%, net Rs 1,317,966 design, holdout -Rs 505,997 (fail)
 ### `book-fmfabozzi-02` 200-day moving-average band on index daily closes, buy the option
 - Source: The Mathematics of Financial Modeling and Investment Management, Ch. 19, Technical analysis (moving-average rule). Family: `patterns-indicators`. Signal source: underlying price.
 - Timeframe: daily closes of index spot. Instruments: NIFTY, BANKNIFTY.
@@ -1993,6 +2167,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book only says buy above some percentage of a long average such as 200 days; band values and expiry handling are ours. Few signals a year, so the sample is small.
 - Data: have
 - Our nearest test: R102 daily momentum reversed in the holdout; swing studies of multi-day trend holds sat inside the coin-flip band. The 200-day band itself is not tested by us.
+- R104: tested (R104): DLY: 119 trades, win 15%, net Rs 2,592 design, holdout -Rs 535,781 (fail)
 ### `book-fmfabozzi-03` NIFTY/BANKNIFTY log-spread z-score reversion (pairs trading)
 - Source: The Mathematics of Financial Modeling and Investment Management, Ch. 10, 12, 18, 19 (Ornstein-Uhlenbeck, cointegration, pairs trading). Family: `outside-strategies`. Signal source: underlying price.
 - Timeframe: 5-minute bars of both index spots, intraday; daily variant on closes. Instruments: NIFTY, BANKNIFTY.
@@ -2004,6 +2179,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book gives the method (pairs beyond a threshold back to the mean, formalised by cointegration) but no thresholds, windows or instruments; all numbers are ours. Long options on both legs pay two thetas; the futures mirror isolates the signal. Correct across every variant (BH).
 - Data: have
 - Our nearest test: R72: C2 laggard catch-up lost (-Rs 1,00,746 final period) and C6 SMT divergence failed; R102 correlation 0.877, beta 1.157 over 5,086 days, so the spread is mostly BANKNIFTY's extra beta. The book warns cointegration is unstable and often spurious.
+- R104: tested (R104): IDX: 939 trades, win 30%, net -Rs 231,181 design, holdout -Rs 37,943 (fail)
 
 ## Introduction to Quantitative Finance: A Math Tool Kit - Robert Reitano ([write-up](fm-intro-quant-finance.md))
 No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
@@ -2020,6 +2196,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book states the rule for the full stock basket and a continuous dividend yield; we read 'basket' as an index ETF and q as the trailing yield. Short selling the basket is restricted in India, so the 'future rich' side is the only practical one.
 - Data: **needs data we lack** - lack: executable index ETF / basket prices aligned to the minute, dividend schedule, and bid-ask quotes for the future
 - Our nearest test: not tested by us as an arbitrage; HUNT_H39.md stage A found futures returns and basis changes tied to the index in the same minute and no lead from 2 minutes on (every |t| below 2.5)
+- R104: not testable (R104): no minute ETF/basket prices, dividend schedule or futures quotes
 
 ## From Stochastic Calculus to Mathematical Finance - Kabanov, Liptser and Stoyanov (eds.) ([write-up](fm-kabanov-stochastic-calculus.md))
 No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
@@ -2042,6 +2219,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Bjork gives the hedge procedure, not a trade. The lot count (5), the delta band (1 futures lot), the 15-minute clock and the stops are ours. Deltas use Black-76 on the future with each option's own implied volatility. Because the NIFTY futures lot equals the option lot, fewer than about 5 option lots cannot be hedged at a useful granularity (DEEP_OPTIONS_SELLING.md).
 - Data: have (1-minute index, futures and ATM+-10 option bars with IV; reprice any leg without a print, per R103 Amendment 2)
 - Our nearest test: R103: defined-risk selling 0 of 24 confirmed; the naked 09:20 short straddle held to 15:10 made +Rs 64k on NIFTY (1,272 days) with worst day -Rs 28,876. R102: VIX over-states NIFTY's next 21 days on 81% of days (n 4,507). A futures-hedged straddle was not tested by us.
+- R104: tested (R104): VOL: 895 trades, win 59%, net Rs 147,050 design, holdout -Rs 97,497 (fail)
 ### `book-fmbjork-02` Long ATM straddle on BANKNIFTY, delta-hedged with the future (gamma scalping) when implied is cheap against forecast realised
 - Source: Arbitrage Theory in Continuous Time, Ch. 9.3 (discrete delta hedge), Ch. 7.7 (historic vs implied volatility). Family: `option-structure`. Signal source: volatility / options structure (BANKNIFTY ATM IV against a realised-volatility forecast on the index; no direction).
 - Timeframe: 1-minute bars; daily bars for the realised-vol forecast. Instruments: BANKNIFTY.
@@ -2053,6 +2231,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Bjork only describes the hedge; the cheapness filter, lot count, band, clock and stop are ours. BANKNIFTY is chosen because R102 found VIX under-states its realised volatility on 60% of days; VIX is a NIFTY number, so the filter uses BANKNIFTY's own IV.
 - Data: have (1-minute index, futures and ATM+-10 option bars with IV)
 - Our nearest test: MCX_OPTIONS.md: delta-hedged long-option P&L was about zero in the best cells and mostly negative in the holdout. R16: next 30-60 minute range predictable. A delta-hedged NSE straddle was not tested by us.
+- R104: tested (R104): VOL: 130 trades, win 27%, net -Rs 288,787 design, holdout -Rs 43,215 (fail)
 ### `book-fmbjork-03` Put-call parity conversion / reversal on NIFTY options against the future
 - Source: Arbitrage Theory in Continuous Time, Ch. 9.1, Parity relations; Ch. 7.6 (forward price). Family: `option-structure`. Signal source: volatility / options structure (pure no-arbitrage identity).
 - Timeframe: 1-minute (ideally tick) quotes. Instruments: NIFTY, BANKNIFTY.
@@ -2064,6 +2243,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Bjork gives the identity, not thresholds; the 20% margin, ATM+-3 window and same-minute rule are ours. Last-trade prices overstate opportunities; a fair test needs synchronous bid/ask. Doubles as a stale-print detector for every option backtest.
 - Data: **needs data we lack** - lack: synchronous bid/ask quotes for the three legs (we have 1-minute last prints and one chain snapshot, h24)
 - Our nearest test: not tested by us; R103's passers were an artefact of stale wing prices (43-63% of design trades had a stale leg), which a parity check would have flagged.
+- R104: not testable (R104): needs synchronous bid/ask on three legs
 ### `book-fmbjork-04` Constant-fraction (fractional Merton/Kelly) sizing for an arm with a record
 - Source: Arbitrage Theory in Continuous Time, Ch. 19.6, Optimal consumption and investment (constant optimal fraction). Family: `sizing-execution`. Signal source: none (sizing on the arm's own past trade returns).
 - Timeframe: per trade; fraction re-estimated monthly. Instruments: BANKNIFTY, NIFTY.
@@ -2075,6 +2255,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Bjork's fraction is for a lognormal asset; applying it to per-trade option returns is our translation. The 12-month window, c values and the 75% floor are ours. LIVE would need shadow mode first (CLAUDE.md: sizing up is not risk-lowering).
 - Data: have (arm trade logs from h14-h17)
 - Our nearest test: h15: half-Kelly grew fastest but P(drawdown >= 30%) 63%, quarter-Kelly P(drawdown >= 50%) 1%; the Kelly fraction was unstable (0.48 / 0.14 vs 1.29) and SPA p = 0.14. HUNT_FINAL chose fixed lots.
+- R104: tested (R104): MM: drawdown cut -136%, net cut -1670% design (fail)
 ### `book-fmbjork-05` Mean-variance (Merton mutual fund) capital split across the arms with a record
 - Source: Arbitrage Theory in Continuous Time, Ch. 19.7, The mutual fund theorems. Family: `sizing-execution`. Signal source: none (allocation on the arms' daily P&L).
 - Timeframe: daily P&L; weights re-set monthly. Instruments: NIFTY, BANKNIFTY.
@@ -2086,6 +2267,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Bjork's theorem assumes known constant means and covariances; the shrinkage, windows and lot caps are ours. Compare against equal 1 lot per arm on the same days (net, worst month, max drawdown).
 - Data: have (arm replays from R101 / R72)
 - Our nearest test: not tested by us (HUNT_R74_STRATEGY_MAP.md: volatility-targeted sizing not tried for the index arms; R72: Breadth Donchian overlaps Donchian, 77% shared trades).
+- R104: tested (R104): MM: drawdown cut 34%, net cut -21% design (fail)
 
 ## Computational Finance: Numerical Methods - George Levy ([write-up](fm-comp-finance-numerical.md))
 No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
@@ -2108,6 +2290,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book's arbitrage uses the stock and a loan; for an index we use the same-expiry future, so the rate term almost cancels. Threshold and the 3-strike window are our choices. Last-trade prices are not executable quotes, so a backtest on the lake can only give an upper bound.
 - Data: **needs data we lack** - lack: executable bid/ask quotes for options and futures (the lake has last prices only); have futures and chain minutes
 - Our nearest test: not tested by us; R103 showed that apparent profits in the chain came from stale wing prices (six BANKNIFTY passes turned into -Rs 2.9 to -Rs 3.3 lakh when repriced), so most 'violations' in last-price data are likely stale prints
+- R104: not testable (R104): needs executable bid/ask; last prints in the lake are often stale (R103)
 ### `book-fmcapinski-02` Buy a butterfly priced below zero (convexity violation across strikes)
 - Source: Mathematics for Finance, Ch. 7.4.1, Proposition 7.8 (call and put prices are convex in strike); Ch. 9.3.1 butterfly. Family: `option-structure`. Signal source: volatility / options structure (option prices across strikes); no direction.
 - Timeframe: 1-minute bars, nearest expiry. Instruments: NIFTY, BANKNIFTY.
@@ -2119,6 +2302,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book proves convexity but gives no trading rule; the cost threshold and liquidity filter are ours. Signals on last prices are an upper bound.
 - Data: **needs data we lack** - lack: executable bid/ask quotes (last prices only); have chain minutes within ATM +-10
 - Our nearest test: not tested by us; R103 found far-wing stale prices create fake edges, so expect most signals to be data errors - useful mainly as a lake cleaning check
+- R104: not testable (R104): needs executable bid/ask
 
 ## Binomial Models in Finance - van der Hoek and Elliott ([write-up](fm-binomial-models.md))
 ### `book-fmbinomial-01` Conversion / reversal when put-call parity breaks by more than costs
@@ -2132,6 +2316,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book states parity for spot plus a riskless loan; we use the future instead of spot (NSE index options are European and cash-settled on the index, the future settles to the same index). r = 91-day T-bill rate. Costs = charges plus half the bid-ask spread per leg; the lake has last prints only, so the literal test overstates opportunities.
 - Data: **needs data we lack** - lack: simultaneous bid-ask quotes (the lake keeps last-traded prices, ATM +-10 only)
 - Our nearest test: not tested by us; R103 showed far-leg prices in the lake are often stale (repriced legs moved -Rs 711 to -Rs 1,698), which would create false parity breaks
+- R104: not testable (R104): needs simultaneous bid/ask
 ### `book-fmbinomial-02` Buy a butterfly that the chain prices at or below zero (convexity break)
 - Source: Binomial Models in Finance, Ch. 12.6 and Exercise 2.44 (butterfly price must be positive); App. D (Farkas). Family: `option-structure`. Signal source: option premium (prices of three calls or three puts of one expiry); options-structure arbitrage, not our default.
 - Timeframe: 1-minute bars, 09:20-15:00. Instruments: NIFTY, BANKNIFTY.
@@ -2143,6 +2328,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book's statement is that a butterfly's price must be positive under no arbitrage; we add a cost hurdle and a same-minute trade filter to avoid stale prints.
 - Data: **needs data we lack** - lack: simultaneous bid-ask quotes (last prints only in the lake)
 - Our nearest test: not tested by us; R103 found the lake's wing prices often stale, the likely source of most apparent breaks
+- R104: not testable (R104): needs simultaneous bid/ask
 ### `book-fmbinomial-03` Sell the ATM straddle when implied volatility exceeds forecast realised volatility, delta-hedged with futures
 - Source: Binomial Models in Finance, Ch. 5.1 (sell an overpriced option and hedge), App. C (historical vs implied volatility). Family: `option-structure`. Signal source: volatility / options structure (chain ATM IV against realised volatility of the index); maps to NSE index options.
 - Timeframe: daily entry at 09:20; hedge checked on 5-minute bars. Instruments: NIFTY, BANKNIFTY.
@@ -2154,6 +2340,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book's literal rule is 'market price above model price'; we read the model price as Black-Scholes at 20-day realised volatility, i.e. IV above HV. The 2-point margin, the +-0.2 delta band and the 1.5x premium stop are our choices to make it testable.
 - Data: have
 - Our nearest test: R103 (HUNT_R103_OPTIONS_SELLING.md): unhedged defined-risk selling 0 of 24 confirmed; R102: VIX above NIFTY's forward realised on 81% of days but below BANKNIFTY's on 60%; never tested with a futures hedge
+- R104: tested (R104): VOL: 424 trades, win 58%, net Rs 372,595 design, holdout -Rs 28,900 (fail)
 
 ## Financial Econometrics Modeling - Gregoriou and Pascalau (eds.) ([write-up](fm-fin-econometrics-derivs.md))
 No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
@@ -2170,6 +2357,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Window length 20 from the book's 20-day channels; the book refits on fixed windows (days 1-20, 20-40, 40-60), we refit every bar to avoid look-ahead. The book only says sell on a downward break and buy on an upward break and gives no stop, exit or size. Uses closes only, as the book does.
 - Data: have
 - Our nearest test: Not tested in this form. Nearest: R51 / R72 flat 20-bar Donchian breaks (R72 Breadth Donchian passed, twin p 0.008, BH q 0.032); R71 squeeze-release channel break lost in the final (-Rs 41,281 on 305 trades, twin p 0.91); R20b / R20c levels and level breaks no better than random lines.
+- R104: tested (R104): DLY: 996 trades, win 39%, net Rs 9,827 design, holdout -Rs 214,333 (fail); MCXD: 409 trades, win 40%, net -Rs 101,013 design, holdout -Rs 249,461 (fail)
 ### `book-fmoptim-02` Allocate lots across the live-record arms by trailing minimum-variance weights
 - Source: Nonlinear Optimization with Financial Applications, Ch. 1, 3, 9, 10 and 16. Family: `sizing-execution`. Signal source: none (sizing only; each arm keeps its own underlying signal).
 - Timeframe: daily P&L of each arm, trailing 60 sessions, re-estimated monthly. Instruments: NIFTY, BANKNIFTY.
@@ -2181,6 +2369,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book optimises share weights from returns; mapping 'assets' to our arms' daily P&L is our adaptation. Window 60, monthly refit, 50% cap and 10-point threshold are our choices (the book shows 50-80 day windows, a 25% cap example and no numeric threshold). Downside-risk and worst-day variants (Ch. 22) are pre-registered alongside.
 - Data: have
 - Our nearest test: R84 cutting correlated Breadth positions lowered the worst day 32-77% but beat no random subset (best p 0.13); R101 sizing by breadth earned what any extra lot earns (p 0.475); R72 Breadth Donchian vs Donchian daily correlation 0.80; H15 Kelly fractions unstable across windows.
+- R104: tested (R104): MM: drawdown cut 59%, net cut -35% design (fail)
 
 ## Financial Mathematics - Hughston and Hunter ([write-up](fm-financial-mathematics.md))
 ### `book-fmhughston-01` Conversion / reversal when call minus put strays from the futures-implied value
@@ -2194,6 +2383,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book's arbitrage uses the underlying share plus a loan; for an index we use the same-expiry future as the forward, so the rate term nearly cancels. Window, threshold and filters are ours. Same rule as written up from fm-capinski-math-finance (same slug).
 - Data: **needs data we lack** - lack: executable bid/ask quotes for options and futures (the lake keeps last prices, ATM +-10 only)
 - Our nearest test: not tested by us; R103 showed apparent profits in the chain came from stale wing prices (six BANKNIFTY passes became -Rs 2.9 to -Rs 3.3 lakh when repriced), so most violations in last-price data are likely stale prints
+- R104: not testable (R104): needs executable bid/ask
 
 ## Quantitative Finance for Physicists - Anatoly Schmidt ([write-up](fm-qf-physicists.md))
 ### `book-fmschmidt-01` Buy on a turn up after a dip, sell on a turn down after a top
@@ -2207,6 +2397,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book uses this only as the strategy of simulated 'technical traders' in an agent-based model and shows it moves prices when those traders are big enough; it never claims a real-market profit. Bar size, stop and session handling are ours.
 - Data: have
 - Our nearest test: R102 2.5: at 5 minutes the next bar follows the previous bar's sign 48.4% of the time (n 167,082); R88 0 of 8 direction findings held; R87 candle shapes and R71 patterns failed. Not tested in this exact form.
+- R104: tested (R104): IDX: 9207 trades, win 30%, net -Rs 543,959 design, holdout -Rs 141,565 (fail)
 
 ## Mathematical Economics and Finance - Harrison and Waldron ([write-up](fm-harrison-waldron.md))
 No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
@@ -2235,6 +2426,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book says only 'buy the lowest IV, sell the highest, hope they converge'. Comparing raw IVs across strikes would just trade the permanent skew (puts dearer on 91% of NIFTY days, R102), so we read 'converge' as relative to the normal smile shape (residual vs a 20-session curve). The 3-point entry, 1-point exit, 3-session limit, Rs 3,000 stop and whole-lot hedge are our choices.
 - Data: have (lake chain ATM +-10 with IV and last prints); lack: simultaneous bid-ask, so stale-print risk is high
 - Our nearest test: not tested by us; R102 measured the skew as persistent (91% / 90% of days); R103 found apparent wing mispricing in the lake was mostly stale prices; IV1 found skew alone useless as a direction signal
+- R104: tested (R104): VOL: 1145 trades, win 28%, net -Rs 1,542,428 design, holdout -Rs 391,601 (fail)
 ### `book-fmwhd-02` Buy the ATM straddle before a scheduled policy event, sell after it
 - Source: The Mathematics of Financial Derivatives, Ch. 3, exercise 1 (option portfolio for an election expected to move the share about 10% either way). Family: `calendar-events`. Signal source: volatility / options structure (a calendar event; no price signal); maps to NSE index options.
 - Timeframe: daily: entry 15:15 the session before, exit 15:15 on the event day. Instruments: BANKNIFTY, NIFTY.
@@ -2246,6 +2438,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The exercise only asks for a portfolio that profits from a large move either way and lists straddles and strangles; we fix the event set, the timing, the ATM strikes and the 'already priced' filter.
 - Data: have
 - Our nearest test: EVENT_SHIELD.md: BANKNIFTY day range 1.48x normal on RBI/Budget days (15 sessions, confirmed on 7 holdout sessions), NIFTY 1.28x not significant; R89: straddles bought when a big candle was forecast lost (0 of 18 profitable, gross about zero, costs decide). Event-day straddles themselves: not tested by us.
+- R104: tested (R104): VOL: 5 trades, win 40%, net -Rs 7,709 design, holdout Rs 0 (fail)
 
 ## Modelling Financial Derivatives with Mathematica - William Shaw ([write-up](fm-shaw-mathematica.md))
 No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
@@ -2265,6 +2458,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book gives the inequalities, not thresholds; the ATM+-5 window, the 20% margin and the same-minute rule are ours. Last-trade prints overstate violations; the main expected use is as a stale-print filter for every option backtest (count how many R103-type trades it would remove).
 - Data: **needs data we lack** - lack: synchronous bid/ask for all legs (we have 1-minute last prints and one chain snapshot, h24)
 - Our nearest test: not tested by us; R103's six design passers were stale wing prices, which such a check would flag (HUNT_R103_OPTIONS_SELLING.md).
+- R104: not testable (R104): needs synchronous bid/ask for all legs
 ### `book-fmmusiela-02` Delta-hedge an ATM straddle with smile-adjusted delta vs plain Black-Scholes delta (hedge-error test)
 - Source: Martingale Methods in Financial Modelling, Ch. 7.1.8 (modified delta), Ch. 7.2.1 (CEV delta), Ch. 7.4.5 (smile dynamics). Family: `trade-management`. Signal source: volatility / options structure (hedge ratios from the option chain's IV-vs-spot slope; no direction).
 - Timeframe: 1-minute bars, one structure a day. Instruments: NIFTY.
@@ -2276,6 +2470,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book defines the modified delta but gives no procedure; the 20-day regression for the IV-spot slope, the bands and lot counts are ours. Book A is the Bjork rule 'delta-hedged-short-straddle'; this test only asks whether B hedges better.
 - Data: have (1-minute index, futures and ATM+-10 option bars with IV)
 - Our nearest test: not tested by us; MCX_OPTIONS.md delta-hedged long options at about zero P&L at best; R102 puts dearer on 91% of NIFTY days (skew exists).
+- R104: tested (R104): VOL: 879 trades, win 59%, net Rs 116,775 design, holdout -Rs 79,347 (fail)
 ### `book-fmmusiela-03` 09:20 short ATM straddle only when ATM IV is rich against recent realised volatility
 - Source: Martingale Methods in Financial Modelling, Ch. 7.1.1-7.1.3, Historical vs implied volatility; Ch. 3.5 (hedger earns implied minus realised). Family: `option-structure`. Signal source: volatility / options structure (ATM IV from the chain against realised volatility of the index).
 - Timeframe: daily decision at 09:20, 1-minute bars to manage. Instruments: NIFTY, BANKNIFTY.
@@ -2287,6 +2482,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book reports that implied-minus-historical reflects hedging cost and that historical-volatility pricing is biased; it gives no trade. The ratio, quintile, stop and filters are ours. This is a filter on R103's naked 09:20 straddle, not a new structure.
 - Data: have (1-minute index and ATM option bars with IV; daily index closes since 2006)
 - Our nearest test: R103: the naked 09:20 short straddle held to 15:10 made +Rs 64k on NIFTY (1,272 days, 62% win) with worst day -Rs 28,876; defined-risk versions 0 of 24. R88: options priced rich vs recent movement predict a 0.85-0.9x smaller next candle. An IV/realised filter was not tested by us.
+- R104: tested (R104): VOL: 307 trades, win 66%, net Rs 110,474 design, holdout Rs 4,088 (fail)
 ### `book-fmmusiela-04` MCX GOLD vs COMEX gold x USDINR fair-value gap, mean reversion
 - Source: Martingale Methods in Financial Modelling, Ch. 4.3-4.4, Foreign equity forwards and foreign market futures (COMEX vs Tokyo gold example). Family: `mcx-crypto`. Signal source: underlying price (MCX GOLD future against COMEX gold future converted at USDINR, plus duty and carry).
 - Timeframe: 5-minute bars during overlapping hours. Instruments: GOLD.
@@ -2298,6 +2494,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book gives the no-arbitrage link between one asset priced in two currencies (and the quanto covariance term), not a trade; the duty/carry formula, thresholds and stops are ours. An Indian trader cannot arbitrage both legs, so this is a one-legged mean-reversion bet on the gap.
 - Data: **needs data we lack** - lack: intraday USDINR and a dated history of import duty; COMEX 1h is available as a proxy (R82)
 - Our nearest test: R82 used COMEX as a lead for MCX and rejected it (O1 overnight move: design +Rs 85k on 398 trades, failed the final period). A fair-value gap was not tested by us.
+- R104: not testable (R104): no intraday USDINR or dated import-duty history
 
 ## Monte Carlo Methods in Finance - Peter Jäckel ([write-up](fm-jackel-monte-carlo.md))
 No mechanical rule precise enough to pre-register (see the write-up for the discretionary ideas).
@@ -2314,6 +2511,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Chan gives no lookback; 20 bars is the Bollinger default. His Sharpe 3 -> -3 came from a 1 bp cost; our futures round trip is charges + one tick each side, options per baselines.yaml (NIFTY ATM about Rs 98). Report gross and net side by side, since the point is the cost wedge.
 - Data: have
 - Our nearest test: F1: Bollinger %B / RSI / MACD lean to a 15-minute reversal (IC ~ -0.05) gone by 60 minutes; 0 of 20 indicator rules pass. R102 2.5: next 5-minute bar repeats the sign 48.4% of the time (NIFTY, n 167,082). Expect gross > 0, net < 0.
+- R104: tested (R104): IDXF: 6113 trades, win 52%, net -Rs 2,649,139 design, holdout -Rs 1,004,805 (fail)
 ### `book-fmchan-02` NIFTY vs BANKNIFTY futures pair with a cointegration gate and half-life exit
 - Source: Quantitative Trading, Ch. 3 Example 3.6; Ch. 7 Examples 7.2 and 7.5. Family: `outside-strategies`. Signal source: underlying price (both index futures; the hedged log spread).
 - Timeframe: daily closes (signal at 15:20 from 15:15-15:20 prices), positions held over days. Instruments: NIFTY, BANKNIFTY.
@@ -2325,6 +2523,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Chan uses price levels and a fixed training window; logs and a rolling window keep the hedge point-in-time. Gates (5% CADF, half-life 3-30) are our choice from his text. Margin: two futures legs need about Rs 3-4 lakh, above Boss's Rs 1 lakh; a research question, not an arm.
 - Data: have
 - Our nearest test: H6 (intraday divergence of NIFTY vs BANKNIFTY with bought options): all 24 variants lost; the 60-minute spread moves about 13 bps. R72 C2 laggard catch-up failed. R102: daily correlation 0.877, beta 1.157 (says nothing about cointegration). The daily futures pair with a CADF gate: not tested by us.
+- R104: tested (R104): DLY: 4 trades, win 50%, net Rs 53,482 design, holdout Rs 0 (fail)
 ### `book-fmchan-03` GOLD/SILVER spread trade only when cointegrated, exit on the OU half-life
 - Source: Quantitative Trading, Ch. 3 Example 3.6; Ch. 7 Examples 7.2 and 7.5. Family: `mcx-crypto`. Signal source: underlying price (MCX GOLD and SILVER roll-adjusted futures; the hedged spread).
 - Timeframe: daily closes, held over days. Instruments: GOLD, SILVER.
@@ -2336,6 +2535,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The CADF gate and half-life exit are what R94 lacked; everything else copies R94 idea 2 so the only change is Chan's two additions. If the gate is rarely open the rule is reported as 'too few trades' rather than tuned.
 - Data: have
 - Our nearest test: R94 idea 2: GOLD/SILVER log-ratio z-score lost in design (68 trades, -Rs 6,26,347 at W60) and holdout; only 14 of 68 reverted to z = 0, 40 timed out. R82 G1 and R96 R5F (27 trades, -Rs 47,162) also failed. Low prior.
+- R104: tested (R104): MCXD: 2 trades, win 0%, net -Rs 16,836 design, holdout Rs 0 (fail)
 ### `book-fmchan-04` Natural gas long from late February to mid-April (Chan's exact window)
 - Source: Quantitative Trading, Ch. 7, Seasonal trading strategies (natural gas sidebar). Family: `calendar-events`. Signal source: calendar (no price signal); trades the underlying future.
 - Timeframe: daily; one trade a year. Instruments: NATURALGAS.
@@ -2347,6 +2547,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Chan buys the NYMEX June contract; MCX NG contracts track the nearby Henry Hub month, so the June leg is not tradeable on MCX; the nearby contract carries contango roll costs Chan's June leg avoided. Test on Henry Hub history (2000+, as R83) for the window itself and on MCX 2012-2026 for the tradeable version; compare with random 35-session windows of the same years (R94's twin) and with always-short (carry). Vary the dates +-5 sessions as Chan advises.
 - Data: have
 - Our nearest test: R83 E9: NG month-of-year seasonality on MCX NATGASMINI: 14 trades, -37,413; always short +14,687. MCX_GUIDE: Feb -5.7%, Dec -10.7% monthly means 2012-2026. R94: bullion seasonals do not beat same-year random windows. Low prior.
+- R104: tested (R104): MCXD: 10 trades, win 40%, net -Rs 4,026 design, holdout Rs 25,181 (fail)
 ### `book-fmchan-05` Trailing half-Kelly throttle that can only cut an arm's size
 - Source: Quantitative Trading, Ch. 6, Optimal capital allocation and leverage; Risk management. Family: `sizing-execution`. Signal source: the arm's own realised trade P&L (sizing; the arm's signals stay on the underlying).
 - Timeframe: re-estimated each evening; applied to the next day's signals. Instruments: NIFTY, BANKNIFTY.
@@ -2358,6 +2559,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Chan: six-month lookback for day-long holds, half-Kelly, and gradual de-leveraging instead of shutdown. Because the multiplier is capped at 1, it only lowers risk (CLAUDE.md LIVE rule: shadow first). Compare on the holdout: net, worst month, max drawdown and the account-stop breaches (-Rs 40k / -Rs 13k a month) vs the unthrottled arm and vs a random throttle with the same average size.
 - Data: have
 - Our nearest test: H15: half-Kelly from Rs 1 lakh -> Rs 7.41 L holdout with a -44% drawdown; Kelly fraction unstable (BN 1.29 vs 0.48 / 0.14). R101: 2 lots on 5-of-5 breadth earned what any lot earns (p 0.475). R74: volatility-targeted sizing not tried for the index arms. A cut-only throttle: not tested by us.
+- R104: tested (R104): MM: drawdown cut 59%, net cut 27% design (fail)
 ### `book-fmchan-06` Lot cap from the worst historical day (Chan's worst-loss leverage cap)
 - Source: Quantitative Trading, Ch. 6, Risk management (Black Monday example). Family: `sizing-execution`. Signal source: the arm's own historical P&L (sizing).
 - Timeframe: set monthly. Instruments: NIFTY, BANKNIFTY, GOLD, SILVER.
@@ -2369,6 +2571,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Rs 13,000 is the monthly account stop used as the one-period tolerance (Chan uses the tolerable one-day loss). Only lowers risk. Measure how often it binds and what it costs in net vs how many account-stop breaches it removes.
 - Data: have
 - Our nearest test: R72: C1's worst design day was -Rs 58,613 at 1 lot on five indices, beyond the account stop; R82: the MCX trend arm sat through -Rs 13.4 lakh. Not tested as a sizing rule by us.
+- R104: tested (R104): MM: drawdown cut 97%, net cut 101% design (fail)
 ### `book-fmchan-07` Turning point: a 1% day against a fresh 10-day extreme (Chan's GS rule, simplest form)
 - Source: Quantitative Trading, Ch. 7, Regime switching, Example 7.1. Family: `patterns-indicators`. Signal source: underlying price (index daily bars).
 - Timeframe: daily; enter at the next open, hold a fixed number of sessions. Instruments: NIFTY, BANKNIFTY.
@@ -2380,6 +2583,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The OCR of the rule box reads '>= -1' for the short side; read as '<= -1'. 'N-day low just before the big up day' is read as today or yesterday. Thresholds +-3% are a variant.
 - Data: have
 - Our nearest test: R102: index direction at 1 day follows the previous sign 53.2% (NIFTY, n 5,086) and no sign rule confirmed (1 of 70, an artefact). R87 candle shapes and R71 chart patterns gave no direction. R78 (gold daily high/low reversal) is the nearest MCX cousin. This exact rule: not tested by us.
+- R104: tested (R104): DLY: 349 trades, win 53%, net -Rs 426,187 design, holdout Rs 219,315 (fail)
 ### `book-fmchan-08` ETH vs BTC hourly spread reversion inside Boss's crypto window, with stop and profit lock
 - Source: Quantitative Trading, Ch. 3 Example 3.6; Ch. 7 Examples 7.2 and 7.5 (method applied to crypto). Family: `mcx-crypto`. Signal source: underlying price (ETH and BTC perpetuals; the hedged log spread).
 - Timeframe: 1-hour bars; trades only 00:00-09:00 IST, flat by 09:00. Instruments: CRYPTO.
@@ -2391,6 +2595,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): Chan's daily method moved to hourly bars so the trade fits Boss's 00:00-09:00 IST window and 'no long holding' rule; the 1.0% stop, 0.4% lock trigger and 50% trail are our choices, sized from C1's median BTC next-hour range 0.546%. Costs: 12 bps a round trip per leg (two legs = 24 bps).
 - Data: have
 - Our nearest test: C1/C2: crypto hourly direction reverses slightly (AUC 0.535-0.550) but nets -10 to -13 bps a trade after costs; RC1: 0 of 8 active ideas pass; ETH/BTC as a pair not tested by us. Two legs double the cost hurdle: low prior.
+- R104: tested (R104): CRY: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail)
 ### `book-fmchan-09` BTC 5-minute Bollinger fade (Chan's cost lesson) with stop and profit lock
 - Source: Quantitative Trading, Ch. 2, How will transaction costs affect the strategy (ES example). Family: `mcx-crypto`. Signal source: underlying price (BTC and ETH perpetual 5-minute closes).
 - Timeframe: 5-minute bars; 00:00-09:00 IST, flat by 09:00. Instruments: CRYPTO.
@@ -2402,6 +2607,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The 0.6% stop is about C1's median BTC next-hour range (0.546%); the lock values are our choices. Report gross vs net to show the cost wedge Chan describes; 12 bps round trip.
 - Data: have
 - Our nearest test: C1: next-hour reversal AUC 0.535 BTC / 0.543 ETH but about 0 bps gross vs 12 bps round trip (net -11.74 / -13.16 bps); C2: same in Boss's window. Expected to fail; it is the cost check.
+- R104: tested (R104): CRY: 6346 trades, win 41%, net -Rs 834,590 design, holdout -Rs 171,924 (fail)
 
 ## An Introduction to Mathematical Finance: Options and Other Topics - Sheldon Ross ([write-up](fm-ross-math-finance.md))
 ### `book-fmross-01` Crude next-day continuation after a >1% down day (Ross four-state table)
@@ -2415,6 +2621,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book only reports statistics (big drop followed by big drop 31%, next-day mean -.0036 after state 1 on 1995-97 NYMEX crude); it proposes no trade. The most literal trade is a one-day continuation short. The mirror ('after state 2 or 3 go long', next-day mean +.0024/+.0025) is a second variant, pre-registered alongside, with BH across both and across instruments. First run the 4x4 chi-square table on our MCX daily data as the descriptive gate.
 - Data: have
 - Our nearest test: not tested by us on MCX; NIFTY daily lag-1 autocorrelation +0.028 (DEEP_NIFTY_BANKNIFTY.md 2.5) was not tradeable
+- R104: tested (R104): MCXD: 1166 trades, win 44%, net -Rs 161,038 design, holdout -Rs 317,905 (fail)
 ### `book-fmross-02` Buy the ATM straddle when the state-conditional volatility forecast exceeds ATM IV
 - Source: An Introduction to Mathematical Finance: Options and Other Topics, Ch. 10.3. Family: `option-structure`. Signal source: volatility / options structure (vol forecast from the underlying vs the chain's ATM IV).
 - Timeframe: daily; decision at the close, trade next open. Instruments: CRUDE, NATURALGAS, NIFTY, BANKNIFTY.
@@ -2426,6 +2633,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book uses state sds to price options by Monte Carlo, not to trade; the 2-point threshold, 500-session window and 30% stop are ours. Six-state version (+/-1%, +/-2%) as a pre-registered variant.
 - Data: have
 - Our nearest test: R89 straddles on a forecast big candle: 0 of 18 profitable (FINDINGS.md); R16 found the size of the next move predictable
+- R104: tested (R104): VOL: 498 trades, win 33%, net -Rs 110,983 design, holdout -Rs 46,248 (fail)
 ### `book-fmross-03` Fade deviations from the AR(1) reversion level of the log price
 - Source: An Introduction to Mathematical Finance: Options and Other Topics, Ch. 11.1, 11.3. Family: `mcx-crypto`. Signal source: underlying price.
 - Timeframe: daily bars. Instruments: CRUDE, NATURALGAS, GOLD, SILVER, NIFTY, BANKNIFTY.
@@ -2437,6 +2645,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book gives the model and the reversion level, not a trading rule; it fits the whole sample in-sample. Window, b threshold, 1-sd trigger, stop and time exit are ours. Crypto version would need a stop and a profit lock per CLAUDE.md.
 - Data: have
 - Our nearest test: SWING_DEEP.md 'Mean reversion: buy after big down day' on NIFTY futures did not pass (no index swing rule passed walk-forward); R59 mean-reversion dip buy 0 of 84
+- R104: tested (R104): MCXD: 1 trades, win 100%, net Rs 4,554 design, holdout Rs 0 (fail); DLY: 0 trades, win -, net Rs 0 design, holdout Rs 0 (fail)
 ### `book-fmross-04` Sell defined-risk premium when AR(1) horizon variance is well below the GBM variance in ATM IV
 - Source: An Introduction to Mathematical Finance: Options and Other Topics, Ch. 11.2. Family: `option-structure`. Signal source: volatility / options structure (AR(1) fit on the underlying vs ATM IV).
 - Timeframe: daily; options with 10-30 sessions to expiry. Instruments: CRUDE, NATURALGAS, GOLD, SILVER, NIFTY, BANKNIFTY.
@@ -2448,6 +2657,7 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book only compares option values (44.42 cents AR(1) vs 79 cents Black-Scholes for crude); the 0.6 ratio, iron-fly structure and stop are ours. Unit-root bias makes b look below 1 in short samples; the ADF filter is required.
 - Data: have
 - Our nearest test: R103 defined-risk option selling: 0 of 24 confirmed, the design passes were stale prices
+- R104: tested (R104): VOL: 3 trades, win 0%, net -Rs 1,789 design, holdout Rs 0 (fail)
 
 ## Methods of Mathematical Finance - Karatzas and Shreve ([write-up](fm-karatzas-shreve.md))
 ### `book-fmkaratzas-01` Size an arm's lots on the cushion above the account floor (growth-optimal with a wealth floor)
@@ -2461,3 +2671,4 @@ No mechanical rule precise enough to pre-register (see the write-up for the disc
 - Assumptions (our reading where the book is vague): The book gives the principle (keep the floor's present value aside, invest the cushion growth-optimally) for a continuous model with known parameters; the floor = peak - Rs 40,000 (a trailing floor), the cushion multiplier k and the use of H15's trade list are ours. Pre-register k = H15's quarter-Kelly value for BN (0.325) applied to the cushion, and compare with H15 fixed 1 lot, quarter-Kelly on full capital (A-K4) and half-Kelly (A-K2) on the same trades and holdout.
 - Data: have
 - Our nearest test: HUNT_H15.md: half-Kelly on full capital grew fastest but P(drawdown >= 30%) 63% and P(drawdown >= 50%) 14%; quarter-Kelly cut P(drawdown >= 50%) to 1%; the Kelly fraction was unstable (0.48 / 0.14 / 1.29). Cushion sizing itself not tested by us.
+- R104: tested (R104): MM: drawdown cut -3%, net cut 8% design (fail)

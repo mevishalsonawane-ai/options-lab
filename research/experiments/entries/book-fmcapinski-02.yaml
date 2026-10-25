@@ -30,10 +30,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmcapinski-02; trade: Lon
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: needs executable bid/ask'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us; R103 found far-wing stale prices create fake edges, so expect most signals to
-  be data errors - useful mainly as a lake cleaning check. Assumptions: The book proves convexity but gives no trading rule;
-  the cost threshold and liquidity filter are ours. Signals on last prices are an upper bound.'
+notes: 'R104: needs data we lack (needs executable bid/ask).'

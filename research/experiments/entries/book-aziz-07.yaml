@@ -1,8 +1,9 @@
 id: book-aziz-07
-title: 'Fallen Angel analogue: gap-up open spike, flush below VWAP, base, volume breakout (Andrew Aziz, book rule, proposed)'
+title: 'Fallen Angel analogue: gap-up open spike, flush below VWAP, base, volume breakout (Andrew Aziz, book rule, tested
+  in R104)'
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, Strategy 1: Fallen Angel) makes money after
   real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume. Entry:
   Day filter: gap up of at least 0.5%. The index makes a new high in the first 15 minutes, then trades below VWAP; a base
@@ -10,9 +11,10 @@ hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6,
   50 SMA. Long on the first 1-minute close above the base high with volume at least 2 x the base''s average 1-minute volume.
   Stop: below the base low Exit: Part at VWAP, part at the day''s high (stop to entry after the first), rest at yesterday''s
   high or a new 5-minute low; time exit 11:45.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -26,13 +28,16 @@ model_or_rule: 'Day filter: gap up of at least 0.5%. The index makes a new high 
   rest at yesterday''s high or a new 5-minute low; time exit 11:45. | filters: Before 11:45; skip if no base forms or the
   breakout volume test fails.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-07; trade: buy ATM CE; stops on the index'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us; nearest R87B pullback continuation and R102 gap facts (a 0.5-1% NIFTY gap fills
-  by the close 42% of the time). Assumptions: The book''s Angel is a low-float US stock gapping on news with pre-market levels;
-  the index has no comparable pre-market, so the previous close stands in for the pre-market low and every threshold is ours.'
+  summary: 'IDX (index spot, bought option), variant 1m: design 260 trades, win 32%, net -Rs 27,826, folds -Rs 8,632, -Rs
+    13,627, -Rs 2,284, -Rs 3,283; p 1.000, BH q 1.000; holdout 27 trades, win 26%, net -Rs 12,409. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). TWAP proxy; volume test dropped (labelled) Our nearest test: not tested by us; nearest
+  R87B pullback continuation and R102 gap facts (a 0.5-1% NIFTY gap fills by the close 42% of the time). Assumptions: The
+  book''s Angel is a low-float US stock gapping on news with pre-market levels; the index has no comparable pre-market, so
+  the previous close stands in for the pre-market low and every threshold is ours.'

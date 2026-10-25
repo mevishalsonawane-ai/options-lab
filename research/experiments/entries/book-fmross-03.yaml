@@ -1,17 +1,18 @@
 id: book-fmross-03
-title: Fade deviations from the AR(1) reversion level of the log price (Sheldon Ross, book rule, proposed)
+title: Fade deviations from the AR(1) reversion level of the log price (Sheldon Ross, book rule, tested in R104)
 family: mcx-crypto
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Sheldon Ross''s rule from An Introduction to Mathematical Finance: Options and Other Topics (Ch. 11.1, 11.3)
   makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price.
   Entry: Each day fit L(n) = a + b L(n-1) + e by least squares on the trailing 250 daily log closes of the continuous future.
   If b < 0.98 and the fitted model''s one-day-ahead expected price is above today''s close by more than 1 residual sd (price
   below the reversion level s* = exp((a + s^2/2)/(1-b))), go long at the next open; mirror for short. Stop: 1.5 x 20-day ATR
   from entry on the underlying (assumption). Exit: Price reaches s*, or 10 sessions, whichever first.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: MCXD 2012-01-01 - 2021-12-31; DLY 2006-01-01 - 2021-12-31
+  holdout: MCXD 2022-01-01 - 2026-10-16 (read once); DLY 2022-01-01 - 2026-10-19 (read once)
 instruments:
 - CRUDE
 - NATURALGAS
@@ -30,14 +31,18 @@ model_or_rule: 'Each day fit L(n) = a + b L(n-1) + e by least squares on the tra
   1; we add it). No entry within 3 sessions of contract expiry.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmross-03; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short
   (monthly on MCX); stops on the underlying'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: SWING_DEEP.md ''Mean reversion: buy after big down day'' on NIFTY futures did not pass (no index
-  swing rule passed walk-forward); R59 mean-reversion dip buy 0 of 84. Assumptions: The book gives the model and the reversion
-  level, not a trading rule; it fits the whole sample in-sample. Window, b threshold, 1-sd trigger, stop and time exit are
-  ours. Crypto version would need a stop and a profit lock per CLAUDE.md.'
+  summary: 'MCXD (MCX future daily), variant base: design 1 trades, win 100%, net Rs 4,554, folds Rs 0, Rs 0, Rs 4,554; p
+    1.000, BH q 1.000; holdout 0 trades, win -, net Rs 0. R104 verdict: fail. | DLY (index daily, futures proxy), variant
+    base: design 0 trades, win -, net Rs 0, folds Rs 0, Rs 0, Rs 0, Rs 0; p 1.000, BH q 1.000; holdout 0 trades, win -, net
+    Rs 0. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: SWING_DEEP.md ''Mean reversion: buy after big down day'' on NIFTY
+  futures did not pass (no index swing rule passed walk-forward); R59 mean-reversion dip buy 0 of 84. Assumptions: The book
+  gives the model and the reversion level, not a trading rule; it fits the whole sample in-sample. Window, b threshold, 1-sd
+  trigger, stop and time exit are ours. Crypto version would need a stop and a profit lock per CLAUDE.md.'

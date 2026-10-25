@@ -37,12 +37,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmhughston-01; trade: Thr
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: needs executable bid/ask'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us; R103 showed apparent profits in the chain came from stale wing prices (six BANKNIFTY
-  passes became -Rs 2.9 to -Rs 3.3 lakh when repriced), so most violations in last-price data are likely stale prints. Assumptions:
-  The book''s arbitrage uses the underlying share plus a loan; for an index we use the same-expiry future as the forward,
-  so the rate term nearly cancels. Window, threshold and filters are ours. Same rule as written up from fm-capinski-math-finance
-  (same slug).'
+notes: 'R104: needs data we lack (needs executable bid/ask).'

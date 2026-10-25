@@ -36,12 +36,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmjavaheri-02; trade: Sam
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: needs the next-monthly chain and far legs (see javaheri-01)'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us. IV1 and h29: skew carries no direction (h29 skew IC about 0; option-only models
-  lost on all 5 indices), but neither traded skew as a price.. Assumptions: The book gives the comparison (Heston xi and rho
-  from options vs filtered MLE on history) but no threshold; the 95th-percentile-of-sampling-distribution threshold is our
-  literal reading of its footnote; ATM-5 / ATM+5 replaces 10% OTM so the measurement stays inside the 1-minute lake; the history
-  model and its sampling distribution are refit with data up to the day before only (look-ahead guard).'
+notes: 'R104: needs data we lack (needs the next-monthly chain and far legs (see javaheri-01)).'

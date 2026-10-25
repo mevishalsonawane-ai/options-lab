@@ -1,15 +1,16 @@
 id: book-tom-15
-title: Red marubozu after a failed push up in a downtrend (Trader Tom, book rule, proposed)
+title: Red marubozu after a failed push up in a downtrend (Trader Tom, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Trader Tom''s rule from The First Trading Manual (Pattern Number 7, Marabozu, p. 95-96) makes money after real
   charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Downtrend (close
   below 89-SMA); a rally of at least 2 green bars; then a red marubozu (wicks each <= 5% of range, body >= 1.0 x ATR14); sell
   at its close. Mirror for uptrends. Stop: the rally''s high Exit: 2R or 30 minutes or 15:10'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -20,12 +21,14 @@ model_or_rule: 'Downtrend (close below 89-SMA); a rally of at least 2 green bars
   range, body >= 1.0 x ATR14); sell at its close. Mirror for uptrends. | stop: the rally''s high | exit: 2R or 30 minutes
   or 15:10 | filters: 09:30-14:30; skip the 15 minutes after scheduled data'
 settings: 'research/books/TESTABLE_RULES.md, rule book-tom-15; trade: buy 1-ITM PE'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 2
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87: marubozu no direction edge out of sample on 5m/15m (NIFTY 1m red marubozu did not hold). Assumptions:
-  Wick tolerance, size threshold, trend filter and exit are ours.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 34 trades, win 32%, net Rs 3,688, folds -Rs 1,999, Rs 8,614,
+    -Rs 2,927; p 0.341, BH q 1.000; holdout 6 trades, win 0%, net -Rs 11,218. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R87: marubozu no direction edge out of sample on 5m/15m (NIFTY
+  1m red marubozu did not hold). Assumptions: Wick tolerance, size threshold, trend filter and exit are ours.'

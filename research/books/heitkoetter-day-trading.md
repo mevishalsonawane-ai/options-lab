@@ -345,3 +345,24 @@ test on at least 200 trades; choose a valid back-test period.
 - The sample performance report (p. 167) and the five TF_Param optimisation charts (pp. 175-179) are images; their numbers
   are known only from the prose.
 - The OCR of the forex quote screen (p. 55) and IBM key statistics (p. 82) is partly garbled; nothing in them is a rule.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-heitkoetter-01`: tested (R104): IDX: 955 trades, win 29%, net -Rs 209,106 design, holdout Rs 7,491 (fail)
+- `book-heitkoetter-02`: not re-run (R104): covered: H25 price x SMA crosses (15,120 variants, Rs -145 a trade, 1 of 28 walk-forward families positive), exits of this kind included
+- `book-heitkoetter-03`: not re-run (R104): covered: OBUY_GB TI-03 MA crosses (-Rs 3,69,856 walk-forward on 4,526) and R29
+- `book-heitkoetter-04`: tested (R104): IDX: 3935 trades, win 42%, net -Rs 354,686 design, holdout -Rs 102,477 (fail); MCXI: 959 trades, win 34%, net -Rs 104,204 design, holdout -Rs 155,264 (fail)
+- `book-heitkoetter-05`: not re-run (R104): covered: H25 MACD signal / zero cross: 27,000 variants, 0 of 50 families positive walk-forward
+- `book-heitkoetter-06`: not re-run (R104): covered: H25 Williams %R as given: no better than random
+- `book-heitkoetter-07`: not re-run (R104): covered: OBUY_GB MR-03 RSI 30/70 reversal: -Rs 82,004 walk-forward on 1,272
+- `book-heitkoetter-08`: not re-run (R104): covered: OBUY_GB MR-02 Bollinger fade: -Rs 90,790 walk-forward on 2,136
+- `book-heitkoetter-09`: tested (R104): IDX: 1259 trades, win 33%, net -Rs 4,494 design, holdout -Rs 25,975 (fail)
+- `book-heitkoetter-10`: not re-run (R104): covered: R1 N11/N12 first-candle rules and the ORB family (R3, R92 0 of 257), PDH/PDL R89 0 of 180
+- `book-heitkoetter-11`: tested (R104): ARM: delta vs the arm Rs 6,153 design (fail)
+- `book-heitkoetter-12`: tested (R104): ARM: delta vs the arm Rs 42,817 design (fail)
+- `book-heitkoetter-13`: not re-run (R104): covered: R81 X5 scale-out failed; thirds are the same partial-profit mechanism
+- `book-heitkoetter-14`: tested (R104): MM: drawdown cut 6%, net cut 136% design (fail)
+- `book-heitkoetter-15`: tested (R104): ARM: delta vs the arm -Rs 76,436 design (fail)
+- `book-heitkoetter-16`: tested (R104): ARM: delta vs the arm -Rs 166,338 design (fail)

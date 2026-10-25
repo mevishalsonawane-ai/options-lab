@@ -26,10 +26,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-07; trade: quote 
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: needs tick-by-tick book and queue position'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: Not tested by us. R7: the published order-flow edge belongs to co-located market makers; a phone
-  app cannot compete.. Assumptions: Inventory cap and stop are ours. Listed for completeness: it needs co-location-level speed
-  and queue position.'
+notes: 'R104: needs data we lack (needs tick-by-tick book and queue position).'

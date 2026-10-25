@@ -1,5 +1,5 @@
 id: book-tom-17
-title: Trade only the first busy hours after the open (Trader Tom, book rule, proposed)
+title: Trade only the first busy hours after the open (Trader Tom, book rule, covered by an earlier study)
 family: daily-filters
 date: '2026-10-25'
 doc: research/books/TESTABLE_RULES.md
@@ -24,10 +24,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-tom-17; trade: filter onl
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not re-run in R104: covered by an earlier study. R101 B4/C4 ''entries by 12:00'' on R72/R51 (raised win rate,
+    cut final net -Rs 81,567) and R92 entry-hour study; the book''s 12:15 differs by 15 minutes'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R92: every entry hour loses for the ORB arms (0 of 257); R101 B4 mornings only on R72 raised win
-  rate but cut the final net (-Rs 81,567). Assumptions: The book''s London window (08:00 plus 2-3 hours) mapped to NSE''s
-  open; the cut at 12:15 is ours.'
+verdict: not-a-test
+notes: 'R104: covered (no BH budget spent). R101 B4/C4 ''entries by 12:00'' on R72/R51 (raised win rate, cut final net -Rs
+  81,567) and R92 entry-hour study; the book''s 12:15 differs by 15 minutes'

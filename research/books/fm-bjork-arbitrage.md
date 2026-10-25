@@ -441,3 +441,13 @@ Proposition 9.5, the barrier, lookback, Vasicek/CIR/Hull-White and LIBOR formula
 where standard. All figures are images (binomial trees Figs 2.1-2.10, Wiener and GBM paths Figs 4.1, 5.1-5.2, payoff
 and price graphs Figs 7.1-7.3, Greeks Figs 9.1-9.7). A few pages are scanning noise (back of the preface, the end of
 Ch. 6 and of Ch. 8). The references and index were skimmed, not studied.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmbjork-01`: tested (R104): VOL: 895 trades, win 59%, net Rs 147,050 design, holdout -Rs 97,497 (fail)
+- `book-fmbjork-02`: tested (R104): VOL: 130 trades, win 27%, net -Rs 288,787 design, holdout -Rs 43,215 (fail)
+- `book-fmbjork-03`: not testable (R104): needs synchronous bid/ask on three legs
+- `book-fmbjork-04`: tested (R104): MM: drawdown cut -136%, net cut -1670% design (fail)
+- `book-fmbjork-05`: tested (R104): MM: drawdown cut 34%, net cut -21% design (fail)

@@ -39,13 +39,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmjavaheri-01; trade: Lon
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: 10% OTM monthly strikes are outside the lake''s ATM +-10; bhavcopy in the lake is a weekly
+    sample, closes only'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us as a risk reversal. R102: NIFTY puts five strikes out dearer than calls by 2.56
-  IV points on 91% of 1,222 days. R103: defined-risk short premium 0 of 24 confirmed; costs turn a near-zero gross into losses..
-  Assumptions: Book trades 3-month SPX options; NSE liquidity is in the nearest monthly, so T is shortened and the OTM distance
-  scaled by sqrt(time). The futures hedge must be in whole lots: rebalance only when the net delta differs from the held futures
-  by more than 0.5 lot, and also report a fractional-hedge (theoretical) version. The short put is naked: margin about Rs
-  1.5 lakh; research only.'
+notes: 'R104: needs data we lack (10% OTM monthly strikes are outside the lake''s ATM +-10; bhavcopy in the lake is a weekly
+  sample, closes only).'

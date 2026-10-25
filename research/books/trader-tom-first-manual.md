@@ -369,3 +369,28 @@ except where noted.
   charts). The text layer and the OCR give only captions and axis labels, so exact bar counts, stop placements and
   targets in those examples are unknown; where the book's words were vague the rules file says so in `assumptions`.
 - Pages 18, 29, 32, 40, 48, 60, 71, 74, 158, 179, 181 and 183 had no text layer; their OCR is toolbar and axis noise.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-tom-01`: tested (R104): IDX: 2075 trades, win 35%, net -Rs 421,025 design, holdout -Rs 187,870 (fail); MCXI: 373 trades, win 33%, net -Rs 270,906 design, holdout -Rs 142,668 (fail)
+- `book-tom-02`: tested (R104): IDX: 203 trades, win 36%, net -Rs 75,101 design, holdout -Rs 21,616 (fail); MCXI: 33 trades, win 33%, net -Rs 3,457 design, holdout -Rs 20,261 (fail)
+- `book-tom-03`: tested (R104): ARM: delta vs the arm Rs 94,702 design (fail)
+- `book-tom-04`: tested (R104): IDX: 1352 trades, win 43%, net -Rs 197,505 design, holdout -Rs 104,765 (fail); MCXI: 44 trades, win 48%, net Rs 38,438 design, holdout Rs 77,450 (fail)
+- `book-tom-05`: tested (R104): IDX: 1809 trades, win 39%, net -Rs 209,879 design, holdout -Rs 61,435 (fail)
+- `book-tom-06`: tested (R104): IDX: 1834 trades, win 38%, net -Rs 289,727 design, holdout -Rs 51,225 (fail)
+- `book-tom-07`: tested (R104): IDX: 5087 trades, win 33%, net -Rs 333,577 design, holdout -Rs 4,813 (fail); MCXI: 188 trades, win 32%, net -Rs 146,517 design, holdout -Rs 149,041 (fail)
+- `book-tom-08`: tested (R104): IDX: 3709 trades, win 35%, net -Rs 427,331 design, holdout -Rs 66,001 (fail)
+- `book-tom-09`: tested (R104): IDX: 377 trades, win 37%, net -Rs 135,513 design, holdout -Rs 1,895 (fail)
+- `book-tom-10`: tested (R104): IDX: 340 trades, win 43%, net -Rs 92,085 design, holdout -Rs 15,950 (fail); MCXI: 55 trades, win 40%, net -Rs 42,176 design, holdout -Rs 37,497 (fail)
+- `book-tom-11`: tested (R104): IDX: 41 trades, win 37%, net -Rs 3,762 design, holdout -Rs 993 (fail)
+- `book-tom-12`: tested (R104): IDX: 29 trades, win 45%, net -Rs 4,794 design, holdout -Rs 1,233 (fail)
+- `book-tom-13`: tested (R104): IDX: 857 trades, win 43%, net -Rs 152,612 design, holdout -Rs 44,250 (fail)
+- `book-tom-14`: tested (R104): IDX: 24 trades, win 25%, net -Rs 13,829 design, holdout -Rs 1,967 (fail); DLY: 12 trades, win 17%, net -Rs 58,814 design, holdout Rs 22,388 (fail)
+- `book-tom-15`: tested (R104): IDX: 34 trades, win 32%, net Rs 3,688 design, holdout -Rs 11,218 (fail)
+- `book-tom-16`: tested (R104): IDX: 937 trades, win 36%, net -Rs 248,832 design, holdout -Rs 84,724 (fail); MCXI: 98 trades, win 36%, net Rs 44,175 design, holdout -Rs 16,889 (fail)
+- `book-tom-17`: not re-run (R104): covered: R101 B4/C4 'entries by 12:00' on R72/R51 (raised win rate, cut final net -Rs 81,567) and R92 entry-hour study; the book's 12:15 differs by 15 minutes
+- `book-tom-18`: tested (R104): ARM: delta vs the arm Rs 55,072 design (fail)
+- `book-tom-19`: not re-run (R104): covered: R81 X7 pyramid on Liquidity (+Rs 58k design, -Rs 20k final) and H5: the same add-at-+1R mechanism
+- `book-tom-20`: not re-run (R104): covered: R81 X5 scale-out (half at 1R, -Rs 79k design / -Rs 35k final) and R100: the same partial-profit mechanism

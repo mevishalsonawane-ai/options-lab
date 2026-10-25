@@ -365,3 +365,15 @@ index-option buyer.
   message), and Exhibits 5.1-5.8 (TraderEx screens). Their captions and the text describing them were read.
 - The table of contents page is garbled in the text layer (only chapter titles and page numbers are recoverable).
 - Nothing else.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-ozenbas-01`: tested (R104): DLY: 259 trades, win 25%, net Rs 750,943 design, holdout -Rs 239,991 (fail); MCXD: 346 trades, win 22%, net -Rs 258,066 design, holdout Rs 1,100,931 (fail)
+- `book-ozenbas-02`: not re-run (R104): covered: h14 capped limit +0.5%: the only execution policy to pass (+Rs 288/day), already the Liquidity arm's entry
+- `book-ozenbas-03`: not testable (R104): no historical bid/ask for index options (one snapshot, 6 Oct 2026)
+- `book-ozenbas-04`: tested (R104): IDX: 6395 trades, win 41%, net -Rs 575,827 design, holdout -Rs 10,056 (fail)
+- `book-ozenbas-05`: tested (R104): IDX: 9206 trades, win 30%, net -Rs 1,017,788 design, holdout -Rs 176,349 (fail)
+- `book-ozenbas-06`: not testable (R104): no option book-depth history
+- `book-ozenbas-07`: not testable (R104): needs tick-by-tick book and queue position

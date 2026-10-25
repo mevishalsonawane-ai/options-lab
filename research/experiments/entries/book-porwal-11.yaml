@@ -30,10 +30,10 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-11; trade: buy 1-I
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: index rule needs futures minute volume (57 sessions only); the price part (day-low reclaim)
+    is R87''s held fact, below option cost'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: R87: 1-minute stop run below NIFTY''s day low followed by +0.20 ATR over 5 minutes, n 1,702 in the
-  holdout, below option cost (weak positive base); fades in R86 lost. Assumptions: Level choice, volume multiple, the 3-bar
-  reclaim window and the partial exit are ours.'
+notes: 'R104: needs data we lack (index rule needs futures minute volume (57 sessions only); the price part (day-low reclaim)
+  is R87''s held fact, below option cost).'

@@ -1,9 +1,9 @@
 id: book-fmbayes-01
 title: 'Cross-sectional momentum: long the top half, short the bottom half on volatility-scaled 9-month return (Rachev, Hsu,
-  Bagasheva and Fabozzi, book rule, proposed)'
+  Bagasheva and Fabozzi, book rule, tested in R104)'
 family: mcx-crypto
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Rachev, Hsu, Bagasheva and Fabozzi''s rule from Bayesian Methods in Finance (Ch. 8, Incorporating trading strategies
   into the Black-Litterman model) makes money after real charges and slippage, walk-forward, with BH across the rules tried.
   Signal source: underlying price (each future''s own daily closes). Entry: On the first trading day of each month, for each
@@ -11,9 +11,10 @@ hypothesis: 'Rachev, Hsu, Bagasheva and Fabozzi''s rule from Bayesian Methods in
   Rank by z; go long the near-month future of the top half and short the bottom half. Stop: Not stated in the book. Research
   variant: none for the book-literal test; a second variant adds a per-leg stop at 2.5 x the 20-day ATR from entry (our choice).
   Exit: Hold one month; close at the next month''s rebalance (roll the futures at expiry inside the month).'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: MCXD 2012-01-01 - 2021-12-31
+  holdout: MCXD 2022-01-01 - 2026-10-16 (read once)
 instruments:
 - GOLD
 - SILVER
@@ -31,15 +32,17 @@ model_or_rule: 'On the first trading day of each month, for each instrument comp
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmbayes-01; trade: Futures long/short (MCX allows both). For the option-buying
   app variant: buy ATM CE on the long legs and ATM PE on the short legs of the nearest monthly expiry, rolled monthly; report
   separately.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: not tested by us as a cross-sectional ranking. R96 (HUNT_R96_SUMMARY.md) tested only intraday /
-  time-series momentum on MCX (US-session momentum U1 died; ZINC untradeable, 0 fills); R72 breadth Donchian is time-series,
-  not cross-sectional.. Assumptions: Book''s universe was MSCI country indices (24 years); 189 trading days for 9 months and
-  a 1-day skip are the book''s. With only 4 MCX majors the halves are 2 and 2; adding base metals (COPPER, ZINC, ALUMINIUM,
-  LEAD, NICKEL) if bars exist gives a wider cross-section. Costs: MCX futures charges and slippage from baselines.yaml.'
+  summary: 'MCXD (MCX future daily), variant base: design 111 trades, win 57%, net Rs 1,354,524, folds Rs 549,535, -Rs 144,216,
+    Rs 949,204; p 0.047, BH q 1.000; holdout 58 trades, win 57%, net Rs 363,878. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: not tested by us as a cross-sectional ranking. R96 (HUNT_R96_SUMMARY.md)
+  tested only intraday / time-series momentum on MCX (US-session momentum U1 died; ZINC untradeable, 0 fills); R72 breadth
+  Donchian is time-series, not cross-sectional.. Assumptions: Book''s universe was MSCI country indices (24 years); 189 trading
+  days for 9 months and a 1-day skip are the book''s. With only 4 MCX majors the halves are 2 and 2; adding base metals (COPPER,
+  ZINC, ALUMINIUM, LEAD, NICKEL) if bars exist gives a wider cross-section. Costs: MCX futures charges and slippage from baselines.yaml.'

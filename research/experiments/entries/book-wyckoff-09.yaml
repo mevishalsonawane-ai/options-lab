@@ -1,15 +1,16 @@
 id: book-wyckoff-09
-title: Fixed-distance trail until costs are covered, then hand over to the arm's exit (Wyckoff, book rule, proposed)
+title: Fixed-distance trail until costs are covered, then hand over to the arm's exit (Wyckoff, book rule, tested in R104)
 family: trade-management
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. IV) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price. Entry: Any entry from an existing arm Stop: initial stop
   1.0x the R16 expected 30-minute range from entry; trail it so it stays exactly that distance from the best price, in steps
   of 0.25 of the distance, until it sits at entry + round-trip costs Exit: then stop trailing; the arm''s own exits take over'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: ARM 2024-11-20 - 2026-03-31
+  holdout: ARM 2026-04-01 - 2026-10-13 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -22,14 +23,18 @@ model_or_rule: 'Any entry from an existing arm | stop: initial stop 1.0x the R16
   costs | exit: then stop trailing; the arm''s own exits take over | filters: none'
 settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-09; trade: manage the arm''s option; for crypto this is the
   required stop plus profit lock'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R19b Rs 500 give-back hurt Liquidity (holdout 15m +Rs 4,584 vs +Rs 14,633 plain); R100 0 of 15;
-  LIQUIDITY_TRAIL halves the average winner. Assumptions: The book''s 1 point on a ~130-dollar stock is about 0.8%, far too
-  wide for an intraday index; we scale it to the expected range. Crypto use needs a stop and a profit lock (CLAUDE.md), which
-  this provides.'
+  summary: 'ARM (the arm''s index signal (overlay / filter)), variant base: design 9160 trades, win 45% (B0 46%), net Rs 505,248
+    vs B0 Rs 774,750 (delta -Rs 269,502), quarters -Rs 68,529, -Rs 30,830, Rs 9,271, -Rs 177,768; p 1.000, BH q 1.000; final
+    delta Rs 26,699. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). fixed-distance trail to cost cover, overlay on every arm; the crypto clause has no
+  crypto arm to apply to Our nearest test: R19b Rs 500 give-back hurt Liquidity (holdout 15m +Rs 4,584 vs +Rs 14,633 plain);
+  R100 0 of 15; LIQUIDITY_TRAIL halves the average winner. Assumptions: The book''s 1 point on a ~130-dollar stock is about
+  0.8%, far too wide for an intraday index; we scale it to the expected range. Crypto use needs a stop and a profit lock (CLAUDE.md),
+  which this provides.'

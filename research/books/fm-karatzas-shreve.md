@@ -274,3 +274,9 @@ lot for hedging (Figlewski's simulation). No evidence is given beyond the citati
   followed.
 - No page was rotated or blank; no figures were missed (the book has essentially none). PDF pages 196-212 are the
   references, 213-214 the index, 215 the series list.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-fmkaratzas-01`: tested (R104): MM: drawdown cut -3%, net cut 8% design (fail)

@@ -276,3 +276,14 @@ as percentages: the book's 6-cent offset is about 0.15-0.5% of those prices; its
   tickers, dates and some indicator read-outs are legible; no trade details.
 - The contents page lists "7.1 Interactive Brokers"; the body has only an optionsXpress section ("Error! Bookmark not
   defined" in the original). The two Ch. 6 flowcharts were read from their extracted text.
+
+## R104 results (25 Oct 2026)
+
+Every testable rule of this book was run in R104 (`research/HUNT_R104_BOOKS.md`; pre-registered in `research/hunt/r104_books/PREREG.md`). Net after real charges and slippage, 1 lot / 1 unit:
+
+- `book-lswing-01`: tested (R104): DLY: 30 trades, win 47%, net Rs 8,091 design, holdout Rs 431 (fail)
+- `book-lswing-02`: tested (R104): MCXD: 58 trades, win 40%, net Rs 80,627 design, holdout Rs 105,286 (fail)
+- `book-lswing-03`: tested (R104): STK: 279 trades, win 35%, net -Rs 88,313 design, holdout -Rs 60,082 (fail)
+- `book-lswing-04`: tested (R104): DLY: 358 trades, win 42%, net Rs 235,028 design, holdout -Rs 253,352 (fail)
+- `book-lswing-05`: tested (R104): DLY: 1584 trades, win 35%, net Rs 1,409,446 design, holdout -Rs 330,423 (fail)
+- `book-lswing-06`: tested (R104): IDXF: 122 trades, win 29%, net -Rs 180,131 design, holdout -Rs 19,537 (fail)

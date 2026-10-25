@@ -30,12 +30,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-atm-02; trade: buy ATM CE
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: index-futures minutes only from 29 Jul 2026 (57 sessions)'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: HUNT_H39.md: heavyweight futures, basis and synthetic forward move with the index in the same minute;
-  from 2 minutes ahead every |t| is below 2.5, and the index''s own future does not lead by a tradeable amount. FINDINGS.md
-  DIRECTION MODEL: basis rising right 50.4-51.6%. Expected to fail.. Assumptions: The paper gives no pair, threshold or holding
-  time. Thresholds (2.5 sd, 60-minute window, 10-minute hold, 0.15% stop) are ours. A true arbitrage would trade futures vs
-  spot basket at sub-second speed; this is the slow, single-leg version a retail phone can run.'
+notes: 'R104: needs data we lack (index-futures minutes only from 29 Jul 2026 (57 sessions)).'

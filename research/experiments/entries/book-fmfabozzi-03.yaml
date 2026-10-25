@@ -1,8 +1,8 @@
 id: book-fmfabozzi-03
-title: NIFTY/BANKNIFTY log-spread z-score reversion (pairs trading) (Focardi and Fabozzi, book rule, proposed)
+title: NIFTY/BANKNIFTY log-spread z-score reversion (pairs trading) (Focardi and Fabozzi, book rule, tested in R104)
 family: outside-strategies
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Focardi and Fabozzi''s rule from The Mathematics of Financial Modeling and Investment Management (Ch. 10, 12,
   18, 19 (Ornstein-Uhlenbeck, cointegration, pairs trading)) makes money after real charges and slippage, walk-forward, with
   BH across the rules tried. Signal source: underlying price. Entry: Spread = ln(BANKNIFTY) - beta x ln(NIFTY), beta from
@@ -11,9 +11,10 @@ hypothesis: 'Focardi and Fabozzi''s rule from The Mathematics of Financial Model
   amounts; when z < -2: the mirror. Only enter if the past window passes an ADF test on the spread at 5%. Stop: z beyond +/-3.5,
   or combined option P&L below -1 x the total premium paid x 0.5. Exit: z back inside +/-0.5, or 15:15 square-off (intraday);
   daily variant: 10 sessions max hold.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -28,15 +29,18 @@ model_or_rule: 'Spread = ln(BANKNIFTY) - beta x ln(NIFTY), beta from a rolling 6
   filters: no entries 09:15-09:30 or after 14:30 (intraday); skip expiry day of either index.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmfabozzi-03; trade: long one index''s ATM call and the other''s ATM
   put (or a long/short futures pair as the mirror); stops on the spread z'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R72: C2 laggard catch-up lost (-Rs 1,00,746 final period) and C6 SMT divergence failed; R102 correlation
-  0.877, beta 1.157 over 5,086 days, so the spread is mostly BANKNIFTY''s extra beta. The book warns cointegration is unstable
-  and often spurious.. Assumptions: The book gives the method (pairs beyond a threshold back to the mean, formalised by cointegration)
-  but no thresholds, windows or instruments; all numbers are ours. Long options on both legs pay two thetas; the futures mirror
-  isolates the signal. Correct across every variant (BH).'
+  summary: 'IDX (index spot, bought option), variant base: design 939 trades, win 30%, net -Rs 231,181, folds -Rs 72,136,
+    -Rs 30,648, -Rs 3,387, -Rs 125,010; p 1.000, BH q 1.000; holdout 49 trades, win 22%, net -Rs 37,943. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). two bought options, intraday Our nearest test: R72: C2 laggard catch-up lost (-Rs
+  1,00,746 final period) and C6 SMT divergence failed; R102 correlation 0.877, beta 1.157 over 5,086 days, so the spread is
+  mostly BANKNIFTY''s extra beta. The book warns cointegration is unstable and often spurious.. Assumptions: The book gives
+  the method (pairs beyond a threshold back to the mean, formalised by cointegration) but no thresholds, windows or instruments;
+  all numbers are ours. Long options on both legs pay two thetas; the futures mirror isolates the signal. Correct across every
+  variant (BH).'

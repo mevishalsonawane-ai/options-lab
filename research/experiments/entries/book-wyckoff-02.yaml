@@ -1,18 +1,18 @@
 id: book-wyckoff-02
-title: 'Heavy volume packed into a narrow band near a new high, then slipping: short (Wyckoff, book rule, proposed)'
+title: 'Heavy volume packed into a narrow band near a new high, then slipping: short (Wyckoff, book rule, tested in R104)'
 family: flow-oi
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. IV, V, X) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: underlying price/volume (index future volume, price on the future). Entry:
   After the price has risen >= 1 ATR(14, 5m) in the last 12 bars and printed the session high within the last 6 bars: if the
   volume of the last 3 bars is >= 3x the slot''s 20-day median while their combined high-low range is <= 0.5 ATR, set the
   zone = high/low of those 3 bars. Short on the first 5m close below the zone low within the next 6 bars. Stop: zone high
   + 0.1 ATR Exit: first 5m close back above the zone midpoint, or 2 ATR in favour, or 15:15 (15:05 on expiry; MCX 23:00)'
-data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: index-futures minute volume only from 29 Jul 2026;
-  check MCX lake for per-minute futures volume (R89/R90 used close-only)'
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: MCXI 2025-10-20 - 2026-07-31
+  holdout: MCXI 2026-08-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -29,13 +29,17 @@ model_or_rule: 'After the price has risen >= 1 ATR(14, 5m) in the last 12 bars a
   MCX 23:00) | filters: none beyond the setup; mirror version (long) after a >= 1 ATR fall into the session low'
 settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-02; trade: buy ATM PE on the short (CE on the mirror); stops
   on the underlying future'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87 absorption proxy 51.5% vs 51.5% (n 2,266); R8 heavy-volume levels broke 58-68% vs 55%; R86b
-  absorption at day extremes almost never seen. Assumptions: Book''s ''abnormally large volume within a small radius'' made
-  3x volume within 0.5 ATR; ''the price starts to slip'' made a close below the zone. Thresholds are ours.'
+  summary: 'MCXI (MCX mini future (own bars)), variant 5m: design 26 trades, win 35%, net -Rs 36,075, folds -Rs 26,862, Rs
+    52, -Rs 9,266; p 1.000, BH q 1.000; holdout 1 trades, win 0%, net -Rs 180. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). MCX minis have real minute volume (Oct 2025+); the index version lacks volume (index-futures
+  minutes only from 29 Jul 2026, 57 sessions) Our nearest test: R87 absorption proxy 51.5% vs 51.5% (n 2,266); R8 heavy-volume
+  levels broke 58-68% vs 55%; R86b absorption at day extremes almost never seen. Assumptions: Book''s ''abnormally large volume
+  within a small radius'' made 3x volume within 0.5 ATR; ''the price starts to slip'' made a close below the zone. Thresholds
+  are ours.'

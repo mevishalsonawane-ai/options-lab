@@ -1,9 +1,9 @@
 id: book-fmmusiela-03
 title: 09:20 short ATM straddle only when ATM IV is rich against recent realised volatility (Musiela and Rutkowski, book rule,
-  proposed)
+  tested in R104)
 family: option-structure
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Musiela and Rutkowski''s rule from Martingale Methods in Financial Modelling (Ch. 7.1.1-7.1.3, Historical vs
   implied volatility; Ch. 3.5 (hedger earns implied minus realised)) makes money after real charges and slippage, walk-forward,
   with BH across the rules tried. Signal source: volatility / options structure (ATM IV from the chain against realised volatility
@@ -11,9 +11,10 @@ hypothesis: 'Musiela and Rutkowski''s rule from Martingale Methods in Financial 
   of the index (annualised). If R is in the top quintile of its trailing 250-day distribution, sell 1 lot ATM call and 1 lot
   ATM put. Stop: Close both legs if the combined premium rises 50% above the credit, or the loss reaches Rs 13,000, whichever
   is first. Exit: Square off at 15:10.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: VOL 2021-08-02 - 2026-03-31
+  holdout: VOL 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -27,15 +28,18 @@ model_or_rule: 'At 09:20 on non-expiry days compute R = nearest-expiry ATM IV / 
   exceeds 0.5%.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-fmmusiela-03; trade: Short 1 lot each of ATM CE and PE; app cost model
   plus h24 spreads; stale exit legs repriced as in R103 Amendment 2.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R103: the naked 09:20 short straddle held to 15:10 made +Rs 64k on NIFTY (1,272 days, 62% win) with
-  worst day -Rs 28,876; defined-risk versions 0 of 24. R88: options priced rich vs recent movement predict a 0.85-0.9x smaller
-  next candle. An IV/realised filter was not tested by us.. Assumptions: The book reports that implied-minus-historical reflects
-  hedging cost and that historical-volatility pricing is biased; it gives no trade. The ratio, quintile, stop and filters
-  are ours. This is a filter on R103''s naked 09:20 straddle, not a new structure.'
+  summary: 'VOL (option structure (chain as context)), variant base: design 307 trades, win 66%, net Rs 110,474, folds Rs
+    40,179, Rs 16,338, -Rs 19,609, Rs 73,566; p 0.054, BH q 1.000; holdout 35 trades, win 71%, net Rs 4,088. R104 verdict:
+    fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R103: the naked 09:20 short straddle held to 15:10 made +Rs 64k
+  on NIFTY (1,272 days, 62% win) with worst day -Rs 28,876; defined-risk versions 0 of 24. R88: options priced rich vs recent
+  movement predict a 0.85-0.9x smaller next candle. An IV/realised filter was not tested by us.. Assumptions: The book reports
+  that implied-minus-historical reflects hedging cost and that historical-volatility pricing is biased; it gives no trade.
+  The ratio, quintile, stop and filters are ours. This is a filter on R103''s naked 09:20 straddle, not a new structure.'

@@ -1,9 +1,9 @@
 id: book-bennett-01
 title: Sell defined-risk premium only when implied is dear against forecast realised (volatility risk premium filter) (Colin
-  Bennett, book rule, proposed)
+  Bennett, book rule, tested in R104)
 family: option-structure
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 1.2 Figure 1, Ch. 2.1 (implied - realised = carry), Ch. 3.1)
   makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options
   structure (index''s own ATM IV vs its own forecast realised vol); no direction. Entry: At 09:20, compute ratio = nearest-expiry
@@ -12,9 +12,10 @@ hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 1.2 Figure 1, Ch
   out (iron fly). Stop: Basket loss = 100% of the credit received, or the fly''s max loss if smaller (stops on hedged structures
   belong at the max loss, per R103). Exit: 15:10 square-off on non-expiry days; on expiry day 15:05 (app rule). No overnight
   hold in version A; version B holds to expiry with the same stop.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: VOL 2021-08-02 - 2026-03-31
+  holdout: VOL 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -30,14 +31,17 @@ model_or_rule: 'At 09:20, compute ratio = nearest-expiry ATM IV (mean of ATM cal
   fell more than 3% the previous day (Bennett A.6: after a crash do not sell near-dated calls below the size of the fall).'
 settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-01; trade: Iron fly, 1 lot: short ATM CE + PE, long ATM+4 CE
   and ATM-4 PE; longs filled first, shorts closed first.'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R103 sold iron flies / condors every day: 0 of 24 confirmed. R102: India VIX over-states NIFTY''s
-  next 21 days on 81% of days (median 1.28, n 4,507) but under-states BANKNIFTY''s on 60%. A VRP-timed filter was not tested..
-  Assumptions: Bennett gives no threshold for ''dear''; the 70th percentile and the 4-strike wing are our choices. The forecast
-  excludes the overnight gap for intraday holds because h29 found IV carries overnight risk an intraday seller does not collect.'
+  summary: 'VOL (option structure (chain as context)), variant A: design 537 trades, win 42%, net -Rs 144,620, folds -Rs 29,823,
+    -Rs 52,843, -Rs 34,277, -Rs 27,677; p 1.000, BH q 1.000; holdout 81 trades, win 31%, net -Rs 38,545. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all). version A (intraday iron fly); README pick 2 Our nearest test: R103 sold iron flies
+  / condors every day: 0 of 24 confirmed. R102: India VIX over-states NIFTY''s next 21 days on 81% of days (median 1.28, n
+  4,507) but under-states BANKNIFTY''s on 60%. A VRP-timed filter was not tested.. Assumptions: Bennett gives no threshold
+  for ''dear''; the 70th percentile and the 4-strike wing are our choices. The forecast excludes the overnight gap for intraday
+  holds because h29 found IV carries overnight risk an intraday seller does not collect.'

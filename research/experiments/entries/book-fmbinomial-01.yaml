@@ -30,12 +30,8 @@ settings: 'research/books/TESTABLE_RULES.md, rule book-fmbinomial-01; trade: 3-l
 prereg: null
 variants_tried: null
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  summary: 'Not testable in R104: needs simultaneous bid/ask'
   costs: not run; real charges and slippage apply when tested
 holdout_read: null
 verdict: proposed
-notes: 'Our nearest test: not tested by us; R103 showed far-leg prices in the lake are often stale (repriced legs moved -Rs
-  711 to -Rs 1,698), which would create false parity breaks. Assumptions: The book states parity for spot plus a riskless
-  loan; we use the future instead of spot (NSE index options are European and cash-settled on the index, the future settles
-  to the same index). r = 91-day T-bill rate. Costs = charges plus half the bid-ask spread per leg; the lake has last prints
-  only, so the literal test overstates opportunities.'
+notes: 'R104: needs data we lack (needs simultaneous bid/ask).'

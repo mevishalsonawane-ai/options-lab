@@ -1,16 +1,17 @@
 id: book-atb-03
-title: Morning / evening star three-candle reversal (The Advanced Trading Book, book rule, proposed)
+title: Morning / evening star three-candle reversal (The Advanced Trading Book, book rule, tested in R104)
 family: patterns-indicators
 date: '2026-10-25'
-doc: research/books/TESTABLE_RULES.md
+doc: research/HUNT_R104_BOOKS.md
 hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 2, Morning star / evening
   star (p12, p19)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source:
   underlying price. Entry: Downtrend; bar 1 red with body >= 1 ATR; bar 2 body <= 0.3x bar 1 body (either colour); bar 3 green
   closing above the midpoint of bar 1''s body. Enter at bar 4 open. Mirror for evening star. Stop: Beyond bar 2''s extreme.
   Exit: 3R or square-off.'
-data_version: not run (proposed 25 Oct 2026)
+data_version: Drive lake copied 25 Oct 2026 (index_1m, options_rolling_1m, index_daily, fut_*, crypto)
 period:
-  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+  design: IDX 2021-08-02 - 2026-03-31
+  holdout: IDX 2026-04-01 - 2026-10-19 (read once)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -22,13 +23,15 @@ model_or_rule: 'Downtrend; bar 1 red with body >= 1 ATR; bar 2 body <= 0.3x bar 
   3R or square-off. | filters: None.'
 settings: 'research/books/TESTABLE_RULES.md, rule book-atb-03; trade: buy 1-ITM CE on a morning star, 1-ITM PE on an evening
   star'
-prereg: null
-variants_tried: null
+prereg: research/hunt/r104_books/PREREG.md
+variants_tried: 1
 results:
-  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
-  costs: not run; real charges and slippage apply when tested
-holdout_read: null
-verdict: proposed
-notes: 'Our nearest test: R87: SENSEX 1m morning star +0.090 ATR design (n 3,466) reversed to -0.083 in the holdout (n 837).
-  Assumptions: ''Long'', ''short-bodied'' and the third candle''s reach are our numbers; the book''s evening-star drawing
-  has bar 3 closing deep into bar 1''s body.'
+  summary: 'IDX (index spot, bought option), variant 15m: design 123 trades, win 33%, net -Rs 57,418, folds -Rs 6,671, -Rs
+    6,445, -Rs 12,643, -Rs 31,660; p 1.000, BH q 1.000; holdout 12 trades, win 25%, net -Rs 4,727. R104 verdict: fail.'
+  costs: 'dated charges and liquidity slippage (PREREG.md section 5): options R51 liq fills and dated charges; futures proxies
+    dated futures charges, half-spreads, carry; MCX R94 charges; crypto fees + GST'
+holdout_read: true
+verdict: rejected
+notes: 'R104 (227 tests, BH across all).  Our nearest test: R87: SENSEX 1m morning star +0.090 ATR design (n 3,466) reversed
+  to -0.083 in the holdout (n 837). Assumptions: ''Long'', ''short-bodied'' and the third candle''s reach are our numbers;
+  the book''s evening-star drawing has bar 3 closing deep into bar 1''s body.'
