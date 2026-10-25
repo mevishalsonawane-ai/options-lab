@@ -1,0 +1,47 @@
+id: book-fmjavaheri-02
+title: Skew trade only when the chain's skew exceeds the skew implied by the index's own history (Alireza Javaheri, book rule,
+  proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Alireza Javaheri''s rule from Inside Volatility Arbitrage (Ch. 3, The Consistency Test; Financial Interpretation;
+  footnote 12 (conclusive test)) makes money after real charges and slippage, walk-forward, with BH across the rules tried.
+  Signal source: volatility / options structure (option chain skew vs a model fitted on underlying price history). Entry:
+  Each day at 15:20 compute chain skew = IV(put at ATM-5) - IV(call at ATM+5) on the next monthly expiry (average of bid/ask
+  or close IVs). Compute history skew = the same IV difference produced by a model fitted only on past index returns (NGARCH
+  with leverage, or a 1-D Kalman-filtered Heston on 1-minute returns), priced at the same strikes and expiry, using the chain''s
+  ATM IV as the variance level. Gap = chain skew - history skew. Enter the skew-risk-reversal-monthly position on the first
+  day the gap is above the 95th percentile of the history skew''s simulated sampling distribution (book: call a mispricing
+  only when it lies outside the range of history estimates). Stop: As skew-risk-reversal-monthly (none; variant B basket stop
+  Rs 13,000). Exit: Unwind 5 trading days before expiry, or earlier if the gap closes to below its 50th percentile (variant).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (option chain skew vs a model fitted on underlying price history)
+- daily; history model refit monthly on daily (or 1-minute) index returns, chain skew at 15:20
+model_or_rule: 'Each day at 15:20 compute chain skew = IV(put at ATM-5) - IV(call at ATM+5) on the next monthly expiry (average
+  of bid/ask or close IVs). Compute history skew = the same IV difference produced by a model fitted only on past index returns
+  (NGARCH with leverage, or a 1-D Kalman-filtered Heston on 1-minute returns), priced at the same strikes and expiry, using
+  the chain''s ATM IV as the variance level. Gap = chain skew - history skew. Enter the skew-risk-reversal-monthly position
+  on the first day the gap is above the 95th percentile of the history skew''s simulated sampling distribution (book: call
+  a mispricing only when it lies outside the range of history estimates). | stop: As skew-risk-reversal-monthly (none; variant
+  B basket stop Rs 13,000). | exit: Unwind 5 trading days before expiry, or earlier if the gap closes to below its 50th percentile
+  (variant). | filters: Skip if the index fell more than 3% in the past 5 days (peso logic: after a fall the option skew is
+  likely right); skip pre-listed event days (Budget, RBI, election results).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmjavaheri-02; trade: Same legs and daily futures hedge as skew-risk-reversal-monthly.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us. IV1 and h29: skew carries no direction (h29 skew IC about 0; option-only models
+  lost on all 5 indices), but neither traded skew as a price.. Assumptions: The book gives the comparison (Heston xi and rho
+  from options vs filtered MLE on history) but no threshold; the 95th-percentile-of-sampling-distribution threshold is our
+  literal reading of its footnote; ATM-5 / ATM+5 replaces 10% OTM so the measurement stays inside the 1-minute lake; the history
+  model and its sampling distribution are refit with data up to the day before only (look-ahead guard).'

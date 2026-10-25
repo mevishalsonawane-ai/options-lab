@@ -1,0 +1,43 @@
+id: book-fmbinomial-03
+title: Sell the ATM straddle when implied volatility exceeds forecast realised volatility, delta-hedged with futures (van
+  der Hoek and Elliott, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'van der Hoek and Elliott''s rule from Binomial Models in Finance (Ch. 5.1 (sell an overpriced option and hedge),
+  App. C (historical vs implied volatility)) makes money after real charges and slippage, walk-forward, with BH across the
+  rules tried. Signal source: volatility / options structure (chain ATM IV against realised volatility of the index); maps
+  to NSE index options. Entry: At 09:20, if the nearest-expiry ATM IV exceeds the 20-day close-to-close realised volatility
+  of the index (annualised by the square root of 252) by at least 2 IV points, sell 1 lot ATM call and 1 lot ATM put. Stop:
+  The book''s method has no stop (the hedge is the control); for the test add one: close options and hedge if the straddle''s
+  mark-to-market loss reaches 1.5x the premium collected. Exit: Rebalance with index futures whenever the position''s Black-Scholes
+  delta passes +-0.2 lot; close the options and the hedge at the 15:05 expiry square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (chain ATM IV against realised volatility of the index); maps to NSE index options
+- daily entry at 09:20; hedge checked on 5-minute bars
+model_or_rule: 'At 09:20, if the nearest-expiry ATM IV exceeds the 20-day close-to-close realised volatility of the index
+  (annualised by the square root of 252) by at least 2 IV points, sell 1 lot ATM call and 1 lot ATM put. | stop: The book''s
+  method has no stop (the hedge is the control); for the test add one: close options and hedge if the straddle''s mark-to-market
+  loss reaches 1.5x the premium collected. | exit: Rebalance with index futures whenever the position''s Black-Scholes delta
+  passes +-0.2 lot; close the options and the hedge at the 15:05 expiry square-off. | filters: Skip event days (budget, RBI,
+  election results) from our event calendar.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmbinomial-03; trade: short ATM straddle plus futures delta hedge;
+  option chosen by the strike rule (ATM).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R103 (HUNT_R103_OPTIONS_SELLING.md): unhedged defined-risk selling 0 of 24 confirmed; R102: VIX
+  above NIFTY''s forward realised on 81% of days but below BANKNIFTY''s on 60%; never tested with a futures hedge. Assumptions:
+  The book''s literal rule is ''market price above model price''; we read the model price as Black-Scholes at 20-day realised
+  volatility, i.e. IV above HV. The 2-point margin, the +-0.2 delta band and the 1.5x premium stop are our choices to make
+  it testable.'

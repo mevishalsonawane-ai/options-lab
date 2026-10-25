@@ -1,0 +1,45 @@
+id: book-fmbjork-01
+title: Short ATM straddle, delta-hedged with the index future (sell implied, pay realised) (Tomas Björk, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Tomas Björk''s rule from Arbitrage Theory in Continuous Time (Ch. 9.3, Delta and gamma hedging (discrete rebalanced
+  delta hedge); Ch. 7.3 (hedged book earns the risk-free rate)) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: volatility / options structure (no direction; hedge deltas computed from
+  the index future and Black-76 at the leg''s own IV). Entry: At 09:20 on non-expiry days, sell N = 5 lots of the nearest-expiry
+  ATM call and ATM put; immediately sell or buy whole NIFTY futures lots to bring the book''s net delta (in index units) as
+  close to zero as whole lots allow. Stop: Basket stop: close everything if the book''s mark-to-market loss reaches Rs 13,000
+  (Boss''s monthly account stop) or 100% of the credit, whichever is smaller. Exit: Rebalance the futures hedge whenever the
+  net delta exceeds +-1 futures lot (65 index units) or every 15 minutes, whichever comes first; square off options and futures
+  at 15:10.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+features:
+- volatility / options structure (no direction; hedge deltas computed from the index future and Black-76 at the leg's own
+  IV)
+- 1-minute bars, one entry a day
+model_or_rule: 'At 09:20 on non-expiry days, sell N = 5 lots of the nearest-expiry ATM call and ATM put; immediately sell
+  or buy whole NIFTY futures lots to bring the book''s net delta (in index units) as close to zero as whole lots allow. |
+  stop: Basket stop: close everything if the book''s mark-to-market loss reaches Rs 13,000 (Boss''s monthly account stop)
+  or 100% of the credit, whichever is smaller. | exit: Rebalance the futures hedge whenever the net delta exceeds +-1 futures
+  lot (65 index units) or every 15 minutes, whichever comes first; square off options and futures at 15:10. | filters: Skip
+  pre-listed event days (Budget, RBI, election result) and expiry days (version A); version B trades expiry days with exit
+  15:05.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmbjork-01; trade: Options short 5 lots each side, hedge in NIFTY futures;
+  all orders at market with the app cost model plus h24 spreads.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R103: defined-risk selling 0 of 24 confirmed; the naked 09:20 short straddle held to 15:10 made
+  +Rs 64k on NIFTY (1,272 days) with worst day -Rs 28,876. R102: VIX over-states NIFTY''s next 21 days on 81% of days (n 4,507).
+  A futures-hedged straddle was not tested by us.. Assumptions: Bjork gives the hedge procedure, not a trade. The lot count
+  (5), the delta band (1 futures lot), the 15-minute clock and the stops are ours. Deltas use Black-76 on the future with
+  each option''s own implied volatility. Because the NIFTY futures lot equals the option lot, fewer than about 5 option lots
+  cannot be hedged at a useful granularity (DEEP_OPTIONS_SELLING.md).'

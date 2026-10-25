@@ -1,0 +1,42 @@
+id: book-fmbjork-02
+title: Long ATM straddle on BANKNIFTY, delta-hedged with the future (gamma scalping) when implied is cheap against forecast
+  realised (Tomas Björk, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Tomas Björk''s rule from Arbitrage Theory in Continuous Time (Ch. 9.3 (discrete delta hedge), Ch. 7.7 (historic
+  vs implied volatility)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
+  source: volatility / options structure (BANKNIFTY ATM IV against a realised-volatility forecast on the index; no direction).
+  Entry: At 09:20, if the nearest-expiry ATM IV (mean of call and put IV) is below the forecast realised volatility to 15:10
+  (forecast = R16-style 60-minute range model scaled to the session, or 20-day realised if unavailable), buy N = 5 lots ATM
+  straddle (call + put) and hedge net delta to zero with whole BANKNIFTY futures lots. Stop: Close everything if the book
+  loses 40% of the premium paid. Exit: Re-hedge whenever net delta exceeds +-1 futures lot (30 index units) or every 15 minutes;
+  square off at 15:10 (15:05 on expiry day).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- BANKNIFTY
+features:
+- volatility / options structure (BANKNIFTY ATM IV against a realised-volatility forecast on the index; no direction)
+- 1-minute bars; daily bars for the realised-vol forecast
+model_or_rule: 'At 09:20, if the nearest-expiry ATM IV (mean of call and put IV) is below the forecast realised volatility
+  to 15:10 (forecast = R16-style 60-minute range model scaled to the session, or 20-day realised if unavailable), buy N =
+  5 lots ATM straddle (call + put) and hedge net delta to zero with whole BANKNIFTY futures lots. | stop: Close everything
+  if the book loses 40% of the premium paid. | exit: Re-hedge whenever net delta exceeds +-1 futures lot (30 index units)
+  or every 15 minutes; square off at 15:10 (15:05 on expiry day). | filters: Skip if ATM IV >= forecast realised. Skip the
+  first trading day after a gap above 2% (forecast unreliable).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmbjork-02; trade: Long 5 lots each of ATM CE and PE, futures hedge,
+  app cost model plus h24 spreads.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: MCX_OPTIONS.md: delta-hedged long-option P&L was about zero in the best cells and mostly negative
+  in the holdout. R16: next 30-60 minute range predictable. A delta-hedged NSE straddle was not tested by us.. Assumptions:
+  Bjork only describes the hedge; the cheapness filter, lot count, band, clock and stop are ours. BANKNIFTY is chosen because
+  R102 found VIX under-states its realised volatility on 60% of days; VIX is a NIFTY number, so the filter uses BANKNIFTY''s
+  own IV.'

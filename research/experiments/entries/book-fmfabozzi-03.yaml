@@ -1,0 +1,42 @@
+id: book-fmfabozzi-03
+title: NIFTY/BANKNIFTY log-spread z-score reversion (pairs trading) (Focardi and Fabozzi, book rule, proposed)
+family: outside-strategies
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Focardi and Fabozzi''s rule from The Mathematics of Financial Modeling and Investment Management (Ch. 10, 12,
+  18, 19 (Ornstein-Uhlenbeck, cointegration, pairs trading)) makes money after real charges and slippage, walk-forward, with
+  BH across the rules tried. Signal source: underlying price. Entry: Spread = ln(BANKNIFTY) - beta x ln(NIFTY), beta from
+  a rolling 60-session regression using only past data. z = (spread - rolling mean) / rolling sd over the past 20 sessions
+  of 5-minute bars. When z > +2: BANKNIFTY rich, buy the NIFTY ATM CE and the BANKNIFTY ATM PE in beta-matched premium-delta
+  amounts; when z < -2: the mirror. Only enter if the past window passes an ADF test on the spread at 5%. Stop: z beyond +/-3.5,
+  or combined option P&L below -1 x the total premium paid x 0.5. Exit: z back inside +/-0.5, or 15:15 square-off (intraday);
+  daily variant: 10 sessions max hold.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute bars of both index spots, intraday; daily variant on closes
+model_or_rule: 'Spread = ln(BANKNIFTY) - beta x ln(NIFTY), beta from a rolling 60-session regression using only past data.
+  z = (spread - rolling mean) / rolling sd over the past 20 sessions of 5-minute bars. When z > +2: BANKNIFTY rich, buy the
+  NIFTY ATM CE and the BANKNIFTY ATM PE in beta-matched premium-delta amounts; when z < -2: the mirror. Only enter if the
+  past window passes an ADF test on the spread at 5%. | stop: z beyond +/-3.5, or combined option P&L below -1 x the total
+  premium paid x 0.5. | exit: z back inside +/-0.5, or 15:15 square-off (intraday); daily variant: 10 sessions max hold. |
+  filters: no entries 09:15-09:30 or after 14:30 (intraday); skip expiry day of either index.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmfabozzi-03; trade: long one index''s ATM call and the other''s ATM
+  put (or a long/short futures pair as the mirror); stops on the spread z'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R72: C2 laggard catch-up lost (-Rs 1,00,746 final period) and C6 SMT divergence failed; R102 correlation
+  0.877, beta 1.157 over 5,086 days, so the spread is mostly BANKNIFTY''s extra beta. The book warns cointegration is unstable
+  and often spurious.. Assumptions: The book gives the method (pairs beyond a threshold back to the mean, formalised by cointegration)
+  but no thresholds, windows or instruments; all numbers are ours. Long options on both legs pay two thetas; the futures mirror
+  isolates the signal. Correct across every variant (BH).'

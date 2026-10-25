@@ -1,0 +1,38 @@
+id: book-fmaqf-04
+title: Pause or size down an arm when a CUSUM chart of its trade results alarms (Härdle, Kleinow and Stahl, book rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Härdle, Kleinow and Stahl''s rule from Applied Quantitative Finance (Ch. 11) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: none (monitoring of the arm''s own per-trade net
+  results). Entry: Not an entry rule. For each arm, standardise each trade''s net by the mean and sd of its design-period
+  trades. Run a one-sided lower CUSUM: S = max(0, S - z - k) with k = 0.5; alarm when S > h, h set so the in-control average
+  run length is 300 trades (book''s value 3.8929 for normal data; re-derive by simulation on the arm''s own bootstrapped design
+  trades because of fat tails). Stop: On alarm: skip the arm''s next N trades or halve its size (shadow first); resume when
+  a parallel upper CUSUM returns S to 0 or after N trades. Exit: n/a'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none (monitoring of the arm's own per-trade net results)
+- per trade
+model_or_rule: 'Not an entry rule. For each arm, standardise each trade''s net by the mean and sd of its design-period trades.
+  Run a one-sided lower CUSUM: S = max(0, S - z - k) with k = 0.5; alarm when S > h, h set so the in-control average run length
+  is 300 trades (book''s value 3.8929 for normal data; re-derive by simulation on the arm''s own bootstrapped design trades
+  because of fat tails). | stop: On alarm: skip the arm''s next N trades or halve its size (shadow first); resume when a parallel
+  upper CUSUM returns S to 0 or after N trades. | exit: n/a | filters: Apply only to arms with at least 200 design trades.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmaqf-04; trade: Compare the arm''s net, worst drawdown and worst day
+  with and without the pause on the holdout; a risk-lowering change only.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R101: 0 of 20 entry filters and sizing changes on the arms passed (best q 0.40). A results-based
+  pause is not tested by us.. Assumptions: The book''s CUSUM targets a mean shift of normal data; trade P&L is fat-tailed
+  and skewed, so h must come from bootstrap simulation. N (e.g. 20 trades) is our choice and must be pre-registered.'

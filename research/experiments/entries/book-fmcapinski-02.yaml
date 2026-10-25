@@ -1,0 +1,39 @@
+id: book-fmcapinski-02
+title: Buy a butterfly priced below zero (convexity violation across strikes) (Capinski and Zastawniak, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Capinski and Zastawniak''s rule from Mathematics for Finance (Ch. 7.4.1, Proposition 7.8 (call and put prices
+  are convex in strike); Ch. 9.3.1 butterfly) makes money after real charges and slippage, walk-forward, with BH across the
+  rules tried. Signal source: volatility / options structure (option prices across strikes); no direction. Entry: Each minute
+  09:20-15:00, for consecutive strikes K1 < K2 < K3 equally spaced within ATM +-10: fly = C(K1) - 2 x C(K2) + C(K3) (same
+  with puts). If fly < -(charges of four option legs in points + 2 points slippage per leg), buy the fly (1 lot of K1 and
+  K3, sell 2 lots of K2). Stop: None needed at expiry (payoff of a long fly is never negative); research variant exits at
+  15:05 on expiry day per app rule. Exit: Hold to expiry, or close when fly >= 0.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: executable bid/ask quotes (last prices only); have
+  chain minutes within ATM +-10'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (option prices across strikes); no direction
+- 1-minute bars, nearest expiry
+model_or_rule: 'Each minute 09:20-15:00, for consecutive strikes K1 < K2 < K3 equally spaced within ATM +-10: fly = C(K1)
+  - 2 x C(K2) + C(K3) (same with puts). If fly < -(charges of four option legs in points + 2 points slippage per leg), buy
+  the fly (1 lot of K1 and K3, sell 2 lots of K2). | stop: None needed at expiry (payoff of a long fly is never negative);
+  research variant exits at 15:05 on expiry day per app rule. | exit: Hold to expiry, or close when fly >= 0. | filters: All
+  three strikes traded in the same minute; no stale-print flags; skip if any leg has fewer than 20 contracts that minute.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmcapinski-02; trade: Long call (or put) butterfly, 1-2-1 lots; long
+  wings filled first.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R103 found far-wing stale prices create fake edges, so expect most signals to
+  be data errors - useful mainly as a lake cleaning check. Assumptions: The book proves convexity but gives no trading rule;
+  the cost threshold and liquidity filter are ours. Signals on last prices are an upper bound.'

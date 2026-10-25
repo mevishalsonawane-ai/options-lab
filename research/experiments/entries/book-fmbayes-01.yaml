@@ -1,0 +1,45 @@
+id: book-fmbayes-01
+title: 'Cross-sectional momentum: long the top half, short the bottom half on volatility-scaled 9-month return (Rachev, Hsu,
+  Bagasheva and Fabozzi, book rule, proposed)'
+family: mcx-crypto
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Rachev, Hsu, Bagasheva and Fabozzi''s rule from Bayesian Methods in Finance (Ch. 8, Incorporating trading strategies
+  into the Black-Litterman model) makes money after real charges and slippage, walk-forward, with BH across the rules tried.
+  Signal source: underlying price (each future''s own daily closes). Entry: On the first trading day of each month, for each
+  instrument compute z = (close one day ago / close 190 days ago - 1) / annualised daily-return volatility over the same window.
+  Rank by z; go long the near-month future of the top half and short the bottom half. Stop: Not stated in the book. Research
+  variant: none for the book-literal test; a second variant adds a per-leg stop at 2.5 x the 20-day ATR from entry (our choice).
+  Exit: Hold one month; close at the next month''s rebalance (roll the futures at expiry inside the month).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- GOLD
+- SILVER
+- CRUDE
+- NATURALGAS
+features:
+- underlying price (each future's own daily closes)
+- daily bars, monthly rebalance
+model_or_rule: 'On the first trading day of each month, for each instrument compute z = (close one day ago / close 190 days
+  ago - 1) / annualised daily-return volatility over the same window. Rank by z; go long the near-month future of the top
+  half and short the bottom half. | stop: Not stated in the book. Research variant: none for the book-literal test; a second
+  variant adds a per-leg stop at 2.5 x the 20-day ATR from entry (our choice). | exit: Hold one month; close at the next month''s
+  rebalance (roll the futures at expiry inside the month). | filters: None. Weights proportional to 1/volatility within each
+  side, scaled so the book''s ex-ante volatility is 20% a year.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmbayes-01; trade: Futures long/short (MCX allows both). For the option-buying
+  app variant: buy ATM CE on the long legs and ATM PE on the short legs of the nearest monthly expiry, rolled monthly; report
+  separately.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us as a cross-sectional ranking. R96 (HUNT_R96_SUMMARY.md) tested only intraday /
+  time-series momentum on MCX (US-session momentum U1 died; ZINC untradeable, 0 fills); R72 breadth Donchian is time-series,
+  not cross-sectional.. Assumptions: Book''s universe was MSCI country indices (24 years); 189 trading days for 9 months and
+  a 1-day skip are the book''s. With only 4 MCX majors the halves are 2 and 2; adding base metals (COPPER, ZINC, ALUMINIUM,
+  LEAD, NICKEL) if bars exist gives a wider cross-section. Costs: MCX futures charges and slippage from baselines.yaml.'

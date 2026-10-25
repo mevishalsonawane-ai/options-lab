@@ -1,0 +1,52 @@
+id: book-fmcapinski-01
+title: Trade put-call parity violations against the index future (conversion / reversal) (Capinski and Zastawniak, book rule,
+  proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Capinski and Zastawniak''s rule from Mathematics for Finance (Ch. 7.2, Theorem 7.1 and its arbitrage proof; Ex
+  7.4) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility
+  / options structure (option prices vs the futures-implied forward); reads option premiums only as a consistency check, no
+  direction. Entry: Each minute 09:20-15:00, for each strike K within ATM +-3: gap = (C - P) - (F - K) x exp(-r x T), with
+  C, P the minute''s call and put closes, F the same-expiry index future''s close, r a 6.5% continuous rate, T years to expiry.
+  If gap > threshold: sell the call, buy the put, buy 1 lot future (conversion). If gap < -threshold: buy the call, sell the
+  put, sell 1 lot future (reversal). threshold = all-in round-trip charges of the three legs (about Rs 70 + Rs 70 + futures
+  charges, in points per unit) plus 2 points of slippage per leg. Stop: None in the book (riskless at expiry if all three
+  legs fill at the signal prices); research variant: exit all legs if the basket''s mark-to-market loss exceeds 3 x the expected
+  edge (protects against a bad print being the ''signal''). Exit: Close all three legs when |gap| falls below 1 point, else
+  hold to expiry (cash settled; the payoff is locked except for the futures-vs-spot settlement difference and STT on exercise).'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: executable bid/ask quotes for options and futures
+  (the lake has last prices only); have futures and chain minutes'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (option prices vs the futures-implied forward); reads option premiums only as a consistency
+  check, no direction
+- 1-minute bars, nearest expiry
+model_or_rule: 'Each minute 09:20-15:00, for each strike K within ATM +-3: gap = (C - P) - (F - K) x exp(-r x T), with C,
+  P the minute''s call and put closes, F the same-expiry index future''s close, r a 6.5% continuous rate, T years to expiry.
+  If gap > threshold: sell the call, buy the put, buy 1 lot future (conversion). If gap < -threshold: buy the call, sell the
+  put, sell 1 lot future (reversal). threshold = all-in round-trip charges of the three legs (about Rs 70 + Rs 70 + futures
+  charges, in points per unit) plus 2 points of slippage per leg. | stop: None in the book (riskless at expiry if all three
+  legs fill at the signal prices); research variant: exit all legs if the basket''s mark-to-market loss exceeds 3 x the expected
+  edge (protects against a bad print being the ''signal''). | exit: Close all three legs when |gap| falls below 1 point, else
+  hold to expiry (cash settled; the payoff is locked except for the futures-vs-spot settlement difference and STT on exercise).
+  | filters: Both options and the future must have traded in the same minute (no stale prints: HUNT_LAKE_STALE_PRINTS rule);
+  skip expiry day after 13:00; skip strikes with fewer than 20 contracts traded in the minute.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmcapinski-01; trade: Three legs, 1 lot each: option pair at strike
+  K plus 1 index futures lot; longs filled first. Margin is the futures plus short-option margin, mostly offset.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R103 showed that apparent profits in the chain came from stale wing prices (six
+  BANKNIFTY passes turned into -Rs 2.9 to -Rs 3.3 lakh when repriced), so most ''violations'' in last-price data are likely
+  stale prints. Assumptions: The book''s arbitrage uses the stock and a loan; for an index we use the same-expiry future,
+  so the rate term almost cancels. Threshold and the 3-strike window are our choices. Last-trade prices are not executable
+  quotes, so a backtest on the lake can only give an upper bound.'

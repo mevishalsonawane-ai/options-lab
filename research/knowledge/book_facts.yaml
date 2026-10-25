@@ -48,6 +48,111 @@ books:
   douglas-trading-in-the-zone:
     author: Mark Douglas
     title: Trading in the Zone
+  fm-wilmott:
+    author: Paul Wilmott
+    title: Paul Wilmott on Quantitative Finance
+  fm-javaheri-vol-arb:
+    author: Alireza Javaheri
+    title: Inside Volatility Arbitrage
+  fm-mcnelis-neural-nets:
+    author: Paul McNelis
+    title: Neural Networks in Finance
+  fm-applied-quant-finance:
+    author: Härdle, Kleinow and Stahl
+    title: Applied Quantitative Finance
+  fm-bayesian-methods:
+    author: Rachev, Hsu, Bagasheva and Fabozzi
+    title: Bayesian Methods in Finance
+  fm-copula-methods:
+    author: Cherubini, Luciano and Vecchiato
+    title: Copula Methods in Finance
+  fm-fabozzi-modelling:
+    author: Focardi and Fabozzi
+    title: The Mathematics of Financial Modeling and Investment Management
+  fm-intro-quant-finance:
+    author: Robert Reitano
+    title: 'Introduction to Quantitative Finance: A Math Tool Kit'
+  fm-lyuu-fin-engineering:
+    author: Yuh-Dauh Lyuu
+    title: Financial Engineering and Computation
+  fm-kabanov-stochastic-calculus:
+    author: Kabanov, Liptser and Stoyanov (eds.)
+    title: From Stochastic Calculus to Mathematical Finance
+  fm-brandimarte-numerical:
+    author: Paolo Brandimarte
+    title: Numerical Methods in Finance and Economics
+  fm-fries-math-finance:
+    author: Christian Fries
+    title: Mathematical Finance
+  fm-bjork-arbitrage:
+    author: Tomas Björk
+    title: Arbitrage Theory in Continuous Time
+  fm-comp-finance-numerical:
+    author: George Levy
+    title: 'Computational Finance: Numerical Methods'
+  fm-elliott-fin-markets:
+    author: Elliott and Kopp
+    title: Mathematics of Financial Markets
+  fm-structured-finance:
+    author: Cherubini and Della Lunga
+    title: 'Structured Finance: The Object-Oriented Approach'
+  fm-capinski-math-finance:
+    author: Capinski and Zastawniak
+    title: Mathematics for Finance
+  fm-binomial-models:
+    author: van der Hoek and Elliott
+    title: Binomial Models in Finance
+  fm-fin-econometrics-derivs:
+    author: Gregoriou and Pascalau (eds.)
+    title: Financial Econometrics Modeling
+  fm-nonlinear-optimization:
+    author: Bartholomew-Biggs
+    title: Nonlinear Optimization with Financial Applications
+  fm-financial-mathematics:
+    author: Hughston and Hunter
+    title: Financial Mathematics
+  fm-qf-physicists:
+    author: Anatoly Schmidt
+    title: Quantitative Finance for Physicists
+  fm-harrison-waldron:
+    author: Harrison and Waldron
+    title: Mathematical Economics and Finance
+  fm-basics-fin-math:
+    author: Richard Bass
+    title: The Basics of Financial Mathematics
+  fm-optimal-control:
+    author: Chen and Islam
+    title: Optimal Control Models in Finance
+  fm-comp-finance-no-pain:
+    author: Peter Forsyth
+    title: Introduction to Computational Finance without Agonizing Pain
+  fm-neftci-derivatives:
+    author: Salih Neftci
+    title: An Introduction to the Mathematics of Financial Derivatives
+  fm-wilmott-howison-dewynne:
+    author: Wilmott, Howison and Dewynne
+    title: The Mathematics of Financial Derivatives
+  fm-shaw-mathematica:
+    author: William Shaw
+    title: Modelling Financial Derivatives with Mathematica
+  fm-baxter-financial-calculus:
+    author: Baxter and Rennie
+    title: Financial Calculus
+  fm-musiela-martingale:
+    author: Musiela and Rutkowski
+    title: Martingale Methods in Financial Modelling
+  fm-jackel-monte-carlo:
+    author: Peter Jäckel
+    title: Monte Carlo Methods in Finance
+  fm-chan-quantitative-trading:
+    author: Ernest Chan
+    title: Quantitative Trading
+  fm-ross-math-finance:
+    author: Sheldon Ross
+    title: An Elementary Introduction to Mathematical Finance
+  fm-karatzas-shreve:
+    author: Karatzas and Shreve
+    title: Methods of Mathematical Finance
 cards:
 - id: book.wyckoff-day-traders-bible.1
   book: wyckoff-day-traders-bible
@@ -2507,3 +2612,3479 @@ cards:
   tags:
   - stop
   - filter
+- id: book.fm-wilmott.1
+  book: fm-wilmott
+  title: Hedging at implied vol vs at your forecast vol
+  chapter: Ch. 12, How to delta hedge
+  text: 'Buying or selling an option at one implied vol and delta hedging gives two choices: hedge with your forecast vol''s
+    delta and the final profit is locked but the daily marks swing; hedge with the implied vol''s delta and every day''s profit
+    is steady but the total depends on the path, biggest if the index stays near the strike. SPX realised vol averaged about
+    15% against VIX about 20%.'
+  tags:
+  - iv
+  - vix
+  - option-selling
+  - straddle
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - INDIAVIX
+  verdict: positive
+  tested_src: research/FINDINGS.md
+  tested_text: Our R102 found India VIX over-states NIFTY's next 21 days on 81% of days (median ratio 1.28, 4,507 days), but
+    under-states BANKNIFTY's on 60%.
+- id: book.fm-wilmott.2
+  book: fm-wilmott
+  title: Long gamma loses small on most days
+  chapter: Ch. 7 and Ch. 47, Discrete hedging
+  text: 'A delta-hedged long option loses a little on quiet days and wins on rare big moves: under Normal returns it loses
+    on about 68% of rehedges; on the Dow 1977-96, 78% of days moved less than one SD, so a long-gamma hedger loses on about
+    four days in five. Theta is not the expected profit of a fairly priced hedged option.'
+  tags:
+  - option-buying
+  - theta
+  - iv
+  - mcx
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - CRUDE
+  - NATURALGAS
+  - GOLD
+  - SILVER
+  verdict: positive
+  tested_src: research/MCX_OPTIONS.md
+  tested_text: Our MCX options study found the average option lost money for a buyer in every book, with realised moves 0.73-0.93
+    of what the options priced.
+- id: book.fm-wilmott.3
+  book: fm-wilmott
+  title: 'Kelly: half Kelly, never twice'
+  chapter: Ch. 17, Blackjack and Kelly; Ch. 44, LTCM
+  text: The growth-optimal stake is edge divided by variance; twice Kelly gives zero expected growth, and half Kelly halves
+    the volatility while giving up only 25% of the growth, so use half or less when the edge is uncertain. LTCM ran at roughly
+    twice Kelly.
+  tags:
+  - sizing
+  verdict: weak
+  tested_src: research/HUNT_H15.md
+  tested_text: Our sizing study found the BANKNIFTY Kelly fraction unstable (0.48 and 0.14 on other windows against 1.29 here),
+    and half-Kelly carried a 14% chance of a 50% drawdown.
+- id: book.fm-wilmott.4
+  book: fm-wilmott
+  title: Hedge a futures position on a delta band, not the clock
+  chapter: Ch. 48, Transaction costs
+  text: With costs, a long option is worth less (priced at a lower vol) and a short one more; the best rebalancing waits until
+    delta leaves a band around the model delta. On about 40 stocks, 1985-96, the delta-tolerance band won about 70% of paths
+    against 7% for fixed-interval Leland hedging.
+  tags:
+  - costs
+  - iv
+  - mcx
+  - crypto
+  inst:
+  - CRUDE
+  - NATURALGAS
+  - GOLD
+  - SILVER
+  - CRYPTO
+- id: book.fm-wilmott.5
+  book: fm-wilmott
+  title: 'Fat tails: the 1987 day the Normal says never happens'
+  chapter: Ch. 16 and Ch. 19, Normal accuracy; VaR
+  text: The 1987 crash of -20.5% in a day was a once-in-25-years event in the data but essentially impossible under a Normal
+    model; an extreme-value fit to earlier annual falls, whose largest was 6.7%, put the 50-year fall at 24%. Delta-VaR understates
+    short-option risk because short gamma fattens the loss tail.
+  tags:
+  - gap
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_OPTIONS_SELLING.md
+  tested_text: Our R102 daily data show NIFTY's worst day -12.98% and kurtosis 14 (a normal distribution has 3).
+- id: book.fm-wilmott.6
+  book: fm-wilmott
+  title: Worst-case crash check and paid-for wings
+  chapter: Ch. 43 CrashMetrics; Ch. 58 Crash modelling
+  text: Judge a short-gamma book by its worst loss over a bounded gap, with all assets falling together, not by probability;
+    buying offsetting positive gamma is worth more than model value. In the example a 15% crash cost 9.3 and buying 3.5 of
+    the 90 calls cut that to 5.7.
+  tags:
+  - option-selling
+  - gap
+  - overnight
+  - sizing
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_OPTIONS_SELLING.md
+  tested_text: Our notes found the naked 09:20 BANKNIFTY short straddle had a worst day of -Rs 65,483, beyond the -Rs 40k
+    / -Rs 13k stops.
+- id: book.fm-wilmott.7
+  book: fm-wilmott
+  title: Vega hides the risk of iron flies and condors
+  chapter: Ch. 52, Ch. 56, Ch. 60, Uncertain volatility
+  text: 'When a book''s gamma changes sign (spreads, condors, cliquets) vega can look tiny while the real vol risk is large:
+    in the cliquet example constant vols moved the price 0.75% but a vol band moved it 10.5%, 14x what vega showed. Price
+    such books with a vol range, low vol where gamma is positive and high where negative.'
+  tags:
+  - option-selling
+  - iv
+  - straddle
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-wilmott.8
+  book: fm-wilmott
+  title: Buy options only with a real drift edge; sell when it is gone
+  chapter: Ch. 59, Speculating with options
+  text: A speculator values an option by its payoff under his own real drift; without a drift edge that value equals the market
+    price, so there is no reason to buy. With changing views, sell as soon as your value falls to the market price.
+  tags:
+  - option-buying
+  - direction
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/FINDINGS.md
+  tested_text: Our R16 found 15/30/60-minute direction not predictable (holdout AUC 0.509-0.536), and every option-buying
+    version lost Rs 12-142 a trade after costs.
+- id: book.fm-wilmott.9
+  book: fm-wilmott
+  title: Hedgers' gamma can pin or push the index
+  chapter: Ch. 61, Feedback effects of hedging
+  text: Replicating positive gamma (portfolio insurance) pushes prices further and can make them jump near the strike at expiry;
+    when hedgers are net long gamma they damp moves and draw the price toward the strike (pinning).
+  tags:
+  - gex
+  - expiry
+  - big-players
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: weak
+  tested_src: research/HUNT_R36_GAMMA_EXPOSURE.md
+  tested_text: Our R36 found gamma exposure does not give a profitable trade (0 of 4 rules pass); with implied vol held fixed
+    its link to the afternoon move was slightly negative, a faint pin.
+- id: book.fm-javaheri-vol-arb.1
+  book: fm-javaheri-vol-arb
+  title: Options price more crash skew than history shows
+  chapter: Ch. 3, The Consistency Test
+  text: 'On S&P 500 in January 2002, one-year options implied vol-of-vol 0.420 and spot-vol correlation -0.674, while about
+    3,000 days of index history gave only 0.096 and -0.133: the option smile is far steeper than the index''s own past moves
+    justify, and the literature finds this every time.'
+  tags:
+  - iv
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: 'Our R102 found the same shape on NIFTY: puts five strikes out dearer than calls by 2.56 IV points on 91% of
+    1,222 days, while daily returns since 2006 have skew of only -0.04.'
+- id: book.fm-javaheri-vol-arb.2
+  book: fm-javaheri-vol-arb
+  title: The skew trade is selling insurance
+  chapter: Ch. 3, Trading Strategies
+  text: 'Buying an OTM call and selling an OTM put, vega-neutral and delta-hedged, collects the over-priced skew: it makes
+    small regular profits and suffers sudden large losses in a crash or a fast fall. The author calls it closer to selling
+    insurance than to arbitrage.'
+  tags:
+  - option-selling
+  - iv
+  - gap
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-javaheri-vol-arb.3
+  book: fm-javaheri-vol-arb
+  title: '40 skew trades: loss at bid/ask, profit only at mid'
+  chapter: Ch. 3, Multiple Trades
+  text: Forty three-month S&P 500 skew trades (10% OTM call bought, 10% OTM put sold, unwound about 20 business days before
+    expiry) lost money when filled at bid and ask and made money only at mid prices, so the author found no decisive proof
+    that options are mispriced.
+  tags:
+  - costs
+  - option-selling
+- id: book.fm-javaheri-vol-arb.4
+  book: fm-javaheri-vol-arb
+  title: One worked skew trade made almost nothing
+  chapter: Ch. 3, An Example of the Skewness Trade
+  text: A single SPX skew trade from April to June 2002 sold the 1050 put at 14.20 and bought the 1250 call at 3.20; the index
+    fell to 989.14, the put loss was mostly offset by +50.39 of delta-hedge profit, and the trade ended +1.85 points. Jumps
+    mid-trade caused most of the hedge losses.
+  tags:
+  - option-selling
+  - gap
+- id: book.fm-javaheri-vol-arb.5
+  book: fm-javaheri-vol-arb
+  title: Vol-of-vol and correlation need decades of daily data
+  chapter: Ch. 2, The Performance of the Inference Tools
+  text: With 5,000 simulated days and true vol-of-vol 0.03, the best filter still estimated 0.052; it took 50,000 points (200
+    years of daily data) to get near the truth. The variance level and its mean reversion are estimated well, the noise parameters
+    are not; the fix is high-frequency data.
+  tags:
+  - iv
+  - ml
+- id: book.fm-javaheri-vol-arb.6
+  book: fm-javaheri-vol-arb
+  title: Skew is estimable from history, kurtosis much less
+  chapter: Ch. 2 and Ch. 3, Error Size Revisited; Financial Interpretation
+  text: The product of vol-of-vol and correlation, which sets the skew of returns, is estimated far better than either alone,
+    so a history-based skew is more trustworthy than a history-based kurtosis; that makes the skew trade easier to justify
+    than the kurtosis trade.
+  tags:
+  - iv
+- id: book.fm-javaheri-vol-arb.7
+  book: fm-javaheri-vol-arb
+  title: When a skew trade exists, and when it does not
+  chapter: Ch. 3, High Volatility-of-Volatility and High Correlation
+  text: A skew opportunity appears when history shows weak vol-of-vol (the S&P 500) or weak spot-vol correlation (a penny
+    stock, though its crash risk is real); when history already shows strong negative correlation and high vol-of-vol (Microsoft,
+    the NDX index) the option skew is justified and there is no trade. An index is the safest place for it.
+  tags:
+  - iv
+  - option-selling
+  - filter
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-javaheri-vol-arb.8
+  book: fm-javaheri-vol-arb
+  title: 'Peso problem: a calm history can hide a crash process'
+  chapter: Ch. 3, The Peso Theory
+  text: 'Options may be right to price a crash the history window never showed: fitting a jump to S&P 500 options gave a rare
+    (intensity 0.009) but huge (j 0.91) crash, and the volatility smile hardly existed before 1987.'
+  tags:
+  - iv
+  - gap
+  - option-selling
+- id: book.fm-javaheri-vol-arb.9
+  book: fm-javaheri-vol-arb
+  title: Particle filters add little on daily data
+  chapter: Ch. 2, Particle Filtering
+  text: Kalman filters (extended or unscented) and particle filters track the hidden variance of a daily index about equally
+    well; particle filters only help with large time steps, jumps or non-Gaussian models, and even then they cannot fix too
+    little data.
+  tags:
+  - ml
+  - iv
+- id: book.fm-javaheri-vol-arb.10
+  book: fm-javaheri-vol-arb
+  title: Synchronise prices and average the four IVs
+  chapter: Ch. 3, Robustness Issues for the Cross-Sectional Method
+  text: A few minutes' mismatch between the spot close and the option close distorts implied vol; call and put IVs differ
+    within the bid-ask, so use the average of call bid, call ask, put bid and put ask IVs when fitting a smile.
+  tags:
+  - iv
+  - costs
+- id: book.fm-mcnelis-neural-nets.1
+  book: fm-mcnelis-neural-nets
+  title: Neural nets pay off in volatility, not returns
+  chapter: Preface and Ch. 5.8, Conclusion
+  text: After testing small networks against linear models, the author concludes the real payoff of neural networks in markets
+    is likely volatility forecasting, not return forecasting, and does not claim his forecast edge means trading profit.
+  tags:
+  - ml
+  - vix
+  - direction
+  verdict: positive
+  tested_src: research/HUNT_R41_NEURAL_NETS.md
+  tested_text: Our R41 networks forecast the next 60-minute range with holdout R2 0.432 against trees 0.382 (36,320 forecasts),
+    while index direction stayed a coin at AUC 0.510-0.517.
+- id: book.fm-mcnelis-neural-nets.2
+  book: fm-mcnelis-neural-nets
+  title: On return-like series the net did not beat linear
+  chapter: Ch. 5.3-5.5, Artificial data
+  text: On simulated jump-diffusion, Markov regime and volatility-regime returns the network forecast no better than a linear
+    model out of sample (RMSE .157 vs .167, 1.122 vs 1.224, 1.37 vs 1.38, none significant); it won only on strongly nonlinear
+    or pricing-formula data.
+  tags:
+  - ml
+  - direction
+  verdict: negative
+  tested_src: research/HUNT_R16_PREDICTABILITY.md
+  tested_text: Our R16 found NIFTY and BANKNIFTY direction over 15/30/60 minutes not predictable (AUC 0.509-0.536) while the
+    range of the next 30/60 minutes was.
+- id: book.fm-mcnelis-neural-nets.3
+  book: fm-mcnelis-neural-nets
+  title: 'Keep networks small: one layer, two or three neurons'
+  chapter: Ch. 2.4 and 2.9
+  text: One hidden layer with two or three neurons is usually enough; extra layers add parameters, local optima and overfitting,
+    and the plain logistic multilayer perceptron is as accurate as fancier designs.
+  tags:
+  - ml
+- id: book.fm-mcnelis-neural-nets.4
+  book: fm-mcnelis-neural-nets
+  title: Average many fitted nets (thick models)
+  chapter: Ch. 3.3 and 4.4, Thick models
+  text: Because a network never gives the same answer twice, refit it many times and use the trimmed mean of the forecasts,
+    with their spread as a forecast band; citing Granger and Jeon, single nets did not beat linear models on most macro series
+    but averaged nets did.
+  tags:
+  - ml
+- id: book.fm-mcnelis-neural-nets.5
+  book: fm-mcnelis-neural-nets
+  title: Judge forecasts in simulated real time
+  chapter: Ch. 4.2, Out-of-sample criteria
+  text: 'The acid test is out of sample: re-estimate on data up to each date and forecast the next step, compare errors with
+    a Diebold-Mariano test, check sign calls with the Pesaran-Timmermann test, and beat the best-specified linear model rather
+    than a weak one.'
+  tags:
+  - ml
+- id: book.fm-mcnelis-neural-nets.6
+  book: fm-mcnelis-neural-nets
+  title: A net can recover implied volatility from option prices
+  chapter: Ch. 5.7, Black-Scholes implied volatility
+  text: On simulated Black-Scholes option data a small network recovered the implied volatility with out-of-sample RMSE .0173
+    against .0602 for a linear model, more than 80% lower; for time series the inputs should be spot/strike and price/strike
+    ratios.
+  tags:
+  - iv
+  - ml
+- id: book.fm-mcnelis-neural-nets.7
+  book: fm-mcnelis-neural-nets
+  title: One nonlinear number for the whole IV term structure
+  chapter: Ch. 2.6 and 9, Nonlinear principal components
+  text: An auto-associative network squeezed swaption implied vols at maturities 2, 3, 4, 5, 7 and 10 years into one component
+    and rebuilt them out of sample better than one linear component at most maturities (Hong Kong 2-year RMSE 1.873 vs 4.195),
+    as a single market-riskiness gauge.
+  tags:
+  - iv
+  - vix
+  - ml
+- id: book.fm-mcnelis-neural-nets.8
+  book: fm-mcnelis-neural-nets
+  title: Test for missed nonlinearity before building a net
+  chapter: Ch. 4.1.6, Lee-White-Granger test
+  text: Regress a linear model's residuals on randomly weighted logistic neurons of its inputs 1000 times; if more than 5%
+    of the regressions are significant there is nonlinearity left to model. In the author's simulation it caught the misspecification
+    in 99% of runs against 6.6% for the BDS test.
+  tags:
+  - ml
+- id: book.fm-mcnelis-neural-nets.9
+  book: fm-mcnelis-neural-nets
+  title: Recent data may beat more data
+  chapter: Ch. 4.2.9, Data requirements
+  text: Citing Walczak, for daily currency forecasts at most two years of training data gave the best networks, single-hidden-layer
+    nets beat two-layer ones and could reach about 60% directional accuracy; the author warns that old data may describe a
+    market that no longer exists.
+  tags:
+  - ml
+  - direction
+  verdict: negative
+  tested_src: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+  tested_text: Our R88 model of 22 parameters called the next candle's direction at AUC 0.485-0.535 (0.50 = coin) in the holdout
+    on 5 indices and 10 MCX contracts.
+- id: book.fm-applied-quant-finance.1
+  book: fm-applied-quant-finance
+  title: Delta-gamma shortcuts mislead on option books; simulate smartly
+  chapter: Ch. 1, Approximating Value at Risk in Conditional Gaussian Models
+  text: A delta-gamma (quadratic) approximation can give very large errors in the loss quantile of an option book, and a normal
+    model understates joint extremes; when simulating, importance sampling cut the standard error of the VaR estimate by 84.68%
+    against plain sampling, about 42 times fewer scenarios.
+  tags:
+  - option-selling
+  - sizing
+- id: book.fm-applied-quant-finance.2
+  book: fm-applied-quant-finance
+  title: Rescale history to today's volatility before reading a worst day
+  chapter: Ch. 3, Quantification of Spread Risk by Means of Historical Simulation
+  text: Plain historical simulation under-predicted losses (1.57% of days broke a 99% VaR on the benchmark curve); rescaling
+    each past move to today's EWMA volatility (decay 0.94) brought the violation rate to 1.14%, close to the 1% target.
+  tags:
+  - sizing
+  - vix
+- id: book.fm-applied-quant-finance.3
+  book: fm-applied-quant-finance
+  title: Correlation hides joint crashes; tail-dependent copulas do not
+  chapter: Ch. 2 and Ch. 5, Copulas
+  text: A Gaussian (correlation) model has no tail dependence, so it understates the chance that several positions lose together;
+    with the same correlation a Student-t copula raised the 99% loss quantile of a portfolio from 22 to 71, more than three
+    times.
+  tags:
+  - sizing
+- id: book.fm-applied-quant-finance.4
+  book: fm-applied-quant-finance
+  title: Implied volatility moves mostly as one level factor
+  chapter: Ch. 6, The Analysis of Implied Volatilities
+  text: Daily changes of DAX implied volatility across eight maturities were about 70% one near-parallel level shift and about
+    13% a front-versus-back twist, about 83% together; the same shift, slope and twist shapes held for every maturity's smile,
+    with the front moving most.
+  tags:
+  - iv
+  - vix
+- id: book.fm-applied-quant-finance.5
+  book: fm-applied-quant-finance
+  title: Option prices imply a more crash-prone market than history shows
+  chapter: Ch. 9, Trading on Deviations of Implied and Historical Densities
+  text: On the DAX the option-implied distribution of the index three months ahead was more negatively skewed than the one
+    estimated from the index's own recent path in 29 of 30 monthly periods, and had fatter tails in all but one.
+  tags:
+  - iv
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found puts five strikes out dearer than calls five strikes out on 91% of NIFTY days (1,222 days) and
+    90% of BANKNIFTY days.
+- id: book.fm-applied-quant-finance.6
+  book: fm-applied-quant-finance
+  title: 'Skew trade: sell OTM puts, buy OTM calls, hold to expiry'
+  chapter: Ch. 9.5, Skewness Trades
+  text: When implied skew is more negative than historical, sell every OTM put and buy every OTM call and hold to expiry;
+    on the DAX this made +9855.50 EUR net of 5% costs over 30 monthly periods, from 28 small gains and 2 large losses, because
+    the position is really a long-index bet.
+  tags:
+  - option-selling
+  - iv
+  - direction
+- id: book.fm-applied-quant-finance.7
+  book: fm-applied-quant-finance
+  title: Kurtosis trade earns only the premium taken in
+  chapter: Ch. 9.6, Kurtosis Trades
+  text: When implied tails are fatter than historical, sell ATM and far-OTM options and buy near-OTM ones; on the DAX this
+    made +10,915.77 EUR net of 5% costs, yet every position lost at expiry and all profit came from premium collected at entry,
+    worst in trending months.
+  tags:
+  - option-selling
+  - straddle
+  - theta
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: weak
+  tested_src: research/HUNT_R103_OPTIONS_SELLING.md
+  tested_text: Our R103 found a naked short straddle made +Rs 64k on NIFTY over 1,272 days (62% win) with a worst day of -28,876
+    rupees on one lot, while defined-risk selling passed 0 of 24 tests.
+- id: book.fm-applied-quant-finance.8
+  book: fm-applied-quant-finance
+  title: 'Hurst exponent: single prices wander, a spread can revert'
+  chapter: Ch. 14, Long Memory Effects Trading Strategy
+  text: Single German shares had a Hurst exponent of 0.50 to 0.57 (random walk) while the spread between each company's voting
+    and non-voting shares had 0.33 to 0.41 (reverting); fading new 50-day extremes of the spread made money over 26 years,
+    but the weakest pair turned negative at 1% cost per share.
+  tags:
+  - reversal
+  - costs
+- id: book.fm-applied-quant-finance.9
+  book: fm-applied-quant-finance
+  title: Control charts tell when a model or arm has broken
+  chapter: Ch. 11, Statistical Process Control
+  text: An EWMA or CUSUM chart on standardised residuals, designed for a chosen false-alarm spacing (run length 500), flagged
+    that a stock's beta model had changed at observation 64 of the monitoring period, after which alarms became frequent;
+    fat tails raise false alarms.
+  tags:
+  - filter
+  - sizing
+- id: book.fm-bayesian-methods.1
+  book: fm-bayesian-methods
+  title: Shrink small-sample estimates toward a prior
+  chapter: Ch. 3, 4 and 6, posterior mean and shrinkage
+  text: A Bayesian estimate of a mean is a weighted average of the sample mean and a prior mean, the sample getting weight
+    n/(n+T); with few observations the prior dominates, so noisy numbers such as a strategy's average profit should be pulled
+    toward zero or a pooled value.
+  tags:
+  - sizing
+- id: book.fm-bayesian-methods.2
+  book: fm-bayesian-methods
+  title: Errors in expected returns do the most damage
+  chapter: Ch. 6, Bayesian framework for portfolio allocation
+  text: Errors in estimated means are 10 to 11 times more damaging to allocations than errors in variances; in one example
+    raising one input by 10% moved 22 classical weights by more than 30% and none of the Bayesian ones.
+  tags:
+  - sizing
+- id: book.fm-bayesian-methods.3
+  book: fm-bayesian-methods
+  title: Forecasts must include parameter uncertainty
+  chapter: Ch. 3, 5 and 9, predictive distribution; Barberis
+  text: Plugging estimates into a forecast as if they were true understates risk; the predictive distribution averages over
+    what the data leave unknown and is wider. Ignoring this makes a strategy look better the longer it is held.
+  tags:
+  - sizing
+- id: book.fm-bayesian-methods.4
+  book: fm-bayesian-methods
+  title: Volatility clusters and is forecastable
+  chapter: Ch. 10-11, GARCH models
+  text: 'Volatility clusters: today''s variance mixes the long-run level, yesterday''s forecast and yesterday''s shock. A
+    Student-t GARCH(1,1) on daily MSCI Canada returns gave persistence 0.965 and degrees of freedom 9.24; normal residuals
+    were rejected for over 80% of 382 stocks.'
+  tags:
+  - vix
+  - sizing
+  - stop
+  verdict: positive
+  tested_src: research/HUNT_R16_PREDICTABILITY.md
+  tested_text: Our R16 found the range of the next 30 and 60 minutes predictable on both indices, holdout 15-20% better than
+    the time-of-day baseline (q 0.003), while direction was not.
+- id: book.fm-bayesian-methods.5
+  book: fm-bayesian-methods
+  title: 'Volatility regimes: calm lasts, storms are short'
+  chapter: Ch. 11, Markov regime-switching GARCH
+  text: A three-state switching GARCH found a calm state that persists (stay probability 0.988) and a short-lived high-volatility
+    state (stay 0.181) that is explosive while it lasts; a single-regime model over-forecasts in calm periods and under-forecasts
+    in storms.
+  tags:
+  - vix
+  - sizing
+- id: book.fm-bayesian-methods.6
+  book: fm-bayesian-methods
+  title: Use CVaR, not VaR, as the tail-risk number
+  chapter: Ch. 13 Appendices A-B; Ch. 10 VaR illustration
+  text: VaR says nothing about losses beyond its cut-off and can punish diversification; CVaR, the average loss on the worst
+    days, is subadditive and can be minimised as a linear programme over scenarios. A Student-t GARCH 95% VaR was breached
+    on 3.4% of days instead of 5%.
+  tags:
+  - sizing
+  - stop
+- id: book.fm-bayesian-methods.7
+  book: fm-bayesian-methods
+  title: Smoothed volatility uses the future
+  chapter: Ch. 12, Kalman filtering and smoothing
+  text: A filtered volatility estimate uses data up to today; a smoothed one also uses later data and is more accurate, and
+    filtered estimates react to volatility bumps later than smoothed ones. Only filtered values are available in real time.
+  tags:
+  - filter
+  - ml
+- id: book.fm-bayesian-methods.8
+  book: fm-bayesian-methods
+  title: Jumps in returns vs jumps in volatility
+  chapter: Ch. 12, jump extension of the SV model
+  text: A return jump is a one-off shock (about three to four a year on the S&P); a jump in volatility persists, and with
+    both in a model return jumps become rarer and explain crashes.
+  tags:
+  - gap
+  - option-selling
+- id: book.fm-bayesian-methods.9
+  book: fm-bayesian-methods
+  title: A p-value is not the chance the idea is wrong
+  chapter: Ch. 3 and 4, Bayesian hypothesis comparison
+  text: A p-value is not the probability that the null is true and can overstate evidence; Bayes reports the posterior probability
+    of an effect instead, but a strong prior can manufacture one (about 50% vs over 95% posterior mass for the same coefficient
+    under two priors).
+  tags:
+  - filter
+- id: book.fm-bayesian-methods.10
+  book: fm-bayesian-methods
+  title: Skill times breadth
+  chapter: Ch. 8, active management and Black-Litterman
+  text: 'Grinold''s law: the information ratio is about the information coefficient times the square root of the number of
+    independent bets, so many small independent edges beat a few large ones; a strategy''s view confidence can be set from
+    the variance of its backtest forecast errors.'
+  tags:
+  - sizing
+- id: book.fm-copula-methods.1
+  book: fm-copula-methods
+  title: Correlation is not the same as dependence
+  chapter: Ch. 3.1, Measures of association
+  text: 'Linear correlation depends on each market''s own distribution: two perfectly dependent lognormal assets with volatilities
+    0.4 and 0.6 can only reach a correlation of 0.57, and zero correlation does not mean independence. Kendall''s tau and
+    Spearman''s rho depend only on how the markets move together and reach 1 exactly at perfect co-movement.'
+  tags:
+  - breadth
+- id: book.fm-copula-methods.2
+  book: fm-copula-methods
+  title: A Gaussian model has no crash dependence
+  chapter: Ch. 3.1.5 and 3.2, Tail dependence and copula families
+  text: Under a Gaussian copula with any correlation below 1, the chance that both markets have their worst days together
+    fades towards zero far in the tail; a Student t copula keeps a positive chance of joint crashes, and a single correlation
+    number cannot tell the two apart.
+  tags:
+  - breadth
+  - sizing
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-copula-methods.3
+  book: fm-copula-methods
+  title: Fat tails and joint crashes are separate risks
+  chapter: Ch. 1.8.5 and 2.3.4, Tail dependence; VaR computation
+  text: Fat tails in each market and the tendency to crash together are two separate properties to model. In the book's two-asset
+    example the 99% VaR of an equal split is -1.792 with fat-tailed returns and -1.622 with normal returns of the same spread,
+    while the 95% level barely changes.
+  tags:
+  - sizing
+- id: book.fm-copula-methods.4
+  book: fm-copula-methods
+  title: Normal VaR under-counted joint losses on index pairs
+  chapter: Ch. 2.7.1, VaR bounds
+  text: On equal-weight pairs of six stock indices (daily, 1994-2000) the normal 95% VaR was exceeded 56-65 times when 35
+    were expected; a worst-case bound that assumes nothing about how the indices move together was exceeded 18-32 times, so
+    it was not as over-cautious as feared.
+  tags:
+  - sizing
+- id: book.fm-copula-methods.5
+  book: fm-copula-methods
+  title: A basket of dependent positions is one position
+  chapter: Ch. 1.8.7, Credit-linked products
+  text: 'When the members of a basket are strongly dependent the basket behaves like a single position: protection on the
+    first of two names to default, with 50% default-time correlation, cost 116,240 euros against 123,200 under perfect dependence,
+    and the book calls such a basket undiversified.'
+  tags:
+  - sizing
+  - breadth
+  verdict: negative
+  tested_src: research/HUNT_R84_BREADTH_RISK.md
+  tested_text: 'Our R84 capped how many of one Breadth Donchian signal''s same-direction index positions are held: none of
+    the 8 rules passes; every rule cut the worst day by 32% to 77% but none kept the edge.'
+- id: book.fm-copula-methods.6
+  book: fm-copula-methods
+  title: The dependence model drives the tail, not the average
+  chapter: Ch. 7.4, EuroStoxx50 CDO
+  text: Switching a 50-name basket from a Gaussian to a Student t copula with 8 degrees of freedom raised the senior tranche's
+    expected loss from 496,364 to 795,313 euros and its 99% VaR from 20,072,488 to 28,117,222, while a copula with only lower-tail
+    dependence showed almost no senior loss.
+  tags:
+  - sizing
+- id: book.fm-copula-methods.7
+  book: fm-copula-methods
+  title: Fit each market first, then how they move together
+  chapter: Ch. 5.3-5.4 and 8.7, IFM and CML estimation; basket option
+  text: 'Estimate in two steps: each market''s own distribution (or just its ranks), then the dependence. If the margins are
+    wrongly taken as normal, the dependence model absorbs their fat tails: a basket''s t copula needed about 2 degrees of
+    freedom with normal margins against about 10 with fat-tailed margins.'
+  tags:
+  - sizing
+- id: book.fm-copula-methods.8
+  book: fm-copula-methods
+  title: Robust correlation for fat-tailed data
+  chapter: Ch. 7.5.4, Variance-covariance robust estimation
+  text: The ordinary Pearson correlation estimator performs poorly on fat-tailed or contaminated returns; the book uses a
+    matrix built from Kendall's tau, or the Spearman rank matrix, which is positive definite by construction.
+  tags:
+  - sizing
+- id: book.fm-copula-methods.9
+  book: fm-copula-methods
+  title: Wrong-way counterparty risk
+  chapter: Ch. 8.4, Pricing vulnerable options
+  text: 'When the option writer is most likely to fail exactly when the option pays, counterparty risk multiplies: for a Baa3
+    writer of a one-year at-the-money call it is 0.231% of the option''s value if default is independent of the market and
+    2.24963% if they are perfectly dependent.'
+  tags:
+  - crypto
+  inst:
+  - CRYPTO
+- id: book.fm-fabozzi-modelling.1
+  book: fm-fabozzi-modelling
+  title: Size of moves is forecastable, direction is not
+  chapter: Ch. 11, Stylized facts of financial time series
+  text: Returns show almost no autocorrelation at any lag, while volatility clusters and its autocorrelation decays slowly;
+    returns from minutes to days have fat tails. Point models at range, straddle pricing and sizing, not at direction.
+  tags:
+  - direction
+  - ml
+  - volume
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+  tested_text: Our R88 found that out of sample 225 of 305 size findings held and 0 of 8 direction findings held.
+- id: book.fm-fabozzi-modelling.2
+  book: fm-fabozzi-modelling
+  title: VaR can improve while the tail gets worse
+  chapter: Ch. 13 and 23, Expected shortfall versus VaR
+  text: In a fat-tailed example, 90% VaR fell from 102.9 to 96.6 bp while 90% expected shortfall rose from 240.3 to 256.2
+    bp. VaR is silent on tail size and not subadditive; report expected shortfall and the worst day for option-selling and
+    overnight studies.
+  tags:
+  - option-selling
+  - sizing
+  - overnight
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-fabozzi-modelling.3
+  book: fm-fabozzi-modelling
+  title: The option writer carries the jump
+  chapter: Ch. 23, Market completeness and risk
+  text: With jumps or stochastic volatility an option cannot be replicated, so the seller bears the large moves; the premium
+    over realised volatility is pay for that. Short straddles need a stop or wing, a scenario check and crash days in the
+    back-test.
+  tags:
+  - option-selling
+  - straddle
+  - iv
+  - stop
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R103_OPTIONS_SELLING.md
+  tested_text: Our R103 naked short straddle made money on NIFTY over 1,272 days with a 62% win rate, but defined-risk selling
+    confirmed 0 of 24 tests.
+- id: book.fm-fabozzi-modelling.4
+  book: fm-fabozzi-modelling
+  title: SPAN-style scenario grid before selling options
+  chapter: Ch. 21 and 23, Scenario analysis and SPAN
+  text: Price the whole option book under a fixed grid of price and volatility moves; SPAN uses 16 scenarios and takes the
+    worst of 14 ordinary ones or 35% of the loss in the 2 extreme ones. Scenarios must include extremes and respect correlations.
+    Use it as a risk-lowering pre-trade check.
+  tags:
+  - option-selling
+  - sizing
+  - iv
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - GOLD
+  - SILVER
+  - CRUDE
+  - NATURALGAS
+- id: book.fm-fabozzi-modelling.5
+  book: fm-fabozzi-modelling
+  title: Pairs that test cointegrated are often chance
+  chapter: Ch. 18, Spurious cointegration
+  text: Among independent random walks a few percent of pairs pass a cointegration test; with many pairs, ask whether the
+    count beats chance and correct for all pairs tried. Cointegration found in markets is largely unstable.
+  tags:
+  - reversal
+  - filter
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - GOLD
+  - SILVER
+  - CRYPTO
+- id: book.fm-fabozzi-modelling.6
+  book: fm-fabozzi-modelling
+  title: Optimisers and Kelly fractions maximise estimation error
+  chapter: Ch. 16, Mean-variance inputs are unstable
+  text: 'Optimised weights pile into whatever return is over-estimated, and inputs move between periods: an emerging-market
+    return of 16.3% became 0.1% and a correlation of 0.45 became 0.73. Cap and shrink weights estimated on one window.'
+  tags:
+  - sizing
+  verdict: positive
+  tested_src: research/HUNT_H15.md
+  tested_text: 'Our H15 found the Kelly fraction unstable: BANKNIFTY f* was 1.29 on the study window but 0.48 and 0.14 on
+    other windows.'
+- id: book.fm-fabozzi-modelling.7
+  book: fm-fabozzi-modelling
+  title: Breadth beats more direction bets
+  chapter: Ch. 19, Fundamental law of active management
+  text: Information ratio is roughly skill (IC) times the square root of independent bets a year; a market timer with few
+    bets needs a high IC. Seek many independent contracts or days rather than more trades on the same move.
+  tags:
+  - direction
+  - breadth
+  - sizing
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-fabozzi-modelling.8
+  book: fm-fabozzi-modelling
+  title: 'Classic technical rules: forecastable but not clearly profitable'
+  chapter: Ch. 19, Technical analysis and statistical pattern recognition
+  text: Filter rules, moving-average bands around a 200-day average, the advance/decline line and relative strength show some
+    forecastability in academic tests, but profitability after costs is unclear. Test them only with real costs and a random-entry
+    baseline.
+  tags:
+  - moving-average
+  - trend
+  - momentum
+  - costs
+  - breadth
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-intro-quant-finance.1
+  book: fm-intro-quant-finance
+  title: A 5-sigma move is not rare without a normal law
+  chapter: Ch. 8.2 and Ch. 8 exercises, Chebyshev's inequality
+  text: For any distribution with a variance, the chance of a move of at least 5 sds is at most 4% (one-sided about 3.8%),
+    and of 10 sds at most 1%; calling such days unforeseeable only holds under a normal assumption. NIFTY's worst day, -12.98%,
+    was about 10 sd.
+  tags:
+  - filter
+  - stop
+  - sizing
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-intro-quant-finance.2
+  book: fm-intro-quant-finance
+  title: Rare-event Monte Carlo needs huge samples
+  chapter: Ch. 8.8.1, Tail events
+  text: Counting simulated losses beyond a level pins a 10% tail to within its own size only after about 13,830 runs, and
+    a 1% tail after about 15.2 million; a cheaper route simulates to a threshold exceeded 10-20% of the time and bounds the
+    rest with a one-sided Chebyshev inequality.
+  tags:
+  - sizing
+- id: book.fm-intro-quant-finance.3
+  book: fm-intro-quant-finance
+  title: Realised volatility is a noisy estimate when tails are fat
+  chapter: Ch. 7.5.2 and 8.3, Sample moments
+  text: The error of a sample variance depends on the fourth moment, so with NIFTY kurtosis 14.1 and BANKNIFTY 8.5 a 20- or
+    21-day realised vol is much noisier than the normal formula says; compare it with VIX or IV over many days, not one.
+  tags:
+  - iv
+  - vix
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - INDIAVIX
+- id: book.fm-intro-quant-finance.4
+  book: fm-intro-quant-finance
+  title: Greeks from any repricer by central differences
+  chapter: Ch. 9.7 and 9.8.7, Numerical derivatives and the Greeks
+  text: 'Reprice up and down and divide by twice the step to get delta with error shrinking as the step squared; gamma uses
+    up, down and centre prices. Check against the closed forms: call delta = N(d1), put delta = N(d1) - 1, gamma the same
+    for both.'
+  tags:
+  - iv
+  - option-buying
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-intro-quant-finance.5
+  book: fm-intro-quant-finance
+  title: Implied volatility by bisection; no bracket means a bad quote
+  chapter: Ch. 4.3, 5.5 and 9.8.3, Interval bisection
+  text: Halving an interval whose ends price above and below the market always finds the implied value when price is monotone
+    and continuous in it, each step halving the error; an option quote that cannot be bracketed lies outside the no-arbitrage
+    bounds and should be treated as stale.
+  tags:
+  - iv
+  - filter
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-intro-quant-finance.6
+  book: fm-intro-quant-finance
+  title: Size a bet by edge over risk aversion times second moment
+  chapter: Ch. 9.8.9, Optimal risky asset allocation
+  text: With one risky position and cash, the best amount at risk is the expected excess return divided by risk aversion times
+    the expected squared excess return; among several bets the highest Sharpe ratio wins, and a risk-seeker's choice is maximum
+    leverage. The edge estimate is the weak input.
+  tags:
+  - sizing
+- id: book.fm-intro-quant-finance.7
+  book: fm-intro-quant-finance
+  title: The deepest dip of a no-edge P&L path
+  chapter: Ch. 8.4, Kolmogorov's inequality
+  text: For independent zero-mean daily results, the chance that the running total ever falls past a level has the same Chebyshev
+    bound as the final total alone, so an arm with no edge can sit as deep mid-month as it may finish.
+  tags:
+  - sizing
+  - stop
+- id: book.fm-intro-quant-finance.8
+  book: fm-intro-quant-finance
+  title: 'Cheapest rebalance: minimise total lots traded'
+  chapter: Ch. 3.3, Trading cost as an l1 norm
+  text: With a cost per unit traded, the best way to reach a target exposure (a delta or beta) is the set of trades with the
+    smallest sum of absolute sizes, under position caps, then rounded to lot sizes; every extra leg adjustment is a charged
+    order.
+  tags:
+  - costs
+- id: book.fm-lyuu-fin-engineering.1
+  book: fm-lyuu-fin-engineering
+  title: Drift is hard to estimate, volatility is easy
+  chapter: Ch. 20.1, Introduction (maximum-likelihood estimation)
+  text: How precisely a series' drift can be estimated depends only on the total time span, not on how often it is sampled,
+    while volatility gets more precise with every observation; in the book's simulation (true drift 0.105) 5,999 frequent
+    observations gave 0.118348, but fewer observations over a longer span gave 0.108039.
+  tags:
+  - direction
+  - vix
+  verdict: positive
+  tested_src: research/HUNT_R16_PREDICTABILITY.md
+  tested_text: Our R16 found the range of the next 30-60 minutes predictable (q 0.003) but direction not (holdout AUC 0.509-0.536).
+- id: book.fm-lyuu-fin-engineering.2
+  book: fm-lyuu-fin-engineering
+  title: Theta is the price of gamma
+  chapter: Ch. 15.2.1, Merton's derivation (Eq. 15.3)
+  text: 'For a delta-neutral option position the Black-Scholes equation reduces to theta plus half sigma squared S squared
+    gamma equals r times the value: time decay is what the holder pays to own movement (gamma) and what the seller is paid
+    to carry it.'
+  tags:
+  - theta
+  - straddle
+  - option-buying
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-lyuu-fin-engineering.3
+  book: fm-lyuu-fin-engineering
+  title: A delta-hedged written option is not free money
+  chapter: Ch. 16.3, Hedging and options (Exercise 16.3.3)
+  text: In a worked weekly delta hedge of written calls the hedge was not self-financing ($171,622 tracking error after the
+    first week, $1,757 once gamma was also hedged); a hedged seller buys after rises and sells after falls, so the premium
+    is the reserve that pays these hedging losses.
+  tags:
+  - option-selling
+  - costs
+- id: book.fm-lyuu-fin-engineering.4
+  book: fm-lyuu-fin-engineering
+  title: The option smile means Black-Scholes is not literally true
+  chapter: Ch. 9.4.3, Implied volatility
+  text: Options on the same underlying imply different volatilities, typically lowest at the money and higher for in- and
+    out-of-the-money strikes, most strongly for short-dated options; blending them into one composite volatility is not sound.
+  tags:
+  - iv
+  - expiry
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-lyuu-fin-engineering.5
+  book: fm-lyuu-fin-engineering
+  title: Price options on futures with the Black model
+  chapter: Ch. 12.4.2, The Black model
+  text: Options on futures are priced by Black-Scholes with the futures price in place of spot and the dividend yield set
+    equal to the interest rate, so no dividend forecast is needed; a European futures option equals the option on the cash
+    asset when maturities match.
+  tags:
+  - iv
+  - mcx
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - GOLD
+  - SILVER
+  - CRUDE
+  - NATURALGAS
+- id: book.fm-lyuu-fin-engineering.6
+  book: fm-lyuu-fin-engineering
+  title: Futures fair value and the cost of carry
+  chapter: Ch. 12.3.3-12.3.5, Stock index futures; cost of carry
+  text: An index future should trade at spot times e to the (r - q)T; gold and silver (held for investment) should sit at
+    full carry, while consumption commodities can trade below it because holding the physical has a convenience yield, which
+    produces inverted curves.
+  tags:
+  - mcx
+  - overnight
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - GOLD
+  - SILVER
+  - CRUDE
+  - NATURALGAS
+- id: book.fm-lyuu-fin-engineering.7
+  book: fm-lyuu-fin-engineering
+  title: Diversification stops at the average covariance
+  chapter: Ch. 31.1, Mean-variance analysis of risk and return
+  text: With equal weights and a common correlation z, portfolio variance is z s^2 + (1 - z) s^2 / n, so adding more correlated
+    positions cannot push risk below the average covariance; only uncorrelated risks diversify away.
+  tags:
+  - sizing
+  - breadth
+- id: book.fm-lyuu-fin-engineering.8
+  book: fm-lyuu-fin-engineering
+  title: Normal VaR misses fat tails; add stress tests
+  chapter: Ch. 31.4, Value at risk
+  text: Normal-distribution VaR uses 2.326 standard deviations for 99% and 1.645 for 95%, scaled by the square root of days,
+    but returns have fat tails on both sides at daily and monthly horizons, so VaR is not sufficient and stress tests of extreme
+    moves are needed.
+  tags:
+  - sizing
+  - stop
+  - news
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: 'Our R102 measured NIFTY daily returns 2006 - 14 Jul 2026 (5,087 days): kurtosis 14.1 and a worst day of -12.98,
+    far fatter-tailed than normal.'
+- id: book.fm-lyuu-fin-engineering.9
+  book: fm-lyuu-fin-engineering
+  title: Never take Greeks by bumping a tree price
+  chapter: Ch. 10.2, Numerical techniques
+  text: A binomial option price is piecewise linear in spot, so gamma from bumping the spot and repricing is zero most of
+    the time and huge near a kink, and smaller bumps make it worse; take delta and gamma from the tree's own nodes or use
+    closed-form Greeks.
+  tags:
+  - iv
+- id: book.fm-lyuu-fin-engineering.10
+  book: fm-lyuu-fin-engineering
+  title: Calibration cannot fix a wrong model
+  chapter: Ch. 25.4, Model calibration; Ch. 26.2.4
+  text: A misspecified model fitted to today's prices still misprices and mis-hedges, and re-fitting its parameters every
+    day ('a new model is born every day') hides the failure; such a model is at best an interpolator for claims like those
+    it was fitted to.
+  tags:
+  - filter
+- id: book.fm-kabanov-stochastic-calculus.1
+  book: fm-kabanov-stochastic-calculus
+  title: Bipower variation splits a day's volatility into smooth part and jumps
+  chapter: Paper 3, Barndorff-Nielsen et al., realised power and bipower variation
+  text: Summing products of neighbouring absolute intraday returns (bipower variation) estimates a session's continuous variance
+    even when the price jumps, so realised variance minus bipower variation measures the jump part; the estimation error shrinks
+    with more bars and has known confidence bands.
+  tags:
+  - iv
+  - gap
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-kabanov-stochastic-calculus.2
+  book: fm-kabanov-stochastic-calculus
+  title: Intraday volatility follows the clock; normalise by time-of-day
+  chapter: Paper 4, Bingham and Schmidt, section 4.1
+  text: On 15-minute stock data (n = 36,855 bars) returns were not autocorrelated but squared returns were, with high volatility
+    at the open, low at midday and daily peaks; dividing each bar by the average volatility of its time slot removes the cycle,
+    leaving volatility clustering.
+  tags:
+  - time-of-day
+  verdict: positive
+  tested_src: research/FINDINGS.md
+  tested_text: Our R16 found the range of the next 30/60 min predictable, with holdout error 15-20% below the time-of-day
+    average, while direction was not.
+- id: book.fm-kabanov-stochastic-calculus.3
+  book: fm-kabanov-stochastic-calculus
+  title: Tail dependence can be an artefact of uncleaned data
+  chapter: Paper 4, Bingham and Schmidt, section 4.4
+  text: The chance of two stocks crashing together (lower tail dependence) was 0.15 on raw returns, 0.1 after time-of-day
+    weighting and gone after GARCH filtering, while plain correlation barely moved (0.24, 0.23, 0.22); joint-crash claims
+    depend on how volatility was filtered.
+  tags:
+  - filter
+- id: book.fm-kabanov-stochastic-calculus.4
+  book: fm-kabanov-stochastic-calculus
+  title: Hedging with a correlated proxy leaves most of the risk
+  chapter: Paper 8, Davis, optimal hedging with basis risk
+  text: Even at 0.98 correlation about 19.9% of the volatility cannot be hedged with the proxy; in the cited simulations the
+    best proxy hedge of a written put left a P&L spread comparable to the whole premium, against 5-10% of the premium for
+    ordinary discrete hedging error.
+  tags:
+  - option-selling
+  - costs
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-kabanov-stochastic-calculus.5
+  book: fm-kabanov-stochastic-calculus
+  title: Volatility jumps with shocks, then decays; tails are power-law
+  chapter: Paper 21, Kluppelberg, Lindner and Maller, COGARCH vs OU
+  text: In continuous-time GARCH a big price move instantly lifts volatility, which then decays exponentially towards a floor;
+    returns stay uncorrelated while squared returns cluster, and returns get Pareto-type heavy tails, so a short-option book's
+    worst day is far worse than normal limits suggest.
+  tags:
+  - vix
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-kabanov-stochastic-calculus.6
+  book: fm-kabanov-stochastic-calculus
+  title: Kelly fraction is drift over variance; a wrong edge costs its square
+  chapter: Papers 10 and 13, Di Masi-Stettner and Gasbarra-Valkeila-Vostrikova
+  text: The log-optimal (Kelly) fraction is drift divided by variance and may depend on the current market state; a slightly
+    more cautious criterion barely changes it, and growth lost to a mis-estimated edge rises with the square of the error,
+    which argues for a fraction of Kelly when the edge is uncertain.
+  tags:
+  - sizing
+  verdict: weak
+  tested_src: research/HUNT_H15.md
+  tested_text: 'Our H15 found the Kelly fraction unstable: on other windows f* for BN is 0.48 and 0.14, against 1.29 in the
+    sample used.'
+- id: book.fm-kabanov-stochastic-calculus.7
+  book: fm-kabanov-stochastic-calculus
+  title: Drawdown stops cannot add expectancy on a driftless price
+  chapter: Paper 25, Obloj and Yor, local martingale and its supremum
+  text: Functions of a price and its running high, including the drawdown from the high, form martingales (Azema-Yor), so
+    on a driftless price an exit at a set distance below the running high only reshapes outcomes and cannot raise the expected
+    result (our reading of the construction).
+  tags:
+  - profit-lock
+  - stop
+  verdict: negative
+  tested_src: research/FINDINGS.md
+  tested_text: 'Our R19b tested a Rs 500 give-back trail on Liquidity: holdout +Rs 4,584 vs +Rs 14,633 on plain rules (27
+    trades).'
+- id: book.fm-kabanov-stochastic-calculus.8
+  book: fm-kabanov-stochastic-calculus
+  title: Asymmetric skew means the market prices asymmetric jumps
+  chapter: Paper 12, Fajardo and Mordecki, section 4
+  text: In a jump market a call equals a put in a mirrored dual market; puts and calls are mirror images only if the jump
+    distribution satisfies a symmetry condition, so persistently dearer OTM puts mean the market prices crash jumps more than
+    rallies.
+  tags:
+  - iv
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-brandimarte-numerical.1
+  book: fm-brandimarte-numerical
+  title: A stop-loss hedge does not converge
+  chapter: Ch. 8.1.2, Simulating hedging strategies
+  text: In a 10,000-path simulation, hedging a written call by holding the stock only while it is above the strike cost 4.8268
+    with 10 checks and 4.8286 with 100, against a fair value of 4.7328; delta hedging cost 4.7352-4.7370. Crossings are detected
+    late, so the hedger buys above the level and sells below it, and checking more often does not fix it.
+  tags:
+  - stop
+  - option-selling
+- id: book.fm-brandimarte-numerical.2
+  book: fm-brandimarte-numerical
+  title: VaR can punish diversification; CVaR does not
+  chapter: Ch. 2.4.5, Value at Risk
+  text: 'Value at Risk is only a loss quantile: it cannot see how fat the tail beyond it is, and two bonds that each default
+    with 4% probability each show a 95% VaR of 0 but 100 when held together. Conditional VaR, the average loss beyond VaR,
+    is the coherent alternative.'
+  tags:
+  - sizing
+  - option-selling
+- id: book.fm-brandimarte-numerical.3
+  book: fm-brandimarte-numerical
+  title: The 'optimal' risky fraction swings with sampling noise
+  chapter: Ch. 10.3, Example 10.4
+  text: With log utility, the optimal share in a stock estimated from 10,000 random scenarios ranged from 0.2694 to 0.3763
+    across seven runs; 5,000,000 scenarios or a 3-5 node Gauss-Hermite rule settled at about 0.3064.
+  tags:
+  - sizing
+  verdict: positive
+  tested_src: research/HUNT_H15.md
+  tested_text: 'Our h15 found the Kelly fraction unstable: BN f* was 0.48 (Jun 2023 to Nov 2024) and 0.14 (2020 to May 2023)
+    against 1.29 in the window used.'
+- id: book.fm-brandimarte-numerical.4
+  book: fm-brandimarte-numerical
+  title: Deciding on noisy estimates biases results
+  chapter: Ch. 4.5.4, Conditioning; Ch. 10.4
+  text: 'A chooser option priced by nested Monte Carlo, where the mid-life choice used sampled estimates, came out at 8.698
+    and still 8.930 with ten times the samples, against about 9.26-9.30: noisy estimates cause wrong choices and more samples
+    do not remove the bias. Fit a decision rule on one sample and score it on an independent one.'
+  tags:
+  - filter
+- id: book.fm-brandimarte-numerical.5
+  book: fm-brandimarte-numerical
+  title: Monte Carlo error falls only with the square root of runs
+  chapter: Ch. 4.4, Setting the number of replications
+  text: A call worth 1.1718 was estimated at 1.1953 from 50,000 replications with a confidence interval 4.2% wide; 1,000,000
+    replications narrowed it to 0.94%. Run about 30 pilot replications to size the run, fix the seed, and report the interval;
+    intervals assume independent samples.
+  tags:
+  - costs
+- id: book.fm-brandimarte-numerical.6
+  book: fm-brandimarte-numerical
+  title: Compare variants on the same random numbers
+  chapter: Ch. 4.5.2-4.5.3, Common random numbers and control variates
+  text: To estimate a difference between two variants, drive both with the same random stream so the noise cancels; a known-price
+    control (the stock for a call) cut a confidence interval from 1.49% to 0.66%. Antithetic pairs need a monotone payoff
+    and made a butterfly spread worse (2.56% to 3.55%).
+  tags:
+  - straddle
+- id: book.fm-brandimarte-numerical.7
+  book: fm-brandimarte-numerical
+  title: Sample the rare event on purpose
+  chapter: Ch. 4.5.6 and 8.3.3, Importance sampling
+  text: When only 249 of 200,000 paths touched a barrier, shifting the drift toward it and reweighting each path by the likelihood
+    ratio raised the touches to 8,469 of 10,000 and shrank the error band by two orders of magnitude; the same trick cut a
+    deep out-of-the-money call's error from 3.06% to 1.155%.
+  tags:
+  - option-selling
+  - stop
+- id: book.fm-brandimarte-numerical.8
+  book: fm-brandimarte-numerical
+  title: 'Implied vol depends on strike: Black-Scholes as interpolation'
+  chapter: Ch. 2.6.5, Remarks on the Black-Scholes formula
+  text: Real markets are incomplete (costs, jumps, changing volatility), so Black-Scholes is used to back out an implied volatility
+    from market prices, and that implied volatility varies with strike and maturity (a volatility surface).
+  tags:
+  - iv
+  inst:
+  - NIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found NIFTY puts five strikes out dearer than calls five strikes out on 91% of days (n 1,222), with
+    expiry-day ATM IV 7.7 points above India VIX.
+- id: book.fm-brandimarte-numerical.9
+  book: fm-brandimarte-numerical
+  title: Daily-checked barriers are touched less often
+  chapter: Ch. 2.7.1, Barrier options
+  text: A barrier checked once a day is crossed less often than a continuous one; shifting the barrier by exp(-0.5826 x vol
+    x square root of the check interval) corrects the price (0.5424 became 0.6380 with daily checks).
+  tags:
+  - stop
+- id: book.fm-fries-math-finance.1
+  book: fm-fries-math-finance
+  title: Option prices across strikes hold the market's expiry distribution
+  chapter: Ch. 5 and 9.2, Density of the underlying; digital caplet
+  text: The strike-slope of call prices gives the market's (risk-neutral) probability of finishing above a strike, a tight
+    call spread approximates it, and the curvature gives the density; these probabilities include the risk premium, so they
+    are not forecasts.
+  tags:
+  - iv
+  - expiry
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-fries-math-finance.2
+  book: fm-fries-math-finance
+  title: No-arbitrage checks on a strike strip
+  chapter: Ch. 6, Interpolation of European option prices
+  text: Call prices must fall as the strike rises, by no more than the discount factor per unit of strike, and must be convex
+    (no butterfly can cost less than zero); spline or implied-vol interpolation can break this and imply negative probabilities,
+    and an implied vol cannot fall or rise arbitrarily fast across strikes.
+  tags:
+  - iv
+  - filter
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/HUNT_LAKE_STALE_PRINTS.md
+  tested_text: 'Our lake filter drops stale option prices that break the strike-order bound against the neighbouring strikes:
+    9,646 one-minute prices flagged out of 35.4 million, none on NIFTY; smaller stale errors are still missed.'
+- id: book.fm-fries-math-finance.3
+  book: fm-fries-math-finance
+  title: 'Discrete hedging: the bill is gamma times realised minus implied'
+  chapter: Ch. 7.4, Delta and delta-gamma hedging
+  text: Hedging only at intervals leaves an error each step of about half the gamma times the gap between the squared move
+    and the variance the option priced; hedging with a volatility of 0.4 when the true one is 0.5 leaves the hedge under-funded
+    and noisier, and adding a second option to match gamma tightens it.
+  tags:
+  - option-selling
+  - theta
+  - iv
+- id: book.fm-fries-math-finance.4
+  book: fm-fries-math-finance
+  title: Minimum-variance hedge ratio, not textbook delta
+  chapter: Ch. 7.5, Bouchaud-Sornette method
+  text: When you can only rebalance at intervals, choose the hedge ratio that minimises the variance of the hedge error under
+    real-world probabilities (covariance of option and underlying changes over their variance); it can differ from the Black-Scholes
+    delta.
+  tags:
+  - option-selling
+  - sizing
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-fries-math-finance.5
+  book: fm-fries-math-finance
+  title: 'Foresight bias: fitting and judging on the same sample'
+  chapter: Ch. 15.6-15.9, Perfect foresight and foresight bias
+  text: A decision that uses later information looks better than possible, and even an honest rule estimated and then valued
+    on the same sample keeps a bias equal to an option on its own estimation noise; the cure is to estimate on one sample
+    and value on an independent one.
+  tags:
+  - ml
+  - filter
+- id: book.fm-fries-math-finance.6
+  book: fm-fries-math-finance
+  title: Tuning one threshold is noisy and the rule shape matters
+  chapter: Ch. 15.11, Optimization methods
+  text: Choosing a threshold that maximises a simulated value gives a jumpy objective with spurious peaks of about 1/n size,
+    and if the true region is an interval a one-threshold rule finds only 'always' or 'never', both worth less than the truth.
+  tags:
+  - stop
+  - target
+  - ml
+- id: book.fm-fries-math-finance.7
+  book: fm-fries-math-finance
+  title: Exit timing by regressing the value of holding
+  chapter: Ch. 15.10, Least-squares Monte Carlo
+  text: At each decision time compare the value of exiting now with a regression estimate of the value of holding, fitted
+    on a few state variables over many paths; use the estimate only for the decision, never as the payoff, and fit it on separate
+    data.
+  tags:
+  - stop
+  - target
+  - profit-lock
+- id: book.fm-fries-math-finance.8
+  book: fm-fries-math-finance
+  title: Calibrate to today's prices, but do not fit every quote
+  chapter: Ch. 19.1.4, Calibration and overfitting
+  text: A pricing model must reproduce current traded prices, since the hedge is bought at today's prices; fitting every quote
+    exactly also fits bad or stale quotes, so a few-parameter family trades a perfect fit for robustness, and differencing
+    coarse quantities amplifies their noise.
+  tags:
+  - iv
+  - filter
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-fries-math-finance.9
+  book: fm-fries-math-finance
+  title: Skew changes the probability of a tail; expiry prices do not fix the path
+  chapter: Ch. 25.2, Markov functional calibration
+  text: The market price of finishing beyond a strike includes a term for the slope of the smile, so with dearer puts the
+    downside tail is larger than a flat-volatility N(-d2) suggests; option prices at an expiry fix only the distribution on
+    that date, not how often the path crosses a level before it.
+  tags:
+  - iv
+  - stop
+  - expiry
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-fries-math-finance.10
+  book: fm-fries-math-finance
+  title: Correlation at the horizon, not minute by minute
+  chapter: Ch. 20, Instantaneous and terminal correlation
+  text: Two rates can move together step by step yet end a horizon uncorrelated if they receive their volatility at different
+    times; in the example, caplets all priced 0.26% while the matching swaption ranged from 0.27% to 0.51%, because a spread
+    or sum depends on the covariance at the horizon.
+  tags:
+  - breadth
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-bjork-arbitrage.1
+  book: fm-bjork-arbitrage
+  title: Option price depends on volatility, not expected return
+  chapter: Ch. 7.3-7.4, The Black-Scholes equation and risk neutral valuation
+  text: 'An option''s no-arbitrage price depends on the underlying''s volatility, not on its expected return: two stocks with
+    the same volatility give the same option price whether they are expected to rise or fall, because the option can be replicated
+    by hedging with the stock and cash.'
+  tags:
+  - iv
+  - direction
+- id: book.fm-bjork-arbitrage.2
+  book: fm-bjork-arbitrage
+  title: Implied volatility and the smile
+  chapter: Ch. 7.7.2, Implied volatility
+  text: Implied volatility is the volatility that makes Black-Scholes match a traded option; if the model were right it would
+    be flat across strikes, but far-from-the-money options trade at higher implied volatility (the smile), so the model is
+    a quoting tool rather than the truth.
+  tags:
+  - iv
+- id: book.fm-bjork-arbitrage.3
+  book: fm-bjork-arbitrage
+  title: 'Delta hedging: hedge quality against costs'
+  chapter: Ch. 9.3, Delta and gamma hedging
+  text: A seller hedges by holding delta units of the underlying and rebalancing at intervals; rebalancing often gives a better
+    hedge but higher transaction costs, and high gamma makes the hedge go stale quickly, so it needs more rebalancing.
+  tags:
+  - costs
+  - option-selling
+- id: book.fm-bjork-arbitrage.4
+  book: fm-bjork-arbitrage
+  title: Theta is the price of gamma
+  chapter: Ch. 9, Exercises 9.8-9.9
+  text: 'For a book hedged to zero delta and zero gamma, the time decay exactly offsets the gamma term and the book earns
+    only the risk-free rate: the theta an option seller collects is payment for being short gamma, not free income.'
+  tags:
+  - theta
+  - option-selling
+- id: book.fm-bjork-arbitrage.5
+  book: fm-bjork-arbitrage
+  title: Implied prices carry a risk premium
+  chapter: Ch. 15.6 and 22.2, Who chooses the martingale measure?
+  text: When risks cannot be hedged perfectly, no-arbitrage does not fix a unique price; the market's risk aversion, supply
+    and demand pick it, so implied numbers such as implied volatility or forward rates are prices that include a premium,
+    not unbiased forecasts.
+  tags:
+  - iv
+  - vix
+  inst:
+  - INDIAVIX
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found India VIX over-states NIFTY's next 21 days on 81% of days (median ratio 1.28, n 4,507) but under-states
+    BANKNIFTY's on 60%.
+- id: book.fm-bjork-arbitrage.6
+  book: fm-bjork-arbitrage
+  title: 'Merton: bet a constant fraction'
+  chapter: Ch. 19.6, Optimal consumption and investment
+  text: 'With constant expected return and volatility, the optimal share of wealth in the risky asset is constant: the expected
+    excess return divided by the variance and by a risk-aversion term; with log utility this becomes the growth-optimal (Kelly-type)
+    fraction.'
+  tags:
+  - sizing
+  verdict: weak
+  tested_src: research/HUNT_H15.md
+  tested_text: Our h15 found half-Kelly sizing on Liquidity 15+5 grew fastest but had P(drawdown ≥ 30%) of 63%, and the Kelly
+    fraction was unstable (0.48 and 0.14 on other windows against 1.29).
+- id: book.fm-bjork-arbitrage.7
+  book: fm-bjork-arbitrage
+  title: Touch odds for a stop and a target
+  chapter: Ch. 18.1 and Appendix C, Exercise C.8
+  text: 'With no drift, the chance the price reaches a level a above before a level b below is b / (a + b): a target twice
+    as far away as the stop is reached first only about one time in three, and touching a level before expiry is about twice
+    as likely as finishing beyond it.'
+  tags:
+  - stop
+  - target
+- id: book.fm-bjork-arbitrage.8
+  book: fm-bjork-arbitrage
+  title: Exits and sizing cannot create an edge
+  chapter: Appendix C, Discrete stochastic integrals and stopping times
+  text: 'A fair game stays fair under any betting scheme decided from past information and under any stopping rule: if price
+    has no drift, stops, targets, locks or changing size reshape the win rate against the size of wins but cannot make the
+    expected profit positive.'
+  tags:
+  - stop
+  - target
+  - profit-lock
+  verdict: negative
+  tested_src: research/HUNT_R19_LIQUIDITY_LOCK.md
+  tested_text: 'Our R19 tried profit locks on Liquidity 15+5 and none added value: 0 of 12 tests passed, because a lock sells
+    the runners early.'
+- id: book.fm-bjork-arbitrage.9
+  book: fm-bjork-arbitrage
+  title: Drift is hard to estimate, volatility is not
+  chapter: Ch. 11.6, Maximum likelihood estimation
+  text: 'The maximum-likelihood estimate of a diffusion''s drift is simply the total move divided by the elapsed time, so
+    it uses only the first and last price, while volatility is estimated from every increment: direction needs far longer
+    samples than size.'
+  tags:
+  - direction
+  verdict: positive
+  tested_src: research/HUNT_R16_PREDICTABILITY.md
+  tested_text: Our R16 found only the size of the next 30-60 minutes predictable (range error 18-20% smaller than the time-of-day
+    average); direction failed in the locked holdout.
+- id: book.fm-bjork-arbitrage.10
+  book: fm-bjork-arbitrage
+  title: Put-call parity and static replication
+  chapter: Ch. 9.1, Parity relations
+  text: Pricing is linear, so a call minus a put at the same strike and expiry equals the underlying minus the discounted
+    strike, and any piecewise-linear payoff (straddle, spread, butterfly) can be built once from cash, the underlying and
+    calls with no rebalancing.
+  tags:
+  - option-selling
+  - straddle
+- id: book.fm-comp-finance-numerical.1
+  book: fm-comp-finance-numerical
+  title: Implied volatility forecasts best
+  chapter: Ch. 14, Introduction (Granger survey)
+  text: In a survey of about 40 studies, implied volatility beat historical volatility in 12 of 13 comparisons and beat GARCH
+    in 13 of 14; GARCH won 5 and lost 5 against historical, and implied wins because option prices carry more information
+    than past returns.
+  tags:
+  - iv
+  - vix
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - INDIAVIX
+  verdict: weak
+  tested_src: research/HUNT_R16_PREDICTABILITY.md
+  tested_text: Our R16 found VIX already holds the next-day range information, but for the next 30 or 60 minutes a realised-range
+    model beat the VIX-implied forecast in the holdout (skill 10.4% to 15.0%).
+- id: book.fm-comp-finance-numerical.2
+  book: fm-comp-finance-numerical
+  title: Volatility clusters and drifts back to its average
+  chapter: Ch. 15.2.2 and 22, GARCH forecasting and mean reversion
+  text: 'Volatility clusters: a GARCH forecast starts from today''s variance and decays toward the long-run level at a rate
+    set by the sum of its two weights, which real data put close to 1 (a currency fit gave 0.128 plus 0.852), so volatility
+    shocks fade slowly.'
+  tags:
+  - vix
+  - sizing
+  verdict: positive
+  tested_src: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+  tested_text: Our R88 found the next candle 1.4x bigger after a volatile last hour on the indices; 225 of 305 size findings
+    held out of sample, and 0 of 8 direction findings.
+- id: book.fm-comp-finance-numerical.3
+  book: fm-comp-finance-numerical
+  title: Bad news raises volatility more than good news
+  chapter: Ch. 16 and 22.5, Nonlinear GARCH and the S&P 500 fit
+  text: Equity and index volatility rises more after a fall than after an equal rise (the leverage effect); on 3,000 S&P 500
+    daily returns the GJR asymmetry term was strongly significant (t 7.60). Commodities show the effect in either direction
+    and currencies not at all.
+  tags:
+  - vix
+  - mcx
+- id: book.fm-comp-finance-numerical.4
+  book: fm-comp-finance-numerical
+  title: Returns have fat tails even after GARCH
+  chapter: Ch. 14, 17 and 22.5, Conditional distributions
+  text: Returns have fatter tails than the normal even after a GARCH model removes volatility clustering; Student-t shocks
+    with 8.116 degrees of freedom fitted the S&P 500 best, and below about 5 degrees of freedom the tails are very thick.
+  tags:
+  - sizing
+  - stop
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 measured daily-return kurtosis of 14.1 for NIFTY and 8.5 for BANKNIFTY over 5,087 days.
+- id: book.fm-comp-finance-numerical.5
+  book: fm-comp-finance-numerical
+  title: Stale prices manufacture results
+  chapter: Ch. 14.2, Nonsynchronous trading
+  text: A price that does not trade every period keeps its average return but gains extra variance, negative autocorrelation
+    and false lead-lag with actively traded series; with a 0.75 chance of no trade per period, untraded runs average 3 periods.
+  tags:
+  - costs
+  - option-selling
+  verdict: positive
+  tested_src: research/HUNT_R103_OPTIONS_SELLING.md
+  tested_text: Our R103's six design passes came from far wings marked at prints often 30+ minutes old; repriced with Black-Scholes,
+    every one lost (-Rs 2.87 to -Rs 3.31 lakh in design).
+- id: book.fm-comp-finance-numerical.6
+  book: fm-comp-finance-numerical
+  title: Effective spread from prices alone
+  chapter: Ch. 14.3, Bid-ask spread (Roll model)
+  text: When trades bounce between bid and ask, price changes get a lag-1 autocorrelation of minus one half and look more
+    volatile than the true price; the effective spread is about two times the square root of minus the lag-1 covariance of
+    price changes, and it can differ from the quoted spread.
+  tags:
+  - costs
+- id: book.fm-comp-finance-numerical.7
+  book: fm-comp-finance-numerical
+  title: Do not trust implied volatility when vega is tiny
+  chapter: Ch. 9.3.4, Implied volatility
+  text: Implied volatility is found by Newton steps that divide by vega; check the price against its intrinsic floor first,
+    bound the search and cap it at 50 iterations, because the method breaks down when vega is near zero (far strikes, the
+    last minutes before expiry).
+  tags:
+  - iv
+  - expiry
+- id: book.fm-comp-finance-numerical.8
+  book: fm-comp-finance-numerical
+  title: Monte Carlo needs many paths; quasi-random numbers help
+  chapter: Ch. 11 and 12.3, Monte Carlo simulation
+  text: Monte Carlo error shrinks only with the square root of the number of paths, so each extra decimal costs 100 times
+    the work; at 3,000 paths Sobol quasi-random numbers were off by 0.007 on a basket call where pseudo-random draws were
+    off by 0.133.
+  tags:
+  - sizing
+- id: book.fm-comp-finance-numerical.9
+  book: fm-comp-finance-numerical
+  title: A GARCH fit needs about 1,000 observations
+  chapter: Ch. 21, Testing GARCH software
+  text: In 200 simulated series of 300 observations the software reported a standard error of 0.068 for a parameter whose
+    estimates actually spread by 0.42; at 1,000 observations the reported and actual errors agreed, so short samples give
+    overconfident volatility models.
+  tags:
+  - ml
+  - sizing
+- id: book.fm-elliott-fin-markets.1
+  book: fm-elliott-fin-markets
+  title: Option prices ignore the expected return
+  chapter: Ch. 2.7 and 7.5, From CRR to Black-Scholes; An equivalent martingale measure
+  text: In the binomial and Black-Scholes models an option's price depends on spot, strike, time, rate and volatility but
+    not on the stock's expected return, because it is priced with risk-neutral probabilities; a view on direction is not paid
+    for in the premium.
+  tags:
+  - iv
+  - direction
+  - option-buying
+- id: book.fm-elliott-fin-markets.2
+  book: fm-elliott-fin-markets
+  title: Exits cannot create an edge on a fair-game price
+  chapter: Ch. 5.2-5.3 and 6.2, Optional stopping
+  text: If a price has no predictable drift, stopping it by any rule that uses only past information (stop-loss, target, trailing
+    stop, time stop) leaves the expected result unchanged; exits only trade win rate against the size of wins, and costs then
+    lower the mean.
+  tags:
+  - stop
+  - target
+  - profit-lock
+  verdict: positive
+  tested_src: research/HUNT_R18_EXITS.md
+  tested_text: 'Our R18 added five early-exit overlays to every arm''s own exits: 0 of 60 passed, consistent with the theorem
+    that exits alone add no edge.'
+- id: book.fm-elliott-fin-markets.3
+  book: fm-elliott-fin-markets
+  title: Touching a level is about twice as likely as closing beyond it
+  chapter: Ch. 7.8, Barrier options (reflection principle); Ch. 7.2, Hitting times
+  text: For a driftless price, the chance of touching a level before a deadline is about twice the chance of finishing beyond
+    it; with drift away from the level the chance of ever reaching it falls off exponentially with distance. Stops, targets
+    and short strikes get touched more often than closing prices suggest.
+  tags:
+  - stop
+  - target
+  - option-selling
+- id: book.fm-elliott-fin-markets.4
+  book: fm-elliott-fin-markets
+  title: Realised variance is the sum of squared returns
+  chapter: Ch. 6.4, The Ito calculus (quadratic variation)
+  text: Adding up squared log returns over finer and finer steps converges to the variance the price actually delivered over
+    the period; this is the quantity implied volatility tries to forecast, and the same holds for covariance between two prices.
+  tags:
+  - iv
+  - vix
+- id: book.fm-elliott-fin-markets.5
+  book: fm-elliott-fin-markets
+  title: 'Greeks: gamma sets hedging cost, call theta is always negative'
+  chapter: Ch. 7.10, The Greeks
+  text: Call delta is N(d1) and put delta is that minus one; gamma and vega are the same for a call and a put, largest near
+    the money, and vega shrinks to zero at expiry; a European call's theta is always negative. Gamma decides how often and
+    how much a delta hedge must be adjusted, so low gamma keeps hedging costs down.
+  tags:
+  - theta
+  - iv
+  - costs
+- id: book.fm-elliott-fin-markets.6
+  book: fm-elliott-fin-markets
+  title: An option is a levered underlying
+  chapter: Ch. 1.4 Risk and return; Ch. 7.10 The Greeks
+  text: A call's return volatility and its excess return are both its elasticity (spot times delta divided by the option price,
+    at least 1) times the stock's, so an option multiplies whatever edge the underlying signal has - including none - while
+    its risk-neutral expected return is only the riskless rate.
+  tags:
+  - option-buying
+  - sizing
+- id: book.fm-elliott-fin-markets.7
+  book: fm-elliott-fin-markets
+  title: 'Kelly / Merton size: edge divided by variance'
+  chapter: Ch. 10.4, Maximisation of terminal utility (log utility)
+  text: With log utility (maximising long-run growth) the best holding is a constant fraction of wealth equal to the expected
+    excess return divided by the variance, rebalanced continuously; with no expected excess return the best size is zero.
+  tags:
+  - sizing
+  verdict: weak
+  tested_src: research/HUNT_H15.md
+  tested_text: 'Our H15 sized Liquidity books at half-Kelly: P(drawdown 30% or more) was 63%, and BANKNIFTY''s Kelly fraction
+    was 1.29 in sample but 0.14 on 2020 to May 2023.'
+- id: book.fm-elliott-fin-markets.8
+  book: fm-elliott-fin-markets
+  title: VaR can stay flat while the tail explodes; use expected shortfall
+  chapter: Ch. 11.1-11.3, Value at Risk; Coherent risk measures; CVaR
+  text: 'VaR is one quantile: it is not subadditive (two independent half-size loans can show more VaR than one big loan)
+    and ignores how big losses beyond it are. In a 150-loan example, making defaults cluster moved VaR only from 5 to 6 defaults
+    while the average loss beyond it went from 6.287 to 14.5. Expected shortfall, the average of the worst cases, is coherent.'
+  tags:
+  - sizing
+  - option-selling
+- id: book.fm-elliott-fin-markets.9
+  book: fm-elliott-fin-markets
+  title: In real markets an option price is a band, not a point
+  chapter: 'Ch. 4.5, Incomplete models: the arbitrage interval; Ch. 2.4, Superhedging'
+  text: When a claim cannot be hedged exactly, no-arbitrage only places its price in an open interval; the seller's price
+    (cost of always covering the payoff) sits at or above the risk-neutral value and the buyer's at or below, so a model price
+    is one point inside the band.
+  tags:
+  - iv
+  - option-selling
+  - vix
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - INDIAVIX
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found India VIX above NIFTY's next-21-day realised volatility on 81% of days (median ratio 1.28, 4,507
+    days), the premium sellers collect.
+- id: book.fm-elliott-fin-markets.10
+  book: fm-elliott-fin-markets
+  title: 'Put-call parity: a gap usually means a stale price'
+  chapter: Ch. 1.1 and 1.6, Call-put parity; Bounds on option prices
+  text: Call minus put at one strike must equal spot minus the discounted strike, and the chain gives an implied rate or forward
+    this way; a gap beyond the spread is an arbitrage that real markets close quickly, so in historical data it usually points
+    to a stale quote.
+  tags:
+  - costs
+  - filter
+- id: book.fm-structured-finance.1
+  book: fm-structured-finance
+  title: 'A sold option is short gamma: small gains, large losses'
+  chapter: Ch. 1.6 and 5.5, reverse convertible bonds
+  text: 'A product that embeds a sold put, such as a reverse convertible, is short gamma and short volatility: it earns little
+    when nothing happens and loses a lot on a large move in either direction, even when delta-hedged.'
+  tags:
+  - option-selling
+  - theta
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: weak
+  tested_src: research/HUNT_R103_OPTIONS_SELLING.md
+  tested_text: Our R103 found the naked 09:20 short straddle made +Rs 64k on NIFTY over 1,272 days, but with a worst day of
+    -Rs 28,876 on one lot.
+- id: book.fm-structured-finance.2
+  book: fm-structured-finance
+  title: Implied volatility carries a risk premium
+  chapter: Ch. 3.2 and 3.4, implied versus historical information
+  text: Implied volatility is forward-looking but includes the market's risk premium and liquidity effects, while historical
+    volatility is model-free but backward-looking and hurt by regime breaks; which predicts better is left open.
+  tags:
+  - iv
+  - vix
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - INDIAVIX
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found India VIX above NIFTY's realised volatility of the next 21 days on 81% of days (median ratio
+    1.28, 4,507 days).
+- id: book.fm-structured-finance.3
+  book: fm-structured-finance
+  title: High-low volatility estimators assume no gaps
+  chapter: Ch. 3.4.3, realized volatility
+  text: Range estimators such as Parkinson's high-low measure use more of each bar than close-to-close volatility, but they
+    assume a continuous price path; sampling at very high frequency instead adds bid-ask and stale-constituent noise.
+  tags:
+  - gap
+  - vix
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: weak
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: 'Our R102 found the Parkinson high-low measure below close-to-close on both indices every year (NIFTY 2025:
+    11.8 vs 8.4), because overnight gaps are a big part of daily variance.'
+- id: book.fm-structured-finance.4
+  book: fm-structured-finance
+  title: Filtered historical simulation for risk
+  chapter: Ch. 9.4, historical and filtered historical simulation
+  text: Plain historical simulation assumes past days are independent, so a calm window understates risk going into a volatile
+    one; the fix is to standardise past shocks by a GARCH volatility and rebuild paths from today's volatility before reading
+    the loss percentile.
+  tags:
+  - sizing
+- id: book.fm-structured-finance.5
+  book: fm-structured-finance
+  title: Expected shortfall over VaR for option books
+  chapter: Ch. 9.3, value-at-risk and risk measures
+  text: For books with options, normal-distribution VaR fails because squared moves are not normal; simulate the profit and
+    loss instead, and prefer expected shortfall (the average loss beyond the VaR level), which also works better as a sizing
+    constraint.
+  tags:
+  - sizing
+  - option-selling
+- id: book.fm-structured-finance.6
+  book: fm-structured-finance
+  title: Correlations rise in sell-offs
+  chapter: Ch. 3.10-3.12, tail dependence and correlation asymmetry
+  text: Equity correlations are higher in falling markets than rising ones, and a Gaussian model has no tail dependence, so
+    it understates how often markets crash together; Student t or Clayton dependence captures joint crashes.
+  tags:
+  - sizing
+- id: book.fm-structured-finance.7
+  book: fm-structured-finance
+  title: AND conditions are long correlation, OR conditions short
+  chapter: Ch. 3.7 and 6.5, the AND/OR rule
+  text: A payoff that needs event A AND event B gains when the two are more correlated; one that pays on A OR B loses value
+    as correlation rises. A call on the worst of several assets is long correlation, on the best short.
+  tags:
+  - filter
+  - breadth
+- id: book.fm-structured-finance.8
+  book: fm-structured-finance
+  title: 'Monte Carlo: report the error, reuse the random draws'
+  chapter: Ch. 6.6, Monte Carlo method
+  text: Monte Carlo error falls with the square root of the number of paths, so four times the paths only halves it; when
+    comparing two cases, use the same random draws for both (common random numbers), and use antithetic or control variates
+    to cut noise.
+  tags:
+  - sizing
+- id: book.fm-structured-finance.9
+  book: fm-structured-finance
+  title: Model hedge ratios can break overnight
+  chapter: Ch. 8.6.3, delta-hedged equity blues
+  text: In May 2005 funds hedging CDO equity tranches with the higher-carry mezzanine hedge lost on both legs after a small
+    3 bp index move; hedge ratios from a model are unstable and a hedge chosen for its carry hides basis risk.
+  tags:
+  - sizing
+- id: book.fm-capinski-math-finance.1
+  book: fm-capinski-math-finance
+  title: Direction does not enter an option's price
+  chapter: Ch. 1.6 and 8.3, Remarks 1.2, 8.1, 8.2
+  text: An option's fair price comes from copying its payoff with the underlying and cash, so neither the real chance of an
+    up move nor the expected return of the underlying appears in it (Black-Scholes has no drift term); a directional view
+    changes what a buyer expects to earn, not what the option is worth.
+  tags:
+  - iv
+  - direction
+  - option-buying
+- id: book.fm-capinski-math-finance.2
+  book: fm-capinski-math-finance
+  title: Put-call parity and model-free bounds
+  chapter: Ch. 7.2-7.5, Put-Call Parity and Bounds on Option Prices
+  text: For European options call minus put equals spot minus the discounted strike (use the forward for an index); premiums
+    must fall with strike for calls and rise for puts, a call spread is worth less than the discounted strike gap, a butterfly
+    can never cost less than zero, and time value is largest at the money. A quote breaking these is either an arbitrage or
+    a bad print.
+  tags:
+  - filter
+  - straddle
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-capinski-math-finance.3
+  book: fm-capinski-math-finance
+  title: 'Delta hedge: earns theta, loses on big moves and vol rises'
+  chapter: Ch. 9.1.1, Delta Hedging
+  text: 'In the book''s example a delta-hedged short book of 1,000 calls makes +19.45 in a day if the price does not move,
+    but loses -2,233.19 if the stock falls from 60 to 50, and about -212 at every price if volatility rises from 30% to 32%:
+    delta hedging only covers small moves.'
+  tags:
+  - option-selling
+  - theta
+  - iv
+- id: book.fm-capinski-math-finance.4
+  book: fm-capinski-math-finance
+  title: Hedging gamma needs a second option
+  chapter: Ch. 9.1.2-9.1.3, Greek Parameters and Applications
+  text: Adding a second option so that both delta and gamma are zero keeps the one-day result within about +-2 between 58
+    and 62 where delta alone drifted much more; each further Greek hedged needs another option and adds transaction costs.
+  tags:
+  - option-selling
+  - costs
+- id: book.fm-capinski-math-finance.5
+  book: fm-capinski-math-finance
+  title: All-in calls can lose everything; options plus cash cut VaR
+  chapter: Ch. 9.3.2, Case 9.2
+  text: A 20-day at-the-money call bought with all the capital had a 0.4119 chance of losing everything; putting 94.77% in
+    cash and the rest in calls matched the stock's risk and cut VaR to 798.73 against 1,931.78 for holding the stock.
+  tags:
+  - option-buying
+  - sizing
+  - stop
+- id: book.fm-capinski-math-finance.6
+  book: fm-capinski-math-finance
+  title: A spread plus cash wins only if the range view is right
+  chapter: Ch. 9.3.2, Case 9.3
+  text: An analyst sure the price stays in a range did best with a 58/60 bull spread plus 94.58% cash (sd 2.8396% vs 3.9257%
+    for the stock at the same expected return); the advantage comes entirely from the view being correct.
+  tags:
+  - option-buying
+  - direction
+  - sizing
+- id: book.fm-capinski-math-finance.7
+  book: fm-capinski-math-finance
+  title: Futures fair value, basis and hedge ratio
+  chapter: Ch. 6.1-6.2, Forward Price and Hedging with Futures
+  text: Fair futures equal spot grown at the interest rate minus the dividend yield, and the basis shrinks to zero at expiry;
+    the lowest-variance hedge uses correlation times the ratio of the two volatilities, and futures can set a portfolio's
+    beta to any level, though beta zero earns only the risk-free rate on average and is not riskless.
+  tags:
+  - filter
+  - sizing
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - GOLD
+  - CRUDE
+- id: book.fm-capinski-math-finance.8
+  book: fm-capinski-math-finance
+  title: Value at Risk is one point of the outcome curve
+  chapter: Ch. 9.2, Hedging Business Risk
+  text: Value at Risk is the loss, counting the risk-free return given up, not exceeded with 95% probability; in the book's
+    currency case a forward locked +471,852 while full option protection ended at -27,328 because the premium was costly,
+    so the whole outcome curve should be compared, not one VaR number.
+  tags:
+  - sizing
+  - costs
+- id: book.fm-capinski-math-finance.9
+  book: fm-capinski-math-finance
+  title: Costs erase arbitrage and make hedging dearer
+  chapter: Ch. 4 Ex 4.7, Ch. 8 Ex 8.3
+  text: 'A 5% transaction cost removed an arbitrage that existed without costs, and a 2% cost on selling stock raised the
+    cost of replicating a call from 7.1429 to 8.1633: small theoretical edges rarely survive real charges.'
+  tags:
+  - costs
+- id: book.fm-capinski-math-finance.10
+  book: fm-capinski-math-finance
+  title: Averages of past returns are fragile forecasts
+  chapter: Ch. 3.1.2, Remark 3.5
+  text: From the same ten daily prices the average log return is about 0.77% over 9 days but 6.18% over the last 4; simple
+    returns do not add up over time while log returns do, so estimating expected return from history depends heavily on the
+    window.
+  tags:
+  - direction
+  - momentum
+- id: book.fm-binomial-models.1
+  book: fm-binomial-models
+  title: An option's fair price needs no view on direction
+  chapter: Ch. 2, The one-step binomial model
+  text: An option can be copied with the underlying plus cash, so its no-arbitrage price is a discounted average of its payoffs
+    under 'risk-neutral' odds set by the up and down moves and the interest rate, not by anyone's real-world forecast; the
+    share count in the copy is the hedge ratio (delta).
+  tags:
+  - direction
+  - iv
+- id: book.fm-binomial-models.2
+  book: fm-binomial-models
+  title: Put-call parity and the no-arbitrage bounds
+  chapter: Ch. 2.5-2.6, Call-put parity and non-arbitrage inequalities
+  text: For European options call minus put equals the underlying minus the present value of the strike; a call is worth at
+    least spot minus PV(strike), a butterfly must cost more than zero, and a lower-strike call can exceed a higher-strike
+    one by no more than PV of the strike gap. Any break is a riskless profit before costs.
+  tags:
+  - iv
+  - costs
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-binomial-models.3
+  book: fm-binomial-models
+  title: Butterfly prices give the market's odds for the expiry close
+  chapter: Ch. 12.5, Choosing time T data (van der Hoek's method)
+  text: With evenly spaced strikes, a butterfly's price scaled up by the strike gap and interest is the risk-neutral probability
+    that the expiry close lands at the middle strike; in the book's check these matched Black-Scholes bucket probabilities
+    closely (0.0981 vs 0.0976 at the 100 strike). These are pricing odds, not a forecast.
+  tags:
+  - expiry
+  - iv
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-binomial-models.4
+  book: fm-binomial-models
+  title: Options leverage both ways
+  chapter: Ch. 1.1, Buying a call option
+  text: In the book's example a correct view earned +6.82% through the stock but +66.67% through an out-of-the-money call,
+    while a wrong view cost the whole 100% of the call premium.
+  tags:
+  - option-buying
+  - sizing
+- id: book.fm-binomial-models.5
+  book: fm-binomial-models
+  title: Selling a rich option and hedging locks profit only if the model is right
+  chapter: Ch. 5.1, Hedging (Remark 5.2)
+  text: If an option trades above the model price you can sell it and delta-hedge to expiry, keeping the gap (1.92 in the
+    worked example) on every path, but only when the assumed volatility and tree are right; the authors call the failure of
+    that assumption model risk.
+  tags:
+  - option-selling
+  - iv
+- id: book.fm-binomial-models.6
+  book: fm-binomial-models
+  title: Implied volatility differs by strike and by expiry
+  chapter: App. C.2, Implied volatility estimation; Ch. 11
+  text: 'Implied volatility is not one number: it changes with the strike (smile or skew) and with time to expiry (higher
+    close to expiry); practitioners read it from out-of-the-money options and fit a smooth curve before pricing an off-grid
+    strike.'
+  tags:
+  - iv
+  - expiry
+  - vix
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found puts five strikes out dearer than calls on 91% of NIFTY days, and the nearest-expiry ATM IV
+    median at 22.6 on expiry days vs 15.0 on other days.
+- id: book.fm-binomial-models.7
+  book: fm-binomial-models
+  title: Numerical gamma from a coarse tree can be badly wrong
+  chapter: Ch. 9.2, The gamma of an option
+  text: Bumping spot by one point on a 10-step tree gave a gamma of 0.186 against the true 0.0202, about ten times too big;
+    delta by bumping was close. Use closed-form Greeks or a bump matched to the tree's step.
+  tags:
+  - gex
+  - iv
+- id: book.fm-binomial-models.8
+  book: fm-binomial-models
+  title: Historical volatility and its error
+  chapter: App. C.1, Historical volatility estimation
+  text: Historical volatility is the standard deviation of daily log returns annualised by the square root of the trading
+    days (252 in the example); 20 days of data gave 19.5% a year with a standard error of about 3.1%, and the same day count
+    must be used when the number goes into Black-Scholes.
+  tags:
+  - iv
+  - vix
+- id: book.fm-binomial-models.9
+  book: fm-binomial-models
+  title: With more than two outcomes there is only a price band
+  chapter: App. B, An application of linear programming
+  text: 'When the next move has three or more outcomes an option cannot be copied exactly, so no single fair price exists:
+    the cheapest covering portfolio sets the ask (4.02 in the example) and the dearest covered one the bid; transaction costs
+    widen the band further.'
+  tags:
+  - costs
+  - option-selling
+- id: book.fm-binomial-models.10
+  book: fm-binomial-models
+  title: Value an unhedgeable risk at mean minus a variance penalty
+  chapter: Ch. 14.2, Options on non-tradeable assets
+  text: A risk that cannot be hedged has no market price; its certainty-equivalent value is roughly its expected value minus
+    half the risk aversion times its variance (plus for an ask), so the bid-ask gap widens as risk aversion rises.
+  tags:
+  - sizing
+- id: book.fm-fin-econometrics-derivs.1
+  book: fm-fin-econometrics-derivs
+  title: Implied trees fit index option smiles inside the spread
+  chapter: Ch. 2, Implied binomial trees (Arnold, Crack, Schwartz)
+  text: An implied binomial tree fitted to one expiry's S&P 500 calls priced 198 of 200 options inside the bid-ask spread
+    over 20 months (1993-1995), using only quotes above $0.50 taken within about 15 minutes of each other and screened for
+    arbitrage. This is an in-sample fit, not a forecast.
+  tags:
+  - iv
+- id: book.fm-fin-econometrics-derivs.2
+  book: fm-fin-econometrics-derivs
+  title: Option-implied tails are fatter on the downside than what happens
+  chapter: Ch. 2, Literature review and pricing kernel
+  text: Comparing the market's risk-neutral distribution with the real-world one gives the pricing kernel; earlier work (Jackwerth)
+    found post-1987 index puts overpriced versus realised returns and profitable put-selling strategies, while these authors,
+    using wholly implied methods, find a well-behaved kernel with risk aversion rising with wealth.
+  tags:
+  - iv
+  - vix
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - INDIAVIX
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found India VIX above NIFTY's next-21-day realised volatility on 81% of 4,507 days (median ratio 1.28),
+    and the put side dearer than the call side on 91% of days.
+- id: book.fm-fin-econometrics-derivs.3
+  book: fm-fin-econometrics-derivs
+  title: GARCH persistence is partly a mis-specified mean
+  chapter: Ch. 5, Fourier-GARCH (Pascalau, Thomann, Gregoriou)
+  text: Letting the long-run mean and variance drift smoothly (one or two Fourier terms) cut GARCH persistence by half or
+    more for 10 of 12 large US stocks, for example IBM from 0.99180 to 0.51090; letting only the variance drift changed little.
+    It is an in-sample fit with no forecast test.
+  tags:
+  - vix
+  - sizing
+- id: book.fm-fin-econometrics-derivs.4
+  book: fm-fin-econometrics-derivs
+  title: Jumps matter for short-expiry smiles
+  chapter: Ch. 4, Exponential time integration pricer
+  text: Black-Scholes cannot fit fat tails; stochastic-volatility models calibrate long expiries well but jumps are essential
+    for short-expiry smile patterns. The chapter's fast PDE method prices European, barrier and American options under Black-Scholes,
+    Merton, Heston, Bates and CGMY models.
+  tags:
+  - iv
+  - expiry
+- id: book.fm-fin-econometrics-derivs.5
+  book: fm-fin-econometrics-derivs
+  title: Benchmark forecasts against 'no change'; volatility is the forecastable part
+  chapter: Ch. 9, Short-term interest-rate models (Hsiao, Semmler)
+  text: A classic mean-reverting short-rate model forecast no better than the naive no-change forecast (relative error 99-105
+    percent); a discrete ARMA with level-dependent ARCH volatility helped for 2 of 3 countries and improved volatility forecasts
+    more consistently than level forecasts.
+  tags:
+  - ml
+  - direction
+- id: book.fm-fin-econometrics-derivs.6
+  book: fm-fin-econometrics-derivs
+  title: Sharpe ratios mislead with autocorrelation and fat tails
+  chapter: Ch. 1, The operation of hedge funds (Semmler, Chappe)
+  text: Annualising a monthly Sharpe ratio by the square root of 12 can be off by as much as 65 percent when returns are serially
+    correlated; with fat tails and negative skew, Sortino and maximum drawdown are better guides, and survivorship (about
+    2 to 3.74 percent a year) and backfill biases inflate reported records.
+  tags:
+  - sizing
+- id: book.fm-fin-econometrics-derivs.7
+  book: fm-fin-econometrics-derivs
+  title: Mean reversion between markets only beyond a threshold
+  chapter: Ch. 6, Nonlinear integration of the Philippine market (Arouri, Jawadi)
+  text: The Philippine index was pulled back toward its long-run relation with the world index only when the gap was large
+    (a nonlinear error-correction model); the effect was small and statistically weak, and the smooth-transition version was
+    rejected.
+  tags:
+  - reversal
+  - breadth
+  verdict: negative
+  tested_src: research/HUNT_R72_CROSS_INDEX.md
+  tested_text: 'Our R72 tested a laggard catch-up across the five indices (the nearest idea): 613 final-period trades lost
+    Rs 1,00,746 and it failed.'
+- id: book.fm-fin-econometrics-derivs.8
+  book: fm-fin-econometrics-derivs
+  title: A bought put sets a price floor; add a sold call for a collar
+  chapter: Ch. 3, Pricing toxic assets (Currie)
+  text: 'A producer''s minimum price is the put strike plus local basis minus premium and costs: a $60 put bought for $2.75
+    with +$1.00 basis and $0.25 costs floors the sale at $58. Selling an upper call too makes a collar, used by gold miners.'
+  tags:
+  - option-buying
+  - mcx
+  - stop
+  inst:
+  - GOLD
+  - SILVER
+  - CRUDE
+- id: book.fm-nonlinear-optimization.1
+  book: fm-nonlinear-optimization
+  title: Optimal weights drift after about ten days
+  chapter: Ch. 10, Time-variation of optimal portfolios
+  text: Least-risk portfolio weights fitted on 50 to 80 days of history stayed roughly constant for about ten more days and
+    then shifted substantially; the author reads this as a case for rebalancing, but only when the change is big enough to
+    pay the trading costs.
+  tags:
+  - sizing
+  - costs
+  verdict: positive
+  tested_src: research/HUNT_H15.md
+  tested_text: Our H15 found the Kelly fraction for BANKNIFTY was 0.48 on one window and 0.14 on another, against 1.29 on
+    the window it was fitted on, so sizing estimated from history drifted the same way.
+- id: book.fm-nonlinear-optimization.2
+  book: fm-nonlinear-optimization
+  title: An optimised portfolio can still lose
+  chapter: Ch. 10, Performance of optimized portfolios
+  text: A least-risk portfolio fixed on day 50 and held over days 51-100 had a running mean return around its 0.1% daily target,
+    mostly above it, but lost money for a stretch; optimising on past returns does not protect against assets that are doing
+    badly now.
+  tags:
+  - sizing
+- id: book.fm-nonlinear-optimization.3
+  book: fm-nonlinear-optimization
+  title: 'Optima are flat: the exact best setting is poorly pinned down'
+  chapter: Ch. 16, A sensitivity problem
+  text: Allowing performance to sit within about 5% of the optimum, three of five portfolio weights could each move by 10-20%;
+    many quite different settings perform almost the same, so a single 'optimal' setting carries little information and a
+    plateau around it matters more.
+  tags:
+  - sizing
+  - filter
+- id: book.fm-nonlinear-optimization.4
+  book: fm-nonlinear-optimization
+  title: A search finds the optimum nearest its start
+  chapter: Ch. 2 and Ch. 23, Global optimization
+  text: Local search methods usually stop at the optimum nearest their starting point; on a two-optimum example a quasi-Newton
+    method from 10 random starts found the global answer 7 times, so restarts or a global method such as DIRECT are needed,
+    and differing answers across restarts are a warning.
+  tags:
+  - ml
+- id: book.fm-nonlinear-optimization.5
+  book: fm-nonlinear-optimization
+  title: More parameters always fit the past better
+  chapter: Ch. 11, Gauss-Newton applied to time series
+  text: Fitting a trend line plus an autoregressive term to 10 closing prices, and then fitting all coefficients together,
+    cut the in-sample squared error to about a third; the book reports no check of the fitted model on unseen prices.
+  tags:
+  - ml
+  - direction
+  verdict: negative
+  tested_src: research/FINDINGS.md
+  tested_text: 'Our R30 found EMA x everything combinations made +Rs 300-520 a trade on training years and Rs -111 out of
+    sample: over-fitting.'
+- id: book.fm-nonlinear-optimization.6
+  book: fm-nonlinear-optimization
+  title: Costs change the best action
+  chapter: Ch. 10, 16 and 22, Rebalancing with transaction costs
+  text: Small rebalances are not worth their cost; with a 5% cost each way, the best rebalance of an existing portfolio differed
+    from the best fresh portfolio on the same data, and the smallest change that restores the target is usually enough.
+  tags:
+  - costs
+  - sizing
+- id: book.fm-nonlinear-optimization.7
+  book: fm-nonlinear-optimization
+  title: Least-width trend channel and its break
+  chapter: Ch. 21, Trend channels for time series data
+  text: Fit two parallel lines that enclose a 20-day window of closes as tightly as possible and project them forward; a close
+    below the support line suggests selling, a close above the resistance line suggests buying, and the severity of a break
+    needs judgement.
+  tags:
+  - pattern
+  - trend
+- id: book.fm-nonlinear-optimization.8
+  book: fm-nonlinear-optimization
+  title: Downside and worst-case risk give different answers
+  chapter: Ch. 22, Downside risk and worst-case analysis
+  text: Counting only below-target periods, or only the single worst period, gives quite different optimal weights from plain
+    variance even when the risk number barely moves; choosing the setting that is least bad under both a short recent window
+    and the full history guards against estimates drifting.
+  tags:
+  - sizing
+  - stop
+- id: book.fm-financial-mathematics.1
+  book: fm-financial-mathematics
+  title: The drift never enters an option's price
+  chapter: Ch. 13, Arbitrage Argument; App. F.3
+  text: Hedging an option with the underlying removes all randomness, so the option's fair price cannot depend on how fast
+    the underlying is expected to rise or fall; in the casino example the side-bet costs the same 2.97 whether heads comes
+    up with probability 0.8 or 0.3.
+  tags:
+  - direction
+  - option-buying
+  - iv
+  verdict: negative
+  tested_src: research/HUNT_R16_PREDICTABILITY.md
+  tested_text: Our R16 found intraday direction not predictable (AUC 0.509-0.536), so a directional view gives option buyers
+    no edge over the price.
+- id: book.fm-financial-mathematics.2
+  book: fm-financial-mathematics
+  title: Same reward per unit of risk for an option and its underlying
+  chapter: Ch. 13.1, No-Arbitrage Condition
+  text: Anything driven by the same randomness as the underlying must offer the same excess return per unit of volatility,
+    so an option's expected excess return is just the underlying's, scaled up by leverage; with no drift in the underlying,
+    buying the option has no edge before costs and decay.
+  tags:
+  - option-buying
+  - costs
+  - theta
+  verdict: negative
+  tested_src: research/HUNT_R47_RELAXED_OPTION_BUYING.md
+  tested_text: Our R47 searched 387,392 index-option buying variants and none beat random entries after correcting for the
+    tries (best q = 0.50).
+- id: book.fm-financial-mathematics.3
+  book: fm-financial-mathematics
+  title: Black-Scholes is written on the forward
+  chapter: Ch. 16 and 18, Call and Put Option Prices
+  text: The call is the discount factor times forward x N(h+) minus strike x N(h-), with h built from the log of forward over
+    strike; plugging the same-expiry future in as the forward gives the Black-76 form for index and commodity options without
+    guessing a carry rate. A 6-month 115 call on 100 at 20% volatility and 5% rate is worth 1.76.
+  tags:
+  - iv
+  - mcx
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-financial-mathematics.4
+  book: fm-financial-mathematics
+  title: N(h-) is the chain's chance of finishing in the money
+  chapter: Ch. 17.1, Binary Options
+  text: A digital call paying 1 above the strike is worth the discount factor times N(h-), and digital call plus digital put
+    equal one discounted unit, so N(h-) is the option market's own (risk-neutral) probability of the price ending above the
+    strike.
+  tags:
+  - iv
+  - expiry
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-financial-mathematics.5
+  book: fm-financial-mathematics
+  title: Put-call parity and its arbitrage
+  chapter: Ch. 17.3 and App. F.6
+  text: Call minus put at one strike equals spot minus the discounted strike (spot discounted at the dividend yield first);
+    if the gap is rich, selling the call, buying the put and buying the underlying locks the difference in, so a large parity
+    break in last-price data is far more likely a stale print than free money.
+  tags:
+  - filter
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-financial-mathematics.6
+  book: fm-financial-mathematics
+  title: Delta hedging is never continuous; gamma hedging needs a second option
+  chapter: Ch. 17.2, Greeks and Hedging
+  text: Continuous rehedging is unrealistic because every trade costs money, so hedged books drift off neutral between rehedges;
+    making gamma zero with a second option keeps delta small near the current price and cuts how often one must rehedge, at
+    the cost of a third instrument.
+  tags:
+  - option-selling
+  - costs
+  verdict: negative
+  tested_src: research/HUNT_R103_OPTIONS_SELLING.md
+  tested_text: 'Our R103 tested index option selling with wings and stops instead of hedges: 0 of 24 tests are confirmed.'
+- id: book.fm-financial-mathematics.7
+  book: fm-financial-mathematics
+  title: ATM straddle is about 0.8 x sigma x root T
+  chapter: App. F.5, KCL 1998 exam
+  text: An at-the-money-forward call is worth about 0.4 x sigma x root T of the discounted spot, so the ATM straddle is about
+    0.8 x sigma x root T; a deep in-the-money call is worth about the discounted forward minus the discounted strike, behaving
+    like a future.
+  tags:
+  - straddle
+  - iv
+  - vix
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-financial-mathematics.8
+  book: fm-financial-mathematics
+  title: '1885: naked option buying is a losing game'
+  chapter: App. E, The Economist, 2 May 1885
+  text: A reprinted 1885 article says the dabbler who buys a put or call on his view and just holds it plays a losing game,
+    with costs and premium stacking the odds against him; options used to protect another position limit loss and still leave
+    a fair chance of profit.
+  tags:
+  - option-buying
+  - costs
+- id: book.fm-qf-physicists.1
+  book: fm-qf-physicists
+  title: Returns have fat tails
+  chapter: Ch. 3.1-3.3 and 8.2, Distributions and power laws
+  text: 'Return distributions have excess kurtosis: big moves are far more common than a normal curve allows. Studies it cites
+    find tails falling like a power law with index about 3 for horizons under 4 days (S&P 500) or 16 days (US stocks), drifting
+    slowly toward normal at longer horizons.'
+  tags:
+  - vix
+  - option-selling
+  - stop
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: 'Our R102 measured NIFTY and BANKNIFTY daily returns 2006-2026 (n 5,087): kurtosis 14.1 and 8.5, against 3
+    for a normal curve, so the tails are fat.'
+- id: book.fm-qf-physicists.2
+  book: fm-qf-physicists
+  title: 'Volatility clusters: big moves follow big moves'
+  chapter: Ch. 5.3, Conditional heteroskedasticity
+  text: Large returns of either sign tend to follow large returns, so squared returns are autocorrelated; GARCH models capture
+    this. Outliers can hide the effect by lowering the measured autocorrelation.
+  tags:
+  - vix
+  - filter
+  - sizing
+  verdict: positive
+  tested_src: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+  tested_text: Our R88 found the next candle 1.5x bigger after a big one on the indices, held in 10 of 10 index cells out
+    of sample; 225 of 305 size findings held.
+- id: book.fm-qf-physicists.3
+  book: fm-qf-physicists
+  title: Return signs have almost no memory
+  chapter: Ch. 2.3 and 5.1, Efficient markets and autocorrelation
+  text: Under the weak efficient-market view past prices do not forecast returns; Lo and MacKinlay rejected the random walk
+    for weekly US returns 1962-1986, but the effect weakened in 1986-1996, plausibly because arbitrage traders used it up.
+  tags:
+  - direction
+  - momentum
+  - reversal
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+  tested_text: Our R88 found lag-1 autocorrelation of candle returns of -0.04 to +0.06 and 0 of 8 direction findings held
+    out of sample.
+- id: book.fm-qf-physicists.4
+  book: fm-qf-physicists
+  title: A power-law tail can come from mixed volatility
+  chapter: Ch. 8.3, New developments
+  text: LeBaron produced an apparent power-law tail index of 2.98 to 3.33 from plain normal returns whose volatility mixes
+    three time scales (years, weeks, a day), so fat tails may be a by-product of changing volatility rather than a deep law.
+  tags:
+  - vix
+  - sizing
+- id: book.fm-qf-physicists.5
+  book: fm-qf-physicists
+  title: GARCH and EWMA volatility forecasts
+  chapter: Ch. 5.3, GARCH(1,1), IGARCH, EGARCH
+  text: GARCH(1,1) forecasts variance from yesterday's squared shock and yesterday's variance; forecasts decay toward a long-run
+    level, and the model is stable only if the two weights sum below 1. With the weights summing to 1 and no constant it is
+    the EWMA estimator; EGARCH lets falls raise volatility more than rises.
+  tags:
+  - vix
+  - iv
+  - sizing
+- id: book.fm-qf-physicists.6
+  book: fm-qf-physicists
+  title: Prefer expected tail loss to VaR
+  chapter: Ch. 11, Market risk measurement
+  text: VaR says nothing about losses beyond its threshold and is not sub-additive when P/L is not normal; expected tail loss
+    (the average loss beyond VaR) fixes both. With 100 daily P/L values at 95%, VaR is the sixth-worst value and ETL the average
+    of the five worst.
+  tags:
+  - sizing
+  - stop
+- id: book.fm-qf-physicists.7
+  book: fm-qf-physicists
+  title: Beware spurious regressions and data snooping
+  chapter: Ch. 5.4, Multivariate time series
+  text: Regressing one trending series on another invents relationships (butter production in Bangladesh 'predicting' the
+    S&P 500), and statistics built on the data they are tested on look significant by chance.
+  tags:
+  - ml
+  - filter
+- id: book.fm-qf-physicists.8
+  book: fm-qf-physicists
+  title: Option leverage cuts both ways
+  chapter: Ch. 9.2, General properties of stock options
+  text: In the IBM example a call bought at 2.55 returned 96% when the stock rose to 90, against 7.2% for the stock, but loses
+    100% of the premium if the stock stays put; a protective put capped the stock loss at 5.45 instead of 8.95.
+  tags:
+  - option-buying
+  - stop
+- id: book.fm-qf-physicists.9
+  book: fm-qf-physicists
+  title: Technical rules can be self-fulfilling in a model
+  chapter: Ch. 12.4.3, Why technical trading may be successful
+  text: In the author's agent-based model, traders who buy on a turn up after a dip and sell on a turn down after a top amplify
+    price swings and pull regular trend-chasers along once they are big enough. It is a simulation, not evidence from a real
+    market.
+  tags:
+  - direction
+  - reversal
+  - big-players
+- id: book.fm-harrison-waldron.1
+  book: fm-harrison-waldron
+  title: 'No arbitrage: copies must cost the same'
+  chapter: Ch. 4.4.2, The No Arbitrage Principle
+  text: In equilibrium nobody can buy a bundle, directly or through a combination of other assets, at one price and sell the
+    same bundle dearer; forward rates, the riskless rate and option prices built from synthetic portfolios all follow from
+    this, and a mix of assets with zero variance must earn the riskless rate.
+  tags:
+  - filter
+  - option-selling
+- id: book.fm-harrison-waldron.2
+  book: fm-harrison-waldron
+  title: A butterfly prices one outcome
+  chapter: Ch. 5.4.1 and 5.4.4, completing markets with options; butterfly spread
+  text: Calls at every possible level of an underlying complete the market, and a butterfly of adjacent strikes pays only
+    if the underlying ends at the middle strike, so its price is the market's price for that single outcome; summed across
+    strikes these prices give the chain's own distribution of the expiry close.
+  tags:
+  - iv
+  - expiry
+  - straddle
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-harrison-waldron.3
+  book: fm-harrison-waldron
+  title: 'Black-Scholes: the drift drops out'
+  chapter: Ch. 7.2.2, The Black-Scholes option pricing model
+  text: A stock-and-option mix can be made riskless for an instant, so no arbitrage fixes the option's price without using
+    the underlying's expected return; delta is N(d1), gamma shrinks as time to expiry grows, and a directional view changes
+    what a buyer expects to earn, not what the option is worth.
+  tags:
+  - iv
+  - direction
+  - option-buying
+  - theta
+- id: book.fm-harrison-waldron.4
+  book: fm-harrison-waldron
+  title: Prices are not unbiased forecasts (Siegel)
+  chapter: Ch. 5.6, Jensen's Inequality and Siegel's Paradox
+  text: Because the average of a curved function is not the function of the average, a forward price cannot equal the expected
+    future spot in every currency at once; the authors extend the doubt to any theory that treats today's price as the expected
+    future value.
+  tags:
+  - direction
+  - vix
+- id: book.fm-harrison-waldron.5
+  book: fm-harrison-waldron
+  title: Utility curvature decides which moments matter
+  chapter: Ch. 5.3 and 5.8, stochastic Taylor expansion; mean-variance paradigm
+  text: Expected utility equals utility at the mean plus terms in variance, skewness and kurtosis weighted by its derivatives,
+    so a trader whose risk aversion falls with wealth likes positive skew; judging strategies on mean and variance alone ignores
+    the tails.
+  tags:
+  - option-buying
+  - option-selling
+  - sizing
+- id: book.fm-harrison-waldron.6
+  book: fm-harrison-waldron
+  title: Fixed rupees vs fixed fraction is a risk-aversion choice
+  chapter: Ch. 5.7 and 6.3.2, risk aversion and portfolio composition
+  text: A risk-averse trader always takes a small stake in a bet whose expected return beats cash and none in a zero-edge
+    bet; with constant relative risk aversion the fraction of capital at risk stays constant as wealth grows, while constant
+    absolute risk aversion keeps the rupee stake fixed.
+  tags:
+  - sizing
+- id: book.fm-harrison-waldron.7
+  book: fm-harrison-waldron
+  title: Kelly maximises long-run growth
+  chapter: Ch. 5.9, The Kelly Strategy
+  text: The Kelly rule maximises the long-run growth rate of capital and minimises the expected time to reach a large goal;
+    the book gives no formula and says nothing about drawdowns or estimation error.
+  tags:
+  - sizing
+  verdict: weak
+  tested_src: research/HUNT_H15.md
+  tested_text: 'Our H15 sized Liquidity 15+5 by half-Kelly: it led the holdout, but the sizing choice was not statistically
+    separable (SPA p = 0.14), the BN Kelly fraction ranged from 0.14 to 1.29 by window, and P(drawdown ≥ 50%) was 14%.'
+- id: book.fm-harrison-waldron.8
+  book: fm-harrison-waldron
+  title: Minimum-variance mix and the diversification floor
+  chapter: Ch. 6.4 and 6.5.1, the portfolio frontier
+  text: The lowest-variance mix of assets needs only their covariance matrix, which must be strictly positive definite; adding
+    more equally weighted components lowers portfolio variance only down to the average covariance between them, never below.
+  tags:
+  - sizing
+- id: book.fm-harrison-waldron.9
+  book: fm-harrison-waldron
+  title: Uncorrelated is not independent
+  chapter: Ch. 5.2 and 6.5.3, beta; frontier holdings
+  text: A regression beta makes the leftover part uncorrelated with the driver, but the fitted line is the expected outcome
+    given the driver only if the leftover is independent of it, which holds for normal-like returns and not in general.
+  tags:
+  - filter
+  - ml
+- id: book.fm-basics-fin-math.1
+  book: fm-basics-fin-math
+  title: An option's price ignores the underlying's drift
+  chapter: S6 Remarks 6.1-6.4 and S20, Black-Scholes formula I
+  text: An option is priced by copying its payoff with the underlying and cash, so the real chance of an up move and the expected
+    return of the underlying never enter the price; only volatility does. A directional view changes what a buyer expects
+    to earn, not what the option is worth.
+  tags:
+  - iv
+  - direction
+  - option-buying
+  verdict: positive
+  tested_src: research/FINDINGS.md
+  tested_text: 'Our R89 bought straddles when a big move was forecast: out of sample 2,214 straddles, 0 of 18 versions positive,
+    because the options already priced the move.'
+- id: book.fm-basics-fin-math.2
+  book: fm-basics-fin-math
+  title: Exits alone cannot turn a fair game into profit
+  chapter: S5, Doob's optional stopping theorem
+  text: If the price is a fair game, any exit rule that uses only past information and ends by a fixed time (stop, target,
+    trail, time stop) leaves the expected result unchanged; it reshapes the win rate and the size of wins and losses, not
+    the mean.
+  tags:
+  - stop
+  - target
+  - profit-lock
+  verdict: negative
+  tested_src: research/HUNT_R18_EXITS.md
+  tested_text: Our R18 tried five early-exit overlays on every arm's own exits and 0 of 60 tests passed.
+- id: book.fm-basics-fin-math.3
+  book: fm-basics-fin-math
+  title: Only where the price is, not how it got there
+  chapter: S17, Markov properties of Brownian motion
+  text: 'In the standard model future moves are independent of the path so far: to predict the future you need only the current
+    price, not the history, so patterns in the path carry no information about direction.'
+  tags:
+  - direction
+  - pattern
+  - candles
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/HUNT_R16_PREDICTABILITY.md
+  tested_text: Our R16 found direction over the next 15/30/60 minutes not predictable (holdout AUC 0.509-0.536), though the
+    size of the move was.
+- id: book.fm-basics-fin-math.4
+  book: fm-basics-fin-math
+  title: A level is touched about twice as often as it is finished beyond
+  chapter: S14, reflection principle and Girsanov
+  text: For a driftless random price the chance of touching a level before a deadline is about twice the chance of ending
+    beyond it at the deadline; with drift a closed form follows from Girsanov's theorem. A sold strike is therefore touched
+    far more often than it expires in the money.
+  tags:
+  - stop
+  - target
+  - option-selling
+- id: book.fm-basics-fin-math.5
+  book: fm-basics-fin-math
+  title: Time decay is the price of gamma
+  chapter: S13 Ito's formula and S22, Black-Scholes PDE
+  text: 'The Black-Scholes equation ties time decay to gamma: a delta-hedged long option pays theta and earns it back only
+    through the squared moves, so it profits only if realised volatility beats the implied volatility paid.'
+  tags:
+  - theta
+  - straddle
+  - iv
+  - option-buying
+  inst:
+  - NIFTY
+  - INDIAVIX
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found India VIX above NIFTY's next 21 days of realised volatility on 81% of days (n 4,507), the condition
+    in which bought gamma loses on average.
+- id: book.fm-basics-fin-math.6
+  book: fm-basics-fin-math
+  title: Moves scale with the square root of time
+  chapter: S11, Brownian motion
+  text: Under a random walk the variance of the move grows in proportion to elapsed time, so the typical move over a horizon
+    scales with its square root; expected-move bands and straddle values follow this clock.
+  tags:
+  - straddle
+  - iv
+  - time-of-day
+- id: book.fm-basics-fin-math.7
+  book: fm-basics-fin-math
+  title: Geometric Brownian motion called a very good model
+  chapter: S16, Continuous time financial models
+  text: Stock prices are modelled as geometric Brownian motion (percentage moves with constant volatility, no costs, continuous
+    trading); the author calls it a very good model despite discrete prices, with no evidence offered.
+  tags:
+  - iv
+  - vix
+  inst:
+  - NIFTY
+  verdict: negative
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 measured NIFTY daily kurtosis of 14.1 over 5,087 days, far fatter-tailed than the normal returns this
+    model assumes.
+- id: book.fm-basics-fin-math.8
+  book: fm-basics-fin-math
+  title: 'Double or nothing: fair on average, ruin in practice'
+  chapter: S4, Martingales
+  text: 'A bettor who stakes everything on a fair double-or-nothing coin has expected wealth unchanged every round, yet is
+    almost surely broke in the end: a fair expected value says nothing about survival under all-in sizing.'
+  tags:
+  - sizing
+- id: book.fm-basics-fin-math.9
+  book: fm-basics-fin-math
+  title: A decision may use only the past
+  chapter: S5 stopping times; S12 and S16 adapted holdings
+  text: 'A valid trading rule is a stopping time: it can be decided with information available at that moment (''first time
+    price reaches A''), while rules such as ''the last time price was above A'' need the future; trading P&L is only defined
+    for holdings set before each price change.'
+  tags:
+  - ml
+  - filter
+- id: book.fm-basics-fin-math.10
+  book: fm-basics-fin-math
+  title: Mean-reverting process with explicit half-life
+  chapter: S26, Hull-White and Cox-Ingersoll-Ross models
+  text: A series pulled back toward a level at a fixed speed with random shocks has an explicit mean and variance at every
+    horizon; the book uses it for interest rates (Hull-White can go negative, Cox-Ingersoll-Ross stays positive) and gives
+    no trading rule.
+  tags:
+  - reversal
+  - filter
+- id: book.fm-optimal-control.1
+  book: fm-optimal-control
+  title: A cost per switch makes the best number of switches finite
+  chapter: Ch. 2, Sections 2.7-2.8
+  text: Without a switching cost, an in/out allocation that tracks a target keeps improving as switches are added, so the
+    optimum chatters forever. Charging a fixed cost per switch gives an interior best number of switches, and a higher cost
+    means fewer switches.
+  tags:
+  - costs
+  - sizing
+- id: book.fm-optimal-control.2
+  book: fm-optimal-control
+  title: 'Hysteresis: keep the current setting inside a band'
+  chapter: Ch. 1, Section 1.6 (Blatt's indifference principle)
+  text: With a cost per switch, the control need not flip the moment the other choice becomes better; it may stay put until
+    the advantage crosses an indifference curve. In trading terms this is a dead-band around an on/off filter so it does not
+    flip back and forth.
+  tags:
+  - costs
+  - filter
+- id: book.fm-optimal-control.3
+  book: fm-optimal-control
+  title: Switch cost too high or too low both fail
+  chapter: Ch. 2, Table 2.2
+  text: In the toy model, a switch cost of 0.02 made every extra switch worse, 0.0002 was too small to matter, and 0.002 gave
+    a clear interior minimum. The authors conclude any investment strategy should count the cost of switching when deciding
+    how often to flip.
+  tags:
+  - costs
+- id: book.fm-optimal-control.4
+  book: fm-optimal-control
+  title: Diminishing returns from more switches
+  chapter: Ch. 2 and Appendix B
+  text: 'The tracking error fell from 0.0627 with 2 intervals to 0.0291, 0.0184 and 0.0134 with 4, 6 and 8: big gains at first,
+    then small ones. Each extra switch buys less.'
+  tags:
+  - costs
+- id: book.fm-optimal-control.5
+  book: fm-optimal-control
+  title: 'Optimisers get stuck: multi-start and warm start'
+  chapter: Ch. 3 and Ch. 5, Table 5.3
+  text: The authors' optimiser often stopped at a local minimum (one case gave J = 1.5791, nearly double a smaller case).
+    Warm-starting from the smaller problem's answer or nudging the control fixed it; forcing extra switches did not, and an
+    infeasible starting guess caused one failure.
+  tags:
+  - ml
+- id: book.fm-optimal-control.6
+  book: fm-optimal-control
+  title: Starting order changes the answer on coarse grids
+  chapter: Ch. 3, Section 3.6
+  text: Starting the bang-bang control at -2 or at +2 gave very different results on coarse time grids and similar results
+    on fine ones, so every ordering of the control values has to be tried.
+  tags:
+  - ml
+- id: book.fm-optimal-control.7
+  book: fm-optimal-control
+  title: A flat middle state helps when the target oscillates
+  chapter: Ch. 5, Section 5.3
+  text: When the target path oscillates, a control limited to two extremes tracks it poorly; adding a do-nothing middle value
+    (-1 / 0 / +1) tracks it better. It is the planning analogue of long / flat / short.
+  tags:
+  - filter
+- id: book.fm-comp-finance-no-pain.1
+  book: fm-comp-finance-no-pain
+  title: Option price is the cost of the hedge
+  chapter: Sec. 2.9, The option price
+  text: The Black-Scholes price is what it costs a seller to run a self-financing delta hedge, not the option's expected payoff;
+    it contains no drift. A buyer who holds without hedging is betting on the drift, which the author calls art, not science.
+  tags:
+  - option-buying
+  - option-selling
+  - iv
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found India VIX above NIFTY's forward 21-day realised volatility on 81% of days (median ratio 1.28,
+    n 4,507), so the hedge cost usually priced more movement than came.
+- id: book.fm-comp-finance-no-pain.2
+  book: fm-comp-finance-no-pain
+  title: Hedge error shrinks only with the square root of the interval
+  chapter: Sec. 8.1, Delta Hedging
+  text: In a Monte Carlo study of a short put hedged monthly, weekly and daily, the hedging error is centred near zero and
+    its standard deviation is proportional to the square root of the rebalancing interval, so halving the error needs four
+    times the rebalances. Costs are given as the reason to hedge rarely but are not simulated.
+  tags:
+  - option-selling
+  - costs
+- id: book.fm-comp-finance-no-pain.3
+  book: fm-comp-finance-no-pain
+  title: 'Unhedged put writing: steady wins, then a blow-up'
+  chapter: Sec. 8.1, Delta Hedging
+  text: With no hedge the writer usually keeps the whole premium because markets drift up, but the loss tail runs to several
+    premiums; funds that write puts unhedged do well for years and then blow up in a sudden drop.
+  tags:
+  - option-selling
+  - gap
+  - stop
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R103_OPTIONS_SELLING.md
+  tested_text: Our R103 confirmed 0 of 24 selling tests, and the naked BANKNIFTY 09:20 straddle's worst day was -29,257 rupees
+    on one lot.
+- id: book.fm-comp-finance-no-pain.4
+  book: fm-comp-finance-no-pain
+  title: Gamma hedging tightens the error but adds model risk
+  chapter: Sec. 8.2, Gamma Hedging
+  text: Adding a second, longer-dated option so the book is delta- and gamma-neutral gives a much narrower hedge-error distribution
+    than delta hedging at the same weekly or daily rebalance, at the price of relying on the model's second derivative.
+  tags:
+  - option-selling
+  - expiry
+- id: book.fm-comp-finance-no-pain.5
+  book: fm-comp-finance-no-pain
+  title: Delta-vega hedging at current implied vol
+  chapter: Sec. 8.3, Vega Hedging
+  text: The industry's simple fix for changing volatility is to recompute delta and vega at today's implied vol on each rebalance
+    and hold another option against vega; even when volatility is truly random this constant-vol vega hedge works surprisingly
+    well (Hull and White).
+  tags:
+  - iv
+  - vix
+  - option-selling
+- id: book.fm-comp-finance-no-pain.6
+  book: fm-comp-finance-no-pain
+  title: Delta hedging cannot remove jump risk
+  chapter: Sec. 9, Jump Diffusion
+  text: Real returns have taller peaks and fatter tails than the normal; a delta hedge removes the small moves but not the
+    jumps, and option prices imply larger and more frequent jumps than history, i.e. a premium for jump risk.
+  tags:
+  - gap
+  - option-selling
+  - iv
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: 'Our R102 measured NIFTY daily returns with kurtosis 14.1 over 5,087 days: fat tails, as the notes say.'
+- id: book.fm-comp-finance-no-pain.7
+  book: fm-comp-finance-no-pain
+  title: Monte Carlo needs error bars and a time-step check
+  chapter: Sec. 4, Monte Carlo Methods
+  text: Simulation error falls only with the square root of the number of paths (ten times the accuracy needs a hundred times
+    the paths), and a one-day step adds its own bias that more paths never fix; antithetic pairs can make non-monotone payoffs
+    worse.
+  tags:
+  - ml
+- id: book.fm-comp-finance-no-pain.8
+  book: fm-comp-finance-no-pain
+  title: Estimated expected returns are mostly noise
+  chapter: Sec. 11.4, Criticism
+  text: Mean-variance weights depend on expected returns that short series cannot pin down; studies find plain equal weights
+    (1/N) do about as well once estimation error is counted.
+  tags:
+  - sizing
+  verdict: weak
+  tested_src: research/HUNT_H15.md
+  tested_text: Our H15 found the Kelly fraction unstable because it was estimated on the same 10 regime months the bootstrap
+    resamples.
+- id: book.fm-neftci-derivatives.1
+  book: fm-neftci-derivatives
+  title: Option prices do not forecast direction
+  chapter: Ch. 14 sec. 6 and Ch. 15, Which Probabilities?
+  text: An option's fair value comes from copying it with the underlying and cash, so the underlying's expected return never
+    enters the price; the risk-neutral odds that price options give poor forecasts because under them everything grows at
+    the risk-free rate, so forecasts must use real-world odds.
+  tags:
+  - iv
+  - direction
+  - option-buying
+- id: book.fm-neftci-derivatives.2
+  book: fm-neftci-derivatives
+  title: Delta hedging covers only small moves
+  chapter: Ch. 4 sec. 2.2 and Ch. 12 sec. 3, Accuracy of the Method
+  text: Holding an option against delta units of the underlying cancels only small moves; on a large move the option's curvature
+    makes the hedge miss, it needs continuous re-hedging with no costs, and because delta keeps changing the hedged book is
+    not self-financing, its cash leak averaging out only under risk-neutral odds.
+  tags:
+  - option-selling
+  - theta
+  - costs
+- id: book.fm-neftci-derivatives.3
+  book: fm-neftci-derivatives
+  title: Rare events keep their size; ordinary moves shrink
+  chapter: Ch. 8, The Wiener Process and Rare Events
+  text: Ordinary moves get smaller as the observation window shrinks, but a rare event such as a crash is about the same size
+    over ten minutes or a whole day while its chance shrinks; both give variance proportional to time, so variance alone cannot
+    tell them apart, and only for jumps do skew and kurtosis still matter over short intervals.
+  tags:
+  - gap
+  - vix
+  - stop
+- id: book.fm-neftci-derivatives.4
+  book: fm-neftci-derivatives
+  title: Normal VaR is wrong when jumps are routine
+  chapter: Ch. 8 sec. 1.1 and 2.4
+  text: Value at Risk can rely on the normal distribution only if sudden jumps are not a regular part of the market; where
+    they are, the loss estimate must model the jump process, and commodity futures jump more often than financial ones because
+    a single report, such as a crop report, can reprice them.
+  tags:
+  - stop
+  - sizing
+  - mcx
+  - news
+- id: book.fm-neftci-derivatives.5
+  book: fm-neftci-derivatives
+  title: Moves scale with the square root of time
+  chapter: Ch. 7 sec. 4, The Size of Incremental Errors
+  text: If risk neither vanishes with finer sampling nor explodes with more frequent trading, and no single instant holds
+    all of it, the variance of price news grows in proportion to the window, so the typical move scales with the square root
+    of time and the drift is negligible over short windows.
+  tags:
+  - vix
+  - time-of-day
+- id: book.fm-neftci-derivatives.6
+  book: fm-neftci-derivatives
+  title: Black-Scholes assumptions, and why it survives
+  chapter: Ch. 13 sec. 3 and Ch. 16 sec. 1
+  text: Black-Scholes assumes a constant rate and volatility, no dividends, European exercise and no transaction costs or
+    indivisibilities; the author adds that it stays reasonably accurate when volatility or rates are random and suits short-dated
+    options, which is why practitioners keep using it.
+  tags:
+  - iv
+  - costs
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-neftci-derivatives.7
+  book: fm-neftci-derivatives
+  title: Ladder, lookback and knock-out payoffs
+  chapter: Ch. 13 sec. 4, Exotic Options
+  text: A ladder option locks in its gain each time the underlying crosses a preset level, a lookback pays against the best
+    price seen during its life and so costs more than a plain option, and a knock-out dies when a barrier is touched; such
+    features change only the boundary conditions of the pricing equation.
+  tags:
+  - profit-lock
+  - stop
+- id: book.fm-neftci-derivatives.8
+  book: fm-neftci-derivatives
+  title: 'Optimal stopping: compare with continuing optimally'
+  chapter: Ch. 22 sec. 6, A Simple Example
+  text: 'The right time to stop (exercise or exit) is found backward: each state''s value is the larger of stopping now and
+    continuing optimally; judging only the next step undervalues continuing (in the example a payoff of 8 against a one-step
+    expectation of 3), and the stopping points are where the payoff touches its envelope.'
+  tags:
+  - target
+  - stop
+- id: book.fm-neftci-derivatives.9
+  book: fm-neftci-derivatives
+  title: Maximising expected value can ruin you
+  chapter: Ch. 22 Exercises 1-2 and the Solution Manual
+  text: In a double-or-nothing game whose expected reward keeps rising with every toss, maximising expected value says never
+    stop, yet the player ends with nothing with probability one; expected value suits many repeated plays, not a single bankroll.
+  tags:
+  - sizing
+- id: book.fm-neftci-derivatives.10
+  book: fm-neftci-derivatives
+  title: Cash-and-carry versus consumption commodities
+  chapter: Ch. 1 sec. 3 and Ch. 4 sec. 2.1; Solution Manual Ch. 1
+  text: In cash-and-carry markets such as gold and silver the futures price is set by spot, interest, storage and insurance,
+    and news moves spot and futures alike; for consumption goods only a band holds because holders will not sell the physical,
+    and storing crude oil can be very costly.
+  tags:
+  - mcx
+  inst:
+  - GOLD
+  - SILVER
+  - CRUDE
+- id: book.fm-wilmott-howison-dewynne.1
+  book: fm-wilmott-howison-dewynne
+  title: An option's price carries no view on direction
+  chapter: Ch. 3.5 and 5.6, The Black-Scholes analysis; Risk neutrality
+  text: The asset's expected growth drops out of the hedged-option equation, so two traders who disagree about direction still
+    agree on the option's value. Delta is not the probability of finishing in the money and the real drift is not the interest
+    rate; the real probability needs a real drift forecast.
+  tags:
+  - direction
+  - iv
+- id: book.fm-wilmott-howison-dewynne.2
+  book: fm-wilmott-howison-dewynne
+  title: 'Implied volatility differs by strike: the smile'
+  chapter: Ch. 3.10, Implied volatility
+  text: 'Implied volatility is not one number: it varies with strike (a smile or lopsided skew on FT-SE index options) and
+    with expiry, and calls and puts give slightly different values. The authors offer one trade on it: buy the lowest-IV option
+    and sell the highest-IV option of one expiry and hope the IVs converge, with no evidence given.'
+  tags:
+  - iv
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found the put side dearer than the call side on 91% of NIFTY days and 90% of BANKNIFTY days, so the
+    skew is persistent rather than something that converges.
+- id: book.fm-wilmott-howison-dewynne.3
+  book: fm-wilmott-howison-dewynne
+  title: Near expiry, at-the-money hedges flip
+  chapter: Ch. 3.8 and 5.5, Black-Scholes formulae; Binary options
+  text: As expiry nears, a call's delta becomes a step; with the index near the strike a hedged writer swings between holding
+    nothing and holding the full hedge many times, paying costs each time. For a cash-or-nothing binary the delta spikes so
+    sharply that the authors doubt the simple formula is usable.
+  tags:
+  - expiry
+  - iv
+  - costs
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-wilmott-howison-dewynne.4
+  book: fm-wilmott-howison-dewynne
+  title: A trailing stop, priced, is worth exactly the asset
+  chapter: Ch. 15.6.2, The stop-loss option
+  text: A perpetual contract that pays the asset price once it falls to a set fraction of its running maximum (a trailing
+    stop as a contract) is worth exactly the asset price when there is no dividend, whatever the fraction. A trail adds no
+    value by itself; any gain must come from a real pattern in the path.
+  tags:
+  - profit-lock
+  - stop
+  verdict: negative
+  tested_src: research/HUNT_R19B_LIQUIDITY_TRAIL.md
+  tested_text: Our R19b found Boss's give-back trail on Liquidity BANKNIFTY did worse than random early exits in 97% (15m)
+    and 99.8% (5m) of 2,000 tries.
+- id: book.fm-wilmott-howison-dewynne.5
+  book: fm-wilmott-howison-dewynne
+  title: Costs lower a long option's value and raise a short one's
+  chapter: Ch. 16, Options with transaction costs (Leland)
+  text: With costs on each rehedge, a long option is worth Black-Scholes at a lower volatility and a short option at a higher
+    one, so the price depends on the hedger's costs. Cost divided by (vol times the square root of the rehedge interval) far
+    above 1 means rehedging too often; hedge the net book, not each option separately.
+  tags:
+  - costs
+- id: book.fm-wilmott-howison-dewynne.6
+  book: fm-wilmott-howison-dewynne
+  title: A stop is a knock-out; in plus out equals vanilla
+  chapter: Ch. 12, Barrier options
+  text: A knock-in plus the matching knock-out equals the plain option, so a stop on the underlying turns a position into
+    a knock-out and gives away the knock-in part (the rebound cases). A random walk that touches a level crosses it again
+    and again, so 'touched three times' only means something inside a time window.
+  tags:
+  - stop
+- id: book.fm-wilmott-howison-dewynne.7
+  book: fm-wilmott-howison-dewynne
+  title: Options on futures use Black-76; hedge with futures
+  chapter: Ch. 6.3-6.4, Forward and futures contracts; Options on futures
+  text: An option on a future is priced as the discounted (F N(d1) - E N(d2)); the future has the same volatility as spot
+    and is usually more liquid and cheaper to trade, so writers hedge with futures. Storage costs, as for gold, act like a
+    negative dividend yield in the forward price.
+  tags:
+  - mcx
+  - iv
+  inst:
+  - GOLD
+  - SILVER
+  - CRUDE
+  - NATURALGAS
+- id: book.fm-wilmott-howison-dewynne.8
+  book: fm-wilmott-howison-dewynne
+  title: Interest rates barely move short-dated options
+  chapter: Ch. 1.7, Interest rates and present value
+  text: A rise in rates from 8% to 10% a year lowers a nine-month option's value by only about 2%, which is why a known or
+    constant rate is acceptable when pricing short-dated options.
+  tags:
+  - iv
+- id: book.fm-wilmott-howison-dewynne.9
+  book: fm-wilmott-howison-dewynne
+  title: Gearing cuts both ways
+  chapter: Ch. 1.2 and 1.4, What is an option?
+  text: 'In the book''s example a 10p call on a 250p strike made +100% or -100% where the share made +8% or -8%: options expose
+    a small stake to a large amount of risk.'
+  tags:
+  - option-buying
+  - sizing
+- id: book.fm-shaw-mathematica.1
+  book: fm-shaw-mathematica
+  title: Distrust implied vol where vega is near zero
+  chapter: Ch. 1, 5 and 8, implied volatility case studies
+  text: An implied volatility only means something when the price rises clearly with volatility; where vega is near zero the
+    inversion is unstable or has two, three or infinitely many answers, and the number should not be reported.
+  tags:
+  - iv
+- id: book.fm-shaw-mathematica.2
+  book: fm-shaw-mathematica
+  title: Near-expiry ATM gamma becomes unhedgeable
+  chapter: Ch. 6, binary options, the hedge nightmare
+  text: As expiry nears, a binary option's delta collapses into a spike at the strike and its gamma into the slope of that
+    spike, so hedging near the money near expiry means huge repeated trades that costs make ruinous.
+  tags:
+  - expiry
+  - theta
+- id: book.fm-shaw-mathematica.3
+  book: fm-shaw-mathematica
+  title: A tiny price error can hide a huge Greek error
+  chapter: Ch. 13 and 15, finite differences with option payoffs
+  text: A Crank-Nicolson grid with large time steps priced a put within 0.00171 everywhere yet got gamma wrong by 12.4% and
+    theta by 197% at the strike; numerically computed Greeks must be checked on their own, near the strike and near expiry.
+  tags:
+  - theta
+  - iv
+- id: book.fm-shaw-mathematica.4
+  book: fm-shaw-mathematica
+  title: Low standard error is not accuracy
+  chapter: Ch. 22, Monte Carlo on path-dependent options
+  text: 'Simulating a lookback with 10 steps per path gave 7.1541 with standard error 0.081 against an exact 8.6084: sampling
+    a path at a few points misses its extremes, so more paths shrink the error bar but not the bias.'
+  tags:
+  - stop
+  - profit-lock
+- id: book.fm-shaw-mathematica.5
+  book: fm-shaw-mathematica
+  title: Level-dependent volatility makes a put skew
+  chapter: Ch. 28, the CEV model, skews and smiles
+  text: 'Pricing with a constant-elasticity model, where volatility rises as the price falls, and reading prices back through
+    Black-Scholes gives implied 0.20538 at strike 90, 0.200104 at 100 and 0.195409 at 110 with today''s vol fixed at 20%:
+    the leverage effect alone creates a put skew.'
+  tags:
+  - iv
+  - vix
+- id: book.fm-shaw-mathematica.6
+  book: fm-shaw-mathematica
+  title: The bid-offer spread inflates far-strike IV
+  chapter: Ch. 28.9-28.10, the effect of spread
+  text: Adding a 2.5% markup to model prices raised out-of-the-money implied volatilities sharply and turned the put skew
+    into a smile, so implied vols read from offers or stale last trades on far strikes overstate volatility.
+  tags:
+  - iv
+  - costs
+- id: book.fm-shaw-mathematica.7
+  book: fm-shaw-mathematica
+  title: Price options off the future, not spot minus dividends
+  chapter: Ch. 24 dividends and Ch. 27 Black-76
+  text: With a cash dividend, treating spot minus dividends as lognormal and treating spot as lognormal disagree (1.94853
+    against 2.56562 in one example); pricing on the futures price with Black-76 avoids the issue and is the standard model
+    for options on futures.
+  tags:
+  - iv
+  - mcx
+- id: book.fm-shaw-mathematica.8
+  book: fm-shaw-mathematica
+  title: A ladder option is a priced step profit lock
+  chapter: Ch. 9.8, ladder options
+  text: A ladder option locks in gains each time the price reaches a preset rung and can be built from a call, puts and up-and-out
+    puts; with three rungs it was worth 5.77933 when the high so far was 55 but 29.3159 once the price had been above 80.
+  tags:
+  - profit-lock
+- id: book.fm-shaw-mathematica.9
+  book: fm-shaw-mathematica
+  title: Use an accurate normal CDF in the tails
+  chapter: Ch. 6.5, computing the cumulative normal
+  text: The common 3-term approximation of the normal CDF is off by about 4% in the far left tail and worse when differenced
+    for gamma; use continued fractions or a library erfc, and never compute N(-x) as 1 - N(x) for large x.
+  tags:
+  - iv
+- id: book.fm-baxter-financial-calculus.1
+  book: fm-baxter-financial-calculus
+  title: Price from the hedge, not from your own odds
+  chapter: The parable of the bookmaker
+  text: A bookmaker who sets odds from the true chances (25% and 75%) breaks even on average but can lose $5,000 on one race;
+    one who sets odds from the money wagered on each side breaks even whichever horse wins. Pricing from the hedge gives steady
+    income, pricing from a forecast is a gamble.
+  tags:
+  - option-selling
+- id: book.fm-baxter-financial-calculus.2
+  book: fm-baxter-financial-calculus
+  title: The real chance of going up does not enter the price
+  chapter: Ch. 2.2, The binomial tree model
+  text: On a three-step tree where the stock really rises with probability 3/4, a call costs 15 because it can be copied with
+    stock and borrowing; its average payoff under the real odds would be 33.75, which is the wrong price. Only the size of
+    the moves matters, not their probabilities.
+  tags:
+  - direction
+  - iv
+- id: book.fm-baxter-financial-calculus.3
+  book: fm-baxter-financial-calculus
+  title: Changing measure changes drift, never volatility
+  chapter: Ch. 3.4, Cameron-Martin-Girsanov theorem
+  text: Switching from real-world to pricing probabilities only adds a drift to the price process; the volatility stays the
+    same. So an option's fair value needs a volatility estimate and never a return forecast, and the only real debate is implied
+    versus realised volatility.
+  tags:
+  - iv
+  - vix
+  inst:
+  - INDIAVIX
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found India VIX over-states NIFTY's next 21 days on 81% of days (median ratio 1.28, n 4,507) but under-states
+    BANKNIFTY's on 60%.
+- id: book.fm-baxter-financial-calculus.4
+  book: fm-baxter-financial-calculus
+  title: Delta lives between 0 and 1 and snaps near expiry
+  chapter: Ch. 3.8, Black-Scholes in action
+  text: The hedge for a call is the slope of its price against the underlying, always between 0 and 1 share, with borrowing
+    never more than the strike. Near expiry it heads to 1 if the option will finish in the money and to 0 if not, swinging
+    hardest when the price sits near the strike.
+  tags:
+  - expiry
+  - theta
+- id: book.fm-baxter-financial-calculus.5
+  book: fm-baxter-financial-calculus
+  title: Leave out dividends and the price is wrong
+  chapter: Ch. 4.2, Equities and dividends
+  text: A five-year index product priced with the dividend yield in the forward is worth 0.9712; forgetting that the index's
+    stocks pay dividends gives 1.0183, about 5% too high. Options should be priced off the forward (futures or synthetic),
+    not spot.
+  tags:
+  - iv
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-baxter-financial-calculus.6
+  book: fm-baxter-financial-calculus
+  title: Paying in the wrong currency needs a correlation fix
+  chapter: Ch. 4.5, Quantos
+  text: 'A contract that pays a foreign price as a number in the home currency (a quanto) has a different fair forward from
+    the local one: it is higher when the asset and the exchange rate are negatively correlated, and even a simple digital
+    depends on that correlation.'
+  tags:
+  - crypto
+  - mcx
+  inst:
+  - CRYPTO
+  - GOLD
+  - SILVER
+- id: book.fm-baxter-financial-calculus.7
+  book: fm-baxter-financial-calculus
+  title: A fair game cannot be beaten
+  chapter: Ch. 6.6, Harrison and Pliska
+  text: A market has no arbitrage exactly when some pricing measure makes every discounted price a martingale, a fair game;
+    any strategy that only plays fair games cannot guarantee a profit. A real edge has to come from a risk premium, frictions
+    or information, not from reading past prices.
+  tags:
+  - direction
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/HUNT_R16_PREDICTABILITY.md
+  tested_text: Our R16 found index direction over the next 15/30/60 minutes not predictable (AUC 0.509-0.536), while the next
+    30-60 minutes' range was.
+- id: book.fm-baxter-financial-calculus.8
+  book: fm-baxter-financial-calculus
+  title: 'Mean reversion: the distribution settles, the path does not'
+  chapter: Ch. 5.4, Vasicek / Ornstein-Uhlenbeck
+  text: In a mean-reverting (Ornstein-Uhlenbeck) process the pull toward the long-run level is proportional to the distance
+    from it; its distribution settles to a fixed normal, but the path itself never settles, and mean reversion seen in data
+    does not by itself prove the model.
+  tags:
+  - reversal
+  - mcx
+  inst:
+  - GOLD
+  - SILVER
+  verdict: negative
+  tested_src: research/HUNT_R94_MCX_ADVANCED.md
+  tested_text: 'Our R94 found the GOLD/SILVER ratio lost in design (-Rs 6.3 lakh, W60) and in the holdout: the ratio kept
+    running instead of reverting.'
+- id: book.fm-musiela-martingale.1
+  book: fm-musiela-martingale
+  title: The option price ignores the real odds
+  chapter: Ch. 1.4, One-period spot market
+  text: In a one-period example (stock 280 going to 320 or 260, rate 5%, strike 280) the call's only arbitrage-free price
+    is 21.59, built from 2/3 of a share and a loan; a bear's expectation (7.62) and a bull's (30.48) are both wrong prices,
+    because a hedged seller never needs to know which way the stock goes.
+  tags:
+  - direction
+  - iv
+- id: book.fm-musiela-martingale.2
+  book: fm-musiela-martingale
+  title: 'Options are leveraged bets: elasticity'
+  chapter: Ch. 3.1.11, Option portfolios and Greeks
+  text: 'An option''s elasticity (delta x spot / price) says how many percent it moves per 1% of the underlying: with spot
+    31, strike 30, 3 months and 10% volatility the call costs 1.52 with delta 0.82 and moves nearly 17 times the stock''s
+    percentage, and the put''s elasticity is several times larger.'
+  tags:
+  - option-buying
+  - sizing
+- id: book.fm-musiela-martingale.3
+  book: fm-musiela-martingale
+  title: Implied over historical volatility pays for hedging
+  chapter: Ch. 7.1.1-7.1.3, Historical vs implied volatility
+  text: Pricing with historical volatility is systematically biased (Black and Scholes' own test overpriced options on high-volatility
+    stocks and underpriced low ones), and the gap between implied and historical volatility should reflect the cost of dynamic
+    hedging; implied volatility forecasts realised better where trading costs are low (futures options) than on stock-index
+    options.
+  tags:
+  - iv
+  - vix
+  - costs
+  inst:
+  - INDIAVIX
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found India VIX over-states NIFTY's next 21 days on 81% of days (median ratio 1.28, n 4,507) but under-states
+    BANKNIFTY's on 60%.
+- id: book.fm-musiela-martingale.4
+  book: fm-musiela-martingale
+  title: A hedger who overestimates volatility does not lose
+  chapter: Ch. 3.5, Robustness of the Black-Scholes approach
+  text: A seller who prices and delta-hedges a call, put or straddle at a volatility at least as high as the true volatility
+    ends with a non-negative result, because the hedge earns half of gamma times spot squared times the gap between hedging
+    and realised variance; for spreads and flies the worst case uses high volatility where gamma is positive and low where
+    it is negative.
+  tags:
+  - option-selling
+  - iv
+  verdict: positive
+  tested_src: research/MCX_OPTIONS.md
+  tested_text: Our MCX options study found realised moves were 0.73-0.93 of what the options priced over 60 minutes, and delta-hedged
+    long-option P&L was about zero at best.
+- id: book.fm-musiela-martingale.5
+  book: fm-musiela-martingale
+  title: Put skew means price and volatility move opposite
+  chapter: Ch. 7.4, Stochastic volatility models
+  text: If volatility moved independently of the price the smile would be symmetric with its bottom at the forward; a skew
+    where puts are dearer needs returns and volatility changes to be negatively correlated, which studies of stock returns
+    found.
+  tags:
+  - iv
+  - reversal
+  inst:
+  - NIFTY
+  - BANKNIFTY
+- id: book.fm-musiela-martingale.6
+  book: fm-musiela-martingale
+  title: Local-volatility hedges can be worse than plain Black-Scholes
+  chapter: Ch. 7.3.4 and 7.4.5, Local volatility drawbacks; SABR
+  text: A local-volatility model fits every vanilla price but predicts that the smile shifts the wrong way when spot moves,
+    so its hedges may be worse than the naive constant-volatility ones; models with their own volatility driver (SABR) move
+    the smile the right way.
+  tags:
+  - iv
+- id: book.fm-musiela-martingale.7
+  book: fm-musiela-martingale
+  title: Short expiries need jumps
+  chapter: Ch. 7.6.1, Jump-diffusion and Levy processes
+  text: Studies cited in the book find that jump-diffusion models, with or without stochastic volatility, fit the observed
+    smile better than continuous models, especially for shorter expirations.
+  tags:
+  - expiry
+  - iv
+- id: book.fm-musiela-martingale.8
+  book: fm-musiela-martingale
+  title: Volatility clusters and follows activity
+  chapter: Ch. 7.6.1, GARCH models and random time change
+  text: Volatility clusters (GARCH), returns are fat-tailed, and measured in business time (the count of trades) returns look
+    more normal, so recent volatility and recent activity are the natural inputs for the size of the next move.
+  tags:
+  - volume
+  - time-of-day
+  verdict: positive
+  tested_src: research/HUNT_R88_WHAT_MOVES_THE_CANDLE.md
+  tested_text: Our R88 found a big last candle predicts a 1.5x bigger next candle on the indices (10 of 10 index cells held
+    out of sample), and a volatile last hour 1.4x.
+- id: book.fm-musiela-martingale.9
+  book: fm-musiela-martingale
+  title: Perfect hedging under costs costs a whole share
+  chapter: Ch. 8.2.4, Market imperfections
+  text: 'With proportional transaction costs no non-trivial strategy super-replicates a call: the cheapest perfect hedge is
+    simply to buy the stock, so practical hedging must accept some risk and trade rarely.'
+  tags:
+  - costs
+- id: book.fm-musiela-martingale.10
+  book: fm-musiela-martingale
+  title: Doubling only works with unlimited credit
+  chapter: Ch. 3.1.3, Self-financing strategies (suicide strategy)
+  text: A doubling strategy that keeps raising the bet after losses can turn near-certain ruin into an apparent sure profit
+    only if borrowing is unlimited; realistic strategies must have a known maximum leverage, and then the arbitrage disappears.
+  tags:
+  - sizing
+- id: book.fm-jackel-monte-carlo.1
+  book: fm-jackel-monte-carlo
+  title: A stop checked at intervals is touched less than a watched one
+  chapter: Ch. 1 and Ch. 11, discrete barrier correction
+  text: A barrier or stop checked only at fixed times is touched less often than one watched continuously; pricing it as continuous
+    with the level shifted by exp(0.5826 x vol x square root of the check interval) works only far from the level. In its
+    test with spot 160 the shifted barrier was 157.8, and the formula wrongly gave zero.
+  tags:
+  - stop
+- id: book.fm-jackel-monte-carlo.2
+  book: fm-jackel-monte-carlo
+  title: Interpolate implied vol in total variance, not in vol
+  chapter: Ch. 14.1, Interpolation of the term structure of implied volatility
+  text: Linear interpolation of implied volatility between expiries can imply negative forward variance, which no price path
+    can produce; interpolate cumulative variance (IV squared times time) monotonically instead, with monotone cubic interpolation
+    as the best compromise between smoothness and consistency.
+  tags:
+  - iv
+  - expiry
+- id: book.fm-jackel-monte-carlo.3
+  book: fm-jackel-monte-carlo
+  title: Correlation hides joint crashes; copulas show them
+  chapter: Ch. 5, Correlation and co-movement
+  text: Linear correlation can be zero for strongly dependent variables and misses joint extremes; a t-copula adds joint large
+    moves of the same sign and a Clayton copula makes assets crash together. Because correlation cannot be hedged, the co-dependence
+    assumption has to be guessed carefully.
+  tags:
+  - sizing
+  - breadth
+- id: book.fm-jackel-monte-carlo.4
+  book: fm-jackel-monte-carlo
+  title: Correlation matrices from gappy data are often invalid
+  chapter: Ch. 6, Salvaging a linear correlation matrix
+  text: Correlation matrices estimated from data with asynchronous gaps, or edited by hand for a stress test, often become
+    invalid; lowering one entry of a 3x3 index matrix from 0.4 to 0.3 broke it. The fix is to set negative eigenvalues to
+    zero and rescale each row to unit length, or to optimise angle coordinates for the best fit.
+  tags:
+  - sizing
+- id: book.fm-jackel-monte-carlo.5
+  book: fm-jackel-monte-carlo
+  title: Every random number generator fails somewhere
+  chapter: Ch. 7, Pseudo-random numbers; Ch. 14.7, Parallel computing
+  text: Never trust an undocumented system generator; re-run an important result with a different generator method, not just
+    a new seed. For parallel runs, giving each worker a different seed of a simple generator can produce overlapping streams;
+    use non-overlapping offsets instead.
+  tags:
+  - ml
+- id: book.fm-jackel-monte-carlo.6
+  book: fm-jackel-monte-carlo
+  title: Box-Muller normals can lose the tails
+  chapter: Ch. 9.3, Normal variates (the Neave effect)
+  text: Box-Muller normals built from a simple multiplicative generator never go below about -4.48 over the generator's whole
+    cycle, although about 8,157 such draws are expected, and the tails show artefacts; since finance cares most about tails,
+    draw normals by inverting the normal distribution instead.
+  tags:
+  - sizing
+- id: book.fm-jackel-monte-carlo.7
+  book: fm-jackel-monte-carlo
+  title: Fit a decision rule on training paths, score it on fresh ones
+  chapter: Ch. 12.8-12.9, Bermudan swaption exercise boundary
+  text: A decision rule optimised on a set of simulated paths looks better on those paths than it is, so the rule is fitted
+    on a training set and then re-priced on a fresh, independent set about twice as large. Its Bermudan example gave 5.062%
+    to 5.069% against a tree benchmark of 5.084%.
+  tags:
+  - ml
+- id: book.fm-jackel-monte-carlo.8
+  book: fm-jackel-monte-carlo
+  title: Greeks of knock-out or stop-type payoffs need special methods
+  chapter: Ch. 11, Greeks
+  text: For payoffs with kinks or knock-outs, bump-and-reprice Gamma by simulation is virtually unusable; building only the
+    paths that survive and end in the money (importance sampling) or weighting payoffs by a likelihood ratio gives stable
+    Delta, Gamma and Vega, and the two can be combined.
+  tags:
+  - stop
+  - iv
+- id: book.fm-jackel-monte-carlo.9
+  book: fm-jackel-monte-carlo
+  title: A simulated number is only statistically right
+  chapter: Ch. 2.7 and Ch. 14.4, error estimation and convergence diagrams
+  text: 'A Monte Carlo estimate carries a statistical error only: roughly one run in three lands outside one standard error
+    of the truth. Return a convergence diagram (the running estimate against the number of samples) and the run time with
+    every result, not a single number.'
+  tags:
+  - ml
+- id: book.fm-jackel-monte-carlo.10
+  book: fm-jackel-monte-carlo
+  title: Build simulated paths end-point first
+  chapter: Ch. 10.8, Path construction
+  text: 'Building a simulated path end-point first and then filling midpoints (a Brownian bridge) lets the first few random
+    numbers fix most of its shape: for a 12-step path the first 4 explain 93.2% of the variability, against 53.9% when built
+    step by step, which is what makes Sobol'' numbers converge fast.'
+  tags:
+  - ml
+- id: book.fm-chan-quantitative-trading.1
+  book: fm-chan-quantitative-trading
+  title: Sharpe rules of thumb
+  chapter: Ch. 2, How does it compare with a benchmark
+  text: A Sharpe ratio below 1 does not make a stand-alone strategy; one profitable almost every month has a Sharpe above
+    2, and one profitable almost every day above 3. Judge a strategy by its Sharpe and its drawdown (depth and duration),
+    not by its raw return.
+  tags:
+  - sizing
+- id: book.fm-chan-quantitative-trading.2
+  book: fm-chan-quantitative-trading
+  title: One tick of cost can erase a reversal edge
+  chapter: Ch. 2, How will transaction costs affect the strategy
+  text: 'On E-mini S&P 5-minute bars, fading moves beyond 2 moving standard deviations and exiting back inside 1 had a Sharpe
+    of about 3 before costs and about -3 after a 1 bp cost per trade: a fine-grained reversal edge can be smaller than the
+    cost of trading it.'
+  tags:
+  - costs
+  - reversal
+  - scalp
+  verdict: negative
+  tested_src: research/HUNT_F1_FACTORY.md
+  tested_text: Our F1 screen found chart indicators on the indices lean only to a small 15-minute reversal (IC ~ -0.05) that
+    is gone by 60 minutes, and 0 of 20 indicator rules pass after costs.
+- id: book.fm-chan-quantitative-trading.3
+  book: fm-chan-quantitative-trading
+  title: Few parameters, enough data, rolling optimisation
+  chapter: Ch. 3, Data-snooping bias
+  text: Use at most five free parameters and at least 252 observations per parameter (a 3-parameter daily model needs 3 years
+    of data). Optimise only in a backward-looking rolling window, and prefer averaging over several nearby parameter sets
+    to picking the single best.
+  tags:
+  - ml
+  - filter
+- id: book.fm-chan-quantitative-trading.4
+  book: fm-chan-quantitative-trading
+  title: The truncation test for look-ahead
+  chapter: Ch. 3, Look-ahead bias
+  text: Rerun the backtest with the last 10-100 days of data removed; if any position before the cut changes, the program
+    is using future data. Signals should be computed only from data lagged to the previous bar.
+  tags:
+  - filter
+- id: book.fm-chan-quantitative-trading.5
+  book: fm-chan-quantitative-trading
+  title: Kelly leverage, and why traders halve it
+  chapter: Ch. 6, Optimal capital allocation and leverage
+  text: The leverage that maximises long-run growth is the mean excess return divided by its variance, and the best growth
+    rate rises with the Sharpe ratio squared. Traders use half of it (half-Kelly) because the estimates are noisy and returns
+    have fat tails, and size must be cut after every loss.
+  tags:
+  - sizing
+  verdict: weak
+  tested_src: research/HUNT_H15.md
+  tested_text: 'Our H15 sized Liquidity 15+5 at half-Kelly from Rs 1 lakh: it grew to Rs 7.41 L in the holdout but with a
+    -44% drawdown, and the Kelly fraction was unstable (BN 1.29 vs 0.48 and 0.14 on other windows).'
+- id: book.fm-chan-quantitative-trading.6
+  book: fm-chan-quantitative-trading
+  title: Cap leverage by the worst day in history
+  chapter: Ch. 6, Risk management
+  text: Cap leverage at the largest one-period loss you can bear divided by the worst historical one-period loss, and use
+    the smaller of that and half-Kelly. With the S&P 500's -20.47% day in 1987, even half-Kelly (1.26) was too much for someone
+    who can stand a 20% one-day loss.
+  tags:
+  - sizing
+  - gap
+- id: book.fm-chan-quantitative-trading.7
+  book: fm-chan-quantitative-trading
+  title: Gold vs gold-miners pair, z-score and half-life
+  chapter: Ch. 3 Example 3.6; Ch. 7 Examples 7.2 and 7.5
+  text: 'Gold ETF vs gold-miners ETF: hedge ratio from a regression on 252 training days, buy the spread at z <= -2, sell
+    it at z >= +2, exit at |z| <= 1. Sharpe 2.3 in training and 1.5 in the test, before costs; the spread''s reversion half-life
+    was about 10 days.'
+  tags:
+  - reversal
+  - swing
+  inst:
+  - GOLD
+  - SILVER
+  verdict: negative
+  tested_src: research/HUNT_R94_MCX_ADVANCED.md
+  tested_text: 'Our R94 traded the GOLD/SILVER log-ratio z-score on MCX proxies: it lost in design and holdout, and of 68
+    design W60 trades only 14 reverted to z = 0.'
+- id: book.fm-chan-quantitative-trading.8
+  book: fm-chan-quantitative-trading
+  title: Cointegration is not correlation
+  chapter: Ch. 7, Stationarity and cointegration
+  text: Coca-Cola and Pepsi daily returns correlate at 0.4849, yet their prices are not cointegrated (test t -2.14), while
+    the gold and gold-miners ETFs are (t -3.357). Test that a spread is stationary before trading its reversion; correlation
+    alone says nothing about prices drifting apart.
+  tags:
+  - reversal
+  - filter
+- id: book.fm-chan-quantitative-trading.9
+  book: fm-chan-quantitative-trading
+  title: Stops belong to momentum trades
+  chapter: Ch. 6 sidebar on stop loss; Ch. 7, What is your exit strategy
+  text: 'Stops suit momentum trades, not mean-reversion trades: a reversion signal only strengthens as the loss grows, and
+    no stop prevents a gap loss. Moves driven by news tend to trend; sharp moves with no news are usually liquidity events
+    that revert.'
+  tags:
+  - stop
+  - reversal
+  - momentum
+  - news
+- id: book.fm-chan-quantitative-trading.10
+  book: fm-chan-quantitative-trading
+  title: 'Energy seasonals: natural gas and gasoline in spring'
+  chapter: Ch. 7, Seasonal trading strategies
+  text: Buying the NYMEX June natural-gas future at the 25 February close and selling on 15 April was profitable 14 years
+    running (1995-2008), and a mid-April gasoline trade in every year since 1995 too. The author warns that one trade a year
+    invites data snooping and that gas is violent.
+  tags:
+  - mcx
+  - swing
+  inst:
+  - NATURALGAS
+  verdict: negative
+  tested_src: research/HUNT_R83_MCX_ENERGY.md
+  tested_text: 'Our R83 traded natural-gas month-of-year seasonality on MCX NATGASMINI: 14 trades, -37,413, worse than simply
+    staying short (+14,687).'

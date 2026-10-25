@@ -1,0 +1,47 @@
+id: book-fmaqf-01
+title: 'Skewness trade S1: sell OTM puts, buy OTM calls when implied skew is richer than historical (Härdle, Kleinow and Stahl,
+  book rule, proposed)'
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Härdle, Kleinow and Stahl''s rule from Applied Quantitative Finance (Ch. 9.5 (also Table 7.1)) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (implied
+  density skew vs skew of a density simulated from the index''s own last 3 months); implicit long-index exposure. Entry: On
+  the first trading day after the monthly expiry, compute implied skewness of the next-month (or second-month, closest to
+  the book''s 3 months) risk-neutral density from settlement prices (smile smoothed, Breeden-Litzenberger) and the skewness
+  of a density simulated from a local-volatility function fitted to the last 63 daily closes (10,000 paths, drift = risk-free
+  rate, mean shifted to the futures price, variance matched). If implied skew < historical skew: sell 1 lot of every put with
+  strike/forward in [0.86, 0.95] and buy 1 lot of every call in [1.05, 1.14]. If implied > historical: the mirror (S2). Stop:
+  None in the book. Research variant: close all legs if the index falls 5% below the entry forward (to stay inside the account
+  stop). Exit: Hold to expiry, cash settled.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (implied density skew vs skew of a density simulated from the index's own last 3 months);
+  implicit long-index exposure
+- end-of-day; one entry a month, held to expiry
+model_or_rule: 'On the first trading day after the monthly expiry, compute implied skewness of the next-month (or second-month,
+  closest to the book''s 3 months) risk-neutral density from settlement prices (smile smoothed, Breeden-Litzenberger) and
+  the skewness of a density simulated from a local-volatility function fitted to the last 63 daily closes (10,000 paths, drift
+  = risk-free rate, mean shifted to the futures price, variance matched). If implied skew < historical skew: sell 1 lot of
+  every put with strike/forward in [0.86, 0.95] and buy 1 lot of every call in [1.05, 1.14]. If implied > historical: the
+  mirror (S2). | stop: None in the book. Research variant: close all legs if the index falls 5% below the entry forward (to
+  stay inside the account stop). | exit: Hold to expiry, cash settled. | filters: None beyond the density comparison.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmaqf-01; trade: Multi-leg on monthly options; book used 1 contract
+  per strike across the whole band. Measure net with real charges (each strike is an order) plus slippage at bid/ask.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R102: puts five strikes out dearer than calls on 91% of NIFTY days (n 1,222). R103: short premium
+  breaks even before costs intraday (0 of 24 defined-risk). The risk-reversal hold-to-expiry trade is not tested by us.. Assumptions:
+  Book used 3-month DAX options and 5% of premium as cost; NSE monthlies are 1 month. Simple version: replace the density
+  comparison by ''put 0.95 IV minus call 1.05 IV above its median'', since the book''s switch said S1 in 29 of 30 months.
+  Strike band may be cut to strikes with non-zero OI.'

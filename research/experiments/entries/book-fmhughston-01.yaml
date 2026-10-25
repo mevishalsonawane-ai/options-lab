@@ -1,0 +1,48 @@
+id: book-fmhughston-01
+title: Conversion / reversal when call minus put strays from the futures-implied value (Hughston and Hunter, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Hughston and Hunter''s rule from Financial Mathematics (Ch. 17.3 (put-call parity); App. F.6.1 (b) arbitrage
+  strategy) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility
+  / options structure (option prices against the same-expiry index future); reads option premiums only as a consistency check,
+  no direction; not our default signal type. Entry: Each minute, for each strike K within ATM +-3: gap = (C - P) - (F - K)
+  x exp(-r x T), with C, P the minute''s call and put closes, F the same-expiry future''s close, r 6.5% continuous, T years
+  to expiry. If gap > threshold: sell the call, buy the put, buy 1 lot future. If gap < -threshold: buy the call, sell the
+  put, sell 1 lot future. threshold = all-in charges of the three legs in points plus 2 points slippage per leg. Stop: None
+  in the book (locked payoff); research variant: close all legs if the basket''s mark-to-market loss exceeds 3 x the expected
+  edge (guards against a bad print being the signal). Exit: Close all legs when |gap| < 1 point, else hold to expiry cash
+  settlement.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: executable bid/ask quotes for options and futures
+  (the lake keeps last prices, ATM +-10 only)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (option prices against the same-expiry index future); reads option premiums only as a consistency
+  check, no direction; not our default signal type
+- 1-minute bars, nearest expiry, 09:20-15:00
+model_or_rule: 'Each minute, for each strike K within ATM +-3: gap = (C - P) - (F - K) x exp(-r x T), with C, P the minute''s
+  call and put closes, F the same-expiry future''s close, r 6.5% continuous, T years to expiry. If gap > threshold: sell the
+  call, buy the put, buy 1 lot future. If gap < -threshold: buy the call, sell the put, sell 1 lot future. threshold = all-in
+  charges of the three legs in points plus 2 points slippage per leg. | stop: None in the book (locked payoff); research variant:
+  close all legs if the basket''s mark-to-market loss exceeds 3 x the expected edge (guards against a bad print being the
+  signal). | exit: Close all legs when |gap| < 1 point, else hold to expiry cash settlement. | filters: Both options and the
+  future traded in the same minute (no stale-print flag per HUNT_LAKE_STALE_PRINTS); skip expiry day after 13:00; skip strikes
+  with fewer than 20 contracts in the minute.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-fmhughston-01; trade: Three legs, 1 lot each: option pair at strike
+  K plus 1 index futures lot.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R103 showed apparent profits in the chain came from stale wing prices (six BANKNIFTY
+  passes became -Rs 2.9 to -Rs 3.3 lakh when repriced), so most violations in last-price data are likely stale prints. Assumptions:
+  The book''s arbitrage uses the underlying share plus a loan; for an index we use the same-expiry future as the forward,
+  so the rate term nearly cancels. Window, threshold and filters are ours. Same rule as written up from fm-capinski-math-finance
+  (same slug).'
