@@ -463,10 +463,11 @@ object NtfyArm {
             val next = sellRest(x, c, "exit message")
             runCatching { ArmLive.level(next.ref, next.stop) }
             if (!next.open) { runCatching { ArmLive.closed(next.ref, next.why ?: "exit") }; sold++ }
+            if (next != x) changed = true
             b.positions[i] = next
         }
         return if (sold == mine.size) finish(b, a, CLOSED, ended + "closed ${mine.joinToString { it.value.symbol }} (exit message) · paper")
-        else say(b, "an exit message: the sale is tried again on the next pass") || changed || sold > 0
+        else say(b, "an exit message: the sale is tried again on the next pass") || changed
     }
 
     private suspend fun stoppedToday(): Boolean =
@@ -532,7 +533,7 @@ object NtfyArm {
         val v = _view.value
         val wanted = LinkedHashSet<String>()
         v.open.filter { it.idxStop != null || it.idxTarget != null }.forEach { wanted += it.index }
-        for (a in v.alerts) if (a.state == PENDING) (NtfyParser.read(a.title, a.body, a.at.toLocalDate()) as? Parsed.Buy)?.let { p ->
+        for (a in v.alerts) if (a.state == PENDING) (runCatching { NtfyParser.read(a.title, a.body, a.at.toLocalDate()) }.getOrNull() as? Parsed.Buy)?.let { p ->
             if (p.strike == null || p.stock) wanted += p.index
             if (p.stock) runCatching { StockOptions.listed(p.index) }
         }
@@ -542,11 +543,10 @@ object NtfyArm {
         // the 15-second stop check never waits behind a network read.
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         val quotes = HashMap<String, com.optionslab.engine.sandbox.Quote>(); val bars = HashMap<String, List<Upstox.Bar>>()
-        for (a in v.alerts) if (a.state == PENDING) (NtfyParser.read(a.title, a.body, a.at.toLocalDate()) as? Parsed.Buy)?.let { p ->
+        for (a in v.alerts) if (a.state == PENDING) (runCatching { NtfyParser.read(a.title, a.body, a.at.toLocalDate()) }.getOrNull() as? Parsed.Buy)?.let { p ->
             val c = runCatching { contractFor(p, today, v.settings, out[p.index]) }.getOrNull() ?: return@let
-            if (c.feedKey in quotes) return@let
-            runCatching { Paper.quote(c) }.getOrNull()?.let { quotes[c.feedKey] = it }
-            if (p.trig == NtfyParser.Trig.ZONE || p.trig == NtfyParser.Trig.ABOVE) runCatching { bars(c.feedKey) }.getOrNull()?.let { bars[c.feedKey] = it }
+            if (c.feedKey !in quotes) runCatching { Paper.quote(c) }.getOrNull()?.let { quotes[c.feedKey] = it }
+            if ((p.trig == NtfyParser.Trig.ZONE || p.trig == NtfyParser.Trig.ABOVE) && c.feedKey !in bars) runCatching { bars(c.feedKey) }.getOrNull()?.let { bars[c.feedKey] = it }
         }
         quotesNow = quotes; barsNow = bars
         return out
@@ -614,7 +614,7 @@ object NtfyArm {
         if (b.positions.any { it.open && it.symbol == c.symbol } || Paper.state.positions.any { it.symbol == c.symbol && it.quantity != 0 })
             return done("not traded: ${c.symbol} is already held - never two positions on one contract")
         // 25 Oct (review): the quote read before the lock ([prefetch]); never a network read here.
-        val q = quotesNow[c.feedKey]
+        val q = quotesNow[c.feedKey] ?: return say(b, "waiting for a fresh price of ${c.symbol}")
         val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 }
         val (hi, lo) = if (p.trig == NtfyParser.Trig.ZONE || p.trig == NtfyParser.Trig.ABOVE) rangeSince(c, maxOf(sent, today.atTime(9, 15))) else null to null
         if (!NtfyRules.triggered(p.trig, p.entry, ltp, hi, lo))
@@ -655,7 +655,8 @@ object NtfyArm {
         val (stop, ours) = NtfyRules.stop(p.stop, p.stopPct, price, s)
         val target = NtfyRules.target(p.target, price)
         val lots = (qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-        val stopId = runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, stop) }.getOrNull()?.takeIf { it.ok }?.orderId
+        // 25 Oct (review): the fill's price goes with it, so placing the stop never reads a quote under the lock.
+        val stopId = runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, stop, known = com.optionslab.engine.sandbox.Quote(price)) }.getOrNull()?.takeIf { it.ok }?.orderId
             ?.also { runCatching { Strategies.tagOwner("paper:$it", "${NtfyRules.OWNER} · stop") } }
         val pos = Pos(SRC, a.id, p.index, c.symbol, p.right.name, lots, qty, price, now, orderId, stop, ours, stopId, Exit.T1_ALL.key,
             target, target, c.expiry == now.toLocalDate(), charges = chargesOf(orderId), idxStop = p.indexStop, idxTarget = p.indexTarget)
