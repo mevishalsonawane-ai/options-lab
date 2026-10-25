@@ -60,10 +60,21 @@ object WhatsNew {
     private val OCT20: LocalDate = LocalDate.of(2026, 10, 20)
     private val OCT21: LocalDate = LocalDate.of(2026, 10, 21)
     private val OCT22: LocalDate = LocalDate.of(2026, 10, 22)
+    private val OCT25: LocalDate = LocalDate.of(2026, 10, 25)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 25 Oct (Boss: "find out what all the issues we have in the application", after the books): the app audit's fixes, newest of all.
+        Entry("2026-10-25-app-audit-fixes", OCT25, "Fixes from the app audit against the books",
+            "Paper fills are now measured, stops against their trigger, and the diagnostics show them. " +
+                "A moment's failed read can no longer switch the passed arms off or forget what they hold. " +
+                "An MCX position is sold for today's stop only when that stop applies to MCX. " +
+                "Switching an arm off from its row now shows in the change timeline, and one tap undoes it. " +
+                "The daily loss stop's message lists each position and says when two arms bet opposite ways. " +
+                "The paper loss limit's row says it sells what the bots hold, and loosening it asks your PIN. " +
+                "A price stream sending heartbeats but no prices is opened again after 20 seconds.",
+            "Autopilot → change timeline; Bot settings → Account guard; the full audit is in the repository's research folder"),
         // 22 Oct (Boss: borrow four ideas from Jake Schincariol's day-trader skill): the time machine, the order fingerprint, the three gates, the flat-by.
         Entry("2026-10-22-day-trader-borrow", OCT22, "Four safety ideas from a day-trader kit",
             "Every bot entry now gets a reality check from the index's own past days. " +
