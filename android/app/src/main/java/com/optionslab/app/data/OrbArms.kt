@@ -1934,7 +1934,8 @@ object OrbArms {
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, expected), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
         // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]; the stop rests on the fill, so it is not in it).
-        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", 1, "MARKET", "MIS", null, null, now().toLocalDate(), arm.source), refusals, "paper guard")
+        // (25 Oct: the verdict's day is the market clock's, the one the paper book's door reads back - so the arm's own test clock on another day never refuses an entry.)
+        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", 1, "MARKET", "MIS", null, null, Market.today(), arm.source), refusals, "paper guard")
         val entry = buyPaperEntry(arm.label, c, 1, q, ownerOf(arm), mayRetryPrice(b), verdict) { nq ->
             val again = nq.ltp * 1.0005
             if (OrbRules.stopTrigger(again, pp.stopPoints) == null) "refused: premium %.2f is at or below %s, a %s-point stop has no level"
@@ -2402,7 +2403,7 @@ object OrbArms {
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return kept("guard_refused: " + refusals.joinToString(" "), pick, limit, lots)
         // 22 Oct: the guard's verdict stamped with this order's fingerprint, its -60% stop level with it ([OrderVerdicts]).
-        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, "LIMIT", "MIS", limit, null, day, src, stop = HeroRules.stopLevel(limit)), refusals, "paper guard")
+        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, "LIMIT", "MIS", limit, null, Market.today(), src, stop = HeroRules.stopLevel(limit)), refusals, "paper guard")
         // Never a market order on these strikes: a LIMIT BUY on the PAPER account. Not filled at once, it is cancelled
         // (nothing held), and the arm may decide again on a later bar until 14:45.
         val buy = Paper.place(c, "BUY", lots, "LIMIT", "MIS", limit, null, known = q, auto = HeroRules.OWNER, verdict = verdict, stop = HeroRules.stopLevel(limit))
@@ -2628,7 +2629,8 @@ object OrbArms {
         val armKey = if (liquidity != null) FlowShadow.liquidityKey(c.underlying) else arm.source
         // 22 Oct: the checks above cleared THIS order: stamped with its fingerprint (and the stop it rests), recomputed at the door.
         val liveStop = if (liquidity == null) OrbRules.stopTrigger(last, lp.stopPoints) else LiquidityRules.stopTrigger(last, lq.stopPct)
-        val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, today0, armKey, stop = liveStop), "ORB live checks")
+        // (25 Oct: dated by the market clock, the one the door ([Broker.placeOrder]) reads back; in the app both clocks are the same.)
+        val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), armKey, stop = liveStop), "ORB live checks")
         val id: String? = try {
             // The arm's key as its entry check asked the portfolio guard (the door refuses only this arm's blocked entry).
             // [last]: the price this entry decided on (its slippage is measured from it once it fills; nothing else changes).
@@ -3255,7 +3257,7 @@ object OrbArms {
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
         // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]).
-        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, "MARKET", "MIS", null, null, now().toLocalDate(), arm.source), refusals, "paper guard")
+        val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, "MARKET", "MIS", null, null, Market.today(), arm.source), refusals, "paper guard")
         val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b), verdict) { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
         val buy = entry.result
         val fill = entry.fill ?: return unfilled(c, entry)

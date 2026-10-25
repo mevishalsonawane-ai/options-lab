@@ -13,7 +13,8 @@ import java.time.LocalDate
  *    and on an expiry day the 15:05 square-off still comes first);
  *  - NSE stock or fund options and futures: 15:20;
  *  - MCX: ten minutes before that day's close (MCX's own MIS square-off minute, 23:20 in US summer time, 23:45 in US winter;
- *    an evening-only session keeps the same close).
+ *    an evening-only session keeps the same close; a special session - the Diwali Muhurat hour, a Budget Sunday - uses its own
+ *    close from the calendar handed in ([McxSession.Calendar], the built-in list by default; 25 Oct review).
  *
  * A position designed to be held (NRML by design: Night (R3)'s overnight option, the Expiry Put ticket, the MCX arms' NRML
  * futures, a strategy defined as positional) is not intraday and is left alone; so is anything that is not an arm's.
@@ -37,21 +38,25 @@ object FlatBy {
         else -> Segment.NSE_STOCK
     }
 
-    /** The flat-by minute of [segment] on [day]. */
-    fun minute(segment: Segment, day: LocalDate): Int = when (segment) {
+    /** MCX's close on [day] per [calendar]: the day's own session window (a special session has its own), else the ordinary close. */
+    fun mcxClose(day: LocalDate, calendar: McxSession.Calendar): java.time.LocalTime = calendar.window(day)?.close ?: McxSession.close(day)
+
+    /** The flat-by minute of [segment] on [day]; MCX's ten minutes before its close that day per [calendar]. */
+    fun minute(segment: Segment, day: LocalDate, calendar: McxSession.Calendar = McxSession.DEFAULT): Int = when (segment) {
         Segment.NSE_INDEX -> NSE_INDEX_MINUTE
         Segment.NSE_STOCK -> NSE_STOCK_MINUTE
-        Segment.MCX -> McxSession.misCut(day).let { it.hour * 60 + it.minute }
+        Segment.MCX -> mcxClose(day, calendar).minusMinutes(McxSession.MIS_BEFORE_CLOSE_MIN).let { it.hour * 60 + it.minute }
     }
 
     /** The last minute (exclusive) the flat-by may still send an exit on [day]: the segment's close. */
-    fun until(segment: Segment, day: LocalDate): Int = when (segment) {
+    fun until(segment: Segment, day: LocalDate, calendar: McxSession.Calendar = McxSession.DEFAULT): Int = when (segment) {
         Segment.NSE_INDEX, Segment.NSE_STOCK -> NseHours.foClose(day)
-        Segment.MCX -> McxSession.close(day).let { it.hour * 60 + it.minute }
+        Segment.MCX -> mcxClose(day, calendar).let { it.hour * 60 + it.minute }
     }
 
     /** Whether the flat-by of [segment] is due at [minuteNow] on [day]: from its minute until the segment's close. */
-    fun due(segment: Segment, day: LocalDate, minuteNow: Int): Boolean = minuteNow >= minute(segment, day) && minuteNow < until(segment, day)
+    fun due(segment: Segment, day: LocalDate, minuteNow: Int, calendar: McxSession.Calendar = McxSession.DEFAULT): Boolean =
+        minuteNow >= minute(segment, day, calendar) && minuteNow < until(segment, day, calendar)
 
     /** Intraday: a MIS position; NRML is held by design. */
     fun intraday(product: String): Boolean = product.equals("MIS", ignoreCase = true)
@@ -60,8 +65,8 @@ object FlatBy {
     fun text(minute: Int): String = "%02d:%02d".format(minute / 60, minute % 60)
 
     /** The Automation card's line: every segment's minute on [day]. */
-    fun line(day: LocalDate): String =
-        "Flat-by: index options ${text(NSE_INDEX_MINUTE)} · stock and fund ${text(NSE_STOCK_MINUTE)} · MCX ${text(minute(Segment.MCX, day))} " +
+    fun line(day: LocalDate, calendar: McxSession.Calendar = McxSession.DEFAULT): String =
+        "Flat-by: index options ${text(NSE_INDEX_MINUTE)} · stock and fund ${text(NSE_STOCK_MINUTE)} · MCX ${text(minute(Segment.MCX, day, calendar))} " +
             "(10 min before its close) · expiry day ${text(NseHours.EXPIRY_SQUARE_OFF)} first. Closes any intraday arm position still open; " +
             "positions held by design are left alone."
 }

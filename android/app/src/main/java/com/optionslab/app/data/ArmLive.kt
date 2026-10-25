@@ -737,7 +737,8 @@ object ArmLive {
         Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last).takeIf { it.isNotEmpty() }?.let { notMirrored(a, it.joinToString("; ")); return@withLock }
         // 22 Oct: the gate's verdict stamped with this exact order's fingerprint (the paper stop it will rest with it); the door
         // recomputes it right before Zerodha and refuses a difference ([OrderVerdicts]).
-        val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, now().toLocalDate(), "arm:${a.key}", stop = a.stop), "arm live gate")
+        // (25 Oct: dated by the market clock, the one the door reads back; in the app the arms' clock is the same one.)
+        val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), "arm:${a.key}", stop = a.stop), "arm live gate")
         val base = Pos(a.key, a.ref, ins.symbol, ins.exchange, spec.product, if (a.side >= 0) 1 else -1, qty, qty, ins.lot, ins.tick, ins.multiplier,
             last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true)
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).

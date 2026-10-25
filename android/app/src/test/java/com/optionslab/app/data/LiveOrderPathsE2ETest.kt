@@ -458,7 +458,9 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
     }
 
     @Test fun afterThePaperOnlyPeriodEndsEntriesGoAgain() = runBlocking {
-        val ended = com.optionslab.ira.PaperOnlyPeriod.Period(now.toLocalDate().minusDays(1), "10 days on paper", now.toLocalDate().minusDays(11))
+        // (25 Oct: dated by the market clock the period is judged on - at a weekend the wall clock's day is later than it.)
+        val today = Market.today()
+        val ended = com.optionslab.ira.PaperOnlyPeriod.Period(today.minusDays(1), "10 days on paper", today.minusDays(11))
         SecurePrefs.put(PaperOnly.KEY, com.optionslab.ira.PaperOnlyPeriod.encode(ended))
         PaperOnly.unreadForTest(); PaperOnly.ensureLoaded()
         assertNull(PaperOnly.entryRefusal())

@@ -1309,7 +1309,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /**
      * 22 Oct (the three gates): the generation of the plan "yes" was typed for. [sendPlan] holds a real entry of Boss's own
      * until it is this plan's, when his "Type yes" setting is on: the gate lives here, so no path around the screen (a test, a
-     * later caller) sends a real entry without it. Jarvis's approved trades carry Boss's own approval card instead.
+     * later caller) sends a real entry without it - with ONE exception, kept as it was: an order Boss gives Jarvis in words
+     * ([com.optionslab.app.ira.IraActions.trade], source "Jarvis") goes through this review's checks and is sent without the swipe
+     * or the PIN by Boss's own rule (the app must be open), and does not type "yes" either; the words were the order. Said in
+     * RESULT.md for Boss to decide (25 Oct review).
      */
     private val yesGen = java.util.concurrent.atomic.AtomicLong(-1)
 
@@ -1466,6 +1469,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val legs = cur.legs.mapIndexed { j, o -> if (j == i) o.copy(price = price) else o }
         // 22 Oct: the typed price is another order: judged again and stamped again (the old verdict's fingerprint would refuse it).
         plan.value = Load.Done(stamped(cur.copy(legs = legs, refusals = gate(legs, cur.holdToSettlement, cur.exit))))
+        // 25 Oct review: and "yes" typed for the old price does not cover it (the card asks again; so does this gate).
+        yesGen.set(-1)
     }
 
     /**

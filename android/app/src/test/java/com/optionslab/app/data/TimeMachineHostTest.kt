@@ -6,6 +6,7 @@ import com.optionslab.engine.Series
 import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.risk.TimeMachine
+import com.optionslab.ira.TradeManager
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -22,12 +23,17 @@ import java.time.LocalTime
  * noted as such, the diagnostics and Jarvis's words. Shadow only: nothing here touches an order.
  */
 class TimeMachineHostTest : RobolectricTest() {
-    private val today = Market.today()
+    /** The market clock's day, read in [up] (a test instance is built before the clock rule runs). */
+    private lateinit var today: LocalDate
 
     private lateinit var storeBars: TimeMachineHost.Bars
 
-    @Before fun up() { TimeMachineHost.init(context); TimeMachineHost.resetForTest(); storeBars = TimeMachineHost.bars }
-    @After fun down() { TimeMachineHost.resetForTest(); TimeMachineHost.bars = storeBars }
+    /** The store's own read ([TestApp] hands every other test an empty phone instead). */
+    @Before fun up() { today = Market.today(); TimeMachineHost.init(context); TimeMachineHost.resetForTest(); storeBars = TimeMachineHost.storeBarsForTest(); TimeMachineHost.bars = storeBars }
+    @After fun down() {
+        TimeMachineHost.resetForTest()
+        assertEquals("the time machine never reaches the internet", emptyList<String>(), com.optionslab.app.testing.NetworkGuard.blocked.toList())
+    }
 
     /** [n] past sessions of 5-minute bars climbing 20 points a bar from 09:15. */
     private fun climbing(n: Int): List<TimeMachine.Session> {
@@ -91,6 +97,42 @@ class TimeMachineHostTest : RobolectricTest() {
         assertEquals(3, TimeMachineHost.forwardLog().size)
     }
 
+    /** The hook queues and returns; the check runs on the time machine's own low-priority thread, and a test can wait for it. */
+    @Test fun afterEntryRunsOnItsOwnThreadAndTheTestWaitsForIt() {
+        var thread: String? = null
+        TimeMachineHost.bars = TimeMachineHost.Bars { _, _, _ -> thread = Thread.currentThread().name; climbing(30) to "30 sessions from the test" }
+        TimeMachineHost.afterEntry(entry(arm = "orb_bg"))
+        assertTrue("finished", TimeMachineHost.awaitIdleForTest())
+        assertTrue("$thread", thread?.startsWith("time-machine") == true)
+        assertEquals("edge", TimeMachineHost.resultOf("orb:orb_bg:P1")?.verdict)
+    }
+
+    /**
+     * 25 Oct (CI): the time machine's finding on the bus is words only. It must never bring the trade manager's look forward -
+     * a look reads the option's minutes from the feed (that read, running on after a test closed its fake feed, reached the
+     * real host and ate the next test's scripted prices). A directional finding from anyone else still does.
+     */
+    @Test fun aTimeMachineFindingNeverBringsTheManagersLookForward() {
+        SmartWorkers.resetForTest(); TradeManagerHost.resetForTest()
+        val t0 = TradeManagerHost.nowMs()
+        val looks = java.util.concurrent.atomic.AtomicInteger()
+        TradeManagerHost.testSnapshot = { _, at -> looks.incrementAndGet(); TradeManager.Snapshot(at, 120.0) }
+        TradeManagerHost.testBars = { emptyList() }
+        TradeManagerHost.attach(TradeManagerHost.Registration(TradeManager.ManagedTrade("pine:liq", "orb:liq:P9", "Liquidity", "BANKNIFTY", 1,
+            "BANKNIFTY25OCT54000CE", 300.0, 30, 240.0, 420.0, TradeManager.Caps(t0 + 3 * 3_600_000L), TradeManager.Account.PAPER, t0, 0.5), premium = { 310.0 }))
+        TimeMachineHost.bars = TimeMachineHost.Bars { _, _, _ -> climbing(30) to "30 sessions from the test" }
+        TimeMachineHost.check(entry(arm = "liquidity").copy(ref = "orb:liq:P9"))
+        assertTrue(SmartWorkers.bus.recent(System.currentTimeMillis(), "BANKNIFTY").any { it.who == TimeMachineHost.WHO })
+        Thread.sleep(400)
+        assertEquals("no look brought forward by the time machine's words", 0, looks.get())
+        // The control: a directional finding from another worker on the same index does wake it.
+        SmartWorkers.bus.post(com.optionslab.ira.Findings.Finding("test worker", com.optionslab.ira.Findings.Kind.OTHER, "BANKNIFTY", 1, null, 60, System.currentTimeMillis()))
+        var waited = 0
+        while (looks.get() == 0 && waited++ < 200) Thread.sleep(20)
+        assertEquals("a worker's finding brings the look forward", 1, looks.get())
+        TradeManagerHost.resetForTest()
+    }
+
     @Test fun premiumPointsAreConvertedWithTheDeltaOrSaidAsAssumed() {
         val (s0, t0, n0) = TimeMachineHost.points(entry(40.0, 80.0))
         assertEquals(80.0, s0!!, 1e-9); assertEquals(160.0, t0!!, 1e-9)
@@ -135,7 +177,11 @@ class TimeMachineHostTest : RobolectricTest() {
         TimeMachineHost.bars = storeBars
         // An underlying with nothing kept: the history keeper has nothing either.
         val (none, why) = storeBars.sessions("MIDCPNIFTY", today, 5)
-        assertTrue(none.isEmpty()); assertTrue(why, why.contains("recent MIDCPNIFTY history"))
+        assertTrue(none.isEmpty()); assertEquals("no sessions saved yet on this phone for MIDCPNIFTY", why)
+        // Said so on the ticket, and nothing else done (no odds, no verdict).
+        val said = TimeMachineHost.check(entry(arm = "orb_midcp").copy(underlying = "MIDCPNIFTY"))
+        assertEquals("unknown", said.verdict)
+        assertTrue(said.line(), said.line().contains("no past sessions of the underlying on the phone") && said.line().contains("no sessions saved yet on this phone for MIDCPNIFTY"))
         // The fold itself.
         val ones = (0 until 10).map { i -> Bar(today.atTime(9, 15).plusMinutes(i.toLong()), 1.0 + i, 2.0 + i, 0.5 + i, 1.5 + i) }
         val fives = TimeMachineHost.fold(ones, 5)

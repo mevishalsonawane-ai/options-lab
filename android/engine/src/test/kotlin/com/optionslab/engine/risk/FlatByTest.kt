@@ -29,6 +29,24 @@ class FlatByTest {
         assertEquals("23:45", FlatBy.text(FlatBy.minute(FlatBy.Segment.MCX, winter)))
     }
 
+    /** 25 Oct review: a special MCX session (the Diwali Muhurat hour, a Budget Sunday) goes ten minutes before ITS close, not 23:20. */
+    @Test fun anMcxSpecialSessionGoesTenMinutesBeforeItsOwnClose() {
+        val muhurat = LocalDate.of(2026, 11, 8)                       // Sunday, 18:00-19:00 (the built-in list)
+        assertEquals(18 * 60 + 50, FlatBy.minute(FlatBy.Segment.MCX, muhurat))
+        assertEquals(19 * 60, FlatBy.until(FlatBy.Segment.MCX, muhurat))
+        assertTrue(FlatBy.due(FlatBy.Segment.MCX, muhurat, 18 * 60 + 50))
+        assertFalse(FlatBy.due(FlatBy.Segment.MCX, muhurat, 18 * 60 + 49))
+        assertFalse(FlatBy.due(FlatBy.Segment.MCX, muhurat, 23 * 60 + 20), "the ordinary 23:20 is not due that day")
+        val budget = LocalDate.of(2026, 2, 1)                          // Sunday, 09:00-17:00
+        assertEquals(16 * 60 + 50, FlatBy.minute(FlatBy.Segment.MCX, budget))
+        // An evening-only session keeps the ordinary close; a calendar handed in wins over the built-in list.
+        assertEquals(23 * 60 + 20, FlatBy.minute(FlatBy.Segment.MCX, LocalDate.of(2026, 10, 20)))
+        val cal = com.optionslab.engine.mcx.McxSession.Calendar(mapOf(summer to com.optionslab.engine.mcx.McxSession.Window(java.time.LocalTime.of(9, 0), java.time.LocalTime.of(21, 0))))
+        assertEquals(20 * 60 + 50, FlatBy.minute(FlatBy.Segment.MCX, summer, cal))
+        assertTrue(FlatBy.line(muhurat).contains("MCX 18:50"), FlatBy.line(muhurat))
+        assertTrue(FlatBy.line(summer).contains("MCX 23:20"), FlatBy.line(summer))
+    }
+
     @Test fun dueFromTheMinuteUntilTheSegmentsClose() {
         val idx = FlatBy.Segment.NSE_INDEX
         assertFalse(FlatBy.due(idx, summer, 15 * 60 + 24))

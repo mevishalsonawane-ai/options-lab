@@ -63,8 +63,10 @@ object TradeManagerHost {
         subscribed = true
         runCatching {
             SmartWorkers.bus.subscribe(Findings.Sub(emptySet(), emptySet()) { f ->
-                // (20 Oct: the Candle agent's reads are knowledge only - they never bring a look forward.)
-                if (!f.who.startsWith(TradeManager.WHO) && f.kind != Findings.Kind.CANDLE && live.isNotEmpty() &&
+                // (20 Oct: the Candle agent's reads are knowledge only - they never bring a look forward. 25 Oct: nor the time
+                // machine's words on an entry just made - a look reads the option's minutes from the feed, and the time machine
+                // must never cause a read, a delay or a change; CI saw its finding's look reach the feed after a test's fake closed.)
+                if (!f.who.startsWith(TradeManager.WHO) && f.kind != Findings.Kind.CANDLE && f.who != TimeMachineHost.WHO && live.isNotEmpty() &&
                     live.values.any { f.instrument == Findings.ALL || it.reg.trade.underlying.equals(f.instrument, ignoreCase = true) })
                     if (!testNoWake) scope.launch { runCatching { onLook() } }
             })

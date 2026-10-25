@@ -17,6 +17,13 @@ import kotlin.math.abs
  * closing, cancelled first, refused and told).
  */
 internal object SquareOffExit {
+    /** The two square-offs' tags: each counts the other's working exit as cover and never cancels it (25 Oct review). */
+    val TAGS = setOf("iraalgoexpiry", "iraalgoflat")
+    private val DONE = setOf("COMPLETE", "REJECTED", "CANCELLED")
+
+    /** A stop-type order (waits for a trigger): the kind that is cancelled before the exit. A plain MARKET or LIMIT sell is an exit. */
+    private fun isStop(o: Broker.OrderRow): Boolean = o.type.equals("SL", true) || o.type.equals("SL-M", true) || o.status == "TRIGGER PENDING"
+
     suspend fun send(p: Broker.Position, lotSize: Int, tickSize: Double, read: List<Broker.OrderRow>, working: List<Broker.OrderRow>,
                      positions: Broker.Positions, limits: Kite.Limits, who: String, tag: String, origin: String,
                      aboutIt: String, exitName: String, multiplier: Int = 1, tell: (String, String) -> Unit): Boolean {
@@ -25,17 +32,29 @@ internal object SquareOffExit {
             if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) return false
             val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
             val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
-            // Any other resting exit on it (a protection's stop or target, a strategy's stop) would keep the market exit from
-            // ever going out: cancel them first; the exit goes on the next pass.
-            val others = same.filter { it.tag != tag }
+            // 25 Oct review: a plain exit already working on it - this square-off's own, the other square-off's, or the arm's own
+            // market or limit sell ([LiveMirror.TAG]: its closing in progress) - is COVER: subtracted below, never cancelled (a
+            // cancel racing its fill, then a sell on stale holdings, could sell the position twice). Anything else resting the same
+            // way (the arm's stop at Zerodha, a protection's stop or target, a strategy's) would keep the market exit from ever going
+            // out: cancelled first, and - new - confirmed out, so the exit goes in THIS pass. (Before, the exit waited for the next
+            // pass; the arm put its stop back in between and this cancelled it again, every minute until the close, with the
+            // position never flat and its stop gone most of the time.) A cancelled order found filled sold the position meanwhile:
+            // nothing more this pass, the next reads the books again; one not yet out: the exit waits for the next pass too.
+            val cover = same.filter { it.tag == tag || it.tag in TAGS || (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) }
+            val others = same.filter { it !in cover }
             if (others.isNotEmpty()) {
-                others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
-                return false
+                var filled = false; var allOut = true
+                for (o in others) {
+                    runCatching { Broker.cancel(o.id, o.variety) }
+                    val st = runCatching { Broker.orderState(o.id)?.status }.getOrNull()
+                    if (st == "COMPLETE") filled = true else if (st !in DONE) allOut = false
+                }
+                if (filled || !allOut) return false
             }
             // A protection's stop and target resting as one GTT ([DayOco]) would still fire after this exit sold the position:
             // deleted first, confirmed (or the exit waits for the next pass).
             if (!Protections.dayGttsOut(p.exchange, p.symbol, who)) return false
-            val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+            val pending = cover.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
             // What is held, checked against the orders read's fills: an exit sent from here that filled a moment ago is never
             // sold again while the positions catch up ([ExitCoordinator.held]).
             val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, who, read, positions) }.getOrNull() ?: return false

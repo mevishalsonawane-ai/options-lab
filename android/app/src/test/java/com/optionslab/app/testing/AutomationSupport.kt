@@ -39,9 +39,16 @@ object AutomationSupport {
         return d.atTime(LocalTime.of(h, m)).atZone(IST)
     }
 
-    /** Now, as a time today before 15:00 and never later than the real clock (Zerodha's order times come from it). */
+    /**
+     * Now, as a time today before 15:00 and never later than the real clock (Zerodha's order times come from it). 25 Oct: "today" is
+     * the market clock's day ([MarketClockRule]: the latest trading day) - at a weekend or on a holiday that is an earlier day than
+     * the wall clock's, and the market clock's noon is used, so an arm's day and [Market.today] never disagree (they did: a refusal
+     * recorded on Saturday's date was not found under Friday's, and the fingerprint's day check refused every entry).
+     */
     fun earlierToday(): ZonedDateTime {
         val real = ZonedDateTime.now(IST).minusSeconds(5)
+        val market = Market.now()
+        if (market.toLocalDate() != real.toLocalDate()) return market
         return if (real.hour * 60 + real.minute >= 15 * 60) real.with(LocalTime.of(15, 0)) else real
     }
 

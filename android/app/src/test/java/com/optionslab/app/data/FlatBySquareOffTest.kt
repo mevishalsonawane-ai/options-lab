@@ -183,6 +183,67 @@ class FlatBySquareOffTest : RobolectricTest() {
         assertEquals("still working: not sent again", 1, kite.placed.size)
     }
 
+    /**
+     * 25 Oct review: the arm's stop resting at Zerodha is cancelled, confirmed out, and the exit goes in the SAME pass - before, the
+     * exit waited a pass, the arm put its stop back, and the flat-by cancelled it again every minute: never flat, no stop meanwhile.
+     */
+    @Test fun theArmsRestingStopIsCancelledAndTheExitGoesInTheSamePass() {
+        FlatBySquareOff.liveOwner = { "ORB Donchian" }
+        kite.position(ce, 30, 200.0, product = "MIS")
+        val stop = runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(ce, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "SL", 161.5, 0.05, "NFO",
+            com.optionslab.engine.orb.LiveMirror.TAG, triggerPrice = 170.0), exit = true) }
+        kite.requests.clear()
+        at(15, 26); pass()
+        assertTrue("the stop cancelled first", kite.requests.any { it.method == "DELETE" && it.path == "/orders/regular/$stop" })
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertEquals("the exit in the same pass", listOf(Triple(ce, "SELL", "30")), sent())
+        at(15, 27); pass()
+        assertEquals("nothing more", 1, kite.placed.size)
+    }
+
+    /** 25 Oct review: the arm's own market exit still working on it is its closing in progress - cover, never cancelled, never doubled. */
+    @Test fun theArmsOwnWorkingExitIsCoverNotCancelled() {
+        FlatBySquareOff.liveOwner = { "ORB Donchian" }
+        kite.position(ce, 30, 200.0, product = "MIS")
+        kite.nextPlace(outcome = FakeKite.Outcome.OPEN)
+        val armSell = runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(ce, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO",
+            com.optionslab.engine.orb.LiveMirror.TAG), exit = true) }
+        kite.requests.clear()
+        at(15, 26); pass()
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
+        assertEquals("OPEN", kite.order(armSell).status)
+        assertFalse("the index segment is not done while it is open", FlatBySquareOff.diagLine().contains(com.optionslab.engine.risk.FlatBy.Segment.NSE_INDEX.label))
+    }
+
+    /** 25 Oct review: on an expiry day 15:25-15:30 the expiry square-off's working exit is cover too; the two never cancel each other. */
+    @Test fun theExpirySquareOffsWorkingExitIsCoverNotCancelled() {
+        FlatBySquareOff.liveOwner = { "ORB Donchian" }
+        kite.position(ce, 30, 200.0, product = "MIS")
+        kite.nextPlace(outcome = FakeKite.Outcome.OPEN)
+        val expirySell = runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(ce, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO",
+            "iraalgoexpiry"), exit = true) }
+        kite.requests.clear()
+        at(15, 26); pass()
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
+        assertEquals("OPEN", kite.order(expirySell).status)
+    }
+
+    /** 25 Oct review: a special MCX session (the Diwali Muhurat hour, 18:00-19:00) goes ten minutes before ITS close, not at 23:20. */
+    @Test fun anMcxSpecialSessionGoesTenMinutesBeforeItsOwnClose() {
+        val day = LocalDate.of(2026, 11, 8)                       // Sunday: the Muhurat hour (the built-in list)
+        val fut = McxContract(148_600_400L, 580_480L, "CRUDEOIL26NOVFUT", "CRUDEOIL", LocalDate.of(2026, 11, 19), 0.0, null, 1.0, 100)
+        val c = McxMarket.paperContract(fut)
+        upstox.price(c.feedKey, 5_000.0)
+        runBlocking { assertTrue(Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, Quote(5_000.0)).ok) }
+        at(18, 49, day); pass()
+        assertEquals(1, paperOpen().size)
+        at(18, 51, day); pass()
+        assertTrue("closed at 18:50, ten minutes before the hour's close", paperOpen().isEmpty())
+        assertTrue(FlatBySquareOff.diagLine(), FlatBySquareOff.diagLine().contains("MCX 18:50"))
+    }
+
     @Test fun mcxGoesTenMinutesBeforeItsCloseMisOnly() {
         val day = today                                   // a Thursday in US summer time: MCX closes 23:30
         val fut = McxContract(148_600_400L, 580_480L, "CRUDEOIL26NOVFUT", "CRUDEOIL", LocalDate.of(2026, 11, 19), 0.0, null, 1.0, 100)

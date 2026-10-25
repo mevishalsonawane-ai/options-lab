@@ -5,8 +5,8 @@ import com.optionslab.engine.Right
 import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.risk.TimeMachine
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -19,6 +19,8 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The time machine on every arm ticket (22 Oct 2026, borrowed from Jake Schincariol's day-trader skill, MIT; the maths is the
@@ -32,16 +34,22 @@ import java.util.concurrent.ConcurrentHashMap
  * timeline, in the diagnostics, and said by Jarvis.
  *
  * SHADOW ONLY: it decides nothing - it never skips, resizes or delays a trade, paper or live. Off the order and tick path:
- * [afterEntry] only queues (one memory write) and starts a background coroutine on its own IO scope; the bars are read from
- * the store there, after the entry, never during a decision; nothing here runs on the position watch. A premium stop or
- * target is converted with the delta the arm has, else said as "premium stops: odds on the underlying move only" with the
- * at-the-money delta 0.5 assumed.
+ * [afterEntry] only queues (one memory write) and starts a background coroutine on this object's own single low-priority
+ * thread (never the watch's IO pool); the bars are read from the store there, after the entry, never during a decision;
+ * nothing here runs on the position watch. The bars come ONLY from what the phone already holds on disk (the harvested
+ * sessions bundled with the app or saved by the recorder, else the history keeper's days): nothing here ever opens a network
+ * connection (25 Oct, CI: a test showed the arms' entries reaching the feed's host after a test's fake was closed; the read is
+ * now one streaming pass over the saved days, on this thread, and [TimeMachineHostTest] proves no host is asked). With no
+ * saved sessions it reports "no sessions saved yet" and does nothing else. A premium stop or target is converted with the
+ * delta the arm has, else said as "premium stops: odds on the underlying move only" with the at-the-money delta 0.5 assumed.
  *
  * A forward log (date, arm, ref, verdict, odds, and the trade's actual outcome once its arm reports it) is kept in the app's
  * encrypted store (noBackupFilesDir/self/timemachine.vault), so research can judge the verdicts after 30 signal days.
  */
 object TimeMachineHost {
     private const val FILE = "timemachine.vault"
+    /** The finding's author on the bus (the trade manager never brings a look forward for it: words only, no read). */
+    const val WHO = "time machine"
     private const val KEEP = 600
 
     /** What an arm hands over right after its entry. */
@@ -70,7 +78,7 @@ object TimeMachineHost {
         fun line(): String {
             val head = "${entry.label}: "
             val body = odds?.line() ?: "Time machine (unknown): ${note ?: "no replay"}"
-            val tail = listOfNotNull(note.takeIf { odds != null }, sessionsSource.takeIf { odds != null }).joinToString("; ").let { if (it.isEmpty()) "" else " [$it]" }
+            val tail = listOfNotNull(note.takeIf { odds != null }, sessionsSource.takeIf { odds != null && it.isNotEmpty() }).joinToString("; ").let { if (it.isEmpty()) "" else " [$it]" }
             return head + body + tail
         }
         val verdict: String get() = odds?.verdict?.word ?: "unknown"
@@ -83,7 +91,12 @@ object TimeMachineHost {
     fun interface Bars { fun sessions(underlying: String, today: LocalDate, barMinutes: Int): Pair<List<TimeMachine.Session>, String> }
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** One daemon thread at the lowest priority: a check never competes with the position watch or the order path. */
+    private val scope = CoroutineScope(SupervisorJob() + Executors.newSingleThreadExecutor { r ->
+        Thread(r, "time-machine").apply { priority = Thread.MIN_PRIORITY; isDaemon = true }
+    }.asCoroutineDispatcher())
+    /** Checks queued or running (memory): the tests wait for zero before the fake feed closes. */
+    private val inFlight = AtomicInteger()
     private val io = Any()
     @Volatile private var loaded = false
     @Volatile private var records: List<Record> = emptyList()
@@ -95,7 +108,10 @@ object TimeMachineHost {
     @Volatile internal var testDone: ((Result) -> Unit)? = null
 
     /** The store's bars (the default [Bars]): the harvested index sessions first, else the history keeper's days. */
-    @Volatile internal var bars: Bars = Bars { u, today, minutes -> storeSessions(u, today, minutes) }
+    private val storeBars = Bars { u, today, minutes -> storeSessions(u, today, minutes) }
+    @Volatile internal var bars: Bars = storeBars
+    /** TEST: the store's own read (TestApp hands the other tests an empty phone). */
+    internal fun storeBarsForTest(): Bars = storeBars
 
     /** The sessions read once per underlying, interval and day (the same past for every entry of the day; memory). */
     private val sessionsKept = ConcurrentHashMap<String, Pair<List<TimeMachine.Session>, String>>()
@@ -108,7 +124,18 @@ object TimeMachineHost {
 
     /** An arm just entered: its check runs in the background; the arm goes on at once. */
     fun afterEntry(e: Entry) {
-        scope.launch { runCatching { check(e) }.onFailure { x -> runCatching { Diag.record("timemachine", "${e.label}: the check failed: ${x.message}") } } }
+        inFlight.incrementAndGet()
+        scope.launch {
+            try { runCatching { check(e) }.onFailure { x -> runCatching { Diag.record("timemachine", "${e.label}: the check failed: ${x.message}") } } }
+            finally { inFlight.decrementAndGet() }
+        }
+    }
+
+    /** TEST: wait (up to [ms]) until no check is queued or running; true when none is. */
+    internal fun awaitIdleForTest(ms: Long = 5_000): Boolean {
+        val until = System.currentTimeMillis() + ms
+        while (inFlight.get() > 0 && System.currentTimeMillis() < until) Thread.sleep(5)
+        return inFlight.get() == 0
     }
 
     /** The trade [ref]'s actual outcome, as its arm reports it when it closes ("target", "stop", "time", "+Rs 1,200"). */
@@ -135,9 +162,11 @@ object TimeMachineHost {
         }
         results[e.ref] = r
         _latest.update { (listOf(r) + it.filter { x -> x.entry.ref != e.ref }).take(60) }
+        // Bounded (25 Oct review): a long-running service keeps only what the tickets can still show.
+        if (results.size > 240) { val keep = _latest.value.map { it.entry.ref }.toSet(); results.keys.retainAll(keep) }
         runCatching { Diag.record("timemachine", r.line()) }
         // The Autopilot change timeline shows it as its own finding (words only; nothing to undo).
-        runCatching { SmartWorkers.bus.post(com.optionslab.ira.Findings.Finding("time machine", com.optionslab.ira.Findings.Kind.OTHER, e.underlying, 0, null, 50,
+        runCatching { SmartWorkers.bus.post(com.optionslab.ira.Findings.Finding(WHO, com.optionslab.ira.Findings.Kind.OTHER, e.underlying, 0, null, 50,
             r.atMs, 12 * 3_600_000L, words = "Time machine checked ${e.label}'s entry: verdict ${r.verdict} → " + (r.odds?.let { "target first ${it.targetPct.toInt()}%, stop first ${it.stopPct.toInt()}%, break-even ${(it.breakEven * 100).toInt()}%" } ?: (r.note ?: "no odds")))) }
         synchronized(io) {
             ensureLoaded()
@@ -164,18 +193,31 @@ object TimeMachineHost {
 
     // ---- the bars --------------------------------------------------------------------------------------------------------
 
-    /** The index sessions harvested on the phone ([Store]), else the history keeper's days; folded to [minutes]-minute bars. */
+    /** The words when the phone holds no session of [u] at all. */
+    fun noSessions(u: String): String = "no sessions saved yet on this phone for $u"
+
+    /**
+     * The index sessions harvested on the phone ([Store]: the days bundled with the app and the recorder's, read in ONE
+     * streaming pass, only the newest [TimeMachine.KEEP_SESSIONS] before [today] kept), else the history keeper's days;
+     * folded to [minutes]-minute bars. Disk only, this object's thread only; never the network.
+     */
     private fun storeSessions(u: String, today: LocalDate, minutes: Int): Pair<List<TimeMachine.Session>, String> {
         val fromStore = runCatching {
-            Store.barDays(u).filter { it.isBefore(today) }.takeLast(TimeMachine.KEEP_SESSIONS).mapNotNull { d ->
-                val s = Store.barSession(u, d) ?: return@mapNotNull null
-                val ix = s.series.firstOrNull { it.right == Right.IX } ?: return@mapNotNull null
+            val kept = java.util.TreeMap<LocalDate, TimeMachine.Session>()
+            Store.barSessions(u).forEach { s ->
+                if (!s.day.isBefore(today)) return@forEach
+                // Older than the oldest day kept once the window is full: not folded (the bundled file starts years back).
+                if (kept.size >= TimeMachine.KEEP_SESSIONS && !s.day.isAfter(kept.firstKey())) return@forEach
+                val ix = s.series.firstOrNull { it.right == Right.IX } ?: return@forEach
+                if (ix.size == 0) return@forEach
                 val ones = (0 until ix.size).map { i ->
                     val m = ix.minutes[i]
-                    Bar(d.atTime(m / 60, m % 60), ix.open?.get(i) ?: ix.close[i], ix.high?.get(i) ?: ix.close[i], ix.low?.get(i) ?: ix.close[i], ix.close[i])
+                    Bar(s.day.atTime(m / 60, m % 60), ix.open?.get(i) ?: ix.close[i], ix.high?.get(i) ?: ix.close[i], ix.low?.get(i) ?: ix.close[i], ix.close[i])
                 }
-                TimeMachine.Session(d, fold(ones, minutes))
+                kept[s.day] = TimeMachine.Session(s.day, fold(ones, minutes))
+                while (kept.size > TimeMachine.KEEP_SESSIONS) kept.pollFirstEntry()
             }
+            kept.values.toList()
         }.getOrDefault(emptyList())
         if (fromStore.isNotEmpty()) return fromStore to "${fromStore.size} sessions from the phone's harvested $u bars"
         val keeper = runCatching {
@@ -187,6 +229,7 @@ object TimeMachineHost {
                 }, minutes))
             }
         }.getOrDefault(emptyList())
+        if (keeper.isEmpty()) return emptyList<TimeMachine.Session>() to noSessions(u)
         return keeper to "${keeper.size} sessions from the phone's recent $u history (about five days are kept)"
     }
 
@@ -266,5 +309,8 @@ object TimeMachineHost {
     fun forwardLog(): List<Record> = synchronized(io) { ensureLoaded(); records }
 
     /** TEST: forget everything in memory (the file stays). */
-    internal fun resetForTest() { synchronized(io) { loaded = false; records = emptyList() }; results.clear(); sessionsKept.clear(); _latest.value = emptyList(); testDone = null }
+    internal fun resetForTest() {
+        awaitIdleForTest()
+        synchronized(io) { loaded = false; records = emptyList() }; results.clear(); sessionsKept.clear(); _latest.value = emptyList(); testDone = null
+    }
 }

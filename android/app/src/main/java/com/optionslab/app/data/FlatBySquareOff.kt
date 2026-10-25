@@ -61,12 +61,17 @@ object FlatBySquareOff {
     /** The segments whose flat-by is due now on [today] and not done yet. */
     internal fun dueNow(today: LocalDate, minute: Int): List<FlatBy.Segment> {
         val nse = Market.isTradingDay(today)
-        // MCX: only on a day it trades (a holiday shut all day has no window; an evening-only session keeps the same close).
-        val mcx = runCatching { McxMarket.calendar().window(today) != null }.getOrDefault(false)
+        // MCX: only on a day it trades (a holiday shut all day has no window; an evening-only session keeps the same close; a special
+        // session - the Diwali Muhurat hour - has its own close, ten minutes before which it goes; 25 Oct review).
+        val cal = mcxCalendar()
+        val mcx = runCatching { cal.window(today) != null }.getOrDefault(false)
         return FlatBy.Segment.values().filter { seg ->
-            (if (seg == FlatBy.Segment.MCX) mcx else nse) && FlatBy.due(seg, today, minute) && synchronized(done) { "$today|$seg" !in done }
+            (if (seg == FlatBy.Segment.MCX) mcx else nse) && FlatBy.due(seg, today, minute, cal) && synchronized(done) { "$today|$seg" !in done }
         }
     }
+
+    /** MCX's calendar as the app has it (the fetched list, else the built-in one); memory after its first read. */
+    internal fun mcxCalendar(): com.optionslab.engine.mcx.McxSession.Calendar = runCatching { McxMarket.calendar() }.getOrDefault(com.optionslab.engine.mcx.McxSession.DEFAULT)
 
     suspend fun maybeRun(context: Context, s: AppSettings) {
         val today = todayIst()
@@ -105,7 +110,8 @@ object FlatBySquareOff {
             val positions = Broker.positionBook()
             val book = positions.net.filter { it.qty != 0 && FlatBy.intraday(it.product) }.sortedBy { if (it.qty < 0) 0 else 1 }
             for (p in book) {
-                val owner = runCatching { liveOwner(p.symbol) }.getOrNull() ?: continue
+                // (25 Oct review: the owner's look may wait on the arms' lock; two seconds at most, else the position is looked at next pass.)
+                val owner = runCatching { kotlinx.coroutines.withTimeoutOrNull(2_000) { liveOwner(p.symbol) } }.getOrNull() ?: continue
                 val i = ins[p.symbol]
                 // An underlying the app's list does not know: judged by the exchange alone (MCX, else an NSE option is an index's
                 // only when its name says so).
@@ -127,6 +133,7 @@ object FlatBySquareOff {
         if (!unread) synchronized(done) { for (seg in segments) if ((stillOpen[seg] ?: 0) == 0) done += "$today|$seg" }
         if (closed.isNotEmpty()) {
             runCatching { Diag.record("flatby", "Flat-by at ${FlatBy.text(minuteNow())}: sent the close of ${closed.joinToString()}") }
+            // (A pass that sent an exit is not a pass that found nothing: the segment stays open until one does.)
             Notifier.post(context, 2033, Notifier.APPROVAL, "Flat-by: intraday positions closed",
                 "Sent the close of ${closed.size} intraday position(s) still open at the flat-by: ${closed.joinToString()}. Checked again until none is left.", "trade")
         }
@@ -136,7 +143,7 @@ object FlatBySquareOff {
     fun diagLine(): String {
         val today = todayIst()
         val doneNow = synchronized(done) { FlatBy.Segment.values().filter { "$today|$it" in done } }
-        return "Flat-by: index ${FlatBy.text(FlatBy.NSE_INDEX_MINUTE)}, stock ${FlatBy.text(FlatBy.NSE_STOCK_MINUTE)}, MCX ${FlatBy.text(FlatBy.minute(FlatBy.Segment.MCX, today))}" +
+        return "Flat-by: index ${FlatBy.text(FlatBy.NSE_INDEX_MINUTE)}, stock ${FlatBy.text(FlatBy.NSE_STOCK_MINUTE)}, MCX ${FlatBy.text(FlatBy.minute(FlatBy.Segment.MCX, today, mcxCalendar()))}" +
             (if (doneNow.isEmpty()) "; nothing done yet today" else "; done today: " + doneNow.joinToString { it.label })
     }
 }
