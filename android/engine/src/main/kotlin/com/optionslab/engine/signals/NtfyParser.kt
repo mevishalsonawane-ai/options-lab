@@ -232,7 +232,8 @@ object NtfyParser {
         CE_WORDS + PE_WORDS + EXIT_WORDS + BUY_WORDS + NEGATIVE + FUTURES + ENTRY_ZONE + ENTRY_ABOVE + STOP_WORDS + TARGET_WORDS + LOT_WORDS +
             BRIDGE + LEVEL_WORDS + setOf("atm", "itm", "otm", "weekly", "week", "next", "cmp", "market", "tripwire", "hit", "moving", "ns", "index",
             "option", "options", "opt", "now", "today", "expiry", "exp", "for", "looks", "and", "or", "to", "the", "%", "status", "checkin", "check",
-            "intraday", "only", "nifty", "banknifty", "niftybank", "finnifty", "midcpnifty", "sensex", "bnf")
+            "intraday", "only", "alert", "alerts", "signal", "signals", "update", "trade", "strike", "qty", "ka", "ki", "ke", "me", "mein", "lo", "le",
+            "nifty", "banknifty", "niftybank", "finnifty", "midcpnifty", "sensex", "bnf")
     }
 
     private val MONTHS = listOf("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
@@ -250,6 +251,8 @@ object NtfyParser {
 
     /** The marker a NIFTY sector index leaves in the text ([SECTOR]): such a message is refused, never read as NIFTY. */
     private const val UNKNOWN_INDEX = "unknownindex"
+    /** What an unknown Hindi word leaves in the text (ignored, except right after "nifty"). */
+    private const val HINDI_WORD = "xhindi"
 
     /**
      * 25 Oct (review): "nifty" followed by any other index's word - NIFTY IT, NIFTY FIN (alone), PHARMA, AUTO, METAL, NEXT 50, REALTY,
@@ -277,6 +280,8 @@ object NtfyParser {
         for ((a, b) in HINDI) s = s.replace(a, b)
         // Devanagari digits read as digits ("२४५००" -> 24500), never dropped.
         s = s.map { c -> if (c in '०'..'९') '0' + (c - '०') else c }.joinToString("")
+        // 25 Oct (review 2): a Hindi word the reader does not know leaves a marker (it used to vanish): "निफ्टी आईटी कॉल" is not NIFTY.
+        s = s.replace(rx("[\\u0900-\\u097F]+"), " $HINDI_WORD ")
         s = s.lowercase(Locale.ROOT)
         // 25 Oct (review): Yahoo's symbols read as words ("nifty_fin_service.ns" -> "nifty fin service ns") BEFORE the joins below.
         s = s.replace('_', ' ').replace(rx("(?<=[a-z])\\.ns\\b"), " ns")

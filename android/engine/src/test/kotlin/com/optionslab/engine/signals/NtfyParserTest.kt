@@ -92,6 +92,11 @@ class NtfyParserTest {
         assertEquals(Parsed.Buy("NIFTY", Right.PE), buy("NIFTY bearish"))
         assertEquals(Parsed.Exit("NIFTY"), NtfyParser.parse("exit nifty", day))
         assertTrue(refused("NIFTY and BANKNIFTY CE").contains("two indices"))
+        // Review 2: a Hindi sector name is not NIFTY; common words after NIFTY still read.
+        for (t in listOf("निफ्टी आईटी कॉल", "निफ्टी फार्मा पुट")) assertTrue(refused(t).contains("unknown index"), t)
+        assertEquals(Parsed.Buy("NIFTY", Right.CE, 24500.0), buy("NIFTY Alert: Buy 24500 CE"))
+        assertEquals(Parsed.Buy("NIFTY", Right.CE, 24500.0), buy("Nifty strike 24500 CE"))
+        assertEquals(Parsed.Buy("NIFTY", Right.CE, 24500.0), buy("nifty ka 24500 call"))
     }
 
     @Test fun hindi() {
