@@ -128,7 +128,6 @@ def slip(p, buy, vl, mult=1.0):
 
 
 def opt_charges(price, qty, buy, d):
-    import engine as E                             # R51 engine (dated option charges)
     from obuy.costs import Costs
     dn = np.array([(d - date(1970, 1, 1)).days])
     return float(Costs("dated").charge(buy, np.array([price]), np.array([qty]), dn, False)[0])
@@ -267,7 +266,10 @@ def run_struct(ch, d0, legs, er, exit_day, exit_row, q, stop=None, hedge=None, s
                 net_delta = 0.0
                 t = years_left(d, exp, r)
                 for side, k, sg, lots in legs:
-                    v = hedge.get("vol") or leg_iv(ch, D, d, side, k, r)
+                    if hedge.get("vol_fn") is not None:
+                        v = hedge["vol_fn"](S)
+                    else:
+                        v = hedge.get("vol") or leg_iv(ch, D, d, side, k, r)
                     if v != v:
                         v = iv_fb
                     if v == v:
@@ -284,9 +286,7 @@ def run_struct(ch, d0, legs, er, exit_day, exit_row, q, stop=None, hedge=None, s
                         px = S + (K.index_half_spread(S) if trade > 0 else -K.index_half_spread(S))
                         # realise the old hedge at px, open the new size at px
                         hedge_pnl += hedge_units * (px - hedge_px) if hedge_units else 0.0
-                        cost += K.index_fut_charges(abs(trade) * px if trade > 0 else 0, abs(trade) * px if trade < 0 else 0, d) \
-                            if False else 20.0 * 1.18 + abs(trade) * px * (0.00002 + 0.0000173 * 1.18) + \
-                            (abs(trade) * px * K._dated(d, K._FUT_STT) if trade < 0 else 0.0)
+                        cost += fut_order_cost(abs(trade) * px, trade < 0, d)
                         hedge_units, hedge_px = want, px
                         last_hedge_spot = S
                 last_hedge_min = r
@@ -319,9 +319,16 @@ def run_struct(ch, d0, legs, er, exit_day, exit_row, q, stop=None, hedge=None, s
     if hedge_units:
         px = Sx - (K.index_half_spread(Sx) if hedge_units > 0 else -K.index_half_spread(Sx))
         hedge_pnl += hedge_units * (px - hedge_px)
-        cost += 20.0 * 1.18 + abs(hedge_units) * px * (0.0000173 * 1.18 + (K._dated(xd, K._FUT_STT) if hedge_units > 0 else 0.00002))
+        cost += fut_order_cost(abs(hedge_units) * px, hedge_units > 0, xd)
     gross += hedge_pnl
     return dict(gross=gross, cost=cost, net=gross - cost, why=why, stale=stale_n, exit_day=xd)
+
+
+def fut_order_cost(value, sell, d):
+    """One index-futures order: Rs 20, exchange + SEBI (+ GST), stamp on a buy, STT on a sell, dated."""
+    exch = K._dated(d, K._FUT_EXCH) * value
+    sebi = 1e-6 * value
+    return 20.0 + exch + sebi + 0.18 * (20.0 + exch + sebi) + (K._dated(d, K._FUT_STT) * value if sell else 0.00002 * value)
 
 
 # ================================================================================================ forecasts
@@ -390,6 +397,27 @@ def ewma_vol(und, lam=0.94):
 def prev_day_ret(und):
     c = DA.index_daily(und).close
     return (c / c.shift(1) - 1).shift(1).to_dict()       # yesterday's close-to-close, known today
+
+
+@lru_cache(None)
+def vix_minutes():
+    """{day: (375,) India VIX minute closes (NaN-filled forward)}."""
+    s = DA.idx_series_long("INDIAVIX", 2021)
+    out = {}
+    for i, d in enumerate(s.days):
+        a, z = s.s0[i], s.s1[i] + 1
+        arr = np.full(375, np.nan)
+        rr = s.tod[a:z] - K.NSE_OPEN
+        ok = (rr >= 0) & (rr < 375)
+        arr[rr[ok]] = s.c[a:z][ok]
+        out[d] = pd.Series(arr).ffill().values
+    return out
+
+
+@lru_cache(None)
+def vix_prev_close():
+    c = DA.index_daily("INDIAVIX").close
+    return c.shift(1).to_dict()
 
 
 def event_days(kinds=("budget", "rbi")):
@@ -499,7 +527,6 @@ def bennett04(part, band_move):
 
 def bennett05(part):
     rows = []
-    vix = DA.index_daily("INDIAVIX").close
     for und in UNDS:
         ch = chain(und)
         skew_hist = {}
@@ -524,14 +551,16 @@ def bennett05(part):
                 continue
             if d in event_days() or prev_day_ret(und).get(d, 0.0) < -0.02:
                 continue
-            vprev = vix[vix.index < d]
-            if len(vprev) and vix.get(d, np.nan) == vix.get(d, np.nan):
-                pass
+            vm = vix_minutes().get(d)
+            pc = vix_prev_close().get(d, np.nan)
+            if vm is None or pc != pc or not np.isfinite(vm[5]) or vm[5] / pc - 1 >= 0.10:
+                continue                                   # VIX up 10% on the day by 09:20 (or unknown): skip
             q = K.lot(und, d)
             legs = [("P", k0 - 5 * ch.step, -1, 1), ("C", k0 + 5 * ch.step, 1, 1)]
             S0 = spot_at(D, 5)
             lim = 0.015 * S0 * q
-            stop = (lambda pnl, info, lim=lim: pnl <= -lim)
+            stop = (lambda pnl, info, lim=lim, vm=vm, pc=pc: pnl <= -lim or (np.isfinite(vm[info["r"]]) and
+                                                                         vm[info["r"]] / pc - 1 >= 0.15))
             sq = K.SQ_ROW_EXPIRY if D.expiry else K.SQ_ROW
             r = run_struct(ch, d, legs, 6, d, sq, q, stop=stop, hedge=dict(band_lots=0.5, every=15), iv_fb=iv0)
             if r:
@@ -701,49 +730,9 @@ def smile_slopes(ch):
 
 
 def run_struct_smile(ch, d, legs, er, sq, q, iv0, s_, S0):
-    hedge = dict(band_lots=1.0, every=15, vol=None)
-    # the walker takes one vol for the hedge; B re-evaluates it each check from the spot (iv0 + s x (S - S0))
-    class V(dict):
-        pass
-    res = None
-    # emulate with a stop-free walk whose hedge vol is computed in a wrapper: run minute by minute via run_struct's
-    # hook: pass a callable vol
-    hedge["vol_fn"] = lambda S: max(iv0 + s_ * (S - S0), 0.01)
-    return run_struct_vfn(ch, d, legs, er, d, sq, q, stop=lambda pnl, info: pnl <= -13000.0, hedge=hedge, iv_fb=iv0)
-
-
-def run_struct_vfn(ch, d0, legs, er, exit_day, exit_row, q, stop=None, hedge=None, iv_fb=NAN):
-    """run_struct with hedge['vol_fn'](S) as the hedge vol (Musiela book B)."""
-    vf = hedge.pop("vol_fn")
-    orig = hedge.get("vol")
-
-    class VolAtSpot(float):
-        pass
-    # run_struct reads hedge.get("vol") once per check; give it a live value through a small shim
-    hedge = dict(hedge)
-    shim = _VolShim(vf)
-    hedge["vol"] = shim
-    return run_struct(ch, d0, legs, er, exit_day, exit_row, q, stop=_SpotTap(stop, shim), hedge=hedge, iv_fb=iv_fb)
-
-
-class _VolShim(float):
-    def __new__(cls, fn):
-        o = float.__new__(cls, 0.2)
-        o.fn = fn
-        o.S = None
-        return o
-
-    def __bool__(self):
-        return True
-
-
-class _SpotTap:
-    def __init__(self, stop, shim):
-        self.stop, self.shim = stop, shim
-
-    def __call__(self, pnl, info):
-        self.shim.S = info["S"]
-        return self.stop(pnl, info) if self.stop else False
+    """Book B: hedge with the BS delta at the smile-implied vol iv0 + s x (S - S0) (delta + vega x s, Musiela)."""
+    hedge = dict(band_lots=1.0, every=15, vol_fn=lambda S: max(iv0 + s_ * (S - S0), 0.01))
+    return run_struct(ch, d, legs, er, d, sq, q, stop=lambda pnl, info: pnl <= -13000.0, hedge=hedge, iv_fb=iv0)
 
 
 def binomial03(part):

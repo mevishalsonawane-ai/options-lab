@@ -289,3 +289,61 @@ def test_adf_and_half_life_on_known_series():
     assert 2.0 < Q.half_life(e) < 5.0
     rw = np.cumsum(rng.normal(size=800))
     assert Q.adf_t(rw) > -3.34 or Q.half_life(rw) > 30
+
+
+# ================================================================================================ F8 structure walker
+class _FakeDay:
+    def __init__(self, d, spot, con, expiry=False):
+        self.d = d
+        self.idx = np.vstack([np.full(375, spot)] * 4).astype(float)
+        self.atm = np.full(375, 100.0)
+        self.con = con
+        self.expiry = expiry
+
+
+class _FakeChain:
+    def __init__(self, days):
+        self.days = {D.d: D for D in days}
+        self.dates = sorted(self.days)
+        self.exp = [d for d, D in self.days.items() if D.expiry]
+        self.step = 50.0
+
+    def expiry_for(self, d):
+        e = [x for x in self.exp if x >= d]
+        return e[0] if e else None
+
+    def D(self, d):
+        return self.days.get(d)
+
+
+def _con(price, vol=100.0):
+    a = np.full((5, 375), float(price))
+    a[4] = vol
+    return a
+
+
+def test_struct_walker_flat_prices_cost_only_and_settlement():
+    import f8_vol as V
+    d0, d1 = date(2024, 1, 1), date(2024, 1, 2)
+    days = [_FakeDay(d0, 100.0, {("C", 100.0): _con(5.0), ("P", 100.0): _con(5.0)}),
+            _FakeDay(d1, 100.0, {("C", 100.0): _con(5.0), ("P", 100.0): _con(5.0)}, expiry=True)]
+    ch = _FakeChain(days)
+    legs = [("C", 100.0, -1, 1), ("P", 100.0, -1, 1)]
+    r = V.run_struct(ch, d0, legs, 6, d0, 355, 50)
+    # flat prices: gross = slippage only (sold below 5, bought back above 5), costs > 0
+    assert r["gross"] < 0 and r["cost"] > 0 and r["net"] < r["gross"]
+    # held to expiry at spot 100: both legs settle at 0 intrinsic -> the seller keeps the credit
+    r2 = V.run_struct(ch, d0, legs, 6, d1, 374, 50, settle=True)
+    assert r2["why"] == "expiry" and r2["gross"] > 0.9 * 10 * 50
+
+
+def test_struct_walker_stop_fires_on_loss():
+    import f8_vol as V
+    d0 = date(2024, 1, 1)
+    c = _con(5.0)
+    c[:, 100:] = 20.0
+    c[4] = 100.0
+    days = [_FakeDay(d0, 100.0, {("C", 100.0): c, ("P", 100.0): _con(5.0)})]
+    ch = _FakeChain(days)
+    r = V.run_struct(ch, d0, [("C", 100.0, -1, 1)], 6, d0, 355, 50, stop=lambda pnl, info: pnl <= -500.0)
+    assert r["why"] == "stop" and r["gross"] < -500
