@@ -1,0 +1,40 @@
+id: book-bennett-07
+title: 'Sell an overpriced event jump: short the expiry after the event, long the expiry before (Colin Bennett, book rule,
+  proposed)'
+family: calendar-events
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 6.4, Trading earnings announcements / jumps) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure around
+  a calendar event. Entry: For each Budget, RBI policy and general-election result day bracketed by two NIFTY expiries: implied
+  jump vol = sqrt(IV_after^2 x T_after - IV_before^2 x (T_after - 1 day)) using the before-expiry IV as diffusive vol; convert
+  to an expected one-day move. If it exceeds 1.3x the median absolute move of past events of the same type, sell the after-event
+  ATM straddle and buy the before-event ATM straddle (vega-matched). Stop: Close if the basket loses 1x the jump premium collected.
+  Exit: Close at 15:10 on the event day (or next session if the event is after hours).'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: needs two expiries'' chains on event days (rolling
+  lake keeps the nearest expiry only); events.csv exists (R98d)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+features:
+- volatility / options structure around a calendar event
+- daily, entry the session before the event
+model_or_rule: 'For each Budget, RBI policy and general-election result day bracketed by two NIFTY expiries: implied jump
+  vol = sqrt(IV_after^2 x T_after - IV_before^2 x (T_after - 1 day)) using the before-expiry IV as diffusive vol; convert
+  to an expected one-day move. If it exceeds 1.3x the median absolute move of past events of the same type, sell the after-event
+  ATM straddle and buy the before-event ATM straddle (vega-matched). | stop: Close if the basket loses 1x the jump premium
+  collected. | exit: Close at 15:10 on the event day (or next session if the event is after hours). | filters: Defined risk:
+  add wings 4 strikes out on the short straddle.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-07; trade: 1 lot short after-expiry iron fly, long before-expiry
+  straddle scaled by vega.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Event straddle buying lost (R1 rows 22-24: realised 0.69x implied); Budget day doubles the range
+  (2.13% NIFTY, n 6). The jump calendar was not tested.. Assumptions: Bennett''s stock earnings method moved to index macro
+  events; the 1.3x threshold is ours.'

@@ -1,0 +1,43 @@
+id: book-douglas-01
+title: Judge each arm in 20-trade blocks; pause an arm whose block falls outside its own expected range (Mark Douglas, book
+  rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Mark Douglas''s rule from Trading in the Zone (Ch. 11 (Trading in Sample Sizes, Testing)) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: none (a rule on an arm''s own closed
+  trades; the arm''s signals stay on the underlying). Entry: Unchanged: every signal of the existing arm (Liquidity 15+5,
+  R72 Breadth Donchian, R51 Donchian, R52 OOV). Stop: Unchanged (the arm''s own). Exit: Unchanged. After each completed block
+  of 20 trades, compare the block''s win count and net with the arm''s expected 20-trade range from its design record; if
+  the block is below the 5th percentile of that range, pause new entries for the next 20 signals (shadow-log them), then resume.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+features:
+- none (a rule on an arm's own closed trades; the arm's signals stay on the underlying)
+- per closed trade, blocks of 20
+model_or_rule: 'Unchanged: every signal of the existing arm (Liquidity 15+5, R72 Breadth Donchian, R51 Donchian, R52 OOV).
+  | stop: Unchanged (the arm''s own). | exit: Unchanged. After each completed block of 20 trades, compare the block''s win
+  count and net with the arm''s expected 20-trade range from its design record; if the block is below the 5th percentile of
+  that range, pause new entries for the next 20 signals (shadow-log them), then resume. | filters: None besides the block
+  check. Variables are never changed mid-block.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-douglas-01; trade: as the arm (1-ITM CE/PE chosen by its strike rule;
+  stops/targets as the arm)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R75 L1-K2 (stop after 2 losses in a row) and L7-DD20 (half size in a Rs 20k drawdown) both failed:
+  the trades after a bad stretch paid. A 20-trade block rule is a slower version of the same idea and is not tested by us..
+  Assumptions: The book says to judge in samples of at least 20 and that 20 is small enough to catch a fading edge, but gives
+  no stop criterion; the 5th-percentile bootstrap of the arm''s own design trades and the 20-signal pause are ours. Risk-lowering
+  only; would start in shadow for live per CLAUDE.md.'

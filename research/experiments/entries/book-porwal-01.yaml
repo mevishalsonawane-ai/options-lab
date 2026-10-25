@@ -1,0 +1,43 @@
+id: book-porwal-01
+title: Inside bar, entry on the close beyond the mother bar, 1x/1.5x/2x targets (Nikhil Porwal, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 3.1) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Bar t-1 (inside bar) has
+  high <= high and low >= low of bar t-2 (mother). The first later bar (within 4 bars) that CLOSES above the mother high ->
+  long; closes below the mother low -> short. Enter at the next bar''s open. Stop: Long: mother low; short: mother high (on
+  the underlying). Exit: Three equal parts: targets at entry +/- 1.0x, 1.5x and 2.0x the mother range; after target 1 move
+  the stop to entry (book: trailing stop, method not given). Intraday versions square off at 15:15 (15:05 on expiry).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+features:
+- underlying price
+- 15-minute bars (also 60-minute and daily as variants)
+model_or_rule: 'Bar t-1 (inside bar) has high <= high and low >= low of bar t-2 (mother). The first later bar (within 4 bars)
+  that CLOSES above the mother high -> long; closes below the mother low -> short. Enter at the next bar''s open. | stop:
+  Long: mother low; short: mother high (on the underlying). | exit: Three equal parts: targets at entry +/- 1.0x, 1.5x and
+  2.0x the mother range; after target 1 move the stop to entry (book: trailing stop, method not given). Intraday versions
+  square off at 15:15 (15:05 on expiry). | filters: Continuation variant: trade only in the direction of the 60-minute (or
+  daily for daily bars) trend, trend = close above / below EMA 20 of that timeframe. Volume confirmation: break-bar futures
+  volume above its 20-bar average. Stop for the day after two stopped-out trades.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-01; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a short;
+  stops and targets on the underlying as the book states; MCX: the future itself or its 1-ITM option'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R71 P1: 15-minute inside-bar breaks, 1-ITM, final -Rs 1,23,667 on 1,075 trades; R22 1x-extension
+  target lost; SWING_DEEP NR7/inside-day walk-forward lost. Assumptions: The book writes only the short side; long is the
+  mirror. Higher-timeframe trend definition, the 4-bar validity window, the breakeven step and the volume multiple are ours.
+  Partial exits at 1x/1.5x/2x as written.'

@@ -1,0 +1,37 @@
+id: book-atb-13
+title: Double top / bottom neckline break with stop inside and measured target (The Advanced Trading Book, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 4, Double top / double
+  bottom (p34, p38, p53, p54)) makes money after real charges and slippage, walk-forward, with BH across the rules tried.
+  Signal source: underlying price. Entry: Two swing highs within 0.25 ATR, at least 4 bars apart, a swing low between them
+  (neckline) at least 1 ATR below; sell at the open after the first close below the neckline. Mirror for double bottoms. Stop:
+  Midway between the neckline and the tops (the drawing places it inside the pattern, below the peaks). Exit: Target = top-to-neckline
+  height projected from the neckline; else square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- CRUDE
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Two swing highs within 0.25 ATR, at least 4 bars apart, a swing low between them (neckline) at least 1 ATR
+  below; sell at the open after the first close below the neckline. Mirror for double bottoms. | stop: Midway between the
+  neckline and the tops (the drawing places it inside the pattern, below the peaks). | exit: Target = top-to-neckline height
+  projected from the neckline; else square-off. | filters: None.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-13; trade: buy 1-ITM PE on a double top, 1-ITM CE on a double bottom'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R71 P5 double bottom / top (5-min swings): final -Rs 12,091 on 502, design -Rs 94,311; the book''s
+  stop and target differ from R71''s. Assumptions: The midway stop and measured target are read from the drawings; R71 used
+  the extreme as stop and Donchian''s exits.'

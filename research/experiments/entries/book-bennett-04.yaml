@@ -1,0 +1,38 @@
+id: book-bennett-04
+title: Long ATM straddle, gamma-scalped with futures at fixed index bands, only when implied is cheap (Colin Bennett, book
+  rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 2.1 Delta hedging, Ch. 3.5 Discrete hedging) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (implied
+  vs forecast realised); hedge on the underlying future. Entry: At 09:20 if nearest-expiry ATM IV / forecast intraday realised
+  vol <= its rolling 30th percentile, buy 1 lot ATM straddle. Stop: Close everything if the straddle plus hedge loses 40%
+  of the premium paid. Exit: 15:10 (15:05 on expiry day).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (implied vs forecast realised); hedge on the underlying future
+- 1-minute bars, intraday
+model_or_rule: 'At 09:20 if nearest-expiry ATM IV / forecast intraday realised vol <= its rolling 30th percentile, buy 1 lot
+  ATM straddle. | stop: Close everything if the straddle plus hedge loses 40% of the premium paid. | exit: 15:10 (15:05 on
+  expiry day). | filters: Hedge rule: compute straddle delta from expected (forecast) vol, not implied (Bennett 3.5). When
+  straddle delta x option lot >= +0.5 future lot, sell 1 future lot; when <= -0.5, buy 1; flatten the future when delta returns
+  inside +-0.25 lot. Variant B: hedge only when the index moves 0.5% from the last hedge (bands), to test ''hedge less in
+  trends''.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-04; trade: 1 lot ATM CE + PE plus 0 or +-1 NIFTY / BANKNIFTY
+  future lot.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R89: unhedged straddles 0 of 18 (4,302 design straddles); h29: buying when IV is cheap, 16 variants
+  all lost. A futures-hedged version was never tested.. Assumptions: A one-lot hedge is coarse (NIFTY future 65 units = option
+  lot), so the hedge only switches in whole lots; thresholds are ours. Futures costs added per hedge.'

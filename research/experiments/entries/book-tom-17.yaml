@@ -1,0 +1,33 @@
+id: book-tom-17
+title: Trade only the first busy hours after the open (Trader Tom, book rule, proposed)
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (The 24-Hour Trading Cycle, p. 15-19) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: none / clock. Entry: Filter for any arm:
+  allow new entries only 09:15-12:15 IST (the first 3 hours, the book''s busy window); none 12:15-14:30. Stop: the arm''s
+  own Exit: the arm''s own'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none / clock
+- intraday clock
+model_or_rule: 'Filter for any arm: allow new entries only 09:15-12:15 IST (the first 3 hours, the book''s busy window); none
+  12:15-14:30. | stop: the arm''s own | exit: the arm''s own | filters: applies to Liquidity 15+5, R51 Donchian, R72 Breadth
+  Donchian'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-17; trade: filter only; skip entries outside the window (risk-lowering;
+  shadow first for live)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R92: every entry hour loses for the ORB arms (0 of 257); R101 B4 mornings only on R72 raised win
+  rate but cut the final net (-Rs 81,567). Assumptions: The book''s London window (08:00 plus 2-3 hours) mapped to NSE''s
+  open; the cut at 12:15 is ours.'

@@ -1,0 +1,32 @@
+id: book-wyckoff-13
+title: 'A sudden burst in a secondary index while the leaders stall: skip new longs (Wyckoff, book rule, proposed)'
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. III) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price (index spots). Entry: When MIDCPNIFTY (or FINNIFTY) rises
+  >= 1.0% in the last 60 minutes while NIFTY and BANKNIFTY each rise <= 0.2% and are below their session highs, skip new long
+  entries on NIFTY / BANKNIFTY for the next 60 minutes Stop: n/a Exit: n/a'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (index spots)
+- 15-minute bars
+model_or_rule: 'When MIDCPNIFTY (or FINNIFTY) rises >= 1.0% in the last 60 minutes while NIFTY and BANKNIFTY each rise <=
+  0.2% and are below their session highs, skip new long entries on NIFTY / BANKNIFTY for the next 60 minutes | stop: n/a |
+  exit: n/a | filters: after 10:15 only'
+settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-13; trade: skip-only filter on the arms (risk-lowering)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R72 C3 lonely breakout (faded) lost Rs 1,60,188 on 499. Assumptions: Book''s ''secondary
+  leader bursts into activity while the leaders are distributed'' mapped to a mid-cap or financials index running alone; thresholds
+  are ours'

@@ -1,0 +1,35 @@
+id: book-heitkoetter-02
+title: Close crosses a 10-period SMA (Markus Heitkoetter, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 3, Simple Moving Averages) makes money
+  after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Long
+  when a bar closes above SMA(10) of closes after closing below it on the prior bar; short on the reverse cross. Stop: 0.27%
+  of the index against the entry (the book''s $200 per E-mini contract at ~1460). Exit: Target 0.41% of the index (book''s
+  $300); time stop after 45 minutes (3 bars); opposite cross; 15:10 square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars (book's default timeframe); book's example 10-minute
+model_or_rule: 'Long when a bar closes above SMA(10) of closes after closing below it on the prior bar; short on the reverse
+  cross. | stop: 0.27% of the index against the entry (the book''s $200 per E-mini contract at ~1460). | exit: Target 0.41%
+  of the index (book''s $300); time stop after 45 minutes (3 bars); opposite cross; 15:10 square-off. | filters: Book: only
+  in trending markets; tested both without a filter and with method hk-trendline-break-trend''s trend state agreeing.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-02; trade: buy 1-ITM CE on a long signal, 1-ITM PE on a
+  short; stops/targets on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: H25 price x SMA crosses (SMA family 15,120 variants, Rs -145 a trade, 1 of 28 walk-forward families
+  positive). Assumptions: Book suggests 5 or 10 periods without picking; SMA(10) chosen, SMA(5) as the one variant. Stop/target
+  converted from the author''s own $200 / $300 per contract; time stop from the book''s three-bar rule.'

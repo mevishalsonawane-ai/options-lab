@@ -1,0 +1,33 @@
+id: book-atb-02
+title: Engulfing candle at the end of a trend (The Advanced Trading Book, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 2, Bullish / bearish
+  engulfing (p13, p18)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
+  source: underlying price. Entry: Downtrend into bar 1; bar 1 red; bar 2 green with open <= bar 1 close and close >= bar
+  1 open (body engulfs body), bar 2 body >= 1.5x bar 1 body. Enter at bar 3 open. Mirror for bearish engulfing after an uptrend.
+  Stop: Beyond bar 2''s low (high for shorts). Exit: 3R target or square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Downtrend into bar 1; bar 1 red; bar 2 green with open <= bar 1 close and close >= bar 1 open (body engulfs
+  body), bar 2 body >= 1.5x bar 1 body. Enter at bar 3 open. Mirror for bearish engulfing after an uptrend. | stop: Beyond
+  bar 2''s low (high for shorts). | exit: 3R target or square-off. | filters: None.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-02; trade: buy 1-ITM CE on bullish engulfing, 1-ITM PE on bearish'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87: engulfing among 12 patterns, nothing held out of sample; GOLD_CANDLES: 144 versions, none with
+  t above 1.1; R85 MCX: no tradable meaning. Assumptions: Stop, target and entry timing are ours (book: ''leads to a reversal'').'

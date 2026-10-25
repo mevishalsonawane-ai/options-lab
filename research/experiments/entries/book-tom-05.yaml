@@ -1,0 +1,40 @@
+id: book-tom-05
+title: Body-engulfing bar on 10-minute index bars in the trend direction (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Engulfing Patterns for Day-Trading, p. 105-110) makes money
+  after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Bullish:
+  bar t is green, bar t-1 red, open[t] <= close[t-1] and close[t] >= open[t-1] (body engulfs body), with the 60-minute close
+  above its 89-period SMA. Cautious entry (book''s method 3): buy-stop at high[t] valid for the next 2 bars. Bearish mirror.
+  Stop: the far end of the engulfing bar (low[t] for longs) on the underlying Exit: move the stop to breakeven once the underlying
+  is +1R; then trail at the low of the last completed 10-minute bar; exit at the next doji (body <= 10% of range) against
+  the position''s high/low by tightening to that bar; square-off 15:10 (15:05 expiry)'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 10-minute bars built from 1-minute (5-minute variant)
+model_or_rule: 'Bullish: bar t is green, bar t-1 red, open[t] <= close[t-1] and close[t] >= open[t-1] (body engulfs body),
+  with the 60-minute close above its 89-period SMA. Cautious entry (book''s method 3): buy-stop at high[t] valid for the next
+  2 bars. Bearish mirror. | stop: the far end of the engulfing bar (low[t] for longs) on the underlying | exit: move the stop
+  to breakeven once the underlying is +1R; then trail at the low of the last completed 10-minute bar; exit at the next doji
+  (body <= 10% of range) against the position''s high/low by tightening to that bar; square-off 15:10 (15:05 expiry) | filters:
+  09:30-14:30 entries; trend by 60-minute 89-SMA'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-05; trade: buy 1-ITM CE on a bullish signal, 1-ITM PE on bearish;
+  stops and trail on the underlying as the book states'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87 tested engulfing among 43 shapes: no direction edge, 0 of 4,049 context cells; R87B exits on
+  an opposite engulfing hurt. Assumptions: Book gives no explicit stop; ''tells us how much to risk'' read as the bar''s far
+  end. Trend filter not defined in the chapter; the book''s 89-period MA used. Breakeven trigger at +1R and the bar-low trail
+  are our readings of ''runs immediately'' and ''move the stop progressively''.'

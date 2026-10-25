@@ -1,0 +1,35 @@
+id: book-porwal-10
+title: 'Bull trap: failed break of the day high reclaimed with a volume spike, go short (Nikhil Porwal, book rule, proposed)'
+family: flow-oi
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 5.3) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: underlying price and volume (futures volume). Entry:
+  After 10:00, a 5-minute bar closes above the running day high (break) on futures volume below its 20-bar average (weak break).
+  Within 6 bars, a red bar closes back below the broken day high with volume >= 2x its 20-bar average: short at the next open.
+  Stop: Above the highest high since the break. Exit: Target the last 5-minute swing low before the break (previous higher
+  low), else 2R; trail by 3-bar highs; square-off 15:15.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price and volume (futures volume)
+- 5-minute bars
+model_or_rule: 'After 10:00, a 5-minute bar closes above the running day high (break) on futures volume below its 20-bar average
+  (weak break). Within 6 bars, a red bar closes back below the broken day high with volume >= 2x its 20-bar average: short
+  at the next open. | stop: Above the highest high since the break. | exit: Target the last 5-minute swing low before the
+  break (previous higher low), else 2R; trail by 3-bar highs; square-off 15:15. | filters: Prior uptrend: close above EMA(20)
+  for the 6 bars before the break.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-10; trade: buy ATM PE; stop and target on the index'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R86 stop-run fades lost in 6 of 6 tests; R87 stop run above the 15-minute day high was followed
+  by more upside (n 1,666); R91 0 of 63. Assumptions: Volume thresholds, the 6-bar window and the trend check are ours.'

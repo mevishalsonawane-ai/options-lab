@@ -1,0 +1,33 @@
+id: book-bennett-10
+title: Is skew a risk indicator? Next-day range vs 09:20 skew, controlling for ATM IV (Colin Bennett, book rule, proposed)
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 7.1, Skew is often mistakenly used as a risk indicator) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: option chain as context
+  (skew and ATM IV). Entry: Descriptive test, no trade: regress the rest-of-day range (09:20 to 15:30) and next-day range
+  on 09:20 ATM IV and on skew = IV(ATM-5 put) - IV(ATM+5 call). Bennett''s claim: skew adds nothing once ATM IV is known and
+  often moves against it. Stop: n/a Exit: n/a'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- option chain as context (skew and ATM IV)
+- daily
+model_or_rule: 'Descriptive test, no trade: regress the rest-of-day range (09:20 to 15:30) and next-day range on 09:20 ATM
+  IV and on skew = IV(ATM-5 put) - IV(ATM+5 call). Bennett''s claim: skew adds nothing once ATM IV is known and often moves
+  against it. | stop: n/a | exit: n/a | filters: n/a'
+settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-10; trade: none; if skew adds no information Jarvis must not
+  call high skew a fear signal'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R16 and R102: VIX / ATM IV is the range dial; IV1 and h29: skew carries no direction. Skew vs range
+  given ATM IV not tested.. Assumptions: Fixed-strike skew uses ATM-5 vs ATM+5 because 90% strikes are outside ATM +-10.'

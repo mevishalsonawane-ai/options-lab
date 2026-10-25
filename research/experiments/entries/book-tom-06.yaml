@@ -1,0 +1,34 @@
+id: book-tom-06
+title: Reverse after a failed engulfing trade (5-minute scalp) (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (A Special Note on Scalping, p. 114) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: When an engulfing-bar
+  trade (as in engulfing-10min-trend but on 5-minute bars, normal entry at the bar''s close) hits its stop within 3 bars,
+  enter the opposite side at the stop price. Stop: the extreme of the failed engulfing trade''s adverse move plus 0.25 x 5-minute
+  ATR14 Exit: target 1.5 x initial risk on the underlying, else 30 minutes, else 15:10'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute bars
+model_or_rule: 'When an engulfing-bar trade (as in engulfing-10min-trend but on 5-minute bars, normal entry at the bar''s
+  close) hits its stop within 3 bars, enter the opposite side at the stop price. | stop: the extreme of the failed engulfing
+  trade''s adverse move plus 0.25 x 5-minute ATR14 | exit: target 1.5 x initial risk on the underlying, else 30 minutes, else
+  15:10 | filters: 09:30-14:30; one reversal per day per index'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-06; trade: buy 1-ITM option in the reversal direction'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us as an entry; R87B: after a strong candle against you price tends to come back (exits
+  on opposite engulfing hurt). Assumptions: Book shows one example with no stop or target; the 3-bar window, stop buffer,
+  1.5R target and 30-minute time stop are ours.'

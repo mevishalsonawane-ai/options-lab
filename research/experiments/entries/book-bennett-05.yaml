@@ -1,0 +1,38 @@
+id: book-bennett-05
+title: Sell skew (short ATM-5 put, long ATM+5 call, delta hedged) outside jumpy regimes (Colin Bennett, book rule, proposed)
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 7.5, Skew trading; Ch. 1.6 risk reversals) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (skew
+  level and realised skew); hedge on the underlying future. Entry: At 09:20 if skew = IV(ATM-5 put) - IV(ATM+5 call) is above
+  its rolling 60-day median AND the regime is not jumpy (yesterday''s realised skew = change in ATM IV / skew between yesterday''s
+  and today''s spot <= 1, and India VIX up less than 10% on the day), sell the ATM-5 put, buy the ATM+5 call, and short futures
+  to delta-neutral in whole lots. Stop: Basket loss of 1.5% of the index notional of one lot, or India VIX up 15% intraday.
+  Exit: 15:10.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (skew level and realised skew); hedge on the underlying future
+- 1-minute chain; daily decision at 09:20; held to 15:10
+model_or_rule: 'At 09:20 if skew = IV(ATM-5 put) - IV(ATM+5 call) is above its rolling 60-day median AND the regime is not
+  jumpy (yesterday''s realised skew = change in ATM IV / skew between yesterday''s and today''s spot <= 1, and India VIX up
+  less than 10% on the day), sell the ATM-5 put, buy the ATM+5 call, and short futures to delta-neutral in whole lots. | stop:
+  Basket loss of 1.5% of the index notional of one lot, or India VIX up 15% intraday. | exit: 15:10. | filters: Skip event
+  days; skip if the index fell more than 2% the previous day (jumpy regimes cluster after falls).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-05; trade: 1 lot each leg plus futures hedge. Note: the short
+  put is naked unless a further put is bought; research version adds a long ATM-9 put to keep risk defined.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R102 measured the skew level only (ATM-5 put dearer than ATM+5 call by 2.56 IV
+  points on 91% of 1,222 NIFTY days).. Assumptions: Bennett''s realised-skew definition is made literal on daily ATM IV changes;
+  strikes 5 out because 90% strikes are outside ATM +-10 on a weekly.'

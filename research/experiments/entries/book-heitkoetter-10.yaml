@@ -1,0 +1,34 @@
+id: book-heitkoetter-10
+title: First 15-minute bar direction, previous-day high/low target, then reverse (Markus Heitkoetter, book rule, proposed)
+family: orb
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 5, Stop Losses (technical) and Profit-Taking
+  (technical)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying
+  price. Entry: At 09:30, if the 09:15-09:30 bar closed above its open, long; if below, short. If the long reaches the previous
+  day''s high, close and reverse short with the previous day''s low as target (mirror for shorts). Stop: The far end of the
+  first 15-minute bar (stands in for the book''s trendline from yesterday''s high) Exit: Target previous-day high (long) /
+  low (short); 15:10 square-off'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'At 09:30, if the 09:15-09:30 bar closed above its open, long; if below, short. If the long reaches the previous
+  day''s high, close and reverse short with the previous day''s low as target (mirror for shorts). | stop: The far end of
+  the first 15-minute bar (stands in for the book''s trendline from yesterday''s high) | exit: Target previous-day high (long)
+  / low (short); 15:10 square-off | filters: skip if the open is already beyond the previous-day level in the trade''s direction'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-10; trade: buy 1-ITM CE on long, 1-ITM PE on short'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: ORB family lost everywhere (R3, R92 0 of 257); R1 N11 / N12 first-candle rules lost; R89 PDH/PDL
+  0 of 180. Assumptions: The book shows two single-chart examples, not a system; the stop rule and skip filter are ours.'

@@ -1,0 +1,32 @@
+id: book-smith-07
+title: Skip swing entries whose trigger is hit by a gap (David Graeme Smith, book rule, proposed)
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 13.1) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Applied to any daily-level stop-entry rule (SST,
+  NR7/inside-day breakout, Donchian next-day): if the 09:15 open is already beyond the trigger, do not trade; otherwise trade
+  as usual. Stop: host rule''s Exit: host rule''s'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- daily trigger levels, first minute of the session
+model_or_rule: 'Applied to any daily-level stop-entry rule (SST, NR7/inside-day breakout, Donchian next-day): if the 09:15
+  open is already beyond the trigger, do not trade; otherwise trade as usual. | stop: host rule''s | exit: host rule''s |
+  filters: variant: skip only if the gap beyond the trigger is >= 0.25% of price.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-smith-07; trade: host rule''s option (1-ITM monthly)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R102: a 0.5-1% NIFTY gap fills by the close less than half the time (NIFTY 42%); SWING_DEEP and
+  LV-05 found swing profit is made overnight, which this filter discards. Not tested by us as a filter.. Assumptions: Book''s
+  ''gaps through the trigger'' read as the open being beyond the trigger level.'

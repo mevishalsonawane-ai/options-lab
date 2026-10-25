@@ -1,0 +1,38 @@
+id: book-aziz-07
+title: 'Fallen Angel analogue: gap-up open spike, flush below VWAP, base, volume breakout (Andrew Aziz, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, Strategy 1: Fallen Angel) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume. Entry:
+  Day filter: gap up of at least 0.5%. The index makes a new high in the first 15 minutes, then trades below VWAP; a base
+  of at least 15 one-minute bars with a range under 0.3 x daily ATR14 forms at or above the previous day''s close or the 5-minute
+  50 SMA. Long on the first 1-minute close above the base high with volume at least 2 x the base''s average 1-minute volume.
+  Stop: below the base low Exit: Part at VWAP, part at the day''s high (stop to entry after the first), rest at yesterday''s
+  high or a new 5-minute low; time exit 11:45.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price/volume
+- 1-minute and 5-minute bars
+model_or_rule: 'Day filter: gap up of at least 0.5%. The index makes a new high in the first 15 minutes, then trades below
+  VWAP; a base of at least 15 one-minute bars with a range under 0.3 x daily ATR14 forms at or above the previous day''s close
+  or the 5-minute 50 SMA. Long on the first 1-minute close above the base high with volume at least 2 x the base''s average
+  1-minute volume. | stop: below the base low | exit: Part at VWAP, part at the day''s high (stop to entry after the first),
+  rest at yesterday''s high or a new 5-minute low; time exit 11:45. | filters: Before 11:45; skip if no base forms or the
+  breakout volume test fails.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-07; trade: buy ATM CE; stops on the index'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; nearest R87B pullback continuation and R102 gap facts (a 0.5-1% NIFTY gap fills
+  by the close 42% of the time). Assumptions: The book''s Angel is a low-float US stock gapping on news with pre-market levels;
+  the index has no comparable pre-market, so the previous close stands in for the pre-market low and every threshold is ours.'

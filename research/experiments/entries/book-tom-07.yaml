@@ -1,0 +1,36 @@
+id: book-tom-07
+title: Fake-out / fake-down of the previous swing, fade back into the range (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (The Fake Moves, p. 103-104) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Fake-down: a bar trades
+  below the most recent confirmed swing low (2-bar fractal) and the same or next bar closes back above it; buy at that close.
+  Fake-out mirror for shorts. Stop: 1 tick beyond the fake extreme (the lowest low of the break) Exit: target the most recent
+  confirmed swing high on the other side of the range; else 15:10 (15:05 expiry)'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- CRUDE
+features:
+- underlying price
+- 15-minute bars (5-minute variant)
+model_or_rule: 'Fake-down: a bar trades below the most recent confirmed swing low (2-bar fractal) and the same or next bar
+  closes back above it; buy at that close. Fake-out mirror for shorts. | stop: 1 tick beyond the fake extreme (the lowest
+  low of the break) | exit: target the most recent confirmed swing high on the other side of the range; else 15:10 (15:05
+  expiry) | filters: range must be at least 1.0 x ATR14 wide; 09:30-14:30'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-07; trade: buy 1-ITM CE after a fake-down, 1-ITM PE after a fake-out;
+  stop and target on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R3 ORB Sweep / Range Fade lost Rs 5,05,954 / 5,10,978; R91 swing-sweep fade 0 of 63; R89 break-and-reclaim
+  lost. Assumptions: Book gives only a diagram; swing definition, close-back confirmation and range minimum are ours.'

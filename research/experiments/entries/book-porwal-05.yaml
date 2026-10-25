@@ -1,0 +1,42 @@
+id: book-porwal-05
+title: Darvas box break with volume confirmation, stop outside the box (Nikhil Porwal, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 4.2) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: underlying price and volume (futures volume). Entry:
+  Box = the high / low of the last N bars (N = 20 and 40) when (high - low) <= 1.5 x ATR14 x sqrt(N)/sqrt(20) (a quiet box).
+  Long when a bar closes above the box high with a body >= 60% of its range and futures volume >= 1.5x its 20-bar average;
+  buy at the next bar''s open. Short mirror. Stop: Below the box low (book''s preferred stop, outside the box); variant: below
+  the breakout bar''s low. Exit: 2R target, or trail by the 10-bar low; intraday square-off 15:15.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+- NATURALGAS
+features:
+- underlying price and volume (futures volume)
+- 5-minute bars intraday; daily as a variant
+model_or_rule: 'Box = the high / low of the last N bars (N = 20 and 40) when (high - low) <= 1.5 x ATR14 x sqrt(N)/sqrt(20)
+  (a quiet box). Long when a bar closes above the box high with a body >= 60% of its range and futures volume >= 1.5x its
+  20-bar average; buy at the next bar''s open. Short mirror. | stop: Below the box low (book''s preferred stop, outside the
+  box); variant: below the breakout bar''s low. | exit: 2R target, or trail by the 10-bar low; intraday square-off 15:15.
+  | filters: ''Longer consolidation, bigger move'': variant N = 40 vs N = 20. No entry when price is already more than 2 ATR
+  beyond the box (no chasing).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-05; trade: buy 1-ITM CE / PE nearest expiry, stops on the index;
+  compare with the R51 Donchian arm on the same days'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: nearest R51 Donchian 20 5-minute: final +Rs 55,439 on 1,787 trades (our real arm); R71 P3 squeeze
+  release lost; R73 confirmation wait lost; volume filter not tested by us. Assumptions: The box definition, quiet-box width
+  test, body and volume thresholds are ours; the book gives no numbers.'

@@ -1,0 +1,37 @@
+id: book-bennett-08
+title: 'Relative-value vol: NIFTY vs BANKNIFTY ATM IV spread mean reversion (theta-weighted) (Colin Bennett, book rule, proposed)'
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 6.2, Relative value volatility trading) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (spread
+  of two indices'' implieds). Entry: Compute s = BANKNIFTY ATM IV / NIFTY ATM IV at matched time to expiry (convert each to
+  30-day forward vol with additive variance, or use only days when both have 5-7 days to expiry). If s is above its rolling
+  120-day 90th percentile, sell BANKNIFTY vol and buy NIFTY vol; below the 10th, the reverse. Legs theta-weighted (Bennett:
+  same-type securities). Stop: Spread move of 2 rolling standard deviations against, or basket loss of 2% of combined notional.
+  Exit: s back to its median, or 10 sessions.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- volatility / options structure (spread of two indices' implieds)
+- daily at 09:20
+model_or_rule: 'Compute s = BANKNIFTY ATM IV / NIFTY ATM IV at matched time to expiry (convert each to 30-day forward vol
+  with additive variance, or use only days when both have 5-7 days to expiry). If s is above its rolling 120-day 90th percentile,
+  sell BANKNIFTY vol and buy NIFTY vol; below the 10th, the reverse. Legs theta-weighted (Bennett: same-type securities).
+  | stop: Spread move of 2 rolling standard deviations against, or basket loss of 2% of combined notional. | exit: s back
+  to its median, or 10 sessions. | filters: Defined risk on the short leg (iron fly).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-08; trade: Short iron fly on one index, long straddle on the
+  other, theta-weighted in whole lots.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R102: BANKNIFTY realised is about 1.3x NIFTY''s and beta 1.157.. Assumptions:
+  BANKNIFTY is monthly and NIFTY weekly, so the matched-expiry rule is ours; whole-lot weighting is coarse.'

@@ -1,0 +1,34 @@
+id: book-carli-04
+title: Skip a trade in the direction of today's opening gap (David Carli, book rule, proposed)
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'David Carli''s rule from The Power of Divergence Trading (Ch. 2) makes money after real charges and slippage,
+  walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: no new entry of its own; on a rising-window
+  day (open > yesterday''s high) skip long signals, on a falling-window day (open < yesterday''s low) skip short signals Stop:
+  unchanged (filter only) Exit: unchanged (filter only)'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- daily gap (today's open vs yesterday's high / low), applied to any intraday or swing entry
+model_or_rule: 'no new entry of its own; on a rising-window day (open > yesterday''s high) skip long signals, on a falling-window
+  day (open < yesterday''s low) skip short signals | stop: unchanged (filter only) | exit: unchanged (filter only) | filters:
+  true window only: today''s low > yesterday''s high (gap up) or today''s high < yesterday''s low (gap down), known from the
+  first bar that keeps the gap unfilled; the literal reading uses the open only'
+settings: 'research/books/TESTABLE_RULES.md, rule book-carli-04; trade: applied to Carli''s own divergence entries (the book''s
+  intent); optionally as a shadow skip rule on the running arms (risk-lowering only)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us in this form; R87 found gap-day context did not make any candle shape predictive
+  (0 of 4,049 shape x context cells). Assumptions: The book gives the advice for its own trades without a time limit; we apply
+  it to the gap day only.'

@@ -1,0 +1,34 @@
+id: book-ozenbas-02
+title: Enter with a capped limit instead of a market order; never chase (Ozenbas, Pagano, Schwartz and Weber, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ozenbas, Pagano, Schwartz and Weber''s rule from Liquidity, Markets and Trading in Action (Ch. 2.1, 2.9.1, 5.4)
+  makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: none (execution
+  overlay on any underlying signal). Entry: On an arm''s buy signal, send a limit buy at the entry-bar option price + 0.5%;
+  take what fills at once up to that price, leave the rest resting 3 minutes, then cancel. Stop: Unchanged from the arm. Exit:
+  Unchanged from the arm (market or capped limit).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none (execution overlay on any underlying signal)
+- 1-minute bars (entry minute + 3 minutes)
+model_or_rule: 'On an arm''s buy signal, send a limit buy at the entry-bar option price + 0.5%; take what fills at once up
+  to that price, leave the rest resting 3 minutes, then cancel. | stop: Unchanged from the arm. | exit: Unchanged from the
+  arm (market or capped limit). | filters: None.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-02; trade: the arm''s own option (signal on the underlying,
+  strike by the arm''s rule)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: h14: the only one of 9 execution policies to pass every gate (+Rs 288/day vs +250 required); holdout
+  +Rs 625/day at kappa 0.02; not robust at kappa 0.04. Already used by the Liquidity arm.. Assumptions: The book only states
+  the trade-off (limit saves the spread but risks no fill); the +0.5% cap and 3-minute rest are h14''s pre-registered values.'

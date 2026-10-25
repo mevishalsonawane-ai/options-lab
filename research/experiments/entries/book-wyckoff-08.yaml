@@ -1,0 +1,34 @@
+id: book-wyckoff-08
+title: Stop beyond the last point of resistance, raised under each new reaction low (Wyckoff, book rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. IV) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Any entry from an existing arm (Breadth Donchian,
+  R51 Donchian, Liquidity 15+5) Stop: initial: 0.1 ATR beyond the last confirmed swing low (3-bar fractal) before entry; after
+  each new high in favour, raise to 0.1 ATR below the latest confirmed reaction low; never lower it Exit: the trailed stop,
+  or the arm''s own exit, whichever first; 15:15 (15:05 on expiry)'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute bars (index spot)
+model_or_rule: 'Any entry from an existing arm (Breadth Donchian, R51 Donchian, Liquidity 15+5) | stop: initial: 0.1 ATR beyond
+  the last confirmed swing low (3-bar fractal) before entry; after each new high in favour, raise to 0.1 ATR below the latest
+  confirmed reaction low; never lower it | exit: the trailed stop, or the arm''s own exit, whichever first; 15:15 (15:05 on
+  expiry) | filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-08; trade: manage the option bought by the arm; stop read on
+  the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R19 breakeven / give-back locks 0 of 12; R90 swing stops 0 of 99; a swing-low trail on the arms
+  is not tested by us. Assumptions: Book''s 1/4 point beyond the point of resistance converted to 0.1 ATR; swing = 3-bar fractal'

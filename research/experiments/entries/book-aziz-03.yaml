@@ -1,0 +1,40 @@
+id: book-aziz-03
+title: 'VWAP reversal: opening move fails to make a new 5-minute extreme -> trade back to VWAP (Andrew Aziz, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, VWAP Reversals) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume. Entry: Before 10:45:
+  the index is below VWAP and has made the day''s low; a completed 5-minute bar fails to make a new low (its low >= the prior
+  bar''s low). Long on the first 1-minute close above the 1-minute 9 EMA after that bar. Mirror short above VWAP after a 5-minute
+  bar fails to make a new high. Stop: below the low of the day (or the previous 5-minute bar''s low if closer) Exit: Sell
+  half at VWAP and move the stop to entry; rest at the 5-minute 9 EMA, then 20 EMA (whichever comes later above VWAP), or
+  a new 5-minute low; time exit 11:45.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price/volume
+- 5-minute bars for the setup, 1-minute bars for the trigger
+model_or_rule: 'Before 10:45: the index is below VWAP and has made the day''s low; a completed 5-minute bar fails to make
+  a new low (its low >= the prior bar''s low). Long on the first 1-minute close above the 1-minute 9 EMA after that bar. Mirror
+  short above VWAP after a 5-minute bar fails to make a new high. | stop: below the low of the day (or the previous 5-minute
+  bar''s low if closer) | exit: Sell half at VWAP and move the stop to entry; rest at the 5-minute 9 EMA, then 20 EMA (whichever
+  comes later above VWAP), or a new 5-minute low; time exit 11:45. | filters: Skip unless the distance from entry to VWAP
+  is at least 2 x the distance from entry to the stop (the book''s risk/reward rule).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-03; trade: buy ATM CE on a long signal, ATM PE on a short; stops
+  and targets on the index'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R71 P7 three-bar reversal at the day''s high/low beat random timing (twin p 0.002) but lost after
+  option costs; R86 V1 midday fade to VWAP lost Rs 64,786 on 71 trades. Assumptions: ''Fails to make a new low'' = one 5-minute
+  bar whose low is not below the previous bar''s low; 1-minute 9 EMA close as the trigger (DLTR / AA examples); window ends
+  at the NSE equivalent of the Late-Morning start.'

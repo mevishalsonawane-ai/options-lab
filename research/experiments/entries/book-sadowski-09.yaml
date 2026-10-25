@@ -1,0 +1,34 @@
+id: book-sadowski-09
+title: RSI(2) above 90 buy / below 10 sell, with adds (Roman Sadowski, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 9) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Long when RSI(2)
+  crosses above 90; short when it crosses below 10. Add one more unit on each new cross in the same direction, up to 3 units.
+  Stop: Not specified (''rigorous''); we use 1.5 x ATR14 from each entry on the underlying. Exit: Close all units on the opposite
+  signal (RSI(2) crossing the other extreme), or square-off at 15:15 intraday.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- '15-minute bars (book: not stated); daily variant'
+model_or_rule: 'Long when RSI(2) crosses above 90; short when it crosses below 10. Add one more unit on each new cross in
+  the same direction, up to 3 units. | stop: Not specified (''rigorous''); we use 1.5 x ATR14 from each entry on the underlying.
+  | exit: Close all units on the opposite signal (RSI(2) crossing the other extreme), or square-off at 15:15 intraday. | filters:
+  None.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-09; trade: Buy the 1-ITM CE/PE per unit.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: GOLD_SCALP.md rsi2 follow on XAUUSD all negative (-234,718 over 6629 trades, M5 buys only); the
+  Connors reading (RSI(2)<10 buy) inside the coin band on NIFTY (SWING_EXITS.md); momentum reading on NIFTY not tested by
+  us. Assumptions: The stop and the 3-unit cap are ours. ''Moves above'' = a cross at a bar close.'

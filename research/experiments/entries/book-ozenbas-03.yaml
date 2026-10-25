@@ -1,0 +1,37 @@
+id: book-ozenbas-03
+title: Rest the entry at the best bid (maker) instead of crossing the spread (Ozenbas, Pagano, Schwartz and Weber, book rule,
+  proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Ozenbas, Pagano, Schwartz and Weber''s rule from Liquidity, Markets and Trading in Action (Ch. 2.1, 2.9.1 (limit
+  orders save the spread; non-execution and pick-off risk)) makes money after real charges and slippage, walk-forward, with
+  BH across the rules tried. Signal source: none (execution overlay on any underlying signal). Entry: On an arm''s buy signal,
+  post a limit buy at the current best bid of the chosen option; re-peg to the new best bid at most once; cancel if not filled
+  within 2 minutes (the signal is then skipped). Stop: Unchanged from the arm. Exit: Unchanged from the arm.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: historical bid/ask and top-of-book quantity for index
+  options (only one snapshot, 2026-10-06; the app recorder''s quote log since 6 Oct 2026 is the source once long enough)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none (execution overlay on any underlying signal)
+- tick / 1-second quotes, entry window 1-3 minutes
+model_or_rule: 'On an arm''s buy signal, post a limit buy at the current best bid of the chosen option; re-peg to the new
+  best bid at most once; cancel if not filled within 2 minutes (the signal is then skipped). | stop: Unchanged from the arm.
+  | exit: Unchanged from the arm. | filters: Only when the half-spread at the signal is >= 0.15% of premium (otherwise the
+  saving is too small to pay for missed trades).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-ozenbas-03; trade: the arm''s own option'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Not tested by us. h24 measured the spread to be saved (half-spread 0.16% NIFTY/BANKNIFTY, one snapshot);
+  h14 tested only marketable limits.. Assumptions: The 2-minute window, one re-peg and the 0.15% threshold are ours. The test
+  must count missed trades at their market-order P&L (opportunity cost) and the adverse-selection bias (fills happen more
+  often when price moves against us).'

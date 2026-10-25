@@ -1,0 +1,31 @@
+id: book-heitkoetter-13
+title: Take profits in thirds (Markus Heitkoetter, book rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 5, Taking Partial Profits) makes money
+  after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: any
+  arm, 3 lots Stop: arm''s stop for all lots Exit: lot 1 at a fixed +0.41% index move (book''s $300), lot 2 at the previous-day
+  high/low or next pivot, lot 3 on the previous-bar trail (hk-prev-bar-trail-60m on 15-minute bars)'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- arm's own
+model_or_rule: 'any arm, 3 lots | stop: arm''s stop for all lots | exit: lot 1 at a fixed +0.41% index move (book''s $300),
+  lot 2 at the previous-day high/low or next pivot, lot 3 on the previous-bar trail (hk-prev-bar-trail-60m on 15-minute bars)
+  | filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-13; trade: 3 x 1-ITM lots'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R81 X5 scale out half at 1R rejected (-Rs 79k design, -Rs 35k final). Assumptions: Which S/R level
+  and which trail are our choices.'

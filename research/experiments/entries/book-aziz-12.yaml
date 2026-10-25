@@ -1,0 +1,32 @@
+id: book-aziz-12
+title: Stop for the day after giving back 30% of the first hour's profit (Andrew Aziz, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Andrew Aziz''s rule from Advanced Techniques in Day Trading (Ch. 6, One Stock in Play, All Strategies) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: none (account P&L rule).
+  Entry: None. Stop: If the account''s realised P&L at 10:15 is positive and later realised plus open P&L falls by more than
+  30% of it, take no new entries for the rest of the day. Exit: Open positions keep their own exits (the rule blocks only
+  new entries).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none (account P&L rule)
+- intraday
+model_or_rule: 'None. | stop: If the account''s realised P&L at 10:15 is positive and later realised plus open P&L falls by
+  more than 30% of it, take no new entries for the rest of the day. | exit: Open positions keep their own exits (the rule
+  blocks only new entries). | filters: Applies only on days with a positive P&L at 10:15.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-aziz-12; trade: all paper arms'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R19c: a day profit lock raised green days but failed net / drawdown; the day loss cap lowered green
+  days. Assumptions: US Open (to 10:30) mapped to NSE 10:15; ''switch to the simulator'' read as no new entries.'

@@ -1,0 +1,33 @@
+id: book-heitkoetter-14
+title: Stop trading for the week once a weekly profit goal per lot is reached (Markus Heitkoetter, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Is It Really Possible to Make a Living; Tenets
+  of Day Trading) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source:
+  none / account rule. Entry: the arm''s normal entries until the week''s closed P&L per lot reaches the goal; then no new
+  entries until Monday Stop: arm''s own Exit: arm''s own'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none / account rule
+- weekly
+model_or_rule: 'the arm''s normal entries until the week''s closed P&L per lot reaches the goal; then no new entries until
+  Monday | stop: arm''s own | exit: arm''s own | filters: goal per lot fixed in advance, low (book: start near $100 per contract,
+  later $250-300); test goals of 0.5x, 1x and 2x the arm''s median winning trade'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-14; trade: as the arm; applied to the Donchian, Breadth
+  Donchian and Liquidity paper records'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; nearest R19c day profit lock raised green days (42% -> 49%) but failed net / drawdown.
+  Assumptions: Conversion of the book''s dollar goals to rupees per lot via the arm''s own median win; risk-lowering, so paper-eligible
+  only after it passes gates.'

@@ -1,0 +1,40 @@
+id: book-lswing-03
+title: FORCESWING + Master Plan on the R58 stocks, bought monthly options (Larry Swing, book rule, proposed)
+family: outside-strategies
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Larry Swing''s rule from A Practical Guide to Swing Trading (Ch. 5.1, 6, 10.1.1) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price/volume (the stock''s daily OHLCV).
+  Entry: Scan exactly as the book on each stock (20-day avg volume filter dropped: all are liquid): close > SMA10 and SMA20,
+  two lower highs, SMA3(FI) <= 0, SMA13(FI) >= 0, ADX(20) > 30 (short mirror). Trigger: no gap (|open - prev close| < 1.8%)
+  -> buy-stop at prev high + 0.2% from 09:20; gap with the trade -> wait to 09:45, gap against -> 09:20, trigger = today''s
+  high so far + 0.2%. Order valid 5 sessions. Stop: Higher of entry - 4% or reference low - 0.2% (on the stock); daily trail
+  to prev low - 0.2%. Exit: Half at stock +7%; rest on the trail; out by 15:15 three sessions before expiry (physical settlement)
+  as in R58; R58''s band exit applies to the option.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- F&O stocks
+features:
+- underlying price/volume (the stock's daily OHLCV)
+- daily bars; stock 1-minute bars for the trigger
+model_or_rule: 'Scan exactly as the book on each stock (20-day avg volume filter dropped: all are liquid): close > SMA10 and
+  SMA20, two lower highs, SMA3(FI) <= 0, SMA13(FI) >= 0, ADX(20) > 30 (short mirror). Trigger: no gap (|open - prev close|
+  < 1.8%) -> buy-stop at prev high + 0.2% from 09:20; gap with the trade -> wait to 09:45, gap against -> 09:20, trigger =
+  today''s high so far + 0.2%. Order valid 5 sessions. | stop: Higher of entry - 4% or reference low - 0.2% (on the stock);
+  daily trail to prev low - 0.2%. | exit: Half at stock +7%; rest on the trail; out by 15:15 three sessions before expiry
+  (physical settlement) as in R58; R58''s band exit applies to the option. | filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-lswing-03; trade: Long: 2 lots nearest-monthly ATM CE; short: ATM PE;
+  stops/targets on the stock. Baseline: the same trades in cash (longs as delivery).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R58: 38 stock-option rules, 0 pass; F5 daily momentum / Donchian final -Rs 5.5 lakh on 970 trades;
+  round trip about Rs 280 a lot (2% of premium). SWING_DEEP: stock pullbacks beat random stocks 9/11 years but not buy-and-hold..
+  Assumptions: $0.06 on a ~$27 stock -> 0.2%; $0.50 -> 1.8%; literal 4% / 7% kept because stock ATRs are close to the book''s.
+  Lot sizes from bhavcopy.'

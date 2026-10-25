@@ -1,0 +1,44 @@
+id: book-atm-01
+title: TWAP-style sliced exit of multi-lot option positions vs one market order (The Advanced Trading Methods book, book rule,
+  proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Methods book''s rule from The Advanced Trading Methods in the Financial Markets (Sec. 3.2,
+  item 2 (TWAP algorithms); Sec. 2.1.2 (minimise market impact)) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: none (execution method applied to existing arm signals on the underlying).
+  Entry: unchanged: take the existing arm''s entries (Liquidity 15+5, R72 Breadth Donchian, R51 Donchian) as they are Stop:
+  unchanged from each arm; a stop exit is never sliced (sent in full at once) Exit: on a target, trail or time exit of N >=
+  2 lots, sell N/3 lots (rounded up) at each of the next 3 one-minute bar opens instead of all N at the signal bar''s next
+  open'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: realistic fill depth for multi-lot exits needs 5-level
+  book recordings; 1-minute bars alone overstate fills'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+features:
+- none (execution method applied to existing arm signals on the underlying)
+- 1-minute bars
+model_or_rule: 'unchanged: take the existing arm''s entries (Liquidity 15+5, R72 Breadth Donchian, R51 Donchian) as they are
+  | stop: unchanged from each arm; a stop exit is never sliced (sent in full at once) | exit: on a target, trail or time exit
+  of N >= 2 lots, sell N/3 lots (rounded up) at each of the next 3 one-minute bar opens instead of all N at the signal bar''s
+  next open | filters: only for option contracts whose median 1-minute volume is below 20x the position size (thin strikes,
+  MCX options)'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atm-01; trade: same option as the arm; compare net P&L and fill slippage
+  of sliced vs single exits on the same trades'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; nearest is HUNT_H14.md (entry execution: only a marketable limit at +0.5% passed,
+  +Rs 288/day vs +250 required); HUNT_H10.md suggests slicing exits in thin contracts. Assumptions: The paper only names TWAP.
+  The 3 slices, 1-minute spacing, the thin-contract filter and never slicing stops are ours (stops must not be delayed per
+  CLAUDE.md priority rules). Fills at bar open plus our usual spread model.'

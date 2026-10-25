@@ -1,0 +1,41 @@
+id: book-wyckoff-01
+title: 'Big lots at the offer vs the bid: futures signed volume as a direction lead (Wyckoff, book rule, proposed)'
+family: flow-oi
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. V) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price/volume (index future tick-rule signed volume). Entry: At
+  each minute close 09:30-15:00, compute signed volume of the near-month index future over the last 5 minutes (tick rule;
+  prints >= 5x the median print size counted separately as ''big lots''). Long when big-lot signed volume and total signed
+  volume are both in the top decile of the trailing 20-session distribution for that time slot; short when both are in the
+  bottom decile. Stop: 0.5x the R16 expected 30-minute range on the index, from entry Exit: 15 minutes after entry, or the
+  stop, or 15:15 (15:05 on expiry)'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: index-futures ticks exist only in the phone''s TickZoneRecorder
+  (from 12 Oct 2026, private IraAlgo repo); about 3 months needed (R61b)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price/volume (index future tick-rule signed volume)
+- 1-minute bars built from futures ticks
+model_or_rule: 'At each minute close 09:30-15:00, compute signed volume of the near-month index future over the last 5 minutes
+  (tick rule; prints >= 5x the median print size counted separately as ''big lots''). Long when big-lot signed volume and
+  total signed volume are both in the top decile of the trailing 20-session distribution for that time slot; short when both
+  are in the bottom decile. | stop: 0.5x the R16 expected 30-minute range on the index, from entry | exit: 15 minutes after
+  entry, or the stop, or 15:15 (15:05 on expiry) | filters: skip if the feed-health checks of R8 sec. 4 fail in the window;
+  skip the first 15 minutes'
+settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-01; trade: buy ATM CE on a long signal, ATM PE on a short;
+  stop on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R7: signed option flow leads (IC +0.109 at 1 minute) but its edge is 0.42x of cost; R9 delta-divergence
+  proxy no. Assumptions: The book reads each print at the bid or offer; we only have retail snapshots, so the tick rule stands
+  in for the aggressor side (R7 found the quote rule fails on snapshots). ''Large lot'' is made relative to the median print,
+  as the book says lot size is relative. Horizon 15 minutes is ours.'

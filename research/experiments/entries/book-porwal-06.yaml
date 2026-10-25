@@ -1,0 +1,40 @@
+id: book-porwal-06
+title: 'Turbocharged opening: first 15-minute range break with prior-day trend and EMA(14) bias (Nikhil Porwal, book rule,
+  proposed)'
+family: orb
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 4.3) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Prior-day trend = up if
+  yesterday''s close > yesterday''s open and > the day before''s close (down mirror; else no trade). Long: a 5-minute close
+  above the 15-minute range high, prior-day trend up, and the 5-minute close above EMA(14). Short mirror. One trade a side
+  a day, entries 09:30-11:00. Stop: The other side of the 15-minute range (book: ''pre-decided''; variant: the range midpoint).
+  Exit: A third each at entry +/- 1.0x, 1.5x, 2.0x the range; the rest trailed by a 5-minute close through EMA(14); square-off
+  15:15 (15:05 on expiry).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- first 15-minute candle (09:15-09:29) as the range; 5-minute bars for the break
+model_or_rule: 'Prior-day trend = up if yesterday''s close > yesterday''s open and > the day before''s close (down mirror;
+  else no trade). Long: a 5-minute close above the 15-minute range high, prior-day trend up, and the 5-minute close above
+  EMA(14). Short mirror. One trade a side a day, entries 09:30-11:00. | stop: The other side of the 15-minute range (book:
+  ''pre-decided''; variant: the range midpoint). | exit: A third each at entry +/- 1.0x, 1.5x, 2.0x the range; the rest trailed
+  by a 5-minute close through EMA(14); square-off 15:15 (15:05 on expiry). | filters: Skip if the range is narrower or wider
+  than its 20-day 20th-80th percentile (variant only). Gap noted but not a filter (book: gap analysis without a rule).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-06; trade: buy ATM CE on a long, ATM PE on a short; stops and
+  targets on the index'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R23 first-15-minute range break -Rs 71,624 on 1,171 trades; R3 ORB -Rs 2,23,040; R49 0 of 336; R92
+  0 of 257; R22 1x-extension target lost. Assumptions: Prior-day trend definition, the stop level, the entry window and the
+  range-width variant are ours.'

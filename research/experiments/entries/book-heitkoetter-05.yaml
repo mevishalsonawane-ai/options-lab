@@ -1,0 +1,32 @@
+id: book-heitkoetter-05
+title: MACD 12/26/9 signal-line cross (Markus Heitkoetter, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 3, MACD) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: MACD = EMA12 - EMA26
+  of closes, signal = EMA9 of MACD; long when MACD crosses above the signal on a bar close, short when it crosses below. Stop:
+  0.27% of the index Exit: 0.41% target, 45-minute time stop, opposite cross, 15:10'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'MACD = EMA12 - EMA26 of closes, signal = EMA9 of MACD; long when MACD crosses above the signal on a bar close,
+  short when it crosses below. | stop: 0.27% of the index | exit: 0.41% target, 45-minute time stop, opposite cross, 15:10
+  | filters: trending markets (book); none in the base test'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-05; trade: buy 1-ITM CE on long, 1-ITM PE on short'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: H25 MACD signal and zero cross in the ''other indicators'' family: 27,000 variants, Rs -146 a trade,
+  0 of 50 walk-forward families positive. Assumptions: The book''s wording of which line crosses which is ambiguous; the standard
+  reading is used.'

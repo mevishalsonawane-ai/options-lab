@@ -1,0 +1,30 @@
+id: book-woods-08
+title: Three-bar reversal (Galen Woods, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.6) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Bar 1 bearish; bar 2 lower high and lower low; bar
+  3 bullish with a higher low, closing above bar 2''s high; buy stop above bar 3''s high. Mirror. Stop: Bar 2''s low. Exit:
+  Not stated; nearest swing.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute bars
+model_or_rule: 'Bar 1 bearish; bar 2 lower high and lower low; bar 3 bullish with a higher low, closing above bar 2''s high;
+  buy stop above bar 3''s high. Mirror. | stop: Bar 2''s low. | exit: Not stated; nearest swing. | filters: None (book).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-woods-08; trade: buy 1-ITM CE / PE'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R71 P7 at day high/low: final -Rs 1,67,689 on 855 trades, twin p 0.002 (timing real, below costs)..
+  Assumptions: Book''s literal rule; R71 tested a version restricted to the day''s high/low.'

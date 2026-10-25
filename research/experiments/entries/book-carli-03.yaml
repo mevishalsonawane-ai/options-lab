@@ -1,0 +1,38 @@
+id: book-carli-03
+title: Do Carli's three divergence filters improve R95's confirmed divergences? (David Carli, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'David Carli''s rule from The Power of Divergence Trading (Ch. 4) makes money after real charges and slippage,
+  walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: R95''s confirmed regular divergence
+  (pivots 5/5, known at pivot + 5 bars), kept only if: CCI(20) at the second extreme beyond -+150; CCI did not cross zero
+  between the two pivots; second price extreme is a 1.13-1.618 extension of the AB pullback. Entry at the next minute''s open
+  after confirmation, as in R95. Stop: beyond the second pivot by 1 tick (R95) and, variant, by 0.1% of price (Carli) Exit:
+  variant A: R95''s CCI-back-to-0 exit; variant B: half at 127.2%, stop to entry, rest at 161.8%, flat at 15:15'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute and 60-minute bars (R95's stores)
+model_or_rule: 'R95''s confirmed regular divergence (pivots 5/5, known at pivot + 5 bars), kept only if: CCI(20) at the second
+  extreme beyond -+150; CCI did not cross zero between the two pivots; second price extreme is a 1.13-1.618 extension of the
+  AB pullback. Entry at the next minute''s open after confirmation, as in R95. | stop: beyond the second pivot by 1 tick (R95)
+  and, variant, by 0.1% of price (Carli) | exit: variant A: R95''s CCI-back-to-0 exit; variant B: half at 127.2%, stop to
+  entry, rest at 161.8%, flat at 15:15 | filters: R95''s session window 09:30-14:45 entries'
+settings: 'research/books/TESTABLE_RULES.md, rule book-carli-03; trade: 1-ITM nearest-expiry CE on bullish, PE on bearish;
+  real prints, real costs, 1 lot'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R95 confirmed-divergence entries lost (index design 1,778 trades -Rs 3,37,415; holdout 691 trades
+  -Rs 37,156); DV variant 0-52 trades a cell. Assumptions: Tests the filters on intraday bars, which the author says he never
+  uses; the point is a cheap check on existing R95 code of whether the filters separate good from bad divergences. Unfiltered
+  R95 divergences are the control.'

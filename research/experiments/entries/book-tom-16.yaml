@@ -1,0 +1,36 @@
+id: book-tom-16
+title: Equal-size pullback limit buy (harmonic retracement) (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Case Story: David the Swing Trader, p. 156-158) makes money
+  after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: In
+  a 60-minute uptrend, measure the last completed pullback (swing high to swing low, 2-bar fractals); after a new swing high,
+  place a limit buy at new high minus that pullback size; fill on touch. Mirror in downtrends. Stop: 1.0 x the pullback size
+  beyond the fill Exit: the new swing high, or square-off 15:10; futures variant may hold 3 sessions'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- CRUDE
+features:
+- underlying price
+- 15-minute bars (60-minute trend filter)
+model_or_rule: 'In a 60-minute uptrend, measure the last completed pullback (swing high to swing low, 2-bar fractals); after
+  a new swing high, place a limit buy at new high minus that pullback size; fill on touch. Mirror in downtrends. | stop: 1.0
+  x the pullback size beyond the fill | exit: the new swing high, or square-off 15:10; futures variant may hold 3 sessions
+  | filters: only when the 60-minute chart shows higher highs and higher lows'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-16; trade: buy 1-ITM CE when the limit level is touched (option
+  bought at that minute)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R4 ABCD on the touch of D: 10,927 trades, -Rs 227 a trade net; Fibonacci pullback entries no better
+  than random (R4/h37). Assumptions: The book gives the entry only; stop size, target and trend test are ours.'

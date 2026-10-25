@@ -1,0 +1,35 @@
+id: book-bennett-02
+title: 'NIFTY buy-write: long future, short weekly ~25-delta call (Colin Bennett, book rule, proposed)'
+family: option-structure
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Colin Bennett''s rule from Trading Volatility (Ch. 1.4, Call overwriting) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: volatility / options structure (overwriting); the
+  long future is a passive holding. Entry: Each Wednesday 09:20 (day after the Tuesday expiry): hold 1 lot NIFTY future (rolled
+  monthly) and sell 1 lot of the nearest weekly call whose delta is closest to 0.25 (Bennett: one-month 103-104% strike or
+  a fixed 25-delta). Stop: None in the book; research variant adds a stop on the future at -3% from entry to stay inside the
+  account stop. Exit: Call held to expiry (cash settled); re-sell next Wednesday.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+features:
+- volatility / options structure (overwriting); the long future is a passive holding
+- daily; weekly expiry cycle
+model_or_rule: 'Each Wednesday 09:20 (day after the Tuesday expiry): hold 1 lot NIFTY future (rolled monthly) and sell 1 lot
+  of the nearest weekly call whose delta is closest to 0.25 (Bennett: one-month 103-104% strike or a fixed 25-delta). | stop:
+  None in the book; research variant adds a stop on the future at -3% from entry to stay inside the account stop. | exit:
+  Call held to expiry (cash settled); re-sell next Wednesday. | filters: None (Bennett: enhanced / timed overwriting on an
+  index rarely beats always overwriting).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-bennett-02; trade: Benchmark only; compare with long future alone on
+  return, Sortino and worst month. Not an app arm (the app holds no index longs).'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us. Assumptions: Weekly instead of monthly because NIFTY weeklies exist; 25-delta
+  weekly strike is about 1-2% OTM, inside ATM +-10.'

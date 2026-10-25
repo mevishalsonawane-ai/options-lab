@@ -1,0 +1,32 @@
+id: book-heitkoetter-16
+title: Skip holiday-adjacent and pre-major-release days (Markus Heitkoetter, book rule, proposed)
+family: calendar-events
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Is It Really Possible to Make a Living) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: none / calendar. Entry:
+  no new entries on any arm on: the session before and after an NSE trading holiday; the session before an RBI policy decision,
+  the Union Budget, US CPI or US payrolls Stop: n/a Exit: n/a'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: a dated event calendar for RBI / Budget / US releases
+  2021-2026 in the lake (holidays are in the NSE calendar)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- none / calendar
+- daily filter
+model_or_rule: 'no new entries on any arm on: the session before and after an NSE trading holiday; the session before an RBI
+  policy decision, the Union Budget, US CPI or US payrolls | stop: n/a | exit: n/a | filters: as entry'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-16; trade: risk-lowering skip on existing arms'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us; R15 pre-open day filters 0 of 5; R102 US-event sign rules never passed. Assumptions:
+  US Thanksgiving / Christmas and Fed / jobs-report days mapped to Indian holidays and the releases that move NIFTY; list
+  fixed before any result.'

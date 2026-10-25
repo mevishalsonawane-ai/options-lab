@@ -1,0 +1,2509 @@
+# What 13 trading books teach, as short cards for Jarvis (25 Oct 2026; research/books/, one write-up per book).
+# Each card is the BOOK's claim in our own words, never a tested result: build_pack.py says so in every card's text.
+# A card whose idea our research tested carries that test's result (verdict + tested_src + tested_text).
+# Numbers in `text` are checked against the book's write-up, numbers in `tested_text` against the study.
+books:
+  wyckoff-day-traders-bible:
+    author: Wyckoff
+    title: The Day Trader's Bible
+  woods-price-action:
+    author: Galen Woods
+    title: How to Trade Price Action
+  carli-divergence:
+    author: David Carli
+    title: The Power of Divergence Trading
+  trader-tom-first-manual:
+    author: Trader Tom
+    title: The First Trading Manual
+  ozenbas-liquidity-markets:
+    author: Ozenbas, Pagano, Schwartz and Weber
+    title: Liquidity, Markets and Trading in Action
+  advanced-trading-book:
+    author: The Advanced Trading Book
+    title: Advanced Trading Book / Simple Trading Book
+  bennett-trading-volatility:
+    author: Colin Bennett
+    title: Trading Volatility
+  sadowski-9-strategies:
+    author: Roman Sadowski
+    title: 9 Advanced and Profitable Trading Strategies
+  heitkoetter-day-trading:
+    author: Markus Heitkoetter
+    title: A Complete Guide to Day Trading
+  swing-practical-guide:
+    author: Larry Swing
+    title: A Practical Guide to Swing Trading
+  smith-short-swing:
+    author: David Graeme Smith
+    title: Short Swing Trading
+  advanced-trading-methods:
+    author: The Advanced Trading Methods book
+    title: The Advanced Trading Methods in the Financial Markets
+  porwal-10-strategies:
+    author: Nikhil Porwal
+    title: 10 Most Profitable Trading Strategies
+  aziz-advanced-day-trading:
+    author: Andrew Aziz
+    title: Advanced Techniques in Day Trading
+  douglas-trading-in-the-zone:
+    author: Mark Douglas
+    title: Trading in the Zone
+cards:
+- id: book.wyckoff-day-traders-bible.1
+  book: wyckoff-day-traders-bible
+  title: 'Tape reading: which side the big lots hit'
+  chapter: Ch. V, Volumes and Their Significance
+  text: 'Tape reading weighs each print: when the large lots trade at the offer and only small lots at the bid, buyers are
+    winning and the next move is more likely up; the reverse means sellers are in control.'
+  tags:
+  - order-flow
+  - volume
+  - big-players
+  - direction
+  verdict: weak
+  tested_src: research/HUNT_R7_ORDER_FLOW.md
+  tested_text: Our R7 found signed option flow does lead the index (IC +0.109 at 1 minute) but its edge is only 0.42x of an
+    option trade's cost.
+- id: book.wyckoff-day-traders-bible.2
+  book: wyckoff-day-traders-bible
+  title: Heavy volume in a narrow band warns of a top
+  chapter: Ch. IV, V and X
+  text: Very heavy volume packed into a narrow price band after a rise warns of distribution and a coming fall; one example
+    counted some 80,000 shares within about half a point.
+  tags:
+  - volume
+  - big-players
+  - reversal
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: 'Our R87 tested heavy-activity narrow-range 5-minute NIFTY bars on an option-activity proxy, not true volume:
+    up 51.5% of the time after them vs 51.5% for matched bars, n 2,266.'
+- id: book.wyckoff-day-traders-bible.3
+  book: wyckoff-day-traders-bible
+  title: Volume on advances vs reactions
+  chapter: Ch. V, IX and X
+  text: In a genuine up move volume swells on the advances and dries up on the reactions; heavy volume on declines followed
+    by sluggish, small-lot rallies signals liquidation.
+  tags:
+  - volume
+  - trend
+- id: book.wyckoff-day-traders-bible.4
+  book: wyckoff-day-traders-bible
+  title: The line of least resistance
+  chapter: Ch. IV, Trading Rules
+  text: 'Prices follow the line of least resistance: trade only with the immediate trend, never against it, and stay out of
+    a market that swings within a couple of points without a trend.'
+  tags:
+  - trend
+  - momentum
+  - direction
+  inst:
+  - NIFTY
+  verdict: negative
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: 'Our R102 found the next NIFTY 5-minute bar keeps the previous bar''s sign only 48.4% of the time (n 167,082):
+    no usable continuation.'
+- id: book.wyckoff-day-traders-bible.5
+  book: wyckoff-day-traders-bible
+  title: Follow a break the whole market joins
+  chapter: Ch. V and VIII
+  text: When price breaks out of a range it has been held in, go with it, especially if the rest of the market breaks with
+    it; the resistance just overcome means little stands in the way.
+  tags:
+  - breadth
+  - trend
+  - momentum
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: positive
+  tested_src: research/HUNT_R72_CROSS_INDEX.md
+  tested_text: Our R72 Breadth Donchian, a 20-bar break taken only when at least 4 of 5 indices break together, made Rs 1,71,366
+    in the final window vs Rs 55,439 for plain Donchian.
+- id: book.wyckoff-day-traders-bible.6
+  book: wyckoff-day-traders-bible
+  title: Trade the leader, not the laggards
+  chapter: Ch. III, The Stock Lists and Groups
+  text: Trade the leader of the strongest group rather than laggards; when a secondary stock suddenly leads a rally, the main
+    leaders are often being sold under its cover.
+  tags:
+  - breadth
+  - trend
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R72_CROSS_INDEX.md
+  tested_text: 'Our R72 tested both timing ideas and both lost: following the leading index at 10:15 lost Rs 30,969 on 55
+    trades and the laggard catch-up lost Rs 1,00,746 on 613.'
+- id: book.wyckoff-day-traders-bible.7
+  book: wyckoff-day-traders-bible
+  title: The normal rally is half to two-thirds
+  chapter: Ch. VI and IX
+  text: A normal rally recovers one half to two thirds of the preceding decline; a rally that falls short says the decline
+    is not over.
+  tags:
+  - reversal
+  - gann-fib
+  inst:
+  - NIFTY
+  verdict: negative
+  tested_src: research/HUNT_R4_GANN_FIB_MAGIC.md
+  tested_text: Our R4 found swing retracement levels turn NIFTY 49.0% of the time vs 49.1% for shifted levels over 25,000+
+    touches.
+- id: book.wyckoff-day-traders-bible.8
+  book: wyckoff-day-traders-bible
+  title: Stops at the point of resistance
+  chapter: Ch. IV, Trading Rules
+  text: Place the stop just beyond the last swing turning point, raise it under each new reaction low as the move extends,
+    move it to cost once the trade is well ahead, and never widen the original risk.
+  tags:
+  - stop
+  - profit-lock
+  inst:
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R19_LIQUIDITY_LOCK.md
+  tested_text: 'Our R19 tested breakeven and give-back locks on the Liquidity BANKNIFTY arm: 0 of 12 passed, because they
+    sell the few runners early.'
+- id: book.wyckoff-day-traders-bible.9
+  book: wyckoff-day-traders-bible
+  title: Get out if it does not act right
+  chapter: Ch. X, Various Examples
+  text: Once in, a trade must act as expected at once; if it does not, close it immediately instead of hoping.
+  tags:
+  - stop
+  - filter
+  verdict: weak
+  tested_src: research/HUNT_R12_TRADE_MANAGER.md
+  tested_text: Our R12 'no progress' exit beat random exits on ORB Fresh (+Rs 14,365 over 474 holdout trades) but the arm
+    still lost and it did not help the profitable arms.
+- id: book.wyckoff-day-traders-bible.10
+  book: wyckoff-day-traders-bible
+  title: 'The invisible eighth: costs on every trade'
+  chapter: Ch. IV, Trading Rules
+  text: Commission plus the bid-ask spread (the invisible eighth) is paid on every trade, so each risk should promise 2 to
+    5 points of profit; scalping fractions in a dull market does not pay.
+  tags:
+  - costs
+  - scalp
+- id: book.wyckoff-day-traders-bible.11
+  book: wyckoff-day-traders-bible
+  title: Small steady profits, compounded
+  chapter: Ch. XI, Obstacles to be Overcome
+  text: The aim is a small, steady average profit; a table turns 1/8 of a point a day and $1,000 of capital into $10,195.50
+    net in 250 trading days by adding size as capital grows, an illustration rather than a record.
+  tags:
+  - sizing
+- id: book.wyckoff-day-traders-bible.12
+  book: wyckoff-day-traders-bible
+  title: Shakeouts during accumulation
+  chapter: Ch. VII, Dull Markets
+  text: When insiders shake holders out of a stock during accumulation they want the stock themselves, and that is a good
+    time to buy.
+  tags:
+  - traps
+  - big-players
+  - reversal
+  inst:
+  - NIFTY
+  verdict: weak
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our R87 found NIFTY 1-minute pokes below the day's low that close back bounce a little out of sample (n 1,702),
+    worth less than an option round trip.
+- id: book.wyckoff-day-traders-bible.13
+  book: wyckoff-day-traders-bible
+  title: Overtrading ruins; cut size after losses
+  chapter: Ch. II, IV and XI
+  text: Overtrading is behind about 90% of stock market disasters; after a run of losses cut size to a half or a quarter,
+    and act only on the choicest setups.
+  tags:
+  - sizing
+- id: book.wyckoff-day-traders-bible.14
+  book: wyckoff-day-traders-bible
+  title: Dull markets come before big swings
+  chapter: Ch. VII, Dull Markets and Their Opportunities
+  text: Dull, narrow markets come after a big move has spent its force, and a pronounced swing follows; watch them for the
+    breakout instead of ignoring them.
+  tags:
+  - trend
+  - filter
+- id: book.wyckoff-day-traders-bible.15
+  book: wyckoff-day-traders-bible
+  title: Flat at the close
+  chapter: Ch. I and IX
+  text: A pure tape reader ends each day flat because news can strike while the market is shut; any position carried overnight
+    gets a stop.
+  tags:
+  - overnight
+  - stop
+- id: book.woods-price-action.1
+  book: woods-price-action
+  title: Market bias matters more than the pattern
+  chapter: Ch. 7.1, Market Bias
+  text: The trend or bias gives the edge, not the bar or candle pattern; a pattern only times the entry and gives a nearby
+    stop. Its own example, chosen with hindsight, claims almost any pattern works once the bias is right.
+  tags:
+  - trend
+  - direction
+  - pattern
+- id: book.woods-price-action.2
+  book: woods-price-action
+  title: 'Pin bar at support: buy above it'
+  chapter: Ch. 4.4, Pin Bar
+  text: A bar whose long lower tail fills most of its range, rejected from a support level, traps sellers; buy above its high
+    with the stop at the tail's tip (mirror at resistance).
+  tags:
+  - candles
+  - reversal
+  - traps
+  - stop
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our R87 found a big lower tail has no direction edge on NIFTY 15m (up 51% vs 52% matched, n 949), and its low
+    is broken 59% of the time within 10 candles on NIFTY 5m (n 3,314).
+- id: book.woods-price-action.3
+  book: woods-price-action
+  title: Three-bar pullback in a trend
+  chapter: Ch. 4.7, Three-Bar Pullback
+  text: In a bull trend, wait for three bearish bars in a row, then buy above the next bullish bar; the mirror in a bear trend.
+    The idea is that counter-trend pullbacks are hard to sustain.
+  tags:
+  - trend
+  - pattern
+  - candles
+  - reentry
+  verdict: weak
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our nearest test (R87B, green-green-red on SENSEX 15m) held out of sample (n 182) but the call-buying rule
+    lost Rs 21,127 on 162 trades because the stop under the red candle was too close.
+- id: book.woods-price-action.4
+  book: woods-price-action
+  title: 'Inside bar: bracket, with-trend, or fade'
+  chapter: Ch. 4.8, Inside Bar
+  text: An inside bar is a pause; trade its breakout with buy and sell stop orders around it (one cancels the other), or take
+    only the side that agrees with the trend, or wait for the breakout to fail and trade the other way.
+  tags:
+  - pattern
+  - candles
+  - filter
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: 'Our R71 traded 15-minute inside-bar breaks on the index with options: -Rs 1,23,667 on 1,075 trades in the
+    final period.'
+- id: book.woods-price-action.5
+  book: woods-price-action
+  title: 'NR7: narrowest of 7 bars, break with the trend'
+  chapter: Ch. 4.10, NR7
+  text: When the last bar has the smallest range of 7, volatility has contracted and a bigger move may follow; buy a break
+    of its high in an uptrend, sell a break of its low in a downtrend.
+  tags:
+  - pattern
+  - filter
+  - momentum
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: 'Our R71 traded 15-minute NR7 breaks on the index with options: -Rs 1,68,820 on 1,341 trades in the final period.'
+- id: book.woods-price-action.6
+  book: woods-price-action
+  title: Three-bar reversal
+  chapter: Ch. 4.6, Three-Bar Reversal
+  text: A bearish bar, then a bar with a lower high and lower low, then a bullish bar with a higher low closing above the
+    second bar's high; buy above the third bar. The book calls it the most conservative reversal pattern.
+  tags:
+  - reversal
+  - pattern
+  - candles
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: Our R71 three-bar reversal at the day's high or low beat random timing (twin p 0.002) but still lost -Rs 1,67,689
+    on 855 trades after option costs in the final period.
+- id: book.woods-price-action.7
+  book: woods-price-action
+  title: 'Hikkake: trade the failed inside-bar break'
+  chapter: Ch. 5.10, Hikkake
+  text: After an inside bar, if the next bar breaks one side and that break fails within three bars, trade the opposite way,
+    because inside-bar breakout traders are trapped.
+  tags:
+  - traps
+  - pattern
+  - reversal
+- id: book.woods-price-action.8
+  book: woods-price-action
+  title: Reversal candles need a trend to reverse
+  chapter: Ch. 5, Candlestick Patterns
+  text: Hammer, shooting star, morning star, doji and three white soldiers are read as reversals only after a real decline
+    or rise; with no trend to reverse, a doji means stand aside. Most reversal chart patterns fail, especially in strong trends.
+  tags:
+  - candles
+  - reversal
+  - trend
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: 'Our R87 found reversal shapes mostly mark continuation: after a NIFTY 15m hammer the index fell a further
+    0.47 ATR over 20 candles, and none of 4,049 shape x context cells passed.'
+- id: book.woods-price-action.9
+  book: woods-price-action
+  title: 'Chart pattern targets: project the height'
+  chapter: Ch. 6, Chart Patterns
+  text: Head and shoulders, double and triple tops, rectangles, wedges and triangles are traded on the breakout (or its retest)
+    with a target equal to the pattern's height projected from the break; a flag's target is the pole's height; volume should
+    rise on the break.
+  tags:
+  - pattern
+  - target
+  - volume
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: Our R71 double bottom / top on 5-minute index bars lost -Rs 12,091 on 502 trades in the final period, and the
+    flag had only 32 trades.
+- id: book.woods-price-action.10
+  book: woods-price-action
+  title: Stop at the pattern's far end
+  chapter: Ch. 7.2-7.3, Setup and Exit
+  text: 'The setup''s job is risk control: the stop goes at the lowest point of a bullish pattern (highest of a bearish one);
+    targets are the nearest opposing support or resistance, or a measured move of 100% of the prior impulse.'
+  tags:
+  - stop
+  - target
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: 'In our R87B rule the stop under the signal candle''s low closed 117 of 162 trades: too close for an option
+    buyer.'
+- id: book.woods-price-action.11
+  book: woods-price-action
+  title: 'Support and resistance: swings, congestion, round numbers, Fibonacci'
+  chapter: Ch. 8, Support and Resistance
+  text: Levels come from major swing highs and lows, congestion areas, round numbers and 52-week highs/lows, moving averages
+    and Fibonacci retracements (23.6, 38.2, 50, 61.8); broken support flips to resistance. Buy bullish signals at support,
+    sell bearish ones at resistance.
+  tags:
+  - filter
+  - gann-fib
+  - reversal
+  verdict: negative
+  tested_src: research/HUNT_R20B_SR_RANGE.md
+  tested_text: 'Our R20b found support/resistance levels no better than random lines: in 6 of the 7 variants random levels
+    made more on average than the real ones.'
+- id: book.woods-price-action.12
+  book: woods-price-action
+  title: Previous session high/low as day-trade levels
+  chapter: Ch. 8.3, Trade Exits
+  text: For day traders the previous session's high and low are important support and resistance, and the book uses the prior
+    low as a profit target.
+  tags:
+  - target
+  - filter
+  verdict: negative
+  tested_src: research/HUNT_R89_PDHL_BREAK.md
+  tested_text: Our R89 previous-day high / low break rules passed 0 of 180 cells and lost in the holdout on every index.
+- id: book.woods-price-action.13
+  book: woods-price-action
+  title: Higher-timeframe and structure bias filter
+  chapter: Ch. 7.1, Market Bias
+  text: Use a higher timeframe, higher highs and higher lows, trend lines and volume to decide the bias, and take only patterns
+    in its direction.
+  tags:
+  - trend
+  - filter
+  - direction
+  verdict: negative
+  tested_src: research/HUNT_R89_PDHL_BREAK.md
+  tested_text: In our R89 the daily + 15-minute trend filter did not cut false breaks (NIFTY 32% -> 39%) and lowered the win
+    rate (NIFTY 36% -> 26%).
+- id: book.woods-price-action.14
+  book: woods-price-action
+  title: 'Channels: trend, reversal, range, breakout'
+  chapter: Ch. 9, Channels
+  text: In a sloping channel buy pullbacks to the trend line and target the far line; fade overshoots only in steep channels
+    against the higher-timeframe trend; in flat channels sell the top and buy the bottom; trust breakouts with volume and
+    a wide bar. To avoid overtrading, trade only in the larger channel's direction.
+  tags:
+  - trend
+  - momentum
+  - reversal
+- id: book.woods-price-action.15
+  book: woods-price-action
+  title: Label trades mechanical or discretionary before the exit
+  chapter: Ch. 10, Trading Records
+  text: Keep a real-time commentary written before outcomes are known, and tag each trade as following the rules or bending
+    them before it closes; later compare the two groups to see whether discretion adds value.
+  tags:
+  - sizing
+- id: book.carli-divergence.1
+  book: carli-divergence
+  title: Only regular divergence, only on the CCI
+  chapter: Ch. 3-4, Commodity Channel Index / The Strategy
+  text: 'Teaches one setup: regular divergence between price and the CCI (bullish = price lower low, CCI higher low; bearish
+    = price higher high, CCI lower high). It does not teach hidden divergence or divergence on RSI, MACD or stochastic.'
+  tags:
+  - reversal
+  - pattern
+  verdict: negative
+  tested_src: research/HUNT_R95_CCI_SIGNALS.md
+  tested_text: 'Our R95 traded every confirmed CCI divergence on index options once it was known, 5 candles after the pivot:
+    691 holdout trades lost Rs 37,156.'
+- id: book.carli-divergence.2
+  book: carli-divergence
+  title: Three rules that qualify a CCI divergence
+  chapter: Ch. 4, The Strategy
+  text: A divergence counts only if the CCI's second extreme is beyond 150 (below -150 bullish, above +150 bearish), the CCI
+    does not cross zero between the two extremes, and the second price extreme is a 1.13 to 1.618 extension of the last pullback;
+    beyond 1.618 the setup is void. Small exceptions are allowed but not quantified.
+  tags:
+  - reversal
+  - filter
+  - gann-fib
+- id: book.carli-divergence.3
+  book: carli-divergence
+  title: Divergence alone is not an entry
+  chapter: Ch. 4, The Strategy
+  text: A divergence can run on for days or weeks, so the trade waits for price to break a trendline drawn against the old
+    move. Aggressive traders enter on the cross; cautious ones wait for a close beyond the line to dodge fakeouts.
+  tags:
+  - reversal
+  - traps
+- id: book.carli-divergence.4
+  book: carli-divergence
+  title: Stop just beyond the divergence extreme
+  chapter: Ch. 4, The Strategy
+  text: The stop goes 15-20 pips or ticks below the last low of a bullish divergence, or above the last high of a bearish
+    one. On NSE indices that literal distance is about 1 point, so it means a tight stop just past the swing.
+  tags:
+  - stop
+- id: book.carli-divergence.5
+  book: carli-divergence
+  title: Fibonacci targets with half off and break-even
+  chapter: Ch. 4, The Strategy
+  text: Half the position is closed at the 127.2% extension and the stop moved to break-even; the rest exits at 161.8%. The
+    target is the one part the author says may be changed, as long as reward to risk is at least 1:1.
+  tags:
+  - target
+  - profit-lock
+  - gann-fib
+  verdict: negative
+  tested_src: research/HUNT_H37.md
+  tested_text: Our h37 test used 127.2 / 161.8% extensions as targets on Fibonacci-bounce entries and they made those trades
+    worse, Rs 182 and Rs 193 a trade net.
+- id: book.carli-divergence.6
+  book: carli-divergence
+  title: CCI length 20 and the 150 zone, not the usual signals
+  chapter: Ch. 3 and end of Ch. 4
+  text: The author uses CCI length 20 (14 is fine too) and ignores the CCI's ordinary overbought / oversold signals, saying
+    standard indicator use does not pay; he uses the +-150 zone only to qualify divergences.
+  tags:
+  - filter
+  - reversal
+  verdict: negative
+  tested_src: research/HUNT_R95_CCI_SIGNALS.md
+  tested_text: 'Our R95 tested the CCI''s own cross-back signals on 9 instruments and 4 timeframes: 0 of 288 fade cells pass,
+    agreeing that the usual signals do not pay.'
+- id: book.carli-divergence.7
+  book: carli-divergence
+  title: Daily charts, never below 4-hour
+  chapter: Ch. 4 and Ch. 7
+  text: The strategy is used mostly on daily charts, rarely on 4-hour, sometimes weekly, never lower; the author says a higher
+    timeframe gives bigger and more reliable moves after the divergence.
+  tags:
+  - swing
+  - overnight
+- id: book.carli-divergence.8
+  book: carli-divergence
+  title: Charts flatter divergences
+  chapter: Ch. 4 examples; Ch. 7
+  text: The only evidence for the claimed high win rate is about 16 hand-picked example charts, nearly all winners, plus one
+    stopped-out Amazon trade. No sample, period, costs or backtest is given.
+  tags:
+  - reversal
+  - pattern
+  verdict: negative
+  tested_src: research/HUNT_R95_CCI_SIGNALS.md
+  tested_text: In R95, divergences entered at the label candle showed +Rs 12,01,300 on 1,687 index trades, but entered when
+    actually known they lost Rs 3,37,415 on 1,778.
+- id: book.carli-divergence.9
+  book: carli-divergence
+  title: No trade in the direction of a fresh gap
+  chapter: Ch. 2, Windows or Gaps
+  text: 'Do not open a long right after a gap up or a short right after a gap down: a normal retracement can hit the stop.
+    Gaps matter inside an established trend, little inside congestion; exhaustion gaps come with exceptionally high volume.'
+  tags:
+  - gap
+  - filter
+- id: book.carli-divergence.10
+  book: carli-divergence
+  title: Size every trade from the stop
+  chapter: Ch. 6, Money Management
+  text: Quantity = money at risk / distance from entry to stop, with money at risk a fixed sum or a percent of capital (examples
+    0.5% and 0.75%). Oversized positions, not bad signals, cause most trading stress and blown accounts.
+  tags:
+  - sizing
+  - stop
+- id: book.carli-divergence.11
+  book: carli-divergence
+  title: Pullback retest confirms a breakout
+  chapter: Ch. 2, Some Technical Analysis
+  text: After a level breaks, old resistance becomes support; a pullback that retests it is said to confirm the breakout and
+    raise the success rate, while a close back inside the level marks a fakeout.
+  tags:
+  - traps
+  - reversal
+- id: book.trader-tom-first-manual.1
+  book: trader-tom-first-manual
+  title: No gap or opening-range strategy in this book
+  chapter: Whole book; engulfing section p. 98-102
+  text: The manual teaches no gap-fill or opening-range rule. Gaps appear only inside the daily engulfing pattern, where a
+    bar opens above the prior close and then closes below the prior candle's open, read as a reversal.
+  tags:
+  - gap
+  - candles
+  - reversal
+  verdict: negative
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found a 2%-plus NIFTY gap closes on its own side 94-96% of the time and the pre-registered gap-fade
+    rules did not pass.
+- id: book.trader-tom-first-manual.2
+  book: trader-tom-first-manual
+  title: Busy first hours, quiet lunch
+  chapter: The 24-Hour Trading Cycle
+  text: The first 2-3 hours after the European open are the busy period with the best setups; after 11:00 London the market
+    tends to range or drift until the US open, whose first few minutes are whippy.
+  tags:
+  - time-of-day
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: 'Our R102 agrees on the shape: by 10:30 NIFTY has made a median 61% of its day range (BANKNIFTY 65%), though
+    busier is not more predictable in direction.'
+- id: book.trader-tom-first-manual.3
+  book: trader-tom-first-manual
+  title: Check Asia for the morning bias
+  chapter: The 24-Hour Trading Cycle, Check Asia
+  text: If a weak open is expected after a down close on Wall Street but Asia is up overnight, look for buys instead; but
+    never trade one index just because another is strong or weak.
+  tags:
+  - overnight
+  - gap
+  - direction
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_H27.md
+  tested_text: Our h27 found US and Asian cues are priced into the 09:15 gap; 234 option variants were tried and none passed.
+- id: book.trader-tom-first-manual.4
+  book: trader-tom-first-manual
+  title: Trend change needs a break of the lower low
+  chapter: Principles of Price Action & Trend
+  text: An uptrend turns down only after a lower high, a lower low, and then a trade below that lower low; a lower high and
+    lower low alone is just a warning, often a two-leg ABCD pullback.
+  tags:
+  - trend
+  - reversal
+  - pattern
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: Our R71 swing-structure (higher high + higher low) rule lost Rs 40,109 on 374 final-period trades.
+- id: book.trader-tom-first-manual.5
+  book: trader-tom-first-manual
+  title: Three-bar swing as the trend line in the sand
+  chapter: Trend Indicators; Daily Work Routine
+  text: Mark the highest high and lowest low of the last 3 daily or weekly bars; a break of either level turns the trend that
+    way, and the weekly version sets the bias for the week.
+  tags:
+  - trend
+  - filter
+  - swing
+- id: book.trader-tom-first-manual.6
+  book: trader-tom-first-manual
+  title: Four-bar fractal entry
+  chapter: Trade Entry Technique 4 Bar Fractal
+  text: Buy when a bar closes above the high of the previous bar and above the high of the bar three back (sell is the mirror);
+    it catches some trends but brings many small wins and losses.
+  tags:
+  - momentum
+  - pattern
+- id: book.trader-tom-first-manual.7
+  book: trader-tom-first-manual
+  title: Stochastic hidden divergence plus fractal
+  chapter: Divergence Strategies
+  text: In a downtrend, a lower high in price with a higher high on the stochastic means the trend should continue; a 4-bar
+    fractal sell then times the entry.
+  tags:
+  - trend
+  - momentum
+  - filter
+  verdict: negative
+  tested_src: research/HUNT_R95_CCI_SIGNALS.md
+  tested_text: Our R95 found CCI divergence labels made +Rs 12.0 lakh entered where drawn but -Rs 3.4 lakh entered once known,
+    5 candles later.
+- id: book.trader-tom-first-manual.8
+  book: trader-tom-first-manual
+  title: Engulfing bar on 10-minute index charts
+  chapter: Engulfing Patterns for Day-Trading
+  text: An engulfing bar on a 10-min or higher chart of the FTSE, DAX, S&P 500 or Dow is the main day-trade entry; move the
+    stop to breakeven if price runs, trail it, and be patient since a good trade can last an hour or more.
+  tags:
+  - candles
+  - trend
+  - stop
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: 'Our R87 found no candle shape predicts direction: 0 of 4,049 shape x context cells passed on the indices.'
+- id: book.trader-tom-first-manual.9
+  book: trader-tom-first-manual
+  title: Doji, hammer and marubozu readings
+  chapter: The Essential 8 Candle Patterns
+  text: 'Eight shapes cover all you need: a gravestone doji warns of a top, a hammer needs confirmation, and a marubozu closing
+    at its low after a failed push up is a strong short. Place a buy where shorts would put stops above a dragonfly doji.'
+  tags:
+  - candles
+  - reversal
+  - traps
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our R87 tested every common shape on NIFTY, BANKNIFTY and SENSEX; reversal shapes at trend extremes mostly
+    marked continuation and 0 of 4,049 context cells passed.
+- id: book.trader-tom-first-manual.10
+  book: trader-tom-first-manual
+  title: Fake-out and fake-down
+  chapter: The Fake Moves
+  text: Breaks of a previous high or low often fail and reverse back into the range; trade back inside with a stop beyond
+    the fake extreme and a target at the other side of the range.
+  tags:
+  - traps
+  - reversal
+  - orb
+  verdict: negative
+  tested_src: research/HUNT_R91_SMC_SWEEP.md
+  tested_text: 'Our R91 faded failed breaks of a 1h swing on real option prices: 0 of 63 pre-registered tests passed.'
+- id: book.trader-tom-first-manual.11
+  book: trader-tom-first-manual
+  title: Scaling in and out
+  chapter: Managing Your Risk
+  text: 'Scaling out a third at +20 and a third at +40 points suits beginners, but the author adds to winners instead: double
+    at +75 points with the stop to entry, exit at 150, for 225 points on 75 at risk.'
+  tags:
+  - sizing
+  - target
+  - profit-lock
+  verdict: negative
+  tested_src: research/HUNT_R81_LIQUIDITY_EXITS.md
+  tested_text: 'Our R81 rejected both on Liquidity: pyramiding made +Rs 58k in design then -Rs 20k in the final, and scaling
+    out half at 1R lost.'
+- id: book.trader-tom-first-manual.12
+  book: trader-tom-first-manual
+  title: Fixed-fraction sizing, always a stop
+  chapter: Managing Your Risk
+  text: Never trade without a stop; size the trade as money at risk divided by stop distance, starting at 1% or 2% of the
+    account per trade.
+  tags:
+  - sizing
+  - stop
+- id: book.trader-tom-first-manual.13
+  book: trader-tom-first-manual
+  title: Hit rate is not the goal
+  chapter: Principles of Price Action & Trend; Trading Psychology
+  text: 'How you handle losses matters more than hit rate: a coached trader with an 85% hit rate lost 20 times as much on
+    the losers; with winners 3 times the losers, a 25% hit rate breaks even before costs.'
+  tags:
+  - stop
+  - target
+- id: book.ozenbas-liquidity-markets.1
+  book: ozenbas-liquidity-markets
+  title: Market order vs limit order
+  chapter: Ch. 2.1, Order types
+  text: A market order buys immediacy and pays the bid-ask spread; a limit order saves the spread but may never fill and can
+    be picked off when news arrives before it is cancelled. Choosing between them is a strategic decision, not a habit.
+  tags:
+  - costs
+  - liquidity
+  verdict: weak
+  tested_src: research/HUNT_H14.md
+  tested_text: Our h14 found a marketable limit at the entry-bar price + 0.5%, resting 3 minutes and never chasing, was the
+    only one of the 9 policies to pass every gate, adding +Rs 288/day against a required +250, but it was not robust at κ
+    = 0.04.
+- id: book.ozenbas-liquidity-markets.2
+  book: ozenbas-liquidity-markets
+  title: Three hidden costs of trading
+  chapter: Ch. 2.2, Trading costs
+  text: 'Besides commissions, fees and taxes, every trade carries implicit costs: the bid-ask spread, the opportunity cost
+    of an unfilled order, and market impact. Implementation shortfall measures them as the fill price after charges minus
+    the mid-quote at the moment of decision.'
+  tags:
+  - costs
+- id: book.ozenbas-liquidity-markets.3
+  book: ozenbas-liquidity-markets
+  title: Walking the book
+  chapter: Ch. 2.9.1, Continuous order-driven markets
+  text: An order bigger than the size at the best price eats into worse prices. In the example, a 5000-share market buy against
+    400 shares at the ask paid 2.12 cents a share more on average, an extra $106.
+  tags:
+  - costs
+  - liquidity
+- id: book.ozenbas-liquidity-markets.4
+  book: ozenbas-liquidity-markets
+  title: The pull of certainty keeps spreads wide
+  chapter: Ch. 2.9.1
+  text: Spreads stay wider than one tick because when one more tick buys a certain fill, traders prefer a market order to
+    a limit order inside the spread. Empty price levels deeper in the book are air pockets that show a thin market.
+  tags:
+  - costs
+  - liquidity
+- id: book.ozenbas-liquidity-markets.5
+  book: ozenbas-liquidity-markets
+  title: How a call auction sets the price
+  chapter: Ch. 2.8 and 2.9.2, Call auctions
+  text: A call auction batches orders and executes them all at one clearing price, the price that maximises the shares traded;
+    orders better than that price get price improvement. Batching concentrates liquidity, lowers volatility and cost, and
+    is why exchanges open and close with calls, but it gives no immediacy.
+  tags:
+  - liquidity
+  - time-of-day
+- id: book.ozenbas-liquidity-markets.6
+  book: ozenbas-liquidity-markets
+  title: The open is a price-discovery period
+  chapter: Ch. 2.6, Intraday price volatility
+  text: For S&P 500 stocks in 2019, opening-half-hour variance scaled to a full day was 4.36 times the daily variance and
+    the closing half hour 1.82 times, where a frictionless market would give 1. Short-period volatility is accentuated by
+    friction, most of all after the overnight close.
+  tags:
+  - time-of-day
+  - liquidity
+- id: book.ozenbas-liquidity-markets.7
+  book: ozenbas-liquidity-markets
+  title: Liquidity shocks revert, news shocks stay
+  chapter: Ch. 2.3, What drives trading
+  text: A move caused by news shifts the equilibrium value and does not come back; a move caused by one trader's own cash
+    needs or algorithm pushes the price away from equilibrium and tends to revert.
+  tags:
+  - reversal
+  - news
+  - liquidity
+  verdict: negative
+  tested_src: research/FINDINGS.md
+  tested_text: Our R86 found that fading a failed poke beyond yesterday's high/low, a round number or the opening range lost
+    on all 6 level x index tests (295-804 trades, Rs -2.3 to -5.5 lakh, 2022-24).
+- id: book.ozenbas-liquidity-markets.8
+  book: ozenbas-liquidity-markets
+  title: Visible depth is only part of liquidity
+  chapter: Ch. 2.7, Liquidity
+  text: 'Liquidity has depth, breadth and resiliency, and much of it is latent: hidden, conditional or held back by traders
+    and algorithms. Posted orders can be measured but latent liquidity cannot, so the screen book understates and misstates
+    what is really there.'
+  tags:
+  - order-flow
+  - liquidity
+  - traps
+  verdict: negative
+  tested_src: research/HUNT_R8_ORDER_FLOW_TRAPS.md
+  tested_text: Our R8 found walls (a level 2x the normal size or more) mostly live about 1 second and end pulled 45-50% of
+    the time, traded only 5-12%.
+- id: book.ozenbas-liquidity-markets.9
+  book: ozenbas-liquidity-markets
+  title: Intraday patterns exist but keep shifting
+  chapter: Ch. 2.11 and 3.7, Market efficiency
+  text: 'Intraday data rejects the pure random walk: short-term positive and negative correlations exist, but they shift and
+    are far from easy to exploit. Markets are efficient enough to punish anyone who thinks they have a sure-fire formula.'
+  tags:
+  - direction
+  - momentum
+  - reversal
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found the only confirmed pattern, a 1-minute continuation of +0.11 bps on NIFTY, is a stale-price
+    artefact far below a 1.25-1.54 bps cost.
+- id: book.ozenbas-liquidity-markets.10
+  book: ozenbas-liquidity-markets
+  title: Illiquid prices lag and jump
+  chapter: Ch. 3.5, Information shocks
+  text: On 4 Jan 2019 Microsoft traded 2,520 times between 9:30 and 11:15 and moved smoothly with the news, while a small
+    bank stock traded 25 times, lagged the index and jumped to catch up. Thin markets give noisier, staler price signals and
+    more bid-ask bounce.
+  tags:
+  - liquidity
+- id: book.ozenbas-liquidity-markets.11
+  book: ozenbas-liquidity-markets
+  title: 'News days: fast first move, slow settling'
+  chapter: Ch. 3.3-3.5, Macro information shocks
+  text: After a surprise from the Fed, prices react within minutes but discovery can run for days as bulls and bears trade
+    out their divergent views; the S&P 500 fell 1.8% over about two days after one remark and gained 3.02% on a day with a
+    strong jobs report and a softer Fed tone.
+  tags:
+  - news
+  - direction
+  verdict: negative
+  tested_src: research/MARKET_HOW.md
+  tested_text: Our h28 found event days move more (Budget days 2.0-2.4× range) but 8,820 variants found no side (SPA p = 1.00).
+- id: book.ozenbas-liquidity-markets.12
+  book: ozenbas-liquidity-markets
+  title: Order flow and momentum in the simulator
+  chapter: Ch. 5.1 and 5.4, TraderEx
+  text: In TraderEx, informed orders push price toward the hidden value, while momentum traders chase and create false trends;
+    buying with market orders when the bid steps up pays the spread on every round trip. Limit-order providers earn from the
+    overshoots.
+  tags:
+  - order-flow
+  - momentum
+  - big-players
+  verdict: negative
+  tested_src: research/HUNT_R7_ORDER_FLOW.md
+  tested_text: Our R7 found the app's signed option flow leads the index (IC +0.109 at 1 minute) but its edge is 0.42x of
+    the cost of an option trade.
+- id: book.ozenbas-liquidity-markets.13
+  book: ozenbas-liquidity-markets
+  title: Judge execution against VWAP
+  chapter: Ch. 5.4, Running a TraderEx simulation
+  text: A large order is better worked with patient limit orders than one big market order, and its average price is judged
+    against the day's VWAP; in the example, buying 10 cents under VWAP instead of over it would have added 0.47% to the holding's
+    return.
+  tags:
+  - vwap
+  - costs
+- id: book.ozenbas-liquidity-markets.14
+  book: ozenbas-liquidity-markets
+  title: Moving-average crossover as a timing example
+  chapter: Ch. 3.7, Technical analysis
+  text: As an example of technical timing, a price rising above its 65-day moving average marks a possible bottom to buy,
+    and a fall below it a sell; the authors say they neither support nor deny technical analysis.
+  tags:
+  - moving-average
+  - trend
+- id: book.advanced-trading-book.1
+  book: advanced-trading-book
+  title: FOMO and the trading checklist
+  chapter: Ch. 1, Psychology (p3-p7)
+  text: Fear of missing out makes traders buy near tops and sell near bottoms. The cure offered is to verify news before acting,
+    keep a short list of trusted sources, accept that losses happen, and trade from a written checklist.
+  tags:
+  - crypto
+  - news
+  inst:
+  - CRYPTO
+- id: book.advanced-trading-book.2
+  book: advanced-trading-book
+  title: Hammer needs confirmation at support
+  chapter: Ch. 2, Hammer (p11)
+  text: A hammer (small body, long lower wick, little upper wick) after a fall, sitting on a support line, hints at an upside
+    reversal, but it only counts once price actually starts rising after it.
+  tags:
+  - candles
+  - reversal
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our R87 found that after a NIFTY 15m hammer the index fell a further 0.47 ATR over 20 candles, against +0.19
+    for matched candles.
+- id: book.advanced-trading-book.3
+  book: advanced-trading-book
+  title: Engulfing candles as reversals
+  chapter: Ch. 2, Bullish and bearish engulfing (p13, p18)
+  text: A small candle completely covered by a larger opposite-coloured candle at the end of a trend signals a reversal; the
+    further the engulfing candle runs, the stronger the move is said to be.
+  tags:
+  - candles
+  - reversal
+  verdict: negative
+  tested_src: research/GOLD_CANDLES.md
+  tested_text: Our gold test of 144 candle-pattern versions, engulfing included, found 13 positive in both fitting and held-out
+    years, none with a t above 1.1.
+- id: book.advanced-trading-book.4
+  book: advanced-trading-book
+  title: Three white soldiers with RSI
+  chapter: Ch. 2, Three white soldiers / three black crows (p14, p20)
+  text: Three long candles of one colour, each opening and closing beyond the last, are called a strong signal; three white
+    soldiers after a downtrend are said to be reliable when RSI confirms.
+  tags:
+  - candles
+  - rsi
+  - reversal
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our R87 rule buying a NIFTY call after 5m three white soldiers lost Rs 3,910 on 160 trades.
+- id: book.advanced-trading-book.5
+  book: advanced-trading-book
+  title: Morning and evening star
+  chapter: Ch. 2, Morning star / evening star (p12, p19)
+  text: A long candle, then a small-bodied middle candle, then a long candle the other way marks a reversal; the third candle
+    is the confirmation.
+  tags:
+  - candles
+  - reversal
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: In our R87 a 1m SENSEX morning star was positive in design (+0.090 ATR) but negative out of sample (-0.083
+    ATR, n 837).
+- id: book.advanced-trading-book.6
+  book: advanced-trading-book
+  title: 'Doji: wait a few candles'
+  chapter: Ch. 2, Doji (p22)
+  text: A doji (tiny body, long wicks) is indecision that can lead to continuation or reversal, so the advice is to open a
+    position only a few candles later, once the direction is clear.
+  tags:
+  - candles
+  - filter
+- id: book.advanced-trading-book.7
+  book: advanced-trading-book
+  title: Never buy the first break
+  chapter: Ch. 3, Strategies 1, 2 and 6 (p26, p27, p31)
+  text: Do not buy the first break of a neckline, triangle line or box top; wait for price to come back to the broken line
+    and print a bullish candle, then buy.
+  tags:
+  - pattern
+  - filter
+  verdict: negative
+  tested_src: research/HUNT_H35.md
+  tested_text: Our h35 tested break-and-hold, retest-then-go and bounce entries on 8 families of levels, and all 408 variants
+    lost money after costs.
+- id: book.advanced-trading-book.8
+  book: advanced-trading-book
+  title: 'Rising wedge: second break, then retest'
+  chapter: Ch. 3, Strategy 3 (p28)
+  text: 'In a rising wedge a break of the lower line is not enough: wait for the previous swing low to break too, then sell
+    when price retests that low with a bearish candle, stop above the previous high.'
+  tags:
+  - pattern
+  - stop
+- id: book.advanced-trading-book.9
+  book: advanced-trading-book
+  title: Buy the pullback candle after a flag break
+  chapter: Ch. 3, Strategy 7 (p32)
+  text: After a bullish flag, wait for the last swing high to break; then let one bearish pullback candle form and buy the
+    next bullish candle, which keeps the stop smaller than buying the break itself.
+  tags:
+  - pattern
+  - stop
+  - momentum
+- id: book.advanced-trading-book.10
+  book: advanced-trading-book
+  title: Double top and double bottom
+  chapter: Ch. 4, Double top / double bottom (p34, p38)
+  text: Sell under the neckline of two equal highs, or buy over the neckline of two equal lows, with the stop back inside
+    the pattern and the target about the pattern's height beyond the neckline.
+  tags:
+  - pattern
+  - reversal
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: Our R71 double bottom / top rule on five indices lost Rs 12,091 on 502 final-period trades.
+- id: book.advanced-trading-book.11
+  book: advanced-trading-book
+  title: Flags and pennants continue the pole
+  chapter: Ch. 3 Strategies 5 and 7; Ch. 4 pennants and flags (p30, p32, p43, p45, p58)
+  text: 'A tight flag or small pennant after a sharp move is a continuation: trade the break of the flag or pennant in the
+    direction of the pole, stop beyond the opposite line.'
+  tags:
+  - pattern
+  - momentum
+  - trend
+  verdict: weak
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: Our R71 flag rule fired only 32 times in the final period (-Rs 442), too few to judge.
+- id: book.advanced-trading-book.12
+  book: advanced-trading-book
+  title: Many chart patterns, one winning example each
+  chapter: Ch. 4, Chart patterns and printable sheets (p34-p58)
+  text: Head and shoulders, wedges, pennants, rectangles, triangles, cup and handle, rounding tops and bottoms and diamonds
+    are each shown with one winning chart and no statistics, costs or failed examples.
+  tags:
+  - pattern
+- id: book.advanced-trading-book.13
+  book: advanced-trading-book
+  title: The 1:3 reward-to-risk ratio
+  chapter: Ch. 3, Trading terms (p25)
+  text: A 1:3 trade means three units of expected gain for one unit of risk; the term is defined, but none of the setups states
+    its target in those units.
+  tags:
+  - target
+  - stop
+- id: book.advanced-trading-book.14
+  book: advanced-trading-book
+  title: Consolidation box breakout with retest
+  chapter: Ch. 3, Strategy 6 (p31)
+  text: After a strong move, mark the high and low of the sideways box that follows and trade whichever side breaks, entering
+    only after the retest and a confirming candle.
+  tags:
+  - pattern
+  - momentum
+- id: book.bennett-trading-volatility.1
+  book: bennett-trading-volatility
+  title: Implied volatility is usually above realised
+  chapter: Ch. 1.4 and 3.1, Implied volatility should be above realised
+  text: Implied volatility trades on average 1-2 points above the volatility later realised, more for indices than single
+    stocks, because hedgers buy protection, sellers of cheap options demand a margin, short-dated options carry gap risk and
+    structured products lift index implieds.
+  tags:
+  - iv
+  - vix
+  - option-selling
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  - INDIAVIX
+  verdict: positive
+  tested_src: research/DEEP_NIFTY_BANKNIFTY.md
+  tested_text: Our R102 found India VIX over-states NIFTY's next 21 days on 81% of days (median ratio 1.28, 4,507 days) but
+    under-states BANKNIFTY's on 60%.
+- id: book.bennett-trading-volatility.2
+  book: bennett-trading-volatility
+  title: Selling volatility is partly paid equity risk
+  chapter: Ch. 3.1, Short vol has similar risk and return to long equity
+  text: Part of the profit from selling volatility is pay for carrying equity risk, because volatility rises when markets
+    fall; the trade is crowded, should be less profitable than before, and a back-test of it is not a reliable forecast.
+  tags:
+  - option-selling
+  - iv
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R103_OPTIONS_SELLING.md
+  tested_text: 'Our R103 tested defined-risk selling (iron fly and condor) on NIFTY and BANKNIFTY: 0 of 24 tests were confirmed;
+    the design passes came from stale wing prices.'
+- id: book.bennett-trading-volatility.3
+  book: bennett-trading-volatility
+  title: 'Call overwriting: short expiry, slightly OTM, on the index'
+  chapter: Ch. 1.4, Call overwriting
+  text: Overwriting an index with the shortest expiry and a slightly out-of-the-money call (about a 103-104% strike for one
+    month, or a fixed 25-delta call) has done best; it lags in low-volatility bull markets and its downside is the same as
+    a plain long position.
+  tags:
+  - option-selling
+  - theta
+- id: book.bennett-trading-volatility.4
+  book: bennett-trading-volatility
+  title: Put underwriting at a level you would buy
+  chapter: Ch. 1.2, Put underwriting
+  text: Selling a put at the level where you would happily buy earns premium for analysis that would otherwise be wasted;
+    if you only want the premium, choose an out-of-the-money strike at a support level that should hold. It collects both
+    the volatility premium and overpriced skew.
+  tags:
+  - option-selling
+  - iv
+- id: book.bennett-trading-volatility.5
+  book: bennett-trading-volatility
+  title: Volatility rules of thumb
+  chapter: Ch. 2.1, Option trading rules of thumb
+  text: Annual volatility is about 16 times the typical daily percentage move, an at-the-money option is worth about 0.4 x
+    volatility x the square root of time, and a delta-hedged option's profit grows with the square of the move while its daily
+    carry depends on realised minus implied volatility.
+  tags:
+  - iv
+  - theta
+- id: book.bennett-trading-volatility.6
+  book: bennett-trading-volatility
+  title: 'Gamma scalping: when to re-hedge'
+  chapter: Ch. 2.1 and 3.5, Delta hedging
+  text: 'A long-gamma trader re-hedges delta to lock in gains: hedge less often in trending markets, more often in choppy
+    ones, and just before a known announcement. Hedging four times as often halves the noise of the result, but a cheaply
+    bought option can still lose when hedged discretely.'
+  tags:
+  - scalp
+  - iv
+  - trend
+- id: book.bennett-trading-volatility.7
+  book: bennett-trading-volatility
+  title: Hedge with expected volatility, not implied
+  chapter: Ch. 3.5, Stretching Black-Scholes assumptions
+  text: 'Deltas should come from the volatility you expect, not the implied: a SX5E straddle bought at 22% implied in April
+    2008 that went on to realise 42% still lost money when it was hedged with implied-vol deltas.'
+  tags:
+  - iv
+  - sizing
+- id: book.bennett-trading-volatility.8
+  book: bennett-trading-volatility
+  title: Long volatility loses on average
+  chapter: Ch. 3.2, Long volatility is a poor hedge
+  text: Long volatility has negative average returns and is a poor hedge compared with simply cutting the position; rolling
+    one-month vStoxx futures lost 87% from launch while the index lost 4%.
+  tags:
+  - straddle
+  - option-buying
+  - iv
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R89_SIZE_STRADDLE.md
+  tested_text: 'Our R89 bought ATM straddles when R88 forecast a big candle: 0 of 18 versions were profitable on 4,302 design
+    straddles.'
+- id: book.bennett-trading-volatility.9
+  book: bennett-trading-volatility
+  title: Buy when implied is cheap, sell when dear; expiry around events
+  chapter: Ch. 1.2, Figure 1
+  text: 'Choose the option from two views: if implied vol looks cheap, buy (a call if bullish, a put if bearish); if it looks
+    dear, sell (a put if bullish, a call if bearish). A long-volatility trade should expire just after a key date and a short
+    one just before it.'
+  tags:
+  - iv
+  - option-buying
+  - option-selling
+  - news
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_H29.md
+  tested_text: 'Our h29 tested buying index options only when IV was cheap against a HAR realised-vol forecast: all 16 variants
+    lost after costs.'
+- id: book.bennett-trading-volatility.10
+  book: bennett-trading-volatility
+  title: Skew is usually overpriced; long skew pays only in panics
+  chapter: Ch. 7.5, Skew trading
+  text: A long-skew position (long OTM put, short OTM call, delta hedged) pays a skew theta and only profits in a jumpy, panicked
+    market where implied vol jumps by more than the skew implies as spot falls; in calm or trending markets selling skew wins,
+    so skew is usually overpriced.
+  tags:
+  - iv
+  - option-selling
+- id: book.bennett-trading-volatility.11
+  book: bennett-trading-volatility
+  title: Skew is not a fear gauge
+  chapter: Ch. 7.1 and 7.4, Measuring skew
+  text: 'Skew is not a reliable risk indicator: it often rises when at-the-money implied falls, because low-strike implieds
+    are sticky. Measure it as a fixed-strike difference such as 90%-100% and do not divide it by ATM volatility.'
+  tags:
+  - iv
+  - filter
+- id: book.bennett-trading-volatility.12
+  book: bennett-trading-volatility
+  title: Term structure and the square-root-of-time rule
+  chapter: Ch. 7.1-7.3, Skew and term structure
+  text: Term structure is normally upward sloping and inverts when markets fall; realised vol takes about 8 months to mean
+    revert after a spike. Implied vol moves roughly with one over the square root of time, so a 3-month implied moves about
+    twice as much as a 1-year one, and calendars can be traded when moves break that rule.
+  tags:
+  - iv
+  - vix
+- id: book.bennett-trading-volatility.13
+  book: bennett-trading-volatility
+  title: Trading the implied jump of a known event
+  chapter: Ch. 6.4, Trading earnings announcements / jumps
+  text: The extra volatility priced for a known event can be backed out of the expiries just before and just after it, because
+    variance adds up over time; to trade only the event, buy the expiry after and sell the expiry before, or the reverse to
+    sell an overpriced jump.
+  tags:
+  - news
+  - expiry
+  - iv
+- id: book.bennett-trading-volatility.14
+  book: bennett-trading-volatility
+  title: Hedgers can pin a stock, rarely an index
+  chapter: Ch. 2.1, Hedging can pin a stock approaching expiry
+  text: A long-gamma hedger who sells rallies and buys dips can pin an underlying to a strike into expiry, but only where
+    the hedge is large against traded volume and markets are calm; a major index is hard to pin.
+  tags:
+  - expiry
+  - gex
+  - oi
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/EXPIRY_PLAYBOOK.md
+  tested_text: Our expiry playbook found the close landed within half a strike step of the 09:20 largest-OI strike on only
+    11% of NIFTY expiries (53).
+- id: book.bennett-trading-volatility.15
+  book: bennett-trading-volatility
+  title: How a VIX-style index differs from variance
+  chapter: Ch. 4.2-4.3, Volatility indices and their futures
+  text: A variance-based volatility index sits about 0.2-0.7 points below a variance swap of the same maturity because illiquid
+    wings are chopped, jumps by about 2 points when it rolls expiries without interpolation, and its futures react only partly
+    to spot moves because volatility mean reverts.
+  tags:
+  - vix
+  - iv
+  inst:
+  - INDIAVIX
+- id: book.sadowski-9-strategies.1
+  book: sadowski-9-strategies
+  title: Stochastic reversal at S/R with a COT bias
+  chapter: Strategy 1, Momentum reversal
+  text: Set the trend bias from fundamentals and the Commitments of Traders report. Look for a daily reversal zone where weekly
+    and daily stochastic are above 70 (or oversold) and price is at a major support or resistance zone. Then take an intraday
+    reversal pattern only in the bias direction, getting 1-5 signals a month.
+  tags:
+  - reversal
+  - filter
+  - swing
+- id: book.sadowski-9-strategies.2
+  book: sadowski-9-strategies
+  title: 20/60/100 moving-average crossover
+  chapter: Strategy 2, MA crossover
+  text: Buy when the 20-period MA crosses above the 60-period MA and sell on the opposite cross. Stay in until the next cross,
+    and let the trade run while bars hold on one side of the 100-period MA. The author admits it is right only about half
+    the time and fails in ranges.
+  tags:
+  - moving-average
+  - trend
+  - direction
+  verdict: negative
+  tested_src: research/OBUY_FINAL.md
+  tested_text: 'Our OBUY_FINAL tested EMA crosses (TI-03) as option-buying triggers: 96 variants lost -369,856 walk-forward,
+    positive in 1 of 5 years.'
+- id: book.sadowski-9-strategies.3
+  book: sadowski-9-strategies
+  title: Heikin-Ashi two-candle reversal
+  chapter: Strategy 3, Heikin-Ashi
+  text: Two completed daily Heikin-Ashi candles of the new colour after a run of the other colour signal a reversal. Confirm
+    with a stochastic (14,7,3) and optionally the Accelerator Oscillator, then enter on a stop order beyond the second candle.
+    Use a 100 pips stop and move to breakeven after +50 pips.
+  tags:
+  - reversal
+  - candles
+  - stop
+  - profit-lock
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: Our R71 Heikin-Ashi flip on the index, buying the option, lost Rs 79,173 on 357 trades in the final period.
+- id: book.sadowski-9-strategies.4
+  book: sadowski-9-strategies
+  title: Swing entry out of an overlapping correction
+  chapter: Strategy 4, Swing trading
+  text: In a trend, a correction shows as many overlapping bars in a contracting range. Enter when price breaks out of that
+    range back in the trend direction, with the stop at the last minor swing or the low of the correction. The example risked
+    about 30 points to gain about 600.
+  tags:
+  - trend
+  - swing
+  - stop
+- id: book.sadowski-9-strategies.5
+  book: sadowski-9-strategies
+  title: Engulfing, long shadow and hammer candles
+  chapter: Strategy 5, Candlestick patterns
+  text: Wait for an engulfing, long-shadow (wick at least twice the body) or hammer candle to close. Enter at the next open,
+    with the stop at the pattern candle's extreme, trailed with the trend. The more candles an engulfing body covers, the
+    stronger it is claimed to be.
+  tags:
+  - candles
+  - reversal
+  - pattern
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: 'Our R87 found a candle''s shape alone does not predict direction: for 92% of the 234 shape cells the index
+    went up between 45% and 55% of the time.'
+- id: book.sadowski-9-strategies.6
+  book: sadowski-9-strategies
+  title: 'Role reversal: broken resistance becomes support'
+  chapter: Strategy 6, Role reversal
+  text: In an uptrend, buy the pullback to a broken resistance, treated as a zone, not an exact price; mirror this for downtrends.
+    Scale in with 1/3 at the 20 MA, 1/3 at the broken level and 1/3 at the 50% Fibonacci retracement.
+  tags:
+  - reversal
+  - trend
+  - sizing
+  - gann-fib
+  verdict: negative
+  tested_src: research/HUNT_R20C_SR_BREAK.md
+  tested_text: Our R20c found that after a two-close level break, price was further in the break's direction at 15:29 in 51%
+    of 7,548 breaks, and random levels did almost as well.
+- id: book.sadowski-9-strategies.7
+  book: sadowski-9-strategies
+  title: Bollinger squeeze, trade the middle-line close
+  chapter: Strategy 7, Bollinger squeeze
+  text: Use Bollinger(20, 2) and watch the band width. When the bands squeeze (width near 0.0100 on EURUSD), buy the first
+    full candle closing above the middle line or sell one closing below. The stop is the prior candle's extreme or a 3% capital
+    loss, whichever is smaller.
+  tags:
+  - filter
+  - momentum
+  - stop
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: Our R71 squeeze release lost Rs 41,281 on 305 trades in the final period, and 67% of its trades were trades
+    Donchian already takes.
+- id: book.sadowski-9-strategies.8
+  book: sadowski-9-strategies
+  title: NR4 / NR7 narrow-range breakout
+  chapter: Strategy 8, Narrow range
+  text: Mark the narrowest daily candle of the last 4 or 7 days. Buy a move above its high or sell a move below its low, with
+    the stop at the other end of the candle, then trail it. Two or more narrow candles in a row are said to precede a bigger
+    break.
+  tags:
+  - momentum
+  - filter
+  - stop
+  verdict: negative
+  tested_src: research/OBUY_FINAL.md
+  tested_text: Our OBUY_FINAL daily NR7 / inside-day rule (LV-04) lost -28,141 walk-forward over 72 variants.
+- id: book.sadowski-9-strategies.9
+  book: sadowski-9-strategies
+  title: RSI(2) momentum with pyramiding
+  chapter: Strategy 9, 2-period RSI
+  text: Buy when the 2-period RSI rises above 90 and sell when it falls below 10, which is the momentum reading, not the usual
+    mean-reversion one. Add on each repeat trigger while trending and close everything on the opposite signal. The author
+    warns it whipsaws in ranges and needs a strict stop.
+  tags:
+  - rsi
+  - momentum
+  - trend
+  verdict: negative
+  tested_src: research/GOLD_SCALP.md
+  tested_text: Our GOLD_SCALP rsi2 follow rules on XAUUSD lost, for example -234,718 over 6629 trades for M5 buys only.
+- id: book.sadowski-9-strategies.10
+  book: sadowski-9-strategies
+  title: The 3 / 1000 money rule
+  chapter: Closing section
+  text: Never risk more than 3% of capital on one trade, and never more than one-thousandth of capital per point of price
+    movement. The author blames most failures on untested strategies, poor discipline and missing stops.
+  tags:
+  - sizing
+  - stop
+- id: book.sadowski-9-strategies.11
+  book: sadowski-9-strategies
+  title: Accelerator Oscillator as a confirmation
+  chapter: Strategy 3, Heikin-Ashi filters
+  text: After a Heikin-Ashi reversal, wait for the Accelerator Oscillator to print a bar of the trade's colour on the right
+    side of zero before entering. Also skip bank holidays, NFP, FOMC and central-bank speech days.
+  tags:
+  - filter
+  - news
+  - momentum
+- id: book.sadowski-9-strategies.12
+  book: sadowski-9-strategies
+  title: Performance evidence is hand-picked
+  chapter: Strategies 2-3
+  text: 'The only results given are a few chart examples: the MA cross was right 6/12 or 50% of the time on one EURUSD chart,
+    and three 2013 Heikin-Ashi trades made +300, +130 and +170 pips. There is no backtest, no costs and no losing sample.'
+  tags:
+  - costs
+- id: book.heitkoetter-day-trading.1
+  book: heitkoetter-day-trading
+  title: How to draw an intraday trendline
+  chapter: Step 3, Technical Indicators
+  text: An uptrend line starts at the day's low and the first bar that fails to make a higher low; it may only become flatter,
+    never steeper, must never cut through bars, and the trend counts as broken once the line would have to move far from the
+    recent lows. Downtrend lines mirror this above the highs.
+  tags:
+  - trend
+  - pattern
+- id: book.heitkoetter-day-trading.2
+  book: heitkoetter-day-trading
+  title: Pick the tool for the regime
+  chapter: Step 3, Popular Trading Approaches
+  text: Markets trend about 30% of the time and range the rest, so a trader should call the regime first and use trend-following
+    tools (moving averages, MACD, 20-bar breakout) in trends and fading tools (RSI, Williams %R, Bollinger) in ranges.
+  tags:
+  - trend
+  - filter
+  verdict: negative
+  tested_src: research/FINDINGS.md
+  tested_text: Our R16 found trend vs range day from the first 30/45 min is not predictable (AUC 0.46-0.52).
+- id: book.heitkoetter-day-trading.3
+  book: heitkoetter-day-trading
+  title: Turtle 20-bar breakout
+  chapter: Step 3, Turtle Trading
+  text: Buy when price trades above the high of the previous 20 bars and sell below the 20-bar low; the book gives no exits
+    and says stops and targets must be added.
+  tags:
+  - momentum
+  - trend
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: weak
+  tested_src: research/HUNT_R73_DONCHIAN_TREND_WAIT.md
+  tested_text: Our Donchian 20 paper arm on 5-minute index bars made Rs 81,845 on 1,781 final-period trades but only Rs 9,998
+    in design.
+- id: book.heitkoetter-day-trading.4
+  book: heitkoetter-day-trading
+  title: RSI 14 at 30 and 70
+  chapter: Step 3, Relative Strength Index
+  text: Buy when RSI 14 crosses back above 30 and sell when it crosses back below 70; the book says it works best in sideways
+    markets.
+  tags:
+  - rsi
+  - reversal
+  verdict: negative
+  tested_src: research/OBUY_GB.md
+  tested_text: Our MR-03 RSI 30/70 reversal on NIFTY and BANKNIFTY lost Rs -82,004 in walk-forward.
+- id: book.heitkoetter-day-trading.5
+  book: heitkoetter-day-trading
+  title: Bollinger 21 / 2 band fade
+  chapter: Step 3, Bollinger Bands
+  text: With a 21-bar average and 2 standard deviations, buy when price moves below the lower band and sell above the upper
+    band, in sideways markets.
+  tags:
+  - reversal
+  - filter
+  verdict: negative
+  tested_src: research/OBUY_GB.md
+  tested_text: Our MR-02 Bollinger alert candle lost Rs -90,790 in walk-forward.
+- id: book.heitkoetter-day-trading.6
+  book: heitkoetter-day-trading
+  title: MACD, Williams %R and moving-average crosses
+  chapter: Step 3, Popular Trading Approaches
+  text: 'Standard settings: MACD 12 / 26 / 9 signal-line cross, Williams %R 14 sell above 80 and buy below 20, a 14 / 20 moving-average
+    cross, and a close crossing a 5 or 10 period average.'
+  tags:
+  - moving-average
+  - momentum
+  verdict: negative
+  tested_src: research/HUNT_H25.md
+  tested_text: 'H25 tested MACD, Williams %R, RSI 30/70, Bollinger, Donchian 20 and moving-average crosses as option-buying
+    triggers in 210,600 variants: the average trade loses Rs 146 after costs, no better than random entries.'
+- id: book.heitkoetter-day-trading.7
+  book: heitkoetter-day-trading
+  title: Time stop of three bars
+  chapter: Step 5, Time-Stops
+  text: 'If neither stop nor target is hit after three bars of the chart timeframe, exit: 45 minutes on 15-minute charts,
+    3 hours on 60-minute charts.'
+  tags:
+  - stop
+  - time-of-day
+  verdict: negative
+  tested_src: research/HUNT_R18_EXITS.md
+  tested_text: Our R18 added a 45 min time stop to every arm's exits and it was part of 0 of 60 overlays that passed.
+- id: book.heitkoetter-day-trading.8
+  book: heitkoetter-day-trading
+  title: Partial profits
+  chapter: Step 5, Taking Partial Profits
+  text: 'Close half at a fixed profit and let the rest run to the next support or resistance, or take thirds: fixed target,
+    next level, trailing stop.'
+  tags:
+  - target
+  - profit-lock
+  inst:
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R81_LIQUIDITY_EXITS.md
+  tested_text: 'Scaling out half at 1R on Liquidity 15+5 was rejected: -Rs 79k design, -Rs 35k final.'
+- id: book.heitkoetter-day-trading.9
+  book: heitkoetter-day-trading
+  title: High win rate as a goal
+  chapter: Power Principles 3 and 8
+  text: A robust system should show 60-80% winners, a profit factor of 1.3-2.5 and a drawdown of 10-20% of the yearly profit;
+    beginners should want more than 65% winners.
+  tags:
+  - target
+  - stop
+  verdict: negative
+  tested_src: research/FINDINGS.md
+  tested_text: Our R48 searched for 65%+ win-rate option buying and 0 of 10 candidates passed; FINNIFTY ATM +3% / -50% won
+    70.6% of 218 trades and lost Rs 1,05,369.
+- id: book.heitkoetter-day-trading.10
+  book: heitkoetter-day-trading
+  title: Reverse a losing system
+  chapter: Step 6, Total (Net) Profit
+  text: Because trading is a zero-sum game, a system that loses can often be turned into a winner by reversing its entry signals.
+  tags:
+  - direction
+  - costs
+  verdict: negative
+  tested_src: research/HUNT_H25.md
+  tested_text: 'H25 traded every signal both ways: follow lost Rs 141 a trade and fade lost Rs 151, because costs and time
+    decay hit both sides.'
+- id: book.heitkoetter-day-trading.11
+  book: heitkoetter-day-trading
+  title: Support and resistance swap roles
+  chapter: Step 3, Support & Resistance
+  text: Buy near support and sell near resistance that is unlikely to break; once broken, old support becomes resistance and
+    old resistance becomes support.
+  tags:
+  - reversal
+  - filter
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/FINDINGS.md
+  tested_text: 'Our R20b found support and resistance levels no better than random lines: mirrored random levels made more
+    in 6 of 7 variants.'
+- id: book.heitkoetter-day-trading.12
+  book: heitkoetter-day-trading
+  title: Weekly goal, then stop
+  chapter: Is It Really Possible to Make a Living; Tenets
+  text: Never set daily goals; set a low weekly goal per contract (start near $100, later $250-300) and stop trading for the
+    week once it is reached. With a $300 target and $200 stop, a 50% win rate still reaches it.
+  tags:
+  - sizing
+  - profit-lock
+- id: book.heitkoetter-day-trading.13
+  book: heitkoetter-day-trading
+  title: Skip thin and pre-news days
+  chapter: Is It Really Possible to Make a Living
+  text: Days around holidays and days before major releases such as a rate decision or the jobs report are thin or erratic
+    and are best left alone; in the first 2 to 3 months trade only twice a day, once in the morning and once in the afternoon.
+  tags:
+  - news
+  - day-of-week
+  - filter
+- id: book.heitkoetter-day-trading.14
+  book: heitkoetter-day-trading
+  title: Back-test size and validity
+  chapter: Step 6 and Power Principles 9-10
+  text: A performance report needs at least 40 trades and 200 is optimal; a profit factor of 1.5 or more is wanted but above
+    3.0 suggests over-fitting; only the last 3-4 years of a market are a valid back-test, and plan for twice the worst drawdown.
+  tags:
+  - costs
+  - sizing
+- id: book.heitkoetter-day-trading.15
+  book: heitkoetter-day-trading
+  title: No martingale
+  chapter: Power Principle 6
+  text: Doubling after each loss would need 512 contracts by the tenth trade and $102,300 of losses; start with one contract
+    and add size only as the account grows.
+  tags:
+  - sizing
+- id: book.swing-practical-guide.1
+  book: swing-practical-guide
+  title: 'Master Plan: buy the pullback only when it turns'
+  chapter: Ch. 6, The Master Plan
+  text: 'Swing trades last a few days to a few weeks on daily bars: find a pullback in an uptrend after the close, then buy
+    next morning with a buy-stop just above the previous day''s high, so a trade only fills if price first moves your way.
+    Shorts are the mirror image.'
+  tags:
+  - swing
+  - trend
+  - reversal
+- id: book.swing-practical-guide.2
+  book: swing-practical-guide
+  title: The 3-day pullback scan
+  chapter: Ch. 5.1 and 10.1.1, FORCESWING scan
+  text: A long candidate closes above its 10- and 20-day simple averages and has made two lower highs in a row (a 3-day decline);
+    a short candidate is below both averages with two higher lows. The scan also needs ADX above 30 and a Force Index filter.
+  tags:
+  - swing
+  - moving-average
+  - trend
+  verdict: negative
+  tested_src: research/SWING_DEEP.md
+  tested_text: 'Our SWING_DEEP tested a 3-down-closes pullback above the 200-day average on index futures 2016-2026: NIFTY
+    lost Rs 283,401 on 109 trades with a fixed 10-day exit.'
+- id: book.swing-practical-guide.3
+  book: swing-practical-guide
+  title: Elder's Force Index, 3- and 13-day
+  chapter: Ch. 8.8, Force Index
+  text: Force Index is volume times the change in close. A buy setup is a 13-day average at or above zero (bulls own the bigger
+    battle) with the 3-day average at or below zero (bears won the last few days), inside an uptrend; the sell setup is the
+    mirror.
+  tags:
+  - volume
+  - swing
+  - momentum
+- id: book.swing-practical-guide.4
+  book: swing-practical-guide
+  title: ADX above 30 means a real trend
+  chapter: Ch. 8.9, DMI
+  text: A trend is confirmed when ADX is above 30 (the higher the better) and +DI is above -DI for an uptrend, -DI above +DI
+    for a downtrend. The book says markets trend only about 30% of the time.
+  tags:
+  - trend
+  - filter
+- id: book.swing-practical-guide.5
+  book: swing-practical-guide
+  title: 'Gap rule: wait before entering'
+  chapter: Ch. 6.3-6.4, When and how to enter
+  text: If the stock gaps in the trade's direction, wait 30 minutes; if it gaps against it, wait 5 minutes; then re-base the
+    buy-stop on the new day's high instead of yesterday's. Without a gap, the order goes in a few minutes after the open.
+  tags:
+  - gap
+  - time-of-day
+  - swing
+- id: book.swing-practical-guide.6
+  book: swing-practical-guide
+  title: 'Stop: the higher of -4% or the signal day''s low'
+  chapter: Ch. 6.5, After the trade is executed
+  text: 'The first stop sits at whichever is higher: 4% under the entry or just under the low of the day used for the entry,
+    so the loss is capped at 4%. Stop and target go in together as one-cancels-other orders resting at the broker.'
+  tags:
+  - stop
+  - swing
+- id: book.swing-practical-guide.7
+  book: swing-practical-guide
+  title: Half off at +7%, trail the rest daily
+  chapter: Ch. 6.6-6.8, Trailing stop
+  text: Half the position is sold with a limit order at +7%; every morning the stop is raised to just under the previous day's
+    low (never lowered), and that trailing stop closes the second half. The book expects average wins above 7% and losses
+    under 4%.
+  tags:
+  - target
+  - profit-lock
+  - stop
+  - swing
+- id: book.swing-practical-guide.8
+  book: swing-practical-guide
+  title: An entry order lives up to 5 days
+  chapter: Ch. 6.7, If the trade is not executed
+  text: If the buy-stop does not trigger, the same process is repeated each morning for up to 5 trading days; if the stock
+    keeps pulling back, there is simply no trade.
+  tags:
+  - swing
+  - filter
+- id: book.swing-practical-guide.9
+  book: swing-practical-guide
+  title: Capital split into 15 slices
+  chapter: Introduction and Ch. 9
+  text: Divide the account by 15 (up to 20 if you can handle it) and put one slice in each trade. Pick about 25 candidates
+    a day, place stop orders on all, and let the first ones that trigger fill the free slots.
+  tags:
+  - sizing
+  - swing
+- id: book.swing-practical-guide.10
+  book: swing-practical-guide
+  title: Volume says reversal or continuation
+  chapter: Ch. 8.5-8.6, Volume and Equivolume
+  text: Above-average volume with little price movement, or after a huge run, hints at a reversal; above-average volume with
+    a strong move or a breakout hints at continuation. A 'power box' (range and volume both unusually large) confirms a breakout.
+  tags:
+  - volume
+  - reversal
+  - trend
+- id: book.swing-practical-guide.11
+  book: swing-practical-guide
+  title: Daily swing direction for option holds
+  chapter: Ch. 4, Introduction to swing trading
+  text: Swing trading works, the book says, because you trade with the trend, wait for a pullback, and enter only when price
+    shows it is resuming the trend; holds run from a few days to a few weeks.
+  tags:
+  - swing
+  - overnight
+  - option-buying
+  - direction
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/SWING.md
+  tested_text: 'Our SWING.md tested daily-chart rules for 1, 3 and 5-day BANKNIFTY option holds over 498 days, including an
+    RSI(2) pullback in trend: no rule was consistently right and bought options mostly lost.'
+- id: book.swing-practical-guide.12
+  book: swing-practical-guide
+  title: Up / Down / In / Out bars
+  chapter: Ch. 8.10, Up/Down/In/Out
+  text: 'Each bar is labelled by its high and low against the previous bar: Up (higher high and higher low), Down (lower high
+    and lower low), In (inside bar) or Out (outside bar). It is a chart colouring; no trading rule is attached.'
+  tags:
+  - candles
+  - pattern
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: 'Our R87 tested 4,049 candle shape x context cells on the indices, inside and outside bars among the patterns:
+    none passed.'
+- id: book.swing-practical-guide.13
+  book: swing-practical-guide
+  title: Three hand-picked winners
+  chapter: Ch. 11, Case studies
+  text: 'The three worked trades from spring 2002 all made money: +4.63%, +2.49% and +9.37%. No losers, sample sizes or backtest
+    results are shown, so they illustrate the rules rather than prove them.'
+  tags:
+  - swing
+- id: book.smith-short-swing.1
+  book: smith-short-swing
+  title: The six SST rules in one breath
+  chapter: Ch. 7-9, rules summary
+  text: 'The whole system is six rules on daily bars: risk at most 5% of the account per trade (the author uses 3%), trade
+    only on the side of the 50-day simple average, wait for an 8-period +DI/-DI cross or touch, enter on a break of the last
+    significant day, stop just beyond that day, then trail day by day with no target.'
+  tags:
+  - swing
+  - trend
+  - moving-average
+  - stop
+  - sizing
+- id: book.smith-short-swing.2
+  book: smith-short-swing
+  title: Trend side from the 50-day simple average
+  chapter: Ch. 7.1, Rule 2
+  text: Longs only while price is above the 50-day simple moving average, shorts only while below; the author calls the 200-day
+    too slow and anything shorter than 50 too noisy, without showing a test.
+  tags:
+  - trend
+  - moving-average
+  - filter
+  - swing
+- id: book.smith-short-swing.3
+  book: smith-short-swing
+  title: 8-period DMI cross as the set-up
+  chapter: Ch. 7.2, Rule 3
+  text: Wilder's Directional Movement with the period cut from 14 to 8; a long set-up is +DI crossing or touching -DI from
+    below, only when price is above the 50-day average. ADX itself is not used.
+  tags:
+  - trend
+  - momentum
+  - swing
+  - direction
+  verdict: negative
+  tested_src: research/OBUY_GB.md
+  tested_text: 'Our OBUY_GB tested an intraday ADX/DMI entry (DI aligned, break of the set-up candle) in 48 variants: walk-forward
+    Rs -345,311, 0/5 years positive; the daily 8-period version was not run.'
+- id: book.smith-short-swing.4
+  book: smith-short-swing
+  title: Enter on the last significant day's break
+  chapter: Ch. 7.3, Rule 4
+  text: After the DI set-up, buy when price trades above the high of the last significant day (sell below its low); inside
+    days do not count as significant and are skipped. Late entries a day or two after the trigger should normally be passed.
+  tags:
+  - swing
+  - candles
+  - pattern
+  - direction
+  verdict: negative
+  tested_src: research/SWING_DEEP.md
+  tested_text: Our SWING_DEEP found the NR7 / inside-day breakout on NIFTY and BANKNIFTY futures sat inside the coin-flip
+    range; the walk-forward lost Rs 45-58k a year.
+- id: book.smith-short-swing.5
+  book: smith-short-swing
+  title: Stop beyond the reference day plus 0.5%
+  chapter: Ch. 8.2, Rule 5
+  text: The initial stop sits just below the last significant day's low for a long (above its high for a short), with an extra
+    buffer of 0.5% of the price for shares that fit the profile; indices and wilder shares need a wider buffer. The stop is
+    never loosened.
+  tags:
+  - stop
+  - swing
+- id: book.smith-short-swing.6
+  book: smith-short-swing
+  title: Significant-day trailing stop, no target
+  chapter: Ch. 8.3 and 9, Rule 6
+  text: 'From the end of the entry day, each new significant day moves the stop to just under its low (long) with the same
+    0.5% buffer; inside days never move it. There is no target: the trade ends when stopped, giving back about one day''s
+    range.'
+  tags:
+  - profit-lock
+  - stop
+  - swing
+  - target
+- id: book.smith-short-swing.7
+  book: smith-short-swing
+  title: 'Big move day: lock half of it'
+  chapter: Ch. 9.1
+  text: If a day moves 5% of the price or more in the trade's favour, the stop moves to just beyond the half-way point of
+    that day instead of its far end; after a gap the 5% is measured open to close.
+  tags:
+  - profit-lock
+  - swing
+  - stop
+- id: book.smith-short-swing.8
+  book: smith-short-swing
+  title: Share personality decides if it works
+  chapter: Ch. 11
+  text: The author says the rules only work on instruments that move in neat daily steps with small shadows, low intraday
+    volatility and correlation with the index below 0.20; he calls major indices like the FTSE 100 too volatile and advises
+    leaving them alone.
+  tags:
+  - filter
+  - swing
+  - trend
+- id: book.smith-short-swing.9
+  book: smith-short-swing
+  title: Two-week blackout before results
+  chapter: Ch. 13
+  text: Do not open a trade in a share in the two weeks before its results, AGM or other scheduled company news, because a
+    profit warning gaps the price; general market news is ignored.
+  tags:
+  - news
+  - filter
+  - swing
+- id: book.smith-short-swing.10
+  book: smith-short-swing
+  title: Skip entries triggered by a gap
+  chapter: Ch. 13.1
+  text: 'If the price gaps through the entry trigger, skip the trade: the author''s experience is that the gap tends to fill
+    and whipsaw the stop. A favourable gap after entry is trailed like any new high.'
+  tags:
+  - gap
+  - filter
+  - overnight
+- id: book.smith-short-swing.11
+  book: smith-short-swing
+  title: 200-day average as a barrier
+  chapter: Ch. 7.3
+  text: Do not enter if the 200-day moving average lies between the entry and the point where the trade would be in profit,
+    since the author treats it as a strong barrier.
+  tags:
+  - moving-average
+  - filter
+  - swing
+- id: book.smith-short-swing.12
+  book: smith-short-swing
+  title: The author's own month and exercises
+  chapter: Ch. 15.3 and 18.3
+  text: 'His one shown month: 30 trades, 77% at break-even or better, 209 points net; three chart exercises gave 18 trades,
+    13 positive. All self-reported, hand-marked and in-sample, with no random or out-of-sample comparison.'
+  tags:
+  - swing
+  - costs
+- id: book.smith-short-swing.13
+  book: smith-short-swing
+  title: Back-test yardstick for a watch list
+  chapter: Ch. 11.2
+  text: A share joins the watch list if a 6-month back-test shows at least 60% of trades at break-even or better (over 70%
+    preferred) and a few moves of 8% or more; the worst performers are weeded out repeatedly.
+  tags:
+  - swing
+  - filter
+- id: book.smith-short-swing.14
+  book: smith-short-swing
+  title: Avoid yo-yo sizing
+  chapter: Ch. 17
+  text: Raising size after a good run and cutting it after a bad one makes the losers big and the winners small; keep one
+    risk level through poor spells and raise it only gradually.
+  tags:
+  - sizing
+- id: book.advanced-trading-methods.1
+  book: advanced-trading-methods
+  title: HFT is a subset of algorithmic trading
+  chapter: Sec. 2, AT and HFT definitions
+  text: Algorithmic trading means computers executing traders' pre-designed strategies automatically; high frequency trading
+    is the subset that does this at very high speed, with co-location, many placed-and-cancelled orders, very short holds
+    and few overnight positions. It is a way of executing, not a strategy in itself.
+  tags:
+  - order-flow
+  - big-players
+- id: book.advanced-trading-methods.2
+  book: advanced-trading-methods
+  title: Market makers earn the spread
+  chapter: Sec. 3.1.1, Market making
+  text: Market-making HFT firms make their money on the bid-ask spread; the cited literature adds that one large HFT firm
+    lost on its inventory but earned on the spread, and that its result was very sensitive to cost assumptions.
+  tags:
+  - big-players
+  - costs
+  - order-flow
+- id: book.advanced-trading-methods.3
+  book: advanced-trading-methods
+  title: Statistical arbitrage between related prices
+  chapter: Sec. 3.1.3, Statistical arbitrage
+  text: HFT statistical arbitrage tries to profit from brief mismatches in prices or rates between exchanges or asset classes.
+    No pairs, thresholds or holding times are given.
+  tags:
+  - big-players
+  - breadth
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R72_CROSS_INDEX.md
+  tested_text: 'Our R72 tested buying the index that lagged the others'' breakout (C2 laggard catch-up): it lost Rs 1,00,746
+    on 613 final trades.'
+- id: book.advanced-trading-methods.4
+  book: advanced-trading-methods
+  title: 'Momentum ignition: orders placed to start a rush'
+  chapter: Sec. 3.1.4, Momentum ignition
+  text: Some HFT firms place and cancel many orders in one direction to set off a quick price move that pulls in other traders'
+    algorithms. The paper presents it as a strategy; regulators treat it as manipulation, so for us it is only a trap to avoid.
+  tags:
+  - traps
+  - order-flow
+  - big-players
+  - momentum
+  verdict: weak
+  tested_src: research/HUNT_R8_ORDER_FLOW_TRAPS.md
+  tested_text: Our R8 saw only 11 events in our tick data, too few to measure, so our rule is to wait for a 1-minute close
+    beyond the level that still holds 60 s later.
+- id: book.advanced-trading-methods.5
+  book: advanced-trading-methods
+  title: Speed edge belongs to co-located firms
+  chapter: Sec. 3.1.5, Leveraging structural differences
+  text: Some HFT firms see market data before everyone else through co-location and direct exchange feeds, and trade on that
+    head start. A retail trader is on the slow side of this edge.
+  tags:
+  - big-players
+  - order-flow
+- id: book.advanced-trading-methods.6
+  book: advanced-trading-methods
+  title: Seven kinds of execution algorithm
+  chapter: Sec. 3.2, Types of algorithms
+  text: 'The paper lists seven execution algorithm types: percentage of volume, TWAP, VWAP, implementation shortfall, adaptive,
+    liquidity seeking and newsreader. It only names them; no settings are given.'
+  tags:
+  - vwap
+  - costs
+  - news
+- id: book.advanced-trading-methods.7
+  book: advanced-trading-methods
+  title: VWAP is a benchmark big funds execute against
+  chapter: Sec. 3.2, VWAP algorithms
+  text: VWAP algorithms work a large order so its average price tracks the day's volume-weighted average price; the paper
+    names them as one of the main execution tools.
+  tags:
+  - vwap
+  - big-players
+  inst:
+  - NIFTY
+  verdict: negative
+  tested_src: research/HUNT_R86_BIG_PLAYERS.md
+  tested_text: Our R86 found a fade to VWAP lost Rs 64,786 on 71 trades; midday stretches from VWAP tend to continue.
+- id: book.advanced-trading-methods.8
+  book: advanced-trading-methods
+  title: Buy-side wants low impact, not speed
+  chapter: Sec. 4, Evaluation (THE TRADE surveys)
+  text: In the 2017 survey, market impact scored 5.89 and anonymity 5.85 among algorithm features, behind execution consulting;
+    13.9% named reducing market impact as their reason for using algorithms, while trading at speed fell from 7.1% in 2015
+    to 5.8% in 2017.
+  tags:
+  - costs
+  - big-players
+- id: book.advanced-trading-methods.9
+  book: advanced-trading-methods
+  title: Execution quality is the lever we can pull
+  chapter: Sec. 2.1.2 and Sec. 4
+  text: Algorithmic trading exists mainly to cut the market impact of large orders by working them through time and across
+    markets, and firms now value consistent execution most.
+  tags:
+  - costs
+  verdict: weak
+  tested_src: research/HUNT_H14.md
+  tested_text: Our H14 tested entry execution policies and adopted only a marketable limit at the entry-bar price +0.5%, which
+    added +Rs 288/day against a required +250.
+- id: book.advanced-trading-methods.10
+  book: advanced-trading-methods
+  title: Futures and related prices do not lead us enough
+  chapter: Sec. 3.1.3 and 3.1.5
+  text: The paper says faster access and cross-market mismatches give HFT firms their profit opportunities, which last only
+    moments.
+  tags:
+  - big-players
+  - direction
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_H39.md
+  tested_text: Our H39 found heavyweight futures, basis and synthetic forward move with the index in the same minute, and
+    from 2 minutes ahead every |t| is below 2.5.
+- id: book.porwal-10-strategies.1
+  book: porwal-10-strategies
+  title: 'Inside bar: enter on the close beyond the mother bar'
+  chapter: Ch. 3.1, Inside Bar
+  text: Enter only when a candle closes beyond the mother candle, with the stop beyond its other side and three targets at
+    1x, 1.5x and 2x the mother candle's range. Take continuation breaks in the bigger timeframe's trend, or reversal breaks
+    at a top or bottom with an oscillator overbought or oversold.
+  tags:
+  - candles
+  - pattern
+  - target
+  - stop
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: 'Our R71 bought 1-ITM options on 15-minute inside-bar breaks on five indices: -Rs 1,23,667 on 1,075 trades
+    in the final period.'
+- id: book.porwal-10-strategies.2
+  book: porwal-10-strategies
+  title: Doji at a top or bottom, traded on the break
+  chapter: Ch. 3.2, Doji
+  text: Only a doji at a market top or bottom counts, confirmed by an oscillator in overbought or oversold. Enter when price
+    breaks the doji's high or low, stop beyond the doji, and trail the stop with a moving average; mainly on daily charts.
+  tags:
+  - candles
+  - reversal
+  - pattern
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our R87 found no candle shape predicts the index's direction, and daily shapes in R87B were 0 of 25.
+- id: book.porwal-10-strategies.3
+  book: porwal-10-strategies
+  title: Engulfing with volume and stochastic
+  chapter: Ch. 3.3, Engulfing
+  text: A bullish engulfing needs a prior downtrend and a white body covering the previous black body; a volume spike, an
+    unusually long first black candle and an oversold stochastic add confidence. Enter on the break of the engulfing candle's
+    high, stop below it, aim for at least 1:2.
+  tags:
+  - candles
+  - reversal
+  - volume
+  - pattern
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: 'Our R87 tested engulfing among the candle patterns: after every shape the index went up 43-62% of the time,
+    no direction edge.'
+- id: book.porwal-10-strategies.4
+  book: porwal-10-strategies
+  title: 'Trendline break: wait for the previous lower high'
+  chapter: Ch. 4.1, Trendline
+  text: Do not buy the trendline break itself; enter once price holds above the previous lower high, with the stop just below
+    it and targets at older swing highs. A volume spike and a bigger-than-recent candle confirm it; a line near 45 degrees
+    is best and lines steeper than 60 should be avoided.
+  tags:
+  - pattern
+  - trend
+  - volume
+- id: book.porwal-10-strategies.5
+  book: porwal-10-strategies
+  title: Darvas box breakout with volume
+  chapter: Ch. 4.2, Darvas Box
+  text: Buy slightly above a consolidation box once higher volume and a strong candle confirm the break; the best stop sits
+    outside the box on its far side. The longer the box, the bigger the expected move.
+  tags:
+  - volume
+  - momentum
+  - pattern
+  - stop
+- id: book.porwal-10-strategies.6
+  book: porwal-10-strategies
+  title: 'Turbocharged opening: 15-minute range break'
+  chapter: Ch. 4.3, Turbocharged Market Opening
+  text: Break of the first 15-minute candle's range, taken only in the direction of the previous day's trend, with EMA(14)
+    as day bias and trailing stop. Targets are 1x, 1.5x and 2x of that range.
+  tags:
+  - orb
+  - time-of-day
+  - moving-average
+  - target
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R23_ORB_RANGE.md
+  tested_text: 'Our R23 traded the break of the first 15-minute range on 5-minute bars: -Rs 71,624 on 1,171 trades.'
+- id: book.porwal-10-strategies.7
+  book: porwal-10-strategies
+  title: Trade only with yesterday's trend
+  chapter: Ch. 4.3 and 5.1
+  text: Both intraday setups (the opening range and ADX-EMA) take trades only in the direction of the previous day's trend,
+    to raise the odds.
+  tags:
+  - filter
+  - trend
+  - direction
+  verdict: negative
+  tested_src: research/HUNT_R89_PDHL_BREAK.md
+  tested_text: 'In our R89 a daily plus 15-minute trend filter did not cut false breaks: on NIFTY they rose from 32% to 39%.'
+- id: book.porwal-10-strategies.8
+  book: porwal-10-strategies
+  title: '52-week high: longs only, then an intraday setup'
+  chapter: Ch. 4.4, High-Low Momentum
+  text: Screen for stocks at a 52-week high, wait for a daily close above resistance, then take only long setups on an intraday
+    chart (mirror for 52-week lows).
+  tags:
+  - momentum
+  - filter
+  - swing
+  verdict: negative
+  tested_src: research/SWING_DEEP.md
+  tested_text: 'Our swing study traded 52-week high/low momentum on NIFTY futures: about Rs 2,175 a year over 11 years, inside
+    the coin-flip range.'
+- id: book.porwal-10-strategies.9
+  book: porwal-10-strategies
+  title: ADX-EMA settings and rules
+  chapter: Ch. 5.1, ADX-EMA
+  text: 'On 5- or 15-minute bars: EMA 14 and DMI 14/14, ADX between 20 and 50, +DI above -DI and price above the EMA for a
+    buy (mirror for a sell), with yesterday''s trend agreeing. Exit on a candle close through EMA(14), square off before the
+    close.'
+  tags:
+  - trend
+  - moving-average
+  - filter
+  inst:
+  - NIFTY
+  verdict: negative
+  tested_src: research/OBUY_GB.md
+  tested_text: Our ADX/DMI trend entry (TI-09, 48 variants) lost Rs -345,311 walk-forward on index options.
+- id: book.porwal-10-strategies.10
+  book: porwal-10-strategies
+  title: Quasimodo reversal, and its time problem
+  chapter: Ch. 5.2, Quasimodo
+  text: After a downtrend, a higher high followed by a higher low is the buy, with the stop under the prior low and a target
+    at the first zig-zag top or 1:2 to 1:3. The author warns the pattern often runs out of time before the close in Indian
+    intraday trading.
+  tags:
+  - reversal
+  - pattern
+  - time-of-day
+  verdict: negative
+  tested_src: research/HUNT_R90_ALMAZOV_BOS.md
+  tested_text: 'Our R90 tested break-of-structure entries on the index with bought 1-ITM options: 0 of 99 cells passed.'
+- id: book.porwal-10-strategies.11
+  book: porwal-10-strategies
+  title: 'Bull trap: fade a false break of the day high'
+  chapter: Ch. 5.3, Price Action Trap
+  text: A break of a key level such as the day high on weak volume, then a red candle with a volume spike back below it, is
+    a short with the stop above the swing high. The author reads it as big players selling to late retail buyers.
+  tags:
+  - traps
+  - big-players
+  - reversal
+  - volume
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R86_BIG_PLAYERS.md
+  tested_text: 'Our R86 faded failed pokes at yesterday''s high or low, round numbers and the opening range: 6 of 6 lose after
+    costs.'
+- id: book.porwal-10-strategies.12
+  book: porwal-10-strategies
+  title: 'Bear trap: reclaim of support with a volume spike'
+  chapter: Ch. 5.3, Price Action Trap
+  text: 'Price breaks below support, cannot stay there and reclaims it on a volume spike: buy above the reversal candle''s
+    high, stop below the swing low, target the previous resistance or previous day''s high.'
+  tags:
+  - traps
+  - reversal
+  - volume
+  - target
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: weak
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our R87 found a 1-minute stop run below NIFTY's day low was followed by +0.20 ATR over 5 minutes (n 1,702 in
+    the holdout), smaller than an option's cost.
+- id: book.porwal-10-strategies.13
+  book: porwal-10-strategies
+  title: Stop trading after two stop-losses
+  chapter: Ch. 2 and 3.1 rules
+  text: Close the trading terminal for the day once two stop-losses have been hit.
+  tags:
+  - sizing
+  - stop
+  verdict: negative
+  tested_src: research/HUNT_R75_DONCHIAN_LESS_LOSS.md
+  tested_text: 'Our R75 stopped new Donchian entries after 2 losses in a row: it failed the gates.'
+- id: book.porwal-10-strategies.14
+  book: porwal-10-strategies
+  title: Minimum 1:2 and a trailing stop on every trade
+  chapter: Ch. 2, Basic Rules
+  text: Every setup uses at least 1:2 reward-to-risk, which the author says stays profitable at a 50-60% win rate, plus position
+    size from the stop and a trailing stop once the trade moves your way. No measured win rates are given.
+  tags:
+  - sizing
+  - target
+  - profit-lock
+  - stop
+- id: book.aziz-advanced-day-trading.1
+  book: aziz-advanced-day-trading
+  title: 'Stocks in Play: the gappers filter'
+  chapter: Ch. 3, Pre-Market Gappers
+  text: 'Day trade only Stocks in Play: a gap of at least 2% with a news catalyst, at least 100,000 shares traded pre-market
+    by 9 a.m., average daily volume over 500,000 and an ATR of at least 50 cents; skip buyout gaps and flat pre-markets.'
+  tags:
+  - gap
+  - volume
+  - filter
+- id: book.aziz-advanced-day-trading.2
+  book: aziz-advanced-day-trading
+  title: Opening Range Breakout with a VWAP stop
+  chapter: 'Ch. 6, Strategy 4: Opening Range Breakout'
+  text: Let the first 5, 15 or 30 minutes form a range that must be much smaller than the daily ATR, enter on the break on
+    the correct side of VWAP, stop at VWAP, and target the next level or exit on a new 5-minute low (long).
+  tags:
+  - orb
+  - vwap
+  - time-of-day
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R92_ORB_TIME.md
+  tested_text: 'Our R92 tested the ORB family by entry time, range length, day type and exit time on the indices: 0 of 257
+    pass; the index was on the right side on 64-72% of trades yet the option lost Rs 33-110 a trade.'
+- id: book.aziz-advanced-day-trading.3
+  book: aziz-advanced-day-trading
+  title: VWAP shows who is in control
+  chapter: 'Ch. 6, Strategy 5: VWAP Trading'
+  text: 'VWAP is called the most important day-trading indicator: above it buyers are in control, below it sellers, and institutions
+    judge their fills against it, so longs are held above VWAP and shorts below it.'
+  tags:
+  - vwap
+  - big-players
+  - filter
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R10_ORDERFLOW_TOOLS.md
+  tested_text: Our R10 tested 7 VWAP rules as filters on the arms (side of VWAP, bands, slope, prior-day VWAP); none helps
+    Liquidity BANKNIFTY in both periods.
+- id: book.aziz-advanced-day-trading.4
+  book: aziz-advanced-day-trading
+  title: VWAP False Breakout, his favourite
+  chapter: Ch. 6, VWAP False Breakout
+  text: A stock that sold off below VWAP, reclaimed it, then loses VWAP again in the Late-Morning (10:30-12:00 New York) is
+    shorted below VWAP with the stop above it and the low of the day as the first target.
+  tags:
+  - vwap
+  - traps
+  - time-of-day
+- id: book.aziz-advanced-day-trading.5
+  book: aziz-advanced-day-trading
+  title: 'VWAP Reversal: no new 5-minute low'
+  chapter: Ch. 6, VWAP Reversals
+  text: After the opening move takes a stock away from VWAP, a failure to make a new 5-minute low (or a turn to higher highs
+    and higher lows) is the long signal back to VWAP, with the stop below the low of the day and part sold at VWAP.
+  tags:
+  - vwap
+  - reversal
+  - time-of-day
+- id: book.aziz-advanced-day-trading.6
+  book: aziz-advanced-day-trading
+  title: 'Midday: a lost VWAP keeps trending'
+  chapter: Ch. 6, VWAP Moving Average Trend
+  text: In the Late-Morning and Mid-day a stock that has lost (held) VWAP tends to trend along the 9 and 20 EMA; enter near
+    the average and exit on a 5-minute close beyond the 20 EMA.
+  tags:
+  - vwap
+  - moving-average
+  - trend
+  verdict: weak
+  tested_src: research/HUNT_R86_BIG_PLAYERS.md
+  tested_text: Our R86 found a midday stretch away from NIFTY's VWAP tends to continue rather than revert (1,465 days), and
+    a fade back to VWAP lost Rs 64,786 on 71 trades; no trend rule was built on it.
+- id: book.aziz-advanced-day-trading.7
+  book: aziz-advanced-day-trading
+  title: 'ABCD: buy the pullback that holds'
+  chapter: 'Ch. 6, Strategy 2: ABCD Pattern'
+  text: After a surge from A to a new high of day at B, buy near the higher pullback low C once it holds, stop below C, sell
+    half at the break of B and move the stop to break-even.
+  tags:
+  - pattern
+  - momentum
+  - stop
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our R87B pullback-after-a-rise call rule on SENSEX lost -Rs 21,127 on 162 trades; the stop under the red candle's
+    low closed 117 of 162 trades.
+- id: book.aziz-advanced-day-trading.8
+  book: aziz-advanced-day-trading
+  title: 'Bull flag: first and second flag only'
+  chapter: 'Ch. 6, Strategy 3: Bull Flag'
+  text: On low-float runners, buy the break of the first or second consolidation after a pole when a new 1-minute and 5-minute
+    high come together on rising volume; stop below the flag; the third flag is too extended.
+  tags:
+  - pattern
+  - momentum
+  - volume
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R71_CHART_PATTERNS.md
+  tested_text: 'Our R71 flag rule on index 5-minute bars was too rare to judge: 32 final trades lost -Rs 442, below random
+    entries.'
+- id: book.aziz-advanced-day-trading.9
+  book: aziz-advanced-day-trading
+  title: Partial profit, then break-even stop
+  chapter: Ch. 5, Trade Management
+  text: Take 1/4 or 1/2 of the position at each target, move the stop to break-even after the first partial, and never let
+    a winner turn into a loss.
+  tags:
+  - profit-lock
+  - target
+  - stop
+  inst:
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R81_LIQUIDITY_EXITS.md
+  tested_text: 'Our R81 tested half at +15% with the runner to breakeven on Liquidity 15+5: Rs 1,78,523 against Rs 2,57,249
+    for its own exits in design.'
+- id: book.aziz-advanced-day-trading.10
+  book: aziz-advanced-day-trading
+  title: Previous day close and Y / YY highs-lows
+  chapter: Ch. 4, Support and Resistance
+  text: The previous day close is called the most important level, followed by yesterday's and two days ago's high and low,
+    pre-market high/low and daily moving averages; levels are areas, and diagonal trend lines are rejected.
+  tags:
+  - filter
+  - target
+  - pattern
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R89_PDHL_BREAK.md
+  tested_text: 'Our R89 tested previous-day high / low breaks on 1-minute index bars: 0 of 180 pass, no better than a random
+    entry minute.'
+- id: book.aziz-advanced-day-trading.11
+  book: aziz-advanced-day-trading
+  title: Higher highs/lows and engulfing as exits
+  chapter: Ch. 5, Candlestick Patterns
+  text: 'Only two candle patterns are trusted on 5-minute charts: two-bar higher highs and higher lows (or the mirror) and
+    engulfing; a short is wrong once the chart stops making new lows and turns to higher highs and higher lows.'
+  tags:
+  - candles
+  - reversal
+  - stop
+  inst:
+  - NIFTY
+  - BANKNIFTY
+  verdict: negative
+  tested_src: research/HUNT_R87_CANDLE_ANATOMY.md
+  tested_text: Our R87B found that exiting the ORB arm on an engulfing candle against the trade made it worse by -42,729 in
+    design.
+- id: book.aziz-advanced-day-trading.12
+  book: aziz-advanced-day-trading
+  title: The 2% and 6% rules
+  chapter: Ch. 7, Position Sizing
+  text: Never risk more than 2% of account equity (not buying power) on one trade, with 0.5-1% advised and 1% used by the
+    author; stop live trading for the month once losses reach 6%; never average down.
+  tags:
+  - sizing
+  - stop
+- id: book.aziz-advanced-day-trading.13
+  book: aziz-advanced-day-trading
+  title: Risk/reward gate of at least 2:1
+  chapter: Ch. 7, Risk/Reward Analysis
+  text: Take a trade only if the reward to the next level is at least 2 times the risk to a technical stop such as VWAP; never
+    tighten the stop just to fix the ratio, and treat a late entry with a worse ratio as a missed trade.
+  tags:
+  - filter
+  - target
+  - stop
+- id: book.aziz-advanced-day-trading.14
+  book: aziz-advanced-day-trading
+  title: Strategies by time of day, and the 30% rule
+  chapter: Ch. 6, One Stock in Play, All Strategies
+  text: Flags, ORB, ABCD and Fallen Angel belong to the Open, VWAP reversals and false breakouts to the Late-Morning, VWAP
+    trends to Mid-day and the Close; never give back more than 30% of the Open's profit later in the day.
+  tags:
+  - time-of-day
+  - profit-lock
+- id: book.aziz-advanced-day-trading.15
+  book: aziz-advanced-day-trading
+  title: Level 2 read backwards
+  chapter: Ch. 5, Understanding Nasdaq Level 2 Signals
+  text: A big bid near the inside market is read as bearish (a patient buyer expecting lower prices) and a big ask as bullish;
+    large orders far from the inside are fake and ignored, and Level 2 is never traded alone.
+  tags:
+  - order-flow
+  - big-players
+  - traps
+- id: book.douglas-trading-in-the-zone.1
+  book: douglas-trading-in-the-zone
+  title: Five truths of thinking in probabilities
+  chapter: Ch. 7, Eliminating the Emotional Risk
+  text: Anything can happen; you do not need to know what happens next to make money; wins and losses are randomly distributed
+    for any edge; an edge is only a higher probability; every moment is unique. The book offers no system of its own and assumes
+    the reader already has a real edge.
+  tags:
+  - direction
+- id: book.douglas-trading-in-the-zone.2
+  book: douglas-trading-in-the-zone
+  title: 'Be the casino: judge a series, not a trade'
+  chapter: Ch. 7, Probabilities Paradox
+  text: A casino cannot predict any hand yet keeps about 4.5 percent of what is wagered over many hands; a trader with an
+    edge should likewise accept that each trade is uncertain while a long series is predictable.
+  tags:
+  - direction
+  - sizing
+- id: book.douglas-trading-in-the-zone.3
+  book: douglas-trading-in-the-zone
+  title: A losing streak says nothing about the next trade
+  chapter: Ch. 5 and Ch. 7
+  text: Each trade is statistically independent, so the last two or three results should not make a trader hesitate (after
+    losses) or load up (after wins).
+  tags:
+  - sizing
+  - filter
+  verdict: positive
+  tested_src: research/HUNT_R75_DONCHIAN_LESS_LOSS.md
+  tested_text: 'Our R75 agrees: stopping a Donchian book after 2 losses in a row skipped 1,260 losers (Rs 14.6 lakh) but also
+    928 winners (Rs 14.3 lakh) in design, so the streak did not predict the next trade.'
+- id: book.douglas-trading-in-the-zone.4
+  book: douglas-trading-in-the-zone
+  title: Pre-define the risk of every trade
+  chapter: Ch. 6 and Ch. 11, Stop-Loss Exit
+  text: Decide before entry exactly where the trade is shown not to work, set by market structure rather than a money amount
+    you feel like risking, and exit there without hesitation; losses are the cost of doing business.
+  tags:
+  - stop
+- id: book.douglas-trading-in-the-zone.5
+  book: douglas-trading-in-the-zone
+  title: A stop placed is not a risk accepted
+  chapter: Ch. 7, Trading in the Moment
+  text: A fund manager put in a stop but bailed out at his entry when the market came back, and then missed a 500-point run
+    his way; exiting early to avoid being wrong is a sign the risk was never accepted.
+  tags:
+  - stop
+  - target
+- id: book.douglas-trading-in-the-zone.6
+  book: douglas-trading-in-the-zone
+  title: Take every signal of your edge
+  chapter: Ch. 7 and Ch. 8, truth 4
+  text: Do not pick and choose which signals to take or gather other evidence for or against a trade; that adds random variables
+    and makes it impossible to learn whether the edge works.
+  tags:
+  - filter
+- id: book.douglas-trading-in-the-zone.7
+  book: douglas-trading-in-the-zone
+  title: Judge an edge on 20 trades or more
+  chapter: Ch. 11, Trading in Sample Sizes
+  text: 'Never judge an edge on the last trade; trade it for a sample of at least 20 trades without changing its variables.
+    The book says 20 is enough for a fair test yet small enough to spot a fading edge (our arithmetic: with no edge, 12 or
+    more wins in 20 still happens 25.17% of the time).'
+  tags:
+  - sizing
+- id: book.douglas-trading-in-the-zone.8
+  book: douglas-trading-in-the-zone
+  title: Size so 20 straight losses are bearable
+  chapter: Ch. 11, Accepting the Risk
+  text: Multiply the risk per trade by 20 and make sure you can accept that sum; if not, cut the position (for example 3 S&P
+    contracts at a 3-point stop is $2,250 a trade and $45,000 for 20), never the stop distance.
+  tags:
+  - sizing
+  - stop
+- id: book.douglas-trading-in-the-zone.9
+  book: douglas-trading-in-the-zone
+  title: Scale out in thirds, stop to entry
+  chapter: Ch. 11, Taking Profits
+  text: Take a third off at a small first profit, a third at the next longer-timeframe level while moving the stop to entry,
+    and the last third just before the next significant high or low; the aim is a trade that can no longer lose.
+  tags:
+  - target
+  - profit-lock
+  verdict: negative
+  tested_src: research/HUNT_R81_LIQUIDITY_EXITS.md
+  tested_text: 'Our R81 sold half at +15% with the runner to breakeven on Liquidity 15+5: Rs 1,78,523 against Rs 2,57,249
+    plain in design (881 trades) and -Rs 23,896 against Rs 11,155 in the final (357 trades).'
+- id: book.douglas-trading-in-the-zone.10
+  book: douglas-trading-in-the-zone
+  title: Aim for 3:1 reward to risk
+  chapter: Ch. 11, Taking Profits
+  text: With a 3:1 reward-to-risk ratio a trader can win fewer than half the trades and still make money; the win rate alone
+    says little.
+  tags:
+  - target
+  - stop
+  - option-buying
+  verdict: negative
+  tested_src: research/FINDINGS.md
+  tested_text: Our test of a fixed 3:1 option rule (target +10%, stop -3.3% of premium) won 19-31% of trades against about
+    28% needed after costs, because 73% of trades hit the stop in ordinary noise.
+- id: book.douglas-trading-in-the-zone.11
+  book: douglas-trading-in-the-zone
+  title: Buy dips in the daily trend
+  chapter: Ch. 11, Time Frame
+  text: 'The example filter: if the daily chart makes higher highs and higher lows, only buy pullbacks to 30-minute support;
+    in a daily downtrend only sell rallies to 30-minute resistance.'
+  tags:
+  - trend
+  - filter
+  - swing
+  verdict: negative
+  tested_src: research/FINDINGS.md
+  tested_text: Our study found that using the daily trend as an intraday filter was with-trend better in one year and against-trend
+    better in the other, no consistent value.
+- id: book.douglas-trading-in-the-zone.12
+  book: douglas-trading-in-the-zone
+  title: Winning streaks breed oversized trades
+  chapter: Ch. 3, Winners, Losers, Boomers and Busters
+  text: Euphoria after a run of wins (even 15 or 20 in a row) leads traders to put on larger-than-usual positions and give
+    it back; the book calls the 40 to 50 percent of traders who cycle like this boom-and-busters (no data given).
+  tags:
+  - sizing
+- id: book.douglas-trading-in-the-zone.13
+  book: douglas-trading-in-the-zone
+  title: Anything can happen at a level
+  chapter: Ch. 6, The Market's Most Fundamental Characteristic
+  text: 'One large trader can break any support: a chairman sold two million bushels at market and soybeans fell through the
+    analyst''s ''low of the day'' at once.'
+  tags:
+  - traps
+  - big-players
+  verdict: positive
+  tested_src: research/FINDINGS.md
+  tested_text: 'Our R20b agrees that levels are not walls: levels mirrored at random to the other side of the price made more
+    on average than the real ones in 6 of 7 variants.'
+- id: book.douglas-trading-in-the-zone.14
+  book: douglas-trading-in-the-zone
+  title: Rigid rules, flexible expectations
+  chapter: Ch. 7, Managing Expectations
+  text: The trader must be rigid in rules and flexible in expectations; the market has no built-in endings, so the structure
+    (stops, limits, when to stop) must come from the trader, which is the case for hard locks and a kill switch.
+  tags:
+  - stop
+  - filter

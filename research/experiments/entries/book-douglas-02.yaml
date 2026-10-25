@@ -1,0 +1,39 @@
+id: book-douglas-02
+title: Fixed rupee risk per trade so that 20 straight losses fit the account stop (Mark Douglas, book rule, proposed)
+family: sizing-execution
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Mark Douglas''s rule from Trading in the Zone (Ch. 11 (Accepting the Risk)) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: none (sizing); stop distance from the arm''s index-level
+  stop. Entry: Unchanged: the arm''s own signals. Stop: Unchanged: the arm''s index-level stop (never moved to change size).
+  Exit: Unchanged.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+features:
+- none (sizing); stop distance from the arm's index-level stop
+- per trade
+model_or_rule: 'Unchanged: the arm''s own signals. | stop: Unchanged: the arm''s index-level stop (never moved to change size).
+  | exit: Unchanged. | filters: Lots = floor(R / rupee loss of 1 lot if the stop is hit), minimum 0 (skip the trade if even
+  1 lot risks more than R). R = Rs 2,000 (Rs 40,000 drawdown stop / 20) or Rs 650 (Rs 13,000 monthly stop / 20); with k arms
+  live at once, divide R by k.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-douglas-02; trade: the arm''s option, sized by the rule above instead
+  of a fixed 1 lot'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Not tested by us as a sizing rule. R75: every Donchian book breaks the account stop at 1 lot on
+  all five indices; its conclusion was that size, not filters, is the lever. R101: 2 lots on 5-of-5 breadth earned what any
+  extra lot earns (Rs 161 vs random 160, p 0.475).. Assumptions: The book sizes so that 20 losses are acceptable but gives
+  no formula; dividing CLAUDE.md''s account stop by 20 is ours. The rupee loss of 1 lot at the stop is estimated from the
+  option''s delta at entry times the index stop distance plus charges (about Rs 70 NIFTY / Rs 76 BANKNIFTY a round trip).'

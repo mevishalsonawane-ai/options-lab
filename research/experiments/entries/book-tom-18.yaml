@@ -1,0 +1,34 @@
+id: book-tom-18
+title: No new entries around high-impact scheduled news (Trader Tom, book rule, proposed)
+family: calendar-events
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (The 24-Hour Trading Cycle; Stanley case study) makes money
+  after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: none / calendar. Entry: Filter:
+  no new entries from 15 minutes before to 15 minutes after a high-impact release (India: RBI policy, Budget, CPI; MCX: EIA
+  crude/gas storage, US CPI, NFP, FOMC in MCX hours). Stop: the arm''s own Exit: the arm''s own'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- NATURALGAS
+- GOLD
+features:
+- none / calendar
+- intraday
+model_or_rule: 'Filter: no new entries from 15 minutes before to 15 minutes after a high-impact release (India: RBI policy,
+  Budget, CPI; MCX: EIA crude/gas storage, US CPI, NFP, FOMC in MCX hours). | stop: the arm''s own | exit: the arm''s own
+  | filters: event calendar (research/context/events.csv)'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-18; trade: filter only (skip), shadow first for live'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: EVENT_SHIELD: BANKNIFTY policy-day range 1.48x (15 sessions); pausing arms on event days not an
+  edge; R83 EIA fade/follow failed. Assumptions: Window width is ours; ''red-flagged'' mapped to the events in our calendar.'

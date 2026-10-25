@@ -1,0 +1,31 @@
+id: book-woods-20
+title: 'Linear-regression channel: buy pullbacks to the lower line in a rising channel (Galen Woods, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 9.1) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: 50-bar linear regression channel (+/- 2 standard
+  errors) with slope above a threshold; when price touches the lower line and a bullish bar forms, buy stop above it. Mirror
+  in a falling channel. Stop: Below the touch bar''s low. Exit: The upper channel line; else square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: '50-bar linear regression channel (+/- 2 standard errors) with slope above a threshold; when price touches
+  the lower line and a bullish bar forms, buy stop above it. Mirror in a falling channel. | stop: Below the touch bar''s low.
+  | exit: The upper channel line; else square-off. | filters: Channel slope ''healthy'' (ours: > 0.1 ATR per 10 bars).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-woods-20; trade: buy 1-ITM CE / PE'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: Not tested by us.. Assumptions: The book draws trend lines by hand; a regression channel is the
+  mechanical stand-in it names.'

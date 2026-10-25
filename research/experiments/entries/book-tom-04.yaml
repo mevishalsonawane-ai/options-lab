@@ -1,0 +1,36 @@
+id: book-tom-04
+title: Daily 3-bar breakout traded directly (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Trend Indicators, p. 67-70) makes money after real charges
+  and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Buy-stop at the highest
+  high of the previous 3 daily bars, sell-stop at their lowest low; first trigger of the day only, 09:20-14:30. Stop: the
+  opposite 3-bar level, capped at 1.0 x daily ATR14 from entry Exit: square-off 15:10 (15:05 expiry); variant: hold the future
+  until the opposite 3-bar break'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+features:
+- underlying price
+- daily levels, entry on 1-minute trade-through
+model_or_rule: 'Buy-stop at the highest high of the previous 3 daily bars, sell-stop at their lowest low; first trigger of
+  the day only, 09:20-14:30. | stop: the opposite 3-bar level, capped at 1.0 x daily ATR14 from entry | exit: square-off 15:10
+  (15:05 expiry); variant: hold the future until the opposite 3-bar break | filters: none'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-04; trade: buy 1-ITM CE on an up-break, 1-ITM PE on a down-break;
+  MCX: the near future'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested at 3 bars; R89 PDHL (1-bar daily levels) 0 of 180; R51 Donchian 20 on 5-minute passed
+  thin (+Rs 48,689, 1,775 trades). Assumptions: The book uses it as a trend tool, not an entry with stops; the entry, the
+  ATR cap and the exit are ours.'

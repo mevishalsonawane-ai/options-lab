@@ -1,0 +1,33 @@
+id: book-atb-18
+title: 'Triple top / bottom: break of the opposite side after three touches (The Advanced Trading Book, book rule, proposed)'
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'The Advanced Trading Book''s rule from Advanced Trading Book / Simple Trading Book (Ch. 4, Triple top / triple
+  bottom (p46, p47, p56)) makes money after real charges and slippage, walk-forward, with BH across the rules tried. Signal
+  source: underlying price. Entry: Three swing highs within 0.25 ATR of each other; support = lowest swing low between them;
+  sell at the open after the first close below support. Mirror for triple bottoms. Stop: Above the midpoint of the pattern.
+  Exit: Target = pattern height from the break, else square-off.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Three swing highs within 0.25 ATR of each other; support = lowest swing low between them; sell at the open
+  after the first close below support. Mirror for triple bottoms. | stop: Above the midpoint of the pattern. | exit: Target
+  = pattern height from the break, else square-off. | filters: None.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-atb-18; trade: buy 1-ITM PE (CE for triple bottoms)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R71 P5 (two touches) lost; R20b levels no better than random lines. Assumptions: Book draws only
+  the lines; stop and target are ours.'

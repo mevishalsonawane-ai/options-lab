@@ -1,0 +1,31 @@
+id: book-tom-15
+title: Red marubozu after a failed push up in a downtrend (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Pattern Number 7, Marabozu, p. 95-96) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Downtrend (close
+  below 89-SMA); a rally of at least 2 green bars; then a red marubozu (wicks each <= 5% of range, body >= 1.0 x ATR14); sell
+  at its close. Mirror for uptrends. Stop: the rally''s high Exit: 2R or 30 minutes or 15:10'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 5-minute and 15-minute bars
+model_or_rule: 'Downtrend (close below 89-SMA); a rally of at least 2 green bars; then a red marubozu (wicks each <= 5% of
+  range, body >= 1.0 x ATR14); sell at its close. Mirror for uptrends. | stop: the rally''s high | exit: 2R or 30 minutes
+  or 15:10 | filters: 09:30-14:30; skip the 15 minutes after scheduled data'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-15; trade: buy 1-ITM PE'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87: marubozu no direction edge out of sample on 5m/15m (NIFTY 1m red marubozu did not hold). Assumptions:
+  Wick tolerance, size threshold, trend filter and exit are ours.'

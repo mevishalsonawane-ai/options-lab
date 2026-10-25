@@ -1,0 +1,33 @@
+id: book-tom-19
+title: Add one lot at +1R with the stop to entry (scaling in) (Trader Tom, book rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Managing Your Risk, Scaling In, p. 131) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price (the arm''s own signal).
+  Entry: On an open winning position at +1R (underlying), add an equal position and move both stops to the first entry; book''s
+  numbers: add at +75, exit at +150 on the 4-hour chart (reward/risk 3 instead of 2). Stop: first entry price for both Exit:
+  first position''s target (2R from the first entry)'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price (the arm's own signal)
+- the arm's own
+model_or_rule: 'On an open winning position at +1R (underlying), add an equal position and move both stops to the first entry;
+  book''s numbers: add at +75, exit at +150 on the 4-hour chart (reward/risk 3 instead of 2). | stop: first entry price for
+  both | exit: first position''s target (2R from the first entry) | filters: paper arms with a record (R51 Donchian, R72 Breadth
+  Donchian)'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-19; trade: a second 1-ITM option lot of the same strike'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R81 X7 pyramid on Liquidity +Rs 58k design, -Rs 20k final; H5 pyramiding raised gross not net. Assumptions:
+  Points mapped to R multiples of the arm''s stop.'

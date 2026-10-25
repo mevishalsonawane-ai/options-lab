@@ -128,7 +128,34 @@ class KnowledgeTest {
         "does the weekday matter for nifty" to listOf("index.weekday-means-nothing"),
         "is vix a direction dial" to listOf("index.vix-is-the-range-dial"),
         "is expiry day a bigger day for nifty" to listOf("index.expiry-day-not-bigger"),
+        // The books' cards (book_facts.yaml, 25 Oct 2026): "what does <author> say about <topic>" finds the book's card.
+        "what does wyckoff say about volume" to listOf("book.wyckoff-day-traders-bible.2", "book.wyckoff-day-traders-bible.3",
+            "book.wyckoff-day-traders-bible.1"),
+        "what does trading in the zone say about thinking in probabilities" to listOf("book.douglas-trading-in-the-zone.1",
+            "book.douglas-trading-in-the-zone.2"),
+        "what does carli say about cci divergence" to listOf("book.carli-divergence.1", "book.carli-divergence.2", "book.carli-divergence.6"),
+        "what does bennett say about implied and realised volatility" to listOf("book.bennett-trading-volatility.1",
+            "book.bennett-trading-volatility.7"),
+        "what does aziz say about vwap" to listOf("book.aziz-advanced-day-trading.3", "book.aziz-advanced-day-trading.4",
+            "book.aziz-advanced-day-trading.5", "book.aziz-advanced-day-trading.6"),
+        "what does galen woods say about the pin bar" to listOf("book.woods-price-action.2"),
     )
+
+    @Test fun aBookCardSaysItIsTheBooksClaimAndNeverLeadsAVerdictQuestion() {
+        val books = index.pack.facts.filter { it.kind == "book_fact" }
+        assertTrue(books.size >= 100, "${books.size} book cards")
+        for (f in books) {
+            assertTrue(f.text.contains("(the book's claim, not our tested result)"), f.id)
+            assertTrue(f.src.startsWith("research/books/") && f.conf == "low", f.id)
+        }
+        // Asked whether something works, Jarvis leads with our research, never with what a book claims.
+        for (q in listOf("is orb profitable", "does vwap work", "does divergence work", "is selling straddles profitable",
+                "does the pin bar work", "do candlestick patterns work", "does volume predict direction")) {
+            val top = Knowledge.search(index, q, 5)
+            assertTrue(top.isNotEmpty(), q)
+            assertTrue(top.first().fact.kind != "book_fact", "\"$q\" led with ${top.first().fact.id}")
+        }
+    }
 
     @Test fun eachQuestionFindsItsFacts() {
         assertTrue(EXPECT.size >= 30)

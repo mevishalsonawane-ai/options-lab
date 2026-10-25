@@ -1,0 +1,46 @@
+id: book-sadowski-02
+title: Daily Heikin-Ashi two-candle reversal with stochastic 14,7,3 (Roman Sadowski, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 3) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Setup long:
+  two consecutive completed green HA candles after at least 3 red HA candles, and the stochastic(14,7,3) %K was below 30 within
+  the last 5 bars. Place a buy-stop 0.1 ATR14 above the second green HA candle''s high, valid for the next 3 sessions. Short
+  is the mirror (two red after 3+ green, %K above 70 within 5 bars, sell-stop below the second red candle''s low). Stop: 1.0
+  x ATR14(daily) from entry (the book''s ''100 pips flat''), or the setup''s swing low/high if nearer. Exit: Move the stop
+  to breakeven after +0.5 ATR14 (the book''s +50 pips); then trail to the latest 2-bar swing low/high; exit on an opposite
+  HA setup.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+features:
+- underlying price
+- daily bars
+model_or_rule: 'Setup long: two consecutive completed green HA candles after at least 3 red HA candles, and the stochastic(14,7,3)
+  %K was below 30 within the last 5 bars. Place a buy-stop 0.1 ATR14 above the second green HA candle''s high, valid for the
+  next 3 sessions. Short is the mirror (two red after 3+ green, %K above 70 within 5 bars, sell-stop below the second red
+  candle''s low). | stop: 1.0 x ATR14(daily) from entry (the book''s ''100 pips flat''), or the setup''s swing low/high if
+  nearer. | exit: Move the stop to breakeven after +0.5 ATR14 (the book''s +50 pips); then trail to the latest 2-bar swing
+  low/high; exit on an opposite HA setup. | filters: Skip the RBI policy day, the US FOMC day, the Union Budget and exchange
+  holidays (the book''s NFP/FOMC/bank-holiday rule). Skip if the prior daily bar''s range > 2 x ATR14 (''volatile swing'').
+  Optional AC variant: require Accelerator Oscillator > 0 and rising for longs (< 0 and falling for shorts).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-02; trade: Buy the 1-ITM monthly CE (long) / PE (short); stops
+  and trail on the underlying; max hold 10 sessions or 5 sessions before expiry.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: HUNT_R71 P6 Heikin-Ashi flip (15-min, EMA filter): -Rs 79,173 on 357 trades, fail; OBUY_FINAL TI-08
+  Heikin-Ashi -170,762 walk-forward; daily HA + stochastic not tested by us. Assumptions: The book''s stochastic sentence
+  has the colours swapped; we read it as oversold for longs. Pips converted to ATR fractions. ''Series of candles'' = at least
+  3. The AC sign for shorts is read as below zero.'

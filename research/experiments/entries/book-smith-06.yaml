@@ -1,0 +1,36 @@
+id: book-smith-06
+title: SST six rules on BTC/ETH daily, with the trail as the profit lock (David Graeme Smith, book rule, proposed)
+family: mcx-crypto
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 7-9) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: As sst-six-rules-index-daily on BTC/ETH daily bars
+  (SMA50 side, DMI 8 cross or touch, break of last non-inside day). Stop: Mandatory: reference day''s far end minus 0.5% of
+  price, and a variant at 0.25 x ATR(14). Exit: Mandatory profit lock: the significant-day step trail (each new non-inside
+  favourable day moves the stop to its far end minus buffer) plus the midpoint lock on a >= 5% favourable day; no target;
+  max hold 20 days.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- CRYPTO
+features:
+- underlying price
+- daily bars (00:00 UTC close) of BTC and ETH spot/perp index
+model_or_rule: 'As sst-six-rules-index-daily on BTC/ETH daily bars (SMA50 side, DMI 8 cross or touch, break of last non-inside
+  day). | stop: Mandatory: reference day''s far end minus 0.5% of price, and a variant at 0.25 x ATR(14). | exit: Mandatory
+  profit lock: the significant-day step trail (each new non-inside favourable day moves the stop to its far end minus buffer)
+  plus the midpoint lock on a >= 5% favourable day; no target; max hold 20 days. | filters: No entries in the 24 hours before
+  FOMC or US CPI (book''s scheduled-news blackout mapped); gap rule not applicable (24/7 market).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-smith-06; trade: spot or 1x perp, and Delta Exchange India ATM option
+  on the trigger; stops on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: RC1: 0 of 8 active ideas beat buy-and-hold after India''s 30% tax; R46: BTC EMA 8/21 + ADX(14) >
+  15 option calls, 0 of 14 variants pass.. Assumptions: Crypto never appears in the book; mapping is ours. Stop and step lock
+  are both present as CLAUDE.md requires; compare against lock/stop variants, never ''no stop''.'

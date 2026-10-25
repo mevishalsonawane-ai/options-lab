@@ -1,0 +1,33 @@
+id: book-woods-12
+title: NR7 break in the trend's direction only (Galen Woods, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Galen Woods''s rule from How to Trade Price Action (Ch. 4.10) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: The last bar has the smallest high-low range of
+  the last 7; uptrend: buy stop above its high; downtrend: sell stop below its low; valid 2 bars. Stop: The other end of the
+  NR7 bar. Exit: Not stated; nearest swing or square-off (daily: 5 sessions).'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+features:
+- underlying price
+- 15-minute bars; daily bars
+model_or_rule: 'The last bar has the smallest high-low range of the last 7; uptrend: buy stop above its high; downtrend: sell
+  stop below its low; valid 2 bars. | stop: The other end of the NR7 bar. | exit: Not stated; nearest swing or square-off
+  (daily: 5 sessions). | filters: Trend = EMA 20 slope (ours).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-woods-12; trade: buy 1-ITM CE / PE (index); MCX 1-ITM option or the
+  future'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R71 P2 two-sided 15m: -Rs 1,68,820 on 1,341 trades; R96 crude NR7 lead (Rs 48,875 on 46) failed
+  on COPPER.. Assumptions: Trend definition ours.'

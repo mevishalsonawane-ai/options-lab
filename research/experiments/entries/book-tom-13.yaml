@@ -1,0 +1,32 @@
+id: book-tom-13
+title: Spinning top at the end of a pullback, enter on its break with the main trend (Trader Tom, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Trader Tom''s rule from The First Trading Manual (Pattern Number 2, Spinning Top, p. 83-84) makes money after
+  real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Main trend
+  DOWN (close below 89-SMA on 15-minute, falling over the last 40 bars); a counter-rally of at least 5 bars; a spinning top
+  (body <= 30% of range, both wicks >= 25%); sell-stop below its low, valid 5 bars. Mirror for uptrends. Stop: the rally''s
+  high Exit: the low that started the rally, or square-off 15:10'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Main trend DOWN (close below 89-SMA on 15-minute, falling over the last 40 bars); a counter-rally of at least
+  5 bars; a spinning top (body <= 30% of range, both wicks >= 25%); sell-stop below its low, valid 5 bars. Mirror for uptrends.
+  | stop: the rally''s high | exit: the low that started the rally, or square-off 15:10 | filters: 09:30-14:30'
+settings: 'research/books/TESTABLE_RULES.md, rule book-tom-13; trade: buy 1-ITM PE (CE in the mirror)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87: spinning top no edge; 0 of 4,049 shape x context cells. Assumptions: The book''s example uses
+  40-50 bars of downtrend and 8-10 bars of rally; thresholds, target and trend proxy are ours.'

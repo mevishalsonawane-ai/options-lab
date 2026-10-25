@@ -1,0 +1,32 @@
+id: book-heitkoetter-03
+title: 14 / 20 moving-average crossover (Markus Heitkoetter, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Markus Heitkoetter''s rule from A Complete Guide to Day Trading (Step 3, Crossover of Moving Averages) makes
+  money after real charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry:
+  Long when SMA(14) crosses above SMA(20) on a bar close; short when it crosses below. Stop: 0.27% of the index Exit: 0.41%
+  target, 45-minute time stop, opposite cross, 15:10 square-off'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 15-minute bars
+model_or_rule: 'Long when SMA(14) crosses above SMA(20) on a bar close; short when it crosses below. | stop: 0.27% of the
+  index | exit: 0.41% target, 45-minute time stop, opposite cross, 15:10 square-off | filters: none stated'
+settings: 'research/books/TESTABLE_RULES.md, rule book-heitkoetter-03; trade: buy 1-ITM CE on long, 1-ITM PE on short; stops/targets
+  on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: OBUY_GB TI-03 EMA crosses Rs -369,856 walk-forward on 4,526 trades; R29 EMA 9 x 21 Rs -110 a trade
+  (1,785 holdout trades); the 14/20 pair itself not tested. Assumptions: Book does not say simple or exponential; simple used
+  (book calls them moving averages in the SMA section). Exits from the book''s generic $200/$300 and three-bar time stop.'

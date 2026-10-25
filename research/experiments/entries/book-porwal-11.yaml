@@ -1,0 +1,39 @@
+id: book-porwal-11
+title: 'Bear trap: failed break of the day low / previous-day low, reclaimed on volume, buy above the reversal bar (Nikhil
+  Porwal, book rule, proposed)'
+family: flow-oi
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 5.3) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: underlying price and volume (futures volume). Entry:
+  Level = the running day low (variant: the previous day''s low). A bar trades below the level and, within 3 bars, a green
+  bar closes back above it with futures volume >= 2x its 20-bar average. Buy when price trades above that green bar''s high
+  (book: above the high of the bullish reversal candle). Stop: Below the lowest low of the poke (the swing low). Exit: Book
+  target: the previous day''s high or the day high, partial at 1R and the rest trailed by 3-bar lows; variant 2R; square-off
+  15:15.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price and volume (futures volume)
+- 1-minute and 5-minute bars
+model_or_rule: 'Level = the running day low (variant: the previous day''s low). A bar trades below the level and, within 3
+  bars, a green bar closes back above it with futures volume >= 2x its 20-bar average. Buy when price trades above that green
+  bar''s high (book: above the high of the bullish reversal candle). | stop: Below the lowest low of the poke (the swing low).
+  | exit: Book target: the previous day''s high or the day high, partial at 1R and the rest trailed by 3-bar lows; variant
+  2R; square-off 15:15. | filters: Entries 09:30-14:30; skip when the level was poked 3+ times already.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-11; trade: buy 1-ITM CE; variant: trade the index future (lower
+  cost) with the same levels'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87: 1-minute stop run below NIFTY''s day low followed by +0.20 ATR over 5 minutes, n 1,702 in the
+  holdout, below option cost (weak positive base); fades in R86 lost. Assumptions: Level choice, volume multiple, the 3-bar
+  reclaim window and the partial exit are ours.'

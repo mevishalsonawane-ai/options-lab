@@ -1,0 +1,41 @@
+id: book-porwal-03
+title: Engulfing reversal with trend, volume and stochastic filters (Nikhil Porwal, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Nikhil Porwal''s rule from 10 Most Profitable Trading Strategies (Ch. 3.3) makes money after real charges and
+  slippage, walk-forward, with BH across the rules tried. Signal source: underlying price and volume (futures volume). Entry:
+  Bullish: close below SMA 20 and SMA 20 falling (downtrend); day 1 close < open; day 2 close > open with body covering day
+  1''s body (open2 <= close1 and close2 >= open1). Buy when price trades above day 2''s high within the next 3 sessions. Bearish
+  mirror, plus open2 > close1, close2 < open1 and day-2 volume > day-1 volume. Stop: Below day 2''s low (bullish) / above
+  day 2''s high (bearish). Exit: Target 2R; else trail with EMA 20 close; max hold 10 sessions.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- GOLD
+- SILVER
+- CRUDE
+features:
+- underlying price and volume (futures volume)
+- daily bars
+model_or_rule: 'Bullish: close below SMA 20 and SMA 20 falling (downtrend); day 1 close < open; day 2 close > open with body
+  covering day 1''s body (open2 <= close1 and close2 >= open1). Buy when price trades above day 2''s high within the next
+  3 sessions. Bearish mirror, plus open2 > close1, close2 < open1 and day-2 volume > day-1 volume. | stop: Below day 2''s
+  low (bullish) / above day 2''s high (bearish). | exit: Target 2R; else trail with EMA 20 close; max hold 10 sessions. |
+  filters: Optional confidence filters as in the book: day-1 body longer than each of the previous 5 bodies; futures volume
+  on day 1 or day 2 above 1.5x its 20-day average; stochastic 14,3,3 below 20 (bullish) / above 80 (bearish).'
+settings: 'research/books/TESTABLE_RULES.md, rule book-porwal-03; trade: buy ATM CE / PE of the next monthly expiry (or 1-ITM
+  weekly), stop and target on the index; MCX: the future'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R87 engulfing among 2-candle patterns: no direction edge; R85 MCX engulfing no reliable edge; R87B
+  daily 0 of 25. Assumptions: Downtrend definition, the 3-session trigger window, the volume multiple and the stochastic settings
+  are ours; the book shows the trend ''visually''.'

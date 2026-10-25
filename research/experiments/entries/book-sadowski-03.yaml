@@ -1,0 +1,41 @@
+id: book-sadowski-03
+title: Break out of an overlapping correction in the trend direction (Roman Sadowski, book rule, proposed)
+family: patterns-indicators
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Roman Sadowski''s rule from 9 Advanced and Profitable Trading Strategies (Strategy 4) makes money after real
+  charges and slippage, walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Trend down:
+  close below EMA50 and EMA50 falling over 10 bars. Correction: the last 8 bars all sit inside a box no taller than 1.5 x
+  ATR14 and each overlaps the previous bar by at least 50% of its range. Short on the first close below the box low; long
+  is the mirror (close above the box high in an uptrend). Book long variant: wait for 2 closes above the box high and buy
+  the next open. Stop: The most recent 2-bar swing high (short) or the box low (long). Exit: Not stated by the book; we use
+  a 3R target or a trailing stop at the last 2-bar swing, plus a time exit at 15:15 for intraday options or 5 sessions on
+  60-min bars.'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+- CRUDE
+- GOLD
+features:
+- underlying price
+- '60-minute bars (book: 4-hour forex); 15-minute variant'
+model_or_rule: 'Trend down: close below EMA50 and EMA50 falling over 10 bars. Correction: the last 8 bars all sit inside a
+  box no taller than 1.5 x ATR14 and each overlaps the previous bar by at least 50% of its range. Short on the first close
+  below the box low; long is the mirror (close above the box high in an uptrend). Book long variant: wait for 2 closes above
+  the box high and buy the next open. | stop: The most recent 2-bar swing high (short) or the box low (long). | exit: Not
+  stated by the book; we use a 3R target or a trailing stop at the last 2-bar swing, plus a time exit at 15:15 for intraday
+  options or 5 sessions on 60-min bars. | filters: Trend by EMA50 as above.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-sadowski-03; trade: Buy the 1-ITM CE/PE; stop on the underlying.'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: HUNT_R71 P3 squeeze release -Rs 41,281 on 305 trades and P8 swing structure -Rs 34,242 on 372 trades,
+  both fail; Donchian 20 breakout is our paper arm. Assumptions: Overlap, contraction and trend are all our definitions (8
+  bars, 1.5 ATR box, 50% overlap, EMA50); the book gives only examples.'

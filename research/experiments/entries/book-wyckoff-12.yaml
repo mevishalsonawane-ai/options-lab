@@ -1,0 +1,31 @@
+id: book-wyckoff-12
+title: Tighten the stop in the last 15 minutes before square-off (Wyckoff, book rule, proposed)
+family: trade-management
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. X) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price. Entry: Any open arm trade at 15:00 (14:50 on expiry days)
+  Stop: from then on, trail the stop 0.25x the trailing 15-minute ATR(1m)-sum behind the best index price Exit: the trail
+  or the 15:15 square-off (15:05 on expiry)'
+data_version: not run (proposed 25 Oct 2026)
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price
+- 1-minute bars
+model_or_rule: 'Any open arm trade at 15:00 (14:50 on expiry days) | stop: from then on, trail the stop 0.25x the trailing
+  15-minute ATR(1m)-sum behind the best index price | exit: the trail or the 15:15 square-off (15:05 on expiry) | filters:
+  only trades in profit at the start of the window'
+settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-12; trade: manage the arm''s option'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: locks on Liquidity 0 of 12 (R19) and 0 of 15 (R100); late-day squeeze alone not tested by us. Assumptions:
+  Book''s ''within a fraction of the extreme'' made 0.25x of a short-window ATR; times shifted to our 15:15 / 15:05 square-offs'

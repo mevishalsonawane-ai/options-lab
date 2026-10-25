@@ -1,0 +1,39 @@
+id: book-smith-05
+title: SST six rules on F&O stocks chosen by a walk-forward 'step-ness' screen (David Graeme Smith, book rule, proposed)
+family: daily-filters
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'David Graeme Smith''s rule from Short Swing Trading (Ch. 11, 7-9) makes money after real charges and slippage,
+  walk-forward, with BH across the rules tried. Signal source: underlying price. Entry: Each quarter, rank F&O stocks on the
+  PREVIOUS 6 months only by: (1) step score = share of up-trend days (close > SMA50) whose low >= previous low, plus the mirror
+  for down-trend days; (2) median shadow/range ratio (lower is better); (3) 6-month daily return correlation with NIFTY (book
+  wants < 0.20; use the bottom quartile if too few qualify); (4) median daily traded value above a floor. Keep the top 20.
+  Trade the SST six rules on them next quarter. Stop: Last significant day''s far end minus 0.5% of price (book''s number,
+  written for shares). Exit: Significant-day trail; midpoint lock on a >= 5% favourable day; no target.'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: corporate results / AGM calendar for F&O stocks (have
+  daily bars and the R58 stock-option lake for 10 names)'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments: []
+features:
+- underlying price
+- daily bars of F&O stocks
+model_or_rule: 'Each quarter, rank F&O stocks on the PREVIOUS 6 months only by: (1) step score = share of up-trend days (close
+  > SMA50) whose low >= previous low, plus the mirror for down-trend days; (2) median shadow/range ratio (lower is better);
+  (3) 6-month daily return correlation with NIFTY (book wants < 0.20; use the bottom quartile if too few qualify); (4) median
+  daily traded value above a floor. Keep the top 20. Trade the SST six rules on them next quarter. | stop: Last significant
+  day''s far end minus 0.5% of price (book''s number, written for shares). | exit: Significant-day trail; midpoint lock on
+  a >= 5% favourable day; no target. | filters: No new entry in the 10 sessions (two weeks) before the stock''s scheduled
+  results or AGM; skip gap-through triggers; skip if SMA(200) lies between entry and first 1R of profit.'
+settings: 'research/books/TESTABLE_RULES.md, rule book-smith-05; trade: stock futures (1 lot) and the 1-ITM monthly stock
+  option; stops on the stock; out 3 sessions before expiry (physical settlement)'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: R58: 0 of 38 stock-option rules pass, round trip about Rs 280 a lot; SWING_DEEP: stock swing set-ups
+  did not beat holding the same stocks.. Assumptions: The book''s screen is by eye with a weed-out loop on past back-tests
+  (in-sample); we make it a frozen, walk-forward ranking. Thresholds above are our literal reading.'

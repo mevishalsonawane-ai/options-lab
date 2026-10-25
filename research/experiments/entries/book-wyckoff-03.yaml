@@ -1,0 +1,35 @@
+id: book-wyckoff-03
+title: Buy the light-volume pullback in an up move whose advances carried more volume (Wyckoff, book rule, proposed)
+family: flow-oi
+date: '2026-10-25'
+doc: research/books/TESTABLE_RULES.md
+hypothesis: 'Wyckoff''s rule from The Day Trader''s Bible (Ch. V, IX, X) makes money after real charges and slippage, walk-forward,
+  with BH across the rules tried. Signal source: underlying price/volume (index future). Entry: Swings by a ZigZag of 1 ATR(14).
+  In an uptrend (last two swing highs and lows rising), when a pullback retraces <= 50% of the last up-leg and the pullback''s
+  average bar volume is <= 0.6x the up-leg''s average bar volume, buy on the first 5m close above the prior bar''s high. Mirror
+  for downtrends. Stop: below the pullback low Exit: a new swing low (trend broken), or a pullback whose volume exceeds the
+  up-leg''s, or 15:15 (15:05 on expiry)'
+data_version: 'not run (proposed 25 Oct 2026); needs data we lack: lack: index-futures minute volume only from 29 Jul 2026'
+period:
+  design: 'not set: fixed in the pre-registration when Boss picks this rule for a round'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- underlying price/volume (index future)
+- 5-minute bars
+model_or_rule: 'Swings by a ZigZag of 1 ATR(14). In an uptrend (last two swing highs and lows rising), when a pullback retraces
+  <= 50% of the last up-leg and the pullback''s average bar volume is <= 0.6x the up-leg''s average bar volume, buy on the
+  first 5m close above the prior bar''s high. Mirror for downtrends. | stop: below the pullback low | exit: a new swing low
+  (trend broken), or a pullback whose volume exceeds the up-leg''s, or 15:15 (15:05 on expiry) | filters: entries 09:45-14:30'
+settings: 'research/books/TESTABLE_RULES.md, rule book-wyckoff-03; trade: buy 1-ITM CE on a long signal, PE on a short; stop
+  on the underlying'
+prereg: null
+variants_tried: null
+results:
+  summary: Not run. Proposed from the book; Boss chooses which rules go to a research round.
+  costs: not run; real charges and slippage apply when tested
+holdout_read: null
+verdict: proposed
+notes: 'Our nearest test: not tested by us with true volume; R86b big selling fast / buying slow (169 / 179 days), following
+  it 0 of 8. Assumptions: Book gives no thresholds; 0.6x and 50% are ours. Volume must be the future''s, not the cash index.'
