@@ -644,8 +644,9 @@ class ControlPagesTest {
         assertFalse(model.settings.value.live)
         show { RiskPage(model) }
         compose.waitForText("Bot settings")
-        compose.reveal("sells what the NSE paper bots hold", substring = true)
-        assertTrue(compose.has("Paper bots' daily loss limit (sells what the NSE paper bots hold and stops them for the day)", substring = true))
+        // (A row's title is shown in capitals.)
+        compose.reveal("SELLS WHAT THE NSE PAPER BOTS HOLD", substring = true)
+        assertTrue(compose.has("PAPER BOTS' DAILY LOSS LIMIT (SELLS WHAT THE NSE PAPER BOTS HOLD AND STOPS THEM FOR THE DAY)", substring = true))
         fun chip(text: String) { compose.reveal(text); compose.onAllNodesWithText(text)[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
         assertEquals(10_000.0, model.settings.value.guardPaperDailyLoss, 0.0)
         // Looser (₹10,000 -> ₹20,000): the PIN first; Cancel keeps it.
