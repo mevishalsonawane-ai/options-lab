@@ -134,7 +134,8 @@ object NtfyParser {
         val o = runCatching { com.optionslab.engine.orb.MiniJson.parse(json) }.getOrNull() as? Map<*, *>
             ?: return refuse("a signal that is not valid JSON (check the sender's commas and quotes)")
         if (o["type"] != "signal") return refuse("a JSON message whose type is not \"signal\"")
-        if (o["test"] == true) return refuse("a test signal (\"test\": true): read, never traded")
+        // Only an absent or false "test" trades: true, "true", 1 or anything else is a test.
+        if (o["test"] != null && o["test"] != false) return refuse("a test signal (\"test\": ${o["test"]}): read, never traded")
         fun dbl(m: Map<*, *>?, k: String): Double? = (m?.get(k) as? Number)?.toDouble()?.takeIf { it.isFinite() }
         fun str(m: Map<*, *>?, k: String): String? = (m?.get(k) as? String)?.trim()?.takeIf { it.isNotEmpty() }
         val id = str(o, "signalId")
@@ -142,7 +143,9 @@ object NtfyParser {
         val named = listOfNotNull(str(o, "yahooSymbol"), str(o, "symbol"))
         if (a != null && b != null && a != b) return refuse("symbol and yahooSymbol name different indices ($b, $a)")
         // 25 Oct (Boss: "add normal stocks"): an NSE stock ("ADANIENT.NS") is an F&O stock whose option is bought; a BSE one is not.
-        val stockSym = if (a == null && b == null) stockOf(str(o, "yahooSymbol")) else null
+        val yStock = stockOf(str(o, "yahooSymbol"))
+        if ((a != null || b != null) && yStock != null) return refuse("symbol and yahooSymbol disagree (an index and the stock $yStock)")
+        val stockSym = if (a == null && b == null) yStock else null
         if (a == null && b == null && stockSym == null) return refuse("not an index or NSE stock signal (${named.firstOrNull() ?: "no symbol"}): " +
             "NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX and NSE F&O stocks (\"X.NS\") are traded")
         val u = a ?: b ?: stockSym!!
@@ -216,6 +219,9 @@ object NtfyParser {
     private val LOT_WORDS = setOf("lot", "lots")
     /** Words that may stand between a keyword and its number ("SL @ 90", "target of 180", "lots = 2"). */
     private val BRIDGE = setOf("@", "at", "rs", "inr", "of", "is", "=")
+    /** Words that make a number an index LEVEL ("NIFTY PE below 24400"), never a strike: such a message is refused. */
+    private val LEVEL_WORDS = setOf("below", "under", "breaks", "break", "breakdown", "breakout", "support", "resistance", "spot", "level",
+        "levels", "crosses", "cross", "sustains", "sustain", "holds")
     private val MONTHS = listOf("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
 
     private val HINDI = listOf(
@@ -242,6 +248,8 @@ object NtfyParser {
     internal fun normalize(raw: String): String {
         var s = raw
         for ((a, b) in HINDI) s = s.replace(a, b)
+        // Devanagari digits read as digits ("२४५००" -> 24500), never dropped.
+        s = s.map { c -> if (c in '०'..'९') '0' + (c - '०') else c }.joinToString("")
         s = s.lowercase(Locale.ROOT)
         // Digit grouping only in a strike ("24,500 CE", "1,02,500 PE"): elsewhere a comma separates numbers ("tgt 180,220").
         s = s.replace(GROUPED_STRIKE) { m -> m.value.replace(",", "") }
@@ -411,6 +419,10 @@ object NtfyParser {
         if (words.contains("%") && stopPct == null) return refuse("a percentage not understood (only 'SL 20%')")
         if (odd.isNotEmpty()) return refuse("a number not understood (${num(toks[odd.first()].n!!)}): write @ for the entry, SL for the stop, TGT for the target")
         if (strikes.size > 1) return refuse("two strikes named (${strikes.joinToString(" and ") { num(it) }})")
+        // A level word beside a big number: an index level, not a strike (strict: refused, never guessed).
+        if (strikes.isNotEmpty() && words.any { it in LEVEL_WORDS }) return refuse("names an index level (below / breaks / support ...), not a strike - not traded")
+        // A premium of 1000 or more is an index level written as a price ("above 24500"): refused.
+        listOfNotNull(entry, stop, target).firstOrNull { it >= 1000 }?.let { return refuse("a price of ${num(it)} looks like an index level, not a premium") }
         val strike = strikes.firstOrNull()
         stopPct?.let { if (it <= 0 || it >= 100) return refuse("the stop percentage must be between 0 and 100") }
         listOfNotNull(entry, stop, target).firstOrNull { it <= 0 }?.let { return refuse("a price of zero") }

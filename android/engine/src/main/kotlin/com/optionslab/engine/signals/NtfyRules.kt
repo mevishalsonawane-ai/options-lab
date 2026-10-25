@@ -233,8 +233,14 @@ object NtfyRules {
     /** The catch-up address: the messages after [since], and the connection closes. */
     fun pollUrl(server: String, topic: String, since: String): String = "$server/$topic/json?poll=1&since=$since"
 
-    /** Where to read from: after the last id read, else [staleMin] minutes back from [nowEpoch] (older ones would be stale anyway). */
-    fun since(last: String?, nowEpoch: Long, staleMin: Int): String = last ?: (nowEpoch - staleMin * 60L).toString()
+    /**
+     * Where to read from: after the last id read while that message is recent ([lastAtEpoch] within [staleMin] minutes); else
+     * [staleMin] minutes back from [nowEpoch] - an old id may have left the server's cache (anything older is stale anyway).
+     */
+    fun since(last: String?, lastAtEpoch: Long?, nowEpoch: Long, staleMin: Int): String {
+        val from = nowEpoch - staleMin * 60L
+        return if (last != null && lastAtEpoch != null && lastAtEpoch >= from) last else from.toString()
+    }
 
     /** The wait before reconnect [attempt] (0 the first): 1 s, 2 s, 4 s ... at most 60 s. */
     fun backoffMs(attempt: Int): Long = (1_000L shl attempt.coerceIn(0, 6)).coerceAtMost(60_000L)

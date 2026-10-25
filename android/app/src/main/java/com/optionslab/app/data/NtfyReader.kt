@@ -159,7 +159,10 @@ object NtfyReader {
             val topic = c.topic ?: break
             val ok = runCatching {
                 // The catch-up poll first (after a restart or a gap), then the stream from the last id read.
-                val since = NtfyRules.since(NtfyArm.view.value.last ?: NtfyArm.refresh().last, nowEpoch(), NtfyArm.view.value.settings.staleMin)
+                val v = if (NtfyArm.view.value.last != null) NtfyArm.view.value else NtfyArm.refresh()
+                // After the last id read while it is recent; else the last few minutes (an old id may have left the server's cache).
+                val lastAt = v.alerts.firstOrNull { it.id == v.last }?.readAt?.atZone(com.optionslab.engine.IST)?.toEpochSecond()
+                val since = NtfyRules.since(v.last, lastAt, nowEpoch(), v.settings.staleMin)
                 read(NtfyRules.pollUrl(c.server, topic, since), c)
                 val after = NtfyArm.view.value.last ?: since
                 _status.value = _status.value.copy(connected = true, said = "connected", failures = 0)

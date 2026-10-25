@@ -116,6 +116,8 @@ object NtfyArm {
         val log: ArrayList<String> = ArrayList(),
         /** alertId -> an entry order a cancel could not take out (settled on the next pass, never a second BUY beside it). */
         val pending: MutableMap<String, String> = HashMap(),
+        /** Messages whose BUY is being placed: written before the order, so a restart in between never orders them again. */
+        val ordering: MutableSet<String> = HashSet(),
     )
 
     data class View(val on: Boolean = false, val settings: NtfyRules.Settings = NtfyRules.Settings(), val open: List<Pos> = emptyList(),
@@ -182,6 +184,7 @@ object NtfyArm {
             b.status.readFrom(o, runCatching { f.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { b.pending[it] = m.getString(it) } }
+            o.optJSONArray("ordering")?.let { a -> for (i in 0 until a.length()) b.ordering += a.getString(i) }
         }.isSuccess
         if (!ok && f != null && f.exists()) runCatching { Vault.setAside(f) }
         cache = b
@@ -196,11 +199,13 @@ object NtfyArm {
      */
     private fun migrate(b: Book) {
         val old = oldFile?.takeIf { it.exists() } ?: return publish(b)
-        val moved = runCatching {
-            val o = JSONObject(String(Vault.readFileSteady(old) ?: return@runCatching emptyList<Pos>(), Charsets.UTF_8))
+        val read = runCatching {
+            val o = JSONObject(String(Vault.readFileSteady(old) ?: error("unreadable"), Charsets.UTF_8))
             val a = o.optJSONArray("positions") ?: return@runCatching emptyList<Pos>()
             (0 until a.length()).map { posOf(a.getJSONObject(it), legacy = true) }.filter { it.open }
-        }.getOrElse { emptyList() }
+        }
+        // Not read (the Keystore not ready yet, or damaged): left in place and tried again on the next start - never deleted unread.
+        val moved = read.getOrElse { runCatching { Diag.record("ntfy", "the removed Telegram calls arm's book could not be read yet: kept") }; return publish(b) }
         val fresh = moved.filter { m -> b.positions.none { it.ref == m.ref } }
         b.positions += fresh
         if (fresh.isNotEmpty()) note(b, "moved ${fresh.size} open paper trade(s) of the removed Telegram calls arm here: managed until they close")
@@ -226,6 +231,7 @@ object NtfyArm {
             .put("ids", JSONArray(b.read.ids)).put("signals", JSONArray(b.signals.toList()))
             .put("log", JSONArray(b.log.takeLast(200)))
             .put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k, v) } })
+            .put("ordering", JSONArray(b.ordering.toList()))
         b.read.last?.let { o.put("last", it) }
         b.status.writeTo(o)
         val ok = file?.let { f -> runCatching { written.write(f, o.toString().toByteArray(Charsets.UTF_8)) }.getOrDefault(false) } ?: false
@@ -327,18 +333,30 @@ object NtfyArm {
             val body = e.message?.let { NtfyRules.afterPrefix(it, prefix) }
             val title = e.title?.let { NtfyRules.afterPrefix(it, prefix) }
             if (prefix.isNotBlank() && body == null && title == null) { keep(NOT_TRADED, "does not start with your prefix"); continue }
-            val p = NtfyParser.read(title ?: e.title, body ?: e.message, now.toLocalDate())
-            val sent = (p as? Parsed.Buy)?.sentAt?.let { maxOf(it, e.at()) } ?: e.at()
-            val sid = (p as? Parsed.Buy)?.signalId ?: (p as? Parsed.Exit)?.signalId
+            // What is kept for the pass is exactly what was read here (the prefix taken off): the pass reads it the same way.
+            val t0 = title ?: e.title; val b0 = body ?: e.message
+            val p = NtfyParser.read(t0, b0, now.toLocalDate())
+            // A signal's own time and the server's: the EARLIER counts (an old signal posted late is stale).
+            val sent = (p as? Parsed.Buy)?.sentAt?.let { minOf(it, e.at()) } ?: e.at()
+            val sid = ((p as? Parsed.Buy)?.signalId?.let { "$it|buy" }) ?: (p as? Parsed.Exit)?.signalId?.let { "$it|exit" }
             when {
                 p is Parsed.Refused -> keep(NOT_TRADED, p.reason)
-                sid != null && !b.signals.add(sid) -> keep(NOT_TRADED, "the same signal id was read before - traded once only")
+                sid != null && !b.signals.add(sid) -> keep(NOT_TRADED, "the same signal id was read before - acted on once only")
+                // An exit only lowers risk: honoured the same day whatever the switch or its age.
+                p is Parsed.Exit -> if (sent.toLocalDate() == now.toLocalDate()) keep(PENDING, "read: ${p.line()}", t0?.take(500), b0?.take(4_000))
+                    else keep(NOT_TRADED, "stale, not acted on: an exit from an earlier day")
                 !b.on -> keep(NOT_TRADED, "read; ntfy alerts is off")
                 else -> NtfyRules.stale(sent, now, b.settings.staleMin)?.let { keep(NOT_TRADED, it) }
-                    ?: keep(PENDING, "read: ${(p as? Parsed.Buy)?.line() ?: (p as? Parsed.Exit)?.line()}", e.title?.take(500), e.message?.take(4_000))
+                    ?: keep(PENDING, "read: ${(p as? Parsed.Buy)?.line()}", t0?.take(500), b0?.take(4_000))
             }
         }
-        if (fresh > 0) save(b)
+        if (fresh > 0 && !save(b)) {
+            // Read once means written before acting: what could not be written is never acted on.
+            for (i in b.alerts.indices) if (b.alerts[i].state == PENDING && b.alerts[i].id !in placing)
+                b.alerts[i] = b.alerts[i].copy(state = NOT_TRADED, why = "could not be saved, so not acted on", title = null, body = null)
+            note(b, "a message could not be saved: not acted on")
+            publish(b)
+        }
         fresh
     }
 
@@ -359,6 +377,10 @@ object NtfyArm {
     suspend fun tick() {
         if (com.optionslab.app.BuildConfig.GOLD) return
         val now = now()
+        if (cache == null) lock.withLock { book() }
+        // The prices this pass needs (the underlyings of held trades with their own levels, and of waiting buys), read BEFORE the
+        // lock: the 15-second stop check never waits behind a network read.
+        spotsNow = prefetch()
         lock.withLock {
             val b = book()
             var changed = runCatching { exits(b, now, indexLevels = true) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true }
@@ -370,7 +392,11 @@ object NtfyArm {
         }
     }
 
+    /** This run's own orders being placed (memory): one in [Book.ordering] but not here was interrupted by a restart. */
+    private val placing: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
+
     private fun finish(b: Book, a: Alert, state: String, why: String): Boolean {
+        b.ordering.remove(a.id); placing.remove(a.id)
         val i = b.alerts.indexOfFirst { it.id == a.id }
         if (i >= 0) b.alerts[i] = a.copy(state = state, why = why, title = null, body = null)
         b.pending.remove(a.id)
@@ -386,6 +412,9 @@ object NtfyArm {
     }
 
     private suspend fun decide(b: Book, a: Alert, now: LocalDateTime): Boolean {
+        // Its BUY was being placed when the app stopped: never placed again (a fill is in the paper book, kept by the orphan watch).
+        if (a.id in b.ordering && a.id !in placing && a.id !in b.pending)
+            return finish(b, a, NOT_TRADED, "interrupted while its order was placed - not ordered again (check Paper for a fill)")
         val p = NtfyParser.read(a.title, a.body, a.at.toLocalDate())
         return when (p) {
             is Parsed.Refused -> finish(b, a, NOT_TRADED, p.reason)
@@ -440,6 +469,23 @@ object NtfyArm {
         return saved.second.filter { it.underlying == u }
     }
 
+    /** The underlyings' prices read for this pass, before the lock ([prefetch]). */
+    @Volatile private var spotsNow: Map<String, Double> = emptyMap()
+
+    /** The underlyings this pass may need, and their prices; stock lists warmed in memory. Off the lock; never throws. */
+    private suspend fun prefetch(): Map<String, Double> {
+        val v = _view.value
+        val wanted = LinkedHashSet<String>()
+        v.open.filter { it.idxStop != null || it.idxTarget != null }.forEach { wanted += it.index }
+        for (a in v.alerts) if (a.state == PENDING) (NtfyParser.read(a.title, a.body, a.at.toLocalDate()) as? Parsed.Buy)?.let { p ->
+            if (p.strike == null || p.stock) wanted += p.index
+            if (p.stock) runCatching { StockOptions.listed(p.index) }
+        }
+        val out = HashMap<String, Double>()
+        for (u in wanted) runCatching { spot(u) }.getOrNull()?.let { out[u] = it }
+        return out
+    }
+
     /** The index's (or the stock's) last price: its last finished minute (the quick read: 5 s connect, one retry), or null. */
     private suspend fun spot(u: String): Double? {
         testSpot?.let { return it(u) }
@@ -463,14 +509,16 @@ object NtfyArm {
             }
         }
         if (!b.on) return done("ntfy alerts was switched off before it was traded")
-        val sent = p.sentAt?.let { maxOf(it, a.at) } ?: a.at
+        // Another message's entry order still working: settled first, never a second BUY beside it.
+        if (b.pending.keys.any { it != a.id }) return say(b, "an entry order is still working; settled before anything new")
+        val sent = p.sentAt?.let { minOf(it, a.at) } ?: a.at
         val tradingDay = runCatching { Market.isTradingDay(now.toLocalDate()) }.getOrDefault(false)
         NtfyRules.marketRefusal(now, tradingDay, false)?.let { return done("not traded: $it") }
         if (NtfyRules.phase(sent, now, s, false) == NtfyRules.Phase.LATE)
             return done(NtfyRules.stale(sent, now, s.staleMin) ?: "not filled within ${s.staleMin} minutes - no order")
         val today = now.toLocalDate()
         val mine = b.positions.filter { !it.legacy && it.day == today }
-        NtfyRules.refusal(mine.size, mine.sumOf { it.net ?: 0.0 }, s)?.let { return done("not traded: $it") }
+        NtfyRules.refusal(mine.size + b.pending.size, mine.sumOf { it.net ?: 0.0 }, s)?.let { return done("not traded: $it") }
         if (b.positions.any { it.open && it.index == p.index }) return done("not traded: ntfy alerts already holds a ${p.index} trade")
         // The kill switch, the bot's stop for today, the day lock and the guard: nothing bypasses them.
         if (runCatching { AppSettings.load().guardKill }.getOrDefault(true)) return done("refused: the kill switch is on")
@@ -484,10 +532,10 @@ object NtfyArm {
         val exp = NtfyRules.expiryFor(list.map { it.expiry }, today, p.expiry) ?: return done("not traded: the expiry asked for is not listed today")
         val right = p.right
         val strikes = list.filter { it.expiry == exp && it.right == right }.map { it.strike }
-        // A stock signal names its strike: never another stock strike by a rule.
-        if (p.stock && p.strike !in strikes) return done("not traded: ${p.index} ${p.strike?.let { NtfyParser.num(it) }} ${right.name} is not listed for $exp")
-        val strike = p.strike?.takeIf { it in strikes } ?: run {
-            val px = spot(p.index) ?: return say(b, "waiting for ${p.index}'s price")
+        // A named strike must be listed: never another strike by a rule in its place (strict).
+        if (p.strike != null && p.strike !in strikes) return done("not traded: ${p.index} ${p.strike?.let { NtfyParser.num(it) }} ${right.name} is not listed for $exp")
+        val strike = p.strike ?: run {
+            val px = spotsNow[p.index] ?: return say(b, "waiting for ${p.index}'s price")
             NtfyRules.strikeFor(strikes, px, right, p.pick ?: s.strikeRule) ?: return done("not traded: no ${p.index} strike for the rule")
         }
         val expiryDay = exp == today
@@ -514,6 +562,9 @@ object NtfyArm {
         // The guard's verdict stamped with this order's fingerprint, its stop and target with it ([OrderVerdicts]).
         val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, "LIMIT", "MIS", limit, null, today, NtfyRules.OWNER,
             stop = stop0, target = target0), refusals, "paper guard")
+        // Written before the order (read once): a restart between the order and the book's save never orders it again.
+        b.ordering += a.id; placing += a.id
+        if (!save(b)) { b.ordering.remove(a.id); placing.remove(a.id); return done("not traded: the book could not be saved before the order") }
         // A LIMIT BUY on the PAPER account (1% above the price at most); not filled at once, cancelled and tried next pass.
         val res = Paper.place(c, "BUY", lots, "LIMIT", "MIS", limit, null, known = q, auto = NtfyRules.OWNER, verdict = verdict, stop = stop0, target = target0)
         val fill = res.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
@@ -553,12 +604,11 @@ object NtfyArm {
     /** Each open trade's exit, when due ([indexLevels]: also a signal's index stop and target, read from the index's price). */
     private suspend fun exits(b: Book, now: LocalDateTime, indexLevels: Boolean): Boolean {
         var changed = false
-        val spots = HashMap<String, Double?>()
         for (i in b.positions.indices) {
             val p = b.positions[i]
             if (!p.open) continue
             val lvl = if (indexLevels && (p.idxStop != null || p.idxTarget != null))
-                NtfyRules.indexExit(Right.valueOf(p.right), spots.getOrPut(p.index) { runCatching { spot(p.index) }.getOrNull() }, p.idxStop, p.idxTarget) else null
+                NtfyRules.indexExit(Right.valueOf(p.right), spotsNow[p.index], p.idxStop, p.idxTarget) else null
             val next = runCatching { if (lvl != null) Paper.contractOf(p.symbol)?.let { sellRest(p, it, lvl) } ?: p else exitOne(p, now) }.getOrNull() ?: continue
             // Its stop (moved to cost at T1) for its live trade, and its close ([ArmLive]; memory only).
             runCatching { ArmLive.level(next.ref, next.stop) }

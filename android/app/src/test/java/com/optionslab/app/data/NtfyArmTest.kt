@@ -317,14 +317,51 @@ class NtfyArmTest : RobolectricTest() {
         assertEquals("index stop", v().closed.single().why)
         // Stock options switched off: a stock signal is not traded; a strike not listed is not traded.
         runBlocking { NtfyArm.setSettings(NtfyRules.Settings(stocks = false)) }
-        msg("s2", j.replace("|1\"", "|2\""), LocalTime.of(9, 33), title = "signal")
+        msg("s2", j.replace("|1\"", "|2\"").replace("T09:28", "T09:33"), LocalTime.of(9, 33), title = "signal")
         at(LocalTime.of(9, 33), 30); runBlocking { NtfyArm.tick() }
         assertTrue(alert("s2").why, alert("s2").why.contains("stock options are switched off"))
         runBlocking { NtfyArm.setSettings(NtfyRules.Settings(stocks = true)) }
-        msg("s3", j.replace("|1\"", "|3\"").replace("\"strike\":2500", "\"strike\":2600"), LocalTime.of(9, 34), title = "signal")
+        msg("s3", j.replace("|1\"", "|3\"").replace("T09:28", "T09:34").replace("\"strike\":2500", "\"strike\":2600"), LocalTime.of(9, 34), title = "signal")
         at(LocalTime.of(9, 34), 30); runBlocking { NtfyArm.tick() }
         assertTrue(alert("s3").why, alert("s3").why.contains("not listed"))
         assertNothingAtZerodha()
+    }
+
+    /** 25 Oct review fixes: exits honoured while off; a named strike not listed is refused; an old signal posted late is stale. */
+    @Test fun reviewFixesExitWhileOffStrictStrikeAndOldSignalTime() {
+        on()
+        msg("b1", "BUY NIFTY 25000 CE")
+        tick(LocalTime.of(9, 28), 30)
+        assertEquals(1, v().open.size)
+        runBlocking { NtfyArm.setOn(false) }
+        msg("x1", "EXIT NIFTY", LocalTime.of(9, 31))
+        assertEquals("an exit is read even while off", NtfyArm.PENDING, alert("x1").state)
+        tick(LocalTime.of(9, 31), 30)
+        assertEquals("exit message", v().closed.single().why)
+        on()
+        msg("u1", "BUY NIFTY 26000 CE", LocalTime.of(9, 33))
+        tick(LocalTime.of(9, 33), 30)
+        assertTrue(alert("u1").why, alert("u1").why.contains("not listed"))
+        // A signal stamped yesterday evening, delivered this morning: its own time counts - stale.
+        val old = """{"type":"signal","test":false,"source":"IraThinker","version":51,"strategy":"S","signalId":"OLD-1","tsIST":"${day.minusDays(1)}T23:12:44+05:30",""" +
+            """"symbol":"NIFTY","yahooSymbol":"^NSEI","side":"BUY_CALL","entry":null,"stop":null,"target1":null,"target2":null,"score":null,""" +
+            """"option":{"strike":25000,"expiry":null,"kind":"CE","premium":null}}"""
+        msg("o1", old, LocalTime.of(9, 34), title = "signal")
+        assertTrue(alert("o1").why, alert("o1").why.contains("earlier day"))
+        assertEquals(1, v().closed.size + v().open.size)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun aPrefixedJsonSignalIsReadTheSameWayWhenDecided() {
+        on()
+        SecurePrefs.put(NtfyReader.K_PREFIX, "IRA")
+        val j = """IRA {"type":"signal","test":false,"source":"IraThinker","version":51,"strategy":"S","signalId":"P-1",""" +
+            """"symbol":"NIFTY","yahooSymbol":"^NSEI","side":"BUY_PUT","entry":null,"stop":null,"target1":null,"target2":null,"score":null,""" +
+            """"option":{"strike":25000,"expiry":null,"kind":"PE","premium":null}}"""
+        msg("p1", j)
+        assertEquals(NtfyArm.PENDING, alert("p1").state)
+        tick(LocalTime.of(9, 28), 30)
+        assertTrue(alert("p1").why, v().open.single().symbol.endsWith("25000PE"))
     }
 
     @Test fun aPrefixFiltersMessages() {

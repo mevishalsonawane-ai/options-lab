@@ -47,6 +47,7 @@ class NtfyParserTest {
         assertEquals(Parsed.Buy("BANKNIFTY", Right.PE), buy("बैंक निफ्टी पुट"))
         assertEquals(Parsed.Buy("SENSEX", Right.CE), buy("सेंसेक्स तेजी"))
         assertEquals(Parsed.Buy("NIFTY", Right.PE, stop = 90.0, target = 180.0), buy("निफ्टी मंदी स्टॉप लॉस 90 टारगेट 180"))
+        assertEquals(Parsed.Buy("NIFTY", Right.CE, 24500.0, stop = 90.0), buy("निफ्टी २४५०० कॉल SL ९०"))
         assertEquals(Parsed.Exit("NIFTY"), NtfyParser.parse("निफ्टी बेचो", day))
     }
 
@@ -141,6 +142,11 @@ class NtfyParserTest {
         assertTrue(refused("NIFTY ATM 24500 CE").contains("both a strike"))
         assertTrue(refused("NIFTY ATM OTM CE").contains("two strike choices"))
         assertTrue(refused("NIFTY CE " + "x".repeat(700)).contains("too long"))
+        // 25 Oct review: index levels are never strikes or premiums.
+        assertTrue(refused("NIFTY PE below 24400").contains("index level"))
+        assertTrue(refused("NIFTY CE breaks 24500").contains("index level"))
+        assertTrue(refused("NIFTY CE above 24500").contains("looks like an index level"))
+        assertTrue(refused("NIFTY CE SL 24400").contains("looks like an index level"))
     }
 
     @Test fun bossSenderAlerts() {
@@ -232,6 +238,10 @@ class NtfyParserTest {
     @Test fun aSignalIsRefused() {
         fun r(j: String) = assertIs<Parsed.Refused>(read(j)).reason
         assertTrue(r(sig(test = true)).contains("test signal"))
+        assertTrue(r(sig().replace("\"test\":false", "\"test\":\"true\"")).contains("test signal"))
+        assertTrue(r(sig().replace("\"test\":false", "\"test\":1")).contains("test signal"))
+        assertTrue(assertIs<Parsed.Buy>(read(sig().replace("\"test\":false,", ""))).index == "NIFTY", "no test field: a real signal")
+        assertTrue(r(sig(symbol = "NIFTY", yahoo = "ADANIENT.NS")).contains("disagree"))
         assertTrue(r(sig(symbol = "TEST", yahoo = "TEST")).contains("not an index or NSE stock signal (TEST)"))
         assertTrue(r(sig(symbol = "Reliance", yahoo = "RELIANCE.BO", strike = "2500")).contains("not an index or NSE stock signal"))
         assertTrue(r(sig(symbol = "Reliance", yahoo = "RELIANCE.NS")).contains("needs its option strike"))

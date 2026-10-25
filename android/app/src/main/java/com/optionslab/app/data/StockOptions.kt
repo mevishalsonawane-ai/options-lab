@@ -30,8 +30,15 @@ object StockOptions {
 
     private fun today(): LocalDate = runCatching { Market.today() }.getOrElse { LocalDate.now() }
 
-    /** The saved list's day, or null when there is none. */
-    fun savedDay(): LocalDate? = runCatching { file?.takeIf { it.exists() }?.bufferedReader()?.use { it.readLine() }?.removePrefix("day=")?.let { LocalDate.parse(it) } }.getOrNull()
+    /** The saved list's day, kept in memory once read (the refresh sets it): the pass never reads the file for it again. */
+    @Volatile private var dayKept: Pair<Boolean, LocalDate?> = false to null
+
+    fun savedDay(): LocalDate? {
+        if (dayKept.first) return dayKept.second
+        return readDay().also { dayKept = true to it }
+    }
+
+    private fun readDay(): LocalDate? = runCatching { file?.takeIf { it.exists() }?.bufferedReader()?.use { it.readLine() }?.removePrefix("day=")?.let { LocalDate.parse(it) } }.getOrNull()
 
     /** Today's list is saved. */
     fun ready(): Boolean = savedDay() == today()
@@ -54,7 +61,7 @@ object StockOptions {
             for (c in opts) w.write(listOf("C", c.underlying, c.expiry, c.strike, c.right.name, c.lotSize, c.instrumentKey, c.tradingSymbol.replace('\t', ' ')).joinToString("\t") + "\n")
         }
         if (!tmp.renameTo(f)) { f.writeText(tmp.readText()); tmp.delete() }
-        mem.clear(); keys = null
+        mem.clear(); keys = null; dayKept = true to today()
         runCatching { Diag.record("ntfy", "stock options list saved: ${eq.size} stocks, ${opts.size} options") }
     }
 
@@ -90,5 +97,5 @@ object StockOptions {
     }
 
     /** For tests. */
-    internal fun wipe() { mem.clear(); keys = null; testFetch = null; file?.delete() }
+    internal fun wipe() { mem.clear(); keys = null; testFetch = null; file?.delete(); dayKept = false to null }
 }
