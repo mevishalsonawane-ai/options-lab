@@ -138,6 +138,42 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(PassedArmsHost.SOURCES.none { view().on(it) })
     }
 
+    /**
+     * 25 Oct (app audit): a read of the book that fails for a moment (a Keystore hiccup) is not a damaged file: the book is never
+     * set aside for it (that switched every arm off and forgot what they held), nothing is cached, and the next read finds the
+     * arms as they were. A file that fails authentication is still set aside.
+     */
+    @Test fun aReadThatFailsForAMomentNeverEmptiesTheBook() {
+        only(OovArm.SOURCE)
+        assertTrue(PassedArmsHost.awaitWrites(20_000L))
+        assertTrue(bookFile.exists())
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        PassedArmsHost.testRead = { throw java.security.ProviderException("keystore busy") }
+        try {
+            assertTrue("the read is thrown, not an empty book", runCatching { runBlocking { PassedArmsHost.refresh() } }.isFailure)
+            assertTrue("a switch flip waits for a readable book", runCatching { runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, true, log = false) } }.isFailure)
+        } finally { PassedArmsHost.testRead = null }
+        assertTrue("never set aside", bookFile.exists())
+        assertTrue(context.filesDir.listFiles().orEmpty().none { it.name.startsWith("passed_arms.vault.unreadable") })
+        val v = view()
+        assertTrue("the arm is still on", v.on(OovArm.SOURCE))
+        assertFalse(v.on(DonchianArm.SOURCE))
+        // A failure that does not clear: after a few in a row the book is set aside as before (the orphan watch takes back what is held).
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        PassedArmsHost.testRead = { throw java.security.ProviderException("the key is gone") }
+        try {
+            repeat(PassedArmsHost.READ_FAILS_BEFORE_ASIDE - 1) { assertTrue(runCatching { runBlocking { PassedArmsHost.refresh() } }.isFailure) }
+            assertTrue(bookFile.exists())
+            assertTrue("set aside on the last one", runCatching { runBlocking { PassedArmsHost.refresh() } }.isSuccess)
+        } finally { PassedArmsHost.testRead = null }
+        assertTrue(context.filesDir.listFiles().orEmpty().any { it.name.startsWith("passed_arms.vault.unreadable") })
+        assertTrue(PassedArmsHost.SOURCES.none { view().on(it) })
+        // Bytes that fail authentication: set aside, as before (and never switched on by themselves).
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(PassedArmsHost.SOURCES.none { view().on(it) })
+        assertTrue(context.filesDir.listFiles().orEmpty().any { it.name.startsWith("passed_arms.vault.unreadable") })
+    }
+
     @Test fun theChangeLogsUndoSwitchesAnArmOffAndOnlyIt() {
         only(DonchianArm.SOURCE)
         val on = AutoChange.passedArmOn(DonchianArm.SOURCE, DonchianArm.LABEL, DonchianArm.RESEARCH_ID)
