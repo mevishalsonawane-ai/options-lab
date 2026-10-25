@@ -151,6 +151,23 @@ object NtfyRules {
         else -> stale(msgAt, now, staleMin)
     }
 
+    /** The reader's day starts here (the F&O close, [NseHours.foClose], ends it). */
+    val READ_FROM: LocalTime = LocalTime.of(9, 0)
+
+    /**
+     * 25 Oct (review): why a message received at [now] is outside the reader's hours (a trading day, 09:00 to the F&O close
+     * [closeMin], minutes of the day), or null inside them. Outside, the reader stops and a message is recorded, never pending.
+     */
+    fun outsideHours(now: LocalDateTime, tradingDay: Boolean, closeMin: Int): String? {
+        val m = now.hour * 60 + now.minute
+        return when {
+            !tradingDay -> "outside market hours, not traded: market closed today (a weekend or a market holiday)"
+            now.toLocalTime().isBefore(READ_FROM) -> "outside market hours, not traded: before 09:00"
+            m >= closeMin -> "outside market hours, not traded: after the F&O close (%02d:%02d)".format(Locale.ENGLISH, closeMin / 60, closeMin % 60)
+            else -> null
+        }
+    }
+
     /** Why nothing new may be bought at [now] on a day that is [tradingDay] (expiring today: [expiryDay]), or null. */
     fun marketRefusal(now: LocalDateTime, tradingDay: Boolean, expiryDay: Boolean): String? = when {
         !tradingDay -> "market closed today (a weekend or a market holiday)"

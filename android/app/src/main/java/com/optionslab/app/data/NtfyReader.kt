@@ -33,7 +33,8 @@ import java.util.concurrent.TimeUnit
  * missed; then the stream (".../json?since=<last id>"), held open (ntfy sends a keepalive every 45 s; 90 s of silence is a dead
  * line). On any failure: the next try after 1 s, 2 s, 4 s ... at most 60 s, and each new connection starts with the catch-up poll
  * again. Overlaps are harmless: an id already read is skipped. It runs while ntfy alerts is on and a topic is set, on trading days
- * from 09:00 to the F&O close (messages outside are stale anyway and are caught up, as stale, by the next start's poll). Under
+ * from 09:00 to the F&O close: each reconnect and a 30-second timer check the hours and stop it outside them (25 Oct review); a
+ * message read outside them is recorded "outside market hours, not traded" and never waits to be decided. Under
  * memory pressure it is closed before anything that watches positions ([releaseForMemory]); the next round starts it again.
  */
 object NtfyReader {
@@ -117,10 +118,12 @@ object NtfyReader {
     // ---- running -----------------------------------------------------------------------------------------------------------
 
     private fun inHours(): Boolean = testInHours ?: runCatching {
-        val n = Market.now()
-        val m = n.hour * 60 + n.minute
-        Market.isTradingDay(n.toLocalDate()) && m in (9 * 60) until com.optionslab.engine.NseHours.foClose(n.toLocalDate())
+        val n = Market.now().toLocalDateTime()
+        NtfyRules.outsideHours(n, Market.isTradingDay(n.toLocalDate()), com.optionslab.engine.NseHours.foClose(n.toLocalDate())) == null
     }.getOrDefault(false)
+
+    /** 25 Oct (review): how often a running reader checks the hours (it stops at the F&O close, not at the next in-session round). */
+    @Volatile internal var hoursCheckMs: Long = 30_000L
 
     /** Start the reader when it should run (on, a topic set, in hours), stop it when not. Cheap; off the main thread. */
     fun ensure() {
@@ -135,7 +138,12 @@ object NtfyReader {
 
     @Synchronized private fun start() {
         if (job?.isActive == true) return
-        job = scope.launch { loop() }
+        job = scope.launch {
+            // 25 Oct (review): the stream is held open for hours; outside them (after the F&O close) it is stopped by this timer,
+            // not left open all night waiting for the next in-session round's [ensure].
+            val hours = launch { while (isActive) { delay(hoursCheckMs); if (!inHours()) { stop("outside market hours"); break } } }
+            try { loop() } finally { hours.cancel() }
+        }
     }
 
     @Synchronized fun stop(why: String) {
@@ -155,6 +163,8 @@ object NtfyReader {
         var attempt = 0
         _status.value = Status(running = true, said = "starting")
         while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+            // 25 Oct (review): every (re)connect checks the hours first - never a new connection after the F&O close.
+            if (!inHours()) { _status.value = _status.value.copy(said = "stopped (outside market hours)"); break }
             val c = config()
             val topic = c.topic ?: break
             val ok = runCatching {

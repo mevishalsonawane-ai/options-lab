@@ -222,6 +222,22 @@ class NtfyArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /** 25 Oct review: a message read outside the reader's hours (09:00 to the F&O close, trading days) is recorded, never pending. */
+    @Test fun aMessageReadOutsideMarketHoursIsNeverPending() {
+        on()
+        msg("dawn", "BUY NIFTY 25000 CE", LocalTime.of(8, 0))
+        assertEquals(NtfyArm.NOT_TRADED, alert("dawn").state)
+        assertTrue(alert("dawn").why, alert("dawn").why.startsWith("outside market hours, not traded"))
+        msg("night", "EXIT NIFTY", LocalTime.of(15, 45))
+        assertEquals(NtfyArm.NOT_TRADED, alert("night").state)
+        assertTrue(alert("night").why, alert("night").why.contains("after the F&O close"))
+        assertFalse(NtfyArm.wantsPass())
+        // Inside the hours it still waits for the pass.
+        msg("in", "BUY NIFTY 25000 CE", LocalTime.of(9, 1))
+        assertEquals(NtfyArm.PENDING, alert("in").state)
+        assertNothingAtZerodha()
+    }
+
     @Test fun aHolidayOrWeekendIsMarketClosed() {
         on()
         var d = day.plusDays(1)

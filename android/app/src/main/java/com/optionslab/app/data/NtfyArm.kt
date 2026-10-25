@@ -322,6 +322,9 @@ object NtfyArm {
         val b = book()
         var fresh = 0
         val now = now()
+        // 25 Oct (review): outside the reader's hours (a trading day, 09:00 to the F&O close) nothing read becomes pending.
+        val outside = runCatching { NtfyRules.outsideHours(now, Market.isTradingDay(now.toLocalDate()), com.optionslab.engine.NseHours.foClose(now.toLocalDate())) }
+            .getOrDefault("outside market hours, not traded: the market's day could not be read")
         for (e in events) {
             if (!e.isMessage || !b.read.mark(e.id)) continue
             fresh++
@@ -333,6 +336,7 @@ object NtfyArm {
             val body = e.message?.let { NtfyRules.afterPrefix(it, prefix) }
             val title = e.title?.let { NtfyRules.afterPrefix(it, prefix) }
             if (prefix.isNotBlank() && body == null && title == null) { keep(NOT_TRADED, "does not start with your prefix"); continue }
+            if (outside != null) { keep(NOT_TRADED, outside); continue }
             // What is kept for the pass is exactly what was read here (the prefix taken off): the pass reads it the same way.
             val t0 = title ?: e.title; val b0 = body ?: e.message
             val p = NtfyParser.read(t0, b0, now.toLocalDate())

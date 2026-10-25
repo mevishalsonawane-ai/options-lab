@@ -47,6 +47,7 @@ class NtfyReaderTest : RobolectricTest() {
 
     @After fun down() {
         NtfyReader.wipe()
+        NtfyReader.hoursCheckMs = 30_000L
         Market.testClock = null
         server.shutdown()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -110,6 +111,36 @@ class NtfyReaderTest : RobolectricTest() {
         assertFalse(NtfyReader.status.value.running)
         assertEquals(0, server.requestCount)
         assertEquals("Type your topic first.", runBlocking { SecurePrefs.put(NtfyReader.K_TOPIC, null); NtfyReader.test() })
+    }
+
+    /** 25 Oct review: the stream stayed open all night (the hours were checked only by the in-session round). */
+    @Test fun theReaderStopsItselfOutsideMarketHours() {
+        NtfyReader.hoursCheckMs = 50
+        server.enqueue(MockResponse().setBody(""))
+        server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+        NtfyReader.ensure()
+        waitFor("connected") { NtfyReader.status.value.connected }
+        waitFor("the stream asked for") { server.requestCount == 2 }
+        // The F&O close passes while the stream is open: the timer stops it, with no new request.
+        NtfyReader.testInHours = false
+        waitFor("stopped by the timer") { !NtfyReader.status.value.running }
+        assertTrue(NtfyReader.status.value.said, NtfyReader.status.value.said.contains("outside market hours"))
+        Thread.sleep(300)
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test fun aReconnectAfterHoursNeverConnects() {
+        NtfyReader.hoursCheckMs = 60_000
+        server.enqueue(MockResponse().setBody(""))
+        // The stream ends; by then the market has closed: no reconnect.
+        server.enqueue(MockResponse().setBody(keepalive()).setBodyDelay(800, TimeUnit.MILLISECONDS))
+        NtfyReader.ensure()
+        waitFor("connected") { NtfyReader.status.value.connected }
+        NtfyReader.testInHours = false
+        waitFor("the loop ended") { !NtfyReader.status.value.running }
+        Thread.sleep(1_500)
+        assertEquals("no poll after hours", 2, server.requestCount)
+        assertTrue(NtfyReader.status.value.said, NtfyReader.status.value.said.contains("outside market hours"))
     }
 
     @Test fun testFetchesWithoutTradingOrMarkingRead() {

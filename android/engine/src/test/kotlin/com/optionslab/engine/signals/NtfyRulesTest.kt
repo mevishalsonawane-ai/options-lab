@@ -82,6 +82,16 @@ class NtfyRulesTest {
         assertNull(NtfyRules.entryRefusal(at(10, 0), at(10, 5), 5))
     }
 
+    @Test fun theReadersHours() {
+        val close = 15 * 60 + 40
+        assertNull(NtfyRules.outsideHours(at(9, 0), true, close))
+        assertNull(NtfyRules.outsideHours(at(15, 39, 59), true, close))
+        assertTrue(NtfyRules.outsideHours(at(8, 59, 59), true, close)!!.contains("before 09:00"))
+        assertTrue(NtfyRules.outsideHours(at(15, 40), true, close)!!.contains("after the F&O close (15:40)"))
+        assertTrue(NtfyRules.outsideHours(at(23, 0), true, close)!!.startsWith("outside market hours, not traded"))
+        assertTrue(NtfyRules.outsideHours(at(11, 0), false, close)!!.contains("market closed"))
+    }
+
     @Test fun triggers() {
         assertTrue(NtfyRules.triggered(Trig.MARKET, null, 100.0, null, null))
         assertFalse(NtfyRules.triggered(Trig.MARKET, null, null, null, null))
