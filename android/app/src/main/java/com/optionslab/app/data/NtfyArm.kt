@@ -689,7 +689,7 @@ object NtfyArm {
 
     /** 26 Oct: [u]'s price from Zerodha's live stream (memory; at most 5 s old), or null. Never the network. */
     private fun streamSpot(u: String): Double? = runCatching {
-        val token = Broker.indexToken(u) ?: return@runCatching null
+        val token = KiteStream.indexToken(u) ?: return@runCatching null
         KiteStream.touch(listOf(token))
         KiteStream.tick(token)?.last?.takeIf { it > 0 }
     }.getOrNull()

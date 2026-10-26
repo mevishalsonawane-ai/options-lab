@@ -162,6 +162,9 @@ object KiteStream {
      * its age was negative, so it passed for fresh for as long as the step, however long the stream had been silent (as
      * [com.optionslab.ira.LiveQuote.pick] already judged it): the caller reads Zerodha's quote instead.
      */
+    /** 26 Oct: an index's token by its name ("NIFTY", "BANKNIFTY" ...), for a price read from this stream; null when unknown. Memory only. */
+    fun indexToken(name: String): Long? = Broker.indexToken(name)
+
     fun tick(token: Long, maxAgeMs: Long = 5_000): KiteTicks.Tick? =
         ticks[token]?.takeIf { System.currentTimeMillis() - it.at in 0..maxAgeMs }?.tick
 
