@@ -16,3 +16,11 @@
    - R51 called Wed 21 Oct "NIFTY's expiry day" (NIFTY expired Tue 20 Oct).
 9. **Nothing goes on paper or live from R105.** Today's exits stay (-15%, +5% once +25%, breakeven once +30%, 30/60/100, 30 minutes, 15:15). The knowledge pack, which lives in `android/**`, was not rebuilt; this was research only.
 10. Details: `research/HUNT_R105_DONCHIAN_GIVEBACK.md`; tables: `research/hunt/r105_donchian_giveback/results/report.md`; 20 entries `research/experiments/entries/r105-*.yaml`. The final window was read for the ~25th time (weak evidence); only 4 unseen sessions (14-19 Oct) exist.
+
+# R105B for Boss: the books' direction rules on the arms (26 Oct 2026)
+
+1. **No change.** 10 untested book direction rules × 4 paper arms = 40 tests, and none passed. The rules: Trader Tom's weekly swing and weekly 89 MA, Dow HH/HL daily and hourly, Porwal's prior-day trend, the 200-day SMA, ADX > 30, the first 15-minute candle, and the gap side.
+2. **The books' trend filters hurt these arms.** None was better in the walk-forward year on any arm. On Breadth Donchian's final period (1,202 trades, Rs 1,71,366 today), the 200-day SMA filter gave Rs 47,394 and the weekly swing filter Rs 66,537. These arms make money on breaks that often go against the bigger trend.
+3. **Breadth (4 of 5 indices together) is already the best direction check for R72.** Every book rule added on top was worse in the final.
+4. **One note to watch:** the first 15-minute candle on R51 + Supertrend was better in every period (final Rs 1,71,587 vs Rs 1,34,743, smaller drawdown) and beat random skips. It failed only the multiple-testing check (q 0.29), and it lost on R72, so it stays a note.
+5. Details: `research/HUNT_R105B_DIRECTION.md`; 40 entries `research/experiments/entries/r105b-*.yaml`. Nothing goes on paper or live.

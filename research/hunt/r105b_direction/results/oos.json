@@ -1,0 +1,616 @@
+{
+ "arms": {
+  "R72": {
+   "base": {
+    "trades": 25,
+    "win": 0.56,
+    "net": -624,
+    "worst_day": -18451,
+    "max_dd": 18451,
+    "ex_top5": -13429,
+    "days": 3
+   },
+   "rules": {
+    "D1": {
+     "stats": {
+      "trades": 20,
+      "win": 0.65,
+      "net": 3971,
+      "worst_day": -12705,
+      "max_dd": 12705,
+      "ex_top5": -8834,
+      "days": 3
+     },
+     "dropped": 10,
+     "dropped_lost": 9,
+     "dropped_net": -9893
+    },
+    "D2": {
+     "stats": {
+      "trades": 18,
+      "win": 0.3889,
+      "net": -14402,
+      "worst_day": -18451,
+      "max_dd": 18451,
+      "ex_top5": -18798,
+      "days": 3
+     },
+     "dropped": 21,
+     "dropped_lost": 4,
+     "dropped_net": 19546
+    },
+    "D3": {
+     "stats": {
+      "trades": 15,
+      "win": 0.4667,
+      "net": -7281,
+      "worst_day": -14162,
+      "max_dd": 14162,
+      "ex_top5": -13523,
+      "days": 3
+     },
+     "dropped": 26,
+     "dropped_lost": 9,
+     "dropped_net": 10915
+    },
+    "D4": {
+     "stats": {
+      "trades": 13,
+      "win": 0.7692,
+      "net": 12056,
+      "worst_day": -2172,
+      "max_dd": 2172,
+      "ex_top5": -749,
+      "days": 3
+     },
+     "dropped": 26,
+     "dropped_lost": 21,
+     "dropped_net": -27061
+    },
+    "D5": {
+     "stats": {
+      "trades": 17,
+      "win": 0.2941,
+      "net": -14338,
+      "worst_day": -18451,
+      "max_dd": 18451,
+      "ex_top5": -20377,
+      "days": 3
+     },
+     "dropped": 25,
+     "dropped_lost": 9,
+     "dropped_net": 8509
+    },
+    "D6": {
+     "stats": {
+      "trades": 9,
+      "win": 0.3333,
+      "net": -9726,
+      "worst_day": -12705,
+      "max_dd": 12705,
+      "ex_top5": -11128,
+      "days": 2
+     },
+     "dropped": 41,
+     "dropped_lost": 19,
+     "dropped_net": 4115
+    },
+    "D7": {
+     "stats": {
+      "trades": 18,
+      "win": 0.3889,
+      "net": -14402,
+      "worst_day": -18451,
+      "max_dd": 18451,
+      "ex_top5": -18798,
+      "days": 3
+     },
+     "dropped": 21,
+     "dropped_lost": 4,
+     "dropped_net": 19546
+    },
+    "D8": {
+     "stats": {
+      "trades": 22,
+      "win": 0.5,
+      "net": -8524,
+      "worst_day": -18451,
+      "max_dd": 18451,
+      "ex_top5": -16701,
+      "days": 3
+     },
+     "dropped": 8,
+     "dropped_lost": 1,
+     "dropped_net": 10902
+    },
+    "D9": {
+     "stats": {
+      "trades": 22,
+      "win": 0.5,
+      "net": -5557,
+      "worst_day": -18451,
+      "max_dd": 18451,
+      "ex_top5": -16050,
+      "days": 3
+     },
+     "dropped": 7,
+     "dropped_lost": 2,
+     "dropped_net": 4980
+    },
+    "D10": {
+     "stats": {
+      "trades": 25,
+      "win": 0.56,
+      "net": -624,
+      "worst_day": -18451,
+      "max_dd": 18451,
+      "ex_top5": -13429,
+      "days": 3
+     },
+     "dropped": 0,
+     "dropped_lost": 0,
+     "dropped_net": 0
+    }
+   }
+  },
+  "R51T": {
+   "base": {
+    "trades": 46,
+    "win": 0.5,
+    "net": 3412,
+    "worst_day": -13478,
+    "max_dd": 20847,
+    "ex_top5": -14530,
+    "days": 4
+   },
+   "rules": {
+    "D1": {
+     "stats": {
+      "trades": 37,
+      "win": 0.5405,
+      "net": 7458,
+      "worst_day": -11108,
+      "max_dd": 15649,
+      "ex_top5": -10454,
+      "days": 4
+     },
+     "dropped": 26,
+     "dropped_lost": 19,
+     "dropped_net": -17474
+    },
+    "D2": {
+     "stats": {
+      "trades": 28,
+      "win": 0.5,
+      "net": -3986,
+      "worst_day": -7832,
+      "max_dd": 15265,
+      "ex_top5": -17455,
+      "days": 4
+     },
+     "dropped": 61,
+     "dropped_lost": 25,
+     "dropped_net": 24152
+    },
+    "D3": {
+     "stats": {
+      "trades": 26,
+      "win": 0.4615,
+      "net": -3086,
+      "worst_day": -8135,
+      "max_dd": 9292,
+      "ex_top5": -17031,
+      "days": 4
+     },
+     "dropped": 74,
+     "dropped_lost": 28,
+     "dropped_net": 34050
+    },
+    "D4": {
+     "stats": {
+      "trades": 26,
+      "win": 0.5385,
+      "net": 10045,
+      "worst_day": -8083,
+      "max_dd": 11289,
+      "ex_top5": -7330,
+      "days": 4
+     },
+     "dropped": 59,
+     "dropped_lost": 38,
+     "dropped_net": -29822
+    },
+    "D5": {
+     "stats": {
+      "trades": 31,
+      "win": 0.4194,
+      "net": -13793,
+      "worst_day": -13478,
+      "max_dd": 20564,
+      "ex_top5": -26943,
+      "days": 4
+     },
+     "dropped": 54,
+     "dropped_lost": 25,
+     "dropped_net": 20967
+    },
+    "D6": {
+     "stats": {
+      "trades": 22,
+      "win": 0.3636,
+      "net": -16792,
+      "worst_day": -11108,
+      "max_dd": 17320,
+      "ex_top5": -22180,
+      "days": 4
+     },
+     "dropped": 93,
+     "dropped_lost": 40,
+     "dropped_net": 33629
+    },
+    "D7": {
+     "stats": {
+      "trades": 28,
+      "win": 0.5,
+      "net": -3986,
+      "worst_day": -7832,
+      "max_dd": 15265,
+      "ex_top5": -17455,
+      "days": 4
+     },
+     "dropped": 61,
+     "dropped_lost": 25,
+     "dropped_net": 24152
+    },
+    "D8": {
+     "stats": {
+      "trades": 34,
+      "win": 0.5294,
+      "net": -948,
+      "worst_day": -10273,
+      "max_dd": 18105,
+      "ex_top5": -15260,
+      "days": 4
+     },
+     "dropped": 35,
+     "dropped_lost": 17,
+     "dropped_net": 15884
+    },
+    "D9": {
+     "stats": {
+      "trades": 34,
+      "win": 0.5294,
+      "net": 4053,
+      "worst_day": -10149,
+      "max_dd": 17582,
+      "ex_top5": -12433,
+      "days": 4
+     },
+     "dropped": 28,
+     "dropped_lost": 18,
+     "dropped_net": -7197
+    },
+    "D10": {
+     "stats": {
+      "trades": 45,
+      "win": 0.5111,
+      "net": 4764,
+      "worst_day": -13478,
+      "max_dd": 19495,
+      "ex_top5": -13178,
+      "days": 4
+     },
+     "dropped": 1,
+     "dropped_lost": 1,
+     "dropped_net": -1352
+    }
+   }
+  },
+  "LIQ": {
+   "base": {
+    "trades": 15,
+    "win": 0.2667,
+    "net": -7105,
+    "worst_day": -6815,
+    "max_dd": 8243,
+    "ex_top5": -10146,
+    "days": 4
+   },
+   "rules": {
+    "D1": {
+     "stats": {
+      "trades": 15,
+      "win": 0.2667,
+      "net": -7105,
+      "worst_day": -6815,
+      "max_dd": 8243,
+      "ex_top5": -10146,
+      "days": 4
+     },
+     "dropped": 0,
+     "dropped_lost": 0,
+     "dropped_net": 0
+    },
+    "D2": {
+     "stats": {
+      "trades": 8,
+      "win": 0.125,
+      "net": -7098,
+      "worst_day": -6815,
+      "max_dd": 7098,
+      "ex_top5": -5734,
+      "days": 2
+     },
+     "dropped": 7,
+     "dropped_lost": 4,
+     "dropped_net": -8
+    },
+    "D3": {
+     "stats": {
+      "trades": 9,
+      "win": 0.1111,
+      "net": -7371,
+      "worst_day": -6916,
+      "max_dd": 7371,
+      "ex_top5": -6960,
+      "days": 3
+     },
+     "dropped": 6,
+     "dropped_lost": 3,
+     "dropped_net": 266
+    },
+    "D4": {
+     "stats": {
+      "trades": 6,
+      "win": 0.5,
+      "net": 1218,
+      "worst_day": -1429,
+      "max_dd": 1429,
+      "ex_top5": -823,
+      "days": 2
+     },
+     "dropped": 9,
+     "dropped_lost": 8,
+     "dropped_net": -8323
+    },
+    "D5": {
+     "stats": {
+      "trades": 12,
+      "win": 0.1667,
+      "net": -8738,
+      "worst_day": -6815,
+      "max_dd": 8738,
+      "ex_top5": -9350,
+      "days": 4
+     },
+     "dropped": 3,
+     "dropped_lost": 1,
+     "dropped_net": 1632
+    },
+    "D6": {
+     "stats": {
+      "trades": 11,
+      "win": 0.1818,
+      "net": -8416,
+      "worst_day": -6815,
+      "max_dd": 8416,
+      "ex_top5": -8745,
+      "days": 4
+     },
+     "dropped": 4,
+     "dropped_lost": 2,
+     "dropped_net": 1311
+    },
+    "D7": {
+     "stats": {
+      "trades": 8,
+      "win": 0.125,
+      "net": -7098,
+      "worst_day": -6815,
+      "max_dd": 7098,
+      "ex_top5": -5734,
+      "days": 2
+     },
+     "dropped": 7,
+     "dropped_lost": 4,
+     "dropped_net": -8
+    },
+    "D8": {
+     "stats": {
+      "trades": 13,
+      "win": 0.2308,
+      "net": -6933,
+      "worst_day": -6815,
+      "max_dd": 8243,
+      "ex_top5": -8729,
+      "days": 4
+     },
+     "dropped": 2,
+     "dropped_lost": 1,
+     "dropped_net": -172
+    },
+    "D9": {
+     "stats": {
+      "trades": 9,
+      "win": 0.1111,
+      "net": -7419,
+      "worst_day": -6815,
+      "max_dd": 7419,
+      "ex_top5": -6695,
+      "days": 3
+     },
+     "dropped": 6,
+     "dropped_lost": 3,
+     "dropped_net": 314
+    },
+    "D10": {
+     "stats": {
+      "trades": 15,
+      "win": 0.2667,
+      "net": -7105,
+      "worst_day": -6815,
+      "max_dd": 8243,
+      "ex_top5": -10146,
+      "days": 4
+     },
+     "dropped": 0,
+     "dropped_lost": 0,
+     "dropped_net": 0
+    }
+   }
+  },
+  "R52": {
+   "base": {
+    "trades": 6,
+    "win": 0.3333,
+    "net": -7291,
+    "worst_day": -4472,
+    "max_dd": 8017,
+    "ex_top5": -3545,
+    "days": 3
+   },
+   "rules": {
+    "D1": {
+     "stats": {
+      "trades": 6,
+      "win": 0.3333,
+      "net": -7291,
+      "worst_day": -4472,
+      "max_dd": 8017,
+      "ex_top5": -3545,
+      "days": 3
+     },
+     "dropped": 0,
+     "dropped_lost": 0,
+     "dropped_net": 0
+    },
+    "D2": {
+     "stats": {
+      "trades": 1,
+      "win": 0.0,
+      "net": -3545,
+      "worst_day": -3545,
+      "max_dd": 3545,
+      "ex_top5": 0,
+      "days": 1
+     },
+     "dropped": 5,
+     "dropped_lost": 3,
+     "dropped_net": -3745
+    },
+    "D3": {
+     "stats": {
+      "trades": 1,
+      "win": 1.0,
+      "net": 1002,
+      "worst_day": 1002,
+      "max_dd": 0,
+      "ex_top5": 0,
+      "days": 1
+     },
+     "dropped": 5,
+     "dropped_lost": 4,
+     "dropped_net": -8292
+    },
+    "D4": {
+     "stats": {
+      "trades": 4,
+      "win": 0.25,
+      "net": -7729,
+      "worst_day": -4472,
+      "max_dd": 8017,
+      "ex_top5": 0,
+      "days": 3
+     },
+     "dropped": 2,
+     "dropped_lost": 1,
+     "dropped_net": 438
+    },
+    "D5": {
+     "stats": {
+      "trades": 6,
+      "win": 0.3333,
+      "net": -7291,
+      "worst_day": -4472,
+      "max_dd": 8017,
+      "ex_top5": -3545,
+      "days": 3
+     },
+     "dropped": 0,
+     "dropped_lost": 0,
+     "dropped_net": 0
+    },
+    "D6": {
+     "stats": {
+      "trades": 6,
+      "win": 0.3333,
+      "net": -7291,
+      "worst_day": -4472,
+      "max_dd": 8017,
+      "ex_top5": -3545,
+      "days": 3
+     },
+     "dropped": 0,
+     "dropped_lost": 0,
+     "dropped_net": 0
+    },
+    "D7": {
+     "stats": {
+      "trades": 1,
+      "win": 0.0,
+      "net": -3545,
+      "worst_day": -3545,
+      "max_dd": 3545,
+      "ex_top5": 0,
+      "days": 1
+     },
+     "dropped": 5,
+     "dropped_lost": 3,
+     "dropped_net": -3745
+    },
+    "D8": {
+     "stats": {
+      "trades": 1,
+      "win": 0.0,
+      "net": -3545,
+      "worst_day": -3545,
+      "max_dd": 3545,
+      "ex_top5": 0,
+      "days": 1
+     },
+     "dropped": 5,
+     "dropped_lost": 3,
+     "dropped_net": -3745
+    },
+    "D9": {
+     "stats": {
+      "trades": 6,
+      "win": 0.3333,
+      "net": -7291,
+      "worst_day": -4472,
+      "max_dd": 8017,
+      "ex_top5": -3545,
+      "days": 3
+     },
+     "dropped": 0,
+     "dropped_lost": 0,
+     "dropped_net": 0
+    },
+    "D10": {
+     "stats": {
+      "trades": 6,
+      "win": 0.3333,
+      "net": -7291,
+      "worst_day": -4472,
+      "max_dd": 8017,
+      "ex_top5": -3545,
+      "days": 3
+     },
+     "dropped": 0,
+     "dropped_lost": 0,
+     "dropped_net": 0
+    }
+   }
+  }
+ }
+}
