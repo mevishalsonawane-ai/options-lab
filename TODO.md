@@ -145,7 +145,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   - DII cash flows need a source that does not block cloud machines (NSE's API returns 403); and
   - rerun `python3 -I research/hunt/of1/fetch.py --from <last day>` then build/analyze `summary` to refresh the
     who-profited tables (the holdout of OF1 is spent: any new test needs a new pre-registration and a new holdout).
-- [ ] R4. Before/after report for Boss (owner, 13 Oct: "show me before and after results after everything is done").
+- [x] R4. (done 26 Oct: research/reports/r4/, private Artifact page; backtest and paper kept apart; nothing changes) Before/after report for Boss (owner, 13 Oct: "show me before and after results after everything is done").
 - [ ] R21. (record only, 22 Oct; research/experiments/entries/app-time-machine.yaml) Time machine verdicts: after 30 signal
   days, join the app's forward log (the encrypted timemachine.vault: date, arm, ref, verdict, odds, outcome) with each arm's
   closed trades and compare the net of entries called "edge" vs "against", real charges and slippage. Until then it is words
