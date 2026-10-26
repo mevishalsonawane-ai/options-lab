@@ -536,7 +536,9 @@ fun SchedulePage(model: AppModel) {
                             Jobs.Kind.HARVEST -> s.nightlyHarvest
                         }
                         val note = when {
-                            on -> "$sub · next ${Jobs.nextRun(k).format(fmt)}"
+                            // 26 Oct: the watch starts at 09:00 while ntfy alerts is armed (memory only; this is the main thread).
+                            on -> "$sub · next ${Jobs.nextRun(k, early = k == Jobs.Kind.LIVE && !com.optionslab.app.BuildConfig.GOLD &&
+                                com.optionslab.app.data.NtfyReader.armedHint).format(fmt)}"
                             chosen -> "$sub · runs once Zerodha is linked"
                             else -> sub
                         }
