@@ -37,7 +37,8 @@ code run from them). Key facts from them:
     check runs again 10 s later, until the bar is settled or its window ends.
   - A cached index read that lacks that minute is read again.
   - It never runs while any of these arms could be mirrored live, so no live entry is added. This is checked when it is
-    planned and again just before it fires.
+    planned and again just before it fires. It reads the live flags itself first: the cap's memory-only check says "not
+    live" until something has read them, for example right after a start.
   - At most 8 retries a bar, so an index whose feed is down all day costs only a few reads a bar.
   - The stop path is untouched.
   - Code: `PassedArmsHost.retryEnds/planRetry`, `DonchianArm.nextRetry/barWhole/windowEnd`.
@@ -95,8 +96,6 @@ The research sells at the level (or at the minute's open on a gap). The code boo
   - Tested with Dussehra, two holidays in a row, weekends, the monthly indices, SENSEX, and a broken calendar.
   - The app's own holiday table shows a case ahead: Tue 24 Nov 2026 (Guru Nanak Jayanti) is November's last Tuesday, so the
     monthly expiry falls on Mon 23 Nov.
-- The new entry retry reads the live flags itself before checking "could this trade live". The same-direction cap's check
-  uses only flags already in memory, and right after a start it would say "not live".
 
 ## 5. R51's Supertrend (10, 3) filter (not a bug)
 
@@ -162,4 +161,14 @@ Also fixed: CI was already red on the base commit (878cb1f): "Engine parity with
 card out of the top five, so R104's two tested Wyckoff volume rules now lead. The test now accepts them, as it already does
 for the tested Aziz VWAP rules.
 
-CI sha: (filled in after the push)
+CI: all green on `cc03165a3b51fca6303c4c22700c1390cbbb07fe`:
+- Engine parity with the PC;
+- PC harness tests;
+- App tests shards 0-3 (JVM, Robolectric, Compose UI);
+- Build APK.
+
+Publish screenshots is skipped on branches. The first push (06f938b) had two test-setup failures:
+- November's last Tuesday (24 Nov) is itself a holiday;
+- the live flags were not yet read in the retry's live check.
+
+Both are fixed in cc03165. Only this file changed after it.
