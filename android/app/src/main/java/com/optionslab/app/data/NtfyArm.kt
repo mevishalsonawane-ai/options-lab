@@ -757,7 +757,7 @@ object NtfyArm {
         // A named strike must be listed: never another strike by a rule in its place (strict).
         if (p.strike != null && p.strike !in strikes) return done(
             // 26 Oct (IraThinker review, INFY 1130 CE): a stock's strike off the exchange's grid says so, and whether the sender guessed it.
-            if (p.stock) NtfyRules.offGrid(p.index, p.strike, right, exp, strikes, p.strikeGuess)
+            if (p.stock) NtfyRules.offGrid(p.index, p.strike!!, right, exp, strikes, p.strikeGuess)
             else "not traded: ${p.index} ${p.strike?.let { NtfyParser.num(it) }} ${right.name} is not listed for $exp")
         val strike = p.strike ?: run {
             val px = entrySpotsNow[p.index] ?: return say(b, "waiting for ${p.index}'s price")
