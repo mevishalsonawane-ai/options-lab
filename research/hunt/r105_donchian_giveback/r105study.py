@@ -6,7 +6,7 @@ on C (R72 Breadth Donchian) and B (R51 Donchian 20 + Supertrend), gated over des
     python research/hunt/r105_donchian_giveback/r105study.py final    # the ONE final read: rules, twins, 2x slip, BH,
                                                                       # gate, cohort, paper bootstrap
     python research/hunt/r105_donchian_giveback/r105study.py oos      # after final: 14-19 Oct (own store copy), once
-    python research/hunt/r105_donchian_giveback/r105study.py report   # results/*.json -> results/report.md
+    python research/hunt/r105_donchian_giveback/r105report.py         # results/*.json -> results/report.md
 
 Signals and trade-taking are R75's (`r75study.candidates`, verbatim): Donchian 20 on the index's 5-minute bars (B with
 R73's Supertrend agreement, C with R72's 4-of-5 breadth), 1-ITM, entries 09:20-15:10, one open a side per index, at
@@ -240,7 +240,7 @@ def _dump(name, obj):
 
 def _json(obj, path):
     L.RESULTS.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, indent=1, default=str) + "\n")
+    path.write_text(json.dumps(L.drop_keys(obj), indent=1, default=str) + "\n")
 
 
 def phase_block(arm, lo, hi, phase, twins=True):
@@ -361,6 +361,9 @@ def oos():
         raise SystemExit("the OOS window is read only after the final read")
     if L.OOS_FLAG.exists():
         raise SystemExit("R105's OOS window was already read once (results/OOS_READ)")
+    missing = [u for u in K.UNDS if not (K.OUT / f"day_{u}.pkl").exists()]
+    if missing:
+        raise SystemExit(f"extended stores missing for {missing}: run build_ext first (nothing read)")
     L.OOS_FLAG.write_text(datetime.now(timezone.utc).isoformat(timespec="seconds") + "\n")
     mods()["C"].open_final()
     out = dict(phase="oos", lo=str(L.OOS_START), hi=str(L.OOS_END), arms={})

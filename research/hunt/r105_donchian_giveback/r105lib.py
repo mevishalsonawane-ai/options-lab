@@ -179,6 +179,15 @@ def key(t: dict) -> tuple:
     return (t["und"], str(t["day"]), t["side"], int(t["er"]))
 
 
+def drop_keys(obj):
+    """The result files keep each cohort's count and total, not its per-trade key list (keeps them small)."""
+    if isinstance(obj, dict):
+        return {k: drop_keys(v) for k, v in obj.items() if k != "keys"}
+    if isinstance(obj, list):
+        return [drop_keys(v) for v in obj]
+    return obj
+
+
 def same_trades(trades: list, keys) -> float:
     ks = {tuple(k) for k in keys}
     return round(sum(t["net"] for t in trades if key(t) in ks))

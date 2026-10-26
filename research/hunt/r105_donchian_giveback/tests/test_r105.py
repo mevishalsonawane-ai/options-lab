@@ -207,6 +207,11 @@ def test_cohort_bands():
     assert L.same_trades(tr, c["rs1000_lost"]["keys"]) == -1300
 
 
+def test_drop_keys_keeps_counts():
+    x = {"a": {"n": 2, "net": -5, "keys": [[1]]}, "b": [{"keys": [], "n": 1}]}
+    assert L.drop_keys(x) == {"a": {"n": 2, "net": -5}, "b": [{"n": 1}]}
+
+
 def test_stats_dd_and_worst_day():
     tr = [T(date(2025, 5, 1), 100), T(date(2025, 5, 2), -300), T(date(2025, 5, 2), -100, er=20), T(date(2025, 5, 5), 50)]
     s = L.stats(tr)
