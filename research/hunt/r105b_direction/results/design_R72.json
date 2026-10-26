@@ -1,0 +1,250 @@
+{
+ "base": {
+  "trades": 3071,
+  "win": 0.4676,
+  "net": 216929,
+  "worst_day": -58613,
+  "max_dd": 199077,
+  "ex_top5": 160476,
+  "days": 323
+ },
+ "rules": {
+  "D1": {
+   "stats": {
+    "trades": 2620,
+    "win": 0.471,
+    "net": 282526,
+    "worst_day": -50663,
+    "max_dd": 140255,
+    "ex_top5": 226073,
+    "days": 318
+   },
+   "dropped": 787,
+   "dropped_lost": 458,
+   "dropped_net": -196068,
+   "q": [
+    107055,
+    61555,
+    17399,
+    171484
+   ],
+   "wf_net": 357494,
+   "p": 0.006,
+   "twin_mean": 184741
+  },
+  "D2": {
+   "stats": {
+    "trades": 1485,
+    "win": 0.4869,
+    "net": 184006,
+    "worst_day": -20926,
+    "max_dd": 91145,
+    "ex_top5": 130063,
+    "days": 261
+   },
+   "dropped": 3008,
+   "dropped_lost": 1716,
+   "dropped_net": -396441,
+   "q": [
+    83241,
+    15612,
+    9125,
+    94869
+   ],
+   "wf_net": 202847,
+   "p": 0.0319,
+   "twin_mean": 55891
+  },
+  "D3": {
+   "stats": {
+    "trades": 1677,
+    "win": 0.4645,
+    "net": 54528,
+    "worst_day": -39585,
+    "max_dd": 168237,
+    "ex_top5": 4148,
+    "days": 258
+   },
+   "dropped": 2766,
+   "dropped_lost": 1535,
+   "dropped_net": -75146,
+   "q": [
+    79136,
+    5879,
+    12950,
+    102029
+   ],
+   "wf_net": 199994,
+   "p": 0.6148,
+   "twin_mean": 69515
+  },
+  "D4": {
+   "stats": {
+    "trades": 2075,
+    "win": 0.4742,
+    "net": 192734,
+    "worst_day": -27081,
+    "max_dd": 102843,
+    "ex_top5": 141964,
+    "days": 301
+   },
+   "dropped": 1940,
+   "dropped_lost": 1094,
+   "dropped_net": -136646,
+   "q": [
+    59164,
+    8383,
+    -15905,
+    121635
+   ],
+   "wf_net": 173277,
+   "p": 0.0758,
+   "twin_mean": 119091
+  },
+  "D5": {
+   "stats": {
+    "trades": 2194,
+    "win": 0.4622,
+    "net": 107559,
+    "worst_day": -39585,
+    "max_dd": 166183,
+    "ex_top5": 54486,
+    "days": 312
+   },
+   "dropped": 1753,
+   "dropped_lost": 979,
+   "dropped_net": -130670,
+   "q": [
+    -1734,
+    19361,
+    45048,
+    152250
+   ],
+   "wf_net": 214925,
+   "p": 0.6687,
+   "twin_mean": 130731
+  },
+  "D6": {
+   "stats": {
+    "trades": 1860,
+    "win": 0.4817,
+    "net": 231173,
+    "worst_day": -39585,
+    "max_dd": 102667,
+    "ex_top5": 176333,
+    "days": 280
+   },
+   "dropped": 2243,
+   "dropped_lost": 1296,
+   "dropped_net": -320939,
+   "q": [
+    19751,
+    79528,
+    37295,
+    100165
+   ],
+   "wf_net": 236738,
+   "p": 0.024,
+   "twin_mean": 107594
+  },
+  "D7": {
+   "stats": {
+    "trades": 1662,
+    "win": 0.4765,
+    "net": 238957,
+    "worst_day": -27103,
+    "max_dd": 67763,
+    "ex_top5": 186536,
+    "days": 269
+   },
+   "dropped": 2619,
+   "dropped_lost": 1492,
+   "dropped_net": -435839,
+   "q": [
+    86138,
+    5879,
+    12950,
+    114264
+   ],
+   "wf_net": 219231,
+   "p": 0.006,
+   "twin_mean": 74394
+  },
+  "D8": {
+   "stats": {
+    "trades": 3024,
+    "win": 0.4699,
+    "net": 233952,
+    "worst_day": -58613,
+    "max_dd": 177978,
+    "ex_top5": 177498,
+    "days": 322
+   },
+   "dropped": 88,
+   "dropped_lost": 55,
+   "dropped_net": -38083,
+   "q": [
+    85063,
+    70225,
+    9774,
+    165906
+   ],
+   "wf_net": 330967,
+   "p": 0.0639,
+   "twin_mean": 213693
+  },
+  "D9": {
+   "stats": {
+    "trades": 1919,
+    "win": 0.4805,
+    "net": 268343,
+    "worst_day": -27861,
+    "max_dd": 116833,
+    "ex_top5": 212024,
+    "days": 301
+   },
+   "dropped": 2305,
+   "dropped_lost": 1328,
+   "dropped_net": -392207,
+   "q": [
+    26102,
+    85845,
+    43714,
+    148636
+   ],
+   "wf_net": 304298,
+   "p": 0.002,
+   "twin_mean": 95750
+  },
+  "D10": {
+   "stats": {
+    "trades": 2562,
+    "win": 0.4699,
+    "net": 288581,
+    "worst_day": -52490,
+    "max_dd": 137154,
+    "ex_top5": 232128,
+    "days": 317
+   },
+   "dropped": 896,
+   "dropped_lost": 525,
+   "dropped_net": -277491,
+   "q": [
+    93412,
+    70863,
+    18852,
+    171181
+   ],
+   "wf_net": 354308,
+   "p": 0.004,
+   "twin_mean": 180064
+  }
+ },
+ "base_q": [
+  85063,
+  70225,
+  9774,
+  170821
+ ],
+ "base_wf_net": 335882
+}
