@@ -594,14 +594,14 @@ class WhatsNewChangelogTest {
     @Test fun theArmsCleanupAndTheCompactRowsAreSaidPlainly() {
         // 15 Oct (Boss's questionnaire): the newest two entries.
         val c = WhatsNew.ENTRIES.first { it.id == "2026-10-15-arms-cleanup" }
-        assertEquals(36, WhatsNew.ENTRIES.indexOf(c), "under the exits fix, the Telegram login fix, the open trade change and the market concepts")
+        assertEquals(37, WhatsNew.ENTRIES.indexOf(c), "under the exits fix, the Telegram login fix, the open trade change and the market concepts")
         for (w in listOf("On your choice", "Liquidity 15+5 on BANKNIFTY, FINNIFTY and MIDCPNIFTY", "Hero ₹1,000 ticket", "R51", "R52", "Solo 2.0",
             "Watchlist", "Solo midday", "MCX paper arms", "switched off and hidden", "trades kept", "own exit first", "on paper",
             "NIFTY has no Liquidity book", "one tap", "Hidden arms list"))
             assertTrue(w in c.what, w)
         assertTrue("Home → Strategies → Hidden arms" in c.where && "Autopilot → Change log" in c.where, c.where)
         val r = WhatsNew.ENTRIES.first { it.id == "2026-10-15-compact-rows" }
-        assertEquals(37, WhatsNew.ENTRIES.indexOf(r))
+        assertEquals(38, WhatsNew.ENTRIES.indexOf(r))
         for (w in listOf("name", "one status line", "key numbers", "switch", "Tap the name", "OK button")) assertTrue(w in r.what, w)
         for (x in listOf(c, r)) { assertFalse(x.jarvisOnly); assertFalse(x.gold); assertNull(x.to); assertNull(x.ask) }
     }
@@ -623,14 +623,14 @@ class WhatsNewChangelogTest {
     @Test fun thePassedArmsAndTheWatchlistAreSaidWithTheirLabels() {
         // 15 Oct (Boss: "Both"): the newest two entries.
         val a = WhatsNew.ENTRIES.first { it.id == "2026-10-15-passed-paper-arms" }
-        assertEquals(38, WhatsNew.ENTRIES.indexOf(a), "under the exits fix, the Telegram login fix, the open trade change, the market concepts and the arms cleanup's two entries")
+        assertEquals(39, WhatsNew.ENTRIES.indexOf(a), "under the exits fix, the Telegram login fix, the open trade change, the market concepts and the arms cleanup's two entries")
         for (w in listOf("R51 Donchian 20", "R52 Open outside value", "Solo 2.0", "1 lot each", "passed every research gate", "paper rule",
             "stays on paper forever", "signal from the index", "stop", "own record", "forward test", "None ever trades on Zerodha", "one tap switches each off"))
             assertTrue(w in a.what, w)
         assertTrue("Passed research (R51/R52/R57) — paper only" in a.where && "Autopilot → Change log" in a.where, a.where)
         assertEquals(PassedArmsTalk.Topic.ALL, PassedArmsTalk.asked(a.ask!!))
         val w = WhatsNew.ENTRIES.first { it.id == "2026-10-15-watchlist-shadow" }
-        assertEquals(39, WhatsNew.ENTRIES.indexOf(w))
+        assertEquals(40, WhatsNew.ENTRIES.indexOf(w))
         for (x in listOf("shadow", "R47 C4", "option-chain signal, marked non-default", "R52 R4-8", "R52 H45-1", "never traded", "paper costs",
             "40 new trades", "which to drop")) assertTrue(x in w.what, x)
         assertTrue("Watchlist (shadow)" in w.where && "evening summary" in w.where)
