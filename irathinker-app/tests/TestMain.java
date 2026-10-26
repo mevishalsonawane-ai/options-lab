@@ -985,8 +985,11 @@ public class TestMain {
                     "weekly expiry is the next Tuesday (27 Oct 2026)");
             check(OptionsMath.monthlyExpiry(fri).equals(java.time.LocalDate.of(2026, 10, 27)),
                     "monthly expiry is the last Tuesday (27 Oct 2026)");
+            // Review 26 Oct 2026: November's last Tuesday (24 Nov) is Guru Nanak
+            // Jayanti, an NSE holiday, so the listed monthly expiry is Mon 23 Nov.
             check(OptionsMath.monthlyExpiry(java.time.LocalDate.of(2026, 10, 28))
-                    .equals(java.time.LocalDate.of(2026, 11, 24)), "monthly expiry rolls to November's last Tuesday");
+                    .equals(java.time.LocalDate.of(2026, 11, 23)),
+                    "monthly expiry rolls to November's (holiday-shifted) Mon 23 Nov");
             Analysis.Scan ps = new Analysis.Scan();
             ps.sym = rel; ps.setup = Analysis.Setup.ORB_DOWN;
             ps.entry = 1000; ps.stop = 1015; ps.target = 970;
@@ -1504,11 +1507,12 @@ public class TestMain {
                     "mom60 premium: bsPrice(int days) == bsPriceDays(fractional) at whole days");
 
             // Monthly expiry - the study traded the MONTH contract:
-            // late October's signal takes November's last Tuesday,
-            // not next week's weekly.
+            // late October's signal takes November's monthly, not next
+            // week's weekly. (Review 26 Oct 2026: November's last Tuesday,
+            // 24 Nov, is Guru Nanak Jayanti, so the contract expires Mon 23 Nov.)
             Mom60.Signal sm = Mom60.buildSignal(0, true, 0.6, 58340,
                     java.time.LocalDate.of(2026, 10, 28), iv);
-            check(sm.expiry.equals(java.time.LocalDate.of(2026, 11, 24))
+            check(sm.expiry.equals(java.time.LocalDate.of(2026, 11, 23))
                             && !sm.expiry.equals(OptionsMath.weeklyExpiry(java.time.LocalDate.of(2026, 10, 28))),
                     "mom60 expiry: nearest MONTHLY expiry (last Tuesday), never the weekly");
             check(sb.expiry.equals(java.time.LocalDate.of(2026, 10, 27)),
@@ -1725,8 +1729,8 @@ public class TestMain {
                     "mom60x FIN resolve: flat path exits TIME at the +60m bar");
             check(Mom60.buildSignal(Mom60.FIN, 0, true, 0.53, 24630,
                             java.time.LocalDate.of(2026, 10, 28), iv).expiry
-                            .equals(java.time.LocalDate.of(2026, 11, 24)),
-                    "mom60x FIN expiry: Wed 28 Oct takes November's last Tuesday (24 Nov)");
+                            .equals(java.time.LocalDate.of(2026, 11, 23)),
+                    "mom60x FIN expiry: Wed 28 Oct takes November's monthly (holiday-shifted Mon 23 Nov)");
 
             // FINNIFTY down fires a PE at the 50-step; +0.40% stays
             // under its 0.50% bar.
@@ -2582,6 +2586,98 @@ public class TestMain {
             }
             check(builders59 == 8 && SystemFeed.VERSION == 51,
                     "v59 feed: still exactly 8 payload builders, VERSION 51 - new optional fields only");
+        }
+
+        // ---- review 26 Oct 2026: holiday-shifted expiries ----
+        // An expiry on an exchange holiday moves to the trading day before;
+        // IraAlgo refuses a feed expiry that is not listed.
+        {
+            java.time.LocalDate d = java.time.LocalDate.of(2026, 11, 2);
+            check(OptionsMath.monthlyExpiry(d).equals(java.time.LocalDate.of(2026, 11, 23)),
+                    "review: Nov 2026 monthly (24 Nov is Guru Nanak Jayanti) is Mon 23 Nov");
+            check(OptionsMath.monthlyExpiry(java.time.LocalDate.of(2026, 11, 23)).equals(java.time.LocalDate.of(2026, 11, 23)),
+                    "review: on Mon 23 Nov the monthly expires today");
+            check(OptionsMath.monthlyExpiry(java.time.LocalDate.of(2026, 11, 24)).equals(java.time.LocalDate.of(2026, 12, 29)),
+                    "review: after the shifted Nov expiry the monthly rolls to Tue 29 Dec");
+            check(OptionsMath.monthlyExpiry(java.time.LocalDate.of(2026, 3, 16)).equals(java.time.LocalDate.of(2026, 3, 30)),
+                    "review: Mar 2026 monthly (31 Mar Mahavir Jayanti) is Mon 30 Mar");
+            check(OptionsMath.monthlyExpiry(java.time.LocalDate.of(2026, 3, 31)).equals(java.time.LocalDate.of(2026, 4, 28)),
+                    "review: on the 31 Mar holiday the monthly is April's");
+            check(OptionsMath.monthlyExpiry(java.time.LocalDate.of(2026, 12, 1)).equals(java.time.LocalDate.of(2026, 12, 29)),
+                    "review: a non-holiday last Tuesday is unchanged (29 Dec)");
+            check(OptionsMath.weeklyExpiry(java.time.LocalDate.of(2026, 11, 5)).equals(java.time.LocalDate.of(2026, 11, 9)),
+                    "review: weekly expiry of the Diwali week (10 Nov holiday) is Mon 9 Nov");
+            check(OptionsMath.weeklyExpiry(java.time.LocalDate.of(2026, 11, 9)).equals(java.time.LocalDate.of(2026, 11, 9))
+                            && OptionsMath.daysToExpiry(java.time.LocalDate.of(2026, 11, 9)) == 0,
+                    "review: Mon 9 Nov is that week's expiry day (0 days)");
+            check(OptionsMath.weeklyExpiry(java.time.LocalDate.of(2026, 11, 10)).equals(java.time.LocalDate.of(2026, 11, 17)),
+                    "review: on the 10 Nov holiday the nearest weekly is Tue 17 Nov");
+            check(OptionsMath.weeklyExpiry(java.time.LocalDate.of(2026, 11, 18)).equals(java.time.LocalDate.of(2026, 11, 23)),
+                    "review: weekly expiry in the Guru Nanak week is Mon 23 Nov");
+            check(OptionsMath.weeklyExpiry(java.time.LocalDate.of(2027, 1, 1)).equals(java.time.LocalDate.of(2027, 1, 5)),
+                    "review: 2027 dates stay unshifted (holidays not yet listed)");
+            check(OptionsMath.monthlyExpiryBse(java.time.LocalDate.of(2026, 11, 2)).equals(java.time.LocalDate.of(2026, 11, 26)),
+                    "review: BSE Nov monthly (Thu 26 Nov, not a holiday) is unchanged");
+            Mom60.Cfg bn = Mom60.BN;
+            check(bn.expiry(java.time.LocalDate.of(2026, 11, 2)).equals(java.time.LocalDate.of(2026, 11, 23)),
+                    "review: mom60 BANKNIFTY's November contract is the 23 Nov expiry");
+            double[] flat = new double[375];
+            java.util.Arrays.fill(flat, 52000);
+            java.time.LocalDate m23 = java.time.LocalDate.of(2026, 11, 23), m16 = java.time.LocalDate.of(2026, 11, 16);
+            Strangle.Entry sn = Strangle.buildEntry(momDay(m23, flat), m23, 15.0);
+            check(sn != null && sn.expiry.equals(m23) && sn.expiryWeek && sn.exitDate.equals(m23),
+                    "review: a strangle entered Mon 23 Nov settles at that day's expiry");
+            Strangle.Entry s16 = Strangle.buildEntry(momDay(m16, flat), m16, 15.0);
+            check(s16 != null && s16.expiry.equals(m23) && !s16.expiryWeek
+                            && s16.exitDate.equals(java.time.LocalDate.of(2026, 11, 19)),
+                    "review: a strangle entered Mon 16 Nov is not an expiry week (expiry 23 Nov after Thu 19 Nov)");
+            Universe.Sym infy = new Universe.Sym("Infosys", "INFY.NS", "NIFTY 50 companies");
+            OptionsMath.Ticket tn = OptionsMath.ticket(infy, true, 1500, 1490, 1520, 25, java.time.LocalDate.of(2026, 11, 2));
+            check(tn.expiry.equals(java.time.LocalDate.of(2026, 11, 23)) && tn.dte == 21,
+                    "review: a stock ticket on 2 Nov carries the 23 Nov expiry (21 days)");
+        }
+
+        // ---- review 26 Oct 2026: which symbols alert, and only fresh ----
+        {
+            Universe.Sym relA = null, vixA = null, usdA = null, mid50 = null, sensexA = null, crude = null,
+                    niftyA = null, bnA = null, finA = null, comexGold = null;
+            for (Universe.Sym u : Universe.all()) {
+                if ("RELIANCE.NS".equals(u.yahoo)) relA = u;
+                if ("^INDIAVIX".equals(u.yahoo)) vixA = u;
+                if ("USDINR=X".equals(u.yahoo)) usdA = u;
+                if ("^NSEMDCP50".equals(u.yahoo)) mid50 = u;
+                if ("^BSESN".equals(u.yahoo)) sensexA = u;
+                if ("CL=F".equals(u.yahoo)) crude = u;
+                if ("GC=F".equals(u.yahoo)) comexGold = u;
+                if ("^NSEI".equals(u.yahoo)) niftyA = u;
+                if ("^NSEBANK".equals(u.yahoo)) bnA = u;
+                if ("^CNXFIN".equals(u.yahoo)) finA = u;
+            }
+            check(Universe.alertable(relA) && Universe.alertable(niftyA) && Universe.alertable(bnA)
+                            && Universe.alertable(finA),
+                    "review: NSE F&O stocks and NIFTY / BANKNIFTY / FINNIFTY may alert");
+            check(!Universe.alertable(vixA) && !Universe.alertable(usdA) && !Universe.alertable(mid50)
+                            && !Universe.alertable(sensexA) && !Universe.alertable(crude)
+                            && !Universe.alertable(comexGold) && !Universe.alertable(Universe.gold())
+                            && !Universe.alertable(null),
+                    "review: VIX, USD/INR, MIDCAP 50, SENSEX and commodities never strategy-alert");
+            int stocksA = 0, stocksAll = 0;
+            for (Universe.Sym u : Universe.all()) {
+                if (Universe.G_NIFTY.equals(u.group) || Universe.G_BANK.equals(u.group)) {
+                    stocksAll++;
+                    if (Universe.alertable(u)) stocksA++;
+                }
+            }
+            check(stocksAll > 40 && stocksA == stocksAll, "review: every listed stock stays alertable (" + stocksA + ")");
+            long bar = java.time.ZonedDateTime.of(2026, 10, 27, 9, 35, 0, 0,
+                    java.time.ZoneId.of("Asia/Kolkata")).toEpochSecond();
+            check(Analysis.alertFresh(bar, bar + 300) && Analysis.alertFresh(bar, bar + 300 + 600),
+                    "review: an alert is fresh from bar close to 10 minutes after it");
+            check(!Analysis.alertFresh(bar, bar + 300 + 601) && !Analysis.alertFresh(bar, bar + 3 * 3600)
+                            && !Analysis.alertFresh(0, bar),
+                    "review: a break found 10+ minutes late (or no bar) never alerts");
+            check(NseChain.endpointFor("^NSEMDCP50") == null && "indices:FINNIFTY".equals(NseChain.endpointFor("^CNXFIN")),
+                    "review: MIDCAP 50 is not mapped to MIDCPNIFTY's chain");
         }
 
         System.out.println("\nALL TESTS PASSED: " + passed + " checks");

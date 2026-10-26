@@ -112,6 +112,20 @@ public final class Universe {
         return ALL;
     }
 
+    /** Review 26 Oct 2026: the symbols a strategy alert (ORB / gap
+     *  fade) may fire on - NSE F&O stocks (the NIFTY 50 and bank
+     *  lists) and the three NSE indices whose options the ticket
+     *  prices (NIFTY weekly, BANKNIFTY / FINNIFTY monthly). INDIA
+     *  VIX, USD/INR, MIDCAP 50, SENSEX (BSE expiry rules, no index
+     *  strike table here) and the global commodity benchmarks have
+     *  no NSE option the ticket can name, so they never alert (they
+     *  stay on the board, and price alerts on them still work). */
+    public static boolean alertable(Sym s) {
+        if (s == null || s.yahoo == null) return false;
+        if (G_NIFTY.equals(s.group) || G_BANK.equals(s.group)) return s.yahoo.endsWith(".NS");
+        return "^NSEI".equals(s.yahoo) || "^NSEBANK".equals(s.yahoo) || "^CNXFIN".equals(s.yahoo);
+    }
+
     public static boolean isCommodity(Sym s) {
         return s != null && G_COMM.equals(s.group);
     }

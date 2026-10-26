@@ -205,8 +205,10 @@ public final class AlertEngine {
             if (sendEod(ctx, prefs, dateKey)) prefs.markEod(dateKey);
         }
 
-        // square-off reminder
-        if (!now.isBefore(LocalTime.of(15, 20)) && !prefs.squareOffSent(dateKey)) {
+        // square-off reminder - review 26 Oct 2026: only 15:20-15:35, so
+        // a late pass (phone off, Doze) never sends it in the evening
+        if (!now.isBefore(LocalTime.of(15, 20)) && now.isBefore(LocalTime.of(15, 35))
+                && !prefs.squareOffSent(dateKey)) {
             if (NtfyClient.postToAll(prefs, prefs.activeTopics(), "IraThinker - square off",
                     "15:20 - close all intraday positions. No overnight heroics.", "warning")) {
                 prefs.markSquareOff(dateKey);

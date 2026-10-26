@@ -30,21 +30,43 @@ public final class OptionsMath {
         return (int) java.time.temporal.ChronoUnit.DAYS.between(today, weeklyExpiry(today));
     }
 
-    /** Next Tuesday (today itself when today is Tuesday). */
+    /** Next Tuesday (today itself when today is Tuesday), moved back
+     *  to the trading day before when that Tuesday is an exchange
+     *  holiday (review 26 Oct 2026: Tue 10 Nov 2026 is Diwali
+     *  Balipratipada, so that week's NIFTY expiry is Mon 9 Nov). */
     public static LocalDate weeklyExpiry(LocalDate today) {
         int add = (DayOfWeek.TUESDAY.getValue() - today.getDayOfWeek().getValue() + 7) % 7;
-        return today.plusDays(add);
+        LocalDate tue = today.plusDays(add);
+        LocalDate e = holidayShift(tue);
+        // Only on the holiday itself can the moved expiry be behind
+        // today: the contract has gone, so next week's is the nearest.
+        if (e.isBefore(today)) e = holidayShift(tue.plusWeeks(1));
+        return e;
     }
 
     /** Last Tuesday of the month (next month's once it has passed) -
-     *  the stock-options and non-NIFTY index expiry. */
+     *  the stock-options and non-NIFTY index expiry - moved back to
+     *  the trading day before when it is an exchange holiday (review
+     *  26 Oct 2026: Tue 24 Nov 2026 is Guru Nanak Jayanti, so the
+     *  November monthly expiry is Mon 23 Nov; Tue 31 Mar 2026 was
+     *  Mahavir Jayanti, so March's was Mon 30 Mar). */
     public static LocalDate monthlyExpiry(LocalDate today) {
-        LocalDate e = lastTuesday(today.getYear(), today.getMonthValue());
+        LocalDate e = holidayShift(lastTuesday(today.getYear(), today.getMonthValue()));
         if (today.isAfter(e)) {
             LocalDate nm = today.plusMonths(1);
-            e = lastTuesday(nm.getYear(), nm.getMonthValue());
+            e = holidayShift(lastTuesday(nm.getYear(), nm.getMonthValue()));
         }
         return e;
+    }
+
+    /** An expiry that falls on an exchange holiday moves to the
+     *  previous trading day (the exchanges' rule). Uses the NSE
+     *  list in MarketCalendar (2026 only: a later year's holidays
+     *  are not known, so its dates stay unshifted); BSE closes on
+     *  the same days for these holidays. */
+    static LocalDate holidayShift(LocalDate d) {
+        while (MarketCalendar.isHoliday(d) || d.getDayOfWeek().getValue() > 5) d = d.minusDays(1);
+        return d;
     }
 
     private static LocalDate lastTuesday(int year, int month) {
@@ -63,10 +85,10 @@ public final class OptionsMath {
      *  is exactly its month's last Thursday. Not a Tuesday (the
      *  NSE rule above) and not the pre-2025 Friday. */
     public static LocalDate monthlyExpiryBse(LocalDate today) {
-        LocalDate e = lastThursday(today.getYear(), today.getMonthValue());
+        LocalDate e = holidayShift(lastThursday(today.getYear(), today.getMonthValue()));
         if (today.isAfter(e)) {
             LocalDate nm = today.plusMonths(1);
-            e = lastThursday(nm.getYear(), nm.getMonthValue());
+            e = holidayShift(lastThursday(nm.getYear(), nm.getMonthValue()));
         }
         return e;
     }
