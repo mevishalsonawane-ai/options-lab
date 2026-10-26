@@ -3,6 +3,7 @@ package com.optionslab.app.ui.screens
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -93,5 +94,25 @@ class NtfyPageTest {
         assertTrue(exists("● 1 OTM"))
         assertTrue(exists("Access token: set (****)"))
         assertTrue(exists("Reader: connected"))
+    }
+
+    /** 26 Oct (Boss: "I think ntfy messages are getting read late"): each message's seconds to read and decide, and today's line. */
+    @Test fun eachMessageShowsItsTimingAndTodaysLine() {
+        val sent = at.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(at.plusMinutes(5).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+        try {
+            val alerts = listOf(
+                NtfyArm.Alert("m2", at.plusMinutes(2), "exit nifty", NtfyArm.CLOSED, "closed", readMs = sent + 120_000 + 800, actedMs = sent + 120_000 + 1_500),
+                NtfyArm.Alert("m1", at, "BUY NIFTY 25000 CE", NtfyArm.TRADED, "bought", readMs = sent + 1_200, actedMs = sent + 2_500),
+                // Kept before 26 Oct: no timing, no line of its own and not counted.
+                NtfyArm.Alert("m0", at.minusMinutes(1), "old", NtfyArm.NOT_TRADED, "stale"))
+            show(NtfyArm.View(on = true, alerts = alerts), NtfyReader.Config("k3J9-q2Lm_8xZpV4rT7wYb", NtfyRules.DEFAULT_SERVER, null, ""))
+            compose.onNodeWithTag("ntfy-timing").performScrollTo()
+            assertTrue(exists("ntfy: 2 messages, read in median 1.0s / max 1.2s, acted in median 2.0s / max 2.5s"))
+            compose.onNodeWithTag("ntfy-alert-timing-0").performScrollTo()
+            assertTrue(exists("read 0.8s · decided 1.5s after it was sent"))
+            assertTrue(exists("read 1.2s · decided 2.5s after it was sent"))
+            assertTrue(compose.onAllNodesWithTag("ntfy-alert-timing-2").fetchSemanticsNodes().isEmpty())
+        } finally { com.optionslab.app.data.Market.testClock = null }
     }
 }

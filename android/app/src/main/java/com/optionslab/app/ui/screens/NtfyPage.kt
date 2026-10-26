@@ -173,6 +173,9 @@ internal fun NtfyContent(v: NtfyArm.View, st: NtfyReader.Status, cfg: NtfyReader
         }
         LedgerCard(Modifier.padding(top = 10.dp).testTag("ntfy-alerts"), title = "Alerts") {
             if (v.alerts.isEmpty()) Note("No messages read yet.")
+            // 26 Oct (Boss: "ntfy messages are getting read late"): today's timing, from the server's time to read and to decided.
+            else Text(NtfyArm.daySummary(v), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+                modifier = Modifier.padding(bottom = 6.dp).testTag("ntfy-timing"))
             v.alerts.take(50).forEachIndexed { i, a ->
                 if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
                 Column(Modifier.testTag("ntfy-alert-$i").semantics { contentDescription = "Alert ${a.state}" }) {
@@ -180,6 +183,8 @@ internal fun NtfyContent(v: NtfyArm.View, st: NtfyReader.Status, cfg: NtfyReader
                         style = Type.label.copy(color = if (a.state == NtfyArm.TRADED) p.oxblood else p.inkSoft, fontSize = 11.sp))
                     Text(a.text, style = Type.bodySmall.copy(color = p.ink))
                     if (a.why.isNotBlank()) Text(a.why, style = Type.bodySmall.copy(color = p.inkSoft))
+                    if (a.timingWords.isNotEmpty()) Text(a.timingWords + " after it was sent", style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp),
+                        modifier = Modifier.testTag("ntfy-alert-timing-$i"))
                 }
             }
         }

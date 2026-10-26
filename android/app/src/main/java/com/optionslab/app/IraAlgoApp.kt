@@ -143,6 +143,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.KiteStream.init(this)
         com.optionslab.app.data.PositionsFirst.start(this)
+        // 26 Oct: ntfy alerts' reader supervised on its own (started at 09:00, restarted within seconds); after the positions step above (it waits for it).
+        if (!com.optionslab.app.BuildConfig.GOLD) com.optionslab.app.data.NtfyReader.init(this)
         // Boss's 15 Oct arms cleanup: its small file read on its own worker; its first pass waits for the positions step above.
         com.optionslab.app.data.HiddenArms.init(this)
         // 25 Oct: the removed Telegram feature's data deleted once, in the background, after the positions step above.

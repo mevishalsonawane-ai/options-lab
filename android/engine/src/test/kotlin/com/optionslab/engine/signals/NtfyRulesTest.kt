@@ -207,12 +207,34 @@ class NtfyRulesTest {
         assertEquals("700", NtfyRules.since(null, null, 1_000, 5))
         assertEquals("700", NtfyRules.since("abc", 100, 1_000, 5), "an old id may have left the server's cache")
         assertEquals("700", NtfyRules.since("abc", null, 1_000, 5))
-        assertEquals(listOf(1_000L, 2_000L, 4_000L, 60_000L, 60_000L), listOf(0, 1, 2, 6, 99).map { NtfyRules.backoffMs(it) })
+        // 26 Oct: capped at 15 s in the reader's hours (it was 60 s); a 429 still waits a minute.
+        assertEquals(listOf(1_000L, 2_000L, 4_000L, 8_000L, 15_000L, 15_000L, 15_000L), listOf(0, 1, 2, 3, 4, 6, 99).map { NtfyRules.backoffMs(it) })
+        assertEquals(60_000L, NtfyRules.backoffMs(0, 429))
+        assertEquals(1_000L, NtfyRules.backoffMs(0, 500))
         assertEquals(1_000L, NtfyRules.backoffMs(-3))
         assertEquals("topic set (****)", NtfyRules.masked("secret"))
         assertEquals("no topic set", NtfyRules.masked(null)); assertEquals("no topic set", NtfyRules.masked(" "))
         assertTrue(NtfyRules.weakTopic("alerts1")); assertTrue(NtfyRules.weakTopic("abcdefghijklmnopqrstuvwxyz"))
         assertFalse(NtfyRules.weakTopic("k3J9-q2Lm_8xZpV4rT7wYb"))
         assertTrue(NtfyRules.SIGNAL.contains("not researched"))
+    }
+
+    /** 26 Oct (Boss: "ntfy messages are getting read late"): each message's timing and the day's line in the diagnostics. */
+    @Test fun timingAndTheDaySummary() {
+        val sent = 1_800_000_000L
+        val t = NtfyRules.Timing(sent, sent * 1000 + 1_200, sent * 1000 + 2_500)
+        assertEquals(1.2, t.readS!!, 1e-9); assertEquals(2.5, t.actedS!!, 1e-9)
+        // Not decided yet; the phone's clock behind the server's: 0, never below.
+        val waiting = NtfyRules.Timing(sent, sent * 1000 - 3_000)
+        assertEquals(0.0, waiting.readS!!, 1e-9); assertNull(waiting.actedS)
+        assertNull(NtfyRules.Timing(sent, 0L).readS)
+        assertEquals("ntfy: no messages today", NtfyRules.daySummary(emptyList()))
+        assertEquals("ntfy: 1 message, read in median 0.0s / max 0.0s, acted in none yet", NtfyRules.daySummary(listOf(waiting)))
+        val late = NtfyRules.Timing(sent, sent * 1000 + 64_000, sent * 1000 + 185_000)
+        assertEquals("ntfy: 3 messages, read in median 1.2s / max 64s, acted in median 94s / max 3m 05s",
+            NtfyRules.daySummary(listOf(t, waiting, late)))
+        assertEquals(null, NtfyRules.median(emptyList()))
+        assertEquals(2.0, NtfyRules.median(listOf(3.0, 1.0))!!, 1e-9)
+        assertEquals("9.9s", NtfyRules.secs(9.94)); assertEquals("10s", NtfyRules.secs(10.2)); assertEquals("2m 00s", NtfyRules.secs(120.0))
     }
 }

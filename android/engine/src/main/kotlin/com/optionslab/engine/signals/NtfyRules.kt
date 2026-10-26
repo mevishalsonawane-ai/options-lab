@@ -271,8 +271,55 @@ object NtfyRules {
         return if (last != null && lastAtEpoch != null && lastAtEpoch >= from) last else from.toString()
     }
 
-    /** The wait before reconnect [attempt] (0 the first): 1 s, 2 s, 4 s ... at most 60 s. */
-    fun backoffMs(attempt: Int): Long = (1_000L shl attempt.coerceIn(0, 6)).coerceAtMost(60_000L)
+    /**
+     * The wait before reconnect [attempt] (0 the first): 1 s, 2 s, 4 s, 8 s, then at most [BACKOFF_CAP_MS] (15 s). 26 Oct (Boss: "ntfy
+     * messages are getting read late"): it was at most 60 s, so a line that kept failing could leave a minute with no reader; the
+     * reader only runs in its hours, so a short cap costs little. The server saying "too many requests" (429) still waits 60 s.
+     */
+    fun backoffMs(attempt: Int, httpCode: Int? = null): Long =
+        if (httpCode == 429) 60_000L else (1_000L shl attempt.coerceIn(0, 6)).coerceAtMost(BACKOFF_CAP_MS)
+
+    /** 26 Oct: the longest wait between two connection tries in the reader's hours (a 429 aside). */
+    const val BACKOFF_CAP_MS = 15_000L
+
+    /**
+     * 26 Oct (Boss: "ntfy messages are getting read late"): one message's timing, in seconds from the server's time [sentEpochS]
+     * (ntfy's own stamp, whole seconds): when the app read it ([readMs], epoch milliseconds) and when a pass first decided on it
+     * ([actedMs]; 0 while nothing has decided yet). A phone clock behind the server's reads as 0, never below.
+     */
+    data class Timing(val sentEpochS: Long, val readMs: Long, val actedMs: Long = 0L) {
+        val readS: Double? get() = if (readMs > 0) lag(sentEpochS, readMs) else null
+        val actedS: Double? get() = if (actedMs > 0) lag(sentEpochS, actedMs) else null
+    }
+
+    /** Seconds from [sentEpochS] to [atMs], never below 0. */
+    fun lag(sentEpochS: Long, atMs: Long): Double = ((atMs - sentEpochS * 1_000L) / 1_000.0).coerceAtLeast(0.0)
+
+    /** [s] seconds in words: "0.4s", "12s", "3m 05s". */
+    fun secs(s: Double): String = when {
+        s < 10 -> "%.1fs".format(Locale.ENGLISH, s)
+        s < 120 -> "%.0fs".format(Locale.ENGLISH, s)
+        else -> (s.toLong()).let { "%dm %02ds".format(Locale.ENGLISH, it / 60, it % 60) }
+    }
+
+    /** The middle value (the mean of the two middle ones for an even count); null when empty. */
+    fun median(xs: List<Double>): Double? {
+        if (xs.isEmpty()) return null
+        val s = xs.sorted(); val m = s.size / 2
+        return if (s.size % 2 == 1) s[m] else (s[m - 1] + s[m]) / 2
+    }
+
+    /**
+     * The day's line for the diagnostics and the page: "ntfy: N messages, read in median Xs / max Ys, acted in median Xs / max Ys".
+     * Messages not decided yet count in N and the read figures only.
+     */
+    fun daySummary(day: List<Timing>): String {
+        if (day.isEmpty()) return "ntfy: no messages today"
+        val read = day.mapNotNull { it.readS }
+        val acted = day.mapNotNull { it.actedS }
+        fun part(xs: List<Double>) = median(xs)?.let { "median ${secs(it)} / max ${secs(xs.max())}" } ?: "none yet"
+        return "ntfy: ${day.size} message${if (day.size == 1) "" else "s"}, read in ${part(read)}, acted in ${part(acted)}"
+    }
 
     /**
      * The index crossed a signal's own level ([idxStop] / [idxTarget], the index's): "index stop" or "index target", else null.

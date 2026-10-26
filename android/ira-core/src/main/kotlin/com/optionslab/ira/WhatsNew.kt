@@ -61,11 +61,21 @@ object WhatsNew {
     private val OCT21: LocalDate = LocalDate.of(2026, 10, 21)
     private val OCT22: LocalDate = LocalDate.of(2026, 10, 22)
     private val OCT25: LocalDate = LocalDate.of(2026, 10, 25)
+    private val OCT26: LocalDate = LocalDate.of(2026, 10, 26)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
-        // 25 Oct (Boss: "Do whatever you think better for application", on the audits' open decisions): newest of all.
+        // 26 Oct (Boss: "I think ntfy messages are getting read late, please check"): newest of all.
+        Entry("2026-10-26-ntfy-faster", OCT26, "ntfy messages are acted on within seconds",
+            "A message used to wait for the next minute's check; now it is decided within seconds of arriving. " +
+                "The reader starts at 09:00 and, if it stops, starts again within a few seconds. " +
+                "A dropped line is tried again within 15 seconds, not a minute. " +
+                "Each message shows how many seconds it took to be read and decided, and today's line sums them up. " +
+                "Every rule, limit and switch applies as before.",
+            "Settings → Automation → ntfy alerts → Alerts; the diagnostics' ntfy line",
+            ask = "what did ntfy say"),
+        // 25 Oct (Boss: "Do whatever you think better for application", on the audits' open decisions).
         Entry("2026-10-25-boss-decisions", OCT25, "Your risk decisions are in",
             "Your account stop rule now also stops new paper entries, and a paper week down ₹20,000 stops them until Monday. " +
                 "A paper trade risking over 2% of the account to its stop is sized down or skipped. " +

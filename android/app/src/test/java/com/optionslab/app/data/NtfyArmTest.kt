@@ -554,4 +554,117 @@ class NtfyArmTest : RobolectricTest() {
             assertFalse("$name reads ntfy", code.contains("NtfyReader") || code.contains("NtfyArm.receive") || code.contains("NtfyArm.refresh"))
         }
     }
+
+    // ---- 26 Oct (Boss: "I think ntfy messages are getting read late, please check") -------------------------------------------
+
+    private fun waitFor(what: String, ms: Long = 10_000, ok: () -> Boolean) {
+        val end = System.currentTimeMillis() + ms
+        while (!ok()) { assertTrue("timed out: $what", System.currentTimeMillis() < end); Thread.sleep(10) }
+    }
+    private fun buys() = Paper.state.orders.count { it.action == "BUY" }
+
+    /** It waited as pending for the watch's next minute (up to ~60 s); now its own pass decides it within seconds, with its timing. */
+    @Test fun aMessageArrivingMidMinuteIsDecidedWithinSecondsNotAtTheNextBarClose() {
+        on()
+        NtfyArm.testNoKick = false
+        val t0 = System.nanoTime()
+        // Sent at 09:28:34 (mid-minute), read at 09:28:35; no watch pass, no bar close: only the quick pass.
+        msg("m1", "NIFTY 25000 CE BUY SL 100 TGT 140", LocalTime.of(9, 28), 34)
+        waitFor("decided by the quick pass", 8_000) { alert("m1").state != NtfyArm.PENDING }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        assertTrue("decided in $ms ms", ms < 5_000)
+        assertEquals(alert("m1").why, NtfyArm.TRADED, alert("m1").state)
+        assertEquals(1, v().open.size); assertEquals(1, buys())
+        assertTrue(NtfyArm.kickedPasses >= 1)
+        // Its timing (by the market's clock): sent 09:28:34, read and decided 09:28:35.
+        assertEquals("read 1.0s · decided 1.0s", alert("m1").timingWords)
+        assertEquals("ntfy: 1 message, read in median 1.0s / max 1.0s, acted in median 1.0s / max 1.0s", NtfyArm.daySummary())
+        assertTrue(NtfyArm.diagLine(), NtfyArm.diagLine().contains("ntfy: 1 message, read in median 1.0s"))
+        assertTrue(Diag.lines().any { it.contains("message m1: traded") && it.contains("(read 1.0s · decided 1.0s after it was sent)") })
+        // Kept in the book across a restart.
+        val before = alert("m1")
+        NtfyArm.wipe(); runBlocking { NtfyArm.refresh() }
+        assertEquals(before.readMs, alert("m1").readMs); assertEquals(before.actedMs, alert("m1").actedMs)
+        assertTrue(before.readMs > 0)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun twoMessagesInQuickSuccessionAreEachActedOnOnce() {
+        on()
+        NtfyArm.testNoKick = false
+        at(LocalTime.of(9, 28), 5); market(LocalTime.of(9, 29), rally)
+        runBlocking { NtfyArm.receive(listOf(ev("a1", "BUY NIFTY 25000 CE"))) }
+        runBlocking { NtfyArm.receive(listOf(ev("a2", "BUY NIFTY 25000 PE", s = 5))) }
+        waitFor("both decided") { v().alerts.size == 2 && v().alerts.none { it.state == NtfyArm.PENDING } }
+        assertEquals(NtfyArm.TRADED, alert("a1").state)
+        assertEquals(NtfyArm.NOT_TRADED, alert("a2").state)
+        assertTrue(alert("a2").why, alert("a2").why.contains("already holds a NIFTY trade"))
+        assertEquals(1, buys())
+        // The same two again (a duplicate delivery, an overlapping catch-up poll): read once, nothing more.
+        assertEquals(0, runBlocking { NtfyArm.receive(listOf(ev("a1", "BUY NIFTY 25000 CE"), ev("a2", "BUY NIFTY 25000 PE", s = 5))) })
+        Thread.sleep(300)
+        assertEquals(1, buys())
+        assertEquals(1, Diag.lines().count { it.contains("message a1: traded") })
+        assertEquals(1, Diag.lines().count { it.contains("message a2: not traded") })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun anExitRightAfterABuyNeverLeavesItOpenOrSellsShort() {
+        on()
+        NtfyArm.testNoKick = false
+        msg("b1", "BUY NIFTY 25000 CE")
+        msg("x1", "exit nifty", LocalTime.of(9, 28), 6)
+        waitFor("both decided") { v().alerts.size == 2 && v().alerts.none { it.state == NtfyArm.PENDING } }
+        assertTrue(v().open.isEmpty())
+        // Either the buy was placed and the exit sold it, or the exit ended the buy still waiting: one buy at most, never a short.
+        if (alert("b1").state == NtfyArm.TRADED) {
+            assertEquals(alert("x1").why, NtfyArm.CLOSED, alert("x1").state)
+            assertEquals(1, v().closed.size)
+        } else assertEquals("cancelled by a later exit", alert("b1").why)
+        assertTrue(buys() <= 1)
+        assertTrue(Paper.state.positions.all { it.quantity == 0 })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun staleAndDuplicateMessagesAreStillRefusedAndNeedNoPass() {
+        on()
+        NtfyArm.testNoKick = false
+        // Sent at 09:28:04, read at 09:40:05 (a phone that was asleep): stale at the read, never pending, never a pass.
+        at(LocalTime.of(9, 40), 5); market(LocalTime.of(9, 41), rally)
+        assertEquals(1, runBlocking { NtfyArm.receive(listOf(ev("old", "BUY NIFTY 25000 CE"))) })
+        assertEquals(NtfyArm.NOT_TRADED, alert("old").state)
+        assertTrue(alert("old").why, alert("old").why.startsWith("stale, not traded"))
+        assertEquals("the timing says how late it was read", "read 12m 01s · decided 12m 01s", alert("old").timingWords)
+        Thread.sleep(200)
+        assertEquals(0, NtfyArm.kickedPasses)
+        // A fresh one is bought once; its duplicate is read once.
+        msg("d1", "BUY NIFTY 25000 CE", LocalTime.of(9, 40), 10)
+        waitFor("decided") { alert("d1").state != NtfyArm.PENDING }
+        assertEquals(0, msg("d1", "BUY NIFTY 25000 CE", LocalTime.of(9, 40), 10))
+        Thread.sleep(200)
+        assertEquals(1, buys())
+        assertNothingAtZerodha()
+    }
+
+    /** Open positions first: a quick pass held on a slow price read never holds the stop check ([NtfyArm.manageOnly]). */
+    @Test fun aSlowQuickPassNeverDelaysTheStopCheck() {
+        on()
+        msg("m1", "BUY NIFTY 25000 CE")
+        tick(LocalTime.of(9, 28), 30)
+        assertTrue(NtfyArm.holding())
+        val entered = java.util.concurrent.CountDownLatch(1); val release = java.util.concurrent.CountDownLatch(1)
+        upstox.gate = { key -> if (key == pe) { entered.countDown(); release.await(8, java.util.concurrent.TimeUnit.SECONDS) } }
+        try {
+            NtfyArm.testNoKick = false
+            msg("w1", "NIFTY 25000 PE @ 100", LocalTime.of(9, 29))
+            assertTrue("the quick pass reads the option's price", entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            val t0 = System.nanoTime()
+            val done = runBlocking { kotlinx.coroutines.withTimeoutOrNull(3_000) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { NtfyArm.manageOnly() }; true } }
+            assertEquals("the stop check never waits behind the quick pass", true, done)
+            assertTrue((System.nanoTime() - t0) / 1_000_000 < 2_000)
+        } finally { release.countDown(); upstox.gate = null }
+        waitFor("the quick pass ended") { alert("w1").actedMs > 0 }
+        assertEquals(1, v().open.size)
+        assertNothingAtZerodha()
+    }
 }

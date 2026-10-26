@@ -203,4 +203,82 @@ class NtfyReaderTest : RobolectricTest() {
         assertFalse(NtfyReader.diagWords().contains(topic))
         assertTrue(NtfyReader.releaseForMemory().not())
     }
+
+    // ---- 26 Oct (Boss: "I think ntfy messages are getting read late, please check") -------------------------------------------
+
+    /** A message from the stream is decided by its own pass within seconds (it waited for the watch's next minute before). */
+    @Test fun aStreamedMessageIsDecidedWithinSecondsNotAtTheNextMinute() {
+        NtfyArm.testNoKick = false
+        server.enqueue(MockResponse().setBody(""))
+        // Mid-minute, the stream brings an exit (nothing held: decided at once, no market data needed).
+        server.enqueue(MockResponse().setBody(open() + line("x1", "exit nifty", at = nowSec - 1)).setBodyDelay(300, TimeUnit.MILLISECONDS))
+        server.enqueue(MockResponse().setBody(""))
+        server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+        val t0 = System.nanoTime()
+        NtfyReader.ensure()
+        waitFor("read and decided", 8_000) { NtfyArm.view.value.alerts.any { it.id == "x1" && it.state != NtfyArm.PENDING } }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        assertTrue("read and decided in $ms ms", ms < 5_000)
+        val a = NtfyArm.view.value.alerts.single { it.id == "x1" }
+        assertEquals(NtfyArm.NOT_TRADED, a.state)
+        assertTrue(a.why, a.why.contains("nothing held on NIFTY"))
+        assertTrue(NtfyArm.kickedPasses >= 1)
+        // Its timing: sent 09:59:59, read and decided at 10:00:00 by the market's clock; the topic is never in the diary.
+        assertEquals("read 1.0s · decided 1.0s", a.timingWords)
+        assertTrue(Diag.lines().any { it.contains("message x1: not traded") && it.contains("after it was sent") })
+        assertFalse(Diag.lines().any { it.contains(topic) })
+        NtfyReader.stop("test")
+    }
+
+    /** The supervisor starts the reader at its hours' open (09:00), not at the words lane's 09:15. */
+    @Test fun theSupervisorStartsTheReaderAtNine() {
+        NtfyReader.testInHours = null
+        val d = AutomationSupport.tradingDayAt(9, 0)
+        Market.testClock = Clock.fixed(d.minusSeconds(2).toInstant(), IST)
+        NtfyReader.superviseMs = 100; NtfyReader.idleLookMs = 200
+        NtfyReader.supervise()
+        waitFor("looked") { NtfyReader.looks >= 2 }
+        Thread.sleep(400)
+        assertFalse("08:59:58: never before its hours", NtfyReader.status.value.running)
+        assertEquals(0, server.requestCount)
+        assertTrue(NtfyReader.armedHint)
+        server.enqueue(MockResponse().setBody(""))
+        server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+        Market.testClock = Clock.fixed(d.toInstant(), IST)
+        waitFor("started at 09:00", 3_000) { NtfyReader.status.value.running }
+        waitFor("polled") { server.requestCount >= 1 }
+        assertTrue(take().path!!.contains("poll=1"))
+        NtfyReader.stopSupervisor(); NtfyReader.stop("test")
+    }
+
+    /** A reader stopped in its hours (memory pressure, a stop) runs again within seconds; outside its hours it stays stopped. */
+    @Test fun theSupervisorRestartsAStoppedReaderWithinSecondsAndNeverOutsideHours() {
+        NtfyReader.superviseMs = 100; NtfyReader.idleLookMs = 200; NtfyReader.hoursCheckMs = 50
+        repeat(2) {
+            server.enqueue(MockResponse().setBody(""))
+            server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+        }
+        NtfyReader.supervise()
+        waitFor("running") { NtfyReader.status.value.running && server.requestCount >= 2 }
+        assertTrue(NtfyReader.releaseForMemory())
+        assertFalse(NtfyReader.status.value.running)
+        val t0 = System.nanoTime()
+        waitFor("running again", 3_000) { NtfyReader.status.value.running }
+        assertTrue((System.nanoTime() - t0) / 1_000_000 < 3_000)
+        waitFor("caught up by its poll") { server.requestCount >= 3 }
+        // The F&O close: stopped by its timer, and the supervisor never starts it again outside its hours.
+        NtfyReader.testInHours = false
+        waitFor("stopped") { !NtfyReader.status.value.running }
+        val n = server.requestCount
+        Thread.sleep(600)
+        assertFalse(NtfyReader.status.value.running)
+        assertEquals(n, server.requestCount)
+        // Off: not armed, and nothing runs in its hours either.
+        runBlocking { NtfyArm.setOn(false, log = false) }
+        NtfyReader.testInHours = true
+        Thread.sleep(400)
+        assertFalse(NtfyReader.status.value.running)
+        assertFalse(NtfyReader.armedHint); assertFalse(NtfyReader.armedNow())
+        NtfyReader.stopSupervisor()
+    }
 }

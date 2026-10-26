@@ -173,6 +173,8 @@ class TestApp : Application() {
         com.optionslab.app.data.WatchlistHost.resetForTest()
         com.optionslab.app.data.NtfyArm.wipe()
         com.optionslab.app.data.NtfyReader.wipe()
+        // 26 Oct: the quick pass off in the tests (they drive the pass themselves); a test that checks it turns it on.
+        com.optionslab.app.data.NtfyArm.testNoKick = true
         com.optionslab.app.data.StockOptions.wipe()
         com.optionslab.app.data.GrammarArm.wipe()
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()

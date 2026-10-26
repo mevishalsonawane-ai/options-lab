@@ -169,6 +169,18 @@ class JobsTest : RobolectricTest() {
         assertEquals("a Saturday session", from(fri.plusDays(1), 9, 14), Jobs.nextRun(Jobs.Kind.LIVE, from(fri, 12, 0)))
     }
 
+    /** 26 Oct (Boss: "ntfy messages are getting read late"): with ntfy alerts armed the watch starts at 09:00, its reader's open. */
+    @Test fun withNtfyArmedTheWatchStartsAtNine() {
+        fun from(d: LocalDate, h: Int, m: Int): ZonedDateTime = d.atTime(h, m).atZone(IST)
+        assertEquals(from(WED, 9, 0), Jobs.nextRun(Jobs.Kind.LIVE, from(WED, 8, 0), early = true))
+        assertEquals(from(WED.plusDays(1), 9, 0), Jobs.nextRun(Jobs.Kind.LIVE, from(WED, 9, 0), early = true))
+        assertEquals("not armed: 09:14 as before", from(WED, 9, 14), Jobs.nextRun(Jobs.Kind.LIVE, from(WED, 8, 0)))
+        assertEquals("only the market watch moves", from(WED, 15, 45), Jobs.nextRun(Jobs.Kind.HARVEST, from(WED, 8, 0), early = true))
+        assertTrue(Jobs.nseWatchDueAt(WED, 9 * 60, early = true)); assertFalse(Jobs.nseWatchDueAt(WED, 8 * 60 + 59, early = true))
+        assertFalse(Jobs.nseWatchDueAt(WED, 9 * 60 + 13)); assertTrue(Jobs.nseWatchDueAt(WED, 9 * 60 + 14))
+        assertFalse("never on a closed day (a Saturday)", Jobs.nseWatchDueAt(WED.plusDays(3), 10 * 60, early = true))
+    }
+
     @Test fun withoutZerodhaOnlyTheWatchAndItsHeartbeatAreArmed() {
         Jobs.scheduleAll(context)
         assertEquals(at(WED.plusDays(1), LocalTime.of(9, 14)), alarm("ol.job.LIVE").triggerAtMs)
