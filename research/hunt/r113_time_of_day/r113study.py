@@ -171,7 +171,18 @@ def cmd_paper(diag_dir: str) -> None:
             d = json.load(gzip.open(f))
         except (OSError, ValueError):
             continue
-        trips += L.pair_orders(d.get("orders"), str(d.get("day")))
+        day_trips = L.pair_orders(d.get("orders"), str(d.get("day")))
+        if not d.get("orders"):           # schema 1 (19 Oct) lists no orders: the arm's own closed paper trades
+            for a in d.get("arms") or []:
+                for t in a.get("trades") or []:
+                    try:
+                        if t.get("account") == "paper" and not t.get("open"):
+                            day_trips.append(dict(day=str(d.get("day")), source=str(a.get("label")), symbol="",
+                                                  entry_at=str(t["entry_at"]), exit_at=str(t.get("exit_at")),
+                                                  dir="BUY", points=float(t["points"]), pct=float(t["pct"])))
+                    except (KeyError, TypeError, ValueError):
+                        continue
+        trips += day_trips
     rows = {}
     for t in trips:
         b = L.bucket(L.hhmm_minute(t["entry_at"]), L.time_buckets("SILVERM" if "SILVER" in t["symbol"] or "NATURALGAS"
