@@ -1,0 +1,1592 @@
+{
+ "_meta": {
+  "phase": "design",
+  "sessions": 337,
+  "twins": 10000,
+  "seed": 107
+ },
+ "design": {
+  "G2-LIQ": {
+   "variant": {
+    "net": 407605,
+    "max_dd": 47878,
+    "worst_day": -11094,
+    "r_dd": 8.5134,
+    "r_wd": 36.7424,
+    "months": 17,
+    "worst_month": -27007,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 2,
+    "trades": 881,
+    "changed": 395,
+    "sessions": 337,
+    "twin_p": 0.4262,
+    "twin_p_wd": 0.1945
+   },
+   "base": {
+    "net": 257249,
+    "max_dd": 32537,
+    "worst_day": -8416,
+    "r_dd": 7.9063,
+    "r_wd": 30.5651,
+    "months": 17,
+    "worst_month": -17360,
+    "months_below": 1,
+    "dd_over": false,
+    "dd_breaches": 0,
+    "trades": 881,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": 555042,
+    "max_dd": 63004,
+    "worst_day": -16691,
+    "r_dd": 8.8096,
+    "r_wd": 33.2534,
+    "months": 17,
+    "worst_month": -32164,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 3,
+    "trades": 881,
+    "changed": 881,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": 8.2193,
+    "r_wd": 30.6952,
+    "net": 382979.525
+   }
+  },
+  "D2-LIQ": {
+   "variant": {
+    "net": 339573,
+    "max_dd": 40812,
+    "worst_day": -16691,
+    "r_dd": 8.3204,
+    "r_wd": 20.3444,
+    "months": 17,
+    "worst_month": -19924,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 881,
+    "changed": 112,
+    "sessions": 337,
+    "twin_p": 0.3953,
+    "twin_p_wd": 0.8559
+   },
+   "base": {
+    "net": 257249,
+    "max_dd": 32537,
+    "worst_day": -8416,
+    "r_dd": 7.9063,
+    "r_wd": 30.5651,
+    "months": 17,
+    "worst_month": -17360,
+    "months_below": 1,
+    "dd_over": false,
+    "dd_breaches": 0,
+    "trades": 881,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": 555042,
+    "max_dd": 63004,
+    "worst_day": -16691,
+    "r_dd": 8.8096,
+    "r_wd": 33.2534,
+    "months": 17,
+    "worst_month": -32164,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 3,
+    "trades": 881,
+    "changed": 881,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": 7.9295,
+    "r_wd": 27.5898,
+    "net": 295266.795
+   }
+  },
+  "G2-R72": {
+   "variant": {
+    "net": 316651,
+    "max_dd": 305735,
+    "worst_day": -70799,
+    "r_dd": 1.0357,
+    "r_wd": 4.4726,
+    "months": 17,
+    "worst_month": -123896,
+    "months_below": 6,
+    "dd_over": true,
+    "dd_breaches": 5,
+    "trades": 3071,
+    "changed": 1308,
+    "sessions": 337,
+    "twin_p": 0.8668,
+    "twin_p_wd": 0.4778
+   },
+   "base": {
+    "net": 216929,
+    "max_dd": 199077,
+    "worst_day": -58613,
+    "r_dd": 1.0897,
+    "r_wd": 3.701,
+    "months": 17,
+    "worst_month": -78467,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 5,
+    "trades": 3071,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": 576488,
+    "max_dd": 375471,
+    "worst_day": -116525,
+    "r_dd": 1.5354,
+    "r_wd": 4.9473,
+    "months": 17,
+    "worst_month": -148090,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 7,
+    "trades": 3071,
+    "changed": 3071,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": 1.3549,
+    "r_wd": 4.4068,
+    "net": 361038.555
+   }
+  },
+  "D2-R72": {
+   "variant": {
+    "net": 266413,
+    "max_dd": 254916,
+    "worst_day": -116525,
+    "r_dd": 1.0451,
+    "r_wd": 2.2863,
+    "months": 17,
+    "worst_month": -130160,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 6,
+    "trades": 3071,
+    "changed": 389,
+    "sessions": 337,
+    "twin_p": 0.6424,
+    "twin_p_wd": 0.872
+   },
+   "base": {
+    "net": 216929,
+    "max_dd": 199077,
+    "worst_day": -58613,
+    "r_dd": 1.0897,
+    "r_wd": 3.701,
+    "months": 17,
+    "worst_month": -78467,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 5,
+    "trades": 3071,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": 576488,
+    "max_dd": 375471,
+    "worst_day": -116525,
+    "r_dd": 1.5354,
+    "r_wd": 4.9473,
+    "months": 17,
+    "worst_month": -148090,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 7,
+    "trades": 3071,
+    "changed": 3071,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": 1.2001,
+    "r_wd": 4.4183,
+    "net": 265753.46
+   }
+  },
+  "G2-R51": {
+   "variant": {
+    "net": 56509,
+    "max_dd": 354035,
+    "worst_day": -69514,
+    "r_dd": 0.1596,
+    "r_wd": 0.8129,
+    "months": 17,
+    "worst_month": -119467,
+    "months_below": 8,
+    "dd_over": true,
+    "dd_breaches": 2,
+    "trades": 4498,
+    "changed": 1812,
+    "sessions": 337,
+    "twin_p": 0.8042,
+    "twin_p_wd": 0.733
+   },
+   "base": {
+    "net": 9998,
+    "max_dd": 224592,
+    "worst_day": -56647,
+    "r_dd": 0.0445,
+    "r_wd": 0.1765,
+    "months": 17,
+    "worst_month": -89909,
+    "months_below": 8,
+    "dd_over": true,
+    "dd_breaches": 4,
+    "trades": 4498,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": 228044,
+    "max_dd": 416482,
+    "worst_day": -112452,
+    "r_dd": 0.5475,
+    "r_wd": 2.0279,
+    "months": 17,
+    "worst_month": -166723,
+    "months_below": 8,
+    "dd_over": true,
+    "dd_breaches": 6,
+    "trades": 4498,
+    "changed": 4498,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": 0.3565,
+    "r_wd": 1.3588,
+    "net": 108048.41
+   }
+  },
+  "D2-R51": {
+   "variant": {
+    "net": 56738,
+    "max_dd": 278570,
+    "worst_day": -112452,
+    "r_dd": 0.2037,
+    "r_wd": 0.5046,
+    "months": 17,
+    "worst_month": -145465,
+    "months_below": 8,
+    "dd_over": true,
+    "dd_breaches": 3,
+    "trades": 4498,
+    "changed": 585,
+    "sessions": 337,
+    "twin_p": 0.4328,
+    "twin_p_wd": 0.5392
+   },
+   "base": {
+    "net": 9998,
+    "max_dd": 224592,
+    "worst_day": -56647,
+    "r_dd": 0.0445,
+    "r_wd": 0.1765,
+    "months": 17,
+    "worst_month": -89909,
+    "months_below": 8,
+    "dd_over": true,
+    "dd_breaches": 4,
+    "trades": 4498,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": 228044,
+    "max_dd": 416482,
+    "worst_day": -112452,
+    "r_dd": 0.5475,
+    "r_wd": 2.0279,
+    "months": 17,
+    "worst_month": -166723,
+    "months_below": 8,
+    "dd_over": true,
+    "dd_breaches": 6,
+    "trades": 4498,
+    "changed": 4498,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": 0.1526,
+    "r_wd": 0.6271,
+    "net": 39476.675
+   }
+  },
+  "G2-R52": {
+   "variant": {
+    "net": 418742,
+    "max_dd": 162365,
+    "worst_day": -50091,
+    "r_dd": 2.579,
+    "r_wd": 8.3596,
+    "months": 17,
+    "worst_month": -85368,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 2,
+    "trades": 706,
+    "changed": 283,
+    "sessions": 337,
+    "twin_p": 0.9197,
+    "twin_p_wd": 0.9104
+   },
+   "base": {
+    "net": 290573,
+    "max_dd": 82713,
+    "worst_day": -25140,
+    "r_dd": 3.513,
+    "r_wd": 11.5582,
+    "months": 17,
+    "worst_month": -49847,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 706,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": 613929,
+    "max_dd": 161388,
+    "worst_day": -50091,
+    "r_dd": 3.8041,
+    "r_wd": 12.2562,
+    "months": 17,
+    "worst_month": -97648,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 4,
+    "trades": 706,
+    "changed": 706,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": 3.4701,
+    "r_wd": 11.7,
+    "net": 417173.39
+   }
+  },
+  "D2-R52": {
+   "variant": {
+    "net": 283730,
+    "max_dd": 83748,
+    "worst_day": -37109,
+    "r_dd": 3.3879,
+    "r_wd": 7.6459,
+    "months": 17,
+    "worst_month": -44103,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 2,
+    "trades": 706,
+    "changed": 71,
+    "sessions": 337,
+    "twin_p": 0.4891,
+    "twin_p_wd": 0.8191
+   },
+   "base": {
+    "net": 290573,
+    "max_dd": 82713,
+    "worst_day": -25140,
+    "r_dd": 3.513,
+    "r_wd": 11.5582,
+    "months": 17,
+    "worst_month": -49847,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 706,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": 613929,
+    "max_dd": 161388,
+    "worst_day": -50091,
+    "r_dd": 3.8041,
+    "r_wd": 12.2562,
+    "months": 17,
+    "worst_month": -97648,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 4,
+    "trades": 706,
+    "changed": 706,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": 3.3661,
+    "r_wd": 10.1528,
+    "net": 334222.565
+   }
+  },
+  "G3": {
+   "variant": {
+    "net": -418192,
+    "max_dd": 454494,
+    "worst_day": -39185,
+    "r_dd": -0.9201,
+    "r_wd": -10.6723,
+    "months": 17,
+    "worst_month": -113719,
+    "months_below": 9,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 5063,
+    "changed": 1023,
+    "sessions": 337,
+    "twin_p": 0.7696,
+    "twin_p_wd": 0.9603,
+    "trades_base": 4303
+   },
+   "base": {
+    "net": -402702,
+    "max_dd": 422620,
+    "worst_day": -31905,
+    "r_dd": -0.9529,
+    "r_wd": -12.6219,
+    "months": 17,
+    "worst_month": -97046,
+    "months_below": 10,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 5063,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": -368679,
+    "max_dd": 401095,
+    "worst_day": -44860,
+    "r_dd": -0.9192,
+    "r_wd": -8.2184,
+    "months": 17,
+    "worst_month": -119072,
+    "months_below": 9,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 5470,
+    "changed": 5063,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": -0.8947,
+    "r_wd": -8.1775,
+    "net": -346451.39
+   }
+  },
+  "D3": {
+   "variant": {
+    "net": -397298,
+    "max_dd": 417215,
+    "worst_day": -44860,
+    "r_dd": -0.9523,
+    "r_wd": -8.8563,
+    "months": 17,
+    "worst_month": -115179,
+    "months_below": 10,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 4455,
+    "changed": 191,
+    "sessions": 337,
+    "twin_p": 0.5546,
+    "twin_p_wd": 0.0415,
+    "trades_base": 4303
+   },
+   "base": {
+    "net": -402702,
+    "max_dd": 422620,
+    "worst_day": -31905,
+    "r_dd": -0.9529,
+    "r_wd": -12.6219,
+    "months": 17,
+    "worst_month": -97046,
+    "months_below": 10,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 4455,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": -368679,
+    "max_dd": 401095,
+    "worst_day": -44860,
+    "r_dd": -0.9192,
+    "r_wd": -8.2184,
+    "months": 17,
+    "worst_month": -119072,
+    "months_below": 9,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 5470,
+    "changed": 4455,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": -0.9509,
+    "r_wd": -12.2793,
+    "net": -398444.77
+   }
+  },
+  "D1": {
+   "variant": {
+    "net": -601179,
+    "max_dd": 647272,
+    "worst_day": -51822,
+    "r_dd": -0.9288,
+    "r_wd": -11.6008,
+    "months": 17,
+    "worst_month": -154890,
+    "months_below": 10,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 4303,
+    "changed": 3719,
+    "sessions": 337,
+    "twin_p": 0.5826,
+    "twin_p_wd": 0.9695
+   },
+   "base": {
+    "net": -402702,
+    "max_dd": 422620,
+    "worst_day": -31905,
+    "r_dd": -0.9529,
+    "r_wd": -12.6219,
+    "months": 17,
+    "worst_month": -97046,
+    "months_below": 10,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 4303,
+    "changed": 0,
+    "sessions": 337
+   },
+   "always": {
+    "net": -606075,
+    "max_dd": 652168,
+    "worst_day": -63102,
+    "r_dd": -0.9293,
+    "r_wd": -9.6047,
+    "months": 17,
+    "worst_month": -182780,
+    "months_below": 10,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 4303,
+    "changed": 4303,
+    "sessions": 337
+   },
+   "twin_median": {
+    "r_dd": -0.9263,
+    "r_wd": -9.3538,
+    "net": -577750.745
+   }
+  },
+  "_describe": {
+   "LIQ": {
+    "gex_neg": {
+     "n": 395,
+     "per_trade": 335,
+     "net": 132199,
+     "win": 0.448
+    },
+    "gex_other": {
+     "n": 486,
+     "per_trade": 257,
+     "net": 125050,
+     "win": 0.426
+    },
+    "danger_flagged": {
+     "n": 112,
+     "per_trade": 690,
+     "sessions": 47,
+     "per_session": 1644,
+     "worst_day": -8416
+    },
+    "danger_normal": {
+     "n": 769,
+     "per_trade": 234,
+     "sessions": 290,
+     "per_session": 621,
+     "worst_day": -6363
+    }
+   },
+   "R72": {
+    "gex_neg": {
+     "n": 1308,
+     "per_trade": 30,
+     "net": 38889,
+     "win": 0.466
+    },
+    "gex_other": {
+     "n": 1763,
+     "per_trade": 101,
+     "net": 178041,
+     "win": 0.469
+    },
+    "danger_flagged": {
+     "n": 389,
+     "per_trade": 81,
+     "sessions": 47,
+     "per_session": 669,
+     "worst_day": -58613
+    },
+    "danger_normal": {
+     "n": 2682,
+     "per_trade": 69,
+     "sessions": 290,
+     "per_session": 640,
+     "worst_day": -27444
+    }
+   },
+   "R51": {
+    "gex_neg": {
+     "n": 1812,
+     "per_trade": -21,
+     "net": -37349,
+     "win": 0.436
+    },
+    "gex_other": {
+     "n": 2686,
+     "per_trade": 18,
+     "net": 47347,
+     "win": 0.455
+    },
+    "danger_flagged": {
+     "n": 585,
+     "per_trade": 34,
+     "sessions": 47,
+     "per_session": 420,
+     "worst_day": -56647
+    },
+    "danger_normal": {
+     "n": 3913,
+     "per_trade": -2,
+     "sessions": 290,
+     "per_session": -34,
+     "worst_day": -31959
+    }
+   },
+   "R52": {
+    "gex_neg": {
+     "n": 283,
+     "per_trade": 406,
+     "net": 114999,
+     "win": 0.565
+    },
+    "gex_other": {
+     "n": 423,
+     "per_trade": 415,
+     "net": 175574,
+     "win": 0.551
+    },
+    "danger_flagged": {
+     "n": 71,
+     "per_trade": -142,
+     "sessions": 47,
+     "per_session": -215,
+     "worst_day": -18625
+    },
+    "danger_normal": {
+     "n": 635,
+     "per_trade": 474,
+     "sessions": 290,
+     "per_session": 1037,
+     "worst_day": -25140
+    }
+   },
+   "BOOK": {
+    "gex_neg": {
+     "n": 1666,
+     "per_trade": -67,
+     "net": -111112,
+     "win": 0.429
+    },
+    "gex_other": {
+     "n": 2637,
+     "per_trade": -111,
+     "net": -291590,
+     "win": 0.419
+    },
+    "danger_flagged": {
+     "n": 584,
+     "per_trade": -55,
+     "sessions": 47,
+     "per_session": -679,
+     "worst_day": -31905
+    },
+    "danger_normal": {
+     "n": 3719,
+     "per_trade": -100,
+     "sessions": 290,
+     "per_session": -1279,
+     "worst_day": -26273
+    }
+   },
+   "_gex_share": {
+    "NIFTY": {
+     "sessions": 337,
+     "neg_0920": 91,
+     "neg_1000": 95
+    },
+    "BANKNIFTY": {
+     "sessions": 337,
+     "neg_0920": 149,
+     "neg_1000": 156
+    },
+    "FINNIFTY": {
+     "sessions": 337,
+     "neg_0920": 131,
+     "neg_1000": 148
+    },
+    "MIDCPNIFTY": {
+     "sessions": 337,
+     "neg_0920": 138,
+     "neg_1000": 139
+    },
+    "SENSEX": {
+     "sessions": 337,
+     "neg_0920": 138,
+     "neg_1000": 144
+    }
+   },
+   "_danger_levels": {
+    "normal": 290,
+    "careful": 32,
+    "paper-only": 15
+   }
+  }
+ },
+ "wf": {
+  "G2-LIQ": {
+   "variant": {
+    "net": 373045,
+    "max_dd": 40413,
+    "worst_day": -11094,
+    "r_dd": 9.2308,
+    "r_wd": 33.627,
+    "months": 12,
+    "worst_month": -27007,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 657,
+    "changed": 286,
+    "sessions": 247,
+    "twin_p": 0.6807,
+    "twin_p_wd": 0.4381
+   },
+   "base": {
+    "net": 238064,
+    "max_dd": 23139,
+    "worst_day": -6363,
+    "r_dd": 10.2884,
+    "r_wd": 37.4161,
+    "months": 12,
+    "worst_month": -17360,
+    "months_below": 1,
+    "dd_over": false,
+    "dd_breaches": 0,
+    "trades": 657,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": 506160,
+    "max_dd": 43196,
+    "worst_day": -12307,
+    "r_dd": 11.7178,
+    "r_wd": 41.1281,
+    "months": 12,
+    "worst_month": -32164,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 2,
+    "trades": 657,
+    "changed": 657,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": 10.0772,
+    "r_wd": 32.8881,
+    "net": 344125.16
+   }
+  },
+  "D2-LIQ": {
+   "variant": {
+    "net": 327253,
+    "max_dd": 30435,
+    "worst_day": -6879,
+    "r_dd": 10.7526,
+    "r_wd": 47.5753,
+    "months": 12,
+    "worst_month": -19924,
+    "months_below": 1,
+    "dd_over": false,
+    "dd_breaches": 0,
+    "trades": 657,
+    "changed": 94,
+    "sessions": 247,
+    "twin_p": 0.3214,
+    "twin_p_wd": 0.0228
+   },
+   "base": {
+    "net": 238064,
+    "max_dd": 23139,
+    "worst_day": -6363,
+    "r_dd": 10.2884,
+    "r_wd": 37.4161,
+    "months": 12,
+    "worst_month": -17360,
+    "months_below": 1,
+    "dd_over": false,
+    "dd_breaches": 0,
+    "trades": 657,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": 506160,
+    "max_dd": 43196,
+    "worst_day": -12307,
+    "r_dd": 11.7178,
+    "r_wd": 41.1281,
+    "months": 12,
+    "worst_month": -32164,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 2,
+    "trades": 657,
+    "changed": 657,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": 9.8941,
+    "r_wd": 27.8528,
+    "net": 274403.415
+   }
+  },
+  "G2-R72": {
+   "variant": {
+    "net": 531112,
+    "max_dd": 143985,
+    "worst_day": -51084,
+    "r_dd": 3.6887,
+    "r_wd": 10.3968,
+    "months": 12,
+    "worst_month": -123896,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 6,
+    "trades": 2238,
+    "changed": 941,
+    "sessions": 247,
+    "twin_p": 0.8009,
+    "twin_p_wd": 0.8719
+   },
+   "base": {
+    "net": 335882,
+    "max_dd": 86529,
+    "worst_day": -25837,
+    "r_dd": 3.8817,
+    "r_wd": 13.0001,
+    "months": 12,
+    "worst_month": -72605,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 5,
+    "trades": 2238,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": 775437,
+    "max_dd": 164515,
+    "worst_day": -51084,
+    "r_dd": 4.7135,
+    "r_wd": 15.1797,
+    "months": 12,
+    "worst_month": -135116,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 8,
+    "trades": 2238,
+    "changed": 2238,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": 4.1981,
+    "r_wd": 12.3842,
+    "net": 505146.845
+   }
+  },
+  "D2-R72": {
+   "variant": {
+    "net": 432313,
+    "max_dd": 135483,
+    "worst_day": -46040,
+    "r_dd": 3.1909,
+    "r_wd": 9.3899,
+    "months": 12,
+    "worst_month": -122237,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 6,
+    "trades": 2238,
+    "changed": 314,
+    "sessions": 247,
+    "twin_p": 0.8281,
+    "twin_p_wd": 0.5195
+   },
+   "base": {
+    "net": 335882,
+    "max_dd": 86529,
+    "worst_day": -25837,
+    "r_dd": 3.8817,
+    "r_wd": 13.0001,
+    "months": 12,
+    "worst_month": -72605,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 5,
+    "trades": 2238,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": 775437,
+    "max_dd": 164515,
+    "worst_day": -51084,
+    "r_dd": 4.7135,
+    "r_wd": 15.1797,
+    "months": 12,
+    "worst_month": -135116,
+    "months_below": 2,
+    "dd_over": true,
+    "dd_breaches": 8,
+    "trades": 2238,
+    "changed": 2238,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": 4.0106,
+    "r_wd": 9.5216,
+    "net": 398615.88
+   }
+  },
+  "G2-R51": {
+   "variant": {
+    "net": 329692,
+    "max_dd": 148627,
+    "worst_day": -63252,
+    "r_dd": 2.2183,
+    "r_wd": 5.2124,
+    "months": 12,
+    "worst_month": -119119,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 5,
+    "trades": 3266,
+    "changed": 1269,
+    "sessions": 247,
+    "twin_p": 0.4097,
+    "twin_p_wd": 0.7887
+   },
+   "base": {
+    "net": 175789,
+    "max_dd": 103931,
+    "worst_day": -31959,
+    "r_dd": 1.6914,
+    "r_wd": 5.5005,
+    "months": 12,
+    "worst_month": -69324,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 5,
+    "trades": 3266,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": 502177,
+    "max_dd": 194545,
+    "worst_day": -63252,
+    "r_dd": 2.5813,
+    "r_wd": 7.9394,
+    "months": 12,
+    "worst_month": -125610,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 6,
+    "trades": 3266,
+    "changed": 3266,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": 2.1101,
+    "r_wd": 6.3552,
+    "net": 305850.71
+   }
+  },
+  "D2-R51": {
+   "variant": {
+    "net": 273481,
+    "max_dd": 121008,
+    "worst_day": -58437,
+    "r_dd": 2.26,
+    "r_wd": 4.6799,
+    "months": 12,
+    "worst_month": -103004,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 4,
+    "trades": 3266,
+    "changed": 452,
+    "sessions": 247,
+    "twin_p": 0.2191,
+    "twin_p_wd": 0.5974
+   },
+   "base": {
+    "net": 175789,
+    "max_dd": 103931,
+    "worst_day": -31959,
+    "r_dd": 1.6914,
+    "r_wd": 5.5005,
+    "months": 12,
+    "worst_month": -69324,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 5,
+    "trades": 3266,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": 502177,
+    "max_dd": 194545,
+    "worst_day": -63252,
+    "r_dd": 2.5813,
+    "r_wd": 7.9394,
+    "months": 12,
+    "worst_month": -125610,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 6,
+    "trades": 3266,
+    "changed": 3266,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": 1.7668,
+    "r_wd": 5.3284,
+    "net": 221237.7
+   }
+  },
+  "G2-R52": {
+   "variant": {
+    "net": 400992,
+    "max_dd": 85368,
+    "worst_day": -50091,
+    "r_dd": 4.6972,
+    "r_wd": 8.0052,
+    "months": 12,
+    "worst_month": -85368,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 2,
+    "trades": 529,
+    "changed": 211,
+    "sessions": 247,
+    "twin_p": 0.6361,
+    "twin_p_wd": 0.8051
+   },
+   "base": {
+    "net": 247057,
+    "max_dd": 49847,
+    "worst_day": -25140,
+    "r_dd": 4.9563,
+    "r_wd": 9.8272,
+    "months": 12,
+    "worst_month": -49847,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 529,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": 518620,
+    "max_dd": 97648,
+    "worst_day": -50091,
+    "r_dd": 5.3111,
+    "r_wd": 10.3535,
+    "months": 12,
+    "worst_month": -97648,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 4,
+    "trades": 529,
+    "changed": 529,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": 5.0637,
+    "r_wd": 10.2156,
+    "net": 350890.035
+   }
+  },
+  "D2-R52": {
+   "variant": {
+    "net": 236410,
+    "max_dd": 53820,
+    "worst_day": -33769,
+    "r_dd": 4.3926,
+    "r_wd": 7.0008,
+    "months": 12,
+    "worst_month": -44103,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 2,
+    "trades": 529,
+    "changed": 56,
+    "sessions": 247,
+    "twin_p": 0.6668,
+    "twin_p_wd": 0.7893
+   },
+   "base": {
+    "net": 247057,
+    "max_dd": 49847,
+    "worst_day": -25140,
+    "r_dd": 4.9563,
+    "r_wd": 9.8272,
+    "months": 12,
+    "worst_month": -49847,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 529,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": 518620,
+    "max_dd": 97648,
+    "worst_day": -50091,
+    "r_dd": 5.3111,
+    "r_wd": 10.3535,
+    "months": 12,
+    "worst_month": -97648,
+    "months_below": 1,
+    "dd_over": true,
+    "dd_breaches": 4,
+    "trades": 529,
+    "changed": 529,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": 5.0424,
+    "r_wd": 9.5164,
+    "net": 285666.155
+   }
+  },
+  "G3": {
+   "variant": {
+    "net": -117730,
+    "max_dd": 226183,
+    "worst_day": -21853,
+    "r_dd": -0.5205,
+    "r_wd": -5.3873,
+    "months": 12,
+    "worst_month": -80318,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 3674,
+    "changed": 731,
+    "sessions": 247,
+    "twin_p": 0.7138,
+    "twin_p_wd": 0.9396,
+    "trades_base": 3127
+   },
+   "base": {
+    "net": -169821,
+    "max_dd": 232997,
+    "worst_day": -23594,
+    "r_dd": -0.7289,
+    "r_wd": -7.1978,
+    "months": 12,
+    "worst_month": -80496,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 3674,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": -86563,
+    "max_dd": 197345,
+    "worst_day": -21831,
+    "r_dd": -0.4386,
+    "r_wd": -3.9651,
+    "months": 12,
+    "worst_month": -90842,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 3973,
+    "changed": 3674,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": -0.4365,
+    "r_wd": -2.9564,
+    "net": -80497.62
+   }
+  },
+  "D3": {
+   "variant": {
+    "net": -148119,
+    "max_dd": 221400,
+    "worst_day": -23594,
+    "r_dd": -0.669,
+    "r_wd": -6.2779,
+    "months": 12,
+    "worst_month": -79710,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 3248,
+    "changed": 149,
+    "sessions": 247,
+    "twin_p": 0.3337,
+    "twin_p_wd": 0.2798,
+    "trades_base": 3127
+   },
+   "base": {
+    "net": -169821,
+    "max_dd": 232997,
+    "worst_day": -23594,
+    "r_dd": -0.7289,
+    "r_wd": -7.1978,
+    "months": 12,
+    "worst_month": -80496,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 3248,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": -86563,
+    "max_dd": 197345,
+    "worst_day": -21831,
+    "r_dd": -0.4386,
+    "r_wd": -3.9651,
+    "months": 12,
+    "worst_month": -90842,
+    "months_below": 4,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 3973,
+    "changed": 3248,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": -0.6906,
+    "r_wd": -6.8132,
+    "net": -157816.01
+   }
+  },
+  "D1": {
+   "variant": {
+    "net": -223159,
+    "max_dd": 346846,
+    "worst_day": -46680,
+    "r_dd": -0.6434,
+    "r_wd": -4.7806,
+    "months": 12,
+    "worst_month": -142575,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 3,
+    "trades": 3127,
+    "changed": 2680,
+    "sessions": 247,
+    "twin_p": 0.8181,
+    "twin_p_wd": 0.7404
+   },
+   "base": {
+    "net": -169821,
+    "max_dd": 232997,
+    "worst_day": -23594,
+    "r_dd": -0.7289,
+    "r_wd": -7.1978,
+    "months": 12,
+    "worst_month": -80496,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 1,
+    "trades": 3127,
+    "changed": 0,
+    "sessions": 247
+   },
+   "always": {
+    "net": -195187,
+    "max_dd": 345967,
+    "worst_day": -46680,
+    "r_dd": -0.5642,
+    "r_wd": -4.1814,
+    "months": 12,
+    "worst_month": -148314,
+    "months_below": 5,
+    "dd_over": true,
+    "dd_breaches": 3,
+    "trades": 3127,
+    "changed": 3127,
+    "sessions": 247
+   },
+   "twin_median": {
+    "r_dd": -0.5758,
+    "r_wd": -4.2079,
+    "net": -191057.295
+   }
+  },
+  "_describe": {
+   "LIQ": {
+    "gex_neg": {
+     "n": 286,
+     "per_trade": 426,
+     "net": 121944,
+     "win": 0.458
+    },
+    "gex_other": {
+     "n": 371,
+     "per_trade": 313,
+     "net": 116120,
+     "win": 0.434
+    },
+    "danger_flagged": {
+     "n": 94,
+     "per_trade": 904,
+     "sessions": 36,
+     "per_session": 2360,
+     "worst_day": -3554
+    },
+    "danger_normal": {
+     "n": 563,
+     "per_trade": 272,
+     "sessions": 211,
+     "per_session": 726,
+     "worst_day": -6363
+    }
+   },
+   "R72": {
+    "gex_neg": {
+     "n": 941,
+     "per_trade": 161,
+     "net": 151610,
+     "win": 0.496
+    },
+    "gex_other": {
+     "n": 1297,
+     "per_trade": 142,
+     "net": 184271,
+     "win": 0.485
+    },
+    "danger_flagged": {
+     "n": 314,
+     "per_trade": 261,
+     "sessions": 36,
+     "per_session": 2276,
+     "worst_day": -23307
+    },
+    "danger_normal": {
+     "n": 1924,
+     "per_trade": 132,
+     "sessions": 211,
+     "per_session": 1204,
+     "worst_day": -25837
+    }
+   },
+   "R51": {
+    "gex_neg": {
+     "n": 1269,
+     "per_trade": 75,
+     "net": 95355,
+     "win": 0.458
+    },
+    "gex_other": {
+     "n": 1997,
+     "per_trade": 40,
+     "net": 80434,
+     "win": 0.461
+    },
+    "danger_flagged": {
+     "n": 452,
+     "per_trade": 170,
+     "sessions": 36,
+     "per_session": 2137,
+     "worst_day": -29576
+    },
+    "danger_normal": {
+     "n": 2814,
+     "per_trade": 35,
+     "sessions": 211,
+     "per_session": 469,
+     "worst_day": -31959
+    }
+   },
+   "R52": {
+    "gex_neg": {
+     "n": 211,
+     "per_trade": 683,
+     "net": 144140,
+     "win": 0.611
+    },
+    "gex_other": {
+     "n": 318,
+     "per_trade": 324,
+     "net": 102916,
+     "win": 0.55
+    },
+    "danger_flagged": {
+     "n": 56,
+     "per_trade": -236,
+     "sessions": 36,
+     "per_session": -367,
+     "worst_day": -17002
+    },
+    "danger_normal": {
+     "n": 473,
+     "per_trade": 550,
+     "sessions": 211,
+     "per_session": 1234,
+     "worst_day": -25140
+    }
+   },
+   "BOOK": {
+    "gex_neg": {
+     "n": 1184,
+     "per_trade": 13,
+     "net": 15876,
+     "win": 0.448
+    },
+    "gex_other": {
+     "n": 1943,
+     "per_trade": -96,
+     "net": -185697,
+     "win": 0.42
+    },
+    "danger_flagged": {
+     "n": 447,
+     "per_trade": 16,
+     "sessions": 36,
+     "per_session": 204,
+     "worst_day": -14695
+    },
+    "danger_normal": {
+     "n": 2680,
+     "per_trade": -66,
+     "sessions": 211,
+     "per_session": -840,
+     "worst_day": -23594
+    }
+   },
+   "_gex_share": {
+    "NIFTY": {
+     "sessions": 247,
+     "neg_0920": 69,
+     "neg_1000": 69
+    },
+    "BANKNIFTY": {
+     "sessions": 247,
+     "neg_0920": 104,
+     "neg_1000": 112
+    },
+    "FINNIFTY": {
+     "sessions": 247,
+     "neg_0920": 89,
+     "neg_1000": 106
+    },
+    "MIDCPNIFTY": {
+     "sessions": 247,
+     "neg_0920": 98,
+     "neg_1000": 100
+    },
+    "SENSEX": {
+     "sessions": 247,
+     "neg_0920": 100,
+     "neg_1000": 101
+    }
+   },
+   "_danger_levels": {
+    "normal": 211,
+    "careful": 25,
+    "paper-only": 11
+   }
+  }
+ },
+ "_meters": {
+  "events": [
+   "2024-02-01",
+   "2024-02-08",
+   "2024-04-05",
+   "2024-06-07",
+   "2024-07-23",
+   "2024-08-08",
+   "2024-09-30",
+   "2024-10-09",
+   "2024-11-29",
+   "2024-12-06",
+   "2025-02-01",
+   "2025-02-07",
+   "2025-02-28",
+   "2025-03-28",
+   "2025-04-09",
+   "2025-05-30",
+   "2025-06-06",
+   "2025-08-06",
+   "2025-08-29",
+   "2025-09-30",
+   "2025-10-01",
+   "2025-11-28",
+   "2025-12-05",
+   "2026-02-01",
+   "2026-02-06",
+   "2026-02-27",
+   "2026-03-30",
+   "2026-04-08",
+   "2026-06-05",
+   "2026-08-06",
+   "2026-10-01"
+  ],
+  "levels": {
+   "normal": 290,
+   "careful": 32,
+   "paper-only": 15
+  }
+ }
+}

@@ -1,0 +1,39 @@
+id: r107-g2-r52
+title: 'R107 G2-R52 on R52 Open outside value: 2 lots when the trade''s index shows negative dealer GEX (09:20 / 10:00 reading)'
+family: sizing-execution
+date: '2026-10-26'
+doc: research/HUNT_R107_METERS_MORE.md
+hypothesis: 'Boss (26 Oct): use the GEX and danger meters to trade MORE on the days they flag. This rule: 2 lots when the
+  trade''s index shows negative dealer GEX (09:20 / 10:00 reading). Gates: net > 0 and net / max DD and net / worst day above
+  today''s rule, ''always more'' and the random-day twins'' median in design, walk-forward and final; final twin BH q <= 0.10
+  over 584 tests (11 + 573 earlier); >= 30 final trades changed.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, index_daily, options_rolling_1m WEEK) and derived/r28_gex
+  copied 26 Oct; R51 Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R106)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index first 5-min bar + previous day''s value area (unchanged); meter: dealer GEX S1 near expiry of the
+  trade''s index at 09:20 / 10:00 (R28), option-chain context only; only the size or the 3rd same-direction place changes'
+model_or_rule: R52 Open outside value with 2 lots when the trade's index shows negative dealer GEX (09:20 / 10:00 reading)
+settings: research/hunt/r107_meters_more/r107cfg.py TESTS; PREREG.md sections 2-4
+prereg: research/hunt/r107_meters_more/PREREG.md
+variants_tried: 11
+results:
+  summary: 'Design: 706 trades (283 changed), net Rs 418,742 (today Rs 290,573, always Rs 613,929); net / max DD 2.58 (today
+    3.51, always 3.80, twins 3.47); net / worst day 8.36 (today 11.56); max DD Rs 162,365. Walk-forward: 529 trades (211 changed),
+    net Rs 400,992 (today Rs 247,057, always Rs 518,620); net / max DD 4.70 (today 4.96, always 5.31, twins 5.06); net / worst
+    day 8.01 (today 9.83); max DD Rs 85,368. Final: 293 trades (111 changed), net Rs 92,562 (today Rs 48,612, always Rs 110,721);
+    net / max DD 1.36 (today 1.03, always 1.21, twins 1.04); net / worst day 4.16 (today 2.94); max DD Rs 67,963; twin p 0.2295,
+    BH q 1.0 (R107 alone 0.5049). Fails 13 checks, first: design: net / max DD not above today''s; design: net / max DD not
+    above ''always''; design: net / max DD not above the twins'' median.'
+  costs: dated Zerodha charges, R17 fills; 2 lots priced by the engine as a 2-lot order (fills and charges)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live or on paper.

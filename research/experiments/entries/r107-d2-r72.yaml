@@ -1,0 +1,39 @@
+id: r107-d2-r72
+title: 'R107 D2-R72 on R72 Breadth Donchian: 2 lots on the danger meter''s flagged days (careful / paper-only)'
+family: sizing-execution
+date: '2026-10-26'
+doc: research/HUNT_R107_METERS_MORE.md
+hypothesis: 'Boss (26 Oct): use the GEX and danger meters to trade MORE on the days they flag. This rule: 2 lots on the danger
+  meter''s flagged days (careful / paper-only). Gates: net > 0 and net / max DD and net / worst day above today''s rule, ''always
+  more'' and the random-day twins'' median in design, walk-forward and final; final twin BH q <= 0.10 over 584 tests (11 +
+  573 earlier); >= 30 final trades changed.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, index_daily, options_rolling_1m WEEK) and derived/r28_gex
+  copied 26 Oct; R51 Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R106)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars of all five indices (Donchian 20, 4 of 5 break) (unchanged); meter: the app''s fixed danger
+  meter (gap, VIX, VIX change, event, expiry, weekday); only the size or the 3rd same-direction place changes'
+model_or_rule: R72 Breadth Donchian with 2 lots on the danger meter's flagged days (careful / paper-only)
+settings: research/hunt/r107_meters_more/r107cfg.py TESTS; PREREG.md sections 2-4
+prereg: research/hunt/r107_meters_more/PREREG.md
+variants_tried: 11
+results:
+  summary: 'Design: 3071 trades (389 changed), net Rs 266,413 (today Rs 216,929, always Rs 576,488); net / max DD 1.05 (today
+    1.09, always 1.54, twins 1.20); net / worst day 2.29 (today 3.70); max DD Rs 254,916. Walk-forward: 2238 trades (314 changed),
+    net Rs 432,313 (today Rs 335,882, always Rs 775,437); net / max DD 3.19 (today 3.88, always 4.71, twins 4.01); net / worst
+    day 9.39 (today 13.00); max DD Rs 135,483. Final: 1202 trades (99 changed), net Rs 232,082 (today Rs 171,366, always Rs
+    398,405); net / max DD 4.57 (today 2.77, always 3.59, twins 2.71); net / worst day 10.28 (today 7.59); max DD Rs 50,745;
+    twin p 0.0443, BH q 1.0 (R107 alone 0.4873). Fails 13 checks, first: design: net / max DD not above today''s; design:
+    net / max DD not above ''always''; design: net / max DD not above the twins'' median.'
+  costs: dated Zerodha charges, R17 fills; 2 lots priced by the engine as a 2-lot order (fills and charges)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live or on paper.

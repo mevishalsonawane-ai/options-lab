@@ -1,0 +1,290 @@
+{
+ "G2-LIQ": {
+  "passed": false,
+  "fails": [
+   "design: net / max DD not above 'always'",
+   "wf: net / max DD not above today's",
+   "wf: net / max DD not above 'always'",
+   "wf: net / max DD not above the twins' median",
+   "wf: net / worst day not above today's",
+   "wf: net / worst day not above 'always'",
+   "final: net / max DD not above 'always'",
+   "final: net / max DD not above the twins' median",
+   "final: net / worst day not above 'always'",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.6357,
+  "twin_p": 0.5201,
+  "account": {
+   "final_months_below": 3,
+   "base_months_below": 1,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "G2-R72": {
+  "passed": false,
+  "fails": [
+   "design: net / max DD not above today's",
+   "design: net / max DD not above 'always'",
+   "design: net / max DD not above the twins' median",
+   "design: net / worst day not above 'always'",
+   "wf: net / max DD not above today's",
+   "wf: net / max DD not above 'always'",
+   "wf: net / max DD not above the twins' median",
+   "wf: net / worst day not above today's",
+   "wf: net / worst day not above 'always'",
+   "wf: net / worst day not above the twins' median",
+   "final: net / worst day not above 'always'",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.5049,
+  "twin_p": 0.2126,
+  "account": {
+   "final_months_below": 1,
+   "base_months_below": 2,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "G2-R51": {
+  "passed": false,
+  "fails": [
+   "design: net / max DD not above 'always'",
+   "design: net / max DD not above the twins' median",
+   "design: net / worst day not above 'always'",
+   "design: net / worst day not above the twins' median",
+   "wf: net / max DD not above 'always'",
+   "wf: net / worst day not above today's",
+   "wf: net / worst day not above 'always'",
+   "wf: net / worst day not above the twins' median",
+   "final: net / max DD not above 'always'",
+   "final: net / worst day not above 'always'",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.6357,
+  "twin_p": 0.4666,
+  "account": {
+   "final_months_below": 1,
+   "base_months_below": 1,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "G2-R52": {
+  "passed": false,
+  "fails": [
+   "design: net / max DD not above today's",
+   "design: net / max DD not above 'always'",
+   "design: net / max DD not above the twins' median",
+   "design: net / worst day not above today's",
+   "design: net / worst day not above 'always'",
+   "design: net / worst day not above the twins' median",
+   "wf: net / max DD not above today's",
+   "wf: net / max DD not above 'always'",
+   "wf: net / max DD not above the twins' median",
+   "wf: net / worst day not above today's",
+   "wf: net / worst day not above 'always'",
+   "wf: net / worst day not above the twins' median",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.5049,
+  "twin_p": 0.2295,
+  "account": {
+   "final_months_below": 0,
+   "base_months_below": 1,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "D2-LIQ": {
+  "passed": false,
+  "fails": [
+   "design: net / max DD not above 'always'",
+   "design: net / worst day not above today's",
+   "design: net / worst day not above 'always'",
+   "design: net / worst day not above the twins' median",
+   "wf: net / max DD not above 'always'",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.5049,
+  "twin_p": 0.1653,
+  "account": {
+   "final_months_below": 1,
+   "base_months_below": 1,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "D2-R72": {
+  "passed": false,
+  "fails": [
+   "design: net / max DD not above today's",
+   "design: net / max DD not above 'always'",
+   "design: net / max DD not above the twins' median",
+   "design: net / worst day not above today's",
+   "design: net / worst day not above 'always'",
+   "design: net / worst day not above the twins' median",
+   "wf: net / max DD not above today's",
+   "wf: net / max DD not above 'always'",
+   "wf: net / max DD not above the twins' median",
+   "wf: net / worst day not above today's",
+   "wf: net / worst day not above 'always'",
+   "wf: net / worst day not above the twins' median",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.4873,
+  "twin_p": 0.0443,
+  "account": {
+   "final_months_below": 2,
+   "base_months_below": 2,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "D2-R51": {
+  "passed": false,
+  "fails": [
+   "design: net / max DD not above 'always'",
+   "design: net / worst day not above 'always'",
+   "design: net / worst day not above the twins' median",
+   "wf: net / max DD not above 'always'",
+   "wf: net / worst day not above today's",
+   "wf: net / worst day not above 'always'",
+   "wf: net / worst day not above the twins' median",
+   "final: net / max DD not above 'always'",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.5049,
+  "twin_p": 0.1826,
+  "account": {
+   "final_months_below": 1,
+   "base_months_below": 1,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "D2-R52": {
+  "passed": false,
+  "fails": [
+   "design: net / max DD not above today's",
+   "design: net / max DD not above 'always'",
+   "design: net / worst day not above today's",
+   "design: net / worst day not above 'always'",
+   "design: net / worst day not above the twins' median",
+   "wf: net / max DD not above today's",
+   "wf: net / max DD not above 'always'",
+   "wf: net / max DD not above the twins' median",
+   "wf: net / worst day not above today's",
+   "wf: net / worst day not above 'always'",
+   "wf: net / worst day not above the twins' median",
+   "final: net / max DD not above today's",
+   "final: net / max DD not above 'always'",
+   "final: net / max DD not above the twins' median",
+   "final: net / worst day not above today's",
+   "final: net / worst day not above 'always'",
+   "final: net / worst day not above the twins' median",
+   "twin BH q 1.00 > 0.10",
+   "only 17 final trades changed (< 30)"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.7786,
+  "twin_p": 0.7078,
+  "account": {
+   "final_months_below": 1,
+   "base_months_below": 1,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "G3": {
+  "passed": false,
+  "fails": [
+   "design: net not > 0",
+   "design: net / max DD not above 'always'",
+   "design: net / max DD not above the twins' median",
+   "design: net / worst day not above 'always'",
+   "design: net / worst day not above the twins' median",
+   "wf: net not > 0",
+   "wf: net / max DD not above 'always'",
+   "wf: net / max DD not above the twins' median",
+   "wf: net / worst day not above 'always'",
+   "wf: net / worst day not above the twins' median",
+   "final: net / max DD not above 'always'",
+   "final: net / max DD not above the twins' median",
+   "final: net / worst day not above 'always'",
+   "final: net / worst day not above the twins' median",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.8991,
+  "twin_p": 0.8991,
+  "account": {
+   "final_months_below": 1,
+   "base_months_below": 2,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "D1": {
+  "passed": false,
+  "fails": [
+   "design: net not > 0",
+   "design: net / max DD not above the twins' median",
+   "design: net / worst day not above 'always'",
+   "design: net / worst day not above the twins' median",
+   "wf: net not > 0",
+   "wf: net / max DD not above 'always'",
+   "wf: net / max DD not above the twins' median",
+   "wf: net / worst day not above 'always'",
+   "wf: net / worst day not above the twins' median",
+   "final: net / max DD not above 'always'",
+   "final: net / worst day not above 'always'",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.6357,
+  "twin_p": 0.4131,
+  "account": {
+   "final_months_below": 2,
+   "base_months_below": 2,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "D3": {
+  "passed": false,
+  "fails": [
+   "design: net not > 0",
+   "design: net / max DD not above 'always'",
+   "design: net / max DD not above the twins' median",
+   "design: net / worst day not above 'always'",
+   "wf: net not > 0",
+   "wf: net / max DD not above 'always'",
+   "wf: net / worst day not above 'always'",
+   "final: net / max DD not above 'always'",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r107": 0.6357,
+  "twin_p": 0.3495,
+  "account": {
+   "final_months_below": 2,
+   "base_months_below": 2,
+   "final_dd_over": true,
+   "base_dd_over": true
+  }
+ },
+ "_m": {
+  "r107": 11,
+  "prior": 573,
+  "total": 584
+ }
+}
