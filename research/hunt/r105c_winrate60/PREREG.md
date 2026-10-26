@@ -1,0 +1,66 @@
+# R105C pre-registration: a 60% win rate on Breadth Donchian and R51, even at less profit
+
+Written 26 Oct 2026, committed and pushed BEFORE any R105C rule is priced. Research only: no `android/**`.
+
+Boss, 26 Oct: *"Make the winrate to 60%, even the profit is less and provide me results."*
+
+## 0. What is already known (not repeated)
+
+- **R106 (26 Oct, `claude/r106-small-targets`) tested fixed RUPEE targets** (+Rs 500 / 1,000 / 1,500, with and without
+  a 1:1 stop, and 5 trades x Rs 1,000) on Liquidity, R72, R51 and R52.
+  - R52 reached 63% at +Rs 1,500 and still made Rs 31,274 in the final.
+  - R72 / R51 reached 55-67% but lost money.
+  - Liquidity never reached 60%.
+- **R65 tested trails** (win rate 53-54%, less profit).
+- **Not yet tested: a PERCENT-of-premium target on the Donchian arms with today's paper exits.** A percent target
+  scales with the premium; a rupee target is +4% on BANKNIFTY but +11% on NIFTY. Also untested: a target with
+  breakeven at half-way.
+
+So R105C covers R72 and R51 + Supertrend (R51T) with percent targets. For Liquidity and R52 it reports R106's results.
+
+Disclosure: the final window (1 Apr - 13 Oct 2026) has been read by about 27 studies. It is weak evidence.
+
+## 1. Arms and baseline (R105's engine and candidates, unchanged)
+
+| arm | baseline (paper exits P: -15%, L25, 30/60/100, 30 min, 15:15) | design | final |
+|---|---|---|---|
+| C = R72 Breadth Donchian | 4 of 5 indices break, 1-ITM | 3,071 / 47% / Rs 2,16,929 | 1,202 / 46% / Rs 1,71,366 |
+| B = R51T Donchian 20 + Supertrend | as paper | 4,208 / 44% / Rs 50,425 | 1,670 / 45% / Rs 1,34,743 |
+
+Signal on the index (unchanged); the target is a limit on the option premium (allowed by CLAUDE.md). Trades re-walk the
+book (an earlier exit frees the side, as the app would).
+
+## 2. The 12 rules per arm (24 tests), each added to exits P
+
+- **Tk:** sell the whole lot at +k% of the fill (a limit, R64's target fill), for k = 5, 8, 10, 12, 15, 20.
+- **TkB:** Tk, plus the stop moves to breakeven (fill + round-trip charges) once the premium is +k/2%.
+
+## 3. Selection on design only, then one confirmation
+
+For each arm:
+1. Among the 12 rules, pick the one with the highest DESIGN net whose design win rate is >= 60%.
+2. If none reaches 60% in design, pick the one with the highest design win rate, and report that 60% was not reached.
+3. The pick is written to `results/pick.json` and committed BEFORE the final read.
+
+**Result for Boss, per arm.** The pick's win rate and net in design, walk-forward (Apr 2025 - Mar 2026) and final,
+next to today's rules, with trades, average win and loss, worst day and max drawdown.
+
+**Verdict:**
+- "meets 60%" only if the pick's win rate is >= 60% in walk-forward AND in the final, AND its net is > 0 in both;
+- "60% but losing" if the win rate holds but the net is <= 0;
+- otherwise "not reached".
+
+This is a request to trade profit for win rate, so there is no "better than today" gate. A pick that meets 60% can go
+on paper only if Boss switches it on (logged, undoable, never live).
+
+All 24 rules are reported (design all; final all). BH is not used, because no claim of an edge is made: the claim is
+only "this rule wins >= 60% of the time with a positive net", read on the one confirmation period.
+
+## 4. Tests
+
+`tests/test_r105c.py`:
+- the rule table;
+- the target and half-way breakeven fills (R105's engine);
+- the selection rule (ties, nobody at 60%);
+- the verdict;
+- the read-once final.
