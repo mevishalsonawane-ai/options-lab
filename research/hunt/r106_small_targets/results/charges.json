@@ -1,0 +1,167 @@
+{
+ "BANKNIFTY": {
+  "lot": 30,
+  "premium": 654.3,
+  "lot_value": 19629,
+  "entry_slip": 11,
+  "charges_flat": 94,
+  "targets": {
+   "500": {
+    "move_pct": 3.1,
+    "gross_needed": 608,
+    "stop_pct": 1.9,
+    "be_1to1": 0.5,
+    "loss_own15": 3067,
+    "be_own15": 0.86
+   },
+   "1000": {
+    "move_pct": 5.6,
+    "gross_needed": 1109,
+    "stop_pct": 4.4,
+    "be_1to1": 0.5,
+    "loss_own15": 3067,
+    "be_own15": 0.754
+   },
+   "1500": {
+    "move_pct": 8.2,
+    "gross_needed": 1610,
+    "stop_pct": 7.0,
+    "be_1to1": 0.5,
+    "loss_own15": 3067,
+    "be_own15": 0.672
+   }
+  }
+ },
+ "FINNIFTY": {
+  "lot": 60,
+  "premium": 315.0,
+  "lot_value": 18903,
+  "entry_slip": 13,
+  "charges_flat": 92,
+  "targets": {
+   "500": {
+    "move_pct": 3.2,
+    "gross_needed": 606,
+    "stop_pct": 1.9,
+    "be_1to1": 0.5,
+    "loss_own15": 2963,
+    "be_own15": 0.856
+   },
+   "1000": {
+    "move_pct": 5.9,
+    "gross_needed": 1107,
+    "stop_pct": 4.6,
+    "be_1to1": 0.5,
+    "loss_own15": 2963,
+    "be_own15": 0.748
+   },
+   "1500": {
+    "move_pct": 8.5,
+    "gross_needed": 1608,
+    "stop_pct": 7.2,
+    "be_1to1": 0.5,
+    "loss_own15": 2963,
+    "be_own15": 0.664
+   }
+  }
+ },
+ "MIDCPNIFTY": {
+  "lot": 120,
+  "premium": 215.0,
+  "lot_value": 25800,
+  "entry_slip": 19,
+  "charges_flat": 108,
+  "targets": {
+   "500": {
+    "move_pct": 2.4,
+    "gross_needed": 630,
+    "stop_pct": 1.2,
+    "be_1to1": 0.5,
+    "loss_own15": 4036,
+    "be_own15": 0.89
+   },
+   "1000": {
+    "move_pct": 4.4,
+    "gross_needed": 1134,
+    "stop_pct": 3.2,
+    "be_1to1": 0.5,
+    "loss_own15": 4036,
+    "be_own15": 0.801
+   },
+   "1500": {
+    "move_pct": 6.3,
+    "gross_needed": 1632,
+    "stop_pct": 5.1,
+    "be_1to1": 0.5,
+    "loss_own15": 4036,
+    "be_own15": 0.729
+   }
+  }
+ },
+ "NIFTY": {
+  "lot": 65,
+  "premium": 150.1,
+  "lot_value": 9756,
+  "entry_slip": 8,
+  "charges_flat": 70,
+  "targets": {
+   "500": {
+    "move_pct": 6.0,
+    "gross_needed": 582,
+    "stop_pct": 4.1,
+    "be_1to1": 0.5,
+    "loss_own15": 1560,
+    "be_own15": 0.757
+   },
+   "1000": {
+    "move_pct": 11.1,
+    "gross_needed": 1082,
+    "stop_pct": 9.2,
+    "be_1to1": 0.5,
+    "loss_own15": 1560,
+    "be_own15": 0.609
+   },
+   "1500": {
+    "move_pct": 16.2,
+    "gross_needed": 1583,
+    "stop_pct": 14.4,
+    "be_1to1": 0.5,
+    "loss_own15": 1560,
+    "be_own15": 0.51
+   }
+  }
+ },
+ "SENSEX": {
+  "lot": 20,
+  "premium": 463.0,
+  "lot_value": 9259,
+  "entry_slip": 6,
+  "charges_flat": 68,
+  "targets": {
+   "500": {
+    "move_pct": 6.2,
+    "gross_needed": 576,
+    "stop_pct": 4.5,
+    "be_1to1": 0.5,
+    "loss_own15": 1472,
+    "be_own15": 0.746
+   },
+   "1000": {
+    "move_pct": 11.6,
+    "gross_needed": 1077,
+    "stop_pct": 9.9,
+    "be_1to1": 0.5,
+    "loss_own15": 1472,
+    "be_own15": 0.596
+   },
+   "1500": {
+    "move_pct": 17.0,
+    "gross_needed": 1578,
+    "stop_pct": 15.3,
+    "be_1to1": 0.5,
+    "loss_own15": 1472,
+    "be_own15": 0.495
+   }
+  }
+ }
+}

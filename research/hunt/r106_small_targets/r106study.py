@@ -458,6 +458,7 @@ def post_build():
     """Stores to 19 Oct in their own folder (clean_post), so R101's stores stay as they were."""
     import os
     os.environ["R51_CLEAN"] = "1"
+    import r101cfg  # noqa: F401  (the R51 paths)
     import r51cfg
     r51cfg.END = K.POST_END
     r51cfg.OUT = r51cfg.OUT.parent / "clean_post"
