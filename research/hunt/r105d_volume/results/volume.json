@@ -1,0 +1,296 @@
+{
+ "C": {
+  "trades": 457,
+  "all": {
+   "n": 457,
+   "win": 0.4617,
+   "net": 118506,
+   "per_trade": 259
+  },
+  "tod": {
+   "groups": {
+    "high": {
+     "n": 187,
+     "win": 0.4439,
+     "net": 60262,
+     "per_trade": 322
+    },
+    "low": {
+     "n": 133,
+     "win": 0.5188,
+     "net": 45694,
+     "per_trade": 344
+    },
+    "unknown": {
+     "n": 137,
+     "win": 0.4307,
+     "net": 12551,
+     "per_trade": 92
+    }
+   },
+   "p": 0.5391,
+   "halves": {
+    "29 Jul - 31 Aug": {
+     "high": {
+      "n": 40,
+      "win": 0.45,
+      "net": 11410,
+      "per_trade": 285
+     },
+     "low": {
+      "n": 31,
+      "win": 0.3871,
+      "net": -4045,
+      "per_trade": -130
+     }
+    },
+    "1 Sep - 13 Oct": {
+     "high": {
+      "n": 132,
+      "win": 0.4318,
+      "net": 50872,
+      "per_trade": 385
+     },
+     "low": {
+      "n": 92,
+      "win": 0.5543,
+      "net": 48342,
+      "per_trade": 525
+     }
+    },
+    "14 - 19 Oct (OOS)": {
+     "high": {
+      "n": 15,
+      "win": 0.5333,
+      "net": -2020,
+      "per_trade": -135
+     },
+     "low": {
+      "n": 10,
+      "win": 0.6,
+      "net": 1396,
+      "per_trade": 140
+     }
+    }
+   },
+   "q": 0.5656,
+   "lead": false
+  },
+  "r20": {
+   "groups": {
+    "high": {
+     "n": 234,
+     "win": 0.453,
+     "net": 66301,
+     "per_trade": 283
+    },
+    "low": {
+     "n": 124,
+     "win": 0.4919,
+     "net": 39641,
+     "per_trade": 320
+    },
+    "unknown": {
+     "n": 99,
+     "win": 0.4444,
+     "net": 12564,
+     "per_trade": 127
+    }
+   },
+   "p": 0.5656,
+   "halves": {
+    "29 Jul - 31 Aug": {
+     "high": {
+      "n": 70,
+      "win": 0.3857,
+      "net": -2836,
+      "per_trade": -41
+     },
+     "low": {
+      "n": 30,
+      "win": 0.4333,
+      "net": 3544,
+      "per_trade": 118
+     }
+    },
+    "1 Sep - 13 Oct": {
+     "high": {
+      "n": 144,
+      "win": 0.4722,
+      "net": 73273,
+      "per_trade": 509
+     },
+     "low": {
+      "n": 89,
+      "win": 0.5056,
+      "net": 32583,
+      "per_trade": 366
+     }
+    },
+    "14 - 19 Oct (OOS)": {
+     "high": {
+      "n": 20,
+      "win": 0.55,
+      "net": -4137,
+      "per_trade": -207
+     },
+     "low": {
+      "n": 5,
+      "win": 0.6,
+      "net": 3513,
+      "per_trade": 703
+     }
+    }
+   },
+   "q": 0.5656,
+   "lead": false
+  }
+ },
+ "B": {
+  "trades": 704,
+  "all": {
+   "n": 704,
+   "win": 0.4361,
+   "net": 67756,
+   "per_trade": 96
+  },
+  "tod": {
+   "groups": {
+    "high": {
+     "n": 229,
+     "win": 0.4541,
+     "net": 33885,
+     "per_trade": 148
+    },
+    "low": {
+     "n": 255,
+     "win": 0.451,
+     "net": 35697,
+     "per_trade": 140
+    },
+    "unknown": {
+     "n": 220,
+     "win": 0.4,
+     "net": -1826,
+     "per_trade": -8
+    }
+   },
+   "p": 0.4805,
+   "halves": {
+    "29 Jul - 31 Aug": {
+     "high": {
+      "n": 64,
+      "win": 0.4062,
+      "net": 3952,
+      "per_trade": 62
+     },
+     "low": {
+      "n": 74,
+      "win": 0.4189,
+      "net": 131,
+      "per_trade": 2
+     }
+    },
+    "1 Sep - 13 Oct": {
+     "high": {
+      "n": 148,
+      "win": 0.4662,
+      "net": 32639,
+      "per_trade": 221
+     },
+     "low": {
+      "n": 152,
+      "win": 0.4605,
+      "net": 29447,
+      "per_trade": 194
+     }
+    },
+    "14 - 19 Oct (OOS)": {
+     "high": {
+      "n": 17,
+      "win": 0.5294,
+      "net": -2707,
+      "per_trade": -159
+     },
+     "low": {
+      "n": 29,
+      "win": 0.4828,
+      "net": 6119,
+      "per_trade": 211
+     }
+    }
+   },
+   "q": 0.5656,
+   "lead": false
+  },
+  "r20": {
+   "groups": {
+    "high": {
+     "n": 289,
+     "win": 0.4567,
+     "net": 45678,
+     "per_trade": 158
+    },
+    "low": {
+     "n": 260,
+     "win": 0.4154,
+     "net": 13147,
+     "per_trade": 51
+    },
+    "unknown": {
+     "n": 155,
+     "win": 0.4323,
+     "net": 8931,
+     "per_trade": 58
+    }
+   },
+   "p": 0.23,
+   "halves": {
+    "29 Jul - 31 Aug": {
+     "high": {
+      "n": 102,
+      "win": 0.3922,
+      "net": -7325,
+      "per_trade": -72
+     },
+     "low": {
+      "n": 91,
+      "win": 0.3956,
+      "net": 1379,
+      "per_trade": 15
+     }
+    },
+    "1 Sep - 13 Oct": {
+     "high": {
+      "n": 157,
+      "win": 0.4968,
+      "net": 57083,
+      "per_trade": 364
+     },
+     "low": {
+      "n": 153,
+      "win": 0.4118,
+      "net": 4276,
+      "per_trade": 28
+     }
+    },
+    "14 - 19 Oct (OOS)": {
+     "high": {
+      "n": 30,
+      "win": 0.4667,
+      "net": -4081,
+      "per_trade": -136
+     },
+     "low": {
+      "n": 16,
+      "win": 0.5625,
+      "net": 7493,
+      "per_trade": 468
+     }
+    }
+   },
+   "q": 0.5656,
+   "lead": false
+  }
+ }
+}
