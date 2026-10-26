@@ -682,6 +682,14 @@ object MarketRecorder {
     fun forget() {
         runCatching { SecurePrefs.put(K_GAPS, null) }
         for (k in listOf(K_OI_LAST, K_OI_TRY, K_OI_MISSED, K_GIFT)) runCatching { SecurePrefs.put(k, null) }
+        forgetMemory()
+    }
+
+    /**
+     * The day's state in memory only (no settings write). Erase-everything runs it again after [wipeFiles] (26 Oct, review): a
+     * pass between the two would otherwise keep a day whose file (and header) the folder's delete took.
+     */
+    fun forgetMemory() {
         giftTriedAt = null
         gapAt.clear()
         today = null

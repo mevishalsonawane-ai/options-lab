@@ -394,6 +394,7 @@ fun eraseEverything() {
     // is safe (26 Oct: the market recorder's settings writes moved out of here, above).
     val slow = Runnable {
         w { com.optionslab.app.data.MarketRecorder.wipeFiles() }
+        w { com.optionslab.app.data.MarketRecorder.forgetMemory() }
         w { com.optionslab.app.data.FillSlippage.wipe() }
         w { com.optionslab.app.data.LiveRecorder.wipe() }
         w { com.optionslab.app.data.History.wipe() }

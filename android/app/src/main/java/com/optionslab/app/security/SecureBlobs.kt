@@ -214,7 +214,7 @@ internal object SecureBlobs {
         val (v, ver, unreadable) = synchronized(e) { if (!e.dirty) return; Triple(e.value, e.version, e.unreadable) }
         val f = file(k)
         if (unreadable) { runCatching { if (f.exists()) Vault.setAside(f) }; synchronized(e) { e.unreadable = false } }
-        Vault.writeFile(f, encode(v))
+        if (!Vault.writeFileWritten(f, encode(v))) return     // dropped (an erase): still dirty, written by a later save
         synchronized(e) { if (e.version == ver) e.dirty = false }
         SecurePrefs.dropLegacy(k)
     }
@@ -241,7 +241,7 @@ internal object SecureBlobs {
                 // Written by this process since (or read from its file): that copy is the newer one.
                 if (runCatching { f.exists() }.getOrDefault(false)) { SecurePrefs.dropLegacy(k); return@read true }
             }
-            val existing = try { Vault.readFileSteady(f) } catch (_: Exception) { null.also { runCatching { Vault.setAside(f) } } }
+            val existing = try { Vault.readFileSteady(f) } catch (_: Vault.Erasing) { return@read false } catch (_: Exception) { null.also { runCatching { Vault.setAside(f) } } }
             if (existing != null) { SecurePrefs.dropLegacy(k); return@read true }   // its own file wins
             val bytes = encode(legacy)
             Vault.writeFile(f, bytes)

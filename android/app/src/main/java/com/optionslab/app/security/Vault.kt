@@ -81,7 +81,15 @@ object Vault {
      * Atomic and durable: the new file is synced before it is renamed over the old one, and the
      * rename is synced too, so neither a crash nor a power cut leaves a half-written (or empty) vault file.
      */
-    fun writeFile(file: File, plain: ByteArray) = MainWrites.guard({ "Vault.writeFile ${file.name}" }) { writeFileNow(file, plain) }
+    fun writeFile(file: File, plain: ByteArray) { writeFileWritten(file, plain) }
+
+    /**
+     * [writeFile], saying whether the file was written (26 Oct, review): false when an erase dropped the save, so a caller that
+     * remembers what is on disk ([LastWrite], the settings) never takes it for written. A save a restore drops counts as
+     * written, as before (the restart reads the restored file).
+     */
+    internal fun writeFileWritten(file: File, plain: ByteArray): Boolean =
+        MainWrites.guard({ "Vault.writeFile ${file.name}" }) { writeFileNow(file, plain) }
 
     /**
      * TEST ONLY (19 Oct, order speed): every vault file write takes this long more (ms), as a Pixel's StrongBox can - so a test can
@@ -97,17 +105,17 @@ object Vault {
     @Volatile internal var testWriteDelayMs = 0L
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
-    private fun writeFileNow(file: File, plain: ByteArray, restoring: Boolean = false) {
+    private fun writeFileNow(file: File, plain: ByteArray, restoring: Boolean = false): Boolean {
         // 20 Oct, review: a backup being restored owns its files until the app restarts: a live store saving its old book in
         // the seconds before the restart would write it over the restored file. Such a save is dropped (the store's memory
         // is the old data anyway; the restart reads the restored file).
         if (!restoring && file.path in frozen) {
             runCatching { com.optionslab.app.data.Diag.record("vault", "${file.name}: a save during a restore was dropped (the restored file is kept)") }
-            return
+            return true     // handled, as before 26 Oct: only an erase's drop counts as not written
         }
         // 26 Oct: a save made while everything is being erased is dropped (no new key, no file); see [beginErase].
         val epoch = eraseEpoch
-        if (erasing.get() > 0) { droppedInErase.incrementAndGet(); return }
+        if (erasing.get() > 0) { droppedInErase.incrementAndGet(); return false }
         testWriteDelayMs.takeIf { it > 0 }?.let { Thread.sleep(it) }
         if (file.name in testFailWrites) throw java.io.IOException("simulated disk fault writing ${file.name}")
         val dir = file.parentFile
@@ -130,10 +138,10 @@ object Vault {
                 else if (!restoring && file.path in frozen) true
                 else { if (!tmp.renameTo(file)) throw java.io.IOException("could not replace ${file.name}"); false }
             }
-            if (erased) { droppedInErase.incrementAndGet(); return }
+            if (erased) { droppedInErase.incrementAndGet(); return false }
             if (dropped) {
                 runCatching { com.optionslab.app.data.Diag.record("vault", "${file.name}: a save during a restore was dropped (the restored file is kept)") }
-                return
+                return true
             }
         } finally { if (tmp.exists()) tmp.delete() }
         syncDir(dir)
@@ -147,6 +155,7 @@ object Vault {
             }
         }
         fileWrites.merge(file.path, 1L) { a, b -> a + b }
+        return true
     }
 
     /** Files a backup restore owns until the restart ([freezeForRestore]); every other write to them is dropped. */
@@ -165,7 +174,7 @@ object Vault {
     private val freezeLock = Any()
 
     /** The restore's own write of a file [freezeForRestore] froze. */
-    fun writeRestored(file: File, plain: ByteArray) = writeFileNow(file, plain, restoring = true)
+    fun writeRestored(file: File, plain: ByteArray) { writeFileNow(file, plain, restoring = true) }
 
     /** A restore that stopped half-way (no restart follows), and tests: the stores write their files again. */
     fun thaw() { synchronized(freezeLock) { frozen = emptySet() } }
@@ -196,7 +205,8 @@ object Vault {
             val d = java.security.MessageDigest.getInstance("SHA-256").digest(plain)
             if (same(file, d)) return false
             path = null; digest = null; stat = null
-            writeFile(file, plain)
+            // A save an erase dropped is not remembered: the next save of the same bytes is written.
+            if (!writeFileWritten(file, plain)) return false
             path = file.path; digest = d; stat = file.length() to file.lastModified()
             writes = fileWrites[file.path] ?: 0L; epoch = keyEpoch
             return true

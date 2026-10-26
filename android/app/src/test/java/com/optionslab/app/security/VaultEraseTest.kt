@@ -61,13 +61,16 @@ class VaultEraseTest : RobolectricTest() {
         val f = File(context.filesDir, "slow.vault")
         // The save starts before the erase and is held (the slow-write seam) until the erase has begun and ended; its rename
         // comes after the erase deleted everything, so it is dropped (its file would bring the erased data back).
-        Vault.testWriteDelayMs = 400L
+        Vault.testWriteDelayMs = 2_000L
         val failure = AtomicReference<Throwable?>()
         val before = Vault.droppedInErase.get()
         val t = Thread { try { Vault.writeFile(f, plain) } catch (e: Throwable) { failure.set(e) } }
         try {
             t.start()
-            Thread.sleep(100)                       // the save is under way (inside its delay)
+            // The save is under way: inside its delay (it has passed the erase check), never a fixed sleep.
+            val until = System.nanoTime() + 10_000_000_000L
+            while (t.state != Thread.State.TIMED_WAITING && System.nanoTime() < until) Thread.yield()
+            assertEquals(Thread.State.TIMED_WAITING, t.state)
             Vault.beginErase()
             Vault.endErase()
             t.join(10_000)
@@ -127,6 +130,32 @@ class VaultEraseTest : RobolectricTest() {
         }
         assertNull(failure.get())
         assertTrue("the writers ran", tries.get() > 300)
+    }
+
+    /** 26 Oct, review: a save dropped by an erase is never remembered as written (the next save of the same bytes is written). */
+    @Test fun aDroppedSaveIsNotRememberedAsWritten() {
+        val f = File(context.filesDir, "book.vault")
+        val last = Vault.LastWrite()
+        Vault.beginErase()
+        try { assertFalse("dropped", last.write(f, plain)) } finally { Vault.endErase() }
+        assertFalse(f.exists())
+        assertTrue("written after the erase", last.write(f, plain))
+        assertArrayEquals(plain, Vault.readFile(f))
+        assertFalse("now unchanged", last.write(f, plain))
+    }
+
+    /** 26 Oct, review: a settings write dropped by an erase counts as not written, and the next write puts the value on disk. */
+    @Test fun aSettingsWriteDroppedByAnEraseIsNotCountedAsWritten() {
+        SecurePrefs.put("x.kept", 1)
+        assertTrue(SecurePrefs.flush())
+        Vault.beginErase()
+        try {
+            SecurePrefs.put("x.kept", 2)
+            assertFalse("a dropped write is not on disk", SecurePrefs.flush())
+        } finally { Vault.endErase() }
+        assertTrue(SecurePrefs.writeNow())
+        assertTrue(SecurePrefs.reload())
+        assertEquals(2, SecurePrefs.getInt("x.kept", 0))
     }
 
     @Test fun anEraseThatThrowsStillEnds() {

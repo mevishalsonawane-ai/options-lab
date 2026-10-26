@@ -366,7 +366,10 @@ object ArmLive {
         val bytes = try {
             testReadFails?.let { if (it.getAndDecrement() > 0) throw java.io.IOException("test: the book could not be read") }
             Vault.readFileSteady(f)
-        } catch (e: Vault.Tampered) { null.also { tampered(f) } } catch (e: Exception) {
+        } catch (e: Vault.Tampered) { null.also { tampered(f) } } catch (e: Vault.Erasing) {
+            // 26 Oct, review: everything is being erased (the book with it): no entry, no alarm; read again after the erase.
+            throw Unreadable()
+        } catch (e: Exception) {
             // Not read now (a Keystore hiccup): nothing cached, read again by every lane ([recoverHint]); meanwhile no live entry goes.
             readFailedMs = runCatching { nowMs() }.getOrDefault(System.currentTimeMillis())
             readFails = (readFails + 1).coerceAtMost(30)
