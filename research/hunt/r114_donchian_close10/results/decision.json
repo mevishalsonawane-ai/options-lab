@@ -1,0 +1,31 @@
+{
+ "passed": false,
+ "fails": [
+  "twin BH q 1.000 > 0.1"
+ ],
+ "q_all": 1.0,
+ "p": 0.502,
+ "q_own": 0.502,
+ "m": 5841,
+ "twins": {
+  "net": 55912,
+  "refusal_p": 0.2649,
+  "refusal_mean": 39599,
+  "refusal_removed": 857,
+  "exit_p": 0.502,
+  "exit_mean": 55940,
+  "exit_changed": 69,
+  "changed_vs_book0": 931,
+  "p": 0.502
+ },
+ "_m": {
+  "r114": 1,
+  "prior": 5840,
+  "total": 5841,
+  "prior_detail": {
+   "R64-R111 (as R112)": 5819,
+   "R112": 10,
+   "R113": 11
+  }
+ }
+}
