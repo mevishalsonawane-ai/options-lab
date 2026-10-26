@@ -73,8 +73,9 @@ def day_table() -> dict:
             out[(str(s).upper(), d)] = (float(o), float(h), float(l), float(c), float(pc))
     # MCX names the arms trade by their mini contracts
     for (s, d), v in list(out.items()):
-        if s == "SILVERM":
-            out[("SILVERMIC", d)] = v
+        for mini, parent in K.MCX_PARENT.items():
+            if s == parent and (mini, d) not in out:
+                out[(mini, d)] = v
     return out
 
 

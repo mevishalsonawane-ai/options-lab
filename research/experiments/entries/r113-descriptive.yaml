@@ -1,0 +1,37 @@
+family: market-facts
+date: '2026-10-26'
+doc: research/HUNT_R113_TIME_OF_DAY.md
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 26 Oct 2026; R51 Amendment A clean stores; each arm's own study data
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R112)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+- NATURALGAS
+- SILVERM
+- MCX
+prereg: research/hunt/r113_time_of_day/PREREG.md
+id: r113-descriptive
+title: R113 where each arm makes and loses its money (time of day, holding, weekday, expiry, gap, VIX, day shape)
+hypothesis: 'Descriptive only (Boss, 26 Oct: at what time each strategy made most profit, and a pattern between them). No
+  rule adopted.'
+features:
+- 'signal source: each arm''s own (the underlying for all but FT3 / Hero, whose strike is picked by the option''s price);
+  R113 only re-reads the trade lists'
+model_or_rule: 21 arm trade lists from their own research code, bucketed (PREREG section 2)
+settings: research/hunt/r113_time_of_day/r113cfg.py; r113study.py describe
+variants_tried: null
+holdout_read: true
+verdict: not-a-test
+results:
+  summary: FT3 478 trades Rs 862,909; HERO 355 trades -Rs 12,948; LIQ 1238 trades Rs 268,404; MCX_NG_EVE 252 trades Rs 14,357;
+    MCX_SILVERM_AM 129 trades Rs 135,402; MCX_TREND12M 130 trades Rs 775,778; MCX_US_NIGHT_SILVER 197 trades Rs 189,743; MOM60
+    411 trades -Rs 7,320; NIGHT_R3 869 trades Rs 272,171; ORB_FADE 1843 trades -Rs 286,033; ORB_FRESH 1207 trades -Rs 123,935;
+    ORB_ORB 1207 trades -Rs 123,935; ORB_SWEEP 1677 trades -Rs 299,428; PINE_MATRIX_5M 1498 trades -Rs 222,108; PINE_ST_EMA_15M
+    545 trades -Rs 157,389; PINE_ST_EMA_5M 1576 trades -Rs 186,234; R51 5878 trades Rs 185,168; R52 999 trades Rs 339,185;
+    R72 4273 trades Rs 388,295; SOLO 294 trades Rs 156,646; VIXDIV 378 trades Rs 199,497
+  costs: each arm's own study costs (see the write-up)

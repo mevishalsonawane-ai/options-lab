@@ -1,0 +1,29 @@
+family: daily-filters
+date: '2026-10-26'
+doc: research/HUNT_R113_TIME_OF_DAY.md
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 26 Oct 2026; R51 Amendment A clean stores; each arm's own study data
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R112)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r113_time_of_day/PREREG.md
+id: r113-noon-r52
+title: 'R113 NOON on R52 Open outside value: entries before 12:00 only'
+hypothesis: 'entries before 12:00 only lifts R52 Open outside value (its design entries there: 0 trades, Rs 0). Gates: net
+  > 0 in design, walk-forward and final; above today''s rules in walk-forward and final; random-drop twin BH q <= 0.10 over
+  5,840 tests; >= 40 final trades.'
+features:
+- 'signal source: the index (the arm''s own signals unchanged); only an entry-time filter'
+model_or_rule: R52 Open outside value with entries before 12:00 only (candidates removed before the arm's walk)
+settings: research/hunt/r113_time_of_day/r113cfg.py RULES; r113study.py select / design / final
+variants_tried: null
+holdout_read: false
+verdict: proposed
+results:
+  summary: 'Not run: did not qualify on design (the entries it removes: 0 trades, Rs 0, not a loss).'
+  costs: dated Zerodha charges, R17 fills, next-minute fills (R101 / R106 engine), 1 lot

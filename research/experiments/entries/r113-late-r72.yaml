@@ -1,0 +1,32 @@
+family: daily-filters
+date: '2026-10-26'
+doc: research/HUNT_R113_TIME_OF_DAY.md
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 26 Oct 2026; R51 Amendment A clean stores; each arm's own study data
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R112)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r113_time_of_day/PREREG.md
+id: r113-late-r72
+title: 'R113 LATE on R72 Breadth Donchian: no new entries at or after 14:00'
+hypothesis: 'no new entries at or after 14:00 lifts R72 Breadth Donchian (its design entries there: 610 trades, -Rs 21,825).
+  Gates: net > 0 in design, walk-forward and final; above today''s rules in walk-forward and final; random-drop twin BH q
+  <= 0.10 over 5,840 tests; >= 40 final trades.'
+features:
+- 'signal source: the index (the arm''s own signals unchanged); only an entry-time filter'
+model_or_rule: R72 Breadth Donchian with no new entries at or after 14:00 (candidates removed before the arm's walk)
+settings: research/hunt/r113_time_of_day/r113cfg.py RULES; r113study.py select / design / final
+variants_tried: 1
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'Design 2461 trades Rs 238,754 (today''s rules Rs 216,929); walk-forward Rs 313,297 (today''s Rs 335,882); final
+    982 trades Rs 180,748 (today''s Rs 171,366, 1202 trades); random-drop twin p 0.1238 (twin median Rs 140,149); BH q 1.0
+    over 5,840 tests (R113 alone 0.6806). Fails: not above today''s rules in walk-forward and final; random-twin BH q 1.000
+    > 0.1.'
+  costs: dated Zerodha charges, R17 fills, next-minute fills (R101 / R106 engine), 1 lot

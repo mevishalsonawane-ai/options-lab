@@ -1,0 +1,783 @@
+{
+ "FT3": {
+  "name": "FT3 near-ATM morning",
+  "trades": 478,
+  "net": 862909,
+  "win": 0.163,
+  "first": "2021-08-05",
+  "last": "2026-10-19",
+  "periods": {
+   "design": {
+    "trades": 256,
+    "net": 516725
+   },
+   "other": {
+    "trades": 222,
+    "net": 346185
+   }
+  },
+  "common": {
+   "trades": 115,
+   "net": -58771
+  },
+  "first_hour_share": 0.0,
+  "top10_days": 2.896951485571812,
+  "top10_trades": 2.947318019961955,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r98/ft3_app.py (pick_at, fill, cut-offs, marks; run_und's loop re-written to keep bars)",
+   "research/hunt/r98/hero2.py (net_legs: R98 charges)",
+   "research/hunt/r98/r98lib.py",
+   "research/hunt/r98/r98data.py (day pickles)",
+   "research/hunt/r113_time_of_day/adapters/ft3.py"
+  ],
+  "parity": true,
+  "signal": "NOT the underlying: clock marks 11:00-12:55 on expiry day + the option's own price (Rs 6-10), its Black-76 IV vs the ATM IV and distance in ATM straddles (chain context). An option-price pick: report separately (CLAUDE.md)."
+ },
+ "HERO": {
+  "name": "Hero Rs 1,000 ticket",
+  "trades": 355,
+  "net": -12948,
+  "win": 0.18,
+  "first": "2024-11-21",
+  "last": "2026-10-13",
+  "periods": {
+   "design": {
+    "trades": 248,
+    "net": -14507
+   },
+   "final": {
+    "trades": 107,
+    "net": 1559
+   }
+  },
+  "common": {
+   "trades": 355,
+   "net": -12948
+  },
+  "first_hour_share": -0.0,
+  "top10_days": null,
+  "top10_trades": null,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r55/r55lib.py (run_cell, simulate)",
+   "research/hunt/r55/r55cfg.py",
+   "research/hunt/r54/r54lib.py (pick, enter, sell_at, guard)",
+   "research/hunt/r54/r54data.py (days)",
+   "research/hunt/r50/r50lib.py (Trade, dated charges)",
+   "research/hunt/r25 (fills, held path)",
+   "research/hunt/r113_time_of_day/adapters/hero.py"
+  ],
+  "parity": {
+   "design": "20 Nov 2024 - 31 Mar 2026 (R50/R54/R55 design)",
+   "final": "1 Apr - 13 Oct 2026 (R55's final test, read once by R54/R55)"
+  },
+  "signal": "clock only (12:30 on expiry day); strike chosen by the option's own PRICE (Rs 5-30, lot <= Rs 1,000), not an underlying chart signal; trail and stop on the premium. Not the CLAUDE.md underlying-signal default: label it as an option-price pick."
+ },
+ "LIQ": {
+  "name": "Liquidity 15+5",
+  "trades": 1238,
+  "net": 268404,
+  "win": 0.418,
+  "first": "2024-11-21",
+  "last": "2026-10-13",
+  "periods": {
+   "design": {
+    "trades": 881,
+    "net": 257249
+   },
+   "final": {
+    "trades": 357,
+    "net": 11155
+   }
+  },
+  "common": {
+   "trades": 1238,
+   "net": 268404
+  },
+  "first_hour_share": 0.7069888661263825,
+  "top10_days": 1.9464529522883278,
+  "top10_trades": 2.5681749035801733,
+  "unlabelled": 0,
+  "source": "research/hunt/r101_arms_enhance/r101arms.py units, research/hunt/r106_small_targets/r106study.py run_rule (rule None = today's rules)",
+  "parity": {
+   "final": {
+    "trades": 357,
+    "net": 11155,
+    "published": [
+     357,
+     11155
+    ],
+    "parity": true
+   }
+  },
+  "signal": "the index (5-minute bars); 1-ITM weekly option bought"
+ },
+ "MCX_NG_EVE": {
+  "name": "NG evening breakout",
+  "trades": 252,
+  "net": 14357,
+  "win": 0.444,
+  "first": "2025-08-06",
+  "last": "2026-10-07",
+  "periods": {
+   "design": {
+    "trades": 197,
+    "net": 9220
+   },
+   "final": {
+    "trades": 55,
+    "net": 5137
+   }
+  },
+  "common": {
+   "trades": 252,
+   "net": 14357
+  },
+  "first_hour_share": 0.0,
+  "top10_days": 9.77120771412489,
+  "top10_trades": 9.77120771412489,
+  "unlabelled": 3,
+  "source": "research/hunt/m3/run.py (EVE, amendment 1) + m3lib.py range_break_signals/sim_option (M3_PRINTS=1); rupees from research/hunt/m3/results/trades_{design,holdout}.csv.gz (analyze.py costs)",
+  "parity": "yes",
+  "signal": "underlying: the NATURALGAS near-month future (Dhan rolling-option `spot`); option premium only for the -15% stop"
+ },
+ "MCX_SILVERM_AM": {
+  "name": "SILVERM morning",
+  "trades": 129,
+  "net": 135402,
+  "win": 0.589,
+  "first": "2025-08-28",
+  "last": "2026-10-07",
+  "periods": {
+   "design": {
+    "trades": 78,
+    "net": 112224
+   },
+   "final": {
+    "trades": 51,
+    "net": 23178
+   }
+  },
+  "common": {
+   "trades": 129,
+   "net": 135402
+  },
+  "first_hour_share": 0.8501055892978817,
+  "top10_days": 0.88149730159042,
+  "top10_trades": 1.1480060335897597,
+  "unlabelled": 3,
+  "source": "research/hunt/m4/build.py main() + analyze.py load/run_rule/trades_for/add_pnl (cell SILVERM OTM2-3 call dte11-20 morning h240 E1)",
+  "parity": "yes",
+  "signal": "no direction signal (direction-free buy of a call at a fixed time); ATM/strike from the SILVERM future (Dhan rolling-option `spot`) = the underlying; exit is a time exit"
+ },
+ "MCX_TREND12M": {
+  "name": "MCX 12-month trend",
+  "trades": 130,
+  "net": 775778,
+  "win": 0.354,
+  "first": "2013-01-02",
+  "last": "2026-03-02",
+  "periods": {
+   "design": {
+    "trades": 108,
+    "net": 427986
+   },
+   "final": {
+    "trades": 22,
+    "net": 347792
+   }
+  },
+  "common": {
+   "trades": 22,
+   "net": 347792
+  },
+  "first_hour_share": 1.0,
+  "top10_days": 1.433932912233374,
+  "top10_trades": 1.5621194496671595,
+  "unlabelled": 19,
+  "source": "research/hunt/m2/prep.py build() + engine.py load()/signal('TSM252')/side_cost()/run_futures() (trade split mirrors run_futures, constrained=False, one leg at a time)",
+  "parity": "no: LEAD (LEADMINI) is not in the lake, so 6 of 7 legs; and the published book is the constrained Rs 1 lakh portfolio (margin, forced exits, ruin stop) that has no per-trade rupees. This list is the per-leg, unconstrained, fixed-lot version (what a 1-lot-per-leg paper arm does); compare only with care",
+  "signal": "each leg's own continuous near-month future (the underlying): sign of the 252-trading-day change of the roll-adjusted price at each month end, traded at the next open; long and short"
+ },
+ "MCX_US_NIGHT_SILVER": {
+  "name": "US-night silver",
+  "trades": 197,
+  "net": 189743,
+  "win": 0.553,
+  "first": "2025-08-06",
+  "last": "2026-10-06",
+  "periods": {
+   "design": {
+    "trades": 31,
+    "net": -7631
+   },
+   "final": {
+    "trades": 166,
+    "net": 197375
+   }
+  },
+  "common": {
+   "trades": 197,
+   "net": 189743
+  },
+  "first_hour_share": 1.0,
+  "top10_days": 1.068429450397365,
+  "top10_trades": 1.068429450397365,
+  "unlabelled": 0,
+  "source": "research/hunt/r2/cand.py (C2_follow_us, XEOD, FUT, SILVER) + hourly.py (us_on, inr_on, px_at) + lib.py fut_pnl + m3/m3lib.py Market; logic copied verbatim for the one cell (scripts run all commodities)",
+  "parity": "yes",
+  "signal": "US overnight move of COMEX silver (SI=F) + USD/INR, read before the MCX open; traded on the SILVERM future itself (priced as 1 SILVERMIC); the underlying is the future, no option"
+ },
+ "MOM60": {
+  "name": "IraThinker mom60 (R110)",
+  "trades": 411,
+  "net": -7320,
+  "win": 0.472,
+  "first": "2024-04-18",
+  "last": "2026-03-27",
+  "periods": {
+   "design": {
+    "trades": 331,
+    "net": 7216
+   },
+   "final": {
+    "trades": 80,
+    "net": -14536
+   }
+  },
+  "common": {
+   "trades": 367,
+   "net": -6253
+  },
+  "first_hour_share": -0.0,
+  "top10_days": null,
+  "top10_trades": null,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r110_irathinker/java/R110Runner.java (mode mom60)",
+   "irathinker-app/app/app/src/main/java/com/irathinker/app/Mom60.java (+ YahooClient, OptionsMath, ...)",
+   "research/hunt/r110_irathinker/r110prep.py",
+   "research/hunt/r110_irathinker/r110study.py (Market, run_directional 'S3', Fill(1.0), long_option)",
+   "research/hunt/r113_time_of_day/adapters/mom60.py (adapter, new)"
+  ],
+  "parity": {
+   "NIFTY": {
+    "published_design": [
+     118,
+     5809
+    ],
+    "reproduced_design": [
+     118,
+     5809
+    ],
+    "match": true,
+    "signals": 636,
+    "priced_all": 147
+   },
+   "BANKNIFTY": {
+    "published_design": [
+     213,
+     1407
+    ],
+    "reproduced_design": [
+     213,
+     1407
+    ],
+    "match": true,
+    "signals": 477,
+    "priced_all": 264
+   }
+  },
+  "signal": "underlying index: |60-minute return| of the index's closed 1-minute bars >= threshold (NIFTY 0.38% = R110's design q90, BANKNIFTY 0.50% IraThinker's frozen value), IraThinker's own Java Mom60.Watcher; buys the ATM monthly option in the move's direction. 30% stop is on the option premium (allowed by CLAUDE.md); not an option-chart signal."
+ },
+ "NIGHT_R3": {
+  "name": "Night (R3)",
+  "trades": 869,
+  "net": 272171,
+  "win": 0.544,
+  "first": "2021-08-31",
+  "last": "2026-10-09",
+  "periods": {
+   "design": {
+    "trades": 224,
+    "net": 87551
+   },
+   "final": {
+    "trades": 173,
+    "net": 42411
+   },
+   "other": {
+    "trades": 472,
+    "net": 142209
+   }
+  },
+  "common": {
+   "trades": 330,
+   "net": 144318
+  },
+  "first_hour_share": 0.0,
+  "top10_days": 2.3620688996357293,
+  "top10_trades": 2.2879591930013397,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r27/r27cfg.py",
+   "research/hunt/r27/r27data.py",
+   "research/hunt/r27/r27lib.py (trade, B0, cost_net)",
+   "research/hunt/r113_time_of_day/adapters/night_r3.py"
+  ],
+  "parity": "YES: exact, same trade count and net to the rupee in all three blocks",
+  "signal": "underlying: NIFTY / BANKNIFTY index 15:19 close location, day move, breadth of 59 stocks; option-chain OI build-up z (ATM+-2, nearest series) as a filter (context, allowed); trades the 1-ITM option"
+ },
+ "ORB_FADE": {
+  "name": "Range Fade",
+  "trades": 1843,
+  "net": -286033,
+  "win": 0.305,
+  "first": "2021-09-03",
+  "last": "2026-10-12",
+  "periods": {
+   "design": {
+    "trades": 1843,
+    "net": -286033
+   }
+  },
+  "common": {
+   "trades": 707,
+   "net": -144193
+  },
+  "first_hour_share": -0.0,
+  "top10_days": null,
+  "top10_trades": null,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r3orb/r3engine.py (baseline, run_session, simulate, _walk, fills, charges)",
+   "research/hunt/r3orb/r3data.py (sessions)",
+   "research/hunt/r3orb/r3cfg.py",
+   "research/hunt/r113_time_of_day/adapters/orb.py"
+  ],
+  "parity": true,
+  "signal": "underlying: BANKNIFTY index 5-minute closes vs the 09:15-10:00 opening range (Sweep: a wick beyond and close back inside; Fade: the outer 10% of the range and close back inside); option premium for stop / target / ladder"
+ },
+ "ORB_FRESH": {
+  "name": "ORB Fresh",
+  "trades": 1207,
+  "net": -123935,
+  "win": 0.377,
+  "first": "2021-09-03",
+  "last": "2026-10-12",
+  "periods": {
+   "design": {
+    "trades": 1207,
+    "net": -123935
+   }
+  },
+  "common": {
+   "trades": 448,
+   "net": -38551
+  },
+  "first_hour_share": 0.2641662664554585,
+  "top10_days": null,
+  "top10_trades": null,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r3orb/r3engine.py (baseline, run_session, simulate, _walk, fills, charges)",
+   "research/hunt/r3orb/r3data.py (sessions)",
+   "research/hunt/r3orb/r3cfg.py",
+   "research/hunt/r113_time_of_day/adapters/orb.py"
+  ],
+  "parity": true,
+  "signal": "underlying: BANKNIFTY index 5-minute closes vs the 09:15-10:00 opening range (Sweep: a wick beyond and close back inside; Fade: the outer 10% of the range and close back inside); option premium for stop / target / ladder"
+ },
+ "ORB_ORB": {
+  "name": "ORB",
+  "trades": 1207,
+  "net": -123935,
+  "win": 0.377,
+  "first": "2021-09-03",
+  "last": "2026-10-12",
+  "periods": {
+   "design": {
+    "trades": 1207,
+    "net": -123935
+   }
+  },
+  "common": {
+   "trades": 448,
+   "net": -38551
+  },
+  "first_hour_share": 0.2641662664554585,
+  "top10_days": null,
+  "top10_trades": null,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r3orb/r3engine.py (baseline, run_session, simulate, _walk, fills, charges)",
+   "research/hunt/r3orb/r3data.py (sessions)",
+   "research/hunt/r3orb/r3cfg.py",
+   "research/hunt/r113_time_of_day/adapters/orb.py"
+  ],
+  "parity": true,
+  "signal": "underlying: BANKNIFTY index 5-minute closes vs the 09:15-10:00 opening range (Sweep: a wick beyond and close back inside; Fade: the outer 10% of the range and close back inside); option premium for stop / target / ladder"
+ },
+ "ORB_SWEEP": {
+  "name": "ORB Sweep",
+  "trades": 1677,
+  "net": -299428,
+  "win": 0.272,
+  "first": "2021-09-03",
+  "last": "2026-10-12",
+  "periods": {
+   "design": {
+    "trades": 1677,
+    "net": -299428
+   }
+  },
+  "common": {
+   "trades": 630,
+   "net": -166944
+  },
+  "first_hour_share": 0.1254255158381279,
+  "top10_days": null,
+  "top10_trades": null,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r3orb/r3engine.py (baseline, run_session, simulate, _walk, fills, charges)",
+   "research/hunt/r3orb/r3data.py (sessions)",
+   "research/hunt/r3orb/r3cfg.py",
+   "research/hunt/r113_time_of_day/adapters/orb.py"
+  ],
+  "parity": true,
+  "signal": "underlying: BANKNIFTY index 5-minute closes vs the 09:15-10:00 opening range (Sweep: a wick beyond and close back inside; Fade: the outer 10% of the range and close back inside); option premium for stop / target / ladder"
+ },
+ "PINE_MATRIX_5M": {
+  "name": "PINE_MATRIX_5M",
+  "trades": 1498,
+  "net": -222108,
+  "win": 0.362,
+  "first": "2021-08-04",
+  "last": "2026-10-13",
+  "periods": {
+   "design": {
+    "trades": 459,
+    "net": -195492
+   },
+   "final": {
+    "trades": 173,
+    "net": 39116
+   },
+   "other": {
+    "trades": 866,
+    "net": -65732
+   }
+  },
+  "common": {
+   "trades": 632,
+   "net": -156375
+  },
+  "first_hour_share": 1.2922620568223022,
+  "top10_days": null,
+  "top10_trades": null,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/h22/pine_replay.py (bars_of, st_ema_targets, matrix_targets, replay)",
+   "research/hunt/h19/sim.py (supplement)",
+   "research/hunt/h22/solo_learner.py (dense)",
+   "research/hunt/r52/lake2obuy.py",
+   "research/hunt/r113_time_of_day/adapters/obuy_layout.py",
+   "research/hunt/r113_time_of_day/adapters/pine_h22.py"
+  ],
+  "parity": "trade count exact (1,491); net -2.17 lakh vs -2.21 lakh (2% gap). Likely from the lake's minute prices and lot read from OI (obuy Index built from the lake, not h22's jx cache)",
+  "signal": "underlying: BANKNIFTY index candles (Supertrend(10,3)+EMA50 / EMA20 cross with ATR stop and 2.5R target on the index); trades the ATM option"
+ },
+ "PINE_ST_EMA_15M": {
+  "name": "PINE_ST_EMA_15M",
+  "trades": 545,
+  "net": -157389,
+  "win": 0.402,
+  "first": "2021-08-04",
+  "last": "2026-10-13",
+  "periods": {
+   "design": {
+    "trades": 161,
+    "net": -68841
+   },
+   "final": {
+    "trades": 75,
+    "net": -83469
+   },
+   "other": {
+    "trades": 309,
+    "net": -5080
+   }
+  },
+  "common": {
+   "trades": 236,
+   "net": -152309
+  },
+  "first_hour_share": 0.5217680452723645,
+  "top10_days": null,
+  "top10_trades": null,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/h22/pine_replay.py (bars_of, st_ema_targets, matrix_targets, replay)",
+   "research/hunt/h19/sim.py (supplement)",
+   "research/hunt/h22/solo_learner.py (dense)",
+   "research/hunt/r52/lake2obuy.py",
+   "research/hunt/r113_time_of_day/adapters/obuy_layout.py",
+   "research/hunt/r113_time_of_day/adapters/pine_h22.py"
+  ],
+  "parity": "trade count exact (539); net -1.63 lakh vs -1.68 lakh (3% gap). Likely from the lake's minute prices and lot read from OI (obuy Index built from the lake, not h22's jx cache)",
+  "signal": "underlying: BANKNIFTY index candles (Supertrend(10,3)+EMA50 / EMA20 cross with ATR stop and 2.5R target on the index); trades the ATM option"
+ },
+ "PINE_ST_EMA_5M": {
+  "name": "PINE_ST_EMA_5M",
+  "trades": 1576,
+  "net": -186234,
+  "win": 0.35,
+  "first": "2021-08-04",
+  "last": "2026-10-13",
+  "periods": {
+   "design": {
+    "trades": 467,
+    "net": -27008
+   },
+   "final": {
+    "trades": 182,
+    "net": -52573
+   },
+   "other": {
+    "trades": 927,
+    "net": -106653
+   }
+  },
+  "common": {
+   "trades": 649,
+   "net": -79581
+  },
+  "first_hour_share": 0.5608782838117601,
+  "top10_days": null,
+  "top10_trades": null,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/h22/pine_replay.py (bars_of, st_ema_targets, matrix_targets, replay)",
+   "research/hunt/h19/sim.py (supplement)",
+   "research/hunt/h22/solo_learner.py (dense)",
+   "research/hunt/r52/lake2obuy.py",
+   "research/hunt/r113_time_of_day/adapters/obuy_layout.py",
+   "research/hunt/r113_time_of_day/adapters/pine_h22.py"
+  ],
+  "parity": "NO within 1%: +2 trades (1,567 vs 1,565), net -1.96 lakh vs -2.13 lakh (8% less negative). Likely from the lake's minute prices and lot read from OI (obuy Index built from the lake, not h22's jx cache)",
+  "signal": "underlying: BANKNIFTY index candles (Supertrend(10,3)+EMA50 / EMA20 cross with ATR stop and 2.5R target on the index); trades the ATM option"
+ },
+ "R51": {
+  "name": "R51 Donchian 20 + Supertrend",
+  "trades": 5878,
+  "net": 185168,
+  "win": 0.446,
+  "first": "2024-11-21",
+  "last": "2026-10-13",
+  "periods": {
+   "design": {
+    "trades": 4208,
+    "net": 50425
+   },
+   "final": {
+    "trades": 1670,
+    "net": 134743
+   }
+  },
+  "common": {
+   "trades": 5878,
+   "net": 185168
+  },
+  "first_hour_share": 1.809358909407693,
+  "top10_days": 5.96763302501394,
+  "top10_trades": 13.804018148455908,
+  "unlabelled": 0,
+  "source": "research/hunt/r101_arms_enhance/r101arms.py units, research/hunt/r106_small_targets/r106study.py run_rule (rule None = today's rules)",
+  "parity": {
+   "final": {
+    "trades": 1670,
+    "net": 134743,
+    "published": null,
+    "parity": false
+   }
+  },
+  "signal": "the index (5-minute bars); 1-ITM weekly option bought"
+ },
+ "R52": {
+  "name": "R52 Open outside value",
+  "trades": 999,
+  "net": 339185,
+  "win": 0.545,
+  "first": "2024-11-21",
+  "last": "2026-10-12",
+  "periods": {
+   "design": {
+    "trades": 706,
+    "net": 290573
+   },
+   "final": {
+    "trades": 293,
+    "net": 48612
+   }
+  },
+  "common": {
+   "trades": 999,
+   "net": 339185
+  },
+  "first_hour_share": 1.0,
+  "top10_days": 1.880921463717426,
+  "top10_trades": 1.8784307590833713,
+  "unlabelled": 0,
+  "source": "research/hunt/r101_arms_enhance/r101arms.py units, research/hunt/r106_small_targets/r106study.py run_rule (rule None = today's rules)",
+  "parity": {
+   "final": {
+    "trades": 293,
+    "net": 48612,
+    "published": [
+     293,
+     48612
+    ],
+    "parity": true
+   }
+  },
+  "signal": "the index (5-minute bars); 1-ITM weekly option bought"
+ },
+ "R72": {
+  "name": "R72 Breadth Donchian",
+  "trades": 4273,
+  "net": 388295,
+  "win": 0.465,
+  "first": "2024-11-21",
+  "last": "2026-10-13",
+  "periods": {
+   "design": {
+    "trades": 3071,
+    "net": 216929
+   },
+   "final": {
+    "trades": 1202,
+    "net": 171366
+   }
+  },
+  "common": {
+   "trades": 4273,
+   "net": 388295
+  },
+  "first_hour_share": 0.8572981256446934,
+  "top10_days": 2.843105106319777,
+  "top10_trades": 4.768632239535551,
+  "unlabelled": 0,
+  "source": "research/hunt/r101_arms_enhance/r101arms.py units, research/hunt/r106_small_targets/r106study.py run_rule (rule None = today's rules)",
+  "parity": {
+   "final": {
+    "trades": 1202,
+    "net": 171366,
+    "published": [
+     1202,
+     171366
+    ],
+    "parity": true
+   }
+  },
+  "signal": "the index (5-minute bars); 1-ITM weekly option bought"
+ },
+ "SOLO": {
+  "name": "Solo 2.0",
+  "trades": 294,
+  "net": 156646,
+  "win": 0.582,
+  "first": "2025-07-01",
+  "last": "2026-10-14",
+  "periods": {
+   "design": {
+    "trades": 166,
+    "net": 55910
+   },
+   "final": {
+    "trades": 127,
+    "net": 99735
+   },
+   "other": {
+    "trades": 1,
+    "net": 1002
+   }
+  },
+  "common": {
+   "trades": 293,
+   "net": 155645
+  },
+  "first_hour_share": 0.9680401643703043,
+  "top10_days": 1.160588216893729,
+  "top10_trades": 1.160588216893729,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r57/r57cfg.py, r57data.py, r57setups.py, r57study.py (run_a, VARIANTS['A2']), r57model.py (walk)",
+   "research/hunt/r51/engine.py (R51 held-contract engine, fills and charges)",
+   "research/hunt/r106_small_targets/r106solo.py (picks(): the same call, which asserts parity)",
+   "research/hunt/r113_time_of_day/adapters/solo.py (adapter, new; reports parity instead of asserting)"
+  ],
+  "parity": {
+   "design": {
+    "published": [
+     166,
+     55910
+    ],
+    "reproduced": [
+     166,
+     55910
+    ],
+    "match": true
+   },
+   "final": {
+    "published": [
+     128,
+     99172
+    ],
+    "reproduced": [
+     128,
+     100737
+    ],
+    "match": false
+   }
+  },
+  "signal": "underlying index (A2 scores index-signal candidates: S1 SoloMidday 12:00, S2, S3 = R52 H37-10 'open outside value and go' at 09:20, S4 15-min ORB, C4) with index/chain/VIX/brain features as context; buys the option at the setup's strike rule; R57 EXITS on the premium plus the setups' index exits. Not an option-chart signal."
+ },
+ "VIXDIV": {
+  "name": "VIX divergence",
+  "trades": 378,
+  "net": 199497,
+  "win": 0.418,
+  "first": "2022-01-05",
+  "last": "2026-08-26",
+  "periods": {
+   "design": {
+    "trades": 304,
+    "net": 154942
+   },
+   "final": {
+    "trades": 74,
+    "net": 44556
+   }
+  },
+  "common": {
+   "trades": 143,
+   "net": 9902
+  },
+  "first_hour_share": 0.0,
+  "top10_days": 1.6418323889767368,
+  "top10_trades": 1.789947617357179,
+  "unlabelled": 0,
+  "source": [
+   "research/hunt/r1/signals.py (n13_vixdiv, Req)",
+   "research/hunt/r1/lib.py (load_index, vix_minutes, run_engine)",
+   "research/hunt/r1/design.py (engine_dedup)",
+   "research/hunt/r52/lake2obuy.py (convert, raw)",
+   "research/hunt/r113_time_of_day/adapters/obuy_layout.py",
+   "research/hunt/r113_time_of_day/adapters/vixdiv.py"
+  ],
+  "parity": "PARTIAL. Final: trade counts exact (29, 45); Rs/day 67.6 vs 70 (NIFTY, -3%) and 111.3 vs 112 (BANKNIFTY, -1%). Design: NO - 139 vs 148 trades (-9, -6%) and Rs/day 75.3 vs 67 (+12%) on NIFTY; 165 vs 178 (-13, -7%) and 92.2 vs 89 (+4%) on BANKNIFTY. Sessions match (925 of 927 design days usable on both indices); the gap comes from the lake's minute prices vs R1's original Dhan files (signal or option-price availability on some days) and cannot be traced trade by trade without R1's original list",
+  "signal": "underlying: NIFTY / BANKNIFTY index move from its 09:15 open, with India VIX move from its open (VIX is computed from option prices: context); trades the 1-ITM option against the index move"
+ }
+}

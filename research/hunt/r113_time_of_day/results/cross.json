@@ -1,0 +1,2906 @@
+{
+ "best_worst": {
+  "FT3": {
+   "best": {
+    "bucket": "11:00-12:00",
+    "trades": 401,
+    "win": 0.175,
+    "net": 862444,
+    "avg": 2151,
+    "band": [
+     204046,
+     1627896
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.999
+   },
+   "worst": {
+    "bucket": "12:00-13:00",
+    "trades": 77,
+    "win": 0.104,
+    "net": 466,
+    "avg": 6,
+    "band": [
+     -268360,
+     316123
+    ],
+    "small": false,
+    "sure": false,
+    "share": 0.001
+   },
+   "first_hour_share": 0.0
+  },
+  "HERO": {
+   "best": {
+    "bucket": "12:00-13:00",
+    "trades": 355,
+    "win": 0.18,
+    "net": -12948,
+    "avg": -36,
+    "band": [
+     -31506,
+     10193
+    ],
+    "small": false,
+    "sure": false,
+    "share": 1.0
+   },
+   "worst": {
+    "bucket": "12:00-13:00",
+    "trades": 355,
+    "win": 0.18,
+    "net": -12948,
+    "avg": -36,
+    "band": [
+     -31506,
+     10193
+    ],
+    "small": false,
+    "sure": false,
+    "share": 1.0
+   },
+   "first_hour_share": -0.0
+  },
+  "LIQ": {
+   "best": {
+    "bucket": "09:15-09:30",
+    "trades": 261,
+    "win": 0.506,
+    "net": 131854,
+    "avg": 505,
+    "band": [
+     59530,
+     209275
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.491
+   },
+   "worst": {
+    "bucket": "11:00-12:00",
+    "trades": 151,
+    "win": 0.331,
+    "net": -28491,
+    "avg": -189,
+    "band": [
+     -64371,
+     8568
+    ],
+    "small": false,
+    "sure": false,
+    "share": -0.106
+   },
+   "first_hour_share": 0.7069888661263825
+  },
+  "MCX_NG_EVE": {
+   "best": {
+    "bucket": "19:00-21:00",
+    "trades": 233,
+    "win": 0.446,
+    "net": 15835,
+    "avg": 68,
+    "band": [
+     -53777,
+     82682
+    ],
+    "small": false,
+    "sure": false,
+    "share": 1.103
+   },
+   "worst": {
+    "bucket": "21:00-23:55",
+    "trades": 19,
+    "win": 0.421,
+    "net": -1478,
+    "avg": -78,
+    "band": [
+     -13942,
+     11066
+    ],
+    "small": true,
+    "sure": false,
+    "share": -0.103
+   },
+   "first_hour_share": 0.0
+  },
+  "MCX_SILVERM_AM": {
+   "best": {
+    "bucket": "09:00-12:00",
+    "trades": 80,
+    "win": 0.688,
+    "net": 144344,
+    "avg": 1804,
+    "band": [
+     64779,
+     227927
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.066
+   },
+   "worst": {
+    "bucket": "12:00-17:00",
+    "trades": 49,
+    "win": 0.429,
+    "net": -8942,
+    "avg": -182,
+    "band": [
+     -44556,
+     27051
+    ],
+    "small": false,
+    "sure": false,
+    "share": -0.066
+   },
+   "first_hour_share": 0.8501055892978817
+  },
+  "MCX_TREND12M": {
+   "best": {
+    "bucket": "09:00-12:00",
+    "trades": 130,
+    "win": 0.354,
+    "net": 775778,
+    "avg": 5968,
+    "band": [
+     42010,
+     1607870
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.0
+   },
+   "worst": {
+    "bucket": "09:00-12:00",
+    "trades": 130,
+    "win": 0.354,
+    "net": 775778,
+    "avg": 5968,
+    "band": [
+     42010,
+     1607870
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.0
+   },
+   "first_hour_share": 1.0
+  },
+  "MCX_US_NIGHT_SILVER": {
+   "best": {
+    "bucket": "09:00-12:00",
+    "trades": 197,
+    "win": 0.553,
+    "net": 189743,
+    "avg": 963,
+    "band": [
+     82650,
+     302474
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.0
+   },
+   "worst": {
+    "bucket": "09:00-12:00",
+    "trades": 197,
+    "win": 0.553,
+    "net": 189743,
+    "avg": 963,
+    "band": [
+     82650,
+     302474
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.0
+   },
+   "first_hour_share": 1.0
+  },
+  "MOM60": {
+   "best": {
+    "bucket": "11:00-12:00",
+    "trades": 74,
+    "win": 0.581,
+    "net": 30595,
+    "avg": 413,
+    "band": [
+     -9162,
+     69221
+    ],
+    "small": false,
+    "sure": false,
+    "share": -4.179
+   },
+   "worst": {
+    "bucket": "14:00-15:30",
+    "trades": 33,
+    "win": 0.394,
+    "net": -27935,
+    "avg": -847,
+    "band": [
+     -50059,
+     -6008
+    ],
+    "small": false,
+    "sure": true,
+    "share": 3.816
+   },
+   "first_hour_share": -0.0
+  },
+  "NIGHT_R3": {
+   "best": {
+    "bucket": "14:00-15:30",
+    "trades": 869,
+    "win": 0.544,
+    "net": 272171,
+    "avg": 313,
+    "band": [
+     54981,
+     466209
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.0
+   },
+   "worst": {
+    "bucket": "14:00-15:30",
+    "trades": 869,
+    "win": 0.544,
+    "net": 272171,
+    "avg": 313,
+    "band": [
+     54981,
+     466209
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.0
+   },
+   "first_hour_share": 0.0
+  },
+  "ORB_FADE": {
+   "best": {
+    "bucket": "13:00-14:00",
+    "trades": 173,
+    "win": 0.295,
+    "net": -17513,
+    "avg": -101,
+    "band": [
+     -30307,
+     -5284
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.061
+   },
+   "worst": {
+    "bucket": "11:00-12:00",
+    "trades": 678,
+    "win": 0.322,
+    "net": -115456,
+    "avg": -170,
+    "band": [
+     -142407,
+     -86997
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.404
+   },
+   "first_hour_share": -0.0
+  },
+  "ORB_FRESH": {
+   "best": {
+    "bucket": "12:00-13:00",
+    "trades": 167,
+    "win": 0.401,
+    "net": -8279,
+    "avg": -50,
+    "band": [
+     -23206,
+     7371
+    ],
+    "small": false,
+    "sure": false,
+    "share": 0.067
+   },
+   "worst": {
+    "bucket": "10:00-11:00",
+    "trades": 680,
+    "win": 0.379,
+    "net": -80464,
+    "avg": -118,
+    "band": [
+     -108614,
+     -51633
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.649
+   },
+   "first_hour_share": 0.2641662664554585
+  },
+  "ORB_ORB": {
+   "best": {
+    "bucket": "12:00-13:00",
+    "trades": 167,
+    "win": 0.401,
+    "net": -8279,
+    "avg": -50,
+    "band": [
+     -23206,
+     7371
+    ],
+    "small": false,
+    "sure": false,
+    "share": 0.067
+   },
+   "worst": {
+    "bucket": "10:00-11:00",
+    "trades": 680,
+    "win": 0.379,
+    "net": -80464,
+    "avg": -118,
+    "band": [
+     -108614,
+     -51633
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.649
+   },
+   "first_hour_share": 0.2641662664554585
+  },
+  "ORB_SWEEP": {
+   "best": {
+    "bucket": "14:00-15:30",
+    "trades": 99,
+    "win": 0.384,
+    "net": -485,
+    "avg": -5,
+    "band": [
+     -16446,
+     15307
+    ],
+    "small": false,
+    "sure": false,
+    "share": 0.002
+   },
+   "worst": {
+    "bucket": "10:00-11:00",
+    "trades": 702,
+    "win": 0.265,
+    "net": -132070,
+    "avg": -188,
+    "band": [
+     -173371,
+     -91522
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.441
+   },
+   "first_hour_share": 0.1254255158381279
+  },
+  "PINE_MATRIX_5M": {
+   "best": {
+    "bucket": "11:00-12:00",
+    "trades": 21,
+    "win": 0.524,
+    "net": 31120,
+    "avg": 1482,
+    "band": [
+     462,
+     63594
+    ],
+    "small": true,
+    "sure": false,
+    "share": -0.14
+   },
+   "worst": {
+    "bucket": "09:30-10:00",
+    "trades": 287,
+    "win": 0.303,
+    "net": -127869,
+    "avg": -446,
+    "band": [
+     -225798,
+     -35025
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.576
+   },
+   "first_hour_share": 1.2922620568223022
+  },
+  "PINE_ST_EMA_15M": {
+   "best": {
+    "bucket": "12:00-13:00",
+    "trades": 57,
+    "win": 0.491,
+    "net": 914,
+    "avg": 16,
+    "band": [
+     -32231,
+     34673
+    ],
+    "small": false,
+    "sure": false,
+    "share": -0.006
+   },
+   "worst": {
+    "bucket": "09:30-10:00",
+    "trades": 185,
+    "win": 0.438,
+    "net": -54791,
+    "avg": -296,
+    "band": [
+     -181604,
+     66418
+    ],
+    "small": false,
+    "sure": false,
+    "share": 0.348
+   },
+   "first_hour_share": 0.5217680452723645
+  },
+  "PINE_ST_EMA_5M": {
+   "best": {
+    "bucket": "12:00-13:00",
+    "trades": 184,
+    "win": 0.353,
+    "net": 34120,
+    "avg": 185,
+    "band": [
+     -36736,
+     108775
+    ],
+    "small": false,
+    "sure": false,
+    "share": -0.183
+   },
+   "worst": {
+    "bucket": "09:15-09:30",
+    "trades": 298,
+    "win": 0.326,
+    "net": -84860,
+    "avg": -285,
+    "band": [
+     -207036,
+     37940
+    ],
+    "small": false,
+    "sure": false,
+    "share": 0.456
+   },
+   "first_hour_share": 0.5608782838117601
+  },
+  "R51": {
+   "best": {
+    "bucket": "09:15-09:30",
+    "trades": 1273,
+    "win": 0.52,
+    "net": 357146,
+    "avg": 281,
+    "band": [
+     144617,
+     569994
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.929
+   },
+   "worst": {
+    "bucket": "11:00-12:00",
+    "trades": 820,
+    "win": 0.41,
+    "net": -175521,
+    "avg": -214,
+    "band": [
+     -307046,
+     -47116
+    ],
+    "small": false,
+    "sure": true,
+    "share": -0.948
+   },
+   "first_hour_share": 1.809358909407693
+  },
+  "R52": {
+   "best": {
+    "bucket": "09:15-09:30",
+    "trades": 999,
+    "win": 0.545,
+    "net": 339185,
+    "avg": 340,
+    "band": [
+     83334,
+     592786
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.0
+   },
+   "worst": {
+    "bucket": "09:15-09:30",
+    "trades": 999,
+    "win": 0.545,
+    "net": 339185,
+    "avg": 340,
+    "band": [
+     83334,
+     592786
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.0
+   },
+   "first_hour_share": 1.0
+  },
+  "R72": {
+   "best": {
+    "bucket": "09:15-09:30",
+    "trades": 908,
+    "win": 0.547,
+    "net": 335365,
+    "avg": 369,
+    "band": [
+     132284,
+     531309
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.864
+   },
+   "worst": {
+    "bucket": "11:00-12:00",
+    "trades": 552,
+    "win": 0.402,
+    "net": -132983,
+    "avg": -241,
+    "band": [
+     -274030,
+     12072
+    ],
+    "small": false,
+    "sure": false,
+    "share": -0.342
+   },
+   "first_hour_share": 0.8572981256446934
+  },
+  "SOLO": {
+   "best": {
+    "bucket": "09:15-09:30",
+    "trades": 252,
+    "win": 0.603,
+    "net": 167629,
+    "avg": 665,
+    "band": [
+     90221,
+     249046
+    ],
+    "small": false,
+    "sure": true,
+    "share": 1.07
+   },
+   "worst": {
+    "bucket": "09:30-10:00",
+    "trades": 25,
+    "win": 0.44,
+    "net": -13575,
+    "avg": -543,
+    "band": [
+     -38849,
+     10985
+    ],
+    "small": true,
+    "sure": false,
+    "share": -0.087
+   },
+   "first_hour_share": 0.9680401643703043
+  },
+  "VIXDIV": {
+   "best": {
+    "bucket": "10:00-11:00",
+    "trades": 127,
+    "win": 0.433,
+    "net": 91298,
+    "avg": 719,
+    "band": [
+     1274,
+     198535
+    ],
+    "small": false,
+    "sure": true,
+    "share": 0.458
+   },
+   "worst": {
+    "bucket": "11:00-12:00",
+    "trades": 101,
+    "win": 0.366,
+    "net": 24398,
+    "avg": 242,
+    "band": [
+     -39934,
+     88034
+    ],
+    "small": false,
+    "sure": false,
+    "share": 0.122
+   },
+   "first_hour_share": 0.0
+  }
+ },
+ "sign": {
+  "FT3": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    0,
+    0
+   ],
+   "11:00-12:00": [
+    48654,
+    90
+   ],
+   "12:00-13:00": [
+    -107425,
+    25
+   ],
+   "13:00-14:00": [
+    0,
+    0
+   ],
+   "14:00-15:30": [
+    0,
+    0
+   ]
+  },
+  "HERO": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    0,
+    0
+   ],
+   "11:00-12:00": [
+    0,
+    0
+   ],
+   "12:00-13:00": [
+    -12948,
+    355
+   ],
+   "13:00-14:00": [
+    0,
+    0
+   ],
+   "14:00-15:30": [
+    0,
+    0
+   ]
+  },
+  "LIQ": {
+   "09:15-09:30": [
+    131854,
+    261
+   ],
+   "09:30-10:00": [
+    92420,
+    251
+   ],
+   "10:00-11:00": [
+    -4058,
+    196
+   ],
+   "11:00-12:00": [
+    -28491,
+    151
+   ],
+   "12:00-13:00": [
+    24298,
+    181
+   ],
+   "13:00-14:00": [
+    29417,
+    177
+   ],
+   "14:00-15:30": [
+    22964,
+    21
+   ]
+  },
+  "MCX_NG_EVE": {
+   "09:00-12:00": [
+    0,
+    0
+   ],
+   "12:00-17:00": [
+    0,
+    0
+   ],
+   "17:00-19:00": [
+    0,
+    0
+   ],
+   "19:00-21:00": [
+    15835,
+    233
+   ],
+   "21:00-23:55": [
+    -1478,
+    19
+   ]
+  },
+  "MCX_SILVERM_AM": {
+   "09:00-12:00": [
+    144344,
+    80
+   ],
+   "12:00-17:00": [
+    -8942,
+    49
+   ],
+   "17:00-19:00": [
+    0,
+    0
+   ],
+   "19:00-21:00": [
+    0,
+    0
+   ],
+   "21:00-23:55": [
+    0,
+    0
+   ]
+  },
+  "MCX_TREND12M": {
+   "09:00-12:00": [
+    347792,
+    22
+   ],
+   "12:00-17:00": [
+    0,
+    0
+   ],
+   "17:00-19:00": [
+    0,
+    0
+   ],
+   "19:00-21:00": [
+    0,
+    0
+   ],
+   "21:00-23:55": [
+    0,
+    0
+   ]
+  },
+  "MCX_US_NIGHT_SILVER": {
+   "09:00-12:00": [
+    189743,
+    197
+   ],
+   "12:00-17:00": [
+    0,
+    0
+   ],
+   "17:00-19:00": [
+    0,
+    0
+   ],
+   "19:00-21:00": [
+    0,
+    0
+   ],
+   "21:00-23:55": [
+    0,
+    0
+   ]
+  },
+  "MOM60": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    -24047,
+    160
+   ],
+   "11:00-12:00": [
+    33587,
+    67
+   ],
+   "12:00-13:00": [
+    28851,
+    58
+   ],
+   "13:00-14:00": [
+    -16567,
+    54
+   ],
+   "14:00-15:30": [
+    -28076,
+    28
+   ]
+  },
+  "NIGHT_R3": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    0,
+    0
+   ],
+   "11:00-12:00": [
+    0,
+    0
+   ],
+   "12:00-13:00": [
+    0,
+    0
+   ],
+   "13:00-14:00": [
+    0,
+    0
+   ],
+   "14:00-15:30": [
+    144318,
+    330
+   ]
+  },
+  "ORB_FADE": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    -35668,
+    250
+   ],
+   "11:00-12:00": [
+    -57764,
+    267
+   ],
+   "12:00-13:00": [
+    -40033,
+    122
+   ],
+   "13:00-14:00": [
+    -10728,
+    68
+   ],
+   "14:00-15:30": [
+    0,
+    0
+   ]
+  },
+  "ORB_FRESH": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    -31568,
+    241
+   ],
+   "11:00-12:00": [
+    -8473,
+    92
+   ],
+   "12:00-13:00": [
+    8027,
+    65
+   ],
+   "13:00-14:00": [
+    -6537,
+    50
+   ],
+   "14:00-15:30": [
+    0,
+    0
+   ]
+  },
+  "ORB_ORB": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    -31568,
+    241
+   ],
+   "11:00-12:00": [
+    -8473,
+    92
+   ],
+   "12:00-13:00": [
+    8027,
+    65
+   ],
+   "13:00-14:00": [
+    -6537,
+    50
+   ],
+   "14:00-15:30": [
+    0,
+    0
+   ]
+  },
+  "ORB_SWEEP": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    -54874,
+    249
+   ],
+   "11:00-12:00": [
+    -31352,
+    155
+   ],
+   "12:00-13:00": [
+    -71882,
+    112
+   ],
+   "13:00-14:00": [
+    -14257,
+    81
+   ],
+   "14:00-15:30": [
+    5422,
+    33
+   ]
+  },
+  "PINE_MATRIX_5M": {
+   "09:15-09:30": [
+    -53524,
+    67
+   ],
+   "09:30-10:00": [
+    -83575,
+    102
+   ],
+   "10:00-11:00": [
+    -26470,
+    141
+   ],
+   "11:00-12:00": [
+    22095,
+    11
+   ],
+   "12:00-13:00": [
+    0,
+    0
+   ],
+   "13:00-14:00": [
+    13072,
+    161
+   ],
+   "14:00-15:30": [
+    -27973,
+    150
+   ]
+  },
+  "PINE_ST_EMA_15M": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    -36287,
+    86
+   ],
+   "10:00-11:00": [
+    -34743,
+    40
+   ],
+   "11:00-12:00": [
+    -40495,
+    19
+   ],
+   "12:00-13:00": [
+    -12102,
+    28
+   ],
+   "13:00-14:00": [
+    -10384,
+    23
+   ],
+   "14:00-15:30": [
+    -18297,
+    40
+   ]
+  },
+  "PINE_ST_EMA_5M": {
+   "09:15-09:30": [
+    -41885,
+    127
+   ],
+   "09:30-10:00": [
+    -43134,
+    59
+   ],
+   "10:00-11:00": [
+    -37660,
+    57
+   ],
+   "11:00-12:00": [
+    22280,
+    72
+   ],
+   "12:00-13:00": [
+    44164,
+    75
+   ],
+   "13:00-14:00": [
+    12006,
+    95
+   ],
+   "14:00-15:30": [
+    -35352,
+    164
+   ]
+  },
+  "R51": {
+   "09:15-09:30": [
+    357146,
+    1273
+   ],
+   "09:30-10:00": [
+    -4061,
+    637
+   ],
+   "10:00-11:00": [
+    -22619,
+    852
+   ],
+   "11:00-12:00": [
+    -175521,
+    820
+   ],
+   "12:00-13:00": [
+    49307,
+    788
+   ],
+   "13:00-14:00": [
+    22637,
+    686
+   ],
+   "14:00-15:30": [
+    -41719,
+    822
+   ]
+  },
+  "R52": {
+   "09:15-09:30": [
+    339185,
+    999
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    0,
+    0
+   ],
+   "11:00-12:00": [
+    0,
+    0
+   ],
+   "12:00-13:00": [
+    0,
+    0
+   ],
+   "13:00-14:00": [
+    0,
+    0
+   ],
+   "14:00-15:30": [
+    0,
+    0
+   ]
+  },
+  "R72": {
+   "09:15-09:30": [
+    335365,
+    908
+   ],
+   "09:30-10:00": [
+    26119,
+    279
+   ],
+   "10:00-11:00": [
+    89634,
+    441
+   ],
+   "11:00-12:00": [
+    -132983,
+    552
+   ],
+   "12:00-13:00": [
+    20681,
+    686
+   ],
+   "13:00-14:00": [
+    80686,
+    577
+   ],
+   "14:00-15:30": [
+    -31207,
+    830
+   ]
+  },
+  "SOLO": {
+   "09:15-09:30": [
+    166627,
+    251
+   ],
+   "09:30-10:00": [
+    -13575,
+    25
+   ],
+   "10:00-11:00": [
+    -6458,
+    7
+   ],
+   "11:00-12:00": [
+    526,
+    1
+   ],
+   "12:00-13:00": [
+    9018,
+    7
+   ],
+   "13:00-14:00": [
+    0,
+    0
+   ],
+   "14:00-15:30": [
+    -493,
+    2
+   ]
+  },
+  "VIXDIV": {
+   "09:15-09:30": [
+    0,
+    0
+   ],
+   "09:30-10:00": [
+    0,
+    0
+   ],
+   "10:00-11:00": [
+    -15762,
+    40
+   ],
+   "11:00-12:00": [
+    2433,
+    33
+   ],
+   "12:00-13:00": [
+    21849,
+    36
+   ],
+   "13:00-14:00": [
+    1382,
+    34
+   ],
+   "14:00-15:30": [
+    0,
+    0
+   ]
+  }
+ },
+ "corr": {
+  "design": {
+   "FT3|HERO": [
+    0.008,
+    139
+   ],
+   "FT3|LIQ": [
+    -0.005,
+    303
+   ],
+   "FT3|MCX_NG_EVE": [
+    0.007,
+    176
+   ],
+   "FT3|MCX_SILVERM_AM": [
+    -0.069,
+    88
+   ],
+   "FT3|MCX_TREND12M": [
+    -0.008,
+    68
+   ],
+   "FT3|MCX_US_NIGHT_SILVER": [
+    -0.023,
+    141
+   ],
+   "FT3|MOM60": [
+    0.119,
+    206
+   ],
+   "FT3|NIGHT_R3": [
+    0.069,
+    212
+   ],
+   "FT3|ORB_FADE": [
+    -0.084,
+    288
+   ],
+   "FT3|ORB_FRESH": [
+    0.041,
+    294
+   ],
+   "FT3|ORB_ORB": [
+    0.041,
+    294
+   ],
+   "FT3|ORB_SWEEP": [
+    -0.064,
+    283
+   ],
+   "FT3|PINE_MATRIX_5M": [
+    -0.021,
+    328
+   ],
+   "FT3|PINE_ST_EMA_15M": [
+    -0.08,
+    177
+   ],
+   "FT3|PINE_ST_EMA_5M": [
+    0.098,
+    281
+   ],
+   "FT3|R51": [
+    0.094,
+    337
+   ],
+   "FT3|R52": [
+    0.008,
+    266
+   ],
+   "FT3|R72": [
+    0.115,
+    327
+   ],
+   "FT3|SOLO": [
+    -0.026,
+    203
+   ],
+   "FT3|VIXDIV": [
+    0.063,
+    119
+   ],
+   "HERO|LIQ": [
+    -0.02,
+    309
+   ],
+   "HERO|MCX_NG_EVE": [
+    0.027,
+    216
+   ],
+   "HERO|MCX_SILVERM_AM": [
+    0.016,
+    156
+   ],
+   "HERO|MCX_TREND12M": [
+    -0.032,
+    141
+   ],
+   "HERO|MCX_US_NIGHT_SILVER": [
+    -0.009,
+    194
+   ],
+   "HERO|MOM60": [
+    0.017,
+    248
+   ],
+   "HERO|NIGHT_R3": [
+    0.115,
+    242
+   ],
+   "HERO|ORB_FADE": [
+    0.047,
+    300
+   ],
+   "HERO|ORB_FRESH": [
+    -0.068,
+    304
+   ],
+   "HERO|ORB_ORB": [
+    -0.068,
+    304
+   ],
+   "HERO|ORB_SWEEP": [
+    0.034,
+    295
+   ],
+   "HERO|PINE_MATRIX_5M": [
+    -0.012,
+    331
+   ],
+   "HERO|PINE_ST_EMA_15M": [
+    0.03,
+    211
+   ],
+   "HERO|PINE_ST_EMA_5M": [
+    0.051,
+    289
+   ],
+   "HERO|R51": [
+    0.022,
+    337
+   ],
+   "HERO|R52": [
+    -0.013,
+    284
+   ],
+   "HERO|R72": [
+    0.013,
+    330
+   ],
+   "HERO|SOLO": [
+    0.007,
+    235
+   ],
+   "HERO|VIXDIV": [
+    -0.034,
+    172
+   ],
+   "LIQ|MCX_NG_EVE": [
+    -0.058,
+    304
+   ],
+   "LIQ|MCX_SILVERM_AM": [
+    -0.102,
+    289
+   ],
+   "LIQ|MCX_TREND12M": [
+    -0.028,
+    282
+   ],
+   "LIQ|MCX_US_NIGHT_SILVER": [
+    -0.04,
+    293
+   ],
+   "LIQ|MOM60": [
+    0.166,
+    307
+   ],
+   "LIQ|NIGHT_R3": [
+    -0.121,
+    300
+   ],
+   "LIQ|ORB_FADE": [
+    -0.076,
+    326
+   ],
+   "LIQ|ORB_FRESH": [
+    0.133,
+    327
+   ],
+   "LIQ|ORB_ORB": [
+    0.133,
+    327
+   ],
+   "LIQ|ORB_SWEEP": [
+    -0.084,
+    328
+   ],
+   "LIQ|PINE_MATRIX_5M": [
+    0.131,
+    321
+   ],
+   "LIQ|PINE_ST_EMA_15M": [
+    0.179,
+    299
+   ],
+   "LIQ|PINE_ST_EMA_5M": [
+    0.158,
+    312
+   ],
+   "LIQ|R51": [
+    0.434,
+    337
+   ],
+   "LIQ|R52": [
+    0.207,
+    324
+   ],
+   "LIQ|R72": [
+    0.402,
+    330
+   ],
+   "LIQ|SOLO": [
+    0.164,
+    299
+   ],
+   "LIQ|VIXDIV": [
+    -0.02,
+    297
+   ],
+   "MCX_NG_EVE|MCX_SILVERM_AM": [
+    -0.019,
+    146
+   ],
+   "MCX_NG_EVE|MCX_TREND12M": [
+    -0.003,
+    148
+   ],
+   "MCX_NG_EVE|MCX_US_NIGHT_SILVER": [
+    -0.04,
+    154
+   ],
+   "MCX_NG_EVE|MOM60": [
+    -0.042,
+    273
+   ],
+   "MCX_NG_EVE|NIGHT_R3": [
+    -0.021,
+    244
+   ],
+   "MCX_NG_EVE|ORB_FADE": [
+    0.043,
+    305
+   ],
+   "MCX_NG_EVE|ORB_FRESH": [
+    0.03,
+    309
+   ],
+   "MCX_NG_EVE|ORB_ORB": [
+    0.03,
+    309
+   ],
+   "MCX_NG_EVE|ORB_SWEEP": [
+    0.036,
+    302
+   ],
+   "MCX_NG_EVE|PINE_MATRIX_5M": [
+    -0.11,
+    325
+   ],
+   "MCX_NG_EVE|PINE_ST_EMA_15M": [
+    0.004,
+    218
+   ],
+   "MCX_NG_EVE|PINE_ST_EMA_5M": [
+    -0.035,
+    293
+   ],
+   "MCX_NG_EVE|R51": [
+    -0.131,
+    342
+   ],
+   "MCX_NG_EVE|R52": [
+    -0.077,
+    290
+   ],
+   "MCX_NG_EVE|R72": [
+    -0.105,
+    330
+   ],
+   "MCX_NG_EVE|SOLO": [
+    -0.114,
+    179
+   ],
+   "MCX_NG_EVE|VIXDIV": [
+    0.035,
+    187
+   ],
+   "MCX_SILVERM_AM|MCX_TREND12M": [
+    -0.043,
+    46
+   ],
+   "MCX_SILVERM_AM|MCX_US_NIGHT_SILVER": [
+    0.127,
+    110
+   ],
+   "MCX_SILVERM_AM|MOM60": [
+    0.02,
+    202
+   ],
+   "MCX_SILVERM_AM|NIGHT_R3": [
+    -0.024,
+    186
+   ],
+   "MCX_SILVERM_AM|ORB_FADE": [
+    0.013,
+    287
+   ],
+   "MCX_SILVERM_AM|ORB_FRESH": [
+    -0.041,
+    288
+   ],
+   "MCX_SILVERM_AM|ORB_ORB": [
+    -0.041,
+    288
+   ],
+   "MCX_SILVERM_AM|ORB_SWEEP": [
+    -0.044,
+    276
+   ],
+   "MCX_SILVERM_AM|PINE_MATRIX_5M": [
+    -0.02,
+    316
+   ],
+   "MCX_SILVERM_AM|PINE_ST_EMA_15M": [
+    0.023,
+    159
+   ],
+   "MCX_SILVERM_AM|PINE_ST_EMA_5M": [
+    0.013,
+    271
+   ],
+   "MCX_SILVERM_AM|R51": [
+    0.009,
+    337
+   ],
+   "MCX_SILVERM_AM|R52": [
+    -0.027,
+    263
+   ],
+   "MCX_SILVERM_AM|R72": [
+    -0.006,
+    324
+   ],
+   "MCX_SILVERM_AM|SOLO": [
+    -0.033,
+    169
+   ],
+   "MCX_SILVERM_AM|VIXDIV": [
+    -0.013,
+    109
+   ],
+   "MCX_TREND12M|MCX_US_NIGHT_SILVER": [
+    -0.017,
+    110
+   ],
+   "MCX_TREND12M|MOM60": [
+    0.032,
+    183
+   ],
+   "MCX_TREND12M|NIGHT_R3": [
+    -0.005,
+    175
+   ],
+   "MCX_TREND12M|ORB_FADE": [
+    -0.069,
+    284
+   ],
+   "MCX_TREND12M|ORB_FRESH": [
+    -0.036,
+    288
+   ],
+   "MCX_TREND12M|ORB_ORB": [
+    -0.036,
+    288
+   ],
+   "MCX_TREND12M|ORB_SWEEP": [
+    -0.063,
+    275
+   ],
+   "MCX_TREND12M|PINE_MATRIX_5M": [
+    0.002,
+    313
+   ],
+   "MCX_TREND12M|PINE_ST_EMA_15M": [
+    0.012,
+    146
+   ],
+   "MCX_TREND12M|PINE_ST_EMA_5M": [
+    -0.026,
+    261
+   ],
+   "MCX_TREND12M|R51": [
+    0.005,
+    337
+   ],
+   "MCX_TREND12M|R52": [
+    0.004,
+    255
+   ],
+   "MCX_TREND12M|R72": [
+    -0.013,
+    323
+   ],
+   "MCX_TREND12M|SOLO": [
+    -0.012,
+    170
+   ],
+   "MCX_TREND12M|VIXDIV": [
+    0.016,
+    83
+   ],
+   "MCX_US_NIGHT_SILVER|MOM60": [
+    0.051,
+    243
+   ],
+   "MCX_US_NIGHT_SILVER|NIGHT_R3": [
+    0.068,
+    216
+   ],
+   "MCX_US_NIGHT_SILVER|ORB_FADE": [
+    0.074,
+    295
+   ],
+   "MCX_US_NIGHT_SILVER|ORB_FRESH": [
+    0.004,
+    296
+   ],
+   "MCX_US_NIGHT_SILVER|ORB_ORB": [
+    0.004,
+    296
+   ],
+   "MCX_US_NIGHT_SILVER|ORB_SWEEP": [
+    0.065,
+    287
+   ],
+   "MCX_US_NIGHT_SILVER|PINE_MATRIX_5M": [
+    0.006,
+    317
+   ],
+   "MCX_US_NIGHT_SILVER|PINE_ST_EMA_15M": [
+    -0.025,
+    190
+   ],
+   "MCX_US_NIGHT_SILVER|PINE_ST_EMA_5M": [
+    -0.021,
+    278
+   ],
+   "MCX_US_NIGHT_SILVER|R51": [
+    0.035,
+    337
+   ],
+   "MCX_US_NIGHT_SILVER|R52": [
+    -0.015,
+    278
+   ],
+   "MCX_US_NIGHT_SILVER|R72": [
+    0.037,
+    325
+   ],
+   "MCX_US_NIGHT_SILVER|SOLO": [
+    0.035,
+    173
+   ],
+   "MCX_US_NIGHT_SILVER|VIXDIV": [
+    -0.073,
+    155
+   ],
+   "MOM60|NIGHT_R3": [
+    -0.02,
+    255
+   ],
+   "MOM60|ORB_FADE": [
+    -0.071,
+    316
+   ],
+   "MOM60|ORB_FRESH": [
+    0.021,
+    300
+   ],
+   "MOM60|ORB_ORB": [
+    0.021,
+    300
+   ],
+   "MOM60|ORB_SWEEP": [
+    -0.089,
+    303
+   ],
+   "MOM60|PINE_MATRIX_5M": [
+    0.07,
+    327
+   ],
+   "MOM60|PINE_ST_EMA_15M": [
+    0.098,
+    240
+   ],
+   "MOM60|PINE_ST_EMA_5M": [
+    0.117,
+    304
+   ],
+   "MOM60|R51": [
+    0.253,
+    337
+   ],
+   "MOM60|R52": [
+    0.161,
+    297
+   ],
+   "MOM60|R72": [
+    0.313,
+    325
+   ],
+   "MOM60|SOLO": [
+    0.047,
+    288
+   ],
+   "MOM60|VIXDIV": [
+    -0.144,
+    202
+   ],
+   "NIGHT_R3|ORB_FADE": [
+    0.089,
+    310
+   ],
+   "NIGHT_R3|ORB_FRESH": [
+    0.001,
+    299
+   ],
+   "NIGHT_R3|ORB_ORB": [
+    0.001,
+    299
+   ],
+   "NIGHT_R3|ORB_SWEEP": [
+    0.027,
+    302
+   ],
+   "NIGHT_R3|PINE_MATRIX_5M": [
+    -0.023,
+    319
+   ],
+   "NIGHT_R3|PINE_ST_EMA_15M": [
+    -0.02,
+    234
+   ],
+   "NIGHT_R3|PINE_ST_EMA_5M": [
+    0.085,
+    293
+   ],
+   "NIGHT_R3|R51": [
+    0.002,
+    337
+   ],
+   "NIGHT_R3|R52": [
+    -0.09,
+    289
+   ],
+   "NIGHT_R3|R72": [
+    -0.021,
+    326
+   ],
+   "NIGHT_R3|SOLO": [
+    -0.128,
+    249
+   ],
+   "NIGHT_R3|VIXDIV": [
+    -0.066,
+    212
+   ],
+   "ORB_FADE|ORB_FRESH": [
+    0.01,
+    316
+   ],
+   "ORB_FADE|ORB_ORB": [
+    0.01,
+    316
+   ],
+   "ORB_FADE|ORB_SWEEP": [
+    0.373,
+    293
+   ],
+   "ORB_FADE|PINE_MATRIX_5M": [
+    -0.004,
+    332
+   ],
+   "ORB_FADE|PINE_ST_EMA_15M": [
+    -0.073,
+    304
+   ],
+   "ORB_FADE|PINE_ST_EMA_5M": [
+    -0.046,
+    319
+   ],
+   "ORB_FADE|R51": [
+    0.036,
+    337
+   ],
+   "ORB_FADE|R52": [
+    -0.083,
+    319
+   ],
+   "ORB_FADE|R72": [
+    -0.011,
+    332
+   ],
+   "ORB_FADE|SOLO": [
+    0.039,
+    305
+   ],
+   "ORB_FADE|VIXDIV": [
+    -0.081,
+    288
+   ],
+   "ORB_FRESH|ORB_ORB": [
+    1.0,
+    285
+   ],
+   "ORB_FRESH|ORB_SWEEP": [
+    -0.125,
+    305
+   ],
+   "ORB_FRESH|PINE_MATRIX_5M": [
+    0.102,
+    331
+   ],
+   "ORB_FRESH|PINE_ST_EMA_15M": [
+    -0.01,
+    300
+   ],
+   "ORB_FRESH|PINE_ST_EMA_5M": [
+    0.087,
+    323
+   ],
+   "ORB_FRESH|R51": [
+    0.286,
+    337
+   ],
+   "ORB_FRESH|R52": [
+    0.113,
+    321
+   ],
+   "ORB_FRESH|R72": [
+    0.231,
+    328
+   ],
+   "ORB_FRESH|SOLO": [
+    0.082,
+    308
+   ],
+   "ORB_FRESH|VIXDIV": [
+    -0.013,
+    297
+   ],
+   "ORB_ORB|ORB_SWEEP": [
+    -0.125,
+    305
+   ],
+   "ORB_ORB|PINE_MATRIX_5M": [
+    0.102,
+    331
+   ],
+   "ORB_ORB|PINE_ST_EMA_15M": [
+    -0.01,
+    300
+   ],
+   "ORB_ORB|PINE_ST_EMA_5M": [
+    0.087,
+    323
+   ],
+   "ORB_ORB|R51": [
+    0.286,
+    337
+   ],
+   "ORB_ORB|R52": [
+    0.113,
+    321
+   ],
+   "ORB_ORB|R72": [
+    0.231,
+    328
+   ],
+   "ORB_ORB|SOLO": [
+    0.082,
+    308
+   ],
+   "ORB_ORB|VIXDIV": [
+    -0.013,
+    297
+   ],
+   "ORB_SWEEP|PINE_MATRIX_5M": [
+    -0.044,
+    332
+   ],
+   "ORB_SWEEP|PINE_ST_EMA_15M": [
+    -0.054,
+    292
+   ],
+   "ORB_SWEEP|PINE_ST_EMA_5M": [
+    0.021,
+    316
+   ],
+   "ORB_SWEEP|R51": [
+    -0.135,
+    337
+   ],
+   "ORB_SWEEP|R52": [
+    -0.085,
+    315
+   ],
+   "ORB_SWEEP|R72": [
+    -0.143,
+    330
+   ],
+   "ORB_SWEEP|SOLO": [
+    -0.002,
+    302
+   ],
+   "ORB_SWEEP|VIXDIV": [
+    0.056,
+    285
+   ],
+   "PINE_MATRIX_5M|PINE_ST_EMA_15M": [
+    0.031,
+    314
+   ],
+   "PINE_MATRIX_5M|PINE_ST_EMA_5M": [
+    0.158,
+    317
+   ],
+   "PINE_MATRIX_5M|R51": [
+    0.149,
+    337
+   ],
+   "PINE_MATRIX_5M|R52": [
+    -0.032,
+    329
+   ],
+   "PINE_MATRIX_5M|R72": [
+    0.16,
+    334
+   ],
+   "PINE_MATRIX_5M|SOLO": [
+    0.012,
+    316
+   ],
+   "PINE_MATRIX_5M|VIXDIV": [
+    -0.017,
+    320
+   ],
+   "PINE_ST_EMA_15M|PINE_ST_EMA_5M": [
+    0.292,
+    276
+   ],
+   "PINE_ST_EMA_15M|R51": [
+    0.037,
+    337
+   ],
+   "PINE_ST_EMA_15M|R52": [
+    0.165,
+    286
+   ],
+   "PINE_ST_EMA_15M|R72": [
+    0.03,
+    327
+   ],
+   "PINE_ST_EMA_15M|SOLO": [
+    0.013,
+    231
+   ],
+   "PINE_ST_EMA_15M|VIXDIV": [
+    -0.093,
+    188
+   ],
+   "PINE_ST_EMA_5M|R51": [
+    0.23,
+    337
+   ],
+   "PINE_ST_EMA_5M|R52": [
+    0.101,
+    319
+   ],
+   "PINE_ST_EMA_5M|R72": [
+    0.212,
+    332
+   ],
+   "PINE_ST_EMA_5M|SOLO": [
+    0.046,
+    292
+   ],
+   "PINE_ST_EMA_5M|VIXDIV": [
+    -0.031,
+    279
+   ],
+   "R51|R52": [
+    0.446,
+    337
+   ],
+   "R51|R72": [
+    0.826,
+    337
+   ],
+   "R51|SOLO": [
+    0.265,
+    337
+   ],
+   "R51|VIXDIV": [
+    -0.116,
+    337
+   ],
+   "R52|R72": [
+    0.371,
+    329
+   ],
+   "R52|SOLO": [
+    0.411,
+    292
+   ],
+   "R52|VIXDIV": [
+    -0.053,
+    265
+   ],
+   "R72|SOLO": [
+    0.203,
+    327
+   ],
+   "R72|VIXDIV": [
+    -0.061,
+    325
+   ],
+   "SOLO|VIXDIV": [
+    -0.102,
+    208
+   ]
+  },
+  "final": {
+   "FT3|HERO": [
+    -0.093,
+    55
+   ],
+   "FT3|LIQ": [
+    0.128,
+    121
+   ],
+   "FT3|MCX_NG_EVE": [
+    0.018,
+    117
+   ],
+   "FT3|MCX_SILVERM_AM": [
+    -0.082,
+    65
+   ],
+   "FT3|MCX_US_NIGHT_SILVER": [
+    0.001,
+    105
+   ],
+   "FT3|NIGHT_R3": [
+    -0.067,
+    79
+   ],
+   "FT3|ORB_FADE": [
+    -0.036,
+    123
+   ],
+   "FT3|ORB_FRESH": [
+    0.126,
+    118
+   ],
+   "FT3|ORB_ORB": [
+    0.126,
+    118
+   ],
+   "FT3|ORB_SWEEP": [
+    0.029,
+    118
+   ],
+   "FT3|PINE_MATRIX_5M": [
+    -0.136,
+    130
+   ],
+   "FT3|PINE_ST_EMA_15M": [
+    0.101,
+    80
+   ],
+   "FT3|PINE_ST_EMA_5M": [
+    0.17,
+    109
+   ],
+   "FT3|R51": [
+    0.164,
+    133
+   ],
+   "FT3|R52": [
+    -0.047,
+    113
+   ],
+   "FT3|R72": [
+    0.169,
+    130
+   ],
+   "FT3|SOLO": [
+    -0.073,
+    133
+   ],
+   "FT3|VIXDIV": [
+    0.031,
+    44
+   ],
+   "HERO|LIQ": [
+    -0.052,
+    124
+   ],
+   "HERO|MCX_NG_EVE": [
+    0.022,
+    119
+   ],
+   "HERO|MCX_SILVERM_AM": [
+    0.238,
+    82
+   ],
+   "HERO|MCX_US_NIGHT_SILVER": [
+    -0.083,
+    114
+   ],
+   "HERO|NIGHT_R3": [
+    -0.113,
+    91
+   ],
+   "HERO|ORB_FADE": [
+    0.052,
+    124
+   ],
+   "HERO|ORB_FRESH": [
+    0.108,
+    123
+   ],
+   "HERO|ORB_ORB": [
+    0.108,
+    123
+   ],
+   "HERO|ORB_SWEEP": [
+    0.123,
+    122
+   ],
+   "HERO|PINE_MATRIX_5M": [
+    0.106,
+    131
+   ],
+   "HERO|PINE_ST_EMA_15M": [
+    -0.016,
+    95
+   ],
+   "HERO|PINE_ST_EMA_5M": [
+    -0.101,
+    116
+   ],
+   "HERO|R51": [
+    -0.068,
+    133
+   ],
+   "HERO|R52": [
+    -0.07,
+    119
+   ],
+   "HERO|R72": [
+    -0.177,
+    131
+   ],
+   "HERO|SOLO": [
+    -0.055,
+    133
+   ],
+   "HERO|VIXDIV": [
+    0.441,
+    67
+   ],
+   "LIQ|MCX_NG_EVE": [
+    0.159,
+    135
+   ],
+   "LIQ|MCX_SILVERM_AM": [
+    -0.147,
+    119
+   ],
+   "LIQ|MCX_US_NIGHT_SILVER": [
+    0.126,
+    124
+   ],
+   "LIQ|NIGHT_R3": [
+    0.032,
+    120
+   ],
+   "LIQ|ORB_FADE": [
+    -0.092,
+    129
+   ],
+   "LIQ|ORB_FRESH": [
+    0.111,
+    128
+   ],
+   "LIQ|ORB_ORB": [
+    0.111,
+    128
+   ],
+   "LIQ|ORB_SWEEP": [
+    0.042,
+    130
+   ],
+   "LIQ|PINE_MATRIX_5M": [
+    0.078,
+    127
+   ],
+   "LIQ|PINE_ST_EMA_15M": [
+    0.042,
+    119
+   ],
+   "LIQ|PINE_ST_EMA_5M": [
+    0.302,
+    124
+   ],
+   "LIQ|R51": [
+    0.338,
+    133
+   ],
+   "LIQ|R52": [
+    0.172,
+    127
+   ],
+   "LIQ|R72": [
+    0.404,
+    133
+   ],
+   "LIQ|SOLO": [
+    0.186,
+    128
+   ],
+   "LIQ|VIXDIV": [
+    -0.02,
+    116
+   ],
+   "MCX_NG_EVE|MCX_SILVERM_AM": [
+    -0.014,
+    117
+   ],
+   "MCX_NG_EVE|MCX_US_NIGHT_SILVER": [
+    0.007,
+    128
+   ],
+   "MCX_NG_EVE|NIGHT_R3": [
+    -0.076,
+    123
+   ],
+   "MCX_NG_EVE|ORB_FADE": [
+    0.004,
+    134
+   ],
+   "MCX_NG_EVE|ORB_FRESH": [
+    -0.1,
+    133
+   ],
+   "MCX_NG_EVE|ORB_ORB": [
+    -0.1,
+    133
+   ],
+   "MCX_NG_EVE|ORB_SWEEP": [
+    0.089,
+    133
+   ],
+   "MCX_NG_EVE|PINE_MATRIX_5M": [
+    0.014,
+    138
+   ],
+   "MCX_NG_EVE|PINE_ST_EMA_15M": [
+    0.113,
+    126
+   ],
+   "MCX_NG_EVE|PINE_ST_EMA_5M": [
+    -0.067,
+    134
+   ],
+   "MCX_NG_EVE|R51": [
+    -0.055,
+    138
+   ],
+   "MCX_NG_EVE|R52": [
+    0.121,
+    133
+   ],
+   "MCX_NG_EVE|R72": [
+    0.029,
+    136
+   ],
+   "MCX_NG_EVE|SOLO": [
+    0.261,
+    138
+   ],
+   "MCX_NG_EVE|VIXDIV": [
+    -0.014,
+    118
+   ],
+   "MCX_SILVERM_AM|MCX_US_NIGHT_SILVER": [
+    0.113,
+    106
+   ],
+   "MCX_SILVERM_AM|NIGHT_R3": [
+    0.04,
+    86
+   ],
+   "MCX_SILVERM_AM|ORB_FADE": [
+    0.358,
+    116
+   ],
+   "MCX_SILVERM_AM|ORB_FRESH": [
+    -0.216,
+    114
+   ],
+   "MCX_SILVERM_AM|ORB_ORB": [
+    -0.216,
+    114
+   ],
+   "MCX_SILVERM_AM|ORB_SWEEP": [
+    0.196,
+    109
+   ],
+   "MCX_SILVERM_AM|PINE_MATRIX_5M": [
+    0.154,
+    127
+   ],
+   "MCX_SILVERM_AM|PINE_ST_EMA_15M": [
+    0.005,
+    93
+   ],
+   "MCX_SILVERM_AM|PINE_ST_EMA_5M": [
+    -0.005,
+    112
+   ],
+   "MCX_SILVERM_AM|R51": [
+    -0.078,
+    133
+   ],
+   "MCX_SILVERM_AM|R52": [
+    0.003,
+    115
+   ],
+   "MCX_SILVERM_AM|R72": [
+    -0.168,
+    130
+   ],
+   "MCX_SILVERM_AM|SOLO": [
+    0.015,
+    129
+   ],
+   "MCX_SILVERM_AM|VIXDIV": [
+    0.127,
+    63
+   ],
+   "MCX_US_NIGHT_SILVER|NIGHT_R3": [
+    0.223,
+    113
+   ],
+   "MCX_US_NIGHT_SILVER|ORB_FADE": [
+    -0.092,
+    129
+   ],
+   "MCX_US_NIGHT_SILVER|ORB_FRESH": [
+    -0.072,
+    130
+   ],
+   "MCX_US_NIGHT_SILVER|ORB_ORB": [
+    -0.072,
+    130
+   ],
+   "MCX_US_NIGHT_SILVER|ORB_SWEEP": [
+    -0.099,
+    128
+   ],
+   "MCX_US_NIGHT_SILVER|PINE_MATRIX_5M": [
+    -0.06,
+    129
+   ],
+   "MCX_US_NIGHT_SILVER|PINE_ST_EMA_15M": [
+    0.089,
+    113
+   ],
+   "MCX_US_NIGHT_SILVER|PINE_ST_EMA_5M": [
+    0.195,
+    121
+   ],
+   "MCX_US_NIGHT_SILVER|R51": [
+    0.034,
+    133
+   ],
+   "MCX_US_NIGHT_SILVER|R52": [
+    0.013,
+    125
+   ],
+   "MCX_US_NIGHT_SILVER|R72": [
+    0.079,
+    133
+   ],
+   "MCX_US_NIGHT_SILVER|SOLO": [
+    0.008,
+    130
+   ],
+   "MCX_US_NIGHT_SILVER|VIXDIV": [
+    -0.044,
+    109
+   ],
+   "NIGHT_R3|ORB_FADE": [
+    0.186,
+    126
+   ],
+   "NIGHT_R3|ORB_FRESH": [
+    -0.029,
+    118
+   ],
+   "NIGHT_R3|ORB_ORB": [
+    -0.029,
+    118
+   ],
+   "NIGHT_R3|ORB_SWEEP": [
+    0.012,
+    121
+   ],
+   "NIGHT_R3|PINE_MATRIX_5M": [
+    -0.03,
+    125
+   ],
+   "NIGHT_R3|PINE_ST_EMA_15M": [
+    -0.035,
+    97
+   ],
+   "NIGHT_R3|PINE_ST_EMA_5M": [
+    0.022,
+    119
+   ],
+   "NIGHT_R3|R51": [
+    -0.142,
+    133
+   ],
+   "NIGHT_R3|R52": [
+    -0.167,
+    115
+   ],
+   "NIGHT_R3|R72": [
+    -0.114,
+    131
+   ],
+   "NIGHT_R3|SOLO": [
+    -0.091,
+    127
+   ],
+   "NIGHT_R3|VIXDIV": [
+    -0.111,
+    77
+   ],
+   "ORB_FADE|ORB_FRESH": [
+    0.113,
+    128
+   ],
+   "ORB_FADE|ORB_ORB": [
+    0.113,
+    128
+   ],
+   "ORB_FADE|ORB_SWEEP": [
+    0.482,
+    121
+   ],
+   "ORB_FADE|PINE_MATRIX_5M": [
+    0.006,
+    131
+   ],
+   "ORB_FADE|PINE_ST_EMA_15M": [
+    -0.089,
+    124
+   ],
+   "ORB_FADE|PINE_ST_EMA_5M": [
+    -0.137,
+    126
+   ],
+   "ORB_FADE|R51": [
+    -0.111,
+    133
+   ],
+   "ORB_FADE|R52": [
+    0.034,
+    128
+   ],
+   "ORB_FADE|R72": [
+    -0.057,
+    133
+   ],
+   "ORB_FADE|SOLO": [
+    -0.046,
+    132
+   ],
+   "ORB_FADE|VIXDIV": [
+    0.2,
+    116
+   ],
+   "ORB_FRESH|ORB_ORB": [
+    1.0,
+    110
+   ],
+   "ORB_FRESH|ORB_SWEEP": [
+    -0.009,
+    119
+   ],
+   "ORB_FRESH|PINE_MATRIX_5M": [
+    -0.136,
+    129
+   ],
+   "ORB_FRESH|PINE_ST_EMA_15M": [
+    0.138,
+    118
+   ],
+   "ORB_FRESH|PINE_ST_EMA_5M": [
+    -0.137,
+    125
+   ],
+   "ORB_FRESH|R51": [
+    -0.12,
+    133
+   ],
+   "ORB_FRESH|R52": [
+    -0.079,
+    126
+   ],
+   "ORB_FRESH|R72": [
+    -0.003,
+    130
+   ],
+   "ORB_FRESH|SOLO": [
+    0.02,
+    130
+   ],
+   "ORB_FRESH|VIXDIV": [
+    0.119,
+    113
+   ],
+   "ORB_ORB|ORB_SWEEP": [
+    -0.009,
+    119
+   ],
+   "ORB_ORB|PINE_MATRIX_5M": [
+    -0.136,
+    129
+   ],
+   "ORB_ORB|PINE_ST_EMA_15M": [
+    0.138,
+    118
+   ],
+   "ORB_ORB|PINE_ST_EMA_5M": [
+    -0.137,
+    125
+   ],
+   "ORB_ORB|R51": [
+    -0.12,
+    133
+   ],
+   "ORB_ORB|R52": [
+    -0.079,
+    126
+   ],
+   "ORB_ORB|R72": [
+    -0.003,
+    130
+   ],
+   "ORB_ORB|SOLO": [
+    0.02,
+    130
+   ],
+   "ORB_ORB|VIXDIV": [
+    0.119,
+    113
+   ],
+   "ORB_SWEEP|PINE_MATRIX_5M": [
+    0.054,
+    130
+   ],
+   "ORB_SWEEP|PINE_ST_EMA_15M": [
+    -0.048,
+    116
+   ],
+   "ORB_SWEEP|PINE_ST_EMA_5M": [
+    -0.05,
+    121
+   ],
+   "ORB_SWEEP|R51": [
+    0.031,
+    133
+   ],
+   "ORB_SWEEP|R52": [
+    0.052,
+    126
+   ],
+   "ORB_SWEEP|R72": [
+    0.081,
+    130
+   ],
+   "ORB_SWEEP|SOLO": [
+    0.027,
+    131
+   ],
+   "ORB_SWEEP|VIXDIV": [
+    0.187,
+    111
+   ],
+   "PINE_MATRIX_5M|PINE_ST_EMA_15M": [
+    -0.03,
+    126
+   ],
+   "PINE_MATRIX_5M|PINE_ST_EMA_5M": [
+    0.054,
+    126
+   ],
+   "PINE_MATRIX_5M|R51": [
+    0.281,
+    133
+   ],
+   "PINE_MATRIX_5M|R52": [
+    -0.049,
+    128
+   ],
+   "PINE_MATRIX_5M|R72": [
+    0.18,
+    133
+   ],
+   "PINE_MATRIX_5M|SOLO": [
+    -0.093,
+    128
+   ],
+   "PINE_MATRIX_5M|VIXDIV": [
+    0.108,
+    127
+   ],
+   "PINE_ST_EMA_15M|PINE_ST_EMA_5M": [
+    0.205,
+    110
+   ],
+   "PINE_ST_EMA_15M|R51": [
+    0.088,
+    133
+   ],
+   "PINE_ST_EMA_15M|R52": [
+    0.051,
+    122
+   ],
+   "PINE_ST_EMA_15M|R72": [
+    0.084,
+    129
+   ],
+   "PINE_ST_EMA_15M|SOLO": [
+    0.05,
+    128
+   ],
+   "PINE_ST_EMA_15M|VIXDIV": [
+    -0.018,
+    81
+   ],
+   "PINE_ST_EMA_5M|R51": [
+    0.42,
+    133
+   ],
+   "PINE_ST_EMA_5M|R52": [
+    0.047,
+    123
+   ],
+   "PINE_ST_EMA_5M|R72": [
+    0.338,
+    131
+   ],
+   "PINE_ST_EMA_5M|SOLO": [
+    -0.003,
+    128
+   ],
+   "PINE_ST_EMA_5M|VIXDIV": [
+    -0.083,
+    107
+   ],
+   "R51|R52": [
+    0.306,
+    133
+   ],
+   "R51|R72": [
+    0.832,
+    133
+   ],
+   "R51|SOLO": [
+    0.185,
+    133
+   ],
+   "R51|VIXDIV": [
+    -0.047,
+    133
+   ],
+   "R52|R72": [
+    0.294,
+    131
+   ],
+   "R52|SOLO": [
+    0.695,
+    129
+   ],
+   "R52|VIXDIV": [
+    0.02,
+    109
+   ],
+   "R72|SOLO": [
+    0.188,
+    133
+   ],
+   "R72|VIXDIV": [
+    -0.156,
+    130
+   ],
+   "SOLO|VIXDIV": [
+    -0.068,
+    129
+   ]
+  }
+ },
+ "concentration": {
+  "FT3": {
+   "top10_days": 2.896951485571812,
+   "top10_trades": 2.947318019961955,
+   "days": 442
+  },
+  "HERO": {
+   "top10_days": null,
+   "top10_trades": null,
+   "days": 189
+  },
+  "LIQ": {
+   "top10_days": 1.9464529522883278,
+   "top10_trades": 2.5681749035801733,
+   "days": 395
+  },
+  "MCX_NG_EVE": {
+   "top10_days": 9.77120771412489,
+   "top10_trades": 9.77120771412489,
+   "days": 252
+  },
+  "MCX_SILVERM_AM": {
+   "top10_days": 0.88149730159042,
+   "top10_trades": 1.1480060335897597,
+   "days": 83
+  },
+  "MCX_TREND12M": {
+   "top10_days": 1.433932912233374,
+   "top10_trades": 1.5621194496671595,
+   "days": 87
+  },
+  "MCX_US_NIGHT_SILVER": {
+   "top10_days": 1.068429450397365,
+   "top10_trades": 1.068429450397365,
+   "days": 197
+  },
+  "MOM60": {
+   "top10_days": null,
+   "top10_trades": null,
+   "days": 198
+  },
+  "NIGHT_R3": {
+   "top10_days": 2.3620688996357293,
+   "top10_trades": 2.2879591930013397,
+   "days": 594
+  },
+  "ORB_FADE": {
+   "top10_days": null,
+   "top10_trades": null,
+   "days": 1060
+  },
+  "ORB_FRESH": {
+   "top10_days": null,
+   "top10_trades": null,
+   "days": 1085
+  },
+  "ORB_ORB": {
+   "top10_days": null,
+   "top10_trades": null,
+   "days": 1085
+  },
+  "ORB_SWEEP": {
+   "top10_days": null,
+   "top10_trades": null,
+   "days": 1030
+  },
+  "PINE_MATRIX_5M": {
+   "top10_days": null,
+   "top10_trades": null,
+   "days": 1055
+  },
+  "PINE_ST_EMA_15M": {
+   "top10_days": null,
+   "top10_trades": null,
+   "days": 461
+  },
+  "PINE_ST_EMA_5M": {
+   "top10_days": null,
+   "top10_trades": null,
+   "days": 876
+  },
+  "R51": {
+   "top10_days": 5.96763302501394,
+   "top10_trades": 13.804018148455908,
+   "days": 470
+  },
+  "R52": {
+   "top10_days": 1.880921463717426,
+   "top10_trades": 1.8784307590833713,
+   "days": 354
+  },
+  "R72": {
+   "top10_days": 2.843105106319777,
+   "top10_trades": 4.768632239535551,
+   "days": 452
+  },
+  "SOLO": {
+   "top10_days": 1.160588216893729,
+   "top10_trades": 1.160588216893729,
+   "days": 294
+  },
+  "VIXDIV": {
+   "top10_days": 1.6418323889767368,
+   "top10_trades": 1.789947617357179,
+   "days": 258
+  }
+ },
+ "shared_days": {
+  "days": 470,
+  "top_days": 47,
+  "mean_green_arms_on_top_days": 3.36,
+  "top_days_all_green": 22,
+  "mean_red_arms_on_worst_days": 3.43,
+  "top10_share_of_book": 2.426256473714779,
+  "arms": [
+   "R72",
+   "R51",
+   "R52",
+   "LIQ"
+  ]
+ }
+}

@@ -74,7 +74,10 @@ ARM_NAME = {
     "HERO": "Hero Rs 1,000 ticket", "ORB_ORB": "ORB", "ORB_FRESH": "ORB Fresh", "ORB_SWEEP": "ORB Sweep",
     "ORB_FADE": "Range Fade", "NIGHT_R3": "Night (R3)", "VIXDIV": "VIX divergence",
     "MCX_NG_EVE": "NG evening breakout", "MCX_SILVERM_AM": "SILVERM morning", "MCX_US_NIGHT_SILVER": "US-night silver",
-    "MCX_TREND12M": "MCX 12-month trend",
+    "MCX_TREND12M": "MCX 12-month trend", "PINE_ST_EMA_5M": "Pine Supertrend+EMA 5m",
+    "PINE_ST_EMA_15M": "Pine Supertrend+EMA 15m", "PINE_MATRIX_5M": "Pine Matrix 5m",
 }
 MCX_UNDS = ("NATURALGAS", "NATGASMINI", "SILVERM", "SILVER", "SILVERMIC", "GOLD", "GOLDM", "CRUDEOIL", "CRUDEOILM",
-            "COPPER", "ZINC")
+            "COPPER", "ZINC", "ZINCMINI", "ALUMINIUM", "ALUMINI", "GOLDPETAL")
+# a mini contract's day labels come from its parent's near-month future (same commodity, same session)
+MCX_PARENT = {"SILVERMIC": "SILVERM", "ALUMINI": "ALUMINIUM", "GOLDPETAL": "GOLD", "ZINCMINI": "ZINC"}
