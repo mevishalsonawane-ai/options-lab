@@ -464,6 +464,8 @@ class RootNavigationTest {
         }
         try {
             repeat(40) { round ->
+                // The last round's racer may have saved its ticket after that erase ended (allowed then): a fresh ledger to seed.
+                Ledger.wipe()
                 seedPersonalData()
                 val stop = java.util.concurrent.atomic.AtomicBoolean(false)
                 val saves = java.util.concurrent.atomic.AtomicLong()
