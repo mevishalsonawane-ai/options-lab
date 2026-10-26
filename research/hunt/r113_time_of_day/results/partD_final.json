@@ -1,0 +1,315 @@
+{
+ "written": "2026-10-26T19:32:51.356125+00:00",
+ "m_total": 5840,
+ "tests_counted": 11,
+ "rows": {
+  "MID-R72": {
+   "final": {
+    "trades": 900,
+    "net": 127679,
+    "win": 0.4511
+   },
+   "b0_final": {
+    "trades": 1202,
+    "net": 171366,
+    "win": 0.4584
+   },
+   "removed": 763,
+   "twin_p": 0.6467,
+   "twin_median": 142917,
+   "design": {
+    "trades": 2448,
+    "net": 242781,
+    "win": 0.4751
+   },
+   "b0_design": {
+    "trades": 3071,
+    "net": 216929,
+    "win": 0.4676
+   },
+   "wf": {
+    "trades": 1768,
+    "net": 309904,
+    "win": 0.5028
+   },
+   "b0_wf": {
+    "trades": 2238,
+    "net": 335882,
+    "win": 0.4897
+   },
+   "q_all": 1.0,
+   "q_r113": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "not above today's rules in walk-forward and final",
+     "random-twin BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "MID-R51": {
+   "final": {
+    "trades": 1369,
+    "net": 76248,
+    "win": 0.4339
+   },
+   "b0_final": {
+    "trades": 1670,
+    "net": 134743,
+    "win": 0.4485
+   },
+   "removed": 1591,
+   "twin_p": 0.7325,
+   "twin_median": 101784,
+   "design": {
+    "trades": 3598,
+    "net": 107200,
+    "win": 0.4544
+   },
+   "b0_design": {
+    "trades": 4208,
+    "net": 50425,
+    "win": 0.4446
+   },
+   "wf": {
+    "trades": 2592,
+    "net": 184777,
+    "win": 0.4676
+   },
+   "b0_wf": {
+    "trades": 3044,
+    "net": 213748,
+    "win": 0.4589
+   },
+   "q_all": 1.0,
+   "q_r113": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "not above today's rules in walk-forward and final",
+     "random-twin BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "MID-LIQ": {
+   "final": {
+    "trades": 238,
+    "net": 21901,
+    "win": 0.3824
+   },
+   "b0_final": {
+    "trades": 357,
+    "net": 11155,
+    "win": 0.3725
+   },
+   "removed": 121,
+   "twin_p": 0.2515,
+   "twin_median": 7592,
+   "design": {
+    "trades": 643,
+    "net": 265815,
+    "win": 0.4666
+   },
+   "b0_design": {
+    "trades": 881,
+    "net": 257249,
+    "win": 0.4359
+   },
+   "wf": {
+    "trades": 473,
+    "net": 230520,
+    "win": 0.4799
+   },
+   "b0_wf": {
+    "trades": 657,
+    "net": 238064,
+    "win": 0.4444
+   },
+   "q_all": 1.0,
+   "q_r113": 0.9222,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "not above today's rules in walk-forward and final",
+     "random-twin BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "LATE-R72": {
+   "final": {
+    "trades": 982,
+    "net": 180748,
+    "win": 0.4695
+   },
+   "b0_final": {
+    "trades": 1202,
+    "net": 171366,
+    "win": 0.4584
+   },
+   "removed": 676,
+   "twin_p": 0.1238,
+   "twin_median": 140149,
+   "design": {
+    "trades": 2461,
+    "net": 238754,
+    "win": 0.4754
+   },
+   "b0_design": {
+    "trades": 3071,
+    "net": 216929,
+    "win": 0.4676
+   },
+   "wf": {
+    "trades": 1778,
+    "net": 313297,
+    "win": 0.4955
+   },
+   "b0_wf": {
+    "trades": 2238,
+    "net": 335882,
+    "win": 0.4897
+   },
+   "q_all": 1.0,
+   "q_r113": 0.6806,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "not above today's rules in walk-forward and final",
+     "random-twin BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "LATE-R51": {
+   "final": {
+    "trades": 1447,
+    "net": 160562,
+    "win": 0.4644
+   },
+   "b0_final": {
+    "trades": 1670,
+    "net": 134743,
+    "win": 0.4485
+   },
+   "removed": 1186,
+   "twin_p": 0.0938,
+   "twin_median": 110004,
+   "design": {
+    "trades": 3609,
+    "net": 66326,
+    "win": 0.4494
+   },
+   "b0_design": {
+    "trades": 4208,
+    "net": 50425,
+    "win": 0.4446
+   },
+   "wf": {
+    "trades": 2612,
+    "net": 195345,
+    "win": 0.4636
+   },
+   "b0_wf": {
+    "trades": 3044,
+    "net": 213748,
+    "win": 0.4589
+   },
+   "q_all": 1.0,
+   "q_r113": 0.6806,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "not above today's rules in walk-forward and final",
+     "random-twin BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "NOON-R72": {
+   "final": {
+    "trades": 584,
+    "net": 100144,
+    "win": 0.4812
+   },
+   "b0_final": {
+    "trades": 1202,
+    "net": 171366,
+    "win": 0.4584
+   },
+   "removed": 1507,
+   "twin_p": 0.4351,
+   "twin_median": 92526,
+   "design": {
+    "trades": 1596,
+    "net": 217990,
+    "win": 0.4862
+   },
+   "b0_design": {
+    "trades": 3071,
+    "net": 216929,
+    "win": 0.4676
+   },
+   "wf": {
+    "trades": 1122,
+    "net": 232265,
+    "win": 0.5053
+   },
+   "b0_wf": {
+    "trades": 2238,
+    "net": 335882,
+    "win": 0.4897
+   },
+   "q_all": 1.0,
+   "q_r113": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "not above today's rules in walk-forward and final",
+     "random-twin BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "NOON-R51": {
+   "final": {
+    "trades": 987,
+    "net": 32641,
+    "win": 0.4549
+   },
+   "b0_final": {
+    "trades": 1670,
+    "net": 134743,
+    "win": 0.4485
+   },
+   "removed": 2842,
+   "twin_p": 0.7565,
+   "twin_median": 66974,
+   "design": {
+    "trades": 2595,
+    "net": 122303,
+    "win": 0.4671
+   },
+   "b0_design": {
+    "trades": 4208,
+    "net": 50425,
+    "win": 0.4446
+   },
+   "wf": {
+    "trades": 1862,
+    "net": 180417,
+    "win": 0.4834
+   },
+   "b0_wf": {
+    "trades": 3044,
+    "net": 213748,
+    "win": 0.4589
+   },
+   "q_all": 1.0,
+   "q_r113": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "not above today's rules in walk-forward and final",
+     "random-twin BH q 1.000 > 0.1"
+    ]
+   }
+  }
+ }
+}

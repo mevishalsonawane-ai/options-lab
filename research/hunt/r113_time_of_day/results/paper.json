@@ -1,0 +1,105 @@
+{
+ "days": [
+  "2026-10-19",
+  "2026-10-20",
+  "2026-10-21",
+  "2026-10-22",
+  "2026-10-23",
+  "2026-10-26"
+ ],
+ "round_trips": 27,
+ "by_source": {
+  "Liquidity 15+5": {
+   "09:30-10:00": {
+    "trades": 3,
+    "wins": 0,
+    "avg_pct": -15.61
+   },
+   "09:15-09:30": {
+    "trades": 1,
+    "wins": 0,
+    "avg_pct": -5.17
+   },
+   "10:00-11:00": {
+    "trades": 2,
+    "wins": 1,
+    "avg_pct": -5.72
+   }
+  },
+  "NG evening breakout": {
+   "19:00-21:00": {
+    "trades": 2,
+    "wins": 1,
+    "avg_pct": -0.41
+   }
+  },
+  "R52 Open outside value": {
+   "09:15-09:30": {
+    "trades": 3,
+    "wins": 1,
+    "avg_pct": 2.26
+   }
+  },
+  "R72 Breadth Donchian": {
+   "11:00-12:00": {
+    "trades": 2,
+    "wins": 2,
+    "avg_pct": 33.24
+   },
+   "12:00-13:00": {
+    "trades": 2,
+    "wins": 2,
+    "avg_pct": 4.14
+   },
+   "09:15-09:30": {
+    "trades": 2,
+    "wins": 0,
+    "avg_pct": -13.56
+   },
+   "10:00-11:00": {
+    "trades": 1,
+    "wins": 1,
+    "avg_pct": 2.11
+   },
+   "13:00-14:00": {
+    "trades": 2,
+    "wins": 1,
+    "avg_pct": -5.87
+   },
+   "14:00-15:30": {
+    "trades": 2,
+    "wins": 0,
+    "avg_pct": -7.34
+   }
+  },
+  "Hero \u20b9[hidden]": {
+   "12:00-13:00": {
+    "trades": 2,
+    "wins": 0,
+    "avg_pct": -47.54
+   }
+  },
+  "Solo 2.0": {
+   "09:15-09:30": {
+    "trades": 1,
+    "wins": 0,
+    "avg_pct": -17.58
+   }
+  },
+  "US-night silver (not proven, futures)": {
+   "09:00-12:00": {
+    "trades": 1,
+    "wins": 0,
+    "avg_pct": -0.12
+   }
+  },
+  "R51 Donchian 20": {
+   "12:00-13:00": {
+    "trades": 1,
+    "wins": 0,
+    "avg_pct": -15.66
+   }
+  }
+ },
+ "note": "phone diagnostics (untrusted, redacted); points and % only, too few to judge"
+}
