@@ -64,3 +64,16 @@ only "this rule wins >= 60% of the time with a positive net", read on the one co
 - the selection rule (ties, nobody at 60%);
 - the verdict;
 - the read-once final.
+
+## Amendment 1 (26 Oct 2026, pushed before any amendment number; the original 24 rules were already read)
+
+Boss, after the first R105C results: *"Add a stoploss of 10%."*
+
+- **6 more rules per arm (12 tests).** S10Tk: the stop is -10% of the premium instead of -15%, plus a limit target at
+  +k%, for k = 5, 8, 10, 12, 15, 20. The rest of exits P (L25, the ladder, 30 minutes, 15:15) is unchanged.
+- **Also S10 alone (no target), as a reference.** R64 already tested it as A3 on plain Donchian.
+- **The same selection, run separately on these 6.** The highest design net with design win >= 60%, else the highest
+  design win. It is fixed in `results/pick_s10.json` before their final read.
+- **The same verdict.**
+- **Disclosure.** The final window was already read for the 24 original rules. These 6 are read once in it, after
+  their own design pick.
