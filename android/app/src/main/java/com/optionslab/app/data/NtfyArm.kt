@@ -118,11 +118,16 @@ object NtfyArm {
      */
     data class Alert(val id: String, val at: LocalDateTime, val text: String, val state: String, val why: String,
                      val title: String? = null, val body: String? = null, val readAt: LocalDateTime = at,
-                     val readMs: Long = 0L, val actedMs: Long = 0L) {
+                     val readMs: Long = 0L, val actedMs: Long = 0L, val doneMs: Long = 0L) {
         val timing: NtfyRules.Timing get() = NtfyRules.Timing(at.atZone(com.optionslab.engine.IST).toEpochSecond(), readMs, actedMs)
-        /** "read 1.2s · decided 2.0s" (after the server's time), or "" for a message kept before 26 Oct. */
+        /**
+         * "read 1.2s · decided 2.0s" (after the server's time), or "" for a message kept before 26 Oct. "Decided" is the first pass's
+         * decision (bought, refused, or waiting for its price); when it was settled later (a buy waiting for its price), " · done Xs".
+         */
         val timingWords: String get() = timing.let { t ->
-            listOfNotNull(t.readS?.let { "read ${NtfyRules.secs(it)}" }, t.actedS?.let { "decided ${NtfyRules.secs(it)}" }).joinToString(" · ")
+            val done = if (doneMs > 0 && actedMs > 0 && doneMs - actedMs >= 1_000) NtfyRules.lag(t.sentEpochS, doneMs) else null
+            listOfNotNull(t.readS?.let { "read ${NtfyRules.secs(it)}" }, t.actedS?.let { "decided ${NtfyRules.secs(it)}" },
+                done?.let { "done ${NtfyRules.secs(it)}" }).joinToString(" · ")
         }
     }
 
@@ -181,13 +186,13 @@ object NtfyArm {
     private const val LEGACY_REF = "telegram:"
 
     private fun alertJson(a: Alert) = JSONObject().put("id", a.id).put("at", a.at.toString()).put("text", a.text).put("state", a.state).put("why", a.why)
-        .put("readAt", a.readAt.toString()).put("readMs", a.readMs).put("actedMs", a.actedMs)
+        .put("readAt", a.readAt.toString()).put("readMs", a.readMs).put("actedMs", a.actedMs).put("doneMs", a.doneMs)
         .apply { a.title?.let { put("title", it) }; a.body?.let { put("body", it) } }
 
     private fun alertOf(o: JSONObject) = Alert(o.getString("id"), LocalDateTime.parse(o.getString("at")), o.optString("text"), o.optString("state", NOT_TRADED),
         o.optString("why"), o.optString("title").ifEmpty { null }, o.optString("body").ifEmpty { null },
         o.optString("readAt").ifEmpty { null }?.let { LocalDateTime.parse(it) } ?: LocalDateTime.parse(o.getString("at")),
-        o.optLong("readMs", 0L), o.optLong("actedMs", 0L))
+        o.optLong("readMs", 0L), o.optLong("actedMs", 0L), o.optLong("doneMs", 0L))
 
     private fun book(): Book {
         cache?.let { return it }
@@ -378,7 +383,8 @@ object NtfyArm {
             fresh++
             val words = NtfyParser.text(e.title, e.message).replace(Regex("\\s+"), " ").trim().take(300)
             fun keep(state: String, why: String, title: String? = null, body: String? = null) {
-                val a = Alert(e.id, e.at(), words, state, why, title, body, now, readMs, if (state != PENDING) readMs else 0L)
+                val a = Alert(e.id, e.at(), words, state, why, title, body, now, readMs, if (state != PENDING) readMs else 0L,
+                    if (state != PENDING) readMs else 0L)
                 b.alerts += a
                 if (state != PENDING) note(b, "message ${e.id}: $state - $why${timed(a)}")
             }
@@ -439,7 +445,7 @@ object NtfyArm {
         synchronized(kicks) {
             if (kicker?.isActive != true) kicker = kickScope.launch {
                 for (k in kicks) {
-                    if (!_view.value.pending) continue
+                    if (testNoKick || !_view.value.pending) continue
                     kickedPasses++
                     try { tick() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                         runCatching { Diag.record("ntfy", "quick pass failed: ${e.javaClass.simpleName}") }
@@ -510,8 +516,9 @@ object NtfyArm {
     private fun finish(b: Book, a: Alert, state: String, why: String): Boolean {
         b.ordering.remove(a.id); placing.remove(a.id)
         val i = b.alerts.indexOfFirst { it.id == a.id }
-        val acted = (if (i >= 0) b.alerts[i].actedMs else a.actedMs).takeIf { it > 0L } ?: nowMs()
-        val done = a.copy(state = state, why = why, title = null, body = null, actedMs = acted)
+        val doneAt = nowMs()
+        val acted = (if (i >= 0) b.alerts[i].actedMs else a.actedMs).takeIf { it > 0L } ?: doneAt
+        val done = a.copy(state = state, why = why, title = null, body = null, actedMs = acted, doneMs = doneAt)
         if (i >= 0) b.alerts[i] = done
         b.pending.remove(a.id)
         note(b, "message ${a.id}: $state - $why${timed(done)}")
@@ -635,26 +642,32 @@ object NtfyArm {
         return saved.second.filter { it.underlying == u }
     }
 
-    /** The underlyings' prices read for this pass, before the lock ([prefetch]). */
+    /** The underlyings' prices read for this pass, before the lock ([prefetch]): the last finished minute (held trades' index levels). */
     @Volatile private var spotsNow: Map<String, Double> = emptyMap()
+    /** 26 Oct: the waiting buys' underlyings' prices for the strike rule (the live stream's when fresh), read before the lock. */
+    @Volatile private var entrySpotsNow: Map<String, Double> = emptyMap()
 
     /** The underlyings this pass may need, and their prices; stock lists warmed in memory. Off the lock; never throws. */
     private suspend fun prefetch(): Map<String, Double> {
         val v = _view.value
-        val wanted = LinkedHashSet<String>()
-        v.open.filter { it.idxStop != null || it.idxTarget != null }.forEach { wanted += it.index }
+        // 26 Oct (review): two sets of prices. A held trade's index stop and target are judged on the last finished minute, as
+        // before (its exit rule unchanged); a waiting buy's strike is chosen on the live stream's price when fresh (faster).
+        val levels = LinkedHashSet<String>(); val buys = LinkedHashSet<String>()
+        v.open.filter { it.idxStop != null || it.idxTarget != null }.forEach { levels += it.index }
         for (a in v.alerts) if (a.state == PENDING) (runCatching { NtfyParser.read(a.title, a.body, a.at.toLocalDate()) }.getOrNull() as? Parsed.Buy)?.let { p ->
-            if (p.strike == null || p.stock) wanted += p.index
+            if (p.strike == null || p.stock) buys += p.index
             if (p.stock) runCatching { StockOptions.listed(p.index) }
         }
-        val out = HashMap<String, Double>()
-        for (u in wanted) runCatching { spot(u) }.getOrNull()?.let { out[u] = it }
+        val out = HashMap<String, Double>(); val entryOut = HashMap<String, Double>()
+        for (u in levels) runCatching { spot(u, stream = false) }.getOrNull()?.let { out[u] = it }
+        for (u in buys) runCatching { spot(u, stream = true) }.getOrNull()?.let { entryOut[u] = it }
+        entrySpotsNow = entryOut
         // 25 Oct (review): each waiting buy's option quote (and, for "near" / "above", its minutes) read HERE, never under the lock:
         // the 15-second stop check never waits behind a network read.
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         val quotes = HashMap<String, com.optionslab.engine.sandbox.Quote>(); val bars = HashMap<String, List<Upstox.Bar>>()
         for (a in v.alerts) if (a.state == PENDING) (runCatching { NtfyParser.read(a.title, a.body, a.at.toLocalDate()) }.getOrNull() as? Parsed.Buy)?.let { p ->
-            val c = runCatching { contractFor(p, today, v.settings, out[p.index]) }.getOrNull() ?: return@let
+            val c = runCatching { contractFor(p, today, v.settings, entryOut[p.index]) }.getOrNull() ?: return@let
             if (c.feedKey !in quotes) runCatching { Paper.quote(c) }.getOrNull()?.let { quotes[c.feedKey] = it }
             if ((p.trig == NtfyParser.Trig.ZONE || p.trig == NtfyParser.Trig.ABOVE) && c.feedKey !in bars) runCatching { bars(c.feedKey) }.getOrNull()?.let { bars[c.feedKey] = it }
         }
@@ -663,12 +676,12 @@ object NtfyArm {
     }
 
     /**
-     * The index's (or the stock's) last price: the live stream's when fresh (26 Oct: no network read for a quick pass), else its
-     * last finished minute (the quick read: 5 s connect, one retry), or null.
+     * The index's (or the stock's) last price: with [stream], the live stream's when fresh (26 Oct: the strike rule of a quick
+     * pass, with no network read), else its last finished minute (the quick read: 5 s connect, one retry), or null.
      */
-    private suspend fun spot(u: String): Double? {
+    private suspend fun spot(u: String, stream: Boolean): Double? {
         testSpot?.let { return it(u) }
-        streamSpot(u)?.let { return it }
+        if (stream) streamSpot(u)?.let { return it }
         val key = Ft3Arm.indexKey(u) ?: StockOptions.eqKey(u) ?: return null
         return runCatching { bars(key) }.getOrNull().orEmpty().filter { it.istDate == Market.today() }
             .maxByOrNull { it.epochSecond }?.close?.takeIf { it > 0 }
@@ -724,7 +737,7 @@ object NtfyArm {
         // A named strike must be listed: never another strike by a rule in its place (strict).
         if (p.strike != null && p.strike !in strikes) return done("not traded: ${p.index} ${p.strike?.let { NtfyParser.num(it) }} ${right.name} is not listed for $exp")
         val strike = p.strike ?: run {
-            val px = spotsNow[p.index] ?: return say(b, "waiting for ${p.index}'s price")
+            val px = entrySpotsNow[p.index] ?: return say(b, "waiting for ${p.index}'s price")
             NtfyRules.strikeFor(strikes, px, right, p.pick ?: s.strikeRule) ?: return done("not traded: no ${p.index} strike for the rule")
         }
         val expiryDay = exp == today
@@ -901,5 +914,10 @@ object NtfyArm {
         p.copy(exit = price, exitTime = at, why = why, charges = p.charges + charges, stopOrderId = null)
 
     /** For tests: the book forgotten (its file goes with the test's directory). */
-    internal fun wipe() { cache = null; _view.value = View(); testListed = null; testSpot = null; barsNow = emptyMap(); quotesNow = emptyMap(); kickedPasses = 0 }
+    internal fun wipe() {
+        cache = null; _view.value = View(); testListed = null; testSpot = null; barsNow = emptyMap(); quotesNow = emptyMap(); kickedPasses = 0
+        entrySpotsNow = emptyMap()
+        // 26 Oct (review): a quick pass left from the last test never runs into the next one.
+        synchronized(kicks) { kicker?.cancel(); kicker = null; while (kicks.tryReceive().isSuccess) Unit }
+    }
 }

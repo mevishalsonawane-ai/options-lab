@@ -722,9 +722,7 @@ object Tasks {
             runCatching { Ledger.openTicket() != null }.getOrDefault(true) ||
             runCatching { com.optionslab.app.data.Paper.state.positions.any { it.quantity != 0 } }.getOrDefault(true)
         if (held) return false
-        // 26 Oct: ntfy alerts armed in its hours counts as armed (memory only).
-        val pine = runCatching { com.optionslab.app.data.PineScripts.items.value.any { it.auto.on } }.getOrDefault(true) ||
-            (!com.optionslab.app.BuildConfig.GOLD && com.optionslab.app.data.NtfyReader.armedNow())
+        val pine = runCatching { com.optionslab.app.data.PineScripts.items.value.any { it.auto.on } }.getOrDefault(true)
         // The arms' lock may be held by their tick across a network read: a short wait, else "unknown" (not quiet).
         val orb = if (pine) true else kotlinx.coroutines.withTimeoutOrNull(2_000) {
             runCatching { com.optionslab.app.data.OrbArms.anyArmed() }.getOrNull()
@@ -1542,13 +1540,17 @@ class WatchService : Service() {
                 // minutes): a pass hung on one call with nothing open no longer keeps the processor awake for ever - the hold
                 // lapses by itself, and the dead-man alarm finds the watch stuck. A slow pass moves step by step and keeps it.
                 // With a position or order open it is renewed whatever the loop is doing: open positions come first.
-                // 26 Oct: also while the ntfy reader should be reading (ntfy alerts armed, in its hours; memory only).
-                val progressing = Heartbeat.keepsAwake(runStartEl) || holdingAny() ||
-                    (!com.optionslab.app.BuildConfig.GOLD && com.optionslab.app.data.NtfyReader.armedNow())
-                if (run == watchRun && progressing) { WatchWake.hold(me); hungTold = false }
+                val progressing = Heartbeat.keepsAwake(runStartEl) || holdingAny()
+                // 26 Oct: the hold is also renewed while the ntfy reader is reading in its hours (memory only) - but a hung loop is
+                // still told below as before.
+                val reader = !com.optionslab.app.BuildConfig.GOLD && runCatching {
+                    com.optionslab.app.data.NtfyReader.armedNow() && com.optionslab.app.data.NtfyReader.status.value.running }.getOrDefault(false)
+                if (run == watchRun && (progressing || reader)) WatchWake.hold(me)
+                if (run == watchRun && progressing) hungTold = false
                 else if (run == watchRun && !hungTold) {
                     hungTold = true
-                    Heartbeat.diary("watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): the processor's hold is not renewed")
+                    Heartbeat.diary("watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): " +
+                        if (reader) "the processor is held only for the ntfy reader" else "the processor's hold is not renewed")
                 }
                 Heartbeat.watchRunning()
                 delay(com.optionslab.ira.WatchHealth.PULSE_MS)

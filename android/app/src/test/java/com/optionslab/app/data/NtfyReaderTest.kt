@@ -260,12 +260,13 @@ class NtfyReaderTest : RobolectricTest() {
         }
         NtfyReader.supervise()
         waitFor("running") { NtfyReader.status.value.running && server.requestCount >= 2 }
-        assertTrue(NtfyReader.releaseForMemory())
-        assertFalse(NtfyReader.status.value.running)
+        val polls = server.requestCount
+        assertTrue("it was running and is closed", NtfyReader.releaseForMemory())
+        assertTrue(Diag.lines().none { it.contains(topic) })
         val t0 = System.nanoTime()
         waitFor("running again", 3_000) { NtfyReader.status.value.running }
         assertTrue((System.nanoTime() - t0) / 1_000_000 < 3_000)
-        waitFor("caught up by its poll") { server.requestCount >= 3 }
+        waitFor("caught up by its poll (a new connection)") { server.requestCount > polls }
         // The F&O close: stopped by its timer, and the supervisor never starts it again outside its hours.
         NtfyReader.testInHours = false
         waitFor("stopped") { !NtfyReader.status.value.running }

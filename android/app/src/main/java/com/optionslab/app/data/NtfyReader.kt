@@ -133,16 +133,27 @@ object NtfyReader {
 
     /** Start the reader when it should run (on, a topic set, in hours), stop it when not. Cheap; off the main thread. */
     fun ensure() {
-        val armed = runCatching { NtfyArm.view.value.on && config().topic != null }.getOrDefault(false)
+        // 26 Oct (review): a settings read that fails is "unknown": nothing is changed (a passing Keystore hiccup never stops the
+        // reader nor moves the watch's alarm).
+        val armed = runCatching { NtfyArm.view.value.on && config().topic != null }.getOrNull() ?: return
         noteArmed(armed)
         val want = armed && runCatching { inHours() }.getOrDefault(false)
         val running = job?.isActive == true
         if (want && !running) start() else if (!want && running) stop("off")
         // 25 Oct: today's stock options list, fetched in the background while stock signals may trade.
-        if (want && runCatching { NtfyArm.view.value.settings.stocks }.getOrDefault(false)) runCatching { StockOptions.refreshInBackground() }
+        // 26 Oct (review): at most every 5 minutes (ensure now runs every few seconds; a failing download is not retried each time).
+        val nowMs = System.currentTimeMillis()
+        if (want && nowMs - stocksAskedAt >= STOCKS_EVERY_MS && runCatching { NtfyArm.view.value.settings.stocks }.getOrDefault(false)) {
+            stocksAskedAt = nowMs
+            runCatching { StockOptions.refreshInBackground() }
+        }
     }
 
     private fun restart() { if (job?.isActive == true) stop("settings changed"); ensure() }
+
+    /** 26 Oct (review): when [ensure] last asked for today's stock options list (memory). */
+    @Volatile private var stocksAskedAt = 0L
+    private const val STOCKS_EVERY_MS = 5 * 60_000L
 
     // ---- supervision (26 Oct) ----------------------------------------------------------------------------------------------
 
@@ -176,7 +187,9 @@ object NtfyReader {
     /** [armed] remembered; on a change the mark is written and the watch's start alarm moved, in the background. */
     private fun noteArmed(armed: Boolean) {
         if (armedHint == armed && armedKnown) return
-        val changed = armedKnown && armedHint != armed
+        // 26 Oct (review): the first answer in a process re-arms the watch's alarm too when armed - a boot's arming on the main
+        // thread could not read the mark and left it at 09:14.
+        val changed = (armedKnown && armedHint != armed) || (!armedKnown && armed)
         armedHint = armed; armedKnown = true
         val c = appContext ?: return
         scope.launch {
@@ -260,6 +273,7 @@ object NtfyReader {
     }
 
     private suspend fun loop() {
+        val me = kotlinx.coroutines.currentCoroutineContext()[Job]
         var attempt = 0
         _status.value = Status(running = true, said = "starting")
         while (kotlinx.coroutines.currentCoroutineContext().isActive) {
@@ -286,7 +300,8 @@ object NtfyReader {
             runCatching { Diag.record("ntfy", "reader: $why; again in ${wait / 1000} s") }
             delay(wait)
         }
-        _status.value = _status.value.copy(running = false, connected = false)
+        // 26 Oct (review): only this run's own status (a reader started again meanwhile keeps its "running").
+        if (job == null || job === me) _status.value = _status.value.copy(running = false, connected = false)
     }
 
     private fun nowEpoch(): Long = runCatching { Market.now().toEpochSecond() }.getOrElse { System.currentTimeMillis() / 1000 }
@@ -344,6 +359,6 @@ object NtfyReader {
     /** For tests: stopped and forgotten. */
     internal fun wipe() {
         stopSupervisor(); stop("test"); _status.value = Status(); testServer = null; testInHours = null
-        armedHint = false; armedKnown = false; looks = 0; superviseMs = 3_000L; idleLookMs = 30_000L
+        armedHint = false; armedKnown = false; looks = 0; superviseMs = 3_000L; idleLookMs = 30_000L; stocksAskedAt = 0L
     }
 }

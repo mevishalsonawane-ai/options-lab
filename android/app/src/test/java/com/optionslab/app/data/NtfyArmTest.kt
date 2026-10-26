@@ -289,6 +289,9 @@ class NtfyArmTest : RobolectricTest() {
         // 09:29 traded 100, then back to 121 by the next pass: the range read before the lock shows the touch.
         tick(LocalTime.of(9, 31), px = { t -> if (t == LocalTime.of(9, 29)) 100.0 else 121.0 })
         assertEquals(alert("w1").why, NtfyArm.TRADED, alert("w1").state)
+        // 26 Oct: its timing - sent 09:28:04, read 09:28:05, first decided (waiting for its price) 09:28:30, bought 09:31:00.
+        assertEquals("read 1.0s · decided 26s · done 2m 56s", alert("w1").timingWords)
+        assertTrue(NtfyArm.daySummary(), NtfyArm.daySummary().endsWith("acted in median 26s / max 26s"))
         assertNothingAtZerodha()
     }
 
