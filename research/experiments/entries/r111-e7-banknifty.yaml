@@ -1,0 +1,28 @@
+id: r111-e7-banknifty
+title: R111 BANKNIFTY mom60 without the 30% premium stop
+family: patterns-indicators
+date: '2026-10-26'
+doc: research/HUNT_R111_IRATHINKER_PLUS.md
+hypothesis: 'Pre-registered (research/hunt/r111_irathinker_plus/PREREG.md, tag ex-ante): this change to IraThinker''s mom60
+  trade makes money after real charges and slippage, with R110''s gates (n >= 40, mean > 0 with day-bootstrap p < 0.05, BH
+  q <= 0.10, > 0 at 2x slippage and without the 5 best days, worst month >= -Rs 13,000), then the holdout once.'
+data_version: research-data release (GitHub tag research-data), downloaded 26 Oct 2026; IraThinker signals from R110Runner.java
+period:
+  design: 2024-11-14 - 2025-09-30
+  holdout: 2025-10-01 - 2026-02-23
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: the underlying index (IraThinker''s own engine)'
+- 'change: {"stop": false} (ex-ante)'
+model_or_rule: BANKNIFTY mom60 without the 30% premium stop; option bought
+settings: research/hunt/r111_irathinker_plus/r111study.py (VARIANTS)
+prereg: research/hunt/r111_irathinker_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 213 trades, win 50.7%, mean Rs 9, total Rs 2,001, day-bootstrap p 0.4767, BH q 0.6192 (10 R111 tests;
+    0.8545 with R110''s 13), at 2x slippage Rs -2,947, without the 5 best days Rs -52,051, worst month Rs -21,658. Gates failed:
+    2_mean_p, 3_bh, 4_slip2x, 5_ex_best5, 6_worst_month. Holdout not read.'
+  costs: Costs("dated") charges, obuy liq slippage 5 bps + 1-4 ticks by 5-minute volume (stops 2x), the lot in force
+holdout_read: false
+verdict: rejected
