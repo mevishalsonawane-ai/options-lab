@@ -434,9 +434,11 @@ def close(phase: str):
 
 
 def decide() -> dict:
-    d = {a: json.loads((K.RESULTS / f"design_{a}.json").read_text()) for a in K.ARMS}
-    f = {a: json.loads((K.RESULTS / f"final_{a}.json").read_text()) for a in K.ARMS}
-    tests = [(a, r) for a in K.ARMS for r in K.RULE_IDS]
+    arms = list(K.ARMS) + [a for a in ("SOLO",) if (K.RESULTS / f"final_{a}.json").exists()
+                           and (K.RESULTS / f"design_{a}.json").exists()]
+    d = {a: json.loads((K.RESULTS / f"design_{a}.json").read_text()) for a in arms}
+    f = {a: json.loads((K.RESULTS / f"final_{a}.json").read_text()) for a in arms}
+    tests = [(a, r) for a in arms for r in K.RULE_IDS]
     ps = [f[a][r]["twin"]["p"] for a, r in tests]
     q_all = bh(ps, len(tests) + K.N_PRIOR)
     q_own = bh(ps)
