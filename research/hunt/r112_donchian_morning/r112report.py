@@ -22,9 +22,9 @@ def rs(x) -> str:
     if x is None:
         return "-"
     x = round(x)
-    s = f"{abs(x):,}"
     # Indian grouping (lakh / crore)
     a = str(abs(x))
+    s = a
     if len(a) > 3:
         head, tail = a[:-3], a[-3:]
         parts = []

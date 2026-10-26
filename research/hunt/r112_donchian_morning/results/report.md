@@ -29,6 +29,28 @@ Rules: **B0** = today's rules: entries all day (09:20-15:10), today's exits; **C
 | CUT10X | 580 | 53% | 45% | Rs 1,73,830 | Rs 2,029 / -Rs 1,631 | 53% of 135 | -Rs 26,277 | Rs 53,822 | 3 of 12 |
 | M10X | 680 | 45% | 42% | Rs 34,578 | Rs 1,340 / -Rs 985 | 48% of 135 | -Rs 9,830 | Rs 56,358 | 3 of 12 |
 
+**R72 Breadth Donchian, final** (133 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 1,202 | 46% | 41% | Rs 1,71,366 | Rs 1,748 / -Rs 1,217 | 52% of 129 | -Rs 22,571 | Rs 61,884 | 2 of 7 |
+| CUT10 | 366 | 52% | 42% | Rs 1,12,986 | Rs 1,882 / -Rs 1,371 | 57% of 86 | -Rs 14,064 | Rs 41,284 | 2 of 7 |
+| TS | 1,251 | 40% | 43% | -Rs 68,210 | Rs 1,239 / -Rs 925 | 46% of 129 | -Rs 14,668 | Rs 97,028 | 3 of 7 |
+| M10 | 413 | 43% | 42% | Rs 5,147 | Rs 1,354 / -Rs 984 | 48% of 86 | -Rs 8,866 | Rs 51,040 | 1 of 7 |
+| CUT10X | 366 | 53% | 41% | Rs 1,43,906 | Rs 1,896 / -Rs 1,302 | 58% of 86 | -Rs 14,064 | Rs 30,857 | 2 of 7 |
+| M10X | 413 | 44% | 43% | Rs 11,848 | Rs 1,318 / -Rs 978 | 49% of 86 | -Rs 8,866 | Rs 44,778 | 1 of 7 |
+
+**R72 Breadth Donchian, post** (4 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 25 | 56% | 57% | -Rs 624 | Rs 1,333 / -Rs 1,753 | 67% of 3 | -Rs 18,451 | Rs 18,451 | 0 of 1 |
+| CUT10 | 11 | 55% | 60% | -Rs 3,056 | Rs 1,906 / -Rs 2,899 | 50% of 2 | -Rs 14,495 | Rs 14,495 | 0 of 1 |
+| TS | 29 | 38% | 48% | -Rs 7,178 | Rs 1,287 / -Rs 1,185 | 67% of 3 | -Rs 13,535 | Rs 13,535 | 0 of 1 |
+| M10 | 11 | 27% | 49% | -Rs 7,000 | Rs 1,501 / -Rs 1,438 | 50% of 2 | -Rs 8,508 | Rs 8,508 | 0 of 1 |
+| CUT10X | 11 | 55% | 78% | -Rs 9,639 | Rs 809 / -Rs 2,899 | 50% of 2 | -Rs 14,495 | Rs 14,495 | 0 of 1 |
+| M10X | 11 | 27% | 75% | -Rs 10,062 | Rs 481 / -Rs 1,438 | 0% of 2 | -Rs 8,508 | Rs 10,062 | 0 of 1 |
+
 ## R51 Donchian 20 + Supertrend
 
 **R51 Donchian 20 + Supertrend, design** (337 sessions)
@@ -52,6 +74,28 @@ Rules: **B0** = today's rules: entries all day (09:20-15:10), today's exits; **C
 | M10 | 1,238 | 42% | 42% | Rs 9,844 | Rs 1,372 / -Rs 1,000 | 40% of 240 | -Rs 10,830 | Rs 65,349 | 3 of 12 |
 | CUT10X | 973 | 50% | 45% | Rs 1,64,320 | Rs 1,904 / -Rs 1,556 | 47% of 239 | -Rs 26,277 | Rs 83,839 | 3 of 12 |
 | M10X | 1,204 | 42% | 43% | -Rs 2,885 | Rs 1,309 / -Rs 969 | 41% of 239 | -Rs 10,830 | Rs 73,933 | 3 of 12 |
+
+**R51 Donchian 20 + Supertrend, final** (133 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 1,670 | 45% | 42% | Rs 1,34,743 | Rs 1,651 / -Rs 1,197 | 46% of 133 | -Rs 21,578 | Rs 81,683 | 1 of 7 |
+| CUT10 | 566 | 50% | 43% | Rs 1,25,389 | Rs 1,835 / -Rs 1,392 | 52% of 130 | -Rs 14,064 | Rs 52,550 | 1 of 7 |
+| TS | 1,731 | 40% | 43% | -Rs 1,02,013 | Rs 1,219 / -Rs 906 | 40% of 133 | -Rs 13,121 | Rs 1,17,316 | 3 of 7 |
+| M10 | 674 | 42% | 42% | -Rs 228 | Rs 1,330 / -Rs 963 | 47% of 130 | -Rs 6,997 | Rs 44,820 | 2 of 7 |
+| CUT10X | 546 | 51% | 42% | Rs 1,49,855 | Rs 1,803 / -Rs 1,288 | 54% of 130 | -Rs 14,064 | Rs 49,057 | 1 of 7 |
+| M10X | 655 | 44% | 43% | Rs 14,983 | Rs 1,258 / -Rs 947 | 46% of 130 | -Rs 6,211 | Rs 31,716 | 1 of 7 |
+
+**R51 Donchian 20 + Supertrend, post** (4 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 46 | 50% | 48% | Rs 3,412 | Rs 1,710 / -Rs 1,562 | 50% of 4 | -Rs 13,478 | Rs 20,847 | 0 of 1 |
+| CUT10 | 17 | 53% | 57% | -Rs 2,515 | Rs 1,778 / -Rs 2,315 | 33% of 3 | -Rs 11,747 | Rs 15,466 | 0 of 1 |
+| TS | 52 | 33% | 45% | -Rs 15,397 | Rs 1,363 / -Rs 1,102 | 25% of 4 | -Rs 11,618 | Rs 16,851 | 1 of 1 |
+| M10 | 19 | 21% | 45% | -Rs 12,741 | Rs 1,502 / -Rs 1,250 | 33% of 3 | -Rs 9,005 | Rs 14,251 | 0 of 1 |
+| CUT10X | 17 | 53% | 62% | -Rs 4,839 | Rs 1,119 / -Rs 1,863 | 33% of 3 | -Rs 11,747 | Rs 11,852 | 0 of 1 |
+| M10X | 19 | 21% | 57% | -Rs 14,980 | Rs 942 / -Rs 1,250 | 0% of 3 | -Rs 9,005 | Rs 14,980 | 1 of 1 |
 
 ## both arms (each alone, summed)
 
@@ -77,6 +121,28 @@ Rules: **B0** = today's rules: entries all day (09:20-15:10), today's exits; **C
 | CUT10X | 1,553 | 51% | 45% | Rs 3,38,150 | Rs 1,952 / -Rs 1,583 | 46% of 239 | -Rs 52,554 | Rs 1,35,536 | 3 of 12 |
 | M10X | 1,884 | 43% | 42% | Rs 31,693 | Rs 1,320 / -Rs 975 | 41% of 239 | -Rs 20,660 | Rs 1,30,195 | 4 of 12 |
 
+**both arms (each alone, summed), final** (133 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 2,872 | 45% | 42% | Rs 3,06,109 | Rs 1,692 / -Rs 1,205 | 49% of 133 | -Rs 42,305 | Rs 1,37,028 | 1 of 7 |
+| CUT10 | 932 | 51% | 43% | Rs 2,38,376 | Rs 1,854 / -Rs 1,384 | 52% of 130 | -Rs 28,128 | Rs 86,643 | 2 of 7 |
+| TS | 2,982 | 40% | 43% | -Rs 1,70,223 | Rs 1,228 / -Rs 914 | 40% of 133 | -Rs 22,824 | Rs 2,09,705 | 4 of 7 |
+| M10 | 1,087 | 42% | 42% | Rs 4,919 | Rs 1,339 / -Rs 971 | 46% of 130 | -Rs 15,077 | Rs 94,578 | 3 of 7 |
+| CUT10X | 912 | 52% | 41% | Rs 2,93,761 | Rs 1,841 / -Rs 1,293 | 52% of 130 | -Rs 28,128 | Rs 75,869 | 1 of 7 |
+| M10X | 1,068 | 44% | 43% | Rs 26,831 | Rs 1,281 / -Rs 959 | 45% of 130 | -Rs 15,077 | Rs 75,163 | 2 of 7 |
+
+**both arms (each alone, summed), post** (4 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 71 | 52% | 51% | Rs 2,788 | Rs 1,567 / -Rs 1,624 | 50% of 4 | -Rs 31,929 | Rs 39,298 | 0 of 1 |
+| CUT10 | 28 | 54% | 58% | -Rs 5,571 | Rs 1,830 / -Rs 2,540 | 33% of 3 | -Rs 26,242 | Rs 29,960 | 0 of 1 |
+| TS | 81 | 35% | 46% | -Rs 22,575 | Rs 1,333 / -Rs 1,130 | 50% of 4 | -Rs 25,152 | Rs 30,386 | 1 of 1 |
+| M10 | 30 | 23% | 47% | -Rs 19,741 | Rs 1,501 / -Rs 1,315 | 33% of 3 | -Rs 17,512 | Rs 22,758 | 1 of 1 |
+| CUT10X | 28 | 54% | 69% | -Rs 14,477 | Rs 995 / -Rs 2,262 | 33% of 3 | -Rs 26,242 | Rs 26,347 | 1 of 1 |
+| M10X | 30 | 23% | 64% | -Rs 25,042 | Rs 744 / -Rs 1,315 | 0% of 3 | -Rs 17,512 | Rs 25,042 | 1 of 1 |
+
 ## both arms in one book, cap of 2 (as the app)
 
 **both arms in one book, cap of 2 (as the app), design** (337 sessions)
@@ -100,6 +166,28 @@ Rules: **B0** = today's rules: entries all day (09:20-15:10), today's exits; **C
 | M10 | 845 | 40% | 42% | -Rs 36,586 | Rs 1,367 / -Rs 984 | 41% of 240 | -Rs 10,601 | Rs 62,316 | 3 of 12 |
 | CUT10X | 617 | 47% | 45% | Rs 42,461 | Rs 1,831 / -Rs 1,514 | 47% of 239 | -Rs 13,786 | Rs 58,264 | 3 of 12 |
 | M10X | 816 | 40% | 42% | -Rs 41,844 | Rs 1,296 / -Rs 957 | 41% of 239 | -Rs 10,601 | Rs 66,463 | 2 of 12 |
+
+**both arms in one book, cap of 2 (as the app), final** (133 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 1,226 | 43% | 42% | Rs 62,060 | Rs 1,640 / -Rs 1,164 | 50% of 133 | -Rs 13,846 | Rs 51,009 | 1 of 7 |
+| CUT10 | 348 | 48% | 43% | Rs 59,918 | Rs 1,836 / -Rs 1,381 | 53% of 130 | -Rs 11,077 | Rs 31,336 | 0 of 7 |
+| TS | 1,417 | 39% | 43% | -Rs 1,14,374 | Rs 1,204 / -Rs 908 | 42% of 133 | -Rs 10,712 | Rs 1,24,449 | 4 of 7 |
+| M10 | 446 | 41% | 41% | -Rs 5,607 | Rs 1,343 / -Rs 947 | 47% of 130 | -Rs 5,992 | Rs 32,293 | 1 of 7 |
+| CUT10X | 332 | 48% | 42% | Rs 64,269 | Rs 1,740 / -Rs 1,263 | 54% of 130 | -Rs 8,067 | Rs 28,549 | 1 of 7 |
+| M10X | 429 | 42% | 42% | Rs 1,257 | Rs 1,262 / -Rs 925 | 45% of 130 | -Rs 5,992 | Rs 30,523 | 1 of 7 |
+
+**both arms in one book, cap of 2 (as the app), post** (4 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 34 | 47% | 40% | Rs 7,824 | Rs 1,957 / -Rs 1,305 | 50% of 4 | -Rs 5,838 | Rs 9,409 | 0 of 1 |
+| CUT10 | 11 | 64% | 48% | Rs 6,230 | Rs 1,923 / -Rs 1,807 | 33% of 3 | -Rs 3,142 | Rs 4,175 | 0 of 1 |
+| TS | 45 | 33% | 43% | -Rs 9,896 | Rs 1,344 / -Rs 1,002 | 25% of 4 | -Rs 6,106 | Rs 11,340 | 0 of 1 |
+| M10 | 15 | 27% | 40% | -Rs 5,233 | Rs 1,501 / -Rs 1,022 | 33% of 3 | -Rs 5,246 | Rs 7,740 | 0 of 1 |
+| CUT10X | 11 | 64% | 50% | Rs 4,056 | Rs 1,317 / -Rs 1,291 | 67% of 3 | -Rs 3,142 | Rs 3,142 | 0 of 1 |
+| M10X | 15 | 27% | 50% | -Rs 7,221 | Rs 1,004 / -Rs 1,022 | 33% of 3 | -Rs 5,246 | Rs 7,740 | 0 of 1 |
 
 ## both arms in one book, no cap
 
@@ -125,6 +213,28 @@ Rules: **B0** = today's rules: entries all day (09:20-15:10), today's exits; **C
 | CUT10X | 1,035 | 49% | 45% | Rs 1,35,107 | Rs 1,876 / -Rs 1,539 | 46% of 239 | -Rs 26,277 | Rs 93,690 | 3 of 12 |
 | M10X | 1,258 | 42% | 42% | -Rs 12,487 | Rs 1,305 / -Rs 961 | 41% of 239 | -Rs 10,830 | Rs 86,782 | 3 of 12 |
 
+**both arms in one book, no cap, final** (133 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 2,044 | 45% | 42% | Rs 1,48,965 | Rs 1,640 / -Rs 1,195 | 49% of 133 | -Rs 27,124 | Rs 83,123 | 1 of 7 |
+| CUT10 | 583 | 50% | 44% | Rs 1,18,426 | Rs 1,819 / -Rs 1,407 | 52% of 130 | -Rs 14,064 | Rs 59,486 | 1 of 7 |
+| TS | 2,133 | 40% | 43% | -Rs 1,56,277 | Rs 1,202 / -Rs 912 | 35% of 133 | -Rs 15,613 | Rs 1,79,236 | 4 of 7 |
+| M10 | 696 | 42% | 42% | -Rs 2,597 | Rs 1,334 / -Rs 965 | 46% of 130 | -Rs 7,366 | Rs 49,845 | 2 of 7 |
+| CUT10X | 563 | 50% | 42% | Rs 1,47,291 | Rs 1,798 / -Rs 1,302 | 52% of 130 | -Rs 14,064 | Rs 54,391 | 1 of 7 |
+| M10X | 677 | 44% | 43% | Rs 12,614 | Rs 1,265 / -Rs 950 | 45% of 130 | -Rs 7,366 | Rs 36,740 | 1 of 7 |
+
+**both arms in one book, no cap, post** (4 sessions)
+
+| rule | trades | win | needs (own) | net | avg win / loss | green days | worst day | max DD | months <= -13k |
+|---|---|---|---|---|---|---|---|---|---|
+| B0 | 54 | 48% | 48% | -Rs 139 | Rs 1,670 / -Rs 1,556 | 50% of 4 | -Rs 21,115 | Rs 28,484 | 0 of 1 |
+| CUT10 | 19 | 53% | 57% | -Rs 3,908 | Rs 1,912 / -Rs 2,559 | 33% of 3 | -Rs 16,260 | Rs 19,978 | 0 of 1 |
+| TS | 60 | 33% | 44% | -Rs 15,732 | Rs 1,384 / -Rs 1,085 | 50% of 4 | -Rs 15,645 | Rs 20,878 | 1 of 1 |
+| M10 | 20 | 25% | 45% | -Rs 11,240 | Rs 1,501 / -Rs 1,250 | 33% of 3 | -Rs 9,005 | Rs 14,251 | 0 of 1 |
+| CUT10X | 19 | 53% | 67% | -Rs 8,673 | Rs 1,075 / -Rs 2,158 | 33% of 3 | -Rs 16,260 | Rs 16,365 | 0 of 1 |
+| M10X | 20 | 25% | 58% | -Rs 14,302 | Rs 889 / -Rs 1,250 | 0% of 3 | -Rs 9,005 | Rs 14,302 | 1 of 1 |
+
 ## Walk-forward quarters (net; Apr-Jun 2025, Jul-Sep, Oct-Dec, Jan-Mar 2026)
 
 | who | B0 | CUT10 | TS | M10 | CUT10X | M10X |
@@ -140,6 +250,9 @@ Rules: **B0** = today's rules: entries all day (09:20-15:10), today's exits; **C
 - design R72: 3,071 trades, Rs 2,16,929 (published [3071, 216929])
 - design R51: 4,208 trades, Rs 50,425 (published [4208, 50425])
 - design R51plain: 4,498 trades, Rs 9,998 (published [4498, 9998])
+- final R72: 1,202 trades, Rs 1,71,366 (published [1202, 171366])
+- final R51: 1,670 trades, Rs 1,34,743 (published [1670, 134743])
+- final R51plain: 1,781 trades, Rs 81,845 (published [1781, 81845])
 
 ## Where +Rs 1,500 and -Rs 1,000 sit on a typical premium (B0 design entries, lot of 15 Oct 2026)
 
@@ -150,6 +263,21 @@ Rules: **B0** = today's rules: entries all day (09:20-15:10), today's exits; **C
 | FINNIFTY | 60 | Rs 317.1 | Rs 19,024 | Rs 92 | +8.4% | -4.6% | Rs 2,940 |
 | MIDCPNIFTY | 120 | Rs 215.3 | Rs 25,831 | Rs 108 | +6.2% | -3.3% | Rs 3,976 |
 | SENSEX | 20 | Rs 461.2 | Rs 9,224 | Rs 68 | +17.0% | -10.0% | Rs 1,449 |
+
+## Gates (final twins, 100,000 each; BH over 5,829 tests)
+
+| arm | rule | entry-twin p | exit-twin p | p | q (all) | q (R112) | passed | why not |
+|---|---|---|---|---|---|---|---|---|
+| R72 Breadth Donchian | CUT10 | 0.070759 | - | 0.070759 | 1.0 | 0.2359 | no | not better than today's rules in wf, final; twin BH q 1.000 > 0.1 |
+| R72 Breadth Donchian | TS | - | 1.0 | 1.0 | 1.0 | 1.0 | no | not positive in design, walk-forward and final; not better than today's rules in design, wf, final; twin BH q 1.000 > 0.1 |
+| R72 Breadth Donchian | M10 | 0.283987 | 1.0 | 1.0 | 1.0 | 1.0 | no | not better than today's rules in design, wf, final; twin BH q 1.000 > 0.1 |
+| R72 Breadth Donchian | CUT10X | 0.00423 | 0.03308 | 0.03308 | 1.0 | 0.2359 | no | not better than today's rules in wf, final; twin BH q 1.000 > 0.1 |
+| R72 Breadth Donchian | M10X | 0.157388 | 1.0 | 1.0 | 1.0 | 1.0 | no | not better than today's rules in design, wf, final; twin BH q 1.000 > 0.1 |
+| R51 Donchian 20 + Supertrend | CUT10 | 0.143309 | - | 0.143309 | 1.0 | 0.3583 | no | not better than today's rules in wf, final; twin BH q 1.000 > 0.1 |
+| R51 Donchian 20 + Supertrend | TS | - | 1.0 | 1.0 | 1.0 | 1.0 | no | not positive in design, walk-forward and final; not better than today's rules in design, wf, final; twin BH q 1.000 > 0.1 |
+| R51 Donchian 20 + Supertrend | M10 | 0.235268 | 1.0 | 1.0 | 1.0 | 1.0 | no | not positive in design, walk-forward and final; not better than today's rules in design, wf, final; twin BH q 1.000 > 0.1 |
+| R51 Donchian 20 + Supertrend | CUT10X | 0.03403 | 0.061679 | 0.061679 | 1.0 | 0.2359 | no | not better than today's rules in wf; twin BH q 1.000 > 0.1 |
+| R51 Donchian 20 + Supertrend | M10X | 0.094429 | 1.0 | 1.0 | 1.0 | 1.0 | no | not positive in design, walk-forward and final; not better than today's rules in design, wf, final; twin BH q 1.000 > 0.1 |
 
 ## Exit mix, design
 
@@ -165,3 +293,18 @@ Rules: **B0** = today's rules: entries all day (09:20-15:10), today's exits; **C
 - R51 M10: {'target': 638, 'stop': 968, 'time': 136, 'missing': 1, 'lock': 1}; largest loss -Rs 9,603
 - R51 CUT10X: {'time': 669, 'stop': 281, 'lock': 26, 'rule_exit': 385, 'missing': 3}; largest loss -Rs 11,511
 - R51 M10X: {'target': 578, 'stop': 885, 'rule_exit': 167, 'time': 54, 'lock': 1}; largest loss -Rs 9,603
+
+## Exit mix, final
+
+- R72 B0: {'time': 950, 'squareoff': 65, 'stop': 174, 'lock': 13}; largest loss -Rs 6,245
+- R72 CUT10: {'time': 303, 'stop': 60, 'lock': 3}; largest loss -Rs 6,245
+- R72 TS: {'stop': 611, 'target': 367, 'time': 235, 'squareoff': 38}; largest loss -Rs 4,218
+- R72 M10: {'stop': 210, 'target': 149, 'time': 54}; largest loss -Rs 4,218
+- R72 CUT10X: {'time': 271, 'stop': 55, 'rule_exit': 38, 'lock': 2}; largest loss -Rs 6,245
+- R72 M10X: {'stop': 203, 'target': 148, 'rule_exit': 13, 'time': 49}; largest loss -Rs 4,218
+- R51 B0: {'time': 1370, 'squareoff': 67, 'stop': 219, 'lock': 14}; largest loss -Rs 5,985
+- R51 CUT10: {'time': 465, 'stop': 95, 'lock': 6}; largest loss -Rs 5,985
+- R51 TS: {'stop': 826, 'target': 496, 'time': 365, 'squareoff': 42, 'lock': 2}; largest loss -Rs 4,218
+- R51 M10: {'stop': 341, 'target': 230, 'time': 103}; largest loss -Rs 4,218
+- R51 CUT10X: {'time': 356, 'stop': 81, 'rule_exit': 106, 'lock': 3}; largest loss -Rs 5,985
+- R51 M10X: {'stop': 309, 'target': 215, 'rule_exit': 63, 'time': 68}; largest loss -Rs 4,218

@@ -1,0 +1,111 @@
+{
+ "R72:CUT10": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules in wf, final",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 0.2359,
+  "p": 0.070759
+ },
+ "R72:TS": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules in design, wf, final",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 1.0,
+  "p": 1.0
+ },
+ "R72:M10": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules in design, wf, final",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 1.0,
+  "p": 1.0
+ },
+ "R72:CUT10X": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules in wf, final",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 0.2359,
+  "p": 0.03308
+ },
+ "R72:M10X": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules in design, wf, final",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 1.0,
+  "p": 1.0
+ },
+ "R51:CUT10": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules in wf, final",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 0.3583,
+  "p": 0.143309
+ },
+ "R51:TS": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules in design, wf, final",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 1.0,
+  "p": 1.0
+ },
+ "R51:M10": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules in design, wf, final",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 1.0,
+  "p": 1.0
+ },
+ "R51:CUT10X": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules in wf",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 0.2359,
+  "p": 0.061679
+ },
+ "R51:M10X": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules in design, wf, final",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q": 1.0,
+  "q_r112": 1.0,
+  "p": 1.0
+ },
+ "_m": {
+  "r112": 10,
+  "prior": 5819,
+  "total": 5829
+ }
+}

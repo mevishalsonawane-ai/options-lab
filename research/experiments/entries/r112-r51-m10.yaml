@@ -1,0 +1,39 @@
+id: r112-r51-m10
+title: 'R112 M10 on R51 Donchian 20 + Supertrend: entries until 10:00, +Rs 1,500 / -Rs 1,000 an order (Boss''s rule, reading
+  A)'
+family: trade-management
+date: '2026-10-26'
+doc: research/HUNT_R112_DONCHIAN_MORNING.md
+hypothesis: 'Boss (26 Oct): keep both Donchian arms open only till 10 am and exit each order at +Rs 1,500 or -Rs 1,000. This
+  test: entries until 10:00, +Rs 1,500 / -Rs 1,000 an order (Boss''s rule, reading A). Gates: net > 0 and better than today''s
+  rules in design, walk-forward and final; twin BH q <= 0.10 over 5,829 tests; >= 40 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 26 Oct; R51 Amendment
+  A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R111); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s own 5-min bars (Donchian 20 break, Supertrend 10/3 agreeing); the option (1-ITM weekly) is
+  bought; target / stop on its premium'
+model_or_rule: R51 Donchian 20 + Supertrend with entries until 10:00, +Rs 1,500 / -Rs 1,000 an order (Boss's rule, reading
+  A)
+settings: research/hunt/r112_donchian_morning/r112cfg.py RULES; PREREG.md section 2
+prereg: research/hunt/r112_donchian_morning/PREREG.md
+variants_tried: 10
+results:
+  summary: 'Design: 1744 trades, win 41% (needs 42%), net -Rs 25,094, worst day -Rs 10,830, max DD Rs 98,784 (today Rs 50,425).
+    Walk-forward: 1238 trades, win 42% (needs 42%), net Rs 9,844, worst day -Rs 10,830, max DD Rs 65,349 (today Rs 2,13,748).
+    Final: 674 trades, win 42% (needs 42%), net -Rs 228, worst day -Rs 6,997, max DD Rs 44,820 (today Rs 1,34,743); twin p
+    1.0, BH q 1.0 (R112 alone 1.0). Fails: not positive in design, walk-forward and final; not better than today''s rules
+    in design, wf, final; twin BH q 1.000 > 0.1.'
+  costs: dated Zerodha charges, R17 fills (stops -10 bps and 2x the half-spread, gaps at the open), limit targets at their
+    price, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.
