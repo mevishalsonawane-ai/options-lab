@@ -405,7 +405,8 @@ object SecurePrefs {
             if (s.seq <= writtenSeq) return                              // a newer copy is on disk already
             if (synchronized(this) { s.gen != generation }) return       // wiped (or started again) since: never written back
             try {
-                Vault.writeFile(file, s.bytes)
+                // 26 Oct, review: a write dropped by an erase is not on disk: counted as failed, so a later save or flush writes it.
+                if (!Vault.writeFileWritten(file, s.bytes)) { writeFailed = true; return }
                 writtenSeq = s.seq
                 writeFailed = false
             } catch (e: Exception) { writeFailed = true; throw e }

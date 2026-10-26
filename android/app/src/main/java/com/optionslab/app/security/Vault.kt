@@ -33,6 +33,9 @@ object Vault {
     @Synchronized
     private fun dataKey(): SecretKey {
         val ks = keyStore()
+        // 26 Oct: during an erase no key is made (and none is used: the old one is gone). A save racing the erase used to
+        // make a NEW key here after the erase destroyed the old one, so data saved in that moment was sealed again.
+        if (erasing.get() > 0) throw Erasing()
         (ks.getKey(DATA_KEY, null) as? SecretKey)?.let { return it }
         // 20 Oct, review: a key that exists but did not come back (a Keystore hiccup on some phones) is never replaced: a new
         // key under the same name would make every vault file unreadable for good. Only a key truly absent is made.
@@ -78,7 +81,15 @@ object Vault {
      * Atomic and durable: the new file is synced before it is renamed over the old one, and the
      * rename is synced too, so neither a crash nor a power cut leaves a half-written (or empty) vault file.
      */
-    fun writeFile(file: File, plain: ByteArray) = MainWrites.guard({ "Vault.writeFile ${file.name}" }) { writeFileNow(file, plain) }
+    fun writeFile(file: File, plain: ByteArray) { writeFileWritten(file, plain) }
+
+    /**
+     * [writeFile], saying whether the file was written (26 Oct, review): false when an erase dropped the save, so a caller that
+     * remembers what is on disk ([LastWrite], the settings) never takes it for written. A save a restore drops counts as
+     * written, as before (the restart reads the restored file).
+     */
+    internal fun writeFileWritten(file: File, plain: ByteArray): Boolean =
+        MainWrites.guard({ "Vault.writeFile ${file.name}" }) { writeFileNow(file, plain) }
 
     /**
      * TEST ONLY (19 Oct, order speed): every vault file write takes this long more (ms), as a Pixel's StrongBox can - so a test can
@@ -94,14 +105,17 @@ object Vault {
     @Volatile internal var testWriteDelayMs = 0L
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
-    private fun writeFileNow(file: File, plain: ByteArray, restoring: Boolean = false) {
+    private fun writeFileNow(file: File, plain: ByteArray, restoring: Boolean = false): Boolean {
         // 20 Oct, review: a backup being restored owns its files until the app restarts: a live store saving its old book in
         // the seconds before the restart would write it over the restored file. Such a save is dropped (the store's memory
         // is the old data anyway; the restart reads the restored file).
         if (!restoring && file.path in frozen) {
             runCatching { com.optionslab.app.data.Diag.record("vault", "${file.name}: a save during a restore was dropped (the restored file is kept)") }
-            return
+            return true     // handled, as before 26 Oct: only an erase's drop counts as not written
         }
+        // 26 Oct: a save made while everything is being erased is dropped (no new key, no file); see [beginErase].
+        val epoch = eraseEpoch
+        if (erasing.get() > 0) { droppedInErase.incrementAndGet(); return false }
         testWriteDelayMs.takeIf { it > 0 }?.let { Thread.sleep(it) }
         if (file.name in testFailWrites) throw java.io.IOException("simulated disk fault writing ${file.name}")
         val dir = file.parentFile
@@ -115,13 +129,19 @@ object Vault {
             // A rename replaces the file in one step; if it cannot, the old file is kept as it is and the write fails.
             // 20 Oct, second review: the freeze is asked again here, under the lock the freeze takes - a save that began
             // (and was encrypting) before the restore froze its file never lands over the restored one.
+            // 26 Oct: a save that began before an erase and reaches its rename during or after it is dropped too (its file
+            // would come back after the erase deleted it). Asked under the same lock [beginErase] takes.
+            var erased = false
             val dropped = synchronized(freezeLock) {
-                if (!restoring && file.path in frozen) true
+                erased = erasing.get() > 0 || epoch != eraseEpoch
+                if (erased) false
+                else if (!restoring && file.path in frozen) true
                 else { if (!tmp.renameTo(file)) throw java.io.IOException("could not replace ${file.name}"); false }
             }
+            if (erased) { droppedInErase.incrementAndGet(); return false }
             if (dropped) {
                 runCatching { com.optionslab.app.data.Diag.record("vault", "${file.name}: a save during a restore was dropped (the restored file is kept)") }
-                return
+                return true
             }
         } finally { if (tmp.exists()) tmp.delete() }
         syncDir(dir)
@@ -135,6 +155,7 @@ object Vault {
             }
         }
         fileWrites.merge(file.path, 1L) { a, b -> a + b }
+        return true
     }
 
     /** Files a backup restore owns until the restart ([freezeForRestore]); every other write to them is dropped. */
@@ -153,7 +174,7 @@ object Vault {
     private val freezeLock = Any()
 
     /** The restore's own write of a file [freezeForRestore] froze. */
-    fun writeRestored(file: File, plain: ByteArray) = writeFileNow(file, plain, restoring = true)
+    fun writeRestored(file: File, plain: ByteArray) { writeFileNow(file, plain, restoring = true) }
 
     /** A restore that stopped half-way (no restart follows), and tests: the stores write their files again. */
     fun thaw() { synchronized(freezeLock) { frozen = emptySet() } }
@@ -184,7 +205,8 @@ object Vault {
             val d = java.security.MessageDigest.getInstance("SHA-256").digest(plain)
             if (same(file, d)) return false
             path = null; digest = null; stat = null
-            writeFile(file, plain)
+            // A save an erase dropped is not remembered: the next save of the same bytes is written.
+            if (!writeFileWritten(file, plain)) return false
             path = file.path; digest = d; stat = file.length() to file.lastModified()
             writes = fileWrites[file.path] ?: 0L; epoch = keyEpoch
             return true
@@ -218,7 +240,8 @@ object Vault {
     fun readFileSteady(file: File, attempts: Int = 3): ByteArray? {
         var last: Exception? = null
         repeat(attempts) { i ->
-            try { return readFile(file) } catch (e: Exception) { last = e; if (i < attempts - 1) Thread.sleep(150L * (i + 1)) }
+            try { return readFile(file) } catch (e: Erasing) { throw e   // not a hiccup: no retry
+            } catch (e: Exception) { last = e; if (i < attempts - 1) Thread.sleep(150L * (i + 1)) }
         }
         throw last!!
     }
@@ -230,9 +253,60 @@ object Vault {
         return aside
     }
 
-    /** Destroys the key: every vault file becomes unreadable at once. */
+    /**
+     * Destroys the key: every vault file becomes unreadable at once. Under [dataKey]'s lock, so a key being made at this
+     * moment is made first and destroyed with the rest (never left behind).
+     */
+    @Synchronized
     fun destroy() {
         keyEpoch++
         runCatching { keyStore().deleteEntry(DATA_KEY) }
+    }
+
+    // ---- erase (26 Oct) -------------------------------------------------------------------------------------------------
+
+    /**
+     * 26 Oct (CI on 29ba08f: "the vault key is gone" failed once): erase-everything destroyed the key, but a save on another
+     * thread (a settings write, an arm's book, the market recorder's own wipe) could encrypt after that and make a NEW key,
+     * sealing what it saved again. Between [beginErase] and [endErase] no key is made and no vault file is written: such saves
+     * are dropped (the stores are being wiped anyway), reads fail. The PIN pepper is held the same way ([PinPepper]).
+     */
+    class Erasing : java.security.KeyStoreException("everything is being erased: nothing is sealed until the erase ends")
+
+    private val erasing = java.util.concurrent.atomic.AtomicInteger(0)
+    /** Bumped when an erase begins: a save that started before it never lands after it. Written under [freezeLock]. */
+    @Volatile private var eraseEpoch = 0
+    /** Saves dropped because an erase was running (the tests). */
+    internal val droppedInErase = java.util.concurrent.atomic.AtomicLong()
+
+    /** True while an erase runs. */
+    val isErasing: Boolean get() = erasing.get() > 0
+
+    /** The erase begins: from now no key is made and no vault file written; the key is destroyed. Pair with [endErase]. */
+    fun beginErase() {
+        synchronized(freezeLock) { erasing.incrementAndGet(); eraseEpoch++ }
+        runCatching { PinPepper.destroy() }
+        destroy()
+    }
+
+    /**
+     * TEST ONLY: run at the end of an erase, just before the keys are destroyed the last time (a test checks that no key was
+     * made during the erase, which the last destroy would otherwise hide). Null in the app.
+     */
+    @Volatile internal var testBeforeLastDestroy: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /** TEST ONLY: no erase running (a test that failed mid-erase never leaves the next one held). */
+    internal fun resetEraseForTest() { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; erasing.set(0) }
+
+    /** The erase ends: the keys are destroyed one last time, then saves (with a new key) are allowed again. */
+    fun endErase() {
+        try { testBeforeLastDestroy?.invoke() } finally {
+            synchronized(this) {
+                runCatching { PinPepper.destroy() }
+                destroy()
+                erasing.updateAndGet { if (it > 0) it - 1 else 0 }
+            }
+        }
     }
 }
