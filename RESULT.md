@@ -14,3 +14,12 @@
 8. "8 minutes old": IraAlgo read late (before build 29ba08f). IraThinker stamps each message at send time.
 9. IraAlgo buys mom60 "paper" signals and ignores their 30% stop and 60-minute exit. It should honour them or skip them.
 10. Strategies: none was tested in this repo's research. ORB, gap fade and SMC versions failed there; the strangle is option selling, and R103 found 0 of 24 selling tests confirmed. Full report: irathinker-app/REVIEW_2026-10-26.md.
+
+## R107: every IraThinker strategy back-tested on every index (26 Oct)
+
+- **No strategy passed** on real NIFTY or BANKNIFTY options after charges (13 tests). The holdout was never read.
+- **ORB alert (BUY PUT):** lost on every index, e.g. NIFTY −₹869 a trade (35 trades). **Gap fade:** about breakeven or a loss.
+- **mom60:** about breakeven after costs on real options (BANKNIFTY +₹7 a trade, 213 trades). IraThinker's own tape showed +1.4%.
+- **BANKNIFTY strangle (option selling):** closest, +₹3,935 a week (36 weeks, 81% won). It failed on too few weeks and the multiple-testing check. Worst week −₹31,283; it needs about ₹2 lakh margin.
+- **Prediction engine:** no edge. FINNIFTY and SENSEX have index points only (no option data); MIDCPNIFTY has no data.
+- Full report: research/HUNT_R107_IRATHINKER.md.

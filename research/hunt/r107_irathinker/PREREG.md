@@ -80,3 +80,19 @@ mom60 thresholds:
 - Holdout pass: mean net > 0 on the holdout's trades (at least 10).
 - No parameter of any IraThinker rule is changed. Every test is logged in `research/experiments/entries/`, failures
   included.
+
+## Amendment 1 (26 Oct 2026, after the first run)
+
+- **What went wrong:** the first run's monthly-contract check ("no later listed expiry in the same month") read
+  holiday-moved weeklies as monthlies. Examples: BANKNIFTY 30 Apr 2024 and NIFTY 30 Apr 2025, both weeklies moved back
+  from a 1 May holiday. So S3 and S4 priced some weekly contracts.
+- **New check:**
+  - BANKNIFTY counts as the monthly only from 14 Nov 2024, after its weeklies ended.
+  - NIFTY counts as the monthly when the expiry falls within 3 days before the month's last Thursday (to Aug 2025) or last
+    Tuesday (from Sep 2025).
+- This corrects which contract is priced. No rule, threshold or gate changed. The first run's numbers are superseded and
+  not reported.
+- **Values computed by the script before pricing:** NIFTY's mom60 threshold is 0.38%. That is the design-period q90 of
+  |ret60|, 0.3795%, rounded to two decimals as IraThinker does (117,173 minutes).
+- **Data limit found while running:** INDIA VIX ends 27 Feb 2026. NIFTY days after that cannot be alert-grade for S1,
+  because IraThinker's gate needs VIX.

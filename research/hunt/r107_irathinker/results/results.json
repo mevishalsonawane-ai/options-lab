@@ -1,0 +1,793 @@
+[
+ {
+  "index": "NIFTY",
+  "test": "S1",
+  "real": true,
+  "signals": 41,
+  "priced": 41,
+  "design": {
+   "n": 35,
+   "days": 35,
+   "win": 28.6,
+   "mean": -869.2,
+   "total": -30424.0,
+   "p": 0.9931,
+   "ex_best5": -42666.0,
+   "worst_month": -14739.0,
+   "worst_day": -4643.0,
+   "net_2x_slip": -30950.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 6,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": false,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": false
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "NIFTY",
+  "test": "S1R",
+  "real": true,
+  "signals": 41,
+  "priced": 41,
+  "design": {
+   "n": 35,
+   "days": 35,
+   "win": 25.7,
+   "mean": -630.8,
+   "total": -22077.0,
+   "p": 0.923,
+   "ex_best5": -44190.0,
+   "worst_month": -11401.0,
+   "worst_day": -4643.0,
+   "net_2x_slip": -22616.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 6,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": false,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": true
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "NIFTY",
+  "test": "S1A",
+  "real": true,
+  "signals": 490,
+  "priced": 490,
+  "design": {
+   "n": 363,
+   "days": 363,
+   "win": 34.7,
+   "mean": -169.8,
+   "total": -61627.0,
+   "p": 0.8681,
+   "ex_best5": -120394.0,
+   "worst_month": -31180.0,
+   "worst_day": -8911.0,
+   "net_2x_slip": -67523.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 127,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": true,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": false
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "NIFTY",
+  "test": "S2",
+  "real": true,
+  "signals": 42,
+  "priced": 42,
+  "design": {
+   "n": 30,
+   "days": 30,
+   "win": 43.3,
+   "mean": 59.5,
+   "total": 1786.0,
+   "p": 0.4647,
+   "ex_best5": -22081.0,
+   "worst_month": -4609.0,
+   "worst_day": -4609.0,
+   "net_2x_slip": 1270.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 12,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": false,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": true,
+   "5_ex_best5": false,
+   "6_worst_month": true
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "NIFTY",
+  "test": "S3",
+  "real": true,
+  "signals": 636,
+  "priced": 147,
+  "design": {
+   "n": 118,
+   "days": 62,
+   "win": 50.0,
+   "mean": 49.2,
+   "total": 5809.0,
+   "p": 0.432,
+   "ex_best5": -29199.0,
+   "worst_month": -8386.0,
+   "worst_day": -8355.0,
+   "net_2x_slip": 4102.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 29,
+   "note": "not read (failed design)"
+  },
+  "irathinker_tape": {
+   "trades": 636,
+   "mean_pnl_pct": 2.85,
+   "win": 52.5
+  },
+  "gates": {
+   "1_n40": true,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": true,
+   "5_ex_best5": false,
+   "6_worst_month": true
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "NIFTY",
+  "test": "S5",
+  "real": true,
+  "signals": 439,
+  "priced": 439,
+  "design": {
+   "n": 312,
+   "days": 312,
+   "win": 42.0,
+   "mean": 6.8,
+   "total": 2113.0,
+   "p": 0.4826,
+   "ex_best5": -48891.0,
+   "worst_month": -12006.0,
+   "worst_day": -6349.0,
+   "net_2x_slip": -2268.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 127,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": true,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": true
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "BANKNIFTY",
+  "test": "S1",
+  "real": true,
+  "signals": 42,
+  "priced": 42,
+  "design": {
+   "n": 38,
+   "days": 38,
+   "win": 39.5,
+   "mean": -35.7,
+   "total": -1357.0,
+   "p": 0.5382,
+   "ex_best5": -25327.0,
+   "worst_month": -8500.0,
+   "worst_day": -4338.0,
+   "net_2x_slip": -2035.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 4,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": false,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": true
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "BANKNIFTY",
+  "test": "S1R",
+  "real": true,
+  "signals": 42,
+  "priced": 42,
+  "design": {
+   "n": 38,
+   "days": 38,
+   "win": 36.8,
+   "mean": -178.1,
+   "total": -6769.0,
+   "p": 0.6503,
+   "ex_best5": -35646.0,
+   "worst_month": -8500.0,
+   "worst_day": -4338.0,
+   "net_2x_slip": -7456.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 4,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": false,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": true
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "BANKNIFTY",
+  "test": "S1A",
+  "real": true,
+  "signals": 484,
+  "priced": 483,
+  "design": {
+   "n": 390,
+   "days": 390,
+   "win": 31.5,
+   "mean": -207.6,
+   "total": -80966.0,
+   "p": 0.91,
+   "ex_best5": -137618.0,
+   "worst_month": -26416.0,
+   "worst_day": -9560.0,
+   "net_2x_slip": -88607.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 93,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": true,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": false
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "BANKNIFTY",
+  "test": "S2",
+  "real": true,
+  "signals": 55,
+  "priced": 55,
+  "design": {
+   "n": 45,
+   "days": 45,
+   "win": 46.7,
+   "mean": -96.0,
+   "total": -4320.0,
+   "p": 0.5952,
+   "ex_best5": -25122.0,
+   "worst_month": -7476.0,
+   "worst_day": -7540.0,
+   "net_2x_slip": -5024.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 10,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": true,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": true
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "BANKNIFTY",
+  "test": "S3",
+  "real": true,
+  "signals": 477,
+  "priced": 264,
+  "design": {
+   "n": 213,
+   "days": 124,
+   "win": 50.7,
+   "mean": 6.6,
+   "total": 1407.0,
+   "p": 0.4888,
+   "ex_best5": -52645.0,
+   "worst_month": -22111.0,
+   "worst_day": -9907.0,
+   "net_2x_slip": -3589.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 51,
+   "note": "not read (failed design)"
+  },
+  "irathinker_tape": {
+   "trades": 477,
+   "mean_pnl_pct": 1.37,
+   "win": 51.6
+  },
+  "gates": {
+   "1_n40": true,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": false
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "BANKNIFTY",
+  "test": "S5",
+  "real": true,
+  "signals": 438,
+  "priced": 438,
+  "design": {
+   "n": 342,
+   "days": 342,
+   "win": 41.2,
+   "mean": -93.8,
+   "total": -32068.0,
+   "p": 0.8093,
+   "ex_best5": -78962.0,
+   "worst_month": -13819.0,
+   "worst_day": -6834.0,
+   "net_2x_slip": -37922.0,
+   "q": 0.9931
+  },
+  "holdout": {
+   "n": 96,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "1_n40": true,
+   "2_mean_p": false,
+   "3_bh": false,
+   "4_slip2x": false,
+   "5_ex_best5": false,
+   "6_worst_month": false
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "BANKNIFTY",
+  "test": "S4",
+  "real": true,
+  "signals": 98,
+  "priced": 51,
+  "design": {
+   "n": 36,
+   "days": 36,
+   "win": 80.6,
+   "mean": 3934.6,
+   "total": 141646.0,
+   "p": 0.0119,
+   "ex_best5": 60789.0,
+   "worst_month": -10080.0,
+   "worst_day": -31283.0,
+   "net_2x_slip": 140477.0,
+   "q": 0.1547
+  },
+  "holdout": {
+   "n": 15,
+   "note": "not read (failed design)"
+  },
+  "irathinker_tape": {
+   "weeks": 98,
+   "mean_net_pct": -14.83,
+   "total_rs_lot30": -132226.0
+  },
+  "gates": {
+   "1_n40": false,
+   "2_mean_p": true,
+   "3_bh": false,
+   "4_slip2x": true,
+   "5_ex_best5": true,
+   "6_worst_month": true
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "FINNIFTY",
+  "test": "S1",
+  "real": false,
+  "signals": 46,
+  "priced": 46,
+  "design": {
+   "n": 40,
+   "days": 40,
+   "win": 37.5,
+   "mean": -453.4,
+   "total": -18136.0,
+   "p": 0.7337,
+   "ex_best5": -56414.0,
+   "worst_month": -13939.0,
+   "worst_day": -8310.0
+  },
+  "holdout": {
+   "n": 6,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "FINNIFTY",
+  "test": "S1R",
+  "real": false,
+  "signals": 46,
+  "priced": 46,
+  "design": {
+   "n": 40,
+   "days": 40,
+   "win": 35.0,
+   "mean": -425.6,
+   "total": -17023.0,
+   "p": 0.7001,
+   "ex_best5": -62904.0,
+   "worst_month": -13939.0,
+   "worst_day": -8310.0
+  },
+  "holdout": {
+   "n": 6,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "FINNIFTY",
+  "test": "S1A",
+  "real": false,
+  "signals": 490,
+  "priced": 489,
+  "design": {
+   "n": 391,
+   "days": 391,
+   "win": 41.4,
+   "mean": -63.1,
+   "total": -24660.0,
+   "p": 0.5971,
+   "ex_best5": -122833.0,
+   "worst_month": -54129.0,
+   "worst_day": -13968.0
+  },
+  "holdout": {
+   "n": 98,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "FINNIFTY",
+  "test": "S2",
+  "real": false,
+  "signals": 48,
+  "priced": 48,
+  "design": {
+   "n": 40,
+   "days": 40,
+   "win": 55.0,
+   "mean": -495.4,
+   "total": -19818.0,
+   "p": 0.7367,
+   "ex_best5": -54569.0,
+   "worst_month": -17864.0,
+   "worst_day": -15746.0
+  },
+  "holdout": {
+   "n": 8,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "FINNIFTY",
+  "test": "S3",
+  "real": false,
+  "signals": 470,
+  "priced": 470,
+  "design": {
+   "n": 414,
+   "days": 240,
+   "win": 55.6,
+   "mean": 433.0,
+   "total": 179244.0,
+   "p": 0.0208,
+   "ex_best5": 44242.0,
+   "worst_month": -17785.0,
+   "worst_day": -21453.0
+  },
+  "holdout": {
+   "n": 56,
+   "note": "not read (failed design)"
+  },
+  "irathinker_tape": {
+   "trades": 470,
+   "mean_pnl_pct": 1.85,
+   "win": 53.4
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "FINNIFTY",
+  "test": "S5",
+  "real": false,
+  "signals": 444,
+  "priced": 444,
+  "design": {
+   "n": 345,
+   "days": 345,
+   "win": 49.3,
+   "mean": 115.5,
+   "total": 39860.0,
+   "p": 0.2854,
+   "ex_best5": -43245.0,
+   "worst_month": -15428.0,
+   "worst_day": -15214.0
+  },
+  "holdout": {
+   "n": 99,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "SENSEX",
+  "test": "S1",
+  "real": false,
+  "signals": 40,
+  "priced": 40,
+  "design": {
+   "n": 36,
+   "days": 36,
+   "win": 36.1,
+   "mean": -530.8,
+   "total": -19108.0,
+   "p": 0.7794,
+   "ex_best5": -53346.0,
+   "worst_month": -9374.0,
+   "worst_day": -7287.0
+  },
+  "holdout": {
+   "n": 4,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "SENSEX",
+  "test": "S1R",
+  "real": false,
+  "signals": 40,
+  "priced": 40,
+  "design": {
+   "n": 36,
+   "days": 36,
+   "win": 33.3,
+   "mean": -431.1,
+   "total": -15519.0,
+   "p": 0.7243,
+   "ex_best5": -56592.0,
+   "worst_month": -9374.0,
+   "worst_day": -7287.0
+  },
+  "holdout": {
+   "n": 4,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "SENSEX",
+  "test": "S1A",
+  "real": false,
+  "signals": 494,
+  "priced": 493,
+  "design": {
+   "n": 395,
+   "days": 395,
+   "win": 39.0,
+   "mean": -34.9,
+   "total": -13767.0,
+   "p": 0.5717,
+   "ex_best5": -93064.0,
+   "worst_month": -30854.0,
+   "worst_day": -16843.0
+  },
+  "holdout": {
+   "n": 98,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "SENSEX",
+  "test": "S2",
+  "real": false,
+  "signals": 37,
+  "priced": 37,
+  "design": {
+   "n": 34,
+   "days": 34,
+   "win": 50.0,
+   "mean": -523.5,
+   "total": -17800.0,
+   "p": 0.7496,
+   "ex_best5": -51547.0,
+   "worst_month": -10410.0,
+   "worst_day": -9232.0
+  },
+  "holdout": {
+   "n": 3,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "SENSEX",
+  "test": "S3",
+  "real": false,
+  "signals": 383,
+  "priced": 383,
+  "design": {
+   "n": 340,
+   "days": 198,
+   "win": 52.1,
+   "mean": 159.9,
+   "total": 54349.0,
+   "p": 0.2606,
+   "ex_best5": -64172.0,
+   "worst_month": -50981.0,
+   "worst_day": -27735.0
+  },
+  "holdout": {
+   "n": 43,
+   "note": "not read (failed design)"
+  },
+  "irathinker_tape": {
+   "trades": 383,
+   "mean_pnl_pct": 1.91,
+   "win": 49.3
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ },
+ {
+  "index": "SENSEX",
+  "test": "S5",
+  "real": false,
+  "signals": 444,
+  "priced": 444,
+  "design": {
+   "n": 345,
+   "days": 345,
+   "win": 53.3,
+   "mean": 252.5,
+   "total": 87097.0,
+   "p": 0.0723,
+   "ex_best5": 12142.0,
+   "worst_month": -10905.0,
+   "worst_day": -10396.0
+  },
+  "holdout": {
+   "n": 99,
+   "note": "not read (failed design)"
+  },
+  "gates": {
+   "note": "index points only (no option data): descriptive, cannot pass"
+  },
+  "pass_design": false,
+  "holdout_read": false
+ }
+]
