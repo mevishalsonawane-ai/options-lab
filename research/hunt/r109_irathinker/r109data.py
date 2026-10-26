@@ -28,7 +28,10 @@ def flat():
         for p in sorted((K.LAKE / sub).glob("*.parquet")):
             q = f / p.name
             if not q.exists():
-                q.symlink_to(p.resolve())
+                try:
+                    q.symlink_to(p.resolve())
+                except FileExistsError:          # a parallel build made it first
+                    pass
     return f
 
 
