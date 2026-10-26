@@ -425,6 +425,81 @@ class RootNavigationTest {
         assertTrue(SecurePrefs.snapshot().isEmpty())
     }
 
+    /** The erase's slow file thread ("erase-files"), if one is running, waited for. */
+    private fun joinEraseFiles() {
+        Thread.getAllStackTraces().keys.filter { it.name == "erase-files" }.forEach { it.join(20_000) }
+    }
+
+    /**
+     * 26 Oct (CI on 29ba08f: aWipeThatThrowsStillDestroysTheKeys failed once with "the vault key is gone"): the slow file thread's
+     * market-recorder wipe wrote two settings after the keys were destroyed - a new settings file sealed with a NEW vault key,
+     * on every erase. It raced the test's check; waited for here, it failed every time.
+     */
+    @Test fun theSlowFileWipesNeverMakeANewKey() {
+        seedPersonalData()
+        eraseEverything()
+        joinEraseFiles()
+        shadowOf(Looper.getMainLooper()).idle()
+        val aliases = com.optionslab.app.testing.FakeAndroidKeyStore.aliases()
+        assertFalse("a new vault key after the erase", "ol.vault.data.v1" in aliases)
+        assertFalse("a new PIN pepper after the erase", "ol.pin.pepper.v1" in aliases)
+        assertFalse("a new settings file after the erase", File(app.noBackupFilesDir, "prefs.vault").exists())
+        assertFalse(Vault.isErasing)
+    }
+
+    /**
+     * 26 Oct: saves on another thread all through erase-everything (settings, a vault file, the ledger, the PIN pepper), 40
+     * times, on the screen's thread and off it: no key is made while the erase runs (checked just before the last destroy,
+     * which would otherwise hide one), and no vault file written then survives.
+     */
+    @Test fun aBackgroundSaveRacingTheEraseNeverRecreatesTheKey() {
+        val keysAtEnd = java.util.concurrent.ConcurrentLinkedQueue<String>()
+        val filesAtEnd = java.util.concurrent.ConcurrentLinkedQueue<String>()
+        Vault.testBeforeLastDestroy = {
+            val a = com.optionslab.app.testing.FakeAndroidKeyStore.aliases()
+            if ("ol.vault.data.v1" in a) keysAtEnd += "vault"
+            if ("ol.pin.pepper.v1" in a) keysAtEnd += "pepper"
+            // The ledger's and the settings' files were deleted by the erase: a save racing it must not bring them back.
+            for (f in listOf(File(app.noBackupFilesDir, "ledger.vault"), File(app.noBackupFilesDir, "prefs.vault"))) if (f.exists()) filesAtEnd += f.name
+        }
+        try {
+            repeat(40) { round ->
+                seedPersonalData()
+                val stop = java.util.concurrent.atomic.AtomicBoolean(false)
+                val saves = java.util.concurrent.atomic.AtomicLong()
+                val racer = Thread {
+                    var i = 0
+                    while (!stop.get()) {
+                        i++
+                        runCatching {
+                            when (i % 4) {
+                                0 -> SecurePrefs.put("race.n", i)
+                                1 -> Vault.writeFile(File(app.filesDir, "race.vault"), "a save racing the erase".toByteArray())
+                                2 -> Ledger.record(ticket, null, null)
+                                else -> SecurePrefs.putAll(mapOf("s.capital" to i.toDouble()))
+                            }
+                        }
+                        saves.incrementAndGet()
+                    }
+                }.apply { isDaemon = true; start() }
+                // The racer is saving before the erase starts.
+                val until = System.nanoTime() + 2_000_000_000L
+                while (saves.get() < 4 && System.nanoTime() < until) Thread.yield()
+                val before = wipes.value
+                if (round % 2 == 0) eraseEverything()
+                else Thread { eraseEverything() }.apply { start(); join(20_000) }
+                stop.set(true)
+                racer.join(20_000)
+                joinEraseFiles()
+                shadowOf(Looper.getMainLooper()).idle()
+                assertEquals("round $round", before + 1, wipes.value)
+                assertTrue("round $round: a key was made during the erase: $keysAtEnd", keysAtEnd.isEmpty())
+                assertTrue("round $round: a vault file written during the erase survived it: $filesAtEnd", filesAtEnd.isEmpty())
+                assertFalse(Vault.isErasing)
+            }
+        } finally { Vault.testBeforeLastDestroy = null }
+    }
+
     @Test fun eraseEverythingFromABackgroundThread() {
         seedPersonalData()
         val before = wipes.value

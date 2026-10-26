@@ -345,47 +345,55 @@ internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit, checking:
 fun eraseEverything() {
     // 20 Oct, review: the keys go FIRST. They were destroyed last, after about 18 wipes with no guard: one wipe that threw (a
     // store not set up yet) skipped them, and on the too-many-wrong-PINs path the data stayed readable. Every wipe below is
-    // guarded, so one failing never stops the rest; the keys are destroyed again at the end (a save made in between was
-    // sealed with a new key, which goes too).
-    runCatching { com.optionslab.app.security.PinPepper.destroy() }
-    runCatching { Vault.destroy() }
+    // guarded, so one failing never stops the rest.
+    // 26 Oct (CI on 29ba08f, "the vault key is gone"): a save on another thread could still seal data with a NEW key made
+    // after the keys were destroyed - the slow file thread's market-recorder wipe did, every time. Now the vault is held for
+    // the whole erase ([Vault.beginErase]): no key is made and no vault file written until [Vault.endErase], which destroys
+    // the keys a last time. Nothing waits on a lock the order path or the screen holds.
+    runCatching { Vault.beginErase() }
     runCatching { SessionLock.lock() }
     fun w(f: () -> Unit) { runCatching(f) }
-    w { com.optionslab.app.data.Ledger.wipe() }
-    w { com.optionslab.app.data.Alarms.wipe() }
-    w { com.optionslab.app.data.Paper.wipe() }
-    w { com.optionslab.app.data.OrbArms.wipe() }
-    w { com.optionslab.app.data.ShadowArms.wipe() }
-    w { com.optionslab.app.data.PineScripts.wipe() }
-    w { com.optionslab.app.data.PineAuto.wipe() }
-    w { com.optionslab.app.data.Protections.wipe() }
-    w { com.optionslab.app.data.TradeBook.wipe() }
-    // The OI-wall shadow log (14 Oct): its own encrypted file.
-    w { com.optionslab.app.data.OiWallShadowHost.wipe() }
-    w { com.optionslab.app.data.Diag.wipe() }
-    w { com.optionslab.app.data.Journal.wipe() }
-    w { com.optionslab.app.data.Strategies.wipe() }
-    w { com.optionslab.app.data.Market.wipe() }
-    w { com.optionslab.app.data.Broker.forget() }
-    // WebView state (the Zerodha login's cookies and storage) must be cleared on the main thread;
-    // eraseEverything can be called from a background dispatcher, where these calls fail silently.
-    val web = Runnable {
-        runCatching { android.webkit.CookieManager.getInstance().removeAllCookies(null) }
-        runCatching { android.webkit.WebStorage.getInstance().deleteAllData() }
-    }
     val main = android.os.Looper.getMainLooper()
     val onMain = android.os.Looper.myLooper() == main
-    if (onMain) web.run() else android.os.Handler(main).post(web)
-    w { SecurePrefs.wipe() }
-    w { com.optionslab.ira.ShortAnswer.clearCache() }
-    w { BiometricGate.forget() }
-    runCatching { com.optionslab.app.security.PinPepper.destroy() }
-    runCatching { Vault.destroy() }
-    runCatching { SessionLock.lock() }
+    try {
+        w { com.optionslab.app.data.Ledger.wipe() }
+        w { com.optionslab.app.data.Alarms.wipe() }
+        w { com.optionslab.app.data.Paper.wipe() }
+        w { com.optionslab.app.data.OrbArms.wipe() }
+        w { com.optionslab.app.data.ShadowArms.wipe() }
+        w { com.optionslab.app.data.PineScripts.wipe() }
+        w { com.optionslab.app.data.PineAuto.wipe() }
+        w { com.optionslab.app.data.Protections.wipe() }
+        w { com.optionslab.app.data.TradeBook.wipe() }
+        // The OI-wall shadow log (14 Oct): its own encrypted file.
+        w { com.optionslab.app.data.OiWallShadowHost.wipe() }
+        w { com.optionslab.app.data.Diag.wipe() }
+        w { com.optionslab.app.data.Journal.wipe() }
+        w { com.optionslab.app.data.Strategies.wipe() }
+        w { com.optionslab.app.data.Market.wipe() }
+        w { com.optionslab.app.data.Broker.forget() }
+        // The market recorder's settings (26 Oct: here, while the vault is held; its folder goes with the slow files below).
+        w { com.optionslab.app.data.MarketRecorder.forget() }
+        // WebView state (the Zerodha login's cookies and storage) must be cleared on the main thread;
+        // eraseEverything can be called from a background dispatcher, where these calls fail silently.
+        val web = Runnable {
+            runCatching { android.webkit.CookieManager.getInstance().removeAllCookies(null) }
+            runCatching { android.webkit.WebStorage.getInstance().deleteAllData() }
+        }
+        if (onMain) web.run() else android.os.Handler(main).post(web)
+        w { SecurePrefs.wipe() }
+        w { com.optionslab.ira.ShortAnswer.clearCache() }
+        w { BiometricGate.forget() }
+    } finally {
+        // The keys destroyed a last time (none can have been made since the start), then saves are allowed again.
+        runCatching { Vault.endErase() }
+        runCatching { SessionLock.lock() }
+    }
     // The large folders (the recordings, the price history, the device data): deleted off the screen's thread (an erase from
-    // a button no longer freezes it). Nothing here holds a key, and nothing destroys one, so a PIN set meanwhile is safe.
+    // a button no longer freezes it). Nothing here holds a key, writes a vault file or destroys a key, so a PIN set meanwhile
+    // is safe (26 Oct: the market recorder's settings writes moved out of here, above).
     val slow = Runnable {
-        w { com.optionslab.app.data.MarketRecorder.wipe() }
+        w { com.optionslab.app.data.MarketRecorder.wipeFiles() }
         w { com.optionslab.app.data.FillSlippage.wipe() }
         w { com.optionslab.app.data.LiveRecorder.wipe() }
         w { com.optionslab.app.data.History.wipe() }

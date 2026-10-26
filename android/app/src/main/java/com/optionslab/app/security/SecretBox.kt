@@ -95,6 +95,8 @@ internal object PinPepper {
     /** The key, created on first use. A Keystore fault throws; it never yields a different key silently. */
     @Synchronized
     private fun key(): javax.crypto.SecretKey {
+        // 26 Oct: never made (or used) while everything is being erased ([Vault.beginErase]).
+        if (Vault.isErasing) throw Vault.Erasing()
         (keyStore().getKey(ALIAS, null) as? javax.crypto.SecretKey)?.let { return it }
         val spec = android.security.keystore.KeyGenParameterSpec.Builder(ALIAS, android.security.keystore.KeyProperties.PURPOSE_SIGN).build()
         return javax.crypto.KeyGenerator.getInstance(android.security.keystore.KeyProperties.KEY_ALGORITHM_HMAC_SHA256, STORE)
@@ -111,12 +113,14 @@ internal object PinPepper {
                 mac.update(label.toByteArray(Charsets.UTF_8))
                 mac.update(0.toByte())
                 return mac.doFinal(input)
+            } catch (e: Vault.Erasing) { throw e   // not a hiccup: no retry
             } catch (e: Exception) { last = e; if (i < 2) Thread.sleep(100L * (i + 1)) }
         }
         throw last!!
     }
 
-    /** Erase: every v2 sealed secret and verifier becomes useless with it. */
+    /** Erase: every v2 sealed secret and verifier becomes useless with it. Under [key]'s lock: a key being made goes too. */
+    @Synchronized
     fun destroy() {
         runCatching { keyStore().deleteEntry(ALIAS) }
     }

@@ -667,7 +667,19 @@ object MarketRecorder {
 
     /** Erase: every recorded day and the gap counts (Boss's erase-everything). */
     fun wipe() {
-        runCatching { dirOrNull?.deleteRecursively() }
+        wipeFiles()
+        forget()
+    }
+
+    /** The recorded days' folder deleted (slow: erase-everything runs it off the screen's thread, after the keys are gone). */
+    fun wipeFiles() { runCatching { dirOrNull?.deleteRecursively() } }
+
+    /**
+     * The gap counts and the day's state forgotten (26 Oct: split from [wipe]). Erase-everything runs this while the vault is
+     * held ([com.optionslab.app.security.Vault.beginErase]): run from its slow file thread, after the keys were destroyed,
+     * these settings writes made a new vault key and a new settings file - the CI failure "the vault key is gone".
+     */
+    fun forget() {
         runCatching { SecurePrefs.put(K_GAPS, null) }
         for (k in listOf(K_OI_LAST, K_OI_TRY, K_OI_MISSED, K_GIFT)) runCatching { SecurePrefs.put(k, null) }
         giftTriedAt = null
