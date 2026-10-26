@@ -105,8 +105,9 @@ class NtfyReaderTest : RobolectricTest() {
         runBlocking { NtfyArm.setOn(false, log = false) }
         NtfyReader.ensure()
         assertFalse(NtfyReader.status.value.running)
-        runBlocking { NtfyArm.setOn(true, log = false) }
+        // 26 Oct: out of hours BEFORE switching on (switching on starts the reader at once when in hours: a request could slip in).
         NtfyReader.testInHours = false
+        runBlocking { NtfyArm.setOn(true, log = false) }
         NtfyReader.ensure()
         assertFalse(NtfyReader.status.value.running)
         assertEquals(0, server.requestCount)
