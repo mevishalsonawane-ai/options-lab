@@ -23,3 +23,12 @@
 - **BANKNIFTY strangle (option selling):** closest, +₹3,935 a week (36 weeks, 81% won). It failed on too few weeks and the multiple-testing check. Worst week −₹31,283; it needs about ₹2 lakh margin.
 - **Prediction engine:** no edge. FINNIFTY and SENSEX have index points only (no option data); MIDCPNIFTY has no data.
 - Full report: research/HUNT_R107_IRATHINKER.md.
+
+## R108: improving the strategies (26 Oct)
+
+- 10 pre-registered changes. **One looks worth pursuing:** the BANKNIFTY strangle with a stop at 2x the credit made +₹4,117 a week (36 weeks, p 0.002, q 0.01), and the worst week halved to −₹15,552.
+- It is **not proven**: only 36 weeks of real prices (under the 40 required), and it is still naked option selling (about ₹2 lakh margin).
+- Next step: test it on the unseen 2021–Nov 2024 BANKNIFTY monthly options in the Drive lake.
+- Protective wings, mom60 changes (ITM strike, no stop, weekly) and strong prediction votes: no improvement.
+- One holdout week was seen by accident while checking the stop. This is disclosed, and the strangle's holdout is no longer clean.
+- Full report: research/HUNT_R108_IRATHINKER_PLUS.md.

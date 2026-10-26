@@ -54,3 +54,15 @@ E1–E3 are descriptive (see above). E4–E10 can pass.
 
 FINNIFTY and SENSEX are left out: there are no option prices, and these changes act on the option, so index points
 cannot show them.
+
+## Note added after the run (26 Oct 2026)
+
+- **An accident while checking E1's stopped weeks:** a printout listed every week, including one holdout week, 19 Jan 2026.
+  On that week E1 was stopped for −₹24,548, where holding would have made +₹3,492.
+- No other holdout number was looked at.
+- The strangle variants could not pass design anyway (n < 40). But the holdout for the strangle (Oct 2025 – Feb 2026) is
+  **no longer clean**, and a later confirmation of E1 must use data nobody has seen. The 2021 – Nov 2024 BANKNIFTY monthly
+  options in the Drive lake are such data.
+- The mom60 and prediction-engine holdouts were not touched.
+- The guard added for a missing exit day (30 Dec 2025 has no index bars in the release) drops that week, exactly as
+  R107's S4 does.
