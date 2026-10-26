@@ -141,6 +141,13 @@ class PaperExitReduceTest : RobolectricTest() {
 
     /** A short's stop is a resting BUY SL-M: it fills on a high touched between two looks, at the trigger. */
     @Test fun aShortsRestingBuyStopFillsOnAHighBetweenLooks() {
+        // 26 Oct: the stop's resting time is the market's clock (the tests' noon on a trading day) while the stream's spike is the
+        // real time: before noon IST the spike read as older than the stop and it never filled (CI before 12:00 IST failed, after
+        // passed). The market's clock here: noon of the trading day before, still ticking - always before the real spike.
+        var prev = Market.today().minusDays(1)
+        while (!Market.isTradingDay(prev)) prev = prev.minusDays(1)
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST),
+            java.time.Duration.between(java.time.ZonedDateTime.now(com.optionslab.engine.IST), prev.atTime(12, 0).atZone(com.optionslab.engine.IST)))
         val short = runBlocking { Paper.place(c, "SELL", 1, "MARKET", "NRML", null, null, Quote(100.0, bid = 99.95, ask = 100.05)) }
         assertTrue(short.message, short.ok)
         assertEquals(-75, held())

@@ -156,15 +156,15 @@ object KiteStream {
     /** The 1-minute candle of [token] that started at [startMs] built from the stream's ticks (open, high, low, close), or null. */
     fun minuteBar(token: Long, startMs: Long): DoubleArray? = paths[token]?.minute(startMs)
 
+    /** 26 Oct: an index's token by its name ("NIFTY", "BANKNIFTY" ...), for a price read from this stream; null when unknown. Memory only. */
+    fun indexToken(name: String): Long? = Broker.indexToken(name)
+
     /**
      * The last tick for [token] if it is at most [maxAgeMs] old (market closed = none fresh). 18 Oct: a tick that reached
      * the phone "in the future" (the phone's clock stepped back since, e.g. a network time correction) is not fresh either -
      * its age was negative, so it passed for fresh for as long as the step, however long the stream had been silent (as
      * [com.optionslab.ira.LiveQuote.pick] already judged it): the caller reads Zerodha's quote instead.
      */
-    /** 26 Oct: an index's token by its name ("NIFTY", "BANKNIFTY" ...), for a price read from this stream; null when unknown. Memory only. */
-    fun indexToken(name: String): Long? = Broker.indexToken(name)
-
     fun tick(token: Long, maxAgeMs: Long = 5_000): KiteTicks.Tick? =
         ticks[token]?.takeIf { System.currentTimeMillis() - it.at in 0..maxAgeMs }?.tick
 
