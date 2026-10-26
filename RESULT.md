@@ -10,3 +10,15 @@
 8. **What IraThinker should change:** label mom60 as "not confirmed on real prints", say which way its BS premium errs, and add the -Rs 32k month to the strangle's footer (see the write-up).
 9. **Leads only, not tests:** mom60 at 3-7 days to expiry (BANKNIFTY +Rs 20,235, n = 58) and mom60's 0-2 day cell being the worst (as IraThinker already warns).
 10. **Checks:** 27 R109 tests pass, incl. look-ahead guards. The final was read once. BH counted 14,253 tests (R1-R109). Feature catalog up to date. Brain tests: 174 pass and 9 fail or error, because this sandbox has pandas 3.0 instead of the pinned 2.2.3; `research/brain` is untouched.
+
+# R110 result for Boss (26 Oct 2026): making the strangle fit your account
+
+1. **Answer: no.** 0 of 8 changes pass. Nothing goes on paper or live. Full write-up: `research/HUNT_R110_STRANGLE.md`.
+2. **The base, at 1 lot:** IraThinker's BANKNIFTY Monday strangle made +Rs 1.68 lakh in design (69 weeks) and +Rs 61,920 in the final (26 weeks), but had months of -Rs 24,307 and -Rs 32,436.
+3. **Insurance wings keep every design and final month above -Rs 13k, but kill the profit.** Wings at +-700: +Rs 10,899 in design and -Rs 13,724 in the final. Wings at +-1000: +Rs 38,531 and +Rs 52.
+4. **Best trade-off: the index stop at the breakevens.** Same design profit (+Rs 1,68,645) with a smaller drawdown (Rs 24,912 vs Rs 34,925). Still -Rs 18,247 and -Rs 29,072 months, and an overnight gap gave a -Rs 34,490 week.
+5. **Selling further out, a premium stop, and skipping after 2-sigma days** keep most of the money, but all break the -Rs 13k month.
+6. **"Only sell when options are expensive"** did worse than skipping the same number of weeks at random.
+7. **Bottom line:** one BANKNIFTY strangle lot is too big for a -Rs 13,000 monthly stop. It needs more capital, or a much smaller contract than any index lot today.
+8. **Caveats:** the wing results rely on Black-Scholes prices, because the lake keeps only +-10 strikes. The hedged margins (Rs 15-25k) are estimates, not broker quotes. The final window had been seen by R109.
+9. **Checks:** 14 R110 tests pass, and B0 matches R109 week for week. The final was read once. BH counted 14,261 tests.

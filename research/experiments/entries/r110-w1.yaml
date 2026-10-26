@@ -1,0 +1,24 @@
+id: r110-w1
+title: R110 W1 wings +-700 on IraThinker's BANKNIFTY Monday strangle
+family: option-structure
+date: '2026-10-26'
+doc: research/HUNT_R110_STRANGLE.md
+hypothesis: 'cap the tail with wings 500 beyond the shorts keeps the R109 strangle profitable and inside Boss''s account rule at 1 lot. Gates: net > 0 and worst month >= -Rs 13,000 and drawdown < Rs 40,000 in design, walk-forward and final; design bootstrap p < 0.05 (filters also a random-skip twin); BH q <= 0.10 over 14,261 tests; >= 40 design / 15 final weeks.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 26 Oct 2026; R109's R51 Amendment A clean MONTH stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R110 (B0 already read by R109); 14-19 Oct descriptive
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: none directional; strikes off the index spot at 09:30'
+model_or_rule: R109 strangle-bn with W1 wings +-700
+settings: research/hunt/r110_strangle/r110study.py TESTS; PREREG.md section 2
+prereg: research/hunt/r110_strangle/PREREG.md
+variants_tried: 1
+results:
+  summary: 'History: 152 weeks, win 45%, net -Rs 70,130 (B0 same weeks Rs 90,519), worst month -Rs 7,831, max DD Rs 81,896. Design: 69 weeks, win 48%, net Rs 10,899 (B0 same weeks Rs 167,686), worst month -Rs 8,203, max DD Rs 20,284. Walk-forward: 50 weeks, win 50%, net Rs 12,260 (B0 same weeks Rs 171,510), worst month -Rs 8,203, max DD Rs 20,284. Final: 26 weeks, win 42%, net -Rs 13,724 (B0 same weeks Rs 61,920), worst month -Rs 12,765, max DD Rs 14,244. Post-13 Oct: 2 weeks, win 50%, net -Rs 503 (B0 same weeks Rs 5,058), worst month -Rs 503, max DD Rs 714. BH q 1. Fails: final: net -13,724 not above 0; design bootstrap p 0.351 >= 0.05; BH q 1 > 0.10 (m = 14,261).'
+  costs: dated Zerodha charges, liq slippage, next-minute fills, stale legs repriced by BS at the last implied vol, exercise STT on long legs settled in the money
+holdout_read: true
+verdict: rejected
+notes: Research only; the app does not sell options; nothing changes on paper or live.

@@ -1,0 +1,799 @@
+{
+ "B0": {
+  "skipped": 1,
+  "periods": {
+   "final": {
+    "n": 26,
+    "win": 0.692308,
+    "net": 61920.42,
+    "per_trade": 2381.554615,
+    "worst_day": -31695.64,
+    "worst_week": -31695.64,
+    "worst_month": -32436.04,
+    "max_dd": 37925.74,
+    "months_le_13k": 1,
+    "gross_pct": 11.816564,
+    "pf": 2.14223,
+    "stale": 5,
+    "days": 26,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-04-06",
+      -31696
+     ],
+     [
+      "2026-04-27",
+      -6904
+     ],
+     [
+      "2026-04-13",
+      -6230
+     ],
+     [
+      "2026-09-21",
+      -2946
+     ],
+     [
+      "2026-09-28",
+      -2720
+     ]
+    ],
+    "weeks_le_13k": 1,
+    "credit_mean": 1209.146147,
+    "margin_mean": 219212.9025,
+    "net_per_margin": 0.282467,
+    "stale_legs": 7,
+    "exp_weeks": 6,
+    "b0_same_weeks_net": 61920.42,
+    "b0_net": 61920.42,
+    "b0_n": 26,
+    "boot_p": 0.092647
+   },
+   "post": {
+    "n": 2,
+    "win": 1.0,
+    "net": 5058.41,
+    "per_trade": 2529.205,
+    "worst_day": 2250.55,
+    "worst_week": 2250.55,
+    "worst_month": 5058.41,
+    "max_dd": 0.0,
+    "months_le_13k": 0,
+    "gross_pct": 9.214051,
+    "pf": null,
+    "stale": 0,
+    "days": 2,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-10-12",
+      2251
+     ],
+     [
+      "2026-10-19",
+      2808
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 1041.075012,
+    "margin_mean": 215437.0725,
+    "net_per_margin": 0.02348,
+    "stale_legs": 0,
+    "exp_weeks": 0,
+    "b0_same_weeks_net": 5058.41,
+    "b0_net": 5058.41,
+    "b0_n": 2
+   }
+  }
+ },
+ "W1": {
+  "skipped": 0,
+  "periods": {
+   "final": {
+    "n": 26,
+    "win": 0.423077,
+    "net": -13723.604375,
+    "per_trade": -527.830938,
+    "worst_day": -6925.424375,
+    "worst_week": -6925.424375,
+    "worst_month": -12765.144375,
+    "max_dd": 14243.984375,
+    "months_le_13k": 0,
+    "gross_pct": -2.049058,
+    "pf": 0.581485,
+    "stale": 15,
+    "days": 26,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-04-27",
+      -6925
+     ],
+     [
+      "2026-09-28",
+      -6081
+     ],
+     [
+      "2026-07-27",
+      -5362
+     ],
+     [
+      "2026-04-13",
+      -4878
+     ],
+     [
+      "2026-04-06",
+      -2215
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 362.840379,
+    "margin_mean": 15000.0,
+    "net_per_margin": -0.914907,
+    "stale_legs": 23,
+    "exp_weeks": 6,
+    "b0_same_weeks_net": 61920.42,
+    "b0_net": 61920.42,
+    "b0_n": 26,
+    "boot_p": 0.831787
+   },
+   "post": {
+    "n": 2,
+    "win": 0.5,
+    "net": -502.91,
+    "per_trade": -251.455,
+    "worst_day": -714.01,
+    "worst_week": -714.01,
+    "worst_month": -502.91,
+    "max_dd": 714.01,
+    "months_le_13k": 0,
+    "gross_pct": 1.199822,
+    "pf": 0.295654,
+    "stale": 1,
+    "days": 2,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-10-12",
+      -714
+     ],
+     [
+      "2026-10-19",
+      211
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 378.725014,
+    "margin_mean": 15000.0,
+    "net_per_margin": -0.033527,
+    "stale_legs": 1,
+    "exp_weeks": 0,
+    "b0_same_weeks_net": 5058.41,
+    "b0_net": 5058.41,
+    "b0_n": 2
+   }
+  }
+ },
+ "W2": {
+  "skipped": 3,
+  "periods": {
+   "final": {
+    "n": 23,
+    "win": 0.521739,
+    "net": 51.74,
+    "per_trade": 2.249565,
+    "worst_day": -10080.03,
+    "worst_week": -10080.03,
+    "worst_month": -12080.64,
+    "max_dd": 13507.77,
+    "months_le_13k": 0,
+    "gross_pct": 2.590118,
+    "pf": 1.00166,
+    "stale": 16,
+    "days": 23,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-04-27",
+      -10080
+     ],
+     [
+      "2026-04-13",
+      -4960
+     ],
+     [
+      "2026-09-28",
+      -4390
+     ],
+     [
+      "2026-07-27",
+      -4079
+     ],
+     [
+      "2026-07-20",
+      -1669
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 509.226078,
+    "margin_mean": 24000.0,
+    "net_per_margin": 0.002156,
+    "stale_legs": 21,
+    "exp_weeks": 6,
+    "b0_same_weeks_net": 80293.0,
+    "b0_net": 61920.42,
+    "b0_n": 26,
+    "boot_p": 0.491935
+   },
+   "post": {
+    "n": 2,
+    "win": 0.5,
+    "net": -1317.95,
+    "per_trade": -658.975,
+    "worst_day": -1675.02,
+    "worst_week": -1675.02,
+    "worst_month": -1317.95,
+    "max_dd": 1675.02,
+    "months_le_13k": 0,
+    "gross_pct": -1.482428,
+    "pf": 0.213174,
+    "stale": 2,
+    "days": 2,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-10-12",
+      -1675
+     ],
+     [
+      "2026-10-19",
+      357
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 542.825012,
+    "margin_mean": 24000.0,
+    "net_per_margin": -0.054915,
+    "stale_legs": 2,
+    "exp_weeks": 0,
+    "b0_same_weeks_net": 5058.41,
+    "b0_net": 5058.41,
+    "b0_n": 2
+   }
+  }
+ },
+ "X1": {
+  "skipped": 0,
+  "periods": {
+   "final": {
+    "n": 26,
+    "win": 0.769231,
+    "net": 65994.51,
+    "per_trade": 2538.250385,
+    "worst_day": -30561.48,
+    "worst_week": -30561.48,
+    "worst_month": -25125.44,
+    "max_dd": 33358.73,
+    "months_le_13k": 1,
+    "gross_pct": 21.911786,
+    "pf": 2.62224,
+    "stale": 10,
+    "days": 26,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-04-06",
+      -30561
+     ],
+     [
+      "2026-04-27",
+      -3586
+     ],
+     [
+      "2026-04-13",
+      -2797
+     ],
+     [
+      "2026-09-21",
+      -2418
+     ],
+     [
+      "2026-09-07",
+      -790
+     ]
+    ],
+    "weeks_le_13k": 1,
+    "credit_mean": 974.813464,
+    "margin_mean": 219212.9025,
+    "net_per_margin": 0.301052,
+    "stale_legs": 11,
+    "exp_weeks": 6,
+    "b0_same_weeks_net": 61920.42,
+    "b0_net": 61920.42,
+    "b0_n": 26,
+    "boot_p": 0.065332
+   },
+   "post": {
+    "n": 2,
+    "win": 1.0,
+    "net": 4837.31,
+    "per_trade": 2418.655,
+    "worst_day": 2282.39,
+    "worst_week": 2282.39,
+    "worst_month": 4837.31,
+    "max_dd": 0.0,
+    "months_le_13k": 0,
+    "gross_pct": 11.565414,
+    "pf": null,
+    "stale": 0,
+    "days": 2,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-10-12",
+      2282
+     ],
+     [
+      "2026-10-19",
+      2555
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 797.675018,
+    "margin_mean": 215437.0725,
+    "net_per_margin": 0.022453,
+    "stale_legs": 0,
+    "exp_weeks": 0,
+    "b0_same_weeks_net": 5058.41,
+    "b0_net": 5058.41,
+    "b0_n": 2
+   }
+  }
+ },
+ "X1W": {
+  "skipped": 3,
+  "periods": {
+   "final": {
+    "n": 23,
+    "win": 0.434783,
+    "net": 3941.79,
+    "per_trade": 171.382174,
+    "worst_day": -6761.91,
+    "worst_week": -6761.91,
+    "worst_month": -5904.2,
+    "max_dd": 8495.49,
+    "months_le_13k": 0,
+    "gross_pct": 10.981596,
+    "pf": 1.24526,
+    "stale": 16,
+    "days": 23,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-04-27",
+      -6762
+     ],
+     [
+      "2026-05-04",
+      -1734
+     ],
+     [
+      "2026-04-13",
+      -1527
+     ],
+     [
+      "2026-07-20",
+      -1213
+     ],
+     [
+      "2026-09-21",
+      -968
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 278.865215,
+    "margin_mean": 15000.0,
+    "net_per_margin": 0.262786,
+    "stale_legs": 24,
+    "exp_weeks": 6,
+    "b0_same_weeks_net": 80293.0,
+    "b0_net": 61920.42,
+    "b0_n": 26,
+    "boot_p": 0.347226
+   },
+   "post": {
+    "n": 2,
+    "win": 0.5,
+    "net": -1539.05,
+    "per_trade": -769.525,
+    "worst_day": -1643.18,
+    "worst_week": -1643.18,
+    "worst_month": -1539.05,
+    "max_dd": 1643.18,
+    "months_le_13k": 0,
+    "gross_pct": -4.114479,
+    "pf": 0.063371,
+    "stale": 2,
+    "days": 2,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-10-12",
+      -1643
+     ],
+     [
+      "2026-10-19",
+      104
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 299.425018,
+    "margin_mean": 15000.0,
+    "net_per_margin": -0.102603,
+    "stale_legs": 2,
+    "exp_weeks": 0,
+    "b0_same_weeks_net": 5058.41,
+    "b0_net": 5058.41,
+    "b0_n": 2
+   }
+  }
+ },
+ "S1": {
+  "skipped": 0,
+  "periods": {
+   "final": {
+    "n": 26,
+    "win": 0.692308,
+    "net": 52601.81,
+    "per_trade": 2023.146538,
+    "worst_day": -31695.64,
+    "worst_week": -31695.64,
+    "worst_month": -32436.04,
+    "max_dd": 37925.74,
+    "months_le_13k": 2,
+    "gross_pct": 8.456045,
+    "pf": 1.828,
+    "stale": 6,
+    "days": 26,
+    "stops": 1,
+    "worst5": [
+     [
+      "2026-04-06",
+      -31696
+     ],
+     [
+      "2026-09-28",
+      -12039
+     ],
+     [
+      "2026-04-27",
+      -6904
+     ],
+     [
+      "2026-04-13",
+      -6230
+     ],
+     [
+      "2026-09-21",
+      -2946
+     ]
+    ],
+    "weeks_le_13k": 1,
+    "credit_mean": 1209.146147,
+    "margin_mean": 219212.9025,
+    "net_per_margin": 0.239958,
+    "stale_legs": 8,
+    "exp_weeks": 6,
+    "b0_same_weeks_net": 61920.42,
+    "b0_net": 61920.42,
+    "b0_n": 26,
+    "boot_p": 0.13467
+   },
+   "post": {
+    "n": 2,
+    "win": 1.0,
+    "net": 5058.41,
+    "per_trade": 2529.205,
+    "worst_day": 2250.55,
+    "worst_week": 2250.55,
+    "worst_month": 5058.41,
+    "max_dd": 0.0,
+    "months_le_13k": 0,
+    "gross_pct": 9.214051,
+    "pf": null,
+    "stale": 0,
+    "days": 2,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-10-12",
+      2251
+     ],
+     [
+      "2026-10-19",
+      2808
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 1041.075012,
+    "margin_mean": 215437.0725,
+    "net_per_margin": 0.02348,
+    "stale_legs": 0,
+    "exp_weeks": 0,
+    "b0_same_weeks_net": 5058.41,
+    "b0_net": 5058.41,
+    "b0_n": 2
+   }
+  }
+ },
+ "S2": {
+  "skipped": 0,
+  "periods": {
+   "final": {
+    "n": 26,
+    "win": 0.653846,
+    "net": 59571.64,
+    "per_trade": 2291.216923,
+    "worst_day": -34490.2,
+    "worst_week": -34490.2,
+    "worst_month": -29071.85,
+    "max_dd": 40720.3,
+    "months_le_13k": 1,
+    "gross_pct": 9.860469,
+    "pf": 2.124813,
+    "stale": 5,
+    "days": 26,
+    "stops": 7,
+    "worst5": [
+     [
+      "2026-04-06",
+      -34490
+     ],
+     [
+      "2026-04-13",
+      -6230
+     ],
+     [
+      "2026-08-24",
+      -4098
+     ],
+     [
+      "2026-07-20",
+      -2632
+     ],
+     [
+      "2026-09-28",
+      -2590
+     ]
+    ],
+    "weeks_le_13k": 1,
+    "credit_mean": 1209.146147,
+    "margin_mean": 219212.9025,
+    "net_per_margin": 0.271752,
+    "stale_legs": 7,
+    "exp_weeks": 6,
+    "b0_same_weeks_net": 61920.42,
+    "b0_net": 61920.42,
+    "b0_n": 26,
+    "boot_p": 0.107731
+   },
+   "post": {
+    "n": 2,
+    "win": 1.0,
+    "net": 5058.41,
+    "per_trade": 2529.205,
+    "worst_day": 2250.55,
+    "worst_week": 2250.55,
+    "worst_month": 5058.41,
+    "max_dd": 0.0,
+    "months_le_13k": 0,
+    "gross_pct": 9.214051,
+    "pf": null,
+    "stale": 0,
+    "days": 2,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-10-12",
+      2251
+     ],
+     [
+      "2026-10-19",
+      2808
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 1041.075012,
+    "margin_mean": 215437.0725,
+    "net_per_margin": 0.02348,
+    "stale_legs": 0,
+    "exp_weeks": 0,
+    "b0_same_weeks_net": 5058.41,
+    "b0_net": 5058.41,
+    "b0_n": 2
+   }
+  }
+ },
+ "F1": {
+  "skipped": 16,
+  "periods": {
+   "final": {
+    "n": 11,
+    "win": 0.727273,
+    "net": 46992.93,
+    "per_trade": 4272.084545,
+    "worst_day": -2945.55,
+    "worst_week": -2945.55,
+    "worst_month": -4746.59,
+    "max_dd": 5665.61,
+    "months_le_13k": 0,
+    "gross_pct": 19.785795,
+    "pf": 6.704445,
+    "stale": 1,
+    "days": 11,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-09-21",
+      -2946
+     ],
+     [
+      "2026-09-28",
+      -2720
+     ],
+     [
+      "2026-07-27",
+      -2572
+     ],
+     [
+      "2026-09-07",
+      919
+     ],
+     [
+      "2026-10-05",
+      2047
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 932.881813,
+    "margin_mean": 217635.564545,
+    "net_per_margin": 0.215925,
+    "stale_legs": 1,
+    "exp_weeks": 5,
+    "b0_same_weeks_net": 46992.93,
+    "b0_net": 61920.42,
+    "b0_n": 26,
+    "boot_p": 0.005228,
+    "skip_twin_p": 0.203399
+   },
+   "post": {
+    "n": 1,
+    "win": 1.0,
+    "net": 2807.86,
+    "per_trade": 2807.86,
+    "worst_day": 2807.86,
+    "worst_week": 2807.86,
+    "worst_month": 2807.86,
+    "max_dd": 0.0,
+    "months_le_13k": 0,
+    "gross_pct": 11.741158,
+    "pf": null,
+    "stale": 0,
+    "days": 1,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-10-19",
+      2808
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 849.150024,
+    "margin_mean": 215909.655,
+    "net_per_margin": 0.013005,
+    "stale_legs": 0,
+    "exp_weeks": 0,
+    "b0_same_weeks_net": 2807.86,
+    "b0_net": 5058.41,
+    "b0_n": 2
+   }
+  }
+ },
+ "F2": {
+  "skipped": 2,
+  "periods": {
+   "final": {
+    "n": 24,
+    "win": 0.708333,
+    "net": 53364.07,
+    "per_trade": 2223.502917,
+    "worst_day": -31695.64,
+    "worst_week": -31695.64,
+    "worst_month": -32436.04,
+    "max_dd": 37925.74,
+    "months_le_13k": 1,
+    "gross_pct": 12.67118,
+    "pf": 2.036395,
+    "stale": 5,
+    "days": 24,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-04-06",
+      -31696
+     ],
+     [
+      "2026-04-27",
+      -6904
+     ],
+     [
+      "2026-04-13",
+      -6230
+     ],
+     [
+      "2026-09-21",
+      -2946
+     ],
+     [
+      "2026-07-27",
+      -2572
+     ]
+    ],
+    "weeks_le_13k": 1,
+    "credit_mean": 1238.533327,
+    "margin_mean": 219224.70375,
+    "net_per_margin": 0.243422,
+    "stale_legs": 7,
+    "exp_weeks": 5,
+    "b0_same_weeks_net": 53364.07,
+    "b0_net": 61920.42,
+    "b0_n": 26,
+    "boot_p": 0.117268,
+    "skip_twin_p": 0.593322
+   },
+   "post": {
+    "n": 2,
+    "win": 1.0,
+    "net": 5058.41,
+    "per_trade": 2529.205,
+    "worst_day": 2250.55,
+    "worst_week": 2250.55,
+    "worst_month": 5058.41,
+    "max_dd": 0.0,
+    "months_le_13k": 0,
+    "gross_pct": 9.214051,
+    "pf": null,
+    "stale": 0,
+    "days": 2,
+    "stops": 0,
+    "worst5": [
+     [
+      "2026-10-12",
+      2251
+     ],
+     [
+      "2026-10-19",
+      2808
+     ]
+    ],
+    "weeks_le_13k": 0,
+    "credit_mean": 1041.075012,
+    "margin_mean": 215437.0725,
+    "net_per_margin": 0.02348,
+    "stale_legs": 0,
+    "exp_weeks": 0,
+    "b0_same_weeks_net": 5058.41,
+    "b0_net": 5058.41,
+    "b0_n": 2
+   }
+  }
+ },
+ "_meta": {
+  "phase": "final",
+  "run": "2026-10-26T18:21:27+00:00",
+  "f1_ratio_median_all": 1.198119,
+  "f1_kept": 12,
+  "f2_flagged": 2
+ }
+}

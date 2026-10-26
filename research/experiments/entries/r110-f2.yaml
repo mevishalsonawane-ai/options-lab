@@ -1,0 +1,24 @@
+id: r110-f2
+title: R110 F2 skip after a 2-sigma day on IraThinker's BANKNIFTY Monday strangle
+family: option-structure
+date: '2026-10-26'
+doc: research/HUNT_R110_STRANGLE.md
+hypothesis: 'skip fresh turbulence (IraThinker''s aftershock rule) keeps the R109 strangle profitable and inside Boss''s account rule at 1 lot. Gates: net > 0 and worst month >= -Rs 13,000 and drawdown < Rs 40,000 in design, walk-forward and final; design bootstrap p < 0.05 (filters also a random-skip twin); BH q <= 0.10 over 14,261 tests; >= 40 design / 15 final weeks.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 26 Oct 2026; R109's R51 Amendment A clean MONTH stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R110 (B0 already read by R109); 14-19 Oct descriptive
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: none directional; strikes off the index spot at 09:30; index daily returns as a filter'
+model_or_rule: R109 strangle-bn with F2 skip after a 2-sigma day
+settings: research/hunt/r110_strangle/r110study.py TESTS; PREREG.md section 2
+prereg: research/hunt/r110_strangle/PREREG.md
+variants_tried: 1
+results:
+  summary: 'History: 135 weeks, win 70%, net Rs 83,179 (B0 same weeks Rs 83,179), worst month -Rs 15,694, max DD Rs 38,454. Design: 62 weeks, win 74%, net Rs 164,064 (B0 same weeks Rs 164,064), worst month -Rs 24,307, max DD Rs 43,283. Walk-forward: 43 weeks, win 77%, net Rs 167,888 (B0 same weeks Rs 167,888), worst month -Rs 10,289, max DD Rs 43,283. Final: 24 weeks, win 71%, net Rs 53,364 (B0 same weeks Rs 53,364), worst month -Rs 32,436, max DD Rs 37,926. Post-13 Oct: 2 weeks, win 100%, net Rs 5,058 (B0 same weeks Rs 5,058), worst month Rs 5,058, max DD Rs 0. BH q 1. Fails: design: worst month Rs -24,307 below -Rs 13,000; design: drawdown Rs 43,283 >= Rs 40,000; walk-forward: drawdown Rs 43,283 >= Rs 40,000.'
+  costs: dated Zerodha charges, liq slippage, next-minute fills, stale legs repriced by BS at the last implied vol, exercise STT on long legs settled in the money
+holdout_read: true
+verdict: rejected
+notes: Research only; the app does not sell options; nothing changes on paper or live.

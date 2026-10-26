@@ -1,0 +1,101 @@
+{
+ "tests": {
+  "W1": {
+   "p": 0.35082,
+   "fails": [
+    "final: net -13,724 not above 0",
+    "design bootstrap p 0.351 >= 0.05",
+    "BH q 1 > 0.10 (m = 14,261)"
+   ],
+   "q": 1.0,
+   "q_r110": 0.400937,
+   "verdict": "FAIL"
+  },
+  "W2": {
+   "p": 0.169179,
+   "fails": [
+    "design bootstrap p 0.169 >= 0.05",
+    "BH q 1 > 0.10 (m = 14,261)"
+   ],
+   "q": 1.0,
+   "q_r110": 0.338358,
+   "verdict": "FAIL"
+  },
+  "X1": {
+   "p": 0.019644,
+   "fails": [
+    "design: worst month Rs -26,790 below -Rs 13,000",
+    "final: worst month Rs -25,125 below -Rs 13,000",
+    "BH q 1 > 0.10 (m = 14,261)"
+   ],
+   "q": 1.0,
+   "q_r110": 0.052488,
+   "verdict": "FAIL"
+  },
+  "X1W": {
+   "p": 0.313796,
+   "fails": [
+    "design bootstrap p 0.314 >= 0.05",
+    "BH q 1 > 0.10 (m = 14,261)"
+   ],
+   "q": 1.0,
+   "q_r110": 0.400937,
+   "verdict": "FAIL"
+  },
+  "S1": {
+   "p": 0.019683,
+   "fails": [
+    "design: worst month Rs -31,620 below -Rs 13,000",
+    "design: drawdown Rs 42,583 >= Rs 40,000",
+    "final: worst month Rs -32,436 below -Rs 13,000",
+    "BH q 1 > 0.10 (m = 14,261)"
+   ],
+   "q": 1.0,
+   "q_r110": 0.052488,
+   "verdict": "FAIL"
+  },
+  "S2": {
+   "p": 0.005646,
+   "fails": [
+    "design: worst month Rs -18,247 below -Rs 13,000",
+    "walk-forward: worst month Rs -18,247 below -Rs 13,000",
+    "final: worst month Rs -29,072 below -Rs 13,000",
+    "final: drawdown Rs 40,720 >= Rs 40,000",
+    "BH q 1 > 0.10 (m = 14,261)"
+   ],
+   "q": 1.0,
+   "q_r110": 0.045168,
+   "verdict": "FAIL"
+  },
+  "F1": {
+   "p": 0.838551,
+   "fails": [
+    "design: worst month Rs -31,283 below -Rs 13,000",
+    "walk-forward: worst month Rs -31,283 below -Rs 13,000",
+    "design bootstrap p 0.25 >= 0.05",
+    "design random-skip twin p 0.839 >= 0.05",
+    "design weeks 35 < 40",
+    "final weeks 11 < 15",
+    "BH q 1 > 0.10 (m = 14,261)"
+   ],
+   "q": 1.0,
+   "q_r110": 0.838551,
+   "verdict": "FAIL"
+  },
+  "F2": {
+   "p": 0.275859,
+   "fails": [
+    "design: worst month Rs -24,307 below -Rs 13,000",
+    "design: drawdown Rs 43,283 >= Rs 40,000",
+    "walk-forward: drawdown Rs 43,283 >= Rs 40,000",
+    "final: worst month Rs -32,436 below -Rs 13,000",
+    "design random-skip twin p 0.276 >= 0.05",
+    "BH q 1 > 0.10 (m = 14,261)"
+   ],
+   "q": 1.0,
+   "q_r110": 0.400937,
+   "verdict": "FAIL"
+  }
+ },
+ "m": 14261
+}
