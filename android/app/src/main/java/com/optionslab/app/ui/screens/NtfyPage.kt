@@ -161,13 +161,18 @@ internal fun NtfyContent(v: NtfyArm.View, st: NtfyReader.Status, cfg: NtfyReader
                     }
                 }
                 Note("A stop always: the message's, else 20% under the fill. Target: the message's, else 40% over the fill. Out by 15:15 " +
-                    "(15:05 on expiry day). It only buys options; sell, exit, close or book closes what it holds on that index, never a short. " +
+                    "(15:05 on expiry day). A signal's own premium stop, target or hold (IraThinker's mom60: 30% stop, 60 minutes) is used only " +
+                    "where it is tighter or earlier - never a wider stop. Sales and multi-leg trades (a strangle) are shown as information. " +
+                    "It only buys options; sell, exit, close or book closes what it holds on that index, never a short. " +
                     "The kill switch, the day lock, the account guard and the same-direction cap all apply.")
             }
         }
         if (v.open.isNotEmpty()) LedgerCard(Modifier.padding(top = 10.dp).testTag("ntfy-open"), title = "Open") {
             v.open.forEach { o ->
                 Text("${o.symbol} ${o.qty} @ ${NtfyParser.num(o.entry)} · stop ${NtfyParser.num(o.stop)}" + (o.target?.let { " · target ${NtfyParser.num(it)}" } ?: "") +
+                    // 26 Oct (IraThinker review): the source rule's exit time and its strategy ("IraThinker mom60"), paper only when marked.
+                    (o.exitAt?.let { " · out by %02d:%02d".format(java.util.Locale.ENGLISH, it.hour, it.minute) } ?: "") +
+                    (o.strategy?.let { " · $it" } ?: "") + (if (o.paperOnly) " (a paper signal)" else "") +
                     (if (o.legacy) " · moved from the removed Telegram arm" else ""), style = Type.bodySmall.copy(color = p.ink))
             }
         }
@@ -179,8 +184,12 @@ internal fun NtfyContent(v: NtfyArm.View, st: NtfyReader.Status, cfg: NtfyReader
             v.alerts.take(50).forEachIndexed { i, a ->
                 if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
                 Column(Modifier.testTag("ntfy-alert-$i").semantics { contentDescription = "Alert ${a.state}" }) {
-                    Text("%02d:%02d %s".format(java.util.Locale.ENGLISH, a.at.hour, a.at.minute, a.at.toLocalDate()) + " · " + a.state,
-                        style = Type.label.copy(color = if (a.state == NtfyArm.TRADED) p.oxblood else p.inkSoft, fontSize = 11.sp))
+                    // 26 Oct (IraThinker review): information (a sale, several legs, a price alert) is shown as a neutral note, not a refusal.
+                    val info = a.state == NtfyArm.INFO
+                    Text("%02d:%02d %s".format(java.util.Locale.ENGLISH, a.at.hour, a.at.minute, a.at.toLocalDate()) + " · " +
+                        (if (info) "ⓘ information" else a.state),
+                        style = Type.label.copy(color = if (a.state == NtfyArm.TRADED) p.oxblood else if (info) p.brass else p.inkSoft, fontSize = 11.sp),
+                        modifier = if (info) Modifier.testTag("ntfy-alert-info-$i") else Modifier)
                     Text(a.text, style = Type.bodySmall.copy(color = p.ink))
                     if (a.why.isNotBlank()) Text(a.why, style = Type.bodySmall.copy(color = p.inkSoft))
                     if (a.timingWords.isNotEmpty()) Text(a.timingWords + " after it was sent", style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp),

@@ -120,6 +120,55 @@ object NtfyRules {
     /** The target for a fill at [fill]: the message's [given] when above the fill, else [DEFAULT_TARGET] over it. */
     fun target(given: Double?, fill: Double): Double = given?.takeIf { it > fill } ?: round2(tickDown(fill * (1 + DEFAULT_TARGET)) + 0.05)
 
+    /**
+     * 26 Oct (IraThinker review): a trade's exits for a fill at [fill] at [filledAt]. IraAlgo's own first ([stop], [target], the
+     * square-off [squareOff]); then the source rule's ([NtfyParser.Parsed.Buy.srcStopPct] / [NtfyParser.Parsed.Buy.srcStop],
+     * [NtfyParser.Parsed.Buy.srcTarget], [NtfyParser.Parsed.Buy.exitBy], [NtfyParser.Parsed.Buy.holdMin]) where it is TIGHTER or
+     * EARLIER - risk only ever lowers: a source stop wider than IraAlgo's, a target further away, or a time past the square-off is
+     * not used, and [notes] say so. With no source exits, today's exits exactly.
+     */
+    data class Exits(val stop: Double, val ours: Boolean, val target: Double, val exitAt: LocalDateTime?, val notes: List<String>)
+
+    fun sourceExits(p: NtfyParser.Parsed.Buy, fill: Double, filledAt: LocalDateTime, squareOff: LocalDateTime, s: Settings): Exits {
+        val notes = ArrayList<String>()
+        var (stop, ours) = stop(p.stop, p.stopPct, fill, s)
+        val src = p.srcStopPct?.takeIf { it > 0 && it < 100 }?.let { round2(tickDown(fill * (1 - it / 100))).coerceAtLeast(0.05) }
+            ?: p.srcStop?.takeIf { it > 0 && it < fill }
+        val srcWords = p.srcStopPct?.let { "${NtfyParser.num(it)}%" } ?: p.srcStop?.let { NtfyParser.num(it) }
+        if (src != null) {
+            if (src > stop) { stop = src; ours = false; notes += "the source rule's stop ($srcWords) used" }
+            else notes += "the source rule's stop ($srcWords, ${NtfyParser.num(src)}) is wider than IraAlgo's own (${NtfyParser.num(stop)}): IraAlgo's kept"
+        }
+        var target = target(p.target, fill)
+        p.srcTarget?.takeIf { it > fill }?.let { t ->
+            if (t < target) { target = t; notes += "the source rule's target (${NtfyParser.num(t)}) used" }
+            else notes += "the source rule's target (${NtfyParser.num(t)}) is further than IraAlgo's (${NtfyParser.num(target)}): IraAlgo's kept"
+        }
+        val times = listOfNotNull(p.exitBy, p.holdMin?.let { filledAt.plusMinutes(it.toLong()) })
+        var exitAt = times.minOrNull()
+        if (exitAt != null && !exitAt.isBefore(squareOff)) {
+            notes += "the source rule's exit time (${hm(exitAt)}) is not before the square-off (${hm(squareOff)}): the square-off comes first"
+            exitAt = null
+        } else if (exitAt != null) notes += "out by ${hm(exitAt)} (the source rule's hold)"
+        return Exits(stop, ours, target, exitAt, notes)
+    }
+
+    private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
+
+    /**
+     * 26 Oct (IraThinker review, the INFY 1130 CE refusal): why a stock signal's [strike] is not bought - it is not on the exchange's
+     * listed strike grid for [expiry] - with the listed strikes either side of it, and, when the sender said so ([guessed]), that its
+     * strike was estimated.
+     */
+    fun offGrid(index: String, strike: Double, right: Right, expiry: LocalDate, listed: Collection<Double>, guessed: Boolean): String {
+        val below = listed.filter { it < strike }.maxOrNull(); val above = listed.filter { it > strike }.minOrNull()
+        val near = listOfNotNull(below, above).joinToString(" and ") { NtfyParser.num(it) }
+        return "not traded: $index ${NtfyParser.num(strike)} ${right.name} is not listed for $expiry - not on the exchange's strike grid" +
+            (if (near.isNotEmpty()) " (listed either side: $near)" else "") +
+            (if (guessed) "; the message says this strike is estimated by the sender, not read from the exchange" else "") +
+            ". Never another strike in its place."
+    }
+
     /** The lots sold at T1 under [Exit.HALF_COST] (0 for 1 lot: then only the stop moves to cost). */
     fun halfLots(lots: Int): Int = lots / 2
 

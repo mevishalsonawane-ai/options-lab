@@ -66,7 +66,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
-        // 26 Oct (research R105: the paper Donchian trades against the backtest): newest of all.
+        // 26 Oct (the IraThinker review, irathinker-app/REVIEW_2026-10-26.md): newest of all.
+        Entry("2026-10-26-ntfy-irathinker-fit", OCT26, "ntfy alerts follow your alert app's own exits",
+            "Your alert app's mom60 trades now follow its own stop and hold, only where tighter or earlier. " +
+                "This app's stop stays when the signal's is wider: never a wider stop. " +
+                "These trades are labelled mom60, a paper signal, and not a proven strategy. " +
+                "A strangle or any sale is shown as information: this app only buys options. " +
+                "A stock strike off the exchange's strike grid is refused, saying when the sender estimated it. " +
+                "The stale check uses the signal's sending time, as before.",
+            "Settings → Automation → ntfy alerts → Alerts and Open",
+            ask = "what did ntfy say"),
+        // 26 Oct (research R105: the paper Donchian trades against the backtest).
         Entry("2026-10-26-donchian-paper-fixes", OCT26, "Donchian paper trades follow the research closer",
             "A paper stop or lock now books at its level, as a resting order would fill, not the later price. " +
                 "Stops and locks are checked every 15 seconds even when prices are slow to arrive. " +

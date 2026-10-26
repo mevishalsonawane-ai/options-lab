@@ -70,6 +70,20 @@ object NtfyParser {
             val sentAt: java.time.LocalDateTime? = null, val signalId: String? = null, val from: String? = null,
             /** 25 Oct (Boss: "add normal stocks"): [index] is an NSE F&O stock (a JSON signal's "X.NS"), its option bought. */
             val stock: Boolean = false,
+            /**
+             * 26 Oct (IraThinker review): the source rule's own exits, on the option's PREMIUM. [srcStopPct] its stop as a percent under
+             * the fill (mom60's "premiumStop" over its "premium": 30%), or [srcStop] as a premium when no premium came to convert it;
+             * [srcTarget] a premium target; [exitBy] the time it is out ("exitBy") and [holdMin] its hold in minutes from the fill.
+             * The arm only ever makes its own exits TIGHTER or EARLIER with them ([NtfyRules.sourceExits]): never a wider stop.
+             */
+            val srcStopPct: Double? = null, val srcStop: Double? = null, val srcTarget: Double? = null,
+            val exitBy: java.time.LocalDateTime? = null, val holdMin: Int? = null,
+            /** The source strategy for the record ("IraThinker mom60"), or null. */
+            val strategy: String? = null,
+            /** The sender marked it "paper": true: paper only, never told to the live path. */
+            val paper: Boolean = false,
+            /** The sender said its strike is estimated (guessed by a price band), not read from the exchange's list. */
+            val strikeGuess: Boolean = false,
         ) : Parsed() {
             /** "NIFTY 24500 CE (weekly) at market, stop 90, target 180". */
             fun line(): String = listOfNotNull(index, strike?.let { num(it) } ?: pick?.label ?: "strike by the rule", right.name).joinToString(" ") +
@@ -78,7 +92,16 @@ object NtfyParser {
                 (if (trig == Trig.MARKET || entry == null) " at market" else " ${trig.words} ${num(entry)}") +
                 ", stop " + (stop?.let { num(it) } ?: stopPct?.let { "${num(it)}%" } ?: "the arm's") +
                 ", target " + (target?.let { num(it) } ?: "the arm's") +
-                (if (indexStop != null || indexTarget != null) "; index stop ${indexStop?.let { num(it) } ?: "-"}, index target ${indexTarget?.let { num(it) } ?: "-"}" else "")
+                (if (indexStop != null || indexTarget != null) "; index stop ${indexStop?.let { num(it) } ?: "-"}, index target ${indexTarget?.let { num(it) } ?: "-"}" else "") +
+                sourceWords()
+
+            /** 26 Oct: "; the source rule: stop 30%, out by 10:45 · IraThinker mom60 (paper only)", or "" when it carries none. */
+            fun sourceWords(): String {
+                val rule = listOfNotNull(srcStopPct?.let { "stop ${num(it)}%" } ?: srcStop?.let { "stop ${num(it)}" }, srcTarget?.let { "target ${num(it)}" },
+                    exitBy?.let { "out by %02d:%02d".format(Locale.ENGLISH, it.hour, it.minute) }, holdMin?.let { "hold $it min" })
+                val tail = listOfNotNull(strategy, if (paper) "a paper signal" else null, if (strikeGuess) "strike estimated by the sender" else null)
+                return (if (rule.isEmpty()) "" else "; the source rule: " + rule.joinToString(", ")) + (if (tail.isEmpty()) "" else " · " + tail.joinToString(" · "))
+            }
         }
 
         /** Close what the arm holds on [index] (only [right] when named). Reduce-only. */
@@ -88,7 +111,20 @@ object NtfyParser {
 
         /** Not traded, and why. */
         data class Refused(val reason: String) : Parsed()
+
+        /**
+         * 26 Oct (IraThinker review): information the arm cannot trade and never refuses as an error - a sell-side or multi-leg
+         * trade (SELL_STRANGLE: IraAlgo only buys options), a price alert, the market's context. Read once, shown, never traded.
+         */
+        data class Info(val reason: String) : Parsed()
     }
+
+    /** The JSON sides that close what the arm holds (reduce-only). */
+    private val EXIT_SIDES = setOf("EXIT", "SELL", "CLOSE", "EXIT_CALL", "SELL_CALL", "CLOSE_CALL", "EXIT_CE", "SELL_CE", "CLOSE_CE",
+        "EXIT_PUT", "SELL_PUT", "CLOSE_PUT", "EXIT_PE", "SELL_PE", "CLOSE_PE")
+
+    /** What an info message says when the sender asks for a sale or several legs (26 Oct). */
+    const val ONLY_BUYS = "information, not traded: IraAlgo only buys options"
 
     /** A signal's premium may have risen this much before the buy (more: not chased). */
     const val UPTO = 0.05
@@ -140,6 +176,9 @@ object NtfyParser {
         if (o["test"] != null && o["test"] != false) return refuse("a test signal (\"test\": ${o["test"]}): read, never traded")
         fun dbl(m: Map<*, *>?, k: String): Double? = (m?.get(k) as? Number)?.toDouble()?.takeIf { it.isFinite() }
         fun str(m: Map<*, *>?, k: String): String? = (m?.get(k) as? String)?.trim()?.takeIf { it.isNotEmpty() }
+        // 26 Oct (IraThinker review): what can never be bought is information, not an error: a sale, a multi-leg trade, a price
+        // alert, the market's context. Read once and shown; never traded.
+        info(o, str(o, "strategy")?.uppercase(Locale.ROOT), str(o, "side")?.uppercase(Locale.ROOT), str(o, "symbol"), dbl(o, "level"))?.let { return it }
         val id = str(o, "signalId")
         val a = indexOf(str(o, "yahooSymbol")); val b = indexOf(str(o, "symbol"))
         val named = listOfNotNull(str(o, "yahooSymbol"), str(o, "symbol"))
@@ -157,8 +196,8 @@ object NtfyParser {
         val kindRight = when (kind) { null -> null; "CE", "CALL" -> Right.CE; "PE", "PUT" -> Right.PE; else -> return refuse("an option kind not understood ($kind)") }
         when (side) {
             "EXIT", "SELL", "CLOSE" -> return Parsed.Exit(u, kindRight, id)
-            "EXIT_CALL", "SELL_CALL", "CLOSE_CALL" -> return if (kindRight == Right.PE) refuse("an exit of a call whose kind is PE") else Parsed.Exit(u, Right.CE, id)
-            "EXIT_PUT", "SELL_PUT", "CLOSE_PUT" -> return if (kindRight == Right.CE) refuse("an exit of a put whose kind is CE") else Parsed.Exit(u, Right.PE, id)
+            "EXIT_CALL", "SELL_CALL", "CLOSE_CALL", "EXIT_CE", "SELL_CE", "CLOSE_CE" -> return if (kindRight == Right.PE) refuse("an exit of a call whose kind is PE") else Parsed.Exit(u, Right.CE, id)
+            "EXIT_PUT", "SELL_PUT", "CLOSE_PUT", "EXIT_PE", "SELL_PE", "CLOSE_PE" -> return if (kindRight == Right.CE) refuse("an exit of a put whose kind is CE") else Parsed.Exit(u, Right.PE, id)
         }
         val right = when (side) {
             "BUY_CALL", "BUY_CE", "LONG" -> Right.CE
@@ -181,11 +220,93 @@ object NtfyParser {
         if (!below(stop, entry)) return refuse("the index stop (${num(stop!!)}) is on the wrong side of the entry (${num(entry!!)}) for a ${right.name}")
         if (!below(entry, t1)) return refuse("the index target (${num(t1!!)}) is on the wrong side of the entry (${num(entry!!)}) for a ${right.name}")
         if (!below(stop, t1)) return refuse("the index stop and target are on the wrong sides for a ${right.name}")
-        val at = str(o, "tsIST")?.let { runCatching { java.time.OffsetDateTime.parse(it).atZoneSameInstant(com.optionslab.engine.IST).toLocalDateTime() }.getOrNull() }
+        // tsIST: IraThinker stamps it when it SENDS (SystemFeed.nowIst, moments before the post); the arm counts the earlier of it
+        // and ntfy's own time for the stale rule.
+        val at = str(o, "tsIST")?.let { ist(it) }
         val from = listOfNotNull(str(o, "source"), (o["version"] as? Number)?.let { "v${it.toInt()}" }, str(o, "strategy"),
             dbl(o, "score")?.let { "score ${num(it)}" }).joinToString(" · ").ifEmpty { null }
+        // 26 Oct (IraThinker review): the source rule's own exits on the premium. A field that is there but not understood refuses
+        // the signal (strict: never a guess about how it exits).
+        fun bad(k: String) = o.containsKey(k) && o[k] != null && dbl(o, k) == null
+        for (k in listOf("premiumStop", "premiumStopPct", "stopPct", "premiumTarget", "holdMin", "holdMinutes"))
+            if (bad(k)) return refuse("a $k not understood (${o[k]})")
+        val pStop = dbl(o, "premiumStop")
+        val pPct = dbl(o, "premiumStopPct") ?: dbl(o, "stopPct")
+        val pTarget = dbl(o, "premiumTarget")
+        if (pStop != null && pStop <= 0) return refuse("a premiumStop not understood (${num(pStop)})")
+        if (pPct != null && (pPct <= 0 || pPct >= 100)) return refuse("the stop percentage must be between 0 and 100 (${num(pPct)})")
+        if (pTarget != null && pTarget <= 0) return refuse("a premiumTarget not understood (${num(pTarget)})")
+        if (pStop != null && premium != null && pStop >= premium) return refuse("the premium stop (${num(pStop)}) is not below the premium (${num(premium)})")
+        if (pTarget != null && premium != null && pTarget <= premium) return refuse("the premium target (${num(pTarget)}) is not above the premium (${num(premium)})")
+        if (pStop != null && pTarget != null && pStop >= pTarget) return refuse("the premium stop is not below the premium target")
+        // The stop as a percent of the premium the sender priced (mom60: 30%), applied to IraAlgo's own fill; a premium stop with no
+        // premium to compare stays a premium level.
+        val srcPct = pPct ?: if (pStop != null && premium != null) round2((1 - pStop / premium) * 100) else null
+        val srcStop = if (srcPct == null) pStop else null
+        val hold = (dbl(o, "holdMin") ?: dbl(o, "holdMinutes"))?.let { h ->
+            if (h != Math.floor(h) || h < 1 || h > 375) return refuse("a hold not understood (${num(h)} minutes; a whole number from 1 to 375)")
+            h.toInt()
+        }
+        val exitBy = if (o.containsKey("exitBy") && o["exitBy"] != null) {
+            val raw = o["exitBy"] as? String
+            raw?.trim()?.let { ist(it) } ?: return refuse("an exitBy not understood (${o["exitBy"]})")
+        } else null
+        if (exitBy != null && at != null && !exitBy.isAfter(at)) return refuse("its exitBy ($exitBy) is not after its own time ($at)")
+        val label = str(o, "strategy")?.let { st -> listOfNotNull(str(o, "source"), strategyWords(st)).joinToString(" ") }
+        val paper = o.containsKey("paper") && o["paper"] != null && o["paper"] != false
+        val guess = guessed(opt) || guessed(o)
         return Parsed.Buy(u, right, strike, expiry, null, if (premium != null) Trig.UPTO else Trig.MARKET, premium, null, null, null, null,
-            indexStop = stop, indexTarget = t1, sentAt = at, signalId = id, from = from, stock = stockSym != null)
+            indexStop = stop, indexTarget = t1, sentAt = at, signalId = id, from = from, stock = stockSym != null,
+            srcStopPct = srcPct, srcStop = srcStop, srcTarget = pTarget, exitBy = exitBy, holdMin = hold, strategy = label, paper = paper,
+            strikeGuess = guess)
+    }
+
+    /** An ISO time with its offset ("2026-10-26T10:45:00+05:30") as IST, or null. */
+    private fun ist(s: String): java.time.LocalDateTime? =
+        runCatching { java.time.OffsetDateTime.parse(s).atZoneSameInstant(com.optionslab.engine.IST).toLocalDateTime() }.getOrNull()
+
+    private fun round2(x: Double) = Math.round(x * 100) / 100.0
+
+    /** A sender's strategy name in words for the record: "MOM60" -> "mom60", "ORB_BREAKOUT" -> "ORB breakout". */
+    fun strategyWords(s: String): String = when (s.uppercase(Locale.ROOT)) {
+        "MOM60" -> "mom60"
+        "ORB_BREAKOUT" -> "ORB breakout"
+        "ORB_BREAKDOWN" -> "ORB breakdown"
+        "GAP_FADE" -> "gap fade"
+        "MANUAL" -> "manual share"
+        else -> s
+    }
+
+    /**
+     * 26 Oct (IraThinker review, the INFY 1130 CE refusal): the sender says its strike is an estimate, not read from the exchange's
+     * list: "strikeEstimated": true, "strikeVerified": false, or "strikeSource" "estimate" / "estimated" / "guess" / "guessed" /
+     * "band" (on the option block or the signal).
+     */
+    private fun guessed(m: Map<*, *>?): Boolean {
+        if (m == null) return false
+        if (m["strikeEstimated"] == true || m["strikeGuessed"] == true || m["strikeVerified"] == false) return true
+        val src = (m["strikeSource"] as? String)?.trim()?.lowercase(Locale.ROOT) ?: return false
+        return src in setOf("estimate", "estimated", "guess", "guessed", "band", "price band")
+    }
+
+    /**
+     * 26 Oct (IraThinker review): a message that can never be bought, as information (null: read on). A sale or a multi-leg trade
+     * (SELL_STRANGLE, a straddle, a spread, a condor, any "legs"): IraAlgo only buys options. A SELL / SELL_CALL / SELL_PUT side stays
+     * an exit of what the arm holds. IraThinker's price alert and market-flush context are not trade signals.
+     */
+    private fun info(o: Map<*, *>, strategy: String?, side: String?, symbol: String?, level: Double?): Parsed.Info? {
+        // An exit (EXIT / SELL / CLOSE, of a call or a put) is never information: it only lowers risk.
+        if (side in EXIT_SIDES) return null
+        val multi = o["legs"] is List<*> || listOf("STRANGLE", "STRADDLE", "SPREAD", "CONDOR", "BUTTERFLY").any { w ->
+            side?.contains(w) == true || strategy?.contains(w) == true }
+        val sale = side != null && (side.startsWith("SELL_") || side.startsWith("SHORT_")) 
+        return when {
+            multi || sale -> Parsed.Info("$ONLY_BUYS (${side ?: strategy}: " + (if (multi) "a multi-leg" else "a sell-side") + " trade)")
+            strategy == "PRICE_ALERT" -> Parsed.Info("information, not traded: a price alert" +
+                (symbol?.let { " on $it" } ?: "") + (level?.let { " at ${num(it)}" } ?: "") + ", not a trade signal")
+            strategy == "MARKET_FLUSH" -> Parsed.Info("information, not traded: the market's context (many stocks breaking down together), not a trade signal")
+            else -> null
+        }
     }
 
     /** A message longer than this is not one clear order. */

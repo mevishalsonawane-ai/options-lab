@@ -349,6 +349,7 @@ object NtfyReader {
                         is NtfyParser.Parsed.Buy -> "would buy: ${p.line()}"
                         is NtfyParser.Parsed.Exit -> "would close: ${p.line()}"
                         is NtfyParser.Parsed.Refused -> "not a trade: ${p.reason}"
+                        is NtfyParser.Parsed.Info -> p.reason
                     }
                 }
                 "Connected. ${events.size} message(s) in the last hour. The newest:\n$last\nNothing was traded or marked read."
