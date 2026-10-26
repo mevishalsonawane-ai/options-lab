@@ -70,7 +70,7 @@ object WhatsNew {
         Entry("2026-10-26-ntfy-irathinker-fit", OCT26, "ntfy alerts follow your alert app's own exits",
             "Your alert app's mom60 trades now follow its own stop and hold, only where tighter or earlier. " +
                 "This app's stop stays when the signal's is wider: never a wider stop. " +
-                "These trades are labelled mom60, paper only, and not a proven strategy. " +
+                "These trades are labelled mom60, a paper signal, and not a proven strategy. " +
                 "A strangle or any sale is shown as information: this app only buys options. " +
                 "A stock strike off the exchange's strike grid is refused, saying when the sender estimated it. " +
                 "The stale check uses the signal's sending time, as before.",

@@ -100,8 +100,8 @@ object NtfyArm {
         val ref: String = "$SRC:$alertId", val legacy: Boolean = false, val idxStop: Double? = null, val idxTarget: Double? = null,
         /**
          * 26 Oct (IraThinker review): the source rule's exit time ([exitAt]: "exitBy" or the hold, before the square-off), the
-         * source strategy for the record ([strategy], "IraThinker mom60"), and [paperOnly] (the sender marked it paper: never
-         * told to the live path).
+         * source strategy for the record ([strategy], "IraThinker mom60"), and [paperOnly] (the sender marked it "paper": true;
+         * labelled only - its live path is unchanged, decided by its own switch and Boss's PIN).
          */
         val exitAt: LocalDateTime? = null, val strategy: String? = null, val paperOnly: Boolean = false,
     ) {
@@ -830,21 +830,22 @@ object NtfyArm {
             if (p.right == Right.CE) 1 else -1, now, (price - stop).takeIf { it > 0 }, (target - price).takeIf { it > 0 }, premium = true,
             exitAt = ex.exitAt?.toLocalTime()?.takeIf { it.isBefore(NtfyRules.SQ) } ?: NtfyRules.SQ)) }
         // Its live path ([ArmLive], off until Boss switches it on): the same option and lots, a LIMIT 1% over the fill at most, the stop resting.
-        // 26 Oct (IraThinker review): a signal its sender marked "paper": true is never told to the live path (paper only).
-        if (!p.paper) runCatching { ArmLive.entered(ArmLive.Ask(LiveMirror.NTFY_ALERTS, pos.ref, c, 1, qty, price, stop = stop, limit = price * 1.01)) }
+        // 26 Oct (review): a signal marked "paper": true is labelled paper only but still told to the live path as before (whose
+        // own switch and Boss's PIN decide): skipping it would be a new live skip, which CLAUDE.md says must start in shadow.
+        runCatching { ArmLive.entered(ArmLive.Ask(LiveMirror.NTFY_ALERTS, pos.ref, c, 1, qty, price, stop = stop, limit = price * 1.01)) }
         return finish(b, a, TRADED, "bought ${c.symbol} $qty @ ${NtfyParser.num(price)} · paper · stop ${NtfyParser.num(stop)}${if (ours) " (our stop)" else ""}, " +
             "target ${NtfyParser.num(target)}" + (p.from?.let { " · $it" } ?: "") + strategyWords(p) + (if (ex.notes.isEmpty()) "" else " · " + ex.notes.joinToString("; ")))
     }
 
     /**
-     * 26 Oct (IraThinker review): " · IraThinker mom60 (paper only; not a proven strategy - research R110: about breakeven after
+     * 26 Oct (IraThinker review): " · IraThinker mom60 (a paper signal; not a proven strategy - research R110: about breakeven after
      * costs on real options)" for a source strategy; the sender's estimated strike said too. "" for a plain message.
      */
     internal fun strategyWords(p: Parsed.Buy): String {
         val label = p.strategy?.let { st ->
             val r110 = if (st.contains("mom60", ignoreCase = true)) "; research R110: about breakeven after costs on real options" else ""
-            " · $st (" + (if (p.paper) "paper only; " else "") + "not a proven strategy$r110)"
-        } ?: if (p.paper) " · paper only" else ""
+            " · $st (" + (if (p.paper) "a paper signal; " else "") + "not a proven strategy$r110)"
+        } ?: if (p.paper) " · a paper signal" else ""
         return label + if (p.strikeGuess) " · strike estimated by the sender" else ""
     }
 
@@ -899,7 +900,7 @@ object NtfyArm {
             val lots = ((p.qty - p.soldQty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
             // Not while a sale already works for the symbol: a stop put in beside it could open a short on a flat book.
             val again = if (closingWorks(p.symbol)) null else runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, p.stop) }.getOrNull()?.takeIf { it.ok }?.orderId
-                ?.also { runCatching { Strategies.tagOwner("paper:$it", "${NtfyRules.OWNER} · stop") } }
+                ?.also { runCatching { Strategies.tagOwner("paper:$it", "${ownerOf(p)} · stop") } }
             if (again != null) p = p.copy(stopOrderId = again)
         }
         val rule = Exit.of(p.exitRule)
@@ -945,9 +946,12 @@ object NtfyArm {
             val again = if (closingWorks(p.symbol)) null else runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, p.stop) }.getOrNull()?.takeIf { it.ok }?.orderId
             return p.copy(stopOrderId = again)
         }
-        r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${NtfyRules.OWNER} · exit") } }
+        r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${ownerOf(p)} · exit") } }
         return closed(p.copy(stopOrderId = null), f.price, now(), why, chargesOf(r.orderId))
     }
+
+    /** 26 Oct: the owner tag of [p]'s orders, its source strategy with it ("ntfy alerts (paper) · IraThinker mom60"). */
+    private fun ownerOf(p: Pos): String = NtfyRules.OWNER + (p.strategy?.let { " · $it" } ?: "")
 
     /** Whether stop order [id] still rests in the paper book (working or waiting for its trigger). */
     private fun stopResting(id: String?): Boolean {

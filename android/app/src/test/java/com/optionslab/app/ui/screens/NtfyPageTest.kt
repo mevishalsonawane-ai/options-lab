@@ -99,7 +99,7 @@ class NtfyPageTest {
 
     /**
      * 26 Oct (IraThinker review): a strangle is shown as information (a neutral note, not a refusal), and an open IraThinker mom60
-     * trade shows its source rule's exit time, its label and "paper only".
+     * trade shows its source rule's exit time, its label and "a paper signal".
      */
     @Test fun informationIsANeutralNoteAndASourceTradeShowsItsRule() {
         val alerts = listOf(
@@ -109,7 +109,7 @@ class NtfyPageTest {
         val open = NtfyArm.Pos("ntfy", "m1", "NIFTY", "NIFTY26N0225000CE", "CE", 1, 65, 121.0, at, "o1", 96.8, true, "s1", "t1", 169.45, 169.45, false,
             exitAt = at.plusMinutes(60), strategy = "IraThinker mom60", paperOnly = true)
         show(NtfyArm.View(on = true, open = listOf(open), alerts = alerts), NtfyReader.Config("k3J9-q2Lm_8xZpV4rT7wYb", NtfyRules.DEFAULT_SERVER, null, ""))
-        assertTrue(exists("NIFTY26N0225000CE 65 @ 121 · stop 96.8 · target 169.45 · out by 10:28 · IraThinker mom60 (paper only)"))
+        assertTrue(exists("NIFTY26N0225000CE 65 @ 121 · stop 96.8 · target 169.45 · out by 10:28 · IraThinker mom60 (a paper signal)"))
         compose.onNodeWithTag("ntfy-alert-info-0").performScrollTo()
         assertTrue(exists("09:29 2026-10-26 · ⓘ information"))
         assertTrue(!exists("09:29 2026-10-26 · not traded"))

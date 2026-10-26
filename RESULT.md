@@ -18,12 +18,17 @@ through the arm's own "Trade live" switch and Boss's PIN, as before.
    - The time exit runs in `exitOne`, so it runs in the 15-second stop lane (`manageOnly`) as well as the pass. It is kept in the
      encrypted book (`srcExit`), so after a restart the position comes back with its exit time.
    - A signal whose `exitBy` has already passed when the pass decides is not bought.
-   - Labelled in the record: the trade's line says "IraThinker mom60 (paper only; not a proven strategy; research R110: about
-     breakeven after costs on real options)". The order owner tag and the Open card carry "IraThinker mom60".
-   - `"paper": true` signals are never sent to the live path (`ArmLive.entered` is skipped). This only lowers risk and matches the review.
+   - Labelled in the record: the trade's line says "IraThinker mom60 (a paper signal; not a proven strategy; research R110: about
+     breakeven after costs on real options)". The owner tags of all its orders (entry, stop, exit) and the Open card carry
+     "IraThinker mom60".
+   - `"paper": true` is shown as a label only. Its live path is as before: the arm's own "Trade live" switch (off) and Boss's PIN.
+     A first version skipped the live path for paper signals. The reviewer pointed out that this is a new skip of live trades,
+     which CLAUDE.md says must start in shadow, so it was taken out. If Boss wants paper signals never to go live, that needs a
+     shadow switch, off by default.
 2. **SELL_STRANGLE and other sales or multi-leg trades are information.** New `Parsed.Info` and state `information`:
    "information, not traded: IraAlgo only buys options (SELL_STRANGLE: a multi-leg trade)". The same goes for any `SELL_*` / `SHORT_*`
-   side except the exits SELL / SELL_CALL / SELL_PUT, any `legs`, and straddles, spreads and condors. `PRICE_ALERT` and `MARKET_FLUSH`
+   side, any `legs`, and straddles, spreads and condors. Exits are never information: EXIT / SELL / CLOSE, `_CALL` / `_PUT`, and now
+   `SELL_CE`, `EXIT_PE`, `CLOSE_CE` and the like (the BUY_CE spellings) close what the arm holds. `PRICE_ALERT` and `MARKET_FLUSH`
    are information too. They are read once, never wait for a pass and are never ordered. The page shows "ⓘ information" in a neutral
    colour, not the refusal header.
 3. **Stock strike off the grid.** Still refused, now with a clearer reason. Example: "not traded: INFY 1130 CE is not listed for
@@ -59,7 +64,14 @@ Nothing new on the order or tick path touches disk, the network or blocks.
 ## Review
 
 - Self-review of the full diff.
-- A separate reviewer agent (findings and fixes below).
+- A separate reviewer agent. It ran the engine and ira-core tests: all passed, including 86 of 86 for What's New and 12 of 12
+  for BatteryRest. Fixed after its review:
+  1. Confirmed: two app tests assumed a paper fill of 121, but paper fills pay the half-spread (121.20). The expected stops are
+     now worked out from the fill.
+  2. The live skip for `"paper": true` was taken out (CLAUDE.md shadow-first rule). It is now a label only.
+  3. `SELL_CE` / `SELL_PE` (and the `EXIT_` / `CLOSE_` forms) are exits, not information.
+  4. Exit sides skip the multi-leg check, so an exit is never swallowed as information.
+  5. The exit and re-placed-stop order tags also carry the source strategy.
 
 ## CI
 

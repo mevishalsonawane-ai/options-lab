@@ -99,7 +99,7 @@ object NtfyParser {
             fun sourceWords(): String {
                 val rule = listOfNotNull(srcStopPct?.let { "stop ${num(it)}%" } ?: srcStop?.let { "stop ${num(it)}" }, srcTarget?.let { "target ${num(it)}" },
                     exitBy?.let { "out by %02d:%02d".format(Locale.ENGLISH, it.hour, it.minute) }, holdMin?.let { "hold $it min" })
-                val tail = listOfNotNull(strategy, if (paper) "paper only" else null, if (strikeGuess) "strike estimated by the sender" else null)
+                val tail = listOfNotNull(strategy, if (paper) "a paper signal" else null, if (strikeGuess) "strike estimated by the sender" else null)
                 return (if (rule.isEmpty()) "" else "; the source rule: " + rule.joinToString(", ")) + (if (tail.isEmpty()) "" else " · " + tail.joinToString(" · "))
             }
         }
@@ -118,6 +118,10 @@ object NtfyParser {
          */
         data class Info(val reason: String) : Parsed()
     }
+
+    /** The JSON sides that close what the arm holds (reduce-only). */
+    private val EXIT_SIDES = setOf("EXIT", "SELL", "CLOSE", "EXIT_CALL", "SELL_CALL", "CLOSE_CALL", "EXIT_CE", "SELL_CE", "CLOSE_CE",
+        "EXIT_PUT", "SELL_PUT", "CLOSE_PUT", "EXIT_PE", "SELL_PE", "CLOSE_PE")
 
     /** What an info message says when the sender asks for a sale or several legs (26 Oct). */
     const val ONLY_BUYS = "information, not traded: IraAlgo only buys options"
@@ -192,8 +196,8 @@ object NtfyParser {
         val kindRight = when (kind) { null -> null; "CE", "CALL" -> Right.CE; "PE", "PUT" -> Right.PE; else -> return refuse("an option kind not understood ($kind)") }
         when (side) {
             "EXIT", "SELL", "CLOSE" -> return Parsed.Exit(u, kindRight, id)
-            "EXIT_CALL", "SELL_CALL", "CLOSE_CALL" -> return if (kindRight == Right.PE) refuse("an exit of a call whose kind is PE") else Parsed.Exit(u, Right.CE, id)
-            "EXIT_PUT", "SELL_PUT", "CLOSE_PUT" -> return if (kindRight == Right.CE) refuse("an exit of a put whose kind is CE") else Parsed.Exit(u, Right.PE, id)
+            "EXIT_CALL", "SELL_CALL", "CLOSE_CALL", "EXIT_CE", "SELL_CE", "CLOSE_CE" -> return if (kindRight == Right.PE) refuse("an exit of a call whose kind is PE") else Parsed.Exit(u, Right.CE, id)
+            "EXIT_PUT", "SELL_PUT", "CLOSE_PUT", "EXIT_PE", "SELL_PE", "CLOSE_PE" -> return if (kindRight == Right.CE) refuse("an exit of a put whose kind is CE") else Parsed.Exit(u, Right.PE, id)
         }
         val right = when (side) {
             "BUY_CALL", "BUY_CE", "LONG" -> Right.CE
@@ -291,9 +295,11 @@ object NtfyParser {
      * an exit of what the arm holds. IraThinker's price alert and market-flush context are not trade signals.
      */
     private fun info(o: Map<*, *>, strategy: String?, side: String?, symbol: String?, level: Double?): Parsed.Info? {
+        // An exit (EXIT / SELL / CLOSE, of a call or a put) is never information: it only lowers risk.
+        if (side in EXIT_SIDES) return null
         val multi = o["legs"] is List<*> || listOf("STRANGLE", "STRADDLE", "SPREAD", "CONDOR", "BUTTERFLY").any { w ->
             side?.contains(w) == true || strategy?.contains(w) == true }
-        val sale = side != null && (side.startsWith("SELL_") || side.startsWith("SHORT_")) && side !in setOf("SELL_CALL", "SELL_PUT")
+        val sale = side != null && (side.startsWith("SELL_") || side.startsWith("SHORT_")) 
         return when {
             multi || sale -> Parsed.Info("$ONLY_BUYS (${side ?: strategy}: " + (if (multi) "a multi-leg" else "a sell-side") + " trade)")
             strategy == "PRICE_ALERT" -> Parsed.Info("information, not traded: a price alert" +

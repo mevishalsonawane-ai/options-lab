@@ -110,20 +110,23 @@ class NtfyIraThinkerArmTest : RobolectricTest() {
         on()
         assertEquals(1, msg("m1", mom60("MOM60|^NSEI|1", day.atTime(9, 28), day.atTime(10, 28)), LocalTime.of(9, 28)))
         assertEquals(NtfyArm.PENDING, alert("m1").state)
-        assertTrue(alert("m1").why, alert("m1").why.contains("the source rule: stop 30%, out by 10:28 · IraThinker mom60 · paper only"))
+        assertTrue(alert("m1").why, alert("m1").why.contains("the source rule: stop 30%, out by 10:28 · IraThinker mom60 · a paper signal"))
         tick(LocalTime.of(9, 28), 30)
         val p = v().open.single()
         assertTrue(p.symbol, p.symbol.endsWith("25000CE"))
-        // mom60's 30% stop (84.7 on a 121 fill) is WIDER than IraAlgo's 20% (96.8): IraAlgo's stays. Its 60-minute hold is used.
-        assertEquals(96.8, p.stop, 1e-9); assertTrue(p.ourStop)
+        // mom60's 30% stop is WIDER than IraAlgo's 20%: IraAlgo's stays. Its 60-minute hold is used. (The paper fill pays the
+        // half-spread, so the levels are worked out from the fill.)
+        val ours = NtfyRules.stop(null, null, p.entry, NtfyRules.Settings()).first
+        val src30 = NtfyRules.round2(NtfyRules.tickDown(p.entry * 0.7))
+        assertEquals(ours, p.stop, 1e-9); assertTrue(p.ourStop)
         assertEquals(day.atTime(10, 28), p.exitAt)
         assertEquals("IraThinker mom60", p.strategy); assertTrue(p.paperOnly)
         val why = alert("m1").why
         assertTrue(why, why.contains("out by 10:28"))
-        assertTrue(why, why.contains("IraThinker mom60 (paper only; not a proven strategy; research R110: about breakeven after costs on real options)"))
-        assertTrue(why, why.contains("the source rule's stop (30%, 84.7) is wider than IraAlgo's own (96.8): IraAlgo's kept"))
-        // "paper": true - never told to the live path.
-        assertTrue(heard.toString(), heard.none { it.startsWith("entered|") })
+        assertTrue(why, why.contains("IraThinker mom60 (a paper signal; not a proven strategy; research R110: about breakeven after costs on real options)"))
+        assertTrue(why, why.contains("the source rule's stop (30%, ${NtfyParser.num(src30)}) is wider than IraAlgo's own (${NtfyParser.num(ours)}): IraAlgo's kept"))
+        // "paper": true is labelled; its live path is as before (its own switch, off, and Boss's PIN decide).
+        assertTrue(heard.toString(), heard.any { it == "entered|${LiveMirror.NTFY_ALERTS}|${p.ref}|65|$ours" })
         // A restart: the book read again first (positions first) - its exit time and label come back with it.
         NtfyArm.wipe()
         runBlocking { NtfyArm.refresh() }
@@ -139,7 +142,7 @@ class NtfyIraThinkerArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
-    @Test fun aTighterSourceStopIsUsedAndAPlainSignalStillGoesToTheLivePath() {
+    @Test fun aTighterSourceStopIsUsedAndToldToTheLivePath() {
         val heard = java.util.Collections.synchronizedList(ArrayList<String>())
         ArmLive.testHeard = heard
         on()
@@ -147,10 +150,12 @@ class NtfyIraThinkerArmTest : RobolectricTest() {
         msg("m1", mom60("MOM60|^NSEI|2", day.atTime(9, 28), null, paper = false, premiumStop = "108"), LocalTime.of(9, 28))
         tick(LocalTime.of(9, 28), 30)
         val p = v().open.single()
-        assertEquals(108.9, p.stop, 1e-9); assertFalse(p.ourStop); assertNull(p.exitAt); assertFalse(p.paperOnly)
+        val tight = NtfyRules.round2(NtfyRules.tickDown(p.entry * 0.9))
+        assertTrue(tight > NtfyRules.stop(null, null, p.entry, NtfyRules.Settings()).first)
+        assertEquals(tight, p.stop, 1e-9); assertFalse(p.ourStop); assertNull(p.exitAt); assertFalse(p.paperOnly)
         assertTrue(alert("m1").why, alert("m1").why.contains("the source rule's stop (10%) used"))
-        assertTrue(heard.toString(), heard.any { it == "entered|${LiveMirror.NTFY_ALERTS}|${p.ref}|65|108.9" })
-        assertEquals(108.9, Paper.state.orders.single { it.orderId == p.stopOrderId }.triggerPrice!!.toDouble(), 1e-9)
+        assertTrue(heard.toString(), heard.any { it == "entered|${LiveMirror.NTFY_ALERTS}|${p.ref}|65|$tight" })
+        assertEquals(tight, Paper.state.orders.single { it.orderId == p.stopOrderId }.triggerPrice!!.toDouble(), 1e-9)
         assertNothingAtZerodha()
     }
 
@@ -240,9 +245,9 @@ class NtfyIraThinkerArmTest : RobolectricTest() {
 
     @Test fun theRecordWordsOfASourceStrategy() {
         val b = NtfyParser.Parsed.Buy("NIFTY", Right.CE, strategy = "IraThinker mom60", paper = true)
-        assertEquals(" · IraThinker mom60 (paper only; not a proven strategy; research R110: about breakeven after costs on real options)", NtfyArm.strategyWords(b))
+        assertEquals(" · IraThinker mom60 (a paper signal; not a proven strategy; research R110: about breakeven after costs on real options)", NtfyArm.strategyWords(b))
         assertEquals(" · IraThinker ORB breakout (not a proven strategy)", NtfyArm.strategyWords(b.copy(strategy = "IraThinker ORB breakout", paper = false)))
-        assertEquals(" · paper only · strike estimated by the sender", NtfyArm.strategyWords(b.copy(strategy = null, strikeGuess = true)))
+        assertEquals(" · a paper signal · strike estimated by the sender", NtfyArm.strategyWords(b.copy(strategy = null, strikeGuess = true)))
         assertEquals("", NtfyArm.strategyWords(NtfyParser.Parsed.Buy("NIFTY", Right.CE)))
     }
 }

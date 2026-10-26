@@ -51,7 +51,7 @@ class WhatsNewChangelogTest {
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
         assertTrue(sentences.size <= 8, "${sentences.size}")
         for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
-        for (w in listOf("mom60", "only where tighter or earlier", "never a wider stop", "paper only", "not a proven strategy",
+        for (w in listOf("mom60", "only where tighter or earlier", "never a wider stop", "a paper signal", "not a proven strategy",
             "shown as information", "only buys options", "strike grid", "estimated", "sending time"))
             assertTrue(w in x.what, w)
         assertTrue("Settings → Automation → ntfy alerts" in x.where, x.where)

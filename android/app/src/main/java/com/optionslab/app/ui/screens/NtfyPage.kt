@@ -172,7 +172,7 @@ internal fun NtfyContent(v: NtfyArm.View, st: NtfyReader.Status, cfg: NtfyReader
                 Text("${o.symbol} ${o.qty} @ ${NtfyParser.num(o.entry)} · stop ${NtfyParser.num(o.stop)}" + (o.target?.let { " · target ${NtfyParser.num(it)}" } ?: "") +
                     // 26 Oct (IraThinker review): the source rule's exit time and its strategy ("IraThinker mom60"), paper only when marked.
                     (o.exitAt?.let { " · out by %02d:%02d".format(java.util.Locale.ENGLISH, it.hour, it.minute) } ?: "") +
-                    (o.strategy?.let { " · $it" } ?: "") + (if (o.paperOnly) " (paper only)" else "") +
+                    (o.strategy?.let { " · $it" } ?: "") + (if (o.paperOnly) " (a paper signal)" else "") +
                     (if (o.legacy) " · moved from the removed Telegram arm" else ""), style = Type.bodySmall.copy(color = p.ink))
             }
         }

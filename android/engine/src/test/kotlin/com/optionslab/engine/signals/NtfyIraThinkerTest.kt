@@ -40,7 +40,7 @@ class NtfyIraThinkerTest {
         assertEquals(LocalDateTime.of(2026, 10, 26, 11, 16), b.exitBy)
         assertEquals("IraThinker mom60", b.strategy); assertTrue(b.paper)
         assertNull(b.indexStop); assertNull(b.indexTarget); assertNull(b.stop, "a premium stop is never the message's own stop")
-        assertTrue(b.line().contains("the source rule: stop 30%, out by 11:16 · IraThinker mom60 · paper only"), b.line())
+        assertTrue(b.line().contains("the source rule: stop 30%, out by 11:16 · IraThinker mom60 · a paper signal"), b.line())
         // FINNIFTY by its Yahoo symbol ^CNXFIN (not in IraAlgo's list): its "symbol" names it.
         assertEquals("FINNIFTY", assertIs<Parsed.Buy>(read(mom60(symbol = "FINNIFTY", yahoo = "^CNXFIN"))).index)
         assertEquals("SENSEX", assertIs<Parsed.Buy>(read(mom60(symbol = "SENSEX", yahoo = "^BSESN"))).index)
@@ -138,7 +138,7 @@ class NtfyIraThinkerTest {
         assertTrue(i.reason.startsWith(NtfyParser.ONLY_BUYS), i.reason); assertTrue(i.reason.contains("SELL_STRANGLE"))
         assertEquals("information, not traded: IraAlgo only buys options", NtfyParser.ONLY_BUYS)
         // Any other sale or several legs, whatever the symbol.
-        for (side in listOf("SELL_STRADDLE", "SHORT_STRANGLE", "SELL_CE", "SELL_PE", "BUY_CALL_SPREAD", "IRON_CONDOR"))
+        for (side in listOf("SELL_STRADDLE", "SHORT_STRANGLE", "SHORT_CALL", "SELL_FUT", "BUY_CALL_SPREAD", "IRON_CONDOR"))
             assertIs<Parsed.Info>(read(strangle.replace("SELL_STRANGLE", side).replace("\"legs\"", "\"x\"")
                 .replace("\"strategy\":\"STRANGLE\"", "\"strategy\":\"S\"")), side)
         assertIs<Parsed.Info>(read(strangle.replace("SELL_STRANGLE", "BUY_CALL")), "legs: a multi-leg trade")
@@ -147,6 +147,12 @@ class NtfyIraThinkerTest {
             .replace("\"strategy\":\"STRANGLE\"", "\"strategy\":\"S\"")
         assertEquals(Parsed.Exit("BANKNIFTY", Right.CE, "STRANGLE|^NSEBANK|2026-10-26"), read(exit.replace("SELL_STRANGLE", "SELL_CALL")))
         assertEquals(Parsed.Exit("BANKNIFTY", null, "STRANGLE|^NSEBANK|2026-10-26"), read(exit.replace("SELL_STRANGLE", "SELL")))
+        // SELL_CE / EXIT_PE / CLOSE_CE (the BUY_CE / BUY_PE spellings) are exits too, never information.
+        assertEquals(Parsed.Exit("BANKNIFTY", Right.CE, "STRANGLE|^NSEBANK|2026-10-26"), read(exit.replace("SELL_STRANGLE", "SELL_CE")))
+        assertEquals(Parsed.Exit("BANKNIFTY", Right.PE, "STRANGLE|^NSEBANK|2026-10-26"), read(exit.replace("SELL_STRANGLE", "EXIT_PE")))
+        assertEquals(Parsed.Exit("BANKNIFTY", Right.CE, "STRANGLE|^NSEBANK|2026-10-26"), read(exit.replace("SELL_STRANGLE", "CLOSE_CE")))
+        // An exit side with legs or a strangle strategy is still an exit (it only lowers risk).
+        assertEquals(Parsed.Exit("BANKNIFTY", null, "STRANGLE|^NSEBANK|2026-10-26"), read(strangle.replace("SELL_STRANGLE", "EXIT")))
         // Price alerts and the market flush: information, never "a signal with no side" / "no symbol".
         val price = """{"type":"signal","test":false,"source":"IraThinker","version":51,"strategy":"PRICE_ALERT","signalId":"^NSEI|PRICE_ALERT|ABOVE|2460000|1",""" +
             """"tsIST":"2026-10-26T10:00:00+05:30","symbol":"NIFTY 50","yahooSymbol":"^NSEI","level":24600,"direction":"ABOVE","ltp":24603.1,"recurring":false}"""
