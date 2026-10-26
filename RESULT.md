@@ -1,12 +1,12 @@
-# R107 result for Boss (26 Oct 2026): GEX meter + danger meter to trade MORE
+# R108 result for Boss (26 Oct 2026): the same-direction cap, checked and 7 alternatives tested
 
-1. **Answer: no.** 0 of 11 pre-registered tests passed. Nothing changes on paper or live. Full write-up: `research/HUNT_R107_METERS_MORE.md`.
-2. Tested: 2 lots on negative-GEX trades (4 arms), 2 lots on danger-flagged days (4 arms), and on the paper book a 3rd same-direction place on negative-GEX or flagged days, plus 2 lots on the meter's normal days.
-3. **Both meters say "bigger day", not "better day".** Flagged days often pay more per trade, but they also hold the worst days (R72 -Rs 58,613 and R51 -Rs 56,647 in design), so doubling up there was no better than doubling on random days.
-4. The GEX edge flipped over time: worse for R72 / R51 in design (n = 1,308 / 1,812 trades), better in the walk-forward window and the final. Win rates never moved (46% vs 46% on R72 in the final).
-5. The best result, 2 lots on R72's flagged days (final twin p 0.044, 99 trades changed), failed in design. With 584 tests counted, BH q = 1.0.
-6. "Always 2 lots" beat every meter rule on net per unit of risk, only because brokerage is a flat Rs 20 an order. It doubles the drawdown, so it is not recommended without its own test.
-7. Account rule: today's rules already break the Rs 40,000 drawdown at 1 lot in the final (R72 Rs 61,884, R51 Rs 91,626 alone), and most variants make it worse.
-8. Keep the danger meter's "half size" switch off: it would cut size on the better days for Liquidity, R72 and R51.
-9. **Lead (not a test):** in the model, the same-direction cap of 2 cut the four arms from Rs 7.75 lakh to -Rs 4.03 lakh in design, and from Rs 3.13 lakh to Rs 0.59 lakh in the final. It mostly refuses R52, Liquidity and R51's winning trades. This needs an app check and its own pre-registered study.
-10. Checks: 19 R107 tests and 183 brain tests passed; feature catalog up to date; ORB-on-negative-GEX (S3) was not re-run, because it is R28 G1, which already failed.
+1. **Answer: keep the cap at 2. Nothing changes on paper or live.** 0 of 7 alternatives passed. Full write-up: `research/HUNT_R108_SAME_DIRECTION_CAP.md`.
+2. **R107's lead was real but overstated.** As the app runs it, the cap costs about Rs 3.6 lakh in design (no cap Rs 2,30,649 → cap -Rs 1,28,786; 6,520 → 3,456 trades) and Rs 1.2 lakh in the final (Rs 1,38,560 → Rs 15,955; 2,538 → 1,384 trades). R107's model gave -Rs 4.05 lakh in design.
+3. Most of R107's gap came from one modelling choice. In the app, a refused Donchian / R52 entry becomes a would-be trade. In R107's model it freed the arm to take a later, weaker signal.
+4. "Rs 7.75 lakh without the cap" was never possible: the "one option, one arm" rule already makes R51's and R52's copies of R72's option would-be trades.
+5. The cap refuses about half the entries, no better or worse than refusing at random (twin p 0.41 design, 0.45 final). What it buys is fewer very bad days: 52 → 13 days at or below -Rs 13,000 in design, worst day -Rs 86,966 → -Rs 27,269.
+6. All 7 alternatives (cap 3, per index, per index + 3, rupee risk, edge priority, loss stops only, R52 / Liquidity outside the cap) earned more in design and the walk-forward window. But each brought more bad days or months than the cap in design, and BH q = 1.0 over 5,784 tests.
+7. The closest was cap 3: Rs 87,231 vs Rs 15,955 in the final, with a smaller drawdown (Rs 51,894 vs Rs 74,624). But in design it had 27 bad days vs 13 and final twin p 0.043. Loosening to 3 would be Boss's choice, not a research pass.
+8. **Account rule:** no set of the four arms at 1 lot stays inside Rs 40,000 drawdown with no month at or below -Rs 13,000 in both periods, cap or not (all 15 sets). 1 lot is the minimum, so no size fixes it. Today's book: Rs 2,09,037 drawdown in design, Rs 74,624 in the final.
+9. **Leads for new studies:** R51's own (non-R72) entries lost in every period (design -Rs 3,31,143 over 2,639 trades; final -Rs 67,104 over 1,021). "One option, one arm" turns R52's best trades into would-be trades (Rs 2,87,980 over 526 trades in design).
+10. Checks: each arm alone reproduces R101 to the rupee; 30 R108 tests (with the look-ahead guard) and 183 brain tests passed; feature catalog up to date. The phone's 19-26 Oct record shows the same mechanisms. The "16 refused today" figure cannot be confirmed from the redacted upload (about 8 visible up to 12:55).

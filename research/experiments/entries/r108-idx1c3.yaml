@@ -1,0 +1,28 @@
+id: r108-idx1c3
+title: 'R108 IDX1C3 on the paper book (R72, R51, R52, Liquidity 15+5): at most 1 a way per index and at most 3 a way in all'
+family: sizing-execution
+date: '2026-10-26'
+doc: research/HUNT_R108_SAME_DIRECTION_CAP.md
+hypothesis: 'Boss''s same-direction cap (at most 2 open a way across all arms) refuses the arms'' winning trades (R107 lead). This rule: at most 1 a way per index and at most 3 a way in all. Gates: net above the app''s cap in design, walk-forward and final; Boss''s account rule (months <= -Rs 13,000, Rs 40,000 drawdown breaches, days <= -Rs 13,000) at least as often as the cap in each period; final random-refusal twin BH q <= 0.10 over 5,784 tests; >= 30 final trades changed.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 26 Oct; R51 Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R107)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the four arms'' own index signals (unchanged); only which entries the account takes changes'
+model_or_rule: 'the paper book (R72, R51, R52, Liquidity 15+5 at 1 lot, the app order, would-be accounting) with at most 1 a way per index and at most 3 a way in all'
+settings: research/hunt/r108_same_direction_cap/r108cfg.py TESTS; r108book.make_rule; PREREG.md section 4
+prereg: research/hunt/r108_same_direction_cap/PREREG.md
+variants_tried: 7
+results:
+  summary: 'Design: 4,378 trades, net -Rs 13,349 (CAP2 -Rs 1,28,786, 3,456 trades; no cap Rs 2,30,649), max DD Rs 1,89,442 (CAP2 Rs 2,09,037), worst day -Rs 37,832, months <= -Rs 13k 6 (CAP2 6), Rs 40k breaches 2 (CAP2 1), twin p 0.1266. Walk-forward: 3,211 trades, net Rs 1,38,339 (CAP2 Rs 25,383, 2,536 trades; no cap Rs 4,37,733), max DD Rs 1,24,720 (CAP2 Rs 1,24,652), worst day -Rs 19,671, months <= -Rs 13k 3 (CAP2 3), Rs 40k breaches 2 (CAP2 1), twin p 0.2673. Final: 1,744 trades, net Rs 67,903 (CAP2 Rs 15,955, 1,384 trades; no cap Rs 1,38,560), max DD Rs 62,750 (CAP2 Rs 74,624), worst day -Rs 19,438, months <= -Rs 13k 1 (CAP2 2), Rs 40k breaches 1 (CAP2 1), twin p 0.1667. BH q 1.0 over 5,784 tests (R108 alone 0.5834). Fails 6 checks, first: design: more Rs 40,000 drawdown breaches than CAP2 (2 vs 1); design: more days at or below -Rs 13,000 than CAP2 (25 vs 13); wf: more Rs 40,000 drawdown breaches than CAP2 (2 vs 1).'
+  costs: dated Zerodha charges, R17 fills, next-minute fills (R101 / R106 engine)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live; the cap is Boss's rule, any paper change is Boss's decision.

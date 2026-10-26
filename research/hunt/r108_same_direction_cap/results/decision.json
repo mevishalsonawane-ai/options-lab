@@ -1,0 +1,108 @@
+{
+ "CAP3": {
+  "passed": false,
+  "fails": [
+   "design: more months at or below -Rs 13,000 than CAP2 (7 vs 6)",
+   "design: more Rs 40,000 drawdown breaches than CAP2 (3 vs 1)",
+   "design: more days at or below -Rs 13,000 than CAP2 (27 vs 13)",
+   "wf: more months at or below -Rs 13,000 than CAP2 (4 vs 3)",
+   "wf: more days at or below -Rs 13,000 than CAP2 (14 vs 8)",
+   "final: more Rs 40,000 drawdown breaches than CAP2 (2 vs 1)",
+   "final: more days at or below -Rs 13,000 than CAP2 (5 vs 2)",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q_all": 1.0,
+  "q_r108": 0.3038,
+  "twin_p": 0.0434
+ },
+ "IDX1": {
+  "passed": false,
+  "fails": [
+   "design: more Rs 40,000 drawdown breaches than CAP2 (5 vs 1)",
+   "design: more days at or below -Rs 13,000 than CAP2 (35 vs 13)",
+   "wf: more Rs 40,000 drawdown breaches than CAP2 (4 vs 1)",
+   "wf: more days at or below -Rs 13,000 than CAP2 (21 vs 8)",
+   "final: more days at or below -Rs 13,000 than CAP2 (7 vs 2)",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q_all": 1.0,
+  "q_r108": 0.5914,
+  "twin_p": 0.4623
+ },
+ "IDX1C3": {
+  "passed": false,
+  "fails": [
+   "design: more Rs 40,000 drawdown breaches than CAP2 (2 vs 1)",
+   "design: more days at or below -Rs 13,000 than CAP2 (25 vs 13)",
+   "wf: more Rs 40,000 drawdown breaches than CAP2 (2 vs 1)",
+   "wf: more days at or below -Rs 13,000 than CAP2 (13 vs 8)",
+   "final: more days at or below -Rs 13,000 than CAP2 (5 vs 2)",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q_all": 1.0,
+  "q_r108": 0.5834,
+  "twin_p": 0.1667
+ },
+ "RISK": {
+  "passed": false,
+  "fails": [
+   "design: more months at or below -Rs 13,000 than CAP2 (7 vs 6)",
+   "wf: more months at or below -Rs 13,000 than CAP2 (4 vs 3)",
+   "final: more days at or below -Rs 13,000 than CAP2 (4 vs 2)",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q_all": 1.0,
+  "q_r108": 0.5914,
+  "twin_p": 0.3279
+ },
+ "EDGE": {
+  "passed": false,
+  "fails": [
+   "design: more months at or below -Rs 13,000 than CAP2 (9 vs 6)",
+   "design: more days at or below -Rs 13,000 than CAP2 (15 vs 13)",
+   "wf: more months at or below -Rs 13,000 than CAP2 (5 vs 3)",
+   "final: net not above CAP2's",
+   "final: more days at or below -Rs 13,000 than CAP2 (3 vs 2)",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q_all": 1.0,
+  "q_r108": 0.5914,
+  "twin_p": 0.5069
+ },
+ "STOPS": {
+  "passed": false,
+  "fails": [
+   "design: more months at or below -Rs 13,000 than CAP2 (13 vs 6)",
+   "design: more Rs 40,000 drawdown breaches than CAP2 (4 vs 1)",
+   "wf: more months at or below -Rs 13,000 than CAP2 (8 vs 3)",
+   "wf: more Rs 40,000 drawdown breaches than CAP2 (3 vs 1)",
+   "final: net not above CAP2's",
+   "final: more months at or below -Rs 13,000 than CAP2 (5 vs 2)",
+   "final: more Rs 40,000 drawdown breaches than CAP2 (2 vs 1)",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q_all": 1.0,
+  "q_r108": 1.0,
+  "twin_p": 1.0
+ },
+ "EXEMPT": {
+  "passed": false,
+  "fails": [
+   "design: more Rs 40,000 drawdown breaches than CAP2 (3 vs 1)",
+   "design: more days at or below -Rs 13,000 than CAP2 (29 vs 13)",
+   "wf: more Rs 40,000 drawdown breaches than CAP2 (3 vs 1)",
+   "wf: more days at or below -Rs 13,000 than CAP2 (15 vs 8)",
+   "final: more Rs 40,000 drawdown breaches than CAP2 (3 vs 1)",
+   "final: more days at or below -Rs 13,000 than CAP2 (5 vs 2)",
+   "twin BH q 1.000 > 0.1"
+  ],
+  "q_all": 1.0,
+  "q_r108": 0.5914,
+  "twin_p": 0.4068
+ },
+ "_m": {
+  "r108": 7,
+  "prior": 5777,
+  "total": 5784
+ }
+}

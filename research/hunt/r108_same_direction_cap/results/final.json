@@ -1,0 +1,1634 @@
+{
+ "_meta": {
+  "phase": "final",
+  "sessions": 470,
+  "twins": 100000,
+  "seed": 108,
+  "n_prior": 5777
+ },
+ "final": {
+  "ALONE": {
+   "net": 312978,
+   "trades": 3633,
+   "win": 0.446,
+   "worst_day": -69940,
+   "max_dd": 170942,
+   "r_dd": 1.8309,
+   "months": 7,
+   "worst_month": -113276,
+   "months_below": 2,
+   "days_below": 30,
+   "dd_breaches": 4,
+   "sessions": 133,
+   "per_arm": {
+    "LIQ": {
+     "net": 11155,
+     "trades": 357,
+     "win": 0.373,
+     "worst_day": -11405,
+     "max_dd": 61062,
+     "r_dd": 0.1827,
+     "months": 7,
+     "worst_month": -37821,
+     "months_below": 1,
+     "days_below": 0,
+     "dd_breaches": 1,
+     "sessions": 133
+    },
+    "R72": {
+     "net": 171366,
+     "trades": 1202,
+     "win": 0.458,
+     "worst_day": -22571,
+     "max_dd": 61884,
+     "r_dd": 2.7691,
+     "months": 7,
+     "worst_month": -40908,
+     "months_below": 2,
+     "days_below": 8,
+     "dd_breaches": 2,
+     "sessions": 133
+    },
+    "R51": {
+     "net": 81845,
+     "trades": 1781,
+     "win": 0.44,
+     "worst_day": -23012,
+     "max_dd": 91626,
+     "r_dd": 0.8932,
+     "months": 7,
+     "worst_month": -54306,
+     "months_below": 1,
+     "days_below": 6,
+     "dd_breaches": 1,
+     "sessions": 133
+    },
+    "R52": {
+     "net": 48612,
+     "trades": 293,
+     "win": 0.515,
+     "worst_day": -16554,
+     "max_dd": 47194,
+     "r_dd": 1.0301,
+     "months": 7,
+     "worst_month": -17113,
+     "months_below": 1,
+     "days_below": 3,
+     "dd_breaches": 1,
+     "sessions": 133
+    }
+   }
+  },
+  "NOCAP": {
+   "net": 138560,
+   "trades": 2538,
+   "win": 0.433,
+   "worst_day": -39963,
+   "max_dd": 88497,
+   "r_dd": 1.5657,
+   "months": 7,
+   "worst_month": -38662,
+   "months_below": 2,
+   "days_below": 12,
+   "dd_breaches": 3,
+   "sessions": 133,
+   "arms": {
+    "LIQ": {
+     "real": {
+      "n": 357,
+      "net": 11155
+     },
+     "refused": {
+      "n": 0,
+      "net": 0
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    },
+    "R72": {
+     "real": {
+      "n": 1110,
+      "net": 186496
+     },
+     "refused": {
+      "n": 0,
+      "net": 0
+     },
+     "held": {
+      "n": 92,
+      "net": -15130
+     }
+    },
+    "R51": {
+     "real": {
+      "n": 1021,
+      "net": -67104
+     },
+     "refused": {
+      "n": 0,
+      "net": 0
+     },
+     "held": {
+      "n": 760,
+      "net": 148949
+     }
+    },
+    "R52": {
+     "real": {
+      "n": 50,
+      "net": 8013
+     },
+     "refused": {
+      "n": 0,
+      "net": 0
+     },
+     "held": {
+      "n": 243,
+      "net": 40599
+     }
+    }
+   },
+   "refused": 0,
+   "liq_extra": {
+    "n": 0,
+    "net": 0
+   }
+  },
+  "CAP2": {
+   "net": 15955,
+   "trades": 1384,
+   "win": 0.418,
+   "worst_day": -14149,
+   "max_dd": 74624,
+   "r_dd": 0.2138,
+   "months": 7,
+   "worst_month": -42969,
+   "months_below": 2,
+   "days_below": 2,
+   "dd_breaches": 1,
+   "sessions": 133,
+   "arms": {
+    "LIQ": {
+     "real": {
+      "n": 152,
+      "net": 16783
+     },
+     "refused": {
+      "n": 205,
+      "net": -5628
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    },
+    "R72": {
+     "real": {
+      "n": 369,
+      "net": 50875
+     },
+     "refused": {
+      "n": 758,
+      "net": 129471
+     },
+     "held": {
+      "n": 75,
+      "net": -8980
+     }
+    },
+    "R51": {
+     "real": {
+      "n": 836,
+      "net": -54076
+     },
+     "refused": {
+      "n": 676,
+      "net": 87873
+     },
+     "held": {
+      "n": 269,
+      "net": 48048
+     }
+    },
+    "R52": {
+     "real": {
+      "n": 27,
+      "net": 2373
+     },
+     "refused": {
+      "n": 160,
+      "net": 32115
+     },
+     "held": {
+      "n": 106,
+      "net": 14123
+     }
+    }
+   },
+   "refused": 1799,
+   "liq_extra": {
+    "n": 0,
+    "net": 0
+   },
+   "twin": {
+    "p": 0.45,
+    "median_r_dd": 0.1343,
+    "median_net": 10820,
+    "refusals_matched": 1154
+   },
+   "changed_vs_cap2": 0
+  },
+  "CAP3": {
+   "net": 87231,
+   "trades": 1807,
+   "win": 0.424,
+   "worst_day": -22027,
+   "max_dd": 51894,
+   "r_dd": 1.6809,
+   "months": 7,
+   "worst_month": -28292,
+   "months_below": 1,
+   "days_below": 5,
+   "dd_breaches": 2,
+   "sessions": 133,
+   "arms": {
+    "LIQ": {
+     "real": {
+      "n": 232,
+      "net": 3552
+     },
+     "refused": {
+      "n": 125,
+      "net": 7603
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    },
+    "R72": {
+     "real": {
+      "n": 579,
+      "net": 125477
+     },
+     "refused": {
+      "n": 535,
+      "net": 52649
+     },
+     "held": {
+      "n": 88,
+      "net": -6760
+     }
+    },
+    "R51": {
+     "real": {
+      "n": 959,
+      "net": -49714
+     },
+     "refused": {
+      "n": 401,
+      "net": 25468
+     },
+     "held": {
+      "n": 421,
+      "net": 106091
+     }
+    },
+    "R52": {
+     "real": {
+      "n": 37,
+      "net": 7916
+     },
+     "refused": {
+      "n": 114,
+      "net": -9005
+     },
+     "held": {
+      "n": 142,
+      "net": 49701
+     }
+    }
+   },
+   "refused": 1175,
+   "liq_extra": {
+    "n": 0,
+    "net": 0
+   },
+   "twin": {
+    "p": 0.0434,
+    "median_r_dd": 0.3522,
+    "median_net": 31539,
+    "refusals_matched": 731
+   },
+   "changed_vs_cap2": 427
+  },
+  "IDX1": {
+   "net": 66275,
+   "trades": 2105,
+   "win": 0.429,
+   "worst_day": -25523,
+   "max_dd": 81864,
+   "r_dd": 0.8096,
+   "months": 7,
+   "worst_month": -44183,
+   "months_below": 1,
+   "days_below": 7,
+   "dd_breaches": 1,
+   "sessions": 133,
+   "arms": {
+    "LIQ": {
+     "real": {
+      "n": 225,
+      "net": 140
+     },
+     "refused": {
+      "n": 132,
+      "net": 11015
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    },
+    "R72": {
+     "real": {
+      "n": 871,
+      "net": 138441
+     },
+     "refused": {
+      "n": 243,
+      "net": 45992
+     },
+     "held": {
+      "n": 88,
+      "net": -13068
+     }
+    },
+    "R51": {
+     "real": {
+      "n": 959,
+      "net": -80319
+     },
+     "refused": {
+      "n": 156,
+      "net": 25794
+     },
+     "held": {
+      "n": 666,
+      "net": 136370
+     }
+    },
+    "R52": {
+     "real": {
+      "n": 50,
+      "net": 8013
+     },
+     "refused": {
+      "n": 53,
+      "net": 254
+     },
+     "held": {
+      "n": 190,
+      "net": 40345
+     }
+    }
+   },
+   "refused": 584,
+   "liq_extra": {
+    "n": 0,
+    "net": 0
+   },
+   "twin": {
+    "p": 0.4623,
+    "median_r_dd": 0.7576,
+    "median_net": 69698,
+    "refusals_matched": 433
+   },
+   "changed_vs_cap2": 849
+  },
+  "IDX1C3": {
+   "net": 67903,
+   "trades": 1744,
+   "win": 0.42,
+   "worst_day": -19438,
+   "max_dd": 62750,
+   "r_dd": 1.0821,
+   "months": 7,
+   "worst_month": -38589,
+   "months_below": 1,
+   "days_below": 5,
+   "dd_breaches": 1,
+   "sessions": 133,
+   "arms": {
+    "LIQ": {
+     "real": {
+      "n": 206,
+      "net": 11445
+     },
+     "refused": {
+      "n": 151,
+      "net": -290
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    },
+    "R72": {
+     "real": {
+      "n": 581,
+      "net": 119806
+     },
+     "refused": {
+      "n": 538,
+      "net": 59432
+     },
+     "held": {
+      "n": 83,
+      "net": -7872
+     }
+    },
+    "R51": {
+     "real": {
+      "n": 918,
+      "net": -72329
+     },
+     "refused": {
+      "n": 418,
+      "net": 41461
+     },
+     "held": {
+      "n": 445,
+      "net": 112713
+     }
+    },
+    "R52": {
+     "real": {
+      "n": 39,
+      "net": 8981
+     },
+     "refused": {
+      "n": 115,
+      "net": -6687
+     },
+     "held": {
+      "n": 139,
+      "net": 46318
+     }
+    }
+   },
+   "refused": 1222,
+   "liq_extra": {
+    "n": 0,
+    "net": 0
+   },
+   "twin": {
+    "p": 0.1667,
+    "median_r_dd": 0.3852,
+    "median_net": 33526,
+    "refusals_matched": 794
+   },
+   "changed_vs_cap2": 478
+  },
+  "RISK": {
+   "net": 69927,
+   "trades": 1451,
+   "win": 0.431,
+   "worst_day": -15309,
+   "max_dd": 63461,
+   "r_dd": 1.1019,
+   "months": 7,
+   "worst_month": -32314,
+   "months_below": 1,
+   "days_below": 4,
+   "dd_breaches": 1,
+   "sessions": 133,
+   "arms": {
+    "LIQ": {
+     "real": {
+      "n": 197,
+      "net": 26000
+     },
+     "refused": {
+      "n": 160,
+      "net": -14845
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    },
+    "R72": {
+     "real": {
+      "n": 460,
+      "net": 101180
+     },
+     "refused": {
+      "n": 668,
+      "net": 76310
+     },
+     "held": {
+      "n": 74,
+      "net": -6124
+     }
+    },
+    "R51": {
+     "real": {
+      "n": 777,
+      "net": -61430
+     },
+     "refused": {
+      "n": 673,
+      "net": 60133
+     },
+     "held": {
+      "n": 331,
+      "net": 83142
+     }
+    },
+    "R52": {
+     "real": {
+      "n": 17,
+      "net": 4177
+     },
+     "refused": {
+      "n": 158,
+      "net": 20100
+     },
+     "held": {
+      "n": 118,
+      "net": 24336
+     }
+    }
+   },
+   "refused": 1659,
+   "liq_extra": {
+    "n": 0,
+    "net": 0
+   },
+   "twin": {
+    "p": 0.3279,
+    "median_r_dd": 0.7139,
+    "median_net": 53229,
+    "refusals_matched": 1087
+   },
+   "changed_vs_cap2": 521
+  },
+  "EDGE": {
+   "net": 8100,
+   "trades": 1360,
+   "win": 0.415,
+   "worst_day": -17197,
+   "max_dd": 83281,
+   "r_dd": 0.0973,
+   "months": 7,
+   "worst_month": -43610,
+   "months_below": 1,
+   "days_below": 3,
+   "dd_breaches": 1,
+   "sessions": 133,
+   "arms": {
+    "LIQ": {
+     "real": {
+      "n": 171,
+      "net": 3190
+     },
+     "refused": {
+      "n": 186,
+      "net": 7965
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    },
+    "R72": {
+     "real": {
+      "n": 256,
+      "net": 28714
+     },
+     "refused": {
+      "n": 753,
+      "net": 118789
+     },
+     "held": {
+      "n": 193,
+      "net": 23863
+     }
+    },
+    "R51": {
+     "real": {
+      "n": 751,
+      "net": -55879
+     },
+     "refused": {
+      "n": 720,
+      "net": 90293
+     },
+     "held": {
+      "n": 310,
+      "net": 47431
+     }
+    },
+    "R52": {
+     "real": {
+      "n": 182,
+      "net": 32075
+     },
+     "refused": {
+      "n": 111,
+      "net": 16537
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    }
+   },
+   "refused": 1770,
+   "liq_extra": {
+    "n": 0,
+    "net": 0
+   },
+   "twin": {
+    "p": 0.5069,
+    "median_r_dd": 0.1083,
+    "median_net": 9066,
+    "refusals_matched": 1178
+   },
+   "changed_vs_cap2": 500
+  },
+  "STOPS": {
+   "net": -2041,
+   "trades": 1076,
+   "win": 0.41,
+   "worst_day": -13487,
+   "max_dd": 64106,
+   "r_dd": -0.0318,
+   "months": 7,
+   "worst_month": -21170,
+   "months_below": 5,
+   "days_below": 1,
+   "dd_breaches": 2,
+   "sessions": 133,
+   "arms": {
+    "LIQ": {
+     "real": {
+      "n": 162,
+      "net": -9996
+     },
+     "refused": {
+      "n": 195,
+      "net": 21151
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    },
+    "R72": {
+     "real": {
+      "n": 433,
+      "net": 82180
+     },
+     "refused": {
+      "n": 733,
+      "net": 105111
+     },
+     "held": {
+      "n": 36,
+      "net": -15925
+     }
+    },
+    "R51": {
+     "real": {
+      "n": 460,
+      "net": -89657
+     },
+     "refused": {
+      "n": 975,
+      "net": 89665
+     },
+     "held": {
+      "n": 346,
+      "net": 81838
+     }
+    },
+    "R52": {
+     "real": {
+      "n": 21,
+      "net": 15432
+     },
+     "refused": {
+      "n": 135,
+      "net": 31826
+     },
+     "held": {
+      "n": 137,
+      "net": 1354
+     }
+    }
+   },
+   "refused": 2038,
+   "liq_extra": {
+    "n": 0,
+    "net": 0
+   },
+   "twin": {
+    "p": 1.0,
+    "median_r_dd": 3.1465,
+    "median_net": 116499,
+    "refusals_matched": 1462
+   },
+   "changed_vs_cap2": 1244
+  },
+  "EXEMPT": {
+   "net": 70140,
+   "trades": 1813,
+   "win": 0.422,
+   "worst_day": -34357,
+   "max_dd": 66020,
+   "r_dd": 1.0624,
+   "months": 7,
+   "worst_month": -45269,
+   "months_below": 2,
+   "days_below": 5,
+   "dd_breaches": 3,
+   "sessions": 133,
+   "arms": {
+    "LIQ": {
+     "real": {
+      "n": 357,
+      "net": 11155
+     },
+     "refused": {
+      "n": 0,
+      "net": 0
+     },
+     "held": {
+      "n": 0,
+      "net": 0
+     }
+    },
+    "R72": {
+     "real": {
+      "n": 425,
+      "net": 72395
+     },
+     "refused": {
+      "n": 697,
+      "net": 104467
+     },
+     "held": {
+      "n": 80,
+      "net": -5496
+     }
+    },
+    "R51": {
+     "real": {
+      "n": 874,
+      "net": -43401
+     },
+     "refused": {
+      "n": 586,
+      "net": 62903
+     },
+     "held": {
+      "n": 321,
+      "net": 62342
+     }
+    },
+    "R52": {
+     "real": {
+      "n": 157,
+      "net": 29990
+     },
+     "refused": {
+      "n": 0,
+      "net": 0
+     },
+     "held": {
+      "n": 136,
+      "net": 18622
+     }
+    }
+   },
+   "refused": 1283,
+   "liq_extra": {
+    "n": 0,
+    "net": 0
+   },
+   "twin": {
+    "p": 0.4068,
+    "median_r_dd": 0.8821,
+    "median_net": 68435,
+    "refusals_matched": 725
+   },
+   "changed_vs_cap2": 441
+  },
+  "_r107_steps": {
+   "R107 model": {
+    "net": 57202,
+    "trades": 1692,
+    "win": 0.436,
+    "worst_day": -14698,
+    "max_dd": 88715,
+    "r_dd": 0.6448,
+    "months": 7,
+    "worst_month": -29956,
+    "months_below": 2,
+    "days_below": 4,
+    "dd_breaches": 1,
+    "sessions": 133,
+    "arms": {
+     "LIQ": {
+      "real": {
+       "n": 83,
+       "net": -1228
+      },
+      "refused": {
+       "n": 275,
+       "net": 13068
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R72": {
+      "real": {
+       "n": 464,
+       "net": 88347
+      },
+      "refused": {
+       "n": 1474,
+       "net": 261257
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R51": {
+      "real": {
+       "n": 1112,
+       "net": -39491
+      },
+      "refused": {
+       "n": 2278,
+       "net": 274106
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R52": {
+      "real": {
+       "n": 33,
+       "net": 9576
+      },
+      "refused": {
+       "n": 260,
+       "net": 39036
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     }
+    },
+    "refused": 4287,
+    "liq_extra": {
+     "n": 0,
+     "net": 0
+    }
+   },
+   "+ would-be accounting": {
+    "net": 49877,
+    "trades": 1428,
+    "win": 0.425,
+    "worst_day": -15522,
+    "max_dd": 55706,
+    "r_dd": 0.8954,
+    "months": 7,
+    "worst_month": -33534,
+    "months_below": 2,
+    "days_below": 2,
+    "dd_breaches": 1,
+    "sessions": 133,
+    "arms": {
+     "LIQ": {
+      "real": {
+       "n": 109,
+       "net": 11009
+      },
+      "refused": {
+       "n": 249,
+       "net": 830
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R72": {
+      "real": {
+       "n": 415,
+       "net": 74883
+      },
+      "refused": {
+       "n": 787,
+       "net": 96482
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R51": {
+      "real": {
+       "n": 871,
+       "net": -45592
+      },
+      "refused": {
+       "n": 910,
+       "net": 127437
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R52": {
+      "real": {
+       "n": 33,
+       "net": 9576
+      },
+      "refused": {
+       "n": 260,
+       "net": 39036
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     }
+    },
+    "refused": 2206,
+    "liq_extra": {
+     "n": 0,
+     "net": 0
+    }
+   },
+   "+ one option, one arm": {
+    "net": 39993,
+    "trades": 1411,
+    "win": 0.422,
+    "worst_day": -15522,
+    "max_dd": 56218,
+    "r_dd": 0.7114,
+    "months": 7,
+    "worst_month": -29517,
+    "months_below": 2,
+    "days_below": 1,
+    "dd_breaches": 1,
+    "sessions": 133,
+    "arms": {
+     "LIQ": {
+      "real": {
+       "n": 114,
+       "net": 10038
+      },
+      "refused": {
+       "n": 244,
+       "net": 1801
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R72": {
+      "real": {
+       "n": 413,
+       "net": 76961
+      },
+      "refused": {
+       "n": 709,
+       "net": 104742
+      },
+      "held": {
+       "n": 80,
+       "net": -10338
+      }
+     },
+     "R51": {
+      "real": {
+       "n": 857,
+       "net": -49380
+      },
+      "refused": {
+       "n": 612,
+       "net": 63681
+      },
+      "held": {
+       "n": 312,
+       "net": 67544
+      }
+     },
+     "R52": {
+      "real": {
+       "n": 27,
+       "net": 2373
+      },
+      "refused": {
+       "n": 130,
+       "net": 27617
+      },
+      "held": {
+       "n": 136,
+       "net": 18622
+      }
+     }
+    },
+    "refused": 1695,
+    "liq_extra": {
+     "n": 0,
+     "net": 0
+    }
+   },
+   "+ the app's order (Liquidity first)": {
+    "net": 16878,
+    "trades": 1419,
+    "win": 0.414,
+    "worst_day": -14149,
+    "max_dd": 72520,
+    "r_dd": 0.2327,
+    "months": 7,
+    "worst_month": -35635,
+    "months_below": 2,
+    "days_below": 2,
+    "dd_breaches": 1,
+    "sessions": 133,
+    "arms": {
+     "LIQ": {
+      "real": {
+       "n": 239,
+       "net": 9742
+      },
+      "refused": {
+       "n": 118,
+       "net": 1413
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R72": {
+      "real": {
+       "n": 332,
+       "net": 60018
+      },
+      "refused": {
+       "n": 793,
+       "net": 120726
+      },
+      "held": {
+       "n": 77,
+       "net": -9378
+      }
+     },
+     "R51": {
+      "real": {
+       "n": 821,
+       "net": -55255
+      },
+      "refused": {
+       "n": 719,
+       "net": 79907
+      },
+      "held": {
+       "n": 241,
+       "net": 57193
+      }
+     },
+     "R52": {
+      "real": {
+       "n": 27,
+       "net": 2373
+      },
+      "refused": {
+       "n": 175,
+       "net": 19340
+      },
+      "held": {
+       "n": 91,
+       "net": 26899
+      }
+     }
+    },
+    "refused": 1805,
+    "liq_extra": {
+     "n": 0,
+     "net": 0
+    }
+   },
+   "+ R72's kept place = CAP2": {
+    "net": 15955,
+    "trades": 1384,
+    "win": 0.418,
+    "worst_day": -14149,
+    "max_dd": 74624,
+    "r_dd": 0.2138,
+    "months": 7,
+    "worst_month": -42969,
+    "months_below": 2,
+    "days_below": 2,
+    "dd_breaches": 1,
+    "sessions": 133,
+    "arms": {
+     "LIQ": {
+      "real": {
+       "n": 152,
+       "net": 16783
+      },
+      "refused": {
+       "n": 205,
+       "net": -5628
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R72": {
+      "real": {
+       "n": 369,
+       "net": 50875
+      },
+      "refused": {
+       "n": 758,
+       "net": 129471
+      },
+      "held": {
+       "n": 75,
+       "net": -8980
+      }
+     },
+     "R51": {
+      "real": {
+       "n": 836,
+       "net": -54076
+      },
+      "refused": {
+       "n": 676,
+       "net": 87873
+      },
+      "held": {
+       "n": 269,
+       "net": 48048
+      }
+     },
+     "R52": {
+      "real": {
+       "n": 27,
+       "net": 2373
+      },
+      "refused": {
+       "n": 160,
+       "net": 32115
+      },
+      "held": {
+       "n": 106,
+       "net": 14123
+      }
+     }
+    },
+    "refused": 1799,
+    "liq_extra": {
+     "n": 0,
+     "net": 0
+    }
+   },
+   "R107 model without a cap": {
+    "net": 312978,
+    "trades": 3633,
+    "win": 0.446,
+    "worst_day": -69940,
+    "max_dd": 170942,
+    "r_dd": 1.8309,
+    "months": 7,
+    "worst_month": -113276,
+    "months_below": 2,
+    "days_below": 30,
+    "dd_breaches": 4,
+    "sessions": 133,
+    "arms": {
+     "LIQ": {
+      "real": {
+       "n": 357,
+       "net": 11155
+      },
+      "refused": {
+       "n": 0,
+       "net": 0
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R72": {
+      "real": {
+       "n": 1202,
+       "net": 171366
+      },
+      "refused": {
+       "n": 0,
+       "net": 0
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R51": {
+      "real": {
+       "n": 1781,
+       "net": 81845
+      },
+      "refused": {
+       "n": 0,
+       "net": 0
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     },
+     "R52": {
+      "real": {
+       "n": 293,
+       "net": 48612
+      },
+      "refused": {
+       "n": 0,
+       "net": 0
+      },
+      "held": {
+       "n": 0,
+       "net": 0
+      }
+     }
+    },
+    "refused": 0,
+    "liq_extra": {
+     "n": 0,
+     "net": 0
+    }
+   }
+  },
+  "_subsets": {
+   "LIQ": {
+    "NOCAP": {
+     "net": 11155,
+     "trades": 357,
+     "worst_day": -11405,
+     "max_dd": 61062,
+     "worst_month": -37821,
+     "months_below": 1,
+     "days_below": 0,
+     "dd_breaches": 1
+    },
+    "CAP2": {
+     "net": -17029,
+     "trades": 264,
+     "worst_day": -4668,
+     "max_dd": 35911,
+     "worst_month": -16518,
+     "months_below": 1,
+     "days_below": 0,
+     "dd_breaches": 0
+    }
+   },
+   "R72": {
+    "NOCAP": {
+     "net": 171366,
+     "trades": 1202,
+     "worst_day": -22571,
+     "max_dd": 61884,
+     "worst_month": -40908,
+     "months_below": 2,
+     "days_below": 8,
+     "dd_breaches": 2
+    },
+    "CAP2": {
+     "net": 105169,
+     "trades": 611,
+     "worst_day": -14242,
+     "max_dd": 32566,
+     "worst_month": -21873,
+     "months_below": 1,
+     "days_below": 1,
+     "dd_breaches": 0
+    }
+   },
+   "R51": {
+    "NOCAP": {
+     "net": 81845,
+     "trades": 1781,
+     "worst_day": -23012,
+     "max_dd": 91626,
+     "worst_month": -54306,
+     "months_below": 1,
+     "days_below": 6,
+     "dd_breaches": 1
+    },
+    "CAP2": {
+     "net": 5038,
+     "trades": 1232,
+     "worst_day": -13915,
+     "max_dd": 79234,
+     "worst_month": -41822,
+     "months_below": 3,
+     "days_below": 1,
+     "dd_breaches": 1
+    }
+   },
+   "R52": {
+    "NOCAP": {
+     "net": 48612,
+     "trades": 293,
+     "worst_day": -16554,
+     "max_dd": 47194,
+     "worst_month": -17113,
+     "months_below": 1,
+     "days_below": 3,
+     "dd_breaches": 1
+    },
+    "CAP2": {
+     "net": 32075,
+     "trades": 182,
+     "worst_day": -10265,
+     "max_dd": 36095,
+     "worst_month": -17770,
+     "months_below": 1,
+     "days_below": 0,
+     "dd_breaches": 0
+    }
+   },
+   "LIQ+R72": {
+    "NOCAP": {
+     "net": 182521,
+     "trades": 1559,
+     "worst_day": -32132,
+     "max_dd": 74854,
+     "worst_month": -53066,
+     "months_below": 2,
+     "days_below": 9,
+     "dd_breaches": 2
+    },
+    "CAP2": {
+     "net": 73423,
+     "trades": 750,
+     "worst_day": -14289,
+     "max_dd": 29073,
+     "worst_month": -16643,
+     "months_below": 2,
+     "days_below": 1,
+     "dd_breaches": 0
+    }
+   },
+   "LIQ+R51": {
+    "NOCAP": {
+     "net": 93000,
+     "trades": 2138,
+     "worst_day": -34417,
+     "max_dd": 93422,
+     "worst_month": -55255,
+     "months_below": 2,
+     "days_below": 10,
+     "dd_breaches": 3
+    },
+    "CAP2": {
+     "net": 7875,
+     "trades": 1299,
+     "worst_day": -13862,
+     "max_dd": 76155,
+     "worst_month": -37800,
+     "months_below": 3,
+     "days_below": 1,
+     "dd_breaches": 1
+    }
+   },
+   "LIQ+R52": {
+    "NOCAP": {
+     "net": 59767,
+     "trades": 650,
+     "worst_day": -26201,
+     "max_dd": 52289,
+     "worst_month": -23390,
+     "months_below": 3,
+     "days_below": 3,
+     "dd_breaches": 1
+    },
+    "CAP2": {
+     "net": 37024,
+     "trades": 372,
+     "worst_day": -10265,
+     "max_dd": 20388,
+     "worst_month": -16040,
+     "months_below": 1,
+     "days_below": 0,
+     "dd_breaches": 0
+    }
+   },
+   "R72+R51": {
+    "NOCAP": {
+     "net": 118756,
+     "trades": 2132,
+     "worst_day": -28558,
+     "max_dd": 95730,
+     "worst_month": -63278,
+     "months_below": 1,
+     "days_below": 10,
+     "dd_breaches": 1
+    },
+    "CAP2": {
+     "net": 28029,
+     "trades": 1301,
+     "worst_day": -15281,
+     "max_dd": 69270,
+     "worst_month": -46368,
+     "months_below": 2,
+     "days_below": 1,
+     "dd_breaches": 1
+    }
+   },
+   "R72+R52": {
+    "NOCAP": {
+     "net": 203933,
+     "trades": 1285,
+     "worst_day": -22571,
+     "max_dd": 55636,
+     "worst_month": -14372,
+     "months_below": 1,
+     "days_below": 7,
+     "dd_breaches": 2
+    },
+    "CAP2": {
+     "net": 134114,
+     "trades": 666,
+     "worst_day": -14242,
+     "max_dd": 33512,
+     "worst_month": -12554,
+     "months_below": 0,
+     "days_below": 1,
+     "dd_breaches": 0
+    }
+   },
+   "R51+R52": {
+    "NOCAP": {
+     "net": 90494,
+     "trades": 1830,
+     "worst_day": -23012,
+     "max_dd": 80968,
+     "worst_month": -28741,
+     "months_below": 1,
+     "days_below": 6,
+     "dd_breaches": 1
+    },
+    "CAP2": {
+     "net": 16264,
+     "trades": 1242,
+     "worst_day": -13915,
+     "max_dd": 75697,
+     "worst_month": -35906,
+     "months_below": 2,
+     "days_below": 1,
+     "dd_breaches": 1
+    }
+   },
+   "LIQ+R72+R51": {
+    "NOCAP": {
+     "net": 129911,
+     "trades": 2489,
+     "worst_day": -39963,
+     "max_dd": 102074,
+     "worst_month": -64226,
+     "months_below": 2,
+     "days_below": 13,
+     "dd_breaches": 3
+    },
+    "CAP2": {
+     "net": 7885,
+     "trades": 1374,
+     "worst_day": -14149,
+     "max_dd": 74831,
+     "worst_month": -46579,
+     "months_below": 2,
+     "days_below": 2,
+     "dd_breaches": 1
+    }
+   },
+   "LIQ+R72+R52": {
+    "NOCAP": {
+     "net": 215088,
+     "trades": 1642,
+     "worst_day": -32132,
+     "max_dd": 58148,
+     "worst_month": -30930,
+     "months_below": 2,
+     "days_below": 10,
+     "dd_breaches": 3
+    },
+    "CAP2": {
+     "net": 108942,
+     "trades": 789,
+     "worst_day": -14289,
+     "max_dd": 27599,
+     "worst_month": -6455,
+     "months_below": 0,
+     "days_below": 1,
+     "dd_breaches": 0
+    }
+   },
+   "LIQ+R51+R52": {
+    "NOCAP": {
+     "net": 101649,
+     "trades": 2187,
+     "worst_day": -34417,
+     "max_dd": 76969,
+     "worst_month": -29690,
+     "months_below": 2,
+     "days_below": 8,
+     "dd_breaches": 3
+    },
+    "CAP2": {
+     "net": 15945,
+     "trades": 1309,
+     "worst_day": -13862,
+     "max_dd": 73466,
+     "worst_month": -34190,
+     "months_below": 2,
+     "days_below": 1,
+     "dd_breaches": 1
+    }
+   },
+   "R72+R51+R52": {
+    "NOCAP": {
+     "net": 127404,
+     "trades": 2181,
+     "worst_day": -28558,
+     "max_dd": 87553,
+     "worst_month": -37713,
+     "months_below": 1,
+     "days_below": 9,
+     "dd_breaches": 1
+    },
+    "CAP2": {
+     "net": 39256,
+     "trades": 1311,
+     "worst_day": -15281,
+     "max_dd": 65906,
+     "worst_month": -40452,
+     "months_below": 2,
+     "days_below": 1,
+     "dd_breaches": 1
+    }
+   },
+   "LIQ+R72+R51+R52": {
+    "NOCAP": {
+     "net": 138560,
+     "trades": 2538,
+     "worst_day": -39963,
+     "max_dd": 88497,
+     "worst_month": -38662,
+     "months_below": 2,
+     "days_below": 12,
+     "dd_breaches": 3
+    },
+    "CAP2": {
+     "net": 15955,
+     "trades": 1384,
+     "worst_day": -14149,
+     "max_dd": 74624,
+     "worst_month": -42969,
+     "months_below": 2,
+     "days_below": 2,
+     "dd_breaches": 1
+    }
+   }
+  },
+  "_edge_order_last": [
+   "R52",
+   "LIQ",
+   "R72",
+   "R51"
+  ]
+ }
+}
