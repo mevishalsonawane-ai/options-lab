@@ -1,0 +1,42 @@
+id: r105-c-x6
+title: 'R105 X6 GB50: once +12%, keep half of the best gain on R72 Breadth Donchian (on top of the paper exits)'
+family: trade-management
+date: '2026-10-26'
+doc: research/HUNT_R105_DONCHIAN_GIVEBACK.md
+hypothesis: 'Boss (26 Oct: "it goes to 1,000 to 2,000 profit and then we end up losing"): GB50: once +12%, keep half of the
+  best gain recovers the giveback of R72 Breadth Donchian without cutting its profit: better net in design, walk-forward (>=
+  3 of 4 quarters) and final, worst day / max DD not worse (2%), beats 500 random-minute exit twins (p < 0.05 in design and
+  final), BH q <= 0.10 over the 20 new tests plus every earlier Donchian test, >= 30 changed design trades, design gain >=
+  0 without the 5 best, still better at 2x slippage.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov
+  2024 - 13 Oct 2026 (OOS 14-19 Oct reported apart)
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R105 (26 Oct); already read by R51-R75, R101, R104, so weak evidence
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Donchian 20 on 5-minute index bars); exit source: premium; no option chart for a signal'
+model_or_rule: 'R72 Breadth Donchian, 1-ITM, exits P (-15%, L25, 30/60/100 ladder, 30 min, 15:15) + X6: GB50: once +12%, keep
+  half of the best gain'
+settings: research/hunt/r105_donchian_giveback/r105lib.py; PREREG.md
+prereg: research/hunt/r105_donchian_giveback/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 3126 trades, net Rs 125,219, win 51%, worst day -Rs 58,613, max DD Rs 190,036 (baseline 3071 trades, net
+    Rs 216,929, win 47%, worst day -Rs 58,613, max DD Rs 199,077). Walk-forward net Rs 267,762 vs Rs 335,882; quarters [60243,
+    70833, 1090, 135595] vs [85063, 70225, 9774, 170821]. Final: 1209 trades, net Rs 122,292, win 49%, worst day -Rs 22,571,
+    max DD Rs 73,072 (baseline 1202 trades, net Rs 171,366, win 46%, worst day -Rs 22,571, max DD Rs 61,884). Changed 679
+    design / 220 final trades. Exit-twin p 1.0 design / 0.9541 final; BH q 1.0 over 20 new + 274 earlier Donchian tests. 2x
+    slippage final Rs 86,565 vs Rs 137,648. Verdict: FAIL (a_design, a_wf, a_final, a_quarters, b_final, c_twin, d_bh, f_ex_top5,
+    g_slip2).'
+  costs: 'dated charges, R17 liquidity fills, next-minute fills, stops on the minute low with gap fills at the worse open,
+    one held contract, 1 lot in force (X9: two 1-lot legs, per lot)'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying (the index). Research only; a passer goes on paper only via the app session (logged, undoable),
+  never live.

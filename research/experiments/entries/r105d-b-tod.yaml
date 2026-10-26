@@ -1,0 +1,32 @@
+id: r105d-b-tod
+title: R105D futures volume confirms the break (same time-of-day slot over 10 sessions) on R51 Donchian 20 + Supertrend
+family: flow-oi
+date: '2026-10-26'
+doc: research/HUNT_R105D_VOLUME.md
+hypothesis: 'Boss (26 Oct: "test the volume idea from the books"): breaks whose signal bar''s index-futures volume is >= 1.5x
+  normal make more per trade than low-volume breaks (Wyckoff, Aziz, Woods, Porwal, Larry Swing).'
+data_version: Drive lake fut_1m_live_index (29 Jul - 19 Oct 2026, 57 sessions); R105's frozen baseline trades
+period:
+  design: none (exploratory; 57 sessions only)
+  holdout: 29 Jul - 13 Oct inside R105's read final; 14 - 19 Oct OOS
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Donchian 20); filter: the active index future''s volume on the signal bar vs same time-of-day
+  slot over 10 sessions'
+model_or_rule: R51 Donchian 20 + Supertrend trades split by signal-bar futures volume ratio >= 1.5 (same time-of-day slot
+  over 10 sessions)
+settings: research/hunt/r105d_volume/r105d.py; PREREG.md
+prereg: research/hunt/r105d_volume/PREREG.md
+variants_tried: 1
+results:
+  summary: 'High volume: 229 trades, win 45%, Rs 148 a trade; low: 255, win 45%, Rs 140 a trade; unknown 220. Permutation
+    p 0.4805, BH q 0.5656 (4 tests). Not a lead.'
+  costs: R105's trades as priced (dated charges, liquidity fills, 1 lot)
+holdout_read: true
+verdict: rejected
+notes: Exploratory; re-run on the phone's near-month futures ticks after ~3 months.

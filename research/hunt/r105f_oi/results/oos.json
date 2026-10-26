@@ -1,0 +1,124 @@
+{
+ "C": {
+  "base": {
+   "trades": 25,
+   "win": 0.56,
+   "net": -624,
+   "worst_day": -18451,
+   "max_dd": 18451,
+   "ex_top5": -13429,
+   "days": 3
+  },
+  "rules": {
+   "O1": {
+    "stats": {
+     "trades": 10,
+     "win": 0.6,
+     "net": 3910,
+     "worst_day": -2215,
+     "max_dd": 2215,
+     "ex_top5": -4413,
+     "days": 3
+    },
+    "dropped": 39
+   },
+   "O2": {
+    "stats": {
+     "trades": 18,
+     "win": 0.4444,
+     "net": -3004,
+     "worst_day": -13938,
+     "max_dd": 13938,
+     "ex_top5": -14266,
+     "days": 3
+    },
+    "dropped": 11
+   },
+   "O3": {
+    "stats": {
+     "trades": 25,
+     "win": 0.56,
+     "net": -624,
+     "worst_day": -18451,
+     "max_dd": 18451,
+     "ex_top5": -13429,
+     "days": 3
+    },
+    "dropped": 3
+   },
+   "O4": {
+    "stats": {
+     "trades": 23,
+     "win": 0.4783,
+     "net": -3636,
+     "worst_day": -15587,
+     "max_dd": 15587,
+     "ex_top5": -15308,
+     "days": 3
+    },
+    "dropped": 18
+   }
+  }
+ },
+ "B": {
+  "base": {
+   "trades": 46,
+   "win": 0.5,
+   "net": 3412,
+   "worst_day": -13478,
+   "max_dd": 20847,
+   "ex_top5": -14530,
+   "days": 4
+  },
+  "rules": {
+   "O1": {
+    "stats": {
+     "trades": 23,
+     "win": 0.5217,
+     "net": 5670,
+     "worst_day": -4825,
+     "max_dd": 7470,
+     "ex_top5": -9390,
+     "days": 4
+    },
+    "dropped": 88
+   },
+   "O2": {
+    "stats": {
+     "trades": 29,
+     "win": 0.4828,
+     "net": -5930,
+     "worst_day": -11923,
+     "max_dd": 16999,
+     "ex_top5": -19522,
+     "days": 4
+    },
+    "dropped": 49
+   },
+   "O3": {
+    "stats": {
+     "trades": 44,
+     "win": 0.5227,
+     "net": 5382,
+     "worst_day": -13469,
+     "max_dd": 18151,
+     "ex_top5": -12467,
+     "days": 4
+    },
+    "dropped": 16
+   },
+   "O4": {
+    "stats": {
+     "trades": 40,
+     "win": 0.5,
+     "net": 5602,
+     "worst_day": -8754,
+     "max_dd": 12194,
+     "ex_top5": -11441,
+     "days": 4
+    },
+    "dropped": 43
+   }
+  }
+ }
+}

@@ -1,0 +1,250 @@
+{
+ "C": {
+  "today": {
+   "trades": 1202,
+   "win": 0.4584,
+   "net": 171366,
+   "avg_win": 1748,
+   "avg_loss": -1217,
+   "worst_day": -22571,
+   "max_dd": 61884
+  },
+  "T5": {
+   "trades": 1273,
+   "win": 0.6096,
+   "net": -118373,
+   "avg_win": 705,
+   "avg_loss": -1338,
+   "worst_day": -23550,
+   "max_dd": 148087
+  },
+  "T8": {
+   "trades": 1260,
+   "win": 0.5381,
+   "net": -58477,
+   "avg_win": 1033,
+   "avg_loss": -1304,
+   "worst_day": -22571,
+   "max_dd": 131472
+  },
+  "T10": {
+   "trades": 1251,
+   "win": 0.5116,
+   "net": -30224,
+   "avg_win": 1188,
+   "avg_loss": -1294,
+   "worst_day": -22604,
+   "max_dd": 129428
+  },
+  "T12": {
+   "trades": 1243,
+   "win": 0.4932,
+   "net": 15556,
+   "avg_win": 1326,
+   "avg_loss": -1265,
+   "worst_day": -22571,
+   "max_dd": 101491
+  },
+  "T15": {
+   "trades": 1234,
+   "win": 0.4749,
+   "net": 53385,
+   "avg_win": 1471,
+   "avg_loss": -1248,
+   "worst_day": -22571,
+   "max_dd": 65298
+  },
+  "T20": {
+   "trades": 1221,
+   "win": 0.4636,
+   "net": 116363,
+   "avg_win": 1627,
+   "avg_loss": -1228,
+   "worst_day": -22571,
+   "max_dd": 48469
+  },
+  "T5B": {
+   "trades": 1278,
+   "win": 0.41,
+   "net": -124089,
+   "avg_win": 752,
+   "avg_loss": -687,
+   "worst_day": -24249,
+   "max_dd": 135223
+  },
+  "T8B": {
+   "trades": 1262,
+   "win": 0.3914,
+   "net": -87481,
+   "avg_win": 1103,
+   "avg_loss": -823,
+   "worst_day": -21809,
+   "max_dd": 133070
+  },
+  "T10B": {
+   "trades": 1256,
+   "win": 0.4021,
+   "net": -39434,
+   "avg_win": 1268,
+   "avg_loss": -905,
+   "worst_day": -21014,
+   "max_dd": 128680
+  },
+  "T12B": {
+   "trades": 1247,
+   "win": 0.409,
+   "net": -4740,
+   "avg_win": 1404,
+   "avg_loss": -978,
+   "worst_day": -22067,
+   "max_dd": 113465
+  },
+  "T15B": {
+   "trades": 1235,
+   "win": 0.4202,
+   "net": 50843,
+   "avg_win": 1520,
+   "avg_loss": -1031,
+   "worst_day": -22571,
+   "max_dd": 65734
+  },
+  "T20B": {
+   "trades": 1221,
+   "win": 0.4251,
+   "net": 102785,
+   "avg_win": 1672,
+   "avg_loss": -1090,
+   "worst_day": -22571,
+   "max_dd": 58255
+  },
+  "pick": {
+   "rule": "T5",
+   "reached60": true,
+   "verdict": "60% but losing"
+  }
+ },
+ "B": {
+  "today": {
+   "trades": 1670,
+   "win": 0.4485,
+   "net": 134743,
+   "avg_win": 1651,
+   "avg_loss": -1197,
+   "worst_day": -21578,
+   "max_dd": 81683
+  },
+  "T5": {
+   "trades": 1758,
+   "win": 0.6132,
+   "net": -138114,
+   "avg_win": 723,
+   "avg_loss": -1349,
+   "worst_day": -22092,
+   "max_dd": 150480
+  },
+  "T8": {
+   "trades": 1737,
+   "win": 0.5337,
+   "net": -105095,
+   "avg_win": 1025,
+   "avg_loss": -1303,
+   "worst_day": -21692,
+   "max_dd": 137875
+  },
+  "T10": {
+   "trades": 1729,
+   "win": 0.5014,
+   "net": -94678,
+   "avg_win": 1169,
+   "avg_loss": -1286,
+   "worst_day": -21426,
+   "max_dd": 141677
+  },
+  "T12": {
+   "trades": 1714,
+   "win": 0.4848,
+   "net": -47778,
+   "avg_win": 1288,
+   "avg_loss": -1266,
+   "worst_day": -21578,
+   "max_dd": 115954
+  },
+  "T15": {
+   "trades": 1707,
+   "win": 0.4663,
+   "net": 3492,
+   "avg_win": 1418,
+   "avg_loss": -1235,
+   "worst_day": -21578,
+   "max_dd": 76640
+  },
+  "T20": {
+   "trades": 1691,
+   "win": 0.4524,
+   "net": 72096,
+   "avg_win": 1560,
+   "avg_loss": -1211,
+   "worst_day": -21578,
+   "max_dd": 66885
+  },
+  "T5B": {
+   "trades": 1769,
+   "win": 0.424,
+   "net": -137984,
+   "avg_win": 764,
+   "avg_loss": -698,
+   "worst_day": -16804,
+   "max_dd": 145201
+  },
+  "T8B": {
+   "trades": 1742,
+   "win": 0.3858,
+   "net": -127988,
+   "avg_win": 1103,
+   "avg_loss": -812,
+   "worst_day": -18793,
+   "max_dd": 147367
+  },
+  "T10B": {
+   "trades": 1736,
+   "win": 0.3831,
+   "net": -116636,
+   "avg_win": 1259,
+   "avg_loss": -890,
+   "worst_day": -21426,
+   "max_dd": 143017
+  },
+  "T12B": {
+   "trades": 1720,
+   "win": 0.389,
+   "net": -73968,
+   "avg_win": 1397,
+   "avg_loss": -959,
+   "worst_day": -20407,
+   "max_dd": 117600
+  },
+  "T15B": {
+   "trades": 1712,
+   "win": 0.4001,
+   "net": -7544,
+   "avg_win": 1491,
+   "avg_loss": -1002,
+   "worst_day": -20407,
+   "max_dd": 81629
+  },
+  "T20B": {
+   "trades": 1693,
+   "win": 0.4182,
+   "net": 56322,
+   "avg_win": 1599,
+   "avg_loss": -1092,
+   "worst_day": -20407,
+   "max_dd": 78599
+  },
+  "pick": {
+   "rule": "T5",
+   "reached60": true,
+   "verdict": "60% but losing"
+  }
+ }
+}

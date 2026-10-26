@@ -1,0 +1,10 @@
+{
+ "C": {
+  "rule": "T5",
+  "reached60": true
+ },
+ "B": {
+  "rule": "T5",
+  "reached60": true
+ }
+}

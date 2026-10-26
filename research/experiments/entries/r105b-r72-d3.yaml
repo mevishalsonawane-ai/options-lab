@@ -1,0 +1,36 @@
+id: r105b-r72-d3
+title: 'R105B D3 WK89: weekly 89 SMA (Trader Tom) as a direction filter on R72 Breadth Donchian'
+family: daily-filters
+date: '2026-10-26'
+doc: research/HUNT_R105B_DIRECTION.md
+hypothesis: 'Boss (26 Oct: "by all the pdf knowledge, find the direction and use it in Breadth Donchian and other strategies"):
+  WK89: weekly 89 SMA (Trader Tom) as a bias (calls only on up, puts only on down) makes R72 Breadth Donchian better in design,
+  walk-forward (>= 3 of 4 quarters) and final, beats random skips (p < 0.05 in design and final), BH q <= 0.10 over 40 new
+  + the earlier filter tests, >= 40 final trades, better without the 5 best, drawdown not worse by > 10%.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK), R51 Amendment A clean
+  stores, 20 Nov 2024 - 13 Oct 2026 (OOS 14-19 Oct apart)
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R105B (26 Oct); already read by ~25 studies, weak evidence
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s own signal; the bias from the index''s daily / weekly / 60-minute / 15-minute bars
+  or today''s open); no option chart'
+model_or_rule: 'R72 Breadth Donchian (R101 candidates, own exits) + bias D3: WK89: weekly 89 SMA (Trader Tom)'
+settings: research/hunt/r105b_direction/r105bbias.py; PREREG.md
+prereg: research/hunt/r105b_direction/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design 1677 trades, win 46%, net Rs 54,528 (baseline 3071 / Rs 216,929); WF Rs 199,994 vs Rs 335,882, quarters
+    [79136, 5879, 12950, 102029] vs [85063, 70225, 9774, 170821]; final 703 trades, win 45%, net Rs 91,646 (baseline 1202
+    / Rs 171,366); dropped 2766 design signals (1535 lost on their own); random-skip p 0.6148 / 0.8004; BH q 1.0. Verdict:
+    FAIL (a_design, a_wf, a_final, a_quarters, b_twin, c_bh, e_top5).'
+  costs: dated charges, R17 liquidity fills, next-minute fills, stops on the minute low, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Research only; a passer goes on paper only via the app session.

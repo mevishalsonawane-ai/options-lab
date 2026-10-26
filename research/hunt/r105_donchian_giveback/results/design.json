@@ -1,0 +1,715 @@
+{
+ "phase": "design",
+ "lo": "2024-11-20",
+ "hi": "2026-03-31",
+ "arms": {
+  "C": {
+   "base": {
+    "trades": 3071,
+    "net": 216929,
+    "win": 0.4676,
+    "avg_win": 1715,
+    "avg_loss": -1374,
+    "worst_day": -58613,
+    "max_dd": 199077,
+    "days": 323,
+    "green_days": 0.4551
+   },
+   "base_q": [
+    85063,
+    70225,
+    9774,
+    170821
+   ],
+   "cohort": {
+    "all": {
+     "n": 3071,
+     "net": 216929
+    },
+    "reached_rs1000": {
+     "n": 1638,
+     "net": 1848726
+    },
+    "rs1000_lost": {
+     "n": 384,
+     "net": -561586
+    },
+    "rs1000_2000_lost": {
+     "n": 284,
+     "net": -401696
+    },
+    "rs2000plus_lost": {
+     "n": 100,
+     "net": -159890
+    },
+    "pct8_25_lost": {
+     "n": 290,
+     "net": -331964
+    },
+    "pct8_15_lost": {
+     "n": 226,
+     "net": -262517
+    },
+    "pct15_25_lost": {
+     "n": 64,
+     "net": -69448
+    },
+    "pct25plus_lost": {
+     "n": 4,
+     "net": -2395
+    },
+    "never8": {
+     "n": 1657,
+     "net": -1717307
+    }
+   },
+   "rules": {
+    "X1": {
+     "stats": {
+      "trades": 3088,
+      "net": 189083,
+      "win": 0.4041,
+      "avg_win": 1791,
+      "avg_loss": -1112,
+      "worst_day": -58613,
+      "max_dd": 180647,
+      "days": 323,
+      "green_days": 0.4551
+     },
+     "fixed_net": 183100,
+     "cohort_rs1000_lost": -371228,
+     "cohort_pct8_25_lost": -117879,
+     "base_winners_after": 2215166,
+     "base_winners": 2463080,
+     "ex_top5": -58247,
+     "q": [
+      90265,
+      60103,
+      14902,
+      121080
+     ],
+     "wf_net": 286350,
+     "p": 0.984,
+     "changed": 386,
+     "twin_mean": 244434
+    },
+    "X2": {
+     "stats": {
+      "trades": 3075,
+      "net": 201194,
+      "win": 0.4433,
+      "avg_win": 1745,
+      "avg_loss": -1271,
+      "worst_day": -58613,
+      "max_dd": 196615,
+      "days": 323,
+      "green_days": 0.452
+     },
+     "fixed_net": 188414,
+     "cohort_rs1000_lost": -495613,
+     "cohort_pct8_25_lost": -263925,
+     "base_winners_after": 2366526,
+     "base_winners": 2463080,
+     "ex_top5": -41413,
+     "q": [
+      84057,
+      71812,
+      8420,
+      148588
+     ],
+     "wf_net": 312877,
+     "p": 0.988,
+     "changed": 141,
+     "twin_mean": 227232
+    },
+    "X3": {
+     "stats": {
+      "trades": 3078,
+      "net": 199907,
+      "win": 0.4896,
+      "avg_win": 1574,
+      "avg_loss": -1383,
+      "worst_day": -58613,
+      "max_dd": 192729,
+      "days": 323,
+      "green_days": 0.4489
+     },
+     "fixed_net": 175892,
+     "cohort_rs1000_lost": -478921,
+     "cohort_pct8_25_lost": -247251,
+     "base_winners_after": 2337000,
+     "base_winners": 2463080,
+     "ex_top5": -56003,
+     "q": [
+      89621,
+      72906,
+      9439,
+      137339
+     ],
+     "wf_net": 309305,
+     "p": 0.996,
+     "changed": 179,
+     "twin_mean": 230471
+    },
+    "X4": {
+     "stats": {
+      "trades": 3114,
+      "net": 64794,
+      "win": 0.3372,
+      "avg_win": 1761,
+      "avg_loss": -864,
+      "worst_day": -39063,
+      "max_dd": 174909,
+      "days": 323,
+      "green_days": 0.4272
+     },
+     "fixed_net": 26273,
+     "cohort_rs1000_lost": -43547,
+     "cohort_pct8_25_lost": -81882,
+     "base_winners_after": 1754386,
+     "base_winners": 2463080,
+     "ex_top5": -222228,
+     "q": [
+      53833,
+      35415,
+      -498,
+      105070
+     ],
+     "wf_net": 193819,
+     "p": 1.0,
+     "changed": 784,
+     "twin_mean": 271481
+    },
+    "X5": {
+     "stats": {
+      "trades": 3073,
+      "net": 211463,
+      "win": 0.4025,
+      "avg_win": 1872,
+      "avg_loss": -1146,
+      "worst_day": -58613,
+      "max_dd": 185739,
+      "days": 323,
+      "green_days": 0.4458
+     },
+     "fixed_net": 211848,
+     "cohort_rs1000_lost": -419386,
+     "cohort_pct8_25_lost": -161530,
+     "base_winners_after": 2287565,
+     "base_winners": 2463080,
+     "ex_top5": -20369,
+     "q": [
+      61149,
+      55838,
+      16162,
+      184145
+     ],
+     "wf_net": 317294,
+     "p": 0.8862,
+     "changed": 435,
+     "twin_mean": 246979
+    },
+    "X6": {
+     "stats": {
+      "trades": 3126,
+      "net": 125219,
+      "win": 0.5128,
+      "avg_win": 1401,
+      "avg_loss": -1393,
+      "worst_day": -58613,
+      "max_dd": 190036,
+      "days": 323,
+      "green_days": 0.483
+     },
+     "fixed_net": 73920,
+     "cohort_rs1000_lost": -339003,
+     "cohort_pct8_25_lost": -97200,
+     "base_winners_after": 2082670,
+     "base_winners": 2463080,
+     "ex_top5": -169130,
+     "q": [
+      60243,
+      70833,
+      1090,
+      135595
+     ],
+     "wf_net": 267762,
+     "p": 1.0,
+     "changed": 679,
+     "twin_mean": 264923
+    },
+    "X7": {
+     "stats": {
+      "trades": 3116,
+      "net": 278825,
+      "win": 0.3601,
+      "avg_win": 1841,
+      "avg_loss": -896,
+      "worst_day": -39108,
+      "max_dd": 165104,
+      "days": 323,
+      "green_days": 0.4365
+     },
+     "fixed_net": 242956,
+     "cohort_rs1000_lost": -446703,
+     "cohort_pct8_25_lost": -257664,
+     "base_winners_after": 1782617,
+     "base_winners": 2463080,
+     "ex_top5": -2968,
+     "q": [
+      49260,
+      72142,
+      63785,
+      127333
+     ],
+     "wf_net": 312521,
+     "p": 0.9401,
+     "changed": 1508,
+     "twin_mean": 324079
+    },
+    "X8": {
+     "stats": {
+      "trades": 3071,
+      "net": 218821,
+      "win": 0.4637,
+      "avg_win": 1702,
+      "avg_loss": -1339,
+      "worst_day": -58613,
+      "max_dd": 194392,
+      "days": 323,
+      "green_days": 0.4551
+     },
+     "fixed_net": 216759,
+     "cohort_rs1000_lost": -516965,
+     "cohort_pct8_25_lost": -282736,
+     "base_winners_after": 2413681,
+     "base_winners": 2463080,
+     "ex_top5": -17583,
+     "q": [
+      90543,
+      68236,
+      12184,
+      157312
+     ],
+     "wf_net": 328275,
+     "p": 0.6567,
+     "changed": 99,
+     "twin_mean": 222986
+    },
+    "X9": {
+     "stats": {
+      "trades": 3075,
+      "net": 141180,
+      "win": 0.4911,
+      "avg_win": 1531,
+      "avg_loss": -1387,
+      "worst_day": -58613,
+      "max_dd": 201955,
+      "days": 323,
+      "green_days": 0.4799
+     },
+     "fixed_net": 129835,
+     "cohort_rs1000_lost": -438770,
+     "cohort_pct8_25_lost": -210411,
+     "base_winners_after": 2249945,
+     "base_winners": 2463080,
+     "ex_top5": -106273,
+     "q": [
+      62245,
+      64151,
+      13023,
+      128377
+     ],
+     "wf_net": 267797,
+     "p": 1.0,
+     "changed": 740,
+     "twin_mean": 241904
+    },
+    "X10": {
+     "stats": {
+      "trades": 3075,
+      "net": 198332,
+      "win": 0.4498,
+      "avg_win": 1717,
+      "avg_loss": -1286,
+      "worst_day": -58613,
+      "max_dd": 198786,
+      "days": 323,
+      "green_days": 0.4551
+     },
+     "fixed_net": 185552,
+     "cohort_rs1000_lost": -490573,
+     "cohort_pct8_25_lost": -258886,
+     "base_winners_after": 2358624,
+     "base_winners": 2463080,
+     "ex_top5": -45575,
+     "q": [
+      72846,
+      70329,
+      16379,
+      151083
+     ],
+     "wf_net": 310637,
+     "p": 0.99,
+     "changed": 263,
+     "twin_mean": 235099
+    }
+   },
+   "base_wf_net": 335882
+  },
+  "B": {
+   "base": {
+    "trades": 4208,
+    "net": 50425,
+    "win": 0.4446,
+    "avg_win": 1752,
+    "avg_loss": -1381,
+    "worst_day": -49738,
+    "max_dd": 214239,
+    "days": 337,
+    "green_days": 0.451
+   },
+   "base_q": [
+    13763,
+    59076,
+    20835,
+    120074
+   ],
+   "cohort": {
+    "all": {
+     "n": 4208,
+     "net": 50425
+    },
+    "reached_rs1000": {
+     "n": 2211,
+     "net": 2382522
+    },
+    "rs1000_lost": {
+     "n": 580,
+     "net": -825777
+    },
+    "rs1000_2000_lost": {
+     "n": 425,
+     "net": -595092
+    },
+    "rs2000plus_lost": {
+     "n": 155,
+     "net": -230686
+    },
+    "pct8_25_lost": {
+     "n": 440,
+     "net": -481738
+    },
+    "pct8_15_lost": {
+     "n": 341,
+     "net": -374952
+    },
+    "pct15_25_lost": {
+     "n": 99,
+     "net": -106786
+    },
+    "pct25plus_lost": {
+     "n": 1,
+     "net": -185
+    },
+    "never8": {
+     "n": 2355,
+     "net": -2455282
+    }
+   },
+   "rules": {
+    "X1": {
+     "stats": {
+      "trades": 4219,
+      "net": 66956,
+      "win": 0.3873,
+      "avg_win": 1824,
+      "avg_loss": -1127,
+      "worst_day": -44318,
+      "max_dd": 181987,
+      "days": 337,
+      "green_days": 0.4599
+     },
+     "fixed_net": 50497,
+     "cohort_rs1000_lost": -547358,
+     "cohort_pct8_25_lost": -160426,
+     "base_winners_after": 2956207,
+     "base_winners": 3277448,
+     "ex_top5": -21798,
+     "q": [
+      16554,
+      54147,
+      24620,
+      76977
+     ],
+     "wf_net": 172298,
+     "p": 0.9261,
+     "changed": 541,
+     "twin_mean": 100301
+    },
+    "X2": {
+     "stats": {
+      "trades": 4209,
+      "net": 22329,
+      "win": 0.4227,
+      "avg_win": 1770,
+      "avg_loss": -1287,
+      "worst_day": -46772,
+      "max_dd": 204016,
+      "days": 337,
+      "green_days": 0.457
+     },
+     "fixed_net": 21484,
+     "cohort_rs1000_lost": -728065,
+     "cohort_pct8_25_lost": -380198,
+     "base_winners_after": 3146966,
+     "base_winners": 3277448,
+     "ex_top5": -44287,
+     "q": [
+      5780,
+      60696,
+      17444,
+      86088
+     ],
+     "wf_net": 170008,
+     "p": 0.992,
+     "changed": 192,
+     "twin_mean": 69514
+    },
+    "X3": {
+     "stats": {
+      "trades": 4213,
+      "net": 26521,
+      "win": 0.4678,
+      "avg_win": 1598,
+      "avg_loss": -1393,
+      "worst_day": -46772,
+      "max_dd": 214858,
+      "days": 337,
+      "green_days": 0.4629
+     },
+     "fixed_net": 11276,
+     "cohort_rs1000_lost": -702078,
+     "cohort_pct8_25_lost": -353706,
+     "base_winners_after": 3109935,
+     "base_winners": 3277448,
+     "ex_top5": -57037,
+     "q": [
+      14885,
+      65108,
+      19225,
+      81933
+     ],
+     "wf_net": 181152,
+     "p": 0.994,
+     "changed": 232,
+     "twin_mean": 71791
+    },
+    "X4": {
+     "stats": {
+      "trades": 4245,
+      "net": -31657,
+      "win": 0.3204,
+      "avg_win": 1823,
+      "avg_loss": -870,
+      "worst_day": -32443,
+      "max_dd": 208662,
+      "days": 337,
+      "green_days": 0.4214
+     },
+     "fixed_net": -54002,
+     "cohort_rs1000_lost": -59653,
+     "cohort_pct8_25_lost": -125618,
+     "base_winners_after": 2406896,
+     "base_winners": 3277448,
+     "ex_top5": -135256,
+     "q": [
+      8703,
+      15474,
+      21477,
+      79098
+     ],
+     "wf_net": 124752,
+     "p": 1.0,
+     "changed": 1090,
+     "twin_mean": 151467
+    },
+    "X5": {
+     "stats": {
+      "trades": 4210,
+      "net": 70824,
+      "win": 0.3841,
+      "avg_win": 1899,
+      "avg_loss": -1157,
+      "worst_day": -47329,
+      "max_dd": 189851,
+      "days": 337,
+      "green_days": 0.4599
+     },
+     "fixed_net": 58081,
+     "cohort_rs1000_lost": -610878,
+     "cohort_pct8_25_lost": -224667,
+     "base_winners_after": 3028032,
+     "base_winners": 3277448,
+     "ex_top5": -9880,
+     "q": [
+      -3514,
+      47174,
+      28738,
+      125711
+     ],
+     "wf_net": 198108,
+     "p": 0.9301,
+     "changed": 618,
+     "twin_mean": 108352
+    },
+    "X6": {
+     "stats": {
+      "trades": 4258,
+      "net": -51853,
+      "win": 0.4969,
+      "avg_win": 1410,
+      "avg_loss": -1417,
+      "worst_day": -46772,
+      "max_dd": 223408,
+      "days": 337,
+      "green_days": 0.4807
+     },
+     "fixed_net": -142722,
+     "cohort_rs1000_lost": -500531,
+     "cohort_pct8_25_lost": -128630,
+     "base_winners_after": 2730535,
+     "base_winners": 3277448,
+     "ex_top5": -219793,
+     "q": [
+      -8175,
+      55868,
+      22392,
+      48105
+     ],
+     "wf_net": 118190,
+     "p": 1.0,
+     "changed": 906,
+     "twin_mean": 130703
+    },
+    "X7": {
+     "stats": {
+      "trades": 4295,
+      "net": 106938,
+      "win": 0.3176,
+      "avg_win": 1893,
+      "avg_loss": -844,
+      "worst_day": -36414,
+      "max_dd": 179298,
+      "days": 337,
+      "green_days": 0.4332
+     },
+     "fixed_net": 92061,
+     "cohort_rs1000_lost": -620622,
+     "cohort_pct8_25_lost": -373005,
+     "base_winners_after": 2182765,
+     "base_winners": 3277448,
+     "ex_top5": 11650,
+     "q": [
+      11620,
+      51803,
+      20387,
+      106778
+     ],
+     "wf_net": 190588,
+     "p": 1.0,
+     "changed": 2398,
+     "twin_mean": 277262
+    },
+    "X8": {
+     "stats": {
+      "trades": 4209,
+      "net": 44872,
+      "win": 0.441,
+      "avg_win": 1732,
+      "avg_loss": -1347,
+      "worst_day": -48558,
+      "max_dd": 200542,
+      "days": 337,
+      "green_days": 0.4629
+     },
+     "fixed_net": 35734,
+     "cohort_rs1000_lost": -756684,
+     "cohort_pct8_25_lost": -400680,
+     "base_winners_after": 3181698,
+     "base_winners": 3277448,
+     "ex_top5": -29388,
+     "q": [
+      17017,
+      61750,
+      22816,
+      91588
+     ],
+     "wf_net": 193171,
+     "p": 0.9461,
+     "changed": 202,
+     "twin_mean": 69373
+    },
+    "X9": {
+     "stats": {
+      "trades": 4209,
+      "net": -64584,
+      "win": 0.4699,
+      "avg_win": 1542,
+      "avg_loss": -1396,
+      "worst_day": -42388,
+      "max_dd": 215258,
+      "days": 337,
+      "green_days": 0.4807
+     },
+     "fixed_net": -72653,
+     "cohort_rs1000_lost": -641877,
+     "cohort_pct8_25_lost": -291412,
+     "base_winners_after": 2963411,
+     "base_winners": 3277448,
+     "ex_top5": -150907,
+     "q": [
+      -18733,
+      47010,
+      26208,
+      53355
+     ],
+     "wf_net": 107840,
+     "p": 1.0,
+     "changed": 948,
+     "twin_mean": 94418
+    },
+    "X10": {
+     "stats": {
+      "trades": 4209,
+      "net": 21955,
+      "win": 0.43,
+      "avg_win": 1739,
+      "avg_loss": -1303,
+      "worst_day": -46772,
+      "max_dd": 204365,
+      "days": 337,
+      "green_days": 0.4659
+     },
+     "fixed_net": 21262,
+     "cohort_rs1000_lost": -718470,
+     "cohort_pct8_25_lost": -370241,
+     "base_winners_after": 3136787,
+     "base_winners": 3277448,
+     "ex_top5": -45086,
+     "q": [
+      3577,
+      53723,
+      26611,
+      87100
+     ],
+     "wf_net": 171010,
+     "p": 0.988,
+     "changed": 343,
+     "twin_mean": 81407
+    }
+   },
+   "base_wf_net": 213748
+  }
+ }
+}

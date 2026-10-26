@@ -1,0 +1,31 @@
+id: r105e-b-q2
+title: 'R105E Q2 option-liquidity check (VOL100: >= 100 lots) on R51 Donchian 20 + Supertrend'
+family: sizing-execution
+date: '2026-10-26'
+doc: research/HUNT_R105E_OPTION_LIQUIDITY.md
+hypothesis: 'Boss (26 Oct: "if we add liquidity check"): buying only when the option is liquid makes the arm better in design,
+  walk-forward and final, beats random skips and survives BH.'
+data_version: Drive lake (index_1m, options_rolling_1m WEEK incl. volume), R51 Amendment A clean stores, 20 Nov 2024 - 13
+  Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once (~30th read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index; the check reads the bought option''s own volume before entry (no option chart signal)'
+model_or_rule: R51 Donchian 20 + Supertrend + Q2
+settings: research/hunt/r105e_optliq/r105e.py; PREREG.md
+prereg: research/hunt/r105e_optliq/PREREG.md
+variants_tried: 1
+results:
+  summary: Design Rs 738 vs Rs 50,425; WF Rs 174,487 vs Rs 213,748; final 1283 trades, win 44%, Rs 84,518 vs Rs 134,743; random-skip
+    p 0.5669 / 0.6766; BH q 1.0. FAIL (a_design, a_wf, a_final, a_quarters, b_twin, c_bh, e_top5).
+  costs: dated charges, R17 liquidity fills (2-4 ticks on thin options), 1 lot
+holdout_read: true
+verdict: rejected
+notes: No bid/ask history; the app's live spread check (shadow) is the real test.

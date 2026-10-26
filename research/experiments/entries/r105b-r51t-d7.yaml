@@ -1,0 +1,38 @@
+id: r105b-r51t-d7
+title: 'R105B D7 SMA200: daily 200 SMA with a 1% band (Fabozzi, Aziz) as a direction filter on R51 Donchian 20 + Supertrend'
+family: daily-filters
+date: '2026-10-26'
+doc: research/HUNT_R105B_DIRECTION.md
+hypothesis: 'Boss (26 Oct: "by all the pdf knowledge, find the direction and use it in Breadth Donchian and other strategies"):
+  SMA200: daily 200 SMA with a 1% band (Fabozzi, Aziz) as a bias (calls only on up, puts only on down) makes R51 Donchian
+  20 + Supertrend better in design, walk-forward (>= 3 of 4 quarters) and final, beats random skips (p < 0.05 in design and
+  final), BH q <= 0.10 over 40 new + the earlier filter tests, >= 40 final trades, better without the 5 best, drawdown not
+  worse by > 10%.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK), R51 Amendment A clean
+  stores, 20 Nov 2024 - 13 Oct 2026 (OOS 14-19 Oct apart)
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R105B (26 Oct); already read by ~25 studies, weak evidence
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s own signal; the bias from the index''s daily / weekly / 60-minute / 15-minute bars
+  or today''s open); no option chart'
+model_or_rule: 'R51 Donchian 20 + Supertrend (R101 candidates, own exits) + bias D7: SMA200: daily 200 SMA with a 1% band
+  (Fabozzi, Aziz)'
+settings: research/hunt/r105b_direction/r105bbias.py; PREREG.md
+prereg: research/hunt/r105b_direction/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design 2310 trades, win 44%, net Rs 96,381 (baseline 4208 / Rs 50,425); WF Rs 160,321 vs Rs 213,748, quarters
+    [58761, 32947, 11237, 57375] vs [13763, 59076, 20835, 120074]; final 928 trades, win 42%, net -Rs 18,225 (baseline 1670
+    / Rs 134,743); dropped 5580 design signals (3183 lost on their own); random-skip p 0.004 / 0.9721; BH q 1.0. Verdict:
+    FAIL (a_wf, a_final, a_quarters, b_twin, c_bh, e_top5).'
+  costs: dated charges, R17 liquidity fills, next-minute fills, stops on the minute low, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Research only; a passer goes on paper only via the app session.
