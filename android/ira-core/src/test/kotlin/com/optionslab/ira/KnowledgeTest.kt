@@ -132,8 +132,9 @@ class KnowledgeTest {
         "is vix a direction dial" to listOf("index.vix-is-the-range-dial"),
         "is expiry day a bigger day for nifty" to listOf("index.expiry-day-not-bigger"),
         // The books' cards (book_facts.yaml, 25 Oct 2026): "what does <author> say about <topic>" finds the book's card.
+        // 26 Oct (R105D merge): Wyckoff's own volume rules, logged with their tested result, are as good an answer as his card.
         "what does wyckoff say about volume" to listOf("book.wyckoff-day-traders-bible.2", "book.wyckoff-day-traders-bible.3",
-            "book.wyckoff-day-traders-bible.1"),
+            "book.wyckoff-day-traders-bible.1", "exp.book-wyckoff-02", "exp.book-wyckoff-04"),
         "what does trading in the zone say about thinking in probabilities" to listOf("book.douglas-trading-in-the-zone.1",
             "book.douglas-trading-in-the-zone.2"),
         "what does carli say about cci divergence" to listOf("book.carli-divergence.1", "book.carli-divergence.2", "book.carli-divergence.6"),
