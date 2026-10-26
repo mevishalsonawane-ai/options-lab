@@ -218,8 +218,10 @@ def eval_book_slot(day_units: dict, sess: list, cap_fn_for, mx: dict, rng, day_l
         three_t += walk(d, lambda c, r: K.CAP_MORE)
         var_t += walk(d, cap_fn_for(d, None))
     base, three, var = (B.daily_vector(x, sess) for x in (base_t, three_t, var_t))
-    keyset = {(t["und"], t["day"], t["arm"], t["er_sig"], t["side"]) for t in base_t}
-    changed = sum(1 for t in var_t if (t["und"], t["day"], t["arm"], t["er_sig"], t["side"]) not in keyset)
+    def tkey(t):
+        return t["und"], t["day"], t["arm"], t["er_sig"], t["side"], t.get("book")
+    keyset = {tkey(t) for t in base_t}
+    changed = sum(1 for t in var_t if tkey(t) not in keyset)
     if day_level:
         flags = np.array([flag_day(d) for d in sess], bool)
         perm = B.perm_matrix(K.TWINS, len(sess), rng)
