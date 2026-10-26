@@ -492,14 +492,30 @@ internal object IraBots {
     private fun names(x: org.json.JSONObject, k: String): Set<String> =
         x.optJSONArray(k)?.let { arr -> (0 until arr.length()).map { arr.getString(it) }.toSet() } ?: emptySet()
 
-    fun armLog(): com.optionslab.ira.ArmHabits.Log = armCache ?: runCatching {
+    fun armLog(): com.optionslab.ira.ArmHabits.Log = armCache ?: wipeGen.let { gen -> runCatching {
         val a = org.json.JSONArray(com.optionslab.app.security.SecurePrefs.getString(SWITCHES_KEY) ?: "[]")
         com.optionslab.ira.ArmHabits.Log((0 until a.length()).map { i -> a.getJSONObject(i).let { x ->
             com.optionslab.ira.ArmHabits.Day(java.time.LocalDate.parse(x.getString("d")), names(x, "k"), names(x, "a"), names(x, "l"), names(x, "w"))
         } })
-    }.getOrDefault(com.optionslab.ira.ArmHabits.Log()).also { armCache = it }
+    }.getOrDefault(com.optionslab.ira.ArmHabits.Log()).also { if (gen == wipeGen) armCache = it } }
 
-    private fun armSave(log: com.optionslab.ira.ArmHabits.Log) {
+    /** Bumped by [wipe] (26 Oct): a read or a note that began before "Erase everything" keeps nothing. */
+    @Volatile private var wipeGen = 0
+
+    /**
+     * "Erase everything" (26 Oct): the bots' switch-and-sign record dropped from memory (its settings keys, with the tested
+     * marks and the told and asked days, go with [com.optionslab.app.security.SecurePrefs.wipe]). Never reads the settings.
+     */
+    fun wipe() {
+        wipeGen++
+        armCache = null; lastNote = 0L; lastPass = 0L; lastCutoff = 0L; lastPromotion = 0L
+    }
+
+    /** Memory only, for the erase's tests. */
+    internal fun holdsForErase(): Boolean = armCache?.days?.isNotEmpty() == true
+
+    private fun armSave(log: com.optionslab.ira.ArmHabits.Log, gen: Int) {
+        if (gen != wipeGen) return
         armCache = log
         val a = org.json.JSONArray()
         log.days.forEach { d ->
@@ -522,6 +538,7 @@ internal object IraBots {
         val nowMs = System.currentTimeMillis()
         if (nowMs - lastNote < 5 * 60_000L) return
         lastNote = nowMs
+        val gen = wipeGen
         val byName = bots().filter { it.kind != "Solo" }.groupBy { it.name }
         if (byName.isEmpty()) return
         val switches = byName.mapValues { (_, bs) -> bs.any { it.on } }
@@ -530,7 +547,7 @@ internal object IraBots {
         val won = todays.filter { it.value.isNotEmpty() && it.value.sumOf { t -> t.net } > 0 }.keys
         val before = armLog()
         val after = com.optionslab.ira.ArmHabits.note(before, today, switches, lost, won)
-        if (after !== before) armSave(after)
+        if (after !== before) armSave(after, gen)
     }
 
     /** "Do I usually disarm my bots after losses?" (the phone unlocked: the hub checks). */

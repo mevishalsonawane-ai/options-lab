@@ -111,6 +111,7 @@ object GrammarArm {
 
     private fun book(): Book {
         cache?.let { return it }
+        val gen = wipes
         val b = Book()
         runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
@@ -126,7 +127,8 @@ object GrammarArm {
             o.optJSONArray("positions")?.let { a -> for (i in 0 until a.length()) b.positions += readPos(a.getJSONObject(i)) }
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
-        cache = b
+        // 26 Oct (review): a book read before "Erase everything" ([wipe]) is used by this pass only: never kept, saved or shown.
+        if (!synchronized(written) { (gen == wipes).also { if (it) cache = b } }) return b
         publish(b)
         return b
     }
@@ -153,6 +155,9 @@ object GrammarArm {
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
+        // 26 Oct (erase everything): a pass that read the book before an erase never writes it back, nor shows it ([wipe]
+        // drops the cache: a book that is no longer the cache is the erased one).
+        if (b !== cache) return
         val o = JSONObject()
         o.put("ideas", JSONArray().apply { b.ideas.forEach { put(writeIdea(it)) } })
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
@@ -542,6 +547,27 @@ object GrammarArm {
         }
     }
 
-    /** For tests (and AreaE's reset): the book forgotten (its file goes with the test's directory). */
-    internal fun wipe() { cache = null; prev = null; _view.value = View() }
+    /**
+     * For tests (and AreaE's reset): the book forgotten (its file goes with the test's directory). 26 Oct (erase everything):
+     * its file deleted too (first, so a pass that reads the book again meanwhile finds none), and what was last written
+     * forgotten. A pass under way keeps the old book in hand, but [save] writes and shows only the cached one.
+     */
+    internal fun wipe() {
+        filesForErase().forEach { runCatching { it.delete() } }
+        written.forget()
+        synchronized(written) { wipes++; cache = null }
+        prev = null; _view.value = View()
+    }
+
+    /** 26 Oct: bumped by [wipe] (under [written]'s lock): a read that began before it is not kept ([book]). */
+    @Volatile private var wipes = 0
+
+    /** The erase's files: the book and any copy of it set aside as unreadable (empty before [init]). */
+    internal fun filesForErase(): List<File> = if (!ready()) emptyList() else
+        listOf(file) + file.parentFile?.listFiles { f -> f.name.startsWith(file.name + ".unreadable.") }.orEmpty()
+
+    /** Ideas, trades or notes in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        cache?.let { it.ideas.isNotEmpty() || it.positions.isNotEmpty() || it.log.isNotEmpty() } == true || _view.value != View()
+    }.getOrDefault(false)
 }

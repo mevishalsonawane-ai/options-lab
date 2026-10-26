@@ -103,7 +103,9 @@ object MarketContext {
         // The card shows the switch at once (the refresh may now be hours away out of market hours: Battery, 14 Oct).
         _card.value = _card.value.copy(pause = m)
         if (m != EventShield.Mode.SHADOW) shadowSince = null else if (was != EventShield.Mode.SHADOW) shadowSince = nowIst()
-        scope.launch(Dispatchers.IO) { runCatching { SecurePrefs.putAllSoon(mapOf(K_PAUSE to m.name)) } }
+        // 26 Oct: an erase that came before this save ran drops it (Boss's switch is not written back after "Erase everything").
+        val gen = wipes
+        scope.launch(Dispatchers.IO) { if (gen == wipes) runCatching { SecurePrefs.putAllSoon(mapOf(K_PAUSE to m.name)) } }
         runCatching { Diag.record("context", "pause paper arms on event days: ${m.name}") }
         return when (m) {
             EventShield.Mode.OFF -> "Off: event days change nothing."
@@ -383,6 +385,26 @@ object MarketContext {
             for (s in seq) runCatching { JSONObject(s) }.getOrNull()?.let { each(it) }
         }
     }
+
+    /**
+     * "Erase everything" (26 Oct): Boss's switch and its shadowed days, today's events (Boss's own among them), the morning
+     * brief (it holds the paper arms' net per day) and the card dropped from memory; the settings keys go with
+     * [SecurePrefs.wipe]. The level maps are public market data and stay. Never reads the settings; nothing is waited on.
+     */
+    /** Bumped by [wipe]: a switch save still queued then is dropped. */
+    @Volatile private var wipes = 0
+
+    fun wipe() {
+        wipes++
+        _mode.value = EventShield.DEFAULT_MODE; _shadowDays.value = emptySet(); today = LocalDate.MIN to emptyList()
+        shadowSince = null; shadowVerdictAt = null
+        briefs.clear(); briefTries = MarketContextCore.BriefTries()
+        _card.value = Card()
+    }
+
+    /** Memory only, for the erase's tests. */
+    internal fun holdsForErase(): Boolean = _mode.value != EventShield.DEFAULT_MODE || _shadowDays.value.isNotEmpty() ||
+        today.second.isNotEmpty() || briefs.isNotEmpty() || _card.value != Card() || shadowSince != null || shadowVerdictAt != null
 
     /** TEST ONLY. */
     internal fun resetForTest() {

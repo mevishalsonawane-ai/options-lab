@@ -55,6 +55,23 @@ internal object IraNewsTrades {
     /** The record as last read ([all]): its saved text and what it read as. */
     @Volatile private var lastRead: Pair<String?, List<Pos>>? = null
 
+    /** 26 Oct: bumped by [wipe]; a [tick] or [scorecard] that read the record before it saves nothing after it. */
+    @Volatile private var erased = 0
+
+    /**
+     * 26 Oct: "Erase everything" ([com.optionslab.app.data.PersonalStores]): the record read last and its open trades' exits
+     * forgotten (the trades and suggestions themselves are settings keys, gone with [com.optionslab.app.security.SecurePrefs.wipe]).
+     * Memory only, never the settings; never waits on [lock].
+     */
+    fun wipe() {
+        erased++
+        lastRead = null
+        runCatching { com.optionslab.ira.ArmExits.set("jarvis", emptyList()) }
+    }
+
+    /** 26 Oct: whether a record read is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = lastRead?.second?.isNotEmpty() == true
+
     /**
      * Every news / pattern trade; an entry that does not read back is skipped, never the whole record. Read again only
      * when the saved text changed: each market-watch pass asks several times (the bots' holdings, Solo's loss limit, the
@@ -227,6 +244,7 @@ internal object IraNewsTrades {
      * option prices - what it made, or would have made - and whether the owner's answer was the better choice.
      */
     @Synchronized fun scorecard(day: java.time.LocalDate = com.optionslab.app.data.Market.today()): List<String> {
+        val gen = erased
         val l = suggestions()
         val sessions = HashMap<String, com.optionslab.engine.Session?>()
         val out = l.map { (i, x) ->
@@ -236,7 +254,7 @@ internal object IraNewsTrades {
             val p = runCatching { JarvisTrades.OptionSim.trade(sess, x.at, x.call, x.spot, JarvisTrades.strikeStep(u)) }.getOrNull()
             i to x.copy(points = p, lot = sess.lotHint ?: sess.options.firstOrNull()?.lot, answer = if (x.answer == "waiting") "lapsed" else x.answer)
         }
-        saveSuggestions(out)
+        if (gen == erased) saveSuggestions(out)
         return JarvisTrades.scorecard(day, out.map { it.second })
     }
 
@@ -383,6 +401,7 @@ internal object IraNewsTrades {
      * trade the position book shows closed is recorded with its result (retried until the trade book has it).
      */
     suspend fun tick() = lock.withLock {
+        val gen = erased
         val list = all()
         if (list.none { !it.closed || (it.result == null && recent(it)) }) return@withLock
         val paperNet = runCatching { Paper.state.positions }.getOrNull()
@@ -431,7 +450,8 @@ internal object IraNewsTrades {
             }
             p.copy(peak = peak, stop = stop)
         }
-        save(out)
+        // 26 Oct: an erase while this pass read Zerodha and the prices: the old record is not written back.
+        if (gen == erased) save(out)
         Unit
     }
 

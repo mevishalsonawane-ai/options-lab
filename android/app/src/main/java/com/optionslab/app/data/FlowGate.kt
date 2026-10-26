@@ -304,7 +304,8 @@ object FlowGate {
             val (orderId, at) = v
             val net = runCatching { netOf(trades, orderId) }.getOrNull()
             synchronized(lock) {
-                if (net != null) { append(FlowShadow.result(id, net)); orders.remove(id) }
+                // 26 Oct: only an entry still waiting (an erase meanwhile forgot it: its result is not logged after it).
+                if (net != null) { if (orders.remove(id) != null) append(FlowShadow.result(id, net)) }
                 else if (now - at > 4 * 86_400_000L) orders.remove(id)
             }
         }
@@ -350,10 +351,13 @@ object FlowGate {
 
     /** Writes the buffered lines (append-only; over 4 MB the file becomes the old one and a new one starts). */
     fun flush() {
-        val text = synchronized(lock) { buf.toString().also { buf.setLength(0) } }
+        var gen = 0
+        val text = synchronized(lock) { gen = erased; buf.toString().also { buf.setLength(0) } }
         if (text.isEmpty()) return
         val f = file() ?: return
         synchronized(this) {
+            // 26 Oct: lines taken before an erase ([wipe]) are never written after it.
+            if (gen != erased) return
             f.parentFile?.mkdirs()
             // 4 MB, or up to 8 MB while one of Jarvis's learning goals needs more of this log (recording only, within its cap).
             if (f.length() > maxOf(MAX_BYTES, com.optionslab.app.ira.SelfGrowth.shadowLogBytes())) { oldFile()?.let { o -> o.delete(); f.renameTo(o) } }
@@ -442,6 +446,33 @@ object FlowGate {
 
     /** Every signal in the log with its outcome, for Jarvis's nightly learning ([com.optionslab.app.ira.JarvisLearning]). Reads the file: off the main thread. */
     fun signalsForLearning(): List<FlowShadow.Signal> = FlowShadow.parse(lines())
+
+    /** 26 Oct: bumped by [wipe] (under [lock]): a [flush] that took its lines before it writes nothing. */
+    @Volatile private var erased = 0
+
+    /**
+     * 26 Oct: "Erase everything" ([PersonalStores]): the modes, the signals seen, the entries waiting for a result, the moves, the
+     * lines not written yet and the record forgotten, and the log's files deleted. The modes' key goes with [SecurePrefs.wipe];
+     * never read here. Marked loaded: there is no log left to read back.
+     */
+    fun wipe() {
+        synchronized(loadLock) {
+            synchronized(lock) {
+                erased++
+                cached = null; _modes.value = emptyMap(); seen.clear(); orders.clear(); moves.clear(); buf.setLength(0); loaded = true
+            }
+            synchronized(this) { filesForErase().forEach { runCatching { it.delete() } } }
+        }
+        recordsAt = -1; _records.value = emptyList()
+    }
+
+    /** 26 Oct: whether any of the log, the modes or the record is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = synchronized(lock) {
+        !cached.isNullOrEmpty() || _modes.value.isNotEmpty() || seen.isNotEmpty() || orders.isNotEmpty() || moves.isNotEmpty() || buf.isNotEmpty()
+    } || _records.value.isNotEmpty()
+
+    /** 26 Oct: the log's two files (not their folder: the order flow's recordings share it, [OrderFlowLive]); empty before [init]. */
+    internal fun filesForErase(): List<File> = files()
 
     /** TEST ONLY: forget the modes, the log in memory and the pending results. Throws unless BuildConfig.DEBUG. */
     internal fun resetForTest() {

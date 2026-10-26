@@ -100,6 +100,7 @@ object VixDivArm {
 
     private fun book(): Book {
         cache?.let { return it }
+        val gen = wipes
         val b = Book()
         runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
@@ -108,7 +109,10 @@ object VixDivArm {
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
             b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
-        }.onFailure { if (file.exists()) Vault.setAside(file) }
+        // 26 Oct: a read the erase refused ([Vault.Erasing]) is not a damaged file: never set aside (it is being deleted).
+        }.onFailure { if (file.exists() && !Vault.isErasing) Vault.setAside(file) }
+        // 26 Oct: read before an erase that came meanwhile ([wipe]): not kept, not shown (its passes' saves are dropped).
+        if (gen != wipes) return b
         cache = b
         publish(b)
         return b
@@ -131,6 +135,8 @@ object VixDivArm {
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
+        // 26 Oct (Erase everything): a pass that read the book before [wipe] never writes it back or shows it again.
+        if (cache !== b) return
         val o = JSONObject().put("armed", b.armed)
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(40).forEach { put(it) } })
@@ -440,6 +446,35 @@ object VixDivArm {
             "Sold (%s) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
     }
 
-    /** For tests: the book forgotten (its file goes with the test's directory). */
-    internal fun wipe() { cache = null; _view.value = View(false, emptyMap(), emptyList(), emptyList(), emptyList()) }
+    /** Bumped by [wipe]: a read under way when the erase came is not kept. */
+    @Volatile private var wipes = 0
+
+    /**
+     * For tests: the book forgotten (its file stays: a test reads it again, as after the app is killed). 26 Oct: a pass under
+     * way keeps its old book only until its save, which is then dropped ([save]). Never reads the vault; never waits on the
+     * book's lock.
+     */
+    internal fun wipe() {
+        wipes++
+        cache = null
+        written.forget()
+        _view.value = View(false, emptyMap(), emptyList(), emptyList(), emptyList())
+        runCatching { com.optionslab.ira.ArmExits.set("vixdiv", emptyList()) }
+    }
+
+    /** 26 Oct (Erase everything, [PersonalStores]): [wipe], and the book's file deleted. */
+    internal fun wipeForErase() {
+        wipe()
+        if (ready()) file.delete()
+    }
+
+    /** Whether its book (trades, log, status) is held in memory or shown. Memory only. */
+    internal fun holdsForErase(): Boolean = runCatching {
+        val v = _view.value
+        cache?.let { b -> b.armed || b.positions.isNotEmpty() || b.log.isNotEmpty() || b.decided.isNotEmpty() || b.status.isNotEmpty() } == true ||
+            v.armed || v.open.isNotEmpty() || v.closed.isNotEmpty() || v.log.isNotEmpty() || v.status.isNotEmpty() || v.nets.isNotEmpty()
+    }.getOrDefault(false)
+
+    /** Its book's file (none before [init]). */
+    internal fun filesForErase(): List<File> = if (ready()) listOf(file) else emptyList()
 }

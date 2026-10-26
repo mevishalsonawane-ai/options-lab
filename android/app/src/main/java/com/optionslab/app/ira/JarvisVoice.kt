@@ -641,6 +641,31 @@ class JarvisVoice : Service() {
         /** Robolectric shares static state between tests: the voice's own memory reset. */
         internal fun resetForTest() { lastHeld = null; cutStopTally = com.optionslab.ira.CutStops.Tally(); resetLangAskForTest() }
 
+        /**
+         * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): what the ears kept in memory dropped - the words
+         * heard last, the turns' trace, Boss's pauses, the hearing and language counts, the kept choices - so nothing read before
+         * the erase is written back (each is read again from the empty settings when next asked for; their keys go with the
+         * settings' own wipe). A running voice drops the audio of its turn on its own thread. Nothing is read here.
+         */
+        fun wipe() {
+            heardText = null; heardBefore = null
+            synchronized(trace) { trace.clear() }
+            lastHeld = null; cutStopTally = com.optionslab.ira.CutStops.Tally()
+            paceKept = null
+            synchronized(hearingLock) { hearingKept = null; hearingSavedAt = 0L }
+            langKept = null; langAskKept = null; langCheckedAt = 0L; whenKept = null
+            lastLatencyMs = 0L; latencies = emptyList(); voiceLatencies = emptyList(); lastError = null
+            runCatching { instance?.get()?.let { v -> v.main.post { v.lastHeard = null } } }
+        }
+
+        /** 26 Oct: anything of Boss's kept in memory (the erase's test). Memory only; never throws. */
+        internal fun holdsForErase(): Boolean = runCatching {
+            heardText != null || heardBefore != null || synchronized(trace) { trace.isNotEmpty() } || lastHeld != null ||
+                paceKept?.isNotEmpty() == true || synchronized(hearingLock) { hearingKept?.isNotEmpty() == true } ||
+                (langKept ?: com.optionslab.ira.ListenLanguage.State()) != com.optionslab.ira.ListenLanguage.State() ||
+                (langAskKept ?: com.optionslab.ira.ListenLanguage.Ask()) != com.optionslab.ira.ListenLanguage.Ask()
+        }.getOrDefault(false)
+
         /** Boss's cuts over Jarvis: how many, and how soon the voice went silent (durations only - [com.optionslab.ira.CutStops]). */
         @Volatile internal var cutStopTally = com.optionslab.ira.CutStops.Tally()
 

@@ -124,6 +124,19 @@ object JarvisSpeaker {
     /** The last words handed to [aloud] under Robolectric (no speech engine there): what tests check. */
     @Volatile internal var lastAloud: String? = null
 
+    /**
+     * 26 Oct (Erase everything, [com.optionslab.app.data.PersonalStores]): the words waiting for the engine and the last words
+     * said are forgotten, and what is being said stops (a reply may carry account figures). The "speak typed" switch is a
+     * settings key, wiped with the rest. Memory only; never reads the vault.
+     */
+    internal fun wipe() {
+        synchronized(this) { waiting = null; runCatching { tts?.stop() } }
+        lastAloud = null
+    }
+
+    /** Whether words to say (or last said) are held in memory. Memory only. */
+    internal fun holdsForErase(): Boolean = waiting != null || lastAloud != null
+
     /** After a typed [question]: says Jarvis's reply the moment it is there (never waiting for the model's rewrite). */
     suspend fun replyTo(context: Context, question: String) {
         if (!com.optionslab.app.BuildConfig.JARVIS || !speakTyped) return

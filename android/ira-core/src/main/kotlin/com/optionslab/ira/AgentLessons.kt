@@ -1218,6 +1218,15 @@ object AgentLessons {
 
     private val askedKept = Kept<Ask?>(64)
 
+    /**
+     * 26 Oct ("Erase everything"): the readings of Boss's last questions forgotten (their words are the keys). Memory only; the
+     * app's erase list (PersonalStores) calls it.
+     */
+    fun clearCache() = askedKept.clear()
+
+    /** 26 Oct: a question's reading is kept in memory (the app's erase test). */
+    fun cachedForErase(): Boolean = askedKept.size > 0
+
     private fun askedFresh(text: String): Ask? {
         val t = Spaced.joined(text)
         if (TODAY.containsMatchIn(t)) return Ask(AskKind.TODAY)

@@ -6746,6 +6746,52 @@ object IraHub {
         _state.update { State() }
     }
 
+    /**
+     * 26 Oct (Erase everything): the conversation, the proposals and the journal, every request waiting for Boss's answer and
+     * its views, the trade check, the positions asked about (stops offered, unguarded since), the pattern book and the files,
+     * forgotten - without the conversation's lock (a coroutine lock) and without reading the vault, unlike [forgetAll]. A read
+     * of the saved memory still under way is dropped (as a later start drops an older one), so it cannot put the old
+     * conversation back; the keeper's next save finds nothing and deletes the file. Other stores' memories (IraTools' habits,
+     * routine and memory, IraNewsTrades) are their own entries.
+     */
+    fun wipe() {
+        synchronized(loadLock) {
+            if (!loaded.isCompleted) loaded = CompletableDeferred<Unit>().apply { complete(Unit) }
+            wipedWhileLoading = false; stateReadFailed = false; bookReadFailed = false
+            _ready.value = true
+        }
+        synchronized(actions) {
+            actions.clear(); exitIds.clear(); requestMeta.clear(); confirming.clear()
+            newsAsks.clear(); soloAsks.clear(); liveApproved.clear(); declinedCbs.clear()
+        }
+        synchronized(strategySeen) { strategySeen.clear() }
+        _recent.value = emptyList()
+        synchronized(askedAt) { askedAt.clear() }
+        synchronized(tested) { tested.clear() }
+        synchronized(coolSaid) { coolSaid.clear() }
+        synchronized(unguardedSince) { unguardedSince.clear() }
+        synchronized(rescueAsked) { rescueAsked.clear() }
+        synchronized(alerted) { alerted.clear() }
+        synchronized(suggested) { suggested.clear() }
+        unaskedIds.clear()
+        checked = null; lastStructureRead = null; widgetKey = null; heardByVoice = false; lastExpertSlot = null
+        lastBackground = null; refreshBeganAt = 0L
+        book = PatternBook()
+        runCatching { IraNotes.clear() }
+        _state.value = State()
+        filesForErase().forEach { runCatching { it.delete() } }
+    }
+
+    /** 26 Oct: the conversation, a proposal, the journal or a waiting request in memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = _state.value.let { it.messages.isNotEmpty() || it.proposals.isNotEmpty() || it.journal.isNotEmpty() || it.pending.isNotEmpty() } ||
+        synchronized(actions) { actions.isNotEmpty() || requestMeta.isNotEmpty() } || _recent.value.isNotEmpty() || checked != null
+
+    /** 26 Oct: the pattern book's and the saved conversation's files (none before [init]). */
+    internal fun filesForErase(): List<File> = listOfNotNull(bookFile, stateFile)
+
+    /** TEST ONLY (26 Oct): the conversation saved now, as the keeper does 300 ms after a change. */
+    internal fun saveStateForTest() = saveState()
+
     const val MAX_MESSAGES = 60
     private val msgSeq = java.util.concurrent.atomic.AtomicLong()
     private val MARKET_TOPICS = setOf(Topic.OVERVIEW, Topic.WHY, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.VOLATILITY, Topic.ADVICE, Topic.NEWS)

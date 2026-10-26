@@ -353,6 +353,26 @@ object IraModel {
     }
 
     /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): the model leaves memory with its prompt slots (they
+     * hold the last questions and their facts: Boss's trades and rupees). A reply being written is stopped. Never waits for the
+     * model's lock: free now, it leaves now; held (a reply ending), it leaves as soon as the lock is free. The model file is
+     * public (downloaded from Hugging Face, pinned by its fingerprint) and stays; its settings go with the settings.
+     */
+    internal fun wipe() {
+        deferred = false
+        stopWriting()
+        if (lock.tryLock()) {
+            try { idle?.cancel(); unloadLocked() } finally { lock.unlock() }
+        } else releaseForMemory()
+    }
+
+    /** 26 Oct: the model is in memory with its prompt slots (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = handle != 0L
+
+    /** TEST ONLY: as if the model were in memory (the erase's test; there is no model library in a unit test). */
+    internal fun pretendLoadedForTest() { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; handle = -1L }
+
+    /**
      * Loaded ahead (the Ira page opened, voice off): the first typed question does not wait the seconds loading takes.
      * Never while Jarvis listens - held in memory then, it starved the speech recognizer (Boss, 4 Oct).
      */

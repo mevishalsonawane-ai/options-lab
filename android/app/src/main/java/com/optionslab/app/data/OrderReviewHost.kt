@@ -62,6 +62,8 @@ object OrderReviewHost {
     private val running = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var loaded = false
     @Volatile private var retryAtMs = 0L
+    /** 26 Oct (Erase everything): bumped by [wipe]; a review that began before an erase never keeps or saves its book after it. */
+    @Volatile private var wipeGen = 0
 
     private val _book = MutableStateFlow(OrderReview.Book())
     /** What the review keeps (the Automation card's section reads it). */
@@ -157,6 +159,7 @@ object OrderReviewHost {
 
     /** The review of [day] (and the improvements, lessons, notices): the window since the last review's cutoff. */
     internal suspend fun run(day: LocalDate, morning: Boolean, nowMs: Long): OrderReview.Day? {
+        val gen = wipeGen
         val b0 = _book.value
         val dayStart = ms(day.atStartOfDay())
         val from = if (b0.cutoffMs > 0) maxOf(b0.cutoffMs, dayStart - 4 * 86_400_000L) else dayStart
@@ -176,7 +179,7 @@ object OrderReviewHost {
         runCatching { toProblems(dayResult, improvements) }
         b = coach(b, dayResult, day)
         val kept = b
-        withContext(Dispatchers.IO) { synchronized(lock) { _book.value = kept; save(kept) } }
+        withContext(Dispatchers.IO) { synchronized(lock) { if (gen == wipeGen) { _book.value = kept; save(kept) } } }
         runCatching { Diag.record("orders", "reviewed $day${if (morning) " (MCX catch-up)" else ""}: ${reviewed.orders} orders, ${reviewed.trades} trades, " +
             "${reviewed.flaws.size} flaws, ${patterns.size} recurring") }
         return dayResult
@@ -529,6 +532,26 @@ object OrderReviewHost {
             "(${d.flaws.count { it.severity == OrderReview.Severity.HIGH }} serious), ${OrderReview.patterns(b.logs).size} recurring, " +
             "${b.requests.size} lab requests (${testing(b)} testing), ${b.logs.size} days kept"
     }
+
+    /**
+     * 26 Oct (Erase everything): the kept review (Boss's orders and trades, their flaws, the lab requests) forgotten and its file
+     * deleted, under the same lock as its saves; a review in flight sees [wipeGen] changed and keeps nothing. Never the vault.
+     * The file counts as read (it is gone), so the next review starts a new one.
+     */
+    fun wipe() {
+        synchronized(lock) {
+            wipeGen++
+            _book.value = OrderReview.Book()
+            loaded = true; retryAtMs = 0L
+            filesForErase().forEach { runCatching { it.delete() } }
+        }
+    }
+
+    /** 26 Oct: a review kept in memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = _book.value != OrderReview.Book()
+
+    /** 26 Oct: the review's file and its temporary file (none before [init]). */
+    internal fun filesForErase(): List<File> = file()?.let { listOf(it, File(it.parentFile, it.name + ".tmp")) }.orEmpty()
 
     /** TEST ONLY: nothing kept, the file read (as empty). */
     internal fun resetForTest() {

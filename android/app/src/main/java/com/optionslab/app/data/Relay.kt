@@ -124,6 +124,7 @@ object Relay {
 
     @Synchronized private fun connect(): Session {
         session?.takeIf { it.isConnected }?.let { return it }
+        val gen = erased
         runCatching { session?.disconnect() }
         val h = host ?: throw IOException("Relay: no server IP set (More → Zerodha → Static IP)")
         val prv = SecurePrefs.getString(K_PRV) ?: throw IOException("Relay: no key yet: tap Create key, then add it to the server")
@@ -163,6 +164,8 @@ object Relay {
                 else -> "Relay: $m"
             })
         }
+        // 26 Oct: "Erase everything" ran while this connected (with the key it read before): the session is not kept.
+        if (gen != erased) { runCatching { s.disconnect() }; throw IOException("Relay: everything was erased; set the relay up again") }
         session = s
         return s
     }
@@ -193,6 +196,24 @@ object Relay {
 
     /** Connect ahead of time (market hours), so the first order does not wait for the handshake. */
     fun warm(): Boolean = !enabled || runCatching { connect() }.isSuccess
+
+    /** 26 Oct: bumped by [wipe]: a [connect] that began before it keeps nothing. */
+    @Volatile private var erased = 0
+
+    /**
+     * 26 Oct: "Erase everything" ([PersonalStores]): the SSH session (logged in with Boss's key) and the local SOCKS port closed,
+     * the kept switch forgotten. The key, the server and the switch are settings keys, gone with [SecurePrefs.wipe]; never read
+     * here. Not [close]: that waits on this object's lock, which a connect holds for up to 45 s.
+     */
+    fun wipe() {
+        erased++
+        enabledKept = null
+        val ss = socks; socks = null; runCatching { ss?.close() }
+        val s = session; session = null; runCatching { s?.disconnect() }
+    }
+
+    /** 26 Oct: whether a session, the SOCKS port or the kept switch is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = session != null || socks != null || enabledKept?.second == true
 
     @Synchronized fun close() {
         runCatching { socks?.close() }; socks = null

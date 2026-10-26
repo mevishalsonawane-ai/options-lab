@@ -268,6 +268,8 @@ object McxPaperArms {
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
+        // 26 Oct ("Erase everything"): a pass still holding the book from before an erase ([wipe] dropped it) never writes it back.
+        if (b !== cache) return
         val o = JSONObject()
         o.put("armed", JSONObject().apply { b.armed.forEach { (k, v) -> put(k, v) } })
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
@@ -282,6 +284,7 @@ object McxPaperArms {
     }
 
     private fun publish(b: Book) {
+        if (b !== cache) return      // 26 Oct: the book from before an erase is not shown (nor handed to the trade manager) again
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
         // 21 Oct, review: this book's arms only (the NR7 record keeps its own key, [McxMarket.noteNr7On]).
         runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
@@ -1041,6 +1044,20 @@ object McxPaperArms {
         return true
     }
 
-    /** For tests: the book forgotten (its file goes with the test's directory). */
-    internal fun wipe() { cache = null; trendTried.clear(); _view.value = View(emptyMap(), emptyMap(), emptyList(), emptyList(), emptyList()) }
+    /**
+     * For tests: the book forgotten (its file goes with the test's directory). 26 Oct, "Erase everything" ([PersonalStores]): also
+     * the last-write mark and the file. A pass holding the old book under [lock] (never waited on here) finds it is no longer
+     * [cache] and neither saves nor shows it. Safe before [init]; never reads the vault.
+     */
+    internal fun wipe() {
+        cache = null; trendTried.clear(); _view.value = View(emptyMap(), emptyMap(), emptyList(), emptyList(), emptyList())
+        written.forget()
+        if (::file.isInitialized) runCatching { file.delete() }
+    }
+
+    /** 26 Oct: the book, or the screen's copy of it, in memory (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = cache != null || _view.value != View(emptyMap(), emptyMap(), emptyList(), emptyList(), emptyList())
+
+    /** 26 Oct: the book's file (empty before [init]). */
+    internal fun filesForErase(): List<File> = if (::file.isInitialized) listOf(file) else emptyList()
 }

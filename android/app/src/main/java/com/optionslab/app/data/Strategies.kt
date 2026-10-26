@@ -95,9 +95,14 @@ object Strategies {
          * Taken out (and confirmed out) before any exit of that leg is sent, so the two can never both fill.
          */
         val legStops: LinkedHashMap<String, String> = LinkedHashMap(),
-    )
+    ) {
+        /** 26 Oct: the [wipeGen] this book was read in; a book from before "Erase everything" is never saved or kept again. */
+        @Volatile var gen: Int = 0
+    }
 
-    private var cache: Book? = null
+    @Volatile private var cache: Book? = null
+    /** Bumped by [wipe] (under [ioLock] and [writeOrder]). */
+    @Volatile private var wipeGen = 0
 
     /**
      * Whether any run is open, as of the last load or save: read without the lock (the main thread must never
@@ -161,6 +166,7 @@ object Strategies {
 
     private fun book(): Book {
         cache?.let { return it }
+        val gen = wipeGen
         // A read that failed (a Keystore hiccup past readFileSteady's retries) is not a destroyed file (18 Oct, review): it is
         // thrown, nothing cached, so the next call reads again - as TradeBook does. Setting the vault aside for it lost an open
         // live run's legs, broker ids and stops for good. Only bytes that fail authentication or do not parse are set aside.
@@ -202,8 +208,14 @@ object Strategies {
             val sc = d.scheduler
             if (needsBreakoutRules(d) && sc != null && sc.enabled) loaded.defs[i] = d.copy(scheduler = sc.copy(enabled = false))
         }
-        return loaded.also { cache = it; hint(it) }
+        // 26 Oct: a read that began before "Erase everything" is not kept (its pass saves nothing: [save]).
+        loaded.gen = gen
+        val kept = synchronized(writeOrder) { (gen == wipeGen).also { if (it) cache = loaded } }
+        if (kept) { hint(loaded); if (gen != wipeGen) clearHints() }
+        return loaded
     }
+
+    private fun clearHints() { runningHint = false; exposureHint = emptyList(); stopHintDay = null }
 
     /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
     private val written = Vault.LastWrite()
@@ -212,11 +224,14 @@ object Strategies {
         val bytes = encode(b)
         // 19 Oct: one order of writes with [saveSoon]: a write it left pending is dropped (this newer book carries it).
         synchronized(ioLock) {
+            // 26 Oct: a book read before "Erase everything" is dropped, never written back.
+            if (b.gen != wipeGen) return
             synchronized(writeOrder) { saveSeq++; ownersPending = null }
             written.write(file, bytes)
+            cache = b
         }
-        cache = b
         hint(b)
+        if (b.gen != wipeGen) clearHints()
     }
 
     /**
@@ -226,9 +241,12 @@ object Strategies {
      */
     private fun saveSoon(b: Book) {
         val bytes = encode(b)
-        synchronized(writeOrder) { saveSeq++; ownersPending = PendingWrite(saveSeq, bytes) }
-        cache = b
+        synchronized(writeOrder) {
+            if (b.gen != wipeGen) return                    // 26 Oct: a book read before "Erase everything" is dropped
+            saveSeq++; ownersPending = PendingWrite(saveSeq, bytes); cache = b
+        }
         hint(b)
+        if (b.gen != wipeGen) clearHints()
         ownersWriter.kick()
     }
 
@@ -1142,9 +1160,30 @@ object Strategies {
     /** A LIVE run is running now (21 Oct: the loss limits then keep one paper figure, [LossBreaker.check]). */
     suspend fun anyLiveRunning(): Boolean = all().any { it.running && it.run?.mode == RunMode.LIVE }
 
+    /**
+     * "Erase everything": the book dropped from memory and its file deleted. 26 Oct: a pass or edit still holding the old book
+     * (it waits on the coroutine lock, which the erase never takes) saves nothing ([Book.gen]); safe before [init]; the
+     * set-aside copies go too. Never reads the vault.
+     */
     fun wipe() {
-        synchronized(ioLock) { synchronized(writeOrder) { ownersPending = null; saveSeq++ } }
-        cache = null; runningHint = false; exposureHint = emptyList(); stopHintDay = null; file.delete()
+        synchronized(ioLock) { synchronized(writeOrder) { wipeGen++; ownersPending = null; saveSeq++; cache = null } }
+        clearHints(); notRestedAt.clear()
+        written.forget()
+        filesForErase().forEach { runCatching { it.delete() } }
+    }
+
+    /** Memory only, for the erase's tests: a book held, or a hint from one. */
+    internal fun holdsForErase(): Boolean = runCatching {
+        cache?.let { b -> b.defs.isNotEmpty() || b.runs.isNotEmpty() || b.history.isNotEmpty() || b.log.isNotEmpty() || b.owners.isNotEmpty() ||
+            b.pending.isNotEmpty() || b.autoApprove.isNotEmpty() || b.brokerIds.isNotEmpty() || b.legStops.isNotEmpty() || b.stoppedDay != null } == true ||
+            runningHint || exposureHint.isNotEmpty() || stopHintDay != null
+    }.getOrDefault(true)
+
+    /** The book's file and any set-aside copy (none before [init]). */
+    internal fun filesForErase(): List<File> {
+        if (!::file.isInitialized) return emptyList()
+        val aside = runCatching { file.parentFile?.listFiles { x -> x.name.startsWith(file.name + ".unreadable.") }?.toList() }.getOrNull().orEmpty()
+        return listOf(file) + aside
     }
 
     /** TEST ONLY: the book read from its file again on the next call (as after a restart); the file is kept. */

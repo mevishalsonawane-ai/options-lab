@@ -97,6 +97,15 @@ object LossBreaker {
     /** TEST SEAM: the paper day instead of the paper book's (null in the app). */
     @Volatile internal var testPaperDay: (() -> PaperDay)? = null
 
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the kept copy of the day's stops dropped (its keys go with the settings' own
+     * wipe; the next look reads the empty settings). Nothing is read here.
+     */
+    fun wipe() { kept = null }
+
+    /** 26 Oct: the day's stops kept in memory (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = kept?.let { it.day != null || it.kind != null || it.mcx != null || it.whole != null || it.boss != null } == true
+
     /** TEST SEAM: the kept copy forgotten, as a new process starts (the vault keeps the day's stops). */
     internal fun forgetForTest() { kept = null }
 

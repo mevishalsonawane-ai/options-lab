@@ -122,6 +122,18 @@ object LiveSelfTest {
     private val running = java.util.concurrent.atomic.AtomicBoolean(false)
     val busy: Boolean get() = running.get()
 
+    /** 26 Oct (Erase everything): bumped by [wipe]; a run that began before an erase never keeps its steps after it. */
+    @Volatile private var wipeGen = 0
+
+    /**
+     * 26 Oct (Erase everything): the last run's steps (the account's holdings, positions and orders as the check saw them)
+     * forgotten. Memory only (its switch and day are settings keys; its diary lines are the diary's).
+     */
+    fun wipe() { wipeGen++; last = emptyList() }
+
+    /** 26 Oct: a run's steps in memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = last.isNotEmpty()
+
     /** TEST ONLY: no last run left from an earlier test. Throws unless BuildConfig.DEBUG. */
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
@@ -152,6 +164,7 @@ object LiveSelfTest {
     suspend fun run(onStep: (LiveCheck.Step) -> Unit = {}, auto: Boolean = false, src: Sources = sourcesForTest ?: Real,
                     limits: Limits = Limits()): List<LiveCheck.Step> {
         if (!running.compareAndSet(false, true)) return emptyList()
+        val gen = wipeGen
         try {
             val r = LiveCheck.Runner(Dispatchers.IO, reason = ::reason, onStep = { s ->
                 onStep(s)
@@ -166,7 +179,7 @@ object LiveSelfTest {
                 }
             }
             val out = r.steps
-            last = out
+            if (gen == wipeGen) last = out
             runCatching { Diag.record(LiveCheck.AREA, LiveCheck.SUMMARY + LiveCheck.summary(out)) }
             return out
         } finally {

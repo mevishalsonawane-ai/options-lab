@@ -162,7 +162,7 @@ object NtfyReader {
      * ([Jobs]) and its rest rules read it (armed: the watch starts at 09:00 and counts it as armed).
      */
     @Volatile var armedHint = false
-        private set
+        internal set      // 26 Oct: internal for the erase's test seed (the app sets it in [noteArmed] only)
 
     /** In the reader's hours with ntfy armed: counts as armed for any quiet or rest rule. Memory only. */
     fun armedNow(): Boolean = armedHint && runCatching { inHours() }.getOrDefault(false)
@@ -355,6 +355,20 @@ object NtfyReader {
             }
         }.getOrElse { "Could not reach the server (${it.javaClass.simpleName})." }
     }
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the reader stopped (its connection held the topic and the token) and what it
+     * knew forgotten. The supervisor keeps running: it reads the (empty) settings, finds nothing armed and starts nothing, until
+     * Boss sets ntfy up again. The topic and token go with the settings' own wipe. Nothing is read here.
+     */
+    fun forgetForErase() {
+        stop("erased")
+        _status.value = Status()
+        armedHint = false; armedKnown = false; stocksAskedAt = 0L
+    }
+
+    /** 26 Oct: a reader running, or armed as last known (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = job?.isActive == true || armedHint
 
     /** For tests: stopped and forgotten. */
     internal fun wipe() {

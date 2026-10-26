@@ -38,6 +38,15 @@ object ExpirySquareOff {
     /** What the owner was already told today ("day|what"), so a retry every pass does not repeat it. */
     private val told = HashSet<String>()
 
+    /** 26 Oct: "Erase everything" ([PersonalStores]): what Boss was told today (its positions' symbols) forgotten. Memory only. */
+    fun wipe() { synchronized(told) { told.clear() } }
+
+    /** 26 Oct: whether anything told is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = synchronized(told) { told.isNotEmpty() }
+
+    /** TEST ONLY (26 Oct, the erase's tests): [key] noted as told today, as [tellOnce] notes it. Memory only. */
+    internal fun noteToldForTest(key: String) { synchronized(told) { told += "${todayIst()}|$key" } }
+
     private fun tellOnce(context: Context, key: String, text: String) {
         val k = "${todayIst()}|$key"
         synchronized(told) { if (!told.add(k)) return }

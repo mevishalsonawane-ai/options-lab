@@ -44,6 +44,9 @@ object SelfJobs {
     @Volatile private var marks: Map<String, String>? = null
     @Volatile private var healthDays: Set<LocalDate>? = null
 
+    /** 26 Oct: bumped by [wipe]; a lesson built across an erase is never kept or shown ([buildLesson]). */
+    @Volatile private var wipes = 0
+
     private val _lesson = MutableStateFlow<DailyLesson.Lesson?>(null)
     /** The newest lesson (the Ira page's card shows it on its own day). */
     val lesson: StateFlow<DailyLesson.Lesson?> = _lesson
@@ -142,6 +145,7 @@ object SelfJobs {
 
     /** Today's lesson from today's records (a worker thread); kept, and null when nothing qualifies. */
     fun buildLesson(today: LocalDate): DailyLesson.Lesson? {
+        val gen = wipes
         val moves = runCatching {
             MoveRecorder.files().filter { it.first.day == today && it.first.kind != com.optionslab.ira.MoveEvents.Kind.CONTROL }
                 .mapNotNull { MoveRecorder.summary(it.second) }
@@ -153,6 +157,8 @@ object SelfJobs {
         }
         val habit = runCatching { BossTradeLog.todayInsight(today) }.getOrNull()
         val l = DailyLesson.of(today, moves, bots, habit)
+        // 26 Oct: "Erase everything" ran while it was built (it read the old records): dropped, never kept.
+        if (l != null && gen != wipes) return null
         if (l != null) {
             _lesson.value = l
             writeLesson(DailyLesson.encode(l))
@@ -169,8 +175,31 @@ object SelfJobs {
         return DailyLesson.say(l, closed, locked)
     }
 
+    /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): today's lesson (it can carry Boss's habit and a bot's
+     * rupees), the jobs' marks and the health tuner's days dropped from memory, and its own files deleted ([filesForErase]; the
+     * other stores sharing the "self" folder wipe their own). Memory and files only: no vault read.
+     */
+    internal fun wipe() {
+        wipes++
+        _lesson.value = null
+        marks = null; healthDays = null
+        for (f in filesForErase()) runCatching { f.delete() }
+    }
+
+    /** 26 Oct: a lesson, marks or health days are held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = _lesson.value != null || !marks.isNullOrEmpty() || !healthDays.isNullOrEmpty()
+
+    /** 26 Oct: the files it writes in the "self" folder (and their half-written ".tmp"s). */
+    internal fun filesForErase(): List<File> = dir()?.let { d ->
+        listOf(MARKS, HEALTH_DAYS, LESSON).flatMap { listOf(File(d, it), File(d, "$it.tmp")) }
+    }.orEmpty()
+
     /** TEST ONLY: nothing kept. */
     internal fun resetForTest() { marks = emptyMap(); healthDays = emptySet(); _lesson.value = null; running.set(false) }
+
+    /** TEST ONLY: [l] kept as a built lesson is (in memory and its sealed file). */
+    internal fun keepLessonForTest(l: DailyLesson.Lesson) { _lesson.value = l; writeLesson(DailyLesson.encode(l)) }
 
     /** TEST ONLY: [l] as the lesson. */
     internal fun setLessonForTest(l: DailyLesson.Lesson?) { _lesson.value = l }

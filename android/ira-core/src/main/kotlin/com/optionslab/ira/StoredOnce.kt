@@ -29,4 +29,7 @@ class StoredOnce<T>(private val read: (String?) -> T) {
 
     /** The kept reading forgotten and the count reset (tests). */
     fun forget() { held = null; reads.set(0) }
+
+    /** 26 Oct ("Erase everything"): whether a reading is kept now (memory only). */
+    val holds: Boolean get() = held != null
 }

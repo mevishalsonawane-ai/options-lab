@@ -70,6 +70,9 @@ object ArmExits {
         return if (words.size == 1) words.single().second else words.joinToString("; ") { (l, w) -> "$l: $w" }
     }
 
-    /** TEST ONLY: forget every arm's list. */
+    /** Forget every arm's list (tests; and "Erase everything", 26 Oct). */
     fun clear() = byOwner.clear()
+
+    /** 26 Oct ("Erase everything"): whether any arm's open trades are held (memory only). */
+    fun isEmpty(): Boolean = byOwner.isEmpty()
 }

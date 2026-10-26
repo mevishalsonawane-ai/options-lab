@@ -83,6 +83,26 @@ internal object IraCoach {
 
     @Volatile private var overtradeToldAt: LocalDateTime? = null
 
+    /**
+     * 26 Oct (erase everything): what the coach keeps about Boss's own trading in memory - the stops whose trail failed (by
+     * protection) and when he was last warned of overtrading - forgotten. Its records (the gap and day-plan records, the told
+     * days) are settings keys, wiped with the settings; the market looks it keeps (OI walls, ORB, moments, VIX) are public data
+     * and stay. Reads nothing.
+     */
+    fun wipe() {
+        synchronized(failedTrail) { failedTrail.clear() }
+        overtradeToldAt = null
+    }
+
+    /** A failed trail or an overtrading warning in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching { synchronized(failedTrail) { failedTrail.isNotEmpty() } || overtradeToldAt != null }.getOrDefault(false)
+
+    /** TEST ONLY: a trail that failed on protection [id], as [trailWatch] keeps it. Debug builds only. */
+    internal fun failedTrailForTest(id: Long, stop: Double) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        synchronized(failedTrail) { failedTrail[id] = stop to LocalDateTime.now(IST) }
+    }
+
     /** More than 3 of the owner's own buys in 30 minutes: a word, at most once every 30 minutes. */
     suspend fun overtradeWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.OVERTRADE) || !com.optionslab.app.data.Market.isOpen()) return

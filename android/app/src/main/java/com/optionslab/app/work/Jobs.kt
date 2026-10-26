@@ -1037,6 +1037,15 @@ object Tasks {
 
         /** TEST ONLY: forget the memory (the vault's copy stays). */
         fun resetForTest() { said = null }
+
+        /**
+         * 26 Oct: "Erase everything" ([com.optionslab.app.data.PersonalStores]): the notices said are forgotten (their settings
+         * key goes with [SecurePrefs.wipe]). Memory only, never the vault: the next [said] reads the wiped settings again.
+         */
+        @Synchronized fun wipe() { said = null }
+
+        /** 26 Oct: whether notices said are still in memory (the erase's tests). Memory only. */
+        internal fun holdsForErase(): Boolean = said?.isNotEmpty() == true
     }
 
     private suspend fun watchTickOnce(context: Context, s: AppSettings, fired: MutableSet<String>, lanes: CoroutineScope?): Tick {

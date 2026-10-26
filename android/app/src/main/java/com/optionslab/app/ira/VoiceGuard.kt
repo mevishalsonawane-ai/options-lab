@@ -49,6 +49,19 @@ object VoiceGuard {
         _teach.value = Teach(message = "Your voice print is deleted: voice can ask, not trade, until you teach me again.")
     }
 
+    /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): the voice print and any half-taught phrases dropped
+     * from memory. Unlike [forget] it writes nothing: the print's setting goes with the settings, and the vault is held then.
+     */
+    internal fun wipe() {
+        cached = null
+        synchronized(samples) { samples.clear() }
+        _teach.value = Teach()
+    }
+
+    /** 26 Oct: a voice print or taught phrases are held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = cached != null || synchronized(samples) { samples.isNotEmpty() } || _teach.value != Teach()
+
     /** Does [pcm] (16 kHz mono, what the recognizer just heard) sound like the owner? */
     fun isBoss(pcm: ShortArray?): Boolean {
         val p = print() ?: return false

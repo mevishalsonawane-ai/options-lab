@@ -128,6 +128,23 @@ class OpenWidget : AppWidgetProvider() {
             drawn = null; streamAt = 0L; ordersAt = 0L; screenWasOn = null; inlineForTest = false
         }
 
+        /**
+         * 26 Oct (Erase everything): the figures and positions held for the widget, what it drew last and the switch forgotten,
+         * under the locks its writes take. A store in flight then finds the switch unknown and keeps nothing ([store]). Memory
+         * only: its vault copy is settings keys (gone with them). The placed widget itself is redrawn on the next pass.
+         */
+        fun wipe() {
+            synchronized(unsaved) { unsaved.clear(); savedAt = null }
+            synchronized(flagLock) { enabled = null }
+            drawn = null; streamAt = 0L; ordersAt = 0L
+        }
+
+        /** 26 Oct: figures held or drawn in memory (memory only, for the erase's tests). */
+        internal fun holdsForErase(): Boolean = synchronized(unsaved) { unsaved.isNotEmpty() } || drawn.let { it != null && it != "off" }
+
+        /** TEST ONLY (26 Oct): a paper book's figures held as a pass with no placed widget cannot (the erase's tests). */
+        internal fun holdForTest(text: String) { synchronized(unsaved) { fresh(); unsaved[K_P] = text }; drawn = text }
+
         /** Under [unsaved]'s lock: a wiped (or re-opened) vault drops what was held, the switch included (read again). */
         private fun fresh() {
             val g = SecurePrefs.generationNow()

@@ -93,13 +93,14 @@ object FillSlippage {
         if (filled <= 0 || !(avg > 0)) return
         val at = System.currentTimeMillis()
         runCatching { LiveRecorder.fill(p.symbol, p.side, p.exit, filled, avg, p.intended, paper = false, arm = p.arm ?: p.tag) }
+        val gen = erased
         scope.launch {
             delay(settleMs)
             val owner = runCatching { Strategies.owners()["kite:$id"] }.getOrNull()
             val day = runCatching { Market.today().toString() }.getOrDefault(java.time.LocalDate.now().toString())
             Slippage.Fill.of(day, at, Slippage.strategyOf(p.tag, p.arm, owner), p.symbol, p.side,
                 if (p.exit) Slippage.Leg.EXIT else Slippage.Leg.ENTRY, filled, p.intended, avg, p.tick, paper = false, basis = p.basis)
-                ?.let { keep(it) }
+                ?.let { keep(it, gen) }
         }
     }
 
@@ -111,10 +112,11 @@ object FillSlippage {
               basis: Slippage.Basis = if (limit) Slippage.Basis.LIMIT else Slippage.Basis.LTP) {
         if (intended == null) return
         val at = System.currentTimeMillis()
+        val gen = erased
         scope.launch {
             val day = runCatching { Market.today().toString() }.getOrDefault(java.time.LocalDate.now().toString())
             Slippage.Fill.of(day, at, "Paper", symbol, side, if (entry) Slippage.Leg.ENTRY else Slippage.Leg.EXIT, qty, intended, avg, 0.05,
-                paper = true, basis = basis)?.let { keep(it) }
+                paper = true, basis = basis)?.let { keep(it, gen) }
         }
     }
 
@@ -136,9 +138,14 @@ object FillSlippage {
         paper(f.symbol, f.action, entry, f.quantity, intended, f.price, limit = basis == Slippage.Basis.LIMIT, basis = basis)
     }
 
-    /** In memory, then one encrypted line appended to the file (trimmed to the newest [Slippage.KEEP] when it grows past twice that). */
-    private suspend fun keep(f: Slippage.Fill) {
+    /**
+     * In memory, then one encrypted line appended to the file (trimmed to the newest [Slippage.KEEP] when it grows past twice that).
+     * 26 Oct: [gen] is [erased] when the fill was seen: one seen before an erase ([wipe]) is neither kept nor written after it (the
+     * file is touched under [memLock], as the wipe deletes it).
+     */
+    private suspend fun keep(f: Slippage.Fill, gen: Int) {
         val size = synchronized(memLock) {
+            if (gen != erased) return
             val k = loadLocked()
             k += f
             while (k.size > Slippage.KEEP) k.removeAt(0)
@@ -149,17 +156,24 @@ object FillSlippage {
             runCatching {
                 val file = File(d, FILE)
                 val line = android.util.Base64.encodeToString(Vault.encrypt(Slippage.encode(f).toByteArray(Charsets.UTF_8)), android.util.Base64.NO_WRAP)
-                java.io.FileOutputStream(file, true).use { it.write((line + "\n").toByteArray(Charsets.US_ASCII)) }
+                synchronized(memLock) {
+                    if (gen != erased) return@runCatching
+                    java.io.FileOutputStream(file, true).use { it.write((line + "\n").toByteArray(Charsets.US_ASCII)) }
+                }
                 appended += 1
                 if (appended > 2 * Slippage.KEEP) {
                     // Rewritten once in a while from memory (already the newest KEEP): the file never grows without end.
                     appended = size
                     val all = synchronized(memLock) { ArrayList(kept.orEmpty()) }
                     val tmp = File(d, "$FILE.tmp")
-                    tmp.writeText(all.joinToString("") { x ->
+                    val text = all.joinToString("") { x ->
                         android.util.Base64.encodeToString(Vault.encrypt(Slippage.encode(x).toByteArray(Charsets.UTF_8)), android.util.Base64.NO_WRAP) + "\n"
-                    }, Charsets.US_ASCII)
-                    if (!tmp.renameTo(file)) tmp.delete()
+                    }
+                    synchronized(memLock) {
+                        if (gen != erased) return@runCatching
+                        tmp.writeText(text, Charsets.US_ASCII)
+                        if (!tmp.renameTo(file)) tmp.delete()
+                    }
                 }
             }
         }
@@ -204,13 +218,28 @@ object FillSlippage {
     /** Jarvis's answer ("what's my slippage", "slippage on ORB"). */
     fun answer(ask: Slippage.Ask): String = Slippage.answer(fills(), ask, today())
 
-    /** Erase everything: nothing noted, nothing kept in memory; the file removed. */
+    /** 26 Oct: bumped by [wipe] (under [memLock]): a fill seen before it is never kept or written after it ([keep]). */
+    @Volatile private var erased = 0
+
+    /**
+     * Erase everything: nothing noted, nothing kept in memory; the file removed. 26 Oct: its temp file too, deleted under
+     * [memLock] (as [keep] writes), so a fill on its way never brings the file back.
+     */
     fun wipe() {
         synchronized(pending) { pending.clear() }
-        synchronized(memLock) { kept = null }
+        synchronized(memLock) {
+            erased++
+            filesForErase().forEach { runCatching { it.delete() } }
+            kept = null
+        }
         appended = 0
-        dir?.let { runCatching { File(it, FILE).delete() } }
     }
+
+    /** 26 Oct: whether any fill (noted or kept) is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = synchronized(pending) { pending.isNotEmpty() } || synchronized(memLock) { !kept.isNullOrEmpty() }
+
+    /** 26 Oct: the fills' file and its temp file; empty before [init]. */
+    internal fun filesForErase(): List<File> = dir?.let { d -> listOf(File(d, FILE), File(d, "$FILE.tmp")) }.orEmpty()
 
     /** TEST ONLY: the fills in memory forgotten (the next read is the file's), as after a restart. */
     internal fun forgetMemoryForTest() { synchronized(memLock) { kept = null } }

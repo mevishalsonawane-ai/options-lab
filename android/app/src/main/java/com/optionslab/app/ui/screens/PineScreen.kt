@@ -141,6 +141,19 @@ private object PineSession {
     var open by mutableStateOf<PineDraft?>(null)
 }
 
+/**
+ * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): the script being edited (Boss's unsaved code and its
+ * last backtest) dropped from memory. The page already hid a draft from before an erase ([com.optionslab.app.ui.wipes]); now
+ * it is not kept either. Memory only (nothing of a draft is saved before Save).
+ */
+internal fun wipePineDraft() { PineSession.open = null; pineChartAsk = null }
+
+/** 26 Oct: whether a draft is held in memory. */
+internal fun pineDraftHeld(): Boolean = PineSession.open != null
+
+/** TEST ONLY: [item] open in the editor, as a tap on it does. */
+internal fun pineDraftForTest(item: PineScripts.Item) { PineSession.open = PineDraft(item, com.optionslab.app.ui.wipes.value) }
+
 /** The index a backtest asked the chart to show, taken (once) by the app when the Lab opens the chart. */
 private var pineChartAsk: Pair<String, String>? = null
 fun takePineChartAsk(): Pair<String, String>? = pineChartAsk.also { pineChartAsk = null }

@@ -66,7 +66,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
-        // 26 Oct (Boss: "I think ntfy messages are getting read late, please check"): newest of all.
+        // 26 Oct (the erase audit): "Erase everything" missed some stores, which saved their books again; newest of all.
+        Entry("2026-10-26-erase-all-stores", OCT26, "Erase everything now erases every book",
+            "Erase everything missed some paper books, the risk records and parts of Jarvis's memory. " +
+                "They kept a copy in memory and saved it again after the erase. " +
+                "Now every store is cleared, in memory and on the phone, and a check covers each one. " +
+                "Public market data still stays.",
+            "More → Security → Erase everything personal"),
+        // 26 Oct (Boss: "I think ntfy messages are getting read late, please check").
         Entry("2026-10-26-ntfy-faster", OCT26, "ntfy messages are acted on within seconds",
             "A message used to wait for the next minute's check; now it is decided within seconds of arriving. " +
                 "The reader starts at 09:00 and, if it stops, starts again within a few seconds. " +

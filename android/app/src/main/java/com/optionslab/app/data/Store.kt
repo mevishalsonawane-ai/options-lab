@@ -220,6 +220,16 @@ object Store {
         invalidate()
     }
 
+    /** 26 Oct (Erase everything, [PersonalStores]): whether a backtest report (run with Boss's settings) is held in memory. Memory only. */
+    internal fun holdsForErase(): Boolean = cached != null
+
+    /** What [wipeDeviceData] deletes: the device's chains, partitions, harvest lists, manifests and contract list (none before [init]). */
+    internal fun filesForErase(): List<File> {
+        if (!::app.isInitialized) return emptyList()
+        return listOf(File(root, "expiry"), File(root, "bars"), File(root, "harvest"), File(root, "contracts.json")) +
+            root.listFiles { f -> f.name.startsWith("manifest_") }.orEmpty()
+    }
+
     fun deviceBytes(): Long = listOf(File(root, "expiry"), File(root, "bars")).sumOf { d -> d.walkTopDown().filter { it.isFile }.sumOf { it.length() } }
 
     /**

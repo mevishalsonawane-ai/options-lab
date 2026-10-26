@@ -349,6 +349,24 @@ object ExitCoordinator {
 
     private fun publish() { runCatching { _view.value = View(on, line(), lagOn, lagLine()) } }
 
+    /**
+     * 26 Oct (erase everything): the exits noted (Boss's orders, by contract), today's counts and both switches dropped from
+     * memory, back to the shadow a fresh phone starts in (the switches' keys go with the settings; read again on the next
+     * [refresh]). Nothing is refused or held by this: off only stops a sender waiting its turn. A turn under way finishes as
+     * before. Reads nothing. The exits already sent ([registry]) are kept: a turn under way must still see them, or a second exit
+     * could be sent for the same position (order ids and contracts, in memory only and kept just [ExitDesk.KEEP_MS]).
+     */
+    fun wipe() {
+        on = false; lagOn = false; switched = false; lagSwitched = false; loaded = false
+        synchronized(lock) { counts = ExitDesk.Counts() }
+        _view.value = View()
+    }
+
+    /** Exits, counts or a switch on in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        on || lagOn || synchronized(lock) { counts != ExitDesk.Counts(day = counts.day) } || _view.value != View()
+    }.getOrDefault(false)
+
     /** TEST ONLY: shadow, nothing noted. */
     internal fun resetForTest(on: Boolean = false, lagOn: Boolean = false) {
         this.on = on; this.lagOn = lagOn; loaded = true; switched = false; lagSwitched = false

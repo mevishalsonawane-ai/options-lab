@@ -81,6 +81,23 @@ class IraWidget : AppWidgetProvider() {
         /** Tests: each test's home screen starts empty, so nothing counts as drawn already. */
         internal fun forgetDrawnForTest() { drawnSig = null }
 
+        /** Bumped by [wipe]: a Liquidity read that began before it keeps nothing. */
+        @Volatile private var wipedGen = 0
+
+        /**
+         * "Erase everything" (26 Oct): the figures held for the vault (P&L, charges), the Liquidity row and what was drawn last,
+         * dropped from memory (their settings keys go with [SecurePrefs.wipe]). Never reads the settings. The home screen keeps
+         * its last drawing until the next redraw, which then shows no figures.
+         */
+        internal fun wipe() {
+            synchronized(unsaved) { unsaved.clear(); savedAt = null; unsavedGen = Int.MIN_VALUE }
+            wipedGen++
+            liquidity = null; liquidityAt = 0L; drawnSig = null
+        }
+
+        /** Memory only, for the erase's tests. */
+        internal fun holdsForErase(): Boolean = synchronized(unsaved) { unsaved.isNotEmpty() || savedAt != null } || liquidity != null || drawnSig != null
+
         /** Tests share this process: back to a fresh start. */
         internal fun resetForTest() {
             drawnSig = null
@@ -167,10 +184,12 @@ class IraWidget : AppWidgetProvider() {
             if (BuildConfig.GOLD || ids.isEmpty()) { done?.invoke(); return }
             val app = context.applicationContext ?: context
             val work = {
+                val g = wipedGen
                 val was = liquidity
                 val read = liquidityFake ?: runCatching { kotlinx.coroutines.runBlocking { readLiquidity() } }.getOrNull()
-                // A busy lock or a failed read keeps what was shown (nothing shown before: no row).
-                if (read != null) {
+                // A busy lock or a failed read keeps what was shown (nothing shown before: no row). 26 Oct: a read that began
+                // before "Erase everything" is dropped.
+                if (read != null && g == wipedGen) {
                     liquidity = read
                     // (A stale read before - its row hidden - is redrawn with the fresh one even when the words match.)
                     if (was == null || WidgetLiquidity.row(was, true) != WidgetLiquidity.row(read, true) ||

@@ -24,7 +24,11 @@ object History {
         keysFile = File(context.applicationContext.filesDir, "equity_keys.vault")
     }
 
-    fun wipe() { keysFile.delete() }
+    /** 26 Oct: safe before [init] (the erase's slow file thread). Nothing is kept in memory: the cache is read each time. */
+    fun wipe() { filesForErase().forEach { it.delete() } }
+
+    /** The erase's files: the looked-up symbols' keys (empty before [init]). */
+    internal fun filesForErase(): List<File> = if (::keysFile.isInitialized) listOf(keysFile) else emptyList()
 
     /** Indices the backtesters accept as benchmarks, by IraAlgo name. */
     val BENCHMARKS = listOf("NIFTY", "BANKNIFTY")

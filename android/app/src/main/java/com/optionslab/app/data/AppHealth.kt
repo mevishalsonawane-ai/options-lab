@@ -100,6 +100,8 @@ object AppHealth {
         synchronized(writeLock) {
             // Encoded under the write lock, so the last write is always the newest book.
             val text = synchronized(lock) { if (!loaded) return; HealthBook.encode(book) }
+            // 26 Oct: nothing kept and no file (after "Erase everything"): no file is made for an empty book.
+            if (text == HealthBook.encode(HealthBook.Book()) && !f.exists()) return
             runCatching {
                 f.parentFile?.mkdirs()
                 val tmp = File(f.parentFile, f.name + ".tmp")
@@ -299,6 +301,25 @@ object AppHealth {
 
     /** "Why was the app slow?" */
     fun sayWhySlow(): String { ensureLoaded(); return HealthBook.sayWhySlow(book, today(), ::hhmm) }
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): what was kept (the stalls, the crashes and the tuner's changes) dropped from
+     * memory, the cadences back to normal, and its file deleted; a save already due then finds an empty book and writes nothing.
+     * Under the write lock, so a write under way ends first and none lands after. Memory and files only: no vault read.
+     */
+    internal fun wipe() {
+        synchronized(writeLock) {
+            synchronized(lock) { book = HealthBook.Book(); cadences = emptyMap(); loaded = true }
+            for (f in filesForErase()) runCatching { f.delete() }
+        }
+        tickedAt.set(0L); trimmedAt = 0L
+    }
+
+    /** 26 Oct: anything kept in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = book != HealthBook.Book() || cadences.isNotEmpty()
+
+    /** 26 Oct: its file and its half-written ".tmp" (the "growth" folder is shared with Jarvis's growth: not deleted here). */
+    internal fun filesForErase(): List<File> = file()?.let { listOf(it, File(it.parentFile, it.name + ".tmp")) }.orEmpty()
 
     /** TEST ONLY: nothing kept, normal cadences. */
     internal fun resetForTest() {

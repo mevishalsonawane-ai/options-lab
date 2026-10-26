@@ -110,6 +110,18 @@ internal object IraNotes {
     /** Forgotten with the conversation (Boss's own button) and by the tests. */
     fun clear() { _notes.value = emptyList() }
 
+    /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): the notes and both catch-up moments dropped from
+     * memory. Their vault keys go with the settings' own wipe; nothing is read here (the anchors count as read: the vault is empty).
+     */
+    @Synchronized fun wipe() {
+        _notes.value = emptyList()
+        seenAt = null; caughtAt = null; anchorsRead = true
+    }
+
+    /** 26 Oct: anything kept in memory (the erase's test). Memory only; never throws. */
+    internal fun holdsForErase(): Boolean = _notes.value.isNotEmpty() || seenAt != null || caughtAt != null
+
     /** Settings → Jarvis → What Jarvis does by itself: the row of a group's switch ([com.optionslab.app.ui.SettingSpot]'s key). */
     fun groupKey(g: Automations.Group): String = "jarvis.switch.group.${g.name}"
 

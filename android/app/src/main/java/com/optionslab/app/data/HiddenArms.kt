@@ -136,6 +136,19 @@ object HiddenArms {
 
     private val written = Vault.LastWrite()
 
+    /**
+     * Bumped by [wipe] (26 Oct, erase everything): a pass, restore or hide that began before the erase (it read [wipes] under
+     * [lock]) leaves memory as the erase left it and writes nothing ([wiped]).
+     */
+    @Volatile private var wipes = 0
+
+    /** Under [lock]: true when an erase came since [gen] was read; the state and the members are then dropped here too. */
+    private fun wiped(gen: Int): Boolean {
+        if (gen == wipes) return false
+        ids.clear(); _state.value = ArmsCleanup.State(); loaded = false
+        return true
+    }
+
     private fun save() {
         if (!ready()) return
         val o = JSONObject().put("state", ArmsCleanup.encode(_state.value))
@@ -174,10 +187,12 @@ object HiddenArms {
      * each first switch-off or hiding logged (the diagnostics and Autopilot's timeline). What it did, for the diagnostics.
      */
     internal suspend fun passNow(): List<ArmsCleanup.Step> = lock.withLock {
+        val gen = wipes
         load()
         val now = arms.mapNotNull { a -> runCatching { a.now() }.getOrNull() }
         val before = _state.value
         val (next, steps) = ArmsCleanup.pass(before, now)
+        if (wiped(gen)) return@withLock steps
         // In force at once: the gated arms read it, and each switch-off is checked against it below.
         _state.value = next
         var s = next
@@ -206,6 +221,7 @@ object HiddenArms {
                 ArmsCleanup.Action.WAIT -> runCatching { Diag.record("arms", "$label: ${ArmsCleanup.WAITING}") }
             }
         }
+        if (wiped(gen)) return@withLock steps
         val changed = s != before
         _state.value = s
         if (changed || steps.isNotEmpty()) save()
@@ -220,7 +236,9 @@ object HiddenArms {
         if (!ready()) return "Not ready yet."
         val label = ArmsCleanup.of(key)?.label ?: return "There is no hidden arm called $key."
         val (wasOn, members) = lock.withLock {
+            val gen = wipes
             load()
+            if (wiped(gen)) return "Not ready yet."
             if (key !in _state.value.hidden) return "$label is not hidden."
             val r = ArmsCleanup.restore(_state.value, key)
             _state.value = r.state
@@ -238,7 +256,7 @@ object HiddenArms {
     suspend fun hideAgain(key: String): String {
         if (!ready()) return "Not ready yet."
         val label = ArmsCleanup.of(key)?.label ?: return "There is no arm called $key."
-        lock.withLock { load(); _state.value = ArmsCleanup.hideAgain(_state.value, key); save() }
+        lock.withLock { val gen = wipes; load(); if (!wiped(gen)) { _state.value = ArmsCleanup.hideAgain(_state.value, key); save() } }
         poke.trySend(Unit)
         return "$label is hidden again (switched off once it holds nothing)."
     }
@@ -326,6 +344,29 @@ object HiddenArms {
             off = { emptyList() },
             on = { "Jarvis offers his trade ideas again" }),
     )
+
+    /**
+     * 26 Oct (erase everything): the cleanup's state (which arms Boss's cleanup hid, switched off or restored) and the members to
+     * restore dropped from memory, its file deleted; read again as on a fresh phone by the next pass (poked now), which hides the
+     * short list's others again (only switching off: risk lowered), as on a first start. Never waits for [lock]: a pass under
+     * way sees [wipes] moved on and keeps nothing. Reads nothing; safe before [init].
+     */
+    fun wipe() {
+        wipes++
+        _state.value = ArmsCleanup.State(); loaded = false; unread = false
+        // The members are cleared here only when no pass holds them; otherwise by that pass ([wiped]).
+        if (lock.tryLock()) try { ids.clear() } finally { lock.unlock() }
+        written.forget()
+        filesForErase().forEach { runCatching { it.delete() } }
+        poke.trySend(Unit)
+    }
+
+    /** The erase's files: the cleanup's file and any copy set aside as unreadable (empty before [init]). */
+    internal fun filesForErase(): List<File> = if (!ready()) emptyList() else
+        listOf(file) + file.parentFile?.listFiles { f -> f.name.startsWith(file.name + ".unreadable.") }.orEmpty()
+
+    /** A state other than a fresh phone's, or members kept, in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching { _state.value != ArmsCleanup.State() || ids.isNotEmpty() }.getOrDefault(false)
 
     /** TEST ONLY: as after a restart - the state read again from its file on the next pass. */
     internal fun reloadForTest() { loaded = false; unread = false; _state.value = ArmsCleanup.State(); ids.clear() }

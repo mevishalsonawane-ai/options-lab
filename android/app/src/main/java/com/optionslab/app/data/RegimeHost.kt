@@ -24,6 +24,8 @@ object RegimeHost {
 
     @Volatile private var loaded = false
     @Volatile private var rebuiltOn: LocalDate? = null
+    /** 26 Oct: bumped by [wipe]; a look that started before it saves nothing (it holds the erased book). */
+    @Volatile private var wipeGen = 0
 
     private fun ensureLoaded() {
         if (loaded) return
@@ -46,6 +48,7 @@ object RegimeHost {
         val minute = Market.minuteNow()
         val kept = RegimeParams.book.day
         if (kept?.day == today && rebuiltOn == today) return
+        val gen = wipeGen
         ensureLoaded()
         val b0 = RegimeParams.book
         if (b0.day?.day != today && minute >= RegimeParams.DECIDE_MINUTE) {
@@ -58,6 +61,7 @@ object RegimeHost {
             // Moving an override to paper by itself is an automatic change: never while learning is frozen or Autopilot
             // learning is not SAFE (review 2 #10).
             val (b1, ready) = RegimeParams.observe(b0, day, hold = holdPromotions())
+            if (gen != wipeGen) return
             save(b1)
             runCatching { Diag.record("brain", RegimeParams.line(b1)) }
             // Jarvis's note on an event day (TODO S11): "Event day: learning ignores today's results".
@@ -83,6 +87,7 @@ object RegimeHost {
             // live approval - would be dropped for good. Not read yet: no rebuild now; the next look tries again.
             val lessons = runCatching { com.optionslab.app.ira.JarvisLearning.ensureLoaded(); com.optionslab.app.ira.JarvisLearning.book.value.lessons }
                 .getOrNull() ?: return
+            if (gen != wipeGen) return
             rebuiltOn = today
             save(RegimeParams.refresh(RegimeParams.book, lessons))
         }
@@ -116,6 +121,17 @@ object RegimeHost {
     /** [cfg] with today's regime weights for its strategy (paper, or live once approved). Memory only. */
     fun managerConfig(cfg: ManagerConfig, live: Boolean): ManagerConfig =
         if (!loaded) cfg else runCatching { RegimeParams.applyTo(cfg, live, date = Market.today()) }.getOrDefault(cfg)
+
+    /**
+     * "Erase everything" (26 Oct): the regime book (its overrides, learnt from Jarvis's lessons, and today's frozen day) dropped
+     * from memory; the settings key goes with [SecurePrefs.wipe]. Never reads the settings. Read again (empty) on the next look.
+     */
+    fun wipe() {
+        synchronized(this) { wipeGen++; RegimeParams.use(RegimeParams.Book()); rebuiltOn = null; loaded = false }
+    }
+
+    /** Memory only, for the erase's tests: any override or frozen day held. */
+    internal fun holdsForErase(): Boolean = RegimeParams.book.let { it.overrides.isNotEmpty() || it.day != null }
 
     /** TEST ONLY. */
     internal fun resetForTest() { loaded = true; rebuiltOn = null; RegimeParams.resetForTest() }

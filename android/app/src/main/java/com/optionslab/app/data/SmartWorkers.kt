@@ -598,14 +598,53 @@ object SmartWorkers {
     // ---- the findings log ----------------------------------------------------------------------------------------------------
 
     private fun flushFindings(context: Context?, today: LocalDate) {
+        val gen = wipes
         val lines = bus.drainLines()
         if (lines.isEmpty()) return
         val dir = File((context ?: appContext ?: return).noBackupFilesDir, "findings")
-        dir.mkdirs()
-        java.io.FileOutputStream(File(dir, "$today.log"), true).use { out -> out.write((lines.joinToString("\n") + "\n").toByteArray(Charsets.UTF_8)) }
+        // 26 Oct: under the log's lock, and only when no erase came since the lines were drained ([wipe]).
+        synchronized(findingsLock) {
+            if (gen != wipes) return
+            dir.mkdirs()
+            java.io.FileOutputStream(File(dir, "$today.log"), true).use { out -> out.write((lines.joinToString("\n") + "\n").toByteArray(Charsets.UTF_8)) }
+        }
         // Kept 30 days.
         dir.listFiles()?.forEach { f -> runCatching { if (LocalDate.parse(f.name.removeSuffix(".log")).isBefore(today.minusDays(30))) f.delete() } }
     }
+
+    // ---- Erase everything (26 Oct) -------------------------------------------------------------------------------------------
+
+    /** Held while the findings log is appended and while [wipe] deletes it. */
+    private val findingsLock = Any()
+    /** Bumped by [wipe]: a log write, a review or its reads under way when the erase came never keep what came before it. */
+    @Volatile private var wipes = 0
+
+    /**
+     * 26 Oct (Erase everything, [PersonalStores]): the findings (on the bus and waiting for the log), the daily self-reviews,
+     * Boss's brain settings as read (back to their defaults, which only ever pause more; the settings keys are wiped with the
+     * rest), the positions seen closed and the repeat filter forgotten, and the findings logs deleted. The market picture and
+     * the app's own health stay (no account data). Never reads the vault or the settings; never waits on a review.
+     */
+    internal fun wipe() {
+        synchronized(findingsLock) {
+            wipes++
+            bus.clear()
+            filesForErase().forEach { it.deleteRecursively() }
+        }
+        lastPost.clear()
+        synchronized(settingsLock) { _settings.value = Settings(); loaded = true }
+        _reviews.value = emptyList(); reviewedOn = null
+        synchronized(closedSeen) { closedSeen.clear() }
+    }
+
+    /** Whether findings, reviews, changed brain settings or positions seen closed are held in memory. Memory only. */
+    internal fun holdsForErase(): Boolean = runCatching {
+        bus.recent(System.currentTimeMillis()).isNotEmpty() || _reviews.value.isNotEmpty() || reviewedOn != null ||
+            _settings.value != Settings() || synchronized(closedSeen) { closedSeen.isNotEmpty() }
+    }.getOrDefault(false)
+
+    /** The findings logs' folder (noBackupFilesDir/findings); none before [init]. */
+    internal fun filesForErase(): List<File> = appContext?.let { listOf(File(it.noBackupFilesDir, "findings")) }.orEmpty()
 
     // ---- the daily self-review -----------------------------------------------------------------------------------------------
 
@@ -647,7 +686,11 @@ object SmartWorkers {
     }
 
     /** Home's chips with no review yet today (the app just opened): the reviews worked out, nothing done. Off the main thread. */
-    suspend fun refreshReviews() { if (_reviews.value.isEmpty()) tried { reviewNow()?.let { _reviews.value = it } } }
+    suspend fun refreshReviews() {
+        val gen = wipes
+        // 26 Oct: reviews read before an erase ([wipe]) are not shown after it.
+        if (_reviews.value.isEmpty()) tried { reviewNow()?.let { if (gen == wipes) _reviews.value = it } }
+    }
 
     /**
      * After F&O's close (15:45) on a trading day, once a day: each strategy reviewed; a drifting live one parks itself to
@@ -660,10 +703,13 @@ object SmartWorkers {
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return
         val day = today.toString()
         if (!reviewGuard.claim(day)) return
+        val gen = wipes
         try {
             ensureLoaded()
             if (timedVault { SecurePrefs.getString(K_REVIEWED) } == day) { reviewGuard.done(day); reviewedOn = day; refreshReviews(); return }
             val list = reviewNow() ?: return
+            // 26 Oct: the books were read before an erase ([wipe]): nothing is kept or acted on (the next pass reviews again).
+            if (gen != wipes) return
             // The books were read: the day is reviewed (the steps below are memory and posts; none waits).
             reviewGuard.done(day)
             reviewedOn = day

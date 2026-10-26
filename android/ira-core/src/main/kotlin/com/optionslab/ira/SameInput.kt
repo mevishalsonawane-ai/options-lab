@@ -26,4 +26,7 @@ class SameInput<K : Any, V : Any> {
 
     /** Forgets the kept result (the next [of] makes it afresh). */
     @Synchronized fun forget() { input = null; kept = null }
+
+    /** 26 Oct ("Erase everything"): whether a result is kept now (memory only). */
+    val held: Boolean get() = synchronized(this) { kept != null }
 }

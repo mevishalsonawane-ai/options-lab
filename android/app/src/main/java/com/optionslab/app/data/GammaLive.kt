@@ -43,6 +43,18 @@ object GammaLive {
         runCatching { SecurePrefs.putAllSoon(mapOf(K_CONVENTION to c.name)) }
     }
 
+    /**
+     * "Erase everything" (26 Oct): Boss's sign convention back to the standard one, unread (its key goes with
+     * [SecurePrefs.wipe]); the regimes are public market readings and stay. Never reads the settings.
+     */
+    fun wipe() {
+        conventionRead = false
+        _convention.value = GammaRegime.Convention.STANDARD
+    }
+
+    /** Memory only, for the erase's tests: Boss's own convention held. */
+    internal fun holdsForErase(): Boolean = _convention.value != GammaRegime.Convention.STANDARD
+
     private fun due(underlying: String, now: Long): Boolean = _state.value[underlying]?.let { now - it.atMs >= GammaRegime.REFRESH_MS } ?: true
 
     /** The Options tab priced [snap] (on its IO thread): the regime from it, at most every 5 minutes per index. */

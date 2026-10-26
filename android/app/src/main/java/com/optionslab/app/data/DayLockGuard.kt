@@ -35,6 +35,16 @@ object DayLockGuard {
     /** TEST SEAM: the kept copy forgotten, as a new process starts (21 Oct). */
     internal fun forgetForTest() { kept = null }
 
+    /**
+     * 26 Oct (erase everything): the kept lock days (each with its day P&L) and amounts dropped from memory; the lock days' keys
+     * go with the settings. The next look reads the settings again, as it already does after the settings' wipe
+     * ([SecurePrefs.generationHint] moves on): nothing new on the order path.
+     */
+    fun wipe() { kept = null }
+
+    /** A kept copy in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = kept != null
+
     private fun kept(): Kept {
         val g = SecurePrefs.generationHint
         val q = SecurePrefs.guardHint

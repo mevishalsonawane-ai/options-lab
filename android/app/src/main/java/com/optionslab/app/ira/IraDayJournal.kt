@@ -187,6 +187,18 @@ internal object IraDayJournal {
     }
 
     /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): the questions being asked (they name Boss's
+     * trades) forgotten. The journal itself is a settings key, gone with the settings. Memory only: no vault read.
+     */
+    @Synchronized internal fun wipe() { asking = null }
+
+    /** 26 Oct: questions are held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = asking != null
+
+    /** TEST ONLY: [d]'s questions asked from now, as [help] starts them. */
+    internal fun startForTest(live: Boolean, d: DayJournal.Draft): String? = start(live, d)
+
+    /**
      * "Help me journal today" (asked on an unlocked phone): today's draft, kept, with the first question first so it is
      * heard even when only one sentence is said.
      */

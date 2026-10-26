@@ -79,6 +79,9 @@ class TestApp : Application() {
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)
+        // 26 Oct: the erase's list of stores knows this test's folders (the crash report, the widgets); no extra store in it.
+        com.optionslab.app.data.PersonalStores.init(this)
+        com.optionslab.app.data.PersonalStores.testExtra = emptyList()
         Market.init(this)
         Holidays.init(this)
         Holidays.resetForTest()            // no background holiday refresh or test list left from the previous test

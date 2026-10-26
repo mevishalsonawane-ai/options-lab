@@ -134,6 +134,7 @@ object McxNr7Record {
 
     private fun book(): Book {
         cache?.let { return it }
+        val gen = wipeGen
         val b = Book()
         runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
@@ -144,9 +145,46 @@ object McxNr7Record {
             o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
-        publish(b)
-        cache = b                                                        // after the view: [onIfLoaded] never reads a stale "off"
+        // 26 Oct: a read that began before "Erase everything" is neither kept nor shown (and its pass saves nothing: [save]).
+        synchronized(writeLock) {
+            if (gen != wipeGen) return b
+            publish(b)
+            cache = b                                                    // after the view: [onIfLoaded] never reads a stale "off"
+        }
         return b
+    }
+
+    /** Held by [book]'s result, [save] and [wipe] (a plain lock, never across a suspension). */
+    private val writeLock = Any()
+    /** Bumped by [wipe]. */
+    @Volatile private var wipeGen = 0
+
+    /**
+     * "Erase everything" (26 Oct): the record (its switch, would-be trades, NR7 days, status and log) dropped from memory and
+     * its file deleted, with any set-aside copy. A pass still running holds the old book: its save is dropped ([save] writes
+     * only the book in [cache]). Never reads the vault; never waits on the passes' lock; safe before [init]. The MCX watch's
+     * hint file is [McxMarket]'s (its own wipe).
+     */
+    fun wipe() {
+        synchronized(writeLock) {
+            wipeGen++
+            cache = null; lastMinute = -1L
+            written.forget()
+            filesForErase().forEach { runCatching { it.delete() } }
+            _view.value = View()
+        }
+    }
+
+    /** Memory only, for the erase's tests. */
+    internal fun holdsForErase(): Boolean = runCatching {
+        _view.value != View() || cache?.let { it.on || it.trades.isNotEmpty() || it.log.isNotEmpty() || it.decided.isNotEmpty() || it.status.isNotEmpty() } == true
+    }.getOrDefault(true)
+
+    /** The record's file and any set-aside copy (none before [init]). */
+    internal fun filesForErase(): List<File> {
+        if (!ready()) return emptyList()
+        val aside = runCatching { file.parentFile?.listFiles { x -> x.name.startsWith(file.name + ".unreadable.") }?.toList() }.getOrNull().orEmpty()
+        return listOf(file) + aside
     }
 
     suspend fun refresh(): View { if (ready()) lock.withLock { book() }; return _view.value }
@@ -398,7 +436,9 @@ object McxNr7Record {
             t.exit?.let { put("exit", it) }; t.exitTime?.let { put("out", it.toString()) }; t.why?.let { put("why", it) }
         }
 
-    private fun save(b: Book) {
+    private fun save(b: Book) { synchronized(writeLock) {
+        // 26 Oct: only the book in memory is saved (an erase since the pass read it dropped it).
+        if (cache !== b) return
         val o = JSONObject().put("on", b.on)
             .put("trades", JSONArray().apply { b.trades.forEach { put(writeTrade(it)) } })
             .put("nr7", JSONObject().apply { b.nr7.forEach { (k, v) -> put(k, v) } })
@@ -407,7 +447,7 @@ object McxNr7Record {
             .put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
-    }
+    } }
 
     private fun publish(b: Book) {
         // The MCX watch's plain hint (the main thread's): it runs while this records, even with every paper arm off.

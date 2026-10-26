@@ -83,6 +83,15 @@ object StaticIp {
     suspend fun status(force: Boolean = false) = Status(registered, current(force), vpnOn())
 
     /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the registered IP and the phone's last read IP dropped from memory (the
+     * setting itself goes with [SecurePrefs.wipe]). Memory only: no vault, no network.
+     */
+    internal fun wipe() { kept = null; cached = null }
+
+    /** 26 Oct: an IP is still held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = kept?.second != null || cached != null
+
+    /**
      * Why a NEW live position must not be opened now, or null when it may. Nothing is
      * blocked while no IP is registered, or when the IP cannot be read (Zerodha decides).
      */

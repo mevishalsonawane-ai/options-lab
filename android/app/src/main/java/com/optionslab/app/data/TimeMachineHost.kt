@@ -98,6 +98,8 @@ object TimeMachineHost {
     /** Checks queued or running (memory): the tests wait for zero before the fake feed closes. */
     private val inFlight = AtomicInteger()
     private val io = Any()
+    /** 26 Oct: bumped by [wipe] (under [io]): a check or a settle begun before an erase never keeps or writes its record. */
+    @Volatile private var wipeGen = 0
     @Volatile private var loaded = false
     @Volatile private var records: List<Record> = emptyList()
     private val results = ConcurrentHashMap<String, Result>()
@@ -140,10 +142,12 @@ object TimeMachineHost {
 
     /** The trade [ref]'s actual outcome, as its arm reports it when it closes ("target", "stop", "time", "+Rs 1,200"). */
     fun settle(ref: String, outcome: String) {
-        scope.launch { runCatching { synchronized(io) { ensureLoaded(); records = records.map { if (it.ref == ref && it.outcome == null) it.copy(outcome = outcome) else it }; save() } } }
+        val gen = wipeGen
+        scope.launch { runCatching { synchronized(io) { if (gen != wipeGen) return@synchronized; ensureLoaded(); records = records.map { if (it.ref == ref && it.outcome == null) it.copy(outcome = outcome) else it }; save() } } }
     }
 
     internal fun check(e: Entry): Result {
+        val gen = wipeGen
         val day = e.at.toLocalDate()
         val r = if (e.skip != null) Result(e, null, "", e.skip, System.currentTimeMillis(), day) else {
             val (stop, target, note) = points(e)
@@ -160,15 +164,20 @@ object TimeMachineHost {
             Result(e, odds, source, listOfNotNull(note, if (expiry) "expiry day today: the odds are from all sessions, not expiry days only" else null).joinToString("; ").ifEmpty { null },
                 System.currentTimeMillis(), day)
         }
+        // 26 Oct: an erase while the odds were worked out: this check (of a trade from before it) is neither shown nor kept.
+        if (gen != wipeGen) return r
         results[e.ref] = r
         _latest.update { (listOf(r) + it.filter { x -> x.entry.ref != e.ref }).take(60) }
         // Bounded (25 Oct review): a long-running service keeps only what the tickets can still show.
         if (results.size > 240) { val keep = _latest.value.map { it.entry.ref }.toSet(); results.keys.retainAll(keep) }
+        // 26 Oct: an erase just between the check above and here: taken back out.
+        if (gen != wipeGen) { results.remove(e.ref); _latest.update { l -> l.filter { it.entry.ref != e.ref } }; return r }
         runCatching { Diag.record("timemachine", r.line()) }
         // The Autopilot change timeline shows it as its own finding (words only; nothing to undo).
         runCatching { SmartWorkers.bus.post(com.optionslab.ira.Findings.Finding(WHO, com.optionslab.ira.Findings.Kind.OTHER, e.underlying, 0, null, 50,
             r.atMs, 12 * 3_600_000L, words = "Time machine checked ${e.label}'s entry: verdict ${r.verdict} → " + (r.odds?.let { "target first ${it.targetPct.toInt()}%, stop first ${it.stopPct.toInt()}%, break-even ${(it.breakEven * 100).toInt()}%" } ?: (r.note ?: "no odds")))) }
         synchronized(io) {
+            if (gen != wipeGen) return r
             ensureLoaded()
             records = (records + Record(day, e.arm, e.ref, r.verdict, r.odds?.line() ?: (r.note ?: ""), null, e.live)).takeLast(KEEP)
             save()
@@ -307,6 +316,25 @@ object TimeMachineHost {
 
     /** The forward log as kept (reads the file once; a worker thread). */
     fun forwardLog(): List<Record> = synchronized(io) { ensureLoaded(); records }
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the forward log and this process's checks dropped from memory and the log's
+     * file deleted; a check still running finds [wipeGen] changed and keeps nothing. Never reads the vault; safe before [init].
+     */
+    fun wipe() {
+        synchronized(io) {
+            wipeGen++
+            records = emptyList(); loaded = false
+            runCatching { file()?.delete() }
+        }
+        results.clear(); sessionsKept.clear(); _latest.value = emptyList()
+    }
+
+    /** 26 Oct: records or checks in memory (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = records.isNotEmpty() || results.isNotEmpty() || _latest.value.isNotEmpty()
+
+    /** 26 Oct: the forward log's file (empty before [init]). */
+    internal fun filesForErase(): List<File> = listOfNotNull(file())
 
     /** TEST: forget everything in memory (the file stays). */
     internal fun resetForTest() {

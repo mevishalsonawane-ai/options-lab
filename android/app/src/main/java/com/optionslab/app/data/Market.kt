@@ -162,7 +162,11 @@ object Market {
 
     private fun contractsFile() = File(app.filesDir, "contracts.json")
 
-    fun wipe() { contractsFile().delete() }
+    // 26 Oct: safe before [init] (the erase's list wipes every store, set up or not).
+    fun wipe() { if (::app.isInitialized) contractsFile().delete() }
+
+    /** 26 Oct: the file [wipe] deletes (empty before [init]); the SENSEX list stays (public, [PersonalStores.KEPT_FILES]). */
+    internal fun filesForErase(): List<File> = if (::app.isInitialized) listOf(contractsFile()) else emptyList()
 
     /** Parsed once and kept in memory; the file is only re-read when it changes. */
     @Volatile private var mem: Pair<Long, Pair<LocalDate, List<Upstox.Contract>>>? = null

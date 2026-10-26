@@ -248,6 +248,10 @@ object Vault {
 
     /** Move an unreadable vault file aside (never overwrite it) and say where it went. */
     fun setAside(file: File): File {
+        // 26 Oct (erase audit): during an erase every read fails ([Erasing]) and the stores that catch it set their file aside.
+        // Renamed, it outlived the erase (its wipe deletes the file by its own name). Now the file is deleted instead: it is
+        // being erased anyway, and its key is already gone.
+        if (isErasing) { runCatching { file.delete() }; return file }
         val aside = File(file.parentFile, "${file.name}.unreadable.${System.currentTimeMillis()}")
         file.renameTo(aside)
         return aside

@@ -74,10 +74,26 @@ object HealthReport {
         return HealthExport.build(AppHealth.book(), traces, order, today, com.optionslab.app.BuildConfig.COMMIT, device, ::hhmm, known())
     }
 
+    /** 26 Oct: the cache folder the last report was written under (the erase finds it without a context). */
+    @Volatile private var cacheRoot: File? = null
+
+    /** 26 Oct: the reports' folder (the cache's exports/health/); null before anything knows the app's folders. */
+    private fun folder(): File? = (cacheRoot ?: com.optionslab.app.ira.IraHub.appContext()?.cacheDir)?.let { File(it, SUB) }
+
+    /**
+     * 26 Oct: "Erase everything" ([PersonalStores]): the reports written for sharing (redacted, but still the phone's own
+     * diagnostics and order timings) deleted. Nothing is kept in memory; never reads the vault.
+     */
+    fun wipe() { folder()?.let { runCatching { it.deleteRecursively() } } }
+
+    /** 26 Oct: the reports' folder. */
+    internal fun filesForErase(): List<File> = listOfNotNull(folder())
+
     /** The report zipped in the cache's exports/health/ (older ones removed). A worker thread. */
     fun write(ctx: Context): File {
         val text = text(ctx)
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
+        cacheRoot = ctx.cacheDir
         val dir = File(ctx.cacheDir, SUB).apply { mkdirs() }
         dir.listFiles()?.forEach { runCatching { it.delete() } }
         val name = HealthExport.fileName(today)

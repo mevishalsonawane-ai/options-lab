@@ -198,11 +198,14 @@ object LiquidityTest {
         runCatching {
             synchronized(twins) { twins += r; while (twins.size > com.optionslab.ira.LiquidityTwin.KEEP) twins.removeAt(0) }
             val d = dir ?: return
+            val gen = erased
             scope.launch {
                 runCatching { readTwins() }
                 runCatching {
                     // The copy taken under the write lock (review): an older copy is never written after a newer one.
                     synchronized(saveLock) {
+                        // 26 Oct: asked for before an erase ([wipe]): nothing is written after it.
+                        if (gen != erased) return@synchronized
                         val text = synchronized(twins) { ArrayList(twins) }.joinToString("") { t ->
                             android.util.Base64.encodeToString(Vault.encrypt(t.encode().toByteArray(Charsets.UTF_8)), android.util.Base64.NO_WRAP) + "\n"
                         }
@@ -219,6 +222,7 @@ object LiquidityTest {
     private fun readTwins() {
         if (twinsRead) return
         val d = dir ?: return
+        val gen = erased
         val kept = runCatching {
             File(d, TWINS).takeIf { it.isFile }?.readLines(Charsets.US_ASCII).orEmpty().mapNotNull { l ->
                 if (l.isBlank()) null else runCatching {
@@ -227,6 +231,8 @@ object LiquidityTest {
             }
         }.getOrDefault(emptyList())
         synchronized(twins) {
+            // 26 Oct: a read that began before an erase ([wipe]) adds nothing after it.
+            if (gen != erased) return
             val now = ArrayList(twins)
             twins.clear(); twins.addAll((kept + now).distinct().sortedBy { it.atMs }.takeLast(com.optionslab.ira.LiquidityTwin.KEEP))
         }
@@ -270,11 +276,14 @@ object LiquidityTest {
 
     private fun saveSoon() {
         val d = dir ?: return
+        val gen = erased
         scope.launch {
             // Never the defaults over the saved file: it is read first (here, a worker). One write at a time (one temp file).
             runCatching { ensureLoaded() }
             runCatching {
                 synchronized(saveLock) {
+                    // 26 Oct: asked for before an erase ([wipe]): nothing is written after it.
+                    if (gen != erased) return@synchronized
                     val f = File(d, STATE)
                     val tmp = File(d, "$STATE.tmp")
                     tmp.writeText(LiquidityFreeze.encode(_state.value))
@@ -299,14 +308,19 @@ object LiquidityTest {
 
     private fun write() {
         val d = dir ?: return
-        val all = synchronized(fills) { ArrayList(fills) }
+        var gen = 0
+        val all = synchronized(fills) { gen = erased; ArrayList(fills) }
         val text = all.joinToString("") { r ->
             android.util.Base64.encodeToString(Vault.encrypt(FillQuality.encode(r).toByteArray(Charsets.UTF_8)), android.util.Base64.NO_WRAP) + "\n"
         }
-        val f = File(d, FILLS)
-        val tmp = File(d, "$FILLS.tmp")
-        tmp.writeText(text, Charsets.US_ASCII)
-        if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+        // 26 Oct: under the write lock, as [wipe] deletes: records copied before an erase are never written after it.
+        synchronized(saveLock) {
+            if (gen != erased) return
+            val f = File(d, FILLS)
+            val tmp = File(d, "$FILLS.tmp")
+            tmp.writeText(text, Charsets.US_ASCII)
+            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+        }
     }
 
     /** The records kept, oldest first (the file read once first: call off the main thread). */
@@ -326,12 +340,34 @@ object LiquidityTest {
     /** The order review's notes for [day]. */
     fun reviewNotes(day: java.time.LocalDate): List<String> = FillQuality.reviewNotes(fills(), day)
 
-    /** Everything erased (a wipe): memory and files. */
+    /** 26 Oct: bumped by [wipe] (under the fills' lock): a write asked for or copied before it writes nothing after it. */
+    @Volatile private var erased = 0
+
+    /**
+     * Everything erased (a wipe): memory and files. 26 Oct ("Erase everything", [PersonalStores]): also the changes waiting for
+     * the first read and the temp files, under the write lock so no write in flight lands after the delete; the files count as
+     * read (none is left to read back). Never reads the vault.
+     */
     fun wipe() {
-        synchronized(fills) { fills.clear() }
-        synchronized(twins) { twins.clear() }
-        _state.value = LiquidityFreeze.State()
-        dir?.let { d -> runCatching { File(d, STATE).delete() }; runCatching { File(d, FILLS).delete() }; runCatching { File(d, TWINS).delete() } }
+        // The read lock too: a first read of the files in flight never puts their old state back after this.
+        synchronized(lock) { synchronized(saveLock) {
+            synchronized(fills) { erased++; fills.clear() }
+            synchronized(twins) { twins.clear() }
+            synchronized(edits) { edits.clear(); early = false }
+            _state.value = LiquidityFreeze.State()
+            filesForErase().forEach { runCatching { it.delete() } }
+            loaded = true; twinsRead = true
+        } }
+    }
+
+    /** 26 Oct: whether any record or a changed state is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = synchronized(fills) { fills.isNotEmpty() } || synchronized(twins) { twins.isNotEmpty() } ||
+        _state.value != LiquidityFreeze.State() || synchronized(edits) { edits.isNotEmpty() }
+
+    /** 26 Oct: the state, fills and twins files and their temp files; empty before [init]. */
+    internal fun filesForErase(): List<File> {
+        val d = dir ?: return emptyList()
+        return listOf(STATE, FILLS, TWINS).flatMap { listOf(File(d, it), File(d, "$it.tmp")) }
     }
 
     /** TEST ONLY: as a fresh start - nothing kept, the defaults, the files read again on the next ask. */

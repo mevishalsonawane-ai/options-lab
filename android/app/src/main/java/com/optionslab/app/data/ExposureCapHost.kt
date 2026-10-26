@@ -246,6 +246,24 @@ object ExposureCapHost {
     fun livePositions(held: Map<String, Int>, readAtMs: Long) { runCatching { ledgerToday(); ledger.reconcile(held, readAtMs) } }
 
     /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the would-be entries (Boss's arms, options and prices), the live ledger and
+     * Boss's switches dropped from memory, back to a new phone's defaults (the settings themselves go with the settings: the paper
+     * cap on at its default number, live in shadow). Memory only: no vault read; the order path's reads stay memory reads.
+     */
+    internal fun wipe() {
+        paperOn = true; max = SameDirectionCap.DEFAULT_MAX; liveOn = false; loaded = true
+        synchronized(lock) { blocked = emptyList() }
+        ledger.clear(); ledgerDay = null; seeded = false
+        _view.value = View()
+    }
+
+    /** 26 Oct: a would-be entry, a live entry or a changed switch is held (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        synchronized(lock) { blocked.isNotEmpty() } || ledger.open().isNotEmpty() || max != SameDirectionCap.DEFAULT_MAX || liveOn ||
+            _view.value.line.isNotEmpty() || _view.value.openNow.isNotEmpty()
+    }.getOrDefault(true)
+
+    /**
      * TEST ONLY: defaults back (2, live in shadow), no record, no live entries. [paperOn]: false for every other test (TestApp:
      * their arms' many same-way entries are not what they test); the cap's own tests switch it on.
      */

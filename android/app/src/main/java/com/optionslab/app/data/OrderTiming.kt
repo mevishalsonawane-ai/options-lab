@@ -265,6 +265,11 @@ object OrderTiming {
     /** The diagnostics export's line. */
     fun diagLine(): String = synchronized(lock) { OrderSpeed.diagLine(withBook()) }
 
+    /** 26 Oct: today's timings or queued figures in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        synchronized(lock) { book != null } || pending.isNotEmpty() || synchronized(dropsLock) { dropsPending > 0 }
+    }.getOrDefault(false)
+
     /** TEST ONLY (and a wipe): forget the in-memory book, the queued figures, and when the clock was last sampled (18 Oct: the next reading counts). */
     internal fun forget() = synchronized(lock) {
         book = null; fillsOnStream = 0; fillsKnown = 0; clockAt = 0L; serverClockAt = 0L

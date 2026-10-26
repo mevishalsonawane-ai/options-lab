@@ -59,7 +59,7 @@ object GoldTasPaper {
     internal suspend fun replaceForTest(b: Book) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }
         GoldBooks.awaitLoaded()
-        lock.withLock { readFailed = false; save(b) }
+        lock.withLock { val gen = wipes; readFailed = false; save(b, gen) }
     }
 
     fun init(context: Context) {
@@ -69,12 +69,17 @@ object GoldTasPaper {
 
     /** Reads the saved book (on [GoldBooks]' background thread; every change waits for it). */
     internal fun load() {
+        val gen = wipes
         val r = runCatching { read() }
         // A saved book that is there but could not be read is never written over by the minute passes (it may read
         // back next time); the empty book shows meanwhile. Boss's own change reads it again first; only a reset writes over it ([edit]).
-        readFailed = r.isFailure
+        // 26 Oct: a read that began before "Erase everything" shows nothing it read.
+        synchronized(writeLock) {
+            if (gen != wipes) return
+            readFailed = r.isFailure
+            _book.value = r.getOrNull() ?: Book()
+        }
         if (r.isFailure) runCatching { Diag.record("gold", "${file.name} could not be read; it is not saved over") }
-        _book.value = r.getOrNull() ?: Book()
     }
 
     /** The saved book could not be read at the start: only a reset writes over it ([load], [edit]). */
@@ -98,6 +103,7 @@ object GoldTasPaper {
     suspend fun step(hourly: List<Bar>, minutes: List<Bar>, t: LocalDateTime, fed: LocalDateTime, lots: Double) = runCatching {
         GoldBooks.awaitLoaded()
         lock.withLock {
+            val gen = wipes
             var b = _book.value
             val last = minutes.lastOrNull()
             val r = GoldTas.read(hourly)
@@ -125,7 +131,7 @@ object GoldTasPaper {
             }
             if (r == null) {
                 if (b.armed && b.position == null) b = b.copy(status = "Loading the 1-hour candles")
-                save(b); return@withLock
+                save(b, gen); return@withLock
             }
             val fresh = b.decided != r.bar.toString()
             val priced = last != null && !last.start.isBefore(t.minusMinutes(30))
@@ -167,7 +173,7 @@ object GoldTasPaper {
             } else if (!b.armed && b.status != "Not armed" && !b.status.startsWith("Sold")) {
                 b = b.copy(status = "Not armed")
             }
-            save(b)
+            save(b, gen)
         }
     }
 
@@ -195,21 +201,54 @@ object GoldTasPaper {
     private suspend fun edit(clear: Boolean = false, f: (Book) -> Book) {
         GoldBooks.awaitLoaded()
         lock.withLock {
+            val gen = wipes
             if (clear) { readFailed = false }
             else if (readFailed) {
                 val again = runCatching { read() }
-                if (again.isSuccess) { readFailed = false; again.getOrNull()?.let { _book.value = it } }
+                // 26 Oct: an erase since this change began keeps the book it read off the screen.
+                if (again.isSuccess) synchronized(writeLock) { if (gen == wipes) { readFailed = false; again.getOrNull()?.let { _book.value = it } } }
                 else runCatching { Diag.record("gold", "${file.name} could not be read; this change is kept on screen only, not saved") }
             }
-            save(f(_book.value))
+            save(f(_book.value), gen)
         }
     }
 
-    private fun save(b: Book) {
-        _book.value = b
-        if (readFailed) return
-        if (::file.isInitialized) runCatching { Vault.writeFile(file, toJson(b).toString().toByteArray(Charsets.UTF_8)) }
+    /**
+     * Bumped by [wipe] (26 Oct, erase everything): a pass or a change that took the book before the erase ([gen], read under
+     * [lock]) neither shows nor writes it after.
+     */
+    @Volatile private var wipes = 0
+
+    /** 26 Oct: [save], [load]'s result and [wipe] one at a time (a plain lock, never across a suspension), so no save lands after an erase. */
+    private val writeLock = Any()
+
+    private fun save(b: Book, gen: Int) {
+        synchronized(writeLock) {
+            if (gen != wipes) return
+            _book.value = b
+            if (readFailed) return
+            if (::file.isInitialized) runCatching { Vault.writeFile(file, toJson(b).toString().toByteArray(Charsets.UTF_8)) }
+        }
     }
+
+    /**
+     * 26 Oct (erase everything): the book (switch, open trade, closed trades) dropped from memory and its file deleted. Never
+     * waits for [lock]: a pass under way sees [wipes] moved on and saves nothing. Reads nothing; safe before [init].
+     */
+    fun wipe() {
+        synchronized(writeLock) {
+            wipes++
+            readFailed = false
+            _book.value = Book()
+            filesForErase().forEach { runCatching { it.delete() } }
+        }
+    }
+
+    /** The erase's files: the book (empty before [init]). */
+    internal fun filesForErase(): List<File> = if (::file.isInitialized) listOf(file) else emptyList()
+
+    /** A book other than the empty one in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = _book.value != Book()
 
     private fun read(): Book? = Vault.readFileSteady(file)?.let { fromJson(JSONObject(String(it, Charsets.UTF_8))) }
 

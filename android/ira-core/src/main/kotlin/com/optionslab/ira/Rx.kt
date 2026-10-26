@@ -55,8 +55,34 @@ internal class Kept<V>(private val max: Int) {
     /** How many readings are kept. */
     val size: Int get() = synchronized(kept) { kept.size }
 
-    /** Every kept reading forgotten (tests). */
+    /** Every kept reading forgotten (tests; and "Erase everything", through [WordCaches]). */
     fun clear() = synchronized(kept) { kept.clear() }
+
+    // 26 Oct (erase everything): each one made is known to [WordCaches], so the erase can forget the words Boss said.
+    init { WordCaches.add(this) }
+}
+
+/**
+ * 26 Oct ("Erase everything"): every [Kept] reading made, so the erase forgets them all. They are keyed by the words Boss
+ * said (his questions, his ask log's lines) and live for the whole process, so without this a question asked before the
+ * erase stayed in memory after it. Held weakly (a reader that is gone is dropped); memory only, never the disk.
+ */
+object WordCaches {
+    private val all = ArrayList<java.lang.ref.WeakReference<Kept<*>>>()
+
+    internal fun add(k: Kept<*>) { synchronized(all) { all.removeAll { it.get() == null }; all.add(java.lang.ref.WeakReference(k)) } }
+
+    private fun each(): List<Kept<*>> = synchronized(all) { all.mapNotNull { it.get() } }
+
+    /** Every kept reading of Boss's words forgotten: each [Kept], [Ask]'s questions and [ShortAnswer]'s answers. Never throws. */
+    fun clear() {
+        each().forEach { runCatching { it.clear() } }
+        runCatching { Ask.forgetReadings() }
+        runCatching { ShortAnswer.clearCache() }
+    }
+
+    /** Whether any reading of Boss's words is still kept (memory only). Never throws. */
+    fun holds(): Boolean = runCatching { each().any { it.size > 0 } || Ask.readingsKept() > 0 }.getOrDefault(false)
 }
 
 /** [read] of [words] kept in [kept], given back as [words] itself when it reads as the same words (a reader that returns its input). */

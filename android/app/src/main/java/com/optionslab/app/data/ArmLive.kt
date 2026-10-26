@@ -174,6 +174,12 @@ object ArmLive {
     private val _view = MutableStateFlow(View())
     val view: StateFlow<View> = _view
     @Volatile private var cache: Book? = null
+    /**
+     * 26 Oct (Erase everything): bumped by [wipe], which cannot take [lock] (a coroutine lock). [loadGen] is the count when the
+     * book in hand was read; a pass that read it before an erase neither saves it, backs its switches up nor shows it afterwards.
+     */
+    @Volatile private var wipeGen = 0
+    @Volatile private var loadGen = 0
     /** The book's file could not be read (memory): no live entry until it is. */
     @Volatile private var unreadable = false
     /** The book failed authentication and was rebuilt: the open live trades are to be recovered from Zerodha on the next look. */
@@ -362,7 +368,8 @@ object ArmLive {
 
     private fun book(): Book {
         cache?.let { return it }
-        val f = file ?: return Book().also { cache = it }
+        val gen = wipeGen
+        val f = file ?: return Book().also { cache = it; loadGen = gen }
         val bytes = try {
             testReadFails?.let { if (it.getAndDecrement() > 0) throw java.io.IOException("test: the book could not be read") }
             Vault.readFileSteady(f)
@@ -399,6 +406,9 @@ object ArmLive {
         if (unreadable) runCatching { Diag.record("armlive", "the live book was read again: its open live trades are watched") }
         unreadable = false
         readFails = 0
+        loadGen = gen
+        // 26 Oct: a book read while an erase ran is used by this pass only (never kept, shown or saved).
+        if (gen != wipeGen) return b
         cache = b
         publish(b)
         return b
@@ -439,6 +449,8 @@ object ArmLive {
         .apply { p.stopQty?.let { put("stopQty", it) }; p.zeroSinceMs?.let { put("zeroSince", it) } }.put("stopBooked", p.stopBooked)
 
     private fun save(b: Book) {
+        // 26 Oct: a book read before an erase is never written back over it.
+        if (loadGen != wipeGen) return
         // Every real trade is kept (the live record and the account stop rule read them all); shadow trades the last [SHADOW_KEPT].
         val sh = b.positions.filter { !it.open && it.shadow }
         if (sh.size > SHADOW_KEPT) { val gone = sh.take(sh.size - SHADOW_KEPT).toSet(); b.positions.removeAll { it in gone } }
@@ -458,6 +470,7 @@ object ArmLive {
 
     /** The switches' second copy (a worker: only Boss's switch changes write it). */
     private fun backupSwitches(b: Book) {
+        if (loadGen != wipeGen) return
         runCatching {
             SecurePrefs.putAll(mapOf(K_SWITCHES to JSONObject().apply { b.switches.forEach { (k, v) -> put(k, v) } }.toString(),
                 K_SHADOW to JSONObject().apply { b.shadow.forEach { (k, v) -> put(k, v) } }.toString()))
@@ -465,6 +478,7 @@ object ArmLive {
     }
 
     private fun publish(b: Book) {
+        if (loadGen != wipeGen) return
         val open = b.positions.filter { it.open }
         val real = open.filter { !it.shadow }
         holdingHint = real.isNotEmpty()
@@ -1749,11 +1763,34 @@ object ArmLive {
             "; out of shadow: " + (live.joinToString().ifEmpty { "none" }) + (if (v.unreadable) "; BOOK UNREADABLE: no live entries" else "")
     }
 
-    /** For tests: the book forgotten (its file goes with the test's directory) and the memory notes cleared. */
+    /**
+     * The book forgotten (its file goes with the test's directory) and the memory notes cleared: the tests, between them and as a
+     * restart (the book stays on disk). 26 Oct: also the count that stops a pass in flight from saving or showing the old book,
+     * and the record of the last write. Never takes [lock] and never reads the vault.
+     */
     internal fun wipe() {
+        wipeGen++
+        written.forget()
         cache = null; unreadable = false; recoverDue = false; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
         readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L
         _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); levels.clear(); closedRefs.clear()
+    }
+
+    /** 26 Oct (Erase everything): [wipe], and the book's files deleted (a set-aside copy too). */
+    internal fun wipeForErase() {
+        wipe()
+        filesForErase().forEach { runCatching { it.delete() } }
+    }
+
+    /** 26 Oct: the live book or its notes in memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = cache?.let { it.positions.isNotEmpty() || it.switches.isNotEmpty() || it.log.isNotEmpty() || it.shadow.isNotEmpty() } == true ||
+        _view.value.let { it.open.isNotEmpty() || it.closed.isNotEmpty() || it.log.isNotEmpty() || it.switches.isNotEmpty() } ||
+        holdingHint || shadowHint || liveKeysHint.isNotEmpty() || levels.isNotEmpty() || closedRefs.isNotEmpty() || legsKept.isNotEmpty()
+
+    /** 26 Oct: the book's file and any copy of it set aside as damaged (none before [init]). */
+    internal fun filesForErase(): List<File> {
+        val f = file ?: return emptyList()
+        return listOf(f) + f.parentFile?.listFiles { x -> x.name.startsWith("${f.name}.unreadable.") }.orEmpty().toList()
     }
 
     /** For tests: as after a restart - the memory gone, the book on disk. */

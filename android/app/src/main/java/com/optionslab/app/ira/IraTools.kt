@@ -2343,4 +2343,53 @@ internal object IraTools {
             prefs().putAllSoon(mapOf(NEWS_MOVES to com.optionslab.ira.NewsMoves.save(log)))
         }
     }
+
+    // ---- 26 Oct: "Erase everything" ([com.optionslab.app.data.PersonalStores]) ------------------------------------------
+
+    /** Every copy in memory of what is kept above (Boss's mistakes, his notes' readings, missed words, habits, the logs). */
+    private fun memoryCopies(): List<Any?> = listOf(weakCache, alertCache, freshCache, freshSavedAt, awaiting, missedLast, nextAfterMiss,
+        clarityCache, lastKind, shortCache, wordFitCache, againCache, againOpen, wrongCache, wrongLast, figureCache, leadCache,
+        morningCache, talkCache, talkHoursCache, asksCache, asksOffered, turnCache, turnedDownAt, lengthCache, lengthLast,
+        indexCache, indexLast, indexReadLast, nickCache, nickAsked, nickLearned, firstIndexCache, leadPartCache, nextAskCache,
+        nextAskOffered, nextAskOfferedLine, nextAskLineShown, asksLineShown, moreAfterCache, outlookCache, callsCache, trendCache,
+        heldNotedOn, newsMovesCache, newsMovesSeen)
+
+    /**
+     * 26 Oct: everything above forgotten from memory. The settings keys themselves go with [com.optionslab.app.security.SecurePrefs.wipe];
+     * without this the kept copies (each read once, then kept) were said and saved again after the erase. Under the object's
+     * lock, as every update above: one under way finishes first, and the next reads the (wiped) settings afresh. Memory
+     * only: never reads the vault or the settings.
+     */
+    @Synchronized fun wipe() {
+        mistakesRead.forget(); routineRead.forget()
+        weakCache = null; alertCache = null; freshCache = null; freshSavedAt = null
+        chainAt.clear()
+        awaiting = null; missedLast = null; offeredOnce.clear(); nextAfterMiss = null
+        clarityCache = null; lastKind = null; shortCache = null
+        wordFitCache = null
+        againCache = null; againOpen = null
+        wrongCache = null; wrongLast = null
+        figureCache = null; leadCache = null
+        morningCache = null
+        talkCache = null; talkHoursCache = null
+        asksCache = null; asksOffered = null
+        turnCache = null; turnedDownAt = null
+        lengthCache = null; lengthLast = null; lengthLongAt = 0L
+        indexCache = null; indexLast = null; indexReadLast = null
+        nickCache = null; nickAsked = null; nickLearned = null
+        firstIndexCache = null
+        leadPartCache = null
+        nextAskCache = null; nextAskOffered = null; nextAskOfferedLine = null; nextAskLineShown = null; asksLineShown = null
+        moreAfterCache = null
+        outlookCache = null
+        callsCache = null; trendCache = null
+        heldNotedOn = null
+        newsMovesCache = null; newsMovesSeen = null
+    }
+
+    /** 26 Oct: whether anything above is still held in memory (never the disk). Never throws. */
+    internal fun holdsForErase(): Boolean = runCatching {
+        mistakesRead.holds || routineRead.holds || chainAt.isNotEmpty() || offeredOnce.isNotEmpty() || lengthLongAt != 0L ||
+            memoryCopies().any { it != null }
+    }.getOrDefault(true)
 }

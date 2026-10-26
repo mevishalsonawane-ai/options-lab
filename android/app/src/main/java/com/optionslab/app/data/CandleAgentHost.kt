@@ -101,9 +101,20 @@ object CandleAgentHost {
 
     private fun file(context: Context) = File(context.noBackupFilesDir, "candles/stats.txt")
 
+    /**
+     * 26 Oct (Erase everything): the app's context, kept at the start ([init]) or on the agent's first load, so [wipe] can delete
+     * its counts without being handed one; and the count [wipe] bumps, so a batch that began before an erase never saves its
+     * agent's counts after it ([save]).
+     */
+    @Volatile private var appContext: Context? = null
+    @Volatile private var wipeGen = 0
+
+    fun init(context: Context) { appContext = context.applicationContext }
+
     /** The agent, loaded on first use (its counts file and the research seed): call on a worker thread only. */
     internal fun agentOrLoad(context: Context): CandleAgent {
         agent?.let { return it }
+        if (appContext == null) appContext = context.applicationContext
         synchronized(this) {
             agent?.let { return it }
             return load(context).also { agent = it; _view.value = _view.value.copy(released = false) }
@@ -144,6 +155,7 @@ object CandleAgentHost {
         // Open positions first: the start-up restores and watches them before any agent's work.
         PositionsFirst.awaitPositions(); PositionsFirst.awaitStream()
         if (MemoryTrim.underPressure()) return
+        val gen = wipeGen
         val a = withContext(Dispatchers.IO) { agentOrLoad(context) }
         val now = Market.now()
         val nowMs = System.currentTimeMillis()
@@ -169,7 +181,7 @@ object CandleAgentHost {
         } ?: run { publish(a); return }                 // 20 Oct, review: a failed batch shows its error on the page too
         // Its reads on the bus as they are (no direction: never a vote in any strategy's consensus).
         for (p in step.posts) runCatching { SmartWorkers.bus.post(p) }
-        if (step.changed) withContext(Dispatchers.IO) { save(context, a) }
+        if (step.changed) withContext(Dispatchers.IO) { save(context, a, gen) }
         if (nseOver) settledDay = Market.today()
         if (step.posts.isNotEmpty() || step.counted > 0) SharedKnowledgeHost.added(NAME, "${step.posts.size} candle reads shared, ${step.counted} outcomes counted")
         if (heard.isNotEmpty()) SharedKnowledgeHost.read(NAME, "the other agents' posts on the findings bus")
@@ -196,6 +208,7 @@ object CandleAgentHost {
             deepRead = true
         }
         if (open || deepDay == today || MemoryTrim.underPressure()) return
+        val gen = wipeGen
         val a = withContext(Dispatchers.IO) { agentOrLoad(context) }
         val series = ArrayList<CandleAgent.Series>()
         for (m in INDICES) {
@@ -231,7 +244,7 @@ object CandleAgentHost {
             try { runCatching { a.study(series, emptyList(), System.currentTimeMillis(), now, false) }.onFailure { a.failed(it) }.getOrNull() }
             finally { runCatching { com.optionslab.app.work.BackgroundBudget.done(budget) } }
         } ?: return
-        if (step.changed) withContext(Dispatchers.IO) { save(context, a) }
+        if (step.changed) withContext(Dispatchers.IO) { save(context, a, gen) }
         if (step.counted > 0) SharedKnowledgeHost.added(NAME, "${step.counted} older candles studied")
         publish(a)
     }
@@ -338,8 +351,10 @@ object CandleAgentHost {
      * The counts written (IO thread). 20 Oct, review: one writer at a time (the batch worker and the hourly study worker could
      * both write the same temporary file), and the file replaced in one step: a failed rename used to delete the counts first.
      */
-    private fun save(context: Context, a: CandleAgent) {
+    private fun save(context: Context, a: CandleAgent, gen: Int) {
         synchronized(saveLock) {
+            // 26 Oct: an agent loaded before an erase never writes its counts after it (checked under the writers' lock [wipe] takes).
+            if (gen != wipeGen) return
             runCatching {
                 val f = file(context)
                 f.parentFile?.mkdirs()
@@ -391,6 +406,31 @@ object CandleAgentHost {
 
     /** The diagnostics' line. */
     fun diagLine(): String = agent?.status()?.words() ?: if (_view.value.released) "Candle agent: released to free memory" else "Candle agent: not loaded yet"
+
+    /**
+     * 26 Oct (Erase everything): the agent, its kept minutes and OI, its page and its counts file forgotten. Under the load's and
+     * the writers' locks (a load or a write is a small file), so a load already reading the old counts cannot keep them and a
+     * batch in flight cannot write them back. Never the vault.
+     */
+    fun wipe() {
+        synchronized(this) {
+            synchronized(saveLock) {
+                wipeGen++
+                agent = null
+                mcxBars.clear(); lastOi.clear()
+                lastBatchAt = 0L; settledDay = null
+                _view.value = View()
+                filesForErase().forEach { runCatching { it.delete() } }
+            }
+        }
+    }
+
+    /** 26 Oct: the agent or its page in memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = agent != null || mcxBars.isNotEmpty() || lastOi.isNotEmpty() || _view.value.status != null ||
+        _view.value.lessons.isNotEmpty() || _view.value.notes.isNotEmpty()
+
+    /** 26 Oct: the counts file and its temporary file (none before [init] or the first load). */
+    internal fun filesForErase(): List<File> = appContext?.let { c -> val f = file(c); listOf(f, File(f.parentFile, "stats.tmp")) }.orEmpty()
 
     /** TEST ONLY: [bars] kept for [u] as if fetched at their last minute's end. */
     internal fun keepMcxForTest(u: String, bars: List<CandleRead.Bar>) {

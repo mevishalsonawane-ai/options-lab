@@ -15,6 +15,21 @@ internal object IraTax {
     private const val DIR = "exports"
     private const val AUTHORITY_SUFFIX = ".exports"
 
+    /** 26 Oct: the cache folder the last export was written under (the erase finds it without a context). */
+    @Volatile private var cacheRoot: java.io.File? = null
+
+    /** 26 Oct: the exports folder (the cache's exports/, HealthReport's reports too); null before anything knows the app's folders. */
+    private fun folder(): java.io.File? = (cacheRoot ?: IraHub.appContext()?.cacheDir)?.let { java.io.File(it, DIR) }
+
+    /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): the whole exports folder deleted - the tax CSVs
+     * (Boss's trades, P&L and charges) and the health reports beside them. Nothing is kept in memory; never reads the vault.
+     */
+    fun wipe() { folder()?.let { runCatching { it.deleteRecursively() } } }
+
+    /** 26 Oct: the exports folder. */
+    internal fun filesForErase(): List<java.io.File> = listOfNotNull(folder())
+
     private fun trades(live: Boolean): List<com.optionslab.ira.TaxRecords.Trade> =
         runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
             com.optionslab.ira.TaxRecords.trade(t.symbol, t.direction, t.qty, t.entry, t.exit, t.openedAt, t.closedAt, t.charges)
@@ -42,6 +57,7 @@ internal object IraTax {
         if (w.isEmpty()) return com.optionslab.ira.TaxRecords.nothing(fy)
         val text = com.optionslab.ira.TaxRecords.csv(label, w, fy, today)
         val file = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            cacheRoot = c.cacheDir
             val dir = java.io.File(c.cacheDir, DIR).apply { mkdirs() }
             dir.listFiles()?.forEach { runCatching { it.delete() } }
             java.io.File(dir, com.optionslab.ira.TaxRecords.fileName(fy, label)).apply { writeText(text, Charsets.UTF_8) }

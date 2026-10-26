@@ -370,10 +370,16 @@ object ManagerSpecialists {
         o?.let { j -> j.keys().asSequence().mapNotNull { k -> runCatching { k to decT(j.getJSONObject(k)) }.getOrNull() }.toMap() }.orEmpty()
 
     /** Written now (tests, and the coalesced save). */
-    internal fun save() {
+    internal fun save() = synchronized(writeLock) { saveHere() }
+
+    private fun saveHere() {
         if (!loaded) return
         val f = file() ?: return
         val b = _book.value
+        // 26 Oct: right after "Erase everything" an empty book writes no file (the coalesced save may still be waiting). Any
+        // other save, an empty book's too, is written as before.
+        if (erasedEmpty && b == Book()) return
+        erasedEmpty = false
         val o = JSONObject().put("tuned", encMap(b.tuned)).put("frozen", encMap(b.frozen))
             .put("research", b.research.values.joinToString("\n\n") { ManagerConfig.encode(it) })
             .put("lines", JSONArray(b.lines))
@@ -406,6 +412,7 @@ object ManagerSpecialists {
     internal fun load() {
         if (loaded) return
         val f = file() ?: return
+        val gen = wipeGen
         val read = runCatching {
             val text = if (f.isFile) f.readText() else return@runCatching
             val o = JSONObject(text)
@@ -416,6 +423,8 @@ object ManagerSpecialists {
             // A change made in the moment before the file was read (a mute, an un-mute, an import) is replayed onto the file's
             // book - never the file thrown away for it: the tuned weights, the research blocks and the frozen live mutes stay.
             synchronized(this) {
+                // 26 Oct: a read that began before "Erase everything" keeps nothing it read.
+                if (gen != wipeGen) return@runCatching
                 var b = got
                 for (op in early) b = op(b)
                 _book.value = b
@@ -433,11 +442,47 @@ object ManagerSpecialists {
         if (replayed > 0) dirty()
     }
 
+    /** Held by [save] and [wipe]: a save that read the book before the erase finishes before the wipe deletes the file. */
+    private val writeLock = Any()
+    /** Bumped by [wipe]; guarded by this object. */
+    @Volatile private var wipeGen = 0
+    /** Set by [wipe]: nothing has been saved since the erase (an empty book then writes no file). */
+    @Volatile private var erasedEmpty = false
+
+    /**
+     * "Erase everything" (26 Oct): the specialists' book (Boss's mutes, the tuned and frozen weights, the research blocks, the
+     * nightly lines), the open trades' views and the cached committees dropped from memory, and the file deleted (with its
+     * set-aside copies). Never reads the settings; safe before [init]. A save still waiting writes nothing.
+     */
+    fun wipe() {
+        synchronized(writeLock) {
+            synchronized(this) {
+                wipeGen++; erasedEmpty = true
+                _book.value = Book(); early.clear()
+                // Nothing left to read: the file goes now (unknown before init, then the first read finds it gone).
+                if (appContext != null) loaded = true
+            }
+            cache.clear(); lastView.clear()
+            synchronized(_views) { _views.value = emptyMap() }
+            filesForErase().forEach { runCatching { it.delete() } }
+        }
+    }
+
+    /** Memory only, for the erase's tests. */
+    internal fun holdsForErase(): Boolean = _book.value != Book() || _views.value.isNotEmpty() || lastView.isNotEmpty()
+
+    /** The book's file, its temp file and any set-aside copy (the folder is shared with the trade manager's own files). */
+    internal fun filesForErase(): List<File> {
+        val f = file() ?: return emptyList()
+        val aside = runCatching { f.parentFile?.listFiles { x -> x.name.startsWith(f.name + ".") }?.toList() }.getOrNull().orEmpty()
+        return listOf(f, File(f.parentFile, f.name + ".tmp")) + aside.filter { it.name != f.name + ".tmp" }
+    }
+
     /** TEST ONLY: the file read again, as a new process would. */
     internal fun reloadForTest(context: Context) {
         appContext = context.applicationContext
         synchronized(this) { _book.value = Book(); early.clear() }
-        loaded = false
+        loaded = false; erasedEmpty = false
         load()
     }
 
