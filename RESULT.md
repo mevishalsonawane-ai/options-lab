@@ -1,7 +1,7 @@
 # IraThinker check (26 Oct 2026): summary for Boss
 
 1. Secrets: clean. No tokens, keystore, topic names, Dhan keys or personal data. It never places orders.
-2. Harness: 847 of 855 pass on fresh Yahoo data. The 8 failures are golden numbers tied to your original data file. After the fixes: 869 pass, same 8, 0 other failures.
+2. Harness: 847 of 855 pass on fresh Yahoo data. The 8 failures are golden numbers tied to your original data file. After the fixes: 870 pass, same 8, 0 other failures.
 3. APK builds (target SDK 36), using a stand-in icon (your PNGs aren't committed) and a newer d8. Not run on a phone.
 4. Fixed (with tests):
    - Expiries now skip holidays: Nov monthly is Mon 23 Nov (24 Nov is Guru Nanak Jayanti); the Diwali-week weekly is Mon 9 Nov.

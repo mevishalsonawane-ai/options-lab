@@ -2615,7 +2615,10 @@ public class TestMain {
             check(OptionsMath.weeklyExpiry(java.time.LocalDate.of(2026, 11, 18)).equals(java.time.LocalDate.of(2026, 11, 23)),
                     "review: weekly expiry in the Guru Nanak week is Mon 23 Nov");
             check(OptionsMath.weeklyExpiry(java.time.LocalDate.of(2027, 1, 1)).equals(java.time.LocalDate.of(2027, 1, 5)),
-                    "review: 2027 dates stay unshifted (holidays not yet listed)");
+                    "review: a 2027 Tuesday with no listed holiday is unchanged");
+            check(OptionsMath.monthlyExpiry(java.time.LocalDate.of(2026, 12, 30)).equals(java.time.LocalDate.of(2027, 1, 25))
+                            && OptionsMath.weeklyExpiry(java.time.LocalDate.of(2027, 1, 21)).equals(java.time.LocalDate.of(2027, 1, 25)),
+                    "review: Republic Day 2027 (Tue 26 Jan) moves the Jan expiry to Mon 25 Jan");
             check(OptionsMath.monthlyExpiryBse(java.time.LocalDate.of(2026, 11, 2)).equals(java.time.LocalDate.of(2026, 11, 26)),
                     "review: BSE Nov monthly (Thu 26 Nov, not a holiday) is unchanged");
             Mom60.Cfg bn = Mom60.BN;

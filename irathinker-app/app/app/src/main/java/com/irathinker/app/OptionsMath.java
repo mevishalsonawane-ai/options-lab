@@ -61,8 +61,8 @@ public final class OptionsMath {
 
     /** An expiry that falls on an exchange holiday moves to the
      *  previous trading day (the exchanges' rule). Uses the NSE
-     *  list in MarketCalendar (2026 only: a later year's holidays
-     *  are not known, so its dates stay unshifted); BSE closes on
+     *  list in MarketCalendar (2026, plus Republic Day 2027: a later holiday
+     *  not listed there stays unshifted); BSE closes on
      *  the same days for these holidays. */
     static LocalDate holidayShift(LocalDate d) {
         while (MarketCalendar.isHoliday(d) || d.getDayOfWeek().getValue() > 5) d = d.minusDays(1);
