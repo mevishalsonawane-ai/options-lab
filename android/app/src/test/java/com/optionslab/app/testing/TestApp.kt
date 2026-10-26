@@ -101,6 +101,8 @@ class TestApp : Application() {
         com.optionslab.app.data.Ft3Arm.testNoAutoOn = true
         com.optionslab.app.data.PassedArmsHost.init(this)
         com.optionslab.app.data.PassedArmsHost.testNoAutoOn = true
+        // 26 Oct: an entry retry is planned ([PassedArmsHost.plannedRetry]) but never launched by itself in a test.
+        com.optionslab.app.data.PassedArmsHost.testNoRetry = true
         com.optionslab.app.data.WatchlistHost.init(this)
         com.optionslab.app.data.NtfyArm.init(this)
         com.optionslab.app.data.StockOptions.init(this)

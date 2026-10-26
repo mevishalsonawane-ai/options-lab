@@ -183,4 +183,34 @@ class DonchianArmTest {
         assertTrue(DonchianArm.ST_RULE.contains("Supertrend (10, 3)") && DonchianArm.ST_RULE.contains("R73 T7"))
         assertTrue("1,670 trades" in DonchianArm.ST_RECORD && "+₹1,34,743" in DonchianArm.ST_RECORD && "+₹81,845" in DonchianArm.ST_RECORD)
     }
+
+    /** 26 Oct (R105 lead 3): an entry check that could not settle a bar looks again 10 s on, inside the fill window only. */
+    @Test fun theEntryRetryComesBackWithinTheFillWindowOnly() {
+        val d = LocalDate.of(2026, 10, 21)
+        val s = DonchianArm.Signal("FINNIFTY", -1, b5(d, 53, 1.0, 1.0, 1.0, 1.0), 26_000)     // the 13:45 put break (the 13:40 bar)
+        val end = DonchianArm.windowEnd(s)
+        assertEquals(d.atTime(13, 48), end)
+        assertEquals(d.atTime(13, 45, 13), DonchianArm.nextRetry(d.atTime(13, 45, 3), listOf(end)))
+        // Near the end: a second before it, never after.
+        assertEquals(d.atTime(13, 47, 59), DonchianArm.nextRetry(d.atTime(13, 47, 55), listOf(end)))
+        // The window passed (or nothing pending): no retry.
+        assertNull(DonchianArm.nextRetry(d.atTime(13, 47, 59), listOf(end)))
+        assertNull(DonchianArm.nextRetry(d.atTime(13, 48), listOf(end)))
+        assertNull(DonchianArm.nextRetry(d.atTime(13, 45, 3), emptyList()))
+        // The nearest open window counts.
+        assertEquals(d.atTime(13, 47, 59), DonchianArm.nextRetry(d.atTime(13, 47, 52), listOf(end, d.atTime(13, 53))))
+    }
+
+    @Test fun aBarIsWholeOnlyWithItsLastMinute() {
+        val d = LocalDate.of(2026, 10, 22)
+        // At 09:20:03 the 09:15 bar needs its 09:19 minute.
+        assertTrue(DonchianArm.barWhole(LocalTime.of(9, 19), d.atTime(9, 20, 3)))
+        assertTrue(!DonchianArm.barWhole(LocalTime.of(9, 18), d.atTime(9, 20, 3)))
+        assertTrue(!DonchianArm.barWhole(null, d.atTime(9, 21, 40)), "no minute read at all")
+        assertTrue(DonchianArm.barWhole(LocalTime.of(13, 44), d.atTime(13, 47, 50)))
+        assertTrue(!DonchianArm.barWhole(LocalTime.of(13, 43), d.atTime(13, 46)))
+        // Before the first bar closes there is nothing to wait for (the open, the market closed).
+        assertTrue(DonchianArm.barWhole(null, d.atTime(9, 16)))
+        assertTrue(DonchianArm.barWhole(null, d.atTime(8, 0)))
+    }
 }

@@ -90,11 +90,23 @@ object DonchianArm {
      * (high + low) / 2 ± [mult] × ATR, the usual flip - with one guard: a bar with a missing price is left out (0), as the
      * research's series had no such bar. Pure.
      */
-    fun supertrend(series: List<PassedArms.Bar5>, n: Int = ST_ATR, mult: Double = ST_MULT): IntArray {
+    fun supertrend(series: List<PassedArms.Bar5>, n: Int = ST_ATR, mult: Double = ST_MULT): IntArray = supertrendLines(series, n, mult).dir
+
+    /**
+     * 26 Oct (R105 lead 7, the parity test): [supertrend]'s working lines per bar of [series] - the direction, the Wilder ATR and
+     * the two final bands (NaN where none: before the ATR exists, or a bar left out for a missing price), so they can be held to
+     * R73's own numbers. Pure.
+     */
+    class Lines(val dir: IntArray, val atr: DoubleArray, val up: DoubleArray, val dn: DoubleArray)
+
+    fun supertrendLines(series: List<PassedArms.Bar5>, n: Int = ST_ATR, mult: Double = ST_MULT): Lines {
         val out = IntArray(series.size)
+        val atrOut = DoubleArray(series.size) { Double.NaN }
+        val upOut = DoubleArray(series.size) { Double.NaN }
+        val dnOut = DoubleArray(series.size) { Double.NaN }
         val ok = series.indices.filter { val x = series[it]; !x.high.isNaN() && !x.low.isNaN() && !x.close.isNaN() }
         val m = ok.size
-        if (m == 0) return out
+        if (m == 0) return Lines(out, atrOut, upOut, dnOut)
         val h = DoubleArray(m) { series[ok[it]].high }; val l = DoubleArray(m) { series[ok[it]].low }; val c = DoubleArray(m) { series[ok[it]].close }
         val tr = DoubleArray(m)
         tr[0] = h[0] - l[0]
@@ -116,8 +128,9 @@ object DonchianArm {
                 if (cur == -1 && c[i] > dn) cur = 1 else if (cur == 1 && c[i] < up) cur = -1
             }
             out[ok[i]] = cur
+            atrOut[ok[i]] = atr[i]; upOut[ok[i]] = up; dnOut[ok[i]] = dn
         }
-        return out
+        return Lines(out, atrOut, upOut, dnOut)
     }
 
     /**
@@ -186,6 +199,39 @@ object DonchianArm {
     /** The research filled at the bar's close or up to 2 minutes after it (else no fill): [now] is still in time. */
     fun mayFill(s: Signal, now: java.time.LocalDateTime): Boolean =
         !now.isBefore(s.entryTime) && now.isBefore(s.entryTime.plusMinutes(FILL_SLACK_MINUTES + 1))
+
+    /** The first moment [s] may no longer fill (its fill window's end, exclusive): [mayFill]'s bound. */
+    fun windowEnd(s: Signal): java.time.LocalDateTime = s.entryTime.plusMinutes(FILL_SLACK_MINUTES + 1)
+
+    /**
+     * 26 Oct (R105 lead 3: four breaks lost to "the fill window passed" on 21 and 22 Oct): how soon an entry check that could not
+     * settle a bar comes back - a break due and not decided, or an index whose bar was not whole yet - instead of the next full
+     * pass up to a minute later. Paper only (the host asks only while no arm here can be mirrored live).
+     */
+    const val RETRY_SECONDS = 10L
+
+    /**
+     * When the entry check should look again at [now] for work whose fill windows end at [ends] (exclusive): [RETRY_SECONDS] on,
+     * or a second before the nearest window still open ends, whichever is sooner; null when none is still open (nothing to
+     * retry: the window passed, or nothing was pending). Pure.
+     */
+    fun nextRetry(now: java.time.LocalDateTime, ends: Collection<java.time.LocalDateTime>): java.time.LocalDateTime? {
+        val end = ends.filter { it.isAfter(now.plusSeconds(1)) }.minOrNull() ?: return null
+        return minOf(now.plusSeconds(RETRY_SECONDS), end.minusSeconds(1))
+    }
+
+    /**
+     * Whether an index read at [at] holds the whole 5-minute bar that closed last (its last minute, the one before the 5-minute
+     * boundary at or before [at]): [lastMinute] is the read's last whole minute today (null: none). Before 09:20 there is no
+     * such bar: true. Pure.
+     */
+    fun barWhole(lastMinute: LocalTime?, at: java.time.LocalDateTime): Boolean {
+        val m = at.hour * 60 + at.minute
+        if (m < 9 * 60 + 20) return true
+        val close = 9 * 60 + 15 + ((m - (9 * 60 + 15)) / 5) * 5
+        val need = LocalTime.of((close - 1) / 60, (close - 1) % 60)
+        return lastMinute != null && !lastMinute.isBefore(need)
+    }
 
     /**
      * One entry check's read of an index (22 Oct): when it read, and the last whole minute it had (null: none today); [failed]: the

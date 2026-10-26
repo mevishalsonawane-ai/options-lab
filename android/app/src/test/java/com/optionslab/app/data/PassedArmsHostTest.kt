@@ -1839,4 +1839,153 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(0, view().stUnjudged)
         assertNothingAtZerodha()
     }
+
+    // ---- 26 Oct (research R105: the paper Donchian trades against the backtest) -----------------------------------------------
+
+    /** The option's own candles: 100 flat from 09:15 to [flatUntil] (exclusive), then [after] as they are. */
+    private fun optionMinutes(key: String, flatUntil: LocalTime, vararg after: FakeUpstox.Candle) {
+        val out = ArrayList<FakeUpstox.Candle>()
+        var t = LocalTime.of(9, 15)
+        while (t.isBefore(flatUntil)) { out += FakeUpstox.Candle(t, 100.0, 101.0, 99.0, 100.0); t = t.plusMinutes(1) }
+        upstox.minutes[key] = out + after
+    }
+
+    /**
+     * R105 lead 4 (21 Oct: R72's BANKNIFTY put sold Rs 216 below its +5% lock): a stop reached on a minute that opened above it is
+     * booked at the stop's level - where a resting order fills it, and where the research books it - even when the look that saw
+     * it came later and the paper account's market sale filled lower. The account's own fill is kept beside it, labelled.
+     */
+    @Test fun aStopReachedBetweenLooksIsBookedAtItsLevelNotTheLaterFill() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setLock(false) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        val level = p.entry * (1 - DonchianArm.EXITS.stop!!)
+        // 09:24 opens at 95 and trades down to 84 (through the stop), 09:25 at 80: the look at 09:26 sees it only then.
+        optionMinutes(ce, LocalTime.of(9, 24), FakeUpstox.Candle(LocalTime.of(9, 24), 95.0, 95.0, 84.0, 84.0),
+            FakeUpstox.Candle(LocalTime.of(9, 25), 80.0, 81.0, 79.0, 80.0))
+        at(LocalTime.of(9, 26)); runBlocking { PassedArmsHost.manageOnly() }
+        val sold = PassedArmsHost.view.value.closed.single()
+        assertEquals("stop", sold.why)
+        assertEquals("booked at the stop's level", level, sold.exit!!, 1e-6)
+        val fill = Paper.state.trades.last { it.symbol == p.symbol && it.action == "SELL" }.price.toDouble()
+        assertTrue("the account sold at the later price: $fill", fill < level - 1.0)
+        assertEquals("the account's own fill is kept beside it", fill, sold.paperFill!!, 1e-9)
+        assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
+    /** A gap through the stop (09:24 opens at 78): the research fills at that open, and so is it booked - never the level above it. */
+    @Test fun aGapThroughTheStopIsBookedAtTheMinutesOpen() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setLock(false) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val p = PassedArmsHost.view.value.open.single()
+        optionMinutes(ce, LocalTime.of(9, 24), FakeUpstox.Candle(LocalTime.of(9, 24), 78.0, 79.0, 77.0, 78.0))
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        val sold = PassedArmsHost.view.value.closed.single()
+        assertEquals("stop", sold.why)
+        assertEquals("the gap's open, never the level above it", 78.0, sold.exit!!, 1e-9)
+        assertTrue(sold.exit!! < p.entry * 0.85)
+    }
+
+    /**
+     * R105 lead 4 (OPEN POSITIONS FIRST): a held option whose minutes are slow to come (a slow feed) never holds its exit look:
+     * the look waits [PassedArmsHost.EXIT_READ_WAIT_MS] at most and decides on what it has; the read finishes by itself.
+     */
+    @Test fun aSlowMinuteReadNeverHoldsTheExitLook() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setLock(false) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        market(LocalTime.of(9, 22)); at(LocalTime.of(9, 22)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals(1, PassedArmsHost.view.value.open.size)
+        val released = java.util.concurrent.CountDownLatch(1)
+        upstox.gate = { key -> if (key == ce) released.await(6, java.util.concurrent.TimeUnit.SECONDS) }
+        try {
+            at(LocalTime.of(9, 23))
+            val t0 = System.nanoTime()
+            runBlocking { PassedArmsHost.manageOnly() }
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            assertTrue("the look took $ms ms", ms < PassedArmsHost.EXIT_READ_WAIT_MS + 1_500)
+            assertEquals("still held: nothing reached its exit", 1, PassedArmsHost.view.value.open.size)
+        } finally { released.countDown(); upstox.gate = null }
+        Thread.sleep(1_500)      // the held read ends by itself
+        // The read came back by itself: the next look has it (09:24 under the stop: sold).
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * Review (26 Oct): when a held option's minute read fails, the minutes kept from an earlier look are used for the walk only - an
+     * old close never stands in for the price now. Here the kept minutes end at 09:21 (all at 100) and the read at 09:30 hangs: the
+     * price is read as a quote (84, under the stop) and the stop sells, where the old close would have held it.
+     */
+    @Test fun aFailedReadNeverLetsAnOldCloseStandInForThePriceNow() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setLock(false) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        market(LocalTime.of(9, 22)); at(LocalTime.of(9, 22)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals(1, PassedArmsHost.view.value.open.size)
+        // The option trades at 84 from 09:24; the next exit read hangs (past the look's wait), the quote after it does not.
+        market(LocalTime.of(9, 30), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        val released = java.util.concurrent.CountDownLatch(1)
+        val first = java.util.concurrent.atomic.AtomicBoolean(true)
+        upstox.gate = { key -> if (key == ce && first.getAndSet(false)) released.await(6, java.util.concurrent.TimeUnit.SECONDS) }
+        try {
+            at(LocalTime.of(9, 30)); runBlocking { PassedArmsHost.manageOnly() }
+        } finally { released.countDown(); upstox.gate = null }
+        Thread.sleep(1_500)      // the held read ends by itself
+        val sold = PassedArmsHost.view.value.closed.single()
+        assertEquals("stop", sold.why)
+        assertTrue("${sold.exit}", sold.exit!! < 90.0)
+        assertNothingAtZerodha()
+    }
+
+    /**
+     * R105 lead 3 ("the fill window passed"): at 09:20:20 the index's 09:19 minute has not come yet, so the 09:15 bar cannot be judged;
+     * the entry check plans to look again 10 s on (not the next full pass), reads the index again within the same minute, and buys
+     * the break inside its window. Past the window nothing is planned.
+     */
+    @Test fun aBarNotWholeAtTheBarCloseIsTriedAgainTenSecondsOnAndBoughtInItsWindow() {
+        only(DonchianArm.SOURCE)
+        market(LocalTime.of(9, 19))
+        tick(LocalTime.of(9, 20))
+        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertEquals(day.atTime(9, 20, 30), PassedArmsHost.plannedRetry)
+        // The minute lands; the retry (same minute) reads the index again and buys.
+        market(LocalTime.of(9, 20))
+        tick(LocalTime.of(9, 20), seconds = 30)
+        val p = PassedArmsHost.view.value.open.single()
+        assertEquals("CE", p.right)
+        assertNothingAtZerodha()
+        // Outside a bar's first minutes (or once nothing is pending) no retry is planned.
+        tick(LocalTime.of(9, 23), seconds = 10)
+        assertNull(PassedArmsHost.plannedRetry)
+    }
+
+    /** The retry is paper only: while one of these arms could be mirrored live, nothing is planned (a live entry is never added). */
+    @Test fun noRetryIsPlannedWhileAnArmCouldTradeLive() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        runBlocking { com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, false, pinConfirmed = true, log = false) }
+        only(DonchianArm.SOURCE)
+        assertTrue(ExposureCapHost.liveMirrorPossible(DonchianArm.SOURCE))
+        market(LocalTime.of(9, 19))
+        tick(LocalTime.of(9, 20))
+        assertNull(PassedArmsHost.plannedRetry)
+        assertNothingAtZerodha()
+    }
+
+    /** The plain-rules record keeps the same-direction cap's would-be trades: counted in R72's record, apart from the forward bar. */
+    @Test fun capRefusedBreaksStayInThePlainRulesRecordLabelledApart() {
+        val v = view()
+        val wb = PassedArmsHost.Pos(BreadthDonchianArm.SOURCE, "NIFTY", "NIFTY-X", "PE", 65, 100.0, day.atTime(9, 20), null, exit = 90.0,
+            exitTime = day.atTime(9, 40), why = "stop", shadow = PassedArmsHost.SHADOW_CAP)
+        runBlocking { PassedArmsHost.addClosedForTest(listOf(wb)) }
+        val after = view()
+        assertEquals(v.closedOf(BreadthDonchianArm.SOURCE).size + 1, after.closedOf(BreadthDonchianArm.SOURCE).size)
+        assertEquals(1, after.wouldBeOf(BreadthDonchianArm.SOURCE).count { it.shadow == PassedArmsHost.SHADOW_CAP })
+        assertTrue(after.forwardLine(BreadthDonchianArm.SOURCE), after.forwardLine(BreadthDonchianArm.SOURCE).startsWith("Forward test: 0 of 40"))
+    }
 }

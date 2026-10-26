@@ -66,6 +66,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 26 Oct (research R105: the paper Donchian trades against the backtest): newest of all.
+        Entry("2026-10-26-donchian-paper-fixes", OCT26, "Donchian paper trades follow the research closer",
+            "A paper stop or lock now books at its level, as a resting order would fill, not the later price. " +
+                "Stops and locks are checked every 15 seconds even when prices are slow to arrive. " +
+                "A Donchian break the phone could not settle at the bar close is tried again within 10 seconds. " +
+                "Past expiry days move back to the trading day before a holiday, never the day after. " +
+                "The Supertrend filter was checked against the research, bar by bar, and matches. " +
+                "The stop check's time limit covers live stops too; the rest is paper only.",
+            "Paper arms → R72 Breadth Donchian and R51 Donchian 20; the diagnostics' stop-check line"),
         // 26 Oct (Boss: "I think ntfy messages are getting read late, please check"): newest of all.
         Entry("2026-10-26-ntfy-faster", OCT26, "ntfy messages are acted on within seconds",
             "A message used to wait for the next minute's check; now it is decided within seconds of arriving. " +

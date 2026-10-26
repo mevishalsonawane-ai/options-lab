@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -868,6 +869,10 @@ object PassedArmsHost {
         return saved.second.filter { it.underlying == u }
     }
 
+    /** [bars]' last whole minute on [now]'s day (null: none). */
+    private fun lastMinuteOf(bars: List<Bar>?, now: LocalDateTime): LocalTime? =
+        bars?.lastOrNull { it.start.toLocalDate() == now.toLocalDate() }?.start?.toLocalTime()
+
     /** The reads of one pass, made outside the lock: each index's minutes today (null: unread), and India VIX's. */
     private class Reads(val bars: Map<String, List<Bar>?>, val vix: List<Bar>?)
 
@@ -979,7 +984,9 @@ object PassedArmsHost {
         return kotlinx.coroutines.coroutineScope {
             val reads = want.map { u ->
                 u to async(kotlinx.coroutines.Dispatchers.IO) {
-                    lastRead[u]?.takeIf { it.first == minute }?.second
+                    // 26 Oct: a read this minute is used again only when it already had the closed bar's last minute; one that
+                    // came without it (the feed late) is read again, so a retry ([planRetry]) can find the minute once it lands.
+                    lastRead[u]?.takeIf { it.first == minute && DonchianArm.barWhole(lastMinuteOf(it.second, now), now) }?.second
                         ?: runCatching { minutes(upKey(u), now) }.getOrNull()?.also { lastRead[u] = minute to it }
                 }
             }
@@ -1032,7 +1039,7 @@ object PassedArmsHost {
         val v = _view.value
         if (!v.armed.values.any { it } && v.recordOnly.isEmpty()) return
         runCatching { follow(now, v) }
-        if (!entryMinute(now.toLocalTime())) return
+        if (!entryMinute(now.toLocalTime())) { plannedRetry = null; return }
         if (!entryLock.tryLock()) return
         try {
             val reads = runCatching { reads(now, v) }.getOrNull() ?: return
@@ -1061,6 +1068,9 @@ object PassedArmsHost {
             if (!r72First && work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             // R72 has decided its breaks (bought, refused or let go): the place is no longer kept for them.
             runCatching { noteR72Due(work, now, reads) }
+            // 26 Oct (R105 lead 3): a bar this check could not settle (a break due and not decided, or an index's bar not whole
+            // yet) is looked at again 10 s on, inside its fill window, not on the next full pass up to a minute later.
+            runCatching { planRetry(now, retryEnds(work, now, reads)) }
             if (!changed) return
             lock.withLock {
                 val b = book()
@@ -1079,6 +1089,81 @@ object PassedArmsHost {
     }
 
     private data class Quad(val a: Book, val b: Int, val c: Int, val d: Int)
+
+    // ---- 26 Oct (R105 lead 3): the entry check's quick retry inside a fill window ----------------------------------------
+
+    /**
+     * R105 found four Donchian breaks lost to "the fill window passed" (R72's FINNIFTY 09:20 put on 22 Oct; R51's three lines dated
+     * "21 Oct", written before R51 was switched off on 19 Oct). The bar-close check runs once, 3 s after the boundary; when an index's
+     * last minute had not reached the phone, or a buy found no fresh price, the next try was the full pass up to a minute later, and
+     * the window is 3 minutes. Now such a bar is looked at again [DonchianArm.RETRY_SECONDS] on, until it is settled or its window
+     * ends. When the entries end the fill windows still open of: each R51 / R72 break due and not decided, and (when one of the five
+     * indices' read lacks the closed bar's last minute) the bar itself. Memory only.
+     */
+    private fun retryEnds(b: Book, now: LocalDateTime, reads: Reads): List<LocalDateTime> {
+        val r51 = b.active(DonchianArm.SOURCE)
+        val r72 = b.active(BreadthDonchianArm.SOURCE)
+        if (!r51 && !r72) return emptyList()
+        val today = now.toLocalDate()
+        val out = ArrayList<LocalDateTime>()
+        val close = barCloseOf(now)
+        val indices = ((if (r51) DonchianArm.UNDERLYINGS else emptyList()) + (if (r72) BreadthDonchianArm.UNDERLYINGS else emptyList())).distinct()
+        if (DonchianArm.inWindow(close.toLocalTime()) && indices.any { u -> !DonchianArm.barWhole(lastMinuteOf(reads.bars[u], now), now) })
+            out += close.plusMinutes(DonchianArm.FILL_SLACK_MINUTES + 1)
+        val all = seriesAll(today, reads)
+        fun undecided(src: String, x: DonchianArm.Signal) = "$today|$src|${x.underlying}|${x.bar.b}|${x.side}" !in b.decided && DonchianArm.mayFill(x, now)
+        if (r51) for (u in DonchianArm.UNDERLYINGS) all[u]?.let { DonchianArm.signals(u, it, today) }.orEmpty()
+            .filter { undecided(DonchianArm.SOURCE, it) }.forEach { out += DonchianArm.windowEnd(it) }
+        if (r72) runCatching { BreadthDonchianArm.signals(all, today) }.getOrDefault(emptyList())
+            .filter { undecided(BreadthDonchianArm.SOURCE, it) }.forEach { out += DonchianArm.windowEnd(it) }
+        return out
+    }
+
+    /** When the entry check is planned to look again (null: none); kept for the tests and the diagnostics. Memory only. */
+    @Volatile internal var plannedRetry: LocalDateTime? = null
+        private set
+    @Volatile private var retryJob: kotlinx.coroutines.Job? = null
+
+    /** TEST SEAM: true in the JVM tests' app (a planned retry is kept in [plannedRetry], never launched). Debug builds only. */
+    @Volatile internal var testNoRetry: Boolean = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /**
+     * The retry itself: one at a time, on this host's background scope (never the main thread, never the order or tick path), a
+     * whole [tick] (its exits first, under the book's lock, then the entries with every guard). PAPER ONLY: not while any of these
+     * arms can be mirrored live (CLAUDE.md's LIVE rule: a live entry that would have been missed is never added by this change).
+     */
+    private fun planRetry(now: LocalDateTime, ends: List<LocalDateTime>) {
+        if (retryJob?.isActive == true) return
+        val bar = barCloseOf(now)
+        val (seenBar, n) = retriesOf
+        val done = if (seenBar == bar) n else 0
+        val at = DonchianArm.nextRetry(now, ends)?.takeIf { done < MAX_RETRIES_A_BAR && !liveMirrorPossibleNow() }
+        plannedRetry = at
+        if (at == null) return
+        retriesOf = bar to done + 1
+        if (testNoRetry) return
+        val waitMs = java.time.Duration.between(now, at).toMillis().coerceIn(0L, DonchianArm.RETRY_SECONDS * 1000)
+        retryJob = background.launch {
+            kotlinx.coroutines.delay(waitMs)
+            // This retry may plan the next one (its own job is over as far as [planRetry] is concerned).
+            retryJob = null
+            // Live switched on during the wait: no retry (it would be a live entry the old timing would have missed).
+            if (liveMirrorPossibleNow()) { plannedRetry = null; return@launch }
+            runCatching { if (wantsPass()) tick() }
+        }
+    }
+
+    /** Whether any of these arms that is on (or record only) could be mirrored live now (memory only). */
+    private fun liveMirrorPossibleNow(): Boolean {
+        val v = _view.value
+        return SOURCES.any { s -> (v.on(s) || v.recording(s)) && ExposureCapHost.liveMirrorPossible(s) }
+    }
+
+    /** At most this many retries for one bar (an index whose feed is down all day costs a few reads a bar, never 17). */
+    internal const val MAX_RETRIES_A_BAR = 8
+    /** The bar the retries were counted for, and how many. Memory only. */
+    @Volatile private var retriesOf: Pair<LocalDateTime?, Int> = null to 0
 
     /** How long the entries wait at most for [prewarm]'s reads (each read is also capped by the quick feed's own timeouts). */
     private const val PREWARM_MS = 3_000L
@@ -1642,6 +1727,10 @@ object PassedArmsHost {
         // 22 Oct (arms audit): an unreadable stop flag is never a reason to sell what is held (entries keep "unknown is stopped").
         val stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(false) || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
         if (sharedSoldElsewhere(b, now)) changed = true
+        // 26 Oct: every held option's minutes are asked for side by side first, so each look below waits on its own read at most
+        // [EXIT_READ_WAIT_MS] in all, not one after another.
+        if (b.positions.count { it.open } > 1) for (p in b.positions) if (p.open && !p.day.isBefore(now.toLocalDate()))
+            runCatching { Paper.contractOf(p.symbol)?.let { exitRead(it.feedKey, now) } }
         for ((i, p) in b.positions.withIndex().toList()) {
             if (!p.open) continue
             try {
@@ -1656,6 +1745,35 @@ object PassedArmsHost {
         }
         return changed
     }
+
+    /**
+     * 26 Oct (R105 lead 4, OPEN POSITIONS FIRST): the held trade's 1-minute bars for its exit look, waited on [EXIT_READ_WAIT_MS] at
+     * most. The read ran inside the look, one held option after another under the book's lock, up to 30 s each on a slow feed
+     * (two tries of 5 s connect + 10 s read): with the stream quiet the stops and locks were looked at 30 s and more apart, and
+     * on 21 Oct both R72 puts were sold in one look at 12:33:42. Now the read goes on in the background (one at a time per
+     * option; what it brings is kept for the next look) and the look decides at once on the price now and the minutes it has.
+     */
+    private suspend fun exitMinutes(key: String, now: LocalDateTime): List<Bar> {
+        val day = now.toLocalDate()
+        val running = exitRead(key, now)
+        val got = kotlinx.coroutines.withTimeoutOrNull(EXIT_READ_WAIT_MS) {
+            try { running.await() } catch (e: kotlinx.coroutines.CancellationException) {
+                // The look's own cancellation goes up; only the read's failure is answered with the minutes kept.
+                if (!kotlinx.coroutines.currentCoroutineContext().isActive) throw e
+                null
+            } catch (_: Throwable) { null }
+        }
+        return got ?: exitBars[key]?.takeIf { it.first.toLocalDate() == day }?.second.orEmpty()
+    }
+
+    /** [key]'s minutes read in flight, or a new read started on the background scope (one at a time per option). */
+    private fun exitRead(key: String, now: LocalDateTime): kotlinx.coroutines.Deferred<List<Bar>> =
+        exitReads[key]?.takeIf { it.isActive } ?: background.async { minutes(key, now).also { exitBars[key] = now to it } }.also { exitReads[key] = it }
+
+    /** How long an exit look waits for a held option's minutes (the price now decides meanwhile). */
+    internal const val EXIT_READ_WAIT_MS = 2_000L
+    private val exitReads = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Deferred<List<Bar>>>()
+    private val exitBars = java.util.concurrent.ConcurrentHashMap<String, Pair<LocalDateTime, List<Bar>>>()
 
     /** The stream's last price counts as the price now for this long (ms). */
     private const val FRESH_MS = 15_000L
@@ -1685,10 +1803,13 @@ object PassedArmsHost {
             b.positions[i] = done; closed(b, done); return true
         }
         val overnight = p.day.isBefore(now.toLocalDate())
-        val bars = if (!overnight) runCatching { minutes(c.feedKey, now) }.getOrNull().orEmpty() else emptyList()
+        val bars = if (!overnight) exitMinutes(c.feedKey, now) else emptyList()
         // The stream's price only while fresh (16 Oct: a tick left from a stream that stopped following the option is not
         // the price now); else the last closed minute, else a quote.
-        val ltp = runCatching { Paper.bookNow(c)?.takeIf { it.ageMs <= FRESH_MS }?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.lastOrNull()?.close
+        // 26 Oct (review): a closed minute stands in for the price now only when it is the one just ended (or the one before: the
+        // feed's own lag); minutes kept from an earlier, slow read are older, so a quote is read instead, as before.
+        val ltp = runCatching { Paper.bookNow(c)?.takeIf { it.ageMs <= FRESH_MS }?.last }.getOrNull()?.takeIf { it > 0 }
+            ?: bars.lastOrNull()?.takeIf { !it.start.isBefore(now.withSecond(0).withNano(0).minusMinutes(2)) }?.close
             ?: if (!overnight) runCatching { Paper.quote(c)?.ltp }.getOrNull()?.takeIf { it > 0 } else null
         ltp?.let { b.marks[p.symbol] = it }
         val known = b.locks[lockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
@@ -1697,7 +1818,7 @@ object PassedArmsHost {
         val why: String? = when {
             overnight -> "overnight"
             p.setup == Solo2.Setup.S1.key -> {
-                val ones = runCatching { minutes(upKey(p.index), now) }.getOrNull().orEmpty()
+                val ones = exitMinutes(upKey(p.index), now)
                 val w = SoloMidday.walk(SoloMidday.Open(p.index, p.side, p.idx ?: Double.NaN, p.atr ?: Double.NaN, p.entryMinute), ones, now)
                 // The index unread (or its levels unknown): the premium backstop, -30% (the Solo layer's stop), so it never runs unwatched.
                 w.exit ?: (if (ones.isEmpty() || p.idx == null || p.atr == null)
@@ -1931,6 +2052,8 @@ object PassedArmsHost {
     internal fun wipe() {
         synchronized(writeLock) { pendingBytes.set(null) }
         cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
+        // 26 Oct: the exit looks' kept minutes and the entry retry are memory too.
+        exitReads.clear(); exitBars.clear(); retryJob?.cancel(); retryJob = null; plannedRetry = null; retriesOf = null to 0
     }
 
     /** TEST ONLY: closed trades added to the book as if traded (the forward bars' tests). Debug builds only. */

@@ -144,9 +144,15 @@ internal object StopLane {
      * arm's exits side by side, the missed-lock sweep, the stops and targets. As safety work: its Zerodha requests go first.
      */
     private suspend fun nseCheck(context: Context) = Tasks.safely {
-        guarded("15-second stop check: paper orders") { Tasks.paperEventsPublic(context, com.optionslab.app.data.Paper.tick()) }
-        // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) first.
-        guarded("15-second stop check: unwatched positions") { com.optionslab.app.data.OrphanWatch.run(context) }
+        // 26 Oct (R105 lead 4: the stops were looked at 30 s or more apart while held, 4 times on 23 Oct and 3 on 26 Oct, with the
+        // stream quiet and Zerodha slow): the paper book's pass reads every held option's price, up to 30 s on a slow feed, and the
+        // arms' exits waited behind it. It is still first, but waited on [PAPER_WAIT_MS] at most: one still running is left to
+        // finish by itself (never cut mid-order, not started again beside itself) and the exits go on time.
+        Tasks.together("15-second stop check: paper", listOf(com.optionslab.ira.Supervisor.Step("15-second stop check: paper orders") {
+            guarded("15-second stop check: paper orders") { Tasks.paperEventsPublic(context, com.optionslab.app.data.Paper.tick()) }
+            // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) first.
+            guarded("15-second stop check: unwatched positions") { com.optionslab.app.data.OrphanWatch.run(context) }
+        }), PAPER_WAIT_MS, inOrder = false, named = false)
         // The arms' exits side by side (10 Oct): ORB's (with Liquidity's index exits), and every money exit run here too (08 Oct,
         // research/PROFIT_LOCK_8OCT.md fix 3) - the Pine scripts' stops and locks, Solo's exits, Jarvis's own trades' profit-lock
         // stop and exits. Each under its own lock, as in the full pass, so a holding never has two sells in flight.
@@ -172,9 +178,20 @@ internal object StopLane {
         ), if (quietNow) QUIET_EXITS_WAIT_MS else WatchWorkers.EXITS_WAIT_MS, inOrder = false, named = false)
         // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the bots' live stops,
         // and the no-price failsafe (REST quotes; a loud warning after two minutes).
-        guarded("15-second stop check: missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
-        guarded("15-second stop check: stops and targets") { com.optionslab.app.data.Protections.tick() }
+        // 26 Oct: in the same order, waited on [SAFETY_WAIT_MS] at most (a slow Zerodha answer finishes by itself), so the next look
+        // starts on time: the look is bounded by [LOOK_BOUND_MS], inside its 15 s.
+        Tasks.together("15-second stop check: safety", listOf(com.optionslab.ira.Supervisor.Step("15-second stop check: sweep and stops") {
+            guarded("15-second stop check: missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
+            guarded("15-second stop check: stops and targets") { com.optionslab.app.data.Protections.tick() }
+        }), SAFETY_WAIT_MS, inOrder = false, named = false)
     }
+
+    /** 26 Oct: how long a look waits for the paper book's pass before the arms' exits (it finishes by itself after). */
+    const val PAPER_WAIT_MS = 3_000L
+    /** 26 Oct: how long a look waits for the missed-lock sweep and the stops-and-targets pass (they finish by themselves after). */
+    const val SAFETY_WAIT_MS = 3_000L
+    /** The longest a look waits in all: within the 15 s window, so a slow read never stretches the gap between looks. */
+    const val LOOK_BOUND_MS = PAPER_WAIT_MS + WatchWorkers.EXITS_WAIT_MS + SAFETY_WAIT_MS
 
     /**
      * MCX's stop look between its passes (22 Oct): the steps of [Tasks.mcxTick] that guard what is held - paper fills (resting
