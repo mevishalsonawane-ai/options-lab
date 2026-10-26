@@ -1,0 +1,38 @@
+id: r106-r51-t1000sr
+title: 'R106 T1000SR on R51 Donchian 20: +Rs 1,000 / -Rs 1,000, re-enter after a target (<= 5 an index a day)'
+family: trade-management
+date: '2026-10-26'
+doc: research/HUNT_R106_SMALL_TARGETS.md
+hypothesis: 'Boss (26 Oct): small fixed profits ("5 orders each give me Rs 1,000") work on R51 Donchian 20. This rule: +Rs
+  1,000 / -Rs 1,000, re-enter after a target (<= 5 an index a day) (net of charges, per lot). Gates: net > 0 in design, walk-forward
+  and final; above today''s rules in walk-forward and final (or within 5% with worst day and drawdown >= 20% smaller); random-exit
+  twin BH q <= 0.10 counted with 513 earlier target / lock / filter tests; >= 40 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 26 Oct; R51 Amendment
+  A clean stores (R57 stores for Solo 2.0)
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026; Solo Jul 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R104); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars (Donchian 20) (unchanged); only the option''s exit (premium target / stop) differs'
+model_or_rule: R51 Donchian 20 with +Rs 1,000 / -Rs 1,000, re-enter after a target (<= 5 an index a day)
+settings: research/hunt/r106_small_targets/r106cfg.py RULES; PREREG.md section 2
+prereg: research/hunt/r106_small_targets/PREREG.md
+variants_tried: 36
+results:
+  summary: 'Design: 6128 trades, win 46% (break-even 50%), net -Rs 503,371, -Rs 1,494 a session, green days 36%, worst day
+    -Rs 13,980, max DD Rs 506,227 (today''s rules Rs 9,998). Walk-forward: 4478 trades, win 47% (break-even 51%), net -Rs
+    301,320, -Rs 1,220 a session, green days 39%, worst day -Rs 12,714, max DD Rs 301,320 (today Rs 175,789). Final: 2415
+    trades, win 44% (break-even 50%), net -Rs 255,863, -Rs 1,924 a session, green days 30%, worst day -Rs 12,199, max DD Rs
+    262,355 (today Rs 81,845); exit-twin p 1.0, BH q 1.0 (R106 alone 1.0). Fails: not positive in design, walk-forward and
+    final; not better than today''s rules (walk-forward and final); exit-twin BH q 1.00 > 0.10.'
+  costs: dated Zerodha charges, R17 fills (stops -10 bps and 2x the half-spread, gaps at the open), limit targets at their
+    price, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.

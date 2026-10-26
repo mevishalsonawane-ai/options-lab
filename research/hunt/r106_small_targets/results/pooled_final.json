@@ -1,0 +1,94 @@
+{
+ "phase": "final",
+ "arms": [
+  "LIQ",
+  "R72",
+  "R51",
+  "R52"
+ ],
+ "sessions": 133,
+ "day5k": {
+  "trades": 665,
+  "sessions": 133,
+  "win": 0.5053,
+  "net": -14673,
+  "per_trade": -22,
+  "per_session": -110,
+  "days": 133,
+  "green_days": 0.4812,
+  "worst_day": -8185,
+  "best_day": 5022,
+  "median_day": -651,
+  "max_dd": 48895,
+  "ex_top5": -19702,
+  "avg_win": 952,
+  "avg_loss": 1017,
+  "be_win": 0.5165,
+  "largest_loss": -7102,
+  "exits": {
+   "stop": 295,
+   "target": 308,
+   "rule_exit": 14,
+   "time": 48
+  }
+ },
+ "day5k_profile": {
+  "sessions": 133,
+  "traded": 133,
+  "median_day": -651,
+  "mean_day": -110,
+  "reach_goal": 0.1278,
+  "green": 0.4812,
+  "red": 0.5188,
+  "worst_day": -8185,
+  "best_day": 5022,
+  "p10": -4993,
+  "p90": 5004
+ },
+ "b0": {
+  "trades": 3633,
+  "sessions": 133,
+  "win": 0.4456,
+  "net": 312978,
+  "per_trade": 86,
+  "per_session": 2353,
+  "days": 133,
+  "green_days": 0.5038,
+  "worst_day": -69940,
+  "best_day": 100254,
+  "median_day": 41,
+  "max_dd": 170942,
+  "ex_top5": 235751,
+  "avg_win": 1715,
+  "avg_loss": 1223,
+  "be_win": 0.4163,
+  "largest_loss": -9049,
+  "exits": {
+   "rule_exit": 233,
+   "time": 2761,
+   "stop": 439,
+   "squareoff": 148,
+   "missing": 1,
+   "lock": 51
+  }
+ },
+ "b0_profile": {
+  "sessions": 133,
+  "traded": 133,
+  "median_day": 41,
+  "mean_day": 2353,
+  "reach_goal": 0.391,
+  "green": 0.5038,
+  "red": 0.4962,
+  "worst_day": -69940,
+  "best_day": 100254,
+  "p10": -23377,
+  "p90": 29607
+ },
+ "by_arm": {
+  "LIQ": 76,
+  "R72": 281,
+  "R51": 219,
+  "R52": 89
+ }
+}

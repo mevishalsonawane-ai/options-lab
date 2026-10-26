@@ -1,0 +1,401 @@
+{
+ "LIQ:T500": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "LIQ:T1000": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 0.998
+ },
+ "LIQ:T1500": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 0.988
+ },
+ "LIQ:T500S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "LIQ:T1000S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "LIQ:T1500S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "LIQ:T1000R": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "LIQ:T1000SR": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "LIQ:DAY5K": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R72:T500": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 0.996
+ },
+ "R72:T1000": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 0.1674,
+  "twin_p": 0.0279
+ },
+ "R72:T1500": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 0.27 > 0.10"
+  ],
+  "q_all": 0.2745,
+  "q_r106": 0.018,
+  "twin_p": 0.002
+ },
+ "R72:T500S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R72:T1000S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R72:T1500S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R72:T1000R": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 0.88 > 0.10"
+  ],
+  "q_all": 0.8784,
+  "q_r106": 0.0576,
+  "twin_p": 0.008
+ },
+ "R72:T1000SR": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R72:DAY5K": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:T500": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 0.9481
+ },
+ "R51:T1000": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 0.27 > 0.10"
+  ],
+  "q_all": 0.2745,
+  "q_r106": 0.018,
+  "twin_p": 0.002
+ },
+ "R51:T1500": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 0.27 > 0.10"
+  ],
+  "q_all": 0.2745,
+  "q_r106": 0.018,
+  "twin_p": 0.002
+ },
+ "R51:T500S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:T1000S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:T1500S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:T1000R": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 0.27 > 0.10"
+  ],
+  "q_all": 0.2745,
+  "q_r106": 0.018,
+  "twin_p": 0.002
+ },
+ "R51:T1000SR": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:DAY5K": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R52:T500": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 0.998
+ },
+ "R52:T1000": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 0.7186
+ },
+ "R52:T1500": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 0.2375
+ },
+ "R52:T500S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R52:T1000S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R52:T1500S": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R52:T1000R": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 0.3054
+ },
+ "R52:T1000SR": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "R52:DAY5K": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r106": 1.0,
+  "twin_p": 1.0
+ },
+ "_m": {
+  "r106": 36,
+  "prior": 513,
+  "total": 549
+ }
+}

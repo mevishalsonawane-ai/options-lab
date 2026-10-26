@@ -1,0 +1,738 @@
+{
+ "parity": {
+  "trades": 881,
+  "net": 257249,
+  "published": [
+   881,
+   257249
+  ],
+  "reproduced": true
+ },
+ "sessions": 337,
+ "B0": {
+  "all": {
+   "trades": 881,
+   "sessions": 337,
+   "win": 0.4359,
+   "net": 257249,
+   "per_trade": 292,
+   "per_session": 763,
+   "days": 282,
+   "green_days": 0.422,
+   "worst_day": -8416,
+   "best_day": 44035,
+   "median_day": -339,
+   "max_dd": 32537,
+   "ex_top5": 175714,
+   "avg_win": 1976,
+   "avg_loss": 1009,
+   "be_win": 0.338,
+   "largest_loss": -5165,
+   "exits": {
+    "rule_exit": 591,
+    "stop": 31,
+    "time": 235,
+    "squareoff": 23,
+    "missing": 1
+   }
+  },
+  "wf": {
+   "trades": 657,
+   "sessions": 247,
+   "win": 0.4444,
+   "net": 238064,
+   "per_trade": 362,
+   "per_session": 964,
+   "days": 209,
+   "green_days": 0.445,
+   "worst_day": -6363,
+   "best_day": 44035,
+   "median_day": -147,
+   "max_dd": 23139,
+   "ex_top5": 156528,
+   "avg_win": 2027,
+   "avg_loss": 970,
+   "be_win": 0.3235,
+   "largest_loss": -4757,
+   "exits": {
+    "rule_exit": 432,
+    "time": 183,
+    "squareoff": 18,
+    "stop": 23,
+    "missing": 1
+   }
+  },
+  "wf_q": [
+   94245,
+   17659,
+   9336,
+   116825
+  ],
+  "re_trades": 0,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": 763,
+   "reach_goal": 0.0979,
+   "green": 0.3531,
+   "red": 0.4837,
+   "worst_day": -8416,
+   "best_day": 44035,
+   "p10": -2983,
+   "p90": 4865
+  }
+ },
+ "T500": {
+  "all": {
+   "trades": 886,
+   "sessions": 337,
+   "win": 0.6682,
+   "net": 4829,
+   "per_trade": 5,
+   "per_session": 14,
+   "days": 282,
+   "green_days": 0.5922,
+   "worst_day": -6841,
+   "best_day": 4007,
+   "median_day": 500,
+   "max_dd": 28118,
+   "ex_top5": 2296,
+   "avg_win": 486,
+   "avg_loss": 963,
+   "be_win": 0.6644,
+   "largest_loss": -5165,
+   "exits": {
+    "target": 561,
+    "rule_exit": 246,
+    "stop": 10,
+    "time": 69
+   }
+  },
+  "wf": {
+   "trades": 660,
+   "sessions": 247,
+   "win": 0.6727,
+   "net": 16847,
+   "per_trade": 26,
+   "per_session": 68,
+   "days": 209,
+   "green_days": 0.5885,
+   "worst_day": -6841,
+   "best_day": 4007,
+   "median_day": 500,
+   "max_dd": 23911,
+   "ex_top5": 14314,
+   "avg_win": 484,
+   "avg_loss": 917,
+   "be_win": 0.6545,
+   "largest_loss": -4757,
+   "exits": {
+    "rule_exit": 182,
+    "target": 417,
+    "time": 54,
+    "stop": 7
+   }
+  },
+  "wf_q": [
+   14691,
+   3544,
+   695,
+   -2083
+  ],
+  "re_trades": 0,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": 14,
+   "reach_goal": 0.0,
+   "green": 0.4955,
+   "red": 0.3412,
+   "worst_day": -6841,
+   "best_day": 4007,
+   "p10": -1810,
+   "p90": 1563
+  }
+ },
+ "T1000": {
+  "all": {
+   "trades": 886,
+   "sessions": 337,
+   "win": 0.5485,
+   "net": 45003,
+   "per_trade": 51,
+   "per_session": 134,
+   "days": 282,
+   "green_days": 0.5567,
+   "worst_day": -6363,
+   "best_day": 7911,
+   "median_day": 189,
+   "max_dd": 22992,
+   "ex_top5": 39971,
+   "avg_win": 884,
+   "avg_loss": 962,
+   "be_win": 0.521,
+   "largest_loss": -5165,
+   "exits": {
+    "rule_exit": 350,
+    "stop": 16,
+    "target": 391,
+    "time": 129
+   }
+  },
+  "wf": {
+   "trades": 660,
+   "sessions": 247,
+   "win": 0.5485,
+   "net": 40730,
+   "per_trade": 62,
+   "per_session": 165,
+   "days": 209,
+   "green_days": 0.5646,
+   "worst_day": -6363,
+   "best_day": 7911,
+   "median_day": 265,
+   "max_dd": 21973,
+   "ex_top5": 35698,
+   "avg_win": 875,
+   "avg_loss": 926,
+   "be_win": 0.5142,
+   "largest_loss": -4757,
+   "exits": {
+    "rule_exit": 254,
+    "time": 107,
+    "target": 287,
+    "stop": 12
+   }
+  },
+  "wf_q": [
+   26079,
+   15169,
+   1792,
+   -2310
+  ],
+  "re_trades": 0,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": 134,
+   "reach_goal": 0.0148,
+   "green": 0.4659,
+   "red": 0.3709,
+   "worst_day": -6363,
+   "best_day": 7911,
+   "p10": -2438,
+   "p90": 2483
+  }
+ },
+ "T1000R": {
+  "all": {
+   "trades": 1320,
+   "sessions": 337,
+   "win": 0.5652,
+   "net": -9122,
+   "per_trade": -7,
+   "per_session": -27,
+   "days": 282,
+   "green_days": 0.422,
+   "worst_day": -17086,
+   "best_day": 10045,
+   "median_day": -380,
+   "max_dd": 66360,
+   "ex_top5": -14954,
+   "avg_win": 873,
+   "avg_loss": 1151,
+   "be_win": 0.5686,
+   "largest_loss": -8111,
+   "exits": {
+    "rule_exit": 426,
+    "stop": 53,
+    "target": 591,
+    "time": 250
+   }
+  },
+  "wf": {
+   "trades": 984,
+   "sessions": 247,
+   "win": 0.5671,
+   "net": -2704,
+   "per_trade": -3,
+   "per_session": -11,
+   "days": 209,
+   "green_days": 0.4211,
+   "worst_day": -17086,
+   "best_day": 10021,
+   "median_day": -375,
+   "max_dd": 66360,
+   "ex_top5": -8536,
+   "avg_win": 863,
+   "avg_loss": 1136,
+   "be_win": 0.5684,
+   "largest_loss": -8111,
+   "exits": {
+    "rule_exit": 311,
+    "time": 199,
+    "target": 435,
+    "stop": 39
+   }
+  },
+  "wf_q": [
+   20907,
+   -2540,
+   -14385,
+   -6685
+  ],
+  "re_trades": 461,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": -27,
+   "reach_goal": 0.0623,
+   "green": 0.3531,
+   "red": 0.4837,
+   "worst_day": -17086,
+   "best_day": 10045,
+   "p10": -2974,
+   "p90": 3667
+  }
+ },
+ "T1500": {
+  "all": {
+   "trades": 885,
+   "sessions": 337,
+   "win": 0.4994,
+   "net": 83523,
+   "per_trade": 94,
+   "per_session": 248,
+   "days": 282,
+   "green_days": 0.5035,
+   "worst_day": -6363,
+   "best_day": 7743,
+   "median_day": 8,
+   "max_dd": 21251,
+   "ex_top5": 75861,
+   "avg_win": 1145,
+   "avg_loss": 954,
+   "be_win": 0.4545,
+   "largest_loss": -5165,
+   "exits": {
+    "rule_exit": 412,
+    "stop": 19,
+    "target": 275,
+    "time": 178,
+    "missing": 1
+   }
+  },
+  "wf": {
+   "trades": 660,
+   "sessions": 247,
+   "win": 0.5,
+   "net": 70035,
+   "per_trade": 106,
+   "per_session": 284,
+   "days": 209,
+   "green_days": 0.512,
+   "worst_day": -6363,
+   "best_day": 7593,
+   "median_day": 59,
+   "max_dd": 21251,
+   "ex_top5": 62374,
+   "avg_win": 1130,
+   "avg_loss": 917,
+   "be_win": 0.4482,
+   "largest_loss": -4757,
+   "exits": {
+    "rule_exit": 295,
+    "time": 145,
+    "target": 204,
+    "stop": 15,
+    "missing": 1
+   }
+  },
+  "wf_q": [
+   35370,
+   23956,
+   388,
+   10322
+  ],
+  "re_trades": 0,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": 248,
+   "reach_goal": 0.0415,
+   "green": 0.4214,
+   "red": 0.4154,
+   "worst_day": -6363,
+   "best_day": 7743,
+   "p10": -2318,
+   "p90": 3140
+  }
+ },
+ "T500S": {
+  "all": {
+   "trades": 887,
+   "sessions": 337,
+   "win": 0.4543,
+   "net": -50878,
+   "per_trade": -57,
+   "per_session": -151,
+   "days": 282,
+   "green_days": 0.461,
+   "worst_day": -5077,
+   "best_day": 3511,
+   "median_day": -488,
+   "max_dd": 50881,
+   "ex_top5": -53411,
+   "avg_win": 487,
+   "avg_loss": 511,
+   "be_win": 0.5118,
+   "largest_loss": -2565,
+   "exits": {
+    "stop": 453,
+    "target": 384,
+    "rule_exit": 44,
+    "time": 6
+   }
+  },
+  "wf": {
+   "trades": 661,
+   "sessions": 247,
+   "win": 0.4614,
+   "net": -35476,
+   "per_trade": -54,
+   "per_session": -144,
+   "days": 209,
+   "green_days": 0.4689,
+   "worst_day": -5077,
+   "best_day": 2511,
+   "median_day": -321,
+   "max_dd": 44076,
+   "ex_top5": -38009,
+   "avg_win": 485,
+   "avg_loss": 515,
+   "be_win": 0.5151,
+   "largest_loss": -2565,
+   "exits": {
+    "stop": 330,
+    "rule_exit": 37,
+    "target": 288,
+    "time": 6
+   }
+  },
+  "wf_q": [
+   3001,
+   -3864,
+   -2377,
+   -32237
+  ],
+  "re_trades": 0,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": -151,
+   "reach_goal": 0.0,
+   "green": 0.3858,
+   "red": 0.451,
+   "worst_day": -5077,
+   "best_day": 3511,
+   "p10": -1117,
+   "p90": 1004
+  }
+ },
+ "T1000S": {
+  "all": {
+   "trades": 887,
+   "sessions": 337,
+   "win": 0.4882,
+   "net": 17385,
+   "per_trade": 20,
+   "per_session": 52,
+   "days": 282,
+   "green_days": 0.5071,
+   "worst_day": -5041,
+   "best_day": 5014,
+   "median_day": 2,
+   "max_dd": 27317,
+   "ex_top5": 12353,
+   "avg_win": 887,
+   "avg_loss": 808,
+   "be_win": 0.4766,
+   "largest_loss": -2565,
+   "exits": {
+    "rule_exit": 206,
+    "stop": 278,
+    "target": 349,
+    "time": 54
+   }
+  },
+  "wf": {
+   "trades": 661,
+   "sessions": 247,
+   "win": 0.4977,
+   "net": 24208,
+   "per_trade": 37,
+   "per_session": 98,
+   "days": 209,
+   "green_days": 0.5215,
+   "worst_day": -5041,
+   "best_day": 5014,
+   "median_day": 3,
+   "max_dd": 16841,
+   "ex_top5": 19175,
+   "avg_win": 874,
+   "avg_loss": 794,
+   "be_win": 0.4758,
+   "largest_loss": -2565,
+   "exits": {
+    "rule_exit": 157,
+    "stop": 194,
+    "target": 260,
+    "time": 50
+   }
+  },
+  "wf_q": [
+   11218,
+   17864,
+   1300,
+   -6174
+  ],
+  "re_trades": 0,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": 52,
+   "reach_goal": 0.0059,
+   "green": 0.4243,
+   "red": 0.4125,
+   "worst_day": -5041,
+   "best_day": 5014,
+   "p10": -1989,
+   "p90": 2008
+  }
+ },
+ "T1000SR": {
+  "all": {
+   "trades": 1240,
+   "sessions": 337,
+   "win": 0.4742,
+   "net": -39295,
+   "per_trade": -32,
+   "per_session": -117,
+   "days": 282,
+   "green_days": 0.4504,
+   "worst_day": -5041,
+   "best_day": 10021,
+   "median_day": -303,
+   "max_dd": 49883,
+   "ex_top5": -44894,
+   "avg_win": 874,
+   "avg_loss": 849,
+   "be_win": 0.4926,
+   "largest_loss": -2565,
+   "exits": {
+    "rule_exit": 240,
+    "stop": 456,
+    "target": 464,
+    "time": 80
+   }
+  },
+  "wf": {
+   "trades": 927,
+   "sessions": 247,
+   "win": 0.4746,
+   "net": -25677,
+   "per_trade": -28,
+   "per_session": -104,
+   "days": 209,
+   "green_days": 0.4593,
+   "worst_day": -5041,
+   "best_day": 10021,
+   "median_day": -163,
+   "max_dd": 37083,
+   "ex_top5": -31275,
+   "avg_win": 864,
+   "avg_loss": 833,
+   "be_win": 0.491,
+   "largest_loss": -2565,
+   "exits": {
+    "rule_exit": 183,
+    "stop": 327,
+    "target": 341,
+    "time": 76
+   }
+  },
+  "wf_q": [
+   482,
+   -318,
+   -816,
+   -25025
+  ],
+  "re_trades": 375,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": -117,
+   "reach_goal": 0.0178,
+   "green": 0.3769,
+   "red": 0.4599,
+   "worst_day": -5041,
+   "best_day": 10021,
+   "p10": -1998,
+   "p90": 1697
+  }
+ },
+ "DAY5K": {
+  "all": {
+   "trades": 975,
+   "sessions": 337,
+   "win": 0.48,
+   "net": -15392,
+   "per_trade": -16,
+   "per_session": -46,
+   "days": 282,
+   "green_days": 0.4823,
+   "worst_day": -4998,
+   "best_day": 5015,
+   "median_day": -71,
+   "max_dd": 31060,
+   "ex_top5": -20990,
+   "avg_win": 883,
+   "avg_loss": 845,
+   "be_win": 0.4891,
+   "largest_loss": -2565,
+   "exits": {
+    "rule_exit": 196,
+    "stop": 350,
+    "target": 372,
+    "time": 57
+   }
+  },
+  "wf": {
+   "trades": 725,
+   "sessions": 247,
+   "win": 0.4869,
+   "net": 14,
+   "per_trade": 0,
+   "per_session": 0,
+   "days": 209,
+   "green_days": 0.5024,
+   "worst_day": -4254,
+   "best_day": 5015,
+   "median_day": 1,
+   "max_dd": 23406,
+   "ex_top5": -5585,
+   "avg_win": 874,
+   "avg_loss": 829,
+   "be_win": 0.4869,
+   "largest_loss": -2565,
+   "exits": {
+    "rule_exit": 149,
+    "stop": 246,
+    "target": 275,
+    "time": 55
+   }
+  },
+  "wf_q": [
+   3175,
+   489,
+   7190,
+   -10841
+  ],
+  "re_trades": 256,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": -46,
+   "reach_goal": 0.0119,
+   "green": 0.4036,
+   "red": 0.4332,
+   "worst_day": -4998,
+   "best_day": 5015,
+   "p10": -1997,
+   "p90": 1865
+  }
+ },
+ "T1500S": {
+  "all": {
+   "trades": 886,
+   "sessions": 337,
+   "win": 0.4808,
+   "net": 63986,
+   "per_trade": 72,
+   "per_session": 190,
+   "days": 282,
+   "green_days": 0.4752,
+   "worst_day": -5995,
+   "best_day": 7743,
+   "median_day": -73,
+   "max_dd": 24761,
+   "ex_top5": 56325,
+   "avg_win": 1140,
+   "avg_loss": 917,
+   "be_win": 0.4457,
+   "largest_loss": -2565,
+   "exits": {
+    "rule_exit": 351,
+    "stop": 143,
+    "target": 262,
+    "time": 129,
+    "missing": 1
+   }
+  },
+  "wf": {
+   "trades": 661,
+   "sessions": 247,
+   "win": 0.4811,
+   "net": 48366,
+   "per_trade": 73,
+   "per_session": 196,
+   "days": 209,
+   "green_days": 0.488,
+   "worst_day": -5995,
+   "best_day": 7593,
+   "median_day": -27,
+   "max_dd": 24761,
+   "ex_top5": 40705,
+   "avg_win": 1124,
+   "avg_loss": 901,
+   "be_win": 0.445,
+   "largest_loss": -2565,
+   "exits": {
+    "rule_exit": 251,
+    "time": 110,
+    "stop": 105,
+    "target": 194,
+    "missing": 1
+   }
+  },
+  "wf_q": [
+   20826,
+   26706,
+   -1874,
+   2708
+  ],
+  "re_trades": 0,
+  "day_profile": {
+   "sessions": 337,
+   "traded": 282,
+   "median_day": 0,
+   "mean_day": 190,
+   "reach_goal": 0.0415,
+   "green": 0.3976,
+   "red": 0.4392,
+   "worst_day": -5995,
+   "best_day": 7743,
+   "p10": -2093,
+   "p90": 3006
+  }
+ }
+}

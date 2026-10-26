@@ -1,0 +1,121 @@
+{
+ "phase": "design",
+ "arms": [
+  "LIQ",
+  "R72",
+  "R51",
+  "R52"
+ ],
+ "sessions": 337,
+ "day5k": {
+  "trades": 1678,
+  "sessions": 337,
+  "win": 0.4547,
+  "net": -173993,
+  "per_trade": -104,
+  "per_session": -516,
+  "days": 337,
+  "green_days": 0.4362,
+  "worst_day": -11598,
+  "best_day": 5019,
+  "median_day": -991,
+  "max_dd": 209831,
+  "ex_top5": -179025,
+  "avg_win": 972,
+  "avg_loss": 1000,
+  "be_win": 0.5073,
+  "largest_loss": -9603,
+  "exits": {
+   "rule_exit": 39,
+   "target": 728,
+   "stop": 862,
+   "time": 48,
+   "lock": 1
+  }
+ },
+ "day5k_profile": {
+  "sessions": 337,
+  "traded": 337,
+  "median_day": -991,
+  "mean_day": -516,
+  "reach_goal": 0.1306,
+  "green": 0.4362,
+  "red": 0.5638,
+  "worst_day": -11598,
+  "best_day": 5019,
+  "p10": -4994,
+  "p90": 5006
+ },
+ "b0": {
+  "trades": 9156,
+  "sessions": 337,
+  "win": 0.4614,
+  "net": 774750,
+  "per_trade": 85,
+  "per_session": 2299,
+  "days": 337,
+  "green_days": 0.4688,
+  "worst_day": -121774,
+  "best_day": 149586,
+  "median_day": -1285,
+  "max_dd": 444695,
+  "ex_top5": 689567,
+  "avg_win": 1816,
+  "avg_loss": 1399,
+  "be_win": 0.4351,
+  "largest_loss": -14592,
+  "exits": {
+   "rule_exit": 591,
+   "stop": 1486,
+   "time": 6466,
+   "squareoff": 389,
+   "missing": 27,
+   "lock": 197
+  }
+ },
+ "b0_profile": {
+  "sessions": 337,
+  "traded": 337,
+  "median_day": -1285,
+  "mean_day": 2299,
+  "reach_goal": 0.3353,
+  "green": 0.4688,
+  "red": 0.5312,
+  "worst_day": -121774,
+  "best_day": 149586,
+  "p10": -24568,
+  "p90": 37085
+ },
+ "by_arm": {
+  "LIQ": 215,
+  "R72": 546,
+  "R51": 621,
+  "R52": 296
+ },
+ "day5k_wf_profile": {
+  "sessions": 247,
+  "traded": 247,
+  "median_day": -988,
+  "mean_day": -424,
+  "reach_goal": 0.1457,
+  "green": 0.4575,
+  "red": 0.5425,
+  "worst_day": -11598,
+  "best_day": 5016,
+  "p10": -4993,
+  "p90": 5006
+ },
+ "b0_wf_profile": {
+  "sessions": 247,
+  "traded": 247,
+  "median_day": -415,
+  "mean_day": 4036,
+  "reach_goal": 0.3725,
+  "green": 0.4939,
+  "red": 0.5061,
+  "worst_day": -63037,
+  "best_day": 128902,
+  "p10": -21673,
+  "p90": 35930
+ }
+}
