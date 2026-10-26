@@ -3,6 +3,7 @@ package com.optionslab.app.ui.screens
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -94,6 +95,31 @@ class NtfyPageTest {
         assertTrue(exists("● 1 OTM"))
         assertTrue(exists("Access token: set (****)"))
         assertTrue(exists("Reader: connected"))
+    }
+
+    /**
+     * 26 Oct (IraThinker review): a strangle is shown as information (a neutral note, not a refusal), and an open IraThinker mom60
+     * trade shows its source rule's exit time, its label and "paper only".
+     */
+    @Test fun informationIsANeutralNoteAndASourceTradeShowsItsRule() {
+        val alerts = listOf(
+            NtfyArm.Alert("st", at.plusMinutes(1), "signal {\"strategy\":\"STRANGLE\"}", NtfyArm.INFO,
+                "information, not traded: IraAlgo only buys options (SELL_STRANGLE: a multi-leg trade)"),
+            NtfyArm.Alert("x", at, "NIFTY CE PE", NtfyArm.NOT_TRADED, "both CE and PE (call and put) in one message"))
+        val open = NtfyArm.Pos("ntfy", "m1", "NIFTY", "NIFTY26N0225000CE", "CE", 1, 65, 121.0, at, "o1", 96.8, true, "s1", "t1", 169.45, 169.45, false,
+            exitAt = at.plusMinutes(60), strategy = "IraThinker mom60", paperOnly = true)
+        show(NtfyArm.View(on = true, open = listOf(open), alerts = alerts), NtfyReader.Config("k3J9-q2Lm_8xZpV4rT7wYb", NtfyRules.DEFAULT_SERVER, null, ""))
+        assertTrue(exists("NIFTY26N0225000CE 65 @ 121 · stop 96.8 · target 169.45 · out by 10:28 · IraThinker mom60 (paper only)"))
+        compose.onNodeWithTag("ntfy-alert-info-0").performScrollTo()
+        assertTrue(exists("09:29 2026-10-26 · ⓘ information"))
+        assertTrue(!exists("09:29 2026-10-26 · not traded"))
+        assertTrue(exists("information, not traded: IraAlgo only buys options"))
+        assertEquals(1, compose.onAllNodesWithContentDescription("Alert information").fetchSemanticsNodes().size)
+        // A refusal keeps its own header, and no info tag.
+        assertTrue(exists("09:28 2026-10-26 · not traded"))
+        assertTrue(compose.onAllNodesWithTag("ntfy-alert-info-1").fetchSemanticsNodes().isEmpty())
+        // The note says how a signal's own exits are used.
+        assertTrue(exists("never a wider stop"))
     }
 
     /** 26 Oct (Boss: "I think ntfy messages are getting read late"): each message's seconds to read and decide, and today's line. */

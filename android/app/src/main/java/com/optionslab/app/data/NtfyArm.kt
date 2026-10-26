@@ -98,6 +98,12 @@ object NtfyArm {
         val soldQty: Int = 0, val soldValue: Double = 0.0,
         val exit: Double? = null, val exitTime: LocalDateTime? = null, val why: String? = null, val charges: Double = 0.0,
         val ref: String = "$SRC:$alertId", val legacy: Boolean = false, val idxStop: Double? = null, val idxTarget: Double? = null,
+        /**
+         * 26 Oct (IraThinker review): the source rule's exit time ([exitAt]: "exitBy" or the hold, before the square-off), the
+         * source strategy for the record ([strategy], "IraThinker mom60"), and [paperOnly] (the sender marked it paper: never
+         * told to the live path).
+         */
+        val exitAt: LocalDateTime? = null, val strategy: String? = null, val paperOnly: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -110,6 +116,8 @@ object NtfyArm {
     const val TRADED = "traded"
     const val NOT_TRADED = "not traded"
     const val CLOSED = "closed"
+    /** 26 Oct (IraThinker review): information the arm cannot trade (a sale, several legs, a price alert): final, not a refusal. */
+    const val INFO = "information"
 
     /**
      * One message on the Alerts list: its time (the server's), its words, what was decided and why. [title]/[body] kept while it
@@ -167,6 +175,7 @@ object NtfyArm {
             p.orderId?.let { put("order", it) }; p.stopOrderId?.let { put("stopOrder", it) }; p.target?.let { put("target", it) }
             p.lastTarget?.let { put("last", it) }; p.exit?.let { put("exit", it) }; p.exitTime?.let { put("exitAt", it.toString()) }; p.why?.let { put("why", it) }
             p.idxStop?.let { put("idxStop", it) }; p.idxTarget?.let { put("idxTarget", it) }
+            p.exitAt?.let { put("srcExit", it.toString()) }; p.strategy?.let { put("strat", it) }; if (p.paperOnly) put("paperOnly", true)
         }
 
     private fun dbl(o: JSONObject, k: String): Double? = if (o.has(k) && !o.isNull(k)) o.getDouble(k) else null
@@ -180,7 +189,9 @@ object NtfyArm {
             dbl(o, "last"), o.optBoolean("exp"), o.optBoolean("half"), o.optInt("soldQty"), o.optDouble("soldValue", 0.0),
             dbl(o, "exit"), o.optString("exitAt").ifEmpty { null }?.let { LocalDateTime.parse(it) }, o.optString("why").ifEmpty { null }, o.optDouble("charges", 0.0),
             ref = o.optString("ref").ifEmpty { if (legacy) LEGACY_REF + "$src:$call" else "$SRC:$call" }, legacy = legacy,
-            idxStop = dbl(o, "idxStop"), idxTarget = dbl(o, "idxTarget"))
+            idxStop = dbl(o, "idxStop"), idxTarget = dbl(o, "idxTarget"),
+            exitAt = o.optString("srcExit").ifEmpty { null }?.let { LocalDateTime.parse(it) }, strategy = o.optString("strat").ifEmpty { null },
+            paperOnly = o.optBoolean("paperOnly"))
     }
     /** The live path's reference of the removed arm's trades (kept so a live trade it may hold still finds its paper trade). */
     private const val LEGACY_REF = "telegram:"
@@ -404,6 +415,8 @@ object NtfyArm {
             val sid = ((p as? Parsed.Buy)?.signalId?.let { "$it|buy" }) ?: (p as? Parsed.Exit)?.signalId?.let { "$it|exit" }
             when {
                 p is Parsed.Refused -> keep(NOT_TRADED, p.reason)
+                // 26 Oct (IraThinker review): a sale, several legs, a price alert: information, read once, never traded.
+                p is Parsed.Info -> keep(INFO, p.reason)
                 sid != null && !b.signals.add(sid) -> keep(NOT_TRADED, "the same signal id was read before - acted on once only")
                 // An exit only lowers risk: honoured the same day whatever the switch or its age.
                 p is Parsed.Exit -> if (sent.toLocalDate() == now.toLocalDate()) keep(PENDING, "read: ${p.line()}", t0?.take(500), b0?.take(4_000))
@@ -543,6 +556,7 @@ object NtfyArm {
         val p = NtfyParser.read(a.title, a.body, a.at.toLocalDate())
         return when (p) {
             is Parsed.Refused -> finish(b, a, NOT_TRADED, p.reason)
+            is Parsed.Info -> finish(b, a, INFO, p.reason)
             is Parsed.Exit -> exitMessage(b, a, p, now)
             is Parsed.Buy -> entry(b, a, p, now)
         }
@@ -722,6 +736,8 @@ object NtfyArm {
         NtfyRules.entryRefusal(sent, now, s.staleMin)?.let { return done(it) }
         if (NtfyRules.phase(sent, now, s, false) == NtfyRules.Phase.LATE)
             return done(NtfyRules.stale(sent, now, s.staleMin) ?: "not filled within ${s.staleMin} minutes - no order")
+        // 26 Oct (IraThinker review): the source rule's own exit time already passed: buying now could only be sold at once.
+        p.exitBy?.let { if (!now.isBefore(it)) return done("not traded: the source rule's exit time (%02d:%02d) has passed".format(Locale.ENGLISH, it.hour, it.minute)) }
         val today = now.toLocalDate()
         val mine = b.positions.filter { !it.legacy && it.day == today }
         NtfyRules.refusal(mine.size + b.pending.size, mine.sumOf { it.net ?: 0.0 }, s)?.let { return done("not traded: $it") }
@@ -739,7 +755,10 @@ object NtfyArm {
         val right = p.right
         val strikes = list.filter { it.expiry == exp && it.right == right }.map { it.strike }
         // A named strike must be listed: never another strike by a rule in its place (strict).
-        if (p.strike != null && p.strike !in strikes) return done("not traded: ${p.index} ${p.strike?.let { NtfyParser.num(it) }} ${right.name} is not listed for $exp")
+        if (p.strike != null && p.strike !in strikes) return done(
+            // 26 Oct (IraThinker review, INFY 1130 CE): a stock's strike off the exchange's grid says so, and whether the sender guessed it.
+            if (p.stock) NtfyRules.offGrid(p.index, p.strike, right, exp, strikes, p.strikeGuess)
+            else "not traded: ${p.index} ${p.strike?.let { NtfyParser.num(it) }} ${right.name} is not listed for $exp")
         val strike = p.strike ?: run {
             val px = entrySpotsNow[p.index] ?: return say(b, "waiting for ${p.index}'s price")
             NtfyRules.strikeFor(strikes, px, right, p.pick ?: s.strikeRule) ?: return done("not traded: no ${p.index} strike for the rule")
@@ -759,10 +778,12 @@ object NtfyArm {
             return say(b, "${c.symbol}: waiting for ${p.entry?.let { "${p.trig.words} ${NtfyParser.num(it)}" } ?: "a price"} (last ${ltp?.let { NtfyParser.num(it) } ?: "?"})")
         val px = ltp ?: return say(b, "waiting for a fresh price of ${c.symbol}")
         if (p.stop?.let { px <= it } == true) return done("not traded: ${c.symbol} at ${NtfyParser.num(px)} is already at its stop")
+        if (p.srcStop?.let { px <= it } == true) return done("not traded: ${c.symbol} at ${NtfyParser.num(px)} is already at the source rule's stop")
         val lots = NtfyRules.lotsFor(p.lots, s)
         val limit = NtfyRules.round2(NtfyRules.tickDown(px * 1.01) + 0.05)
-        val (stop0, _) = NtfyRules.stop(p.stop, p.stopPct, px, s)
-        val target0 = NtfyRules.target(p.target, px)
+        // 26 Oct: IraAlgo's own exits, made tighter or earlier (never wider) by the source rule's ([NtfyRules.sourceExits]).
+        val ex0 = NtfyRules.sourceExits(p, px, now, today.atTime(NtfyRules.squareOff(expiryDay)), s)
+        val stop0 = ex0.stop; val target0 = ex0.target
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return done("refused by the account guard: " + refusals.joinToString(" "))
@@ -789,24 +810,42 @@ object NtfyArm {
     /** [qty] of [c] bought at [price] for message [a]: its stop resting as a paper SELL SL-M. */
     private suspend fun bought(b: Book, a: Alert, p: Parsed.Buy, c: Paper.Contract, orderId: String?, qty: Int, price: Double, now: LocalDateTime): Boolean {
         val s = b.settings
-        orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${NtfyRules.OWNER} · entry") } }
-        val (stop, ours) = NtfyRules.stop(p.stop, p.stopPct, price, s)
-        val target = NtfyRules.target(p.target, price)
+        // 26 Oct (IraThinker review): the source strategy rides on the order's owner tag ("ntfy alerts (paper) · IraThinker mom60").
+        val owner = NtfyRules.OWNER + (p.strategy?.let { " · $it" } ?: "")
+        orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "$owner · entry") } }
+        val expiryDay = c.expiry == now.toLocalDate()
+        // IraAlgo's own stop, target and square-off, made tighter or earlier (never wider) by the source rule's exits.
+        val ex = NtfyRules.sourceExits(p, price, now, now.toLocalDate().atTime(NtfyRules.squareOff(expiryDay)), s)
+        val stop = ex.stop; val ours = ex.ours; val target = ex.target
         val lots = (qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
         // 25 Oct (review): the fill's price goes with it, so placing the stop never reads a quote under the lock.
         val stopId = runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, stop, known = com.optionslab.engine.sandbox.Quote(price)) }.getOrNull()?.takeIf { it.ok }?.orderId
-            ?.also { runCatching { Strategies.tagOwner("paper:$it", "${NtfyRules.OWNER} · stop") } }
+            ?.also { runCatching { Strategies.tagOwner("paper:$it", "$owner · stop") } }
         val pos = Pos(SRC, a.id, p.index, c.symbol, p.right.name, lots, qty, price, now, orderId, stop, ours, stopId, Exit.T1_ALL.key,
-            target, target, c.expiry == now.toLocalDate(), charges = chargesOf(orderId), idxStop = p.indexStop, idxTarget = p.indexTarget)
+            target, target, expiryDay, charges = chargesOf(orderId), idxStop = p.indexStop, idxTarget = p.indexTarget,
+            exitAt = ex.exitAt, strategy = p.strategy, paperOnly = p.paper)
         b.positions += pos
         // The time machine's reality check (shadow only; background): the stop and target as premium, out by 15:15.
         runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(LiveMirror.NTFY_ALERTS, NtfyRules.OWNER, pos.ref, p.index,
             if (p.right == Right.CE) 1 else -1, now, (price - stop).takeIf { it > 0 }, (target - price).takeIf { it > 0 }, premium = true,
-            exitAt = NtfyRules.SQ)) }
+            exitAt = ex.exitAt?.toLocalTime()?.takeIf { it.isBefore(NtfyRules.SQ) } ?: NtfyRules.SQ)) }
         // Its live path ([ArmLive], off until Boss switches it on): the same option and lots, a LIMIT 1% over the fill at most, the stop resting.
-        runCatching { ArmLive.entered(ArmLive.Ask(LiveMirror.NTFY_ALERTS, pos.ref, c, 1, qty, price, stop = stop, limit = price * 1.01)) }
+        // 26 Oct (IraThinker review): a signal its sender marked "paper": true is never told to the live path (paper only).
+        if (!p.paper) runCatching { ArmLive.entered(ArmLive.Ask(LiveMirror.NTFY_ALERTS, pos.ref, c, 1, qty, price, stop = stop, limit = price * 1.01)) }
         return finish(b, a, TRADED, "bought ${c.symbol} $qty @ ${NtfyParser.num(price)} · paper · stop ${NtfyParser.num(stop)}${if (ours) " (our stop)" else ""}, " +
-            "target ${NtfyParser.num(target)}" + (p.from?.let { " · $it" } ?: ""))
+            "target ${NtfyParser.num(target)}" + (p.from?.let { " · $it" } ?: "") + strategyWords(p) + (if (ex.notes.isEmpty()) "" else " · " + ex.notes.joinToString("; ")))
+    }
+
+    /**
+     * 26 Oct (IraThinker review): " · IraThinker mom60 (paper only; not a proven strategy - research R110: about breakeven after
+     * costs on real options)" for a source strategy; the sender's estimated strike said too. "" for a plain message.
+     */
+    internal fun strategyWords(p: Parsed.Buy): String {
+        val label = p.strategy?.let { st ->
+            val r110 = if (st.contains("mom60", ignoreCase = true)) "; research R110: about breakeven after costs on real options" else ""
+            " · $st (" + (if (p.paper) "paper only; " else "") + "not a proven strategy$r110)"
+        } ?: if (p.paper) " · paper only" else ""
+        return label + if (p.strikeGuess) " · strike estimated by the sender" else ""
     }
 
     /** Each open trade's exit, when due ([indexLevels]: also a signal's index stop and target, read from the index's price). */
@@ -850,6 +889,8 @@ object NtfyArm {
         }
         val sq = p.day.atTime(NtfyRules.squareOff(p.expiryDay))
         if (!now.isBefore(sq) || p.day.isBefore(now.toLocalDate())) return sellRest(p, c, "square-off")
+        // 26 Oct (IraThinker review): the source rule's hold is over (mom60: 60 minutes) - out at full cadence, like the stop.
+        p.exitAt?.let { if (!now.isBefore(it)) return sellRest(p, c, "time exit (the source rule's hold)") }
         val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: runCatching { Paper.quote(c)?.ltp }.getOrNull() ?: return p
         // No stop resting in the paper book: the arm checks the stop itself - through it, sold now - and puts the SL-M back while
         // above it; never a position riding to the square-off without a stop.
