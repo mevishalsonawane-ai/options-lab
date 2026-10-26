@@ -1,0 +1,40 @@
+id: r114-x10
+title: 'R114 X10: R72 and R51 + Supertrend mornings only (entries by 09:55), all closed at 10:00, in the app''s four-arm
+  capped paper book'
+family: trade-management
+date: '2026-10-26'
+doc: research/HUNT_R114_DONCHIAN_MORNING_CLOSE10.md
+hypothesis: 'R112''s lead (data-snooped, said so): the two Donchian arms take only signals whose 5-minute bar closes by 09:55
+  and sell everything still open at 10:00, today''s exits otherwise; Liquidity 15+5 and R52 unchanged; the cap of 2 a way
+  as the app runs it (R108''s model). Gates: net above today''s book in design, walk-forward and final; months / days at or
+  below -Rs 13,000 and Rs 40,000 breaches not more; twin BH q <= 0.10 over 5,841 tests; >= 30 final trades differ.
+  First committed as R113 (749734f), renumbered before any number.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 26 Oct; R51 Amendment
+  A clean stores (to 13 Oct; post stores to 19 Oct in their own folder)
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R114 (already read many times by R51-R113, so weak evidence); post 14-19 Oct
+    reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s own bars for every arm (R72 breadth Donchian, R51 Donchian 20 + Supertrend 10/3, Liquidity''s
+  ORB, R52 open outside value); the 1-ITM weekly option is bought; stops / locks on its premium'
+model_or_rule: X10 in the four-arm CAP2 book (R108's r108book.walk_period)
+settings: research/hunt/r114_donchian_close10/r114cfg.py RULES; PREREG.md section 2
+prereg: research/hunt/r114_donchian_close10/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Four-arm CAP2 book, X10 vs today''s (BOOK0). Design: 1,340 trades, Rs 1,45,385 vs 3,271 trades, -Rs 1,33,339.
+    Walk-forward: 979, Rs 1,32,920 vs 2,387, Rs 21,247. Final: 521, Rs 55,912 vs 1,310, Rs 40,786; worst day -Rs 12,204
+    vs -Rs 14,149, max DD Rs 29,835 vs Rs 57,479. Gates 1, 2 and 4 hold (931 final trades differ). Twins: refusal p 0.265
+    (mean Rs 39,599), exit p 0.502 (mean Rs 55,940, 69 trades sold earlier); p 0.502, BH q 1.0 over 5,841. Fails: twin BH
+    q 1.000 > 0.1. Post 14-19 Oct (4 sessions): 22 trades Rs 987 vs 39 trades Rs 7,325.'
+  costs: dated Zerodha charges, R17 fills (stops -10 bps and 2x the half-spread, gaps at the open), 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Nothing changes on paper or live. The edge is fewer Donchian trades, not the 10:00 clock.
