@@ -1,0 +1,106 @@
+{
+ "strangle_stop": {
+  "weeks": 51,
+  "win": 78.4,
+  "mean": 3585.0,
+  "total": 182828.0,
+  "worst_week": -24552.0,
+  "worst_month": -21992.0,
+  "weeks_losing_over_10k": 6,
+  "margin_median": 95375.0,
+  "app_default_guard": {
+   "weeks_offered": 51,
+   "weeks_taken": 6,
+   "refused": {
+    "guard: drawdown 10%": 45
+   },
+   "net": 25604.0,
+   "end_equity": 125604.0,
+   "max_drawdown": -15559.0,
+   "first_refused": [
+    "2025-02-10",
+    "guard: drawdown 10%"
+   ]
+  },
+  "guard_max_positions_raised_to_4": {
+   "weeks_offered": 51,
+   "weeks_taken": 6,
+   "refused": {
+    "guard: drawdown 10%": 45
+   },
+   "net": 25604.0,
+   "end_equity": 125604.0,
+   "max_drawdown": -15559.0,
+   "first_refused": [
+    "2025-02-10",
+    "guard: drawdown 10%"
+   ]
+  }
+ },
+ "condor_stop": {
+  "weeks": 41,
+  "win": 61.0,
+  "mean": 542.0,
+  "total": 22213.0,
+  "worst_week": -10297.0,
+  "worst_month": -9563.0,
+  "weeks_losing_over_10k": 1,
+  "margin_median": 14000.0,
+  "app_default_guard": {
+   "weeks_offered": 41,
+   "weeks_taken": 0,
+   "refused": {
+    "guard: 4 legs > 3 open positions": 41
+   },
+   "net": 0.0,
+   "end_equity": 100000.0,
+   "max_drawdown": 0.0,
+   "first_refused": [
+    "2024-11-18",
+    "guard: 4 legs > 3 open positions"
+   ]
+  },
+  "guard_max_positions_raised_to_4": {
+   "weeks_offered": 41,
+   "weeks_taken": 41,
+   "refused": {},
+   "net": 22213.0,
+   "end_equity": 122213.0,
+   "max_drawdown": -11984.0,
+   "first_refused": null
+  }
+ },
+ "condor_stop_skip_expiry": {
+  "weeks": 28,
+  "win": 57.1,
+  "mean": -177.0,
+  "total": -4957.0,
+  "worst_week": -10297.0,
+  "worst_month": -9563.0,
+  "weeks_losing_over_10k": 1,
+  "margin_median": 14000.0,
+  "app_default_guard": {
+   "weeks_offered": 28,
+   "weeks_taken": 0,
+   "refused": {
+    "guard: 4 legs > 3 open positions": 28
+   },
+   "net": 0.0,
+   "end_equity": 100000.0,
+   "max_drawdown": 0.0,
+   "first_refused": [
+    "2024-11-18",
+    "guard: 4 legs > 3 open positions"
+   ]
+  },
+  "guard_max_positions_raised_to_4": {
+   "weeks_offered": 28,
+   "weeks_taken": 28,
+   "refused": {},
+   "net": -4957.0,
+   "end_equity": 95043.0,
+   "max_drawdown": -10297.0,
+   "first_refused": null
+  }
+ }
+}

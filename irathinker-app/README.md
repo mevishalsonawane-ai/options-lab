@@ -1,7 +1,8 @@
 # IraThinker — Android app source
 
 Snapshot of the IraThinker app source at **v59** (855/855 JVM harness checks),
-pushed 2026-10-26 at the owner's request.
+pushed 2026-10-26 at the owner's request. Review and fixes of the same day:
+`REVIEW_2026-10-26.md` (harness now 878 checks; see the review for the 8 golden-data checks).
 
 IraThinker is a **support / alert-provider app only** — market board, analysis,
 Adaptive Brain (Live Ledger, Time Machine, self-grading), and ntfy alerts: human

@@ -111,8 +111,10 @@ public final class BuyAlerts {
         for (Analysis.Scan sc : scans) {
             if (sc == null || !sc.hasFade()) continue;
             if (Universe.isGold(sc.sym)) continue; // v52: gold never alerts (see eligible)
+            if (!Universe.alertable(sc.sym)) continue; // review 26 Oct: NSE F&O names only
             if (!Analysis.istDate(sc.fadeTs).equals(today)) continue;
             if (sc.fadeTs + 300 > nowSec) continue; // the 09:45 bar must have closed
+            if (!Analysis.alertFresh(sc.fadeTs, nowSec)) continue; // review 26 Oct: never a stale fade
             if (prefs.setupFired(fadeKey(sc, dateKey))) continue;
             cands.add(sc);
         }
@@ -178,6 +180,10 @@ public final class BuyAlerts {
         // ORB + gap fades on that gate's symbols. (An explicit guard,
         // not a hope that its score never clears the bar.)
         if (Universe.isGold(sc.sym)) return false;
+        // Review 26 Oct 2026: only symbols with an NSE option the
+        // ticket can name (VIX, USD/INR, MIDCAP 50, SENSEX and the
+        // global commodities never alert).
+        if (!Universe.alertable(sc.sym)) return false;
         if (sc.setup != Analysis.Setup.ORB_UP && sc.setup != Analysis.Setup.ORB_DOWN) return false;
         // Stale-bar guard: on a market holiday the feed serves the previous
         // session and scan() falls back to it - never replay its breakout
@@ -186,7 +192,11 @@ public final class BuyAlerts {
         // Closed-bar firing (user rule): the break bar must have closed,
         // so the entry in the dedupe key is the bar's final close and a
         // break that closes back inside the range never notifies.
-        if (!Analysis.breakBarClosed(sc, System.currentTimeMillis() / 1000)) return false;
+        long nowSec = System.currentTimeMillis() / 1000;
+        if (!Analysis.breakBarClosed(sc, nowSec)) return false;
+        // Review 26 Oct 2026: a break found late (Doze, offline, a
+        // restart) is skipped, never sent with old levels as fresh.
+        if (!Analysis.alertFresh(sc.breakTs, nowSec)) return false;
         if (prefs.setupFired(signalKey(sc, dateKey))) return false;
         int gate = Math.max(MIN_CONFIDENCE, prefs.minAlertScore());
         return Analysis.alertWorthy(sc, scoreFor(sc), gate)

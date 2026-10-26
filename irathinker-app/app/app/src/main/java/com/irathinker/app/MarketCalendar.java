@@ -34,6 +34,12 @@ public final class MarketCalendar {
                 {12, 25},  // Christmas
         };
         for (int[] d : md) HOLIDAYS_2026.add(LocalDate.of(2026, d[0], d[1]));
+        // Review 26 Oct 2026: NSE's 2027 list is not out yet. Republic
+        // Day is a fixed national holiday, and Tue 26 Jan 2027 is
+        // January's last Tuesday, so the monthly expiry (shown from
+        // 30 Dec) must already move to Mon 25 Jan. Replace with the
+        // full 2027 circular when NSE publishes it.
+        HOLIDAYS_2026.add(LocalDate.of(2027, 1, 26));
     }
 
     public static boolean isHoliday(LocalDate date) {

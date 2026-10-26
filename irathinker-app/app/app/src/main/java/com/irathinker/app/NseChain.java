@@ -49,7 +49,9 @@ public final class NseChain {
             case "^NSEI": return "indices:NIFTY";
             case "^NSEBANK": return "indices:BANKNIFTY";
             case "^CNXFIN": return "indices:FINNIFTY";
-            case "^NSEMDCP50": return "indices:MIDCPNIFTY";
+            // Review 26 Oct 2026: ^NSEMDCP50 is NIFTY MIDCAP 50, NOT
+            // MIDCPNIFTY (NIFTY MIDCAP SELECT) - another index at
+            // another level, so it has no chain here (null below).
             default: break;
         }
         if (yahoo.endsWith(".NS")) return "equities:" + yahoo.substring(0, yahoo.length() - 3);

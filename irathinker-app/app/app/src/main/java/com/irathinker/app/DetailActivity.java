@@ -774,7 +774,9 @@ public class DetailActivity extends Activity {
                         .append(fresh.startsWith("TARGET") ? "target" : "stop")
                         .append(" — not a fresh signal.\n");
             }
-            if (!Analysis.alertWorthy(s, BuyAlerts.scoreFor(s),
+            // Review 26 Oct 2026: a symbol that never strategy-alerts
+            // (Universe.alertable) would not auto-fire either.
+            if (!Universe.alertable(s.sym) || !Analysis.alertWorthy(s, BuyAlerts.scoreFor(s),
                     Math.max(Analysis.ALERT_MIN_SCORE, prefs.minAlertScore()))) {
                 b.append("Note: this plan would not auto-fire under your alert rules — sharing manually.\n");
             }

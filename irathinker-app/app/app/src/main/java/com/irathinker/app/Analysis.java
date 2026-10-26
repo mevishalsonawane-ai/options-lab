@@ -863,6 +863,21 @@ public final class Analysis {
         return s != null && s.breakTs > 0 && nowSec >= s.breakTs + 300;
     }
 
+    /** Review 26 Oct 2026: an ORB / gap-fade alert must go out within
+     *  this many seconds of its 5-minute bar closing. A pass that
+     *  catches up late (Doze, no network, a restart) skips the old
+     *  signal instead of sending its stale levels as fresh - the
+     *  feed's tsIST is the send time, so the order system could not
+     *  tell. mom60 has the same rule (Mom60.MAX_SIGNAL_AGE_SEC). */
+    public static final long MAX_ALERT_AGE_SEC = 600;
+
+    /** True while a signal on the 5-minute bar starting at barTs is
+     *  still fresh enough to alert: no later than MAX_ALERT_AGE_SEC
+     *  after that bar closed. */
+    public static boolean alertFresh(long barTs, long nowSec) {
+        return barTs > 0 && nowSec <= barTs + 300 + MAX_ALERT_AGE_SEC;
+    }
+
     /** After the 15:30 equity close, only commodities keep working
      *  (user rule, 2026-10-23): the MCX/global-benchmark session runs
      *  into the night while every stock and index feed is frozen. */
