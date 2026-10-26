@@ -88,3 +88,12 @@ def test_s10_rules_and_stop():
     r = X.simulate(C, 10, 360, -1, 0.10, -1.0, st, 30, -1.0, -1.0, 0.05, 75.0, 101.0, -1.0, -1, 0.0, -1.0, 0.0, 0, 0.0,
                    math.nan, 1, I)
     assert r[6] == 1 and r[1] == pytest.approx(90.0)
+
+
+def test_grid_spec_and_breakeven():
+    import r105cgrid as Gd
+    assert len(Gd.STOPS) * len(Gd.TARGETS) == 30
+    assert Gd.cell_spec(None, L.OFF, L.P_STEPS)["target"] == -1.0
+    assert Gd.cell_spec(15, L.OFF, L.P_STEPS)["target"] == pytest.approx(0.15)
+    assert Gd.breakeven_win(dict(avg_win=1000, avg_loss=-500)) == pytest.approx(1 / 3, abs=1e-4)
+    assert Gd.breakeven_win(dict(avg_win=None, avg_loss=-1)) is None
