@@ -50,6 +50,16 @@ object MoveRecorder {
     /** Reads the switch into [onFlow] (call off the main thread). */
     fun refreshSwitch() { _onFlow.value = on }
 
+    /**
+     * 26 Oct (Erase everything, [PersonalStores]): Boss's switch as kept in memory goes back to its default (on), as the wiped
+     * settings say - set, not forgotten, so the order flow's next second never reads the settings for it. The event files are
+     * public market data (kept, as the market data always was). Never reads the vault.
+     */
+    internal fun wipe() { onCached = true; _onFlow.value = true }
+
+    /** Whether Boss's switch is held in memory changed from its default. Memory only. */
+    internal fun holdsForErase(): Boolean = onCached == false
+
     fun dir(): File? = appContext?.let { File(File(it.noBackupFilesDir, "orderflow"), "events") }
 
     // ---- the cash indices' prints (a 30-minute ring each) -----------------------------------------------------------------

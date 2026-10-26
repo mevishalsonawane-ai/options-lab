@@ -156,6 +156,24 @@ internal object IraAccount {
     private val quickKept = java.util.concurrent.atomic.AtomicInteger()
     private val quickRead = java.util.concurrent.atomic.AtomicInteger()
     private val quickSlow = java.util.concurrent.atomic.AtomicInteger()
+    /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): the account's lines kept for quick answers and the
+     * named round trips forgotten (memory only: nothing here is saved). [invalidate] bumps the generation, so a read begun
+     * before the erase keeps nothing after it; the read behind is cancelled. Never reads the vault.
+     */
+    fun wipe() {
+        behindJob?.cancel(); behindJob = null
+        invalidate()
+        liveNamed.forget(); paperNamed.forget()
+    }
+
+    /** 26 Oct: whether account lines or round trips are held in memory. */
+    internal fun holdsForErase(): Boolean =
+        synchronized(cache) { cache.isNotEmpty() || cacheMode != null } || liveNamed.held || paperNamed.held
+
+    /** TEST ONLY: [v] kept as a read just made (the erase's test). */
+    internal fun keepForTest(v: AppView) = keep(v, android.os.SystemClock.elapsedRealtime(), generationNow())
+
     /** The reset hook between tests: the counts above, what is kept, and any read behind. */
     internal fun resetSpeed() { behindJob?.cancel(); behindJob = null; quickKept.set(0); quickRead.set(0); quickSlow.set(0); invalidate() }
     fun speedNote(): String = "account answers: ${quickKept.get()} from kept figures, ${quickRead.get()} read fresh, ${quickSlow.get()} slow reads stood in for"

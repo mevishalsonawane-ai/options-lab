@@ -46,11 +46,14 @@ object BotReplayStore {
     /** Each bot trade closed [today] gets its option's minutes kept (after the close; a worker thread). */
     suspend fun keepToday(today: LocalDate) {
         val d = dir() ?: return
+        // 26 Oct (erase everything): a keep under way when the phone is erased writes no more trades' minutes after it ([wipe]).
+        val gen = wipes
         d.mkdirs()
         for (r in TradeManagerHost.records.value.filter { it.actual?.let { a -> com.optionslab.ira.AgentLessons.dayOf(a.atMs) == today } == true }) {
             val f = File(d, safe(r.trade.tradeId) + ".txt")
             if (f.isFile) continue
             val bars = feedBars(r) ?: continue
+            if (gen != wipes) return
             runCatching { f.writeText(encode(bars)) }
         }
         val all = d.listFiles()?.sortedByDescending { it.lastModified() }.orEmpty()
@@ -97,4 +100,20 @@ object BotReplayStore {
 
     /** TEST ONLY. */
     internal fun resetForTest() { _open.value = null; testBars = null }
+
+    /** Bumped by [wipe]: a [keepToday] under way stops writing. */
+    @Volatile private var wipes = 0
+
+    /** 26 Oct (erase everything): the kept trades' minutes deleted and the open replay closed. Safe before the app's start. */
+    fun wipe() {
+        wipes++
+        _open.value = null
+        filesForErase().forEach { runCatching { it.deleteRecursively() } }
+    }
+
+    /** The erase's files: the replay folder (empty before the app's start). */
+    internal fun filesForErase(): List<File> = listOfNotNull(dir())
+
+    /** A replay sheet open on a trade (the erase's test; memory only: the kept minutes are files). */
+    internal fun holdsForErase(): Boolean = _open.value != null
 }

@@ -241,6 +241,18 @@ internal object IraSolo {
         runCatching { expiries(today) }
     }
 
+    /**
+     * 26 Oct (erase everything): the day's memory forgotten as [resetForTest] does (today's decision record, what Solo saw, the
+     * decision's day) and the card's switch shown off. Solo's trades, switch and counts are settings keys, wiped with the
+     * settings. Never waits for Solo's [lock]; reads nothing.
+     */
+    fun wipe() { resetForTest(); _onState.value = false }
+
+    /** Solo's day, what it saw, or its switch on in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        _onState.value || watch != null || decided != null || synchronized(dayLock) { dayKept != null }
+    }.getOrDefault(false)
+
     /** Tests: forget the day's memory (ATR14s, listed expiries, the early reads, the decision and what Solo saw). */
     internal fun resetForTest() {
         synchronized(atrs) { atrs.clear() }

@@ -80,6 +80,25 @@ internal object IraWeekly {
         file()?.let { com.optionslab.app.security.Vault.writeFile(it, WeeklyReview.encodeAll(rs).toByteArray(Charsets.UTF_8)) }
     }
 
+    /** 26 Oct: bumped by [wipe]: a review being made when everything was erased is not saved after it. */
+    @Volatile private var erased = 0
+
+    /**
+     * 26 Oct: "Erase everything" ([com.optionslab.app.data.PersonalStores]): the kept reviews forgotten and their file deleted.
+     * Never reads the vault; never waits on [lock] (a review being made then saves nothing: [prepare]).
+     */
+    fun wipe() {
+        erased++
+        filesForErase().forEach { runCatching { it.delete() } }
+        _state.value = null
+    }
+
+    /** 26 Oct: whether reviews are still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = !_state.value.isNullOrEmpty()
+
+    /** 26 Oct: the reviews' file; empty before Jarvis is set up. */
+    internal fun filesForErase(): List<java.io.File> = listOfNotNull(file())
+
     /** Reads the kept reviews into [state] (the Ira page's card). */
     suspend fun refresh() = withContext(Dispatchers.IO) { _state.value = kept() }
 
@@ -93,6 +112,7 @@ internal object IraWeekly {
         if (!on()) return
         withContext(Dispatchers.IO) {
             lock.withLock {
+                val gen = erased
                 val now = Market.now().toLocalDateTime()
                 // Unreadable just now: no review is made over the kept ones (it is tried again at the next report).
                 val all = read() ?: run {
@@ -102,6 +122,8 @@ internal object IraWeekly {
                 val monday = WeeklyReview.due(now, all.filter { !it.soFar }.map { it.monday }, ::tradingDay) ?: return@withLock
                 val r = build(monday, now, soFar = false)
                 val keep = WeeklyReview.keep(all, r)
+                // 26 Oct: erased while this review was made (from the old trades): nothing is saved, said or shown.
+                if (gen != erased) return@withLock
                 runCatching { save(keep) }
                 _state.value = keep
                 IraHub.note("Your weekly review is ready, Boss (${r.title.lowercase()}). ${r.summary} The whole review is on the Ira page.", from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)

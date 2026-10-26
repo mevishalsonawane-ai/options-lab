@@ -74,6 +74,8 @@ object VariantRunner {
     val forge: StateFlow<StrategyForge.Book> = _forge
 
     @Volatile private var loaded = false
+    /** 26 Oct: bumped by [wipe] (under [lock]): a settle or a forge night begun before an erase keeps and saves nothing. */
+    @Volatile private var wipeGen = 0
     @Volatile private var settling = false
     @Volatile private var armLoadTried = false
 
@@ -155,9 +157,11 @@ object VariantRunner {
 
     /** The runs written off the arms' pass, on IO (one small file; only when a strategy's day or account changed). */
     private fun saveSeenSoon() {
+        val gen = wipeGen
         scope.launch {
             runCatching {
                 synchronized(seenLock) {
+                    if (gen != wipeGen) return@synchronized      // 26 Oct: asked before an erase
                     val d = dir() ?: return@synchronized
                     d.mkdirs()
                     write(File(d, RUNS), seen.entries.sortedBy { it.key }.joinToString("\n") { "${it.key}|${it.value.first}|${if (it.value.second) 1 else 0}" })
@@ -381,6 +385,7 @@ object VariantRunner {
         while (!Market.isTradingDay(d) && guard++ < 10) d = d.minusDays(1)
         if (Market.isTradingDay(today) && minute in (9 * 60) until SETTLE_FROM) return Settled(null, "market hours")
         if (settling) return Settled(null, "busy")
+        val gen = wipeGen
         withContext(Dispatchers.IO) { ensureLoaded() }
         if (!loaded) return Settled(null, "the lab's book could not be read")
         val vb = _variants.value; val fb = _forge.value
@@ -411,6 +416,8 @@ object VariantRunner {
             // disk not.
             val (vp, fp) = withContext(Dispatchers.IO) {
                 synchronized(lock) {
+                    // 26 Oct: an erase since this settle began: nothing kept or saved (its day's results are the old books').
+                    if (gen != wipeGen) return@synchronized null
                     val v0 = com.optionslab.app.ira.LearningFreeze.holdPromotions(VariantLab.day(_variants.value, d, runs, todays, history,
                         DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual, evidence, seeds.values.sortedBy { it.id }))
                     // R14's re-entry cap through the lab's own path, once: on paper by itself (undoable), proposed for live (PIN).
@@ -421,7 +428,7 @@ object VariantRunner {
                     save()
                     v to f
                 }
-            }
+            } ?: return Settled(null, "erased")
             // The asked variants' answers: kept for the review; a final one is not asked again.
             for (r in vp.seeded) { seededResults[r.id] = r; if (r.final) seeds.remove(r.id) }
             while (seededResults.size > 200) seededResults.keys.firstOrNull()?.let { seededResults.remove(it) }
@@ -507,6 +514,7 @@ object VariantRunner {
      */
     suspend fun forgeIfDue(today: LocalDate = Market.today(), stopped: () -> Boolean = { false }): StrategyForge.Night? {
         if (!enabled()) return null
+        val gen = wipeGen
         withContext(Dispatchers.IO) { ensureLoaded() }
         if (!loaded || _forge.value.lastNight == today) return null
         val hist = withContext(Dispatchers.IO) { UNDERLYINGS.associateWith { u -> runCatching { days(u, today, FORGE_DAYS) }.getOrDefault(emptyList()) } }
@@ -533,6 +541,8 @@ object VariantRunner {
         for (r in night.made) runCatching { Diag.record("strategylab", "idea ${r.c.name}: ${r.why}") }
         for ((idea, why) in night.skipped.distinct().take(20)) runCatching { Diag.record("strategylab", "idea $idea not tested: $why") }
         synchronized(lock) {
+            // 26 Oct: an erase since the night began: its book (made from the old one) is not kept.
+            if (gen != wipeGen) return night
             // Boss's answers made meanwhile are kept: only the night's own records and counters move.
             val now = _forge.value
             _forge.value = night.book.copy(records = night.book.records.map { r -> now.find(r.c.id)?.takeIf { it.stage != r.stage && it.stage in BOSS } ?: r })
@@ -643,6 +653,32 @@ object VariantRunner {
         return "Strategy lab: ${_variants.value.alive().size} variants shadowing (${_variants.value.tried} tried), forge ${f.tried} ideas tried, " +
             "${f.passed} passed the backtest, ${f.forward} in forward test, ${f.proposed} proposed, ${f.retired} retired"
     }
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the variants, the forge, the arms' runs and the asked variants dropped from
+     * memory and the lab's folder deleted. Not loaded afterwards: the arms trade their defaults until the (now absent) files are
+     * read again, and a save before that writes nothing; a settle or a night begun before finds [wipeGen] changed. Safe before
+     * [init]; nothing is read here.
+     */
+    fun wipe() {
+        synchronized(lock) {
+            wipeGen++
+            _variants.value = VariantLab.Book(); _forge.value = StrategyForge.Book()
+            loaded = false; armLoadTried = false; tuned = Tuned(VariantLab.Book())
+        }
+        synchronized(seenLock) {
+            seen.clear()
+            runCatching { dir()?.deleteRecursively() }
+        }
+        seeds.clear(); seededResults.clear()
+    }
+
+    /** 26 Oct: anything of the lab in memory (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = _variants.value != VariantLab.Book() || _forge.value != StrategyForge.Book() ||
+        seen.isNotEmpty() || seeds.isNotEmpty() || seededResults.isNotEmpty()
+
+    /** 26 Oct: the lab's folder (empty before [init]). */
+    internal fun filesForErase(): List<File> = listOfNotNull(dir())
 
     /** TEST ONLY. */
     internal fun resetForTest() {

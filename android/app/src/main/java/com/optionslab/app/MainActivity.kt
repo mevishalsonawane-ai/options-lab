@@ -41,6 +41,16 @@ class MainActivity : FragmentActivity() {
         val cardRequests = MutableStateFlow<com.optionslab.app.work.NoticeCard?>(null)
         private fun cardOf(i: android.content.Intent): com.optionslab.app.work.NoticeCard? =
             com.optionslab.app.work.NoticeCards.fromExtras { k -> i.getStringExtra(k) }?.let { com.optionslab.app.work.NoticeCards.resolve(it) }
+
+        /**
+         * 26 Oct (Erase everything): a tapped notification's card (its words can name a position and its P&L), a position's
+         * close request and a page asked for, all waiting in memory, dropped with the data. The nonce is a settings key
+         * (gone with them). Memory only.
+         */
+        fun wipe() { cardRequests.value = null; closeRequests.value = null; tabRequests.value = null }
+
+        /** 26 Oct: a card or a close request waiting in memory (for the erase's tests). */
+        internal fun holdsForErase(): Boolean = cardRequests.value != null || closeRequests.value != null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -263,9 +263,13 @@ object NtfyArm {
             .put("ordering", JSONArray(b.ordering.toList()))
         b.read.last?.let { o.put("last", it) }
         b.status.writeTo(o)
-        val ok = file?.let { f -> runCatching { written.write(f, o.toString().toByteArray(Charsets.UTF_8)) }.getOrDefault(false) } ?: false
-        publish(b)
-        return ok
+        // 26 Oct: under [written]'s lock, as [wipe]: a book "Erase everything" dropped meanwhile is never written back or shown.
+        return synchronized(written) {
+            if (cache !== b) return false
+            val ok = file?.let { f -> runCatching { written.write(f, o.toString().toByteArray(Charsets.UTF_8)) }.getOrDefault(false) } ?: false
+            publish(b)
+            ok
+        }
     }
 
     private fun publish(b: Book) {
@@ -913,11 +917,42 @@ object NtfyArm {
     private fun closed(p: Pos, price: Double, at: LocalDateTime, why: String, charges: Double): Pos =
         p.copy(exit = price, exitTime = at, why = why, charges = p.charges + charges, stopOrderId = null)
 
-    /** For tests: the book forgotten (its file goes with the test's directory). */
+    /**
+     * For tests: the book forgotten (its file stays: the tests read it again, as after a restart), the quick pass cancelled.
+     * 26 Oct: under [written]'s lock, as every save, so a pass that read the old book writes nothing after it ([save]).
+     */
     internal fun wipe() {
-        cache = null; _view.value = View(); testListed = null; testSpot = null; barsNow = emptyMap(); quotesNow = emptyMap(); kickedPasses = 0
-        entrySpotsNow = emptyMap()
+        synchronized(written) {
+            cache = null; _view.value = View(); testListed = null; testSpot = null; barsNow = emptyMap(); quotesNow = emptyMap(); kickedPasses = 0
+            entrySpotsNow = emptyMap()
+            written.forget()
+        }
         // 26 Oct (review): a quick pass left from the last test never runs into the next one.
         synchronized(kicks) { kicker?.cancel(); kicker = null; while (kicks.tryReceive().isSuccess) Unit }
+    }
+
+    /**
+     * 26 Oct, "Erase everything" ([PersonalStores]): [wipe], and its files deleted (the book, the removed arm's old book, the
+     * set-aside copies) under [written]'s lock, so a write under way ends first. Memory and files only: no vault read; never
+     * waits for the book's lock.
+     */
+    internal fun wipeForErase() {
+        synchronized(written) {
+            for (f in filesForErase()) runCatching { f.delete() }
+            wipe()
+        }
+    }
+
+    /** 26 Oct: anything of the book is held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        val v = _view.value
+        v.on || v.open.isNotEmpty() || v.closed.isNotEmpty() || v.alerts.isNotEmpty() || v.log.isNotEmpty() || v.last != null ||
+            v.settings != NtfyRules.Settings() || cache?.let { b -> b.positions.isNotEmpty() || b.alerts.isNotEmpty() || b.read.ids.isNotEmpty() ||
+                b.signals.isNotEmpty() || b.log.isNotEmpty() } == true
+    }.getOrDefault(true)
+
+    /** 26 Oct: its book, the removed arm's old book, and any copy of either set aside as unreadable. */
+    internal fun filesForErase(): List<File> = listOfNotNull(file, oldFile).flatMap { f ->
+        listOf(f) + f.parentFile?.listFiles { x -> x.name.startsWith(f.name + ".unreadable.") }.orEmpty()
     }
 }

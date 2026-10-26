@@ -249,6 +249,16 @@ internal object IraStudy {
         }
     }
 
+    /**
+     * "Erase everything" (26 Oct): Jarvis's study (its findings, the news it kept, the arms' monthly re-test) dropped from
+     * memory; its settings key goes with [com.optionslab.app.security.SecurePrefs.wipe]. Never reads the settings itself (the
+     * object's first touch reads them, inside a runCatching: during the erase that read fails and gives the empty study).
+     */
+    fun wipe() { _state.value = Kept() }
+
+    /** Memory only, for the erase's tests. */
+    internal fun holdsForErase(): Boolean = _state.value != Kept()
+
     /** A headline read overnight that matters, with what it means (kept 18 hours). */
     fun overnight(at: Instant, text: String) {
         val cut = Instant.now().minusSeconds(OVERNIGHT_HOURS * 3600)

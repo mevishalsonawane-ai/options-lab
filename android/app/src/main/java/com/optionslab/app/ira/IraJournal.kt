@@ -262,6 +262,24 @@ internal object IraJournal {
     /** Headlines already told against a position, the newest 1,000 only (the app can run for days). */
     private val newsTold = LinkedHashSet<String>()
 
+    /**
+     * 26 Oct (Erase everything, [com.optionslab.app.data.PersonalStores]): the positions seen open (and since when), the ones
+     * already asked about and the headlines told against them, forgotten. The notes and the day's target are settings keys,
+     * wiped with the rest. Memory only; never reads the vault.
+     */
+    internal fun wipe() {
+        synchronized(firstSeen) { firstSeen.clear() }
+        synchronized(staleAsked) { staleAsked.clear() }
+        synchronized(newsTold) { newsTold.clear() }
+    }
+
+    /** Whether positions seen or headlines told are held in memory. Memory only. */
+    internal fun holdsForErase(): Boolean =
+        synchronized(firstSeen) { firstSeen.isNotEmpty() } || synchronized(staleAsked) { staleAsked.isNotEmpty() } || synchronized(newsTold) { newsTold.isNotEmpty() }
+
+    /** TEST ONLY: [key] ("P:" or "L:" and the symbol) as a position seen open now (the erase's test). */
+    internal fun seenForTest(key: String) { synchronized(firstSeen) { firstSeen[key] = LocalDateTime.now(IST) } }
+
     /** A headline on an index the owner holds: good or bad for the side held, told at once (once per headline). */
     suspend fun positionNews(h: com.optionslab.ira.Headline) {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.POSNEWS)) return

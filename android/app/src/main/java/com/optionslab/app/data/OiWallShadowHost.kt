@@ -442,4 +442,18 @@ object OiWallShadowHost {
 
     /** Erase the log (Boss's erase-everything, called on the main thread): done on a thread of its own, never waiting here. */
     fun wipe() { Thread { runCatching { wipeNow() } }.apply { name = "oiwall-wipe" }.start() }
+
+    /** 26 Oct: the erase's files: the log and any copy of it set aside as unreadable (empty before [init]). */
+    internal fun filesForErase(): List<File> = file?.let { f ->
+        listOf(f) + f.parentFile?.listFiles { x -> x.name.startsWith(f.name + ".unreadable.") }.orEmpty()
+    } ?: emptyList()
+
+    /** 26 Oct: the log or a day in memory (the erase's test). Memory only, never waits for a round (a size read, no lock). */
+    internal fun holdsForErase(): Boolean = runCatching { cache?.isNotEmpty() == true || live.isNotEmpty() }.getOrDefault(false)
+
+    /** TEST ONLY: one finished index-day put in the log (memory and file), as a round would. Debug builds only. */
+    internal fun putForTest(index: String, day: LocalDate, note: String) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        put(JSONObject().put("day", day.toString()).put("index", index).put("final", true).put("note", note))
+    }
 }

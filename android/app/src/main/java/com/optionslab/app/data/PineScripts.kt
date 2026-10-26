@@ -226,7 +226,29 @@ object PineScripts {
     /** A script saved before [Auto.byJarvis] existed that the Strategy Lab wrote: its own first comment, or its name. */
     internal fun jarvisWrote(name: String, code: String): Boolean = code.contains("// Written by Jarvis from the ") || name.startsWith("Jarvis: ")
 
-    @Synchronized fun wipe() { if (::file.isInitialized) file.delete(); _items.value = emptyList(); loaded = true; _chartRev.value++ }
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): also the copies set aside as unreadable, the notes and lists the load left
+     * for the auto-trader, and the compiled scripts (their code) kept in memory. Never reads the vault.
+     */
+    @Synchronized fun wipe() {
+        filesForErase().forEach { runCatching { it.delete() } }
+        _items.value = emptyList(); loaded = true; needsRewrite = false; _chartRev.value++
+        synchronized(ruleNotes) { ruleNotes.clear() }
+        synchronized(renamed) { renamed.clear() }
+        synchronized(refused) { refused.clear() }
+        compiled.clear()
+    }
+
+    /** 26 Oct: whether any script (or its compiled code, or a note of the load) is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = _items.value.isNotEmpty() || synchronized(ruleNotes) { ruleNotes.isNotEmpty() } ||
+        synchronized(renamed) { renamed.isNotEmpty() } || synchronized(refused) { refused.isNotEmpty() }
+
+    /** 26 Oct: the scripts' vault file and any copy set aside as unreadable; empty before [init]. */
+    internal fun filesForErase(): List<File> {
+        if (!::file.isInitialized) return emptyList()
+        val aside = file.parentFile?.listFiles { f -> f.name.startsWith(file.name + ".unreadable.") }.orEmpty().toList()
+        return listOf(file) + aside
+    }
 
     fun get(id: Long): Item? = _items.value.firstOrNull { it.id == id }
 

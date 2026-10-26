@@ -45,6 +45,8 @@ object LearningFreeze {
     private val refreshing = AtomicBoolean(false)
     @Volatile private var refreshedAt = 0L
     @Volatile private var loaded = false
+    /** Bumped by [wipe] (26 Oct, Erase everything): a refresh worked out from the figures before it is never kept or saved. */
+    @Volatile private var wipes = 0
 
     private val _state = MutableStateFlow(FreezeRule.State())
     val state: StateFlow<FreezeRule.State> = _state
@@ -74,13 +76,17 @@ object LearningFreeze {
         }
     }
 
-    private fun save() {
+    private fun save(gen: Int = wipes) {
         val f = file() ?: return
-        runCatching {
-            f.parentFile?.mkdirs()
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(FreezeRule.encode(_state.value))
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+        // Under the state's lock (26 Oct): an erase meanwhile ([wipe]) is either before this write (then nothing is written) or after it.
+        synchronized(lock) {
+            if (gen != wipes) return
+            runCatching {
+                f.parentFile?.mkdirs()
+                val tmp = File(f.parentFile, f.name + ".tmp")
+                tmp.writeText(FreezeRule.encode(_state.value))
+                if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+            }
         }
     }
 
@@ -138,16 +144,21 @@ object LearningFreeze {
     fun refresh(today: LocalDate = runCatching { Market.today() }.getOrElse { LocalDate.now() }) {
         if (!enabled()) return
         ensureLoaded()
+        val gen = wipes
         refreshedAt = System.currentTimeMillis()
         val days = changeDays()
         val over = thresholdSetting().takeIf { it > 0 }
         val since = _state.value.unfrozenOn
         val vs = listOf(FreezeRule.check(FreezeRule.Account.PAPER, daily(false), days, today, over, since),
             FreezeRule.check(FreezeRule.Account.LIVE, daily(true), days, today, over, since))
-        _verdicts.value = vs
         val was = _state.value.frozen
-        val next = synchronized(lock) { FreezeRule.next(_state.value, vs, today).also { _state.value = it } }
-        save()
+        // 26 Oct: worked out from the figures an erase has since wiped: dropped, never kept or saved.
+        val next = synchronized(lock) {
+            if (gen != wipes) return
+            _verdicts.value = vs
+            FreezeRule.next(_state.value, vs, today).also { _state.value = it }
+        }
+        save(gen)
         if (!was && next.frozen) told(next)
     }
 
@@ -199,6 +210,29 @@ object LearningFreeze {
         if (_verdicts.value.isEmpty()) runCatching { refresh() }
         return FreezeRule.say(_state.value, _verdicts.value)
     }
+
+    /**
+     * 26 Oct (Erase everything, [com.optionslab.app.data.PersonalStores]): not frozen, no verdicts, the file deleted, and a
+     * refresh already under way never brings the old state back ([wipes]). Never reads the vault or the settings. Boss's line
+     * is a settings key, wiped with the rest.
+     */
+    internal fun wipe() {
+        synchronized(lock) {
+            wipes++
+            _state.value = FreezeRule.State()
+            _verdicts.value = emptyList()
+            loaded = true
+            // No refresh straight away (it would read the vault the erase holds); the next one is at its usual time.
+            refreshedAt = System.currentTimeMillis()
+            filesForErase().forEach { it.delete() }
+        }
+    }
+
+    /** Whether a freeze state or verdicts (worked out from the P&L) are held in memory. Memory only. */
+    internal fun holdsForErase(): Boolean = _state.value != FreezeRule.State() || _verdicts.value.isNotEmpty()
+
+    /** Its file and the file's temporary (none before [init]). */
+    internal fun filesForErase(): List<File> = file()?.let { listOf(it, File(it.parentFile, it.name + ".tmp")) }.orEmpty()
 
     /** TEST ONLY: not frozen, nothing kept. */
     internal fun resetForTest() {

@@ -142,6 +142,8 @@ internal object Autopilot {
 
     private fun save() {
         val d = dir() ?: return
+        // 26 Oct: after "Erase everything" an empty log writes no files (a save may still be queued).
+        if (_book.value == AutoChange.Book() && _knobs.value.isEmpty() && !File(d, LOG).exists() && !File(d, KNOBS).exists()) return
         runCatching {
             d.mkdirs()
             write(File(d, LOG), AutoChange.encode(_book.value))
@@ -156,6 +158,9 @@ internal object Autopilot {
     }
 
     private fun saveSoon() { scope.launch { synchronized(lock) { save() } } }
+
+    /** Written now, on the caller's thread (tests: the erase's seed). */
+    internal fun saveNow() { synchronized(lock) { save() } }
 
     // ---- the setting ---------------------------------------------------------------------------------------------------------
 
@@ -1504,6 +1509,27 @@ internal object Autopilot {
             "; trials ${_book.value.trials}, experiments running ${Experiments.running(_book.value).size}" +
             (if (_knobs.value.isNotEmpty()) "; knobs " + _knobs.value.toSortedMap().entries.joinToString(", ") { "${it.key}=${AutoChange.fmt(it.value)}" } else "") + brain
     }
+
+    /**
+     * "Erase everything" (26 Oct): the change timeline, the learned knobs and the day's notice dropped from memory, Boss's
+     * setting back to its fresh-phone value (SAFE: its key goes with [SecurePrefs.wipe]), and the folder deleted. Under the
+     * log's lock (a save in progress ends first; one queued after writes nothing). Never reads the settings; safe before [init].
+     */
+    fun wipe() {
+        synchronized(lock) {
+            _book.value = AutoChange.Book(); _knobs.value = emptyMap()
+            _mode.value = AutoChange.Mode.SAFE; modeLoaded = true
+            if (appContext != null) loaded = true
+            notified = null
+            dir()?.let { runCatching { it.deleteRecursively() } }
+        }
+    }
+
+    /** Memory only, for the erase's tests. */
+    internal fun holdsForErase(): Boolean = _book.value != AutoChange.Book() || _knobs.value.isNotEmpty() || _mode.value != AutoChange.Mode.SAFE || notified != null
+
+    /** The timeline's folder (none before [init]). */
+    internal fun filesForErase(): List<File> = listOfNotNull(dir())
 
     /** TEST ONLY: nothing kept, SAFE, nothing learned (in memory). */
     internal fun resetForTest() {

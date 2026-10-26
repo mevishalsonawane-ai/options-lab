@@ -213,7 +213,16 @@ object TradeBook {
         dayCharges.forget()
         dayOrderIds.forget()
         ZerodhaCharges.forget()
+        // 26 Oct (Erase everything): the round trips kept from the last read hold the trades too (both accounts').
+        liveTrips.forget()
+        paperTrips.forget()
     }
+
+    /** 26 Oct: Zerodha trades read into memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = !liveCache.isNullOrEmpty()
+
+    /** 26 Oct: the file this writes (none before [init]). */
+    internal fun filesForErase(): List<File> = if (::liveFile.isInitialized) listOf(liveFile) else emptyList()
 }
 
 /**
@@ -294,5 +303,12 @@ object Journal {
         return m.map { (tag, ts) -> TagStat(tag, ts.size, ts.sumOf { it.net }, ts.count { it.net > 0 }) }.sortedByDescending { it.net }
     }
 
-    fun wipe() { cache = null; if (::file.isInitialized) file.delete() }
+    // 26 Oct (Erase everything): under the journal's lock, so a [put] already writing cannot keep its old notes in memory after it.
+    @Synchronized fun wipe() { cache = null; if (::file.isInitialized) file.delete() }
+
+    /** 26 Oct: notes read into memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = !cache.isNullOrEmpty()
+
+    /** 26 Oct: the file this writes (none before [init]). */
+    internal fun filesForErase(): List<File> = if (::file.isInitialized) listOf(file) else emptyList()
 }

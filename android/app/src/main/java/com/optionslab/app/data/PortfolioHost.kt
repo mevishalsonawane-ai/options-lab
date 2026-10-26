@@ -150,6 +150,22 @@ object PortfolioHost {
         }
     }
 
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the arms' correlations and stop losses (worked out from Boss's trades), the
+     * capital and cap, today's openings and blocks dropped from memory; the switches' settings go with the settings. The guard is
+     * worked out again by the next [refresh]. Memory only: no vault read.
+     */
+    internal fun wipe() {
+        guard.clear(); guard.update(PortfolioRisk.Matrix(emptyList(), emptyMap(), emptyMap()), emptyMap(), PortfolioGuard.Config())
+        refreshedAt = 0L; _view.value = View()
+    }
+
+    /** 26 Oct: anything worked out from the trades or the settings is held (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        guard.matrix.arms.isNotEmpty() || guard.stops.isNotEmpty() || guard.config != PortfolioGuard.Config() || refreshedAt != 0L ||
+            _view.value != View() || guard.blocksToday(Market.today()).isNotEmpty()
+    }.getOrDefault(true)
+
     /** TEST ONLY. */
     internal fun resetForTest() { guard.clear(); guard.update(PortfolioRisk.Matrix(emptyList(), emptyMap(), emptyMap()), emptyMap(), PortfolioGuard.Config()); refreshedAt = 0L; _view.value = View(); testOwners = null }
 }

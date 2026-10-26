@@ -1337,6 +1337,10 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     // Set (before the keys are saved) once this form's key belongs to the saved keys: its draft is then cleared, and the
     // form leaving the page must not write it back. Not snapshot state: it is read in onDispose, possibly mid-save.
     val keysSaved = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
+    // 26 Oct (the erase audit): "Erase everything" under way or done since this form opened - the key typed here is never
+    // written back as a draft after it (the form leaves the page when the erase locks the app).
+    val wipesAtOpen = remember { com.optionslab.app.ui.wipes.value }
+    fun erased() = com.optionslab.app.security.Vault.isErasing || com.optionslab.app.ui.wipes.value != wipesAtOpen
     // The form's state is set on the main thread only. Each vault read or write hops to IO and comes back to the main
     // thread before the state is set: a coroutine of this screen resuming on the worker that finished its IO (as the
     // Compose test rule's dispatcher does) would write the state there and send the snapshot's apply notifications from
@@ -1358,12 +1362,12 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
             val v = key
             // Not once the keys are being saved: their save clears the draft, and this must not land after it.
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { if (!keysSaved.get()) draft(DRAFT_KEY, v) }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { if (!keysSaved.get() && !erased()) draft(DRAFT_KEY, v) }
             keyWritten = v
         }
     }
     DisposableEffect(Unit) {
-        onDispose { val v = key; if (!keysSaved.get() && keyWritten != null && v != keyWritten) Thread { draft(DRAFT_KEY, v) }.start() }
+        onDispose { val v = key; if (!keysSaved.get() && !erased() && keyWritten != null && v != keyWritten) Thread { if (!erased()) draft(DRAFT_KEY, v) }.start() }
     }
     fun pasteInto(set: (String) -> Unit) = clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let(set)
     Column(Modifier.padding(top = 10.dp)) {

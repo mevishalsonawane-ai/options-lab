@@ -265,10 +265,24 @@ object Broker {
         SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_BIO_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
             K_LOGIN_AT to null, K_USER to null, K_UID to null))
         dropCreds(); dropKept()
-        File(app.filesDir, "kite_instruments.json").delete()
-        File(app.filesDir, "kite_futures.json").delete()
+        // 26 Oct (erase everything): today's sent count and the paper-only notice's day go too (memory; the count is read again).
+        sentKept = null; paperOnlyNoticeDay = null
+        if (::app.isInitialized) filesForErase().forEach { it.delete() }
         PnlTracker.clear()
     }
+
+    /** The erase's files: the instrument lists [forget] deletes (empty before [init]). */
+    internal fun filesForErase(): List<File> = if (!::app.isInitialized) emptyList() else
+        listOf("kite_instruments.json", "kite_instruments.json.tmp", "kite_futures.json", "kite_futures.json.tmp").map { File(app.filesDir, it) }
+
+    /**
+     * 26 Oct: whether the session or a kept read of the account is still in memory (the erase's test). Memory only: a session
+     * read again from an empty vault (every field null) holds nothing.
+     */
+    internal fun holdsForErase(): Boolean = runCatching {
+        credsKept?.let { it.key != null || it.token != null || it.user != null } == true ||
+            keptOrders != null || keptBook != null || fundsKept != null || sentKept != null
+    }.getOrDefault(false)
 
     fun expiresAt(): ZonedDateTime? = creds().loginAt.takeIf { it > 0 }
         ?.let { Kite.expiresAt(Instant.ofEpochMilli(it).atZone(IST)) }

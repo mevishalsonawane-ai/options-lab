@@ -118,6 +118,21 @@ object DayOco {
         else "Off: in the day the stop and target rest as two orders again (from the next look in market hours)."
     }
 
+    /**
+     * 26 Oct: "Erase everything" ([PersonalStores]): the switch off and the week's counts forgotten. Both are settings keys, gone
+     * with [SecurePrefs.wipe] (never read here), so they count as read: off, no counts. A save on its way writes these empty
+     * counts, never the old ones (it copies them under [tallyLock]).
+     */
+    fun wipe() {
+        // [switched]: a start's read still on its way (from before the erase) never turns the switch back on.
+        on = false; loaded = true; switched = true
+        synchronized(tallyLock) { tally = emptyList(); tallyLoaded = true }
+        publish()
+    }
+
+    /** 26 Oct: whether the switch or any count is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = on || tally.isNotEmpty()
+
     /** TEST ONLY: the switch as given, nothing saved. */
     internal fun resetForTest(on: Boolean = false, loaded: Boolean = true) {
         this.on = on; this.loaded = loaded; switched = false

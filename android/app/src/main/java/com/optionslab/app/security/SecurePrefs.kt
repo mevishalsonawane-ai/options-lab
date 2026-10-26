@@ -518,4 +518,13 @@ object SecurePrefs {
             }
         }
     } }
+
+    /**
+     * 26 Oct (Erase everything, [com.optionslab.app.data.PersonalStores]): whether any setting is still held in memory (the
+     * decrypted cache, or values of an older file waiting to move). Memory only: never reads the file.
+     */
+    internal fun holdsForErase(): Boolean = synchronized(this) { (cache?.length() ?: 0) > 0 || legacy.isNotEmpty() }
+
+    /** The settings file and the large values' folder ([SecureBlobs]); none before [init]. */
+    internal fun filesForErase(): List<File> = if (::file.isInitialized) listOf(file, File(file.parentFile, "prefs.blobs")) else emptyList()
 }

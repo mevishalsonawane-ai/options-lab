@@ -89,6 +89,12 @@ object Ask {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Question>?) = size > READ_KEPT
     }
 
+    /** 26 Oct ("Erase everything", [WordCaches]): the questions read forgotten. */
+    internal fun forgetReadings() { synchronized(read) { read.clear() } }
+
+    /** 26 Oct: how many questions' readings are kept (the erase's check). */
+    internal fun readingsKept(): Int = synchronized(read) { read.size }
+
     private fun parseFresh(said: String): Question {
         val q = parseAs(said)
         if (q.topics == setOf(Topic.OFF_TOPIC)) Spelling.fix(said).takeIf { it != said }?.let { return parseAs(it) }

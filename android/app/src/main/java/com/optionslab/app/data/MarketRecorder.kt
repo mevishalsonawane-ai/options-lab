@@ -696,6 +696,12 @@ object MarketRecorder {
         _status.value = null
         RecordedData.clear()
     }
+
+    /** 26 Oct (Erase everything, [PersonalStores]): whether the day's state, gap times or the card's status are held in memory. Memory only. */
+    internal fun holdsForErase(): Boolean = today != null || giftTriedAt != null || gapAt.isNotEmpty() || _status.value != null
+
+    /** The recorded days' folder (noBackupFilesDir/recorder; none before [init]). Deleted on the erase's slow file thread. */
+    internal fun filesForErase(): List<File> = listOfNotNull(dirOrNull)
 }
 
 /** The market recorder's off-hours run ([MarketRecorder.fired]): GIFT Nifty and NSE's participant files, then the next alarm. */

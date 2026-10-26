@@ -60,6 +60,13 @@ object Protections {
     private lateinit var app: Context
     private val lock = Mutex()
     private var cache: MutableList<Item>? = null
+    /**
+     * 26 Oct (Erase everything): bumped by [wipe], which cannot take [lock] (a coroutine lock). [loadGen] is the count when the
+     * list in hand was read; a look that read it before an erase neither saves it nor publishes its hints afterwards, so the
+     * old stops and targets never come back in memory or on disk.
+     */
+    @Volatile private var wipeGen = 0
+    @Volatile private var loadGen = 0
 
     /** The note of a protection being removed whose orders are not yet confirmed gone. */
     private const val REMOVING = "removing"
@@ -80,6 +87,7 @@ object Protections {
 
     private fun load(): MutableList<Item> {
         cache?.let { return it }
+        val gen = wipeGen
         val out = ArrayList<Item>()
         val read = runCatching {
             val a = JSONArray(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
@@ -92,13 +100,15 @@ object Protections {
                     s("stopId"), s("targetId"), o.optBoolean("active", true), o.optString("note"), o.optLong("gtt", 0L).takeIf { it > 0L })
             }
         }
-        if (read.isFailure && file.exists()) {
+        // 26 Oct: a read refused because everything is being erased is not a damaged file: never set aside (the copy would
+        // outlive the erase). The list in hand is then empty and never saved ([wipeGen]).
+        if (read.isFailure && file.exists() && read.exceptionOrNull() !is Vault.Erasing) {
             // Never overwrite it: kept aside, and the owner told that exits may still rest at the broker.
             Vault.setAside(file)
             Alerts.error("The saved stops and targets could not be read and were set aside. Their orders may still be resting: check the order book.", "Protection")
         }
-        cache = out
-        hint(out)
+        loadGen = gen
+        if (gen == wipeGen) { cache = out; hint(out) }
         return out
     }
 
@@ -114,6 +124,8 @@ object Protections {
         private set
 
     private fun hint(list: List<Item>) {
+        // 26 Oct: never the hints of a list read before an erase.
+        if (loadGen != wipeGen) return
         activeHint = list.any { it.active }
         liveKeysHint = list.filter { it.active && it.live }.map { "${it.exchange}:${it.symbol}" }.distinct()
         overnightHint = list.any { it.active && it.live && it.product != "MIS" && it.exchange != "MCX" && it.gttId == null && it.note != REMOVING &&
@@ -184,6 +196,8 @@ object Protections {
                 .put("target", p.target ?: JSONObject.NULL).put("best", p.best).put("stopId", p.stopOrderId ?: "").put("targetId", p.targetOrderId ?: "")
                 .put("active", p.active).put("note", p.note).put("gtt", p.gttId ?: 0L))
         }
+        // 26 Oct: a list read before an erase is never written back over it.
+        if (loadGen != wipeGen) return
         Vault.writeFile(file, a.toString().toByteArray(Charsets.UTF_8))
         cache = list.toMutableList()
         hint(list)
@@ -1167,7 +1181,26 @@ object Protections {
     /** Reset paper: every paper stop / target / trail is dropped; Zerodha's are untouched. */
     suspend fun resetPaper(): Unit = lock.withLock { save(load().filter { it.live }) }
 
-    fun wipe() { cache = null; activeHint = null; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap(); gttTries.clear(); if (::file.isInitialized) file.delete() }
+    fun wipe() {
+        // 26 Oct (Erase everything): first the count (a look in flight then drops its list), then every copy in memory and the
+        // files, a set-aside copy included. Never takes [lock] and never reads the vault.
+        wipeGen++
+        cache = null; activeHint = null; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap()
+        freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L
+        runCatching { gttTries.clear() }
+        filesForErase().forEach { runCatching { it.delete() } }
+    }
+
+    /** 26 Oct: stops and targets in memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = !cache.isNullOrEmpty() || activeHint == true || liveKeysHint.isNotEmpty() || dayGttHint.isNotEmpty() ||
+        freshDayGtts.isNotEmpty()
+
+    /** 26 Oct: the file this writes and any copy of it set aside as unreadable (none before [init]). */
+    internal fun filesForErase(): List<File> {
+        if (!::file.isInitialized) return emptyList()
+        val aside = file.parentFile?.listFiles { f -> f.name.startsWith("${file.name}.unreadable.") }.orEmpty().toList()
+        return listOf(file) + aside
+    }
 
     /** TEST ONLY: memory forgotten (the file kept), as after a restart: the next look reads the file. */
     internal fun forgetMemoryForTest() { cache = null; gttTries.clear() }

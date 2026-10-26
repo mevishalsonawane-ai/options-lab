@@ -44,6 +44,11 @@ object PayoutWatch {
     /** The day it was said (once a day in the diary). */
     @Volatile private var saidDay: java.time.LocalDate? = null
     private val lock = Any()
+    /**
+     * 26 Oct: bumped by [wipe] (under [lock]; read without it, so the send path takes no lock): a read or a save begun before the
+     * erase never brings the old payouts back.
+     */
+    @Volatile private var wipeGen = 0
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** [offer]: the payouts Bot settings offers to lower the peak by (on, and they alone explain the limit reached); null: none. */
@@ -57,12 +62,15 @@ object PayoutWatch {
 
     /** The switch and the kept payouts from the settings (a worker thread). Payouts seen before this read are kept. */
     internal fun load() {
+        val gen = wipeGen
         val ok = runCatching {
             val saved = SecurePrefs.getBoolean(K_ON, false)
             val list = PayoutDrawdown.decode(SecurePrefs.getString(K_LIST))
             val bals = PayoutDrawdown.decodeBalances(SecurePrefs.getString(K_BAL))
-            if (!switched) on = saved
             synchronized(lock) {
+                // 26 Oct: an erase since this read began: what was read is the old book, dropped.
+                if (gen != wipeGen) return@runCatching
+                if (!switched) on = saved
                 var merged = list
                 for (p in payouts) merged = PayoutDrawdown.record(merged, p.day, p.amount, p.peak)
                 payouts = merged
@@ -101,10 +109,13 @@ object PayoutWatch {
         // 21 Oct, enhancement round 5 (idea 5): the day's balances, to confirm tomorrow that a payout really left ([PayoutDrawdown.left]).
         // Review: only reads on a trading day after Zerodha's morning run (08:30 IST): a read past midnight or on a holiday can
         // still show the day before's opening balance, which would never confirm a payout.
+        val gen = wipeGen
         if (((opening.isFinite() && opening > 0.0) || expectedNext.isFinite()) && balanceReadCounts()) scope.launch {
             runCatching {
                 if (!loaded) load()
                 synchronized(lock) {
+                    if (gen != wipeGen) return@runCatching      // 26 Oct: read before an erase
+
                     balances = PayoutDrawdown.recordBalance(balances, day, opening, expectedNext)
                     // Review: written under the lock, so two reads close together never save in reverse order.
                     if (loaded) SecurePrefs.putAllSoon(mapOf(K_BAL to PayoutDrawdown.encodeBalances(balances)))
@@ -118,11 +129,12 @@ object PayoutWatch {
             runCatching {
                 if (!loaded) load()
                 val peak = SecurePrefs.getDouble(K_PEAK, Double.NaN)
-                val text = synchronized(lock) {
+                synchronized(lock) {
+                    if (gen != wipeGen) return@runCatching      // 26 Oct: read before an erase
                     payouts = PayoutDrawdown.record(payouts, day, amount, peak)
-                    PayoutDrawdown.encode(payouts)
+                    // 26 Oct: queued under the lock (a queue, never a wait), so an erase cannot fall between the check and the save.
+                    if (loaded) SecurePrefs.putAllSoon(mapOf(K_LIST to PayoutDrawdown.encode(payouts)))
                 }
-                if (loaded) SecurePrefs.putAllSoon(mapOf(K_LIST to text))
                 publish()
             }
         }
@@ -198,6 +210,20 @@ object PayoutWatch {
             _view.value = View(on, line(), if (on && j != null && j.explained) j.paidOut else null)
         }
     }
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the payouts, balances and last judgement dropped from memory, the switch back
+     * to shadow; the saves already queued go with the settings' own wipe, and one begun before this never writes the old book
+     * ([wipeGen]). Read again from the (empty) settings when next needed. Nothing is read here.
+     */
+    fun wipe() {
+        synchronized(lock) { wipeGen++; payouts = emptyList(); balances = emptyList(); on = false; switched = false; loaded = false }
+        lastSnap = Last(null, Double.NaN, Double.NaN); saidDay = null; lastWaiting = null
+        _view.value = View()
+    }
+
+    /** 26 Oct: payouts or balances in memory (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = payouts.isNotEmpty() || balances.isNotEmpty() || lastSnap.j != null || lastWaiting != null
 
     /** TEST ONLY: shadow, nothing kept. */
     internal fun resetForTest(on: Boolean = false) {

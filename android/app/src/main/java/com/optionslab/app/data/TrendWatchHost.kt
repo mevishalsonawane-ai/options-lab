@@ -267,6 +267,8 @@ object TrendWatchHost {
 
     /** One round at [now] (tests call it directly). */
     internal suspend fun round(now: LocalDateTime) {
+        // 26 Oct: an erase during the round's reads (it read the old positions): nothing of it is kept.
+        val gen = wipes
         val sw = switches()
         // A request for a leg the Hero arm no longer holds (sold, its 15:05, closed by Boss) is forgotten.
         sells.keys.removeAll { heroGone(it) }
@@ -289,6 +291,7 @@ object TrendWatchHost {
             if (sw.live) runCatching { livePendingNotes(now) { h -> bars(h) } }.getOrDefault(emptyList()) else emptyList()
         val new = ArrayList<Rec>()
         synchronized(lock) {
+            if (gen != wipes) return
             val l = log()
             val d = now.toLocalDate()
             for ((h, v, act0) in found) {
@@ -554,6 +557,33 @@ object TrendWatchHost {
         synchronized(lock) { cache = null; written.forget() }
         liveFillCache.clear(); stockKeys.clear()
     }
+
+    /** 26 Oct: bumped by [wipe] (under [lock]); a round that read across an erase keeps nothing ([round]). */
+    @Volatile private var wipes = 0
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the log (which positions turned, their premiums), Boss's switches, the Hero
+     * legs' sell requests, the Zerodha orders and fills read, and the looked-up keys dropped from memory, and its file deleted.
+     * Under [lock], as every save, so none lands after it. Memory and files only: no vault read.
+     */
+    internal fun wipe() {
+        synchronized(lock) {
+            wipes++
+            cache = null; written.forget(); sells.clear(); _view.value = View()
+            liveOrders = null; liveFillCache.clear(); liveFillDay = null; stockKeys.clear(); stockTried.clear()
+            for (f in filesForErase()) runCatching { f.delete() }
+        }
+    }
+
+    /** 26 Oct: anything from the log, the switches or the positions is held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        synchronized(lock) { cache != null } || sells.isNotEmpty() || _view.value != View() || liveFillCache.isNotEmpty() || liveOrders != null
+    }.getOrDefault(true)
+
+    /** 26 Oct: its file, and any copy of it set aside as unreadable. */
+    internal fun filesForErase(): List<File> = file?.let { f ->
+        listOf(f) + f.parentFile?.listFiles { x -> x.name.startsWith(f.name + ".unreadable.") }.orEmpty()
+    }.orEmpty()
 
     /** TEST ONLY: a sell request as a SELL round leaves it. */
     internal fun requestForTest(symbol: String) { sells[symbol] = LocalDateTime.now(IST) }

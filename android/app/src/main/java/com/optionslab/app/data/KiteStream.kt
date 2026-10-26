@@ -708,6 +708,19 @@ object KiteStream {
         }
     }
 
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): Boss's order updates the stream pushed, and Zerodha's last error, forgotten
+     * (memory only; nothing here is saved: the diary lines go through [Diag]). The socket itself is stopped by [Broker.forget].
+     * The prices are public and stay. Never reads the vault.
+     */
+    fun wipe() {
+        synchronized(updates) { updates.clear() }
+        lastError = null
+    }
+
+    /** 26 Oct: whether an order update or Zerodha's error is held in memory. */
+    internal fun holdsForErase(): Boolean = synchronized(updates) { updates.isNotEmpty() } || lastError != null
+
     /** Zerodha's latest pushed state of order [orderId], or null when the stream has said nothing of it. */
     fun orderUpdate(orderId: String): com.optionslab.ira.OrderUpdate.Update? = synchronized(updates) { updates[orderId] }
 

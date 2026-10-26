@@ -86,14 +86,41 @@ object ProblemsHost {
         val f = file() ?: return
         if (!loaded) runCatching { ensureLoaded() }
         if (!loaded) return
-        runCatching {
-            val text = synchronized(lock) { OpenProblems.encode(_board.value) }
-            f.parentFile?.mkdirs()
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(text)
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+        // 26 Oct: one write at a time with the erase's [wipe] ([writeLock]): a write that read the board before the erase ends
+        // before the wipe deletes the file, and an empty board after it writes no file at all.
+        synchronized(writeLock) {
+            runCatching {
+                val b = synchronized(lock) { _board.value }
+                if (b.items.isEmpty() && !f.exists()) return
+                val text = OpenProblems.encode(b)
+                f.parentFile?.mkdirs()
+                val tmp = File(f.parentFile, f.name + ".tmp")
+                tmp.writeText(text)
+                if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+            }
         }
     }
+
+    /** Held by [saveNow]'s file write and by [wipe] (never by [report] or [clear]: they stay memory steps). */
+    private val writeLock = Any()
+
+    /**
+     * "Erase everything" (26 Oct): the board and the "told today" marks dropped, the board's folder deleted. Never reads the
+     * settings; safe before [init]. A save still waiting writes nothing (the board is empty and its file gone).
+     */
+    fun wipe() {
+        synchronized(writeLock) {
+            synchronized(lock) { _board.value = OpenProblems.Board(); loaded = true }
+            told.clear(); sweptAt = 0L
+            file()?.parentFile?.let { runCatching { it.deleteRecursively() } }
+        }
+    }
+
+    /** Memory only, for the erase's tests. */
+    internal fun holdsForErase(): Boolean = _board.value.items.isNotEmpty() || told.isNotEmpty()
+
+    /** The board's folder (none before [init]). */
+    internal fun filesForErase(): List<File> = listOfNotNull(file()?.parentFile)
 
     private fun now(): Long = System.currentTimeMillis()
 

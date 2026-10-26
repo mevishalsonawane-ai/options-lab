@@ -45,6 +45,8 @@ internal object JarvisLearning {
 
     @Volatile private var loaded = false
     @Volatile private var passedOn: LocalDate? = null
+    /** 26 Oct (Erase everything): bumped by [wipe]; a pass or a result that began before an erase never keeps or saves its lessons. */
+    @Volatile private var wipeGen = 0
 
     /** The lessons the last answer was built from, its words and when (for "why do you think that?"). */
     @Volatile private var shown: List<String> = emptyList()
@@ -142,6 +144,7 @@ internal object JarvisLearning {
 
     /** The pass itself (and by tests): read, digest, keep, tell, propose. */
     internal suspend fun runPass(today: LocalDate): AgentLessons.Pass? {
+        val gen = wipeGen
         // Never a pass on an unread book (G6-8): its result would be saved over the lessons the file holds.
         withContext(Dispatchers.IO) { ensureLoaded() }
         if (!loaded) return null
@@ -150,12 +153,14 @@ internal object JarvisLearning {
         val inputs = if (read.lab.isNotEmpty()) read else read.copy(lab = withContext(Dispatchers.IO) { labResults(today) })
         val pass = withContext(Dispatchers.Default) {
             synchronized(lock) {
+                // 26 Oct: the day's records were read before an erase: nothing learned from them is kept.
+                if (gen != wipeGen) return@synchronized null
                 val p = AgentLessons.pass(_book.value, inputs)
                 _book.value = p.book
                 p
             }
-        }
-        withContext(Dispatchers.IO) { synchronized(lock) { save(_book.value) } }
+        } ?: return null
+        withContext(Dispatchers.IO) { synchronized(lock) { if (gen == wipeGen) save(_book.value) } }
         runCatching { com.optionslab.app.data.Diag.record("jarvis", pass.finding) }
         // One finding, only when something was learned (nothing posted on a day with nothing new).
         if (AgentLessons.learnedCount(pass.book, pass.changes) > 0) runCatching {
@@ -321,10 +326,11 @@ internal object JarvisLearning {
      * lesson that started it moved ([AgentLessons.experimentResult]). A worker thread (the file is read first if it was not).
      */
     fun experimentResult(lessonId: String?, target: String, what: String, won: Boolean, pairs: List<Pair<LocalDate, Double>>) {
+        val gen = wipeGen
         ensureLoaded()
         if (!loaded) return
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
-        synchronized(lock) { _book.value = AgentLessons.experimentResult(_book.value, lessonId, target, what, won, pairs, today) }
+        synchronized(lock) { if (gen != wipeGen) return; _book.value = AgentLessons.experimentResult(_book.value, lessonId, target, what, won, pairs, today) }
         scope.launch { synchronized(lock) { save(_book.value) } }
     }
 
@@ -422,6 +428,27 @@ internal object JarvisLearning {
         }
         return n
     }
+
+    /**
+     * 26 Oct (Erase everything): what Jarvis learned, the lessons shown with the last answer and the day's pass forgotten, and
+     * the lessons' file deleted, under the lock its saves take; a pass in flight sees [wipeGen] changed and keeps nothing. Never
+     * the vault. The file counts as read (it is gone), so the next pass starts a new book.
+     */
+    fun wipe() {
+        synchronized(lock) {
+            wipeGen++
+            _book.value = AgentLessons.Book()
+            loaded = true
+            filesForErase().forEach { runCatching { it.delete() } }
+        }
+        passedOn = null; retryAtMs = 0L; shown = emptyList(); shownText = null; shownAt = 0L
+    }
+
+    /** 26 Oct: lessons or the last answer's in memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = _book.value != AgentLessons.Book() || shown.isNotEmpty() || shownText != null
+
+    /** 26 Oct: the lessons' file and its temporary file (none before [init]). */
+    internal fun filesForErase(): List<File> = file()?.let { listOf(it, File(it.parentFile, it.name + ".tmp")) }.orEmpty()
 
     /** TEST ONLY: nothing kept, nothing shown (in memory). */
     internal fun resetForTest() {

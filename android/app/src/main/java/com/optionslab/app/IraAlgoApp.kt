@@ -88,6 +88,11 @@ class IraAlgoApp : Application() {
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)
+        // 26 Oct (erase audit): the erase's list of stores knows the app's folders, and two stores whose files it deletes are
+        // told where they are at the start (they learned it only when first used, so an erase before that missed their files).
+        com.optionslab.app.data.PersonalStores.init(this)
+        com.optionslab.app.work.LiquidityNotices.init(this)
+        com.optionslab.app.data.CandleAgentHost.init(this)
         // 22 Oct: the time machine's forward log lives in the app's encrypted store.
         com.optionslab.app.data.TimeMachineHost.init(this)
         removeOldMarketDataStore()

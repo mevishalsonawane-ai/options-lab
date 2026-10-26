@@ -157,12 +157,15 @@ object SharedKnowledgeHost {
     private fun build(day: LocalDate?, writeSnapshot: Boolean): Pair<SharedKnowledge.Snapshot, List<LessonsBundle.FindingCount>>? {
         if (!building.compareAndSet(false, true)) return null
         try {
+            val gen = wipes
             val ctx = appContext
             val shared = runCatching { com.optionslab.app.ira.KnowledgeLibrary.shared(ctx) }.getOrNull()
             runCatching { com.optionslab.app.ira.JarvisLearning.ensureLoaded() }
             val book = runCatching { com.optionslab.app.ira.JarvisLearning.book.value }.getOrNull()
             val tally = runCatching { findingsRecent(day) }.getOrDefault(FindingsTally())
             val s = SharedKnowledge.build(shared?.first, book, tally, day, shared?.second.orEmpty())
+            // 26 Oct: built from the lessons and findings an erase has since wiped ([wipe]): dropped, never kept or written.
+            if (gen != wipes) return null
             current = s
             val counts = LessonsBundle.counts(tally)
             lastCounts = counts
@@ -286,6 +289,7 @@ object SharedKnowledgeHost {
         if (nightOf == today) return false
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return false
         // The counts of this very build, for the bundle below (a memory trim meanwhile empties [lastCounts]).
+        val gen = wipes
         val (s, counts) = build(today, writeSnapshot = true) ?: return false
         nightOf = today
         val trips = runCatching {
@@ -294,7 +298,8 @@ object SharedKnowledgeHost {
         }.getOrDefault(emptyList())
         val shadow = if (shadowOn) runCatching { SharedKnowledge.shadowSkips(s, trips, today) }.getOrDefault(emptyList()) else emptyList()
         for (sk in shadow) runCatching { Diag.record("knowledge", "shadow (logs only): ${sk.why} - would have skipped ${sk.wouldSkip} of ${sk.trades} trades today; nothing was skipped") }
-        runCatching { writeBundle(today, s, shadow, counts) }
+        // 26 Oct: an erase since the build: no bundle of what it wiped.
+        if (gen == wipes) runCatching { writeBundle(today, s, shadow, counts) }
         return true
     }
 
@@ -335,6 +340,37 @@ object SharedKnowledgeHost {
     /** The diagnostics' line. */
     fun diagLine(): String = "Shared knowledge: ${current.summary()}; ${current.conflicts.size} conflict(s) kept; shadow rule ${if (shadowInMemory()) "on (logs only)" else "off"}" +
         (nightOf?.let { "; last night $it" } ?: "")
+
+    // ---- Erase everything (26 Oct) ---------------------------------------------------------------------------------------------
+
+    /** Bumped by [wipe]: a build or a night under way when the erase came never keeps or writes what it read before it. */
+    @Volatile private var wipes = 0
+
+    /**
+     * 26 Oct (Erase everything, [com.optionslab.app.data.PersonalStores]): the shared knowledge (Jarvis's lessons in it), the
+     * agents' tallies, the findings counts, tonight's forge skips and the switch as read are forgotten, and the findings
+     * snapshot and the lessons bundles deleted. Never reads the vault or the settings (the switch is a settings key, wiped
+     * with the rest).
+     */
+    internal fun wipe() {
+        wipes++
+        current = SharedKnowledge.EMPTY; lastCounts = emptyList(); tallies.clear(); nightOf = null; shadowKept = null
+        synchronized(skippedIdeas) { skippedIdeas.clear() }
+        _lines.value = emptyList()
+        filesForErase().forEach { it.delete() }
+    }
+
+    /** Whether the shared knowledge, tallies, counts or skips are held in memory. Memory only. */
+    internal fun holdsForErase(): Boolean = current !== SharedKnowledge.EMPTY || tallies.isNotEmpty() || lastCounts.isNotEmpty() ||
+        synchronized(skippedIdeas) { skippedIdeas.isNotEmpty() } || shadowKept == true || nightOf != null
+
+    /** The findings snapshot and every day's lessons bundle (recordings/<day>/lessons_bundle.json); none before [init]. */
+    internal fun filesForErase(): List<File> {
+        val ctx = appContext ?: return emptyList()
+        val bundles = File(ctx.noBackupFilesDir, "recordings").listFiles().orEmpty()
+            .flatMap { d -> listOf(File(d, LessonsBundle.FILE), File(d, LessonsBundle.FILE + ".tmp")) }.filter { it.exists() }
+        return listOf(snapshotFile(ctx)) + bundles
+    }
 
     /** TEST ONLY: [context] as the app's, without the background build ([refresh] runs when the test calls it). */
     internal fun attachForTest(context: Context) { appContext = context.applicationContext }

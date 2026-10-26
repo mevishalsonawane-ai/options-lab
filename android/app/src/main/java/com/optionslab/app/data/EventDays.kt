@@ -66,7 +66,20 @@ object EventDays {
         return "Added: learning leaves ${day.dayOfMonth} ${day.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} out of its evidence."
     }
 
-    /** TEST ONLY. */
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the calendar built from Boss's own events and the days he took out dropped;
+     * learning reads the bundled dates alone until the next [refresh] (the settings are empty by then). Nothing is read here.
+     */
+    fun wipe() {
+        builtOn = null
+        val base = EventCalendar.calendar(LocalDate.of(2026, 1, 1), LocalDate.of(2027, 12, 31), { false })
+        LearningFilter.use(base)
+        _calendar.value = base
+    }
+
+    /** 26 Oct: a calendar built from Boss's settings is in memory (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = builtOn != null
+
     /** TEST ONLY: the day the calendar was last built (null: not yet). */
     internal val builtDayForTest: LocalDate? get() = builtOn
 

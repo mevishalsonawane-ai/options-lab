@@ -1419,10 +1419,24 @@ object Paper {
 
     fun wipe() {
         // The write lock first (as [flush] takes it): a write on its way never puts the file back after the delete.
+        // 26 Oct ("Erase everything", [PersonalStores]): safe before [init] (no file yet), and the books set aside as unreadable
+        // go too. Every save reads the book again under this lock ([locked]), so none can write the old one back after this.
         synchronized(writeLock) { synchronized(this) {
-            pending = null; cache = null; savedAtMs = 0L; file.delete()
+            pending = null; cache = null; savedAtMs = 0L
+            filesForErase().forEach { runCatching { it.delete() } }
         } }
         lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear()
+        heldNoted.clear()
         follow(emptySet())
+    }
+
+    /** 26 Oct: whether the book (or a write of it) is still in memory (the erase's tests). Memory only, never the vault. */
+    internal fun holdsForErase(): Boolean = cache != null || pending != null
+
+    /** 26 Oct: the book's vault file and any book set aside as unreadable ([load]); empty before [init]. */
+    internal fun filesForErase(): List<File> {
+        if (!::file.isInitialized) return emptyList()
+        val aside = file.parentFile?.listFiles { f -> f.name.startsWith("paper.unreadable.") }.orEmpty().toList()
+        return listOf(file) + aside
     }
 }

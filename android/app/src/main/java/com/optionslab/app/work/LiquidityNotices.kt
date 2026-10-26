@@ -43,11 +43,22 @@ object LiquidityNotices {
     private val lastSkip = HashMap<String, LocalDateTime>()
 
     /**
+     * 26 Oct (Erase everything): the app's context, kept when the app starts ([init]) or a notice is first seen, so [wipe] can
+     * delete this file (the days notices were told, as hashes) without being handed one.
+     */
+    @Volatile private var appContext: Context? = null
+
+    fun init(context: Context) { appContext = context.applicationContext }
+
+    private fun keep(context: Context) { if (appContext == null) appContext = context.applicationContext }
+
+    /**
      * The notification ids of a position's entry and exit (the exit's is the entry's + 1): a slot of its own for the day,
      * kept across a restart ([IDS_KEY]: "day|digest|slot", the position as a digest only), so two positions of a day never
      * share one. A new position's slot is the first free one from its hash.
      */
     @Synchronized internal fun entryId(context: Context, day: LocalDate, position: String): Int {
+        keep(context)
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val digest = digest(position)
         // Every day's slots are kept but those older than [KEEP_DAYS] before [day]: a call for another day (the exit of
@@ -78,6 +89,7 @@ object LiquidityNotices {
      * Kept as hashes only, so the file holds no symbol or time.
      */
     @Synchronized internal fun once(context: Context, day: LocalDate, event: String): Boolean {
+        keep(context)
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         // Only today's are kept: yesterday's drop out on the first notice of a new day.
         val told = prefs.getStringSet(KEY, emptySet()).orEmpty().filterTo(HashSet()) { it.startsWith("$day|") }
@@ -87,6 +99,24 @@ object LiquidityNotices {
     }
 
     @Synchronized internal fun resetForTest() { lastSkip.clear() }
+
+    /**
+     * 26 Oct (Erase everything): the told notices and slots (on disk and in Android's copy of the file) and the skipped breaks'
+     * times forgotten. Under this object's lock, as every write here; never the vault.
+     */
+    @Synchronized fun wipe() {
+        lastSkip.clear()
+        val c = appContext ?: return
+        runCatching { c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().commit() }
+        runCatching { c.deleteSharedPreferences(PREFS) }
+    }
+
+    /** 26 Oct: a skipped break's time in memory (memory only; the told hashes live in Android's copy of the file). */
+    @Synchronized internal fun holdsForErase(): Boolean = lastSkip.isNotEmpty()
+
+    /** 26 Oct: the file this writes (Android's shared_prefs folder; none before [init] or a notice). */
+    internal fun filesForErase(): List<java.io.File> =
+        listOfNotNull(appContext?.let { java.io.File(java.io.File(it.dataDir, "shared_prefs"), "$PREFS.xml") })
 
     private fun hide(): Boolean = runCatching { AppSettings.load().hideAmountsOnLockScreen }.getOrDefault(true)
 

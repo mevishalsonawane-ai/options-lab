@@ -595,8 +595,8 @@ object TradeManagerHost {
                         bars, from, l.reg.lockAt).exit
                     if (m != null) x = x.copy(manager = m)
                 }
-                if (x !== r) {
-                    synchronized(recs) { recs[id] = x }
+                // 26 Oct: only over the record still kept (an erase meanwhile dropped it: never brought back).
+                if (x !== r && synchronized(recs) { recs.containsKey(id).also { if (it) recs[id] = x } }) {
                     publish(); dirty()
                     x.vsOriginal?.let { v -> runCatching { Diag.record("trade manager", "${t.label}: settled, ${TradeManager.rs(v)} against the original rules") } }
                 }
@@ -629,6 +629,8 @@ object TradeManagerHost {
 
     @Volatile private var loaded = false
     private val pendingSave = AtomicBoolean(false)
+    /** 26 Oct: one write of the records file at a time, and none across [wipe] (the erase deletes the file under it). */
+    private val saveLock = Any()
 
     private fun dirty() {
         if (!pendingSave.compareAndSet(false, true)) return
@@ -644,16 +646,20 @@ object TradeManagerHost {
         // Never over a file that was not read yet (or could not be moved aside): that would lose the records kept in it.
         if (!loaded) return
         val f = file() ?: return
-        val list = synchronized(recs) { recs.values.toList().takeLast(KEEP) }
-        val a = JSONArray()
-        for (r in list) a.put(enc(r))
-        runCatching {
-            f.parentFile?.mkdirs()
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            // Synced before the rename, so a power cut leaves the old file or the new one, never an empty one.
-            java.io.FileOutputStream(tmp).use { it.write(a.toString().toByteArray(Charsets.UTF_8)); it.fd.sync() }
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
-            com.optionslab.app.security.Vault.syncDir(f.parentFile)
+        synchronized(saveLock) {
+            val list = synchronized(recs) { recs.values.toList().takeLast(KEEP) }
+            // 26 Oct: nothing to keep and no file (after "Erase everything"): no file is made for it.
+            if (list.isEmpty() && !f.exists()) return
+            val a = JSONArray()
+            for (r in list) a.put(enc(r))
+            runCatching {
+                f.parentFile?.mkdirs()
+                val tmp = File(f.parentFile, f.name + ".tmp")
+                // Synced before the rename, so a power cut leaves the old file or the new one, never an empty one.
+                java.io.FileOutputStream(tmp).use { it.write(a.toString().toByteArray(Charsets.UTF_8)); it.fd.sync() }
+                if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+                com.optionslab.app.security.Vault.syncDir(f.parentFile)
+            }
         }
     }
 
@@ -661,28 +667,32 @@ object TradeManagerHost {
     internal fun load() {
         if (loaded) return
         val f = file() ?: return
-        // The records read, and how many could not be.
-        val read = runCatching {
-            val text = if (f.isFile) f.readText() else return@runCatching emptyList<TradeManager.Record>() to 0
-            val a = JSONArray(text)
-            var bad = 0
-            val out = (0 until a.length()).mapNotNull { i -> runCatching { dec(a.getJSONObject(i)) }.onFailure { bad++ }.getOrNull() }
-            out to bad
+        // 26 Oct: under [saveLock], so an erase ([wipe]) never runs in the middle of the read (it would see its records put back).
+        synchronized(saveLock) {
+            if (loaded) return
+            // The records read, and how many could not be.
+            val read = runCatching {
+                val text = if (f.isFile) f.readText() else return@runCatching emptyList<TradeManager.Record>() to 0
+                val a = JSONArray(text)
+                var bad = 0
+                val out = (0 until a.length()).mapNotNull { i -> runCatching { dec(a.getJSONObject(i)) }.onFailure { bad++ }.getOrNull() }
+                out to bad
+            }
+            val bad = read.getOrNull()?.second ?: 0
+            if ((read.isFailure || bad > 0) && f.exists()) {
+                // Unreadable (cut short, corrupt) - or a record in it that is: moved aside, never overwritten (the next save would
+                // rewrite it without that record, lost for good; review G4 L7); if it cannot be moved, nothing is saved over it.
+                if (bad > 0) runCatching { Diag.record("trade manager", "$bad record(s) could not be read: the file was set aside, the rest kept") }
+                runCatching { com.optionslab.app.security.Vault.setAside(f) }
+                if (f.exists()) return
+            }
+            loaded = true
+            val got = read.getOrNull()?.first.orEmpty()
+            val early = synchronized(recs) { val e = recs.isNotEmpty(); for (r in got) if (r.trade.tradeId !in recs) recs[r.trade.tradeId] = r; e }
+            publish()
+            // A trade followed in the moment before the file was read: its save was held until now.
+            if (early) dirty()
         }
-        val bad = read.getOrNull()?.second ?: 0
-        if ((read.isFailure || bad > 0) && f.exists()) {
-            // Unreadable (cut short, corrupt) - or a record in it that is: moved aside, never overwritten (the next save would
-            // rewrite it without that record, lost for good; review G4 L7); if it cannot be moved, nothing is saved over it.
-            if (bad > 0) runCatching { Diag.record("trade manager", "$bad record(s) could not be read: the file was set aside, the rest kept") }
-            runCatching { com.optionslab.app.security.Vault.setAside(f) }
-            if (f.exists()) return
-        }
-        loaded = true
-        val got = read.getOrNull()?.first.orEmpty()
-        val early = synchronized(recs) { val e = recs.isNotEmpty(); for (r in got) if (r.trade.tradeId !in recs) recs[r.trade.tradeId] = r; e }
-        publish()
-        // A trade followed in the moment before the file was read: its save was held until now.
-        if (early) dirty()
     }
 
     private fun dn(o: JSONObject, k: String): Double? = if (o.has(k) && !o.isNull(k)) o.getDouble(k).takeIf { it.isFinite() } else null
@@ -725,6 +735,31 @@ object TradeManagerHost {
             decExit(o.optJSONObject("actual")), decExit(o.optJSONObject("mgr")), decExit(o.optJSONObject("orig")),
             if (o.has("acted")) o.getLong("acted") else null)
     }
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): every followed trade and record (Boss's arms' trades, prices, rupees) dropped
+     * from memory, Boss's modes back to the defaults (read again from the settings, which the erase empties), and the records'
+     * folder deleted. Under [saveLock], so a write under way ends first; a save already due then finds no records and writes
+     * nothing. The file counts as read (it is gone), so the records followed after the erase are saved as before. Memory and
+     * files only: no vault read. (The specialists' own memory is [ManagerSpecialists]'.)
+     */
+    internal fun wipe() {
+        synchronized(saveLock) {
+            live.clear(); synchronized(recs) { recs.clear() }; publish()
+            policyLoaded = false; _policy.value = TradeManager.Policy()
+            loaded = true
+            lastEval = 0L; minuteSettled = -1L
+            for (f in filesForErase()) runCatching { f.deleteRecursively() }
+        }
+    }
+
+    /** 26 Oct: a followed trade, a record or a mode of Boss's is held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        live.isNotEmpty() || synchronized(recs) { recs.isNotEmpty() } || _records.value.isNotEmpty() || _policy.value != TradeManager.Policy()
+    }.getOrDefault(true)
+
+    /** 26 Oct: the records' folder (its file and the file's ".tmp"). */
+    internal fun filesForErase(): List<File> = listOfNotNull(file()?.parentFile)
 
     /** TEST ONLY: the records file read again, as a new process would. */
     internal fun reloadForTest(context: Context) {

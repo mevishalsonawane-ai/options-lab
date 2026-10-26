@@ -142,6 +142,16 @@ object DangerToday {
         return read(i, today)
     }
 
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): today's reading and the switch's copy forgotten (memory only). The switch
+     * goes back to its default, off, as the wiped settings read; the next settings save or start copies it again. Never reads
+     * the vault or the settings. Paper only: the switch halves paper lots, and the wiped settings say off too.
+     */
+    fun wipe() { held.value = null; halfSize = false }
+
+    /** 26 Oct: whether a reading or the switch's copy (on) is held in memory. */
+    internal fun holdsForErase(): Boolean = held.value != null || halfSize
+
     /** A paper arm's lots for [day]: [planned], or half of it under the switch on a careful day. Never more than [planned]. */
     fun paperLots(planned: Int, day: LocalDate): Int = DangerMeter.lots(planned, today(day)?.level, halfSize)
 }

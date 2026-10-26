@@ -62,6 +62,25 @@ internal object IraThinking {
     fun now(): LocalDateTime = LocalDateTime.now(IST).withSecond(0).withNano(0)
 
     /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): the trail kept in memory forgotten (its settings
+     * key goes with [com.optionslab.app.security.SecurePrefs.wipe]). Under [add]'s lock, so a step being written finishes first;
+     * the next read finds the wiped settings. Memory only: never reads the vault.
+     */
+    @Synchronized fun wipe() { cache = null }
+
+    /** 26 Oct: whether a step is held in memory (never the disk). */
+    internal fun holdsForErase(): Boolean = cache?.isNotEmpty() == true
+
+    /**
+     * TEST ONLY (26 Oct, the erase's test): [steps] kept in memory as a read keeps them. CI runs the unit tests without Jarvis
+     * (-PtestsWithoutJarvis=true), where [add] keeps nothing. Throws unless BuildConfig.DEBUG.
+     */
+    @Synchronized internal fun keepForTest(steps: List<Thinking.Step>) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        cache = steps
+    }
+
+    /**
      * The answer to [q] from what was written ([locked]: Boss's account and words are left out), or null when nothing
      * fits. For "why did you do that", something in the activity log after his latest step is what "that" means.
      */

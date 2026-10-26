@@ -261,9 +261,17 @@ object OrbArms {
          * 5-minute books ([com.optionslab.engine.orb.LiquidityDayReplay]), the last 60 days.
          */
         val liqReplays: MutableMap<String, JSONArray> = LinkedHashMap(),
-    )
+    ) {
+        /** 26 Oct: the [wipeGen] this book was read in; one from before "Erase everything" is never saved or kept again. */
+        @Volatile var gen: Int = 0
+    }
 
-    private var cache: Book? = null
+    @Volatile private var cache: Book? = null
+    /**
+     * Bumped by [wipe] (26 Oct). Checked without a lock (the arms' passes place orders: no new lock on their path): a book read
+     * before the erase is not kept, and its save is dropped - or, if its write slipped past the check, undone ([wipedSince]).
+     */
+    @Volatile private var wipeGen = 0
 
     private fun contractJson(c: Paper.Contract) = JSONArray().put(c.symbol).put(c.underlying).put(c.expiry.toString()).put(c.strike)
         .put(c.right.name).put(c.lotSize).put(c.feedKey)
@@ -290,7 +298,8 @@ object OrbArms {
     private fun book(): Book {
         cache?.let { return it }
         writtenText = null; writtenStat = null
-        val b = Book()
+        val gen = wipeGen
+        val b = Book().also { it.gen = gen }
         // A book saved by an earlier build (false: a new install, or wiped): only such a book goes through the one-time changes.
         var existed = false
         val ok = runCatching {
@@ -360,8 +369,8 @@ object OrbArms {
             if (file.exists()) Vault.setAside(file)
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
-            return Book().also { it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
-                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION); cache = it; hints(it) }
+            return Book().also { it.gen = gen; it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
+                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION); cache = it; hints(it); wipedSince(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -369,6 +378,7 @@ object OrbArms {
         }
         cache = b
         hints(b)
+        if (wipedSince(b)) return b
         // A new book has nothing to change: it starts with every one-time change marked done (nothing is armed by itself).
         if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN, LiquidityLots.ONE_LOT_MIGRATION,
             ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION)
@@ -868,6 +878,8 @@ object OrbArms {
     internal const val KEEP_POSITIONS = 2000
 
     private fun save(b: Book) {
+        // 26 Oct: a book read before "Erase everything" is dropped, never written back.
+        if (b.gen != wipeGen) return
         val o = JSONObject()
         o.put("armed", JSONObject(b.armed as Map<*, *>))
         o.put("auto", JSONObject(b.auto as Map<*, *>))
@@ -928,6 +940,7 @@ object OrbArms {
         }
         cache = b
         hints(b)
+        if (wipedSince(b)) { runCatching { file.delete() }; writtenText = null; writtenStat = null; return }
         // The trade manager's one call (10 Oct; memory only, after the book is written): the ORB arms, Liquidity 15+5 and the
         // Hero arm, SHADOW by default - it records only; these arms' own exits stay authoritative (their exits do not take its word).
         runCatching {
@@ -1801,7 +1814,7 @@ object OrbArms {
         runCatching { priceCheck(b, t, stream = fast && stream, regular = !fast) }
         runCatching { liquidityExits(b, t) }
         runCatching { liquidityNotices(b, t) }
-        if (before != null && before == untracked(b)) { cache = b; hints(b) } else save(b)
+        if (before != null && before == untracked(b)) { cache = b; hints(b); wipedSince(b) } else save(b)
     }
 
     /** [b]'s positions without the premiums tracked on every price (what [priceCheckOnly]'s fast look may leave unsaved). */
@@ -4030,11 +4043,49 @@ object OrbArms {
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
     }
 
+    /**
+     * "Erase everything": the book and every hint from it dropped, the file deleted. 26 Oct: a pass still holding the old book
+     * (it waits on the coroutine lock, which the erase never takes) saves nothing ([Book.gen]); the hints the old wipe missed
+     * (armed, the paper legs for the live path, the BANKNIFTY live and stop hints) and the open positions' exits go too, and the
+     * set-aside copies of the file. Never reads the vault; safe before [init].
+     */
     @Synchronized fun wipe() {
-        cache = null; holdingHint = false; armedLabelsHint = emptyList(); liveHint = false; liveSymbolsHint = emptyList(); restoppedAt.clear(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
+        wipeGen++
+        cache = null; restoppedAt.clear(); writtenText = null; writtenStat = null
+        forgetHints()
         shownParams.clear()
         lastLook.clear(); gapTried.clear(); indexReadSaid.clear(); exitCheckSaid.clear()
         noPriceTried.clear(); noPriceSaid.clear(); liquidityLag.clear(); liquidityHistoryMiss.clear(); capWaits.clear()
-        if (::file.isInitialized) file.delete()
+        runCatching { com.optionslab.ira.ArmExits.set("orb", emptyList()) }
+        filesForErase().forEach { runCatching { it.delete() } }
+    }
+
+    /** Every hint read without the lock, as before any book is read. */
+    private fun forgetHints() {
+        holdingHint = false; armedHint = false; armedLabelsHint = emptyList(); liveHint = false; liveSymbolsHint = emptyList()
+        exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); liquidityBnLiveHint = false
+        liquidityStopHint = NO_STOP; liquidityStopPaperHint = NO_STOP; mirrorLegs = null
+    }
+
+    /** True (and [b] and its hints dropped) when an erase came after [b] was read: a pass that raced it keeps nothing. */
+    private fun wipedSince(b: Book): Boolean {
+        if (b.gen == wipeGen) return false
+        if (cache === b) cache = null
+        forgetHints()
+        return true
+    }
+
+    /** Memory only, for the erase's tests. */
+    internal fun holdsForErase(): Boolean = runCatching {
+        cache?.let { b -> b.positions.isNotEmpty() || b.armed.values.any { it } || b.pending.isNotEmpty() || b.replays.isNotEmpty() ||
+            b.liqReplays.isNotEmpty() || b.liqLots != null || b.liqLotsChosen } == true ||
+            holdingHint || armedHint || armedLabelsHint.isNotEmpty() || liveHint || exposureHint.isNotEmpty() || !mirrorLegs.isNullOrEmpty()
+    }.getOrDefault(true)
+
+    /** The book's file and any set-aside copy (none before [init]). */
+    internal fun filesForErase(): List<File> {
+        if (!::file.isInitialized) return emptyList()
+        val aside = runCatching { file.parentFile?.listFiles { x -> x.name.startsWith(file.name + ".unreadable.") }?.toList() }.getOrNull().orEmpty()
+        return listOf(file) + aside
     }
 }

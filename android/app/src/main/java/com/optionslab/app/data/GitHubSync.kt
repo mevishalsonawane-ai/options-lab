@@ -105,6 +105,16 @@ object GitHubSync {
     /** Keeps the context only (no read, no write). */
     fun init(context: Context) { if (enabled()) app = context.applicationContext }
 
+    /**
+     * "Erase everything" (26 Oct): the upload folder (sealed day files and backups waiting to go up, or left by a failed run)
+     * deleted, on the erase's slow file thread. Its settings (the token, the keys, what went up) go with [SecurePrefs.wipe];
+     * nothing about the account is kept in memory here. Never reads the settings.
+     */
+    fun wipe() { filesForErase().forEach { runCatching { it.deleteRecursively() } } }
+
+    /** The upload folder (none before [init]). */
+    internal fun filesForErase(): List<File> = listOfNotNull(app?.let { File(it.noBackupFilesDir, OUT_DIR) })
+
     // ---- hooks ---------------------------------------------------------------------------------------------------------
 
     /**

@@ -96,7 +96,13 @@ object Ledger {
     /** Settled rows in the schema the health checks read. Open intentions are excluded. */
     fun settledRows() = all().mapNotNull { it.row.toMonitorRow() }
 
-    fun wipe() { file.delete() }
+    /** 26 Oct: under the ledger's lock (after a write in progress), safe before [init]; a copy set aside as unreadable goes too. */
+    @Synchronized
+    fun wipe() { filesForErase().forEach { it.delete() } }
+
+    /** The erase's files: the ledger and any copy set aside as unreadable (empty before [init]). Nothing is kept in memory. */
+    internal fun filesForErase(): List<File> = if (!::file.isInitialized) emptyList() else
+        listOf(file) + file.parentFile?.listFiles { f -> f.name.startsWith(file.name + ".unreadable.") }.orEmpty()
 
     fun csv(): String = buildString {
         append("session,underlying,expiry,side,right,strike,lot_size,lots,qty,credit,forward,breakeven,margin,max_loss,wing_strike,wing_debit,status,settlement,net_pnl,won,paper,orders\n")
@@ -211,5 +217,11 @@ object Alarms {
     /** Stamp an alarm fired, on the current list: an edit made meanwhile is kept. */
     @Synchronized
     fun markFired(id: Long, at: Long) = save(all().map { if (it.id == id) it.copy(firedAtMillis = at) else it })
-    fun wipe() { file.delete() }
+    /** 26 Oct: as [Ledger.wipe]: under the alarms' lock, safe before [init], a copy set aside as unreadable goes too. */
+    @Synchronized
+    fun wipe() { filesForErase().forEach { it.delete() } }
+
+    /** The erase's files (empty before [init]). Nothing is kept in memory. */
+    internal fun filesForErase(): List<File> = if (!::file.isInitialized) emptyList() else
+        listOf(file) + file.parentFile?.listFiles { f -> f.name.startsWith(file.name + ".unreadable.") }.orEmpty()
 }

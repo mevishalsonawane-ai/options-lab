@@ -135,15 +135,21 @@ object ShadowArms {
         val pulls: MutableList<Pull> = ArrayList(),
         /** Liquidity 15+5's trades ([liqKey]) -> candidates (d) and (e). */
         val liq: MutableMap<String, LiqAlt> = LinkedHashMap(),
-    )
+    ) {
+        /** 26 Oct: the [wipeGen] this book was read in; one from before "Erase everything" is never saved or kept again. */
+        @Volatile var gen: Int = 0
+    }
 
-    private var cache: Book? = null
+    @Volatile private var cache: Book? = null
+    /** Bumped by [wipe]. */
+    @Volatile private var wipeGen = 0
 
     private fun d(o: JSONObject, k: String): Double? = if (o.has(k)) o.getDouble(k) else null
 
     private fun book(): Book {
         cache?.let { return it }
-        val b = Book()
+        val gen = wipeGen
+        val b = Book().also { it.gen = gen }
         val ok = runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
             o.optString("since").ifEmpty { null }?.let { b.since = LocalDate.parse(it) }
@@ -183,8 +189,11 @@ object ShadowArms {
         }.isSuccess
         // Never overwrite what could not be read: set it aside and start a fresh record.
         if (!ok && file.exists()) runCatching { Vault.setAside(file) }
+        // 26 Oct: a read that began before "Erase everything" is not kept (its pass saves nothing: [save]).
+        if (gen != wipeGen) return b
         cache = b
         hints(b)
+        wipedSince(b)
         return b
     }
 
@@ -230,9 +239,21 @@ object ShadowArms {
         o.put("promoted", JSONObject(b.promoted as Map<*, *>))
         o.put("armed", JSONObject(b.armed as Map<*, *>))
         o.put("asked", JSONArray(b.asked.sorted()))
+        // 26 Oct: a book read before "Erase everything" is dropped, never written back (checked without a lock: the arms' passes
+        // take none new); a write that slipped past the check is undone ([wipedSince]).
+        if (b.gen != wipeGen) return
         written.write(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
         hints(b)
+        if (wipedSince(b)) { runCatching { file.delete() }; written.forget() }
+    }
+
+    /** True (and [b] and its hints dropped) when an erase came after [b] was read. */
+    private fun wipedSince(b: Book): Boolean {
+        if (b.gen == wipeGen) return false
+        if (cache === b) cache = null
+        exposureHint = emptyList(); rowsHint = emptyList(); liquidityHint = emptyMap(); mirrorLegs = null
+        return true
     }
 
     // ---- the clock and the feeds (tests set them; the app never does) ---------------------------------------------
@@ -804,8 +825,30 @@ object ShadowArms {
         lock.withLock { val b = book(); if (b.asked.add(id)) save(b) }
     }
 
+    /**
+     * "Erase everything": the record dropped from memory and its file deleted. 26 Oct: a pass still holding the old book (it
+     * waits on the coroutine lock, which the erase never takes) saves nothing ([Book.gen]); the re-armed variants' paper legs
+     * are forgotten (as at a fresh start: unknown until the book is read again) and the set-aside copies go too.
+     */
     @Synchronized fun wipe() {
+        wipeGen++
         cache = null; exposureHint = emptyList(); rowsHint = emptyList(); liquidityHint = emptyMap(); minuteCache.clear()
-        if (::file.isInitialized) file.delete()
+        mirrorLegs = null
+        written.forget()
+        filesForErase().forEach { runCatching { it.delete() } }
+    }
+
+    /** Memory only, for the erase's tests. */
+    internal fun holdsForErase(): Boolean = runCatching {
+        cache?.let { b -> b.trades.isNotEmpty() || b.pulls.isNotEmpty() || b.liq.isNotEmpty() || b.promoted.isNotEmpty() || b.armed.isNotEmpty() ||
+            b.asked.isNotEmpty() || b.decided.isNotEmpty() } == true ||
+            exposureHint.isNotEmpty() || liquidityHint.isNotEmpty() || !mirrorLegs.isNullOrEmpty()
+    }.getOrDefault(true)
+
+    /** The record's file and any set-aside copy (none before [init]). */
+    internal fun filesForErase(): List<File> {
+        if (!::file.isInitialized) return emptyList()
+        val aside = runCatching { file.parentFile?.listFiles { x -> x.name.startsWith(file.name + ".unreadable.") }?.toList() }.getOrNull().orEmpty()
+        return listOf(file) + aside
     }
 }

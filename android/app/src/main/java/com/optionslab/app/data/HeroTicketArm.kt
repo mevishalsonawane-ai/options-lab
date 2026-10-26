@@ -143,6 +143,7 @@ object HeroTicketArm {
 
     private fun book(): Book {
         cache?.let { return it }
+        val gen = erases
         val b = Book()
         var unreadable = false
         runCatching {
@@ -157,7 +158,8 @@ object HeroTicketArm {
             o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) b.migrated += a.getString(i) }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { b.pending[it] = m.getString(it) } }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
-        cache = b
+        // 26 Oct (review): a book read before "Erase everything" ([erase]) is used by this pass only: never kept, so never saved or shown.
+        synchronized(written) { if (gen == erases) cache = b }
         // 15 Oct, Boss's choice: on once, on paper. A book that could not be read is never switched on by itself (Boss may have
         // switched it off): it is only marked done. Never in IraGoldAlgo.
         var changed = false
@@ -208,6 +210,8 @@ object HeroTicketArm {
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
+        // 26 Oct: a pass that read the book before "Erase everything" ([erase]) never writes it back after it.
+        if (b !== cache) return
         val o = JSONObject().put("armed", b.armed).put("target", b.target.key).put("trailStart", b.trailStart.key)
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(60).forEach { put(it) } })
@@ -221,6 +225,8 @@ object HeroTicketArm {
     }
 
     private fun publish(b: Book) {
+        // 26 Oct: nor shows one from before "Erase everything" ([erase]).
+        if (b !== cache) return
         decidedNow = b.decided.toSet()
         pendingNow = b.pending.isNotEmpty()
         val closed = b.positions.filter { !it.open }
@@ -749,4 +755,30 @@ object HeroTicketArm {
 
     /** For tests: the book forgotten (its file goes with the test's directory). */
     internal fun wipe() { cache = null; _view.value = empty() }
+
+    /**
+     * 26 Oct: "Erase everything" ([PersonalStores]): the book's file (and any set aside as unreadable) deleted, then the book, its
+     * kept lists and the last write forgotten. Not [wipe], which tests use as a restart (the file kept). Never reads the vault;
+     * never waits on [lock]: a pass still holding the old book cannot write it back ([save] writes only the book in memory).
+     */
+    fun erase() {
+        filesForErase().forEach { runCatching { it.delete() } }
+        synchronized(written) { erases++; cache = null }
+        decidedNow = emptySet(); pendingNow = false
+        written.forget()
+        _view.value = empty()
+    }
+
+    /** 26 Oct: bumped by [erase] (under [written]'s lock): a read that began before it is not kept ([book]). */
+    @Volatile private var erases = 0
+
+    /** 26 Oct: whether the book is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = cache != null || pendingNow || decidedNow.isNotEmpty() || _view.value != empty()
+
+    /** 26 Oct: the book's vault file and any copy set aside as unreadable; empty before [init]. */
+    internal fun filesForErase(): List<File> {
+        if (!ready()) return emptyList()
+        val aside = file.parentFile?.listFiles { f -> f.name.startsWith(file.name + ".unreadable.") }.orEmpty().toList()
+        return listOf(file) + aside
+    }
 }

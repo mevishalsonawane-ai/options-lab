@@ -75,7 +75,9 @@ object PineAuto {
     val held: StateFlow<Map<Long, Held>> = _held
     private val _log = MutableStateFlow<List<Line>>(emptyList())
     val log: StateFlow<List<Line>> = _log
-    private var cache: Book? = null
+    @Volatile private var cache: Book? = null
+    /** Bumped by [wipe] (26 Oct, Erase everything): a read under way when the erase came is not kept. */
+    @Volatile private var wipes = 0
 
     fun init(context: Context) {
         app = context.applicationContext
@@ -84,6 +86,7 @@ object PineAuto {
 
     private fun book(): Book {
         cache?.let { return it }
+        val gen = wipes
         val b = runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching null, Charsets.UTF_8))
             val bk = Book()
@@ -108,14 +111,19 @@ object PineAuto {
             if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) bk.liveOk.clear()
             bk
         }.getOrNull()
-        if (b == null && file.exists()) Vault.setAside(file)
-        return (b ?: Book()).also { cache = it; publish(it) }
+        // 26 Oct: a read the erase refused ([Vault.Erasing]) is not a damaged file: never set aside (it is being deleted).
+        if (b == null && file.exists() && !Vault.isErasing) Vault.setAside(file)
+        // 26 Oct: read before an erase that came meanwhile ([wipe]): not kept, not shown (its pass's saves are then dropped).
+        return (b ?: Book()).also { synchronized(this) { if (gen == wipes) { cache = it; publish(it) } } }
     }
 
     /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
+        // 26 Oct (Erase everything): a pass that read the book before [wipe] never writes it back or shows it again. The write
+        // itself holds no lock (a live position's save is on the order's way): an erase that came during it is undone below.
+        if (cache !== b) return
         while (b.log.size > 300) b.log.removeAt(0)
         val o = JSONObject()
         o.put("held", JSONObject().apply { b.held.forEach { (k, h) -> put(k.toString(), JSONObject().put("symbol", h.symbol).put("right", h.right)
@@ -131,11 +139,18 @@ object PineAuto {
         o.put("winding", JSONObject().apply { b.winding.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("migrated", JSONArray(b.migrated.sorted()))
         written.write(file, o.toString().toByteArray(Charsets.UTF_8))
-        cache = b
-        publish(b)
+        synchronized(this) {
+            // Erased while it was written: the file it may have put back is deleted again, and nothing is shown.
+            if (cache !== b) { written.forget(); if (::file.isInitialized) runCatching { file.delete() }; return }
+            publish(b)
+        }
     }
 
-    private fun publish(b: Book) { _held.value = HashMap(b.held); _log.value = b.log.toList() }
+    private fun publish(b: Book) { synchronized(this) {
+        // 26 Oct: an old book (read before an erase) is never shown again.
+        if (cache !== b) return
+        _held.value = HashMap(b.held); _log.value = b.log.toList()
+    } }
 
     private fun note(b: Book, id: Long, text: String) { b.log += Line(System.currentTimeMillis(), id, text) }
 
@@ -306,7 +321,27 @@ object PineAuto {
         ?: Market.isOpen()
     private fun epochSecondNow(): Long = testNow?.toEpochSecond() ?: (System.currentTimeMillis() / 1000)
 
-    @Synchronized fun wipe() { cache = null; if (::file.isInitialized) file.delete(); _held.value = emptyMap(); _log.value = emptyList() }
+    /**
+     * The book forgotten and its file deleted (26 Oct, Erase everything: [PersonalStores]). A pass under way keeps its old book
+     * only until its save or publish, which are then dropped. Never reads the vault; never waits on the book's lock ([lock]).
+     */
+    fun wipe() {
+        synchronized(this) {
+            wipes++
+            cache = null; written.forget(); _held.value = emptyMap(); _log.value = emptyList()
+            stopNoted.clear()
+        }
+        if (::file.isInitialized) file.delete()
+    }
+
+    /** Whether its book (holdings, log, day's P&L, pauses) is held in memory or shown. Memory only. */
+    internal fun holdsForErase(): Boolean = runCatching {
+        cache?.let { b -> b.held.isNotEmpty() || b.log.isNotEmpty() || b.dayPnl.isNotEmpty() || b.paused.isNotEmpty() || b.winding.isNotEmpty() ||
+            b.liveOk.isNotEmpty() || b.lastBar.isNotEmpty() || b.lastTarget.isNotEmpty() } == true || _held.value.isNotEmpty() || _log.value.isNotEmpty()
+    }.getOrDefault(false)
+
+    /** Its book's file (none before [init]). */
+    internal fun filesForErase(): List<File> = if (::file.isInitialized) listOf(file) else emptyList()
 
     /**
      * Reset paper: paper holdings and their day's P&L / pause go; scripts holding at Zerodha keep theirs. A flat script's
@@ -482,7 +517,8 @@ object PineAuto {
                 Unit
             }.onFailure { e -> note(b, id, "Error: ${e.message ?: e.javaClass.simpleName}") }
         }
-        if (before != null && before == untracked(b)) { cache = b; publish(b) } else save(b)
+        // 26 Oct: [b] is the cached book (an erase since: [publish] shows nothing, [save] writes nothing).
+        if (before != null && before == untracked(b)) publish(b) else save(b)
     }
 
     /** Zerodha's orders: the kept read on a stream look ([streamLook]), else read now. */

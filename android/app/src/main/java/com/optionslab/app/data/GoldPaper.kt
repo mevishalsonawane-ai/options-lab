@@ -79,7 +79,7 @@ object GoldPaper {
     internal suspend fun replaceForTest(b: Book) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }
         GoldBooks.awaitLoaded()
-        lock.withLock { readFailed = false; save(b) }
+        lock.withLock { heldGen = wipes; readFailed = false; save(b) }
     }
 
     fun init(context: Context) {
@@ -89,12 +89,17 @@ object GoldPaper {
 
     /** Reads the saved book (on [GoldBooks]' background thread; every change waits for it). */
     internal fun load() {
+        val gen = wipes
         val r = runCatching { read() }
         // A saved book that is there but could not be read is never written over by the minute passes (it may read
         // back next time); the empty book shows meanwhile. Boss's own change reads it again first; only a reset writes over it ([edit]).
-        readFailed = r.isFailure
+        // 26 Oct: a read that began before "Erase everything" shows nothing it read.
+        synchronized(writeLock) {
+            if (gen != wipes) return
+            readFailed = r.isFailure
+            _book.value = r.getOrNull() ?: Book()
+        }
         if (r.isFailure) runCatching { Diag.record("gold", "${file.name} could not be read; it is not saved over") }
-        _book.value = r.getOrNull() ?: Book()
     }
 
     /** The saved book could not be read at the start: only a reset writes over it ([load], [edit]). */
@@ -123,6 +128,7 @@ object GoldPaper {
     suspend fun tick() = runCatching {
         GoldBooks.awaitLoaded()
         lock.withLock {
+            heldGen = wipes
             val t = now()
             val minutes = minutes(t)
             // A candle is complete when the feed has reached its end, not when the clock has: Yahoo's COMEX prices run
@@ -337,10 +343,12 @@ object GoldPaper {
     private suspend fun edit(clear: Boolean = false, f: (Book) -> Book) {
         GoldBooks.awaitLoaded()
         lock.withLock {
+            heldGen = wipes
             if (clear) { readFailed = false }
             else if (readFailed) {
                 val again = runCatching { read() }
-                if (again.isSuccess) { readFailed = false; again.getOrNull()?.let { _book.value = it } }
+                // 26 Oct: an erase since this change began keeps the book it read off the screen.
+                if (again.isSuccess) synchronized(writeLock) { if (heldGen == wipes) { readFailed = false; again.getOrNull()?.let { _book.value = it } } }
                 else runCatching { Diag.record("gold", "${file.name} could not be read; this change is kept on screen only, not saved") }
             }
             save(f(_book.value))
@@ -348,10 +356,40 @@ object GoldPaper {
     }
 
     private fun save(b: Book) {
-        _book.value = b
-        if (readFailed) return
-        if (::file.isInitialized) runCatching { Vault.writeFile(file, toJson(b).toString().toByteArray(Charsets.UTF_8)) }
+        synchronized(writeLock) {
+            // 26 Oct: "Erase everything" ran while this pass held the book (it started from the old one): nothing of it is kept.
+            if (heldGen != wipes) return
+            _book.value = b
+            if (readFailed) return
+            if (::file.isInitialized) runCatching { Vault.writeFile(file, toJson(b).toString().toByteArray(Charsets.UTF_8)) }
+        }
     }
+
+    /** 26 Oct: [save] and [wipe] one at a time, so no save lands after an erase. */
+    private val writeLock = Any()
+    /** 26 Oct: bumped by [wipe]; [heldGen]: its value when the book's lock was taken (set first under [lock]). */
+    @Volatile private var wipes = 0
+    @Volatile private var heldGen = 0
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the paper account (balance, trades, open buy, switch, lots) back to a new one
+     * in memory and its file deleted; a pass holding the old book saves nothing after it ([save]). Never waits for the book's lock;
+     * safe before [init]. Memory and files only: no vault read. (The other gold arms' books are their own.)
+     */
+    internal fun wipe() {
+        synchronized(writeLock) {
+            wipes++
+            _book.value = Book(); _chart.value = emptyList(); readFailed = false
+            for (f in filesForErase()) runCatching { f.delete() }
+        }
+    }
+
+    /** 26 Oct: anything of the account is held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = _book.value != Book()
+
+    /** 26 Oct: its book, and any copy of it set aside as unreadable (none before [init]). */
+    internal fun filesForErase(): List<File> = if (!::file.isInitialized) emptyList() else
+        listOf(file) + file.parentFile?.listFiles { x -> x.name.startsWith(file.name + ".unreadable.") }.orEmpty()
 
     private fun read(): Book? = Vault.readFileSteady(file)?.let { fromJson(JSONObject(String(it, Charsets.UTF_8))) }
 

@@ -354,4 +354,27 @@ object WatchlistHost {
 
     /** TEST ONLY: forget the log's memory (the file stays), as a restart would. */
     internal fun resetForTest() = synchronized(lock) { cache = null; written.forget(); _view.value = View() }
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the shadow records (contracts and rupees), Boss's switch and the evening lines
+     * dropped from memory and the file deleted. Under [lock], as every save; each save reads the log again under it, so a round
+     * that read the old log finds the new, empty one. Memory and files only: no vault read.
+     */
+    internal fun wipe() {
+        synchronized(lock) {
+            cache = null; written.forget(); _view.value = View()
+            for (f in filesForErase()) runCatching { f.delete() }
+        }
+    }
+
+    /** 26 Oct: a record, a changed switch or a line of the log is held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        synchronized(lock) { cache?.let { l -> l.recs.isNotEmpty() || !l.on || l.told.isNotEmpty() || l.evening != null } == true } ||
+            _view.value.recs.isNotEmpty() || !_view.value.on
+    }.getOrDefault(true)
+
+    /** 26 Oct: its file, and any copy of it set aside as unreadable. */
+    internal fun filesForErase(): List<File> = file?.let { f ->
+        listOf(f) + f.parentFile?.listFiles { x -> x.name.startsWith(f.name + ".unreadable.") }.orEmpty()
+    }.orEmpty()
 }

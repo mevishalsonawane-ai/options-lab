@@ -59,6 +59,8 @@ internal object SelfGrowth {
     @Volatile private var reportedWeek: LocalDate? = null
     @Volatile private var plan = LearningGoals.RecordingPlan()
     @Volatile private var loaded = false
+    /** 26 Oct: bumped by [wipe] (under [lock]): goals or a week worked out before an erase are neither kept nor written. */
+    @Volatile private var wipeGen = 0
 
     /** TEST ONLY: the time instead of the clock's. */
     @Volatile internal var testNow: (() -> LocalDateTime)? = null
@@ -106,7 +108,8 @@ internal object SelfGrowth {
         }
     }
 
-    private fun saveWeeks() = synchronized(lock) {
+    private fun saveWeeks(gen: Int = wipeGen) = synchronized(lock) {
+        if (gen != wipeGen) return@synchronized
         write(WEEKS, "M|${consolidatedOn ?: ""}|${reportedWeek ?: ""}\n" + _weeks.value.joinToString("") { GrowthReport.encode(it) + "\n" })
     }
 
@@ -135,6 +138,7 @@ internal object SelfGrowth {
 
     /** After each learning pass (a new day in Jarvis's book): at most three goals; one finding when they change. True: set. */
     internal suspend fun goalsIfDue(): Boolean {
+        val gen = wipeGen
         val book = JarvisLearning.book.value
         val day = book.lastPass ?: return false
         if (_goals.value.day == day) return false
@@ -145,8 +149,8 @@ internal object SelfGrowth {
         val next = withContext(Dispatchers.Default) { LearningGoals.next(old, book.lessons, instruments, day) }
         // Only goals that record and never trade are kept.
         val safe = next.copy(goals = next.goals.filter { LearningGoals.safe(it) })
-        synchronized(lock) { setGoals(safe) }
-        withContext(Dispatchers.IO) { synchronized(lock) { write(GOALS, LearningGoals.encode(safe)) } }
+        synchronized(lock) { if (gen != wipeGen) return false; setGoals(safe) }
+        withContext(Dispatchers.IO) { synchronized(lock) { if (gen == wipeGen) write(GOALS, LearningGoals.encode(safe)) } }
         if (safe.goals.map { it.id } != old.goals.map { it.id } && safe.goals.isNotEmpty()) {
             val words = "What I'm trying to learn next: " + safe.goals.joinToString("; ") { it.text }
             runCatching { Diag.record("jarvis", "learning goals: " + safe.goals.joinToString("; ") { it.id }) }
@@ -170,18 +174,19 @@ internal object SelfGrowth {
     }
 
     private suspend fun consolidate(today: LocalDate, sunday: LocalDate): Consolidation.Done? {
+        val gen = wipeGen
         val first = consolidatedOn == null
         consolidatedOn = sunday
         // The very first run on this phone only sets the week (nothing kept yet to tidy; the first consolidation is next Sunday).
-        if (first) { withContext(Dispatchers.IO) { saveWeeks() }; return null }
+        if (first) { withContext(Dispatchers.IO) { saveWeeks(gen) }; return null }
         val done = withContext(Dispatchers.IO) {
             val merged = runCatching { JarvisLearning.consolidate { Consolidation.lessons(it) } }.getOrDefault(0)
             val compacted = runCatching { compactFindings(today) }.getOrDefault(0)
             val trimmed = runCatching { trimRecordings(today) }.getOrDefault(0)
             val week = sunday.minusDays(6)
             val w = summary(week)
-            synchronized(lock) { _weeks.value = GrowthReport.keep(_weeks.value, w) }
-            saveWeeks()
+            synchronized(lock) { if (gen == wipeGen) _weeks.value = GrowthReport.keep(_weeks.value, w) }
+            saveWeeks(gen)
             Consolidation.Done(merged, compacted, trimmed, week)
         }
         runCatching { Diag.record("jarvis", done.words()) }
@@ -236,16 +241,18 @@ internal object SelfGrowth {
         val at = now()
         if (!GrowthReport.due(at, reportedWeek)) return null
         val monday = GrowthReport.dueWeek(at)
+        val gen = wipeGen
         val first = reportedWeek == null
         reportedWeek = monday
         // The very first run on this phone only sets the week: the app did not watch that week, so there is nothing to report.
-        if (first) { withContext(Dispatchers.IO) { saveWeeks() }; return null }
+        if (first) { withContext(Dispatchers.IO) { saveWeeks(gen) }; return null }
         val w = withContext(Dispatchers.IO) {
             val w = summary(monday)
-            synchronized(lock) { _weeks.value = GrowthReport.keep(_weeks.value, w) }
-            saveWeeks()
+            synchronized(lock) { if (gen == wipeGen) _weeks.value = GrowthReport.keep(_weeks.value, w) }
+            saveWeeks(gen)
             w
         }
+        if (gen != wipeGen) return null      // 26 Oct: erased meanwhile: no report of the old week
         runCatching { Diag.record("jarvis", "weekly self-report: ${GrowthReport.title(monday)}") }
         if (context != null) runCatching {
             com.optionslab.app.work.Notifier.post(context, NOTICE_ID, com.optionslab.app.work.Notifier.IRA, "Jarvis's weekly report · ${GrowthReport.title(monday)}",
@@ -278,6 +285,26 @@ internal object SelfGrowth {
         Ask.GOALS -> { ensureLoaded(); LearningGoals.say(_goals.value, locked) }
         Ask.WEEK -> { ensureLoaded(); GrowthReport.say(_weeks.value.lastOrNull(), locked) }
     }
+
+    /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): the goals, the weekly reports and their marks dropped
+     * from memory and the growth folder deleted; a pass still running finds [wipeGen] changed and keeps nothing. Counted as read
+     * (nothing is left to read). Safe before [init].
+     */
+    fun wipe() {
+        synchronized(lock) {
+            wipeGen++
+            _goals.value = LearningGoals.Book(); _weeks.value = emptyList(); plan = LearningGoals.RecordingPlan()
+            consolidatedOn = null; reportedWeek = null; loaded = true
+            runCatching { dir()?.deleteRecursively() }
+        }
+    }
+
+    /** 26 Oct: goals or weeks in memory (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = _goals.value != LearningGoals.Book() || _weeks.value.isNotEmpty() || consolidatedOn != null || reportedWeek != null
+
+    /** 26 Oct: the growth folder (empty before [init]). */
+    internal fun filesForErase(): List<File> = listOfNotNull(dir())
 
     /** TEST ONLY: nothing kept. */
     internal fun resetForTest() {

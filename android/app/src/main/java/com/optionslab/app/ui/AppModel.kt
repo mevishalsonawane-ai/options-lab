@@ -686,6 +686,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         paper.value = Load.Idle; stuck.value = null; orb.value = null; strategies.value = emptyList()
         orderOwners.value = emptyMap(); strategyPending.value = emptyMap(); botStopped.value = false; botStopWhy.value = null
         dayLockLine.value = null; paperSinceLine.value = null
+        // 26 Oct (the erase audit): every other screen copy of the account goes too - the positions, P&L, ledger, alarms, stops,
+        // GTTs, the imported trades, the portfolio views, the open popup, the strategies' log and the login's secret.
+        livePositions.value = emptyList(); pnlSeries.value = emptyList(); ledger.value = emptyList(); alarms.value = emptyList()
+        protections.value = emptyList(); gtts.value = emptyList(); health.value = Load.Idle; imported = null
+        draft.value = Load.Idle; openMark.value = null; rowAction.value = null; strategyAuto.value = emptyMap(); strategyLog.value = emptyList()
+        portfolio.value = Load.Idle; sip.value = Load.Idle; analyzer.value = Load.Idle; message.value = null
+        loginSecret = null; showKiteLogin.value = false; askLoginPin.value = false
     }
 
     // ---- protections: stops, trailing stops, targets ------------------------------------------

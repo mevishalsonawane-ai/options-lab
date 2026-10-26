@@ -62,12 +62,17 @@ object AccountStopHost {
      * a failed read never writes today's figure alone over the saved history.
      */
     internal fun load() {
+        val gen = erased
         val ok = runCatching {
-            on = SecurePrefs.getBoolean(K_ON, false)
-            since = SecurePrefs.getString(K_SINCE)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+            // 26 Oct: each part read before an erase ([wipe]) is not taken after it.
+            val savedOn = SecurePrefs.getBoolean(K_ON, false)
+            if (gen == erased) on = savedOn
+            val savedSince = SecurePrefs.getString(K_SINCE)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+            if (gen == erased) since = savedSince
             val r = AccountStop.decodeReached(SecurePrefs.getString(K_REACHED))
             val saved = AccountStop.decode(SecurePrefs.getString(K_DAYS))
             synchronized(lock) {
+                if (gen != erased) return@synchronized
                 if (reached == null) reached = r
                 // A day recorded in memory before the read wins over the saved one (it is newer).
                 days = (saved.filter { s -> days.none { it.day == s.day } } + days).sortedBy { it.day }.takeLast(AccountStop.KEEP)
@@ -115,9 +120,10 @@ object AccountStopHost {
             }
             if (loaded && ((st.stopped && !was) || now - writtenAt >= WRITE_EVERY_MS)) {
                 writtenAt = now
-                val text = synchronized(lock) { AccountStop.encode(days) }
+                val (text, gen) = synchronized(lock) { AccountStop.encode(days) to erased }
                 val r = reached
-                scope.launch { runCatching { SecurePrefs.putAllSoon(mapOf(K_DAYS to text, K_REACHED to AccountStop.encodeReached(r))) }; publish() }
+                // 26 Oct: days copied before an erase ([wipe]) are never written after it.
+                scope.launch { if (gen == erased) runCatching { SecurePrefs.putAllSoon(mapOf(K_DAYS to text, K_REACHED to AccountStop.encodeReached(r))) }; publish() }
             }
         }
     }
@@ -181,6 +187,25 @@ object AccountStopHost {
     private fun publish() {
         runCatching { _view.value = View(on, line(), status.stopped) }
     }
+
+    /** 26 Oct: bumped by [wipe] (under [lock]): a read or a write of the days from before it is dropped. */
+    @Volatile private var erased = 0
+
+    /**
+     * 26 Oct: "Erase everything" ([PersonalStores]): the switch, the days, the reached day, the restart and today's shadow refusals
+     * forgotten; counted as read (the settings keys are gone with [SecurePrefs.wipe], never read here).
+     */
+    fun wipe() {
+        synchronized(lock) {
+            erased++
+            on = false; since = null; reached = null; loaded = true; writtenAt = 0L
+            days = emptyList(); shadowSeen.clear(); shadowDay = null; status = AccountStop.status(emptyList(), today())
+        }
+        _view.value = View()
+    }
+
+    /** 26 Oct: whether any day, the switch or a reached rule is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = on || since != null || reached != null || synchronized(lock) { days.isNotEmpty() || shadowSeen.isNotEmpty() }
 
     /** TEST ONLY: as a fresh start before the saved days were read. */
     internal fun unloadForTest() { loaded = false; synchronized(lock) { days = emptyList(); reached = null; status = AccountStop.status(emptyList(), today()) } }

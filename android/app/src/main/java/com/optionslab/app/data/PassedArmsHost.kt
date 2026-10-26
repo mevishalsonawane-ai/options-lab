@@ -337,6 +337,7 @@ object PassedArmsHost {
 
     private fun book(): Book {
         cache?.let { return it }
+        val gen = wipes
         val b = Book()
         var unreadable = false
         // 25 Oct (app audit): a read that failed for a moment (a Keystore hiccup past readFileSteady's retries) is not a damaged
@@ -347,6 +348,9 @@ object PassedArmsHost {
             readFails = 0
             unreadable = true; if (file.exists()) Vault.setAside(file); null
         } catch (e: Exception) {
+            // 26 Oct: a read the erase refused ([Vault.Erasing]) is not a failed read: never counted, never set aside (the
+            // book is being deleted); read again after the erase.
+            if (e is Vault.Erasing) throw java.io.IOException("the passed arms' book is being erased", e)
             readFails += 1
             if (readFails < READ_FAILS_BEFORE_ASIDE) {
                 runCatching { Diag.record("passed-arms", "the arms' book could not be read now (${e.javaClass.simpleName}, $readFails in a row); read again on the next look") }
@@ -378,6 +382,8 @@ object PassedArmsHost {
             // 19 Oct: absent in an older book (no arm record only); never beside "on" (on wins).
             o.optJSONArray("recordOnly")?.let { a -> for (i in 0 until a.length()) a.getString(i).takeIf { it in SOURCES && b.armed[it] != true }?.let { b.recordOnly += it } }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
+        // 26 Oct: read before an erase that came meanwhile ([wipe]): not kept (as a read that failed: the next call reads again).
+        if (gen != wipes) throw java.io.IOException("the passed arms' book was erased while it was read")
         cache = b
         // 15 Oct (the PAPER rule): on once, on paper. A book that could not be read is never switched on by itself (Boss may
         // have switched an arm off): it is only marked done. Never in IraGoldAlgo.
@@ -494,6 +500,10 @@ object PassedArmsHost {
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
+        // 26 Oct (Erase everything): a pass that read the book before [wipe] never writes it back or shows it again; the
+        // generation goes with the bytes, so a write already queued is dropped too ([flushBook]).
+        val gen = wipes
+        if (cache !== b) return
         val o = JSONObject()
         o.put("armed", JSONObject().apply { b.armed.forEach { (k, v) -> put(k, v) } })
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
@@ -517,24 +527,27 @@ object PassedArmsHost {
         // 19 Oct (order speed): written on this book's own writer thread ([writer]), never under [lock] on the caller's - an
         // entry booked here ([record]) used to wait for the vault write before the next index's entry, and the 15-second stop
         // check's exits ([manageOnly]) waited for the lock behind it. The newest book is always the last written.
-        pendingBytes.set(o.toString().toByteArray(Charsets.UTF_8))
+        pendingBytes.set(gen to o.toString().toByteArray(Charsets.UTF_8))
         writer.kick()
         publish(b)
     }
 
-    /** The newest book not yet on disk ([save]); [flushBook] writes it. */
-    private val pendingBytes = java.util.concurrent.atomic.AtomicReference<ByteArray?>(null)
+    /** The newest book not yet on disk ([save]), with the erase generation it was saved in ([wipes]); [flushBook] writes it. */
+    private val pendingBytes = java.util.concurrent.atomic.AtomicReference<Pair<Int, ByteArray>?>(null)
     private val writeLock = Any()
     private val writer = com.optionslab.ira.WriteBehind(com.optionslab.ira.WriteBehind.thread("passed-arms-writer")) { flushBook() }
 
     /** The newest saved book to the vault, one write at a time; a failed write is kept for the next one (said in diagnostics). */
     private fun flushBook() {
         synchronized(writeLock) {
-            val bytes = pendingBytes.getAndSet(null) ?: return
+            val pending = pendingBytes.getAndSet(null) ?: return
+            // 26 Oct: saved before an erase ([wipe] bumps the generation under this lock): never written after it.
+            if (pending.first != wipes) return
+            val bytes = pending.second
             try {
                 written.write(file, bytes)
             } catch (e: Exception) {
-                pendingBytes.compareAndSet(null, bytes)
+                pendingBytes.compareAndSet(null, pending)
                 runCatching { Diag.record("passed", "The passed arms' book could not be written (${e.javaClass.simpleName}); it is written again with the next change") }
             }
         }
@@ -551,6 +564,8 @@ object PassedArmsHost {
         ?: SoloMidday.Baseline()
 
     private fun publish(b: Book) {
+        // 26 Oct: an old book (read before an erase) is never shown again.
+        if (cache !== b) return
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         val closed = b.positions.filter { !it.open }
         _view.value = View(b.armed.toMap(), b.status.shown({ k, _ -> k == ST_UNJUDGED_KEY }), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
@@ -1036,6 +1051,7 @@ object PassedArmsHost {
         if (!entryLock.tryLock()) return
         try {
             val reads = runCatching { reads(now, v) }.getOrNull() ?: return
+            val gen = wipes
             val (work, n0, log0, sc0) = lock.withLock { val b = book(); Quad(b.copy(), b.positions.size, b.log.size, b.scores.size) }
             // 25 Oct: R72's due breaks noted first, so the cap keeps its place only for a break it really has ([placeKeptFor]).
             runCatching { noteR72Due(work, now, reads) }
@@ -1063,6 +1079,8 @@ object PassedArmsHost {
             runCatching { noteR72Due(work, now, reads) }
             if (!changed) return
             lock.withLock {
+                // 26 Oct: an erase since the copy was taken ([wipe]): what this pass worked on is not merged into the new book.
+                if (gen != wipes) return@withLock
                 val b = book()
                 // 16 Oct: each entry is booked in the book the moment it fills ([buy]); only one that is not there yet is added.
                 val added = work.positions.drop(n0).filter { a -> b.positions.none { same(it, a) } }
@@ -1927,11 +1945,45 @@ object PassedArmsHost {
     private fun lockTag(p: Pos): String = (if (!p.lock) "" else if (p.l25) " · 30-60-100 lock + L25" else " · 30-60-100 lock") +
         (if (p.st) " · Supertrend filter" else "") + (if (p.shadow != null) " · ${shadowWords(p)}" else "")
 
-    /** For tests: the book forgotten (its file goes with the test's directory), and the day's memory. */
+    /** Bumped by [wipe] (under [writeLock]): a read, a save or a pass's entries under way when the erase came are not kept. */
+    @Volatile private var wipes = 0
+
+    /**
+     * For tests: the book forgotten (its file stays: the tests read it again, as after the app is killed), and the day's memory.
+     * 26 Oct: a save queued before, or made by a pass that read the book before, is dropped ([save], [flushBook]), and a pass's
+     * entries worked on a copy are not merged back ([tick]). Never reads the vault; never waits on the book's lock.
+     */
     internal fun wipe() {
-        synchronized(writeLock) { pendingBytes.set(null) }
+        synchronized(writeLock) {
+            wipes++
+            pendingBytes.set(null)
+            written.forget()
+        }
         cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
+        runCatching { com.optionslab.ira.ArmExits.set("passed", emptyList()) }
     }
+
+    /**
+     * 26 Oct (Erase everything, [PersonalStores]): [wipe], and the book's file deleted - under the writer's lock, so a write in
+     * progress finishes first and the file goes after it.
+     */
+    internal fun wipeForErase() {
+        synchronized(writeLock) {
+            wipe()
+            if (ready()) file.delete()
+        }
+    }
+
+    /** Whether its book (trades, switches, log, status) is held in memory or shown. Memory only. */
+    internal fun holdsForErase(): Boolean = runCatching {
+        val v = _view.value
+        cache?.let { b -> b.positions.isNotEmpty() || b.log.isNotEmpty() || b.armed.values.any { it } || b.decided.isNotEmpty() || b.status.isNotEmpty() ||
+            b.acted.isNotEmpty() || b.paused.isNotEmpty() || b.scores.isNotEmpty() || b.marks.isNotEmpty() || b.recordOnly.isNotEmpty() } == true ||
+            v.open.isNotEmpty() || v.all.isNotEmpty() || v.log.isNotEmpty() || v.armed.values.any { it } || v.status.isNotEmpty()
+    }.getOrDefault(false)
+
+    /** Its book's file (none before [init]). */
+    internal fun filesForErase(): List<File> = if (ready()) listOf(file) else emptyList()
 
     /** TEST ONLY: closed trades added to the book as if traded (the forward bars' tests). Debug builds only. */
     internal suspend fun addClosedForTest(list: List<Pos>) {

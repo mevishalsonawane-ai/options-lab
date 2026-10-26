@@ -80,6 +80,8 @@ object BossRiskHost {
 
     // ---- the paper figures (the watch pass) ----
     private val lock = Any()
+    /** 26 Oct: bumped by [wipe] (under [lock]): figures or records read before an erase are never kept or saved after it. */
+    @Volatile private var wipeGen = 0
     private var paperDays: List<AccountStop.Day> = emptyList()
     @Volatile private var daysReadAt = 0L
     @Volatile private var acctSince: LocalDate? = null
@@ -135,6 +137,7 @@ object BossRiskHost {
 
     /** The switches, the kept marks and the record from the settings (a worker thread). */
     internal fun load() {
+        val gen = wipeGen
         runCatching {
             for (r in PAPER_RULES) paperOn[r] = SecurePrefs.getBoolean(r.paperKey, true)
             for (r in LIVE_RULES) liveOn[r] = SecurePrefs.getBoolean(r.liveKey, false)
@@ -147,7 +150,10 @@ object BossRiskHost {
             weekReachedOn = SecurePrefs.getString(K_WEEK_REACHED)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
             weekLimit = AppSettings.load().paperWeeklyLoss
             val saved = SecurePrefs.getString(K_LOG).orEmpty().lines().mapNotNull { decode(it) }
-            synchronized(lock) { log = (saved + log).distinct().sortedBy { it.atMs }.takeLast(LOG_KEPT); recompute(today()) }
+            synchronized(lock) {
+                if (gen != wipeGen) return@runCatching      // 26 Oct: read before an erase: the old record, dropped
+                log = (saved + log).distinct().sortedBy { it.atMs }.takeLast(LOG_KEPT); recompute(today())
+            }
         }
         loaded = true
         publish()
@@ -162,19 +168,23 @@ object BossRiskHost {
      */
     fun refresh(context: Context?, paperToday: Double?, s: AppSettings, nowMs: Long = System.currentTimeMillis()) {
         runCatching {
+            val gen = wipeGen
             if (!loaded) load()
             weekLimit = s.paperWeeklyLoss
             val d = today()
             if (nowMs - daysReadAt >= REFRESH_DAYS_MS) {
                 val all = runCatching { DailyPnl.all(false) }.getOrDefault(emptyMap())
-                synchronized(lock) { paperDays = all.values.filter { it.date != d }.map { AccountStop.Day(it.date, it.net) }.sortedBy { it.day } }
+                synchronized(lock) {
+                    if (gen != wipeGen) return@runCatching      // 26 Oct: read before an erase
+                    paperDays = all.values.filter { it.date != d }.map { AccountStop.Day(it.date, it.net) }.sortedBy { it.day }
+                }
                 daysReadAt = nowMs
             }
             if (paperToday != null && paperToday.isFinite() && Market.isTradingDay(d))
-                synchronized(lock) { paperDays = AccountStop.record(paperDays, d, paperToday) }
+                synchronized(lock) { if (gen != wipeGen) return@runCatching; paperDays = AccountStop.record(paperDays, d, paperToday) }
             val wasAcct = acctStatus.stopped
             val wasWeek = week.reached
-            synchronized(lock) { recompute(d) }
+            synchronized(lock) { if (gen != wipeGen) return@runCatching; recompute(d) }
             if (acctStatus.stopped && !wasAcct) said(context, "Account stop rule reached on paper",
                 "The paper account reached the account stop rule (${acctStatus.why}). " +
                     (if (paperOn[Rule.ACCOUNT] == true) "The bots open no new paper position until you restart the count with your PIN (Account guard page); open positions keep their exits."
@@ -334,13 +344,14 @@ object BossRiskHost {
      */
     fun entryIv(owner: String, contract: com.optionslab.app.data.Paper.Contract, premium: Double, live: Boolean, nowMs: Long = System.currentTimeMillis()) {
         if (contract.isMcx || !(premium > 0)) return
+        val gen = wipeGen
         scope.launch {
             runCatching {
                 val s = spot(contract.underlying)
                 val years = runCatching { com.optionslab.engine.options.OptionMath.timeToExpiryYears(Market.now(), contract.expiry) }.getOrNull()
                 val iv = BossRisk.entryIv(premium, s, contract.strike, years, contract.right.name)
                 val rec = Iv(nowMs, today(), owner, contract.symbol, live, premium, s, iv)
-                synchronized(lock) { ivs = (ivs + rec).takeLast(IV_KEPT) }
+                synchronized(lock) { if (gen != wipeGen) return@runCatching; ivs = (ivs + rec).takeLast(IV_KEPT) }
                 runCatching {
                     Diag.record("iv", "$owner ${contract.symbol} @ %.2f: IV at entry %s (index %s; record only)".format(Locale.ENGLISH, premium,
                         iv?.let { "%.1f%%".format(Locale.ENGLISH, it * 100) } ?: "not known", s?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "no fresh price"))
@@ -507,6 +518,30 @@ object BossRiskHost {
         publish()
         return "The paper account stop rule counts again from $from."
     }
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): the record, the paper days, the IVs, the latched stops and the switches back
+     * to their defaults in memory (the keys go with the settings' own wipe); a read or a save begun before this keeps nothing
+     * ([wipeGen]). Read again from the (empty) settings on the next pass. Nothing is read here.
+     */
+    fun wipe() {
+        synchronized(lock) {
+            wipeGen++
+            paperDays = emptyList(); log = emptyList(); ivs = emptyList()
+            PAPER_RULES.forEach { paperOn[it] = true }
+            LIVE_RULES.forEach { liveOn[it] = false }
+            loaded = false; daysReadAt = 0L
+            acctSince = null; acctReached = null; weekReachedOn = null; weekLimit = BossRisk.PAPER_WEEKLY_DEFAULT; liveCapital = null
+            val d = today()
+            acctStatus = AccountStop.status(emptyList(), d); week = BossRisk.weekly(emptyList(), d, weekLimit)
+        }
+        ivWaiting.clear()
+        _view.value = View()
+    }
+
+    /** 26 Oct: records, figures or latched stops in memory (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = synchronized(lock) { log.isNotEmpty() || paperDays.isNotEmpty() || ivs.isNotEmpty() } ||
+        ivWaiting.isNotEmpty() || acctReached != null || weekReachedOn != null || acctSince != null || liveCapital != null
 
     /** Paper switch state (tests, the card). */
     fun paperOn(rule: Rule): Boolean = paperOn[rule] == true

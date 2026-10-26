@@ -19,6 +19,7 @@ internal object IraExpert {
         val today = runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() }
         // Judged again only when the paper trips (or the day) changed: every pass read it.
         return judged.of(IraAccount.trips(false, owners) to today) { (trips, day) ->
+            judgedAny = true
             trips.filter { it.owner.isNotBlank() && it.owner != "Manual" && !it.owner.startsWith("Jarvis") }
                 // Liquidity 15+5 per index (research X1): BANKNIFTY's paper test apart from FINNIFTY's and MIDCPNIFTY's.
                 .groupBy { com.optionslab.ira.LiquiditySplit.owner(it.owner, it.symbol) }
@@ -27,6 +28,17 @@ internal object IraExpert {
     }
 
     private val judged = com.optionslab.ira.SameInput<Pair<List<com.optionslab.ira.Insights.Trip>, java.time.LocalDate>, List<Vetting.Verdict>>()
+    /** Whether [judged] was ever filled (it keeps the paper trips it judged): for the erase's check ([holdsForErase]). */
+    @Volatile private var judgedAny = false
+
+    /**
+     * 26 Oct (Erase everything, [com.optionslab.app.data.PersonalStores]): the kept verdicts and the paper trips they were
+     * judged from forgotten (the "told" marks are settings keys, wiped with the rest). Memory only; never reads the vault.
+     */
+    internal fun wipe() { judged.forget(); judgedAny = false }
+
+    /** Whether verdicts (and the trips behind them) are held in memory. Memory only. */
+    internal fun holdsForErase(): Boolean = judgedAny
 
     suspend fun say(): String = Vetting.say(verdicts())
 

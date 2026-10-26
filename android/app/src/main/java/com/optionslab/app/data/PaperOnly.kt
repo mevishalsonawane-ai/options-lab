@@ -144,6 +144,16 @@ object PaperOnly {
         return "The paper-only period is over. The app stays in its mode until you switch it."
     }
 
+    /**
+     * 26 Oct (erase everything): the period (its end date and Boss's reason) dropped from memory; its key goes with the settings.
+     * Left unread, as at a cold start, so a new live entry is refused until it is read again ([entryRefusal]: risk only lowered;
+     * exits never wait). Reads nothing.
+     */
+    fun wipe() { synchronized(this) { _period.value = null; loaded = false } }
+
+    /** A period in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = _period.value != null
+
     /** TEST ONLY. */
     internal fun resetForTest(p: PaperOnlyPeriod.Period? = null) { _period.value = p; loaded = true }
     /** TEST ONLY: as at a cold start, before the period is read. */

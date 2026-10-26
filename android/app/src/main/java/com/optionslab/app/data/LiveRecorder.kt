@@ -48,6 +48,10 @@ object LiveRecorder {
     private const val K_KEEP = "recordings.keep"
 
     @Volatile private var root: File? = null
+    /** 26 Oct: the share sheet's copy of the recordings (cache/exports/recordings), deleted with them by the erase. */
+    @Volatile private var exports: File? = null
+    /** 26 Oct: bumped by [wipe]: a write begun before an erase deletes the day folder it recreated instead of keeping it. */
+    @Volatile private var wipeGen = 0
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val queue = LiveRecord.Queue<Pending>()
     private val wake = Channel<Unit>(Channel.CONFLATED)
@@ -69,6 +73,7 @@ object LiveRecorder {
     fun init(context: Context) {
         if (!enabled()) return
         root = File(context.applicationContext.noBackupFilesDir, DIR)
+        exports = File(context.applicationContext.cacheDir, "exports/recordings")
         startedMs = System.currentTimeMillis()
         if (loop?.isActive != true) loop = scope.launch { writer() }
         scope.launch { minutes() }
@@ -145,10 +150,11 @@ object LiveRecorder {
 
     /** Every queued snapshot built from memory and written, encrypted, to today's trades file. */
     internal suspend fun drain() {
+        val gen = wipeGen
         val items = queue.drain()
         if (items.isEmpty()) return
         val lines = items.map { p -> runCatching { LiveRecord.snapshot(build(p)) }.getOrElse { LiveRecord.gap(p.atMs, "snapshot ${p.symbol}", it.javaClass.simpleName) } }
-        writeTrades(today(), lines)
+        writeTrades(today(), lines, gen)
     }
 
     private fun build(p: Pending): LiveRecord.Snapshot {
@@ -250,6 +256,7 @@ object LiveRecorder {
 
     /** The minute that ended before [nowMs]: one row per index (internal: the tests call it). */
     internal suspend fun minute(nowMs: Long) {
+        val gen = wipeGen
         val day = today()
         if (rotatedOn != day) { rotatedOn = day; runCatching { rotate(day) } }
         val start = nowMs - Math.floorMod(nowMs, 60_000L) - 60_000L
@@ -259,7 +266,7 @@ object LiveRecorder {
             val bar = Broker.indexToken(ix)?.let { KiteStream.minuteBar(it, start) }?.let { LiveRecord.Bar(it[0], it[1], it[2], it[3]) }
             LiveRecord.minute(LiveRecord.Minute(t, ix, bar, m.spot, m.future, m.vix, m.expiry, m.legs, m.missing + if (bar == null) listOf("bar") else emptyList()))
         }
-        writeMarket(day, lines)
+        writeMarket(day, lines, gen)
     }
 
     // ---- the files -----------------------------------------------------------------------------------------------------
@@ -270,24 +277,30 @@ object LiveRecorder {
 
     private fun gz(text: String): ByteArray = java.io.ByteArrayOutputStream().also { b -> GZIPOutputStream(b).use { it.write(text.toByteArray(Charsets.UTF_8)) } }.toByteArray()
 
-    private suspend fun writeMarket(day: LocalDate, lines: List<String>) = writeLock.withLock {
+    private suspend fun writeMarket(day: LocalDate, lines: List<String>, gen: Int = wipeGen) = writeLock.withLock {
         val d = dayDir(day) ?: return@withLock
+        if (gen != wipeGen) return@withLock     // 26 Oct: built before an erase
         d.mkdirs()
         // The day's budget counts the market and trade files; the tick zone's raw seconds have their own ([TickZoneRecorder]).
         if (LiveRecord.overDayBudget(dirBytes(d) - File(d, com.optionslab.ira.TickZone.TICKS_FILE).length())) return@withLock
         val f = File(d, LiveRecord.MARKET_FILE)
         val head = if (f.exists()) emptyList() else listOf(LiveRecord.header(LiveRecord.MARKET_FILE, day, app()))
         java.io.FileOutputStream(f, true).use { it.write(gz((head + lines).joinToString("") { l -> l + "\n" })) }
+        // 26 Oct: an erase while this was written: the folder it made again is deleted.
+        if (gen != wipeGen) { runCatching { d.deleteRecursively() }; return@withLock }
         lastWriteMs = System.currentTimeMillis()
     }
 
-    private suspend fun writeTrades(day: LocalDate, lines: List<String>) = writeLock.withLock {
+    private suspend fun writeTrades(day: LocalDate, lines: List<String>, gen: Int = wipeGen) = writeLock.withLock {
         val d = dayDir(day) ?: return@withLock
+        if (gen != wipeGen) return@withLock     // 26 Oct: Boss's records from before an erase
         d.mkdirs()
         val f = File(d, LiveRecord.TRADES_FILE)
         val head = if (f.exists()) emptyList() else listOf(LiveRecord.header(LiveRecord.TRADES_FILE, day, app()))
         val blob = Vault.encrypt(gz((head + lines).joinToString("") { l -> l + "\n" }))
         java.io.FileOutputStream(f, true).use { it.write((android.util.Base64.encodeToString(blob, android.util.Base64.NO_WRAP) + "\n").toByteArray(Charsets.US_ASCII)) }
+        // 26 Oct: an erase while this was written: the folder it made again is deleted.
+        if (gen != wipeGen) { runCatching { d.deleteRecursively() }; return@withLock }
         lastWriteMs = System.currentTimeMillis()
     }
 
@@ -404,12 +417,23 @@ object LiveRecorder {
 
     /** Erase everything recorded (Boss's erase-everything). */
     fun wipe() {
+        // 26 Oct: bumped first, so a write already past its queue sees it and keeps nothing (see [writeTrades]).
+        wipeGen++
         queue.drain()
         runCatching { TickZoneRecorder.wipe() }
         firstOi.clear()
         lastWriteMs = null
+        // 26 Oct: Boss's switch and days kept forgotten too (read again from the emptied settings; memory only, nothing written).
+        onKept = null; keepKept = null
         runCatching { root?.deleteRecursively() }
+        runCatching { exports?.deleteRecursively() }
     }
+
+    /** 26 Oct: snapshots queued, or the day's chain kept, in memory (the erase's test). Memory only. */
+    internal fun holdsForErase(): Boolean = queue.size() > 0 || firstOi.isNotEmpty() || lastWriteMs != null
+
+    /** 26 Oct: the recordings folder and its exported zip (empty before [init]). */
+    internal fun filesForErase(): List<File> = listOfNotNull(root, exports)
 
     /** TEST ONLY: recording into [context]'s folder without the writer and minute loops (the test drains by hand). */
     internal fun attachForTest(context: Context) {

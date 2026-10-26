@@ -83,7 +83,7 @@ object NightArm {
     private val _view = MutableStateFlow(View(false, emptyMap(), emptyList(), emptyList(), emptyList()))
     val view: StateFlow<View> = _view
 
-    private var cache: Book? = null
+    @Volatile private var cache: Book? = null
     private const val LOG_KEPT = 200
     private const val CLOSED_KEPT = 400
 
@@ -94,6 +94,7 @@ object NightArm {
 
     private fun book(): Book {
         cache?.let { return it }
+        val gen = wipes
         val b = Book()
         runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
@@ -112,10 +113,13 @@ object NightArm {
             b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
-        cache = b
-        publish(b)
+        // 26 Oct (review): a book read before "Erase everything" is used by this pass only, never kept or shown ([save] then skips it).
+        synchronized(written) { if (gen == wipes) { cache = b; publish(b) } }
         return b
     }
+
+    /** 26 Oct: bumped by [wipe] (under [written]'s lock): a read that began before it is not kept ([book]). */
+    @Volatile private var wipes = 0
 
     /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
     private val written = Vault.LastWrite()
@@ -136,9 +140,39 @@ object NightArm {
         o.put("status", JSONObject(b.status as Map<*, *>))
         b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
-        runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
-        publish(b)
+        // 26 Oct: under [written]'s lock, as [wipe]: a book "Erase everything" dropped meanwhile is never written back or shown.
+        synchronized(written) {
+            if (cache !== b) return
+            runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
+            publish(b)
+        }
     }
+
+    /**
+     * 26 Oct ("Erase everything", [PersonalStores]): its trades, switch, decisions and log dropped from memory and its file deleted.
+     * Under [written]'s lock, as every save, so a pass that read the old book writes nothing after it ([save]). Never waits for the
+     * book's lock; safe before [init]. Memory and files only: no vault read. (Its live path's memory is [ArmLive]'s.)
+     */
+    internal fun wipe() {
+        synchronized(written) {
+            wipes++; cache = null; written.forget()
+            _view.value = View(false, emptyMap(), emptyList(), emptyList(), emptyList())
+            for (f in filesForErase()) runCatching { f.delete() }
+        }
+    }
+
+    /** 26 Oct: anything of the book is held in memory (the erase's check; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching {
+        val v = _view.value
+        cache != null || v.armed || v.open.isNotEmpty() || v.closed.isNotEmpty() || v.log.isNotEmpty() || v.status.isNotEmpty()
+    }.getOrDefault(true)
+
+    /** 26 Oct: its book, and any copy of it set aside as unreadable (none before [init]). */
+    internal fun filesForErase(): List<File> = if (!ready()) emptyList() else
+        listOf(file) + file.parentFile?.listFiles { x -> x.name.startsWith(file.name + ".unreadable.") }.orEmpty()
+
+    /** TEST ONLY: [p] kept in the book and its file, as a trade it made is. */
+    internal suspend fun seedForTest(p: Pos) { lock.withLock { val b = book(); b.positions += p; save(b) } }
 
     private fun publish(b: Book) {
         _view.value = View(b.armed, b.status.shown(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(20),

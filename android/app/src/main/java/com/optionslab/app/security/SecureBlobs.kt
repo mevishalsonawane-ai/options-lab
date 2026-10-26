@@ -113,6 +113,15 @@ internal object SecureBlobs {
         then()
     }
 
+    /**
+     * 26 Oct ("Erase everything", [com.optionslab.app.data.PersonalStores]): a value kept in memory (read, or set and not yet
+     * written). Memory only, never the disk; never throws.
+     */
+    internal fun holdsForErase(): Boolean = runCatching { entries.values.any { synchronized(it) { it.dirty || (it.loaded && it.value != null) } } }.getOrDefault(false)
+
+    /** 26 Oct: the folder of the large values (empty before [init]). */
+    internal fun filesForErase(): List<File> = if (::dir.isInitialized) listOf(dir) else emptyList()
+
     private fun file(k: String) = File(dir, "$k.vault")
     private fun entry(k: String) = entries.getOrPut(k) { Entry() }
 

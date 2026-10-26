@@ -34,7 +34,11 @@ internal object GlanceSource {
     fun setExpanded(open: Boolean) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(KEY_OPEN to open)) } }
 
     /** Read every source and word the card. */
-    suspend fun read(): TodayGlance.Card = withContext(Dispatchers.IO) { TodayGlance.card(facts()).also { last = it } }
+    suspend fun read(): TodayGlance.Card = withContext(Dispatchers.IO) {
+        val gen = erased
+        // 26 Oct: a card read from the books before an erase ([wipe]) is not kept after it.
+        TodayGlance.card(facts()).also { if (gen == erased) last = it }
+    }
 
     private val jarvis: Boolean get() = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
 
@@ -85,12 +89,25 @@ internal object GlanceSource {
     /** Liquidity 15+5's and Solo's live-vs-backtest checks ([ForwardRecords.rows]), read again at most every 5 minutes. */
     private suspend fun forward(nowMs: Long = System.currentTimeMillis()): List<ForwardCheck.Result> {
         forwardKept?.takeIf { nowMs - it.first < FORWARD_EVERY_MS }?.let { return it.second }
+        val gen = erased
         val rows = runCatching { ForwardRecords.rows() }.getOrNull() ?: return forwardKept?.second.orEmpty()
         val keep = rows.filter { !it.shadow && it.result.expectation.key in setOf(ForwardCheck.LIQUIDITY.key, ForwardCheck.SOLO.key) }.map { it.result }
-        forwardKept = nowMs to keep
+        if (gen == erased) forwardKept = nowMs to keep
         return keep
     }
 
     /** TEST ONLY: forget the kept card and reads. */
     internal fun forget() { last = null; forwardKept = null }
+
+    /** 26 Oct: bumped by [wipe]: a read on its way when everything was erased keeps nothing. */
+    @Volatile private var erased = 0
+
+    /**
+     * 26 Oct: "Erase everything" ([PersonalStores]): the card shown last (the arms' and Jarvis's trades, their P&L) and the kept
+     * live-vs-backtest records forgotten. Memory only (the open/folded switch is a settings key).
+     */
+    fun wipe() { erased++; forget() }
+
+    /** 26 Oct: whether a card or record is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = last != null || forwardKept != null
 }

@@ -95,7 +95,10 @@ object Diag {
         // Redacted on the diary's own thread (round 2): the caller - an order being sent - never waits on the vault read it
         // makes for the account holder's name.
         val head = "${TIME.format(Instant.now())} [$area] "
+        // 26 Oct (erase everything): a line recorded before an erase and still queued is dropped, never kept after it.
+        val gen = wipes
         runCatching { writer.execute {
+            if (gen != wipes) return@execute
             keep(head + redact(text.replace('\n', ' ')))
             // 12 Oct: the day's errors counted by kind on this thread (the order review and the app's health read them; no agent read the diary).
             // 20 Oct: scrubbed as the diagnostics file scrubs the diary's lines, so one event has one kind in both counts.
@@ -362,8 +365,25 @@ object Diag {
         }
     }
 
+    /** Bumped by [wipe]: the lines queued before it are dropped ([record]). */
+    @Volatile private var wipes = 0
+
+    // 26 Oct (erase everything): the day's error tally goes too, and the queued lines ([wipes]); a copy set aside as
+    // unreadable is deleted with the file.
     @Synchronized
-    fun wipe() { cache = null; dirty = false; unread = false; if (::file.isInitialized) file.delete() }
+    fun wipe() {
+        wipes++
+        cache = null; dirty = false; unread = false
+        runCatching { errors.clear() }
+        filesForErase().forEach { runCatching { it.delete() } }
+    }
+
+    /** The erase's files: the diary and any copy of it set aside as unreadable (empty before [init]). */
+    internal fun filesForErase(): List<File> = if (!::file.isInitialized) emptyList() else
+        listOf(file) + file.parentFile?.listFiles { f -> f.name.startsWith(file.name + ".unreadable.") }.orEmpty()
+
+    /** Lines in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = runCatching { synchronized(this) { cache?.isNotEmpty() == true } }.getOrDefault(false)
 
     /**
      * 20 Oct, enhancement round 1: the cap's entries only LOGGED and let through today (idea 9), Liquidity's no-twin rule (idea 3)

@@ -46,6 +46,11 @@ object BossTradeLog {
     @Volatile private var loaded = false
     @Volatile private var trades: List<BossTrades.Trade> = emptyList()
     @Volatile private var rulesKept: Pair<Int, List<BossTrades.Rule>>? = null
+    /**
+     * 26 Oct (Erase everything): bumped by [wipe]. A drain, settle or answer that began before the erase checks it under [lock]
+     * before it changes the book or saves, so it can never put the old trades back in memory or on disk after the erase.
+     */
+    @Volatile private var wipeGen = 0
 
     /** A hand fill waiting to be recorded (the order path's one write). */
     private data class Fill(val venueId: String, val symbol: String, val buy: Boolean, val live: Boolean, val atMs: Long, val entry: Double?,
@@ -70,6 +75,9 @@ object BossTradeLog {
             if (loaded) return
             val f = file()
             val read = runCatching { f?.takeIf { it.isFile }?.let { com.optionslab.app.security.Vault.readFileSteady(it) }?.toString(Charsets.UTF_8) }
+            // 26 Oct: a read refused because everything is being erased is not a damaged file: never set aside (the copy would
+            // outlive the erase), nothing kept as read.
+            if (read.exceptionOrNull() is com.optionslab.app.security.Vault.Erasing) return
             if (read.isFailure) {
                 // Unreadable (a Keystore that stayed broken, a tampered file): moved aside, never overwritten. While it is still
                 // in place (the move failed) nothing is saved over it - [loaded] stays false and the next read tries again.
@@ -83,11 +91,12 @@ object BossTradeLog {
         }
     }
 
-    private fun save() {
+    private fun save(gen: Int) {
         // Never over a file that was not read (a failed load): that would wipe Boss's record.
         if (!loaded) return
         val f = file() ?: return
-        val text = BossTrades.encode(trades.takeLast(BossTrades.KEEP))
+        // 26 Oct: nothing saved by a round that began before an erase.
+        val text = synchronized(lock) { if (gen != wipeGen) return; BossTrades.encode(trades.takeLast(BossTrades.KEEP)) }
         runCatching { f.parentFile?.mkdirs(); com.optionslab.app.security.Vault.writeFile(f, text.toByteArray(Charsets.UTF_8)) }
     }
 
@@ -106,19 +115,21 @@ object BossTradeLog {
     }
 
     /** The queued fills recorded with their context (a worker thread). */
-    internal fun drain(): Unit = synchronized(io) {
+    internal fun drain() { synchronized(io) {
+        val gen = wipeGen
         ensureLoaded()
         while (true) {
+            if (gen != wipeGen) return
             val f = fills.poll() ?: break
             val closing = f.closing ?: closes(f)
-            if (closing) closeOne(f) else openOne(f)
+            if (closing) closeOne(f, gen) else openOne(f, gen)
             if (_prompt.value?.tradeId == f.venueId) _prompt.value = _prompt.value?.copy(exit = closing)
         }
         // A paper close's round trip is in the paper book now; a live one's (this or an earlier close's) once the account loads.
-        settle()
+        settle(gen)
         rulesKept = null
-        save()
-    }
+        save(gen)
+    } }
 
     /** Does [f] close (or cut) what was held? Paper: the paper book's position after it; live: a sell of an option bought before. */
     private fun closes(f: Fill): Boolean {
@@ -143,24 +154,24 @@ object BossTradeLog {
         }.distinct().take(8)
     }.getOrDefault(emptyList())
 
-    private fun openOne(f: Fill) {
+    private fun openOne(f: Fill, gen: Int) {
         val t = BossTrades.Trade(f.venueId, f.symbol, f.live, f.atMs, regime = regimeOf(f.symbol), votes = votesOn(f.symbol),
             rr = BossTrades.rr(f.entry, f.stop, f.target, f.buy))
-        synchronized(lock) { trades = (trades.filter { it.id != t.id } + t).takeLast(BossTrades.KEEP) }
+        synchronized(lock) { if (gen != wipeGen) return; trades = (trades.filter { it.id != t.id } + t).takeLast(BossTrades.KEEP) }
     }
 
-    private fun closeOne(f: Fill) {
+    private fun closeOne(f: Fill, gen: Int) {
         val open = trades.lastOrNull { it.symbol == f.symbol && it.live == f.live && it.open } ?: return
         // Pending until the trade book holds this close's own round trip (G6-4): a live exit's comes only on the next account
         // load, so its net is filled in then ([settle]) - never 0, never an earlier trip's on the same symbol.
-        synchronized(lock) { trades = trades.map { if (it.id == open.id) it.copy(closedMs = f.atMs, closeId = f.venueId) else it } }
+        synchronized(lock) { if (gen != wipeGen) return; trades = trades.map { if (it.id == open.id) it.copy(closedMs = f.atMs, closeId = f.venueId) else it } }
         // The exit's "why?" is kept on the trade it closes.
         val cur = _prompt.value
         if (cur != null && cur.tradeId == f.venueId) _prompt.value = cur.copy(tradeId = open.id, exit = true)
     }
 
     /** The pending closes given their nets from the trade book (memory; the caller saves). True when one was settled. */
-    private fun settle(): Boolean {
+    private fun settle(gen: Int): Boolean {
         val ts = trades
         if (ts.none { it.pending }) return false
         val nets = HashMap<String, Double>()
@@ -168,6 +179,7 @@ object BossTradeLog {
             for (t in com.optionslab.app.data.TradeBook.trips(live)) nets[t.closeOrderId] = (nets[t.closeOrderId] ?: 0.0) + t.net
         }
         synchronized(lock) {
+            if (gen != wipeGen) return false
             val next = BossTrades.settle(trades, nets)
             if (next == trades) return false
             trades = next
@@ -181,7 +193,7 @@ object BossTradeLog {
      */
     fun settleSoon() {
         if (!enabled() || trades.none { it.pending }) return
-        scope.launch { runCatching { synchronized(io) { ensureLoaded(); if (settle()) { rulesKept = null; save() } } } }
+        scope.launch { runCatching { synchronized(io) { val gen = wipeGen; ensureLoaded(); if (settle(gen)) { rulesKept = null; save(gen) } } } }
     }
 
     // ---- Boss's answer -----------------------------------------------------------------------------------------------------
@@ -192,15 +204,17 @@ object BossTradeLog {
         scope.launch {
             runCatching {
                 synchronized(io) {
+                    val gen = wipeGen
                     drain()
                     synchronized(lock) {
+                        if (gen != wipeGen) return@synchronized
                         trades = trades.map { t ->
                             if (t.id != p.tradeId) t else t.copy(why = why ?: t.why, exitWhy = exitWhy ?: t.exitWhy,
                                 note = note.trim().take(140).ifEmpty { t.note })
                         }
                     }
                     rulesKept = null
-                    save()
+                    save(gen)
                 }
             }
         }
@@ -228,6 +242,26 @@ object BossTradeLog {
     fun sayHabits(): String = BossTrades.sayHabits(all())
     fun sayRules(): String = BossTrades.sayRules(rules(), all().count { it.closed })
     fun todayInsight(day: LocalDate): String? = BossTrades.todayInsight(rules(), all().filter { it.day == day })
+
+    /**
+     * 26 Oct (Erase everything): every trade, queued fill, kept rule and the open card forgotten, and the file deleted. A round
+     * already running sees [wipeGen] changed and neither changes nor saves the book. Memory and files only: never the vault.
+     * The book counts as read (the file is gone), so the next fill starts a new one.
+     */
+    fun wipe() {
+        synchronized(lock) { wipeGen++; trades = emptyList(); loaded = true }
+        fills.clear(); _prompt.value = null; rulesKept = null
+        filesForErase().forEach { runCatching { it.delete() } }
+    }
+
+    /** 26 Oct: Boss's trades, a queued fill or the card in memory (memory only, for the erase's tests). */
+    internal fun holdsForErase(): Boolean = trades.isNotEmpty() || fills.isNotEmpty() || _prompt.value != null || rulesKept != null
+
+    /** 26 Oct: the file this writes (none before [init]). */
+    internal fun filesForErase(): List<File> {
+        val f = file() ?: return emptyList()
+        return listOf(f) + f.parentFile?.listFiles { x -> x.name.startsWith("${f.name}.unreadable.") }.orEmpty().toList()
+    }
 
     /** Hand fills not recorded yet (tests wait for none). */
     internal fun pending(): Int = fills.size

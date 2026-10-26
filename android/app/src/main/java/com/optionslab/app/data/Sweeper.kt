@@ -55,6 +55,23 @@ object Sweeper {
     /** Tests: the failsafe starts afresh. */
     internal fun resetForTest() { watch = PriceWatch.Failsafe(); lastPaper = emptyList(); lastLive = emptyList() }
 
+    /**
+     * 26 Oct (erase everything): the positions each book last showed dropped (the books themselves are erased; the next sweep
+     * reads them again). The failsafe's clock is kept (times only, nothing about the account): a silence already running is
+     * still said on time. The backup GTTs' list is a settings key, wiped with the settings. Never waits for a sweep: one under
+     * way sets the lists again from the books it read.
+     */
+    fun wipe() { lastPaper = emptyList(); lastLive = emptyList() }
+
+    /** Positions in memory (the erase's test; memory only). */
+    internal fun holdsForErase(): Boolean = lastPaper.isNotEmpty() || lastLive.isNotEmpty()
+
+    /** TEST ONLY: the positions the books showed when last read, as a sweep leaves them. Debug builds only. */
+    internal fun heldForTest(paper: List<PriceWatch.Held>, live: List<PriceWatch.Held> = emptyList()) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        lastPaper = paper; lastLive = live
+    }
+
     /** (holding, priced) over [held] at [at]: only the positions whose own market trades then ([PriceWatch.judge]). */
     internal fun judge(held: List<PriceWatch.Held>, quoted: Set<String>, at: java.time.LocalDateTime, all: Boolean = false): Pair<Boolean, Boolean> =
         PriceWatch.judge(held, quoted, at, { d, minute -> Market.isOpenAt(d, minute) },

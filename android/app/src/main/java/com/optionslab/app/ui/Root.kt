@@ -352,28 +352,13 @@ fun eraseEverything() {
     // the keys a last time. Nothing waits on a lock the order path or the screen holds.
     runCatching { Vault.beginErase() }
     runCatching { SessionLock.lock() }
-    fun w(f: () -> Unit) { runCatching(f) }
     val main = android.os.Looper.getMainLooper()
     val onMain = android.os.Looper.myLooper() == main
+    // 26 Oct (erase audit): every store is in [PersonalStores] now, each wipe guarded there. About 20 were named here by hand;
+    // the rest (the grammar, night, Hero, MCX and gold arms, the risk hosts, Jarvis's books...) kept their books in memory and
+    // saved them again after the erase.
     try {
-        w { com.optionslab.app.data.Ledger.wipe() }
-        w { com.optionslab.app.data.Alarms.wipe() }
-        w { com.optionslab.app.data.Paper.wipe() }
-        w { com.optionslab.app.data.OrbArms.wipe() }
-        w { com.optionslab.app.data.ShadowArms.wipe() }
-        w { com.optionslab.app.data.PineScripts.wipe() }
-        w { com.optionslab.app.data.PineAuto.wipe() }
-        w { com.optionslab.app.data.Protections.wipe() }
-        w { com.optionslab.app.data.TradeBook.wipe() }
-        // The OI-wall shadow log (14 Oct): its own encrypted file.
-        w { com.optionslab.app.data.OiWallShadowHost.wipe() }
-        w { com.optionslab.app.data.Diag.wipe() }
-        w { com.optionslab.app.data.Journal.wipe() }
-        w { com.optionslab.app.data.Strategies.wipe() }
-        w { com.optionslab.app.data.Market.wipe() }
-        w { com.optionslab.app.data.Broker.forget() }
-        // The market recorder's settings (26 Oct: here, while the vault is held; its folder goes with the slow files below).
-        w { com.optionslab.app.data.MarketRecorder.forget() }
+        val failed = com.optionslab.app.data.PersonalStores.wipeAll(slow = false)
         // WebView state (the Zerodha login's cookies and storage) must be cleared on the main thread;
         // eraseEverything can be called from a background dispatcher, where these calls fail silently.
         val web = Runnable {
@@ -381,28 +366,29 @@ fun eraseEverything() {
             runCatching { android.webkit.WebStorage.getInstance().deleteAllData() }
         }
         if (onMain) web.run() else android.os.Handler(main).post(web)
-        w { SecurePrefs.wipe() }
-        w { com.optionslab.ira.ShortAnswer.clearCache() }
-        w { BiometricGate.forget() }
+        eraseFailures.value = failed
     } finally {
         // The keys destroyed a last time (none can have been made since the start), then saves are allowed again.
         runCatching { Vault.endErase() }
         runCatching { SessionLock.lock() }
     }
+    // 26 Oct, review: the screens drop their copies now, before the slow folders below (a key form closed during them used to
+    // save its draft again).
+    wipes.value = wipes.value + 1
     // The large folders (the recordings, the price history, the device data): deleted off the screen's thread (an erase from
     // a button no longer freezes it). Nothing here holds a key, writes a vault file or destroys a key, so a PIN set meanwhile
     // is safe (26 Oct: the market recorder's settings writes moved out of here, above).
     val slow = Runnable {
-        w { com.optionslab.app.data.MarketRecorder.wipeFiles() }
-        w { com.optionslab.app.data.MarketRecorder.forgetMemory() }
-        w { com.optionslab.app.data.FillSlippage.wipe() }
-        w { com.optionslab.app.data.LiveRecorder.wipe() }
-        w { com.optionslab.app.data.History.wipe() }
-        w { com.optionslab.app.data.Store.wipeDeviceData() }
+        val failed = com.optionslab.app.data.PersonalStores.wipeAll(slow = true)
+        if (failed.isNotEmpty()) eraseFailures.value = eraseFailures.value + failed
+        // The home-screen widgets redrawn (they showed the last figures until their next update).
+        runCatching { com.optionslab.app.data.PersonalStores.redrawWidgets() }
     }
     if (onMain) Thread(slow, "erase-files").start() else slow.run()
-    wipes.value = wipes.value + 1
 }
+
+/** The stores whose wipe threw in the last erase (by source name), for the diagnostics; empty when every one was wiped. */
+val eraseFailures = kotlinx.coroutines.flow.MutableStateFlow<List<String>>(emptyList())
 
 /** Bumped by [eraseEverything]: the screen state held in memory is dropped with the data. */
 val wipes = kotlinx.coroutines.flow.MutableStateFlow(0)

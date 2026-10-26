@@ -525,4 +525,25 @@ object McxMarket {
 
     /** For tests: the day's lists and the calendar forgotten (their files go with the test's directories). */
     internal fun wipe() { mem = null; cal = null; margins = null; liveSeen = null; synchronized(hintLock) { hints = null } }
+
+    /**
+     * 26 Oct: "Erase everything" ([PersonalStores]): what is Boss's own - the watch hint (whether the paper book and the MCX arms
+     * hold or work anything there) and its file, the live MCX flag and the login notice as seen in memory - is forgotten. Not
+     * [wipe] (tests use it as a restart, the hint file kept). The day's contract list, the calendar and the margins are public
+     * market data and stay. Never reads the vault or the settings (their keys go with [SecurePrefs.wipe]).
+     */
+    fun erase() {
+        synchronized(hintLock) {
+            hints = HashMap()
+            filesForErase().forEach { runCatching { it.delete() } }
+        }
+        liveSeen = null; loginToldOn = null
+    }
+
+    /** 26 Oct: whether Boss's own MCX facts are still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = liveSeen?.second == true || loginToldOn != null ||
+        synchronized(hintLock) { hints?.values?.any { it } == true }
+
+    /** 26 Oct: the watch hint's plain file; empty before [init]. */
+    internal fun filesForErase(): List<File> = if (ready()) listOf(hintFile()) else emptyList()
 }
