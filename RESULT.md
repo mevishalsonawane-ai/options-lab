@@ -59,7 +59,8 @@ Nothing new on the order or tick path touches disk, the network or blocks.
   - INFY 1130 off the grid, with and without the estimate;
   - the record words.
 - `NtfyPageTest`: new Compose test for the neutral information row and the Open card's source rule.
-- Local: `:engine:test :ira-core:cleanTest :ira-core:test :engine:jacocoTestCoverageVerification` (see below). `:app` builds only in CI.
+- Local: `:engine:test :ira-core:cleanTest :ira-core:test :engine:jacocoTestCoverageVerification` passed, before and after the
+  review fixes. `:app` builds only in CI.
 
 ## Review
 
@@ -75,4 +76,7 @@ Nothing new on the order or tick path touches disk, the network or blocks.
 
 ## CI
 
-(filled in after the push)
+- `97f66db`: the app did not compile. `p.strike` cannot be smart-cast across modules (`NtfyArm.kt:760`, in `:app` only, which
+  builds only in CI). Fixed with `p.strike!!`, which is safe because it sits inside the `p.strike != null` check.
+- **`3e0914176279943861da243f386568e4103f0172`: all green.** Build APK, App tests 0/4 to 3/4 (JVM, Robolectric, Compose UI), Engine
+  parity with the PC and the PC harness tests passed; Publish screenshots was skipped. This RESULT.md commit changes docs only.
