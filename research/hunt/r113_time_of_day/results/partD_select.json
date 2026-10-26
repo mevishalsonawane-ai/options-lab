@@ -1,0 +1,82 @@
+{
+ "written": "2026-10-26T19:17:08.655225+00:00",
+ "tests": {
+  "MID-R72": {
+   "rule": "MID",
+   "arm": "R72",
+   "removed_trades": 830,
+   "removed_net": -15338,
+   "qualifies": true
+  },
+  "MID-R51": {
+   "rule": "MID",
+   "arm": "R51",
+   "removed_trades": 1036,
+   "removed_net": -96924,
+   "qualifies": true
+  },
+  "MID-R52": {
+   "rule": "MID",
+   "arm": "R52",
+   "removed_trades": 0,
+   "removed_net": 0,
+   "qualifies": false
+  },
+  "MID-LIQ": {
+   "rule": "MID",
+   "arm": "LIQ",
+   "removed_trades": 238,
+   "removed_net": -8566,
+   "qualifies": true
+  },
+  "LATE-R72": {
+   "rule": "LATE",
+   "arm": "R72",
+   "removed_trades": 610,
+   "removed_net": -21825,
+   "qualifies": true
+  },
+  "LATE-R51": {
+   "rule": "LATE",
+   "arm": "R51",
+   "removed_trades": 599,
+   "removed_net": -15901,
+   "qualifies": true
+  },
+  "LATE-R52": {
+   "rule": "LATE",
+   "arm": "R52",
+   "removed_trades": 0,
+   "removed_net": 0,
+   "qualifies": false
+  },
+  "NOON-R72": {
+   "rule": "NOON",
+   "arm": "R72",
+   "removed_trades": 1475,
+   "removed_net": -1061,
+   "qualifies": true
+  },
+  "NOON-R51": {
+   "rule": "NOON",
+   "arm": "R51",
+   "removed_trades": 1613,
+   "removed_net": -71878,
+   "qualifies": true
+  },
+  "NOON-R52": {
+   "rule": "NOON",
+   "arm": "R52",
+   "removed_trades": 0,
+   "removed_net": 0,
+   "qualifies": false
+  },
+  "NOON-LIQ": {
+   "rule": "NOON",
+   "arm": "LIQ",
+   "removed_trades": 262,
+   "removed_net": 42609,
+   "qualifies": false
+  }
+ }
+}
