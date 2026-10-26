@@ -183,4 +183,52 @@ class StopLaneTest : RobolectricTest() {
     @Test fun theArmsExitsAreWaitedOnInsideTheWindow() {
         assertTrue(WatchWorkers.EXITS_WAIT_MS < StopCadence.WINDOW_MS)
     }
+
+    /**
+     * 26 Oct (R105 lead 4: looks 30 s and more apart on 23 and 26 Oct while held, the stream quiet and Zerodha slow): every wait in a
+     * look is bounded, so a look ends inside its 15 s window however slow a read is.
+     */
+    @Test fun aLooksWaitsAddUpToLessThanItsWindow() {
+        assertTrue("${StopLane.LOOK_BOUND_MS}", StopLane.LOOK_BOUND_MS < StopCadence.WINDOW_MS)
+        assertTrue(StopLane.PAPER_WAIT_MS + StopLane.QUIET_EXITS_WAIT_MS + StopLane.SAFETY_WAIT_MS < StopCadence.WINDOW_MS)
+    }
+
+    /**
+     * A held paper option whose price read hangs (the stream quiet, the feed slow): the paper book's pass is left to finish by
+     * itself and the look - the arms' exits, the sweep, the stops - ends on time, well inside its 15 s.
+     */
+    @Test fun aSlowPaperPriceReadNeverHoldsTheLookPastItsBound() {
+        val upstox = com.optionslab.app.testing.FakeUpstox()
+        val released = java.util.concurrent.CountDownLatch(1)
+        try {
+            val day = com.optionslab.app.testing.AutomationSupport.tradingDayAt(10, 0).toLocalDate()
+            com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(day.atTime(10, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+            val key = "NSE_FO|SL25050CE"
+            com.optionslab.app.testing.AutomationSupport.contracts(context, listOf(
+                com.optionslab.engine.Upstox.Contract("NIFTY", day.plusDays(7), 25_050.0, com.optionslab.engine.Right.CE, 65, key, "NIFTY-SL-25050CE")))
+            upstox.price(key, 100.0)
+            val c = com.optionslab.app.data.Paper.contractFor("NIFTY", day.plusDays(7), 25_050.0, com.optionslab.engine.Right.CE)!!
+            assertTrue(runBlocking { com.optionslab.app.data.Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, com.optionslab.engine.sandbox.Quote(100.0)) }.ok)
+            upstox.gate = { k -> if (k == key) released.await(10, java.util.concurrent.TimeUnit.SECONDS) }
+            runBlocking {
+                val run = WatchWorkers.begin(this)
+                try {
+                    val t0 = System.currentTimeMillis()
+                    StopLane.look(context, StopLane.Mode.NSE, t0)
+                    val ms = System.currentTimeMillis() - t0
+                    assertTrue("the look took $ms ms", ms < StopLane.LOOK_BOUND_MS + 2_000L)
+                    assertTrue("inside its window: $ms ms", ms < StopCadence.WINDOW_MS)
+                    assertEquals("the drift guard saw the look start", t0, WatchClock.lookAt)
+                } finally {
+                    released.countDown()
+                    WatchWorkers.end(run)
+                }
+            }
+        } finally {
+            released.countDown()
+            upstox.gate = null
+            upstox.close()
+            com.optionslab.app.data.Market.testClock = null
+        }
+    }
 }

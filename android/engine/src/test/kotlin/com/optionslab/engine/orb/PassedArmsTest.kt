@@ -107,8 +107,9 @@ class PassedArmsTest {
         val k = PassedArms.ExitKind.values()
         // A -15% wick at 09:31 that recovered to 95 by the next look: booked at the stop's 85, not 95.
         assertEquals(85.0, PassedArms.booked(PassedArms.ExitKind.STOP, 95.0, 130.0, 85.0), 1e-9)
-        // A worse fill (slippage through the stop) is booked as it came.
-        assertEquals(82.0, PassedArms.booked(PassedArms.ExitKind.STOP, 82.0, 130.0, 85.0), 1e-9)
+        // 26 Oct (R105 lead 4): a worse fill (the look came after the price fell through) is booked at the walk's price too -
+        // the level a resting stop would have filled at, as the research books it.
+        assertEquals(85.0, PassedArms.booked(PassedArms.ExitKind.STOP, 82.0, 130.0, 85.0), 1e-9)
         assertEquals(110.0, PassedArms.booked(PassedArms.ExitKind.LOCK, 114.0, 130.0, 110.0), 1e-9)
         // No walk price (or an unusable one): the fill, as before.
         for (w in listOf(null, Double.NaN, 0.0, -1.0)) assertEquals(95.0, PassedArms.booked(PassedArms.ExitKind.STOP, 95.0, 130.0, w), 1e-9)
@@ -147,14 +148,15 @@ class PassedArmsTest {
         // The minute that earned it does not use it: a dip in the same minute below 110 is no exit.
         val same = PassedArms.exitOnBars(100.0, t(10, 0), listOf(bar(10, 0, 100.0, 141.0, 105.0, 120.0)), 121.0, t(10, 1), layer)
         assertNull(same.exit); assertEquals(110.0, same.lock!!, 1e-9)
-        // Between bars the price now is held against the lock.
+        // Between bars the price now is held against the lock; 26 Oct: it sells at the lock (a resting order's fill, the research's).
         val now = PassedArms.exitOnBars(100.0, t(10, 0), listOf(bar(10, 0, 100.0, 141.0, 105.0, 120.0)), 108.0, t(10, 1).plusSeconds(20), layer)
-        assertEquals(PassedArms.ExitKind.LOCK, now.exit!!.kind); assertEquals(108.0, now.exit!!.price)
+        assertEquals(PassedArms.ExitKind.LOCK, now.exit!!.kind); assertEquals(110.0, now.exit!!.price, 1e-9)
     }
 
     @Test fun thePriceNowSellsAtTheStopOrTheTargetBetweenBars() {
         val stop = PassedArms.exitOnBars(100.0, t(10, 0), listOf(flat(10, 0, 100.0)), 84.0, t(10, 1).plusSeconds(30), r51)
-        assertEquals(PassedArms.ExitKind.STOP, stop.exit!!.kind); assertEquals(84.0, stop.exit!!.price)
+        // 26 Oct: the stop's level (85), as a resting stop fills, not the 84 seen after it.
+        assertEquals(PassedArms.ExitKind.STOP, stop.exit!!.kind); assertEquals(85.0, stop.exit!!.price, 1e-9)
         val tgt = PassedArms.exitOnBars(100.0, t(10, 0), listOf(flat(10, 0, 100.0)), 131.0, t(10, 1).plusSeconds(30), r51)
         assertEquals(PassedArms.ExitKind.TARGET, tgt.exit!!.kind); assertEquals(130.0, tgt.exit!!.price, 1e-9)
         assertNull(PassedArms.exitOnBars(100.0, t(10, 0), listOf(flat(10, 0, 100.0)), 0.0, t(10, 1), r51).exit)
@@ -277,9 +279,9 @@ class PassedArmsTest {
         val bars = listOf(flat(10, 0, 100.0), bar(10, 1, 110.0, 126.0, 104.0, 118.0))
         val w = PassedArms.exitOnBars(100.0, t(10, 0), bars, null, t(10, 2), l25, breakeven = 101.0)
         assertNull(w.exit); assertEquals(105.0, w.lock!!, 1e-9)
-        // Between bars, the price now under it sells (a lock), at the price now.
+        // Between bars, the price now under it sells (a lock); 26 Oct: at the lock's 105 (the last minute closed above it).
         val now = PassedArms.exitOnBars(100.0, t(10, 0), bars, 104.5, t(10, 2).plusSeconds(20), l25, breakeven = 101.0)
-        assertEquals(PassedArms.ExitKind.LOCK, now.exit!!.kind); assertEquals(104.5, now.exit!!.price, 1e-9)
+        assertEquals(PassedArms.ExitKind.LOCK, now.exit!!.kind); assertEquals(105.0, now.exit!!.price, 1e-9)
     }
 
     @Test fun l25AGapThroughItSellsAtThatMinutesOpen() {
@@ -394,5 +396,44 @@ class PassedArmsTest {
         assertEquals(15.35, PassedArms.floorTick(15.38), 1e-9)
         assertTrue(PassedArms.PASSED.startsWith("Passed research") && PassedArms.PASSED.contains("paper book") && PassedArms.PASSED.contains("Shadow"))
         assertNotNull(PassedArms.SIGNAL_INDEX)
+    }
+
+    /**
+     * 26 Oct (R105 lead 4): on 21 Oct R72's BANKNIFTY put was bought at 448.85, went past +25% (L25 locks +5%: 471.29) and the
+     * look that found it under the lock sold at 464.10 - Rs 216 below on 30 qty. The walk now books the lock's level, as the
+     * research (and a resting order) fills it.
+     */
+    @Test fun aLockReachedBetweenLooksSellsAtTheLockNotTheLaterPrice() {
+        val e = 448.85
+        val bars = listOf(flat(12, 11, e), bar(12, 20, 520.0, 565.0, 515.0, 540.0), bar(12, 31, 480.0, 490.0, 474.0, 476.0),
+            bar(12, 32, 476.0, 478.0, 472.0, 473.0))
+        val w = PassedArms.exitOnBars(e, t(12, 11), bars, 464.10, t(12, 33).plusSeconds(42), l25, breakeven = e + 2.0)
+        assertEquals(PassedArms.ExitKind.LOCK, w.exit!!.kind)
+        assertEquals(e * 1.05, w.exit!!.price, 1e-9)
+        assertEquals(e * 1.05, PassedArms.booked(PassedArms.ExitKind.LOCK, 464.10, null, w.exit!!.price), 1e-9)
+        assertTrue((e * 1.05 - 464.10) * 30 > 215.0)
+    }
+
+    /** 26 Oct: where a level the price is under now would have filled, by what is known of the minutes before. */
+    @Test fun theRestingFillBetweenMinutesEdgeCases() {
+        // The last minute closed above the level: the level.
+        assertEquals(105.0, PassedArms.restingPx(105.0, 101.0, flat(10, 1, 110.0), 100.0, t(10, 0), t(10, 2).plusSeconds(10)), 1e-9)
+        // A lock raised on a minute that itself closed under it: that close (the next minute's open, as the research fills).
+        assertEquals(103.0, PassedArms.restingPx(105.0, 101.0, bar(10, 1, 110.0, 126.0, 102.0, 103.0), 100.0, t(10, 0), t(10, 2).plusSeconds(5)), 1e-9)
+        // The minutes are stale (the feed and the stream silent for minutes): the path is not known - the price now, as before.
+        assertEquals(80.0, PassedArms.restingPx(85.0, 80.0, flat(10, 1, 100.0), 100.0, t(10, 0), t(10, 6)), 1e-9)
+        // A minute in between unseen (the feed a minute late): it may have gapped through - the price now, never the level.
+        assertEquals(80.0, PassedArms.restingPx(85.0, 80.0, flat(10, 1, 100.0), 100.0, t(10, 0), t(10, 3).plusSeconds(50)), 1e-9)
+        assertEquals(85.0, PassedArms.restingPx(85.0, 80.0, flat(10, 2, 100.0), 100.0, t(10, 0), t(10, 3).plusSeconds(50)), 1e-9)
+        // No minute yet, still in the entry minute: the fill is the last price seen - the level. A minute later, unseen: the price now.
+        assertEquals(85.0, PassedArms.restingPx(85.0, 80.0, null, 100.0, t(10, 0), t(10, 0).plusSeconds(40)), 1e-9)
+        assertEquals(80.0, PassedArms.restingPx(85.0, 80.0, null, 100.0, t(10, 0), t(10, 1).plusSeconds(40)), 1e-9)
+        // No minute read at all long after the entry (the feed failed): the price now.
+        assertEquals(80.0, PassedArms.restingPx(85.0, 80.0, null, 100.0, t(10, 0), t(10, 9)), 1e-9)
+        // A broken close is never used.
+        assertEquals(80.0, PassedArms.restingPx(85.0, 80.0, flat(10, 1, Double.NaN), 100.0, t(9, 0), t(10, 2)), 1e-9)
+        // Through the walk: bars unread long after the entry - the price now (never a price that cannot be told).
+        val w = PassedArms.exitOnBars(100.0, t(10, 0), emptyList(), 80.0, t(10, 9), r51)
+        assertEquals(PassedArms.ExitKind.STOP, w.exit!!.kind); assertEquals(80.0, w.exit!!.price, 1e-9)
     }
 }

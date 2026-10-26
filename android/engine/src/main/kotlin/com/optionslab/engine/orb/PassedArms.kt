@@ -223,7 +223,8 @@ object PassedArms {
         known?.let { (_, lv) -> if (lock == null || lv > lock!!) lock = lv }
         val lv = maxOf(stop ?: -1.0, lock ?: -1.0)
         if (ltp != null && ltp > 0) {
-            if (lv > 0 && ltp <= lv + EPS) return Walk(Exit(if (lock != null && lock >= (stop ?: -1.0)) ExitKind.LOCK else ExitKind.STOP, now, ltp), peak, lock)
+            if (lv > 0 && ltp <= lv + EPS) return Walk(Exit(if (lock != null && lock >= (stop ?: -1.0)) ExitKind.LOCK else ExitKind.STOP, now,
+                restingPx(lv, ltp, done.lastOrNull(), entry, entryMinute, now)), peak, lock)
             if (tgt != null && ltp >= tgt - EPS) return Walk(Exit(ExitKind.TARGET, now, tgt), peak, lock)
         }
         val last = ltp ?: done.lastOrNull()?.close ?: entry
@@ -232,18 +233,40 @@ object PassedArms {
         return Walk(null, peak, lock)
     }
 
+    /**
+     * 26 Oct (R105 lead 4: on 21 Oct BANKNIFTY's +5% lock was 471.3 and the look that found the price under it sold at 464.1,
+     * Rs 216 below): where a stop or lock level [lv] that the price now ([ltp]) is under would have filled as a resting order -
+     * the research's fill ([exitOnBars]'s closed-minute rule: the level, or the minute's open when it opened under it). The
+     * current minute's open is taken as the last closed minute's close ([last]; the entry itself in the entry minute): the
+     * level when that was above it, that close when it was already under (a lock raised on that very minute). Only while the
+     * minutes are known up to the one just ended (or, in the entry minute, the fill itself); otherwise a minute in between is
+     * unseen (it may have gapped through) and the price now is used, as before (never better than what can be told). Pure.
+     */
+    internal fun restingPx(lv: Double, ltp: Double, last: Bar?, entry: Double, entryMinute: LocalDateTime, now: LocalDateTime): Double {
+        val minute = now.withSecond(0).withNano(0)
+        val seen: Double? = when {
+            last != null && last.start == minute.minusMinutes(1) && last.close.isFinite() -> last.close
+            last == null && entryMinute == minute -> entry
+            else -> null
+        }
+        return if (seen == null) ltp else minOf(lv, seen)
+    }
+
     /** A target is booked at the target at most (a gap through it never counts as better: the research's limit fill). */
     fun booked(kind: ExitKind, fill: Double, target: Double?): Double = if (kind == ExitKind.TARGET && target != null) minOf(fill, target) else fill
 
     /**
      * 20 Oct, review: a STOP or LOCK the walk found on a closed minute (a wick through the stop that recovered by the next look)
      * is booked at the walk's own price ([walk]: the stop's level, or the minute's open on a gap through it) when the later
-     * market fill is better - never flattered above what the research books. A worse fill is booked as it came. A target stays
-     * at the target at most; any other exit, or no walk price, is the fill.
+     * market fill is better - never flattered above what the research books. A target stays at the target at most; any other
+     * exit, or no walk price, is the fill.
+     * 26 Oct (R105 lead 4, paper mirrors the research fill): a worse market fill is no longer booked as it came - a stop or lock
+     * the walk decided is booked at the walk's price either way, as a resting order at the level would have filled (the
+     * research's fill; [restingPx] between minutes). The paper account's own fill is kept beside it by the caller.
      */
     fun booked(kind: ExitKind, fill: Double, target: Double?, walk: Double?): Double = when {
         kind == ExitKind.TARGET -> booked(kind, fill, target)
-        (kind == ExitKind.STOP || kind == ExitKind.LOCK) && walk != null && walk.isFinite() && walk > 0 -> minOf(fill, walk)
+        (kind == ExitKind.STOP || kind == ExitKind.LOCK) && walk != null && walk.isFinite() && walk > 0 -> walk
         else -> fill
     }
 
