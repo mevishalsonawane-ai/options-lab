@@ -1,0 +1,30 @@
+id: r105c-b-grid
+title: 'R105C Amendment 2: stop x target grid (30 cells) on R51 Donchian 20 + Supertrend'
+family: trade-management
+date: '2026-10-26'
+doc: research/HUNT_R105C_WINRATE60.md
+hypothesis: 'Boss (26 Oct: "profit 15%, loss 10%, test multiple combinations"): some stop (5-15%) x target (10-30%, none)
+  on the premium beats today''s exits in design, walk-forward and final.'
+data_version: Drive lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for the grid (~29th read, weak evidence)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index; stop and target on the option premium'
+model_or_rule: R51 Donchian 20 + Supertrend, exits P with stop s in 5-15% and target t in 10-30% / none
+settings: research/hunt/r105c_winrate60/r105cgrid.py; PREREG.md Amendment 2
+prereg: research/hunt/r105c_winrate60/PREREG.md
+variants_tried: 30
+results:
+  summary: 'No cell beats today''s exits in design, walk-forward and final (0 of 30). Today (-15%, no target): final 1670
+    trades, win 45%, net Rs 134,743. Boss''s -10% / +15%: final win 44%, net -Rs 3,031; design -Rs 135,797. Full table: research/hunt/r105c_winrate60/results/grid.md.'
+  costs: dated charges, R17 liquidity fills, next-minute fills, stops on the minute low, limit target fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Descriptive grid; nothing changes.

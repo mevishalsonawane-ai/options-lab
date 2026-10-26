@@ -79,3 +79,27 @@ See `research/HUNT_R106_SMALL_TARGETS.md` on branch `claude/r106-small-targets`.
 - **1 lot.** The baselines reproduce R75 to the rupee. The engine and fills are R105's (R64 simulator, next-minute
   fills, limit target fills, stops on the minute low with gap fills, dated charges).
 - **Signal on the index.** Stops and targets are on the option premium.
+
+## Amendment 2: profit 15% / loss 10%, and 30 combinations per arm
+
+Boss: *"Add profit as 15% and loss as 10%, and test multiple combinations."* Pre-registered as Amendment 2 (41b398f)
+before any number. The grid: stop 5 / 7.5 / 10 / 12.5 / 15% × target 10 / 15 / 20 / 25 / 30% / none, on the premium,
+with the rest of the paper exits unchanged. Every cell: `research/hunt/r105c_winrate60/results/grid.md`.
+
+**Boss's pair, -10% stop / +15% target, makes much less than today:**
+
+| final 1 Apr - 13 Oct 2026, 1 lot | R72 Breadth Donchian | R51 + Supertrend |
+|---|---|---|
+| today (-15%, no target) | 1,202 trades, 46% win, **Rs 1,71,366**, worst day -Rs 22,571, max DD Rs 61,884 | 1,670, 45%, **Rs 1,34,743**, -Rs 21,578, Rs 81,683 |
+| -10% / +15% | 1,234, 45%, Rs 38,713, -Rs 18,996, Rs 63,469 | 1,712, 44%, -Rs 3,031, -Rs 17,777, Rs 78,538 |
+
+In design it was Rs 60,415 vs Rs 2,16,929 (R72) and -Rs 1,35,797 vs Rs 50,425 (R51).
+
+**No combination beats today's rules in design, walk-forward and final (0 of 60).** Today's exits made the most in the
+final on both arms. The nearest cells:
+- **R72, -12.5% stop, no target:** design Rs 2,26,568 (+Rs 9.6k), walk-forward about equal, final Rs 1,71,166 (-Rs 200).
+  It has a slightly smaller average loss (Rs 1,188 vs Rs 1,217), worst day (-Rs 20,947 vs -Rs 22,571) and drawdown
+  (Rs 59,851 vs Rs 61,884). It is the same profit with slightly smaller losses, but the difference is within noise.
+- **R72, -12.5% stop, +30% target:** final Rs 1,52,251 (-Rs 19k), with the drawdown down from Rs 61,884 to Rs 47,930.
+
+Every target of 15% or less cuts profit sharply, and every stop below 10% cuts it more.
