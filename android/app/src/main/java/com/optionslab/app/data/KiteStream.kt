@@ -156,6 +156,9 @@ object KiteStream {
     /** The 1-minute candle of [token] that started at [startMs] built from the stream's ticks (open, high, low, close), or null. */
     fun minuteBar(token: Long, startMs: Long): DoubleArray? = paths[token]?.minute(startMs)
 
+    /** 26 Oct: an index's token by its name ("NIFTY", "BANKNIFTY" ...), for a price read from this stream; null when unknown. Memory only. */
+    fun indexToken(name: String): Long? = Broker.indexToken(name)
+
     /**
      * The last tick for [token] if it is at most [maxAgeMs] old (market closed = none fresh). 18 Oct: a tick that reached
      * the phone "in the future" (the phone's clock stepped back since, e.g. a network time correction) is not fresh either -

@@ -28,14 +28,18 @@ import java.util.concurrent.TimeUnit
  * start with. The On switch is the arm's ([NtfyArm.setOn], off by default).
  *
  * How it reads: its own coroutine on the IO pool - never the main thread, never the order or tick path - started and stopped by
- * [ensure] (the watch's words lane calls it every round; the page calls it after a change). First a catch-up poll
+ * [ensure]. 26 Oct (Boss: "I think ntfy messages are getting read late"): [ensure] is called by the reader's own supervisor
+ * ([supervise], every few seconds while ntfy alerts is on with a topic set; started with the app) - it was called only by the
+ * words lane, from 09:15 and once a minute or two, so the reader started late and a stopped one waited for the next round. With
+ * ntfy armed the market watch also starts at 09:00 ([armedHint], [Jobs]), the reader's hours' open, so the phone is awake for it. First a catch-up poll
  * (".../json?poll=1&since=<last id>", or the last few minutes on a first start) so nothing sent during a restart or a gap is
  * missed; then the stream (".../json?since=<last id>"), held open (ntfy sends a keepalive every 45 s; 90 s of silence is a dead
- * line). On any failure: the next try after 1 s, 2 s, 4 s ... at most 60 s, and each new connection starts with the catch-up poll
+ * line). On any failure: the next try after 1 s, 2 s, 4 s ... at most 15 s (26 Oct; 60 s when the server says 429), and each new connection starts with the catch-up poll
  * again. Overlaps are harmless: an id already read is skipped. It runs while ntfy alerts is on and a topic is set, on trading days
  * from 09:00 to the F&O close: each reconnect and a 30-second timer check the hours and stop it outside them (25 Oct review); a
  * message read outside them is recorded "outside market hours, not traded" and never waits to be decided. Under
- * memory pressure it is closed before anything that watches positions ([releaseForMemory]); the next round starts it again.
+ * memory pressure it is closed before anything that watches positions ([releaseForMemory]); the supervisor starts it again a few
+ * seconds later (its memory is a connection and a line buffer) and the catch-up poll reads what came meanwhile.
  */
 object NtfyReader {
     const val K_TOPIC = "ntfy.topic"
@@ -119,7 +123,7 @@ object NtfyReader {
 
     // ---- running -----------------------------------------------------------------------------------------------------------
 
-    private fun inHours(): Boolean = testInHours ?: runCatching {
+    internal fun inHours(): Boolean = testInHours ?: runCatching {
         val n = Market.now().toLocalDateTime()
         NtfyRules.outsideHours(n, Market.isTradingDay(n.toLocalDate()), com.optionslab.engine.NseHours.foClose(n.toLocalDate())) == null
     }.getOrDefault(false)
@@ -129,14 +133,121 @@ object NtfyReader {
 
     /** Start the reader when it should run (on, a topic set, in hours), stop it when not. Cheap; off the main thread. */
     fun ensure() {
-        val want = runCatching { NtfyArm.view.value.on && config().topic != null && inHours() }.getOrDefault(false)
+        // 26 Oct (review): a settings read that fails is "unknown": nothing is changed (a passing Keystore hiccup never stops the
+        // reader nor moves the watch's alarm).
+        val armed = runCatching { NtfyArm.view.value.on && config().topic != null }.getOrNull() ?: return
+        noteArmed(armed)
+        val want = armed && runCatching { inHours() }.getOrDefault(false)
         val running = job?.isActive == true
         if (want && !running) start() else if (!want && running) stop("off")
         // 25 Oct: today's stock options list, fetched in the background while stock signals may trade.
-        if (want && runCatching { NtfyArm.view.value.settings.stocks }.getOrDefault(false)) runCatching { StockOptions.refreshInBackground() }
+        // 26 Oct (review): at most every 5 minutes (ensure now runs every few seconds; a failing download is not retried each time).
+        val nowMs = System.currentTimeMillis()
+        if (want && nowMs - stocksAskedAt >= STOCKS_EVERY_MS && runCatching { NtfyArm.view.value.settings.stocks }.getOrDefault(false)) {
+            stocksAskedAt = nowMs
+            runCatching { StockOptions.refreshInBackground() }
+        }
     }
 
     private fun restart() { if (job?.isActive == true) stop("settings changed"); ensure() }
+
+    /** 26 Oct (review): when [ensure] last asked for today's stock options list (memory). */
+    @Volatile private var stocksAskedAt = 0L
+    private const val STOCKS_EVERY_MS = 5 * 60_000L
+
+    // ---- supervision (26 Oct) ----------------------------------------------------------------------------------------------
+
+    /**
+     * ntfy alerts is on with a topic set (whatever the hour), as the last [ensure] found it. Memory only: the watch's start time
+     * ([Jobs]) and its rest rules read it (armed: the watch starts at 09:00 and counts it as armed).
+     */
+    @Volatile var armedHint = false
+        private set
+
+    /** In the reader's hours with ntfy armed: counts as armed for any quiet or rest rule. Memory only. */
+    fun armedNow(): Boolean = armedHint && runCatching { inHours() }.getOrDefault(false)
+
+    @Volatile private var appContext: android.content.Context? = null
+    /** The NightMarks key that keeps [armedHint] across a restart (a flag only; nothing about the topic). */
+    internal const val EARLY_MARK = "ntfy.early"
+
+    /** The app's start: its context kept (for the watch's alarm) and the supervisor started. No I/O on the caller's thread. */
+    fun init(context: android.content.Context) {
+        appContext = context.applicationContext
+        supervise()
+    }
+
+    /**
+     * Armed for the morning (ntfy on, a topic set) as last known: memory, else the plain mark kept across a restart (off the main
+     * thread only). For [Jobs]: the market watch starts at 09:00, the reader's hours' open, instead of 09:14.
+     */
+    fun earlyWatch(context: android.content.Context?): Boolean =
+        armedHint || runCatching { com.optionslab.app.work.NightMarks.get(context, EARLY_MARK) == "1" }.getOrDefault(false)
+
+    /** [armed] remembered; on a change the mark is written and the watch's start alarm moved, in the background. */
+    private fun noteArmed(armed: Boolean) {
+        if (armedHint == armed && armedKnown) return
+        // 26 Oct (review): the first answer in a process re-arms the watch's alarm too when armed - a boot's arming on the main
+        // thread could not read the mark and left it at 09:14.
+        val changed = (armedKnown && armedHint != armed) || (!armedKnown && armed)
+        armedHint = armed; armedKnown = true
+        val c = appContext ?: return
+        scope.launch {
+            val was = runCatching { com.optionslab.app.work.NightMarks.get(c, EARLY_MARK) == "1" }.getOrDefault(false)
+            if (was != armed || changed) {
+                runCatching { com.optionslab.app.work.NightMarks.put(c, EARLY_MARK, if (armed) "1" else null) }
+                runCatching { com.optionslab.app.work.Jobs.schedule(c, com.optionslab.app.work.Jobs.Kind.LIVE) }
+            }
+            // Armed inside the reader's hours (switched on at 09:05, or the app started then): the watch starts now, not at 09:14.
+            if (armed && runCatching { inHours() }.getOrDefault(false)) runCatching { com.optionslab.app.work.Jobs.ensureWatch(c) }
+        }
+    }
+    @Volatile private var armedKnown = false
+
+    /** How often the supervisor looks while ntfy alerts is armed (a stopped reader is started again within this). */
+    @Volatile internal var superviseMs: Long = 3_000L
+    /** How often it looks while not armed (a switch on the page calls [ensure] itself, at once). */
+    @Volatile internal var idleLookMs: Long = 30_000L
+    @Volatile private var supervisor: Job? = null
+    /** Looks the supervisor made (memory; the tests). */
+    @Volatile internal var looks = 0
+
+    /**
+     * The reader's own supervisor (26 Oct): every [superviseMs] while armed, [ensure] - the reader started at its hours' open
+     * (09:00), started again within seconds after a stop (memory pressure, a failure that ended it), stopped at the F&O close.
+     * After a restart the open positions are restored and watched first ([PositionsFirst]); then the book is read. Its own
+     * coroutine on the IO pool; never the main thread, the order or the tick path. Idempotent.
+     */
+    fun supervise() {
+        if (com.optionslab.app.BuildConfig.GOLD) return
+        synchronized(this) {
+            if (supervisor?.isActive == true) return
+            supervisor = scope.launch {
+                runCatching { PositionsFirst.awaitPositions() }
+                if (!NtfyArm.loaded()) runCatching { NtfyArm.refresh() }
+                while (isActive) {
+                    looks++
+                    runCatching { ensure() }
+                    delay(nextLookMs())
+                }
+            }
+        }
+    }
+
+    /** The supervisor's next look: [superviseMs] while armed in hours; else [idleLookMs], or sooner to be on time for 09:00. */
+    private fun nextLookMs(): Long {
+        if (!armedHint) return idleLookMs
+        if (runCatching { inHours() }.getOrDefault(false)) return superviseMs
+        val toOpen = runCatching {
+            val n = Market.now()
+            val open = n.toLocalDate().atTime(NtfyRules.READ_FROM).atZone(n.zone)
+            if (n.isBefore(open)) java.time.Duration.between(n, open).toMillis() + 200 else null
+        }.getOrNull()
+        return if (toOpen != null) toOpen.coerceIn(superviseMs, idleLookMs) else idleLookMs
+    }
+
+    /** For tests: the supervisor stopped. */
+    internal fun stopSupervisor() { synchronized(this) { supervisor?.cancel(); supervisor = null } }
 
     @Synchronized private fun start() {
         if (job?.isActive == true) return
@@ -154,7 +265,7 @@ object NtfyReader {
         _status.value = _status.value.copy(running = false, connected = false, said = "stopped ($why)")
     }
 
-    /** Memory pressure: the reader closes (the next round starts it again and catches up by its poll). True when it was running. */
+    /** Memory pressure: the reader closes (the supervisor starts it again within seconds; it catches up by its poll). True when it was running. */
     fun releaseForMemory(): Boolean {
         if (job?.isActive != true) return false
         stop("memory pressure")
@@ -162,6 +273,7 @@ object NtfyReader {
     }
 
     private suspend fun loop() {
+        val me = kotlinx.coroutines.currentCoroutineContext()[Job]
         var attempt = 0
         _status.value = Status(running = true, said = "starting")
         while (kotlinx.coroutines.currentCoroutineContext().isActive) {
@@ -183,12 +295,13 @@ object NtfyReader {
             }
             if (!kotlinx.coroutines.currentCoroutineContext().isActive || ok.exceptionOrNull() is kotlinx.coroutines.CancellationException) break
             val why = ok.exceptionOrNull()?.let { e -> (e as? HttpError)?.let { "server said ${it.code}" } ?: e.javaClass.simpleName } ?: "the line closed"
-            val wait = NtfyRules.backoffMs(attempt++)
+            val wait = NtfyRules.backoffMs(attempt++, (ok.exceptionOrNull() as? HttpError)?.code)
             _status.value = _status.value.copy(connected = false, said = "reconnecting in ${wait / 1000} s ($why)", failures = _status.value.failures + 1)
             runCatching { Diag.record("ntfy", "reader: $why; again in ${wait / 1000} s") }
             delay(wait)
         }
-        _status.value = _status.value.copy(running = false, connected = false)
+        // 26 Oct (review): only this run's own status (a reader started again meanwhile keeps its "running").
+        if (job == null || job === me) _status.value = _status.value.copy(running = false, connected = false)
     }
 
     private fun nowEpoch(): Long = runCatching { Market.now().toEpochSecond() }.getOrElse { System.currentTimeMillis() / 1000 }
@@ -244,5 +357,8 @@ object NtfyReader {
     }
 
     /** For tests: stopped and forgotten. */
-    internal fun wipe() { stop("test"); _status.value = Status(); testServer = null; testInHours = null }
+    internal fun wipe() {
+        stopSupervisor(); stop("test"); _status.value = Status(); testServer = null; testInHours = null
+        armedHint = false; armedKnown = false; looks = 0; superviseMs = 3_000L; idleLookMs = 30_000L; stocksAskedAt = 0L
+    }
 }

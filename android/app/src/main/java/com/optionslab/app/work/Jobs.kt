@@ -93,13 +93,22 @@ object Jobs {
         Kind.HARVEST -> s.nightlyHarvest
     }
 
-    /** The next weekday instant for this job, in IST. */
-    fun nextRun(k: Kind, from: ZonedDateTime = Market.now()): ZonedDateTime {
+    /**
+     * The next weekday instant for this job, in IST. 26 Oct (Boss: "ntfy messages are getting read late"): [early] - ntfy alerts
+     * on with a topic set ([com.optionslab.app.data.NtfyReader.earlyWatch]) - starts the market watch at 09:00, the ntfy
+     * reader's hours' open, instead of 09:14 (the phone is kept awake for the reader from then).
+     */
+    fun nextRun(k: Kind, from: ZonedDateTime = Market.now(), early: Boolean = false): ZonedDateTime {
+        val at = atOf(k, early)
         var d = from.toLocalDate()
-        if (!from.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
+        if (!from.toLocalTime().isBefore(at)) d = d.plusDays(1)
         while (!Market.isTradingDay(d)) d = d.plusDays(1)
-        return d.atTime(k.at).atZone(IST)
+        return d.atTime(at).atZone(IST)
     }
+
+    /** [k]'s time of day: the market watch at 09:00 when [early] (ntfy alerts armed), else its own. */
+    internal fun atOf(k: Kind, early: Boolean): LocalTime =
+        if (k == Kind.LIVE && early) LocalTime.of(NSE_WATCH_FROM / 60, NSE_WATCH_FROM % 60) else k.at
 
     fun canExact(context: Context): Boolean {
         val am = context.getSystemService(AlarmManager::class.java)
@@ -143,7 +152,8 @@ object Jobs {
     private const val PERIODIC_DAY = "periodic.day"
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load(), onlyChanged: Boolean = false) {
-        val at = if (enabled(k, s)) nextRun(k).toInstant().toEpochMilli() else com.optionslab.ira.NightStart.OFF
+        val early = k == Kind.LIVE && !com.optionslab.app.BuildConfig.GOLD && runCatching { com.optionslab.app.data.NtfyReader.earlyWatch(context) }.getOrDefault(false)
+        val at = if (enabled(k, s)) nextRun(k, early = early).toInstant().toEpochMilli() else com.optionslab.ira.NightStart.OFF
         val mark = "job.${k.name}"
         // 22 Oct: a start in the background leaves an alarm armed for the same time as it is (while Android still holds it) -
         // never the 09:14 market watch's: it is armed at every start, as before (the open positions' watch; one alarm).
@@ -218,11 +228,15 @@ object Jobs {
      * NSE's part of [watchDue]: the clock and NSE's calendar only (no vault, no lock), safe on the main thread. To F&O's
      * close (15:40 from 3 Aug 2026; 15:30 before): orders, positions and option prices run to then.
      */
-    private fun nseWatchDue(): Boolean = nseWatchDueAt(Market.today(), Market.minuteNow())
+    private fun nseWatchDue(): Boolean = nseWatchDueAt(Market.today(), Market.minuteNow(),
+        early = !com.optionslab.app.BuildConfig.GOLD && com.optionslab.app.data.NtfyReader.armedHint)
 
-    /** [nseWatchDue] on [day] at [minute] (the clock given; NSE's calendar only). */
-    internal fun nseWatchDueAt(day: java.time.LocalDate, minute: Int): Boolean =
-        Market.isTradingDay(day) && minute in (Market.OPEN - 1)..Market.foClose(day)
+    /**
+     * [nseWatchDue] on [day] at [minute] (the clock given; NSE's calendar only). 26 Oct: from 09:00 when [early] (ntfy alerts armed,
+     * memory only), else from 09:14.
+     */
+    internal fun nseWatchDueAt(day: java.time.LocalDate, minute: Int, early: Boolean = false): Boolean =
+        Market.isTradingDay(day) && minute in (if (early) NSE_WATCH_FROM else Market.OPEN - 1)..Market.foClose(day)
 
     /**
      * NSE's hours as the running watch judges them at [minute] ([foClose]: F&O's close; [running]: a strategy run still open, asked
@@ -862,6 +876,7 @@ object Tasks {
         // record and one evening line, never an order or an alert.
         word("Watchlist (shadow)") { com.optionslab.app.data.WatchlistHost.watch() }
         // 25 Oct: ntfy alerts' reader started (on, a topic set, in hours) or stopped - its own background coroutine; never here.
+        // 26 Oct: its own supervisor ([com.optionslab.app.data.NtfyReader.supervise]) does this every few seconds; this is a spare.
         if (!com.optionslab.app.BuildConfig.GOLD) word("ntfy reader") { com.optionslab.app.data.NtfyReader.ensure() }
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }
         // Jarvis: a sharp move within minutes - what coincided with it (headlines, VIX, the other indices), timing only.
@@ -1526,10 +1541,16 @@ class WatchService : Service() {
                 // lapses by itself, and the dead-man alarm finds the watch stuck. A slow pass moves step by step and keeps it.
                 // With a position or order open it is renewed whatever the loop is doing: open positions come first.
                 val progressing = Heartbeat.keepsAwake(runStartEl) || holdingAny()
-                if (run == watchRun && progressing) { WatchWake.hold(me); hungTold = false }
+                // 26 Oct: the hold is also renewed while the ntfy reader is reading in its hours (memory only) - but a hung loop is
+                // still told below as before.
+                val reader = !com.optionslab.app.BuildConfig.GOLD && runCatching {
+                    com.optionslab.app.data.NtfyReader.armedNow() && com.optionslab.app.data.NtfyReader.status.value.running }.getOrDefault(false)
+                if (run == watchRun && (progressing || reader)) WatchWake.hold(me)
+                if (run == watchRun && progressing) hungTold = false
                 else if (run == watchRun && !hungTold) {
                     hungTold = true
-                    Heartbeat.diary("watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): the processor's hold is not renewed")
+                    Heartbeat.diary("watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): " +
+                        if (reader) "the processor is held only for the ntfy reader" else "the processor's hold is not renewed")
                 }
                 Heartbeat.watchRunning()
                 delay(com.optionslab.ira.WatchHealth.PULSE_MS)
