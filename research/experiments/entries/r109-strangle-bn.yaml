@@ -1,0 +1,24 @@
+id: r109-strangle-bn
+title: R109 BANKNIFTY Monday short strangle on real prints
+family: option-structure
+date: '2026-10-26'
+doc: research/HUNT_R109_IRATHINKER_RULES.md
+hypothesis: 'IraThinker''s own study claims (+16.42% of premium pooled, win 77.8%, worst week -285% of premium) hold on our lake''s real prints after dated charges and slippage. Gates: net > 0 and twin p < 0.05 in design, walk-forward and final; BH q <= 0.10 over all earlier tests; >= 40 design / 20 final trades; account rule and bootstrap for selling.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m MONTH/WEEK, bhav_index) copied 26 Oct 2026; R51 Amendment A clean held-contract stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R108); 14-19 Oct descriptive
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: none directional; strikes off the index spot at 09:30'
+model_or_rule: 'IraThinker''s Monday short strangle: sell the monthly CE ATM+200 / PE ATM-200 at 09:31 Monday, buy back Thursday 15:29 or settle at intrinsic when the monthly expiry falls inside (month chain)'
+settings: research/hunt/r109_irathinker/r109cfg.py TESTS; PREREG.md sections 1-5
+prereg: research/hunt/r109_irathinker/PREREG.md
+variants_tried: 1
+results:
+  summary: 'History: 155 trades, win 70.3%, net Rs 101,345, worst month -Rs 15,694, max DD Rs 36,983. Design: 69 trades, win 72.5%, net Rs 167,686, worst month -Rs 24,307, max DD Rs 34,925, twin p 0.184. Walk-forward: 50 trades, win 74.0%, net Rs 171,510, worst month -Rs 10,289, max DD Rs 34,925, twin p 0.279. Final: 26 trades, win 69.2%, net Rs 61,920, worst month -Rs 32,436, max DD Rs 37,926, twin p 0.995. Post-13 Oct: 2 trades, win 100.0%, net Rs 5,058, worst month Rs 5,058, max DD Rs 0, twin p 2e-06. BH q 1 over 14,253 tests. Fails 6 checks, first: design: does not beat its twin (p 0.18372); walk-forward: does not beat its twin (p 0.278514); final: does not beat its twin (p 0.995193).'
+  costs: dated Zerodha charges, liq slippage, next-minute fills, stale legs repriced by BS at the last implied vol
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing changes live. Signal on the underlying.

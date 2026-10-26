@@ -1,0 +1,24 @@
+id: r109-m60-bn
+title: R109 mom60 BANKNIFTY (monthly) on real prints
+family: outside-strategies
+date: '2026-10-26'
+doc: research/HUNT_R109_IRATHINKER_RULES.md
+hypothesis: 'IraThinker''s own study claims (train +2.29% / val +0.99% / test +4.75% per trade, win ~50%, 1-2 trades a day) hold on our lake''s real prints after dated charges and slippage. Gates: net > 0 and twin p < 0.05 in design, walk-forward and final; BH q <= 0.10 over all earlier tests; >= 40 design / 20 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m MONTH/WEEK, bhav_index) copied 26 Oct 2026; R51 Amendment A clean held-contract stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R108); 14-19 Oct descriptive
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: the index spot''s 60-minute return (underlying)'
+model_or_rule: 'IraThinker''s mom60: |60-minute index return| >= threshold -> buy the ATM option that way, hold 60 min, exit if the premium closes 30% below entry; one at a time, entries 60 min apart, last entry 14:30 (month chain)'
+settings: research/hunt/r109_irathinker/r109cfg.py TESTS; PREREG.md sections 1-5
+prereg: research/hunt/r109_irathinker/PREREG.md
+variants_tried: 1
+results:
+  summary: 'History: 1,087 trades, win 42.5%, net -Rs 114,009, worst month -Rs 23,111, max DD Rs 154,320. Design: 307 trades, win 43.3%, net -Rs 47,521, worst month -Rs 26,088, max DD Rs 76,644, twin p 1. Walk-forward: 185 trades, win 38.9%, net -Rs 31,435, worst month -Rs 26,088, max DD Rs 63,027, twin p 1. Final: 146 trades, win 46.6%, net Rs 63,263, worst month -Rs 9,160, max DD Rs 17,784, twin p 0.891. Post-13 Oct: 4 trades, win 25.0%, net -Rs 4,181, worst month -Rs 4,181, max DD Rs 4,181, twin p 0.828. BH q 1 over 14,253 tests. Fails 6 checks, first: design: net not above 0; design: does not beat its twin (p 0.999928); walk-forward: net not above 0.'
+  costs: dated Zerodha charges, liq slippage, next-minute fills, stale legs repriced by BS at the last implied vol
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing changes live. Signal on the underlying.

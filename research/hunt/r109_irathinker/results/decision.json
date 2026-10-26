@@ -1,0 +1,127 @@
+{
+ "tests": {
+  "m60-bn": {
+   "p": 0.999928,
+   "fails": [
+    "design: net not above 0",
+    "design: does not beat its twin (p 0.999928)",
+    "walk-forward: net not above 0",
+    "walk-forward: does not beat its twin (p 0.999703)",
+    "final: does not beat its twin (p 0.89067)",
+    "BH q 1 > 0.10 (m = 14,253)"
+   ],
+   "q": 1.0,
+   "q_r109": 1.0,
+   "q_all_variants": 1.0,
+   "verdict": "FAIL"
+  },
+  "m60-fin": {
+   "p": 0.992208,
+   "fails": [
+    "design: does not beat its twin (p 0.992208)",
+    "walk-forward: does not beat its twin (p 0.96585)",
+    "final: does not beat its twin (p 0.16842)",
+    "BH q 1 > 0.10 (m = 14,253)"
+   ],
+   "q": 1.0,
+   "q_r109": 1.0,
+   "q_all_variants": 1.0,
+   "verdict": "FAIL"
+  },
+  "m60-sx": {
+   "p": 0.90879,
+   "fails": [
+    "design: net not above 0",
+    "design: does not beat its twin (p 0.90879)",
+    "walk-forward: net not above 0",
+    "walk-forward: does not beat its twin (p 0.690373)",
+    "final: does not beat its twin (p 0.287177)",
+    "BH q 1 > 0.10 (m = 14,253)"
+   ],
+   "q": 1.0,
+   "q_r109": 1.0,
+   "q_all_variants": 1.0,
+   "verdict": "FAIL"
+  },
+  "m60-nf": {
+   "p": 0.999993,
+   "fails": [
+    "design: net not above 0",
+    "design: does not beat its twin (p 0.999993)",
+    "walk-forward: net not above 0",
+    "walk-forward: does not beat its twin (p 0.999428)",
+    "final: net not above 0",
+    "final: does not beat its twin (p 0.988615)",
+    "BH q 1 > 0.10 (m = 14,253)"
+   ],
+   "q": 1.0,
+   "q_r109": 1.0,
+   "q_all_variants": 1.0,
+   "verdict": "FAIL"
+  },
+  "m60-mid": {
+   "p": 1.0,
+   "fails": [
+    "design: net not above 0",
+    "design: does not beat its twin (p 1.0)",
+    "walk-forward: net not above 0",
+    "walk-forward: does not beat its twin (p 1.0)",
+    "final: net not above 0",
+    "final: does not beat its twin (p 0.993078)",
+    "BH q 1 > 0.10 (m = 14,253)"
+   ],
+   "q": 1.0,
+   "q_r109": 1.0,
+   "q_all_variants": 1.0,
+   "verdict": "FAIL"
+  },
+  "m60-nf-w": {
+   "p": 1.0,
+   "fails": [
+    "design: net not above 0",
+    "design: does not beat its twin (p 1.0)",
+    "walk-forward: net not above 0",
+    "walk-forward: does not beat its twin (p 0.999543)",
+    "final: net not above 0",
+    "final: does not beat its twin (p 0.99027)",
+    "BH q 1 > 0.10 (m = 14,253)"
+   ],
+   "q": 1.0,
+   "q_r109": 1.0,
+   "q_all_variants": 1.0,
+   "verdict": "FAIL"
+  },
+  "m60-sx-w": {
+   "p": 1.0,
+   "fails": [
+    "design: net not above 0",
+    "design: does not beat its twin (p 1.0)",
+    "walk-forward: net not above 0",
+    "walk-forward: does not beat its twin (p 0.998533)",
+    "final: does not beat its twin (p 0.961508)",
+    "BH q 1 > 0.10 (m = 14,253)"
+   ],
+   "q": 1.0,
+   "q_r109": 1.0,
+   "q_all_variants": 1.0,
+   "verdict": "FAIL"
+  },
+  "strangle-bn": {
+   "p": 0.995193,
+   "fails": [
+    "design: does not beat its twin (p 0.18372)",
+    "walk-forward: does not beat its twin (p 0.278514)",
+    "final: does not beat its twin (p 0.995193)",
+    "design: worst month Rs -24,307 below -Rs 13,000",
+    "final: worst month Rs -32,436 below -Rs 13,000",
+    "BH q 1 > 0.10 (m = 14,253)"
+   ],
+   "q": 1.0,
+   "q_r109": 1.0,
+   "q_all_variants": 1.0,
+   "verdict": "FAIL"
+  }
+ },
+ "m": 14253,
+ "n_prior": 14245
+}

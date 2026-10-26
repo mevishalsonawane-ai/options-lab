@@ -1,0 +1,24 @@
+id: r109-m60-sx
+title: R109 mom60 SENSEX (monthly) on real prints
+family: outside-strategies
+date: '2026-10-26'
+doc: research/HUNT_R109_IRATHINKER_RULES.md
+hypothesis: 'IraThinker''s own study claims (+2.03% per trade, PF 1.31, n=593, win ~44%) hold on our lake''s real prints after dated charges and slippage. Gates: net > 0 and twin p < 0.05 in design, walk-forward and final; BH q <= 0.10 over all earlier tests; >= 40 design / 20 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m MONTH/WEEK, bhav_index) copied 26 Oct 2026; R51 Amendment A clean held-contract stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R108); 14-19 Oct descriptive
+instruments:
+- SENSEX
+features:
+- 'signal source: the index spot''s 60-minute return (underlying)'
+model_or_rule: 'IraThinker''s mom60: |60-minute index return| >= threshold -> buy the ATM option that way, hold 60 min, exit if the premium closes 30% below entry; one at a time, entries 60 min apart, last entry 14:30 (month chain)'
+settings: research/hunt/r109_irathinker/r109cfg.py TESTS; PREREG.md sections 1-5
+prereg: research/hunt/r109_irathinker/PREREG.md
+variants_tried: 1
+results:
+  summary: 'History: 135 trades, win 30.4%, net -Rs 17,498, worst month -Rs 7,078, max DD Rs 24,063. Design: 225 trades, win 43.6%, net -Rs 24,954, worst month -Rs 19,353, max DD Rs 62,955, twin p 0.909. Walk-forward: 127 trades, win 46.5%, net -Rs 527, worst month -Rs 19,353, max DD Rs 53,580, twin p 0.69. Final: 81 trades, win 53.1%, net Rs 49,775, worst month -Rs 421, max DD Rs 8,962, twin p 0.287. Post-13 Oct: 5 trades, win 20.0%, net -Rs 5,441, worst month -Rs 5,441, max DD Rs 5,441, twin p 0.968. BH q 1 over 14,253 tests. Fails 6 checks, first: design: net not above 0; design: does not beat its twin (p 0.90879); walk-forward: net not above 0.'
+  costs: dated Zerodha charges, liq slippage, next-minute fills, stale legs repriced by BS at the last implied vol
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing changes live. Signal on the underlying.
