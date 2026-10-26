@@ -53,7 +53,38 @@ def main():
             (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
 
 
+
+def amendment():
+    des = json.loads((HERE / "results" / "design_s10.json").read_text())
+    fin = json.loads((HERE / "results" / "final_s10.json").read_text())
+    import r105c as Cc
+    for arm in Cc.ARMS:
+        for rule in Cc.S10_RULES:
+            d, w, f = des[arm][rule]["design"], des[arm][rule]["wf"], fin[arm][rule]
+            what = "-10% stop" + ("" if rule == "S10" else f", sell at +{rule[4:]}%")
+            e = dict(
+                id=f"r105c-{arm.lower()}-{rule.lower()}", title=f"R105C Amendment 1 {rule} ({what}) on {NAMES[arm]}",
+                family="trade-management", date="2026-10-26", doc="research/HUNT_R105C_WINRATE60.md",
+                hypothesis=("Boss (26 Oct: \"add a stoploss of 10%\"): " + what + f" on {NAMES[arm]} gives a win rate >= "
+                            "60% with a positive net in walk-forward and final."),
+                data_version="Drive lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov 2024 - 13 Oct 2026",
+                period=dict(design="20 Nov 2024 - 31 Mar 2026 (walk-forward Apr 2025 - Mar 2026)",
+                            holdout="1 Apr - 13 Oct 2026, read once for Amendment 1 (weak evidence, ~28 reads)"),
+                instruments=["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"],
+                features=["signal source: the index; stop and target on the option premium"],
+                model_or_rule=f"{NAMES[arm]}, exits P with a -10% stop" + ("" if rule == "S10" else f" + a +{rule[4:]}% target"),
+                settings="research/hunt/r105c_winrate60/r105c.py; PREREG.md Amendment 1",
+                prereg="research/hunt/r105c_winrate60/PREREG.md", variants_tried=1,
+                results=dict(summary=(f"Design {d['trades']} trades, win {round(100 * d['win'])}%, net {rs(d['net'])}; walk-forward "
+                                      f"win {round(100 * w['win'])}%, net {rs(w['net'])}; final {f['trades']} trades, win "
+                                      f"{round(100 * f['win'])}%, net {rs(f['net'])}. Verdict: {Cc.verdict(w, f)}."),
+                             costs="dated charges, R17 liquidity fills, next-minute fills, stops on the minute low, 1 lot"),
+                holdout_read=True, verdict="rejected", notes="Signal on the underlying. Nothing changes.")
+            (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
+
+
 if __name__ == "__main__":
     import sys
     sys.path.insert(0, str(HERE))
     main()
+    amendment()

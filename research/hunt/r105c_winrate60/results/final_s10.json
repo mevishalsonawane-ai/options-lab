@@ -1,0 +1,142 @@
+{
+ "C": {
+  "S10": {
+   "trades": 1203,
+   "win": 0.4339,
+   "net": 145098,
+   "avg_win": 1776,
+   "avg_loss": -1148,
+   "worst_day": -18996,
+   "max_dd": 55184
+  },
+  "S10T5": {
+   "trades": 1273,
+   "win": 0.5821,
+   "net": -130860,
+   "avg_win": 716,
+   "avg_loss": -1243,
+   "worst_day": -18171,
+   "max_dd": 150241
+  },
+  "S10T8": {
+   "trades": 1260,
+   "win": 0.5135,
+   "net": -57214,
+   "avg_win": 1048,
+   "avg_loss": -1200,
+   "worst_day": -18996,
+   "max_dd": 111095
+  },
+  "S10T10": {
+   "trades": 1251,
+   "win": 0.486,
+   "net": -35799,
+   "avg_win": 1207,
+   "avg_loss": -1197,
+   "worst_day": -18996,
+   "max_dd": 115256
+  },
+  "S10T12": {
+   "trades": 1243,
+   "win": 0.4674,
+   "net": 1836,
+   "avg_win": 1342,
+   "avg_loss": -1175,
+   "worst_day": -18996,
+   "max_dd": 96903
+  },
+  "S10T15": {
+   "trades": 1234,
+   "win": 0.4498,
+   "net": 38713,
+   "avg_win": 1490,
+   "avg_loss": -1161,
+   "worst_day": -18996,
+   "max_dd": 63469
+  },
+  "S10T20": {
+   "trades": 1221,
+   "win": 0.4414,
+   "net": 106630,
+   "avg_win": 1649,
+   "avg_loss": -1147,
+   "worst_day": -18996,
+   "max_dd": 43043
+  },
+  "pick": {
+   "rule": "S10T5",
+   "reached60": true,
+   "verdict": "not reached"
+  }
+ },
+ "B": {
+  "S10": {
+   "trades": 1676,
+   "win": 0.4236,
+   "net": 101867,
+   "avg_win": 1671,
+   "avg_loss": -1123,
+   "worst_day": -17777,
+   "max_dd": 66519
+  },
+  "S10T5": {
+   "trades": 1759,
+   "win": 0.5912,
+   "net": -132110,
+   "avg_win": 734,
+   "avg_loss": -1245,
+   "worst_day": -17318,
+   "max_dd": 143510
+  },
+  "S10T8": {
+   "trades": 1739,
+   "win": 0.5129,
+   "net": -86963,
+   "avg_win": 1039,
+   "avg_loss": -1197,
+   "worst_day": -16918,
+   "max_dd": 120481
+  },
+  "S10T10": {
+   "trades": 1731,
+   "win": 0.4772,
+   "net": -90954,
+   "avg_win": 1189,
+   "avg_loss": -1185,
+   "worst_day": -16651,
+   "max_dd": 133237
+  },
+  "S10T12": {
+   "trades": 1718,
+   "win": 0.4604,
+   "net": -48638,
+   "avg_win": 1308,
+   "avg_loss": -1168,
+   "worst_day": -17777,
+   "max_dd": 108100
+  },
+  "S10T15": {
+   "trades": 1712,
+   "win": 0.4422,
+   "net": -3031,
+   "avg_win": 1438,
+   "avg_loss": -1143,
+   "worst_day": -17777,
+   "max_dd": 78538
+  },
+  "S10T20": {
+   "trades": 1696,
+   "win": 0.4281,
+   "net": 55072,
+   "avg_win": 1582,
+   "avg_loss": -1127,
+   "worst_day": -17777,
+   "max_dd": 59949
+  },
+  "pick": {
+   "rule": "S10T5",
+   "reached60": true,
+   "verdict": "not reached"
+  }
+ }
+}

@@ -24,3 +24,10 @@
 3. **Breadth (4 of 5 indices together) is already the best direction check for R72.** Every book rule added on top was worse in the final.
 4. **One note to watch:** the first 15-minute candle on R51 + Supertrend was better in every period (final Rs 1,71,587 vs Rs 1,34,743, smaller drawdown) and beat random skips. It failed only the multiple-testing check (q 0.29), and it lost on R72, so it stays a note.
 5. Details: `research/HUNT_R105B_DIRECTION.md`; 40 entries `research/experiments/entries/r105b-*.yaml`. Nothing goes on paper or live.
+
+# R105C for Boss: a 60% win rate (26 Oct 2026)
+
+1. **60% is reachable only by selling at +5%, and then the arms lose money.** R72: 61% wins but −Rs 1,18,373 in the final period (today: 46%, +Rs 1,71,366). R51: 61% but −Rs 1,38,114 (today: 45%, +Rs 1,34,743).
+2. **With your 10% stop, even +5% gives only 58–59% and still loses about Rs 1.3 lakh.** The 10% stop alone keeps most of the profit (R72 Rs 1,45,098) with a smaller worst day, but at 43% wins.
+3. **Only R52 Open outside value gets 60%+ with a profit:** +Rs 1,500 target, 63% wins, +Rs 31,274 (R106).
+4. Details: `research/HUNT_R105C_WINRATE60.md`; 38 entries `research/experiments/entries/r105c-*.yaml`. Nothing switched on.

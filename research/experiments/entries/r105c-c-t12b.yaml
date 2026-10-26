@@ -1,0 +1,30 @@
+id: r105c-c-t12b
+title: R105C T12B (sell at +12% of the premium, breakeven once +6%) on R72 Breadth Donchian for a 60% win rate
+family: trade-management
+date: '2026-10-26'
+doc: research/HUNT_R105C_WINRATE60.md
+hypothesis: 'Boss (26 Oct: "make the winrate 60%, even the profit is less"): sell at +12% of the premium, breakeven once +6%
+  on top of the paper exits gives R72 Breadth Donchian a win rate >= 60% with a positive net in walk-forward and final.'
+data_version: Drive lake (index_1m, options_rolling_1m WEEK), R51 Amendment A clean stores, 20 Nov 2024 - 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once for R105C; already read by ~27 studies (weak evidence)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Donchian 20 on 5-minute index bars); the target is on the option premium'
+model_or_rule: 'R72 Breadth Donchian, exits P + T12B: sell at +12% of the premium, breakeven once +6%'
+settings: research/hunt/r105c_winrate60/r105c.py; PREREG.md
+prereg: research/hunt/r105c_winrate60/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design 3245 trades, win 39%, net -Rs 3,062; walk-forward win 41%, net Rs 144,862; final 1247 trades, win 41%,
+    net -Rs 4,740, avg win Rs 1,404 / loss -Rs 978 (today: win 46%, net Rs 171,366). Verdict: not reached.'
+  costs: dated charges, R17 liquidity fills, next-minute fills, limit target fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Win rate 60% only at +5%, where the net is negative; nothing changes.
