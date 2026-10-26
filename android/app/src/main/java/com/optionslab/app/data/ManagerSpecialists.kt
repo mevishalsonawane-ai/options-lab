@@ -376,8 +376,10 @@ object ManagerSpecialists {
         if (!loaded) return
         val f = file() ?: return
         val b = _book.value
-        // 26 Oct: after "Erase everything" an empty book writes no file (the coalesced save may still be waiting).
-        if (b == Book() && !f.exists()) return
+        // 26 Oct: right after "Erase everything" an empty book writes no file (the coalesced save may still be waiting). Any
+        // other save, an empty book's too, is written as before.
+        if (erasedEmpty && b == Book()) return
+        erasedEmpty = false
         val o = JSONObject().put("tuned", encMap(b.tuned)).put("frozen", encMap(b.frozen))
             .put("research", b.research.values.joinToString("\n\n") { ManagerConfig.encode(it) })
             .put("lines", JSONArray(b.lines))
@@ -444,6 +446,8 @@ object ManagerSpecialists {
     private val writeLock = Any()
     /** Bumped by [wipe]; guarded by this object. */
     @Volatile private var wipeGen = 0
+    /** Set by [wipe]: nothing has been saved since the erase (an empty book then writes no file). */
+    @Volatile private var erasedEmpty = false
 
     /**
      * "Erase everything" (26 Oct): the specialists' book (Boss's mutes, the tuned and frozen weights, the research blocks, the
@@ -453,7 +457,7 @@ object ManagerSpecialists {
     fun wipe() {
         synchronized(writeLock) {
             synchronized(this) {
-                wipeGen++
+                wipeGen++; erasedEmpty = true
                 _book.value = Book(); early.clear()
                 // Nothing left to read: the file goes now (unknown before init, then the first read finds it gone).
                 if (appContext != null) loaded = true
@@ -478,7 +482,7 @@ object ManagerSpecialists {
     internal fun reloadForTest(context: Context) {
         appContext = context.applicationContext
         synchronized(this) { _book.value = Book(); early.clear() }
-        loaded = false
+        loaded = false; erasedEmpty = false
         load()
     }
 
