@@ -77,3 +77,20 @@ Boss, after the first R105C results: *"Add a stoploss of 10%."*
 - **The same verdict.**
 - **Disclosure.** The final window was already read for the 24 original rules. These 6 are read once in it, after
   their own design pick.
+
+## Amendment 2 (26 Oct 2026, pushed before any Amendment 2 number)
+
+Boss: *"Add profit as 15% and loss as 10%, and test multiple combinations, and check what's the output."*
+
+- **Grid, on R72 and R51T.** Stop s in {5, 7.5, 10, 12.5, 15}% of the premium × target t in {10, 15, 20, 25, 30, none}%
+  of the premium. That is 30 combinations per arm, 60 in all. Boss's pair is s = 10, t = 15.
+- **Everything else stays exits P:** L25, the 30/60/100 ladder, out after 30 minutes, square-off 15:15. Same engine,
+  candidates and re-walk.
+- **Some cells repeat earlier rules:** s = 15 with t = 10 / 15 / 20 / none are R105C's T10 / T15 / T20 and today's
+  rules; s = 10 with t = 10 / 15 / 20 / none are Amendment 1's. They are recomputed in the grid for one consistent
+  table.
+- **Reported for every cell:** trades, win rate, net, average win / loss, worst day and max drawdown, in design,
+  walk-forward and final. Breakeven win rate = average loss / (average win + average loss).
+- **This is a description for Boss, not an edge test.** No twin, no BH. A cell is marked "better than today" only if
+  its net is higher than today's rules in design, walk-forward AND final; it is not proposed for paper on that alone.
+- **Disclosure:** the final window is read again (about the 29th time).
