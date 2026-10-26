@@ -1,0 +1,106 @@
+{
+ "C": {
+  "base": {
+   "trades": 25,
+   "win": 0.56,
+   "net": -624,
+   "worst_day": -18451,
+   "max_dd": 18451,
+   "ex_top5": -13429,
+   "days": 3
+  },
+  "rules": {
+   "Q1": {
+    "stats": {
+     "trades": 25,
+     "win": 0.56,
+     "net": -624,
+     "worst_day": -18451,
+     "max_dd": 18451,
+     "ex_top5": -13429,
+     "days": 3,
+     "avg_loss": -1753
+    },
+    "dropped": 4
+   },
+   "Q2": {
+    "stats": {
+     "trades": 18,
+     "win": 0.5556,
+     "net": -255,
+     "worst_day": -12318,
+     "max_dd": 12318,
+     "ex_top5": -10738,
+     "days": 3,
+     "avg_loss": -1643
+    },
+    "dropped": 18
+   },
+   "Q3": {
+    "stats": {
+     "trades": 23,
+     "win": 0.6087,
+     "net": 4357,
+     "worst_day": -12603,
+     "max_dd": 12603,
+     "ex_top5": -7581,
+     "days": 3,
+     "avg_loss": -1492
+    },
+    "dropped": 8
+   }
+  }
+ },
+ "B": {
+  "base": {
+   "trades": 46,
+   "win": 0.5,
+   "net": 3412,
+   "worst_day": -13478,
+   "max_dd": 20847,
+   "ex_top5": -14530,
+   "days": 4
+  },
+  "rules": {
+   "Q1": {
+    "stats": {
+     "trades": 45,
+     "win": 0.5111,
+     "net": 2300,
+     "worst_day": -13478,
+     "max_dd": 19596,
+     "ex_top5": -15549,
+     "days": 4,
+     "avg_loss": -1576
+    },
+    "dropped": 12
+   },
+   "Q2": {
+    "stats": {
+     "trades": 40,
+     "win": 0.45,
+     "net": -11904,
+     "worst_day": -14031,
+     "max_dd": 27374,
+     "ex_top5": -27256,
+     "days": 4,
+     "avg_loss": -1678
+    },
+    "dropped": 48
+   },
+   "Q3": {
+    "stats": {
+     "trades": 43,
+     "win": 0.4651,
+     "net": -3526,
+     "worst_day": -13398,
+     "max_dd": 24554,
+     "ex_top5": -21375,
+     "days": 4,
+     "avg_loss": -1590
+    },
+    "dropped": 25
+   }
+  }
+ }
+}
