@@ -1,0 +1,37 @@
+id: r112-r72-ts
+title: 'R112 TS on R72 Breadth Donchian: entries all day, +Rs 1,500 / -Rs 1,000 an order'
+family: trade-management
+date: '2026-10-26'
+doc: research/HUNT_R112_DONCHIAN_MORNING.md
+hypothesis: 'Boss (26 Oct): keep both Donchian arms open only till 10 am and exit each order at +Rs 1,500 or -Rs 1,000. This
+  test: entries all day, +Rs 1,500 / -Rs 1,000 an order. Gates: net > 0 and better than today''s rules in design, walk-forward
+  and final; twin BH q <= 0.10 over 5,829 tests; >= 40 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 26 Oct; R51 Amendment
+  A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R111); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars of all five indices (4 of 5 break their Donchian 20 together); the option (1-ITM weekly)
+  is bought; target / stop on its premium'
+model_or_rule: R72 Breadth Donchian with entries all day, +Rs 1,500 / -Rs 1,000 an order
+settings: research/hunt/r112_donchian_morning/r112cfg.py RULES; PREREG.md section 2
+prereg: research/hunt/r112_donchian_morning/PREREG.md
+variants_tried: 10
+results:
+  summary: 'Design: 3269 trades, win 40% (needs 43%), net -Rs 1,61,066, worst day -Rs 15,976, max DD Rs 2,19,038 (today Rs
+    2,16,929). Walk-forward: 2363 trades, win 43% (needs 43%), net -Rs 19,360, worst day -Rs 13,992, max DD Rs 75,298 (today
+    Rs 3,35,882). Final: 1251 trades, win 40% (needs 43%), net -Rs 68,210, worst day -Rs 14,668, max DD Rs 97,028 (today Rs
+    1,71,366); twin p 1.0, BH q 1.0 (R112 alone 1.0). Fails: not positive in design, walk-forward and final; not better than
+    today''s rules in design, wf, final; twin BH q 1.000 > 0.1.'
+  costs: dated Zerodha charges, R17 fills (stops -10 bps and 2x the half-spread, gaps at the open), limit targets at their
+    price, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.
