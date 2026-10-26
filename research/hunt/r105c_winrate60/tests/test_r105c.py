@@ -75,3 +75,16 @@ def test_final_read_once(tmp_path, monkeypatch):
     monkeypatch.setattr(Cc, "FINAL_FLAG", flag)
     with pytest.raises(SystemExit):
         Cc.final()
+
+
+def test_s10_rules_and_stop():
+    assert Cc.S10_RULES[0] == "S10" and len(Cc.S10_RULES) == 7
+    assert Cc.s10_spec("S10", L.OFF, L.P_STEPS)["target"] == -1.0
+    assert Cc.s10_spec("S10T8", L.OFF, L.P_STEPS)["target"] == pytest.approx(0.08)
+    # a -10% stop: a fall to 89 stops at 90 (the -15% stop would not)
+    C = contract([100] * 10 + [100, 95, 89] + [89] * 50)
+    I = np.full((4, N), 100.0)
+    st = np.array(L.P_STEPS, float).reshape(-1, 2)
+    r = X.simulate(C, 10, 360, -1, 0.10, -1.0, st, 30, -1.0, -1.0, 0.05, 75.0, 101.0, -1.0, -1, 0.0, -1.0, 0.0, 0, 0.0,
+                   math.nan, 1, I)
+    assert r[6] == 1 and r[1] == pytest.approx(90.0)
