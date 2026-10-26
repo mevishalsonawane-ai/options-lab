@@ -246,7 +246,7 @@ What would help more than an exit (decisions for Boss and the app session, not R
 
   R105's engine equals R64's trade by trade with no rule (a test on 400 random paths). The baselines reproduce R75 to
   the rupee (R72 3,071 / Rs 2,16,929 and 1,202 / Rs 1,71,366; R51 4,208 / Rs 50,425 and 1,670 / Rs 1,34,743).
-- **Tests:** `research/hunt/r105_donchian_giveback/tests/test_r105.py` (24 tests). They cover:
+- **Tests:** `research/hunt/r105_donchian_giveback/tests/test_r105.py` (25 tests). They cover:
   - engine = R64;
   - each rule on hand-made paths: thresholds, next-minute action, rupees vs quantity, the 15-minute wait, the
     half-gain stop, the limit leg, index close-through, put mirror, arming, the 10-minute trail;
