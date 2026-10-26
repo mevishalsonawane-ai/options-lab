@@ -1970,9 +1970,11 @@ class PassedArmsHostTest : RobolectricTest() {
         com.optionslab.app.data.ArmLive.testDefaultOff = false
         runBlocking { com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, false, pinConfirmed = true, log = false) }
         only(DonchianArm.SOURCE)
-        assertTrue(ExposureCapHost.liveMirrorPossible(DonchianArm.SOURCE))
+        // Nothing has read the live flags yet (as after a fresh start: the test app wipes them): the cap's memory-only check cannot
+        // tell, so the retry reads them itself before planning.
         market(LocalTime.of(9, 19))
         tick(LocalTime.of(9, 20))
+        assertTrue("Live is known now", ExposureCapHost.liveMirrorPossible(DonchianArm.SOURCE))
         assertNull(PassedArmsHost.plannedRetry)
         assertNothingAtZerodha()
     }

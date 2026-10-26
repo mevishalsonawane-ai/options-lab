@@ -1154,8 +1154,13 @@ object PassedArmsHost {
         }
     }
 
-    /** Whether any of these arms that is on (or record only) could be mirrored live now (memory only). */
+    /**
+     * Whether any of these arms that is on (or record only) could be mirrored live now. The live flags are read first (the cap's
+     * check uses only flags already read, and before anything has read them it says "not live"): this runs on the entries'
+     * worker or the retry's background job, never the order or tick path.
+     */
     private fun liveMirrorPossibleNow(): Boolean {
+        runCatching { ArmLive.liveFlags() }
         val v = _view.value
         return SOURCES.any { s -> (v.on(s) || v.recording(s)) && ExposureCapHost.liveMirrorPossible(s) }
     }

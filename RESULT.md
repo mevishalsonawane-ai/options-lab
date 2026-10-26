@@ -93,6 +93,10 @@ The research sells at the level (or at the minute's open on a gap). The code boo
   marked every Tuesday, so the 20 Oct holiday was flagged and Mon 19 Oct was not.
   - Fixed with `ExpiryRule`: the weekday rule, moved back to the previous trading day, never the next.
   - Tested with Dussehra, two holidays in a row, weekends, the monthly indices, SENSEX, and a broken calendar.
+  - The app's own holiday table shows a case ahead: Tue 24 Nov 2026 (Guru Nanak Jayanti) is November's last Tuesday, so the
+    monthly expiry falls on Mon 23 Nov.
+- The new entry retry reads the live flags itself before checking "could this trade live". The same-direction cap's check
+  uses only flags already in memory, and right after a start it would say "not live".
 
 ## 5. R51's Supertrend (10, 3) filter (not a bug)
 

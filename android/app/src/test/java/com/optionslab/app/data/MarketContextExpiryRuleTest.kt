@@ -37,8 +37,11 @@ class MarketContextExpiryRuleTest : RobolectricTest() {
             assertFalse(u, MarketContext.ruleExpiry(u, tue13))
             assertFalse(u, MarketContext.ruleExpiry(u, thu22))
         }
-        // A month whose last Tuesday is the 24th (November 2026 ends on a Monday the 30th).
-        assertTrue(MarketContext.ruleExpiry("BANKNIFTY", LocalDate.of(2026, 11, 24)))
+        // A month whose last Tuesday is the 24th (November 2026 ends on a Monday the 30th) - and the 24th is Guru Nanak Jayanti, an
+        // NSE holiday: the expiry moves back to Monday the 23rd (26 Oct, R105 lead 6).
+        assertTrue(Holidays.isHoliday(LocalDate.of(2026, 11, 24)))
+        assertFalse(MarketContext.ruleExpiry("BANKNIFTY", LocalDate.of(2026, 11, 24)))
+        assertTrue(MarketContext.ruleExpiry("BANKNIFTY", LocalDate.of(2026, 11, 23)))
         assertFalse(MarketContext.ruleExpiry("BANKNIFTY", LocalDate.of(2026, 11, 17)))
     }
 
