@@ -88,3 +88,33 @@ post-hoc. The ORB alert and gap fade were deliberately not retried: ORB has fail
 | `research/hunt/r108_irathinker_plus/test_r108.py` | 8 tests (stop timing, no look-ahead, wings, settlement, ITM strike) |
 | `research/hunt/r108_irathinker_plus/results/results.json` | every number |
 | `research/experiments/entries/r108-*.yaml` | 10 entries |
+
+## App fit: would it work in IraAlgo? (26 Oct, `appfit.py`)
+
+Boss: "do a plain test and find out if this works out for our application". This is a plain check, not a research gate.
+- Every week with real monthly prices (Nov 2024 – Feb 2026, holdout included, because the strangle's holdout is no
+  longer clean).
+- IraAlgo's own paper fills and today's charges.
+- ₹1 lakh capital.
+- IraAlgo's `AccountGuard` default limits, and Boss's −₹13k a month and −₹40k drawdown stops.
+
+| | Strangle + stop (E1) | Condor + stop (wings at ATM ± 600) |
+|---|---|---|
+| Can IraAlgo place it? | **No: the guard refuses a naked short** (`blockNakedShort`, never bypassed) | **No, with default settings:** 4 legs, but the guard allows 3 open positions |
+| Weeks | 51 | 41 |
+| Per week | +₹3,585 (78% won) | +₹542 (61% won) |
+| Total | +₹1,82,828 | +₹22,213 |
+| Worst week / worst month | −₹24,552 / **−₹21,992 (breaks the −₹13k month rule)** | −₹10,297 / −₹9,563 |
+| Weeks losing over ₹10k | 6 | 1 |
+| Margin (estimate) | about ₹95k (R103's estimate; IraThinker says about ₹2.1 lakh) | about ₹14k |
+| Run through the guard's 10% drawdown limit | trades 6 weeks, then **frozen from 10 Feb 2025** (the drawdown never recovers without new trades) | if the position limit is raised to 4: all 41 weeks, +₹22,213, max drawdown −₹11,984 |
+
+**Verdict: no, not for IraAlgo as it is.**
+- **The strangle that looked good** is blocked by the app's own safety guard. It breaks the monthly stop rule once
+  (−₹22k in a month), and the guard's drawdown limit would have frozen it after 6 weeks.
+- **The form the app could run** (the condor, with the position limit raised to 4) keeps within every rule. But it makes
+  only about ₹540 a week, an edge nobody has tested, on a ₹14k margin.
+- Neither is worth an arm on this evidence. Both were checked on the same 2 years already used, with the holdout partly
+  seen.
+- Next step, if Boss still wants it: test the **condor + stop** (the form the app can run) on the unseen 2021 – Nov 2024
+  BANKNIFTY monthly options.

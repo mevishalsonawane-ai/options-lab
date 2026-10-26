@@ -104,3 +104,32 @@ def test_variant_list_is_the_preregistered_ten():
     assert [v[0] for v in E.VARIANTS] == [f"E{i}" for i in range(1, 11)]
     assert [v[4] for v in E.VARIANTS].count("post-hoc") == 1
     assert not any(v[5] for v in E.VARIANTS if v[2] == "strangle")   # strangle variants are descriptive only
+
+
+# ---- app-fit account rules (appfit.py) ----
+def _weeks(nets):
+    return pd.DataFrame({"day": [date(2025, 1, 6) + timedelta(days=7 * i) for i in range(len(nets))], "net": nets})
+
+
+def test_appfit_guard_and_stop_rules():
+    import appfit as A
+    t = _weeks([5000, -12000, 3000, 3000])
+    m = {d: 10_000 for d in t["day"]}
+    # -12k from a 105k peak is 11.4% >= 10%: the guard refuses every later entry
+    r = A.account(t, m, legs=2)
+    assert r["weeks_taken"] == 2 and r["refused"] == {"guard: drawdown 10%": 2}
+    # a condor's 4 legs exceed the default 3 open positions: nothing is placed
+    assert A.account(t, m, legs=4)["weeks_taken"] == 0
+    # margin above equity is refused
+    assert A.account(t, {d: 200_000 for d in t["day"]}, legs=2)["refused"] == {"margin above equity": 4}
+
+
+def test_appfit_month_stop():
+    import appfit as A
+    # +50k, then -14k in the same month (136k: 9.3% below the 150k peak, under the guard's 10%):
+    # the -13k month rule refuses the next entry that month; February trades again
+    t = pd.DataFrame({"day": [date(2025, 1, 6), date(2025, 1, 13), date(2025, 1, 20), date(2025, 2, 3)],
+                      "net": [50_000, -14_000, 1_000, 1_000]})
+    t.loc[0, "day"] = date(2024, 12, 30)        # the +50k week in December, so January's P&L is -14k
+    r = A.account(t, {d: 1 for d in t["day"]}, legs=2)
+    assert r["refused"] == {"Boss: -13k month stop": 1} and r["weeks_taken"] == 3
