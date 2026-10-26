@@ -1,0 +1,32 @@
+id: r105f-b-o3
+title: 'R105F O3 OI check (OWNOI: skip if the bought option''s OI rose > 5% in 15 minutes) on R51 Donchian 20 + Supertrend'
+family: flow-oi
+date: '2026-10-26'
+doc: research/HUNT_R105F_OI.md
+hypothesis: 'Boss (26 Oct: "what if we use OI data"): an OI check around the index signal makes the arm better in design,
+  walk-forward and final, beats random skips and survives BH.'
+data_version: Drive lake (index_1m, options_rolling_1m WEEK incl. OI), R51 Amendment A clean stores, 20 Nov 2024 - 13 Oct
+  2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (walk-forward Apr 2025 - Mar 2026)
+  holdout: 1 Apr - 13 Oct 2026, read once (~31st read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index; OI of the ATM+-10 chain as context only (no option-chart signal)'
+model_or_rule: 'R51 Donchian 20 + Supertrend + O3: OWNOI: skip if the bought option''s OI rose > 5% in 15 minutes'
+settings: research/hunt/r105f_oi/r105f.py; PREREG.md
+prereg: research/hunt/r105f_oi/PREREG.md
+variants_tried: 1
+results:
+  summary: Design 4016 trades, Rs 45,356 vs Rs 50,425; WF Rs 197,243 vs Rs 213,748; final 1614 trades, win 45%, Rs 158,819
+    vs Rs 134,743, max DD Rs 72,629; random-skip p 0.2056 / 0.0958; BH q 0.8334. FAIL (a_design, a_wf, a_quarters, b_twin,
+    c_bh, e_top5).
+  costs: dated charges, R17 liquidity fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; OI context only.
