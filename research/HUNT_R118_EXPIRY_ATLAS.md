@@ -248,6 +248,11 @@ From the 11:00-12:45 marks (OTM options; outcomes after the mark; "dies" = ends 
   - random twins;
   - and Benjamini-Hochberg that counts these R118 tables as looks already taken.
 
+## Tested afterwards
+
+- **R119** (`research/HUNT_R119_ATLAS_TESTS.md`) turned six of these patterns into pre-registered strategies: 0 of 6
+  pass after real costs. Only the morning iron fly makes money before costs, and its eight orders eat it.
+
 ## Reproduce
 
 ```bash

@@ -1,0 +1,37 @@
+id: r119-p1
+title: 'R119 P1: iron fly at 09:30 (wings 2 straddles), out 15:05'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R119_ATLAS_TESTS.md
+hypothesis: 'From R118 patterns 1-3 (straddle out-prices the typical move; fat tails; implied > realised early): the fixed
+  rule makes money on expiry days after real charges and slippage, in design, walk-forward and final, and beats random twins.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): R98 expiry-day records, five indices,
+  rolling ATM+-10 1-minute options, index minutes'
+period:
+  design: expiry days to 31 Dec 2023
+  walk_forward: 2024-25 (nothing fitted)
+  holdout: 'final 1 Jan - 19 Oct 2026, read once (NOT pristine: R118 found the patterns on all of 2021-26; one 2026 day was
+    seen in a smoke test)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: underlying (ATM strike from the index)'
+model_or_rule: iron fly at 09:30 (wings 2 straddles), out 15:05
+settings: research/hunt/r119_atlas_tests/r119cfg.py, r119lib.py
+prereg: research/hunt/r119_atlas_tests/PREREG.md
+variants_tried: 1
+results:
+  summary: 'iron fly at 09:30 (wings 2 straddles), out 15:05: design 375 trades, win 55.2%, mean Rs -60 (gross +122, charges
+    182), total Rs -22,555; wf 380 trades, win 60.5%, mean Rs +167 (gross +350, charges 183), total Rs +63,427; final 105
+    trades, win 55.2%, mean Rs -1 (gross +192, charges 193), total Rs -92; final worst day Rs -16,848, w/o 3 best days Rs
+    -42,378, at 2x slippage mean Rs -23; twin p 0.187, BH q 1 (m 9,300,054). fail: design mean <= 0; final mean <= 0; final
+    <= 0 without 3 best days; final mean <= 0 at 2x slippage; twin p 0.187; BH q 1.'
+  costs: R50 / obuy dated charges per order (BSE rates for SENSEX), R25 'liq' fills (5 bps + 1-4 ticks by volume) x R54 late
+    multiplier, stale legs repriced by Black-76 at their last IV (R103 Am. 2); 1 lot, dated lots
+holdout_read: true
+verdict: rejected
+notes: Random twins 2,000 (seed 119). Nothing to paper or live.

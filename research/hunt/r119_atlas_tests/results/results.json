@@ -1,0 +1,622 @@
+{
+ "strats": {
+  "P1": {
+   "name": "iron fly at 09:30 (wings 2 straddles), out 15:05",
+   "source": "underlying (ATM strike from the index)",
+   "days": 911,
+   "periods": {
+    "design": {
+     "trades": 375,
+     "win": 55.2,
+     "mean": -60.14594666666665,
+     "total": -22554.729999999996,
+     "worst_day": -23916.510000000002,
+     "max_dd": 75638.80000000002,
+     "months_at_stop": 4,
+     "ex3": -49149.81,
+     "stale": 27,
+     "charges": 181.70687999999996,
+     "gross": 121.56093333333332,
+     "margin": 42224.5,
+     "days": 264
+    },
+    "wf": {
+     "trades": 380,
+     "win": 60.526315789473685,
+     "mean": 166.91444736842107,
+     "total": 63427.490000000005,
+     "worst_day": -20550.8,
+     "max_dd": 123057.84000000004,
+     "months_at_stop": 3,
+     "ex3": -20772.809999999998,
+     "stale": 125,
+     "charges": 182.8423947368421,
+     "gross": 349.7568421052633,
+     "margin": 84536.58881578948,
+     "days": 329
+    },
+    "final": {
+     "trades": 105,
+     "win": 55.23809523809524,
+     "mean": -0.8799047619047952,
+     "total": -92.3900000000035,
+     "worst_day": -16848.4,
+     "max_dd": 41694.82,
+     "months_at_stop": 3,
+     "ex3": -42377.700000000004,
+     "stale": 34,
+     "charges": 192.67323809523808,
+     "gross": 191.79333333333335,
+     "margin": 142412.35714285713,
+     "days": 82
+    },
+    "all": {
+     "trades": 860,
+     "win": 57.55813953488372,
+     "mean": 47.419034883720904,
+     "total": 40780.36999999998,
+     "worst_day": -23916.510000000002,
+     "max_dd": 154216.7,
+     "months_at_stop": 10,
+     "ex3": -43419.93000000002,
+     "stale": 186,
+     "charges": 183.54753488372094,
+     "gross": 230.96656976744188,
+     "margin": 73152.77761627907,
+     "days": 675
+    }
+   },
+   "final_2x": {
+    "trades": 105,
+    "win": 55.23809523809524,
+    "mean": -22.91085714285712,
+    "total": -2405.6399999999976,
+    "worst_day": -16985.38,
+    "max_dd": 42194.380000000005,
+    "months_at_stop": 3,
+    "ex3": -44436.98999999999,
+    "stale": 34,
+    "charges": 186.36752380952382,
+    "gross": 163.45666666666673,
+    "margin": 142412.35714285713,
+    "days": 82
+   },
+   "twin": {
+    "p": 0.1874062968515742,
+    "p_mc": 0.1874062968515742,
+    "hits": 374,
+    "twin_mean": -21871.528664999998,
+    "twin_sd": 23975.106878397648
+   },
+   "q_all": 1.0,
+   "q_r119": 0.5622188905547226,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design mean <= 0",
+     "final mean <= 0",
+     "final <= 0 without 3 best days",
+     "final mean <= 0 at 2x slippage",
+     "twin p 0.187",
+     "BH q 1"
+    ]
+   }
+  },
+  "P2": {
+   "name": "iron fly at 12:00 (wings 2 straddles), out 15:05",
+   "source": "underlying (ATM strike from the index)",
+   "days": 911,
+   "periods": {
+    "design": {
+     "trades": 379,
+     "win": 58.839050131926115,
+     "mean": -20.022242744063334,
+     "total": -7588.430000000004,
+     "worst_day": -15266.71,
+     "max_dd": 58628.289999999986,
+     "months_at_stop": 5,
+     "ex3": -31343.250000000004,
+     "stale": 9,
+     "charges": 183.69110817941956,
+     "gross": 163.6688654353562,
+     "margin": 42328.90831134564,
+     "days": 260
+    },
+    "wf": {
+     "trades": 385,
+     "win": 60.77922077922078,
+     "mean": -64.18088311688311,
+     "total": -24709.64,
+     "worst_day": -25130.940000000002,
+     "max_dd": 108767.31000000003,
+     "months_at_stop": 5,
+     "ex3": -77575.26,
+     "stale": 47,
+     "charges": 186.10503896103896,
+     "gross": 121.92415584415583,
+     "margin": 85039.76623376623,
+     "days": 333
+    },
+    "final": {
+     "trades": 108,
+     "win": 53.70370370370371,
+     "mean": -519.2185185185185,
+     "total": -56075.6,
+     "worst_day": -14505.34,
+     "max_dd": 69215.06999999999,
+     "months_at_stop": 3,
+     "ex3": -81499.06,
+     "stale": 16,
+     "charges": 194.23703703703703,
+     "gross": -324.9814814814815,
+     "margin": 142274.58333333334,
+     "days": 83
+    },
+    "all": {
+     "trades": 872,
+     "win": 59.05963302752294,
+     "mean": -101.3459518348624,
+     "total": -88373.67000000001,
+     "worst_day": -25130.940000000002,
+     "max_dd": 121453.85999999999,
+     "months_at_stop": 13,
+     "ex3": -141239.29,
+     "stale": 72,
+     "charges": 186.0630389908257,
+     "gross": 84.71708715596331,
+     "margin": 73564.9326261468,
+     "days": 676
+    }
+   },
+   "final_2x": {
+    "trades": 108,
+    "win": 53.70370370370371,
+    "mean": -541.8803703703704,
+    "total": -58523.08,
+    "worst_day": -14591.669999999998,
+    "max_dd": 71128.51999999999,
+    "months_at_stop": 3,
+    "ex3": -83571.29000000001,
+    "stale": 16,
+    "charges": 187.00722222222225,
+    "gross": -354.8731481481481,
+    "margin": 142274.58333333334,
+    "days": 83
+   },
+   "twin": {
+    "p": 0.823088455772114,
+    "p_mc": 0.823088455772114,
+    "hits": 1646,
+    "twin_mean": -33838.683784999994,
+    "twin_sd": 24350.687719070917
+   },
+   "q_all": 1.0,
+   "q_r119": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design mean <= 0",
+     "wf mean <= 0",
+     "final mean <= 0",
+     "final <= 0 without 3 best days",
+     "final mean <= 0 at 2x slippage",
+     "twin p 0.823",
+     "BH q 1"
+    ]
+   }
+  },
+  "P3": {
+   "name": "long ATM straddle 15:00 -> 15:20 (past the app's 15:05)",
+   "source": "underlying (ATM strike from the index)",
+   "days": 911,
+   "periods": {
+    "design": {
+     "trades": 391,
+     "win": 28.9002557544757,
+     "mean": -292.60846547314577,
+     "total": -114409.91,
+     "worst_day": -4885.4,
+     "max_dd": 115871.39000000003,
+     "months_at_stop": 1,
+     "ex3": -124804.99,
+     "stale": 0,
+     "charges": 86.83838874680306,
+     "gross": -205.77007672634272,
+     "margin": 0.0,
+     "days": 271
+    },
+    "wf": {
+     "trades": 389,
+     "win": 26.99228791773779,
+     "mean": -213.98768637532132,
+     "total": -83241.20999999999,
+     "worst_day": -5883.82,
+     "max_dd": 88674.46000000004,
+     "months_at_stop": 1,
+     "ex3": -105030.51999999999,
+     "stale": 1,
+     "charges": 88.71570694087404,
+     "gross": -125.2719794344473,
+     "margin": 0.0,
+     "days": 337
+    },
+    "final": {
+     "trades": 108,
+     "win": 30.555555555555557,
+     "mean": -374.8828703703703,
+     "total": -40487.34999999999,
+     "worst_day": -6055.0,
+     "max_dd": 43386.47999999999,
+     "months_at_stop": 1,
+     "ex3": -51289.55999999999,
+     "stale": 0,
+     "charges": 90.66574074074073,
+     "gross": -284.21712962962965,
+     "margin": 0.0,
+     "days": 83
+    },
+    "all": {
+     "trades": 888,
+     "win": 28.265765765765767,
+     "mean": -268.1739527027027,
+     "total": -238138.47,
+     "worst_day": -6055.0,
+     "max_dd": 238527.67000000016,
+     "months_at_stop": 3,
+     "ex3": -259927.78,
+     "stale": 1,
+     "charges": 88.12626126126126,
+     "gross": -180.0476914414414,
+     "margin": 0.0,
+     "days": 691
+    }
+   },
+   "final_2x": {
+    "trades": 108,
+    "win": 31.48148148148148,
+    "mean": -393.16537037037045,
+    "total": -42461.86000000001,
+    "worst_day": -6138.42,
+    "max_dd": 45163.549999999996,
+    "months_at_stop": 1,
+    "ex3": -53092.42000000001,
+    "stale": 0,
+    "charges": 87.595,
+    "gross": -305.57037037037037,
+    "margin": 0.0,
+    "days": 83
+   },
+   "twin": {
+    "p": 1.0,
+    "p_mc": 1.0,
+    "hits": 2000,
+    "twin_mean": -18022.659534999995,
+    "twin_sd": 7538.2951670493385
+   },
+   "q_all": 1.0,
+   "q_r119": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design mean <= 0",
+     "wf mean <= 0",
+     "final mean <= 0",
+     "final <= 0 without 3 best days",
+     "final mean <= 0 at 2x slippage",
+     "twin p 1",
+     "BH q 1"
+    ]
+   }
+  },
+  "P4": {
+   "name": "short longshot spreads at 12:00 (p_itm ~3%, 2-strike wing), out 15:05",
+   "source": "option chain: Black-76 odds from the option's own price (NON-DEFAULT, labelled)",
+   "days": 911,
+   "periods": {
+    "design": {
+     "trades": 353,
+     "win": 4.53257790368272,
+     "mean": -169.198611898017,
+     "total": -59727.11,
+     "worst_day": -4070.31,
+     "max_dd": 59727.10999999998,
+     "months_at_stop": 0,
+     "ex3": -60997.04,
+     "stale": 68,
+     "charges": 155.68770538243626,
+     "gross": -13.510906515580738,
+     "margin": 40455.851614730884,
+     "days": 280
+    },
+    "wf": {
+     "trades": 236,
+     "win": 0.423728813559322,
+     "mean": -152.25885593220337,
+     "total": -35933.09,
+     "worst_day": -3839.76,
+     "max_dd": 35933.090000000004,
+     "months_at_stop": 0,
+     "ex3": -35825.06,
+     "stale": 71,
+     "charges": 154.56224576271188,
+     "gross": 2.30338983050847,
+     "margin": 82026.37186440678,
+     "days": 214
+    },
+    "final": {
+     "trades": 57,
+     "win": 0.0,
+     "mean": -145.22578947368422,
+     "total": -8277.87,
+     "worst_day": -622.76,
+     "max_dd": 8277.869999999999,
+     "months_at_stop": 0,
+     "ex3": -8142.9400000000005,
+     "stale": 30,
+     "charges": 161.17315789473685,
+     "gross": 15.947368421052632,
+     "margin": 142675.65789473685,
+     "days": 48
+    },
+    "all": {
+     "trades": 646,
+     "win": 2.631578947368421,
+     "mean": -160.89484520123838,
+     "total": -103938.06999999999,
+     "worst_day": -4070.31,
+     "max_dd": 103938.06999999998,
+     "months_at_stop": 0,
+     "ex3": -105207.99999999999,
+     "stale": 169,
+     "charges": 155.7605572755418,
+     "gross": -5.1342879256965945,
+     "margin": 64661.99981424148,
+     "days": 542
+    }
+   },
+   "final_2x": {
+    "trades": 57,
+    "win": 0.0,
+    "mean": -170.28859649122805,
+    "total": -9706.449999999999,
+    "worst_day": -729.78,
+    "max_dd": 9706.449999999997,
+    "months_at_stop": 0,
+    "ex3": -9465.48,
+    "stale": 30,
+    "charges": 153.2938596491228,
+    "gross": -16.99473684210526,
+    "margin": 142675.65789473685,
+    "days": 48
+   },
+   "twin": {
+    "p": 0.08595702148925537,
+    "p_mc": 0.08595702148925537,
+    "hits": 171,
+    "twin_mean": -9804.130435000001,
+    "twin_sd": 1472.395274244953
+   },
+   "q_all": 1.0,
+   "q_r119": 0.5157421289355322,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design mean <= 0",
+     "wf mean <= 0",
+     "final mean <= 0",
+     "final <= 0 without 3 best days",
+     "final mean <= 0 at 2x slippage",
+     "twin p 0.086",
+     "BH q 1"
+    ]
+   }
+  },
+  "P5": {
+   "name": "fade 15-minute moves >= 1.5 sd with the ATM option, 15 minutes",
+   "source": "underlying (the index's 15-minute move; default)",
+   "days": 911,
+   "periods": {
+    "design": {
+     "trades": 344,
+     "win": 38.372093023255815,
+     "mean": -56.95651162790698,
+     "total": -19593.04,
+     "worst_day": -4366.04,
+     "max_dd": 31917.11,
+     "months_at_stop": 0,
+     "ex3": -32409.57,
+     "stale": 0,
+     "charges": 50.00636627906977,
+     "gross": -6.950145348837211,
+     "margin": 0.0,
+     "days": 188
+    },
+    "wf": {
+     "trades": 372,
+     "win": 40.59139784946236,
+     "mean": -41.382768817204315,
+     "total": -15394.390000000005,
+     "worst_day": -6190.139999999999,
+     "max_dd": 20204.630000000016,
+     "months_at_stop": 0,
+     "ex3": -32824.33,
+     "stale": 0,
+     "charges": 50.85212365591397,
+     "gross": 9.469354838709682,
+     "margin": 0.0,
+     "days": 221
+    },
+    "final": {
+     "trades": 97,
+     "win": 37.11340206185567,
+     "mean": -208.30463917525776,
+     "total": -20205.550000000003,
+     "worst_day": -4225.71,
+     "max_dd": 25677.85,
+     "months_at_stop": 0,
+     "ex3": -27513.050000000003,
+     "stale": 0,
+     "charges": 53.55206185567011,
+     "gross": -154.7525773195876,
+     "margin": 0.0,
+     "days": 49
+    },
+    "all": {
+     "trades": 813,
+     "win": 39.23739237392374,
+     "mean": -67.88804428044281,
+     "total": -55192.98000000001,
+     "worst_day": -6190.139999999999,
+     "max_dd": 67729.05999999998,
+     "months_at_stop": 0,
+     "ex3": -73382.24000000002,
+     "stale": 0,
+     "charges": 50.816396063960646,
+     "gross": -17.071648216482163,
+     "margin": 0.0,
+     "days": 458
+    }
+   },
+   "final_2x": {
+    "trades": 97,
+    "win": 37.11340206185567,
+    "mean": -212.4455670103093,
+    "total": -20607.22,
+    "worst_day": -4268.67,
+    "max_dd": 26033.56,
+    "months_at_stop": 0,
+    "ex3": -27881.25,
+    "stale": 0,
+    "charges": 53.54865979381442,
+    "gross": -158.89690721649484,
+    "margin": 0.0,
+    "days": 49
+   },
+   "twin": {
+    "p": 0.9025487256371814,
+    "p_mc": 0.9025487256371814,
+    "hits": 1805,
+    "twin_mean": -6676.589185000001,
+    "twin_sd": 10407.109937607862
+   },
+   "q_all": 1.0,
+   "q_r119": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design mean <= 0",
+     "wf mean <= 0",
+     "final mean <= 0",
+     "final <= 0 without 3 best days",
+     "final mean <= 0 at 2x slippage",
+     "twin p 0.903",
+     "BH q 1"
+    ]
+   }
+  },
+  "P6": {
+   "name": "buy the OTM call 1.25 straddles out at 12:00, out 15:05",
+   "source": "underlying (strike from the index and its straddle)",
+   "days": 911,
+   "periods": {
+    "design": {
+     "trades": 386,
+     "win": 12.435233160621761,
+     "mean": -145.61784974093263,
+     "total": -56208.49,
+     "worst_day": -2195.0699999999997,
+     "max_dd": 59142.039999999986,
+     "months_at_stop": 0,
+     "ex3": -86275.5,
+     "stale": 4,
+     "charges": 43.78300518134714,
+     "gross": -101.83484455958549,
+     "margin": 0.0,
+     "days": 266
+    },
+    "wf": {
+     "trades": 388,
+     "win": 9.536082474226804,
+     "mean": -180.38853092783506,
+     "total": -69990.75,
+     "worst_day": -4722.92,
+     "max_dd": 77311.48999999999,
+     "months_at_stop": 0,
+     "ex3": -117164.33,
+     "stale": 10,
+     "charges": 44.16971649484537,
+     "gross": -136.2188144329897,
+     "margin": 0.0,
+     "days": 336
+    },
+    "final": {
+     "trades": 108,
+     "win": 9.25925925925926,
+     "mean": -329.59814814814814,
+     "total": -35596.6,
+     "worst_day": -5673.169999999999,
+     "max_dd": 39131.860000000015,
+     "months_at_stop": 0,
+     "ex3": -61637.21,
+     "stale": 2,
+     "charges": 46.16481481481481,
+     "gross": -283.4333333333333,
+     "margin": 0.0,
+     "days": 83
+    },
+    "all": {
+     "trades": 882,
+     "win": 10.770975056689343,
+     "mean": -183.4419954648526,
+     "total": -161795.84,
+     "worst_day": -5673.169999999999,
+     "max_dd": 168264.64999999982,
+     "months_at_stop": 0,
+     "ex3": -212023.64,
+     "stale": 16,
+     "charges": 44.24477324263039,
+     "gross": -139.19722222222222,
+     "margin": 0.0,
+     "days": 685
+    }
+   },
+   "final_2x": {
+    "trades": 108,
+    "win": 9.25925925925926,
+    "mean": -332.8759259259259,
+    "total": -35950.6,
+    "worst_day": -5718.959999999999,
+    "max_dd": 39461.25999999999,
+    "months_at_stop": 0,
+    "ex3": -61942.64,
+    "stale": 2,
+    "charges": 42.22361111111112,
+    "gross": -290.6523148148148,
+    "margin": 0.0,
+    "days": 83
+   },
+   "twin": {
+    "p": 0.37831084457771114,
+    "p_mc": 0.37831084457771114,
+    "hits": 756,
+    "twin_mean": -39065.26948999999,
+    "twin_sd": 10482.86916418166
+   },
+   "q_all": 1.0,
+   "q_r119": 0.7566216891554222,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design mean <= 0",
+     "wf mean <= 0",
+     "final mean <= 0",
+     "final <= 0 without 3 best days",
+     "final mean <= 0 at 2x slippage",
+     "twin p 0.378",
+     "BH q 1"
+    ]
+   }
+  }
+ },
+ "m_all": 9300054
+}
