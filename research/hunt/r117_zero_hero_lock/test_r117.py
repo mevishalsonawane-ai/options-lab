@@ -325,3 +325,36 @@ def test_real_ft3_hold_equals_ft3_app():
     ref = [r for r in F.run_und("MIDCPNIFTY") if r["app"] == r["app"]]
     assert len(ts) == len(ref)
     assert all(abs(a.nets["HOLD"] - b["app"]) < 1e-6 for a, b in zip(ts, ref))
+
+
+# ------------------------------------------------------------------------------------------------ descriptive parts
+def test_describe_counts_iv_fails_by_side():
+    out = D.describe([synthetic_day(put_skew=1.3)])
+    assert out["iv"]["P"]["n"] == 0 or out["iv"]["P"]["iv_fail"] == out["iv"]["P"]["n"]   # every skewed put fails IV
+    assert out["no_signal"]["NIFTY"]["days"] == 1
+    assert out["distance"]["C"]["n"] >= out["iv"]["C"]["n"]
+
+
+def test_anatomy_groups(tmp_path, monkeypatch):
+    import r117study as S
+    ts = []
+    for i, (reach, hold) in enumerate([(4.0, -5000.0), (6.0, 20000.0), (1.2, -4000.0)]):
+        t = L.Ticket("FT3", "NIFTY", date(2026, 1, 1 + i), "P", 100.0, 0, 1, 10.0, reach)
+        t.nets = {x: hold for x in K.ALL_EXITS}
+        ts.append(t)
+    h = []
+    for i in range(2):
+        t = L.Ticket("HERO", "NIFTY", date(2026, 1, 1 + i), "C", 100.0, 0, 1, 10.0, 1.0)
+        t.nets = {x: -100.0 for x in K.ALL_EXITS if K.ALL_EXITS[x]["kind"] != "half_trail"}
+        h.append(t)
+    monkeypatch.setattr(K, "OUT", tmp_path)
+    monkeypatch.setattr(K, "RESULTS", tmp_path)
+    (tmp_path / "tickets.pkl").write_bytes(pickle.dumps(dict(FT3=ts, HERO=h)))
+    S.anatomy()
+    import json
+    a = json.loads((tmp_path / "anatomy.json").read_text())
+    g = a["FT3"]
+    assert g["round trip (reached 3x, lost if held)"]["n"] == 1
+    assert g["late runner (reached 3x, in profit if held)"]["HOLD"] == 20000
+    assert g["never reached 3x"]["n"] == 1
+    assert a["FT3"]["total"] == 11000 and a["HERO"]["never reached 3x"]["n"] == 2

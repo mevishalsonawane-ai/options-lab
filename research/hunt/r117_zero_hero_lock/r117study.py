@@ -2,6 +2,8 @@
 
     python3 research/hunt/r117_zero_hero_lock/r117study.py run      # tickets, parity, metrics, twins, BH, gates
                                                                     # -> results/results.json, results/report.md
+    python3 research/hunt/r117_zero_hero_lock/r117study.py anatomy  # descriptive split of the saved tickets
+                                                                    # -> results/anatomy.md, results/anatomy.json
 
 Ticket lists go to $R117_OUT (not in git). The final period is read in the same run as design and walk-forward: nothing
 is fitted, so there is nothing to choose between them (PREREG section 1); the run is done once.
@@ -21,6 +23,7 @@ import r117lib as L
 import r98data as R98
 import r54data as DD
 import r54lib as LB
+import r55cfg as K55
 import r55lib as L55
 
 
@@ -101,7 +104,6 @@ def run(procs: int = 4):
     print(report(res))
 
 
-import r55cfg as K55  # noqa: E402
 K55_START, K55_DESIGN_END, K55_FINAL_START, K55_LAKE_END = K55.START, K55.DESIGN_END, K55.FINAL_START, K55.LAKE_END
 
 NAMES = {**{k: v["name"] for k, v in K.ALL_EXITS.items()}}
@@ -139,9 +141,40 @@ def report(res: dict) -> str:
     return "\n".join(md) + "\n"
 
 
+def anatomy() -> str:
+    """Descriptive (not a test): where each exit makes and loses its money. Groups by the ticket's best close from the
+    fill to the end (the same for every exit): reached 3x and then lost money if held ("round trip", like 27 Oct),
+    reached 3x and was still in profit at the end ("late runner"), never reached 3x. Reads the saved tickets only."""
+    d = pickle.loads((K.OUT / "tickets.pkl").read_bytes())
+    out, md = {}, ["## Where the money is (all periods, descriptive)", ""]
+    for f, ts in d.items():
+        base = "HOLD"
+        groups = {"round trip (reached 3x, lost if held)": [t for t in ts if t.reach >= 3 and t.nets[base] <= 0],
+                  "late runner (reached 3x, in profit if held)": [t for t in ts if t.reach >= 3 and t.nets[base] > 0],
+                  "never reached 3x": [t for t in ts if t.reach < 3]}
+        exits = [x for x in (K.FAMILY_BASE[f], K.FAMILY_REF[f], *K.FAMILY_RULES[f]) if x in ts[0].nets]
+        exits = list(dict.fromkeys(["HOLD", *exits]))
+        out[f] = {g: dict(n=len(v), **{x: round(sum(t.nets[x] for t in v)) for x in exits}) for g, v in groups.items()}
+        v = sorted((t.nets[K.FAMILY_BASE[f]] for t in ts), reverse=True)
+        out[f]["top5_tickets"] = round(sum(v[:5]))
+        out[f]["total"] = round(sum(v))
+        md += [f"### {f} ({len(ts)} tickets; total Rs by group)", "",
+               "| group | n | " + " | ".join(exits) + " |", "|---|---|" + "---|" * len(exits)]
+        for g, row in out[f].items():
+            if isinstance(row, dict):
+                md.append(f"| {g} | {row['n']} | " + " | ".join(rs(row[x]) for x in exits) + " |")
+        md += ["", f"Its own exit ({K.FAMILY_BASE[f]}): the 5 best tickets make Rs {rs(out[f]['top5_tickets'])} of "
+               f"Rs {rs(out[f]['total'])}.", ""]
+    (K.RESULTS / "anatomy.json").write_text(json.dumps(out, indent=1))
+    (K.RESULTS / "anatomy.md").write_text("\n".join(md) + "\n")
+    return "\n".join(md)
+
+
 if __name__ == "__main__":
     if sys.argv[1:2] == ["run"]:
         run()
+    elif sys.argv[1:2] == ["anatomy"]:
+        print(anatomy())
     elif sys.argv[1:2] == ["report"]:
         print(report(json.loads((K.RESULTS / "results.json").read_text())))
     else:

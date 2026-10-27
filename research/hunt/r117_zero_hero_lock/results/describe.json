@@ -1,0 +1,44 @@
+{
+ "iv": {
+  "C": {
+   "n": 1529,
+   "iv_fail": 1230
+  },
+  "P": {
+   "n": 1421,
+   "iv_fail": 1231
+  }
+ },
+ "distance": {
+  "C": {
+   "n": 16321,
+   "dist_fail": 14792
+  },
+  "P": {
+   "n": 17436,
+   "dist_fail": 16015
+  }
+ },
+ "no_signal": {
+  "NIFTY": {
+   "days": 273,
+   "none": 37
+  },
+  "BANKNIFTY": {
+   "days": 195,
+   "none": 186
+  },
+  "FINNIFTY": {
+   "days": 167,
+   "none": 43
+  },
+  "MIDCPNIFTY": {
+   "days": 100,
+   "none": 8
+  },
+  "SENSEX": {
+   "days": 176,
+   "none": 159
+  }
+ }
+}

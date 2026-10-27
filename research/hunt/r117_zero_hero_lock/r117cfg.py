@@ -70,6 +70,7 @@ BASE = {
 }
 ALL_EXITS = {**BASE, **RULES}
 FAMILIES = ("FT3", "HERO")
+R98_UNDS = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
 FAMILY_BASE = {"FT3": "HOLD", "HERO": "T0"}               # each arm's own exit today
 FAMILY_REF = {"FT3": "T0", "HERO": "HOLD"}                # shown for reference only
 FAMILY_RULES = {"FT3": ("L1", "L2", "L3", "L4", "L5", "L6", "L7"), "HERO": ("L3", "L4", "L5", "L6", "L7")}

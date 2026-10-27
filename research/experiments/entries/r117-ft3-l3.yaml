@@ -1,0 +1,48 @@
+id: r117-ft3-l3
+title: 'FT3 ticket with a profit lock: step lock: 2x once 4x, 4x once 8x, 8x once 16x, 16x once 32x'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R117_ZERO_HERO_LOCK.md
+hypothesis: 'On expiry days, the existing FT3 entry with the lock ''step lock: 2x once 4x, 4x once 8x, 8x once 16x, 16x once
+  32x'' makes more per ticket than hold to 15:05 (FT3''s frozen exit) in design, walk-forward and final, after real costs,
+  and beats random exit minutes.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026: options_rolling_1m opt_<UND>_WEEK 2021-2026 (rolling
+  ATM+-10 1-minute), index_1m 2021-2026; lake to 19 Oct 2026 (27 Oct not in it)'
+period:
+  design: expiry days to 31 Dec 2023
+  walk_forward: 1 Jan 2024 - 31 Dec 2025 (nothing fitted)
+  holdout: 'final: 1 Jan - 19 Oct 2026, read once (entries not pristine: R98 / ft3_app and R50-R55 read them; the locks were
+    never run on them)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: option-price rule (NOT the default; on by Boss''s choice): FT3 reads the option chain at the mark, Hero
+  the option''s own price band; the locks read the held option''s premium'
+- lock on the option premium
+model_or_rule: 'entry: FT3 (frozen app version, research/hunt/r98/FORWARD_TEST.md): first 5-minute mark 11:00-12:55 with an
+  OTM option priced Rs 6-10, Black-76 IV <= 1.0333 x ATM IV, within 1.5466 ATM straddles; LIMIT capped at price x 1.2 + 0.10
+  for 3 bars; Rs 5,000; all five indices'' expiry days; exit: step lock: 2x once 4x, 4x once 8x, 8x once 16x, 16x once 32x;
+  the rest sells at 15:05'
+settings: research/hunt/r117_zero_hero_lock/r117cfg.py, research/hunt/r117_zero_hero_lock/r117lib.py
+prereg: research/hunt/r117_zero_hero_lock/PREREG.md
+variants_tried: 1
+results:
+  summary: 'step lock: 2x once 4x, 4x once 8x, 8x once 16x, 16x once 32x on the existing FT3 tickets (entries unchanged),
+    against hold to 15:05 (FT3''s frozen exit). design: rule 256 tickets, win 22.7%, mean Rs +2,129, total Rs +545,007, max
+    DD Rs 103,033, without the 3 best days Rs +104,381 vs today''s mean Rs +2,018; wf: rule 171 tickets, win 23.4%, mean Rs
+    +679, total Rs +116,098, max DD Rs 224,233, without the 3 best days Rs -253,096 vs today''s mean Rs +1,568; final: rule
+    51 tickets, win 23.5%, mean Rs +2,202, total Rs +112,291, max DD Rs 58,615, without the 3 best days Rs -87,635 vs today''s
+    mean Rs +1,531. Reached 3x / 5x / 10x (all periods): 25.3% / 15.1% / 6.7%; sold at >= 3x 10.3%. Final twin p 0.9470 (5
+    final tickets changed), BH q 1 (m 9,300,059), zero-hero families q 1. fail: wf: mean not above today''s exit; final <=
+    0 without the 3 best days; twin p 0.947 >= 0.05; BH q 1 > 0.1.'
+  costs: 'FT3: R98 charges (Rs 20 an order + GST, STT 0.15% on the sell, exchange, stamp), 1-tick sell spread, fills at the
+    next open; Hero: R54 / R55 pricing (dated charges, R17 liquidity spread with the late multiplier, stray-print guard)'
+holdout_read: true
+verdict: rejected
+notes: 'Random twins: 2,000 (seed 117); tickets whose exit differs from today''s are sold whole at a random bar open after
+  the fill. FT3 is a frozen forward test: it never changes; a passer could only run as a separate labelled paper variant.
+  Nothing live.'
