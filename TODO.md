@@ -493,3 +493,13 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
       many stock signals.
 - [ ] N4. A JSON signal's target2 is shown but not used (target1 closes the trade); a half-at-T1 exit could use it.
 - [ ] N5. An exit message for a stock ("side":"EXIT" with "X.NS") closes that stock's trade; words alone cannot name a stock.
+
+## E. Expiry days (R116, 27 Oct 2026: Boss, "why don't we use next expiry options?")
+
+- [ ] E1. Proposal, waits for Boss's go-ahead (research/HUNT_R116_EXPIRY_NEXT_OPTION.md): R116 found buying the NEXT
+      expiry's option on an index's expiry day lost on all four arms (R72 -Rs 41,872 on 206 design trades; R51 -Rs 31,128 on
+      266; R52 -Rs 17,092 on 49; Liquidity -Rs 3,577 on 11), worst on monthly expiries, so expiry days stay skipped. Dhan's
+      history never keeps the next expiry's minutes (FINNIFTY / MIDCPNIFTY have none), so to build evidence: a log-only
+      "would-be" record on expiry days (the next-expiry 1-ITM each arm would buy, its premium, where today's exits would
+      sell it; no order, off the order and tick path, released first when memory is short), the next expiry's ATM±2
+      minutes kept in the IraAlgo data repo on expiry days, and a fresh pre-registered re-test after about six months.

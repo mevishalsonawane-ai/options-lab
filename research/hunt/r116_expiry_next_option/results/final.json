@@ -1,0 +1,1463 @@
+{
+ "_meta": {
+  "phase": "final",
+  "twins": 2000,
+  "seed": 116,
+  "written": "2026-10-27T13:42:49.790041+00:00"
+ },
+ "parity": {
+  "R72": {
+   "trades": 1202,
+   "net": 171366,
+   "published": [
+    1202,
+    171366
+   ]
+  },
+  "R51": {
+   "trades": 1670,
+   "net": 134743,
+   "published": [
+    1670,
+    134743
+   ]
+  },
+  "R52": {
+   "trades": 293,
+   "net": 48612,
+   "published": [
+    293,
+    48612
+   ]
+  },
+  "LIQ": {
+   "trades": 357,
+   "net": 11155,
+   "published": [
+    357,
+    11155
+   ]
+  }
+ },
+ "arms": {
+  "R72": {
+   "S": {
+    "final": {
+     "trades": 145,
+     "days": 51,
+     "win": 0.3586,
+     "net": -2905,
+     "avg": -20,
+     "worst_day": -9134,
+     "max_dd": 24565,
+     "bad_months": 1,
+     "open_0915_0930": {
+      "trades": 29,
+      "days": 26,
+      "win": 0.5172,
+      "net": 19102,
+      "avg": 659,
+      "worst_day": -1302,
+      "max_dd": 6448,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 55,
+       "days": 26,
+       "win": 0.3273,
+       "net": -2998,
+       "avg": -55,
+       "worst_day": -2652,
+       "max_dd": 12575,
+       "bad_months": 0
+      },
+      "BANKNIFTY": {
+       "trades": 14,
+       "days": 6,
+       "win": 0.2143,
+       "net": -592,
+       "avg": -42,
+       "worst_day": -2833,
+       "max_dd": 7335,
+       "bad_months": 0
+      },
+      "FINNIFTY": {
+       "trades": 14,
+       "days": 6,
+       "win": 0.2143,
+       "net": -4960,
+       "avg": -354,
+       "worst_day": -2779,
+       "max_dd": 6761,
+       "bad_months": 0
+      },
+      "MIDCPNIFTY": {
+       "trades": 8,
+       "days": 6,
+       "win": 0.5,
+       "net": 2771,
+       "avg": 346,
+       "worst_day": -1145,
+       "max_dd": 3286,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 54,
+       "days": 25,
+       "win": 0.4444,
+       "net": 2872,
+       "avg": 53,
+       "worst_day": -2182,
+       "max_dd": 4317,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 4770,
+     "risk_per_lot_median": 776,
+     "account_for_2pct_median": 38775,
+     "premium_by_index": {
+      "NIFTY": 5301,
+      "BANKNIFTY": 4699,
+      "FINNIFTY": 5212,
+      "MIDCPNIFTY": 5331,
+      "SENSEX": 4440
+     }
+    },
+    "twin": {
+     "p": 0.5037481259370314,
+     "p_mc": 0.5037481259370314,
+     "p_norm": 0.5117596443737294,
+     "twin_mean": -2451,
+     "twin_sd": 15412,
+     "hits": 1007
+    }
+   },
+   "N": {
+    "final": {
+     "trades": 29,
+     "days": 12,
+     "win": 0.4138,
+     "net": -3251,
+     "avg": -112,
+     "worst_day": -5593,
+     "max_dd": 5593,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 8,
+      "days": 8,
+      "win": 0.375,
+      "net": -3159,
+      "avg": -395,
+      "worst_day": -2069,
+      "max_dd": 4535,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 15,
+       "days": 7,
+       "win": 0.4667,
+       "net": 3016,
+       "avg": 201,
+       "worst_day": -1763,
+       "max_dd": 1763,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 14,
+       "days": 5,
+       "win": 0.3571,
+       "net": -6267,
+       "avg": -448,
+       "worst_day": -5593,
+       "max_dd": 6267,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 13857,
+     "risk_per_lot_median": 2139,
+     "account_for_2pct_median": 106927,
+     "premium_by_index": {
+      "NIFTY": 18567,
+      "SENSEX": 12876
+     }
+    },
+    "twin": {
+     "p": 0.7221389305347327,
+     "p_mc": 0.7221389305347327,
+     "p_norm": 0.722486515464076,
+     "twin_mean": 941,
+     "twin_sd": 7101,
+     "hits": 1444
+    }
+   },
+   "M": {
+    "final": {
+     "trades": 47,
+     "days": 25,
+     "win": 0.4255,
+     "net": 1568,
+     "avg": 33,
+     "worst_day": -4602,
+     "max_dd": 9711,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 9,
+      "days": 9,
+      "win": 0.4444,
+      "net": 238,
+      "avg": 26,
+      "worst_day": -1494,
+      "max_dd": 2920,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 30,
+       "days": 14,
+       "win": 0.4667,
+       "net": -3123,
+       "avg": -104,
+       "worst_day": -4602,
+       "max_dd": 9814,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 17,
+       "days": 11,
+       "win": 0.3529,
+       "net": 4691,
+       "avg": 276,
+       "worst_day": -2500,
+       "max_dd": 2604,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 22597,
+     "risk_per_lot_median": 3450,
+     "account_for_2pct_median": 172479,
+     "premium_by_index": {
+      "NIFTY": 22755,
+      "SENSEX": 21578
+     }
+    },
+    "twin": {
+     "p": 0.4917541229385307,
+     "p_mc": 0.4917541229385307,
+     "p_norm": 0.4937747966803056,
+     "twin_mean": 1431,
+     "twin_sd": 8793,
+     "hits": 983
+    }
+   },
+   "S_on_N_days": {
+    "final": {
+     "trades": 29,
+     "days": 12,
+     "win": 0.3448,
+     "net": -5055,
+     "avg": -174,
+     "worst_day": -2182,
+     "max_dd": 7364,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 8,
+      "days": 8,
+      "win": 0.25,
+      "net": -5080,
+      "avg": -635,
+      "worst_day": -1302,
+      "max_dd": 5639,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 15,
+       "days": 7,
+       "win": 0.2667,
+       "net": -4156,
+       "avg": -277,
+       "worst_day": -2127,
+       "max_dd": 5299,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 14,
+       "days": 5,
+       "win": 0.4286,
+       "net": -898,
+       "avg": -64,
+       "worst_day": -2182,
+       "max_dd": 2182,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 4618,
+     "risk_per_lot_median": 753,
+     "account_for_2pct_median": 37635,
+     "premium_by_index": {
+      "NIFTY": 5216,
+      "SENSEX": 4228
+     }
+    }
+   },
+   "S_on_M_days": {
+    "final": {
+     "trades": 56,
+     "days": 27,
+     "win": 0.4107,
+     "net": 3594,
+     "avg": 64,
+     "worst_day": -2486,
+     "max_dd": 6033,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 15,
+      "days": 15,
+      "win": 0.4,
+      "net": 1480,
+      "avg": 99,
+      "worst_day": -1302,
+      "max_dd": 4453,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 30,
+       "days": 14,
+       "win": 0.4,
+       "net": -1165,
+       "avg": -39,
+       "worst_day": -2486,
+       "max_dd": 8240,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 26,
+       "days": 13,
+       "win": 0.4231,
+       "net": 4759,
+       "avg": 183,
+       "worst_day": -773,
+       "max_dd": 1366,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 4787,
+     "risk_per_lot_median": 778,
+     "account_for_2pct_median": 38904,
+     "premium_by_index": {
+      "NIFTY": 5210,
+      "SENSEX": 4440
+     }
+    }
+   },
+   "N_monthly_days": {
+    "final": {
+     "trades": 0,
+     "days": 0,
+     "win": null,
+     "net": 0,
+     "avg": null,
+     "worst_day": 0,
+     "max_dd": 0,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {}
+    }
+   },
+   "N_weekly_days": {
+    "final": {
+     "trades": 29,
+     "days": 12,
+     "win": 0.4138,
+     "net": -3251,
+     "avg": -112,
+     "worst_day": -5593,
+     "max_dd": 5593,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 8,
+      "days": 8,
+      "win": 0.375,
+      "net": -3159,
+      "avg": -395,
+      "worst_day": -2069,
+      "max_dd": 4535,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 15,
+       "days": 7,
+       "win": 0.4667,
+       "net": 3016,
+       "avg": 201,
+       "worst_day": -1763,
+       "max_dd": 1763,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 14,
+       "days": 5,
+       "win": 0.3571,
+       "net": -6267,
+       "avg": -448,
+       "worst_day": -5593,
+       "max_dd": 6267,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 13857,
+     "risk_per_lot_median": 2139,
+     "account_for_2pct_median": 106927,
+     "premium_by_index": {
+      "NIFTY": 18567,
+      "SENSEX": 12876
+     }
+    }
+   }
+  },
+  "R51": {
+   "S": {
+    "final": {
+     "trades": 204,
+     "days": 54,
+     "win": 0.3824,
+     "net": -2301,
+     "avg": -11,
+     "worst_day": -7248,
+     "max_dd": 26288,
+     "bad_months": 1,
+     "open_0915_0930": {
+      "trades": 43,
+      "days": 38,
+      "win": 0.3953,
+      "net": 7534,
+      "avg": 175,
+      "worst_day": -5204,
+      "max_dd": 15831,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 75,
+       "days": 27,
+       "win": 0.3733,
+       "net": 1254,
+       "avg": 17,
+       "worst_day": -3474,
+       "max_dd": 11303,
+       "bad_months": 0
+      },
+      "BANKNIFTY": {
+       "trades": 16,
+       "days": 6,
+       "win": 0.375,
+       "net": 3781,
+       "avg": 236,
+       "worst_day": -2202,
+       "max_dd": 4033,
+       "bad_months": 0
+      },
+      "FINNIFTY": {
+       "trades": 16,
+       "days": 6,
+       "win": 0.25,
+       "net": -5599,
+       "avg": -350,
+       "worst_day": -2779,
+       "max_dd": 7401,
+       "bad_months": 0
+      },
+      "MIDCPNIFTY": {
+       "trades": 19,
+       "days": 6,
+       "win": 0.4211,
+       "net": -229,
+       "avg": -12,
+       "worst_day": -4095,
+       "max_dd": 7684,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 78,
+       "days": 27,
+       "win": 0.4103,
+       "net": -1508,
+       "avg": -19,
+       "worst_day": -2266,
+       "max_dd": 4741,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 4788,
+     "risk_per_lot_median": 778,
+     "account_for_2pct_median": 38913,
+     "premium_by_index": {
+      "NIFTY": 5005,
+      "BANKNIFTY": 5815,
+      "FINNIFTY": 5390,
+      "MIDCPNIFTY": 5412,
+      "SENSEX": 4381
+     }
+    },
+    "twin": {
+     "p": 0.33833083458270863,
+     "p_mc": 0.33833083458270863,
+     "p_norm": 0.35033334042873054,
+     "twin_mean": -8562,
+     "twin_sd": 16286,
+     "hits": 676
+    }
+   },
+   "N": {
+    "final": {
+     "trades": 34,
+     "days": 13,
+     "win": 0.4412,
+     "net": -7983,
+     "avg": -235,
+     "worst_day": -5903,
+     "max_dd": 10235,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 10,
+      "days": 10,
+      "win": 0.3,
+      "net": -7632,
+      "avg": -763,
+      "worst_day": -2630,
+      "max_dd": 9009,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 19,
+       "days": 8,
+       "win": 0.4737,
+       "net": -1997,
+       "avg": -105,
+       "worst_day": -4001,
+       "max_dd": 4217,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 15,
+       "days": 5,
+       "win": 0.4,
+       "net": -5986,
+       "avg": -399,
+       "worst_day": -5903,
+       "max_dd": 6017,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 12955,
+     "risk_per_lot_median": 2003,
+     "account_for_2pct_median": 100162,
+     "premium_by_index": {
+      "NIFTY": 15723,
+      "SENSEX": 12921
+     }
+    },
+    "twin": {
+     "p": 0.8865567216391804,
+     "p_mc": 0.8865567216391804,
+     "p_norm": 0.8913160338732778,
+     "twin_mean": 810,
+     "twin_sd": 7129,
+     "hits": 1773
+    }
+   },
+   "M": {
+    "final": {
+     "trades": 66,
+     "days": 27,
+     "win": 0.3939,
+     "net": 7532,
+     "avg": 114,
+     "worst_day": -4602,
+     "max_dd": 12627,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 12,
+      "days": 12,
+      "win": 0.3333,
+      "net": -4904,
+      "avg": -409,
+      "worst_day": -2090,
+      "max_dd": 4904,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 37,
+       "days": 14,
+       "win": 0.4054,
+       "net": -3835,
+       "avg": -104,
+       "worst_day": -4602,
+       "max_dd": 10828,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 29,
+       "days": 13,
+       "win": 0.3793,
+       "net": 11367,
+       "avg": 392,
+       "worst_day": -2702,
+       "max_dd": 8560,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 21840,
+     "risk_per_lot_median": 3336,
+     "account_for_2pct_median": 166796,
+     "premium_by_index": {
+      "NIFTY": 21931,
+      "SENSEX": 21748
+     }
+    },
+    "twin": {
+     "p": 0.16041979010494753,
+     "p_mc": 0.16041979010494753,
+     "p_norm": 0.16086442406775966,
+     "twin_mean": -2058,
+     "twin_sd": 9678,
+     "hits": 320
+    }
+   },
+   "S_on_N_days": {
+    "final": {
+     "trades": 36,
+     "days": 13,
+     "win": 0.4167,
+     "net": -6188,
+     "avg": -172,
+     "worst_day": -2127,
+     "max_dd": 8543,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 10,
+      "days": 10,
+      "win": 0.2,
+      "net": -6976,
+      "avg": -698,
+      "worst_day": -1302,
+      "max_dd": 7535,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 20,
+       "days": 8,
+       "win": 0.35,
+       "net": -6298,
+       "avg": -315,
+       "worst_day": -2127,
+       "max_dd": 6534,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 16,
+       "days": 5,
+       "win": 0.5,
+       "net": 110,
+       "avg": 7,
+       "worst_day": -2010,
+       "max_dd": 2010,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 4699,
+     "risk_per_lot_median": 765,
+     "account_for_2pct_median": 38242,
+     "premium_by_index": {
+      "NIFTY": 5143,
+      "SENSEX": 4228
+     }
+    }
+   },
+   "S_on_M_days": {
+    "final": {
+     "trades": 84,
+     "days": 29,
+     "win": 0.369,
+     "net": 2788,
+     "avg": 33,
+     "worst_day": -2486,
+     "max_dd": 9915,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 20,
+      "days": 20,
+      "win": 0.35,
+      "net": -1980,
+      "avg": -99,
+      "worst_day": -1302,
+      "max_dd": 5623,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 39,
+       "days": 14,
+       "win": 0.3846,
+       "net": 3033,
+       "avg": 78,
+       "worst_day": -2486,
+       "max_dd": 7694,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 45,
+       "days": 15,
+       "win": 0.3556,
+       "net": -246,
+       "avg": -5,
+       "worst_day": -2266,
+       "max_dd": 5928,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 4627,
+     "risk_per_lot_median": 754,
+     "account_for_2pct_median": 37706,
+     "premium_by_index": {
+      "NIFTY": 5005,
+      "SENSEX": 4406
+     }
+    }
+   },
+   "N_monthly_days": {
+    "final": {
+     "trades": 0,
+     "days": 0,
+     "win": null,
+     "net": 0,
+     "avg": null,
+     "worst_day": 0,
+     "max_dd": 0,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {}
+    }
+   },
+   "N_weekly_days": {
+    "final": {
+     "trades": 34,
+     "days": 13,
+     "win": 0.4412,
+     "net": -7983,
+     "avg": -235,
+     "worst_day": -5903,
+     "max_dd": 10235,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 10,
+      "days": 10,
+      "win": 0.3,
+      "net": -7632,
+      "avg": -763,
+      "worst_day": -2630,
+      "max_dd": 9009,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 19,
+       "days": 8,
+       "win": 0.4737,
+       "net": -1997,
+       "avg": -105,
+       "worst_day": -4001,
+       "max_dd": 4217,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 15,
+       "days": 5,
+       "win": 0.4,
+       "net": -5986,
+       "avg": -399,
+       "worst_day": -5903,
+       "max_dd": 6017,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 12955,
+     "risk_per_lot_median": 2003,
+     "account_for_2pct_median": 100162,
+     "premium_by_index": {
+      "NIFTY": 15723,
+      "SENSEX": 12921
+     }
+    }
+   }
+  },
+  "R52": {
+   "S": {
+    "final": {
+     "trades": 38,
+     "days": 32,
+     "win": 0.6316,
+     "net": 18724,
+     "avg": 493,
+     "worst_day": -2515,
+     "max_dd": 8447,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 38,
+      "days": 32,
+      "win": 0.6316,
+      "net": 18724,
+      "avg": 493,
+      "worst_day": -2515,
+      "max_dd": 8447,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 14,
+       "days": 14,
+       "win": 0.5,
+       "net": -3419,
+       "avg": -244,
+       "worst_day": -2515,
+       "max_dd": 9748,
+       "bad_months": 0
+      },
+      "BANKNIFTY": {
+       "trades": 3,
+       "days": 3,
+       "win": 0.6667,
+       "net": 9069,
+       "avg": 3023,
+       "worst_day": -2096,
+       "max_dd": 2096,
+       "bad_months": 0
+      },
+      "FINNIFTY": {
+       "trades": 2,
+       "days": 2,
+       "win": 1.0,
+       "net": 6392,
+       "avg": 3196,
+       "worst_day": 2194,
+       "max_dd": 0,
+       "bad_months": 0
+      },
+      "MIDCPNIFTY": {
+       "trades": 2,
+       "days": 2,
+       "win": 1.0,
+       "net": 4801,
+       "avg": 2401,
+       "worst_day": 212,
+       "max_dd": 0,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 17,
+       "days": 17,
+       "win": 0.6471,
+       "net": 1881,
+       "avg": 111,
+       "worst_day": -1977,
+       "max_dd": 3900,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 5596,
+     "risk_per_lot_median": 899,
+     "account_for_2pct_median": 44966,
+     "premium_by_index": {
+      "NIFTY": 5965,
+      "BANKNIFTY": 6747,
+      "FINNIFTY": 7432,
+      "MIDCPNIFTY": 6936,
+      "SENSEX": 4684
+     }
+    },
+    "twin": {
+     "p": 0.004997501249375313,
+     "p_mc": 0.004997501249375313,
+     "p_norm": 0.0016120371918557834,
+     "twin_mean": -8619,
+     "twin_sd": 9283,
+     "hits": 9
+    }
+   },
+   "N": {
+    "final": {
+     "trades": 8,
+     "days": 8,
+     "win": 0.25,
+     "net": -10191,
+     "avg": -1274,
+     "worst_day": -2866,
+     "max_dd": 12379,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 8,
+      "days": 8,
+      "win": 0.25,
+      "net": -10191,
+      "avg": -1274,
+      "worst_day": -2866,
+      "max_dd": 12379,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 4,
+       "days": 4,
+       "win": 0.25,
+       "net": -5730,
+       "avg": -1432,
+       "worst_day": -2808,
+       "max_dd": 6659,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 4,
+       "days": 4,
+       "win": 0.25,
+       "net": -4462,
+       "avg": -1115,
+       "worst_day": -2866,
+       "max_dd": 5720,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 13619,
+     "risk_per_lot_median": 2103,
+     "account_for_2pct_median": 105143,
+     "premium_by_index": {
+      "NIFTY": 14207,
+      "SENSEX": 13619
+     }
+    },
+    "twin": {
+     "p": 0.9890054972513743,
+     "p_mc": 0.9890054972513743,
+     "p_norm": 0.9839107766631952,
+     "twin_mean": -585,
+     "twin_sd": 4484,
+     "hits": 1978
+    }
+   },
+   "M": {
+    "final": {
+     "trades": 10,
+     "days": 10,
+     "win": 0.5,
+     "net": -1479,
+     "avg": -148,
+     "worst_day": -2713,
+     "max_dd": 2983,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 10,
+      "days": 10,
+      "win": 0.5,
+      "net": -1479,
+      "avg": -148,
+      "worst_day": -2713,
+      "max_dd": 2983,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 8,
+       "days": 8,
+       "win": 0.5,
+       "net": -1642,
+       "avg": -205,
+       "worst_day": -2713,
+       "max_dd": 2983,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 2,
+       "days": 2,
+       "win": 0.5,
+       "net": 162,
+       "avg": 81,
+       "worst_day": -284,
+       "max_dd": 284,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 24183,
+     "risk_per_lot_median": 3687,
+     "account_for_2pct_median": 184374,
+     "premium_by_index": {
+      "NIFTY": 24183,
+      "SENSEX": 19606
+     }
+    },
+    "twin": {
+     "p": 0.3568215892053973,
+     "p_mc": 0.3568215892053973,
+     "p_norm": 0.3557733998466608,
+     "twin_mean": -3276,
+     "twin_sd": 4860,
+     "hits": 713
+    }
+   },
+   "S_on_N_days": {
+    "final": {
+     "trades": 8,
+     "days": 8,
+     "win": 0.375,
+     "net": -8065,
+     "avg": -1008,
+     "worst_day": -2515,
+     "max_dd": 9896,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 8,
+      "days": 8,
+      "win": 0.375,
+      "net": -8065,
+      "avg": -1008,
+      "worst_day": -2515,
+      "max_dd": 9896,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 4,
+       "days": 4,
+       "win": 0.25,
+       "net": -5877,
+       "avg": -1469,
+       "worst_day": -2515,
+       "max_dd": 6202,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 4,
+       "days": 4,
+       "win": 0.5,
+       "net": -2187,
+       "avg": -547,
+       "worst_day": -1977,
+       "max_dd": 3695,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 5573,
+     "risk_per_lot_median": 896,
+     "account_for_2pct_median": 44794,
+     "premium_by_index": {
+      "NIFTY": 5809,
+      "SENSEX": 4735
+     }
+    }
+   },
+   "S_on_M_days": {
+    "final": {
+     "trades": 16,
+     "days": 16,
+     "win": 0.5,
+     "net": -3637,
+     "avg": -227,
+     "worst_day": -2515,
+     "max_dd": 5057,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 16,
+      "days": 16,
+      "win": 0.5,
+      "net": -3637,
+      "avg": -227,
+      "worst_day": -2515,
+      "max_dd": 5057,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 8,
+       "days": 8,
+       "win": 0.375,
+       "net": -6556,
+       "avg": -820,
+       "worst_day": -2515,
+       "max_dd": 6621,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 8,
+       "days": 8,
+       "win": 0.625,
+       "net": 2920,
+       "avg": 365,
+       "worst_day": -1469,
+       "max_dd": 1674,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 5256,
+     "risk_per_lot_median": 848,
+     "account_for_2pct_median": 42423,
+     "premium_by_index": {
+      "NIFTY": 6040,
+      "SENSEX": 4755
+     }
+    }
+   },
+   "N_monthly_days": {
+    "final": {
+     "trades": 0,
+     "days": 0,
+     "win": null,
+     "net": 0,
+     "avg": null,
+     "worst_day": 0,
+     "max_dd": 0,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {}
+    }
+   },
+   "N_weekly_days": {
+    "final": {
+     "trades": 8,
+     "days": 8,
+     "win": 0.25,
+     "net": -10191,
+     "avg": -1274,
+     "worst_day": -2866,
+     "max_dd": 12379,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 8,
+      "days": 8,
+      "win": 0.25,
+      "net": -10191,
+      "avg": -1274,
+      "worst_day": -2866,
+      "max_dd": 12379,
+      "bad_months": 0
+     },
+     "by_index": {
+      "NIFTY": {
+       "trades": 4,
+       "days": 4,
+       "win": 0.25,
+       "net": -5730,
+       "avg": -1432,
+       "worst_day": -2808,
+       "max_dd": 6659,
+       "bad_months": 0
+      },
+      "SENSEX": {
+       "trades": 4,
+       "days": 4,
+       "win": 0.25,
+       "net": -4462,
+       "avg": -1115,
+       "worst_day": -2866,
+       "max_dd": 5720,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 13619,
+     "risk_per_lot_median": 2103,
+     "account_for_2pct_median": 105143,
+     "premium_by_index": {
+      "NIFTY": 14207,
+      "SENSEX": 13619
+     }
+    }
+   }
+  },
+  "LIQ": {
+   "S": {
+    "final": {
+     "trades": 16,
+     "days": 5,
+     "win": 0.125,
+     "net": -9134,
+     "avg": -571,
+     "worst_day": -5083,
+     "max_dd": 10309,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {
+      "BANKNIFTY": {
+       "trades": 4,
+       "days": 3,
+       "win": 0.0,
+       "net": -4914,
+       "avg": -1229,
+       "worst_day": -3412,
+       "max_dd": 4914,
+       "bad_months": 0
+      },
+      "FINNIFTY": {
+       "trades": 4,
+       "days": 3,
+       "win": 0.0,
+       "net": -2327,
+       "avg": -582,
+       "worst_day": -1588,
+       "max_dd": 2327,
+       "bad_months": 0
+      },
+      "MIDCPNIFTY": {
+       "trades": 8,
+       "days": 4,
+       "win": 0.25,
+       "net": -1893,
+       "avg": -237,
+       "worst_day": -1851,
+       "max_dd": 3748,
+       "bad_months": 0
+      }
+     },
+     "premium_per_lot_median": 5415,
+     "risk_per_lot_median": 872,
+     "account_for_2pct_median": 43612,
+     "premium_by_index": {
+      "BANKNIFTY": 4819,
+      "FINNIFTY": 5463,
+      "MIDCPNIFTY": 5490
+     }
+    },
+    "twin": {
+     "p": 0.8915542228885557,
+     "p_mc": 0.8915542228885557,
+     "p_norm": 0.8850103146850011,
+     "twin_mean": 4214,
+     "twin_sd": 11120,
+     "hits": 1783
+    }
+   },
+   "N": {
+    "final": {
+     "trades": 0,
+     "days": 0,
+     "win": null,
+     "net": 0,
+     "avg": null,
+     "worst_day": 0,
+     "max_dd": 0,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {}
+    },
+    "twin": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": null,
+     "twin_sd": null,
+     "hits": 0
+    }
+   },
+   "M": {
+    "final": {
+     "trades": 0,
+     "days": 0,
+     "win": null,
+     "net": 0,
+     "avg": null,
+     "worst_day": 0,
+     "max_dd": 0,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {}
+    },
+    "twin": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": null,
+     "twin_sd": null,
+     "hits": 0
+    }
+   },
+   "S_on_N_days": {
+    "final": {
+     "trades": 0,
+     "days": 0,
+     "win": null,
+     "net": 0,
+     "avg": null,
+     "worst_day": 0,
+     "max_dd": 0,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {}
+    }
+   },
+   "S_on_M_days": {
+    "final": {
+     "trades": 0,
+     "days": 0,
+     "win": null,
+     "net": 0,
+     "avg": null,
+     "worst_day": 0,
+     "max_dd": 0,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {}
+    }
+   },
+   "N_monthly_days": {
+    "final": {
+     "trades": 0,
+     "days": 0,
+     "win": null,
+     "net": 0,
+     "avg": null,
+     "worst_day": 0,
+     "max_dd": 0,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {}
+    }
+   },
+   "N_weekly_days": {
+    "final": {
+     "trades": 0,
+     "days": 0,
+     "win": null,
+     "net": 0,
+     "avg": null,
+     "worst_day": 0,
+     "max_dd": 0,
+     "bad_months": 0,
+     "open_0915_0930": {
+      "trades": 0,
+      "days": 0,
+      "win": null,
+      "net": 0,
+      "avg": null,
+      "worst_day": 0,
+      "max_dd": 0,
+      "bad_months": 0
+     },
+     "by_index": {}
+    }
+   }
+  }
+ },
+ "days": {
+  "S": {
+   "final": {
+    "NIFTY": 27,
+    "BANKNIFTY": 6,
+    "FINNIFTY": 6,
+    "MIDCPNIFTY": 6,
+    "SENSEX": 27
+   }
+  },
+  "N": {
+   "final": {
+    "NIFTY": 8,
+    "BANKNIFTY": 0,
+    "FINNIFTY": 0,
+    "MIDCPNIFTY": 0,
+    "SENSEX": 5
+   }
+  },
+  "M": {
+   "final": {
+    "NIFTY": 14,
+    "BANKNIFTY": 0,
+    "FINNIFTY": 0,
+    "MIDCPNIFTY": 0,
+    "SENSEX": 15
+   }
+  }
+ }
+}
