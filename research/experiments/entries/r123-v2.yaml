@@ -1,0 +1,37 @@
+id: r123-v2
+title: 'R123 V2: short ATM straddle 09:30, index stop at 1.5 straddles, else out 15:05'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R123_STRADDLE_INDEX_STOP.md
+hypothesis: On expiry days, a naked ATM straddle sold at 09:30 and closed when the index moves k straddles (else at 15:05)
+  keeps the short-premium edge with 4 orders instead of 8, makes money after real costs in every period, beats random entry
+  times, inside Boss's limits.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): opt_<UND>_WEEK rolling nearest expiry
+  ATM+-10 1-minute (R98 expiry-day records), index minutes'
+period:
+  design: expiry days to 31 Dec 2023
+  walk_forward: 2024-25
+  holdout: final 1 Jan - 19 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: stop on the underlying (the index''s minute closes; default); entry by the clock; ATM strike from the index'
+model_or_rule: short ATM straddle 09:30, index stop at 1.5 straddles, else out 15:05 (1 lot each leg)
+settings: research/hunt/r123_straddle_index_stop/r123cfg.py, r121lib.py
+prereg: research/hunt/r123_straddle_index_stop/PREREG.md
+variants_tried: 1
+results:
+  summary: 'short ATM straddle 09:30, index stop at 1.5 straddles, else out 15:05: design 392 trades, win 57.1%, mean Rs +277
+    (gross +379, charges 103), worst day Rs -11,636, months <= -13k 1; wf 389 trades, win 60.9%, mean Rs +668 (gross +774,
+    charges 106), worst day Rs -14,429, months <= -13k 3; final 108 trades, win 61.1%, mean Rs +273 (gross +386, charges 113),
+    worst day Rs -17,585, months <= -13k 3; final at 2x slippage Rs +258; twin p 0.200; BH q 1. fail: final <= 0 without 3
+    best days; twin p 0.2; BH q 1; 3 final months <= -13k; final drawdown >= 40k.'
+  costs: 'R25 liq fills x R54 late multiplier, R50 dated charges per order, stale legs repriced by Black-76; twins: the same
+    rule entered at a random bar 09:30-14:30'
+holdout_read: true
+verdict: rejected
+notes: 'Loop round 3. Failed the gates: stays a note (CLAUDE.md). Nothing to paper or live.'
