@@ -1,0 +1,27 @@
+family: liquidity
+date: '2026-10-27'
+doc: research/LIQUIDITY_PAPER_CHECK_2026-10-27.md
+data_version: Upstox public 1-minute candles (indices from 14 Sep, 27 Oct 2026 contracts 1-26 Oct; zero-volume filler minutes dropped); the phone's redacted diagnostics 19-26 Oct (release diag-2026-10)
+period:
+  design: none (no rule fitted)
+  holdout: 2026-10-01..2026-10-26 (paper period; described, nothing chosen)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+prereg: null
+id: liq-paper-check
+title: Liquidity 15+5 paper record against the research rule replayed on the same October days
+hypothesis: 'Descriptive only (Boss, 27 Oct: why is the paper record worse than the backtest). No rule adopted.'
+features:
+- 'signal source: the index (liquidity-pool breaks on 15/30/5-minute index bars); the 1-ITM option is only bought'
+model_or_rule: hunt/r51/fam_liq.py signals + R51 engine + R101 book walk, unchanged (research/reports/liqpaper/)
+settings: research/reports/liqpaper/lpreplay.py; lpcompare.py
+variants_tried: null
+holdout_read: true
+verdict: not-a-test
+results:
+  summary: 'Research rule 1-26 Oct: 65 trades, -1.6% of premium before costs (-Rs 11,647 after costs, 1 lot). Paper 37 trades
+    -76%. 19-26 Oct (22 research trades, 6 paper): gap -71.3 points = rules -61.2 (daily loss limit -65.9, no-twin -29.3, cap
+    +34.0), app bug -8.1 (fixed: paper limit buys pay the ask), feed +2.0, execution -4.1. Signals, bars and strikes match.'
+  costs: R51 engine (R17 liquidity slippage, dated charges)

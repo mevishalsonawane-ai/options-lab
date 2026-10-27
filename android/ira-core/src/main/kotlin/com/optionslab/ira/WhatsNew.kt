@@ -62,10 +62,18 @@ object WhatsNew {
     private val OCT22: LocalDate = LocalDate.of(2026, 10, 22)
     private val OCT25: LocalDate = LocalDate.of(2026, 10, 25)
     private val OCT26: LocalDate = LocalDate.of(2026, 10, 26)
+    private val OCT27: LocalDate = LocalDate.of(2026, 10, 27)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 27 Oct (research/LIQUIDITY_PAPER_CHECK_2026-10-27.md): newest of all.
+        Entry("2026-10-27-paper-limit-pays-ask", OCT27, "Paper limit buys pay the real ask",
+            "A paper buy with a price cap now fills at the ask when a real quote is there. " +
+                "Before, it could fill on an old last price plus the spread. " +
+                "On 26 Oct a FINNIFTY option was bought at 256.90 while the market traded 237.80 to 246.65. " +
+                "If the ask is above the cap, the order waits. Paper only; live orders are not touched.",
+            "Trade → Paper → tap a trade or an order"),
         // 26 Oct (the IraThinker review, irathinker-app/REVIEW_2026-10-26.md): newest of all.
         Entry("2026-10-26-ntfy-irathinker-fit", OCT26, "ntfy alerts follow your alert app's own exits",
             "Your alert app's mom60 trades now follow its own stop and hold, only where tighter or earlier. " +
