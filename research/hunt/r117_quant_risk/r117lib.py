@@ -245,6 +245,19 @@ def gates(per: dict, q_all: float, changed_final: int, periods=("design", "wf", 
     return dict(passed=not fails, fails=fails, q_all=round(float(q_all), 4))
 
 
+def paired_days(rule_v, base_v, n_boot: int, rng) -> dict:
+    """Amendment 1: the day-by-day difference (rule - CAP2) on the days they differ, bootstrapped over those days.
+    p = one-sided chance the mean difference is not above 0. A fair check for DAYLOCK, whose twin is tilted."""
+    diff = np.asarray(rule_v, float) - np.asarray(base_v, float)
+    x = diff[np.abs(diff) > 0.5]
+    if len(x) < 2:
+        return dict(days=int(len(x)), mean=round(float(x.mean()), 1) if len(x) else 0.0, p=1.0, lo=None, hi=None)
+    means = x[rng.integers(0, len(x), size=(n_boot, len(x)))].mean(axis=1)
+    return dict(days=int(len(x)), mean=round(float(x.mean()), 1), total=round(float(x.sum())),
+                lo=round(float(np.percentile(means, 5)), 1), hi=round(float(np.percentile(means, 95)), 1),
+                p=round(float((1 + (means <= 0).sum()) / (n_boot + 1)), 6))
+
+
 def by_day(trades: list) -> dict:
     out = defaultdict(list)
     for t in trades:

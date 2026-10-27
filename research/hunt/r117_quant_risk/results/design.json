@@ -1,0 +1,958 @@
+{
+ "_meta": {
+  "phase": "design",
+  "sessions": 337,
+  "twins": 100000,
+  "seed": 117,
+  "n_prior": 5863,
+  "thresholds": {
+   "V67": 14.4135,
+   "R67": 0.0084,
+   "vix_days": 336,
+   "rv_days": 337,
+   "design_sessions": 337
+  }
+ },
+ "design": {
+  "CAP2": {
+   "net": -128786,
+   "trades": 3456,
+   "win": 0.427,
+   "worst_day": -27269,
+   "max_dd": 209037,
+   "r_dd": -0.6161,
+   "months": 17,
+   "worst_month": -81773,
+   "months_below": 6,
+   "days_below": 13,
+   "dd_breaches": 1,
+   "sessions": 337,
+   "t_n": 3456,
+   "t_win": 0.4271,
+   "t_avg_win": 1642,
+   "t_avg_loss": 1289,
+   "t_payoff": 1.274,
+   "t_breakeven_win": 0.4398,
+   "t_expectancy": -37.3,
+   "t_kelly_trade": -0.0227,
+   "per_arm": {
+    "LIQ": {
+     "n": 364,
+     "net": 88184
+    },
+    "R72": {
+     "n": 902,
+     "net": 96176
+    },
+    "R51": {
+     "n": 2092,
+     "net": -329467
+    },
+    "R52": {
+     "n": 98,
+     "net": 16321
+    }
+   },
+   "refused": 4647
+  },
+  "VIXCAP": {
+   "net": -125159,
+   "trades": 2972,
+   "win": 0.426,
+   "worst_day": -19383,
+   "max_dd": 196616,
+   "r_dd": -0.6366,
+   "months": 17,
+   "worst_month": -61481,
+   "months_below": 6,
+   "days_below": 7,
+   "dd_breaches": 1,
+   "sessions": 337,
+   "t_n": 2972,
+   "t_win": 0.426,
+   "t_avg_win": 1594,
+   "t_avg_loss": 1256,
+   "t_payoff": 1.269,
+   "t_breakeven_win": 0.4408,
+   "t_expectancy": -42.1,
+   "t_kelly_trade": -0.0264,
+   "per_arm": {
+    "LIQ": {
+     "n": 226,
+     "net": 22219
+    },
+    "R72": {
+     "n": 773,
+     "net": 113521
+    },
+    "R51": {
+     "n": 1891,
+     "net": -258391
+    },
+    "R52": {
+     "n": 82,
+     "net": -2508
+    }
+   },
+   "refused": 5260,
+   "twin": {
+    "p": 0.6671,
+    "actual_r_dd": -0.6366,
+    "median_r_dd": -0.5782,
+    "median_net": -106700,
+    "removed": 484
+   },
+   "changed_vs_cap2": 484,
+   "paired": {
+    "days": 109,
+    "mean": 33.3,
+    "total": 3626,
+    "lo": -766.7,
+    "hi": 831.5,
+    "p": 0.4659
+   }
+  },
+  "RVCAP": {
+   "net": -185873,
+   "trades": 2981,
+   "win": 0.424,
+   "worst_day": -27269,
+   "max_dd": 255406,
+   "r_dd": -0.7278,
+   "months": 17,
+   "worst_month": -81773,
+   "months_below": 6,
+   "days_below": 8,
+   "dd_breaches": 1,
+   "sessions": 337,
+   "t_n": 2981,
+   "t_win": 0.424,
+   "t_avg_win": 1593,
+   "t_avg_loss": 1281,
+   "t_payoff": 1.244,
+   "t_breakeven_win": 0.4457,
+   "t_expectancy": -62.4,
+   "t_kelly_trade": -0.0391,
+   "per_arm": {
+    "LIQ": {
+     "n": 235,
+     "net": 34838
+    },
+    "R72": {
+     "n": 773,
+     "net": 67070
+    },
+    "R51": {
+     "n": 1890,
+     "net": -275804
+    },
+    "R52": {
+     "n": 83,
+     "net": -11976
+    }
+   },
+   "refused": 5253,
+   "twin": {
+    "p": 0.7796,
+    "actual_r_dd": -0.7278,
+    "median_r_dd": -0.6354,
+    "median_net": -133938,
+    "removed": 475
+   },
+   "changed_vs_cap2": 475,
+   "paired": {
+    "days": 109,
+    "mean": -523.7,
+    "total": -57087,
+    "lo": -1326.3,
+    "hi": 259.2,
+    "p": 0.8645
+   }
+  },
+  "EQ10": {
+   "net": -168650,
+   "trades": 2546,
+   "win": 0.426,
+   "worst_day": -27269,
+   "max_dd": 226770,
+   "r_dd": -0.7437,
+   "months": 17,
+   "worst_month": -68785,
+   "months_below": 8,
+   "days_below": 6,
+   "dd_breaches": 1,
+   "sessions": 337,
+   "t_n": 2546,
+   "t_win": 0.4258,
+   "t_avg_win": 1649,
+   "t_avg_loss": 1338,
+   "t_payoff": 1.232,
+   "t_breakeven_win": 0.4479,
+   "t_expectancy": -66.2,
+   "t_kelly_trade": -0.0402,
+   "per_arm": {
+    "LIQ": {
+     "n": 143,
+     "net": 28727
+    },
+    "R72": {
+     "n": 657,
+     "net": 53180
+    },
+    "R51": {
+     "n": 1678,
+     "net": -255672
+    },
+    "R52": {
+     "n": 68,
+     "net": 5115
+    }
+   },
+   "refused": 5818,
+   "twin": {
+    "p": 0.7684,
+    "actual_r_dd": -0.7437,
+    "median_r_dd": -0.6537,
+    "median_net": -129481,
+    "removed": 910
+   },
+   "changed_vs_cap2": 920,
+   "paired": {
+    "days": 207,
+    "mean": -192.6,
+    "total": -39864,
+    "lo": -681.7,
+    "hi": 290.7,
+    "p": 0.7425
+   }
+  },
+  "ARMEQ": {
+   "net": -37074,
+   "trades": 2013,
+   "win": 0.451,
+   "worst_day": -17200,
+   "max_dd": 111768,
+   "r_dd": -0.3317,
+   "months": 17,
+   "worst_month": -51410,
+   "months_below": 7,
+   "days_below": 5,
+   "dd_breaches": 1,
+   "sessions": 337,
+   "t_n": 2013,
+   "t_win": 0.4511,
+   "t_avg_win": 1563,
+   "t_avg_loss": 1318,
+   "t_payoff": 1.186,
+   "t_breakeven_win": 0.4575,
+   "t_expectancy": -18.4,
+   "t_kelly_trade": -0.0118,
+   "per_arm": {
+    "LIQ": {
+     "n": 293,
+     "net": 48587
+    },
+    "R72": {
+     "n": 553,
+     "net": 66650
+    },
+    "R51": {
+     "n": 1053,
+     "net": -143307
+    },
+    "R52": {
+     "n": 114,
+     "net": -9003
+    }
+   },
+   "refused": 6573,
+   "twin": {
+    "p": 0.841,
+    "actual_r_dd": -0.3317,
+    "median_r_dd": -0.0719,
+    "median_net": -8431,
+    "removed": 1445
+   },
+   "changed_vs_cap2": 2011,
+   "paired": {
+    "days": 248,
+    "mean": 369.8,
+    "total": 91712,
+    "lo": -271.6,
+    "hi": 1009.5,
+    "p": 0.1718
+   }
+  },
+  "DAYLOCK": {
+   "net": -80626,
+   "trades": 3124,
+   "win": 0.434,
+   "worst_day": -27269,
+   "max_dd": 177110,
+   "r_dd": -0.4552,
+   "months": 17,
+   "worst_month": -74053,
+   "months_below": 5,
+   "days_below": 13,
+   "dd_breaches": 1,
+   "sessions": 337,
+   "t_n": 3124,
+   "t_win": 0.4337,
+   "t_avg_win": 1631,
+   "t_avg_loss": 1295,
+   "t_payoff": 1.26,
+   "t_breakeven_win": 0.4426,
+   "t_expectancy": -25.8,
+   "t_kelly_trade": -0.0158,
+   "per_arm": {
+    "LIQ": {
+     "n": 327,
+     "net": 102538
+    },
+    "R72": {
+     "n": 779,
+     "net": 63426
+    },
+    "R51": {
+     "n": 1920,
+     "net": -262911
+    },
+    "R52": {
+     "n": 98,
+     "net": 16321
+    }
+   },
+   "refused": 5079,
+   "twin": {
+    "p": 0.0,
+    "actual_r_dd": -0.4552,
+    "median_r_dd": -0.9482,
+    "median_net": -438510,
+    "removed": 332
+   },
+   "changed_vs_cap2": 334,
+   "paired": {
+    "days": 67,
+    "mean": 718.8,
+    "total": 48159,
+    "lo": -518.7,
+    "hi": 1851.9,
+    "p": 0.1616
+   }
+  },
+  "COMBO": {
+   "net": -142612,
+   "trades": 2285,
+   "win": 0.424,
+   "worst_day": -15724,
+   "max_dd": 201364,
+   "r_dd": -0.7082,
+   "months": 17,
+   "worst_month": -59687,
+   "months_below": 8,
+   "days_below": 3,
+   "dd_breaches": 1,
+   "sessions": 337,
+   "t_n": 2285,
+   "t_win": 0.4241,
+   "t_avg_win": 1638,
+   "t_avg_loss": 1314,
+   "t_payoff": 1.246,
+   "t_breakeven_win": 0.4452,
+   "t_expectancy": -62.4,
+   "t_kelly_trade": -0.0381,
+   "per_arm": {
+    "LIQ": {
+     "n": 72,
+     "net": 7763
+    },
+    "R72": {
+     "n": 588,
+     "net": 60577
+    },
+    "R51": {
+     "n": 1565,
+     "net": -212241
+    },
+    "R52": {
+     "n": 60,
+     "net": 1289
+    }
+   },
+   "refused": 6150,
+   "twin": {
+    "p": 0.8019,
+    "actual_r_dd": -0.7082,
+    "median_r_dd": -0.5503,
+    "median_net": -90724,
+    "removed": 1171
+   },
+   "changed_vs_cap2": 1181,
+   "paired": {
+    "days": 266,
+    "mean": -52.0,
+    "total": -13827,
+    "lo": -506.4,
+    "hi": 398.6,
+    "p": 0.5756
+   }
+  },
+  "_part_a": {
+   "trades": {
+    "n": 3456,
+    "win": 0.4271,
+    "avg_win": 1642,
+    "avg_loss": 1289,
+    "payoff": 1.274,
+    "breakeven_win": 0.4398,
+    "expectancy": -37.3,
+    "kelly_trade": -0.0227
+   },
+   "daily": {
+    "n": 337,
+    "mean": -382.2,
+    "sd": 7619.7,
+    "sharpe": -0.793,
+    "sortino": -1.131,
+    "kelly_daily_per_rupee": -0.0,
+    "ac1": -0.04,
+    "ac10": 0.1327
+   },
+   "arm_corr": {
+    "LIQ~R72": 0.088,
+    "LIQ~R51": -0.011,
+    "LIQ~R52": -0.01,
+    "R72~R51": 0.034,
+    "R72~R52": 0.024,
+    "R51~R52": 0.003
+   },
+   "per_arm": {
+    "LIQ": {
+     "n": 364,
+     "win": 0.4203,
+     "avg_win": 1931,
+     "avg_loss": 982,
+     "payoff": 1.966,
+     "breakeven_win": 0.3372,
+     "expectancy": 242.3,
+     "kelly_trade": 0.1254
+    },
+    "R72": {
+     "n": 902,
+     "win": 0.4623,
+     "avg_win": 1727,
+     "avg_loss": 1286,
+     "payoff": 1.342,
+     "breakeven_win": 0.4269,
+     "expectancy": 106.6,
+     "kelly_trade": 0.0617
+    },
+    "R51": {
+     "n": 2092,
+     "win": 0.4073,
+     "avg_win": 1498,
+     "avg_loss": 1295,
+     "payoff": 1.157,
+     "breakeven_win": 0.4636,
+     "expectancy": -157.5,
+     "kelly_trade": -0.1051
+    },
+    "R52": {
+     "n": 98,
+     "win": 0.551,
+     "avg_win": 2449,
+     "avg_loss": 2635,
+     "payoff": 0.93,
+     "breakeven_win": 0.5183,
+     "expectancy": 166.5,
+     "kelly_trade": 0.068
+    }
+   },
+   "p_dd40k_120": 0.9837
+  },
+  "_days": {
+   "vix_high": 111,
+   "rv_high": 111,
+   "vix_known": 336,
+   "rv_known": 337,
+   "sessions": 337,
+   "paused_arm_days": {
+    "LIQ": 126,
+    "R72": 171,
+    "R51": 178,
+    "R52": 119
+   }
+  }
+ },
+ "wf": {
+  "CAP2": {
+   "net": 25383,
+   "trades": 2536,
+   "win": 0.438,
+   "worst_day": -17200,
+   "max_dd": 124652,
+   "r_dd": 0.2036,
+   "months": 12,
+   "worst_month": -74410,
+   "months_below": 3,
+   "days_below": 8,
+   "dd_breaches": 1,
+   "sessions": 247,
+   "t_n": 2536,
+   "t_win": 0.4385,
+   "t_avg_win": 1598,
+   "t_avg_loss": 1230,
+   "t_payoff": 1.299,
+   "t_breakeven_win": 0.4349,
+   "t_expectancy": 10.0,
+   "t_kelly_trade": 0.0063,
+   "per_arm": {
+    "LIQ": {
+     "n": 266,
+     "net": 87048
+    },
+    "R72": {
+     "n": 668,
+     "net": 131577
+    },
+    "R51": {
+     "n": 1531,
+     "net": -217757
+    },
+    "R52": {
+     "n": 71,
+     "net": 24515
+    }
+   },
+   "refused": 3383
+  },
+  "VIXCAP": {
+   "net": -27812,
+   "trades": 2264,
+   "win": 0.432,
+   "worst_day": -15724,
+   "max_dd": 107534,
+   "r_dd": -0.2586,
+   "months": 12,
+   "worst_month": -61481,
+   "months_below": 3,
+   "days_below": 4,
+   "dd_breaches": 1,
+   "sessions": 247,
+   "t_n": 2264,
+   "t_win": 0.4324,
+   "t_avg_win": 1534,
+   "t_avg_loss": 1190,
+   "t_payoff": 1.289,
+   "t_breakeven_win": 0.4369,
+   "t_expectancy": -12.3,
+   "t_kelly_trade": -0.008,
+   "per_arm": {
+    "LIQ": {
+     "n": 190,
+     "net": 36423
+    },
+    "R72": {
+     "n": 599,
+     "net": 114660
+    },
+    "R51": {
+     "n": 1414,
+     "net": -191607
+    },
+    "R52": {
+     "n": 61,
+     "net": 12712
+    }
+   },
+   "refused": 3727,
+   "twin": {
+    "p": 0.8784,
+    "actual_r_dd": -0.2586,
+    "median_r_dd": 0.072,
+    "median_net": 7456,
+    "removed": 272
+   },
+   "changed_vs_cap2": 272,
+   "paired": {
+    "days": 62,
+    "mean": -858.0,
+    "total": -53195,
+    "lo": -1955.6,
+    "hi": 230.5,
+    "p": 0.9034
+   }
+  },
+  "RVCAP": {
+   "net": -38251,
+   "trades": 2207,
+   "win": 0.431,
+   "worst_day": -17200,
+   "max_dd": 115340,
+   "r_dd": -0.3316,
+   "months": 12,
+   "worst_month": -69287,
+   "months_below": 3,
+   "days_below": 4,
+   "dd_breaches": 1,
+   "sessions": 247,
+   "t_n": 2207,
+   "t_win": 0.4314,
+   "t_avg_win": 1539,
+   "t_avg_loss": 1198,
+   "t_payoff": 1.285,
+   "t_breakeven_win": 0.4377,
+   "t_expectancy": -17.3,
+   "t_kelly_trade": -0.0113,
+   "per_arm": {
+    "LIQ": {
+     "n": 176,
+     "net": 38614
+    },
+    "R72": {
+     "n": 577,
+     "net": 108872
+    },
+    "R51": {
+     "n": 1395,
+     "net": -194359
+    },
+    "R52": {
+     "n": 59,
+     "net": 8623
+    }
+   },
+   "refused": 3800,
+   "twin": {
+    "p": 0.8678,
+    "actual_r_dd": -0.3316,
+    "median_r_dd": -0.0216,
+    "median_net": -2338,
+    "removed": 329
+   },
+   "changed_vs_cap2": 329,
+   "paired": {
+    "days": 75,
+    "mean": -848.4,
+    "total": -63634,
+    "lo": -1805.7,
+    "hi": 70.6,
+    "p": 0.9349
+   }
+  },
+  "EQ10": {
+   "net": -15180,
+   "trades": 1914,
+   "win": 0.437,
+   "worst_day": -17200,
+   "max_dd": 114758,
+   "r_dd": -0.1323,
+   "months": 12,
+   "worst_month": -64465,
+   "months_below": 5,
+   "days_below": 4,
+   "dd_breaches": 1,
+   "sessions": 247,
+   "t_n": 1914,
+   "t_win": 0.4373,
+   "t_avg_win": 1628,
+   "t_avg_loss": 1279,
+   "t_payoff": 1.273,
+   "t_breakeven_win": 0.44,
+   "t_expectancy": -7.9,
+   "t_kelly_trade": -0.0049,
+   "per_arm": {
+    "LIQ": {
+     "n": 118,
+     "net": 36827
+    },
+    "R72": {
+     "n": 503,
+     "net": 104123
+    },
+    "R51": {
+     "n": 1242,
+     "net": -163514
+    },
+    "R52": {
+     "n": 51,
+     "net": 7384
+    }
+   },
+   "refused": 4182,
+   "twin": {
+    "p": 0.8324,
+    "actual_r_dd": -0.1323,
+    "median_r_dd": 0.1812,
+    "median_net": 19135,
+    "removed": 622
+   },
+   "changed_vs_cap2": 630,
+   "paired": {
+    "days": 141,
+    "mean": -287.7,
+    "total": -40562,
+    "lo": -834.4,
+    "hi": 235.5,
+    "p": 0.8147
+   }
+  },
+  "ARMEQ": {
+   "net": 35724,
+   "trades": 1576,
+   "win": 0.464,
+   "worst_day": -17200,
+   "max_dd": 69977,
+   "r_dd": 0.5105,
+   "months": 12,
+   "worst_month": -23254,
+   "months_below": 5,
+   "days_below": 3,
+   "dd_breaches": 2,
+   "sessions": 247,
+   "t_n": 1576,
+   "t_win": 0.4638,
+   "t_avg_win": 1488,
+   "t_avg_loss": 1245,
+   "t_payoff": 1.195,
+   "t_breakeven_win": 0.4555,
+   "t_expectancy": 22.7,
+   "t_kelly_trade": 0.0152,
+   "per_arm": {
+    "LIQ": {
+     "n": 213,
+     "net": 57276
+    },
+    "R72": {
+     "n": 454,
+     "net": 111334
+    },
+    "R51": {
+     "n": 826,
+     "net": -134509
+    },
+    "R52": {
+     "n": 83,
+     "net": 1622
+    }
+   },
+   "refused": 4649,
+   "twin": {
+    "p": 0.3926,
+    "actual_r_dd": 0.5105,
+    "median_r_dd": 0.4016,
+    "median_net": 37567,
+    "removed": 961
+   },
+   "changed_vs_cap2": 1374,
+   "paired": {
+    "days": 171,
+    "mean": 60.5,
+    "total": 10341,
+    "lo": -613.4,
+    "hi": 727.6,
+    "p": 0.4406
+   }
+  },
+  "DAYLOCK": {
+   "net": 57194,
+   "trades": 2309,
+   "win": 0.445,
+   "worst_day": -17200,
+   "max_dd": 108428,
+   "r_dd": 0.5275,
+   "months": 12,
+   "worst_month": -74053,
+   "months_below": 2,
+   "days_below": 8,
+   "dd_breaches": 1,
+   "sessions": 247,
+   "t_n": 2309,
+   "t_win": 0.4452,
+   "t_avg_win": 1594,
+   "t_avg_loss": 1235,
+   "t_payoff": 1.291,
+   "t_breakeven_win": 0.4365,
+   "t_expectancy": 24.8,
+   "t_kelly_trade": 0.0155,
+   "per_arm": {
+    "LIQ": {
+     "n": 241,
+     "net": 99930
+    },
+    "R72": {
+     "n": 582,
+     "net": 100845
+    },
+    "R51": {
+     "n": 1415,
+     "net": -168096
+    },
+    "R52": {
+     "n": 71,
+     "net": 24515
+    }
+   },
+   "refused": 3680,
+   "twin": {
+    "p": 0.0,
+    "actual_r_dd": 0.5275,
+    "median_r_dd": -0.7983,
+    "median_net": -188513,
+    "removed": 227
+   },
+   "changed_vs_cap2": 227,
+   "paired": {
+    "days": 47,
+    "mean": 676.8,
+    "total": 31811,
+    "lo": -672.4,
+    "hi": 1922.6,
+    "p": 0.1943
+   }
+  },
+  "COMBO": {
+   "net": -45780,
+   "trades": 1742,
+   "win": 0.431,
+   "worst_day": -15724,
+   "max_dd": 105793,
+   "r_dd": -0.4327,
+   "months": 12,
+   "worst_month": -59687,
+   "months_below": 5,
+   "days_below": 2,
+   "dd_breaches": 1,
+   "sessions": 247,
+   "t_n": 1742,
+   "t_win": 0.4305,
+   "t_avg_win": 1598,
+   "t_avg_loss": 1254,
+   "t_payoff": 1.274,
+   "t_breakeven_win": 0.4398,
+   "t_expectancy": -26.3,
+   "t_kelly_trade": -0.0164,
+   "per_arm": {
+    "LIQ": {
+     "n": 70,
+     "net": 9963
+    },
+    "R72": {
+     "n": 459,
+     "net": 95049
+    },
+    "R51": {
+     "n": 1168,
+     "net": -157313
+    },
+    "R52": {
+     "n": 45,
+     "net": 6521
+    }
+   },
+   "refused": 4401,
+   "twin": {
+    "p": 0.9309,
+    "actual_r_dd": -0.4327,
+    "median_r_dd": 0.1295,
+    "median_net": 12800,
+    "removed": 794
+   },
+   "changed_vs_cap2": 802,
+   "paired": {
+    "days": 180,
+    "mean": -395.4,
+    "total": -71163,
+    "lo": -902.9,
+    "hi": 104.5,
+    "p": 0.9023
+   }
+  },
+  "_part_a": {
+   "trades": {
+    "n": 2536,
+    "win": 0.4385,
+    "avg_win": 1598,
+    "avg_loss": 1230,
+    "payoff": 1.299,
+    "breakeven_win": 0.4349,
+    "expectancy": 10.0,
+    "kelly_trade": 0.0063
+   },
+   "daily": {
+    "n": 247,
+    "mean": 102.8,
+    "sd": 6937.3,
+    "sharpe": 0.234,
+    "sortino": 0.357,
+    "kelly_daily_per_rupee": 0.0,
+    "ac1": -0.0392,
+    "ac10": 0.1516
+   },
+   "arm_corr": {
+    "LIQ~R72": 0.056,
+    "LIQ~R51": -0.034,
+    "LIQ~R52": 0.001,
+    "R72~R51": -0.007,
+    "R72~R52": 0.061,
+    "R51~R52": -0.07
+   },
+   "per_arm": {
+    "LIQ": {
+     "n": 266,
+     "win": 0.4361,
+     "avg_win": 1941,
+     "avg_loss": 921,
+     "payoff": 2.108,
+     "breakeven_win": 0.3218,
+     "expectancy": 327.2,
+     "kelly_trade": 0.1686
+    },
+    "R72": {
+     "n": 668,
+     "win": 0.4895,
+     "avg_win": 1671,
+     "avg_loss": 1217,
+     "payoff": 1.374,
+     "breakeven_win": 0.4213,
+     "expectancy": 197.0,
+     "kelly_trade": 0.1179
+    },
+    "R51": {
+     "n": 1531,
+     "win": 0.4115,
+     "avg_win": 1436,
+     "avg_loss": 1245,
+     "payoff": 1.153,
+     "breakeven_win": 0.4645,
+     "expectancy": -142.2,
+     "kelly_trade": -0.0991
+    },
+    "R52": {
+     "n": 71,
+     "win": 0.5493,
+     "avg_win": 2587,
+     "avg_loss": 2386,
+     "payoff": 1.084,
+     "breakeven_win": 0.4799,
+     "expectancy": 345.3,
+     "kelly_trade": 0.1335
+    }
+   },
+   "p_dd40k_120": 0.9179
+  },
+  "_days": {
+   "vix_high": 64,
+   "rv_high": 77,
+   "vix_known": 246,
+   "rv_known": 247,
+   "sessions": 247,
+   "paused_arm_days": {
+    "LIQ": 93,
+    "R72": 112,
+    "R51": 121,
+    "R52": 80
+   }
+  }
+ }
+}

@@ -68,3 +68,8 @@ ACCOUNT_MONTH = K8.ACCOUNT_MONTH
 BOOT_PATHS = 20_000
 BOOT_BLOCK = 5
 BOOT_HORIZON = 120
+
+# Amendment 1 (27 Oct, before the final read): the paired day-by-day check (r117lib.paired_days)
+PAIRED_BOOT = 20_000
+PAIRED_P = 0.10
+PAIRED_GATED = ("DAYLOCK",)

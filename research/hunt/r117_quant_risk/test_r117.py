@@ -272,3 +272,14 @@ def test_bh_counts_the_prior_tests():
     q = B.bh([1e-5, 0.5], 2 + K.N_PRIOR)
     assert q[0] == pytest.approx(min(1.0, 1e-5 * (2 + K.N_PRIOR)))
     assert K.N_PRIOR == 5_863
+
+
+def test_paired_days_amendment_1():
+    rng = np.random.default_rng(0)
+    base = np.zeros(100)
+    up = base.copy(); up[:30] = 500.0
+    r = L.paired_days(up, base, 5_000, rng)
+    assert r["days"] == 30 and r["mean"] == 500.0 and r["p"] < 0.001
+    mixed = base.copy(); mixed[:20] = 500.0; mixed[20:40] = -500.0
+    assert L.paired_days(mixed, base, 5_000, rng)["p"] > 0.3
+    assert L.paired_days(base, base, 100, rng)["p"] == 1.0

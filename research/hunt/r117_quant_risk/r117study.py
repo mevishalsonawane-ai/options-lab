@@ -141,8 +141,6 @@ def evaluate(phase: str) -> dict:
                          thresholds=th)}
     for per in periods:
         res = {n: view(W[n], sessions, per) for n in NAMES}
-        if per in ("design", "wf") or phase == "final":
-            pass
         res["_part_a"] = part_a(W["CAP2"], sessions, per, rng)
         sess = [d for d in sessions if K.in_period(d, per)]
         res["_days"] = dict(vix_high=sum(1 for d in sess if di["vix_high"].get(d)), rv_high=sum(1 for d in sess if di["rv_high"].get(d)),
@@ -152,6 +150,10 @@ def evaluate(phase: str) -> dict:
         for n in K.TESTS:
             res[n]["twin"] = twin(W[n], W["CAP2"], sessions, per, rng)
             res[n]["changed_vs_cap2"] = B.changed_vs(real(W[n], per), real(W["CAP2"], per))
+            # Amendment 1 (before the final read): the paired day-by-day check against CAP2
+            sess = [d for d in sessions if K.in_period(d, per)]
+            res[n]["paired"] = L.paired_days(B.daily_vector(real(W[n], per), sess), B.daily_vector(real(W["CAP2"], per), sess),
+                                             K.PAIRED_BOOT, rng)
             print(per, n, res[n]["net"], res[n]["trades"], res[n]["win"], res[n]["max_dd"], res[n]["twin"]["p"], flush=True)
         out[per] = res
     parity({p: out[p]["CAP2"] for p in periods}, phase)
@@ -184,6 +186,13 @@ def decide() -> dict:
     for t, qa, qo in zip(K.TESTS, q_all, q_own):
         per = {p: ((d if p != "final" else f)[p][t], (d if p != "final" else f)[p]["CAP2"]) for p in K.PERIODS}
         g = L.gates(per, qa, f["final"][t]["changed_vs_cap2"], K.PERIODS, K.GATE_Q, K.MIN_CHANGED)
+        # Amendment 1: DAYLOCK's twin is tilted in its favour, so it must also pass the paired day check in the final
+        if t in K.PAIRED_GATED:
+            pp = f["final"][t]["paired"]["p"]
+            if not pp <= K.PAIRED_P:
+                g["fails"].append(f"final: paired day check p {pp} > {K.PAIRED_P} (Amendment 1)")
+                g["passed"] = False
+        g["paired_p_final"] = f["final"][t]["paired"]["p"]
         g["q_r117"] = round(float(qo), 4)
         g["twin_p"] = f["final"][t]["twin"]["p"]
         out[t] = g

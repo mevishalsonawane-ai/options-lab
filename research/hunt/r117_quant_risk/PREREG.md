@@ -103,3 +103,18 @@ decides. A rule that fails stays a note. Nothing in R117 changes the app.
 
 Every rule (pass or fail) and the Part A measures are written to `research/experiments/entries/r117-*.yaml`, with
 sample sizes, after `results/decision.json`. The write-up is `research/HUNT_R117_QUANT_RISK.md`.
+
+## Amendment 1 (27 Oct, after the design numbers, BEFORE the final read): a stricter check for DAYLOCK
+
+The design phase showed a flaw in gate 3 for DAYLOCK: its random-refusal twin is tilted in its favour. DAYLOCK only drops
+the trades that come AFTER a day is already +Rs 6,500; a twin drops the same number of that day's trades at random,
+often the early winners that made the day good, so DAYLOCK beats almost every twin (design p about 1e-5) whatever the
+later trades are worth. The gates are never relaxed, so the fix only adds a check:
+
+- **Paired day check** (`r117lib.paired_days`): on the days a rule's net differs from CAP2's, the difference (rule minus
+  CAP2) is bootstrapped over those days (20,000 resamples, seed 117); p = the share of resampled means at or below 0.
+- **DAYLOCK must also have a paired p <= 0.10 in the final window** (on top of gates 1-4). It is reported for every rule,
+  but decides only DAYLOCK (the other rules' twins are not tilted this way).
+
+Design-phase numbers seen before this amendment: every rule's design / walk-forward summary and twin p (they are in
+`results/design.json` as first computed); no final-window number has been computed by R117.
