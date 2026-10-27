@@ -1,0 +1,44 @@
+id: r118-expiry-atlas
+title: R118 atlas of every option on every expiry day (decay, priced vs realised move, IV smile, volume, OI, pinning, quant maths)
+family: market-facts
+date: '2026-10-27'
+doc: research/HUNT_R118_EXPIRY_ATLAS.md
+hypothesis: 'Descriptive only (Boss, 27 Oct: "deep analysis ... each and every option on expiry date ... find a pattern, dont
+  directly write strategy"; "use all the math you can"). No rule, no entry, no exit, no P&L tested.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026); R98 expiry-day records, rolling ATM+-10
+  1-minute options with OHLC, volume, OI and vendor IV; index and India VIX minutes
+period:
+  design: 911 expiry days 2021-08-05..2026-10-19 (NIFTY 273, BANKNIFTY 195, FINNIFTY 167, MIDCPNIFTY 100, SENSEX 176); split
+    2021-23 (414 days) / 2024-26 (497 days) for stability
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: none (descriptive); the index''s minutes and the options'' own prints'
+- 859,800 option-marks (every option with a recent print at each 15-minute mark 09:30-15:15)
+model_or_rule: 'tables only: census and data quality, straddle decay vs sqrt(time), priced vs realised move, variance risk premium,
+  fat tails, IV smile, volume / OI / walls / PCR, pinning and max pain vs placebo, index expiry vs normal days (kurtosis, jumps,
+  variance ratios), option paths (2x / 5x / 10x, death), Black-76 risk-neutral probability vs outcome, delta theory vs measured'
+settings: research/hunt/r118_expiry_atlas/atlas.py, report.py, quant.py
+prereg: research/hunt/r118_expiry_atlas/PREREG.md
+variants_tried: null
+holdout_read: null
+verdict: not-a-test
+results:
+  summary: 'Stable in both halves: the straddle out-priced the move to the close on about 2 days in 3 (index beat the 12:00
+    straddle on 35% of 893 days vs 42.5% under a normal curve) yet 3-straddle moves came 1.5-2x as often as a normal curve
+    says (fat tails, kurtosis of the close move 4.6-8.9); the straddle melts close to sqrt(time) until about 14:30 and faster
+    after 15:00; implied variance exceeds realised early in the day (median ratio 1.20 from 09:30) and falls below it from
+    15:00 (0.61); OTM puts carry higher IV than calls at the same distance; the put OI wall sits closer to spot than the call
+    wall, PCR below 1, near-money OI grows 3-4x through the day; volume is heaviest 14:00-15:15; on expiry days the index
+    mean-reverts minute to minute (VR(30) 0.76 vs 0.84 normal days) and moves more in its last 30 minutes; the market''s
+    risk-neutral probability overstates the chance a cheap OTM option ends ITM (2-5% priced, 1.1% happened; 7-20 paise back
+    per rupee for options priced at under 5% odds). Not there: no pinning to strikes, no pull toward max pain or OI walls
+    (inside a shuffled-day placebo), and nothing at the open (VIX, gap, weekday, monthly) changes the 10x-day rate in both
+    halves.'
+  costs: none (descriptive; no trade is simulated; payout / price ratios are before any charges)
+notes: Not counted in Benjamini-Hochberg (no test). Any later idea built on a pattern here must be pre-registered and must
+  count R118's cells as looks already taken.
