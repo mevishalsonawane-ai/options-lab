@@ -1,0 +1,45 @@
+id: r117-hero-l7
+title: 'HERO ticket with a profit lock: 25% trail from the fill, widened to 50% once 2x'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R117_ZERO_HERO_LOCK.md
+hypothesis: On expiry days, the existing HERO entry with the lock '25% trail from the fill, widened to 50% once 2x' makes
+  more per ticket than the 25% trail from the fill (R55 T0, the arm's exit) in design, walk-forward and final, after real
+  costs, and beats random exit minutes.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026: options_rolling_1m opt_<UND>_WEEK 2021-2026 (rolling
+  ATM+-10 1-minute), index_1m 2021-2026; lake to 19 Oct 2026 (27 Oct not in it)'
+period:
+  design: expiry days to 31 Dec 2023
+  walk_forward: 1 Jan 2024 - 31 Dec 2025 (nothing fitted)
+  holdout: 'final: 1 Jan - 19 Oct 2026, read once (entries not pristine: R98 / ft3_app and R50-R55 read them; the locks were
+    never run on them)'
+instruments:
+- NIFTY
+- SENSEX
+features:
+- 'signal source: option-price rule (NOT the default; on by Boss''s choice): FT3 reads the option chain at the mark, Hero
+  the option''s own price band; the locks read the held option''s premium'
+- lock on the option premium
+model_or_rule: 'entry: Hero Rs 1,000 ticket (R55 / R54): NIFTY and SENSEX own expiry days, the bar closing 12:30, 1 lot CE
+  + 1 lot PE, nearest eligible OTM priced Rs 5 - min(30, 1,000 / lot); exit: 25% trail from the fill, widened to 50% once
+  2x; the rest sells at 15:05'
+settings: research/hunt/r117_zero_hero_lock/r117cfg.py, research/hunt/r117_zero_hero_lock/r117lib.py
+prereg: research/hunt/r117_zero_hero_lock/PREREG.md
+variants_tried: 1
+results:
+  summary: '25% trail from the fill, widened to 50% once 2x on the existing HERO tickets (entries unchanged), against the
+    25% trail from the fill (R55 T0, the arm''s exit). design: rule 314 tickets, win 12.7%, mean Rs -104, total Rs -32,514,
+    max DD Rs 32,514, without the 3 best days Rs -37,401 vs today''s mean Rs -89; wf: rule 373 tickets, win 13.7%, mean Rs
+    -70, total Rs -26,207, max DD Rs 26,207, without the 3 best days Rs -37,282 vs today''s mean Rs -59; final: rule 160 tickets,
+    win 18.8%, mean Rs -33, total Rs -5,273, max DD Rs 6,380, without the 3 best days Rs -15,845 vs today''s mean Rs -14.
+    Reached 3x / 5x / 10x (all periods): 17.0% / 9.6% / 2.2%; sold at >= 3x 1.3%. Final twin p 0.7351 (15 final tickets changed),
+    BH q 1 (m 9,300,059), zero-hero families q 1. fail: design: mean not above today''s exit; wf: mean not above today''s
+    exit; final: mean not above today''s exit; final mean <= 0; final <= 0 without the 3 best days; final drawdown worse;
+    twin p 0.735 >= 0.05; BH q 1 > 0.1.'
+  costs: 'FT3: R98 charges (Rs 20 an order + GST, STT 0.15% on the sell, exchange, stamp), 1-tick sell spread, fills at the
+    next open; Hero: R54 / R55 pricing (dated charges, R17 liquidity spread with the late multiplier, stray-print guard)'
+holdout_read: true
+verdict: rejected
+notes: 'Random twins: 2,000 (seed 117); tickets whose exit differs from today''s are sold whole at a random bar open after
+  the fill. FT3 is a frozen forward test: it never changes; a passer could only run as a separate labelled paper variant.
+  Nothing live.'

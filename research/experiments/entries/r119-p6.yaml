@@ -1,0 +1,37 @@
+id: r119-p6
+title: 'R119 P6: buy the OTM call 1.25 straddles out at 12:00, out 15:05'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R119_ATLAS_TESTS.md
+hypothesis: 'From R118 pattern 8 (OTM calls reach 10x more often than puts): the fixed rule makes money on expiry days after
+  real charges and slippage, in design, walk-forward and final, and beats random twins.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): R98 expiry-day records, five indices,
+  rolling ATM+-10 1-minute options, index minutes'
+period:
+  design: expiry days to 31 Dec 2023
+  walk_forward: 2024-25 (nothing fitted)
+  holdout: 'final 1 Jan - 19 Oct 2026, read once (NOT pristine: R118 found the patterns on all of 2021-26; one 2026 day was
+    seen in a smoke test)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: underlying (strike from the index and its straddle)'
+model_or_rule: buy the OTM call 1.25 straddles out at 12:00, out 15:05
+settings: research/hunt/r119_atlas_tests/r119cfg.py, r119lib.py
+prereg: research/hunt/r119_atlas_tests/PREREG.md
+variants_tried: 1
+results:
+  summary: 'buy the OTM call 1.25 straddles out at 12:00, out 15:05: design 386 trades, win 12.4%, mean Rs -146 (gross -102,
+    charges 44), total Rs -56,208; wf 388 trades, win 9.5%, mean Rs -180 (gross -136, charges 44), total Rs -69,991; final
+    108 trades, win 9.3%, mean Rs -330 (gross -283, charges 46), total Rs -35,597; final worst day Rs -5,673, w/o 3 best days
+    Rs -61,637, at 2x slippage mean Rs -333; twin p 0.378, BH q 1 (m 9,300,054). fail: design mean <= 0; wf mean <= 0; final
+    mean <= 0; final <= 0 without 3 best days; final mean <= 0 at 2x slippage; twin p 0.378; BH q 1.'
+  costs: R50 / obuy dated charges per order (BSE rates for SENSEX), R25 'liq' fills (5 bps + 1-4 ticks by volume) x R54 late
+    multiplier, stale legs repriced by Black-76 at their last IV (R103 Am. 2); 1 lot, dated lots
+holdout_read: true
+verdict: rejected
+notes: Random twins 2,000 (seed 119). Nothing to paper or live.
