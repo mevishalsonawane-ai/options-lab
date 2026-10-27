@@ -10,7 +10,6 @@ import com.optionslab.app.work.Tasks
 import com.optionslab.app.work.WatchWorkers
 import com.optionslab.engine.Right
 import com.optionslab.engine.mcx.McxContract
-import com.optionslab.engine.sandbox.Quote
 import com.optionslab.ira.AnalysisRest
 import com.optionslab.ira.LoopMeter
 import com.optionslab.ira.McxRest
@@ -74,9 +73,9 @@ class BatteryAuditTest : RobolectricTest() {
 
     @Test fun aHeldPositionKeepsFullCadenceAndTheStreamWithTheSaverOnAndTheBatteryAt10Percent() = runBlocking {
         at(day, "22:30")
-        val r = Paper.place(McxMarket.paperContract(option), "BUY", 1, "MARKET", "NRML", null, null, Quote(242.0))
-        assertTrue(r.message, r.ok)
         booksRead()
+        // An MCX position held (Zerodha's book; a paper order would price itself from the internet in the background).
+        McxMarket.markLive()
         phone(pct = 10, charging = false, saver = true)
         assertEquals(10 to false, Battery.state(context))
         assertTrue(WatchWorkers.saver(context))
@@ -128,10 +127,8 @@ class BatteryAuditTest : RobolectricTest() {
         CandleAgentHost.settledDay = Market.today()
         assertNull("nothing held on MCX at 22:30: the Candle agent rests", CandleAgentHost.delayMs(context))
         assertEquals(McxRest.IDLE_MS, McxMarket.watchCadenceMs())
-        // A paper silver short opens: the MCX watch goes to 15 s and the agent reads again.
-        val r = Paper.place(McxMarket.paperContract(option), "SELL", 1, "MARKET", "NRML", null, null, Quote(242.0))
-        assertTrue(r.message, r.ok)
-        booksRead()
+        // A silver short opens: the MCX watch goes to 15 s and the agent reads again.
+        McxMarket.markLive()
         assertEquals(McxRest.HELD_MS, McxMarket.watchCadenceMs())
         assertNotNull(CandleAgentHost.delayMs(context))
     }
