@@ -114,6 +114,19 @@ object OrderFlowLive {
      */
     private suspend fun relayout() {
         if (!Broker.loggedIn) { if (watched.isNotEmpty()) clear(); return }
+        // Battery audit (27 Oct): with nothing held, on a low battery (30% or less, not charging) or under Android's saver, the
+        // flow follows only the option the Chart shows ([com.optionslab.ira.AnalysisRest.flowFollows]) - its reads are SHADOW
+        // by default. Never while any strategy is in CONFIRM (review: with no read CONFIRM has no opinion, so an entry it would
+        // have skipped would go ahead - a risk raised, not lowered). With anything held it follows as before.
+        val held = runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true)
+        val resting = !com.optionslab.ira.AnalysisRest.flowFollows(com.optionslab.app.work.Battery.analysisPace(appContext, held)) &&
+            !FlowGate.anyConfirm()
+        if (resting != restingNow) {
+            restingNow = resting
+            runCatching { com.optionslab.app.work.BatteryMeter.meter.set(com.optionslab.ira.LoopMeter.FLOW_RESTING, resting) }
+            runCatching { Diag.record("battery", if (resting) "order flow rests: nothing held and the battery low or the saver on" else "order flow follows again") }
+        }
+        if (resting) { follow(listOfNotNull(watching)); return }
         val today = Market.today()
         val out = ArrayList<OrderFlow.Board.Entry>()
         val futs = runCatching { Kite.nearestFutures(Broker.futures(), today) }.getOrDefault(emptyMap())
@@ -139,6 +152,10 @@ object OrderFlowLive {
         // The trap guard's time windows: each index's session (an expiry day's last hour, the day's event minutes), MCX's hours.
         runCatching { sessions(today, mcx) }
     }
+
+    /** The flow rests for the battery now ([relayout]; the diary is told when it changes). */
+    @Volatile internal var restingNow = false
+        private set
 
     /** The charted option (its tape and heatmap; null: an index or nothing charted). */
     @Volatile private var watching: OrderFlow.Board.Entry? = null
@@ -442,8 +459,12 @@ object OrderFlowLive {
         if (!runCatching { Market.isTradingDay() }.getOrDefault(false)) return false
         val m = Market.minuteNow()
         if (m < 9 * 60 + 15 || m > Market.foClose()) return false
-        if (runCatching { ctx.getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode == true }.getOrDefault(false)) return false
-        if (runCatching { com.optionslab.app.work.Battery.saving(ctx) }.getOrDefault(false)) return false
+        // 27 Oct (battery audit, review): anything held keeps the stream on here whatever the battery - its prices come first.
+        if (runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true)) return true
+        if (com.optionslab.app.work.Battery.powerSave(ctx)) return false
+        // 27 Oct (battery audit): with nothing held, a battery at 30% or less, not charging, lets the stream close too
+        // (recording only).
+        if (runCatching { com.optionslab.app.work.Battery.state(ctx).let { com.optionslab.ira.AnalysisRest.low(it.first, it.second) } }.getOrDefault(false)) return false
         return true
     }
 

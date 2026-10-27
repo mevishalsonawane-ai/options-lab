@@ -425,6 +425,12 @@ object FlowGate {
     fun researchVerdict(): String? = runCatching { com.optionslab.ira.SharedKnowledge.flowVerdict(SharedKnowledgeHost.snapshot) }.getOrNull()
         ?.also { SharedKnowledgeHost.read("Order flow", "the research's verdict on order flow (unproven until S7)") }
 
+    /**
+     * 27 Oct (battery audit): any strategy in CONFIRM (the flow can skip its entries). The flow then never rests for the battery:
+     * with no read CONFIRM has no opinion, and an entry it would have skipped would go ahead (risk raised). Off the main thread.
+     */
+    fun anyConfirm(): Boolean = runCatching { all().values.any { it.mode == OrderFlow.Mode.CONFIRM } }.getOrDefault(true)
+
     /** The Diagnostics line: modes set, signals logged. */
     fun diagLine(): String {
         val m = all()

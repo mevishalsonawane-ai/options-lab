@@ -129,7 +129,7 @@ object TickZoneRecorder {
     private fun saverNow(): Boolean {
         saverForTest?.let { return it }
         val ctx = appContext ?: return false
-        val power = runCatching { ctx.getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode == true }.getOrDefault(false)
+        val power = com.optionslab.app.work.Battery.powerSave(ctx)
         val (percent, charging) = com.optionslab.app.work.Battery.state(ctx)
         return TickRest.narrow(power, percent, charging)
     }

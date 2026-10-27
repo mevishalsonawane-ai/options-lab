@@ -121,8 +121,11 @@ object TickRest {
     /** Strikes either side of the money under battery saver (else [TickZone.EACH_SIDE]); the futures and VIX stay. */
     const val SAVER_EACH_SIDE = 1
 
-    /** Android's battery saver on, or the battery low and not charging ([BatterySaver.saving]). */
-    fun narrow(powerSave: Boolean, percent: Int?, charging: Boolean): Boolean = powerSave || BatterySaver.saving(percent, charging)
+    /**
+     * Android's battery saver on, or the battery low and not charging. 27 Oct (battery audit): low is 30% or less
+     * ([AnalysisRest.LOW_PCT]; was Jarvis's 20%) - recording only, never a stop.
+     */
+    fun narrow(powerSave: Boolean, percent: Int?, charging: Boolean): Boolean = powerSave || AnalysisRest.low(percent, charging)
 
     /** Strikes either side of the money to follow. */
     fun eachSide(narrow: Boolean): Int = if (narrow) SAVER_EACH_SIDE else TickZone.EACH_SIDE
@@ -216,11 +219,24 @@ class LoopMeter(private val clock: () -> Long = System::currentTimeMillis, priva
     private val counts = HashMap<String, Int>()
     private var day: LocalDate? = null
 
+    /** The day before's figures, kept at the day's roll ([lineFor]): the evening upload often runs after midnight. */
+    private var previous: Figures? = null
+
+    /**
+     * 27 Oct (battery audit): one day's figures - each loop's milliseconds and counts - saved on disk by the app so a restart
+     * (or the next morning's catch-up upload, a new process) keeps the day's count ([restore], [encode] / [decode]).
+     */
+    data class Figures(val day: LocalDate, val ms: Map<String, Long>, val counts: Map<String, Int>) {
+        fun line(): String = render({ n -> (ms[n] ?: 0L) / 60_000L }, { n -> counts[n] ?: 0 })
+    }
+
     private fun roll(now: Long) {
         val d = dayOf(now)
         if (d == day) return
         // A loop running across midnight counts only its part of the new day.
         val midnight = if (day == null) now else d.atStartOfDay(MarketRecord.IST).toInstant().toEpochMilli()
+        // 27 Oct (battery audit): the day's figures kept as its line before they are cleared (running loops counted to midnight).
+        day?.let { old -> previous = figuresAt(old, midnight) }
         total.clear(); counts.clear()
         for (k in since.keys.toList()) since[k] = maxOf(since[k]!!, minOf(midnight, now))
         day = d
@@ -253,6 +269,41 @@ class LoopMeter(private val clock: () -> Long = System::currentTimeMillis, priva
 
     @Synchronized fun running(name: String): Boolean = since.containsKey(name)
 
+    /**
+     * [d]'s "Battery today" line: today's from the running figures, the day before's as kept at midnight; null for any other
+     * day, or a day this process did not see (memory only: a restart starts again).
+     */
+    @Synchronized fun lineFor(d: LocalDate): String? = figuresFor(d)?.line()
+
+    /** [d]'s figures (today's with the running stretches to now; the day before's as kept at midnight); null for any other day. */
+    @Synchronized fun figuresFor(d: LocalDate): Figures? {
+        val now = clock(); roll(now)
+        if (d == day) return figuresAt(d, now)
+        return previous?.takeIf { it.day == d }
+    }
+
+    private fun figuresAt(d: LocalDate, upTo: Long): Figures {
+        val ms = HashMap(total)
+        for ((k, s) in since) ms[k] = (ms[k] ?: 0L) + (upTo - s).coerceAtLeast(0L)
+        return Figures(d, ms, HashMap(counts))
+    }
+
+    /**
+     * Figures saved by an earlier process ([f]) added in: today's into today's count, the day before's as the day before's
+     * (unless this process saw that day itself). Other days are ignored. Call once, at the start.
+     */
+    @Synchronized fun restore(f: Figures) {
+        roll(clock())
+        val today = day ?: return
+        when {
+            f.day == today -> {
+                for ((k, v) in f.ms) total[k] = (total[k] ?: 0L) + v.coerceAtLeast(0L)
+                for ((k, v) in f.counts) counts[k] = (counts[k] ?: 0) + v.coerceAtLeast(0)
+            }
+            f.day == today.minusDays(1) && previous == null -> previous = f
+        }
+    }
+
     companion object {
         const val WATCH_EVENING = "watch after 15:40"
         const val MCX_FAST = "MCX 15 s passes"
@@ -261,17 +312,147 @@ class LoopMeter(private val clock: () -> Long = System::currentTimeMillis, priva
         const val STREAM = "price stream on"
         const val ORDER_FLOW = "order-flow pump"
         const val LISTEN_RESTING = "Jarvis resting"
+        /** 27 Oct (battery audit): the Candle agent's batches and Jarvis's words rounds today (counts). */
+        const val CANDLE_BATCHES = "Candle agent batches"
+        const val WORDS_ROUNDS = "Jarvis words rounds"
+        /** 27 Oct: minutes the order flow rested for the battery ([AnalysisRest.flowFollows]). */
+        const val FLOW_RESTING = "order flow resting"
+        /** 27 Oct: live stream drops today (counts; each reconnect costs a new connection and a fresh subscription). */
+        const val RECONNECTS = "stream reconnects"
+        /** 27 Oct: minutes the battery was at 30% or less, not charging, as the workers saw it. */
+        const val LOW_BATTERY = "battery low"
 
         /** "Battery today: ..." from the meter's figures (shown on the diagnostics and the Health page). */
-        fun line(m: LoopMeter): String {
-            fun min(n: String) = m.minutes(n)
-            return "Battery today: " + listOf(
-                "watch after 15:40 ${min(WATCH_EVENING)} min (MCX passes: ${m.counted(MCX_FAST)} at 15 s, ${m.counted(MCX_SLOW)} at 60 s)",
-                "tick recorder ${min(RECORDER)} min",
-                "stream on ${min(STREAM)} min",
-                "order-flow pump ${min(ORDER_FLOW)} min",
-                "Jarvis resting ${min(LISTEN_RESTING)} min",
-            ).joinToString(" · ") + "."
+        fun line(m: LoopMeter): String = render(m::minutes, m::counted)
+
+        /** [f] as one line of text: "2026-10-26|m:name=ms;c:name=n;..." (loop names hold no '|', ';' or '='). */
+        fun encode(f: Figures): String = f.day.toString() + "|" +
+            (f.ms.entries.sortedBy { it.key }.map { "m:${it.key}=${it.value}" } + f.counts.entries.sortedBy { it.key }.map { "c:${it.key}=${it.value}" })
+                .joinToString(";")
+
+        /** [encode]'s line back (null: not one). Unknown or broken parts are skipped. */
+        fun decode(line: String): Figures? {
+            val bar = line.indexOf('|')
+            if (bar <= 0) return null
+            val d = runCatching { LocalDate.parse(line.substring(0, bar).trim()) }.getOrNull() ?: return null
+            val ms = HashMap<String, Long>(); val counts = HashMap<String, Int>()
+            for (part in line.substring(bar + 1).split(';')) {
+                val eq = part.lastIndexOf('=')
+                if (eq < 3) continue
+                val k = part.substring(2, eq)
+                when {
+                    part.startsWith("m:") -> part.substring(eq + 1).toLongOrNull()?.let { ms[k] = it }
+                    part.startsWith("c:") -> part.substring(eq + 1).toIntOrNull()?.let { counts[k] = it }
+                }
+            }
+            return Figures(d, ms, counts)
+        }
+
+        /** The line from each loop's minutes and counts. No personal data: loop names, minutes and counts only. */
+        internal fun render(min: (String) -> Long, counted: (String) -> Int): String = "Battery today: " + listOf(
+            "watch after 15:40 ${min(WATCH_EVENING)} min (MCX passes: ${counted(MCX_FAST)} at 15 s, ${counted(MCX_SLOW)} at 60 s)",
+            "tick recorder ${min(RECORDER)} min",
+            "stream on ${min(STREAM)} min (${counted(RECONNECTS)} reconnects)",
+            "order-flow pump ${min(ORDER_FLOW)} min (resting ${min(FLOW_RESTING)} min)",
+            "Candle agent ${counted(CANDLE_BATCHES)} batches",
+            "Jarvis words ${counted(WORDS_ROUNDS)} rounds",
+            "Jarvis resting ${min(LISTEN_RESTING)} min",
+            "battery 30% or less ${min(LOW_BATTERY)} min",
+        ).joinToString(" · ") + "."
+    }
+}
+
+/**
+ * Battery audit, 27 Oct (Boss: "the battery drained a lot today"; android/BATTERY_AUDIT_2026-10-27.md). The analysis that is
+ * knowledge or words only - the Candle agent's batches, Jarvis's words-only round, the order flow's shadow reads - ran at the
+ * same pace with nothing held, the screen off and the battery at 15%. Here is how fast each may go now.
+ *
+ * What never changes: with ANY position or order open (paper or live, NSE or MCX) the pace is [Pace.FULL], whatever the
+ * battery, the saver or the screen (open positions come first). The position watch, the 15-second stop lane, the stream for
+ * held instruments and the start-up restore never read this at all. Pure.
+ */
+object AnalysisRest {
+    /** The battery at or below this, not charging, counts as low here (Boss's audit: 30%; Jarvis's old saver is 20%). */
+    const val LOW_PCT = 30
+
+    enum class Pace {
+        /** As before. */
+        FULL,
+        /** Twice the wait: the screen is off and nothing is held. */
+        SLOW,
+        /** Knowledge-only work stops; words-only work goes to [REST_WORDS_MS]: nothing held, and the battery low or the saver on. */
+        REST,
+    }
+
+    /** The battery is low: at or below [LOW_PCT] and not charging (unknown: not low). */
+    fun low(percent: Int?, charging: Boolean): Boolean = !charging && percent != null && percent <= LOW_PCT
+
+    /**
+     * The pace of the knowledge/words-only analysis. [held]: any position or order open (paper or live, NSE or MCX; unknown
+     * counts as held). [saver]: Android's battery saver. [screenOn]: unknown counts as on.
+     */
+    fun pace(held: Boolean, screenOn: Boolean, saver: Boolean, percent: Int?, charging: Boolean): Pace = when {
+        held -> Pace.FULL
+        saver || low(percent, charging) -> Pace.REST
+        !screenOn && !charging -> Pace.SLOW
+        else -> Pace.FULL
+    }
+
+    /** Jarvis's words-only round at [Pace.REST]: once every five minutes (its safety words still come, just later). */
+    const val REST_WORDS_MS = 5 * 60_000L
+
+    /** The words round's wait at [pace] from its [normalMs] (60 s, or 120 s under the saver as before). */
+    fun wordsMs(pace: Pace, normalMs: Long): Long = when (pace) {
+        Pace.FULL -> normalMs
+        Pace.SLOW -> normalMs * 2
+        Pace.REST -> maxOf(normalMs, REST_WORDS_MS)
+    }
+
+    /** The Candle agent's wait at [pace] from its [normalMs]; null: rests (asked again in a minute). Knowledge only. */
+    fun candleMs(pace: Pace, normalMs: Long): Long? = when (pace) {
+        Pace.FULL -> normalMs
+        Pace.SLOW -> normalMs * 2
+        Pace.REST -> null
+    }
+
+    /**
+     * The Candle agent on MCX's evening (NSE closed): only while something is held on MCX or an armed MCX arm is in its entry
+     * minutes. On 26-27 Oct it read the MCX candles every few minutes to 23:30 with nothing held, a batch up to its 2-minute
+     * limit (p95 2 min 0 s, 101 runs on 27 Oct). Its reads are knowledge only: no stop, exit or entry waits on them.
+     */
+    fun candlesOnMcxEvening(mcxHeld: Boolean, inEntryMinutes: Boolean): Boolean = mcxHeld || inEntryMinutes
+
+    /**
+     * The order flow's NSE set (index futures and ATM options, Kite's full mode) at [Pace.REST]: none, unless something is
+     * held (then [pace] is FULL anyway). Its reads are SHADOW by default (TODO.md S7: not proven); a CONFIRM strategy with no
+     * read "has no opinion" and trades as its rules say ([com.optionslab.ira.OrderFlow]), so resting never skips an entry.
+     */
+    fun flowFollows(pace: Pace): Boolean = pace != Pace.REST
+}
+
+/**
+ * The phone's battery and screen, read from Android at most once per [ttlMs] (Battery audit, 27 Oct: each read is a call into
+ * Android - "excessive binder traffic during cached" on 25 Oct - and several loops read them every few seconds). Thread-safe;
+ * a read that fails keeps the last value. [read] is the real reading (the app's sticky broadcast and PowerManager). Pure.
+ */
+class PowerCache<T>(private val ttlMs: Long, private val clock: () -> Long, private val read: () -> T) {
+    @Volatile private var kept: Pair<Long, T>? = null
+    /** How many real reads were made (the tests; the diagnostics). */
+    @Volatile var reads: Int = 0
+        private set
+
+    fun get(): T {
+        val now = clock()
+        kept?.let { (at, v) -> if (now - at in 0 until ttlMs) return v }
+        synchronized(this) {
+            kept?.let { (at, v) -> if (now - at in 0 until ttlMs) return v }
+            val v = runCatching { read() }.getOrElse { e -> kept?.second ?: throw e }
+            reads++
+            kept = now to v
+            return v
         }
     }
+
+    /** Forget the kept value (a charger plugged in: read again at once). */
+    fun clear() { kept = null }
 }

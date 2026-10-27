@@ -67,6 +67,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 27 Oct (Boss: "Check the battery usage too; the battery drained a lot today"; android/BATTERY_AUDIT_2026-10-27.md).
+        Entry("2026-10-27-battery-audit", OCT27, "Less battery when nothing is held",
+            "With nothing held, the Candle agent and Jarvis's background words rest at 30% battery or under the saver. " +
+                "On the MCX evening the Candle agent reads only while something is held there. " +
+                "The order flow's practice reads pause on a low battery. " +
+                "The app asks the phone for its battery and screen far less often. " +
+                "Open positions and orders never slow down: stops, targets, the stream and the watch run at full speed. " +
+                "The uploaded diagnostics now carry the day's Battery today line.",
+            "Lab → Health → Battery today (also in the diagnostics); android/BATTERY_AUDIT_2026-10-27.md"),
         // 27 Oct (research/LIQUIDITY_PAPER_CHECK_2026-10-27.md): newest of all.
         Entry("2026-10-27-paper-limit-pays-ask", OCT27, "Paper limit buys pay the real ask",
             "A paper buy with a price cap now fills at the ask when a real quote is there. " +

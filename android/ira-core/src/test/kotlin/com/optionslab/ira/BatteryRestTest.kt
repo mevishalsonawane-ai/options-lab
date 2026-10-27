@@ -228,7 +228,8 @@ class BatteryRestTest {
         // (20 Oct: the Candle agent's entry, then the 19 Oct diagnostics fixes newest of all.)
         // (20 Oct: the whole-app review's entry, then enhancement round 1's, then round 2's; 21 Oct: round 3's, the commodities' own lock, then round 4's, then round 5's, then FT3's; 22 Oct: the Liquidity exit fixes, then Boss's breakeven switch, then the 22 Oct diagnostics fixes newest of all.)
         // (22 Oct: the arms audit's fixes, then the four ideas borrowed from the day-trader skill; 25 Oct: ntfy alerts, the app audit's fixes, then Boss's decisions; 26 Oct: ntfy acted on within seconds, then the erase of every store, then the Donchian paper fixes, then ntfy following the alert app's own exits, newest of all.)
-        assertEquals(45, o)
+        // (27 Oct: paper limit buys paying the ask, then the battery audit, newest of all.)
+        assertEquals(46, o)
         assertTrue(WhatsNew.ENTRIES.take(o).all { it.date > java.time.LocalDate.of(2026, 10, 14) })
         assertEquals("2026-10-14-gamma-line-oi-wall-shadow", WhatsNew.ENTRIES[o + 1].id)
         assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[o + 2].id)
@@ -274,5 +275,126 @@ class BatteryRestTest {
         assertEquals(0, meter.counted(LoopMeter.MCX_SLOW))
         assertEquals(20, meter.minutes(LoopMeter.ORDER_FLOW))
         assertFalse(meter.running(LoopMeter.RECORDER))
+    }
+
+    // ---- the battery audit, 27 Oct: the knowledge/words-only analysis --------------------------------------------------------
+
+    @Test fun anythingHeldKeepsFullPaceWithTheSaverOnAndTheBatteryAt10Percent() {
+        for (screen in listOf(true, false)) for (saver in listOf(true, false)) for (pct in listOf(10, 15, 30, null, 90))
+            for (charging in listOf(true, false))
+                assertEquals(AnalysisRest.Pace.FULL, AnalysisRest.pace(held = true, screenOn = screen, saver = saver, percent = pct, charging = charging),
+                    "held, screen $screen saver $saver $pct% charging $charging")
+        // And at FULL every worker keeps its normal wait.
+        assertEquals(60_000L, AnalysisRest.wordsMs(AnalysisRest.Pace.FULL, 60_000L))
+        assertEquals(300_000L, AnalysisRest.candleMs(AnalysisRest.Pace.FULL, 300_000L))
+        assertTrue(AnalysisRest.flowFollows(AnalysisRest.Pace.FULL))
+    }
+
+    @Test fun nothingHeldTheAnalysisRestsOnALowBatteryOrTheSaverAndSlowsWithTheScreenOff() {
+        // Low: 30% or less, not charging.
+        assertTrue(AnalysisRest.low(30, false)); assertTrue(AnalysisRest.low(10, false))
+        assertFalse(AnalysisRest.low(31, false)); assertFalse(AnalysisRest.low(10, true)); assertFalse(AnalysisRest.low(null, false))
+        assertEquals(AnalysisRest.Pace.REST, AnalysisRest.pace(false, screenOn = true, saver = false, percent = 25, charging = false))
+        assertEquals(AnalysisRest.Pace.REST, AnalysisRest.pace(false, screenOn = true, saver = true, percent = 90, charging = false))
+        assertEquals(AnalysisRest.Pace.REST, AnalysisRest.pace(false, screenOn = false, saver = true, percent = 90, charging = true), "the saver wins even on the charger")
+        assertEquals(AnalysisRest.Pace.SLOW, AnalysisRest.pace(false, screenOn = false, saver = false, percent = 80, charging = false))
+        assertEquals(AnalysisRest.Pace.FULL, AnalysisRest.pace(false, screenOn = false, saver = false, percent = 80, charging = true), "on the charger")
+        assertEquals(AnalysisRest.Pace.FULL, AnalysisRest.pace(false, screenOn = true, saver = false, percent = 80, charging = false))
+        assertEquals(AnalysisRest.Pace.FULL, AnalysisRest.pace(false, screenOn = true, saver = false, percent = null, charging = false), "unknown battery")
+        // What each pace means.
+        assertEquals(120_000L, AnalysisRest.wordsMs(AnalysisRest.Pace.SLOW, 60_000L))
+        assertEquals(AnalysisRest.REST_WORDS_MS, AnalysisRest.wordsMs(AnalysisRest.Pace.REST, 60_000L))
+        assertEquals(AnalysisRest.REST_WORDS_MS, AnalysisRest.wordsMs(AnalysisRest.Pace.REST, 120_000L))
+        assertEquals(600_000L, AnalysisRest.candleMs(AnalysisRest.Pace.SLOW, 300_000L))
+        assertNull(AnalysisRest.candleMs(AnalysisRest.Pace.REST, 300_000L), "the Candle agent rests")
+        assertFalse(AnalysisRest.flowFollows(AnalysisRest.Pace.REST))
+        assertTrue(AnalysisRest.flowFollows(AnalysisRest.Pace.SLOW))
+    }
+
+    @Test fun theCandleAgentOnMcxsEveningOnlyWithSomethingHeldOrAnArmInItsEntryMinutes() {
+        assertTrue(AnalysisRest.candlesOnMcxEvening(mcxHeld = true, inEntryMinutes = false), "a US-night silver short held to 23:20")
+        assertTrue(AnalysisRest.candlesOnMcxEvening(mcxHeld = false, inEntryMinutes = true))
+        assertFalse(AnalysisRest.candlesOnMcxEvening(mcxHeld = false, inEntryMinutes = false))
+        // The MCX watch itself is untouched by this: held on MCX keeps its 15 s pass all evening, battery or not.
+        for (minute in listOf(m(17, 0), m(20, 0), m(23, 20)))
+            assertEquals(McxRest.HELD_MS, McxRest.cadenceMs(held = true, inEntryMinutes = McxRest.inEntryMinutes(all, minute)))
+    }
+
+    @Test fun theRecorderNarrowsAt30PercentNow() {
+        assertTrue(TickRest.narrow(powerSave = false, percent = 30, charging = false))
+        assertTrue(TickRest.narrow(powerSave = false, percent = 25, charging = false))
+        assertFalse(TickRest.narrow(powerSave = false, percent = 31, charging = false))
+        assertFalse(TickRest.narrow(powerSave = false, percent = 25, charging = true))
+    }
+
+    @Test fun thePowerCacheAsksAndroidAtMostOncePerTtlAndKeepsTheLastValueOnAFailure() {
+        var now = 0L
+        var value = 50
+        var fail = false
+        val c = PowerCache(30_000L, { now }) { if (fail) error("binder died") else value }
+        repeat(100) { assertEquals(50, c.get()); now += 100 }      // 10 s of reads every 100 ms
+        assertEquals(1, c.reads)
+        value = 40; now = 30_000L
+        assertEquals(40, c.get()); assertEquals(2, c.reads)
+        fail = true; now = 61_000L
+        assertEquals(40, c.get(), "a failed read keeps the last value")
+        c.clear(); fail = false; value = 35
+        assertEquals(35, c.get(), "cleared: read again at once")
+        // A clock that went back reads again (never a value from the future kept for ever).
+        now = 0L
+        assertEquals(35, c.get()); assertEquals(5, c.reads)
+        // The very first read failing has nothing to keep: the caller sees the failure (and its own fallback).
+        val bad = PowerCache(30_000L, { 0L }) { error("no") }
+        assertTrue(runCatching { bad.get() }.isFailure)
+    }
+
+    @Test fun theMetersFiguresSurviveARestartAndTheDayBeforesLineIsKeptPastMidnight() {
+        var now = at("2026-10-26T20:00").atZone(MarketRecord.IST).toInstant().toEpochMilli()
+        val dayOf = { ms: Long -> java.time.Instant.ofEpochMilli(ms).atZone(MarketRecord.IST).toLocalDate() }
+        val first = LoopMeter({ now }, dayOf)
+        first.on(LoopMeter.STREAM)
+        repeat(4) { first.count(LoopMeter.CANDLE_BATCHES) }
+        repeat(2) { first.count(LoopMeter.RECONNECTS) }
+        now += 30 * 60_000L
+        val saved = LoopMeter.encode(first.figuresFor(LocalDate.of(2026, 10, 26))!!)
+        assertEquals(LocalDate.of(2026, 10, 26), LoopMeter.decode(saved)!!.day)
+        // A new process (an hourly night job, a low-memory kill): the saved figures are added in.
+        now += 10 * 60_000L
+        val second = LoopMeter({ now }, dayOf)
+        second.restore(LoopMeter.decode(saved)!!)
+        second.count(LoopMeter.CANDLE_BATCHES)
+        assertEquals(30, second.minutes(LoopMeter.STREAM))
+        assertEquals(5, second.counted(LoopMeter.CANDLE_BATCHES))
+        val line = LoopMeter.line(second)
+        assertTrue(line.contains("stream on 30 min (2 reconnects)"), line)
+        assertTrue(line.contains("Candle agent 5 batches"), line)
+        // Past midnight the day before's line is still there for the catch-up upload; today starts from zero.
+        second.on(LoopMeter.ORDER_FLOW)
+        now = at("2026-10-27T02:26").atZone(MarketRecord.IST).toInstant().toEpochMilli()
+        val y = second.lineFor(LocalDate.of(2026, 10, 26))!!
+        assertTrue(y.contains("Candle agent 5 batches"), y)
+        assertTrue(y.contains("order-flow pump 200 min"), "running 20:40 to midnight counted to midnight: $y")
+        assertEquals(146, second.minutes(LoopMeter.ORDER_FLOW), "and today's part from 00:00")
+        assertEquals(0, second.counted(LoopMeter.CANDLE_BATCHES))
+        assertNull(second.lineFor(LocalDate.of(2026, 10, 24)), "an older day is not kept")
+        // A new process after midnight restores the day before as the day before.
+        val third = LoopMeter({ now }, dayOf)
+        third.restore(LoopMeter.decode(saved)!!)
+        assertTrue(third.lineFor(LocalDate.of(2026, 10, 26))!!.contains("Candle agent 4 batches"))
+        assertEquals(0, third.counted(LoopMeter.CANDLE_BATCHES), "not added into today")
+        // Older days and broken lines are ignored.
+        third.restore(LoopMeter.Figures(LocalDate.of(2026, 10, 20), mapOf(LoopMeter.STREAM to 99L), emptyMap()))
+        assertNull(LoopMeter.decode("not a line"))
+        assertNull(LoopMeter.decode("2026-13-40|m:x=1"))
+        assertEquals(mapOf(LoopMeter.STREAM to 5L), LoopMeter.decode("2026-10-26|m:${LoopMeter.STREAM}=5;c:bad=x;junk")!!.ms)
+    }
+
+    @Test fun theBatteryLineHasNoPersonalDataOnlyLoopNamesMinutesAndCounts() {
+        val f = LoopMeter.Figures(LocalDate.of(2026, 10, 26), mapOf(LoopMeter.STREAM to 196 * 60_000L, LoopMeter.LOW_BATTERY to 45 * 60_000L),
+            mapOf(LoopMeter.WORDS_ROUNDS to 194))
+        val line = f.line()
+        assertTrue(line.startsWith("Battery today: "), line)
+        assertTrue(line.contains("stream on 196 min") && line.contains("Jarvis words 194 rounds") && line.contains("battery 30% or less 45 min"), line)
+        assertFalse(line.contains("₹") || line.contains("@"), line)
     }
 }

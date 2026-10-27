@@ -158,4 +158,36 @@ class StreamHealthTest {
         val none = StreamHealth.answer(emptyList(), now, "OFF", watchRunning = null)
         assertEquals("Boss, the live price stream hasn't dropped today; it's off now. It runs only with a Zerodha login during market hours.", none)
     }
+
+    // ---- battery audit, 27 Oct: the reconnect backoff on a flapping network -----------------------------------------------
+
+    @Test fun aHeldPositionReconnectsExactlyAsBeforeOnANetworkFlap() {
+        var w = 0L
+        val seen = ArrayList<Long>()
+        // Six network changes in a row, each connection up 30 s (the 26 Oct 12:55-12:57 pattern), jitter at its extremes.
+        for (j in listOf(1.0, -1.0, 1.0, -1.0, 1.0, -1.0)) {
+            w = StreamHealth.waitFor(w, 30_000L, StreamHealth.Cause.NETWORK_CHANGED, held = true, jitter = j)
+            seen += w
+            assertEquals(seen.size.let { n -> var x = 0L; repeat(n) { x = StreamHealth.wait(x, 30_000L, StreamHealth.Cause.NETWORK_CHANGED) }; x }, w)
+        }
+        assertEquals(listOf(500L, 1_000L, 2_000L, 4_000L, 4_000L, 4_000L), seen, "never past 4 s while held")
+        // A connection that stayed up starts again at once, held or not.
+        assertEquals(StreamHealth.FIRST_WAIT_MS, StreamHealth.waitFor(4_000L, 120_000L, StreamHealth.Cause.NETWORK_CHANGED, held = true, jitter = 1.0))
+        assertEquals(StreamHealth.FIRST_WAIT_MS, StreamHealth.waitFor(16_000L, 120_000L, StreamHealth.Cause.NETWORK_CHANGED, held = false, jitter = 1.0))
+    }
+
+    @Test fun nothingHeldAFlappingNetworkBacksOffTo16SecondsWithJitter() {
+        var w = 0L
+        val seen = ArrayList<Long>()
+        repeat(8) { w = StreamHealth.waitFor(w, 20_000L, StreamHealth.Cause.NETWORK_CHANGED, held = false, jitter = 0.0); seen += w }
+        assertEquals(listOf(500L, 1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 16_000L, 16_000L), seen)
+        // Jitter: up to a fifth either way on waits of a second or more, never on the first half-second try.
+        assertEquals(500L, StreamHealth.waitFor(0L, null, StreamHealth.Cause.NETWORK_LOST, held = false, jitter = 1.0))
+        assertEquals(19_200L, StreamHealth.waitFor(16_000L, null, StreamHealth.Cause.NETWORK_LOST, held = false, jitter = 1.0))
+        assertEquals(12_800L, StreamHealth.waitFor(16_000L, null, StreamHealth.Cause.DNS, held = false, jitter = -1.0))
+        assertEquals(12_800L, StreamHealth.waitFor(16_000L, null, StreamHealth.Cause.DNS, held = false, jitter = -7.0), "jitter kept within -1..1")
+        // Other causes keep their own doubling to 30 s (spread, never past 30 s); a refused session waits the longest as before.
+        assertEquals(StreamHealth.MAX_WAIT_MS, StreamHealth.waitFor(30_000L, null, StreamHealth.Cause.SILENT, held = false, jitter = 1.0))
+        assertEquals(StreamHealth.MAX_WAIT_MS, StreamHealth.waitFor(0L, null, StreamHealth.Cause.TOKEN, held = true, jitter = 0.0))
+    }
 }

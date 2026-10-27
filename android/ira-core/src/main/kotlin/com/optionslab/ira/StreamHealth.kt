@@ -218,6 +218,30 @@ object StreamHealth {
         else -> (lastWait * 2).coerceAtMost(MAX_WAIT_MS)
     }
 
+    /**
+     * Battery audit, 27 Oct (38 drops on 26 Oct, 15 of them the phone's network changing; a flapping network meant a new
+     * connection, a TLS handshake and a fresh subscription every few seconds). The wait before the next try:
+     *  - anything [held] (a position or order open, paper or live, NSE or MCX): exactly [wait], as before - its prices come first;
+     *  - nothing held: the phone-offline waits double up to [IDLE_NETWORK_WAIT_MS] (not [NETWORK_WAIT_MS]), and every wait of a
+     *    second or more is spread by up to [JITTER] either way ([jitter] in -1..1), so tries do not line up with the network's
+     *    own retries. A connection that stayed up still starts again at once.
+     */
+    fun waitFor(lastWait: Long, upMs: Long?, cause: Cause, held: Boolean, jitter: Double): Long {
+        if (held) return wait(lastWait, upMs, cause)
+        val base = when {
+            cause in PHONE_OFFLINE && lastWait > 0 && !(upMs != null && upMs >= STABLE_MS) -> (lastWait * 2).coerceIn(FIRST_WAIT_MS, IDLE_NETWORK_WAIT_MS)
+            else -> wait(lastWait, upMs, cause)
+        }
+        if (base < 1_000L) return base
+        val j = jitter.coerceIn(-1.0, 1.0) * JITTER
+        return (base * (1.0 + j)).toLong().coerceIn(FIRST_WAIT_MS, MAX_WAIT_MS)
+    }
+
+    /** The longest wait between tries while the phone's network is down and nothing is held ([waitFor]). */
+    const val IDLE_NETWORK_WAIT_MS = 16_000L
+    /** [waitFor]'s spread with nothing held: up to a fifth either way. */
+    const val JITTER = 0.2
+
     /** The phone's own network down: no connection reached Zerodha. */
     private val PHONE_OFFLINE = setOf(Cause.DNS, Cause.NETWORK_LOST, Cause.NETWORK_CHANGED)
     /** The longest wait between tries while the phone's network is down ([wait]). */

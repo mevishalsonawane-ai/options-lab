@@ -1,9 +1,6 @@
 package com.optionslab.app.work
 
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.os.BatteryManager
 import com.optionslab.ira.BudgetRule
 import java.time.LocalDateTime
 
@@ -38,13 +35,11 @@ object BackgroundBudget {
     fun phone(c: Context? = appContext): BudgetRule.Phone {
         testPhone?.let { return it }
         if (c == null) return BudgetRule.Phone(null, false, null, false)
-        val i: Intent? = runCatching { c.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }.getOrNull()
-        val pct = i?.let { BudgetRule.pctOf(it.getIntExtra(BatteryManager.EXTRA_LEVEL, -1), it.getIntExtra(BatteryManager.EXTRA_SCALE, -1)) }
-        val status = i?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-        val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-        val temp = i?.let { BudgetRule.tempOf(it.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0)) }
-        val saver = runCatching { c.getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode == true }.getOrDefault(false)
-        return BudgetRule.Phone(pct, charging, temp, saver)
+        // 27 Oct (battery audit): through Battery's 30-second cache - the history keeper asked Android twice for each of its ~62
+        // pieces a run, at night while the app was cached ("excessive binder traffic", 25 Oct).
+        val r = Battery.reading(c)
+        val temp = r.tempTenths?.let { BudgetRule.tempOf(it) }
+        return BudgetRule.Phone(r.percent, r.charging, temp, Battery.powerSave(c))
     }
 
     /**

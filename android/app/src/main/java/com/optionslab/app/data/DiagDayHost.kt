@@ -100,6 +100,9 @@ object DiagDayHost {
         line("speed") { Speed.line() }
         line("stream") { KiteStream.statusLine(diary, day) }
         line("github") { GitHubSync.diagLine() }
+        // 27 Oct (battery audit, Boss: "the battery drained a lot today"): the day's "Battery today" line - which background
+        // loops ran and for how long (loop names, minutes and counts only), read for [day] itself like app_health.
+        line("battery") { com.optionslab.app.work.BatteryMeter.lineFor(day) }
         if (!GOLD) {
             line("order_speed") { OrderTiming.diagLine() }
             // Slippage is a premium difference a unit (points of premium), said with "₹" on the phone: written as points here so

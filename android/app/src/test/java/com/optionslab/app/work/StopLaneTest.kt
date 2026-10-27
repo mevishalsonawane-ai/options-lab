@@ -127,6 +127,8 @@ class StopLaneTest : RobolectricTest() {
     /** The lane reads no battery, saver, heat or memory state: with the saver on its looks stay 15 s apart. */
     @Test fun theBatterySaverNeverStretchesTheLook() = runTest {
         shadowOf(context.getSystemService(android.os.PowerManager::class.java)).setIsPowerSaveMode(true)
+        // 27 Oct: the saver is read at most every 30 s (Battery's cache): read afresh here.
+        Battery.resetForTest()
         assertTrue(WatchWorkers.saver(context))
         val now = clock()
         val ctl = StopLane.Control().apply { mode = StopLane.Mode.NSE }
