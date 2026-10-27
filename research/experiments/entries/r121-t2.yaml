@@ -1,0 +1,38 @@
+id: r121-t2
+title: 'R121 T2: overnight short iron fly, only the night before expiry: iron fly 15:15 -> 09:20 on the expiry morning'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R121_OVERNIGHT.md
+hypothesis: 'Option sellers earn the premium overnight (Muravyev & Ni 2020): an ATM iron fly sold at 15:15 and bought back
+  at 09:20 the next session (same expiry) makes money after real costs in every period, with a high win rate, inside Boss''s
+  limits.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): opt_<UND>_WEEK rolling nearest expiry
+  ATM+-10 1-minute (real strikes), index minutes; every session'
+period:
+  design: nights from d <= 31 Dec 2023
+  walk_forward: 2024-25
+  holdout: final 1 Jan - 19 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: none directional (the clock); strikes from the index''s ATM and its straddle (underlying)'
+model_or_rule: 'only the night before expiry: iron fly 15:15 -> 09:20 on the expiry morning (sell C/P at the ATM strike, buy
+  wings 2 straddles out, 1 lot each)'
+settings: research/hunt/r121_overnight/r121cfg.py, r121lib.py
+prereg: research/hunt/r121_overnight/PREREG.md
+variants_tried: 1
+results:
+  summary: 'only the night before expiry: iron fly 15:15 -> 09:20 on the expiry morning: design 373 trades, win 55.2%, mean
+    Rs -17 (gross +180, charges 197), worst night Rs -14,065, months <= -13k 2; wf 378 trades, win 54.5%, mean Rs -96 (gross
+    +103, charges 199), worst night Rs -16,607, months <= -13k 0; final 100 trades, win 68.0%, mean Rs +344 (gross +554, charges
+    210), worst night Rs -11,524, months <= -13k 1; final at 2x slippage Rs +306; bootstrap p 0.118; BH q 1. fail: design
+    mean <= 0; wf mean <= 0; bootstrap p 0.118; BH q 1; 1 final months <= -13k.'
+  costs: R25 liq fills x R54 late multiplier, R50 dated charges per order, stale legs repriced by Black-76 at their last IV
+    with calendar time to expiry
+holdout_read: true
+verdict: rejected
+notes: Loop round 1. Nothing to paper or live.

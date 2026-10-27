@@ -1,0 +1,39 @@
+id: r121-t1
+title: 'R121 T1: overnight short iron fly, every night of the same expiry: iron fly 15:15 -> 09:20'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R121_OVERNIGHT.md
+hypothesis: 'Option sellers earn the premium overnight (Muravyev & Ni 2020): an ATM iron fly sold at 15:15 and bought back
+  at 09:20 the next session (same expiry) makes money after real costs in every period, with a high win rate, inside Boss''s
+  limits.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): opt_<UND>_WEEK rolling nearest expiry
+  ATM+-10 1-minute (real strikes), index minutes; every session'
+period:
+  design: nights from d <= 31 Dec 2023
+  walk_forward: 2024-25
+  holdout: final 1 Jan - 19 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: none directional (the clock); strikes from the index''s ATM and its straddle (underlying)'
+model_or_rule: 'every night of the same expiry: iron fly 15:15 -> 09:20 (sell C/P at the ATM strike, buy wings 2 straddles
+  out, 1 lot each)'
+settings: research/hunt/r121_overnight/r121cfg.py, r121lib.py
+prereg: research/hunt/r121_overnight/PREREG.md
+variants_tried: 1
+results:
+  summary: 'every night of the same expiry: iron fly 15:15 -> 09:20: design 1370 trades, win 43.6%, mean Rs -129 (gross +77,
+    charges 206), worst night Rs -14,727, months <= -13k 12; wf 1905 trades, win 30.6%, mean Rs -498 (gross -256, charges
+    242), worst night Rs -26,611, months <= -13k 20; final 708 trades, win 35.7%, mean Rs -539 (gross -251, charges 288),
+    worst night Rs -23,335, months <= -13k 9; final at 2x slippage Rs -605; bootstrap p 1.000; BH q 1. fail: design mean <=
+    0; wf mean <= 0; final mean <= 0; final <= 0 without 3 best days; final mean <= 0 at 2x slippage; bootstrap p 1; BH q
+    1; 9 final months <= -13k; final drawdown >= 40k.'
+  costs: R25 liq fills x R54 late multiplier, R50 dated charges per order, stale legs repriced by Black-76 at their last IV
+    with calendar time to expiry
+holdout_read: true
+verdict: rejected
+notes: Loop round 1. Nothing to paper or live.
