@@ -90,7 +90,7 @@ notes. Every test gets an entry in `research/experiments/entries/r117-*.yaml`.
 
 ## 6. 27 Oct itself
 
-- If the 27 Oct prints become available (a renewed Dhan token, or Boss opening the recording on his own PC), `r117day.py`
+- If the 27 Oct prints become available (a renewed Dhan token, or Boss opening the recording on their own PC), `r117day.py`
   replays FT3's 24 marks for that day and prints, for each mark and for the named option, its close, distance in
   straddles and IV ratio, and which FT3 test failed; then every R117 exit on that option. Until then the write-up says
   plainly that 27 Oct could not be replayed.
