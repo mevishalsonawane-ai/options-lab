@@ -657,7 +657,11 @@ class Sandbox(
                 }
                 "LIMIT" -> {
                     marginPrice = price
-                    if (quoteLtp != null && ((action == "BUY" && quoteLtp <= price) || (action == "SELL" && quoteLtp >= price))) cached = prefetched
+                    // 27 Oct (research/LIQUIDITY_PAPER_CHECK_2026-10-27.md): with honest paper and a real book, a BUY LIMIT is
+                    // marketable when the ask is inside it, as at the exchange; the last trade may be stale.
+                    val far = bookFarSide(prefetched, action)
+                    val reach = far ?: quoteLtp
+                    if (quoteLtp != null && reach != null && ((action == "BUY" && reach <= price) || (action == "SELL" && reach >= price))) cached = prefetched
                 }
                 else -> {
                     marginPrice = trigger
@@ -727,8 +731,13 @@ class Sandbox(
                 if (cached != null && quoteLooksStale(cached)) cached = null
                 if (cached != null) {
                     val ltp = pyDec(cached.ltp)
+                    val far = if (priceType == "LIMIT") bookFarSide(cached, action) else null
                     if (priceType == "MARKET") processOrder(orderId, cached)
-                    // A marketable LIMIT fills at the LTP (price improvement), as does a triggered stop.
+                    // Honest paper, 27 Oct: a marketable BUY LIMIT that found a real book fills at the ask, like a MARKET,
+                    // never at a stale last trade plus the half-spread (26 Oct: FINNIFTY 24400 CE paid 256.90
+                    // when the minute traded 237.80-246.65).
+                    else if (far != null) executeOrder(orderId, far, usedBook = true, quote = cached)
+                    // Otherwise a marketable LIMIT fills at the LTP (price improvement), as does a triggered stop.
                     else if (ltp.signum() > 0) executeOrder(orderId, ltp, quote = cached)
                 }
             }
@@ -792,6 +801,17 @@ class Sandbox(
         }
 
         // ---- execution (execution_engine.ExecutionEngine) ---------------------
+
+        /**
+         * Honest paper only (27 Oct): the ask a marketable paper BUY LIMIT takes when the quote has a usable book
+         * ([PaperSpread.fromBook]); null when paper spreads are off, the order is a sale or there is no book. Only buys:
+         * every paper BUY LIMIT is an entry (an unfilled one is cancelled), while a SELL LIMIT can be an exit or a target,
+         * which keeps the last-trade rule so it is never held back by a wide bid (review, 27 Oct).
+         */
+        fun bookFarSide(q: Quote?, action: String): BigDecimal? {
+            if (!config.paperSpread || action != "BUY" || q == null || PaperSpread.fromBook(q.bid, q.ask) == null) return null
+            return pyDec(q.ask).takeIf { it.signum() > 0 }
+        }
 
         /**
          * _process_order. MARKET fills at the ask (buy) or bid (sell), falling

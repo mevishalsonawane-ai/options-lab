@@ -189,6 +189,55 @@ class PaperSpreadTest {
         assertEquals(d("200.20"), last(s).first)
     }
 
+    /** 27 Oct (research/LIQUIDITY_PAPER_CHECK_2026-10-27.md): a capped LIMIT buy that finds a real book pays the ask,
+     *  never a stale last trade plus the half-spread. 26 Oct 10:10 FINNIFTY 24400 CE: last 254.95 (a 10:09 print), book
+     *  about 244.80 / 248.50, cap 256.90; the old fill was 254.95 x 1.0075 -> 256.90, above the whole 10:10 minute. */
+    @Test fun aMarketableLimitWithABookPaysTheAskNotAStaleLast() {
+        var s = sb.newState(at("09:30"))
+        s = sb.place(s, req(fin, "BUY", 65, "LIMIT", price = 256.90), q(254.95, 244.80, 248.50), at("10:10")).state
+        // Filled at the ask; the spread is the ask's distance from the mid (246.65): 1.85 x 65 = 120.25.
+        assertEquals(d("248.50") to d("120.25"), last(s))
+        // A sale keeps the last-trade rule (a LIMIT sale can be an exit or a target, never held back by the bid):
+        // 250 x (1 - 0.0075) = 248.125, rounded against the seller to 248.10.
+        s = sb.place(s, req(fin, "SELL", 65, "LIMIT", price = 240.0), q(250.0, 244.80, 248.50), at("10:11")).state
+        assertEquals(d("248.10"), last(s).first)
+    }
+
+    @Test fun aLimitBelowTheAskRestsEvenWhenTheLastTradeIsInside() {
+        var s = sb.newState(at("09:30"))
+        // The last trade (240) is inside the limit but the ask (248.50) is not: at the exchange this order would rest.
+        val r = sb.place(s, req(fin, "BUY", 65, "LIMIT", price = 245.0), q(240.0, 244.80, 248.50), at("10:10"))
+        assertTrue(r.result.ok)
+        s = r.state
+        assertEquals("open", s.orders.last().status)
+        assertTrue(s.trades.isEmpty())
+        // A sell limit above the bid but under the last trade still fills (exits and targets are never held back),
+        // at the last trade less the half-spread, held to its limit: 250 x 0.9925 = 248.125 -> 248.10.
+        s = sb.place(s, req(fin, "SELL", 65, "LIMIT", price = 246.0), q(250.0, 244.80, 248.50), at("10:10")).state
+        assertEquals(d("248.10"), last(s).first)
+    }
+
+    @Test fun withNoUsableBookAMarketableLimitKeepsTheLastTradeRule() {
+        var s = sb.newState(at("09:30"))
+        // A crossed book is not a book: 200 x 1.0016 = 200.35 as before (FIN default would be 0.42%; BN 0.16%).
+        s = sb.place(s, req(bn, "BUY", 30, "LIMIT", price = 210.0), q(200.0, 201.0, 199.0), at("10:00")).state
+        assertEquals(d("200.35"), last(s).first)
+        // Only one side of the book: the same.
+        s = sb.place(s, req(bn, "BUY", 30, "LIMIT", price = 210.0), q(200.0, 0.0, 200.5), at("10:00")).state
+        assertEquals(d("200.35"), last(s).first)
+        // A stale quote at placement still leaves the limit open.
+        val stale = sb.place(sb.newState(at("09:30")), req(bn, "BUY", 30, "LIMIT", price = 210.0),
+            Quote(200.0, 199.0, 201.0, high = 190.0, low = 180.0), at("10:00")).state
+        assertEquals("open", stale.orders.last().status)
+    }
+
+    @Test fun withPaperSpreadsOffABookChangesNothing() {
+        val plain = Sandbox(honest.copy(paperSpread = false), master)
+        var s = plain.newState(at("09:30"))
+        s = plain.place(s, req(fin, "BUY", 65, "LIMIT", price = 256.90), q(254.95, 244.80, 248.50), at("10:10")).state
+        assertEquals(d("254.95"), last(s).first, "the desktop's price improvement to the LTP")
+    }
+
     @Test fun heldOrdersWaitAndTheSpreadSurvivesTheStore() {
         var s = sb.newState(at("09:30"))
         s = sb.place(s, req(bn, "BUY", 30, "LIMIT", price = 190.0), q(200.0), at("10:00")).state
