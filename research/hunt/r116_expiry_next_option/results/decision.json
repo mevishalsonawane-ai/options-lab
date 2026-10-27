@@ -1,0 +1,114 @@
+{
+ "_m": {
+  "r116": 8,
+  "prior_all": 9300047,
+  "m_all": 9300055
+ },
+ "NR72": {
+  "passed": false,
+  "fails": [
+   "design: net not above skipping (Rs -41,872)",
+   "wf: net not above skipping (Rs -30,327)",
+   "final: net not above skipping (Rs -3,251)",
+   "only 29 final trades (< 40)",
+   "BH q 1 > 0.1"
+  ],
+  "decidable": false,
+  "p": 0.7221389305347327,
+  "q_all": 1.0,
+  "q_own": 1.0
+ },
+ "NR51": {
+  "passed": false,
+  "fails": [
+   "design: net not above skipping (Rs -31,128)",
+   "wf: net not above skipping (Rs -28,044)",
+   "final: net not above skipping (Rs -7,983)",
+   "only 34 final trades (< 40)",
+   "BH q 1 > 0.1"
+  ],
+  "decidable": false,
+  "p": 0.8865567216391804,
+  "q_all": 1.0,
+  "q_own": 1.0
+ },
+ "NR52": {
+  "passed": false,
+  "fails": [
+   "design: net not above skipping (Rs -17,092)",
+   "wf: net not above skipping (Rs -15,937)",
+   "final: net not above skipping (Rs -10,191)",
+   "only 8 final trades (< 40)",
+   "BH q 1 > 0.1"
+  ],
+  "decidable": false,
+  "p": 0.9890054972513743,
+  "q_all": 1.0,
+  "q_own": 1.0
+ },
+ "NLIQ": {
+  "passed": false,
+  "fails": [
+   "design: net not above skipping (Rs -3,577)",
+   "wf: net not above skipping (Rs -4,629)",
+   "final: no trades (no data)",
+   "only 0 final trades (< 40)",
+   "BH q 1 > 0.1"
+  ],
+  "decidable": false,
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_own": 1.0
+ },
+ "SR72": {
+  "passed": false,
+  "fails": [
+   "design: net not above skipping (Rs -89,574)",
+   "wf: net not above skipping (Rs -94,103)",
+   "final: net not above skipping (Rs -2,905)",
+   "BH q 1 > 0.1"
+  ],
+  "decidable": true,
+  "p": 0.5037481259370314,
+  "q_all": 1.0,
+  "q_own": 1.0
+ },
+ "SR51": {
+  "passed": false,
+  "fails": [
+   "design: net not above skipping (Rs -114,833)",
+   "wf: net not above skipping (Rs -101,549)",
+   "final: net not above skipping (Rs -2,301)",
+   "BH q 1 > 0.1"
+  ],
+  "decidable": true,
+  "p": 0.33833083458270863,
+  "q_all": 1.0,
+  "q_own": 1.0
+ },
+ "SR52": {
+  "passed": false,
+  "fails": [
+   "only 38 final trades (< 40)",
+   "BH q 1 > 0.1"
+  ],
+  "decidable": false,
+  "p": 0.004997501249375313,
+  "q_all": 1.0,
+  "q_own": 0.04
+ },
+ "SLIQ": {
+  "passed": false,
+  "fails": [
+   "design: net not above skipping (Rs -19,904)",
+   "wf: net not above skipping (Rs -14,552)",
+   "final: net not above skipping (Rs -9,134)",
+   "only 16 final trades (< 40)",
+   "BH q 1 > 0.1"
+  ],
+  "decidable": false,
+  "p": 0.8915542228885557,
+  "q_all": 1.0,
+  "q_own": 1.0
+ }
+}

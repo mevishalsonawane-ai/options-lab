@@ -1,0 +1,37 @@
+id: r116-sr51
+title: 'R116 SR51: R51 Donchian 20 + Supertrend, expiry days, the same-day (expiring) 1-ITM option'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R116_EXPIRY_NEXT_OPTION.md
+hypothesis: 'On its index''s own expiry day (skipped today), R51 Donchian 20 + Supertrend''s unchanged index signal buying
+  the same-day (expiring) 1-ITM option with today''s exits makes money: net > 0 in design, walk-forward and final, >= 40 final
+  trades, beats a random-entry twin at BH q <= 0.10 over every logged test.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK + MONTH) copied 27 Oct 2026;
+  research-data release nifty_prev / nifty_year / banknifty_*_year_wide (next expiry); R51 Amendment A clean stores to 13
+  Oct 2026
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R116 (expiry days never read by the arms' studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s own bars (R72 / R51 5-minute, R52 the 09:15-09:19 bar against yesterday''s value area, Liquidity
+  its book bars); only the option bought changes, stops / locks on its premium'
+model_or_rule: 'SR51: R51 Donchian 20 + Supertrend trades its expiry days, buying the same-day (expiring) 1-ITM option'
+settings: research/hunt/r116_expiry_next_option/r116cfg.py TESTS
+prereg: research/hunt/r116_expiry_next_option/PREREG.md
+variants_tried: 1
+results:
+  summary: 'R51 Donchian 20 + Supertrend on its index''s expiry days buying the same-day (expiring) 1-ITM option, against
+    skipping (Rs 0). design 544 trades, win 31%, net Rs -114,833, worst day Rs -15,353; wf 409 trades, win 31%, net Rs -101,549,
+    worst day Rs -15,353; final 204 trades, win 38%, net Rs -2,301, worst day Rs -7,248. Final random-entry twin p 0.338;
+    BH q 1 over 9,300,055 tests (q 1 within R116). Fails: design: net not above skipping (Rs -114,833); wf: net not above
+    skipping (Rs -101,549); final: net not above skipping (Rs -2,301); BH q 1 > 0.1.'
+  costs: dated Zerodha / exchange charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Nothing changes live or on paper; expiry days stay skipped.
