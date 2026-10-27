@@ -329,6 +329,27 @@ object LiveCheck {
         "Live check (last run $stamp): " + l.substringAfter("[$AREA] $SUMMARY").trim()
     }
 
+    /**
+     * 27 Oct (the 23 Oct file said only "Live check at 09:20: 1 failed"): the failed steps by name, "Price stream · First tick;
+     * Paper · Round trip" (up to [max], then "and N more"); null when none failed.
+     */
+    fun failedNames(steps: List<Step>, max: Int = 3): String? {
+        val bad = steps.filter { it.verdict == Verdict.FAIL }
+        if (bad.isEmpty()) return null
+        return bad.take(max).joinToString("; ") { "${it.group.label} · ${it.name}" } + if (bad.size > max) "; and ${bad.size - max} more" else ""
+    }
+
+    /**
+     * The last run's failed steps from the diary's [lines] (the "FAILED ..." lines between the last summary and the one before
+     * it), each with its reason; empty when the last run had none or there is no run.
+     */
+    fun lastFailures(lines: List<String>): List<String> {
+        val end = lines.indexOfLast { "[$AREA] $SUMMARY" in it }
+        if (end < 0) return emptyList()
+        val start = lines.subList(0, end).indexOfLast { "[$AREA] $SUMMARY" in it } + 1
+        return lines.subList(start, end).filter { "[$AREA] FAILED " in it }.map { it.substringAfter("[$AREA] FAILED ").trim() }
+    }
+
     // ---- 09:20 on a trading day, behind its switch (off by default) -----------------------------------------------------
 
     /** The automatic run's window: from 09:20, for 15 minutes (a phone asleep at 09:20 still runs it once soon after). */

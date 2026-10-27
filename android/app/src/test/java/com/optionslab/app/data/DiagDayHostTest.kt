@@ -108,4 +108,32 @@ class DiagDayHostTest : RobolectricTest() {
         assertEquals(today.minusDays(2).toString(), r["day"])
         assertEquals(emptyList<Any?>(), r["decisions"])
     }
+
+    /**
+     * 27 Oct (the 23-27 Oct files said "4 stop-check gaps", "1 failed", "2 serious" and nothing more): the day's file now says
+     * why the stops were looked at late, which live-check step failed and why, and how the app last ended.
+     */
+    @Test fun theDaysFileSaysWhyTheStopsWereLateWhichCheckFailedAndHowTheAppLastEnded() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        WatchClock.resetForTest(); LiveSelfTest.resetForTest()
+        try {
+            val t0 = System.currentTimeMillis()
+            WatchClock.looked(true, t0, up = 0L); WatchClock.lookEnded(t0 + 1_000L)
+            // 40 s apart on the wall clock, 10 s awake: the phone slept 30 s.
+            WatchClock.looked(true, t0 + 40_000L, up = 10_000L)
+            Diag.record(com.optionslab.ira.LiveCheck.AREA, "FAILED Paper · Round trip: no fill in 10 s (10004 ms)")
+            Diag.record(com.optionslab.ira.LiveCheck.AREA, com.optionslab.ira.LiveCheck.SUMMARY + "20 of 21 passed, 1 failed")
+            Diag.flush()
+            val lines = (report()["health"] as Map<*, *>)["lines"] as Map<*, *>
+            assertTrue(lines.toString(), lines["stop_gaps"].toString().contains("1 of 1 gaps while holding were over 16 s"))
+            assertTrue(lines.toString(), lines["stop_gap_causes"].toString().contains("phone asleep 1"))
+            assertTrue(lines.toString(), lines["stop_gap_causes"].toString().contains("(phone asleep 30 s)"))
+            assertTrue(lines.toString(), lines["live_check"].toString().contains("Failed: Paper · Round trip: no fill in 10 s"))
+            assertTrue(lines.keys.toString(), "process_end" in lines.keys && "quiet_stop_gaps" in lines.keys)
+            // No serious flaw on a fresh phone: no line for it.
+            assertFalse(lines.keys.toString(), "order_review_serious" in lines.keys)
+        } finally {
+            WatchClock.resetForTest(); LiveSelfTest.resetForTest()
+        }
+    }
 }

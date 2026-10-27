@@ -195,6 +195,19 @@ object OrderReview {
         val cost: Double get() = if (category.evidenceOnly) 0.0 else rupees.coerceAtLeast(0.0)
     }
 
+    /**
+     * 27 Oct (the 27 Oct diagnostics counted "2 serious" flaws but did not say what they were): the serious flaws in words for
+     * the daily file, "Serious: Liquidity (paper) · order rejected: <evidence>; ..." (up to [max]); no order id, no rupee figure
+     * of its own (the file's scrub also strips any in the evidence). Null when there is none.
+     */
+    fun seriousLine(flaws: List<Flaw>, max: Int = 3): String? {
+        val high = flaws.filter { it.severity == Severity.HIGH }
+        if (high.isEmpty()) return null
+        return "Serious flaws: " + high.take(max).joinToString("; ") {
+            "${it.strategy} (${it.venue.word}) · ${it.category.words}: ${it.evidence}"
+        } + if (high.size > max) "; and ${high.size - max} more" else ""
+    }
+
     /** One strategy's day on one account: its orders and trades, wins and losses, net after real costs, its flaws. */
     data class Summary(
         val strategy: String, val venue: Venue, val orders: Int, val trades: Int, val wins: Int, val losses: Int,

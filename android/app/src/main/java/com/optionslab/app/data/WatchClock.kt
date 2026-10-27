@@ -32,10 +32,10 @@ object WatchClock {
      * day and logged (at most once in 5 minutes, with how many since); one of 30 s or more is also shown in the app. Memory and
      * the diary's own queue only: never the order or tick path, never a wait. Returns the drift, if any.
      */
-    fun looked(held: Boolean, now: Long = System.currentTimeMillis()): com.optionslab.ira.StopCadence.Gap? {
+    fun looked(held: Boolean, now: Long = System.currentTimeMillis(), up: Long = awake()): com.optionslab.ira.StopCadence.Gap? {
         lookAt = now
         val day = runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() }
-        val g = drift.look(now, held, day) ?: return null
+        val g = drift.look(now, held, day, up) ?: return null
         unlogged++
         if (g.alert || now - loggedAt >= LOG_EVERY_MS) {
             val n = unlogged
@@ -46,11 +46,24 @@ object WatchClock {
         return g
     }
 
+    /**
+     * 27 Oct: the look that started last has ended (its length is read at the next gap, to tell a slow look from a late start).
+     * Memory only.
+     */
+    fun lookEnded(now: Long = System.currentTimeMillis()) { drift.ended(now) }
+
+    /** The phone's awake clock (stops while the phone sleeps); -1 when it cannot be read. */
+    private fun awake(): Long = runCatching { android.os.SystemClock.uptimeMillis() }.getOrDefault(-1L)
+
     /** When the next 15-second look is due: 15 s after the last one STARTED ([com.optionslab.ira.StopCadence.windowEnd]). */
     fun windowEnd(now: Long = System.currentTimeMillis()): Long = com.optionslab.ira.StopCadence.windowEnd(lookAt, now)
 
     /** The diagnostics' line: today's gaps over 16 s while holding. */
-    fun driftLine(): String = drift.line(runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() })
+    fun driftLine(day: java.time.LocalDate = runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() }): String = drift.line(day)
+
+    /** 27 Oct: the day's gaps by cause and the worst few with their times (null when there was none). */
+    fun gapsLine(day: java.time.LocalDate = runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() }): String? =
+        drift.detail(day, com.optionslab.engine.IST)
 
     private const val LOG_EVERY_MS = 5 * 60_000L
 

@@ -100,12 +100,20 @@ object DiagDayHost {
         line("speed") { Speed.line() }
         line("stream") { KiteStream.statusLine(diary, day) }
         line("github") { GitHubSync.diagLine() }
+        line("process_end") { com.optionslab.app.work.ProcessExits.diagLine() }
         if (!GOLD) {
             line("order_speed") { OrderTiming.diagLine() }
             // Slippage is a premium difference a unit (points of premium), said with "₹" on the phone: written as points here so
             // the final scrub's rupee rule leaves it, and no rupee figure is in the file.
             line("slippage") { FillSlippage.diagLine().replace(" ₹ (", " pts (") }
             line("order_review") { OrderReviewHost.diagLine() }
+            // 27 Oct (the 23-27 Oct files): what the serious flaws were, which live-check steps failed, why the stops were
+            // looked at late, and how the app last ended (a restart in the day). Each only when there is something to say.
+            OrderReviewHost.seriousLine()?.let { l -> line("order_review_serious") { l } }
+            line("live_check") { LiveSelfTest.dayLine(diary) }
+            line("stop_gaps") { WatchClock.driftLine(day) }
+            runCatching { WatchClock.gapsLine(day) }.getOrNull()?.let { l -> line("stop_gap_causes") { l } }
+            line("quiet_stop_gaps") { com.optionslab.app.work.StopLane.quietLine() }
             line("order_flow") { FlowGate.diagLine() }
             line("zerodha_sync") { ZerodhaSync.line() }
         }

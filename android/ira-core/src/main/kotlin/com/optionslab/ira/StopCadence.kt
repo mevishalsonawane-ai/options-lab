@@ -163,40 +163,78 @@ object StopCadence {
         }
     }
 
-    /** One drift: the gap and when the late look started. */
-    data class Gap(val gapMs: Long, val atMs: Long) {
+    /**
+     * One drift: the gap and when the late look started; 27 Oct: how long the phone slept in it ([sleptMs]) and how long the
+     * look before it took ([prevTookMs]), each -1 when unknown.
+     */
+    data class Gap(val gapMs: Long, val atMs: Long, val sleptMs: Long = -1L, val prevTookMs: Long = -1L) {
         val alert: Boolean get() = gapMs >= ALERT_MS
+
+        /** The likely cause: the phone slept 5 s or more in it; else the look before ran past 15 s; else the lane started late. */
+        val cause: Cause get() = when {
+            sleptMs >= SLEEP_MS -> Cause.ASLEEP
+            prevTookMs > WINDOW_MS -> Cause.SLOW_LOOK
+            sleptMs >= 0L || prevTookMs >= 0L -> Cause.LATE
+            else -> Cause.UNKNOWN
+        }
+
+        /** The cause in words, with its seconds. */
+        fun why(): String = when (cause) {
+            Cause.ASLEEP -> "phone asleep ${sleptMs / 1000} s"
+            Cause.SLOW_LOOK -> "the look before took ${prevTookMs / 1000} s"
+            Cause.LATE -> "late start, phone awake" + if (prevTookMs >= 0L) ", last look ${prevTookMs / 1000} s" else ""
+            Cause.UNKNOWN -> "cause unknown"
+        }
     }
 
     /** The day's drifts, in memory (a restart starts again at none). Thread-safe. */
     class Drift {
         private var lastMs = 0L
         private var lastHeld = false
+        private var lastUp = -1L
+        private var lastEnd = 0L
         private var day: LocalDate? = null
         private var count = 0
         private var looks = 0
         private var worst = 0L
+        private val gaps = ArrayList<Gap>()
 
         /**
          * A look at the stops started at [startMs] on [today] with something [held]: the drift when the gap since the last look
          * (also held, the same day) is over [DRIFT_MS], else null. A look with nothing held starts the count again.
+         * 27 Oct (the 23-27 Oct diagnostics: 27 gaps, no cause known): [upMs] is the phone's awake clock at the start
+         * (SystemClock.uptimeMillis, which stops while the phone sleeps; -1 when unknown), so a gap names how long the phone
+         * slept in it; [ended] gives how long the last look took.
          */
-        @Synchronized fun look(startMs: Long, held: Boolean, today: LocalDate): Gap? {
-            if (day != today) { day = today; count = 0; looks = 0; worst = 0L; lastMs = 0L; lastHeld = false }
+        @Synchronized fun look(startMs: Long, held: Boolean, today: LocalDate, upMs: Long = -1L): Gap? {
+            if (day != today) { day = today; count = 0; looks = 0; worst = 0L; lastMs = 0L; lastHeld = false; lastUp = -1L; lastEnd = 0L; gaps.clear() }
             val prev = lastMs
+            val prevUp = lastUp
+            val prevEnd = lastEnd
             val both = held && lastHeld && prev > 0L && startMs >= prev
-            lastMs = startMs; lastHeld = held
+            lastMs = startMs; lastHeld = held; lastUp = upMs
             if (!both) return null
             looks++
             val gap = startMs - prev
             if (gap <= DRIFT_MS) return null
             count++
             if (gap > worst) worst = gap
-            return Gap(gap, startMs)
+            val slept = if (upMs >= 0L && prevUp >= 0L && upMs >= prevUp) (gap - (upMs - prevUp)).coerceAtLeast(0L) else -1L
+            val took = if (prevEnd >= prev && prevEnd <= startMs) prevEnd - prev else -1L
+            val g = Gap(gap, startMs, slept, took)
+            gaps += g
+            if (gaps.size > KEEP) gaps.removeAt(0)
+            return g
         }
+
+        /** The look that started last ended at [endMs] (how long it took is read at the next gap). */
+        @Synchronized fun ended(endMs: Long) { if (endMs >= lastMs) lastEnd = endMs }
 
         /** The day's count, the looks measured and the worst gap. */
         @Synchronized fun today(today: LocalDate): Triple<Int, Int, Long> = if (day == today) Triple(count, looks, worst) else Triple(0, 0, 0L)
+
+        /** The day's last [KEEP] gaps over 16 s, oldest first. */
+        @Synchronized fun gaps(today: LocalDate): List<Gap> = if (day == today) gaps.toList() else emptyList()
 
         /** The diagnostics' line. */
         fun line(today: LocalDate): String {
@@ -205,7 +243,36 @@ object StopCadence {
             else if (n == 0) "Stop-check gaps: all $of gaps while holding were 16 s or less today."
             else "Stop-check gaps: $n of $of gaps while holding were over 16 s today (worst ${w / 1000} s)."
         }
+
+        /**
+         * 27 Oct: the gaps' causes for the diagnostics, "Stop-check gap causes: phone asleep 3, slow look 1. Worst: 10:14:03 41 s
+         * (phone asleep 35 s); ..." (the [WORST] longest, by time; under the file's 300-character cut); null when there was no gap. Times in [zone].
+         */
+        fun detail(today: LocalDate, zone: java.time.ZoneId): String? {
+            val g = gaps(today)
+            if (g.isEmpty()) return null
+            val by = g.groupingBy { it.cause }.eachCount()
+            val causes = Cause.values().filter { (by[it] ?: 0) > 0 }.joinToString(", ") { "${it.words} ${by[it]}" }
+            val fmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
+            val worst = g.sortedByDescending { it.gapMs }.take(WORST).sortedBy { it.atMs }.joinToString("; ") {
+                "${java.time.Instant.ofEpochMilli(it.atMs).atZone(zone).format(fmt)} ${it.gapMs / 1000} s (${it.why()})"
+            }
+            val of = if (g.size < today(today).first) " (the last ${g.size})" else ""
+            return "Stop-check gap causes$of: $causes. Worst: $worst."
+        }
     }
+
+    /** Why a look came late (27 Oct). */
+    enum class Cause(val words: String) {
+        ASLEEP("phone asleep"), SLOW_LOOK("slow look"), LATE("late start"), UNKNOWN("unknown")
+    }
+
+    /** A gap counts as the phone's sleep when the phone slept this long in it. */
+    const val SLEEP_MS = 5_000L
+    /** Gaps kept for the day's causes (memory only). */
+    const val KEEP = 60
+    /** Gaps named in the diagnostics' detail. */
+    const val WORST = 3
 
     /** What the app shows for a gap of 30 s or more: the same words each time, so one banner stands for them all. */
     const val ALERT_WORDS = "The stops were looked at 30 s or more apart while a position was held (the promise is 15 s). " +
@@ -213,6 +280,7 @@ object StopCadence {
 
     /** What the log says for one drift. */
     fun words(g: Gap): String = "The stops were looked at ${g.gapMs / 1000} s apart while a position was held (the promise is 15 s)." +
+        (if (g.cause != Cause.UNKNOWN) " Cause: ${g.why()}." else "") +
         if (g.alert) " Something held the watch back: keep the app open, or check the battery settings." else ""
 }
 

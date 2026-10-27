@@ -533,6 +533,9 @@ object OrderReviewHost {
             "${b.requests.size} lab requests (${testing(b)} testing), ${b.logs.size} days kept"
     }
 
+    /** 27 Oct: the last review's serious flaws in words, for the daily diagnostics file (null: none). */
+    fun seriousLine(): String? = _book.value.last?.let { OrderReview.seriousLine(it.flaws) }
+
     /**
      * 26 Oct (Erase everything): the kept review (Boss's orders and trades, their flaws, the lab requests) forgotten and its file
      * deleted, under the same lock as its saves; a review in flight sees [wipeGen] changed and keeps nothing. Never the vault.

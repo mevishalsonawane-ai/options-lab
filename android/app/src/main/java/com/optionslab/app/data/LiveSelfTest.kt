@@ -682,7 +682,8 @@ object LiveSelfTest {
             val out = runCatching { run(auto = true) }.getOrDefault(emptyList())
             val bad = out.count { it.verdict == LiveCheck.Verdict.FAIL }
             if (bad > 0) runCatching {
-                com.optionslab.app.work.Alerts.post("Live check at 09:20: $bad failed. More → Zerodha → Live check shows which.",
+                // 27 Oct: the failed steps named (the 23 Oct file could not say which one failed).
+                com.optionslab.app.work.Alerts.post("Live check at 09:20: $bad failed (${LiveCheck.failedNames(out)}). More → Zerodha → Live check.",
                     com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true)
             }
         }
@@ -693,6 +694,17 @@ object LiveSelfTest {
         last.takeIf { it.isNotEmpty() }?.let { LiveCheck.answer(it) }
             ?: LiveCheck.lastSummary(lines)?.let { "$it, Boss." }
             ?: "The live check has not run yet, Boss: say \"run the live check\" in market hours."
+
+    /**
+     * 27 Oct: the daily diagnostics file's line: [diagLine], then the failed steps with their reasons (this session's run, else
+     * the diary's last run), at most three.
+     */
+    fun dayLine(lines: List<String>): String {
+        val head = diagLine(lines)
+        val fails = last.takeIf { it.isNotEmpty() }?.filter { it.verdict == LiveCheck.Verdict.FAIL }?.map { "${it.group.label} · ${it.name}: ${it.detail}" }
+            ?: LiveCheck.lastFailures(lines)
+        return if (fails.isEmpty()) head else "$head. Failed: " + fails.take(3).joinToString("; ") + if (fails.size > 3) "; and ${fails.size - 3} more" else ""
+    }
 
     /** The diagnostics' line: the last run's summary (this run's, else the diary's). */
     fun diagLine(lines: List<String>): String =
