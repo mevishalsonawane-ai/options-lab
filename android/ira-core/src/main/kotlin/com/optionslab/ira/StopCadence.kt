@@ -170,10 +170,13 @@ object StopCadence {
     data class Gap(val gapMs: Long, val atMs: Long, val sleptMs: Long = -1L, val prevTookMs: Long = -1L) {
         val alert: Boolean get() = gapMs >= ALERT_MS
 
-        /** The likely cause: the phone slept 5 s or more in it; else the look before ran past 15 s; else the lane started late. */
+        /**
+         * The likely cause: the phone slept 5 s or more in it; else the look before was long enough by itself to push the next
+         * past 16 s (the next waits [MIN_GAP_MS] at least after it, so over 11 s); else the lane started late.
+         */
         val cause: Cause get() = when {
             sleptMs >= SLEEP_MS -> Cause.ASLEEP
-            prevTookMs > WINDOW_MS -> Cause.SLOW_LOOK
+            prevTookMs >= 0L && prevTookMs + MIN_GAP_MS > DRIFT_MS -> Cause.SLOW_LOOK
             sleptMs >= 0L || prevTookMs >= 0L -> Cause.LATE
             else -> Cause.UNKNOWN
         }
@@ -227,8 +230,11 @@ object StopCadence {
             return g
         }
 
-        /** The look that started last ended at [endMs] (how long it took is read at the next gap). */
-        @Synchronized fun ended(endMs: Long) { if (endMs >= lastMs) lastEnd = endMs }
+        /**
+         * The look that started at [startMs] ended at [endMs] (how long it took is read at the next gap). Only the latest look's
+         * end is kept: a slower look that overlapped it (the MCX pass beside the stop lane) is not booked as its end.
+         */
+        @Synchronized fun ended(startMs: Long, endMs: Long) { if (startMs == lastMs && endMs >= startMs) lastEnd = endMs }
 
         /** The day's count, the looks measured and the worst gap. */
         @Synchronized fun today(today: LocalDate): Triple<Int, Int, Long> = if (day == today) Triple(count, looks, worst) else Triple(0, 0, 0L)
@@ -248,7 +254,7 @@ object StopCadence {
          * 27 Oct: the gaps' causes for the diagnostics, "Stop-check gap causes: phone asleep 3, slow look 1. Worst: 10:14:03 41 s
          * (phone asleep 35 s); ..." (the [WORST] longest, by time; under the file's 300-character cut); null when there was no gap. Times in [zone].
          */
-        fun detail(today: LocalDate, zone: java.time.ZoneId): String? {
+        @Synchronized fun detail(today: LocalDate, zone: java.time.ZoneId): String? {
             val g = gaps(today)
             if (g.isEmpty()) return null
             val by = g.groupingBy { it.cause }.eachCount()

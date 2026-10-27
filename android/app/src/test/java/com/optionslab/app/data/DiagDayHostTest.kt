@@ -118,7 +118,7 @@ class DiagDayHostTest : RobolectricTest() {
         WatchClock.resetForTest(); LiveSelfTest.resetForTest()
         try {
             val t0 = System.currentTimeMillis()
-            WatchClock.looked(true, t0, up = 0L); WatchClock.lookEnded(t0 + 1_000L)
+            WatchClock.looked(true, t0, up = 0L); WatchClock.lookEnded(t0, t0 + 1_000L)
             // 40 s apart on the wall clock, 10 s awake: the phone slept 30 s.
             WatchClock.looked(true, t0 + 40_000L, up = 10_000L)
             Diag.record(com.optionslab.ira.LiveCheck.AREA, "FAILED Paper · Round trip: no fill in 10 s (10004 ms)")

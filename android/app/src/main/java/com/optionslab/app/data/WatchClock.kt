@@ -47,10 +47,10 @@ object WatchClock {
     }
 
     /**
-     * 27 Oct: the look that started last has ended (its length is read at the next gap, to tell a slow look from a late start).
+     * 27 Oct: the look that started at [startedAt] has ended (its length is read at the next gap, to tell a slow look from a late start).
      * Memory only.
      */
-    fun lookEnded(now: Long = System.currentTimeMillis()) { drift.ended(now) }
+    fun lookEnded(startedAt: Long, now: Long = System.currentTimeMillis()) { drift.ended(startedAt, now) }
 
     /** The phone's awake clock (stops while the phone sleeps); -1 when it cannot be read. */
     private fun awake(): Long = runCatching { android.os.SystemClock.uptimeMillis() }.getOrDefault(-1L)

@@ -1744,7 +1744,7 @@ class WatchService : Service() {
         lane.mcxPassAt = started
         lane.mode = StopLane.Mode.MCX
         Heartbeat.beat(this)
-        val t = try { Tasks.mcxTick(this, AppSettings.load()) } finally { runCatching { com.optionslab.app.data.WatchClock.lookEnded() } }
+        val t = try { Tasks.mcxTick(this, AppSettings.load()) } finally { runCatching { com.optionslab.app.data.WatchClock.lookEnded(started) } }
         // 18 Oct, review: a live MCX position kept as held with no Zerodha login to confirm it: Boss told once a day.
         runCatching { com.optionslab.app.data.McxMarket.loginNoticeIfDue(this) }
         Tasks.publishWatch(Tasks.LiveState(true, t.title, -1f, System.currentTimeMillis()))

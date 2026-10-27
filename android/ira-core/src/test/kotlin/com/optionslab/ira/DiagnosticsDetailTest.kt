@@ -25,7 +25,7 @@ class DiagnosticsDetailTest {
     @Test fun aGapWhileThePhoneSleptIsNamedSo() {
         val d = StopCadence.Drift()
         d.look(t0, true, day, upMs = 1_000_000L)
-        d.ended(t0 + 2_000L)
+        d.ended(t0, t0 + 2_000L)
         // 40 s on the wall clock, only 10 s on the awake clock: the phone slept 30 s.
         val g = assertNotNull(d.look(t0 + 40_000L, true, day, upMs = 1_010_000L))
         assertEquals(30_000L, g.sleptMs)
@@ -38,7 +38,7 @@ class DiagnosticsDetailTest {
     @Test fun aGapAfterASlowLookIsNamedSo() {
         val d = StopCadence.Drift()
         d.look(t0, true, day, upMs = 0L)
-        d.ended(t0 + 21_000L)
+        d.ended(t0, t0 + 21_000L)
         val g = assertNotNull(d.look(t0 + 22_000L, true, day, upMs = 22_000L))
         assertEquals(0L, g.sleptMs)
         assertEquals(StopCadence.Cause.SLOW_LOOK, g.cause)
@@ -48,11 +48,28 @@ class DiagnosticsDetailTest {
     @Test fun anAwakePhoneAndAQuickLookMeanTheLaneStartedLate() {
         val d = StopCadence.Drift()
         d.look(t0, true, day, upMs = 0L)
-        d.ended(t0 + 1_000L)
+        d.ended(t0, t0 + 1_000L)
         val g = assertNotNull(d.look(t0 + 25_000L, true, day, upMs = 24_000L))
         assertEquals(1_000L, g.sleptMs, "1 s of sleep is under the 5 s mark")
         assertEquals(StopCadence.Cause.LATE, g.cause)
         assertEquals("late start, phone awake, last look 1 s", g.why())
+    }
+
+    /** Review: a 12 s look already puts the next one 17 s later (it waits 5 s at least after a look ends): a slow look. */
+    @Test fun aLookOver11sIsASlowLookAndAnOverlappingLooksEndIsNotBooked() {
+        val d = StopCadence.Drift()
+        d.look(t0, true, day, upMs = 0L)
+        d.ended(t0, t0 + 12_000L)
+        val g = assertNotNull(d.look(t0 + 17_000L, true, day, upMs = 17_000L))
+        assertEquals(StopCadence.Cause.SLOW_LOOK, g.cause)
+        val d2 = StopCadence.Drift()
+        d2.look(t0, true, day, upMs = 0L)              // the MCX pass starts
+        d2.look(t0 + 15_000L, true, day, upMs = 15_000L) // the lane looks beside it
+        d2.ended(t0 + 15_000L, t0 + 15_500L)           // the lane's look ends
+        d2.ended(t0, t0 + 30_000L)                     // the slow pass ends later: not the latest look, not booked
+        val g2 = assertNotNull(d2.look(t0 + 33_000L, true, day, upMs = 33_000L))
+        assertEquals(500L, g2.prevTookMs)
+        assertEquals(StopCadence.Cause.LATE, g2.cause)
     }
 
     @Test fun noClocksMeansUnknownAndTheOldWordsStay() {
@@ -67,7 +84,7 @@ class DiagnosticsDetailTest {
     @Test fun anEndBeforeTheLastStartOrAClockThatWentBackIsNotUsed() {
         val d = StopCadence.Drift()
         d.look(t0, true, day, upMs = 50_000L)
-        d.ended(t0 - 1_000L)                                       // older than the look: ignored
+        d.ended(t0, t0 - 1_000L)                                   // ends before it started: ignored
         val g = assertNotNull(d.look(t0 + 20_000L, true, day, upMs = 10_000L)) // awake clock went back (a reboot)
         assertEquals(-1L, g.sleptMs); assertEquals(-1L, g.prevTookMs)
         assertEquals(StopCadence.Cause.UNKNOWN, g.cause)
@@ -79,7 +96,7 @@ class DiagnosticsDetailTest {
         var t = t0; var up = 0L
         fun look(wall: Long, awake: Long, took: Long = 1_000L) {
             t += wall; up += awake
-            d.look(t, true, day, up); d.ended(t + took)
+            d.look(t, true, day, up); d.ended(t, t + took)
         }
         look(0L, 0L)
         look(40_000L, 10_000L)            // 10:00:40 asleep 30 s
@@ -103,7 +120,7 @@ class DiagnosticsDetailTest {
             val wall = 100_000L + i * 1_000L
             t += wall
             up += when (i % 4) { 0 -> 1_000L; 1 -> wall; else -> wall - 1_000L }
-            d.ended(t - wall + if (i % 4 == 1) 99_000L else 14_000L)
+            d.ended(t - wall, t - wall + if (i % 4 == 1) 99_000L else 14_000L)
             d.look(t, true, day, if (i % 4 == 3) -1L else up)
         }
         val line = assertNotNull(d.detail(day, ist))
@@ -170,6 +187,12 @@ class DiagnosticsDetailTest {
         )))
         assertEquals("Serious flaws: Liquidity (paper) · order rejected: margin short; Hero (paper) · partly filled: 1 of 2 lots", l)
         assertTrue("ref-" !in l && "1234" !in l && "1,234" !in l)
+        // Review: a live duplicate fill names both Zerodha order ids in its evidence: never in the file.
+        val dup = assertNotNull(OrderReview.seriousLine(listOf(flaw(OrderReview.Severity.HIGH, "ORB", OrderReview.Category.REJECTED,
+            "filled twice 0.5s apart (orders 251013000123456 and 251013000123457)"))))
+        assertTrue("251013000123456" !in dup && "(orders # and #)" in dup, dup)
+        val long = assertNotNull(OrderReview.seriousLine(listOf(flaw(OrderReview.Severity.HIGH, "ORB", OrderReview.Category.REJECTED, "x".repeat(500)))))
+        assertTrue(long.length < 150 && long.endsWith("…"), long)
         val many = (1..5).map { flaw(OrderReview.Severity.HIGH, "A$it", OrderReview.Category.REJECTED, "e") }
         assertTrue(OrderReview.seriousLine(many)!!.endsWith("; and 2 more"))
     }

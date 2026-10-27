@@ -123,7 +123,7 @@ internal object StopLane {
         try {
             if (mode == Mode.MCX) mcxCheck(context) else nseCheck(context)
         } finally {
-            runCatching { com.optionslab.app.data.WatchClock.lookEnded() }
+            runCatching { com.optionslab.app.data.WatchClock.lookEnded(startMs) }
             WatchWorkers.timed(if (mode == Mode.MCX) MCX_TOTAL else NSE_TOTAL, System.currentTimeMillis() - startMs)
         }
     }
