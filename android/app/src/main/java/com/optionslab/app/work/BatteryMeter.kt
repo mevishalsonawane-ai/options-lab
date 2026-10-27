@@ -56,9 +56,10 @@ object BatteryMeter {
 
     /** At the app's start: where the figures are kept; the earlier process's figures are read back on a background thread. */
     fun init(context: android.content.Context) {
-        dir = context.noBackupFilesDir
+        val app = context.applicationContext ?: context
         init()
-        scope.launch(Dispatchers.IO) { restoreOnce() }
+        // The folder is looked up (it may be created) on a background thread, never the main one.
+        scope.launch(Dispatchers.IO) { runCatching { if (dir == null) dir = app.noBackupFilesDir }; restoreOnce() }
     }
 
     /** The figures an earlier process saved, added in once ([LoopMeter.restore]). Off the main thread only. */
