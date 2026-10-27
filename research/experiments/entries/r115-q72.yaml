@@ -1,0 +1,38 @@
+id: r115-q72
+title: 'R115 Q72: R72 Breadth Donchian, strong break bar (body >= 60% of range, close in the top / bottom 25% the trade''s
+  way)'
+family: patterns-indicators
+date: '2026-10-27'
+doc: research/HUNT_R115_PRICE_ACTION_ARMS.md
+hypothesis: strong break bar (body >= 60% of range, close in the top / bottom 25% the trade's way) on the arm's own index
+  bars improves R72 Breadth Donchian (net up in design, walk-forward and final; worst day and drawdown not worse; beats its
+  random twin at BH q <= 0.10 over 9,300,046 tests).
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 27 Oct; R51 Amendment
+  A clean stores to 13 Oct
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R115 (already read by R51-R114, so weak evidence)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s own 5-minute bars (Liquidity: its 15 / 5-minute book bar; OOV: the 09:15-09:19 index bar);
+  the 1-ITM weekly option is bought, stops / locks on its premium'
+model_or_rule: 'Q72: strong break bar (body >= 60% of range, close in the top / bottom 25% the trade''s way)'
+settings: research/hunt/r115_price_action_arms/r115cfg.py TESTS
+prereg: research/hunt/r115_price_action_arms/PREREG.md
+variants_tried: 1
+results:
+  summary: 'R72 Breadth Donchian, strong break bar (body >= 60% of range, close in the top / bottom 25% the trade''s way)
+    vs today''s rules. Design 2326 trades Rs 190,456 vs 3071 / Rs 216,929; walk-forward 1663 / Rs 269,148 vs 2238 / Rs 335,882;
+    final 856 / Rs 128,969 vs 1202 / Rs 171,366 (worst day Rs -27,945 vs -22,571, max DD Rs 76,194 vs 61,884). Twin p 0.475
+    (Monte-Carlo 0.475, mean Rs 126,253); BH q 1 over 9,300,046 (q 1 over the R64+ count 5,853). Fails: design: net not above
+    today''s; wf: net not above today''s; wf: worst day worse; wf: drawdown worse; final: net not above today''s; final: worst
+    day worse; final: drawdown worse; BH q 1 > 0.1.'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Nothing changes live. Nothing changes on paper either.

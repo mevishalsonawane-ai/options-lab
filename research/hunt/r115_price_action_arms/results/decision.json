@@ -1,0 +1,157 @@
+{
+ "_m": {
+  "r115": 12,
+  "prior_all": 9300034,
+  "m_all": 9300046,
+  "prior_r64": 5841,
+  "m_r64": 5853
+ },
+ "Q72": {
+  "passed": false,
+  "fails": [
+   "design: net not above today's",
+   "wf: net not above today's",
+   "wf: worst day worse",
+   "wf: drawdown worse",
+   "final: net not above today's",
+   "final: worst day worse",
+   "final: drawdown worse",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.4752623688155922,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.7129
+ },
+ "Q51": {
+  "passed": false,
+  "fails": [
+   "final: net not above today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.45377311344327836,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.7129
+ },
+ "O72": {
+  "passed": false,
+  "fails": [
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.026486756621689155,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.1319
+ },
+ "O51": {
+  "passed": false,
+  "fails": [
+   "wf: net not above today's",
+   "wf: worst day worse",
+   "wf: drawdown worse",
+   "final: worst day worse",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.1089455272363818,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.3022
+ },
+ "F72": {
+  "passed": false,
+  "fails": [
+   "wf: net not above today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.03298350824587706,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.1319
+ },
+ "F51": {
+  "passed": false,
+  "fails": [
+   "wf: net not above today's",
+   "wf: drawdown worse",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.02348825587206397,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.1319
+ },
+ "N72": {
+  "passed": false,
+  "fails": [
+   "design: net not above today's",
+   "wf: net not above today's",
+   "final: net not above today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8215892053973014,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.9859
+ },
+ "N51": {
+  "passed": false,
+  "fails": [
+   "wf: net not above today's",
+   "final: net not above today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6086956521739131,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.8116
+ },
+ "X72": {
+  "passed": false,
+  "fails": [
+   "wf: net not above today's",
+   "final: net not above today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 1.0
+ },
+ "X51": {
+  "passed": false,
+  "fails": [
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 1.0
+ },
+ "QL": {
+  "passed": false,
+  "fails": [
+   "design: net not above today's",
+   "wf: net not above today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.12593703148425786,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.3022
+ },
+ "QO": {
+  "passed": false,
+  "fails": [
+   "design: net not above today's",
+   "wf: net not above today's",
+   "final: net not above today's",
+   "BH q 1 > 0.1",
+   "< 40 final trades"
+  ],
+  "p": 0.3058470764617691,
+  "q_all": 1.0,
+  "q_r64": 1.0,
+  "q_own": 0.6117
+ }
+}

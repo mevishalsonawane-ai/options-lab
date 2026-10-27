@@ -1,0 +1,37 @@
+id: r115-qo
+title: 'R115 QO: R52 Open outside value, strong break bar (body >= 60% of range, close in the top / bottom 25% the trade''s
+  way)'
+family: patterns-indicators
+date: '2026-10-27'
+doc: research/HUNT_R115_PRICE_ACTION_ARMS.md
+hypothesis: strong break bar (body >= 60% of range, close in the top / bottom 25% the trade's way) on the arm's own index
+  bars improves R52 Open outside value (net up in design, walk-forward and final; worst day and drawdown not worse; beats
+  its random twin at BH q <= 0.10 over 9,300,046 tests).
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 27 Oct; R51 Amendment
+  A clean stores to 13 Oct
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R115 (already read by R51-R114, so weak evidence)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s own 5-minute bars (Liquidity: its 15 / 5-minute book bar; OOV: the 09:15-09:19 index bar);
+  the 1-ITM weekly option is bought, stops / locks on its premium'
+model_or_rule: 'QO: strong break bar (body >= 60% of range, close in the top / bottom 25% the trade''s way)'
+settings: research/hunt/r115_price_action_arms/r115cfg.py TESTS
+prereg: research/hunt/r115_price_action_arms/PREREG.md
+variants_tried: 1
+results:
+  summary: 'R52 Open outside value, strong break bar (body >= 60% of range, close in the top / bottom 25% the trade''s way)
+    vs today''s rules. Design 117 trades Rs 86,160 vs 706 / Rs 290,573; walk-forward 89 / Rs 97,497 vs 529 / Rs 247,057; final
+    39 / Rs 14,501 vs 293 / Rs 48,612 (worst day Rs -13,726 vs -16,554, max DD Rs 15,649 vs 47,194). Twin p 0.306 (Monte-Carlo
+    0.306, mean Rs 6,709); BH q 1 over 9,300,046 (q 1 over the R64+ count 5,853). Fails: design: net not above today''s; wf:
+    net not above today''s; final: net not above today''s; BH q 1 > 0.1; < 40 final trades.'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Nothing changes live. Nothing changes on paper either.

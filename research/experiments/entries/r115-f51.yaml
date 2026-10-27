@@ -1,0 +1,37 @@
+id: r115-f51
+title: 'R115 F51: R51 Donchian 20 + Supertrend, fresh break only (previous session''s high / low not already taken earlier
+  today)'
+family: patterns-indicators
+date: '2026-10-27'
+doc: research/HUNT_R115_PRICE_ACTION_ARMS.md
+hypothesis: fresh break only (previous session's high / low not already taken earlier today) on the arm's own index bars improves
+  R51 Donchian 20 + Supertrend (net up in design, walk-forward and final; worst day and drawdown not worse; beats its random
+  twin at BH q <= 0.10 over 9,300,046 tests).
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 27 Oct; R51 Amendment
+  A clean stores to 13 Oct
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R115 (already read by R51-R114, so weak evidence)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s own 5-minute bars (Liquidity: its 15 / 5-minute book bar; OOV: the 09:15-09:19 index bar);
+  the 1-ITM weekly option is bought, stops / locks on its premium'
+model_or_rule: 'F51: fresh break only (previous session''s high / low not already taken earlier today)'
+settings: research/hunt/r115_price_action_arms/r115cfg.py TESTS
+prereg: research/hunt/r115_price_action_arms/PREREG.md
+variants_tried: 1
+results:
+  summary: 'R51 Donchian 20 + Supertrend, fresh break only (previous session''s high / low not already taken earlier today)
+    vs today''s rules. Design 3019 trades Rs 112,715 vs 4208 / Rs 50,425; walk-forward 2194 / Rs 195,587 vs 3044 / Rs 213,748;
+    final 1212 / Rs 162,540 vs 1670 / Rs 134,743 (worst day Rs -16,355 vs -21,578, max DD Rs 48,026 vs 81,683). Twin p 0.0235
+    (Monte-Carlo 0.0235, mean Rs 79,839); BH q 1 over 9,300,046 (q 1 over the R64+ count 5,853). Fails: wf: net not above
+    today''s; wf: drawdown worse; BH q 1 > 0.1.'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Nothing changes live. Nothing changes on paper either.

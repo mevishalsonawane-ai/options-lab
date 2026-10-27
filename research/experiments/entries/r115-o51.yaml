@@ -1,0 +1,35 @@
+id: r115-o51
+title: 'R115 O51: R51 Donchian 20 + Supertrend, no outside-bar break'
+family: patterns-indicators
+date: '2026-10-27'
+doc: research/HUNT_R115_PRICE_ACTION_ARMS.md
+hypothesis: no outside-bar break on the arm's own index bars improves R51 Donchian 20 + Supertrend (net up in design, walk-forward
+  and final; worst day and drawdown not worse; beats its random twin at BH q <= 0.10 over 9,300,046 tests).
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 27 Oct; R51 Amendment
+  A clean stores to 13 Oct
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R115 (already read by R51-R114, so weak evidence)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s own 5-minute bars (Liquidity: its 15 / 5-minute book bar; OOV: the 09:15-09:19 index bar);
+  the 1-ITM weekly option is bought, stops / locks on its premium'
+model_or_rule: 'O51: no outside-bar break'
+settings: research/hunt/r115_price_action_arms/r115cfg.py TESTS
+prereg: research/hunt/r115_price_action_arms/PREREG.md
+variants_tried: 1
+results:
+  summary: 'R51 Donchian 20 + Supertrend, no outside-bar break vs today''s rules. Design 4115 trades Rs 52,181 vs 4208 / Rs
+    50,425; walk-forward 2979 / Rs 190,282 vs 3044 / Rs 213,748; final 1641 / Rs 153,428 vs 1670 / Rs 134,743 (worst day Rs
+    -21,920 vs -21,578, max DD Rs 72,365 vs 81,683). Twin p 0.109 (Monte-Carlo 0.109, mean Rs 128,790); BH q 1 over 9,300,046
+    (q 1 over the R64+ count 5,853). Fails: wf: net not above today''s; wf: worst day worse; wf: drawdown worse; final: worst
+    day worse; BH q 1 > 0.1.'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying. Nothing changes live. Nothing changes on paper either.
