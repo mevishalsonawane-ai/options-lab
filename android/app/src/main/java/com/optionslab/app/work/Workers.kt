@@ -122,7 +122,7 @@ object WatchWorkers {
 
     /** Is the battery saver on? Workers that only talk slow down then. */
     fun saver(context: android.content.Context?): Boolean =
-        runCatching { context?.getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode == true }.getOrDefault(false)
+        Battery.powerSave(context)
 
     private val HHMMSS = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
 

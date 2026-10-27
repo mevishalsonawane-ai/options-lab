@@ -716,7 +716,7 @@ object Tasks {
      */
     private suspend fun wordsQuiet(): Boolean {
         val ctx = com.optionslab.app.ira.IraHub.appContext() ?: return false
-        val screen = runCatching { ctx.getSystemService(android.os.PowerManager::class.java)?.isInteractive }.getOrNull() ?: true
+        val screen = Battery.screenOn(ctx)
         if (screen) return false
         val held = PositionCards.anyOpen || com.optionslab.app.data.OrbArms.holdingHint || com.optionslab.app.data.Strategies.runningHint ||
             runCatching { Ledger.openTicket() != null }.getOrDefault(true) ||
@@ -763,7 +763,7 @@ object Tasks {
         }
     }
 
-    @Volatile private var wordsRoundAt = 0L
+    @Volatile internal var wordsRoundAt = 0L
 
     /**
      * 21 Oct: the most the words round's two slowest steps (the pattern check, the candle expert) may take each, so the round
@@ -781,7 +781,12 @@ object Tasks {
         // are the MCX pass's, at its full 15 s.
         val mcxHeld = { runCatching { com.optionslab.app.data.McxMarket.isOpen() && com.optionslab.app.data.McxMarket.heldQuick() }.getOrDefault(false) }
         if (!wordsDue(Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose(), mcxHeld)) return null
-        val every = if (WatchWorkers.saver(context)) 120_000L else 60_000L
+        val normal = if (WatchWorkers.saver(context)) 120_000L else 60_000L
+        // Battery audit (27 Oct): with nothing held, the words round goes every 2 minutes with the screen off and every 5 on a
+        // low battery or under the saver ([com.optionslab.ira.AnalysisRest]); words only, so no stop or exit waits on it. With
+        // anything held (paper or live, NSE or MCX) it keeps its minute, as before.
+        val held = runCatching { com.optionslab.app.data.HeldNow.any(mcxLive = true) }.getOrDefault(true)
+        val every = com.optionslab.ira.AnalysisRest.wordsMs(Battery.analysisPace(context, held), normal)
         return (every - (System.currentTimeMillis() - wordsRoundAt)).coerceIn(0L, every)
     }
 
@@ -791,6 +796,7 @@ object Tasks {
     /** One round of Jarvis's words-only checks as the lowest-priority worker: its Zerodha reads go last in the budget. */
     internal suspend fun wordsRound() {
         wordsRoundAt = System.currentTimeMillis()
+        runCatching { BatteryMeter.meter.count(com.optionslab.ira.LoopMeter.WORDS_ROUNDS) }
         wordsSince = wordsRoundAt
         kotlinx.coroutines.withContext(com.optionslab.app.data.Broker.Lane(com.optionslab.ira.RateGate.Priority.ANALYSIS)) {
             com.optionslab.app.data.Broker.passBegin()

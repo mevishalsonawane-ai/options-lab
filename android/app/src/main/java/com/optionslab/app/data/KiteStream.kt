@@ -219,8 +219,7 @@ object KiteStream {
         val hasKey = Broker.apiKey != null
         // NSE's day, and MCX's hours while something is held or working on MCX (9 Oct: to 23:30, 23:55 in US winter).
         // To five minutes past F&O's close (15:40 from 3 Aug 2026: 15:45; it was 15:45 before too, past the 15:30 close).
-        val inHours = Market.isTradingDay() && Market.minuteNow() in (9 * 60)..maxOf(15 * 60 + 45, Market.foClose() + 5) ||
-            runCatching { McxMarket.watchDue() }.getOrDefault(false)
+        val inHours = inHoursNow()
         if (loggedIn && hasKey && inHours) {
             // Battery, round 1: a stream nobody reads (the app off screen, no position or chart following instruments, no
             // quote asked for 3 minutes) kept the phone's radio busy all session for the indices' ticks alone. Unneeded for
@@ -240,6 +239,14 @@ object KiteStream {
         } else stop(when { !loggedIn -> "no Zerodha login"; !hasKey -> "no API key"; else -> "outside market hours" })
     }
 
+    /**
+     * The stream's hours: NSE's day to five minutes past F&O's close, and MCX's while something is held or working there
+     * ([McxMarket.watchDue]). Memory and the calendar only.
+     */
+    internal fun inHoursNow(): Boolean =
+        runCatching { Market.isTradingDay() && Market.minuteNow() in (9 * 60)..maxOf(15 * 60 + 45, Market.foClose() + 5) }.getOrDefault(true) ||
+            runCatching { McxMarket.watchDue() }.getOrDefault(false)
+
     /** Battery, round 1: when the stream was first found unneeded (0: needed), and whether it was closed for that. */
     @Volatile private var idleSince = 0L
     @Volatile private var idleStopped = false
@@ -247,7 +254,7 @@ object KiteStream {
     private const val IDLE_STOP_MS = 5 * 60_000L
 
     /** Something reads live prices: the app on screen (or unknown), a part following instruments, a quote asked in the last 3 min. */
-    private fun needed(): Boolean {
+    internal fun needed(): Boolean {
         if (foreground() != false) return true
         if (wants.keys.any { it != "index" && it != OrderFlowLive.OWNER && it != TickZoneRecorder.OWNER && it != OiWallShadowHost.OWNER }) return true
         // The big-move recorder (on by default): kept on 09:15 to F&O's close, never in battery saver ([OrderFlowLive.keepStreamOn]).
@@ -311,6 +318,13 @@ object KiteStream {
             var lastCause: StreamHealth.Cause? = null
             while (isActive) {
                 if (!Broker.loggedIn) break
+                // 27 Oct (battery audit): out of hours, no new connection. Before, only ensure(), a logout or the watch's normal
+                // end stopped this loop: a watch cancelled or destroyed left it reconnecting all night, the app cached. MCX's
+                // hours with anything held there are hours (McxMarket.watchDue): a held position's prices never stop here.
+                if (wait > 0L && !inHoursNow()) {
+                    runCatching { Diag.record(StreamHealth.AREA, "stream: not reconnecting outside market hours (nothing held on MCX)") }
+                    break
+                }
                 _status.value = if (wait == 0L) Status.CONNECTING else Status.RETRYING
                 val token = Broker.streamToken() ?: break
                 val key = Broker.apiKey ?: break
@@ -351,6 +365,7 @@ object KiteStream {
                     runCatching { OrderTiming.streamDropped() }
                     // The app's own health record: a reconnect of the live stream (a counter; it reconnects by itself).
                     runCatching { AppHealth.reconnect() }
+                    runCatching { com.optionslab.app.work.BatteryMeter.meter.count(com.optionslab.ira.LoopMeter.RECONNECTS) }
                 }
                 runCatching { candles.broke() }
                 if (opened) fails = 0 else fails++
@@ -367,8 +382,17 @@ object KiteStream {
                         severity = com.optionslab.ira.DiagErrors.Severity.WARNING)
                 }
                 _status.value = Status.RETRYING
-                wait = if (check) StreamHealth.FIRST_WAIT_MS else StreamHealth.wait(wait, d.upMs, cause)
-                delay(wait)
+                // 27 Oct (battery audit): anything held - exactly as before; nothing held - a flapping network backs off further,
+                // spread a little ([StreamHealth.waitFor]). Memory only (HeldNow reads no disk, vault or network).
+                val heldNow = runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true)
+                wait = if (check) StreamHealth.FIRST_WAIT_MS else StreamHealth.waitFor(wait, d.upMs, cause, heldNow, kotlin.random.Random.nextDouble(-1.0, 1.0))
+                // A longer wait with nothing held ends at once when something becomes held (a 1 s look, memory only).
+                if (heldNow || wait <= StreamHealth.NETWORK_WAIT_MS) delay(wait)
+                else {
+                    val until = System.currentTimeMillis() + wait
+                    while (System.currentTimeMillis() < until && !runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true))
+                        delay(minOf(1_000L, (until - System.currentTimeMillis()).coerceAtLeast(1L)))
+                }
             }
             _status.value = Status.OFF
         }

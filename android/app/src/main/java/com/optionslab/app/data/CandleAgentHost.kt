@@ -143,15 +143,35 @@ object CandleAgentHost {
         val mcxSettle = mcxState == false && mcxBars.isNotEmpty()
         // Off hours: a batch once an hour, asked again every minute (never one long wait that would sleep through the open),
         // and only while the agent is loaded - one let go for memory is not brought back just to idle.
-        if (!nse && !mcx && !settle && !mcxSettle) return if (agent != null && System.currentTimeMillis() - lastBatchAt >= OFF_HOURS_MS) 0L else null
-        val every = if (runCatching { com.optionslab.app.work.WatchWorkers.saver(context) }.getOrDefault(false)) SAVER_MS else EVERY_MS
+        // Battery audit (27 Oct): with nothing held anywhere, the agent rests on a low battery (30% or less, not charging) or
+        // under Android's saver, and reads every 10 minutes with the screen off ([com.optionslab.ira.AnalysisRest]). Its reads
+        // are knowledge only: no stop, exit or entry waits on them. With anything held it keeps its pace, as before.
+        val held = runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true)
+        val pace = com.optionslab.app.work.Battery.analysisPace(context, held)
+        // MCX's evening (NSE closed): only while something is held on MCX or an armed MCX arm is in its entry minutes.
+        val mcxOnly = mcx && !nse && !settle && !mcxSettle
+        val mcxNeeded = !mcxOnly || com.optionslab.ira.AnalysisRest.candlesOnMcxEvening(
+            runCatching { McxMarket.heldQuick() }.getOrDefault(true), runCatching { McxPaperArms.inEntryMinutesQuick() }.getOrDefault(true))
+        if (!nse && !mcxNeeded) { if (mcxRestNoted != Market.today()) noteMcxRest(); return null }
+        if (!nse && !mcx && !settle && !mcxSettle) return if (pace != com.optionslab.ira.AnalysisRest.Pace.REST && agent != null && System.currentTimeMillis() - lastBatchAt >= OFF_HOURS_MS) 0L else null
+        val normal = if (runCatching { com.optionslab.app.work.WatchWorkers.saver(context) }.getOrDefault(false)) SAVER_MS else EVERY_MS
+        val every = com.optionslab.ira.AnalysisRest.candleMs(pace, normal) ?: return null
         return (every - (System.currentTimeMillis() - lastBatchAt)).coerceIn(0L, every)
+    }
+
+    /** The day the MCX evening rest was noted in the diary (once a day). */
+    @Volatile private var mcxRestNoted: java.time.LocalDate? = null
+
+    private fun noteMcxRest() {
+        mcxRestNoted = runCatching { Market.today() }.getOrNull()
+        runCatching { Diag.record("battery", "Candle agent rests on MCX's evening: nothing held on MCX and no MCX arm in its entry minutes (battery audit, 27 Oct)") }
     }
 
     /** One batch (the worker's body): off the main thread; returns at once while memory is short. */
     suspend fun batch(context: Context) {
         lastBatchAt = System.currentTimeMillis()
         if (!enabled()) return
+        runCatching { com.optionslab.app.work.BatteryMeter.meter.count(com.optionslab.ira.LoopMeter.CANDLE_BATCHES) }
         // Open positions first: the start-up restores and watches them before any agent's work.
         PositionsFirst.awaitPositions(); PositionsFirst.awaitStream()
         if (MemoryTrim.underPressure()) return

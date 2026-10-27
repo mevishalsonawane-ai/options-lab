@@ -165,7 +165,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.LiquidityTest.init(this)
         com.optionslab.app.data.Journal.init(this)
         // Battery (14 Oct): the minutes each background loop ran today, for the diagnostics and the Health page.
-        com.optionslab.app.work.BatteryMeter.init()
+        com.optionslab.app.work.BatteryMeter.init(this)
         // The live order flow (shown, logged beside each signal; it can only ever skip an entry where Boss set CONFIRM).
         com.optionslab.app.data.FlowGate.init(this)
         com.optionslab.app.data.SmartWorkers.init(this)
@@ -250,6 +250,8 @@ class IraAlgoApp : Application() {
         runCatching { com.optionslab.app.data.AppHealth.trim(level) }
         // 18 Oct, review: the settings still in memory go to disk first, on a background thread (a low-memory kill may follow).
         runCatching { SecurePrefs.flushSoon() }
+        // 27 Oct (battery audit): the day's "Battery today" figures saved too, on a background thread (at most every 10 minutes).
+        runCatching { com.optionslab.app.work.BatteryMeter.saveSoon() }
     }
 
     /**

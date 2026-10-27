@@ -1224,7 +1224,7 @@ class JarvisVoice : Service() {
                     // read, and a holiday weekday fetched prices every minute and the account every 30 s all session).
                     val open = runCatching { com.optionslab.app.data.Market.isOpen() }.getOrElse {
                         com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) }
-                    val screen = runCatching { getSystemService(android.os.PowerManager::class.java)?.isInteractive }.getOrNull() ?: true
+                    val screen = com.optionslab.app.work.Battery.screenOn(this@JarvisVoice)
                     // Battery (round 10): a full read under 50 s old (the Ira page's, the feed check's) is shared, and with the
                     // screen off and the words lane quiet (nothing held or armed) one is read every 2 minutes, not every minute
                     // ([com.optionslab.ira.LiveReadPace]). Words only: stops and safety alerts read their own prices.

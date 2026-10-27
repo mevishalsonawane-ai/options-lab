@@ -575,11 +575,11 @@ object SmartWorkers {
         val expected = runCatching { Market.isOpen() && Broker.loggedIn && KiteStream.status.value != KiteStream.Status.OFF }.getOrDefault(false)
         health.stream(KiteStream.lastTickAt.takeIf { it > 0 }, expected)
         val ctx = context ?: appContext ?: return
-        val bm = ctx.getSystemService(android.os.BatteryManager::class.java)
-        val pct = bm?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)?.takeIf { it in 1..100 }
-        val charging = bm?.isCharging ?: true
-        val thermal = if (android.os.Build.VERSION.SDK_INT >= 29)
-            ctx.getSystemService(android.os.PowerManager::class.java)?.currentThermalStatus ?: 0 else 0
+        // 27 Oct (battery audit): read through Battery's 30-second cache - three calls into Android every 10 s before (about
+        // 1,080 an hour all MCX evening). A 15% or a "very hot" is still told within half a minute.
+        val (p, charging) = com.optionslab.app.work.Battery.state(ctx)
+        val pct = p?.takeIf { it in 1..100 }
+        val thermal = com.optionslab.app.work.Battery.thermal(ctx)
         health.phone(pct, charging, thermal)
     }
 
