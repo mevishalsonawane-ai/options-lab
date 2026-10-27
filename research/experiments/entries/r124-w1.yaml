@@ -1,0 +1,38 @@
+id: r124-w1
+title: 'R124 W1: normal days: short ATM straddle 09:30, index stop at 1 straddles, else out 15:05'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R124_STRADDLE_STOP_NORMAL_DAYS.md
+hypothesis: 'R123''s frozen rule (naked ATM straddle at 09:30, closed when the index moves k straddles, else 15:05) also makes
+  money on the indices'' normal (non-expiry) days, after real costs in every period, beats random entry times, inside Boss''s
+  limits: an out-of-sample check of the mechanism.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): opt_<UND>_WEEK rolling nearest expiry
+  ATM+-10 1-minute (real strikes), index minutes; normal sessions 09:15-15:15'
+period:
+  design: normal sessions to 31 Dec 2023
+  walk_forward: 2024-25
+  holdout: final 1 Jan - 19 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: stop on the underlying (the index''s minute closes; default); entry by the clock; ATM strike from the index'
+model_or_rule: 'normal days: short ATM straddle 09:30, index stop at 1 straddles, else out 15:05 (1 lot each leg)'
+settings: research/hunt/r124_straddle_stop_normal_days/r124cfg.py, r121lib.py
+prereg: research/hunt/r124_straddle_stop_normal_days/PREREG.md
+variants_tried: 1
+results:
+  summary: 'normal days: short ATM straddle 09:30, index stop at 1 straddles, else out 15:05: design 1392 trades, win 62.6%,
+    mean Rs +34 (gross +148, charges 114), worst day Rs -15,942, months <= -13k 6; wf 2089 trades, win 63.4%, mean Rs +201
+    (gross +340, charges 139), worst day Rs -43,088, months <= -13k 7; final 796 trades, win 62.3%, mean Rs -159 (gross +11,
+    charges 170), worst day Rs -47,208, months <= -13k 5; final at 2x slippage Rs -183; twin p 0.244; BH q 1. fail: final
+    mean <= 0; final <= 0 without 3 best days; final mean <= 0 at 2x slippage; twin p 0.244; BH q 1; 5 final months <= -13k;
+    final drawdown >= 40k.'
+  costs: 'R25 liq fills x R54 late multiplier, R50 dated charges per order, stale legs repriced by Black-76; twins: the same
+    rule entered at a random bar 09:30-14:30'
+holdout_read: true
+verdict: rejected
+notes: 'Loop round 4. Failed the gates: stays a note (CLAUDE.md). Nothing to paper or live.'
