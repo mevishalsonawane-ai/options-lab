@@ -1,0 +1,39 @@
+id: r122-u1
+title: 'R122 U1: sell the opening premium, non-expiry sessions: iron fly 09:20 -> 10:30'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R122_MORNING_PREMIUM.md
+hypothesis: 'Options are dearest at the open (R118 / R121): an ATM iron fly sold on the 09:20 close and bought back at the
+  10:30 open makes money after real costs in every period, beats the same trade at random later times, with a high win rate,
+  inside Boss''s limits.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): opt_<UND>_WEEK rolling nearest expiry
+  ATM+-10 1-minute (real strikes), index minutes; every session 09:15-15:15'
+period:
+  design: sessions to 31 Dec 2023
+  walk_forward: 2024-25
+  holdout: final 1 Jan - 19 Oct 2026, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: none directional (the clock); strikes from the index''s ATM and its straddle (underlying)'
+model_or_rule: 'non-expiry sessions: iron fly 09:20 -> 10:30 (sell C/P at the ATM strike, buy wings 2 straddles out, 1 lot
+  each)'
+settings: research/hunt/r122_morning_premium/r122cfg.py, r121lib.py
+prereg: research/hunt/r122_morning_premium/PREREG.md
+variants_tried: 1
+results:
+  summary: 'non-expiry sessions: iron fly 09:20 -> 10:30: design 1236 trades, win 33.6%, mean Rs -230 (gross -19, charges
+    211), worst day Rs -9,240, months <= -13k 5; wf 1678 trades, win 35.6%, mean Rs -260 (gross -14, charges 246), worst day
+    Rs -14,105, months <= -13k 15; final 577 trades, win 30.8%, mean Rs -355 (gross -68, charges 288), worst day Rs -12,136,
+    months <= -13k 7; final at 2x slippage Rs -389; twin p 0.042; BH q 1. fail: design mean <= 0; wf mean <= 0; final mean
+    <= 0; final <= 0 without 3 best days; final mean <= 0 at 2x slippage; BH q 1; 7 final months <= -13k; final drawdown >=
+    40k.'
+  costs: 'R25 liq fills x R54 late multiplier, R50 dated charges per order, stale legs repriced by Black-76 at their last
+    IV with calendar time to expiry; twins: the same trade at a random bar 10:30-14:00 held 70 minutes (30 random rows a day)'
+holdout_read: true
+verdict: rejected
+notes: Loop round 2. Nothing to paper or live.
