@@ -83,7 +83,7 @@ object CandleAgentHost {
     private const val INDEX_CLOSE_M = 30
     /** How many MCX settle batches ran in this process (tests: one a session). */
     @Volatile internal var mcxSettles = 0
-    @Volatile private var settledDay: LocalDate? = null
+    @Volatile internal var settledDay: LocalDate? = null
     @Volatile private var deepDay: LocalDate? = null
     /** 22 Oct: the kept study day ([K_DEEP]) was read back this process. */
     @Volatile private var deepRead = false

@@ -55,8 +55,8 @@ All of these apply only when **nothing is held**. With any position or order ope
 | Candle agent reads every 10 min instead of 5 | Screen off | half its batches |
 | Candle agent rests on the MCX evening | Nothing held on MCX and no MCX arm in its entry minutes | ~80 batches a week of evenings |
 | Jarvis's words round every 5 min | Low battery or saver (every 2 min with the screen off; it was every 1 min) | 50–80% of the rounds |
-| Order flow follows only the charted option | Low battery or saver | the 25-instrument full-mode feed and the 4×/s parse |
-| Big-move recorder and tick recorder | Narrow or let the stream go at 30% (was 20%) | recording at low battery |
+| Order flow follows only the charted option | Low battery or saver, and no strategy set to CONFIRM (CONFIRM keeps it on: it can only skip entries) | the 25-instrument full-mode feed and the 4×/s parse |
+| Big-move recorder and tick recorder | Narrow or let the stream go at 30% (was 20%); the stream is never let go while anything is held | recording at low battery |
 | Reconnect waits on a flapping network | Grow to 16 s with a small random spread (was 4 s) | fewer reconnect storms; a position opening ends the wait at once |
 
 These changes apply always:

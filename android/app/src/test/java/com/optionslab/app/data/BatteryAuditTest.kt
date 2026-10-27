@@ -64,6 +64,7 @@ class BatteryAuditTest : RobolectricTest() {
 
     @After fun down() {
         Market.testClock = null
+        CandleAgentHost.settledDay = null
         Battery.resetForTest()
         Tasks.wordsRoundAt = 0L
         KiteStream.want(TEST_OWNER, emptyList())
@@ -122,6 +123,9 @@ class BatteryAuditTest : RobolectricTest() {
         at(day, "22:30")
         booksRead()
         phone(pct = 80, charging = false, saver = false)
+        // The post-close batch that settles NSE's day is still due once; after it the evening rests.
+        assertNotNull("NSE's day not settled yet: one more batch", CandleAgentHost.delayMs(context))
+        CandleAgentHost.settledDay = Market.today()
         assertNull("nothing held on MCX at 22:30: the Candle agent rests", CandleAgentHost.delayMs(context))
         assertEquals(McxRest.IDLE_MS, McxMarket.watchCadenceMs())
         // A paper silver short opens: the MCX watch goes to 15 s and the agent reads again.
@@ -140,14 +144,15 @@ class BatteryAuditTest : RobolectricTest() {
     }
 
     @Test fun theUploadedDiagnosticsCarryTheDaysBatteryLineAndItSurvivesARestart() = runBlocking {
-        val today = Market.today()
+        // The meter's own day (the wall clock's; the market's test clock sits on the last trading day, which on a weekend differs).
+        val today = java.time.Instant.now().atZone(com.optionslab.engine.IST).toLocalDate()
         BatteryMeter.meter.count(LoopMeter.CANDLE_BATCHES)
         val input = DiagDayHost.input(today)
         val line = input.health["battery"]
         assertNotNull(input.health.keys.toString(), line)
         assertTrue(line!!, line.startsWith("Battery today: ") && line.contains("Candle agent") && line.contains("stream on"))
         // Saved when read (the app reads it in DiagDayHost.report, on IO); a new process reads the figures back.
-        val saved = BatteryMeter.kept()[java.time.Instant.now().atZone(com.optionslab.engine.IST).toLocalDate()]
+        val saved = BatteryMeter.kept()[today]
         assertNotNull("saved when the line was read", saved)
         assertTrue(saved!!.counts[LoopMeter.CANDLE_BATCHES]!! >= 1)
         // A day the app never saw.

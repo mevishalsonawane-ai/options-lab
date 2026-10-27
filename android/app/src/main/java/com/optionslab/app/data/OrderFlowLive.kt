@@ -115,10 +115,12 @@ object OrderFlowLive {
     private suspend fun relayout() {
         if (!Broker.loggedIn) { if (watched.isNotEmpty()) clear(); return }
         // Battery audit (27 Oct): with nothing held, on a low battery (30% or less, not charging) or under Android's saver, the
-        // flow follows only the option the Chart shows ([com.optionslab.ira.AnalysisRest.flowFollows]): its reads are SHADOW by
-        // default and CONFIRM with no read has no opinion, so no entry is skipped for it. With anything held it follows as before.
+        // flow follows only the option the Chart shows ([com.optionslab.ira.AnalysisRest.flowFollows]) - its reads are SHADOW
+        // by default. Never while any strategy is in CONFIRM (review: with no read CONFIRM has no opinion, so an entry it would
+        // have skipped would go ahead - a risk raised, not lowered). With anything held it follows as before.
         val held = runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true)
-        val resting = !com.optionslab.ira.AnalysisRest.flowFollows(com.optionslab.app.work.Battery.analysisPace(appContext, held))
+        val resting = !com.optionslab.ira.AnalysisRest.flowFollows(com.optionslab.app.work.Battery.analysisPace(appContext, held)) &&
+            !FlowGate.anyConfirm()
         if (resting != restingNow) {
             restingNow = resting
             runCatching { com.optionslab.app.work.BatteryMeter.meter.set(com.optionslab.ira.LoopMeter.FLOW_RESTING, resting) }
@@ -457,9 +459,11 @@ object OrderFlowLive {
         if (!runCatching { Market.isTradingDay() }.getOrDefault(false)) return false
         val m = Market.minuteNow()
         if (m < 9 * 60 + 15 || m > Market.foClose()) return false
+        // 27 Oct (battery audit, review): anything held keeps the stream on here whatever the battery - its prices come first.
+        if (runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true)) return true
         if (com.optionslab.app.work.Battery.powerSave(ctx)) return false
-        // 27 Oct (battery audit): a battery at 30% or less, not charging, lets the stream close too (recording only; a held
-        // position's instruments keep the stream on through their own owner).
+        // 27 Oct (battery audit): with nothing held, a battery at 30% or less, not charging, lets the stream close too
+        // (recording only).
         if (runCatching { com.optionslab.app.work.Battery.state(ctx).let { com.optionslab.ira.AnalysisRest.low(it.first, it.second) } }.getOrDefault(false)) return false
         return true
     }

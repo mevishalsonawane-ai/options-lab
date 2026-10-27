@@ -241,7 +241,7 @@ object KiteStream {
 
     /**
      * The stream's hours: NSE's day to five minutes past F&O's close, and MCX's while something is held or working there
-     * ([McxMarket.watchDue]). Memory and the calendar only.
+     * ([McxMarket.watchDue]; it may read the MCX books once, so call it off the main thread and never on the tick path).
      */
     internal fun inHoursNow(): Boolean =
         runCatching { Market.isTradingDay() && Market.minuteNow() in (9 * 60)..maxOf(15 * 60 + 45, Market.foClose() + 5) }.getOrDefault(true) ||
