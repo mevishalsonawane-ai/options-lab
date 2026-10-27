@@ -1,0 +1,38 @@
+id: r120-q2
+title: 'R120 Q2: fade 15-minute moves >= 1.5 sd with the index future, 15 minutes'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R120_OUT_OF_BOX.md
+hypothesis: On expiry days, fade 15-minute moves >= 1.5 sd with the index future, 15 minutes makes money after real costs
+  in design, walk-forward and final, beats random twins, and stays inside Boss's -Rs 13k month / -Rs 40k drawdown limits.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): R98 expiry-day records, five indices;
+  index minutes of every session (twin index, next session)'
+period:
+  design: expiry days to 31 Dec 2023 (Q1's lot count fitted here)
+  walk_forward: 2024-25
+  holdout: 'final 1 Jan - 19 Oct 2026, read once (Q1-Q3 not pristine: R118 / R119 saw these patterns and P1''s P&L)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: underlying (default)'
+model_or_rule: fade 15-minute moves >= 1.5 sd with the index future, 15 minutes
+settings: research/hunt/r120_out_of_box/r120cfg.py, r120lib.py
+prereg: research/hunt/r120_out_of_box/PREREG.md
+variants_tried: 1
+results:
+  summary: 'fade 15-minute moves >= 1.5 sd with the index future, 15 minutes: design 344 trades, win 34.0%, mean Rs -366,
+    total Rs -125,988, worst day Rs -13,120, months <= -13k 2; wf 372 trades, win 35.5%, mean Rs -460, total Rs -171,175,
+    worst day Rs -15,022, months <= -13k 5; final 97 trades, win 25.8%, mean Rs -1,332, total Rs -129,247, worst day Rs -15,604,
+    months <= -13k 5; final w/o 3 best days Rs -138,948, max DD Rs 135,341; twin p 0.857; BH q 1 (m 9,300,059). fail: design
+    mean <= 0; wf mean <= 0; final mean <= 0; final <= 0 without 3 best days; final mean <= 0 at 2x costs; twin p 0.857; BH
+    q 1; 5 final months <= -13k; final drawdown >= 40k.'
+  costs: 'options: R119''s engine (R25 liq fills x R54 late multiplier, dated charges, stale legs repriced; Q1 +1 tick per
+    5 lots beyond 5); futures: R104 dated index-futures charges (STT 0.01% -> 0.05% from Apr 2026), half-spread max(0.05,
+    0.5 bp) + 0.5 bp slippage per fill, index as proxy'
+holdout_read: true
+verdict: rejected
+notes: Random twins 2,000 (seed 120). Nothing to paper or live.

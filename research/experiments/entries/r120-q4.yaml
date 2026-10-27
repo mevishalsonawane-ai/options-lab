@@ -1,0 +1,39 @@
+id: r120-q4
+title: 'R120 Q4: fade the expiring index''s 15-minute move relative to its twin index, with its future'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R120_OUT_OF_BOX.md
+hypothesis: On expiry days, fade the expiring index's 15-minute move relative to its twin index, with its future makes money
+  after real costs in design, walk-forward and final, beats random twins, and stays inside Boss's -Rs 13k month / -Rs 40k
+  drawdown limits.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): R98 expiry-day records, five indices;
+  index minutes of every session (twin index, next session)'
+period:
+  design: expiry days to 31 Dec 2023 (Q1's lot count fitted here)
+  walk_forward: 2024-25
+  holdout: 'final 1 Jan - 19 Oct 2026, read once (Q1-Q3 not pristine: R118 / R119 saw these patterns and P1''s P&L)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: underlying (the two indices'' minutes; default)'
+model_or_rule: fade the expiring index's 15-minute move relative to its twin index, with its future
+settings: research/hunt/r120_out_of_box/r120cfg.py, r120lib.py
+prereg: research/hunt/r120_out_of_box/PREREG.md
+variants_tried: 1
+results:
+  summary: 'fade the expiring index''s 15-minute move relative to its twin index, with its future: design 605 trades, win
+    31.9%, mean Rs -493, total Rs -298,183, worst day Rs -21,608, months <= -13k 11; wf 657 trades, win 32.6%, mean Rs -511,
+    total Rs -335,579, worst day Rs -18,900, months <= -13k 12; final 188 trades, win 24.5%, mean Rs -1,440, total Rs -270,704,
+    worst day Rs -18,149, months <= -13k 9; final w/o 3 best days Rs -276,924, max DD Rs 271,407; twin p 0.998; BH q 1 (m
+    9,300,059). fail: design mean <= 0; wf mean <= 0; final mean <= 0; final <= 0 without 3 best days; final mean <= 0 at
+    2x costs; twin p 0.998; BH q 1; 9 final months <= -13k; final drawdown >= 40k.'
+  costs: 'options: R119''s engine (R25 liq fills x R54 late multiplier, dated charges, stale legs repriced; Q1 +1 tick per
+    5 lots beyond 5); futures: R104 dated index-futures charges (STT 0.01% -> 0.05% from Apr 2026), half-spread max(0.05,
+    0.5 bp) + 0.5 bp slippage per fill, index as proxy'
+holdout_read: true
+verdict: rejected
+notes: Random twins 2,000 (seed 120). Nothing to paper or live.

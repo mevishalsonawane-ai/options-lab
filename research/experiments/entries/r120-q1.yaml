@@ -1,0 +1,37 @@
+id: r120-q1
+title: 'R120 Q1: R119''s P1 iron fly at N lots (N fitted on design)'
+family: calendar-events
+date: '2026-10-27'
+doc: research/HUNT_R120_OUT_OF_BOX.md
+hypothesis: On expiry days, R119's P1 iron fly at N lots (N fitted on design) makes money after real costs in design, walk-forward
+  and final, beats random twins, and stays inside Boss's -Rs 13k month / -Rs 40k drawdown limits.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 27 Oct 2026 (to 19 Oct 2026): R98 expiry-day records, five indices;
+  index minutes of every session (twin index, next session)'
+period:
+  design: expiry days to 31 Dec 2023 (Q1's lot count fitted here)
+  walk_forward: 2024-25
+  holdout: 'final 1 Jan - 19 Oct 2026, read once (Q1-Q3 not pristine: R118 / R119 saw these patterns and P1''s P&L)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: underlying (ATM strike from the index)'
+model_or_rule: R119's P1 iron fly at N lots (N fitted on design) at 2 lots per leg (chosen on design)
+settings: research/hunt/r120_out_of_box/r120cfg.py, r120lib.py
+prereg: research/hunt/r120_out_of_box/PREREG.md
+variants_tried: 10
+results:
+  summary: 'R119''s P1 iron fly at N lots (N fitted on design) at 2 lots per leg (chosen on design): design 375 trades, win
+    56.3%, mean Rs +52, total Rs +19,649, worst day Rs -47,503, months <= -13k 7; wf 380 trades, win 60.8%, mean Rs +504,
+    total Rs +191,613, worst day Rs -40,417, months <= -13k 6; final 105 trades, win 58.1%, mean Rs +171, total Rs +17,963,
+    worst day Rs -33,036, months <= -13k 3; final w/o 3 best days Rs -68,188, max DD Rs 81,289; twin p 0.172; BH q 1 (m 9,300,059).
+    fail: final <= 0 without 3 best days; twin p 0.172; BH q 1; 3 final months <= -13k; final drawdown >= 40k.'
+  costs: 'options: R119''s engine (R25 liq fills x R54 late multiplier, dated charges, stale legs repriced; Q1 +1 tick per
+    5 lots beyond 5); futures: R104 dated index-futures charges (STT 0.01% -> 0.05% from Apr 2026), half-spread max(0.05,
+    0.5 bp) + 0.5 bp slippage per fill, index as proxy'
+holdout_read: true
+verdict: rejected
+notes: Random twins 2,000 (seed 120). Nothing to paper or live.
