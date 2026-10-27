@@ -1,0 +1,36 @@
+id: r125-z1
+title: 'R125 Z1: R123 V2, one trade a day (liquidity order)'
+family: trade-management
+date: '2026-10-27'
+doc: research/HUNT_R125_RISK_OVERLAY.md
+hypothesis: R123 V2's expiry-day short straddle with an index stop fits inside Boss's limits (-Rs 13k a month, -Rs 40k drawdown)
+  with a one-trade-a-day rule (and a monthly breaker at half the monthly stop), keeps a positive mean in every period, and
+  the rule beats random skipping.
+data_version: R123's trade lists (R98 expiry days, lake to 19 Oct 2026)
+period:
+  design: expiry days to 31 Dec 2023
+  walk_forward: 2024-25
+  holdout: 'final 2026 (NOT pristine: R123''s trades by period were known; post hoc)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: stop on the underlying (the index''s minute closes; default); entry by the clock; ATM strike from the index'
+model_or_rule: R123 V2, one trade a day (liquidity order)
+settings: research/hunt/r125_risk_overlay/r125cfg.py, r125lib.py
+prereg: research/hunt/r125_risk_overlay/PREREG.md
+variants_tried: 1
+results:
+  summary: 'R123 V2, one trade a day (liquidity order): design 278 trades, win 58.6%, mean Rs +221, worst day Rs -4,995, max
+    DD Rs 19,739, months <= -13k 0; wf 337 trades, win 59.3%, mean Rs +361, worst day Rs -13,831, max DD Rs 75,430, months
+    <= -13k 3; final 83 trades, win 61.4%, mean Rs +106, worst day Rs -9,036, max DD Rs 37,626, months <= -13k 2; all 698
+    trades, win 59.3%, mean Rs +275, worst day Rs -13,831, max DD Rs 75,430, months <= -13k 5; 191 trades skipped; final at
+    2x slippage Rs +93; twin p 0.609; BH q 1, q within the loop 0.677. fail: final <= 0 without 3 best days; twin p 0.609;
+    BH q 1; 2 final months <= -13k; 5 2021-26 months <= -13k; 2021-26 drawdown >= 40k.'
+  costs: R123's (R25 liq fills x R54 late multiplier, dated charges)
+holdout_read: true
+verdict: rejected
+notes: 'Loop round 5. Twins: random skipping of the same number of trades. Nothing to paper or live.'
