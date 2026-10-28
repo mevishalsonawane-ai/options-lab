@@ -172,3 +172,37 @@ jumps (clipped); India has no US-market data in the lake, so the overnight US se
 Every horizon x source result goes into the write-up `research/HUNT_R131_DIRECTION.md` and the experiment log
 (`research/experiments/entries/r131-*.yaml`), failures included. Big intermediate files go to Drive
 `derived/r131/`, never git.
+
+## Amendment 1 (28 Oct 2026, after the walk-forward, BEFORE the holdout read)
+
+**What the walk-forward showed** (results/wf.json, committed with this amendment): 72 of 693 tests pass the
+walk-forward gates (sections 6.1-6.3): 64 at GAP and 8 at C2C, at 10-20% coverage, nearly all calls UP. The gap is up
+63.7% of the time anyway (F1-F4, 3,970 index-days). The GAP models pick days that closed near the day's high (mean
+close location +0.31 vs +0.02 on all days, 443 calls of IDX-LR at 10%), and 220 of the 376 C2C calls of the best C2C
+test are MIDCPNIFTY.
+
+**Why that is not yet a tradeable call.** NSE's official close (the daily file's close, and the bhavcopy futures close
+used by the section-7 money check) is a weighted average of the last 30 minutes, not a price one can trade at 15:29
+knowing that close. A strong last half hour leaves the last traded price above the official close, so tomorrow's move
+measured FROM the official close looks predictable from today's close location. Section 2's "decision at 15:29 using
+the daily close" therefore carries up to 30 minutes of look-ahead in both features and entry price.
+
+**Added now, fixed before any number for them is computed:**
+
+1. Two tradeable twins, built only from minute bars and evening files already published:
+   - **GAP_T:** decision at **14:55** (the 14:54 bar's close, R123's last decision row) -> the first bar's open of the
+     next session; **C2C_T:** 14:55 -> the next session's last bar's close (15:30). The next session must be the
+     index's next trading day in the daily calendar (else the row is dropped).
+   - Inputs: the `morning` lags of section 3 for day D (close and evening of D-1, evening+1 of D-2), plus R123's
+     intraday rows at 14:55 (ri_, rb_, rc_, rk_) and the 59-stock breadth at 14:55 (eq_). Nothing from D after 14:54.
+   - Same 8 sets, 3 models, 4 coverages, 3 baselines (B1 = the sign of the move from D-1's close to 14:55), folds,
+     holdout and tiny-move threshold (0.10%) as GAP / C2C. From 2021-08-02 (minute data).
+   - Money check: buy the ATM option of the called side (lake WEEK file) at the 14:54 bar's close, sell the SAME
+     contract (side, strike) the next session at the 09:15 bar's close (GAP_T) or the 15:19 bar's close (C2C_T;
+     15:04 if that day is the contract's expiry). Skipped (and counted) when D is that index's expiry day (the weekly
+     contract changes overnight) or a minute has no traded print. Fills("liq"), Costs("dated"), 1 lot.
+2. The BH family grows to 693 + 2 x 99 = **891 tests**; every q is recomputed over all of them.
+3. **Tightening (never loosening) of section 6.5:** a GAP or C2C test can count as a ">= 60% tradeable call" only
+   if its _T twin (same set, model, coverage) also passes every gate. The original GAP / C2C results are still
+   reported, with this caveat.
+4. Also printed (descriptive, not a gate): each passing test's calls by index.
