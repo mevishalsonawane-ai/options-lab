@@ -157,6 +157,18 @@ object AutoChange {
          * choice): logged so the change timeline shows it and its Undo flips the switch back. Never proposed or applied by Autopilot.
          */
         LIQ_BREAKEVEN("strategies", "your breakeven at +10% on Liquidity paper"),
+        /**
+         * 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): Boss's win-rate rule
+         * for automatic ideas ([IdeaWinRate], [ideaRule]) - logged once as Boss's own when the update switches it on; one tap
+         * undoes it (the behaviour before 28 Oct: no win-rate check). Taking it away loosens Boss's own rule, so that undo asks
+         * the PIN where one is set. Never proposed or applied by Autopilot.
+         */
+        IDEA_RULE("automatic ideas", "your win-rate rule for automatic ideas"),
+        /**
+         * 28 Oct: an automatic idea (a forge proposal, a lab variant, a shadow re-arm, a Pine script of Jarvis's) held by that rule
+         * ([ideaHeld]): kept as a note only (SKIPPED: nothing was made, nothing to undo).
+         */
+        IDEA_HELD("automatic ideas", "an automatic idea held by your win-rate rule"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -333,6 +345,10 @@ object AutoChange {
             Kind.SEGMENT_SPLIT -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // 22 Oct: the breakeven only ever adds an earlier exit, on paper: on lowers risk, off takes that away.
             Kind.LIQ_BREAKEVEN -> if (c.to == ON) Risk.LOWER else Risk.RAISE
+            // 28 Oct: the win-rate rule only ever holds automatic ideas back: on lowers risk, off takes the hold away.
+            Kind.IDEA_RULE -> if (c.to == ON) Risk.LOWER else Risk.RAISE
+            // A held idea is a note: nothing was made.
+            Kind.IDEA_HELD -> Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -373,7 +389,7 @@ object AutoChange {
      */
     fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
         k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK || k == Kind.PAPER_FILTER || k == Kind.ARM_LIVE ||
-        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT || k == Kind.LIQ_BREAKEVEN
+        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT || k == Kind.LIQ_BREAKEVEN || k == Kind.IDEA_RULE
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -783,6 +799,36 @@ object AutoChange {
         else "the same-direction cap is off for paper: automatic entries are no longer refused by it",
         Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "the same-direction cap on automatic paper entries")
+
+    /** 28 Oct: the target of Boss's win-rate rule for automatic ideas ([Kind.IDEA_RULE]). */
+    const val IDEA_RULE_TARGET = "rule:idea_winrate"
+
+    /**
+     * 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): the win-rate rule for
+     * automatic ideas ([IdeaWinRate]) switched [on] at [minPct], or off (the behaviour before 28 Oct). It only holds ideas back
+     * (on lowers risk); things Boss makes or switches on by hand and the arms already running are not touched.
+     */
+    fun ideaRule(on: Boolean, minPct: Double = IdeaWinRate.DEFAULT_PCT): Change = Change(Kind.IDEA_RULE, IDEA_RULE_TARGET,
+        if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your rule (28 Oct, \"Dont create a pine script or stratergies automatically, until 65% + winrate is found\"): a forge " +
+            "proposal, a strategy lab variant, a shadow re-arm or a Pine script of Jarvis's is made only with a win rate of at least " +
+            "${IdeaWinRate.pct(minPct)} out of sample, after charges and slippage, with enough trades and a profit - on top of every gate " +
+            "it already has; below it the idea is kept as a note. Your own scripts and switches, and the arms already running, are not touched"
+        else "automatic ideas are judged by their own gates only again (no win-rate check)",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "Automatic ideas: minimum win rate")
+
+    /**
+     * 28 Oct: [creator]'s idea [id] ([name]) held by the win-rate rule ([IdeaWinRate.held]'s [words]): a note only, recorded
+     * SKIPPED - nothing was created, armed or traded.
+     */
+    fun ideaHeld(creator: IdeaWinRate.Creator, id: String, name: String, words: String): Change = Change(Kind.IDEA_HELD,
+        "idea:${creator.name.lowercase(Locale.ENGLISH)}:${id.lowercase(Locale.ENGLISH).replace(Regex("[^a-z0-9._-]+"), "_").take(80)}",
+        "would be made", HELD_NOTE, words, Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), Risk.LOWER, Scope.PAPER,
+        what = "${creator.words} ${name.take(120)}")
+
+    /** A held idea's "to". */
+    const val HELD_NOTE = "held as a note"
 
     /** 28 Oct: the target of the paper entries priced on the live book when an option has no last price ([paperBookPrice]). */
     const val BOOK_PRICE_TARGET = "filter:paper_book_price"
@@ -1283,7 +1329,7 @@ object AutoChange {
         // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) and the passed arms' lock ([Kind.PAPER_LOCK]) likewise - the
         // switch flipped since is the one to undo.
         if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER, Kind.ARM_LIVE,
-                Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT, Kind.LIQ_BREAKEVEN)) return false
+                Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT, Kind.LIQ_BREAKEVEN, Kind.IDEA_RULE)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
         return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
     }

@@ -170,6 +170,13 @@ object VariantLab {
         val scale: Double, val status: Status, val diffs: List<Double> = emptyList(), val vSum: Double = 0.0, val cSum: Double = 0.0,
         val pBetter: Double = 1.0, val pWorse: Double = 1.0, val lastDay: LocalDate? = null, val why: String = "",
         val pre: Pair<Double, Double>? = null,
+        /**
+         * 28 Oct (Boss's win-rate rule, [IdeaWinRate]): the variant's own closed trades on the compared days since it was born
+         * (out of sample, after the lab's costs) and how many of them made money. 0 for a variant from before 28 Oct.
+         */
+        val vTrades: Int = 0, val vWins: Int = 0,
+        /** Those trades' own rupees after costs (not [vSum], which also holds the days before they were counted). */
+        val vTradeNet: Double = 0.0,
     ) {
         val n: Int get() = diffs.size
         val alive: Boolean get() = status == Status.ALIVE || status == Status.PROPOSED
@@ -359,11 +366,19 @@ object VariantLab {
     // ---- the day -----------------------------------------------------------------------------------------------------------
 
     /** What a day's pass did, for the app to act on and tell. */
+    /** One strategy's day with some values: its rupees, whether it traded, its closed trades and how many made money. */
+    data class DayResult(val net: Double, val traded: Boolean, val trades: Int, val wins: Int)
+
     sealed class Event {
         data class Applied(val change: Change) : Event()
         data class Proposed(val change: Change) : Event()
         data class Retired(val variant: Variant) : Event()
         data class Waiting(val variant: Variant, val why: String) : Event()
+        /**
+         * 28 Oct: it won against the current rules but is below Boss's win-rate rule ([IdeaWinRate]): not applied or proposed,
+         * kept shadowing with the note ([words]) until it reaches the rule, loses, or runs out of days.
+         */
+        data class Held(val variant: Variant, val words: String) : Event()
         /**
          * The safety net put a strategy back to its defaults ([Change] of kind SAFETY_REVERT). [liveStopKept]: the live arm kept
          * its tighter stop (the defaults' wider one would raise live risk: Boss's PIN, through the accepted change's Undo).
@@ -430,26 +445,27 @@ object VariantLab {
      */
     fun day(book: Book, date: LocalDate, runs: Map<String, Run>, days: Map<String, ShadowSim.Day>, history: List<ShadowSim.Day>,
             rng: DiscoveryStats.Rng, from: LocalDate = date.plusDays(1), actual: Map<String, Double> = emptyMap(),
-            evidence: Boolean = true, seeds: List<Seed> = emptyList()): Pass {
+            evidence: Boolean = true, seeds: List<Seed> = emptyList(), rule: IdeaWinRate.Rule = IdeaWinRate.Rule.OFF): Pass {
         if (book.lastDay != null && !date.isAfter(book.lastDay)) return Pass(book, emptyList())
         var b = book.copy(runs = book.runs + runs, lastDay = date)
         val events = ArrayList<Event>()
         // The day's rupees per strategy and values, worked out once (every variant is compared with the same current rules).
-        val memo = HashMap<Pair<String, Map<String, Double>>, Pair<Double, Boolean>>()
-        fun result(s: Strategy, values: Map<String, Double>): Pair<Double, Boolean> = memo.getOrPut(s.key to values) {
-            var net = 0.0; var traded = false
+        val memo = HashMap<Pair<String, Map<String, Double>>, DayResult>()
+        fun result(s: Strategy, values: Map<String, Double>): DayResult = memo.getOrPut(s.key to values) {
+            var net = 0.0; var traded = false; var trades = 0; var won = 0
             for (u in s.underlyings) {
                 val d = days[u] ?: continue
                 val t = ArmLab.trades(s.key, values, d, history)
                 if (t.isNotEmpty()) traded = true
                 net += t.sumOf { it.net }
+                trades += t.size; won += t.count { it.net > 0 }
             }
-            net to traded
+            DayResult(net, traded, trades, won)
         }
         // 0. The safety net, on what each arm traded that day.
         // (No result known and no stored day of its indices: not judged.)
         val sn = safety(b, date, runs, from) { key, values ->
-            actual[key] ?: strategy(key)?.takeIf { s -> s.underlyings.any { it in days } }?.let { result(it, values).first }
+            actual[key] ?: strategy(key)?.takeIf { s -> s.underlyings.any { it in days } }?.let { result(it, values).net }
         }
         b = sn.book; events += sn.events
         // An event day is not evidence (G9-6): nothing compared, nothing judged; the refill still runs.
@@ -463,16 +479,18 @@ object VariantLab {
         b = b.copy(variants = b.variants.map { v ->
             if (!v.alive) return@map v
             val s = strategy(v.strategy) ?: return@map v
-            val (vn, vt) = result(s, s.values(v.values))
+            val vr = result(s, s.values(v.values))
+            val (vn, vt) = vr
             val (cn, ct) = result(s, b.currentOf(v.strategy))
             if (!vt && !ct) v.copy(lastDay = date) else {
                 val diffs = v.diffs + (vn - cn)
-                v.copy(diffs = diffs, vSum = v.vSum + vn, cSum = v.cSum + cn, lastDay = date,
+                v.copy(diffs = diffs, vSum = v.vSum + vn, cSum = v.cSum + cn, lastDay = date, vTrades = v.vTrades + vr.trades, vWins = v.vWins + vr.wins,
+                    vTradeNet = v.vTradeNet + vr.net,
                     pBetter = DiscoveryStats.alwaysValidP(diffs, 1, MIN_SD), pWorse = DiscoveryStats.alwaysValidP(diffs, -1, MIN_SD))
             }
         })
         // 2. Judge (a change is traded from the next session), with the safety net's yardsticks on each change.
-        val j = judge(b, date, from)
+        val j = judge(b, date, from, rule)
         b = j.book
         for (e in j.events) events += when (e) {
             is Event.Applied -> Event.Applied(yardsticks(e.change, history).also { c -> b = b.copy(changes = b.changes.map { if (it.id == c.id) c else it }) })
@@ -512,7 +530,7 @@ object VariantLab {
      * The judgement of the living variants on [date]: promotions (paper by itself from session [from], live proposed) and
      * retirements.
      */
-    fun judge(book: Book, date: LocalDate, from: LocalDate = date.plusDays(1)): Pass {
+    fun judge(book: Book, date: LocalDate, from: LocalDate = date.plusDays(1), rule: IdeaWinRate.Rule = IdeaWinRate.Rule.OFF): Pass {
         var b = book
         val events = ArrayList<Event>()
         val allP = allP(b)
@@ -521,7 +539,21 @@ object VariantLab {
             if (v.strategy in promotedFor) continue
             val wins = wins(v, allP, b.tried)
             val loses = loses(v)
+            // 28 Oct: Boss's win-rate rule on top of the lab's gates, before anything is applied or proposed (paper or live).
+            val held = if (wins && b.runOf(v.strategy) != Run.OFF)
+                IdeaWinRate.held(IdeaWinRate.Creator.VARIANT, IdeaWinRate.forVariant(v.vTrades, v.vWins, v.vTradeNet), rule) else null
             when {
+                held != null && v.n >= MAX_N -> {
+                    val r = v.copy(status = Status.RETIRED, why = "no proof after ${v.n} days: still $held")
+                    b = b.copy(variants = b.variants.map { if (it.id == v.id) r else it }, retiredCount = b.retiredCount + 1)
+                    events += Event.Retired(r)
+                }
+                // Kept shadowing, its note as its why (said once, the first day it is held).
+                held != null -> {
+                    val h = v.copy(why = held)
+                    b = b.copy(variants = b.variants.map { if (it.id == v.id) h else it })
+                    if (!v.why.startsWith("held:")) events += Event.Held(h, held)
+                }
                 wins -> {
                     val penalty = DiscoveryStats.penalizedAlpha(strategy(v.strategy)?.alpha ?: ALPHA, b.tried)
                     val why = "over ${v.n} days it made ${DiscoveryStats.rs(v.vSum)} against ${DiscoveryStats.rs(v.cSum)} " +
@@ -884,7 +916,7 @@ object VariantLab {
         for ((k, s) in b.scales.toSortedMap()) append("K|$k|$s\n")
         for ((k, m) in b.current.toSortedMap()) append("S|$k|${kv(m)}\n")
         for (v in b.variants) append("V|${v.id}|${v.strategy}|${v.status.name}|${v.born}|${v.scale}|${v.lastDay ?: ""}|${v.pBetter}|${v.pWorse}|" +
-            "${v.vSum}|${v.cSum}|${kv(v.values)}|${kv(v.base)}|${v.diffs.joinToString(";")}|${v.pre?.let { "${it.first};${it.second}" } ?: ""}|${clean(v.why)}\n")
+            "${v.vSum}|${v.cSum}|${kv(v.values)}|${kv(v.base)}|${v.diffs.joinToString(";")}|${v.pre?.let { "${it.first};${it.second}" } ?: ""}|${clean(v.why)}|${v.vTrades}|${v.vWins}|${v.vTradeNet}\n")
         for (c in b.changes) append("C|${c.id}|${c.strategy}|${c.variant}|${c.kind.name}|${c.status.name}|${c.day}|${kv(c.from)}|${kv(c.to)}|${clean(c.why)}|" +
             "${c.effective ?: ""}|${c.avgLoss}|${c.expect}\n")
         for (t in b.tunes) append("U|${t.strategy}|${if (t.live) 1 else 0}|${t.from}|${kv(t.values)}|${t.change}\n")
@@ -912,7 +944,9 @@ object VariantLab {
                 "V" -> vs += Variant(p[1], p[2], unkv(p[11]), unkv(p[12]), LocalDate.parse(p[4]), p[5].toDouble(), Status.valueOf(p[3]),
                     p[13].split(';').filter { it.isNotBlank() }.map { it.toDouble() }, p[9].toDouble(), p[10].toDouble(), p[7].toDouble(), p[8].toDouble(),
                     p[6].takeIf { it.isNotEmpty() }?.let(LocalDate::parse), p.getOrElse(15) { "" },
-                    p[14].split(';').takeIf { it.size == 2 }?.let { it[0].toDouble() to it[1].toDouble() })
+                    p[14].split(';').takeIf { it.size == 2 }?.let { it[0].toDouble() to it[1].toDouble() },
+                    p.getOrNull(16)?.toIntOrNull()?.coerceAtLeast(0) ?: 0, p.getOrNull(17)?.toIntOrNull()?.coerceAtLeast(0) ?: 0,
+                    p.getOrNull(18)?.toDoubleOrNull()?.takeIf { it.isFinite() } ?: 0.0)
                 "C" -> cs += Change(p[1], p[2], p[3], ChangeKind.valueOf(p[4]), ChangeStatus.valueOf(p[5]), LocalDate.parse(p[6]), unkv(p[7]), unkv(p[8]), p[9],
                     p.getOrNull(10)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse), p.getOrNull(11)?.toDoubleOrNull() ?: 0.0,
                     p.getOrNull(12)?.toDoubleOrNull() ?: 0.0)

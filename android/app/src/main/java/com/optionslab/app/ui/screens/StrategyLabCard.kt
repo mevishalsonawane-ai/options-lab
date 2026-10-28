@@ -58,8 +58,12 @@ internal fun StrategyLabSection(model: AppModel) {
     val variants by VariantRunner.variants.collectAsState(Dispatchers.Main.immediate)
     val forge by VariantRunner.forge.collectAsState(Dispatchers.Main.immediate)
     var open by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { VariantRunner.ensureLoaded() } } }
-    StrategyLabCardContent(variants, forge, onOpen = { open = it ?: "" })
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { VariantRunner.ensureLoaded() }
+        if (com.optionslab.app.ira.Autopilot.enabled()) runCatching { com.optionslab.app.ira.Autopilot.ensureLoaded() } } }
+    // 28 Oct: the automatic ideas held by Boss's win-rate rule (notes in the Autopilot change log; memory only here).
+    val autoBook by com.optionslab.app.ira.Autopilot.book.collectAsState(Dispatchers.Main.immediate)
+    val held = remember(autoBook) { com.optionslab.ira.IdeaWinRate.heldOf(autoBook) }
+    StrategyLabCardContent(variants, forge, onOpen = { open = it ?: "" }, held = held)
     // Liquidity BANKNIFTY frozen for its paper test (12 Oct): said here, and Boss unfreezes it here.
     val liq by com.optionslab.app.data.LiquidityTest.state.collectAsState(Dispatchers.Main.immediate)
     val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() } }
@@ -169,7 +173,8 @@ internal const val LAB_NOTE = "Variants trade virtually beside each strategy, an
 
 /** The card from plain state (tests drive it). [onOpen]: the sheet, at a candidate's id or at the top (null). */
 @Composable
-internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyForge.Book, onOpen: (String?) -> Unit) {
+internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyForge.Book,
+                                    held: List<com.optionslab.ira.AutoChange.Entry> = emptyList(), onOpen: (String?) -> Unit) {
     val p = LocalPalette.current
     val rows = remember(variants) {
         VariantLab.STRATEGIES.filter { variants.alive(it.key).isNotEmpty() || variants.runOf(it.key) != VariantLab.Run.OFF }.map { s ->
@@ -202,6 +207,12 @@ internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyFo
                 forge.waiting.size.takeIf { it > 0 }?.let { "$it to start on paper" }).joinToString(" · "),
             style = Type.label.copy(color = if (waitingLive + forge.waiting.size > 0) p.oxblood else p.inkSoft, fontSize = 12.sp),
             modifier = Modifier.padding(top = 4.dp).testTag("lab-waiting"))
+        // 28 Oct: below Boss's win-rate rule, kept as notes: said here with the newest one.
+        com.optionslab.ira.IdeaWinRate.heldSummary(held)?.let { line ->
+            Text(line, style = Type.label.copy(color = p.amber, fontSize = 12.sp), modifier = Modifier.padding(top = 4.dp).testTag("lab-held"))
+            Text("• " + com.optionslab.ira.IdeaWinRate.heldLine(held.first()), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+                modifier = Modifier.padding(top = 2.dp).testTag("lab-held-newest"))
+        }
         BrassButton("Details", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("lab-details"), tone = p.inkSoft) { onOpen(null) }
     }
 }
@@ -228,7 +239,9 @@ internal fun StrategyLabDialog(model: AppModel, selected: String?, onClose: () -
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(
         usePlatformDefaultWidth = false, securePolicy = com.optionslab.app.security.Capture.policy)) {
         Column(Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.9f).background(LocalPalette.current.paper, RoundedCornerShape(16.dp))) {
-            StrategyLabSheet(variants, forge, selected, said, today = today, onAction = { a, id ->
+            val autoBook by com.optionslab.app.ira.Autopilot.book.collectAsState(Dispatchers.Main.immediate)
+            val held = remember(autoBook) { com.optionslab.ira.IdeaWinRate.heldOf(autoBook) }
+            StrategyLabSheet(variants, forge, selected, said, today = today, heldIdeas = held, onAction = { a, id ->
                 when (a) {
                     LabAction.UNDO -> doIt { VariantRunner.undo(id) }
                     // A live undo that puts the defaults back lowers risk: no PIN. Any other live undo asks for it.
@@ -260,7 +273,8 @@ internal fun StrategyLabDialog(model: AppModel, selected: String?, onClose: () -
 @Composable
 internal fun StrategyLabSheet(variants: VariantLab.Book, forge: StrategyForge.Book, selected: String?, said: String?,
                               onAction: (LabAction, String) -> Unit, onClose: (() -> Unit)?,
-                              today: java.time.LocalDate = java.time.LocalDate.now()) {
+                              today: java.time.LocalDate = java.time.LocalDate.now(),
+                              heldIdeas: List<com.optionslab.ira.AutoChange.Entry> = emptyList()) {
     val p = LocalPalette.current
     val changes = remember(variants) { variants.changes.filter { it.status != VariantLab.ChangeStatus.DECLINED }.reversed() }
     val ideas = remember(forge, selected) {
@@ -306,6 +320,12 @@ internal fun StrategyLabSheet(variants: VariantLab.Book, forge: StrategyForge.Bo
             if (ideas.isEmpty()) item(key = "ideas-none") { Note("No idea tried yet: the forge runs at night, while the phone charges or after 18:00.") }
             items(ideas, key = { "i:" + it.c.id }) { r -> IdeaRow(r, onAction) }
             item(key = "hosted") { HostedIdeasSection() }
+            // 28 Oct: the automatic ideas Boss's win-rate rule held (notes only: nothing was made, armed or traded).
+            if (heldIdeas.isNotEmpty()) item(key = "held-h") { Text("Held by your win-rate rule", style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold)) }
+            items(heldIdeas.take(30), key = { "h:" + it.id }) { e ->
+                Text(com.optionslab.ira.IdeaWinRate.heldLine(e), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+                    modifier = Modifier.padding(top = 2.dp).testTag("lab-held-" + e.id))
+            }
         }
     }
 }

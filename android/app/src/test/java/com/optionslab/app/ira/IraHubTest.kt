@@ -43,6 +43,7 @@ class IraHubTest : RobolectricTest() {
     )
 
     @After fun down() { IraHub.testLabBars = null; IraAccount.testView = null; IraHub.testHistories = null; IraHub.testAutoLab = false
+        com.optionslab.app.data.IdeaRuleHost.setForTest()
         IraHub.testLoadHold?.complete(Unit); IraHub.testLoadHold = null; runBlocking { IraHub.forgetAll() }; IraHub.resetAskSpeed() }
 
     private fun waitFor(what: String, ok: () -> Boolean) {
@@ -151,6 +152,8 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun theAutomaticHuntOffersOnlyWhatIsWorthATrial() = runBlocking {
+        // The behaviour before 28 Oct (Boss's win-rate rule undone in the change log): the two-year test alone.
+        com.optionslab.app.data.IdeaRuleHost.setForTest(on = false)
         IraHub.testLabBars = { _, _ -> twoYears }
         IraHub.testAutoLab = true
         IraHub.testHistories = { sixty }
@@ -162,10 +165,45 @@ class IraHubTest : RobolectricTest() {
     }
 
     /**
+     * 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): with the rule on (the
+     * default), Jarvis's own hunt offers and adds nothing - its two-year backtest is in-sample - and each script it would have
+     * offered is held as a note; Boss's own asked backtest still answers with its offer.
+     */
+    @Test fun theWinRateRuleHoldsJarvisOwnScriptsAndLeavesBossesAskedBacktestAlone() = runBlocking {
+        com.optionslab.app.data.IdeaRuleHost.setForTest()
+        IraHub.testLabBars = { _, _ -> twoYears }
+        IraHub.testAutoLab = true
+        IraHub.testHistories = { sixty }
+        IraHub.refresh()
+        assertTrue("nothing offered or added by itself", IraHub.state.value.proposals.isEmpty())
+        val held = com.optionslab.app.data.IdeaRuleHost.notedForTest().filter { it.startsWith("PINE|") }
+        // The same hunt with the rule undone offers what is worth a trial (the old behaviour): exactly the scripts it held.
+        com.optionslab.app.data.IdeaRuleHost.setForTest(on = false)
+        IraHub.forgetAll()
+        IraHub.refresh()
+        val old = IraHub.state.value.proposals
+        assertTrue(old.all { it.result.recommended })
+        for (p in old) {
+            assertNotNull("held with the rule on", IraHub.heldPine(p.result, com.optionslab.ira.IdeaWinRate.Rule.DEFAULT))
+            assertTrue("${p.result.name} was held as a note", "PINE|${p.result.name}" in held)
+        }
+        assertEquals(old.size, held.size)
+        // Boss's own asked backtest is his manual action: with the rule on it still answers with its offer.
+        com.optionslab.app.data.IdeaRuleHost.setForTest()
+        IraHub.testAutoLab = false
+        IraHub.forgetAll()
+        IraHub.refresh()
+        IraHub.ask("backtest the hammer on banknifty 1 hour")
+        waitFor("the asked backtest") { IraHub.state.value.proposals.isNotEmpty() }
+        assertEquals(60, IraHub.state.value.proposals.single().result.minutes)
+    }
+
+    /**
      * 21 Oct (Boss's diagnostics: the words worker's pattern check took up to 6 min 44 s): from the words round's checks the
      * two-year pattern lab runs on its own background job - the refresh returns without it, and its offers still come.
      */
     @Test fun theWordsRoundsRefreshLeavesThePatternLabToItsOwnJob() = runBlocking {
+        com.optionslab.app.data.IdeaRuleHost.setForTest(on = false)
         IraHub.testAutoLab = true
         IraHub.testHistories = { sixty }
         IraHub.testLabBars = { _, _ -> twoYears }

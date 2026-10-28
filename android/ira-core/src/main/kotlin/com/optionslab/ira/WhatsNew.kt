@@ -68,7 +68,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
-        // 28 Oct (Boss: "Add s5 trail to arms directly, if it does not perform I will turn it off"): newest of all.
+        // 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): newest of all.
+        Entry("2026-10-28-auto-ideas-65", OCT28, "Automatic ideas now need a 65% win rate",
+            "Nothing new is made by itself unless it wins at least 65% of its trades. " +
+                "That covers forge ideas, strategy lab variants, shadow re-arms and Jarvis's own Pine scripts. " +
+                "The win rate must come from a forward record or a walk-forward test, after charges and slippage. " +
+                "It also needs enough trades and a profit, on top of every test it already passes. " +
+                "Below the rule an idea is only a note, held in the change log and the Strategy lab. " +
+                "What you make or switch on yourself is not touched, and running arms stay on. " +
+                "Changing the 65% needs your PIN, and one tap in the change timeline undoes the rule.",
+            "Settings → Bot settings → Automatic ideas: minimum win rate; the change timeline; the Strategy lab"),
+        // 28 Oct (Boss: "Add s5 trail to arms directly, if it does not perform I will turn it off"): the 65% rule came later that day, above it.
         Entry("2026-10-28-s5-trail-paper-arm", OCT28, "S5 Trail now trades on paper",
             "S5 Trail is the research network's morning pick, now a paper arm. " +
                 "At 09:20, 09:25 and 09:30 it reads the five indices, India VIX and the option chain. " +

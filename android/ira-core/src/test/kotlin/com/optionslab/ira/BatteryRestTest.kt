@@ -228,8 +228,9 @@ class BatteryRestTest {
         // (20 Oct: the Candle agent's entry, then the 19 Oct diagnostics fixes newest of all.)
         // (20 Oct: the whole-app review's entry, then enhancement round 1's, then round 2's; 21 Oct: round 3's, the commodities' own lock, then round 4's, then round 5's, then FT3's; 22 Oct: the Liquidity exit fixes, then Boss's breakeven switch, then the 22 Oct diagnostics fixes newest of all.)
         // (22 Oct: the arms audit's fixes, then the four ideas borrowed from the day-trader skill; 25 Oct: ntfy alerts, the app audit's fixes, then Boss's decisions; 26 Oct: ntfy acted on within seconds, then the erase of every store, then the Donchian paper fixes, then ntfy following the alert app's own exits, newest of all.)
-        // (27 Oct: paper limit buys paying the ask, then the battery audit; 28 Oct: IraThinker's flow on paper, then the FINNIFTY book price, then S5 Trail on paper, newest of all.)
-        assertEquals(49, o)
+        // (27 Oct: paper limit buys paying the ask, then the battery audit; 28 Oct: IraThinker's flow on paper, then the FINNIFTY book price,
+        // then S5 Trail on paper, then the 65% win-rate rule for automatic ideas, newest of all.)
+        assertEquals(50, o)
         assertTrue(WhatsNew.ENTRIES.take(o).all { it.date > java.time.LocalDate.of(2026, 10, 14) })
         assertEquals("2026-10-14-gamma-line-oi-wall-shadow", WhatsNew.ENTRIES[o + 1].id)
         assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[o + 2].id)

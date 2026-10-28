@@ -27,6 +27,8 @@ object ChangeTimeline {
         NO_UNDO("no undo here"),
         /** Asked of Boss, not applied (nothing to undo). */
         ASKED("asked, not applied"),
+        /** 28 Oct: an automatic idea held by Boss's win-rate rule ([IdeaWinRate]): a note, nothing made (nothing to undo). */
+        HELD("held as a note: nothing made"),
     }
 
     /**
@@ -63,11 +65,12 @@ object ChangeTimeline {
      * in Live), beside the change's scope (review G5-2).
      */
     fun fromAutopilot(book: AutoChange.Book, day: LocalDate, undoNeedsPin: (AutoChange.Entry) -> Boolean = { false }): List<Item> = book.entries
-        .filter { it.day == day && it.status != AutoChange.Status.SKIPPED && it.status != AutoChange.Status.DECLINED }
+        .filter { it.day == day && it.status != AutoChange.Status.DECLINED &&
+            (it.status != AutoChange.Status.SKIPPED || it.change.kind == AutoChange.Kind.IDEA_HELD) }
         .map { e ->
             val c = e.change
             val tuning = e.by.startsWith("specialists")
-            val state = when (e.status) {
+            val state = if (c.kind == AutoChange.Kind.IDEA_HELD) UndoState.HELD else when (e.status) {
                 AutoChange.Status.UNDONE -> UndoState.UNDONE
                 AutoChange.Status.REVERTED -> UndoState.REVERTED
                 AutoChange.Status.OFFERED -> UndoState.ASKED
@@ -143,11 +146,13 @@ object ChangeTimeline {
     /** "What changed today across the app?" */
     fun say(items: List<Item>, hhmm: (Long) -> String): String {
         if (items.isEmpty()) return "Nothing changed by itself today, Boss: no agent made an automatic change."
-        val made = items.filter { it.undo != UndoState.ASKED }
-        val asked = items.size - made.size
+        val made = items.filter { it.undo != UndoState.ASKED && it.undo != UndoState.HELD }
+        val held = items.count { it.undo == UndoState.HELD }
+        val asked = items.size - made.size - held
         val bySource = made.groupBy { it.source }.entries.sortedBy { it.key.ordinal }.joinToString(", ") { "${it.value.size} from ${it.key.agent}" }
         val head = "Today ${plural(made.size, "automatic change")}" + (if (made.isNotEmpty()) " ($bySource)" else "") +
-            (if (asked > 0) ", and ${plural(asked, "change")} asked of you" else "") + "."
+            (if (asked > 0) ", and ${plural(asked, "change")} asked of you" else "") +
+            (if (held > 0) "; ${plural(held, "automatic idea")} held by your win-rate rule (notes only)" else "") + "."
         val last = made.sortedByDescending { it.atMs }.take(4).joinToString(" ") { "${hhmm(it.atMs)} ${it.agent}: ${it.what} (${it.undo.words})." }
         val pending = made.count { it.pending }
         val pin = made.count { it.undo == UndoState.NEEDS_PIN }
