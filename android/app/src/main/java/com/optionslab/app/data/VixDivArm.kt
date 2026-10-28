@@ -439,7 +439,7 @@ object VixDivArm {
     }
 
     private fun closed(b: Book, p: Pos) {
-        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit", ArmLive.pct(p.entry, p.exit)) }
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
         note(b, "%s: sold (%s) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6990 + VixDivRules.UNDERLYINGS.indexOf(p.index).coerceAtLeast(0), Notifier.SELL, "${VixDivRules.LABEL} sold ${p.symbol} · Paper",

@@ -1054,4 +1054,13 @@ class ArmLiveTest : RobolectricTest() {
             assertEquals(0, ExitCoordinator.countsForTest().lagSubtracted)
         } finally { ExitCoordinator.resetForTest() }
     }
+
+    /** 28 Oct (shadow logging): a paper trade's result in percent of its entry, for the time machine's forward log. */
+    @Test fun aPaperResultInPercentOfTheEntry() {
+        assertEquals(50.0, ArmLive.pct(100.0, 150.0)!!, 1e-9)
+        assertEquals(-15.0, ArmLive.pct(100.0, 85.0)!!, 1e-9)
+        assertEquals(10.0, ArmLive.pct(100.0, 90.0, side = -1)!!, 1e-9)     // a sale (MCX short) that fell
+        assertNull(ArmLive.pct(100.0, null)); assertNull(ArmLive.pct(0.0, 5.0)); assertNull(ArmLive.pct(Double.NaN, 5.0))
+        assertNull(ArmLive.pct(null, 5.0))
+    }
 }

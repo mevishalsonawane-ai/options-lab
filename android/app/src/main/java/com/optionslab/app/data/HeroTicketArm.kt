@@ -741,7 +741,7 @@ object HeroTicketArm {
     const val TREND_WHY = "trend_turn"
 
     private fun closed(b: Book, p: Pos) {
-        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit", ArmLive.pct(p.entry, p.exit)) }
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
         if (p.why == TREND_WHY) runCatching {
             TrendWatchHost.sold(p.symbol, "%s %s sold on paper on the trend turn (T3) @ %s".format(Locale.ENGLISH,

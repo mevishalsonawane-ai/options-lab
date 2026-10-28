@@ -731,7 +731,7 @@ object McxPaperArms {
     }
 
     private fun closed(b: Book, p: Pos) {
-        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit", ArmLive.pct(p.entry, p.exit, p.side)) }
         b.status[p.arm] = "closed ${p.symbol}: ${p.why}"
         note(b, p.arm, "%s: closed (%s) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6970 + ARMS.indexOf(p.arm).coerceAtLeast(0), Notifier.SELL, "${label(p.arm)} closed ${p.symbol} · Paper",

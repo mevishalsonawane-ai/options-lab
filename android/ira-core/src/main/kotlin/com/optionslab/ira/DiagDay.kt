@@ -23,6 +23,9 @@ import java.util.zip.GZIPOutputStream
  *  2. App health: the day's error counts by kind, the order-speed and slippage lines, stream drops, the workers' lines and
  *     the GitHub sync's failed or skipped runs.
  *  3. The Autopilot change timeline of the day, Boss's own switches (the trail, the parks) included.
+ *  4. (28 Oct, shadow logging) The time machine's checks of the day ([TimeMachineCheck]): each entry's arm, index, direction,
+ *     minute, stop and target in index points, its odds as numbers and its verdict; no ref (refs can hold order ids), no
+ *     rupees. Research joins them with the arms' trades and the index's bars (research/HUNT_R122_CONTEXT_GATE.md).
  *
  * Privacy (13 Oct, tested in DiagDayTest): every text goes through [scrub] - GitHub tokens ([CloudSync.redact]), the owner's
  * secret rules ([Secrets.redact]: digit runs of 9+, phone numbers, e-mail, PAN), JWTs (eyJ...), long letter-and-digit runs
@@ -51,6 +54,7 @@ object DiagDay {
     const val MAX_TRADES = 60
     const val MAX_ORDERS = 150
     const val MAX_CHANGES = 120
+    const val MAX_CHECKS = 150
     const val MAX_LINES = 80
     const val MAX_TEXT = 300
     /** The most drop times and incidents kept (the newest). */
@@ -99,6 +103,20 @@ object DiagDay {
         val status: String, val type: String = "", val avg: Double = 0.0, val message: String = "",
     )
 
+    /**
+     * 28 Oct (shadow logging): one time machine check ([com.optionslab.app.data.TimeMachineHost] in the app): the entry's facts,
+     * its odds as numbers, the verdict, whether it is hidden from display, and the arm's exit reason once known ([outcome]).
+     * Shadow only: nothing trades on it.
+     */
+    data class TimeMachineCheck(
+        val arm: String, val underlying: String, val direction: Int, val at: LocalDateTime, val barMinutes: Int,
+        val stopPoints: Double?, val targetPoints: Double?, val exitAt: LocalTime?, val premium: Boolean, val live: Boolean,
+        val verdict: String, val used: Int, val sessions: Int, val targetFirst: Int, val stopFirst: Int, val neither: Int,
+        val breakEven: Double?, val hidden: Boolean, val outcome: String? = null,
+        /** The paper trade's result in percent of its entry, once its arm reported the close (null: not known or live). */
+        val pct: Double? = null,
+    )
+
     data class Input(
         val day: LocalDate, val generatedAt: LocalDateTime, val app: String,
         /** The app's switches (states only). */
@@ -120,6 +138,8 @@ object DiagDay {
         val workers: List<String> = emptyList(),
         /** The personal words to take out wherever they appear (name, user id, login, e-mail). */
         val personal: Collection<String?> = emptyList(),
+        /** 28 Oct: the day's time machine checks (shadow logging). */
+        val timeMachine: List<TimeMachineCheck> = emptyList(),
     )
 
     // ---- the reasons ----------------------------------------------------------------------------------------------------
@@ -526,6 +546,19 @@ object DiagDay {
                     "source" to c.source.name.lowercase(Locale.ROOT), "agent" to s(c.agent), "what" to s(c.what), "why" to s(c.why),
                     "undo" to c.undo.name.lowercase(Locale.ROOT), "scope" to s(c.scope), "own" to c.own)
             },
+            // 28 Oct (shadow logging): the day's time machine checks, oldest first; numbers only besides the arm, index and verdict.
+            "time_machine" to capped("time_machine", i.timeMachine.filter { it.at.toLocalDate() == i.day }.sortedBy { it.at }, MAX_CHECKS).map { c ->
+                linkedMapOf("at" to at(c.at, i.day), "arm" to s(c.arm), "underlying" to s(c.underlying), "direction" to c.direction,
+                    "account" to if (c.live) "live" else "paper", "bar_minutes" to c.barMinutes,
+                    "stop_points" to c.stopPoints?.takeIf { it.isFinite() }?.let { r2(it) },
+                    "target_points" to c.targetPoints?.takeIf { it.isFinite() }?.let { r2(it) },
+                    "exit_at" to c.exitAt?.let { HM.format(it) }, "premium" to c.premium, "verdict" to s(c.verdict),
+                    "used" to c.used, "sessions" to c.sessions, "target_first" to c.targetFirst, "stop_first" to c.stopFirst,
+                    "neither" to c.neither, "break_even" to c.breakEven?.takeIf { it.isFinite() }?.let { Math.round(it * 10_000.0) / 10_000.0 },
+                    "hidden" to c.hidden, "outcome" to c.outcome?.let { s(it) },
+                    // A live trade's result is left out: the forward test reads paper trades only.
+                    "pct" to if (c.live) null else c.pct?.takeIf { it.isFinite() }?.let { r2(it) })
+            },
         )
         report["truncated"] = cut
         return fit(report)
@@ -566,7 +599,7 @@ object DiagDay {
         repeat(40) {
             if (Json.write(r).toByteArray(Charsets.UTF_8).size <= MAX_BYTES) return r
             val health = r["health"] as MutableMap<String, Any?>
-            val lists = listOf("decisions" to r, "orders" to r, "timeline" to r, "other_arms" to r, "workers" to health)
+            val lists = listOf("decisions" to r, "orders" to r, "timeline" to r, "other_arms" to r, "workers" to health, "time_machine" to r)
                 .map { (k, m) -> Triple(k, m, (m[k] as List<*>)) }.filter { it.third.isNotEmpty() }
             val big = lists.maxByOrNull { Json.write(it.third).length }
             if (big == null) {

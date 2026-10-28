@@ -69,10 +69,10 @@ class TimeMachineHostTest : RobolectricTest() {
         assertTrue(TimeMachineHost.diagLine(), TimeMachineHost.diagLine().contains("1 check(s) today") && TimeMachineHost.diagLine().contains("forward log 1 record(s)"))
         val said = TimeMachineHost.jarvisLine(today)
         assertTrue(said, said.startsWith("Time machine today, Boss: ORB edge (target first 100%"))
-        assertTrue(said, said.endsWith("It only reports; it never skips or resizes a trade."))
+        assertTrue(said, said.endsWith("It only reports; it never skips or resizes a trade. Treat it as background: in a backtest its odds did not predict wins."))
         assertEquals("The time machine checked no entry today, Boss.", TimeMachineHost.jarvisLine(today.minusDays(1)))
         // The timeline's finding.
-        assertTrue(SmartWorkers.bus.recent(System.currentTimeMillis()).any { it.who == "time machine" && it.words.contains("verdict edge") })
+        assertTrue(SmartWorkers.bus.recent(System.currentTimeMillis()).any { it.who == "time machine" && it.words.contains("verdict edge") && it.words.startsWith(TimeMachineHost.NOTE_SHORT) })
         // A fresh process (memory cleared): the log is read back from the encrypted file, then settled with the trade's outcome.
         TimeMachineHost.resetForTest()
         assertEquals("read back from the encrypted file", 1, TimeMachineHost.forwardLog().size)
@@ -80,6 +80,77 @@ class TimeMachineHostTest : RobolectricTest() {
         var waited = 0
         while (TimeMachineHost.forwardLog()[0].outcome == null && waited++ < 100) Thread.sleep(20)
         assertEquals("target", TimeMachineHost.forwardLog()[0].outcome)
+    }
+
+    /**
+     * 28 Oct (R120): the Hero Rs 1,000 ticket's verdict is hidden (its stop is a few index points, so most entries read "against"
+     * whatever happens): no timeline finding and nothing from Jarvis, but still checked and kept in the forward log for research.
+     */
+    @Test fun aHiddenArmIsCheckedAndLoggedButNeverShown() {
+        assertTrue(TimeMachineHost.hidden(com.optionslab.engine.orb.HeroTicketRules.SOURCE))
+        assertTrue("only the ticket arm R120 measured", !TimeMachineHost.hidden(com.optionslab.engine.orb.HeroRules.ARM.source) && !TimeMachineHost.hidden("orb"))
+        SmartWorkers.resetForTest()
+        TimeMachineHost.bars = TimeMachineHost.Bars { _, _, _ -> climbing(30) to "30 sessions from the test" }
+        val r = TimeMachineHost.check(entry(arm = com.optionslab.engine.orb.HeroTicketRules.SOURCE))
+        assertNotNull(r.odds)
+        assertEquals(r, TimeMachineHost.resultOf("orb:hero_ticket:P1"))
+        assertEquals("kept for research", 1, TimeMachineHost.forwardLog().size)
+        assertTrue("no timeline finding", SmartWorkers.bus.recent(System.currentTimeMillis()).none { it.who == TimeMachineHost.WHO })
+        assertTrue(TimeMachineHost.jarvisLine(today), TimeMachineHost.jarvisLine(today).startsWith("The time machine has nothing to show today, Boss: only the Hero ticket"))
+        assertTrue(TimeMachineHost.diagLine(), TimeMachineHost.diagLine().contains("[hidden from display]") && TimeMachineHost.diagLine().contains("not a proven signal, R120"))
+        // A shown arm the same day: Jarvis speaks of it alone.
+        TimeMachineHost.check(entry())
+        val said = TimeMachineHost.jarvisLine(today)
+        assertTrue(said, said.startsWith("Time machine today, Boss: ORB edge"))
+        assertEquals(said, 1, Regex("ORB edge").findAll(said).count())
+        assertTrue(SmartWorkers.bus.recent(System.currentTimeMillis()).count { it.who == TimeMachineHost.WHO } == 1)
+    }
+
+    /**
+     * 28 Oct (shadow logging): each check keeps the entry's facts and its odds as numbers in the encrypted forward log (read back
+     * by a fresh process), and the daily diagnostics get them without the ref; a record from before 28 Oct (no facts) still reads.
+     */
+    @Test fun theForwardLogKeepsTheFactsForTheDiagnostics() {
+        TimeMachineHost.bars = TimeMachineHost.Bars { _, _, _ -> climbing(30) to "30 sessions from the test" }
+        TimeMachineHost.check(entry())
+        TimeMachineHost.check(entry(arm = com.optionslab.engine.orb.HeroTicketRules.SOURCE))
+        TimeMachineHost.check(entry(skip = "held overnight by design: no intraday replay", arm = "night_r3"))
+        TimeMachineHost.resetForTest()
+        val log = TimeMachineHost.forwardLog()
+        assertEquals(3, log.size)
+        val f = log.first { it.arm == "orb" }.facts!!
+        assertEquals("BANKNIFTY", f.underlying); assertEquals(1, f.direction); assertEquals(today.atTime(10, 35), f.at)
+        assertEquals(80.0, f.stopPoints!!, 1e-9); assertEquals(80.0, f.targetPoints!!, 1e-9)   // 40 premium points / delta 0.5
+        assertEquals(OrbRules.SQUARE_OFF, f.exitAt); assertTrue(f.premium); assertEquals(30, f.sessions)
+        assertEquals(f.used, f.targetFirst + f.stopFirst + f.neither); assertEquals(0.5, f.breakEven!!, 1e-9); assertTrue(!f.hidden)
+        assertTrue(log.first { it.arm == com.optionslab.engine.orb.HeroTicketRules.SOURCE }.facts!!.hidden)
+        val night = log.first { it.arm == "night_r3" }.facts!!
+        assertNull(night.stopPoints); assertEquals(0, night.used)
+        // The settle keeps the facts and adds the result.
+        TimeMachineHost.settle("orb:orb:P1", "target", 30.5)
+        var waited = 0
+        while (TimeMachineHost.forwardLog().first { it.arm == "orb" }.outcome == null && waited++ < 100) Thread.sleep(20)
+        assertNotNull(TimeMachineHost.forwardLog().first { it.arm == "orb" }.facts)
+        val checks = TimeMachineHost.diagChecks(today)
+        assertEquals(3, checks.size)
+        assertEquals("target", checks.first { it.arm == "orb" }.outcome)
+        assertEquals(30.5, checks.first { it.arm == "orb" }.pct!!, 1e-9)
+        assertNull(checks.first { it.arm == "night_r3" }.pct)
+        assertTrue(TimeMachineHost.diagChecks(today.minusDays(1)).isEmpty())
+        // An old record without facts reads, and is left out of the diagnostics.
+        val old = TimeMachineHost.decode("""[{"day":"$today","arm":"orb","ref":"r","verdict":"edge","odds":"x","outcome":null,"live":false}]""")
+        assertEquals(1, old.size); assertNull(old[0].facts)
+        // Encoded and decoded again, facts equal (the round trip the vault file makes).
+        assertEquals(log, TimeMachineHost.decode(TimeMachineHost.encode(log)).let { d -> d.map { r -> r.copy(outcome = log.first { it.ref == r.ref }.outcome) } })
+    }
+
+    /** 28 Oct (review): the timeline shows a finding's first 160 characters; the note comes first, so a long label never cuts it. */
+    @Test fun theNoteSurvivesALongLabelInTheTimeline() {
+        SmartWorkers.resetForTest()
+        TimeMachineHost.bars = TimeMachineHost.Bars { _, _, _ -> climbing(30) to "30 sessions from the test" }
+        TimeMachineHost.check(entry(arm = "pine").copy(label = "Pine · " + "a very long script name the owner chose ".repeat(3)))
+        val words = SmartWorkers.bus.recent(System.currentTimeMillis()).first { it.who == TimeMachineHost.WHO }.words
+        assertTrue(words, words.take(160).contains("not a proven signal"))
     }
 
     @Test fun noBarsFewSessionsAndAnOvernightArmAreSaidHonestly() {

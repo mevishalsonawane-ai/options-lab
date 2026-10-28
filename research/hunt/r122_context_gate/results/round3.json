@@ -1,0 +1,5 @@
+{
+ "D1_ST_GAP_CHASE_TREND": {"kind": "rule", "rules": ["R6_SUPERTREND", "R4_GAP_AGAINST", "R8_CHASE", "R1_TREND"]},
+ "D2_GAP_CHASE": {"kind": "rule", "rules": ["R4_GAP_AGAINST", "R8_CHASE"]},
+ "D3_ST_CHASE": {"kind": "rule", "rules": ["R6_SUPERTREND", "R8_CHASE"]}
+}

@@ -40,6 +40,16 @@ Schema 2 (20 Oct 2026) keeps every schema-1 key and adds:
   lines with their times; ``health.lines_as_of``: when ``health.lines`` were read (``app_health`` and ``stream`` are the
   day's own; the others as at that time).
 
+Since 28 Oct 2026 (still schema 2: one key added, every other key as it was; an older file has no such key):
+
+- ``time_machine``: the time machine's checks of the day (shadow logging, research/HUNT_R122_CONTEXT_GATE.md): at, arm (the
+  arm's key), underlying, direction (+1 the index must rise), account, bar_minutes, stop_points and target_points (index
+  points after the app's delta-0.5 conversion; null: none), exit_at, premium, verdict (edge / coin flip / against /
+  unknown), used, sessions, target_first, stop_first, neither, break_even, hidden (kept off the screens: the Hero Rs 1,000
+  ticket), outcome (the arm's exit reason once known) and pct (a paper trade's result in percent of its entry, once its
+  arm reported the close: the price move only, BEFORE charges; null for live, and for the ntfy arm's partial sells).
+  For the MCX arms ``underlying`` is the traded contract's symbol, not an index. No ref and no rupees. :func:`time_machine_rows` reads it.
+
 Usage::
 
     python research/data/read_diagnostics.py diag-2026-10-13.json.gz          # a short summary
@@ -162,6 +172,11 @@ def arm_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def time_machine_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """The day's time machine checks, one row each with the day added; [] for a file from before 28 Oct 2026."""
+    return [dict(c, day=data["day"]) for c in data.get("time_machine") or []]
+
+
 def summary(data: dict[str, Any]) -> str:
     """A few lines a research session can read at a glance."""
     out = [f"{data['day']} · app {data['app']} · generated {data['generated_at']}"]
@@ -181,6 +196,10 @@ def summary(data: dict[str, Any]) -> str:
     for kind, n in sorted(sev["errors"].items(), key=lambda kv: -kv[1])[:5]:
         out.append(f"    error x{n}: {kind}")
     out.append(f"  changes: {len(data['timeline'])} ({sum(1 for c in data['timeline'] if c['own'])} by Boss)")
+    tm = time_machine_rows(data)
+    if tm:
+        out.append(f"  time machine: {len(tm)} checks (" + ", ".join(f"{v} {n}" for v, n in
+                                                                    Counter(r["verdict"] for r in tm).most_common()) + ")")
     if data["truncated"]:
         out.append("  cut for size: " + ", ".join(f"{k} {v}" for k, v in sorted(data["truncated"].items())))
     return "\n".join(out)

@@ -724,18 +724,18 @@ object ShadowArms {
     private suspend fun exitPaper(p: Trade, c: Paper.Contract, why: String, ltp: Double): Trade? {
         val held = Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity }
         // Gone from the paper book without this selling it (the 15:15 square-off, or Boss closed it): booked at the price seen.
-        if (held <= 0) { runCatching { ArmLive.closed(mirrorRef(p), "closed_outside") }; return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp) }
+        if (held <= 0) { runCatching { ArmLive.closed(mirrorRef(p), "closed_outside", ArmLive.pct(p.entry, ltp)) }; return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp) }
         // 22 Oct (arms audit): the sale only reduces what the book holds; closed between the read above and the sale (the
         // square-off), it is refused and booked as closed outside - never a short.
         val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null, exit = true)
         if (!sell.ok && sell.message.contains("already closed")) {
-            runCatching { ArmLive.closed(mirrorRef(p), "closed_outside") }
+            runCatching { ArmLive.closed(mirrorRef(p), "closed_outside", ArmLive.pct(p.entry, ltp)) }
             return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp)
         }
         val (_, px) = filled(sell) ?: return null
         val v = ShadowRules.of(p.variant)
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${v?.let { x -> "${ShadowRules.armName(x)} (${x.name})" } ?: p.variant} · $why") }
-        runCatching { ArmLive.closed(mirrorRef(p), why) }
+        runCatching { ArmLive.closed(mirrorRef(p), why, ArmLive.pct(p.entry, px)) }
         return p.copy(exit = px, exitTime = now(), why = why, last = ltp,
             charges = p.charges + Paper.state.trades.filter { it.orderId == sell.orderId }.sumOf { it.charges.toDouble() })
     }

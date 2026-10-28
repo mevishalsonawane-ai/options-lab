@@ -92,5 +92,10 @@
     {"at": "12:00:00", "source": "autopilot", "agent": "You (logged by Autopilot)", "what": "Liquidity paper trail: off → on",
      "why": "your choice", "undo": "undoable", "scope": "paper", "own": true}
   ],
+  "time_machine": [
+    {"at": "10:21:00", "arm": "donchian", "underlying": "NIFTY", "direction": 1, "account": "paper", "bar_minutes": 5,
+     "stop_points": 61.23, "target_points": 61.23, "exit_at": "15:15", "premium": true, "verdict": "coin flip", "used": 1587,
+     "sessions": 60, "target_first": 570, "stop_first": 584, "neither": 433, "break_even": 0.5, "hidden": false, "outcome": "stop", "pct": -14.57}
+  ],
   "truncated": {}
 }

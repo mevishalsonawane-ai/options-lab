@@ -1,0 +1,6 @@
+{
+ "E1_ST_GAP_CHASE_TREND_INTRADAY": {"kind": "rule", "rules": ["R6_SUPERTREND", "R4_GAP_AGAINST", "R8_CHASE", "R1_TREND", "R2_INTRADAY"]},
+ "E2_ST_GAP_TREND": {"kind": "rule", "rules": ["R6_SUPERTREND", "R4_GAP_AGAINST", "R1_TREND"]},
+ "E3_ST_TREND": {"kind": "rule", "rules": ["R6_SUPERTREND", "R1_TREND"]},
+ "E4_GAP_TREND": {"kind": "rule", "rules": ["R4_GAP_AGAINST", "R1_TREND"]}
+}

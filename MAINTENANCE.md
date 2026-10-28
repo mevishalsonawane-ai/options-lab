@@ -274,6 +274,14 @@ stream drop it reconnected, the paper ticket near its breakeven, the daily loss 
 form's hint (the morning check, the day report, "that passphrase is too easy to guess"). A schema-1 file counted all of
 them as errors; `read_diagnostics.py` sorts its kinds by the same words as the phone.
 
+Since 28 Oct 2026 the file also carries `time_machine`: every time machine check of the day (shadow logging, your "yes
+build the shadow logging"). Each check gives the arm, index, direction, entry minute, stop and target in index points, the
+odds as numbers, the verdict, whether it is hidden from the screens (the Hero ₹1,000 ticket), and the arm's exit reason
+and the paper trade's result in percent of its entry once the trade closes (the price move, before charges; for MCX the
+"underlying" is the contract's symbol). No ref and no rupees. Research joins it with the arms' trades in the same file and the index's bars, to test
+the time machine and R122's context rules on trades no study has seen (research/hunt/r122_context_gate/FORWARD_PREREG.md).
+Nothing trades on it.
+
 Built by `android/ira-core/.../DiagDay.kt`; a sample is `research/data/tests/diag_sample.json` (and the schema-1 one,
 `diag_sample_v1.json`), and a test keeps the phone and the sample in step:
 

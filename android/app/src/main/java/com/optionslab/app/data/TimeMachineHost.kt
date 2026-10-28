@@ -52,6 +52,26 @@ object TimeMachineHost {
     const val WHO = "time machine"
     private const val KEEP = 600
 
+    /**
+     * 28 Oct (research R120, research/HUNT_R120_TIME_MACHINE_GATE.md): worked out before each entry on 14 arms' backtests, its
+     * odds did not predict which trades won (correlation 0.04 over 16,810 trades) and no gate built on it passed. Said with
+     * every verdict shown, so it is read as background, never as a signal.
+     */
+    const val UNPROVEN = "Not a proven signal: in a backtest of 16,810 trades its odds did not predict wins (R120)."
+
+    /**
+     * 28 Oct (R120): arms whose verdict is not shown on the ticket, to Jarvis or in the timeline. The Hero Rs 1,000 ticket's stop
+     * (25% of a Rs 5-30 premium) is a few index points, so the replay calls most entries "against" whatever happens (255 of
+     * 355 in the backtest). Still checked and kept in the forward log for research; only the display is hidden.
+     */
+    val HIDDEN_ARMS: Set<String> = setOf(com.optionslab.engine.orb.HeroTicketRules.SOURCE)
+
+    /** The timeline's opening words: the note comes first, so a long arm label can never cut it off (the timeline shows 160 characters). */
+    const val NOTE_SHORT = "Time machine (not a proven signal, R120)"
+
+    /** True when [arm]'s verdict is kept out of sight ([HIDDEN_ARMS]). */
+    fun hidden(arm: String): Boolean = arm in HIDDEN_ARMS
+
     /** What an arm hands over right after its entry. */
     data class Entry(
         val arm: String, val label: String,
@@ -84,8 +104,26 @@ object TimeMachineHost {
         val verdict: String get() = odds?.verdict?.word ?: "unknown"
     }
 
-    /** One line of the forward log: the check and, once reported, the trade's actual outcome. */
-    data class Record(val day: LocalDate, val arm: String, val ref: String, val verdict: String, val odds: String, val outcome: String?, val live: Boolean)
+    /**
+     * One line of the forward log: the check and, once reported, the trade's actual outcome. 28 Oct (Boss: "yes build the shadow
+     * logging"): also the entry's facts and the odds as numbers ([Facts]), so research can join each check with the trade's result
+     * in the daily diagnostics and work out the R122 context from the index's bars (research/HUNT_R122_CONTEXT_GATE.md). Shadow
+     * only: nothing reads it to trade. Records written before 28 Oct have no facts (null).
+     */
+    data class Record(val day: LocalDate, val arm: String, val ref: String, val verdict: String, val odds: String, val outcome: String?, val live: Boolean,
+                      val facts: Facts? = null,
+                      /** 28 Oct: the paper trade's result in percent of its entry, once its arm reports the close (null: not known). */
+                      val pct: Double? = null)
+
+    /** An entry's facts and its odds as numbers (no order id, no rupees): what the daily diagnostics carry ([diagChecks]). */
+    data class Facts(
+        val underlying: String, val direction: Int, val at: LocalDateTime, val barMinutes: Int,
+        /** In underlying points after [points] (null: none), and the arm's time exit. */
+        val stopPoints: Double?, val targetPoints: Double?, val exitAt: LocalTime?, val premium: Boolean,
+        val used: Int, val sessions: Int, val targetFirst: Int, val stopFirst: Int, val neither: Int, val breakEven: Double?,
+        /** Kept out of sight ([hidden]): still logged for research. */
+        val hidden: Boolean,
+    )
 
     /** Where the bars come from (replaceable in tests): the sessions of [underlying] before [today], and a word for the source. */
     fun interface Bars { fun sessions(underlying: String, today: LocalDate, barMinutes: Int): Pair<List<TimeMachine.Session>, String> }
@@ -141,9 +179,9 @@ object TimeMachineHost {
     }
 
     /** The trade [ref]'s actual outcome, as its arm reports it when it closes ("target", "stop", "time", "+Rs 1,200"). */
-    fun settle(ref: String, outcome: String) {
+    fun settle(ref: String, outcome: String, pct: Double? = null) {
         val gen = wipeGen
-        scope.launch { runCatching { synchronized(io) { if (gen != wipeGen) return@synchronized; ensureLoaded(); records = records.map { if (it.ref == ref && it.outcome == null) it.copy(outcome = outcome) else it }; save() } } }
+        scope.launch { runCatching { synchronized(io) { if (gen != wipeGen) return@synchronized; ensureLoaded(); records = records.map { if (it.ref == ref && it.outcome == null) it.copy(outcome = outcome, pct = pct?.takeIf { p -> p.isFinite() }) else it }; save() } } }
     }
 
     internal fun check(e: Entry): Result {
@@ -173,17 +211,36 @@ object TimeMachineHost {
         // 26 Oct: an erase just between the check above and here: taken back out.
         if (gen != wipeGen) { results.remove(e.ref); _latest.update { l -> l.filter { it.entry.ref != e.ref } }; return r }
         runCatching { Diag.record("timemachine", r.line()) }
-        // The Autopilot change timeline shows it as its own finding (words only; nothing to undo).
-        runCatching { SmartWorkers.bus.post(com.optionslab.ira.Findings.Finding(WHO, com.optionslab.ira.Findings.Kind.OTHER, e.underlying, 0, null, 50,
-            r.atMs, 12 * 3_600_000L, words = "Time machine checked ${e.label}'s entry: verdict ${r.verdict} → " + (r.odds?.let { "target first ${it.targetPct.toInt()}%, stop first ${it.stopPct.toInt()}%, break-even ${(it.breakEven * 100).toInt()}%" } ?: (r.note ?: "no odds")))) }
+        // The Autopilot change timeline shows it as its own finding (words only; nothing to undo). 28 Oct: not for a hidden arm.
+        if (!hidden(e.arm)) runCatching { SmartWorkers.bus.post(com.optionslab.ira.Findings.Finding(WHO, com.optionslab.ira.Findings.Kind.OTHER, e.underlying, 0, null, 50,
+            r.atMs, 12 * 3_600_000L, words = "$NOTE_SHORT checked ${e.label}'s entry: verdict ${r.verdict} → " + (r.odds?.let { "target first ${it.targetPct.toInt()}%, stop first ${it.stopPct.toInt()}%, break-even ${(it.breakEven * 100).toInt()}%" } ?: (r.note ?: "no odds")))) }
         synchronized(io) {
             if (gen != wipeGen) return r
             ensureLoaded()
-            records = (records + Record(day, e.arm, e.ref, r.verdict, r.odds?.line() ?: (r.note ?: ""), null, e.live)).takeLast(KEEP)
+            records = (records + Record(day, e.arm, e.ref, r.verdict, r.odds?.line() ?: (r.note ?: ""), null, e.live, factsOf(e, r))).takeLast(KEEP)
             save()
         }
         testDone?.invoke(r)
         return r
+    }
+
+    /** [e]'s facts and [r]'s odds as numbers for the forward log (28 Oct, shadow logging). */
+    internal fun factsOf(e: Entry, r: Result): Facts {
+        val (stop, target, _) = if (e.skip != null) Triple(null, null, null) else points(e)
+        val o = r.odds
+        return Facts(e.underlying, e.direction, e.at.withSecond(0).withNano(0), e.barMinutes, stop, target, e.exitAt, e.premium,
+            o?.used ?: 0, o?.sessions ?: 0, o?.targetFirst ?: 0, o?.stopFirst ?: 0, o?.neither ?: 0,
+            o?.breakEven?.takeIf { it.isFinite() }, hidden(e.arm))
+    }
+
+    /**
+     * 28 Oct (shadow logging): [day]'s checks from the forward log, as the daily diagnostics carry them (no ref: refs can hold
+     * order ids). Reads the log (the evening sync's thread, never the order or tick path); records without facts are left out.
+     */
+    fun diagChecks(day: LocalDate): List<com.optionslab.ira.DiagDay.TimeMachineCheck> = forwardLog().filter { it.day == day && it.facts != null }.map { rec ->
+        val f = rec.facts!!
+        com.optionslab.ira.DiagDay.TimeMachineCheck(rec.arm, f.underlying, f.direction, f.at, f.barMinutes, f.stopPoints, f.targetPoints, f.exitAt,
+            f.premium, rec.live, rec.verdict, f.used, f.sessions, f.targetFirst, f.stopFirst, f.neither, f.breakEven, f.hidden, rec.outcome, rec.pct)
     }
 
     /** The stop and target in underlying points, converting premium points with the delta (0.5 assumed when the arm has none). */
@@ -262,11 +319,13 @@ object TimeMachineHost {
 
     /** Jarvis's words on today's checks (none: says so). */
     fun jarvisLine(day: LocalDate): String {
-        val todays = _latest.value.filter { it.day == day }
-        if (todays.isEmpty()) return "The time machine checked no entry today, Boss."
+        val all = _latest.value.filter { it.day == day }
+        val todays = all.filter { !hidden(it.entry.arm) }
+        if (all.isEmpty()) return "The time machine checked no entry today, Boss."
+        if (todays.isEmpty()) return "The time machine has nothing to show today, Boss: only the Hero ticket was checked, and its verdict is hidden (its stop is too close for the replay to mean anything)."
         return "Time machine today, Boss: " + todays.joinToString(" ") { r ->
             "${r.entry.label} ${r.verdict}" + (r.odds?.takeIf { it.used > 0 }?.let { " (target first ${it.targetPct.toInt()}%, stop first ${it.stopPct.toInt()}%, break-even ${(it.breakEven * 100).toInt()}%, ${it.sessions} sessions)" } ?: "") + "."
-        } + " It only reports; it never skips or resizes a trade."
+        } + " It only reports; it never skips or resizes a trade. Treat it as background: in a backtest its odds did not predict wins."
     }
 
     /** The diagnostics' line: today's checks and the forward log's size. */
@@ -274,8 +333,9 @@ object TimeMachineHost {
         val today = Market.today()
         val todays = _latest.value.filter { it.day == today }
         val n = synchronized(io) { records.size }
-        return "Time machine: ${todays.size} check(s) today" + (todays.takeIf { it.isNotEmpty() }?.joinToString(" | ", prefix = " - ") { it.line() } ?: "") +
-            "; forward log $n record(s) (shadow only: never skips, resizes or delays a trade)"
+        // 28 Oct (R120): the diagnostics keep every check for research; a hidden arm's is marked so, and the note is said once.
+        return "Time machine: ${todays.size} check(s) today" + (todays.takeIf { it.isNotEmpty() }?.joinToString(" | ", prefix = " - ") { it.line() + if (hidden(it.entry.arm)) " [hidden from display]" else "" } ?: "") +
+            "; forward log $n record(s) (shadow only: never skips, resizes or delays a trade; not a proven signal, R120)"
     }
 
     // ---- the forward log (the encrypted vault file; this object's IO scope only) --------------------------------------------
@@ -302,15 +362,31 @@ object TimeMachineHost {
 
     internal fun encode(rs: List<Record>): String = JSONArray().apply {
         rs.forEach { put(JSONObject().put("day", it.day.toString()).put("arm", it.arm).put("ref", it.ref).put("verdict", it.verdict).put("odds", it.odds)
-            .put("outcome", it.outcome ?: JSONObject.NULL).put("live", it.live)) }
+            .put("outcome", it.outcome ?: JSONObject.NULL).put("live", it.live).put("pct", num(it.pct)).apply { it.facts?.let { f -> put("facts", factsJson(f)) } }) }
     }.toString()
+
+    private fun num(x: Double?): Any = x?.takeIf { it.isFinite() } ?: JSONObject.NULL
+
+    private fun factsJson(f: Facts): JSONObject = JSONObject().put("u", f.underlying).put("dir", f.direction).put("at", f.at.toString())
+        .put("bar", f.barMinutes).put("stop", num(f.stopPoints)).put("target", num(f.targetPoints)).put("exit", f.exitAt?.toString() ?: JSONObject.NULL)
+        .put("premium", f.premium).put("used", f.used).put("sessions", f.sessions).put("tf", f.targetFirst).put("sf", f.stopFirst)
+        .put("nf", f.neither).put("be", num(f.breakEven)).put("hidden", f.hidden)
+
+    private fun dbl(o: JSONObject, k: String): Double? = if (!o.has(k) || o.isNull(k)) null else o.optDouble(k).takeIf { it.isFinite() }
+
+    /** A record's facts, or null (none, or unreadable: the record itself is still kept). */
+    private fun factsFrom(o: JSONObject?): Facts? = o?.let { f -> runCatching {
+        Facts(f.getString("u"), f.getInt("dir"), LocalDateTime.parse(f.getString("at")), f.getInt("bar"), dbl(f, "stop"), dbl(f, "target"),
+            if (f.isNull("exit")) null else LocalTime.parse(f.getString("exit")), f.optBoolean("premium"), f.optInt("used"), f.optInt("sessions"),
+            f.optInt("tf"), f.optInt("sf"), f.optInt("nf"), dbl(f, "be"), f.optBoolean("hidden"))
+    }.getOrNull() }
 
     internal fun decode(text: String?): List<Record> = runCatching {
         val a = JSONArray(text ?: return emptyList())
         (0 until a.length()).map { i ->
             val o = a.getJSONObject(i)
             Record(LocalDate.parse(o.getString("day")), o.getString("arm"), o.getString("ref"), o.getString("verdict"), o.optString("odds"),
-                o.optString("outcome").takeIf { !o.isNull("outcome") && it.isNotEmpty() }, o.optBoolean("live"))
+                o.optString("outcome").takeIf { !o.isNull("outcome") && it.isNotEmpty() }, o.optBoolean("live"), factsFrom(o.optJSONObject("facts")), dbl(o, "pct"))
         }
     }.getOrDefault(emptyList())
 

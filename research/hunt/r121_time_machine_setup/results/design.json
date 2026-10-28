@@ -1,0 +1,2125 @@
+{
+ "arms": {
+  "R72": {
+   "name": "R72 Breadth Donchian",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 3071,
+       "kept": 3071,
+       "skipped": 0,
+       "net": 216929.47,
+       "win": 0.4676,
+       "max_dd": 199077.41
+      },
+      "rule": {
+       "trades": 3071,
+       "kept": 3061,
+       "skipped": 10,
+       "net": 206988.18,
+       "win": 0.4662,
+       "max_dd": 199077.41
+      },
+      "p": 0.9255,
+      "twin_p95": 226313
+     },
+     "wf": {
+      "base": {
+       "trades": 2238,
+       "kept": 2238,
+       "skipped": 0,
+       "net": 335881.73,
+       "win": 0.4897,
+       "max_dd": 86529.48
+      },
+      "rule": {
+       "trades": 2238,
+       "kept": 2228,
+       "skipped": 10,
+       "net": 325940.44,
+       "win": 0.4879,
+       "max_dd": 86529.48
+      },
+      "p": 0.8916,
+      "twin_p95": 344769
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 3071,
+       "kept": 3071,
+       "skipped": 0,
+       "net": 216929.47,
+       "win": 0.4676,
+       "max_dd": 199077.41
+      },
+      "rule": {
+       "trades": 3071,
+       "kept": 3071,
+       "skipped": 0,
+       "net": 216929.47,
+       "win": 0.4676,
+       "max_dd": 199077.41
+      },
+      "p": 1.0,
+      "twin_p95": 216929
+     },
+     "wf": {
+      "base": {
+       "trades": 2238,
+       "kept": 2238,
+       "skipped": 0,
+       "net": 335881.73,
+       "win": 0.4897,
+       "max_dd": 86529.48
+      },
+      "rule": {
+       "trades": 2238,
+       "kept": 2238,
+       "skipped": 0,
+       "net": 335881.73,
+       "win": 0.4897,
+       "max_dd": 86529.48
+      },
+      "p": 1.0,
+      "twin_p95": 335882
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "against": {
+       "n": 10,
+       "win": 0.9,
+       "mean": 994.1
+      },
+      "coin flip": {
+       "n": 2757,
+       "win": 0.472,
+       "mean": 92.9
+      },
+      "edge": {
+       "n": 252,
+       "win": 0.44,
+       "mean": -53.5
+      },
+      "unknown": {
+       "n": 52,
+       "win": 0.308,
+       "mean": -683.4
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 10,
+       "win": 0.9,
+       "mean": 994.1
+      },
+      "coin flip": {
+       "n": 2009,
+       "win": 0.494,
+       "mean": 162.1
+      },
+      "edge": {
+       "n": 219,
+       "win": 0.429,
+       "mean": 1.3
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "coin flip": {
+       "n": 2638,
+       "win": 0.473,
+       "mean": 92.4
+      },
+      "edge": {
+       "n": 381,
+       "win": 0.454,
+       "mean": 22.8
+      },
+      "unknown": {
+       "n": 52,
+       "win": 0.308,
+       "mean": -683.4
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 1857,
+       "win": 0.497,
+       "mean": 176.2
+      },
+      "edge": {
+       "n": 381,
+       "win": 0.454,
+       "mean": 22.8
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "R51": {
+   "name": "R51 Donchian 20 + Supertrend",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 4208,
+       "kept": 4208,
+       "skipped": 0,
+       "net": 50425.49,
+       "win": 0.4446,
+       "max_dd": 214238.57
+      },
+      "rule": {
+       "trades": 4208,
+       "kept": 4157,
+       "skipped": 51,
+       "net": 49298.78,
+       "win": 0.4441,
+       "max_dd": 201665.88
+      },
+      "p": 0.5157,
+      "twin_p95": 73288
+     },
+     "wf": {
+      "base": {
+       "trades": 3044,
+       "kept": 3044,
+       "skipped": 0,
+       "net": 213748.1,
+       "win": 0.4589,
+       "max_dd": 94176.35
+      },
+      "rule": {
+       "trades": 3044,
+       "kept": 3006,
+       "skipped": 38,
+       "net": 209786.91,
+       "win": 0.4581,
+       "max_dd": 94176.35
+      },
+      "p": 0.5477,
+      "twin_p95": 231337
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 4208,
+       "kept": 4208,
+       "skipped": 0,
+       "net": 50425.49,
+       "win": 0.4446,
+       "max_dd": 214238.57
+      },
+      "rule": {
+       "trades": 4208,
+       "kept": 4204,
+       "skipped": 4,
+       "net": 49029.61,
+       "win": 0.4446,
+       "max_dd": 214238.57
+      },
+      "p": 0.6662,
+      "twin_p95": 56684
+     },
+     "wf": {
+      "base": {
+       "trades": 3044,
+       "kept": 3044,
+       "skipped": 0,
+       "net": 213748.1,
+       "win": 0.4589,
+       "max_dd": 94176.35
+      },
+      "rule": {
+       "trades": 3044,
+       "kept": 3044,
+       "skipped": 0,
+       "net": 213748.1,
+       "win": 0.4589,
+       "max_dd": 94176.35
+      },
+      "p": 1.0,
+      "twin_p95": 213748
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "against": {
+       "n": 51,
+       "win": 0.49,
+       "mean": 22.1
+      },
+      "coin flip": {
+       "n": 3786,
+       "win": 0.446,
+       "mean": 12.5
+      },
+      "edge": {
+       "n": 316,
+       "win": 0.44,
+       "mean": 49.9
+      },
+      "unknown": {
+       "n": 55,
+       "win": 0.327,
+       "mean": -252.8
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 38,
+       "win": 0.526,
+       "mean": 104.2
+      },
+      "coin flip": {
+       "n": 2702,
+       "win": 0.46,
+       "mean": 72.5
+      },
+      "edge": {
+       "n": 304,
+       "win": 0.444,
+       "mean": 45.3
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "against": {
+       "n": 4,
+       "win": 0.5,
+       "mean": 349.0
+      },
+      "coin flip": {
+       "n": 3893,
+       "win": 0.449,
+       "mean": 23.5
+      },
+      "edge": {
+       "n": 256,
+       "win": 0.406,
+       "mean": -111.3
+      },
+      "unknown": {
+       "n": 55,
+       "win": 0.327,
+       "mean": -252.8
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 2788,
+       "win": 0.464,
+       "mean": 86.9
+      },
+      "edge": {
+       "n": 256,
+       "win": 0.406,
+       "mean": -111.3
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "R52": {
+   "name": "R52 Open outside value",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 706,
+       "kept": 706,
+       "skipped": 0,
+       "net": 290573.12,
+       "win": 0.5567,
+       "max_dd": 82713.1
+      },
+      "rule": {
+       "trades": 706,
+       "kept": 704,
+       "skipped": 2,
+       "net": 289452.96,
+       "win": 0.5568,
+       "max_dd": 81537.63
+      },
+      "p": 0.5262,
+      "twin_p95": 297032
+     },
+     "wf": {
+      "base": {
+       "trades": 529,
+       "kept": 529,
+       "skipped": 0,
+       "net": 247056.62,
+       "win": 0.5747,
+       "max_dd": 49847.04
+      },
+      "rule": {
+       "trades": 529,
+       "kept": 527,
+       "skipped": 2,
+       "net": 245936.46,
+       "win": 0.575,
+       "max_dd": 48205.61
+      },
+      "p": 0.5222,
+      "twin_p95": 253443
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 706,
+       "kept": 706,
+       "skipped": 0,
+       "net": 290573.12,
+       "win": 0.5567,
+       "max_dd": 82713.1
+      },
+      "rule": {
+       "trades": 706,
+       "kept": 706,
+       "skipped": 0,
+       "net": 290573.12,
+       "win": 0.5567,
+       "max_dd": 82713.1
+      },
+      "p": 1.0,
+      "twin_p95": 290573
+     },
+     "wf": {
+      "base": {
+       "trades": 529,
+       "kept": 529,
+       "skipped": 0,
+       "net": 247056.62,
+       "win": 0.5747,
+       "max_dd": 49847.04
+      },
+      "rule": {
+       "trades": 529,
+       "kept": 529,
+       "skipped": 0,
+       "net": 247056.62,
+       "win": 0.5747,
+       "max_dd": 49847.04
+      },
+      "p": 1.0,
+      "twin_p95": 247057
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "against": {
+       "n": 2,
+       "win": 0.5,
+       "mean": 560.1
+      },
+      "coin flip": {
+       "n": 597,
+       "win": 0.563,
+       "mean": 380.1
+      },
+      "edge": {
+       "n": 57,
+       "win": 0.491,
+       "mean": 430.9
+      },
+      "unknown": {
+       "n": 50,
+       "win": 0.56,
+       "mean": 759.2
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 2,
+       "win": 0.5,
+       "mean": 560.1
+      },
+      "coin flip": {
+       "n": 478,
+       "win": 0.579,
+       "mean": 442.4
+      },
+      "edge": {
+       "n": 49,
+       "win": 0.531,
+       "mean": 703.6
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "coin flip": {
+       "n": 641,
+       "win": 0.56,
+       "mean": 405.6
+      },
+      "edge": {
+       "n": 15,
+       "win": 0.4,
+       "mean": -491.0
+      },
+      "unknown": {
+       "n": 50,
+       "win": 0.56,
+       "mean": 759.2
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 517,
+       "win": 0.576,
+       "mean": 478.2
+      },
+      "edge": {
+       "n": 12,
+       "win": 0.5,
+       "mean": -14.7
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "LIQ": {
+   "name": "Liquidity 15+5",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 881,
+       "kept": 881,
+       "skipped": 0,
+       "net": 257249.29,
+       "win": 0.4359,
+       "max_dd": 32537.13
+      },
+      "rule": {
+       "trades": 881,
+       "kept": 873,
+       "skipped": 8,
+       "net": 259474.39,
+       "win": 0.4364,
+       "max_dd": 32537.13
+      },
+      "p": 0.2664,
+      "twin_p95": 263776
+     },
+     "wf": {
+      "base": {
+       "trades": 657,
+       "kept": 657,
+       "skipped": 0,
+       "net": 238064.08,
+       "win": 0.4444,
+       "max_dd": 23139.11
+      },
+      "rule": {
+       "trades": 657,
+       "kept": 657,
+       "skipped": 0,
+       "net": 238064.08,
+       "win": 0.4444,
+       "max_dd": 23139.11
+      },
+      "p": 1.0,
+      "twin_p95": 238064
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 881,
+       "kept": 881,
+       "skipped": 0,
+       "net": 257249.29,
+       "win": 0.4359,
+       "max_dd": 32537.13
+      },
+      "rule": {
+       "trades": 881,
+       "kept": 877,
+       "skipped": 4,
+       "net": 258628.3,
+       "win": 0.4356,
+       "max_dd": 32537.13
+      },
+      "p": 0.3258,
+      "twin_p95": 261927
+     },
+     "wf": {
+      "base": {
+       "trades": 657,
+       "kept": 657,
+       "skipped": 0,
+       "net": 238064.08,
+       "win": 0.4444,
+       "max_dd": 23139.11
+      },
+      "rule": {
+       "trades": 657,
+       "kept": 657,
+       "skipped": 0,
+       "net": 238064.08,
+       "win": 0.4444,
+       "max_dd": 23139.11
+      },
+      "p": 1.0,
+      "twin_p95": 238064
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "against": {
+       "n": 8,
+       "win": 0.375,
+       "mean": -278.1
+      },
+      "coin flip": {
+       "n": 814,
+       "win": 0.435,
+       "mean": 291.4
+      },
+      "edge": {
+       "n": 29,
+       "win": 0.483,
+       "mean": 498.7
+      },
+      "unknown": {
+       "n": 30,
+       "win": 0.433,
+       "mean": 261.2
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 628,
+       "win": 0.443,
+       "mean": 356.1
+      },
+      "edge": {
+       "n": 29,
+       "win": 0.483,
+       "mean": 498.7
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "against": {
+       "n": 4,
+       "win": 0.5,
+       "mean": -344.8
+      },
+      "coin flip": {
+       "n": 808,
+       "win": 0.436,
+       "mean": 300.8
+      },
+      "edge": {
+       "n": 39,
+       "win": 0.436,
+       "mean": 198.4
+      },
+      "unknown": {
+       "n": 30,
+       "win": 0.433,
+       "mean": 261.2
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 618,
+       "win": 0.445,
+       "mean": 372.7
+      },
+      "edge": {
+       "n": 39,
+       "win": 0.436,
+       "mean": 198.4
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "SOLO": {
+   "name": "Solo 2.0",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "rule": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "p": 1.0,
+      "twin_p95": 55910
+     },
+     "wf": {
+      "base": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "rule": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "p": 1.0,
+      "twin_p95": 55910
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "rule": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "p": 1.0,
+      "twin_p95": 55910
+     },
+     "wf": {
+      "base": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "rule": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "p": 1.0,
+      "twin_p95": 55910
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "coin flip": {
+       "n": 119,
+       "win": 0.588,
+       "mean": 382.0
+      },
+      "edge": {
+       "n": 2,
+       "win": 1.0,
+       "mean": 2217.3
+      },
+      "unknown": {
+       "n": 45,
+       "win": 0.489,
+       "mean": 133.7
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 119,
+       "win": 0.588,
+       "mean": 382.0
+      },
+      "edge": {
+       "n": 2,
+       "win": 1.0,
+       "mean": 2217.3
+      },
+      "unknown": {
+       "n": 45,
+       "win": 0.489,
+       "mean": 133.7
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "coin flip": {
+       "n": 117,
+       "win": 0.598,
+       "mean": 414.5
+      },
+      "edge": {
+       "n": 4,
+       "win": 0.5,
+       "mean": 348.2
+      },
+      "unknown": {
+       "n": 45,
+       "win": 0.489,
+       "mean": 133.7
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 117,
+       "win": 0.598,
+       "mean": 414.5
+      },
+      "edge": {
+       "n": 4,
+       "win": 0.5,
+       "mean": 348.2
+      },
+      "unknown": {
+       "n": 45,
+       "win": 0.489,
+       "mean": 133.7
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "HERO": {
+   "name": "Hero Rs 1,000 ticket",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 248,
+       "kept": 248,
+       "skipped": 0,
+       "net": -14507.03,
+       "win": 0.1613,
+       "max_dd": 18386.26
+      },
+      "rule": {
+       "trades": 248,
+       "kept": 248,
+       "skipped": 0,
+       "net": -14507.03,
+       "win": 0.1613,
+       "max_dd": 18386.26
+      },
+      "p": 1.0,
+      "twin_p95": -14507
+     },
+     "wf": {
+      "base": {
+       "trades": 190,
+       "kept": 190,
+       "skipped": 0,
+       "net": -12935.14,
+       "win": 0.1789,
+       "max_dd": 14867.65
+      },
+      "rule": {
+       "trades": 190,
+       "kept": 190,
+       "skipped": 0,
+       "net": -12935.14,
+       "win": 0.1789,
+       "max_dd": 14867.65
+      },
+      "p": 1.0,
+      "twin_p95": -12935
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 248,
+       "kept": 248,
+       "skipped": 0,
+       "net": -14507.03,
+       "win": 0.1613,
+       "max_dd": 18386.26
+      },
+      "rule": {
+       "trades": 248,
+       "kept": 230,
+       "skipped": 18,
+       "net": -19689.21,
+       "win": 0.1609,
+       "max_dd": 21773.03
+      },
+      "p": 0.955,
+      "twin_p95": -11414
+     },
+     "wf": {
+      "base": {
+       "trades": 190,
+       "kept": 190,
+       "skipped": 0,
+       "net": -12935.14,
+       "win": 0.1789,
+       "max_dd": 14867.65
+      },
+      "rule": {
+       "trades": 190,
+       "kept": 182,
+       "skipped": 8,
+       "net": -12160.12,
+       "win": 0.1758,
+       "max_dd": 14092.63
+      },
+      "p": 0.5007,
+      "twin_p95": -11414
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "coin flip": {
+       "n": 228,
+       "win": 0.162,
+       "mean": -50.7
+      },
+      "unknown": {
+       "n": 20,
+       "win": 0.15,
+       "mean": -147.0
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 190,
+       "win": 0.179,
+       "mean": -68.1
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "against": {
+       "n": 18,
+       "win": 0.167,
+       "mean": 287.9
+      },
+      "coin flip": {
+       "n": 210,
+       "win": 0.162,
+       "mean": -79.8
+      },
+      "unknown": {
+       "n": 20,
+       "win": 0.15,
+       "mean": -147.0
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 8,
+       "win": 0.25,
+       "mean": -96.9
+      },
+      "coin flip": {
+       "n": 182,
+       "win": 0.176,
+       "mean": -66.8
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "ORB_ORB": {
+   "name": "ORB",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "rule": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "p": 1.0,
+      "twin_p95": -41427
+     },
+     "wf": {
+      "base": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "rule": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "p": 1.0,
+      "twin_p95": -28480
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "rule": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "p": 1.0,
+      "twin_p95": -41427
+     },
+     "wf": {
+      "base": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "rule": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "p": 1.0,
+      "twin_p95": -28480
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "coin flip": {
+       "n": 296,
+       "win": 0.385,
+       "mean": -113.5
+      },
+      "edge": {
+       "n": 24,
+       "win": 0.292,
+       "mean": -326.7
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 207,
+       "win": 0.362,
+       "mean": -99.7
+      },
+      "edge": {
+       "n": 24,
+       "win": 0.292,
+       "mean": -326.7
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "coin flip": {
+       "n": 262,
+       "win": 0.363,
+       "mean": -152.8
+      },
+      "edge": {
+       "n": 58,
+       "win": 0.448,
+       "mean": -24.0
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 173,
+       "win": 0.324,
+       "mean": -156.6
+      },
+      "edge": {
+       "n": 58,
+       "win": 0.448,
+       "mean": -24.0
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "ORB_FRESH": {
+   "name": "ORB Fresh",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "rule": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "p": 1.0,
+      "twin_p95": -41427
+     },
+     "wf": {
+      "base": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "rule": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "p": 1.0,
+      "twin_p95": -28480
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "rule": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "p": 1.0,
+      "twin_p95": -41427
+     },
+     "wf": {
+      "base": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "rule": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "p": 1.0,
+      "twin_p95": -28480
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "coin flip": {
+       "n": 296,
+       "win": 0.385,
+       "mean": -113.5
+      },
+      "edge": {
+       "n": 24,
+       "win": 0.292,
+       "mean": -326.7
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 207,
+       "win": 0.362,
+       "mean": -99.7
+      },
+      "edge": {
+       "n": 24,
+       "win": 0.292,
+       "mean": -326.7
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "coin flip": {
+       "n": 262,
+       "win": 0.363,
+       "mean": -152.8
+      },
+      "edge": {
+       "n": 58,
+       "win": 0.448,
+       "mean": -24.0
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 173,
+       "win": 0.324,
+       "mean": -156.6
+      },
+      "edge": {
+       "n": 58,
+       "win": 0.448,
+       "mean": -24.0
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "ORB_SWEEP": {
+   "name": "ORB Sweep",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 454,
+       "kept": 454,
+       "skipped": 0,
+       "net": -112523.08,
+       "win": 0.2643,
+       "max_dd": 118585.95
+      },
+      "rule": {
+       "trades": 454,
+       "kept": 438,
+       "skipped": 16,
+       "net": -117844.12,
+       "win": 0.2557,
+       "max_dd": 123906.99
+      },
+      "p": 0.975,
+      "twin_p95": -101631
+     },
+     "wf": {
+      "base": {
+       "trades": 326,
+       "kept": 326,
+       "skipped": 0,
+       "net": -100324.69,
+       "win": 0.2485,
+       "max_dd": 106262.74
+      },
+      "rule": {
+       "trades": 326,
+       "kept": 310,
+       "skipped": 16,
+       "net": -105645.73,
+       "win": 0.2355,
+       "max_dd": 111583.78
+      },
+      "p": 0.9865,
+      "twin_p95": -88706
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 454,
+       "kept": 454,
+       "skipped": 0,
+       "net": -112523.08,
+       "win": 0.2643,
+       "max_dd": 118585.95
+      },
+      "rule": {
+       "trades": 454,
+       "kept": 382,
+       "skipped": 72,
+       "net": -92988.31,
+       "win": 0.2644,
+       "max_dd": 99051.18
+      },
+      "p": 0.4153,
+      "twin_p95": -80621
+     },
+     "wf": {
+      "base": {
+       "trades": 326,
+       "kept": 326,
+       "skipped": 0,
+       "net": -100324.69,
+       "win": 0.2485,
+       "max_dd": 106262.74
+      },
+      "rule": {
+       "trades": 326,
+       "kept": 254,
+       "skipped": 72,
+       "net": -80789.92,
+       "win": 0.2441,
+       "max_dd": 86727.97
+      },
+      "p": 0.6217,
+      "twin_p95": -64589
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "against": {
+       "n": 16,
+       "win": 0.5,
+       "mean": 332.6
+      },
+      "coin flip": {
+       "n": 438,
+       "win": 0.256,
+       "mean": -269.1
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 16,
+       "win": 0.5,
+       "mean": 332.6
+      },
+      "coin flip": {
+       "n": 310,
+       "win": 0.235,
+       "mean": -340.8
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "against": {
+       "n": 72,
+       "win": 0.264,
+       "mean": -271.3
+      },
+      "coin flip": {
+       "n": 382,
+       "win": 0.264,
+       "mean": -243.4
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 72,
+       "win": 0.264,
+       "mean": -271.3
+      },
+      "coin flip": {
+       "n": 254,
+       "win": 0.244,
+       "mean": -318.1
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "ORB_FADE": {
+   "name": "Range Fade",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 500,
+       "kept": 500,
+       "skipped": 0,
+       "net": -114382.74,
+       "win": 0.314,
+       "max_dd": 114382.74
+      },
+      "rule": {
+       "trades": 500,
+       "kept": 331,
+       "skipped": 169,
+       "net": -79703.09,
+       "win": 0.3202,
+       "max_dd": 79703.09
+      },
+      "p": 0.7051,
+      "twin_p95": -61826
+     },
+     "wf": {
+      "base": {
+       "trades": 362,
+       "kept": 362,
+       "skipped": 0,
+       "net": -89022.52,
+       "win": 0.3177,
+       "max_dd": 90037.2
+      },
+      "rule": {
+       "trades": 362,
+       "kept": 274,
+       "skipped": 88,
+       "net": -68666.0,
+       "win": 0.3212,
+       "max_dd": 69680.68
+      },
+      "p": 0.5672,
+      "twin_p95": -56259
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 500,
+       "kept": 500,
+       "skipped": 0,
+       "net": -114382.74,
+       "win": 0.314,
+       "max_dd": 114382.74
+      },
+      "rule": {
+       "trades": 500,
+       "kept": 432,
+       "skipped": 68,
+       "net": -109083.32,
+       "win": 0.3079,
+       "max_dd": 109083.32
+      },
+      "p": 0.9585,
+      "twin_p95": -88573
+     },
+     "wf": {
+      "base": {
+       "trades": 362,
+       "kept": 362,
+       "skipped": 0,
+       "net": -89022.52,
+       "win": 0.3177,
+       "max_dd": 90037.2
+      },
+      "rule": {
+       "trades": 362,
+       "kept": 294,
+       "skipped": 68,
+       "net": -83723.1,
+       "win": 0.3095,
+       "max_dd": 84737.78
+      },
+      "p": 0.9655,
+      "twin_p95": -61772
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "against": {
+       "n": 169,
+       "win": 0.302,
+       "mean": -205.2
+      },
+      "coin flip": {
+       "n": 331,
+       "win": 0.32,
+       "mean": -240.8
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 88,
+       "win": 0.307,
+       "mean": -231.3
+      },
+      "coin flip": {
+       "n": 274,
+       "win": 0.321,
+       "mean": -250.6
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "against": {
+       "n": 68,
+       "win": 0.353,
+       "mean": -77.9
+      },
+      "coin flip": {
+       "n": 432,
+       "win": 0.308,
+       "mean": -252.5
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 68,
+       "win": 0.353,
+       "mean": -77.9
+      },
+      "coin flip": {
+       "n": 294,
+       "win": 0.31,
+       "mean": -284.8
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "VIXDIV": {
+   "name": "VIX divergence",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 116,
+       "kept": 116,
+       "skipped": 0,
+       "net": 15657.56,
+       "win": 0.3621,
+       "max_dd": 43407.15
+      },
+      "rule": {
+       "trades": 116,
+       "kept": 116,
+       "skipped": 0,
+       "net": 15657.56,
+       "win": 0.3621,
+       "max_dd": 43407.15
+      },
+      "p": 1.0,
+      "twin_p95": 15658
+     },
+     "wf": {
+      "base": {
+       "trades": 84,
+       "kept": 84,
+       "skipped": 0,
+       "net": 21521.28,
+       "win": 0.369,
+       "max_dd": 34376.12
+      },
+      "rule": {
+       "trades": 84,
+       "kept": 84,
+       "skipped": 0,
+       "net": 21521.28,
+       "win": 0.369,
+       "max_dd": 34376.12
+      },
+      "p": 1.0,
+      "twin_p95": 21521
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 116,
+       "kept": 116,
+       "skipped": 0,
+       "net": 15657.56,
+       "win": 0.3621,
+       "max_dd": 43407.15
+      },
+      "rule": {
+       "trades": 116,
+       "kept": 114,
+       "skipped": 2,
+       "net": 14288.57,
+       "win": 0.3596,
+       "max_dd": 44776.14
+      },
+      "p": 0.6952,
+      "twin_p95": 21795
+     },
+     "wf": {
+      "base": {
+       "trades": 84,
+       "kept": 84,
+       "skipped": 0,
+       "net": 21521.28,
+       "win": 0.369,
+       "max_dd": 34376.12
+      },
+      "rule": {
+       "trades": 84,
+       "kept": 83,
+       "skipped": 1,
+       "net": 22376.78,
+       "win": 0.3735,
+       "max_dd": 33520.62
+      },
+      "p": 0.3333,
+      "twin_p95": 26428
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "coin flip": {
+       "n": 34,
+       "win": 0.235,
+       "mean": -170.4
+      },
+      "unknown": {
+       "n": 82,
+       "win": 0.415,
+       "mean": 261.6
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 23,
+       "win": 0.304,
+       "mean": 94.4
+      },
+      "unknown": {
+       "n": 61,
+       "win": 0.393,
+       "mean": 317.2
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "against": {
+       "n": 2,
+       "win": 0.5,
+       "mean": 684.5
+      },
+      "coin flip": {
+       "n": 32,
+       "win": 0.219,
+       "mean": -223.9
+      },
+      "unknown": {
+       "n": 82,
+       "win": 0.415,
+       "mean": 261.6
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 1,
+       "win": 0.0,
+       "mean": -855.5
+      },
+      "coin flip": {
+       "n": 22,
+       "win": 0.318,
+       "mean": 137.6
+      },
+      "unknown": {
+       "n": 61,
+       "win": 0.393,
+       "mean": 317.2
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "PINE_ST_EMA_5M": {
+   "name": "Pine Supertrend+EMA 5m",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 467,
+       "kept": 467,
+       "skipped": 0,
+       "net": -27007.91,
+       "win": 0.3747,
+       "max_dd": 92740.44
+      },
+      "rule": {
+       "trades": 467,
+       "kept": 467,
+       "skipped": 0,
+       "net": -27007.91,
+       "win": 0.3747,
+       "max_dd": 92740.44
+      },
+      "p": 1.0,
+      "twin_p95": -27008
+     },
+     "wf": {
+      "base": {
+       "trades": 322,
+       "kept": 322,
+       "skipped": 0,
+       "net": 52485.12,
+       "win": 0.4037,
+       "max_dd": 27065.99
+      },
+      "rule": {
+       "trades": 322,
+       "kept": 322,
+       "skipped": 0,
+       "net": 52485.12,
+       "win": 0.4037,
+       "max_dd": 27065.99
+      },
+      "p": 1.0,
+      "twin_p95": 52485
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 467,
+       "kept": 467,
+       "skipped": 0,
+       "net": -27007.91,
+       "win": 0.3747,
+       "max_dd": 92740.44
+      },
+      "rule": {
+       "trades": 467,
+       "kept": 467,
+       "skipped": 0,
+       "net": -27007.91,
+       "win": 0.3747,
+       "max_dd": 92740.44
+      },
+      "p": 1.0,
+      "twin_p95": -27008
+     },
+     "wf": {
+      "base": {
+       "trades": 322,
+       "kept": 322,
+       "skipped": 0,
+       "net": 52485.12,
+       "win": 0.4037,
+       "max_dd": 27065.99
+      },
+      "rule": {
+       "trades": 322,
+       "kept": 322,
+       "skipped": 0,
+       "net": 52485.12,
+       "win": 0.4037,
+       "max_dd": 27065.99
+      },
+      "p": 1.0,
+      "twin_p95": 52485
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "coin flip": {
+       "n": 458,
+       "win": 0.378,
+       "mean": -30.4
+      },
+      "edge": {
+       "n": 9,
+       "win": 0.222,
+       "mean": -1453.5
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 313,
+       "win": 0.409,
+       "mean": 209.5
+      },
+      "edge": {
+       "n": 9,
+       "win": 0.222,
+       "mean": -1453.5
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "coin flip": {
+       "n": 431,
+       "win": 0.378,
+       "mean": -63.4
+      },
+      "edge": {
+       "n": 36,
+       "win": 0.333,
+       "mean": 9.4
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 286,
+       "win": 0.413,
+       "mean": 182.3
+      },
+      "edge": {
+       "n": 36,
+       "win": 0.333,
+       "mean": 9.4
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "PINE_ST_EMA_15M": {
+   "name": "Pine Supertrend+EMA 15m",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 161,
+       "kept": 161,
+       "skipped": 0,
+       "net": -68840.58,
+       "win": 0.4161,
+       "max_dd": 106871.62
+      },
+      "rule": {
+       "trades": 161,
+       "kept": 161,
+       "skipped": 0,
+       "net": -68840.58,
+       "win": 0.4161,
+       "max_dd": 106871.62
+      },
+      "p": 1.0,
+      "twin_p95": -68841
+     },
+     "wf": {
+      "base": {
+       "trades": 118,
+       "kept": 118,
+       "skipped": 0,
+       "net": -25999.65,
+       "win": 0.4492,
+       "max_dd": 77766.55
+      },
+      "rule": {
+       "trades": 118,
+       "kept": 118,
+       "skipped": 0,
+       "net": -25999.65,
+       "win": 0.4492,
+       "max_dd": 77766.55
+      },
+      "p": 1.0,
+      "twin_p95": -26000
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 161,
+       "kept": 161,
+       "skipped": 0,
+       "net": -68840.58,
+       "win": 0.4161,
+       "max_dd": 106871.62
+      },
+      "rule": {
+       "trades": 161,
+       "kept": 160,
+       "skipped": 1,
+       "net": -75842.69,
+       "win": 0.4125,
+       "max_dd": 113873.73
+      },
+      "p": 0.966,
+      "twin_p95": -62177
+     },
+     "wf": {
+      "base": {
+       "trades": 118,
+       "kept": 118,
+       "skipped": 0,
+       "net": -25999.65,
+       "win": 0.4492,
+       "max_dd": 77766.55
+      },
+      "rule": {
+       "trades": 118,
+       "kept": 117,
+       "skipped": 1,
+       "net": -33001.76,
+       "win": 0.4444,
+       "max_dd": 84768.66
+      },
+      "p": 0.9665,
+      "twin_p95": -19071
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "coin flip": {
+       "n": 130,
+       "win": 0.431,
+       "mean": -310.0
+      },
+      "edge": {
+       "n": 31,
+       "win": 0.355,
+       "mean": -920.6
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 87,
+       "win": 0.483,
+       "mean": 29.2
+      },
+      "edge": {
+       "n": 31,
+       "win": 0.355,
+       "mean": -920.6
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "against": {
+       "n": 1,
+       "win": 1.0,
+       "mean": 7002.1
+      },
+      "coin flip": {
+       "n": 160,
+       "win": 0.412,
+       "mean": -474.0
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 1,
+       "win": 1.0,
+       "mean": 7002.1
+      },
+      "coin flip": {
+       "n": 117,
+       "win": 0.444,
+       "mean": -282.1
+      }
+     }
+    }
+   },
+   "calibration": {}
+  },
+  "PINE_MATRIX_5M": {
+   "name": "Pine Matrix 5m",
+   "cells": {
+    "V_SETUP": {
+     "design": {
+      "base": {
+       "trades": 459,
+       "kept": 459,
+       "skipped": 0,
+       "net": -195491.78,
+       "win": 0.3508,
+       "max_dd": 198516.36
+      },
+      "rule": {
+       "trades": 459,
+       "kept": 459,
+       "skipped": 0,
+       "net": -195491.78,
+       "win": 0.3508,
+       "max_dd": 198516.36
+      },
+      "p": 1.0,
+      "twin_p95": -195492
+     },
+     "wf": {
+      "base": {
+       "trades": 336,
+       "kept": 336,
+       "skipped": 0,
+       "net": -137346.74,
+       "win": 0.3631,
+       "max_dd": 143099.51
+      },
+      "rule": {
+       "trades": 336,
+       "kept": 336,
+       "skipped": 0,
+       "net": -137346.74,
+       "win": 0.3631,
+       "max_dd": 143099.51
+      },
+      "p": 1.0,
+      "twin_p95": -137347
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "base": {
+       "trades": 459,
+       "kept": 459,
+       "skipped": 0,
+       "net": -195491.78,
+       "win": 0.3508,
+       "max_dd": 198516.36
+      },
+      "rule": {
+       "trades": 459,
+       "kept": 437,
+       "skipped": 22,
+       "net": -202720.81,
+       "win": 0.3387,
+       "max_dd": 205745.39
+      },
+      "p": 0.8866,
+      "twin_p95": -165258
+     },
+     "wf": {
+      "base": {
+       "trades": 336,
+       "kept": 336,
+       "skipped": 0,
+       "net": -137346.74,
+       "win": 0.3631,
+       "max_dd": 143099.51
+      },
+      "rule": {
+       "trades": 336,
+       "kept": 314,
+       "skipped": 22,
+       "net": -144575.77,
+       "win": 0.3471,
+       "max_dd": 150328.54
+      },
+      "p": 0.8746,
+      "twin_p95": -104999
+     }
+    }
+   },
+   "verdicts": {
+    "V_SETUP": {
+     "design": {
+      "coin flip": {
+       "n": 459,
+       "win": 0.351,
+       "mean": -425.9
+      }
+     },
+     "wf": {
+      "coin flip": {
+       "n": 336,
+       "win": 0.363,
+       "mean": -408.8
+      }
+     }
+    },
+    "V_EXITS": {
+     "design": {
+      "against": {
+       "n": 22,
+       "win": 0.591,
+       "mean": 328.6
+      },
+      "coin flip": {
+       "n": 437,
+       "win": 0.339,
+       "mean": -463.9
+      }
+     },
+     "wf": {
+      "against": {
+       "n": 22,
+       "win": 0.591,
+       "mean": 328.6
+      },
+      "coin flip": {
+       "n": 314,
+       "win": 0.347,
+       "mean": -460.4
+      }
+     }
+    }
+   },
+   "calibration": {}
+  }
+ }
+}
