@@ -1,0 +1,37 @@
+id: r122-context-gate
+title: R122 a context-aware time machine (strategies, chart patterns, VIX, gap, trend, analogs) searched in a bounded loop
+  as a pre-entry gate
+family: daily-filters
+date: '2026-10-28'
+doc: research/HUNT_R122_CONTEXT_GATE.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m incl. INDIAVIX); R120's trade lists (R113 adapters)
+period:
+  design: 2024-11-20..2026-03-31 (monthly walk-forward Apr 2025 - Mar 2026)
+  holdout: '2026-04-01..2026-10-13 read once (not fresh: read by R51-R121)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: each arm''s own (the underlying; Hero''s strike by the option''s price); the gate reads only the index,
+  India VIX and the arms'' earlier entries, before the entry minute'
+hypothesis: 'Boss: feed the strategies, chart patterns and everything else to the time machine, in a loop until success. Bounded
+  loop: <= 30 variants on the design walk-forward, freeze the best by pooled p, read the final once; a pass would earn only
+  a shadow forward test on the phone.'
+model_or_rule: research/hunt/r122_context_gate/ (r122feat.py inputs, r122lib.py variants and twins, r122loop.py)
+settings: PREREG.md; rounds in results/round{2,3,4}.json, every variant in results/loop.json
+prereg: research/hunt/r122_context_gate/PREREG.md
+variants_tried: 30
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'Frozen D1_ST_GAP_CHASE_TREND: walk-forward 8,603 trades, 5,441 skipped, Rs 770,557 -> Rs 894,678, z 4.390262,
+    p 6e-06; FINAL 4,724 trades, 3,059 skipped, Rs 283,133 -> Rs 97,921, uplift vs random -Rs 45,426, z -0.594334, p 0.723856,
+    q 1. Fails: final: pooled net not above the arms'' own; final: not above the twin''s 95th percentile with p <= 0.05 (p
+    0.723856); BH q 1 > 0.10; fewer than 40 final trades kept on ORB_FADE, ORB_SWEEP, PINE_ST_EMA_15M, VIXDIV; final: net
+    held on only 1 of the 4 paper index arms. The design ''success'' did not survive the final: a search overfit.'
+  costs: each arm's own study costs (R120's lists), 1 lot
+notes: 'Normal-approximation twin p (the empirical twin floor 1/20,001 can never clear BH over ~9.3M tests; the same floor
+  made R120/R121''s twin gate unpassable). The loop is closed: no variant is tried on the final.'

@@ -1,7 +1,7 @@
-# R120 + R121: the time machine before entries (28 Oct 2026)
+# R120-R122: the time machine before entries (28 Oct 2026)
 
-- Boss asked whether the time machine should be used before entries. Its verdict, worked out before each entry, made no arm better: R120 passed 0 of 28 tests.
-- The improved version (R121) replays each arm's own past trades with its real exits. The replay now matches real trades well (same win/loss 90% of the time for R51/R72/Solo), but past results still don't predict the next trade (correlation -0.003, 16,552 trades). It passed 0 of 28 tests.
-- R120's nearest miss, R51 "skip against" (final twin p 0.039), fails the multiple-testing gate and stays a note.
-- App change (display only): every time machine verdict now says "Not a proven signal"; the Hero Rs 1,000 ticket's verdict is hidden from the ticket, Jarvis and the timeline, but still logged. No trade, order, size or exit changes.
-- Write-ups: research/HUNT_R120_TIME_MACHINE_GATE.md and research/HUNT_R121_TIME_MACHINE_SETUP.md.
+- R120: the app's time machine verdict, read before entry, improved no arm (0 of 28); its odds don't predict wins (correlation 0.04, 16,810 trades).
+- R121: replaying each arm's own past trades with its real exits matches real trades well (90% same sign) but still doesn't predict the next one (0 of 28).
+- R122: strategies, chart patterns, VIX, gap and trend fed in a bounded 30-version loop. The best design filter (p 0.000006) failed the final: net Rs 2,83,133 -> Rs 97,921 on 4,724 trades, worse than random skipping. The loop stopped, as agreed.
+- App (display only): every verdict says "Not a proven signal"; the Hero Rs 1,000 ticket's verdict is hidden but still logged. No trade, order, size or exit changes.
+- Next: only the phone's forward log (TODO R21), with a new pre-registration, can reopen this.

@@ -157,6 +157,9 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   28 Oct (R121, research/HUNT_R121_TIME_MACHINE_SETUP.md): the enhanced version (the arm's own past entries, its real
   exits) also passed nowhere (0 of 28; correlation with the next trade -0.003, n 16,552). The app now labels every verdict
   "not a proven signal" and hides the Hero Rs 1,000 ticket's verdict (display only; still logged).
+  28 Oct (R122, research/HUNT_R122_CONTEXT_GATE.md): strategies + chart patterns + VIX/gap/trend in a bounded 30-variant
+  loop: the design best (p 0.000006) failed the final (net Rs 283,133 -> 97,921). 86 versions in R120-R122, none passed;
+  do not search this history again: only the forward log, with a new pre-registration, can reopen it.
   When R3, R19c and the 13–26 Oct paper run are finished, show one page with every arm and the whole portfolio on the
   same days, BEFORE (today's plain rules) and AFTER (every change that passed):
   - total P&L, P&L per day, % green days, win rate, average win and average loss;

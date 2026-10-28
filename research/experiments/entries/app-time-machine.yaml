@@ -35,7 +35,10 @@ results:
     arm. R121 (28 Oct, research/HUNT_R121_TIME_MACHINE_SETUP.md): replaying the arm''s OWN past entries with its real exits
     tracks each trade well (same sign 90% for R51/R72/Solo) but still does not predict the next trade (correlation -0.003,
     n 16,552); 0 of 28 passed. Since 28 Oct the app says every verdict is not a proven signal and hides the Hero Rs 1,000
-    ticket''s verdict (display only). Stays shadow; the forward-log test (TODO R21) still stands.'
+    ticket''s verdict (display only). R122 (28 Oct, research/HUNT_R122_CONTEXT_GATE.md): feeding the strategies, chart
+    patterns, VIX, gap and trend in a bounded 30-variant loop found a filter with design walk-forward p 0.000006 that
+    failed the final (4,724 trades: Rs 283,133 -> 97,921, worse than random skips). Stays shadow; the forward-log test
+    (TODO R21) still stands.'
   costs: each arm's own study costs (R120)
 holdout_read: null
 verdict: not-a-test
