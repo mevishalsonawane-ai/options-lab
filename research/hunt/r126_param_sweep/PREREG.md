@@ -30,7 +30,7 @@ open or close is used, except a trade's own entry reference (R124 amendment 1).
 - Trades: index-exit ATM option trades.
 - Folds: quarterly, F1 Apr-Jun 2025 .. F4 Jan-15 Mar 2026.
 
-## 2. The variant grid (pre-registered; 134 input variants)
+## 2. The variant grid (pre-registered; 118 input variants)
 
 tf = candle timeframe in minutes (aligned to 09:15; always the last *completed* candle). m = the move size (30 NIFTY
 points, scaled by price). Distances are signed wick-span distances in m.
@@ -52,7 +52,7 @@ points, scaled by price). Distances are signed wick-span distances in m.
 | Wick candles | tf ∈ {1, 3, 5, 15} | 4 | the R125 eight wick patterns |
 | Option flow | call/put volume window ∈ {3, 5, 15, 30}; OI build-up window ∈ {5, 15, 30} | 7 | the log ratio / build-up score |
 | R125 defaults | (the R125 inputs not covered above: participant OI, highs-minus-lows, S/R counts) | 1 | as in R125 |
-| | | **134** | |
+| | | **118** | |
 
 ## 3. Tests
 
@@ -61,12 +61,12 @@ points, scaled by price). Distances are signed wick-span distances in m.
   state inputs (returns 5/15/30/60, realised volatility, day range, distances to the day high/low, move since the
   open, gap, VIX, time of day). It is fitted with and without the variant's inputs, per fold.
 - The measure: the change in out-of-sample log-loss for **direction given a move** (15 and 30 minutes).
-- 268 tests (134 × 2), one BH family, with day-block bootstrap p-values.
+- 236 tests (118 × 2), one BH family, with day-block bootstrap p-values.
 - A variant "adds" if q ≤ 0.05, it is better in ≥ 3 of 4 folds, and it improves the log-loss by at least 0.001 (a
   tenth of a percent: smaller is not worth an input).
 
 **B. The network with everything (N4).**
-- R124's multi-level network plus 14 specialists, one per family above, holding **all 134 variants' inputs**.
+- R124's multi-level network plus 14 specialists, one per family above, holding **all 118 variants' inputs**.
 - Compared against R124's network (R125's walk-forward "base" predictions on the same rows and seeds) on the four
   cells of R125 (direction and move-coming, 15 and 30 minutes); BH over 4.
 - Permutation importance by family.
@@ -94,3 +94,8 @@ index.
 - Write-up: `research/HUNT_R126_PARAM_SWEEP.md`.
 - Experiment entries: one per family plus the rule sweep, `variants_tried` the real counts.
 - Big files: on Drive (`derived/r126/`).
+
+## Amendment 1 (28 Oct 2026, before any input was computed): the count
+
+The grid in section 2 adds up to **118** variants (236 screening tests), not 134. The table rows are unchanged; only
+the totals were mis-added. They are corrected above.
