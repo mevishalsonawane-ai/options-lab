@@ -92,6 +92,8 @@ object S5Arm {
         val index: String, val symbol: String, val right: String, val lots: Int, val qty: Int, val entry: Double, val entryTime: LocalDateTime,
         val orderId: String?, val stop: Double?, val stopOrderId: String?, val stopRs: Double, val ev: Double, val cell: Int, val expiryDay: Boolean,
         val peak: Double? = null, val exit: Double? = null, val exitTime: LocalDateTime? = null, val why: String? = null, val charges: Double = 0.0,
+        /** The profit lock said "out" but the sale did not fill yet: sold again at every look until it does (never re-judged). */
+        val lockHit: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -144,7 +146,7 @@ object S5Arm {
         .put("entry", p.entry).put("at", p.entryTime.toString()).put("stopRs", p.stopRs).put("ev", p.ev).put("cell", p.cell)
         .put("expiryDay", p.expiryDay).put("charges", p.charges)
         .apply {
-            p.stop?.let { put("stop", it) }; p.peak?.takeIf { it.isFinite() }?.let { put("peak", it) }
+            p.stop?.let { put("stop", it) }; p.peak?.takeIf { it.isFinite() }?.let { put("peak", it) }; if (p.lockHit) put("lockHit", true)
             p.orderId?.let { put("order", it) }; p.stopOrderId?.let { put("stopOrder", it) }
             p.exit?.let { put("exit", it) }; p.exitTime?.let { put("exitAt", it.toString()) }; p.why?.let { put("why", it) }
         }
@@ -155,7 +157,7 @@ object S5Arm {
         o.getDouble("entry"), LocalDateTime.parse(o.getString("at")), o.optString("order").ifEmpty { null }, dbl(o, "stop"),
         o.optString("stopOrder").ifEmpty { null }, o.optDouble("stopRs", 2000.0), o.optDouble("ev", 0.0), o.optInt("cell"), o.optBoolean("expiryDay"),
         dbl(o, "peak"), dbl(o, "exit"), o.optString("exitAt").ifEmpty { null }?.let { LocalDateTime.parse(it) }, o.optString("why").ifEmpty { null },
-        o.optDouble("charges", 0.0))
+        o.optDouble("charges", 0.0), o.optBoolean("lockHit"))
 
     private fun lookJson(l: Look) = JSONObject().put("day", l.day.toString()).put("index", l.index).put("row", l.row).put("at", l.at.toString())
         .put("why", l.why).put("taken", l.taken).apply { l.ev?.takeIf { it.isFinite() }?.let { put("ev", it) }; l.cell?.let { put("cell", it) } }
@@ -299,7 +301,7 @@ object S5Arm {
         val v = refresh()
         val state = if (v.armed) "on, on paper" else "off"
         val today = if (v.looks.isEmpty()) "no decision yet today" else v.looks.joinToString("; ") { l ->
-            "${l.index} ${l.time} ${if (l.taken) "taken" else l.why}" }
+            "${l.index} ${l.time} ${if (l.taken) "taken" else if (locked) "not taken" else l.why}" }
         val held = if (v.open.isEmpty()) "nothing held" else "holding " + v.open.joinToString { it.symbol }
         val record = if (locked) "" else " Its record: ${v.nets.size} closed, ${v.wins} won, %s after charges.".format(Locale.ENGLISH, rs(v.nets.sum()))
         return "${S5Trail.LABEL} is $state - ${S5Trail.NOT_PROVEN}. Today: $today. $held.$record"
@@ -368,7 +370,7 @@ object S5Arm {
             // 4. The book: each verdict recorded, each pick taken (every guard), under the lock.
             lock.withLock {
                 val b = book()
-                for (v in verdicts) {
+                for (v in verdicts.sortedWith(compareBy({ it.row }, { -(it.pick?.ev ?: Double.NEGATIVE_INFINITY) }))) {
                     val key = "$day|${v.index}|${v.row}"
                     if (key in b.looks) continue
                     val look = if (v.pick != null) runCatching { take(b, v, now) }.getOrElse { Look(day, v.index, v.row, now, v.pick.ev, v.pick.j, "not taken: ${it.javaClass.simpleName}", false) }
@@ -421,12 +423,16 @@ object S5Arm {
             (hists[u]?.sessions.orEmpty() + listOfNotNull(today[u])).associateBy { it.date }
         }
         val vix = (hists[PassedArmsHost.VIX]?.sessions.orEmpty() + listOfNotNull(today[PassedArmsHost.VIX])).associateBy { it.date }
-        return due.map { (u, t) -> runCatching { decideOne(m, u, t, day, today[u], hists[u], byDay, vix) }
-            .getOrElse { Verdict(u, t, null, null, "the decision failed: ${it.javaClass.simpleName}", final = false) } }
+        // The five indices at once (one gate over all their option reads), so a pick is placed soon after the bar's close.
+        val gate = Semaphore(CHAIN_READS)
+        return coroutineScope {
+            due.map { (u, t) -> async { runCatching { decideOne(m, u, t, day, today[u], hists[u], byDay, vix, gate) }
+                .getOrElse { Verdict(u, t, null, null, "the decision failed: ${it.javaClass.simpleName}", final = false) } } }.awaitAll()
+        }
     }
 
     private suspend fun decideOne(m: S5Trail.Model, u: String, t: Int, day: LocalDate, todayBars: PassedArms.DayBars?, h: PassedArmsHost.Hist?,
-                                  byDay: Map<String, Map<LocalDate, PassedArms.DayBars>>, vix: Map<LocalDate, PassedArms.DayBars>): Verdict {
+                                  byDay: Map<String, Map<LocalDate, PassedArms.DayBars>>, vix: Map<LocalDate, PassedArms.DayBars>, gate: Semaphore): Verdict {
         if (todayBars == null || todayBars.c[t].isNaN()) return Verdict(u, t, null, null, "no $u minute bar for ${PassedArms.Session.time(t)} yet", final = false)
         val prior = h?.sessions.orEmpty().filter { it.date.isBefore(day) }
         if (prior.isEmpty() || h == null) return Verdict(u, t, null, null, "waiting for $u's earlier sessions (read from 08:45)", final = false)
@@ -439,8 +445,9 @@ object S5Arm {
         val trading = (1..45L).map { day.plusDays(it) }.filter { runCatching { Market.isTradingDay(it) }.getOrDefault(it.dayOfWeek.value < 6) }
         val cal = S5Trail.Calendar(S5Trail.sessionsToExpiry(day, exp, trading), isExpiry, day in com.optionslab.ira.EventStudy.BUDGET)
         val close = todayBars.closeAtOrBefore(t)
-        val chainBars = chainBars(u, list.filter { it.expiry == exp }, close)
         val spot = DoubleArray(t + 1).also { a -> var last = Double.NaN; for (r in 0..t) { if (todayBars.c[r].isFinite()) last = todayBars.c[r]; a[r] = last } }
+        val seen = spot.filter { it.isFinite() }
+        val chainBars = chainBars(u, list.filter { it.expiry == exp }, seen.min(), seen.max(), gate)
         val chain = S5Trail.Chain.of(u, t, spot, chainBars) { price, s, strike, row, call ->
             val atmK = S5Trail.atm(s, S5Trail.step(u))
             val off = (strike - atmK) / S5Trail.step(u)
@@ -475,15 +482,20 @@ object S5Arm {
         }.takeLast(25)
     }
 
-    /** Strikes either side of the money whose minutes are read for the chain inputs (offsets -5..+5 of each minute's ATM, with room). */
-    private const val CHAIN_HALF = 7
+    /** Strikes beyond each minute's ATM whose minutes are read: the inputs read offsets -5..+5 (the OI and volume), one spare. */
+    private const val CHAIN_HALF = 6
+    /** Option reads at once over all five indices. */
+    private const val CHAIN_READS = 12
 
-    /** Today's minutes of the listed strikes near [close] (both sides): (strike, call) -> row -> (close, OI, volume). Network reads. */
-    private suspend fun chainBars(u: String, list: List<Upstox.Contract>, close: Double): Map<Pair<Int, Boolean>, Array<DoubleArray>> {
+    /**
+     * Today's minutes of the listed strikes from [lo]'s ATM − [CHAIN_HALF] steps to [hi]'s ATM + [CHAIN_HALF] steps ([lo], [hi]: the
+     * index's lowest and highest close since the open), both sides: (strike, call) -> row -> (close, OI, volume). Network reads.
+     */
+    private suspend fun chainBars(u: String, list: List<Upstox.Contract>, lo: Double, hi: Double, gate: Semaphore): Map<Pair<Int, Boolean>, Array<DoubleArray>> {
         val st = S5Trail.step(u)
-        val atmK = S5Trail.atm(close, st)
-        val want = list.filter { c -> c.right != Right.IX && kotlin.math.abs(c.strike - atmK) <= CHAIN_HALF * st + 1e-6 && c.strike % st == 0.0 }
-        val gate = Semaphore(10)
+        val from = S5Trail.atm(lo, st) - CHAIN_HALF * st
+        val to = S5Trail.atm(hi, st) + CHAIN_HALF * st
+        val want = list.filter { c -> c.right != Right.IX && c.strike >= from - 1e-6 && c.strike <= to + 1e-6 && c.strike % st == 0.0 }
         val day = today()
         val got = coroutineScope {
             want.map { c -> async { gate.withPermit { c to runCatching { testChain?.invoke(c) ?: Net.intradayQuick(c.instrumentKey) }.getOrNull() } } }.awaitAll()
@@ -555,11 +567,12 @@ object S5Arm {
         if (c.lotSize <= 0) return no("lot size unknown")
         if (b.positions.any { it.open && it.symbol == c.symbol } || Paper.state.positions.any { it.symbol == c.symbol && it.quantity != 0 })
             return no("${c.symbol} is already held - never two positions on one contract")
-        val q = optionQuote(c) ?: v.chain[strike.toInt() to p.call]?.let { com.optionslab.engine.sandbox.Quote(it) }
-            ?: return no("no price for ${c.symbol}")
-        val stop0 = S5Trail.stopPremium(q.ltp, c.lotSize, p.stopRs, chargeFor(c.lotSize))
+        // The fill reads Zerodha's price (the stream's, or the paper book's own fresh read): never the chain's minute-old close.
+        val q = optionQuote(c)
+        val est = q?.ltp ?: v.chain[strike.toInt() to p.call] ?: return no("no price for ${c.symbol}")
+        val stop0 = S5Trail.stopPremium(est, c.lotSize, p.stopRs, chargeFor(c.lotSize))
         val snap = snapNow?.takeIf { System.currentTimeMillis() - it.first in 0..SNAP_FRESH_MS }?.second ?: return no("the account guard's check could not be read")
-        val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, q.ltp), Guard.paperAccount(snap), paper = true)
+        val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, est), Guard.paperAccount(snap), paper = true)
         if (refusals.isNotEmpty()) return no("refused by the account guard: " + refusals.joinToString(" "))
         val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", 1, "MARKET", "MIS", null, null, day, S5Trail.OWNER, stop = stop0),
             refusals, "paper guard")
@@ -636,6 +649,8 @@ object S5Arm {
         }
         val sq = if (p.expiryDay) SQ_EXPIRY else SQ
         if (!now.isBefore(p.day.atTime(sq)) || p.day.isBefore(now.toLocalDate())) return sellRest(p, c, "square-off $sq")
+        // The profit lock already said "out" and the sale did not fill: sold again now, never re-judged.
+        if (p.lockHit) return sellRest(p, c, "profit lock (best ${rs(p.peak ?: 0.0)})")
         val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: optionQuote(c)?.ltp
         // The profit lock, once a minute (R128 marked the net at minute closes).
         val minute = now.withSecond(0).withNano(0)
@@ -643,7 +658,7 @@ object S5Arm {
             marked[p.ref] = minute
             val net = S5Trail.netAt(p.entry, ltp, p.qty, chargeFor(p.qty))
             val (trail, out) = S5Trail.Trail(p.peak ?: Double.NEGATIVE_INFINITY).onClose(net)
-            if (out) return sellRest(p.copy(peak = trail.peak), c, "profit lock (best ${rs(trail.peak)}, out at ${rs(net)})")
+            if (out) return sellRest(p.copy(peak = trail.peak, lockHit = true), c, "profit lock (best ${rs(trail.peak)}, out at ${rs(net)})")
             if (trail.peak != (p.peak ?: Double.NEGATIVE_INFINITY)) p = p.copy(peak = trail.peak)
         }
         // No stop resting in the paper book: the arm checks the stop itself and puts the SL-M back while above it.

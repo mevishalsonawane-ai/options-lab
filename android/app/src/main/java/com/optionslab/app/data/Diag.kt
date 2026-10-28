@@ -264,9 +264,9 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { TrendWatchHost.diagLine() }.getOrElse { "Trend watch: could not read" }).append('\n')
         // 25 Oct: ntfy alerts - the topic shown as "topic set (****)" only, never its words; the token likewise.
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { NtfyArm.diagLine() }.getOrElse { "ntfy alerts: could not read" }).append('\n')
-        // 28 Oct: IraThinker's flow (paper, not proven): counts and its record, no prices of the account beyond the paper arm's own.
-        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FlowArm.diagLine() }.getOrElse { "IraThinker's flow: could not read" }).append('\n')
-        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { S5Arm.diagLine(hideNet = true) }.getOrElse { "S5 Trail: could not read" }).append('\n')
+        // 28 Oct: IraThinker's flow and S5 Trail (paper, not proven / failed the gates): in their own function (the report's one is
+        // near the compiler's limit).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(lateArmLines())
         // The MCX paper arms (9 Oct, paper only, not proven): on or off, what each holds, its last decision (the "[mcx-arms]" lines below).
         // 21 Oct: with NR7 crude's record line, in their own function (the report's one is near the compiler's limit).
         if (!com.optionslab.app.BuildConfig.GOLD) append(mcxArmLines())
@@ -415,6 +415,11 @@ object Diag {
         (runCatching { PayoutWatch.line() }.getOrElse { "Payout-aware drawdown: could not read" }) + "\n"
 
     /** The MCX paper arms' line and NR7 crude's record-only line (21 Oct). Its own function: the report's one is near the compiler's limit. */
+    /** IraThinker's flow's line and S5 Trail's (its net hidden), each "could not read" on a failure. Memory only. */
+    private fun lateArmLines(): String =
+        runCatching { FlowArm.diagLine() }.getOrElse { "IraThinker's flow: could not read" } + "\n" +
+            runCatching { S5Arm.diagLine(hideNet = true) }.getOrElse { "S5 Trail: could not read" } + "\n"
+
     private fun mcxArmLines(): String =
         (runCatching { McxPaperArms.diagLine() }.getOrElse { "MCX paper arms: could not read" }) + "\n" +
             (runCatching { McxNr7Record.diagLine() }.getOrElse { "NR7 crude (record only): could not read" }) + "\n" + borrowedLines()

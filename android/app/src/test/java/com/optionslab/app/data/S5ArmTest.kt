@@ -75,6 +75,14 @@ class S5ArmTest : RobolectricTest() {
                     days.map { d -> start.getValue(u).let { px -> Bar(d.atTime(9, 15), px, px * 1.01, px * 0.99, px) } })
             }
         }
+        // Every index's options list (NIFTY's is also the phone's saved list, [up]): its ATM +- 8 strikes, both sides.
+        S5Arm.testListed = { u ->
+            val st = S5Trail.step(u).toDouble()
+            val atm = S5Trail.atm(start.getValue(u), S5Trail.step(u)).toDouble()
+            (-8..8).flatMap { i -> val k = atm + st * i; listOf(Right.PE, Right.CE).map { r ->
+                Upstox.Contract(u, expiry, k, r, if (u == "NIFTY") 65 else 30,
+                    if (u == "NIFTY" && k == 25_000.0) (if (r == Right.PE) pe else ce) else "TEST|$u${k.toInt()}${r.name}", "$u-S5-${k.toInt()}${r.name}") } }
+        }
         S5Arm.testChain = { c ->
             val base = if (c.right == Right.CE) 120.0 else 110.0
             (0 until todayMinutes).map { i -> Upstox.Bar(day.atTime(9, 15 + i).atZone(IST).toEpochSecond(), base, base + 1, base - 1, base + i * 0.1, 1000L + i, 50_000L + 10 * i) }
@@ -205,6 +213,7 @@ class S5ArmTest : RobolectricTest() {
         assertTrue(runBlocking { Strategies.owners() }["paper:${p.orderId}"].orEmpty().contains(S5Trail.NOT_PROVEN))
         // A second pass at 09:21 and the 09:25 decision never buy NIFTY again while it is open.
         tick(LocalTime.of(9, 21))
+        market(todayMinutes = 10)
         tick(LocalTime.of(9, 25), 2)
         assertEquals(1, view().open.size)
         assertTrue(view().looks.single { it.index == "NIFTY" && it.row == 9 }.why.contains("still open"))
@@ -219,7 +228,7 @@ class S5ArmTest : RobolectricTest() {
         option(peToken, 110.4); option(ceToken, 120.4)
         tick(LocalTime.of(9, 20), 3)
         val v = view()
-        assertEquals("every index decided at 09:20", S5Trail.UNDERLYINGS.toSet(), v.looks.filter { it.row == 4 }.map { it.index }.toSet())
+        assertEquals(v.looks.toString(), S5Trail.UNDERLYINGS.toSet(), v.looks.filter { it.row == 4 }.map { it.index }.toSet())
         assertNull(v.model)
         // Each decision carries the network's best EV (a number, not a failure).
         assertTrue(v.looks.toString(), v.looks.all { it.ev != null && it.ev!!.isFinite() })

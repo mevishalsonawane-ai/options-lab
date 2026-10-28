@@ -243,8 +243,12 @@ class S5TrailTest {
 
     @Test fun theStopPremiumNetsTheCellsLossAfterCharges() {
         val sp = assertNotNull(S5Trail.stopPremium(150.0, 65, 2000.0, charge))
-        val net = S5Trail.netAt(150.0, sp, 65, charge)
-        assertTrue(net >= -2000.0 - 0.05 * 65 - 1e-9 && net <= -2000.0 + 0.05 * 65 + 1e-6, "net at the stop $net")
+        // The fill: 2 ticks and 10 bps under the trigger (research's stop fill) nets about -Rs 2,000 (within a tick).
+        val fill = sp * (1 - S5Trail.STOP_BPS / 1e4) - 2 * 0.05
+        val net = S5Trail.netAt(150.0, fill, 65, charge)
+        assertTrue(net >= -2000.0 - 1e-6 && net <= -2000.0 + 0.05 * 65 + 1e-6, "net at the stop's fill $net")
+        val thin = assertNotNull(S5Trail.stopPremium(150.0, 65, 2000.0, charge, ticks = 2))
+        assertTrue(thin > sp)
         assertEquals(0.0, (sp * 100).let { it - Math.round(it) }, 1e-6)
         assertTrue(abs(sp / 0.05 - Math.round(sp / 0.05)) < 1e-6)
         assertNull(S5Trail.stopPremium(20.0, 65, 2000.0, charge))           // the loss is more than the premium

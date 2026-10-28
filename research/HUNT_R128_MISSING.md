@@ -71,8 +71,15 @@ exception" everywhere, starts on, is undone in one tap, and has no live path (CL
   | the app's, no offset | 780 trades, 58% won, +Rs 135 | 65 trades, 71% won, +Rs 164 |
 
   Expect the paper record to be weaker than R128's numbers.
-- **Other differences from R128:** out at 15:15 (the paper book's MIS square-off), not 15:20 (13 of 596 R128 trades ended at the
-  close). The chain is read from Upstox (ATM +-7 strikes) instead of Dhan, and OI and volume are used only as ratios.
+- **Other differences from R128:**
+  - Out at 15:15 (the paper book's MIS square-off), not 15:20: 13 of 596 R128 trades ended at the close.
+  - One open trade per index: a second pick on an index waits until its trade closes. R123's portfolio freed the index at the
+    original cell's exit. `s5_app_check.py` already uses the app's rule, so its 540 / 33 trades include this.
+  - The profit lock reads the price at the first look in each minute: the minute lane's or the 15-second check's, close to the
+    minute's close.
+  - The chain comes from Upstox's intraday candles (each minute's ATM ±6 strikes over the session so far) instead of Dhan's. OI
+    and volume are used only as ratios, so units do not matter.
+  - The stop trigger carries research's buffer (2 ticks and 10 bps), so a filled stop nets about the cell's −Y.
 
 ## Where an option buyer's money goes (T4)
 

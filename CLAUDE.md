@@ -37,8 +37,9 @@ notes; match the surrounding code.
   - Every change is logged in the Autopilot change timeline, undoable in one tap, and shown to Boss.
   - Ideas that failed the gates stay notes only.
     - One exception, chosen by Boss on 28 Oct ("add S5 trail to arms directly; if it does not perform I will turn it
-      off"): R128's S5 Trail, the morning ATM put pick with a −₹2,000 stop and a 60% profit lock after +₹1,000, runs as
-      a PAPER arm although it failed the gates (41 holdout trades, worst month −₹18.6k).
+      off"): R128's S5 Trail, R123's morning network pick (an ATM option, nearly always a put) with its cell's stop
+      (−₹1,000 or −₹2,000 net) and a 60% profit lock after +₹1,000, runs as a PAPER arm although it failed the gates
+      (41 holdout trades, worst month −₹18.6k).
       - It is labelled "failed gates, Boss's exception" wherever it is shown.
       - Boss can switch it off in one tap.
       - It never goes live.

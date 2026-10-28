@@ -47,7 +47,10 @@ internal fun s5Explanation(v: S5Arm.View): List<String> = listOf(
     "${S5Trail.SIGNAL}.",
     S5Trail.RECORD + ".",
     "Out at 15:15 (the paper book's square-off; the research held to 15:20) or 15:05 on expiry day. Never live.",
-) + v.looks.map { l -> "${l.index} ${l.time}: ${if (l.taken) "taken" else l.why}" } + listOfNotNull(v.model?.let { "The network could not be read ($it): nothing is decided." })
+) + v.looks.map { l -> "${l.index} ${l.time}: ${if (l.taken) "taken" else noRupees(l.why)}" } + listOfNotNull(v.model?.let { "The network could not be read ($it): nothing is decided." })
+
+/** [why] without its rupee figures (the row shows none). */
+internal fun noRupees(why: String): String = why.replace(Regex("\\s*\\((?:[^()]*₹[^()]*)\\)"), "").replace(Regex("[−+-]?₹[\\d,]+"), "₹…")
 
 @Composable
 internal fun S5RowContent(v: S5Arm.View, onArm: (Boolean) -> Unit) {

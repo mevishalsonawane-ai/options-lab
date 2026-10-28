@@ -253,16 +253,21 @@ object S5Trail {
 
     // ---- the exit -----------------------------------------------------------------------------------------------------
 
+    /** A stop's fill slips this much under its trigger (research Fills.bps_stop; the paper book's SL-M slips the same). */
+    const val STOP_BPS = 10.0
+
     /**
-     * The premium at which a sell nets -[stopRs] after both legs' charges ([charge] = one leg's charges at a premium, for the
-     * whole quantity): solved as research's target_stop and rounded UP to the tick (never a bigger loss than asked by more than
-     * a tick). Null when it would be at or below one tick.
+     * The stop's trigger premium (research r123data.target_stop): the premium at which a sell nets -[stopRs] after both legs'
+     * charges ([charge] = one leg's charges at a premium, for the whole quantity), raised by [ticks] x 2 ticks and the stop fill's
+     * [STOP_BPS] slippage so the FILL nets about -[stopRs], rounded UP to the tick. [ticks]: 1 for a liquid option (research: 5-minute
+     * volume of 20 lots or more), 2 thin, 4 none. Null when it would be at or below one tick.
      */
-    fun stopPremium(entry: Double, qty: Int, stopRs: Double, charge: (buy: Boolean, price: Double) -> Double, tick: Double = 0.05): Double? {
+    fun stopPremium(entry: Double, qty: Int, stopRs: Double, charge: (buy: Boolean, price: Double) -> Double, tick: Double = 0.05,
+                    ticks: Int = 1): Double? {
         val cb = charge(true, entry)
         var s = entry - stopRs / qty
         repeat(3) { s = entry + (cb + charge(false, max(s, 0.0)) - stopRs) / qty }
-        val sp = ceil(s / tick - 1e-9) * tick
+        val sp = ceil((s + 2 * ticks * tick) / (1 - STOP_BPS / 1e4) / tick - 1e-9) * tick
         return if (sp > tick) Math.round(sp * 100) / 100.0 else null
     }
 
