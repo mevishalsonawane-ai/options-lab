@@ -344,8 +344,10 @@ def holdout_gate(status: str):
     if status == "start":
         if old and old.get("status") == "done":
             raise RuntimeError(f"refused: the holdout was already read at {old.get('done_at')}")
-        rec = dict(status="started", started_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                   resumed=bool(old))
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        first = (old or {}).get("first_started_at") or (old or {}).get("started_at") or now
+        rec = dict(status="started", first_started_at=first, started_at=now, resumed=bool(old),
+                   resumes=int((old or {}).get("resumes", 0)) + int(bool(old)))
     else:
         rec = dict(old or {}, status="done", done_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
     p.write_text(json.dumps(rec))
@@ -368,7 +370,11 @@ def money_rows(preds: pd.DataFrame, which: list, tag: str) -> dict:
         """One session's cleaned options, cached across the tests (lakeclean is slow)."""
         key = (u, d)
         if key not in cache:
-            cache[key] = lake[u].day(d, closes=grids[u].c[i])
+            o = lake[u].day(d, closes=grids[u].c[i])
+            if o is not None:
+                o.chain = None                       # only the contracts' own bars are needed here (memory)
+                o.contracts = {kk: v.astype(np.float32) for kk, v in o.contracts.items()}
+            cache[key] = o
         return cache[key]
 
     # Overnight option trades must hold the SAME weekly contract: the exchange's own expiry dates (bhavcopy; an
