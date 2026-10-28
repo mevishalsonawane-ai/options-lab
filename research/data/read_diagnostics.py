@@ -47,7 +47,8 @@ Since 28 Oct 2026 (still schema 2: one key added, every other key as it was; an 
   points after the app's delta-0.5 conversion; null: none), exit_at, premium, verdict (edge / coin flip / against /
   unknown), used, sessions, target_first, stop_first, neither, break_even, hidden (kept off the screens: the Hero Rs 1,000
   ticket), outcome (the arm's exit reason once known) and pct (a paper trade's result in percent of its entry, once its
-  arm reported the close; null for live). No ref and no rupees. :func:`time_machine_rows` reads it.
+  arm reported the close: the price move only, BEFORE charges; null for live, and for the ntfy arm's partial sells).
+  For the MCX arms ``underlying`` is the traded contract's symbol, not an index. No ref and no rupees. :func:`time_machine_rows` reads it.
 
 Usage::
 

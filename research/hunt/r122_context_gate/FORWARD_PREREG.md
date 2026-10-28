@@ -14,8 +14,10 @@ filters read from the underlying index, India VIX and the arms' earlier entries 
   reports the close; a check without it is joined by `forward.py` to the same file's arm trades (same day, arm key and
   direction, entry minutes within 2 minutes). Checks with no result either way are counted and reported, never guessed.
 - Paper trades only (live trades are few and their lots are hidden). Hidden arms (the Hero Rs 1,000 ticket) are kept.
-- Outcome: the trade's result in percent of the premium (`pct`, before charges; charges are about equal per trade, so a
-  skip-versus-random comparison is not biased by them); win = pct > 0.
+- Outcome: the trade's result in percent of the premium (`pct`, the price move BEFORE charges; charges are about equal
+  per trade, so a skip-versus-random comparison is not biased by them; research adds each arm's charges when it reports
+  rupees); win = pct > 0. A few close paths (the ntfy arm's partial sells) report no pct: joined by `forward.py` or
+  counted as unmatched. MCX checks name the contract, not an index (R122's inputs then use that future's own bars).
 - The index's 1-minute bars of those days from the Drive lake (or the phone's recordings) for R122's inputs, computed by
   the same code as R122 (`r122feat.py`), from bars before the entry minute only.
 

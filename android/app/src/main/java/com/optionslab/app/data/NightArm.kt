@@ -279,7 +279,7 @@ object NightArm {
             val gone = closedElsewhere(p, held, Paper.state.trades, now)
             if (gone != null) {
                 b.positions[i] = gone
-                runCatching { ArmLive.closed(mirrorRef(p), "closed_elsewhere") }
+                runCatching { ArmLive.closed(mirrorRef(p), "closed_elsewhere", ArmLive.pct(p.entry, gone.exit)) }
                 b.status[p.index] = "closed elsewhere"
                 note(b, "${p.symbol}: no longer held on paper (closed elsewhere), %s after charges".format(Locale.ENGLISH, rs(gone.net ?: 0.0)))
                 changed = true

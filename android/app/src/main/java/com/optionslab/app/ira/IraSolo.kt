@@ -747,7 +747,7 @@ internal object IraSolo {
     private fun finish(t: T, list: List<T>, px: Double?, why: String, exitOrderId: String? = null) {
         runCatching { com.optionslab.ira.ArmExits.set(exitsOwner(t), emptyList()) }
         // 18 Oct: its live trade, if any, is sold on the next look ([com.optionslab.app.data.ArmLive]; memory only).
-        if (t.midday) runCatching { com.optionslab.app.data.ArmLive.closed(managerId(t), "paper_exit") }
+        if (t.midday) runCatching { com.optionslab.app.data.ArmLive.closed(managerId(t), "paper_exit", com.optionslab.app.data.ArmLive.pct(t.entry, px)) }
         val net = px?.let { (it - t.entry) * t.qty - ShadowRules.charges(t.entry, it, t.qty) }
         val done = t.copy(closed = true, exitPrice = px, net = net, exit = why, exitOrderId = exitOrderId)
         val all = list.map { if (it === t) done else it }
