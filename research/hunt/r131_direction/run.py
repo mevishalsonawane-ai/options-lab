@@ -351,7 +351,7 @@ def holdout_gate(status: str):
     p.write_text(json.dumps(rec))
 
 
-def money_rows(preds: pd.DataFrame, which: list) -> dict:
+def money_rows(preds: pd.DataFrame, which: list, tag: str) -> dict:
     """Trades for each (H, set, model, k) in `which` from the calls in preds."""
     sys.path.insert(0, str(HERE.parent / "r123_neural_70"))
     import r123data as RD  # noqa: E402
@@ -362,6 +362,26 @@ def money_rows(preds: pd.DataFrame, which: list) -> dict:
     rows_all = {h: load_rows(h) for h in K.HORIZONS}
     lake = {}
     grids = {}
+    cache = {}
+
+    def day_opts(u, d, i):
+        """One session's cleaned options, cached across the tests (lakeclean is slow)."""
+        key = (u, d)
+        if key not in cache:
+            cache[key] = lake[u].day(d, closes=grids[u].c[i])
+        return cache[key]
+
+    # Overnight option trades must hold the SAME weekly contract: the exchange's own expiry dates (bhavcopy; an
+    # expiry on a holiday moves to the trading day before) decide which days roll. SENSEX (no NSE bhavcopy) keeps
+    # R123's flag. A trade is skipped when D is an expiry day or D and D+1 have different nearest expiries.
+    idd = S.index_daily()
+    ex_bhav = expiries_from_bhav()
+    near = {}
+    for u in K.NSE_UNDS:
+        cal = pd.DatetimeIndex(sorted(idd[idd.symbol == u].date))
+        eff = sorted({cal[cal <= e].max() for e in ex_bhav[u] if (cal <= e).any()})
+        ei = pd.DatetimeIndex(eff)
+        near[u] = {d: (ei[ei >= d].min() if (ei >= d).any() else pd.NaT) for d in cal[cal >= pd.Timestamp("2021-01-01")]}
     for (h, s, m, k) in which:
         g = preds[(preds.H == h) & (preds.set == s) & (preds.model == m)]
         g = g[np.abs(g.p - 0.5) >= g[f"cut_{int(k * 100)}"]] if k < 1.0 else g
@@ -395,7 +415,7 @@ def money_rows(preds: pd.DataFrame, which: list) -> dict:
                 if i is None:
                     skipped += 1
                     continue
-                opts = lake[u].day(d, closes=gr.c[i])
+                opts = day_opts(u, d, i)
                 is_exp = bool(meta.loc[(u, r.day, r.row)].get("rk_is_expiry", 0) == 1)
                 t = int(r.row)
                 end = t + 60 if h == "M60" else (K.EXIT_LAST_EXPIRY if is_exp else K.EXIT_LAST)
@@ -423,18 +443,24 @@ def money_rows(preds: pd.DataFrame, which: list) -> dict:
                     lake[u] = RD.LakeOptions(u, K.HOLDOUT[1])
                 gr = grids[u]
                 i = gr.pos().get(d_in)
-                if i is None or i + 1 >= len(gr.days) or bool(mr.get("rk_is_expiry", 0) == 1):
+                if u in near:
+                    e_in, e_out = near[u].get(pd.Timestamp(d_in), pd.NaT), near[u].get(pd.Timestamp(d_out), pd.NaT)
+                    roll = pd.isna(e_in) or e_in == pd.Timestamp(d_in) or e_in != e_out
+                else:
+                    roll = bool(mr.get("rk_is_expiry", 0) == 1)
+                if i is None or i + 1 >= len(gr.days) or roll:
                     skipped += 1
                     continue
                 t = int(r.row)
-                o_in = lake[u].day(d_in, closes=gr.c[i])
-                o_out = lake[u].day(d_out, closes=gr.c[i + 1])
+                o_in = day_opts(u, d_in, i)
+                o_out = day_opts(u, d_out, i + 1)
                 side = "C" if r.p >= 0.5 else "P"
                 spot = gr.c[i, t] if np.isfinite(gr.c[i, t]) else mr["close"]
                 kk = RD.atm(float(spot), K.STEP[u])
                 a_in = o_in.contracts.get((side, kk)) if o_in is not None else None
                 a_out = o_out.contracts.get((side, kk)) if o_out is not None else None
-                end = 0 if h == "GAP_T" else (K.EXIT_LAST_EXPIRY if (u, r.day) in exp_days else K.EXIT_LAST)
+                d_exp = (near[u].get(r.day) == r.day) if u in near else ((u, r.day) in exp_days)
+                end = 0 if h == "GAP_T" else (K.EXIT_LAST_EXPIRY if d_exp else K.EXIT_LAST)
                 x = Y.opt_overnight(a_in, t, a_out, end, K.LOT[u], d_in, d_out, u, RD.FILLS, RD.charge)
                 if x is None:
                     skipped += 1
@@ -445,6 +471,8 @@ def money_rows(preds: pd.DataFrame, which: list) -> dict:
         summ = {"all": Y.summarise(df) if len(df) else {"trades": 0}, "skipped": skipped}
         if len(df):
             summ["by_fold"] = {f: Y.summarise(x) for f, x in df.groupby("fold")}
+            summ["by_und"] = {u: Y.summarise(x) for u, x in df.groupby("und")}
+            df.assign(key=f"{h}|{s}|{m}|{k}").to_parquet(K.OUT / f"trades_{h}_{s.replace('+', '_')}_{m}_{k}_{tag}.parquet")
         out[f"{h}|{s}|{m}|{k}"] = summ
         log("money", h, s, m, k, summ["all"])
     return out
@@ -476,7 +504,7 @@ def cmd_holdout():
                                                                     "C2C_T")]
     which = sorted(set(fixed + gates))
     wfp = pd.read_parquet(K.OUT / "preds_wf.parquet")
-    money = {"wf": money_rows(wfp, which), "holdout": money_rows(preds, which)}
+    money = {"wf": money_rows(wfp, which, "wf"), "holdout": money_rows(preds, which, "holdout")}
     (K.RESULTS / "holdout.json").write_text(json.dumps({"results": wf, "passes": gates, "money": money},
                                                        indent=0, default=float))
     holdout_gate("done")
