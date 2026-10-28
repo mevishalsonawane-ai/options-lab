@@ -116,3 +116,43 @@ def test_sizing_is_two_percent_of_capital():
     s = G.sizing()
     assert s["500000"]["NIFTY"]["20"] == int(500000 * 0.02 // (20 * 65))
     assert s["200000"]["SENSEX"]["15"] == int(200000 * 0.02 // (15 * 20))
+
+
+# ---- amendment 1: the loose rule (r129loose.py) ------------------------------------------------------------------------
+def test_loose_walls_are_the_nearest_2x_strikes_each_way():
+    import r129loose as L
+    oi = {25000.0: (100.0, 100.0), 25050.0: (150.0, 100.0), 25100.0: (300.0, 100.0), 25150.0: (900.0, 100.0),
+          24950.0: (100.0, 250.0), 24900.0: (50.0, 900.0)}
+    w = L.walls(oi, 25010.0, 50.0)
+    assert w[1] == 25100.0                                # the nearest 2x call wall above spot, not the biggest
+    assert w[-1] == 24950.0                               # 2.5x puts below spot
+    assert L.walls(oi, 25010.0, 50.0)[1] != 25150.0
+    far = {25400.0: (900.0, 1.0)}                          # 7.8 strikes away: out of range
+    assert L.walls(far, 25010.0, 50.0) == {1: None, -1: None}
+
+
+def test_loose_setup_needs_the_near_side_at_1344_and_has_no_look_ahead():
+    import r129loose as L
+    c = np.full(N, 25000.0)
+    c[L.WIN0 + 10:] = 25060.0
+    e = L.setup_loose(c, 25050.0, 1)
+    assert e == L.WIN0 + 14
+    c2 = c.copy()
+    c2[e + 1:] = 1.0
+    assert L.setup_loose(c2, 25050.0, 1) == e
+    c3 = c.copy()
+    c3[:G.ROW_WALL + 1] = 25070.0                          # already beyond the wall at 13:44
+    assert L.setup_loose(c3, 25050.0, 1) is None
+
+
+def test_loose_heavyweights_need_two_of_three():
+    import r129loose as L
+    from datetime import date
+    d = date(2025, 1, 2)
+    up = (np.full(N, 101.0), np.full(N, 100.0))
+    dn = (np.full(N, 99.0), np.full(N, 100.0))
+    eq = {("A", d): up, ("B", d): up, ("C", d): dn}
+    assert L.heavy_ok(eq, ("A", "B", "C"), d, 300, 1)
+    assert not L.heavy_ok(eq, ("A", "B", "C"), d, 300, -1)
+    assert L.heavy_ok(eq, (), d, 300, 1)
+    assert not L.heavy_ok({("A", d): up}, ("A", "B", "C"), d, 300, 1)     # missing stocks do not count
