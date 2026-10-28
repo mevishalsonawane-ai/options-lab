@@ -150,3 +150,32 @@ def test_step3_gates():
     assert "net held on only 1" in " ".join(L.step3_gates(wf, bad, 0.05)["fails"])
     few = dict(fin, arms=dict(ok_arms, R72=arm(1, 2, n=45, s=10)))
     assert not L.step3_gates(wf, few, 0.05)["passed"]
+
+
+# ---------------------------------------------------------------- the forward test's join (FORWARD_PREREG.md)
+
+import forward as FW  # noqa: E402
+
+
+def _diag(checks, trades):
+    return dict(day="2026-11-03", arms=[dict(key="orb", trades=trades)], time_machine=checks)
+
+
+def test_forward_join_prefers_the_checks_own_result_then_matches_trades():
+    own = dict(at="10:21:00", arm="donchian", direction=1, account="paper", verdict="edge", pct=12.5, outcome="target")
+    near = dict(at="10:35:00", arm="orb", direction=1, account="paper", verdict="against", pct=None)
+    wrong_side = dict(at="10:35:00", arm="orb", direction=-1, account="paper", verdict="coin flip", pct=None)
+    live = dict(at="11:00:00", arm="orb", direction=1, account="live", verdict="edge", pct=None)
+    trades = [dict(account="paper", right="CE", entry_at="10:36:00", pct=-20.0, points=-30.0, why="stop", open=False),
+              dict(account="paper", right="CE", entry_at="10:40:00", pct=5.0, points=8.0, why="target", open=False),
+              dict(account="live", right="CE", entry_at="11:00:00", pct=None, points=None, why=None, open=True)]
+    rows, c = FW.join(_diag([own, near, wrong_side, live], trades))
+    assert c == dict(checks=4, matched=2, unmatched=1, live=1, open=0)
+    assert rows[0]["trade"]["pct"] == 12.5
+    assert rows[1]["trade"]["pct"] == -20.0          # the nearest trade within 2 minutes, used once
+    assert rows[2]["trade"] is None                  # no PE trade: never guessed
+
+
+def test_forward_join_on_an_old_file_has_nothing():
+    rows, c = FW.join(dict(day="2026-10-20", arms=[]))
+    assert rows == [] and c["checks"] == 0

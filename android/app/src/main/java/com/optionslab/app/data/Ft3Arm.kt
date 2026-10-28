@@ -765,7 +765,7 @@ object Ft3Arm {
     }
 
     private fun closed(b: Book, p: Pos) {
-        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit", ArmLive.pct(p.entry, p.exit)) }
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
         note(b, "%s: sold (%s) @ %s, %s after charges · paper".format(Locale.ENGLISH, p.symbol, p.why, px(p.exit ?: 0.0), rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, NOTICE + Ft3Rules.UNDERLYINGS.indexOf(p.index).coerceAtLeast(0), Notifier.SELL,

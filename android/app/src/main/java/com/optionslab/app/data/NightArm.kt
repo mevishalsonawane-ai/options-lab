@@ -299,7 +299,7 @@ object NightArm {
             val done = p.copy(exit = fill.price, exitTime = now, why = if (NightRules.exitDue(p.entryDay, now)) "night_exit_0916" else "trade_manager", charges = charges)
             b.positions[i] = done
             // 18 Oct: its live trade, if any, is sold now too ([ArmLive]; memory only).
-            runCatching { ArmLive.closed(mirrorRef(p), done.why ?: "night_exit_0916") }
+            runCatching { ArmLive.closed(mirrorRef(p), done.why ?: "night_exit_0916", ArmLive.pct(p.entry, done.exit)) }
             b.status[p.index] = "sold at 09:16"
             note(b, "${p.symbol}: sold ${fill.quantity} @ %.2f, %s after charges".format(Locale.ENGLISH, fill.price, rs(done.net ?: 0.0)))
             runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(p.index), Notifier.SELL, "${NightRules.LABEL} sold ${p.symbol} · Paper",

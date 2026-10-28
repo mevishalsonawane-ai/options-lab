@@ -1990,7 +1990,7 @@ object PassedArmsHost {
             return
         }
         // 18 Oct: its live trade, if any, is sold on the next look ([ArmLive]; memory only).
-        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit") }
+        runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit", ArmLive.pct(p.entry, p.exit)) }
         b.status["${p.arm}|${p.index}"] = "closed ${p.symbol}: ${p.why}"
         note(b, "%s: %s sold (%s) @ %s, %s after charges · paper".format(Locale.ENGLISH, label(p.arm), p.symbol, p.why, px(p.exit ?: 0.0), rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, NOTICE + 40 + SOURCES.indexOf(p.arm) * 5 + ALL_INDICES.indexOf(p.index).coerceAtLeast(0), Notifier.SELL,

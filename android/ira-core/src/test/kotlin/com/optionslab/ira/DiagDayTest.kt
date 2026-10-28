@@ -34,6 +34,41 @@ class DiagDayTest {
         DiagDay.Input(day, t(23, 41, 5), app, mapOf("live" to false, "kill_switch" to false), arms, others, decisions, t(9, 0), orders, changes,
             diary, tally, health, workers, personal)
 
+    // ---- the time machine's checks (28 Oct, shadow logging) -----------------------------------------------------------
+
+    @Test fun theTimeMachinesChecksAreCarriedAsNumbersWithoutRefsOrRupees() {
+        val c = DiagDay.TimeMachineCheck("donchian", "NIFTY", 1, t(10, 21), 5, 61.2345, 61.2345, LocalTime.of(15, 15), true, false,
+            "coin flip", 1587, 60, 570, 584, 433, 0.5, false, "stop", -14.567)
+        val hidden = c.copy(arm = "hero_ticket", at = t(12, 30), verdict = "against", hidden = true, outcome = null)
+        val yesterday = c.copy(at = t(10, 21, d = day.minusDays(1)))
+        val r = json(input().copy(timeMachine = listOf(hidden, c, yesterday)))
+        val tm = r["time_machine"] as List<Map<String, Any?>>
+        assertEquals(2, tm.size, "the day's own checks, oldest first")
+        val first = tm[0]
+        assertEquals("10:21:00", first["at"]); assertEquals("donchian", first["arm"]); assertEquals("NIFTY", first["underlying"])
+        assertEquals(1.0, (first["direction"] as Number).toDouble()); assertEquals("paper", first["account"])
+        assertEquals(61.23, (first["stop_points"] as Number).toDouble()); assertEquals("15:15", first["exit_at"])
+        assertEquals(570.0, (first["target_first"] as Number).toDouble()); assertEquals(0.5, (first["break_even"] as Number).toDouble())
+        assertEquals("coin flip", first["verdict"]); assertEquals("stop", first["outcome"]); assertEquals(false, first["hidden"])
+        assertEquals(-14.57, (first["pct"] as Number).toDouble())
+        assertEquals(true, tm[1]["hidden"]); assertNull(tm[1]["outcome"])
+        // A live check carries no result.
+        val live = json(input().copy(timeMachine = listOf(c.copy(live = true))))
+        assertNull((live["time_machine"] as List<Map<String, Any?>>)[0]["pct"])
+        assertFalse(tm.any { it.containsKey("ref") }, "no ref: refs can hold order ids")
+        // None: an empty list, and an earlier file without the key still reads.
+        assertEquals(emptyList<Any>(), json(input())["time_machine"])
+        // A long day is capped, newest kept, and counted.
+        val many = (0 until DiagDay.MAX_CHECKS + 5).map { c.copy(at = t(9, 15).plusMinutes(it.toLong())) }
+        val big = json(input().copy(timeMachine = many))
+        assertEquals(DiagDay.MAX_CHECKS, (big["time_machine"] as List<*>).size)
+        assertEquals(5.0, ((big["truncated"] as Map<String, Any?>)["time_machine"] as Number).toDouble())
+        // No NaN reaches the JSON (a NaN break-even or stop is written as null).
+        val nan = json(input().copy(timeMachine = listOf(c.copy(breakEven = Double.NaN, stopPoints = Double.NaN))))
+        assertNull((nan["time_machine"] as List<Map<String, Any?>>)[0]["break_even"])
+        assertNull((nan["time_machine"] as List<Map<String, Any?>>)[0]["stop_points"])
+    }
+
     // ---- names --------------------------------------------------------------------------------------------------------
 
     @Test fun namesAreStableOnePerDay() {

@@ -157,3 +157,13 @@ def test_a_schema_1_file_of_19_oct_is_sorted_by_severity():
 ])
 def test_classify_edges(kind, want):
     assert rd.classify(kind) == want
+
+
+def test_time_machine_rows_since_28_oct():
+    """28 Oct (shadow logging): the time machine's checks; an older file has none."""
+    data = rd.load(SAMPLE)
+    rows = rd.time_machine_rows(data)
+    assert len(rows) == 1 and rows[0]["day"] == data["day"] and rows[0]["verdict"] == "coin flip"
+    assert "ref" not in rows[0] and rows[0]["stop_points"] == 61.23
+    assert "time machine: 1 checks (coin flip 1)" in rd.summary(data)
+    assert rd.time_machine_rows(rd.load(SAMPLE_V1)) == []

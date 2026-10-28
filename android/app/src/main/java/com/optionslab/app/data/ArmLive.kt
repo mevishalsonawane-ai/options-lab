@@ -268,15 +268,23 @@ object ArmLive {
         if (levels.size > NOTES_KEPT) prune()
     }
 
-    /** The paper trade [ref] is closed ([why]): its live trade is sold on the next look, which is asked now (memory only). */
-    fun closed(ref: String, why: String) {
+    /**
+     * The paper trade [ref] is closed ([why]): its live trade is sold on the next look, which is asked now (memory only). 28 Oct
+     * (shadow logging): [pct], the paper trade's result in percent of its entry ([pct] below), goes to the time machine's forward
+     * log with the reason (arithmetic only here; the log is written on its own scope).
+     */
+    fun closed(ref: String, why: String, pct: Double? = null) {
         testHeard?.add("closed|$ref|$why")
         closedRefs[ref] = (runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() }) to why
         // 22 Oct: the time machine's forward log learns how the trade ended (one queue add; the write runs on its own scope).
-        runCatching { TimeMachineHost.settle(ref, why) }
+        runCatching { TimeMachineHost.settle(ref, why, pct) }
         if (closedRefs.size > NOTES_KEPT) prune()
         if (holdingHint || shadowHint) nudge()
     }
+
+    /** 28 Oct: a paper trade's result in percent of its [entry] ([side] -1 for a sale), or null when it cannot be told. */
+    fun pct(entry: Double?, exit: Double?, side: Int = 1): Double? =
+        if (entry == null || exit == null || !entry.isFinite() || !exit.isFinite() || entry <= 0) null else (exit - entry) * side / entry * 100.0
 
     /** A look soon, off the caller's thread (the minute lane and the stop check run it anyway). */
     fun nudge() {

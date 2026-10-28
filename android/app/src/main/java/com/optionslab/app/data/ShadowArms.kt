@@ -735,7 +735,7 @@ object ShadowArms {
         val (_, px) = filled(sell) ?: return null
         val v = ShadowRules.of(p.variant)
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${v?.let { x -> "${ShadowRules.armName(x)} (${x.name})" } ?: p.variant} · $why") }
-        runCatching { ArmLive.closed(mirrorRef(p), why) }
+        runCatching { ArmLive.closed(mirrorRef(p), why, ArmLive.pct(p.entry, px)) }
         return p.copy(exit = px, exitTime = now(), why = why, last = ltp,
             charges = p.charges + Paper.state.trades.filter { it.orderId == sell.orderId }.sumOf { it.charges.toDouble() })
     }

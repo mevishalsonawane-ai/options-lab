@@ -104,8 +104,26 @@ object TimeMachineHost {
         val verdict: String get() = odds?.verdict?.word ?: "unknown"
     }
 
-    /** One line of the forward log: the check and, once reported, the trade's actual outcome. */
-    data class Record(val day: LocalDate, val arm: String, val ref: String, val verdict: String, val odds: String, val outcome: String?, val live: Boolean)
+    /**
+     * One line of the forward log: the check and, once reported, the trade's actual outcome. 28 Oct (Boss: "yes build the shadow
+     * logging"): also the entry's facts and the odds as numbers ([Facts]), so research can join each check with the trade's result
+     * in the daily diagnostics and work out the R122 context from the index's bars (research/HUNT_R122_CONTEXT_GATE.md). Shadow
+     * only: nothing reads it to trade. Records written before 28 Oct have no facts (null).
+     */
+    data class Record(val day: LocalDate, val arm: String, val ref: String, val verdict: String, val odds: String, val outcome: String?, val live: Boolean,
+                      val facts: Facts? = null,
+                      /** 28 Oct: the paper trade's result in percent of its entry, once its arm reports the close (null: not known). */
+                      val pct: Double? = null)
+
+    /** An entry's facts and its odds as numbers (no order id, no rupees): what the daily diagnostics carry ([diagChecks]). */
+    data class Facts(
+        val underlying: String, val direction: Int, val at: LocalDateTime, val barMinutes: Int,
+        /** In underlying points after [points] (null: none), and the arm's time exit. */
+        val stopPoints: Double?, val targetPoints: Double?, val exitAt: LocalTime?, val premium: Boolean,
+        val used: Int, val sessions: Int, val targetFirst: Int, val stopFirst: Int, val neither: Int, val breakEven: Double?,
+        /** Kept out of sight ([hidden]): still logged for research. */
+        val hidden: Boolean,
+    )
 
     /** Where the bars come from (replaceable in tests): the sessions of [underlying] before [today], and a word for the source. */
     fun interface Bars { fun sessions(underlying: String, today: LocalDate, barMinutes: Int): Pair<List<TimeMachine.Session>, String> }
@@ -161,9 +179,9 @@ object TimeMachineHost {
     }
 
     /** The trade [ref]'s actual outcome, as its arm reports it when it closes ("target", "stop", "time", "+Rs 1,200"). */
-    fun settle(ref: String, outcome: String) {
+    fun settle(ref: String, outcome: String, pct: Double? = null) {
         val gen = wipeGen
-        scope.launch { runCatching { synchronized(io) { if (gen != wipeGen) return@synchronized; ensureLoaded(); records = records.map { if (it.ref == ref && it.outcome == null) it.copy(outcome = outcome) else it }; save() } } }
+        scope.launch { runCatching { synchronized(io) { if (gen != wipeGen) return@synchronized; ensureLoaded(); records = records.map { if (it.ref == ref && it.outcome == null) it.copy(outcome = outcome, pct = pct?.takeIf { p -> p.isFinite() }) else it }; save() } } }
     }
 
     internal fun check(e: Entry): Result {
@@ -199,11 +217,30 @@ object TimeMachineHost {
         synchronized(io) {
             if (gen != wipeGen) return r
             ensureLoaded()
-            records = (records + Record(day, e.arm, e.ref, r.verdict, r.odds?.line() ?: (r.note ?: ""), null, e.live)).takeLast(KEEP)
+            records = (records + Record(day, e.arm, e.ref, r.verdict, r.odds?.line() ?: (r.note ?: ""), null, e.live, factsOf(e, r))).takeLast(KEEP)
             save()
         }
         testDone?.invoke(r)
         return r
+    }
+
+    /** [e]'s facts and [r]'s odds as numbers for the forward log (28 Oct, shadow logging). */
+    internal fun factsOf(e: Entry, r: Result): Facts {
+        val (stop, target, _) = if (e.skip != null) Triple(null, null, null) else points(e)
+        val o = r.odds
+        return Facts(e.underlying, e.direction, e.at.withSecond(0).withNano(0), e.barMinutes, stop, target, e.exitAt, e.premium,
+            o?.used ?: 0, o?.sessions ?: 0, o?.targetFirst ?: 0, o?.stopFirst ?: 0, o?.neither ?: 0,
+            o?.breakEven?.takeIf { it.isFinite() }, hidden(e.arm))
+    }
+
+    /**
+     * 28 Oct (shadow logging): [day]'s checks from the forward log, as the daily diagnostics carry them (no ref: refs can hold
+     * order ids). Reads the log (the evening sync's thread, never the order or tick path); records without facts are left out.
+     */
+    fun diagChecks(day: LocalDate): List<com.optionslab.ira.DiagDay.TimeMachineCheck> = forwardLog().filter { it.day == day && it.facts != null }.map { rec ->
+        val f = rec.facts!!
+        com.optionslab.ira.DiagDay.TimeMachineCheck(rec.arm, f.underlying, f.direction, f.at, f.barMinutes, f.stopPoints, f.targetPoints, f.exitAt,
+            f.premium, rec.live, rec.verdict, f.used, f.sessions, f.targetFirst, f.stopFirst, f.neither, f.breakEven, f.hidden, rec.outcome, rec.pct)
     }
 
     /** The stop and target in underlying points, converting premium points with the delta (0.5 assumed when the arm has none). */
@@ -325,15 +362,31 @@ object TimeMachineHost {
 
     internal fun encode(rs: List<Record>): String = JSONArray().apply {
         rs.forEach { put(JSONObject().put("day", it.day.toString()).put("arm", it.arm).put("ref", it.ref).put("verdict", it.verdict).put("odds", it.odds)
-            .put("outcome", it.outcome ?: JSONObject.NULL).put("live", it.live)) }
+            .put("outcome", it.outcome ?: JSONObject.NULL).put("live", it.live).put("pct", num(it.pct)).apply { it.facts?.let { f -> put("facts", factsJson(f)) } }) }
     }.toString()
+
+    private fun num(x: Double?): Any = x?.takeIf { it.isFinite() } ?: JSONObject.NULL
+
+    private fun factsJson(f: Facts): JSONObject = JSONObject().put("u", f.underlying).put("dir", f.direction).put("at", f.at.toString())
+        .put("bar", f.barMinutes).put("stop", num(f.stopPoints)).put("target", num(f.targetPoints)).put("exit", f.exitAt?.toString() ?: JSONObject.NULL)
+        .put("premium", f.premium).put("used", f.used).put("sessions", f.sessions).put("tf", f.targetFirst).put("sf", f.stopFirst)
+        .put("nf", f.neither).put("be", num(f.breakEven)).put("hidden", f.hidden)
+
+    private fun dbl(o: JSONObject, k: String): Double? = if (!o.has(k) || o.isNull(k)) null else o.optDouble(k).takeIf { it.isFinite() }
+
+    /** A record's facts, or null (none, or unreadable: the record itself is still kept). */
+    private fun factsFrom(o: JSONObject?): Facts? = o?.let { f -> runCatching {
+        Facts(f.getString("u"), f.getInt("dir"), LocalDateTime.parse(f.getString("at")), f.getInt("bar"), dbl(f, "stop"), dbl(f, "target"),
+            if (f.isNull("exit")) null else LocalTime.parse(f.getString("exit")), f.optBoolean("premium"), f.optInt("used"), f.optInt("sessions"),
+            f.optInt("tf"), f.optInt("sf"), f.optInt("nf"), dbl(f, "be"), f.optBoolean("hidden"))
+    }.getOrNull() }
 
     internal fun decode(text: String?): List<Record> = runCatching {
         val a = JSONArray(text ?: return emptyList())
         (0 until a.length()).map { i ->
             val o = a.getJSONObject(i)
             Record(LocalDate.parse(o.getString("day")), o.getString("arm"), o.getString("ref"), o.getString("verdict"), o.optString("odds"),
-                o.optString("outcome").takeIf { !o.isNull("outcome") && it.isNotEmpty() }, o.optBoolean("live"))
+                o.optString("outcome").takeIf { !o.isNull("outcome") && it.isNotEmpty() }, o.optBoolean("live"), factsFrom(o.optJSONObject("facts")), dbl(o, "pct"))
         }
     }.getOrDefault(emptyList())
 

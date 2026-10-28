@@ -137,6 +137,8 @@ object DiagDayHost {
             decisionsSince = if (GOLD) null else runCatching { OrbArms.liquidityRecordSince }.getOrNull(),
             orders = orders, changes = changes, diary = diary, errorTally = runCatching { Diag.errors.of(day) }.getOrNull(),
             health = health, workers = workers, personal = personal,
+            // 28 Oct (shadow logging): the day's time machine checks from its forward log (this sync's thread; no ref, no rupees).
+            timeMachine = if (GOLD) emptyList() else runCatching { TimeMachineHost.diagChecks(day) }.getOrDefault(emptyList()),
         )
     }
 }
