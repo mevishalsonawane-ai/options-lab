@@ -199,9 +199,12 @@ class S5ArmTest : RobolectricTest() {
         val p = boughtAt0920()
         assertEquals("NIFTY", p.index); assertEquals("PE", p.right); assertTrue(p.symbol, p.symbol.endsWith("25000PE"))
         assertEquals(65, p.qty); assertEquals(2000.0, p.stopRs, 0.0); assertEquals(15, p.cell); assertEquals(500.0, p.ev, 1e-9)
-        // The stop nets about −₹2,000 after both legs' charges.
-        val stopNet = S5Trail.netAt(p.entry, p.stop!!, p.qty, S5Arm.chargeFor(p.qty))
-        assertTrue("$stopNet", stopNet in -2000.0 - 0.05 * 65..-2000.0 + 0.05 * 65)
+        // The stop's FILL (10 bps and 2 ticks under its trigger, research's stop fill) nets about −₹2,000 after both legs' charges;
+        // the trigger itself sits a little above it.
+        val fill = p.stop!! * (1 - S5Trail.STOP_BPS / 1e4) - 2 * 0.05
+        val stopNet = S5Trail.netAt(p.entry, fill, p.qty, S5Arm.chargeFor(p.qty))
+        assertTrue("$stopNet", stopNet in -2000.0 - 1e-6..-2000.0 + 0.05 * 65 + 1e-6)
+        assertTrue(S5Trail.netAt(p.entry, p.stop!!, p.qty, S5Arm.chargeFor(p.qty)) > stopNet)
         val stop = Paper.state.orders.single { it.orderId == p.stopOrderId }
         assertEquals("SL-M", stop.priceType); assertEquals("SELL", stop.action); assertEquals(p.stop!!, stop.triggerPrice!!.toDouble(), 1e-9)
         val v = view()
