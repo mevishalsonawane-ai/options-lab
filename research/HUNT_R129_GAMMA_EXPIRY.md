@@ -60,6 +60,49 @@ too rare to be a strategy.
 - From 14:00 the same days show +134 points. That number is selection: those days were picked because the index had already
   broken out. On wall days without a breakout it was −31 points.
 
+## Amendment 1: a looser version (Boss: "Try a looser version of the gamma strategy")
+
+Pre-registered before any number (`PREREG_LOOSE.md`, commit `61360fb`). Each R129 filter that blocked the most days was loosened:
+- the wall is the nearest strike each way (within 5 strikes) with a 2x imbalance, not the heaviest with 3x;
+- no VIX floor;
+- no box: a 5-minute close beyond the wall and the TWAP, from 13:50 to 15:00;
+- 2 of 3 heavyweights beyond VWAP;
+- the nearest out-of-the-money option at ₹10-40.
+
+The trigger, exits, costs, twins and gates are unchanged.
+
+**It trades about 40 times a year now, and it loses in every version and every year.**
+
+| version | trigger read on | trades | won | avg win / avg loss | avg net | 4x reached | total (1 lot) | vs random entries |
+|---|---|---|---|---|---|---|---|---|
+| L1 | option premium chart (NOT the default) | 204 | 18% | ₹1,059 / −₹447 | **−₹174** | 3.4% | −₹35,484 | p 1.00 |
+| L2 | index (default) | 221 | 17% | ₹1,537 / −₹519 | **−₹175** | 7.2% | −₹38,682 | p 0.99 |
+| L3 | index (default) | 221 | 17% | ₹1,282 / −₹503 | **−₹204** | 4.5% | −₹45,144 | p 1.00 |
+| L4 | index breakout only (default) | 228 | 17% | ₹1,554 / −₹510 | **−₹166** | 7.5% | −₹37,891 | p 1.00 |
+
+L3 exits at 15:05; the others at 15:25.
+
+- **Every year negative in every version** (2021-2026), on every index.
+- **Random entries on the same days and options did better** (twin p 0.99-1.00): the rule's own timing hurt.
+- **About one trade in six wins.** The wins (₹1,000-1,500) are about 2-3 times the losses (₹450-520), not the 4x the source promises.
+  4x was reached on only 3-7.5% of trades.
+- **Filters do not rescue it.**
+  - VIX above 12: −₹169 to −₹203 a trade.
+  - VIX at or below 12: −₹104 to −₹213 a trade.
+  - Walls within 1 strike of spot: −₹107 to −₹178.
+  - Walls 1-3 strikes away: −₹211 to −₹243.
+- **The claim again:**
+  - After a nearest-2x-wall break (420 setups), the index moved +13 points its way to 15:20 on average.
+  - It went the right way on 54% of days.
+  - That is a little follow-through, far too small for a cheap option to pay 4x, and less than the option's decay and spread take.
+- **Nothing passes.** q is 1.00 within these 4 versions and over all 10 R129 versions.
+
+## Conclusion
+
+Strict, the rule almost never fires; loose, it fires about 40 times a year and loses about ₹170-200 a trade. The weak point is the
+idea itself: on expiry afternoon a broken OI wall does not bring the short-covering blast the strategy depends on, so a cheap OTM
+option mostly decays. Nothing goes on paper.
+
 ## How it was done
 
 - **Pre-registration:** `research/hunt/r129_gamma_expiry/PREREG.md`, commit `39ec9da`, before any number.

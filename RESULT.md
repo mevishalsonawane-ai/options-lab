@@ -3,7 +3,8 @@
 2. The main blocker: the heaviest OI wall sits at the money and has a 3x call/put imbalance only 14-25% of the time; then VIX, then no breakout.
 3. Its claim fails: after the index broke a 3x wall (22 days), it moved -6 points the wall's way to 15:20 (55% right): no blast.
 4. As written its trigger reads the option's own chart (not the default; labelled); the index-signal version did no better.
-5. Nothing passes; nothing goes on paper. Details: research/HUNT_R129_GAMMA_EXPIRY.md.
+5. A looser version (pre-registered: nearest 2x wall, no VIX floor, no box, Rs 10-40 OTM) trades ~40 times a year (204-228 trades) and loses -Rs 166 to -204 a trade in every version and every year; 17-18% win; 4x on 3-7.5%; worse than random entries.
+6. Nothing passes; nothing goes on paper. Details: research/HUNT_R129_GAMMA_EXPIRY.md.
 
 # R128 result (28 Oct 2026): what we were missing, fixed and tested (option buying only)
 1. Three reviews (internet research, the repo's book/PDF studies, a code audit) agreed: we never compared our move forecast with the option's PRICE, and our fixed exits capped the big wins a bought option needs.
