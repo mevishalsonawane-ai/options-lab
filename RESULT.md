@@ -4,7 +4,8 @@
 3. Its claim fails: after the index broke a 3x wall (22 days), it moved -6 points the wall's way to 15:20 (55% right): no blast.
 4. As written its trigger reads the option's own chart (not the default; labelled); the index-signal version did no better.
 5. A looser version (pre-registered: nearest 2x wall, no VIX floor, no box, Rs 10-40 OTM) trades ~40 times a year (204-228 trades) and loses -Rs 166 to -204 a trade in every version and every year; 17-18% win; 4x on 3-7.5%; worse than random entries.
-6. Nothing passes; nothing goes on paper. Details: research/HUNT_R129_GAMMA_EXPIRY.md.
+6. A filter to keep only the winners (pre-registered logistic meta-label on 10 entry-time facts, walk-forward) cannot tell them apart: out-of-sample AUC 0.47-0.51; it kept 20% of winners and 29% of losers; kept trades still lost (-Rs 110 / -Rs 197, 39-41 trades).
+7. Nothing passes; nothing goes on paper. Details: research/HUNT_R129_GAMMA_EXPIRY.md.
 
 # R128 result (28 Oct 2026): what we were missing, fixed and tested (option buying only)
 1. Three reviews (internet research, the repo's book/PDF studies, a code audit) agreed: we never compared our move forecast with the option's PRICE, and our fixed exits capped the big wins a bought option needs.

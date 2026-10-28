@@ -97,11 +97,47 @@ L3 exits at 15:05; the others at 15:25.
   - That is a little follow-through, far too small for a cheap option to pay 4x, and less than the option's decay and spread take.
 - **Nothing passes.** q is 1.00 within these 4 versions and over all 10 R129 versions.
 
+## Amendment 2: can a filter keep only the winners? (Boss: "Can we do something where only that 18% won trades can be bought")
+
+Pre-registered before any number (`PREREG_META.md`, commit `f75d18d`).
+- **The model:** a logistic model on 10 facts known before each entry: the entry minute, the premium, VIX, the index's move since
+  the open, the day's range, the wall's distance and OI ratio, how far out of the money, the direction, and monthly expiry.
+- **The keep rule:** keep the top 30% of scores (the threshold is set on the training years).
+- **The test:** trained on earlier years and tested on each later year (2023, 2024, 2025, early 2026). The latest half-year was
+  read once, after that was committed.
+- **The trades:** the loose rule's index-signal versions, L2 (221 trades) and L4 (228).
+
+**It cannot tell the winners apart.**
+
+| filter on | trades tested | kept | won (kept vs all) | avg net (kept vs all) | AUC | winners kept / losers kept | vs random keeps |
+|---|---|---|---|---|---|---|---|
+| L2 | 143 | 39 | 13% vs 17% | −₹110 vs −₹203 | 0.47 | 21% / 29% | p 0.26 |
+| L4 | 148 | 41 | 12% vs 17% | −₹197 vs −₹193 | 0.51 | 20% / 29% | p 0.49 |
+
+The kept rows are the walk-forward 2023 - Mar 2026.
+
+- **Scoring was no better than a coin.** AUC was 0.47 and 0.51 (0.5 is a coin). The filter kept a SMALLER share of the winners
+  than of the losers.
+- **The kept trades lost less, but only because they were cheaper losers.** The kept trades' average loss was about ₹320-350, not
+  ₹540. Their win rate fell to 12-13%, and they made money in only 1 of 4 folds (L2) and 0 of 4 (L4).
+- **Apr - Oct 2026 (read once):**
+  - L2 kept 5 trades, 40% won, +₹329 a trade.
+  - L4 kept 8 trades, 25% won, +₹120 a trade.
+  - That rests on the same two winning trades in both (₹1,227 on average), and the filter had already failed the walk-forward,
+    so it means nothing.
+- **Nothing passes.** The 100-trade floor could not be met anyway (about 45 kept trades in all).
+- **Why, plainly:**
+  - The winners are the few afternoons when the index happened to keep running after the break.
+  - None of the facts known at the entry say which afternoons those will be. R123-R126 found the same for direction over the next
+    hour (AUC about 0.51).
+  - A filter can only drop trades. With no signal to drop by, it drops winners and losers alike.
+
 ## Conclusion
 
 Strict, the rule almost never fires; loose, it fires about 40 times a year and loses about ₹170-200 a trade. The weak point is the
 idea itself: on expiry afternoon a broken OI wall does not bring the short-covering blast the strategy depends on, so a cheap OTM
-option mostly decays. Nothing goes on paper.
+option mostly decays. A filter on facts known at entry cannot pick the rare winners (amendment 2: AUC 0.47-0.51).
+Nothing goes on paper.
 
 ## How it was done
 

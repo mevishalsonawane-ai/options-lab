@@ -1,0 +1,28 @@
+id: r129-meta-l4
+title: 'R129 amendment 2: a winners filter (logistic meta-label, top 30%) on the loose gamma rule L4'
+family: option-structure
+date: '2026-10-28'
+doc: research/HUNT_R129_GAMMA_EXPIRY.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m, options_rolling_1m WEEK with per-strike OI, equity_1m), lakeclean steps 1-3
+period:
+  design: '2023-01-01..2026-03-15 walk-forward (yearly folds, trained on earlier years)'
+  holdout: 2026-04-01..2026-10-19 (read once, after the walk-forward was committed)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r129_gamma_expiry/PREREG_META.md
+holdout_read: true
+features:
+- 'signal source: the index (the loose rule L4); the filter reads 10 entry-time facts: entry minute, premium, VIX, the move since
+  the open, the day''s range, the wall''s distance and OI ratio, strikes out of the money, direction, monthly expiry'
+hypothesis: Facts known at entry pick the loose gamma rule's rare winners well enough to turn it positive out of sample
+model_or_rule: research/hunt/r129_gamma_expiry/r129meta.py
+settings: PREREG_META.md (logistic, C 1.0, keep at the training scores' 70th percentile)
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'Walk-forward 2023 - Mar 2026: kept 41 of 148 trades, win 12% (all 17%), avg net Rs -197 (all Rs -193); out-of-fold AUC 0.51; kept 20% of winners and 29% of losers; 0 of 4 folds positive; vs random keeps p 0.49, q 0.49. Holdout Apr-Oct 2026: kept 8 trades, avg net Rs 120 (one or two winners; too few to mean anything). Fails: AUC, folds, random, n.'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots
