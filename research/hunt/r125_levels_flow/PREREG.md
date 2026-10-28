@@ -1,0 +1,156 @@
+# R125 pre-registration: support/resistance from wicks, liquidity, order flow and volume, all inside the network
+
+Written 28 Oct 2026, before any R125 feature was computed or model fitted. Research only: nothing in the app changes,
+nothing trades.
+
+Boss, 28 Oct: *"Try using support and resistance from all the wicks, try using liquidity, try order flow, try using
+all the parameters, in the neural network. Also add volume data too, vertical volume too."*
+
+## 0. The question
+
+R124 found that its network sees a 30-point NIFTY move coming (holdout AUC 0.853 vs trees 0.842 at 30 minutes), but
+its direction was a coin (holdout AUC 0.51). **Does adding wick support and resistance, liquidity, order flow and
+volume, including the volume profile, let the network tell which way the move goes, and does that make money on
+options after costs?**
+
+Everything that measures a move or a level uses candle **highs and lows (wicks)**, never opens or closes (R124
+amendment 1). The one exception is a trade's own reference, the index at entry.
+
+## 1. Data, and what each new input really is
+
+| Boss's word | what exists | what R125 uses |
+|---|---|---|
+| support / resistance from wicks | index 1-minute highs and lows | swing highs/lows (wick pivots) from today and the last 5 sessions, clustered into levels |
+| liquidity | the same wicks | "pools" of equal highs or lows (resting stops), and **sweeps**: a wick that pokes through a level and fails |
+| order flow | **daily** NSE participant OI by group (FII, Pro, Client, DII; 2012-2026, from OF1), and **per-minute** option volume and OI by strike | yesterday's participant positions; the last minutes' call-vs-put volume and option OI build-up. True tick order flow (bid/ask, absorption) exists only in the phone's recent recordings, so it cannot be backtested |
+| volume | index volume exists only from Jan 2026, too short to train on; option volume exists every minute since 2021 | traded volume of the ATM±3 options (calls + puts) as the market-activity measure |
+| vertical volume (volume profile) | as above | each minute's option volume spread evenly over that minute's index wick range (low to high), giving a volume-at-price histogram for today and the last 5 sessions |
+
+All inputs at decision row t use bars ≤ t only. A pivot counts only after its confirming bars have closed. The
+participant file of day d is used from day d+1 (it is published after the close).
+
+## 2. The new inputs (4 groups, each a new specialist in the network)
+
+The move size is m: 30 points on NIFTY, scaled by price on the other indices (R124).
+
+**SR, support and resistance from wicks (8 inputs).**
+- Pivots: a bar whose high is the highest (or low the lowest) of the 5 bars on each side. It is confirmed 5 bars
+  later, and only confirmed pivots count.
+- Taken from today and the previous 5 sessions. Pivots within m/3 of each other form one level; its strength is the
+  number of wick touches.
+- The inputs:
+  - distance from bar t's high to the nearest resistance above, and from bar t's low to the nearest support below
+    (in m);
+  - the strength of each;
+  - how many levels lie within 1 m above and below;
+  - distance to the 5-session high and low (in m).
+
+**LIQ, liquidity (7 inputs).**
+- Pools: two or more confirmed pivots on the same side within m/6 of each other, not yet traded through.
+  - distance to the nearest pool above and below (in m).
+- Sweeps: in the last 15 bars, a bar's high went above a confirmed level, pool, or yesterday's high, and within the
+  next 3 bars no high reached it again (a failed poke, on wicks only). A low sweep is the mirror.
+  - whether a high sweep or a low sweep happened;
+  - minutes since the last sweep;
+  - how far it poked (in m).
+- How often today's highs and lows were taken out: the count of new session highs minus new lows in the last 30 bars.
+
+**FLOW, order flow (8 inputs).**
+- Yesterday's participant positions:
+  - FII index-futures long share and its 1-day change;
+  - Pro option stance (calls net minus puts net) and its 1-day change;
+  - Client option stance (scaled by total index option OI).
+- The last minutes' option flow:
+  - log ratio of call volume to put volume (ATM±3) over 5 and 15 minutes;
+  - OI build-up score over 15 minutes, ATM±3: (+1) a call strike with premium up and OI up, or a put strike with
+    premium down and OI up; (-1) the mirror; averaged over strikes. This is option-chain context, as CLAUDE.md
+    allows; it is never the signal by itself.
+
+**VOL, volume and the volume profile (8 inputs).**
+- Option volume (ATM±3) over the last 5, 15 and 60 minutes, each as a log ratio to the average of the previous 20
+  sessions at the same minutes.
+- From the profile (today so far and the last 5 sessions, 70% value area):
+  - distance from bar t's wick range to the point of control (in m);
+  - distance to the value-area high and to the value-area low (in m);
+  - inside the value area (0/1);
+  - volume at bar t's price range relative to the profile's average (a high- or low-volume node).
+
+## 3. Periods, rows, labels, network
+
+- **Periods:** as R123/R124. Design 2021-08-01 .. 2026-03-15, folds 2023 / 2024 / 2025 / 2026-Q1; embargo 16-31 Mar;
+  holdout 2026-04-01 .. 10-19, read once.
+- **Rows and labels:** R124's rows (every 5 minutes, 09:20-14:55, all five indices). The labels are R124's
+  wick-to-wick "30-point move within 15 / 30 minutes: up first, down first, neither". The trades are R124's
+  index-exit option trades. Both are reused unchanged.
+- **The network, N3:** R124's network (R123's multi-level N2: fast and slow encoders, specialists, gated committee,
+  calibration and abstention), with **four more specialists (sr, liq, flow, vol)** on the 31 new inputs. Same
+  settings, seeds and folds.
+- **Comparison, the point of R125:** N3 against R124's network on the same rows (retrained here with the same seeds,
+  so that only the inputs differ), plus the base rate and trees on all inputs.
+
+## 4. Tests and gates
+
+**Model tests** (one BH family of 4 cells). The new inputs "help" a cell only if all of these hold:
+- pooled walk-forward q ≤ 0.05;
+- N3 better in ≥ 3 of 4 folds;
+- the holdout 95% CI excludes 0 in the same direction.
+
+| cell | measure |
+|---|---|
+| direction given a move, 15 min | log-loss of P(up)/(P(up)+P(down)) and AUC; N3 vs R124's network |
+| direction given a move, 30 min | as above |
+| move coming, 15 min | Brier score; N3 vs R124's network |
+| move coming, 30 min | as above |
+
+**What N3 uses:** permutation importance by input group, including the four new groups.
+
+**Rules** (signal on the underlying, buy the ATM option; R124's exits on the index's wicks: ±m or the time limit;
+1 lot at today's lots, dated charges, liquidity-aware slippage, at most 5 trades a day, one open per index;
+thresholds from the training rows only):
+
+| rule | enter when | buys |
+|---|---|---|
+| **M1** | P(move in 15 min) in the top 10%, and direction share ≥ 0.60 or ≤ 0.40 | ATM call (up) or put (down); exits ±m / 15 min |
+| **M2** | as M1, 30 min | ATM call or put; exits ±m / 30 min |
+| **M3** | M1 at 09:20 / 09:25 / 09:30 only | as M1 |
+| **L1** | bar t's wick is within 0.25 m of a wick level (SR) or a sweep happened in the last 15 bars (LIQ), and N3's 15-minute direction share is ≥ 0.60 or ≤ 0.40 | ATM call or put; exits ±m / 15 min |
+
+**Gates (as R123/R124):**
+- Walk-forward: ≥ 300 trades; positive average net at 1x and 2x slippage; positive in 3 of 4 folds; BH q ≤ 0.10
+  over the 4 rules vs 1,000 random-entry twins.
+- Holdout: ≥ 100 trades; positive at 1x and 2x; q ≤ 0.10; the account stop is not breached.
+- A rule that passes everything is only *proposed* for a paper test.
+
+## 5. Honest limits, stated before any result
+
+- **The holdout has been read twice today**, by R123 and by R124 (whose holdout read used these exact labels). We
+  already know that in it, direction was a coin for R124's network. A third read is the only data there is. It is
+  disclosed, and a pass here would need a fresh forward test before anything else.
+- "Order flow" here is daily positions plus option volume and OI, not tick-level bid/ask flow.
+- The volume profile is built from option volume on the index's price range, a proxy: there is no historical index
+  or futures volume before 2026.
+- Previous studies of single levels and sweeps found nothing:
+  - I12: levels held no more often than random prices;
+  - R91: ICT liquidity sweeps;
+  - the Liquidity Swings / Pools break rules (LIQUIDITY.md);
+  - OF1: following participant groups did not pay after costs.
+
+  R125 differs because it puts all of them together into one network with the price sequence. It does not use any
+  of them as a rule on its own.
+
+## 6. Tests (before any result)
+
+- Pivots confirm only after their right-hand bars; levels and pools use confirmed pivots only.
+- A sweep is known only after its 3 failure bars.
+- Participant data is lagged one session.
+- The volume profile at t uses minutes ≤ t.
+- Every new input is unchanged when every bar after t is changed.
+- Hand-made cases: a pool, a sweep, the value area and the point of control.
+
+## 7. Outputs
+
+- Code and results: `research/hunt/r125_levels_flow/`.
+- Big files: `gdrive:IraAlgo-data-lake/derived/r125/`.
+- Write-up: `research/HUNT_R125_LEVELS_FLOW.md`.
+- Experiment entries: `research/experiments/entries/r125-*.yaml`.
+- RESULT.md.
