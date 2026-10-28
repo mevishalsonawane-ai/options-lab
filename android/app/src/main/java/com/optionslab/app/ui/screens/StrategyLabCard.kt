@@ -173,8 +173,8 @@ internal const val LAB_NOTE = "Variants trade virtually beside each strategy, an
 
 /** The card from plain state (tests drive it). [onOpen]: the sheet, at a candidate's id or at the top (null). */
 @Composable
-internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyForge.Book, onOpen: (String?) -> Unit,
-                                    held: List<com.optionslab.ira.AutoChange.Entry> = emptyList()) {
+internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyForge.Book,
+                                    held: List<com.optionslab.ira.AutoChange.Entry> = emptyList(), onOpen: (String?) -> Unit) {
     val p = LocalPalette.current
     val rows = remember(variants) {
         VariantLab.STRATEGIES.filter { variants.alive(it.key).isNotEmpty() || variants.runOf(it.key) != VariantLab.Run.OFF }.map { s ->
