@@ -86,6 +86,9 @@ def trade(arm, und, day, minute_from_0915, side, net, prem, **kw) -> dict:
              side=side, net=float(net), prem=(None if prem is None else float(prem)), period=K.period_of(d),
              setup=kw.get("setup"))
     t.update(ask_fields(arm, t["prem"], und=und, **kw))
+    if arm == "LIQ":   # R121 (28 Oct): the pool target as given (None: no pool target), before R 1 is assumed
+        tg, lv = kw.get("target"), kw.get("level")
+        t["pool_target_pts"] = abs(tg - lv) if tg is not None and lv is not None and _finite(tg) else None
     return t
 
 
