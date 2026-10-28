@@ -24,9 +24,11 @@ hypothesis: A network over all the data forecasts 'this ATM option gains +X befo
 model_or_rule: research/hunt/r123_neural_70/r123net.py
 settings: PREREG.md section 5, amendment 1
 variants_tried: 40
-verdict: inconclusive
+verdict: rejected
 results:
-  summary: see the cells below and HUNT_R123_NEURAL_70.md (model tests are information, the rules carry the gates)
+  summary: 'Holdout: no ''+X first'' cell of either network beat gradient-boosted trees (best q 0.34, Brier within +-0.002);
+    direction log-loss equal to ''always 50%''. The range head beat trees again (multi-level R2 0.405 vs 0.386 for 60 min,
+    43,155 forecasts, q 0.08), as in R41.'
   costs: none (forecast scores)
   walk_forward_cells_q_le_0_05: 29
   holdout_cells_q_le_0_05: 0

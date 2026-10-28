@@ -88,9 +88,13 @@ def main():
              hypothesis="A network over all the data forecasts 'this ATM option gains +X before it loses Y' better "
                         "than the base rate and gradient-boosted trees",
              model_or_rule="research/hunt/r123_neural_70/r123net.py", settings="PREREG.md section 5, amendment 1",
-             variants_tried=len(ho["models"]), verdict="inconclusive",
-             results=dict(summary="see the cells below and HUNT_R123_NEURAL_70.md (model tests are information, the "
-                                  "rules carry the gates)", costs="none (forecast scores)",
+             # the hypothesis failed on the holdout (no "+X first" cell beat the trees; direction a coin), so
+             # "rejected"; the range head's edge over trees is R41's known result, not this entry's claim
+             variants_tried=len(ho["models"]), verdict="rejected",
+             results=dict(summary="Holdout: no '+X first' cell of either network beat gradient-boosted trees (best "
+                                  "q 0.34, Brier within +-0.002); direction log-loss equal to 'always 50%'. The range "
+                                  "head beat trees again (multi-level R2 0.405 vs 0.386 for 60 min, 43,155 forecasts, "
+                                  "q 0.08), as in R41.", costs="none (forecast scores)",
                           walk_forward_cells_q_le_0_05=sum(m["q"] <= 0.05 for m in wf["models"]),
                           holdout_cells_q_le_0_05=sum(m["q"] <= 0.05 for m in ho["models"]),
                           holdout_best=[dict(net=m["net"], cell=m["cell"], metric=m["metric"], n=m["n"],
