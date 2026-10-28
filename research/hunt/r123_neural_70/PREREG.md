@@ -171,3 +171,32 @@ the twins; BH.
 - Datasets, predictions and model weights: the cache, copied to `gdrive:IraAlgo-data-lake/derived/r123/`, never git.
 - `research/HUNT_R123_NEURAL_70.md`, experiment entries `research/experiments/entries/r123-*.yaml` (every rule and
   model test, failures included), a TODO.md line only if something passes, and RESULT.md at the repo root.
+
+## Amendment 1 (28 Oct 2026, before any model was fitted or any outcome was looked at): a network with multiple levels
+
+Boss, 28 Oct: *"Create a neuro network with multiple levels."* Written while the design rows were still being built.
+No model had been fitted and no label or trade outcome had been read when this was committed.
+
+**What changes.** A second network, **N2 "multi-level"**, is added. It follows the four-level Brain in
+`research/data/ARCHITECTURE.md` (L5). The pre-registered single network of section 5 stays as **N1**, unchanged, so
+the two can be compared.
+
+| level | what it is | what it reads | what it is trained on |
+|---|---|---|---|
+| 1. Market encoders | **fast:** the causal TCN of section 5 over the last 120 one-minute bars. **slow:** a GRU (32 units) over the last 20 *completed* sessions' daily bars: gap, open-to-close, open-to-high, open-to-low, range, India VIX daily change | the index's minutes and days (bars ≤ t; days before today) | through the levels above it |
+| 2. Specialists | four small MLPs (64 → 32 units), each taking the Level-1 state plus its own inputs: **size** (VIX, volatility, ranges); **direction** (returns, gap, breadth); **option chain** (the chain-state inputs of section 4); **calendar** (index, time, weekday, expiry distance, budget day) | Level 1 + their own input group | **size** → head (b), the next 30/60-minute range; **direction** → head (c); **option chain** and **calendar** → each has its own copy of head (a), 16 × 3 (auxiliary, weight 0.5) |
+| 3. Committee | combines the four specialists' 32-number outputs through a learned gate (one weight per specialist per row, adding to 1, which shows which specialist it leans on), then 64 units → **head (a)**, 16 × 3 | Level 2 only | head (a), weight 1 |
+| 4. Calibration and abstention | one temperature per cell-side, fitted on the validation slice (the last 20% of training sessions, never test rows), applied to the committee's probabilities. **Abstains** (no trade) when the 3 seeds disagree: the spread (max − min) of P(+X first) for the chosen cell-side above **0.10** | Level 3's output | validation slice only |
+
+The loss is the weighted mean of the terms above. Training settings (optimiser, epochs, early stopping, seeds,
+scalers on training rows only) are section 5's.
+
+**How it is judged.** Every rule S1-S5 is run twice: with N1 and with N2 (10 rule tests). BH runs over all 10, in
+the walk-forward and in the holdout, so adding N2 makes every rule's bar a little harder, not easier. The gates of
+section 6 are unchanged, and the holdout is still read once, for both networks together. Neither network is
+picked on holdout results: both are reported in full. The model tests of section 5 are also run for N2: one BH
+family of 40 cells (20 per network). N2's abstention is a part of N2. It is reported (how many signals it held back),
+never tuned.
+
+**Tests added:** the slow encoder reads only sessions before today (point-in-time); the temperatures are fitted on
+the validation slice only; abstention removes exactly the rows whose seed spread is above 0.10.
