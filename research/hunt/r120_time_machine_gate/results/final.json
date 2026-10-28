@@ -1,0 +1,4522 @@
+{
+ "arms": {
+  "R72": {
+   "name": "R72 Breadth Donchian",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 172,
+      "win": 0.442,
+      "mean": -327.3,
+      "net": -56293
+     },
+     "coin flip": {
+      "n": 2601,
+      "win": 0.467,
+      "mean": 72.8,
+      "net": 189247
+     },
+     "edge": {
+      "n": 171,
+      "win": 0.444,
+      "mean": 268.8,
+      "net": 45962
+     },
+     "unknown": {
+      "n": 127,
+      "win": 0.551,
+      "mean": 299.3,
+      "net": 38013
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 135,
+      "win": 0.422,
+      "mean": -287.8,
+      "net": -38855
+     },
+     "coin flip": {
+      "n": 1854,
+      "win": 0.49,
+      "mean": 149.1,
+      "net": 276493
+     },
+     "edge": {
+      "n": 139,
+      "win": 0.475,
+      "mean": 394.3,
+      "net": 54807
+     },
+     "unknown": {
+      "n": 110,
+      "win": 0.582,
+      "mean": 394.9,
+      "net": 43436
+     }
+    },
+    "final": {
+     "against": {
+      "n": 62,
+      "win": 0.419,
+      "mean": -180.0,
+      "net": -11161
+     },
+     "coin flip": {
+      "n": 1059,
+      "win": 0.468,
+      "mean": 183.6,
+      "net": 194470
+     },
+     "edge": {
+      "n": 54,
+      "win": 0.426,
+      "mean": -44.4,
+      "net": -2398
+     },
+     "unknown": {
+      "n": 27,
+      "win": 0.222,
+      "mean": -353.5,
+      "net": -9545
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 3071,
+       "kept": 3071,
+       "skipped": 0,
+       "net": 216929.47,
+       "win": 0.4676,
+       "max_dd": 199077.41
+      },
+      "rule": {
+       "trades": 3071,
+       "kept": 2899,
+       "skipped": 172,
+       "net": 273222.02,
+       "win": 0.4691,
+       "max_dd": 169426.67
+      },
+      "p": 0.007,
+      "twin_p95": 249089,
+      "twin_median": 205317
+     },
+     "wf": {
+      "base": {
+       "trades": 2238,
+       "kept": 2238,
+       "skipped": 0,
+       "net": 335881.73,
+       "win": 0.4897,
+       "max_dd": 86529.48
+      },
+      "rule": {
+       "trades": 2238,
+       "kept": 2103,
+       "skipped": 135,
+       "net": 374736.35,
+       "win": 0.4941,
+       "max_dd": 66553.35
+      },
+      "p": 0.003,
+      "twin_p95": 354275,
+      "twin_median": 316824
+     },
+     "final": {
+      "base": {
+       "trades": 1202,
+       "kept": 1202,
+       "skipped": 0,
+       "net": 171365.64,
+       "win": 0.4584,
+       "max_dd": 61883.87
+      },
+      "rule": {
+       "trades": 1202,
+       "kept": 1140,
+       "skipped": 62,
+       "net": 182526.69,
+       "win": 0.4605,
+       "max_dd": 61332.93
+      },
+      "p": 0.0945,
+      "twin_p95": 187340,
+      "twin_median": 164020
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 3071,
+       "kept": 3071,
+       "skipped": 0,
+       "net": 216929.47,
+       "win": 0.4676,
+       "max_dd": 199077.41
+      },
+      "rule": {
+       "trades": 3071,
+       "kept": 171,
+       "skipped": 2900,
+       "net": 45961.57,
+       "win": 0.4444,
+       "max_dd": 39666.37
+      },
+      "p": 0.1054,
+      "twin_p95": 57336,
+      "twin_median": 12296
+     },
+     "wf": {
+      "base": {
+       "trades": 2238,
+       "kept": 2238,
+       "skipped": 0,
+       "net": 335881.73,
+       "win": 0.4897,
+       "max_dd": 86529.48
+      },
+      "rule": {
+       "trades": 2238,
+       "kept": 139,
+       "skipped": 2099,
+       "net": 54806.86,
+       "win": 0.4748,
+       "max_dd": 29203.26
+      },
+      "p": 0.078,
+      "twin_p95": 60596,
+      "twin_median": 20693
+     },
+     "final": {
+      "base": {
+       "trades": 1202,
+       "kept": 1202,
+       "skipped": 0,
+       "net": 171365.64,
+       "win": 0.4584,
+       "max_dd": 61883.87
+      },
+      "rule": {
+       "trades": 1202,
+       "kept": 54,
+       "skipped": 1148,
+       "net": -2397.93,
+       "win": 0.4259,
+       "max_dd": 15265.6
+      },
+      "p": 0.7506,
+      "twin_p95": 33349,
+      "twin_median": 6990
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 3055,
+     "brier": 0.2611,
+     "brier_base": 0.2489,
+     "base_rate": 0.46760013025073266,
+     "corr": 0.0047,
+     "bins": [
+      {
+       "bin": "0-10%",
+       "n": 11,
+       "predicted": 0.012,
+       "actual": 0.545
+      },
+      {
+       "bin": "10-20%",
+       "n": 17,
+       "predicted": 0.167,
+       "actual": 0.471
+      },
+      {
+       "bin": "20-30%",
+       "n": 44,
+       "predicted": 0.264,
+       "actual": 0.614
+      },
+      {
+       "bin": "30-40%",
+       "n": 280,
+       "predicted": 0.366,
+       "actual": 0.446
+      },
+      {
+       "bin": "40-50%",
+       "n": 1101,
+       "predicted": 0.457,
+       "actual": 0.434
+      },
+      {
+       "bin": "50-60%",
+       "n": 1226,
+       "predicted": 0.543,
+       "actual": 0.493
+      },
+      {
+       "bin": "60-70%",
+       "n": 297,
+       "predicted": 0.635,
+       "actual": 0.492
+      },
+      {
+       "bin": "70-80%",
+       "n": 36,
+       "predicted": 0.74,
+       "actual": 0.5
+      },
+      {
+       "bin": "80-90%",
+       "n": 14,
+       "predicted": 0.833,
+       "actual": 0.357
+      },
+      {
+       "bin": "90-100%",
+       "n": 29,
+       "predicted": 0.987,
+       "actual": 0.31
+      }
+     ]
+    },
+    "final": {
+     "n": 1199,
+     "brier": 0.2615,
+     "brier_base": 0.2484,
+     "base_rate": 0.46760013025073266,
+     "corr": -0.0349,
+     "bins": [
+      {
+       "bin": "0-10%",
+       "n": 2,
+       "predicted": 0.0,
+       "actual": 0.0
+      },
+      {
+       "bin": "10-20%",
+       "n": 3,
+       "predicted": 0.14,
+       "actual": 0.0
+      },
+      {
+       "bin": "20-30%",
+       "n": 17,
+       "predicted": 0.258,
+       "actual": 0.235
+      },
+      {
+       "bin": "30-40%",
+       "n": 95,
+       "predicted": 0.367,
+       "actual": 0.568
+      },
+      {
+       "bin": "40-50%",
+       "n": 471,
+       "predicted": 0.458,
+       "actual": 0.478
+      },
+      {
+       "bin": "50-60%",
+       "n": 497,
+       "predicted": 0.539,
+       "actual": 0.449
+      },
+      {
+       "bin": "60-70%",
+       "n": 88,
+       "predicted": 0.635,
+       "actual": 0.409
+      },
+      {
+       "bin": "70-80%",
+       "n": 17,
+       "predicted": 0.739,
+       "actual": 0.235
+      },
+      {
+       "bin": "80-90%",
+       "n": 7,
+       "predicted": 0.839,
+       "actual": 0.429
+      },
+      {
+       "bin": "90-100%",
+       "n": 2,
+       "predicted": 1.0,
+       "actual": 0.5
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.46760013025073266
+  },
+  "R51": {
+   "name": "R51 Donchian 20 + Supertrend",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 207,
+      "win": 0.415,
+      "mean": -268.2,
+      "net": -55520
+     },
+     "coin flip": {
+      "n": 3653,
+      "win": 0.448,
+      "mean": 30.6,
+      "net": 111870
+     },
+     "edge": {
+      "n": 216,
+      "win": 0.389,
+      "mean": -97.3,
+      "net": -21025
+     },
+     "unknown": {
+      "n": 132,
+      "win": 0.477,
+      "mean": 114.4,
+      "net": 15100
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 150,
+      "win": 0.4,
+      "mean": -312.9,
+      "net": -46930
+     },
+     "coin flip": {
+      "n": 2623,
+      "win": 0.463,
+      "mean": 87.2,
+      "net": 228837
+     },
+     "edge": {
+      "n": 172,
+      "win": 0.424,
+      "mean": 61.0,
+      "net": 10499
+     },
+     "unknown": {
+      "n": 99,
+      "win": 0.495,
+      "mean": 215.6,
+      "net": 21342
+     }
+    },
+    "final": {
+     "against": {
+      "n": 73,
+      "win": 0.411,
+      "mean": -307.7,
+      "net": -22460
+     },
+     "coin flip": {
+      "n": 1491,
+      "win": 0.454,
+      "mean": 110.5,
+      "net": 164814
+     },
+     "edge": {
+      "n": 76,
+      "win": 0.461,
+      "mean": -5.2,
+      "net": -393
+     },
+     "unknown": {
+      "n": 30,
+      "win": 0.233,
+      "mean": -240.6,
+      "net": -7217
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 4208,
+       "kept": 4208,
+       "skipped": 0,
+       "net": 50425.49,
+       "win": 0.4446,
+       "max_dd": 214238.57
+      },
+      "rule": {
+       "trades": 4208,
+       "kept": 4001,
+       "skipped": 207,
+       "net": 105945.76,
+       "win": 0.4461,
+       "max_dd": 212225.19
+      },
+      "p": 0.0265,
+      "twin_p95": 98072,
+      "twin_median": 48081
+     },
+     "wf": {
+      "base": {
+       "trades": 3044,
+       "kept": 3044,
+       "skipped": 0,
+       "net": 213748.1,
+       "win": 0.4589,
+       "max_dd": 94176.35
+      },
+      "rule": {
+       "trades": 3044,
+       "kept": 2894,
+       "skipped": 150,
+       "net": 260678.2,
+       "win": 0.462,
+       "max_dd": 84278.78
+      },
+      "p": 0.0085,
+      "twin_p95": 244516,
+      "twin_median": 203298
+     },
+     "final": {
+      "base": {
+       "trades": 1670,
+       "kept": 1670,
+       "skipped": 0,
+       "net": 134742.88,
+       "win": 0.4485,
+       "max_dd": 81682.79
+      },
+      "rule": {
+       "trades": 1670,
+       "kept": 1597,
+       "skipped": 73,
+       "net": 157203.04,
+       "win": 0.4502,
+       "max_dd": 68658.69
+      },
+      "p": 0.039,
+      "twin_p95": 154993,
+      "twin_median": 129835
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 4208,
+       "kept": 4208,
+       "skipped": 0,
+       "net": 50425.49,
+       "win": 0.4446,
+       "max_dd": 214238.57
+      },
+      "rule": {
+       "trades": 4208,
+       "kept": 216,
+       "skipped": 3992,
+       "net": -21025.07,
+       "win": 0.3889,
+       "max_dd": 62883.85
+      },
+      "p": 0.7846,
+      "twin_p95": 52598,
+      "twin_median": 2297
+     },
+     "wf": {
+      "base": {
+       "trades": 3044,
+       "kept": 3044,
+       "skipped": 0,
+       "net": 213748.1,
+       "win": 0.4589,
+       "max_dd": 94176.35
+      },
+      "rule": {
+       "trades": 3044,
+       "kept": 172,
+       "skipped": 2872,
+       "net": 10498.98,
+       "win": 0.4244,
+       "max_dd": 31974.37
+      },
+      "p": 0.5217,
+      "twin_p95": 55383,
+      "twin_median": 11864
+     },
+     "final": {
+      "base": {
+       "trades": 1670,
+       "kept": 1670,
+       "skipped": 0,
+       "net": 134742.88,
+       "win": 0.4485,
+       "max_dd": 81682.79
+      },
+      "rule": {
+       "trades": 1670,
+       "kept": 76,
+       "skipped": 1594,
+       "net": -393.39,
+       "win": 0.4605,
+       "max_dd": 23926.05
+      },
+      "p": 0.6422,
+      "twin_p95": 34637,
+      "twin_median": 5660
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 4197,
+     "brier": 0.2595,
+     "brier_base": 0.2469,
+     "base_rate": 0.4446292775665399,
+     "corr": 0.0044,
+     "bins": [
+      {
+       "bin": "0-10%",
+       "n": 10,
+       "predicted": 0.009,
+       "actual": 0.5
+      },
+      {
+       "bin": "10-20%",
+       "n": 20,
+       "predicted": 0.16,
+       "actual": 0.3
+      },
+      {
+       "bin": "20-30%",
+       "n": 51,
+       "predicted": 0.261,
+       "actual": 0.49
+      },
+      {
+       "bin": "30-40%",
+       "n": 381,
+       "predicted": 0.368,
+       "actual": 0.454
+      },
+      {
+       "bin": "40-50%",
+       "n": 1622,
+       "predicted": 0.457,
+       "actual": 0.43
+      },
+      {
+       "bin": "50-60%",
+       "n": 1674,
+       "predicted": 0.542,
+       "actual": 0.458
+      },
+      {
+       "bin": "60-70%",
+       "n": 338,
+       "predicted": 0.634,
+       "actual": 0.45
+      },
+      {
+       "bin": "70-80%",
+       "n": 57,
+       "predicted": 0.734,
+       "actual": 0.421
+      },
+      {
+       "bin": "80-90%",
+       "n": 16,
+       "predicted": 0.841,
+       "actual": 0.375
+      },
+      {
+       "bin": "90-100%",
+       "n": 28,
+       "predicted": 0.995,
+       "actual": 0.393
+      }
+     ]
+    },
+    "final": {
+     "n": 1666,
+     "brier": 0.2576,
+     "brier_base": 0.2474,
+     "base_rate": 0.4446292775665399,
+     "corr": -0.0039,
+     "bins": [
+      {
+       "bin": "0-10%",
+       "n": 5,
+       "predicted": 0.0,
+       "actual": 0.2
+      },
+      {
+       "bin": "10-20%",
+       "n": 1,
+       "predicted": 0.142,
+       "actual": 0.0
+      },
+      {
+       "bin": "20-30%",
+       "n": 18,
+       "predicted": 0.265,
+       "actual": 0.333
+      },
+      {
+       "bin": "30-40%",
+       "n": 125,
+       "predicted": 0.371,
+       "actual": 0.456
+      },
+      {
+       "bin": "40-50%",
+       "n": 670,
+       "predicted": 0.46,
+       "actual": 0.452
+      },
+      {
+       "bin": "50-60%",
+       "n": 693,
+       "predicted": 0.538,
+       "actual": 0.456
+      },
+      {
+       "bin": "60-70%",
+       "n": 133,
+       "predicted": 0.633,
+       "actual": 0.421
+      },
+      {
+       "bin": "70-80%",
+       "n": 13,
+       "predicted": 0.741,
+       "actual": 0.308
+      },
+      {
+       "bin": "80-90%",
+       "n": 5,
+       "predicted": 0.827,
+       "actual": 0.8
+      },
+      {
+       "bin": "90-100%",
+       "n": 3,
+       "predicted": 1.0,
+       "actual": 0.333
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.4446292775665399
+  },
+  "R52": {
+   "name": "R52 Open outside value",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 84,
+      "win": 0.417,
+      "mean": -568.6,
+      "net": -47758
+     },
+     "coin flip": {
+      "n": 544,
+      "win": 0.585,
+      "mean": 588.3,
+      "net": 320035
+     },
+     "edge": {
+      "n": 65,
+      "win": 0.492,
+      "mean": 270.7,
+      "net": 17596
+     },
+     "unknown": {
+      "n": 13,
+      "win": 0.615,
+      "mean": 53.9,
+      "net": 701
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 42,
+      "win": 0.429,
+      "mean": -418.4,
+      "net": -17571
+     },
+     "coin flip": {
+      "n": 435,
+      "win": 0.584,
+      "mean": 538.1,
+      "net": 234060
+     },
+     "edge": {
+      "n": 39,
+      "win": 0.615,
+      "mean": 765.8,
+      "net": 29867
+     },
+     "unknown": {
+      "n": 13,
+      "win": 0.615,
+      "mean": 53.9,
+      "net": 701
+     }
+    },
+    "final": {
+     "against": {
+      "n": 19,
+      "win": 0.632,
+      "mean": 306.6,
+      "net": 5826
+     },
+     "coin flip": {
+      "n": 253,
+      "win": 0.518,
+      "mean": 178.8,
+      "net": 45238
+     },
+     "edge": {
+      "n": 18,
+      "win": 0.389,
+      "mean": 9.3,
+      "net": 168
+     },
+     "unknown": {
+      "n": 3,
+      "win": 0.333,
+      "mean": -873.1,
+      "net": -2619
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 706,
+       "kept": 706,
+       "skipped": 0,
+       "net": 290573.12,
+       "win": 0.5567,
+       "max_dd": 82713.1
+      },
+      "rule": {
+       "trades": 706,
+       "kept": 622,
+       "skipped": 84,
+       "net": 338331.61,
+       "win": 0.5756,
+       "max_dd": 43130.7
+      },
+      "p": 0.0025,
+      "twin_p95": 302301,
+      "twin_median": 257238
+     },
+     "wf": {
+      "base": {
+       "trades": 529,
+       "kept": 529,
+       "skipped": 0,
+       "net": 247056.62,
+       "win": 0.5747,
+       "max_dd": 49847.04
+      },
+      "rule": {
+       "trades": 529,
+       "kept": 487,
+       "skipped": 42,
+       "net": 264627.72,
+       "win": 0.5873,
+       "max_dd": 40692.39
+      },
+      "p": 0.0275,
+      "twin_p95": 260163,
+      "twin_median": 227940
+     },
+     "final": {
+      "base": {
+       "trades": 293,
+       "kept": 293,
+       "skipped": 0,
+       "net": 48612.02,
+       "win": 0.5154,
+       "max_dd": 47193.62
+      },
+      "rule": {
+       "trades": 293,
+       "kept": 274,
+       "skipped": 19,
+       "net": 42786.44,
+       "win": 0.5073,
+       "max_dd": 46791.61
+      },
+      "p": 0.5877,
+      "twin_p95": 63976,
+      "twin_median": 45510
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 706,
+       "kept": 706,
+       "skipped": 0,
+       "net": 290573.12,
+       "win": 0.5567,
+       "max_dd": 82713.1
+      },
+      "rule": {
+       "trades": 706,
+       "kept": 65,
+       "skipped": 641,
+       "net": 17595.96,
+       "win": 0.4923,
+       "max_dd": 47108.36
+      },
+      "p": 0.6487,
+      "twin_p95": 68066,
+      "twin_median": 27366
+     },
+     "wf": {
+      "base": {
+       "trades": 529,
+       "kept": 529,
+       "skipped": 0,
+       "net": 247056.62,
+       "win": 0.5747,
+       "max_dd": 49847.04
+      },
+      "rule": {
+       "trades": 529,
+       "kept": 39,
+       "skipped": 490,
+       "net": 29867.22,
+       "win": 0.6154,
+       "max_dd": 24194.82
+      },
+      "p": 0.2679,
+      "twin_p95": 49436,
+      "twin_median": 17627
+     },
+     "final": {
+      "base": {
+       "trades": 293,
+       "kept": 293,
+       "skipped": 0,
+       "net": 48612.02,
+       "win": 0.5154,
+       "max_dd": 47193.62
+      },
+      "rule": {
+       "trades": 293,
+       "kept": 18,
+       "skipped": 275,
+       "net": 167.91,
+       "win": 0.3889,
+       "max_dd": 8996.86
+      },
+      "p": 0.6162,
+      "twin_p95": 21317,
+      "twin_median": 3215
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 706,
+     "brier": 0.2604,
+     "brier_base": 0.2468,
+     "base_rate": 0.556657223796034,
+     "corr": 0.0471,
+     "bins": [
+      {
+       "bin": "0-10%",
+       "n": 5,
+       "predicted": 0.055,
+       "actual": 0.2
+      },
+      {
+       "bin": "10-20%",
+       "n": 8,
+       "predicted": 0.142,
+       "actual": 0.375
+      },
+      {
+       "bin": "20-30%",
+       "n": 31,
+       "predicted": 0.268,
+       "actual": 0.581
+      },
+      {
+       "bin": "30-40%",
+       "n": 92,
+       "predicted": 0.363,
+       "actual": 0.5
+      },
+      {
+       "bin": "40-50%",
+       "n": 228,
+       "predicted": 0.456,
+       "actual": 0.583
+      },
+      {
+       "bin": "50-60%",
+       "n": 233,
+       "predicted": 0.544,
+       "actual": 0.584
+      },
+      {
+       "bin": "60-70%",
+       "n": 83,
+       "predicted": 0.636,
+       "actual": 0.494
+      },
+      {
+       "bin": "70-80%",
+       "n": 18,
+       "predicted": 0.737,
+       "actual": 0.611
+      },
+      {
+       "bin": "80-90%",
+       "n": 4,
+       "predicted": 0.851,
+       "actual": 0.25
+      },
+      {
+       "bin": "90-100%",
+       "n": 4,
+       "predicted": 0.963,
+       "actual": 0.75
+      }
+     ]
+    },
+    "final": {
+     "n": 293,
+     "brier": 0.2642,
+     "brier_base": 0.2515,
+     "base_rate": 0.556657223796034,
+     "corr": -0.0645,
+     "bins": [
+      {
+       "bin": "0-10%",
+       "n": 1,
+       "predicted": 0.093,
+       "actual": 0.0
+      },
+      {
+       "bin": "10-20%",
+       "n": 1,
+       "predicted": 0.138,
+       "actual": 1.0
+      },
+      {
+       "bin": "20-30%",
+       "n": 5,
+       "predicted": 0.276,
+       "actual": 0.8
+      },
+      {
+       "bin": "30-40%",
+       "n": 22,
+       "predicted": 0.367,
+       "actual": 0.5
+      },
+      {
+       "bin": "40-50%",
+       "n": 110,
+       "predicted": 0.459,
+       "actual": 0.536
+      },
+      {
+       "bin": "50-60%",
+       "n": 125,
+       "predicted": 0.543,
+       "actual": 0.504
+      },
+      {
+       "bin": "60-70%",
+       "n": 22,
+       "predicted": 0.633,
+       "actual": 0.455
+      },
+      {
+       "bin": "70-80%",
+       "n": 6,
+       "predicted": 0.76,
+       "actual": 0.5
+      },
+      {
+       "bin": "80-90%",
+       "n": 1,
+       "predicted": 0.831,
+       "actual": 0.0
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.556657223796034
+  },
+  "LIQ": {
+   "name": "Liquidity 15+5",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 59,
+      "win": 0.407,
+      "mean": 602.4,
+      "net": 35540
+     },
+     "coin flip": {
+      "n": 818,
+      "win": 0.436,
+      "mean": 260.9,
+      "net": 213456
+     },
+     "edge": {
+      "n": 4,
+      "win": 0.75,
+      "mean": 2063.3,
+      "net": 8253
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 42,
+      "win": 0.452,
+      "mean": 746.7,
+      "net": 31362
+     },
+     "coin flip": {
+      "n": 612,
+      "win": 0.441,
+      "mean": 318.0,
+      "net": 194621
+     },
+     "edge": {
+      "n": 3,
+      "win": 1.0,
+      "mean": 4027.2,
+      "net": 12082
+     }
+    },
+    "final": {
+     "against": {
+      "n": 23,
+      "win": 0.261,
+      "mean": -421.9,
+      "net": -9703
+     },
+     "coin flip": {
+      "n": 331,
+      "win": 0.384,
+      "mean": 77.3,
+      "net": 25598
+     },
+     "edge": {
+      "n": 3,
+      "win": 0.0,
+      "mean": -1580.0,
+      "net": -4740
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 881,
+       "kept": 881,
+       "skipped": 0,
+       "net": 257249.29,
+       "win": 0.4359,
+       "max_dd": 32537.13
+      },
+      "rule": {
+       "trades": 881,
+       "kept": 822,
+       "skipped": 59,
+       "net": 221709.3,
+       "win": 0.438,
+       "max_dd": 25061.34
+      },
+      "p": 0.8421,
+      "twin_p95": 267815,
+      "twin_median": 241998
+     },
+     "wf": {
+      "base": {
+       "trades": 657,
+       "kept": 657,
+       "skipped": 0,
+       "net": 238064.08,
+       "win": 0.4444,
+       "max_dd": 23139.11
+      },
+      "rule": {
+       "trades": 657,
+       "kept": 615,
+       "skipped": 42,
+       "net": 206702.43,
+       "win": 0.4439,
+       "max_dd": 23155.06
+      },
+      "p": 0.8471,
+      "twin_p95": 246325,
+      "twin_median": 223938
+     },
+     "final": {
+      "base": {
+       "trades": 357,
+       "kept": 357,
+       "skipped": 0,
+       "net": 11155.05,
+       "win": 0.3725,
+       "max_dd": 61061.6
+      },
+      "rule": {
+       "trades": 357,
+       "kept": 334,
+       "skipped": 23,
+       "net": 20858.42,
+       "win": 0.3802,
+       "max_dd": 50561.28
+      },
+      "p": 0.1504,
+      "twin_p95": 25050,
+      "twin_median": 12165
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 881,
+       "kept": 881,
+       "skipped": 0,
+       "net": 257249.29,
+       "win": 0.4359,
+       "max_dd": 32537.13
+      },
+      "rule": {
+       "trades": 881,
+       "kept": 4,
+       "skipped": 877,
+       "net": 8253.29,
+       "win": 0.75,
+       "max_dd": 3828.35
+      },
+      "p": 0.094,
+      "twin_p95": 11837,
+      "twin_median": 29
+     },
+     "wf": {
+      "base": {
+       "trades": 657,
+       "kept": 657,
+       "skipped": 0,
+       "net": 238064.08,
+       "win": 0.4444,
+       "max_dd": 23139.11
+      },
+      "rule": {
+       "trades": 657,
+       "kept": 3,
+       "skipped": 654,
+       "net": 12081.64,
+       "win": 1.0,
+       "max_dd": 0.0
+      },
+      "p": 0.04,
+      "twin_p95": 10340,
+      "twin_median": 86
+     },
+     "final": {
+      "base": {
+       "trades": 357,
+       "kept": 357,
+       "skipped": 0,
+       "net": 11155.05,
+       "win": 0.3725,
+       "max_dd": 61061.6
+      },
+      "rule": {
+       "trades": 357,
+       "kept": 3,
+       "skipped": 354,
+       "net": -4739.97,
+       "win": 0.0,
+       "max_dd": 4739.97
+      },
+      "p": 0.971,
+      "twin_p95": 6581,
+      "twin_median": -655
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 881,
+     "brier": 0.3096,
+     "brier_base": 0.2459,
+     "base_rate": 0.4358683314415437,
+     "corr": 0.0128,
+     "bins": [
+      {
+       "bin": "0-10%",
+       "n": 222,
+       "predicted": 0.04,
+       "actual": 0.36
+      },
+      {
+       "bin": "10-20%",
+       "n": 180,
+       "predicted": 0.15,
+       "actual": 0.533
+      },
+      {
+       "bin": "20-30%",
+       "n": 173,
+       "predicted": 0.248,
+       "actual": 0.451
+      },
+      {
+       "bin": "30-40%",
+       "n": 166,
+       "predicted": 0.35,
+       "actual": 0.464
+      },
+      {
+       "bin": "40-50%",
+       "n": 122,
+       "predicted": 0.447,
+       "actual": 0.369
+      },
+      {
+       "bin": "50-60%",
+       "n": 18,
+       "predicted": 0.523,
+       "actual": 0.444
+      }
+     ]
+    },
+    "final": {
+     "n": 357,
+     "brier": 0.2759,
+     "brier_base": 0.2378,
+     "base_rate": 0.4358683314415437,
+     "corr": -0.0113,
+     "bins": [
+      {
+       "bin": "0-10%",
+       "n": 79,
+       "predicted": 0.046,
+       "actual": 0.367
+      },
+      {
+       "bin": "10-20%",
+       "n": 80,
+       "predicted": 0.149,
+       "actual": 0.388
+      },
+      {
+       "bin": "20-30%",
+       "n": 68,
+       "predicted": 0.253,
+       "actual": 0.412
+      },
+      {
+       "bin": "30-40%",
+       "n": 60,
+       "predicted": 0.341,
+       "actual": 0.35
+      },
+      {
+       "bin": "40-50%",
+       "n": 54,
+       "predicted": 0.45,
+       "actual": 0.278
+      },
+      {
+       "bin": "50-60%",
+       "n": 16,
+       "predicted": 0.534,
+       "actual": 0.562
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.4358683314415437
+  },
+  "SOLO": {
+   "name": "Solo 2.0",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 33,
+      "win": 0.515,
+      "mean": -522.5,
+      "net": -17242
+     },
+     "coin flip": {
+      "n": 113,
+      "win": 0.566,
+      "mean": 547.0,
+      "net": 61815
+     },
+     "edge": {
+      "n": 11,
+      "win": 0.727,
+      "mean": 978.6,
+      "net": 10765
+     },
+     "unknown": {
+      "n": 9,
+      "win": 0.556,
+      "mean": 63.6,
+      "net": 572
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 33,
+      "win": 0.515,
+      "mean": -522.5,
+      "net": -17242
+     },
+     "coin flip": {
+      "n": 113,
+      "win": 0.566,
+      "mean": 547.0,
+      "net": 61815
+     },
+     "edge": {
+      "n": 11,
+      "win": 0.727,
+      "mean": 978.6,
+      "net": 10765
+     },
+     "unknown": {
+      "n": 9,
+      "win": 0.556,
+      "mean": 63.6,
+      "net": 572
+     }
+    },
+    "final": {
+     "against": {
+      "n": 15,
+      "win": 0.8,
+      "mean": 743.5,
+      "net": 11153
+     },
+     "coin flip": {
+      "n": 99,
+      "win": 0.576,
+      "mean": 852.1,
+      "net": 84357
+     },
+     "edge": {
+      "n": 9,
+      "win": 0.444,
+      "mean": -588.4,
+      "net": -5296
+     },
+     "unknown": {
+      "n": 4,
+      "win": 0.75,
+      "mean": 2380.2,
+      "net": 9521
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "rule": {
+       "trades": 166,
+       "kept": 133,
+       "skipped": 33,
+       "net": 73151.6,
+       "win": 0.5789,
+       "max_dd": 22751.86
+      },
+      "p": 0.038,
+      "twin_p95": 70788,
+      "twin_median": 44263
+     },
+     "wf": {
+      "base": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "rule": {
+       "trades": 166,
+       "kept": 133,
+       "skipped": 33,
+       "net": 73151.6,
+       "win": 0.5789,
+       "max_dd": 22751.86
+      },
+      "p": 0.038,
+      "twin_p95": 70788,
+      "twin_median": 44263
+     },
+     "final": {
+      "base": {
+       "trades": 127,
+       "kept": 127,
+       "skipped": 0,
+       "net": 99735.12,
+       "win": 0.5984,
+       "max_dd": 18055.71
+      },
+      "rule": {
+       "trades": 127,
+       "kept": 112,
+       "skipped": 15,
+       "net": 88582.4,
+       "win": 0.5714,
+       "max_dd": 18055.71
+      },
+      "p": 0.4678,
+      "twin_p95": 104757,
+      "twin_median": 87780
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "rule": {
+       "trades": 166,
+       "kept": 11,
+       "skipped": 155,
+       "net": 10764.59,
+       "win": 0.7273,
+       "max_dd": 9691.69
+      },
+      "p": 0.2439,
+      "twin_p95": 20762,
+      "twin_median": 4426
+     },
+     "wf": {
+      "base": {
+       "trades": 166,
+       "kept": 166,
+       "skipped": 0,
+       "net": 55909.55,
+       "win": 0.5663,
+       "max_dd": 25842.98
+      },
+      "rule": {
+       "trades": 166,
+       "kept": 11,
+       "skipped": 155,
+       "net": 10764.59,
+       "win": 0.7273,
+       "max_dd": 9691.69
+      },
+      "p": 0.2439,
+      "twin_p95": 20762,
+      "twin_median": 4426
+     },
+     "final": {
+      "base": {
+       "trades": 127,
+       "kept": 127,
+       "skipped": 0,
+       "net": 99735.12,
+       "win": 0.5984,
+       "max_dd": 18055.71
+      },
+      "rule": {
+       "trades": 127,
+       "kept": 9,
+       "skipped": 118,
+       "net": -5295.54,
+       "win": 0.4444,
+       "max_dd": 7994.91
+      },
+      "p": 0.9265,
+      "twin_p95": 21564,
+      "twin_median": 6648
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 163,
+     "brier": 0.2677,
+     "brier_base": 0.2459,
+     "base_rate": 0.5662650602409639,
+     "corr": 0.0887,
+     "bins": [
+      {
+       "bin": "0-10%",
+       "n": 5,
+       "predicted": 0.079,
+       "actual": 0.2
+      },
+      {
+       "bin": "10-20%",
+       "n": 7,
+       "predicted": 0.161,
+       "actual": 0.571
+      },
+      {
+       "bin": "20-30%",
+       "n": 12,
+       "predicted": 0.267,
+       "actual": 0.667
+      },
+      {
+       "bin": "30-40%",
+       "n": 25,
+       "predicted": 0.366,
+       "actual": 0.64
+      },
+      {
+       "bin": "40-50%",
+       "n": 53,
+       "predicted": 0.447,
+       "actual": 0.472
+      },
+      {
+       "bin": "50-60%",
+       "n": 41,
+       "predicted": 0.543,
+       "actual": 0.585
+      },
+      {
+       "bin": "60-70%",
+       "n": 13,
+       "predicted": 0.63,
+       "actual": 0.692
+      },
+      {
+       "bin": "70-80%",
+       "n": 5,
+       "predicted": 0.754,
+       "actual": 0.6
+      },
+      {
+       "bin": "80-90%",
+       "n": 1,
+       "predicted": 0.817,
+       "actual": 1.0
+      },
+      {
+       "bin": "90-100%",
+       "n": 1,
+       "predicted": 0.959,
+       "actual": 1.0
+      }
+     ]
+    },
+    "final": {
+     "n": 124,
+     "brier": 0.2836,
+     "brier_base": 0.2416,
+     "base_rate": 0.5662650602409639,
+     "corr": -0.1992,
+     "bins": [
+      {
+       "bin": "10-20%",
+       "n": 1,
+       "predicted": 0.155,
+       "actual": 1.0
+      },
+      {
+       "bin": "20-30%",
+       "n": 3,
+       "predicted": 0.264,
+       "actual": 1.0
+      },
+      {
+       "bin": "30-40%",
+       "n": 19,
+       "predicted": 0.362,
+       "actual": 0.737
+      },
+      {
+       "bin": "40-50%",
+       "n": 45,
+       "predicted": 0.456,
+       "actual": 0.578
+      },
+      {
+       "bin": "50-60%",
+       "n": 37,
+       "predicted": 0.538,
+       "actual": 0.595
+      },
+      {
+       "bin": "60-70%",
+       "n": 15,
+       "predicted": 0.636,
+       "actual": 0.4
+      },
+      {
+       "bin": "70-80%",
+       "n": 4,
+       "predicted": 0.735,
+       "actual": 0.5
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.5662650602409639
+  },
+  "HERO": {
+   "name": "Hero Rs 1,000 ticket",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 176,
+      "win": 0.142,
+      "mean": -39.8,
+      "net": -7007
+     },
+     "coin flip": {
+      "n": 72,
+      "win": 0.208,
+      "mean": -104.2,
+      "net": -7500
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 129,
+      "win": 0.155,
+      "mean": -59.9,
+      "net": -7722
+     },
+     "coin flip": {
+      "n": 61,
+      "win": 0.23,
+      "mean": -85.5,
+      "net": -5213
+     }
+    },
+    "final": {
+     "against": {
+      "n": 79,
+      "win": 0.203,
+      "mean": 39.9,
+      "net": 3152
+     },
+     "coin flip": {
+      "n": 28,
+      "win": 0.286,
+      "mean": -56.9,
+      "net": -1593
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 248,
+       "kept": 248,
+       "skipped": 0,
+       "net": -14507.03,
+       "win": 0.1613,
+       "max_dd": 18386.26
+      },
+      "rule": {
+       "trades": 248,
+       "kept": 72,
+       "skipped": 176,
+       "net": -7500.21,
+       "win": 0.2083,
+       "max_dd": 7594.46
+      },
+      "p": 0.7786,
+      "twin_p95": 3039,
+      "twin_median": -5343
+     },
+     "wf": {
+      "base": {
+       "trades": 190,
+       "kept": 190,
+       "skipped": 0,
+       "net": -12935.14,
+       "win": 0.1789,
+       "max_dd": 14867.65
+      },
+      "rule": {
+       "trades": 190,
+       "kept": 61,
+       "skipped": 129,
+       "net": -5213.29,
+       "win": 0.2295,
+       "max_dd": 5213.29
+      },
+      "p": 0.6772,
+      "twin_p95": -502,
+      "twin_median": -4292
+     },
+     "final": {
+      "base": {
+       "trades": 107,
+       "kept": 107,
+       "skipped": 0,
+       "net": 1559.25,
+       "win": 0.2243,
+       "max_dd": 5358.82
+      },
+      "rule": {
+       "trades": 107,
+       "kept": 28,
+       "skipped": 79,
+       "net": -1592.59,
+       "win": 0.2857,
+       "max_dd": 1837.12
+      },
+      "p": 0.5212,
+      "twin_p95": 8062,
+      "twin_median": -1501
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 248,
+       "kept": 248,
+       "skipped": 0,
+       "net": -14507.03,
+       "win": 0.1613,
+       "max_dd": 18386.26
+      },
+      "rule": {
+       "trades": 248,
+       "kept": 0,
+       "skipped": 248,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     },
+     "wf": {
+      "base": {
+       "trades": 190,
+       "kept": 190,
+       "skipped": 0,
+       "net": -12935.14,
+       "win": 0.1789,
+       "max_dd": 14867.65
+      },
+      "rule": {
+       "trades": 190,
+       "kept": 0,
+       "skipped": 190,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     },
+     "final": {
+      "base": {
+       "trades": 107,
+       "kept": 107,
+       "skipped": 0,
+       "net": 1559.25,
+       "win": 0.2243,
+       "max_dd": 5358.82
+      },
+      "rule": {
+       "trades": 107,
+       "kept": 0,
+       "skipped": 107,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 248,
+     "brier": 0.1671,
+     "brier_base": 0.1353,
+     "base_rate": 0.16129032258064516,
+     "corr": 0.0805,
+     "bins": [
+      {
+       "bin": "10-20%",
+       "n": 2,
+       "predicted": 0.187,
+       "actual": 0.0
+      },
+      {
+       "bin": "20-30%",
+       "n": 60,
+       "predicted": 0.261,
+       "actual": 0.15
+      },
+      {
+       "bin": "30-40%",
+       "n": 143,
+       "predicted": 0.346,
+       "actual": 0.154
+      },
+      {
+       "bin": "40-50%",
+       "n": 42,
+       "predicted": 0.43,
+       "actual": 0.19
+      },
+      {
+       "bin": "50-60%",
+       "n": 1,
+       "predicted": 0.501,
+       "actual": 1.0
+      }
+     ]
+    },
+    "final": {
+     "n": 107,
+     "brier": 0.1794,
+     "brier_base": 0.178,
+     "base_rate": 0.16129032258064516,
+     "corr": 0.1451,
+     "bins": [
+      {
+       "bin": "10-20%",
+       "n": 4,
+       "predicted": 0.181,
+       "actual": 0.0
+      },
+      {
+       "bin": "20-30%",
+       "n": 48,
+       "predicted": 0.258,
+       "actual": 0.188
+      },
+      {
+       "bin": "30-40%",
+       "n": 39,
+       "predicted": 0.349,
+       "actual": 0.256
+      },
+      {
+       "bin": "40-50%",
+       "n": 13,
+       "predicted": 0.434,
+       "actual": 0.154
+      },
+      {
+       "bin": "50-60%",
+       "n": 3,
+       "predicted": 0.541,
+       "actual": 1.0
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.16129032258064516
+  },
+  "ORB_ORB": {
+   "name": "ORB",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 4,
+      "win": 0.5,
+      "mean": -247.5,
+      "net": -990
+     },
+     "coin flip": {
+      "n": 314,
+      "win": 0.376,
+      "mean": -126.9,
+      "net": -39839
+     },
+     "edge": {
+      "n": 2,
+      "win": 0.5,
+      "mean": -298.9,
+      "net": -598
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 4,
+      "win": 0.5,
+      "mean": -247.5,
+      "net": -990
+     },
+     "coin flip": {
+      "n": 225,
+      "win": 0.351,
+      "mean": -119.5,
+      "net": -26892
+     },
+     "edge": {
+      "n": 2,
+      "win": 0.5,
+      "mean": -298.9,
+      "net": -598
+     }
+    },
+    "final": {
+     "coin flip": {
+      "n": 128,
+      "win": 0.438,
+      "mean": 22.5,
+      "net": 2876
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "rule": {
+       "trades": 320,
+       "kept": 316,
+       "skipped": 4,
+       "net": -40436.58,
+       "win": 0.3766,
+       "max_dd": 43961.82
+      },
+      "p": 0.4098,
+      "twin_p95": -38170,
+      "twin_median": -40870
+     },
+     "wf": {
+      "base": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "rule": {
+       "trades": 231,
+       "kept": 227,
+       "skipped": 4,
+       "net": -27490.15,
+       "win": 0.3524,
+       "max_dd": 36443.67
+      },
+      "p": 0.3838,
+      "twin_p95": -25286,
+      "twin_median": -28072
+     },
+     "final": {
+      "base": {
+       "trades": 128,
+       "kept": 128,
+       "skipped": 0,
+       "net": 2876.05,
+       "win": 0.4375,
+       "max_dd": 7493.14
+      },
+      "rule": {
+       "trades": 128,
+       "kept": 128,
+       "skipped": 0,
+       "net": 2876.05,
+       "win": 0.4375,
+       "max_dd": 7493.14
+      },
+      "p": 1.0,
+      "twin_p95": 2876,
+      "twin_median": 2876
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "rule": {
+       "trades": 320,
+       "kept": 2,
+       "skipped": 318,
+       "net": -597.82,
+       "win": 0.5,
+       "max_dd": 1546.36
+      },
+      "p": 0.6582,
+      "twin_p95": 1439,
+      "twin_median": -64
+     },
+     "wf": {
+      "base": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "rule": {
+       "trades": 231,
+       "kept": 2,
+       "skipped": 229,
+       "net": -597.82,
+       "win": 0.5,
+       "max_dd": 1546.36
+      },
+      "p": 0.6887,
+      "twin_p95": 1537,
+      "twin_median": -54
+     },
+     "final": {
+      "base": {
+       "trades": 128,
+       "kept": 128,
+       "skipped": 0,
+       "net": 2876.05,
+       "win": 0.4375,
+       "max_dd": 7493.14
+      },
+      "rule": {
+       "trades": 128,
+       "kept": 0,
+       "skipped": 128,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 320,
+     "brier": 0.2553,
+     "brier_base": 0.2351,
+     "base_rate": 0.378125,
+     "corr": -0.0403,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 9,
+       "predicted": 0.368,
+       "actual": 0.444
+      },
+      {
+       "bin": "40-50%",
+       "n": 146,
+       "predicted": 0.466,
+       "actual": 0.384
+      },
+      {
+       "bin": "50-60%",
+       "n": 153,
+       "predicted": 0.536,
+       "actual": 0.379
+      },
+      {
+       "bin": "60-70%",
+       "n": 12,
+       "predicted": 0.615,
+       "actual": 0.25
+      }
+     ]
+    },
+    "final": {
+     "n": 128,
+     "brier": 0.2517,
+     "brier_base": 0.2496,
+     "base_rate": 0.378125,
+     "corr": 0.0288,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 3,
+       "predicted": 0.394,
+       "actual": 0.0
+      },
+      {
+       "bin": "40-50%",
+       "n": 61,
+       "predicted": 0.454,
+       "actual": 0.426
+      },
+      {
+       "bin": "50-60%",
+       "n": 60,
+       "predicted": 0.547,
+       "actual": 0.467
+      },
+      {
+       "bin": "60-70%",
+       "n": 4,
+       "predicted": 0.604,
+       "actual": 0.5
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.378125
+  },
+  "ORB_FRESH": {
+   "name": "ORB Fresh",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 5,
+      "win": 0.6,
+      "mean": -382.0,
+      "net": -1910
+     },
+     "coin flip": {
+      "n": 314,
+      "win": 0.373,
+      "mean": -128.9,
+      "net": -40465
+     },
+     "edge": {
+      "n": 1,
+      "win": 1.0,
+      "mean": 948.5,
+      "net": 949
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 5,
+      "win": 0.6,
+      "mean": -382.0,
+      "net": -1910
+     },
+     "coin flip": {
+      "n": 225,
+      "win": 0.347,
+      "mean": -122.3,
+      "net": -27519
+     },
+     "edge": {
+      "n": 1,
+      "win": 1.0,
+      "mean": 948.5,
+      "net": 949
+     }
+    },
+    "final": {
+     "coin flip": {
+      "n": 128,
+      "win": 0.438,
+      "mean": 22.5,
+      "net": 2876
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "rule": {
+       "trades": 320,
+       "kept": 315,
+       "skipped": 5,
+       "net": -39516.63,
+       "win": 0.3746,
+       "max_dd": 43041.87
+      },
+      "p": 0.2289,
+      "twin_p95": -37744,
+      "twin_median": -40885
+     },
+     "wf": {
+      "base": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "rule": {
+       "trades": 231,
+       "kept": 226,
+       "skipped": 5,
+       "net": -26570.2,
+       "win": 0.3496,
+       "max_dd": 35523.72
+      },
+      "p": 0.2474,
+      "twin_p95": -24787,
+      "twin_median": -27877
+     },
+     "final": {
+      "base": {
+       "trades": 128,
+       "kept": 128,
+       "skipped": 0,
+       "net": 2876.05,
+       "win": 0.4375,
+       "max_dd": 7493.14
+      },
+      "rule": {
+       "trades": 128,
+       "kept": 128,
+       "skipped": 0,
+       "net": 2876.05,
+       "win": 0.4375,
+       "max_dd": 7493.14
+      },
+      "p": 1.0,
+      "twin_p95": 2876,
+      "twin_median": 2876
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 320,
+       "kept": 320,
+       "skipped": 0,
+       "net": -41426.73,
+       "win": 0.3781,
+       "max_dd": 44951.97
+      },
+      "rule": {
+       "trades": 320,
+       "kept": 1,
+       "skipped": 319,
+       "net": 948.54,
+       "win": 1.0,
+       "max_dd": 0.0
+      },
+      "p": 0.0935,
+      "twin_p95": 1126,
+      "twin_median": -23
+     },
+     "wf": {
+      "base": {
+       "trades": 231,
+       "kept": 231,
+       "skipped": 0,
+       "net": -28480.3,
+       "win": 0.355,
+       "max_dd": 36089.04
+      },
+      "rule": {
+       "trades": 231,
+       "kept": 1,
+       "skipped": 230,
+       "net": 948.54,
+       "win": 1.0,
+       "max_dd": 0.0
+      },
+      "p": 0.094,
+      "twin_p95": 1108,
+      "twin_median": -23
+     },
+     "final": {
+      "base": {
+       "trades": 128,
+       "kept": 128,
+       "skipped": 0,
+       "net": 2876.05,
+       "win": 0.4375,
+       "max_dd": 7493.14
+      },
+      "rule": {
+       "trades": 128,
+       "kept": 0,
+       "skipped": 128,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 320,
+     "brier": 0.2556,
+     "brier_base": 0.2351,
+     "base_rate": 0.378125,
+     "corr": -0.0496,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 13,
+       "predicted": 0.375,
+       "actual": 0.462
+      },
+      {
+       "bin": "40-50%",
+       "n": 154,
+       "predicted": 0.469,
+       "actual": 0.383
+      },
+      {
+       "bin": "50-60%",
+       "n": 144,
+       "predicted": 0.539,
+       "actual": 0.375
+      },
+      {
+       "bin": "60-70%",
+       "n": 9,
+       "predicted": 0.617,
+       "actual": 0.222
+      }
+     ]
+    },
+    "final": {
+     "n": 128,
+     "brier": 0.2514,
+     "brier_base": 0.2496,
+     "base_rate": 0.378125,
+     "corr": 0.0348,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 2,
+       "predicted": 0.398,
+       "actual": 0.0
+      },
+      {
+       "bin": "40-50%",
+       "n": 60,
+       "predicted": 0.458,
+       "actual": 0.417
+      },
+      {
+       "bin": "50-60%",
+       "n": 63,
+       "predicted": 0.545,
+       "actual": 0.476
+      },
+      {
+       "bin": "60-70%",
+       "n": 3,
+       "predicted": 0.606,
+       "actual": 0.333
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.378125
+  },
+  "ORB_SWEEP": {
+   "name": "ORB Sweep",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 23,
+      "win": 0.261,
+      "mean": -235.1,
+      "net": -5408
+     },
+     "coin flip": {
+      "n": 431,
+      "win": 0.265,
+      "mean": -248.5,
+      "net": -107115
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 21,
+      "win": 0.19,
+      "mean": -400.5,
+      "net": -8410
+     },
+     "coin flip": {
+      "n": 305,
+      "win": 0.252,
+      "mean": -301.4,
+      "net": -91914
+     }
+    },
+    "final": {
+     "against": {
+      "n": 2,
+      "win": 0.0,
+      "mean": -1498.7,
+      "net": -2997
+     },
+     "coin flip": {
+      "n": 174,
+      "win": 0.287,
+      "mean": -295.5,
+      "net": -51424
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 454,
+       "kept": 454,
+       "skipped": 0,
+       "net": -112523.08,
+       "win": 0.2643,
+       "max_dd": 118585.95
+      },
+      "rule": {
+       "trades": 454,
+       "kept": 431,
+       "skipped": 23,
+       "net": -107115.04,
+       "win": 0.2645,
+       "max_dd": 113177.91
+      },
+      "p": 0.5287,
+      "twin_p95": -98560,
+      "twin_median": -106680
+     },
+     "wf": {
+      "base": {
+       "trades": 326,
+       "kept": 326,
+       "skipped": 0,
+       "net": -100324.69,
+       "win": 0.2485,
+       "max_dd": 106262.74
+      },
+      "rule": {
+       "trades": 326,
+       "kept": 305,
+       "skipped": 21,
+       "net": -91914.5,
+       "win": 0.2525,
+       "max_dd": 97852.55
+      },
+      "p": 0.3658,
+      "twin_p95": -86110,
+      "twin_median": -93912
+     },
+     "final": {
+      "base": {
+       "trades": 176,
+       "kept": 176,
+       "skipped": 0,
+       "net": -54421.29,
+       "win": 0.2841,
+       "max_dd": 54421.29
+      },
+      "rule": {
+       "trades": 176,
+       "kept": 174,
+       "skipped": 2,
+       "net": -51423.89,
+       "win": 0.2874,
+       "max_dd": 51831.48
+      },
+      "p": 0.1499,
+      "twin_p95": -51338,
+      "twin_median": -53452
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 454,
+       "kept": 454,
+       "skipped": 0,
+       "net": -112523.08,
+       "win": 0.2643,
+       "max_dd": 118585.95
+      },
+      "rule": {
+       "trades": 454,
+       "kept": 0,
+       "skipped": 454,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     },
+     "wf": {
+      "base": {
+       "trades": 326,
+       "kept": 326,
+       "skipped": 0,
+       "net": -100324.69,
+       "win": 0.2485,
+       "max_dd": 106262.74
+      },
+      "rule": {
+       "trades": 326,
+       "kept": 0,
+       "skipped": 326,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     },
+     "final": {
+      "base": {
+       "trades": 176,
+       "kept": 176,
+       "skipped": 0,
+       "net": -54421.29,
+       "win": 0.2841,
+       "max_dd": 54421.29
+      },
+      "rule": {
+       "trades": 176,
+       "kept": 0,
+       "skipped": 176,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 454,
+     "brier": 0.1992,
+     "brier_base": 0.1945,
+     "base_rate": 0.2643171806167401,
+     "corr": 0.0137,
+     "bins": [
+      {
+       "bin": "10-20%",
+       "n": 18,
+       "predicted": 0.166,
+       "actual": 0.222
+      },
+      {
+       "bin": "20-30%",
+       "n": 167,
+       "predicted": 0.265,
+       "actual": 0.251
+      },
+      {
+       "bin": "30-40%",
+       "n": 249,
+       "predicted": 0.343,
+       "actual": 0.269
+      },
+      {
+       "bin": "40-50%",
+       "n": 20,
+       "predicted": 0.421,
+       "actual": 0.35
+      }
+     ]
+    },
+    "final": {
+     "n": 176,
+     "brier": 0.2128,
+     "brier_base": 0.2038,
+     "base_rate": 0.2643171806167401,
+     "corr": -0.1178,
+     "bins": [
+      {
+       "bin": "10-20%",
+       "n": 2,
+       "predicted": 0.151,
+       "actual": 0.0
+      },
+      {
+       "bin": "20-30%",
+       "n": 55,
+       "predicted": 0.274,
+       "actual": 0.418
+      },
+      {
+       "bin": "30-40%",
+       "n": 111,
+       "predicted": 0.348,
+       "actual": 0.234
+      },
+      {
+       "bin": "40-50%",
+       "n": 8,
+       "predicted": 0.413,
+       "actual": 0.125
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.2643171806167401
+  },
+  "ORB_FADE": {
+   "name": "Range Fade",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 1,
+      "win": 1.0,
+      "mean": 226.2,
+      "net": 226
+     },
+     "coin flip": {
+      "n": 495,
+      "win": 0.311,
+      "mean": -232.9,
+      "net": -115261
+     },
+     "edge": {
+      "n": 4,
+      "win": 0.5,
+      "mean": 163.0,
+      "net": 652
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 1,
+      "win": 1.0,
+      "mean": 226.2,
+      "net": 226
+     },
+     "coin flip": {
+      "n": 357,
+      "win": 0.314,
+      "mean": -251.8,
+      "net": -89901
+     },
+     "edge": {
+      "n": 4,
+      "win": 0.5,
+      "mean": 163.0,
+      "net": 652
+     }
+    },
+    "final": {
+     "coin flip": {
+      "n": 207,
+      "win": 0.333,
+      "mean": -144.0,
+      "net": -29811
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 500,
+       "kept": 500,
+       "skipped": 0,
+       "net": -114382.74,
+       "win": 0.314,
+       "max_dd": 114382.74
+      },
+      "rule": {
+       "trades": 500,
+       "kept": 499,
+       "skipped": 1,
+       "net": -114608.91,
+       "win": 0.3126,
+       "max_dd": 114608.91
+      },
+      "p": 0.7946,
+      "twin_p95": -112859,
+      "twin_median": -114363
+     },
+     "wf": {
+      "base": {
+       "trades": 362,
+       "kept": 362,
+       "skipped": 0,
+       "net": -89022.52,
+       "win": 0.3177,
+       "max_dd": 90037.2
+      },
+      "rule": {
+       "trades": 362,
+       "kept": 361,
+       "skipped": 1,
+       "net": -89248.69,
+       "win": 0.3158,
+       "max_dd": 90263.37
+      },
+      "p": 0.7761,
+      "twin_p95": -87492,
+      "twin_median": -89001
+     },
+     "final": {
+      "base": {
+       "trades": 207,
+       "kept": 207,
+       "skipped": 0,
+       "net": -29810.69,
+       "win": 0.3333,
+       "max_dd": 32363.27
+      },
+      "rule": {
+       "trades": 207,
+       "kept": 207,
+       "skipped": 0,
+       "net": -29810.69,
+       "win": 0.3333,
+       "max_dd": 32363.27
+      },
+      "p": 1.0,
+      "twin_p95": -29811,
+      "twin_median": -29811
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 500,
+       "kept": 500,
+       "skipped": 0,
+       "net": -114382.74,
+       "win": 0.314,
+       "max_dd": 114382.74
+      },
+      "rule": {
+       "trades": 500,
+       "kept": 4,
+       "skipped": 496,
+       "net": 652.18,
+       "win": 0.5,
+       "max_dd": 133.48
+      },
+      "p": 0.1524,
+      "twin_p95": 1503,
+      "twin_median": -881
+     },
+     "wf": {
+      "base": {
+       "trades": 362,
+       "kept": 362,
+       "skipped": 0,
+       "net": -89022.52,
+       "win": 0.3177,
+       "max_dd": 90037.2
+      },
+      "rule": {
+       "trades": 362,
+       "kept": 4,
+       "skipped": 358,
+       "net": 652.18,
+       "win": 0.5,
+       "max_dd": 133.48
+      },
+      "p": 0.1429,
+      "twin_p95": 1431,
+      "twin_median": -1072
+     },
+     "final": {
+      "base": {
+       "trades": 207,
+       "kept": 207,
+       "skipped": 0,
+       "net": -29810.69,
+       "win": 0.3333,
+       "max_dd": 32363.27
+      },
+      "rule": {
+       "trades": 207,
+       "kept": 0,
+       "skipped": 207,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 500,
+     "brier": 0.2512,
+     "brier_base": 0.2154,
+     "base_rate": 0.314,
+     "corr": -0.0112,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 11,
+       "predicted": 0.381,
+       "actual": 0.545
+      },
+      {
+       "bin": "40-50%",
+       "n": 255,
+       "predicted": 0.463,
+       "actual": 0.298
+      },
+      {
+       "bin": "50-60%",
+       "n": 225,
+       "predicted": 0.533,
+       "actual": 0.32
+      },
+      {
+       "bin": "60-70%",
+       "n": 9,
+       "predicted": 0.623,
+       "actual": 0.333
+      }
+     ]
+    },
+    "final": {
+     "n": 207,
+     "brier": 0.2471,
+     "brier_base": 0.2226,
+     "base_rate": 0.314,
+     "corr": 0.0917,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 11,
+       "predicted": 0.394,
+       "actual": 0.364
+      },
+      {
+       "bin": "40-50%",
+       "n": 98,
+       "predicted": 0.442,
+       "actual": 0.276
+      },
+      {
+       "bin": "50-60%",
+       "n": 87,
+       "predicted": 0.553,
+       "actual": 0.402
+      },
+      {
+       "bin": "60-70%",
+       "n": 11,
+       "predicted": 0.607,
+       "actual": 0.273
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.314
+  },
+  "VIXDIV": {
+   "name": "VIX divergence",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 2,
+      "win": 1.0,
+      "mean": 6860.1,
+      "net": 13720
+     },
+     "coin flip": {
+      "n": 54,
+      "win": 0.241,
+      "mean": -103.2,
+      "net": -5571
+     },
+     "edge": {
+      "n": 1,
+      "win": 1.0,
+      "mean": 319.2,
+      "net": 319
+     },
+     "unknown": {
+      "n": 59,
+      "win": 0.441,
+      "mean": 121.9,
+      "net": 7189
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 2,
+      "win": 1.0,
+      "mean": 6860.1,
+      "net": 13720
+     },
+     "coin flip": {
+      "n": 37,
+      "win": 0.243,
+      "mean": 42.1,
+      "net": 1558
+     },
+     "edge": {
+      "n": 1,
+      "win": 1.0,
+      "mean": 319.2,
+      "net": 319
+     },
+     "unknown": {
+      "n": 44,
+      "win": 0.432,
+      "mean": 134.6,
+      "net": 5924
+     }
+    },
+    "final": {
+     "coin flip": {
+      "n": 7,
+      "win": 0.143,
+      "mean": -927.5,
+      "net": -6493
+     },
+     "unknown": {
+      "n": 20,
+      "win": 0.4,
+      "mean": 36.8,
+      "net": 737
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 116,
+       "kept": 116,
+       "skipped": 0,
+       "net": 15657.56,
+       "win": 0.3621,
+       "max_dd": 43407.15
+      },
+      "rule": {
+       "trades": 116,
+       "kept": 114,
+       "skipped": 2,
+       "net": 1937.31,
+       "win": 0.3509,
+       "max_dd": 43407.15
+      },
+      "p": 0.9895,
+      "twin_p95": 21667,
+      "twin_median": 16321
+     },
+     "wf": {
+      "base": {
+       "trades": 84,
+       "kept": 84,
+       "skipped": 0,
+       "net": 21521.28,
+       "win": 0.369,
+       "max_dd": 34376.12
+      },
+      "rule": {
+       "trades": 84,
+       "kept": 82,
+       "skipped": 2,
+       "net": 7801.03,
+       "win": 0.3537,
+       "max_dd": 34376.12
+      },
+      "p": 0.98,
+      "twin_p95": 27950,
+      "twin_median": 22029
+     },
+     "final": {
+      "base": {
+       "trades": 27,
+       "kept": 27,
+       "skipped": 0,
+       "net": -5755.79,
+       "win": 0.3333,
+       "max_dd": 16533.12
+      },
+      "rule": {
+       "trades": 27,
+       "kept": 27,
+       "skipped": 0,
+       "net": -5755.79,
+       "win": 0.3333,
+       "max_dd": 16533.12
+      },
+      "p": 1.0,
+      "twin_p95": -5756,
+      "twin_median": -5756
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 116,
+       "kept": 116,
+       "skipped": 0,
+       "net": 15657.56,
+       "win": 0.3621,
+       "max_dd": 43407.15
+      },
+      "rule": {
+       "trades": 116,
+       "kept": 1,
+       "skipped": 115,
+       "net": 319.17,
+       "win": 1.0,
+       "max_dd": 0.0
+      },
+      "p": 0.2804,
+      "twin_p95": 6138,
+      "twin_median": -488
+     },
+     "wf": {
+      "base": {
+       "trades": 84,
+       "kept": 84,
+       "skipped": 0,
+       "net": 21521.28,
+       "win": 0.369,
+       "max_dd": 34376.12
+      },
+      "rule": {
+       "trades": 84,
+       "kept": 1,
+       "skipped": 83,
+       "net": 319.17,
+       "win": 1.0,
+       "max_dd": 0.0
+      },
+      "p": 0.2759,
+      "twin_p95": 7160,
+      "twin_median": -476
+     },
+     "final": {
+      "base": {
+       "trades": 27,
+       "kept": 27,
+       "skipped": 0,
+       "net": -5755.79,
+       "win": 0.3333,
+       "max_dd": 16533.12
+      },
+      "rule": {
+       "trades": 27,
+       "kept": 0,
+       "skipped": 27,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 57,
+     "brier": 0.2567,
+     "brier_base": 0.2085,
+     "base_rate": 0.3620689655172414,
+     "corr": -0.0914,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 3,
+       "predicted": 0.344,
+       "actual": 0.667
+      },
+      {
+       "bin": "40-50%",
+       "n": 32,
+       "predicted": 0.462,
+       "actual": 0.219
+      },
+      {
+       "bin": "50-60%",
+       "n": 18,
+       "predicted": 0.536,
+       "actual": 0.333
+      },
+      {
+       "bin": "60-70%",
+       "n": 3,
+       "predicted": 0.622,
+       "actual": 0.0
+      },
+      {
+       "bin": "70-80%",
+       "n": 1,
+       "predicted": 0.719,
+       "actual": 1.0
+      }
+     ]
+    },
+    "final": {
+     "n": 7,
+     "brier": 0.2422,
+     "brier_base": 0.1705,
+     "base_rate": 0.3620689655172414,
+     "corr": 0.3687,
+     "bins": [
+      {
+       "bin": "40-50%",
+       "n": 3,
+       "predicted": 0.436,
+       "actual": 0.0
+      },
+      {
+       "bin": "50-60%",
+       "n": 4,
+       "predicted": 0.56,
+       "actual": 0.25
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.3620689655172414
+  },
+  "PINE_ST_EMA_5M": {
+   "name": "Pine Supertrend+EMA 5m",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 11,
+      "win": 0.182,
+      "mean": -575.8,
+      "net": -6333
+     },
+     "coin flip": {
+      "n": 450,
+      "win": 0.38,
+      "mean": -48.5,
+      "net": -21830
+     },
+     "edge": {
+      "n": 6,
+      "win": 0.333,
+      "mean": 192.5,
+      "net": 1155
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 11,
+      "win": 0.182,
+      "mean": -575.8,
+      "net": -6333
+     },
+     "coin flip": {
+      "n": 305,
+      "win": 0.413,
+      "mean": 189.1,
+      "net": 57663
+     },
+     "edge": {
+      "n": 6,
+      "win": 0.333,
+      "mean": 192.5,
+      "net": 1155
+     }
+    },
+    "final": {
+     "against": {
+      "n": 4,
+      "win": 0.25,
+      "mean": 372.2,
+      "net": 1489
+     },
+     "coin flip": {
+      "n": 178,
+      "win": 0.331,
+      "mean": -303.7,
+      "net": -54061
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 467,
+       "kept": 467,
+       "skipped": 0,
+       "net": -27007.91,
+       "win": 0.3747,
+       "max_dd": 92740.44
+      },
+      "rule": {
+       "trades": 467,
+       "kept": 456,
+       "skipped": 11,
+       "net": -20674.53,
+       "win": 0.3794,
+       "max_dd": 92740.44
+      },
+      "p": 0.3163,
+      "twin_p95": -10342,
+      "twin_median": -25894
+     },
+     "wf": {
+      "base": {
+       "trades": 322,
+       "kept": 322,
+       "skipped": 0,
+       "net": 52485.12,
+       "win": 0.4037,
+       "max_dd": 27065.99
+      },
+      "rule": {
+       "trades": 322,
+       "kept": 311,
+       "skipped": 11,
+       "net": 58818.5,
+       "win": 0.4116,
+       "max_dd": 25517.82
+      },
+      "p": 0.2599,
+      "twin_p95": 68429,
+      "twin_median": 51513
+     },
+     "final": {
+      "base": {
+       "trades": 182,
+       "kept": 182,
+       "skipped": 0,
+       "net": -52572.76,
+       "win": 0.3297,
+       "max_dd": 71492.12
+      },
+      "rule": {
+       "trades": 182,
+       "kept": 178,
+       "skipped": 4,
+       "net": -54061.48,
+       "win": 0.3315,
+       "max_dd": 65908.54
+      },
+      "p": 0.6747,
+      "twin_p95": -39549,
+      "twin_median": -50496
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 467,
+       "kept": 467,
+       "skipped": 0,
+       "net": -27007.91,
+       "win": 0.3747,
+       "max_dd": 92740.44
+      },
+      "rule": {
+       "trades": 467,
+       "kept": 6,
+       "skipped": 461,
+       "net": 1155.17,
+       "win": 0.3333,
+       "max_dd": 634.16
+      },
+      "p": 0.3763,
+      "twin_p95": 13274,
+      "twin_median": -1047
+     },
+     "wf": {
+      "base": {
+       "trades": 322,
+       "kept": 322,
+       "skipped": 0,
+       "net": 52485.12,
+       "win": 0.4037,
+       "max_dd": 27065.99
+      },
+      "rule": {
+       "trades": 322,
+       "kept": 6,
+       "skipped": 316,
+       "net": 1155.17,
+       "win": 0.3333,
+       "max_dd": 634.16
+      },
+      "p": 0.4573,
+      "twin_p95": 17342,
+      "twin_median": 321
+     },
+     "final": {
+      "base": {
+       "trades": 182,
+       "kept": 182,
+       "skipped": 0,
+       "net": -52572.76,
+       "win": 0.3297,
+       "max_dd": 71492.12
+      },
+      "rule": {
+       "trades": 182,
+       "kept": 0,
+       "skipped": 182,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 467,
+     "brier": 0.2497,
+     "brier_base": 0.2343,
+     "base_rate": 0.3747323340471092,
+     "corr": 0.0104,
+     "bins": [
+      {
+       "bin": "20-30%",
+       "n": 1,
+       "predicted": 0.285,
+       "actual": 1.0
+      },
+      {
+       "bin": "30-40%",
+       "n": 24,
+       "predicted": 0.371,
+       "actual": 0.333
+      },
+      {
+       "bin": "40-50%",
+       "n": 257,
+       "predicted": 0.462,
+       "actual": 0.374
+      },
+      {
+       "bin": "50-60%",
+       "n": 172,
+       "predicted": 0.535,
+       "actual": 0.384
+      },
+      {
+       "bin": "60-70%",
+       "n": 13,
+       "predicted": 0.629,
+       "actual": 0.308
+      }
+     ]
+    },
+    "final": {
+     "n": 182,
+     "brier": 0.2475,
+     "brier_base": 0.223,
+     "base_rate": 0.3747323340471092,
+     "corr": -0.001,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 12,
+       "predicted": 0.38,
+       "actual": 0.25
+      },
+      {
+       "bin": "40-50%",
+       "n": 96,
+       "predicted": 0.452,
+       "actual": 0.333
+      },
+      {
+       "bin": "50-60%",
+       "n": 74,
+       "predicted": 0.539,
+       "actual": 0.338
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.3747323340471092
+  },
+  "PINE_ST_EMA_15M": {
+   "name": "Pine Supertrend+EMA 15m",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 1,
+      "win": 0.0,
+      "mean": -106.1,
+      "net": -106
+     },
+     "coin flip": {
+      "n": 160,
+      "win": 0.419,
+      "mean": -429.6,
+      "net": -68734
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 1,
+      "win": 0.0,
+      "mean": -106.1,
+      "net": -106
+     },
+     "coin flip": {
+      "n": 117,
+      "win": 0.453,
+      "mean": -221.3,
+      "net": -25894
+     }
+    },
+    "final": {
+     "coin flip": {
+      "n": 74,
+      "win": 0.419,
+      "mean": -1123.0,
+      "net": -83101
+     },
+     "edge": {
+      "n": 1,
+      "win": 0.0,
+      "mean": -368.1,
+      "net": -368
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 161,
+       "kept": 161,
+       "skipped": 0,
+       "net": -68840.58,
+       "win": 0.4161,
+       "max_dd": 106871.62
+      },
+      "rule": {
+       "trades": 161,
+       "kept": 160,
+       "skipped": 1,
+       "net": -68734.5,
+       "win": 0.4188,
+       "max_dd": 106765.54
+      },
+      "p": 0.5812,
+      "twin_p95": -62177,
+      "twin_median": -68288
+     },
+     "wf": {
+      "base": {
+       "trades": 118,
+       "kept": 118,
+       "skipped": 0,
+       "net": -25999.65,
+       "win": 0.4492,
+       "max_dd": 77766.55
+      },
+      "rule": {
+       "trades": 118,
+       "kept": 117,
+       "skipped": 1,
+       "net": -25893.57,
+       "win": 0.453,
+       "max_dd": 77660.47
+      },
+      "p": 0.5172,
+      "twin_p95": -19589,
+      "twin_median": -25876
+     },
+     "final": {
+      "base": {
+       "trades": 75,
+       "kept": 75,
+       "skipped": 0,
+       "net": -83468.59,
+       "win": 0.4133,
+       "max_dd": 98509.73
+      },
+      "rule": {
+       "trades": 75,
+       "kept": 75,
+       "skipped": 0,
+       "net": -83468.59,
+       "win": 0.4133,
+       "max_dd": 98509.73
+      },
+      "p": 1.0,
+      "twin_p95": -83469,
+      "twin_median": -83469
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 161,
+       "kept": 161,
+       "skipped": 0,
+       "net": -68840.58,
+       "win": 0.4161,
+       "max_dd": 106871.62
+      },
+      "rule": {
+       "trades": 161,
+       "kept": 0,
+       "skipped": 161,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     },
+     "wf": {
+      "base": {
+       "trades": 118,
+       "kept": 118,
+       "skipped": 0,
+       "net": -25999.65,
+       "win": 0.4492,
+       "max_dd": 77766.55
+      },
+      "rule": {
+       "trades": 118,
+       "kept": 0,
+       "skipped": 118,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     },
+     "final": {
+      "base": {
+       "trades": 75,
+       "kept": 75,
+       "skipped": 0,
+       "net": -83468.59,
+       "win": 0.4133,
+       "max_dd": 98509.73
+      },
+      "rule": {
+       "trades": 75,
+       "kept": 1,
+       "skipped": 74,
+       "net": -368.08,
+       "win": 0.0,
+       "max_dd": 368.08
+      },
+      "p": 0.5267,
+      "twin_p95": 5462,
+      "twin_median": -347
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 161,
+     "brier": 0.248,
+     "brier_base": 0.243,
+     "base_rate": 0.4161490683229814,
+     "corr": 0.0753,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 5,
+       "predicted": 0.384,
+       "actual": 0.2
+      },
+      {
+       "bin": "40-50%",
+       "n": 86,
+       "predicted": 0.468,
+       "actual": 0.407
+      },
+      {
+       "bin": "50-60%",
+       "n": 66,
+       "predicted": 0.532,
+       "actual": 0.424
+      },
+      {
+       "bin": "60-70%",
+       "n": 4,
+       "predicted": 0.617,
+       "actual": 0.75
+      }
+     ]
+    },
+    "final": {
+     "n": 75,
+     "brier": 0.2512,
+     "brier_base": 0.2425,
+     "base_rate": 0.4161490683229814,
+     "corr": -0.0101,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 2,
+       "predicted": 0.379,
+       "actual": 0.5
+      },
+      {
+       "bin": "40-50%",
+       "n": 44,
+       "predicted": 0.47,
+       "actual": 0.386
+      },
+      {
+       "bin": "50-60%",
+       "n": 28,
+       "predicted": 0.533,
+       "actual": 0.464
+      },
+      {
+       "bin": "60-70%",
+       "n": 1,
+       "predicted": 0.63,
+       "actual": 0.0
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.4161490683229814
+  },
+  "PINE_MATRIX_5M": {
+   "name": "Pine Matrix 5m",
+   "verdicts": {
+    "design": {
+     "against": {
+      "n": 5,
+      "win": 0.2,
+      "mean": -1024.4,
+      "net": -5122
+     },
+     "coin flip": {
+      "n": 447,
+      "win": 0.356,
+      "mean": -419.8,
+      "net": -187665
+     },
+     "edge": {
+      "n": 7,
+      "win": 0.143,
+      "mean": -386.3,
+      "net": -2704
+     }
+    },
+    "wf": {
+     "against": {
+      "n": 5,
+      "win": 0.2,
+      "mean": -1024.4,
+      "net": -5122
+     },
+     "coin flip": {
+      "n": 324,
+      "win": 0.37,
+      "mean": -399.8,
+      "net": -129520
+     },
+     "edge": {
+      "n": 7,
+      "win": 0.143,
+      "mean": -386.3,
+      "net": -2704
+     }
+    },
+    "final": {
+     "against": {
+      "n": 1,
+      "win": 0.0,
+      "mean": -270.1,
+      "net": -270
+     },
+     "coin flip": {
+      "n": 172,
+      "win": 0.413,
+      "mean": 229.0,
+      "net": 39386
+     }
+    }
+   },
+   "cells": {
+    "SKIP_AGAINST": {
+     "design": {
+      "base": {
+       "trades": 459,
+       "kept": 459,
+       "skipped": 0,
+       "net": -195491.78,
+       "win": 0.3508,
+       "max_dd": 198516.36
+      },
+      "rule": {
+       "trades": 459,
+       "kept": 454,
+       "skipped": 5,
+       "net": -190369.71,
+       "win": 0.3524,
+       "max_dd": 193394.29
+      },
+      "p": 0.3588,
+      "twin_p95": -184224,
+      "twin_median": -192468
+     },
+     "wf": {
+      "base": {
+       "trades": 336,
+       "kept": 336,
+       "skipped": 0,
+       "net": -137346.74,
+       "win": 0.3631,
+       "max_dd": 143099.51
+      },
+      "rule": {
+       "trades": 336,
+       "kept": 331,
+       "skipped": 5,
+       "net": -132224.67,
+       "win": 0.3656,
+       "max_dd": 137977.44
+      },
+      "p": 0.3288,
+      "twin_p95": -125286,
+      "twin_median": -135088
+     },
+     "final": {
+      "base": {
+       "trades": 173,
+       "kept": 173,
+       "skipped": 0,
+       "net": 39116.32,
+       "win": 0.4104,
+       "max_dd": 43065.54
+      },
+      "rule": {
+       "trades": 173,
+       "kept": 172,
+       "skipped": 1,
+       "net": 39386.46,
+       "win": 0.4128,
+       "max_dd": 42795.4
+      },
+      "p": 0.5242,
+      "twin_p95": 43166,
+      "twin_median": 39581
+     }
+    },
+    "EDGE_ONLY": {
+     "design": {
+      "base": {
+       "trades": 459,
+       "kept": 459,
+       "skipped": 0,
+       "net": -195491.78,
+       "win": 0.3508,
+       "max_dd": 198516.36
+      },
+      "rule": {
+       "trades": 459,
+       "kept": 7,
+       "skipped": 452,
+       "net": -2704.4,
+       "win": 0.1429,
+       "max_dd": 2861.93
+      },
+      "p": 0.4443,
+      "twin_p95": 11335,
+      "twin_median": -3844
+     },
+     "wf": {
+      "base": {
+       "trades": 336,
+       "kept": 336,
+       "skipped": 0,
+       "net": -137346.74,
+       "win": 0.3631,
+       "max_dd": 143099.51
+      },
+      "rule": {
+       "trades": 336,
+       "kept": 7,
+       "skipped": 329,
+       "net": -2704.4,
+       "win": 0.1429,
+       "max_dd": 2861.93
+      },
+      "p": 0.4523,
+      "twin_p95": 11489,
+      "twin_median": -3813
+     },
+     "final": {
+      "base": {
+       "trades": 173,
+       "kept": 173,
+       "skipped": 0,
+       "net": 39116.32,
+       "win": 0.4104,
+       "max_dd": 43065.54
+      },
+      "rule": {
+       "trades": 173,
+       "kept": 0,
+       "skipped": 173,
+       "net": 0,
+       "win": null,
+       "max_dd": 0.0
+      },
+      "p": 1.0,
+      "twin_p95": 0,
+      "twin_median": 0
+     }
+    }
+   },
+   "calibration": {
+    "design": {
+     "n": 459,
+     "brier": 0.2527,
+     "brier_base": 0.2277,
+     "base_rate": 0.35076252723311546,
+     "corr": -0.0261,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 17,
+       "predicted": 0.373,
+       "actual": 0.294
+      },
+      {
+       "bin": "40-50%",
+       "n": 235,
+       "predicted": 0.461,
+       "actual": 0.374
+      },
+      {
+       "bin": "50-60%",
+       "n": 190,
+       "predicted": 0.534,
+       "actual": 0.326
+      },
+      {
+       "bin": "60-70%",
+       "n": 17,
+       "predicted": 0.626,
+       "actual": 0.353
+      }
+     ]
+    },
+    "final": {
+     "n": 173,
+     "brier": 0.2488,
+     "brier_base": 0.2455,
+     "base_rate": 0.35076252723311546,
+     "corr": 0.0527,
+     "bins": [
+      {
+       "bin": "30-40%",
+       "n": 4,
+       "predicted": 0.382,
+       "actual": 0.25
+      },
+      {
+       "bin": "40-50%",
+       "n": 93,
+       "predicted": 0.462,
+       "actual": 0.419
+      },
+      {
+       "bin": "50-60%",
+       "n": 72,
+       "predicted": 0.535,
+       "actual": 0.389
+      },
+      {
+       "bin": "60-70%",
+       "n": 4,
+       "predicted": 0.612,
+       "actual": 0.75
+      }
+     ]
+    }
+   },
+   "design_win_rate": 0.35076252723311546
+  }
+ },
+ "untested": {
+  "MOM60": "no trade list rebuilt",
+  "MCX_NG_EVE": "no trade list rebuilt",
+  "MCX_SILVERM_AM": "no trade list rebuilt",
+  "MCX_US_NIGHT_SILVER": "no trade list rebuilt",
+  "MCX_TREND12M": "no trade list rebuilt"
+ },
+ "tests": {
+  "R72|SKIP_AGAINST": {
+   "arm": "R72",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.0945,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: not above the random twin's 95th percentile (p 0.095)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "R72|EDGE_ONLY": {
+   "arm": "R72",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.7506,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design: net not above the arm's own",
+     "wf: net not above the arm's own",
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.751)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "R51|SKIP_AGAINST": {
+   "arm": "R51",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.039,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "R51|EDGE_ONLY": {
+   "arm": "R51",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.6422,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design: net not above the arm's own",
+     "wf: net not above the arm's own",
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.642)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "R52|SKIP_AGAINST": {
+   "arm": "R52",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.5877,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.588)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "R52|EDGE_ONLY": {
+   "arm": "R52",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.6162,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design: net not above the arm's own",
+     "wf: net not above the arm's own",
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.616)",
+     "BH q 1.000 > 0.1",
+     "final: 18 trades kept < 40"
+    ]
+   }
+  },
+  "LIQ|SKIP_AGAINST": {
+   "arm": "LIQ",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.1504,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design: net not above the arm's own",
+     "wf: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.150)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "LIQ|EDGE_ONLY": {
+   "arm": "LIQ",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.971,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design: net not above the arm's own",
+     "wf: net not above the arm's own",
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.971)",
+     "BH q 1.000 > 0.1",
+     "final: 3 trades kept < 40"
+    ]
+   }
+  },
+  "SOLO|SKIP_AGAINST": {
+   "arm": "SOLO",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.4678,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.468)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "SOLO|EDGE_ONLY": {
+   "arm": "SOLO",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.9265,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design: net not above the arm's own",
+     "wf: net not above the arm's own",
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.926)",
+     "BH q 1.000 > 0.1",
+     "final: 9 trades kept < 40"
+    ]
+   }
+  },
+  "HERO|SKIP_AGAINST": {
+   "arm": "HERO",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.5212,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.521)",
+     "BH q 1.000 > 0.1",
+     "final: 28 trades kept < 40"
+    ]
+   }
+  },
+  "HERO|EDGE_ONLY": {
+   "arm": "HERO",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1",
+     "final: 0 trades kept < 40"
+    ]
+   }
+  },
+  "ORB_ORB|SKIP_AGAINST": {
+   "arm": "ORB_ORB",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "ORB_ORB|EDGE_ONLY": {
+   "arm": "ORB_ORB",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1",
+     "final: 0 trades kept < 40"
+    ]
+   }
+  },
+  "ORB_FRESH|SKIP_AGAINST": {
+   "arm": "ORB_FRESH",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "ORB_FRESH|EDGE_ONLY": {
+   "arm": "ORB_FRESH",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1",
+     "final: 0 trades kept < 40"
+    ]
+   }
+  },
+  "ORB_SWEEP|SKIP_AGAINST": {
+   "arm": "ORB_SWEEP",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.1499,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: not above the random twin's 95th percentile (p 0.150)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "ORB_SWEEP|EDGE_ONLY": {
+   "arm": "ORB_SWEEP",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1",
+     "final: 0 trades kept < 40"
+    ]
+   }
+  },
+  "ORB_FADE|SKIP_AGAINST": {
+   "arm": "ORB_FADE",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design: net not above the arm's own",
+     "wf: net not above the arm's own",
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "ORB_FADE|EDGE_ONLY": {
+   "arm": "ORB_FADE",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1",
+     "final: 0 trades kept < 40"
+    ]
+   }
+  },
+  "VIXDIV|SKIP_AGAINST": {
+   "arm": "VIXDIV",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design: net not above the arm's own",
+     "wf: net not above the arm's own",
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1",
+     "final: 27 trades kept < 40"
+    ]
+   }
+  },
+  "VIXDIV|EDGE_ONLY": {
+   "arm": "VIXDIV",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "design: net not above the arm's own",
+     "wf: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1",
+     "final: 0 trades kept < 40"
+    ]
+   }
+  },
+  "PINE_ST_EMA_5M|SKIP_AGAINST": {
+   "arm": "PINE_ST_EMA_5M",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.6747,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 0.675)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "PINE_ST_EMA_5M|EDGE_ONLY": {
+   "arm": "PINE_ST_EMA_5M",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "wf: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1",
+     "final: 0 trades kept < 40"
+    ]
+   }
+  },
+  "PINE_ST_EMA_15M|SKIP_AGAINST": {
+   "arm": "PINE_ST_EMA_15M",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "PINE_ST_EMA_15M|EDGE_ONLY": {
+   "arm": "PINE_ST_EMA_15M",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.5267,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: not above the random twin's 95th percentile (p 0.527)",
+     "BH q 1.000 > 0.1",
+     "final: 1 trades kept < 40"
+    ]
+   }
+  },
+  "PINE_MATRIX_5M|SKIP_AGAINST": {
+   "arm": "PINE_MATRIX_5M",
+   "rule": "SKIP_AGAINST",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 0.5242,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: not above the random twin's 95th percentile (p 0.524)",
+     "BH q 1.000 > 0.1"
+    ]
+   }
+  },
+  "PINE_MATRIX_5M|EDGE_ONLY": {
+   "arm": "PINE_MATRIX_5M",
+   "rule": "EDGE_ONLY",
+   "q_all": 1.0,
+   "q_r120": 1.0,
+   "p": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "final: net not above the arm's own",
+     "final: not above the random twin's 95th percentile (p 1.000)",
+     "BH q 1.000 > 0.1",
+     "final: 0 trades kept < 40"
+    ]
+   }
+  }
+ },
+ "m_prior": 9300075,
+ "m_all": 9300113,
+ "m_r120": 38,
+ "pooled_calibration": {
+  "n": 16810,
+  "brier": 0.2576,
+  "brier_base": 0.245,
+  "base_rate": 0.42932246441018374,
+  "corr": 0.0371,
+  "bins": [
+   {
+    "bin": "0-10%",
+    "n": 340,
+    "predicted": 0.04,
+    "actual": 0.362
+   },
+   {
+    "bin": "10-20%",
+    "n": 344,
+    "predicted": 0.152,
+    "actual": 0.448
+   },
+   {
+    "bin": "20-30%",
+    "n": 753,
+    "predicted": 0.259,
+    "actual": 0.378
+   },
+   {
+    "bin": "30-40%",
+    "n": 1923,
+    "predicted": 0.359,
+    "actual": 0.395
+   },
+   {
+    "bin": "40-50%",
+    "n": 6179,
+    "predicted": 0.458,
+    "actual": 0.422
+   },
+   {
+    "bin": "50-60%",
+    "n": 5920,
+    "predicted": 0.541,
+    "actual": 0.453
+   },
+   {
+    "bin": "60-70%",
+    "n": 1079,
+    "predicted": 0.633,
+    "actual": 0.45
+   },
+   {
+    "bin": "70-80%",
+    "n": 157,
+    "predicted": 0.738,
+    "actual": 0.446
+   },
+   {
+    "bin": "80-90%",
+    "n": 48,
+    "predicted": 0.837,
+    "actual": 0.417
+   },
+   {
+    "bin": "90-100%",
+    "n": 67,
+    "predicted": 0.989,
+    "actual": 0.388
+   }
+  ]
+ },
+ "passed": []
+}

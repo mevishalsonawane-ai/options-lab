@@ -1,0 +1,62 @@
+id: r120-time-machine-gate
+title: R120 the time machine's verdict as a pre-entry gate on every arm (skip 'against' / take only 'edge')
+family: daily-filters
+date: '2026-10-28'
+doc: research/HUNT_R120_TIME_MACHINE_GATE.md
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 28 Oct 2026 (index_1m, options_rolling_1m, ...); R51 Amendment A
+  clean stores; each arm's own study data via R113's adapters
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R119)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: each arm''s own (the underlying; Hero''s strike by the option''s price, labelled); the filter reads only
+  the underlying''s own 60 sessions before the entry day'
+hypothesis: 'The app''s time machine verdict (2,000 bootstrap replays of the entry on the underlying''s last 60 sessions,
+  the arm''s own stop and target in underlying points, stop before target inside a bar), worked out BEFORE the entry, improves
+  an arm as a filter: H1 skip ''against'', H2 take only ''edge''. Gates: net up in design, walk-forward and final; final above
+  the random-skip twin''s 95th percentile; BH q <= 0.10 over 9,300,113 tests; >= 40 final trades; drawdown not worse.'
+model_or_rule: research/hunt/r120_time_machine_gate/tm.py (TimeMachine.kt ported, Kotlin's RNG included, pinned to the engine's
+  own numbers); r120arms.py (each arm's ask as its TimeMachineHost.Entry call passes it); r120study.py
+settings: PREREG.md + Amendment A1; the app's draws, slot tolerance, lookback, margin (none chosen by R120)
+prereg: research/hunt/r120_time_machine_gate/PREREG.md
+variants_tried: 38
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'Passed: none of 28 tested cells (38 registered; untested counted as p = 1). R72 SKIP_AGAINST: final 1202 trades,
+    62 skipped, Rs 171,366 -> Rs 182,527, twin p 0.095, q 1.00; R72 EDGE_ONLY: final 1202 trades, 1148 skipped, Rs 171,366
+    -> -Rs 2,398, twin p 0.751, q 1.00; R51 SKIP_AGAINST: final 1670 trades, 73 skipped, Rs 134,743 -> Rs 157,203, twin p
+    0.039, q 1.00; R51 EDGE_ONLY: final 1670 trades, 1594 skipped, Rs 134,743 -> -Rs 393, twin p 0.642, q 1.00; R52 SKIP_AGAINST:
+    final 293 trades, 19 skipped, Rs 48,612 -> Rs 42,786, twin p 0.588, q 1.00; R52 EDGE_ONLY: final 293 trades, 275 skipped,
+    Rs 48,612 -> Rs 168, twin p 0.616, q 1.00; LIQ SKIP_AGAINST: final 357 trades, 23 skipped, Rs 11,155 -> Rs 20,858, twin
+    p 0.150, q 1.00; LIQ EDGE_ONLY: final 357 trades, 354 skipped, Rs 11,155 -> -Rs 4,740, twin p 0.971, q 1.00; SOLO SKIP_AGAINST:
+    final 127 trades, 15 skipped, Rs 99,735 -> Rs 88,582, twin p 0.468, q 1.00; SOLO EDGE_ONLY: final 127 trades, 118 skipped,
+    Rs 99,735 -> -Rs 5,296, twin p 0.926, q 1.00; HERO SKIP_AGAINST: final 107 trades, 79 skipped, Rs 1,559 -> -Rs 1,593,
+    twin p 0.521, q 1.00; HERO EDGE_ONLY: final 107 trades, 107 skipped, Rs 1,559 -> Rs 0, twin p 1.000, q 1.00; ORB_ORB SKIP_AGAINST:
+    final 128 trades, 0 skipped, Rs 2,876 -> Rs 2,876, twin p 1.000, q 1.00; ORB_ORB EDGE_ONLY: final 128 trades, 128 skipped,
+    Rs 2,876 -> Rs 0, twin p 1.000, q 1.00; ORB_FRESH SKIP_AGAINST: final 128 trades, 0 skipped, Rs 2,876 -> Rs 2,876, twin
+    p 1.000, q 1.00; ORB_FRESH EDGE_ONLY: final 128 trades, 128 skipped, Rs 2,876 -> Rs 0, twin p 1.000, q 1.00; ORB_SWEEP
+    SKIP_AGAINST: final 176 trades, 2 skipped, -Rs 54,421 -> -Rs 51,424, twin p 0.150, q 1.00; ORB_SWEEP EDGE_ONLY: final
+    176 trades, 176 skipped, -Rs 54,421 -> Rs 0, twin p 1.000, q 1.00; ORB_FADE SKIP_AGAINST: final 207 trades, 0 skipped,
+    -Rs 29,811 -> -Rs 29,811, twin p 1.000, q 1.00; ORB_FADE EDGE_ONLY: final 207 trades, 207 skipped, -Rs 29,811 -> Rs 0,
+    twin p 1.000, q 1.00; VIXDIV SKIP_AGAINST: final 27 trades, 0 skipped, -Rs 5,756 -> -Rs 5,756, twin p 1.000, q 1.00; VIXDIV
+    EDGE_ONLY: final 27 trades, 27 skipped, -Rs 5,756 -> Rs 0, twin p 1.000, q 1.00; PINE_ST_EMA_5M SKIP_AGAINST: final 182
+    trades, 4 skipped, -Rs 52,573 -> -Rs 54,061, twin p 0.675, q 1.00; PINE_ST_EMA_5M EDGE_ONLY: final 182 trades, 182 skipped,
+    -Rs 52,573 -> Rs 0, twin p 1.000, q 1.00; PINE_ST_EMA_15M SKIP_AGAINST: final 75 trades, 0 skipped, -Rs 83,469 -> -Rs
+    83,469, twin p 1.000, q 1.00; PINE_ST_EMA_15M EDGE_ONLY: final 75 trades, 74 skipped, -Rs 83,469 -> -Rs 368, twin p 0.527,
+    q 1.00; PINE_MATRIX_5M SKIP_AGAINST: final 173 trades, 1 skipped, Rs 39,116 -> Rs 39,386, twin p 0.524, q 1.00; PINE_MATRIX_5M
+    EDGE_ONLY: final 173 trades, 173 skipped, Rs 39,116 -> Rs 0, twin p 1.000, q 1.00. Calibration (pooled, design + final):
+    n 16810, Brier 0.2576 vs 0.245 for the constant win rate, correlation 0.0371.'
+  costs: 'each arm''s own study costs: dated Zerodha charges, R17 fills, next-minute fills, 1 lot (R3 ORB: R3''s charges;
+    Pine: h22''s)'
+notes: 'Not tested: FT3 (the app passes no stop and no target, so its time machine always says ''unknown''); NIGHT_R3 (held
+  overnight: the app skips the replay (''no intraday replay'')); MOM60 (no trade list rebuilt); MCX_NG_EVE (no trade list
+  rebuilt); MCX_SILVERM_AM (no trade list rebuilt); MCX_US_NIGHT_SILVER (no trade list rebuilt); MCX_TREND12M (no trade list
+  rebuilt). A skipped trade earns 0 (the arm''s book is not re-walked; the twins are built the same way). Every underlying
+  given the full 60 sessions (the phone has them for NIFTY / BANKNIFTY, fewer for others).'

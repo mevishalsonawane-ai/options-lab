@@ -150,6 +150,10 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   days, join the app's forward log (the encrypted timemachine.vault: date, arm, ref, verdict, odds, outcome) with each arm's
   closed trades and compare the net of entries called "edge" vs "against", real charges and slippage. Until then it is words
   on the ticket only; it never skips, resizes or delays a trade, paper or live.
+  28 Oct (R120, research/HUNT_R120_TIME_MACHINE_GATE.md): the backtest version is done: the verdict worked out BEFORE
+  entry did not pass as a filter on any of 14 arms (0 of 28 cells; its odds vs the real win: correlation 0.04, n 16,810).
+  The forward-log check above still stands; R51 "skip against" (the near miss: final twin p 0.039, BH q 1.0) is the one
+  thing worth looking at again there, with a new pre-registration.
   When R3, R19c and the 13–26 Oct paper run are finished, show one page with every arm and the whole portfolio on the
   same days, BEFORE (today's plain rules) and AFTER (every change that passed):
   - total P&L, P&L per day, % green days, win rate, average win and average loss;

@@ -26,10 +26,14 @@ settings: shadow only on every arm, paper and live, hidden arms too; it never sk
 prereg: null
 variants_tried: null
 results:
-  summary: 'no result yet. Planned test after 30 signal days: join the forward log with each arm''s closed trades, compare
-    the net of entries called edge vs against (real charges and slippage); only then decide whether a verdict may ever
-    act on paper (never live by itself).'
-  costs: n/a
+  summary: 'R120 (28 Oct 2026, research/HUNT_R120_TIME_MACHINE_GATE.md): the verdict worked out BEFORE each entry from the
+    60 sessions before the entry day, on 14 arms'' historical trades (16,810 trades, design + final), did not pass as a
+    filter: 0 of 28 arm x rule cells passed (skip ''against''; take only ''edge''). Its odds do not tell winners from losers:
+    pooled correlation of the predicted win rate with the real win 0.04 (n 16,810), Brier 0.258 vs 0.245 for a constant
+    guess, worse than the constant in all 14 arms'' finals. Nearest miss: R51 skip ''against'' up in all three windows (final
+    Rs 134,743 -> 157,203, 1,670 trades, 73 skipped, twin p 0.039) but BH q 1.0. ''Edge only'' lost money on every profitable
+    arm. Stays shadow; the forward-log test (TODO R21) still stands.'
+  costs: each arm's own study costs (R120)
 holdout_read: null
 verdict: not-a-test
 notes: A reality check in words, not an edge claim. Verdicts need at least 10 past sessions and 100 decided draws; fewer
