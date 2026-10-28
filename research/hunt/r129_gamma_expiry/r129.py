@@ -252,6 +252,10 @@ def run_index(und: str, equity: dict, log=print):
             rec["stop"] = "no breakout"
             continue
         rec["setup"] = True
+        # the claim, measured honestly: index points the wall's way AFTER the setup bar's close, to 15:20 (the setup itself is
+        # the break, so the move up to it is not evidence)
+        cs = D3._last(c[:e5 + 1])
+        rec["move_after"] = float(dr * (c1 - cs)) if np.isfinite(cs) and np.isfinite(c1) else np.nan
         heavy = HEAVY[und]
         if heavy:
             ok = True
@@ -360,12 +364,18 @@ def run():
     Dd = pd.DataFrame([d for r in res for d in r[1]])
     OUT.mkdir(parents=True, exist_ok=True)
     T.drop(columns=["twins"]).to_parquet(OUT / "trades.parquet")
+    Dd.to_parquet(OUT / "days.parquet")
     out = dict(expiry_days=int(len(Dd)), stops={str(k): int(v) for k, v in Dd.stop.fillna("traded or reached a trigger").value_counts().items()},
                sizing=sizing(), variants={})
     setup = Dd[Dd.get("setup", pd.Series(False, index=Dd.index)).fillna(False).astype(bool)]
     other = Dd[(Dd.stop.isin(["no breakout"])) & Dd.move.notna()]
-    out["claim_move"] = dict(setup_days=int(len(setup)), setup_move=float(setup.move.mean()) if len(setup) else None,
-                             other_wall_days=int(len(other)), other_move=float(other.move.mean()) if len(other) else None)
+    out["claim_move"] = dict(setup_days=int(len(setup)), setup_move_from_1400=float(setup.move.mean()) if len(setup) else None,
+                             setup_move_after_setup=float(setup.move_after.mean()) if len(setup) else None,
+                             setup_after_positive=float((setup.move_after > 0).mean()) if len(setup) else None,
+                             other_wall_days=int(len(other)), other_move_from_1400=float(other.move.mean()) if len(other) else None,
+                             note="the 14:00 move includes the break itself (selection); the move after the setup is the test")
+    out["stops_by_index"] = {u: {str(k): int(v) for k, v in x.stop.fillna("traded or reached a trigger").value_counts().items()}
+                             for u, x in Dd.groupby("und")}
     ps = []
     for v in VARIANTS:
         X = T[T.variant == v] if len(T) else T
