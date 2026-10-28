@@ -68,6 +68,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 28 Oct (Boss: "Add s5 trail to arms directly, if it does not perform I will turn it off"): newest of all.
+        Entry("2026-10-28-s5-trail-paper-arm", OCT28, "S5 Trail now trades on paper",
+            "S5 Trail is the research network's morning pick, now a paper arm. " +
+                "At 09:20, 09:25 and 09:30 it reads the five indices, India VIX and the option chain. " +
+                "When the best expected net is ₹300 or more, it buys 1 lot of that ATM option on paper. " +
+                "Its stop is −₹1,000 or −₹2,000 net. Once a trade is up ₹1,000, it locks 60% of the best. " +
+                "It failed the research gates, so it runs as your exception, on paper only and never live. " +
+                "It starts on, and one tap in the change timeline or on its row switches it off.",
+            "Home → Strategies → its row; the change timeline",
+            ask = "how is s5 trail doing"),
         // 28 Oct (Boss: "Also check flow page on Irathinker and implement that too"; "Use live data from zerodha instead"; "Dont add
         // alert, just take orders from flow, and keep it for index only"): newest of all.
         Entry("2026-10-28-flow-paper-arm", OCT28, "Your alert app's flow now trades on paper",

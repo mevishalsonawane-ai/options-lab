@@ -50,6 +50,30 @@ sessions after 19 Oct 2026: S5's morning put pick with the trailing exit, the ca
 - It needs about 100 logged trades, roughly a year at its rate, before any paper decision.
 - It was not built here.
 
+## S5 Trail on paper (28 Oct, Boss's exception)
+
+Boss: *"Add s5 trail to arms directly, if it does not perform I will turn it off"*. S5 with the trailing exit now runs as a
+PAPER arm in the app (`S5Trail.kt`, `S5Arm.kt`). It failed the gates, so it is labelled "Failed research gates (R128): Boss's
+exception" everywhere, starts on, is undone in one tap, and has no live path (CLAUDE.md, 28 Oct).
+
+- **The network on the phone.** R123's N1 holdout fit is exported by `export_s5.py`. The export refuses to write unless its
+  forward pass reproduces the saved holdout predictions (it did, to 1.4e-7). The engine's tests check the Kotlin port against 8
+  golden rows (1e-4) and its 42 inputs and 120-minute window against R123's own Python (`android/tools/s5_parity_fixture.py`).
+- **IV.** The network learned Dhan's IV. The app computes its own (Black-76 on the index, rate 0). Dhan's sits about 1.5 points
+  lower for calls and 1.3 higher for puts (about 30,000 samples, 2024-25 design period, no outcome read), and that moves the
+  skew input. The app adds that measured offset.
+- **The app's version, backtested** (`s5_app_check.py`; same networks and exits, only the IV changed):
+
+  | IV | walk-forward (2023 - Mar 2026) | holdout (Apr - Oct 2026) |
+  |---|---|---|
+  | Dhan's (as tested) | 556 trades, 58% won, +Rs 209 | 40 trades, 85% won, +Rs 625 |
+  | the app's + offset (what runs) | 540 trades, 58% won, +Rs 161; 2025 -Rs 14.8k (38 trades) | 33 trades, 79% won, +Rs 509 |
+  | the app's, no offset | 780 trades, 58% won, +Rs 135 | 65 trades, 71% won, +Rs 164 |
+
+  Expect the paper record to be weaker than R128's numbers.
+- **Other differences from R128:** out at 15:15 (the paper book's MIS square-off), not 15:20 (13 of 596 R128 trades ended at the
+  close). The chain is read from Upstox (ATM +-7 strikes) instead of Dhan, and OI and volume are used only as ratios.
+
 ## Where an option buyer's money goes (T4)
 
 Every ATM straddle bought at 10:00 and held 60 minutes, walk-forward plus holdout: 4,194 straddles over five indices.

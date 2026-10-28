@@ -25,6 +25,6 @@ holdout_read: true
 verdict: rejected
 results:
   summary: 'Walk-forward 555 trades, avg net Rs 240, q 0.004, 4 of 4 folds positive; holdout 41 trades, avg net Rs 561. Fails:
-    ho_n. Fragile: the best 5 days give 115-134% of the profit; 476 of 555 S5 design trades in 2024; worst month breaches
-    the account stop. Proposed only as a shadow forward test (S5 trailing exit).'
+    ho_n. Fragile: the best 5 days give 82-90% of this exit''s profit (115-134% for hold-to-close); 476 of 555 S5 design trades in 2024; worst month breaches
+    the account stop. Proposed as a shadow forward test; Boss chose to run it on paper instead (28 Oct, Boss''s exception: app-s5-trail-paper).'
   costs: Costs('dated') + Fills('liq'), 1 lot, today's lots

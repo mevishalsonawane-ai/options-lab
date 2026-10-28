@@ -385,6 +385,11 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.FlowArm.setArmed(c.to == AutoChange.ON, log = false) }
                 said.takeIf { !it.contains("not ready") }
+            } else if (c.target == AutoChange.S5_TARGET) {
+                // 28 Oct: S5 Trail ([logS5On]): its Undo switches the arm off (or, undone twice, back on) - paper only, no PIN.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.S5Arm.setArmed(c.to == AutoChange.ON, log = false) }
+                said.takeIf { !it.contains("not ready") }
             } else if (c.target == AutoChange.FT3_TARGET) {
                 // 21 Oct: FT3 near-ATM morning ([logFt3On]): its Undo switches the arm off (or, undone twice, back on) - on paper,
                 // never Zerodha itself (its live path is the standard one, behind the PIN and Shadow), so no PIN either way.
@@ -947,6 +952,29 @@ internal object Autopilot {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.flowOn(), "your ask, 28 Oct; on paper, index options only - not proven (R110); live only the standard " +
             "way (Live with your PIN, AI trades live, its own Trade live switch, off until you turn it on)")
+    }
+
+    /** 28 Oct: S5 Trail switched on once by the update, on Boss's ask - logged as Boss's, once, undone in one tap. */
+    fun logS5On() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.s5On(), "your ask, 28 Oct; on paper only - it failed the research gates (R128), your exception; never live")
+    }
+
+    /** Boss switched S5 Trail from its row: both ways logged as a new kept entry ([bossPaperFlip]). */
+    fun s5SwitchedByBoss(on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): S5 Trail ${if (on) "on" else "off"}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    bossPaperFlip(AutoChange.S5_TARGET, on, today, if (on) AutoChange.s5On() else AutoChange.paperArmOffByBoss(AutoChange.S5_TARGET, "S5 Trail"),
+                        if (on) "switched on from its row; on paper - failed the research gates (your exception)" else "switched off from its row; paper only")
+                }
+            }
+        }
     }
 
     /** Boss switched IraThinker's flow from its row or page: both ways logged as a new kept entry ([bossPaperFlip]). */

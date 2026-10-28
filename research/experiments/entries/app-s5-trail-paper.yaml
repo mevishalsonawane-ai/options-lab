@@ -1,0 +1,45 @@
+id: app-s5-trail-paper
+title: 'S5 Trail on paper in IraAlgo (R123 N1-S5 morning pick + R128 trailing lock), the five indices, from 28 Oct 2026'
+family: ml
+date: '2026-10-28'
+doc: research/HUNT_R128_MISSING.md
+hypothesis: 'Not a new test (Boss''s ask, 28 Oct: "Add s5 trail to arms directly, if it does not perform I will turn it off").
+  R128 T2-S5x1 FAILED the gates (41 holdout trades < 100; worst month -Rs 18.6k breaks the -Rs 13k month stop). It runs as a
+  PAPER arm under Boss''s one exception in CLAUDE.md; its paper record is a forward record of a rule that failed. No claim is made
+  for it; nothing about it may go live by itself, ever.'
+data_version: 'live: the passed arms'' index minutes (Upstox intraday with the Zerodha stream''s whole minutes), their earlier
+  sessions and daily candles; the chain from Upstox''s intraday candles of ATM +-7 strikes. IV computed in the app (Black-76 on the
+  index, rate 0) plus Dhan''s measured offset by side and offset (s5_app_check.IV_SHIFT, 2024-25 design-period samples, no outcome
+  read). The network: R123''s N1 holdout fit, exported by research/hunt/r128_missing/export_s5.py (reproduces its saved holdout
+  predictions to 1.4e-7).'
+period:
+  design: 2023-01-01..2026-03-15 (R123 walk-forward folds; R128 T2)
+  holdout: 2026-04-01..2026-10-19 (read before)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the underlying indices (120 minutes of index channels, VIX, breadth, calendar); the option chain (ATM premiums,
+  IV, skew, PCR, OI, volume) is context only; the ATM option is what is bought (mostly puts)'
+model_or_rule: 'S5Trail (android/engine/src/main/kotlin/com/optionslab/engine/orb/S5Trail.kt); the app arm S5Arm.kt. Decisions at
+  09:20, 09:25, 09:30; best EV over 16 cell-sides >= Rs 300; 1 lot ATM; stop at the cell''s -Rs 1,000 / -Rs 2,000 net resting;
+  once +Rs 1,000 net, out at 60% of the best (minute marks); out at 15:15 (15:05 expiry day; R128 held to 15:20); one open trade
+  per index, 5 a day.'
+settings: R123 PREREG section 6 (S5) + R128 PREREG section 1 (T2 x1)
+prereg: research/hunt/r128_missing/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Nothing traded yet (added 28 Oct 2026). The app''s own version backtested (s5_app_check.py, the app''s IV with the
+    offset): walk-forward 540 trades, 58% won, +Rs 161 a trade (2025: 38 trades, -Rs 14.8k); holdout 33 trades, 79% won, +Rs 509 a
+    trade. With Dhan''s IV (as R128 tested): 556 trades, +Rs 209; holdout 40 trades, 85% won, +Rs 625. Without the offset the app''s
+    IV gave 780 trades, +Rs 135, and holdout 65 trades, +Rs 164. The best 5 days give 82-90% of the trailing version''s profit;
+    476 of its 555 R128 design trades were in 2024.'
+  costs: the app's honest paper fills (the spread and Zerodha's charges) for the forward record
+holdout_read: true
+verdict: paper-only
+notes: 'Boss''s explicit ask and exception (CLAUDE.md, 28 Oct): ON on paper by the 28 Oct update, logged in the Autopilot change
+  timeline as Boss''s choice and undone in one tap, or switched off on its row. No live path at all. Labelled everywhere "Failed
+  research gates (R128): Boss''s exception - paper only, never live".'

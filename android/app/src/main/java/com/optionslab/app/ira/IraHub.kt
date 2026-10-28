@@ -3464,6 +3464,19 @@ object IraHub {
             }
             return true
         }
+        // 28 Oct: "how is s5 trail doing" ([com.optionslab.ira.S5Talk]): S5 Trail's day - each decision at 09:20, 09:25 and 09:30, what
+        // was taken and why not, what is held - always "failed research gates, Boss's exception". Boss's trades, so never on a locked
+        // phone; reads only. (Not in IraGoldAlgo.)
+        val s5Ask = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null &&
+            parsed.command == null && runCatching { com.optionslab.ira.S5Talk.asked(q) }.getOrDefault(false)
+        if (s5Ask) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.S5Talk.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.S5Arm.talk() }.getOrElse { "I could not read S5 Trail just now, Boss." })
+            }
+            return true
+        }
         // 16 Oct (Boss: "if the trend changes, sell the orders"; research R63): "has the trend turned on my trades?", "trend watch"
         // ([com.optionslab.ira.TrendTalk], [com.optionslab.app.data.TrendWatchHost.talk]): each turn today and what is watched now,
         // from the Trend watch's own log - positions and premiums, so never on a locked phone. Read only: nothing is sold here.

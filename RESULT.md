@@ -6,6 +6,6 @@
 5. But it is fragile: the best 5 days give more than all the profit, most design trades are in 2024, and on 1 lot it breaches the account stop.
 6. Late-day momentum (published abroad) loses in India with ITM options (-Rs 104 a trade).
 7. No bug turned profits into losses; R127's twin slip is fixed (CPR still loses).
-8. Nothing passes every gate; nothing goes on paper.
-9. Proposed only: a logged-only shadow forward test of S5 with the trailing exit (calmer) on sessions after 19 Oct, ~100 trades before any paper decision.
+8. Nothing passes every gate.
+9. Boss chose (28 Oct) to run S5 with the trailing exit on PAPER anyway, as a labelled exception (CLAUDE.md): app arm "S5 Trail", never live. The app's own version (its IV, offset to Dhan's) backtests weaker: 540 trades, +Rs 161 a trade walk-forward; 33 trades, 79% won, +Rs 509 on Apr-Oct 2026.
 10. Details: research/HUNT_R128_MISSING.md; code + tests in research/hunt/r128_missing/.

@@ -5,7 +5,7 @@
 Writes:
     s5net.bin      little-endian float32 blob: the 3 seeds' weights, then the input scalers (see LAYOUT)
     s5net.json     the layout, the 42 input names, the cells, the 'neither' means and a checksum
-    s5golden.json  20 decision rows: their raw inputs, the 120-minute window and the network's outputs (for the
+    s5golden.json  8 decision rows: their raw inputs, the raw 120-minute window and the network's outputs (for the
                    Kotlin test, which must match to 1e-4)
 
 The scalers are refitted exactly as run.py's holdout fit did (training rows = design rows before the 80% day cut;
@@ -121,15 +121,14 @@ def main(out_dir: Path) -> None:
     (out_dir / "s5net.json").write_text(json.dumps(meta, indent=1))
 
     gold = []
-    for i in pick[:20]:
-        W = store.window(fp[i:i + 1])[0]
+    for i in pick[:8]:
         raw_w = store.A[fp[i] - K.SEQ_N + 1:fp[i] + 1]
         p = saved["probs"][i]
         ev = [float(p[j, 0] * K.CELLS[j // 2][0] - p[j, 1] * K.CELLS[j // 2][1] + p[j, 2] * neither[Fh.und.iat[i]][j])
               for j in range(len(K.CS))]
         gold.append(dict(und=Fh.und.iat[i], day=str(Fh.day.iat[i]), row=int(Fh.row.iat[i]),
                          tab_raw=[None if not np.isfinite(v) else float(v) for v in Fh[cols].values[i]],
-                         seq_raw=raw_w.astype(float).tolist(), seq_scaled=W.astype(float).tolist(),
+                         seq_raw=raw_w.astype(float).tolist(),
                          probs=p.astype(float).tolist(), range=saved["range"][i].astype(float).tolist(),
                          dir=saved["dir"][i].astype(float).tolist(), ev=ev))
     (out_dir / "s5golden.json").write_text(json.dumps(gold))

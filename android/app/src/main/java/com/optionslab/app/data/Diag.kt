@@ -266,6 +266,7 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { NtfyArm.diagLine() }.getOrElse { "ntfy alerts: could not read" }).append('\n')
         // 28 Oct: IraThinker's flow (paper, not proven): counts and its record, no prices of the account beyond the paper arm's own.
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FlowArm.diagLine() }.getOrElse { "IraThinker's flow: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { S5Arm.diagLine(hideNet = true) }.getOrElse { "S5 Trail: could not read" }).append('\n')
         // The MCX paper arms (9 Oct, paper only, not proven): on or off, what each holds, its last decision (the "[mcx-arms]" lines below).
         // 21 Oct: with NR7 crude's record line, in their own function (the report's one is near the compiler's limit).
         if (!com.optionslab.app.BuildConfig.GOLD) append(mcxArmLines())

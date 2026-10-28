@@ -197,6 +197,7 @@ object FastPath {
             PassedArmsHost.holding() ||
             NtfyArm.holding() ||
             FlowArm.holding() ||
+            S5Arm.holding() ||
             McxPaperArms.view.value.let { v -> v.armed.values.any { it } || v.open.isNotEmpty() } ||
             (jarvis && runCatching { com.optionslab.app.ira.IraSolo.holding() }.getOrDefault(false)) ||
             holding || liveHolding || anyLive
@@ -359,6 +360,8 @@ object FastPath {
                     step(NTFY) { NtfyArm.manageOnly() }
                     // 28 Oct: IraThinker's flow on paper: its stops, index exits and square-off every minute (exits only).
                     step(FLOW) { FlowArm.manageOnly() }
+                    // 28 Oct: S5 Trail on paper: its stop, profit lock and square-off every minute (exits only).
+                    step(S5) { S5Arm.manageOnly() }
                     // 18 Oct: after the paper exits above, their live trades follow at once ([ArmLive]; nothing held: returns at once).
                     // (A shadow trade or a damaged book's recovery too: no order for a shadow, its record checked every minute.)
                     if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
@@ -392,6 +395,8 @@ object FastPath {
     const val NTFY = "ntfy alerts (paper)"
     /** IraThinker's flow's step name (as [HERO_TICKET]: in the rounds only when it needs a pass, [FlowArm.wantsPass]). */
     const val FLOW = "IraThinker's flow (paper)"
+    /** S5 Trail's step name (as [HERO_TICKET]: in the rounds only when it needs a pass, [S5Arm.wantsPass]). */
+    const val S5 = "S5 Trail (paper)"
 
     private suspend inline fun step(name: String, block: () -> Unit) {
         // Measured (10 Oct): each check's time today, beside the watch's steps.
