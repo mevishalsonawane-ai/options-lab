@@ -1,0 +1,81 @@
+id: r123-model-tests
+title: R123 the networks' heads vs base rate and trees (hit-first, range, direction)
+family: ml
+date: '2026-10-28'
+doc: research/HUNT_R123_NEURAL_70.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m 5 indices + INDIAVIX, options_rolling_1m WEEK), lakeclean steps 1-3
+  (stale=True), zero-volume minutes never priced (Amendment 2)
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026-01-01..03-15)
+  holdout: '2026-04-01..2026-10-19 read once (not virgin: R106, R113, R120-R122 read the arms there)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r123_neural_70/PREREG.md
+holdout_read: true
+features:
+- index minutes, VIX, breadth, calendar, option-chain context; heads (a) +X before -Y per cell-side, (b) next 30/60-min range,
+  (c) direction
+hypothesis: A network over all the data forecasts 'this ATM option gains +X before it loses Y' better than the base rate and
+  gradient-boosted trees
+model_or_rule: research/hunt/r123_neural_70/r123net.py
+settings: PREREG.md section 5, amendment 1
+variants_tried: 40
+verdict: inconclusive
+results:
+  summary: see the cells below and HUNT_R123_NEURAL_70.md (model tests are information, the rules carry the gates)
+  costs: none (forecast scores)
+  walk_forward_cells_q_le_0_05: 29
+  holdout_cells_q_le_0_05: 0
+  holdout_best:
+  - net: N2
+    cell: range 60
+    metric: r2
+    n: 43155
+    nn: 0.4048
+    best: trees
+    best_score: 0.3864
+    q: 0.0799
+  - net: N2
+    cell: range 30
+    metric: r2
+    n: 46580
+    nn: 0.4415
+    best: trees
+    best_score: 0.4285
+    q: 0.0999
+  - net: N1
+    cell: range 30
+    metric: r2
+    n: 46580
+    nn: 0.4388
+    best: trees
+    best_score: 0.4285
+    q: 0.1066
+  - net: N1
+    cell: range 60
+    metric: r2
+    n: 43155
+    nn: 0.3968
+    best: trees
+    best_score: 0.3864
+    q: 0.3437
+  - net: N1
+    cell: (2000.0, 1000.0, 60) P
+    metric: brier
+    n: 35968
+    nn: 0.1541
+    best: trees
+    best_score: 0.1551
+    q: 0.3437
+  - net: N1
+    cell: (1000.0, 1000.0, 60) P
+    metric: brier
+    n: 35968
+    nn: 0.2317
+    best: trees
+    best_score: 0.2326
+    q: 0.7859

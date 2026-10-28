@@ -1,0 +1,64 @@
+id: r123-n2-s5
+title: 'R123 N2-S5: S4 at the 09:20 / 09:25 / 09:30 decisions only (R113) (multi-level network (encoders, specialists, committee,
+  abstain))'
+family: ml
+date: '2026-10-28'
+doc: research/HUNT_R123_NEURAL_70.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m 5 indices + INDIAVIX, options_rolling_1m WEEK), lakeclean steps 1-3
+  (stale=True), zero-volume minutes never priced (Amendment 2)
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026-01-01..03-15)
+  holdout: '2026-04-01..2026-10-19 read once (not virgin: R106, R113, R120-R122 read the arms there)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r123_neural_70/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the network''s reading of the underlying (index minutes, India VIX, the five indices'' breadth, calendar)
+  with the option chain (OI, PCR, IV, skew, straddle) as context; the ATM option''s premium sets the target and stop only;
+  no rule reads the option''s own chart'
+hypothesis: 'Boss 28 Oct: a neural network of all the index and option data, simple rules, about 70% wins and about Rs 1,000
+  a trade. Gated on net expectancy after real charges and slippage (2x too), random-entry twins, BH q <= 0.10 over the 10
+  rule tests, enough trades, holdout once.'
+model_or_rule: research/hunt/r123_neural_70/ (S5, network N2)
+settings: PREREG.md section 6 and amendments 1-2; 1 lot at today's lots; ATM; max 5 trades a day, one open per index
+variants_tried: 10
+verdict: rejected
+results:
+  summary: 'Holdout 0 trades over 137 sessions: win 0%, avg net Rs 0 (2x slippage Rs 0), Rs 0 a session, p vs twins 1.000,
+    q 1.000. Walk-forward 1 trades, avg net Rs 2,000, q 0.478. Fails: wf, n, net_pos, q, account.'
+  walk_forward:
+    n: 1
+    win_rate: 1.0
+    avg_net: 2000.0
+    avg_net_x2: 1993.0
+    per_session: 3.0
+    p_twins: 0.2537
+    q: 0.4779
+    folds_positive: 1
+    passes: false
+  holdout:
+    n: 0
+    win_rate: null
+    avg_net: null
+    avg_net_x2: null
+    per_session: null
+    max_dd: null
+    worst_day: null
+    worst_month: null
+    p_twins: 1.0
+    q: 1.0
+    sessions: 137
+  fails:
+  - wf
+  - n
+  - net_pos
+  - q
+  - account
+  boss_target_strict: false
+  boss_target_lenient: false
+  costs: Costs('dated') charges + Fills('liq') slippage, 1 lot, today's lot sizes
