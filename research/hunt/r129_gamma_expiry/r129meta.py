@@ -60,8 +60,8 @@ def facts(T: pd.DataFrame) -> pd.DataFrame:
                 ratio = (cc / pp if r.side > 0 else pp / cc) if (k is not None and cc > 0 and pp > 0) else np.nan
                 with np.errstate(all="ignore"):
                     rng = (np.nanmax(h[:pre + 1]) - np.nanmin(l[:pre + 1])) / cp * 100
-                rows.append(dict(idx=r.Index, minute=pre, log_prem=np.log(r.entry), vix=r.vix,
-                                 move_open=r.side * (cp / o0 - 1) * 100, range_pct=rng, wall_steps=r.wall_steps,
+                rows.append(dict(idx=r.Index, minute=pre, log_prem=np.log(r.entry),          # vix and wall_steps are the trade's own
+                                 move_open=r.side * (cp / o0 - 1) * 100, range_pct=rng,
                                  log_oi_ratio=np.log(ratio) if np.isfinite(ratio) and ratio > 0 else np.nan,
                                  otm_steps=abs(r.strike - D3.atm(cp, step)) / step, dir=float(r.side), monthly=monthly(d)))
     F = pd.DataFrame(rows).set_index("idx").sort_index()
