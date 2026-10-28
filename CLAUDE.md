@@ -36,6 +36,13 @@ notes; match the surrounding code.
   shadow phase.
   - Every change is logged in the Autopilot change timeline, undoable in one tap, and shown to Boss.
   - Ideas that failed the gates stay notes only.
+    - One exception, chosen by Boss on 28 Oct ("add S5 trail to arms directly; if it does not perform I will turn it
+      off"): R128's S5 Trail, the morning ATM put pick with a −₹2,000 stop and a 60% profit lock after +₹1,000, runs as
+      a PAPER arm although it failed the gates (41 holdout trades, worst month −₹18.6k).
+      - It is labelled "failed gates, Boss's exception" wherever it is shown.
+      - Boss can switch it off in one tap.
+      - It never goes live.
+      - No other failed idea may use this exception.
   - Paper changes never carry over to live by themselves.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.
 - Nothing on the order or tick path touches disk, SecurePrefs or the network, or blocks (OrderPathRound2Test stays 0).
