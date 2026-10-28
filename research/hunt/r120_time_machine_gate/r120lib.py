@@ -116,7 +116,9 @@ def twins(nets: np.ndarray, k: int, n: int = K.TWINS, seed: int = K.SEED) -> np.
 
 
 def twin_p(gate_net: float, tw: np.ndarray) -> float:
-    return float((1 + np.sum(tw >= gate_net - 1e-9)) / (1 + len(tw)))
+    # 28 Oct (R121): within 1 paisa, as metrics() rounds the gate's net to 2 decimals (a rule that skips nothing has
+    # p = 1, never 0.0005 from rounding). No R120 number changed.
+    return float((1 + np.sum(tw >= gate_net - 0.01)) / (1 + len(tw)))
 
 
 def bh(p, m_total: int | None = None) -> np.ndarray:

@@ -335,6 +335,9 @@ def test_twins_skip_exactly_k():
     assert np.allclose(L.twins(nets, 4, n=5), 0.0)
     assert L.twin_p(100.0, tw) == pytest.approx(1 / 501)
     assert L.twin_p(-100.0, tw) == 1.0
+    # nothing skipped: p = 1 even when the rounded net sits a fraction of a paisa above the unrounded total
+    same = L.twins(np.array([0.1, 0.2, 0.0004]), 0, n=50)
+    assert L.twin_p(round(float(same[0]), 2) + 0.004, same) == 1.0
 
 
 def test_bh():
