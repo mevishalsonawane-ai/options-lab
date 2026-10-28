@@ -1,0 +1,30 @@
+id: r126-candle
+title: 'R126 wick candle patterns at 4 settings: does any add to the direction of the next 30-point move?'
+date: '2026-10-28'
+doc: research/HUNT_R126_PARAM_SWEEP.md
+family: ml
+data_version: Drive lake copied 28 Oct 2026 (index_1m, options_rolling_1m WEEK, NSE participant OI); lakeclean steps 1-3;
+  every indicator on wick midpoints / highs-lows
+period:
+  design: 2024-10-20..2026-03-15 (quarterly folds Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-19 (fourth read today; only N4 was read, nothing else passed)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r126_param_sweep/PREREG.md
+holdout_read: false
+features:
+- 'wick candle patterns variants: tf1, tf3, tf5, tf15'
+hypothesis: Some setting of this indicator/data adds to a price-only model's forecast of which way the next 30-point (wick)
+  move goes (log-loss gain >= 0.001, q <= 0.05, 3 of 4 folds)
+model_or_rule: 'research/hunt/r126_param_sweep/r126run.py (screen: logistic regression, price core with vs without the variant)'
+settings: PREREG.md section 2-3A
+variants_tried: 8
+verdict: rejected
+results:
+  summary: '8 tests (4 settings x 15/30 min), walk-forward: none adds; 0 improve at all; best tf5 h30: log-loss change +0.00003
+    (q 1.00, 1 of 4 folds), below the 0.001 bar.'
+  costs: none (forecast scores)
