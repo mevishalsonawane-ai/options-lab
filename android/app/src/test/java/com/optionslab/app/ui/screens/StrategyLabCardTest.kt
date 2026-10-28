@@ -110,24 +110,33 @@ class StrategyLabCardTest {
         assertEquals(null, opened)
     }
 
-    /** 28 Oct: automatic ideas held by Boss's win-rate rule, said on the card (with the newest) and listed in the sheet. */
-    @Test fun ideasHeldByTheWinRateRuleAreShownOnTheCardAndInTheSheet() {
+    /** 28 Oct: two automatic ideas held by Boss's win-rate rule (notes in the Autopilot book), the Pine script the newer. */
+    private val heldNotes: List<com.optionslab.ira.AutoChange.Entry> by lazy {
         val why = "held: win rate 64.9% (57) below your 65% rule"
-        val (b1, e1) = com.optionslab.ira.AutoChange.record(com.optionslab.ira.AutoChange.Book(),
+        val (b1, _) = com.optionslab.ira.AutoChange.record(com.optionslab.ira.AutoChange.Book(),
             com.optionslab.ira.AutoChange.ideaHeld(com.optionslab.ira.IdeaWinRate.Creator.FORGE, "F12", "F12 VWAP reclaim Banknifty 5m", why),
             com.optionslab.ira.AutoChange.Status.SKIPPED, 1_000L, day, by = "your win-rate rule", note = why)
-        val (b2, e2) = com.optionslab.ira.AutoChange.record(b1,
+        val (b2, _) = com.optionslab.ira.AutoChange.record(b1,
             com.optionslab.ira.AutoChange.ideaHeld(com.optionslab.ira.IdeaWinRate.Creator.PINE, "Jarvis: Hammer NIFTY 15m", "Jarvis: Hammer NIFTY 15m",
                 "held: tested in-sample only (win rate 80% (100)); your 65% rule needs an out-of-sample record"),
             com.optionslab.ira.AutoChange.Status.SKIPPED, 2_000L, day, by = "your win-rate rule")
-        val held = com.optionslab.ira.IdeaWinRate.heldOf(b2)
-        set { StrategyLabCardContent(variants, forge, onOpen = {}, held = held) }
+        com.optionslab.ira.IdeaWinRate.heldOf(b2)
+    }
+
+    /** 28 Oct: the held ideas said on the card, with the newest. */
+    @Test fun ideasHeldByTheWinRateRuleAreShownOnTheCard() {
+        set { StrategyLabCardContent(variants, forge, held = heldNotes, onOpen = {}) }
         assertTrue(shows("Held by your win-rate rule: 2 automatic ideas (notes only, nothing made)"))
         assertTrue("the newest first", shows("• Jarvis's Pine script Jarvis: Hammer NIFTY 15m: held: tested in-sample only"))
+    }
+
+    /** 28 Oct: the held ideas listed in the sheet, each with its reason. */
+    @Test fun ideasHeldByTheWinRateRuleAreListedInTheSheet() {
+        val held = heldNotes
         set { StrategyLabSheet(variants, forge, null, null, onAction = { _, _ -> }, onClose = {}, heldIdeas = held) }
-        scrollToTag("lab-held-" + e1.id)
-        assertTrue(shows("Forge idea F12 VWAP reclaim Banknifty 5m: $why"))
-        scrollToTag("lab-held-" + e2.id)
+        scrollToTag("lab-held-" + held.last().id)
+        assertTrue(shows("Forge idea F12 VWAP reclaim Banknifty 5m: held: win rate 64.9% (57) below your 65% rule"))
+        scrollToTag("lab-held-" + held.first().id)
         assertTrue(shows("Jarvis's Pine script Jarvis: Hammer NIFTY 15m: held: tested in-sample only"))
         scrollTo("Held by your win-rate rule")
         assertTrue(shows("Held by your win-rate rule"))
