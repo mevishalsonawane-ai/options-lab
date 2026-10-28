@@ -381,3 +381,42 @@ def test_family_is_fixed():
     assert set(K.NOT_TESTABLE) == {"FT3", "NIGHT_R3"} and not set(K.NOT_TESTABLE) & set(K.ARMS)
     assert K.period_of(date(2026, 3, 31)) == "design" and K.period_of(date(2026, 4, 1)) == "final"
     assert K.period_of(date(2026, 10, 14)) is None and K.in_wf(date(2025, 4, 1)) and not K.in_wf(date(2025, 3, 31))
+
+
+# ---------------------------------------------------------------- the per-arm asks (Amendment A1)
+
+import r120arms as A  # noqa: E402
+
+
+def test_asks_as_the_app_passes_them():
+    a = A.ask_fields("R51", 200.0)
+    assert a == dict(stop_pts=60.0, target_pts=60.0, exit_at=time(15, 15), bar_minutes=5)   # 15% / 0.5, R 1
+    assert A.ask_fields("R72", 200.0)["stop_pts"] == 60.0
+    assert A.ask_fields("R52", 100.0) == dict(stop_pts=60.0, target_pts=60.0, exit_at=time(15, 10), bar_minutes=5)
+    assert A.ask_fields("HERO", 10.0)["stop_pts"] == 5.0 and A.ask_fields("HERO", 10.0)["exit_at"] == time(15, 5)
+    assert A.ask_fields("ORB_ORB", 300.0)["stop_pts"] == 80.0 and A.ask_fields("ORB_ORB", 300.0)["target_pts"] == 80.0
+    assert A.ask_fields("ORB_SWEEP", 300.0)["target_pts"] == 160.0
+    assert A.ask_fields("VIXDIV", 100.0, und="NIFTY")["stop_pts"] == 30.0
+    assert A.ask_fields("VIXDIV", 100.0, und="BANKNIFTY")["stop_pts"] is None
+    assert A.ask_fields("PINE_ST_EMA_5M", 100.0)["stop_pts"] == 60.0
+    assert A.ask_fields("PINE_ST_EMA_5M", 30.0)["stop_pts"] is None           # fill - 30 <= a tick: no stop
+    s = A.ask_fields("SOLO", 100.0, setup="S4")
+    assert s["stop_pts"] == 50.0 and s["exit_at"] == time(15, 10)
+    assert A.ask_fields("SOLO", 100.0, setup="S1")["stop_pts"] is None         # index exits only on the passed host
+    with pytest.raises(KeyError):
+        A.ask_fields("MOM60", 100.0)
+
+
+def test_liquidity_ask_in_index_points():
+    a = A.ask_fields("LIQ", 150.0, und="FINNIFTY", target=24_100.0, level=24_000.0)
+    assert a["stop_pts"] == 15.0 and a["target_pts"] == 100.0 and a["exit_at"] == time(15, 10)
+    assert A.ask_fields("LIQ", 150.0, und="MIDCPNIFTY", target=None, level=1.0)["target_pts"] == 8.0   # no pool: R 1
+    assert A.ask_fields("LIQ", 150.0, und="BANKNIFTY", target=float("nan"), level=1.0)["target_pts"] == 30.0
+    assert A.liq_index_stop("NIFTY") == 30.0 and A.liq_index_stop("SENSEX") == 30.0
+
+
+def test_trade_row():
+    t = A.trade("R52", "NIFTY", date(2025, 6, 3), 5, 1, 123.4, 200.0)
+    assert t["entry_ts"] == datetime(2025, 6, 3, 9, 20) and t["period"] == "design" and t["stop_pts"] == 120.0
+    assert A.trade("R52", "NIFTY", date(2026, 5, 4), 5, -1, 1.0, None)["stop_pts"] is None
+    assert A.trade("R52", "NIFTY", datetime(2026, 10, 20, 0, 0), 0, 1, 1.0, 10.0)["period"] is None
