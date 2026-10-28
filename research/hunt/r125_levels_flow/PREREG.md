@@ -154,3 +154,16 @@ thresholds from the training rows only):
 - Write-up: `research/HUNT_R125_LEVELS_FLOW.md`.
 - Experiment entries: `research/experiments/entries/r125-*.yaml`.
 - RESULT.md.
+
+## Amendment 1 (28 Oct 2026, before any outcome or model): two definition fixes found on real inputs
+
+A first look at the new inputs alone (10 NIFTY days in June 2025; no label, trade or model was read) showed two
+definitions behaving badly:
+
+1. **Levels chained into blobs.** Joining pivots that are each within m/3 of the next merged whole price ranges into
+   one "level", with up to about 66 touches. Now a level spans at most m/3 from its first pivot.
+2. **Sweeps fired on 68% of rows,** because every pivot of 5 sessions counted as a level. Sweeps now count only
+   against *notable* levels, as liquidity is usually described: yesterday's high/low, the previous 5 sessions'
+   high/low, the untaken equal-high/low pools, and today's confirmed swings.
+
+Nothing else changes.
