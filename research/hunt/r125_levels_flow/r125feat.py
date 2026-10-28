@@ -37,11 +37,14 @@ LIQ_COLS = ("lq_pool_up", "lq_pool_dn", "lq_sweep_hi", "lq_sweep_lo", "lq_since_
 FLOW_COLS = ("fl_fii_ls", "fl_fii_ls_chg", "fl_pro_stance", "fl_pro_stance_chg", "fl_cli_stance", "fl_cp5", "fl_cp15",
              "fl_buildup")
 VOL_COLS = ("vo_v5", "vo_v15", "vo_v60", "vo_poc", "vo_vah", "vo_val", "vo_in_va", "vo_node")
+VWMA_COLS = ("vw_dist", "vw_slope", "vw_band", "ma9_dist", "ma20_dist", "ma50_dist", "ma_align", "ma20_slope",
+             "ma_cross", "ma5m20_dist")
 CANDLE_TF = (1, 5, 15)
 CANDLE_KEYS = ("inside", "outside", "trend", "run", "rev2", "swing3", "nr7", "wide")
 CANDLE_COLS = tuple(f"c{tf}_{k}" for tf in CANDLE_TF for k in CANDLE_KEYS)
-NEW_COLS = SR_COLS + LIQ_COLS + FLOW_COLS + VOL_COLS + CANDLE_COLS
-GROUPS = {"sr": SR_COLS, "liq": LIQ_COLS, "flow": FLOW_COLS, "vol": VOL_COLS, "candle": CANDLE_COLS}
+NEW_COLS = SR_COLS + LIQ_COLS + FLOW_COLS + VOL_COLS + CANDLE_COLS + VWMA_COLS
+GROUPS = {"sr": SR_COLS, "liq": LIQ_COLS, "flow": FLOW_COLS, "vol": VOL_COLS, "candle": CANDLE_COLS,
+          "vwap_ma": VWMA_COLS}
 
 
 # ------------------------------------------------------------------------------------------------ pivots and levels
@@ -210,6 +213,82 @@ def candle_features(h: np.ndarray, l: np.ndarray, t: int, tf: int) -> dict:
     return out
 
 
+# ------------------------------------------------------------------------------------------------ VWAP and moving averages
+def span_signed(lo: float, hi: float, level: float, m: float) -> float:
+    """Signed distance of a bar's wick span from a level, in m: + when the whole span is above it, - below, 0 touching."""
+    if not (np.isfinite(lo) and np.isfinite(hi) and np.isfinite(level)) or not m > 0:
+        return np.nan
+    if lo > level:
+        return (lo - level) / m
+    if hi < level:
+        return (hi - level) / m
+    return 0.0
+
+
+def ema(x: np.ndarray, n: int) -> np.ndarray:
+    """EMA over a series (NaNs carry the last value); each value uses only earlier and current points."""
+    a = 2.0 / (n + 1)
+    out = np.full(len(x), np.nan)
+    e = np.nan
+    for i, v in enumerate(x):
+        if np.isfinite(v):
+            e = v if not np.isfinite(e) else e + a * (v - e)
+        out[i] = e
+    return out
+
+
+def session_vwap(h: np.ndarray, l: np.ndarray, v: np.ndarray, t: int) -> tuple[float, float, float]:
+    """(VWAP, its value 15 minutes earlier, the volume-weighted SD) of the wick midpoints, bars 0..t, weights = the
+    minute's option volume (the index has no volume before 2026)."""
+    mid = (h[:t + 1] + l[:t + 1]) / 2
+    w = np.where(np.isfinite(mid), v[:t + 1], 0.0)
+    mid = np.nan_to_num(mid)
+    cw = np.cumsum(w)
+    cp = np.cumsum(w * mid)
+    if not cw[-1] > 0:
+        return np.nan, np.nan, np.nan
+    vw = cp[-1] / cw[-1]
+    prev = cp[t - 15] / cw[t - 15] if t >= 15 and cw[t - 15] > 0 else np.nan
+    sd = math.sqrt(max(np.sum(w * (mid - vw) ** 2) / cw[-1], 0.0))
+    return vw, prev, sd
+
+
+def vwap_ma_features(h, l, v, t, m, e9, e20, e50, e20_15, cross_age, e5m20) -> dict:
+    lo, hi = l[t], h[t]
+    vw, vw15, sd = session_vwap(h, l, v, t)
+    mid = (lo + hi) / 2
+    f = dict(vw_dist=span_signed(lo, hi, vw, m), vw_slope=(vw - vw15) / m if np.isfinite(vw15) else np.nan,
+             vw_band=(mid - vw) / sd if sd and sd > 0 else np.nan,
+             ma9_dist=span_signed(lo, hi, e9, m), ma20_dist=span_signed(lo, hi, e20, m),
+             ma50_dist=span_signed(lo, hi, e50, m),
+             ma_align=1.0 if e9 > e20 > e50 else (-1.0 if e9 < e20 < e50 else 0.0),
+             ma20_slope=(e20 - e20_15) / m if np.isfinite(e20_15) else np.nan, ma_cross=cross_age,
+             ma5m20_dist=span_signed(lo, hi, e5m20, m))
+    return f
+
+
+def ma_series(I) -> dict:
+    """1-minute EMAs 9/20/50 of the wick midpoints over the continuous minute series; the signed minutes since the
+    last EMA9/EMA20 cross (+ after an up cross, capped at 120); and the 5-minute EMA20 of 5-minute candle midpoints,
+    read at the last completed 5-minute candle."""
+    mid = ((I.g.h + I.g.l) / 2).reshape(-1)
+    e9, e20, e50 = ema(mid, 9), ema(mid, 20), ema(mid, 50)
+    sgn = np.sign(e9 - e20)
+    cross = np.full(len(mid), np.nan)
+    last, last_s = None, 0
+    for i in range(len(mid)):
+        if i > 0 and np.isfinite(sgn[i]) and np.isfinite(sgn[i - 1]) and sgn[i] != sgn[i - 1] and sgn[i] != 0:
+            last, last_s = i, sgn[i]
+        cross[i] = last_s * min(i - last, 120) if last is not None else 0.0
+    D = I.g.h.shape[0]
+    hh = I.g.h.reshape(D, -1, 5)
+    ll = I.g.l.reshape(D, -1, 5)
+    with np.errstate(all="ignore"):
+        c5 = ((np.nanmax(hh, 2) + np.nanmin(ll, 2)) / 2).reshape(-1)
+    e5 = ema(c5, 20)
+    return dict(e9=e9, e20=e20, e50=e50, cross=cross, e5=e5)
+
+
 # ------------------------------------------------------------------------------------------------ volume profile
 def minute_volume(chain) -> np.ndarray:
     """ATM+-3 option volume (calls + puts) per minute of a session (0 where nothing traded); negative prints -> 0."""
@@ -317,6 +396,7 @@ def index_features(part: str, und: str, rows: pd.DataFrame, log=print) -> pd.Dat
     vol_by_day, piv_by_day, hist_by_day = {}, {}, {}
     hi_all = np.nanmax(I.g.h) if np.isfinite(I.g.h).any() else 1.0
     nb = int(hi_all * 1.3 / bw) + 10
+    MA = ma_series(I)
     out = []
     for i in range(max(first, 0), len(I.days)):
         d = I.days[i]
@@ -389,6 +469,11 @@ def index_features(part: str, und: str, rows: pd.DataFrame, log=print) -> pd.Dat
             f.update(profile_features(base_hist + today_hist, bw, 0, lo_t, hi_t, m))
             for tf in CANDLE_TF:
                 f.update(candle_features(h, l, t, tf))
+            g = I.gpos(i, t)
+            k5 = i * (K.N // 5) + (t + 1) // 5 - 1                 # the last completed 5-minute candle
+            f.update(vwap_ma_features(h, l, v, t, m, MA["e9"][g], MA["e20"][g], MA["e50"][g],
+                                      MA["e20"][g - 15] if g >= 15 else np.nan, MA["cross"][g],
+                                      MA["e5"][k5] if k5 >= 0 else np.nan))
             out.append(f)
     log(f"R125 {und} {part}: {len(out)} rows", flush=True)
     return pd.DataFrame(out)

@@ -32,6 +32,20 @@ import r123rules as R3  # noqa: E402
 OUT = FT.OUT
 R124_OUT = K.OUT                                       # R124's rows (K.OUT is redirected to R125's cache for weights)
 RESULTS = HERE / "results"
+from datetime import date  # noqa: E402
+# amendment 3: two years (20 Oct 2024 - 19 Oct 2026); design to 15 Mar 2026; quarterly folds
+YEAR_START = date(2024, 10, 20)
+FOLDS = {"F1": (date(2025, 4, 1), date(2025, 6, 30)), "F2": (date(2025, 7, 1), date(2025, 9, 30)),
+         "F3": (date(2025, 10, 1), date(2025, 12, 31)), "F4": (date(2026, 1, 1), date(2026, 3, 15))}
+
+
+def fold_of(d):
+    for k, (a, b) in FOLDS.items():
+        if a <= d <= b:
+            return k
+    return None
+
+
 RULES = {
     "M1": dict(h=15, rows=None, level=False, top=True),
     "M2": dict(h=30, rows=None, level=False, top=True),
@@ -77,6 +91,7 @@ def rows(part: str):
         raise SystemExit("the R125 holdout is read only inside the one holdout read")
     F = pd.read_parquet(R124_OUT / f"rows_{part}.parquet")
     S = dict(np.load(R124_OUT / f"seq_{part}.npz"))
+    F = F[F.day >= YEAR_START].reset_index(drop=True)
     X = pd.read_parquet(OUT / f"feat_{part}.parquet")
     F = F.merge(X, on=["und", "day", "row"], how="left")
     return F, S
@@ -95,6 +110,7 @@ def cmd_features(part="design"):
     if part == "holdout" and not holdout_open():
         raise SystemExit("holdout features only inside the one holdout read")
     keys = pd.read_parquet(R124_OUT / f"rows_{part}.parquet", columns=["und", "day", "row"])
+    keys = keys[keys.day >= YEAR_START]
     FT.add_features(part, keys)
     log("features", part, "done")
 
@@ -102,10 +118,10 @@ def cmd_features(part="design"):
 def cmd_wf(variant: str):
     set_variant(variant)
     F, S = rows("design")
-    F["fold"] = [K.fold_of(d) for d in F.day]
+    F["fold"] = [fold_of(d) for d in F.day]
     daily = R4.daily_for(K.DESIGN[1])
     parts, imps = [], {}
-    for f, (a, b) in K.FOLDS.items():
+    for f, (a, b) in FOLDS.items():
         train = F[F.day < a - timedelta(days=K.K3.FOLD_EMBARGO_DAYS)]
         test = F[F.fold == f]
         log(f"{variant} fold {f}: train {len(train)}, test {len(test)}")
@@ -215,10 +231,10 @@ def rule_results(P, sessions_by, folds):
 def finish(part: str):
     PB = pd.read_parquet(OUT / f"{'wf' if part == 'wf' else 'holdout'}_preds_base.parquet")
     PN = pd.read_parquet(OUT / f"{'wf' if part == 'wf' else 'holdout'}_preds_n3.parquet")
-    folds = list(K.FOLDS) if part == "wf" else None
+    folds = list(FOLDS) if part == "wf" else None
     if part != "wf":
         PB["fold"] = PN["fold"] = "holdout"
-    sessions_by = ({f: set(PN.day[PN.fold == f].unique()) for f in K.FOLDS} if folds
+    sessions_by = ({f: set(PN.day[PN.fold == f].unique()) for f in FOLDS} if folds
                    else {"all": set(PN.day.unique())})
     imp = json.loads((OUT / f"{'wf' if part == 'wf' else 'holdout'}_importance_n3.json").read_text())
     if part == "wf":

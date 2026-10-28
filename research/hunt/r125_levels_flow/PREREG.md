@@ -188,3 +188,48 @@ low only, never its open or close. They are computed for the last *completed* 1-
 
 Body patterns (hammer, doji, engulfing by body) need opens and closes, so they are left out, as Boss asked. N3 now
 has five new specialists (sr, liq, flow, vol, candle) and 55 new inputs. Nothing else changes.
+
+## Amendment 3 (28 Oct 2026, before any comparison, rule or gate was computed): VWAP and moving averages; two years
+
+Boss, 28 Oct: *"Also add VWAP and moving averages, and test on only 1 yr of data"*, then *"Okay keep it 2 yrs."*
+
+**What had run before this:** the full-history walk-forward was stopped part-way.
+- R124's network retrained (the "base" variant) had finished its 4 folds.
+- N3 had finished 2.
+- No comparison, model test, rule, twin or gate was computed, and no prediction was looked at.
+- Those files are set aside unread (scratch, not used, not on Drive), and everything below starts again.
+
+**1. A sixth new specialist, vwap_ma (10 inputs).** Prices are each candle's wick midpoint, (high + low) / 2. No close
+is used.
+
+| input | meaning |
+|---|---|
+| vw_dist | bar t's wick span against the session VWAP, signed, in m (+ wholly above, - wholly below, 0 touching). VWAP weights are each minute's ATM±3 option volume (the index has no volume before 2026) |
+| vw_slope | the VWAP's change over 15 minutes, in m |
+| vw_band | (midpoint - VWAP) / the volume-weighted SD |
+| ma9_dist, ma20_dist, ma50_dist | bar t's wick span against the 1-minute EMA 9 / 20 / 50 of midpoints, signed, in m |
+| ma_align | +1 when EMA9 > EMA20 > EMA50, -1 when reversed, 0 otherwise |
+| ma20_slope | the EMA20's change over 15 minutes, in m |
+| ma_cross | signed minutes since the last EMA9/EMA20 cross (+ after an up cross; capped at 120) |
+| ma5m20_dist | bar t's wick span against the EMA20 of 5-minute candle midpoints (last completed candle) |
+
+N3 now has six new specialists and 65 new inputs.
+
+**2. Two years of data, replacing section 3's design period.**
+- The window is **20 Oct 2024 - 19 Oct 2026**: 2 years, all after NSE's Nov 2024 F&O changes (fewer weekly expiries,
+  new lot sizes), so the whole period trades under today's rules.
+- Design: 20 Oct 2024 - 15 Mar 2026.
+- Walk-forward folds (each trains on every design row before it, with a 10-day embargo):
+
+  | fold | test span |
+  |---|---|
+  | F1 | Apr - Jun 2025 |
+  | F2 | Jul - Sep 2025 |
+  | F3 | Oct - Dec 2025 |
+  | F4 | 1 Jan - 15 Mar 2026 |
+
+- Holdout unchanged: 1 Apr - 19 Oct 2026, read once.
+- Gates unchanged: ≥ 300 walk-forward trades, 3 of 4 folds, q ≤ 0.10, ≥ 100 holdout trades, 1x and 2x slippage, the
+  account stop.
+- Less data means less power. A real but small edge is easier to miss, and the trade-count gates are harder to reach.
+  That is accepted, as Boss's choice.

@@ -119,7 +119,7 @@ def test_buildup_signs():
 
 def test_new_cols_cover_groups():
     assert set(F.NEW_COLS) == set(sum((list(v) for v in F.GROUPS.values()), []))
-    assert len(F.NEW_COLS) == 31 + 24
+    assert len(F.NEW_COLS) == 31 + 24 + 10
 
 
 # ------------------------------------------------------------------------------------------------ amendment 2: candles
@@ -163,3 +163,43 @@ def test_candle_features_ignore_future_bars():
     l2[120:] -= 50
     b = {tf: F.candle_features(h2, l2, 119, tf) for tf in F.CANDLE_TF}
     assert a == b
+
+
+
+# ------------------------------------------------------------------------------------------------ amendment 3: VWAP / MAs
+def test_vwap_on_wick_midpoints_weighted_by_volume():
+    h = np.array([102.0, 112.0, 200.0])
+    l = np.array([98.0, 108.0, 0.0])
+    v = np.array([1.0, 3.0, 99.0])
+    vw, prev, sd = F.session_vwap(h, l, v, 1)
+    assert vw == pytest.approx((100 * 1 + 110 * 3) / 4) and np.isnan(prev)
+    assert sd > 0
+
+
+def test_ema_and_span_signed():
+    e = F.ema(np.array([1.0, np.nan, 3.0]), 3)
+    assert e[0] == 1.0 and e[1] == 1.0 and e[2] == pytest.approx(2.0)
+    assert F.span_signed(101, 103, 100, 2) == pytest.approx(0.5)
+    assert F.span_signed(97, 99, 100, 2) == pytest.approx(-0.5)
+    assert F.span_signed(99, 101, 100, 2) == 0.0
+
+
+def test_ma_series_past_only():
+    class G:
+        pass
+    rng = np.random.default_rng(1)
+    c = 100 + rng.normal(0, 1, (3, 375)).cumsum(1)
+    I = G()
+    I.g = G()
+    I.g.h, I.g.l = c + 1, c - 1
+    a = F.ma_series(I)
+    I.g.h = I.g.h.copy()
+    I.g.l = I.g.l.copy()
+    I.g.h[2, 200:] += 40
+    I.g.l[2, 200:] += 40
+    b = F.ma_series(I)
+    g = 2 * 375 + 199
+    for k in ("e9", "e20", "e50", "cross"):
+        assert a[k][g] == pytest.approx(b[k][g])
+    k5 = 2 * 75 + 200 // 5 - 1
+    assert a["e5"][k5] == pytest.approx(b["e5"][k5])
