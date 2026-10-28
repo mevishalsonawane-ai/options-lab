@@ -1,0 +1,27 @@
+id: r131-next-day
+title: 'R131 next-day close-to-close direction (C2C from the official close, C2C_T from 14:55): 198 tests'
+family: overnight
+date: '2026-10-28'
+doc: research/HUNT_R131_DIRECTION.md
+data_version: as r131-gap-official-close plus index_1m and R123 decision rows for C2C_T
+period:
+  design: 2012-04-02..2026-03-15 (C2C), 2021-08-03..2026-03-15 (C2C_T); folds 2023, 2024, 2025, Jan-15 Mar 2026
+  holdout: 2026-04-01..2026-10-19 (read before by other studies; read once here)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (underlying) daily bars / 14:55 state and VIX; context sets as r131-gap-t'
+model_or_rule: research/hunt/r131_direction/run.py
+prereg: research/hunt/r131_direction/PREREG.md
+holdout_read: true
+verdict: rejected
+hypothesis: Tomorrow's close-to-close direction can be called >= 60% on the most confident days
+settings: PREREG.md sections 2-7 and Amendment 1
+variants_tried: 198
+results:
+  summary: 'C2C: 8 walk-forward passes, 1 also on the holdout (IDX+GLOB LR 10%: 62.5% on 352 calls, base 54.6%; holdout 62.2% on 45) but its 14:55 twin fails, so it does not count; its futures trade lost Rs -1,726 a trade on the holdout (39). C2C_T: 1 walk-forward pass, 0 on the holdout; ALL GBM 20% options lost (Rs -590, 106 trades; holdout Rs -264, 17). Most picks are MIDCPNIFTY.'
+  costs: futures (C2C) and ATM option (C2C_T), 1 lot, real dated charges and fills

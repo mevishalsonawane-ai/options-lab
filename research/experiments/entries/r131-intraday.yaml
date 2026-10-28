@@ -1,0 +1,27 @@
+id: r131-intraday
+title: 'R131 intraday direction with every dataset (09:30 -> close, 11:00/13:00 -> close, next 60 min): 396 tests'
+family: ml
+date: '2026-10-28'
+doc: research/HUNT_R131_DIRECTION.md
+data_version: R123 decision rows (2021-08-02 onward) + index_1m + equity_1m breadth + previous-evening daily sources (Drive lake, 28 Oct 2026)
+period:
+  design: 2021-08-02..2026-03-15 (walk-forward folds 2023, 2024, 2025, Jan-15 Mar 2026)
+  holdout: 2026-04-01..2026-10-19 (read before by R123-R130; read once here)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (underlying) minutes, VIX; context sets: 59-stock breadth, participants + FPI, futures, chain (live and end-of-day), rupee/G-sec/MCX, calendar'
+model_or_rule: research/hunt/r131_direction/run.py
+prereg: research/hunt/r131_direction/PREREG.md
+holdout_read: true
+verdict: rejected
+hypothesis: Adding positioning, flows, basis, chain, global and breadth data lifts intraday direction calls to >= 60% on the most confident calls
+settings: PREREG.md sections 2-7
+variants_tried: 396
+results:
+  summary: 'No test passes the walk-forward gates. Best AUC 0.524-0.543 (DAY, R11, R13, M60). Nearest miss R11 ALL LR at 10%: 59.4% on 645 calls (base 50.8%), below 60% in 2 of 4 years; holdout 67.8% (90). Breadth of the 59 stocks adds +0.4 to +1.0 AUC points; participants, futures, chain and global add nothing. ALL GBM 20% options lost on the holdout at DAY (Rs -1,265, 19 trades), R11 (Rs -1,328, 28) and R13 (Rs -567, 18).'
+  costs: Costs('dated') + Fills('liq'), ATM option of the called side, 1 lot, held to the horizon

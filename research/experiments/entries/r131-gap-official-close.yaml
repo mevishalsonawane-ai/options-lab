@@ -1,0 +1,27 @@
+id: r131-gap-official-close
+title: 'R131 overnight gap and pre-open call from the official daily close (GAP, PRE): 198 tests'
+family: overnight
+date: '2026-10-28'
+doc: research/HUNT_R131_DIRECTION.md
+data_version: index_daily 2006-2026, participants/ (OI, FPI, NSE index files, bhavcopy) 2012-2026, fut_daily_continuous, equity_daily, stock_fut_daily_continuous (Drive lake, 28 Oct 2026)
+period:
+  design: 2012-04-02..2026-03-15 (walk-forward folds 2023, 2024, 2025, Jan-15 Mar 2026)
+  holdout: 2026-04-01..2026-10-19 (read before by other studies; read once here)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index daily bars and VIX; context sets: breadth, participants + FPI, futures basis/OI/rollover, bhavcopy chain, rupee/G-sec/MCX, calendar; publication lags applied'
+model_or_rule: research/hunt/r131_direction/run.py
+prereg: research/hunt/r131_direction/PREREG.md
+holdout_read: true
+verdict: rejected
+hypothesis: The overnight gap (official close -> next open) can be called >= 60% beyond its up-drift base rate
+settings: PREREG.md sections 2-7
+variants_tried: 198
+results:
+  summary: 'GAP: 64 tests pass the walk-forward, 25 also the holdout (best 79.0% right on 162 calls, base 63.7%; holdout 68.2% on 22). PRE (not tradeable) passes none. The picked days closed near their high: the official close is a 15:00-15:30 average, so tomorrow beats it partly by construction; the gap is only tradeable via its 14:55 twin (r131-gap-t). Futures entered at that average close are not a real fill.'
+  costs: near-month index future, 1 lot, brokerage + STT (dated) + exchange + SEBI + stamp + GST, 0.01% slippage a side
