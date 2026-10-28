@@ -1971,7 +1971,8 @@ object OrbArms {
         // 22 Oct: the price at the signal, handed to the fill; never enter blind.
         val price = entryQuote(c, mayRetryPrice(b))
         val q = price.quote
-        val ltp = q?.ltp ?: return noQuote(c, price)
+        // 28 Oct (Boss: "Yes fix finnifty"): with no last price, the ask a buyer pays on a sane book ([Paper.entryPrice]).
+        val ltp = Paper.entryPrice(c, q) ?: return noQuote(c, price)
         // The Upstox feed has no bid/ask, so the paper fill is the LTP slipped 5 bps: price the checks the same way.
         val expected = ltp * 1.0005
         // The paper account's parameters today (its stop): this position is managed with them to its exit.
@@ -3147,7 +3148,9 @@ object OrbArms {
 
     /** The words of an entry with no price at its signal ([SignalPrice.retried]: after the one more read). */
     private fun noQuote(c: Paper.Contract, p: SignalPrice): String =
-        if (p.retried) "refused: no quote for ${c.symbol} after 2 reads" else "refused: no quote for ${c.symbol}; not read again while a position of these arms is open"
+        (if (p.retried) "refused: no quote for ${c.symbol} after 2 reads" else "refused: no quote for ${c.symbol}; not read again while a position of these arms is open") +
+            // 28 Oct: why there was no price (an option with no last price and a one-sided or wide book), when the read said.
+            (runCatching { Paper.noPriceWhy(c.symbol) }.getOrNull()?.let { " ($it)" } ?: "")
 
     /** One more fresh price for [c] ([Paper.quote]: the stream's tick, else one read), [ENTRY_RETRY_MS] at most; null: none. */
     internal suspend fun retryQuote(c: Paper.Contract): com.optionslab.engine.sandbox.Quote? =

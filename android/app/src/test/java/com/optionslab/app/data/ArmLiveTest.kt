@@ -122,6 +122,23 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(view().open.all { it.stopOrderId != null })
     }
 
+    /**
+     * 28 Oct (Boss: "Yes fix finnifty"): a paper buy priced on the live book alone (the option had no last price) is never mirrored
+     * live - before, such an entry was not bought at all, so live stays as it was; another arm's ordinary fill still goes.
+     */
+    @Test fun aPaperBuyFilledOnTheBookAloneIsNeverMirroredLive() {
+        try {
+            Paper.bookFillForTest(contract.symbol)
+            ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "book"))
+            assertTrue("nothing sent to Zerodha", kite.placed.isEmpty())
+            assertTrue(view().open.isEmpty())
+            // An ordinary fill goes as before.
+            Paper.bookFillForTest(null)
+            ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "plain"))
+            assertEquals(2, kite.placed.size)
+        } finally { Paper.bookFillForTest(null) }
+    }
+
     @Test fun aLimitEntryPaysAtMostThePaperLimitAndTwoLotsBuyTwoLots() {
         ArmLive.entered(ask(com.optionslab.engine.orb.HeroTicketRules.SOURCE, qty = 60, limit = 200.0))
         assertEquals(mapOf("order_type" to "LIMIT", "price" to "200.00", "quantity" to "60"), form(kite.placed.first(), "order_type", "price", "quantity"))

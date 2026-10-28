@@ -322,7 +322,9 @@ object AutoChange {
             // 16 Oct: R66's L25 step ([L25_TARGET]) only raises a stop (an earlier exit), so on lowers risk; off takes it away.
             Kind.PAPER_LOCK -> if (c.target == L25_TARGET) { if (c.to == ON) Risk.LOWER else Risk.RAISE } else if (c.to == ON) Risk.RAISE else Risk.LOWER
             // 16 Oct: an entry filter only skips paper entries: on lowers risk, off takes the skips away.
-            Kind.PAPER_FILTER -> if (c.to == ON) Risk.LOWER else Risk.RAISE
+            // 28 Oct: the paper book price ([BOOK_PRICE_TARGET]) is the one that adds entries (an untraded option bought at the ask):
+            // on raises paper risk, off takes those entries away.
+            Kind.PAPER_FILTER -> if (c.target == BOOK_PRICE_TARGET) { if (c.to == ON) Risk.RAISE else Risk.LOWER } else if (c.to == ON) Risk.LOWER else Risk.RAISE
             // 18 Oct: an arm's own live switch on lets its live entries go (adds live risk); off keeps it on paper.
             Kind.ARM_LIVE -> if (c.to == ON) Risk.RAISE else Risk.LOWER
             // 18 Oct: an arm's Shadow on sends nothing live (lowers risk); off lets its real live entries go (adds live risk).
@@ -767,6 +769,24 @@ object AutoChange {
         else "the same-direction cap is off for paper: automatic entries are no longer refused by it",
         Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "the same-direction cap on automatic paper entries")
+
+    /** 28 Oct: the target of the paper entries priced on the live book when an option has no last price ([paperBookPrice]). */
+    const val BOOK_PRICE_TARGET = "filter:paper_book_price"
+
+    /**
+     * 28 Oct (Boss: "Yes fix finnifty"): automatic and manual PAPER entries on an option with a live bid and ask but no last price
+     * ([BookPrice]: FINNIFTY23NOV2624250PE / CE were "not bought: no fresh price") fill at the ask, as a buyer pays it, when the book
+     * is sane - switched [on], or off again (such entries refused, as before). It adds paper entries, so on raises paper risk. Paper
+     * only: such a fill is never mirrored live. No PIN either way. Exits and marks always read the bid (never weakened).
+     */
+    fun paperBookPrice(on: Boolean): Change = Change(Kind.PAPER_FILTER, BOOK_PRICE_TARGET,
+        if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (28 Oct, \"Yes fix finnifty\"): a paper entry on an option with a live bid and ask but no last price (an " +
+            "untraded FINNIFTY strike) fills at the ask when the spread is sane (h14's 0.5% cap, or one tick); a wide or one-sided " +
+            "book is refused with the reason; such a fill is never mirrored live"
+        else "paper entries on an option with no last price are refused again (no fresh price); exits still read its bid",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.RAISE else Risk.LOWER, Scope.PAPER,
+        what = "paper entries priced on the live book (no last price)")
 
     // ---- 25 Oct (Boss: "Do whatever you think better for application", on the app audit's open decisions) ----------------
     // Each new PAPER rule is logged once as Boss's decision (kept), shown in the timeline, and undone in one tap. None has

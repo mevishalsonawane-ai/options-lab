@@ -68,6 +68,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 28 Oct (Boss: "Yes fix finnifty"; R72 and R51's FINNIFTY entries "not bought: no fresh price"): newest of all.
+        Entry("2026-10-28-finnifty-book-price", OCT28, "Untraded options can now be bought on paper",
+            "FINNIFTY's 09:20 put and 11:05 call were not bought today: no fresh price. " +
+                "Those options had not traded yet, so Zerodha showed no last price. " +
+                "Their live bid and ask were there all along. " +
+                "A paper buy now fills at the ask when the spread is sane. " +
+                "A wide or one-sided book is refused, and the reason is said. " +
+                "Stops and targets of such a position read the bid, so they are never slower. " +
+                "Such a buy is never copied live. " +
+                "One tap in the change timeline switches it off.",
+            "Home → Strategies → each arm's row; the change timeline"),
         // 28 Oct (Boss: "Also check flow page on Irathinker and implement that too"; "Use live data from zerodha instead"; "Dont add
         // alert, just take orders from flow, and keep it for index only"): newest of all.
         Entry("2026-10-28-flow-paper-arm", OCT28, "Your alert app's flow now trades on paper",

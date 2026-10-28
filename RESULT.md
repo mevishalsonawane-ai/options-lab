@@ -1,0 +1,12 @@
+# FINNIFTY "no fresh price" fix (28 Oct)
+
+1. Cause: FINNIFTY23NOV26 24250 PE and CE had not traded, so Zerodha showed a last price of 0. The paper price code threw away any quote with no last price and fell back to Upstox minute candles, which an untraded option does not have. Its live bid and ask were there all along.
+2. Not a lookup bug: FINNIFTY's contract, its 23 Nov expiry (24 Nov is a holiday) and its Zerodha token resolve the same way as every other index's (tested). The other indices traded, so they priced fine.
+3. Fix: with no last price, paper now uses the live book. A held position is valued at the bid, so its stop, target and trail read the bid. A paper buy fills at the ask.
+4. A buy needs a sane book: both sides there, and the ask within 0.5% of the mid (h14's cap) or one tick wide. A one-sided, empty, crossed, wide or stale book is refused, and the reason is shown, for example "no fresh price (no last price and the spread is too wide ...)".
+5. Every arm gets this, because the fix sits in the shared paper price code (R51, R72 and the other passed arms, ORB, Liquidity, FT3, Hero ticket, ntfy, Flow, Pine). R51/R72 and ORB say the reason in their own line. Solo keeps its own thin-strike check, so it still skips untraded strikes.
+6. Exits are never weaker. A stop fires on the bid and a market exit sells at the bid, even when the book is wide or has only a bid. Shorts are valued at the ask. MCX is unchanged.
+7. Live is unchanged. A paper buy priced on the book alone is never copied to Zerodha (it says "not mirrored live" in diagnostics). Direct live orders still need a real last price.
+8. What Boss sees: the 09:20 / 11:05 type FINNIFTY breaks now buy on paper at the ask. Diagnostics say "had no last price; paper priced it from the live book (bid, ask) and the buy filled at ...". There is a What's New card, and one change-timeline entry that turns it off in one tap.
+9. Order and tick path: no disk or vault reads added. Zerodha's quote is read (at most 2 s) only when a contract has no candles today and no stream tick.
+10. Tests: engine NoLastPriceTest, ira-core BookPriceTest, app PaperBookPriceTest and ArmLiveTest, covering FINNIFTY resolution, ask fills, refusals, stale ticks, exits on the bid, other indices unchanged and the live gate. Local gradle checks pass, and CI must be green.

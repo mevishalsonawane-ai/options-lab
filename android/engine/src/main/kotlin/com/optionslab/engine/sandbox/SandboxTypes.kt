@@ -184,7 +184,16 @@ data class Quote(
     /** Quantity at the best bid and offer (Zerodha's stream depth); 0: not known. Logged only, never priced from. */
     val bidQty: Long = 0,
     val askQty: Long = 0,
-)
+    /**
+     * 28 Oct (FINNIFTY's untraded options): the contract has NO last price; [ltp] is then its bid (what a held long is worth)
+     * and the engine judges every order on the side it would trade against: a buy on the [ask], a sale on the [bid]
+     * ([tradeSide]); a short is marked at the ask. False: a real last trade, as before.
+     */
+    val noLast: Boolean = false,
+) {
+    /** The price an order on this side is judged and filled on: the last trade, or with [noLast] the ask (buy) / bid (sale); 0: none. */
+    fun tradeSide(buy: Boolean): Double = if (!noLast) ltp else if (buy) ask else bid
+}
 
 /**
  * placeorder's payload. Nullable because the Python validates presence first

@@ -1365,7 +1365,10 @@ object PassedArmsHost {
         // 19 Oct: the price read in the last few seconds when there is one ([prewarm] read this bar's options side by side before
         // the entries); the fill itself is priced fresh in Paper.place (2 s at most), as before.
         val q = runCatching { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) }.getOrNull()
-        val ref = q?.ltp?.takeIf { it > 0 } ?: return BuyStep(null, "${c.symbol}: no fresh price", false)
+        // 28 Oct (Boss: "Yes fix finnifty"): an option with a live bid and ask but no last price (an untraded FINNIFTY strike) is
+        // priced at the ask a buyer pays, on a sane book only ([Paper.entryPrice]); otherwise the line says why there is no price.
+        val ref = Paper.entryPrice(c, q) ?: return BuyStep(null, "${c.symbol}: no fresh price" +
+            (Paper.noPriceWhy(c.symbol)?.let { " ($it)" } ?: ""), false)
         // 19 Oct (Boss: "Yes, keep only breadth donchain"): an arm set to record only buys nothing - its entry is a would-be trade,
         // priced at the ask when the quote has one (a buyer pays it), else the last price, as the cap's. Never mirrored live, never
         // on the account (so never counted by the same-direction cap and never a twin for R72), no notice.

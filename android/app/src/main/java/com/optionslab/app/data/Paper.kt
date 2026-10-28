@@ -324,7 +324,8 @@ object Paper {
         // 12 Oct: the quick read (5 s connect, 10 s read, one retry): the full one's 3 tries x 45 s and its rate-limit waits
         // held a paper pass for minutes ("fast check: paper orders" 4 min 15 s), and every stop check behind it.
         val bars = Net.intradayQuick(c.feedKey).filter { it.istDate == Market.today() }
-        if (bars.isEmpty()) return null
+        // 28 Oct (FINNIFTY's untraded options): no trade today, so no candles - Zerodha's live book, when it has one ([restBook]).
+        if (bars.isEmpty()) return restBook(c)
         candleBars[c.symbol] = System.currentTimeMillis() to bars
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
             volume = bars.sumOf { it.volume }).also { remember(c.symbol, it); candleQuotes[c.symbol] = System.currentTimeMillis() to it }
@@ -471,7 +472,7 @@ object Paper {
 
     /** The last price read for each symbol and when (the screen re-prices every few seconds). */
     private val lastQuotes = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Quote>>()
-    private fun remember(symbol: String, q: Quote) { lastQuotes[symbol] = quoteClock() to q }
+    private fun remember(symbol: String, q: Quote) { lastQuotes[symbol] = quoteClock() to q; noPriceWhy.remove(symbol) }
     /** The kept prices' ages run on the market clock ([Market.now]), so a price is never reused across a session or a day. */
     private fun quoteClock(): Long = Market.now().toInstant().toEpochMilli()
 
@@ -555,7 +556,8 @@ object Paper {
     private suspend fun freshRestQuote(c: Contract): Quote? {
         val key = zerodhaKey(c) ?: return null
         val q = Broker.within(FILL_FRESH_MS) { Broker.quotesFresh(listOf(key))[key] } ?: return null
-        if (q.last <= 0) return null
+        // 28 Oct: no last price: its live book ([bookQuote]).
+        if (q.last <= 0) return bookQuote(c, q.bid, q.ask)
         return Quote(q.last, bid = q.bid ?: 0.0, ask = q.ask ?: 0.0, open = q.open, volume = q.volume)
     }
 
@@ -575,9 +577,83 @@ object Paper {
         val token = (if (kept) kiteTokens[c.symbol]?.takeIf { it > 0 } else runCatching { kiteToken(c) }.getOrNull()) ?: return null
         KiteStream.touch(listOf(token))
         val t = KiteStream.tick(token) ?: return null
-        if (t.last <= 0) return null
+        // 28 Oct: no last price (an option that has not traded): its live book, when it has a bid ([bookQuote]).
+        if (t.last <= 0) return bookQuote(c, t.bid, t.ask, bidQty = t.bidQty ?: 0L, askQty = t.askQty ?: 0L)
         return Quote(t.last, bid = t.bid ?: 0.0, ask = t.ask ?: 0.0, high = t.high, low = t.low, open = t.open,
             prevClose = t.close, volume = t.volume, bidQty = t.bidQty ?: 0L, askQty = t.askQty ?: 0L)
+    }
+
+    // ---- 28 Oct (Boss: "Yes fix finnifty"): an option with a live book but no last price ------------------------------------
+
+    /**
+     * Why each symbol's latest price read found no usable price (when, the reason), for the arms' "no fresh price" line. Memory
+     * only; cleared by the next price read that works ([remember]).
+     */
+    private val noPriceWhy = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, String>>()
+
+    /** Why [symbol]'s latest price read found no usable price, if that read was in the last minute; null otherwise. Memory only. */
+    fun noPriceWhy(symbol: String): String? = noPriceWhy[symbol]?.takeIf { quoteClock() - it.first in 0..60_000L }?.second
+
+    private fun noPrice(symbol: String, why: String) { noPriceWhy[symbol] = quoteClock() to why }
+
+    /**
+     * [c]'s live book as its quote when it has NO last price (FINNIFTY23NOV2624250PE on 28 Oct: Zerodha reports 0 for an option
+     * that has not traded, and the candle feed has nothing for it). The quote's ltp is the bid - what a held long is worth, so its
+     * stop, target and marks read the bid - and it is flagged [Quote.noLast], so the engine judges a buy on the ask (and marks a
+     * short at the ask). Null when there is no bid (nobody to sell to: no price at all). An entry is allowed only on a sane book
+     * ([com.optionslab.ira.BookPrice.judge], checked in [place]); MCX is left as before. Memory only.
+     */
+    private fun bookQuote(c: Contract, bid: Double?, ask: Double?, bidQty: Long = 0L, askQty: Long = 0L): Quote? {
+        if (c.isMcx) return null
+        val v = com.optionslab.ira.BookPrice.judge(bid, ask)
+        v.why?.let { noPrice(c.symbol, it) }
+        val b = v.bid ?: return null
+        return Quote(b, bid = b, ask = ask?.takeIf { it.isFinite() && it > 0 } ?: 0.0, bidQty = bidQty, askQty = askQty, noLast = true)
+    }
+
+    /**
+     * 28 Oct: the price an automatic entry is decided on from [q]: its last price, or with no last price ([Quote.noLast]) the ask a
+     * buyer pays - only when the book is sane and Boss's switch is on ([BookPriceHost]); null otherwise ([noPriceWhy] says why).
+     */
+    fun entryPrice(c: Contract, q: Quote?): Double? {
+        if (q == null) return null
+        if (!q.noLast) return q.ltp.takeIf { it > 0 }
+        bookEntryRefusal(c, q)?.let { noPrice(c.symbol, it); return null }
+        return q.ask.takeIf { it > 0 }
+    }
+
+    /** Why an entry may not fill on [q], a quote with no last price: the book's own reason, or Boss's switch off; null: it may. */
+    private fun bookEntryRefusal(c: Contract, q: Quote): String? {
+        com.optionslab.ira.BookPrice.judge(q.bid, q.ask).why?.let { return it }
+        if (!BookPriceHost.paperOn()) return "no last price, and paper entries on the live book are switched off"
+        return null
+    }
+
+    /**
+     * Zerodha's quote for [c] when the candle feed has nothing today (logged in only; one read, [FILL_FRESH_MS] at most): with no
+     * trade today its last price is not today's, so the quote is its live book ([bookQuote]). Null: no session, not listed, no
+     * answer in time, or no bid.
+     */
+    private suspend fun restBook(c: Contract): Quote? {
+        if (c.isMcx) return null
+        if (!Broker.loggedIn) { noPrice(c.symbol, "no trade today and no Zerodha session to read its book"); return null }
+        val key = zerodhaKey(c) ?: run { noPrice(c.symbol, "no trade today and not found in Zerodha's list"); return null }
+        val r = Broker.within(FILL_FRESH_MS) { Broker.quotes(listOf(key))[key] }
+            ?: run { noPrice(c.symbol, "no trade today and Zerodha's quote did not answer"); return null }
+        return bookQuote(c, r.bid, r.ask)?.also { remember(c.symbol, it) }
+    }
+
+    /** When each symbol's paper entry last filled on the book alone (memory only): [ArmLive] never mirrors such a fill live. */
+    private val bookFills = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** Whether [symbol]'s paper entry filled on the book alone (no last price) in the last [withinMs]. Memory only. */
+    fun filledOnBook(symbol: String, withinMs: Long = 120_000L): Boolean =
+        bookFills[symbol]?.let { quoteClock() - it in 0..withinMs } == true
+
+    /** TEST SEAM (JVM tests only): [symbol]'s paper entry as if it had just filled on the book alone. Throws in a release build. */
+    internal fun bookFillForTest(symbol: String?) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "the book-fill seam exists only in debug builds" }
+        if (symbol == null) bookFills.clear() else bookFills[symbol] = quoteClock()
     }
 
     /**
@@ -801,7 +877,8 @@ object Paper {
             else if (c.exchange == "BFO") "BFO:" + (Broker.cachedBfoOptions()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null).tradingSymbol
             else "NFO:" + (Broker.cachedInstruments()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null).tradingSymbol
         val r = runCatching { Broker.quotes(listOf(key)) }.getOrNull()?.get(key) ?: return null
-        if (!(r.last > 0)) return null
+        // 28 Oct: no last price: its live book (an exit sells at the bid) - never on MCX ([bookQuote]).
+        if (!(r.last > 0)) return bookQuote(c, r.bid, r.ask)?.also { remember(c.symbol, it) }
         return Quote(r.last, bid = r.bid ?: 0.0, ask = r.ask ?: 0.0).also { remember(c.symbol, it) }
     }
 
@@ -932,17 +1009,25 @@ object Paper {
             }
         }
         val token = runCatching { kiteToken(c) }.getOrNull()
-        val freshTick = token?.let { tok -> runCatching { KiteStream.touch(listOf(tok)); KiteStream.freshTick(tok) }.getOrNull() }?.takeIf { it.last > 0 }
-        val reRead = freshTick == null && token != null && Broker.loggedIn && runCatching { opens(c.symbol, action) }.getOrDefault(false)
-        val stamp = if (freshTick != null) freshTick.exchangeTime
+        val tick = token?.let { tok -> runCatching { KiteStream.touch(listOf(tok)); KiteStream.freshTick(tok) }.getOrNull() }
+        val freshTick = tick?.takeIf { it.last > 0 }
+        // 28 Oct: a fresh tick with no last price is the contract's live book ([bookQuote]); none usable: Zerodha's quote, as before.
+        val bookTick = if (freshTick == null && tick != null) bookQuote(c, tick.bid, tick.ask, tick.bidQty ?: 0L, tick.askQty ?: 0L) else null
+        val reRead = freshTick == null && bookTick == null && token != null && Broker.loggedIn && runCatching { opens(c.symbol, action) }.getOrDefault(false)
+        val stamp = if (freshTick != null) freshTick.exchangeTime else if (bookTick != null) tick?.exchangeTime
             else if (reRead) null else runCatching { token?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
         val t0 = runCatching { OrderTiming.sending(live = false, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
-        val fresh = freshTick?.let { quoteOf(it) } ?: if (reRead) freshRestQuote(c) else null
+        val fresh = freshTick?.let { quoteOf(it) } ?: bookTick ?: if (reRead) freshRestQuote(c) else null
         // 12 Oct: the stream's tick, else a price read in the last [PLACE_REUSE_MS] (the candle feed moves once a minute and
         // the honest-paper checks below still judge its age), else a fresh read - not a download of the day's candles per order.
         val read = fresh?.also { remember(c.symbol, it) } ?: known ?: runCatching { recentQuote(c, PLACE_REUSE_MS) }.getOrNull()
-        // A paper entry never fills on a stale candle close (fix 4): refused with the reason, nothing placed.
-        staleEntry(c, action, priceType)?.let { return Result(false, it, emptyList()) }
+        // 28 Oct: an entry on a quote with no last price only on a sane book, with Boss's switch on ([bookEntryRefusal]);
+        // refused with the plain reason, nothing placed. An exit is never held back by it (it sells at the bid).
+        val onBook = read?.noLast == true && runCatching { opens(c.symbol, action) }.getOrDefault(true)
+        if (onBook) bookEntryRefusal(c, read!!)?.let { return Result(false, "${c.symbol}: $it", emptyList()) }
+        // A paper entry never fills on a stale candle close (fix 4): refused with the reason, nothing placed. A live book read
+        // just now is not a candle close (28 Oct).
+        if (!onBook) staleEntry(c, action, priceType)?.let { return Result(false, it, emptyList()) }
         // Honest paper (08 Oct): no fill on a price over a minute old. An exit fills on Zerodha's quote or the stale minute's
         // worse side; an entry LIMIT or stop rests without it (it fills later on a fresh price; a MARKET entry is refused
         // above, as before). Noted in diagnostics.
@@ -994,6 +1079,11 @@ object Paper {
         // A refused automatic entry is kept as a would-be entry (its arm, option, way and the price it would have filled at).
         if (r.capped && capDir != null) runCatching { ExposureCapHost.refused(auto!!, c.symbol, capDir, q?.ltp, live = false, applied = true, why = r.message) }
         timed(r, t0)
+        // 28 Oct: an entry filled on the book alone is said in diagnostics and noted for the live mirror (never mirrored: [filledOnBook]).
+        if (onBook && r.ok) r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()?.let { f ->
+            bookFills[c.symbol] = quoteClock()
+            runCatching { Diag.record("paper", com.optionslab.ira.BookPrice.filledLine(c.symbol, q?.bid ?: 0.0, q?.ask ?: 0.0, f.price)) }
+        }
         // 25 Oct: the IV of each automatic entry that filled (V1: record only, worked out in the background).
         if (bossEntry && r.ok) r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()?.let { f -> BossRiskHost.entryIv(auto!!, c, f.price, live = false) }
             ?: r.orderId?.let { BossRiskHost.ivRest(it, auto!!, c) }

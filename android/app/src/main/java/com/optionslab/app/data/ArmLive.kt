@@ -249,6 +249,12 @@ object ArmLive {
         // In Paper (the usual case) nothing more happens: no worker, no read. Final review F7: the Live switch from memory
         // ([liveFlags]), never a settings read on whatever lane the paper fill is on.
         if (!liveFlags().first) return
+        // 28 Oct (Boss: "Yes fix finnifty"): a paper buy filled on the live book alone (the option had no last price) is never
+        // mirrored: before this change such an entry was not bought at all, so live stays exactly as it was. Memory only.
+        if (ask.side > 0 && runCatching { Paper.filledOnBook(ask.contract.symbol) }.getOrDefault(false)) {
+            note(ask.key, "not mirrored live: ${ask.contract.symbol}'s paper buy was priced on its book alone (no last price); live is unchanged")
+            return
+        }
         if (testSync) { kotlinx.coroutines.runBlocking { enterNow(ask) }; return }
         scope.launch { runCatching { enterNow(ask) }.onFailure { e -> note(ask.key, "live entry failed: ${e.javaClass.simpleName}") } }
     }
