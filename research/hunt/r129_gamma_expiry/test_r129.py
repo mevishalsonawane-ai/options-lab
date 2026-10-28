@@ -156,3 +156,56 @@ def test_loose_heavyweights_need_two_of_three():
     assert not L.heavy_ok(eq, ("A", "B", "C"), d, 300, -1)
     assert L.heavy_ok(eq, (), d, 300, 1)
     assert not L.heavy_ok({("A", d): up}, ("A", "B", "C"), d, 300, 1)     # missing stocks do not count
+
+
+# ---- amendment 2: the winners filter (r129meta.py) ---------------------------------------------------------------------
+def _meta_frame(n=200, seed=0):
+    import pandas as pd
+    from datetime import date, timedelta
+    import r129meta as M
+    rng = np.random.default_rng(seed)
+    F = pd.DataFrame({f: rng.normal(size=n) for f in M.FEATS})
+    F["net"] = np.where(F.vix + rng.normal(0, 0.5, n) > 1.0, 1500.0, -500.0)    # winners carry high "vix"
+    F["netx2"] = F.net - 10
+    F["day"] = [date(2022, 1, 3) + timedelta(days=int(i)) for i in range(n)]
+    return F
+
+
+def test_meta_fit_uses_training_rows_only_and_keeps_the_top_30pct():
+    import r129meta as M
+    F = _meta_frame()
+    tr, te = F.iloc[:150], F.iloc[150:].copy()
+    m1 = M.fit(tr)
+    te2 = te.copy()
+    te2["net"] = -te2.net                                  # the test outcomes never reach the model
+    m2 = M.fit(tr)
+    assert np.allclose(M.score(m1, te), M.score(m2, te2)) and m1[4] == m2[4]
+    s_tr = M.score(m1, tr)
+    assert abs((s_tr >= m1[4]).mean() - 0.30) < 0.02
+    # the planted signal is found: kept test trades win more than all of them
+    k = te[M.score(m1, te) >= m1[4]]
+    assert (k.net > 0).mean() > (te.net > 0).mean()
+
+
+def test_meta_imputes_missing_with_training_medians():
+    import r129meta as M
+    F = _meta_frame()
+    F.loc[5, "log_oi_ratio"] = np.nan
+    m = M.fit(F)
+    row = F.iloc[[0]].copy()
+    row["log_oi_ratio"] = np.nan
+    assert np.isfinite(M.score(m, row)).all()
+
+
+def test_meta_summary_and_random_p():
+    import r129meta as M
+    F = _meta_frame()
+    s = M.summary(F)
+    assert s["n"] == len(F) and 0 < s["win"] < 1 and s["avg_win"] == 1500.0 and s["avg_loss"] == -500.0
+    assert M.summary(F.iloc[0:0]) == dict(n=0)
+    rng = np.random.default_rng(1)
+    best = F.sort_values("net", ascending=False).iloc[:20]
+    assert M.random_p(F, 20, float(best.net.sum()), rng) < 0.01
+    assert M.random_p(F, 0, 0.0, rng) == 1.0
+    from datetime import date
+    assert M.monthly(date(2025, 10, 28)) == 1 and M.monthly(date(2025, 10, 7)) == 0
