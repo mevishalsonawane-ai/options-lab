@@ -219,9 +219,19 @@ def stats(T: pd.DataFrame, sessions: int) -> dict:
     dd = float(min((eq - np.maximum.accumulate(np.r_[0.0, eq])[1:]).min(), 0.0))
     mo = T.assign(mo=[f"{d.year}-{d.month:02d}" for d in T.day]).groupby("mo").net.sum()
     yr = T.assign(y=[d.year for d in T.day]).groupby("y").net.agg(["count", "sum", "mean"])
+    # R128 T5 fix: a twin without a trade is resampled from that trade's valid twins (it used to count as Rs 0, which
+    # pulled twin totals toward zero); a trade with no valid twin is left out of the twin totals
+    rng = np.random.default_rng(SEED)
     tw = np.array(T.twins.tolist(), dtype=float)                         # trades x twins
-    tw = np.where(np.isfinite(tw), tw, 0.0)
-    tot = tw.sum(0)
+    for k in range(tw.shape[0]):
+        bad = ~np.isfinite(tw[k])
+        if bad.all():
+            tw[k] = np.nan
+        elif bad.any():
+            tw[k, bad] = rng.choice(tw[k, ~bad], bad.sum())
+    keep = np.isfinite(tw).all(1)
+    tot = tw[keep].sum(0)
+    rule_total = float(net[keep].sum())
     return dict(n=int(len(T)), win=float(w.mean()), avg_net=float(net.mean()), avg_net_x2=float(T.netx2.mean()),
                 avg_win=float(net[w].mean()) if w.any() else 0.0, avg_loss=float(net[~w].mean()) if (~w).any() else 0.0,
                 total=float(net.sum()), per_session=float(net.sum() / sessions), avg_pts=float(T.pts.mean()),
@@ -232,7 +242,8 @@ def stats(T: pd.DataFrame, sessions: int) -> dict:
                          for y, r in yr.iterrows()},
                 by_und={u: dict(n=int((T.und == u).sum()), total=float(T.net[T.und == u].sum()),
                                 win=float((T.net[T.und == u] > 0).mean())) for u in sorted(T.und.unique())},
-                twin_mean=float(tot.mean()), p_twins=float((1 + (tot >= net.sum()).sum()) / (1 + len(tot))),
+                twin_mean=float(tot.mean()), p_twins=float((1 + (tot >= rule_total).sum()) / (1 + len(tot))),
+                twin_trades=int(keep.sum()),
                 buys=float((T.side > 0).mean()))
 
 
