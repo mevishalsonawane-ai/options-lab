@@ -119,7 +119,7 @@ def test_buildup_signs():
 
 def test_new_cols_cover_groups():
     assert set(F.NEW_COLS) == set(sum((list(v) for v in F.GROUPS.values()), []))
-    assert len(F.NEW_COLS) == 31 + 24 + 10
+    assert len(F.NEW_COLS) == 31 + 24 + 10 + 9
 
 
 # ------------------------------------------------------------------------------------------------ amendment 2: candles
@@ -203,3 +203,32 @@ def test_ma_series_past_only():
         assert a[k][g] == pytest.approx(b[k][g])
     k5 = 2 * 75 + 200 // 5 - 1
     assert a["e5"][k5] == pytest.approx(b["e5"][k5])
+
+
+
+# ------------------------------------------------------------------------------------------------ amendment 4: RSI, Supertrend
+def test_rsi_extremes_and_past_only():
+    up = np.arange(1.0, 40.0)
+    assert F.rsi(up)[-1] == 100.0
+    assert F.rsi(up[::-1])[-1] == pytest.approx(0.0)
+    rng = np.random.default_rng(3)
+    x = 100 + rng.normal(0, 1, 300).cumsum()
+    a = F.rsi(x)
+    x2 = x.copy()
+    x2[200:] += 30
+    assert a[199] == pytest.approx(F.rsi(x2)[199])
+    assert np.isnan(a[5])
+
+
+def test_supertrend_flips_on_trend_and_is_past_only():
+    n = 200
+    c = np.concatenate([np.linspace(100, 160, 100), np.linspace(160, 80, 100)])
+    h, l = c + 0.5, c - 0.5
+    line, d = F.supertrend(h, l)
+    assert d[90] == 1 and d[-1] == -1
+    assert line[90] < c[90] and line[-1] > c[-1]
+    h2, l2 = h.copy(), l.copy()
+    h2[150:] += 50
+    l2[150:] += 50
+    line2, d2 = F.supertrend(h2, l2)
+    assert line[149] == pytest.approx(line2[149]) and d[149] == d2[149]

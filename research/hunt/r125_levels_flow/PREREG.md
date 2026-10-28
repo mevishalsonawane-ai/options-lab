@@ -233,3 +233,23 @@ N3 now has six new specialists and 65 new inputs.
   account stop.
 - Less data means less power. A real but small edge is easier to miss, and the trade-count gates are harder to reach.
   That is accepted, as Boss's choice.
+
+## Amendment 4 (28 Oct 2026, before any comparison, rule or gate): RSI and Supertrend
+
+Boss, 28 Oct: *"Also add RSI and Supertrend."* The two-year run was stopped while the base network trained (3 folds'
+weights saved, no prediction written or read); those files are set aside unused, and the run starts again.
+
+A seventh new specialist, **osc** (9 inputs), on wicks:
+
+| input | meaning |
+|---|---|
+| rsi1, rsi5 | Wilder RSI(14) of the wick midpoints, (high + low) / 2, on 1-minute and 5-minute candles (5-minute: the last completed candle) |
+| rsi1_chg5 | the 1-minute RSI's change over 5 minutes |
+| st1_dir, st5_dir | Supertrend(10, 3) direction (+1 / -1) on 1-minute and 5-minute candles |
+| st1_dist, st5_dist | bar t's wick span against the Supertrend line, signed, in m |
+| st1_age, st5_age | signed bars since the last flip (capped at 120) |
+
+The Supertrend uses the true range of the highs and lows (with the previous candle's midpoint standing in for the
+close), bands around the midpoint, and a flip when the midpoint crosses the active band. No close or open is used.
+
+N3 now has seven new specialists and 74 new inputs. Nothing else changes.

@@ -39,12 +39,13 @@ FLOW_COLS = ("fl_fii_ls", "fl_fii_ls_chg", "fl_pro_stance", "fl_pro_stance_chg",
 VOL_COLS = ("vo_v5", "vo_v15", "vo_v60", "vo_poc", "vo_vah", "vo_val", "vo_in_va", "vo_node")
 VWMA_COLS = ("vw_dist", "vw_slope", "vw_band", "ma9_dist", "ma20_dist", "ma50_dist", "ma_align", "ma20_slope",
              "ma_cross", "ma5m20_dist")
+OSC_COLS = ("rsi1", "rsi5", "rsi1_chg5", "st1_dir", "st1_dist", "st1_age", "st5_dir", "st5_dist", "st5_age")
 CANDLE_TF = (1, 5, 15)
 CANDLE_KEYS = ("inside", "outside", "trend", "run", "rev2", "swing3", "nr7", "wide")
 CANDLE_COLS = tuple(f"c{tf}_{k}" for tf in CANDLE_TF for k in CANDLE_KEYS)
-NEW_COLS = SR_COLS + LIQ_COLS + FLOW_COLS + VOL_COLS + CANDLE_COLS + VWMA_COLS
+NEW_COLS = SR_COLS + LIQ_COLS + FLOW_COLS + VOL_COLS + CANDLE_COLS + VWMA_COLS + OSC_COLS
 GROUPS = {"sr": SR_COLS, "liq": LIQ_COLS, "flow": FLOW_COLS, "vol": VOL_COLS, "candle": CANDLE_COLS,
-          "vwap_ma": VWMA_COLS}
+          "vwap_ma": VWMA_COLS, "osc": OSC_COLS}
 
 
 # ------------------------------------------------------------------------------------------------ pivots and levels
@@ -289,6 +290,86 @@ def ma_series(I) -> dict:
     return dict(e9=e9, e20=e20, e50=e50, cross=cross, e5=e5)
 
 
+# ------------------------------------------------------------------------------------------------ RSI and Supertrend
+def rsi(x: np.ndarray, n: int = 14) -> np.ndarray:
+    """Wilder RSI of a series (here wick midpoints); NaNs carry the last value; past-only."""
+    out = np.full(len(x), np.nan)
+    ag = al = np.nan
+    prev = np.nan
+    k = 0
+    for i, v in enumerate(x):
+        if np.isfinite(v) and np.isfinite(prev):
+            d = v - prev
+            g, lo = max(d, 0.0), max(-d, 0.0)
+            k += 1
+            if k <= n:
+                ag = g if k == 1 else (ag * (k - 1) + g) / k
+                al = lo if k == 1 else (al * (k - 1) + lo) / k
+            else:
+                ag = (ag * (n - 1) + g) / n
+                al = (al * (n - 1) + lo) / n
+            if k >= n:
+                out[i] = 100.0 if al == 0 else 100 - 100 / (1 + ag / al)
+        elif k >= n:
+            out[i] = out[i - 1]
+        if np.isfinite(v):
+            prev = v
+    return out
+
+
+def supertrend(h: np.ndarray, l: np.ndarray, n: int = 10, mult: float = 3.0) -> tuple[np.ndarray, np.ndarray]:
+    """Supertrend on wicks: ATR from the true range of highs/lows (the previous bar's midpoint stands in for the
+    close), bands around the midpoint, and the trend flips when the midpoint crosses the active band. Returns
+    (line, direction +1/-1); past-only."""
+    N = len(h)
+    mid = (h + l) / 2
+    line, dirn = np.full(N, np.nan), np.full(N, np.nan)
+    atr = np.nan
+    ub = lb = np.nan
+    d = 1.0
+    pm = np.nan
+    k = 0
+    for i in range(N):
+        if not (np.isfinite(h[i]) and np.isfinite(l[i])):
+            line[i], dirn[i] = line[i - 1] if i else np.nan, dirn[i - 1] if i else np.nan
+            continue
+        tr = h[i] - l[i] if not np.isfinite(pm) else max(h[i] - l[i], abs(h[i] - pm), abs(l[i] - pm))
+        k += 1
+        atr = tr if k == 1 else (atr * (min(k, n) - 1) + tr) / min(k, n)
+        bu, bl = mid[i] + mult * atr, mid[i] - mult * atr
+        ub = bu if not np.isfinite(ub) or bu < ub or pm > ub else ub
+        lb = bl if not np.isfinite(lb) or bl > lb or pm < lb else lb
+        if d > 0 and mid[i] < lb:
+            d = -1.0
+        elif d < 0 and mid[i] > ub:
+            d = 1.0
+        line[i], dirn[i] = (lb if d > 0 else ub), d
+        pm = mid[i]
+    return line, dirn
+
+
+def osc_series(I) -> dict:
+    """1-minute and 5-minute RSI(14) of wick midpoints and Supertrend(10, 3) on wicks over the continuous series; the
+    5-minute values are read at the last completed 5-minute candle."""
+    h1, l1 = I.g.h.reshape(-1), I.g.l.reshape(-1)
+    D = I.g.h.shape[0]
+    with np.errstate(all="ignore"):
+        h5 = np.nanmax(I.g.h.reshape(D, -1, 5), 2).reshape(-1)
+        l5 = np.nanmin(I.g.l.reshape(D, -1, 5), 2).reshape(-1)
+    s1, d1 = supertrend(h1, l1)
+    s5, d5 = supertrend(h5, l5)
+
+    def age(d):
+        out = np.zeros(len(d))
+        last = None
+        for i in range(len(d)):
+            if i and np.isfinite(d[i]) and np.isfinite(d[i - 1]) and d[i] != d[i - 1]:
+                last = i
+            out[i] = (d[i] if np.isfinite(d[i]) else 0) * (min(i - last, 120) if last is not None else 120)
+        return out
+    return dict(rsi1=rsi((h1 + l1) / 2), rsi5=rsi((h5 + l5) / 2), s1=s1, d1=d1, a1=age(d1), s5=s5, d5=d5, a5=age(d5))
+
+
 # ------------------------------------------------------------------------------------------------ volume profile
 def minute_volume(chain) -> np.ndarray:
     """ATM+-3 option volume (calls + puts) per minute of a session (0 where nothing traded); negative prints -> 0."""
@@ -397,6 +478,7 @@ def index_features(part: str, und: str, rows: pd.DataFrame, log=print) -> pd.Dat
     hi_all = np.nanmax(I.g.h) if np.isfinite(I.g.h).any() else 1.0
     nb = int(hi_all * 1.3 / bw) + 10
     MA = ma_series(I)
+    OS = osc_series(I)
     out = []
     for i in range(max(first, 0), len(I.days)):
         d = I.days[i]
@@ -474,6 +556,12 @@ def index_features(part: str, und: str, rows: pd.DataFrame, log=print) -> pd.Dat
             f.update(vwap_ma_features(h, l, v, t, m, MA["e9"][g], MA["e20"][g], MA["e50"][g],
                                       MA["e20"][g - 15] if g >= 15 else np.nan, MA["cross"][g],
                                       MA["e5"][k5] if k5 >= 0 else np.nan))
+            f.update(rsi1=OS["rsi1"][g], rsi5=OS["rsi5"][k5] if k5 >= 0 else np.nan,
+                     rsi1_chg5=OS["rsi1"][g] - OS["rsi1"][g - 5] if g >= 5 else np.nan,
+                     st1_dir=OS["d1"][g], st1_dist=span_signed(l[t], h[t], OS["s1"][g], m), st1_age=OS["a1"][g],
+                     st5_dir=OS["d5"][k5] if k5 >= 0 else np.nan,
+                     st5_dist=span_signed(l[t], h[t], OS["s5"][k5], m) if k5 >= 0 else np.nan,
+                     st5_age=OS["a5"][k5] if k5 >= 0 else np.nan)
             out.append(f)
     log(f"R125 {und} {part}: {len(out)} rows", flush=True)
     return pd.DataFrame(out)
