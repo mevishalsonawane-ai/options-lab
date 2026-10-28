@@ -1,3 +1,11 @@
+# R131 result (28 Oct 2026): a better way to call the direction, with every dataset? Intraday no; overnight one thin yes
+1. 891 pre-registered tests: 9 horizons x 8 data sets (index/VIX, 59-stock breadth, FII/DII/Pro/Client OI + FPI, futures basis/OI/rollover, option chain, rupee/G-sec/MCX, calendar) x 3 models x 4 coverages, walk-forward 2023 - Mar 2026, holdout Apr-Oct 2026 read once, BH over all.
+2. Intraday (09:30/11:00/13:00 to close, next 60 min): still a coin (best AUC 0.52-0.54); nothing reaches 60%; nearest miss 59.4% (645 calls).
+3. Overnight: "the index opens above its 14:55 price" on the 10% surest days was right 74-78% (463-528 calls, base 61.9%) and 64-68% on Apr-Oct 2026 (49-79 calls, base 51%); 14 tests pass every gate. Signal source: the index.
+4. But it is thin: ~70% of calls are MIDCPNIFTY, moves are ~0.35%, half the calls cannot be priced, and an ATM call's profit (holdout Rs +216 to +742 a trade, 15-32 trades) turns negative if sold at 09:19 instead of 09:15. Not robust; nothing goes to paper.
+5. Gaps measured from NSE's official close look 60-79% "right" only because that close is a 30-minute average (a trap, not an edge).
+6. The new sources (participants, FPI, basis, chain, rupee/G-sec/MCX) added nothing; breadth helped intraday by under 1 AUC point. Details: research/HUNT_R131_DIRECTION.md.
+
 # R130 result (28 Oct 2026): more S5-like rules from the network? None better than S5
 1. 84 rules (7 windows x any/puts/calls x EV Rs 300/600 x fixed/trailing exit) from R123's network, BH-corrected.
 2. One passed the walk-forward (13:05-14:00 picks, fixed exits: 311 trades, +Rs 130, q 0.04) but 92% of its trades are 2024, its best 5 days are 109% of the profit, it breaks the month stop, and it made 4 trades in Apr-Oct 2026.
