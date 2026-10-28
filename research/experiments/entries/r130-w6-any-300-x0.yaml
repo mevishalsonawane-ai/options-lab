@@ -1,0 +1,28 @@
+id: r130-w6-any-300-x0
+title: 'R130 W6-any-300-x0: the network''s best cell-side at 13:05-14:00, EV >= Rs 300, the cell''s own exits'
+family: ml
+date: '2026-10-28'
+doc: research/HUNT_R130_NN_SEARCH.md
+data_version: R123 N1 out-of-sample forecasts (walk-forward 2023 - Mar 2026, holdout Apr - Oct 2026) + Drive lake option bars (lakeclean 1-3)
+period:
+  design: 2023-01-01..2026-03-15 (R123 walk-forward folds)
+  holdout: 2026-04-01..2026-10-19 (read before by R123-R129)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the underlying (R123 N1 network expected nets from index, VIX and breadth minutes; option chain as context);
+  buys the ATM option; intraday only'
+model_or_rule: research/hunt/r130_nn_search/r130.py
+prereg: research/hunt/r130_nn_search/PREREG.md
+holdout_read: true
+verdict: rejected
+hypothesis: The network's early-afternoon picks pay with fixed exits
+settings: PREREG.md section 1 (W6, any side, Rs 300, x0)
+variants_tried: 84
+results:
+  summary: 'Walk-forward 311 trades, 53% won, avg net Rs 130 (2x Rs 116), q 0.04, 3 of 4 folds; but 285 of 311 trades in 2024, the best 5 days give 109% of the profit, worst month Rs -17,984 (breaks the -Rs 13k month stop); holdout 4 trades, avg Rs -75. Fails ho_n and the account stop.'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots

@@ -1,3 +1,9 @@
+# R130 result (28 Oct 2026): more S5-like rules from the network? None better than S5
+1. 84 rules (7 windows x any/puts/calls x EV Rs 300/600 x fixed/trailing exit) from R123's network, BH-corrected.
+2. One passed the walk-forward (13:05-14:00 picks, fixed exits: 311 trades, +Rs 130, q 0.04) but 92% of its trades are 2024, its best 5 days are 109% of the profit, it breaks the month stop, and it made 4 trades in Apr-Oct 2026.
+3. In 2026 the network only trades the 09:20-09:30 window (S5's); every other window's picks bunch in 2024.
+4. Nothing new goes to paper or a forward test; S5 Trail stays as it is. Details: research/HUNT_R130_NN_SEARCH.md.
+
 # R129 result (28 Oct 2026): the "Gamma-Driven Hero-to-Zero" expiry strategy, as pasted
 1. On 917 expiry days (five indices, Aug 2021 - Oct 2026) the stated rules lined up only 2-6 times; every version lost (-Rs 210 to -Rs 900 a trade), none reached 4x.
 2. The main blocker: the heaviest OI wall sits at the money and has a 3x call/put imbalance only 14-25% of the time; then VIX, then no breakout.

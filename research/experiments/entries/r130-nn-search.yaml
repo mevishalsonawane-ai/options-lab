@@ -1,0 +1,28 @@
+id: r130-nn-search
+title: 'R130 84 S5-like network rules (7 windows x side x EV 300/600 x fixed/trailing exit)'
+family: ml
+date: '2026-10-28'
+doc: research/HUNT_R130_NN_SEARCH.md
+data_version: R123 N1 out-of-sample forecasts (walk-forward 2023 - Mar 2026, holdout Apr - Oct 2026) + Drive lake option bars (lakeclean 1-3)
+period:
+  design: 2023-01-01..2026-03-15 (R123 walk-forward folds)
+  holdout: 2026-04-01..2026-10-19 (read before by R123-R129)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the underlying (R123 N1 network expected nets from index, VIX and breadth minutes; option chain as context);
+  buys the ATM option; intraday only'
+model_or_rule: research/hunt/r130_nn_search/r130.py
+prereg: research/hunt/r130_nn_search/PREREG.md
+holdout_read: true
+verdict: rejected
+hypothesis: Other windows, sides or thresholds of R123's network give rules like S5 or better
+settings: PREREG.md section 1
+variants_tried: 84
+results:
+  summary: '22 of 36 rules with >= 100 walk-forward trades were positive, almost all from 2024; 1 passed the walk-forward (W6-any-300-x0) but has 4 holdout trades and breaches the month stop; none passes every gate; in Apr-Oct 2026 only the 09:20-09:30 window traded > 30 times (S5''s). S5 Trail under random-row twins: p 0.037, q 0.21.'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots
