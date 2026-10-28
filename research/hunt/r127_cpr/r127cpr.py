@@ -278,8 +278,9 @@ def run():
         s["passes"] = all(s["gates"].values())
     RESULTS.mkdir(parents=True, exist_ok=True)
     (RESULTS / "results.json").write_text(json.dumps(out, indent=1, default=str))
-    K.OUT.mkdir(parents=True, exist_ok=True)
-    T.drop(columns=["twins"]).to_parquet(K.K3.CACHE_ROOT / "r127_trades.parquet")
+    out_dir = Path(__import__("os").environ.get("R127_OUT", K.K3.CACHE_ROOT / "r127")).expanduser()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    T.drop(columns=["twins"]).to_parquet(out_dir / "trades.parquet")
     print({v: (s.get("n"), round(s.get("avg_net", 0) or 0), s.get("passes")) for v, s in out["variants"].items()})
 
 
