@@ -69,10 +69,10 @@ class TimeMachineHostTest : RobolectricTest() {
         assertTrue(TimeMachineHost.diagLine(), TimeMachineHost.diagLine().contains("1 check(s) today") && TimeMachineHost.diagLine().contains("forward log 1 record(s)"))
         val said = TimeMachineHost.jarvisLine(today)
         assertTrue(said, said.startsWith("Time machine today, Boss: ORB edge (target first 100%"))
-        assertTrue(said, said.endsWith("It only reports; it never skips or resizes a trade."))
+        assertTrue(said, said.endsWith("It only reports; it never skips or resizes a trade. Treat it as background: in a backtest its odds did not predict wins."))
         assertEquals("The time machine checked no entry today, Boss.", TimeMachineHost.jarvisLine(today.minusDays(1)))
         // The timeline's finding.
-        assertTrue(SmartWorkers.bus.recent(System.currentTimeMillis()).any { it.who == "time machine" && it.words.contains("verdict edge") })
+        assertTrue(SmartWorkers.bus.recent(System.currentTimeMillis()).any { it.who == "time machine" && it.words.contains("verdict edge") && it.words.startsWith(TimeMachineHost.NOTE_SHORT) })
         // A fresh process (memory cleared): the log is read back from the encrypted file, then settled with the trade's outcome.
         TimeMachineHost.resetForTest()
         assertEquals("read back from the encrypted file", 1, TimeMachineHost.forwardLog().size)
@@ -80,6 +80,39 @@ class TimeMachineHostTest : RobolectricTest() {
         var waited = 0
         while (TimeMachineHost.forwardLog()[0].outcome == null && waited++ < 100) Thread.sleep(20)
         assertEquals("target", TimeMachineHost.forwardLog()[0].outcome)
+    }
+
+    /**
+     * 28 Oct (R120): the Hero Rs 1,000 ticket's verdict is hidden (its stop is a few index points, so most entries read "against"
+     * whatever happens): no timeline finding and nothing from Jarvis, but still checked and kept in the forward log for research.
+     */
+    @Test fun aHiddenArmIsCheckedAndLoggedButNeverShown() {
+        assertTrue(TimeMachineHost.hidden(com.optionslab.engine.orb.HeroTicketRules.SOURCE))
+        assertTrue("only the ticket arm R120 measured", !TimeMachineHost.hidden(com.optionslab.engine.orb.HeroRules.ARM.source) && !TimeMachineHost.hidden("orb"))
+        SmartWorkers.resetForTest()
+        TimeMachineHost.bars = TimeMachineHost.Bars { _, _, _ -> climbing(30) to "30 sessions from the test" }
+        val r = TimeMachineHost.check(entry(arm = com.optionslab.engine.orb.HeroTicketRules.SOURCE))
+        assertNotNull(r.odds)
+        assertEquals(r, TimeMachineHost.resultOf("orb:hero_ticket:P1"))
+        assertEquals("kept for research", 1, TimeMachineHost.forwardLog().size)
+        assertTrue("no timeline finding", SmartWorkers.bus.recent(System.currentTimeMillis()).none { it.who == TimeMachineHost.WHO })
+        assertTrue(TimeMachineHost.jarvisLine(today), TimeMachineHost.jarvisLine(today).startsWith("The time machine has nothing to show today, Boss: only the Hero ticket"))
+        assertTrue(TimeMachineHost.diagLine(), TimeMachineHost.diagLine().contains("[hidden from display]") && TimeMachineHost.diagLine().contains("not a proven signal, R120"))
+        // A shown arm the same day: Jarvis speaks of it alone.
+        TimeMachineHost.check(entry())
+        val said = TimeMachineHost.jarvisLine(today)
+        assertTrue(said, said.startsWith("Time machine today, Boss: ORB edge"))
+        assertEquals(said, 1, Regex("ORB edge").findAll(said).count())
+        assertTrue(SmartWorkers.bus.recent(System.currentTimeMillis()).count { it.who == TimeMachineHost.WHO } == 1)
+    }
+
+    /** 28 Oct (review): the timeline shows a finding's first 160 characters; the note comes first, so a long label never cuts it. */
+    @Test fun theNoteSurvivesALongLabelInTheTimeline() {
+        SmartWorkers.resetForTest()
+        TimeMachineHost.bars = TimeMachineHost.Bars { _, _, _ -> climbing(30) to "30 sessions from the test" }
+        TimeMachineHost.check(entry(arm = "pine").copy(label = "Pine · " + "a very long script name the owner chose ".repeat(3)))
+        val words = SmartWorkers.bus.recent(System.currentTimeMillis()).first { it.who == TimeMachineHost.WHO }.words
+        assertTrue(words, words.take(160).contains("not a proven signal"))
     }
 
     @Test fun noBarsFewSessionsAndAnOvernightArmAreSaidHonestly() {

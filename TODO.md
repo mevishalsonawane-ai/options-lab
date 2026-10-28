@@ -154,6 +154,9 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   entry did not pass as a filter on any of 14 arms (0 of 28 cells; its odds vs the real win: correlation 0.04, n 16,810).
   The forward-log check above still stands; R51 "skip against" (the near miss: final twin p 0.039, BH q 1.0) is the one
   thing worth looking at again there, with a new pre-registration.
+  28 Oct (R121, research/HUNT_R121_TIME_MACHINE_SETUP.md): the enhanced version (the arm's own past entries, its real
+  exits) also passed nowhere (0 of 28; correlation with the next trade -0.003, n 16,552). The app now labels every verdict
+  "not a proven signal" and hides the Hero Rs 1,000 ticket's verdict (display only; still logged).
   When R3, R19c and the 13–26 Oct paper run are finished, show one page with every arm and the whole portfolio on the
   same days, BEFORE (today's plain rules) and AFTER (every change that passed):
   - total P&L, P&L per day, % green days, win rate, average win and average loss;

@@ -144,6 +144,9 @@ All of these still count in the multiple-testing family as p = 1.
 
 - **Paper and live:** nothing changes. Live stays untouched, as CLAUDE.md requires. No gate is proposed, because
   nothing passed.
+- **28 Oct, later (Boss: "yes do both"):** the app now says every verdict is not a proven signal and hides the Hero
+  ₹1,000 ticket's verdict (display only, still logged). R121 then tested an improved time machine and it also passed
+  nowhere (research/HUNT_R121_TIME_MACHINE_SETUP.md).
 - **The forward log keeps running** (TODO R21). If Boss wants R51's near miss checked on fresh data, the app's own
   forward log after 30 signal days is the right place, with a new pre-registration. A possible later idea (not
   tested): skip entries when the recent tape is strongly one-sided either way.

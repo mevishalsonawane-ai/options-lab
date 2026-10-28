@@ -1,9 +1,7 @@
-# R120: the time machine as a pre-entry gate (28 Oct 2026)
+# R120 + R121: the time machine before entries (28 Oct 2026)
 
-- Boss asked whether the time machine is used before entries. It is not: it only reports after each entry. R120 tested whether it should be used before them.
-- The answer is no. Its verdict, worked out before each entry from the days before it, improved none of 14 arms: 0 of 28 tests passed (rules: skip "against", or take only "edge").
-- Its odds do not tell winners from losers: correlation 0.04 with the real win over 16,810 trades, and worse than a flat guess in every arm.
-- Near miss: R51 "skip against" was up in all three windows (final Rs 1,34,743 -> Rs 1,57,203, 73 of 1,670 trades skipped, twin p 0.039), but it fails the multiple-testing gate. It stays a note.
-- "Take only edge" lost money on every profitable arm.
-- Nothing changes in the app, paper or live. The time machine stays shadow, and the forward-log check (TODO R21) still stands.
-- Write-up: research/HUNT_R120_TIME_MACHINE_GATE.md. Tables: research/hunt/r120_time_machine_gate/results/report.md.
+- Boss asked whether the time machine should be used before entries. Its verdict, worked out before each entry, made no arm better: R120 passed 0 of 28 tests.
+- The improved version (R121) replays each arm's own past trades with its real exits. The replay now matches real trades well (same win/loss 90% of the time for R51/R72/Solo), but past results still don't predict the next trade (correlation -0.003, 16,552 trades). It passed 0 of 28 tests.
+- R120's nearest miss, R51 "skip against" (final twin p 0.039), fails the multiple-testing gate and stays a note.
+- App change (display only): every time machine verdict now says "Not a proven signal"; the Hero Rs 1,000 ticket's verdict is hidden from the ticket, Jarvis and the timeline, but still logged. No trade, order, size or exit changes.
+- Write-ups: research/HUNT_R120_TIME_MACHINE_GATE.md and research/HUNT_R121_TIME_MACHINE_SETUP.md.

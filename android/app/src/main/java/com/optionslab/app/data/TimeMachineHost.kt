@@ -52,6 +52,26 @@ object TimeMachineHost {
     const val WHO = "time machine"
     private const val KEEP = 600
 
+    /**
+     * 28 Oct (research R120, research/HUNT_R120_TIME_MACHINE_GATE.md): worked out before each entry on 14 arms' backtests, its
+     * odds did not predict which trades won (correlation 0.04 over 16,810 trades) and no gate built on it passed. Said with
+     * every verdict shown, so it is read as background, never as a signal.
+     */
+    const val UNPROVEN = "Not a proven signal: in a backtest of 16,810 trades its odds did not predict wins (R120)."
+
+    /**
+     * 28 Oct (R120): arms whose verdict is not shown on the ticket, to Jarvis or in the timeline. The Hero Rs 1,000 ticket's stop
+     * (25% of a Rs 5-30 premium) is a few index points, so the replay calls most entries "against" whatever happens (255 of
+     * 355 in the backtest). Still checked and kept in the forward log for research; only the display is hidden.
+     */
+    val HIDDEN_ARMS: Set<String> = setOf(com.optionslab.engine.orb.HeroTicketRules.SOURCE)
+
+    /** The timeline's opening words: the note comes first, so a long arm label can never cut it off (the timeline shows 160 characters). */
+    const val NOTE_SHORT = "Time machine (not a proven signal, R120)"
+
+    /** True when [arm]'s verdict is kept out of sight ([HIDDEN_ARMS]). */
+    fun hidden(arm: String): Boolean = arm in HIDDEN_ARMS
+
     /** What an arm hands over right after its entry. */
     data class Entry(
         val arm: String, val label: String,
@@ -173,9 +193,9 @@ object TimeMachineHost {
         // 26 Oct: an erase just between the check above and here: taken back out.
         if (gen != wipeGen) { results.remove(e.ref); _latest.update { l -> l.filter { it.entry.ref != e.ref } }; return r }
         runCatching { Diag.record("timemachine", r.line()) }
-        // The Autopilot change timeline shows it as its own finding (words only; nothing to undo).
-        runCatching { SmartWorkers.bus.post(com.optionslab.ira.Findings.Finding(WHO, com.optionslab.ira.Findings.Kind.OTHER, e.underlying, 0, null, 50,
-            r.atMs, 12 * 3_600_000L, words = "Time machine checked ${e.label}'s entry: verdict ${r.verdict} → " + (r.odds?.let { "target first ${it.targetPct.toInt()}%, stop first ${it.stopPct.toInt()}%, break-even ${(it.breakEven * 100).toInt()}%" } ?: (r.note ?: "no odds")))) }
+        // The Autopilot change timeline shows it as its own finding (words only; nothing to undo). 28 Oct: not for a hidden arm.
+        if (!hidden(e.arm)) runCatching { SmartWorkers.bus.post(com.optionslab.ira.Findings.Finding(WHO, com.optionslab.ira.Findings.Kind.OTHER, e.underlying, 0, null, 50,
+            r.atMs, 12 * 3_600_000L, words = "$NOTE_SHORT checked ${e.label}'s entry: verdict ${r.verdict} → " + (r.odds?.let { "target first ${it.targetPct.toInt()}%, stop first ${it.stopPct.toInt()}%, break-even ${(it.breakEven * 100).toInt()}%" } ?: (r.note ?: "no odds")))) }
         synchronized(io) {
             if (gen != wipeGen) return r
             ensureLoaded()
@@ -262,11 +282,13 @@ object TimeMachineHost {
 
     /** Jarvis's words on today's checks (none: says so). */
     fun jarvisLine(day: LocalDate): String {
-        val todays = _latest.value.filter { it.day == day }
-        if (todays.isEmpty()) return "The time machine checked no entry today, Boss."
+        val all = _latest.value.filter { it.day == day }
+        val todays = all.filter { !hidden(it.entry.arm) }
+        if (all.isEmpty()) return "The time machine checked no entry today, Boss."
+        if (todays.isEmpty()) return "The time machine has nothing to show today, Boss: only the Hero ticket was checked, and its verdict is hidden (its stop is too close for the replay to mean anything)."
         return "Time machine today, Boss: " + todays.joinToString(" ") { r ->
             "${r.entry.label} ${r.verdict}" + (r.odds?.takeIf { it.used > 0 }?.let { " (target first ${it.targetPct.toInt()}%, stop first ${it.stopPct.toInt()}%, break-even ${(it.breakEven * 100).toInt()}%, ${it.sessions} sessions)" } ?: "") + "."
-        } + " It only reports; it never skips or resizes a trade."
+        } + " It only reports; it never skips or resizes a trade. Treat it as background: in a backtest its odds did not predict wins."
     }
 
     /** The diagnostics' line: today's checks and the forward log's size. */
@@ -274,8 +296,9 @@ object TimeMachineHost {
         val today = Market.today()
         val todays = _latest.value.filter { it.day == today }
         val n = synchronized(io) { records.size }
-        return "Time machine: ${todays.size} check(s) today" + (todays.takeIf { it.isNotEmpty() }?.joinToString(" | ", prefix = " - ") { it.line() } ?: "") +
-            "; forward log $n record(s) (shadow only: never skips, resizes or delays a trade)"
+        // 28 Oct (R120): the diagnostics keep every check for research; a hidden arm's is marked so, and the note is said once.
+        return "Time machine: ${todays.size} check(s) today" + (todays.takeIf { it.isNotEmpty() }?.joinToString(" | ", prefix = " - ") { it.line() + if (hidden(it.entry.arm)) " [hidden from display]" else "" } ?: "") +
+            "; forward log $n record(s) (shadow only: never skips, resizes or delays a trade; not a proven signal, R120)"
     }
 
     // ---- the forward log (the encrypted vault file; this object's IO scope only) --------------------------------------------

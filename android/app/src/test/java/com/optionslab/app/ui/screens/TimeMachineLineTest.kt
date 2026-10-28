@@ -44,6 +44,18 @@ class TimeMachineLineTest {
     @Test fun theLineShowsForTheCheckedOrderAndNotForOthers() {
         compose.setContent { IraAlgoTheme("light") { androidx.compose.foundation.layout.Column { TimeMachineLine("P77"); TimeMachineLine("P78"); TimeMachineLine(null) } } }
         compose.onNodeWithTag("time-machine-line").assertTextContains("Time machine (edge): target first 100%", substring = true)
+        // 28 Oct (R120): every verdict shown says it is not a proven signal.
+        compose.onNodeWithTag("time-machine-line").assertTextContains(TimeMachineHost.UNPROVEN, substring = true)
         assertTrue(compose.onAllNodesWithTag("time-machine-line").fetchSemanticsNodes().size == 1)
+    }
+
+    /** 28 Oct (R120): the Hero Rs 1,000 ticket's verdict is checked but never shown under its ticket. */
+    @Test fun aHiddenArmShowsNoLine() {
+        val today = Market.today()
+        TimeMachineHost.check(TimeMachineHost.Entry(com.optionslab.engine.orb.HeroTicketRules.SOURCE, "Hero ticket", "hero_ticket:P90", "NIFTY", 1,
+            today.atTime(12, 30), 5.0, null, premium = true, exitAt = com.optionslab.engine.orb.HeroTicketRules.EXIT_AT))
+        assertTrue(TimeMachineHost.resultOf("hero_ticket:P90") != null)
+        compose.setContent { IraAlgoTheme("light") { androidx.compose.foundation.layout.Column { TimeMachineLine("P90") } } }
+        assertTrue(compose.onAllNodesWithTag("time-machine-line").fetchSemanticsNodes().isEmpty())
     }
 }
