@@ -28,6 +28,7 @@ object HeldNow {
             ft3 = q { Ft3Arm.holding() },
             signal = q { NtfyArm.holding() },
             flow = q { FlowArm.holding() },
+            s5 = q { S5Arm.holding() },
             night = q { NightArm.view.value.open.isNotEmpty() },
             vixDiv = q { VixDivArm.view.value.open.isNotEmpty() },
             mcxArms = q { McxPaperArms.view.value.open.isNotEmpty() },

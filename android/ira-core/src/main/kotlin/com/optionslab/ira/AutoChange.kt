@@ -517,6 +517,20 @@ object AutoChange {
             "only the standard way: Live with your PIN, \"AI trades go live\" and its own \"Trade live\" switch, which starts off",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "IraThinker's flow's switch (paper)")
 
+    /** The target of S5 Trail's paper switch ([Kind.PAPER_ARM_ON], 28 Oct). */
+    const val S5_TARGET = "paperarm:s5trail"
+
+    /**
+     * 28 Oct (Boss: "Add s5 trail to arms directly, if it does not perform I will turn it off"): S5 Trail switched on once by the
+     * update on Boss's own ask - "off → on" on paper, logged as Boss's (kept), undone in one tap (the arm off; paper, no PIN either
+     * way). It FAILED the research gates (R128: 41 holdout trades, worst month −₹18.6k): Boss's exception in CLAUDE.md. Never live.
+     */
+    fun s5On(): Change = Change(Kind.PAPER_ARM_ON, S5_TARGET, SWITCHED_OFF, ON,
+        "your choice (28 Oct): S5 Trail on, on paper - R123's morning network pick (09:20, 09:25, 09:30 on the five indices) with " +
+            "R128's profit lock; it FAILED the research gates (41 holdout trades, worst month −₹18.6k), so it runs as your exception; " +
+            "paper only, never live",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "S5 Trail's switch (paper)")
+
     /** The target of a passed-research paper arm's switch ([Kind.PAPER_ARM_ON]): "paperarm:" + its source. */
     const val PAPER_ARM = "paperarm:"
     /**

@@ -1,0 +1,667 @@
+{
+ "expiry_days": 917,
+ "stops": {
+  "no 3x wall": 517,
+  "vix": 194,
+  "no breakout": 184,
+  "corridor": 8,
+  "heavyweights": 8,
+  "traded or reached a trigger": 6
+ },
+ "sizing": {
+  "200000": {
+   "NIFTY": {
+    "15": 4,
+    "20": 3,
+    "25": 2,
+    "30": 2
+   },
+   "BANKNIFTY": {
+    "15": 7,
+    "20": 5,
+    "25": 4,
+    "30": 3
+   },
+   "FINNIFTY": {
+    "15": 4,
+    "20": 3,
+    "25": 2,
+    "30": 2
+   },
+   "MIDCPNIFTY": {
+    "15": 2,
+    "20": 1,
+    "25": 1,
+    "30": 1
+   },
+   "SENSEX": {
+    "15": 13,
+    "20": 10,
+    "25": 8,
+    "30": 6
+   }
+  },
+  "500000": {
+   "NIFTY": {
+    "15": 10,
+    "20": 7,
+    "25": 6,
+    "30": 5
+   },
+   "BANKNIFTY": {
+    "15": 19,
+    "20": 14,
+    "25": 11,
+    "30": 9
+   },
+   "FINNIFTY": {
+    "15": 11,
+    "20": 8,
+    "25": 6,
+    "30": 5
+   },
+   "MIDCPNIFTY": {
+    "15": 5,
+    "20": 4,
+    "25": 3,
+    "30": 2
+   },
+   "SENSEX": {
+    "15": 33,
+    "20": 25,
+    "25": 20,
+    "30": 16
+   }
+  },
+  "1000000": {
+   "NIFTY": {
+    "15": 20,
+    "20": 15,
+    "25": 12,
+    "30": 10
+   },
+   "BANKNIFTY": {
+    "15": 38,
+    "20": 28,
+    "25": 22,
+    "30": 19
+   },
+   "FINNIFTY": {
+    "15": 22,
+    "20": 16,
+    "25": 13,
+    "30": 11
+   },
+   "MIDCPNIFTY": {
+    "15": 11,
+    "20": 8,
+    "25": 6,
+    "30": 5
+   },
+   "SENSEX": {
+    "15": 66,
+    "20": 50,
+    "25": 40,
+    "30": 33
+   }
+  }
+ },
+ "variants": {
+  "G1": {
+   "n": 2,
+   "win": 0.5,
+   "avg_net": -210.4499999999999,
+   "avg_net_x2": -217.22499999999988,
+   "avg_win": 362.95,
+   "avg_loss": -783.8499999999998,
+   "total": -420.8999999999998,
+   "per_session": -0.4589967284623771,
+   "avg_pts": -0.0011999999987892807,
+   "exits": {
+    "flip": 2
+   },
+   "target_rate": 0.0,
+   "max_dd": -783.8499999999998,
+   "worst_month": -783.8499999999998,
+   "worst_month_name": "2024-10",
+   "months_green": 1,
+   "months": 2,
+   "by_year": {
+    "2021": {
+     "n": 1,
+     "total": 362.95,
+     "avg": 362.95
+    },
+    "2024": {
+     "n": 1,
+     "total": -783.8499999999998,
+     "avg": -783.8499999999998
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 1,
+     "total": 362.95,
+     "win": 1.0
+    },
+    "FINNIFTY": {
+     "n": 1,
+     "total": -783.8499999999998,
+     "win": 0.0
+    }
+   },
+   "twin_mean": -47.965899999999976,
+   "p_twins": 0.6169154228855721,
+   "twin_trades": 2,
+   "buys": 1.0,
+   "hit_4x": 0.0,
+   "apr_oct_2026": {
+    "n": 0,
+    "avg": null
+   },
+   "weekly_vs_monthly": {
+    "weekly": {
+     "n": 1,
+     "avg": 362.95
+    },
+    "monthly": {
+     "n": 1,
+     "avg": -783.8499999999998
+    }
+   },
+   "ex_midcp": {
+    "n": 2,
+    "avg": -210.4499999999999
+   },
+   "signal": "option premium chart (NOT the default)",
+   "cfg": {
+    "trig": "option",
+    "strike": "strict",
+    "cap": "1525"
+   },
+   "q": 0.9850746268656717,
+   "gates": {
+    "n": false,
+    "net_pos": false,
+    "years": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  },
+  "G2": {
+   "n": 2,
+   "win": 0.5,
+   "avg_net": -210.4499999999999,
+   "avg_net_x2": -217.22499999999988,
+   "avg_win": 362.95,
+   "avg_loss": -783.8499999999998,
+   "total": -420.8999999999998,
+   "per_session": -0.4589967284623771,
+   "avg_pts": -0.0011999999987892807,
+   "exits": {
+    "flip": 2
+   },
+   "target_rate": 0.0,
+   "max_dd": -783.8499999999998,
+   "worst_month": -783.8499999999998,
+   "worst_month_name": "2024-10",
+   "months_green": 1,
+   "months": 2,
+   "by_year": {
+    "2021": {
+     "n": 1,
+     "total": 362.95,
+     "avg": 362.95
+    },
+    "2024": {
+     "n": 1,
+     "total": -783.8499999999998,
+     "avg": -783.8499999999998
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 1,
+     "total": 362.95,
+     "win": 1.0
+    },
+    "FINNIFTY": {
+     "n": 1,
+     "total": -783.8499999999998,
+     "win": 0.0
+    }
+   },
+   "twin_mean": -134.43075000000002,
+   "p_twins": 0.6019900497512438,
+   "twin_trades": 2,
+   "buys": 1.0,
+   "hit_4x": 0.0,
+   "apr_oct_2026": {
+    "n": 0,
+    "avg": null
+   },
+   "weekly_vs_monthly": {
+    "weekly": {
+     "n": 1,
+     "avg": 362.95
+    },
+    "monthly": {
+     "n": 1,
+     "avg": -783.8499999999998
+    }
+   },
+   "ex_midcp": {
+    "n": 2,
+    "avg": -210.4499999999999
+   },
+   "signal": "option premium chart (NOT the default)",
+   "cfg": {
+    "trig": "option",
+    "strike": "strict",
+    "cap": "1505"
+   },
+   "q": 0.9850746268656717,
+   "gates": {
+    "n": false,
+    "net_pos": false,
+    "years": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  },
+  "G3": {
+   "n": 2,
+   "win": 0.5,
+   "avg_net": -840.7549999999998,
+   "avg_net_x2": -847.2299999999999,
+   "avg_win": 362.95,
+   "avg_loss": -2044.4599999999996,
+   "total": -1681.5099999999995,
+   "per_session": -1.8337077426390398,
+   "avg_pts": -7.351199999999153,
+   "exits": {
+    "flip": 2
+   },
+   "target_rate": 0.0,
+   "max_dd": -2044.4599999999996,
+   "worst_month": -2044.4599999999996,
+   "worst_month_name": "2024-10",
+   "months_green": 1,
+   "months": 2,
+   "by_year": {
+    "2021": {
+     "n": 1,
+     "total": 362.95,
+     "avg": 362.95
+    },
+    "2024": {
+     "n": 1,
+     "total": -2044.4599999999996,
+     "avg": -2044.4599999999996
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 1,
+     "total": 362.95,
+     "win": 1.0
+    },
+    "FINNIFTY": {
+     "n": 1,
+     "total": -2044.4599999999996,
+     "win": 0.0
+    }
+   },
+   "twin_mean": -889.0266,
+   "p_twins": 0.7064676616915423,
+   "twin_trades": 2,
+   "buys": 1.0,
+   "hit_4x": 0.0,
+   "apr_oct_2026": {
+    "n": 0,
+    "avg": null
+   },
+   "weekly_vs_monthly": {
+    "weekly": {
+     "n": 1,
+     "avg": 362.95
+    },
+    "monthly": {
+     "n": 1,
+     "avg": -2044.4599999999996
+    }
+   },
+   "ex_midcp": {
+    "n": 2,
+    "avg": -840.7549999999998
+   },
+   "signal": "index (default)",
+   "cfg": {
+    "trig": "index",
+    "strike": "strict",
+    "cap": "1525"
+   },
+   "q": 0.9850746268656717,
+   "gates": {
+    "n": false,
+    "net_pos": false,
+    "years": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  },
+  "G4": {
+   "n": 2,
+   "win": 0.5,
+   "avg_net": -840.7549999999998,
+   "avg_net_x2": -847.2299999999999,
+   "avg_win": 362.95,
+   "avg_loss": -2044.4599999999996,
+   "total": -1681.5099999999995,
+   "per_session": -1.8337077426390398,
+   "avg_pts": -7.351199999999153,
+   "exits": {
+    "flip": 2
+   },
+   "target_rate": 0.0,
+   "max_dd": -2044.4599999999996,
+   "worst_month": -2044.4599999999996,
+   "worst_month_name": "2024-10",
+   "months_green": 1,
+   "months": 2,
+   "by_year": {
+    "2021": {
+     "n": 1,
+     "total": 362.95,
+     "avg": 362.95
+    },
+    "2024": {
+     "n": 1,
+     "total": -2044.4599999999996,
+     "avg": -2044.4599999999996
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 1,
+     "total": 362.95,
+     "win": 1.0
+    },
+    "FINNIFTY": {
+     "n": 1,
+     "total": -2044.4599999999996,
+     "win": 0.0
+    }
+   },
+   "twin_mean": -577.29205,
+   "p_twins": 0.8009950248756219,
+   "twin_trades": 2,
+   "buys": 1.0,
+   "hit_4x": 0.0,
+   "apr_oct_2026": {
+    "n": 0,
+    "avg": null
+   },
+   "weekly_vs_monthly": {
+    "weekly": {
+     "n": 1,
+     "avg": 362.95
+    },
+    "monthly": {
+     "n": 1,
+     "avg": -2044.4599999999996
+    }
+   },
+   "ex_midcp": {
+    "n": 2,
+    "avg": -840.7549999999998
+   },
+   "signal": "index (default)",
+   "cfg": {
+    "trig": "index",
+    "strike": "strict",
+    "cap": "1505"
+   },
+   "q": 0.9850746268656717,
+   "gates": {
+    "n": false,
+    "net_pos": false,
+    "years": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  },
+  "G5": {
+   "n": 5,
+   "win": 0.2,
+   "avg_net": -779.7360000000001,
+   "avg_net_x2": -784.4159999999999,
+   "avg_win": 362.95,
+   "avg_loss": -1065.4075,
+   "total": -3898.6800000000003,
+   "per_session": -4.251559432933479,
+   "avg_pts": -16.142479999997885,
+   "exits": {
+    "flip": 5
+   },
+   "target_rate": 0.0,
+   "max_dd": -4261.63,
+   "worst_month": -2412.03,
+   "worst_month_name": "2024-06",
+   "months_green": 1,
+   "months": 5,
+   "by_year": {
+    "2021": {
+     "n": 1,
+     "total": 362.95,
+     "avg": 362.95
+    },
+    "2024": {
+     "n": 3,
+     "total": -4066.87,
+     "avg": -1355.6233333333332
+    },
+    "2025": {
+     "n": 1,
+     "total": -194.76,
+     "avg": -194.76
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 2,
+     "total": -2049.0800000000004,
+     "win": 0.5
+    },
+    "FINNIFTY": {
+     "n": 1,
+     "total": -783.8499999999998,
+     "win": 0.0
+    },
+    "SENSEX": {
+     "n": 2,
+     "total": -1065.75,
+     "win": 0.0
+    }
+   },
+   "twin_mean": -835.1097500000001,
+   "p_twins": 0.9651741293532339,
+   "twin_trades": 5,
+   "buys": 1.0,
+   "hit_4x": 0.0,
+   "apr_oct_2026": {
+    "n": 0,
+    "avg": null
+   },
+   "weekly_vs_monthly": {
+    "weekly": {
+     "n": 4,
+     "avg": -778.7075000000002
+    },
+    "monthly": {
+     "n": 1,
+     "avg": -783.8499999999998
+    }
+   },
+   "ex_midcp": {
+    "n": 5,
+    "avg": -779.7360000000001
+   },
+   "signal": "option premium chart (NOT the default)",
+   "cfg": {
+    "trig": "option",
+    "strike": "near",
+    "cap": "1525"
+   },
+   "q": 0.9850746268656717,
+   "gates": {
+    "n": false,
+    "net_pos": false,
+    "years": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  },
+  "G6": {
+   "n": 6,
+   "win": 0.16666666666666666,
+   "avg_net": -900.3383333333333,
+   "avg_net_x2": -904.5050000000001,
+   "avg_win": 362.95,
+   "avg_loss": -1152.9959999999999,
+   "total": -5402.03,
+   "per_session": -5.890981461286804,
+   "avg_pts": -28.155399999999037,
+   "exits": {
+    "flip": 6
+   },
+   "target_rate": 0.0,
+   "max_dd": -5764.98,
+   "worst_month": -2412.03,
+   "worst_month_name": "2024-06",
+   "months_green": 1,
+   "months": 6,
+   "by_year": {
+    "2021": {
+     "n": 1,
+     "total": 362.95,
+     "avg": 362.95
+    },
+    "2024": {
+     "n": 4,
+     "total": -5570.22,
+     "avg": -1392.555
+    },
+    "2025": {
+     "n": 1,
+     "total": -194.76,
+     "avg": -194.76
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 2,
+     "total": -2049.0800000000004,
+     "win": 0.5
+    },
+    "FINNIFTY": {
+     "n": 1,
+     "total": -2044.4599999999996,
+     "win": 0.0
+    },
+    "SENSEX": {
+     "n": 3,
+     "total": -1308.4900000000002,
+     "win": 0.0
+    }
+   },
+   "twin_mean": -1142.2903500000002,
+   "p_twins": 0.9850746268656716,
+   "twin_trades": 6,
+   "buys": 1.0,
+   "hit_4x": 0.0,
+   "apr_oct_2026": {
+    "n": 0,
+    "avg": null
+   },
+   "weekly_vs_monthly": {
+    "weekly": {
+     "n": 5,
+     "avg": -671.5140000000001
+    },
+    "monthly": {
+     "n": 1,
+     "avg": -2044.4599999999996
+    }
+   },
+   "ex_midcp": {
+    "n": 6,
+    "avg": -900.3383333333333
+   },
+   "signal": "index (default)",
+   "cfg": {
+    "trig": "index",
+    "strike": "near",
+    "cap": "1525"
+   },
+   "q": 0.9850746268656717,
+   "gates": {
+    "n": false,
+    "net_pos": false,
+    "years": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  }
+ },
+ "claim_move": {
+  "setup_days": 22,
+  "setup_move_from_1400": 133.58637272727256,
+  "setup_move_after_setup": -6.259581818181687,
+  "setup_after_positive": 0.5454545454545454,
+  "other_wall_days": 184,
+  "other_move_from_1400": -31.00891837635863,
+  "note": "the 14:00 move includes the break itself (selection); the move after the setup is the test"
+ },
+ "stops_by_index": {
+  "BANKNIFTY": {
+   "no 3x wall": 115,
+   "no breakout": 51,
+   "vix": 26,
+   "traded or reached a trigger": 2,
+   "corridor": 1
+  },
+  "FINNIFTY": {
+   "no 3x wall": 80,
+   "no breakout": 53,
+   "vix": 31,
+   "corridor": 5,
+   "heavyweights": 3,
+   "traded or reached a trigger": 1
+  },
+  "MIDCPNIFTY": {
+   "no 3x wall": 64,
+   "vix": 28,
+   "no breakout": 7,
+   "corridor": 2
+  },
+  "NIFTY": {
+   "no 3x wall": 172,
+   "vix": 52,
+   "no breakout": 48
+  },
+  "SENSEX": {
+   "no 3x wall": 86,
+   "vix": 57,
+   "no breakout": 25,
+   "heavyweights": 5,
+   "traded or reached a trigger": 3
+  }
+ }
+}

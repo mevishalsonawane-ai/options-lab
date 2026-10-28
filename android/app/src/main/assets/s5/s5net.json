@@ -1,0 +1,860 @@
+{
+ "what": "R123 N1 holdout network (3 seeds) for the S5 Trail paper arm (R128 T2-S5x1); Boss's exception, 28 Oct",
+ "trained_on": "design rows to 2025-04-15 (early-stopping slice to 2026-03-15)",
+ "sha256": "f02c5377029c13ec44eb9555963caa36a954e7b400d54efb9c318f5127b94326",
+ "floats": 143144,
+ "layout": [
+  {
+   "seed": 0,
+   "name": "inp.weight",
+   "shape": [
+    32,
+    7,
+    1
+   ],
+   "n": 224
+  },
+  {
+   "seed": 0,
+   "name": "inp.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 0,
+   "name": "convs.0.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 0,
+   "name": "convs.0.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 0,
+   "name": "convs.1.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 0,
+   "name": "convs.1.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 0,
+   "name": "convs.2.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 0,
+   "name": "convs.2.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 0,
+   "name": "convs.3.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 0,
+   "name": "convs.3.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 0,
+   "name": "tab.0.weight",
+   "shape": [
+    64,
+    42
+   ],
+   "n": 2688
+  },
+  {
+   "seed": 0,
+   "name": "tab.0.bias",
+   "shape": [
+    64
+   ],
+   "n": 64
+  },
+  {
+   "seed": 0,
+   "name": "trunk.0.weight",
+   "shape": [
+    128,
+    160
+   ],
+   "n": 20480
+  },
+  {
+   "seed": 0,
+   "name": "trunk.0.bias",
+   "shape": [
+    128
+   ],
+   "n": 128
+  },
+  {
+   "seed": 0,
+   "name": "trunk.3.weight",
+   "shape": [
+    64,
+    128
+   ],
+   "n": 8192
+  },
+  {
+   "seed": 0,
+   "name": "trunk.3.bias",
+   "shape": [
+    64
+   ],
+   "n": 64
+  },
+  {
+   "seed": 0,
+   "name": "head_a.weight",
+   "shape": [
+    48,
+    64
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 0,
+   "name": "head_a.bias",
+   "shape": [
+    48
+   ],
+   "n": 48
+  },
+  {
+   "seed": 0,
+   "name": "head_b.weight",
+   "shape": [
+    2,
+    64
+   ],
+   "n": 128
+  },
+  {
+   "seed": 0,
+   "name": "head_b.bias",
+   "shape": [
+    2
+   ],
+   "n": 2
+  },
+  {
+   "seed": 0,
+   "name": "head_c.weight",
+   "shape": [
+    2,
+    64
+   ],
+   "n": 128
+  },
+  {
+   "seed": 0,
+   "name": "head_c.bias",
+   "shape": [
+    2
+   ],
+   "n": 2
+  },
+  {
+   "seed": 1,
+   "name": "inp.weight",
+   "shape": [
+    32,
+    7,
+    1
+   ],
+   "n": 224
+  },
+  {
+   "seed": 1,
+   "name": "inp.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 1,
+   "name": "convs.0.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 1,
+   "name": "convs.0.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 1,
+   "name": "convs.1.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 1,
+   "name": "convs.1.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 1,
+   "name": "convs.2.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 1,
+   "name": "convs.2.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 1,
+   "name": "convs.3.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 1,
+   "name": "convs.3.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 1,
+   "name": "tab.0.weight",
+   "shape": [
+    64,
+    42
+   ],
+   "n": 2688
+  },
+  {
+   "seed": 1,
+   "name": "tab.0.bias",
+   "shape": [
+    64
+   ],
+   "n": 64
+  },
+  {
+   "seed": 1,
+   "name": "trunk.0.weight",
+   "shape": [
+    128,
+    160
+   ],
+   "n": 20480
+  },
+  {
+   "seed": 1,
+   "name": "trunk.0.bias",
+   "shape": [
+    128
+   ],
+   "n": 128
+  },
+  {
+   "seed": 1,
+   "name": "trunk.3.weight",
+   "shape": [
+    64,
+    128
+   ],
+   "n": 8192
+  },
+  {
+   "seed": 1,
+   "name": "trunk.3.bias",
+   "shape": [
+    64
+   ],
+   "n": 64
+  },
+  {
+   "seed": 1,
+   "name": "head_a.weight",
+   "shape": [
+    48,
+    64
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 1,
+   "name": "head_a.bias",
+   "shape": [
+    48
+   ],
+   "n": 48
+  },
+  {
+   "seed": 1,
+   "name": "head_b.weight",
+   "shape": [
+    2,
+    64
+   ],
+   "n": 128
+  },
+  {
+   "seed": 1,
+   "name": "head_b.bias",
+   "shape": [
+    2
+   ],
+   "n": 2
+  },
+  {
+   "seed": 1,
+   "name": "head_c.weight",
+   "shape": [
+    2,
+    64
+   ],
+   "n": 128
+  },
+  {
+   "seed": 1,
+   "name": "head_c.bias",
+   "shape": [
+    2
+   ],
+   "n": 2
+  },
+  {
+   "seed": 2,
+   "name": "inp.weight",
+   "shape": [
+    32,
+    7,
+    1
+   ],
+   "n": 224
+  },
+  {
+   "seed": 2,
+   "name": "inp.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 2,
+   "name": "convs.0.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 2,
+   "name": "convs.0.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 2,
+   "name": "convs.1.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 2,
+   "name": "convs.1.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 2,
+   "name": "convs.2.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 2,
+   "name": "convs.2.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 2,
+   "name": "convs.3.conv.weight",
+   "shape": [
+    32,
+    32,
+    3
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 2,
+   "name": "convs.3.conv.bias",
+   "shape": [
+    32
+   ],
+   "n": 32
+  },
+  {
+   "seed": 2,
+   "name": "tab.0.weight",
+   "shape": [
+    64,
+    42
+   ],
+   "n": 2688
+  },
+  {
+   "seed": 2,
+   "name": "tab.0.bias",
+   "shape": [
+    64
+   ],
+   "n": 64
+  },
+  {
+   "seed": 2,
+   "name": "trunk.0.weight",
+   "shape": [
+    128,
+    160
+   ],
+   "n": 20480
+  },
+  {
+   "seed": 2,
+   "name": "trunk.0.bias",
+   "shape": [
+    128
+   ],
+   "n": 128
+  },
+  {
+   "seed": 2,
+   "name": "trunk.3.weight",
+   "shape": [
+    64,
+    128
+   ],
+   "n": 8192
+  },
+  {
+   "seed": 2,
+   "name": "trunk.3.bias",
+   "shape": [
+    64
+   ],
+   "n": 64
+  },
+  {
+   "seed": 2,
+   "name": "head_a.weight",
+   "shape": [
+    48,
+    64
+   ],
+   "n": 3072
+  },
+  {
+   "seed": 2,
+   "name": "head_a.bias",
+   "shape": [
+    48
+   ],
+   "n": 48
+  },
+  {
+   "seed": 2,
+   "name": "head_b.weight",
+   "shape": [
+    2,
+    64
+   ],
+   "n": 128
+  },
+  {
+   "seed": 2,
+   "name": "head_b.bias",
+   "shape": [
+    2
+   ],
+   "n": 2
+  },
+  {
+   "seed": 2,
+   "name": "head_c.weight",
+   "shape": [
+    2,
+    64
+   ],
+   "n": 128
+  },
+  {
+   "seed": 2,
+   "name": "head_c.bias",
+   "shape": [
+    2
+   ],
+   "n": 2
+  },
+  {
+   "seed": null,
+   "name": "tab.med",
+   "shape": [
+    42
+   ],
+   "n": 42
+  },
+  {
+   "seed": null,
+   "name": "tab.mu",
+   "shape": [
+    42
+   ],
+   "n": 42
+  },
+  {
+   "seed": null,
+   "name": "tab.sd",
+   "shape": [
+    42
+   ],
+   "n": 42
+  },
+  {
+   "seed": null,
+   "name": "seq.mu",
+   "shape": [
+    5
+   ],
+   "n": 5
+  },
+  {
+   "seed": null,
+   "name": "seq.sd",
+   "shape": [
+    5
+   ],
+   "n": 5
+  },
+  {
+   "seed": null,
+   "name": "range.mu",
+   "shape": [
+    2
+   ],
+   "n": 2
+  },
+  {
+   "seed": null,
+   "name": "range.sd",
+   "shape": [
+    2
+   ],
+   "n": 2
+  }
+ ],
+ "tab_cols": [
+  "u_NIFTY",
+  "u_BANKNIFTY",
+  "u_FINNIFTY",
+  "u_MIDCPNIFTY",
+  "u_SENSEX",
+  "tod",
+  "weekday",
+  "to_expiry",
+  "is_expiry",
+  "is_budget",
+  "gap",
+  "from_open",
+  "ret5",
+  "ret15",
+  "ret30",
+  "ret60",
+  "rv30",
+  "day_range",
+  "dist_hi",
+  "dist_lo",
+  "prev_range",
+  "prev_ret",
+  "avg_range20",
+  "vix",
+  "vix_chg",
+  "vix_chg30",
+  "br_up",
+  "br_from_open",
+  "br_ret15",
+  "atm_c_pct",
+  "atm_p_pct",
+  "strad_pct",
+  "log_strad_rs",
+  "log_c_rs",
+  "log_p_rs",
+  "atm_iv",
+  "skew",
+  "pcr",
+  "pcr_chg15",
+  "c_oi_chg15",
+  "p_oi_chg15",
+  "cp_vol15"
+ ],
+ "seq_channels": [
+  "ret",
+  "hl",
+  "from_open",
+  "vix_chg",
+  "breadth",
+  "new_session",
+  "mask"
+ ],
+ "seq_n": 120,
+ "clip": 5.0,
+ "cells": [
+  {
+   "x": 1000.0,
+   "y": 1000.0,
+   "h": 30
+  },
+  {
+   "x": 1000.0,
+   "y": 1000.0,
+   "h": 60
+  },
+  {
+   "x": 1000.0,
+   "y": 2000.0,
+   "h": 30
+  },
+  {
+   "x": 1000.0,
+   "y": 2000.0,
+   "h": 60
+  },
+  {
+   "x": 2000.0,
+   "y": 1000.0,
+   "h": 30
+  },
+  {
+   "x": 2000.0,
+   "y": 1000.0,
+   "h": 60
+  },
+  {
+   "x": 2000.0,
+   "y": 2000.0,
+   "h": 30
+  },
+  {
+   "x": 2000.0,
+   "y": 2000.0,
+   "h": 60
+  }
+ ],
+ "sides": [
+  "C",
+  "P"
+ ],
+ "neither_mean": {
+  "NIFTY": [
+   -61.157351928059754,
+   -141.4009821666223,
+   -74.90119861722188,
+   -193.629494024615,
+   -334.98350798952066,
+   -383.9462555726595,
+   -453.30724829497683,
+   -549.4337225152611,
+   134.2875317371043,
+   48.5254925157474,
+   202.36457982061052,
+   54.14395742866003,
+   -145.58626167026983,
+   -201.5779745494809,
+   -190.96991502349482,
+   -317.2469151129729
+  ],
+  "BANKNIFTY": [
+   -52.282237659474944,
+   -87.64722144358792,
+   -80.94764848484846,
+   -123.99734164588524,
+   -414.2725682358832,
+   -444.977282583555,
+   -502.20720697939055,
+   -566.2323228134425,
+   224.1394856350307,
+   155.2044469643455,
+   260.796368045146,
+   173.01845002453788,
+   -149.23437678401518,
+   -210.10574216071316,
+   -188.61926493220957,
+   -287.72634485094846
+  ],
+  "FINNIFTY": [
+   -75.6443301971326,
+   -116.4821656102062,
+   -99.1212834532374,
+   -153.9500209643606,
+   -345.635406756291,
+   -367.27584324193157,
+   -462.12206161137436,
+   -514.5410234403465,
+   130.43872629174805,
+   68.9780553675792,
+   192.07908906648137,
+   95.39884075306846,
+   -147.30912913524895,
+   -188.18502091321017,
+   -194.5870061353614,
+   -277.86319022398436
+  ],
+  "MIDCPNIFTY": [
+   -90.2330482176176,
+   -149.21743575470825,
+   -140.60883293190278,
+   -220.58294547733445,
+   -368.81260230624827,
+   -454.57004467912276,
+   -464.5712419432419,
+   -599.0535780296425,
+   152.60047025568545,
+   65.59470738400663,
+   155.81008140262992,
+   22.76467430025444,
+   -133.83865781767005,
+   -247.70649386135648,
+   -190.1686757599853,
+   -363.1028615549089
+  ],
+  "SENSEX": [
+   -81.14683709146186,
+   -138.13303243674602,
+   -93.80294579811039,
+   -190.95660385743489,
+   -335.22361415161475,
+   -360.3359536712709,
+   -452.4295868404845,
+   -517.4031040292688,
+   90.68370366020747,
+   27.089419388093233,
+   139.70485444531863,
+   29.962063849194305,
+   -167.57243797906537,
+   -201.13190396637202,
+   -230.55338845154245,
+   -311.4976025452061
+  ]
+ },
+ "ev_threshold": 300.0,
+ "decision_rows": [
+  4,
+  9,
+  14
+ ],
+ "unds": [
+  "NIFTY",
+  "BANKNIFTY",
+  "FINNIFTY",
+  "MIDCPNIFTY",
+  "SENSEX"
+ ],
+ "lot": {
+  "NIFTY": 65,
+  "BANKNIFTY": 35,
+  "FINNIFTY": 60,
+  "MIDCPNIFTY": 120,
+  "SENSEX": 20
+ },
+ "step": {
+  "NIFTY": 50.0,
+  "BANKNIFTY": 100.0,
+  "FINNIFTY": 50.0,
+  "MIDCPNIFTY": 25.0,
+  "SENSEX": 100.0
+ }
+}

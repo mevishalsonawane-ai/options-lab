@@ -36,7 +36,7 @@ object OrphanWatch {
     /** The arms whose orphans get a protection (their open records are read from memory, [claims]). */
     // 28 Oct: IraThinker's flow too - protected like the others, but never with a notice (Boss: no alerts from the flow).
     private val NET_OWNERS = setOf(HeroTicketRules.OWNER, com.optionslab.engine.orb.Ft3Rules.OWNER, VixDivRules.LABEL, NtfyRules.OWNER,
-        com.optionslab.engine.signals.FlowRules.OWNER)
+        com.optionslab.engine.signals.FlowRules.OWNER, com.optionslab.engine.orb.S5Trail.OWNER)
 
     /** One look at a time (the 15-second check, the minute lane and the full pass can overlap): a second one returns at once. */
     private val busy = kotlinx.coroutines.sync.Mutex()
@@ -53,7 +53,8 @@ object OrphanWatch {
         runCatching { Ft3Arm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
         runCatching { VixDivArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
         runCatching { NtfyArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
-        runCatching { FlowArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList())
+        runCatching { FlowArm.view.value.open.map { it.symbol } }.getOrDefault(emptyList()) +
+        runCatching { S5Arm.view.value.open.map { it.symbol } }.getOrDefault(emptyList())
 
     private fun nowMs(): Long = runCatching { Market.now().toInstant().toEpochMilli() }.getOrElse { System.currentTimeMillis() }
 

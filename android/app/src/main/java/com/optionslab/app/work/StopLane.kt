@@ -167,6 +167,7 @@ internal object StopLane {
             if (com.optionslab.app.data.Ft3Arm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.FT3}") { com.optionslab.app.data.Ft3Arm.manageOnly() } else null,
             if (com.optionslab.app.data.NtfyArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.NTFY}") { com.optionslab.app.data.NtfyArm.manageOnly() } else null,
             if (com.optionslab.app.data.FlowArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.FLOW}") { com.optionslab.app.data.FlowArm.manageOnly() } else null,
+            if (com.optionslab.app.data.S5Arm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.S5}") { com.optionslab.app.data.S5Arm.manageOnly() } else null,
             // 18 Oct: the paper strategies' live trades ([com.optionslab.app.data.ArmLive]): their Zerodha stops, the paper exits
             // they follow and the 15:15 square-off.
             if (com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch() } else null,

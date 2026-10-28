@@ -1,0 +1,27 @@
+id: r129-loose-l2
+title: 'R129 amendment 1 L2: the loose gamma expiry rule, trigger index, cap 15:25'
+family: option-structure
+date: '2026-10-28'
+doc: research/HUNT_R129_GAMMA_EXPIRY.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m, options_rolling_1m WEEK with per-strike OI, equity_1m), lakeclean steps 1-3
+period:
+  design: '2021-08-01..2026-10-19 (no fitting: the pasted rule tested once on all expiry days, by year)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r129_gamma_expiry/PREREG_LOOSE.md
+holdout_read: null
+features:
+- 'signal source: the index (default); context: the nearest 2x OI wall each way within 5 strikes at 13:45, a 5-minute close beyond it and the
+  TWAP 13:50-15:00, 2 of 3 heavyweights beyond VWAP; buys the nearest OTM option at Rs 10-40'
+hypothesis: A looser reading of the gamma hero-to-zero rule trades often enough and catches expiry-afternoon blasts
+model_or_rule: research/hunt/r129_gamma_expiry/r129loose.py
+settings: PREREG_LOOSE.md (L2)
+variants_tried: 10
+verdict: rejected
+results:
+  summary: '221 trades on 917 expiry days: win 17% (avg win Rs 1,537, avg loss Rs -519), avg net Rs -175 (2x slip Rs -180), total Rs -38,682; 4x reached 7.2%; every year negative (2021 8 trades Rs -864, 2022 44 trades Rs -11,224, 2023 26 trades Rs -6,591, 2024 59 trades Rs -4,751, 2025 45 trades Rs -15,177, 2026 39 trades Rs -75); twin p 0.990 (worse than random entries), q 1.00, q over all 10 R129 versions 1.00.'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots

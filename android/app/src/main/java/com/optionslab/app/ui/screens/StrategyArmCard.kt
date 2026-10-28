@@ -99,6 +99,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
             if (!com.optionslab.app.BuildConfig.GOLD) Ft3Row()
             // 28 Oct (Boss: "just take orders from flow, and keep it for index only"): IraThinker's flow, paper, not proven. Not in IraGoldAlgo.
             if (!com.optionslab.app.BuildConfig.GOLD) FlowRow()
+            // 28 Oct (Boss: "Add s5 trail to arms directly"): S5 Trail, paper, failed the research gates (Boss's exception). Not in IraGoldAlgo.
+            if (!com.optionslab.app.BuildConfig.GOLD) S5Row()
             PassedArmRows(); WatchlistCard()
             // The Trend watch (16 Oct, research R63): every open position judged on its underlying's trend. Not in IraGoldAlgo.
             if (!com.optionslab.app.BuildConfig.GOLD) TrendWatchRow() },
