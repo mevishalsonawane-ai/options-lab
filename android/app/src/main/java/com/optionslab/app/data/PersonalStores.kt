@@ -115,6 +115,8 @@ object PersonalStores {
         Entry("IraNotes", holds = { com.optionslab.app.ira.IraNotes.holdsForErase() }) { com.optionslab.app.ira.IraNotes.wipe() },
         Entry("EventDays", holds = { com.optionslab.app.data.EventDays.holdsForErase() }) { com.optionslab.app.data.EventDays.wipe() },
         Entry("NtfyArm", files = { com.optionslab.app.data.NtfyArm.filesForErase() }, holds = { com.optionslab.app.data.NtfyArm.holdsForErase() }) { com.optionslab.app.data.NtfyArm.wipeForErase() },
+        // 28 Oct: IraThinker's flow's paper book and its session record.
+        Entry("FlowArm", files = { com.optionslab.app.data.FlowArm.filesForErase() }, holds = { com.optionslab.app.data.FlowArm.holdsForErase() }) { com.optionslab.app.data.FlowArm.wipeForErase() },
         Entry("TradeManagerHost", files = { com.optionslab.app.data.TradeManagerHost.filesForErase() }, holds = { com.optionslab.app.data.TradeManagerHost.holdsForErase() }) { com.optionslab.app.data.TradeManagerHost.wipe() },
         Entry("TrendWatchHost", files = { com.optionslab.app.data.TrendWatchHost.filesForErase() }, holds = { com.optionslab.app.data.TrendWatchHost.holdsForErase() }) { com.optionslab.app.data.TrendWatchHost.wipe() },
         Entry("NightArm", files = { com.optionslab.app.data.NightArm.filesForErase() }, holds = { com.optionslab.app.data.NightArm.holdsForErase() }) { com.optionslab.app.data.NightArm.wipe() },

@@ -63,10 +63,23 @@ object WhatsNew {
     private val OCT25: LocalDate = LocalDate.of(2026, 10, 25)
     private val OCT26: LocalDate = LocalDate.of(2026, 10, 26)
     private val OCT27: LocalDate = LocalDate.of(2026, 10, 27)
+    private val OCT28: LocalDate = LocalDate.of(2026, 10, 28)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        // 28 Oct (Boss: "Also check flow page on Irathinker and implement that too"; "Use live data from zerodha instead"; "Dont add
+        // alert, just take orders from flow, and keep it for index only"): newest of all.
+        Entry("2026-10-28-flow-paper-arm", OCT28, "Your alert app's flow now trades on paper",
+            "The flow page of your alert app is now in this app, for indices only. " +
+                "It runs the scanner, the score, the time machine and the risk gate on Zerodha's live prices. " +
+                "A plan that passes all four becomes a paper order on a NIFTY, BANKNIFTY or FINNIFTY option. " +
+                "There is no alert: the order shows on its ticket and in the change timeline. " +
+                "It is not proven: in research no strategy of your alert app passed. " +
+                "It starts on, on paper, and one tap in the change timeline switches it off. " +
+                "Live needs your PIN and its own Trade live switch, which starts off.",
+            "Settings → Automation → the flow page; Home → Strategies → its row",
+            ask = "how is the flow arm doing"),
         // 27 Oct (Boss: "Check the battery usage too; the battery drained a lot today"; android/BATTERY_AUDIT_2026-10-27.md).
         Entry("2026-10-27-battery-audit", OCT27, "Less battery when nothing is held",
             "With nothing held, the Candle agent and Jarvis's background words rest at 30% battery or under the saver. " +

@@ -500,6 +500,21 @@ object AutoChange {
             "way: Live with your PIN, \"AI trades go live\", its own \"Trade live\" switch, and its Shadow off with your PIN",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "FT3 near-ATM morning's switch (paper)")
 
+    /** The target of IraThinker's flow's paper switch ([Kind.PAPER_ARM_ON], 28 Oct). */
+    const val FLOW_TARGET = "paperarm:flow"
+
+    /**
+     * 28 Oct (Boss: "Also check flow page on Irathinker and implement that too"; "just take orders from flow, and keep it for index
+     * only"): IraThinker's flow switched on once by the update on Boss's own ask - "off → on" on paper, logged as Boss's (kept),
+     * undone in one tap (the arm off; paper, no PIN either way). NOT PROVEN: research R110 found no IraThinker strategy that
+     * passed. Its live path is the standard one, with its own "Trade live" switch that starts off.
+     */
+    fun flowOn(): Change = Change(Kind.PAPER_ARM_ON, FLOW_TARGET, SWITCHED_OFF, ON,
+        "your choice (28 Oct): IraThinker's flow on, on paper - index options only (NIFTY, BANKNIFTY, FINNIFTY), its Scanner, " +
+            "IraScore, Time Machine and Risk Gate on Zerodha's stream; not proven (R110: no IraThinker strategy passed). Live goes " +
+            "only the standard way: Live with your PIN, \"AI trades go live\" and its own \"Trade live\" switch, which starts off",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "IraThinker's flow's switch (paper)")
+
     /** The target of a passed-research paper arm's switch ([Kind.PAPER_ARM_ON]): "paperarm:" + its source. */
     const val PAPER_ARM = "paperarm:"
     /**

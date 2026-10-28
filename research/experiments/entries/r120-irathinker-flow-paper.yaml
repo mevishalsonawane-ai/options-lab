@@ -1,0 +1,41 @@
+id: r120-irathinker-flow-paper
+title: 'IraThinker''s flow on paper in IraAlgo (Scanner -> IraScore -> Time Machine -> Risk Gate on Zerodha''s stream), index options only, from 28 Oct 2026'
+family: orb
+date: '2026-10-28'
+doc: research/HUNT_R110_IRATHINKER.md
+hypothesis: 'Not a new test (Boss''s ask, 28 Oct: "Also check flow page on Irathinker and implement that too"; "Use live data from
+  zerodha instead"; "Dont add alert, just take orders from flow, and keep it for index only"). IraThinker''s flow, ported rule for
+  rule from irathinker-app Analysis.java / BuyAlerts.java (android engine signals/FlowRules.kt), runs as a PAPER arm; its paper
+  record is a forward record of an UNPROVEN rule: R110 found no IraThinker strategy that passed (its ORB alert lost on every index).
+  No claim is made for it; nothing about it may go live by itself.'
+data_version: 'live: Zerodha''s stream only (the indices'' and India VIX''s 1-minute candles built from Zerodha ticks in memory, the
+  tick''s previous close); the Time Machine''s history is the arm''s own record of past Zerodha sessions (60 kept). No Yahoo, Upstox
+  or web prices.'
+period:
+  design: none (R110 is the research; no fit here)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+features:
+- 'signal source: the underlying index (its 09:15-09:30 opening range broken by a 5-minute close), confirmed by India VIX''s own
+  opening-range break up; IraScore (break strength, 20-day trend and RSI(14) from the recorded sessions, range width, time of day);
+  Time Machine odds (Monte Carlo over the index''s own 5-minute returns plus past same-direction breaks); IraThinker''s risk gate.
+  The option is only what is bought (ATM, nearest expiry; a PUT, as IraThinker''s VIX gate passes breakdowns only).'
+model_or_rule: 'FlowRules.judge (android/engine/src/main/kotlin/com/optionslab/engine/signals/FlowRules.kt); the app arm FlowArm.kt.
+  Exits: premium stop 20% under the fill resting in the paper book; IraThinker''s index stop (range midpoint) and 2R target; out by
+  15:15; the index''s own expiry day skipped.'
+settings: 'IraThinker''s own: score above 65, at least 10 points to the 1R target, range at most 0.8% wide, VIX break no later than
+  the index''s, 3,000 replays, target-first >= stop-first, reward:risk >= 0.9, budget 1% of the paper capital, 09:30-15:00, top 3 a day'
+prereg: null
+variants_tried: 1
+results:
+  summary: 'Nothing traded yet (added 28 Oct 2026). For reference, R110''s test of the same ORB alert: NIFTY 35 trades, 29% won,
+    -Rs 869 a trade; BANKNIFTY 38 trades, -Rs 36 a trade; FINNIFTY lost on index points (40 trades). The arm needs about two recorded
+    Zerodha sessions before its Time Machine can replay, so it takes nothing on its first session.'
+  costs: the app's honest paper fills (the spread and Zerodha's charges) for the forward record
+holdout_read: null
+verdict: paper-only
+notes: 'Boss''s explicit ask: ON on paper by the 28 Oct update, logged in the Autopilot change timeline as Boss''s choice and undone
+  in one tap. Live only through the standard ArmLive path behind its own Trade live switch (off by default), Live, AI trades go live
+  and Boss''s PIN. No alert or notification. Labelled everywhere "IraThinker''s flow — not proven (R110: no IraThinker strategy passed)".'

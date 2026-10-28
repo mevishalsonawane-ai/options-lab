@@ -380,6 +380,11 @@ internal object Autopilot {
             } else if (c.target == AutoChange.NTFY_PAPER) {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.NtfyArm.setOn(c.to == AutoChange.ON, log = false) }
+            } else if (c.target == AutoChange.FLOW_TARGET) {
+                // 28 Oct: IraThinker's flow ([logFlowOn]): its Undo switches the arm off (or, undone twice, back on) - paper, no PIN.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.FlowArm.setArmed(c.to == AutoChange.ON, log = false) }
+                said.takeIf { !it.contains("not ready") }
             } else if (c.target == AutoChange.FT3_TARGET) {
                 // 21 Oct: FT3 near-ATM morning ([logFt3On]): its Undo switches the arm off (or, undone twice, back on) - on paper,
                 // never Zerodha itself (its live path is the standard one, behind the PIN and Shadow), so no PIN either way.
@@ -937,6 +942,30 @@ internal object Autopilot {
      * morning, the R98 forward test that did not pass research, just switched on once by its book's one-time change
      * ([com.optionslab.app.data.Ft3Arm]). Logged as Boss's (kept, never Autopilot's), and one tap undoes it (the arm off). Once.
      */
+    /** 28 Oct: IraThinker's flow switched on once by the update, on Boss's ask - logged as Boss's, once, undone in one tap. */
+    fun logFlowOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.flowOn(), "your ask, 28 Oct; on paper, index options only - not proven (R110); live only the standard " +
+            "way (Live with your PIN, AI trades live, its own Trade live switch, off until you turn it on)")
+    }
+
+    /** Boss switched IraThinker's flow from its row or page: both ways logged as a new kept entry ([bossPaperFlip]). */
+    fun flowSwitchedByBoss(on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): IraThinker's flow ${if (on) "on" else "off"}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    bossPaperFlip(AutoChange.FLOW_TARGET, on, today, if (on) AutoChange.flowOn() else AutoChange.paperArmOffByBoss(AutoChange.FLOW_TARGET, "IraThinker's flow"),
+                        if (on) "switched on from its row; on paper - not proven (R110)" else "switched off from its row; paper only")
+                }
+            }
+        }
+    }
+
     fun logFt3On() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.ft3On(), "your choice, 21 Oct; on paper - live only the standard way (Live with your PIN, AI trades live, " +

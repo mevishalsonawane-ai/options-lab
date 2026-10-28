@@ -26,7 +26,7 @@ class LiveMirrorTest {
         val keys = LiveMirror.ARMS.map { it.key }
         for (k in listOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, LiveMirror.SOLO_MIDDAY,
                 SweepRules.ARM.source, RangeFadeRules.ARM.source, HeroRules.ARM.source, HeroTicketRules.SOURCE, Ft3Rules.SOURCE, VixDivRules.SOURCE,
-                NightRules.SOURCE, LiveMirror.NTFY_ALERTS, LiveMirror.SHADOW_PROMOTED, "mcx_ng_eve", "mcx_silverm_am", "mcx_trend12", "mcx_us_silver"))
+                NightRules.SOURCE, LiveMirror.NTFY_ALERTS, com.optionslab.engine.signals.FlowRules.SOURCE, LiveMirror.SHADOW_PROMOTED, "mcx_ng_eve", "mcx_silverm_am", "mcx_trend12", "mcx_us_silver"))
             assertTrue(k in keys, k)
         assertEquals(keys.size, keys.toSet().size, "no key twice")
         // Jarvis's own free-form ideas stay on paper (CLAUDE.md): the news trades and the forge ideas are never mirrored.
@@ -50,7 +50,10 @@ class LiveMirrorTest {
         // An external message (ntfy alerts, 25 Oct) starts off: only Boss switches it on.
         assertFalse(LiveMirror.on(LiveMirror.NTFY_ALERTS, emptyMap()))
         assertTrue(LiveMirror.on(LiveMirror.NTFY_ALERTS, mapOf(LiveMirror.NTFY_ALERTS to true)))
-        assertEquals(listOf(LiveMirror.NTFY_ALERTS), LiveMirror.ARMS.filter { !it.defaultOn }.map { it.key })
+        // 28 Oct: IraThinker's flow (not proven, R110) starts off too.
+        assertFalse(LiveMirror.on(com.optionslab.engine.signals.FlowRules.SOURCE, emptyMap()))
+        assertEquals(LiveMirror.FLOW, LiveMirror.spec(com.optionslab.engine.signals.FlowRules.SOURCE)!!.family)
+        assertEquals(listOf(LiveMirror.NTFY_ALERTS, com.optionslab.engine.signals.FlowRules.SOURCE), LiveMirror.ARMS.filter { !it.defaultOn }.map { it.key })
     }
 
     // ---- the gate -----------------------------------------------------------------------------------------------------------------

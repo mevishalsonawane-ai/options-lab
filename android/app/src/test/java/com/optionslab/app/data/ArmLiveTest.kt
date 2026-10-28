@@ -94,6 +94,7 @@ class ArmLiveTest : RobolectricTest() {
 
     @Test fun everyIntradayArmsLiveEntryBuysItsPaperLotsThenRestsItsStopAtZerodha() {
         runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, true, pinConfirmed = true) }   // its switch starts off (Boss's own)
+        runBlocking { ArmLive.setLive(com.optionslab.engine.signals.FlowRules.SOURCE, true, pinConfirmed = true) }   // 28 Oct: IraThinker's flow's too
         SecurePrefs.putAll(mapOf("g.trades" to 0, "k.maxOrders" to 500))          // every arm once in one day: no day caps in this test
         // Solo (midday) stays in shadow (Jarvis's Solo, not proven): its own test below.
         val intraday = LiveMirror.ARMS.filter { it.exchange == "NFO" && it.product == "MIS" && it.key != LiveMirror.SOLO_MIDDAY }

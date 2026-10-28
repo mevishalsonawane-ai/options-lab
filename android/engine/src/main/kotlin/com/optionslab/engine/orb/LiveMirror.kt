@@ -94,6 +94,8 @@ object LiveMirror {
     const val NIGHT = "night"
     /** 25 Oct: ntfy alerts' paper book (an external message, traded on the index option by the strike rule). */
     const val NTFY = "ntfy"
+    /** 28 Oct: IraThinker's flow's paper book (the flow's own ORB plan on the index, not proven: R110). */
+    const val FLOW = "flow"
     const val MCX = "mcx"
     const val SHADOW = "shadow"
 
@@ -131,6 +133,9 @@ object LiveMirror {
             safety = true),
         // 25 Oct: an external message, not a researched rule: its live switch starts off (Boss turns it on with the PIN).
         Spec(NTFY_ALERTS, "ntfy alerts", NTFY, signal = com.optionslab.engine.signals.NtfyRules.SIGNAL, defaultOn = false),
+        // 28 Oct (Boss: "just take orders from flow"): IraThinker's flow - not proven (R110), so its live switch starts off too.
+        Spec(com.optionslab.engine.signals.FlowRules.SOURCE, com.optionslab.engine.signals.FlowRules.LABEL, FLOW,
+            signal = com.optionslab.engine.signals.FlowRules.SIGNAL, defaultOn = false),
         Spec(McxEveRules.SOURCE, McxEveRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the NATURALGAS future's evening break"),
         Spec(McxMorningRules.SOURCE, McxMorningRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the SILVERM future's morning"),
         Spec(McxTrendRules.SOURCE, McxTrendRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the MCX future's 12-month trend",

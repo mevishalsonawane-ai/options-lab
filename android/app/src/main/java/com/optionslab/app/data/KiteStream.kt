@@ -90,6 +90,33 @@ object KiteStream {
      */
     val candles = com.optionslab.ira.LiveCandles()
 
+    /**
+     * 28 Oct (IraThinker's flow, Boss: "Use live data from zerodha instead"): the whole session's 1-minute candles of the flow's
+     * indices and India VIX ([SESSION_TOKENS]) built from Zerodha's ticks ALONE - never laid over by another feed (the [candles]
+     * above take the candle feed's values) and kept for the full day ([SESSION_MINUTES]). Memory only: a set lookup and a map
+     * update per tick of those four instruments, as [candles].
+     */
+    val sessionCandles = com.optionslab.ira.LiveCandles(SESSION_MINUTES)
+
+    /** NIFTY, BANKNIFTY, FINNIFTY and India VIX (Zerodha's index tokens): the instruments [sessionCandles] keeps. */
+    val SESSION_TOKENS: Set<Long> = setOf(256265L, 260105L, 257801L, 264969L)
+
+    /** A whole day's minutes, 09:00 to 15:45 and some margin. */
+    const val SESSION_MINUTES = 480
+
+    /** 28 Oct: the stream's reconnects today (memory only; the Flow page's "reconnects today"). */
+    @Volatile private var reconnectDay: java.time.LocalDate? = null
+    @Volatile private var reconnects = 0
+
+    /** The stream's reconnects counted today in this process (memory only). */
+    fun reconnectsToday(): Int = if (reconnectDay == runCatching { Market.today() }.getOrNull()) reconnects else 0
+
+    private fun countReconnect() {
+        val d = runCatching { Market.today() }.getOrNull() ?: return
+        if (reconnectDay != d) { reconnectDay = d; reconnects = 0 }
+        reconnects++
+    }
+
     /** When the current connection dropped (0: not down), for the gap figure; and drops counted today. */
     @Volatile private var downSince = 0L
 
@@ -365,9 +392,11 @@ object KiteStream {
                     runCatching { OrderTiming.streamDropped() }
                     // The app's own health record: a reconnect of the live stream (a counter; it reconnects by itself).
                     runCatching { AppHealth.reconnect() }
+                    runCatching { countReconnect() }
                     runCatching { com.optionslab.app.work.BatteryMeter.meter.count(com.optionslab.ira.LoopMeter.RECONNECTS) }
                 }
                 runCatching { candles.broke() }
+                runCatching { sessionCandles.broke() }
                 if (opened) fails = 0 else fails++
                 // A connection that never opened is noted once per kind of failure and every tenth try (offline for an hour
                 // is not 120 lines); every live connection lost is noted.
@@ -507,6 +536,7 @@ object KiteStream {
         _status.value = Status.OFF
         downSince = 0L
         runCatching { candles.broke() }
+        runCatching { sessionCandles.broke() }
         if (was) runCatching { Diag.record(StreamHealth.AREA, "stopped: ${why ?: "the session or the day ended"}") }
     }
 
@@ -565,7 +595,11 @@ object KiteStream {
             if (t.last > 0) paths.getOrPut(t.token) { com.optionslab.engine.TickPath() }.record(t.last, now)
             // The local candles by the exchange's own stamp (a tick without one - an index's quote packet - is not used).
             val ex = t.exchangeTime
-            if (t.last > 0 && ex != null && ex > 0) candles.record(t.token, t.last, ex)
+            if (t.last > 0 && ex != null && ex > 0) {
+                candles.record(t.token, t.last, ex)
+                // 28 Oct: IraThinker's flow's own Zerodha-only record of its four instruments (memory only).
+                if (t.token in SESSION_TOKENS) sessionCandles.record(t.token, t.last, ex)
+            }
             if (stamp == null) stamp = t.exchangeTime
         }
         lastTickAt = now
@@ -643,7 +677,8 @@ object KiteStream {
      */
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
-        ticks.clear(); paths.clear(); candles.clear(); touched.clear()
+        ticks.clear(); paths.clear(); candles.clear(); sessionCandles.clear(); touched.clear()
+        reconnects = 0; reconnectDay = null
         synchronized(updates) { updates.clear() }   // an earlier test's order update would answer for the same order id
         lastTickAt = 0L
         _status.value = Status.OFF

@@ -62,6 +62,8 @@ private val GROUPS = listOf(
     // 25 Oct: ntfy alerts (NtfyPage): read your ntfy topic's messages, each once; paper by default. Not in IraGoldAlgo.
     "Automation" to listOf(
         Drawer("ntfy", NTFY_TITLE, "Trade messages from your ntfy topic, read once; paper by default"),
+        // 28 Oct: IraThinker's flow (FlowPage): its animated pipeline on Zerodha's stream, index options only, paper.
+        Drawer("flow", FLOW_TITLE, "IraThinker's Scanner → IraScore → Time Machine → Risk Gate, live; paper orders, indices only; not proven"),
     ),
 ) else emptyList()) + listOf(
     "Research" to listOf(
@@ -120,6 +122,7 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
             "alarms" -> AlarmsPage(model)
             "risk" -> RiskPage(model)
             "ntfy" -> NtfyPage(model)
+            "flow" -> FlowPage(model)
             "signal" -> SignalPage(model)
             "ic" -> IcPage(model)
             "sizing" -> SizingPage(model)
