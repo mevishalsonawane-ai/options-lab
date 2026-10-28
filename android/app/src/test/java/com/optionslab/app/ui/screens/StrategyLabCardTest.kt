@@ -110,6 +110,34 @@ class StrategyLabCardTest {
         assertEquals(null, opened)
     }
 
+    /** 28 Oct: automatic ideas held by Boss's win-rate rule, said on the card (with the newest) and listed in the sheet. */
+    @Test fun ideasHeldByTheWinRateRuleAreShownOnTheCardAndInTheSheet() {
+        val why = "held: win rate 64.9% (57) below your 65% rule"
+        val (b1, e1) = com.optionslab.ira.AutoChange.record(com.optionslab.ira.AutoChange.Book(),
+            com.optionslab.ira.AutoChange.ideaHeld(com.optionslab.ira.IdeaWinRate.Creator.FORGE, "F12", "F12 VWAP reclaim Banknifty 5m", why),
+            com.optionslab.ira.AutoChange.Status.SKIPPED, 1_000L, day, by = "your win-rate rule", note = why)
+        val (b2, e2) = com.optionslab.ira.AutoChange.record(b1,
+            com.optionslab.ira.AutoChange.ideaHeld(com.optionslab.ira.IdeaWinRate.Creator.PINE, "Jarvis: Hammer NIFTY 15m", "Jarvis: Hammer NIFTY 15m",
+                "held: tested in-sample only (win rate 80% (100)); your 65% rule needs an out-of-sample record"),
+            com.optionslab.ira.AutoChange.Status.SKIPPED, 2_000L, day, by = "your win-rate rule")
+        val held = com.optionslab.ira.IdeaWinRate.heldOf(b2)
+        set { StrategyLabCardContent(variants, forge, onOpen = {}, held = held) }
+        assertTrue(shows("Held by your win-rate rule: 2 automatic ideas (notes only, nothing made)"))
+        assertTrue("the newest first", shows("• Jarvis's Pine script Jarvis: Hammer NIFTY 15m: held: tested in-sample only"))
+        set { StrategyLabSheet(variants, forge, null, null, onAction = { _, _ -> }, onClose = {}, heldIdeas = held) }
+        scrollToTag("lab-held-" + e1.id)
+        assertTrue(shows("Forge idea F12 VWAP reclaim Banknifty 5m: $why"))
+        scrollToTag("lab-held-" + e2.id)
+        assertTrue(shows("Jarvis's Pine script Jarvis: Hammer NIFTY 15m: held: tested in-sample only"))
+        scrollTo("Held by your win-rate rule")
+        assertTrue(shows("Held by your win-rate rule"))
+    }
+
+    @Test fun nothingHeldSaysNothing() {
+        set { StrategyLabCardContent(variants, forge, onOpen = {}) }
+        assertFalse(shows("Held by your win-rate rule"))
+    }
+
     @Test fun anEmptyCardSaysSo() {
         set { StrategyLabCardContent(VariantLab.Book(), StrategyForge.Book(), onOpen = {}) }
         assertTrue(shows("No strategy is running for the lab to tune yet."))

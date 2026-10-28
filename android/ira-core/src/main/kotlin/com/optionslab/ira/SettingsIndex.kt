@@ -234,6 +234,8 @@ object SettingsIndex {
             GUARD, listOf("naked", "short", "selling")),
         Entry("risk", "jarvis.autolearn", "Autopilot learning", "OFF, SAFE or SHADOW-ONLY: what the agents change by themselves, logged and undoable; SAFE asks for your PIN when live.",
             listOf("Bot settings", "Autopilot learning"), listOf("autopilot", "learning", "auto heal", "self tuning"), guarded = true),
+        Entry("risk", "ideas.winrate", "Automatic ideas: minimum win rate", "Forge ideas, lab variants, shadow re-arms and Jarvis's own Pine scripts are made only at this win rate or more (65% by your rule), out of sample and after costs; changing it needs your PIN.",
+            listOf("Bot settings", "Automatic ideas: minimum win rate"), listOf("win rate", "automatic ideas", "65", "forge", "pine script", "new strategies"), guarded = true),
         Entry("risk", "learn.freeze", "Learning freeze", "Every automatic change stops when the P&L falls past a line after the agents' changes; your own line, and the unfreeze (PIN when live).",
             listOf("Bot settings", "Learning freeze"), listOf("freeze", "frozen", "unfreeze", "learning", "drawdown", "autopilot"), guarded = true),
         Entry("risk", "risk.paperonly", "Paper-only period", "An end date and a reason: until then switching to Live asks your PIN and shows them, and no new live entry goes from anything; exits are never blocked.",

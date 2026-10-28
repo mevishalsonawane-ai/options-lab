@@ -68,7 +68,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
-        // 28 Oct (Boss: "Yes fix finnifty"; R72 and R51's FINNIFTY entries "not bought: no fresh price"): newest of all.
+        // 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): newest of all.
+        Entry("2026-10-28-auto-ideas-65", OCT28, "Automatic ideas now need a 65% win rate",
+            "Nothing new is made by itself unless it wins at least 65% of its trades. " +
+                "That covers forge ideas, strategy lab variants, shadow re-arms and Jarvis's own Pine scripts. " +
+                "The win rate must come from a forward record or a walk-forward test, after charges and slippage. " +
+                "It also needs enough trades and a profit, on top of every test it already passes. " +
+                "Below the rule an idea is only a note, held in the change log and the Strategy lab. " +
+                "What you make or switch on yourself is not touched, and running arms stay on. " +
+                "Changing the 65% needs your PIN, and one tap in the change timeline undoes the rule.",
+            "Settings → Bot settings → Automatic ideas: minimum win rate; the change timeline; the Strategy lab"),
+        // 28 Oct (Boss: "Yes fix finnifty"; R72 and R51's FINNIFTY entries "not bought: no fresh price"): under the 65% rule.
         Entry("2026-10-28-finnifty-book-price", OCT28, "Untraded options can now be bought on paper",
             "FINNIFTY's 09:20 put and 11:05 call were not bought today: no fresh price. " +
                 "Those options had not traded yet, so Zerodha showed no last price. " +

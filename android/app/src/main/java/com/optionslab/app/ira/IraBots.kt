@@ -473,14 +473,30 @@ internal object IraBots {
         val nowMs = System.currentTimeMillis()
         if (nowMs - lastPromotion < 30 * 60_000L) return
         lastPromotion = nowMs
+        val rule = com.optionslab.app.data.IdeaRuleHost.rule()
         for (row in com.optionslab.app.data.ShadowArms.due()) {
             val v = row.variant
+            // 28 Oct: Boss's win-rate rule on top of the bar: below it the re-arm is not put to Boss - a note only (once), and it
+            // is asked later if its forward record reaches the rule.
+            val held = heldShadow(row, rule)
+            if (held != null) {
+                com.optionslab.app.data.IdeaRuleHost.held(com.optionslab.ira.IdeaWinRate.Creator.SHADOW, v.id, com.optionslab.engine.orb.ShadowRules.askTitle(v), held)
+                continue
+            }
             com.optionslab.app.data.ShadowArms.asked(v.id)
             val id = v.id
             IraHub.offer(com.optionslab.engine.orb.ShadowRules.askTitle(v), "Boss, " + com.optionslab.engine.orb.ShadowRules.askTitle(v),
                 com.optionslab.engine.orb.ShadowRules.ask(v, row.summary), { com.optionslab.app.data.ShadowArms.promote(id) }, addsRisk = true, alwaysAsk = true)
         }
     }
+
+    /**
+     * 28 Oct: why a shadow that met the bar is held by Boss's win-rate rule ([com.optionslab.ira.IdeaWinRate]), or null: its own
+     * closed trades since the shadow started (out of sample, after the shadow charges and slippage).
+     */
+    internal fun heldShadow(row: com.optionslab.app.data.ShadowArms.Row, rule: com.optionslab.ira.IdeaWinRate.Rule): String? =
+        com.optionslab.ira.IdeaWinRate.held(com.optionslab.ira.IdeaWinRate.Creator.SHADOW,
+            com.optionslab.ira.IdeaWinRate.forShadow(row.trades.filter { !it.open }.mapNotNull { it.net }), rule)
 
     // ---- what Boss does with his bots after losing days ([com.optionslab.ira.ArmHabits]) --------------------------
 

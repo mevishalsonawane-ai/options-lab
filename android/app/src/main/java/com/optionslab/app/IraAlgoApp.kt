@@ -106,6 +106,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.ExposureCapHost.init(this)
         // 28 Oct (Boss: "Yes fix finnifty"): the paper switch for entries on an option with no last price (memory, read in the background).
         com.optionslab.app.data.BookPriceHost.init(this)
+        // 28 Oct: Boss's win-rate rule for automatic ideas (read on a worker; logged once in the Autopilot timeline).
+        com.optionslab.app.data.IdeaRuleHost.init(this)
         // 20 Oct, enhancement round 1 (idea 4): the account stop rule (in shadow by default), read in the background.
         com.optionslab.app.data.AccountStopHost.init(this)
         // 25 Oct (Boss's decisions on the app audit): the new risk rules' switches and record, read in the background.

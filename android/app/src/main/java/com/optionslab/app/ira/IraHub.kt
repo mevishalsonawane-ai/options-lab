@@ -480,6 +480,11 @@ object IraHub {
             kotlin.coroutines.coroutineContext.ensureActive()
             val r = lab(p.kind, m, p.minutes) ?: continue
             if (!r.recommended) continue
+            // 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): on top of the
+            // two-year test, the win-rate rule; below it the script is neither offered nor added - a note only. Boss's own asked
+            // backtests and his "Approve as a paper arm" never come here.
+            val held = heldPine(r)
+            if (held != null) { com.optionslab.app.data.IdeaRuleHost.held(com.optionslab.ira.IdeaWinRate.Creator.PINE, r.name, r.name, held); continue }
             val prop = propose(r, "I found a ${p.kind.label} on ${m.label} ${chartWord(p.minutes)} at ${Brain.when_(p.at, m, p.at.toLocalDate())} and backtested it as a strategy. ")
             // Autopilot: a strategy that passed the two-year test is added on paper without asking.
             if (autopilot) { val said = approve(prop.id); app?.let { JarvisPopup.show(it, "Autopilot added ${r.name}", said) } }
@@ -487,6 +492,10 @@ object IraHub {
         }
         if (tried) saveState()
     }
+
+    /** 28 Oct: why Jarvis's own script [r] is held by Boss's win-rate rule ([com.optionslab.ira.IdeaWinRate]), or null. */
+    internal fun heldPine(r: StrategyLab.Result, rule: com.optionslab.ira.IdeaWinRate.Rule = com.optionslab.app.data.IdeaRuleHost.rule()): String? =
+        com.optionslab.ira.IdeaWinRate.held(com.optionslab.ira.IdeaWinRate.Creator.PINE, com.optionslab.ira.IdeaWinRate.forPine(r), rule)
 
     private fun chartWord(minutes: Int) = if (minutes == 60) "1-hour" else "$minutes-minute"
 

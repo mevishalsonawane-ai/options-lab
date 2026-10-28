@@ -354,6 +354,11 @@ object StrategyForge {
     sealed class Event {
         data class Proposed(val record: Record) : Event()
         data class Retired(val record: Record) : Event()
+        /**
+         * 28 Oct: it passed every forward gate but Boss's win-rate rule ([IdeaWinRate]): not proposed, kept in forward test as a
+         * note ([words]) until it reaches the rule or its forward test ends.
+         */
+        data class Held(val record: Record, val words: String) : Event()
     }
 
     data class Forward(val book: Book, val events: List<Event>)
@@ -361,12 +366,13 @@ object StrategyForge {
     /**
      * One live day ([days]: the day's data per index): every candidate in forward test (and every one approved for paper, as a
      * virtual paper record) follows it; then the forward judgement with the same sequential test and the trial penalty.
+     * 28 Oct: [rule] (Boss's win-rate rule, [IdeaWinRate]; the app passes the one in force) is checked on top of those gates
+     * before anything is proposed: below it the idea stays in forward test, held, with the note as its [Record.why].
      */
-    fun forwardDay(book: Book, date: LocalDate, days: Map<String, ShadowSim.Day>): Forward {
+    fun forwardDay(book: Book, date: LocalDate, days: Map<String, ShadowSim.Day>, rule: IdeaWinRate.Rule = IdeaWinRate.Rule.OFF): Forward {
         if (book.lastForward != null && !date.isAfter(book.lastForward)) return Forward(book, emptyList())
         var b = book.copy(lastForward = date)
         val events = ArrayList<Event>()
-        val penalty = DiscoveryStats.penalizedAlpha(FWD_ALPHA, b.tried)
         b = b.copy(records = b.records.map { r ->
             if (r.stage != Stage.FORWARD && r.stage != Stage.PAPER) return@map r
             val d = days[r.c.underlying] ?: return@map r
@@ -374,33 +380,53 @@ object StrategyForge {
             val fwd = (r.fwd + nets).takeLast(400)
             val x = r.copy(fwd = fwd, fwdDays = r.fwdDays + 1)
             if (r.stage == Stage.PAPER) return@map x
-            val pPass = DiscoveryStats.alwaysValidP(fwd, 1, 100.0)
-            val pFail = DiscoveryStats.alwaysValidP(fwd, -1, 100.0)
-            val dd = DiscoveryStats.maxDrawdown(fwd)
-            val record = "${fwd.size} trades over ${x.fwdDays} days, ${DiscoveryStats.rs(fwd.sum())}"
-            when {
-                x.fwdDays >= FWD_MIN_DAYS && fwd.size >= FWD_MIN_TRADES && fwd.average() > 0 && pPass <= penalty -> {
-                    val y = x.copy(stage = Stage.PROPOSED, fwdP = pPass, why = "kept passing its forward test: $record (sequential p ${VariantLab.fmtP(pPass)}, " +
-                        "the bar after ${b.tried} ideas ${VariantLab.fmtP(penalty)})", since = date)
-                    events += Event.Proposed(y); y
-                }
-                (fwd.size >= 15 && pFail <= FWD_ALPHA) || dd > MAX_DD || x.fwdDays >= FWD_MAX_DAYS || fwd.size >= FWD_MAX_TRADES -> {
-                    val cause = when {
-                        dd > MAX_DD -> "its deepest fall ${DiscoveryStats.rs(-dd)} broke the capital rule"
-                        fwd.size >= 15 && pFail <= FWD_ALPHA -> "it lost on live days (p ${VariantLab.fmtP(pFail)})"
-                        else -> "no proof after ${x.fwdDays} days"
-                    }
-                    val y = x.copy(stage = Stage.RETIRED, fwdP = pPass, why = "retired: $cause - $record, against ${DiscoveryStats.rs(r.bt?.net ?: 0.0)} in its backtest", since = date)
-                    events += Event.Retired(y); y
-                }
-                else -> x.copy(fwdP = pPass)
-            }
+            val (y, e) = judgeForward(r, x, b.tried, date, rule)
+            if (e != null) events += e
+            y
         })
         for (e in events) when (e) {
             is Event.Proposed -> b = b.copy(proposed = b.proposed + 1, blocks = bump(b.blocks, e.record.c.blocks) { it.copy(fwdPassed = it.fwdPassed + 1) })
             is Event.Retired -> b = b.copy(retired = b.retired + 1, blocks = bump(b.blocks, e.record.c.blocks) { it.copy(fwdFailed = it.fwdFailed + 1) })
+            is Event.Held -> {}
         }
         return Forward(b, events)
+    }
+
+    /**
+     * The forward judgement of one idea in forward test: [r] as it was, [x] with today's trades added, [tried] the ideas ever
+     * tried (the trial penalty), [rule] Boss's win-rate rule (28 Oct) on top of the gates. Its new record, and the event, if any.
+     */
+    fun judgeForward(r: Record, x: Record, tried: Int, date: LocalDate, rule: IdeaWinRate.Rule = IdeaWinRate.Rule.OFF): Pair<Record, Event?> {
+        val fwd = x.fwd
+        val penalty = DiscoveryStats.penalizedAlpha(FWD_ALPHA, tried)
+        val pPass = DiscoveryStats.alwaysValidP(fwd, 1, 100.0)
+        val pFail = DiscoveryStats.alwaysValidP(fwd, -1, 100.0)
+        val dd = DiscoveryStats.maxDrawdown(fwd)
+        val record = "${fwd.size} trades over ${x.fwdDays} days, ${DiscoveryStats.rs(fwd.sum())}"
+        val gatesPass = x.fwdDays >= FWD_MIN_DAYS && fwd.size >= FWD_MIN_TRADES && fwd.average() > 0 && pPass <= penalty
+        // 28 Oct: Boss's win-rate rule on top of the gates: below it, nothing is proposed.
+        val held = if (gatesPass) IdeaWinRate.held(IdeaWinRate.Creator.FORGE, IdeaWinRate.forForge(fwd), rule) else null
+        val ended = (fwd.size >= 15 && pFail <= FWD_ALPHA) || dd > MAX_DD || x.fwdDays >= FWD_MAX_DAYS || fwd.size >= FWD_MAX_TRADES
+        return when {
+            // Kept in forward test, its note as its why (said once, the first day it is held).
+            held != null && !ended -> x.copy(fwdP = pPass, why = "$held - $record").let { y -> y to if (r.why.startsWith("held:")) null else Event.Held(y, held) }
+            held == null && gatesPass -> {
+                val y = x.copy(stage = Stage.PROPOSED, fwdP = pPass, why = "kept passing its forward test: $record (sequential p ${VariantLab.fmtP(pPass)}, " +
+                    "the bar after $tried ideas ${VariantLab.fmtP(penalty)})", since = date)
+                y to Event.Proposed(y)
+            }
+            ended -> {
+                val cause = when {
+                    dd > MAX_DD -> "its deepest fall ${DiscoveryStats.rs(-dd)} broke the capital rule"
+                    fwd.size >= 15 && pFail <= FWD_ALPHA -> "it lost on live days (p ${VariantLab.fmtP(pFail)})"
+                    held != null -> "its forward test ended still $held"
+                    else -> "no proof after ${x.fwdDays} days"
+                }
+                val y = x.copy(stage = Stage.RETIRED, fwdP = pPass, why = "retired: $cause - $record, against ${DiscoveryStats.rs(r.bt?.net ?: 0.0)} in its backtest", since = date)
+                y to Event.Retired(y)
+            }
+            else -> x.copy(fwdP = pPass) to null
+        }
     }
 
     /** Boss's yes to "start it on paper": the record becomes PAPER (its virtual paper record goes on). Live is never here. */

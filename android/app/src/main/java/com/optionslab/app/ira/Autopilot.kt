@@ -529,6 +529,14 @@ internal object Autopilot {
             }
             AutoChange.Kind.TRAP_THRESHOLD, AutoChange.Kind.WAKE_SCHEDULE, AutoChange.Kind.HEAL_BACKOFF, AutoChange.Kind.REGIME_THRESHOLD,
             AutoChange.Kind.DRIFT_THRESHOLD -> setKnob(c.target.removePrefix("knob:"), c.to.toDoubleOrNull() ?: return null)
+            // 28 Oct: Boss's win-rate rule for automatic ideas ([logIdeaRuleOn]): only its Undo (off) and the undo of that (on) apply
+            // here; the switch is not logged again (the Undo is its own record).
+            AutoChange.Kind.IDEA_RULE -> {
+                if (c.target != AutoChange.IDEA_RULE_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                com.optionslab.app.data.IdeaRuleHost.setOn(c.to == AutoChange.ON, log = false)
+            }
+            // A held idea is a note: nothing to apply.
+            AutoChange.Kind.IDEA_HELD -> null
             else -> null
         }
     }
@@ -610,6 +618,9 @@ internal object Autopilot {
             // 25 Oct: switching one of the new paper risk limits off loosens it: the PIN, as loosening the paper loss limit takes it.
             AutoChange.Kind.PAPER_FILTER -> inverse.target in AutoChange.PIN_TO_LOOSEN && inverse.to == AutoChange.SWITCHED_OFF &&
                 runCatching { com.optionslab.app.security.GuardPin.asks(true, runCatching { AppSettings.load().live }.getOrDefault(true)) }.getOrDefault(true)
+            // 28 Oct: taking Boss's win-rate rule away loosens their own rule (as changing its number does): the PIN, where one is set.
+            AutoChange.Kind.IDEA_RULE -> inverse.to == AutoChange.SWITCHED_OFF &&
+                runCatching { com.optionslab.app.security.PinLock.isSet }.getOrDefault(true)
             else -> false
         }
     }
@@ -886,6 +897,71 @@ internal object Autopilot {
      * tap puts the shared lock back. Never logged twice (a restart, an undone entry): Bot settings' switch logs later flips.
      */
     private fun logSegmentSplitOnce() = logBossOwnOnce(AutoChange.segmentSplit(), "your choice, 21 Oct; paper only, never live")
+
+    // ---- 28 Oct: Boss's win-rate rule for automatic ideas ([com.optionslab.ira.IdeaWinRate]) ---------------------------------
+
+    /**
+     * The rule on by this update: logged once (kept) as Boss's, so the change log and "Today's changes" show it; one tap undoes
+     * it (with the PIN where one is set: it loosens Boss's rule).
+     */
+    fun logIdeaRuleOn(minPct: Double) {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.ideaRule(true, minPct), "the 28 Oct update (your rule: \"Dont create a pine script or stratergies " +
+            "automatically, until 65% + winrate is found\"); it only holds automatic ideas back - nothing running is switched off")
+    }
+
+    /**
+     * Boss switched the rule [on] again from Settings (after an Undo), or off: on is logged as a new kept entry (its Undo takes
+     * it away again); off closes the newest kept entry as undone, so no Undo is left that would do nothing.
+     */
+    fun logIdeaRuleFlip(on: Boolean, minPct: Double) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                if (appContext == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val last = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.IDEA_RULE && it.status == AutoChange.Status.KEPT }
+                    if (on) {
+                        if (last != null) _book.value = AutoChange.undone(_book.value, last.id, today)
+                        _book.value = AutoChange.record(_book.value, AutoChange.ideaRule(true, minPct), AutoChange.Status.KEPT, System.currentTimeMillis(),
+                            today, by = "your choice", note = "switched back on by you in Settings").first
+                    } else {
+                        last ?: return@runCatching
+                        _book.value = AutoChange.undone(_book.value, last.id, today)
+                    }
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * An automatic idea held by the rule ([com.optionslab.app.data.IdeaRuleHost.held]): recorded once per idea as SKIPPED (a note;
+     * nothing was made, so there is nothing to undo), by "your win-rate rule", in the background.
+     */
+    fun logIdeaHeld(c: AutoChange.Change) {
+        if (!enabled() || c.kind != AutoChange.Kind.IDEA_HELD) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    if (_book.value.entries.none { it.change.kind == AutoChange.Kind.IDEA_HELD && it.change.target == c.target }) {
+                        _book.value = AutoChange.record(_book.value, c, AutoChange.Status.SKIPPED, System.currentTimeMillis(), today,
+                            by = HELD_BY, note = c.reason).first
+                        save()
+                    }
+                }
+            }
+        }
+    }
+
+    /** Who a held idea is recorded by. */
+    const val HELD_BY = "your win-rate rule"
 
     /**
      * Bot settings' "Commodities keep their own paper limits" switch flipped by Boss (21 Oct): on is logged as a new entry (its Undo

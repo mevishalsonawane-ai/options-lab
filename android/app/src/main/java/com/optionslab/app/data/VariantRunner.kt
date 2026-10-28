@@ -418,12 +418,14 @@ object VariantRunner {
                 synchronized(lock) {
                     // 26 Oct: an erase since this settle began: nothing kept or saved (its day's results are the old books').
                     if (gen != wipeGen) return@synchronized null
+                    // 28 Oct: Boss's win-rate rule for automatic ideas (memory only), on top of the lab's and the forge's own gates.
+                    val rule = IdeaRuleHost.rule()
                     val v0 = com.optionslab.app.ira.LearningFreeze.holdPromotions(VariantLab.day(_variants.value, d, runs, todays, history,
-                        DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual, evidence, seeds.values.sortedBy { it.id }))
+                        DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual, evidence, seeds.values.sortedBy { it.id }, rule = rule))
                     // R14's re-entry cap through the lab's own path, once: on paper by itself (undoable), proposed for live (PIN).
                     val r14 = VariantLab.research(v0.book, d, from)
                     val v = v0.copy(book = r14.book, events = v0.events + r14.events)
-                    val f = StrategyForge.forwardDay(_forge.value, d, if (evidence) todays.filterKeys { it in UNDERLYINGS } else emptyMap())
+                    val f = StrategyForge.forwardDay(_forge.value, d, if (evidence) todays.filterKeys { it in UNDERLYINGS } else emptyMap(), rule = rule)
                     _variants.value = v.book; _forge.value = f.book
                     save()
                     v to f
@@ -475,10 +477,17 @@ object VariantRunner {
             is VariantLab.Event.Proposed -> offerLive(e.change)
             is VariantLab.Event.Retired -> {}
             is VariantLab.Event.Waiting -> {}
+            // 28 Oct: below Boss's win-rate rule: a note only (the change log, once per variant), nothing applied or proposed.
+            is VariantLab.Event.Held -> {
+                val label = VariantLab.strategy(e.variant.strategy)?.label ?: e.variant.strategy
+                IdeaRuleHost.held(com.optionslab.ira.IdeaWinRate.Creator.VARIANT, e.variant.id, "${e.variant.id} of $label (${e.variant.moved()})", e.words)
+            }
         }
         for (e in fs) when (e) {
             is StrategyForge.Event.Proposed -> offerPaper(e.record)
             is StrategyForge.Event.Retired -> post("$WHO · forge", "lesson: ${e.record.c.name} ${e.record.why}")
+            // 28 Oct: below Boss's win-rate rule: a note only (once per idea), not proposed; it stays in forward test.
+            is StrategyForge.Event.Held -> IdeaRuleHost.held(com.optionslab.ira.IdeaWinRate.Creator.FORGE, e.record.c.id, e.record.c.name, e.words)
         }
     }
 

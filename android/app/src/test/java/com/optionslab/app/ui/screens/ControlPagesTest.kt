@@ -680,6 +680,50 @@ class ControlPagesTest {
         waitSettings { it.paperWeeklyLoss == 30_000.0 }
     }
 
+    /**
+     * 28 Oct (Boss: "until 65% + winrate is found"): Bot settings shows "Automatic ideas: minimum win rate 65%", and every change of
+     * the number takes the PIN (up or down); Cancel keeps it.
+     */
+    @Test fun theMinimumWinRateForAutomaticIdeasShows65AndChangingItTakesThePin() {
+        PinLock.setPin(pin.toCharArray())
+        com.optionslab.app.data.IdeaRuleHost.setForTest()
+        try {
+            show { RiskPage(model) }
+            compose.waitForText("Bot settings")
+            compose.reveal("Automatic ideas: minimum win rate 65%")
+            fun chip(text: String) { compose.reveal(text); compose.onAllNodesWithText(text)[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
+            // Up (65% -> 70%): the PIN first; Cancel keeps 65%.
+            chip("70%")
+            compose.waitForText("Confirm it is you")
+            compose.onNodeWithText(IDEA_RULE_PIN_WHY).assertExists()
+            tap("Cancel")
+            compose.waitForNoText("Confirm it is you")
+            assertEquals(65.0, com.optionslab.app.data.IdeaRuleHost.rule().minPct, 0.0)
+            chip("70%")
+            reauth(pin, IDEA_RULE_PIN_WHY)
+            compose.until(20_000, "the new minimum") { com.optionslab.app.data.IdeaRuleHost.rule().minPct == 70.0 }
+            compose.waitForText("Automatic ideas: minimum win rate 70%")
+            // Down (70% -> 60%) takes the PIN too: it loosens the rule.
+            chip("60%")
+            reauth(pin, IDEA_RULE_PIN_WHY)
+            compose.until(20_000, "the lower minimum") { com.optionslab.app.data.IdeaRuleHost.rule().minPct == 60.0 }
+        } finally { com.optionslab.app.data.IdeaRuleHost.setForTest() }
+    }
+
+    /** After the rule's Undo in the change log, the card says it is off and switches it back on without the PIN (it only holds ideas back). */
+    @Test fun theUndoneWinRateRuleSwitchesBackOnWithoutThePin() {
+        PinLock.setPin(pin.toCharArray())
+        com.optionslab.app.data.IdeaRuleHost.setForTest(on = false)
+        try {
+            show { IdeaRuleSettingCard(model) }
+            compose.waitForText("Automatic ideas: minimum win rate off", substring = true)
+            tap("Switch the rule back on")
+            compose.until(20_000, "the rule back on") { com.optionslab.app.data.IdeaRuleHost.rule().on }
+            assertFalse(compose.has("Confirm it is you"))
+            compose.waitForText("Automatic ideas: minimum win rate 65%")
+        } finally { com.optionslab.app.data.IdeaRuleHost.setForTest() }
+    }
+
     @Test fun theMuhuratSundayIsNamedOnTheHolidayCard() {
         show { SchedulePage(model) }
         compose.reveal("Diwali Muhurat trading", substring = true)
