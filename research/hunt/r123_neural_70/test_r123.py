@@ -433,3 +433,28 @@ def test_tcn_is_causal():
     h2 = h.clone()
     h2[:, :, 50:] += 3
     np.testing.assert_allclose(cv(h)[:, :, :50].detach().numpy(), cv(h2)[:, :, :50].detach().numpy(), atol=1e-6)
+
+
+# ------------------------------------------------------------------------------------------------ Amendment 2
+def test_zero_volume_minutes_are_not_prints():
+    rows = []
+    for m in range(10):
+        rows.append(dict(m=m, offset=0, side="P", strike=25000.0, spot=25000.0, open=100.0, high=100.0, low=100.0,
+                         close=100.0, volume=0 if m in (3, 4) else 650, oi=1, iv=10.0))
+    o = D.DayOptions(pd.DataFrame(rows), 50.0)
+    a = o.contracts[("P", 25000.0)]
+    assert np.isnan(a[3]).all() and np.isnan(a[4]).all() and np.isfinite(a[5]).all()
+    assert D.simulate(a, 2, 8, 65, DAY, "NIFTY", 1000, 1000) is None             # no traded bar to buy at
+
+
+def test_lake_cleaning_drops_foreign_rows():
+    rows = []
+    for m in range(10):
+        for sp in (25000.0, 13000.0):                                           # 13000: another index's row
+            rows.append(dict(d=DAY, m=m, offset=0, side="C", strike=25000.0 if sp > 20000 else 13000.0, spot=sp,
+                             open=100.0, high=101.0, low=99.0, close=100.0, volume=650, oi=1, iv=10.0))
+    LO = D.LakeOptions.__new__(D.LakeOptions)
+    LO.und, LO.year, LO.by_day = "NIFTY", DAY.year, {DAY: pd.DataFrame(rows)}
+    lg = {}
+    o = LO.day(DAY, np.full(K.N, 25000.0), lg)
+    assert set(o.contracts) == {("C", 25000.0)} and lg["foreign"] == 10

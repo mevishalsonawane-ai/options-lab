@@ -205,3 +205,24 @@ the validation slice only; abstention removes exactly the rows whose seed spread
 dilations 1/2/4/8) reaches back only about 31 minutes from its last step, plus the 15-minute average: about 45 of the
 120 minutes. The encoder output now also includes the average over all 120 minutes, so the whole window counts.
 This applies to N1 and to N2's fast encoder. Nothing else changes.
+
+## Amendment 2 (28 Oct 2026, after the first walk-forward, BEFORE the holdout): the lake cleaning was missing
+
+**What happened.** The first walk-forward ran on option prices that had not been through the repo's lake cleaning
+(`research/hunt/lakeclean.py`, used by R51 onward). It is kept unchanged as `results/wf_uncleaned.json` and
+`results/report_wf_uncleaned.md`. Checking its two passing rules (N1-S4, N1-S5) found trades priced on junk prints.
+For example, MIDCPNIFTY puts on 3 Feb 2026 showed flat zero-volume prices of Rs 134, then 256.8, then 528 within six
+minutes. One trade "lost" Rs 14,923 on 1 lot. That is a data error, not a market move.
+
+**The fix (a bug fix, applied before any holdout read; no rule, threshold, grid, model or gate changes):**
+1. Every session's option rows go through `lakeclean.clean(..., stale=True)` (steps 1-3: rows of another index,
+   stray opens / capped highs, stale impossible prints) against that session's index closes. Expiry detection keeps
+   reading the raw rows, as lakeclean's notes say.
+2. A minute with zero traded volume is the lake's carried-forward price (HUNT_LAKE_STALE_PRINTS.md), so it is
+   treated as section 4 already says: *"bars without a print are skipped (never priced)"*. No entry, target fill,
+   stop or time exit happens at a price nobody traded. The chain-state inputs (context) are unchanged.
+
+The design rows are rebuilt and the walk-forward is run again with the same code, seeds and gates. Only the second
+walk-forward counts for the gates. The first is reported beside it, so the effect of the fix is visible. Seeing the
+first run's results is a weakness. It is disclosed. The fix was chosen because the repo's own data rules require it,
+not because of which rules passed.

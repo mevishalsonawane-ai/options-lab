@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
@@ -17,6 +18,9 @@ import pandas as pd
 
 import r123cfg as K
 from research.obuy.costs import Costs, Fills, _dn
+
+sys.path.insert(0, str(K.HERE.parent))                  # research/hunt: the shared lake cleaning
+import lakeclean  # noqa: E402
 
 FILLS = Fills("liq")
 COSTS = Costs("dated")
@@ -144,6 +148,8 @@ class DayOptions:
             mm = h.m.values
             for j, col in enumerate(("open", "high", "low", "close", "volume")):
                 a[mm, j] = h[col].values.astype(float)
+            # a minute with no trade is the lake's carried-forward price, not a print (Amendment 2): never priced
+            a[~(a[:, V_] > 0)] = np.nan
             self.contracts[(str(s), float(k))] = a
 
 
@@ -179,7 +185,9 @@ class LakeOptions:
         ok = (t < 0.6) & (nxt > 2.0 * t.clip(lower=1e-6)) & nxt.notna()
         return {d for d, v in ok.items() if v}
 
-    def day(self, d: date) -> DayOptions | None:
+    def day(self, d: date, closes: np.ndarray | None = None, log: dict | None = None) -> DayOptions | None:
+        """One session's options after the repo's lake cleaning (Amendment 2): lakeclean steps 1-3 (foreign rows,
+        stray prints, stale impossible prints; stale=True), against the index closes of that session."""
         if self.year != d.year:
             ps = [p for p in self.files if p.stem.endswith(str(d.year))]
             self.by_day = {}
@@ -190,7 +198,19 @@ class LakeOptions:
                 self.by_day = dict(tuple(o.groupby("d")))
             self.year = d.year
         g = self.by_day.get(d)
-        return None if g is None or g.empty else DayOptions(g, K.STEP[self.und])
+        if g is None or g.empty:
+            return None
+        if closes is not None:
+            w = g.rename(columns={"d": "day", "m": "r"})
+            kept, _, lg = lakeclean.clean(w, {d: closes}, stale=True)
+            if log is not None:
+                for k, v in (lg.why.value_counts().items() if len(lg) else []):
+                    log[k] = log.get(k, 0) + int(v)
+                log["rows"] = log.get("rows", 0) + len(w)
+            g = kept.rename(columns={"day": "d", "r": "m"})
+            if g.empty:
+                return None
+        return DayOptions(g, K.STEP[self.und])
 
 
 # ------------------------------------------------------------------------------------------------ trade simulator
@@ -489,6 +509,9 @@ def budget_days() -> set:
         return set()
 
 
+CLEAN_LOG: dict = {}
+
+
 def build(part: str, unds=K.UNDS, log=print) -> pd.DataFrame:
     """Every decision row of `part` with its inputs, labels and trade outcomes. Returns the frame; the sequence index
     (global minute position) is in column `gpos` with `und`."""
@@ -504,12 +527,13 @@ def build(part: str, unds=K.UNDS, log=print) -> pd.DataFrame:
         LO = LakeOptions(und, last_day)
         exp = LO.expiry_days()
         exp_sorted = sorted(exp)
+        clean_log: dict = {}
         seqs[und] = I.seq
         n0 = len(rows)
         for i, d in enumerate(I.days):
             if K.part(d) != part:
                 continue
-            opts = LO.day(d)
+            opts = LO.day(d, I.g.c[i], clean_log)
             if opts is None:
                 continue
             nxt = [e for e in exp_sorted if e >= d]
@@ -524,7 +548,8 @@ def build(part: str, unds=K.UNDS, log=print) -> pd.DataFrame:
                 rec.update(index_labels(I, i, t))
                 rec.update(trade_labels(opts, I, i, t, ctx["is_expiry"]))
                 rows.append(rec)
-        log(f"{und} {part}: {len(rows) - n0} rows", flush=True)
+        log(f"{und} {part}: {len(rows) - n0} rows; lake cleaning {clean_log}", flush=True)
+        CLEAN_LOG[und] = clean_log
     F = pd.DataFrame(rows)
     return F, seqs
 
