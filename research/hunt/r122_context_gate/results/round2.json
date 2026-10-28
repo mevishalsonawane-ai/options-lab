@@ -1,0 +1,13 @@
+{
+ "C1_ST_GAP": {"kind": "rule", "rules": ["R6_SUPERTREND", "R4_GAP_AGAINST"]},
+ "C2_ST_GAP_EMA": {"kind": "rule", "rules": ["R6_SUPERTREND", "R4_GAP_AGAINST", "R7_EMA"]},
+ "C3_ST_GAP_CHASE": {"kind": "rule", "rules": ["R6_SUPERTREND", "R4_GAP_AGAINST", "R8_CHASE"]},
+ "C4_ST_GAP_INTRADAY": {"kind": "rule", "rules": ["R6_SUPERTREND", "R4_GAP_AGAINST", "R2_INTRADAY"]},
+ "C5_ST_EMA": {"kind": "rule", "rules": ["R6_SUPERTREND", "R7_EMA"]},
+ "C6_GAP_EMA": {"kind": "rule", "rules": ["R4_GAP_AGAINST", "R7_EMA"]},
+ "M1_ANALOGS_10": {"kind": "L2", "share": 0.10},
+ "M2_ANALOGS_30": {"kind": "L2", "share": 0.30},
+ "M3_LOGIT_HELPED": {"kind": "L1", "share": 0.20, "cols": ["st5", "gap", "ema5", "trend20", "move_open", "side"]},
+ "M4_TREES_HELPED": {"kind": "L3", "share": 0.20, "cols": ["st5", "gap", "ema5", "trend20", "move_open", "side"]},
+ "M5_ANALOGS_HELPED": {"kind": "L2", "share": 0.20, "cols": ["st5", "gap", "ema5", "trend20", "move_open", "side"]}
+}
