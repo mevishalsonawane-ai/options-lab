@@ -74,6 +74,22 @@ def opt_trade(a: np.ndarray, t: int, end: int, lot: int, d: date, und: str, fill
     return {"buy": b, "sell": s, "net": float(net)}
 
 
+def opt_overnight(a_in: np.ndarray, t: int, a_out: np.ndarray, end: int, lot: int, d_in: date, d_out: date, und: str,
+                  fills, charge) -> dict | None:
+    """Amendment 1: buy at bar t's close of day D, sell the SAME contract at bar `end`'s close of the next session."""
+    if a_in is None or a_out is None or t >= a_in.shape[0] or end >= a_out.shape[0]:
+        return None
+    pi, pe = a_in[t, 3], a_out[end, 3]
+    if not (np.isfinite(pi) and pi > 0 and np.isfinite(pe) and pe > 0):
+        return None
+    v_in = np.nansum(a_in[max(t - 4, 0):t + 1, 4]) / lot
+    v_out = np.nansum(a_out[max(end - 4, 0):end + 1, 4]) / lot
+    b = float(np.asarray(fills.buy(pi, v_in)).reshape(-1)[0])
+    s = float(np.asarray(fills.sell(pe, v_out)).reshape(-1)[0])
+    net = (s - b) * lot - charge(True, b, lot, d_in, und) - charge(False, s, lot, d_out, und)
+    return {"buy": b, "sell": s, "net": float(net)}
+
+
 def summarise(tr: pd.DataFrame) -> dict:
     if tr.empty:
         return {"trades": 0}

@@ -33,9 +33,12 @@ EMBARGO_DAYS = 10
 # ---- horizons (PREREG section 2) --------------------------------------------------------------------------------
 DAILY_H = ("GAP", "C2C", "PRE")
 INTRA_H = ("DAY", "R11", "R13", "M60")
-HORIZONS = DAILY_H + INTRA_H
-TRADEABLE = {"GAP", "C2C", "DAY", "R11", "R13", "M60"}
-TINY = {"GAP": 0.10, "PRE": 0.10, "C2C": 0.10, "DAY": 0.10, "R11": 0.05, "R13": 0.05, "M60": 0.05}   # % of price
+OVN_H = ("GAP_T", "C2C_T")                       # Amendment 1: tradeable 14:55 twins of GAP and C2C
+HORIZONS = DAILY_H + INTRA_H + OVN_H
+TRADEABLE = {"GAP", "C2C", "DAY", "R11", "R13", "M60", "GAP_T", "C2C_T"}
+TINY = {"GAP": 0.10, "PRE": 0.10, "C2C": 0.10, "DAY": 0.10, "R11": 0.05, "R13": 0.05, "M60": 0.05,
+        "GAP_T": 0.10, "C2C_T": 0.10}   # % of price
+TWIN = {"GAP": "GAP_T", "C2C": "C2C_T"}          # Amendment 1.3: a GAP/C2C pass counts only if its twin passes
 N = 375
 
 
@@ -45,7 +48,8 @@ def row(hh: int, mm: int) -> int:
 
 
 INTRA_ROWS = {"DAY": (row(9, 29),), "R11": (row(10, 59),), "R13": (row(12, 59),),
-              "M60": (row(9, 59), row(10, 59), row(11, 59), row(12, 59), row(13, 59))}
+              "M60": (row(9, 59), row(10, 59), row(11, 59), row(12, 59), row(13, 59)),
+              "GAP_T": (row(14, 54),), "C2C_T": (row(14, 54),)}
 EXIT_LAST = row(15, 19)          # money check: square-off at the 15:19 bar's close
 EXIT_LAST_EXPIRY = row(15, 4)
 

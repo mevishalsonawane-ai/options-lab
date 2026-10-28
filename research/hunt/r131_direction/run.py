@@ -108,12 +108,29 @@ def build_intra(morning: dict):
     tg = []
     for u, g in grids.items():
         pos = {pd.Timestamp(d): i for i, d in enumerate(g.days)}
+        cal = morning[u].index
+        nxt = dict(zip(cal[:-1], cal[1:]))                   # the index's next trading day (daily calendar)
         x = r123[r123.und == u]
-        for h in K.INTRA_H:
+        for h in K.INTRA_H + K.OVN_H:
             for t in K.INTRA_ROWS[h]:
                 xx = x[x.row == t]
-                mv = [F.intra_targets(g.c[pos[d]], t, h) if d in pos else np.nan for d in xx.day]
-                tg.append(pd.DataFrame({"und": u, "day": xx.day.values, "row": t, "H": h, "move": mv}))
+                mv, tday = [], []
+                for d in xx.day:
+                    if d not in pos:
+                        mv.append(np.nan)
+                        tday.append(d)
+                        continue
+                    i = pos[d]
+                    if h in K.OVN_H:
+                        nd = nxt.get(d)
+                        ok = nd is not None and nd in pos and pos[nd] == i + 1
+                        mv.append(F.ovn_target(g.c[i], t, g.o[i + 1], g.c[i + 1], h) if ok else np.nan)
+                        tday.append(nd if ok else d)
+                    else:
+                        mv.append(F.intra_targets(g.c[i], t, h))
+                        tday.append(d)
+                tg.append(pd.DataFrame({"und": u, "day": xx.day.values, "row": t, "H": h, "move": mv,
+                                        "tday": tday}))
     tg = pd.concat(tg, ignore_index=True)
     # equity breadth at each (day, row)
     eq = equity_breadth(sorted(r123.day.unique()), keep)
@@ -127,15 +144,18 @@ def build_intra(morning: dict):
     md = pd.concat(md, ignore_index=True)
     r123 = r123.merge(md, on=["und", "day"], how="left")
     out = {}
-    for h in K.INTRA_H:
+    for h in K.INTRA_H + K.OVN_H:
         df = tg[tg.H == h].drop(columns="H").merge(r123, on=["und", "day", "row"], how="inner")
         df = df[df.move.notna() & (df.move != 0) & (df.day >= pd.Timestamp(K.INTRA_START))]
-        if h == "DAY":
+        if h in ("DAY",) + K.OVN_H:
             df["B1"] = np.sign(df.ri_gap.fillna(0) + df.ri_from_open.fillna(0))
         elif h in ("R11", "R13"):
             df["B1"] = np.sign(df.ri_from_open)
         else:
             df["B1"] = np.sign(df.ri_ret60)
+        df["dday"] = df.day
+        df["day"] = pd.to_datetime(df.tday)                 # folds and the holdout go by the TARGET day
+        df = df.drop(columns="tday")
         df["y"] = (df.move > 0).astype(int)
         out[h] = df.reset_index(drop=True)
     return out
@@ -390,6 +410,36 @@ def money_rows(preds: pd.DataFrame, which: list) -> dict:
                     skipped += 1
                     continue
                 tr.append({"und": u, "day": r.day, "fold": r.fold, "net": x["net"], "side": side})
+        if h in K.OVN_H:
+            meta = rows_all[h].set_index(["und", "day", "row"])
+            rr = rows_all[h]
+            exp_days = set(zip(rr.und[rr.rk_is_expiry == 1], pd.to_datetime(rr.dday[rr.rk_is_expiry == 1])))
+            for r in g.sort_values(["und", "day"]).itertuples():
+                u = r.und
+                mr = meta.loc[(u, r.day, r.row)]
+                d_in, d_out = pd.Timestamp(mr["dday"]).date(), r.day.date()
+                if u not in grids:
+                    grids[u] = RD.load_grid(u, K.HOLDOUT[1])
+                    lake[u] = RD.LakeOptions(u, K.HOLDOUT[1])
+                gr = grids[u]
+                i = gr.pos().get(d_in)
+                if i is None or i + 1 >= len(gr.days) or bool(mr.get("rk_is_expiry", 0) == 1):
+                    skipped += 1
+                    continue
+                t = int(r.row)
+                o_in = lake[u].day(d_in, closes=gr.c[i])
+                o_out = lake[u].day(d_out, closes=gr.c[i + 1])
+                side = "C" if r.p >= 0.5 else "P"
+                spot = gr.c[i, t] if np.isfinite(gr.c[i, t]) else mr["close"]
+                kk = RD.atm(float(spot), K.STEP[u])
+                a_in = o_in.contracts.get((side, kk)) if o_in is not None else None
+                a_out = o_out.contracts.get((side, kk)) if o_out is not None else None
+                end = 0 if h == "GAP_T" else (K.EXIT_LAST_EXPIRY if (u, r.day) in exp_days else K.EXIT_LAST)
+                x = Y.opt_overnight(a_in, t, a_out, end, K.LOT[u], d_in, d_out, u, RD.FILLS, RD.charge)
+                if x is None:
+                    skipped += 1
+                    continue
+                tr.append({"und": u, "day": r.day, "fold": r.fold, "net": x["net"], "side": side})
         df = pd.DataFrame(tr)
         df.attrs["skipped"] = skipped
         summ = {"all": Y.summarise(df) if len(df) else {"trades": 0}, "skipped": skipped}
@@ -415,7 +465,15 @@ def cmd_holdout():
         r["gate"] = M.gate(r, hr, r["H"]) if hr else None
         if r["gate"] and r["gate"]["pass"]:
             gates.append((r["H"], r["set"], r["model"], r["k"]))
-    fixed = [(h, K.MONEY_SET, K.MONEY_MODEL, K.MONEY_K) for h in ("DAY", "R11", "R13", "M60", "GAP", "C2C")]
+    # Amendment 1.3: a GAP / C2C pass counts as tradeable only if its 14:55 twin passes too
+    passed = set(gates)
+    for r in wf:
+        if r.get("gate"):
+            tw = K.TWIN.get(r["H"])
+            r["gate"]["twin_pass"] = None if tw is None else ((tw, r["set"], r["model"], r["k"]) in passed)
+            r["gate"]["counts"] = bool(r["gate"]["pass"] and r["gate"]["twin_pass"] is not False)
+    fixed = [(h, K.MONEY_SET, K.MONEY_MODEL, K.MONEY_K) for h in ("DAY", "R11", "R13", "M60", "GAP", "C2C", "GAP_T",
+                                                                    "C2C_T")]
     which = sorted(set(fixed + gates))
     wfp = pd.read_parquet(K.OUT / "preds_wf.parquet")
     money = {"wf": money_rows(wfp, which), "holdout": money_rows(preds, which)}

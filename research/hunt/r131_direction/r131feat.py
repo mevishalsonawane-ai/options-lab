@@ -319,6 +319,21 @@ def intra_targets(c_day: np.ndarray, t: int, horizon: str) -> float:
         return float(np.log(ce / c0) * 100) if np.isfinite(ce) and np.isfinite(c0) and c0 > 0 else np.nan
 
 
+def ovn_target(c_day: np.ndarray, t: int, o_next: np.ndarray, c_next: np.ndarray, horizon: str) -> float:
+    """Amendment 1: index move (log %) from the close of bar t of day D to the NEXT session's first open (GAP_T) or
+    last close (C2C_T). Reads bars <= t of D only for the entry."""
+    seg = c_day[:t + 1]
+    fin = seg[np.isfinite(seg)]
+    c0 = fin[-1] if len(fin) else np.nan
+    x = o_next if horizon == "GAP_T" else c_next
+    f = np.flatnonzero(np.isfinite(x))
+    if not len(f):
+        return np.nan
+    ce = x[f[0]] if horizon == "GAP_T" else x[f[-1]]
+    with np.errstate(all="ignore"):
+        return float(np.log(ce / c0) * 100) if np.isfinite(c0) and c0 > 0 and ce > 0 else np.nan
+
+
 def feature_cols(df: pd.DataFrame, set_name: str) -> list:
     srcs = ("IDX",) + K.SOURCES if set_name == "ALL" else tuple(set_name.split("+"))
     pre = tuple(p for s in srcs for p in K.PREFIX[s])

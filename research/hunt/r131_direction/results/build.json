@@ -83,6 +83,30 @@
     "MIDCPNIFTY": 4707,
     "SENSEX": 4189
    }
+  },
+  "GAP_T": {
+   "rows": 5584,
+   "first": "2021-08-03",
+   "last": "2026-10-19",
+   "by_und": {
+    "NIFTY": 1273,
+    "FINNIFTY": 1269,
+    "BANKNIFTY": 1268,
+    "MIDCPNIFTY": 939,
+    "SENSEX": 835
+   }
+  },
+  "C2C_T": {
+   "rows": 5583,
+   "first": "2021-08-03",
+   "last": "2026-10-19",
+   "by_und": {
+    "NIFTY": 1272,
+    "FINNIFTY": 1269,
+    "BANKNIFTY": 1268,
+    "MIDCPNIFTY": 939,
+    "SENSEX": 835
+   }
   }
  },
  "sources": {

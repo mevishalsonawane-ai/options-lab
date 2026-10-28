@@ -372,3 +372,45 @@ def test_opt_trade_skips_untraded_minutes():
     assert r["net"] == pytest.approx((11.95 - 10.05) * 50 - 40)
     assert Y.opt_trade(a, 10, 69, 50, date(2025, 1, 1), "NIFTY", Fl(), ch) is None
     assert Y.opt_trade(None, 10, 70, 50, date(2025, 1, 1), "NIFTY", Fl(), ch) is None
+
+
+# ------------------------------------------------------------------------------------------------ Amendment 1
+def test_ovn_target_entry_reads_day_d_up_to_t_only():
+    c = np.linspace(100, 101, K.N)
+    o2 = np.full(K.N, np.nan)
+    o2[3:] = 102.0
+    c2 = np.full(K.N, 103.0)
+    c2[-5:] = np.nan
+    t = K.row(14, 54)
+    g = F.ovn_target(c, t, o2, c2, "GAP_T")
+    assert g == pytest.approx(np.log(102.0 / c[t]) * 100)
+    assert F.ovn_target(c, t, o2, c2, "C2C_T") == pytest.approx(np.log(103.0 / c[t]) * 100)
+    c_late = c.copy()
+    c_late[t + 1:] = 1e6                                               # D after 14:54 is never read
+    assert F.ovn_target(c_late, t, o2, c2, "GAP_T") == pytest.approx(g)
+    assert np.isnan(F.ovn_target(c, t, np.full(K.N, np.nan), c2, "GAP_T"))
+
+
+def test_opt_overnight_uses_both_days_charges():
+    from datetime import date
+    a_in = np.full((K.N, 5), np.nan)
+    a_out = np.full((K.N, 5), np.nan)
+    a_in[339] = [50, 50, 50, 50.0, 10]
+    a_out[0] = [60, 60, 60, 60.0, 10]
+    seen = []
+
+    class Fl:
+        def buy(self, p, v):
+            return p
+
+        def sell(self, p, v):
+            return p
+
+    def ch(b, px, q, d, u):
+        seen.append((b, d))
+        return 10.0
+    r = Y.opt_overnight(a_in, 339, a_out, 0, 20, date(2025, 1, 1), date(2025, 1, 2), "NIFTY", Fl(), ch)
+    assert r["net"] == pytest.approx(10 * 20 - 20)
+    assert seen == [(True, date(2025, 1, 1)), (False, date(2025, 1, 2))]
+    a_out[0, 3] = np.nan
+    assert Y.opt_overnight(a_in, 339, a_out, 0, 20, date(2025, 1, 1), date(2025, 1, 2), "NIFTY", Fl(), ch) is None
