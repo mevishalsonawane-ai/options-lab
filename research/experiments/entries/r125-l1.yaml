@@ -1,0 +1,30 @@
+id: r125-l1
+title: R125 L1 with the 74-input network
+date: '2026-10-28'
+doc: research/HUNT_R125_LEVELS_FLOW.md
+family: ml
+data_version: Drive lake copied 28 Oct 2026 (index_1m, options_rolling_1m WEEK, NSE participant OI); lakeclean steps 1-3;
+  every level, move and indicator on candle highs/lows (wicks)
+period:
+  design: 2024-10-20..2026-03-15 (quarterly folds Apr 2025 - Mar 2026)
+  holdout: '2026-04-01..2026-10-19 read once (third read today: R123 and R124 read it first)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r125_levels_flow/PREREG.md
+holdout_read: true
+features:
+- '74 new inputs in 7 specialists: wick support/resistance, liquidity (pools, sweeps), order flow (participant OI, option
+  volume and OI build-up), volume and volume profile, wick candle patterns, VWAP and EMAs, RSI and Supertrend; plus R124''s
+  inputs. Signal on the underlying; option chain as context; exits on the index''s wicks'
+hypothesis: Buying the ATM option on the network's direction (with the new inputs) pays after costs
+model_or_rule: research/hunt/r125_levels_flow/r125run.py (L1)
+settings: PREREG.md section 4; 1 lot at today's lots; max 5 trades a day
+variants_tried: 4
+verdict: rejected
+results:
+  summary: 'Walk-forward 3 trades (avg net Rs 464); holdout 1 trades (avg net Rs -2,636). Fails: wf, n, net_pos, q.'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots

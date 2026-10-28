@@ -1,11 +1,11 @@
-# R124 result (28 Oct 2026): every NIFTY 30-point move (on candle highs/lows), traced back, with a neural network
-1. NIFTY makes about 20 moves of 30+ points a day (23,606 in design, 1,142 sessions; typical 40 points in 6 minutes), half up, half down.
-2. Before a move the market is usually already busy: high recent range (2.4x), high VIX (1.7x), expensive straddle (2.0x), price far from the open; these held on unseen data.
-3. Time of day: 09:15-09:45 has 2.8x the move starts; 11:15-13:15 is quietest. Round-100 levels, expiry day and PCR made no difference.
-4. Nothing before a move tells its direction; "price went the other way just before" is built into how swings are defined.
-5. The multi-level network sees a 30-minute move coming better than trees on unseen data (AUC 0.853 vs 0.842, q 0.002), using mostly the last 2 hours of price.
-6. Direction is still a coin (holdout AUC 0.51) - the fifth study to find this (R16, B1, R41, R123, R124).
-7. No option rule made money: the straddle on "move coming" lost Rs 211 a trade (516 holdout trades); call/put rules almost never fired.
-8. A 30-point NIFTY move is too small to pay for a straddle's two sets of charges, spreads and time decay.
-9. Nothing passes, nothing goes on paper. Earlier today R123 (70% win / Rs 1,000 target) also failed: research/HUNT_R123_NEURAL_70.md.
-10. Details: research/HUNT_R124_BIG_MOVES.md; code + 15 tests in research/hunt/r124_big_moves/; holdout read once (11:02-11:17 UTC).
+# R125 result (28 Oct 2026): support/resistance, liquidity, order flow, volume profile, candles, VWAP, MAs, RSI, Supertrend in the neural network
+1. Boss asked to add all of these (on candle wicks) to the network; 74 new inputs in 7 specialists, tested on 2 years (Oct 2024 - Oct 2026).
+2. They did not help: direction of the next 30-point move stays a coin - holdout AUC 0.523 with them vs 0.524 without (25,652 moves).
+3. The network nearly ignores them: shuffling the last 2 hours of price hurts its forecast ~500x more than shuffling any new group.
+4. Why: wick levels, sweeps, candles, VWAP, EMAs, RSI and Supertrend are all summaries of the same past prices the network already reads.
+5. "A move is coming" stays predictable (AUC ~0.83-0.84), as in R124; the new inputs add nothing there either.
+6. No rule works: the network is almost never 60/40 sure of direction; the few trades lost (holdout M2: 17 trades, -Rs 272 each).
+7. Six studies now agree: how MUCH the market moves is predictable; WHICH WAY over 15-30 minutes is a coin.
+8. Nothing passes; nothing goes on paper; no app change.
+9. The holdout (Apr-Oct 2026) has been read three times today (R123, R124, R125) - disclosed in each write-up.
+10. Details: research/HUNT_R125_LEVELS_FLOW.md (and R123, R124); code + tests in research/hunt/r125_levels_flow/.
