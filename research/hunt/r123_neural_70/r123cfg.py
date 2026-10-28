@@ -115,6 +115,8 @@ RULES = {
 }
 RULE_IDS = tuple(RULES)
 ATM_DELTA = 0.5
+NETS = ("N1", "N2")             # Amendment 1: N1 the single network, N2 the multi-level one
+ABSTAIN = 0.10                     # N2 Level 4: no trade when the seeds' P(+X first) spread is above this
 
 # gates (never relaxed)
 G_WF_N, G_WF_FOLDS, G_Q = 300, 3, 0.10

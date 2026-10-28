@@ -200,3 +200,8 @@ never tuned.
 
 **Tests added:** the slow encoder reads only sessions before today (point-in-time); the temperatures are fitted on
 the validation slice only; abstention removes exactly the rows whose seed spread is above 0.10.
+
+**Addendum to amendment 1, the same day, also before any fit.** A test found that the encoder of section 5 (4 causal layers, kernel 3,
+dilations 1/2/4/8) reaches back only about 31 minutes from its last step, plus the 15-minute average: about 45 of the
+120 minutes. The encoder output now also includes the average over all 120 minutes, so the whole window counts.
+This applies to N1 and to N2's fast encoder. Nothing else changes.

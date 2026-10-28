@@ -343,3 +343,93 @@ def test_stats_drawdown_and_month():
     s = R.stats(T, [DAY, DAY + timedelta(days=1), DAY + timedelta(days=2)])
     assert s["max_dd"] == -3000.0 and s["worst_day"] == -2000.0 and s["win_rate"] == pytest.approx(2 / 3)
     assert s["per_session"] == pytest.approx(-1500 / 3)
+
+
+# ------------------------------------------------------------------------------------------------ Amendment 1 (N2)
+def test_daily_store_reads_only_earlier_sessions():
+    grids, vix = _market()
+    a = M.daily_bars(grids["NIFTY"], vix)
+    st = M.DailyStore({"NIFTY": a})
+    i = 25
+    fp = st.flat(np.array(["NIFTY"]), np.array([i * K.N + 200]))
+    W = st.A[fp[:, None] + np.arange(-M.DailyStore.SLOW_N, 0)[None, :]][0]
+    np.testing.assert_array_equal(W[-1], a[i - 1])
+    np.testing.assert_array_equal(W[0], a[i - M.DailyStore.SLOW_N])
+    grids["NIFTY"].c[i:] *= 1.05                                         # today and later change: window does not
+    grids["NIFTY"].h[i:] *= 1.05
+    b = M.daily_bars(grids["NIFTY"], vix)
+    W2 = M.DailyStore({"NIFTY": b}).A[fp[:, None] + np.arange(-M.DailyStore.SLOW_N, 0)[None, :]][0]
+    np.testing.assert_array_equal(W, W2)
+
+
+def test_daily_store_pads_first_sessions():
+    grids, vix = _market()
+    st = M.DailyStore({"NIFTY": M.daily_bars(grids["NIFTY"], vix)})
+    W = st.window(st.flat(np.array(["NIFTY"]), np.array([3 * K.N + 10])))[0]
+    assert (W[:M.DailyStore.SLOW_N - 3, -1] == 0).all()
+
+
+def test_temperatures_fit_on_given_rows_and_recover_scale():
+    rng = np.random.default_rng(0)
+    n = 4000
+    true = rng.normal(0, 1, (n, 1, 3))
+    y = np.array([rng.choice(3, p=np.exp(z) / np.exp(z).sum()) for z in true[:, 0]])
+    L = np.stack([true * 2.0, true * 2.0])                              # over-confident by 2x, 2 seeds
+    cls = np.full((n, 1), -1)
+    cls[:, 0] = y
+    T = M.fit_temperatures(L, cls)
+    assert 1.6 <= T[0] <= 2.4
+    cls2 = cls.copy()
+    cls2[:50] = -1                                                       # too few rows: left at 1
+    assert M.fit_temperatures(L[:, :120], cls2[:120])[0] == 1.0
+
+
+def test_abstention_drops_only_the_chosen_side():
+    F = _frame(3)
+    c = K.RULES["S1"]["cell"]
+    F[f"pw_{2 * c}"] = 0.8
+    F[f"pw_{2 * c + 1}"] = 0.75
+    for j in range(len(K.CS)):
+        F[f"abst_{j}"] = False
+    F.loc[0, f"abst_{2 * c}"] = True                                     # chosen side abstains: no trade at all
+    F.loc[1, f"abst_{2 * c + 1}"] = True                                 # the other side abstains: trade stands
+    C = R.candidates(F, "S1")
+    assert list(C.row) == [F.row[1], F.row[2]] and (C.j == 2 * c).all()
+
+
+def test_attach_marks_abstention_above_threshold():
+    F = _frame(2)
+    P = np.full((2, len(K.CS), 3), 1 / 3)
+    sp = np.zeros((2, len(K.CS)))
+    sp[0, 3] = K.ABSTAIN + 0.01
+    sp[1, 3] = K.ABSTAIN
+    out = R.attach(F, dict(probs=P, range=np.zeros((2, 2)), dir=np.full((2, 2), .5), spread=sp), {})
+    assert bool(out.abst_3[0]) and not bool(out.abst_3[1])
+
+
+def test_n2_forward_shapes_and_gate():
+    torch = pytest.importorskip("torch")
+    gi = {k: list(range(3)) for k in M.SPECIALISTS}
+    net = M.make_multi(gi)
+    out = net(torch.zeros(4, K.SEQ_N, 7), torch.zeros(4, 10), torch.zeros(4, M.DailyStore.SLOW_N, 7))
+    assert out[0].shape == (4, len(K.CS), 3) and out[5].shape == (4, 4)
+    assert torch.allclose(out[5].sum(1), torch.ones(4))
+
+
+def test_tcn_is_causal():
+    torch = pytest.importorskip("torch")
+    torch.manual_seed(0)
+    net = M.make_net(5).eval()
+    x = torch.randn(2, K.SEQ_N, 7)
+    tab = torch.zeros(2, 5)
+    # the first minute of the window reaches the output (the whole window is read), and each conv is left-padded
+    # only, so a minute never sees a later one
+    y1 = net(x, tab)[0]
+    x2 = x.clone()
+    x2[:, 0] += 5
+    assert not torch.allclose(net(x2, tab)[0], y1)
+    h = net.inp(x.transpose(1, 2))
+    cv = net.convs[0]
+    h2 = h.clone()
+    h2[:, :, 50:] += 3
+    np.testing.assert_allclose(cv(h)[:, :, :50].detach().numpy(), cv(h2)[:, :, :50].detach().numpy(), atol=1e-6)

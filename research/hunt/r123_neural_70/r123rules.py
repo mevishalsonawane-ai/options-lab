@@ -22,6 +22,9 @@ def attach(F: pd.DataFrame, pred: dict, m_neither: dict) -> pd.DataFrame:
         x, y, _ = K.CELLS[j // 2]
         m = np.array([m_neither.get((u, j), 0.0) for u in F.und.values])
         F[f"ev_{j}"] = P[:, j, 0] * x - P[:, j, 1] * y + P[:, j, 2] * m
+    if "spread" in pred:                                   # N2 Level 4 abstention (Amendment 1)
+        for j in range(NJ):
+            F[f"abst_{j}"] = pred["spread"][:, j] > K.ABSTAIN
     F["rg60"] = pred["range"][:, K.HS.index(60)]
     F["pdir30"] = pred["dir"][:, 0]
     F["pdir60"] = pred["dir"][:, 1]
@@ -66,6 +69,9 @@ def candidates(F: pd.DataFrame, rule: str) -> pd.DataFrame:
         ok = score >= R["thr"]
     if R["rows"] is not None:
         ok &= F.row.isin(R["rows"]).values
+    if "abst_0" in F:                                      # N2 Level 4: the chosen cell-side's seeds disagree
+        ab = F[[f"abst_{x}" for x in range(NJ)]].values.astype(bool)
+        ok &= ~ab[np.arange(len(F)), j]
     C = F.loc[ok, ["und", "day", "row"]].copy()
     C["j"] = j[ok]
     C["score"] = score[ok]
