@@ -125,3 +125,30 @@ app's); no live change; no app code change. Crypto: nothing in the app trades cr
 `results/` small JSON / markdown, `research/experiments/entries/r120-time-machine-gate.yaml` (failure included), the
 results summary of `app-time-machine.yaml` updated, pytest tests (port vs Kotlin, look-ahead guard, twins, BH, gates),
 and `RESULT.md` at the repo root.
+
+## Amendment A1 (28 Oct 2026, before any verdict was computed)
+
+A read of every `TimeMachineHost.Entry` call (commit `9c71644`) corrects section 1's per-arm list. No verdict, P&L or
+statistic had been computed when this was written; only the R51 stores were built and the Python port was tested.
+
+- Exit times as passed: R51 / R72 / Solo S2 15:15; R52, Solo S3 / S4 15:10; Liquidity and the ORB family 15:10
+  (`OrbRules.SQUARE_OFF`); VIX divergence 15:10; Pine 15:15; Hero ticket 15:05.
+- ORB, ORB Fresh, Range Fade: stop 40 and target 40 premium points (`OrbParams`), ORB Sweep 40 / 80; / 0.5 delta.
+- Liquidity: the pool level is recovered as `idx_stop + sgn x IDX_STOP[und]` from R101's candidate, target |target -
+  level| (NaN target: R 1).
+- Solo 2.0 goes through the passed-arms host, where **S1 passes no stop** (index exits only): its verdict is always
+  "unknown" (taken under SKIP_AGAINST, skipped under EDGE_ONLY, as the rules say). S2 0.15, S3 0.30, S4 0.25 premium
+  stops, R 1 under the lock.
+- Hero ticket: stop 0.25 x fill, target null under its default trail-only setting (R 1).
+- Pine: a 30-point premium stop (`PineProtection.STOP`; none when fill - 30 <= a tick), no target (R 1).
+- IraThinker mom60 (ntfy): stop 20%, target +40%, exit fill + 60 min capped at 15:15.
+- MCX: SILVERM morning and the 12-month trend pass no stop (always "unknown"); NG evening passes 0.15 x the OPTION's
+  fill as points against the option's own symbol (its replay would read the option's own bars, not the future's).
+- **Not tested, with the reason** (each still counts 2 tests in the BH family, p = 1, so m stays as registered):
+  - MOM60: its inputs (R110's release files, the Java runner's signal CSVs) are not in the lake;
+  - MCX_SILVERM_AM, MCX_TREND12M: the app passes no stop, so the verdict is always "unknown" (a gate does nothing);
+  - MCX_NG_EVE: the app's replay reads the option's own symbol, not the underlying; not the default (CLAUDE.md), and
+    the option's own 60-session history is not what the phone holds;
+  - MCX_US_NIGHT_SILVER: needs Yahoo series not in the lake.
+- Tested: R72, R51, R52, LIQ, SOLO, HERO, ORB_ORB, ORB_FRESH, ORB_SWEEP, ORB_FADE, VIXDIV, PINE_ST_EMA_5M,
+  PINE_ST_EMA_15M, PINE_MATRIX_5M (any of these whose list cannot be rebuilt is reported so, never guessed).
