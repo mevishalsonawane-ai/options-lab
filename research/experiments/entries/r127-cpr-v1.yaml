@@ -25,5 +25,5 @@ variants_tried: 3
 verdict: rejected
 results:
   summary: '2495 trades, win 42%, avg net Rs -428 (2x slippage Rs -448), total Rs -1,066,771; every year 2022-2026 negative;
-    p vs random-entry twins 0.428, q 0.642; worst month Rs -103,618. Fails: net_pos, years, q, account.'
+    p vs random-entry twins 0.254, q 0.381; worst month Rs -103,618. Fails: net_pos, years, q, account.'
   costs: Costs('dated') + Fills('liq'), 1 lot

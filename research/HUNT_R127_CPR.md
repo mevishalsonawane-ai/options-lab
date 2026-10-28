@@ -15,8 +15,8 @@ wrong in the data.**
 
 | version | trades | win rate | avg win / avg loss | avg net per trade | total (1 lot) | years positive (2022-26) | vs random entries |
 |---|---|---|---|---|---|---|---|
-| **V1, the rule as stated** (5-min pullback) | 2,495 | 42% | Rs 2,106 / -Rs 2,233 | **-Rs 428** | **-Rs 10.67 lakh** | 0 of 5 | no better (p 0.43) |
-| V2, narrow-CPR days only | 809 | 43% | Rs 1,409 / -Rs 1,485 | -Rs 240 | -Rs 1.94 lakh | 0 of 5 | no better (p 0.77) |
+| **V1, the rule as stated** (5-min pullback) | 2,495 | 42% | Rs 2,106 / -Rs 2,233 | **-Rs 428** | **-Rs 10.67 lakh** | 0 of 5 | no better (p 0.25) |
+| V2, narrow-CPR days only | 809 | 43% | Rs 1,409 / -Rs 1,485 | -Rs 240 | -Rs 1.94 lakh | 0 of 5 | no better (p 0.56) |
 | V3, 1-minute pullback | 2,602 | 33% | Rs 2,629 / -Rs 1,843 | -Rs 353 | -Rs 9.18 lakh | 0 of 5 | better than random (p 0.005, q 0.015), but still loses |
 
 - **By year (V1):** 2022 -Rs 1.61 lakh, 2023 -Rs 1.07 lakh, 2024 -Rs 4.77 lakh, 2025 -Rs 2.21 lakh, 2026 to 19 Oct
@@ -79,6 +79,10 @@ wrong in the data.**
   Boss's account stop not breached.
 
 ## Honest notes
+
+0. **Corrected 28 Oct (R128 T5):** the first run counted random twins that found no trade as Rs 0, which pulled the
+   twins' totals toward zero. They are now resampled from the trade's valid twins. V1's p moved 0.43 → 0.25 and V2's
+   0.77 → 0.56; V3 is unchanged (0.005). No result or gate changed.
 
 1. **"Holds and bounces" and "just below BC" are not exact in the video.** These choices were fixed before any
    result: a touch within 0.03%, no low below BC, a high above the touching candle's high within 3 candles, and a stop
