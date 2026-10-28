@@ -33,7 +33,7 @@ NJ = M.NJ
 GROUP_TESTS = ("fast_encoder", "slow_encoder") + tuple(M.GROUPS)
 
 
-def log(*a):
+def log(*a, **k):
     print(time.strftime("%H:%M:%S"), *a, flush=True)
 
 
