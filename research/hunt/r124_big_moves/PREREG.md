@@ -163,3 +163,30 @@ index-exit option simulator; the quantile threshold uses training rows only; the
 - Write-up: `research/HUNT_R124_BIG_MOVES.md`.
 - Experiment entries: `research/experiments/entries/r124-*.yaml`.
 - RESULT.md.
+
+## Amendment 1 (28 Oct 2026, before any move was counted or any model fitted): wicks, never opens or closes
+
+Boss, 28 Oct: *"always check the head and tail (i.e. highest point / lowest of candle), don't check closing / opening
+point."* Every move is measured on candle **highs and lows**:
+
+1. **Census zigzag:** already on highs and lows. A leg runs from the lowest low to the highest high (or the reverse),
+   and the 10-point turn-back is measured from the extreme's wick.
+2. **Network labels (replacing section 5's "from the close at t"):** inside the window of bars t+1 .. t+H, *up* means
+   some bar's high is ≥ 30 above an earlier-or-same bar's low in that window. *Down* means some bar's low is ≥ 30 below
+   an earlier-or-same bar's high. Whichever completes first (by the bar that completes it) is the label. If none
+   completes, the label is *neither*. If both complete in the same bar, it is *unclear* (masked).
+3. **Factors F3, F4, F13 (momentum into the move):** for an up move, the start's low minus the highest high of the
+   last 5 / 15 minutes (≤ 0: price fell into the start) and, mirrored, for a down move. For F13, the same on the other
+   indices, as % of price.
+4. **Distances F5-F10:** measured from the start's wick (the pivot low of an up move, the pivot high of a down move).
+5. **Trades (part C):**
+   - The target and stop must be measured from the price actually bought: the index at the entry, the open of bar
+     t+1, because that is when the option is filled.
+   - The touches are checked on **wicks**: target when a bar's high (call) or low (put) reaches entry ± 30; stop on the
+     opposite wick.
+   - The straddle exits on either wick touch.
+   - If both touch in one bar, the stop is taken (worst case).
+   - The option is sold at that minute's option close: the option's own bar is the only price at which a fill is known
+     for that minute.
+
+Nothing else changes.
