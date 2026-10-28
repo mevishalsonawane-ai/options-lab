@@ -3451,6 +3451,19 @@ object IraHub {
             }
             return true
         }
+        // 28 Oct: "how is the IraThinker flow doing", "flow arm" ([com.optionslab.ira.FlowTalk]): IraThinker's flow's day - what each index
+        // reached in the flow, what was taken or skipped and why, what is held - always "not proven (R110)". Boss's trades, so never on a
+        // locked phone; reads only. (Not in IraGoldAlgo.)
+        val flowAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null &&
+            parsed.command == null && runCatching { com.optionslab.ira.FlowTalk.asked(q) }.getOrDefault(false)
+        if (flowAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.FlowTalk.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.FlowArm.talk() }.getOrElse { "I could not read IraThinker's flow just now, Boss." })
+            }
+            return true
+        }
         // 16 Oct (Boss: "if the trend changes, sell the orders"; research R63): "has the trend turned on my trades?", "trend watch"
         // ([com.optionslab.ira.TrendTalk], [com.optionslab.app.data.TrendWatchHost.talk]): each turn today and what is watched now,
         // from the Trend watch's own log - positions and premiums, so never on a locked phone. Read only: nothing is sold here.

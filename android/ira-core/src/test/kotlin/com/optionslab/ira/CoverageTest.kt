@@ -799,6 +799,7 @@ class CoverageTest {
         if (alone && BeforeTomorrow.asked(q)) return "BeforeTomorrow"
         if (alone && LiquidityWhyNot.asked(q) != null) return "LiquidityWhyNot"
         if (alone && NtfyTalk.asked(q)) return "NtfyTalk"
+        if (alone && FlowTalk.asked(q)) return "FlowTalk"
         if (alone && TrendTalk.asked(q)) return "TrendWatch"
         if (alone && PassedArmsTalk.asked(q) != null) return "PassedArms"
         if (alone && SoloDay.asked(q) != null) return "SoloDay"

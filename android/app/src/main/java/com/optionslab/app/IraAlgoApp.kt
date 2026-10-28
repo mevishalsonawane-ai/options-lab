@@ -130,6 +130,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.TrendWatchHost.init(this)
         // 25 Oct: ntfy alerts (paper by default; its file only, no I/O here).
         com.optionslab.app.data.NtfyArm.init(this)
+        // 28 Oct: IraThinker's flow (paper, index options only; its files only, no I/O here).
+        com.optionslab.app.data.FlowArm.init(this)
         com.optionslab.app.data.StockOptions.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.McxNr7Record.init(this)          // 21 Oct: NR7 crude, record only (no orders)

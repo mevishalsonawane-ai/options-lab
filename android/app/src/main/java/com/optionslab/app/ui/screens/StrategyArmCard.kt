@@ -97,6 +97,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         nightRow = { NightRow(); VixDivRow(); HeroTicketRow()
             // 21 Oct (Boss: "Add FT3 to the app paper bot until live ..."): the R98 forward test FT3, under the Hero ticket. Not in IraGoldAlgo.
             if (!com.optionslab.app.BuildConfig.GOLD) Ft3Row()
+            // 28 Oct (Boss: "just take orders from flow, and keep it for index only"): IraThinker's flow, paper, not proven. Not in IraGoldAlgo.
+            if (!com.optionslab.app.BuildConfig.GOLD) FlowRow()
             PassedArmRows(); WatchlistCard()
             // The Trend watch (16 Oct, research R63): every open position judged on its underlying's trend. Not in IraGoldAlgo.
             if (!com.optionslab.app.BuildConfig.GOLD) TrendWatchRow() },

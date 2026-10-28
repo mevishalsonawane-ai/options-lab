@@ -135,6 +135,8 @@ object PositionsFirst {
         // 25 Oct: ntfy alerts on paper (its own book, with any trade moved from the removed Telegram calls arm) - restored here,
         // with their stops, first.
         one("ntfy alerts") { NtfyArm.refresh().open.isNotEmpty() }
+        // 28 Oct: IraThinker's flow on paper (its own book) - restored here, with its resting stops, first.
+        one("IraThinker's flow") { FlowArm.refresh().open.isNotEmpty() }
         one("ticket") { Ledger.openTicket() != null }
         one("MCX live") { McxMarket.liveExposureOrThrow() }
         // Jarvis's own paper trades (review, 14 Oct; the fast exits' minute lane counts them).

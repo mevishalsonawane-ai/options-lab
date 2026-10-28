@@ -30,6 +30,8 @@ object Held {
         /** 21 Oct: the FT3 forward test's paper ticket. */
         val ft3: Boolean = false,
         val signal: Boolean = false,
+        /** 28 Oct: IraThinker's flow's paper trades. */
+        val flow: Boolean = false,
         val night: Boolean = false,
         val vixDiv: Boolean = false,
         val mcxArms: Boolean = false,
@@ -49,6 +51,7 @@ object Held {
         "Hero ticket" to s.hero,
         "FT3" to s.ft3,
         "ntfy alerts" to s.signal,
+        "IraThinker's flow" to s.flow,
         "Night (R3)" to s.night,
         "VIX divergence" to s.vixDiv,
         "MCX arms" to s.mcxArms,

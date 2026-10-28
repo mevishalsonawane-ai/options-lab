@@ -69,6 +69,18 @@ class LiveCandlesTest {
         assertEquals(110.0, lc.candle(tok, t0 + 60)!!.high)
     }
 
+    /** 28 Oct (IraThinker's flow): each candle carries the exchange stamps of its first and last tick. */
+    @Test fun aCandleSaysWhenItsFirstAndLastTickCame() {
+        val lc = LiveCandles()
+        lc.record(tok, 100.0, t0 + 40); lc.record(tok, 101.0, t0 + 50)
+        val c = lc.candle(tok, t0)!!
+        assertEquals(t0 + 40, c.openSec); assertEquals(t0 + 50, c.closeSec)
+        assertFalse(c.whole, "the run's first minute")
+        lc.reconcile(tok, listOf(bar(t0 + 60, 1.0, 2.0, 0.5, 1.5)))
+        assertEquals(t0 + 60, lc.candle(tok, t0 + 60)!!.openSec)
+        assertEquals(t0 + 119, lc.candle(tok, t0 + 60)!!.closeSec)
+    }
+
     @Test fun aMissingMinuteIsAGapAndIsNeverDecidedOn() {
         val lc = LiveCandles()
         warm(lc)
