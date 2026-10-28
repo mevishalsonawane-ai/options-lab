@@ -1,0 +1,489 @@
+{
+ "rows": 46580,
+ "sessions": 137,
+ "compare": [
+  {
+   "cell": "direction given a move 15m",
+   "metric": "logloss",
+   "n": 25652,
+   "n3": 0.6924838165927004,
+   "r124": 0.692499067690691,
+   "n3_minus_r124": -1.5251097990684682e-05,
+   "ci": [
+    -0.0004123030171909187,
+    0.00039961217772348045
+   ],
+   "p": 0.46653346653346656,
+   "auc_n3": 0.5227488582059285,
+   "auc_r124": 0.5242221693205664,
+   "q": 0.5494505494505495
+  },
+  {
+   "cell": "move coming 15m",
+   "metric": "brier",
+   "n": 38457,
+   "n3": 0.1552843398794198,
+   "r124": 0.155744500960039,
+   "n3_minus_r124": -0.00046016108061922,
+   "ci": [
+    -0.0009581205142648681,
+    5.9747689898492706e-05
+   ],
+   "p": 0.04295704295704296,
+   "auc_n3": 0.83194165739703,
+   "auc_r124": 0.8305864308350138,
+   "q": 0.17182817182817184
+  },
+  {
+   "cell": "direction given a move 30m",
+   "metric": "logloss",
+   "n": 33933,
+   "n3": 0.6927846466796214,
+   "r124": 0.6930500550404,
+   "n3_minus_r124": -0.00026540836077858107,
+   "ci": [
+    -0.0006689461729583275,
+    0.0001398674402399618
+   ],
+   "p": 0.1108891108891109,
+   "auc_n3": 0.5198367967743256,
+   "auc_r124": 0.5228797084555028,
+   "q": 0.2217782217782218
+  },
+  {
+   "cell": "move coming 30m",
+   "metric": "brier",
+   "n": 36889,
+   "n3": 0.06493030061372905,
+   "r124": 0.06491454689171694,
+   "n3_minus_r124": 1.575372201210589e-05,
+   "ci": [
+    -0.00027853881533499195,
+    0.0003270598195147709
+   ],
+   "p": 0.5494505494505495,
+   "auc_n3": 0.8406845474407958,
+   "auc_r124": 0.8361769234263157,
+   "q": 0.5494505494505495
+  }
+ ],
+ "n3_vs_baselines": [
+  {
+   "cell": "move coming 15m",
+   "metric": "brier",
+   "n": 41001,
+   "base_rate": 0.6569108070534865,
+   "nn": 0.15948772171333983,
+   "best": "tree",
+   "best_score": 0.16537868591095137,
+   "nn_minus_best": -0.005890964197611562,
+   "ci": [
+    -0.00875141888703962,
+    -0.0032096384670974357
+   ],
+   "p": 0.000999000999000999,
+   "auc_nn": 0.8263719472049582,
+   "auc_best": 0.8241303385047096,
+   "q": 0.003996003996003996
+  },
+  {
+   "cell": "direction given a move 15m",
+   "metric": "logloss",
+   "n": 26934,
+   "up_share": 0.4906437959456449,
+   "nn": 0.6924016009068767,
+   "best": "base",
+   "best_score": 0.6931004425645375,
+   "nn_minus_best": -0.0006988416576609087,
+   "ci": [
+    -0.0020961257496367935,
+    0.0005316963365019375
+   ],
+   "p": 0.15884115884115885,
+   "auc_nn": 0.523613638392582,
+   "auc_best": 0.5035146580394771,
+   "q": 0.2117882117882118
+  },
+  {
+   "cell": "move coming 30m",
+   "metric": "brier",
+   "n": 38678,
+   "base_rate": 0.9117586224727235,
+   "nn": 0.07016788762083442,
+   "best": "tree",
+   "best_score": 0.07004134273819827,
+   "nn_minus_best": 0.0001265448826361363,
+   "ci": [
+    -0.001052930699925476,
+    0.0014216995121946897
+   ],
+   "p": 0.5964035964035964,
+   "auc_nn": 0.8382452453149813,
+   "auc_best": 0.8331848406246805,
+   "q": 0.5964035964035964
+  },
+  {
+   "cell": "direction given a move 30m",
+   "metric": "logloss",
+   "n": 35265,
+   "up_share": 0.4875655749326528,
+   "nn": 0.6926496013536295,
+   "best": "base",
+   "best_score": 0.6934142026564293,
+   "nn_minus_best": -0.0007646013027998784,
+   "ci": [
+    -0.002043526002528903,
+    0.0004325566683461107
+   ],
+   "p": 0.1038961038961039,
+   "auc_nn": 0.5213334647129764,
+   "auc_best": 0.49443355843490355,
+   "q": 0.2077922077922078
+  }
+ ],
+ "importance": {
+  "base": {
+   "brier": 0.1647324114855954,
+   "dir_logloss": 0.6924034103104031
+  },
+  "fast_encoder": {
+   "brier_worse": 0.10482489111398743,
+   "dir_logloss_worse": 0.0013301075702317755
+  },
+  "slow_encoder": {
+   "brier_worse": 0.0016315476346503988,
+   "dir_logloss_worse": 6.089142702436767e-05
+  },
+  "size": {
+   "brier_worse": 0.0022521641852460417,
+   "dir_logloss_worse": 1.2749108847964763e-05
+  },
+  "direction": {
+   "brier_worse": 0.0010936686192896672,
+   "dir_logloss_worse": 1.128724667553982e-05
+  },
+  "chain": {
+   "brier_worse": -6.014163886552959e-05,
+   "dir_logloss_worse": 9.120983012200767e-07
+  },
+  "calendar": {
+   "brier_worse": -2.4885802713814353e-06,
+   "dir_logloss_worse": -3.5159743052570747e-06
+  },
+  "levels": {
+   "brier_worse": 0.00021638788070837967,
+   "dir_logloss_worse": -2.383369223424303e-05
+  },
+  "sr": {
+   "brier_worse": 1.5657275485136957e-05,
+   "dir_logloss_worse": 1.2016393016955895e-05
+  },
+  "liq": {
+   "brier_worse": -8.516987917928098e-06,
+   "dir_logloss_worse": -1.2785711735352479e-05
+  },
+  "flow": {
+   "brier_worse": -9.722772268525026e-05,
+   "dir_logloss_worse": 2.3865286590263324e-05
+  },
+  "vol": {
+   "brier_worse": 0.0002295817085538887,
+   "dir_logloss_worse": 3.7466843278655126e-05
+  },
+  "candle": {
+   "brier_worse": -1.9839937145937903e-07,
+   "dir_logloss_worse": -1.3485204656604743e-05
+  },
+  "vwap_ma": {
+   "brier_worse": 0.0001501361501205778,
+   "dir_logloss_worse": -3.468430120157073e-05
+  },
+  "osc": {
+   "brier_worse": 0.00022286792430248337,
+   "dir_logloss_worse": 0.00017661978324534644
+  }
+ },
+ "rules": {
+  "M1": {
+   "n": 2,
+   "sessions": 137,
+   "trade_days": 2,
+   "trades_per_session": 0.014598540145985401,
+   "win_rate": 0.0,
+   "target_hit_rate": 0.0,
+   "stop_rate": 1.0,
+   "avg_win": 0.0,
+   "avg_loss": -1721.1449999999982,
+   "avg_net": -1721.1449999999982,
+   "avg_net_x2": -1814.144999999994,
+   "breakeven_win": NaN,
+   "total": -3442.2899999999963,
+   "total_x2": -3628.289999999988,
+   "per_session": -25.12620437956202,
+   "per_trade_day": -1721.1449999999982,
+   "max_dd": -3442.2899999999963,
+   "worst_day": -2636.459999999999,
+   "best_day": -805.8299999999974,
+   "green_days": 0.0,
+   "worst_month": -2636.459999999999,
+   "worst_month_name": "2026-07",
+   "months": 2,
+   "months_green": 0,
+   "by_und": {
+    "NIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "BANKNIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "FINNIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "MIDCPNIFTY": {
+     "n": 2,
+     "net": -3442.2899999999963,
+     "win": 0.0
+    },
+    "SENSEX": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    }
+   },
+   "calls": 1.0,
+   "puts": 0.0,
+   "exits": {
+    "stop": 2
+   },
+   "twin_mean": -406.44781999999935,
+   "p_twins": 0.997002997002997,
+   "p_side_twins": 1.0,
+   "q": 1.0,
+   "gates": {
+    "wf": false,
+    "n": false,
+    "net_pos": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  },
+  "M2": {
+   "n": 17,
+   "sessions": 137,
+   "trade_days": 10,
+   "trades_per_session": 0.12408759124087591,
+   "win_rate": 0.29411764705882354,
+   "target_hit_rate": 0.29411764705882354,
+   "stop_rate": 0.7058823529411765,
+   "avg_win": 1000.3179999999996,
+   "avg_loss": -801.585833333333,
+   "avg_net": -271.6141176470587,
+   "avg_net_x2": -340.5641176470593,
+   "breakeven_win": 0.44485494647651835,
+   "total": -4617.439999999999,
+   "total_x2": -5789.590000000007,
+   "per_session": -33.703941605839404,
+   "per_trade_day": -461.7439999999998,
+   "max_dd": -5566.079999999997,
+   "worst_day": -4167.869999999999,
+   "best_day": 1511.9600000000014,
+   "green_days": 0.3,
+   "worst_month": -4167.869999999999,
+   "worst_month_name": "2026-07",
+   "months": 5,
+   "months_green": 2,
+   "by_und": {
+    "NIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "BANKNIFTY": {
+     "n": 9,
+     "net": 1870.2899999999954,
+     "win": 0.5555555555555556
+    },
+    "FINNIFTY": {
+     "n": 2,
+     "net": -530.1899999999969,
+     "win": 0.0
+    },
+    "MIDCPNIFTY": {
+     "n": 6,
+     "net": -5957.539999999997,
+     "win": 0.0
+    },
+    "SENSEX": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    }
+   },
+   "calls": 1.0,
+   "puts": 0.0,
+   "exits": {
+    "stop": 12,
+    "target": 5
+   },
+   "twin_mean": -2775.398859999999,
+   "p_twins": 0.6403596403596403,
+   "p_side_twins": 0.7072927072927073,
+   "q": 1.0,
+   "gates": {
+    "wf": false,
+    "n": false,
+    "net_pos": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  },
+  "M3": {
+   "n": 1,
+   "sessions": 137,
+   "trade_days": 1,
+   "trades_per_session": 0.0072992700729927005,
+   "win_rate": 0.0,
+   "target_hit_rate": 0.0,
+   "stop_rate": 1.0,
+   "avg_win": 0.0,
+   "avg_loss": -805.8299999999974,
+   "avg_net": -805.8299999999974,
+   "avg_net_x2": -927.0299999999895,
+   "breakeven_win": NaN,
+   "total": -805.8299999999974,
+   "total_x2": -927.0299999999895,
+   "per_session": -5.881970802919689,
+   "per_trade_day": -805.8299999999974,
+   "max_dd": -805.8299999999974,
+   "worst_day": -805.8299999999974,
+   "best_day": -805.8299999999974,
+   "green_days": 0.0,
+   "worst_month": -805.8299999999974,
+   "worst_month_name": "2026-04",
+   "months": 1,
+   "months_green": 0,
+   "by_und": {
+    "NIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "BANKNIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "FINNIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "MIDCPNIFTY": {
+     "n": 1,
+     "net": -805.8299999999974,
+     "win": 0.0
+    },
+    "SENSEX": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    }
+   },
+   "calls": 1.0,
+   "puts": 0.0,
+   "exits": {
+    "stop": 1
+   },
+   "twin_mean": -229.88665999999964,
+   "p_twins": 0.6753246753246753,
+   "p_side_twins": 1.0,
+   "q": 1.0,
+   "gates": {
+    "wf": false,
+    "n": false,
+    "net_pos": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  },
+  "L1": {
+   "n": 1,
+   "sessions": 137,
+   "trade_days": 1,
+   "trades_per_session": 0.0072992700729927005,
+   "win_rate": 0.0,
+   "target_hit_rate": 0.0,
+   "stop_rate": 1.0,
+   "avg_win": 0.0,
+   "avg_loss": -2636.459999999999,
+   "avg_net": -2636.459999999999,
+   "avg_net_x2": -2701.2599999999984,
+   "breakeven_win": NaN,
+   "total": -2636.459999999999,
+   "total_x2": -2701.2599999999984,
+   "per_session": -19.24423357664233,
+   "per_trade_day": -2636.459999999999,
+   "max_dd": -2636.459999999999,
+   "worst_day": -2636.459999999999,
+   "best_day": -2636.459999999999,
+   "green_days": 0.0,
+   "worst_month": -2636.459999999999,
+   "worst_month_name": "2026-07",
+   "months": 1,
+   "months_green": 0,
+   "by_und": {
+    "NIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "BANKNIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "FINNIFTY": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    },
+    "MIDCPNIFTY": {
+     "n": 1,
+     "net": -2636.459999999999,
+     "win": 0.0
+    },
+    "SENSEX": {
+     "n": 0,
+     "net": 0.0,
+     "win": NaN
+    }
+   },
+   "calls": 1.0,
+   "puts": 0.0,
+   "exits": {
+    "stop": 1
+   },
+   "twin_mean": -163.3745699999998,
+   "p_twins": 1.0,
+   "p_side_twins": 1.0,
+   "q": 1.0,
+   "gates": {
+    "wf": false,
+    "n": false,
+    "net_pos": false,
+    "q": false,
+    "account": true
+   },
+   "passes": false
+  }
+ }
+}

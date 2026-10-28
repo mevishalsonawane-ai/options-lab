@@ -1,0 +1,32 @@
+id: r124-m1
+title: 'R124 M1: move coming in 15 min (top 10%) + direction >= 60%: ATM call/put'
+family: ml
+date: '2026-10-28'
+doc: research/HUNT_R124_BIG_MOVES.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m 5 indices + INDIAVIX, options_rolling_1m WEEK), lakeclean steps 1-3,
+  zero-volume option minutes never priced; every move on candle highs/lows
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026-01-01..03-15)
+  holdout: '2026-04-01..2026-10-19 read once (not virgin: R123 read it the same day, R106/R113/R120-R122 earlier)'
+prereg: research/hunt/r124_big_moves/PREREG.md
+holdout_read: true
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the network''s reading of the underlying (index minutes, VIX, breadth, calendar, levels) with the option
+  chain as context; exits on the index''s wicks; buys the ATM option (M4: the ATM straddle); no rule reads an option''s own
+  chart'
+hypothesis: Buying the ATM option (or straddle) when the network says a 30-point move is coming pays after costs and beats
+  random entries with the same exits
+model_or_rule: research/hunt/r124_big_moves/ (M1)
+settings: PREREG.md section 6; 1 lot at today's lots; max 5 trades a day, one open per index
+variants_tried: 4
+verdict: rejected
+results:
+  summary: 'Walk-forward 0 trades, avg net Rs 0, q 1.000; holdout 0 trades, avg net Rs 0, win 0%, q 1.000. Fails: wf, n, net_pos,
+    q, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots

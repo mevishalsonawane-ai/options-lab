@@ -1,0 +1,28 @@
+id: r124-census
+title: 'R124 every NIFTY 30-point move (wicks) traced back: what came before it'
+family: market-facts
+date: '2026-10-28'
+doc: research/HUNT_R124_BIG_MOVES.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m 5 indices + INDIAVIX, options_rolling_1m WEEK), lakeclean steps 1-3,
+  zero-volume option minutes never priced; every move on candle highs/lows
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026-01-01..03-15)
+  holdout: '2026-04-01..2026-10-19 read once (not virgin: R123 read it the same day, R106/R113/R120-R122 earlier)'
+prereg: research/hunt/r124_big_moves/PREREG.md
+holdout_read: true
+instruments:
+- NIFTY
+features:
+- 20 pre-registered factors at the minute before each move start (PREREG section 4)
+hypothesis: 'Boss 28 Oct: find what caused each 30-point move. Descriptive: which states come before moves more often than
+  at ordinary minutes of the same time of day (association, not cause).'
+model_or_rule: research/hunt/r124_big_moves/r124zig.py
+settings: PREREG.md section 4, amendment 1
+variants_tried: null
+verdict: not-a-test
+results:
+  summary: 'Design: 23,606 big moves over 1142 sessions (20.7 a day, median 40.5 points in 6 minutes). Factors with q <= 0.05
+    in design: F2, F3, F4, F5, F6, F7, F8, F9, F11, F12, F13, F15, F16, F17, F19, F20, F1; held the same side on the holdout:
+    F2, F3, F4, F5, F6, F7, F9, F11, F12, F13, F17, F19, F20, F1. The busy-market factors (recent range, VIX, straddle, distance
+    from the open) dominate; F3/F4/F13/F20 are partly mechanical (a swing starts at a turning point).'
+  costs: none (descriptive)
