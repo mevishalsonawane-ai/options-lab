@@ -173,7 +173,10 @@ def run_index(und: str, log=print) -> tuple[list, list]:
                 opts = LO.day(d, g.c[i])
             if opts is None:
                 break
-            k_atm = D3.atm(D3._last(g.c[i][:r0]), step)
+            ref_c = D3._last(g.c[i][:r0])
+            if not np.isfinite(ref_c):
+                continue
+            k_atm = D3.atm(ref_c, step)
             a = opts.contracts.get(("C" if side > 0 else "P", k_atm))
             tr = option_trade(a, r0, xr, why, lot, d, und)
             if tr is None:
@@ -189,9 +192,12 @@ def run_index(und: str, log=print) -> tuple[list, list]:
                     continue
                 s1, t1 = (ref1 - ds, ref1 + dt) if side > 0 else (ref1 + ds, ref1 - dt)
                 e1 = exit_path(h, l, o, r1, side, s1, t1, last)
-                k1 = D3.atm(D3._last(g.c[i][:r1]), step)
-                a1 = opts.contracts.get(("C" if side > 0 else "P", k1))
-                t1r = option_trade(a1, r1, e1[0], e1[1], lot, d, und) if e1 else None
+                c1 = D3._last(g.c[i][:r1])
+                if not (e1 and np.isfinite(c1)):                    # no earlier print to pick a strike from
+                    tw.append(np.nan)
+                    continue
+                a1 = opts.contracts.get(("C" if side > 0 else "P", D3.atm(c1, step)))
+                t1r = option_trade(a1, r1, e1[0], e1[1], lot, d, und)
                 tw.append(np.nan if t1r is None else t1r[0])
             trades.append(dict(variant=vname, und=und, day=d, side=side, narrow=narrow, entry=r0, exit=xr, why=why,
                                net=tr[0], netx2=tr[1], pts=(xpx - ref) * side, stop_pts=ds, tgt_pts=dt,
