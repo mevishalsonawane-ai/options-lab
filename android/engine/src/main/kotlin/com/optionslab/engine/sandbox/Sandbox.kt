@@ -645,7 +645,8 @@ class Sandbox(
             var marginPrice: BigDecimal? = null
             var cached: Quote? = null
             var triggerMet = false
-            val quoteLtp = prefetched?.ltp?.takeIf { it != 0.0 && it.isFinite() }?.let(::pyDec)?.takeIf { it.signum() > 0 }
+            // 28 Oct: a quote with no last price ([Quote.noLast]) is judged on the side this order trades against.
+            val quoteLtp = prefetched?.tradeSide(action == "BUY")?.takeIf { it != 0.0 && it.isFinite() }?.let(::pyDec)?.takeIf { it.signum() > 0 }
             when (priceType) {
                 "MARKET" -> {
                     val fallback = position(symbol, exchange, product)?.ltp?.takeIf { it.signum() > 0 }
@@ -730,7 +731,7 @@ class Sandbox(
             if (priceType == "MARKET" || (cached != null && priceType in listOf("LIMIT", "SL", "SL-M"))) {
                 if (cached != null && quoteLooksStale(cached)) cached = null
                 if (cached != null) {
-                    val ltp = pyDec(cached.ltp)
+                    val ltp = pyDec(cached.tradeSide(action == "BUY"))
                     val far = if (priceType == "LIMIT") bookFarSide(cached, action) else null
                     if (priceType == "MARKET") processOrder(orderId, cached)
                     // Honest paper, 27 Oct: a marketable BUY LIMIT that found a real book fills at the ask, like a MARKET,
@@ -738,7 +739,8 @@ class Sandbox(
                     // when the minute traded 237.80-246.65).
                     else if (far != null) executeOrder(orderId, far, usedBook = true, quote = cached)
                     // Otherwise a marketable LIMIT fills at the LTP (price improvement), as does a triggered stop.
-                    else if (ltp.signum() > 0) executeOrder(orderId, ltp, quote = cached)
+                    // (28 Oct: on a quote with no last price that side is the book's own: no second spread on top.)
+                    else if (ltp.signum() > 0) executeOrder(orderId, ltp, usedBook = cached.noLast, quote = cached)
                 }
             }
             return OrderResult(true, 200, orderId)
@@ -828,11 +830,12 @@ class Sandbox(
                 }
                 return
             }
-            val ltp = pyDec(q.ltp); val bid = pyDec(q.bid); val ask = pyDec(q.ask)
+            val buy = o.action == "BUY"
+            // 28 Oct: with no last price ([Quote.noLast]) the order is judged on the side it trades against (a buy's ask, a sale's bid).
+            val ltp = pyDec(q.tradeSide(buy)); val bid = pyDec(q.bid); val ask = pyDec(q.ask)
             if (ltp.signum() <= 0) return
             if (quoteLooksStale(q)) return
             if (o.status == OrderStatus.TRIGGER_PENDING) { processTriggerPending(o, ltp, q); return }
-            val buy = o.action == "BUY"
             val fill: BigDecimal? = when (o.priceType) {
                 "MARKET" -> if (buy) (if (ask.signum() > 0) ask else ltp) else (if (bid.signum() > 0) bid else ltp)
                 // Honest paper: a resting limit fills only once the market trades THROUGH it (a touch may be someone else's fill).
@@ -842,7 +845,9 @@ class Sandbox(
                 "SL-M" -> if ((buy && ltp >= o.triggerPrice!!) || (!buy && ltp <= o.triggerPrice!!)) ltp else null
                 else -> null
             }
-            val usedBook = o.priceType == "MARKET" && (if (buy) ask.signum() > 0 else bid.signum() > 0)
+            val usedBook = (o.priceType == "MARKET" && (if (buy) ask.signum() > 0 else bid.signum() > 0)) ||
+                // 28 Oct: an SL released on the book's own side (no last price) fills there with no second spread.
+                (q.noLast && o.priceType == "SL")
             if (fill != null) executeOrder(orderId, fill, usedBook, q, passive = o.priceType == "LIMIT")
         }
 
@@ -854,8 +859,9 @@ class Sandbox(
         fun processTriggerPending(o: Order, ltp: BigDecimal, q: Quote) {
             val buy = o.action == "BUY"
             if (!((buy && ltp >= o.triggerPrice!!) || (!buy && ltp <= o.triggerPrice!!))) return
-            if (o.priceType == "SL-M") { executeOrder(o.orderId, ltp, quote = q); return }
-            if ((buy && ltp <= o.price!!) || (!buy && ltp >= o.price!!)) { executeOrder(o.orderId, ltp, quote = q); return }
+            // 28 Oct: a stop judged on the book's own side (no last price) fills there: that side is already the spread paid.
+            if (o.priceType == "SL-M") { executeOrder(o.orderId, ltp, usedBook = q.noLast, quote = q); return }
+            if ((buy && ltp <= o.price!!) || (!buy && ltp >= o.price!!)) { executeOrder(o.orderId, ltp, usedBook = q.noLast, quote = q); return }
             putOrder(o.copy(status = OrderStatus.OPEN, updateTimestamp = now))
             events += SandboxEvent.OrderUpdate(o.orderId, OrderStatus.OPEN)
         }
@@ -1098,7 +1104,8 @@ class Sandbox(
                 val p = positions[i]
                 if (p.quantity == 0) continue
                 val q = quotes[key(p.symbol, p.exchange)] ?: continue
-                val ltpNow = pyDec(q.ltp)
+                // 28 Oct: no last price: a long is marked at the bid, a short at the ask (what closing it would trade at).
+                val ltpNow = pyDec(q.tradeSide(buy = p.quantity < 0))
                 if (ltpNow.signum() <= 0) continue
                 val cv = contractValue(p.symbol, p.exchange)
                 val unrealized = if (p.quantity > 0) (ltpNow - p.averagePrice) * BigDecimal(p.quantity) * cv

@@ -474,6 +474,11 @@ internal object Autopilot {
             } else if (c.target == AutoChange.SAME_DIR_TARGET) {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 com.optionslab.app.data.ExposureCapHost.setPaperOn(c.to == AutoChange.ON, log = false)
+            } else if (c.target == AutoChange.BOOK_PRICE_TARGET) {
+                // 28 Oct (Boss: "Yes fix finnifty"): paper entries on the live book ([logBookPriceOn]): its Undo flips the switch back
+                // (off: such entries refused again). Paper only, never live: no PIN; not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                com.optionslab.app.data.BookPriceHost.setPaperOn(c.to == AutoChange.ON, log = false)
             } else if (c.target == AutoChange.NO_TWIN_TARGET) {
                 // 20 Oct, enhancement round 1: Liquidity's no-twin rule on paper ([logLiqNoTwinOn], [logBossNoTwin]): its Undo flips the
                 // switch back for paper (live stays in shadow). Paper only: no PIN; not logged again.
@@ -1096,6 +1101,16 @@ internal object Autopilot {
                 }
             }
         }
+    }
+
+    /**
+     * 28 Oct (Boss: "Yes fix finnifty"): paper entries on an option with no last price priced on its live book
+     * ([com.optionslab.app.data.BookPriceHost]) on by this update - logged once (kept) as Boss's ask, so the change log and
+     * "Today's changes" show it; one tap undoes it. Paper only: such a fill is never mirrored live.
+     */
+    fun logBookPriceOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.paperBookPrice(true), "the 28 Oct update (your ask: \"Yes fix finnifty\"); paper only - never mirrored live")
     }
 
     /**

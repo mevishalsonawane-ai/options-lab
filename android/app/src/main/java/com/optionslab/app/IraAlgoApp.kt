@@ -104,6 +104,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Paper.init(this)
         // 19 Oct: the same-direction cap's switches and record, read on a background thread (the order path reads memory only).
         com.optionslab.app.data.ExposureCapHost.init(this)
+        // 28 Oct (Boss: "Yes fix finnifty"): the paper switch for entries on an option with no last price (memory, read in the background).
+        com.optionslab.app.data.BookPriceHost.init(this)
         // 20 Oct, enhancement round 1 (idea 4): the account stop rule (in shadow by default), read in the background.
         com.optionslab.app.data.AccountStopHost.init(this)
         // 25 Oct (Boss's decisions on the app audit): the new risk rules' switches and record, read in the background.
