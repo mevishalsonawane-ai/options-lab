@@ -1,0 +1,29 @@
+id: r127-cpr-v1
+title: 'R127 CPR video strategy V1: the video''s rule as stated (5-min pullback to TC/BC)'
+family: patterns-indicators
+date: '2026-10-28'
+doc: research/HUNT_R127_CPR.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m, options_rolling_1m WEEK), lakeclean steps 1-3
+period:
+  design: '2021-08-01..2026-10-19 (no fitting: the video''s rule tested once on all data, by year)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r127_cpr/PREREG.md
+holdout_read: null
+features:
+- 'signal source: the index (yesterday''s H/L/C for the CPR, today''s open for the bias, wick pullback/bounce); buys the ATM
+  option; stop just below BC, target R1/R2 on index wicks'
+hypothesis: 'Boss''s CPR video: open above CPR, pullback to TC holds and bounces, buy; stop below BC; target R1 (sells mirrored)
+  makes money'
+model_or_rule: research/hunt/r127_cpr/r127cpr.py
+settings: PREREG.md; 1 lot at today's lots; one trade per index-day
+variants_tried: 3
+verdict: rejected
+results:
+  summary: '2495 trades, win 42%, avg net Rs -428 (2x slippage Rs -448), total Rs -1,066,771; every year 2022-2026 negative;
+    p vs random-entry twins 0.254, q 0.381; worst month Rs -103,618. Fails: net_pos, years, q, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot
