@@ -300,7 +300,7 @@ def chain_features(ch: dict | None, t: int, lot: int, spot: float) -> dict:
                 out["c_oi_chg15"] = (sc / c15 - 1) * 100
                 out["p_oi_chg15"] = (sp_ / p15 - 1) * 100
         v = ch["volume"][max(t - 14, 0):t + 1, 5:16]
-        vc, vp = np.nansum(v[..., 0]), np.nansum(v[..., 1])
+        vc, vp = max(np.nansum(v[..., 0]), 0.0), max(np.nansum(v[..., 1]), 0.0)    # a few lake prints are < 0
         out["cp_vol15"] = math.log((vc + 1) / (vp + 1))
     return out
 
@@ -530,8 +530,16 @@ def build(part: str, unds=K.UNDS, log=print) -> pd.DataFrame:
 
 
 def _build_one(args):
+    """One index, cached on its own so a crash in one index does not lose the others."""
     part, und = args
-    return build(part, unds=(und,))
+    import pickle
+    p = K.OUT / f"part_{part}_{und}.pkl"
+    if p.exists():
+        return pickle.loads(p.read_bytes())
+    res = build(part, unds=(und,))
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(pickle.dumps(res))
+    return res
 
 
 def save(part: str, log=print):
