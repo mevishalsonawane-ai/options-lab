@@ -167,3 +167,24 @@ definitions behaving badly:
    high/low, the untaken equal-high/low pools, and today's confirmed swings.
 
 Nothing else changes.
+
+## Amendment 2 (28 Oct 2026, before any outcome or model): candlestick patterns, wick to wick
+
+Boss, 28 Oct: *"Also add candlestick patterns too ... and wick to wick."* The run was stopped before any input file
+was written. A fifth new specialist, **candle**, reads 24 wick-only pattern inputs. They use each candle's high and
+low only, never its open or close. They are computed for the last *completed* 1-, 5- and 15-minute candles (aligned to
+09:15), 8 each:
+
+| input | meaning |
+|---|---|
+| inside | an inside bar (lower high, higher low) |
+| outside | an outside bar (higher high, lower low) |
+| trend | +1 for a higher high and higher low; -1 for a lower high and lower low |
+| run | how many such candles in a row, capped at ±3 (the wick form of three soldiers / crows) |
+| rev2 | the two-candle wick reversal: a new low, then the next candle takes out the previous high (+1); mirrored (-1) |
+| swing3 | the three-candle swing: the middle candle's low is the lowest (+1), or its high the highest (-1) |
+| nr7 | the narrowest range of the last 7 candles |
+| wide | range divided by the average of the previous 10 |
+
+Body patterns (hammer, doji, engulfing by body) need opens and closes, so they are left out, as Boss asked. N3 now
+has five new specialists (sr, liq, flow, vol, candle) and 55 new inputs. Nothing else changes.

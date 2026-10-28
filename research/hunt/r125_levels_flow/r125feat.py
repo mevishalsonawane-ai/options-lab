@@ -37,8 +37,11 @@ LIQ_COLS = ("lq_pool_up", "lq_pool_dn", "lq_sweep_hi", "lq_sweep_lo", "lq_since_
 FLOW_COLS = ("fl_fii_ls", "fl_fii_ls_chg", "fl_pro_stance", "fl_pro_stance_chg", "fl_cli_stance", "fl_cp5", "fl_cp15",
              "fl_buildup")
 VOL_COLS = ("vo_v5", "vo_v15", "vo_v60", "vo_poc", "vo_vah", "vo_val", "vo_in_va", "vo_node")
-NEW_COLS = SR_COLS + LIQ_COLS + FLOW_COLS + VOL_COLS
-GROUPS = {"sr": SR_COLS, "liq": LIQ_COLS, "flow": FLOW_COLS, "vol": VOL_COLS}
+CANDLE_TF = (1, 5, 15)
+CANDLE_KEYS = ("inside", "outside", "trend", "run", "rev2", "swing3", "nr7", "wide")
+CANDLE_COLS = tuple(f"c{tf}_{k}" for tf in CANDLE_TF for k in CANDLE_KEYS)
+NEW_COLS = SR_COLS + LIQ_COLS + FLOW_COLS + VOL_COLS + CANDLE_COLS
+GROUPS = {"sr": SR_COLS, "liq": LIQ_COLS, "flow": FLOW_COLS, "vol": VOL_COLS, "candle": CANDLE_COLS}
 
 
 # ------------------------------------------------------------------------------------------------ pivots and levels
@@ -148,6 +151,63 @@ def hilo_net(h, l, t: int, look: int = 30) -> float:
             if np.isfinite(l[j]) and l[j] < np.nanmin(l[:j]):
                 n -= 1
     return float(n)
+
+
+# ------------------------------------------------------------------------------------------------ candle patterns (wicks)
+def candles(h: np.ndarray, l: np.ndarray, t: int, tf: int, n: int = 12) -> tuple[np.ndarray, np.ndarray]:
+    """The last n COMPLETED tf-minute candles at bar t (aligned to 09:15), oldest first: highs and lows only."""
+    last = (t + 1) // tf - 1
+    H, L = [], []
+    for k in range(last - n + 1, last + 1):
+        if k < 0:
+            H.append(np.nan)
+            L.append(np.nan)
+            continue
+        a, b = k * tf, k * tf + tf
+        with np.errstate(all="ignore"):
+            H.append(np.nanmax(h[a:b]) if np.isfinite(h[a:b]).any() else np.nan)
+            L.append(np.nanmin(l[a:b]) if np.isfinite(l[a:b]).any() else np.nan)
+    return np.array(H), np.array(L)
+
+
+def candle_features(h: np.ndarray, l: np.ndarray, t: int, tf: int) -> dict:
+    """Wick-only patterns of the last completed tf-minute candles (amendment 2): inside / outside bar; higher-high-and-
+    higher-low (+1) or lower-high-and-lower-low (-1) and its run (capped +-3); the two-candle wick reversal (a new low,
+    then the next candle takes the previous high: +1; mirrored -1); the three-candle swing (the middle candle's low is
+    the lowest: +1, its high the highest: -1); NR7; the range against the previous 10 candles."""
+    H, L = candles(h, l, t, tf)
+    p = f"c{tf}_"
+    out = {p + k: np.nan for k in CANDLE_KEYS}
+    if not (np.isfinite(H[-3:]).all() and np.isfinite(L[-3:]).all()):
+        return out
+    h0, h1, h2, l0, l1, l2 = H[-1], H[-2], H[-3], L[-1], L[-2], L[-3]
+    out[p + "inside"] = float(h0 < h1 and l0 > l1)
+    out[p + "outside"] = float(h0 > h1 and l0 < l1)
+    tr = 1.0 if (h0 > h1 and l0 > l1) else (-1.0 if (h0 < h1 and l0 < l1) else 0.0)
+    out[p + "trend"] = tr
+    run = 0
+    for k in range(1, min(4, len(H))):
+        a, b = len(H) - k, len(H) - k - 1
+        if b < 0 or not (np.isfinite(H[a]) and np.isfinite(H[b])):
+            break
+        s = 1 if (H[a] > H[b] and L[a] > L[b]) else (-1 if (H[a] < H[b] and L[a] < L[b]) else 0)
+        if s == 0 or (run and np.sign(run) != s):
+            break
+        run += s
+    out[p + "run"] = float(run)
+    up = l1 < l2 and h0 > h1
+    dn = h1 > h2 and l0 < l1
+    out[p + "rev2"] = 1.0 if up and not dn else (-1.0 if dn and not up else 0.0)
+    lo_turn = l1 < l2 and l1 < l0
+    hi_turn = h1 > h2 and h1 > h0
+    out[p + "swing3"] = 1.0 if lo_turn and not hi_turn else (-1.0 if hi_turn and not lo_turn else 0.0)
+    rng = H - L
+    last7 = rng[-7:]
+    out[p + "nr7"] = float(np.isfinite(last7).all() and rng[-1] <= np.min(last7))
+    prev = rng[-11:-1]
+    prev = prev[np.isfinite(prev)]
+    out[p + "wide"] = float(rng[-1] / prev.mean()) if len(prev) and prev.mean() > 0 else np.nan
+    return out
 
 
 # ------------------------------------------------------------------------------------------------ volume profile
@@ -327,6 +387,8 @@ def index_features(part: str, und: str, rows: pd.DataFrame, log=print) -> pd.Dat
                 today_hist += spread_hist(l[done + 1:t + 1], h[done + 1:t + 1], v[done + 1:t + 1], bw, 0, nb)
                 done = t
             f.update(profile_features(base_hist + today_hist, bw, 0, lo_t, hi_t, m))
+            for tf in CANDLE_TF:
+                f.update(candle_features(h, l, t, tf))
             out.append(f)
     log(f"R125 {und} {part}: {len(out)} rows", flush=True)
     return pd.DataFrame(out)

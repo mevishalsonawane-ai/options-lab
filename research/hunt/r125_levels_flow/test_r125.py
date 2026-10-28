@@ -119,4 +119,47 @@ def test_buildup_signs():
 
 def test_new_cols_cover_groups():
     assert set(F.NEW_COLS) == set(sum((list(v) for v in F.GROUPS.values()), []))
-    assert len(F.NEW_COLS) == 31
+    assert len(F.NEW_COLS) == 31 + 24
+
+
+# ------------------------------------------------------------------------------------------------ amendment 2: candles
+def _bars(pairs, n=60):
+    h, l = np.full(n, np.nan), np.full(n, np.nan)
+    for i, (a, b) in enumerate(pairs):
+        h[i], l[i] = a, b
+    return h, l
+
+
+def test_candles_completed_only_and_wicks():
+    h, l = _bars([(10, 8), (11, 9), (12, 7), (13, 10), (14, 11), (99, 1)])
+    H, L = F.candles(h, l, 4, 5, n=1)                     # the 5-min candle 0..4 is complete at bar 4
+    assert H[-1] == 14 and L[-1] == 7
+    H, L = F.candles(h, l, 3, 5, n=1)                     # at bar 3 it is not: no candle yet
+    assert np.isnan(H[-1])
+
+
+def test_candle_patterns_hand_made():
+    h, l = _bars([(10, 5), (12, 6), (13, 7), (14, 8)])    # three higher-high-and-higher-low bars in a row
+    f = F.candle_features(h, l, 3, 1)
+    assert f["c1_trend"] == 1 and f["c1_run"] == 3 and f["c1_inside"] == 0
+    h, l = _bars([(10, 5), (9, 3), (11, 4)])              # new low, then the next bar takes the previous high
+    f = F.candle_features(h, l, 2, 1)
+    assert f["c1_rev2"] == 1 and f["c1_swing3"] == 1 and f["c1_outside"] == 0
+    h, l = _bars([(10, 5), (9, 6)])
+    h[2], l[2] = 12, 4
+    f = F.candle_features(h, l, 2, 1)
+    assert f["c1_outside"] == 1
+    h, l = _bars([(10, 5), (12, 4), (11, 6)])
+    assert F.candle_features(h, l, 2, 1)["c1_inside"] == 1
+
+
+def test_candle_features_ignore_future_bars():
+    rng = np.random.default_rng(0)
+    c = 100 + rng.normal(0, 1, 200).cumsum()
+    h, l = c + 1, c - 1
+    a = {tf: F.candle_features(h, l, 119, tf) for tf in F.CANDLE_TF}
+    h2, l2 = h.copy(), l.copy()
+    h2[120:] += 50
+    l2[120:] -= 50
+    b = {tf: F.candle_features(h2, l2, 119, tf) for tf in F.CANDLE_TF}
+    assert a == b
