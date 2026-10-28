@@ -126,6 +126,10 @@ class IdeaWinRateTest {
         // Said once: the next day's held judgement adds no event.
         val (y2, e2) = StrategyForge.judgeForward(y, y.copy(fwdDays = 26), 1, day.plusDays(1), rule)
         assertEquals(StrategyForge.Stage.FORWARD, y2.stage); assertNull(e2)
+        // Below its own gates again (here its record no longer passes the forward test's bar): the held note no longer stands.
+        val worse = y.copy(fwd = List(40) { if (it % 2 == 0) 150.0 else -140.0 })
+        val (y4, e4) = StrategyForge.judgeForward(y, worse, 1, day.plusDays(1), rule)
+        assertEquals(StrategyForge.Stage.FORWARD, y4.stage); assertEquals("in forward test", y4.why); assertNull(e4)
         // At the end of its forward test still below the rule: retired, never proposed.
         val (y3, e3) = StrategyForge.judgeForward(y, y.copy(fwdDays = StrategyForge.FWD_MAX_DAYS), 1, day.plusDays(2), rule)
         assertEquals(StrategyForge.Stage.RETIRED, y3.stage)
@@ -168,7 +172,7 @@ class IdeaWinRateTest {
         val p = s.params.first()
         val v = s.defaults + (p.key to p.clamp(s.defaults.getValue(p.key) - p.step))
         return VariantLab.Variant("V1", key, v, s.defaults, day.minusDays(40), 1.0, status, diffs, net ?: diffs.sum(), 0.0,
-            DiscoveryStats.alwaysValidP(diffs, 1, VariantLab.MIN_SD), DiscoveryStats.alwaysValidP(diffs, -1, VariantLab.MIN_SD), vTrades = trades, vWins = wins)
+            DiscoveryStats.alwaysValidP(diffs, 1, VariantLab.MIN_SD), DiscoveryStats.alwaysValidP(diffs, -1, VariantLab.MIN_SD), vTrades = trades, vWins = wins, vTradeNet = net ?: diffs.sum())
     }
 
     private fun lab(v: VariantLab.Variant, run: VariantLab.Run = VariantLab.Run.PAPER) =
@@ -203,6 +207,10 @@ class IdeaWinRateTest {
         // 70% won but its own trades lost after costs.
         val lost = VariantLab.judge(lab(variant(100, 70, net = -2_300.0)), day, rule = rule)
         assertTrue((lost.events.single() as VariantLab.Event.Held).words.startsWith("held: loses after costs"))
+        // Its profit is its counted trades' own rupees, never the days before they were counted (review, 28 Oct): a variant alive
+        // at the update whose old days made money but whose counted trades lose is held.
+        val mixed = variant(60, 45).copy(vSum = 50_000.0, vTradeNet = -600.0)
+        assertTrue((VariantLab.judge(lab(mixed), day, rule = rule).events.single() as VariantLab.Event.Held).words.startsWith("held: loses after costs"))
         // A variant from before 28 Oct (no trades counted yet) is held until it has 30.
         val fresh = VariantLab.judge(lab(variant(0, 0)), day, rule = rule)
         assertTrue((fresh.events.single() as VariantLab.Event.Held).words.startsWith("held: only 0 trades, under the 30"))
@@ -213,10 +221,10 @@ class IdeaWinRateTest {
     @Test fun aVariantsTradesAreKeptAndAnOldLineReadsAsNone() {
         val b = lab(variant(57, 37))
         val back = VariantLab.decode(VariantLab.encode(b)).variants.single()
-        assertEquals(57, back.vTrades); assertEquals(37, back.vWins)
+        assertEquals(57, back.vTrades); assertEquals(37, back.vWins); assertEquals(b.variants.single().vTradeNet, back.vTradeNet, 1e-9)
         val old = VariantLab.encode(b).lines().joinToString("\n") { l -> if (l.startsWith("V|")) l.split('|').take(16).joinToString("|") else l }
         val v = VariantLab.decode(old).variants.single()
-        assertEquals(0, v.vTrades); assertEquals(0, v.vWins)
+        assertEquals(0, v.vTrades); assertEquals(0, v.vWins); assertEquals(0.0, v.vTradeNet, 0.0)
         // A wins count over the trades (a bad file) never reads as more than 100%.
         assertEquals(100.0, IdeaWinRate.forVariant(10, 50, 1000.0).winPct, 1e-9)
     }
@@ -231,7 +239,7 @@ class IdeaWinRateTest {
         val v = p.book.variants.first { it.id == "V1" }
         val t = ArmLab.trades("orb", s.values(b0.variants.single().values), days.last(), days.dropLast(1))
         assertTrue(v.n > 0 && t.isNotEmpty(), "the day was compared and the variant traded")
-        assertEquals(t.size, v.vTrades); assertEquals(t.count { it.net > 0 }, v.vWins)
+        assertEquals(t.size, v.vTrades); assertEquals(t.count { it.net > 0 }, v.vWins); assertEquals(t.sumOf { it.net }, v.vTradeNet, 1e-6)
     }
 
     @Test fun promotedVariantsAndTheirTunesAreUntouched() {

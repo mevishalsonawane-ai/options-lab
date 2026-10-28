@@ -25,6 +25,7 @@ object IdeaRuleHost {
     private const val K_MIN = "g.ideaRule.minPct"
     @Volatile private var on = true
     @Volatile private var minPct = IdeaWinRate.DEFAULT_PCT
+    private val noted: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Reads the rule in the background; logs it once in the Autopilot timeline while on. */
@@ -72,10 +73,15 @@ object IdeaRuleHost {
      * and a line in Diag. Nothing is created, armed or traded.
      */
     fun held(creator: IdeaWinRate.Creator, id: String, name: String, words: String) {
+        // Once per idea while the app runs (a held shadow is looked at every 30 minutes): the change log keeps it once anyway.
+        if (!noted.add("${creator.name}|$id")) return
         runCatching { com.optionslab.app.ira.Autopilot.logIdeaHeld(AutoChange.ideaHeld(creator, id, name, words)) }
         runCatching { Diag.record("ideas", "${creator.words} $name $words") }
     }
 
+    /** TEST SEAM: the ideas held since the last [setForTest] ("CREATOR|id"). */
+    internal fun notedForTest(): Set<String> = synchronized(noted) { noted.toSet() }
+
     /** TEST SEAM: the rule as the tests need it (memory only). */
-    internal fun setForTest(on: Boolean = true, minPct: Double = IdeaWinRate.DEFAULT_PCT) { this.on = on; this.minPct = minPct }
+    internal fun setForTest(on: Boolean = true, minPct: Double = IdeaWinRate.DEFAULT_PCT) { this.on = on; this.minPct = minPct; noted.clear() }
 }

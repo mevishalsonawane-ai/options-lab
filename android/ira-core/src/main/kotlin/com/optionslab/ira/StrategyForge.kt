@@ -425,7 +425,8 @@ object StrategyForge {
                 val y = x.copy(stage = Stage.RETIRED, fwdP = pPass, why = "retired: $cause - $record, against ${DiscoveryStats.rs(r.bt?.net ?: 0.0)} in its backtest", since = date)
                 y to Event.Retired(y)
             }
-            else -> x.copy(fwdP = pPass) to null
+            // Below its own gates again: a held note no longer says why it stands where it does.
+            else -> x.copy(fwdP = pPass, why = if (r.why.startsWith("held:")) "in forward test" else x.why) to null
         }
     }
 

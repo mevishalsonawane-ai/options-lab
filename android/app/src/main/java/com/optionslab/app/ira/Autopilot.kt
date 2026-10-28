@@ -945,8 +945,8 @@ internal object Autopilot {
         if (!enabled() || c.kind != AutoChange.Kind.IDEA_HELD) return
         scope.launch(trailLane) {
             runCatching {
-                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
-                if (waited == null) return@runCatching
+                // Best effort: the creators run long after start-up; before Autopilot's init nothing is logged (Diag keeps the line).
+                if (appContext == null) return@runCatching
                 ensureLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {

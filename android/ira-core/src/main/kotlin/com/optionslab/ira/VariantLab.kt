@@ -175,6 +175,8 @@ object VariantLab {
          * (out of sample, after the lab's costs) and how many of them made money. 0 for a variant from before 28 Oct.
          */
         val vTrades: Int = 0, val vWins: Int = 0,
+        /** Those trades' own rupees after costs (not [vSum], which also holds the days before they were counted). */
+        val vTradeNet: Double = 0.0,
     ) {
         val n: Int get() = diffs.size
         val alive: Boolean get() = status == Status.ALIVE || status == Status.PROPOSED
@@ -483,6 +485,7 @@ object VariantLab {
             if (!vt && !ct) v.copy(lastDay = date) else {
                 val diffs = v.diffs + (vn - cn)
                 v.copy(diffs = diffs, vSum = v.vSum + vn, cSum = v.cSum + cn, lastDay = date, vTrades = v.vTrades + vr.trades, vWins = v.vWins + vr.wins,
+                    vTradeNet = v.vTradeNet + vr.net,
                     pBetter = DiscoveryStats.alwaysValidP(diffs, 1, MIN_SD), pWorse = DiscoveryStats.alwaysValidP(diffs, -1, MIN_SD))
             }
         })
@@ -538,7 +541,7 @@ object VariantLab {
             val loses = loses(v)
             // 28 Oct: Boss's win-rate rule on top of the lab's gates, before anything is applied or proposed (paper or live).
             val held = if (wins && b.runOf(v.strategy) != Run.OFF)
-                IdeaWinRate.held(IdeaWinRate.Creator.VARIANT, IdeaWinRate.forVariant(v.vTrades, v.vWins, v.vSum), rule) else null
+                IdeaWinRate.held(IdeaWinRate.Creator.VARIANT, IdeaWinRate.forVariant(v.vTrades, v.vWins, v.vTradeNet), rule) else null
             when {
                 held != null && v.n >= MAX_N -> {
                     val r = v.copy(status = Status.RETIRED, why = "no proof after ${v.n} days: still $held")
@@ -913,7 +916,7 @@ object VariantLab {
         for ((k, s) in b.scales.toSortedMap()) append("K|$k|$s\n")
         for ((k, m) in b.current.toSortedMap()) append("S|$k|${kv(m)}\n")
         for (v in b.variants) append("V|${v.id}|${v.strategy}|${v.status.name}|${v.born}|${v.scale}|${v.lastDay ?: ""}|${v.pBetter}|${v.pWorse}|" +
-            "${v.vSum}|${v.cSum}|${kv(v.values)}|${kv(v.base)}|${v.diffs.joinToString(";")}|${v.pre?.let { "${it.first};${it.second}" } ?: ""}|${clean(v.why)}|${v.vTrades}|${v.vWins}\n")
+            "${v.vSum}|${v.cSum}|${kv(v.values)}|${kv(v.base)}|${v.diffs.joinToString(";")}|${v.pre?.let { "${it.first};${it.second}" } ?: ""}|${clean(v.why)}|${v.vTrades}|${v.vWins}|${v.vTradeNet}\n")
         for (c in b.changes) append("C|${c.id}|${c.strategy}|${c.variant}|${c.kind.name}|${c.status.name}|${c.day}|${kv(c.from)}|${kv(c.to)}|${clean(c.why)}|" +
             "${c.effective ?: ""}|${c.avgLoss}|${c.expect}\n")
         for (t in b.tunes) append("U|${t.strategy}|${if (t.live) 1 else 0}|${t.from}|${kv(t.values)}|${t.change}\n")
@@ -942,7 +945,8 @@ object VariantLab {
                     p[13].split(';').filter { it.isNotBlank() }.map { it.toDouble() }, p[9].toDouble(), p[10].toDouble(), p[7].toDouble(), p[8].toDouble(),
                     p[6].takeIf { it.isNotEmpty() }?.let(LocalDate::parse), p.getOrElse(15) { "" },
                     p[14].split(';').takeIf { it.size == 2 }?.let { it[0].toDouble() to it[1].toDouble() },
-                    p.getOrNull(16)?.toIntOrNull()?.coerceAtLeast(0) ?: 0, p.getOrNull(17)?.toIntOrNull()?.coerceAtLeast(0) ?: 0)
+                    p.getOrNull(16)?.toIntOrNull()?.coerceAtLeast(0) ?: 0, p.getOrNull(17)?.toIntOrNull()?.coerceAtLeast(0) ?: 0,
+                    p.getOrNull(18)?.toDoubleOrNull()?.takeIf { it.isFinite() } ?: 0.0)
                 "C" -> cs += Change(p[1], p[2], p[3], ChangeKind.valueOf(p[4]), ChangeStatus.valueOf(p[5]), LocalDate.parse(p[6]), unkv(p[7]), unkv(p[8]), p[9],
                     p.getOrNull(10)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse), p.getOrNull(11)?.toDoubleOrNull() ?: 0.0,
                     p.getOrNull(12)?.toDoubleOrNull() ?: 0.0)

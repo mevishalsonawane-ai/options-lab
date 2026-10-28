@@ -170,18 +170,32 @@ class IraHubTest : RobolectricTest() {
      * offered is held as a note; Boss's own asked backtest still answers with its offer.
      */
     @Test fun theWinRateRuleHoldsJarvisOwnScriptsAndLeavesBossesAskedBacktestAlone() = runBlocking {
+        com.optionslab.app.data.IdeaRuleHost.setForTest()
         IraHub.testLabBars = { _, _ -> twoYears }
         IraHub.testAutoLab = true
         IraHub.testHistories = { sixty }
         IraHub.refresh()
         assertTrue("nothing offered or added by itself", IraHub.state.value.proposals.isEmpty())
-        // The same hunt with the rule undone offers what is worth a trial (the old behaviour), so the rule did the holding.
+        val held = com.optionslab.app.data.IdeaRuleHost.notedForTest().filter { it.startsWith("PINE|") }
+        // The same hunt with the rule undone offers what is worth a trial (the old behaviour): exactly the scripts it held.
         com.optionslab.app.data.IdeaRuleHost.setForTest(on = false)
         IraHub.forgetAll()
         IraHub.refresh()
         val old = IraHub.state.value.proposals
         assertTrue(old.all { it.result.recommended })
-        for (p in old) assertNotNull("held with the rule on", IraHub.heldPine(p.result, com.optionslab.ira.IdeaWinRate.Rule.DEFAULT))
+        for (p in old) {
+            assertNotNull("held with the rule on", IraHub.heldPine(p.result, com.optionslab.ira.IdeaWinRate.Rule.DEFAULT))
+            assertTrue("${p.result.name} was held as a note", "PINE|${p.result.name}" in held)
+        }
+        assertEquals(old.size, held.size)
+        // Boss's own asked backtest is his manual action: with the rule on it still answers with its offer.
+        com.optionslab.app.data.IdeaRuleHost.setForTest()
+        IraHub.testAutoLab = false
+        IraHub.forgetAll()
+        IraHub.refresh()
+        IraHub.ask("backtest the hammer on banknifty 1 hour")
+        waitFor("the asked backtest") { IraHub.state.value.proposals.isNotEmpty() }
+        assertEquals(60, IraHub.state.value.proposals.single().result.minutes)
     }
 
     /**
