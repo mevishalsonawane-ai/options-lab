@@ -1,0 +1,59 @@
+id: r123-n1-s4
+title: 'R123 N1-S4: best expectancy over the 16 cell-sides, enter when EV >= Rs 300 (single network (TCN + MLP))'
+family: ml
+date: '2026-10-28'
+doc: research/HUNT_R123_NEURAL_70.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m 5 indices + INDIAVIX, options_rolling_1m WEEK), lakeclean steps 1-3
+  (stale=True), zero-volume minutes never priced (Amendment 2)
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026-01-01..03-15)
+  holdout: '2026-04-01..2026-10-19 read once (not virgin: R106, R113, R120-R122 read the arms there)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r123_neural_70/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the network''s reading of the underlying (index minutes, India VIX, the five indices'' breadth, calendar)
+  with the option chain (OI, PCR, IV, skew, straddle) as context; the ATM option''s premium sets the target and stop only;
+  no rule reads the option''s own chart'
+hypothesis: 'Boss 28 Oct: a neural network of all the index and option data, simple rules, about 70% wins and about Rs 1,000
+  a trade. Gated on net expectancy after real charges and slippage (2x too), random-entry twins, BH q <= 0.10 over the 10
+  rule tests, enough trades, holdout once.'
+model_or_rule: research/hunt/r123_neural_70/ (S4, network N1)
+settings: PREREG.md section 6 and amendments 1-2; 1 lot at today's lots; ATM; max 5 trades a day, one open per index
+variants_tried: 10
+verdict: rejected
+results:
+  summary: 'Holdout 52 trades over 137 sessions: win 56%, avg net Rs 345 (2x slippage Rs 328), Rs 131 a session, p vs twins
+    0.009, q 0.045. Walk-forward 1085 trades, avg net Rs 78, q 0.005. Fails: n.'
+  walk_forward:
+    n: 1085
+    win_rate: 0.508
+    avg_net: 78.0
+    avg_net_x2: 61.0
+    per_session: 107.0
+    p_twins: 0.001
+    q: 0.005
+    folds_positive: 3
+    passes: true
+  holdout:
+    n: 52
+    win_rate: 0.558
+    avg_net: 345.0
+    avg_net_x2: 328.0
+    per_session: 131.0
+    max_dd: -6186.0
+    worst_day: -3080.0
+    worst_month: -2152.0
+    p_twins: 0.009
+    q: 0.045
+    sessions: 137
+  fails:
+  - n
+  boss_target_strict: false
+  boss_target_lenient: false
+  costs: Costs('dated') charges + Fills('liq') slippage, 1 lot, today's lot sizes
