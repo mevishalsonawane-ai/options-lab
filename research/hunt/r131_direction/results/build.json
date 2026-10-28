@@ -1,0 +1,157 @@
+{
+ "rows": {
+  "GAP": {
+   "rows": 15580,
+   "first": "2012-04-02",
+   "last": "2026-10-19",
+   "by_und": {
+    "BANKNIFTY": 3603,
+    "FINNIFTY": 3603,
+    "SENSEX": 3603,
+    "NIFTY": 3602,
+    "MIDCPNIFTY": 1169
+   }
+  },
+  "C2C": {
+   "rows": 15581,
+   "first": "2012-04-02",
+   "last": "2026-10-19",
+   "by_und": {
+    "BANKNIFTY": 3604,
+    "FINNIFTY": 3604,
+    "SENSEX": 3604,
+    "NIFTY": 3600,
+    "MIDCPNIFTY": 1169
+   }
+  },
+  "PRE": {
+   "rows": 15580,
+   "first": "2012-04-02",
+   "last": "2026-10-19",
+   "by_und": {
+    "BANKNIFTY": 3603,
+    "FINNIFTY": 3603,
+    "SENSEX": 3603,
+    "NIFTY": 3602,
+    "MIDCPNIFTY": 1169
+   }
+  },
+  "DAY": {
+   "rows": 5561,
+   "first": "2021-08-02",
+   "last": "2026-10-19",
+   "by_und": {
+    "NIFTY": 1279,
+    "BANKNIFTY": 1251,
+    "FINNIFTY": 1248,
+    "MIDCPNIFTY": 943,
+    "SENSEX": 840
+   }
+  },
+  "R11": {
+   "rows": 5600,
+   "first": "2021-08-02",
+   "last": "2026-10-19",
+   "by_und": {
+    "NIFTY": 1277,
+    "FINNIFTY": 1273,
+    "BANKNIFTY": 1270,
+    "MIDCPNIFTY": 942,
+    "SENSEX": 838
+   }
+  },
+  "R13": {
+   "rows": 5596,
+   "first": "2021-08-02",
+   "last": "2026-10-19",
+   "by_und": {
+    "NIFTY": 1277,
+    "FINNIFTY": 1272,
+    "BANKNIFTY": 1267,
+    "MIDCPNIFTY": 942,
+    "SENSEX": 838
+   }
+  },
+  "M60": {
+   "rows": 27914,
+   "first": "2021-08-02",
+   "last": "2026-10-19",
+   "by_und": {
+    "NIFTY": 6383,
+    "FINNIFTY": 6329,
+    "BANKNIFTY": 6306,
+    "MIDCPNIFTY": 4707,
+    "SENSEX": 4189
+   }
+  }
+ },
+ "sources": {
+  "index_daily": {
+   "rows": 26467,
+   "first": "2006-01-02",
+   "last": "2026-10-19"
+  },
+  "nse_indices": {
+   "rows": 28300,
+   "first": "2012-02-21",
+   "last": "2026-10-13"
+  },
+  "participants": {
+   "rows": 3640,
+   "first": "2012-01-02",
+   "last": "2026-10-13"
+  },
+  "fpi": {
+   "rows": 3560,
+   "first": "2012-01-02",
+   "last": "2026-10-13"
+  },
+  "fut_daily": {
+   "rows": 49417,
+   "first": "2009-03-30",
+   "last": "2026-10-19"
+  },
+  "equity_daily": {
+   "rows": 296217,
+   "first": "2002-01-01",
+   "last": "2026-10-12"
+  },
+  "stock_fut": {
+   "rows": 170320,
+   "first": "2011-10-03",
+   "last": "2026-10-13"
+  },
+  "chain": {
+   "rows": 9872,
+   "first": "2012-01-02",
+   "last": "2026-10-13"
+  }
+ },
+ "checks": {
+  "NIFTY": {
+   "days": 5155,
+   "close_mismatch": 0,
+   "stale_open": 45
+  },
+  "BANKNIFTY": {
+   "days": 5154,
+   "close_mismatch": 0,
+   "stale_open": 6
+  },
+  "FINNIFTY": {
+   "days": 5155,
+   "close_mismatch": 0,
+   "stale_open": 1
+  },
+  "MIDCPNIFTY": {
+   "days": 1170,
+   "close_mismatch": 0,
+   "stale_open": 0
+  },
+  "SENSEX": {
+   "days": 5154,
+   "close_mismatch": 0,
+   "stale_open": 6
+  }
+ }
+}
