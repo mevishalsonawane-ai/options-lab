@@ -1,0 +1,30 @@
+id: r128-t2-s5x2
+title: 'R128 T2-S5x2: R123 S5 entries, hold-to-close exit'
+family: ml
+date: '2026-10-28'
+doc: research/HUNT_R128_MISSING.md
+data_version: R123 out-of-sample forecasts + Drive lake option bars (lakeclean 1-3), ATM IV from the chain
+period:
+  design: 2023-01-01..2026-03-15 (R123 walk-forward folds)
+  holdout: 2026-04-01..2026-10-19 (read before by R123-R127)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the underlying (network forecasts of the index; T1 compares with the ATM option''s implied volatility as
+  context); buys only; intraday only'
+hypothesis: Exits that keep a bought option's convexity turn R123's S4/S5 lead into a stronger edge
+model_or_rule: research/hunt/r128_missing/r128.py
+settings: PREREG.md section 1
+prereg: research/hunt/r128_missing/PREREG.md
+variants_tried: 9
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'Walk-forward 555 trades, avg net Rs 373, q 0.031, 3 of 4 folds positive; holdout 41 trades, avg net Rs 1,797.
+    Fails: ho_n. Fragile: the best 5 days give 115-134% of the profit; 476 of 555 S5 design trades in 2024; worst month breaches
+    the account stop. Proposed only as a shadow forward test (S5 trailing exit).'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots

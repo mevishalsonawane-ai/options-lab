@@ -1,11 +1,11 @@
-# R127 result (28 Oct 2026): the CPR video strategy loses money in every version and every year
-1. Tested the video's rule as stated: open above CPR, pullback to TC holds and bounces on wicks, buy ATM call, stop just below BC, target R1 (sells mirrored).
-2. Five indices, Aug 2021 - Oct 2026, 1 lot, real charges and slippage.
-3. As stated: 2,495 trades, 42% won, -Rs 428 a trade, -Rs 10.67 lakh total; every year 2022-2026 negative; no better than random entries (p 0.25).
-4. Narrow-CPR days only: 809 trades, -Rs 240 a trade, every year negative. 1-minute pullbacks: -Rs 353 a trade.
-5. Stop and target are about equally far, so it is a coin flip on the index; option costs and decay then make it a loss.
-6. The video's claim "narrow CPR = trend day" is wrong in the data: narrow-CPR days were quieter (0.97x vs 1.09x normal range).
-7. "Open above CPR = bullish" is wrong too: after such opens the day went further up only 41% of the time (all days 45%).
-8. On 1 lot it would have breached Boss's account stop many times (worst month -Rs 1.04 lakh).
-9. Nothing passes; nothing goes on paper; no app change. Earlier CPR tests (OBUY_GA LV-02, FINDINGS) agree.
-10. Details: research/HUNT_R127_CPR.md; code + 5 tests in research/hunt/r127_cpr/.
+# R128 result (28 Oct 2026): what we were missing, fixed and tested (option buying only)
+1. Three reviews (internet research, the repo's book/PDF studies, a code audit) agreed: we never compared our move forecast with the option's PRICE, and our fixed exits capped the big wins a bought option needs.
+2. Options here price about twice the intraday move that actually comes, so even zero-cost straddle buyers lose to time decay (-Rs 87 an hour); costs double it (net -Rs 260, 4,194 straddles).
+3. Timing straddles by forecast-vs-price does not help: every tenth of the ranking lost (-Rs 115 to -214 a trade, walk-forward).
+4. Exits that keep the big wins DO help R123's morning put picks: hold-to-close made S5 +Rs 373 a trade in design (555 trades, was +Rs 172) and +Rs 1,797 on unseen Apr-Oct 2026 (41 trades).
+5. But it is fragile: the best 5 days give more than all the profit, most design trades are in 2024, and on 1 lot it breaches the account stop.
+6. Late-day momentum (published abroad) loses in India with ITM options (-Rs 104 a trade).
+7. No bug turned profits into losses; R127's twin slip is fixed (CPR still loses).
+8. Nothing passes every gate; nothing goes on paper.
+9. Proposed only: a logged-only shadow forward test of S5 with the trailing exit (calmer) on sessions after 19 Oct, ~100 trades before any paper decision.
+10. Details: research/HUNT_R128_MISSING.md; code + tests in research/hunt/r128_missing/.

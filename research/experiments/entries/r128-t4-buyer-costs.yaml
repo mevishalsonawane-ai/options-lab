@@ -1,0 +1,27 @@
+id: r128-t4-buyer-costs
+title: R128 T4 where an option buyer's money goes (ATM straddle bought 10:00, held 60 min)
+family: market-facts
+date: '2026-10-28'
+doc: research/HUNT_R128_MISSING.md
+data_version: Drive lake option bars (lakeclean 1-3)
+period:
+  design: 2023-01-01..2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- ATM call + put bought at 10:00, sold 11:00
+hypothesis: 'Descriptive: split a buyer''s loss into decay vs costs'
+model_or_rule: research/hunt/r128_missing/r128.py (T4)
+settings: 1 lot, today's lots
+prereg: research/hunt/r128_missing/PREREG.md
+variants_tried: null
+holdout_read: null
+verdict: not-a-test
+results:
+  summary: '4,194 straddles: premium Rs 22,707; before costs Rs -87; charges Rs 138; slippage Rs 35; net Rs -260. Time decay
+    beats the hour''s move before any cost; costs double the loss.'
+  costs: Costs('dated') + Fills('liq')
