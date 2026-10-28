@@ -481,6 +481,9 @@ class PersonalStoresTest {
             com.optionslab.app.data.EventDays.remove(java.time.LocalDate.of(2026, 11, 26))   // settings key events.removed + calendar built
             com.optionslab.app.security.SecurePrefs.flush()
         },
+        s("FlowArm") {
+            kotlinx.coroutines.runBlocking { com.optionslab.app.data.FlowArm.setArmed(true, log = false) }   // book in memory + flow_arm.vault
+        },
         s("NtfyArm") {
             kotlinx.coroutines.runBlocking { com.optionslab.app.data.NtfyArm.setSettings(com.optionslab.engine.signals.NtfyRules.Settings(lots = 2)) }
         },

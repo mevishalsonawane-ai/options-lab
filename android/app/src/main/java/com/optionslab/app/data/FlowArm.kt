@@ -128,7 +128,12 @@ object FlowArm {
         val pending: MutableMap<String, String> = HashMap(),
         /** Days whose sessions were recorded ([record]). */
         val recorded: MutableSet<String> = HashSet(),
-    )
+        /** "day|index" -> the plan's levels of an entry order still working ([pending]). */
+        val levels: MutableMap<String, Level> = HashMap(),
+    ) {
+        /** Something saved-worthy changed outside the candidates (an order's mark): the pass saves the book. */
+        var dirty: Boolean = false
+    }
 
     /** What the row, the page and Jarvis read (memory only). */
     data class View(
@@ -205,6 +210,8 @@ object FlowArm {
             o.optJSONArray("ordering")?.let { a -> for (i in 0 until a.length()) b.ordering += a.getString(i) }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { b.pending[it] = m.getString(it) } }
             o.optJSONArray("recorded")?.let { a -> for (i in 0 until a.length()) b.recorded += a.getString(i) }
+            o.optJSONObject("levels")?.let { m -> m.keys().forEach { k -> m.getJSONObject(k).let { l ->
+                b.levels[k] = Level(l.optDouble("s", Double.NaN), l.optDouble("t", Double.NaN), l.optInt("score"), l.optDouble("tf", 0.0)) } } }
         }.onFailure { unreadable = true; if (f.exists() && !Vault.isErasing) runCatching { Vault.setAside(f) } }
         synchronized(written) { if (gen == wipes) cache = b }
         // 28 Oct, Boss's explicit ask: on once, on paper. A book that could not be read is never switched on by itself (Boss may have
@@ -235,6 +242,9 @@ object FlowArm {
             .put("ordering", JSONArray(b.ordering.toList()))
             .put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k, v) } })
             .put("recorded", JSONArray(b.recorded.sorted().takeLast(80)))
+            .put("levels", JSONObject().apply { b.levels.forEach { (k, l) -> put(k, JSONObject().apply {
+                if (l.idxStop.isFinite()) put("s", l.idxStop); if (l.idxTarget.isFinite()) put("t", l.idxTarget); put("score", l.score)
+                if (l.targetFirst.isFinite()) put("tf", l.targetFirst) }) } })
         return synchronized(written) {
             if (cache !== b) return false
             val ok = file?.let { f -> runCatching { written.write(f, o.toString().toByteArray(Charsets.UTF_8)) }.getOrDefault(false) } ?: false
@@ -275,17 +285,21 @@ object FlowArm {
     fun holding(): Boolean = _view.value.open.isNotEmpty()
 
     @Volatile private var pendingNow = false
+    /** Today's session already recorded ([record]; memory, set by the pass). */
+    @Volatile private var recordedToday = false
     @Volatile var lastPassMs: Long = 0L
         private set
 
     /**
      * The watch needs this arm's pass now (memory only): a trade held or an entry order working; or switched on, on a trading day,
-     * 09:14 to 15:31 (the opening range, the decisions, and the session's record just after the 15:30 close).
+     * 09:14 to 15:44 (the opening range, the decisions, and the session's record after the 15:30 close, while the stream runs).
      */
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean {
         if (com.optionslab.app.BuildConfig.GOLD) return false
         if (holding() || pendingNow) return true
-        if (!_view.value.armed || minute !in (9 * 60 + 14)..(15 * 60 + 31)) return false
+        if (!_view.value.armed || minute !in (9 * 60 + 14)..(15 * 60 + 44)) return false
+        // After the close only until the day's session is recorded (memory: the book's last publish).
+        if (minute >= 15 * 60 + 30 && recordedToday) return false
         return runCatching { Market.isTradingDay() }.getOrDefault(false)
     }
 
@@ -336,6 +350,8 @@ object FlowArm {
         if (com.optionslab.app.BuildConfig.GOLD || !ready() || !holding()) return
         lock.withLock {
             val b = book()
+            // The held trades' indices stay on the stream (a touch; memory only), so their index exits never go blind.
+            runCatching { KiteStream.touch(b.positions.filter { it.open }.mapNotNull { tokenOf(it.index) }) }
             val changed = runCatching { exits(b, now()) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true }
             if (changed) save(b) else publish(b)
             Unit
@@ -346,24 +362,56 @@ object FlowArm {
     suspend fun tick() {
         if (com.optionslab.app.BuildConfig.GOLD || !ready()) return
         passLock.withLock {
-            val now = now()
-            lock.withLock {
-                val b = book()
-                var changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true }
-                val trading = runCatching { Market.isTradingDay(now.toLocalDate()) }.getOrDefault(false)
-                if (trading && b.armed) {
-                    // The flow's instruments followed on the stream while it decides (a 3-minute touch, as every index arm's read).
-                    runCatching { KiteStream.touch(KiteStream.SESSION_TOKENS) }
-                    changed = runCatching { decideAll(b, now) }.getOrElse { note(b, "flow pass failed: ${it.javaClass.simpleName}"); true } || changed
-                }
-                if (trading && now.toLocalTime() >= LocalTime.of(15, 30) && now.toLocalDate().toString() !in b.recorded)
-                    changed = runCatching { record(b, now) }.getOrElse { note(b, "session record failed: ${it.javaClass.simpleName}"); false } || changed
-                lastPassMs = System.currentTimeMillis()
-                pendingNow = b.pending.isNotEmpty()
-                if (changed) save(b) else publish(b)
-                Unit
+            pass()
+            // A plan passed the flow and waits for the account guard's snapshot: read now, OUTSIDE the arm's lock (it may price other
+            // positions), so the 15-second stop check never waits behind it; then the same pass once more, every rule as before.
+            if (wantSnap) {
+                wantSnap = false
+                snapNow = runCatching { Paper.snapshot() }.getOrNull()?.let { System.currentTimeMillis() to it }
+                if (snapNow != null) pass()
             }
         }
+    }
+
+    /** The account guard's snapshot read before the lock ([tick]) for a plan waiting on it: (when, snapshot). */
+    @Volatile private var snapNow: Pair<Long, Paper.Snapshot>? = null
+    /** A plan passed the flow and needs a fresh snapshot ([take]). */
+    @Volatile private var wantSnap = false
+    private const val SNAP_FRESH_MS = 30_000L
+
+    private suspend fun pass() {
+        val now = now()
+        lock.withLock {
+            val b = book()
+            var changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true }
+            // An entry order a cancel could not take out: settled first in every pass (on or off, any day), never a second BUY beside it.
+            for ((key, id) in b.pending.toMap()) changed = runCatching { settle(b, key, id, now) }.getOrDefault(false) || changed
+            val trading = runCatching { Market.isTradingDay(now.toLocalDate()) }.getOrDefault(false)
+            val tokens = if (trading && b.armed) KiteStream.SESSION_TOKENS else emptySet()
+            follow(b, tokens)
+            if (trading && b.armed)
+                changed = runCatching { decideAll(b, now) }.getOrElse { note(b, "flow pass failed: ${it.javaClass.simpleName}"); true } || changed
+            if (trading && now.toLocalTime() >= LocalTime.of(15, 30) && now.toLocalDate().toString() !in b.recorded)
+                changed = runCatching { record(b, now) }.getOrElse { note(b, "session record failed: ${it.javaClass.simpleName}"); false } || changed
+            if (b.dirty) { b.dirty = false; changed = true }
+            recordedToday = now.toLocalDate().toString() in b.recorded
+            lastPassMs = System.currentTimeMillis()
+            pendingNow = b.pending.isNotEmpty()
+            if (changed) save(b) else publish(b)
+            Unit
+        }
+    }
+
+    /** The stream's owner name for the flow's instruments ([follow]). */
+    const val STREAM_OWNER = "flow"
+
+    /**
+     * The flow's instruments followed on Zerodha's stream (memory only): the indices of its open trades always (their index stop and
+     * target are judged on the stream, whatever the switch), and while it decides the three indices and India VIX ([extra]).
+     */
+    private fun follow(b: Book, extra: Set<Long>) {
+        val held = b.positions.filter { it.open }.mapNotNull { tokenOf(it.index) }.toSet()
+        runCatching { KiteStream.want(STREAM_OWNER, held + extra) }
     }
 
     /** TEST SEAM: the session's minutes of an index token (JVM tests only; null in the app: Zerodha's stream candles). */
@@ -376,7 +424,9 @@ object FlowArm {
         val out = ArrayList<Upstox.Bar>()
         var t = open
         while (t + 60 <= nowSec && t < open + 375 * 60) {
-            KiteStream.sessionCandles.candle(token, t)?.let { out += it.bar() }
+            // A minute the stream saw only in part (it started or dropped inside it) counts as missing - a gap - unless its ticks
+            // still span it (the first within 5 s of its start, the last within 5 s of its end): never a range from part of a minute.
+            KiteStream.sessionCandles.candle(token, t)?.takeIf { it.whole || (it.openSec <= t + 5 && it.closeSec >= t + 55) }?.let { out += it.bar() }
             t += 60
         }
         return out
@@ -405,8 +455,6 @@ object FlowArm {
         val day = now.toLocalDate()
         val sec = nowSec(now)
         var changed = false
-        // An entry order a cancel could not take out: settled first, never a second BUY beside it.
-        for ((key, id) in b.pending.toMap()) changed = settle(b, key, id, now) || changed
         val vixTok = tokenOf(FlowRules.VIX)
         val vix = vixTok?.let { FlowRules.fold5(minutes(it, day, sec), day, sec).bars }.orEmpty()
         val hist = history()
@@ -482,11 +530,11 @@ object FlowArm {
     }
 
     /** [c]'s price from Zerodha's stream (at most 5 s old; the option followed from now on), or null. Memory only. */
-    private fun optionQuote(c: Paper.Contract): com.optionslab.engine.sandbox.Quote? = runCatching {
+    private fun optionQuote(c: Paper.Contract, anyAge: Boolean = false): com.optionslab.engine.sandbox.Quote? = runCatching {
         val list = Broker.cachedInstruments() ?: return@runCatching null
         val tok = Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token?.takeIf { it > 0 } ?: return@runCatching null
         KiteStream.touch(listOf(tok))
-        val t = KiteStream.tick(tok) ?: return@runCatching null
+        val t = (if (anyAge) KiteStream.seen(tok)?.tick else KiteStream.tick(tok)) ?: return@runCatching null
         if (t.last <= 0) null else com.optionslab.engine.sandbox.Quote(t.last, bid = t.bid ?: 0.0, ask = t.ask ?: 0.0)
     }.getOrNull()
 
@@ -503,7 +551,7 @@ object FlowArm {
         fun waiting(why: String) = cand(day, u, now, FlowRules.Stage.RISK_GATE.words, v.setup.name, "passed the flow; not taken: $why", true, v = v)
         fun given(why: String) = waiting(why).copy(final = true)
         // Its BUY was being placed when the app stopped: never placed again (a fill is in the paper book, kept by the orphan watch).
-        if (key in b.ordering && key !in placing) { b.ordering.remove(key); return given("interrupted while its order was placed - not ordered again (check Paper for a fill)") }
+        if (key in b.ordering && key !in placing) { b.ordering.remove(key); b.dirty = true; return given("interrupted while its order was placed - not ordered again (check Paper for a fill)") }
         if (key in b.pending) return waiting("its entry order is still working")
         val list = listed(u)
         val exp = NtfyRules.expiryFor(list.map { it.expiry }, day, NtfyParser.Expiry.Nearest)
@@ -525,8 +573,10 @@ object FlowArm {
         val last = q.ltp
         val limit = NtfyRules.round2(NtfyRules.tickDown(last * 1.01) + 0.05)
         val stop0 = FlowRules.premiumStop(last)
-        val snap = runCatching { Paper.snapshot() }.getOrNull()
-        val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
+        val snap = snapNow?.takeIf { System.currentTimeMillis() - it.first in 0..SNAP_FRESH_MS }?.second
+            ?: run { wantSnap = true; return waiting("checking the account guard") }
+        snapNow = null
+        val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, limit), Guard.paperAccount(snap), paper = true)
         if (refusals.isNotEmpty()) return waiting("refused by the account guard: " + refusals.joinToString(" "))
         val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", 1, "LIMIT", "MIS", limit, null, day, FlowRules.OWNER, stop = stop0),
             refusals, "paper guard")
@@ -535,7 +585,7 @@ object FlowArm {
         if (!save(b)) { b.ordering.remove(key); placing.remove(key); return waiting("the book could not be saved before the order") }
         val res = try {
             Paper.place(c, "BUY", 1, "LIMIT", "MIS", limit, null, known = q, auto = FlowRules.OWNER, verdict = verdict, stop = stop0)
-        } finally { b.ordering.remove(key); placing.remove(key) }
+        } finally { b.ordering.remove(key); placing.remove(key); b.dirty = true }
         val fill = res.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill != null) return bought(b, u, v, c, res.orderId, fill.quantity, fill.price, now)
         val id = res.orderId?.takeIf { res.ok } ?: return waiting("the paper order was refused (${res.message})")
@@ -544,57 +594,74 @@ object FlowArm {
         return when {
             o == null || o.status == "cancelled" || o.status == "rejected" -> waiting("limit ${NtfyParser.num(limit)} for ${c.symbol} not filled; tried again")
             o.status == "complete" -> bought(b, u, v, c, id, o.quantity, o.averagePrice?.toDouble() ?: limit, now)
-            else -> { b.pending[key] = id; pendingNow = true; waiting("its entry order is still working") }
+            else -> {
+                b.pending[key] = id; pendingNow = true
+                // Its plan's levels kept with it (the book), for a fill that comes on a later pass.
+                b.levels[key] = Level(v.stop ?: Double.NaN, v.target ?: Double.NaN, v.score ?: 0, v.odds?.targetFirst ?: 0.0)
+                waiting("its entry order is still working")
+            }
         }
     }
 
     /** This run's own orders being placed (memory): one in [Book.ordering] but not here was interrupted by a restart. */
     private val placing: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
 
-    /** An entry order a cancel could not take out ([Book.pending]): filled, gone, or cancelled again. */
+    /** A plan's IraThinker levels and numbers, kept with an entry order still working ([Book.levels]). */
+    data class Level(val idxStop: Double, val idxTarget: Double, val score: Int, val targetFirst: Double)
+
+    /**
+     * An entry order a cancel could not take out ([Book.pending]): filled (booked as any entry, with its plan's levels), gone, or
+     * cancelled again. One from an earlier day is cancelled and dropped (never a fill booked on another day's plan).
+     */
     private suspend fun settle(b: Book, key: String, id: String, now: LocalDateTime): Boolean {
         val o = Paper.state.orders.firstOrNull { it.orderId == id }
+        val day = runCatching { LocalDate.parse(key.substringBefore('|')) }.getOrNull()
         return when {
-            o == null || o.status == "cancelled" || o.status == "rejected" -> { b.pending.remove(key); true }
+            o == null || o.status == "cancelled" || o.status == "rejected" -> { b.pending.remove(key); b.levels.remove(key); true }
             o.status == "complete" -> {
                 b.pending.remove(key)
+                val lv = b.levels.remove(key)
                 val c = Paper.contractOf(o.symbol) ?: return true
-                val prev = b.candidates[key]
+                val px = o.averagePrice?.toDouble() ?: return true
                 val u = key.substringAfter('|')
-                // The plan's index levels are the candidate's; the levels are read again from the day's flow when unknown.
-                val pos = Pos(u, c.symbol, c.right.name, (o.quantity / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), o.quantity,
-                    o.averagePrice?.toDouble() ?: return true, now, id, FlowRules.premiumStop(o.averagePrice?.toDouble() ?: 0.0), null,
-                    lastLevels[key]?.first ?: Double.NaN, lastLevels[key]?.second ?: Double.NaN, prev?.score ?: 0, prev?.targetFirst ?: 0.0)
-                restStop(b, pos, c)
-                if (prev != null) b.candidates[key] = prev.copy(stage = TAKEN, why = "taken: ${c.symbol} (a late fill of its entry order) · paper", final = true)
+                val pos = entered(b, u, c, id, o.quantity, px, now, lv ?: Level(Double.NaN, Double.NaN, 0, 0.0), "a late fill of its entry order")
+                b.candidates[key]?.let { prev -> b.candidates[key] = prev.copy(stage = TAKEN, why = "taken: ${c.symbol} ${pos.qty} @ ${NtfyParser.num(px)} (a late fill of its entry order) · paper", final = true) }
                 true
+            }
+            day != null && day.isBefore(now.toLocalDate()) -> {
+                runCatching { Paper.cancel(id, "stale_entry") }
+                b.pending.remove(key); b.levels.remove(key)
+                note(b, "an entry order from $day was still working: cancelled, never booked today"); true
             }
             else -> { runCatching { Paper.cancel(id, "unfilled_limit") }; false }
         }
     }
 
-    /** The plan's index stop and 2R target by "day|index", for an entry order that fills on a later pass (memory). */
-    private val lastLevels = java.util.concurrent.ConcurrentHashMap<String, Pair<Double, Double>>()
-
-    /** [qty] of [c] bought at [price] for [u]'s plan [v]: its stop resting as a paper SELL SL-M, its live path told. */
+    /** [qty] of [c] bought at [price] for [u]'s plan [v]: booked ([entered]) and the day's candidate says so. */
     private suspend fun bought(b: Book, u: String, v: FlowRules.Verdict, c: Paper.Contract, orderId: String?, qty: Int, price: Double, now: LocalDateTime): Candidate {
-        val day = now.toLocalDate()
-        lastLevels["$day|$u"] = (v.stop ?: Double.NaN) to (v.target ?: Double.NaN)
+        entered(b, u, c, orderId, qty, price, now, Level(v.stop ?: Double.NaN, v.target ?: Double.NaN, v.score ?: 0, v.odds?.targetFirst ?: 0.0), "IraScore ${v.score}")
+        return cand(now.toLocalDate(), u, now, TAKEN, v.setup.name, "taken: ${c.symbol} $qty @ ${NtfyParser.num(price)} · paper · ${v.why}", true, final = true, v = v)
+    }
+
+    /**
+     * A filled entry booked: its ticket labelled, its premium stop resting as a paper SELL SL-M, the time machine's shadow check, its
+     * live path told ([ArmLive]; off until Boss switches it on), the diary's line. [lv] the plan's IraThinker levels (NaN: unknown -
+     * then only the premium stop and the 15:15 square-off close it).
+     */
+    private suspend fun entered(b: Book, u: String, c: Paper.Contract, orderId: String?, qty: Int, price: Double, now: LocalDateTime, lv: Level, said: String): Pos {
         orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${FlowRules.OWNER} · ${FlowRules.NOT_PROVEN} · entry") } }
         val lots = (qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
-        val pos0 = Pos(u, c.symbol, c.right.name, lots, qty, price, now, orderId, FlowRules.premiumStop(price), null, v.stop ?: Double.NaN,
-            v.target ?: Double.NaN, v.score ?: 0, v.odds?.targetFirst ?: 0.0, charges = chargesOf(orderId))
-        val pos = restStop(b, pos0, c)
-        val entry = v.entry ?: 0.0
-        // The time machine's reality check (shadow only; background): IraThinker's index stop and 2R target, out by 15:15.
+        val pos = restStop(b, Pos(u, c.symbol, c.right.name, lots, qty, price, now, orderId, FlowRules.premiumStop(price), null, lv.idxStop,
+            lv.idxTarget, lv.score, lv.targetFirst, charges = chargesOf(orderId)), c)
+        val spot = runCatching { spot(u) }.getOrNull()
+        // The time machine's reality check (shadow only; background): IraThinker's index stop and 2R target as points, out by 15:15.
         runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(FlowRules.SOURCE, FlowRules.OWNER, pos.ref, u, if (pos.put) -1 else 1, now,
-            v.stop?.let { kotlin.math.abs(it - entry) }?.takeIf { it > 0 }, v.target?.let { kotlin.math.abs(entry - it) }?.takeIf { it > 0 },
-            exitAt = NtfyRules.SQ)) }
-        // Its live path ([ArmLive], off until Boss switches it on): the same option and lot, a LIMIT 1% over the fill at most, the stop resting.
+            spot?.let { s -> kotlin.math.abs(lv.idxStop - s) }?.takeIf { it.isFinite() && it > 0 },
+            spot?.let { s -> kotlin.math.abs(s - lv.idxTarget) }?.takeIf { it.isFinite() && it > 0 }, exitAt = NtfyRules.SQ)) }
         runCatching { ArmLive.entered(ArmLive.Ask(FlowRules.SOURCE, pos.ref, c, 1, qty, price, stop = pos.stop, limit = price * 1.01)) }
         note(b, "$u: bought ${c.symbol} $qty @ ${NtfyParser.num(price)} · paper · premium stop ${NtfyParser.num(pos.stop)} resting · index stop " +
-            "${NtfyParser.num(pos.idxStop)}, target ${NtfyParser.num(pos.idxTarget)} (2R) · IraScore ${v.score} · ${FlowRules.NOT_PROVEN}")
-        return cand(day, u, now, TAKEN, v.setup.name, "taken: ${c.symbol} $qty @ ${NtfyParser.num(price)} · paper · ${v.why}", true, final = true, v = v)
+            "${NtfyParser.num(pos.idxStop)}, target ${NtfyParser.num(pos.idxTarget)} (2R) · $said · ${FlowRules.NOT_PROVEN}")
+        return pos
     }
 
     /** [p] added to the book with its premium stop resting in the paper book (a SELL SL-M). */
@@ -669,7 +736,8 @@ object FlowArm {
             val o = Paper.state.orders.firstOrNull { it.orderId == id }
             if (o != null && o.status == "complete") return closed(p, o.averagePrice?.toDouble() ?: p.stop, o.updateTimestamp, "premium stop", chargesOf(id))
         }
-        val r = Paper.place(c, "SELL", p.lots, "MARKET", "MIS", null, null, known = optionQuote(c), exit = true)
+        // Zerodha's price for the sale: the stream's fresh tick, else its last one (the paper book judges its age, and may ask Zerodha).
+        val r = Paper.place(c, "SELL", p.lots, "MARKET", "MIS", null, null, known = optionQuote(c) ?: optionQuote(c, anyAge = true), exit = true)
         val f = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull() ?: run {
             if (!r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
                 val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
@@ -731,7 +799,7 @@ object FlowArm {
         synchronized(written) {
             wipes++
             cache = null; sessions = null; _view.value = View(); testListed = null; testSpot = null; testMinutes = null
-            pendingNow = false; lastPassMs = 0L; placing.clear(); lastLevels.clear()
+            pendingNow = false; recordedToday = false; lastPassMs = 0L; placing.clear(); snapNow = null; wantSnap = false
             written.forget(); histWritten.forget()
         }
         runCatching { com.optionslab.ira.ArmExits.set(EXITS_KEY, emptyList()) }

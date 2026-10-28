@@ -26,7 +26,9 @@ class LiveCandles(private val keepMinutes: Int = KEEP_MINUTES) {
 
     /** One candle; [whole]: every tick of the minute was seen (or the feed gave it). */
     data class Candle(val startSec: Long, val open: Double, val high: Double, val low: Double, val close: Double,
-                      val whole: Boolean, val fromFeed: Boolean = false) {
+                      val whole: Boolean, val fromFeed: Boolean = false,
+                      /** 28 Oct: the exchange stamps of its first and last tick (a feed minute: its start and end). */
+                      val openSec: Long = 0L, val closeSec: Long = 0L) {
         fun bar(): Upstox.Bar = Upstox.Bar(startSec, open, high, low, close, 0, 0)
     }
 
@@ -155,7 +157,7 @@ class LiveCandles(private val keepMinutes: Int = KEEP_MINUTES) {
         while (s.minutes.size > keepMinutes) s.minutes.pollFirstEntry()
     }
 
-    private fun freeze(c: Mut) = Candle(c.startSec, c.open, c.high, c.low, c.close, c.whole, c.fromFeed)
+    private fun freeze(c: Mut) = Candle(c.startSec, c.open, c.high, c.low, c.close, c.whole, c.fromFeed, c.openSec, c.closeSec)
 
     /**
      * Memory (audit, 14 Oct 2026, item 7): the candles of every instrument whose latest tick is more than [idleSec] before

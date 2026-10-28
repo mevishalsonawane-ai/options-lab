@@ -274,9 +274,22 @@ class FlowArmTest : RobolectricTest() {
         assertTrue(Paper.state.orders.isEmpty())
     }
 
+    @Test fun aMinuteSeenOnlyInPartIsAGap() {
+        history()
+        // The stream (re)started at 09:15:40: its 09:15 minute lost its first 40 seconds - never a range from part of a minute.
+        val s0 = sec(day, 9, 15)
+        KiteStream.feedForTest(listOf(40L to 25_060.0, 58L to 25_060.0).map { (ds, px) -> KiteTicks.Tick(nifty, px, close = 25_100.0, exchangeTime = s0 + ds) })
+        stream(LocalTime.of(9, 41), skip = LocalTime.of(9, 15))
+        option(peToken, 100.0)
+        tick(LocalTime.of(9, 41), 2)
+        val c = view().candidates.single { it.index == "NIFTY" }
+        assertTrue(c.why, c.why.contains("gap in Zerodha's minutes at 09:15"))
+        assertTrue(view().open.isEmpty())
+    }
+
     @Test fun marketClosedAndOffNeverWantAPass() {
         assertFalse("before 09:14", FlowArm.wantsPass(9 * 60))
-        assertFalse("after the record", FlowArm.wantsPass(15 * 60 + 40))
+        assertFalse("after the stream's hours", FlowArm.wantsPass(15 * 60 + 45))
         runBlocking { FlowArm.setArmed(false) }
         assertFalse("off with nothing held", FlowArm.wantsPass(10 * 60))
         // A holiday: no pass decides anything.
@@ -346,6 +359,7 @@ class FlowArmTest : RobolectricTest() {
         runBlocking { FlowArm.tick() }
         assertTrue(view().log.toString(), view().log.any { it.contains("recorded for the Time Machine") })
         assertEquals(1, view().sessions)
+        assertFalse("recorded: no more passes after the close", FlowArm.wantsPass(15 * 60 + 31))
         // Once a day.
         runBlocking { FlowArm.tick() }
         assertEquals(1, view().log.count { it.contains("recorded for the Time Machine") })

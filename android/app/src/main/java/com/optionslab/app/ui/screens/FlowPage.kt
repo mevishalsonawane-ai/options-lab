@@ -187,7 +187,10 @@ fun FlowPage(@Suppress("UNUSED_PARAMETER") model: AppModel) {
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { FlowArm.refresh() } } }
     val scope = rememberCoroutineScope()
     var said by remember { mutableStateOf<String?>(null) }
-    val facts = remember(version, status, v) { streamFacts() }
+    // Read off the main thread (the market's day may read the holiday calendar's file once): memory, never the network.
+    val facts by androidx.compose.runtime.produceState(FlowStreamFacts(false, status, 0, null, 0, false), version, status, v) {
+        value = withContext(Dispatchers.IO) { streamFacts() }
+    }
     FlowContent(flowPageState(v, facts, locked), animate, said,
         onArm = { on -> scope.launch { said = withContext(Dispatchers.IO) { runCatching { FlowArm.setArmed(on) }.getOrElse { "Could not switch it (${it.javaClass.simpleName})." } } } })
 }
