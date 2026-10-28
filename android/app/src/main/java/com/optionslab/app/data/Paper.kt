@@ -499,10 +499,10 @@ object Paper {
         if (token == null) kiteTokens.remove(symbol) else kiteTokens[symbol] = token
     }
 
-    /** TEST SEAM (JVM tests only): forget the 1-minute candles [quote] kept, as a new process starts without them. */
+    /** TEST SEAM (JVM tests only): forget the 1-minute candles [quote] kept (and [restBook]'s read times), as a new process starts without them. */
     internal fun forgetCandlesForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the candle seam exists only in debug builds" }
-        candleBars.clear(); gapInFlight.clear(); gapReadFrom.clear()
+        candleBars.clear(); gapInFlight.clear(); gapReadFrom.clear(); restBookAt.clear()
     }
 
     private fun kiteToken(c: Contract): Long? {
@@ -622,6 +622,13 @@ object Paper {
         return q.ask.takeIf { it > 0 }
     }
 
+    /** Whether [c]'s entry would be priced on the book alone: [known] has no last price, or the stream's tick has none. Memory only. */
+    private fun bookOnlyNow(c: Contract, known: Quote?): Boolean {
+        if (known?.noLast == true) return true
+        val tok = kiteTokens[c.symbol]?.takeIf { it > 0 } ?: return false
+        return KiteStream.tick(tok)?.let { it.last <= 0 } == true
+    }
+
     /** Why an entry may not fill on [q], a quote with no last price: the book's own reason, or Boss's switch off; null: it may. */
     private fun bookEntryRefusal(c: Contract, q: Quote): String? {
         com.optionslab.ira.BookPrice.judge(q.bid, q.ask).why?.let { return it }
@@ -636,12 +643,23 @@ object Paper {
      */
     private suspend fun restBook(c: Contract): Quote? {
         if (c.isMcx) return null
+        // 28 Oct, review: only while the market is open (no pre-open book), and one Zerodha read per symbol per [REST_BOOK_MS] at
+        // most: a held untraded option priced every pass never piles quote calls up (Zerodha's rate limit).
+        if (!runCatching { Market.isOpen() }.getOrDefault(false)) { noPrice(c.symbol, "no trade today and the market is closed"); return null }
+        val nowMs = quoteClock()
+        val last = restBookAt[c.symbol]
+        if (last != null && nowMs - last in 0 until REST_BOOK_MS) { noPrice(c.symbol, "no trade today; its book was read moments ago"); return null }
+        restBookAt[c.symbol] = nowMs
         if (!Broker.loggedIn) { noPrice(c.symbol, "no trade today and no Zerodha session to read its book"); return null }
         val key = zerodhaKey(c) ?: run { noPrice(c.symbol, "no trade today and not found in Zerodha's list"); return null }
         val r = Broker.within(FILL_FRESH_MS) { Broker.quotes(listOf(key))[key] }
             ?: run { noPrice(c.symbol, "no trade today and Zerodha's quote did not answer"); return null }
         return bookQuote(c, r.bid, r.ask)?.also { remember(c.symbol, it) }
     }
+
+    /** When [restBook] last read each symbol from Zerodha (market clock, memory only). */
+    private val restBookAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val REST_BOOK_MS = 5_000L
 
     /** When each symbol's paper entry last filled on the book alone (memory only): [ArmLive] never mirrors such a fill live. */
     private val bookFills = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -933,6 +951,14 @@ object Paper {
             // Zerodha's quote is fresh: everything may fill on it. The candle's worse side is for exits only.
             if (x.worseSide) working.filter { it.symbol == sym && opens(sym, it.action) }.forEach { hold += it.orderId }
         }
+        // 28 Oct, review: a resting ENTRY never fills on a quote with no last price unless an entry may fill there now (a sane book,
+        // Boss's switch on: [bookEntryRefusal]) - so the switch's Undo and the spread rule hold for orders already resting. Exits are
+        // never held by it.
+        for (o in working) {
+            val c = book().contracts[o.symbol] ?: continue
+            val bq = out[Sandbox.key(o.symbol, c.exchange)]?.takeIf { it.noLast } ?: continue
+            if (opens(o.symbol, o.action) && bookEntryRefusal(c, bq) != null) hold += o.orderId
+        }
         return ExitPrices(out, hold, notes)
     }
 
@@ -973,6 +999,9 @@ object Paper {
         // cleared, today. Refusing only lowers risk; an order placed with no verdict (a stop or target resting, an exit) is as before.
         if (verdict != null) OrderVerdicts.refusal(verdict, OrderVerdicts.paperFields(c, action, lots, priceType, product, price, trigger, Market.today(),
                 verdict.fields.source, stop, target))?.let { return Result(false, "Not sent: $it", emptyList()) }
+        // 28 Oct, review: an entry priced on the live book alone (no last price) is never mirrored live ([ArmLive.entered]), so the
+        // paper cap and Boss's rules below apply to it in full, never "logged only: this entry may also go live". Memory only.
+        val mirrorTo = if (runCatching { bookOnlyNow(c, known) }.getOrDefault(false)) ExposureCapHost.NO_LIVE else mirror
         // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
         // exchange stamp of this contract's last stream tick, when it streams.
         // 16 Oct (Boss's diagnostics: "Prices were up to 3.6 s old when used"): a fill never uses a quote older than
@@ -988,7 +1017,7 @@ object Paper {
             val why = d?.let { capCheck(book(), it, auto) }
             // 19 Oct review: while this entry could also be mirrored live, the cap only logs (a refusal here would skip the live
             // mirror too); the live door applies the cap to the live order itself.
-            if (d != null && why != null && ExposureCapHost.liveMirrorPossible(mirror)) {
+            if (d != null && why != null && ExposureCapHost.liveMirrorPossible(mirrorTo)) {
                 runCatching { ExposureCapHost.refused(auto, c.symbol, d, known?.ltp, live = false, applied = false,
                     why = "$why (logged only: this entry may also go live)") }
             } else if (d != null && why != null) {
@@ -1004,7 +1033,7 @@ object Paper {
         if (bossEntry) {
             val d = com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name)
             val bets = if (d == null) emptyList() else runCatching { bossBets(book()) }.getOrDefault(emptyList())
-            BossRiskHost.paperEarly(auto!!, c.symbol, c.underlying, d, bets, mirror)?.let { why ->
+            BossRiskHost.paperEarly(auto!!, c.symbol, c.underlying, d, bets, mirrorTo)?.let { why ->
                 return Result(false, why, emptyList(), capped = true, rule = BossRiskHost.Rule.entries.firstOrNull { r -> why.contains(r.words) })
             }
         }
@@ -1025,6 +1054,10 @@ object Paper {
         // refused with the plain reason, nothing placed. An exit is never held back by it (it sells at the bid).
         val onBook = read?.noLast == true && runCatching { opens(c.symbol, action) }.getOrDefault(true)
         if (onBook) bookEntryRefusal(c, read!!)?.let { return Result(false, "${c.symbol}: $it", emptyList()) }
+        // (Review: the price turned out to be the book's only now, after the rules above only logged for a possible live copy:
+        // not filled this time - the next try applies them in full. Refusing only lowers risk.)
+        if (onBook && auto != null && mirrorTo != ExposureCapHost.NO_LIVE && ExposureCapHost.liveMirrorPossible(mirrorTo))
+            return Result(false, "${c.symbol}: priced on its book alone just now; tried again on the next pass", emptyList())
         // A paper entry never fills on a stale candle close (fix 4): refused with the reason, nothing placed. A live book read
         // just now is not a candle close (28 Oct).
         if (!onBook) staleEntry(c, action, priceType)?.let { return Result(false, it, emptyList()) }
@@ -1046,7 +1079,7 @@ object Paper {
         var sized: BossRiskHost.Rule? = null
         if (bossEntry) {
             val px = (if (priceType.equals("LIMIT", true)) price else null) ?: q?.ask?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 }
-            val v = BossRiskHost.paperSize(auto!!, c.symbol, lots, c.lotSize, px, stop, runCatching { book().capital.toDouble() }.getOrDefault(Double.NaN), mirror)
+            val v = BossRiskHost.paperSize(auto!!, c.symbol, lots, c.lotSize, px, stop, runCatching { book().capital.toDouble() }.getOrDefault(Double.NaN), mirrorTo)
             v.refusal?.let { return Result(false, it, emptyList(), capped = true, rule = v.rule) }
             if (v.lots in 1 until lots) { placeLots = v.lots; sized = v.rule }
             // Only on a quote with a book (the stream's): a candle price has none, and "no book" there says nothing about the market.
@@ -1058,7 +1091,7 @@ object Paper {
         // a paper position the cap must still see once Live is off (before, it was never recorded and the cap undercounted).
         val capWay = if (auto != null && action.equals("BUY", true) && entry)
             com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name) else null
-        val capDir = capWay?.takeIf { !ExposureCapHost.liveMirrorPossible(mirror) }
+        val capDir = capWay?.takeIf { !ExposureCapHost.liveMirrorPossible(mirrorTo) }
         val r = locked {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()
@@ -1367,6 +1400,11 @@ object Paper {
             }
             if (s != b.state) saveMarked(b.copy(state = s, why = if (own.isEmpty()) b.why else noted(b.why, own)))
             noteStale(fill, events)
+            // 28 Oct, review: a resting buy filled on a quote with no last price is a book fill too: never mirrored live.
+            runCatching {
+                events.filterIsInstance<SandboxEvent.Fill>().filter { it.action.equals("BUY", true) && fill.quotes[Sandbox.key(it.symbol, it.exchange)]?.noLast == true }
+                    .forEach { bookFills[it.symbol] = quoteClock() }
+            }
             return events
         }
     }

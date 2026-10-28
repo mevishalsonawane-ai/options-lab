@@ -1987,7 +1987,7 @@ object OrbArms {
         // (25 Oct: the verdict's day is the market clock's, the one the paper book's door reads back - so the arm's own test clock on another day never refuses an entry.)
         val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", 1, "MARKET", "MIS", null, null, Market.today(), arm.source), refusals, "paper guard")
         val entry = buyPaperEntry(arm.label, c, 1, q, ownerOf(arm), mayRetryPrice(b), verdict = verdict) { nq ->
-            val again = nq.ltp * 1.0005
+            val again = (Paper.entryPrice(c, nq) ?: nq.ltp) * 1.0005
             if (OrbRules.stopTrigger(again, pp.stopPoints) == null) "refused: premium %.2f is at or below %s, a %s-point stop has no level"
                 .format(Locale.ENGLISH, again, pts(pp.stopPoints), pts(pp.stopPoints))
             // 22 Oct, merge review: the one index, one side rule again too (another arm may have entered on its own lock meanwhile).

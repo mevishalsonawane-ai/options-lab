@@ -739,7 +739,8 @@ class Sandbox(
                     // when the minute traded 237.80-246.65).
                     else if (far != null) executeOrder(orderId, far, usedBook = true, quote = cached)
                     // Otherwise a marketable LIMIT fills at the LTP (price improvement), as does a triggered stop.
-                    else if (ltp.signum() > 0) executeOrder(orderId, ltp, quote = cached)
+                    // (28 Oct: on a quote with no last price that side is the book's own: no second spread on top.)
+                    else if (ltp.signum() > 0) executeOrder(orderId, ltp, usedBook = cached.noLast, quote = cached)
                 }
             }
             return OrderResult(true, 200, orderId)
@@ -844,7 +845,9 @@ class Sandbox(
                 "SL-M" -> if ((buy && ltp >= o.triggerPrice!!) || (!buy && ltp <= o.triggerPrice!!)) ltp else null
                 else -> null
             }
-            val usedBook = o.priceType == "MARKET" && (if (buy) ask.signum() > 0 else bid.signum() > 0)
+            val usedBook = (o.priceType == "MARKET" && (if (buy) ask.signum() > 0 else bid.signum() > 0)) ||
+                // 28 Oct: an SL released on the book's own side (no last price) fills there with no second spread.
+                (q.noLast && o.priceType == "SL")
             if (fill != null) executeOrder(orderId, fill, usedBook, q, passive = o.priceType == "LIMIT")
         }
 

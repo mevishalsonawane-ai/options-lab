@@ -79,6 +79,24 @@ class NoLastPriceTest {
         assertEquals(0, s.positions.single().quantity)
     }
 
+    @Test fun aStopPlacedUnderTheBidFillsAtTheBidWithNoSecondSpread() {
+        var s = sb.newState(at("09:15"))
+        s = sb.place(s, req("BUY"), book(149.5, 150.0), at("09:20")).state
+        // Placed while the bid (130) is already under its 135 trigger: filled at once, at the bid itself.
+        s = sb.place(s, req("SELL", "SL-M", trigger = 135.0), book(130.0, 131.0), at("09:30")).state
+        assertEquals(d("130.00"), last(s))
+        assertEquals(0, s.positions.single().quantity)
+    }
+
+    @Test fun aReleasedStopLimitOnTheBookFillsAtTheBid() {
+        var s = sb.newState(at("09:15"))
+        s = sb.place(s, req("BUY"), book(149.5, 150.0), at("09:20")).state
+        s = sb.place(s, req("SELL", "SL", price = 130.0, trigger = 135.0), book(149.5, 150.0), at("09:20")).state
+        // Triggered at bid 134 (released as a limit at 130): it fills at that bid, no extra spread.
+        s = sb.onQuotes(s, mapOf(key to book(134.0, 134.5)), at("09:30")).state
+        assertEquals(d("134.00"), last(s))
+    }
+
     @Test fun aTargetLimitSellFillsOnlyWhenTheBidIsThroughIt() {
         var s = sb.newState(at("09:15"))
         s = sb.place(s, req("BUY"), book(149.5, 150.0), at("09:20")).state

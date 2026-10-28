@@ -168,6 +168,10 @@ class PaperBookPriceTest : RobolectricTest() {
         tick(token, 0.0, 149.0, 150.0, atMs = System.currentTimeMillis() - 30_000)
         assertNull(runBlocking { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) })
         assertEquals("no trade today and Zerodha's quote did not answer", Paper.noPriceWhy(c.symbol))
+        // A second try within 5 s does not call Zerodha again (its rate limit): said so.
+        assertNull(runBlocking { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) })
+        assertEquals("no trade today; its book was read moments ago", Paper.noPriceWhy(c.symbol))
+        Paper.forgetCandlesForTest()
         // Zerodha's quote answers with a live book (no last price): read now, priced on it.
         kite.quote("NFO:" + kiteSym("FINNIFTY", 24_450, Right.PE), 0.0, 149.0, 150.0)
         val q = runBlocking { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) } ?: throw AssertionError("no price")
@@ -185,6 +189,30 @@ class PaperBookPriceTest : RobolectricTest() {
         assertEquals("no last price, and paper entries on the live book are switched off", Paper.noPriceWhy(c.symbol))
         assertFalse(buy(c, q).ok)
         assertEquals(0, held(c))
+    }
+
+    /** Review: a resting entry never fills on a book an entry may not fill on (wide, or the switch off); on a sane one it does. */
+    @Test fun aRestingBuyLimitWaitsOnARefusedBookAndFillsOnASaneOne() {
+        val (c, token) = fin(24_300, Right.CE, token = 61_000_000L + 24_300 + 100_000)
+        tick(token, 100.0, 99.0, 101.0)
+        val r = runBlocking { Paper.place(c, "BUY", 1, "LIMIT", "NRML", 95.0, null) }
+        assertTrue(r.message, r.ok)
+        val id = r.orderId!!
+        // No last price, a wide book whose ask is under the limit: held, never filled there.
+        tick(token, 0.0, 85.0, 94.0)
+        runBlocking { Paper.tick() }
+        assertEquals("open", Paper.state.orders.first { it.orderId == id }.status)
+        // With the switch off, a sane book holds it too (the timeline's Undo holds for orders already resting).
+        BookPriceHost.setForTest(false)
+        tick(token, 0.0, 93.9, 94.0)
+        runBlocking { Paper.tick() }
+        assertEquals("open", Paper.state.orders.first { it.orderId == id }.status)
+        // Switch on, a sane book with the ask through the limit: filled at the limit, and noted as a book fill (never mirrored live).
+        BookPriceHost.setForTest(true)
+        runBlocking { Paper.tick() }
+        assertEquals("complete", Paper.state.orders.first { it.orderId == id }.status)
+        assertEquals(65, held(c))
+        assertTrue(Paper.filledOnBook(c.symbol))
     }
 
     // ---- exits (open positions first: never weakened) -------------------------------------------------------------------------
