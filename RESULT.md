@@ -1,3 +1,10 @@
+# R129 result (28 Oct 2026): the "Gamma-Driven Hero-to-Zero" expiry strategy, as pasted
+1. On 917 expiry days (five indices, Aug 2021 - Oct 2026) the stated rules lined up only 2-6 times; every version lost (-Rs 210 to -Rs 900 a trade), none reached 4x.
+2. The main blocker: the heaviest OI wall sits at the money and has a 3x call/put imbalance only 14-25% of the time; then VIX, then no breakout.
+3. Its claim fails: after the index broke a 3x wall (22 days), it moved -6 points the wall's way to 15:20 (55% right): no blast.
+4. As written its trigger reads the option's own chart (not the default; labelled); the index-signal version did no better.
+5. Nothing passes; nothing goes on paper. Details: research/HUNT_R129_GAMMA_EXPIRY.md.
+
 # R128 result (28 Oct 2026): what we were missing, fixed and tested (option buying only)
 1. Three reviews (internet research, the repo's book/PDF studies, a code audit) agreed: we never compared our move forecast with the option's PRICE, and our fixed exits capped the big wins a bought option needs.
 2. Options here price about twice the intraday move that actually comes, so even zero-cost straddle buyers lose to time decay (-Rs 87 an hour); costs double it (net -Rs 260, 4,194 straddles).

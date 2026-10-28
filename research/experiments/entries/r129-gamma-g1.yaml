@@ -1,0 +1,28 @@
+id: r129-gamma-g1
+title: 'R129 G1: gamma hero-to-zero expiry rule, trigger on option, strict strike, cap 15:25'
+family: option-structure
+date: '2026-10-28'
+doc: research/HUNT_R129_GAMMA_EXPIRY.md
+data_version: Drive lake copied 28 Oct 2026 (index_1m, options_rolling_1m WEEK with per-strike OI, equity_1m), lakeclean steps 1-3
+period:
+  design: '2021-08-01..2026-10-19 (no fitting: the pasted rule tested once on all expiry days, by year)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r129_gamma_expiry/PREREG.md
+holdout_read: null
+features:
+- 'signal source: the option''s own 1-minute premium chart (NOT the default; labelled); context: India VIX > 12, the 13:45 OI wall with a 3x call/put imbalance, the 13:15-13:59 index box
+  broken through the wall by a 5-minute close 14:00-15:00 beyond the TWAP, heavyweights beyond their VWAP; buys the ATM+1 CE /
+  ATM-1 PE at Rs 15-30'
+hypothesis: A crossed 3x OI wall on expiry afternoon brings a short-covering / unwinding blast that a cheap OTM option catches (4x)
+model_or_rule: research/hunt/r129_gamma_expiry/r129.py
+settings: PREREG.md section 3-4 (G1)
+variants_tried: 6
+verdict: rejected
+results:
+  summary: '917 expiry days; the rule fired 2 times in five years (BANKNIFTY 1, FINNIFTY 1): win 50%, avg net Rs -210, total Rs -421; 4x reached 0 times; every exit a Supertrend flip; twin p 0.62, q 0.99. Fails n, net, years, q. Too few trades to judge anything but that the stated filters almost never align.'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots
