@@ -14,17 +14,17 @@ instruments:
 - MIDCPNIFTY
 - SENSEX
 prereg: research/hunt/r131_ict_ten/PREREG.md
-holdout_read: '2026-10-29'
+holdout_read: true
 features:
 - 'signal source: the index spot (wick-based swings, sweeps, CHoCH, FVG, CISD, order blocks, fib levels); buys the ATM option
   of the nearest non-expiry-day expiry; stops and targets on index wicks'
 hypothesis: 'Boss''s ICT video (29 Oct): S9 Breaker Block as stated makes money on index options'
 model_or_rule: research/hunt/r131_ict_ten/r131.py
 settings: PREREG.md S9-V3; 1 lot at today's lots; one trade at a time per index
-variants_tried: 30
+variants_tried: 39
 verdict: rejected
 results:
   summary: 'design 1780 trades, win 46%, avg net Rs -178 (2x slippage Rs -199), total Rs -316,266, max drawdown Rs -321,382;
-    p vs random twins 1.000, BH q (30 variants) 1.000; index points -1.2 a trade. Holdout (read once) 236 trades, win 49%,
+    p vs random twins 1.000, BH q (39 variants) 1.000; index points -1.2 a trade. Holdout (read once) 236 trades, win 49%,
     avg net Rs 39, total Rs 9,142. Years positive 2022-26: 0 of 5. Fails: net_pos, folds, q, account.'
   costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

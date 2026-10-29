@@ -14,17 +14,17 @@ instruments:
 - MIDCPNIFTY
 - SENSEX
 prereg: research/hunt/r131_ict_ten/PREREG.md
-holdout_read: '2026-10-29'
+holdout_read: true
 features:
 - 'signal source: the index spot (wick-based swings, sweeps, CHoCH, FVG, CISD, order blocks, fib levels); buys the ATM option
   of the nearest non-expiry-day expiry; stops and targets on index wicks'
 hypothesis: 'Boss''s ICT video (29 Oct): S1 Silver Bullet as stated makes money on index options'
 model_or_rule: research/hunt/r131_ict_ten/r131.py
 settings: PREREG.md S1-V1; 1 lot at today's lots; one trade at a time per index
-variants_tried: 30
+variants_tried: 39
 verdict: rejected
 results:
   summary: 'design 920 trades, win 52%, avg net Rs -166 (2x slippage Rs -186), total Rs -152,661, max drawdown Rs -193,584;
-    p vs random twins 1.000, BH q (30 variants) 1.000; index points +2.7 a trade. Holdout (read once) 122 trades, win 56%,
+    p vs random twins 1.000, BH q (39 variants) 1.000; index points +2.7 a trade. Holdout (read once) 122 trades, win 56%,
     avg net Rs 36, total Rs 4,427. Years positive 2022-26: 0 of 5. Fails: net_pos, folds, q, account.'
   costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
