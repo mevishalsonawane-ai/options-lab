@@ -415,10 +415,11 @@ object Diag {
         (runCatching { PayoutWatch.line() }.getOrElse { "Payout-aware drawdown: could not read" }) + "\n"
 
     /** The MCX paper arms' line and NR7 crude's record-only line (21 Oct). Its own function: the report's one is near the compiler's limit. */
-    /** IraThinker's flow's line and S5 Trail's (its net hidden), each "could not read" on a failure. Memory only. */
+    /** IraThinker's flow's line, S5 Trail's and CISD + network's with its forward record (nets hidden), each "could not read" on a failure. Memory only. */
     private fun lateArmLines(): String =
         runCatching { FlowArm.diagLine() }.getOrElse { "IraThinker's flow: could not read" } + "\n" +
-            runCatching { S5Arm.diagLine(hideNet = true) }.getOrElse { "S5 Trail: could not read" } + "\n"
+            runCatching { S5Arm.diagLine(hideNet = true) }.getOrElse { "S5 Trail: could not read" } + "\n" +
+            runCatching { CisdArm.diagLine(hideNet = true) }.getOrElse { "CISD + network: could not read" } + "\n"
 
     private fun mcxArmLines(): String =
         (runCatching { McxPaperArms.diagLine() }.getOrElse { "MCX paper arms: could not read" }) + "\n" +

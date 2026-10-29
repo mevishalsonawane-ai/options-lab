@@ -3486,6 +3486,18 @@ object IraHub {
             }
             return true
         }
+        // 29 Oct: "how is cisd doing" ([com.optionslab.ira.CisdTalk]): CISD + network's day - each setup, taken or why not, what is
+        // held - always "failed gates, Boss's exception". Boss's trades, so never on a locked phone; reads only. (Not in IraGoldAlgo.)
+        val cisdAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null &&
+            parsed.command == null && runCatching { com.optionslab.ira.CisdTalk.asked(q) }.getOrDefault(false)
+        if (cisdAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.CisdTalk.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.CisdArm.talk() }.getOrElse { "I could not read CISD + network just now, Boss." })
+            }
+            return true
+        }
         // 16 Oct (Boss: "if the trend changes, sell the orders"; research R63): "has the trend turned on my trades?", "trend watch"
         // ([com.optionslab.ira.TrendTalk], [com.optionslab.app.data.TrendWatchHost.talk]): each turn today and what is watched now,
         // from the Trend watch's own log - positions and premiums, so never on a locked phone. Read only: nothing is sold here.

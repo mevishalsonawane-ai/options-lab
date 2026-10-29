@@ -34,6 +34,8 @@ object Held {
         val flow: Boolean = false,
         /** 28 Oct: S5 Trail's paper trades. */
         val s5: Boolean = false,
+        /** 29 Oct: CISD + network's paper trades. */
+        val cisd: Boolean = false,
         val night: Boolean = false,
         val vixDiv: Boolean = false,
         val mcxArms: Boolean = false,
@@ -55,6 +57,7 @@ object Held {
         "ntfy alerts" to s.signal,
         "IraThinker's flow" to s.flow,
         "S5 Trail" to s.s5,
+        "CISD + network" to s.cisd,
         "Night (R3)" to s.night,
         "VIX divergence" to s.vixDiv,
         "MCX arms" to s.mcxArms,

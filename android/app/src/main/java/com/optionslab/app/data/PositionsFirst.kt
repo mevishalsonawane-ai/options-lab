@@ -138,6 +138,8 @@ object PositionsFirst {
         // 28 Oct: IraThinker's flow on paper (its own book) - restored here, with its resting stops, first.
         one("IraThinker's flow") { FlowArm.refresh().open.isNotEmpty() }
         one("S5 Trail") { S5Arm.refresh().open.isNotEmpty() }
+        // 29 Oct: CISD + network on paper (its own book) - restored here, with its index stop and lock, first.
+        one("CISD + network") { CisdArm.refresh().open.isNotEmpty() }
         one("ticket") { Ledger.openTicket() != null }
         one("MCX live") { McxMarket.liveExposureOrThrow() }
         // Jarvis's own paper trades (review, 14 Oct; the fast exits' minute lane counts them).

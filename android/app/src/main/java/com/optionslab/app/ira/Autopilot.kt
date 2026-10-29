@@ -390,6 +390,11 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.S5Arm.setArmed(c.to == AutoChange.ON, log = false) }
                 said.takeIf { !it.contains("not ready") }
+            } else if (c.target == AutoChange.CISD_TARGET) {
+                // 29 Oct: CISD + network (Boss's switch, [cisdSwitchedByBoss]): its Undo switches the arm off (or back on) - paper only, no PIN.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                val said = kotlinx.coroutines.runBlocking { com.optionslab.app.data.CisdArm.setArmed(c.to == AutoChange.ON, log = false) }
+                said.takeIf { !it.contains("not ready") }
             } else if (c.target == AutoChange.FT3_TARGET) {
                 // 21 Oct: FT3 near-ATM morning ([logFt3On]): its Undo switches the arm off (or, undone twice, back on) - on paper,
                 // never Zerodha itself (its live path is the standard one, behind the PIN and Shadow), so no PIN either way.
@@ -1053,6 +1058,23 @@ internal object Autopilot {
                 synchronized(lock) {
                     bossPaperFlip(AutoChange.S5_TARGET, on, today, if (on) AutoChange.s5On() else AutoChange.paperArmOffByBoss(AutoChange.S5_TARGET, "S5 Trail"),
                         if (on) "switched on from its row; on paper - failed the research gates (your exception)" else "switched off from its row; paper only")
+                }
+            }
+        }
+    }
+
+    /** Boss switched CISD + network from its row: both ways logged as a new kept entry ([bossPaperFlip]). */
+    fun cisdSwitchedByBoss(on: Boolean) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): CISD + network ${if (on) "on" else "off"}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    bossPaperFlip(AutoChange.CISD_TARGET, on, today, if (on) AutoChange.cisdOn() else AutoChange.paperArmOffByBoss(AutoChange.CISD_TARGET, "CISD + network"),
+                        if (on) "switched on from its row; on paper - failed gates, Boss's exception" else "switched off from its row; paper only")
                 }
             }
         }

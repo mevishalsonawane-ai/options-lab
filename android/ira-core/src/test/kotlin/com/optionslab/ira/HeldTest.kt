@@ -17,7 +17,7 @@ class HeldTest {
         val each = listOf(
             Held.Sources(cards = true), Held.Sources(paperBook = true), Held.Sources(protections = true), Held.Sources(orb = true),
             Held.Sources(orbLive = true), Held.Sources(pine = true), Held.Sources(strategies = true), Held.Sources(armLive = true),
-            Held.Sources(armLiveRecovering = true), Held.Sources(passed = true), Held.Sources(hero = true), Held.Sources(ft3 = true), Held.Sources(signal = true), Held.Sources(flow = true), Held.Sources(s5 = true),
+            Held.Sources(armLiveRecovering = true), Held.Sources(passed = true), Held.Sources(hero = true), Held.Sources(ft3 = true), Held.Sources(signal = true), Held.Sources(flow = true), Held.Sources(s5 = true), Held.Sources(cisd = true),
             Held.Sources(night = true), Held.Sources(vixDiv = true), Held.Sources(mcxArms = true), Held.Sources(mcxLive = true),
         )
         each.forEach { assertTrue(Held.any(it), "$it") }
@@ -38,5 +38,6 @@ class HeldTest {
         assertEquals("FT3", Held.line(Held.Sources(ft3 = true)))
         assertEquals("IraThinker's flow", Held.line(Held.Sources(flow = true)))
         assertEquals("S5 Trail", Held.line(Held.Sources(s5 = true)))
+        assertEquals("CISD + network", Held.line(Held.Sources(cisd = true)))
     }
 }

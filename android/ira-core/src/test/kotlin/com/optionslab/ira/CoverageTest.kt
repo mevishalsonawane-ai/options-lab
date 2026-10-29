@@ -801,6 +801,7 @@ class CoverageTest {
         if (alone && NtfyTalk.asked(q)) return "NtfyTalk"
         if (alone && FlowTalk.asked(q)) return "FlowTalk"
         if (alone && S5Talk.asked(q)) return "S5Talk"
+        if (alone && CisdTalk.asked(q)) return "CisdTalk"
         if (alone && TrendTalk.asked(q)) return "TrendWatch"
         if (alone && PassedArmsTalk.asked(q) != null) return "PassedArms"
         if (alone && SoloDay.asked(q) != null) return "SoloDay"

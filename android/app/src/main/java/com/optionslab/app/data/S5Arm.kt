@@ -316,12 +316,24 @@ object S5Arm {
     private fun ensureModel(): S5Trail.Model? {
         model?.let { return it }
         if (modelFailed != null) return null
-        val ctx = app ?: return null
-        fun read(name: String): ByteArray = ctx.assets.open(name).use { it.readBytes() }
-        return runCatching { S5Trail.parseModel(String(read(S5Trail.ASSET_META), Charsets.UTF_8), read(S5Trail.ASSET_BIN)) }
+        if (!assetsReady) return null
+        return runCatching { loadModel() }
             .onSuccess { model = it }
             .onFailure { modelFailed = it.javaClass.simpleName; runCatching { Diag.record("s5trail", "the model could not be read: ${it.javaClass.simpleName}") } }
             .getOrNull()
+    }
+
+    /** The assets can be read (the app has started this arm). */
+    internal val assetsReady: Boolean get() = app != null
+
+    /**
+     * R123's N1 from the app's assets (s5/), read and checked ([S5Trail.parseModel]); shared with CISD + network ([CisdArm]). Disk:
+     * off the main thread, never on the tick or order path. Throws when the assets are missing or do not match their checksum.
+     */
+    internal fun loadModel(): S5Trail.Model {
+        val ctx = app ?: throw IllegalStateException("not ready")
+        fun read(name: String): ByteArray = ctx.assets.open(name).use { it.readBytes() }
+        return S5Trail.parseModel(String(read(S5Trail.ASSET_META), Charsets.UTF_8), read(S5Trail.ASSET_BIN))
     }
 
     // ---- the pass ------------------------------------------------------------------------------------------------------
@@ -485,20 +497,22 @@ object S5Arm {
     /** Strikes beyond each minute's ATM whose minutes are read: the inputs read offsets -5..+5 (the OI and volume), one spare. */
     private const val CHAIN_HALF = 6
     /** Option reads at once over all five indices. */
-    private const val CHAIN_READS = 12
+    internal const val CHAIN_READS = 12
 
     /**
      * Today's minutes of the listed strikes from [lo]'s ATM − [CHAIN_HALF] steps to [hi]'s ATM + [CHAIN_HALF] steps ([lo], [hi]: the
-     * index's lowest and highest close since the open), both sides: (strike, call) -> row -> (close, OI, volume). Network reads.
+     * index's lowest and highest close since the open), both sides: (strike, call) -> row -> (close, OI, volume). Network reads
+     * ([read]: one contract's minutes; CISD + network passes its own, with its test seam).
      */
-    private suspend fun chainBars(u: String, list: List<Upstox.Contract>, lo: Double, hi: Double, gate: Semaphore): Map<Pair<Int, Boolean>, Array<DoubleArray>> {
+    internal suspend fun chainBars(u: String, list: List<Upstox.Contract>, lo: Double, hi: Double, gate: Semaphore,
+                                   read: (suspend (Upstox.Contract) -> List<Upstox.Bar>?)? = null): Map<Pair<Int, Boolean>, Array<DoubleArray>> {
         val st = S5Trail.step(u)
         val from = S5Trail.atm(lo, st) - CHAIN_HALF * st
         val to = S5Trail.atm(hi, st) + CHAIN_HALF * st
         val want = list.filter { c -> c.right != Right.IX && c.strike >= from - 1e-6 && c.strike <= to + 1e-6 && c.strike % st == 0.0 }
         val day = today()
         val got = coroutineScope {
-            want.map { c -> async { gate.withPermit { c to runCatching { testChain?.invoke(c) ?: Net.intradayQuick(c.instrumentKey) }.getOrNull() } } }.awaitAll()
+            want.map { c -> async { gate.withPermit { c to runCatching { if (read != null) read(c) else testChain?.invoke(c) ?: Net.intradayQuick(c.instrumentKey) }.getOrNull() } } }.awaitAll()
         }
         val out = HashMap<Pair<Int, Boolean>, Array<DoubleArray>>()
         for ((c, bars) in got) {

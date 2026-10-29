@@ -547,6 +547,22 @@ object AutoChange {
             "paper only, never live",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "S5 Trail's switch (paper)")
 
+    /** The target of CISD + network's paper switch ([Kind.PAPER_ARM_ON], 29 Oct). */
+    const val CISD_TARGET = "paperarm:cisdnet"
+
+    /**
+     * 29 Oct (Boss: "Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward test too"): CISD +
+     * network switched on by Boss from its row (it is built off: the phone has no Dhan IV) - "off → on" on paper, logged as Boss's
+     * (kept), undone in one tap (the arm off; paper, no PIN either way). It FAILED the research gates (R133: 35 holdout trades, short of the 50 needed): Boss's second
+     * exception in CLAUDE.md. Never live.
+     */
+    fun cisdOn(): Change = Change(Kind.PAPER_ARM_ON, CISD_TARGET, SWITCHED_OFF, ON,
+        "your choice: CISD + network on, on paper - ICT's CISD on the five indices' 5-minute bars, taken only when R123's " +
+            "network expects that side to pay, with the index stop and a 60% lock after +₹1,000; it FAILED the research gates (35 " +
+            "holdout trades, short of the 50 needed), so it runs as your exception (failed gates, Boss's exception); its network's IV inputs are the phone's own estimate, not Dhan's; " +
+            "paper only, never live",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "CISD + network's switch (paper)")
+
     /** The target of a passed-research paper arm's switch ([Kind.PAPER_ARM_ON]): "paperarm:" + its source. */
     const val PAPER_ARM = "paperarm:"
     /**
