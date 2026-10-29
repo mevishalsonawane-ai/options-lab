@@ -21,3 +21,9 @@
 2. 6 distinct combinations pass every design gate (4 are CISD), but each had only 22-35 trades in the holdout period (50 needed); 4 of 6 were positive there.
 3. Profits lean on 2023-24, and ~285 rules have now been tried on the same data: a forward test from today is the only fair check (Boss's call).
 4. Write-up: research/HUNT_R133_ICT_NN_EXITS.md; code: research/hunt/r133_ict_nn_exits/; entries r133-*.yaml (all rejected).
+
+# R135-R137 (29 Oct): Boss's three ICT books, studied, measured, put in the network, and turned into a strategy. 0 pass
+1. Study: research/ICT_BOOKS_STUDY.md. On Indian indices the books' "sweep then reverse" fails: sweeps of PDH/PDL, PMH/PML and the opening range continue more than normal (R135).
+2. R136: the books' 35 concepts made R123's network worse (cell forecasts, and its CISD filter: 229 kept -Rs 4k vs 428 kept +Rs 94.5k). R123's network stays.
+3. R137: continuation after a strong-swing break made +Rs 156-176 a trade in design (797 trades) but lost in the holdout (130 trades, -Rs 373 each); with R123's filter +Rs 1,130 a trade on only 83 trades.
+4. The one lead is still R123's network filter; the R134 forward test is how it gets judged on fresh data.

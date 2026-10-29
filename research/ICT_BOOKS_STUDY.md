@@ -148,6 +148,16 @@ The network with the books' 35 inputs:
 
 R123's original network stays.
 
+## 3d. Step 3 done: R137, the strategy (`research/HUNT_R137_STRONG_BREAK.md`)
+
+The rule: continuation after a strong-swing break. In design it made Rs 156-176 a trade (about 795 trades, every
+fold positive, q 0.01), and the weak-swing control lost. But:
+- it broke the account limit;
+- it **lost in the holdout** (130 trades, -Rs 373 to -Rs 461 each).
+
+With R123's network filter it made Rs 1,000+ a trade, on only 83 design trades and 9 holdout trades. **0 of 4 pass.**
+R123's network filter remains the one lead, and that is what the R134 forward test is for.
+
 ## 4. The plan (step by step, each pre-registered before any number)
 
 1. **R135: facts first.** Measure the books' claims on NSE minutes (2021-2026), with sample sizes:
