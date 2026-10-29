@@ -1,0 +1,25 @@
+id: r132-f4-network-repick
+title: 'R132 F4: of Solo''s signalling indices, take the one with the network''s best Solo-side EV instead of the strongest'
+family: ml
+date: '2026-10-29'
+doc: research/HUNT_R132_SOLO_NETWORK.md
+data_version: R123 N1 out-of-sample forecasts at the 12:00 row (walk-forward 2023 - Mar 2026, holdout Apr - Oct 2026) + Drive lake index_1m and option bars (lakeclean 1-3)
+period:
+  design: 2023-01-01..2026-03-15 (R123 walk-forward folds; Solo's own rule was tuned before Jul 2024)
+  holdout: 2026-04-01..2026-10-19 (read before by R123-R131; read once here)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+features:
+- 'signal source: the underlying index (Solo midday: 12:00 move >= 0.5 ATR14 in the outer quarter of the morning range; R123 N1 network from index, VIX and breadth minutes with the option chain as context); buys the 4-ITM option; intraday only'
+model_or_rule: research/hunt/r132_solo_network/r132.py
+prereg: research/hunt/r132_solo_network/PREREG.md
+holdout_read: true
+verdict: rejected
+hypothesis: 'When several indices signal at 12:00, the network picks a better one than Solo''s strongest move'
+settings: PREREG.md section 3, F4
+variants_tried: 5
+results:
+  summary: 'Walk-forward 245 trades, 48% won, Rs +313 a trade (2x Rs +287), 3 of 4 folds (2023 -Rs 27,973), twins (random signalling index) p 0.021, q 0.105; 62 re-picks on 125 multi-signal days, paired +Rs 54,879 (90% +15,821 to +103,038); best 5 trades 87% of the profit. Holdout 35 trades, 49% won, Rs -552 a trade; 6 re-picks, paired +Rs 5,765 (90% 0 to +14,663). Fails wf_n (245 < 300), q (0.105), ho_n, ho_net. The only idea that helped in both periods.'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots; 2x = slippage counted once more

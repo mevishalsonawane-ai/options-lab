@@ -1,3 +1,10 @@
+# R132 result (29 Oct 2026): does R123's network improve Solo (midday)'s picks? Not enough to pass a gate
+1. 5 pre-registered ideas, each paired with Solo's plain rule on the same days: EV veto, quiet-hour veto, direction veto, network re-pick, EV+quiet. Walk-forward 2023 - Mar 2026, Apr-Oct 2026 re-read once, BH over the 5. Signal source: the index; a 4-ITM option is bought.
+2. Solo trades at most once a day: 245 walk-forward trades (gate 300) and 35 in Apr-Oct 2026 (gate 100), so no idea could pass; the gates were not lowered.
+3. Best: the network re-pick (when several indices signal, take the one with the best network EV). Walk-forward +Rs 313 a trade against Solo's +Rs 89 (245 trades, q 0.105); Apr-Oct 2026 -Rs 552 against Solo's -Rs 717 (35 trades). It helped in both periods, but on few days (62 re-picks, then 6).
+4. The vetoes hurt Solo in the walk-forward and helped in 2026: not evidence. The direction veto did nothing (as expected).
+5. Plain Solo lost on Apr-Oct 2026: 35 trades, 43% won, -Rs 25,094. Nothing goes to paper or a forward test; Solo stays as it is. Details: research/HUNT_R132_SOLO_NETWORK.md.
+
 # R131 result (28 Oct 2026): a better way to call the direction, with every dataset? Intraday no; overnight one thin yes
 1. 891 pre-registered tests: 9 horizons x 8 data sets (index/VIX, 59-stock breadth, FII/DII/Pro/Client OI + FPI, futures basis/OI/rollover, option chain, rupee/G-sec/MCX, calendar) x 3 models x 4 coverages, walk-forward 2023 - Mar 2026, holdout Apr-Oct 2026 read once, BH over all.
 2. Intraday (09:30/11:00/13:00 to close, next 60 min): still a coin (best AUC 0.52-0.54); nothing reaches 60%; nearest miss 59.4% (645 calls).

@@ -1,0 +1,25 @@
+id: r132-f1-ev-veto
+title: 'R132 F1: take Solo''s trade only when the network''s best EV for Solo''s side (8 cells, ATM option) is >= 0'
+family: ml
+date: '2026-10-29'
+doc: research/HUNT_R132_SOLO_NETWORK.md
+data_version: R123 N1 out-of-sample forecasts at the 12:00 row (walk-forward 2023 - Mar 2026, holdout Apr - Oct 2026) + Drive lake index_1m and option bars (lakeclean 1-3)
+period:
+  design: 2023-01-01..2026-03-15 (R123 walk-forward folds; Solo's own rule was tuned before Jul 2024)
+  holdout: 2026-04-01..2026-10-19 (read before by R123-R131; read once here)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+features:
+- 'signal source: the underlying index (Solo midday: 12:00 move >= 0.5 ATR14 in the outer quarter of the morning range; R123 N1 network from index, VIX and breadth minutes with the option chain as context); buys the 4-ITM option; intraday only'
+model_or_rule: research/hunt/r132_solo_network/r132.py
+prereg: research/hunt/r132_solo_network/PREREG.md
+holdout_read: true
+verdict: rejected
+hypothesis: 'Vetoing Solo''s trades the network expects to lose improves Solo'
+settings: PREREG.md section 3, F1
+variants_tried: 5
+results:
+  summary: 'Walk-forward 72 trades, 49% won, Rs +152 a trade (2x Rs +127), 2 of 4 folds, twins p 0.255, q 0.42; the 173 skipped trades averaged Rs +63, paired vs Solo -Rs 10,884 (90% -98,478 to +74,495). Holdout 8 trades, Rs -428 a trade; skipped 27 averaged Rs -803. Fails wf_n, folds, q, ho_n, ho_net.'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots; 2x = slippage counted once more

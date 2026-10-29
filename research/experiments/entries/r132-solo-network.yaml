@@ -1,0 +1,25 @@
+id: r132-solo-network
+title: 'R132 does R123''s network improve Solo (midday)''s picks? 5 ideas (EV veto, quiet-hour veto, direction veto, network re-pick, EV+quiet)'
+family: ml
+date: '2026-10-29'
+doc: research/HUNT_R132_SOLO_NETWORK.md
+data_version: R123 N1 out-of-sample forecasts at the 12:00 row (walk-forward 2023 - Mar 2026, holdout Apr - Oct 2026) + Drive lake index_1m and option bars (lakeclean 1-3)
+period:
+  design: 2023-01-01..2026-03-15 (R123 walk-forward folds; Solo's own rule was tuned before Jul 2024)
+  holdout: 2026-04-01..2026-10-19 (read before by R123-R131; read once here)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+features:
+- 'signal source: the underlying index (Solo midday: 12:00 move >= 0.5 ATR14 in the outer quarter of the morning range; R123 N1 network from index, VIX and breadth minutes with the option chain as context); buys the 4-ITM option; intraday only'
+model_or_rule: research/hunt/r132_solo_network/r132.py
+prereg: research/hunt/r132_solo_network/PREREG.md
+holdout_read: true
+verdict: rejected
+hypothesis: 'A network veto or re-pick at 12:00 improves Solo (midday)''s trades on the same days'
+settings: PREREG.md sections 1-4
+variants_tried: 5
+results:
+  summary: 'No idea passes. Solo makes one trade a day at most: 245 walk-forward trades (gate 300) and 35 holdout trades (gate 100), so the family cannot reach the trade-count gates (not lowered). Solo plain: walk-forward 245 trades, 47% won, Rs +89 a trade (2x Rs +62), 3 of 4 folds; holdout 35 trades, 43% won, Rs -717 a trade, Rs -25,094. Best idea F4 (network re-pick): walk-forward Rs +313 a trade on 245, paired +Rs 54,879, q 0.105; holdout Rs -552 on 35. Vetoes hurt Solo in the walk-forward and helped on the holdout; F3 direction veto did nothing (as expected).'
+  costs: Costs('dated') + Fills('liq'), 1 lot, today's lots; 2x = slippage counted once more
