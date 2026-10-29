@@ -1,0 +1,34 @@
+id: r131-trend15-t6
+title: 'R131 15-minute structure trend T6: + R123 expected value >= Rs 0 for the side'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R131_TREND15.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m incl. NIFTY 2017-2020, options_rolling_1m WEEK + MONTH), lakeclean steps
+  1-3; R123 N1 out-of-sample predictions (derived/r123/cleaned)
+period:
+  design: 2021-08-01..2026-03-15 (no fitting; by year, folds 2023-2026Q1)
+  holdout: 2026-04-01..2026-10-19 (read once for R131, 29 Oct 14:51 UTC; read before by R123/R130 for other rules)
+  untouched: NIFTY index 2017-01..2020-12 (points only)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r131_trend15/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot, wicks only (15-min 2-bar swings, minute wick breaks, stop-and-reverse); filters: 60-min
+  structure, R123 N1 pdir60 / best EV per side (option-chain context allowed as a filter); buys the ATM (or 1-ITM) option
+  of the nearest non-expiring expiry'
+hypothesis: Trading the 15-minute wick structure on its own (stop-and-reverse), optionally filtered by R123's network, makes
+  money on index options
+model_or_rule: research/hunt/r131_trend15/r131.py
+settings: PREREG.md; 1 lot at today's lots; one position per index; 200 random-side and 200 same-side twins per trade
+variants_tried: 6
+verdict: rejected
+results:
+  summary: 'Design 1887 trades, win 40% (below 65%), avg win Rs 3,068 / loss Rs -1,569, avg net Rs 267 (2x Rs 248), total
+    Rs 502,986, max DD Rs -92,471; p vs random-side twins 0.005, q 0.006; vs same-side twins 1.00; design gates failed: none.
+    Holdout 167 trades, win 34%, avg net Rs 88, total Rs 14,733, p 0.31. Fails the 65% rule and the account stop.'
+  costs: Costs('dated') + Fills('liq') (also 2x slippage), 1 lot
