@@ -1,0 +1,1013 @@
+{
+ "part": "holdout",
+ "family": "wick",
+ "period": [
+  "2026-04-01",
+  "2026-10-19"
+ ],
+ "sessions": 137,
+ "variants": {
+  "W1": {
+   "n": 61,
+   "win": 0.4262295081967213,
+   "avg_win": 911.3373076923078,
+   "avg_loss": -1126.9188571428567,
+   "avg_net": -258.15393442622917,
+   "avg_net_x2": -287.1391803278684,
+   "total": -15747.38999999998,
+   "max_dd": -26166.309999999976,
+   "worst_month": -9781.419999999993,
+   "worst_month_name": "2026-05",
+   "months_green": 2,
+   "months": 7,
+   "avg_pts": -7.852688327868385,
+   "avg_R": -0.02737420499490135,
+   "pts_win": 0.5409836065573771,
+   "exits": {
+    "target": 28,
+    "stop": 28,
+    "time": 5
+   },
+   "target_vs_stop": {
+    "target": 28,
+    "stop": 28
+   },
+   "buys": 0.5081967213114754,
+   "p_twins": 0.6467661691542289,
+   "twin_mean_total": -13007.261349999997,
+   "twin_trades": 61,
+   "by_year": {
+    "2026": {
+     "n": 61,
+     "win": 0.4262295081967213,
+     "avg_win": 911.3373076923078,
+     "avg_loss": -1126.9188571428567,
+     "avg_net": -258.15393442622917,
+     "avg_net_x2": -287.1391803278684,
+     "total": -15747.38999999998,
+     "max_dd": -26166.309999999976,
+     "worst_month": -9781.419999999993,
+     "avg_pts": -7.852688327868385,
+     "avg_R": -0.02737420499490135,
+     "pts_win": 0.5409836065573771,
+     "target_vs_stop": {
+      "target": 28,
+      "stop": 28
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 15,
+     "win": 0.3333333333333333,
+     "avg_win": 399.96400000000074,
+     "avg_loss": -1846.2819999999988,
+     "avg_net": -1097.5333333333322,
+     "avg_net_x2": -1131.2033333333316,
+     "total": -16462.99999999998,
+     "max_dd": -16740.059999999983,
+     "worst_month": -9963.849999999993,
+     "avg_pts": -43.75903999999864,
+     "avg_R": -0.34889756811091666,
+     "pts_win": 0.4666666666666667,
+     "target_vs_stop": {
+      "target": 6,
+      "stop": 8
+     }
+    },
+    "FINNIFTY": {
+     "n": 8,
+     "win": 0.25,
+     "avg_win": 2081.8749999999986,
+     "avg_loss": -935.6249999999994,
+     "avg_net": -181.24999999999994,
+     "avg_net_x2": -219.79999999999967,
+     "total": -1449.9999999999995,
+     "max_dd": -2909.5399999999977,
+     "worst_month": -2704.21,
+     "avg_pts": -2.995872499999223,
+     "avg_R": -0.019962043071233018,
+     "pts_win": 0.5,
+     "target_vs_stop": {
+      "target": 2,
+      "stop": 4
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 12,
+     "win": 0.5833333333333334,
+     "avg_win": 1905.252857142857,
+     "avg_loss": -823.8219999999992,
+     "avg_net": 768.1383333333337,
+     "avg_net_x2": 722.9383333333329,
+     "total": 9217.660000000003,
+     "max_dd": -3294.6000000000004,
+     "worst_month": -466.1599999999992,
+     "avg_pts": 19.92900249999987,
+     "avg_R": 0.4655457992038246,
+     "pts_win": 0.75,
+     "target_vs_stop": {
+      "target": 9,
+      "stop": 3
+     }
+    },
+    "NIFTY": {
+     "n": 13,
+     "win": 0.46153846153846156,
+     "avg_win": 240.36166666666713,
+     "avg_loss": -844.6514285714289,
+     "avg_net": -343.8761538461537,
+     "avg_net_x2": -364.52615384615353,
+     "total": -4470.3899999999985,
+     "max_dd": -4470.3899999999985,
+     "worst_month": -4210.740000000002,
+     "avg_pts": -4.684469230769677,
+     "avg_R": -0.3063648371894023,
+     "pts_win": 0.46153846153846156,
+     "target_vs_stop": {
+      "target": 6,
+      "stop": 7
+     }
+    },
+    "SENSEX": {
+     "n": 13,
+     "win": 0.46153846153846156,
+     "avg_win": 458.70999999999987,
+     "avg_loss": -761.9885714285716,
+     "avg_net": -198.58923076923085,
+     "avg_net_x2": -209.65076923076927,
+     "total": -2581.660000000001,
+     "max_dd": -4762.770000000002,
+     "worst_month": -1485.7400000000005,
+     "avg_pts": 1.7760509230776313,
+     "avg_R": 0.16304051188930524,
+     "pts_win": 0.5384615384615384,
+     "target_vs_stop": {
+      "target": 5,
+      "stop": 6
+     }
+    }
+   },
+   "census": {
+    "sweeps": 60721,
+    "mss": 10015,
+    "fvg": 5308,
+    "touched": 2830,
+    "triggered": 916
+   },
+   "skips": {
+    "no_target": 22,
+    "no_room": 1,
+    "late": 119,
+    "both": 1,
+    "no_contract": 85,
+    "no_price": 1
+   },
+   "label": "the rule as stated, wick-only (5-min)"
+  },
+  "W2": {
+   "n": 177,
+   "win": 0.3220338983050847,
+   "avg_win": 624.2085964912281,
+   "avg_loss": -769.9210833333332,
+   "avg_net": -320.96406779661,
+   "avg_net_x2": -352.26661016949106,
+   "total": -56810.63999999997,
+   "max_dd": -60346.32999999996,
+   "worst_month": -18061.479999999996,
+   "worst_month_name": "2026-06",
+   "months_green": 1,
+   "months": 7,
+   "avg_pts": -7.826949265536756,
+   "avg_R": -0.21003140064339051,
+   "pts_win": 0.3728813559322034,
+   "exits": {
+    "stop": 111,
+    "target": 60,
+    "time": 6
+   },
+   "target_vs_stop": {
+    "target": 60,
+    "stop": 111
+   },
+   "buys": 0.559322033898305,
+   "p_twins": 0.9601990049751243,
+   "twin_mean_total": -36446.07225,
+   "twin_trades": 177,
+   "by_year": {
+    "2026": {
+     "n": 177,
+     "win": 0.3220338983050847,
+     "avg_win": 624.2085964912281,
+     "avg_loss": -769.9210833333332,
+     "avg_net": -320.96406779661,
+     "avg_net_x2": -352.26661016949106,
+     "total": -56810.63999999997,
+     "max_dd": -60346.32999999996,
+     "worst_month": -18061.479999999996,
+     "avg_pts": -7.826949265536756,
+     "avg_R": -0.21003140064339051,
+     "pts_win": 0.3728813559322034,
+     "target_vs_stop": {
+      "target": 60,
+      "stop": 111
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 41,
+     "win": 0.2926829268292683,
+     "avg_win": 526.750833333334,
+     "avg_loss": -1140.8693103448272,
+     "avg_net": -652.7853658536582,
+     "avg_net_x2": -690.5170731707311,
+     "total": -26764.199999999986,
+     "max_dd": -27194.34999999998,
+     "worst_month": -10040.090000000004,
+     "avg_pts": -26.669873414633734,
+     "avg_R": -0.4688315242540536,
+     "pts_win": 0.3170731707317073,
+     "target_vs_stop": {
+      "target": 13,
+      "stop": 28
+     }
+    },
+    "FINNIFTY": {
+     "n": 16,
+     "win": 0.3125,
+     "avg_win": 1186.3779999999992,
+     "avg_loss": -466.0972727272727,
+     "avg_net": 50.30124999999984,
+     "avg_net_x2": 20.038749999999794,
+     "total": 804.8199999999974,
+     "max_dd": -4104.749999999999,
+     "worst_month": -2163.970000000002,
+     "avg_pts": 12.01170124999976,
+     "avg_R": 0.40783455960453285,
+     "pts_win": 0.5,
+     "target_vs_stop": {
+      "target": 6,
+      "stop": 8
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 45,
+     "win": 0.35555555555555557,
+     "avg_win": 761.6862500000007,
+     "avg_loss": -708.0727586206893,
+     "avg_net": -185.49177777777734,
+     "avg_net_x2": -232.8251111111099,
+     "total": -8347.129999999981,
+     "max_dd": -14068.139999999985,
+     "worst_month": -5350.599999999995,
+     "avg_pts": 0.7488933333333181,
+     "avg_R": -0.14678330609361268,
+     "pts_win": 0.4444444444444444,
+     "target_vs_stop": {
+      "target": 19,
+      "stop": 25
+     }
+    },
+    "NIFTY": {
+     "n": 42,
+     "win": 0.3333333333333333,
+     "avg_win": 381.3821428571428,
+     "avg_loss": -660.3753571428571,
+     "avg_net": -313.12285714285713,
+     "avg_net_x2": -334.8978571428571,
+     "total": -13151.16,
+     "max_dd": -13482.549999999996,
+     "worst_month": -5072.199999999999,
+     "avg_pts": -7.13320928571418,
+     "avg_R": -0.3935975871262241,
+     "pts_win": 0.30952380952380953,
+     "target_vs_stop": {
+      "target": 12,
+      "stop": 29
+     }
+    },
+    "SENSEX": {
+     "n": 33,
+     "win": 0.30303030303030304,
+     "avg_win": 580.0659999999998,
+     "avg_loss": -658.8534782608693,
+     "avg_net": -283.4233333333333,
+     "avg_net_x2": -297.5081818181816,
+     "total": -9352.97,
+     "max_dd": -11311.139999999998,
+     "worst_month": -3699.8900000000003,
+     "avg_pts": -6.612055757576441,
+     "avg_R": -0.0406809375643169,
+     "pts_win": 0.36363636363636365,
+     "target_vs_stop": {
+      "target": 10,
+      "stop": 21
+     }
+    }
+   },
+   "census": {
+    "sweeps": 60801,
+    "mss": 9626,
+    "fvg": 4997,
+    "touched": 2672,
+    "triggered": 2672
+   },
+   "skips": {
+    "no_target": 2,
+    "no_room": 55,
+    "late": 345,
+    "both": 0,
+    "no_contract": 264,
+    "no_price": 6
+   },
+   "label": "wick-only, no confirmation (first touch of the FVG)"
+  },
+  "W3": {
+   "n": 443,
+   "win": 0.37020316027088035,
+   "avg_win": 262.3021341463416,
+   "avg_loss": -430.8308960573476,
+   "avg_net": -174.23085778781035,
+   "avg_net_x2": -202.14530474040623,
+   "total": -77184.26999999999,
+   "max_dd": -78710.51999999996,
+   "worst_month": -19084.300000000017,
+   "worst_month_name": "2026-04",
+   "months_green": 0,
+   "months": 7,
+   "avg_pts": -1.7633890293454282,
+   "avg_R": -0.0631219791963347,
+   "pts_win": 0.6478555304740407,
+   "exits": {
+    "target": 287,
+    "stop": 155,
+    "time": 1
+   },
+   "target_vs_stop": {
+    "target": 287,
+    "stop": 155
+   },
+   "buys": 0.49887133182844245,
+   "p_twins": 0.9900497512437811,
+   "twin_mean_total": -52939.09879999999,
+   "twin_trades": 443,
+   "by_year": {
+    "2026": {
+     "n": 443,
+     "win": 0.37020316027088035,
+     "avg_win": 262.3021341463416,
+     "avg_loss": -430.8308960573476,
+     "avg_net": -174.23085778781035,
+     "avg_net_x2": -202.14530474040623,
+     "total": -77184.26999999999,
+     "max_dd": -78710.51999999996,
+     "worst_month": -19084.300000000017,
+     "avg_pts": -1.7633890293454282,
+     "avg_R": -0.0631219791963347,
+     "pts_win": 0.6478555304740407,
+     "target_vs_stop": {
+      "target": 287,
+      "stop": 155
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 94,
+     "win": 0.4148936170212766,
+     "avg_win": 327.68769230769243,
+     "avg_loss": -505.20254545454526,
+     "avg_net": -159.64170212765936,
+     "avg_net_x2": -196.82734042553113,
+     "total": -15006.31999999998,
+     "max_dd": -17030.39999999998,
+     "worst_month": -5413.639999999993,
+     "avg_pts": -0.9551751063831654,
+     "avg_R": -0.04473486445506834,
+     "pts_win": 0.7021276595744681,
+     "target_vs_stop": {
+      "target": 66,
+      "stop": 28
+     }
+    },
+    "FINNIFTY": {
+     "n": 46,
+     "win": 0.2826086956521739,
+     "avg_win": 291.766153846154,
+     "avg_loss": -304.4857575757572,
+     "avg_net": -135.97978260869542,
+     "avg_net_x2": -171.23630434782564,
+     "total": -6255.069999999989,
+     "max_dd": -6485.849999999991,
+     "worst_month": -2164.3299999999945,
+     "avg_pts": -1.9095817391302579,
+     "avg_R": -0.09232135043940146,
+     "pts_win": 0.6739130434782609,
+     "target_vs_stop": {
+      "target": 31,
+      "stop": 15
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 79,
+     "win": 0.22784810126582278,
+     "avg_win": 386.90777777777805,
+     "avg_loss": -592.142131147541,
+     "avg_net": -369.06746835443045,
+     "avg_net_x2": -414.8801265822785,
+     "total": -29156.330000000005,
+     "max_dd": -31467.130000000016,
+     "worst_month": -8261.030000000002,
+     "avg_pts": -2.7276470886076534,
+     "avg_R": -0.2605014716228476,
+     "pts_win": 0.46835443037974683,
+     "target_vs_stop": {
+      "target": 37,
+      "stop": 42
+     }
+    },
+    "NIFTY": {
+     "n": 125,
+     "win": 0.432,
+     "avg_win": 177.89740740740743,
+     "avg_loss": -341.03901408450713,
+     "avg_net": -116.85848000000009,
+     "avg_net_x2": -135.6044800000002,
+     "total": -14607.31000000001,
+     "max_dd": -15160.240000000016,
+     "worst_month": -4019.029999999999,
+     "avg_pts": 0.18543095999988146,
+     "avg_R": -0.0062327935727252625,
+     "pts_win": 0.704,
+     "target_vs_stop": {
+      "target": 88,
+      "stop": 36
+     }
+    },
+    "SENSEX": {
+     "n": 99,
+     "win": 0.40404040404040403,
+     "avg_win": 246.84925000000013,
+     "avg_loss": -373.4442372881357,
+     "avg_net": -122.82060606060614,
+     "avg_net_x2": -135.81454545454557,
+     "total": -12159.240000000007,
+     "max_dd": -13410.679999999997,
+     "worst_month": -4145.420000000005,
+     "avg_pts": -4.154028989898947,
+     "avg_R": 0.018662000503113573,
+     "pts_win": 0.6565656565656566,
+     "target_vs_stop": {
+      "target": 65,
+      "stop": 34
+     }
+    }
+   },
+   "census": {
+    "sweeps": 315689,
+    "mss": 52940,
+    "fvg": 28136,
+    "touched": 16017,
+    "triggered": 6195
+   },
+   "skips": {
+    "no_target": 44,
+    "no_room": 7,
+    "late": 547,
+    "both": 22,
+    "no_contract": 514,
+    "no_price": 7
+   },
+   "label": "wick-only, 1-minute chart"
+  },
+  "W4": {
+   "n": 62,
+   "win": 0.27419354838709675,
+   "avg_win": 1752.9523529411763,
+   "avg_loss": -1233.228666666666,
+   "avg_net": -414.4370967741932,
+   "avg_net_x2": -445.45887096774106,
+   "total": -25695.09999999998,
+   "max_dd": -33177.709999999985,
+   "worst_month": -6999.399999999998,
+   "worst_month_name": "2026-09",
+   "months_green": 1,
+   "months": 7,
+   "avg_pts": -11.7983444516129,
+   "avg_R": -0.21786151285196723,
+   "pts_win": 0.3225806451612903,
+   "exits": {
+    "stop": 39,
+    "time": 12,
+    "target": 11
+   },
+   "target_vs_stop": {
+    "target": 11,
+    "stop": 39
+   },
+   "buys": 0.4838709677419355,
+   "p_twins": 0.9751243781094527,
+   "twin_mean_total": -6068.061299999993,
+   "twin_trades": 62,
+   "by_year": {
+    "2026": {
+     "n": 62,
+     "win": 0.27419354838709675,
+     "avg_win": 1752.9523529411763,
+     "avg_loss": -1233.228666666666,
+     "avg_net": -414.4370967741932,
+     "avg_net_x2": -445.45887096774106,
+     "total": -25695.09999999998,
+     "max_dd": -33177.709999999985,
+     "worst_month": -6999.399999999998,
+     "avg_pts": -11.7983444516129,
+     "avg_R": -0.21786151285196723,
+     "pts_win": 0.3225806451612903,
+     "target_vs_stop": {
+      "target": 11,
+      "stop": 39
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 15,
+     "win": 0.2,
+     "avg_win": 989.8466666666662,
+     "avg_loss": -2009.024999999999,
+     "avg_net": -1409.2506666666661,
+     "avg_net_x2": -1446.0706666666654,
+     "total": -21138.75999999999,
+     "max_dd": -22910.23999999999,
+     "worst_month": -9963.849999999993,
+     "avg_pts": -56.65947466666548,
+     "avg_R": -0.5040578814035094,
+     "pts_win": 0.2,
+     "target_vs_stop": {
+      "target": 2,
+      "stop": 12
+     }
+    },
+    "FINNIFTY": {
+     "n": 8,
+     "win": 0.25,
+     "avg_win": 2322.609999999999,
+     "avg_loss": -1087.4316666666662,
+     "avg_net": -234.92124999999987,
+     "avg_net_x2": -273.6212499999996,
+     "total": -1879.369999999999,
+     "max_dd": -3820.3799999999974,
+     "worst_month": -2704.21,
+     "avg_pts": -8.6960299999987,
+     "avg_R": -0.11918494841351455,
+     "pts_win": 0.375,
+     "target_vs_stop": {
+      "target": 2,
+      "stop": 5
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 13,
+     "win": 0.23076923076923078,
+     "avg_win": 3853.810000000001,
+     "avg_loss": -1178.0529999999987,
+     "avg_net": -16.853846153845204,
+     "avg_net_x2": -66.60769230768997,
+     "total": -219.09999999998763,
+     "max_dd": -4837.389999999994,
+     "worst_month": -3003.799999999995,
+     "avg_pts": 6.782439230769132,
+     "avg_R": -0.19369233316479806,
+     "pts_win": 0.3076923076923077,
+     "target_vs_stop": {
+      "target": 2,
+      "stop": 8
+     }
+    },
+    "NIFTY": {
+     "n": 13,
+     "win": 0.38461538461538464,
+     "avg_win": 556.56,
+     "avg_loss": -853.6925000000001,
+     "avg_net": -311.28769230769245,
+     "avg_net_x2": -331.5376923076923,
+     "total": -4046.7400000000016,
+     "max_dd": -4935.910000000001,
+     "worst_month": -4210.740000000002,
+     "avg_pts": -2.690895384615802,
+     "avg_R": -0.11577449075770467,
+     "pts_win": 0.38461538461538464,
+     "target_vs_stop": {
+      "target": 2,
+      "stop": 7
+     }
+    },
+    "SENSEX": {
+     "n": 13,
+     "win": 0.3076923076923077,
+     "avg_win": 1960.3000000000002,
+     "avg_loss": -694.7033333333334,
+     "avg_net": 122.22076923076929,
+     "avg_net_x2": 110.57461538461565,
+     "total": 1588.8700000000008,
+     "max_dd": -6025.380000000003,
+     "worst_month": -1651.9799999999996,
+     "avg_pts": 10.36714876922913,
+     "avg_R": -0.07461517518989808,
+     "pts_win": 0.38461538461538464,
+     "target_vs_stop": {
+      "target": 3,
+      "stop": 7
+     }
+    }
+   },
+   "census": {
+    "sweeps": 60298,
+    "mss": 9934,
+    "fvg": 5262,
+    "touched": 2812,
+    "triggered": 908
+   },
+   "skips": {
+    "no_target": 0,
+    "no_room": 1,
+    "late": 116,
+    "both": 1,
+    "no_contract": 85,
+    "no_price": 1
+   },
+   "label": "wick-only, fixed 2R target"
+  }
+ },
+ "scan": {
+  "NIFTY": {
+   "W1": {
+    "skips": {
+     "no_target": 6,
+     "no_room": 0,
+     "late": 29,
+     "both": 0,
+     "no_contract": 3,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 13412,
+     "mss": 2200,
+     "fvg": 1168,
+     "touched": 633,
+     "triggered": 214
+    }
+   },
+   "W2": {
+    "skips": {
+     "no_target": 0,
+     "no_room": 10,
+     "late": 80,
+     "both": 0,
+     "no_contract": 22,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 13422,
+     "mss": 2091,
+     "fvg": 1082,
+     "touched": 588,
+     "triggered": 588
+    }
+   },
+   "W3": {
+    "skips": {
+     "no_target": 14,
+     "no_room": 0,
+     "late": 113,
+     "both": 6,
+     "no_contract": 56,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 69622,
+     "mss": 11474,
+     "fvg": 6065,
+     "touched": 3367,
+     "triggered": 1317
+    }
+   },
+   "W4": {
+    "skips": {
+     "no_target": 0,
+     "no_room": 0,
+     "late": 28,
+     "both": 0,
+     "no_contract": 3,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 13298,
+     "mss": 2174,
+     "fvg": 1155,
+     "touched": 627,
+     "triggered": 210
+    }
+   }
+  },
+  "BANKNIFTY": {
+   "W1": {
+    "skips": {
+     "no_target": 5,
+     "no_room": 0,
+     "late": 22,
+     "both": 0,
+     "no_contract": 10,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 12224,
+     "mss": 2041,
+     "fvg": 1050,
+     "touched": 556,
+     "triggered": 176
+    }
+   },
+   "W2": {
+    "skips": {
+     "no_target": 0,
+     "no_room": 12,
+     "late": 68,
+     "both": 0,
+     "no_contract": 31,
+     "no_price": 3
+    },
+    "census": {
+     "sweeps": 12233,
+     "mss": 1972,
+     "fvg": 992,
+     "touched": 530,
+     "triggered": 530
+    }
+   },
+   "W3": {
+    "skips": {
+     "no_target": 6,
+     "no_room": 1,
+     "late": 113,
+     "both": 3,
+     "no_contract": 66,
+     "no_price": 6
+    },
+    "census": {
+     "sweeps": 63353,
+     "mss": 10983,
+     "fvg": 5527,
+     "touched": 3256,
+     "triggered": 1225
+    }
+   },
+   "W4": {
+    "skips": {
+     "no_target": 0,
+     "no_room": 0,
+     "late": 22,
+     "both": 0,
+     "no_contract": 10,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 12147,
+     "mss": 2025,
+     "fvg": 1044,
+     "touched": 555,
+     "triggered": 176
+    }
+   }
+  },
+  "FINNIFTY": {
+   "W1": {
+    "skips": {
+     "no_target": 5,
+     "no_room": 0,
+     "late": 20,
+     "both": 0,
+     "no_contract": 8,
+     "no_price": 1
+    },
+    "census": {
+     "sweeps": 12115,
+     "mss": 1987,
+     "fvg": 1006,
+     "touched": 536,
+     "triggered": 162
+    }
+   },
+   "W2": {
+    "skips": {
+     "no_target": 0,
+     "no_room": 9,
+     "late": 59,
+     "both": 0,
+     "no_contract": 20,
+     "no_price": 3
+    },
+    "census": {
+     "sweeps": 12132,
+     "mss": 1903,
+     "fvg": 945,
+     "touched": 508,
+     "triggered": 508
+    }
+   },
+   "W3": {
+    "skips": {
+     "no_target": 11,
+     "no_room": 2,
+     "late": 107,
+     "both": 5,
+     "no_contract": 24,
+     "no_price": 1
+    },
+    "census": {
+     "sweeps": 63431,
+     "mss": 10799,
+     "fvg": 5489,
+     "touched": 3186,
+     "triggered": 1232
+    }
+   },
+   "W4": {
+    "skips": {
+     "no_target": 0,
+     "no_room": 0,
+     "late": 20,
+     "both": 0,
+     "no_contract": 8,
+     "no_price": 1
+    },
+    "census": {
+     "sweeps": 12047,
+     "mss": 1979,
+     "fvg": 999,
+     "touched": 533,
+     "triggered": 162
+    }
+   }
+  },
+  "MIDCPNIFTY": {
+   "W1": {
+    "skips": {
+     "no_target": 5,
+     "no_room": 1,
+     "late": 21,
+     "both": 1,
+     "no_contract": 4,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 10893,
+     "mss": 1778,
+     "fvg": 969,
+     "touched": 494,
+     "triggered": 156
+    }
+   },
+   "W2": {
+    "skips": {
+     "no_target": 2,
+     "no_room": 15,
+     "late": 59,
+     "both": 0,
+     "no_contract": 10,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 10898,
+     "mss": 1698,
+     "fvg": 901,
+     "touched": 452,
+     "triggered": 452
+    }
+   },
+   "W3": {
+    "skips": {
+     "no_target": 7,
+     "no_room": 2,
+     "late": 92,
+     "both": 4,
+     "no_contract": 33,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 56627,
+     "mss": 9119,
+     "fvg": 5260,
+     "touched": 2978,
+     "triggered": 1120
+    }
+   },
+   "W4": {
+    "skips": {
+     "no_target": 0,
+     "no_room": 1,
+     "late": 20,
+     "both": 1,
+     "no_contract": 4,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 10807,
+     "mss": 1763,
+     "fvg": 959,
+     "touched": 491,
+     "triggered": 153
+    }
+   }
+  },
+  "SENSEX": {
+   "W1": {
+    "skips": {
+     "no_target": 1,
+     "no_room": 0,
+     "late": 27,
+     "both": 0,
+     "no_contract": 60,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 12077,
+     "mss": 2009,
+     "fvg": 1115,
+     "touched": 611,
+     "triggered": 208
+    }
+   },
+   "W2": {
+    "skips": {
+     "no_target": 0,
+     "no_room": 9,
+     "late": 79,
+     "both": 0,
+     "no_contract": 181,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 12116,
+     "mss": 1962,
+     "fvg": 1077,
+     "touched": 594,
+     "triggered": 594
+    }
+   },
+   "W3": {
+    "skips": {
+     "no_target": 6,
+     "no_room": 2,
+     "late": 122,
+     "both": 4,
+     "no_contract": 335,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 62656,
+     "mss": 10565,
+     "fvg": 5795,
+     "touched": 3230,
+     "triggered": 1301
+    }
+   },
+   "W4": {
+    "skips": {
+     "no_target": 0,
+     "no_room": 0,
+     "late": 26,
+     "both": 0,
+     "no_contract": 60,
+     "no_price": 0
+    },
+    "census": {
+     "sweeps": 11999,
+     "mss": 1993,
+     "fvg": 1105,
+     "touched": 606,
+     "triggered": 207
+    }
+   }
+  }
+ },
+ "claim_c3": {
+  "swept": [
+   156,
+   174,
+   207
+  ],
+  "not_swept": [
+   483,
+   432,
+   522
+  ],
+  "up_first_swept": 0.4727272727272727,
+  "up_first_not_swept": 0.5278688524590164,
+  "n_swept": 330,
+  "n_not_swept": 915,
+  "z": -1.7180850365837768,
+  "p_two_sided": 0.0857811057382063
+ }
+}

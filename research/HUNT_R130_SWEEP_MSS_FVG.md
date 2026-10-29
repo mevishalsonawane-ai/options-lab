@@ -93,7 +93,63 @@ Holdout, 1 Apr to 19 Oct 2026 (137 sessions). It was read once, after the design
   - That is about 50 trades a year across all five indices.
   - Moving to the 1-minute chart (V2) or dropping the engulfing candle (V3) gives more trades, but they lose too.
 
-**Nothing passes. Nothing goes on paper. Nothing changes in the app.**
+**Nothing passes. Nothing goes on paper. Nothing changes in the app.** The wick-only versions (Amendment 1,
+below) lose too.
+
+## Amendment 1: wick-only versions (Boss: "Not opening and closing candles")
+
+**Added after the results above, and after the holdout had been read for V1-V6.** Its holdout read is therefore less
+clean than a first read. Pre-registered in `PREREG_WICK.md` (commit `fad9c7c`) before any wick-only number. The
+design results were committed in `68df4c7` before its own one holdout read (13:17-13:18 UTC, 29 Oct).
+
+V1-V6 already read every level, the sweep, the FVG, the pullback, the stop and the target on wicks. Two steps used
+candle bodies. The amendment makes them wick-only:
+- **MSS:** a **wick** at least 1 tick beyond the recent high or low (it was a 5-minute close).
+- **Engulfing:** a candle whose **wicks engulf the previous candle's wicks**: a higher high, and a low at or below the
+  previous low (mirrored for sells). It used to compare bodies.
+
+No candle open or close decides anything now. The only open used is the price paid in the entry minute, which is a
+fill, not a signal. A test scrambles every candle's open and close inside its wicks, and W1's trades do not change.
+
+**It still loses, in every version.** Design (Aug 2021 to 15 Mar 2026):
+
+| version | trades | win rate (vs 65%) | avg win / avg loss | avg net per trade | total (1 lot) | max drawdown | vs random (p / BH q) |
+|---|---|---|---|---|---|---|---|
+| **W1, as stated, wick-only** (5-min) | 485 | 44% (below) | Rs 848 / -Rs 711 | **-Rs 26** | -Rs 12,584 | -Rs 50,367 | 0.58 / 0.78 |
+| W2, no confirmation (first touch of the FVG) | 1,410 | 43% (below) | Rs 718 / -Rs 587 | -Rs 27 | -Rs 37,942 | -Rs 44,049 | **0.005 / 0.02** |
+| W3, 1-minute chart | 3,473 | 41% (below) | Rs 309 / -Rs 370 | -Rs 94 | -Rs 3,25,564 | -Rs 3,30,484 | 0.47 / 0.78 |
+| W4, fixed 2R target | 496 | 38% (below) | Rs 1,680 / -Rs 1,028 | -Rs 7 | -Rs 3,506 | -Rs 76,831 | 0.97 / 0.97 |
+
+Holdout, Apr to Oct 2026, read once:
+
+| version | trades | win rate (vs 65%) | avg win / avg loss | avg net per trade | total (1 lot) | vs random (p) |
+|---|---|---|---|---|---|---|
+| **W1** | 61 | 43% (below) | Rs 911 / -Rs 1,127 | **-Rs 258** | -Rs 15,747 | 0.65 |
+| W2 | 177 | 32% (below) | Rs 624 / -Rs 770 | -Rs 321 | -Rs 56,811 | 0.96 |
+| W3 | 443 | 37% (below) | Rs 262 / -Rs 431 | -Rs 174 | -Rs 77,184 | 0.99 |
+| W4 | 62 | 27% (below) | Rs 1,753 / -Rs 1,233 | -Rs 414 | -Rs 25,695 | 0.98 |
+
+- **The wick break catches more setups and loses less per trade than the close break.**
+  - W1 had 485 design trades against V1's 218, at -Rs 26 a trade against -Rs 307.
+  - In index points, W1's target and stop are about the same distance (median 0.90). The average win was 35.9 points
+    and the average loss 36.2: a coin flip on the index, and costs make it a small loss.
+- **W2 is the only version that beat random entries** (p 0.005, q 0.02 in design). Even so, it lost Rs 27 a trade
+  after costs. In the holdout it fell to 32% wins and -Rs 321 a trade (p 0.96), so the design edge did not hold.
+- **Every version fails the gates:**
+  - every one lost money in design and in the holdout;
+  - at most 2 of the 4 walk-forward folds were positive (W1 and W4: 2025 and 2026 Q1);
+  - all are far below 65% wins;
+  - over design plus holdout, every drawdown is past the -Rs 40,000 account stop (W1 -Rs 50,367 over 546 trades;
+    W3 -Rs 4.07 lakh).
+- **By index (W1, design):** MIDCPNIFTY +Rs 12,555 (61 trades) and SENSEX +Rs 3,057 (82). BANKNIFTY -Rs 13,676 (122),
+  NIFTY -Rs 7,926 (151) and FINNIFTY -Rs 6,594 (69) lost. In the holdout, MIDCPNIFTY again made +Rs 9,218 on 12
+  trades and the rest lost.
+  - That is one index out of five, after the fact, on 73 trades in all. It is not a reason to trade it.
+- **C3 with wick breaks:** with a sweep first, price went the break's way first 54.3% of the time (n 3,224 decided).
+  Without one it was 55.2% (n 7,549), p = 0.39. Holdout: 47.3% (n 330) vs 52.8% (n 915), p = 0.09. **The sweep still
+  does not help.**
+
+**Verdict unchanged: wick-only, the setup still fails. Nothing goes on paper.**
 
 ## The video's claims, checked on the data (index wicks; design / holdout)
 
@@ -123,7 +179,7 @@ holdout +0.26R is 14 trades, after -0.11R on 111 trades in design.
 - **Pre-registration:** `research/hunt/r130_sweep_mss_fvg/PREREG.md`, commit `66d2467`, before any data was read.
   - Design results were committed in `fca117a` before the holdout.
   - The holdout was read once, guarded by a lock file that refuses a second read.
-- **Code and 16 tests:** `research/hunt/r130_sweep_mss_fvg/` (`r130.py`, `test_r130.py`, `tables.py`).
+- **Code and 21 tests (5 for Amendment 1):** `research/hunt/r130_sweep_mss_fvg/` (`r130.py`, `test_r130.py`, `tables.py`).
   - The tests include a hand-built session, worked out by hand, with its mirror-image sell.
   - They also include a look-ahead guard: removing every bar after the entry does not change the entry.
 - **Results:** `results/design.json`, `results/holdout.json`. The trade lists are in the cache (`trades_*.parquet`), not
