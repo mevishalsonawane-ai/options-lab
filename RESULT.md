@@ -9,4 +9,4 @@
 7. **Small difference from the research:** it sells at 15:15 (the paper book's square-off) instead of 15:20.
 8. **Forward test:** the arm's trades are listed in the diagnostics (entry, exit, network EV, points and % of premium). R134's Saturday cloud run still scores S3-V2-E3 from the same code, and a new test ties the app's numbers to the research's. **Boss: please refresh `DHAN_ACCESS_TOKEN`** so that run can score new days.
 9. **Tests:** engine, ira-core and coverage pass, research and brain tests pass, and the app tests for this arm and everything it touches pass (run locally with an Android SDK). A separate reviewer found no safety bug; its robustness points are fixed.
-10. **What remains:** a Dhan-matching IV on the phone (or Boss's choice to run without it). CI status is on the latest commit of `claude/cisd-nn-arm-1029`.
+10. **What remains:** a Dhan-matching IV on the phone, or Boss's choice to run without it. CI on 90da3dc is all green: engine parity, the four app test shards, Build APK, the PC harness and research. The emulator check runs only on main, so it ran nowhere for this branch.
