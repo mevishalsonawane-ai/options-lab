@@ -179,8 +179,16 @@ def cmd_compare():
     res["tests"]["T3-filter-S3-V2-E0"] = filter_compare(T[T.v == "S3-V2-E0"], Pb, Pi, rng)
     for v in ("S3-V2-E3", "S7-V2-E4", "S3-V1-E3", "S9-W-E4", "S3-W-E1"):
         res["reported"][f"filter-{v}"] = filter_compare(T[T.v == v], Pb, Pi, rng, n=500)
-    E0 = T[T.exit_rule == "E0"]
-    res["reported"]["filter-all-39-E0"] = filter_compare(E0, Pb, Pi, rng, n=500)
+    # each entry on its own (a trade key is unique only within one entry), then summed
+    agg = dict(base=dict(n=0, total=0.0), ict=dict(n=0, total=0.0), entries=0, ict_better=0)
+    for v in sorted(T[T.exit_rule == "E0"].v.unique()):
+        r_ = filter_compare(T[T.v == v], Pb, Pi, rng, n=1)
+        for a in ("base", "ict"):
+            agg[a]["n"] += r_[a]["n"]
+            agg[a]["total"] += r_[a]["total"]
+        agg["entries"] += 1
+        agg["ict_better"] += int(r_["ict"]["total"] > r_["base"]["total"])
+    res["reported"]["filter-all-39-E0"] = agg
     for f in K3.FOLDS:
         mk = Pb.fold.values == f
         res["reported"][f"dir-logloss-{f}"] = dict(base=float(np.nanmean(db[mk])), ict=float(np.nanmean(di[mk])))

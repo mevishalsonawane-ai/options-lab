@@ -1,0 +1,30 @@
+id: r136-ict-network
+title: R136 the ICT / SMC books' concepts (35 inputs) added to R123's network N1, walk-forward vs the same network without
+  them
+family: neural-network
+date: '2026-10-29'
+doc: research/HUNT_R136_ICT_NETWORK.md
+data_version: R123 design rows and sequences; Drive lake index_1m copied 29 Oct 2026
+period:
+  design: walk-forward folds 2023, 2024, 2025, 2026-01-01..03-15 (R123's design rows)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r136_ict_network/PREREG.md
+holdout_read: false
+features:
+- 'signal source: the index (wick levels, structure, sweeps, FVGs, opening range, 200-day bias, TDI) plus R123''s inputs;
+  option chain as context only'
+hypothesis: The books' ICT concepts improve R123's network (direction, trade-cell forecasts, the EV filter on CISD)
+model_or_rule: research/hunt/r136_ict_network/r136.py
+settings: R123 N1 code, seeds, epochs; BH over 3 tests
+variants_tried: 3
+verdict: rejected
+results:
+  summary: 'Direction log-loss 0.6939 vs 0.6939 (p 0.99); cell log-loss worse 0.854 vs 0.846 (q < 0.001); CISD EV filter
+    worse: base 428 kept +Rs 94,531 vs ICT 229 kept -Rs 3,974 (q 0.037). Over all 39 R131 entries: base +Rs 7.87 lakh (16,252)
+    vs ICT -Rs 0.74 lakh (8,850). R123''s network stays.'
+  costs: Costs('dated') + Fills('liq') (R133 trades)

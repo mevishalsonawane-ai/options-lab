@@ -138,6 +138,16 @@ Two claims are backwards or absent:
 
 So the strategy step should test **continuation**, not the books' reversal.
 
+## 3c. Step 2 done: R136 put the concepts into the network (`research/HUNT_R136_ICT_NETWORK.md`)
+
+The network with the books' 35 inputs:
+- forecast direction no better (still a coin flip);
+- forecast its trade cells **worse**;
+- picked **worse** trades through its EV filter: CISD 229 kept, -Rs 4k, against the original's 428 kept, +Rs 94.5k
+  (q 0.04).
+
+R123's original network stays.
+
 ## 4. The plan (step by step, each pre-registered before any number)
 
 1. **R135: facts first.** Measure the books' claims on NSE minutes (2021-2026), with sample sizes:
