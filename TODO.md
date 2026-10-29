@@ -513,3 +513,12 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
       "would-be" record on expiry days (the next-expiry 1-ITM each arm would buy, its premium, where today's exits would
       sell it; no order, off the order and tick path, released first when memory is short), the next expiry's ATM±2
       minutes kept in the IraAlgo data repo on expiry days, and a fresh pre-registered re-test after about six months.
+
+## F. Forward test: CISD + R123's network (R134, set up 29 Oct 2026; Boss: "yes set up the forward test")
+
+- [ ] F1. Weekly run (Saturday 10:17 IST, a scheduled task): `research/hunt/r134_forward/` syncs the lake, tops up new
+      sessions from Dhan, scores them with R123's frozen network and logs the six R133 rules in
+      `results/forward_log.json`. Decide ONCE when the primary (S3-V2-E0) has 50 trades (about Aug-Sep 2027;
+      PREREG section 3). No change to the rules before then.
+- [ ] F2. Boss: refresh `DHAN_ACCESS_TOKEN` in the cloud environment's settings (it was expired on 29 Oct), or the
+      runs can only log what the Drive lake already has (it ends on 19 Oct).
