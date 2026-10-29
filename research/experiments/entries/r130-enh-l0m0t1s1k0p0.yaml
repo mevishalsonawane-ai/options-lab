@@ -1,0 +1,33 @@
+id: r130-enh-l0m0t1s1k0p0
+title: 'R130 Amendment 2 locked version E-L0M0T1S1K0P0: 3-bar swings, all day, 15-min trend, stop >= 0.10%, ATM, no lock'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R130_SWEEP_MSS_FVG.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m, options_rolling_1m WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026 Q1; no fitting)
+  holdout: '2026-04-01..2026-10-19 (''already seen'': read for the 2 locked versions only, 29 Oct 13:51-13:52 UTC; this period
+    had been read twice before)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r130_sweep_mss_fvg/PREREG_ENH.md
+holdout_read: true
+model_or_rule: research/hunt/r130_sweep_mss_fvg/r130enh.py
+settings: PREREG_ENH.md; 96 versions (L x M x T x S x K x P) on W1; 1 lot; 200 twins per trade with the version's own entry
+  window; BH over 106 tests
+variants_tried: 96
+verdict: rejected
+features:
+- 'signal source: the index spot, wicks only (W1); factors: major liquidity, morning, 15-min wick structure, minimum stop
+  0.10%, 1-ITM strike, profit lock on the option premium'
+hypothesis: The best version of the search (by design total) holds up
+results:
+  summary: 'Design 201 trades, win 56%, avg win Rs 1,065 / loss Rs -1,029, avg net Rs 148 (2x Rs 127), total Rs 29,757, max
+    DD Rs -24,432, folds positive 3/4; p (normal) 0.516, p (empirical) 0.493, BH q 0.950 (106); fails design gates: n, q.
+    Already-seen Apr-Oct 2026: 25 trades, win 56% (below 65%), avg net Rs 182, total Rs 4,543, p 0.18; fails n >= 50 and the
+    65% rule.'
+  costs: Costs('dated') + Fills('liq') (also 2x slippage), 1 lot

@@ -1,12 +1,12 @@
-# R130: the sweep → MSS → FVG video setup fails, with closes and wick to wick (research only; nothing in the app changed)
+# R130: the sweep → MSS → FVG video setup fails as stated, wick to wick, and after a 96-version improvement search (research only; nothing in the app changed)
 
-1. Boss's video setup (sweep a recent low, break the recent high, buy the pullback into the FVG on an engulfing candle) was tested on all 5 indices, Aug 2021 to 19 Oct 2026. The signal was read on the index; the ATM option was bought, after real charges and slippage.
-2. As stated (V1, 5-min, MSS by close, body engulfing): 218 design trades, 45% won, -Rs 307 a trade, -Rs 66,966 on 1 lot. Holdout (read once): 36 trades, 39% won, -Rs 750 a trade.
-3. All 6 versions lost in the walk-forward and in the holdout. None beat random entries (best BH q 0.36); none came near Boss's 65% rule.
-4. Wick to wick, with no candle opens or closes anywhere (Amendment 1, added after the results at Boss's request): MSS by a wick 1 tick beyond the swing; engulfing by wicks.
-5. W1 (wick-only, as stated): 485 design trades, 44% won, -Rs 26 a trade; holdout 61 trades, 43% won, -Rs 258 a trade. All 4 wick versions lose; none reaches 65%.
-6. W2 (wick-only, enter on the first touch of the FVG) beat random entries in design (q 0.02) but still lost after costs (-Rs 27), then lost Rs 321 a trade in the holdout.
-7. "Target before stop" holds on the index only when the target is close. Wick-only, the index result is a coin flip (W1 average win 35.9 points vs loss 36.2), and costs turn it into a loss.
+1. As stated (V1, 5-min, on the index, buying the ATM option, real costs): 218 design trades, 45% won, -Rs 307 a trade; holdout 36 trades, -Rs 750 a trade. All 6 versions lost.
+2. Wick to wick, with no candle opens or closes (Amendment 1): W1 485 trades, 44% won, -Rs 26 a trade; holdout -Rs 258. All 4 versions lost.
+3. Improvement search (Amendment 2, 96 versions, after results): major liquidity, morning only, 15-min trend, stop ≥ 0.10%, 1-ITM, and a profit lock. None passed the design gates; BH q 0.95 for all.
+4. Profit lock: it raises the win rate and LOWERS the money. Best version: no lock +Rs 216 a trade (57% won); +Rs 1,000 lock +Rs 29 (62%); +Rs 500 lock -Rs 16 (67%, clears 65% and still loses).
+5. The 15-minute trend filter helped most: trend + stop ≥ 0.10% + 1-ITM made +Rs 216 a trade on 201 design trades (3 of 4 years positive).
+6. But it did no better than random entries on the same day and side (p 0.36): the gain is trading with the 15-min trend, not the sweep/FVG pattern.
+7. Checked once on Apr-Oct 2026 (already seen twice before): 25 trades, 56% won, +Rs 182 (ATM, all from MIDCPNIFTY's 6 trades); 1-ITM 24 trades, -Rs 21. Both fail 65% and n ≥ 50.
 8. "A sweep makes the break stronger" is false with closes (50.7% vs 52.9%) and with wicks (54.3% vs 55.2%, n 10,773).
-9. Every version's drawdown on 1 lot breaks the -Rs 40k account stop. No paper arm is proposed.
-10. Write-up: research/HUNT_R130_SWEEP_MSS_FVG.md. Pre-registrations: PREREG.md (66d2467) and PREREG_WICK.md (fad9c7c). Entries: research/experiments/entries/r130-*.yaml.
+9. No paper arm is proposed. The one lead, the 15-minute trend direction on its own, would be a new pre-registered idea, tested on data after 19 Oct once the lake is topped up.
+10. Write-up: research/HUNT_R130_SWEEP_MSS_FVG.md. Pre-registrations: PREREG.md (66d2467), PREREG_WICK.md (fad9c7c), PREREG_ENH.md (1564595). Entries: research/experiments/entries/r130-*.yaml.

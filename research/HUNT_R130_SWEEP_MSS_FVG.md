@@ -93,8 +93,8 @@ Holdout, 1 Apr to 19 Oct 2026 (137 sessions). It was read once, after the design
   - That is about 50 trades a year across all five indices.
   - Moving to the 1-minute chart (V2) or dropping the engulfing candle (V3) gives more trades, but they lose too.
 
-**Nothing passes. Nothing goes on paper. Nothing changes in the app.** The wick-only versions (Amendment 1,
-below) lose too.
+**Nothing passes. Nothing goes on paper. Nothing changes in the app.** The wick-only versions (Amendment 1)
+and the 96-version improvement search with the profit lock (Amendment 2), both below, fail too.
 
 ## Amendment 1: wick-only versions (Boss: "Not opening and closing candles")
 
@@ -151,6 +151,93 @@ Holdout, Apr to Oct 2026, read once:
 
 **Verdict unchanged: wick-only, the setup still fails. Nothing goes on paper.**
 
+## Amendment 2: can it be improved? (Boss: "Can we enhance it?" and "Also check what will happen if we add profit lock")
+
+**A search on an idea that had already failed, added after its results.**
+- **Pre-registration:** `PREREG_ENH.md` (commit `1564595`), before any number.
+- **Design results:** committed in `c2a4c44` before the one check on Apr-Oct 2026.
+- **That check is labelled "already seen":** this period had been read twice before (V1-V6, W1-W4), so even a pass
+  there would be weak evidence.
+- **New data:** the lake ends on 19 Oct, so there is none to test on yet.
+
+Starting from W1 (wick-only, as stated), 96 versions crossed the three improvements Boss chose, plus the profit lock:
+- **Liquidity:** any 3-bar swing (as before), or major liquidity only (yesterday's low, the opening-range low, equal
+  lows).
+- **Time:** all day, or the morning only (entries to 11:00).
+- **Trend:** none, or the 15-minute structure must agree.
+- **Stop:** any size, or at least 0.10% of the index, so charges are a smaller share.
+- **Strike:** ATM or 1-in-the-money.
+- **Profit lock** on the option premium: none; Boss's S5 lock (after +Rs 1,000, exit if it falls back to 60% of the
+  best open profit); or the same after +Rs 500.
+
+BH ran over 106 tests (these 96 plus R130's earlier 10).
+
+**The answer: some versions turn positive on the past data, but none passes, and none beats random entries.**
+
+What each change did (design, Aug 2021 - Mar 2026; each level averaged over the other factors):
+
+| change | avg net per trade | trades per version | win rate |
+|---|---|---|---|
+| **Profit lock: none** | **+Rs 97** | 135 | 54% |
+| Profit lock: +Rs 1,000, keep 60% | -Rs 108 | 135 | 59% |
+| Profit lock: +Rs 500, keep 60% | -Rs 96 | 135 | 65% |
+| No trend filter | -Rs 67 | 161 | 57% |
+| **15-minute trend agrees** | **-Rs 5** | 109 | 61% |
+| ATM | -Rs 49 | 136 | 58% |
+| 1-ITM | -Rs 23 | 135 | 60% |
+| Any stop | -Rs 39 | 166 | 56% |
+| Stop ≥ 0.10% | -Rs 33 | 105 | 62% |
+| 3-bar swings | -Rs 43 | 189 | 58% |
+| Major liquidity only | -Rs 29 | 82 | 61% |
+| All day | -Rs 31 | 217 | 55% |
+| Morning only | -Rs 41 | 53 | 64% |
+
+- **The profit lock makes it worse.** It raises the win rate but cuts the winners short. On the best version (W1 with
+  the 15-minute trend, a stop of at least 0.10% and 1-ITM; 201 trades):
+
+  | lock | win rate | avg win / avg loss | avg net per trade | total (1 lot) |
+  |---|---|---|---|---|
+  | **none** | 57% | Rs 1,205 / -Rs 1,080 | **+Rs 216** | +Rs 43,432 |
+  | +Rs 1,000, keep 60% | 62% | Rs 676 / -Rs 1,037 | +Rs 29 | +Rs 5,740 |
+  | +Rs 500, keep 60% | **67%** (meets 65%) | Rs 418 / -Rs 903 | **-Rs 16** | -Rs 3,194 |
+
+  With the +Rs 500 lock the setup clears the 65% win rate and still loses money: a high win rate is not the same as
+  making money. On plain W1 (485 trades), the lock turned -Rs 26 a trade into -Rs 75 (+Rs 1,000) and -Rs 63 (+Rs 500).
+- **The 15-minute trend filter helped most.**
+  - W1 with the trend filter, a stop of at least 0.10% and 1-ITM made +Rs 216 a trade (201 trades, 57% won). It was
+    positive in 3 of 4 folds:
+
+    | fold | net (1 lot) | trades |
+    |---|---|---|
+    | 2023 | -Rs 13,183 | 33 |
+    | 2024 | +Rs 4,524 | 53 |
+    | 2025 | +Rs 29,003 | 50 |
+    | 2026 Q1 | +Rs 19,466 | 15 |
+
+  - The same with ATM made +Rs 148 (201 trades).
+- **But it is not the pattern.** Neither beat random entries on the same days, the same side and the same stop and
+  target (p 0.36 and 0.52; BH q 0.95). The twins share the day and the trend's direction, so the gain comes from
+  trading *with the 15-minute trend*. The sweep → MSS → FVG pattern does not add to it.
+- **None passes the design gates.** No version had both 300+ trades and positive money. The best had only 201 trades,
+  and every q was 0.95.
+- **The two best, checked once on Apr-Oct 2026 ("already seen"):**
+
+  | version | trades | win rate | avg net per trade | total (1 lot) | vs random (p) |
+  |---|---|---|---|---|---|
+  | trend + stop ≥ 0.10% + ATM | 25 | 56% | +Rs 182 | +Rs 4,543 | 0.19 |
+  | trend + stop ≥ 0.10% + 1-ITM | 24 | 50% | -Rs 21 | -Rs 515 | 0.51 |
+
+  - Both are below the 65% rule and under 50 trades.
+  - The ATM version's profit is MIDCPNIFTY's: +Rs 12,947 on 6 trades. The other four indices lost Rs 8,404 together,
+    BANKNIFTY alone -Rs 9,113 on 9.
+  - Over design plus this period, they would have stayed inside Boss's account stop (drawdown -Rs 24,432 and
+    -Rs 21,441; worst month -Rs 7,326 and -Rs 7,853), but that does not make up for the failed gates.
+
+**Verdict: the improved versions fail too. Nothing goes on paper.**
+
+The one lead is the 15-minute trend direction. If Boss wants it, it can be tested on its own, without the SMC pattern,
+as a new pre-registered idea (and checked on data after 19 Oct once the lake is topped up).
+
 ## The video's claims, checked on the data (index wicks; design / holdout)
 
 | claim | what the data shows |
@@ -179,7 +266,8 @@ holdout +0.26R is 14 trades, after -0.11R on 111 trades in design.
 - **Pre-registration:** `research/hunt/r130_sweep_mss_fvg/PREREG.md`, commit `66d2467`, before any data was read.
   - Design results were committed in `fca117a` before the holdout.
   - The holdout was read once, guarded by a lock file that refuses a second read.
-- **Code and 21 tests (5 for Amendment 1):** `research/hunt/r130_sweep_mss_fvg/` (`r130.py`, `test_r130.py`, `tables.py`).
+- **Code and 29 tests (5 for Amendment 1, 8 for Amendment 2):** `research/hunt/r130_sweep_mss_fvg/` (`r130.py`, `r130enh.py`,
+  `test_r130.py`, `test_r130enh.py`, `tables.py`).
   - The tests include a hand-built session, worked out by hand, with its mirror-image sell.
   - They also include a look-ahead guard: removing every bar after the entry does not change the entry.
 - **Results:** `results/design.json`, `results/holdout.json`. The trade lists are in the cache (`trades_*.parquet`), not
