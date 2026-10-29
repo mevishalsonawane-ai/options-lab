@@ -1,0 +1,28 @@
+id: r137-b1n
+title: 'R137 B1N: strong-swing break, 2R, R123 N1 EV filter (continuation, from R135)'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R137_STRONG_BREAK.md
+data_version: Drive lake copied 29 Oct 2026; R123 N1 predictions
+period:
+  design: '2021-08-01..2026-03-15 (filtered: folds 2023-2026 Q1)'
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r137_strong_break/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (15-min strong-swing break on wicks); buys the ATM option; index stop'
+hypothesis: Continuation after the first 15-minute close beyond a strong swing pays after costs
+model_or_rule: research/hunt/r137_strong_break/r137.py
+settings: PREREG.md B1N; 1 lot
+variants_tried: 4
+verdict: rejected
+results:
+  summary: 'design 83 trades, win 54%, avg net Rs 1,130 (2x Rs 1,112), total Rs 93,818, drawdown Rs -22,971, worst month Rs
+    -12,471; p 0.003, q 0.010. Holdout 9 trades, avg net Rs 1,160. Fails: n, holdout_n.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
