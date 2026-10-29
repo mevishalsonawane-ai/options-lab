@@ -124,6 +124,20 @@ Concepts unique to *Algorithm Theory*:
     - The R123 network filter is also the only thing that has helped so far (R132-R133). So the books' concepts are
       worth giving to it.
 
+## 3b. Step 1 done: R135 measured the claims on NSE (`research/HUNT_R135_ICT_FACTS.md`)
+
+The books' core claim fails here. Sweeps of PDH/PDL, last month's high/low and the opening range are followed by
+**more continuation than normal**, not a reversal. Three claims do hold:
+- the day's high or low usually comes in the first 75 minutes;
+- strong-swing breaks continue more than weak ones;
+- FVGs get filled.
+
+Two claims are backwards or absent:
+- the 50% pullback rule is backwards (shallow pullbacks hold more);
+- "fill then reverse" and the Monday/Tuesday week show nothing.
+
+So the strategy step should test **continuation**, not the books' reversal.
+
 ## 4. The plan (step by step, each pre-registered before any number)
 
 1. **R135: facts first.** Measure the books' claims on NSE minutes (2021-2026), with sample sizes:
