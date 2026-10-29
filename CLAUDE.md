@@ -43,7 +43,14 @@ notes; match the surrounding code.
       - It is labelled "failed gates, Boss's exception" wherever it is shown.
       - Boss can switch it off in one tap.
       - It never goes live.
-      - No other failed idea may use this exception.
+    - A second exception, chosen by Boss on 29 Oct ("Build CISD (ICT's version) + network + index stop + lock. And add
+      it as a arm, and do forward test too"): R133's S3-V2-E3 runs as a PAPER arm although it failed the gates.
+      - The rule: CISD entries (ICT's reading) on the index, R123's N1 network as the expected-value filter, R131's index
+        stop and a 60% lock after +₹1,000.
+      - Its record: 413 design trades, 69% won, +₹261 a trade; only 35 trades in the holdout period.
+      - Same terms as S5 Trail: labelled "failed gates, Boss's exception", one tap off, never live.
+      - R134's forward test keeps judging it on new days.
+    - No other failed idea may use these exceptions.
   - Paper changes never carry over to live by themselves.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.
 - Nothing on the order or tick path touches disk, SecurePrefs or the network, or blocks (OrderPathRound2Test stays 0).
