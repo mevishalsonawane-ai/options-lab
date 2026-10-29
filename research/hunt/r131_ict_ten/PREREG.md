@@ -236,3 +236,22 @@ index, high → -low, low → -high, open → -open, close → -close, as R130).
   candidates found on full data are found identically when every minute after the entry minute is removed).
 - Results: `results/design.json`, then `results/holdout.json` (the one read).
 - Write-up: `research/HUNT_R131_ICT_TEN.md`; entries `research/experiments/entries/r131-*.yaml`; RESULT.md.
+
+## N1 (29 Oct 2026, after the code, BEFORE any run on the data): choices the text above leaves open, fixed in `r131.py`
+
+1. **The drop run of a CISD (S5, S7):** the run ends at the last red bar at most 3 bars at or before the move's
+   lowest-low bar (the first such bar when lows tie). No red bar there: no CISD yet (the setup keeps waiting).
+2. **The sweep / false-break bar itself can confirm (S5, S7):** the CISD close may come on the sweep bar (a hammer that
+   closes above the level); S1, S2, S4 and S3 need a later bar (as R130's MSS).
+3. **OTE (S10):** skipped when the bars between SH's pivot and its confirmation had already gone below the 0.786 level
+   (the retracement passed the zone before it could be known). A high above SH in the touch minute itself also kills
+   the setup (the order of the two is unknown inside a minute: the worse reading).
+4. **A 1-minute touch (S6, S8, S9, S10):** the touch window starts at the minute after the bar that makes the zone
+   known, and ends with the last bar of the window; entry at the next minute's open.
+5. **The structural target** counts a swing high as taken once a later high is one tick or more above it.
+6. **One trade at a time:** a setup that began during an open trade may still enter after that trade's exit (setups
+   are found independently; only the entry minute is checked against the open trade).
+7. **AMD (S5):** a bar that breaks both sides of the box counts as the false break below for buys (and above for
+   sells); both candidates then meet in the sequencer.
+8. **Silver Bullet V2 window:** a 5-minute bar is inside 09:45-10:45 when it starts at or after 09:45 and ends by
+   10:44; the entry can be 10:45 at the latest.
