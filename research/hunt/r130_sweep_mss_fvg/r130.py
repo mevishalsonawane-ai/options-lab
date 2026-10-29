@@ -228,13 +228,17 @@ class Side:
                                       stop=bottom - STOP_PCT * abs(bottom))
                 return None
         # a new sweep (only while no setup of this side waits for its pullback)
+        self._sweep(t, d)
+        return None
+
+    def _sweep(self, t: int, d: int):
+        """A wick sweep of the recent (untaken) swing low starts a setup (Amendment 2 overrides the level)."""
         if self.lows and self.highs:
             L = self.lows[-1][0]
             H = self.highs[-1][0]
             if H > L and self.ll[t] <= L - TICK and (not self.close_back or self.cc[t] > L):
                 self.census["sweeps"] += 1
                 self.pend = Setup("mss", int(d), t, H)
-        return None
 
     def target(self, ref: float, stop: float, how: str) -> float | None:
         if how == "2R":
@@ -290,15 +294,19 @@ def mirror(g):
     return {1: (g.h, g.l, g.o, g.c), -1: (-g.l, -g.h, -g.o, -g.c)}
 
 
-def scan(g, cfg: dict, blocked: set, days_keep, last_row: int = K.K3.EXIT_LAST) -> tuple[list, dict]:
+def scan(g, cfg: dict, blocked: set, days_keep, last_row: int = K.K3.EXIT_LAST, side_cls=None,
+         entry_last: int = LAST_ENTRY, trend=None, min_stop_pct: float = 0.0) -> tuple[list, dict]:
     """All trades of one variant on one index (index only, no option yet): one trade at a time, both sides.
-    `blocked` = session indices with no tradable contract; `days_keep(day)` -> keep the trade in the output."""
+    `blocked` = session indices with no tradable contract; `days_keep(day)` -> keep the trade in the output.
+    Amendment 2 hooks (defaults = the original rule): `side_cls` (the sweep's liquidity), `entry_last` (the last entry
+    row), `trend(d, row) -> +1 / -1 / 0` (trades only in its direction), `min_stop_pct` (skip smaller stops)."""
+    side_cls = side_cls or Side
     M = mirror(g)
     sides = {}
     for sd in (1, -1):
         mh, ml, mo, mc = M[sd]
         B = make_bars(mo, mh, ml, mc, cfg["tf"])
-        sides[sd] = Side(B, B.h, B.l, B.o, B.c, cfg["k"], cfg["engulf"], cfg["close_back"],
+        sides[sd] = side_cls(B, B.h, B.l, B.o, B.c, cfg["k"], cfg["engulf"], cfg["close_back"],
                         cfg.get("wick", False))
     B = sides[1].B
     # both sides' bars are the same bars (mirroring keeps which bars have data)
@@ -334,8 +342,11 @@ def scan(g, cfg: dict, blocked: set, days_keep, last_row: int = K.K3.EXIT_LAST) 
         S = sides[sd]
         p = S.pend
         S.pend = None
-        if r0 > LAST_ENTRY or r0 > last_row:
+        if r0 > entry_last or r0 > last_row:
             skips["late"] += 1
+            continue
+        if trend is not None and trend(d, r0) != sd:              # the 15-minute structure known at entry must agree
+            skips["trend"] = skips.get("trend", 0) + 1
             continue
         if d in blocked:
             skips["no_contract"] += 1
@@ -347,6 +358,9 @@ def scan(g, cfg: dict, blocked: set, days_keep, last_row: int = K.K3.EXIT_LAST) 
             continue
         if ref <= p.stop:
             skips["no_room"] += 1
+            continue
+        if min_stop_pct and ref - p.stop < min_stop_pct * abs(ref):
+            skips["small_stop"] = skips.get("small_stop", 0) + 1
             continue
         tgt = S.target(ref, p.stop, cfg["target"])
         if tgt is None or tgt <= ref:
