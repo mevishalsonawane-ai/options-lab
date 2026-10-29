@@ -35,7 +35,7 @@ def race(h: np.ndarray, l: np.ndarray, r0: int, px: float, sd: int, dpct: float 
     if r0 >= N or not np.isfinite(px):
         return None
     hh, ll = h[r0:], l[r0:]
-    up, dn = px * (1 + dpct), px * (1 - dpct)
+    up, dn = px + abs(px) * dpct, px - abs(px) * dpct      # abs: mirrored (negative) prices too
     if sd > 0:
         w = np.flatnonzero(np.nan_to_num(hh, nan=-np.inf) >= up)
         x = np.flatnonzero(np.nan_to_num(ll, nan=np.inf) <= dn)

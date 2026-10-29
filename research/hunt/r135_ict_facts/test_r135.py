@@ -46,3 +46,12 @@ def test_period_levels_use_only_completed_periods():
     assert np.isnan(lv[4, 2])                                                       # first week: no previous week
     assert lv[5, 2] == dh[4] and lv[5, 3] == dl[0]                                  # week 2 sees week 1 only
     assert np.isnan(lv[-1, 4])                                                      # January: no previous month
+
+
+def test_race_on_mirrored_negative_prices():
+    h = np.full(N, 100.1)
+    l = np.full(N, 99.9)
+    l[10] = 99.7                                   # a real drop of 0.3%
+    # mirrored: high -> -low, low -> -high; a real drop is a mirrored rise, so a mirrored "up" race wins
+    assert F.race(-l, -h, 0, -100.0, 1) == 1
+    assert F.race(-l, -h, 0, -100.0, -1) == 0

@@ -90,3 +90,10 @@ with daily displacement, the direction of the next 20 sessions' net move, with n
 - `research/hunt/r135_ict_facts/` (`r135.py`, `test_r135.py`); `results/facts.json`.
 - `research/HUNT_R135_ICT_FACTS.md`: one plain table of every claim, with n, its rate, the control's rate, p and q.
 - One entry `research/experiments/entries/r135-ict-facts.yaml` (verdict `not-a-test`: descriptive).
+
+## N1 (29 Oct 2026, after the first run): a code bug fixed, nothing else changed
+
+The first run's race used `px * (1 ± d)` for its two levels. On the mirrored (negated) prices used for the bearish
+side of C4 and C6 that points the wrong way, so their bearish halves raced backwards. It is fixed (`px ± |px| * d`,
+with a test). C1, C2 and C3 use real prices and C5 uses no race, so they are unchanged. The definitions, tests and
+controls are unchanged. The numbers reported are from the corrected run; the first run's C4 and C6 rates are void.
