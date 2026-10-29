@@ -1,0 +1,34 @@
+id: r130-enh-search
+title: 'R130 Amendment 2: 96-version improvement search on the wick-only sweep/MSS/FVG setup (after results)'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R130_SWEEP_MSS_FVG.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m, options_rolling_1m WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026 Q1; no fitting)
+  holdout: '2026-04-01..2026-10-19 (''already seen'': read for the 2 locked versions only, 29 Oct 13:51-13:52 UTC; this period
+    had been read twice before)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r130_sweep_mss_fvg/PREREG_ENH.md
+holdout_read: true
+model_or_rule: research/hunt/r130_sweep_mss_fvg/r130enh.py
+settings: PREREG_ENH.md; 96 versions (L x M x T x S x K x P) on W1; 1 lot; 200 twins per trade with the version's own entry
+  window; BH over 106 tests
+variants_tried: 96
+verdict: rejected
+features:
+- 'signal source: the index spot, wicks only (W1); factors: major liquidity, morning, 15-min wick structure, minimum stop
+  0.10%, 1-ITM strike, profit lock on the option premium'
+hypothesis: Boss's improvements (major liquidity, morning, 15-min trend, cheaper to trade) make the wick-only setup pass
+results:
+  summary: '0 of 96 pass the design gates (none has both n >= 300 and positive money; best q 0.95). 36 of 96 had a positive
+    average. Factor effects (mean over the other factors): L 0: avg Rs -43, win 58%; 1: avg Rs -29, win 61%. M 0: avg Rs -31,
+    win 55%; 1: avg Rs -41, win 64%. T 0: avg Rs -67, win 57%; 1: avg Rs -5, win 61%. S 0: avg Rs -39, win 56%; 1: avg Rs
+    -33, win 62%. K 0: avg Rs -49, win 58%; 1: avg Rs -23, win 60%. The best (15-min trend + stop >= 0.10% + 1-ITM) made +Rs
+    216/trade on 201 trades, but p vs same-day same-side twins 0.36: the gain is the trend direction, not the pattern.'
+  costs: Costs('dated') + Fills('liq') (also 2x slippage), 1 lot

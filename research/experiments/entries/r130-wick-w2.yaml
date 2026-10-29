@@ -1,0 +1,31 @@
+id: r130-wick-w2
+title: 'R130 Amendment 1 (wick-only, added after results) W2: wick-only, no confirmation (first touch of the FVG)'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R130_SWEEP_MSS_FVG.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m, options_rolling_1m WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026 Q1; no fitting)
+  holdout: 2026-04-01..2026-10-19 (read once for the amendment, 29 Oct 13:17-13:18 UTC; already seen for V1-V6)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r130_sweep_mss_fvg/PREREG_WICK.md
+holdout_read: true
+model_or_rule: research/hunt/r130_sweep_mss_fvg/r130.py
+settings: PREREG.md; 1 lot at today's lots; one trade at a time per index; 200 random-entry twins per trade
+variants_tried: 4
+verdict: rejected
+features:
+- 'signal source: the index spot, wicks only (wick swings, wick sweep, wick MSS 1 tick beyond the swing, three-candle FVG,
+  wick-engulfing candle: higher high and low at or below the previous low); no candle open or close in any signal; buys the
+  ATM option of the nearest non-expiring expiry'
+hypothesis: 'Boss: the sweep -> MSS -> FVG setup read wick to wick (no opens or closes) makes money'
+results:
+  summary: 'Design 1410 trades, win 43% (below 65%), avg win Rs 718 / loss Rs -587, avg net Rs -27 (2x slip Rs -49), total
+    Rs -37,942, max DD Rs -44,049; p vs twins 0.005, BH q 0.020 (4 W versions); fails design gates: net_pos, folds. Holdout
+    (read once) 177 trades, win 32%, avg net Rs -321, total Rs -56,811, p 0.960.'
+  costs: Costs('dated') + Fills('liq') (also 2x slippage), 1 lot

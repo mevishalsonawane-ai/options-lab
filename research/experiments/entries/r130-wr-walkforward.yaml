@@ -1,0 +1,33 @@
+id: r130-wr-walkforward
+title: 'R130 Amendment 3: walk-forward pick of the win-rate search'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R130_SWEEP_MSS_FVG.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m, options_rolling_1m WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026 Q1; no fitting)
+  holdout: '2026-04-01..2026-10-19 (''already seen'', 4th read: the version picked on all design only, 29 Oct 14:23 UTC)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r130_sweep_mss_fvg/PREREG_WR.md
+holdout_read: true
+model_or_rule: research/hunt/r130_sweep_mss_fvg/r130wr.py
+settings: PREREG_WR.md; 32 versions (min stop x min target x stop placement x trend) on W1 + 15-min trend + 1-ITM, no lock;
+  walk-forward pick by year; 200 twins; BH over 138
+variants_tried: 32
+verdict: rejected
+features:
+- 'signal source: the index spot, wicks only (W1); trend from 15-min / 60-min wick structure; minimum target and stop distances;
+  stop at the FVG or beyond the sweep; 1-ITM option, no lock'
+hypothesis: Picking the version each year from earlier years only gives >= 65% wins and a profit out of sample
+results:
+  summary: 'Out of sample 120 trades, win 52.5% (below 65%), avg net Rs 45 (2x Rs 24), total Rs 5,410, max DD Rs -23,605,
+    years positive 3/4. Steps: 2023: WR-S0G0X1T1 57 trades, win 46%, Rs -16,688; 2024: WR-S1G0X0T1 29 trades, win 55%, Rs
+    5,363; 2025: WR-S1G0X0T1 27 trades, win 70%, Rs 10,007; 2026: WR-S1G0X0T1 7 trades, win 29%, Rs 6,728. Fails n >= 150
+    and the 65% rule. Picked on all design: WR-S1G0X0T1 (95 trades, win 60%, avg Rs 235); already-seen Apr-Oct 2026: 13 trades,
+    win 38%, avg Rs -503, total Rs -6,533.'
+  costs: Costs('dated') + Fills('liq') (also 2x slippage), 1 lot
