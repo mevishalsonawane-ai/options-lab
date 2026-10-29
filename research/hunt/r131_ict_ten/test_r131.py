@@ -38,7 +38,7 @@ def flat(n, p=100.0):
 
 
 def bull_cands(g, cfg):
-    return R.DETECTORS[cfg["s"]](R.sides_of(g)[1], cfg)
+    return R.detector(cfg)(R.sides_of(g)[1], cfg)
 
 
 # ------------------------------------------------------------------------------------------------ primitives
@@ -298,10 +298,13 @@ def test_holdout_lock_refuses_a_second_read(tmp_path):
         R.holdout_lock("start", out=tmp_path, results=tmp_path)
 
 
-def test_thirty_variants_three_per_strategy():
+def test_thirty_variants_three_per_strategy_plus_nine_wick_only():
     assert len(R.VARIANTS) == 30
     for s in R.STRATS:
         assert sum(v["s"] == s for v in R.VARIANTS.values()) == 3
+    assert len(R.VARIANTS_W) == 9 and all(v["wick"] for v in R.VARIANTS_W.values())
+    assert "ote" not in {v["s"] for v in R.VARIANTS_W.values()}          # OTE uses no close (N4)
+    assert set(R.ALL_VARIANTS) == set(R.VARIANTS) | set(R.VARIANTS_W)
 
 
 # ------------------------------------------------------------------------------------------------ look-ahead guard
@@ -334,7 +337,7 @@ def test_lookahead_guard_every_variant():
     g = random_grid(rng, 25)
     S = R.sides_of(g)
     found = 0
-    for v, cfg in R.VARIANTS.items():
+    for v, cfg in R.ALL_VARIANTS.items():
         full = R.candidates(S, cfg)
         if full:
             found += 1
@@ -343,7 +346,7 @@ def test_lookahead_guard_every_variant():
             St = R.sides_of(truncate(g, c.d, c.r0))
             again = [(s2, x.d, x.r0, round(x.stop, 6)) for s2, x in R.candidates(St, cfg)]
             assert (sd, c.d, c.r0, round(c.stop, 6)) in again, (v, sd, c)
-    assert found == len(R.VARIANTS)                         # every variant has setups on this data
+    assert found == len(R.ALL_VARIANTS)                     # every variant has setups on this data
 
 
 # ------------------------------------------------------------------------------------------------ twins
@@ -380,3 +383,44 @@ def test_vectorised_twins_equal_the_per_trade_loop():
             assert np.isnan(v)
         else:
             assert v == pytest.approx(t1[0], abs=1e-6)
+
+
+# ------------------------------------------------------------------------------------------------ wick-only (N4)
+def test_silver_bullet_wick_choch_enters_the_minute_after_the_wick():
+    g = grid([SWEEP_CHOCH + flat(20, 110)])
+    c = bull_cands(g, dict(s="sb", tf=5, target="S", wick=True))
+    # bar 12 (green): open, low, HIGH 111 at minute 62 >= 110.05: entry 63, not after the bar's close (65)
+    assert [x.r0 for x in c] == [12 * 5 + 2 + 1]
+    assert c[0].stop == pytest.approx(R.stop_below(99.0))
+
+
+def test_silver_bullet_wick_needs_a_tick_above():
+    bars = SWEEP_CHOCH[:12] + [(105, 110.04, 104, 109)] + flat(20, 108)     # high 110.04 < 110 + 0.05
+    assert bull_cands(grid([bars]), dict(s="sb", tf=5, target="S", wick=True)) == []
+
+
+def test_cisd_wick_arms_on_completed_red_bars():
+    g = grid([CISD_DAY + flat(20, 111)])
+    c = bull_cands(g, dict(s="cisd", tf=5, target="S", level="green", wick=True))
+    # the run 15..17 (first high 110.9 - low 103 >= 2 ATR); bar 19's high 112 >= 111.05 at minute 97
+    assert [x.r0 for x in c] == [19 * 5 + 2 + 1] and c[0].stop == pytest.approx(R.stop_below(103.0))
+
+
+def test_ifvg_wick_invalidation_and_breaker_wick_failure():
+    bars = flat(5, 105) + [(105, 105.2, 104.8, 104.9), (104.9, 104.95, 102, 102.1), (102.1, 103.5, 101.5, 101.8),
+                           (101.8, 104.9, 101.7, 104.0),          # 8: a wick to 104.9 >= 104.85, a close below
+                           (104.0, 104.5, 103.9, 104.3), (104.3, 104.9, 104.2, 104.5)]
+    g = grid([bars + flat(20, 104.5)])
+    assert bull_cands(g, dict(s="ifvg", tf=5, target="S", trig="touch")) == []          # no close above: V1 none
+    c = bull_cands(g, dict(s="ifvg", tf=5, target="S", trig="touch", wick=True))
+    assert len(c) == 1 and c[0].r0 == 9 * 5 + 1                                       # bar 9 opens at 104.0 <= 104.8
+
+
+def test_order_block_wick_impulse_measure():
+    # a green pair whose bodies move 1.6 ATR but whose wicks move 2.4 ATR (ATR 1.0)
+    bars = flat(14, 100) + [(100, 100.2, 99.0, 99.2), (99.4, 100.6, 99.1, 100.3), (100.3, 101.5, 100.2, 101.0),
+                            (101.0, 101.1, 100.0, 100.4)]
+    g = grid([bars + flat(20, 100.5)])
+    assert bull_cands(g, dict(s="ob", tf=5, target="S", bos=False)) == []
+    c = bull_cands(g, dict(s="ob", tf=5, target="S", bos=False, wick=True))
+    assert len(c) == 1 and c[0].stop == pytest.approx(R.stop_below(99.0))

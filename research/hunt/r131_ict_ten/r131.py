@@ -94,6 +94,19 @@ VARIANTS = {
     "S10-V2": dict(s="ote", tf=5, target="S", fib=0.705, label="OTE: trend pullback to 0.705"),
     "S10-V3": dict(s="ote", tf=5, target="2R", fib=0.618, label="OTE: 0.618, fixed 2R"),
 }
+# PREREG N4 (Boss, 29 Oct: "wick to wick"): V1 with every confirming close replaced by a wick. S10 has no close.
+VARIANTS_W = {
+    "S1-W": dict(s="sb", tf=15, target="S", wick=True, label="Silver Bullet wick-only: CHoCH by a wick"),
+    "S2-W": dict(s="cam", tf=5, target="S", trend=True, wick=True, label="Cameron wick-only: FVG low back above PDL"),
+    "S3-W": dict(s="cisd", tf=5, target="S", level="green", wick=True, label="CISD wick-only: a wick above the last green high"),
+    "S4-W": dict(s="crt", tf=15, target="S", rng="day", wick=True, label="CRT wick-only: a wick outside, CHoCH by a wick"),
+    "S5-W": dict(s="amd", tf=5, target="S", level="open", wick=True, label="AMD wick-only: CISD by a wick"),
+    "S6-W": dict(s="ifvg", tf=5, target="S", trig="touch", wick=True, label="IFVG wick-only: invalidated by a wick"),
+    "S7-W": dict(s="ts", tf=5, target="S", lvl="swing", wick=True, label="Turtle Soup wick-only: CISD by a wick"),
+    "S8-W": dict(s="ob", tf=5, target="S", bos=False, wick=True, label="Order Block wick-only: impulse wick to wick"),
+    "S9-W": dict(s="brk", tf=5, target="S", trig="touch", wick=True, label="Breaker wick-only: fails on a wick"),
+}
+ALL_VARIANTS = {**VARIANTS, **VARIANTS_W}
 STRATS = {"sb": "S1 Silver Bullet", "cam": "S2 Cameron's Model", "cisd": "S3 CISD", "crt": "S4 CRT", "amd": "S5 AMD",
           "ifvg": "S6 IFVG", "ts": "S7 Turtle Soup", "ob": "S8 Order Block", "brk": "S9 Breaker Block",
           "ote": "S10 OTE"}
@@ -401,7 +414,7 @@ def det_cam(S: Side, cfg: dict) -> list:
                 if t > pend + N_CONF:
                     pend = None
                 elif t - 2 >= pend and ch.same(t - 2, t) and ch.l[t] - ch.h[t - 2] >= fvg_min(ch.l[t]) \
-                        and ch.c[t] > L:
+                        and (ch.l[t] > L if cfg.get("wick") else ch.c[t] > L):
                     out.append(Cand(d, int(ch.B.end[t]) + 1, stop_below(ch.l[pend:t + 1].min()), cfg["tf"]))
                     pend = None
                     continue
@@ -522,7 +535,7 @@ def det_ifvg(S: Side, cfg: dict) -> list:
         keep = []
         for z in zones:
             j1, bot, top = z
-            if ch.c[t] > top:                    # invalidated: now support
+            if (ch.h[t] >= top + TICK) if cfg.get("wick") else (ch.c[t] > top):   # invalidated: now support
                 last = min(t + IFVG_RETEST, int(ch.last_of[t]))
                 stop = stop_below(bot)
                 if last > t:
@@ -581,7 +594,7 @@ def det_ts(S: Side, cfg: dict) -> list:
 
 
 # ---- S8 Order Block / S9 Breaker
-def find_obs(ch: Chart, bull: bool, bos: bool = False) -> list:
+def find_obs(ch: Chart, bull: bool, bos: bool = False, wick: bool = False) -> list:
     """Order blocks on this chart: (ob bar, impulse last bar). bull: a green impulse and the last red bar before it;
     else a red impulse and the last green bar before it. bos: the impulse's close must also be above the recent
     swing high known at its last bar (bull only)."""
@@ -595,7 +608,10 @@ def find_obs(ch: Chart, bull: bool, bos: bool = False) -> list:
             a = t
             while a > t - 2 and ch.same(a - 1, t) and col[a - 1]:
                 a -= 1
-            mv = (ch.c[t] - ch.o[a]) if bull else (ch.o[a] - ch.c[t])
+            if wick:                                  # N4: wick to wick
+                mv = (ch.h[t] - ch.l[a]) if bull else (ch.h[a] - ch.l[t])
+            else:
+                mv = (ch.c[t] - ch.o[a]) if bull else (ch.o[a] - ch.c[t])
             if np.isfinite(ch.atr[a]) and mv >= IMPULSE_ATR * ch.atr[a]:
                 ob = None
                 for x in range(a - 1, a - OB_LOOKBACK - 1, -1):
@@ -619,7 +635,7 @@ def find_obs(ch: Chart, bull: bool, bos: bool = False) -> list:
 def det_ob(S: Side, cfg: dict) -> list:
     ch = S.chart(cfg["tf"])
     out = []
-    for ob, t in find_obs(ch, True, cfg["bos"]):
+    for ob, t in find_obs(ch, True, cfg["bos"], cfg.get("wick", False)):
         last = min(t + OB_LIFE, int(ch.last_of[t]))
         if last <= t:
             continue
@@ -635,10 +651,11 @@ def det_brk(S: Side, cfg: dict) -> list:
     """A bearish order block that a bar closes above becomes a bullish breaker; buy its retest."""
     ch = S.chart(cfg["tf"])
     out = []
-    for ob, t in find_obs(ch, False):
+    wick = cfg.get("wick", False)
+    for ob, t in find_obs(ch, False, wick=wick):
         last = min(t + OB_LIFE, int(ch.last_of[t]))
         hi, lo = float(ch.h[ob]), float(ch.l[ob])
-        v = next((x for x in range(t + 1, last + 1) if ch.c[x] > hi), None)
+        v = next((x for x in range(t + 1, last + 1) if (ch.h[x] >= hi + TICK if wick else ch.c[x] > hi)), None)
         if v is None:
             continue
         last2 = min(v + BRK_LIFE, int(ch.last_of[v]))
@@ -689,15 +706,189 @@ def det_ote(S: Side, cfg: dict) -> list:
     return out
 
 
+# ---- PREREG N4: minute-wick confirmations
+def _cross(S: Side, ch: Chart, t: int, X: float):
+    """The first minute of bar t whose high is at least one tick above X, or None."""
+    d, a, b = int(ch.day[t]), int(ch.B.start[t]), int(ch.B.end[t])
+    seg = S.mh[d][a:b + 1]
+    hit = np.flatnonzero(np.isfinite(seg) & (seg >= X + TICK))
+    return a + int(hit[0]) if len(hit) else None
+
+
+def _low_upto(S: Side, ch: Chart, s: int, t: int, r: int) -> float:
+    """The lowest low from bar s to minute r of bar t (bars s .. t-1 whole, bar t up to and including minute r)."""
+    lo = float(ch.l[s:t].min()) if t > s else np.inf
+    seg = S.ml[int(ch.day[t])][int(ch.B.start[t]):r + 1]
+    seg = seg[np.isfinite(seg)]
+    return float(min(lo, seg.min() if len(seg) else np.inf))
+
+
+def det_sb_w(S: Side, cfg: dict) -> list:
+    """S1-W (and S4-W through det_crt_w): sweep of the recent low, then a minute wick above the recent high."""
+    ch = S.chart(cfg["tf"])
+    st = Struct(ch)
+    out, pend = [], None
+    for t in range(ch.T):
+        if st.new_bar(t):
+            pend = None
+        if pend is not None:
+            s0, H = pend
+            if t > s0 + N_CONF or not ch.same(s0, t):
+                pend = None
+            else:
+                r = _cross(S, ch, t, H)
+                if r is not None:
+                    out.append(Cand(int(ch.day[t]), r + 1, stop_below(_low_upto(S, ch, s0, t, r)), cfg["tf"]))
+                    pend = None
+                    st.after_bar(t)
+                    continue
+        L, H = st.recent_low(), st.recent_high()
+        if L is not None and H is not None and H > L and ch.l[t] <= L - TICK:
+            pend = (t, H)
+        st.after_bar(t)
+    return out
+
+
+def det_crt_w(S: Side, cfg: dict) -> list:
+    """S4-W: a fresh wick below the previous day's low (15-min), then a minute wick above the recent 15-min high."""
+    ch = S.chart(cfg["tf"])
+    st = Struct(ch)
+    out, pend = [], None
+    for t in range(ch.T):
+        if st.new_bar(t):
+            pend = None
+        d = int(ch.day[t])
+        L = S.d_low[d - 1] if d >= 1 else np.nan
+        if pend is not None:
+            s0, H = pend
+            if t > s0 + N_CONF or not ch.same(s0, t):
+                pend = None
+            else:
+                r = _cross(S, ch, t, H)
+                if r is not None:
+                    out.append(Cand(d, r + 1, stop_below(_low_upto(S, ch, s0, t, r)), cfg["tf"]))
+                    pend = None
+                    st.after_bar(t)
+                    continue
+        if np.isfinite(L) and _fresh_poke(ch, t, L):
+            H = st.recent_high()
+            if H is not None and H > L:
+                pend = (t, H)
+        st.after_bar(t)
+    return out
+
+
+def det_cisd_w(S: Side, cfg: dict) -> list:
+    """S3-W: a red run (armed after each completed red bar) whose first high to lowest low is >= 2 ATR; then a minute
+    wick above the last green candle's high within 12 bars of the run's last bar."""
+    ch = S.chart(cfg["tf"])
+    out, pend = [], None
+    for t in range(ch.T):
+        if t and not ch.same(t - 1, t):
+            pend = None
+        if pend is not None:
+            a, e, lv = pend
+            if t > e + N_CONF or not ch.same(e, t):
+                pend = None
+            else:
+                r = _cross(S, ch, t, lv)
+                if r is not None:
+                    out.append(Cand(int(ch.day[t]), r + 1, stop_below(_low_upto(S, ch, a, t, r)), cfg["tf"]))
+                    pend = None
+                    continue
+        if ch.red[t]:
+            a = t
+            while ch.same(a - 1, t) and ch.red[a - 1]:
+                a -= 1
+            if t - a + 1 >= 2 and np.isfinite(ch.atr[a]) and ch.h[a] - ch.l[a:t + 1].min() >= CISD_ATR * ch.atr[a]:
+                lv = run_level(ch, a, cfg["level"])
+                if lv is not None:
+                    pend = (a, t, lv)
+    return out
+
+
+def det_amd_w(S: Side, cfg: dict) -> list:
+    """S5-W: the AMD box and false break as S5 (wicks already); the CISD is a minute wick above ICT's level from the
+    completed bars since the false break."""
+    ch = S.chart(cfg["tf"])
+    out, box, man = [], None, None
+    for t in range(ch.T):
+        if box is not None and not ch.same(box[0], t):
+            box = None
+        if man is not None and not ch.same(man, t):
+            man = None
+        if man is not None:
+            f = man
+            if t > f + N_CONF:
+                man = None
+            elif t > f:
+                lowbar = f + int(np.argmin(ch.l[f:t]))
+                lv = drop_run_level(ch, lowbar, cfg["level"])
+                r = _cross(S, ch, t, lv) if lv is not None else None
+                if r is not None:
+                    out.append(Cand(int(ch.day[t]), r + 1, stop_below(_low_upto(S, ch, f, t, r)), cfg["tf"]))
+                    man = None
+                    continue
+        if man is None and box is not None:
+            b, lo, hi = box
+            if t > b + BOX_WATCH:
+                box = None
+            elif ch.l[t] <= lo - TICK:
+                man, box = t, None
+            elif ch.h[t] > hi:
+                box = None
+        if man is None and t >= BOX_N - 1 and ch.same(t - BOX_N + 1, t):
+            a = t - BOX_N + 1
+            if np.isfinite(ch.atr[a]) and ch.h[a:t + 1].max() - ch.l[a:t + 1].min() <= BOX_ATR * ch.atr[a]:
+                box = (t, float(ch.l[a:t + 1].min()), float(ch.h[a:t + 1].max()))
+    return out
+
+
+def det_ts_w(S: Side, cfg: dict) -> list:
+    """S7-W: a sweep of the recent low (5-min swings), then a minute wick above ICT's level from the completed bars."""
+    ch = S.chart(cfg["tf"])
+    st = Struct(ch)
+    out, pend = [], None
+    for t in range(ch.T):
+        if st.new_bar(t):
+            pend = None
+        if pend is not None:
+            if t > pend + N_CONF or not ch.same(pend, t):
+                pend = None
+            else:
+                lowbar = pend + int(np.argmin(ch.l[pend:t]))
+                lv = drop_run_level(ch, lowbar, "open")
+                r = _cross(S, ch, t, lv) if lv is not None else None
+                if r is not None:
+                    out.append(Cand(int(ch.day[t]), r + 1, stop_below(_low_upto(S, ch, pend, t, r)), cfg["tf"]))
+                    pend = None
+                    st.after_bar(t)
+                    continue
+        L = st.recent_low()
+        if L is not None and ch.l[t] <= L - TICK:
+            pend = t
+        st.after_bar(t)
+    return out
+
+
+W_DETECTORS = dict(sb=det_sb_w, crt=det_crt_w, cisd=det_cisd_w, amd=det_amd_w, ts=det_ts_w)
+
 DETECTORS = dict(sb=det_sb, cam=det_cam, cisd=det_cisd, crt=det_crt, amd=det_amd, ifvg=det_ifvg, ts=det_ts,
                  ob=det_ob, brk=det_brk, ote=det_ote)
+
+
+def detector(cfg: dict):
+    """The detector of a variant: the wick-only one (N4) where it has its own, else the shared one."""
+    if cfg.get("wick") and cfg["s"] in W_DETECTORS:
+        return W_DETECTORS[cfg["s"]]
+    return DETECTORS[cfg["s"]]
 
 
 def candidates(sides: dict, cfg: dict) -> list:
     """All candidate entries of one variant on one index, both sides: (side, Cand), sorted by time."""
     out = []
     for sd in (1, -1):
-        out += [(sd, c) for c in DETECTORS[cfg["s"]](sides[sd], cfg)]
+        out += [(sd, c) for c in detector(cfg)(sides[sd], cfg)]
     out.sort(key=lambda x: (x[1].d, x[1].r0, x[0]))
     return out
 
@@ -891,8 +1082,14 @@ class Series(D3.LakeOptions):
         self.files = sorted((K.K3.LAKE / "options_rolling_1m").glob(f"opt_{und}_{series}_*.parquet"))
 
 
+def family(fam: str) -> tuple[dict, str, int]:
+    """The variant set, the file suffix and the seed offset: 'main' (the 30) or 'W' (PREREG N4's 9 wick-only)."""
+    return (VARIANTS, "", 0) if fam == "main" else (VARIANTS_W, "_w", 500)
+
+
 def run_index(args) -> dict:
-    und, part = args
+    und, part, fam = args if len(args) == 3 else (*args, "main")
+    VS, _, seed_off = family(fam)
     lo, hi = (K.DESIGN if part == "design" else K.HOLDOUT)
     g = D3.load_grid(und, hi)
     W, Mo = Series(und, hi, "WEEK"), Series(und, hi, "MONTH")
@@ -901,11 +1098,11 @@ def run_index(args) -> dict:
     blocked = {i for i, d in enumerate(g.days) if (d in wexp and d in mexp) or d.year < first_opt}
     keep = lambda d: lo <= d <= hi  # noqa: E731
     lot, step = K.LOT[und], K.STEP[und]
-    rng = np.random.default_rng(SEED + K.UNDS.index(und) + (100 if part == "holdout" else 0))
-    rng2 = np.random.default_rng(SEED + 1000 + K.UNDS.index(und) + (100 if part == "holdout" else 0))   # N2
+    rng = np.random.default_rng(SEED + seed_off + K.UNDS.index(und) + (100 if part == "holdout" else 0))
+    rng2 = np.random.default_rng(SEED + seed_off + 1000 + K.UNDS.index(und) + (100 if part == "holdout" else 0))
     sides = sides_of(g)
     sig, meta = {}, {}
-    for v, cfg in VARIANTS.items():
+    for v, cfg in VS.items():
         cands = candidates(sides, cfg)
         sig[v], sk = sequence(sides, cands, cfg, blocked, g.days, keep)
         meta[v] = dict(candidates=sum(keep(g.days[c.d]) for _, c in cands), skips=sk)
@@ -942,7 +1139,7 @@ def run_index(args) -> dict:
                             und, cache)
             rows.append(dict(t, variant=v, und=und, series=src.series, net=tr[0], netx2=tr[1], twins=tw,
                              twins_after=tw2))
-    print(f"R131 {part} {und}: " + ", ".join(f"{v} {sum(r['variant'] == v for r in rows)}" for v in VARIANTS),
+    print(f"R131 {part} {und}: " + ", ".join(f"{v} {sum(r['variant'] == v for r in rows)}" for v in VS),
           flush=True)
     return dict(rows=rows, meta=meta, sessions=sorted({d for d in g.days if keep(d)}))
 
@@ -1010,13 +1207,14 @@ class HoldoutError(RuntimeError):
     pass
 
 
-def holdout_lock(status: str, out: Path = OUT, results: Path = RESULTS) -> None:
-    """The ONE holdout read (PREREG section 3): 'start' refuses once a read has begun or its result is committed."""
-    p = out / "HOLDOUT_READ.json"
+def holdout_lock(status: str, out: Path = OUT, results: Path = RESULTS, suffix: str = "") -> None:
+    """The ONE holdout read (PREREG section 3; N4 for the W family): 'start' refuses once a read has begun or its
+    result is committed."""
+    p = out / f"HOLDOUT_READ{suffix}.json"
     old = json.loads(p.read_text()) if p.exists() else None
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     if status == "start":
-        if (results / "holdout.json").exists():
+        if (results / f"holdout{suffix}.json").exists():
             raise HoldoutError("refused: the holdout was already read (results/holdout.json exists)")
         if old:
             raise HoldoutError(f"refused: a holdout read already started at {old.get('started_at')}")
@@ -1027,30 +1225,37 @@ def holdout_lock(status: str, out: Path = OUT, results: Path = RESULTS) -> None:
     p.write_text(json.dumps(rec))
 
 
-def run(part: str):
+def run(part: str, fam: str = "main"):
+    VS, suf, _ = family(fam)
     from multiprocessing import Pool
     if part == "holdout":
-        holdout_lock("start")
+        holdout_lock("start", suffix=suf)
     with Pool(4) as pool:
-        res = pool.map(run_index, [(u, part) for u in K.UNDS])
+        res = pool.map(run_index, [(u, part, fam) for u in K.UNDS])
     rows = [r for x in res for r in x["rows"]]
     T = pd.DataFrame(rows)
     out = dict(part=part, period=[str(x) for x in (K.DESIGN if part == "design" else K.HOLDOUT)],
                sessions=len({d for x in res for d in x["sessions"]}), variants={},
                scan={u: x["meta"] for u, x in zip(K.UNDS, res)})
-    for v in VARIANTS:
+    for v in VS:
         Tv = T[T.variant == v] if len(T) else T
         s = stats(Tv, part == "design")
         s["candidates"] = sum(out["scan"][u][v]["candidates"] for u in K.UNDS)
         s["skips"] = {kk: sum(out["scan"][u][v]["skips"][kk] for u in K.UNDS) for kk in out["scan"][K.UNDS[0]][v]["skips"]}
-        s["label"], s["strategy"] = VARIANTS[v]["label"], STRATS[VARIANTS[v]["s"]]
+        s["label"], s["strategy"] = VS[v]["label"], STRATS[VS[v]["s"]]
         out["variants"][v] = s
-    qa = R3.bh([out["variants"][v].get("p_twins_after", 1.0) for v in VARIANTS])     # N2, descriptive
-    for v, q in zip(VARIANTS, qa):
+    qa = R3.bh([out["variants"][v].get("p_twins_after", 1.0) for v in VS])     # N2, descriptive
+    for v, q in zip(VS, qa):
         out["variants"][v]["q_after"] = q
     if part == "design":
-        qs = R3.bh([out["variants"][v].get("p_twins", 1.0) for v in VARIANTS])
-        for v, q in zip(VARIANTS, qs):
+        ps = [out["variants"][v].get("p_twins", 1.0) for v in VS]
+        if fam == "W":                     # N4: BH over all 39 (the 30 from design.json plus these 9)
+            main = json.loads((RESULTS / "design.json").read_text())["variants"]
+            ps39 = [main[v].get("p_twins", 1.0) for v in VARIANTS] + ps
+            qs = R3.bh(ps39)[len(VARIANTS):]
+        else:
+            qs = R3.bh(ps)
+        for v, q in zip(VS, qs):
             s = out["variants"][v]
             s["q"] = q
             folds = [s.get("by_fold", {}).get(f, {}).get("total", 0.0) > 0 for f in K.FOLDS]
@@ -1059,15 +1264,15 @@ def run(part: str):
                                      folds=sum(folds) >= GATES["folds"], q=q <= GATES["q"])
             s["passes_design"] = all(s["design_gates"].values())
     RESULTS.mkdir(parents=True, exist_ok=True)
-    (RESULTS / f"{part}.json").write_text(json.dumps(out, indent=1, default=str))
+    (RESULTS / f"{part}{suf}.json").write_text(json.dumps(out, indent=1, default=str))
     OUT.mkdir(parents=True, exist_ok=True)
     if len(T):
-        T.drop(columns=["twins", "twins_after"]).to_parquet(OUT / f"trades_{part}.parquet")
+        T.drop(columns=["twins", "twins_after"]).to_parquet(OUT / f"trades_{part}{suf}.parquet")
     if part == "holdout":
-        holdout_lock("done")
+        holdout_lock("done", suffix=suf)
     print({v: (s.get("n"), round(s.get("avg_net", 0) or 0), round(s.get("win", 0) or 0, 3), s.get("p_twins"))
            for v, s in out["variants"].items()})
 
 
 if __name__ == "__main__":
-    run(sys.argv[1] if len(sys.argv) > 1 else "design")
+    run(sys.argv[1] if len(sys.argv) > 1 else "design", sys.argv[2] if len(sys.argv) > 2 else "main")
