@@ -902,6 +902,7 @@ def run_index(args) -> dict:
     keep = lambda d: lo <= d <= hi  # noqa: E731
     lot, step = K.LOT[und], K.STEP[und]
     rng = np.random.default_rng(SEED + K.UNDS.index(und) + (100 if part == "holdout" else 0))
+    rng2 = np.random.default_rng(SEED + 1000 + K.UNDS.index(und) + (100 if part == "holdout" else 0))   # N2
     sides = sides_of(g)
     sig, meta = {}, {}
     for v, cfg in VARIANTS.items():
@@ -936,7 +937,11 @@ def run_index(args) -> dict:
             r1s = rng.integers(FIRST_TWIN, hi_r + 1, size=TWINS)
             tw = twin_nets(r1s, lastc, mh, ml, mo, opts.contracts, cp, step, t["stop_pts"], t["tgt_pts"], lot, day,
                            und, cache)
-            rows.append(dict(t, variant=v, und=und, series=src.series, net=tr[0], netx2=tr[1], twins=tw))
+            r2s = rng2.integers(r0, hi_r + 1, size=TWINS)                     # N2: after-signal twins
+            tw2 = twin_nets(r2s, lastc, mh, ml, mo, opts.contracts, cp, step, t["stop_pts"], t["tgt_pts"], lot, day,
+                            und, cache)
+            rows.append(dict(t, variant=v, und=und, series=src.series, net=tr[0], netx2=tr[1], twins=tw,
+                             twins_after=tw2))
     print(f"R131 {part} {und}: " + ", ".join(f"{v} {sum(r['variant'] == v for r in rows)}" for v in VARIANTS),
           flush=True)
     return dict(rows=rows, meta=meta, sessions=sorted({d for d in g.days if keep(d)}))
@@ -987,6 +992,8 @@ def stats(T: pd.DataFrame, by_fold: bool) -> dict:
     if not s["n"]:
         return s
     s["p_twins"], s["twin_mean_total"], s["twin_trades"] = twin_p(T)
+    if "twins_after" in T:
+        s["p_twins_after"], s["twin_after_mean_total"], _ = twin_p(T.assign(twins=T.twins_after))
     s["by_year"] = {int(y): money(X) for y, X in T.groupby([d.year for d in T.day])}
     s["by_und"] = {u: money(X) for u, X in T.groupby("und")}
     if by_fold:
@@ -1038,6 +1045,9 @@ def run(part: str):
         s["skips"] = {kk: sum(out["scan"][u][v]["skips"][kk] for u in K.UNDS) for kk in out["scan"][K.UNDS[0]][v]["skips"]}
         s["label"], s["strategy"] = VARIANTS[v]["label"], STRATS[VARIANTS[v]["s"]]
         out["variants"][v] = s
+    qa = R3.bh([out["variants"][v].get("p_twins_after", 1.0) for v in VARIANTS])     # N2, descriptive
+    for v, q in zip(VARIANTS, qa):
+        out["variants"][v]["q_after"] = q
     if part == "design":
         qs = R3.bh([out["variants"][v].get("p_twins", 1.0) for v in VARIANTS])
         for v, q in zip(VARIANTS, qs):
@@ -1052,7 +1062,7 @@ def run(part: str):
     (RESULTS / f"{part}.json").write_text(json.dumps(out, indent=1, default=str))
     OUT.mkdir(parents=True, exist_ok=True)
     if len(T):
-        T.drop(columns=["twins"]).to_parquet(OUT / f"trades_{part}.parquet")
+        T.drop(columns=["twins", "twins_after"]).to_parquet(OUT / f"trades_{part}.parquet")
     if part == "holdout":
         holdout_lock("done")
     print({v: (s.get("n"), round(s.get("avg_net", 0) or 0), round(s.get("win", 0) or 0, 3), s.get("p_twins"))

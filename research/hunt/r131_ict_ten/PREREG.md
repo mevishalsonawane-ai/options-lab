@@ -255,3 +255,14 @@ index, high → -low, low → -high, open → -open, close → -close, as R130).
    sells); both candidates then meet in the sequencer.
 8. **Silver Bullet V2 window:** a 5-minute bar is inside 09:45-10:45 when it starts at or after 09:45 and ends by
    10:44; the entry can be 10:45 at the latest.
+
+## N2 (29 Oct 2026, after the design run, BEFORE the holdout read): a supplementary twin check (not a gate)
+
+The design run showed that the pre-registered twins (a random entry 09:20-15:00 on the same day and side, as R127 and
+R130) can enter **before** the rule's signal. For a reversal setup the side is chosen by a move that has already
+happened, so a twin entering earlier can ride the very move that made the signal (S1-V1: twins' mean total
++Rs 5.87 lakh against the rule's -Rs 1.53 lakh on 920 trades). The gates are NOT changed: the pre-registered twin p and
+BH q stay the gate. In addition, every trade gets 200 **after-signal twins** (a random entry minute from the rule's own
+entry minute to 15:00, a separate random stream, the same distances, exits and option rule), reported as
+`p_twins_after` with its own BH q over the 30 variants, in the design (re-run, the primary numbers are unchanged) and
+in the one holdout read. It is descriptive only.
