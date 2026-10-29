@@ -94,7 +94,8 @@ Holdout, 1 Apr to 19 Oct 2026 (137 sessions). It was read once, after the design
   - Moving to the 1-minute chart (V2) or dropping the engulfing candle (V3) gives more trades, but they lose too.
 
 **Nothing passes. Nothing goes on paper. Nothing changes in the app.** The wick-only versions (Amendment 1)
-and the 96-version improvement search with the profit lock (Amendment 2), both below, fail too.
+the 96-version improvement search with the profit lock (Amendment 2) and the 65% win-rate search (Amendment 3), all below,
+fail too.
 
 ## Amendment 1: wick-only versions (Boss: "Not opening and closing candles")
 
@@ -238,6 +239,70 @@ What each change did (design, Aug 2021 - Mar 2026; each level averaged over the 
 The one lead is the 15-minute trend direction. If Boss wants it, it can be tested on its own, without the SMC pattern,
 as a new pre-registered idea (and checked on data after 19 Oct once the lake is topped up).
 
+## Amendment 3: pushing the win rate from 57% to 65% (Boss: "Enhance it to 57 to 65%, try your best")
+
+**The third search on an idea that had failed, after its results.**
+- **Pre-registration:** `PREREG_WR.md` (commit `cb30b1a`), before any number.
+- **Design and walk-forward results:** committed in `11a2077` before the one "already seen" check (14:23 UTC). That was
+  the fourth read of Apr-Oct 2026.
+- **The fair test is the walk-forward:** each year's version was picked using only the years before it.
+
+**Why these levers.** Amendment 2's best version won 72% of the time on the index but only 57% on the option. Its
+targets were small (median 0.44 of the stop distance), so 1 in 5 trades that reached the target still lost money after
+charges, spread and decay. The profit lock was left out because it had already lost money.
+
+32 versions, on W1 with the 15-minute trend and the 1-ITM option, crossed:
+- a minimum stop (none or 0.10%);
+- a **minimum target distance** (none, 0.10%, 0.15% or 0.20% of the index);
+- **the stop's placement** (at the FVG as stated, or wider, beyond the sweep's extreme);
+- **the trend** (15-minute, or 15-minute and 60-minute both agreeing).
+
+**The answer: no. No version reached 65% wins, even on the past data it was chosen from.**
+
+- **Best win rates in design (Aug 2021 - Mar 2026):**
+
+  | version | trades | win rate | avg net per trade |
+  |---|---|---|---|
+  | stop ≥ 0.10%, 15 + 60-min trend | 95 | **60.0%** | +Rs 235 |
+  | stop ≥ 0.10%, wider stop, 15-min trend | 479 | 59.1% | +Rs 31 |
+  | stop ≥ 0.10%, wider stop, 15 + 60-min trend | 239 | 57.7% | -Rs 41 |
+
+- **The minimum target made more money per trade but LOWERED the win rate.** Bigger targets are reached less often.
+  On the 15-minute version with a stop ≥ 0.10%:
+
+  | minimum target | trades | win rate | avg net per trade |
+  |---|---|---|---|
+  | none | 201 | 57% | +Rs 216 |
+  | 0.10% | 101 | 55% | +Rs 518 |
+  | 0.15% | 76 | 51% | +Rs 656 |
+  | 0.20% | 61 | 44% | +Rs 634 |
+
+- **The wider stop gave more trades and about 59% wins, but almost no profit** (+Rs 31 a trade on 479).
+- **None beat random entries** (p 0.36-0.89; BH q 0.94 over 138 tests). Many versions were positive on the past data
+  (29 of 32 versions, +Rs 4 to +Rs 699 a trade), but random entry times with the same stop, target, day and trend direction did about
+  as well.
+- **The walk-forward (the honest test):** each year's version picked only from earlier years:
+
+  | year | picked | trades | win rate | net (1 lot) |
+  |---|---|---|---|---|
+  | 2023 | wider stop, 15 + 60-min trend | 57 | 46% | -Rs 16,688 |
+  | 2024 | stop ≥ 0.10%, 15 + 60-min trend | 29 | 55% | +Rs 5,363 |
+  | 2025 | the same | 27 | 70% | +Rs 10,007 |
+  | 2026 to 15 Mar | the same | 7 | 29% | +Rs 6,728 |
+  | **all 4** | | **120** | **52.5%** (below 65%) | **+Rs 5,410** (+Rs 45 a trade; +Rs 24 at 2x slippage) |
+
+  It was positive in 3 of 4 years, but it fails the 65% rule and the 150-trade minimum.
+- **The version picked on all design data** (stop ≥ 0.10%, 15 + 60-min trend; 95 trades, 60% won, +Rs 235 a trade),
+  checked once on Apr-Oct 2026 ("already seen"): **13 trades, 38% won, -Rs 503 a trade**, -Rs 6,533 in all.
+
+**Verdict: it cannot be pushed to 65% honestly.**
+- The best on the past data was 60%, on 95 trades.
+- Picked fairly year by year, it won 52.5%.
+- On the latest months it won 38%.
+- The one way that did reach 65%, the +Rs 500 profit lock (67%), lost money (Amendment 2).
+
+Nothing goes on paper.
+
 ## The video's claims, checked on the data (index wicks; design / holdout)
 
 | claim | what the data shows |
@@ -266,8 +331,8 @@ holdout +0.26R is 14 trades, after -0.11R on 111 trades in design.
 - **Pre-registration:** `research/hunt/r130_sweep_mss_fvg/PREREG.md`, commit `66d2467`, before any data was read.
   - Design results were committed in `fca117a` before the holdout.
   - The holdout was read once, guarded by a lock file that refuses a second read.
-- **Code and 29 tests (5 for Amendment 1, 8 for Amendment 2):** `research/hunt/r130_sweep_mss_fvg/` (`r130.py`, `r130enh.py`,
-  `test_r130.py`, `test_r130enh.py`, `tables.py`).
+- **Code and 34 tests (5 for Amendment 1, 8 for Amendment 2, 5 for Amendment 3):** `research/hunt/r130_sweep_mss_fvg/`
+  (`r130.py`, `r130enh.py`, `r130wr.py`, the three `test_*.py`, `tables.py`).
   - The tests include a hand-built session, worked out by hand, with its mirror-image sell.
   - They also include a look-ahead guard: removing every bar after the entry does not change the entry.
 - **Results:** `results/design.json`, `results/holdout.json`. The trade lists are in the cache (`trades_*.parquet`), not

@@ -1,0 +1,31 @@
+id: r130-wr-search
+title: 'R130 Amendment 3: the 65% win-rate search on the sweep/MSS/FVG setup (after results)'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R130_SWEEP_MSS_FVG.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m, options_rolling_1m WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026 Q1; no fitting)
+  holdout: '2026-04-01..2026-10-19 (''already seen'', 4th read: the version picked on all design only, 29 Oct 14:23 UTC)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r130_sweep_mss_fvg/PREREG_WR.md
+holdout_read: true
+model_or_rule: research/hunt/r130_sweep_mss_fvg/r130wr.py
+settings: PREREG_WR.md; 32 versions (min stop x min target x stop placement x trend) on W1 + 15-min trend + 1-ITM, no lock;
+  walk-forward pick by year; 200 twins; BH over 138
+variants_tried: 32
+verdict: rejected
+features:
+- 'signal source: the index spot, wicks only (W1); trend from 15-min / 60-min wick structure; minimum target and stop distances;
+  stop at the FVG or beyond the sweep; 1-ITM option, no lock'
+hypothesis: Minimum target, a wider stop or a 60-min trend lifts the win rate from 57% to 65% while staying profitable
+results:
+  summary: 'No version reached 65% in design: best 60% (95 trades, stop >= 0.10%, any target, stop at the FVG, 15-min and
+    60-min trend). Minimum target raised money per trade but lowered the win rate (none 57%/+Rs 216, 0.10% 55%/+Rs 518, 0.15%
+    51%/+Rs 656, 0.20% 44%/+Rs 634). None beat random entries (BH q 0.94 over 138).'
+  costs: Costs('dated') + Fills('liq') (also 2x slippage), 1 lot
