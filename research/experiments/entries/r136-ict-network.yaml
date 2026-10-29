@@ -1,7 +1,7 @@
 id: r136-ict-network
 title: R136 the ICT / SMC books' concepts (35 inputs) added to R123's network N1, walk-forward vs the same network without
   them
-family: neural-network
+family: ml
 date: '2026-10-29'
 doc: research/HUNT_R136_ICT_NETWORK.md
 data_version: R123 design rows and sequences; Drive lake index_1m copied 29 Oct 2026
