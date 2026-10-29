@@ -1,0 +1,29 @@
+id: r132-s2-v1-ndir
+title: 'R132 S2-V1-NDIR: Cameron: PDH/PDL sweep with the trend, then FVG | filter: network''s P(up in 30 min) agrees with
+  the side'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R132_ICT_EXITS.md
+data_version: Drive lake copied 29 Oct 2026; R131 entries; R123 N1 walk-forward predictions
+period:
+  design: 'folds F1-F4 only: 2023-01-01..2026-03-15'
+  holdout: '2026-04-01..2026-10-19 (already read for these entries in R131: context only)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r132_ict_exits/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R131 entries); filter: R123''s walk-forward network view at the entry'
+hypothesis: A stop-loss / profit lock, or R123's network, makes the R131 ICT entries pay
+model_or_rule: research/hunt/r132_ict_exits/r132nn.py
+settings: PREREG.md S2-V1-NDIR; 1 lot
+variants_tried: 60
+verdict: rejected
+results:
+  summary: 'design 443 trades, win 53%, avg net Rs 14 (2x Rs -7), total Rs 6,039, max drawdown Rs -48,830, worst month Rs
+    -14,330; p vs random subsets 0.224, BH q (60) 0.390. Seen holdout period: 77 trades, avg net Rs 173. Fails: net, q, acct.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

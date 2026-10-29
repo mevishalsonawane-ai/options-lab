@@ -1,0 +1,29 @@
+id: r132-s9-v1-e1
+title: 'R132 S9-V1-E1: Breaker: first retest of the failed block | premium stop -Rs 1,000, 60% lock after +Rs 1,000'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R132_ICT_EXITS.md
+data_version: Drive lake copied 29 Oct 2026; R131 entries; R123 N1 walk-forward predictions
+period:
+  design: 2021-08-01..2026-03-15, folds 2023-2026 Q1
+  holdout: '2026-04-01..2026-10-19 (already read for these entries in R131: context only)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r132_ict_exits/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R131 entries); exits on the option premium (wick to wick) or the index'
+hypothesis: A stop-loss / profit lock, or R123's network, makes the R131 ICT entries pay
+model_or_rule: research/hunt/r132_ict_exits/r132.py
+settings: PREREG.md S9-V1-E1; 1 lot
+variants_tried: 60
+verdict: rejected
+results:
+  summary: 'design 2539 trades, win 50%, avg net Rs -19 (2x Rs -45), total Rs -48,437, max drawdown Rs -113,766, worst month
+    Rs -15,319; p vs random entries with the same exits 0.010, BH q (60) 0.040. Seen holdout period: 330 trades, avg net Rs
+    -122. Fails: net, folds, acct, seen_net.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

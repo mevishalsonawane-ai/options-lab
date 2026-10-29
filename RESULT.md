@@ -9,3 +9,9 @@
 8. Boss's notes applied: no 65% rule for his own strategies (N3); wick-only confirmations added (N4) and they lose too.
 9. Never tested before: CISD, CRT, AMD, IFVG, Breaker, OTE, Silver Bullet. Re-tests (Turtle Soup, Order Block, sweeps) agree with R62/R62b/R90/R91/R130.
 10. Write-up: research/HUNT_R131_ICT_TEN.md; code, tests (32) and PREREG: research/hunt/r131_ict_ten/; entries r131-*.yaml (all rejected). Research only, no app change.
+
+# R132 (same day): stop-losses, profit locks and R123's network on the R131 entries. 0 of 60 pass; one lead
+1. Exits (-Rs 1k / -Rs 2k premium stop + 60% lock after +Rs 1k; index stop + lock; breakeven + 1R trail): 35 of 40 lose in design; none pass.
+2. R123 network filter (take only trades its out-of-sample view expects to pay): CISD + filter passes every design gate (305 trades, 64% won, +Rs 276 a trade, q 0.04).
+3. But the holdout period gave only 21 such trades (+Rs 205 each), under the 50 needed, and that period was already seen. A lead for a forward test, not a pass.
+4. Write-up: research/HUNT_R132_ICT_EXITS.md; code and 15 tests: research/hunt/r132_ict_exits/; entries r132-*.yaml (all rejected).
