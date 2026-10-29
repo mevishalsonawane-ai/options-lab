@@ -96,11 +96,11 @@ class MajorSide(R.Side):
 
 
 # ------------------------------------------------------------------------------------------------ T1: 15-minute trend
-def trend_grid(g) -> np.ndarray:
+def trend_grid(g, tf: int = 15) -> np.ndarray:
     """days x N: the 15-minute structure's direction known at each minute row (from 15-minute bars that ENDED at or
     before it): +1 after a wick 1 tick above the latest confirmed 2-bar swing high, -1 after one below the latest swing
     low, 0 before any break or when one bar breaks both. Carried across sessions."""
-    B = R.make_bars(g.o, g.h, g.l, g.c, 15)
+    B = R.make_bars(g.o, g.h, g.l, g.c, tf)
     hi_av, lo_av = {}, {}
     for i in R.swing_highs(B.h, TREND_K):
         hi_av.setdefault(int(i) + TREND_K + 1, []).append(int(i))

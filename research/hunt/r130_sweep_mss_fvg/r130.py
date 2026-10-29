@@ -144,6 +144,7 @@ class Side:
     engulf: bool
     close_back: bool
     wick: bool = False                             # Amendment 1: wick MSS and wick engulfing (no opens / closes)
+    stop_mode: str = "fvg"                         # Amendment 3: "sweep" = beyond the MSS leg's extreme (wider)
     hi_avail: dict = field(default_factory=dict)   # bar t -> swing-high pivots known from bar t on
     lo_avail: dict = field(default_factory=dict)
     highs: list = field(default_factory=list)      # (level, day) of known swing highs, last 5 sessions
@@ -224,8 +225,11 @@ class Side:
                 else:
                     self.census["fvg"] += 1
                     top, bottom = fv
+                    edge = bottom
+                    if self.stop_mode == "sweep":
+                        edge = float(self.ll[p.s:t + 1].min())        # the lowest low of the leg (wick)
                     self.pend = Setup("pull", int(d), p.s, p.H, m=t, top=top, bottom=bottom,
-                                      stop=bottom - STOP_PCT * abs(bottom))
+                                      stop=edge - STOP_PCT * abs(edge))
                 return None
         # a new sweep (only while no setup of this side waits for its pullback)
         self._sweep(t, d)
@@ -295,7 +299,8 @@ def mirror(g):
 
 
 def scan(g, cfg: dict, blocked: set, days_keep, last_row: int = K.K3.EXIT_LAST, side_cls=None,
-         entry_last: int = LAST_ENTRY, trend=None, min_stop_pct: float = 0.0) -> tuple[list, dict]:
+         entry_last: int = LAST_ENTRY, trend=None, min_stop_pct: float = 0.0,
+         min_tgt_pct: float = 0.0) -> tuple[list, dict]:
     """All trades of one variant on one index (index only, no option yet): one trade at a time, both sides.
     `blocked` = session indices with no tradable contract; `days_keep(day)` -> keep the trade in the output.
     Amendment 2 hooks (defaults = the original rule): `side_cls` (the sweep's liquidity), `entry_last` (the last entry
@@ -308,6 +313,7 @@ def scan(g, cfg: dict, blocked: set, days_keep, last_row: int = K.K3.EXIT_LAST, 
         B = make_bars(mo, mh, ml, mc, cfg["tf"])
         sides[sd] = side_cls(B, B.h, B.l, B.o, B.c, cfg["k"], cfg["engulf"], cfg["close_back"],
                         cfg.get("wick", False))
+        sides[sd].stop_mode = cfg.get("stop", "fvg")
     B = sides[1].B
     # both sides' bars are the same bars (mirroring keeps which bars have data)
     trades, skips = [], dict(no_target=0, no_room=0, late=0, both=0, no_contract=0, no_price=0)
@@ -365,6 +371,9 @@ def scan(g, cfg: dict, blocked: set, days_keep, last_row: int = K.K3.EXIT_LAST, 
         tgt = S.target(ref, p.stop, cfg["target"])
         if tgt is None or tgt <= ref:
             skips["no_target"] += 1
+            continue
+        if min_tgt_pct and tgt - ref < min_tgt_pct * abs(ref):        # Amendment 3: too close to pay for itself
+            skips["small_target"] = skips.get("small_target", 0) + 1
             continue
         ex = exit_on(mh, ml, mo, r0, p.stop, tgt, last_row)
         if ex is None:
