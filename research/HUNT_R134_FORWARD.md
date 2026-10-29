@@ -38,3 +38,22 @@ gave only 32 trades. The only fair test is on sessions **no study has seen**: fr
 **Refresh the Dhan access token** (`DHAN_ACCESS_TOKEN`) in the cloud environment's settings. On 29 Oct it was expired
 (Dhan: "access token is invalid or expired"). Until then the weekly run can only log what the Drive lake has, and that
 ends on 19 Oct, so it will report "no new sessions" each week.
+
+## The paper arm (29 Oct, Boss's second exception)
+
+Boss: *"Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward test too"*. R133's
+**S3-V2-E3** (CISD, ICT's reading + R123's network EV filter + R131's index stop + a 60% lock after +Rs 1,000) now also runs in
+the app as a PAPER arm, "CISD + network (failed gates, Boss's exception)". It failed the gates, so it is labelled so everywhere,
+switched in one tap, and never live (CLAUDE.md). **It is built switched off**: the phone has no Dhan IV, and with the app's own
+IV estimate 2 of the 4 recorded research trades became refusals. Boss decides whether to switch it on.
+
+- **Two forward records, kept apart.** This weekly cloud test keeps scoring all six rules, S3-V2-E3 included, from the same
+  frozen code. The app's paper trades are the second record (the diagnostics list each trade: entry, exit, the network's EV,
+  points and % of premium).
+- **The same rules.** `test_r134.py` checks the app's constants against R131 / R132's. The engine's `CisdNetParityTest`
+  replays recorded lake days through the Kotlin port: all 20 setups, filters and exits equal R131 / R132's code, the network
+  matches R123's outputs to 2.3e-7, and the network's verdict agrees on all 32 checks.
+- **Where the app differs (stated, not hidden).** It sells at 15:15 (the paper book's square-off; the research held to 15:20).
+  It computes IV itself (S5 Trail's method; measured: 30 of 32 network verdicts unchanged, the 2 that moved were research trades). Its option-chain grid is centred on the index close, which put Dhan's ATM one
+  strike away on 2 of 16 recorded rows. Fills are the paper book's.
+- **Still needed from Boss:** a refreshed `DHAN_ACCESS_TOKEN`, so the weekly run can score new sessions.

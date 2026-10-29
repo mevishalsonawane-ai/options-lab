@@ -114,6 +114,8 @@ class TestApp : Application() {
         // 28 Oct: S5 Trail's one-time switch-on too (its own tests turn it back on).
         com.optionslab.app.data.S5Arm.init(this)
         com.optionslab.app.data.S5Arm.testNoAutoOn = true
+        // 29 Oct: CISD + network (built switched off).
+        com.optionslab.app.data.CisdArm.init(this)
         com.optionslab.app.data.StockOptions.init(this)
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.MarketRecorder.init(this)
@@ -188,6 +190,7 @@ class TestApp : Application() {
         com.optionslab.app.data.NtfyArm.wipe()
         com.optionslab.app.data.FlowArm.wipe()
         com.optionslab.app.data.S5Arm.wipe()
+        com.optionslab.app.data.CisdArm.wipe()
         com.optionslab.app.data.NtfyReader.wipe()
         // 26 Oct: the quick pass off in the tests (they drive the pass themselves); a test that checks it turns it on.
         com.optionslab.app.data.NtfyArm.testNoKick = true

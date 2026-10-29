@@ -611,6 +611,7 @@ object Tasks {
             // 28 Oct: IraThinker's flow (paper, index options only): only when it needs a pass (a trade held, or on in its hours).
             if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FLOW) { com.optionslab.app.data.FlowArm.tick() } else null,
             if (com.optionslab.app.data.S5Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.S5) { com.optionslab.app.data.S5Arm.tick() } else null,
+            if (com.optionslab.app.data.CisdArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.CISD) { com.optionslab.app.data.CisdArm.tick() } else null,
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
             // 21 Oct, review: started in its own job ([com.optionslab.app.data.McxNr7Record.kick]); this group never waits for its reads.
@@ -961,6 +962,7 @@ object Tasks {
             // 28 Oct: IraThinker's flow (paper, index options only): only when it needs a pass (a trade held, or on in its hours).
             if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FLOW) { com.optionslab.app.data.FlowArm.tick() } else null,
             if (com.optionslab.app.data.S5Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.S5) { com.optionslab.app.data.S5Arm.tick() } else null,
+            if (com.optionslab.app.data.CisdArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.CISD) { com.optionslab.app.data.CisdArm.tick() } else null,
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
         )), armsWait, inOrder = lanes == null)
@@ -1852,7 +1854,8 @@ class WatchService : Service() {
                 val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
                     com.optionslab.app.data.VixDivArm.view.value.armed || com.optionslab.app.data.HeroTicketArm.wantsPass() ||
                     com.optionslab.app.data.PassedArmsHost.wantsPass() || com.optionslab.app.data.NtfyArm.wantsPass() ||
-                    com.optionslab.app.data.FlowArm.wantsPass() || com.optionslab.app.data.S5Arm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
+                    com.optionslab.app.data.FlowArm.wantsPass() || com.optionslab.app.data.S5Arm.wantsPass() ||
+                    com.optionslab.app.data.CisdArm.wantsPass()) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
                 // While holding, this loop's own wait (the cards' refresh) follows the stop lane's looks ([WatchClock.windowEnd]:
                 // 15 s after the last look started). 22 Oct: the stops themselves are the lane's; nothing here holds them up.
                 val waitEnd = if (holding) com.optionslab.app.data.WatchClock.windowEnd() else next
@@ -1881,6 +1884,7 @@ class WatchService : Service() {
                             if (com.optionslab.app.data.NtfyArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ntfy alerts (paper)") { com.optionslab.app.data.NtfyArm.tick() } else null,
                             if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ${com.optionslab.app.data.FastPath.FLOW}") { com.optionslab.app.data.FlowArm.tick() } else null,
                             if (com.optionslab.app.data.S5Arm.decisionDue()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ${com.optionslab.app.data.FastPath.S5}") { com.optionslab.app.data.S5Arm.tick() } else null,
+                            if (com.optionslab.app.data.CisdArm.decisionDue()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ${com.optionslab.app.data.FastPath.CISD}") { com.optionslab.app.data.CisdArm.tick() } else null,
                         ), WatchWorkers.ARMS_WAIT_MS, inOrder = false)
                         // Smart scheduling: the minute arms just looked at this minute; the next pass need not look again for it.
                         // (Not the ORB arms: a bar the feed has not finished yet is looked at again on the next minute, as before.)

@@ -57,3 +57,36 @@ def test_filter_keeps_positive_ev_side_only():
                           **{f"ev_{j}": [5.0 if j % 2 == 0 else -5.0] for j in range(16)}))
     K_ = F.filtered(T, P)
     assert K_.side.tolist() == [1]
+
+
+# ---- 29 Oct 2026: the app's paper arm "CISD + network" runs S3-V2-E3 from the same frozen rules ---------------------------------
+APP_RULES = Path(__file__).resolve().parents[3] / "android/engine/src/main/kotlin/com/optionslab/engine/orb/CisdNet.kt"
+
+
+def _kt(name: str) -> str:
+    import re
+    m = re.search(rf"\bval {name}\s*=\s*([^\n]+)", APP_RULES.read_text())
+    assert m, name
+    return m.group(1).strip()
+
+
+def test_s3_v2_e3_is_still_scored_weekly():
+    assert "S3-V2-E3" in F.RULES
+    cfg = F.R.ALL_VARIANTS["S3-V2"]
+    assert cfg["s"] == "cisd" and cfg["level"] == "open" and cfg["tf"] == 5 and cfg["target"] == "S"
+    assert F.Q.EXITS["E3"] == dict(prem_stop=None, lock=True, idx="fixed", label=F.Q.EXITS["E3"]["label"])
+    assert (F.Q.LOCK_AFTER, F.Q.LOCK_KEEP) == (1000.0, 0.60)
+
+
+def test_the_app_arm_uses_the_frozen_numbers():
+    """The Kotlin port's constants are R131's / R132's (a change on either side fails here)."""
+    R, Q = F.R, F.Q
+    assert float(_kt("STOP_PCT")) == R.STOP_PCT and float(_kt("CISD_ATR")) == R.CISD_ATR
+    assert int(_kt("ATR_N")) == R.ATR_N and int(_kt("N_CONF")) == R.N_CONF and int(_kt("K_PIVOT")) == R.K_PIVOT
+    assert int(_kt("SESSIONS_BACK")) == R.SESSIONS_BACK and int(_kt("TF")) == R.VARIANTS["S3-V2"]["tf"]
+    assert float(_kt("LOCK_AFTER")) == Q.LOCK_AFTER and float(_kt("LOCK_KEEP")) == Q.LOCK_KEEP
+    assert int(_kt("MAX_AGE")) == F.NN.MAX_AGE and int(_kt("VIEW_STEP")) == F.NN.STEP
+    assert _kt("LAST_ENTRY") == "PassedArms.Session.row(15, 0)" and R.LAST_ENTRY == R.K.row(15, 0)
+    assert _kt("EXIT_LAST") == "PassedArms.Session.row(15, 19)" and Q.EXIT_LAST == R.K.row(15, 19)
+    assert int(_kt("FIRST_VIEW")) == F.NN.FIRST_ROW and _kt("LAST_VIEW") == "PassedArms.Session.row(14, 54)"
+    assert F.NN.LAST_ROW == R.K.row(14, 54)

@@ -119,6 +119,7 @@ object PersonalStores {
         Entry("FlowArm", files = { com.optionslab.app.data.FlowArm.filesForErase() }, holds = { com.optionslab.app.data.FlowArm.holdsForErase() }) { com.optionslab.app.data.FlowArm.wipeForErase() },
         // 28 Oct: S5 Trail's paper book.
         Entry("S5Arm", files = { com.optionslab.app.data.S5Arm.filesForErase() }, holds = { com.optionslab.app.data.S5Arm.holdsForErase() }) { com.optionslab.app.data.S5Arm.wipeForErase() },
+        Entry("CisdArm", files = { com.optionslab.app.data.CisdArm.filesForErase() }, holds = { com.optionslab.app.data.CisdArm.holdsForErase() }) { com.optionslab.app.data.CisdArm.wipeForErase() },
         Entry("TradeManagerHost", files = { com.optionslab.app.data.TradeManagerHost.filesForErase() }, holds = { com.optionslab.app.data.TradeManagerHost.holdsForErase() }) { com.optionslab.app.data.TradeManagerHost.wipe() },
         Entry("TrendWatchHost", files = { com.optionslab.app.data.TrendWatchHost.filesForErase() }, holds = { com.optionslab.app.data.TrendWatchHost.holdsForErase() }) { com.optionslab.app.data.TrendWatchHost.wipe() },
         Entry("NightArm", files = { com.optionslab.app.data.NightArm.filesForErase() }, holds = { com.optionslab.app.data.NightArm.holdsForErase() }) { com.optionslab.app.data.NightArm.wipe() },

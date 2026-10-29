@@ -1,0 +1,51 @@
+id: app-cisd-network-paper
+title: 'CISD + network on paper in IraAlgo (R133 S3-V2-E3: R131 CISD V2 + R123 N1 EV filter + R132 E3 index stop and 60% lock), the five indices, from 29 Oct 2026'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R134_FORWARD.md
+hypothesis: 'Not a new test (Boss''s ask, 29 Oct: "Build CISD (ICT''s version) + network + index stop + lock. And add it as a arm,
+  and do forward test too"). R133 S3-V2-E3 FAILED the gates (35 holdout-period trades, short of the 50 needed; the holdout was
+  already seen). It runs as a PAPER arm under Boss''s second exception in CLAUDE.md; its paper record is a forward record of a rule
+  that failed. No claim is made for it; nothing about it may go live by itself, ever. R134''s weekly forward test keeps scoring
+  the same frozen rule on new days.'
+data_version: 'live: the passed arms'' index minutes (Upstox intraday with the Zerodha stream''s whole minutes) and earlier
+  sessions; the network''s inputs and chain exactly as S5 Trail reads them (Upstox intraday candles of the strikes near the money;
+  IV computed in the app plus Dhan''s measured offset). The network: R123''s N1 holdout fit (assets s5/, the same weights R134''s
+  nnlive.py rebuilds). Parity on recorded lake days (android/tools/cisd_parity_fixture.py, engine CisdNetParityTest): network
+  2.3e-7 on 24 holdout rows; window 7.7e-8 and index/VIX/breadth/calendar inputs 9e-9 on 16 rows; chain inputs differ on 2 of 16
+  rows (Dhan''s ATM one strike from the app''s); the filter''s verdict the same 32 of 32 with the lake''s IV, 30 of 32 with the app''s own IV; all 20 setups, filters and E3 exits of
+  25 May and 11 Sep 2026 the same as R131 / R132''s code.'
+period:
+  design: '2023-01-01..2026-03-15 (R133 folds F1-F4)'
+  holdout: '2026-04-01..2026-10-19 (already seen; R134 forward from 2026-10-20)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index spot''s 5-minute bars (R131 CISD V2, ICT''s reading); filter: R123''s network EV for the side (the
+  option chain context only); exits: the index stop on the index''s ticks, the 60% lock on the option premium; the ATM option is
+  what is bought'
+model_or_rule: 'CisdNet (android/engine/src/main/kotlin/com/optionslab/engine/orb/CisdNet.kt); the app arm CisdArm.kt. At each
+  5-minute bar close 09:20-15:00; CISD V2 with R131''s filters (one side per minute, entry by 15:00, room to the stop, a swing
+  target); taken when the mean EV of the side''s 8 cells > 0 at the latest 5-minute view; 1 lot ATM; the nearest expiry, the
+  monthly on its expiry day, none when both expire; index stop; once +Rs 1,000 on the option''s best price of earlier minutes,
+  out at the entry + 60% of the gain (resting SL-M); out at 15:15 (the paper book''s square-off; R133 held to 15:20); one trade
+  at a time per index counting the setups the filter refused.'
+settings: R131 PREREG S3-V2 + R132 PREREG E3 + R132 amendment A (N-EV); frozen, nothing tuned
+prereg: research/hunt/r134_forward/PREREG.md
+variants_tried: null
+results:
+  summary: 'Nothing traded yet (added 29 Oct 2026). Research record (R133): design 413 of 3,291 trades kept, 69% won, +Rs 261 a
+    trade (+Rs 240 at 2x slippage), drawdown -Rs 15.4k, worst month -Rs 7.5k, q 0.012; holdout period (seen) 35 trades, +Rs 77
+    each. The variant is counted once, in r133-s3-v2-e3 (BH family of 185); this entry adds no test.'
+  costs: the app's honest paper fills (the spread and Zerodha's charges) for the forward record
+holdout_read: true
+verdict: rejected
+notes: 'Boss''s explicit ask and second exception (CLAUDE.md, 29 Oct). Built switched OFF: the phone has no Dhan IV, so the
+  network''s ATM IV and skew inputs are the app''s own estimate; on the recorded days that turned 2 of the 4 research trades
+  (FINNIFTY and SENSEX, 11 Sep 2026) into refusals (CisdNetParityTest). Boss switches it on from its row; that is logged in the
+  Autopilot change timeline as Boss''s choice and undone in one tap. No live path at all. Labelled everywhere
+  "CISD + network (failed gates, Boss''s exception)". The research verdict stays rejected; the paper arm is not an adoption.'

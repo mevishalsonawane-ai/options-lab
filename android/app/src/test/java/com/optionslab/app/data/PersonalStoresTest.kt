@@ -487,6 +487,9 @@ class PersonalStoresTest {
         s("S5Arm") {
             kotlinx.coroutines.runBlocking { com.optionslab.app.data.S5Arm.setArmed(true, log = false) }   // book in memory + s5_arm.vault
         },
+        s("CisdArm") {
+            kotlinx.coroutines.runBlocking { com.optionslab.app.data.CisdArm.setArmed(true, log = false) }   // book in memory + cisd_arm.vault
+        },
         s("NtfyArm") {
             kotlinx.coroutines.runBlocking { com.optionslab.app.data.NtfyArm.setSettings(com.optionslab.engine.signals.NtfyRules.Settings(lots = 2)) }
         },

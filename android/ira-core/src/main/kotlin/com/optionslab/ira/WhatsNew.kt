@@ -64,11 +64,24 @@ object WhatsNew {
     private val OCT26: LocalDate = LocalDate.of(2026, 10, 26)
     private val OCT27: LocalDate = LocalDate.of(2026, 10, 27)
     private val OCT28: LocalDate = LocalDate.of(2026, 10, 28)
+    private val OCT29: LocalDate = LocalDate.of(2026, 10, 29)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
-        // 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): newest of all.
+        // 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): under 29 Oct's CISD entry.
+        // 29 Oct (Boss: "Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward test too"): newest of all.
+        Entry("2026-10-29-cisd-network-paper-arm", OCT29, "CISD + network now trades on paper",
+            "A new paper arm watches the five indices' 5-minute bars for ICT's CISD. " +
+                "Two red bars or more, then a close above the drop's start, signal a call; the mirror signals a put. " +
+                "It buys only when the research network expects that side to pay. " +
+                "It buys 1 lot of the ATM option, with its stop on the index. " +
+                "Once a trade is up ₹1,000, it keeps 60% of the gain. " +
+                "It failed the research gates, so it runs as your exception, on paper only and never live. " +
+                "It starts off: the phone lacks the volatility figure the network learned from, which changed 2 of 4 test trades. " +
+                "One tap on its row switches it on, logged in the change timeline.",
+            "Home → Strategies → its row; the change timeline",
+            ask = "how is cisd doing"),
         Entry("2026-10-28-auto-ideas-65", OCT28, "Automatic ideas now need a 65% win rate",
             "Nothing new is made by itself unless it wins at least 65% of its trades. " +
                 "That covers forge ideas, strategy lab variants, shadow re-arms and Jarvis's own Pine scripts. " +
