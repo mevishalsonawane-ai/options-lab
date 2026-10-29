@@ -56,8 +56,14 @@ def design_frame() -> tuple[pd.DataFrame, dict]:
 
 
 def cmd_train(seeds=K3.SEEDS, epochs=K3.EPOCHS, folds=None):
+    """Each (fold, network) is saved as soon as it is done and skipped on a re-run, so a restart resumes."""
     F, S = design_frame()
-    out = {a: [] for a in ARCHS}
+    parts = OUT / "parts"
+    parts.mkdir(parents=True, exist_ok=True)
+    _drive("pull", parts)                                     # finished parts survive a container restart
+    keep = ["und", "day", "row", "fold", "y_dir_30"] + [f"cls_{j}" for j in range(16)]
+    pcols = ([f"pw_{j}" for j in range(16)] + [f"pl_{j}" for j in range(16)] + [f"pn_{j}" for j in range(16)] +
+             [f"ev_{j}" for j in range(16)] + ["pdir30"])
     for f, (a, _) in K3.FOLDS.items():
         if folds and f not in folds:
             continue
@@ -65,18 +71,30 @@ def cmd_train(seeds=K3.SEEDS, epochs=K3.EPOCHS, folds=None):
         test = F[F.fold == f]
         mn = RR.neither_means(train)
         for arch, cols in ARCHS.items():
+            dest = parts / f"preds_{arch}_{f}.parquet"
+            if dest.exists():
+                log(f"{f} {arch}: already done")
+                continue
             log(f"{f} {arch}: train {len(train)}, test {len(test)}, inputs {len(cols)}")
             net = M.NetModel(seeds=seeds, epochs=epochs, log=lambda *x, **k: None, arch="N1").fit(
                 train, M.SeqStore(S), cols)
             pn = net.predict(test, M.SeqStore(S))
             P = RR.attach(test, pn, mn)
-            keep = ["und", "day", "row", "fold", "y_dir_30"] + [f"cls_{j}" for j in range(16)]
-            out[arch].append(P[keep + [f"pw_{j}" for j in range(16)] + [f"pl_{j}" for j in range(16)] +
-                               [f"pn_{j}" for j in range(16)] + [f"ev_{j}" for j in range(16)] + ["pdir30"]])
+            P[keep + pcols].to_parquet(dest)
+            _drive("push", parts)
             log(f"{f} {arch}: done")
     for arch in ARCHS:
-        if out[arch]:
-            pd.concat(out[arch], ignore_index=True).to_parquet(OUT / f"preds_{arch}.parquet")
+        fs = [parts / f"preds_{arch}_{f}.parquet" for f in K3.FOLDS]
+        if all(p.exists() for p in fs):
+            pd.concat([pd.read_parquet(p) for p in fs], ignore_index=True).to_parquet(OUT / f"preds_{arch}.parquet")
+
+
+def _drive(way: str, parts: Path) -> None:
+    """Best-effort copy of the finished parts to / from gdrive:IraAlgo-data-lake/derived/r136/parts."""
+    import subprocess
+    remote = "gdrive:IraAlgo-data-lake/derived/r136/parts"
+    src, dst = (str(parts), remote) if way == "push" else (remote, str(parts))
+    subprocess.run(["rclone", "copy", src, dst, "-q"], capture_output=True)
 
 
 # ------------------------------------------------------------------------------------------------ comparison
