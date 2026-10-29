@@ -17,12 +17,14 @@ versions Boss asked for on 29 Oct.
     than random entries.
 - **Holdout (1 Apr - 19 Oct 2026, 137 sessions, read once): 24 of the 30 lost**, including S3-V3, the closest design
   candidate (407 trades, -Rs 165 a trade).
-  - The few holdout winners had all lost in design (S2-V2: +Rs 452 a trade on 128 trades; S4-W: +Rs 516 on 95 trades,
-    66% won). A reversal like that is luck, not a signal.
-- **Before costs, on the index itself, the setups are a coin flip.** The average trade makes between -3 and +5 index
-  points (-0.05 to +0.1 R) in nearly every variant. That is what random entries with the same stop and target give.
+  - The holdout winners had lost in design (S2-V2: +Rs 452 a trade on 128 trades; S4-W: +Rs 516 on 95 trades, 66%
+    won). A reversal like that is luck, not a signal. The one exception is S4-V2, with 34 trades in all: too few to
+    judge.
+- **Before costs, on the index itself, the setups are a coin flip.** In 33 of 39 variants the average trade makes
+  between -3 and +5 index points (-0.05 to +0.1 R). The 6 exceptions (+5 to +33 points) are mostly 2R and small
+  variants, and none of them survives costs and the holdout.
   The option's charges, spread and time decay (about Rs 100-200 a trade) then turn it into a loss.
-- **Win rates are 24% to 62%.** The strategies with tight stops (IFVG, order blocks, OTE, 2R targets) win 25-40% of
+- **Win rates are 28% to 62% in design** (24% to 75% in the holdout). The strategies with tight stops (IFVG, order blocks, OTE, 2R targets) win 25-40% of
   the time, and their wins are not big enough to make up for it.
 - **Every variant breaks Boss's account stop** (-Rs 40k drawdown or -Rs 13k in a month) on 1 lot. Drawdowns run from
   -Rs 44k to -Rs 18.7 lakh across design and holdout. The only exception is S4-V2, with 34 trades in five
@@ -157,8 +159,8 @@ they were read. That is labelled; it changes nothing, because every W variant ha
 - **S3-V3 was the nearest miss.** In design it made +Rs 71 a trade on 2,871 trades (+Rs 51 at 2x slippage), and it
   was positive in all 4 walk-forward folds.
   - It failed the twin gate (p 1.00, q 1.00). It did beat the after-signal twins (p 0.005, q 0.03; see the notes).
-  - Then it lost in the holdout: 407 trades, 37% won, -Rs 165 a trade, -Rs 67k, and its worst month was -Rs 84k
-    (Feb 2025).
+  - Then it lost in the holdout: 407 trades, 37% won, -Rs 165 a trade, -Rs 67k. Over design and holdout together its
+    worst month was -Rs 84k (Feb 2025).
   - The index breakdown is mixed (BANKNIFTY, FINNIFTY and SENSEX up; NIFTY and MIDCPNIFTY down). That is the pattern
     of noise, not of an edge.
 - **No index is good across strategies.** MIDCPNIFTY is positive in some variants and negative in others, as in R62.
