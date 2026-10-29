@@ -15,3 +15,9 @@
 2. R123 network filter (take only trades its out-of-sample view expects to pay): CISD + filter passes every design gate (305 trades, 64% won, +Rs 276 a trade, q 0.04).
 3. But the holdout period gave only 21 such trades (+Rs 205 each), under the 50 needed, and that period was already seen. A lead for a forward test, not a pass.
 4. Write-up: research/HUNT_R132_ICT_EXITS.md; code and 15 tests: research/hunt/r132_ict_exits/; entries r132-*.yaml (all rejected).
+
+# R133 (same day): all 39 R131 entries x 5 exits with R123's network filter. 0 of 185 pass; the filter helps
+1. With the network filter 114 of 185 combinations make money in design (2023 - Mar 2026); without it nearly all lost.
+2. 6 distinct combinations pass every design gate (4 are CISD), but each had only 22-35 trades in the holdout period (50 needed); 4 of 6 were positive there.
+3. Profits lean on 2023-24, and ~285 rules have now been tried on the same data: a forward test from today is the only fair check (Boss's call).
+4. Write-up: research/HUNT_R133_ICT_NN_EXITS.md; code: research/hunt/r133_ict_nn_exits/; entries r133-*.yaml (all rejected).
