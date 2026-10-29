@@ -596,7 +596,8 @@ def stats(T: pd.DataFrame, by_fold: bool) -> dict:
     if not s["n"]:
         return s
     s["p_twins"], s["twin_mean_total"], s["twin_trades"] = twin_p(T)
-    s["by_year"] = {int(y): money(X) | {} for y, X in T.groupby([d.year for d in T.day])}
+    # an array, not a list: pandas reads a one-item list as column labels (29 Oct: a 1-trade version crashed)
+    s["by_year"] = {int(y): money(X) | {} for y, X in T.groupby(np.array([d.year for d in T.day]))}
     s["by_und"] = {u: money(X) for u, X in T.groupby("und")}
     if by_fold:
         f = [fold_of(d) for d in T.day]

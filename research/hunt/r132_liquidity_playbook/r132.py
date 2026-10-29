@@ -511,7 +511,7 @@ def run_nifty():
         if not len(T):
             out["versions"][v] = dict(n=0)
             continue
-        yr = T.groupby([d.year for d in T.day]).pts.agg(["count", "mean"])
+        yr = T.groupby(np.array([d.year for d in T.day])).pts.agg(["count", "mean"])
         out["versions"][v] = dict(label=VERSIONS[v]["label"], n=int(len(T)), avg_pts=float(T.pts.mean()),
                                   pts_win=float((T.pts > 0).mean()), avg_R=float(T.R.mean()),
                                   net_pts=float(T.pts.mean() - be), above_breakeven=bool(T.pts.mean() > be),

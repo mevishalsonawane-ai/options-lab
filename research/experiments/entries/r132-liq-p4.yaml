@@ -1,0 +1,35 @@
+family: liquidity
+date: '2026-10-29'
+doc: research/HUNT_R132_LIQUIDITY_PLAYBOOK.md
+data_version: Drive lake copied again 29 Oct 2026 after a container reset (index_1m incl. NIFTY 2017-2020, options_rolling_1m
+  WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (no fitting; by year)
+  holdout: 2026-04-01..2026-10-19 (read once for R132 after one crash before any output; read before by R123/R130/R131 for
+    other rules)
+  untouched: NIFTY index 2017-2020 (points; read before only by R131's trend rule)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r132_liquidity_playbook/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot, wicks only (fresh liquidity levels: PDH/PDL, opening range, previous week, equal highs/lows,
+  round numbers; sudden wick sweep with a reclaim; BOS; stop beyond the sweep; target at opposite liquidity >= 1R); ATM option
+  volume as a filter (P3/P8); buys the ATM option of the nearest non-expiring expiry'
+model_or_rule: research/hunt/r132_liquidity_playbook/r132.py
+settings: PREREG.md; 1 lot; one position per index; 200 twins per trade
+variants_tried: 8
+verdict: rejected
+id: r132-liq-p4
+title: 'R132 liquidity playbook (Boss''s PDFs) P4: + session open (sweeps 09:30-10:30)'
+hypothesis: The PDFs' liquidity playbook (external liquidity, sudden wick sweep + reclaim, BOS, stop beyond the pool, target
+  at the opposite liquidity, volume/session/HTF confluence) makes money on index options
+results:
+  summary: 'Design 145 trades, win 40% (below 65%), avg win Rs 4,124 / loss Rs -3,007, avg net Rs -155 (2x Rs -176), total
+    Rs -22,426, max DD Rs -52,886; p vs twins 0.990, q 1.000; design gates failed: n, net_pos, folds, q. Holdout 12 trades,
+    win 17%, avg net Rs -1,266, total Rs -15,191, p 0.32. NIFTY 2017-2020: 15 trades, +0.3 pts vs break-even 7.1.'
+  costs: Costs('dated') + Fills('liq') (also 2x slippage), 1 lot

@@ -1,0 +1,36 @@
+family: market-facts
+date: '2026-10-29'
+doc: research/HUNT_R132_LIQUIDITY_PLAYBOOK.md
+data_version: Drive lake copied again 29 Oct 2026 after a container reset (index_1m incl. NIFTY 2017-2020, options_rolling_1m
+  WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (no fitting; by year)
+  holdout: 2026-04-01..2026-10-19 (read once for R132 after one crash before any output; read before by R123/R130/R131 for
+    other rules)
+  untouched: NIFTY index 2017-2020 (points; read before only by R131's trend rule)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r132_liquidity_playbook/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot, wicks only (fresh liquidity levels: PDH/PDL, opening range, previous week, equal highs/lows,
+  round numbers; sudden wick sweep with a reclaim; BOS; stop beyond the sweep; target at opposite liquidity >= 1R); ATM option
+  volume as a filter (P3/P8); buys the ATM option of the nearest non-expiring expiry'
+model_or_rule: research/hunt/r132_liquidity_playbook/r132.py
+settings: index wicks, design; 1:1 races from the reclaim (d = sweep depth); placebo half-way levels; two-proportion z tests
+variants_tried: null
+verdict: rejected
+id: r132-liq-claims
+title: 'R132 the liquidity PDFs'' claims: sweep -> BOS, sweep vs run, round-number magnets, entering early, confluence'
+hypothesis: Sweeps are followed by structure breaks; reclaimed sweeps reverse while runs continue; round numbers are magnets;
+  waiting for the BOS beats entering early; confluence makes setups high probability
+results:
+  summary: 'Sweep -> BOS within 12 bars: 14.7% of 10732 sweeps vs 47.5% of 801062 ordinary bars (no). Sweep vs run reversal:
+    56.0% (n 10410) vs 49.4% (n 4161), p 4e-13 (YES, supported). Round numbers vs placebo: 53.9% (n 4759) vs 57.7% (n 5311)
+    (no: round worse). Entering on the reclaim lost less than waiting for the BOS (-Rs 116 vs -Rs 275 a trade). Full confluence:
+    16 trades, -Rs 1,049 a trade.'
+  costs: none for the races (index wicks); the variants as stated

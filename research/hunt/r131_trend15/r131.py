@@ -309,7 +309,7 @@ def run_nifty():
     for v in ("T1", "T2", "T4"):
         cfg = VERSIONS[v]
         T = pd.DataFrame(trade_breaks(g, brks, cfg, set(), lambda d: True, h60=h60 if cfg["h60"] else None))
-        yr = T.groupby([d.year for d in T.day]).pts.agg(["count", "mean", "sum"])
+        yr = T.groupby(np.array([d.year for d in T.day])).pts.agg(["count", "mean", "sum"])
         out["versions"][v] = dict(label=cfg["label"], n=int(len(T)), avg_pts=float(T.pts.mean()),
                                   pts_win=float((T.pts > 0).mean()), net_pts=float(T.pts.mean() - be),
                                   above_breakeven=bool(T.pts.mean() > be),
