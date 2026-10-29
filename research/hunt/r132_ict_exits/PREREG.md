@@ -73,3 +73,29 @@ compared with what already runs on paper. Everything is out by 15:20.
 - Results: `results/design.json`, then `results/holdout_seen.json`.
 - Write-up: `research/HUNT_R132_ICT_EXITS.md`. Entries: `research/experiments/entries/r132-*.yaml`. RESULT.md is
   updated.
+
+## Amendment A (29 Oct 2026, before any R132 number): R123's neural network as a filter (Boss: "use the neuro network created in r123")
+
+R123's single network (N1) saved **walk-forward** predictions for every 5-minute decision point of 2023 - 15 Mar 2026
+(each fold's model trained only on earlier data) and for the holdout (`gdrive:.../derived/r123/cleaned/
+wf_rows_preds_N1.parquet`, `holdout_rows_preds_N1.parquet`). For each decision row t (a row's close; it acts at t+1)
+and each of 16 cell-sides j (8 cells of +X before -Y within H minutes, X, Y in Rs 1,000 / 2,000, H in 30 / 60, on the
+ATM call or put) it gives P(win) `pw_j` and the expected value `ev_j`, plus P(up) over 30 minutes `pdir30`.
+
+**The filter.** For an R131 entry at minute r0 on side sd, the network's view is its row t = the latest decision row
+with t ≤ r0 - 1 (at most 5 minutes old). An entry before the first decision (09:20) has no view and is dropped.
+- **N-EV:** keep the trade only if the mean `ev_j` over the 8 cells of its side (calls for buys, puts for sells) is
+  > 0, i.e. the network expects that option to make money.
+- **N-DIR:** keep it only if `pdir30` agrees with the side (> 0.5 for buys, < 0.5 for sells).
+
+**Applied to** the ten as-stated entries with R131's own exits (E0), using R131's priced trades of those entries
+(`trades_design.parquet`, `trades_holdout.parquet`; the same trades, nothing re-simulated): 20 more variants, so **BH
+is over 60** (the 40 exit variants plus these 20).
+
+**Periods.** Design = the folds F1-F4 only (2023 - 15 Mar 2026), where out-of-sample predictions exist; the
+Aug 2021 - 2022 trades have none and are not used. The holdout period (seen, as section 0) is reported once.
+
+**The gate test for a filter: does it pick better trades than chance?** p = the share of 2,000 random subsets of the
+same entry's trades, drawn with the same number of trades in each fold, whose total is ≥ the kept trades' total. The
+other gates are as section 3: ≥ 300 kept trades, net > 0 at 1x and 2x, ≥ 3 of 4 folds positive, BH q ≤ 0.10, account
+limits.
