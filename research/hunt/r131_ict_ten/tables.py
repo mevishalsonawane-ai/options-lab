@@ -65,7 +65,7 @@ def main():
               f"{c['years_pos']} of 5 | {s['p_twins']:.3f} | {s['q']:.3f} | {s['avg_pts']:+.1f}, {s['avg_R']:+.2f}R |")
     print()
     if hol is not None:
-        print("| variant | holdout trades | win (65% rule) | net per trade | total | p vs twins | design + holdout drawdown "
+        print("| variant | holdout trades | win | net per trade | total | p vs twins | design + holdout drawdown "
               "| worst month |")
         print("|---|---|---|---|---|---|---|---|")
         for v, s in hol["variants"].items():

@@ -23,8 +23,7 @@ def fails(v: str, d: dict, h: dict | None, c: dict) -> list:
             out.append("holdout_n")
         if not h.get("avg_net", -1) > 0:
             out.append("holdout_net")
-        if not h.get("win", 0) >= g["win"]:
-            out.append("win_65")
+        # the 65% win-rate rule is for Jarvis's own strategies only (Boss, 29 Oct; PREREG N3)
     if c.get("n") and (c["max_dd"] <= g["dd"] or c["worst_month"] <= g["month"]):
         out.append("account")
     return out

@@ -1,0 +1,30 @@
+id: r131-s10-v1
+title: 'R131 S10 OTE S10-V1: OTE: trend pullback to 0.618'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R131_ICT_TEN.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m, options_rolling_1m WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026 Q1; no fitting)
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r131_ict_ten/PREREG.md
+holdout_read: '2026-10-29'
+features:
+- 'signal source: the index spot (wick-based swings, sweeps, CHoCH, FVG, CISD, order blocks, fib levels); buys the ATM option
+  of the nearest non-expiry-day expiry; stops and targets on index wicks'
+hypothesis: 'Boss''s ICT video (29 Oct): S10 OTE as stated makes money on index options'
+model_or_rule: research/hunt/r131_ict_ten/r131.py
+settings: PREREG.md S10-V1; 1 lot at today's lots; one trade at a time per index
+variants_tried: 30
+verdict: rejected
+results:
+  summary: 'design 4412 trades, win 41%, avg net Rs -161 (2x slippage Rs -183), total Rs -711,047, max drawdown Rs -774,014;
+    p vs random twins 1.000, BH q (30 variants) 1.000; index points +0.4 a trade. Holdout (read once) 581 trades, win 41%,
+    avg net Rs -284, total Rs -164,964. Years positive 2022-26: 0 of 5. Fails: net_pos, folds, q, holdout_net, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

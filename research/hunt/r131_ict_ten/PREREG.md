@@ -266,3 +266,36 @@ BH q stay the gate. In addition, every trade gets 200 **after-signal twins** (a 
 entry minute to 15:00, a separate random stream, the same distances, exits and option rule), reported as
 `p_twins_after` with its own BH q over the 30 variants, in the design (re-run, the primary numbers are unchanged) and
 in the one holdout read. It is descriptive only.
+
+## N3 (29 Oct 2026, after the holdout read): the 65% rule does not apply here
+
+Boss, 29 Oct: "65% is only for new strategies created by Jarvis". These ten are Boss's own video strategies, so the
+holdout win-rate gate (≥ 65%) is dropped for R131; win rates are still reported. Every other gate stands. No verdict
+changes: every variant already fails the design gates (trades, net at 1x / 2x slippage, folds or BH q).
+
+## N4 (29 Oct 2026, after the holdout read, BEFORE any wick-only code or number): wick-only variants (Boss)
+
+Boss, 29 Oct: "use wick to wick candles, not only opening and closing candles". Every level, sweep, gap, zone, stop,
+target and exit above is already a wick. What still used a close (or an open) is replaced here by a wick, in one new
+variant per strategy, built on its as-stated V1 (S10 OTE uses no close at all, so it has no W variant):
+
+| W variant | what changes from V1 |
+|---|---|
+| S1-W | the CHoCH is the first **minute high ≥ the recent high + 1 tick** (not a 15-min close above it) |
+| S2-W | the FVG's third bar must have its **low** above PDL (not its close) |
+| S3-W | the drop is measured from the run's first **high** to its lowest low; the CISD is the first minute high ≥ the last green high + 1 tick. The run is armed after each completed red bar (so the trigger never needs the colour of the bar it fires in) |
+| S4-W | the "outside close" is a fresh **wick** below the previous day's low; the CHoCH is a minute high ≥ the recent 15-min high + 1 tick |
+| S5-W | the CISD is the first minute high ≥ ICT's level + 1 tick (the level from completed bars only) |
+| S6-W | the FVG is invalidated by a **high ≥ its top + 1 tick** (not a close above it) |
+| S7-W | the CISD is the first minute high ≥ ICT's level + 1 tick (the level from completed bars only) |
+| S8-W | the impulse is measured wick to wick: the run's last high minus its first low ≥ 2 ATR |
+| S9-W | the order block fails on a **high ≥ its high + 1 tick** (bearish: a low below its low), not a close |
+
+- Candle colour (green / red) is kept where the concept itself is a colour ("the last green candle", "the last
+  opposite candle", a run of red candles); it is never used to time an entry.
+- A minute trigger: entry at the next minute's open; the stop is the lowest low from the sweep / run start up to and
+  including the trigger minute (minus 0.02%). The sweep bar itself cannot confirm (the order inside a bar is unknown).
+- **Gates:** the design gates of section 3 (no 65% rule, N3), with BH q over all **39** variants (the 30 plus these
+  9). The holdout period was already read once for V1-V3, so it is **not unseen** to this study: the W variants get
+  one read of it (their own lock), reported with that label. A W variant that passes design and that read would still
+  need a fresh forward test on paper before any arm, never live.

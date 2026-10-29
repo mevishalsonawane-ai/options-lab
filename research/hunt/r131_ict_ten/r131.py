@@ -97,7 +97,7 @@ VARIANTS = {
 STRATS = {"sb": "S1 Silver Bullet", "cam": "S2 Cameron's Model", "cisd": "S3 CISD", "crt": "S4 CRT", "amd": "S5 AMD",
           "ifvg": "S6 IFVG", "ts": "S7 Turtle Soup", "ob": "S8 Order Block", "brk": "S9 Breaker Block",
           "ote": "S10 OTE"}
-GATES = dict(design_n=300, folds=3, q=0.10, holdout_n=50, win=0.65, dd=-40000.0, month=-13000.0)
+GATES = dict(design_n=300, folds=3, q=0.10, holdout_n=50, dd=-40000.0, month=-13000.0)   # no 65% rule: PREREG N3
 
 
 # ------------------------------------------------------------------------------------------------ bars (R130)
