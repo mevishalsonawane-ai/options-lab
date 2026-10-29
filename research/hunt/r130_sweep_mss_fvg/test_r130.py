@@ -193,3 +193,67 @@ def test_holdout_lock_reads_once(tmp_path):
 def test_c3_two_proportion():
     out = R.c3_test({"swept": [60, 40, 5], "not_swept": [50, 50, 5]})
     assert out["up_first_swept"] == 0.6 and out["n_not_swept"] == 100 and 0 < out["p_two_sided"] < 0.2
+
+
+# ---- Amendment 1: wick-only versions ---------------------------------------------------------------------------------
+def _wick_bars():
+    """BARS with bar 23's low at 1001.4: its wicks now engulf bar 22's (high 1006 > 1005.5, low 1001.4 <= 1001.5)."""
+    bars = list(BARS)
+    bars[23] = (1001.8, 1006, 1001.4, 1005.5)
+    return bars
+
+
+def run_w(v, g):
+    return R.scan(g, R.WICK_VARIANTS[v], set(), lambda d: True)
+
+
+def test_w1_wick_break_and_wick_engulfing():
+    assert run_w("W1", minutes())[0] == []                   # no candle's wicks engulf the previous one's in time
+    t = run_w("W1", minutes(_wick_bars()))[0][0]
+    # wick MSS: bar 20's high 1008 >= 1005 + 1 tick; the same FVG 998..1002; trigger bar 23 -> buy at row 120
+    assert (t["side"], t["entry"], t["exit"], t["why"]) == (1, 120, 130, "target")
+    assert t["stop_pts"] == pytest.approx(1005.5 - (998 - 0.0002 * 998))
+
+
+def test_w1_mss_needs_only_a_wick():
+    bars = _wick_bars()
+    bars[20] = (1003, 1008, 1002, 1004.0)                    # closes BELOW the recent high 1005: no close-based MSS
+    t = run_w("W1", minutes(bars))[0][0]
+    assert t["entry"] == 120
+    capped = [(min(o, 1005.02), min(h, 1005.02), min(l, 1005.02), min(c, 1005.02)) if 18 <= b <= 29 else (o, h, l, c)
+              for b, (o, h, l, c) in enumerate(_wick_bars())]     # every wick after the sweep stops short of 1005.05
+    trades, meta = run_w("W1", minutes(capped))
+    assert trades == [] and meta["census"]["mss"] == 0
+
+
+def test_wick_versions_never_read_opens_or_closes():
+    """Scramble every minute's open and close inside its high-low range (all but the entry minute's open, which is the
+    fill price): the wick-only trade must not change."""
+    rng = np.random.default_rng(0)
+    base = run_w("W1", minutes(_wick_bars()))[0][0]
+    for _ in range(5):
+        g = minutes(_wick_bars())
+        u1, u2 = rng.random(N), rng.random(N)
+        keep = g.o[0, base["entry"]]
+        g.o[0] = g.l[0] + u1 * (g.h[0] - g.l[0])
+        g.c[0] = g.l[0] + u2 * (g.h[0] - g.l[0])
+        g.o[0, base["entry"]] = keep
+        t = run_w("W1", g)[0][0]
+        for k in ("side", "entry", "exit", "why", "stop_pts", "tgt_pts", "pts"):
+            assert t[k] == base[k]
+
+
+def test_wick_mirror_and_wick_census_runs():
+    t = run_w("W1", minutes(_wick_bars(), mirror_at=2000.0))[0][0]
+    assert (t["side"], t["entry"], t["exit"]) == (-1, 120, 130)
+    c = R.mss_census(minutes(_wick_bars()), lambda d: True, wick=True)
+    assert sum(c["swept"]) + sum(c["not_swept"]) >= 1
+
+
+def test_wick_holdout_lock_is_separate(tmp_path):
+    R.holdout_lock("start", tmp_path, tmp_path)
+    R.holdout_lock("done", tmp_path, tmp_path)
+    R.holdout_lock("start", tmp_path, tmp_path, suffix="_wick")          # its own lock
+    R.holdout_lock("done", tmp_path, tmp_path, suffix="_wick")
+    with pytest.raises(R.HoldoutError):
+        R.holdout_lock("start", tmp_path, tmp_path, suffix="_wick")

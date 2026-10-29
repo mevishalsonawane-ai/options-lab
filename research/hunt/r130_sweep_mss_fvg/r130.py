@@ -3,6 +3,8 @@ five indices, buying the ATM option of the nearest expiry that does not expire t
 
     python research/hunt/r130_sweep_mss_fvg/r130.py design     # design period -> results/design.json
     python research/hunt/r130_sweep_mss_fvg/r130.py holdout    # the ONE holdout read -> results/holdout.json
+    python research/hunt/r130_sweep_mss_fvg/r130.py design wick    # Amendment 1 (wick-only) -> results/design_wick.json
+    python research/hunt/r130_sweep_mss_fvg/r130.py holdout wick   # its one holdout read -> results/holdout_wick.json
 
 Signal source: the index spot (the underlying). Every swing, sweep, MSS, FVG, pullback, engulfing candle, stop and
 target is read on the index's bars (wicks for levels; bodies only for the engulfing candle and the MSS close). The
@@ -51,6 +53,16 @@ VARIANTS = {
     "V5": dict(tf=5, engulf=True, target="eq", k=5, close_back=False, label="longer swing lookback (5 bars each side)"),
     "V6": dict(tf=5, engulf=True, target="eq", k=3, close_back=True, label="sweep needs a close back inside"),
 }
+# Amendment 1 (PREREG_WICK.md, 29 Oct, after the results): wick-only versions, no candle open or close in any signal
+WICK_VARIANTS = {
+    "W1": dict(tf=5, engulf=True, target="eq", k=3, close_back=False, wick=True,
+               label="the rule as stated, wick-only (5-min)"),
+    "W2": dict(tf=5, engulf=False, target="eq", k=3, close_back=False, wick=True,
+               label="wick-only, no confirmation (first touch of the FVG)"),
+    "W3": dict(tf=1, engulf=True, target="eq", k=3, close_back=False, wick=True, label="wick-only, 1-minute chart"),
+    "W4": dict(tf=5, engulf=True, target="2R", k=3, close_back=False, wick=True, label="wick-only, fixed 2R target"),
+}
+FAMILIES = {"orig": VARIANTS, "wick": WICK_VARIANTS}
 GATES = dict(design_n=300, folds=3, q=0.10, holdout_n=50, win=0.65, dd=-40000.0, month=-13000.0)
 
 
@@ -131,6 +143,7 @@ class Side:
     k: int
     engulf: bool
     close_back: bool
+    wick: bool = False                             # Amendment 1: wick MSS and wick engulfing (no opens / closes)
     hi_avail: dict = field(default_factory=dict)   # bar t -> swing-high pivots known from bar t on
     lo_avail: dict = field(default_factory=dict)
     highs: list = field(default_factory=list)      # (level, day) of known swing highs, last 5 sessions
@@ -168,6 +181,8 @@ class Side:
     def is_engulfing(self, t: int) -> bool:
         if t < 1 or self.B.day[t - 1] != self.B.day[t]:
             return False
+        if self.wick:      # its wicks engulf the previous candle's and it takes out the previous high
+            return bool(self.hh[t] > self.hh[t - 1] and self.ll[t] <= self.ll[t - 1])
         o0, c0, o1, c1 = self.oo[t - 1], self.cc[t - 1], self.oo[t], self.cc[t]
         return bool(c1 > o1 and c0 <= o0 and o1 <= min(o0, c0) and c1 >= max(o0, c0))
 
@@ -201,7 +216,7 @@ class Side:
         if p is not None and p.phase == "mss":
             if t > p.s + N_MSS:
                 self.pend = p = None
-            elif self.cc[t] > p.H:
+            elif (self.hh[t] >= p.H + TICK) if self.wick else (self.cc[t] > p.H):
                 self.census["mss"] += 1
                 fv = find_fvg(self.hh, self.ll, p.s, t)
                 if fv is None:
@@ -283,7 +298,8 @@ def scan(g, cfg: dict, blocked: set, days_keep, last_row: int = K.K3.EXIT_LAST) 
     for sd in (1, -1):
         mh, ml, mo, mc = M[sd]
         B = make_bars(mo, mh, ml, mc, cfg["tf"])
-        sides[sd] = Side(B, B.h, B.l, B.o, B.c, cfg["k"], cfg["engulf"], cfg["close_back"])
+        sides[sd] = Side(B, B.h, B.l, B.o, B.c, cfg["k"], cfg["engulf"], cfg["close_back"],
+                        cfg.get("wick", False))
     B = sides[1].B
     # both sides' bars are the same bars (mirroring keeps which bars have data)
     trades, skips = [], dict(no_target=0, no_room=0, late=0, both=0, no_contract=0, no_price=0)
@@ -351,9 +367,12 @@ def scan(g, cfg: dict, blocked: set, days_keep, last_row: int = K.K3.EXIT_LAST) 
     return trades, dict(skips=skips, census=census)
 
 
-def mss_census(g, days_keep, k: int = 3, tf: int = 5) -> dict:
+def mss_census(g, days_keep, k: int = 3, tf: int = 5, wick: bool = False) -> dict:
     """C3: every first close beyond the latest swing high (low) with an FVG in its leg, split by whether a sweep came
-    in the 12 bars before; a 1:1 race on index wicks from the MSS bar's close to 15:20 (V1's bars and swings)."""
+    in the 12 bars before; a 1:1 race on index wicks from the MSS bar's close to 15:20 (V1's bars and swings).
+    wick=True (Amendment 1): the first WICK 1 tick beyond the swing; the race starts the minute after the breaking
+    minute, from the broken level + 1 tick; the leg and its FVG use only bars before the breaking bar and that bar's
+    minutes up to the break (nothing later)."""
     M = mirror(g)
     out = {True: [0, 0, 0], False: [0, 0, 0]}          # swept -> [up first, down first, neither]
     for sd in (1, -1):
@@ -373,7 +392,10 @@ def mss_census(g, days_keep, k: int = 3, tf: int = 5) -> dict:
                 last_sweep = t
             if S.highs:
                 H = S.highs[-1]                                            # (level, session): one break per swing
-                if S.cc[t] > H[0] and H not in broken:
+                if wick and S.hh[t] >= H[0] + TICK and H not in broken:
+                    broken.add(H)
+                    _wick_race(out, S, B, mh[d], ml[d], mo[d], t, d, H[0] + TICK, last_sweep, days_keep(g.days[d]))
+                elif not wick and S.cc[t] > H[0] and H not in broken:
                     broken.add(H)
                     swept = t - last_sweep <= N_MSS
                     a0 = last_sweep if swept else t - N_MSS
@@ -388,6 +410,29 @@ def mss_census(g, days_keep, k: int = 3, tf: int = 5) -> dict:
                                 out[swept][{"target": 0, "stop": 1, "time": 2}[ex[1]]] += 1
             S.after_bar(t)
     return {"swept": out[True], "not_swept": out[False]}
+
+
+def _wick_race(out, S, B, mh, ml, mo, t, d, level, last_sweep, keep):
+    """One wick-break event of the wick census (see mss_census)."""
+    if not keep:
+        return
+    s0 = int(np.searchsorted(B.day, d))
+    swept = t - last_sweep <= N_MSS
+    a0 = max(last_sweep if swept else t - N_MSS, s0)
+    rows = np.arange(int(B.start[t]), int(B.end[t]) + 1)
+    hit = rows[np.isfinite(mh[rows]) & (mh[rows] >= level)]
+    if not len(hit):
+        return
+    brk = int(hit[0])
+    if a0 > t - 1 or find_fvg(S.hh, S.ll, a0, t - 1) is None:
+        return
+    low = min(float(S.ll[a0:t].min()), float(np.nanmin(ml[int(B.start[t]):brk + 1])))
+    dist = level - low
+    r0 = brk + 1
+    if dist > 0 and r0 <= K.K3.EXIT_LAST:
+        ex = exit_on(mh, ml, mo, r0, level - dist, level + dist, K.K3.EXIT_LAST)
+        if ex is not None:
+            out[swept][{"target": 0, "stop": 1, "time": 2}[ex[1]]] += 1
 
 
 # ------------------------------------------------------------------------------------------------ the option leg
@@ -419,7 +464,8 @@ class Series(D3.LakeOptions):
 
 
 def run_index(args) -> dict:
-    und, part = args
+    und, part, family = (tuple(args) + ("orig",))[:3]
+    VARS = FAMILIES[family]
     lo, hi = (K.DESIGN if part == "design" else K.HOLDOUT)
     g = D3.load_grid(und, hi)
     W, Mo = Series(und, hi, "WEEK"), Series(und, hi, "MONTH")
@@ -428,11 +474,12 @@ def run_index(args) -> dict:
     blocked = {i for i, d in enumerate(g.days) if (d in wexp and d in mexp) or d.year < first_opt}
     keep = lambda d: lo <= d <= hi  # noqa: E731
     lot, step = K.LOT[und], K.STEP[und]
-    rng = np.random.default_rng(SEED + K.UNDS.index(und) + (100 if part == "holdout" else 0))
+    rng = np.random.default_rng(SEED + K.UNDS.index(und) + (100 if part == "holdout" else 0)
+                                + (1000 if family == "wick" else 0))
     sig, meta = {}, {}
-    for v, cfg in VARIANTS.items():
+    for v, cfg in VARS.items():
         sig[v], meta[v] = scan(g, cfg, blocked, keep)
-    census = mss_census(g, keep)
+    census = mss_census(g, keep, wick=family == "wick")
     by_day = {}
     for v, T in sig.items():
         for t in T:
@@ -471,7 +518,7 @@ def run_index(args) -> dict:
                 t1 = option_trade(opts.contracts.get((cp, D3.atm(c1, step))), r1, e1[0], e1[1], lot, day, und)
                 tw.append(np.nan if t1 is None else t1[0])
             rows.append(dict(t, variant=v, und=und, series=src.series, net=tr[0], netx2=tr[1], twins=tw))
-    print(f"R130 {part} {und}: " + ", ".join(f"{v} {sum(r['variant'] == v for r in rows)}" for v in VARIANTS),
+    print(f"R130 {part} {und}: " + ", ".join(f"{v} {sum(r['variant'] == v for r in rows)}" for v in VARS),
           flush=True)
     return dict(rows=rows, meta=meta, census=census, sessions=sorted({d for d in g.days if keep(d)}))
 
@@ -542,14 +589,15 @@ class HoldoutError(RuntimeError):
     pass
 
 
-def holdout_lock(status: str, out: Path = OUT, results: Path = RESULTS) -> None:
-    """The ONE holdout read (PREREG section 3): 'start' refuses once a read has begun or its result is committed."""
-    p = out / "HOLDOUT_READ.json"
+def holdout_lock(status: str, out: Path = OUT, results: Path = RESULTS, suffix: str = "") -> None:
+    """The ONE holdout read (PREREG section 3): 'start' refuses once a read has begun or its result is committed.
+    suffix "_wick": Amendment 1's own lock (HOLDOUT_READ_WICK.json / holdout_wick.json)."""
+    p = out / f"HOLDOUT_READ{suffix.upper()}.json"
     old = json.loads(p.read_text()) if p.exists() else None
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     if status == "start":
-        if (results / "holdout.json").exists():
-            raise HoldoutError("refused: the holdout was already read (results/holdout.json exists)")
+        if (results / f"holdout{suffix}.json").exists():
+            raise HoldoutError(f"refused: the holdout was already read (results/holdout{suffix}.json exists)")
         if old:
             raise HoldoutError(f"refused: a holdout read already started at {old.get('started_at')}")
         rec = dict(status="started", started_at=now)
@@ -559,15 +607,17 @@ def holdout_lock(status: str, out: Path = OUT, results: Path = RESULTS) -> None:
     p.write_text(json.dumps(rec))
 
 
-def run(part: str):
+def run(part: str, family: str = "orig"):
     from multiprocessing import Pool
+    VARS = FAMILIES[family]
+    sfx = "" if family == "orig" else f"_{family}"
     if part == "holdout":
-        holdout_lock("start")
+        holdout_lock("start", suffix=sfx)
     with Pool(4) as pool:
-        res = pool.map(run_index, [(u, part) for u in K.UNDS])
+        res = pool.map(run_index, [(u, part, family) for u in K.UNDS])
     rows = [r for x in res for r in x["rows"]]
     T = pd.DataFrame(rows)
-    out = dict(part=part, period=[str(x) for x in (K.DESIGN if part == "design" else K.HOLDOUT)],
+    out = dict(part=part, family=family, period=[str(x) for x in (K.DESIGN if part == "design" else K.HOLDOUT)],
                sessions=len({d for x in res for d in x["sessions"]}), variants={},
                scan={u: x["meta"] for u, x in zip(K.UNDS, res)})
     cs = {"swept": [0, 0, 0], "not_swept": [0, 0, 0]}
@@ -575,17 +625,17 @@ def run(part: str):
         for kk in cs:
             cs[kk] = [a + b for a, b in zip(cs[kk], x["census"][kk])]
     out["claim_c3"] = c3_test(cs)
-    for v in VARIANTS:
+    for v in VARS:
         Tv = T[T.variant == v] if len(T) else T
         s = stats(Tv, part == "design")
         cen = {kk: sum(out["scan"][u][v]["census"][kk] for u in K.UNDS) for kk in ("sweeps", "mss", "fvg", "touched",
                                                                                      "triggered")}
         sk = {kk: sum(out["scan"][u][v]["skips"][kk] for u in K.UNDS) for kk in out["scan"][K.UNDS[0]][v]["skips"]}
-        s["census"], s["skips"], s["label"] = cen, sk, VARIANTS[v]["label"]
+        s["census"], s["skips"], s["label"] = cen, sk, VARS[v]["label"]
         out["variants"][v] = s
     if part == "design":
-        qs = R3.bh([out["variants"][v].get("p_twins", 1.0) for v in VARIANTS])
-        for v, q in zip(VARIANTS, qs):
+        qs = R3.bh([out["variants"][v].get("p_twins", 1.0) for v in VARS])
+        for v, q in zip(VARS, qs):
             s = out["variants"][v]
             s["q"] = q
             folds = [s.get("by_fold", {}).get(f, {}).get("total", 0.0) > 0 for f in K.FOLDS]
@@ -594,12 +644,12 @@ def run(part: str):
                                      folds=sum(folds) >= GATES["folds"], q=q <= GATES["q"])
             s["passes_design"] = all(s["design_gates"].values())
     RESULTS.mkdir(parents=True, exist_ok=True)
-    (RESULTS / f"{part}.json").write_text(json.dumps(out, indent=1, default=str))
+    (RESULTS / f"{part}{sfx}.json").write_text(json.dumps(out, indent=1, default=str))
     OUT.mkdir(parents=True, exist_ok=True)
     if len(T):
-        T.drop(columns=["twins"]).to_parquet(OUT / f"trades_{part}.parquet")
+        T.drop(columns=["twins"]).to_parquet(OUT / f"trades_{part}{sfx}.parquet")
     if part == "holdout":
-        holdout_lock("done")
+        holdout_lock("done", suffix=sfx)
     print({v: (s.get("n"), round(s.get("avg_net", 0) or 0), round(s.get("win", 0) or 0, 3), s.get("p_twins"))
            for v, s in out["variants"].items()})
 
@@ -620,4 +670,4 @@ def c3_test(cs: dict) -> dict:
 
 
 if __name__ == "__main__":
-    run(sys.argv[1] if len(sys.argv) > 1 else "design")
+    run(sys.argv[1] if len(sys.argv) > 1 else "design", sys.argv[2] if len(sys.argv) > 2 else "orig")
