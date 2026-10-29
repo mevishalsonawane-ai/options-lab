@@ -1,0 +1,1811 @@
+{
+ "tag": "replay",
+ "first": "2026-04-01",
+ "last": "2026-10-19",
+ "sessions": 137,
+ "rules": {
+  "S3-V2-E0": {
+   "n": 32,
+   "win": 0.5,
+   "avg_net": 302.479375,
+   "avg_net_x2": 281.4121874999999,
+   "total": 9679.34,
+   "max_dd": -11675.28,
+   "worst_month": -4571.549999999999
+  },
+  "S3-V2-E3": {
+   "n": 35,
+   "win": 0.7142857142857143,
+   "avg_net": 76.60628571428565,
+   "avg_net_x2": 49.40971428571413,
+   "total": 2681.2199999999975,
+   "max_dd": -10760.539999999999,
+   "worst_month": -4433.37
+  },
+  "S7-V2-E4": {
+   "n": 27,
+   "win": 0.6666666666666666,
+   "avg_net": 1878.8662962962962,
+   "avg_net_x2": 1851.7792592592596,
+   "total": 50729.39,
+   "max_dd": -5111.019999999999,
+   "worst_month": -2403.460000000001
+  },
+  "S3-V1-E3": {
+   "n": 22,
+   "win": 0.6818181818181818,
+   "avg_net": -19.572272727272672,
+   "avg_net_x2": -46.71318181818211,
+   "total": -430.5899999999988,
+   "max_dd": -8262.539999999999,
+   "worst_month": -5497.029999999999
+  },
+  "S9-W-E4": {
+   "n": 30,
+   "win": 0.3,
+   "avg_net": -261.9203333333333,
+   "avg_net_x2": -290.0020000000001,
+   "total": -7857.609999999999,
+   "max_dd": -13575.38,
+   "worst_month": -6356.279999999999
+  },
+  "S3-W-E1": {
+   "n": 28,
+   "win": 0.5714285714285714,
+   "avg_net": 153.87035714285716,
+   "avg_net_x2": 125.9242857142854,
+   "total": 4308.370000000001,
+   "max_dd": -6618.749999999998,
+   "worst_month": -2739.0800000000013
+  }
+ },
+ "primary": "S3-V2-E0",
+ "decision": {
+  "status": "collecting",
+  "trades": 32,
+  "needed": 50
+ },
+ "trades": [
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-04-10",
+   "side": -1,
+   "entry": 305,
+   "exit": 351,
+   "why": "stop",
+   "net": -1891.9
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-04-10",
+   "side": -1,
+   "entry": 305,
+   "exit": 311,
+   "why": "lock",
+   "net": 1070.95
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "NIFTY",
+   "day": "2026-04-10",
+   "side": -1,
+   "entry": 305,
+   "exit": 311,
+   "why": "lock",
+   "net": 1070.95
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "SENSEX",
+   "day": "2026-04-10",
+   "side": -1,
+   "entry": 305,
+   "exit": 351,
+   "why": "stop",
+   "net": -1703.19
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "SENSEX",
+   "day": "2026-04-10",
+   "side": -1,
+   "entry": 305,
+   "exit": 311,
+   "why": "lock",
+   "net": 1023.06
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "SENSEX",
+   "day": "2026-04-10",
+   "side": -1,
+   "entry": 305,
+   "exit": 351,
+   "why": "istop",
+   "net": -1703.19
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "SENSEX",
+   "day": "2026-04-10",
+   "side": -1,
+   "entry": 305,
+   "exit": 311,
+   "why": "lock",
+   "net": 1023.06
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-04-13",
+   "side": 1,
+   "entry": 245,
+   "exit": 245,
+   "why": "target",
+   "net": -491.04
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-04-13",
+   "side": 1,
+   "entry": 245,
+   "exit": 260,
+   "why": "lock",
+   "net": 432.98
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "FINNIFTY",
+   "day": "2026-04-13",
+   "side": 1,
+   "entry": 246,
+   "exit": 261,
+   "why": "lock",
+   "net": 705.94
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "NIFTY",
+   "day": "2026-04-13",
+   "side": 1,
+   "entry": 335,
+   "exit": 345,
+   "why": "istop",
+   "net": -1629.81
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "BANKNIFTY",
+   "day": "2026-04-15",
+   "side": -1,
+   "entry": 25,
+   "exit": 364,
+   "why": "time",
+   "net": 747.12
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "SENSEX",
+   "day": "2026-04-15",
+   "side": -1,
+   "entry": 20,
+   "exit": 364,
+   "why": "time",
+   "net": -2525.14
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "SENSEX",
+   "day": "2026-04-15",
+   "side": -1,
+   "entry": 115,
+   "exit": 364,
+   "why": "time",
+   "net": -1960.5
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "SENSEX",
+   "day": "2026-04-15",
+   "side": -1,
+   "entry": 115,
+   "exit": 364,
+   "why": "time",
+   "net": -1960.5
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "FINNIFTY",
+   "day": "2026-04-16",
+   "side": -1,
+   "entry": 25,
+   "exit": 328,
+   "why": "istop",
+   "net": 8307.11
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "SENSEX",
+   "day": "2026-04-16",
+   "side": 1,
+   "entry": 315,
+   "exit": 364,
+   "why": "time",
+   "net": -212.61
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "SENSEX",
+   "day": "2026-04-16",
+   "side": 1,
+   "entry": 315,
+   "exit": 321,
+   "why": "lock",
+   "net": 665.53
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "SENSEX",
+   "day": "2026-04-16",
+   "side": 1,
+   "entry": 316,
+   "exit": 345,
+   "why": "istop",
+   "net": -112.83
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "NIFTY",
+   "day": "2026-04-17",
+   "side": -1,
+   "entry": 173,
+   "exit": 212,
+   "why": "istop",
+   "net": 122.64
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "FINNIFTY",
+   "day": "2026-04-23",
+   "side": -1,
+   "entry": 266,
+   "exit": 281,
+   "why": "istop",
+   "net": -1083.17
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "SENSEX",
+   "day": "2026-04-23",
+   "side": 1,
+   "entry": 29,
+   "exit": 45,
+   "why": "lock",
+   "net": 1269.7
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "SENSEX",
+   "day": "2026-04-23",
+   "side": 1,
+   "entry": 31,
+   "exit": 60,
+   "why": "istop",
+   "net": 583.94
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "BANKNIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 195,
+   "exit": 235,
+   "why": "target",
+   "net": -498.04
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "BANKNIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 195,
+   "exit": 240,
+   "why": "lock",
+   "net": 131.45
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "BANKNIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 195,
+   "exit": 240,
+   "why": "lock",
+   "net": 131.45
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "BANKNIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 195,
+   "exit": 198,
+   "why": "pstop",
+   "net": -1097.13
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "BANKNIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 196,
+   "exit": 200,
+   "why": "istop",
+   "net": -791.66
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "FINNIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 191,
+   "exit": 221,
+   "why": "pstop",
+   "net": -1093.29
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 195,
+   "exit": 195,
+   "why": "target",
+   "net": -212.77
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 195,
+   "exit": 240,
+   "why": "lock",
+   "net": 362.13
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "FINNIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 195,
+   "exit": 240,
+   "why": "lock",
+   "net": 362.13
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 155,
+   "exit": 180,
+   "why": "pstop",
+   "net": -1085.29
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 190,
+   "exit": 190,
+   "why": "target",
+   "net": 508.24
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-04-24",
+   "side": -1,
+   "entry": 190,
+   "exit": 236,
+   "why": "lock",
+   "net": 565.33
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-05-06",
+   "side": -1,
+   "entry": 20,
+   "exit": 310,
+   "why": "stop",
+   "net": -4230.23
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-05-06",
+   "side": -1,
+   "entry": 20,
+   "exit": 26,
+   "why": "lock",
+   "net": 687.96
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "NIFTY",
+   "day": "2026-05-06",
+   "side": -1,
+   "entry": 20,
+   "exit": 257,
+   "why": "istop",
+   "net": 1945.89
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "SENSEX",
+   "day": "2026-05-06",
+   "side": -1,
+   "entry": 20,
+   "exit": 205,
+   "why": "target",
+   "net": 5365.9
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "SENSEX",
+   "day": "2026-05-06",
+   "side": -1,
+   "entry": 20,
+   "exit": 26,
+   "why": "lock",
+   "net": 804.91
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "SENSEX",
+   "day": "2026-05-06",
+   "side": -1,
+   "entry": 20,
+   "exit": 257,
+   "why": "istop",
+   "net": 2347.0
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "SENSEX",
+   "day": "2026-05-07",
+   "side": -1,
+   "entry": 85,
+   "exit": 99,
+   "why": "istop",
+   "net": 495.56
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "FINNIFTY",
+   "day": "2026-05-08",
+   "side": -1,
+   "entry": 36,
+   "exit": 359,
+   "why": "time",
+   "net": 3913.38
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-05-12",
+   "side": -1,
+   "entry": 266,
+   "exit": 288,
+   "why": "lock",
+   "net": 594.13
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-05-14",
+   "side": -1,
+   "entry": 25,
+   "exit": 138,
+   "why": "stop",
+   "net": -2894.78
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-05-14",
+   "side": -1,
+   "entry": 25,
+   "exit": 30,
+   "why": "lock",
+   "net": 547.5
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "NIFTY",
+   "day": "2026-05-14",
+   "side": -1,
+   "entry": 25,
+   "exit": 65,
+   "why": "istop",
+   "net": 812.19
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "FINNIFTY",
+   "day": "2026-05-18",
+   "side": 1,
+   "entry": 198,
+   "exit": 205,
+   "why": "lock",
+   "net": 366.53
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-05-18",
+   "side": 1,
+   "entry": 200,
+   "exit": 282,
+   "why": "target",
+   "net": 5346.94
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-05-18",
+   "side": 1,
+   "entry": 200,
+   "exit": 231,
+   "why": "lock",
+   "net": 1401.13
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "FINNIFTY",
+   "day": "2026-05-18",
+   "side": 1,
+   "entry": 200,
+   "exit": 231,
+   "why": "lock",
+   "net": 1401.13
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "FINNIFTY",
+   "day": "2026-05-18",
+   "side": 1,
+   "entry": 209,
+   "exit": 235,
+   "why": "istop",
+   "net": 1848.36
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-05-18",
+   "side": 1,
+   "entry": 196,
+   "exit": 200,
+   "why": "lock",
+   "net": 699.11
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-05-18",
+   "side": 1,
+   "entry": 200,
+   "exit": 228,
+   "why": "target",
+   "net": 2319.72
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-05-18",
+   "side": 1,
+   "entry": 200,
+   "exit": 222,
+   "why": "lock",
+   "net": 879.49
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "NIFTY",
+   "day": "2026-05-18",
+   "side": 1,
+   "entry": 200,
+   "exit": 222,
+   "why": "lock",
+   "net": 879.49
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "FINNIFTY",
+   "day": "2026-05-19",
+   "side": -1,
+   "entry": 20,
+   "exit": 27,
+   "why": "istop",
+   "net": -2982.38
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "FINNIFTY",
+   "day": "2026-05-19",
+   "side": -1,
+   "entry": 41,
+   "exit": 46,
+   "why": "pstop",
+   "net": -1124.86
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "FINNIFTY",
+   "day": "2026-05-19",
+   "side": -1,
+   "entry": 46,
+   "exit": 57,
+   "why": "istop",
+   "net": -1515.96
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-05-20",
+   "side": 1,
+   "entry": 110,
+   "exit": 364,
+   "why": "time",
+   "net": 3029.13
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-05-20",
+   "side": 1,
+   "entry": 110,
+   "exit": 128,
+   "why": "lock",
+   "net": 524.15
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "FINNIFTY",
+   "day": "2026-05-20",
+   "side": 1,
+   "entry": 110,
+   "exit": 128,
+   "why": "lock",
+   "net": 524.15
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "SENSEX",
+   "day": "2026-05-20",
+   "side": 1,
+   "entry": 20,
+   "exit": 364,
+   "why": "time",
+   "net": 3273.88
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "SENSEX",
+   "day": "2026-05-20",
+   "side": 1,
+   "entry": 20,
+   "exit": 78,
+   "why": "lock",
+   "net": 557.41
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "SENSEX",
+   "day": "2026-05-20",
+   "side": 1,
+   "entry": 20,
+   "exit": 364,
+   "why": "time",
+   "net": 3273.88
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "SENSEX",
+   "day": "2026-05-20",
+   "side": 1,
+   "entry": 111,
+   "exit": 168,
+   "why": "istop",
+   "net": 740.46
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "SENSEX",
+   "day": "2026-05-21",
+   "side": 1,
+   "entry": 327,
+   "exit": 328,
+   "why": "lock",
+   "net": 594.15
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-05-25",
+   "side": -1,
+   "entry": 25,
+   "exit": 91,
+   "why": "stop",
+   "net": -2020.65
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-05-25",
+   "side": -1,
+   "entry": 25,
+   "exit": 91,
+   "why": "istop",
+   "net": -2020.65
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "NIFTY",
+   "day": "2026-05-25",
+   "side": -1,
+   "entry": 25,
+   "exit": 91,
+   "why": "istop",
+   "net": -2020.65
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "NIFTY",
+   "day": "2026-05-29",
+   "side": -1,
+   "entry": 15,
+   "exit": 364,
+   "why": "time",
+   "net": 6183.07
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-05-29",
+   "side": -1,
+   "entry": 224,
+   "exit": 315,
+   "why": "lock",
+   "net": 2368.1
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "NIFTY",
+   "day": "2026-05-29",
+   "side": -1,
+   "entry": 226,
+   "exit": 315,
+   "why": "istop",
+   "net": 2012.61
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "NIFTY",
+   "day": "2026-06-02",
+   "side": -1,
+   "entry": 334,
+   "exit": 346,
+   "why": "istop",
+   "net": -615.38
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "NIFTY",
+   "day": "2026-06-05",
+   "side": -1,
+   "entry": 80,
+   "exit": 106,
+   "why": "istop",
+   "net": 1038.69
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-06-05",
+   "side": -1,
+   "entry": 80,
+   "exit": 83,
+   "why": "lock",
+   "net": 960.84
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "SENSEX",
+   "day": "2026-06-09",
+   "side": -1,
+   "entry": 25,
+   "exit": 142,
+   "why": "istop",
+   "net": 2926.32
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "NIFTY",
+   "day": "2026-06-12",
+   "side": -1,
+   "entry": 15,
+   "exit": 120,
+   "why": "istop",
+   "net": 808.56
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "MIDCPNIFTY",
+   "day": "2026-06-25",
+   "side": -1,
+   "entry": 10,
+   "exit": 364,
+   "why": "time",
+   "net": 8589.72
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "MIDCPNIFTY",
+   "day": "2026-06-25",
+   "side": -1,
+   "entry": 161,
+   "exit": 169,
+   "why": "istop",
+   "net": -92.64
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-07-13",
+   "side": 1,
+   "entry": 25,
+   "exit": 210,
+   "why": "target",
+   "net": 7222.79
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-07-13",
+   "side": 1,
+   "entry": 25,
+   "exit": 29,
+   "why": "lock",
+   "net": 562.06
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "NIFTY",
+   "day": "2026-07-13",
+   "side": 1,
+   "entry": 25,
+   "exit": 252,
+   "why": "istop",
+   "net": 5408.23
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "SENSEX",
+   "day": "2026-07-13",
+   "side": 1,
+   "entry": 20,
+   "exit": 225,
+   "why": "istop",
+   "net": 9844.22
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "BANKNIFTY",
+   "day": "2026-07-15",
+   "side": -1,
+   "entry": 225,
+   "exit": 364,
+   "why": "time",
+   "net": -2561.48
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "BANKNIFTY",
+   "day": "2026-07-15",
+   "side": -1,
+   "entry": 225,
+   "exit": 237,
+   "why": "lock",
+   "net": 1511.33
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "BANKNIFTY",
+   "day": "2026-07-15",
+   "side": -1,
+   "entry": 225,
+   "exit": 237,
+   "why": "lock",
+   "net": 1511.33
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "FINNIFTY",
+   "day": "2026-07-15",
+   "side": -1,
+   "entry": 271,
+   "exit": 293,
+   "why": "istop",
+   "net": -1791.4
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-07-17",
+   "side": 1,
+   "entry": 299,
+   "exit": 303,
+   "why": "lock",
+   "net": 2604.58
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "SENSEX",
+   "day": "2026-07-17",
+   "side": 1,
+   "entry": 299,
+   "exit": 304,
+   "why": "lock",
+   "net": 3098.06
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "MIDCPNIFTY",
+   "day": "2026-07-20",
+   "side": 1,
+   "entry": 45,
+   "exit": 66,
+   "why": "target",
+   "net": 2987.29
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "MIDCPNIFTY",
+   "day": "2026-07-20",
+   "side": 1,
+   "entry": 45,
+   "exit": 115,
+   "why": "lock",
+   "net": 3098.67
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "MIDCPNIFTY",
+   "day": "2026-07-20",
+   "side": 1,
+   "entry": 45,
+   "exit": 364,
+   "why": "time",
+   "net": 6657.03
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "MIDCPNIFTY",
+   "day": "2026-07-22",
+   "side": 1,
+   "entry": 125,
+   "exit": 125,
+   "why": "target",
+   "net": 78.6
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "MIDCPNIFTY",
+   "day": "2026-07-22",
+   "side": 1,
+   "entry": 125,
+   "exit": 181,
+   "why": "istop",
+   "net": -2559.92
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "MIDCPNIFTY",
+   "day": "2026-07-22",
+   "side": 1,
+   "entry": 126,
+   "exit": 160,
+   "why": "pstop",
+   "net": -1099.05
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "MIDCPNIFTY",
+   "day": "2026-07-22",
+   "side": 1,
+   "entry": 130,
+   "exit": 181,
+   "why": "istop",
+   "net": -2813.76
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "MIDCPNIFTY",
+   "day": "2026-07-22",
+   "side": 1,
+   "entry": 131,
+   "exit": 166,
+   "why": "istop",
+   "net": -1988.77
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "FINNIFTY",
+   "day": "2026-07-24",
+   "side": -1,
+   "entry": 271,
+   "exit": 277,
+   "why": "istop",
+   "net": -1738.98
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "BANKNIFTY",
+   "day": "2026-07-27",
+   "side": -1,
+   "entry": 45,
+   "exit": 364,
+   "why": "time",
+   "net": -1980.64
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "FINNIFTY",
+   "day": "2026-07-27",
+   "side": -1,
+   "entry": 70,
+   "exit": 124,
+   "why": "istop",
+   "net": -1431.67
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-07-30",
+   "side": 1,
+   "entry": 200,
+   "exit": 364,
+   "why": "time",
+   "net": -323.56
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-07-30",
+   "side": 1,
+   "entry": 200,
+   "exit": 364,
+   "why": "time",
+   "net": -323.56
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "FINNIFTY",
+   "day": "2026-07-30",
+   "side": 1,
+   "entry": 200,
+   "exit": 364,
+   "why": "time",
+   "net": -323.56
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-08-11",
+   "side": -1,
+   "entry": 227,
+   "exit": 343,
+   "why": "pstop",
+   "net": -1089.97
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "NIFTY",
+   "day": "2026-08-11",
+   "side": -1,
+   "entry": 326,
+   "exit": 334,
+   "why": "istop",
+   "net": -412.11
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "SENSEX",
+   "day": "2026-08-13",
+   "side": -1,
+   "entry": 326,
+   "exit": 342,
+   "why": "istop",
+   "net": 452.02
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "NIFTY",
+   "day": "2026-08-26",
+   "side": -1,
+   "entry": 60,
+   "exit": 337,
+   "why": "istop",
+   "net": 1073.59
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-08-31",
+   "side": 1,
+   "entry": 325,
+   "exit": 331,
+   "why": "target",
+   "net": 2723.0
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-08-31",
+   "side": 1,
+   "entry": 325,
+   "exit": 332,
+   "why": "lock",
+   "net": 1369.61
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "FINNIFTY",
+   "day": "2026-08-31",
+   "side": 1,
+   "entry": 325,
+   "exit": 332,
+   "why": "lock",
+   "net": 1369.61
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "FINNIFTY",
+   "day": "2026-08-31",
+   "side": 1,
+   "entry": 331,
+   "exit": 332,
+   "why": "istop",
+   "net": -173.6
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-09-08",
+   "side": -1,
+   "entry": 260,
+   "exit": 270,
+   "why": "target",
+   "net": 148.43
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-09-08",
+   "side": -1,
+   "entry": 260,
+   "exit": 364,
+   "why": "time",
+   "net": -305.05
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-09-11",
+   "side": 1,
+   "entry": 120,
+   "exit": 123,
+   "why": "lock",
+   "net": 351.04
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "FINNIFTY",
+   "day": "2026-09-11",
+   "side": 1,
+   "entry": 120,
+   "exit": 123,
+   "why": "lock",
+   "net": 351.04
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-09-11",
+   "side": 1,
+   "entry": 285,
+   "exit": 291,
+   "why": "lock",
+   "net": 2067.16
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "NIFTY",
+   "day": "2026-09-11",
+   "side": 1,
+   "entry": 285,
+   "exit": 291,
+   "why": "lock",
+   "net": 2067.16
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "SENSEX",
+   "day": "2026-09-11",
+   "side": 1,
+   "entry": 280,
+   "exit": 359,
+   "why": "target",
+   "net": 3582.27
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "SENSEX",
+   "day": "2026-09-11",
+   "side": 1,
+   "entry": 280,
+   "exit": 283,
+   "why": "lock",
+   "net": 696.92
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "SENSEX",
+   "day": "2026-09-11",
+   "side": 1,
+   "entry": 280,
+   "exit": 283,
+   "why": "lock",
+   "net": 696.92
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "FINNIFTY",
+   "day": "2026-09-18",
+   "side": -1,
+   "entry": 15,
+   "exit": 163,
+   "why": "istop",
+   "net": -2403.46
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 300,
+   "exit": 364,
+   "why": "time",
+   "net": -870.83
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 300,
+   "exit": 364,
+   "why": "time",
+   "net": -870.83
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "FINNIFTY",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 300,
+   "exit": 364,
+   "why": "time",
+   "net": -870.83
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "FINNIFTY",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 300,
+   "exit": 301,
+   "why": "pstop",
+   "net": -1090.0
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "FINNIFTY",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 313,
+   "exit": 326,
+   "why": "pstop",
+   "net": -1090.93
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "FINNIFTY",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 328,
+   "exit": 344,
+   "why": "istop",
+   "net": -175.21
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "SENSEX",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 300,
+   "exit": 364,
+   "why": "time",
+   "net": -635.41
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "SENSEX",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 300,
+   "exit": 307,
+   "why": "lock",
+   "net": 604.25
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "SENSEX",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 300,
+   "exit": 307,
+   "why": "lock",
+   "net": 604.25
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "SENSEX",
+   "day": "2026-09-22",
+   "side": 1,
+   "entry": 300,
+   "exit": 307,
+   "why": "lock",
+   "net": 604.25
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "MIDCPNIFTY",
+   "day": "2026-09-23",
+   "side": -1,
+   "entry": 15,
+   "exit": 39,
+   "why": "target",
+   "net": 2022.73
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "MIDCPNIFTY",
+   "day": "2026-09-23",
+   "side": -1,
+   "entry": 15,
+   "exit": 42,
+   "why": "lock",
+   "net": 1310.1
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "BANKNIFTY",
+   "day": "2026-09-24",
+   "side": -1,
+   "entry": 138,
+   "exit": 144,
+   "why": "pstop",
+   "net": -1080.74
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "BANKNIFTY",
+   "day": "2026-09-24",
+   "side": -1,
+   "entry": 141,
+   "exit": 238,
+   "why": "istop",
+   "net": -967.15
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "FINNIFTY",
+   "day": "2026-09-24",
+   "side": -1,
+   "entry": 68,
+   "exit": 78,
+   "why": "pstop",
+   "net": -1078.28
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-09-24",
+   "side": -1,
+   "entry": 70,
+   "exit": 251,
+   "why": "target",
+   "net": 1079.58
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-09-24",
+   "side": -1,
+   "entry": 70,
+   "exit": 256,
+   "why": "lock",
+   "net": 922.68
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "FINNIFTY",
+   "day": "2026-09-24",
+   "side": -1,
+   "entry": 70,
+   "exit": 256,
+   "why": "lock",
+   "net": 922.68
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "FINNIFTY",
+   "day": "2026-09-24",
+   "side": -1,
+   "entry": 71,
+   "exit": 96,
+   "why": "istop",
+   "net": -1754.08
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "BANKNIFTY",
+   "day": "2026-09-25",
+   "side": -1,
+   "entry": 262,
+   "exit": 272,
+   "why": "istop",
+   "net": -798.23
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-09-25",
+   "side": -1,
+   "entry": 30,
+   "exit": 288,
+   "why": "stop",
+   "net": -4446.91
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-09-25",
+   "side": -1,
+   "entry": 30,
+   "exit": 288,
+   "why": "istop",
+   "net": -4446.91
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-09-28",
+   "side": -1,
+   "entry": 230,
+   "exit": 233,
+   "why": "target",
+   "net": 108.69
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-09-28",
+   "side": -1,
+   "entry": 230,
+   "exit": 305,
+   "why": "lock",
+   "net": 885.25
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "NIFTY",
+   "day": "2026-09-28",
+   "side": -1,
+   "entry": 230,
+   "exit": 305,
+   "why": "lock",
+   "net": 885.25
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "NIFTY",
+   "day": "2026-09-28",
+   "side": -1,
+   "entry": 231,
+   "exit": 248,
+   "why": "istop",
+   "net": -388.66
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-09-28",
+   "side": -1,
+   "entry": 300,
+   "exit": 306,
+   "why": "lock",
+   "net": 996.62
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "NIFTY",
+   "day": "2026-09-28",
+   "side": -1,
+   "entry": 301,
+   "exit": 331,
+   "why": "istop",
+   "net": 925.71
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "SENSEX",
+   "day": "2026-09-29",
+   "side": -1,
+   "entry": 196,
+   "exit": 222,
+   "why": "istop",
+   "net": -1229.04
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "SENSEX",
+   "day": "2026-09-29",
+   "side": -1,
+   "entry": 200,
+   "exit": 364,
+   "why": "time",
+   "net": -2765.51
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "SENSEX",
+   "day": "2026-09-29",
+   "side": -1,
+   "entry": 200,
+   "exit": 364,
+   "why": "time",
+   "net": -2765.51
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "SENSEX",
+   "day": "2026-09-29",
+   "side": -1,
+   "entry": 200,
+   "exit": 364,
+   "why": "time",
+   "net": -2765.51
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "NIFTY",
+   "day": "2026-09-30",
+   "side": -1,
+   "entry": 126,
+   "exit": 143,
+   "why": "istop",
+   "net": -1007.5
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "SENSEX",
+   "day": "2026-09-30",
+   "side": -1,
+   "entry": 127,
+   "exit": 136,
+   "why": "istop",
+   "net": -962.12
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "NIFTY",
+   "day": "2026-10-01",
+   "side": -1,
+   "entry": 255,
+   "exit": 267,
+   "why": "target",
+   "net": 925.48
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "NIFTY",
+   "day": "2026-10-01",
+   "side": -1,
+   "entry": 255,
+   "exit": 269,
+   "why": "lock",
+   "net": 1063.66
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-10-05",
+   "side": -1,
+   "entry": 70,
+   "exit": 72,
+   "why": "lock",
+   "net": 702.01
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "NIFTY",
+   "day": "2026-10-05",
+   "side": -1,
+   "entry": 74,
+   "exit": 103,
+   "why": "istop",
+   "net": 727.23
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "FINNIFTY",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 102,
+   "exit": 125,
+   "why": "pstop",
+   "net": -1328.7
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "FINNIFTY",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 315,
+   "exit": 364,
+   "why": "time",
+   "net": -2582.71
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "FINNIFTY",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 315,
+   "exit": 364,
+   "why": "time",
+   "net": -2582.71
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "FINNIFTY",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 315,
+   "exit": 364,
+   "why": "time",
+   "net": -2582.71
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "SENSEX",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 103,
+   "exit": 135,
+   "why": "pstop",
+   "net": -1063.96
+  },
+  {
+   "rule": "S3-V2-E0",
+   "und": "SENSEX",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 105,
+   "exit": 225,
+   "why": "stop",
+   "net": -2914.32
+  },
+  {
+   "rule": "S3-V2-E3",
+   "und": "SENSEX",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 105,
+   "exit": 225,
+   "why": "istop",
+   "net": -2914.32
+  },
+  {
+   "rule": "S3-V1-E3",
+   "und": "SENSEX",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 105,
+   "exit": 225,
+   "why": "istop",
+   "net": -2914.32
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "SENSEX",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 107,
+   "exit": 137,
+   "why": "istop",
+   "net": -1396.24
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "SENSEX",
+   "day": "2026-10-07",
+   "side": 1,
+   "entry": 313,
+   "exit": 316,
+   "why": "lock",
+   "net": 741.43
+  },
+  {
+   "rule": "S3-W-E1",
+   "und": "NIFTY",
+   "day": "2026-10-08",
+   "side": -1,
+   "entry": 273,
+   "exit": 307,
+   "why": "lock",
+   "net": 659.59
+  },
+  {
+   "rule": "S9-W-E4",
+   "und": "NIFTY",
+   "day": "2026-10-08",
+   "side": -1,
+   "entry": 276,
+   "exit": 299,
+   "why": "istop",
+   "net": -189.23
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "FINNIFTY",
+   "day": "2026-10-12",
+   "side": -1,
+   "entry": 20,
+   "exit": 199,
+   "why": "istop",
+   "net": 3421.35
+  },
+  {
+   "rule": "S7-V2-E4",
+   "und": "MIDCPNIFTY",
+   "day": "2026-10-12",
+   "side": -1,
+   "entry": 10,
+   "exit": 364,
+   "why": "time",
+   "net": 3739.41
+  }
+ ],
+ "updated": "2026-10-29T15:49:01Z"
+}

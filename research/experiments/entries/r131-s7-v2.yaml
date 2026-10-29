@@ -1,0 +1,30 @@
+id: r131-s7-v2
+title: 'R131 S7 Turtle Soup S7-V2: Turtle Soup: PDH/PDL sweep, CISD'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R131_ICT_TEN.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m, options_rolling_1m WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026 Q1; no fitting)
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r131_ict_ten/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (wick-based swings, sweeps, CHoCH, FVG, CISD, order blocks, fib levels); buys the ATM option
+  of the nearest non-expiry-day expiry; stops and targets on index wicks'
+hypothesis: 'Boss''s ICT video (29 Oct): S7 Turtle Soup as stated makes money on index options'
+model_or_rule: research/hunt/r131_ict_ten/r131.py
+settings: PREREG.md S7-V2; 1 lot at today's lots; one trade at a time per index
+variants_tried: 39
+verdict: rejected
+results:
+  summary: 'design 3040 trades, win 46%, avg net Rs -14 (2x slippage Rs -35), total Rs -43,425, max drawdown Rs -210,200;
+    p vs random twins 0.005, BH q (39 variants) 0.018; index points +5.2 a trade. Holdout (read once) 394 trades, win 40%,
+    avg net Rs -27, total Rs -10,666. Years positive 2022-26: 3 of 5. Fails: net_pos, folds, holdout_net, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

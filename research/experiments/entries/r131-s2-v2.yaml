@@ -1,0 +1,30 @@
+id: r131-s2-v2
+title: 'R131 S2 Cameron''s Model S2-V2: Cameron: fixed 2R'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R131_ICT_TEN.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m, options_rolling_1m WEEK + MONTH), lakeclean steps 1-3
+period:
+  design: 2021-08-01..2026-03-15 (walk-forward folds 2023, 2024, 2025, 2026 Q1; no fitting)
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r131_ict_ten/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (wick-based swings, sweeps, CHoCH, FVG, CISD, order blocks, fib levels); buys the ATM option
+  of the nearest non-expiry-day expiry; stops and targets on index wicks'
+hypothesis: 'Boss''s ICT video (29 Oct): S2 Cameron''s Model as stated makes money on index options'
+model_or_rule: research/hunt/r131_ict_ten/r131.py
+settings: PREREG.md S2-V2; 1 lot at today's lots; one trade at a time per index
+variants_tried: 39
+verdict: rejected
+results:
+  summary: 'design 1149 trades, win 35%, avg net Rs -100 (2x slippage Rs -120), total Rs -114,337, max drawdown Rs -212,680;
+    p vs random twins 1.000, BH q (39 variants) 1.000; index points +3.9 a trade. Holdout (read once) 128 trades, win 38%,
+    avg net Rs 452, total Rs 57,906. Years positive 2022-26: 2 of 5. Fails: net_pos, folds, q, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

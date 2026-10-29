@@ -1,0 +1,32 @@
+id: r135-ict-facts
+title: 'R135 the ICT / SMC books'' claims measured on NSE index minutes (sweep reversal, opening range, weekly cycle, strong/weak
+  swings, 50% pullback, FVG fill)'
+family: market-facts
+date: '2026-10-29'
+doc: research/HUNT_R135_ICT_FACTS.md
+data_version: Drive lake copied 29 Oct 2026 (index_1m)
+period:
+  design: 2021-08-01..2026-03-15 (descriptive, design period only)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r135_ict_facts/PREREG.md
+holdout_read: null
+features:
+- 'signal source: the index (wick levels: PDH/PDL, PWH/PWL, PMH/PML, opening range, 15-min pivots, FVGs); 0.25% race vs
+  same-minute controls'
+hypothesis: The books' ICT claims (sweeps of major liquidity reverse, OR sweep reverses, Monday/Tuesday week extremes, strong-swing
+  breaks are real, valid pullbacks retrace past 50%, a filled FVG reverses) hold on Indian indices
+model_or_rule: research/hunt/r135_ict_facts/r135.py
+settings: PREREG.md; BH over 12 primary tests
+variants_tried: null
+verdict: not-a-test
+results:
+  summary: 'Sweeps of PDH/PDL (2,798) reverse 47.4% vs control 49.6% (q 0.07) and of PMH/PML (430) 46.3% vs 51.4% (q 0.08):
+    they continue more; opening-range sweeps (4,446) 48.6% vs 50.4% (q 0.07). True: day extreme in first 75 min 78.3% vs 59.4%
+    shuffled (5,541 sessions); strong-swing breaks continue 55.8% vs weak 52.6% (q 0.08). Backwards: shallow pullbacks hold
+    63.5% vs deep 55.6%. No: Monday/Tuesday week (78.7% vs 80.9%), full FVG fill reversal (49.6% vs 49.9%).'
+  costs: none (descriptive)

@@ -1,5 +1,7 @@
 # R131: the 15-minute trend on its own, and with R123's neural network as a filter
 
+> Number note (coordinator, 29 Oct): two studies carry the number R131. This one is **R131 trend15**; the other is **R131 ICT ten** (research/HUNT_R131_ICT_TEN.md, the ten ICT/SMC video strategies). Their files and entries do not overlap.
+
 29 Oct 2026. Research only: nothing in the app changes, nothing trades. Boss: *"Test the 15-minute trend on its own"*,
 then *"Also try to use neuronetwork from r123 to find if there could be more enhancement"*.
 

@@ -1,0 +1,31 @@
+id: r133-s4-v2-e4
+title: 'R133 S4-V2-E4: CRT: today''s first 4-hour candle, from 13:15 | R131 index stop, breakeven at 1R, then a 1R trail |
+  R123 network EV filter'
+family: patterns-indicators
+date: '2026-10-29'
+doc: research/HUNT_R133_ICT_NN_EXITS.md
+data_version: Drive lake copied 29 Oct 2026; R131 entries; R132 exits; R123 N1 walk-forward views
+period:
+  design: 'folds F1-F4: 2023-01-01..2026-03-15'
+  holdout: '2026-04-01..2026-10-19 (already read for these entries: context only)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r133_ict_nn_exits/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R131 entries); filter: R123''s walk-forward network view; exits on the index or the option
+  premium (wick to wick)'
+hypothesis: R123's network filter plus a stop / profit lock makes an R131 ICT entry pay
+model_or_rule: research/hunt/r133_ict_nn_exits/r133.py
+settings: PREREG.md S4-V2-E4; 1 lot
+variants_tried: 185
+verdict: rejected
+results:
+  summary: 'design (2023 - 15 Mar 2026) 5 kept trades of 25, win 60%, avg net Rs 958 (2x Rs 945), total Rs 4,791, max drawdown
+    Rs -2,672; p vs random subsets 0.447, BH q (185) 0.547. Seen holdout period: 0 kept trades, avg net Rs 0. Fails: n, folds,
+    q, seen_n, seen_net.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
