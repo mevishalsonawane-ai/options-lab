@@ -151,3 +151,43 @@ def test_lookahead_guard_exit_does_not_change_when_later_minutes_are_removed():
 
 def test_forty_exit_variants():
     assert len(Q.VARIANTS) == 40 and len(Q.ENTRIES) == 10 and set(Q.EXITS) == {"E1", "E2", "E3", "E4"}
+
+
+# ------------------------------------------------------------------------------------------------ amendment A
+import pandas as pd  # noqa: E402
+import r132nn as NN  # noqa: E402
+
+
+def test_view_row_is_the_latest_decision_before_entry():
+    assert NN.view_row(NN.FIRST_ROW) is None                 # entry before the first view acts (09:19 entry)
+    assert NN.view_row(NN.FIRST_ROW + 1) == NN.FIRST_ROW     # 09:20 entry uses the 09:19 close
+    assert NN.view_row(NN.FIRST_ROW + 5) == NN.FIRST_ROW     # 09:24: still the same view (4 minutes old)
+    assert NN.view_row(NN.FIRST_ROW + 6) == NN.FIRST_ROW + 5
+    assert NN.view_row(Q.K.row(15, 0)) == NN.LAST_ROW         # 15:00: the 14:54 view, 5 minutes old
+    for r0 in range(NN.FIRST_ROW + 1, Q.K.row(15, 0) + 1):
+        t = NN.view_row(r0)
+        assert t <= r0 - 1 and (t - NN.FIRST_ROW) % 5 == 0   # never a view from the entry minute or later
+
+
+def test_filters_use_the_trade_side():
+    M = pd.DataFrame(dict(side=[1, 1, -1, -1], ev_side=[5.0, -5.0, 5.0, -5.0], pdir30=[0.6, 0.4, 0.6, 0.4]))
+    assert NN.keep_mask(M, "NEV").tolist() == [True, False, True, False]
+    assert NN.keep_mask(M, "NDIR").tolist() == [True, False, False, True]
+
+
+def test_attach_picks_the_side_cells():
+    T = pd.DataFrame(dict(und=["NIFTY", "NIFTY"], day=[D0, D0], entry=[NN.FIRST_ROW + 1] * 2, side=[1, -1]))
+    P = pd.DataFrame(dict(und=["NIFTY"], day=[D0], row=[NN.FIRST_ROW], pdir30=[0.7],
+                          **{f"ev_{j}": [float(j % 2 * 10 - 5)] for j in range(16)}))   # calls -5, puts +5
+    M = NN.attach(T, P)
+    assert M.ev_side.tolist() == [-5.0, 5.0]
+
+
+def test_subset_p_finds_a_real_pick_and_not_a_random_one():
+    rng = np.random.default_rng(0)
+    net = np.r_[np.full(50, 100.0), np.full(150, -100.0)]
+    strata = np.array(["F1"] * 100 + ["F2"] * 100)
+    good = net > 0
+    assert NN.subset_p(net, good, strata, rng, 500) < 0.01
+    rand = rng.random(200) < 0.25
+    assert NN.subset_p(net, rand, strata, rng, 500) > 0.05
