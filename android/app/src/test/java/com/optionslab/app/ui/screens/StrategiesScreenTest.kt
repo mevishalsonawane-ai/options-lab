@@ -567,7 +567,7 @@ class OrbRowsTest {
     @Test fun theFourArmedOnPaperShowItAndTheirRecordIsInTheDetailAsInformation() {
         rows(StrategyFakes.orbView(fourArmed = true), live = false)
         assertEquals("ORB and ORB Fresh", 2, compose.onAllNodesWithText("ARMED · PAPER · AUTO").fetchSemanticsNodes().size)
-        assertEquals("ORB Sweep and Range Fade", 2, compose.onAllNodesWithText("ARMED · PAPER ONLY · AUTO").fetchSemanticsNodes().size)
+        assertEquals("ORB Sweep and Range Fade", 2, compose.onAllNodesWithText("ARMED · AUTO · PAPER + ITS LIVE SWITCH").fetchSemanticsNodes().size)
         tapRow("orb_fresh")
         assertTrue(shown("Arms · today"))
         for (r in com.optionslab.engine.orb.RetiredArms.ALL) assertTrue(r.arm.label, shown(keepNumbersWhole(recordLine(r))))

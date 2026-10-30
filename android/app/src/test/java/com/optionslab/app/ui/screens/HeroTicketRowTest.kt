@@ -74,7 +74,7 @@ class HeroTicketRowTest {
         // Under the NSE arms (after Night).
         assertTrue(compose.onNodeWithText("Night row").fetchSemanticsNode().boundsInRoot.top <
             compose.onNodeWithText(HeroTicketRules.LABEL).fetchSemanticsNode().boundsInRoot.top)
-        compose.onNodeWithText("ON · PAPER ONLY").assertExists()
+        compose.onNodeWithText("ON · PAPER + ITS LIVE SWITCH").assertExists()
         compose.onNodeWithText(keepNumbersWhole("Today: no ticket · its own record: 0 closed, +₹0 after charges")).assertExists()
         // One tap switches it off (paper only).
         compose.onNodeWithContentDescription("Paper only: switch ${HeroTicketRules.LABEL}").assertIsOn().performClick()
@@ -86,7 +86,7 @@ class HeroTicketRowTest {
         val asked = ArrayList<Boolean>()
         home(off, onArm = { asked += it })
         compose.waitForIdle()
-        compose.onNodeWithText("OFF").assertExists()
+        compose.onNodeWithText("OFF · SHADOW").assertExists()
         compose.onNodeWithContentDescription("Paper only: switch ${HeroTicketRules.LABEL}").assertIsOff().performClick()
         compose.waitForIdle()
         assertEquals(listOf(true), asked)

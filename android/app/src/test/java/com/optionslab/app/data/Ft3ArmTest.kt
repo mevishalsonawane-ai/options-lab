@@ -438,7 +438,8 @@ class Ft3ArmTest : RobolectricTest() {
         // The minute lane sells it at 15:05.
         market(LocalTime.of(15, 5)); at(LocalTime.of(15, 5), seconds = 2); runBlocking { Ft3Arm.manageOnly() }
         assertTrue(Ft3Arm.view.value.open.isEmpty())
-        // Off with nothing held: never wanted.
+        // Off with nothing held and every index's day decided: not wanted (30 Oct: off it still wants its window while a day is
+        // undecided - the switched-off shadow's would-be tickets; Ft3ArmOffShadowTest).
         runBlocking { Ft3Arm.setArmed(false) }
         assertFalse(Ft3Arm.wantsPass(11 * 60 + 30))
         assertNothingAtZerodha()

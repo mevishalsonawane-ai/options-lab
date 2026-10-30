@@ -490,6 +490,16 @@ class PersonalStoresTest {
         s("CisdArm") {
             kotlinx.coroutines.runBlocking { com.optionslab.app.data.CisdArm.setArmed(true, log = false) }   // book in memory + cisd_arm.vault
         },
+        // 30 Oct: the switched-off shadow - one would-be trade (memory + off_shadow.vault).
+        s("OffShadow") {
+            com.optionslab.app.data.OffShadow.testSession = true
+            com.optionslab.app.data.OffShadow.testPrice = { Triple(100.0, 99.9, 100.1) }
+            kotlinx.coroutines.runBlocking {
+                com.optionslab.app.data.OffShadow.enter(com.optionslab.app.data.OffShadow.Ask("seed_arm", "Seed arm", "seed",
+                    com.optionslab.app.data.Paper.Contract("NIFTY-SEED-25000CE", "NIFTY", java.time.LocalDate.now().plusDays(3), 25_000.0,
+                        com.optionslab.engine.Right.CE, 65, "NSE_FO|SEED"), 1, com.optionslab.engine.orb.OffShadow.Exits(), "seed"))
+            }
+        },
         s("NtfyArm") {
             kotlinx.coroutines.runBlocking { com.optionslab.app.data.NtfyArm.setSettings(com.optionslab.engine.signals.NtfyRules.Settings(lots = 2)) }
         },

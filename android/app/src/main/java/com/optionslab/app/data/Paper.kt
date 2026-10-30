@@ -357,6 +357,19 @@ object Paper {
     }
 
     /**
+     * 30 Oct (the switched-off shadow, [OffShadow]): the lowest price [c] traded after [since] (IST), as [highSince] reads the
+     * highest - the stream's kept ticks while it streams [c], else the lows of the 1-minute candles that started after [since]'s
+     * minute. Null: no price. Never on the tick or order path (the candle read is a network read).
+     */
+    suspend fun lowSince(c: Contract, since: java.time.LocalDateTime, maxAgeMs: Long = SHARED_QUOTE_MS): Double? {
+        runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
+            ?.let { tok -> KiteStream.lowSince(tok, epochMs(since))?.let { return it } }
+        val kept = candleBars[c.symbol]
+        if (kept == null || System.currentTimeMillis() - kept.first !in 0..maxAgeMs) runCatching { quote(c) }
+        return barsAfter(c, since)?.filter { it.istDate == Market.today() }?.mapNotNull { b -> b.low.takeIf { it > 0 } }?.minOrNull()
+    }
+
+    /**
      * Does Zerodha's stream stream [c] now (a fresh tick)? Then [highSince] reads only the stream's kept prices (its last five
      * minutes); without it, [highSince] already reads the 1-minute candles since the entry. No network.
      */

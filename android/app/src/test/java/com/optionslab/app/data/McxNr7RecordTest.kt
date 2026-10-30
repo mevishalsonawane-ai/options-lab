@@ -307,9 +307,11 @@ class McxNr7RecordTest : RobolectricTest() {
             runBlocking { McxPaperArms.refresh() }
             assertNull("the NR7 book not read", McxNr7Record.onIfLoaded())
             assertEquals(true, McxMarket.watchDueQuick())
-            // Both off: a firm no.
+            // Both off: a firm no. (30 Oct: switched-off MCX arms still decide in shadow inside their own entry minutes - the
+            // evening break's 18:58-22:03 holds 19:00 - so the firm no is asked outside every arm's minutes, MCX still open.)
             runBlocking { McxNr7Record.setOn(false) }
             McxMarket.wipe()
+            Market.testClock = java.time.Clock.fixed(LocalDate.of(2026, 10, 21).atTime(16, 30).atZone(IST).toInstant(), IST)
             assertEquals(false, McxMarket.watchDueQuick())
         } finally {
             Market.testClock = null

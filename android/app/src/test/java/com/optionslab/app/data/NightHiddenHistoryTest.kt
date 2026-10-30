@@ -21,6 +21,8 @@ import java.time.LocalTime
 /**
  * 25 Oct (Boss's decision on the arms audit): Night (R3) hidden by the 15 Oct cleanup still reads the day's OI build-up at 15:20
  * and keeps its history, so a restore is judged against a current window, not a stale one. It buys nothing while hidden.
+ * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): hidden or plainly off, it now runs its full 15:20
+ * decision in shadow ([OffShadow]); the history is still kept even when the decision stops early (here: no previous close).
  */
 class NightHiddenHistoryTest : RobolectricTest() {
     @Test fun whileHiddenItStillRecordsTheDaysOiBuildUpAndBuysNothing() {
@@ -50,18 +52,15 @@ class NightHiddenHistoryTest : RobolectricTest() {
             assertEquals("NIFTY's history has today's build-up", nifty0 + 1, runBlocking { NightArm.historySizeForTest("NIFTY") })
             assertEquals("no build-up read: nothing added", bank0, runBlocking { NightArm.historySizeForTest("BANKNIFTY") })
             val v = runBlocking { NightArm.refresh() }
-            assertEquals(NightArm.HIDDEN_OI, v.status["NIFTY"])
-            assertTrue(v.status["BANKNIFTY"].orEmpty(), v.status["BANKNIFTY"].orEmpty().startsWith(NightArm.HIDDEN_OI + " (no build-up read today)"))
+            // 30 Oct: the full decision ran (in shadow); the fakes serve no daily history, so it stops at the previous close.
+            assertEquals("night_no_previous_close", v.status["NIFTY"])
+            assertEquals("night_no_previous_close", v.status["BANKNIFTY"])
             assertTrue("nothing bought while hidden", v.open.isEmpty())
             assertTrue(Paper.state.orders.isEmpty())
             // Decided once a day: the next look adds nothing more.
             runBlocking { NightArm.tick() }
             assertEquals(nifty0 + 1, runBlocking { NightArm.historySizeForTest("NIFTY") })
-            // Not hidden and off: it reads nothing at all (as before).
-            HiddenArms.resetForTest(context)
-            Market.testClock = Clock.fixed(day.plusDays(1).atTime(LocalTime.of(15, 20, 20)).atZone(IST).toInstant(), IST)
-            runBlocking { NightArm.tick() }
-            assertEquals(nifty0 + 1, runBlocking { NightArm.historySizeForTest("NIFTY") })
+            assertTrue(Paper.state.orders.isEmpty())
         } finally {
             NightArm.testBuildUp = null
             HiddenArms.resetForTest(context)

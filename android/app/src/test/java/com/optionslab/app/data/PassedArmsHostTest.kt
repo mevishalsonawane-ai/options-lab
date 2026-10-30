@@ -123,13 +123,14 @@ class PassedArmsHostTest : RobolectricTest() {
         PassedArmsHost.testNoAutoOn = false
         PassedArmsHost.wipe(); bookFile.delete()
         val v = view()
-        // 19 Oct (Boss: "Yes, keep only breadth donchain"): R51 is then set to record only by the 19 Oct update; the others stay on.
-        assertTrue(PassedArmsHost.SOURCES.all { v.on(it) || (it == DonchianArm.SOURCE && v.recording(it)) })
+        // 19 Oct set R51 to record only; 30 Oct switched every record-only arm ON again: all four on.
+        assertTrue(PassedArmsHost.SOURCES.all { v.on(it) })
         assertEquals(3, v.log.count { "switched on once by the 15 Oct update" in it && PassedArms.PASSED in it })
-        assertTrue(PassedArmsHost.diagLine().contains("on (paper only)") && PassedArmsHost.diagLine().contains(PassedArms.PASSED))
-        assertEquals("${DonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, false) })
+        assertTrue(PassedArmsHost.diagLine().contains("on (paper; live through the live gates)") && PassedArmsHost.diagLine().contains(PassedArms.PASSED))
+        assertEquals("${DonchianArm.LABEL} off: it runs in shadow (would-be trades, nothing bought).", runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, false) })
         AutomationSupport.reloadFromDisk(PassedArmsHost)
-        assertFalse(view().on(DonchianArm.SOURCE)); assertFalse(view().recording(DonchianArm.SOURCE))
+        // (30 Oct: off is shadow - "recording".)
+        assertFalse(view().on(DonchianArm.SOURCE)); assertTrue(view().recording(DonchianArm.SOURCE))
         assertTrue(view().on(OovArm.SOURCE))
         // Three by the 15 Oct update, R72 Breadth Donchian by its own (16 Oct): four lines, never again.
         assertEquals(4, view().log.count { "switched on once" in it })
@@ -197,9 +198,9 @@ class PassedArmsHostTest : RobolectricTest() {
         only(DonchianArm.SOURCE)
         val on = AutoChange.passedArmOn(DonchianArm.SOURCE, DonchianArm.LABEL, DonchianArm.RESEARCH_ID)
         assertNull(Autopilot.apply(on.copy(target = "paperarm:other"), false))
-        assertEquals("${DonchianArm.LABEL} off.", Autopilot.apply(AutoChange.inverse(on, "undone by you"), false))
+        assertEquals("${DonchianArm.LABEL} off: it runs in shadow (would-be trades, nothing bought).", Autopilot.apply(AutoChange.inverse(on, "undone by you"), false))
         assertFalse(view().on(DonchianArm.SOURCE))
-        assertTrue(Autopilot.apply(on, false)!!.contains("paper only"))
+        assertTrue(Autopilot.apply(on, false)!!.contains("live gates"))
         assertTrue(view().on(DonchianArm.SOURCE))
         assertFalse(view().on(OovArm.SOURCE))
     }
@@ -210,7 +211,7 @@ class PassedArmsHostTest : RobolectricTest() {
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 20))
         tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals(DonchianArm.SOURCE, p.arm); assertEquals("CE", p.right); assertEquals(65, p.qty)
         assertTrue(p.symbol, p.symbol.contains("25050"))
         assertTrue("paid the spread", p.entry >= 100.0)
@@ -218,11 +219,11 @@ class PassedArmsHostTest : RobolectricTest() {
         assertNothingAtZerodha()
         // The bar is decided once: the next pass buys nothing more.
         market(LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
-        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertEquals(1, PassedArmsHost.view.value.open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         // 09:24 trades at 84 (under -15%): the stop sells it in the minute lane.
         market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
         at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
-        val sold = PassedArmsHost.view.value.closed.single()
+        val sold = PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("stop", sold.why)
         assertTrue("${sold.net}", sold.net!! < 0)
         assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
@@ -251,7 +252,7 @@ class PassedArmsHostTest : RobolectricTest() {
         kite.requests.clear()
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         val (buy, stop) = kite.placed
         assertEquals(mapOf("tradingsymbol" to sym, "transaction_type" to "BUY", "order_type" to "MARKET", "quantity" to "65", "tag" to "iraarm"),
             buy.form.filterKeys { it in setOf("tradingsymbol", "transaction_type", "order_type", "quantity", "tag") })
@@ -263,7 +264,7 @@ class PassedArmsHostTest : RobolectricTest() {
         market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
         kite.quote("NFO:$sym", 86.0, 85.95, 86.05)
         at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        assertEquals("stop", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
         runBlocking { com.optionslab.app.data.ArmLive.watch() }
         assertEquals("CANCELLED", kite.order(live.stopOrderId!!).status)
         assertEquals("the live trade closed with its paper trade", "stop", com.optionslab.app.data.ArmLive.view.value.closed.single().why)
@@ -286,9 +287,11 @@ class PassedArmsHostTest : RobolectricTest() {
         File(context.filesDir, "kite_instruments.json").delete()
         runBlocking { Broker.instruments() }
         kite.requests.clear()
+        // 30 Oct: live shadow starts off now - Boss puts this arm in shadow himself (no PIN).
+        runBlocking { com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, true, pinConfirmed = false, log = false) }
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertEquals(1, PassedArmsHost.view.value.open.count { it.shadow == null })
         assertTrue("nothing sent in shadow", kite.placed.isEmpty())
         val sh = com.optionslab.app.data.ArmLive.view.value.openShadow.single()
         assertEquals(DonchianArm.SOURCE, sh.key); assertEquals(65, sh.qty)
@@ -306,14 +309,14 @@ class PassedArmsHostTest : RobolectricTest() {
     @Test fun theOpenTradesExitsAreInThePopupsLineUntilItCloses() {
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         val out = p.entryMinute.plusMinutes(30).toLocalTime()
         assertEquals("stop %.2f · target %.2f · time %02d:%02d".format(java.util.Locale.ENGLISH, p.entry * 0.85, p.entry * 1.3, out.hour, out.minute),
             com.optionslab.ira.ArmExits.line(false, p.symbol))
         assertNull("a paper arm's trade is never the Zerodha position's", com.optionslab.ira.ArmExits.line(true, p.symbol))
         market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
         at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        assertEquals("stop", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
         assertNull("closed: no exits", com.optionslab.ira.ArmExits.line(false, p.symbol))
     }
 
@@ -344,11 +347,11 @@ class PassedArmsHostTest : RobolectricTest() {
     @Test fun theTargetAndTheThirtyMinuteExit() {
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         // Up to 131 at 09:30 (above +30%): sold, booked at the target at most.
         market(LocalTime.of(9, 31), call = { t -> if (t.isBefore(LocalTime.of(9, 30))) 105.0 else 140.0 })
         at(LocalTime.of(9, 31)); runBlocking { PassedArmsHost.manageOnly() }
-        val sold = PassedArmsHost.view.value.closed.single()
+        val sold = PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("target", sold.why)
         assertTrue("${sold.exit}", sold.exit!! <= PassedArms.targetLevel(p.entry, DonchianArm.EXITS)!! + 1e-9)
         assertTrue(sold.net!! > 0)
@@ -383,12 +386,12 @@ class PassedArmsHostTest : RobolectricTest() {
         only(DonchianArm.SOURCE)
         runBlocking { PassedArmsHost.setLock(true) }
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertTrue("it entered with the lock", p.lock)
         // Up to 141 at 09:30 (+40%): the research exits would sell at the +30% target; with the lock it is held.
         market(LocalTime.of(9, 32), call = { t -> if (t.isBefore(LocalTime.of(9, 30))) 105.0 else 140.0 })
         at(LocalTime.of(9, 32)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertEquals(1, PassedArmsHost.view.value.open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertTrue(PassedArmsHost.view.value.closed.isEmpty())
         // A restart keeps the rule it entered with.
         AutomationSupport.reloadFromDisk(PassedArmsHost)
@@ -396,7 +399,7 @@ class PassedArmsHostTest : RobolectricTest() {
         // 09:33 trades at 95: under breakeven (the fill plus the round-trip charges), locked since +30% - sold by the lock.
         market(LocalTime.of(9, 34), call = { t -> if (t.isBefore(LocalTime.of(9, 30))) 105.0 else if (t.isBefore(LocalTime.of(9, 33))) 140.0 else 95.0 })
         at(LocalTime.of(9, 34)); runBlocking { PassedArmsHost.manageOnly() }
-        val sold = PassedArmsHost.view.value.closed.single()
+        val sold = PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("lock", sold.why)
         // Labelled apart, so the research-exit record stays separable.
         assertTrue(PassedArmsHost.tradeLine(sold, emptyMap()).endsWith("30-60-100 lock"))
@@ -409,14 +412,14 @@ class PassedArmsHostTest : RobolectricTest() {
         only(DonchianArm.SOURCE)
         runBlocking { PassedArmsHost.setLock(false) }
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertFalse(p.lock)
         // The lock switched on while it is held: it still sells at its +30% target.
         assertEquals("The 30-60-100 lock is on for new paper trades.", runBlocking { PassedArmsHost.setLock(true) })
         assertEquals("The 30-60-100 lock is already on (paper only).", runBlocking { PassedArmsHost.setLock(true) })
         market(LocalTime.of(9, 31), call = { t -> if (t.isBefore(LocalTime.of(9, 30))) 105.0 else 140.0 })
         at(LocalTime.of(9, 31)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("target", PassedArmsHost.view.value.closed.single().why)
+        assertEquals("target", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
         // Switched off while a locked trade is held: the note says it keeps its lock.
         runBlocking { PassedArmsHost.setLock(false) }
         assertTrue(view().log.last().contains("30-60-100 lock off"))
@@ -459,7 +462,7 @@ class PassedArmsHostTest : RobolectricTest() {
         only(DonchianArm.SOURCE)
         runBlocking { PassedArmsHost.setLock(true); PassedArmsHost.setL25(true) }
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertTrue("it entered with the lock and the step", p.lock && p.l25)
         assertTrue(PassedArmsHost.tradeLine(p, emptyMap()).contains("30-60-100 lock + L25"))
         // The popup before +25%: "+5% locked once +25%".
@@ -468,7 +471,7 @@ class PassedArmsHostTest : RobolectricTest() {
         val peak = p.entry * 1.26
         ride(LocalTime.of(9, 33), peak, peak)
         at(LocalTime.of(9, 33)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals(1, view().open.size)
+        assertEquals(1, view().open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertTrue(com.optionslab.ira.ArmExits.line(false, p.symbol)!!.contains("lock held"))
         // A restart in the middle of the trade: it keeps the ladder it entered with, and the lock it earned.
         AutomationSupport.reloadFromDisk(PassedArmsHost)
@@ -476,7 +479,7 @@ class PassedArmsHostTest : RobolectricTest() {
         // 09:33 on at +5.5% (its low a rupee under, below +5%): through the +5% lock - sold by the lock at about +5%.
         ride(LocalTime.of(9, 35), peak, p.entry * 1.055)
         at(LocalTime.of(9, 35)); runBlocking { PassedArmsHost.manageOnly() }
-        val sold = view().closed.single()
+        val sold = view().closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("lock", sold.why)
         assertTrue("${sold.exit} vs ${p.entry}", sold.exit!! in p.entry * 1.02..p.entry * 1.07)
         assertTrue(PassedArmsHost.tradeLine(sold, emptyMap()).endsWith("30-60-100 lock + L25"))
@@ -489,7 +492,7 @@ class PassedArmsHostTest : RobolectricTest() {
         only(DonchianArm.SOURCE)
         runBlocking { PassedArmsHost.setLock(true); PassedArmsHost.setL25(false) }
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertTrue(p.lock); assertFalse(p.l25)
         assertTrue(com.optionslab.ira.ArmExits.line(false, p.symbol)!!.contains("breakeven locked once +30%"))
         // Switched on while it is held: this trade keeps the plain A4 ladder (open trades keep the exits they entered with).
@@ -500,7 +503,7 @@ class PassedArmsHostTest : RobolectricTest() {
         val peak = p.entry * 1.26
         ride(LocalTime.of(9, 35), peak, p.entry * 1.055)
         at(LocalTime.of(9, 35)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("A4 alone: +26% then +5.5% is still held (its stop is −15%)", 1, view().open.size)
+        assertEquals("A4 alone: +26% then +5.5% is still held (its stop is −15%)", 1, view().open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertTrue(view().closed.isEmpty())
         runBlocking { PassedArmsHost.setL25(false) }
         assertTrue(view().log.last().contains("L25 off"))
@@ -532,13 +535,13 @@ class PassedArmsHostTest : RobolectricTest() {
         // The kill switch: the break is not bought (refused), nothing placed.
         AppSettings.save(AppSettings.load().copy(guardKill = true))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertTrue(PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"].orEmpty().contains("kill switch"))
         AppSettings.save(AppSettings.load().copy(guardKill = false))
         // Today is NIFTY's expiry: no trade at all.
         AutomationSupport.contracts(context, listOf(Upstox.Contract("NIFTY", day, 25_050.0, Right.CE, 65, ce, "NIFTY-PA-25050CE")))
         market(LocalTime.of(9, 25)); tick(LocalTime.of(9, 25))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertEquals("its expiry day: no trades", PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"])
         assertTrue(Paper.state.orders.isEmpty())
     }
@@ -549,15 +552,15 @@ class PassedArmsHostTest : RobolectricTest() {
         only(OovArm.SOURCE)
         market(LocalTime.of(9, 20), firstOpen = 25_100.0)
         tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals(OovArm.SOURCE, p.arm); assertEquals("CE", p.right)
         // 60 minutes later (10:20): out on the time stop.
         market(LocalTime.of(10, 21), firstOpen = 25_100.0, call = { 104.0 })
         at(LocalTime.of(10, 21)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("time", PassedArmsHost.view.value.closed.single().why)
+        assertEquals("time", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
         // One trade per index a day: nothing more.
         tick(LocalTime.of(10, 25))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertNothingAtZerodha()
     }
 
@@ -565,7 +568,7 @@ class PassedArmsHostTest : RobolectricTest() {
         only(OovArm.SOURCE)
         market(LocalTime.of(9, 20), firstOpen = 25_000.0, open = 25_000.0)
         tick(LocalTime.of(9, 20))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertTrue(PassedArmsHost.view.value.status["${OovArm.SOURCE}|NIFTY"].orEmpty().contains("inside"))
     }
 
@@ -574,7 +577,7 @@ class PassedArmsHostTest : RobolectricTest() {
     @Test fun aRestartRestoresTheOpenTradeFirstAndItsStopStillSells() {
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertEquals(1, PassedArmsHost.view.value.open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         // The app is killed: the start-up's positions-first step reads the book before anything else and finds it open.
         PassedArmsHost.wipe()
         assertFalse(PassedArmsHost.holding())
@@ -583,7 +586,7 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(PassedArmsHost.wantsPass(10 * 60))
         market(LocalTime.of(9, 27), call = { t -> if (t.isBefore(LocalTime.of(9, 25))) 100.0 else 80.0 })
         at(LocalTime.of(9, 27)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        assertEquals("stop", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
         assertFalse(PassedArmsHost.holding())
     }
 
@@ -600,11 +603,11 @@ class PassedArmsHostTest : RobolectricTest() {
             t.isBefore(LocalTime.of(9, 51)) -> 120.0; else -> after(t) }
         fun upto(t: LocalTime) { minutes(niftyKey, t, ::index); minutes(ce, t, ::call); minutes(pe, t) { 90.0 } }
         upto(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val first = PassedArmsHost.view.value.open.single()
+        val first = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         upto(LocalTime.of(9, 31)); at(LocalTime.of(9, 31)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("target", PassedArmsHost.view.value.closed.single().why)
+        assertEquals("target", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
         upto(LocalTime.of(9, 50)); tick(LocalTime.of(9, 50))
-        val second = PassedArmsHost.view.value.open.single()
+        val second = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals(first.symbol, second.symbol)
         assertTrue("its own fill, not the first trade's: ${second.entry}", second.entry >= 120.0 && second.entry < 125.0)
         assertEquals(day.atTime(9, 50), second.entryMinute)
@@ -671,17 +674,17 @@ class PassedArmsHostTest : RobolectricTest() {
         at(LocalTime.of(10, 1), 0); runBlocking { OrphanWatch.run(context) }
         assertFalse(PassedArmsHost.holding())
         at(LocalTime.of(10, 1), 30); runBlocking { OrphanWatch.run(context) }
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals(DonchianArm.SOURCE, p.arm); assertEquals(id, p.orderId); assertEquals(PassedArmsHost.ADOPT_FILL, p.adopted)
         assertEquals(fill.price.toDouble(), p.entry, 1e-9); assertEquals(fill.timestamp, p.entryTime); assertEquals(65, p.qty)
         assertTrue(PassedArmsHost.view.value.log.last().contains("taken back"))
         // Not taken twice.
         at(LocalTime.of(10, 2)); runBlocking { OrphanWatch.run(context) }
-        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertEquals(1, PassedArmsHost.view.value.open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         // Its arm's own target sells it.
         minutes(ce, LocalTime.of(10, 6)) { t -> if (t.isBefore(LocalTime.of(10, 5))) 100.0 else 140.0 }
         at(LocalTime.of(10, 6)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("target", PassedArmsHost.view.value.closed.single().why)
+        assertEquals("target", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
         assertNothingAtZerodha()
     }
 
@@ -783,7 +786,8 @@ class PassedArmsHostTest : RobolectricTest() {
 
     @Test fun nothingIsWantedWhenEverythingIsOffAndNothingHeld() {
         only("none")
-        assertFalse(PassedArmsHost.wantsPass(10 * 60))
+        // 30 Oct: off, the arms still decide in shadow, so their hours want a pass on a trading day; outside them nothing does.
+        assertTrue(PassedArmsHost.wantsPass(10 * 60))
         runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, true, log = false) }
         assertTrue(PassedArmsHost.wantsPass(10 * 60))
         assertFalse(PassedArmsHost.wantsPass(16 * 60))
@@ -816,7 +820,7 @@ class PassedArmsHostTest : RobolectricTest() {
             assertTrue(Paper.awaitWrites(20_000L) && PassedArmsHost.awaitWrites(20_000L) && Strategies.awaitWrites(20_000L))
             Paper.writeInlineForTest = true; PassedArmsHost.writeInlineForTest = true; Strategies.writeInlineForTest = true
         }
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertNull(p.shadow)
         assertTrue("the entry pass took $ms ms with a 1.5 s vault write (three or four writes in a row before)", ms < 1_500L)
         val ds = OrderTiming.paperDecisionToSent()!!
@@ -839,7 +843,7 @@ class PassedArmsHostTest : RobolectricTest() {
         val other = Paper.contractFor("NIFTY", day.plusDays(14), 25_000.0, Right.CE)!!
         assertTrue(runBlocking { Paper.place(other, "BUY", 1, "MARKET", "MIS", null, null, com.optionslab.engine.sandbox.Quote(50.0), auto = "ORB") }.ok)
         tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals(PassedArmsHost.SHADOW_CAP, p.shadow)
         assertNull("never a paper order", p.orderId)
         assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
@@ -847,12 +851,12 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(PassedArmsHost.view.value.status.toString(), PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"].orEmpty().contains("same-direction cap"))
         // Decided once: not tried again the next minute.
         market(LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
-        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertEquals(1, PassedArmsHost.view.value.open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertEquals(1, ExposureCapHost.today().size)
         // Its own stop closes the would-be trade at the price seen; nothing is sold on the account.
         market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
         at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
-        val c = view().closed.single()
+        val c = view().closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("stop", c.why); assertEquals(PassedArmsHost.SHADOW_CAP, c.shadow)
         assertEquals("no paper trade in it", 0, Paper.state.trades.count { it.symbol == p.symbol })
         assertNothingAtZerodha()
@@ -912,7 +916,7 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"].orEmpty().contains("tried again until 09:22"))
         AppSettings.save(AppSettings.load().copy(guardKill = false))
         market(LocalTime.of(9, 25)); tick(LocalTime.of(9, 25))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         val st = PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"].orEmpty()
         assertEquals("09:20 call break not bought: refused: the kill switch is on (tried until 09:22, the end of its fill window)", st)
         assertTrue(Paper.state.orders.isEmpty())
@@ -924,7 +928,7 @@ class PassedArmsHostTest : RobolectricTest() {
         for (t in listOf(LocalTime.of(9, 20), LocalTime.of(9, 21), LocalTime.of(9, 22))) {
             // NIFTY's minutes stop at 09:18: the 09:15 bar is never whole inside its window.
             market(LocalTime.of(9, 19)); tick(t, 30)
-            assertTrue(PassedArmsHost.view.value.open.isEmpty())
+            assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         }
         market(LocalTime.of(9, 25)); tick(LocalTime.of(9, 25))
         assertTrue("nothing bought late", PassedArmsHost.view.value.open.isEmpty())
@@ -938,7 +942,7 @@ class PassedArmsHostTest : RobolectricTest() {
     @Test fun aBreakWithNoCheckInItsWindowSaysSo() {
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 25)); tick(LocalTime.of(9, 25))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertEquals("09:20 call break missed: no entry check ran in its fill window (09:20-09:22)",
             PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"])
     }
@@ -962,7 +966,8 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue("not after the last entry", tokens.none { it in KiteStream.touchedForTest() })
         for (s in PassedArmsHost.SOURCES) runBlocking { PassedArmsHost.setArmed(s, false, log = false) }
         KiteStream.resetForTest(); tick(LocalTime.of(10, 0), 5)
-        assertTrue("every arm off: nothing followed", tokens.none { it in KiteStream.touchedForTest() })
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, they are still followed (shadow).
+        assertTrue("every arm off: still followed, in shadow", tokens.all { it in KiteStream.touchedForTest() })
         KiteStream.resetForTest()
     }
 
@@ -970,7 +975,7 @@ class PassedArmsHostTest : RobolectricTest() {
 
     private fun recordOnlyR51() {
         bothDonchians()
-        assertEquals("${DonchianArm.LABEL} is record only: would-be trades, nothing bought.",
+        assertEquals("${DonchianArm.LABEL} off: it runs in shadow (would-be trades, nothing bought).",
             runBlocking { PassedArmsHost.setMode(DonchianArm.SOURCE, PassedArmsHost.Mode.RECORD, log = false) })
     }
 
@@ -988,11 +993,12 @@ class PassedArmsHostTest : RobolectricTest() {
         val v0 = view()
         assertFalse(v0.on(DonchianArm.SOURCE)); assertTrue(v0.recording(DonchianArm.SOURCE))
         assertEquals(PassedArmsHost.Mode.RECORD, v0.mode(DonchianArm.SOURCE)); assertEquals(PassedArmsHost.Mode.ON, v0.mode(BreadthDonchianArm.SOURCE))
-        assertEquals("${DonchianArm.LABEL} is already record only (paper only).",
+        assertEquals("${DonchianArm.LABEL} is already off (it runs in shadow).",
             runBlocking { PassedArmsHost.setMode(DonchianArm.SOURCE, PassedArmsHost.Mode.RECORD, log = false) })
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val open = PassedArmsHost.view.value.open
+        // (30 Oct: the arms that are off keep their own would-be trades too; these two are the ones compared here.)
+        val open = PassedArmsHost.view.value.open.filter { it.arm == DonchianArm.SOURCE || it.arm == BreadthDonchianArm.SOURCE }
         assertEquals(open.toString(), 2, open.size)
         val dn = open.single { it.arm == DonchianArm.SOURCE }
         val br = open.single { it.arm == BreadthDonchianArm.SOURCE }
@@ -1008,12 +1014,12 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue("no buy notice for R51", buyTitles(DonchianArm.LABEL).isEmpty())
         assertEquals("R72's buy notice", 1, buyTitles(BreadthDonchianArm.LABEL).size)
         assertTrue(PassedArmsHost.view.value.status.toString(),
-            PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"].orEmpty().let { it.startsWith("would-be ") && "switched to record only" in it })
-        assertTrue(PassedArmsHost.tradeLine(dn, emptyMap()).contains("would-be: switched to record only"))
+            PassedArmsHost.view.value.status["${DonchianArm.SOURCE}|NIFTY"].orEmpty().let { it.startsWith("would-be ") && "switched off" in it })
+        assertTrue(PassedArmsHost.tradeLine(dn, emptyMap()).contains("would-be: switched off, it runs in shadow"))
         assertEquals("the position popup lists R72's only", listOf(BreadthDonchianArm.LABEL), com.optionslab.ira.ArmExits.of(false, br.symbol).map { it.label })
         // Decided once: the next pass adds nothing.
         market(LocalTime.of(9, 21)); breadthMarket(setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
-        assertEquals(2, PassedArmsHost.view.value.open.size)
+        assertEquals(2, PassedArmsHost.view.value.open.count { it.arm == DonchianArm.SOURCE || it.arm == BreadthDonchianArm.SOURCE })
         // 09:24 trades at 84 (under -15%): R72's stop sells its lot; R51's would-be closes by its own stop at the price seen.
         market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
         at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
@@ -1031,11 +1037,11 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(PassedArmsHost.SHADOW_OFF, v.wouldBeOf(DonchianArm.SOURCE).single().shadow)
         assertTrue(v.wouldBeOf(BreadthDonchianArm.SOURCE).isEmpty())
         val d = PassedArmsHost.diagLine()
-        assertTrue(d, d.contains("${DonchianArm.LABEL}: record only (would-be trades, nothing bought) · open 0 · 1 closed -"))
+        assertTrue(d, d.contains("${DonchianArm.LABEL}: off - runs in shadow (would-be trades, nothing bought) · open 0 · 1 closed -"))
         assertTrue(d, d.contains("of them 1 would-be -"))
         // 20 Oct: the uploaded diagnostics' copy hides every rupee figure and keeps the counts (Copy diagnostics, on the phone, keeps them).
         val up = PassedArmsHost.diagLine(hideNet = true)
-        assertTrue(up, up.contains("${DonchianArm.LABEL}: record only (would-be trades, nothing bought) · open 0 · 1 closed (net hidden) after charges"))
+        assertTrue(up, up.contains("${DonchianArm.LABEL}: off - runs in shadow (would-be trades, nothing bought) · open 0 · 1 closed (net hidden) after charges"))
         assertTrue(up, up.contains("of them 1 would-be (net hidden)"))
         assertTrue(up, up.contains("closed on it (net hidden)") && up.contains("on the research exits (net hidden)"))
         assertFalse(up, Regex("₹|\\bRs\\b").containsMatchIn(up))
@@ -1044,9 +1050,9 @@ class PassedArmsHostTest : RobolectricTest() {
         assertFalse(up, Regex("(?<![(\\d,])\\d{1,3}(,\\d{2,3})+(?![\\d)])").containsMatchIn(up))
         val said = PassedArmsHost.facts(v).arms.single { it.source == DonchianArm.SOURCE }
         assertTrue(said.recordOnly && said.on == false); assertEquals(1, said.wouldBe)
-        assertTrue(com.optionslab.ira.PassedArmsTalk.armWords(said).startsWith("${DonchianArm.LABEL}: record only (would-be trades, nothing bought)."))
+        assertTrue(com.optionslab.ira.PassedArmsTalk.armWords(said).startsWith("${DonchianArm.LABEL}: off - runs in shadow (would-be trades, nothing bought)."))
         // On again: its forward bar counts from now, so would-be trades (never bought) can never switch it off at once; they stay in its record.
-        assertTrue(runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, true, log = false) }.contains("paper only"))
+        assertTrue(runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, true, log = false) }.contains("live gates"))
         // 22 Oct (arms audit): the bar and its starting point count real trades only - the would-be trade is in neither.
         assertEquals(0, view().base[DonchianArm.SOURCE])
         assertEquals(1, view().closedOf(DonchianArm.SOURCE).size)
@@ -1068,7 +1074,7 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { PassedArmsHost.setMode(DonchianArm.SOURCE, PassedArmsHost.Mode.RECORD, log = false) }
         assertTrue("its pass still runs while record only", PassedArmsHost.wantsPass(9 * 60 + 20))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        assertEquals(PassedArmsHost.SHADOW_OFF, PassedArmsHost.view.value.open.single().shadow)
+        assertEquals(PassedArmsHost.SHADOW_OFF, PassedArmsHost.view.value.open.single { it.arm == DonchianArm.SOURCE }.shadow)
         runBlocking { com.optionslab.app.data.ArmLive.watch() }
         assertTrue("nothing sent to Zerodha", kite.placed.isEmpty())
         val lv = com.optionslab.app.data.ArmLive.view.value
@@ -1076,58 +1082,48 @@ class PassedArmsHostTest : RobolectricTest() {
         market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
         at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
         runBlocking { com.optionslab.app.data.ArmLive.watch() }
-        assertEquals("stop", view().closed.single().why)
+        assertEquals("stop", view().closed.single { it.arm == DonchianArm.SOURCE }.why)
         assertTrue(kite.placed.isEmpty())
         assertTrue(com.optionslab.app.data.ArmLive.view.value.shadowClosed.none { it.key == DonchianArm.SOURCE })
         assertNothingAtZerodha()
     }
 
     /**
-     * The 19 Oct update sets R51 to record only once (Boss's choice), R72 and the others untouched; a restart never does it again;
-     * an older book (no record-only field) reads as before; the change log's entry is Boss's ask and one tap puts R51 back on.
+     * The 19 Oct update set R51 to record only once (Boss's choice); 30 Oct (Boss: "dont keep any in paper only or record only")
+     * every arm left record only is switched ON once - so a fresh book ends with R51 ON, both notes written once, R72 and the others
+     * untouched; a restart never does either again; the 30 Oct switch-on is in the change log (one tap undoes it, back to off =
+     * shadow).
      */
-    @Test fun the19OctUpdateSetsR51ToRecordOnlyOnceAndOneTapPutsItBackOn() {
+    @Test fun the19OctRecordOnlyIsSwitchedBackOnBy30OctOnce() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         val settings = AppSettings.load()
         PassedArmsHost.testNoAutoOn = false
         PassedArmsHost.wipe(); bookFile.delete()
         val v = view()
-        assertTrue(v.recording(DonchianArm.SOURCE)); assertFalse(v.on(DonchianArm.SOURCE))
+        assertTrue(v.on(DonchianArm.SOURCE)); assertTrue(v.recordOnly.isEmpty())
         for (s in listOf(BreadthDonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE)) assertTrue(s, v.on(s))
-        val line = v.log.single { "set to record only by the 19 Oct update" in it }
-        assertTrue(line, "Yes, keep only breadth donchain" in line && "${BreadthDonchianArm.LABEL} stays on" in line)
+        assertEquals(1, v.log.count { "set to record only by the 19 Oct update" in it })
+        val on = v.log.single { "switched ON by the 30 Oct update" in it }
+        assertTrue(on, "dont keep any in paper only or record only" in on && "live gates" in on)
         assertEquals("no setting, guard or day lock touched", settings, AppSettings.load())
-        // Once: a restart never sets it again; Boss puts it on, and it stays on.
         AutomationSupport.reloadFromDisk(PassedArmsHost)
-        assertTrue(view().recording(DonchianArm.SOURCE))
-        assertTrue(runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, true, log = false) }.contains("paper only"))
-        AutomationSupport.reloadFromDisk(PassedArmsHost)
-        assertTrue(view().on(DonchianArm.SOURCE)); assertFalse(view().recording(DonchianArm.SOURCE))
-        assertEquals(1, view().log.count { "set to record only by the 19 Oct update" in it })
-        // The change log's Undo through Autopilot's own setter: record only -> on -> record only (paper only, no PIN).
-        val rec = AutoChange.passedArmRecordOnly(DonchianArm.SOURCE, DonchianArm.LABEL, AutoChange.ON, AutoChange.CHOICE_KEEP_BREADTH)
-        assertTrue(Autopilot.apply(rec, false)!!.contains("record only"))
-        assertTrue(view().recording(DonchianArm.SOURCE))
-        assertTrue(Autopilot.apply(AutoChange.inverse(rec, "undone by you"), false)!!.contains("paper only"))
         assertTrue(view().on(DonchianArm.SOURCE))
-        assertNull(Autopilot.apply(rec.copy(to = "sideways"), false))
-        // The update's own entry: Boss's ask, kept, once; its Undo puts R51 back on.
+        assertEquals(1, view().log.count { "switched ON by the 30 Oct update" in it })
+        assertTrue(PassedArmsHost.RECORD_ON_1030 in String(com.optionslab.app.security.Vault.readFileSteady(bookFile)!!, Charsets.UTF_8))
+        // Boss switches it off: off runs in shadow (never record only beside it), and it stays off after a restart.
+        assertTrue(runBlocking { PassedArmsHost.setArmed(DonchianArm.SOURCE, false, log = false) }.contains("runs in shadow"))
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().on(DonchianArm.SOURCE)); assertTrue(view().recording(DonchianArm.SOURCE))
+        // The change log's entry for the 30 Oct switch-on: from record only to on; its Undo puts it back off (shadow).
         org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
         PassedArmsHost.wipe(); bookFile.delete(); view()
         fun entries() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON &&
-            it.change.target == "paperarm:${DonchianArm.SOURCE}" && it.change.to == AutoChange.RECORD_ONLY }
+            it.change.target == "paperarm:${DonchianArm.SOURCE}" && it.change.from == AutoChange.RECORD_ONLY && it.change.to == AutoChange.ON }
         val deadline = System.currentTimeMillis() + 10_000
         while (entries().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
-        val e = entries().single()
-        assertEquals(AutoChange.Status.KEPT, e.status)
-        assertEquals("your choice", e.by)
-        assertTrue(e.change.reason, e.change.reason.contains("Yes, keep only breadth donchain"))
-        assertTrue(e.note, e.note.contains("${BreadthDonchianArm.LABEL} stays on"))
-        assertFalse("no PIN: paper only", Autopilot.undoNeedsPin(e.id))
-        AutomationSupport.reloadFromDisk(PassedArmsHost); view(); Thread.sleep(200)
-        assertEquals("logged once", 1, entries().size)
+        val e = entries().last()
         assertTrue(Autopilot.undo(e.id).startsWith("Undone"))
-        assertTrue(view().on(DonchianArm.SOURCE)); assertFalse(view().recording(DonchianArm.SOURCE))
+        assertFalse(view().on(DonchianArm.SOURCE)); assertTrue(view().recording(DonchianArm.SOURCE))
         assertTrue("R72 untouched", view().on(BreadthDonchianArm.SOURCE))
     }
 
@@ -1147,16 +1143,16 @@ class PassedArmsHostTest : RobolectricTest() {
         // Record only beside on in a book: on wins (the two never both); an unknown arm is dropped.
         old { put("recordOnly", org.json.JSONArray(listOf(DonchianArm.SOURCE, "nope", OovArm.SOURCE))) }
         view().let { v -> assertTrue(v.on(DonchianArm.SOURCE)); assertEquals(setOf(OovArm.SOURCE), v.recordOnly); assertTrue(v.recording(OovArm.SOURCE)) }
-        // The update itself (IraAlgo): R51 on in the older book -> record only, once; R72 untouched.
+        // The updates themselves (IraAlgo): R51 on in the older book -> record only (19 Oct) -> ON again (30 Oct); R72 untouched.
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         PassedArmsHost.testNoAutoOn = false
         old()
-        view().let { v -> assertTrue(v.recording(DonchianArm.SOURCE)); assertTrue(v.on(BreadthDonchianArm.SOURCE)) }
+        view().let { v -> assertTrue(v.on(DonchianArm.SOURCE)); assertTrue(v.recordOnly.isEmpty()); assertTrue(v.on(BreadthDonchianArm.SOURCE)) }
         assertTrue(PassedArmsHost.R51_RECORD in String(com.optionslab.app.security.Vault.readFileSteady(bookFile)!!, Charsets.UTF_8))
         // R72 off in that older book (Boss's switch, or its bar): R51 still set to record only, and the note says R72 is off, never "stays on".
         old { getJSONObject("armed").put(BreadthDonchianArm.SOURCE, false) }
         view().let { v ->
-            assertTrue(v.recording(DonchianArm.SOURCE)); assertFalse(v.on(BreadthDonchianArm.SOURCE))
+            assertTrue(v.on(DonchianArm.SOURCE)); assertFalse(v.on(BreadthDonchianArm.SOURCE))
             val l = v.log.single { "set to record only by the 19 Oct update" in it }
             assertTrue(l, "${BreadthDonchianArm.LABEL} is off: switching it on is your choice" in l && "stays on" !in l)
         }
@@ -1165,7 +1161,8 @@ class PassedArmsHostTest : RobolectricTest() {
         com.optionslab.app.security.Vault.writeFile(bookFile, org.json.JSONObject().put("armed", org.json.JSONObject().put(DonchianArm.SOURCE, false))
             .put("migrated", org.json.JSONArray(done)).toString().toByteArray())
         AutomationSupport.reloadFromDisk(PassedArmsHost)
-        view().let { v -> assertFalse(v.on(DonchianArm.SOURCE)); assertFalse(v.recording(DonchianArm.SOURCE)) }
+        // (30 Oct: off is shadow - "recording" - for every arm that is off.)
+        view().let { v -> assertFalse(v.on(DonchianArm.SOURCE)); assertTrue(v.recording(DonchianArm.SOURCE)) }
     }
 
     // ---- R72 Breadth Donchian (16 Oct, Boss: "Okay add it") --------------------------------------------------------------------
@@ -1201,19 +1198,19 @@ class PassedArmsHostTest : RobolectricTest() {
         // Never in IraGoldAlgo (its passes never run there either); in IraAlgo on at once, on paper, beside Donchian.
         assertEquals(!com.optionslab.app.BuildConfig.GOLD, v.on(BreadthDonchianArm.SOURCE))
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
-        // 19 Oct (Boss: "Yes, keep only breadth donchain"): R51 beside it is record only now (its breaks kept as would-be trades).
-        assertTrue(v.recording(DonchianArm.SOURCE))
+        // 19 Oct set R51 beside it to record only; 30 Oct (Boss: "dont keep any ... record only") switched it ON again.
+        assertTrue(v.on(DonchianArm.SOURCE))
         val line = v.log.single { "switched on once by the 16 Oct update" in it }
         for (w in listOf(BreadthDonchianArm.LABEL, PassedArms.PASSED, BreadthDonchianArm.RESEARCH_ID, "Okay add it", "beside ${DonchianArm.LABEL}", BreadthDonchianArm.RISK))
             assertTrue(w, w in line)
         assertEquals(day, v.breadthSince)
-        assertTrue(PassedArmsHost.diagLine().contains("${BreadthDonchianArm.LABEL}: on (paper only)"))
+        assertTrue(PassedArmsHost.diagLine().contains("${BreadthDonchianArm.LABEL}: on (paper; live through the live gates)"))
         assertTrue(PassedArmsHost.diagLine().contains("Breadth Donchian vs Donchian on paper since"))
         // Boss switches it off: a restart never switches it back on.
-        assertEquals("${BreadthDonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
+        assertEquals("${BreadthDonchianArm.LABEL} off: it runs in shadow (would-be trades, nothing bought).", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertFalse(view().on(BreadthDonchianArm.SOURCE))
-        assertTrue(view().recording(DonchianArm.SOURCE))
+        assertTrue("R51 stays on (30 Oct)", view().on(DonchianArm.SOURCE))
         assertEquals(1, view().log.count { "switched on once by the 16 Oct update" in it })
         assertEquals("the switch-on day is kept", day, view().breadthSince)
         // A book where the update ran without switching it on (here the tests' own seam) never switches it later; nor an unreadable one.
@@ -1228,10 +1225,10 @@ class PassedArmsHostTest : RobolectricTest() {
         // The change log's Undo through Autopilot's own setter (every build).
         bothDonchians()
         val on = AutoChange.passedArmOn(BreadthDonchianArm.SOURCE, BreadthDonchianArm.LABEL, BreadthDonchianArm.RESEARCH_ID, "your choice")
-        assertEquals("${BreadthDonchianArm.LABEL} off.", Autopilot.apply(AutoChange.inverse(on, "undone by you"), false))
+        assertEquals("${BreadthDonchianArm.LABEL} off: it runs in shadow (would-be trades, nothing bought).", Autopilot.apply(AutoChange.inverse(on, "undone by you"), false))
         assertFalse(view().on(BreadthDonchianArm.SOURCE))
         assertTrue("Donchian is never touched", view().on(DonchianArm.SOURCE))
-        assertTrue(Autopilot.apply(on, false)!!.contains("paper only"))
+        assertTrue(Autopilot.apply(on, false)!!.contains("live gates"))
         assertTrue(view().on(BreadthDonchianArm.SOURCE))
         // The update's own entry: Boss's, kept, once; its Undo turns it off (paper only, no PIN).
         org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
@@ -1258,11 +1255,14 @@ class PassedArmsHostTest : RobolectricTest() {
      * one (nothing on the account), run by its own exits, so its record and the R72-vs-R51 comparison still count it.
      */
     @Test fun fourIndicesBreakingTogetherBuyBreadthsCallOnceAndKeepDonchiansAsAWouldBeTrade() {
+        // 30 Oct: live shadow starts off now; R51 in shadow (so its entry cannot go live) keeps the twin rule as before.
+        runBlocking { com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, true, pinConfirmed = false, log = false) }
         bothDonchians()
         runBlocking { PassedArmsHost.setLock(true); PassedArmsHost.setL25(true) }
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val open = PassedArmsHost.view.value.open
+        // (30 Oct: the arms that are off keep their own would-be trades too; these two are the ones compared here.)
+        val open = PassedArmsHost.view.value.open.filter { it.arm == DonchianArm.SOURCE || it.arm == BreadthDonchianArm.SOURCE }
         assertEquals(open.toString(), 2, open.size)
         val br = open.single { it.arm == BreadthDonchianArm.SOURCE }
         val dn = open.single { it.arm == DonchianArm.SOURCE }
@@ -1284,7 +1284,7 @@ class PassedArmsHostTest : RobolectricTest() {
         assertNothingAtZerodha()
         // The bar is decided once: the next pass buys nothing more.
         market(LocalTime.of(9, 21)); breadthMarket(setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
-        assertEquals(2, PassedArmsHost.view.value.open.size)
+        assertEquals(2, PassedArmsHost.view.value.open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertEquals(65, Paper.state.positions.filter { it.symbol == br.symbol }.sumOf { it.quantity })
         // 09:24 trades at 84 (under -15%): R72's stop sells its lot; R51's would-be trade closes on its own stop at the price seen.
         market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
@@ -1401,6 +1401,8 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking {
             com.optionslab.app.data.ArmLive.setLive(BreadthDonchianArm.SOURCE, true, pinConfirmed = true, log = false)
             com.optionslab.app.data.ArmLive.setShadow(BreadthDonchianArm.SOURCE, false, pinConfirmed = true, log = false)
+            // 30 Oct: live shadow starts off now - R51 is put in shadow here (Boss's own choice).
+            com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, true, pinConfirmed = false, log = false)
         }
         runBlocking { com.optionslab.app.data.ArmLive.refresh() }
         com.optionslab.app.data.ArmLive.liveFlags()
@@ -1409,7 +1411,8 @@ class PassedArmsHostTest : RobolectricTest() {
         bothDonchians()
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val open = PassedArmsHost.view.value.open
+        // (30 Oct: the arms that are off keep their own would-be trades too; these two are the ones compared here.)
+        val open = PassedArmsHost.view.value.open.filter { it.arm == DonchianArm.SOURCE || it.arm == BreadthDonchianArm.SOURCE }
         assertEquals(open.toString(), 2, open.size)
         val br = open.single { it.arm == BreadthDonchianArm.SOURCE }
         assertTrue("R72's own trade is real (its live trade is never skipped)", br.shadow == null && br.orderId != null)
@@ -1427,6 +1430,8 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking {
             com.optionslab.app.data.ArmLive.setLive(DonchianArm.SOURCE, true, pinConfirmed = true, log = false)
             com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, false, pinConfirmed = true, log = false)
+            // 30 Oct: live shadow starts off now - R72 is put in shadow here (Boss's own choice).
+            com.optionslab.app.data.ArmLive.setShadow(BreadthDonchianArm.SOURCE, true, pinConfirmed = false, log = false)
         }
         runBlocking { com.optionslab.app.data.ArmLive.refresh() }
         com.optionslab.app.data.ArmLive.liveFlags()
@@ -1435,7 +1440,8 @@ class PassedArmsHostTest : RobolectricTest() {
         bothDonchians()
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val open = PassedArmsHost.view.value.open
+        // (30 Oct: the arms that are off keep their own would-be trades too; these two are the ones compared here.)
+        val open = PassedArmsHost.view.value.open.filter { it.arm == DonchianArm.SOURCE || it.arm == BreadthDonchianArm.SOURCE }
         assertEquals(open.toString(), 2, open.size)
         val dn = open.single { it.arm == DonchianArm.SOURCE }
         assertTrue("R51's own trade is real (its live trade is never skipped)", dn.shadow == null && dn.orderId != null)
@@ -1452,7 +1458,7 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, true, log = false) }
         breadthMarket(up = setOf("BANKNIFTY"), until = LocalTime.of(9, 20))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val dn = PassedArmsHost.view.value.open.single()
+        val dn = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals(DonchianArm.SOURCE, dn.arm)
         val c = Paper.contractOf(dn.symbol)!!
         val r = runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null) }
@@ -1508,7 +1514,7 @@ class PassedArmsHostTest : RobolectricTest() {
     @Test fun oneLotOfASharedOptionSoldElsewhereClosesTheOldestTradeAndTheOthersOwnExitIsItsOwn() {
         val (open, sale) = sharedThenSold(LocalTime.of(9, 22))
         runBlocking { PassedArmsHost.manageOnly() }
-        val gone = view().closed.single()
+        val gone = view().closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals(open.first().arm, gone.arm)
         assertEquals("closed_elsewhere", gone.why)
         assertEquals(sale.price.toDouble(), gone.exit!!, 1e-9)
@@ -1557,8 +1563,8 @@ class PassedArmsHostTest : RobolectricTest() {
     @Test fun bossSwitchingBreadthBackOnFromItsRowIsLoggedAsHisOkayAddIt() {
         org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
         bothDonchians()
-        assertEquals("${BreadthDonchianArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
-        assertTrue(runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, true) }.contains("paper only"))
+        assertEquals("${BreadthDonchianArm.LABEL} off: it runs in shadow (would-be trades, nothing bought).", runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, false) })
+        assertTrue(runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, true) }.contains("live gates"))
         fun kept() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON &&
             it.change.target == "paperarm:${BreadthDonchianArm.SOURCE}" && it.status == AutoChange.Status.KEPT && it.change.to == AutoChange.ON }
         val deadline = System.currentTimeMillis() + 10_000
@@ -1580,7 +1586,7 @@ class PassedArmsHostTest : RobolectricTest() {
         val target = "paperarm:${OovArm.SOURCE}"
         fun all() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.PAPER_ARM_ON && it.change.target == target }
         fun keptOff() = all().filter { it.status == AutoChange.Status.KEPT && it.change.to == AutoChange.SWITCHED_OFF }
-        assertEquals("${OovArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, false) })
+        assertEquals("${OovArm.LABEL} off: it runs in shadow (would-be trades, nothing bought).", runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, false) })
         var deadline = System.currentTimeMillis() + 10_000
         while (keptOff().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
         val off = keptOff().single()
@@ -1594,8 +1600,8 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(Autopilot.undo(off.id).startsWith("Undone"))
         assertTrue(view().on(OovArm.SOURCE))
         // Off and on again from the row: the off entry is closed and the on one logged, each dated today.
-        assertEquals("${OovArm.LABEL} off.", runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, false) })
-        assertTrue(runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, true) }.contains("paper only"))
+        assertEquals("${OovArm.LABEL} off: it runs in shadow (would-be trades, nothing bought).", runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, false) })
+        assertTrue(runBlocking { PassedArmsHost.setArmed(OovArm.SOURCE, true) }.contains("live gates"))
         fun keptOn() = all().filter { it.status == AutoChange.Status.KEPT && it.change.to == AutoChange.ON }
         deadline = System.currentTimeMillis() + 10_000
         while (keptOn().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
@@ -1609,7 +1615,7 @@ class PassedArmsHostTest : RobolectricTest() {
         // NIFTY, BANKNIFTY and FINNIFTY break: Donchian buys NIFTY's call, breadth nothing.
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY"), until = LocalTime.of(9, 20))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals(DonchianArm.SOURCE, p.arm)
         assertEquals("labelled: breadth did not confirm it", false, p.breadth)
         AutomationSupport.reloadFromDisk(PassedArmsHost)
@@ -1620,7 +1626,7 @@ class PassedArmsHostTest : RobolectricTest() {
         only(BreadthDonchianArm.SOURCE)
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20), off = setOf("SENSEX"))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        assertEquals(BreadthDonchianArm.SOURCE, PassedArmsHost.view.value.open.single().arm)
+        assertEquals(BreadthDonchianArm.SOURCE, PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }.arm)
         assertNothingAtZerodha()
     }
 
@@ -1628,7 +1634,7 @@ class PassedArmsHostTest : RobolectricTest() {
         only(BreadthDonchianArm.SOURCE)
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY"), until = LocalTime.of(9, 20), off = setOf("SENSEX"))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertTrue(Paper.state.orders.isEmpty())
     }
 
@@ -1637,17 +1643,17 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { PassedArmsHost.setLock(true); PassedArmsHost.setL25(true) }
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"), until = LocalTime.of(9, 20))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals(BreadthDonchianArm.SOURCE, p.arm); assertTrue(p.lock && p.l25)
         val peak = p.entry * 1.26
         ride(LocalTime.of(9, 33), peak, peak)
         at(LocalTime.of(9, 33)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals(1, view().open.size)
+        assertEquals(1, view().open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertTrue(com.optionslab.ira.ArmExits.line(false, p.symbol)!!.contains("lock held"))
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         ride(LocalTime.of(9, 35), peak, p.entry * 1.055)
         at(LocalTime.of(9, 35)); runBlocking { PassedArmsHost.manageOnly() }
-        val sold = view().closed.single()
+        val sold = view().closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("lock", sold.why)
         assertTrue("${sold.exit} vs ${p.entry}", sold.exit!! in p.entry * 1.02..p.entry * 1.07)
         assertNothingAtZerodha()
@@ -1657,7 +1663,7 @@ class PassedArmsHostTest : RobolectricTest() {
         only(BreadthDonchianArm.SOURCE)
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        assertEquals(BreadthDonchianArm.SOURCE, PassedArmsHost.view.value.open.single().arm)
+        assertEquals(BreadthDonchianArm.SOURCE, PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }.arm)
         // The app is killed: the start-up's positions-first step reads the book before anything else and finds it open.
         PassedArmsHost.wipe()
         assertFalse(PassedArmsHost.holding())
@@ -1666,7 +1672,7 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue("watched at full cadence, whatever the time", PassedArmsHost.wantsPass(16 * 60))
         market(LocalTime.of(9, 27), call = { t -> if (t.isBefore(LocalTime.of(9, 25))) 100.0 else 80.0 })
         at(LocalTime.of(9, 27)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        assertEquals("stop", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
         assertFalse(PassedArmsHost.holding())
     }
 
@@ -1746,7 +1752,7 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { PassedArmsHost.setSupertrend(true) }
         market(LocalTime.of(9, 20))
         tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("CE", p.right); assertTrue(p.st)
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertTrue("the label is kept on disk", view().open.single().st)
@@ -1764,7 +1770,7 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(Paper.state.positions.none { it.quantity != 0 })
         // Decided once: the next pass does not buy it either.
         fallingMarket(LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertNothingAtZerodha()
     }
 
@@ -1774,7 +1780,7 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { PassedArmsHost.setSupertrend(false) }
         fallingMarket(LocalTime.of(9, 20))
         tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("CE", p.right); assertTrue(p.symbol, p.symbol.contains("24950")); assertFalse("a plain-rules trade", p.st)
         assertNothingAtZerodha()
     }
@@ -1788,7 +1794,7 @@ class PassedArmsHostTest : RobolectricTest() {
         minutes(niftyKey, until) { t -> if (t.isBefore(LocalTime.of(10, 59))) 25_000.0 else 25_100.0 }
         minutes(ce, until) { 100.0 }; minutes(pe, until) { 90.0 }
         tick(LocalTime.of(11, 0))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertTrue(view().log.any { "Supertrend cannot be judged yet" in it })
         // 16 Oct (R73 review): counted where Boss sees it - the row, Jarvis and the diagnostics - and kept over a restart.
         assertEquals(1, view().stUnjudged)
@@ -1859,13 +1865,13 @@ class PassedArmsHostTest : RobolectricTest() {
         only(DonchianArm.SOURCE)
         runBlocking { PassedArmsHost.setLock(false) }
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         val level = p.entry * (1 - DonchianArm.EXITS.stop!!)
         // 09:24 opens at 95 and trades down to 84 (through the stop), 09:25 at 80: the look at 09:26 sees it only then.
         optionMinutes(ce, LocalTime.of(9, 24), FakeUpstox.Candle(LocalTime.of(9, 24), 95.0, 95.0, 84.0, 84.0),
             FakeUpstox.Candle(LocalTime.of(9, 25), 80.0, 81.0, 79.0, 80.0))
         at(LocalTime.of(9, 26)); runBlocking { PassedArmsHost.manageOnly() }
-        val sold = PassedArmsHost.view.value.closed.single()
+        val sold = PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("stop", sold.why)
         assertEquals("booked at the stop's level", level, sold.exit!!, 1e-6)
         val fill = Paper.state.trades.last { it.symbol == p.symbol && it.action == "SELL" }.price.toDouble()
@@ -1880,10 +1886,10 @@ class PassedArmsHostTest : RobolectricTest() {
         only(DonchianArm.SOURCE)
         runBlocking { PassedArmsHost.setLock(false) }
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         optionMinutes(ce, LocalTime.of(9, 24), FakeUpstox.Candle(LocalTime.of(9, 24), 78.0, 79.0, 77.0, 78.0))
         at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
-        val sold = PassedArmsHost.view.value.closed.single()
+        val sold = PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("stop", sold.why)
         assertEquals("the gap's open, never the level above it", 78.0, sold.exit!!, 1e-9)
         assertTrue(sold.exit!! < p.entry * 0.85)
@@ -1898,7 +1904,7 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { PassedArmsHost.setLock(false) }
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
         market(LocalTime.of(9, 22)); at(LocalTime.of(9, 22)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertEquals(1, PassedArmsHost.view.value.open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         val released = java.util.concurrent.CountDownLatch(1)
         upstox.gate = { key -> if (key == ce) released.await(6, java.util.concurrent.TimeUnit.SECONDS) }
         try {
@@ -1907,13 +1913,13 @@ class PassedArmsHostTest : RobolectricTest() {
             runBlocking { PassedArmsHost.manageOnly() }
             val ms = (System.nanoTime() - t0) / 1_000_000
             assertTrue("the look took $ms ms", ms < PassedArmsHost.EXIT_READ_WAIT_MS + 1_500)
-            assertEquals("still held: nothing reached its exit", 1, PassedArmsHost.view.value.open.size)
+            assertEquals("still held: nothing reached its exit", 1, PassedArmsHost.view.value.open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         } finally { released.countDown(); upstox.gate = null }
         Thread.sleep(1_500)      // the held read ends by itself
         // The read came back by itself: the next look has it (09:24 under the stop: sold).
         market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
         at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals("stop", PassedArmsHost.view.value.closed.single().why)
+        assertEquals("stop", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
         assertNothingAtZerodha()
     }
 
@@ -1927,7 +1933,7 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { PassedArmsHost.setLock(false) }
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
         market(LocalTime.of(9, 22)); at(LocalTime.of(9, 22)); runBlocking { PassedArmsHost.manageOnly() }
-        assertEquals(1, PassedArmsHost.view.value.open.size)
+        assertEquals(1, PassedArmsHost.view.value.open.count { it.shadow != PassedArmsHost.SHADOW_OFF })
         // The option trades at 84 from 09:24; the next exit read hangs (past the look's wait), the quote after it does not.
         market(LocalTime.of(9, 30), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
         val released = java.util.concurrent.CountDownLatch(1)
@@ -1937,7 +1943,7 @@ class PassedArmsHostTest : RobolectricTest() {
             at(LocalTime.of(9, 30)); runBlocking { PassedArmsHost.manageOnly() }
         } finally { released.countDown(); upstox.gate = null }
         Thread.sleep(1_500)      // the held read ends by itself
-        val sold = PassedArmsHost.view.value.closed.single()
+        val sold = PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("stop", sold.why)
         assertTrue("${sold.exit}", sold.exit!! < 90.0)
         assertNothingAtZerodha()
@@ -1952,12 +1958,12 @@ class PassedArmsHostTest : RobolectricTest() {
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 19))
         tick(LocalTime.of(9, 20))
-        assertTrue(PassedArmsHost.view.value.open.isEmpty())
+        assertTrue(PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
         assertEquals(day.atTime(9, 20, 30), PassedArmsHost.plannedRetry)
         // The minute lands; the retry (same minute) reads the index again and buys.
         market(LocalTime.of(9, 20))
         tick(LocalTime.of(9, 20), seconds = 30)
-        val p = PassedArmsHost.view.value.open.single()
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         assertEquals("CE", p.right)
         assertNothingAtZerodha()
         // Outside a bar's first minutes (or once nothing is pending) no retry is planned.

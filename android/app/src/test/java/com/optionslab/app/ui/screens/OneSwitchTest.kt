@@ -161,7 +161,8 @@ class OneSwitchTest {
         assertTrue("on by default", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.DonchianArm.SOURCE))
         assertFalse("Jarvis's own ideas are not listed", exists("Forge ideas", substring = true))
         assertTrue(exists("ntfy alerts"))
-        assertFalse("an external message (ntfy alerts) starts off", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.LiveMirror.NTFY_ALERTS))
+        // 30 Oct (Boss: "make all arms as live"): ntfy alerts' Trade live starts on like every arm's.
+        assertTrue("ntfy alerts starts on too", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.LiveMirror.NTFY_ALERTS))
         // Every arm's row renders with both switches (Solo (midday) only in Jarvis builds).
         for (spec in com.optionslab.engine.orb.LiveMirror.ARMS) {
             if (spec.key == com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY && !com.optionslab.app.BuildConfig.JARVIS) {
@@ -194,13 +195,14 @@ class OneSwitchTest {
         val key = com.optionslab.engine.orb.DonchianArm.SOURCE
         val label = com.optionslab.engine.orb.DonchianArm.LABEL
         pump { exists("Shadow: $label", desc = true) }
-        assertTrue("in shadow by default", com.optionslab.app.data.ArmLive.view.value.shadowOn(key))
+        // 30 Oct (Boss: "make all live if i move to live market"): out of shadow by default; on is one tap, off again asks the PIN.
+        assertFalse("out of shadow by default", com.optionslab.app.data.ArmLive.view.value.shadowOn(key))
+        compose.onNode(hasContentDescription("Shadow: $label")).performSemanticsAction(SemanticsActions.OnClick).also { frames() }
+        pump { com.optionslab.app.data.ArmLive.view.value.shadowOn(key) }    // on: no PIN
         assertTrue(exists("no shadow trade yet", substring = true))
         compose.onNode(hasContentDescription("Shadow: $label")).performSemanticsAction(SemanticsActions.OnClick).also { frames() }
         enterPin(pin)                                              // off asks the PIN
         pump { !com.optionslab.app.data.ArmLive.view.value.shadowOn(key) }
-        compose.onNode(hasContentDescription("Shadow: $label")).performSemanticsAction(SemanticsActions.OnClick).also { frames() }
-        pump { com.optionslab.app.data.ArmLive.view.value.shadowOn(key) }
         val log = com.optionslab.app.data.ArmLive.view.value.log.joinToString("\n")
         assertTrue(log, log.contains("Shadow OFF (you)") && log.contains("Shadow ON (you)"))
     }

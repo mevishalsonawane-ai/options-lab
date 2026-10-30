@@ -105,16 +105,21 @@ class ArmsCleanupTest {
 
     @Test fun theKeptArmsAreNeverHidden() {
         for (k in listOf("liquidity", "liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin", "liquidity15_mid", "liquidity5_mid",
-            "hero_ticket", Ft3Rules.SOURCE, DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, BreadthDonchianArm.SOURCE, "watchlist", "solo_midday", "mcx")) {
+            Ft3Rules.SOURCE, DonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, BreadthDonchianArm.SOURCE, "watchlist", "solo_midday", "mcx")) {
             assertFalse(ArmsCleanup.covers(k), k)
             val (s, _) = ArmsCleanup.pass(State(), flat())
             assertTrue(ArmsCleanup.visible(s, k), k)
             assertTrue(ArmsCleanup.mayArm(s, k), k)
         }
         assertTrue(ArmsCleanup.KEPT.any { it.label.startsWith("Liquidity 15+5") })
-        assertTrue(ArmsCleanup.KEPT.any { it.label == "Hero ₹1,000 ticket" })
+        // 30 Oct (Boss: "Hide zero hero family arms"): the Hero ₹1,000 ticket is hidden now, beside the Hero (expiry) arm.
+        assertFalse(ArmsCleanup.KEPT.any { it.label == "Hero ₹1,000 ticket" })
+        assertTrue(ArmsCleanup.covers(ArmsCleanup.HERO_TICKET) && ArmsCleanup.covers(ArmsCleanup.HERO))
+        assertEquals("hero_ticket", ArmsCleanup.HERO_TICKET)
+        assertTrue(ArmsCleanup.hiddenWords(ArmsCleanup.HERO_TICKET).contains("30 Oct"))
+        assertFalse(ArmsCleanup.HERO_TICKET in ArmsCleanup.FIRST_15OCT)
         assertTrue(ArmsCleanup.KEPT.any { it.label.startsWith(Ft3Rules.LABEL) && "Ft3Arm.kt" in it.where })
-        assertEquals(14, ArmsCleanup.HIDDEN.size)                  // 12 on 15 Oct + the two MCX arms on 21 Oct
+        assertEquals(15, ArmsCleanup.HIDDEN.size)                  // 12 on 15 Oct + the two MCX arms on 21 Oct + the Hero ticket on 30 Oct
         assertEquals(keys.toSet().size, keys.size)
         assertEquals("ORB", ArmsCleanup.of(ArmsCleanup.ORB)?.label)
         assertNull(ArmsCleanup.of("liquidity"))
@@ -171,7 +176,8 @@ class ArmsCleanupTest {
         assertTrue(mcx.all { ArmsCleanup.covers(it) && it !in ArmsCleanup.FIRST_15OCT })
         // The two MCX arms that stay are never hidden.
         for (k in listOf(com.optionslab.engine.mcx.McxEveRules.SOURCE, com.optionslab.engine.mcx.McxUsSilverRules.SOURCE)) assertFalse(ArmsCleanup.covers(k), k)
-        assertEquals(ArmsCleanup.HIDDEN.map { it.key }.toSet() - mcx.toSet(), ArmsCleanup.FIRST_15OCT)
+        // (30 Oct: the Hero ₹1,000 ticket joined later too - Boss's "Hide zero hero family arms".)
+        assertEquals(ArmsCleanup.HIDDEN.map { it.key }.toSet() - mcx.toSet() - ArmsCleanup.HERO_TICKET, ArmsCleanup.FIRST_15OCT)
     }
 
     @Test fun aPhoneThatRanThe15OctCleanupTakesTheMcxArmsInOnceAndKeepsItsRestores() {

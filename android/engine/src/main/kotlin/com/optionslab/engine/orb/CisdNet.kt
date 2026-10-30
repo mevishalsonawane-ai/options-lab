@@ -8,7 +8,7 @@ import kotlin.math.min
 /**
  * "CISD + network" (29 Oct 2026, Boss: "Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward
  * test too"): research R133's S3-V2-E3, ported exactly (frozen, nothing tuned). A PAPER arm that FAILED the research gates: Boss's
- * second exception (CLAUDE.md, 29 Oct). It never goes live, and it is labelled [SHOWN] ("failed gates, Boss's exception") wherever
+ * second exception (CLAUDE.md, 29 Oct); 30 Oct (Boss): live like every arm, only through the live gates. It is labelled [SHOWN] ("failed gates, Boss's exception") wherever
  * it is shown.
  *
  *   signal   R131 S3-V2, CISD as ICT reads it, on each index's 5-minute bars (wicks for levels, opens and closes for green / red):
@@ -38,7 +38,7 @@ object CisdNet {
     const val SHOWN = "$LABEL ($TAG)"
     const val OWNER = "cisdnet"
     const val RESEARCH_ID = "R133 S3-V2-E3"
-    const val NOT_PROVEN = "Failed research gates (R133): Boss's exception of 29 Oct - paper only, never live"
+    const val NOT_PROVEN = "Failed research gates (R133): Boss's exception of 29 Oct - live only through the live gates (Boss, 30 Oct)"
     const val SIGNAL = "Signal: the index's 5-minute bars (the default); the network's option-chain inputs are context only; the ATM " +
         "option is what is bought"
     const val RULES = "On NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX: a drop of 2+ red 5-minute bars worth 2 ATR, then a close " +

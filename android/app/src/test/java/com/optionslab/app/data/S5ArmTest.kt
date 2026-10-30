@@ -149,6 +149,52 @@ class S5ArmTest : RobolectricTest() {
         return view().open.single()
     }
 
+    // ---- 30 Oct: live through the mirror when on; shadow when off ------------------------------------------------------
+
+    /** On: its paper fill is offered to its live path ([ArmLive.entered]) with its ref and its resting stop, 1 lot as on paper. */
+    @Test fun onItsPaperFillIsOfferedToItsLivePathWithItsStop() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        try {
+            val p = boughtAt0920()
+            val e = heard.firstOrNull { it.startsWith("entered|${S5Trail.SOURCE}|${p.ref}|") } ?: error("not offered: $heard")
+            assertTrue(e, e.endsWith("|${p.qty}|${p.stop}"))
+            assertEquals(65, p.qty)
+            // Its legs for the mirror: the open trade, with what it holds.
+            assertEquals(listOf(ArmLive.PaperLeg(p.ref, S5Trail.SOURCE, 65)), ArmLive.legsForTest(LiveMirror.S5))
+        } finally { ArmLive.testHeard = null }
+    }
+
+    /**
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): off, the same pick is a would-be
+     * trade in the switched-off shadow - its stop, its 60% lock after +Rs 1,000 and its square-off - and nothing is ordered:
+     * no paper order, nothing offered to the live path, nothing at Zerodha.
+     */
+    @Test fun offThePickIsAWouldBeTradeInTheShadowAndNothingIsOrdered() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        OffShadow.testSession = true
+        OffShadow.testPrice = { Triple(110.4, 110.3, 110.5) }
+        try {
+            runBlocking { S5Arm.setArmed(false) }
+            market(); forcePut()
+            option(peToken, 110.4); option(ceToken, 120.4)
+            tick(LocalTime.of(9, 20), 3)
+            assertTrue("no paper order", Paper.state.orders.isEmpty())
+            assertTrue("no paper trade", view().open.isEmpty())
+            assertTrue("nothing offered live: $heard", heard.none { it.startsWith("entered|") })
+            assertNothingAtZerodha()
+            val w = OffShadow.view.value.openOf(S5Trail.SOURCE).singleOrNull() ?: error("no would-be trade: ${OffShadow.view.value} ${view().looks}")
+            assertEquals("NIFTY", w.underlying); assertEquals(-1, w.view); assertEquals(1, w.side); assertEquals(65, w.qty)
+            assertNotNull("its stop", w.exits.stop)
+            assertEquals(S5Trail.LOCK_FROM, w.exits.lockAfterRs!!, 1e-9); assertEquals(S5Trail.LOCK_KEEP, w.exits.lockKeep, 1e-9)
+            assertTrue(view().looks.single { it.index == "NIFTY" }.why.contains("switched off"))
+            // The same signal again is never a second would-be trade, and a second NIFTY pick waits for the first to close.
+            tick(LocalTime.of(9, 21), 10)
+            assertEquals(1, OffShadow.view.value.openOf(S5Trail.SOURCE).size)
+        } finally { ArmLive.testHeard = null; OffShadow.wipe() }
+    }
+
     // ---- on after the update, once; logged; undone in one tap; never live -------------------------------------------
 
     @Test fun theUpdateSwitchesItOnOnceOnPaperAndNeverAgain() {
@@ -161,9 +207,10 @@ class S5ArmTest : RobolectricTest() {
         AutomationSupport.reloadFromDisk(S5Arm)
         assertFalse("Boss's off is kept", view().armed)
         assertEquals(1, view().log.count { "switched on once" in it })
-        // Never live: no live mirror, no live switch.
-        assertNull(LiveMirror.spec(S5Trail.SOURCE))
-        assertFalse(ArmLive.view.value.on(S5Trail.SOURCE))
+        // 30 Oct (Boss: "Make them live s5 and csid startergies live too"): it has a live mirror now, through the live gates only;
+        // switched off, it buys nothing anywhere (its live copy needs a paper fill).
+        assertNotNull(LiveMirror.spec(S5Trail.SOURCE))
+        assertEquals(LiveMirror.S5, LiveMirror.spec(S5Trail.SOURCE)!!.family)
     }
 
     @Test fun itIsInTheChangeLogAsBossOwnAndOneTapSwitchesItOff() {
@@ -311,9 +358,9 @@ class S5ArmTest : RobolectricTest() {
         tick(LocalTime.of(9, 23))
         assertTrue("no decision between the bar closes", view().looks.isEmpty())
         runBlocking { S5Arm.setArmed(false) }
-        assertFalse(S5Arm.wantsPass(9 * 60 + 20)); assertFalse(S5Arm.decisionDue(9 * 60 + 20))
-        tick(LocalTime.of(9, 25), 3)
-        assertTrue(view().looks.isEmpty())
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, it still decides at its bar closes -
+        // nothing is ever ordered (its picks go to the switched-off shadow: S5's shadow test).
+        assertTrue(S5Arm.decisionDue(9 * 60 + 20))
         assertTrue(Paper.state.orders.isEmpty())
     }
 

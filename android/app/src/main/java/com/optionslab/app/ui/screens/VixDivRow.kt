@@ -74,7 +74,7 @@ internal fun VixDivRowContent(v: VixDivArm.View, onArm: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             ExplainedName(VixDivRules.LABEL, vixDivExplanation(v))
-            Text(if (v.armed) "ON · PAPER ONLY" else "OFF", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint, fontSize = 10.sp,
+            Text(if (v.armed) "ON · PAPER + ITS LIVE SWITCH" else "OFF · SHADOW", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint, fontSize = 10.sp,
                 fontWeight = FontWeight.Bold))
             Text(keepNumbersWhole(vixDivNumbers(v)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
             v.open.forEach { o ->

@@ -65,7 +65,7 @@ class CompactRowsTest {
     }
 
     @Test fun anArmHoldingAPositionStaysOnScreenUntilItsExitAndSaysSo() {
-        // 21 Oct: 14 hidden arms (the SILVERM morning call and the 12-month trend joined), one waiting for its exit: 13 listed.
+        // 21 Oct: the SILVERM morning call and the 12-month trend joined; 30 Oct the Hero ticket: 15 hidden, one waiting for its exit: 14 listed.
         val holding = ArmsCleanup.pass(ArmsCleanup.State(), ArmsCleanup.HIDDEN.map { ArmsCleanup.Now(it.key, true, open = it.key == ArmsCleanup.ORB) }).first
         val view = visibleOrbView(StrategyFakes.orbView(orbOpen = true, fourArmed = true), holding)
         compose.setContent { IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -107,8 +107,8 @@ class CompactRowsTest {
         val restored = ArrayList<String>()
         compose.setContent { IraAlgoTheme("light") { Column { HiddenArmsContent(cleaned, said = null) { restored += it } } } }
         compose.waitForIdle()
-        assertTrue(shown("$HIDDEN_ARMS (14)"))
-        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 14").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
+        assertTrue(shown("$HIDDEN_ARMS (15)"))
+        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 15").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertTrue(shown(HIDDEN_NOTE))
         assertTrue(shown("was on · back on paper"))
         assertTrue(shown(keepNumbersWhole(ArmsCleanup.NIFTY_NOTE)))
@@ -125,13 +125,13 @@ class CompactRowsTest {
     }
 
     @Test fun anArmWaitingForItsExitIsNotInTheListButSaidThere() {
-        // 21 Oct: 14 hidden arms (the SILVERM morning call and the 12-month trend joined), one waiting for its exit: 13 listed.
+        // 21 Oct: the SILVERM morning call and the 12-month trend joined; 30 Oct the Hero ticket: 15 hidden, one waiting for its exit: 14 listed.
         val holding = ArmsCleanup.pass(ArmsCleanup.State(), ArmsCleanup.HIDDEN.map { ArmsCleanup.Now(it.key, true, open = it.key == ArmsCleanup.NIGHT) }).first
         compose.setContent { IraAlgoTheme("light") { Column { HiddenArmsContent(holding) {} } } }
         compose.waitForIdle()
-        assertTrue(shown("$HIDDEN_ARMS (13)"))
+        assertTrue(shown("$HIDDEN_ARMS (14)"))
         assertTrue(shown("1 switching off after its exit"))
-        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 13").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
+        compose.onNodeWithContentDescription("$HIDDEN_ARMS: 14").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); compose.waitForIdle()
         assertTrue(shown(keepNumbersWhole("Night (R3): " + ArmsCleanup.WAITING)))
         assertEquals(0, compose.onAllNodes(hasContentDescription("Restore Night (R3)")).fetchSemanticsNodes().size)
     }

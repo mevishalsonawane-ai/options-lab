@@ -131,11 +131,13 @@ object NtfyReader {
     /** 25 Oct (review): how often a running reader checks the hours (it stops at the F&O close, not at the next in-session round). */
     @Volatile internal var hoursCheckMs: Long = 30_000L
 
-    /** Start the reader when it should run (on, a topic set, in hours), stop it when not. Cheap; off the main thread. */
+    /** Start the reader when it should run (a topic set, in hours; on or off), stop it when not. Cheap; off the main thread. */
     fun ensure() {
         // 26 Oct (review): a settings read that fails is "unknown": nothing is changed (a passing Keystore hiccup never stops the
         // reader nor moves the watch's alarm).
-        val armed = runCatching { NtfyArm.view.value.on && config().topic != null }.getOrNull() ?: return
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): with a topic set the reader runs whether ntfy
+        // alerts is on or off - off, each buy becomes a would-be trade in the switched-off shadow ([OffShadow]), nothing bought.
+        val armed = runCatching { config().topic != null }.getOrNull() ?: return
         noteArmed(armed)
         val want = armed && runCatching { inHours() }.getOrDefault(false)
         val running = job?.isActive == true

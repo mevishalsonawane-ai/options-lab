@@ -66,6 +66,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testSync = false
         ArmLive.testNow = null
         ArmLive.testReadFails = null; ArmLive.testAccountFails = false; ArmLive.testSecurityFails = false; ArmLive.testHeard = null
+        ArmLive.testLotCap = null
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
@@ -140,6 +141,7 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     @Test fun aLimitEntryPaysAtMostThePaperLimitAndTwoLotsBuyTwoLots() {
+        ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(com.optionslab.engine.orb.HeroTicketRules.SOURCE, qty = 60, limit = 200.0))
         assertEquals(mapOf("order_type" to "LIMIT", "price" to "200.00", "quantity" to "60"), form(kite.placed.first(), "order_type", "price", "quantity"))
     }
@@ -233,6 +235,32 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("nothing more", 1, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
     }
 
+    /** 30 Oct (Part C): the kill switch, both split day stops and the paper-only period block live ENTRIES, never an exit. */
+    @Test fun theKillSwitchAndEachSplitStopNeverBlockAnExit() {
+        val ref = "k"
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, ref))
+        assertEquals(1, view().openReal.size)
+        watch()                                                    // seen open on paper
+        SecurePrefs.put("g.kill", true)
+        runBlocking { Strategies.stopForToday(false, false, log = false); Strategies.stopCommodities(sell = false, log = false) }
+        val t = Market.today()
+        PaperOnly.resetForTest(com.optionslab.ira.PaperOnlyPeriod.Period(t.plusDays(3), "test", t))
+        try {
+            ArmLive.entered(ask(com.optionslab.engine.orb.OovArm.SOURCE, "k2", c = other(7).first))
+            assertTrue("no new entry", view().openReal.none { it.ref == "k2" })
+            kite.requests.clear()
+            legs[ref] = legs.getValue(ref).first to 0             // the paper trade sold
+            watch()
+            assertTrue("the exit still goes", kite.placed.any { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
+            assertEquals("flat", 0, held())
+            // (Boss's index stop sells what its side holds: the exit is "operator_stop" or the paper exit - an exit either way.)
+            assertTrue(view().closed.single { it.ref == ref }.why in setOf("paper_exit", "operator_stop"))
+        } finally {
+            SecurePrefs.put("g.kill", false); PaperOnly.resetForTest(null)
+            runBlocking { Strategies.startAgain(log = false); Strategies.startCommoditiesAgain(log = false) }
+        }
+    }
+
     @Test fun aStopThatFilledAtZerodhaIsTheExitAndNoSecondSellGoes() {
         val ref = "s"
         ArmLive.entered(ask(com.optionslab.engine.orb.Solo2.SOURCE, ref))
@@ -260,6 +288,7 @@ class ArmLiveTest : RobolectricTest() {
 
     @Test fun aPartPaperSaleSellsTheSameShareLive() {
         val ref = "half"
+        ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(com.optionslab.engine.orb.HeroRules.ARM.source, ref, qty = 60))
         watch()
         legs[ref] = legs.getValue(ref).first to 30                // half sold at 5x on paper
@@ -381,14 +410,80 @@ class ArmLiveTest : RobolectricTest() {
 
     private val donchian = com.optionslab.engine.orb.DonchianArm.SOURCE
 
-    @Test fun everyArmStartsInShadowAndAFreshBookSendsNothing() {
+    /**
+     * 30 Oct (Boss: "make all arms as live ... make all live if i move to live market"): a fresh book starts every arm OUT of shadow
+     * and with its Trade live on (Solo (midday) excepted: Jarvis's Solo stays in shadow until proven), so the first paper fill in Live
+     * with AI trades on goes to Zerodha with its stop.
+     */
+    @Test fun everyArmStartsOutOfShadowAndAFreshBookTradesLive() {
         ArmLive.wipe(); java.io.File(context.noBackupFilesDir, "arm_live.vault").delete()
-        SecurePrefs.put(ArmLive.K_SHADOW, null)
+        SecurePrefs.put(ArmLive.K_SHADOW, null); SecurePrefs.put(ArmLive.K_SWITCHES, null)
         runBlocking { ArmLive.refresh() }
-        for (a in LiveMirror.ARMS) assertTrue(a.key, view().shadowOn(a.key))
+        for (a in LiveMirror.ARMS) { assertEquals(a.key, a.key == LiveMirror.SOLO_MIDDAY, view().shadowOn(a.key)); assertTrue(a.key, view().on(a.key)) }
         ArmLive.entered(ask(donchian, "fresh"))
-        assertTrue("nothing sent in shadow, with Live, AI trades and Trade live all on", kite.placed.isEmpty())
+        assertEquals("the entry and its stop", 2, kite.placed.size)
+        assertEquals(1, view().openReal.size); assertEquals(0, view().openShadow.size)
+    }
+
+    /** 30 Oct (migration): an arm Boss put in live shadow himself keeps it after the default changed; a restart keeps it too. */
+    @Test fun anArmBossPutInShadowStaysInShadowAfterTheNewDefault() {
+        runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false) }
+        ArmLive.wipe()
+        runBlocking { ArmLive.refresh() }
+        assertTrue(view().shadowOn(donchian))
+        assertFalse(view().shadowOn(com.optionslab.engine.orb.OovArm.SOURCE))
+        ArmLive.entered(ask(donchian, "kept"))
+        assertTrue("nothing sent for the arm Boss keeps in shadow", kite.placed.isEmpty())
         assertEquals(1, view().openShadow.size)
+    }
+
+    /**
+     * 30 Oct (Part C): for EVERY mirrored arm, with the app in Live, AI trades on and its own switch on, its entry reaches the broker
+     * door; with any ONE gate off - Paper, AI trades off, its Trade live off, the kill switch, its side's day stop, the paper-only
+     * period - nothing is sent. (The day lock, the loss limit, the account stop and the security check are refused by the same gate:
+     * their own tests.)
+     */
+    @Test fun everyArmReachesTheDoorWithEveryGateOnAndNothingGoesWithAnyOneGateOff() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        val arms = LiveMirror.ARMS.filter { it.key != LiveMirror.SOLO_MIDDAY }
+        val gates = listOf<Pair<String, (Boolean) -> Unit>>(
+            "Paper" to { off -> AutomationSupport.liveSettings(live = !off) },
+            "AI trades go live" to { off -> IraNewsTrades.paperFirst = off },
+            "its Trade live" to { off -> },                                      // per arm, below
+            "kill switch" to { off -> SecurePrefs.put("g.kill", off) },
+            "day stop" to { off -> runBlocking { if (off) { Strategies.stopForToday(false, false, log = false); Strategies.stopCommodities(sell = false, log = false) } else { Strategies.startAgain(log = false); Strategies.startCommoditiesAgain(log = false) } } },
+            "paper-only period" to { off -> val t = Market.today(); PaperOnly.resetForTest(if (off) com.optionslab.ira.PaperOnlyPeriod.Period(t.plusDays(3), "test", t) else null) },
+        )
+        var n = 0
+        for (spec in arms) for ((name, set) in gates) {
+            n++
+            val ref = "gate:${spec.key}:$name"
+            if (name == "its Trade live") runBlocking { ArmLive.setLive(spec.key, false, pinConfirmed = false) } else set(true)
+            try {
+                ArmLive.entered(ask(spec.key, ref))
+                assertTrue("${spec.key} with $name off: nothing sent", kite.placed.isEmpty())
+                assertFalse("${spec.key} with $name off: never at the door", heard.any { it == "door|${spec.key}|$ref" })
+                assertTrue("${spec.key} with $name off: no live trade", view().openReal.none { it.ref == ref })
+            } finally {
+                if (name == "its Trade live") runBlocking { ArmLive.setLive(spec.key, true, pinConfirmed = true, log = false) } else set(false)
+            }
+        }
+        assertEquals(arms.size * gates.size, n)
+        // Every gate back on: each intraday option arm's entry reaches the door and is sent (the carried and MCX arms: their own tests).
+        SecurePrefs.putAll(mapOf("g.trades" to 0, "k.maxOrders" to 500))
+        val intraday = arms.filter { it.exchange == "NFO" && it.product == "MIS" }
+        val cs = intraday.indices.map { other(it + 1) }
+        java.io.File(context.filesDir, "kite_instruments.json").delete()
+        runBlocking { Broker.instruments() }
+        for ((i, spec) in intraday.withIndex()) {
+            kite.requests.clear()
+            val ref = "open:${spec.key}"
+            ArmLive.entered(ask(spec.key, ref, c = cs[i].first))
+            assertTrue("${spec.key}: at the door - ${view().refused[spec.key]}", heard.any { it == "door|${spec.key}|$ref" })
+            assertTrue(spec.key, kite.placed.any { it.form["transaction_type"] == "BUY" && it.form["tag"] == "iraarm" })
+            kite.flat(); kite.orders.values.filter { it.working }.forEach { it.status = "CANCELLED" }
+        }
     }
 
     @Test fun inShadowNothingIsSentAndEachWouldBeTradeIsRecordedWithItsShadowPnl() {
@@ -429,13 +524,11 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     /**
-     * 21 Oct (review): FT3 buys Rs 5,000 of lots (9 lots here). Its live and its shadow trade are the Bot settings' lot cap (2,
-     * the default), never refused whole by the order gates. Only FT3 is cut ([LiveMirror.Spec.capLots]): another arm's over-cap
-     * trade stays refused.
+     * 30 Oct (Boss: "1 lot per arm entry, never more unless Boss sets it"): FT3 buys Rs 5,000 of lots on paper (9 lots here); its live
+     * and its shadow trade are 1 lot, said on its own lines. Every other arm is cut the same way (OOV's 9 paper lots go live as 1).
      */
-    @Test fun aManyLotPaperTicketIsMirroredAtTheLotCapInShadowAndLive() {
+    @Test fun aManyLotPaperTicketIsMirroredAtOneLotInShadowAndLive() {
         val ft3 = com.optionslab.engine.orb.Ft3Rules.SOURCE
-        assertEquals(2, AppSettings.load().guardMaxLots)
         val o1 = other(1)
         val (c1, c2) = o1.first to other(2).first
         java.io.File(context.filesDir, "kite_instruments.json").delete()          // the day's list read again, with them
@@ -444,51 +537,43 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.entered(ask(ft3, "ft3:sh", qty = 9 * 30, stop = null, limit = 201.0))
         assertTrue("nothing sent in shadow", kite.placed.isEmpty())
         val p = view().openShadow.singleOrNull() ?: error("not mirrored: ${view().notMirrored} ${view().log}")
-        assertEquals(60, p.qty); assertEquals(270, p.paperQty)
+        assertEquals(30, p.qty); assertEquals(270, p.paperQty)
         assertEquals("the -80% disaster stop of a close-judged arm", 40.0, p.stopTrigger!!, 0.05)
-        // Out of shadow (Boss's PIN): the live order is 2 lots, not 9.
+        // Out of shadow (Boss's PIN): the live order is 1 lot, not 9.
         runBlocking { ArmLive.setShadow(ft3, false, pinConfirmed = true, log = false) }
         ArmLive.entered(ask(ft3, "ft3:live", qty = 9 * 30, stop = null, limit = 201.0, c = c1))
         val o = kite.placed.singleOrNull { it.form["tag"] == com.optionslab.engine.orb.LiveMirror.TAG && it.form["transaction_type"] == "BUY" }
             ?: error("not placed: ${kite.placed.map { it.form }} ${view().notMirrored} ${view().refused}")
-        assertEquals("60", o.form["quantity"])
-        // Its -80% disaster stop rests for the live 60, and the cut is said on its own lines (shadow and live).
+        assertEquals("30", o.form["quantity"])
+        // Its -80% disaster stop rests for the live 30, and the cut is said on its own lines (shadow and live).
         val stop = kite.placed.single { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "SL" }
-        assertEquals("60", stop.form["quantity"])
+        assertEquals("30", stop.form["quantity"])
         val lines = view().log.filter { "FT3" in it }
-        assertTrue(lines.toString(), lines.count { "2 of the paper's 9 lots (your lot cap)" in it } == 2)
-        // The paper ticket sold: the live 60 are sold (the stop out first), never the paper's 270.
+        assertTrue(lines.toString(), lines.count { "1 of the paper's 9 lots (1 lot per arm entry live)" in it } == 2)
+        // The paper ticket sold: the live 30 are sold (the stop out first), never the paper's 270.
         watch()
         legs["ft3:live"] = ft3 to 0
         watch()
         val sell = kite.placed.single { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }
-        assertEquals("60", sell.form["quantity"])
+        assertEquals("30", sell.form["quantity"])
         assertEquals("flat", 0, kite.positions["NFO:${o1.second}:MIS"]?.first ?: 0)
         assertEquals("paper_exit", view().closed.single { it.ref == "ft3:live" }.why)
-        // Another arm is not cut: its 9 lots are refused whole by the account guard, as before (no live size is invented for it).
+        // Another arm is cut the same way: OOV's 9 paper lots are 1 lot live (in shadow here).
         val oov = com.optionslab.engine.orb.OovArm.SOURCE
         runBlocking { ArmLive.setShadow(oov, true, pinConfirmed = false) }
         ArmLive.entered(ask(oov, "oov:sh", qty = 9 * 30, stop = null, limit = 201.0, c = c2))
-        assertNull(view().openShadow.singleOrNull { it.ref == "oov:sh" })
-        val why = view().notMirrored.single { it.ref == "oov:sh" }.why
-        assertTrue(why, why.contains("9 lots (limit 2)"))
+        assertEquals(30, (view().openShadow.singleOrNull { it.ref == "oov:sh" } ?: error("${view().notMirrored}")).qty)
     }
 
-    /** 21 Oct (review): FT3 at or under the lot cap keeps its paper size with no cut words; with the cap off (0) it is all its lots. */
-    @Test fun ft3UnderTheCapIsItsPaperSizeAndWithTheCapOffAllItsLots() {
+    /** 30 Oct: a 1-lot paper trade is its own size with no cut words, whatever the Bot settings' lot cap. */
+    @Test fun aOneLotPaperTradeKeepsItsSizeWithNoCutWords() {
         val ft3 = com.optionslab.engine.orb.Ft3Rules.SOURCE
-        val c = other(3).first
         java.io.File(context.filesDir, "kite_instruments.json").delete()          // the day's list read again, with it
         runBlocking { Broker.instruments() }
         runBlocking { ArmLive.setShadow(ft3, true, pinConfirmed = false) }
-        ArmLive.entered(ask(ft3, "ft3:two", qty = 2 * 30, stop = null, limit = 201.0))
-        assertEquals(60, (view().openShadow.singleOrNull { it.ref == "ft3:two" } ?: error("${view().notMirrored}")).qty)
-        assertTrue(view().log.toString(), view().log.none { "lot cap" in it })
-        SecurePrefs.putAll(mapOf("g.lots" to 0))                                 // Bot settings: max lots "off"
-        assertEquals(0, AppSettings.load().guardMaxLots)
-        ArmLive.entered(ask(ft3, "ft3:off", qty = 9 * 30, stop = null, limit = 201.0, c = c))
-        assertEquals(270, (view().openShadow.singleOrNull { it.ref == "ft3:off" } ?: error("${view().notMirrored}")).qty)
-        assertTrue(view().log.toString(), view().log.none { "lot cap" in it })
+        ArmLive.entered(ask(ft3, "ft3:one", qty = 30, stop = null, limit = 201.0))
+        assertEquals(30, (view().openShadow.singleOrNull { it.ref == "ft3:one" } ?: error("${view().notMirrored}")).qty)
+        assertTrue(view().log.toString(), view().log.none { "lot per arm entry" in it })
         assertTrue("nothing sent in shadow", kite.placed.isEmpty())
     }
 
@@ -638,6 +723,7 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     @Test fun aPartSoldByHandShrinksTheRestingStopSoItNeverTurnsTheLongShort() {
+        ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(donchian, "hand", qty = 60))
         val sid = view().open.single().stopOrderId!!
         assertEquals(60, kite.order(sid).qty)
@@ -784,6 +870,7 @@ class ArmLiveTest : RobolectricTest() {
 
     @Test fun aPartPaperSaleAgainstAFiredGttCancelsItsOrderSellsThePartAndRestsANewStopForTheRest() {
         val ref = "pfired"
+        ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, ref, qty = 60))
         val gid = kite.gtts.keys.single()
         watch()
@@ -805,6 +892,7 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     @Test fun aWholeExitWhoseStopPartFilledSellsTheRestInTheSameLook() {
+        ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(donchian, "pf", qty = 60))
         val sid = view().open.single().stopOrderId!!
         watch()
@@ -818,6 +906,7 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     @Test fun aStopForLessThanTheTradeThatFillsLeavesTheRestWithANewStop() {
+        ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(donchian, "small", qty = 60))
         val sid = view().open.single().stopOrderId!!
         watch()
@@ -836,6 +925,7 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     @Test fun aFiredGttForLessThanTheTradeIsBookedOnceAndTheRestGetsANewGtt() {
+        ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "gsmall", qty = 60))
         val gid = kite.gtts.keys.single()
         watch()
@@ -985,6 +1075,7 @@ class ArmLiveTest : RobolectricTest() {
      * says otherwise); the last one closes the trade (the order book's average), so both kinds of outside close are covered.
      */
     @Test fun aPartClosedByHandIsBookedAtWhatZerodhaSaysItSoldFor() {
+        ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(donchian, "byhand", qty = 60))
         assertEquals("bought live", 60, held())
         watch()

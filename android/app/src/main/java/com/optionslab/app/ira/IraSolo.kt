@@ -47,6 +47,11 @@ import com.optionslab.ira.Market as IraMarket
  * Its own orders: this book's go to the paper account only, and it never offers its setups as trade ideas for approval. Its live
  * path ([com.optionslab.app.data.ArmLive]) starts in Shadow - it records what it would have sent and sends nothing - and, Solo being
  * Jarvis's, its Shadow cannot be turned off until [provenWhy] passes (review C5, 18 Oct); today it never does.
+ *
+ * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, Solo still makes its
+ * 12:00 decision and its pick is a would-be trade in the switched-off shadow ([com.optionslab.app.data.OffShadow], key
+ * [com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY]; [shadowEntry]) - no paper order, no live path, not in the forward test.
+ * Its live rules are unchanged.
  */
 internal object IraSolo {
     private const val KEY_ON = "jarvis.solo"
@@ -201,6 +206,8 @@ internal object IraSolo {
 
     /** The day Solo made its 12:00 decision (one a day), with the vault's generation (a wiped vault starts afresh). */
     @Volatile private var decided: Pair<Int, LocalDate>? = null
+    /** 30 Oct: the day Solo made its 12:00 decision while switched off (its would-be trade, [shadowEntry]); apart from [decided]. */
+    @Volatile private var shadowDecided: Pair<Int, LocalDate>? = null
     private fun generation(): Int = runCatching { com.optionslab.app.security.SecurePrefs.generationNow() }.getOrDefault(0)
 
     /** Each index's ATR14 for the day (read once a day; a failed read is tried again on the next pass). */
@@ -256,7 +263,7 @@ internal object IraSolo {
     /** Tests: forget the day's memory (ATR14s, listed expiries, the early reads, the decision and what Solo saw). */
     internal fun resetForTest() {
         synchronized(atrs) { atrs.clear() }
-        listed = null; prefetched = null; decided = null; watch = null
+        listed = null; prefetched = null; decided = null; shadowDecided = null; watch = null
         synchronized(dayLock) { dayKept = null }
     }
 
@@ -381,25 +388,30 @@ internal object IraSolo {
         refreshOn()
         // At most one Solo position: an open trade is always seen through to its exit, even after Solo is switched off.
         list.lastOrNull { !it.closed }?.let { manage(it, list, t); return }
-        if (!on) return
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off (by Boss, or by
+        // itself on the forward test), Solo still makes its 12:00 decision; the would-be entry goes to the switched-off shadow
+        // ([com.optionslab.app.data.OffShadow]) - no paper order, nothing to its live path, nothing counted in its forward test.
+        val shadow = !on
         prefetch(t)
         val today = t.toLocalDate()
         val tt = t.toLocalTime()
         // One decision a day, from 12:00 to 12:03 (the research's 3 minutes' slack); one trade a day, no re-entry.
         if (tt.isBefore(SoloMidday.DECIDE_AT) || !tt.isBefore(SoloMidday.LAST_ENTRY.plusMinutes(1))) return
-        if (decided == generation() to today || midday(list).any { it.day == today.toString() }) return
+        if ((if (shadow) shadowDecided else decided) == generation() to today || midday(list).any { it.day == today.toString() }) return
         // The app's guards (they let paper through): the kill switch, the day's loss breaker, the trade check (a read
         // failing is a no - fail closed).
         // (Each guard that holds the decision back is kept for Jarvis's words only; the gates themselves are exactly as before.)
+        // 30 Oct: the same guards hold a would-be trade back (the shadow shows what Solo really would have done); Jarvis's day
+        // record ([noteDay]) is Solo's own decisions only, so a switched-off pass leaves it alone.
         val s = AppSettings.load()
         if (s.guardKill || com.optionslab.app.data.LossBreaker.trippedToday()) {
-            noteDay { com.optionslab.ira.SoloDay.held(it, t, if (s.guardKill) com.optionslab.ira.SoloDay.KILL_SWITCH else com.optionslab.ira.SoloDay.LOSS_BREAKER) }
+            if (!shadow) noteDay { com.optionslab.ira.SoloDay.held(it, t, if (s.guardKill) com.optionslab.ira.SoloDay.KILL_SWITCH else com.optionslab.ira.SoloDay.LOSS_BREAKER) }
             return
         }
         val level = testCheck ?: runCatching { IraHub.tradeCheckFast().level }.getOrNull()
-        if (level == null) { noteDay { com.optionslab.ira.SoloDay.held(it, t, com.optionslab.ira.SoloDay.CHECK_UNREAD) }; return }
-        if (level == com.optionslab.ira.TradeCheck.Level.STOP) { noteDay { com.optionslab.ira.SoloDay.held(it, t, com.optionslab.ira.SoloDay.CHECK_STOP) }; return }
-        decide(t, list)
+        if (level == null) { if (!shadow) noteDay { com.optionslab.ira.SoloDay.held(it, t, com.optionslab.ira.SoloDay.CHECK_UNREAD) }; return }
+        if (level == com.optionslab.ira.TradeCheck.Level.STOP) { if (!shadow) noteDay { com.optionslab.ira.SoloDay.held(it, t, com.optionslab.ira.SoloDay.CHECK_STOP) }; return }
+        decide(t, list, shadow)
     }
 
     /**
@@ -422,25 +434,30 @@ internal object IraSolo {
             com.optionslab.ira.AutoSide.direction(if (s.call) "CE" else "PE", true), exposure())?.let { com.optionslab.ira.AutoSide.describe(it) }
     }.getOrElse { "the other automatic positions could not be read" }
 
-    /** The 12:00 decision: each index read, the strongest signal that may be taken bought on paper. */
-    private suspend fun decide(t: LocalDateTime, list: List<T>) {
+    /**
+     * The 12:00 decision: each index read, the strongest signal that may be taken bought on paper. 30 Oct: [shadow] (Solo switched
+     * off) - the same decision, its pick recorded in the switched-off shadow instead ([enter]); Jarvis's day record, the activity
+     * lines and the thinking are Solo's own trading only, so they are left alone.
+     */
+    private suspend fun decide(t: LocalDateTime, list: List<T>, shadow: Boolean = false) {
         val today = t.toLocalDate()
+        val say = { block: () -> Unit -> if (!shadow) block() }
         val decisions = MARKETS.map { m -> SoloMidday.signal(m.name, bars(m, t), runCatching { atr(m.name, today) }.getOrNull(), t) }
         // An index whose 11:59 minute (or ATR) is not in yet is waited for until 12:01; then Solo decides with what it has.
         val late = decisions.filter { it.why == "waiting_for_1159" || it.why == "no_atr" }
         if (late.isNotEmpty() && t.toLocalTime().isBefore(SoloMidday.DECIDE_AT.plusMinutes(1))) {
-            noteDay { com.optionslab.ira.SoloDay.waited(it, t, late.map { d -> d.underlying }) }
+            say { noteDay { com.optionslab.ira.SoloDay.waited(it, t, late.map { d -> d.underlying }) } }
             return
         }
-        decided = generation() to today
+        // 30 Oct: a switched-off decision is kept apart - Boss switching Solo on before 12:03 still gets its own decision.
+        if (shadow) shadowDecided = generation() to today else decided = generation() to today
         // Each index's read, kept for Jarvis's words ([com.optionslab.ira.SoloDay]); nothing reads it back to decide.
-        noteDay { com.optionslab.ira.SoloDay.decided(it, t, decisions) }
+        say { noteDay { com.optionslab.ira.SoloDay.decided(it, t, decisions) } }
         val signals = decisions.mapNotNull { it.signal }
         val none = decisions.filter { it.signal == null }.map { SoloMidday.skip(it) }
         if (signals.isEmpty()) {
             val line = "No Solo trade today: " + none.joinToString("; ") + "."
-            watch = t to line
-            IraActivity.add(line)
+            say { watch = t to line; IraActivity.add(line) }
             return
         }
         // The strongest that may be taken; one that cannot be bought (no strike, no price, a thin strike, no fill) passes
@@ -452,26 +469,29 @@ internal object IraSolo {
         var bought: String? = null
         try { while (true) {
             val c = SoloMidday.pick(signals) { s ->
-                excluded[s.underlying] ?: SoloMidday.gate(expiryToday(IraMarket.valueOf(s.underlying), today), conflict(s))
+                // 30 Oct (review): in shadow no one-index claim is taken (a would-be trade must never hold back a real entry).
+                excluded[s.underlying] ?: SoloMidday.gate(expiryToday(IraMarket.valueOf(s.underlying), today), if (shadow) null else conflict(s))
             }
-            c.skipped.forEach { (x, why) -> noteDay { com.optionslab.ira.SoloDay.passed(it, t, x.underlying, why) } }
+            c.skipped.forEach { (x, why) -> say { noteDay { com.optionslab.ira.SoloDay.passed(it, t, x.underlying, why) } } }
             val s = c.taken
             if (s == null) {
                 val line = "No Solo trade today: " + (c.skipped.map { (x, why) -> SoloMidday.passedOver(x, why, null) } + none).joinToString("; ") + "."
-                watch = t to line
-                IraActivity.add(line)
-                c.skipped.forEach { (x, why) -> think(x, false, listOf(SoloMidday.passedOver(x, why, null))) }
+                say {
+                    watch = t to line
+                    IraActivity.add(line)
+                    c.skipped.forEach { (x, why) -> think(x, false, listOf(SoloMidday.passedOver(x, why, null))) }
+                }
                 return
             }
-            val why = enter(s, signals, c.skipped, list, t) ?: run { bought = s.underlying; return }
+            // 30 Oct: a would-be trade (switched off) holds no index: its claim is dropped below like any entry not made.
+            val why = enter(s, signals, c.skipped, list, t, shadow) ?: run { if (!shadow) bought = s.underlying; return }
             if (why == LATE) {
                 val line = "No Solo trade today: the 12:00-12:03 entry window closed before the order could go in."
-                watch = t to line
-                IraActivity.add(line)
+                say { watch = t to line; IraActivity.add(line) }
                 return
             }
             excluded[s.underlying] = why
-            noteDay { com.optionslab.ira.SoloDay.passed(it, t, s.underlying, why) }
+            say { noteDay { com.optionslab.ira.SoloDay.passed(it, t, s.underlying, why) } }
         } } finally {
             for (u in SoloMidday.UNDERLYINGS) if (u != bought)
                 runCatching { com.optionslab.app.data.AutoExposure.release(com.optionslab.app.data.AutoExposure.Source.SOLO.name, u) }
@@ -487,10 +507,12 @@ internal object IraSolo {
 
     /**
      * Buys [s] on paper: null when bought, [LATE] when the entry window closed first, else why not (the next strongest is
-     * then tried).
+     * then tried). 30 Oct: [shadow] (Solo switched off) - the same strike, price and thin-strike checks, then the would-be buy is
+     * handed to the switched-off shadow ([shadowEntry]) before any order step: null once handed (recorded or not), never a paper
+     * order, never [com.optionslab.app.data.ArmLive].
      */
     private suspend fun enter(s: SoloMidday.Signal, signals: List<SoloMidday.Signal>, skipped: List<Pair<SoloMidday.Signal, String>>,
-                              list: List<T>, t: LocalDateTime): String? {
+                              list: List<T>, t: LocalDateTime, shadow: Boolean = false): String? {
         val today = t.toLocalDate()
         val listed = expiries(today)?.get(s.underlying).orEmpty()
         // The nearest expiry (never today's: Solo does not trade an index on its expiry day).
@@ -502,10 +524,11 @@ internal object IraSolo {
         var why = "no ${s.underlying} strike near ${s.strike} is listed"
         val held = runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.map { it.symbol }.toSet() }.getOrNull()
             ?: return "the paper account could not be read"
-        // The order flow at this decision (9 Oct; paper only): logged; under CONFIRM skipped unless the flow agrees.
-        val flow = com.optionslab.app.data.FlowGate.gate("solo", s.underlying, if (s.call) 1 else -1, false,
+        // The order flow at this decision (9 Oct; paper only): logged; under CONFIRM skipped unless the flow agrees. 30 Oct: not
+        // asked for a would-be trade (it logs each decision as a real entry's; [shadow]).
+        val flow = if (shadow) null else com.optionslab.app.data.FlowGate.gate("solo", s.underlying, if (s.call) 1 else -1, false,
             t.withSecond(0).withNano(0).toString(), right.name)    // (the strike is chosen below; no book logged)
-        if (flow.skip) return flow.pausedWhy ?: "the order flow did not agree (CONFIRM)"
+        if (flow != null && flow.skip) return flow.pausedWhy ?: "the order flow did not agree (CONFIRM)"
         for (k in SoloMidday.strikesToTry(s.underlying, s.side, s.index)) {
             val c = Paper.contractFor(s.underlying, expiry, k.toDouble(), right) ?: continue
             // Boss's own paper position in this contract is never mixed with Solo's (its exit would touch it).
@@ -516,17 +539,24 @@ internal object IraSolo {
             if (thin != null) {
                 why = thin
                 if (thinFirst == null) thinFirst = "${c.symbol}: $thin"
-                IraActivity.add("Solo skipped ${c.symbol}: $thin")
-                noteDay { com.optionslab.ira.SoloDay.thin(it, t, s.underlying, c.symbol, thin) }
-                runCatching { IraThinking.add(com.optionslab.ira.Thinking.soloThin(IraThinking.now(), IraMarket.valueOf(s.underlying), s.call, thin)) }
+                // 30 Oct: said for Solo's own trading only (a switched-off pass's thin strike is not Solo's day).
+                if (!shadow) {
+                    IraActivity.add("Solo skipped ${c.symbol}: $thin")
+                    noteDay { com.optionslab.ira.SoloDay.thin(it, t, s.underlying, c.symbol, thin) }
+                    runCatching { IraThinking.add(com.optionslab.ira.Thinking.soloThin(IraThinking.now(), IraMarket.valueOf(s.underlying), s.call, thin)) }
+                }
                 continue
             }
             // The decision was made at [t]; the reads since take time: never an order after 12:03.
             val clock = runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrDefault(t)
             if (!SoloMidday.mayPlace(today, if (clock.isAfter(t)) clock else t)) {
-                noteDay { com.optionslab.ira.SoloDay.late(it, if (clock.isAfter(t)) clock else t) }
+                if (!shadow) noteDay { com.optionslab.ira.SoloDay.late(it, if (clock.isAfter(t)) clock else t) }
                 return LATE
             }
+            // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, the pick is a
+            // would-be trade in the switched-off shadow - placed after the contract, its price and the thin-strike check, and before
+            // every order step (no paper buy, no live path, nothing in the forward test).
+            if (shadow) { shadowEntry(s, c, signals.size, today); return null }
             runCatching { com.optionslab.app.data.LiveRecorder.signal("Solo", c.symbol, s.underlying, right.name, q.ltp, paper = true) }
             // PAPER ONLY: the paper account's MARKET buy, 1 lot - there is no Zerodha path here.
             val r = Paper.place(c, "BUY", SoloMidday.LOTS, "MARKET", "MIS", null, null, q, auto = "Jarvis Solo")
@@ -536,7 +566,7 @@ internal object IraSolo {
                 r.orderId?.let { runCatching { Paper.cancel(it) } }
                 return "the paper order for ${c.symbol} did not fill"
             }
-            com.optionslab.app.data.FlowGate.taken(flow, r.orderId)
+            flow?.let { com.optionslab.app.data.FlowGate.taken(it, r.orderId) }
             val itm = kotlin.math.abs(SoloMidday.atm(s.underlying, s.index) - k) / SoloMidday.step(s.underlying)
             val n = signals.size
             val seen = SoloMidday.why(s, n)
@@ -575,13 +605,39 @@ internal object IraSolo {
             IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo · entry", r.orderId) }
             return null
         }
-        // Every strike near it thin: the index is passed over (counted and said; the next strongest is tried).
-        if (thinFirst != null) {
+        // Every strike near it thin: the index is passed over (counted and said; the next strongest is tried). 30 Oct: Solo's own
+        // trading only (the counts are its real strikes').
+        if (thinFirst != null && !shadow) {
             val n = countThin(moved = false).second
             IraActivity.add("Solo passed ${s.underlying} over: its strikes near ${s.strike} were thin (an index passed over $n time${if (n == 1) "" else "s"} so far).")
         }
         return why
     }
+
+    /**
+     * 30 Oct: Solo switched off - its 12:00 pick [s] on [c] handed to the switched-off shadow ([com.optionslab.app.data.OffShadow]):
+     * priced there (the ask plus the half-spread), kept and closed by Solo's own exits as the shadow's rules can hold them:
+     * - the index stop [SoloMidday.Signal.stop] (0.3 ATR against the 12:00 price) as the shadow's index stop. Solo's stop is a
+     *   1-MINUTE CLOSE through it; the shadow judges the index's prices and extremes since its last look, so it can stop out on a
+     *   wick Solo would have sat through (the nearest it allows: stricter, never looser);
+     * - 14:30 ([SoloMidday.EXIT]) as its time exit;
+     * - the breakeven lock (once the index has gone 75% of the way to 2R) has no place in the shadow's rules (a lock on the
+     *   underlying): not mapped, so a would-be trade that turned after that point is held to its index stop or 14:30;
+     * - no premium stop or target (Solo has none: Boss's 30/60 rule is deliberately not applied to Solo).
+     * Nothing is placed and its live path ([com.optionslab.app.data.ArmLive]) is never told. Said in Jarvis's activity.
+     */
+    private suspend fun shadowEntry(s: SoloMidday.Signal, c: Paper.Contract, n: Int, day: LocalDate) {
+        val said = runCatching {
+            com.optionslab.app.data.OffShadow.enter(com.optionslab.app.data.OffShadow.Ask(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY, SHADOW_LABEL,
+                "${s.underlying}|$day", c, if (s.call) 1 else -1,
+                com.optionslab.engine.orb.OffShadow.Exits(indexStop = s.stop, exitAt = SoloMidday.EXIT),
+                SoloMidday.why(s, n) + " (signal on the index)", lots = SoloMidday.LOTS))
+        }.getOrElse { e -> "shadow: not recorded (${e.javaClass.simpleName})" }
+        IraActivity.add("Solo (midday) is switched off: $said")
+    }
+
+    /** Solo (midday)'s label in the switched-off shadow (LiveMirror.ARMS' name for [com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY]). */
+    internal const val SHADOW_LABEL = "Solo (midday)"
 
     private suspend fun manage(t: T, list: List<T>, now: LocalDateTime) {
         val today = now.toLocalDate()
@@ -817,7 +873,10 @@ internal object IraSolo {
             "or FINNIFTY) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's " +
             "range - the strongest one, 4 strikes in the money, one trade a day, never on that index's expiry day; out on a 1-minute close " +
             "0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30."
-        else "Solo is off, Boss: switch it on in Jarvis settings (Solo (midday), paper only, not proven)."
+        // 30 Oct: off runs in shadow (would-be trades recorded, nothing bought): its shadow's record said.
+        else "Solo is off, Boss: it runs in shadow (its 12:00 pick recorded, nothing bought) - " +
+            runCatching { com.optionslab.app.data.OffShadow.line(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY) }.getOrDefault("no shadow record") +
+            ". Switch it on in Jarvis settings (Solo (midday), paper only, not proven)."
         val seen = watch?.takeIf { on && it.first.toLocalDate() == com.optionslab.app.data.Market.today() }?.let { (at, w) ->
             " At %02d:%02d: %s".format(java.util.Locale.ENGLISH, at.hour, at.minute, w.trimEnd('.')) + "."
         } ?: ""

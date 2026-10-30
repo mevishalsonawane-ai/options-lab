@@ -120,6 +120,8 @@ object PersonalStores {
         // 28 Oct: S5 Trail's paper book.
         Entry("S5Arm", files = { com.optionslab.app.data.S5Arm.filesForErase() }, holds = { com.optionslab.app.data.S5Arm.holdsForErase() }) { com.optionslab.app.data.S5Arm.wipeForErase() },
         Entry("CisdArm", files = { com.optionslab.app.data.CisdArm.filesForErase() }, holds = { com.optionslab.app.data.CisdArm.holdsForErase() }) { com.optionslab.app.data.CisdArm.wipeForErase() },
+        // 30 Oct: the switched-off shadow's would-be trades.
+        Entry("OffShadow", files = { com.optionslab.app.data.OffShadow.filesForErase() }, holds = { com.optionslab.app.data.OffShadow.holdsForErase() }) { com.optionslab.app.data.OffShadow.wipeForErase() },
         Entry("TradeManagerHost", files = { com.optionslab.app.data.TradeManagerHost.filesForErase() }, holds = { com.optionslab.app.data.TradeManagerHost.holdsForErase() }) { com.optionslab.app.data.TradeManagerHost.wipe() },
         Entry("TrendWatchHost", files = { com.optionslab.app.data.TrendWatchHost.filesForErase() }, holds = { com.optionslab.app.data.TrendWatchHost.holdsForErase() }) { com.optionslab.app.data.TrendWatchHost.wipe() },
         Entry("NightArm", files = { com.optionslab.app.data.NightArm.filesForErase() }, holds = { com.optionslab.app.data.NightArm.holdsForErase() }) { com.optionslab.app.data.NightArm.wipe() },

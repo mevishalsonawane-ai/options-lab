@@ -35,7 +35,8 @@ class EntryDoorTest : RobolectricTest() {
     private fun order(tag: String = "iraorb", sym: String = "NIFTY26OCT24500CE") =
         Kite.Order(sym, Kite.Side.BUY, 75, 75, "MIS", "MARKET", null, 0.05, "NFO", tag)
 
-    @Before fun up() { kite = FakeKite(); kite.login() }
+    // 30 Oct: the app in Live with "AI trades go live" (as going Live with the PIN sets it) - the door now asks both of an ORB entry.
+    @Before fun up() { kite = FakeKite(); kite.login(); com.optionslab.app.testing.AutomationSupport.liveSettings() }
     @After fun down() { kite.close(); assertEquals(emptyList<String>(), NetworkGuard.blocked.toList()) }
 
     @Test fun theKillSwitchFlippedBeforeTheDoorStopsAnEntryButNeverAnExit() = runBlocking {

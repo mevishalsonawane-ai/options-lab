@@ -72,7 +72,18 @@ object WhatsNew {
     val ENTRIES: List<Entry> = listOf(
         // 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): under 29 Oct's CISD entry.
         // 29 Oct (Boss: "Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward test too"): under 30 Oct's split stop.
-        // 30 Oct (Boss: "Make stop bot different for index and comodities"): newest of all.
+        // 30 Oct (Boss: "Make stop bot different for index and comodities"): under the every-arm-live entry.
+        // 30 Oct (Boss: "make all arms as live ... If i switch any arm off, it should be always run in shadow"): newest of all.
+        Entry("2026-10-30-every-arm-live-off-shadow", OCT30, "Every strategy can trade live; off means shadow",
+            "Every strategy can trade live once you go Live. " +
+                "Each still needs your PIN, AI trades go live, its own Trade live switch and every guard. " +
+                "Live shadow now starts off, and each live entry is 1 lot. " +
+                "S5 Trail and CISD + network join the live path, still labelled your exceptions. " +
+                "Switching one off keeps it running in shadow, so you can watch it. " +
+                "An arm that is off never buys, on paper or live. " +
+                "Its would-be trades are priced with charges and shown on its row, marked shadow (switched off). " +
+                "Switching off never needs the PIN; R51 Donchian is back on, as you asked.",
+            "Home → Strategies → each arm's row; Settings → Zerodha → Arms live; the change timeline"),
         Entry("2026-10-30-stop-index-and-commodities", OCT30, "Stop the index bots and the commodity bots apart",
             "The main stop button now reads Stop index bots. " +
                 "It stops NSE and BSE trading only: every index arm, strategy, Pine script and Jarvis's trades. " +

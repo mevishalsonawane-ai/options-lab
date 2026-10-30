@@ -102,7 +102,7 @@ class Ft3RowTest {
         val asked = ArrayList<Boolean>()
         home(off, onArm = { asked += it })
         compose.waitForIdle()
-        compose.onNodeWithText("OFF").assertExists()
+        compose.onNodeWithText("OFF · SHADOW").assertExists()
         compose.onNodeWithContentDescription("On paper: switch ${Ft3Rules.LABEL}").assertIsOff().performClick()
         compose.waitForIdle()
         assertEquals(listOf(true), asked)

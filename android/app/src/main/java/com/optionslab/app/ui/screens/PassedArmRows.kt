@@ -57,7 +57,7 @@ internal fun PassedArmRows() {
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { PassedArmsHost.refresh() } } }
     PassedArmsHost.SOURCES.forEach { s ->
-        PassedArmRowContent(s, v, onRecordOnly = { scope.launch(Dispatchers.IO) { runCatching { PassedArmsHost.setMode(s, PassedArmsHost.Mode.RECORD) } } }) { on ->
+        PassedArmRowContent(s, v) { on ->
             scope.launch(Dispatchers.IO) { runCatching { PassedArmsHost.setArmed(s, on) } }
         }
     }
@@ -79,14 +79,14 @@ internal fun passedRecord(source: String): String = when (source) {
     else -> Solo2.RECORD
 }
 
-/** 19 Oct: a passed arm set to record only, on its row (Boss: "Yes, keep only breadth donchain"). */
+/** 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): an arm that is off, on its row. */
 internal val RECORD_ONLY_ROW = com.optionslab.ira.PassedArmsTalk.RECORD_ONLY_WORDS.replaceFirstChar { it.uppercase() }
 
 /** The short status line: on / record only / off, paper, today's state. */
 internal fun passedStatusLine(source: String, v: PassedArmsHost.View): String {
     val t = v.todayOf(source)
     val state = when {
-        v.paused[source] != null && !v.recording(source) -> "switched itself off (forward test)"
+        v.paused[source] != null && !v.on(source) && t.none { it.open } -> "switched itself off (forward test)"
         // 19 Oct: what it "holds" in record only is a would-be trade, said so.
         t.any { it.open } -> "holding ${t.count { it.open }}" + t.count { it.open && it.shadow != null }.let { n -> if (n > 0) " ($n would-be)" else "" }
         t.isNotEmpty() -> "${t.size} trade${if (t.size == 1) "" else "s"} today, ${rs(v.todayPnl(source))}"
@@ -94,7 +94,7 @@ internal fun passedStatusLine(source: String, v: PassedArmsHost.View): String {
     }
     // 16 Oct (R73 review): breaks R51's Supertrend filter skipped today because it could not judge them, said on the row.
     val unjudged = if (source == DonchianArm.SOURCE && v.stOn && v.stUnjudged > 0) " · ${v.stUnjudged} not judged by Supertrend" else ""
-    return (if (v.on(source)) "On · paper" else if (v.recording(source)) RECORD_ONLY_ROW else "Off") + " · " + state + unjudged
+    return (if (v.on(source)) "On · paper + its live switch" else RECORD_ONLY_ROW) + " · " + state + unjudged
 }
 
 /** The key numbers: its own record, the index reported apart, the forward test's progress. */
@@ -124,9 +124,10 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     (if (source == Solo2.SOURCE) Solo2.bar() else PassedArms.ForwardBar.BAR) + ".",
     v.forwardLine(source) + ".",
     v.paused[source]?.let { "It switched itself off: $it. Switching it back on is your choice." },
-    // 19 Oct: what record only means, while it is.
+    // 30 Oct: what off means now (shadow).
     if (v.recording(source)) "$RECORD_ONLY_ROW: its signals are still decided on the index; each is kept as a would-be trade, closed by its own " +
-        "exits and counted apart. Nothing is bought, never live." else null,
+        "exits and counted apart. Nothing is bought, on paper or live." else
+        "On: it buys on paper, and live only through your live gates (Live with your PIN, AI trades go live, its own Trade live switch).",
 ) + (if (source == Solo2.SOURCE) soloDecisions(v) else emptyList())
 
 /**
@@ -139,11 +140,11 @@ internal fun soloDecisions(v: PassedArmsHost.View): List<String> =
     else listOf("Today's decisions (its score against its bar; the words say what moved the score most):") + v.scores.map { "• $it." }) + (Solo2.CONTEXT_NOTE + ".")
 
 /**
- * One arm's compact row from plain state ([v]) and its switch callback. 19 Oct: on / record only / off - the switch is on or off,
- * the "Record only" choice beside it ([onRecordOnly]) keeps its breaks as would-be trades with nothing bought; tapped again, off.
+ * One arm's compact row from plain state ([v]) and its switch callback. 30 Oct (Boss: "dont keep any in paper only or record only"):
+ * on or off - off runs in shadow (its breaks kept as would-be trades, nothing bought), so the 19 Oct "Record only" choice is gone.
  */
 @Composable
-internal fun PassedArmRowContent(source: String, v: PassedArmsHost.View, onRecordOnly: () -> Unit = {}, onArm: (Boolean) -> Unit) {
+internal fun PassedArmRowContent(source: String, v: PassedArmsHost.View, onArm: (Boolean) -> Unit) {
     val p = LocalPalette.current
     val label = PassedArmsHost.label(source)
     val on = v.on(source)
@@ -154,13 +155,6 @@ internal fun PassedArmRowContent(source: String, v: PassedArmsHost.View, onRecor
             ExplainedName(label, listOf(passedNumbersLine(source, v) + ".") + passedExplanation(source, v))
             Text(keepNumbersWhole(passedStatusLine(source, v)), style = Type.bodySmall.copy(color = if (on) p.verdigris else p.inkFaint, fontSize = 12.sp))
         }
-        // 19 Oct (Boss: "Yes, keep only breadth donchain"): the third state. Picked: shown ticked; tapped again: off. The switch on leaves it.
-        val rec = v.recording(source)
-        Text(if (rec) "✓ Record only" else "Record only",
-            modifier = Modifier.semantics { contentDescription = "Record only, nothing bought: $label" }
-                .toggleable(value = rec, role = Role.Checkbox) { x -> if (x) onRecordOnly() else onArm(false) }
-                .heightIn(min = 48.dp).padding(horizontal = 8.dp, vertical = 14.dp),
-            style = Type.bodySmall.copy(color = if (rec) p.verdigris else p.inkFaint, fontSize = 12.sp, fontWeight = if (rec) FontWeight.SemiBold else FontWeight.Normal))
         Switch(
             modifier = Modifier.semantics { contentDescription = "Paper only: switch $label" },
             checked = on,

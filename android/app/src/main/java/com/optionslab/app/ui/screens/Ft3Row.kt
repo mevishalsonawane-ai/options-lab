@@ -73,7 +73,7 @@ internal fun Ft3RowContent(v: Ft3Arm.View, onArm: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             ExplainedName(Ft3Rules.LABEL, ft3Explanation(v), extra = { Ft3Tickets(v) })
-            Text(if (v.armed) "ON · PAPER · LIVE THE STANDARD WAY" else "OFF", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint,
+            Text(if (v.armed) "ON · PAPER · LIVE THE STANDARD WAY" else "OFF · SHADOW", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint,
                 fontSize = 10.sp, fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
             if (v.open.isNotEmpty()) RowBadge("HOLDING ${v.open.size} · PAPER", p.verdigris, Modifier.padding(top = 2.dp))
             Text(keepNumbersWhole(ft3PnlLine(v)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))

@@ -682,6 +682,10 @@ object ArmLive {
     /** The account stop rule's refusal when its record could not be read (final review F3). */
     internal const val ACCOUNT_UNCHECKED = "the account stop could not be checked"
 
+    /** TEST ONLY: the live lot cap in place of [LiveMirror.liveLotCap] (0: none), for the multi-lot exit tests. Debug builds only. */
+    @Volatile internal var testLotCap: Int? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
     /** TEST ONLY: the phone's security check fails to run (final review F3). Debug builds only. */
     @Volatile internal var testSecurityFails: Boolean = false
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
@@ -765,10 +769,9 @@ object ArmLive {
         LiveMirror.tooLate(now(), ins.exchange, spec.product, a.contract.expiry)?.let { notMirrored(a, it); return@withLock }
         val lots = LiveMirror.lots(a.paperQty, a.contract.lotSize)
         val s = AppSettings.load()
-        // 21 Oct (review): an arm with [LiveMirror.Spec.capLots] (FT3: Rs 5,000 of a Rs 6-10 option, 3-41 lots by index, which the
-        // order gates would refuse whole) goes live at the Bot settings' lot cap (all its lots with the cap off), said on its own
-        // entry line; every other arm keeps its paper lots.
-        val qty = LiveMirror.liveQty(lots, ins.lot, if (spec.capLots) s.guardMaxLots else 0)
+        // 30 Oct (Boss: "1 lot per arm entry, never more unless Boss sets it"): every arm goes live at 1 lot ([LiveMirror.liveLotCap]),
+        // said on its own entry line - except ntfy alerts, whose lots are Boss's own setting. The order gates still apply to all.
+        val qty = LiveMirror.liveQty(lots, ins.lot, testLotCap ?: LiveMirror.liveLotCap(spec))
         if (qty <= 0) { notMirrored(a, "the paper trade is under one lot"); return@withLock }
         val cut = LiveMirror.cutWords(lots, qty, ins.lot)
         val qkey = "${ins.exchange}:${ins.symbol}"
@@ -807,9 +810,11 @@ object ArmLive {
             notMirrored(a, "not logged in to Zerodha today"); return@withLock
         } catch (e: Exception) {
             if (Broker.definite(e)) { notMirrored(a, e.message ?: "Zerodha refused the order"); return@withLock }
-            // The answer was lost, not necessarily the order: look before calling it unsent.
-            try { Broker.findRecentRetrying(o, known) ?: run { notMirrored(a, "${e.message}; no matching order at Zerodha"); return@withLock } }
-            catch (_: Exception) { null }
+            // The answer was lost, not necessarily the order: look before calling it unsent. 30 Oct (deep review): an order book that
+            // does not show it yet is not proof it was never placed (the book can trail the POST) - the entry is held as UNCONFIRMED
+            // with no order id, so [settle] keeps looking for it by its tag for [UNCONFIRMED_GRACE_MS] before dropping it, and a filled
+            // order is never left at Zerodha with no stop and no watch.
+            try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }
         }
         id?.let { runCatching { Strategies.tagOwner("kite:$it", "${spec.label} · live entry") } }
         var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
@@ -832,12 +837,26 @@ object ArmLive {
         var p = base.copy(entryOrderId = id, qty = f.filled, entryQty = f.filled, entry = fill, heldSeen = false,
             charges = charge(side.name, fill, f.filled, ins.exchange, ins.symbol, ins.multiplier))
         val (stop, kind) = firstStop(spec, p)
-        p = p.copy(stopKind = kind)
-        // The stop rests at once, on the paper trade's level on this fill (or the safety / disaster stop).
-        p = restStop(p, stop, ltp = fill)
+        p = p.copy(stopKind = kind, stopTrigger = stop)
+        // 30 Oct (deep review): the filled trade is WRITTEN before its stop is rested, so a process death in between still finds it
+        // after the restart (watched first, its stop rested by the look: PLACE_STOP) - before, a death there left a live position
+        // nothing knew of. While its stop is being rested the looks leave THIS trade alone ([resting]: no second stop, no exit that
+        // would miss the stop just placed); every other live trade is looked at as usual.
+        resting += a.ref
+        p = try {
+            lock.withLock { val b = book(); b.positions += p; save(b) }
+            // The stop rests at once, on the paper trade's level on this fill (or the safety / disaster stop).
+            val rested = restStop(p, stop, ltp = fill)
+            lock.withLock {
+                val b = book()
+                val i = b.positions.indexOfFirst { it.ref == a.ref && it.open && !it.shadow }
+                if (i >= 0) b.positions[i] = rested else b.positions += rested
+                save(b)
+            }
+            rested
+        } finally { resting -= a.ref }
         lock.withLock {
             val b = book()
-            b.positions += p
             b.refused.remove(a.key)
             line(b, "%s: %s %s %d @ %.2f live%s%s".format(Locale.ENGLISH, spec.label, if (p.side > 0) "bought" else "sold", ins.symbol, p.qty, fill, cut,
                 p.stopTrigger?.let { " · %s %.2f %s".format(Locale.ENGLISH, stopWords(p), it, if (p.stopOrderId != null) "at Zerodha" else "watched by the app (not rested yet)") }
@@ -1268,8 +1287,34 @@ object ArmLive {
         return Triple(q, sell, why)
     }
 
+    /** 30 Oct: the trades whose first stop an entry is resting right now ([enterNow]): the looks leave them alone meanwhile. */
+    private val resting: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** 30 Oct (deep review): when each lost-reply entry was last searched for at Zerodha (ref -> ms): at most every [SETTLE_EVERY_MS]. */
+    private val settleAsked = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val SETTLE_EVERY_MS = 10_000L
+    /** 30 Oct (review): a lost-reply entry is dropped only after the grace AND this many searches that did not find it. */
+    private const val SETTLE_TRIES = 3
+    private val settleTries = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+    /**
+     * Whether a lost-reply entry ([Pos.unconfirmed] with no order id) is searched for at Zerodha on this look: never on a stream look
+     * (every tick: it would spend the order book's rate the exits need), never while another entry is in flight (its order could be
+     * taken for this one's), and at most every [SETTLE_EVERY_MS].
+     */
+    private fun settleNow(p: Pos, stream: Boolean): Boolean {
+        if (p.entryOrderId != null) return true
+        if (stream || entryLock.isLocked) return false
+        val nowMs = System.currentTimeMillis()
+        val last = settleAsked[p.ref]
+        if (last != null && nowMs - last < SETTLE_EVERY_MS) return false
+        settleAsked[p.ref] = nowMs
+        if (settleAsked.size > 200) settleAsked.clear()
+        return true
+    }
+
     private suspend fun look(stream: Boolean) {
-        val open = lock.withLock { book().positions.filter { it.open && !it.shadow }.toList() }
+        val open = lock.withLock { book().positions.filter { it.open && !it.shadow && it.ref !in resting }.toList() }
         if (open.isEmpty()) return
         if (!Broker.loggedIn) { waitingForLogin(open, stream); return }
         val t = now()
@@ -1308,7 +1353,7 @@ object ArmLive {
         // 1. Each trade's own news: an unconfirmed entry settled; its stop filled, refused or gone.
         for (p0 in open) {
             try {
-                if (p0.unconfirmed) { set(p0, listOfNotNull(settle(p0))); continue }
+                if (p0.unconfirmed) { if (settleNow(p0, stream)) set(p0, listOfNotNull(settle(p0))); continue }
                 var p = p0
                 val so = p.slId?.let { orders[it] }
                 val g = p.gttId?.let { gtts?.get(it) }
@@ -1644,6 +1689,13 @@ object ArmLive {
         return out
     }
 
+    /** 30 Oct (deep review): how long an entry with a lost reply and no order found is kept unconfirmed before it is dropped. */
+    internal const val UNCONFIRMED_GRACE_MS = 3 * 60_000L
+
+    /** Whether an unconfirmed entry made at [entryTime] is still within [UNCONFIRMED_GRACE_MS] at [now]. */
+    internal fun unconfirmedWaits(entryTime: LocalDateTime, now: LocalDateTime): Boolean =
+        java.time.Duration.between(entryTime, now).toMillis() < UNCONFIRMED_GRACE_MS
+
     /** An entry Zerodha had not confirmed: settled from the order book (what filled, with its stop), or dropped (nothing filled). */
     private suspend fun settle(p: Pos): Pos? {
         val spec = LiveMirror.spec(p.key)
@@ -1666,7 +1718,14 @@ object ArmLive {
         }
         val side = if (p.side > 0) "BUY" else "SELL"
         val oid = p.entryOrderId ?: run {
-            val row = runCatching { Broker.latestTagged(p.symbol, side, LiveMirror.TAG, p.entryTime.minusMinutes(1), known()) }.getOrElse { return p } ?: return null
+            // 30 Oct (deep review): not found yet - kept (unconfirmed, no second entry meanwhile) for [UNCONFIRMED_GRACE_MS] from its
+            // entry, then dropped with Boss told; before, one read that missed it dropped it at once.
+            val row = runCatching { Broker.latestTagged(p.symbol, side, LiveMirror.TAG, p.entryTime.minusMinutes(1), known()) }.getOrElse { return p }
+                ?: return if (unconfirmedWaits(p.entryTime, now()) || (settleTries.merge(p.ref, 1, Int::plus) ?: 1) < SETTLE_TRIES) p else null.also {
+                    settleTries.remove(p.ref)
+                    com.optionslab.app.work.Alerts.error("${p.label}: no live order for ${p.symbol} was found at Zerodha after its reply was lost; " +
+                        "it is treated as never placed. Check Zerodha's order book.", WHO)
+                }
             runCatching { Strategies.tagOwner("kite:${row.id}", "${p.label} · live entry") }
             row.id
         }

@@ -67,8 +67,8 @@ internal fun NightRowContent(v: NightArm.View, onArm: (Boolean) -> Unit) {
                 Spacer(Modifier.width(8.dp))
                 val (label, color) = when {
                     v.open.isNotEmpty() -> "HOLDING OVERNIGHT · PAPER" to p.verdigris
-                    v.armed -> "ARMED · PAPER ONLY" to p.amber
-                    else -> "OFF" to p.inkFaint
+                    v.armed -> "ARMED · PAPER + ITS LIVE SWITCH" to p.amber
+                    else -> "OFF · SHADOW" to p.inkFaint
                 }
                 RowBadge(label, color)
             }

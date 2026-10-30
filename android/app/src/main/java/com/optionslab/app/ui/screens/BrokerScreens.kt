@@ -328,8 +328,12 @@ internal fun LiveScopeNote(model: AppModel, live: Boolean) {
         val (on, off) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val orb = runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }
             val strat = runCatching { com.optionslab.app.data.Strategies.all() }.getOrDefault(emptyList()).map { it.def }
-            (orb.filter { it.liveOk && !it.arm.paperOnly }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }) to
-                orb.filter { !it.liveOk || it.arm.paperOnly }.map { it.arm.label }
+            // 30 Oct (Boss: "make all arms as live"): an ORB-family arm with no live path of its own (Sweep, Range Fade, Hero) goes
+            // live through its mirror ([com.optionslab.app.data.ArmLive]): listed as live when its Trade live is on and Shadow off.
+            val mirror = com.optionslab.app.data.ArmLive.view.value
+            fun mirrored(a: com.optionslab.app.data.OrbArms.ArmView) = a.arm.paperOnly && mirror.loaded && mirror.on(a.arm.source) && !mirror.shadowOn(a.arm.source)
+            (orb.filter { (it.liveOk && !it.arm.paperOnly) || mirrored(it) }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }) to
+                orb.filter { !((it.liveOk && !it.arm.paperOnly) || mirrored(it)) }.map { it.arm.label }
         }
         // Set on the main thread (never from a worker's continuation: the compose tests' unconfined dispatcher would run the frame there).
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { aiLive = ai; liveArms = on; paperArms = off }
@@ -358,7 +362,8 @@ internal fun LiveScopeNote(model: AppModel, live: Boolean) {
             (if (liveArms.isEmpty()) "no arm is cleared to trade live by itself" else "trade live when armed: ${liveArms.joinToString(", ")}") + ". " +
             (if (paperArms.isNotEmpty()) "On paper: ${paperArms.joinToString(", ")}. " else "") +
             "An ORB-family arm trades live only when you arm it in Live with its own PIN; one armed in Paper asks you first. " +
-            "The paper strategies below trade live by their own switch.")
+            "The paper strategies below trade live by their own switch. An arm you switch off never buys: it runs in shadow, " +
+            "its would-be trades recorded so you can watch it.")
         ArmsLiveList(model)
     }
 }

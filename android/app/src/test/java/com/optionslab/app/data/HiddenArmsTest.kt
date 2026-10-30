@@ -76,7 +76,7 @@ class HiddenArmsTest : RobolectricTest() {
     private fun waitFor(what: String, cond: () -> Boolean) {
         val deadline = System.currentTimeMillis() + 10_000
         while (!cond() && System.currentTimeMillis() < deadline) Thread.sleep(20)
-        assertTrue(what, cond())
+        assertTrue("$what: ${hides().map { it.change.target + "=" + it.change.to }}", cond())
     }
 
     // ---- open positions first -------------------------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ class HiddenArmsTest : RobolectricTest() {
         assertEquals(listOf("off"), fake(ArmsCleanup.ORB).calls)
         assertFalse(HiddenArms.visible(ArmsCleanup.ORB))
         assertTrue(ArmsCleanup.listed(HiddenArms.state.value).any { it.key == ArmsCleanup.ORB })
-        assertTrue(HiddenArms.diagLine(), HiddenArms.diagLine().startsWith("Hidden arms: 14 hidden"))
+        assertTrue(HiddenArms.diagLine(), HiddenArms.diagLine().startsWith("Hidden arms: 15 hidden"))
     }
 
     @Test fun aReadThatFailsCountsAsHoldingSoNothingIsSwitchedOffOnIt() {
@@ -208,7 +208,7 @@ class HiddenArmsTest : RobolectricTest() {
         pass()
         assertTrue(HiddenArms.visible(ArmsCleanup.PINE))
         if (!Autopilot.enabled()) return
-        waitFor("each switch-off logged once, and the restore") { hides().count { it.change.target == "hide:pine_auto" } == 2 && hides().size == 15 }
+        waitFor("each switch-off logged once, and the restore") { hides().count { it.change.target == "hide:pine_auto" } == 2 && hides().size == ArmsCleanup.HIDDEN.size + 2 }      // every hide, then Pine's and Night's restores (30 Oct: + the Hero ticket)
         val pine = hides().filter { it.change.target == "hide:pine_auto" }
         assertEquals(listOf(AutoChange.HIDDEN, AutoChange.RESTORED), pine.map { it.change.to })
         assertEquals(AutoChange.ON, pine[0].change.from)
@@ -316,7 +316,11 @@ class HiddenArmsTest : RobolectricTest() {
         // The gated arms: no new entry or idea.
         assertTrue(HiddenArms.blocks(ArmsCleanup.FORGE) && HiddenArms.blocks(ArmsCleanup.JARVIS))
         // Liquidity and the kept arms: never.
-        for (k in listOf("liquidity", "liquidity15", "hero_ticket", "ft3")) assertTrue(k, HiddenArms.mayArm(k) && !HiddenArms.blocks(k))
+        for (k in listOf("liquidity", "liquidity15", "ft3")) assertTrue(k, HiddenArms.mayArm(k) && !HiddenArms.blocks(k))
+        // 30 Oct (Boss: "Hide zero hero family arms"): the Hero ₹1,000 ticket is hidden too - its own switch refuses, off is allowed.
+        assertFalse(HiddenArms.mayArm(ArmsCleanup.HERO_TICKET))
+        assertEquals(ArmsCleanup.refusal(com.optionslab.engine.orb.HeroTicketRules.LABEL), runBlocking { HeroTicketArm.setArmed(true) })
+        assertFalse(runBlocking { HeroTicketArm.setArmed(false) }.contains("hidden"))
     }
 
     // ---- 21 Oct: the two MCX paper arms Boss asked to remove ------------------------------------------------------------------

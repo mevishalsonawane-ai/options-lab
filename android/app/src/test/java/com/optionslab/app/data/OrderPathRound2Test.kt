@@ -468,11 +468,12 @@ class OrderPathRound2Test : RobolectricTest() {
         SecurePrefs.wipe()
         val g3 = SecurePrefs.generationHint
         assertTrue("$g3 after $g2", g3 > g2)
-        assertNull("the wiped vault's kill switch is off", Broker.entryRecheck(o))
+        // (30 Oct: a wiped vault is also the app in Paper, which the door now refuses for an ORB entry - not the kill switch.)
+        assertEquals("the wiped vault's kill switch is off", "refused: the app is in Paper", Broker.entryRecheck(o))
         SecurePrefs.reload()
         assertTrue(SecurePrefs.generationHint > g3)
         // The kept copy is dropped with the session's kept reads (logout, a session end, forget).
-        assertNull(Broker.entryRecheck(o))
+        assertEquals("refused: the app is in Paper", Broker.entryRecheck(o))
         val f = Broker::class.java.getDeclaredField("killKept").apply { isAccessible = true }
         assertNotNull(f.get(null))
         Broker.resetForTest()

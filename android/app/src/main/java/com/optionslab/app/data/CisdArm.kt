@@ -33,8 +33,10 @@ import java.util.Locale
 /**
  * "CISD + network" (29 Oct 2026, Boss: "Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward
  * test too"): research R133's S3-V2-E3 ([CisdNet]) as a PAPER arm. IT FAILED THE RESEARCH GATES - Boss's second exception (CLAUDE.md,
- * 29 Oct), labelled [CisdNet.SHOWN] on its ticket, its row, the timeline, the diagnostics and by Jarvis. It never goes live: no
- * [ArmLive] path, no LiveMirror spec.
+ * 29 Oct), labelled [CisdNet.SHOWN] on its ticket, its row, the timeline, the diagnostics and by Jarvis. 30 Oct (Boss: "Make them live
+ * s5 and csid startergies live too"; CLAUDE.md, 30 Oct): its paper trades are mirrored live by [ArmLive] ([LiveMirror.CISD]) through
+ * the same gates as every arm: the entry (1 lot), a labelled safety stop at Zerodha while only the index stop guards it, the lock's
+ * level as the live stop once it rests, and every paper exit (the index stop, the lock, the square-off) sells the live trade.
  *
  * SIGNAL SOURCE: the index (the default). At each 5-minute bar close from 09:20 to 15:00, for each of the five indices, R131's CISD
  * (ICT's reading) is looked for on the index's 5-minute bars - today's minutes and the earlier sessions the passed arms already read
@@ -68,7 +70,14 @@ object CisdArm {
 
     fun init(context: Context) {
         file = File(context.applicationContext.noBackupFilesDir, FILE)
+        // 30 Oct: its paper trades for the live mirror (memory only): today's and the open ones, each with what it still holds; null
+        // while its book is not read (nothing is decided on an unread book: a live trade is never sold for want of it).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.CISD) { if (cache == null) null else legs(_view.value, today()) }
     }
+
+    /** [v]'s paper trades for the live mirror: the open ones and those closed on [day] (0 held). */
+    internal fun legs(v: View, day: LocalDate): List<ArmLive.PaperLeg> =
+        (v.open + v.today.filter { !it.open }).distinctBy { it.key }.map { ArmLive.PaperLeg(it.key, CisdNet.SOURCE, if (it.open) it.qty else 0) }
 
     /** The first-start note of 29 Oct (built switched OFF, [CisdNet.IV_GAP]); in [Book.migrated] once done, never again. */
     internal const val BUILT_OFF = "built_off_2026-10-29"
@@ -286,12 +295,13 @@ object CisdArm {
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean {
         if (com.optionslab.app.BuildConfig.GOLD) return false
         if (holding()) return true
-        if (!_view.value.armed || minute !in (8 * 60 + 45) until (LAST_CLOSE + DECIDE_FOR)) return false
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, it still decides (would-be trades).
+        if (minute !in (8 * 60 + 45) until (LAST_CLOSE + DECIDE_FOR)) return false
         return runCatching { Market.isTradingDay() }.getOrDefault(false)
     }
 
     /** A bar-close decision is due at [minute] (the watch's bar-close wake; memory only). */
-    fun decisionDue(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean = _view.value.armed && dueR0(minute) != null
+    fun decisionDue(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean = !com.optionslab.app.BuildConfig.GOLD && dueR0(minute) != null
 
     // ---- Boss's switch --------------------------------------------------------------------------------------------------
 
@@ -397,14 +407,15 @@ object CisdArm {
                 val changed = runCatching { exits(b, now, minutes) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true } || peakUnsaved
                 peakUnsaved = false
                 val r0 = dueR0(minute)
-                val list = if (!trading || !b.armed || r0 == null) emptyList() else CisdNet.UNDERLYINGS
+                // 30 Oct: on or off (off: each kept setup a would-be trade in the switched-off shadow, nothing bought).
+                val list = if (!trading || r0 == null) emptyList() else CisdNet.UNDERLYINGS
                     .filter { "$day|$it|$r0" !in b.looks && "$day|$it|$r0" !in decided }
                     .map { u -> Due(u, r0, b.positions.filter { it.index == u && it.day == day }, b.phantoms[u]?.takeIf { it.day == day }) }
                 lastPassMs = System.currentTimeMillis()
                 if (changed) save(b) else publish(b)
                 list
             }
-            if (trading && _view.value.armed) runCatching { PassedArmsHost.prefetch(now, CisdNet.UNDERLYINGS) }
+            if (trading) runCatching { PassedArmsHost.prefetch(now, CisdNet.UNDERLYINGS) }
             if (due.isEmpty()) return@withLock
             // 2. The reads, the setups and (only for a setup) the network, outside the lock (network reads; never the tick or order path).
             val verdicts = runCatching { decide(due, now) }.getOrElse { e -> due.map { d -> Verdict(d.index, d.r0, null, "the look failed: ${e.javaClass.simpleName}", final = false) } }
@@ -641,12 +652,13 @@ object CisdArm {
         if (key in b.ordering && key !in placing) { b.ordering.remove(key); return no("interrupted while its order was placed - not ordered again (check Paper for a fill)") }
         val time = now.toLocalTime()
         val refusal = when {
-            !b.armed -> "switched off"
             !runCatching { Market.isTradingDay(day) }.getOrDefault(false) -> "not a trading day"
             runCatching { AppSettings.load().guardKill }.getOrDefault(true) -> "the kill switch is on"
             stoppedToday() -> "the bot is stopped for today"
             else -> runCatching { DayLockGuard.refusal(false) }.getOrNull()
                 ?: if (b.positions.any { it.open && it.index == v.index }) "a ${v.index} trade is still open"
+                // 30 Oct (review): switched off, one open would-be trade per index too (the switched-off shadow's, memory only).
+                else if (!b.armed && OffShadow.view.value.openOf(CisdNet.SOURCE).any { it.underlying == v.index }) "a ${v.index} would-be trade is still open"
                 else if (PassedArms.Session.row(time) > v.r0 + DECIDE_FOR - 1) "its entry minute (${PassedArms.Session.time(v.r0)}) has passed"
                 else if (!time.isBefore(SQ)) "too late in the day"
                 else null
@@ -657,6 +669,15 @@ object CisdArm {
         val right = if (c.call) Right.CE else Right.PE
         val pc = Paper.ticketContract(v.index, exp, ct.strike, right) ?: return no("${v.index} ${NtfyParser.num(ct.strike)} ${right.name} is not in the phone's options list")
         if (pc.lotSize <= 0) return no("lot size unknown")
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, the setup is a
+        // would-be trade in the switched-off shadow (the index stop, the 60% lock after +₹1,000, the 15:15 square-off) - nothing is
+        // bought, nothing goes to the paper book or live.
+        if (!b.armed) {
+            val said = OffShadow.enter(OffShadow.Ask(CisdNet.SOURCE, CisdNet.SHOWN, "${v.index}|${v.r0}", pc, if (c.call) 1 else -1,
+                com.optionslab.engine.orb.OffShadow.Exits(indexStop = c.stop, lockAfterRs = CisdNet.LOCK_AFTER, lockKeep = CisdNet.LOCK_KEEP, exitAt = SQ),
+                "${if (c.call) "bullish" else "bearish"} CISD at ${PassedArms.Session.time(v.r0)}, network EV ${"%+.0f".format(Locale.ENGLISH, v.evSide ?: Double.NaN)}"))
+            return no("switched off - $said")
+        }
         if (b.positions.any { it.open && it.symbol == pc.symbol } || Paper.state.positions.any { it.symbol == pc.symbol && it.quantity != 0 })
             return no("${pc.symbol} is already held - never two positions on one contract")
         val q = optionQuote(pc) ?: return no("no fresh price for ${pc.symbol}")
@@ -667,7 +688,7 @@ object CisdArm {
         b.ordering += key; placing += key
         if (!save(b)) { b.ordering.remove(key); placing.remove(key); return no("the book could not be saved before the order") }
         val res = try {
-            Paper.place(pc, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = CisdNet.OWNER, verdict = verdict)
+            Paper.place(pc, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = CisdNet.OWNER, mirror = CisdNet.SOURCE, verdict = verdict)
         } finally { b.ordering.remove(key); placing.remove(key) }
         val fill = res.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
             ?: return no("the paper order did not fill (${res.message})").also { res.orderId?.takeIf { res.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } } }
@@ -684,6 +705,9 @@ object CisdArm {
             charges = chargesOf(orderId))
         b.positions += pos
         b.phantoms.remove(v.index)
+        // 30 Oct: offered to its live path (memory only; nothing goes unless every switch and guard allows it). No premium stop yet:
+        // the live trade rests the labelled safety stop until the lock's level comes ([restLock]).
+        runCatching { ArmLive.entered(ArmLive.Ask(CisdNet.SOURCE, pos.key, pc, 1, qty, price)) }
         // The time machine's reality check (shadow only; background): the index stop and R131's swing target as points, out by 15:15.
         runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(CisdNet.SOURCE, CisdNet.SHOWN, pos.key, v.index, c.side, now,
             kotlin.math.abs(v.ref - c.stop).takeIf { it.isFinite() && it > 0 }, v.target?.let { kotlin.math.abs(it - v.ref) }?.takeIf { it.isFinite() && it > 0 },
@@ -778,6 +802,8 @@ object CisdArm {
      */
     private suspend fun restLock(p: Pos, c: Paper.Contract): Pos {
         val lv = p.lockLevel?.let { lockTrigger(it) } ?: return p
+        // 30 Oct: the live stop follows the lock's level on the live fill (memory only; tighter only, at the live watch's next look).
+        runCatching { ArmLive.level(p.key, lv) }
         val id = p.lockOrderId
         if (id != null && resting(id)) {
             val r = runCatching { Paper.modify(id, null, null, lv) }.getOrNull()
@@ -823,6 +849,8 @@ object CisdArm {
 
     private fun closed(p: Pos, price: Double, at: LocalDateTime, why: String, charges: Double): Pos {
         lastLook.remove(p.key)
+        // 30 Oct: its live trade (if any) is sold on the live watch's next look (memory only).
+        runCatching { ArmLive.closed(p.key, why, ArmLive.pct(p.entry, price)) }
         return p.copy(exit = price, exitTime = at, why = why, charges = p.charges + charges, lockOrderId = null, exitDue = null)
     }
 

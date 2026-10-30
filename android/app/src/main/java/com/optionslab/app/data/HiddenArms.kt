@@ -338,6 +338,11 @@ object HiddenArms {
         // 21 Oct (Boss: "Remove silverm monthly call, and mcx 12 month trend"): two MCX paper arms, through their own switch.
         mcxArm(ArmsCleanup.MCX_SILVERM_AM),
         mcxArm(ArmsCleanup.MCX_TREND),
+        // 30 Oct (Boss: "Hide zero hero family arms"): the Hero ₹1,000 ticket, through its own switch (paper; off runs in shadow).
+        Arm(ArmsCleanup.HERO_TICKET,
+            now = { if (!HeroTicketArm.readyForCleanup()) null else HeroTicketArm.refresh().let { v -> ArmsCleanup.Now(ArmsCleanup.HERO_TICKET, v.armed, v.open.isNotEmpty()) } },
+            off = { HeroTicketArm.setArmed(false); emptyList() },
+            on = { HeroTicketArm.setArmed(true) }),
         // Jarvis's own news and pattern trade ideas (asked, or taken on paper by himself): a gate ([blocks]); the news is still told.
         Arm(ArmsCleanup.JARVIS,
             now = { ArmsCleanup.Now(ArmsCleanup.JARVIS, !blocks(ArmsCleanup.JARVIS), com.optionslab.app.ira.IraNewsTrades.all().any { !it.closed }) },

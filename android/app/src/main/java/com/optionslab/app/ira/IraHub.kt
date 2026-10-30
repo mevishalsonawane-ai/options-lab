@@ -6136,8 +6136,10 @@ object IraHub {
         scope.launch {
             val s = com.optionslab.app.data.AppSettings.load()
             val spot = o.market?.let { m -> _state.value.snaps[m] }?.price
-            val r = runCatching { IraOrders.prepare(o, s.live, s.guardMaxLots, spot) }.getOrElse { Result.failure(it) }
-            reply(r.fold({ t -> runCatching { IraActions.trade(t, s.live) }.getOrElse { e -> "That order failed: ${e.message}" } },
+            // 30 Oct (deep review): always the PAPER account here - this path is reached only when the app was in Paper a moment ago,
+            // and Live switched on in between must never turn a Jarvis order into a real one (real orders never go via Jarvis).
+            val r = runCatching { IraOrders.prepare(o, false, s.guardMaxLots, spot) }.getOrElse { Result.failure(it) }
+            reply(r.fold({ t -> runCatching { IraActions.trade(t, false) }.getOrElse { e -> "That order failed: ${e.message}" } },
                 { e -> e.message ?: "I could not prepare that order." }), whole = true)
         }
     }

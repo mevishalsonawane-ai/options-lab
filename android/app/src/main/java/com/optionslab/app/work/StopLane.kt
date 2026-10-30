@@ -204,6 +204,9 @@ internal object StopLane {
     private suspend fun mcxCheck(context: Context) = Tasks.safely {
         guarded("MCX stop check: paper orders") { Tasks.paperEventsPublic(context, com.optionslab.app.data.Paper.tick()) }
         guarded("MCX stop check: stops and targets") { com.optionslab.app.data.Protections.tick() }
+        // 30 Oct (deep review): the arms' live MCX trades too (their GTT, the paper exit they follow); the NSE look already has them.
+        if (com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint)
+            guarded("MCX stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch() }
         guarded("MCX stop check: missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
     }
 }

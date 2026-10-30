@@ -612,6 +612,8 @@ object Tasks {
             if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FLOW) { com.optionslab.app.data.FlowArm.tick() } else null,
             if (com.optionslab.app.data.S5Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.S5) { com.optionslab.app.data.S5Arm.tick() } else null,
             if (com.optionslab.app.data.CisdArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.CISD) { com.optionslab.app.data.CisdArm.tick() } else null,
+            // 30 Oct: the switched-off shadow's would-be trades (only when one is open): priced, never an order.
+            if (com.optionslab.app.data.OffShadow.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.OFF_SHADOW) { com.optionslab.app.data.OffShadow.watch() } else null,
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
             // 21 Oct, review: started in its own job ([com.optionslab.app.data.McxNr7Record.kick]); this group never waits for its reads.
@@ -963,6 +965,8 @@ object Tasks {
             if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FLOW) { com.optionslab.app.data.FlowArm.tick() } else null,
             if (com.optionslab.app.data.S5Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.S5) { com.optionslab.app.data.S5Arm.tick() } else null,
             if (com.optionslab.app.data.CisdArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.CISD) { com.optionslab.app.data.CisdArm.tick() } else null,
+            // 30 Oct: the switched-off shadow's would-be trades (only when one is open): priced, never an order.
+            if (com.optionslab.app.data.OffShadow.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.OFF_SHADOW) { com.optionslab.app.data.OffShadow.watch() } else null,
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
         )), armsWait, inOrder = lanes == null)
@@ -1200,6 +1204,13 @@ object Tasks {
             step("flat-by") { com.optionslab.app.data.FlatBySquareOff.maybeRun(context, s) }
             // The MCX paper arms (paper only): after the expiry exit, so a position it closed is booked as closed there.
             step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
+            // 30 Oct (deep review): the arms' live trades on MCX in the evening ([com.optionslab.app.data.ArmLive]) - their GTT moved to
+            // the paper lock or trail, the paper exit followed, a damaged book recovered - looked at here too: after 15:30 only the
+            // stream's lanes ran it, so a quiet or broken stream left a paper exit unfollowed until the next tick.
+            if (com.optionslab.app.data.ArmLive.lookDue) step("arms live") { com.optionslab.app.data.ArmLive.watch() }
+            // 30 Oct (review): the switched-off shadow's MCX would-be trades are judged in the evening too (their stop, time exit,
+            // 23:20) - priced, never an order; only while one is open.
+            if (com.optionslab.app.data.OffShadow.wantsPass()) step("switched-off shadow") { com.optionslab.app.data.OffShadow.watch() }
             step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
             if (com.optionslab.app.data.Broker.loggedIn) step("Zerodha positions") {
                 com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }
@@ -1851,7 +1862,9 @@ class WatchService : Service() {
                 // 08 Oct (research X1 change 2): with an arm armed, the arms decide a few seconds after each bar close, not on
                 // the next full pass a minute or more later. The same pass as the full one (paper fills, then the arms), so
                 // every guard applies; each bar is still decided once (the arms' own record of the bars decided).
+                // 30 Oct: Night and VIX divergence also in their own decision windows while switched off (shadow; [wantsPass]).
                 val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
+                    com.optionslab.app.data.NightArm.wantsPass() || com.optionslab.app.data.VixDivArm.wantsPass() ||
                     com.optionslab.app.data.VixDivArm.view.value.armed || com.optionslab.app.data.HeroTicketArm.wantsPass() ||
                     com.optionslab.app.data.PassedArmsHost.wantsPass() || com.optionslab.app.data.NtfyArm.wantsPass() ||
                     com.optionslab.app.data.FlowArm.wantsPass() || com.optionslab.app.data.S5Arm.wantsPass() ||

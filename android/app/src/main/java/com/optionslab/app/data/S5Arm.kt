@@ -34,7 +34,10 @@ import java.util.Locale
 /**
  * S5 Trail (28 Oct 2026, Boss: "Add s5 trail to arms directly, if it does not perform I will turn it off"): research R123's morning
  * pick with R128's trailing exit ([S5Trail]) as a PAPER arm. IT FAILED THE RESEARCH GATES - Boss's exception (CLAUDE.md, 28 Oct),
- * said on its ticket, its row, the diagnostics and by Jarvis ([S5Trail.NOT_PROVEN]). It never goes live: no [ArmLive] path at all.
+ * said on its ticket, its row, the diagnostics and by Jarvis ([S5Trail.NOT_PROVEN]). 30 Oct (Boss: "Make them live s5 and csid startergies
+ * live too"; CLAUDE.md, 30 Oct): its paper trades are mirrored live by [ArmLive] ([LiveMirror.S5]) through the same gates as every arm
+ * (Live with the PIN, "AI trades go live", its own Trade live switch, every guard): the entry ([ArmLive.entered], 1 lot as on paper),
+ * its resting stop as the live stop's level, and every paper exit (the lock, the stop, the square-off) sells the live trade.
  *
  * SIGNAL SOURCE: the index (the default). At the 09:20, 09:25 and 09:30 bar closes, for each of NIFTY, BANKNIFTY, FINNIFTY,
  * MIDCPNIFTY and SENSEX, R123's network reads the last 120 index minutes of the index and the other four, India VIX, the calendar
@@ -71,7 +74,14 @@ object S5Arm {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(context.applicationContext.noBackupFilesDir, FILE)
+        // 30 Oct: its paper trades for the live mirror (memory only): today's and the open ones, each with what it still holds; null
+        // while its book is not read (nothing is decided on an unread book: a live trade is never sold for want of it).
+        ArmLive.register(com.optionslab.engine.orb.LiveMirror.S5) { if (cache == null) null else legs(_view.value, today()) }
     }
+
+    /** [v]'s paper trades for the live mirror: the open ones and those closed on [day] (0 held). */
+    internal fun legs(v: View, day: LocalDate): List<ArmLive.PaperLeg> =
+        (v.open + v.today.filter { !it.open }).distinctBy { it.ref }.map { ArmLive.PaperLeg(it.ref, S5Trail.SOURCE, if (it.open) it.qty else 0) }
 
     /** The one-time switch-on of 28 Oct (Boss's ask); in [Book.migrated] once done, never again. */
     internal const val AUTO_ON = "boss_on_2026-10-28"
@@ -261,12 +271,13 @@ object S5Arm {
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean {
         if (com.optionslab.app.BuildConfig.GOLD) return false
         if (holding()) return true
-        if (!_view.value.armed || minute !in (8 * 60 + 45) until (DECIDE.last() + DECIDE_FOR)) return false
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, it still decides (would-be trades).
+        if (minute !in (8 * 60 + 45) until (DECIDE.last() + DECIDE_FOR)) return false
         return runCatching { Market.isTradingDay() }.getOrDefault(false)
     }
 
     /** A decision is due at [minute] (the watch's bar-close wake; memory only). */
-    fun decisionDue(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean = _view.value.armed && dueRow(minute) != null
+    fun decisionDue(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean = !com.optionslab.app.BuildConfig.GOLD && dueRow(minute) != null
 
     // ---- Boss's switch --------------------------------------------------------------------------------------------------
 
@@ -367,13 +378,14 @@ object S5Arm {
                 val changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true } || peakUnsaved
                 peakUnsaved = false
                 val row = dueRow(minute)
-                val list = if (!trading || !b.armed || row == null) emptyList()
+                // 30 Oct: on or off (off: each pick a would-be trade in the switched-off shadow, nothing bought).
+                val list = if (!trading || row == null) emptyList()
                     else S5Trail.UNDERLYINGS.filter { "$day|$it|$row" !in b.looks }.map { it to row }
                 lastPassMs = System.currentTimeMillis()
                 if (changed) save(b) else publish(b)
                 list
             }
-            if (trading && _view.value.armed) runCatching { PassedArmsHost.prefetch(now, S5Trail.UNDERLYINGS) }
+            if (trading) runCatching { PassedArmsHost.prefetch(now, S5Trail.UNDERLYINGS) }
             if (due.isEmpty()) return@withLock
             // 2. The reads and the network's verdicts, outside the lock (network reads; never the tick or order path).
             val verdicts = runCatching { decide(due, now) }.getOrElse { e -> due.map { (u, r) -> Verdict(u, r, null, null, "the decision failed: ${e.javaClass.simpleName}", final = false) } }
@@ -563,12 +575,12 @@ object S5Arm {
         if (key in b.ordering && key !in placing) { b.ordering.remove(key); return no("interrupted while its order was placed - not ordered again (check Paper for a fill)") }
         val time = now.toLocalTime()
         val refusal = when {
-            !b.armed -> "switched off"
             !runCatching { Market.isTradingDay(day) }.getOrDefault(false) -> "not a trading day"
             runCatching { AppSettings.load().guardKill }.getOrDefault(true) -> "the kill switch is on"
             stoppedToday() -> "the bot is stopped for today"
             else -> runCatching { DayLockGuard.refusal(false) }.getOrNull()
-                ?: if (b.positions.count { it.day == day } >= S5Trail.DAY_MAX) "${S5Trail.DAY_MAX} trades today already"
+                ?: if (!b.armed) shadowBusy(v.index, day)
+                else if (b.positions.count { it.day == day } >= S5Trail.DAY_MAX) "${S5Trail.DAY_MAX} trades today already"
                 else if (b.positions.any { it.open && it.index == v.index }) "a ${v.index} trade is still open"
                 else if (!time.isBefore(SQ_EXPIRY)) "too late in the day"
                 else null
@@ -585,6 +597,16 @@ object S5Arm {
         val q = optionQuote(c)
         val est = q?.ltp ?: v.chain[strike.toInt() to p.call] ?: return no("no price for ${c.symbol}")
         val stop0 = S5Trail.stopPremium(est, c.lotSize, p.stopRs, chargeFor(c.lotSize))
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, the pick is a
+        // would-be trade in the switched-off shadow (its stop, its 60% lock after +₹1,000, its square-off) - nothing is bought, nothing
+        // goes to the paper book or live.
+        if (!b.armed) {
+            val said = OffShadow.enter(OffShadow.Ask(S5Trail.SOURCE, S5Trail.LABEL, "${v.index}|${v.row}", c, if (p.call) 1 else -1,
+                com.optionslab.engine.orb.OffShadow.Exits(stop = stop0, lockAfterRs = S5Trail.LOCK_FROM, lockKeep = S5Trail.LOCK_KEEP,
+                    exitAt = if (exp == day) SQ_EXPIRY else SQ),
+                "picked (expected net ${rs(p.ev)}) at ${PassedArms.Session.time(v.row + 1)}"))
+            return no("switched off - $said")
+        }
         val snap = snapNow?.takeIf { System.currentTimeMillis() - it.first in 0..SNAP_FRESH_MS }?.second ?: return no("the account guard's check could not be read")
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, est), Guard.paperAccount(snap), paper = true)
         if (refusals.isNotEmpty()) return no("refused by the account guard: " + refusals.joinToString(" "))
@@ -593,12 +615,23 @@ object S5Arm {
         b.ordering += key; placing += key
         if (!save(b)) { b.ordering.remove(key); placing.remove(key); return no("the book could not be saved before the order") }
         val res = try {
-            Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = S5Trail.OWNER, verdict = verdict, stop = stop0)
+            Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = S5Trail.OWNER, mirror = S5Trail.SOURCE, verdict = verdict, stop = stop0)
         } finally { b.ordering.remove(key); placing.remove(key) }
         val fill = res.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
             ?: return no("the paper order did not fill (${res.message})").also { res.orderId?.takeIf { res.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } } }
         val pos = entered(b, v, c, res.orderId, fill.quantity, fill.price, now, exp == day)
         return Look(day, v.index, v.row, now, p.ev, p.j, "taken: ${pos.symbol} ${pos.qty} @ ${NtfyParser.num(pos.entry)} · paper", true)
+    }
+
+    /**
+     * 30 Oct (review): switched off, its own rules hold the would-be trades as they would the real ones - one open trade per index,
+     * at most [S5Trail.DAY_MAX] a day - counted on the switched-off shadow's would-be trades ([OffShadow], memory only).
+     */
+    private fun shadowBusy(index: String, day: LocalDate): String? {
+        val v = OffShadow.view.value
+        val mine = (v.openOf(S5Trail.SOURCE) + v.closedOf(S5Trail.SOURCE)).filter { it.day == day }
+        return if (mine.size >= S5Trail.DAY_MAX) "${S5Trail.DAY_MAX} would-be trades today already"
+            else if (v.openOf(S5Trail.SOURCE).any { it.underlying == index }) "a $index would-be trade is still open" else null
     }
 
     /** A filled entry booked: its ticket labelled, its stop resting as a paper SELL SL-M, the diary's line. */
@@ -614,6 +647,8 @@ object S5Arm {
         val pos = Pos(v.index, c.symbol, c.right.name, lots, qty, price, now, orderId, stop, stopId, p.stopRs, p.ev, p.j, expiryDay,
             charges = chargesOf(orderId))
         b.positions += pos
+        // 30 Oct: offered to its live path (memory only; nothing goes unless every switch and guard allows it).
+        runCatching { ArmLive.entered(ArmLive.Ask(S5Trail.SOURCE, pos.ref, c, 1, qty, price, stop = stop)) }
         note(b, "${v.index} ${PassedArms.Session.time(v.row + 1)}: bought ${c.symbol} $qty @ ${NtfyParser.num(price)} · paper · expected net ${rs(p.ev)} · " +
             "stop ${stop?.let { NtfyParser.num(it) } ?: "none (the premium is under the stop)"} (−₹${"%,.0f".format(Locale.ENGLISH, p.stopRs)} net) resting · " +
             "lock 60% of the best once +₹1,000 · ${S5Trail.NOT_PROVEN}")
@@ -718,6 +753,8 @@ object S5Arm {
 
     private fun closed(p: Pos, price: Double, at: LocalDateTime, why: String, charges: Double): Pos {
         marked.remove(p.ref)
+        // 30 Oct: its live trade (if any) is sold on the live watch's next look (memory only).
+        runCatching { ArmLive.closed(p.ref, why, ArmLive.pct(p.entry, price)) }
         return p.copy(exit = price, exitTime = at, why = why, charges = p.charges + charges, stopOrderId = null)
     }
 

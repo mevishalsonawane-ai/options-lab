@@ -164,6 +164,45 @@ class CisdArmTest : RobolectricTest() {
         return view().open.single()
     }
 
+    // ---- 30 Oct: live through the mirror when on; shadow when off ------------------------------------------------------
+
+    /** On: its paper fill is offered to its live path ([ArmLive.entered]) with its ref; its lock's level follows ([ArmLive.level]). */
+    @Test fun onItsPaperFillIsOfferedToItsLivePath() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        try {
+            val p = boughtAt1025()
+            assertTrue(heard.toString(), heard.any { it.startsWith("entered|${CisdNet.SOURCE}|${p.key}|${p.qty}|") })
+            assertEquals(listOf(ArmLive.PaperLeg(p.key, CisdNet.SOURCE, 65)), ArmLive.legsForTest(LiveMirror.CISD))
+        } finally { ArmLive.testHeard = null }
+    }
+
+    /**
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): off, the kept setup is a would-be
+     * trade in the switched-off shadow with its index stop and its 60% lock after +Rs 1,000 - nothing ordered, nothing offered live.
+     */
+    @Test fun offTheSetupIsAWouldBeTradeWithItsIndexStopAndNothingIsOrdered() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        OffShadow.testSession = true
+        OffShadow.testPrice = { Triple(120.4, 120.3, 120.5) }
+        try {
+            runBlocking { CisdArm.setArmed(false) }
+            market(); forceEv(40.0)
+            index(25_006.0); option(ceToken, 120.4); option(peToken, 110.4)
+            tick(LocalTime.of(10, 25), 3)
+            assertTrue("no paper order", Paper.state.orders.isEmpty())
+            assertTrue(view().open.isEmpty())
+            assertTrue("nothing offered live: $heard", heard.none { it.startsWith("entered|") })
+            assertNothingAtZerodha()
+            val w = OffShadow.view.value.openOf(CisdNet.SOURCE).singleOrNull() ?: error("no would-be trade: ${OffShadow.view.value} ${view().looks}")
+            assertEquals("NIFTY", w.underlying); assertEquals(1, w.view)
+            assertEquals(24_955.0 - 0.0002 * 24_955.0, w.exits.indexStop!!, 1e-6)
+            assertEquals(CisdNet.LOCK_AFTER, w.exits.lockAfterRs!!, 1e-9)
+            assertTrue(view().looks.single().why.contains("switched off"))
+        } finally { ArmLive.testHeard = null; OffShadow.wipe() }
+    }
+
     // ---- on after the update, once; logged; undone in one tap; never live -------------------------------------------
 
     @Test fun itIsBuiltOffSaysWhyAndIsNeverLive() {
@@ -171,10 +210,13 @@ class CisdArmTest : RobolectricTest() {
         val v = view()
         assertFalse("built switched off: the phone has no Dhan IV", v.armed)
         assertTrue(v.log.toString(), v.log.single { "built switched off" in it }.contains(CisdNet.IV_GAP))
-        assertFalse(CisdArm.wantsPass(10 * 60 + 25)); assertFalse(CisdArm.decisionDue(10 * 60 + 25))
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, it still decides - nothing is bought.
+        assertTrue(CisdArm.decisionDue(10 * 60 + 25))
+        OffShadow.testSession = true; OffShadow.testPrice = { Triple(120.4, 120.3, 120.5) }
         market(); forceEv(40.0); index(25_006.0); option(ceToken, 120.4)
         tick(LocalTime.of(10, 25), 3)
-        assertTrue("off: nothing looked at, nothing bought", view().looks.isEmpty() && Paper.state.orders.isEmpty())
+        assertTrue("off: nothing bought", Paper.state.orders.isEmpty() && view().open.isEmpty())
+        OffShadow.wipe()
         assertTrue(runBlocking { CisdArm.setArmed(true) }.startsWith("${CisdNet.SHOWN} on, on paper."))
         assertEquals("${CisdNet.SHOWN} is already on (paper).", runBlocking { CisdArm.setArmed(true) })
         AutomationSupport.reloadFromDisk(CisdArm)
@@ -182,10 +224,11 @@ class CisdArmTest : RobolectricTest() {
         assertEquals("the note is written once", 1, view().log.count { "built switched off" in it })
         assertTrue(CisdArm.diagLine().contains("on (paper)") && CisdArm.diagLine().startsWith(CisdNet.SHOWN))
         assertEquals("${CisdNet.SHOWN} off. Nothing new is bought.", runBlocking { CisdArm.setArmed(false) })
-        // Never live: no live mirror, no live switch, and the engine's arm is paper only.
-        assertNull(LiveMirror.spec(CisdNet.SOURCE))
-        assertFalse(ArmLive.view.value.on(CisdNet.SOURCE))
-        assertTrue(CisdNet.ARM.paperOnly)
+        // 30 Oct (Boss: "Make them live s5 and csid startergies live too"): live through its mirror (ArmLive), only through the
+        // live gates, with a labelled safety stop while only its index stop guards it. (The engine arm's paperOnly only keeps it off
+        // the ORB family's own live path.)
+        assertEquals(LiveMirror.CISD, LiveMirror.spec(CisdNet.SOURCE)!!.family)
+        assertTrue(LiveMirror.spec(CisdNet.SOURCE)!!.safety)
     }
 
     @Test fun bossSwitchingItOnIsInTheChangeTimelineAndOneTapUndoesIt() {
@@ -353,9 +396,8 @@ class CisdArmTest : RobolectricTest() {
         tick(LocalTime.of(10, 23))
         assertTrue("no look between the bar closes", view().looks.isEmpty())
         runBlocking { CisdArm.setArmed(false) }
-        assertFalse(CisdArm.wantsPass(10 * 60 + 25)); assertFalse(CisdArm.decisionDue(10 * 60 + 25))
-        tick(LocalTime.of(10, 25), 3)
-        assertTrue(view().looks.isEmpty())
+        // 30 Oct: off, it still decides at its bar closes (shadow) - never a paper order.
+        assertTrue(CisdArm.decisionDue(10 * 60 + 25))
         // A market holiday (the next non-trading day): nothing decided even when on.
         runBlocking { CisdArm.setArmed(true) }
         var off = day.plusDays(1); while (Market.isTradingDay(off)) off = off.plusDays(1)

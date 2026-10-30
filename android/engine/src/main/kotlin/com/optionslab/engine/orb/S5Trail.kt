@@ -15,7 +15,7 @@ import kotlin.math.sqrt
 /**
  * "S5 Trail" (28 Oct 2026, Boss: "Add s5 trail to arms directly, if it does not perform I will turn it off"): research R123's
  * morning pick (N1-S5) with R128's trailing exit (T2-S5x1). A PAPER arm that FAILED the research gates: Boss's exception
- * (CLAUDE.md, 28 Oct). It never goes live, and it is labelled [NOT_PROVEN] wherever it is shown.
+ * (CLAUDE.md, 28 Oct), labelled [NOT_PROVEN] wherever it is shown. 30 Oct (Boss): live like every arm, only through the live gates.
  *
  *   signal   at the 09:20, 09:25 and 09:30 bar closes ([DECISION_ROWS]) on each of the five indices, R123's network N1 (a causal
  *            TCN over the last 120 minutes of seven index channels, plus an MLP over 42 inputs: the index, India VIX, breadth
@@ -41,7 +41,7 @@ object S5Trail {
     const val LABEL = "S5 Trail"
     const val OWNER = "s5trail"
     const val RESEARCH_ID = "R123 N1-S5 + R128 T2-S5x1"
-    const val NOT_PROVEN = "Failed research gates (R128): Boss's exception - paper only, never live"
+    const val NOT_PROVEN = "Failed research gates (R128): Boss's exception - live only through the live gates (Boss, 30 Oct)"
     const val SIGNAL = "Signal: the index (the default); the option chain is context only; the ATM option is what is bought"
     const val RULES = "Each morning at 09:20, 09:25 and 09:30 on NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX, R123's network " +
         "scores 8 target/stop cells on both sides and buys the ATM option of the best one when its expected net is at least ₹300, " +
