@@ -116,7 +116,7 @@ class McxArmsCardTest {
         assertTrue(McxPaperArms.record(McxTrendRules.SOURCE).contains("needs ₹8–10 lakh; at ₹1 lakh often ruined"))
         assertTrue(McxPaperArms.record(McxEveRules.SOURCE).contains("+Rs 41/day") && McxPaperArms.record(McxEveRules.SOURCE).contains("+Rs 83/day"))
         assertTrue(McxPaperArms.record(McxMorningRules.SOURCE).contains("+Rs 454/trade over 51 trades"))
-        assertEquals(4, compose.onAllNodesWithText("OFF").fetchSemanticsNodes().size)
+        assertEquals(4, compose.onAllNodesWithText("OFF · SHADOW").fetchSemanticsNodes().size)
         compose.onNodeWithContentDescription("Paper only: switch ${McxEveRules.LABEL}").assertIsOff().performClick()
         compose.waitForIdle()
         assertEquals(listOf(McxEveRules.SOURCE to true), asked)
@@ -154,7 +154,7 @@ class McxArmsCardTest {
         val v = off.copy(armed = mapOf(McxMorningRules.SOURCE to true), status = mapOf(McxMorningRules.SOURCE to "am_dte 9 (needs 11-20)"))
         home(v)
         compose.waitForIdle()
-        compose.onNodeWithText("ON · PAPER ONLY").assertIsDisplayed()
+        compose.onNodeWithText("ON · PAPER + ITS LIVE SWITCH").assertIsDisplayed()
         compose.onNodeWithContentDescription("Paper only: switch ${McxMorningRules.LABEL}").assertIsOn()
         // Its last decision is in its name's dialog.
         compose.onNodeWithContentDescription("About ${McxMorningRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
@@ -169,7 +169,7 @@ class McxArmsCardTest {
         compose.waitForIdle()
         val row = keepNumbersWhole(com.optionslab.engine.mcx.McxMorningPark.ROW)
         // The row says it short; why, in full, in its name's dialog (once).
-        compose.onNodeWithText("OFF · switched off on your OK (14 Oct)").assertExists()
+        compose.onNodeWithText("OFF · SHADOW · switched off on your OK (14 Oct)").assertExists()
         compose.onNodeWithContentDescription("About ${McxMorningRules.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
         assertEquals(1, compose.onAllNodesWithText(row).fetchSemanticsNodes().size)

@@ -259,7 +259,7 @@ class CisdNetTest {
         assertTrue(CisdNet.ARM.paperOnly)
         assertEquals("CISD + network (failed gates, Boss's exception)", CisdNet.SHOWN)
         assertEquals(CisdNet.SHOWN, CisdNet.ARM.label)
-        assertTrue(CisdNet.NOT_PROVEN.contains("never live"))
+        assertTrue(CisdNet.NOT_PROVEN.contains("live gates"))
         assertTrue(CisdNet.SIGNAL.contains("index"))
         assertTrue(CisdNet.IV_GAP.contains("no Dhan IV") && CisdNet.IV_GAP.contains("2 of the research's 4"))
         assertEquals(PassedArms.Session.row(15, 0), CisdNet.LAST_ENTRY); assertEquals(364, CisdNet.EXIT_LAST)

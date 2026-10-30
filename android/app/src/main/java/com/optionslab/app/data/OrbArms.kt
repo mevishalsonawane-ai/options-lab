@@ -1199,6 +1199,12 @@ object OrbArms {
          * so with a tap to switch it back on; false once Boss switches it back on.
          */
         val bossParked: Boolean = false,
+        /**
+         * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): while the arm is off (or
+         * hidden), "off - runs in shadow (would-be trades recorded, nothing bought) · shadow (switched off): 3 would-be trades,
+         * ..." - its would-be trades' record ([OffShadow]); null while it is on. Liquidity's row: its books together.
+         */
+        val offShadow: String? = null,
     ) {
         /** The charges line for the row's details, or null when nothing was paid this month. */
         val chargesLine: String? get() = com.optionslab.engine.orb.ReentryCap.chargesWords(chargesToday, chargesMonth, ordersMonth)
@@ -1295,7 +1301,9 @@ object OrbArms {
         val shadows = runCatching { ShadowArms.rows() }.getOrDefault(emptyList())
         // Liquidity BANKNIFTY's paper test reads its fill records and the order review before the lock (never under it).
         val extra = if (com.optionslab.app.BuildConfig.GOLD) null else runCatching { liqExtra() }.getOrNull()
-        return viewLocked(extra).copy(stopped = why?.let { DayStop.line(it) }, shadows = shadows)
+        // 30 Oct: each switched-off arm's shadow line (memory only: the shadow's own view, never its lock or file).
+        return viewLocked(extra).let { v -> v.copy(stopped = why?.let { DayStop.line(it) }, shadows = shadows,
+            arms = v.arms.map { a -> offLine(a)?.let { a.copy(offShadow = it) } ?: a }) }
     }
 
     private suspend fun viewLocked(extra: LiqExtra? = null): View = lock.withLock {
@@ -1738,14 +1746,35 @@ object OrbArms {
         // the self-review's parks (memory after that). One answer for the pass's parameters, entries and the lab's record.
         val appLive = if (armedHint) runCatching { liveNow() }.getOrNull() else null
         if (armedHint) runCatching { SmartWorkers.ensureLoaded() }
+        // 30 Oct: the pass's index reads (each index read once a pass, as before); the armed arms' decisions use them exactly as
+        // they did when they were made inside [tickLocked]. The switched-off arms' shadow has its own pass ([shadowTick]).
+        val reads = IndexData.Reads<List<Upstox.Bar>>()
         try {
-            tickLocked(t, appLive)
+            tickLocked(t, appLive, reads)
         } finally {
             heroFed.clear()
         }
     }
 
-    private suspend fun tickLocked(t: LocalDateTime, appLive: Boolean?) {
+    /**
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only, so i can continuously observe it"):
+     * every arm that is off decides too and hands each would-be entry to [OffShadow]; it never orders anything. Its own pass, OUTSIDE
+     * the arms' lock for its reads and (CI review) outside the watch's pass: the watch hands it to its late job, after the stops
+     * ([OffShadow.runLate]), so the open positions' looks never wait on it. Its index reads are its own (a pass's worth, shared by
+     * its arms).
+     */
+    suspend fun shadowTick() {
+        if (!Market.isTradingDay()) return
+        try {
+            offShadowPass(now(), IndexData.Reads())
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            runCatching { Diag.record("orb", "switched-off shadow: its pass failed (${e.javaClass.simpleName}); tried again next pass") }
+        }
+    }
+
+    private suspend fun tickLocked(t: LocalDateTime, appLive: Boolean?, reads: IndexData.Reads<List<Upstox.Bar>>) {
         lock.withLock {
             val b = book()
             runCatching { priceCheck(b, t) }
@@ -1758,7 +1787,7 @@ object OrbArms {
             if (!anyArmed || !OrbRules.inWindow(t.toLocalTime())) { save(b); return@withLock }
             // Each index is read at most once on this pass, shared by the books on it (13 Oct audit fix): BANKNIFTY's candles here
             // for the ORB family (and Liquidity's BANKNIFTY books), FINNIFTY's and MIDCPNIFTY's when their books decide.
-            val reads = IndexData.Reads<List<Upstox.Bar>>()
+            // (30 Oct: [reads] is made by [tick] for this pass, so the switched-off shadow after the lock shares it.)
             val bars = runCatching { indexBars(t, reads) }.getOrNull()
             // The strategy lab (11 Oct): each strategy ran today, and on the account its new entries go to - one record per lab
             // key (Liquidity's books are one strategy), live when any of its armed arms enters live (review G2-2). Memory only.
@@ -3786,6 +3815,405 @@ object OrbArms {
         }
     }
 
+    // ---- 30 Oct: a switched-off arm runs in shadow (Boss: "If i switch any arm off, it should be always run in shadow and record
+    // only, so i can continuously observe it") ---------------------------------------------------------------------------------
+    //
+    // An arm that is OFF - not armed, parked ([ParkedArms], [FamilyPark]) or hidden ([HiddenArms]) - still decides on every bar, on
+    // the same index candles and with the same pure rules (OrbRules, SweepRules, RangeFadeRules, LiquidityRules, HeroRules) as when
+    // it is on, and hands each would-be entry to [OffShadow] with its exits. It NEVER orders: nothing here calls [enter],
+    // [buyPaperEntry], [enterLive], [Paper.place] or [Broker], and nothing here writes the arms' book. The ON path ([tickLocked],
+    // [cycle] and everything after it) is untouched.
+    //
+    // Positions first (CLAUDE.md): the book is read under the arms' lock only for a moment (a copy of the switches and positions);
+    // every network read (the index candles, the master, the option's price, the shadow's own price read) is made outside it, so
+    // the open positions' 15-second stop looks never wait on the shadow. While a live position of these arms is open the shadow
+    // skips its pass altogether ([liveHint]): the worker's time goes to that position alone.
+    //
+    // Signal source: the underlying (the index), as the arms; Hero's own signal reads the straddle's premium, as its ON path does
+    // (labelled [HeroRules.SIGNAL_SOURCE] there).
+
+    /**
+     * TEST ONLY: whether the switched-off shadow runs while the arms' test feeds are set. Off by default, so the many arm tests written
+     * before 30 Oct (which count the feed's reads and never set up [OffShadow]) run exactly as they did; the shadow's own tests
+     * switch it on. In the app the test feeds are always null, so the shadow always runs there. Its setter throws in a release build.
+     */
+    @Volatile internal var testOffShadow: Boolean = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    private fun testFeeds(): Boolean =
+        testIndexBars != null || testHistoryBars != null || testOtherIndexBars != null || testOptionBars != null || testHeroBars != null
+
+    /** Each switched-off arm's bars already decided today ("source|day" -> bar starts, memory only: a restart decides afresh). */
+    private val offDecided = java.util.concurrent.ConcurrentHashMap<String, MutableSet<String>>()
+
+    /** The last bar each switched-off ORB-family arm watched ("source|day" -> bar start): its fresh-break rule after a pause. */
+    private val offWatched = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** The day's strike and legs for the ORB family's shadow (as [contracts], but never written into the arms' book). */
+    @Volatile private var offLegs: Legs? = null
+
+    /**
+     * A Liquidity would-be trade's own turn exits, kept to judge them on later passes ([offLiquidityExits]): its book, its ref as
+     * asked, the side, the broken level, the target, the signal bar, the contract, its exit parameters and whether its time stop
+     * was decided. Memory only: after a restart the shadow's resting exits (the premium stop, the index stop and target, 15:10)
+     * still close it.
+     */
+    private class OffLiq(val book: String, val ref: String, val side: Int, val level: Double, val target: Double?, val signalBar: LocalDateTime,
+                         val contract: Paper.Contract, val params: com.optionslab.engine.orb.LiquidityParams, @Volatile var timed: Boolean = false)
+
+    /** Open Liquidity would-be trades by the shadow's full ref ("day|book|ref"). */
+    private val offLiq = java.util.concurrent.ConcurrentHashMap<String, OffLiq>()
+
+    /** One shadow pass at a time (the minute round and the bar-close check may both call [tick]): a second one is skipped. */
+    private val offPassLock = Mutex()
+
+    /** The book as the shadow reads it: the arms that are off, the positions, Liquidity's lots (a copy, taken under the lock). */
+    private class OffSnap(val off: List<Arm>, val positions: List<Position>, val lots: Int)
+
+    /** Hidden by Boss's cleanup ([HiddenArms]): off, so it runs in shadow (it still may not be switched on while hidden). */
+    private fun hiddenNow(arm: Arm): Boolean = runCatching {
+        HiddenArms.keyOfSource(arm.source)?.let { HiddenArms.blocks(it) } == true || (arm.hero && HiddenArms.blocks(ArmsCleanup.HERO))
+    }.getOrDefault(false)
+
+    private fun offNow(b: Book, arm: Arm): Boolean = b.armed[arm.source] != true || hiddenNow(arm)
+
+    /** The row's shadow line for an arm that is off ([ArmView.offShadow]); null while it is on. Memory only. */
+    private fun offLine(a: ArmView): String? {
+        if (com.optionslab.app.BuildConfig.GOLD) return null
+        if (a.armed && !hiddenNow(a.arm)) return null
+        val keys = if (a.arm.liquidity) LiquidityRules.BOOKS.map { it.source }.toSet() else setOf(a.arm.source)
+        val v = OffShadow.view.value
+        return com.optionslab.engine.orb.OffShadow.OFF_WORDS + " · " +
+            com.optionslab.engine.orb.OffShadow.words(v.closed.filter { it.key in keys }, v.open.count { it.key in keys })
+    }
+
+    /**
+     * The other guards still apply to a would-be trade, so the shadow shows what the arm really would have done: the kill switch,
+     * Boss's Stop for today and the paper day lock. (The account guard, the one-index-one-side rule, the order flow gate and the
+     * no-twin rule are about the real paper book and are not asked: a would-be trade is never in that book.)
+     */
+    private suspend fun offRefusal(): String? = when {
+        runCatching { AppSettings.load().guardKill }.getOrDefault(true) -> "refused: the kill switch is on"
+        runCatching { Strategies.stoppedToday() }.getOrDefault(true) -> "stopped_for_today"
+        else -> runCatching { DayLockGuard.refusal(false) }.getOrNull()
+    }
+
+    /** The would-be trades of [src] today, closed and open ([OffShadow]'s memory). */
+    private fun offToday(sh: OffShadow.View, src: String, day: LocalDate): List<com.optionslab.engine.orb.OffShadow.Pos> =
+        (sh.closedOf(src) + sh.openOf(src)).filter { it.day == day }
+
+    /**
+     * One shadow pass at [t]: the open Liquidity would-be trades' turn exits, then each switched-off arm's decision. [reads]: the
+     * pass's index reads (shared with the armed arms' decisions just made). Never orders, never writes the arms' book.
+     */
+    private suspend fun offShadowPass(t: LocalDateTime, reads: IndexData.Reads<List<Upstox.Bar>>) {
+        if (com.optionslab.app.BuildConfig.GOLD) return                    // IraGoldAlgo only talks: no arm runs there
+        if (testFeeds() && !testOffShadow) return
+        if (liveHint) return                                                // a live position open: its watch first (see above)
+        if (!offPassLock.tryLock()) return
+        try {
+            val day = t.toLocalDate()
+            offDecided.keys.removeAll { !it.endsWith("|$day") }
+            offWatched.keys.removeAll { !it.endsWith("|$day") }
+            offLiq.values.removeAll { it.signalBar.toLocalDate() != day }
+            val sh = OffShadow.refresh()
+            // The would-be trades' own turn exits, whether their arm is still off or was switched on since (a would-be trade runs
+            // to its own exit, as a real one does).
+            offLiquidityExits(t, reads, sh)
+            if (!OrbRules.inWindow(t.toLocalTime()) || !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) return
+            if (Strategies.stoppedToday()) return
+            val snap = lock.withLock { val b = book(); OffSnap(ALL_ARMS.filter { offNow(b, it) }, b.positions.toList(), lotsOf(b)) }
+            if (snap.off.isEmpty()) return
+            var orbBars: List<Bar>? = null
+            var orbRead = false
+            for (arm in snap.off) {
+                val s = try {
+                    when {
+                        arm.hero -> offHero(t, snap, sh)
+                        arm.liquidity -> offLiquidity(arm, t, snap, sh, reads)
+                        else -> {
+                            if (!orbRead) { orbRead = true; orbBars = runCatching { indexBars(t, reads) }.getOrNull() }
+                            offOrb(arm, t, snap, sh, orbBars)
+                        }
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    "error: ${e.javaClass.simpleName}"
+                }
+                // A would-be entry asked is said in the diagnostics (every other verdict stays in memory: the ON arm's own words
+                // and status are never touched by the shadow).
+                if (s.startsWith(OFF_ASKED)) runCatching { Diag.record("orb", "${arm.label}: $s") }
+            }
+        } finally {
+            offPassLock.unlock()
+        }
+    }
+
+    /** The start of the verdict when a would-be entry was handed to [OffShadow] (its own words follow). */
+    private const val OFF_ASKED = "switched off - "
+
+    /** The ORB family's legs for the shadow (as [contracts]: the first bar from 09:20, ATM, the expiry on or after today). */
+    private fun offLegsFor(day: LocalDate, bars: List<Bar>): Legs? {
+        offLegs?.let { if (it.day == day) return it }
+        val ref = OrbRules.strikeBar(bars) ?: return null
+        val strike = OrbRules.atmStrike(ref.close)
+        val listed = Market.contracts().filter { it.underlying == OrbRules.UNDERLYING }.map { it.expiry }.distinct()
+        val expiry = OrbRules.expiryOnOrAfter(day, listed) ?: return null
+        val ce = Paper.contractFor(OrbRules.UNDERLYING, expiry, strike.toDouble(), Right.CE) ?: return null
+        val pe = Paper.contractFor(OrbRules.UNDERLYING, expiry, strike.toDouble(), Right.PE) ?: return null
+        return Legs(day, strike, expiry, ce, pe).also { offLegs = it }
+    }
+
+    /**
+     * A switched-off ORB, ORB Fresh, ORB Sweep or Range Fade on the last completed BANKNIFTY bar ([bars]), as [cycle] decides it
+     * on the PAPER account's parameters. Its exits as the shadow can hold them:
+     *  - the premium stop [OrbParams.stopPoints] (-40) below the estimated fill, and the target [OrbParams.targetPoints] above it
+     *    (+40; ORB Sweep +80), both in premium points - set from the option's price read at the signal (+5 bps, as the paper
+     *    fill), as the shadow's own fill is priced after; a few paise apart at most;
+     *  - the profit-lock ladder (a quarter of the way to the target locks breakeven, half locks a quarter, three quarters half):
+     *    not expressible rung by rung - the nearest is a lock from half the target's rupees that keeps half of the best, which is
+     *    the ladder's own level at its middle rung;
+     *  - 15:10 ([OrbRules.SQUARE_OFF]); the expiry day's 15:05 is the shadow's own;
+     *  - ORB Fresh's trade-manager exit (R12) cannot be expressed: its would-be trades run on the plain exits above.
+     */
+    private suspend fun offOrb(arm: Arm, t: LocalDateTime, snap: OffSnap, sh: OffShadow.View, bars: List<Bar>?): String {
+        val day = t.toLocalDate()
+        val key = "${arm.source}|$day"
+        // Its own paper position (taken while it was on) still runs to its own exits in [priceCheck]: nothing new meanwhile.
+        if (snap.positions.any { it.arm == arm.source && it.open }) return "holding"
+        if (bars == null) return IndexData.none(OrbRules.UNDERLYING)
+        fun watching() { bars.lastOrNull()?.let { offWatched[key] = it.start.toString() } }
+        // One position per arm, as when it is on: a would-be trade still open is "holding".
+        if (sh.openOf(arm.source).isNotEmpty()) { watching(); return "shadow_holding" }
+        val ap = paramsOf(arm, day, live = false)
+        val rng = OrbRules.openingRange(bars, ap.orEnd) ?: return "waiting_for_opening_range"
+        val legs = offLegsFor(day, bars) ?: return "no_contract"
+        val last = bars.last()
+        if (!offDecided.getOrPut(key) { java.util.concurrent.ConcurrentHashMap.newKeySet() }.add(last.start.toString())) return "no_decision_bar"
+        val real = snap.positions.filter { it.arm == arm.source && it.day == day }
+        val would = offToday(sh, arm.source, day)
+        val lastExit = (real.mapNotNull { it.exitTime } + would.mapNotNull { it.exitTime }).maxOrNull()
+        if (arm.freshOnly && real.any { it.why == MANAGER_EXIT || it.why == MANAGER_LOCK }) { watching(); return MANAGER_DONE }
+        val entries = real.size + would.size
+        val (dir, why) = when {
+            arm.fade -> RangeFadeRules.entrySignal(bars, rng, lastExit, entries, ap.edge, ap.lastEntry)
+            arm.sweep -> SweepRules.entrySignal(bars, rng, lastExit, entries, ap.lastEntry, ap.orEnd)
+            else -> {
+                // After a pause (just switched off, or a new process) only a fresh break is taken, as [cycle] after arming.
+                val resumed = bars.size >= 2 && !offWatched.containsKey(key)
+                val taken = com.optionslab.engine.orb.ReentryCap.taken(real.map { it.right } + would.map { if (it.view > 0) "CE" else "PE" })
+                OrbRules.entrySignal(bars, rng, arm, lastExit, requireFresh = resumed, p = ap, taken = taken)
+            }
+        }
+        watching()
+        if (dir == 0) return if (why == "not_a_fresh_break" && !arm.freshOnly) "waiting_for_fresh_break_after_pause" else why
+        val c = if (dir > 0) legs.ce else legs.pe
+        offRefusal()?.let { return it }
+        // The price at the signal (memory, else one read - never the one more read: the shadow never waits for a price).
+        val est = Paper.entryPrice(c, entryQuote(c, mayRetry = false).quote) ?: return "shadow: no price for ${c.symbol}"
+        val expected = est * 1.0005
+        val stop = OrbRules.stopTrigger(expected, ap.stopPoints) ?: return "refused: premium %.2f is at or below %s, a %s-point stop has no level"
+            .format(Locale.ENGLISH, expected, pts(ap.stopPoints), pts(ap.stopPoints))
+        val ladder = ProfitLock.targetOf(arm) != null
+        val exits = com.optionslab.engine.orb.OffShadow.Exits(stop = stop, target = expected + ap.targetPoints,
+            lockAfterRs = if (ladder) ap.targetPoints * 0.5 * c.lotSize else null, lockKeep = 0.5, exitAt = OrbRules.SQUARE_OFF)
+        val words = when {
+            arm.fade -> "range fade ${if (dir > 0) "up" else "down"} on the ${hhmm(last.start)} BANKNIFTY bar"
+            arm.sweep -> "failed break ${if (dir > 0) "below" else "above"} the range on the ${hhmm(last.start)} BANKNIFTY bar"
+            else -> "BANKNIFTY closed ${if (dir > 0) "above" else "below"} the opening range on the ${hhmm(last.start)} bar"
+        }
+        return OFF_ASKED + OffShadow.enter(OffShadow.Ask(arm.source, arm.label, hhmm(last.start), c, dir, exits, words))
+    }
+
+    /**
+     * A switched-off Liquidity book on its chart's last completed bar, as [liquidityCycle] decides it on PAPER (the room filter,
+     * the 1-ITM strike, the expiry-day skip when Boss's paper switch is on). Its exits as the shadow can hold them:
+     *  - the 15% premium stop ([LiquidityParams.stopPct]) under the estimated fill;
+     *  - the index stop [LiquidityRules.indexStopPoints] back through the broken level, and the next liquidity level as the
+     *    index target (when [LiquidityParams.nextLevelTarget]) - on the index, as the arm (the shadow judges "at or beyond";
+     *    the arm "beyond": a hair stricter);
+     *  - its 20-minute time stop, the failed break and new liquidity: judged here on later passes with the arm's own pure rule
+     *    ([LiquidityRules.exitNow], [offLiquidityExits]) and closed with [OffShadow.exitNow];
+     *  - Boss's ₹500 give-back trail when its switch is on: the nearest is a lock from +₹1,000 a lot that keeps half (the trail's
+     *    own level when it starts; later it keeps a little more than the trail would). Boss's breakeven at +10% cannot be
+     *    expressed and is left out (its would-be trades run on the plain exits). A lock variant: as the ORB family's ladder;
+     *  - h14's capped limit (when Boss's paper switch is on): a LIMIT at the cap; the 3-minute wait for the price to come back
+     *    under it is not modelled (not filled at once: not recorded);
+     *  - 15:10 ([OrbRules.SQUARE_OFF]).
+     */
+    private suspend fun offLiquidity(arm: Arm, t: LocalDateTime, snap: OffSnap, sh: OffShadow.View, reads: IndexData.Reads<List<Upstox.Bar>>): String {
+        val day = t.toLocalDate()
+        if (snap.positions.any { it.arm == arm.source && it.open }) return "holding"
+        if (sh.openOf(arm.source).isNotEmpty()) return "shadow_holding"
+        val tf = LiquidityRules.minutesOf(arm)
+        val und = LiquidityRules.underlyingOf(arm)
+        val ones = try {
+            liquidityMinutes(t, und, keep = false, reads = reads)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return IndexData.none(und)
+        }
+        val bars = liquidityBars(ones, tf, t)
+        if (bars.size < 2 * LiquidityRules.SWING_LOOKBACK + 2) return "liquidity_history_loading"
+        val last = bars.last()
+        if (last.start.toLocalDate() != day) return "no_decision_bar"
+        if (!offDecided.getOrPut("${arm.source}|$day") { java.util.concurrent.ConcurrentHashMap.newKeySet() }.add(last.start.toString())) return "no_decision_bar"
+        if (!LiquidityRules.mayEnterAt(last.start.plusMinutes(tf.toLong()))) return "liquidity_outside_entry_hours"
+        val s = LiquidityRules.signal(bars, LiquidityRules.zones(bars)) ?: return "no_liquidity_break"
+        val expiryToday = runCatching {
+            HeroRules.isExpiryDay(day, Market.cachedContracts()?.takeIf { it.first == day }?.second.orEmpty().filter { it.underlying == und }.map { it.expiry }.distinct())
+        }.getOrDefault(false)
+        if (expiryToday && runCatching { BossRiskHost.expirySkipPaper() }.getOrDefault(false)) return "refused: ${LiquidityRules.EXPIRY_DAY_WORDS}"
+        if (!LiquidityRules.hasRoom(s, last.close, und)) return "liquidity_no_room"
+        val strike = LiquidityRules.entryStrike(s.side, last.close, und)
+        offRefusal()?.let { return it }
+        val listed = Market.contracts().filter { it.underlying == und }.map { it.expiry }.distinct()
+        val expiry = OrbRules.expiryAfter(day, listed) ?: return "no_contract"
+        val c = Paper.contractFor(und, expiry, strike.toDouble(), if (s.side > 0) Right.CE else Right.PE) ?: return "no_contract"
+        val lots = snap.lots
+        val est = entryQuote(c, mayRetry = false).quote?.ltp?.takeIf { it > 0 } ?: return "shadow: no price for ${c.symbol}"
+        val lq = liqParamsOf(arm.source, day, live = false)
+        val cap = if (runCatching { BossRiskHost.cappedPaper() }.getOrDefault(false)) com.optionslab.ira.BossRisk.cap(est) else null
+        val trail = LiquidityTrail.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.trailOn() }.getOrDefault(false), lot = c.lotSize)
+        val trailFrom = LiquidityTrail.forEntryFrom(trail)
+        val lockRef = lq.lockTarget(est)
+        val (lockAfter, keep) = when {
+            trail != null && trailFrom != null && trailFrom > 0 -> trailFrom * lots to ((trailFrom - trail) / trailFrom).coerceIn(0.0, 1.0)
+            lockRef != null -> lockRef * 0.5 * lots * c.lotSize to 0.5
+            else -> null to 0.6
+        }
+        val exits = com.optionslab.engine.orb.OffShadow.Exits(
+            stop = LiquidityRules.stopTrigger(est * 1.0005, lq.stopPct),
+            indexStop = s.level - s.side * LiquidityRules.indexStopPoints(und),
+            indexTarget = s.target?.takeIf { lq.nextLevelTarget },
+            lockAfterRs = lockAfter, lockKeep = keep, exitAt = OrbRules.SQUARE_OFF)
+        val ref = hhmm(last.start)
+        offLiq["$day|${arm.source}|$ref"] = OffLiq(arm.source, ref, s.side, s.level, s.target, last.start, c, lq)
+        val words = "the $und ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"} " +
+            "(level %.1f)".format(Locale.ENGLISH, s.level)
+        return OFF_ASKED + OffShadow.enter(OffShadow.Ask(arm.source, arm.label, ref, c, s.side, exits, words, lots = lots, limit = cap))
+    }
+
+    /**
+     * The open Liquidity would-be trades' turn exits ([LiquidityRules.exitNow], the arm's own pure rule, in its order: the index
+     * stop, the 20-minute time stop - decided once, on a fresh option price - then the next level, a failed break, new liquidity),
+     * each closed by [OffShadow.exitNow] at the shadow's price. Reads outside the arms' lock; never orders.
+     */
+    private suspend fun offLiquidityExits(t: LocalDateTime, reads: IndexData.Reads<List<Upstox.Bar>>, sh: OffShadow.View) {
+        if (offLiq.isEmpty()) return
+        val open = sh.open.associateBy { it.ref }
+        val day = t.toLocalDate()
+        for ((full, w) in offLiq.entries.toList()) {
+            val p = open[full]
+            if (p == null) {
+                // Not recorded (refused by the shadow) or already closed by its resting exits: nothing more to judge.
+                if (sh.closed.any { it.ref == full } || !t.isBefore(w.signalBar.plusMinutes(LiquidityRules.minutesOf(armOf(w.book)) + 2L))) offLiq.remove(full)
+                continue
+            }
+            try {
+                val und = w.contract.underlying
+                val ones = liquidityMinutes(t, und, keep = false, reads = reads).filter { !it.start.plusMinutes(1).isAfter(t) }
+                val bars = liquidityBars(ones, LiquidityRules.minutesOf(armOf(w.book)), t)
+                val since = ones.filter { !it.start.isBefore(p.entryTime.withSecond(0).withNano(0)) }
+                // The option's price only when the time stop is due and not yet decided (one read, once).
+                val fresh = if (!w.timed && LiquidityRules.timeStopDue(p.entryTime, t, w.params.timeStopMinutes))
+                    runCatching { Paper.recentQuote(w.contract, Paper.FILL_FRESH_MS) }.getOrNull()?.ltp?.takeIf { it > 0 } else null
+                val look = LiquidityRules.exitNow(w.side, w.level, w.target, w.signalBar, p.entry, p.entryTime, t, bars, since, und, fresh, w.timed, w.params)
+                if (look.timed) w.timed = true
+                val why = look.why ?: continue
+                if (p.day != day) continue
+                OffShadow.exitNow(w.book, w.ref, why)
+                offLiq.remove(full)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // An index read that failed: judged again on the next pass (its resting exits still act meanwhile).
+            }
+        }
+    }
+
+    /**
+     * The switched-off expiry Hero on the last closed minute, as [heroCycle] decides it (NIFTY, today's expiry, 13:30-14:45, one
+     * entry a day; its signal reads the straddle's premium, as its ON path - [HeroRules.SIGNAL_SOURCE]). Its exits as the shadow
+     * can hold them:
+     *  - the -60% stop ([HeroRules.stopLevel]) on the LIMIT price, as a premium stop: the arm judges it on a minute's CLOSE, the
+     *    shadow on the premium's low since its last look - stricter (a wick under it closes the would-be trade);
+     *  - the 5x target ([HeroRules.target1]), where the arm sells half and keeps the rest for 20x: the shadow sells it all at 5x;
+     *  - 15:05 ([HeroRules.EXIT_AT]).
+     * Its lots as the arm's ([HeroRules.lots], the danger meter's half size); its LIMIT as the arm's ([HeroRules.limitPrice]).
+     */
+    private suspend fun offHero(t: LocalDateTime, snap: OffSnap, sh: OffShadow.View): String {
+        val src = HeroRules.ARM.source
+        val day = t.toLocalDate()
+        if (snap.positions.any { it.arm == src && it.open }) return "holding"
+        if (sh.openOf(src).isNotEmpty()) return "shadow_holding"
+        val spent = offDecided.getOrPut("$src|$day") { java.util.concurrent.ConcurrentHashMap.newKeySet() }
+        if (HERO_STOOD_DOWN in spent) return HERO_STOOD_DOWN
+        if (!HeroRules.mayEnter(snap.positions.count { it.arm == src && it.day == day } + offToday(sh, src, day).size)) return "hero_done_for_today"
+        val at = t.toLocalTime().withSecond(0).withNano(0)
+        // The window first (no read at all outside it), then the master.
+        if (at.isBefore(HeroRules.FIRST)) return "hero_waiting_for_window"
+        if (at.isAfter(HeroRules.LAST)) return "hero_window_closed"
+        if ("hero@$at" in spent) return "no_decision_bar"
+        val master = runCatching { Market.contracts() }.getOrNull()?.filter { it.underlying == HeroRules.UNDERLYING }
+        if (master.isNullOrEmpty()) return "hero_no_master"
+        if (!HeroRules.isExpiryDay(day, master.map { it.expiry })) return "hero_not_expiry_day"
+        val today = master.filter { it.expiry == day }
+        val read = HashMap<String, Map<LocalTime, Upstox.Bar>>()
+        suspend fun minutes(key: String): Map<LocalTime, Upstox.Bar> =
+            read[key] ?: minutesOf(heroRead(key, t), t).also { read[key] = it }
+        val spot = minutes(Upstox.INDEX_KEYS.getValue(HeroRules.UNDERLYING)).mapValues { it.value.close }
+        val legs = HashMap<Pair<Double, Right>, Map<LocalTime, HeroRules.Leg>>()
+        suspend fun legsOf(strike: Double, right: Right): Map<LocalTime, HeroRules.Leg> {
+            legs[strike to right]?.let { return it }
+            val c = today.firstOrNull { kotlin.math.abs(it.strike - strike) < 1e-6 && it.right == right }
+            val m: Map<LocalTime, HeroRules.Leg> = if (c == null) emptyMap() else runCatching { minutes(c.instrumentKey) }.getOrDefault(emptyMap())
+                .mapValues { HeroRules.Leg(it.value.close, it.value.volume) }
+            legs[strike to right] = m
+            return m
+        }
+        val straddle = HashMap<LocalTime, Double>()
+        for ((u, x) in spot) {
+            if (u.isBefore(HeroRules.LOW_FROM) || u.isAfter(at)) continue
+            val k = HeroRules.atm(x).toDouble()
+            val ce = HeroRules.legPrice(legsOf(k, Right.CE), u) ?: continue
+            val pe = HeroRules.legPrice(legsOf(k, Right.PE), u) ?: continue
+            straddle[u] = ce + pe
+        }
+        val scan = HeroRules.scan(spot, straddle, at)
+        if (scan.standDown) { spent += HERO_STOOD_DOWN; return HERO_STOOD_DOWN }
+        if (scan.why == "skipped_stale_bar") return "hero_skipped_stale_bar"
+        spent += "hero@$at"
+        if (scan.signal == 0) return "hero_" + scan.why
+        val right = if (scan.signal > 0) Right.CE else Right.PE
+        val s0 = scan.spot ?: return "hero_skipped_stale_bar"
+        val side = today.filter { it.right == right && kotlin.math.abs(it.strike - s0) <= s0 * HeroRules.SPOT_BAND }
+            .filter { if (scan.signal > 0) it.strike > s0 else it.strike < s0 }.sortedBy { kotlin.math.abs(it.strike - s0) }
+        val chain = ArrayList<HeroRules.Candidate>()
+        for (o in side) {
+            val bars = legsOf(o.strike, right).filterKeys { !it.isAfter(at) }
+            val ltp = bars.maxByOrNull { it.key }?.value?.close ?: 0.0
+            val traded = bars.any { (u, l) -> l.volume > 0 && !u.isBefore(at.minusMinutes(HeroRules.TRADED_BARS - 1)) }
+            chain += HeroRules.Candidate(o.strike, ltp, ltp.takeIf { it > 0 }, traded)
+        }
+        val pick = HeroRules.pick(scan.signal, s0, chain) ?: return "hero_no_strike"
+        val c = Paper.contractFor(HeroRules.UNDERLYING, day, pick.strike, right) ?: return "no_contract"
+        if (c.lotSize <= 0) return "hero_lot_unknown"
+        offRefusal()?.let { return it }
+        val q = runCatching { Paper.quote(c) }.getOrNull()
+        val ask = q?.ask?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 } ?: pick.ltp
+        val limit = HeroRules.limitPrice(ask, pick.ltp)
+        val lots = DangerToday.paperLots(HeroRules.lots(limit, c.lotSize), day)
+        if (lots <= 0) return "hero_zero_lots"
+        val exits = com.optionslab.engine.orb.OffShadow.Exits(stop = HeroRules.stopLevel(limit), target = HeroRules.target1(limit), exitAt = HeroRules.EXIT_AT)
+        val words = "NIFTY %s %.2f%% in 15 min, straddle %.0f%% above its low at %s"
+            .format(Locale.ENGLISH, if (scan.signal > 0) "up" else "down", (scan.mom ?: 0.0) * 100, (scan.stExp ?: 0.0) * 100, hhmm(at)) +
+            " · " + HeroRules.SIGNAL_SOURCE
+        return OFF_ASKED + OffShadow.enter(OffShadow.Ask(src, HeroRules.ARM.label, "hero@$at", c, scan.signal, exits, words, lots = lots, limit = limit))
+    }
+
     // ---- data ------------------------------------------------------------------
 
     /**
@@ -4059,6 +4487,7 @@ object OrbArms {
         shownParams.clear()
         lastLook.clear(); gapTried.clear(); indexReadSaid.clear(); exitCheckSaid.clear()
         noPriceTried.clear(); noPriceSaid.clear(); liquidityLag.clear(); liquidityHistoryMiss.clear(); capWaits.clear()
+        offDecided.clear(); offWatched.clear(); offLiq.clear(); offLegs = null              // 30 Oct: the switched-off shadow's memory
         runCatching { com.optionslab.ira.ArmExits.set("orb", emptyList()) }
         filesForErase().forEach { runCatching { it.delete() } }
     }

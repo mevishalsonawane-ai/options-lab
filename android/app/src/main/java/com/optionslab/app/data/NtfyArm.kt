@@ -55,6 +55,11 @@ import java.util.Locale
  * Live: never from here. Each paper buy, stop move and close is told to [ArmLive] (memory only), whose live trade goes only with
  * Live, "AI trades go live", Boss's PIN and this arm's own "Trade live" switch (off until Boss turns it on).
  *
+ * Switched off (30 Oct, Boss: "If i switch any arm off, it should be always run in shadow and record only"): a message read while
+ * off is decided exactly as above (every guard), and the buy it would have made is handed to the switched-off shadow ([OffShadow])
+ * with the message's stop, target, index levels and exit time - nothing is ordered (no paper order, no live path). An exit message
+ * closes the shadow's would-be trades on that index too. What it already holds still closes by its own exits.
+ *
  * Fast (26 Oct, Boss: "I think ntfy messages are getting read late"): a message kept waiting is decided by a pass of its own
  * started the moment it is read ([kick]: its own coroutine, after the read's lock is released; the same [tick], so every rule
  * above applies unchanged), not at the watch's next minute; the underlyings' prices come from the live stream when fresh. Each
@@ -323,7 +328,8 @@ object NtfyArm {
             val b = book()
             if (b.on == on) return@withLock "ntfy alerts is already ${if (on) "on" else "off"}."
             b.on = on
-            note(b, "ntfy alerts ${if (on) "on (paper; ${NtfyRules.NOTE})" else "off"}" +
+            // 30 Oct: off runs in shadow (would-be trades recorded, nothing bought).
+            note(b, "ntfy alerts ${if (on) "on (paper; ${NtfyRules.NOTE})" else "off - runs in shadow (would-be trades recorded, nothing bought)"}" +
                 if (!on && b.positions.any { it.open }) "; what it holds still closes by its own exits" else "")
             save(b)
             if (log) runCatching { com.optionslab.app.ira.Autopilot.ntfyPaperSwitchedByBoss(on) }
@@ -343,7 +349,9 @@ object NtfyArm {
 
     fun diagLine(): String {
         val v = _view.value
-        return "${NtfyRules.LABEL}: ${if (v.on) "on" else "off"} (paper; live only with its own switch) · ${NtfyReader.diagWords()} · " +
+        // 30 Oct: off reads as running in shadow, with the shadow's own record.
+        val state = if (v.on) "on" else "${com.optionslab.engine.orb.OffShadow.OFF_WORDS}; ${runCatching { OffShadow.line(LiveMirror.NTFY_ALERTS) }.getOrDefault("")}"
+        return "${NtfyRules.LABEL}: $state (paper; live only with its own switch) · ${NtfyReader.diagWords()} · " +
             "${v.alerts.size} messages kept, ${v.alerts.count { it.state == TRADED }} traded · open ${v.open.size} · " +
             "${v.closed.size} closed %,.0f after charges · ${NtfyRules.NOTE}".format(Locale.ENGLISH, v.closed.sumOf { it.net ?: 0.0 }) +
             // 26 Oct: the day's timing (counts and seconds only: no topic, no message words).
@@ -421,7 +429,7 @@ object NtfyArm {
                 // An exit only lowers risk: honoured the same day whatever the switch or its age.
                 p is Parsed.Exit -> if (sent.toLocalDate() == now.toLocalDate()) keep(PENDING, "read: ${p.line()}", t0?.take(500), b0?.take(4_000))
                     else keep(NOT_TRADED, "stale, not acted on: an exit from an earlier day")
-                !b.on -> keep(NOT_TRADED, "read; ntfy alerts is off")
+                // 30 Oct: off, the message still waits for the pass - decided in the switched-off shadow (nothing bought).
                 else -> NtfyRules.stale(sent, now, b.settings.staleMin)?.let { keep(NOT_TRADED, it) }
                     ?: keep(PENDING, "read: ${(p as? Parsed.Buy)?.line()}", t0?.take(500), b0?.take(4_000))
             }
@@ -517,6 +525,53 @@ object NtfyArm {
             if (changed) save(b) else publish(b)
             Unit
         }
+        // 30 Oct: switched off, this pass's would-be trades go to the shadow now, OUTSIDE the lock (its price read may be a network
+        // read), so the 15-second stop check never waits behind it.
+        shadowNow()
+    }
+
+    // ---- switched off: the shadow (30 Oct) ---------------------------------------------------------------------------------
+
+    /** A would-be buy of a switched-off pass ([entry]) for message [alertId], handed to the shadow after the lock ([shadowNow]). */
+    private class ShadowAsk(val alertId: String, val day: LocalDate, val ask: OffShadow.Ask)
+    /** An exit message's would-be close of a shadow trade (its ref as asked: the buy message's id). */
+    private class ShadowExit(val ref: String, val why: String)
+    /** This pass's would-be buys and closes (the pass worker only, under [passLock]). */
+    private val shadowAsks = java.util.Collections.synchronizedList(ArrayList<ShadowAsk>())
+    private val shadowExits = java.util.Collections.synchronizedList(ArrayList<ShadowExit>())
+
+    /** The words a message decided while switched off carries. */
+    internal const val OFF_WHY = "ntfy alerts is off - runs in shadow"
+
+    /** The shadow's would-be trades of this arm on [day] (memory only). */
+    private fun shadowOf(day: LocalDate): List<com.optionslab.engine.orb.OffShadow.Pos> =
+        OffShadow.view.value.let { it.open + it.closed }.filter { it.key == LiveMirror.NTFY_ALERTS && it.ref.startsWith("$day|") }
+
+    /**
+     * 30 Oct: this pass's would-be buys handed to the switched-off shadow ([OffShadow.enter]: priced, kept, closed by the exits given;
+     * nothing is ordered anywhere) and an exit message's would-be closes ([OffShadow.exitNow]); then each message says what the shadow
+     * did. A buy the shadow did not keep (no price, its LIMIT would not have filled) keeps waiting, as a real buy would be tried
+     * again until the message goes stale.
+     */
+    private suspend fun shadowNow() {
+        val exits = synchronized(shadowExits) { shadowExits.toList().also { shadowExits.clear() } }
+        for (x in exits) runCatching { OffShadow.exitNow(LiveMirror.NTFY_ALERTS, x.ref, x.why) }
+        if (shadowAsks.isEmpty()) return
+        val asks = synchronized(shadowAsks) { shadowAsks.toList().also { shadowAsks.clear() } }
+        val said = asks.map { s -> s to runCatching { OffShadow.enter(s.ask) }.getOrElse { "shadow: not recorded (${it.javaClass.simpleName})" } }
+        lock.withLock {
+            val b = book()
+            val v = OffShadow.view.value
+            var changed = false
+            for ((s, words) in said) {
+                // 30 Oct (review): a message read while ntfy is off is DONE once handed to the shadow, kept or not - it never waits
+                // as PENDING, so switching ntfy on later never turns a message read while off into a real (and live-mirrored) buy.
+                val a = b.alerts.firstOrNull { it.id == s.alertId && it.state == PENDING } ?: continue
+                changed = finish(b, a, NOT_TRADED, "$OFF_WHY: $words") || changed
+            }
+            if (changed) save(b) else publish(b)
+            Unit
+        }
     }
 
     /** This run's own orders being placed (memory): one in [Book.ordering] but not here was interrupted by a restart. */
@@ -589,9 +644,15 @@ object NtfyArm {
             finish(b, w, NOT_TRADED, "cancelled by a later exit")
             cancelled++; changed = true
         }
-        val ended = if (cancelled > 0) "cancelled $cancelled waiting buy(s); " else ""
+        val ended0 = if (cancelled > 0) "cancelled $cancelled waiting buy(s); " else ""
+        // 30 Oct: the switched-off shadow's would-be trades on that index (and right) are closed too, after the lock ([shadowNow]):
+        // nothing is sold anywhere for them.
+        val ghosts = OffShadow.view.value.openOf(LiveMirror.NTFY_ALERTS)
+            .filter { it.underlying == p.index && (p.right == null || (if (p.right == Right.CE) it.view > 0 else it.view < 0)) }
+        for (g in ghosts) shadowExits += ShadowExit(g.ref.substringAfter("|${LiveMirror.NTFY_ALERTS}|"), "exit message")
+        val ended = ended0 + if (ghosts.isNotEmpty()) "${ghosts.size} would-be trade(s) in the switched-off shadow closed (nothing sold); " else ""
         val mine = b.positions.withIndex().filter { (_, x) -> x.open && !x.legacy && x.index == p.index && (p.right == null || x.right == p.right?.name) }
-        if (mine.isEmpty()) return finish(b, a, if (cancelled > 0) CLOSED else NOT_TRADED, ended + "nothing held on ${p.index}${p.right?.let { " ${it.name}" } ?: ""} to close - no order (never a short)")
+        if (mine.isEmpty()) return finish(b, a, if (cancelled > 0 || ghosts.isNotEmpty()) CLOSED else NOT_TRADED, ended + "nothing held on ${p.index}${p.right?.let { " ${it.name}" } ?: ""} to close - no order (never a short)")
         var sold = 0
         for ((i, x) in mine) {
             val c = Paper.contractOf(x.symbol) ?: continue
@@ -726,7 +787,9 @@ object NtfyArm {
                 else -> { runCatching { Paper.cancel(id, "unfilled_limit") }; false }
             }
         }
-        if (!b.on) return done("ntfy alerts was switched off before it was traded")
+        // 30 Oct: the switch is not a refusal here - off, the buy goes to the switched-off shadow below, after every other guard
+        // has judged it as it would a real buy. Off, the day's would-be trades count towards the day's limits as real ones would.
+        val ghosts: List<com.optionslab.engine.orb.OffShadow.Pos> = if (b.on) emptyList() else shadowOf(now.toLocalDate())
         // Another message's entry order still working: settled first, never a second BUY beside it.
         if (b.pending.keys.any { it != a.id }) return say(b, "an entry order is still working; settled before anything new")
         val sent = p.sentAt?.let { minOf(it, a.at) } ?: a.at
@@ -740,8 +803,9 @@ object NtfyArm {
         p.exitBy?.let { if (!now.isBefore(it)) return done("not traded: the source rule's exit time (%02d:%02d) has passed".format(Locale.ENGLISH, it.hour, it.minute)) }
         val today = now.toLocalDate()
         val mine = b.positions.filter { !it.legacy && it.day == today }
-        NtfyRules.refusal(mine.size + b.pending.size, mine.sumOf { it.net ?: 0.0 }, s)?.let { return done("not traded: $it") }
+        NtfyRules.refusal(mine.size + b.pending.size + ghosts.size, mine.sumOf { it.net ?: 0.0 } + ghosts.sumOf { it.net ?: 0.0 }, s)?.let { return done("not traded: $it") }
         if (b.positions.any { it.open && it.index == p.index }) return done("not traded: ntfy alerts already holds a ${p.index} trade")
+        if (ghosts.any { it.open && it.underlying == p.index }) return done("not traded: $OFF_WHY and already holds a would-be ${p.index} trade there")
         // The kill switch, the bot's stop for today, the day lock and the guard: nothing bypasses them.
         if (runCatching { AppSettings.load().guardKill }.getOrDefault(true)) return done("refused: the kill switch is on")
         if (stoppedToday()) return done("refused: the bot is stopped for today")
@@ -784,6 +848,20 @@ object NtfyArm {
         // 26 Oct: IraAlgo's own exits, made tighter or earlier (never wider) by the source rule's ([NtfyRules.sourceExits]).
         val ex0 = NtfyRules.sourceExits(p, px, now, today.atTime(NtfyRules.squareOff(expiryDay)), s)
         val stop0 = ex0.stop; val target0 = ex0.target
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, the buy is a
+        // would-be trade in the switched-off shadow - nothing is ordered (no paper order, no live path). Its exits as the arm runs
+        // them ([NtfyRules.sourceExits]): the message's stop (else ours, 20% under) and target (else 40% over) - priced here on the
+        // price it would buy at, where the real ones are set on the fill, a few paise apart; all sold at the target (every trade
+        // of this arm books all at T1); a JSON signal's index stop and target; the source rule's exit time, else the square-off
+        // (15:05 on its expiry day). The same LIMIT and lots. Handed over after the lock ([shadowNow]); the message waits till then.
+        if (!b.on) {
+            val sq = NtfyRules.squareOff(expiryDay)
+            shadowAsks += ShadowAsk(a.id, today, OffShadow.Ask(LiveMirror.NTFY_ALERTS, NtfyRules.LABEL, a.id, c, if (right == Right.CE) 1 else -1,
+                com.optionslab.engine.orb.OffShadow.Exits(stop = stop0, target = target0, indexStop = p.indexStop, indexTarget = p.indexTarget,
+                    exitAt = ex0.exitAt?.takeIf { it.toLocalDate() == today }?.toLocalTime()?.takeIf { it.isBefore(sq) } ?: sq),
+                (p.line() + strategyWords(p)).take(200), lots = lots, limit = limit))
+            return say(b, "$OFF_WHY: handed to the shadow")
+        }
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return done("refused by the account guard: " + refusals.joinToString(" "))
@@ -969,7 +1047,7 @@ object NtfyArm {
     internal fun wipe() {
         synchronized(written) {
             cache = null; _view.value = View(); testListed = null; testSpot = null; barsNow = emptyMap(); quotesNow = emptyMap(); kickedPasses = 0
-            entrySpotsNow = emptyMap()
+            entrySpotsNow = emptyMap(); shadowAsks.clear(); shadowExits.clear()
             written.forget()
         }
         // 26 Oct (review): a quick pass left from the last test never runs into the next one.

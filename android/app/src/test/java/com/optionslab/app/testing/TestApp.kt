@@ -116,6 +116,8 @@ class TestApp : Application() {
         com.optionslab.app.data.S5Arm.testNoAutoOn = true
         // 29 Oct: CISD + network (built switched off).
         com.optionslab.app.data.CisdArm.init(this)
+        // 30 Oct: the switched-off shadow's book (as the app starts it).
+        com.optionslab.app.data.OffShadow.init(this)
         com.optionslab.app.data.StockOptions.init(this)
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.MarketRecorder.init(this)
@@ -191,6 +193,10 @@ class TestApp : Application() {
         com.optionslab.app.data.FlowArm.wipe()
         com.optionslab.app.data.S5Arm.wipe()
         com.optionslab.app.data.CisdArm.wipe()
+        com.optionslab.app.data.OffShadow.wipe()
+        // 30 Oct: the watch's shadow-only passes are noted, never started in a job (a test's pass leaves nothing running behind it).
+        AutomationSupport.lateShadow.clear()
+        com.optionslab.app.data.OffShadow.testLate = { AutomationSupport.lateShadow += it }
         com.optionslab.app.data.NtfyReader.wipe()
         // 26 Oct: the quick pass off in the tests (they drive the pass themselves); a test that checks it turns it on.
         com.optionslab.app.data.NtfyArm.testNoKick = true

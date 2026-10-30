@@ -46,7 +46,7 @@ internal fun s5Explanation(v: S5Arm.View): List<String> = listOf(
     S5Trail.RULES + ".",
     "${S5Trail.SIGNAL}.",
     S5Trail.RECORD + ".",
-    "Out at 15:15 (the paper book's square-off; the research held to 15:20) or 15:05 on expiry day. Never live.",
+    "Out at 15:15 (the paper book's square-off; the research held to 15:20) or 15:05 on expiry day. Live only through your live gates (Live with your PIN, AI trades go live, its own Trade live switch). Off: it runs in shadow, nothing bought.",
 ) + v.looks.map { l -> "${l.index} ${l.time}: ${if (l.taken) "taken" else noRupees(l.why)}" } + listOfNotNull(v.model?.let { "The network could not be read ($it): nothing is decided." })
 
 /** [why] without its rupee figures (the row shows none). */
@@ -59,12 +59,14 @@ internal fun S5RowContent(v: S5Arm.View, onArm: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             ExplainedName(S5Trail.LABEL, s5Explanation(v))
-            Text(if (v.armed) "ON · PAPER · FAILED RESEARCH GATES" else "OFF · FAILED RESEARCH GATES", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint,
+            Text(if (v.armed) "ON · PAPER + ITS LIVE SWITCH · FAILED GATES, BOSS'S EXCEPTION" else "OFF · SHADOW · FAILED GATES, BOSS'S EXCEPTION", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint,
                 fontSize = 10.sp, fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
             if (v.open.isNotEmpty()) RowBadge("HOLDING ${v.open.size} · PAPER", p.verdigris, Modifier.padding(top = 2.dp))
             val taken = v.today.size
             Text("Today: $taken taken, ${v.looks.count { !it.taken }} not · ${v.nets.size} closed so far, ${v.wins} won",
                 style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+            // 30 Oct (Boss): off, it runs in shadow - its would-be trades counted here (no rupee figure on the row).
+            if (!v.armed) Text(com.optionslab.app.data.OffShadow.countWords(S5Trail.SOURCE), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
         }
         Switch(
             modifier = Modifier.semantics { contentDescription = "On paper: switch ${S5Trail.LABEL}" },

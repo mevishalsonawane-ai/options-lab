@@ -43,6 +43,8 @@ class SmartWorkersTest : RobolectricTest() {
         Kite.Order("BANKNIFTY26OCT52000CE", side, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", tag)
 
     @Test fun aNewsWindowBlocksAPaperEntryAndALiveEntryButNeverAnExit() = runBlocking {
+        // 30 Oct: the ORB family's and Pine's live entries need Live and "AI trades go live" at the door ([Broker.ARM_TAGS]).
+        com.optionslab.app.testing.AutomationSupport.liveSettings()
         newsNow()
         // The arms' entry check: paper and live alike are skipped, with the reason, and logged beside the signal.
         val paper = FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:01", what = "CE")

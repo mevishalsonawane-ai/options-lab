@@ -653,6 +653,9 @@ class JobsTest : RobolectricTest() {
         assertEquals(emptyList<String>(), Tasks.indexQuotesWanted(context, null))
         Tasks.watchTick(context, AppSettings.load(), HashSet())
         assertEquals(0, upstox.count(::isIntraday))
+        // 30 Oct: the switched-off arms' shadow passes were handed to their own job after the stops, not run in the pass.
+        assertTrue(com.optionslab.app.testing.AutomationSupport.lateShadow.toString(),
+            "MCX paper arms (switched off: shadow)" in com.optionslab.app.testing.AutomationSupport.lateShadow)
         // A ticket on BANKNIFTY reads that one; a VIX alarm adds VIX; a disabled alarm reads nothing.
         assertEquals(listOf("BANKNIFTY"), Tasks.indexQuotesWanted(context, "BANKNIFTY"))
         Alarms.upsert(PriceAlarm(904, "INDIAVIX", above = true, level = 30.0))

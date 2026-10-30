@@ -56,7 +56,7 @@ class PaperBotsRowsTest {
         // Under the NSE arms (after Night).
         assertTrue(compose.onNodeWithText("Night row").fetchSemanticsNode().boundsInRoot.top <
             compose.onNodeWithText(VixDivRules.LABEL).fetchSemanticsNode().boundsInRoot.top)
-        compose.onNodeWithText("OFF").assertExists()
+        compose.onNodeWithText("OFF · SHADOW").assertExists()
         compose.onNodeWithText(keepNumbersWhole("Paper: 0 trades, +₹0")).assertExists()
         // COMPACT (15 Oct): the label, research, rules and paper test are in the name's dialog, research above the rules.
         compose.onNodeWithText(VixDivRules.NOT_PROVEN, substring = true).assertDoesNotExist()
@@ -83,7 +83,7 @@ class PaperBotsRowsTest {
     @Test fun armedItSaysPaperOnlyAndEachIndexsLastDecision() {
         home(off.copy(armed = true, status = mapOf("NIFTY" to "vix_late (10:30 check)", "BANKNIFTY" to "no signal yet (10:30: index +0.01%, VIX +2.50%)")))
         compose.waitForIdle()
-        compose.onNodeWithText("ON · PAPER ONLY").assertExists()
+        compose.onNodeWithText("ON · PAPER + ITS LIVE SWITCH").assertExists()
         compose.onNodeWithContentDescription("Paper only: switch ${VixDivRules.LABEL}").assertIsOn()
         // Each index's last decision is in the name's dialog (compact row).
         compose.onNodeWithText(keepNumbersWhole("NIFTY: vix_late (10:30 check)")).assertDoesNotExist()

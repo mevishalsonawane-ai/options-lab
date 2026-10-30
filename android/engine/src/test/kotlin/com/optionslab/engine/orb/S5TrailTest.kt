@@ -286,7 +286,7 @@ class S5TrailTest {
         assertEquals(20.0, past.range, 1e-12); assertEquals(100.0, past.close)
         val pd = S5Trail.Past.of(flatDay(d, 100.0))
         assertEquals(pd.close, flatDay(d, 100.0).lastClose)
-        assertTrue(S5Trail.NOT_PROVEN.contains("Failed research gates") && S5Trail.NOT_PROVEN.contains("never live"))
+        assertTrue(S5Trail.NOT_PROVEN.contains("Failed research gates") && S5Trail.NOT_PROVEN.contains("live gates"))
         assertTrue(S5Trail.ARM.paperOnly)
     }
 }

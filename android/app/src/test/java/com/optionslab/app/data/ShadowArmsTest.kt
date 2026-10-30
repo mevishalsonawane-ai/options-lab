@@ -331,6 +331,33 @@ class ShadowArmsTest : RobolectricTest() {
         } finally { HiddenArms.resetForTest(context) }
     }
 
+    /**
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): a variant re-armed and then
+     * switched OFF ([ShadowArms.disarm]) still decides its signal and records it as a virtual trade - nothing on paper, nothing
+     * at Zerodha, nothing told to its live path ([ArmLive]).
+     */
+    @Test fun aVariantSwitchedOffStillRecordsItsSignalVirtuallyAndNeverReachesPaperOrLive() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        bankFeed()
+        upstox.price(bankCe, 290.0)
+        HiddenArms.reloadForTest()
+        runBlocking { ShadowArms.promote(ShadowRules.ORB_P10.id) }
+        val off = runBlocking { ShadowArms.disarm(ShadowRules.ORB_P10.id) }
+        assertTrue(off, off.contains("switched off: back to the shadow, no orders"))
+        val paperOrders = Paper.state.orders.size
+        tick(LocalTime.of(10, 10)); tick(LocalTime.of(10, 11)); tick(LocalTime.of(10, 12))
+        assertFalse(row(ShadowRules.ORB_P10).armed)
+        val open = row(ShadowRules.ORB_P10).trades.single()
+        assertTrue(open.open); assertFalse("virtual: switched off", open.paper); assertNull(open.orderId)
+        assertNoBankOrders(paperOrders)
+        assertTrue(synchronized(heard) { heard.toList() }.toString(), synchronized(heard) { heard.none { it.startsWith("entered|") } })
+        // Its own exit still closes the virtual trade (10:13's low after the lock), with no sale anywhere.
+        tick(LocalTime.of(10, 14))
+        assertFalse(row(ShadowRules.ORB_P10).trades.single().open)
+        assertNoBankOrders(paperOrders)
+    }
+
     private fun assertNoBankOrders(paperOrders: Int) {
         assertEquals("the paper account was not touched", paperOrders, Paper.state.orders.size)
         assertTrue("no paper position", Paper.state.positions.none { it.symbol.startsWith("BANKNIFTY-SHADOW") })

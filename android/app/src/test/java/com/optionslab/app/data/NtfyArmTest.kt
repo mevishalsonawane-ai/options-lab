@@ -99,13 +99,19 @@ class NtfyArmTest : RobolectricTest() {
     private fun on() = runBlocking { NtfyArm.setOn(true) }
 
     @Test fun offByDefaultNothingIsBought() {
-        assertEquals(1, msg("m1", "BUY NIFTY 25000 CE"))
-        assertFalse(v().on)
-        assertEquals(NtfyArm.NOT_TRADED, alert("m1").state); assertTrue(alert("m1").why.contains("off"))
-        tick(LocalTime.of(9, 29))
-        assertTrue(v().open.isEmpty()); assertTrue(Paper.state.orders.isEmpty())
-        assertFalse(NtfyArm.wantsPass())
-        assertNothingAtZerodha()
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, the message is still decided - in the
+        // switched-off shadow ([OffShadow]); nothing is bought.
+        OffShadow.init(context); OffShadow.wipe(); OffShadow.testSession = true; OffShadow.testPrice = { Triple(121.0, 120.9, 121.1) }
+        try {
+            assertEquals(1, msg("m1", "BUY NIFTY 25000 CE"))
+            assertFalse(v().on)
+            assertEquals("off: it waits for the pass (decided in shadow)", NtfyArm.PENDING, alert("m1").state)
+            tick(LocalTime.of(9, 29))
+            assertEquals(NtfyArm.NOT_TRADED, alert("m1").state); assertTrue(alert("m1").why, alert("m1").why.contains("off"))
+            assertTrue(v().open.isEmpty()); assertTrue(Paper.state.orders.isEmpty())
+            assertFalse(NtfyArm.wantsPass())
+            assertNothingAtZerodha()
+        } finally { OffShadow.wipe() }
     }
 
     @Test fun aClearMessageIsBoughtOnPaperItsStopRestsAndTheTargetSellsIt() {
@@ -376,7 +382,10 @@ class NtfyArmTest : RobolectricTest() {
         ArmLive.testHeard = heard
         try {
             on()
-            assertFalse("its own Trade live starts off", ArmLive.view.value.on(LiveMirror.NTFY_ALERTS))
+            // 30 Oct (Boss: "make all arms as live"): its Trade live starts ON now; Boss turns it off (no PIN) for paper only.
+            assertTrue("its own Trade live starts on", ArmLive.view.value.on(LiveMirror.NTFY_ALERTS))
+            runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, false, pinConfirmed = false, log = false) }
+            assertFalse(ArmLive.view.value.on(LiveMirror.NTFY_ALERTS))
             msg("m1", "BUY NIFTY 25000 CE SL 100")
             tick(LocalTime.of(9, 28), 30)
             val p = v().open.single()

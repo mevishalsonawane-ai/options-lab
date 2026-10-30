@@ -218,7 +218,10 @@ object NightArm {
             note(b, if (on) "armed on paper (not proven; ${NightRules.RECORD})" else "switched off" +
                 if (b.positions.any { it.open }) "; the open position is still sold at 09:16" else "")
             save(b)
-            if (on) "${NightRules.LABEL} armed on paper: ${NightRules.RULES}. ${NightRules.RECORD}." else "${NightRules.LABEL} switched off."
+            // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, 15:20's decisions still run and each
+            // would-be entry is recorded in the switched-off shadow ([OffShadow]); nothing is bought.
+            if (on) "${NightRules.LABEL} armed on paper: ${NightRules.RULES}. ${NightRules.RECORD}." else "${NightRules.LABEL} switched off" +
+                (if (com.optionslab.app.BuildConfig.GOLD) "." else " - runs in shadow (nothing bought).")
         }
     }
 
@@ -226,9 +229,36 @@ object NightArm {
     fun diagLine(): String {
         val v = _view.value
         val closed = v.closed
-        return "Night (R3): ${if (v.armed) "armed (paper only)" else "off"} · open ${v.open.size} · last ${closed.size} closed " +
+        // 30 Oct: off reads as running in shadow, with the would-be trades' record (memory only).
+        return "Night (R3): ${if (v.armed) "armed (paper only)" else if (com.optionslab.app.BuildConfig.GOLD) "off" else
+            "${com.optionslab.engine.orb.OffShadow.OFF_WORDS} · ${OffShadow.line(NightRules.SOURCE)}"} · open ${v.open.size} · last ${closed.size} closed " +
             "%,.0f after charges".format(Locale.ENGLISH, closed.sumOf { it.net ?: 0.0 }) +
             (v.status.entries.joinToString("") { (k, s) -> " · $k $s" })
+    }
+
+    /**
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): the watch's pass runs this arm in front of the stops only when it
+     * has real work - switched on, or holding (or a book not read yet; [ensureRead] reads it first). Switched off and flat it only decides for the switched-off
+     * shadow ([OffShadow]), which the pass leaves to its own job after the stops ([OffShadow.runLate]). Memory only.
+     */
+    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed || _view.value.open.isNotEmpty() ||
+        com.optionslab.app.BuildConfig.GOLD   // IraGoldAlgo: hidden Night keeps its 15:20 OI history (25 Oct)
+        )
+
+    /** 30 Oct: the book read once (a restart), on the watch's worker, so [realDue] knows the switch and what is held. */
+    suspend fun ensureRead() { if (ready() && cache == null) refresh() }
+
+    /**
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): the watch needs this arm's pass now (memory
+     * only) - a paper trade held, or, on or off (off: never in IraGoldAlgo), a trading day inside 15:20's buying minutes. For the
+     * bar-close wake, which asked "armed". (Its would-be trades are closed by the shadow's own watch at 09:16.)
+     */
+    fun wantsPass(at: java.time.LocalTime = runCatching { Market.now().toLocalTime() }.getOrDefault(java.time.LocalTime.MIDNIGHT)): Boolean {
+        val v = _view.value
+        if (v.open.isNotEmpty()) return true
+        if (!v.armed && com.optionslab.app.BuildConfig.GOLD) return false
+        if (!NightRules.entryWindow(at)) return false
+        return runCatching { Market.isTradingDay() }.getOrDefault(false)
     }
 
     // ---- the pass ---------------------------------------------------------------------------------------------------
@@ -247,7 +277,11 @@ object NightArm {
             // OI build-up at 15:20 and keeps its history ([decide] returns before any entry), so a restore is judged against a current
             // window, not a stale one. It buys nothing while hidden.
             val hidden = !b.armed && runCatching { HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.NIGHT) }.getOrDefault(false)
-            if ((b.armed || hidden) && NightRules.entryWindow(now.toLocalTime())) {
+            // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off (hidden or not),
+            // 15:20's decisions still run in full and each would-be entry goes to the switched-off shadow ([OffShadow]); nothing is
+            // bought. Never in IraGoldAlgo (there a hidden arm only keeps its OI history, as before).
+            val shadow = !b.armed && !com.optionslab.app.BuildConfig.GOLD
+            if ((b.armed || shadow || hidden) && NightRules.entryWindow(now.toLocalTime())) {
                 for (u in NightRules.UNDERLYINGS) {
                     val key = "${now.toLocalDate()}|$u"
                     if (key in b.decided) continue
@@ -346,10 +380,21 @@ object NightArm {
     @Volatile internal var testBuildUp: ((String) -> Double?)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
 
+    /** TEST ONLY (30 Oct): the previous session's close for an index instead of the daily history's (null in the app; debug builds only). */
+    @Volatile internal var testPrevClose: ((String) -> Double?)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** TEST ONLY (30 Oct): the F&O breadth instead of Zerodha's quotes (null in the app; debug builds only). */
+    @Volatile internal var testBreadth: (() -> Double?)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
     /** TEST ONLY: [u]'s OI history length (the seed plus each day recorded). */
     internal suspend fun historySizeForTest(u: String): Int = lock.withLock { book().history[u]?.size ?: NightRules.SEED.getValue(u).size }
 
-    /** 25 Oct: the day's verdict while hidden: no entry, the OI history kept up to date. */
+    /**
+     * 25 Oct: the day's verdict while hidden: no entry, the OI history kept up to date. 30 Oct: only in IraGoldAlgo now; elsewhere a
+     * hidden (switched-off) arm runs its full decision in shadow ([OffShadow]), which keeps the history too.
+     */
     internal const val HIDDEN_OI = "hidden (your 15 Oct cleanup): no new entry; its OI history was updated"
 
     /** [decide]'s word for "the 15:19 minute is not in yet": nothing decided, looked at again (until 15:20:30). */
@@ -360,6 +405,8 @@ object NightArm {
         // 15 Oct (Boss's cleanup): hidden, it buys nothing new; what it holds is still sold at 09:16 (memory only).
         // 25 Oct (the arms audit): but its OI history is still updated (below), so it is never judged against a stale window.
         val hidden = runCatching { HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.NIGHT) }.getOrDefault(true)
+        // 30 Oct: switched off or hidden, the decision runs in shadow (its would-be trade recorded, nothing bought; below).
+        val shadow = !b.armed || hidden
         val today = now.toLocalDate()
         // The index's minutes to 15:19, and the previous session's close.
         val key = Upstox.INDEX_KEYS[u] ?: return "night_no_index_data"
@@ -370,18 +417,29 @@ object NightArm {
         val last = mins.lastOrNull() ?: return "night_no_index_data"
         if (last.istMinute < 15 * 60 + 19 && now.toLocalTime().isBefore(java.time.LocalTime.of(15, 20, 30))) return WAITING
         // 25 Oct (the arms audit): hidden, the day's OI build-up is still recorded (its history kept current), then nothing more.
-        if (hidden) {
+        if (hidden && com.optionslab.app.BuildConfig.GOLD) {
             val listedH = Market.contracts().filter { it.underlying == u }
             val nearH = com.optionslab.engine.orb.OrbRules.expiryOnOrAfter(today, listedH.map { it.expiry }.distinct())
             val buH = nearH?.let { testBuildUp?.invoke(u) ?: buildUp(listedH.filter { c -> c.expiry == it }, last.close, u, today) }
             if (buH != null) b.history.getOrPut(u) { NightRules.SEED.getValue(u).toMutableList() } += buH
             return HIDDEN_OI + (if (buH == null) " (no build-up read today)" else "")
         }
-        val prev = Net.history(key, today.minusDays(10), today.minusDays(1)).filter { it.istDate.isBefore(today) }.maxByOrNull { it.epochSecond }
-            ?: return "night_no_previous_close"
+        val prevClose = testPrevClose?.invoke(u)
+            ?: Net.history(key, today.minusDays(10), today.minusDays(1)).filter { it.istDate.isBefore(today) }.maxByOrNull { it.epochSecond }?.close
+            ?: run {
+                // 30 Oct: off (in shadow), the day's build-up is still recorded on this early return, as the 25 Oct hidden read did,
+                // so a switch back on is judged against a current window. (On, unchanged: nothing recorded without the close.)
+                if (shadow) {
+                    val listedS = Market.contracts().filter { it.underlying == u }
+                    val nearS = com.optionslab.engine.orb.OrbRules.expiryOnOrAfter(today, listedS.map { it.expiry }.distinct())
+                    nearS?.let { testBuildUp?.invoke(u) ?: buildUp(listedS.filter { c -> c.expiry == it }, last.close, u, today) }
+                        ?.let { b.history.getOrPut(u) { NightRules.SEED.getValue(u).toMutableList() } += it }
+                }
+                return "night_no_previous_close"
+            }
         val x = last.close
         val loc = NightRules.loc(x, mins.maxOf { it.high }, mins.minOf { it.low })
-        val move = NightRules.dayMove(x, prev.close)
+        val move = NightRules.dayMove(x, prevClose)
         // The day-end build-up of the nearest series, z-scored against the sessions before (recorded once a day, traded or not).
         val listed = Market.contracts().filter { it.underlying == u }
         val near = com.optionslab.engine.orb.OrbRules.expiryOnOrAfter(today, listed.map { it.expiry }.distinct())
@@ -390,7 +448,7 @@ object NightArm {
         val z = bu?.let { NightRules.z(it, hist) }
         if (bu != null) hist += bu
         // Breadth from Zerodha's quotes (logged in only).
-        val breadth = if (!Broker.loggedIn) null else runCatching {
+        val breadth = testBreadth?.invoke() ?: if (!Broker.loggedIn) null else runCatching {
             val q = Broker.lastAndPrevClose(NightRules.BREADTH_UNIVERSE.map { "NSE:$it" })
             NightRules.breadth(q.values.toList())
         }.getOrNull()
@@ -409,8 +467,20 @@ object NightArm {
         val c = Paper.contractFor(u, expiry, strike.toDouble(), right) ?: return "night_no_contract $u $strike ${right.name} ($facts)"
         // The thin-option gate: an option that barely trades is not bought.
         val minutes = runCatching { Paper.minutes(c) }.getOrNull()?.map { it.epochSecond to it.volume }
-        com.optionslab.engine.risk.ThinOption.refusal(minutes, System.currentTimeMillis() / 1000, c.lotSize, null, null)
+        // 30 Oct: judged at the market clock's now ([nowSec], the wall clock in the app), so a test's fixed clock means the same.
+        com.optionslab.engine.risk.ThinOption.refusal(minutes, nowSec, c.lotSize, null, null)
             ?.let { return "night_thin_option: $it" }
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off (or hidden), the
+        // signal that passed every guard above is a would-be trade in the switched-off shadow - nothing is bought, nothing goes to
+        // the paper book or live. Its one exit, as the arm's: carried overnight (NRML), out at 09:16 the next session (no stop, no
+        // target: the rule has none). Placed before the flow gate, whose log is the arm's real tickets' (its CONFIRM skip, off by
+        // default, is not applied to the would-be trade).
+        if (shadow) {
+            val words = OffShadow.enter(OffShadow.Ask(NightRules.SOURCE, NightRules.LABEL, u, c, if (right == Right.CE) 1 else -1,
+                com.optionslab.engine.orb.OffShadow.Exits(exitAt = java.time.LocalTime.of(9, 16), carry = true, exitOn = nextSession(today)),
+                "${d.why} ($facts)"))
+            return "switched off - %s (%s)".format(Locale.ENGLISH, words, facts)
+        }
         // The order flow at the decision (9 Oct; paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
         val flow = FlowGate.gate(NightRules.SOURCE, u, d.side, false, now.withSecond(0).withNano(0).toString(), right.name, contract = c)
         if (flow.skip) return "${flow.pausedWhy ?: FlowGate.SKIPPED} ($facts)"

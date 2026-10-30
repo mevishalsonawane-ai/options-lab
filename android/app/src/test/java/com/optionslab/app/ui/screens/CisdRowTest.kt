@@ -48,7 +48,7 @@ class CisdRowTest {
         compose.waitForIdle()
         compose.onNodeWithText(CisdNet.SHOWN).assertExists()
         assertEquals("CISD + network (failed gates, Boss's exception)", CisdNet.SHOWN)
-        compose.onNodeWithText("ON · PAPER · FAILED GATES, BOSS'S EXCEPTION").assertExists()
+        compose.onNodeWithText("ON · PAPER + ITS LIVE SWITCH · FAILED GATES, BOSS'S EXCEPTION").assertExists()
         compose.onNodeWithText("Today: 0 taken, 1 setups not · 0 closed so far, 0 won").assertExists()
         compose.onNodeWithContentDescription("About ${CisdNet.SHOWN}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
@@ -70,7 +70,7 @@ class CisdRowTest {
             25_010.0, 70, 45.0)
         row(CisdArm.View(armed = false, open = listOf(held), today = listOf(held)))
         compose.waitForIdle()
-        compose.onNodeWithText("OFF · FAILED GATES, BOSS'S EXCEPTION").assertExists()
+        compose.onNodeWithText("OFF · SHADOW · FAILED GATES, BOSS'S EXCEPTION").assertExists()
         compose.onNodeWithText("HOLDING 1 · PAPER").assertExists()
         compose.onNodeWithContentDescription("On paper: switch ${CisdNet.SHOWN}").assertIsOff()
     }

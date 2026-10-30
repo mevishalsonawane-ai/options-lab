@@ -141,6 +141,9 @@ object HeroTicketArm {
 
     private fun ready() = ::file.isInitialized
 
+    /** 30 Oct: whether the Hidden arms cleanup may read and switch it ([HiddenArms]). */
+    fun readyForCleanup(): Boolean = ready()
+
     private fun book(): Book {
         cache?.let { return it }
         val gen = erases
@@ -248,14 +251,26 @@ object HeroTicketArm {
     fun holding(): Boolean = _view.value.open.isNotEmpty()
 
     /**
-     * The watch needs this arm's pass now (memory only: no file, no network): a ticket is held, or it is switched on and the
-     * time is 12:25 .. 12:33 (its lists are made ready from 12:25, its tickets bought 12:30 .. 12:32). Outside that it costs
-     * the watch nothing - no wake, no minute lane, no safety-net round.
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): the watch's pass runs this arm in front of the stops only when it
+     * has real work - switched on, or holding (or a book not read yet; [ensureRead] reads it first). Switched off and flat it only decides for the switched-off
+     * shadow ([OffShadow]), which the pass leaves to its own job after the stops ([OffShadow.runLate]). Memory only.
+     */
+    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed || holding() || pendingNow)
+
+    /** 30 Oct: the book read once (a restart), on the watch's worker, so [realDue] knows the switch and what is held. */
+    suspend fun ensureRead() { if (ready() && cache == null) refresh() }
+
+    /**
+     * The watch needs this arm's pass now (memory only: no file, no network): a ticket is held, or the time is 12:25 .. 12:33 (its
+     * lists are made ready from 12:25, its tickets bought 12:30 .. 12:32) - on or off (30 Oct: off, it still decides, as would-be
+     * tickets). Outside that it costs the watch nothing - no wake, no minute lane, no safety-net round.
      */
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean =
         // 22 Oct (arms audit, as FT3): an entry order a cancel could not take out keeps the pass coming until it is settled - it
         // may fill late, and a ticket the arm never booked would have no trail and no place in the day's budget.
-        holding() || pendingNow || (_view.value.armed && minute in WAKE_FROM until WAKE_UNTIL)
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): the switch is no longer
+        // asked - off, the same 12:25 .. 12:33 window decides each would-be ticket for the switched-off shadow ([OffShadow]).
+        holding() || pendingNow || minute in WAKE_FROM until WAKE_UNTIL
 
     /** An entry order is still working (memory only: the book as last read). */
     @Volatile private var pendingNow: Boolean = false
@@ -269,10 +284,12 @@ object HeroTicketArm {
     /**
      * Switch it on or off - on paper, always. Off sells nothing it holds: its own exits still close it. [log]: Boss's flip from
      * the row (an off closes the 15 Oct change in Autopilot's log, so its Undo can never switch it again); false for the
-     * change log's own Undo.
+     * change log's own Undo. 30 Oct: off, it runs in shadow - each would-be ticket is recorded by [OffShadow], nothing is bought.
      */
     suspend fun setArmed(on: Boolean, log: Boolean = true): String {
         if (!ready()) return "${HeroTicketRules.LABEL} is not ready yet."
+        // 30 Oct (Boss: "Hide zero hero family arms"): hidden, it is switched on only by its restore from the Hidden arms list.
+        if (on && !HiddenArms.mayArm(com.optionslab.engine.orb.ArmsCleanup.HERO_TICKET)) return HiddenArms.refusal(HeroTicketRules.LABEL)
         return lock.withLock {
             val b = book()
             if (b.armed == on) return@withLock "${HeroTicketRules.LABEL} is already ${if (on) "on" else "off"} (paper only)."
@@ -316,7 +333,10 @@ object HeroTicketArm {
     /** The diagnostics line. */
     fun diagLine(): String {
         val v = _view.value
-        return "${HeroTicketRules.LABEL}: ${if (v.armed) "on (paper only)" else "off"} · ${v.target.words} · ${v.trailStart.words} · open ${v.open.size} · ${v.nets.size} closed " +
+        // 30 Oct: off reads as running in shadow, with the shadow's own record ([OffShadow.line]).
+        val state = if (v.armed) "on (paper only)"
+            else "${com.optionslab.engine.orb.OffShadow.OFF_WORDS}; ${runCatching { OffShadow.line(HeroTicketRules.SOURCE) }.getOrDefault("")}"
+        return "${HeroTicketRules.LABEL}: $state · ${v.target.words} · ${v.trailStart.words} · open ${v.open.size} · ${v.nets.size} closed " +
             "%,.0f after charges".format(Locale.ENGLISH, v.nets.sum()) + v.status.toSortedMap().entries.joinToString("") { (k, s) -> " · $k $s" } +
             " · ${HeroTicketRules.BOSS_CHOICE}"
     }
@@ -346,15 +366,17 @@ object HeroTicketArm {
         val now = Market.now().toLocalDateTime().withNano(0)
         // The book read first (a fresh start), so its switch is known before the reads.
         if (cache == null) lock.withLock { book() }
-        val reads = if (_view.value.armed && HeroTicketRules.entryPhase(now.toLocalTime()) == HeroTicketRules.Phase.OPEN)
+        // 30 Oct: on or off (off: the would-be tickets for the switched-off shadow) - the reads are the same.
+        val reads = if (HeroTicketRules.entryPhase(now.toLocalTime()) == HeroTicketRules.Phase.OPEN)
             runCatching { prefetch(now) }.getOrDefault(emptyMap()) else emptyMap()
         lock.withLock {
             val b = book()
-            if (!b.armed && b.positions.none { it.open }) return@withLock
             // An earlier day's unsettled entry order is the paper book's (its MIS square-off ended it): forgotten.
             var changed = b.pending.keys.removeAll { !it.startsWith("${now.toLocalDate()}|") }
             changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true } || changed
-            if (b.armed) for (u in HeroTicketRules.UNDERLYINGS) {
+            // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): on or off, each index's 12:30 tickets are
+            // decided; off, each becomes a would-be trade in the switched-off shadow ([side]), nothing is bought.
+            for (u in HeroTicketRules.UNDERLYINGS) {
                 changed = runCatching { decide(b, u, now, reads[u]) }.getOrElse { b.status[u] = "error: ${it.javaClass.simpleName}"; true } || changed
             }
             val closed = b.positions.count { !it.open }
@@ -547,6 +569,19 @@ object HeroTicketArm {
         val spent = b.positions.filter { it.day == today }.sumOf { it.cost }
         if (!HeroTicketRules.dayBudgetOk(spent, limit * c.lotSize * HeroTicketRules.LOTS))
             return done("skipped: today's tickets would pass Rs 2,000 (Rs %,.0f spent)".format(Locale.ENGLISH, spent))
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, the ticket is a
+        // would-be trade in the switched-off shadow - the same LIMIT and lot, Boss's exits as set for new tickets - and nothing is
+        // bought: no paper order, no resting target, no live path. A LIMIT the shadow would not have filled is asked again until 12:33.
+        if (!b.armed) {
+            val ref = "$u|${right.name}"
+            val said = OffShadow.enter(OffShadow.Ask(HeroTicketRules.SOURCE, HeroTicketRules.LABEL, ref, c, s,
+                shadowExits(ask, c.lotSize * HeroTicketRules.LOTS, b.target, b.trailStart),
+                "12:30 on its expiry day: %s %s @ %s (spot %s)".format(Locale.ENGLISH, "%.0f".format(Locale.ENGLISH, pick.strike), right.name,
+                    px(pick.ltp), px(spot)), lots = HeroTicketRules.LOTS, limit = limit))
+            if (!shadowKept(ref, today)) return say(b, u, "${right.name} switched off - $said; asked again until 12:33")
+            b.decided += key
+            return say(b, u, "${right.name} switched off - $said", final = true)
+        }
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", HeroTicketRules.LOTS, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return done("refused by the account guard: " + refusals.joinToString(" "))
@@ -569,6 +604,38 @@ object HeroTicketArm {
             // Still working (the cancel did not go through): never a second BUY beside it - settled on the next pass.
             else -> { b.pending[key] = id; say(b, u, "an entry order is still working; settled before anything new") }
         }
+    }
+
+    /**
+     * 30 Oct: Boss's exits for a would-be ticket in the switched-off shadow, priced from [ref] (the ask the LIMIT was set from: the
+     * shadow's own fill, the ask plus half the spread, is not known before it is asked) for [qty] units:
+     * - the 2x / 3x [target] as a premium target ([HeroTicketRules.targetLevel]);
+     * - the 25% trail from the fill as [com.optionslab.engine.orb.OffShadow.Exits.trailPct] 0.25. APPROXIMATION: the arm judges its
+     *   trail on minute CLOSES ([HeroTicketRules.trail]); the shadow trails the best price it sees and stops on the extremes, so it
+     *   can sell on a wick the paper ticket would hold through;
+     * - a trail that starts only after 2x / 3x ([HeroTicketRules.TrailStart.mult]) cannot be said in the shadow's fields (it has no
+     *   start multiple): the nearest is a profit lock armed at that multiple (net up (m - 1) x the fill) that keeps the share of the
+     *   best net the trail would keep at that point (0.75 m - 1) / (m - 1) - 0.5 at 2x, 0.625 at 3x. Below the multiple, as the
+     *   arm, there is no stop (held to 15:05). Past the multiple the lock keeps a fixed share of the net while the trail keeps 75% of
+     *   the premium, so the two part as the premium runs further;
+     * - out at 15:05 ([HeroTicketRules.EXIT_AT]; the shadow's expiry square-off is 15:05 too).
+     */
+    internal fun shadowExits(ref: Double, qty: Int, target: HeroTicketRules.Target, start: HeroTicketRules.TrailStart): com.optionslab.engine.orb.OffShadow.Exits {
+        val m = start.mult
+        return com.optionslab.engine.orb.OffShadow.Exits(
+            target = HeroTicketRules.targetLevel(ref, target),
+            trailPct = if (m == null) HeroTicketRules.TRAIL else null,
+            lockAfterRs = m?.let { (it - 1) * ref * qty },
+            lockKeep = m?.let { ((1 - HeroTicketRules.TRAIL) * it - 1) / (it - 1) } ?: 0.6,
+            exitAt = HeroTicketRules.EXIT_AT,
+        )
+    }
+
+    /** 30 Oct: the switched-off shadow holds today's would-be ticket [ref] (open or already closed; memory only). */
+    private fun shadowKept(ref: String, today: LocalDate): Boolean {
+        val full = "$today|${HeroTicketRules.SOURCE}|$ref"
+        val v = OffShadow.view.value
+        return (v.open + v.closed).any { it.ref == full }
     }
 
     /**

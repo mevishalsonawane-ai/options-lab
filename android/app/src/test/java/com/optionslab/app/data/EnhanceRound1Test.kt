@@ -16,7 +16,8 @@ import org.junit.Test
  * (idea 6), the one shared "is anything held?" answer (idea 7) and the cap's "only logged" count (idea 9).
  */
 class EnhanceRound1Test : RobolectricTest() {
-    @Before fun up() { AccountStopHost.resetForTest(); WatchClock.resetForTest(); ExitCoordinator.resetForTest() }
+    // 30 Oct: the ORB family's and Pine's live entries need Live and "AI trades go live" at the door ([Broker.ARM_TAGS]).
+    @Before fun up() { com.optionslab.app.testing.AutomationSupport.liveSettings(); AccountStopHost.resetForTest(); WatchClock.resetForTest(); ExitCoordinator.resetForTest() }
     @After fun down() { Market.testClock = null; AccountStopHost.resetForTest(); WatchClock.resetForTest() }
 
     /** The clock at [h]:[m] IST on the next trading day (still ticking). */

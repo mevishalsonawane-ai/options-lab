@@ -101,12 +101,15 @@ class NtfyReaderTest : RobolectricTest() {
         assertFalse("the topic is never in the diary", Diag.lines().any { it.contains(topic) || it.contains("tk_abc") })
     }
 
-    @Test fun offOrNoTopicOrOutOfHoursMeansNotRunning() {
+    @Test fun noTopicOrOutOfHoursMeansNotRunningOnOrOff() {
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, the reader still runs in its hours with a
+        // topic (each buy becomes a would-be trade); out of hours it never runs, on or off.
+        NtfyReader.testInHours = false
         runBlocking { NtfyArm.setOn(false, log = false) }
         NtfyReader.ensure()
         assertFalse(NtfyReader.status.value.running)
+        assertTrue("off is still armed (shadow)", NtfyReader.armedHint)
         // 26 Oct: out of hours BEFORE switching on (switching on starts the reader at once when in hours: a request could slip in).
-        NtfyReader.testInHours = false
         runBlocking { NtfyArm.setOn(true, log = false) }
         NtfyReader.ensure()
         assertFalse(NtfyReader.status.value.running)
@@ -275,12 +278,10 @@ class NtfyReaderTest : RobolectricTest() {
         Thread.sleep(600)
         assertFalse(NtfyReader.status.value.running)
         assertEquals(n, server.requestCount)
-        // Off: not armed, and nothing runs in its hours either.
+        // 30 Oct: off is still armed - it runs in shadow (each buy a would-be trade), so its hours still start it.
         runBlocking { NtfyArm.setOn(false, log = false) }
-        NtfyReader.testInHours = true
-        Thread.sleep(400)
-        assertFalse(NtfyReader.status.value.running)
-        assertFalse(NtfyReader.armedHint); assertFalse(NtfyReader.armedNow())
+        NtfyReader.ensure()
+        assertTrue(NtfyReader.armedHint)
         NtfyReader.stopSupervisor()
     }
 }

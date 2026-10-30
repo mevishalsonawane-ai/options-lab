@@ -207,7 +207,7 @@ internal fun FlowContent(s: FlowPageState, animate: Boolean, said: String?, onAr
                 "A plan that passes all four stages becomes a paper order - no alert, no notification. Live only the standard way: Live with " +
                 "your PIN, \"AI trades go live\" and its own Trade live switch (off until you turn it on).")
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (s.armed) "ON · PAPER · INDEX OPTIONS ONLY" else "OFF", style = Type.label.copy(color = if (s.armed) p.verdigris else p.inkFaint,
+                Text(if (s.armed) "ON · PAPER + ITS LIVE SWITCH · INDEX OPTIONS ONLY" else "OFF · SHADOW", style = Type.label.copy(color = if (s.armed) p.verdigris else p.inkFaint,
                     fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
                 Switch(checked = s.armed, onCheckedChange = onArm,
                     modifier = Modifier.semantics { contentDescription = "On paper: switch $FLOW_TITLE" }.testTag("flow-switch"),

@@ -261,13 +261,26 @@ object Ft3Arm {
     private const val WAKE_UNTIL = 13 * 60 + 6
 
     /**
-     * The watch needs this arm's pass now (memory only: no file, no network): a ticket is held, or it is switched on, the time is
-     * 10:55 .. 13:05 and some index's day is not decided yet. Outside that it costs the watch nothing.
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): the watch's pass runs this arm in front of the stops only when it
+     * has real work - switched on, or holding (or a book not read yet; [ensureRead] reads it first). Switched off and flat it only decides for the switched-off
+     * shadow ([OffShadow]), which the pass leaves to its own job after the stops ([OffShadow.runLate]). Memory only.
+     */
+    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed || holding() || pendingNow)
+
+    /** 30 Oct: the book read once (a restart), on the watch's worker, so [realDue] knows the switch and what is held. */
+    suspend fun ensureRead() { if (ready() && cache == null) refresh() }
+
+    /**
+     * The watch needs this arm's pass now (memory only: no file, no network): a ticket is held, or the time is 10:55 .. 13:05 and
+     * some index's day is not decided yet (on or off: 30 Oct, off it still decides, as would-be trades). Outside that it costs the
+     * watch nothing.
      */
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean {
         // 22 Oct (review): an entry order a cancel could not take out keeps the pass coming until it is settled (it may fill late).
         if (holding() || pendingNow) return true
-        if (!_view.value.armed || minute !in WAKE_FROM until WAKE_UNTIL) return false
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): the switch is no longer
+        // asked here - off, the same 10:55 .. 13:05 window decides each would-be ticket for the switched-off shadow ([OffShadow]).
+        if (minute !in WAKE_FROM until WAKE_UNTIL) return false
         val today = runCatching { Market.today() }.getOrNull() ?: return true
         val decided = decidedNow
         return Ft3Rules.UNDERLYINGS.any { "$today|$it" !in decided }
@@ -275,7 +288,8 @@ object Ft3Arm {
 
     /**
      * Switch it on or off - on paper. Off sells nothing it holds: its 15:05 exit still closes it. [log]: Boss's flip from the row
-     * (logged in Autopilot's change log); false for the change log's own Undo.
+     * (logged in Autopilot's change log); false for the change log's own Undo. 30 Oct: off, it runs in shadow - each would-be ticket
+     * is recorded by [OffShadow], nothing is bought.
      */
     suspend fun setArmed(on: Boolean, log: Boolean = true): String {
         if (!ready()) return "${Ft3Rules.LABEL} is not ready yet."
@@ -283,7 +297,7 @@ object Ft3Arm {
             val b = book()
             if (b.armed == on) return@withLock "${Ft3Rules.LABEL} is already ${if (on) "on" else "off"} (on paper)."
             b.armed = on
-            note(b, if (on) "switched on, on paper (${Ft3Rules.BOSS_CHOICE})" else "switched off" +
+            note(b, if (on) "switched on, on paper (${Ft3Rules.BOSS_CHOICE})" else "switched off - runs in shadow (would-be tickets recorded, nothing bought)" +
                 if (b.positions.any { it.open }) "; what it holds still sells at 15:05" else "")
             save(b)
             if (log) runCatching { com.optionslab.app.ira.Autopilot.ft3SwitchedByBoss(on) }
@@ -298,7 +312,10 @@ object Ft3Arm {
     fun diagLine(hideNet: Boolean = false): String {
         val v = _view.value
         val net = if (hideNet) PassedArmsHost.NET_HIDDEN else "%,.0f".format(Locale.ENGLISH, v.nets.sum())
-        return "${Ft3Rules.LABEL}: ${if (v.armed) "on (paper)" else "off"} · open ${v.open.size} · ${v.nets.size} closed $net after charges" +
+        // 30 Oct: off reads as running in shadow, with the shadow's own record ([OffShadow.line]: never a rupee figure in the upload).
+        val state = if (v.armed) "on (paper)" else if (hideNet) com.optionslab.engine.orb.OffShadow.OFF_WORDS
+            else "${com.optionslab.engine.orb.OffShadow.OFF_WORDS}; ${runCatching { OffShadow.line(Ft3Rules.SOURCE) }.getOrDefault("")}"
+        return "${Ft3Rules.LABEL}: $state · open ${v.open.size} · ${v.nets.size} closed $net after charges" +
             v.status.toSortedMap().entries.joinToString("") { (k, s) -> " · $k $s" } + " · ${Ft3Rules.BOSS_CHOICE}"
     }
 
@@ -323,7 +340,8 @@ object Ft3Arm {
         if (!ready() || com.optionslab.app.BuildConfig.GOLD || !Market.isTradingDay()) return
         val now = Market.now().toLocalDateTime().withNano(0)
         if (cache == null) lock.withLock { book() }
-        val reads = if (_view.value.armed && Ft3Rules.phase(now.toLocalTime()) != Ft3Rules.Phase.BEFORE)
+        // 30 Oct: on or off (off: the would-be tickets for the switched-off shadow) - the reads are the same.
+        val reads = if (Ft3Rules.phase(now.toLocalTime()) != Ft3Rules.Phase.BEFORE)
             runCatching { prefetch(now) }.getOrDefault(emptyMap()) else emptyMap()
         // 22 Oct (review): the row's price for a ticket the stream has no price for, read here, outside the lock, so the minute
         // lane's and the 15-second check's exits ([manageOnly]) never wait behind a network read.
@@ -333,12 +351,13 @@ object Ft3Arm {
             // time are judged on the minute the decision is made).
             val now = Market.now().toLocalDateTime().withNano(0)
             val b = book()
-            // An earlier day's unsettled entry order is the paper book's (its MIS square-off ended it): forgotten (before the
-            // switched-off return, so a forgotten one never keeps the pass coming - 22 Oct).
+            // An earlier day's unsettled entry order is the paper book's (its MIS square-off ended it): forgotten (so a forgotten
+            // one never keeps the pass coming - 22 Oct).
             var changed = b.pending.keys.removeAll { !it.startsWith("${now.toLocalDate()}|") }
-            if (!b.armed && b.positions.none { it.open }) { if (changed) save(b); return@withLock }
             changed = runCatching { exits(b, now, barMarks) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true } || changed
-            if (b.armed) for (u in Ft3Rules.UNDERLYINGS) {
+            // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): on or off, each index's marks are judged;
+            // off, a ticket becomes a would-be trade in the switched-off shadow ([buy]), nothing is bought.
+            for (u in Ft3Rules.UNDERLYINGS) {
                 changed = runCatching { decide(b, u, now, reads[u]) }.getOrElse { b.status[u] = "error: ${it.javaClass.simpleName}"; true } || changed
             }
             val closed = b.positions.count { !it.open }
@@ -593,6 +612,10 @@ object Ft3Arm {
 
     /** One index-day's outcome into the signal record (the forward test counts refused, unfilled and missed signals too). */
     private fun record(b: Book, dayKey: String, u: String, outcome: String, s: Saved?, note: String) {
+        // 30 Oct: the signal record is the paper forward test's (R98 FT3); while switched off the days are the shadow's record
+        // ([OffShadow]), never mixed into it.
+        // (A real paper ticket that fills while off - an entry placed before Boss switched it off - is still recorded.)
+        if (!b.armed && outcome != "bought") return
         val day = runCatching { LocalDate.parse(dayKey.substringBefore('|')) }.getOrElse { return }
         b.signals += Signal(day, u, outcome, s?.mark?.let { hm(it) }, s?.pick?.strike, s?.pick?.right, s?.pick?.price, s?.pick?.distEm,
             s?.pick?.ivRatio, note)
@@ -614,12 +637,27 @@ object Ft3Arm {
         val limit = Ft3Rules.limitPrice(ask, s.pick.price)
         val lots = Ft3Rules.lots(limit, c.lotSize)
         if (lots <= 0) return done(b, u, dayKey, "skipped: one lot of ${c.lotSize} at ${px(limit)} costs more than Rs 5,000", "skipped", s)
+        val until = hm(Ft3Rules.barClose(s.mark).plusMinutes(Ft3Rules.ENTRY_WINDOW))
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, the ticket is a
+        // would-be trade in the switched-off shadow - the same LIMIT and lots, held to 15:05 with no stop (the paper rule has none) -
+        // and nothing is bought: no paper order, no live path. A LIMIT the shadow would not have filled is asked again in the window,
+        // as the paper LIMIT is.
+        if (!b.armed) {
+            val ref = "$u|${s.mark}"
+            val said = OffShadow.enter(OffShadow.Ask(Ft3Rules.SOURCE, Ft3Rules.LABEL, ref, c, if (s.pick.call) 1 else -1,
+                com.optionslab.engine.orb.OffShadow.Exits(exitAt = Ft3Rules.EXIT_AT),
+                "the %s mark: %s @ %s, %.2f straddles, IV ratio %.3f".format(Locale.ENGLISH, hm(s.mark), fmtStrike(s.pick), px(s.pick.price),
+                    s.pick.distEm, s.pick.ivRatio), lots = lots, limit = limit))
+            if (!shadowKept(ref, today)) return say(b, u, "switched off - $said; asked again until $until")
+            b.decided += dayKey
+            b.picks.remove(dayKey)
+            return say(b, u, "switched off - $said", final = true)
+        }
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return done(b, u, dayKey, "refused by the account guard: " + refusals.joinToString(" "))
         runCatching { LiveRecorder.signal(Ft3Rules.LABEL, c.symbol, u, right.name, limit, paper = true) }
         // A LIMIT BUY on the PAPER account; not filled at once, it is cancelled and tried again on the next pass in its window.
-        val until = hm(Ft3Rules.barClose(s.mark).plusMinutes(Ft3Rules.ENTRY_WINDOW))
         val r = Paper.place(c, "BUY", lots, "LIMIT", "MIS", limit, null, known = q, auto = Ft3Rules.OWNER, mirror = Ft3Rules.SOURCE)
         val filled = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (filled != null) return bought(b, u, dayKey, s, c, r.orderId, filled.quantity, filled.price, now)
@@ -634,6 +672,13 @@ object Ft3Arm {
             // Still working (the cancel did not go through): never a second BUY beside it - settled on the next pass.
             else -> { b.pending[dayKey] = id; say(b, u, "an entry order is still working; settled before anything new") }
         }
+    }
+
+    /** 30 Oct: the switched-off shadow holds today's would-be ticket [ref] (open or already closed; memory only). */
+    private fun shadowKept(ref: String, today: LocalDate): Boolean {
+        val full = "$today|${Ft3Rules.SOURCE}|$ref"
+        val v = OffShadow.view.value
+        return (v.open + v.closed).any { it.ref == full }
     }
 
     /**

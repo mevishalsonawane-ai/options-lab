@@ -118,6 +118,8 @@ class BossRiskHostTest : RobolectricTest() {
     @Test fun theLiveWeeklyStopIsShadowUntilSwitchedOn() {
         // Zerodha's days as the daily loss limit read them (the session: today after the open).
         AccountStopHost.dayRead(-21_000.0)
+        // 30 Oct: the app in Live with AI trades on (the door now asks both of an ORB-family entry).
+        com.optionslab.app.testing.AutomationSupport.liveSettings()
         val o = Kite.Order("NIFTY26OCT24500CE", Kite.Side.BUY, 75, 75, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
         assertNull("shadow (the default): nothing changes", Broker.entryRecheck(o, "orb"))
         val rec = BossRiskHost.recordsToday(BossRiskHost.Rule.WEEKLY).single()
@@ -197,6 +199,8 @@ class BossRiskHostTest : RobolectricTest() {
 
     @Test fun theLiveRiskCapIsShadowAndRefusesWholeWhenSwitchedOn() {
         BossRiskHost.liveCapital = 400_000.0
+        // 30 Oct: the app in Live with AI trades on (the door now asks both of an ORB-family entry).
+        com.optionslab.app.testing.AutomationSupport.liveSettings()
         val o = Kite.Order("BANKNIFTY26OCT56000CE", Kite.Side.BUY, 90, 30, "MIS", "LIMIT", 600.0, 0.05, "NFO", "iraorb")
         assertNull(Broker.entryRecheck(o, "liquidity15", intended = 600.0, stop = 510.0))
         val rec = BossRiskHost.recordsToday(BossRiskHost.Rule.RISK).single()

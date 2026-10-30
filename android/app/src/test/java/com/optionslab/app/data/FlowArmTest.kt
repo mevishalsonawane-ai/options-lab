@@ -163,8 +163,8 @@ class FlowArmTest : RobolectricTest() {
         AutomationSupport.reloadFromDisk(FlowArm)
         assertFalse("Boss's off is kept", view().armed)
         assertEquals(1, view().log.count { "switched on once" in it })
-        // Its own Trade live switch starts off: only Boss turns it on, with the PIN.
-        assertFalse(ArmLive.view.value.on(FlowRules.SOURCE))
+        // 30 Oct (Boss: "make all arms as live"): its own Trade live switch starts ON like every arm's (Boss turns it off, no PIN).
+        assertTrue(ArmLive.view.value.on(FlowRules.SOURCE))
         assertEquals(LiveMirror.FLOW, LiveMirror.spec(FlowRules.SOURCE)!!.family)
     }
 
@@ -291,7 +291,8 @@ class FlowArmTest : RobolectricTest() {
         assertFalse("before 09:14", FlowArm.wantsPass(9 * 60))
         assertFalse("after the stream's hours", FlowArm.wantsPass(15 * 60 + 45))
         runBlocking { FlowArm.setArmed(false) }
-        assertFalse("off with nothing held", FlowArm.wantsPass(10 * 60))
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, it still decides in its hours.
+        assertTrue("off: still decides (would-be trades in the switched-off shadow)", FlowArm.wantsPass(10 * 60))
         // A holiday: no pass decides anything.
         var hol = day.plusDays(1)
         while (Market.isTradingDay(hol)) hol = hol.plusDays(1)

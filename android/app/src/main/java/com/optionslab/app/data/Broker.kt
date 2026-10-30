@@ -135,6 +135,8 @@ object Broker {
      * paper strategies' live path, [ArmLive]: "iraarm").
      */
     private val BOT_TAGS = setOf("iraorb", "irapine", "iraalgostrat", com.optionslab.engine.orb.LiveMirror.TAG)
+    /** 30 Oct: the arms with a live path of their own (the ORB family, Pine): the door asks Live and "AI trades go live" for them. */
+    internal val ARM_TAGS = setOf("iraorb", "irapine")
 
     /**
      * Why an entry may not be sent NOW, asked inside the door (null: it may). Reads memory and the settings already in it:
@@ -160,6 +162,14 @@ object Broker {
         // 18 Oct (final review F2): a paper strategy's mirrored entry can wait here up to 15 s after its own checks ran: the app in
         // Live, "AI trades go live", its arm's Trade live and its Shadow asked again at the last moment - memory only.
         if (o.tag == com.optionslab.engine.orb.LiveMirror.TAG) ArmLive.doorRefusal(arm)?.let { return it }
+        // 30 Oct (deep review, CLAUDE.md: every arm's live trade passes "AI trades go live"): the ORB family's (ORB, ORB Fresh,
+        // Liquidity 15+5) and Pine's live entries asked the app's Live and "AI trades go live" here too, at the last moment, from
+        // memory ([ArmLive.liveFlags]: the settings are read only after one of those keys was written). Before, they went on the
+        // app's Live and their own PIN flag alone. It only ever refuses an entry; exits never come here.
+        if (o.tag in ARM_TAGS) ArmLive.liveFlags().let { (appLive, aiLive) ->
+            if (!appLive) return "refused: the app is in Paper"
+            if (!aiLive) return "refused: \"AI trades go live\" is off"
+        }
         if (o.tag in BOT_TAGS) {
             // 21 Oct: either paper segment's loss stop, or the whole paper day past the paper limit, refuses too: never weaker than one paper figure.
             if (LossBreaker.liveDoorTripped()) return "refused: the daily loss limit was reached today"

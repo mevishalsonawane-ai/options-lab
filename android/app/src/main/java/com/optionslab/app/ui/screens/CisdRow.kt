@@ -47,7 +47,7 @@ internal fun cisdExplanation(v: CisdArm.View): List<String> = listOf(
     "${CisdNet.SIGNAL}.",
     CisdNet.RECORD + ".",
     "Built switched off: " + CisdNet.IV_GAP + ".",
-    "Out at 15:15 (the paper book's square-off; the research held to 15:20). Never live.",
+    "Out at 15:15 (the paper book's square-off; the research held to 15:20). Live only through your live gates (Live with your PIN, AI trades go live, its own Trade live switch). Off: it runs in shadow, nothing bought.",
 ) + v.looks.map { l -> "${l.index} ${l.time} ${if (l.call) "call" else "put"}: ${if (l.taken) "taken" else noRupees(l.why)}" } +
     listOfNotNull(v.model?.let { "The network could not be read ($it): nothing is bought." })
 
@@ -58,12 +58,14 @@ internal fun CisdRowContent(v: CisdArm.View, onArm: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             ExplainedName(CisdNet.SHOWN, cisdExplanation(v))
-            Text(if (v.armed) "ON · PAPER · FAILED GATES, BOSS'S EXCEPTION" else "OFF · FAILED GATES, BOSS'S EXCEPTION",
+            Text(if (v.armed) "ON · PAPER + ITS LIVE SWITCH · FAILED GATES, BOSS'S EXCEPTION" else "OFF · SHADOW · FAILED GATES, BOSS'S EXCEPTION",
                 style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint, fontSize = 10.sp, fontWeight = FontWeight.Bold),
                 modifier = Modifier.padding(top = 2.dp))
             if (v.open.isNotEmpty()) RowBadge("HOLDING ${v.open.size} · PAPER", p.verdigris, Modifier.padding(top = 2.dp))
             Text("Today: ${v.today.size} taken, ${v.looks.count { !it.taken }} setups not · ${v.nets.size} closed so far, ${v.wins} won",
                 style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))
+            // 30 Oct (Boss): off, it runs in shadow - its would-be trades counted here (no rupee figure on the row).
+            if (!v.armed) Text(com.optionslab.app.data.OffShadow.countWords(CisdNet.SOURCE), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
         }
         Switch(
             modifier = Modifier.semantics { contentDescription = "On paper: switch ${CisdNet.SHOWN}" },

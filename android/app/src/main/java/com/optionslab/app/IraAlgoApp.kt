@@ -140,6 +140,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.S5Arm.init(this)
         // 29 Oct: CISD + network (R133 S3-V2-E3) on paper, Boss's second exception.
         com.optionslab.app.data.CisdArm.init(this)
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): the switched-off shadow's book (its file only).
+        com.optionslab.app.data.OffShadow.init(this)
         com.optionslab.app.data.StockOptions.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.McxNr7Record.init(this)          // 21 Oct: NR7 crude, record only (no orders)

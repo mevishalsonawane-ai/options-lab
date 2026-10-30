@@ -369,7 +369,10 @@ object McxPaperArms {
             note(b, arm, if (on) "switched on, paper only (${McxArmRules.NOT_PROVEN}; ${record(arm)})" else "switched off" +
                 if (b.positions.any { it.arm == arm && it.open }) "; what it holds still closes by its own exits" else "")
             save(b)
-            if (on) "${label(arm)} on, paper only. ${McxArmRules.NOT_PROVEN}. ${record(arm)}." else "${label(arm)} off."
+            // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, its signals are still decided and each
+            // would-be entry is recorded in the switched-off shadow ([OffShadow]); nothing is bought. (Never in IraGoldAlgo.)
+            if (on) "${label(arm)} on, paper only. ${McxArmRules.NOT_PROVEN}. ${record(arm)}." else "${label(arm)} off" +
+                (if (com.optionslab.app.BuildConfig.GOLD) "." else " - runs in shadow (nothing bought).")
         }
     }
 
@@ -393,7 +396,9 @@ object McxPaperArms {
         val v = _view.value
         return "MCX paper arms: " + ARMS.joinToString(" · ") { a ->
             val closed = v.closed.filter { it.arm == a }
-            "${label(a)} ${if (v.isArmed(a)) "on (paper only)" else "off"}, open ${v.open.count { it.arm == a }}, last ${closed.size} closed " +
+            // 30 Oct: off reads as running in shadow, with its would-be trades' record (memory only; never in IraGoldAlgo).
+            "${label(a)} ${if (v.isArmed(a)) "on (paper only)" else if (com.optionslab.app.BuildConfig.GOLD) "off" else
+                "${com.optionslab.engine.orb.OffShadow.OFF_WORDS} · ${OffShadow.line(a)}"}, open ${v.open.count { it.arm == a }}, last ${closed.size} closed " +
                 "%,.0f after charges".format(Locale.ENGLISH, closed.sumOf { it.net ?: 0.0 }) + (v.status[a]?.let { " ($it)" } ?: "")
         }
     }
@@ -410,6 +415,9 @@ object McxPaperArms {
     private fun windows(v: View): List<IntRange> =
         // 21 Oct: the NR7 record ([McxNr7Record], no orders) needs the MCX session's minutes too while it records.
         // (Its book, or its hint before that book is read after a restart: [McxMarket.nr7OnQuick].)
+        // 30 Oct (review): the switched-off arms do NOT wake the MCX watch by themselves (the watch's own coverage, [McxMarket.coverage],
+        // would end the pass at once: start/stop churn all evening). They decide in shadow whenever the MCX pass runs for something
+        // else (an armed arm, a position, the NR7 record) - battery first.
         if (ARMS.any { v.isArmed(it) } || v.open.isNotEmpty() || McxMarket.nr7OnQuick()) listOf(0..24 * 60) else emptyList()
 
     /** Whether the MCX watch should run now for the arms: MCX open and an arm armed, or a position open in an arm's book. */
@@ -479,27 +487,52 @@ object McxPaperArms {
 
     // ---- the pass ---------------------------------------------------------------------------------------------------------
 
-    /** Called by the market watch's NSE pass and its MCX pass: exits first, then each armed arm's entries. */
-    suspend fun tick() {
+    /**
+     * Called by the market watch's NSE pass and its MCX pass: exits first, then each switched-on arm's entries.
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): with [shadow] (the watch's late
+     * job, [OffShadow.runLate], never in front of the stops) only the switched-off arms decide (parked and hidden ones too), each
+     * would-be entry handed to the switched-off shadow ([OffShadow]) - nothing is bought; never in IraGoldAlgo. That pass is skipped
+     * while any of these arms is switched on or holds a position, so its reads never hold this lock in front of a real decision or a
+     * real position's exit (CLAUDE.md: open positions come first); the switched-off arms then decide nothing until it is flat.
+     */
+    suspend fun tick(shadow: Boolean = false) {
         if (!ready()) return
+        if (shadow && com.optionslab.app.BuildConfig.GOLD) return
+        // 30 Oct (review): decided from memory before the lock (the book read first when nothing has read it), so neither pass ever
+        // waits on the other: the watch's pass only with an arm on or a position held, the shadow's only with every arm off and
+        // nothing held (its reads then hold this lock in front of nothing real).
+        val anyOn = armedNow().isNotEmpty()
+        if (!shadow && !anyOn && !holdsNow()) return
+        if (shadow && (anyOn || holdsNow())) return
+        // 30 Oct: the evening break's future-side exits for its open would-be trades (the shadow's own watch has the rest): outside
+        // this lock (it reads no book of these arms), so even while a real position is held.
+        if (shadow) runCatching {
+            if (McxMarket.isOpen()) McxMarket.now().withNano(0).let { now -> shadowEveExits(now, McxMarket.calendar().window(now.toLocalDate())) }
+        }
         lock.withLock {
             val b = book()
-            if (b.armed.values.none { it } && b.positions.none { it.open }) return@withLock
+            if (shadow && (b.positions.any { it.open } || b.armed.values.any { it })) return@withLock
+            if (!shadow && b.armed.values.none { it } && b.positions.none { it.open }) return@withLock
             val now = McxMarket.now().withNano(0)
             val cal = McxMarket.calendar()
             val window = cal.window(now.toLocalDate())
-            var changed = runCatching { manage(b, now, cal, window) }.getOrElse { note(b, "mcx", "exit check failed: ${it.javaClass.simpleName}"); true }
+            var changed = if (shadow) false
+                else runCatching { manage(b, now, cal, window) }.getOrElse { note(b, "mcx", "exit check failed: ${it.javaClass.simpleName}"); true }
             // The strategy lab (11 Oct): the MCX paper arms ran today (one map write: no setting, no I/O; not tuned in the lab).
-            if (b.armed.values.any { it }) VariantRunner.saw("mcx", live = false)
+            if (!shadow && b.armed.values.any { it }) VariantRunner.saw("mcx", live = false)
             if (McxMarket.isOpen()) {
-                if (b.armed[McxEveRules.SOURCE] == true)
+                // Each arm in its own pass: switched on in the watch's, switched off in the shadow's (its entry is then a would-be
+                // trade, inside each arm, [OffShadow]).
+                fun mine(source: String) = (b.armed[source] == true) != shadow
+                if (mine(McxEveRules.SOURCE))
                     changed = runCatching { eve(b, now, window) }.getOrElse { b.status[McxEveRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
                 // 21 Oct: a hidden arm takes no new entry ([HiddenArms.blocks], memory only); what it holds keeps its own exits ([manage]).
-                if (b.armed[McxMorningRules.SOURCE] == true && !HiddenArms.blocks(McxMorningRules.SOURCE))
+                // 30 Oct: hidden is off, so it decides in shadow ([morning]; never a paper entry while hidden).
+                if (mine(McxMorningRules.SOURCE))
                     changed = runCatching { morning(b, now, cal, window) }.getOrElse { b.status[McxMorningRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
-                if (b.armed[McxTrendRules.SOURCE] == true)
+                if (mine(McxTrendRules.SOURCE))
                     changed = runCatching { trend(b, now, cal) }.getOrElse { b.status[McxTrendRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
-                if (b.armed[McxUsSilverRules.SOURCE] == true)
+                if (mine(McxUsSilverRules.SOURCE))
                     changed = runCatching { silver(b, now, cal, window) }.getOrElse { b.status[McxUsSilverRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
             }
             // Closed trades beyond what is kept are dropped (oldest first); open ones always stay.
@@ -615,6 +648,56 @@ object McxPaperArms {
         if (fill == null) r.orderId?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
         else r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", tag) } }
         return fill to r
+    }
+
+    // ---- the switched-off shadow (30 Oct) ------------------------------------------------------------------------------------
+
+    /**
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): whether [arm]'s entry now is a
+     * would-be trade in the switched-off shadow ([OffShadow]) - switched off, parked ([McxMorningPark] / [McxEvePark]) or hidden
+     * ([HiddenArms]) - rather than a paper order. Null: neither (off in IraGoldAlgo, where nothing runs in shadow).
+     */
+    private fun shadowOf(b: Book, arm: String): Boolean? {
+        val off = b.armed[arm] != true || runCatching { HiddenArms.blocks(arm) }.getOrDefault(true)
+        return if (!off) false else if (com.optionslab.app.BuildConfig.GOLD) null else true
+    }
+
+    /** The price a would-be entry in [c] pays ([buy]: the ask, a sale the bid; else the last), for its stop's level; null unread. */
+    private suspend fun estimate(c: Paper.Contract, buy: Boolean): Double? = runCatching { Paper.quote(c) }.getOrNull()?.let { q ->
+        (if (buy) q.ask else q.bid).takeIf { it > 0 } ?: q.ltp.takeIf { it > 0 }
+    }
+
+    /** [m] (minutes of the day) as a time; a minute at or past midnight is kept at 23:59. */
+    private fun timeOf(m: Int): java.time.LocalTime = if (m >= 24 * 60) java.time.LocalTime.of(23, 59) else java.time.LocalTime.of(m / 60, m % 60)
+
+    /** A would-be trade's own ref (as asked) from the shadow's full ref ("day|key|ref"). */
+    private fun askRef(p: com.optionslab.engine.orb.OffShadow.Pos): String = p.ref.removePrefix("${p.day}|${p.key}|")
+
+    /**
+     * 30 Oct: the evening break's range-middle stop and target on the FUTURE for each open would-be trade of today (the two exits
+     * [com.optionslab.engine.orb.OffShadow.Exits] cannot say for MCX: its index stop reads NSE's indices only). The same
+     * [McxEveRules.exit] on the future's finished minutes since the entry, the break read again from today's minutes; booked by
+     * [OffShadow.exitNow]. Its option stop, two hours and flat time are the shadow's own watch's. Nothing is sent anywhere.
+     */
+    private suspend fun shadowEveExits(now: LocalDateTime, window: McxSession.Window?) {
+        val today = now.toLocalDate()
+        val open = OffShadow.view.value.openOf(McxEveRules.SOURCE).filter { it.day == today }
+        if (open.isEmpty()) return
+        val all = McxMarket.contracts()
+        val chain = McxInstruments.nearChain(all, McxEveRules.UNDERLYING, today)
+        val fut = chain.firstOrNull()?.let { McxInstruments.underlyingFuture(all, it) } ?: return
+        val bars = minutes(fut.upstoxKey, now)
+        val sig = McxEveRules.range(bars)?.let { McxEveRules.signal(it, bars) } ?: return
+        val byMinute = bars.associateBy { it.istMinute }
+        val flatBy = McxEveRules.flatBy(window)
+        for (p in open) {
+            val held = McxEveRules.Held(p.view, p.entry, sig.entryMinute, sig.stop, sig.target, flatBy)
+            for (m in sig.entryMinute until minuteOf(now)) {
+                val why = McxEveRules.exit(held, null, byMinute[m]?.close, m) ?: continue
+                if (why == "range_mid_stop" || why == "target") OffShadow.exitNow(McxEveRules.SOURCE, askRef(p), why)
+                break
+            }
+        }
     }
 
     // ---- exits ------------------------------------------------------------------------------------------------------------
@@ -776,6 +859,7 @@ object McxPaperArms {
 
     private suspend fun eve(b: Book, now: LocalDateTime, window: McxSession.Window?): Boolean {
         val arm = McxEveRules.SOURCE
+        val shadow = shadowOf(b, arm) ?: return false
         val today = now.toLocalDate()
         val key = "$today|eve"
         if (key in b.decided || b.positions.any { it.arm == arm && it.open }) return false
@@ -807,6 +891,19 @@ object McxPaperArms {
         val pc = McxMarket.paperContract(oc)
         val fresh = bars.lastOrNull()?.let { McxArmRules.fresh(it.epochSecond, nowSec()) } == true
         refusal(pc, buy = true, fresh = fresh)?.let { decide(b, arm, key, "eve_$it ($facts)"); return true }
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, parked or hidden,
+        // the break that passed every guard above is a would-be trade in the switched-off shadow - nothing is bought, nothing goes
+        // to the paper book or live. Its exits: the option's -15% stop (from the price it would pay), out at two hours or the flat
+        // time, whichever first; the range-middle stop and the target on the future by [shadowEveExits]. Placed before the flow gate,
+        // whose log is the arm's real tickets' (its CONFIRM skip, off by default, is not applied to the would-be trade).
+        if (shadow) {
+            val stop = estimate(pc, buy = true)?.let { toTick(McxEveRules.optionStop(it), oc.tick) }
+            val words = OffShadow.enter(OffShadow.Ask(arm, McxEveRules.LABEL, "eve", pc, sig.side,
+                com.optionslab.engine.orb.OffShadow.Exits(stop = stop, exitAt = timeOf(minOf(sig.entryMinute + McxEveRules.MAX_HOLD_MIN, flatBy))),
+                facts, lots = McxArmRules.LOTS))
+            decide(b, arm, key, "switched off - $words ($facts)")
+            return true
+        }
         // The order flow on the future at the decision (9 Oct; paper only): logged; under CONFIRM skipped unless it agrees.
         val flow = FlowGate.gate(arm, McxEveRules.UNDERLYING, sig.side, false, "$today ${hhmm(sig.minute)}", right.name, contract = pc)
         if (flow.skip) { decide(b, arm, key, "eve_${FlowGate.SKIPPED} ($facts)"); return true }
@@ -833,13 +930,19 @@ object McxPaperArms {
 
     private suspend fun morning(b: Book, now: LocalDateTime, cal: McxSession.Calendar, window: McxSession.Window?): Boolean {
         val arm = McxMorningRules.SOURCE
+        val shadow = shadowOf(b, arm) ?: return false
         val today = now.toLocalDate()
         if (b.positions.any { it.arm == arm && it.open }) return false
+        // 30 Oct: in shadow, one would-be position at a time too, and the next grid time after its 4 hours (its slot is in its ref).
+        val shadowToday: List<com.optionslab.engine.orb.OffShadow.Pos> = if (!shadow) emptyList() else OffShadow.view.value.let { v -> v.openOf(arm) + v.closedOf(arm) }.filter { it.day == today }
+        if (shadowToday.any { it.open }) return false
         val minute = minuteOf(now)
         val slot = McxMorningRules.gridSlot(minute) ?: return false
         val key = "$today|am|${hhmm(slot)}"
         if (key in b.decided) return false
-        val lastEntry = b.positions.filter { it.arm == arm && it.entryDay == today }.maxOfOrNull { it.entryMinute }
+        val lastEntry = (b.positions.filter { it.arm == arm && it.entryDay == today }.map { it.entryMinute } +
+            shadowToday.mapNotNull { p -> askRef(p).removePrefix("am|").split(':').takeIf { it.size == 2 }?.let { (h, m) -> h.toIntOrNull()?.let { hh -> m.toIntOrNull()?.let { hh * 60 + it } } } })
+            .maxOrNull()
         if (!McxMorningRules.mayEnter(slot, lastEntry)) return false
         val all = McxMarket.contracts()
         val chain = McxInstruments.nearChain(all, McxMorningRules.UNDERLYING, today)
@@ -861,6 +964,15 @@ object McxPaperArms {
             if (!McxMorningRules.premiumOk(px, oc.multiplier)) { why = "am_premium ${oc.label}: 1 lot Rs %,.0f (needs Rs 500 to Rs 1 lakh)".format(Locale.ENGLISH, px * oc.multiplier); continue }
             val facts = "OTM$steps call, $dte days to expiry, future %.2f".format(Locale.ENGLISH, last.close)
             refusal(pc, buy = true, fresh = fresh)?.let { decide(b, arm, key, "am_$it ($facts)"); return true }
+            // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, parked or
+            // hidden, the call that passed every guard above is a would-be trade in the switched-off shadow - nothing is bought. Its
+            // one exit, as the arm's: 4 hours after the grid time (or 10 minutes before an earlier close); no stop, no target (E1).
+            if (shadow) {
+                val words = OffShadow.enter(OffShadow.Ask(arm, McxMorningRules.LABEL, "am|${hhmm(slot)}", pc, 1,
+                    com.optionslab.engine.orb.OffShadow.Exits(exitAt = timeOf(McxMorningRules.exitMinute(slot, window))), facts, lots = McxArmRules.LOTS))
+                decide(b, arm, key, "switched off - $words ($facts)")
+                return true
+            }
             val flow = FlowGate.gate(arm, McxMorningRules.UNDERLYING, 1, false, "$today ${hhmm(slot)}", "CE", contract = pc)
             if (flow.skip) { decide(b, arm, key, "am_${FlowGate.SKIPPED} ($facts)"); return true }
             b.decided += key
@@ -889,6 +1001,10 @@ object McxPaperArms {
 
     private suspend fun trend(b: Book, now: LocalDateTime, cal: McxSession.Calendar): Boolean {
         val arm = McxTrendRules.SOURCE
+        // 30 Oct: switched off, its legs are decided in shadow ([trendShadow]); armed but hidden, its paper legs still close as before
+        // and a new leg is a would-be one. Off in IraGoldAlgo: nothing (as before, the pass never ran it).
+        val armedArm = b.armed[arm] == true
+        if (!armedArm && com.optionslab.app.BuildConfig.GOLD) return false
         val today = now.toLocalDate()
         val month = McxTrendRules.month(today)
         val signalDay = McxTrendRules.signalDay(today, cal)
@@ -913,6 +1029,13 @@ object McxPaperArms {
                 changed = true
             }
             val held = b.positions.firstOrNull { it.arm == arm && it.open && it.leg == leg }
+            // 30 Oct: switched off - its paper leg (if any) is left to its own expiry exit exactly as before ([manage]); the
+            // would-be legs are the shadow's.
+            if (!armedArm) {
+                if (held != null) { notes += "$leg: holds ${held.symbol} on paper (closes by its own exit)"; continue }
+                if (trendShadow(b, leg, futures, hold, sig, signalDay, month, today, now, cal, cfg, notes)) changed = true
+                continue
+            }
             val step = McxTrendRules.step(held?.side ?: 0, held?.expiry, sig, hold)
             val dayKey = "$today|trend|$leg|${step.why}"
             if (step.why == "trend_hold" || dayKey in b.decided) { notes += "$leg: ${step.why.removePrefix("trend_")}"; continue }
@@ -930,7 +1053,12 @@ object McxPaperArms {
             }
             if (step.open == 0) { notes += "$leg: ${step.why.removePrefix("trend_")}"; continue }
             // 21 Oct: hidden (Boss's request) - its legs still close on their own signal, rolls and expiry exit; nothing new opens.
-            if (HiddenArms.blocks(arm)) { notes += "$leg: no new leg (hidden on your request, 21 Oct)"; continue }
+            // 30 Oct: hidden is off, so the new leg is a would-be one in the switched-off shadow (never in IraGoldAlgo).
+            if (HiddenArms.blocks(arm)) {
+                if (com.optionslab.app.BuildConfig.GOLD) { notes += "$leg: no new leg (hidden on your request, 21 Oct)"; continue }
+                if (trendShadow(b, leg, futures, hold, sig, signalDay, month, today, now, cal, cfg, notes)) changed = true
+                continue
+            }
             val fc = futures.firstOrNull { it.expiry == hold } ?: continue
             val pc = McxMarket.paperContract(fc)
             val buy = step.open > 0
@@ -961,6 +1089,50 @@ object McxPaperArms {
         return changed
     }
 
+    /**
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): one leg of the switched-off (or
+     * hidden) trend as a would-be trade in the switched-off shadow ([OffShadow]) - nothing is bought or sold. The leg it holds is
+     * the shadow's open one; a long OR SHORT future (side -1: a sale, bearish). Its exit: carried (NRML) to the earlier of its
+     * roll day and the next month's first session, out at 09:00 - the nearest the shadow can say for "held for the month, rolled
+     * before expiry": a carried trade is closed only on its day ([OffShadow.exitNow] is same-day), so a leg whose signal holds into
+     * the next month is closed there and opened again (one extra round trip of charges that the real arm would not pay). True when
+     * [b] changed.
+     */
+    private suspend fun trendShadow(
+        b: Book, leg: String, futures: List<McxContract>, hold: LocalDate?, sig: Int, signalDay: LocalDate, month: String, today: LocalDate,
+        now: LocalDateTime, cal: McxSession.Calendar, cfg: McxExpiry.Config, notes: MutableList<String>,
+    ): Boolean {
+        val arm = McxTrendRules.SOURCE
+        val shadowHeld = OffShadow.view.value.openOf(arm).firstOrNull { "|trend|$leg|" in it.ref }
+        val step = McxTrendRules.step(shadowHeld?.side ?: 0, shadowHeld?.expiry, sig, hold)
+        if (shadowHeld != null) {
+            // Held (or due to close: its own carried exit closes it on its day; nothing new before that).
+            notes += "$leg: would-be ${if (shadowHeld.side > 0) "long" else "short"} held (${com.optionslab.engine.orb.OffShadow.LABEL})"
+            return false
+        }
+        if (step.open == 0) { notes += "$leg: ${step.why.removePrefix("trend_")}"; return false }
+        val dayKey = "$today|trend|$leg|${step.why}"
+        if (dayKey in b.decided) { notes += "$leg: ${step.why.removePrefix("trend_")}"; return false }
+        val fc = futures.firstOrNull { it.expiry == hold } ?: return false
+        val pc = McxMarket.paperContract(fc)
+        val buy = step.open > 0
+        val bars = runCatching { minutes(fc.upstoxKey, now) }.getOrNull().orEmpty()
+        val fresh = bars.lastOrNull()?.let { McxArmRules.fresh(it.epochSecond, nowSec()) } == true
+        b.decided += dayKey
+        val refused = refusal(pc, buy = buy, fresh = fresh)
+        if (refused != null) { note(b, arm, "$leg: ${step.why} refused: $refused (switched off: would-be leg)"); notes += "$leg: $refused"; return true }
+        var nextMonth = java.time.YearMonth.from(today).plusMonths(1).atDay(1)
+        repeat(10) { if (!cal.isTradingDay(nextMonth)) nextMonth = nextMonth.plusDays(1) }
+        val roll = runCatching { McxTrendRules.rollDay(fc.expiry, cal, cfg) }.getOrNull()
+        val exitOn = listOfNotNull(nextMonth, roll?.takeIf { it.isAfter(today) }).minOrNull()
+        val words = OffShadow.enter(OffShadow.Ask(arm, McxTrendRules.LABEL, "trend|$leg|${fc.expiry}", pc, step.open,
+            com.optionslab.engine.orb.OffShadow.Exits(exitAt = java.time.LocalTime.of(9, 0), carry = true, exitOn = exitOn),
+            "${step.why.removePrefix("trend_")}, $month signal (12-month change to $signalDay)", side = step.open, lots = McxArmRules.LOTS))
+        note(b, arm, "$leg: switched off - $words")
+        notes += "$leg: switched off - $words"
+        return true
+    }
+
     // ---- US-night silver (R2, futures) ------------------------------------------------------------------------------------
 
     /** What a filled resting stop is called: the silver future's disaster stop (not part of its research), else the option's -15%. */
@@ -985,6 +1157,7 @@ object McxPaperArms {
      */
     private suspend fun silver(b: Book, now: LocalDateTime, cal: McxSession.Calendar, window: McxSession.Window?): Boolean {
         val arm = McxUsSilverRules.SOURCE
+        val shadow = shadowOf(b, arm) ?: return false
         val today = now.toLocalDate()
         val key = "$today|silver"
         if (key in b.decided || b.positions.any { it.arm == arm && it.open }) return false
@@ -1039,6 +1212,19 @@ object McxPaperArms {
         val bars = runCatching { minutes(near.upstoxKey, now) }.getOrNull().orEmpty()
         val fresh = bars.lastOrNull()?.let { McxArmRules.fresh(it.epochSecond, nowSec()) } == true
         refusal(pc, buy = side > 0, fresh = fresh)?.let { decide(b, arm, key, "silver_$it ($facts)"); return true }
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off or hidden, the
+        // signal that passed every guard above is a would-be trade in the switched-off shadow - nothing is bought or sold. A FUTURE,
+        // long or SHORT (side -1: a sale, bearish): its disaster stop 3% against the price it would get, out 10 minutes before the
+        // close. Placed before the flow gate, whose log is the arm's real tickets' (its CONFIRM skip, off by default, is not applied).
+        if (shadow) {
+            val est = estimate(pc, buy = side > 0) ?: bars.lastOrNull()?.close?.takeIf { it > 0 }
+            val stop = est?.let { toTick(McxUsSilverRules.disasterLevel(it, side), near.tick) }
+            val words = OffShadow.enter(OffShadow.Ask(arm, McxUsSilverRules.LABEL, "silver", pc, side,
+                com.optionslab.engine.orb.OffShadow.Exits(stop = stop, exitAt = timeOf(McxUsSilverRules.exitMinute(today, window))),
+                facts, side = side, lots = McxArmRules.LOTS))
+            decide(b, arm, key, "switched off - $words ($facts)")
+            return true
+        }
         val flow = FlowGate.gate(arm, McxUsSilverRules.UNDERLYING, side, false, "$today silver", if (side > 0) "BUY" else "SELL", contract = pc)
         if (flow.skip) { decide(b, arm, key, "silver_${FlowGate.SKIPPED} ($facts)"); return true }
         b.decided += key

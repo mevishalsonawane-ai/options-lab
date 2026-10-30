@@ -26,7 +26,9 @@ class LiveMirrorTest {
         val keys = LiveMirror.ARMS.map { it.key }
         for (k in listOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE, OovArm.SOURCE, Solo2.SOURCE, LiveMirror.SOLO_MIDDAY,
                 SweepRules.ARM.source, RangeFadeRules.ARM.source, HeroRules.ARM.source, HeroTicketRules.SOURCE, Ft3Rules.SOURCE, VixDivRules.SOURCE,
-                NightRules.SOURCE, LiveMirror.NTFY_ALERTS, com.optionslab.engine.signals.FlowRules.SOURCE, LiveMirror.SHADOW_PROMOTED, "mcx_ng_eve", "mcx_silverm_am", "mcx_trend12", "mcx_us_silver"))
+                NightRules.SOURCE, LiveMirror.NTFY_ALERTS, com.optionslab.engine.signals.FlowRules.SOURCE, LiveMirror.SHADOW_PROMOTED, "mcx_ng_eve", "mcx_silverm_am", "mcx_trend12", "mcx_us_silver",
+                // 30 Oct (Boss: "Make them live s5 and csid startergies live too").
+                S5Trail.SOURCE, CisdNet.SOURCE))
             assertTrue(k in keys, k)
         assertEquals(keys.size, keys.toSet().size, "no key twice")
         // Jarvis's own free-form ideas stay on paper (CLAUDE.md): the news trades and the forge ideas are never mirrored.
@@ -47,13 +49,14 @@ class LiveMirrorTest {
         assertFalse(LiveMirror.on(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to false)))
         assertTrue(LiveMirror.on(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to true)))
         assertFalse(LiveMirror.on("nope", mapOf("nope" to true)), "an unknown arm never")
-        // An external message (ntfy alerts, 25 Oct) starts off: only Boss switches it on.
-        assertFalse(LiveMirror.on(LiveMirror.NTFY_ALERTS, emptyMap()))
-        assertTrue(LiveMirror.on(LiveMirror.NTFY_ALERTS, mapOf(LiveMirror.NTFY_ALERTS to true)))
-        // 28 Oct: IraThinker's flow (not proven, R110) starts off too.
-        assertFalse(LiveMirror.on(com.optionslab.engine.signals.FlowRules.SOURCE, emptyMap()))
+        // 30 Oct (Boss: "make all arms as live"): ntfy alerts and IraThinker's flow start ON like every other arm now; Boss's own
+        // saved "off" still holds.
+        assertTrue(LiveMirror.on(LiveMirror.NTFY_ALERTS, emptyMap()))
+        assertFalse(LiveMirror.on(LiveMirror.NTFY_ALERTS, mapOf(LiveMirror.NTFY_ALERTS to false)))
+        assertTrue(LiveMirror.on(com.optionslab.engine.signals.FlowRules.SOURCE, emptyMap()))
         assertEquals(LiveMirror.FLOW, LiveMirror.spec(com.optionslab.engine.signals.FlowRules.SOURCE)!!.family)
-        assertEquals(listOf(LiveMirror.NTFY_ALERTS, com.optionslab.engine.signals.FlowRules.SOURCE), LiveMirror.ARMS.filter { !it.defaultOn }.map { it.key })
+        assertEquals(emptyList(), LiveMirror.ARMS.filter { !it.defaultOn }.map { it.key }, "no arm starts with Trade live off")
+        for (a in LiveMirror.ARMS) assertTrue(LiveMirror.on(a.key, emptyMap()), a.key)
     }
 
     // ---- the gate -----------------------------------------------------------------------------------------------------------------
@@ -88,7 +91,7 @@ class LiveMirrorTest {
         assertEquals(30, LiveMirror.liveQty(2, 30, maxLots = 1))
         assertEquals(60, LiveMirror.liveQty(2, 30, maxLots = 5))
         // 21 Oct: the words for an entry cut to the lot cap - only when it is smaller than the paper's lots.
-        assertEquals(" · 2 of the paper's 9 lots (your lot cap)", LiveMirror.cutWords(9, 60, 30))
+        assertEquals(" · 2 of the paper's 9 lots (1 lot per arm entry live)", LiveMirror.cutWords(9, 60, 30))
         assertEquals("", LiveMirror.cutWords(2, 60, 30)); assertEquals("", LiveMirror.cutWords(9, 270, 30))
         assertEquals("", LiveMirror.cutWords(9, 0, 30)); assertEquals("", LiveMirror.cutWords(9, 60, 0))
         assertEquals(0, LiveMirror.liveQty(0, 30))
@@ -245,12 +248,24 @@ class LiveMirrorTest {
 
     // ---- shadow and the safety stop (18 Oct) ----------------------------------------------------------------------------------
 
-    @Test fun shadowStartsOnForEveryArmAndOnlyBossesChoiceTurnsItOff() {
-        assertTrue(LiveMirror.SHADOW_DEFAULT)
-        for (a in LiveMirror.ARMS) assertTrue(LiveMirror.shadowOn(a.key, emptyMap()), a.key)
+    @Test fun shadowStartsOffForEveryArmAndBossesSavedChoiceStays() {
+        // 30 Oct (Boss: "make all live if i move to live market"): live shadow starts OFF; an arm Boss put in shadow keeps it.
+        assertFalse(LiveMirror.SHADOW_DEFAULT)
+        for (a in LiveMirror.ARMS) assertEquals(a.key == LiveMirror.SOLO_MIDDAY, LiveMirror.shadowOn(a.key, emptyMap()), a.key)
         assertFalse(LiveMirror.shadowOn(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to false)))
         assertTrue(LiveMirror.shadowOn(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to true)))
         assertTrue(LiveMirror.shadowOn("unknown", mapOf("unknown" to false)), "an unknown arm is never live")
+    }
+
+    @Test fun s5TrailAndCisdMirrorWithTheirOwnStops() {
+        val s5 = LiveMirror.spec(S5Trail.SOURCE)!!
+        assertEquals(LiveMirror.S5, s5.family); assertEquals("MIS", s5.product); assertEquals(LiveMirror.Rest.SL, s5.rest)
+        assertTrue(s5.safety); assertFalse(s5.closeStop); assertFalse(s5.bossLots); assertEquals(Scale.PCT, s5.scale)
+        val cisd = LiveMirror.spec(CisdNet.SOURCE)!!
+        // Its stop is on the index: a labelled safety stop rests at Zerodha until the lock's level comes.
+        assertEquals(LiveMirror.CISD, cisd.family); assertTrue(cisd.safety); assertFalse(cisd.bossLots); assertEquals("NFO", cisd.exchange)
+        assertTrue(cisd.label.contains("failed gates"), "labelled Boss's exception wherever shown")
+        assertTrue(s5.signal.contains("index") && cisd.signal.contains("index"), "signal on the underlying")
     }
 
     @Test fun aShadowExitFillsAsTheLiveMirrorWould() {
@@ -274,8 +289,8 @@ class LiveMirrorTest {
         assertEquals(140.0, LiveMirror.safetyLevel(200.0, 1, 0.05)!!, 1e-9)
         assertEquals(260.0, LiveMirror.safetyLevel(200.0, -1, 0.05)!!, 1e-9)
         assertNull(LiveMirror.safetyLevel(0.0, 1, 0.05))
-        assertEquals(setOf(NightRules.SOURCE, LiveMirror.SOLO_MIDDAY, Solo2.SOURCE, VixDivRules.SOURCE, McxTrendRules.SOURCE, LiveMirror.SHADOW_PROMOTED),
-            LiveMirror.ARMS.filter { it.safety }.map { it.key }.toSet())
+        assertEquals(setOf(NightRules.SOURCE, LiveMirror.SOLO_MIDDAY, Solo2.SOURCE, VixDivRules.SOURCE, McxTrendRules.SOURCE, LiveMirror.SHADOW_PROMOTED,
+            CisdNet.SOURCE, S5Trail.SOURCE), LiveMirror.ARMS.filter { it.safety }.map { it.key }.toSet())
         assertEquals(0.30, LiveMirror.SAFETY_PCT, 1e-9)
     }
 
@@ -332,13 +347,18 @@ class LiveMirrorTest {
 
     @Test fun closeJudgedArmsRestOnlyADisasterStop() {
         assertEquals(setOf(HeroRules.ARM.source, HeroTicketRules.SOURCE, Ft3Rules.SOURCE), LiveMirror.ARMS.filter { it.closeStop }.map { it.key }.toSet())
-        // 21 Oct: only FT3's live size is cut to the lot cap; every other arm's over-cap order stays refused by the order gates.
-        assertEquals(setOf(Ft3Rules.SOURCE), LiveMirror.ARMS.filter { it.capLots }.map { it.key }.toSet())
-        // 21 Oct: FT3 is mirrored like every paper arm - "Trade live" on (Boss asked for it live), its Shadow on until Boss's PIN.
+        // 30 Oct (Boss: "1 lot per arm entry, never more unless Boss sets it"): every arm goes live at 1 lot, except ntfy alerts,
+        // whose size is Boss's own setting on its page.
+        assertEquals(setOf(LiveMirror.NTFY_ALERTS), LiveMirror.ARMS.filter { it.bossLots }.map { it.key }.toSet())
+        for (a in LiveMirror.ARMS) assertEquals(if (a.bossLots) 0 else 1, LiveMirror.liveLotCap(a), a.key)
+        assertEquals(65, LiveMirror.liveQty(9, 65, LiveMirror.liveLotCap(LiveMirror.spec(Ft3Rules.SOURCE)!!)), "FT3: 1 lot of NIFTY")
+        assertEquals(20, LiveMirror.liveQty(12, 20, LiveMirror.liveLotCap(LiveMirror.spec(HeroRules.ARM.source)!!)), "Hero: 1 lot of SENSEX")
+        assertEquals(130, LiveMirror.liveQty(2, 65, LiveMirror.liveLotCap(LiveMirror.spec(LiveMirror.NTFY_ALERTS)!!)), "ntfy: Boss's own lots")
+        // 21 Oct: FT3 is mirrored like every paper arm - "Trade live" on (Boss asked for it live). 30 Oct: its Shadow starts off.
         val ft3 = LiveMirror.spec(Ft3Rules.SOURCE)!!
         assertEquals(LiveMirror.FT3, ft3.family); assertEquals(Ft3Rules.LABEL, ft3.label)
         assertTrue(ft3.defaultOn && LiveMirror.on(Ft3Rules.SOURCE, emptyMap()))
-        assertTrue(LiveMirror.shadowOn(Ft3Rules.SOURCE, emptyMap()))
+        assertFalse(LiveMirror.shadowOn(Ft3Rules.SOURCE, emptyMap()))
         assertEquals("MIS", ft3.product); assertEquals(LiveMirror.Rest.SL, ft3.rest); assertFalse(ft3.safety)
         assertTrue("option chain" in ft3.signal)
         assertEquals(4.0, LiveMirror.disasterLevel(20.0, 1, 0.05)!!, 1e-9)

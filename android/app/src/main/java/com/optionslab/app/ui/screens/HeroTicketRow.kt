@@ -43,6 +43,9 @@ import java.util.Locale
  */
 @Composable
 internal fun HeroTicketRow() {
+    // 30 Oct (Boss: "Hide zero hero family arms"): hidden once it holds nothing; restored from the Hidden arms list.
+    val hidden by com.optionslab.app.data.HiddenArms.state.collectAsState(Dispatchers.Main.immediate)
+    if (!com.optionslab.engine.orb.ArmsCleanup.visible(hidden, com.optionslab.engine.orb.ArmsCleanup.HERO_TICKET)) return
     val v by HeroTicketArm.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { HeroTicketArm.refresh() } } }
@@ -79,7 +82,7 @@ internal fun HeroTicketRowContent(v: HeroTicketArm.View, onArm: (Boolean) -> Uni
         Column(Modifier.weight(1f)) {
             // COMPACT (15 Oct, Boss): its tickets and its exit / trail-start choices are in the name's dialog with its rules.
             ExplainedName(HeroTicketRules.LABEL, heroTicketExplanation(v), extra = { HeroTicketControls(v, onTarget, onStart) })
-            Text(if (v.armed) "ON · PAPER ONLY" else "OFF", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint, fontSize = 10.sp,
+            Text(if (v.armed) "ON · PAPER + ITS LIVE SWITCH" else "OFF · SHADOW", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint, fontSize = 10.sp,
                 fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
             // An open ticket, at a glance (its symbol, entry and mark are in the dialog).
             if (v.open.isNotEmpty()) RowBadge("HOLDING ${v.open.size} · PAPER", p.verdigris, Modifier.padding(top = 2.dp))

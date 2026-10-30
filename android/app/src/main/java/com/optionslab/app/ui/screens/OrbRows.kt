@@ -168,12 +168,14 @@ internal fun OrbRowsContent(
                     val (label, color) = when {
                         a.open != null -> if (a.open.live) "IN TRADE · LIVE" to p.oxblood else "IN TRADE · PAPER" to p.verdigris
                         dayStopped -> "STOPPED TODAY · ARMED" to p.oxblood
-                        a.armed && a.arm.hero -> "ARMED · PAPER ONLY" to p.amber
-                        a.armed && a.arm.paperOnly -> "ARMED · PAPER ONLY · AUTO" to p.verdigris
+                        // 30 Oct (Boss: "dont keep any in paper only"): these trade live through their own Trade live switch (the mirror).
+                        a.armed && a.arm.hero -> "ARMED · PAPER + ITS LIVE SWITCH" to p.amber
+                        a.armed && a.arm.paperOnly -> "ARMED · AUTO · PAPER + ITS LIVE SWITCH" to p.verdigris
                         a.armed && live && a.liveOk -> "ARMED · LIVE · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.oxblood
                         a.armed && live -> "ARMED · LIVE · APPROVE (re-arm for auto)" to p.oxblood
                         a.armed -> "ARMED · PAPER · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.verdigris
-                        else -> "OFF" to p.inkFaint
+                        // 30 Oct (Boss): off never buys; it runs in shadow (would-be trades recorded).
+                        else -> "OFF · SHADOW" to p.inkFaint
                     }
                     RowBadge(label, color)
                 }
@@ -183,6 +185,9 @@ internal fun OrbRowsContent(
                 if (a.test?.stopped == true) RowBadge("LIVE ENTRIES STOPPED · PAPER", p.oxblood, Modifier.padding(top = 2.dp))
                 Text(orbStatusLine(a, view), style = Type.bodySmall.copy(color = if (!a.armed && a.bossParked && a.open == null) p.amber else p.inkSoft, fontSize = 12.sp),
                     maxLines = 2, modifier = Modifier.testTag("orb-line:${a.arm.source}"))
+                // 30 Oct (Boss): an arm that is off runs in shadow - its would-be trades' record, under its line.
+                a.offShadow?.let { Text(it, style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp), maxLines = 2,
+                    modifier = Modifier.testTag("orb-shadow:${a.arm.source}")) }
             }
             Switch(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },

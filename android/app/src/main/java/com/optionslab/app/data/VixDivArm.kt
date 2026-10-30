@@ -198,30 +198,67 @@ object VixDivArm {
             note(b, if (on) "switched on, paper only (${VixDivRules.NOT_PROVEN}; ${VixDivRules.RECORD})" else "switched off" +
                 if (b.positions.any { it.open }) "; what it holds still closes by its own exits" else "")
             save(b)
-            if (on) "${VixDivRules.LABEL} on, paper only. ${VixDivRules.NOT_PROVEN}. ${VixDivRules.RECORD}." else "${VixDivRules.LABEL} off."
+            // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): off, its signals are still decided and
+            // recorded as would-be trades ([OffShadow]); nothing is bought.
+            if (on) "${VixDivRules.LABEL} on, paper only. ${VixDivRules.NOT_PROVEN}. ${VixDivRules.RECORD}." else "${VixDivRules.LABEL} off" +
+                (if (com.optionslab.app.BuildConfig.GOLD) "." else " - runs in shadow (nothing bought).")
         }
     }
 
     /** The diagnostics line. */
     fun diagLine(): String {
         val v = _view.value
-        return "${VixDivRules.LABEL}: ${if (v.armed) "on (paper only)" else "off"} · open ${v.open.size} · ${v.nets.size} closed " +
+        // 30 Oct: off reads as running in shadow, with the would-be trades' record (memory only).
+        return "${VixDivRules.LABEL}: ${if (v.armed) "on (paper only)" else if (com.optionslab.app.BuildConfig.GOLD) "off" else
+            "${com.optionslab.engine.orb.OffShadow.OFF_WORDS} · ${OffShadow.line(VixDivRules.SOURCE)}"} · open ${v.open.size} · ${v.nets.size} closed " +
             "%,.0f after charges".format(Locale.ENGLISH, v.nets.sum()) + v.status.toSortedMap().entries.joinToString("") { (k, s) -> " · $k $s" }
+    }
+
+    /**
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): the watch's pass runs this arm in front of the stops only when it
+     * has real work - switched on, or holding (or a book not read yet; [ensureRead] reads it first). Switched off and flat it only decides for the switched-off
+     * shadow ([OffShadow]), which the pass leaves to its own job after the stops ([OffShadow.runLate]). Memory only.
+     */
+    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed || _view.value.open.isNotEmpty())
+
+    /** 30 Oct: the book read once (a restart), on the watch's worker, so [realDue] knows the switch and what is held. */
+    suspend fun ensureRead() { if (ready() && cache == null) refresh() }
+
+    /**
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow"): the watch needs this arm's pass now (memory
+     * only) - a paper trade held; an open would-be trade of the switched-off shadow (NIFTY's 20-minute rule); or, on or off (off:
+     * never in IraGoldAlgo), a trading day inside one of the four checks' minutes. For the bar-close wake, which asked "armed".
+     */
+    fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean {
+        val v = _view.value
+        if (v.open.isNotEmpty()) return true
+        if (!v.armed && com.optionslab.app.BuildConfig.GOLD) return false
+        if (!v.armed && OffShadow.view.value.openOf(VixDivRules.SOURCE).isNotEmpty()) return true
+        if (VixDivRules.CHECKS.none { minute in it until it + VixDivRules.ENTRY_GRACE }) return false
+        return runCatching { Market.isTradingDay() }.getOrDefault(false)
     }
 
     // ---- the pass ---------------------------------------------------------------------------------------------------
 
-    /** Called by the market watch's pass (and its bar-close wake): exits first, then each index's decision when armed. */
+    /**
+     * Called by the market watch's pass (and its bar-close wake): exits first, then each index's decision. 30 Oct (Boss: "If i
+     * switch any arm off, it should be always run in shadow and record only"): switched off (or hidden), the decisions still run
+     * and each would-be entry goes to the switched-off shadow ([OffShadow]); nothing is bought. Never in IraGoldAlgo.
+     */
     suspend fun tick() {
         if (!ready() || !Market.isTradingDay()) return
         lock.withLock {
             val b = book()
-            if (!b.armed && b.positions.none { it.open }) return@withLock
+            val shadow = !b.armed && !com.optionslab.app.BuildConfig.GOLD
+            if (!b.armed && !shadow && b.positions.none { it.open }) return@withLock
             val now = Market.now().toLocalDateTime().withNano(0)
             var changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true }
+            // 30 Oct: NIFTY's 20-minute rule for its open would-be trades (the shadow's own watch has the stop and 15:10; memory
+            // only when it holds none).
+            if (!com.optionslab.app.BuildConfig.GOLD) runCatching { shadowExits(now) }
             // The strategy lab (11 Oct): VIX divergence ran today, on paper (one map write: no setting, no I/O).
             if (b.armed) VariantRunner.saw(VixDivRules.SOURCE, live = false)
-            if (b.armed) {
+            if (b.armed || shadow) {
                 for (u in VixDivRules.UNDERLYINGS) {
                     val key = "${now.toLocalDate()}|$u"
                     if (key in b.decided) continue
@@ -282,10 +319,32 @@ object VixDivArm {
     /** TEST ONLY: the stop-for-today read ([Strategies.stoppedWhy]), or a throw. */
     @Volatile internal var testStoppedWhy: (() -> com.optionslab.ira.DayStop.Why?)? = null
 
+    /**
+     * 30 Oct: NIFTY's "out after 20 minutes unless +5%" for each open would-be trade of the switched-off shadow (the one exit
+     * [com.optionslab.engine.orb.OffShadow.Exits] cannot say): the same [VixDivRules.exit] on the option's minutes, booked by
+     * [OffShadow.exitNow]. Its stop (on the low) and 15:10 are the shadow's own watch's. Nothing is sent anywhere.
+     */
+    private suspend fun shadowExits(now: LocalDateTime) {
+        val today = now.toLocalDate()
+        // (The contract each would-be trade was priced on, from the shadow's own book: the paper book never held it.)
+        val open = OffShadow.openRecs(VixDivRules.SOURCE).filter { VixDivRules.liquidityExit(it.pos.underlying) && it.pos.entryTime.toLocalDate() == today }
+        for (r in open) {
+            val p = r.pos
+            val c = r.contract
+            val bars = runCatching { minutes(c.feedKey, now) }.getOrNull().orEmpty().map { VixDivRules.Minute(it.istMinute, it.low, it.close) }
+            val why = VixDivRules.exit(VixDivRules.Held(p.underlying, p.entry, minuteOf(p.entryTime)), bars, minuteOf(now), params(today))
+            if (why == "not_up_5_in_20") OffShadow.exitNow(VixDivRules.SOURCE, p.ref.removePrefix("$today|${VixDivRules.SOURCE}|"), why)
+        }
+    }
+
     /** The check's decision for [u] at [now]. */
     private suspend fun decide(b: Book, u: String, now: LocalDateTime): Decision {
         // 15 Oct (Boss's cleanup): hidden, it buys nothing new; what it holds still closes by its own exits (memory only).
-        if (HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.VIX_DIV)) return Decision(false, "hidden (your 15 Oct cleanup): no new entry")
+        // 30 Oct: a hidden arm is off, so it runs in shadow like any switched-off arm (its would-be trades only, below); in
+        // IraGoldAlgo nothing runs in shadow, so there it stays as before.
+        val hidden = HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.VIX_DIV)
+        if (hidden && com.optionslab.app.BuildConfig.GOLD) return Decision(false, "hidden (your 15 Oct cleanup): no new entry")
+        val shadow = !b.armed || hidden
         val minute = minuteOf(now)
         if (minute < VixDivRules.CHECKS.first()) return Decision(false, "waiting for the 10:30 check")
         val today = now.toLocalDate()
@@ -329,6 +388,19 @@ object VixDivArm {
         com.optionslab.engine.risk.ThinOption.refusal(mins, now.atZone(com.optionslab.engine.IST).toEpochSecond(), c.lotSize,
             q?.bid?.takeIf { it > 0 }, q?.ask?.takeIf { it > 0 })
             ?.let { return Decision(true, "vix_thin_option: $it ($said)") }
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off (or hidden), the
+        // signal that passed every guard above is a would-be trade in the switched-off shadow - nothing is bought, nothing goes to
+        // the paper book or live. Its exits: NIFTY's -15% stop on the premium (from the price it would have paid: the ask, else the
+        // last) and 15:10; the 20-minute rule by [shadowExits]; BANKNIFTY held to 15:10. Placed before the flow gate, whose log is
+        // the arm's real tickets' (its CONFIRM skip, off by default, is not applied to the would-be trade).
+        if (shadow) {
+            val est = q?.ask?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 }
+            val stop = if (VixDivRules.liquidityExit(u)) est?.let { VixDivRules.stop(it, vp.stopPct) } else null
+            val words = OffShadow.enter(OffShadow.Ask(VixDivRules.SOURCE, VixDivRules.LABEL, "$u|${hhmm(sig.check)}", c, if (right == Right.CE) 1 else -1,
+                com.optionslab.engine.orb.OffShadow.Exits(stop = stop, exitAt = java.time.LocalTime.of(VixDivRules.EOD / 60, VixDivRules.EOD % 60)),
+                facts, lots = VixDivRules.LOTS))
+            return Decision(true, "switched off - $words ($said)")
+        }
         // The order flow at the decision (9 Oct; paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
         val flow = FlowGate.gate(VixDivRules.SOURCE, u, sig.side, false, "$today ${hhmm(sig.check)}", right.name, contract = c)
         if (flow.skip) return Decision(true, flow.pausedWhy?.let { "vix_$it ($said)" } ?: "vix_${FlowGate.SKIPPED} ($said)")

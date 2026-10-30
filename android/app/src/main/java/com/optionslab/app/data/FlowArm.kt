@@ -53,7 +53,10 @@ import java.util.Locale
  * a day and one trade per index a day, market times and holidays ([FlowRules.entryRefusal]).
  *
  * Its switch: ON on paper, once, by this update on Boss's explicit ask - logged in Autopilot's timeline as Boss's, undone in one
- * tap; after that only Boss switches it. Live: never from here. Each paper buy and close is told to [ArmLive] (memory only), whose
+ * tap; after that only Boss switches it. 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"):
+ * OFF, it still runs the flow every trading day and each plan that passes is handed to the switched-off shadow ([OffShadow]) with
+ * its own exits - nothing is ordered (no paper order, no live path); what it already holds still closes by its own exits.
+ * Live: never from here. Each paper buy and close is told to [ArmLive] (memory only), whose
  * live trade goes only with Live, "AI trades go live", Boss's PIN and this arm's own "Trade live" switch (off until Boss turns it on).
  *
  * Order and tick path: nothing here runs on either. It decides in the watch's pass (memory reads of the stream; the vault only for
@@ -291,13 +294,24 @@ object FlowArm {
         private set
 
     /**
-     * The watch needs this arm's pass now (memory only): a trade held or an entry order working; or switched on, on a trading day,
-     * 09:14 to 15:44 (the opening range, the decisions, and the session's record after the 15:30 close, while the stream runs).
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): the watch's pass runs this arm in front of the stops only when it
+     * has real work - switched on, or holding (or a book not read yet; [ensureRead] reads it first). Switched off and flat it only decides for the switched-off
+     * shadow ([OffShadow]), which the pass leaves to its own job after the stops ([OffShadow.runLate]). Memory only.
+     */
+    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed || holding() || pendingNow)
+
+    /** 30 Oct: the book read once (a restart), on the watch's worker, so [realDue] knows the switch and what is held. */
+    suspend fun ensureRead() { if (ready() && cache == null) refresh() }
+
+    /**
+     * The watch needs this arm's pass now (memory only): a trade held or an entry order working; or, on a trading day, 09:14 to
+     * 15:44 (the opening range, the decisions, and the session's record after the 15:30 close, while the stream runs). 30 Oct: on
+     * or off - off, it still decides (each plan a would-be trade in the switched-off shadow).
      */
     fun wantsPass(minute: Int = runCatching { Market.minuteNow() }.getOrDefault(0)): Boolean {
         if (com.optionslab.app.BuildConfig.GOLD) return false
         if (holding() || pendingNow) return true
-        if (!_view.value.armed || minute !in (9 * 60 + 14)..(15 * 60 + 44)) return false
+        if (minute !in (9 * 60 + 14)..(15 * 60 + 44)) return false
         // After the close only until the day's session is recorded (memory: the book's last publish).
         if (minute >= 15 * 60 + 30 && recordedToday) return false
         return runCatching { Market.isTradingDay() }.getOrDefault(false)
@@ -315,7 +329,8 @@ object FlowArm {
             val b = book()
             if (b.armed == on) return@withLock "${FlowRules.LABEL} is already ${if (on) "on" else "off"} (paper)."
             b.armed = on
-            note(b, if (on) "switched on, on paper (${FlowRules.NOT_PROVEN})" else "switched off" +
+            // 30 Oct: off runs in shadow (would-be trades recorded, nothing bought).
+            note(b, if (on) "switched on, on paper (${FlowRules.NOT_PROVEN})" else "switched off - runs in shadow (would-be trades recorded, nothing bought)" +
                 if (b.positions.any { it.open }) "; what it holds still closes by its own exits" else "")
             save(b)
             if (log) runCatching { com.optionslab.app.ira.Autopilot.flowSwitchedByBoss(on) }
@@ -326,14 +341,17 @@ object FlowArm {
     fun diagLine(hideNet: Boolean = false): String {
         val v = _view.value
         val net = if (hideNet) PassedArmsHost.NET_HIDDEN else "%,.0f".format(Locale.ENGLISH, v.nets.sum())
-        return "${FlowRules.LABEL}: ${if (v.armed) "on (paper)" else "off"} · open ${v.open.size} · today ${v.takenToday} taken, ${v.skips.size} skipped · " +
+        // 30 Oct: off reads as running in shadow, with the shadow's own record (no rupee figure when the net is hidden).
+        val state = if (v.armed) "on (paper)" else if (hideNet) com.optionslab.engine.orb.OffShadow.OFF_WORDS
+            else "${com.optionslab.engine.orb.OffShadow.OFF_WORDS}; ${runCatching { OffShadow.line(FlowRules.SOURCE) }.getOrDefault("")}"
+        return "${FlowRules.LABEL}: $state · open ${v.open.size} · today ${v.takenToday} taken, ${v.skips.size} skipped · " +
             "${v.nets.size} closed $net after charges · ${v.sessions} Zerodha sessions kept · ${FlowRules.NOT_PROVEN}"
     }
 
     /** Jarvis's answer (an unlocked phone only): what the flow did today and why, what is held, the record. No rupees on a locked phone. */
     suspend fun talk(locked: Boolean = false): String {
         val v = refresh()
-        val state = if (v.armed) "on, on paper, index options only" else "off"
+        val state = if (v.armed) "on, on paper, index options only" else com.optionslab.engine.orb.OffShadow.OFF_WORDS
         val today = if (v.candidates.isEmpty()) "nothing judged yet today" else v.candidates.joinToString("; ") { c ->
             "${c.index} ${if (c.taken) "taken" else "${c.stage}: ${c.why}"}" }
         val held = if (v.open.isEmpty()) "nothing held" else "holding " + v.open.joinToString { it.symbol }
@@ -370,6 +388,42 @@ object FlowArm {
                 snapNow = runCatching { Paper.snapshot() }.getOrNull()?.let { System.currentTimeMillis() to it }
                 if (snapNow != null) pass()
             }
+            // 30 Oct: switched off, a plan that passed is handed to the shadow now, OUTSIDE the arm's lock (its price read may be a
+            // network read), so the 15-second stop check never waits behind it.
+            shadowNow()
+        }
+    }
+
+    /** 30 Oct: a would-be trade of a switched-off pass ([take]), handed to the shadow after the lock ([shadowNow]); [key] "day|index". */
+    private class ShadowAsk(val key: String, val day: LocalDate, val ask: OffShadow.Ask)
+    /** This pass's would-be trades (the pass worker only, under [passLock]). */
+    private val shadowAsks = java.util.Collections.synchronizedList(ArrayList<ShadowAsk>())
+
+    /** The words a switched-off plan carries. */
+    private const val OFF_WHY = "switched off - runs in shadow"
+
+    /**
+     * 30 Oct: this pass's would-be trades handed to the switched-off shadow ([OffShadow.enter]: priced, kept, closed by the exits
+     * given; nothing is ordered anywhere), then each index's candidate says what the shadow did. One the shadow did not keep (no
+     * price, its LIMIT would not have filled, the market closed) stays open for the next pass, as a real entry would be tried again.
+     */
+    private suspend fun shadowNow() {
+        if (shadowAsks.isEmpty()) return
+        val asks = synchronized(shadowAsks) { shadowAsks.toList().also { shadowAsks.clear() } }
+        val said = asks.map { s -> s to runCatching { OffShadow.enter(s.ask) }.getOrElse { "shadow: not recorded (${it.javaClass.simpleName})" } }
+        lock.withLock {
+            val b = book()
+            val v = OffShadow.view.value
+            for ((s, words) in said) {
+                val kept = words == "shadow: already recorded" ||
+                    (v.open + v.closed).any { it.key == FlowRules.SOURCE && it.ref == "${s.day}|${FlowRules.SOURCE}|${s.ask.ref}" }
+                val prev = b.candidates[s.key] ?: continue
+                if (prev.final || prev.taken) continue
+                b.candidates[s.key] = prev.copy(why = "passed the flow; $OFF_WHY: $words", final = kept)
+                if (kept) note(b, "${s.ask.ref}: $OFF_WHY - $words")
+            }
+            save(b)
+            Unit
         }
     }
 
@@ -387,9 +441,10 @@ object FlowArm {
             // An entry order a cancel could not take out: settled first in every pass (on or off, any day), never a second BUY beside it.
             for ((key, id) in b.pending.toMap()) changed = runCatching { settle(b, key, id, now) }.getOrDefault(false) || changed
             val trading = runCatching { Market.isTradingDay(now.toLocalDate()) }.getOrDefault(false)
-            val tokens = if (trading && b.armed) KiteStream.SESSION_TOKENS else emptySet()
+            // 30 Oct: on or off - off, the flow still decides (each plan a would-be trade in the switched-off shadow).
+            val tokens = if (trading) KiteStream.SESSION_TOKENS else emptySet()
             follow(b, tokens)
-            if (trading && b.armed)
+            if (trading)
                 changed = runCatching { decideAll(b, now) }.getOrElse { note(b, "flow pass failed: ${it.javaClass.simpleName}"); true } || changed
             if (trading && now.toLocalTime() >= LocalTime.of(15, 30) && now.toLocalDate().toString() !in b.recorded)
                 changed = runCatching { record(b, now) }.getOrElse { note(b, "session record failed: ${it.javaClass.simpleName}"); false } || changed
@@ -555,10 +610,15 @@ object FlowArm {
         if (key in b.pending) return waiting("its entry order is still working")
         val list = listed(u)
         val exp = NtfyRules.expiryFor(list.map { it.expiry }, day, NtfyParser.Expiry.Nearest)
-        val refusal = FlowRules.entryRefusal(u, runCatching { Market.isTradingDay(day) }.getOrDefault(false), now.toLocalTime(), exp == day, b.armed,
+        // 30 Oct: the switch is not a refusal here - off, the plan goes to the shadow below, after every other guard (the kill
+        // switch, the bot's stop, the day lock, the hours, the day's cap) has judged it as it would a real entry. Off, the day's
+        // would-be trades count towards the day's cap and the one-a-day per index, as real ones would.
+        val shadowToday: List<com.optionslab.engine.orb.OffShadow.Pos> = if (b.armed) emptyList()
+            else OffShadow.view.value.let { it.open + it.closed }.filter { it.key == FlowRules.SOURCE && it.ref.startsWith("$day|") }
+        val refusal = FlowRules.entryRefusal(u, runCatching { Market.isTradingDay(day) }.getOrDefault(false), now.toLocalTime(), exp == day, true,
             runCatching { AppSettings.load().guardKill }.getOrDefault(true), stoppedToday(), runCatching { DayLockGuard.refusal(false) }.getOrNull(),
-            KiteStream.status.value == KiteStream.Status.LIVE, b.positions.count { it.day == day } + b.pending.size,
-            b.positions.any { it.day == day && it.index == u })
+            KiteStream.status.value == KiteStream.Status.LIVE, b.positions.count { it.day == day } + b.pending.size + shadowToday.size,
+            b.positions.any { it.day == day && it.index == u } || shadowToday.any { it.underlying == u })
         if (refusal != null) return waiting(refusal)
         if (list.isEmpty() || exp == null) return waiting("waiting for today's $u options list")
         val right = if (v.put) Right.PE else Right.CE
@@ -573,6 +633,18 @@ object FlowArm {
         val last = q.ltp
         val limit = NtfyRules.round2(NtfyRules.tickDown(last * 1.01) + 0.05)
         val stop0 = FlowRules.premiumStop(last)
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off, the plan is a
+        // would-be trade in the switched-off shadow - nothing is ordered (no paper order, no live path). Its exits as the arm runs
+        // them: the 20% premium stop (on the stream's price here; the real one is 20% under the fill, a few paise apart), IraThinker's
+        // index stop (the range's midpoint) and 2R index target, flat at 15:15 (its expiry day is skipped above), the same LIMIT.
+        // Handed over after the lock ([shadowNow]).
+        if (!b.armed) {
+            shadowAsks += ShadowAsk(key, day, OffShadow.Ask(FlowRules.SOURCE, FlowRules.LABEL, u, c, if (v.put) -1 else 1,
+                com.optionslab.engine.orb.OffShadow.Exits(stop = stop0, indexStop = v.stop?.takeIf { it.isFinite() },
+                    indexTarget = v.target?.takeIf { it.isFinite() }, exitAt = NtfyRules.SQ),
+                "IraScore ${v.score} · ${v.why}".take(200), limit = limit))
+            return waiting("$OFF_WHY: handed to the shadow")
+        }
         val snap = snapNow?.takeIf { System.currentTimeMillis() - it.first in 0..SNAP_FRESH_MS }?.second
             ?: run { wantSnap = true; return waiting("checking the account guard") }
         snapNow = null
@@ -799,7 +871,7 @@ object FlowArm {
         synchronized(written) {
             wipes++
             cache = null; sessions = null; _view.value = View(); testListed = null; testSpot = null; testMinutes = null
-            pendingNow = false; recordedToday = false; lastPassMs = 0L; placing.clear(); snapNow = null; wantSnap = false
+            pendingNow = false; recordedToday = false; lastPassMs = 0L; placing.clear(); snapNow = null; wantSnap = false; shadowAsks.clear()
             written.forget(); histWritten.forget()
         }
         runCatching { com.optionslab.ira.ArmExits.set(EXITS_KEY, emptyList()) }

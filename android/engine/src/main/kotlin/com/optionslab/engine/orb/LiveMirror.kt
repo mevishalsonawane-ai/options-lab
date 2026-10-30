@@ -77,11 +77,12 @@ object LiveMirror {
          */
         val closeStop: Boolean = false,
         /**
-         * 21 Oct (FT3): the live size is cut to the Bot settings' lot cap instead of the whole order being refused by the order
-         * gates - for an arm that buys a rupee budget of cheap options (many lots). Off for every other arm, whose over-cap order
-         * stays refused as before.
+         * 30 Oct (Boss: "1 lot per arm entry, never more unless Boss sets it"): every arm's live entry is 1 lot ([LIVE_LOTS]), cut from
+         * its paper lots and said on its entry line - except an arm whose size IS Boss's own setting ([bossLots]: ntfy alerts' "at most
+         * N lots" on its page), which keeps its paper lots (the order gates still apply). Before, FT3 alone was cut (to the Bot settings'
+         * lot cap) and every other arm sent its paper lots.
          */
-        val capLots: Boolean = false,
+        val bossLots: Boolean = false,
     )
 
     const val PASSED = "passed"
@@ -98,12 +99,16 @@ object LiveMirror {
     const val FLOW = "flow"
     const val MCX = "mcx"
     const val SHADOW = "shadow"
+    /** 30 Oct (Boss: "Make them live s5 and csid startergies live too"): S5 Trail's paper book. */
+    const val S5 = "s5"
+    /** 30 Oct: CISD + network's paper book. */
+    const val CISD = "cisd"
 
     /** Solo (midday)'s key (its paper book is Jarvis's Solo; it is a strategy, not one of Jarvis's own ideas). */
     const val SOLO_MIDDAY = "solo_midday"
     /** The shadow variants Boss re-armed on paper ([ShadowRules]): one live switch for them all. */
     const val SHADOW_PROMOTED = "shadow_promoted"
-    /** ntfy alerts (25 Oct): one live switch, off until Boss turns it on with the PIN. */
+    /** ntfy alerts (25 Oct): one live switch; 30 Oct (Boss: "make all arms as live"): ON by default like every other arm. */
     const val NTFY_ALERTS = "ntfy_alerts"
 
     /**
@@ -127,15 +132,25 @@ object LiveMirror {
         Spec(HeroTicketRules.SOURCE, HeroTicketRules.LABEL, HERO_TICKET, signal = "the expiry day at 12:30 (NIFTY, SENSEX)", closeStop = true),
         // 21 Oct: FT3 holds to 15:05 with no stop on paper; live rests only the labelled -80% disaster stop.
         Spec(Ft3Rules.SOURCE, Ft3Rules.LABEL, FT3, signal = "the expiry day's 5-minute marks 11:00-12:55 and the option chain at the mark " +
-            "(a strike's price, IV against the ATM's, distance in straddles; five indices)", closeStop = true, capLots = true),
+            "(a strike's price, IV against the ATM's, distance in straddles; five indices)", closeStop = true),
         Spec(VixDivRules.SOURCE, VixDivRules.LABEL, VIX, signal = "the index against India VIX", safety = true),
         Spec(NightRules.SOURCE, NightRules.LABEL, NIGHT, product = "NRML", rest = Rest.GTT, signal = "the index's close and the day-end OI build-up",
             safety = true),
-        // 25 Oct: an external message, not a researched rule: its live switch starts off (Boss turns it on with the PIN).
-        Spec(NTFY_ALERTS, "ntfy alerts", NTFY, signal = com.optionslab.engine.signals.NtfyRules.SIGNAL, defaultOn = false),
-        // 28 Oct (Boss: "just take orders from flow"): IraThinker's flow - not proven (R110), so its live switch starts off too.
+        // 25 Oct: an external message, not a researched rule. 30 Oct (Boss: "make all arms as live, will stop it if i want"): its
+        // live switch starts ON like every other arm's (it still trades live only in Live, with AI trades on and its paper arm on).
+        Spec(NTFY_ALERTS, "ntfy alerts", NTFY, signal = com.optionslab.engine.signals.NtfyRules.SIGNAL, bossLots = true),
+        // 28 Oct (Boss: "just take orders from flow"): IraThinker's flow - not proven (R110). 30 Oct: ON by default too (Boss).
         Spec(com.optionslab.engine.signals.FlowRules.SOURCE, com.optionslab.engine.signals.FlowRules.LABEL, FLOW,
-            signal = com.optionslab.engine.signals.FlowRules.SIGNAL, defaultOn = false),
+            signal = com.optionslab.engine.signals.FlowRules.SIGNAL),
+        // 30 Oct (Boss: "Make them live s5 and csid startergies live too"; CLAUDE.md, 30 Oct): the two arms that failed the gates
+        // by Boss's exception, live only through the same gates as every arm. S5 Trail's stop is its cell's rupee stop resting in
+        // the paper book (the same share of the price on the live fill), its 60% lock a paper exit the live trade follows.
+        // (Deep review: its rupee stop can be under one tick on a cheap option - no paper stop at all - so the labelled safety stop
+        // rests at Zerodha then; with a paper stop that one rests, scaled to the live fill.)
+        Spec(S5Trail.SOURCE, S5Trail.LABEL, S5, signal = "the index (R123's network at 09:20-09:30; the option chain as context)", safety = true),
+        // CISD's stop is on the index (no premium stop until its lock rests): a labelled safety stop rests at Zerodha (protection).
+        Spec(CisdNet.SOURCE, CisdNet.SHOWN, CISD, signal = "the index's 5-minute CISD (ICT's reading), R123's network as the filter",
+            safety = true),
         Spec(McxEveRules.SOURCE, McxEveRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the NATURALGAS future's evening break"),
         Spec(McxMorningRules.SOURCE, McxMorningRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the SILVERM future's morning"),
         Spec(McxTrendRules.SOURCE, McxTrendRules.LABEL, MCX, exchange = "MCX", product = "NRML", rest = Rest.GTT, signal = "the MCX future's 12-month trend",
@@ -157,11 +172,17 @@ object LiveMirror {
 
     // ---- the shadow (18 Oct, Boss: "add a shadow button, so that even i move to live, until is on, it will not trade") ----------
 
-    /** Each arm's Shadow starts ON: it records what it would have sent live, and sends nothing, until Boss turns it off (the PIN). */
-    const val SHADOW_DEFAULT = true
+    /**
+     * 30 Oct (Boss: "make all arms as live ... dont keep any in paper only or record only, make all live if i move to live market"):
+     * each arm's live Shadow now starts OFF, so going Live (with Boss's PIN and "AI trades go live") trades every arm that is on. An
+     * arm Boss put in shadow himself keeps his choice (it is saved); turning Shadow on never needs the PIN.
+     */
+    const val SHADOW_DEFAULT = false
 
-    /** Whether [key]'s Shadow is on, from Boss's saved choices ([saved]: key -> on); an arm never set, or unknown, is on. */
-    fun shadowOn(key: String, saved: Map<String, Boolean>): Boolean = spec(key) == null || (saved[key] ?: SHADOW_DEFAULT)
+    /** Whether [key]'s Shadow is on, from Boss's saved choices ([saved]: key -> on); an arm never set is [SHADOW_DEFAULT]; unknown: on. */
+    fun shadowOn(key: String, saved: Map<String, Boolean>): Boolean =
+        // (Solo (midday) is Jarvis's Solo: it starts in shadow, and the app keeps it there until it is proven, whatever is saved.)
+        spec(key) == null || (saved[key] ?: (key == SOLO_MIDDAY || SHADOW_DEFAULT))
 
     /**
      * A shadow trade's exit price, as the live mirror would have filled it: at a stop ([stopExit]) its resting SL's trigger while the
@@ -289,14 +310,20 @@ object LiveMirror {
         return lots * lot
     }
 
+    /** 30 Oct (Boss): the live lots of one arm entry ([Spec.bossLots]: Boss's own size). */
+    const val LIVE_LOTS = 1
+
+    /** The lot cap [liveQty] applies to [spec]'s live entry: [LIVE_LOTS], or 0 (no cap here: its paper lots) for [Spec.bossLots]. */
+    fun liveLotCap(spec: Spec): Int = if (spec.bossLots) 0 else LIVE_LOTS
+
     /**
-     * 21 Oct (review): the words for a live / shadow entry cut to the lot cap ([Spec.capLots]) - " · 2 of the paper's 9 lots (your
-     * lot cap)" - or "" when it is the paper's size. Said on the arm's own entry line, so its record is read at its own size.
+     * The words for a live / shadow entry cut to [LIVE_LOTS] - " · 1 of the paper's 9 lots (1 lot per arm entry live)" - or "" when
+     * it is the paper's size. Said on the arm's own entry line, so its record is read at its own size.
      */
     fun cutWords(paperLots: Int, liveQty: Int, lot: Int): String {
         if (lot <= 0 || liveQty <= 0) return ""
         val live = liveQty / lot
-        return if (live < paperLots) " · $live of the paper's $paperLots lots (your lot cap)" else ""
+        return if (live < paperLots) " · $live of the paper's $paperLots lots (1 lot per arm entry live)" else ""
     }
 
     // ---- levels ---------------------------------------------------------------------------------------------------------------

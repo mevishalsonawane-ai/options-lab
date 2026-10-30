@@ -87,6 +87,8 @@ class PortfolioGuardHostTest : RobolectricTest() {
     }
 
     @Test fun aLiveEntryIsRefusedAtTheDoorButNeverAnExitOrBossesOwnOrder() = runBlocking {
+        // 30 Oct: the ORB family's and Pine's live entries need Live and "AI trades go live" at the door ([Broker.ARM_TAGS]).
+        com.optionslab.app.testing.AutomationSupport.liveSettings()
         correlated()
         val orb = FlowGate.check("orb", "BANKNIFTY", 1, live = true, at = "2026-10-12T10:01", what = "CE")
         assertFalse(orb.skip)

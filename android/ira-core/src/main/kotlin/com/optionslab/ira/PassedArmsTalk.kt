@@ -80,7 +80,7 @@ object PassedArmsTalk {
     )
 
     /** 19 Oct: a passed arm set to record only, in words (its row, the diagnostics, Jarvis). */
-    const val RECORD_ONLY_WORDS = "record only (would-be trades, nothing bought)"
+    const val RECORD_ONLY_WORDS = "off - runs in shadow (would-be trades, nothing bought)"
 
     data class Facts(val arms: List<Arm>, val watch: List<String>, val watchOn: Boolean?, val modelLoaded: Boolean? = null,
                      /** 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock, R66's +5% once +25%), in words; null: unknown. */
@@ -146,7 +146,7 @@ object PassedArmsTalk {
     /** One arm, plain: the label, the switch, the rules, today, the record, the bar. */
     fun armWords(a: Arm, full: Boolean = true): String = buildString {
         append("${label(a.source)}: ")
-        append(when (a.on) { true -> "on (paper book)"; false -> if (a.recordOnly) RECORD_ONLY_WORDS else "off"; null -> "its switch could not be read just now" })
+        append(when (a.on) { true -> "on (paper book; live through your live gates)"; false -> RECORD_ONLY_WORDS; null -> "its switch could not be read just now" })
         a.pausedWhy?.let { append(" (it switched itself off: $it)") }
         append(". ${PassedArms.PASSED}. ")
         // 16 Oct (R73 review): R51's rules with its Supertrend filter when on; the short answer still says the filter is on, and

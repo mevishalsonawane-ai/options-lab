@@ -148,7 +148,7 @@ private fun McxArmRow(arm: String, v: McxPaperArms.View, onArm: (String, Boolean
         Column(Modifier.weight(1f)) {
             // COMPACT (15 Oct): name (tap: its label, research, rules, paper test and notes), state, key numbers, holdings.
             ExplainedName(McxPaperArms.label(arm), mcxExplanation(arm, v))
-            Text(if (on) "ON · PAPER ONLY" else if (arm in v.parked) "OFF · switched off on your OK (14 Oct)" else "OFF",
+            Text(if (on) "ON · PAPER + ITS LIVE SWITCH" else if (arm in v.parked) "OFF · SHADOW · switched off on your OK (14 Oct)" else "OFF · SHADOW",
                 style = Type.label.copy(color = if (on) p.verdigris else if (arm in v.parked) p.amber else p.inkFaint, fontSize = 10.sp,
                 fontWeight = FontWeight.Bold))
             Text(keepNumbersWhole(mcxNumbers(arm, v)), style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp))

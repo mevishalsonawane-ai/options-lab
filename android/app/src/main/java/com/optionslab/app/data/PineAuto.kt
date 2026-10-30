@@ -69,6 +69,14 @@ object PineAuto {
         val winding: HashMap<Long, String> = HashMap(),
         /** The one-time changes this book has been through ([dedupe]): each runs once, never again. */
         val migrated: HashSet<String> = HashSet(),
+        /**
+         * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): the scripts SAVED FOR
+         * AUTO-TRADING - switched on at least once (by Boss, or on Boss's yes to a Jarvis script) and still in the library. Only
+         * these run in the switched-off shadow while off ([shadowable]); a script that was only ever written, imported or charted
+         * is not an arm and is never shadowed. A book saved before 30 Oct: the scripts it had already run ([lastTarget],
+         * [lastBar]: written only while a script was on).
+         */
+        val autoSaved: HashSet<Long> = HashSet(),
     )
 
     private val _held = MutableStateFlow<Map<Long, Held>>(emptyMap())
@@ -107,6 +115,9 @@ object PineAuto {
             o.optJSONObject("paused")?.let { m -> m.keys().forEach { k -> bk.paused[k.toLong()] = m.getString(k) } }
             o.optJSONObject("winding")?.let { m -> m.keys().forEach { k -> bk.winding[k.toLong()] = m.getString(k) } }
             o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) bk.migrated += a.getString(i) }
+            // 30 Oct: the scripts saved for auto-trading; a book from before: those it had already run while on.
+            o.optJSONArray("autoSaved")?.let { a -> for (i in 0 until a.length()) bk.autoSaved += a.getLong(i) }
+                ?: run { bk.autoSaved += bk.lastTarget.keys; bk.autoSaved += bk.lastBar.keys }
             // A restore not yet disarmed (the app clears the flag once it has): no script may trade live on restored approvals.
             if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) bk.liveOk.clear()
             bk
@@ -138,6 +149,7 @@ object PineAuto {
         o.put("paused", JSONObject().apply { b.paused.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("winding", JSONObject().apply { b.winding.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("migrated", JSONArray(b.migrated.sorted()))
+        o.put("autoSaved", JSONArray(b.autoSaved.sorted()))
         written.write(file, o.toString().toByteArray(Charsets.UTF_8))
         synchronized(this) {
             // Erased while it was written: the file it may have put back is deleted again, and nothing is shown.
@@ -305,6 +317,93 @@ object PineAuto {
 
     private fun label(item: PineScripts.Item) = "Pine · ${item.name}"
 
+    // ---- the switched-off shadow (30 Oct 2026) ----------------------------------------------------------------------------
+
+    /** A script's key in the switched-off shadow ([OffShadow]): "pine:<id>" (as the trade manager's). */
+    fun shadowKey(id: Long): String = "pine:$id"
+
+    /**
+     * Whether a switched-off script runs in the shadow: one that places orders (alerts-only scripts never trade) on an index chart
+     * (Boss's 14 Oct rule: the signal is read on the index; any other chart is never run), never in IraGoldAlgo. Memory only.
+     */
+    internal fun shadowable(item: PineScripts.Item): Boolean = !com.optionslab.app.BuildConfig.GOLD && item.auto.mode == "trade" &&
+        com.optionslab.ira.PineUnderlying.rootOf(item.auto.symbol) != null
+
+    /** What a script's row says while it is off: its switched-off shadow's record ("shadow (switched off): 3 trades, ..."). Memory only. */
+    fun offWords(id: Long): String = OffShadow.line(shadowKey(id))
+
+    /**
+     * The script's own exits for a would-be trade bought near [price] ([qty] units), as the shadow's rules can hold them:
+     * - its stop-loss [PineScripts.Auto.stopPts] under the price ([ProfitLock.pineBase], as the resting stop) and its target
+     *   [PineScripts.Auto.targetPts] over it. The real ones count from the fill; the shadow fills at the ask plus the half-spread,
+     *   a touch above [price], so the shadow's stop is that touch wider and its target that touch nearer (the nearest it allows).
+     * - its profit lock, the nearest the shadow's one-rung lock (out when the net falls to a share of its best) allows: the
+     *   earliest rung that keeps a share of the gain - the ladder's "at half the target, lock a quarter of it" (keeps 50%), or the
+     *   trail's first step (+8% keeps 50% by default) when that comes sooner. The ladder's breakeven rung and later, tighter steps
+     *   have no place there (a comment, not a guess).
+     * - 15:15: the shadow's own NSE square-off (15:05 on the option's expiry day) applies to every would-be trade; with the
+     *   script's own 15:15 sell switched off it is still the backstop (an MIS trade is squared off that day either way).
+     * - a change of signal: [shadowSignalExit]. The daily loss limit has no place on one trade (not mapped).
+     */
+    internal fun shadowExits(a: PineScripts.Auto, price: Double, qty: Int): com.optionslab.engine.orb.OffShadow.Exits {
+        val stop = ProfitLock.pineBase(price, a.stopPts)
+        val target = if (a.targetPts.isFinite() && a.targetPts > 0) price + a.targetPts else null
+        val rungs = if (!a.profitLock) emptyList() else {
+            val ladder = ProfitLock.pineReference(a.targetPts, a.stopPts)?.let { listOf(0.5 * it to 0.5) }.orEmpty()
+            val trail = a.trail.clean().steps.filter { it.startPct > 0 && it.keepPct > 0 }.map { price * it.startPct / 100.0 to it.keepPct / 100.0 }
+            ladder + trail
+        }
+        val first = rungs.filter { it.first.isFinite() && it.first > 0 }.minByOrNull { it.first }
+        return com.optionslab.engine.orb.OffShadow.Exits(stop = stop, target = target, lockAfterRs = first?.let { it.first * qty },
+            lockKeep = first?.second ?: 0.6, exitAt = if (a.squareOff) java.time.LocalTime.of(15, 15) else null)
+    }
+
+    /**
+     * A switched-off (or hidden) script's would-be entry: the option [enterNow] would have picked (the ATM [right] of the nearest
+     * expiry after today, on the index close [spot]) recorded in the switched-off shadow with the script's exits ([shadowExits]).
+     * Nothing is placed: no paper order, no Zerodha order, no live mirror. The order flow gate and the one-index-one-side claim are
+     * not asked (both keep state for real entries; a would-be trade must not hold back a real one). [bar]: the signal's candle.
+     */
+    private suspend fun shadowEnter(b: Book, item: PineScripts.Item, right: Right, spot: Double, bar: Long, signal: String) {
+        val id = item.id
+        val u = item.auto.symbol
+        val shadowSays = { text: String -> note(b, id, "Shadow (switched off): nothing bought, not recorded - $text") }
+        // Unit tests that have not set the shadow's prices never read one for it (no test may reach the network); the app never
+        // sets either seam.
+        if (Paper.testSkipFeedChecks && OffShadow.testPrice == null) return
+        // The shadow's book not read (not set up): nothing to record into, and no price read for it.
+        if (!OffShadow.refresh().loaded) return
+        if (u == "SENSEX") { shadowSays("SENSEX options trade on BSE"); return }
+        val strike = OrbRules.atmStrike(spot, strikeStep(u))
+        val listed = Market.contracts().filter { it.underlying == u }.map { it.expiry }.distinct()
+        val expiry = OrbRules.expiryAfter(todayIst(), listed) ?: run { shadowSays("no $u expiry after today is listed"); return }
+        val c = Paper.contractFor(u, expiry, strike.toDouble(), right) ?: run { shadowSays("$u $strike $right is not listed"); return }
+        // The thin-option check stands for the shadow too: what the script would really have refused is not recorded as bought.
+        thinRefusal(c)?.let { shadowSays("it would not have been bought ($it)"); return }
+        val px = runCatching { Paper.lastPrice(c) }.getOrNull()?.takeIf { it > 0 } ?: run { shadowSays("no price for ${c.symbol}"); return }
+        val lots = item.auto.lots.coerceIn(1, 50)
+        val said = OffShadow.enter(OffShadow.Ask(shadowKey(id), label(item), "$id|$bar", c, if (right == Right.CE) 1 else -1,
+            shadowExits(item.auto, px, lots * c.lotSize.coerceAtLeast(1)),
+            "Pine $signal on $u ${item.auto.interval} at ${"%.2f".format(java.util.Locale.ENGLISH, spot)} (signal on the index)", lots = lots))
+        // "shadow (switched off): would buy ... (nothing bought)", or why it was not recorded.
+        note(b, id, said.replaceFirstChar { it.uppercase() })
+    }
+
+    /**
+     * The script's signal exit for its open would-be trades: one the signal no longer backs ([want]: "CE", "PE" or null for none) is
+     * closed in the shadow at the quote ([OffShadow.exitNow]), as a change of signal sells a real holding. Memory read; a close only
+     * when one is due.
+     */
+    private suspend fun shadowSignalExit(item: PineScripts.Item, want: String?) {
+        val key = shadowKey(item.id)
+        val open = OffShadow.view.value.openOf(key).ifEmpty { return }
+        val wantView = when (want) { "CE" -> 1; "PE" -> -1; else -> 0 }
+        for (p in open) if (p.view != wantView) {
+            val prefix = "${p.day}|$key|"
+            if (p.ref.startsWith(prefix)) runCatching { OffShadow.exitNow(key, p.ref.removePrefix(prefix), "signal changed") }
+        }
+    }
+
     /**
      * TEST ONLY: a fixed clock and a candle source for the auto-trader's own checks (market hours, 15:15, the day,
      * the stale-candle guard). Both are null in the app, always: the time is then [Market.now] (market hours as
@@ -337,7 +436,7 @@ object PineAuto {
     /** Whether its book (holdings, log, day's P&L, pauses) is held in memory or shown. Memory only. */
     internal fun holdsForErase(): Boolean = runCatching {
         cache?.let { b -> b.held.isNotEmpty() || b.log.isNotEmpty() || b.dayPnl.isNotEmpty() || b.paused.isNotEmpty() || b.winding.isNotEmpty() ||
-            b.liveOk.isNotEmpty() || b.lastBar.isNotEmpty() || b.lastTarget.isNotEmpty() } == true || _held.value.isNotEmpty() || _log.value.isNotEmpty()
+            b.liveOk.isNotEmpty() || b.lastBar.isNotEmpty() || b.lastTarget.isNotEmpty() || b.autoSaved.isNotEmpty() } == true || _held.value.isNotEmpty() || _log.value.isNotEmpty()
     }.getOrDefault(false)
 
     /** Its book's file (none before [init]). */
@@ -380,7 +479,8 @@ object PineAuto {
 
     /**
      * Switch a script's auto-trading on or off. Off sells what it holds. [pinConfirmed]
-     * (the PIN or fingerprint was asked just now) lets it place live orders.
+     * (the PIN or fingerprint was asked just now) lets it place live orders. 30 Oct: off, it keeps reading its signal on every
+     * completed candle and each would-be entry is recorded in the switched-off shadow ([OffShadow]); nothing is bought.
      */
     suspend fun arm(id: Long, on: Boolean, pinConfirmed: Boolean = false): String = lock.withLock {
         val item = PineScripts.get(id) ?: return@withLock "not found"
@@ -398,6 +498,8 @@ object PineAuto {
         b.winding.remove(id)
         if (on) {
             b.liveOk[id] = pinConfirmed
+            // 30 Oct: saved for auto-trading from now on - switched off later, it runs in the switched-off shadow ([shadowable]).
+            b.autoSaved += id
             b.lastTarget.remove(id); b.lastBar.remove(id)
             PineScripts.setAuto(id, item.auto.copy(on = true, symbol = root))
             note(b, id, "Switched on (${if (item.auto.mode == "alert") "alerts only" else if (OrbArms.liveNow()) "Live" else "Paper"}): waiting for the next signal on $root ${item.auto.interval}")
@@ -435,7 +537,20 @@ object PineAuto {
         // Switched off by the app's own rule while holding: managed to its exit, buying nothing more.
         b.winding.keys.removeAll { it !in b.held || all.firstOrNull { x -> x.id == it }?.auto?.on == true }
         val winding = if (disarm) emptyList() else all.filter { it.id in b.winding }
-        if (on.isEmpty() && b.held.isEmpty()) return@withLock
+        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): every script switched on is
+        // saved for auto-trading; one switched off again (by Boss, the kill switch, a restore, the app's own rules, or hidden) keeps
+        // reading its signal and records each would-be entry in the switched-off shadow - nothing bought. A script deleted from the
+        // library is forgotten (never while the library reads empty: an unread file is not a deletion).
+        on.forEach { b.autoSaved += it.id }
+        if (all.isNotEmpty()) all.map { it.id }.toSet().let { ids -> b.autoSaved.retainAll(ids) }
+        // Off and holding nothing (a holding still being sold is left to its sale, never read twice in one pass); winding ones
+        // are read below as before (their holding's exits first), with their would-be entries shadowed too.
+        // 30 Oct (review): never while any script holds an option - this pass holds the lock the held one's fast look ([watchOnly],
+        // the live lane) needs, and the shadow's reads must never delay it (positions first). At most [SHADOW_PER_PASS] a pass.
+        val shadowOnly = if (b.held.isNotEmpty()) emptyList() else all.filter { it.id in b.autoSaved && on.none { x -> x.id == it.id } &&
+            winding.none { x -> x.id == it.id } && it.id !in b.held && shadowable(it) }
+            .let { l -> if (l.size <= SHADOW_PER_PASS) l else { val k = shadowTurn++ % l.size; (l.drop(k) + l.take(k)).take(SHADOW_PER_PASS) } }
+        if (on.isEmpty() && b.held.isEmpty() && shadowOnly.isEmpty()) return@withLock
         // Held by a script that is no longer on (turned off elsewhere, a restore, deleted): sell it.
         for ((id, h) in b.held.toMap()) if (on.none { it.id == id } && winding.none { it.id == id }) {
             val item = all.firstOrNull { it.id == id } ?: PineScripts.Item(id, "deleted script", "")
@@ -446,10 +561,20 @@ object PineAuto {
         // and buys nothing more - before, a signal flip sold the call and bought the put from an arm the Hidden arms list said
         // was off. The exits below run as before; only new entries are held back ([HiddenArms.blocks]: memory only).
         val hidden = HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.PINE)
-        for (item in on) runCatching { one(b, item, stopped, entries = !hidden) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
-        for (item in winding) runCatching { one(b, item, stopped, entries = false) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
+        // 30 Oct: hidden is off - a hidden script's would-be entries go to the switched-off shadow (it still may not be switched on
+        // while hidden: [arm]).
+        for (item in on) runCatching { one(b, item, stopped, entries = !hidden, shadow = hidden && shadowable(item)) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
+        for (item in winding) runCatching { one(b, item, stopped, entries = false, shadow = shadowable(item)) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
+        // 30 Oct: switched off, holding nothing: its signal read on its candles as when on, each would-be entry to the shadow only.
+        for (item in shadowOnly) runCatching { one(b, item, stopped, entries = false, shadow = true, quiet = true) }
+            .onFailure { e -> runCatching { Diag.record("pine", "${label(item)} (shadow): ${e.javaClass.simpleName}") } }
         save(b)
     }
+
+    /** 30 Oct (review): the switched-off scripts read in shadow on one pass, at most (each reads its candles). */
+    private const val SHADOW_PER_PASS = 3
+    /** Where the next pass's shadow scripts start (turn by turn, so each is read in its turn). Memory only. */
+    @Volatile private var shadowTurn = 0
 
     /**
      * Whether the scripts stand still this pass: the day's stop, or the kill switch in Live. The kill switch guards Zerodha
@@ -543,9 +668,16 @@ object PineAuto {
             if (stopResumes) " (\"start all\" to Jarvis, or Start bot on Home, resumes it)." else ".")
     }
 
-    /** [entries] false: a script switched off by the app's rule ([Book.winding]) - its holding managed to its exit, nothing bought. */
-    private suspend fun one(b: Book, item: PineScripts.Item, stopped: Boolean, entries: Boolean = true) {
+    /**
+     * [entries] false: a script switched off by the app's rule ([Book.winding]) - its holding managed to its exit, nothing bought.
+     * 30 Oct: [shadow] - a would-be entry (the signal that would have bought, with entries off) goes to the switched-off shadow
+     * ([shadowEnter]: priced and kept there, never an order). [quiet]: a switched-off script holding nothing - its log says only
+     * what the shadow did (no pause, feed or script-error lines each pass).
+     */
+    private suspend fun one(b: Book, item: PineScripts.Item, stopped: Boolean, entries: Boolean = true, shadow: Boolean = false,
+                            quiet: Boolean = false) {
         val id = item.id
+        val tag = if (quiet) "${com.optionslab.engine.orb.OffShadow.LABEL.replaceFirstChar { it.uppercase() }}: " else ""
         val t = clock()
         val mins = t.hour * 60 + t.minute
         var h = b.held[id]
@@ -578,12 +710,12 @@ object PineAuto {
         }
         if (b.paused[id] == today) { b.lastBar.remove(id); return }
         // Stopped for the day or the kill switch: a real pause - on the way back a signal that changed meanwhile is not chased.
-        if (stopped) { b.lastBar.remove(id); noteStopOnce(b, id); return }
+        if (stopped) { b.lastBar.remove(id); if (!quiet) noteStopOnce(b, id); return }
         if (!isOpen() || mins >= 15 * 60 + 15) return
         // 14 Oct: a script refused for a chart that is not an index never reads a signal there - not even to exit; what it
         // holds goes only by its own stop, target, profit lock, 15:15 or the day's stop (above).
         if (!entries && com.optionslab.ira.PineUnderlying.rootOf(item.auto.symbol) == null) return
-        val script = PineScripts.script(item) ?: run { note(b, id, "The script has errors: nothing traded"); return }
+        val script = PineScripts.script(item) ?: run { if (!quiet) note(b, id, "The script has errors: nothing traded"); return }
         val step = stepSeconds(item.auto.interval)
         val now = epochSecondNow()
         // At most 15 s: this runs in the watch's risk steps, before the stops, the expiry square-off and the strategies.
@@ -593,7 +725,7 @@ object PineAuto {
                 ?: ChartFeed.bars(item.auto.symbol, item.auto.interval, now - lookbackDays(item.auto.interval) * 86400, null, quick = true)
         }
         val fetched = kotlinx.coroutines.withTimeoutOrNull(15_000) { fetch.await() }
-            ?: run { fetch.cancel(); note(b, id, "No candles for ${item.auto.symbol} within 15 s: this pass skipped"); return }
+            ?: run { fetch.cancel(); if (!quiet) note(b, id, "No candles for ${item.auto.symbol} within 15 s: this pass skipped"); return }
         val bars = fetched.filter { it.epochSecond + step <= now }                    // completed candles only
         val last = bars.lastOrNull() ?: return
         // A feed that failed today can hand back yesterday's candles: never trade on those, or on a stalled feed.
@@ -608,20 +740,22 @@ object PineAuto {
         b.lastBar[id] = last.epochSecond
         val r = Pine.run(script, bars.map { PineScripts.toPine(it) }, PineScripts.inputValues(item, script), item.auto.symbol, item.auto.interval,
             budgetMs = 5_000)
-        r.error?.let { note(b, id, "Script stopped: ${it.message}"); return }
+        r.error?.let { if (!quiet) note(b, id, "Script stopped: ${it.message}"); return }
         val prev = b.lastTarget[id]
         val target = targetOf(item, script, r, prev ?: 0)
         b.lastTarget[id] = target
-        if (prev == null) { note(b, id, "Watching: the signal now is ${describe(target)}; it trades on the next change"); return }
+        // 30 Oct: a would-be trade of this script the signal no longer backs closes in the shadow (its signal exit), on or off.
+        shadowSignalExit(item, wantFor(item, target))
+        if (prev == null) { note(b, id, "${tag}Watching: the signal now is ${describe(target)}; it ${if (quiet) "records" else "trades"} on the next change"); return }
         if (target == prev) { owedExit(b, id, item, h); return }
         val want: String? = wantFor(item, target)
         if (resumed && !changedOnLastBar(item, script, r, bars, watchedBefore, prev, target)) {
             // What it holds is sold if the signal no longer backs it; nothing new is bought until the next change.
-            note(b, id, "Back after a pause: the signal is now ${describe(target)}; it trades on the next change, not this one")
+            note(b, id, "${tag}Back after a pause: the signal is now ${describe(target)}; it ${if (quiet) "records" else "trades"} on the next change, not this one")
             if (a.mode != "alert" && h != null && h.right != want) exit(b, id, item, h, "signal changed during a pause")
             return
         }
-        note(b, id, "Signal: ${describe(target)} at ${"%.2f".format(java.util.Locale.ENGLISH, last.close)}")
+        note(b, id, "${tag}Signal: ${describe(target)} at ${"%.2f".format(java.util.Locale.ENGLISH, last.close)}")
         if (a.mode == "alert" && entries) {
             // Alerts only: tell the owner, place nothing. 16 Oct: the banner (and so the diary) as information, not an error -
             // "jarvis: breakout above ... flat" was counted among the day's errors by the order review.
@@ -633,8 +767,14 @@ object PineAuto {
         if (h?.right == want) return
         if (h != null) { exit(b, id, item, h, "signal changed"); if (b.held.containsKey(id)) return }
         if (want == null) return
-        // Switched off by the app's rule: the holding was managed to its exit; nothing new is bought.
-        if (!entries) return
+        // Switched off by the app's rule: the holding was managed to its exit; nothing new is bought. 30 Oct: off (or hidden), the
+        // entry it would have made is recorded in the switched-off shadow instead - placed before the live-PIN check and every
+        // order step, so it can never reach [enter], the paper book or Zerodha.
+        if (!entries) {
+            if (shadow) runCatching { shadowEnter(b, item, Right.valueOf(want), last.close, last.epochSecond, describe(target)) }
+                .onFailure { e -> runCatching { Diag.record("pine", "${label(item)} (shadow): ${e.javaClass.simpleName}") } }
+            return
+        }
         val live = OrbArms.liveNow()
         if (live && b.liveOk[id] != true) {
             note(b, id, "Live needs your PIN once: switch auto-trade off and on again for this script. Nothing was sent.")

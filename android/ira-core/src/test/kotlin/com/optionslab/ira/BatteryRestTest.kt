@@ -231,7 +231,7 @@ class BatteryRestTest {
         // (27 Oct: paper limit buys paying the ask, then the battery audit; 28 Oct: IraThinker's flow on paper, then the FINNIFTY book price,
         // then S5 Trail on paper, then the 65% win-rate rule for automatic ideas; 29 Oct: CISD + network on paper; 30 Oct: the index and
         // commodity stops apart, newest of all.)
-        assertEquals(52, o)
+        assertEquals(53, o)      // 30 Oct: the every-arm-live entry on top
         assertTrue(WhatsNew.ENTRIES.take(o).all { it.date > java.time.LocalDate.of(2026, 10, 14) })
         assertEquals("2026-10-14-gamma-line-oi-wall-shadow", WhatsNew.ENTRIES[o + 1].id)
         assertEquals("2026-10-14-signal-on-the-index", WhatsNew.ENTRIES[o + 2].id)

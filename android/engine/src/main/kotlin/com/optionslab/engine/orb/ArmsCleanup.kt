@@ -48,6 +48,8 @@ object ArmsCleanup {
     /** 21 Oct (Boss: "Remove silverm monthly call, and mcx 12 month trend"): two MCX paper arms, keyed by their own sources. */
     const val MCX_SILVERM_AM = com.optionslab.engine.mcx.McxMorningRules.SOURCE
     const val MCX_TREND = com.optionslab.engine.mcx.McxTrendRules.SOURCE
+    /** 30 Oct (Boss: "Hide zero hero family arms"): the Hero ₹1,000 ticket joins the Hero (expiry) arm, hidden since 15 Oct. */
+    const val HERO_TICKET = HeroTicketRules.SOURCE
 
     /** Every automatic trader switched off and hidden on 15 Oct, in the Hidden arms list's order. */
     val HIDDEN: List<Hidden> = listOf(
@@ -66,6 +68,9 @@ object ArmsCleanup {
         // 21 Oct, Boss's request: both MCX paper arms are switched off and hidden the same way (their code and trades kept).
         Hidden(MCX_SILVERM_AM, "SILVERM morning call (MCX)", "android/app/.../data/McxPaperArms.kt, engine mcx/McxArmRules.kt"),
         Hidden(MCX_TREND, "MCX 12-month trend", "android/app/.../data/McxPaperArms.kt, engine mcx/McxArmRules.kt"),
+        // 30 Oct (Boss: "Hide zero hero family arms"): the expiry-day cheap-option family - the Hero (expiry) arm above (hidden since
+        // 15 Oct) and the Hero ₹1,000 ticket - both hidden; switched off, so each runs in shadow (would-be trades, nothing bought).
+        Hidden(HERO_TICKET, "Hero ₹1,000 ticket", "android/app/.../data/HeroTicketArm.kt, engine orb/HeroTicketRules.kt"),
     )
 
     /**
@@ -77,7 +82,6 @@ object ArmsCleanup {
     /** What stays visible and running as today (Boss's 15 Oct choice). */
     val KEPT: List<Kept> = listOf(
         Kept("Liquidity 15+5 (BANKNIFTY, FINNIFTY, MIDCPNIFTY)", "android/app/.../data/OrbArms.kt, engine orb/LiquidityRules.kt"),
-        Kept("Hero ₹1,000 ticket", "android/app/.../data/HeroTicketArm.kt, engine orb/HeroTicketRules.kt"),
         Kept("FT3 near-ATM morning (21 Oct)", "android/app/.../data/Ft3Arm.kt, engine orb/Ft3Rules.kt"),
         Kept("R51 Donchian 20", "android/app/.../data/PassedArmsHost.kt, engine orb/DonchianArm.kt"),
         Kept("R52 Open outside value", "android/app/.../data/PassedArmsHost.kt, engine orb/OovArm.kt"),
@@ -101,6 +105,8 @@ object ArmsCleanup {
 
     /** The words a hidden arm's switch-off carries for the arms added on 21 Oct (Boss's request). */
     fun hiddenWords(key: String): String = if (key in FIRST_15OCT) HIDDEN_WORDS
+        else if (key == HERO_TICKET) "switched off and hidden on your request (30 Oct: \"Hide zero hero family arms\"); it runs in shadow, " +
+            "its code, settings and trades are kept"
         else "switched off and hidden on your request (21 Oct); its code, settings and trades are kept"
 
     /** What the list and the timeline say about NIFTY (no Liquidity book: it failed research). */

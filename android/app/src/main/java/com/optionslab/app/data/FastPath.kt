@@ -341,9 +341,8 @@ object FastPath {
                 }
                 FastLane.Lane.MINUTE -> {
                     runCatching { TradeManagerHost.onLook() }
-                    step("Night (R3)") { NightArm.tick() }
-                    step("VIX divergence") { VixDivArm.tick() }
-                    step("MCX paper arms") { McxPaperArms.tick() }
+                    // 30 Oct (review): Night, VIX divergence and the MCX arms now also decide while switched off (in shadow), so
+                    // their full passes run AFTER every other arm's exits and the live look below - never ahead of them.
                     step("Forge ideas") { GrammarArm.tick() }
                     if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.manageOnly() }
                     step("missed-lock sweep") { Sweeper.run(ctx) }
@@ -367,6 +366,14 @@ object FastPath {
                     step(CISD) { CisdArm.manageOnly() }
                     // 18 Oct: after the paper exits above, their live trades follow at once ([ArmLive]; nothing held: returns at once).
                     // (A shadow trade or a damaged book's recovery too: no order for a shadow, its record checked every minute.)
+                    if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
+                    // 30 Oct: the three passes moved from the top (their own exits run first inside each), then the live look again
+                    // so a paper exit they just made is followed at once.
+                    // (Only while armed or holding: a switched-off arm's shadow decision runs in the watch's arms rounds, paced by
+                    // the scheduler - never this lane, which carries the other arms' exits every minute.)
+                    if (NightArm.view.value.let { it.armed || it.open.isNotEmpty() }) step("Night (R3)") { NightArm.tick() }
+                    if (VixDivArm.view.value.let { it.armed || it.open.isNotEmpty() }) step("VIX divergence") { VixDivArm.tick() }
+                    if (McxPaperArms.armedNow().isNotEmpty() || McxPaperArms.holdsNow()) step("MCX paper arms") { McxPaperArms.tick() }
                     if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
                     // 21 Oct: NR7 crude, record only (no orders): last, after every step that guards a position. 21 Oct, review:
                     // started in its own job ([McxNr7Record.kick]) - its slow reads held this lane and the next minute's exits.
@@ -402,6 +409,8 @@ object FastPath {
     const val S5 = "S5 Trail (paper)"
     /** CISD + network's step name (as [HERO_TICKET]: in the rounds only when it needs a pass, [CisdArm.wantsPass]). */
     const val CISD = "CISD + network (paper)"
+    /** 30 Oct: the switched-off shadow's step name (in the arms' rounds only while a would-be trade is open, [OffShadow.wantsPass]). */
+    const val OFF_SHADOW = "Switched-off shadow"
 
     private suspend inline fun step(name: String, block: () -> Unit) {
         // Measured (10 Oct): each check's time today, beside the watch's steps.

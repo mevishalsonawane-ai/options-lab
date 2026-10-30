@@ -752,7 +752,11 @@ object ShadowArms {
 
     /**
      * Boss's yes to Jarvis's request ([com.optionslab.app.ira.IraBots.shadowPromotions]): the shadowed arm's variant runs its
-     * rules from now, ON PAPER ONLY (never Zerodha: no live path exists here), until he switches it off ([disarm]).
+     * rules from now on the PAPER account, until Boss switches it off ([disarm]). This file itself never calls Zerodha; 30 Oct
+     * (stale note fixed): its paper trades DO have a live path - [ArmLive] under [com.optionslab.engine.orb.LiveMirror.SHADOW_PROMOTED]
+     * ("Shadow variants re-armed", in LiveMirror.ARMS), told of each paper entry and exit ([enterPaper], [exitPaper]) - which
+     * sends a live order only through the live gates (Live with Boss's PIN, "AI trades go live", its own Trade live switch,
+     * every guard and the kill switch; CLAUDE.md, Boss's 30 Oct rule).
      */
     suspend fun promote(id: String): String = lock.withLock {
         val v = ShadowRules.of(id) ?: return@withLock "No such shadow."
@@ -768,7 +772,13 @@ object ShadowArms {
         msg
     }
 
-    /** Switches a re-armed variant off again: it goes back to recording only. An open paper position is still managed to its exit. */
+    /**
+     * Switches a re-armed variant off again: it goes back to recording only. An open paper position is still managed to its exit.
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): already so - a variant that is
+     * not re-armed (never promoted, switched off here, or hidden) still decides every signal and records it as a virtual trade in
+     * this book ([record], [enter]: "entered_virtual"), priced and closed by its own exits; only a re-armed one goes to paper
+     * ([enterPaper]) and so to its live path. Its virtual record is its switched-off shadow (kept here, not in [OffShadow]).
+     */
     suspend fun disarm(id: String): String = lock.withLock {
         val v = ShadowRules.of(id) ?: return@withLock "No such shadow."
         val b = book()

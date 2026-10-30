@@ -365,12 +365,14 @@ class HeroTicketArmTest : RobolectricTest() {
         market(LocalTime.of(12, 50), put = { t -> if (t.isBefore(LocalTime.of(12, 45))) 11.0 else 7.0 })
         at(LocalTime.of(12, 50)); runBlocking { HeroTicketArm.manageOnly() }
         assertEquals("ticket_trail", HeroTicketArm.view.value.closed.single().why)
-        // Switched off with nothing held: never wanted.
+        // Switched off with nothing held: the minute lane does nothing; 30 Oct (Boss: off runs in shadow): its 12:25-12:33 window
+        // still wants a pass (would-be tickets for the switched-off shadow, nothing bought), and nothing outside it.
         runBlocking { HeroTicketArm.setArmed(false) }
         market(LocalTime.of(13, 10), call = { t -> if (t.isBefore(LocalTime.of(13, 0))) 12.0 else 8.0 }, put = { 7.0 })
         at(LocalTime.of(13, 10)); runBlocking { HeroTicketArm.manageOnly() }
         assertTrue(HeroTicketArm.view.value.open.isEmpty())
-        assertFalse(HeroTicketArm.wantsPass(12 * 60 + 30))
+        assertTrue(HeroTicketArm.wantsPass(12 * 60 + 30))
+        assertFalse(HeroTicketArm.wantsPass(13 * 60 + 10))
         assertNothingAtZerodha()
     }
 

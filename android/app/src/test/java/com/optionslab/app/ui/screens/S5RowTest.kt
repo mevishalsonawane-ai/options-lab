@@ -45,7 +45,7 @@ class S5RowTest {
         row(S5Arm.View(armed = true, looks = looks), onArm = { asked += it })
         compose.waitForIdle()
         compose.onNodeWithText(S5Trail.LABEL).assertExists()
-        compose.onNodeWithText("ON · PAPER · FAILED RESEARCH GATES").assertExists()
+        compose.onNodeWithText("ON · PAPER + ITS LIVE SWITCH · FAILED GATES, BOSS'S EXCEPTION").assertExists()
         compose.onNodeWithText("Today: 0 taken, 1 not · 0 closed so far, 0 won").assertExists()
         compose.onNodeWithContentDescription("About ${S5Trail.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
@@ -64,7 +64,7 @@ class S5RowTest {
     @Test fun offAndHoldingAreSaid() {
         row(S5Arm.View(armed = false))
         compose.waitForIdle()
-        compose.onNodeWithText("OFF · FAILED RESEARCH GATES").assertExists()
+        compose.onNodeWithText("OFF · SHADOW · FAILED GATES, BOSS'S EXCEPTION").assertExists()
     }
 
     @Test fun reasonsLoseTheirRupeeFigures() {
