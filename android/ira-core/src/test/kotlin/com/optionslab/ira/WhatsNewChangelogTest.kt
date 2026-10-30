@@ -22,7 +22,7 @@ class WhatsNewChangelogTest {
         assertEquals(all.size, all.map { it.id }.distinct().size, "ids are unique")
         for (x in all) {
             // Each id starts with its own day (06 Oct, 07 Oct for the un-retired arms, 08 Oct for the locks; 20 Oct and on too).
-            assertTrue(Regex("^2026-10-(0[6789]|[12][0-9])-[a-z0-9-]+$").matches(x.id), x.id)
+            assertTrue(Regex("^2026-10-(0[6789]|[12][0-9]|3[01])-[a-z0-9-]+$").matches(x.id), x.id)
             assertEquals(LocalDate.parse(x.id.take(10)), x.date, x.id)
             assertTrue(x.title.isNotBlank() && x.title.length <= 60, x.id)
             assertTrue(x.what.isNotBlank() && x.where.isNotBlank(), x.id)
@@ -40,9 +40,26 @@ class WhatsNewChangelogTest {
         }
     }
 
-    /** 29 Oct (Boss: "Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward test too"): newest of all. */
-    @Test fun theCisdNetworkPaperArmIsSaidPlainlyNewestOfAll() {
+    /** 30 Oct (Boss: "Make stop bot different for index and comodities"): the index and commodity stops apart, said plainly; newest of all. */
+    @Test fun theSplitStopIsSaidPlainlyNewestOfAll() {
         val x = WhatsNew.ENTRIES.first()
+        assertEquals("2026-10-30-stop-index-and-commodities", x.id)
+        assertEquals(LocalDate.of(2026, 10, 30), x.date)
+        assertTrue(x.title.length <= 60, x.title)
+        val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
+        assertTrue(sentences.size <= 8, "${sentences.size}")
+        for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
+        for (w in listOf("Stop index bots", "NSE and BSE", "Pine script", "Jarvis's trades", "commodity bots keep trading", "Stop commodities",
+            "Start again", "stopped by you 10:42", "stop all", "stops both", "kill switch stays global", "never lifted today", "stops, targets and exits"))
+            assertTrue(w in x.what, w)
+        assertTrue("Stop index bots" in x.where && "MCX card" in x.where && "change timeline" in x.where, x.where)
+        assertFalse(x.gold); assertFalse(x.jarvisOnly)
+        assertEquals("2026-10-29-cisd-network-paper-arm", WhatsNew.ENTRIES[1].id)
+    }
+
+    /** 29 Oct (Boss: "Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward test too"): under the split stop. */
+    @Test fun theCisdNetworkPaperArmIsSaidPlainly() {
+        val x = WhatsNew.ENTRIES[1]
         assertEquals("2026-10-29-cisd-network-paper-arm", x.id)
         assertEquals(LocalDate.of(2026, 10, 29), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -54,12 +71,12 @@ class WhatsNewChangelogTest {
         assertTrue("its row" in x.where && "change timeline" in x.where, x.where)
         assertTrue(CisdTalk.asked(x.ask!!), "its question reaches Jarvis's CISD answer")
         assertFalse(x.gold); assertFalse(x.jarvisOnly)
-        assertEquals("2026-10-28-auto-ideas-65", WhatsNew.ENTRIES[1].id)
+        assertEquals("2026-10-28-auto-ideas-65", WhatsNew.ENTRIES[2].id)
     }
 
     /** 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): said plainly; under CISD + network. */
     @Test fun theAutomaticIdeasWinRateRuleIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[1]
+        val x = WhatsNew.ENTRIES[2]
         assertEquals("2026-10-28-auto-ideas-65", x.id)
         assertEquals(LocalDate.of(2026, 10, 28), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -70,24 +87,24 @@ class WhatsNewChangelogTest {
             assertTrue(w in x.what, w)
         assertTrue("Automatic ideas: minimum win rate" in x.where && "change timeline" in x.where && "Strategy lab" in x.where, x.where)
         assertFalse(x.gold); assertFalse(x.jarvisOnly)
-        assertEquals("2026-10-28-s5-trail-paper-arm", WhatsNew.ENTRIES[2].id)
+        assertEquals("2026-10-28-s5-trail-paper-arm", WhatsNew.ENTRIES[3].id)
     }
 
     /** 28 Oct (Boss: "Add s5 trail to arms directly, if it does not perform I will turn it off"): under the 65% rule. */
     @Test fun theS5TrailPaperArmIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[2]
+        val x = WhatsNew.ENTRIES[3]
         assertEquals("2026-10-28-s5-trail-paper-arm", x.id)
         assertEquals(LocalDate.of(2026, 10, 28), x.date)
         for (w in listOf("09:20", "₹300", "1 lot", "on paper", "failed the research gates", "never live", "one tap"))
             assertTrue(w in x.what, w)
         assertTrue(S5Talk.asked(x.ask!!), "its question reaches Jarvis's S5 Trail answer")
         assertFalse(x.gold)
-        assertEquals("2026-10-28-finnifty-book-price", WhatsNew.ENTRIES[3].id)
+        assertEquals("2026-10-28-finnifty-book-price", WhatsNew.ENTRIES[4].id)
     }
 
     /** 28 Oct (Boss: "Yes fix finnifty"): the untraded FINNIFTY options bought on paper at the ask, said plainly; under S5 Trail. */
     @Test fun theFinniftyBookPriceIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[3]
+        val x = WhatsNew.ENTRIES[4]
         assertEquals("2026-10-28-finnifty-book-price", x.id)
         assertEquals(LocalDate.of(2026, 10, 28), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -97,12 +114,12 @@ class WhatsNewChangelogTest {
             assertTrue(w in x.what, w)
         assertTrue("change timeline" in x.where, x.where)
         assertFalse(x.gold); assertFalse(x.jarvisOnly)
-        assertEquals("2026-10-28-flow-paper-arm", WhatsNew.ENTRIES[4].id)
+        assertEquals("2026-10-28-flow-paper-arm", WhatsNew.ENTRIES[5].id)
     }
 
     /** 28 Oct (Boss: "Also check flow page on Irathinker ..."; "just take orders from flow, and keep it for index only"): under the FINNIFTY fix. */
     @Test fun theFlowPaperArmIsSaidPlainlyNewestOfAll() {
-        val x = WhatsNew.ENTRIES[4]
+        val x = WhatsNew.ENTRIES[5]
         assertEquals("2026-10-28-flow-paper-arm", x.id)
         assertEquals(LocalDate.of(2026, 10, 28), x.date)
         for (w in listOf("indices only", "Zerodha", "paper order", "no alert", "not proven", "one tap", "PIN", "starts off"))
@@ -110,12 +127,12 @@ class WhatsNewChangelogTest {
         assertTrue("Automation" in x.where, x.where)
         assertTrue(FlowTalk.asked(x.ask!!), "its question reaches Jarvis's flow answer")
         assertFalse(x.gold)
-        assertEquals("2026-10-27-battery-audit", WhatsNew.ENTRIES[5].id)
+        assertEquals("2026-10-27-battery-audit", WhatsNew.ENTRIES[6].id)
     }
 
     /** 27 Oct (Boss: "Check the battery usage too; the battery drained a lot today"): plain words. */
     @Test fun theBatteryAuditIsSaidPlainlyNewestOfAll() {
-        val x = WhatsNew.ENTRIES[5]
+        val x = WhatsNew.ENTRIES[6]
         assertEquals("2026-10-27-battery-audit", x.id)
         assertEquals(LocalDate.of(2026, 10, 27), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -125,12 +142,12 @@ class WhatsNewChangelogTest {
             assertTrue(w in x.what, w)
         assertTrue("Health" in x.where, x.where)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
-        assertEquals("2026-10-27-paper-limit-pays-ask", WhatsNew.ENTRIES[6].id)
+        assertEquals("2026-10-27-paper-limit-pays-ask", WhatsNew.ENTRIES[7].id)
     }
 
     /** 27 Oct (research/LIQUIDITY_PAPER_CHECK_2026-10-27.md): newest of all, plain words, paper only. */
     @Test fun paperLimitPaysTheAskIsSaidPlainlyNewestOfAll() {
-        val x = WhatsNew.ENTRIES[6]
+        val x = WhatsNew.ENTRIES[7]
         assertEquals("2026-10-27-paper-limit-pays-ask", x.id)
         assertEquals(LocalDate.of(2026, 10, 27), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -140,7 +157,7 @@ class WhatsNewChangelogTest {
             assertTrue(w in x.what, w)
         assertTrue("Trade → Paper" in x.where, x.where)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
-        assertEquals("2026-10-26-ntfy-irathinker-fit", WhatsNew.ENTRIES[7].id)
+        assertEquals("2026-10-26-ntfy-irathinker-fit", WhatsNew.ENTRIES[8].id)
     }
 
     /** 25 Oct (Boss: "find out what all the issues we have in the application"): the app audit's fixes, newest of all, plain words. */
@@ -148,7 +165,7 @@ class WhatsNewChangelogTest {
     /** 26 Oct (Boss: "I think ntfy messages are getting read late, please check"): newest of all, plain words. */
     /** 26 Oct (IraThinker review): newest of all, plain words; mom60 paper only and not a proven strategy; a strangle is information. */
     @Test fun ntfyIraThinkerFitIsSaidPlainlyNewestOfAll() {
-        val x = WhatsNew.ENTRIES[7]
+        val x = WhatsNew.ENTRIES[8]
         assertEquals("2026-10-26-ntfy-irathinker-fit", x.id)
         assertEquals(LocalDate.of(2026, 10, 26), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -161,12 +178,12 @@ class WhatsNewChangelogTest {
         assertTrue(NtfyTalk.asked(x.ask!!))
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
         // The Donchian paper fixes are the one under it.
-        assertEquals("2026-10-26-donchian-paper-fixes", WhatsNew.ENTRIES[8].id)
+        assertEquals("2026-10-26-donchian-paper-fixes", WhatsNew.ENTRIES[9].id)
     }
 
     /** 26 Oct (R105: the paper Donchian trades against the backtest): under the IraThinker fit, plain words, paper only. */
     @Test fun donchianPaperFixesAreSaidPlainlyNewestOfAll() {
-        val x = WhatsNew.ENTRIES[8]
+        val x = WhatsNew.ENTRIES[9]
         assertEquals("2026-10-26-donchian-paper-fixes", x.id)
         assertEquals(LocalDate.of(2026, 10, 26), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -178,12 +195,12 @@ class WhatsNewChangelogTest {
         assertTrue("R72 Breadth Donchian" in x.where, x.where)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
         // The erase of every store is the one under it.
-        assertEquals("2026-10-26-erase-all-stores", WhatsNew.ENTRIES[9].id)
+        assertEquals("2026-10-26-erase-all-stores", WhatsNew.ENTRIES[10].id)
     }
 
     /** 26 Oct (the erase audit): every store is erased; plain words (under the Donchian paper fixes). */
     @Test fun eraseAllStoresIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[9]
+        val x = WhatsNew.ENTRIES[10]
         assertEquals("2026-10-26-erase-all-stores", x.id)
         assertEquals(LocalDate.of(2026, 10, 26), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -195,11 +212,11 @@ class WhatsNewChangelogTest {
         assertNull(x.ask)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
         // The ntfy speed-up is the one under it.
-        assertEquals("2026-10-26-ntfy-faster", WhatsNew.ENTRIES[10].id)
+        assertEquals("2026-10-26-ntfy-faster", WhatsNew.ENTRIES[11].id)
     }
 
     @Test fun ntfyFasterIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[10]
+        val x = WhatsNew.ENTRIES[11]
         assertEquals("2026-10-26-ntfy-faster", x.id)
         assertEquals(LocalDate.of(2026, 10, 26), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -211,11 +228,11 @@ class WhatsNewChangelogTest {
         assertTrue(NtfyTalk.asked(x.ask!!))
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
         // The 25 Oct decisions are the one under it.
-        assertEquals("2026-10-25-boss-decisions", WhatsNew.ENTRIES[11].id)
+        assertEquals("2026-10-25-boss-decisions", WhatsNew.ENTRIES[12].id)
     }
 
     @Test fun bossDecisionsAreSaidPlainly() {
-        val x = WhatsNew.ENTRIES[11]
+        val x = WhatsNew.ENTRIES[12]
         assertEquals("2026-10-25-boss-decisions", x.id)
         assertEquals(LocalDate.of(2026, 10, 25), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -228,11 +245,11 @@ class WhatsNewChangelogTest {
         assertTrue("Bot settings → Risk rules" in x.where, x.where)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
         // The app audit's fixes are the one under it.
-        assertEquals("2026-10-25-app-audit-fixes", WhatsNew.ENTRIES[12].id)
+        assertEquals("2026-10-25-app-audit-fixes", WhatsNew.ENTRIES[13].id)
     }
 
     @Test fun theAppAuditFixesAreSaidPlainly() {
-        val x = WhatsNew.ENTRIES[12]
+        val x = WhatsNew.ENTRIES[13]
         assertEquals("2026-10-25-app-audit-fixes", x.id)
         assertEquals(LocalDate.of(2026, 10, 25), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -244,13 +261,13 @@ class WhatsNewChangelogTest {
         assertTrue("Autopilot → change timeline" in x.where, x.where)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
         // ntfy alerts' entry is the one under it.
-        assertEquals("2026-10-25-ntfy-alerts", WhatsNew.ENTRIES[13].id)
+        assertEquals("2026-10-25-ntfy-alerts", WhatsNew.ENTRIES[14].id)
     }
 
 
     /** 25 Oct (Boss: "remove telegram full feature" and read ntfy): under the app audit's entry; nothing claimed that is gone. */
     @Test fun ntfyAlertsAreSaidPlainly() {
-        val x = WhatsNew.ENTRIES[13]
+        val x = WhatsNew.ENTRIES[14]
         assertEquals("2026-10-25-ntfy-alerts", x.id)
         assertEquals(LocalDate.of(2026, 10, 25), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -268,7 +285,7 @@ class WhatsNewChangelogTest {
 
     /** 22 Oct (the four ideas borrowed from the day-trader skill): under ntfy alerts' entry, plain words, each gate and the flat-by named. */
     @Test fun theDayTraderBorrowIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[14]
+        val x = WhatsNew.ENTRIES[15]
         assertEquals("2026-10-22-day-trader-borrow", x.id)
         assertEquals(LocalDate.of(2026, 10, 22), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -286,7 +303,7 @@ class WhatsNewChangelogTest {
 
     /** 22 Oct (Boss: "Check each and every arm also hidden arms"): the arms audit's fixes, under the day-trader entry, plain words. */
     @Test fun theArmsAuditFixesAreSaidPlainly() {
-        val x = WhatsNew.ENTRIES[15]
+        val x = WhatsNew.ENTRIES[16]
         assertEquals("2026-10-22-arms-audit-fixes", x.id)
         assertEquals(LocalDate.of(2026, 10, 22), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -298,12 +315,12 @@ class WhatsNewChangelogTest {
             assertTrue(w in x.what, w)
         assertFalse(x.jarvisOnly); assertFalse(x.gold)
         // The 22 Oct diagnostics fixes are the one under it (the day-trader entry above it).
-        assertEquals("2026-10-22-diagnostics-fixes", WhatsNew.ENTRIES[16].id)
+        assertEquals("2026-10-22-diagnostics-fixes", WhatsNew.ENTRIES[17].id)
     }
 
     /** 22 Oct (Boss: "Check why other arms did not trigger today"): the 22 Oct diagnostics fixes, under the arms audit's entry. */
     @Test fun the22OctDiagnosticsFixesAreSaidPlainly() {
-        val x = WhatsNew.ENTRIES[16]
+        val x = WhatsNew.ENTRIES[17]
         assertEquals("2026-10-22-diagnostics-fixes", x.id)
         assertEquals(LocalDate.of(2026, 10, 22), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -316,7 +333,7 @@ class WhatsNewChangelogTest {
 
     /** 22 Oct (Boss: "if the 10% is received, make the stoploss to the start point"): their breakeven switch - under the 22 Oct diagnostics fixes. */
     @Test fun theBreakevenSwitchIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[17]
+        val x = WhatsNew.ENTRIES[18]
         assertEquals("2026-10-22-liquidity-breakeven", x.id)
         assertEquals(LocalDate.of(2026, 10, 22), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -332,7 +349,7 @@ class WhatsNewChangelogTest {
 
     /** 22 Oct (Boss: "it went up to 4.5k, and settled at -1k"): the Liquidity exit fixes and R100 - under the breakeven switch's entry. */
     @Test fun theLiquidityExitFixesAreSaidPlainly() {
-        val x = WhatsNew.ENTRIES[18]
+        val x = WhatsNew.ENTRIES[19]
         assertEquals("2026-10-22-liquidity-exit-fixes", x.id)
         assertEquals(LocalDate.of(2026, 10, 22), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -347,7 +364,7 @@ class WhatsNewChangelogTest {
 
     /** 21 Oct (Boss: "Add FT3 to the app paper bot until live ..."): under the two 22 Oct Liquidity entries, plain words, with its question for Jarvis. */
     @Test fun ft3OnPaperIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[19]
+        val x = WhatsNew.ENTRIES[20]
         assertEquals("2026-10-21-ft3-paper", x.id)
         assertEquals(LocalDate.of(2026, 10, 21), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -364,7 +381,7 @@ class WhatsNewChangelogTest {
 
     /** 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features"): round 5, under FT3's entry, plain words. */
     @Test fun theFifthEnhancementRoundIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[20]
+        val x = WhatsNew.ENTRIES[21]
         assertEquals("2026-10-21-enhance-round-5", x.id)
         assertEquals(LocalDate.of(2026, 10, 21), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -379,7 +396,7 @@ class WhatsNewChangelogTest {
 
     /** 21 Oct: round 4, under round 5's entry, plain words. */
     @Test fun theFourthEnhancementRoundIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[21]
+        val x = WhatsNew.ENTRIES[22]
         assertEquals("2026-10-21-enhance-round-4", x.id)
         assertEquals(LocalDate.of(2026, 10, 21), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -394,7 +411,7 @@ class WhatsNewChangelogTest {
 
     /** 21 Oct (Boss: "Yes, give commodities their own day lock"): under round 4's entry (round 5's above it), plain words. */
     @Test fun theCommoditiesOwnDayLockIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[22]
+        val x = WhatsNew.ENTRIES[23]
         assertEquals("2026-10-21-commodities-own-lock", x.id)
         assertEquals(LocalDate.of(2026, 10, 21), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -409,7 +426,7 @@ class WhatsNewChangelogTest {
 
     /** 21 Oct (Boss, 20 Oct: "run a loop for enhancement and adding new features"): round 3, under the commodities lock's entry, plain words. */
     @Test fun theThirdEnhancementRoundIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[23]
+        val x = WhatsNew.ENTRIES[24]
         assertEquals("2026-10-21-enhance-round-3", x.id)
         assertEquals(LocalDate.of(2026, 10, 21), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -424,7 +441,7 @@ class WhatsNewChangelogTest {
 
     /** 20 Oct (Boss: "run a loop for enhancement and adding new features"): round 2, under the 21 Oct entries, plain words. */
     @Test fun theSecondEnhancementRoundIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[24]
+        val x = WhatsNew.ENTRIES[25]
         assertEquals("2026-10-20-enhance-round-2", x.id)
         assertEquals(LocalDate.of(2026, 10, 20), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -440,7 +457,7 @@ class WhatsNewChangelogTest {
 
     /** 20 Oct (Boss: "...run a loop for enhancement and adding new features"): round 1, under round 2's entry, plain words. */
     @Test fun theFirstEnhancementRoundIsSaidPlainly() {
-        val x = WhatsNew.ENTRIES[25]
+        val x = WhatsNew.ENTRIES[26]
         assertEquals("2026-10-20-enhance-round-1", x.id)
         assertEquals(LocalDate.of(2026, 10, 20), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -455,7 +472,7 @@ class WhatsNewChangelogTest {
 
     /** 20 Oct (Boss: "Deep analysis of the whole application ... resolve them"): under round 1's entry (round 2's on top), plain words. */
     @Test fun theDeepReviewFixesAreSaidPlainly() {
-        val x = WhatsNew.ENTRIES[26]
+        val x = WhatsNew.ENTRIES[27]
         assertEquals("2026-10-20-deep-review-fixes", x.id)
         assertEquals(LocalDate.of(2026, 10, 20), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
@@ -470,8 +487,8 @@ class WhatsNewChangelogTest {
 
     /** 20 Oct (Boss: "Resolve all the problems/issues pushed to git by harvest"): under the deep review's entry, plain words. */
     @Test fun the19OctDiagnosticsFixesAreSaidPlainly() {
-        assertEquals("2026-10-20-diagnostics-fixes", WhatsNew.ENTRIES[27].id)
-        val x = WhatsNew.ENTRIES[27]
+        assertEquals("2026-10-20-diagnostics-fixes", WhatsNew.ENTRIES[28].id)
+        val x = WhatsNew.ENTRIES[28]
         assertEquals(LocalDate.of(2026, 10, 20), x.date)
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
         assertTrue(sentences.size <= 8, "${sentences.size}")
@@ -480,13 +497,13 @@ class WhatsNewChangelogTest {
         for (w in listOf("only real failures as errors", "said once, even after a restart", "exactly how long", "No rupee figure"))
             assertTrue(w in x.what, w)
         // The Candle agent is the one after it.
-        assertEquals("2026-10-20-candle-agent", WhatsNew.ENTRIES[28].id)
+        assertEquals("2026-10-20-candle-agent", WhatsNew.ENTRIES[29].id)
     }
 
     /** 20 Oct (Boss: "add a new agent ... who will only study the candle patterns"): the Candle agent - the newest entry. */
     @Test fun theCandleAgentIsSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-20-candle-agent" }
-        assertEquals(28, WhatsNew.ENTRIES.indexOf(x), "under the 19 Oct diagnostics fixes")
+        assertEquals(29, WhatsNew.ENTRIES.indexOf(x), "under the 19 Oct diagnostics fixes")
         assertEquals(LocalDate.of(2026, 10, 20), x.date)
         for (w in listOf("why a candle is green or red", "support and resistance", "took support from", "the old high a rally ran into",
             "big players' hand", "with the sample size", "no edge said plainly", "learns around the clock", "shares its reads with the other agents",
@@ -504,7 +521,7 @@ class WhatsNewChangelogTest {
     /** 19 Oct (Boss: "Yes, keep only breadth donchain"): R51 Donchian 20 record only, R72 Breadth Donchian trading - the newest entry. */
     @Test fun r51RecordOnlyIsSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-19-r51-record-only" }
-        assertEquals(29, WhatsNew.ENTRIES.indexOf(x), "under the Candle agent's entry")
+        assertEquals(30, WhatsNew.ENTRIES.indexOf(x), "under the Candle agent's entry")
         assertEquals(LocalDate.of(2026, 10, 19), x.date)
         for (w in listOf("Only R72 Breadth Donchian now buys", "R51 Donchian 20 is set to record only", "buys nothing", "would-be trade",
             "counted apart", "on, record only or off", "one tap puts R51 back on"))
@@ -519,7 +536,7 @@ class WhatsNewChangelogTest {
     /** 19 Oct (Boss: "Resolve the issues"): faster paper orders, the same-direction cap and no duplicate Donchian contracts. */
     @Test fun theSpeedAndTheSameDirectionCapAreSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-19-exposure-speed" }
-        assertEquals(30, WhatsNew.ENTRIES.indexOf(x), "under R51's record only entry")
+        assertEquals(31, WhatsNew.ENTRIES.indexOf(x), "under R51's record only entry")
         assertEquals(LocalDate.of(2026, 10, 19), x.date)
         for (w in listOf("well under a second", "At most two automatic paper option positions", "would-be trades", "never capped",
             "counted apart", "On live it only logs", "R51 and R72 no longer buy the same option twice"))
@@ -530,7 +547,7 @@ class WhatsNewChangelogTest {
     /** 18 Oct (Boss: "What ever strategies are present for paper, should be present for live too"; a Shadow switch per arm): the newest entry. */
     @Test fun liveArmsAndShadowAreSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-18-arms-live" }
-        assertEquals(31, WhatsNew.ENTRIES.indexOf(x), "under the 19 Oct speed and cap entry")
+        assertEquals(32, WhatsNew.ENTRIES.indexOf(x), "under the 19 Oct speed and cap entry")
         assertEquals(LocalDate.of(2026, 10, 18), x.date)
         for (w in listOf("Trade live switch", "starts in Shadow", "sends nothing to Zerodha", "needs your PIN", "ask and bid",
             "rest at Zerodha", "safety stop 30% below", "a check that fails blocks the entry", "Exits, stops and square-offs always go"))
@@ -540,7 +557,7 @@ class WhatsNewChangelogTest {
     /** 18 Oct (Boss: "test each and everything ... should work at its minimum time"): the Live check, the newest entry. */
     @Test fun theLiveCheckIsSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-18-live-check" }
-        assertEquals(32, WhatsNew.ENTRIES.indexOf(x), "under the live arms entry")
+        assertEquals(33, WhatsNew.ENTRIES.indexOf(x), "under the live arms entry")
         assertEquals(LocalDate.of(2026, 10, 18), x.date)
         for (w in listOf("never places an order", "reconnect", "stop is watched", "kept out of every result", "over two seconds old is checked with Zerodha"))
             assertTrue(w in x.what, "$w: ${x.what}")
@@ -549,7 +566,7 @@ class WhatsNewChangelogTest {
     /** 18 Oct (Boss: "When i switch to live, i want same as paper, directly placing order with pin"): the newest entry, plain words. */
     @Test fun liveLikePaperIsSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-18-live-like-paper" }
-        assertEquals(33, WhatsNew.ENTRIES.indexOf(x), "under the live check entry")
+        assertEquals(34, WhatsNew.ENTRIES.indexOf(x), "under the live check entry")
         assertEquals(LocalDate.of(2026, 10, 18), x.date)
         for (w in listOf("after your PIN", "no review card", "Every check still runs", "turns on AI trades too", "Jarvis's own ideas stay on paper",
             "paper-only period no new live entry", "exits, stops and square-offs always do", "close a real Zerodha position with your PIN",
@@ -564,7 +581,7 @@ class WhatsNewChangelogTest {
     /** 18 Oct (the whole-app review): the newest entry, in plain words; the kill switch's PIN and the locked phone said first. */
     @Test fun theWholeAppReviewFixesAreSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-18-whole-app-review" }
-        assertEquals(34, WhatsNew.ENTRIES.indexOf(x), "under the live-like-paper entry")
+        assertEquals(35, WhatsNew.ENTRIES.indexOf(x), "under the live-like-paper entry")
         assertEquals(LocalDate.of(2026, 10, 18), x.date)
         for (w in listOf("kill switch can no longer be cleared by mistake", "asks for your PIN", "locked phone", "MCX expiry exit reads your positions fresh",
             "strategy legs", "short positions", "Live cards keep their last figures", "Night", "Gold lots", "Signal tester stops", "sandbox MIS",
@@ -632,7 +649,7 @@ class WhatsNewChangelogTest {
     @Test fun donchiansSupertrendFilterIsSaidAsSkipsOnlyOnPaper() {
         // 16 Oct (R73 review, Boss: "T7 supertrend agree"): the newest entry - R51 only, its research numbers, skips only, paper only.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-16-donchian-supertrend" }
-        assertEquals(36, WhatsNew.ENTRIES.indexOf(x), "under the 18 Oct review fixes and the 17 Oct diagnostics fixes")
+        assertEquals(37, WhatsNew.ENTRIES.indexOf(x), "under the 18 Oct review fixes and the 17 Oct diagnostics fixes")
         for (w in listOf("R51 Donchian 20", "Supertrend (10, 3)", "R73", "+₹1,34,743", "1,670 trades", "+₹81,845", "only skips trades",
             "cannot judge is not taken", "R72 Breadth Donchian keeps its own rules", "paper only", "change log", "one tap undoes it"))
             assertTrue(w in x.what, w)
@@ -644,7 +661,7 @@ class WhatsNewChangelogTest {
     @Test fun breadthDonchianIsSaidWithItsRiskAndPaperOnly() {
         // 16 Oct (Boss: "Okay add it", after R72): the newest entry - beside Donchian, its research, its risk, paper only, undone in one tap.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-16-breadth-donchian" }
-        assertEquals(37, WhatsNew.ENTRIES.indexOf(x), "under R51's Supertrend filter's entry")
+        assertEquals(38, WhatsNew.ENTRIES.indexOf(x), "under R51's Supertrend filter's entry")
         for (w in listOf("at least 4 of the five indices break together", "beside R51 Donchian 20", "same days", "R72", "+₹1,71,366",
             "1,202 trades", "+₹55,439", "₹1.99 lakh", "−₹40k account stop", "paper only", "change log", "one tap undoes it"))
             assertTrue(w in x.what, w)
@@ -656,7 +673,7 @@ class WhatsNewChangelogTest {
     @Test fun theL25StepIsSaidAsBossChoiceNotProven() {
         // 16 Oct (Boss's choice after R65 - R69: "Select the best"; R66 L25 a small, not proven improvement): the newest entry, paper only.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-16-passed-arms-l25" }
-        assertEquals(38, WhatsNew.ENTRIES.indexOf(x), "under R72 Breadth Donchian's entry")
+        assertEquals(39, WhatsNew.ENTRIES.indexOf(x), "under R72 Breadth Donchian's entry")
         for (w in listOf("R51 Donchian 20", "R52 Open outside value", "Solo 2.0", "lock +5% once the option has been +25%", "30-60-100 lock stays",
             "never goes back down", "R66", "small improvement, not a proven one", "+₹5,396", "2,202 trades", "+₹8,042", "your choice, on paper only",
             "open trades keep their exits", "change log", "one tap undoes it"))
@@ -667,7 +684,7 @@ class WhatsNewChangelogTest {
     @Test fun theDiagnosticsFixesAreSaidPlainly() {
         // 16 Oct, Boss's diagnostics of 13:53: the newest entry; nothing it says asks Boss to change a phone setting.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-16-diagnostics-fixes" }
-        assertEquals(39, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+        assertEquals(40, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
         for (w in listOf("MCX's evening", "armed MCX arms", "why Android closed the app", "Telegram channels now stay selected",
             "Zerodha's server time", "at most 2 seconds old", "5 seconds at most", "fingerprint"))
             assertTrue(w in x.what, w)
@@ -678,7 +695,7 @@ class WhatsNewChangelogTest {
     @Test fun thePassedArmsLockIsSaidAsBossChoice() {
         // 16 Oct (Boss's choice: "All three"; research R64 A4 about even with the old exits): the newest entry, paper only.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-16-passed-arms-lock" }
-        assertEquals(40, WhatsNew.ENTRIES.indexOf(x), "the newest entry but the diagnostics fixes of the same day")
+        assertEquals(41, WhatsNew.ENTRIES.indexOf(x), "the newest entry but the diagnostics fixes of the same day")
         for (w in listOf("R51 Donchian 20", "R52 Open outside value", "Solo 2.0", "no fixed target", "own stop and time exit", "breakeven",
             "+60%", "about even", "your choice on paper only", "one tap undoes it"))
             assertTrue(w in x.what, w)
@@ -688,7 +705,7 @@ class WhatsNewChangelogTest {
     @Test fun thePassedArmsExitsFixIsSaidPlainly() {
         // 16 Oct (an R51 re-entry held past its target and time exit): the newest entry, paper only, the safety net said.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-16-passed-arms-exits" }
-        assertEquals(41, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+        assertEquals(42, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
         for (w in listOf("second trade on the same option", "booked the moment it fills", "every 15 seconds", "safety net", "tells you", "on paper"))
             assertTrue(w in x.what, w)
         assertFalse(x.jarvisOnly); assertFalse(x.gold); assertNull(x.to)
@@ -697,7 +714,7 @@ class WhatsNewChangelogTest {
     @Test fun theOpenTradeChangeIsSaidPlainly() {
         // 16 Oct (Boss read "Change +48.57%" as the open trade's): under the same day's exits fix and Telegram login fix.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-16-open-trade-change" }
-        assertEquals(43, WhatsNew.ENTRIES.indexOf(x), "under the passed arms' exits fix and the Telegram login fix")
+        assertEquals(44, WhatsNew.ENTRIES.indexOf(x), "under the passed arms' exits fix and the Telegram login fix")
         assertEquals(LocalDate.of(2026, 10, 16), x.date)
         for (w in listOf("open trade's move on its average price", "not earlier trades on the same option", "Exits", "stop, target and exit time"))
             assertTrue(w in x.what, w)
@@ -708,7 +725,7 @@ class WhatsNewChangelogTest {
     @Test fun theTrendWatchIsSaidWithWhatPassedAndWhatIsOnlyANote() {
         // 16 Oct (Boss: "if the trend changes, sell the orders"; research R63): the newest entry.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-16-trend-watch" }
-        assertEquals(44, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+        assertEquals(45, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
         for (w in listOf("pending order", "index's trend", "writes a note", "would sell at", "Hero ₹1,000 ticket's paper legs", "passed research",
             "lost against random exits", "stay notes", "Live positions are never sold", "change log", "one tap undoes it"))
             assertTrue(w in x.what, w)
@@ -719,7 +736,7 @@ class WhatsNewChangelogTest {
     @Test fun theMarketConceptsAreSaidHonestly() {
         // 15 Oct (Boss: Solo should "understand the concepts"): the newest entry; no concept is said to make money.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-15-market-concepts" }
-        assertEquals(45, WhatsNew.ENTRIES.indexOf(x), "under the passed arms' exits fix")
+        assertEquals(46, WhatsNew.ENTRIES.indexOf(x), "under the passed arms' exits fix")
         for (w in listOf("40 market ideas", "OI", "gamma exposure", "bull traps", "fake breakouts", "order flow", "signal comes from",
             "research found", "sample sizes", "None of them beat Solo 2.0", "why it took or skipped", "what it trades is unchanged", "on paper"))
             assertTrue(w in x.what, w)
@@ -732,14 +749,14 @@ class WhatsNewChangelogTest {
     @Test fun theArmsCleanupAndTheCompactRowsAreSaidPlainly() {
         // 15 Oct (Boss's questionnaire): the newest two entries.
         val c = WhatsNew.ENTRIES.first { it.id == "2026-10-15-arms-cleanup" }
-        assertEquals(46, WhatsNew.ENTRIES.indexOf(c), "under the exits fix, the Telegram login fix, the open trade change and the market concepts")
+        assertEquals(47, WhatsNew.ENTRIES.indexOf(c), "under the exits fix, the Telegram login fix, the open trade change and the market concepts")
         for (w in listOf("On your choice", "Liquidity 15+5 on BANKNIFTY, FINNIFTY and MIDCPNIFTY", "Hero ₹1,000 ticket", "R51", "R52", "Solo 2.0",
             "Watchlist", "Solo midday", "MCX paper arms", "switched off and hidden", "trades kept", "own exit first", "on paper",
             "NIFTY has no Liquidity book", "one tap", "Hidden arms list"))
             assertTrue(w in c.what, w)
         assertTrue("Home → Strategies → Hidden arms" in c.where && "Autopilot → Change log" in c.where, c.where)
         val r = WhatsNew.ENTRIES.first { it.id == "2026-10-15-compact-rows" }
-        assertEquals(47, WhatsNew.ENTRIES.indexOf(r))
+        assertEquals(48, WhatsNew.ENTRIES.indexOf(r))
         for (w in listOf("name", "one status line", "key numbers", "switch", "Tap the name", "OK button")) assertTrue(w in r.what, w)
         for (x in listOf(c, r)) { assertFalse(x.jarvisOnly); assertFalse(x.gold); assertNull(x.to); assertNull(x.ask) }
     }
@@ -747,7 +764,7 @@ class WhatsNewChangelogTest {
     @Test fun theHero1000TicketIsSaidAsBossChoiceThatDidNotPassResearch() {
         // 15 Oct (Boss: "add it directly to arm"): the newest entry; a paper arm on by Boss's choice, R50's verdict said with it.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-15-hero-1000-ticket" }
-        assertEquals(50, WhatsNew.ENTRIES.indexOf(x), "the first 15 Oct entry (the passed arms, the Watchlist and the cleanup came later that day)")
+        assertEquals(51, WhatsNew.ENTRIES.indexOf(x), "the first 15 Oct entry (the passed arms, the Watchlist and the cleanup came later that day)")
         assertEquals(LocalDate.of(2026, 10, 15), x.date)
         for (w in listOf("On your choice", "₹1,000", "12:30", "NIFTY", "SENSEX", "own expiry days", "25% trail", "15:05", "did not pass research",
             "R50", "−₹525 per ₹1,000", "jackpots are rare", "own record", "never trades on Zerodha", "one tap switches it off"))
@@ -761,14 +778,14 @@ class WhatsNewChangelogTest {
     @Test fun thePassedArmsAndTheWatchlistAreSaidWithTheirLabels() {
         // 15 Oct (Boss: "Both"): the newest two entries.
         val a = WhatsNew.ENTRIES.first { it.id == "2026-10-15-passed-paper-arms" }
-        assertEquals(48, WhatsNew.ENTRIES.indexOf(a), "under the exits fix, the Telegram login fix, the open trade change, the market concepts and the arms cleanup's two entries")
+        assertEquals(49, WhatsNew.ENTRIES.indexOf(a), "under the exits fix, the Telegram login fix, the open trade change, the market concepts and the arms cleanup's two entries")
         for (w in listOf("R51 Donchian 20", "R52 Open outside value", "Solo 2.0", "1 lot each", "passed every research gate", "paper rule",
             "stays on paper forever", "signal from the index", "stop", "own record", "forward test", "None ever trades on Zerodha", "one tap switches each off"))
             assertTrue(w in a.what, w)
         assertTrue("Passed research (R51/R52/R57) — paper only" in a.where && "Autopilot → Change log" in a.where, a.where)
         assertEquals(PassedArmsTalk.Topic.ALL, PassedArmsTalk.asked(a.ask!!))
         val w = WhatsNew.ENTRIES.first { it.id == "2026-10-15-watchlist-shadow" }
-        assertEquals(49, WhatsNew.ENTRIES.indexOf(w))
+        assertEquals(50, WhatsNew.ENTRIES.indexOf(w))
         for (x in listOf("shadow", "R47 C4", "option-chain signal, marked non-default", "R52 R4-8", "R52 H45-1", "never traded", "paper costs",
             "40 new trades", "which to drop")) assertTrue(x in w.what, x)
         assertTrue("Watchlist (shadow)" in w.where && "evening summary" in w.where)
@@ -783,13 +800,13 @@ class WhatsNewChangelogTest {
             "chart is refused; option-derived ideas are labelled.", x.what)
         assertTrue("Pine" in x.where && "Strategies" in x.where && "Strategy lab" in x.where, x.where)
         assertNull(x.ask)
-        assertEquals(53, WhatsNew.ENTRIES.indexOf(x), "under the gamma line's entry (14 Oct, later that day; 15 Oct's six and 16 Oct's three on top)")
+        assertEquals(54, WhatsNew.ENTRIES.indexOf(x), "under the gamma line's entry (14 Oct, later that day; 15 Oct's six and 16 Oct's three on top)")
     }
 
     @Test fun theSilvermMorningCallSwitchOffIsSaidWithR42sNumbersAndTheUndo() {
         // 14 Oct (research R42, Boss's OK): the newest entry; a paper bot switched off once, as the 13 Oct ORB park was told.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-silverm-morning-off" }
-        assertEquals(51, WhatsNew.ENTRIES.indexOf(x), "the newest 14 Oct entry (15 Oct's six and 16 Oct's three above it)")
+        assertEquals(52, WhatsNew.ENTRIES.indexOf(x), "the newest 14 Oct entry (15 Oct's six and 16 Oct's three above it)")
         assertEquals(LocalDate.of(2026, 10, 14), x.date)
         for (w in listOf("R42", "53 holdout trades", "random minute", "129 trades", "open position still closes by its own exit", "one tap", "paper only"))
             assertTrue(w in x.what, w)
@@ -800,7 +817,7 @@ class WhatsNewChangelogTest {
     @Test fun theGammaLineAndTheOiWallShadowAreSaidAsInformationOnly() {
         // 14 Oct (Boss approved): two non-trading additions, right under the SILVERM morning call's switch-off (later that day).
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-gamma-line-oi-wall-shadow" }
-        assertEquals(52, WhatsNew.ENTRIES.indexOf(x), "under the SILVERM morning call's entry")
+        assertEquals(53, WhatsNew.ENTRIES.indexOf(x), "under the SILVERM morning call's entry")
         assertEquals(LocalDate.of(2026, 10, 14), x.date)
         for (w in listOf("10:00", "dealer gamma", "says nothing about direction", "never a trade signal", "expiry days", "13:45 to 14:30",
             "only written down", "in points", "never places an order"))
@@ -1322,7 +1339,7 @@ class WhatsNewChangelogTest {
     @Test fun theTelegramLoginFixIsTheNewestEntry() {
         // 16 Oct (Boss: "Telegram login button not working"): under the same day's passed arms' exits fix; what changed and where, nothing about trading.
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-16-telegram-login-fix" }
-        assertEquals(42, WhatsNew.ENTRIES.indexOf(x), "under the passed arms' exits fix")
+        assertEquals(43, WhatsNew.ENTRIES.indexOf(x), "under the passed arms' exits fix")
         for (w in listOf("inside the login window", "spinner", "20 seconds", "Try again", "starts by itself", "no longer closes"))
             assertTrue(w in x.what, w)
         assertTrue("Telegram login" in x.where && "Removed on 25 Oct" in x.where, x.where)

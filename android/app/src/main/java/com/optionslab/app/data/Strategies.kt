@@ -95,6 +95,17 @@ object Strategies {
          * Taken out (and confirmed out) before any exit of that leg is sent, so the two can never both fill.
          */
         val legStops: LinkedHashMap<String, String> = LinkedHashMap(),
+        /**
+         * 30 Oct (Boss: "Make stop bot different for index and comodities"): [stoppedDay] / [stoppedWhy] are the INDEX side's stop;
+         * these the COMMODITY side's own (Stop commodities, Jarvis's "stop all"), with each side's time ("10:42") and whether the
+         * commodity stop sells what the MCX arms hold. A book from an older build (no "stopSides") migrates its one stop as both
+         * ([com.optionslab.ira.DayStop.migratedMcx]).
+         */
+        var stoppedAt: String? = null,
+        var mcxStoppedDay: String? = null,
+        var mcxStoppedWhy: String? = null,
+        var mcxStoppedAt: String? = null,
+        var mcxStopSells: Boolean = true,
     ) {
         /** 26 Oct: the [wipeGen] this book was read in; a book from before "Erase everything" is never saved or kept again. */
         @Volatile var gen: Int = 0
@@ -152,7 +163,37 @@ object Strategies {
         runningHint = b.defs.any { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }
         stopHintDay = b.stoppedDay
         stopHintWhy = com.optionslab.ira.DayStop.Why.of(b.stoppedWhy)
+        stopHintAt = b.stoppedAt
+        mcxHint = b.mcxStoppedDay?.let { McxHint(it, com.optionslab.ira.DayStop.Why.of(b.mcxStoppedWhy), b.mcxStoppedAt, b.mcxStopSells) }
     }
+
+    /** 30 Oct: the commodity side's stop as of the last load or save, read without the lock (one volatile: never torn). */
+    private class McxHint(val day: String, val why: com.optionslab.ira.DayStop.Why, val at: String?, val sells: Boolean)
+    @Volatile private var mcxHint: McxHint? = null
+    @Volatile private var stopHintAt: String? = null
+
+    /** The index side's stop today with its time, as of the last load or save (null: not stopped). Memory only. */
+    fun stopKeptHint(): com.optionslab.ira.DayStop.Kept? = stopHint()?.let { com.optionslab.ira.DayStop.Kept(it, stopHintAt) }
+
+    /**
+     * 30 Oct: the COMMODITY side's own stop today, as of the last load or save, read without the lock (null: not stopped). Memory
+     * only: for words on screen and for [mcxStoppedKept] when the book cannot be read.
+     */
+    fun mcxStopHint(): com.optionslab.ira.DayStop.Kept? = mcxHint?.takeIf { it.day == runCatching { Market.today().toString() }.getOrNull() }
+        ?.let { com.optionslab.ira.DayStop.Kept(it.why, it.at) }
+
+    /**
+     * 30 Oct: the live entry door's day stop for one side, read without the lock ([Broker.entryRecheck]; memory only, never the
+     * disk). The index side: its own stop. MCX: the commodity side's own stop, an older build's kept for MCX, or the index LOSS stop.
+     */
+    fun stopRefusesAtDoor(mcx: Boolean): Boolean {
+        val index = stopHint()
+        if (!mcx) return index != null
+        return index == com.optionslab.ira.DayStop.Why.LOSS || mcxStopHint() != null || runCatching { LossBreaker.bossStoppedToday() }.getOrDefault(true)
+    }
+
+    /** Whether today's commodity stop sells what the MCX arms hold (as of the last load or save). Memory only. */
+    fun mcxStopSellsHint(): Boolean = mcxHint?.takeIf { it.day == runCatching { Market.today().toString() }.getOrNull() }?.sells ?: false
 
     @Volatile private var stopHintDay: String? = null
     @Volatile private var stopHintWhy: com.optionslab.ira.DayStop.Why = com.optionslab.ira.DayStop.Why.BOSS
@@ -194,8 +235,16 @@ object Strategies {
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> pending[k.toLong()] = m.getString(k) } }
             val legStops = LinkedHashMap<String, String>()
             o.optJSONObject("legStops")?.let { m -> m.keys().forEach { k -> legStops[k] = m.getString(k) } }
+            val stoppedDay = o.optString("stoppedDay").takeIf { it.isNotBlank() }
+            val stoppedWhy = o.optString("stoppedWhy").takeIf { it.isNotBlank() }
+            // 30 Oct: an older build's one stop migrates as both stopped (a loss stop: the loss rules decide the MCX side, as before).
+            val mcx = com.optionslab.ira.DayStop.migratedMcx(o.optInt("stopSides", 0) >= 1, stoppedDay, stoppedWhy,
+                o.optString("mcxStoppedDay").takeIf { it.isNotBlank() }, o.optString("mcxStoppedWhy").takeIf { it.isNotBlank() })
             Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners, auto, pending,
-                o.optString("stoppedDay").takeIf { it.isNotBlank() }, o.optString("stoppedWhy").takeIf { it.isNotBlank() }, legStops)
+                stoppedDay, stoppedWhy, legStops, stoppedAt = o.optString("stoppedAt").takeIf { it.isNotBlank() },
+                mcxStoppedDay = mcx?.first, mcxStoppedWhy = mcx?.second,
+                mcxStoppedAt = if (o.optInt("stopSides", 0) >= 1) o.optString("mcxStoppedAt").takeIf { it.isNotBlank() } else o.optString("stoppedAt").takeIf { it.isNotBlank() },
+                mcxStopSells = o.optBoolean("mcxStopSells", true))
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
@@ -215,7 +264,7 @@ object Strategies {
         return loaded
     }
 
-    private fun clearHints() { runningHint = false; exposureHint = emptyList(); stopHintDay = null }
+    private fun clearHints() { runningHint = false; exposureHint = emptyList(); stopHintDay = null; stopHintAt = null; mcxHint = null }
 
     /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
     private val written = Vault.LastWrite()
@@ -292,6 +341,13 @@ object Strategies {
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k.toString(), v) } })
         b.stoppedDay?.let { o.put("stoppedDay", it) }
         b.stoppedWhy?.let { o.put("stoppedWhy", it) }
+        b.stoppedAt?.let { o.put("stoppedAt", it) }
+        // 30 Oct: each side's stop; "stopSides" marks a book kept by this build (an older one migrates as both stopped).
+        o.put("stopSides", 1)
+        b.mcxStoppedDay?.let { o.put("mcxStoppedDay", it) }
+        b.mcxStoppedWhy?.let { o.put("mcxStoppedWhy", it) }
+        b.mcxStoppedAt?.let { o.put("mcxStoppedAt", it) }
+        o.put("mcxStopSells", b.mcxStopSells)
         o.put("legStops", JSONObject().apply { b.legStops.forEach { (k, v) -> put(k, v) } })
         return o.toString().toByteArray(Charsets.UTF_8)
     }
@@ -684,11 +740,14 @@ object Strategies {
         run.startError ?: "${def.name} started (${mode.wire}): ${run.openLegs().size} of ${def.legs.size} legs open."
     }
 
-    /** Whether the owner stopped the bot for today. */
+    /**
+     * Whether the INDEX side is stopped for today (30 Oct, Boss: "Make stop bot different for index and comodities"): every NSE
+     * and BSE arm, strategy, Pine script and Jarvis's trades read this; the MCX arms read [mcxStoppedKept] and the loss rules.
+     */
     suspend fun stoppedToday(): Boolean = stoppedWhy() != null
 
     /**
-     * Why the bot is stopped for today (by Boss, the daily loss limit, the tile), or null when it is not. The book unreadable
+     * Why the index side is stopped for today (by Boss, the daily loss limit, the tile), or null when it is not. The book unreadable
      * just now: the last one read or saved ([stopHint]), never a throw into an arm's exits (18 Oct, review).
      */
     suspend fun stoppedWhy(): com.optionslab.ira.DayStop.Why? = lock.withLock {
@@ -696,59 +755,160 @@ object Strategies {
         if (b.stoppedDay == Market.today().toString()) com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) else null
     }
 
-    /** Whether today's stop was made by the daily loss limit (it is then never lifted today). */
-    suspend fun stoppedByLossToday(): Boolean =
-        stoppedWhy() == com.optionslab.ira.DayStop.Why.LOSS || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
-
-    /**
-     * Stop the bot for the rest of today: no armed strategy starts, waiting approvals are dropped,
-     * and with [stopRunning] every running strategy is stopped too (its positions closed by its own exits).
-     * [why]: who stopped it (kept and said wherever the stop is described); a stop by the daily loss limit stays one.
-     * ORB arms and Pine scripts read the same stop: they make no new entries and sell what they hold.
-     */
-    suspend fun stopForToday(stopRunning: Boolean, compromised: Boolean, why: com.optionslab.ira.DayStop.Why = com.optionslab.ira.DayStop.Why.BOSS): String {
-        val running = lock.withLock {
-            val b = book()
-            val today = Market.today().toString()
-            val wasLoss = b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS
-            b.stoppedWhy = (if (wasLoss) com.optionslab.ira.DayStop.Why.LOSS else why).wire
-            b.stoppedDay = today
-            b.pending.clear()
-            save(b)
-            b.defs.filter { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }.map { it.id to it.name }
-        }
-        // 21 Oct: Boss's (or the tile's) stop kept apart too, so the MCX paper arms, which keep their own loss limit, still stop on it
-        // even when a loss stop was made first today (that one stays the day's kept reason).
-        if (why != com.optionslab.ira.DayStop.Why.LOSS) runCatching { LossBreaker.noteBossStop(true) }
-        if (!stopRunning || running.isEmpty()) return "Bot stopped for today: armed strategies will not start." +
-            if (running.isNotEmpty()) " ${running.size} running strategy(ies) keep managing their exits." else ""
-        val results = running.map { (id, _) -> runCatching { stop(id, "bot stopped for the day", compromised) }.getOrElse { e -> "${e.message}" } }
-        return "Bot stopped for today. " + results.joinToString(" ")
+    /** The index side's stop today with its time ("10:42"), or null (30 Oct: said on Home). Unreadable: the last one read. */
+    suspend fun stoppedKept(): com.optionslab.ira.DayStop.Kept? = lock.withLock {
+        val b = runCatching { book() }.getOrElse { return@withLock stopKeptHint() }
+        if (b.stoppedDay == Market.today().toString()) com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.of(b.stoppedWhy), b.stoppedAt) else null
     }
 
     /**
-     * Undo [stopForToday]: armed strategies start at their times again (and the ORB arms and Pine scripts that are armed
-     * trade again). Never on a day the daily loss limit stopped: plans only lower risk, so that stop holds until tomorrow.
+     * 30 Oct: the COMMODITY side's own stop today (Stop commodities, Jarvis's "stop all", or an older build's stop kept as both),
+     * with its time, or null. Loss stops are not kept here: [LossBreaker.mcxLossStop] says those. Unreadable: the last one read.
      */
-    suspend fun startAgain(): String {
-        val loss = runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
-        return lock.withLock {
+    suspend fun mcxStoppedKept(): com.optionslab.ira.DayStop.Kept? = lock.withLock {
+        val b = runCatching { book() }.getOrElse { return@withLock mcxStopHint() }
+        if (b.mcxStoppedDay == Market.today().toString()) com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.of(b.mcxStoppedWhy), b.mcxStoppedAt) else null
+    }
+
+    /** Why the commodity side is stopped by its own stop today, or null ([mcxStoppedKept]). */
+    suspend fun mcxStoppedWhy(): com.optionslab.ira.DayStop.Why? = mcxStoppedKept()?.why
+
+    /** Whether today's commodity stop also sells what the MCX arms hold (through their own exits). Unreadable: the last one read. */
+    suspend fun mcxStopSells(): Boolean = lock.withLock {
+        val b = runCatching { book() }.getOrElse { return@withLock mcxStopSellsHint() }
+        b.mcxStoppedDay == Market.today().toString() && b.mcxStopSells
+    }
+
+    /** Whether today's index stop was made by the daily loss limit (it is then never lifted today). */
+    suspend fun stoppedByLossToday(): Boolean =
+        stoppedWhy() == com.optionslab.ira.DayStop.Why.LOSS || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
+
+    private fun nowHm(): String = com.optionslab.ira.DayStop.hhmm(Market.now().toLocalTime())
+
+    /** 30 Oct: a side's stop or start by Boss, in Autopilot's change timeline (its Undo does the opposite). Never a loss stop. */
+    private fun logSide(side: com.optionslab.ira.DayStop.Side, stopped: Boolean, by: String, at: String?) {
+        runCatching { com.optionslab.app.ira.Autopilot.logDayStop(side, stopped, by, at) }
+        runCatching { Diag.record("info", "${side.title} ${if (stopped) "stopped for today" else "started again"} $by${at?.let { " at $it" } ?: ""}") }
+    }
+
+    /**
+     * Stop the INDEX side for the rest of today (30 Oct: the main "Stop index bots" button, the tile, "stop the index bots"): no armed
+     * strategy starts, waiting approvals are dropped, and with [stopRunning] every running strategy is stopped too (its positions closed
+     * by its own exits). Every NSE arm and Pine script reads the same stop: no new entries, and they sell what they hold through their
+     * own exits. The commodity bots keep trading ([stopCommodities] stops them; [stopAll] both).
+     * [why]: who stopped it (kept and said wherever the stop is described); a stop by the daily loss limit stays one. [log] false:
+     * the timeline's own Undo (it marks its entry itself).
+     */
+    suspend fun stopForToday(stopRunning: Boolean, compromised: Boolean, why: com.optionslab.ira.DayStop.Why = com.optionslab.ira.DayStop.Why.BOSS,
+                             log: Boolean = true): String {
+        var logged: String? = null
+        val running = lock.withLock {
             val b = book()
             val today = Market.today().toString()
-            if (loss || (b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS)) {
-                // 21 Oct (review): only the NSE paper limit stopped the bot: Boss's own stop made since is lifted for the MCX
-                // paper arms, which keep their own limit (their own loss stop, if any, still holds).
-                if (runCatching { LossBreaker.tripToday() == com.optionslab.ira.SegmentLock.Trip.PAPER && LossBreaker.bossStoppedToday() }.getOrDefault(false)) {
-                    runCatching { LossBreaker.noteBossStop(false) }
-                    return@withLock "Not started: the NSE paper daily loss limit stopped the NSE bots today, so they stay stopped until tomorrow. " +
-                        "The MCX paper bots trade again under their own limit."
-                }
-                return@withLock "Not started: the daily loss limit stopped the bot today, so it stays stopped until tomorrow."
-            }
-            b.stoppedDay = null; b.stoppedWhy = null; save(b)
-            runCatching { LossBreaker.noteBossStop(false) }
-            "Bot running: armed strategies start at their times."
+            val was = if (b.stoppedDay == today) com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) else null
+            val next = if (was == com.optionslab.ira.DayStop.Why.LOSS) com.optionslab.ira.DayStop.Why.LOSS else why
+            if (was == null || next != was) b.stoppedAt = nowHm()
+            b.stoppedWhy = next.wire
+            b.stoppedDay = today
+            b.pending.clear()
+            save(b)
+            if (was == null && why != com.optionslab.ira.DayStop.Why.LOSS) logged = b.stoppedAt
+            b.defs.filter { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }.map { it.id to it.name }
         }
+        // (30 Oct: Boss's index stop no longer stops the MCX arms, so it is not kept for them as 21 Oct's was.)
+        val loggedAt = logged
+        if (log && loggedAt != null) logSide(com.optionslab.ira.DayStop.Side.INDEX, true, com.optionslab.ira.DayStop.by(why), loggedAt)
+        if (!stopRunning || running.isEmpty()) return "Index bots stopped for today: armed strategies will not start." +
+            (if (running.isNotEmpty()) " ${running.size} running strategy(ies) keep managing their exits." else "") + " The commodity bots keep trading."
+        val results = running.map { (id, _) -> runCatching { stop(id, "bot stopped for the day", compromised) }.getOrElse { e -> "${e.message}" } }
+        return "Index bots stopped for today. " + results.joinToString(" ") + " The commodity bots keep trading."
+    }
+
+    /**
+     * Undo [stopForToday]: armed strategies start at their times again (and the NSE arms and Pine scripts that are armed trade
+     * again). Never on a day the daily loss limit stopped the index side: plans only lower risk, so that stop holds until tomorrow.
+     * The commodity side is its own ([startCommoditiesAgain]).
+     */
+    suspend fun startAgain(log: Boolean = true): String {
+        val loss = runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
+        var was: com.optionslab.ira.DayStop.Why? = null
+        val said = lock.withLock {
+            val b = book()
+            val today = Market.today().toString()
+            if (loss || (b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS))
+                return@withLock "Not started: the daily loss limit stopped the index bots today, so they stay stopped until tomorrow."
+            was = if (b.stoppedDay == today) com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) else null
+            b.stoppedDay = null; b.stoppedWhy = null; b.stoppedAt = null; save(b)
+            "Index bots running: armed strategies start at their times."
+        }
+        if (log && was != null) logSide(com.optionslab.ira.DayStop.Side.INDEX, false, "by you", nowHm())
+        return said
+    }
+
+    /**
+     * 30 Oct (Boss: "Make stop bot different for index and comodities"): stop the COMMODITY side for the rest of today ("Stop
+     * commodities" on the MCX card, "stop the commodity bots", "stop all"): the MCX paper arms make no new entry, and with [sell] they
+     * sell what they hold through their own exits (a sell asked once today stays asked). The MCX arms wait for no approvals, so none is
+     * dropped. The index bots keep trading. [log] false: the timeline's own Undo.
+     */
+    suspend fun stopCommodities(sell: Boolean, why: com.optionslab.ira.DayStop.Why = com.optionslab.ira.DayStop.Why.BOSS, log: Boolean = true): String {
+        // A loss stop is never kept on this side (the loss rules say it): Boss's own reason is.
+        val reason = if (why == com.optionslab.ira.DayStop.Why.LOSS) com.optionslab.ira.DayStop.Why.BOSS else why
+        var logged: String? = null
+        val sells = lock.withLock {
+            val b = book()
+            val today = Market.today().toString()
+            val was = b.mcxStoppedDay == today
+            if (!was) { b.mcxStoppedAt = nowHm(); b.mcxStopSells = sell; logged = b.mcxStoppedAt }
+            else b.mcxStopSells = b.mcxStopSells || sell
+            b.mcxStoppedDay = today
+            b.mcxStoppedWhy = reason.wire
+            save(b)
+            b.mcxStopSells
+        }
+        val loggedAt = logged
+        if (log && loggedAt != null) logSide(com.optionslab.ira.DayStop.Side.MCX, true, com.optionslab.ira.DayStop.by(reason), loggedAt)
+        return "Commodity bots stopped for today: no new MCX entries" +
+            (if (sells) "; the MCX arms sell what they hold through their own exits." else "; what they hold keeps its own exits.") +
+            " The index bots keep trading."
+    }
+
+    /**
+     * Undo [stopCommodities]: the armed MCX arms trade again. Never while a loss stop holds on the commodity side (their own limit, or
+     * the index loss stop where it stops both, [LossBreaker.mcxLossStop]): that holds until tomorrow. Also lifts an older build's
+     * stop kept for the MCX arms ([LossBreaker.noteBossStop]).
+     */
+    suspend fun startCommoditiesAgain(log: Boolean = true): String {
+        val loss = runCatching { LossBreaker.mcxLossStop(stoppedWhy()) }.getOrDefault(true)
+        val legacy = runCatching { LossBreaker.bossStoppedToday() }.getOrDefault(false)
+        var lifted = false
+        val said = lock.withLock {
+            val b = book()
+            val today = Market.today().toString()
+            val kept = if (b.mcxStoppedDay == today) com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.of(b.mcxStoppedWhy), b.mcxStoppedAt)
+                else if (legacy) com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS) else null
+            com.optionslab.ira.DayStop.startRefusal(com.optionslab.ira.DayStop.Side.MCX, kept, loss)?.let { return@withLock it }
+            b.mcxStoppedDay = null; b.mcxStoppedWhy = null; b.mcxStoppedAt = null; b.mcxStopSells = true
+            save(b)
+            lifted = true
+            "Commodity bots running: the armed MCX arms trade again."
+        }
+        if (lifted) {
+            if (legacy) runCatching { LossBreaker.noteBossStop(false) }
+            if (log) logSide(com.optionslab.ira.DayStop.Side.MCX, false, "by you", nowHm())
+        }
+        return said
+    }
+
+    /**
+     * Jarvis's "stop all" (30 Oct: it keeps stopping both): the index side as [stopForToday] with [stopRunning], and the commodity
+     * side selling what it holds, as "stop all" always did.
+     */
+    suspend fun stopAll(stopRunning: Boolean, compromised: Boolean): String {
+        val index = stopForToday(stopRunning, compromised)
+        val mcx = runCatching { stopCommodities(sell = true) }.getOrElse { "The commodity bots could not be stopped now: ${it.message ?: it.javaClass.simpleName}." }
+        // (Each side's "the other side keeps trading" is not said: both stop.)
+        return index.removeSuffix(" The commodity bots keep trading.") + " " + mcx.removeSuffix(" The index bots keep trading.")
     }
 
     suspend fun stop(id: Long, reason: String, compromised: Boolean): String = lock.withLock {
@@ -1175,8 +1335,8 @@ object Strategies {
     /** Memory only, for the erase's tests: a book held, or a hint from one. */
     internal fun holdsForErase(): Boolean = runCatching {
         cache?.let { b -> b.defs.isNotEmpty() || b.runs.isNotEmpty() || b.history.isNotEmpty() || b.log.isNotEmpty() || b.owners.isNotEmpty() ||
-            b.pending.isNotEmpty() || b.autoApprove.isNotEmpty() || b.brokerIds.isNotEmpty() || b.legStops.isNotEmpty() || b.stoppedDay != null } == true ||
-            runningHint || exposureHint.isNotEmpty() || stopHintDay != null
+            b.pending.isNotEmpty() || b.autoApprove.isNotEmpty() || b.brokerIds.isNotEmpty() || b.legStops.isNotEmpty() || b.stoppedDay != null || b.mcxStoppedDay != null } == true ||
+            runningHint || exposureHint.isNotEmpty() || stopHintDay != null || mcxHint != null
     }.getOrDefault(true)
 
     /** The book's file and any set-aside copy (none before [init]). */

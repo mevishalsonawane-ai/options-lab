@@ -22,8 +22,9 @@ import kotlinx.coroutines.withContext
 /**
  * The quick-settings tile (the owner's ask, 2026-10-02): the app's logo as a button to stop or start the bot without opening the app.
  *
- *   IraAlgo      the same switch as Home's "Stop bot for today" / "Start bot": stopping means no armed strategy or arm
- *                starts again today (running ones keep managing their own exits); it does not touch the kill switch.
+ *   IraAlgo      the same switch as Home's "Stop index bots" / "Start index bots" (30 Oct: the INDEX side only - the MCX bots
+ *                keep trading; they have their own stop on the MCX card): stopping means no armed strategy or NSE arm starts
+ *                again today (running ones keep managing their own exits); it does not touch the kill switch.
  *   IraGoldAlgo  stops every gold arm (disarms them; an open trade is still managed to its exit) and remembers which
  *                were armed; starting arms those again.
  *
@@ -63,7 +64,7 @@ class BotTile : TileService() {
             withContext(Dispatchers.Main) {
                 val t = qsTile ?: return@withContext
                 t.icon = Icon.createWithResource(this@BotTile, R.drawable.ic_notification_art)
-                t.label = if (com.optionslab.app.BuildConfig.GOLD) "Gold bot" else "IraAlgo bot"
+                t.label = if (com.optionslab.app.BuildConfig.GOLD) "Gold bot" else "Index bots"   // 30 Oct: the tile stops the index side only
                 t.state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) t.subtitle = pnl ?: if (on) "Running" else "Stopped"
                 t.updateTile()

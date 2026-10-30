@@ -516,34 +516,46 @@ object McxPaperArms {
     // ---- guards -----------------------------------------------------------------------------------------------------------
 
     /**
-     * Whether the bot is stopped for today for these arms (Boss's stop, the tile, Zerodha's loss limit; 21 Oct: with commodities on
-     * their own limits, their own loss limit and not the NSE paper one, [LossBreaker.mcxStopped]). Unknown counts as stopped.
+     * Whether these arms are stopped for today (30 Oct, Boss: "Make stop bot different for index and comodities": the commodity
+     * side's own stop - Stop commodities on the MCX card, Jarvis's "stop all" - Zerodha's loss limit, and with commodities on their own
+     * limits their own loss limit and not the NSE paper one, [LossBreaker.mcxStopped]; the main "Stop index bots" button does not stop
+     * them). Unknown counts as stopped.
      */
     private suspend fun stoppedToday(): Boolean = stoppedKnown() ?: true
 
     /**
      * The stop for today as read, or null when it could not be read. An entry treats null as stopped ([stoppedToday]); an EXIT
      * never acts on it (22 Oct audit: a failed read sold every held MCX position as "operator_stop", which is not a stop
-     * Boss made). TEST ONLY: [testStoppedWhy] replaces the read.
+     * Boss made). TEST ONLY: [testStoppedWhy] replaces the index side's read, [testMcxStoppedWhy] the commodity side's.
      */
     private suspend fun stoppedKnown(): Boolean? = runCatching {
-        LossBreaker.mcxStopped(testStoppedWhy.let { h -> if (h != null) h() else Strategies.stoppedWhy() })
+        LossBreaker.mcxStopped(indexWhy(), testMcxStoppedWhy.let { h -> if (h != null) h() else Strategies.mcxStoppedWhy() })
     }.getOrNull()
+
+    private suspend fun indexWhy(): com.optionslab.ira.DayStop.Why? = testStoppedWhy.let { h -> if (h != null) h() else Strategies.stoppedWhy() }
 
     /**
      * 25 Oct (app audit): whether today's stop SELLS what the MCX arms hold - only a stop known to apply to MCX
      * ([LossBreaker.mcxExitStop]); an unreadable read is never one. 23 Oct: the US-night silver short was bought back at 14:39
-     * at market, nine hours before its rule's exit, after the NSE paper loss stop and amid failing reads.
+     * at market, nine hours before its rule's exit, after the NSE paper loss stop and amid failing reads. 30 Oct: the commodity
+     * side's own stop sells only when Boss asked it to ("Stop and sell"; Jarvis's "stop all" always does).
      */
     private suspend fun stopSells(): Boolean = runCatching {
-        LossBreaker.mcxExitStop(testStoppedWhy.let { h -> if (h != null) h() else Strategies.stoppedWhy() })
+        val sells = testMcxStoppedWhy.let { h -> if (h != null) h() != null && testMcxSells else Strategies.mcxStopSells() }
+        LossBreaker.mcxExitStop(indexWhy(), sells)
     }.getOrDefault(false)
 
     @Volatile internal var testStoppedWhy: (() -> com.optionslab.ira.DayStop.Why?)? = null
+    /** TEST ONLY (30 Oct): the commodity side's own stop, and whether it sells, instead of the strategies' book. */
+    @Volatile internal var testMcxStoppedWhy: (() -> com.optionslab.ira.DayStop.Why?)? = null
+    @Volatile internal var testMcxSells: Boolean = true
 
-    /** The MCX arms' refusal words while their own loss stop holds (else the bot's stop for today). */
-    private fun stoppedWords(): String? = if (runCatching { LossBreaker.mcxTrippedToday() }.getOrDefault(false))
-        com.optionslab.ira.SegmentLock.MCX_LOSS_REFUSAL else null
+    /** The MCX arms' refusal words while their own loss stop holds, or the commodity side is stopped (else the plain stop word). */
+    private fun stoppedWords(): String? = when {
+        runCatching { LossBreaker.mcxTrippedToday() }.getOrDefault(false) -> com.optionslab.ira.SegmentLock.MCX_LOSS_REFUSAL
+        Strategies.mcxStopHint() != null -> "the commodity bots are stopped for today (Start again on the MCX card)"
+        else -> null
+    }
 
     /** Why a new entry in [c] ([buy]: a buy) may not go now, or null ([fresh]: the deciding price is under a minute old). */
     private suspend fun refusal(c: Paper.Contract, buy: Boolean, fresh: Boolean): String? = McxArmRules.entryRefusal(

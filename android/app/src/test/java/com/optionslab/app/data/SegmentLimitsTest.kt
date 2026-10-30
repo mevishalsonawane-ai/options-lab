@@ -39,7 +39,7 @@ class SegmentLimitsTest : RobolectricTest() {
     }
 
     private fun check() = runBlocking { LossBreaker.check(context) }
-    private fun mcxStopped() = runBlocking { LossBreaker.mcxStopped(Strategies.stoppedWhy()) }
+    private fun mcxStopped() = runBlocking { LossBreaker.mcxStopped(Strategies.stoppedWhy(), Strategies.mcxStoppedWhy()) }
     private fun nseStopped() = runBlocking { Strategies.stoppedToday() } || LossBreaker.trippedToday()
 
     @org.junit.Before fun up() {
@@ -163,33 +163,45 @@ class SegmentLimitsTest : RobolectricTest() {
         paper(nse = 9_000.0, mcx = 1_000.0)
         check()
         assertTrue(mcxStopped())
-        // "Start all" does not lift it either.
+        // "Start all" does not lift it either, nor the MCX card's "Start again" (30 Oct).
         runBlocking { Strategies.startAgain() }
+        assertTrue(mcxStopped())
+        val said = runBlocking { Strategies.startCommoditiesAgain() }
+        assertTrue(said, said.startsWith("Not started: the daily loss limit stopped the commodity bots today"))
         assertTrue(mcxStopped())
     }
 
-    @Test fun bossStopStopsBothAndStartAgainLiftsBoth() {
+    /** 30 Oct (Boss: "Make stop bot different for index and comodities"): the main button and the tile stop the index side only. */
+    @Test fun bossIndexStopLeavesMcxTradingAndEachSideStartsOnItsOwn() {
         at(day, 10, 0)
         paper(nse = 0.0, mcx = 0.0)
         runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
         assertTrue(nseStopped())
-        assertTrue(mcxStopped())
+        assertFalse("the MCX bots keep trading", mcxStopped())
         runBlocking { Strategies.startAgain() }
         assertFalse(nseStopped())
         assertFalse(mcxStopped())
         // The tile's stop too.
         runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false, why = DayStop.Why.TILE) }
+        assertFalse(mcxStopped())
+        // The commodity side's own stop.
+        runBlocking { Strategies.stopCommodities(sell = true) }
         assertTrue(mcxStopped())
+        runBlocking { Strategies.startCommoditiesAgain() }
+        assertFalse(mcxStopped())
+        assertTrue("the index side's stop is its own", nseStopped())
     }
 
-    @Test fun bossStopAfterTheNsePaperLossStillStopsMcx() {
+    @Test fun theCommodityStopAfterTheNsePaperLossStopsMcx() {
         at(day, 11, 0)
         paper(nse = -7_000.0, mcx = 0.0)
         check()
         assertFalse(mcxStopped())
         runBlocking { Strategies.stopForToday(stopRunning = true, compromised = false) }
-        assertEquals("the day keeps the loss stop's reason", DayStop.Why.LOSS, runBlocking { Strategies.stoppedWhy() })
-        assertTrue("but Boss's own stop stops the MCX arms too", mcxStopped())
+        assertEquals("the index side keeps the loss stop's reason", DayStop.Why.LOSS, runBlocking { Strategies.stoppedWhy() })
+        assertFalse("Boss's index stop no longer reaches the MCX arms", mcxStopped())
+        runBlocking { Strategies.stopCommodities(sell = false) }
+        assertTrue("the commodity stop does", mcxStopped())
     }
 
     @Test fun zerodhasLossLimitStopsBothEvenAfterTheNsePaperOne() {
@@ -335,15 +347,17 @@ class SegmentLimitsTest : RobolectricTest() {
         assertTrue("a shared stop is never lifted by switching the split on", mcxStopped())
     }
 
-    /** Review: after the NSE paper stop, Boss's own stop and then "start" lets the MCX arms trade again; NSE stays stopped. */
+    /** After the NSE paper stop, the commodity stop and then the MCX card's "Start again" lets the MCX arms trade again; NSE stays stopped. */
     @Test fun startAgainAfterTheNsePaperStopResumesOnlyMcx() {
         at(day, 11, 0)
         paper(nse = -7_000.0, mcx = 0.0)
         check()
-        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
+        runBlocking { Strategies.stopCommodities(sell = false) }
         assertTrue(mcxStopped())
-        val said = runBlocking { Strategies.startAgain() }
-        assertTrue(said, said.contains("The MCX paper bots trade again"))
+        val refused = runBlocking { Strategies.startAgain() }
+        assertTrue(refused, refused.startsWith("Not started: the daily loss limit stopped the index bots today"))
+        val said = runBlocking { Strategies.startCommoditiesAgain() }
+        assertEquals("Commodity bots running: the armed MCX arms trade again.", said)
         assertFalse(mcxStopped())
         assertTrue(nseStopped())
     }

@@ -24,6 +24,8 @@ object AppState {
         val killSwitch: Boolean = false,
         val lossLimitTripped: Boolean = false,
         val stoppedToday: Boolean = false,
+        /** 30 Oct: the commodity side's own stop today (its lock-free hint). */
+        val mcxStoppedToday: Boolean = false,
         val dayLockPaper: Boolean = false,
         val dayLockLive: Boolean = false,
         val at: Long = 0L,
@@ -71,6 +73,7 @@ object AppState {
             killSwitch = s?.guardKill ?: _guards.value.killSwitch,
             lossLimitTripped = runCatching { LossBreaker.trippedToday() }.getOrDefault(_guards.value.lossLimitTripped),
             stoppedToday = runCatching { Strategies.stopHint() != null }.getOrDefault(false),
+            mcxStoppedToday = runCatching { Strategies.mcxStopHint() != null }.getOrDefault(false),
             dayLockPaper = runCatching { DayLockGuard.active(false) != null }.getOrDefault(false),
             dayLockLive = runCatching { DayLockGuard.active(true) != null }.getOrDefault(false),
             at = System.currentTimeMillis(),
@@ -84,7 +87,8 @@ object AppState {
         val guards = if (g.at == 0L) "not looked at yet" else listOfNotNull(
             "kill switch ${if (g.killSwitch) "ON" else "off"}",
             if (g.lossLimitTripped) "daily loss limit reached" else null,
-            if (g.stoppedToday) "bot stopped for today" else null,
+            if (g.stoppedToday) "index bots stopped for today" else null,
+            if (g.mcxStoppedToday) "commodity bots stopped for today" else null,
             if (g.dayLockPaper) "day lock (paper)" else null,
             if (g.dayLockLive) "day lock (Zerodha)" else null,
         ).joinToString(", ") + " (${age(g.at)})"

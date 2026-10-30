@@ -163,7 +163,9 @@ object Broker {
         if (o.tag in BOT_TAGS) {
             // 21 Oct: either paper segment's loss stop, or the whole paper day past the paper limit, refuses too: never weaker than one paper figure.
             if (LossBreaker.liveDoorTripped()) return "refused: the daily loss limit was reached today"
-            if (Strategies.stopHint() != null) return "stopped_for_today"
+            // 30 Oct (Boss: "Make stop bot different for index and comodities"): an MCX entry reads the commodity side's stop (and
+            // the index LOSS stop, which stopped every live entry before the split); every other entry the index side's. Memory only.
+            if (Strategies.stopRefusesAtDoor(mcx = o.exchange == "MCX")) return "stopped_for_today"
             DayLockGuard.refusal(true)?.let { return it }
             // Smart workers (10 Oct): a news window paused ON, unreliable data, the relay down - memory only, lower risk only.
             runCatching { SmartWorkers.doorRefusal(o.tradingSymbol) }.getOrNull()?.let { return it }

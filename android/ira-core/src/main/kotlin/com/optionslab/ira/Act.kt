@@ -21,10 +21,16 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
                     * The [targets] were set apart by a comma or "&" ("stop orb, sweep"): each is its own arm, never read together as
                     * one name ([Commands.stops]). Not shown in [toString] (the readings kept in tests stay as written).
                     */
-                   val apart: Boolean = false) {
+                   val apart: Boolean = false,
+                   /**
+                    * 30 Oct (Boss: "Make stop bot different for index and comodities"): the side a [Kind.STOP_ALL] or [Kind.START_ALL]
+                    * is for ("stop the index bots", "stop the commodity bots", "start the commodity bots again"); null: both, as "stop
+                    * all" always was. Same kind, so the same confirm and PIN rules. Shown in [toString] only when said.
+                    */
+                   val side: DayStop.Side? = null) {
     /** As before [targets] and [keep] were added (the readings kept in tests stay as written); they are shown only when said. */
     override fun toString(): String = "Command(kind=$kind, target=$target, number=$number, market=$market, above=$above, level=$level, day=$day, pct=$pct, lots=$lots" +
-        (if (targets.isNotEmpty() || keep) ", targets=$targets, keep=$keep" else "") + ")"
+        (if (targets.isNotEmpty() || keep) ", targets=$targets, keep=$keep" else "") + (if (side != null) ", side=$side" else "") + ")"
 
     enum class Kind(val reduces: Boolean) {
         STOP_ALL(true), START_ALL(false), STOP_ONE(true), START_ONE(false),
@@ -331,6 +337,9 @@ object Commands {
         // kardo") are read first: each is stopped by itself, never all of them (Boss, 6 Oct: two arms switched off became a stop
         // of everything). A comma or "&" between names is an "and" here.
         // (All but some was read above, before the other actions.)
+        // 30 Oct (Boss: "Make stop bot different for index and comodities"): one side's stop or start, read before the arms by name
+        // so "the commodity bots" is never taken for an arm called "commodity". Same kinds as "stop all" / "start all".
+        sideStop(s)?.let { return it }
         stopSeveral(sl, rx("[a-z0-9)]\\s*(?:,(?!\\d{3})|&)\\s*[a-z0-9(]").containsMatchIn(text.lowercase()))?.let { return it }
         if (has(" (stop|halt|pause|disarm|switch off|turn off) (all|every|everything)( the| my)?( strategies| arms| bots| algos| scripts| trading)? | stop trading | stop (the |my )?(bots|algos|arms|strategies) ")) return Command(Command.Kind.STOP_ALL)
         if (has(" (start|resume|restart) (all |the |my )?(bots|arms|strategies|algos|trading) again | (resume|restart) (all|trading|the bots|everything) | start trading again ") ||
@@ -469,6 +478,30 @@ object Commands {
      * sweep" (as normalized), "stop the bots orb sweep", "stop trading orb sweep": each one named is stopped by itself. One
      * name after "the bots" / "trading" is that one arm; "stop trading for today" names none (the stop of everything).
      */
+    private val INDEX_SIDE = "(?:index|indices|indexes|nse|nifty|nse and bse|equity|options?)"
+    private val MCX_SIDE = "(?:commodity|commodities|mcx|commodity market)"
+    private val SIDE_GROUP = "(?: bots| bot| arms| strategies| algos| side| trading| trades)"
+
+    /**
+     * 30 Oct: "stop the index bots" / "stop commodities" / "start the commodity bots again" / "resume mcx": [Command.Kind.STOP_ALL]
+     * or [Command.Kind.START_ALL] for one [DayStop.Side]. The index side needs its group word ("index bots", "nse trading"), so
+     * "stop nifty" alone is never read as it; the commodity side may be said bare ("stop commodities", "stop mcx").
+     */
+    private fun sideStop(s: String): Command? {
+        val stop = "(?:stop|halt|pause|switch off|turn off|disarm)"
+        val start = "(?:start|resume|restart|switch on|turn on)"
+        val tail = "(?: again)?(?: for (?:today|the day|the rest of the day))?(?: too| as well| also)? $"
+        fun m(verb: String, side: String, groupNeeded: Boolean) =
+            rx("^ $verb (?:all )?(?:the |my )?$side${if (groupNeeded) SIDE_GROUP else "$SIDE_GROUP?"}$tail").containsMatchIn(s)
+        return when {
+            m(stop, MCX_SIDE, false) -> Command(Command.Kind.STOP_ALL, side = DayStop.Side.MCX)
+            m(stop, INDEX_SIDE, true) -> Command(Command.Kind.STOP_ALL, side = DayStop.Side.INDEX)
+            m(start, MCX_SIDE, false) -> Command(Command.Kind.START_ALL, side = DayStop.Side.MCX)
+            m(start, INDEX_SIDE, true) -> Command(Command.Kind.START_ALL, side = DayStop.Side.INDEX)
+            else -> null
+        }
+    }
+
     private fun stopSeveral(s: String, apart: Boolean): Command? {
         val m = rx("^ $STOP_VERB (?:the |my )?(?:($GROUP) )?(.+?) $").find(s) ?: return null
         val group = m.groupValues[1].isNotEmpty()
@@ -590,8 +623,16 @@ object Commands {
 
     /** The command in a few words, for the confirm button and the reply. */
     fun describe(c: Command, name: String? = null): String = when (c.kind) {
-        Command.Kind.STOP_ALL -> "stop every strategy and arm for today (and close what they hold)"
-        Command.Kind.START_ALL -> "start every strategy and arm (and let them trade again today)"
+        Command.Kind.STOP_ALL -> when (c.side) {
+            DayStop.Side.INDEX -> "stop the index bots for today - every NSE and BSE strategy, arm and script (and close what they hold); the commodity bots keep trading"
+            DayStop.Side.MCX -> "stop the commodity bots for today (and close what they hold); the index bots keep trading"
+            null -> "stop every strategy and arm for today (and close what they hold)"
+        }
+        Command.Kind.START_ALL -> when (c.side) {
+            DayStop.Side.INDEX -> "start the index bots again (and let them trade again today)"
+            DayStop.Side.MCX -> "start the commodity bots again (and let them trade again today)"
+            null -> "start every strategy and arm (and let them trade again today)"
+        }
         Command.Kind.STOP_ONE -> name?.let { "stop $it" } ?: when {
             c.keep -> "stop every strategy and arm that is on except ${c.targets.joinToString(" and ")}, each by itself"
             c.targets.isNotEmpty() -> "stop ${c.targets.joinToString(" and ")}, each by itself"

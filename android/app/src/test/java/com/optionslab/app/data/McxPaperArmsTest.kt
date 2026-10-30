@@ -117,6 +117,8 @@ class McxPaperArmsTest : RobolectricTest() {
         Market.testClock = null
         McxPaperArms.testDaily = null
         McxPaperArms.testStoppedWhy = null
+        McxPaperArms.testMcxStoppedWhy = null
+        McxPaperArms.testMcxSells = true
         UsCues.testFetch = null
         UsCues.resetForTest()
         kite.close(); upstox.close()
@@ -248,8 +250,9 @@ class McxPaperArmsTest : RobolectricTest() {
         tick(LocalTime.of(19, 34))
         assertEquals("still held", 1, McxPaperArms.view.value.open.size)
         assertTrue(McxPaperArms.view.value.closed.none { it.why == "operator_stop" })
-        // A real stop for today still sells it.
-        McxPaperArms.testStoppedWhy = { com.optionslab.ira.DayStop.Why.BOSS }
+        // A real stop for today still sells it (30 Oct: the commodity side's own stop).
+        McxPaperArms.testStoppedWhy = null
+        McxPaperArms.testMcxStoppedWhy = { com.optionslab.ira.DayStop.Why.BOSS }
         futureMinutes(LocalTime.of(19, 35)) { 312.0 }
         optionMinutes(LocalTime.of(19, 35)) { 21.0 }
         tick(LocalTime.of(19, 35))
@@ -274,12 +277,109 @@ class McxPaperArmsTest : RobolectricTest() {
         tick(LocalTime.of(19, 34))
         assertEquals("still held", 1, McxPaperArms.view.value.open.size)
         assertTrue(McxPaperArms.view.value.closed.none { it.why == "operator_stop" })
-        // Boss's own stop still sells it.
+        // Boss's own commodity stop still sells it (30 Oct: the index side's own stop no longer does).
         McxPaperArms.testStoppedWhy = { com.optionslab.ira.DayStop.Why.BOSS }
         futureMinutes(LocalTime.of(19, 35)) { 312.0 }
         optionMinutes(LocalTime.of(19, 35)) { 21.0 }
         tick(LocalTime.of(19, 35))
+        assertEquals("Boss's index stop: still held", 1, McxPaperArms.view.value.open.size)
+        McxPaperArms.testMcxStoppedWhy = { com.optionslab.ira.DayStop.Why.BOSS }
+        futureMinutes(LocalTime.of(19, 36)) { 312.0 }
+        optionMinutes(LocalTime.of(19, 36)) { 21.0 }
+        tick(LocalTime.of(19, 36))
         assertEquals("operator_stop", McxPaperArms.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    // ---- 30 Oct (Boss: "Make stop bot different for index and comodities"): each side's own stop, through the real book ----------
+
+    /** The 19:32 entry (the future breaks up at 311), as in the evening break's own test. */
+    private fun eveningEntry(): McxPaperArms.Pos? {
+        futureMinutes(LocalTime.of(19, 32)) { 311.0 }
+        optionMinutes(LocalTime.of(19, 32)) { 20.0 }
+        tick(LocalTime.of(19, 32))
+        return McxPaperArms.view.value.open.singleOrNull()
+    }
+
+    /** The target reached at 19:35 (321): the 19:36 pass sells it at its target. */
+    private fun targetAt1936() {
+        futureMinutes(LocalTime.of(19, 36)) { t -> if (t.isBefore(LocalTime.of(19, 35))) 312.0 else 321.0 }
+        optionMinutes(LocalTime.of(19, 36)) { t -> if (t.isBefore(LocalTime.of(19, 35))) 21.0 else 26.0 }
+        tick(LocalTime.of(19, 36))
+    }
+
+    @Test fun theMainIndexStopLeavesTheMcxArmsTradingAndExiting() {
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        at(LocalTime.of(19, 0))
+        runBlocking { Strategies.stopForToday(stopRunning = true, compromised = false) }
+        assertTrue(runBlocking { Strategies.stoppedToday() })
+        assertTrue("the MCX arm still enters", eveningEntry() != null)
+        // The tile's index stop too: still held, then sold at its own target.
+        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false, why = com.optionslab.ira.DayStop.Why.TILE) }
+        tick(LocalTime.of(19, 33))
+        assertEquals(1, McxPaperArms.view.value.open.size)
+        targetAt1936()
+        assertEquals("target", McxPaperArms.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun theCommodityStopRefusesNewEntriesAndSellsWhenAsked() {
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        at(LocalTime.of(19, 0))
+        runBlocking { Strategies.stopCommodities(sell = true) }
+        assertFalse("the index side is not stopped", runBlocking { Strategies.stoppedToday() })
+        assertNull("no new MCX entry", eveningEntry())
+        val st = McxPaperArms.view.value.status[McxEveRules.SOURCE].orEmpty()
+        assertTrue(st, st.contains("stopped_for_today") && st.contains("commodity bots are stopped"))
+        assertEquals("Commodity bots running: the armed MCX arms trade again.", runBlocking { Strategies.startCommoditiesAgain() })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun theCommodityStopSellsWhatIsHeldWhenAsked() {
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        assertTrue(eveningEntry() != null)
+        runBlocking { Strategies.stopCommodities(sell = true) }
+        futureMinutes(LocalTime.of(19, 34)) { 312.0 }
+        optionMinutes(LocalTime.of(19, 34)) { 21.0 }
+        tick(LocalTime.of(19, 34))
+        assertEquals("operator_stop", McxPaperArms.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    /** OPEN POSITIONS FIRST: a commodity stop without the sale keeps watching what is held - its target still sells it. */
+    @Test fun theCommodityStopWithoutTheSaleKeepsWatchingTheHeldPosition() {
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        val pos = eveningEntry()!!
+        runBlocking { Strategies.stopCommodities(sell = false) }
+        tick(LocalTime.of(19, 33))
+        assertEquals("held, not sold", 1, McxPaperArms.view.value.open.size)
+        assertEquals("its stop still rests", "trigger pending", Paper.state.orders.single { it.orderId == pos.stopOrderId }.status)
+        targetAt1936()
+        assertEquals("target", McxPaperArms.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun jarvisStopAllStopsTheMcxArmsAndSellsWhatTheyHold() {
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        assertTrue(eveningEntry() != null)
+        runBlocking { Strategies.stopAll(stopRunning = true, compromised = false) }
+        assertTrue(runBlocking { Strategies.stoppedToday() })
+        futureMinutes(LocalTime.of(19, 34)) { 312.0 }
+        optionMinutes(LocalTime.of(19, 34)) { 21.0 }
+        tick(LocalTime.of(19, 34))
+        assertEquals("operator_stop", McxPaperArms.view.value.closed.single().why)
+        assertNothingAtZerodha()
+    }
+
+    /** The kill switch stays global: neither side's stop or start touches it, and it still refuses an MCX entry. */
+    @Test fun theKillSwitchStaysGlobalThroughEachSidesStopAndStart() {
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+        TradeFixtures.killSwitch(true)
+        runBlocking { Strategies.stopCommodities(sell = false); Strategies.startCommoditiesAgain() }
+        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false); Strategies.startAgain() }
+        assertTrue(AppSettings.load().guardKill)
+        assertNull(eveningEntry())
+        assertTrue(McxPaperArms.view.value.status[McxEveRules.SOURCE].orEmpty().startsWith("eve_kill_switch"))
         assertNothingAtZerodha()
     }
 

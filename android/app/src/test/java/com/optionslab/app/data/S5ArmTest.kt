@@ -282,6 +282,26 @@ class S5ArmTest : RobolectricTest() {
         assertTrue(view().looks.single { it.index == "NIFTY" }.why.contains("stopped for today"))
     }
 
+    /** 30 Oct (Boss: "Make stop bot different for index and comodities"): the commodity stop never stops this index arm. */
+    @Test fun theCommodityStopNeverStopsThisIndexArm() {
+        runBlocking { Strategies.stopCommodities(sell = true) }
+        val p = boughtAt0920()
+        assertEquals("NIFTY", p.index)
+        assertNothingAtZerodha()
+    }
+
+    /** 30 Oct, OPEN POSITIONS FIRST: the index side stopped while it holds - still watched at full cadence and closed by its own exit. */
+    @Test fun aHeldTradeIsStillWatchedAndClosedByItsOwnExitAfterTheIndexStop() {
+        val p = boughtAt0920()
+        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
+        assertTrue(S5Arm.holding()); assertTrue("its watch still wants every pass", S5Arm.wantsPass(12 * 60))
+        assertEquals("its stop still rests", "trigger pending", Paper.state.orders.single { it.orderId == p.stopOrderId }.status)
+        option(peToken, p.entry + 42.0); at(LocalTime.of(10, 0), 5); runBlocking { S5Arm.manageOnly() }
+        option(peToken, p.entry + 20.0); at(LocalTime.of(10, 2), 5); runBlocking { S5Arm.manageOnly() }
+        assertTrue(view().closed.single().why!!.startsWith("profit lock"))
+        assertNothingAtZerodha()
+    }
+
     @Test fun offOrOutsideItsMinutesDecidesNothing() {
         assertFalse("before 08:45", S5Arm.wantsPass(8 * 60))
         assertFalse("after 09:32", S5Arm.wantsPass(10 * 60))

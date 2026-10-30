@@ -65,6 +65,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     val pending by model.strategyPending.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val botStopped by model.botStopped.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val botStopWhy by model.botStopWhy.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val botStopAt by model.botStopAt.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val dayLock by model.dayLockLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val paperSince by model.paperSinceLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // 15 Oct (Boss's cleanup): the scheduled strategies' rows are hidden once none runs; the Hidden arms list restores them.
@@ -88,6 +89,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         reauth = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel) },
         reauthClearKill = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel, why = com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) },
         stopWhy = botStopWhy,
+        stopAt = botStopAt,
         dayLock = dayLock,
         paperSince = paperSince,
         // Night (R3), then VIX divergence (9 Oct, research R1 N13), then the Hero ₹1,000 ticket (15 Oct, Boss's choice; R50
@@ -110,13 +112,28 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     )
 }
 
+/** 30 Oct (Boss: "Make stop bot different for index and comodities"): the main button's words - the index side only. */
+internal const val STOP_INDEX = "Stop index bots"
+internal const val START_INDEX = "Start index bots"
+internal const val INDEX_RUNNING = "Index bots running: armed NSE and BSE strategies start on time; the commodity bots have their own stop"
+
 /** What the Strategies card's title opens (15 Oct, compact rows). */
 internal const val STRATEGIES_NOTE = "Each arm's row shows its name, status, key numbers and switch; tap a name for its rules, research and notes."
 internal const val AUTO_NOTE = "AUTO places the entry by itself at the start time; APPROVE waits for your tap. Stops, targets and square-off always run by themselves."
 
-/** Home's MCX paper bots, a card of their own under the Strategies card (11 Oct). */
+/**
+ * Home's MCX paper bots, a card of their own under the Strategies card (11 Oct). 30 Oct (Boss: "Make stop bot different for index and
+ * comodities"): with their own smaller "Stop commodities" / "Start again" control on top ([McxStopBar]).
+ */
 @Composable
-fun McxHomeCard() { LedgerCard { McxArmRows(divider = false) } }
+fun McxHomeCard(model: AppModel) {
+    val st by model.mcxStop.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    androidx.compose.runtime.LaunchedEffect(Unit) { model.refreshStrategies() }
+    LedgerCard {
+        McxStopBar(st, onStop = { sell -> model.stopCommodities(sell) }, onStart = { model.startCommoditiesAgain() })
+        McxArmRows(divider = false)
+    }
+}
 
 // The trade manager, order flow and the Brain (their own Home cards on 11 Oct) are sections of Home's Automation card
 // ([AutomationHomeCard]) since 11 Oct's second change: one line each on Home, the section in full a tap away.
@@ -146,6 +163,8 @@ internal fun StrategyArmContent(
     pending: Map<Long, RunMode>, botStopped: Boolean, actions: StrategyArmActions, onManage: () -> Unit,
     orbRows: @Composable () -> Unit, reauth: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
     stopWhy: com.optionslab.ira.DayStop.Why? = null,
+    /** 30 Oct: when the index side was stopped today ("10:42"), said on the bar; null when not known. */
+    stopAt: String? = null,
     /** The PIN prompt for clearing the kill switch (18 Oct, review: its own words; [reauth] when not given). */
     reauthClearKill: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit = reauth,
     /** The account day lock's line when reached today ("Day lock (paper): reached +Rs 8,000 at 14:11, no new entries"). */
@@ -179,12 +198,13 @@ internal fun StrategyArmContent(
             Text("Import from desktop", style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.clickable { importing = true }.padding(4.dp))
         }
-        // One control for the whole bot: stop it for today, start it again, or clear the kill switch.
+        // One control for the INDEX side (30 Oct, Boss: "Make stop bot different for index and comodities"): stop it for today,
+        // start it again, or clear the kill switch (which stays global). The MCX card has its own "Stop commodities".
         val (botState, botAction, botTone) = when {
             killOn -> Triple("Kill switch ON: Zerodha orders blocked", "Clear kill switch", p.oxblood)
-            // Who stopped it is said (Boss, the daily loss limit, the tile): the loss limit's stop holds until tomorrow.
-            botStopped -> Triple(com.optionslab.ira.DayStop.bar(stopWhy ?: com.optionslab.ira.DayStop.Why.BOSS), "Start bot", p.verdigris)
-            else -> Triple("Bot running: armed strategies start on time", "Stop bot for today", p.oxblood)
+            // Who stopped it is said (Boss, the daily loss limit, the tile), and when: the loss limit's stop holds until tomorrow.
+            botStopped -> Triple(com.optionslab.ira.DayStop.bar(stopWhy ?: com.optionslab.ira.DayStop.Why.BOSS, stopAt), START_INDEX, p.verdigris)
+            else -> Triple(INDEX_RUNNING, STOP_INDEX, p.oxblood)
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp).background(botTone.copy(alpha = 0.10f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -360,19 +380,20 @@ private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boo
     AlertDialog(
         onDismissRequest = onClose,
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
-        title = { Text(when { killOn -> "Clear the kill switch?"; stopped && lossStop -> "Stopped by the daily loss limit"; stopped -> "Start the bot?"; else -> "Stop the bot for today?" }, style = Type.title) },
+        title = { Text(when { killOn -> "Clear the kill switch?"; stopped && lossStop -> "Stopped by the daily loss limit"; stopped -> "Start the index bots?"; else -> "Stop the index bots for today?" }, style = Type.title) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(when {
                     killOn -> "Orders are allowed again, within your Bot settings limits. Armed strategies start at their times" +
-                        if (stopped) " once the bot is started too." else "."
+                        if (stopped) " once the index bots are started too." else "."
                     // The daily loss limit's stop is never lifted today (plans only lower risk).
-                    stopped && lossStop -> "The daily loss limit stopped the bot today: it stays stopped until tomorrow, and starting it again is refused. " +
-                        "Tomorrow the armed strategies, ORB arms and Pine scripts run as usual."
-                    stopped -> "Armed strategies start at their scheduled times again today, and the armed ORB arms and Pine scripts trade again. " +
-                        "Nothing that is switched off is switched on."
-                    else -> "Stops everything the app trades by itself today: strategies, ORB arms and Pine scripts. What the ORB arms " +
-                        "and Pine scripts hold is sold now. Switches stay on; Start bot (or \"start all\") resumes them today."
+                    stopped && lossStop -> "The daily loss limit stopped the index bots today: they stay stopped until tomorrow, and starting them again is refused. " +
+                        "Tomorrow the armed strategies, NSE arms and Pine scripts run as usual."
+                    stopped -> "Armed strategies start at their scheduled times again today, and the armed NSE arms and Pine scripts trade again. " +
+                        "Nothing that is switched off is switched on. The commodity bots have their own stop on the MCX card."
+                    else -> "Stops the index side today: NSE and BSE options and futures - strategies, every NSE arm, Pine scripts and Jarvis's trades. " +
+                        "What they hold is sold now through their own exits. The commodity (MCX) bots keep trading: they have their own stop on the MCX card. " +
+                        "Switches stay on; Start index bots (or \"start all\") resumes them today."
                 }, style = Type.bodySmall)
                 if (!killOn && !stopped && anyRunning) Row(Modifier.padding(top = 10.dp).clickable { alsoStop = !alsoStop }, verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(alsoStop, { alsoStop = it })
@@ -389,7 +410,7 @@ private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boo
                     else -> actions.stopBot(alsoStop)
                 }
                 onClose()
-            }) { Text(when { killOn -> "Clear"; stopped && lossStop -> "OK"; stopped -> "Start"; else -> "Stop for today" }, color = if (killOn || stopped) p.verdigris else p.oxblood) }
+            }) { Text(when { killOn -> "Clear"; stopped && lossStop -> "OK"; stopped -> "Start"; else -> "Stop index bots" }, color = if (killOn || stopped) p.verdigris else p.oxblood) }
         },
         dismissButton = { TextButton(onClose) { Text("Cancel") } },
     )

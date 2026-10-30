@@ -615,6 +615,25 @@ object ArmLive {
     // ---- entries ---------------------------------------------------------------------------------------------------------------
 
     /**
+     * 30 Oct (Boss: "Make stop bot different for index and comodities"): whether a live entry of this side is stopped today. The
+     * index side: its own day stop. The commodity side: its own stop (or an older build's kept for MCX), or the index side's LOSS
+     * stop - which stopped every live entry before the split and still does (the live loss door, [LossBreaker.liveDoorTripped], is
+     * read beside it). Boss's own index stop no longer stops an MCX live entry.
+     */
+    private suspend fun sideStopped(mcx: Boolean): Boolean {
+        val index = Strategies.stoppedWhy()
+        if (!mcx) return index != null
+        return index == com.optionslab.ira.DayStop.Why.LOSS || Strategies.mcxStoppedWhy() != null || LossBreaker.bossStoppedToday()
+    }
+
+    /** The exit side of [sideStopped]: an MCX live position sells on the commodity stop that sells, or the index LOSS stop. */
+    private suspend fun sideSells(mcx: Boolean): Boolean {
+        val index = Strategies.stoppedWhy()
+        if (!mcx) return index != null
+        return index == com.optionslab.ira.DayStop.Why.LOSS || Strategies.mcxStopSells() || LossBreaker.bossStoppedToday()
+    }
+
+    /**
      * The gate's answers now, in [LiveMirror.refusal]'s order, read only as far as needed: in Paper, with AI trades off or the arm's
      * own switch off nothing else is read. [shadow]: for a shadow trade the paper-only period does not refuse it (nothing is sent).
      */
@@ -628,7 +647,8 @@ object ArmLive {
         if (LiveMirror.refusal(first) != null) return first
         // Final review F3: a check that cannot be read refuses the entry (an entry never goes on a guess), as the day stop does.
         val g = first.copy(paperOnly = if (shadow) null else PaperOnly.entryRefusal(), kill = s.guardKill,
-            stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(true),
+            // 30 Oct: an MCX arm reads the commodity side's stop, every other arm the index side's ([sideStopped]).
+            stopped = runCatching { sideStopped(LiveMirror.spec(key)?.exchange == "MCX") }.getOrDefault(true),
             lossLimit = runCatching { LossBreaker.liveDoorTripped() }.getOrDefault(true))
         if (LiveMirror.refusal(g) != null) return g
         val g2 = g.copy(dayLock = runCatching { DayLockGuard.refusal(true) }.getOrElse { "the day lock could not be checked" },
@@ -1264,6 +1284,8 @@ object ArmLive {
         var gtts = if (open.none { it.gttId != null }) emptyMap() else gttsKept?.takeIf { stream && System.currentTimeMillis() - it.first < 15_000L }?.second
             ?: runCatching { Broker.gtts().associateBy { it.id } }.getOrNull()?.also { gttsKept = System.currentTimeMillis() to it; gttsFresh = true }
         val stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(false)
+        // 30 Oct: an MCX position sells on the commodity side's stop (and the index LOSS stop, as before), never on Boss's index stop.
+        val mcxStopped = if (open.none { it.exchange == "MCX" }) false else runCatching { sideSells(mcx = true) }.getOrDefault(false)
         val updates = LinkedHashMap<Pos, List<Pos>>()
         fun cur(p: Pos): Pos? = updates[p]?.let { it.firstOrNull { x -> x.open } } ?: if (p in updates) null else p
         // What [p0] became this look: the parts already closed earlier in the look are kept (a part sold by hand, a part-filled stop),
@@ -1420,7 +1442,7 @@ object ArmLive {
                     }
                     val look = LiveMirror.Look(side = p.side, qty = p.qty, held = heldOf(p) * p.side, ltp = ltp, tick = p.tick, stopTrigger = p.stopTrigger,
                         stopResting = p.stopOrderId != null, wanted = wanted(p), paperSell = paperSell, paperReason = paperWhy,
-                        squareOff = LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day), operatorStop = stopped,
+                        squareOff = LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day), operatorStop = if (p.exchange == "MCX") mcxStopped else stopped,
                         heldSeen = true, stopQty = stopQty, otherWorking = others, lot = p.lot, stopLimit = stopLimit)
                     val d = LiveMirror.decide(look)
                     val next: List<Pos>? = when (d.step) {

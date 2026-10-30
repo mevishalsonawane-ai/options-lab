@@ -80,9 +80,12 @@ class SegmentLockTest {
         assertFalse(seg.mcxExitStop(null, loss, false, true, null, false))
         assertTrue(seg.mcxExitStop(null, loss, false, true, SegmentLock.Trip.SHARED, false))
         assertTrue(seg.mcxExitStop(null, loss, false, true, SegmentLock.Trip.LIVE, false))
-        // Stops that do apply: Boss's, the tile's, the commodities' own, Zerodha's or the shared paper figure, the split off.
+        // Stops that do apply: the commodity side's own (selling), the commodities' own limit, Zerodha's or the shared paper figure,
+        // the split off. 30 Oct: the index side's own stop by Boss or the tile no longer sells the MCX arms.
         assertTrue(seg.mcxExitStop(null, null, true, false, null, false))
-        assertTrue(seg.mcxExitStop(null, DayStop.Why.TILE, false, false, null, false))
+        assertFalse(seg.mcxExitStop(null, DayStop.Why.TILE, false, false, null, false))
+        assertFalse(seg.mcxExitStop(true, DayStop.Why.BOSS, false, false, null, false))
+        assertFalse(seg.mcxExitStop(false, DayStop.Why.BOSS, false, false, null, false))
         assertTrue(seg.mcxExitStop(null, null, false, false, null, mcxTripped = true))
         assertTrue(seg.mcxExitStop(true, loss, false, true, SegmentLock.Trip.LIVE, false))
         assertTrue(seg.mcxExitStop(true, loss, false, true, SegmentLock.Trip.SHARED, false))
@@ -107,10 +110,35 @@ class SegmentLockTest {
         assertTrue(seg.mcxStopped(false, null, false, false, null, mcxTripped = true))
     }
 
-    @Test fun bossStopAndTheTileStopBoth() {
-        for (why in listOf(DayStop.Why.BOSS, DayStop.Why.TILE)) assertTrue(seg.mcxStopped(true, why, false, false, null, false))
-        // Boss stopped after the NSE paper loss stop (the day keeps LOSS as its reason): his own stop is kept apart and holds.
+    /** 30 Oct (Boss: "Make stop bot different for index and comodities"): the index side's own stop leaves the MCX arms trading. */
+    @Test fun theIndexStopByBossOrTheTileLeavesMcxTrading() {
+        for (split in listOf(true, false)) for (why in listOf(DayStop.Why.BOSS, DayStop.Why.TILE)) {
+            assertFalse(seg.mcxStopped(split, why, false, false, null, false), "split=$split $why")
+            assertFalse(seg.mcxLossStop(split, why, false, null, false))
+        }
+        // The commodity side's own stop stops them, with or without the split, alone or beside an index stop.
+        for (split in listOf(true, false)) {
+            assertTrue(seg.mcxStopped(split, null, bossStop = true, nseTripped = false, nseTrip = null, mcxTripped = false))
+            assertTrue(seg.mcxStopped(split, DayStop.Why.BOSS, bossStop = true, nseTripped = false, nseTrip = null, mcxTripped = false))
+        }
+        // The commodity stop after the NSE paper loss stop (the index side keeps LOSS as its reason): it holds.
         assertTrue(seg.mcxStopped(true, DayStop.Why.LOSS, bossStop = true, nseTripped = true, nseTrip = SegmentLock.Trip.PAPER, mcxTripped = false))
+    }
+
+    /** 30 Oct: the loss stops on the MCX side, with and without the split (they are what "Start again" can never lift). */
+    @Test fun theMcxLossStopFollowsTheSplit() {
+        // Split on: the NSE paper limit alone never; Zerodha's, the shared figure, an unknown account, the MCX limit always.
+        assertFalse(seg.mcxLossStop(true, DayStop.Why.LOSS, true, SegmentLock.Trip.PAPER, false))
+        assertTrue(seg.mcxLossStop(true, DayStop.Why.LOSS, true, SegmentLock.Trip.LIVE, false))
+        assertTrue(seg.mcxLossStop(true, DayStop.Why.LOSS, true, SegmentLock.Trip.SHARED, false))
+        assertTrue(seg.mcxLossStop(true, DayStop.Why.LOSS, true, null, false))
+        assertTrue(seg.mcxLossStop(true, null, false, null, mcxTripped = true))
+        // Split off: any loss stop stops both.
+        assertTrue(seg.mcxLossStop(false, DayStop.Why.LOSS, true, SegmentLock.Trip.PAPER, false))
+        assertTrue(seg.mcxLossStop(false, null, true, null, false))
+        // No loss today: none.
+        assertFalse(seg.mcxLossStop(true, null, false, null, false))
+        assertFalse(seg.mcxLossStop(false, null, false, null, false))
     }
 
     @Test fun zerodhasLossLimitStopsBothAndAnUnknownLossStopIsTheSafeSide() {

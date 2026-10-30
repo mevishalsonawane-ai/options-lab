@@ -169,6 +169,13 @@ object AutoChange {
          * ([ideaHeld]): kept as a note only (SKIPPED: nothing was made, nothing to undo).
          */
         IDEA_HELD("automatic ideas", "an automatic idea held by your win-rate rule"),
+        /**
+         * 30 Oct (Boss: "Make stop bot different for index and comodities"): one side's day stop made or lifted by Boss ("Stop index
+         * bots", "Stop commodities", the tile, Jarvis) - logged so the timeline shows it ([dayStop]). Its Undo lifts the stop (the
+         * side's own "Start again", which never lifts a loss stop) or stops the side again. The index side governs live entries, so
+         * an Undo that lifts its stop asks the PIN where one is set; stopping only lowers risk. Never proposed or applied by Autopilot.
+         */
+        DAY_STOP("risk guards", "a side's day stop"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -349,6 +356,8 @@ object AutoChange {
             Kind.IDEA_RULE -> if (c.to == ON) Risk.LOWER else Risk.RAISE
             // A held idea is a note: nothing was made.
             Kind.IDEA_HELD -> Risk.LOWER
+            // 30 Oct: a side stopped lowers risk; started again it may trade again (adds risk).
+            Kind.DAY_STOP -> if (c.to == STOPPED) Risk.LOWER else Risk.RAISE
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -389,7 +398,7 @@ object AutoChange {
      */
     fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
         k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK || k == Kind.PAPER_FILTER || k == Kind.ARM_LIVE ||
-        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT || k == Kind.LIQ_BREAKEVEN || k == Kind.IDEA_RULE
+        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT || k == Kind.LIQ_BREAKEVEN || k == Kind.IDEA_RULE || k == Kind.DAY_STOP
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -488,6 +497,29 @@ object AutoChange {
             "results no longer stop the MCX arms and MCX results no longer stop the NSE arms; your stop, the kill switch and every live " +
             "guard still stop both. Paper only, never live",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Commodities' own paper limits")
+
+    /** 30 Oct: a side's day stop ([Kind.DAY_STOP]): "daystop:index" or "daystop:mcx" ([DayStop.Side.wire]). */
+    const val DAY_STOP = "daystop:"
+    /** A side stopped for today / running ([Kind.DAY_STOP]'s from and to). */
+    const val STOPPED = "stopped"
+    const val RUNNING = "running"
+
+    /** The side a [Kind.DAY_STOP] target names, or null. */
+    fun dayStopSide(target: String): DayStop.Side? =
+        if (!target.startsWith(DAY_STOP)) null else DayStop.Side.entries.firstOrNull { it.wire == target.removePrefix(DAY_STOP) }
+
+    /**
+     * 30 Oct (Boss: "Make stop bot different for index and comodities"): [side] stopped for today ([stopped]) or started again, by
+     * Boss ([by]: "by you", "from the quick-settings tile", "by Jarvis on your word"), at [at] ("10:42"). The index side governs live
+     * entries too (LIVE scope: an Undo that lifts its stop asks the PIN where one is set); the commodity bots are paper (PAPER).
+     */
+    fun dayStop(side: DayStop.Side, stopped: Boolean, by: String, at: String? = null): Change = Change(Kind.DAY_STOP, DAY_STOP + side.wire,
+        if (stopped) RUNNING else STOPPED, if (stopped) STOPPED else RUNNING,
+        if (stopped) "${side.title} stopped for today $by${at?.let { " at $it" } ?: ""}: no new entries; open positions keep their exits" +
+            (if (side == DayStop.Side.INDEX) "; the commodity bots keep trading" else "; the index bots keep trading")
+        else "${side.title} started again $by${at?.let { " at $it" } ?: ""} (a loss-limit stop is never lifted)",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (stopped) Risk.LOWER else Risk.RAISE,
+        if (side == DayStop.Side.INDEX) Scope.LIVE else Scope.PAPER, what = "${side.title}' day stop")
 
     /** The target of Boss's Hero ₹1,000 ticket switch ([Kind.PAPER_ARM_ON]). */
     const val TICKET_TARGET = "paperarm:hero_ticket"
@@ -1345,7 +1377,7 @@ object AutoChange {
         // 16 Oct: the Trend watch's paper exit ([Kind.TREND_EXIT]) and the passed arms' lock ([Kind.PAPER_LOCK]) likewise - the
         // switch flipped since is the one to undo.
         if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER, Kind.ARM_LIVE,
-                Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT, Kind.LIQ_BREAKEVEN, Kind.IDEA_RULE)) return false
+                Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT, Kind.LIQ_BREAKEVEN, Kind.IDEA_RULE, Kind.DAY_STOP)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
         return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
     }

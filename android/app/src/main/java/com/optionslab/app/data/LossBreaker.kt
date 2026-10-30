@@ -20,7 +20,11 @@ object LossBreaker {
     private const val K_MCX = "breaker.mcx.day"
     /** 21 Oct: the whole paper day past the paper limit while commodities keep their own (the live door still refuses on it). */
     private const val K_WHOLE = "breaker.paper.whole"
-    /** 21 Oct: the day Boss (or the tile) stopped the bot, kept apart so a loss stop made first never hides it from MCX. */
+    /**
+     * 21 Oct: the day Boss (or the tile) stopped the bot, kept apart so a loss stop made first never hides it from MCX. 30 Oct: no
+     * longer written (the commodity side keeps its own stop in the strategies' book, [Strategies.mcxStoppedKept]); a day an older
+     * build kept here still stops the MCX arms until "Start again" on the MCX card lifts it.
+     */
     internal const val K_BOSS = "breaker.bossstop"
 
     /**
@@ -55,7 +59,7 @@ object LossBreaker {
     /** The MCX paper arms' own loss stop holds today. Memory only once read. */
     fun mcxTrippedToday(): Boolean = mcxReached() != null
 
-    /** Boss (or the tile) stopped the bot today (21 Oct: read by the MCX arms beside the day stop). Memory only once read. */
+    /** An older build's stop kept for the MCX arms today (21 Oct; 30 Oct: read as the commodity side's own stop). Memory only once read. */
     fun bossStoppedToday(): Boolean = kept().boss == Market.today().toString()
 
     /**
@@ -66,19 +70,28 @@ object LossBreaker {
         kept().whole == Market.today().toString())
 
     /**
-     * Whether the MCX paper arms make no new entry today and sell what they hold (21 Oct, [com.optionslab.ira.SegmentLock.mcxStopped]):
-     * Boss's stop, the tile, Zerodha's loss limit and the commodities' own limit stop them; the NSE paper limit does not while
-     * the split is on. [stoppedWhy]: the bot's day stop as [Strategies.stoppedWhy] read it.
+     * Whether the MCX paper arms make no new entry today (21 Oct, [com.optionslab.ira.SegmentLock.mcxStopped]). 30 Oct (Boss: "Make
+     * stop bot different for index and comodities"): the commodity side's own stop ([mcxWhy]: Stop commodities, Jarvis's "stop all",
+     * or an older build's stop kept as both) and the loss stops that reach MCX ([mcxLossStop]) stop them; the index side's own stop
+     * by Boss or the tile does not. [indexWhy]: the index side's day stop as [Strategies.stoppedWhy] read it.
      */
-    fun mcxStopped(stoppedWhy: com.optionslab.ira.DayStop.Why?): Boolean = com.optionslab.ira.SegmentLock.mcxStopped(
-        DayLockGuard.splitOn(), stoppedWhy, bossStoppedToday(), trippedToday(), tripToday(), mcxTrippedToday())
+    fun mcxStopped(indexWhy: com.optionslab.ira.DayStop.Why?, mcxWhy: com.optionslab.ira.DayStop.Why?): Boolean = com.optionslab.ira.SegmentLock.mcxStopped(
+        DayLockGuard.splitOn(), indexWhy, mcxWhy != null || bossStoppedToday(), trippedToday(), tripToday(), mcxTrippedToday())
+
+    /**
+     * 30 Oct: whether a LOSS stop holds on the commodity side today ([com.optionslab.ira.SegmentLock.mcxLossStop]): "Start again" on
+     * the MCX card is then refused, and the side says "stopped by the daily loss limit". Memory only once read.
+     */
+    fun mcxLossStop(indexWhy: com.optionslab.ira.DayStop.Why?): Boolean = com.optionslab.ira.SegmentLock.mcxLossStop(
+        DayLockGuard.splitOn(), indexWhy, trippedToday(), tripToday(), mcxTrippedToday())
 
     /**
      * 25 Oct (app audit): whether the MCX paper arms SELL what they hold for today's stop ([com.optionslab.ira.SegmentLock.mcxExitStop]):
-     * only a stop known to apply to MCX; an unknown split setting or an unknown loss account never sells. Memory only once read.
+     * only a stop known to apply to MCX; an unknown split setting or an unknown loss account never sells. 30 Oct: the commodity side's
+     * own stop sells when it was asked to ([mcxSells]); an older build's stop kept for MCX always did. Memory only once read.
      */
-    fun mcxExitStop(stoppedWhy: com.optionslab.ira.DayStop.Why?): Boolean = com.optionslab.ira.SegmentLock.mcxExitStop(
-        DayLockGuard.splitKnown(), stoppedWhy, bossStoppedToday(), trippedToday(), tripToday(), mcxTrippedToday())
+    fun mcxExitStop(indexWhy: com.optionslab.ira.DayStop.Why?, mcxSells: Boolean): Boolean = com.optionslab.ira.SegmentLock.mcxExitStop(
+        DayLockGuard.splitKnown(), indexWhy, mcxSells || bossStoppedToday(), trippedToday(), tripToday(), mcxTrippedToday())
 
     /** Boss's or the tile's stop for today, kept (21 Oct); [on] false: lifted by "start all" or Start bot. */
     internal fun noteBossStop(on: Boolean) {
