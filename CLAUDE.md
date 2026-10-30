@@ -32,6 +32,12 @@ notes; match the surrounding code.
 - Real orders only with Boss's PIN and "AI trades go live" on. Jarvis's own trades stay on paper.
 - LIVE: automatic changes may only LOWER risk (skip, smaller size, earlier exit). Anything new that could skip or resize
   live trades starts in shadow (logged only), behind a switch that is off by default.
+- EVERY ARM CAN GO LIVE (Boss, 30 Oct: "make all arms as live, will stop it if i want, dont keep any in paper only or
+  record only, make all live if i move to live market").
+  - No arm is paper-only or record-only by design. Each arm's live trade goes only through the same gates: the app in
+    Live with Boss's PIN, "AI trades go live" on, the arm's own Trade live switch, every guard and the kill switch.
+  - Boss stops any arm with its own switch.
+  - Jarvis's own trades still stay on paper (the rule above).
 - PAPER (Boss, 13 Oct): an idea that has PASSED the research gates (below) may act on paper arms straight away, with no
   shadow phase.
   - Every change is logged in the Autopilot change timeline, undoable in one tap, and shown to Boss.
@@ -42,13 +48,13 @@ notes; match the surrounding code.
       (41 holdout trades, worst month −₹18.6k).
       - It is labelled "failed gates, Boss's exception" wherever it is shown.
       - Boss can switch it off in one tap.
-      - It never goes live.
+      - Live: like every arm since Boss's 30 Oct choice (below), only through the live gates.
     - A second exception, chosen by Boss on 29 Oct ("Build CISD (ICT's version) + network + index stop + lock. And add
       it as a arm, and do forward test too"): R133's S3-V2-E3 runs as a PAPER arm although it failed the gates.
       - The rule: CISD entries (ICT's reading) on the index, R123's N1 network as the expected-value filter, R131's index
         stop and a 60% lock after +₹1,000.
       - Its record: 413 design trades, 69% won, +₹261 a trade; only 35 trades in the holdout period.
-      - Same terms as S5 Trail: labelled "failed gates, Boss's exception", one tap off, never live.
+      - Same terms as S5 Trail: labelled "failed gates, Boss's exception", one tap off; live only through the live gates (Boss, 30 Oct).
       - R134's forward test keeps judging it on new days.
     - No other failed idea may use these exceptions.
   - Paper changes never carry over to live by themselves.
