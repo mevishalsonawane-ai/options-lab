@@ -54,6 +54,7 @@ import com.optionslab.engine.strategy.SchedulerConfig
 import com.optionslab.engine.strategy.StrategyDef
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -413,23 +414,52 @@ class StrategyArmCardTest {
         assertTrue(shown("ORB rows"))
     }
 
-    @Test fun theBotButtonStopsForTodayAlsoStoppingWhatRuns() {
+    /** 30 Oct (Boss: "Make stop bot different for index and comodities"): the main button says it stops the index bots only. */
+    @Test fun theBotButtonStopsTheIndexBotsForTodayAlsoStoppingWhatRuns() {
         card(listOf(StrategyFakes.running(1, "Straddle")))
-        assertTrue(shown("Bot running: armed strategies start on time"))
-        tap("Stop bot for today")
-        assertTrue(shown("Stop the bot for today?"))
+        assertTrue(shown(INDEX_RUNNING))
+        assertFalse("never the old one-for-everything label", shown("Stop bot for today"))
+        tap(STOP_INDEX)
+        assertTrue(shown("Stop the index bots for today?"))
+        assertTrue(shown("The commodity (MCX) bots keep trading"))
         tap("Also stop the strategies running now (their positions are closed)")
-        tap("Stop for today")
+        compose.onAllNodesWithText(STOP_INDEX).fetchSemanticsNodes().let { assertEquals("the card's button and the dialog's", 2, it.size) }
+        compose.onAllNodesWithText(STOP_INDEX)[1].areaCClick(); compose.waitForIdle()
         assertEquals(listOf("stopBot also=true"), rec.calls)
     }
 
-    @Test fun theBotButtonStartsAgainOrClearsTheKillSwitch() {
+    @Test fun theBotButtonStartsTheIndexBotsAgainOrClearsTheKillSwitch() {
         card(emptyList(), stopped = true)
-        assertTrue(shown("Bot stopped for today"))
-        tap("Start bot"); tap("Cancel")
+        assertTrue(shown("Index bots stopped for today by you"))
+        assertTrue(shown("the commodity bots keep trading"))
+        tap(START_INDEX); tap("Cancel")
         assertTrue(rec.calls.isEmpty())
-        tap("Start bot"); tap("Start")
+        tap(START_INDEX); tap("Start")
         assertEquals(listOf("startBot"), rec.calls)
+    }
+
+    @Test fun theIndexStopSaysWhoAndWhen() {
+        compose.setContent {
+            IraAlgoTheme("light") {
+                StrategyArmContent(false, false, emptyList(), emptyMap(), emptyMap(), true, rec, {}, orbRows = {}, reauth = StrategyFakes.reauth,
+                    stopWhy = com.optionslab.ira.DayStop.Why.BOSS, stopAt = "10:42")
+            }
+        }
+        assertTrue(shown("Index bots stopped for today by you 10:42"))
+    }
+
+    @Test fun aLossStopOfTheIndexSideIsNeverStartedFromTheCard() {
+        compose.setContent {
+            IraAlgoTheme("light") {
+                StrategyArmContent(false, false, emptyList(), emptyMap(), emptyMap(), true, rec, {}, orbRows = {}, reauth = StrategyFakes.reauth,
+                    stopWhy = com.optionslab.ira.DayStop.Why.LOSS, stopAt = "11:00")
+            }
+        }
+        assertTrue(shown("Index bots stopped for today by the daily loss limit"))
+        tap(START_INDEX)
+        assertTrue(shown("Stopped by the daily loss limit"))
+        tap("OK")
+        assertTrue("nothing started", rec.calls.isEmpty())
     }
 
     @Test fun theKillSwitchIsClearedFromTheCard() {
@@ -902,7 +932,7 @@ class StrategiesDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest
 
     @Test fun botDialog() {
         show(StrategyScreens.card(rec))
-        compose.onNodeWithText("Stop bot for today").areaCClick(); compose.waitForIdle()
+        compose.onNodeWithText(STOP_INDEX).areaCClick(); compose.waitForIdle()
         top("strategy-bot-dialog", StrategyLayoutBugs.CARD)
     }
 

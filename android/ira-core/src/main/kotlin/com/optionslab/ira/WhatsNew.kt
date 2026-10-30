@@ -65,12 +65,24 @@ object WhatsNew {
     private val OCT27: LocalDate = LocalDate.of(2026, 10, 27)
     private val OCT28: LocalDate = LocalDate.of(2026, 10, 28)
     private val OCT29: LocalDate = LocalDate.of(2026, 10, 29)
+    private val OCT30: LocalDate = LocalDate.of(2026, 10, 30)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
         // 28 Oct (Boss: "Dont create a pine script or stratergies automatically, until 65% + winrate is found"): under 29 Oct's CISD entry.
-        // 29 Oct (Boss: "Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward test too"): newest of all.
+        // 29 Oct (Boss: "Build CISD (ICT's version) + network + index stop + lock. And add it as a arm, and do forward test too"): under 30 Oct's split stop.
+        // 30 Oct (Boss: "Make stop bot different for index and comodities"): newest of all.
+        Entry("2026-10-30-stop-index-and-commodities", OCT30, "Stop the index bots and the commodity bots apart",
+            "The main stop button now reads Stop index bots. " +
+                "It stops NSE and BSE trading only: every index arm, strategy, Pine script and Jarvis's trades. " +
+                "The commodity bots keep trading when you press it. " +
+                "The MCX card has its own smaller Stop commodities button, with its own Start again. " +
+                "Each side shows its state and reason, like stopped by you 10:42. " +
+                "Saying stop all to Jarvis still stops both; stop the commodity bots stops one side. " +
+                "The kill switch stays global, and a loss-limit stop is never lifted today. " +
+                "Open positions on a stopped side keep their stops, targets and exits.",
+            "Home → Strategies → Stop index bots; Home → MCX card → Stop commodities; the change timeline"),
         Entry("2026-10-29-cisd-network-paper-arm", OCT29, "CISD + network now trades on paper",
             "A new paper arm watches the five indices' 5-minute bars for ICT's CISD. " +
                 "Two red bars or more, then a close above the drop's start, signal a call; the mirror signals a put. " +

@@ -5882,10 +5882,10 @@ object IraHub {
                 // or a cancel is labelled by what is open now (Paper, Zerodha, or both); anything else sends no order. The
                 // request is made at once with the app's standing label (never waiting on a read - least of all the
                 // emergency exit); what is open is read in the background and corrects the label while it still waits.
-                val cmdId = pend(what, suspend { IraActions.verified(c.kind, act()) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL,
+                val cmdId = pend(what, suspend { IraActions.verified(c.kind, act(), c.side) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL,
                     venue = IraActions.venueAtOnce(c, what))
                 venueLater(cmdId) { IraActions.venueOf(c, what) }
-            } else reply(IraActions.run(what, suspend { IraActions.verified(c.kind, act()) }), whole = true)
+            } else reply(IraActions.run(what, suspend { IraActions.verified(c.kind, act(), c.side) }), whole = true)
         }
     }
 
@@ -5920,7 +5920,7 @@ object IraHub {
                         continue
                     }
                     val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
-                    val r = if (act == null) "Not done: $what" else IraActions.run(what, suspend { IraActions.verified(c.kind, act()) })
+                    val r = if (act == null) "Not done: $what" else IraActions.run(what, suspend { IraActions.verified(c.kind, act(), c.side) })
                     done += steps[i] to r
                     if (act == null || com.optionslab.ira.Plan.failed(r)) break
                 }

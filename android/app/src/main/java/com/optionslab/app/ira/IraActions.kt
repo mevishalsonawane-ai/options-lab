@@ -267,18 +267,42 @@ internal object IraActions {
         val nickOn = heard && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
         if (c.kind == Command.Kind.STOP_ONE && c.targets.isNotEmpty()) return stopSeveral(c)
         return when (c.kind) {
-            Command.Kind.STOP_ALL -> Commands.describe(c) to suspend { com.optionslab.app.data.Strategies.stopForToday(true, compromised()) }
+            // 30 Oct (Boss: "Make stop bot different for index and comodities"): "stop all" keeps stopping both sides; "stop the index
+            // bots" / "stop the commodity bots" one side each. Same kind, so the same confirm as before.
+            Command.Kind.STOP_ALL -> Commands.describe(c) to when (c.side) {
+                com.optionslab.ira.DayStop.Side.INDEX -> suspend { com.optionslab.app.data.Strategies.stopForToday(true, compromised()) }
+                com.optionslab.ira.DayStop.Side.MCX -> suspend { com.optionslab.app.data.Strategies.stopCommodities(sell = true) }
+                null -> suspend { com.optionslab.app.data.Strategies.stopAll(true, compromised()) }
+            }
             // "Start all" resumes (Boss, 6 Oct): it lifts his own day stop - what was on when he stopped trades again as it was,
             // what is off stays off (the Hero arm, not proven, only by name), nothing is cleared for Zerodha by voice - and
             // never a stop made by the daily loss limit (plans only lower risk). Nothing stopped: said what is on and off.
+            // 30 Oct: "start the commodity bots again" lifts the commodity side's own stop only (never its loss stop); "start the index
+            // bots" the index side only; "start all" both, each by its own rule.
             Command.Kind.START_ALL -> {
+                val mcxKept = runCatching { com.optionslab.app.data.Strategies.mcxStoppedKept() }.getOrNull()
+                    ?: if (runCatching { com.optionslab.app.data.LossBreaker.bossStoppedToday() }.getOrDefault(false)) com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS) else null
                 val why = runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()
+                val mcxLoss = runCatching { com.optionslab.app.data.LossBreaker.mcxLossStop(why) }.getOrDefault(true)
+                if (c.side == com.optionslab.ira.DayStop.Side.MCX) {
+                    val refused = com.optionslab.ira.DayStop.startRefusal(com.optionslab.ira.DayStop.Side.MCX, mcxKept, mcxLoss)
+                    return if (refused != null) refused to null
+                    else Commands.describe(c) to suspend {
+                        val r = com.optionslab.app.data.Strategies.startCommoditiesAgain()
+                        model()?.refreshStrategies()
+                        r
+                    }
+                }
                 val loss = runCatching { com.optionslab.app.data.Strategies.stoppedByLossToday() }.getOrDefault(false)
                 val st = com.optionslab.ira.DayStop.startAll(if (loss) com.optionslab.ira.DayStop.Why.LOSS else why,
                     items().map { com.optionslab.ira.DayStop.Arm(it.name, it.on, it.needsPin) })
-                if (!st.lift) st.say to null
-                else st.say to suspend {
-                    val r = com.optionslab.app.data.Strategies.startAgain()
+                // "Start all" (no side) also lifts the commodity side's own stop when it may be lifted.
+                val mcxToo = c.side == null && mcxKept != null && !mcxLoss
+                if (!st.lift && !mcxToo) st.say to null
+                else (if (st.lift) st.say else "start the commodity bots again (the index bots stay stopped: ${st.say})") +
+                    (if (st.lift && mcxToo) "; and start the commodity bots again" else "") to suspend {
+                    val r = listOfNotNull(if (st.lift) com.optionslab.app.data.Strategies.startAgain() else null,
+                        if (mcxToo) com.optionslab.app.data.Strategies.startCommoditiesAgain() else null).joinToString(" ")
                     ctx()?.let { runCatching { com.optionslab.app.work.Jobs.ensureWatch(it) } }
                     model()?.refreshStrategies()
                     r
@@ -450,7 +474,8 @@ internal object IraActions {
             Command.Kind.EXIT_ALL -> Commands.describe(c) to suspend {
                 val out = ArrayList<String>()
                 runCatching { setSettings { it.copy(guardKill = true) }; out += "Kill switch on." }.onFailure { e -> out += "Kill switch not set: ${e.message}." }
-                out += runCatching { com.optionslab.app.data.Strategies.stopForToday(true, compromised()) }.getOrElse { e -> "Stopping the bots failed: ${e.message}." }
+                // 30 Oct: both sides (the emergency exit is never weaker than "stop all").
+                out += runCatching { com.optionslab.app.data.Strategies.stopAll(true, compromised()) }.getOrElse { e -> "Stopping the bots failed: ${e.message}." }
                 val (what, act) = runCatching { prepare(Command(Command.Kind.CLOSE_ALL)) }.getOrElse { e -> ("Closing failed: ${e.message}.") to null }
                 out += if (act == null) what else runCatching { act() }.getOrElse { e -> "Closing failed: ${e.message}." }
                 IraActivity.add("Emergency exit: " + out.joinToString(" "))
@@ -568,14 +593,14 @@ internal object IraActions {
      * Jarvis checks his own work (part 3): after [k] said it was done, the app is read again and its effect looked for
      * (once more 3 s later, as exits and cancels take a moment); [result] comes back with the check's word.
      */
-    suspend fun verified(k: com.optionslab.ira.Command.Kind, result: String): String {
+    suspend fun verified(k: com.optionslab.ira.Command.Kind, result: String, side: com.optionslab.ira.DayStop.Side? = null): String {
         val need = com.optionslab.ira.Verify.needs(k)
         if (need.isEmpty() || com.optionslab.ira.Plan.failed(result)) return result
         var problem: String? = null
         var note: String? = null
         for (wait in listOf(1_500L, 3_000L)) {
             kotlinx.coroutines.delay(wait)
-            val f = runCatching { facts(need) }.getOrNull() ?: continue
+            val f = runCatching { facts(need, side) }.getOrNull() ?: continue
             problem = com.optionslab.ira.Verify.problem(k, f)
             note = com.optionslab.ira.Verify.note(k, f)
             if (problem == null && note == null) break
@@ -589,7 +614,7 @@ internal object IraActions {
      * counts only - the paper book is read as it is now, but a price read in the last 20 s is shared (this checks Jarvis's
      * own work twice after an action, words only; the action itself priced fresh).
      */
-    private suspend fun facts(need: Set<String>): com.optionslab.ira.Verify.Facts {
+    private suspend fun facts(need: Set<String>, side: com.optionslab.ira.DayStop.Side? = null): com.optionslab.ira.Verify.Facts {
         val s = runCatching { AppSettings.load() }.getOrNull()
         val live = s?.live == true
         fun <T> read(name: String, f: () -> T): T? = if (name in need) runCatching(f).getOrNull() else null
@@ -603,7 +628,12 @@ internal object IraActions {
             else com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).orders.orders.count { it.status.lowercase() !in setOf("complete", "cancelled", "rejected") }
         }.getOrNull() else null
         val armed = if ("armed" in need) runCatching { com.optionslab.app.data.OrbArms.view().arms.any { it.armed } }.getOrNull() else null
-        val bots = if ("bots" in need) runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrNull() else null
+        // 30 Oct: the side that was stopped is the one looked at ("stop all": both).
+        val bots = if ("bots" in need) runCatching {
+            val index = com.optionslab.app.data.Strategies.stoppedToday()
+            val mcx = com.optionslab.app.data.Strategies.mcxStoppedKept() != null
+            when (side) { com.optionslab.ira.DayStop.Side.INDEX -> index; com.optionslab.ira.DayStop.Side.MCX -> mcx; null -> index && mcx }
+        }.getOrNull() else null
         return com.optionslab.ira.Verify.Facts(killOn = read("kill") { s!!.guardKill }, live = read("live") { s!!.live },
             botsStopped = bots, anyArmed = armed, openPositions = positions, workingOrders = orders)
     }

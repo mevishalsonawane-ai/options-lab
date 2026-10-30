@@ -85,33 +85,42 @@ object SegmentLock {
         if (!splitOn) paper to null else (split?.nse ?: paper) to split?.mcx
 
     /**
-     * Whether the MCX paper arms make no new entry today (and sell what they hold, as the loss stop does). [stoppedWhy]: the bot's
-     * day stop, if any; [bossStop]: Boss (or the tile) stopped today, kept apart so a loss stop made first does not hide it;
-     * [nseTripped] / [nseTrip]: the NSE side's loss limit today and whose; [mcxTripped]: the MCX limit today. Unknown counts as
-     * the shared rule: a loss stop whose account is not known stops both.
+     * Whether the MCX paper arms make no new entry today (and sell what they hold, as the loss stop does). [stoppedWhy]: the INDEX
+     * side's day stop, if any; [bossStop]: the COMMODITY side's own stop today (30 Oct, Boss: "Make stop bot different for index and
+     * comodities" - Stop commodities, Jarvis's "stop all", or an older build's stop kept as both); [nseTripped] / [nseTrip]: the NSE
+     * side's loss limit today and whose; [mcxTripped]: the MCX limit today. Unknown counts as the shared rule: a loss stop whose
+     * account is not known stops both.
+     *
+     * 30 Oct: Boss's own stop of the index side (the main button, the tile, "stop the index bots") no longer stops the MCX arms; only
+     * its LOSS stop does, by the loss rules ([mcxLossStop]), exactly as before.
      */
-    fun mcxStopped(splitOn: Boolean, stoppedWhy: DayStop.Why?, bossStop: Boolean, nseTripped: Boolean, nseTrip: Trip?, mcxTripped: Boolean): Boolean {
-        // Shared (the split switched off): the one paper figure, as before - and an MCX loss stop already made today still holds.
-        if (!splitOn) return stoppedWhy != null || nseTripped || bossStop || mcxTripped
-        if (mcxTripped || bossStop) return true
-        if (stoppedWhy != null && stoppedWhy != DayStop.Why.LOSS) return true
-        val nsePaperOnly = nseTrip == Trip.PAPER
-        if (stoppedWhy == DayStop.Why.LOSS && !nsePaperOnly) return true
-        return nseTripped && !nsePaperOnly
+    fun mcxStopped(splitOn: Boolean, stoppedWhy: DayStop.Why?, bossStop: Boolean, nseTripped: Boolean, nseTrip: Trip?, mcxTripped: Boolean): Boolean =
+        bossStop || mcxLossStop(splitOn, stoppedWhy, nseTripped, nseTrip, mcxTripped)
+
+    /**
+     * 30 Oct: whether a LOSS stop holds on the MCX side today (it is then never lifted today, by "Start again" or by Jarvis): the
+     * commodities' own limit, or the index side's loss stop where it stops both - always with the split off, and with it on unless
+     * it was the NSE paper limit alone ([Trip.PAPER]). A loss stop whose account is not known stops both.
+     */
+    fun mcxLossStop(splitOn: Boolean, stoppedWhy: DayStop.Why?, nseTripped: Boolean, nseTrip: Trip?, mcxTripped: Boolean): Boolean {
+        if (mcxTripped) return true
+        val lossToday = stoppedWhy == DayStop.Why.LOSS || nseTripped
+        if (!splitOn) return lossToday
+        return lossToday && nseTrip != Trip.PAPER
     }
 
     /**
      * 25 Oct (app audit): whether the MCX paper arms SELL what they hold because of today's stop - the exit side of [mcxStopped],
-     * which an entry reads with anything unknown counted as stopped. An exit sells only on a stop known to apply to MCX: Boss's
-     * own stop or the tile, the commodities' own loss stop, a stop that is not a loss stop, or a loss stop whose account is known
-     * and is not the NSE paper one ([nseTrip] null: not known, never a reason to sell). [splitOn] null: the split setting could not
-     * be read (an entry still refuses; only a loss stop known to stop both sells). On 23 Oct the US-night silver future, short from 09:05, was bought
-     * back at 14:39 at market while its rule holds it to 23:20, minutes after the NSE paper loss stop of 09:49 and amid failing
-     * reads: an unknown read counted as "shared" sold it as "operator_stop". Paper only (the MCX arms never trade live).
+     * which an entry reads with anything unknown counted as stopped. An exit sells only on a stop known to apply to MCX: the
+     * commodity side's own stop when it sells ([bossStop]), the commodities' own loss stop, or an index loss stop whose account is
+     * known and is not the NSE paper one ([nseTrip] null: not known, never a reason to sell). [splitOn] null: the split setting could
+     * not be read (an entry still refuses; only a loss stop known to stop both sells). On 23 Oct the US-night silver future, short
+     * from 09:05, was bought back at 14:39 at market while its rule holds it to 23:20, minutes after the NSE paper loss stop of 09:49
+     * and amid failing reads: an unknown read counted as "shared" sold it as "operator_stop". Paper only (the MCX arms never trade
+     * live). 30 Oct: the index side's own stop by Boss or the tile no longer sells them.
      */
     fun mcxExitStop(splitOn: Boolean?, stoppedWhy: DayStop.Why?, bossStop: Boolean, nseTripped: Boolean, nseTrip: Trip?, mcxTripped: Boolean): Boolean {
         if (mcxTripped || bossStop) return true
-        if (stoppedWhy != null && stoppedWhy != DayStop.Why.LOSS) return true
         val lossToday = stoppedWhy == DayStop.Why.LOSS || nseTripped
         // The split setting unread: only a loss stop known to stop both (Zerodha's, or the one shared paper figure) sells.
         val split = splitOn ?: return lossToday && nseTrip != null && nseTrip != Trip.PAPER

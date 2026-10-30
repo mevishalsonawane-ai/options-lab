@@ -122,7 +122,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         } else null,
         strategies = { StrategyArmCard(model) { onGo("strategy") } },
         // Under the Strategies card: the MCX bots.
-        afterStrategies = listOf("mcx" to @Composable { McxHomeCard() }),
+        afterStrategies = listOf("mcx" to @Composable { McxHomeCard(model) }),
         // Last, after the chart (11 Oct, Boss: trading first, less clutter): the trade manager, Autopilot, the strategy lab,
         // the order flow and the Brain, one line each in one card, each section in full a tap away. None in GOLD.
         automation = automationCard)

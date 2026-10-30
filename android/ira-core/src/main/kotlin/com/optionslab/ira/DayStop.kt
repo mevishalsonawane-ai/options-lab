@@ -22,6 +22,58 @@ object DayStop {
         }
     }
 
+    /**
+     * 30 Oct (Boss: "Make stop bot different for index and comodities"): which side a day stop is for. [INDEX]: NSE and BSE options
+     * and futures - every NSE arm, strategy, Pine script and Jarvis's trades (the main "Stop index bots" button and the tile).
+     * [MCX]: the commodity bots ("Stop commodities" on the MCX card). Jarvis's "stop all" stops both. The kill switch stays global.
+     */
+    enum class Side(val wire: String, val words: String, val title: String) {
+        INDEX("index", "index bots", "Index bots"), MCX("mcx", "commodity bots", "Commodity bots");
+    }
+
+    /** One side's stop as kept: why, and when (Boss's time "10:42"; null when not known, as an older build's stop). */
+    data class Kept(val why: Why, val at: String? = null)
+
+    /**
+     * One side's state in a few words: "running", "stopped by you 10:42", "stopped by the daily loss limit". [loss]: a loss stop
+     * holds on this side today (it is said first: it is the one that holds until tomorrow).
+     */
+    fun state(kept: Kept?, loss: Boolean = false): String = when {
+        loss -> "stopped by the daily loss limit"
+        kept == null -> "running"
+        else -> "stopped ${by(kept.why)}" + (kept.at?.let { " $it" } ?: "")
+    }
+
+    /** The side's line on Home: "Index bots: stopped by you 10:42" / "Commodity bots: running". */
+    fun sideLine(side: Side, kept: Kept?, loss: Boolean = false): String = "${side.title}: ${state(kept, loss)}"
+
+    /** The time a stop is kept with ("10:42"). */
+    fun hhmm(t: java.time.LocalTime): String = "%02d:%02d".format(java.util.Locale.ENGLISH, t.hour, t.minute)
+
+    /**
+     * 30 Oct: the commodity side's stop as an OLDER build kept it - one stop for both ([stoppedDay], [stoppedWhy]) and no side of
+     * its own ([split] false) - migrates as "both stopped": Boss's or the tile's stop is the commodity side's too. A loss stop is
+     * not copied: the loss rules already say whether it stops the MCX side ([SegmentLock.mcxLossStop]: with commodities on their
+     * own limits, the NSE paper limit alone never stopped them), so both stay stopped exactly where the older build stopped both.
+     * Once kept by this build ([split] true) the commodity side is as stored. Returns (day, why) or null.
+     */
+    fun migratedMcx(split: Boolean, stoppedDay: String?, stoppedWhy: String?, mcxDay: String?, mcxWhy: String?): Pair<String, String>? {
+        if (split) return mcxDay?.let { it to (mcxWhy ?: Why.BOSS.wire) }
+        val day = stoppedDay ?: return null
+        val why = Why.of(stoppedWhy)
+        return if (why == Why.LOSS) null else day to why.wire
+    }
+
+    /**
+     * What "start" says for one side while its stop is a loss stop, or it is not stopped: null when it may be started now.
+     */
+    fun startRefusal(side: Side, kept: Kept?, loss: Boolean): String? = when {
+        loss -> "Not started: the daily loss limit stopped the ${side.words} today, so they stay stopped until tomorrow."
+        kept == null -> "The ${side.words} are not stopped."
+        !mayLift(kept.why) -> "Not started: the daily loss limit stopped the ${side.words} today, so they stay stopped until tomorrow."
+        else -> null
+    }
+
     /** Who stopped the day, in a few words: "by you", "by the daily loss limit", "from the quick-settings tile". */
     fun by(why: Why): String = when (why) {
         Why.BOSS -> "by you"
@@ -34,15 +86,16 @@ object DayStop {
 
     /** The line under an armed arm while the day is stopped (the arm rows, Jarvis). */
     fun line(why: Why): String = if (mayLift(why))
-        "Stopped for today ${by(why)}: no new entries today. \"Start all\" to Jarvis, or Start bot on Home, resumes it."
+        "Stopped for today ${by(why)}: no new entries today. \"Start all\" to Jarvis, or Start index bots on Home, resumes it."
     else "Stopped for today by the daily loss limit: no new entries until tomorrow (\"start all\" does not lift it)."
 
-    /** Home's bar while the day is stopped. */
-    fun bar(why: Why): String = if (mayLift(why)) "Bot stopped for today ${by(why)}: strategies, ORB arms and Pine scripts" +
-        " stand still" else "Bot stopped for today by the daily loss limit: everything stands still until tomorrow"
+    /** Home's bar while the index side is stopped (30 Oct: the main button stops the index side only). */
+    fun bar(why: Why, at: String? = null): String = if (mayLift(why)) "Index bots stopped for today ${by(why)}${at?.let { " $it" } ?: ""}: " +
+        "NSE and BSE strategies, arms and Pine scripts stand still; the commodity bots keep trading"
+    else "Index bots stopped for today by the daily loss limit: they stand still until tomorrow"
 
     /** Said when "start all" or Start bot is asked while the daily loss limit holds: nothing is lifted or switched on. */
-    const val LOSS_HOLDS = "The daily loss limit stopped the bot today, Boss, so it stays stopped until tomorrow - \"start all\" and Start bot " +
+    const val LOSS_HOLDS = "The daily loss limit stopped the bot today, Boss, so it stays stopped until tomorrow - \"start all\" and Start index bots " +
         "don't lift it (plans only lower risk). Nothing was started. Tomorrow the armed arms and scripts run as usual."
 
     /** One strategy, arm or script as it stands: on (armed or running); [needsPin]: on, in Live, but not cleared for Zerodha. */

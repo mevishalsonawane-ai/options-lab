@@ -684,7 +684,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         broker.value = brokerState()
         account.value = Load.Idle; plan.value = Load.Idle; sending.value = Load.Idle; gttPlan.value = Load.Idle
         paper.value = Load.Idle; stuck.value = null; orb.value = null; strategies.value = emptyList()
-        orderOwners.value = emptyMap(); strategyPending.value = emptyMap(); botStopped.value = false; botStopWhy.value = null
+        orderOwners.value = emptyMap(); strategyPending.value = emptyMap(); botStopped.value = false; botStopWhy.value = null; botStopAt.value = null; mcxStop.value = McxStopState()
         dayLockLine.value = null; paperSinceLine.value = null
         // 26 Oct (the erase audit): every other screen copy of the account goes too - the positions, P&L, ledger, alarms, stops,
         // GTTs, the imported trades, the portfolio views, the open popup, the strategies' log and the login's secret.
@@ -1752,6 +1752,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (tick) runCatching { st.tickAll(compromisedFresh(60_000)) }
             runCatching { orderOwners.value = st.owners() }
             runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending(); botStopped.value = st.stoppedToday(); botStopWhy.value = st.stoppedWhy() }
+            // 30 Oct: each side's state and reason ("stopped by you 10:42", "stopped by the daily loss limit"), off the main thread.
+            runCatching {
+                val index = st.stoppedKept()
+                botStopAt.value = index?.at
+                val mcx = st.mcxStoppedKept() ?: if (com.optionslab.app.data.LossBreaker.bossStoppedToday()) com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS) else null
+                val mcxLoss = com.optionslab.app.data.LossBreaker.mcxLossStop(index?.why)
+                mcxStop.value = McxStopState(kept = mcx, loss = mcxLoss, sells = st.mcxStopSells())
+            }
             runCatching { dayLockLine.value = com.optionslab.app.data.DayLockGuard.statusLine() }
             // The paper account's own day figures after charges, read only (Boss's 08 Oct wish).
             runCatching {
@@ -1837,11 +1845,30 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Home's paper running total since the Settings start date ("Paper since 1 Oct: +Rs 5,490 net over 5 days (avg ...)"). */
     val paperSinceLine = MutableStateFlow<String?>(null)
 
+    /** 30 Oct: the main button stops the INDEX side only (NSE and BSE; every NSE arm). The MCX bots keep trading. */
     fun stopBotForToday(stopRunning: Boolean) = strategyDo {
         com.optionslab.app.data.Strategies.stopForToday(stopRunning, compromisedFresh())
     }
 
     fun startBotAgain() = strategyDo { com.optionslab.app.data.Strategies.startAgain() }
+
+    /** The index side's stop time today ("10:42"), when known; null when it is not stopped. */
+    val botStopAt = MutableStateFlow<String?>(null)
+
+    /**
+     * 30 Oct (Boss: "Make stop bot different for index and comodities"): the commodity side as read: its own stop ([kept]), whether a
+     * loss stop holds on it ([loss]: never lifted today), whether its stop sells what the MCX arms hold.
+     */
+    data class McxStopState(val kept: com.optionslab.ira.DayStop.Kept? = null, val loss: Boolean = false, val sells: Boolean = false) {
+        val stopped: Boolean get() = kept != null || loss
+    }
+    val mcxStop = MutableStateFlow(McxStopState())
+
+    /** "Stop commodities" on the MCX card: no new MCX entries today; [sell]: the MCX arms sell what they hold through their own exits. */
+    fun stopCommodities(sell: Boolean) = strategyDo { com.optionslab.app.data.Strategies.stopCommodities(sell) }
+
+    /** The MCX card's "Start again": never lifts a loss-limit stop. */
+    fun startCommoditiesAgain() = strategyDo { com.optionslab.app.data.Strategies.startCommoditiesAgain() }
 
     fun skipStrategy(id: Long) = strategyDo { com.optionslab.app.data.Strategies.skip(id); "Skipped for today." }
 

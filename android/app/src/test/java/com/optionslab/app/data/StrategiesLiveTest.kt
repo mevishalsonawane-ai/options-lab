@@ -629,9 +629,9 @@ class StrategiesLiveTest : RobolectricTest() {
 
     @Test fun stopForTodayAndStartAgain() = runBlocking {
         assertFalse(Strategies.stoppedToday())
-        assertEquals("Bot stopped for today: armed strategies will not start.", Strategies.stopForToday(stopRunning = false, compromised = false))
+        assertEquals("Index bots stopped for today: armed strategies will not start. The commodity bots keep trading.", Strategies.stopForToday(stopRunning = false, compromised = false))
         assertTrue(Strategies.stoppedToday())
-        assertEquals("Bot running: armed strategies start at their times.", Strategies.startAgain())
+        assertEquals("Index bots running: armed strategies start at their times.", Strategies.startAgain())
         assertFalse(Strategies.stoppedToday())
         assertEquals("Nothing is waiting for approval.", Strategies.approve(1, compromised = false))
         assertTrue(Strategies.pending().isEmpty())

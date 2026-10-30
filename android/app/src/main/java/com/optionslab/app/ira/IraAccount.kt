@@ -382,11 +382,15 @@ internal object IraAccount {
                         if (closed.isEmpty()) null else closed.sumOf { (it.grossPnl ?: 0.0) - it.charges }, a.open?.let { "${it.qty} ${it.symbol}" }, a.today.size)
                 }
                 // While the bot is stopped for today, that comes first: armed arms make no entries, and who stopped it.
+                // 30 Oct: the index side and the commodity side are said apart (the main button stops the index side only).
                 val dayStop = runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()?.let { w ->
-                    "Bot stopped for today ${com.optionslab.ira.DayStop.by(w)}: armed strategies, ORB arms and Pine scripts make no new entries today. " +
-                        if (com.optionslab.ira.DayStop.mayLift(w)) "\"Start all\" (or Start bot on Home) resumes them." else "It holds until tomorrow (\"start all\" does not lift it)."
+                    "Index bots stopped for today ${com.optionslab.ira.DayStop.by(w)}: armed strategies, NSE arms and Pine scripts make no new entries today. " +
+                        if (com.optionslab.ira.DayStop.mayLift(w)) "\"Start all\" (or Start index bots on Home) resumes them." else "It holds until tomorrow (\"start all\" does not lift it)."
                 }
-                out[Section.STRATEGIES] = listOfNotNull(dayStop) + AppFacts.arms(arms, rank = true)
+                val mcxStop = runCatching { com.optionslab.app.data.Strategies.mcxStoppedKept() }.getOrNull()?.let { k ->
+                    "Commodity bots ${com.optionslab.ira.DayStop.state(k)}: the MCX arms make no new entries today. \"Start the commodity bots again\" (or Start again on the MCX card) resumes them."
+                }
+                out[Section.STRATEGIES] = listOfNotNull(dayStop, mcxStop) + AppFacts.arms(arms, rank = true)
             }
 
             if (wants(Section.RISK)) out[Section.RISK] = listOf(
