@@ -1746,19 +1746,27 @@ object OrbArms {
         // the self-review's parks (memory after that). One answer for the pass's parameters, entries and the lab's record.
         val appLive = if (armedHint) runCatching { liveNow() }.getOrNull() else null
         if (armedHint) runCatching { SmartWorkers.ensureLoaded() }
-        // 30 Oct: the pass's index reads, made here so the switched-off arms' shadow below shares them (each index read once a
-        // pass, as before). The armed arms' decisions use them exactly as they did when they were made inside [tickLocked].
+        // 30 Oct: the pass's index reads (each index read once a pass, as before); the armed arms' decisions use them exactly as
+        // they did when they were made inside [tickLocked]. The switched-off arms' shadow has its own pass ([shadowTick]).
         val reads = IndexData.Reads<List<Upstox.Bar>>()
         try {
             tickLocked(t, appLive, reads)
         } finally {
             heroFed.clear()
         }
-        // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only, so i can continuously
-        // observe it"): every arm that is off decides too - AFTER the armed arms and OUTSIDE the arms' lock for its reads, so the
-        // open positions' stop looks never wait on it - and hands each would-be entry to [OffShadow]. It never orders anything.
+    }
+
+    /**
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only, so i can continuously observe it"):
+     * every arm that is off decides too and hands each would-be entry to [OffShadow]; it never orders anything. Its own pass, OUTSIDE
+     * the arms' lock for its reads and (CI review) outside the watch's pass: the watch hands it to its late job, after the stops
+     * ([OffShadow.runLate]), so the open positions' looks never wait on it. Its index reads are its own (a pass's worth, shared by
+     * its arms).
+     */
+    suspend fun shadowTick() {
+        if (!Market.isTradingDay()) return
         try {
-            offShadowPass(t, reads)
+            offShadowPass(now(), IndexData.Reads())
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {

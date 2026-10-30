@@ -251,6 +251,16 @@ object HeroTicketArm {
     fun holding(): Boolean = _view.value.open.isNotEmpty()
 
     /**
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): the watch's pass runs this arm in front of the stops only when it
+     * has real work - switched on, or holding (or a book not read yet; [ensureRead] reads it first). Switched off and flat it only decides for the switched-off
+     * shadow ([OffShadow]), which the pass leaves to its own job after the stops ([OffShadow.runLate]). Memory only.
+     */
+    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed || holding() || pendingNow)
+
+    /** 30 Oct: the book read once (a restart), on the watch's worker, so [realDue] knows the switch and what is held. */
+    suspend fun ensureRead() { if (ready() && cache == null) refresh() }
+
+    /**
      * The watch needs this arm's pass now (memory only: no file, no network): a ticket is held, or the time is 12:25 .. 12:33 (its
      * lists are made ready from 12:25, its tickets bought 12:30 .. 12:32) - on or off (30 Oct: off, it still decides, as would-be
      * tickets). Outside that it costs the watch nothing - no wake, no minute lane, no safety-net round.

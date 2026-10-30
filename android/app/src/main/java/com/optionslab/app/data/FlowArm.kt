@@ -294,6 +294,16 @@ object FlowArm {
         private set
 
     /**
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): the watch's pass runs this arm in front of the stops only when it
+     * has real work - switched on, or holding (or a book not read yet; [ensureRead] reads it first). Switched off and flat it only decides for the switched-off
+     * shadow ([OffShadow]), which the pass leaves to its own job after the stops ([OffShadow.runLate]). Memory only.
+     */
+    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed || holding() || pendingNow)
+
+    /** 30 Oct: the book read once (a restart), on the watch's worker, so [realDue] knows the switch and what is held. */
+    suspend fun ensureRead() { if (ready() && cache == null) refresh() }
+
+    /**
      * The watch needs this arm's pass now (memory only): a trade held or an entry order working; or, on a trading day, 09:14 to
      * 15:44 (the opening range, the decisions, and the session's record after the 15:30 close, while the stream runs). 30 Oct: on
      * or off - off, it still decides (each plan a would-be trade in the switched-off shadow).

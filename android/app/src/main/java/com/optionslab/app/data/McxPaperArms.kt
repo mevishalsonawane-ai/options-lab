@@ -488,36 +488,52 @@ object McxPaperArms {
     // ---- the pass ---------------------------------------------------------------------------------------------------------
 
     /**
-     * Called by the market watch's NSE pass and its MCX pass: exits first, then each arm's entries. 30 Oct (Boss: "If i switch any
-     * arm off, it should be always run in shadow and record only"): a switched-off arm (parked and hidden ones too) still decides and
-     * hands each would-be entry to the switched-off shadow ([OffShadow]) - nothing is bought; never in IraGoldAlgo.
+     * Called by the market watch's NSE pass and its MCX pass: exits first, then each switched-on arm's entries.
+     * 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): with [shadow] (the watch's late
+     * job, [OffShadow.runLate], never in front of the stops) only the switched-off arms decide (parked and hidden ones too), each
+     * would-be entry handed to the switched-off shadow ([OffShadow]) - nothing is bought; never in IraGoldAlgo. That pass is skipped
+     * while any of these arms is switched on or holds a position, so its reads never hold this lock in front of a real decision or a
+     * real position's exit (CLAUDE.md: open positions come first); the switched-off arms then decide nothing until it is flat.
      */
-    suspend fun tick() {
+    suspend fun tick(shadow: Boolean = false) {
         if (!ready()) return
+        if (shadow && com.optionslab.app.BuildConfig.GOLD) return
+        // 30 Oct (review): decided from memory before the lock (the book read first when nothing has read it), so neither pass ever
+        // waits on the other: the watch's pass only with an arm on or a position held, the shadow's only with every arm off and
+        // nothing held (its reads then hold this lock in front of nothing real).
+        val anyOn = armedNow().isNotEmpty()
+        if (!shadow && !anyOn && !holdsNow()) return
+        if (shadow && (anyOn || holdsNow())) return
+        // 30 Oct: the evening break's future-side exits for its open would-be trades (the shadow's own watch has the rest): outside
+        // this lock (it reads no book of these arms), so even while a real position is held.
+        if (shadow) runCatching {
+            if (McxMarket.isOpen()) McxMarket.now().withNano(0).let { now -> shadowEveExits(now, McxMarket.calendar().window(now.toLocalDate())) }
+        }
         lock.withLock {
             val b = book()
-            val shadowOn = !com.optionslab.app.BuildConfig.GOLD
-            if (b.armed.values.none { it } && b.positions.none { it.open } && !shadowOn) return@withLock
+            if (shadow && (b.positions.any { it.open } || b.armed.values.any { it })) return@withLock
+            if (!shadow && b.armed.values.none { it } && b.positions.none { it.open }) return@withLock
             val now = McxMarket.now().withNano(0)
             val cal = McxMarket.calendar()
             val window = cal.window(now.toLocalDate())
-            var changed = runCatching { manage(b, now, cal, window) }.getOrElse { note(b, "mcx", "exit check failed: ${it.javaClass.simpleName}"); true }
+            var changed = if (shadow) false
+                else runCatching { manage(b, now, cal, window) }.getOrElse { note(b, "mcx", "exit check failed: ${it.javaClass.simpleName}"); true }
             // The strategy lab (11 Oct): the MCX paper arms ran today (one map write: no setting, no I/O; not tuned in the lab).
-            if (b.armed.values.any { it }) VariantRunner.saw("mcx", live = false)
+            if (!shadow && b.armed.values.any { it }) VariantRunner.saw("mcx", live = false)
             if (McxMarket.isOpen()) {
-                // 30 Oct: off (shadowOn), each arm still decides; its entry is then a would-be trade (inside each arm, [OffShadow]).
-                if (b.armed[McxEveRules.SOURCE] == true || shadowOn)
+                // Each arm in its own pass: switched on in the watch's, switched off in the shadow's (its entry is then a would-be
+                // trade, inside each arm, [OffShadow]).
+                fun mine(source: String) = (b.armed[source] == true) != shadow
+                if (mine(McxEveRules.SOURCE))
                     changed = runCatching { eve(b, now, window) }.getOrElse { b.status[McxEveRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
                 // 21 Oct: a hidden arm takes no new entry ([HiddenArms.blocks], memory only); what it holds keeps its own exits ([manage]).
                 // 30 Oct: hidden is off, so it decides in shadow ([morning]; never a paper entry while hidden).
-                if (b.armed[McxMorningRules.SOURCE] == true || shadowOn)
+                if (mine(McxMorningRules.SOURCE))
                     changed = runCatching { morning(b, now, cal, window) }.getOrElse { b.status[McxMorningRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
-                if (b.armed[McxTrendRules.SOURCE] == true || shadowOn)
+                if (mine(McxTrendRules.SOURCE))
                     changed = runCatching { trend(b, now, cal) }.getOrElse { b.status[McxTrendRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
-                if (b.armed[McxUsSilverRules.SOURCE] == true || shadowOn)
+                if (mine(McxUsSilverRules.SOURCE))
                     changed = runCatching { silver(b, now, cal, window) }.getOrElse { b.status[McxUsSilverRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
-                // 30 Oct: the evening break's future-side exits for its open would-be trades (the shadow's own watch has the rest).
-                if (shadowOn) runCatching { shadowEveExits(now, window) }
             }
             // Closed trades beyond what is kept are dropped (oldest first); open ones always stay.
             val closed = b.positions.count { !it.open }

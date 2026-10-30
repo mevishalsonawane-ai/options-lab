@@ -597,34 +597,59 @@ object Tasks {
      * Stops and exits are not here: nothing is held (anything held runs the 15-second stop check instead).
      */
     internal suspend fun dueRound(context: Context) {
+        armBooksRead()
+        val late = ArrayList<com.optionslab.ira.Supervisor.Step>()
         val all = listOfNotNull(
             com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
-            com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() },
-            com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+            // 30 Oct: the ORB family's switched-off shadow in the late job, after the stops ([OffShadow.runLate]).
+            split(false, late, com.optionslab.ira.Supervisor.Step("ORB arms (switched off: shadow)") { com.optionslab.app.data.OrbArms.shadowTick() }),
+            split(com.optionslab.app.data.NightArm.realDue(), late, if (com.optionslab.app.data.NightArm.realDue() || com.optionslab.app.data.NightArm.wantsPass()) com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() } else null),
+            split(com.optionslab.app.data.VixDivArm.realDue(), late, if (com.optionslab.app.data.VixDivArm.realDue() || com.optionslab.app.data.VixDivArm.wantsPass()) com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() } else null),
             // 15 Oct: the Hero ₹1,000 ticket only when it needs a pass (a ticket held, or 12:25-12:33 switched on): never a round by itself.
-            if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
+            split(com.optionslab.app.data.HeroTicketArm.realDue(), late, if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null),
             // 21 Oct: FT3 (paper, Boss's choice; R98e failed): its exit, and its 5-minute marks 11:00-12:55 on expiry days (only when it needs a pass).
-            if (com.optionslab.app.data.Ft3Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FT3) { com.optionslab.app.data.Ft3Arm.tick() } else null,
-            if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
+            split(com.optionslab.app.data.Ft3Arm.realDue(), late, if (com.optionslab.app.data.Ft3Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FT3) { com.optionslab.app.data.Ft3Arm.tick() } else null),
+            split(com.optionslab.app.data.PassedArmsHost.realDue(), late, if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null),
             // 25 Oct: ntfy alerts (paper by default): only when it needs a pass (a trade held, or a message waiting to be decided).
             if (com.optionslab.app.data.NtfyArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.NTFY) { com.optionslab.app.data.NtfyArm.tick() } else null,
             // 28 Oct: IraThinker's flow (paper, index options only): only when it needs a pass (a trade held, or on in its hours).
-            if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FLOW) { com.optionslab.app.data.FlowArm.tick() } else null,
-            if (com.optionslab.app.data.S5Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.S5) { com.optionslab.app.data.S5Arm.tick() } else null,
-            if (com.optionslab.app.data.CisdArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.CISD) { com.optionslab.app.data.CisdArm.tick() } else null,
+            split(com.optionslab.app.data.FlowArm.realDue(), late, if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FLOW) { com.optionslab.app.data.FlowArm.tick() } else null),
+            split(com.optionslab.app.data.S5Arm.realDue(), late, if (com.optionslab.app.data.S5Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.S5) { com.optionslab.app.data.S5Arm.tick() } else null),
+            split(com.optionslab.app.data.CisdArm.realDue(), late, if (com.optionslab.app.data.CisdArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.CISD) { com.optionslab.app.data.CisdArm.tick() } else null),
             // 30 Oct: the switched-off shadow's would-be trades (only when one is open): priced, never an order.
-            if (com.optionslab.app.data.OffShadow.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.OFF_SHADOW) { com.optionslab.app.data.OffShadow.watch() } else null,
+            split(false, late, if (com.optionslab.app.data.OffShadow.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.OFF_SHADOW) { com.optionslab.app.data.OffShadow.watch() } else null),
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
+            split(false, late, com.optionslab.ira.Supervisor.Step("MCX paper arms (switched off: shadow)") { com.optionslab.app.data.McxPaperArms.tick(shadow = true) }),
             // 21 Oct, review: started in its own job ([com.optionslab.app.data.McxNr7Record.kick]); this group never waits for its reads.
             com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.kick() },
             com.optionslab.ira.Supervisor.Step("Forge ideas") { com.optionslab.app.data.GrammarArm.tick() },
         )
+        // 30 Oct: the switched-off arms' shadow passes in their own job, never in this round ([split]); on their own wake rules.
+        com.optionslab.app.data.OffShadow.runLate(armsDue(true, late))
         val due = armsDue(true, all)
         if (due.isEmpty()) return
         step("safety net: paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
         together("safety-net round", due, WatchWorkers.ARMS_WAIT_MS, inOrder = false)
     }
+
+    /** 30 Oct: each arm's book read once (a restart) before [split] asks what it holds and whether it is on (memory after that). */
+    internal suspend fun armBooksRead() {
+        for (read in listOf<suspend () -> Unit>(
+            { com.optionslab.app.data.NightArm.ensureRead() }, { com.optionslab.app.data.VixDivArm.ensureRead() },
+            { com.optionslab.app.data.HeroTicketArm.ensureRead() }, { com.optionslab.app.data.Ft3Arm.ensureRead() },
+            { com.optionslab.app.data.PassedArmsHost.ensureRead() }, { com.optionslab.app.data.FlowArm.ensureRead() },
+            { com.optionslab.app.data.S5Arm.ensureRead() }, { com.optionslab.app.data.CisdArm.ensureRead() },
+        )) try { read() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) { stepFailed("arm books", e) }
+    }
+
+    /**
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): an arm's [step] stays in the pass when it has real work ([real]:
+     * switched on, or holding); switched off and flat it only decides for the switched-off shadow, so it is added to [late] instead
+     * ([com.optionslab.app.data.OffShadow.runLate], after the stops, never waited on). Memory only.
+     */
+    internal fun split(real: Boolean, late: MutableList<com.optionslab.ira.Supervisor.Step>, step: com.optionslab.ira.Supervisor.Step?): com.optionslab.ira.Supervisor.Step? =
+        when { step == null -> null; real -> step; else -> { late += step; null } }
 
     /** Is the coroutine running this pass still active (false: it was cancelled, and a cancellation must go up)? */
     private suspend fun passActive(): Boolean = kotlinx.coroutines.currentCoroutineContext()[Job]?.isActive ?: true
@@ -944,29 +969,35 @@ object Tasks {
         // 18 Oct, review: while anything is held each arms group is waited on 10 s, not 45 (a slow arm finishes by itself), so
         // the stops and targets below and the 15-second stop check after the pass are never held up long behind it.
         val armsWait = WatchWorkers.armsWaitMs(WatchWorkers.heldQuick())
+        // 30 Oct (CI review): the arms switched off and flat only decide for their shadow: handed over here ([split]) and started
+        // after the stops and targets below, in their own job the pass never waits on ([com.optionslab.app.data.OffShadow.runLate]).
+        val late = ArrayList<com.optionslab.ira.Supervisor.Step>()
+        armBooksRead()
         // The arms side by side (10 Oct), each under its own lock as before; every new position still goes through the one
         // entry door and the one-index claims. Outside the service (a test's pass) one after another, in this order.
         together("arms", armsDue(lanes != null, listOfNotNull(
             // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
             com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
+            // 30 Oct: the ORB family's switched-off shadow in the late job, after the stops ([OffShadow.runLate]).
+            split(false, late, com.optionslab.ira.Supervisor.Step("ORB arms (switched off: shadow)") { com.optionslab.app.data.OrbArms.shadowTick() }),
             // Night (R3), paper only (08 Oct): its 09:16 sales, and its 15:20 decisions when armed.
-            com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() },
+            split(com.optionslab.app.data.NightArm.realDue(), late, if (com.optionslab.app.data.NightArm.realDue() || com.optionslab.app.data.NightArm.wantsPass()) com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() } else null),
             // VIX divergence, paper only (9 Oct, research R1 N13): its exits, and its 10:30-13:30 checks when armed.
-            com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+            split(com.optionslab.app.data.VixDivArm.realDue(), late, if (com.optionslab.app.data.VixDivArm.realDue() || com.optionslab.app.data.VixDivArm.wantsPass()) com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() } else null),
             // The Hero ₹1,000 ticket, paper only (15 Oct, Boss's choice; R50 failed): its exits, and its 12:30 tickets on expiry days
             // (only when it needs a pass: a ticket held, or 12:25-12:33 switched on).
-            if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null,
+            split(com.optionslab.app.data.HeroTicketArm.realDue(), late, if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.HERO_TICKET) { com.optionslab.app.data.HeroTicketArm.tick() } else null),
             // 21 Oct: FT3 (paper, Boss's choice; R98e failed): its exit, and its 5-minute marks 11:00-12:55 on expiry days (only when it needs a pass).
-            if (com.optionslab.app.data.Ft3Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FT3) { com.optionslab.app.data.Ft3Arm.tick() } else null,
-            if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null,
+            split(com.optionslab.app.data.Ft3Arm.realDue(), late, if (com.optionslab.app.data.Ft3Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FT3) { com.optionslab.app.data.Ft3Arm.tick() } else null),
+            split(com.optionslab.app.data.PassedArmsHost.realDue(), late, if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.PASSED_ARMS) { com.optionslab.app.data.PassedArmsHost.tick() } else null),
             // 25 Oct: ntfy alerts (paper by default): only when it needs a pass (a trade held, or a message waiting to be decided).
             if (com.optionslab.app.data.NtfyArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.NTFY) { com.optionslab.app.data.NtfyArm.tick() } else null,
             // 28 Oct: IraThinker's flow (paper, index options only): only when it needs a pass (a trade held, or on in its hours).
-            if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FLOW) { com.optionslab.app.data.FlowArm.tick() } else null,
-            if (com.optionslab.app.data.S5Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.S5) { com.optionslab.app.data.S5Arm.tick() } else null,
-            if (com.optionslab.app.data.CisdArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.CISD) { com.optionslab.app.data.CisdArm.tick() } else null,
+            split(com.optionslab.app.data.FlowArm.realDue(), late, if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.FLOW) { com.optionslab.app.data.FlowArm.tick() } else null),
+            split(com.optionslab.app.data.S5Arm.realDue(), late, if (com.optionslab.app.data.S5Arm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.S5) { com.optionslab.app.data.S5Arm.tick() } else null),
+            split(com.optionslab.app.data.CisdArm.realDue(), late, if (com.optionslab.app.data.CisdArm.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.CISD) { com.optionslab.app.data.CisdArm.tick() } else null),
             // 30 Oct: the switched-off shadow's would-be trades (only when one is open): priced, never an order.
-            if (com.optionslab.app.data.OffShadow.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.OFF_SHADOW) { com.optionslab.app.data.OffShadow.watch() } else null,
+            split(false, late, if (com.optionslab.app.data.OffShadow.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.OFF_SHADOW) { com.optionslab.app.data.OffShadow.watch() } else null),
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
         )), armsWait, inOrder = lanes == null)
@@ -986,6 +1017,7 @@ object Tasks {
         // exits), and - in Jarvis - his approved news trades and Solo (paper only, Boss's switch); they never go first.
         together("arms after the square-off", armsDue(lanes != null, listOfNotNull(
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
+            split(false, late, com.optionslab.ira.Supervisor.Step("MCX paper arms (switched off: shadow)") { com.optionslab.app.data.McxPaperArms.tick(shadow = true) }),
             // 21 Oct, review: started in its own job ([com.optionslab.app.data.McxNr7Record.kick]); this group never waits for its reads.
             com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.kick() },
             com.optionslab.ira.Supervisor.Step("strategies") {
@@ -995,6 +1027,7 @@ object Tasks {
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Solo") { com.optionslab.app.ira.IraSolo.tick() } else null,
         )), armsWait, inOrder = lanes == null)
+        com.optionslab.app.data.OffShadow.runLate(armsDue(lanes != null, late))
         // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
         step("stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
         // Jarvis: your own stops trailed up automatically (Boss's switch).
@@ -1210,7 +1243,6 @@ object Tasks {
             if (com.optionslab.app.data.ArmLive.lookDue) step("arms live") { com.optionslab.app.data.ArmLive.watch() }
             // 30 Oct (review): the switched-off shadow's MCX would-be trades are judged in the evening too (their stop, time exit,
             // 23:20) - priced, never an order; only while one is open.
-            if (com.optionslab.app.data.OffShadow.wantsPass()) step("switched-off shadow") { com.optionslab.app.data.OffShadow.watch() }
             step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
             if (com.optionslab.app.data.Broker.loggedIn) step("Zerodha positions") {
                 com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }
@@ -1218,6 +1250,11 @@ object Tasks {
             }
             step("position cards") { PositionCards.refresh(context) }
             runCatching { Heartbeat.beat(context) }
+            // 30 Oct: after every step that guards a position, the switched-off MCX arms' shadow decisions and the shadow's would-be
+            // trades (stop, time exit, 23:20; priced, never an order) - in their own job, never waited on here.
+            com.optionslab.app.data.OffShadow.runLate(listOfNotNull(
+                com.optionslab.ira.Supervisor.Step("MCX paper arms (switched off: shadow)") { com.optionslab.app.data.McxPaperArms.tick(shadow = true) },
+                if (com.optionslab.app.data.OffShadow.wantsPass()) com.optionslab.ira.Supervisor.Step("switched-off shadow") { com.optionslab.app.data.OffShadow.watch() } else null))
         } } finally {
             com.optionslab.app.data.Broker.passEnd()
             Heartbeat.stepEnd()
@@ -1888,17 +1925,22 @@ class WatchService : Service() {
                             Tasks.stepFailed("bar-close entry check: paper orders", e)
                         }
                         // The three arms side by side (10 Oct), each in its own try, with this check's timing trigger.
+                        // 30 Oct: an arm switched off and flat decides for its shadow in its own job ([Tasks.split]), not here.
+                        val late = ArrayList<com.optionslab.ira.Supervisor.Step>()
+                        Tasks.armBooksRead()
                         Tasks.together("bar-close entry check", listOfNotNull(
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: ORB arms") { com.optionslab.app.data.OrbArms.tick() },
-                            com.optionslab.ira.Supervisor.Step("bar-close entry check: Night (R3)") { com.optionslab.app.data.NightArm.tick() },
-                            com.optionslab.ira.Supervisor.Step("bar-close entry check: VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
-                            if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Hero 1000 ticket") { com.optionslab.app.data.HeroTicketArm.tick() } else null,
-                            if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Passed-research arms") { com.optionslab.app.data.PassedArmsHost.tick() } else null,
+                            Tasks.split(false, late, com.optionslab.ira.Supervisor.Step("ORB arms (switched off: shadow)") { com.optionslab.app.data.OrbArms.shadowTick() }),
+                            Tasks.split(com.optionslab.app.data.NightArm.realDue(), late, com.optionslab.ira.Supervisor.Step("bar-close entry check: Night (R3)") { com.optionslab.app.data.NightArm.tick() }),
+                            Tasks.split(com.optionslab.app.data.VixDivArm.realDue(), late, com.optionslab.ira.Supervisor.Step("bar-close entry check: VIX divergence") { com.optionslab.app.data.VixDivArm.tick() }),
+                            Tasks.split(com.optionslab.app.data.HeroTicketArm.realDue(), late, if (com.optionslab.app.data.HeroTicketArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Hero 1000 ticket") { com.optionslab.app.data.HeroTicketArm.tick() } else null),
+                            Tasks.split(com.optionslab.app.data.PassedArmsHost.realDue(), late, if (com.optionslab.app.data.PassedArmsHost.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: Passed-research arms") { com.optionslab.app.data.PassedArmsHost.tick() } else null),
                             if (com.optionslab.app.data.NtfyArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ntfy alerts (paper)") { com.optionslab.app.data.NtfyArm.tick() } else null,
-                            if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ${com.optionslab.app.data.FastPath.FLOW}") { com.optionslab.app.data.FlowArm.tick() } else null,
-                            if (com.optionslab.app.data.S5Arm.decisionDue()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ${com.optionslab.app.data.FastPath.S5}") { com.optionslab.app.data.S5Arm.tick() } else null,
-                            if (com.optionslab.app.data.CisdArm.decisionDue()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ${com.optionslab.app.data.FastPath.CISD}") { com.optionslab.app.data.CisdArm.tick() } else null,
+                            Tasks.split(com.optionslab.app.data.FlowArm.realDue(), late, if (com.optionslab.app.data.FlowArm.wantsPass()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ${com.optionslab.app.data.FastPath.FLOW}") { com.optionslab.app.data.FlowArm.tick() } else null),
+                            Tasks.split(com.optionslab.app.data.S5Arm.realDue(), late, if (com.optionslab.app.data.S5Arm.decisionDue()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ${com.optionslab.app.data.FastPath.S5}") { com.optionslab.app.data.S5Arm.tick() } else null),
+                            Tasks.split(com.optionslab.app.data.CisdArm.realDue(), late, if (com.optionslab.app.data.CisdArm.decisionDue()) com.optionslab.ira.Supervisor.Step("bar-close entry check: ${com.optionslab.app.data.FastPath.CISD}") { com.optionslab.app.data.CisdArm.tick() } else null),
                         ), WatchWorkers.ARMS_WAIT_MS, inOrder = false)
+                        com.optionslab.app.data.OffShadow.runLate(late)
                         // Smart scheduling: the minute arms just looked at this minute; the next pass need not look again for it.
                         // (Not the ORB arms: a bar the feed has not finished yet is looked at again on the next minute, as before.)
                         runCatching { com.optionslab.app.data.SmartWorkers.ranByLane(listOf("Night (R3)", "VIX divergence")) }

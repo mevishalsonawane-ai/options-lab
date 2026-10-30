@@ -247,6 +247,8 @@ class ExposureSpeedTest : RobolectricTest() {
     }
 
     @Test fun liveIsShadowOnlyUntilItsSwitchIsOn() {
+        // 30 Oct: the ORB family's live entries need Live and "AI trades go live" at the door ([Broker.ARM_TAGS]).
+        com.optionslab.app.testing.AutomationSupport.liveSettings()
         ExposureCapHost.resetForTest(paperOn = true)
         ExposureCapHost.liveEntered("NIFTY26OCT25000PE", "NFO", true, "orb")
         ExposureCapHost.liveEntered("BANKNIFTY26OCT55500PE", "NFO", true, "liquidity15")
@@ -278,6 +280,8 @@ class ExposureSpeedTest : RobolectricTest() {
      * by itself (only a positions read does).
      */
     @Test fun aCarriedLiveOptionIsCountedOnTheNewDay() {
+        // 30 Oct: the ORB family's live entries need Live and "AI trades go live" at the door ([Broker.ARM_TAGS]).
+        com.optionslab.app.testing.AutomationSupport.liveSettings()
         ExposureCapHost.resetForTest(paperOn = true)
         val was = ExposureCapHost.carried
         ExposureCapHost.carried = { listOf(Triple("NIFTY26OCT25000PE", "NFO", "night"), Triple("BANKNIFTY26OCT55500PE", "NFO", "vix")) }

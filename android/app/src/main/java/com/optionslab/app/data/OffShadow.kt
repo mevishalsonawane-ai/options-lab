@@ -393,7 +393,46 @@ object OffShadow {
 
     // ---- tests and the erase ----------------------------------------------------------------------------------------------
 
+    /**
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): the watch's pass hands over the passes of the arms that are switched
+     * off and flat ([steps]: their shadow decisions only, each arm's realDue false). They run here, on this object's own worker,
+     * after the pass's stops and targets and never waited on by it. Each step runs in its own job, side by side (a slow one never
+     * pushes another past its decision minute), one run per step at a time (a step still going skips its next hand-over: the next
+     * pass asks again), bounded by [LATE_STEP_MS]; a failure or a time-out is its own and goes to the diary. A step that never
+     * ended (a read that ignored its time-out) is given up after [LATE_STALE_MS], so it never stops that arm's shadow for good.
+     */
+    fun runLate(steps: List<com.optionslab.ira.Supervisor.Step>) {
+        if (steps.isEmpty()) return
+        if (com.optionslab.app.BuildConfig.DEBUG) testLate?.let { it(steps.map { s -> s.name }); return }
+        val now = System.currentTimeMillis()
+        for (s in steps) {
+            val key = "late: ${s.name}"
+            val began = lateBusy[key]
+            if (began != null && now - began < LATE_STALE_MS) continue
+            if (began == null) { if (lateBusy.putIfAbsent(key, now) != null) continue }
+            else if (!lateBusy.replace(key, began, now)) continue
+            scope.launch {
+                try {
+                    kotlinx.coroutines.withTimeout(LATE_STEP_MS) { s.body() }
+                } catch (e: Throwable) {
+                    // (This job's own time-out lands here too; the scope itself is never cancelled.)
+                    runCatching { com.optionslab.app.work.Tasks.stepFailed(key, e) }
+                } finally { lateBusy.remove(key, now) }
+            }
+        }
+    }
+
+    /** Each late step's start (epoch ms) while it runs. */
+    private val lateBusy = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** The longest one shadow-only pass may take before it is given up (the next pass asks again). */
+    const val LATE_STEP_MS = 45_000L
+    /** A step still marked as running this long after it began never ended: its next hand-over runs anyway. */
+    const val LATE_STALE_MS = 3 * 60_000L
+
     // TEST SEAMS (JVM tests only): each setter throws in a release build, as every other seam's.
+    /** Where [runLate] hands its steps' names instead of running them (the test app keeps a test's pass from leaving a job behind). */
+    @Volatile internal var testLate: ((List<String>) -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
     @Volatile internal var testNow: LocalDateTime? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
     @Volatile internal var testPrice: ((String) -> Triple<Double, Double?, Double?>?)? = null

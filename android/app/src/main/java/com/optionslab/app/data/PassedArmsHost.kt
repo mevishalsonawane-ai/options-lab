@@ -666,6 +666,16 @@ object PassedArmsHost {
     fun holding(): Boolean = _view.value.open.isNotEmpty()
 
     /**
+     * 30 Oct (CI review; CLAUDE.md "open positions come first"): the watch's pass runs this arm in front of the stops only when it
+     * has real work - switched on, or holding (or a book not read yet; [ensureRead] reads it first). Switched off and flat it only decides for the switched-off
+     * shadow ([OffShadow]), which the pass leaves to its own job after the stops ([OffShadow.runLate]). Memory only.
+     */
+    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed.values.any { it } || _view.value.open.any { it.shadow == null })
+
+    /** 30 Oct: the book read once (a restart), on the watch's worker, so [realDue] knows the switch and what is held. */
+    suspend fun ensureRead() { if (ready() && cache == null) refresh() }
+
+    /**
      * The watch needs this host's pass now (memory only): a position is held, or an arm is on (or record only, 19 Oct) and the time is 09:16 .. 15:16
      * (the entries run 09:20 .. 15:10; the 15:15 square-off). Outside that it costs the watch nothing. 22 Oct: from 09:16, not 09:19, so the
      * indices are followed on the stream ([follow]) before 09:19 starts: the 09:15 bar is whole at the 09:20 check.

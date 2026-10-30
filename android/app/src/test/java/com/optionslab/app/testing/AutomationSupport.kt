@@ -50,6 +50,9 @@ object AutomationSupport {
         return if (now.hour * 60 + now.minute >= 15 * 60) now.with(LocalTime.of(15, 0)) else now
     }
 
+    /** 30 Oct: the names of the shadow-only passes the watch handed over ([com.optionslab.app.data.OffShadow.runLate]) in this test. */
+    val lateShadow = java.util.concurrent.CopyOnWriteArrayList<String>()
+
     /** Live mode with real orders on, no entry cut-off (tests run at any hour). */
     fun liveSettings(live: Boolean = true) {
         // 22 Oct: the typed-"yes" gate off here (its own tests turn it on): these tests drive the paths behind it.

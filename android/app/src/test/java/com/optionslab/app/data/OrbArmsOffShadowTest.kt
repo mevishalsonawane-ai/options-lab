@@ -68,7 +68,8 @@ class OrbArmsOffShadowTest : RobolectricTest() {
         Market.testClock = Clock.fixed(z.toInstant(), IST)
     }
 
-    private fun tick(t: LocalTime) { at(t); runBlocking { OrbArms.tick() } }
+    /** As the watch runs them: its own pass, then the late job's switched-off shadow pass ([OffShadow.runLate]). */
+    private fun tick(t: LocalTime) { at(t); runBlocking { OrbArms.tick(); OrbArms.shadowTick() } }
 
     private fun passes(from: LocalTime, until: LocalTime) {
         var t = from

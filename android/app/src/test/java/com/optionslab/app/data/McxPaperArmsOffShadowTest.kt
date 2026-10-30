@@ -51,7 +51,8 @@ class McxPaperArmsOffShadowTest : RobolectricTest() {
         Market.testClock = Clock.fixed(on.atTime(t).plusSeconds(seconds).atZone(IST).toInstant(), IST)
     }
 
-    private fun tick(t: LocalTime) { at(t); runBlocking { McxPaperArms.tick() } }
+    /** As the watch runs them: its own pass (exits, the switched-on arms), then the late job's shadow pass ([OffShadow.runLate]). */
+    private fun tick(t: LocalTime) { at(t); runBlocking { McxPaperArms.tick(); McxPaperArms.tick(shadow = true) } }
 
     private fun mcxList() {
         val a = JSONArray()
@@ -239,6 +240,29 @@ class McxPaperArmsOffShadowTest : RobolectricTest() {
         tick(LocalTime.of(10, 1))
         assertEquals(1, OffShadow.view.value.openOf(McxTrendRules.SOURCE).size)
         assertEquals(orders, Paper.state.orders.size)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun theWatchsOwnPassNeverDecidesForAnOffArmAndTheShadowPassWaitsWhileAPositionIsHeld() {
+        // The watch's own pass (in front of the stops): a switched-off arm decides nothing there.
+        usFeed(siPrev = 30.0, siNow = 29.4)
+        silverMinutes(LocalTime.of(9, 5))
+        at(LocalTime.of(9, 5)); runBlocking { McxPaperArms.tick() }
+        assertTrue(OffShadow.view.value.openOf(McxUsSilverRules.SOURCE).isEmpty())
+        // US night silver switched on: its short is sold on paper by the watch's own pass; the shadow pass adds nothing for it.
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        tick(LocalTime.of(9, 5))
+        assertEquals(1, McxPaperArms.view.value.open.size)
+        assertTrue(OffShadow.view.value.openOf(McxUsSilverRules.SOURCE).isEmpty())
+        // While it is held the shadow pass decides nothing (its reads never hold the arms' lock in front of that position's exit):
+        // the trend leg, off and due at 10:00, waits.
+        val days = generateSequence(LocalDate.of(2026, 9, 30)) { it.minusDays(1) }.filter { it.dayOfWeek.value <= 5 }.take(253).toList().reversed()
+        McxPaperArms.testDaily = { leg -> if (leg == "CRUDEOILM") days.mapIndexed { i, d -> d to 5_000.0 + i } else emptyList() }
+        upstox.minutes[crudeMiniKey] = listOf(FakeUpstox.Candle(LocalTime.of(9, 59), 5_600.0, 5_600.0, 5_600.0, 5_600.0))
+        silverMinutes(LocalTime.of(10, 0))
+        tick(LocalTime.of(10, 0))
+        assertEquals(1, McxPaperArms.view.value.open.size)
+        assertTrue(OffShadow.view.value.openOf(McxTrendRules.SOURCE).isEmpty())
         assertNothingAtZerodha()
     }
 

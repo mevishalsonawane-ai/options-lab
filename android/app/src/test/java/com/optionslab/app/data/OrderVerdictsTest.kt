@@ -90,6 +90,8 @@ class OrderVerdictsTest : RobolectricTest() {
     }
 
     @Test fun theSameOrderGoesAndAnExitNeverAsks() = runBlocking {
+        // 30 Oct: the ORB family's and Pine's live entries need Live and "AI trades go live" at the door ([Broker.ARM_TAGS]).
+        AutomationSupport.liveSettings()
         val v = Cleared.live(order(), "orb")
         Broker.placeOrder(order(), arm = "orb", verdict = v)
         assertEquals(1, kite.placed.size)
