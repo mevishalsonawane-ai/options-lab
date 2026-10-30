@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -51,7 +52,8 @@ internal fun McxStopBar(st: AppModel.McxStopState, onStop: (sell: Boolean) -> Un
         // Smaller than the main button: a plain text button.
         val label = if (st.stopped) START_MCX else STOP_MCX
         Text(label, style = Type.bodySmall.copy(color = if (st.stopped) p.verdigris else p.oxblood, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-            modifier = Modifier.semantics { contentDescription = label }.clickable { asking = true }.padding(horizontal = 6.dp, vertical = 4.dp))
+            modifier = Modifier.semantics { contentDescription = label }.clickable { asking = true }
+                .heightIn(min = 48.dp).padding(horizontal = 10.dp, vertical = 14.dp))
     }
     if (asking) McxStopDialog(st, onStop = { sell -> asking = false; onStop(sell) }, onStart = { asking = false; onStart() }) { asking = false }
 }

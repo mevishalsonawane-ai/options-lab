@@ -52,9 +52,16 @@ class SplitStopBotTest : RobolectricTest() {
         SecurePrefs.putAll(mapOf("g.pLoss" to 6_000.0, AppSettings.PAPER_LOSS_VERSION_KEY to 1))
         at(10, 42)
         paper(0.0, 0.0)
+        // The change timeline fresh for each test (as the arm tests do): never another class's entries.
+        if (com.optionslab.app.ira.Autopilot.enabled()) {
+            com.optionslab.app.ira.Autopilot.resetForTest(); com.optionslab.app.ira.Autopilot.init(context); com.optionslab.app.ira.Autopilot.testLive = false
+        }
     }
 
-    @After fun down() { Market.testClock = null; LossBreaker.testPaperDay = null }
+    @After fun down() {
+        Market.testClock = null; LossBreaker.testPaperDay = null
+        if (com.optionslab.app.ira.Autopilot.enabled()) com.optionslab.app.ira.Autopilot.resetForTest()
+    }
 
     // ---- the main button: index only ----------------------------------------------------------------------------------------
 
@@ -176,6 +183,15 @@ class SplitStopBotTest : RobolectricTest() {
 
     // ---- the kill switch stays global -----------------------------------------------------------------------------------------
 
+    /** Jarvis's emergency exit is never weaker than "stop all": both sides stop. */
+    @Test fun theEmergencyExitStopsBothSides() {
+        val (_, act) = runBlocking { com.optionslab.app.ira.IraActions.prepare(Command(Command.Kind.EXIT_ALL)) }
+        runBlocking { act!!() }
+        assertTrue(AppSettings.load().guardKill)
+        assertTrue(indexStopped())
+        assertTrue(mcxStopped())
+    }
+
     @Test fun theKillSwitchStaysGlobal() {
         com.optionslab.app.testing.TradeFixtures.killSwitch(true)
         runBlocking { Strategies.stopCommodities(sell = true); Strategies.startCommoditiesAgain() }
@@ -246,7 +262,7 @@ class SplitStopBotTest : RobolectricTest() {
         assertEquals(DayStop.Kept(DayStop.Why.BOSS, "10:42"), runBlocking { Strategies.stoppedKept() })
         assertEquals(DayStop.Kept(DayStop.Why.BOSS, "10:50"), mcxKept())
         assertFalse(runBlocking { Strategies.mcxStopSells() })
-        // The lock-free hints for the screens and the door, as read back.
+        // The lock-free hints for the screens and the door, as read back (the reload's read sets them again).
         assertEquals(DayStop.Kept(DayStop.Why.BOSS, "10:42"), Strategies.stopKeptHint())
         assertEquals(DayStop.Kept(DayStop.Why.BOSS, "10:50"), Strategies.mcxStopHint())
         assertTrue(Strategies.stopRefusesAtDoor(mcx = true) && Strategies.stopRefusesAtDoor(mcx = false))

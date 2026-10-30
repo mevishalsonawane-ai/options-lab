@@ -299,7 +299,8 @@ internal object IraActions {
                 // "Start all" (no side) also lifts the commodity side's own stop when it may be lifted.
                 val mcxToo = c.side == null && mcxKept != null && !mcxLoss
                 if (!st.lift && !mcxToo) st.say to null
-                else (if (st.lift) st.say else "start the commodity bots again") + (if (st.lift && mcxToo) "; and start the commodity bots again" else "") to suspend {
+                else (if (st.lift) st.say else "start the commodity bots again (the index bots stay stopped: ${st.say})") +
+                    (if (st.lift && mcxToo) "; and start the commodity bots again" else "") to suspend {
                     val r = listOfNotNull(if (st.lift) com.optionslab.app.data.Strategies.startAgain() else null,
                         if (mcxToo) com.optionslab.app.data.Strategies.startCommoditiesAgain() else null).joinToString(" ")
                     ctx()?.let { runCatching { com.optionslab.app.work.Jobs.ensureWatch(it) } }
@@ -473,7 +474,8 @@ internal object IraActions {
             Command.Kind.EXIT_ALL -> Commands.describe(c) to suspend {
                 val out = ArrayList<String>()
                 runCatching { setSettings { it.copy(guardKill = true) }; out += "Kill switch on." }.onFailure { e -> out += "Kill switch not set: ${e.message}." }
-                out += runCatching { com.optionslab.app.data.Strategies.stopForToday(true, compromised()) }.getOrElse { e -> "Stopping the bots failed: ${e.message}." }
+                // 30 Oct: both sides (the emergency exit is never weaker than "stop all").
+                out += runCatching { com.optionslab.app.data.Strategies.stopAll(true, compromised()) }.getOrElse { e -> "Stopping the bots failed: ${e.message}." }
                 val (what, act) = runCatching { prepare(Command(Command.Kind.CLOSE_ALL)) }.getOrElse { e -> ("Closing failed: ${e.message}.") to null }
                 out += if (act == null) what else runCatching { act() }.getOrElse { e -> "Closing failed: ${e.message}." }
                 IraActivity.add("Emergency exit: " + out.joinToString(" "))

@@ -905,8 +905,9 @@ object Strategies {
      * side selling what it holds, as "stop all" always did.
      */
     suspend fun stopAll(stopRunning: Boolean, compromised: Boolean): String {
-        val index = stopForToday(stopRunning, compromised)
+        // Each side by itself: one side's failure never leaves the other running (review).
         val mcx = runCatching { stopCommodities(sell = true) }.getOrElse { "The commodity bots could not be stopped now: ${it.message ?: it.javaClass.simpleName}." }
+        val index = runCatching { stopForToday(stopRunning, compromised) }.getOrElse { "The index bots could not be stopped now: ${it.message ?: it.javaClass.simpleName}." }
         // (Each side's "the other side keeps trading" is not said: both stop.)
         return index.removeSuffix(" The commodity bots keep trading.") + " " + mcx.removeSuffix(" The index bots keep trading.")
     }
