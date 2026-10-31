@@ -1,4 +1,4 @@
-# R138: the triple-top fake breakout. After it, the index does what it does at any other moment. 0 of 8 trades pass
+# R138: the triple-top fake breakout. After it, the index does what it does at any other moment. 0 of 18 trades pass (5-point band, no band, and 7 enhancements)
 
 31 Oct 2026. Research only (no app change). Boss, 31 Oct: *"on 15min timeframe, if there are 2 candles are touching a
 same resistance (till 5 points is ok), and creating a M pattern. And if there is a 3 time its touch the same resistance
@@ -36,6 +36,52 @@ and the touches (same session, or spanning yesterday).
 - **by year:** neckline first 12-23%, fake high first 58-63%, 2021-2026 (64-376 events a year);
 - **by time of day:** most events come after 12:00, because an M needs time to form. From 15:00 there is too little
   time left: 8% neckline, 30% fake high, 62% neither (256 events).
+
+## Round 2 (Boss: "Remove that 5point and try again, still loss then try enhancing it"): 0 of 10 pass
+
+Pre-registered as Amendment A (`PREREG.md`, commit 80035f4) before any number. The holdout months had already been
+read once for this pattern, so round 2's read of them is labelled **"already seen"**.
+
+**Removing the 5-point band makes it worse, not better.**
+
+| version | design trades | won | net per trade (2x slip) | total, 1 lot | p / q | already-seen holdout |
+|---|---|---|---|---|---|---|
+| R138's T1 (5 points), for comparison | 839 | 34% | -Rs 118 (-Rs 138) | -Rs 99,330 | 0.43 / 1.0 | 120 trades, +Rs 36 each |
+| **U0** no band at all | 3,970 | 29% | **-Rs 200** (-Rs 222) | -Rs 7,94,646 | 1.0 / 1.0 | 513, -Rs 7 |
+| **U1** band 0.25 x ATR (the base for round 2) | 1,515 | 30% | -Rs 199 (-Rs 220) | -Rs 3,00,934 | 0.98 / 1.0 | 190, +Rs 72 |
+| **U2** band 0.5 x ATR | 2,530 | 30% | -Rs 209 (-Rs 230) | -Rs 5,28,791 | 1.0 / 1.0 | 338, -Rs 22 |
+
+- **A wider band means more M's** (6,510 with no band against 1,361 with 5 points), but still no edge. 60 minutes
+  later the index was lower 48% of the time, against 49% for random closes. Neckline first 19% (control 19%), back
+  above the fake high first 67% (control 65%). q ≥ 0.41 for every test of round 2.
+- **Why it loses more without the band:** the extra M's are looser, and the option's costs are the same per trade.
+
+**The seven enhancements, on U1 (the base with the best design net per trade):**
+
+| enhancement | design trades | won | net per trade (2x slip) | total | worst month | p | already-seen holdout |
+|---|---|---|---|---|---|---|---|
+| **E1** only events by 14:00 | 1,040 | 28% | -Rs 262 (-Rs 284) | -Rs 2,72,607 | -Rs 44,369 | 1.0 | 130, +Rs 68 |
+| **E2** neckline ≥ 1.5x the stop | 1,195 | 25% | -Rs 209 (-Rs 231) | -Rs 2,49,753 | -Rs 43,353 | 1.0 | 145, +Rs 108 |
+| **E3** only below the day's open | 699 | 34% | -Rs 140 (-Rs 161) | -Rs 98,041 | -Rs 35,853 | 0.63 | 75, +Rs 45 |
+| **E4** 60% lock after +Rs 1,000, no target | 1,546 | 37% | -Rs 137 (-Rs 161) | -Rs 2,12,408 | -Rs 15,699 | 0.84 | 195, -Rs 137 |
+| **E5** R123's network filter (2023 - Mar 2026) | 142 | 40% | **-Rs 107** (-Rs 124) | -Rs 15,137 | -Rs 8,724 | 0.15 | 5, +Rs 535 |
+| **E6** flip: buy the CALL when it closes back above the fake high, 2R | 700 | 37% | -Rs 154 (-Rs 177) | -Rs 1,07,748 | -Rs 22,358 | 0.49 | 89, -Rs 243 |
+| **E7** E1 + E2 + E3 | 374 | 27% | -Rs 187 (-Rs 208) | -Rs 70,007 | -Rs 34,772 | 0.83 | 39, +Rs 43 |
+
+- **Every enhancement loses in design** at 1x and 2x slippage. BH q = 1.0 over all 18 R138 variants. None is near 65%
+  wins (best 40%).
+- **The network helped most,** as in R132-R137. It cut the loss from -Rs 198 to -Rs 107 a trade on the same days
+  (1,255 trades down to 142, p 0.15). It is still a loss.
+- **The flip (E6) also loses.** The breakout after a fake breakout comes as often as at any other moment (R138's
+  control), so there is nothing to catch there either.
+- **The already-seen holdout months were again kind to some puts** (E2 +Rs 108 a trade on 145 trades, U1 +Rs 72 on
+  190), as in round 1. All of them lost in design: U1 and E2 in every fold, E3 and E7 in 3 of 4. This is the one
+  period, not the pattern.
+
+**Verdict, round 2:** rejected. The fake breakout of an M has no edge on Indian indices, with or without the 5-point
+band, and no filter or exit tried makes it pay. Nothing goes on paper or live.
+
+## Round 1 details
 
 ### The tradable version: 0 of 8 pass
 
@@ -117,8 +163,10 @@ Notes on the table:
 - **Options:** the ATM option of the nearest expiry that does not expire that day, so the exit is always 15:20. Days
   when the weekly and monthly expire together have no such contract in the lake and are left out, as in R131-R137.
 - **Costs:** R131's dated charges and liquidity-aware slippage.
-- **Tests:** `test_r138.py`, 13 tests: the M and each variant on hand-built candles, the tolerance per index, the W
-  mirror, the measures, the trade's stop and target, and the look-ahead guard.
+- **Tests:** `test_r138.py`, 18 tests: the M and each variant on hand-built candles, the tolerance per index, the W
+  mirror, the measures, the trade's stop and target, round 2's bands, filters and flip, and two look-ahead guards.
+- **Round 2:** `r138b.py`; results `results/amendA_design.json` (committed before the read) and
+  `results/amendA_holdout_seen.json`.
 - **Results:** `results/design.json`, `results/holdout.json`. Event and trade files are in `$R138_OUT`, not in git.
-- **Entries:** `research/experiments/entries/r138-t1.yaml` … `r138-t8.yaml` (all rejected) and `r138-describe.yaml`
-  (the facts).
+- **Entries:** `research/experiments/entries/r138-t1.yaml` … `r138-t8.yaml`, `r138-u0.yaml` … `r138-u2.yaml` and
+  `r138-e1.yaml` … `r138-e7.yaml` (all rejected), and `r138-describe.yaml` (the facts).
