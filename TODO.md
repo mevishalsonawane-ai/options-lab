@@ -522,3 +522,28 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
       PREREG section 3). No change to the rules before then.
 - [ ] F2. Boss: refresh `DHAN_ACCESS_TOKEN` in the cloud environment's settings (it was expired on 29 Oct), or the
       runs can only log what the Drive lake already has (it ends on 19 Oct).
+
+## R140. Fake-breakout filter on R72 (proposed 31 Oct 2026; waits for Boss's go-ahead)
+
+- [ ] R140-1. FB-R72-A10 as a PAPER switch on R72 Breadth Donchian: skip new entries when the index's previous
+      session range is in the top fifth of its 20-session average range (the cuts per index are in
+      `research/hunt/r140_structure_arms/results/design_a.json`).
+      - It passed every R140 lose-less gate. Final: losing days -Rs 3.00 lakh vs -Rs 3.90 lakh, profit Rs 1.94 lakh
+        vs Rs 1.71 lakh, random-skip p 0.001.
+      - Labelled, logged in the Autopilot timeline, one-tap undo; R72's plain-rules record kept separable.
+      - Live: only in shadow, behind a switch that is off by default.
+      - Caveats: research/HUNT_R140_STRUCTURE_ARMS.md.
+- [ ] R140-2. Forward-log the same rule on R51. It missed by one gate: one worse month in the walk-forward year.
+- [ ] R141-1. Leads from R141's losing-trade study, each needing its own pre-registered test with R140's lose-less gates:
+      - an R51 "bad-break" filter: an earlier fake poke today, a weak push, or a quiet signal bar (steady in all
+        three periods, but found by searching);
+      - a "no progress" exit on R72 / R51 (never tested there; R81's on Liquidity failed).
+- [ ] R142-1. (proposed 31 Oct 2026; waits for Boss's approval, nothing built) Shadow forward logs on new sessions,
+      no orders and no arm change:
+      - NP5-52: R52 sells at 09:25 if the option is not up 5%;
+      - BBX-51: R51 skips bad breaks;
+      - R140's FB-R72-A10.
+      Then, only with Boss's go-ahead, labelled paper switches. Details: research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md.
+      - R143 update (31 Oct): on the unseen Dec 2022 - Nov 2024, FB-R72-A10 and NP5-52 held up as loss-cutters;
+        BBX-51 did not (drop it).
+      - R72, R51 and R52 themselves lost money in those years: judge the arms on longer history before any live step.

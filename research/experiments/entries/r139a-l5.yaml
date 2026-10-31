@@ -1,0 +1,31 @@
+id: r139a-l5
+title: 'R139 Amendment A L5: order-block retest entry: wait for price to come back to the last down candle before the turn'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: 'order-block retest entry: wait for price to come back to the last down candle before the turn improves R139''s
+  rules after costs'
+model_or_rule: research/hunt/r139_market_structure/r139a.py
+settings: PREREG_A.md L5; 1 lot
+variants_tried: 19
+verdict: rejected
+results:
+  summary: 'design 622 trades, win 40% (65% rule: below), avg net Rs -82 (2x Rs -103), total Rs -51,222, drawdown Rs -108,936,
+    worst month Rs -18,224; p 0.653, q 0.690. Holdout (already seen) 85 trades, win 31%, avg net Rs -628 (2x Rs -657), total
+    Rs -53,408, p 0.950. Fails: net, twins, folds, q, account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

@@ -1,0 +1,502 @@
+{
+ "_meta": {
+  "written": "2026-10-31T21:45:21.754254+00:00",
+  "test": [
+   "2022-12-01",
+   "2024-11-19"
+  ]
+ },
+ "parity": {
+  "R72": {
+   "main": 238,
+   "old": 238,
+   "identical": true
+  },
+  "R52": {
+   "main": 54,
+   "old": 54,
+   "identical": true
+  },
+  "R51": {
+   "main": 346,
+   "old": 346,
+   "identical": true
+  }
+ },
+ "today": {
+  "R72": {
+   "test": {
+    "trades": 3395,
+    "win": 0.3897,
+    "net": -306931,
+    "avg_win": 820,
+    "avg_loss": -672,
+    "worst_day": -16757,
+    "max_dd": 337564,
+    "bad_months": 10,
+    "loss_sum": -886970,
+    "losing_days": 277,
+    "days": 453,
+    "worst_month": -54175,
+    "sum_losing_trades": -1392158
+   },
+   "Y1": {
+    "trades": 1602,
+    "win": 0.4139,
+    "net": -86409,
+    "avg_win": 726,
+    "avg_loss": -605,
+    "worst_day": -14772,
+    "max_dd": 107702,
+    "bad_months": 4,
+    "loss_sum": -338920,
+    "losing_days": 140,
+    "days": 235,
+    "worst_month": -29769,
+    "sum_losing_trades": -567938
+   },
+   "Y2": {
+    "trades": 1793,
+    "win": 0.3681,
+    "net": -220522,
+    "avg_win": 915,
+    "avg_loss": -727,
+    "worst_day": -16757,
+    "max_dd": 264662,
+    "bad_months": 6,
+    "loss_sum": -548050,
+    "losing_days": 137,
+    "days": 218,
+    "worst_month": -54175,
+    "sum_losing_trades": -824221
+   }
+  },
+  "R52": {
+   "test": {
+    "trades": 973,
+    "win": 0.4584,
+    "net": -152248,
+    "avg_win": 1024,
+    "avg_loss": -1155,
+    "worst_day": -11727,
+    "max_dd": 180912,
+    "bad_months": 7,
+    "loss_sum": -542522,
+    "losing_days": 211,
+    "days": 381,
+    "worst_month": -42892,
+    "sum_losing_trades": -608892
+   },
+   "Y1": {
+    "trades": 441,
+    "win": 0.5011,
+    "net": -43627,
+    "avg_win": 788,
+    "avg_loss": -990,
+    "worst_day": -6036,
+    "max_dd": 53532,
+    "bad_months": 2,
+    "loss_sum": -199025,
+    "losing_days": 101,
+    "days": 190,
+    "worst_month": -17298,
+    "sum_losing_trades": -217830
+   },
+   "Y2": {
+    "trades": 532,
+    "win": 0.4229,
+    "net": -108621,
+    "avg_win": 1255,
+    "avg_loss": -1274,
+    "worst_day": -11727,
+    "max_dd": 163584,
+    "bad_months": 5,
+    "loss_sum": -343497,
+    "losing_days": 110,
+    "days": 191,
+    "worst_month": -42892,
+    "sum_losing_trades": -391062
+   }
+  },
+  "R51": {
+   "test": {
+    "trades": 4815,
+    "win": 0.3921,
+    "net": -400363,
+    "avg_win": 817,
+    "avg_loss": -664,
+    "worst_day": -17346,
+    "max_dd": 423510,
+    "bad_months": 13,
+    "loss_sum": -1012120,
+    "losing_days": 312,
+    "days": 487,
+    "worst_month": -51440,
+    "sum_losing_trades": -1943132
+   },
+   "Y1": {
+    "trades": 2151,
+    "win": 0.4077,
+    "net": -166303,
+    "avg_win": 687,
+    "avg_loss": -604,
+    "worst_day": -12862,
+    "max_dd": 166303,
+    "bad_months": 6,
+    "loss_sum": -402354,
+    "losing_days": 158,
+    "days": 247,
+    "worst_month": -34577,
+    "sum_losing_trades": -768876
+   },
+   "Y2": {
+    "trades": 2664,
+    "win": 0.3795,
+    "net": -234060,
+    "avg_win": 930,
+    "avg_loss": -710,
+    "worst_day": -17346,
+    "max_dd": 275160,
+    "bad_months": 7,
+    "loss_sum": -609766,
+    "losing_days": 154,
+    "days": 240,
+    "worst_month": -51440,
+    "sum_losing_trades": -1174256
+   }
+  }
+ },
+ "tests": {
+  "FB-R72-A10": {
+   "test": {
+    "trades": 2647,
+    "win": 0.4076,
+    "net": -136743,
+    "avg_win": 791,
+    "avg_loss": -632,
+    "worst_day": -11102,
+    "max_dd": 191773,
+    "bad_months": 7,
+    "loss_sum": -611647,
+    "losing_days": 238,
+    "days": 408,
+    "worst_month": -34263,
+    "sum_losing_trades": -990600
+   },
+   "Y1": {
+    "trades": 1284,
+    "win": 0.4268,
+    "net": -33883,
+    "avg_win": 691,
+    "avg_loss": -560,
+    "worst_day": -9412,
+    "max_dd": 54846,
+    "bad_months": 2,
+    "loss_sum": -241182,
+    "losing_days": 124,
+    "days": 212,
+    "worst_month": -23482,
+    "sum_losing_trades": -412386
+   },
+   "Y2": {
+    "trades": 1363,
+    "win": 0.3896,
+    "net": -102860,
+    "avg_win": 895,
+    "avg_loss": -695,
+    "worst_day": -11102,
+    "max_dd": 155915,
+    "bad_months": 5,
+    "loss_sum": -370465,
+    "losing_days": 114,
+    "days": 196,
+    "worst_month": -34263,
+    "sum_losing_trades": -578214
+   },
+   "changed": 748,
+   "twin": {
+    "p": 2.8298838077147393e-25,
+    "p_mc": 0.0004997501249375312,
+    "p_norm": 2.8298838077147393e-25,
+    "twin_mean": -770190,
+    "twin_sd": 15361,
+    "hits": 0
+   },
+   "q": 0.0,
+   "passed": false,
+   "fails": [
+    "no longer makes money"
+   ]
+  },
+  "NP5-52": {
+   "test": {
+    "trades": 973,
+    "win": 0.3628,
+    "net": -115560,
+    "avg_win": 898,
+    "avg_loss": -698,
+    "worst_day": -11727,
+    "max_dd": 140067,
+    "bad_months": 4,
+    "loss_sum": -390652,
+    "losing_days": 241,
+    "days": 381,
+    "worst_month": -34230,
+    "sum_losing_trades": -432547
+   },
+   "Y1": {
+    "trades": 441,
+    "win": 0.4059,
+    "net": -18958,
+    "avg_win": 789,
+    "avg_loss": -612,
+    "worst_day": -4647,
+    "max_dd": 32757,
+    "bad_months": 1,
+    "loss_sum": -145990,
+    "losing_days": 116,
+    "days": 190,
+    "worst_month": -14344,
+    "sum_losing_trades": -160243
+   },
+   "Y2": {
+    "trades": 532,
+    "win": 0.3271,
+    "net": -96603,
+    "avg_win": 1010,
+    "avg_loss": -761,
+    "worst_day": -11727,
+    "max_dd": 131092,
+    "bad_months": 3,
+    "loss_sum": -244662,
+    "losing_days": 125,
+    "days": 191,
+    "worst_month": -34230,
+    "sum_losing_trades": -272305
+   },
+   "changed": 445,
+   "twin": {
+    "p": 1.809614629291173e-09,
+    "p_mc": 0.0004997501249375312,
+    "p_norm": 1.809614629291173e-09,
+    "twin_mean": -427487,
+    "twin_sd": 6242,
+    "hits": 0
+   },
+   "q": 0.0,
+   "passed": false,
+   "fails": [
+    "no longer makes money"
+   ]
+  },
+  "BBX-51": {
+   "test": {
+    "trades": 2095,
+    "win": 0.4072,
+    "net": -111877,
+    "avg_win": 907,
+    "avg_loss": -713,
+    "worst_day": -10643,
+    "max_dd": 144542,
+    "bad_months": 8,
+    "loss_sum": -605592,
+    "losing_days": 285,
+    "days": 462,
+    "worst_month": -37586,
+    "sum_losing_trades": -885950
+   },
+   "Y1": {
+    "trades": 907,
+    "win": 0.4476,
+    "net": -22686,
+    "avg_win": 776,
+    "avg_loss": -674,
+    "worst_day": -9112,
+    "max_dd": 43676,
+    "bad_months": 2,
+    "loss_sum": -216460,
+    "losing_days": 128,
+    "days": 227,
+    "worst_month": -15549,
+    "sum_losing_trades": -337887
+   },
+   "Y2": {
+    "trades": 1188,
+    "win": 0.3763,
+    "net": -89191,
+    "avg_win": 1027,
+    "avg_loss": -740,
+    "worst_day": -10643,
+    "max_dd": 130288,
+    "bad_months": 6,
+    "loss_sum": -389133,
+    "losing_days": 157,
+    "days": 235,
+    "worst_month": -37586,
+    "sum_losing_trades": -548063
+   },
+   "changed": 3286,
+   "twin": {
+    "p": 0.9950024987506247,
+    "p_mc": 0.9950024987506247,
+    "p_norm": 0.9980561368180528,
+    "twin_mean": -535683,
+    "twin_sd": 24214,
+    "hits": 1990
+   },
+   "q": 0.995,
+   "passed": false,
+   "fails": [
+    "no longer makes money",
+    "twin p 0.995",
+    "q 0.995"
+   ]
+  }
+ },
+ "reported": {
+  "BBX-72": {
+   "test": {
+    "trades": 1360,
+    "win": 0.4088,
+    "net": -81444,
+    "avg_win": 899,
+    "avg_loss": -723,
+    "worst_day": -11551,
+    "max_dd": 106588,
+    "bad_months": 3,
+    "loss_sum": -475415,
+    "losing_days": 221,
+    "days": 363,
+    "worst_month": -30578,
+    "sum_losing_trades": -581192
+   },
+   "Y1": {
+    "trades": 604,
+    "win": 0.4536,
+    "net": -15074,
+    "avg_win": 754,
+    "avg_loss": -672,
+    "worst_day": -10665,
+    "max_dd": 41232,
+    "bad_months": 1,
+    "loss_sum": -171695,
+    "losing_days": 99,
+    "days": 175,
+    "worst_month": -17983,
+    "sum_losing_trades": -221761
+   },
+   "Y2": {
+    "trades": 756,
+    "win": 0.373,
+    "net": -66370,
+    "avg_win": 1039,
+    "avg_loss": -758,
+    "worst_day": -11551,
+    "max_dd": 102317,
+    "bad_months": 2,
+    "loss_sum": -303719,
+    "losing_days": 122,
+    "days": 188,
+    "worst_month": -30578,
+    "sum_losing_trades": -359431
+   },
+   "changed": 2239
+  },
+  "BB1-51": {
+   "test": {
+    "trades": 2714,
+    "win": 0.4016,
+    "net": -196993,
+    "avg_win": 867,
+    "avg_loss": -703,
+    "worst_day": -11984,
+    "max_dd": 225469,
+    "bad_months": 11,
+    "loss_sum": -720833,
+    "losing_days": 292,
+    "days": 481,
+    "worst_month": -39920,
+    "sum_losing_trades": -1141584
+   },
+   "Y1": {
+    "trades": 1203,
+    "win": 0.4289,
+    "net": -70028,
+    "avg_win": 735,
+    "avg_loss": -654,
+    "worst_day": -10096,
+    "max_dd": 72698,
+    "bad_months": 4,
+    "loss_sum": -271489,
+    "losing_days": 138,
+    "days": 242,
+    "worst_month": -18365,
+    "sum_losing_trades": -449459
+   },
+   "Y2": {
+    "trades": 1511,
+    "win": 0.3799,
+    "net": -126965,
+    "avg_win": 985,
+    "avg_loss": -739,
+    "worst_day": -11984,
+    "max_dd": 185164,
+    "bad_months": 7,
+    "loss_sum": -449344,
+    "losing_days": 154,
+    "days": 239,
+    "worst_month": -39920,
+    "sum_losing_trades": -692125
+   },
+   "changed": 2101
+  },
+  "NP10-52": {
+   "test": {
+    "trades": 973,
+    "win": 0.3905,
+    "net": -112678,
+    "avg_win": 1010,
+    "avg_loss": -837,
+    "worst_day": -11727,
+    "max_dd": 144997,
+    "bad_months": 5,
+    "loss_sum": -446630,
+    "losing_days": 233,
+    "days": 381,
+    "worst_month": -31685,
+    "sum_losing_trades": -496518
+   },
+   "Y1": {
+    "trades": 441,
+    "win": 0.4376,
+    "net": -31595,
+    "avg_win": 804,
+    "avg_loss": -753,
+    "worst_day": -5725,
+    "max_dd": 40663,
+    "bad_months": 2,
+    "loss_sum": -170518,
+    "losing_days": 111,
+    "days": 190,
+    "worst_month": -14042,
+    "sum_losing_trades": -186820
+   },
+   "Y2": {
+    "trades": 532,
+    "win": 0.3515,
+    "net": -81083,
+    "avg_win": 1223,
+    "avg_loss": -898,
+    "worst_day": -11727,
+    "max_dd": 132267,
+    "bad_months": 3,
+    "loss_sum": -276112,
+    "losing_days": 122,
+    "days": 191,
+    "worst_month": -31685,
+    "sum_losing_trades": -309698
+   },
+   "changed": 344
+  }
+ }
+}

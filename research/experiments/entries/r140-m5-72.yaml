@@ -1,0 +1,31 @@
+id: r140-m5-72
+title: 'R140 M5-72: exit on a 5-min structure shift (R72)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R140_STRUCTURE_ARMS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward 2025-04-01..2026-03-31)
+  holdout: 2026-04-01..2026-10-13 (final, not fresh; read once by R140)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r140_structure_arms/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R139 15/5-min wick swings); the arm buys its own option with its own stops'
+hypothesis: exit on a 5-min structure shift makes R72 lose less (sum of losing days, drawdown, worst day, worst month) while
+  it still makes money
+model_or_rule: research/hunt/r140_structure_arms/r140.py
+settings: PREREG.md M5-72; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 3071 trades, net Rs 214,518 (today Rs 216,929), losing days Rs -1,146,355 (today Rs -1,154,058); final
+    1202 trades, win 46% (65% rule: below), net Rs 177,131 (today Rs 171,366), losing days Rs -383,777 (today Rs -389,644),
+    drawdown Rs 59,358 (today Rs 61,884); twin p 0.991, q 0.9995. Fails: wf: drawdown worse; wf: worst day worse; wf: worst
+    month worse; twin p 0.991 >= 0.05; BH q 1 > 0.1; < 30 final trades differ.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)

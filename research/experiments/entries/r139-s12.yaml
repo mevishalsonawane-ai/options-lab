@@ -1,0 +1,29 @@
+id: r139-s12
+title: 'R139 S12: S1 + R123 N1 expected-value filter'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: '2021-08-01..2026-03-15 (filtered: folds 2023-2026 Q1)'
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (15-min wick swings; S6 60-min + 5-min); buys the ATM option; index stop'
+hypothesis: S1 + R123 N1 expected-value filter pays after costs on Indian index options
+model_or_rule: research/hunt/r139_market_structure/r139.py
+settings: PREREG.md S12; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 338 trades, win 40% (65% rule: below), avg net Rs 11 (2x Rs -6), total Rs 3,712, drawdown Rs -47,751, worst
+    month Rs -15,357; p 0.158, q 0.289. Holdout 20 trades, win 60%, avg net Rs 561 (2x Rs 542), total Rs 11,213, drawdown
+    Rs -5,879, worst month Rs -5,434, p 0.110. Fails: net, twins, folds, q, account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

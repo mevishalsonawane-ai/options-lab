@@ -1,0 +1,29 @@
+id: r139-s11
+title: 'R139 S11: First lower high after a lower low (and mirror)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (15-min wick swings; S6 60-min + 5-min); buys the ATM option; index stop'
+hypothesis: First lower high after a lower low (and mirror) pays after costs on Indian index options
+model_or_rule: research/hunt/r139_market_structure/r139.py
+settings: PREREG.md S11; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 2829 trades, win 38% (65% rule: below), avg net Rs -80 (2x Rs -101), total Rs -226,503, drawdown Rs -390,752,
+    worst month Rs -63,193; p 0.010, q 0.059. Holdout 392 trades, win 38%, avg net Rs -214 (2x Rs -243), total Rs -83,917,
+    drawdown Rs -133,331, worst month Rs -38,588, p 0.634. Fails: net, folds, account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

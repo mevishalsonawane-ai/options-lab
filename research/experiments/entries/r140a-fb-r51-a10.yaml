@@ -1,0 +1,30 @@
+id: r140a-fb-r51-a10
+title: 'R140 Amendment A FB-R51-A10: skip days after a wide day (yesterday''s range in the top fifth vs its 20-day average)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R140_STRUCTURE_ARMS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: '2024-11-20..2026-03-31 (slices chosen here: in-sample)'
+  holdout: 2026-04-01..2026-10-13 (final, not fresh; read once by Amendment A)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r140_structure_arms/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index (daily ranges, gap) with R101 VIX context; the arm buys its own option'
+hypothesis: skipping days after a wide day (yesterday's range in the top fifth vs its 20-day average) cuts R51's fake breakouts
+  and losses
+model_or_rule: research/hunt/r140_structure_arms/r140a.py
+settings: PREREG_A.md FB-R51-A10; 1 lot
+variants_tried: 7
+verdict: rejected
+results:
+  summary: 'final 1394 trades, win 46% (65% rule: below), net Rs 157,384 (today Rs 134,743), losing days Rs -316,936 (today
+    Rs -395,932), drawdown Rs 70,047 (today Rs 81,683), worst month Rs -48,813 (today Rs -54,587); twin p 0.0004, q 0.0023.
+    Fails: wf: worst month worse.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)

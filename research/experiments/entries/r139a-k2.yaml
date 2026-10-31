@@ -1,0 +1,30 @@
+id: r139a-k2
+title: 'R139 Amendment A K2: flow stack: volume surge + OI flow + buying flow'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: 'flow stack: volume surge + OI flow + buying flow improves R139''s rules after costs'
+model_or_rule: research/hunt/r139_market_structure/r139a.py
+settings: PREREG_A.md K2; 1 lot
+variants_tried: 19
+verdict: rejected
+results:
+  summary: 'design 100 trades, win 41% (65% rule: below), avg net Rs -280 (2x Rs -297), total Rs -28,031, drawdown Rs -46,279,
+    worst month Rs -7,803; p 0.723, q 0.723. Holdout (already seen) 26 trades, win 27%, avg net Rs -632 (2x Rs -652), total
+    Rs -16,432, p 0.604. Fails: n, net, twins, folds, q, account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

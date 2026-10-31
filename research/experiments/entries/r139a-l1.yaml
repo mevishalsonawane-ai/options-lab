@@ -1,0 +1,31 @@
+id: r139a-l1
+title: 'R139 Amendment A L1: liquidity sweep: the down-leg took an untaken swing low or the previous day''s low'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: 'liquidity sweep: the down-leg took an untaken swing low or the previous day''s low improves R139''s rules after
+  costs'
+model_or_rule: research/hunt/r139_market_structure/r139a.py
+settings: PREREG_A.md L1; 1 lot
+variants_tried: 19
+verdict: rejected
+results:
+  summary: 'design 812 trades, win 42% (65% rule: below), avg net Rs 148 (2x Rs 128), total Rs 120,104, drawdown Rs -108,019,
+    worst month Rs -52,054; p 0.109, q 0.172. Holdout (already seen) 125 trades, win 50%, avg net Rs 366 (2x Rs 341), total
+    Rs 45,757, p 0.248. Fails: twins, folds, q, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

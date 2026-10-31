@@ -1,0 +1,30 @@
+id: r139b-sr3
+title: 'R139 Amendment B SR3: S3 with stop-and-reverse (once per trade)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_B.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: S3 with stop-and-reverse (once per trade) improves R139's rules after costs
+model_or_rule: research/hunt/r139_market_structure/r139b.py
+settings: PREREG_B.md SR3; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 1868 trades, win 43% (65% rule: below), avg net Rs 174 (2x Rs 155), total Rs 324,795, drawdown Rs -183,553,
+    worst month Rs -66,994; p 0.010, q 0.119. Holdout (already seen) 325 trades, win 45%, avg net Rs 75 (2x Rs 49), total
+    Rs 24,481, p 0.485. Fails: folds, q, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

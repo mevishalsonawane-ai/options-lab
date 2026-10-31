@@ -1,0 +1,29 @@
+id: r142-np5-52
+title: 'R142 NP5-52: sell if the option is not up 5% within 5 min (R52)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward 2025-04-01..2026-03-31)
+  holdout: '2026-04-01..2026-10-13 (final; not fresh: R140/R141 read it, R141 used it to find these leads)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r142_bad_break_noprogress/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R140A features) for filters; the option premium after the fill for the no-progress exit'
+hypothesis: sell if the option is not up 5% within 5 min makes R52 lose less while it still makes money
+model_or_rule: research/hunt/r142_bad_break_noprogress/r142.py
+settings: PREREG.md NP5-52; 1 lot
+variants_tried: 22
+verdict: paper-only
+results:
+  summary: 'PASSED every lose-less gate; proposed for a forward log / paper switch, NOT built (needs Boss''s approval). final
+    293 trades, win 42% (today 52%; 65% rule: below), net Rs 37,510 (today Rs 48,612), losing days Rs -132,769 (today Rs -223,320),
+    drawdown Rs 31,482 (today Rs 47,194); twin p 0.0001, q 0.0008.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)

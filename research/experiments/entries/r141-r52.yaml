@@ -1,0 +1,28 @@
+id: r141-r52
+title: 'R141 R52: every losing trade, patterns (descriptive)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R141_LOSING_TRADES.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: 2024-11-20..2026-03-31 (halves H1 / H2)
+  holdout: 2026-04-01..2026-10-13 (already read by R140; check only)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r141_losing_trades/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R140 Amendment A features) and each trade outcome (exit reason, peak premium gain)'
+hypothesis: R52's losing trades share patterns that hold in H1, H2 and the final
+model_or_rule: research/hunt/r141_losing_trades/r141.py
+settings: descriptive; steady = loser rate above the arm and avg net < 0 in H1, H2 and final (>= 30 trades each)
+variants_tried: null
+verdict: not-a-test
+results:
+  summary: 'descriptive, no rule adopted. design 706 trades, 44% lose, losses Rs -739,055; final 293 trades, 48% lose, losses
+    Rs -268,790. Steady patterns: how:peak in between.'
+  costs: R17 fills, dated Zerodha charges, 1 lot

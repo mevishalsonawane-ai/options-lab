@@ -1,0 +1,65 @@
+{
+ "FB-R72-A10": {
+  "passed": true,
+  "fails": [],
+  "p": 0.0009995002498750624,
+  "q": 0.0023
+ },
+ "FB-R72-C1": {
+  "passed": false,
+  "fails": [
+   "wf: worst day worse",
+   "final: drawdown worse",
+   "final: worst month worse",
+   "twin p 0.495 >= 0.05",
+   "BH q 0.495 > 0.1"
+  ],
+  "p": 0.49525237381309345,
+  "q": 0.4953
+ },
+ "FB-R72-both": {
+  "passed": false,
+  "fails": [
+   "wf: worst day worse"
+  ],
+  "p": 0.004997501249375313,
+  "q": 0.0087
+ },
+ "FB-R51-A10": {
+  "passed": false,
+  "fails": [
+   "wf: worst month worse"
+  ],
+  "p": 0.000386564534194023,
+  "q": 0.0023
+ },
+ "FB-R51-C3": {
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "wf: worst month worse",
+   "final: drawdown worse"
+  ],
+  "p": 0.037481259370314844,
+  "q": 0.0525
+ },
+ "FB-R51-both": {
+  "passed": false,
+  "fails": [
+   "wf: worst month worse"
+  ],
+  "p": 0.0009995002498750624,
+  "q": 0.0023
+ },
+ "FB-LIQ-C1": {
+  "passed": false,
+  "fails": [
+   "final: drawdown worse",
+   "final: worst month worse",
+   "twin p 0.477 >= 0.05",
+   "BH q 0.495 > 0.1"
+  ],
+  "p": 0.47726136931534235,
+  "q": 0.4953
+ }
+}

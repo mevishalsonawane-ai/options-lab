@@ -1,0 +1,31 @@
+id: r140-t15-72
+title: 'R140 T15-72: skip if the 15-min trend is against (R72)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R140_STRUCTURE_ARMS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward 2025-04-01..2026-03-31)
+  holdout: 2026-04-01..2026-10-13 (final, not fresh; read once by R140)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r140_structure_arms/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R139 15/5-min wick swings); the arm buys its own option with its own stops'
+hypothesis: skip if the 15-min trend is against makes R72 lose less (sum of losing days, drawdown, worst day, worst month)
+  while it still makes money
+model_or_rule: research/hunt/r140_structure_arms/r140.py
+settings: PREREG.md T15-72; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 2263 trades, net Rs 81,166 (today Rs 216,929), losing days Rs -933,143 (today Rs -1,154,058); final 896
+    trades, win 43% (65% rule: below), net Rs 43,571 (today Rs 171,366), losing days Rs -362,429 (today Rs -389,644), drawdown
+    Rs 100,252 (today Rs 61,884); twin p 0.988, q 0.9995. Fails: final: drawdown worse; final: worst day worse; twin p 0.988
+    >= 0.05; BH q 1 > 0.1.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)

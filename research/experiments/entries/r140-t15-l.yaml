@@ -1,0 +1,31 @@
+id: r140-t15-l
+title: 'R140 T15-L: skip if the 15-min trend is against (LIQ)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R140_STRUCTURE_ARMS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward 2025-04-01..2026-03-31)
+  holdout: 2026-04-01..2026-10-13 (final, not fresh; read once by R140)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r140_structure_arms/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R139 15/5-min wick swings); the arm buys its own option with its own stops'
+hypothesis: skip if the 15-min trend is against makes LIQ lose less (sum of losing days, drawdown, worst day, worst month)
+  while it still makes money
+model_or_rule: research/hunt/r140_structure_arms/r140.py
+settings: PREREG.md T15-L; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 679 trades, net Rs 177,877 (today Rs 257,249), losing days Rs -266,334 (today Rs -289,743); final 275 trades,
+    win 36% (65% rule: below), net Rs -9,844 (today Rs 11,155), losing days Rs -121,554 (today Rs -144,353), drawdown Rs 51,091
+    (today Rs 61,062); twin p 0.595, q 0.9995. Fails: wf: drawdown worse; final: the arm no longer makes money; twin p 0.595
+    >= 0.05; BH q 1 > 0.1.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)

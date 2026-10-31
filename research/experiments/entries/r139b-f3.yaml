@@ -1,0 +1,30 @@
+id: r139b-f3
+title: 'R139 Amendment B F3: S3 taken the other way'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_B.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: S3 taken the other way improves R139's rules after costs
+model_or_rule: research/hunt/r139_market_structure/r139b.py
+settings: PREREG_B.md F3; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 1592 trades, win 37% (65% rule: below), avg net Rs -365 (2x Rs -384), total Rs -580,337, drawdown Rs -638,869,
+    worst month Rs -48,931; p 0.970, q 1.000. Holdout (already seen) 270 trades, win 37%, avg net Rs -539 (2x Rs -564), total
+    Rs -145,618, p 0.594. Fails: net, twins, folds, q, account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

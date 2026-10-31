@@ -1,0 +1,29 @@
+id: r142-bbx-72
+title: 'R142 BBX-72: skip if any of BB1-BB3 (R72)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward 2025-04-01..2026-03-31)
+  holdout: '2026-04-01..2026-10-13 (final; not fresh: R140/R141 read it, R141 used it to find these leads)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r142_bad_break_noprogress/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R140A features) for filters; the option premium after the fill for the no-progress exit'
+hypothesis: skip if any of BB1-BB3 makes R72 lose less while it still makes money
+model_or_rule: research/hunt/r142_bad_break_noprogress/r142.py
+settings: PREREG.md BBX-72; 1 lot
+variants_tried: 22
+verdict: rejected
+results:
+  summary: 'final 536 trades, win 50% (today 46%; 65% rule: below), net Rs 201,665 (today Rs 171,366), losing days Rs -199,554
+    (today Rs -389,644), drawdown Rs 45,201 (today Rs 61,884); twin p 0.6007, q 1.0. Fails: twin p 0.601 >= 0.05; BH q 1 >
+    0.1.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)

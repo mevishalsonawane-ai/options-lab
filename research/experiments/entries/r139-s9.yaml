@@ -1,0 +1,29 @@
+id: r139-s9
+title: 'R139 S9: Shallow 25% pullback after a BOS leg (R135)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (15-min wick swings; S6 60-min + 5-min); buys the ATM option; index stop'
+hypothesis: Shallow 25% pullback after a BOS leg (R135) pays after costs on Indian index options
+model_or_rule: research/hunt/r139_market_structure/r139.py
+settings: PREREG.md S9; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 3878 trades, win 49% (65% rule: below), avg net Rs -66 (2x Rs -87), total Rs -254,992, drawdown Rs -296,651,
+    worst month Rs -44,666; p 0.010, q 0.059. Holdout 501 trades, win 47%, avg net Rs -249 (2x Rs -278), total Rs -124,725,
+    drawdown Rs -128,854, worst month Rs -40,830, p 0.564. Fails: net, folds, account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
