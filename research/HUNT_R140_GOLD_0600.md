@@ -192,6 +192,38 @@ Note on the run: the first Amendment B run required GOLDM's 09:00 minute for eve
 sessions that open at 09:01-09:02, which the plan does not ask for M3 and L4-L6. This was fixed (`mcx_frame`) and the
 design step re-run before any holdout read. The verdict did not change: 0 of 18 both times.
 
+## Recent look: the high win-rate US-gold versions on 1 Sep - 30 Oct 2026, a $200 account (Boss, 31 Oct)
+
+*Not a test; no verdict changes. These rules were already rejected in design. The 2 months lie inside the locked
+holdout, so the holdout is now SEEN for E7, E8, L1, L2 and L3 (`results/recent_look.lock`, `recent_look.json`, code
+`r140r.py`). The size is 0.01 lot = 1 oz (about $4,200 of gold at Sep-Oct prices; about $42 margin at 1:100), so $1 of
+gold = $1 of profit or loss. Cost $0.32 a trade. The window is 06:00-08:00 IST. The exits are as in Amendment B. E8's
+model was trained on the design period only. Spot gold is information only for Boss (not tradable via Zerodha).*
+
+| version | trades | win rate | net ($200 ->) | at 2x costs | Sep / Oct | worst drawdown | random same-exit trades (median, p) |
+|---|---|---|---|---|---|---|---|
+| E7 vote + target 0.5 ATR | 17 | 71% | +$9.05 (-> $209) | +$3.61 | -$0.63 / +$9.68 | -$7.13 | +$5.99, p 0.40 |
+| E8 model + target 0.5 ATR | 14 (all buys) | 71% | -$1.44 (-> $199) | -$5.92 | +$3.67 / -$5.11 | -$9.17 | -$7.25, p 0.30 |
+| L1 vote, stop 0.5 ATR, lock +0.5 ATR keep 60% | 17 | 76% | **+$22.57 (-> $223)** | +$17.13 | +$14.99 / +$7.58 | -$4.93 | -$2.49, **p 0.034** |
+| L2 vote, stop 1.5 ATR, lock keep 50% | 17 | 88% | +$20.41 (-> $220) | +$14.97 | +$14.00 / +$6.41 | -$9.53 | +$0.82, p 0.14 |
+| L3 vote, stop 1 ATR, lock keep 75% | 17 | 82% | +$25.16 (-> $225) | +$19.72 | +$11.46 / +$13.70 | -$7.13 | +$9.27, p 0.16 |
+
+How to read it:
+- **Two good months are common for these rules, even though they failed overall.** Over the 29 two-month windows of
+  the design period (Oct 2023 - Mar 2026, same 0.01-lot size), the share of positive windows was: L1 52%, L2 38%,
+  L3 38%, E7 28%, E8 39%. The best windows were +$57 to +$68 and the worst -$19 to -$34. So a +$20-25 stretch says
+  little on its own.
+- **L1 is the only one that keeps looking better than chance.**
+  - It beat its random twins in design (p 0.011, 195 trades, +$84.50 over 2.5 years at 0.01 lot). It did so again in
+    these 2 months (p 0.034, 17 trades).
+  - But it failed BH over the 36 rules tried, it was positive in only 3 of 5 design periods, and 17 trades is a very
+    small sample.
+  - It is a candidate to keep watching, not a proven edge.
+- **The 76-88% win rates come from small wins; losses are bigger.** For L2, an average win is +$2.50 and an average
+  loss is -$8.55. Two losers take back about seven winners.
+- Per trade at 0.01 lot: average win +$1.10 to +$3.14, average loss -$2.69 to -$8.55, worst single trade -$9.53
+  (-4.8% of $200).
+
 ## What is new compared with the earlier gold work
 
 - GOLD_15M_PATTERNS and GOLD_30M_1H_PATTERNS had unconditional hour tables (01:00 UTC green 50.8%, 02:00 UTC 50.7%).
