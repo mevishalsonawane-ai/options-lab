@@ -17,6 +17,10 @@ profit lock.
 **Nothing to catch. 0 of 12 pre-registered rules passed (best BH q 0.67; the bar is 0.10). The locked holdout was not
 opened for any rule, because none passed design.**
 
+**Amendment A (Boss's follow-up): the market that closed just before 06:00 (gold's US session, closing at 02:30 IST in
+US summer and 03:30 IST in winter) and the hours after it do not guess the window's direction either. They match it on
+47-53% of days, and 0 of 6 more rules pass. See the Amendment A section.**
+
 1. **What gold does from 06:00 to 08:00 IST** (575 window days, Oct 2023 - Mar 2026):
    - It is a quiet-to-medium stretch. The median 2-hour move is **$4.28**, and the median high-to-low range is **$11.28**
      (0.39%). On MCX that range is about **550 GOLDM points**, but the start-to-end move is much smaller.
@@ -71,6 +75,50 @@ opened for any rule, because none passed design.**
    - Use it as context only, not as a signal. **No paper arm is proposed.**
 5. **Boss's 65% win-rate rule:** only B3 (68%) and B4 (65%) reach it, and both fail the money gates. A high win rate
    with a 60% lock and a 0.30% stop still loses on the days the stop is hit.
+
+## Amendment A: does the market that closed before 06:00 guess the direction? (Boss, 31 Oct)
+
+*Pre-registered in PREREG.md Amendment A (commit f85c7dc) before any number. Code `r140c.py`, tests `test_r140c.py`,
+results `results/amendA_design.json` / `amendA_design.md` / `amendA_holdout.lock`.*
+
+**No. Nothing that happens in the US session or in the hours after it guesses which way gold goes from 06:00 to 08:00
+IST. 0 of 6 new rules pass (best BH q 0.74 over 18). The holdout was not opened.**
+
+- The market that closes just before 06:00 IST is gold's US session. It closes at 17:00 New York: 02:30 IST in US
+  summer time, 03:30 IST in winter. Gold reopens an hour later, and Sydney and Tokyo start before 06:00.
+- Each signal below was checked as "the window goes the same way" and as a trade. The trade buys or sells at 06:00,
+  exits at 08:00, uses the same stop and lock as A2, and learns follow or fade walk-forward.
+- Design period: Oct 2023 - Mar 2026. Per signal, the "same way" columns use 545-574 days, except the big-US-day signal
+  (147 days). The trades use the 473-495 days in folds F2-F5 (128 for C6).
+
+| signal (known by 06:00 IST) | window goes the same way | summer / winter | correlation | as a trade (n, avg net, twin p, q) |
+|---|---|---|---|---|
+| US day session 08:20-17:00 NY (A2, already tested) | 48% | 48% / 48% | +0.04 | A2: 487, -$43, 0.55, 0.74 (q of the first 12) |
+| prior day 17:00 -> 17:00 NY (A3, already tested) | 50% | 49% / 51% | +0.06 | A3: 487, -$43, 0.62, 0.74 (q of the first 12) |
+| C1 last US hour 16:00-17:00 NY | 53% | 51% / 55% | -0.05 | 473, -$35, 0.45, 0.74 |
+| C2 US afternoon 13:30-17:00 NY | 50% | 51% / 50% | -0.09 | 486, -$96, 0.96, 0.99 |
+| C3 US close -> 06:00 IST (reopen, Sydney, Tokyo) | 53% | 54% / 51% | -0.11 | 494, -$28, 0.41, 0.74 |
+| C4 the last 30 min, 05:30-06:00 IST | 52% | 54% / 49% | -0.03 | 493, -$35, 0.45, 0.74 |
+| C5 MCX close -> 06:00 IST (the whole night) | 50% | 52% / 48% | -0.15 | 495, -$31, 0.45, 0.74 |
+| C6 big US day only (top 20% of moves) | 47% | 49% / 43% | +0.05 | 128, -$178, 0.99, 0.99 |
+
+- **Every signal is close to a coin flip, 47% to 53%.** The best "same way" rate is 53% (the last US hour, and the move
+  after the close). With about 550 days, 53% is within normal luck (about plus or minus 4 points).
+- **All 6 rules lose after costs** ($32 a round trip on a 100-oz lot). They lose at -$28 to -$178 a trade, and none
+  beats the random same-hour twins. Win rates are 48-51%, far below Boss's 65% rule.
+- **Big US days do not help.** After the biggest 20% of US sessions, the window went the same way only 47% of the time
+  (147 days). Trading it lost -$178 a trade on 128 trades.
+- **Winter-time correlations look stronger, but they come from a few big days.** In US winter, the night's move since
+  the MCX close has a correlation of -0.35 with the window. The US afternoon has -0.32. These hint at a reversal after
+  a big night. But the window goes the opposite way on only 52% and 50% of those days (n 242 and 232). The walk-forward rules
+  that try to use it lose money.
+- **For MCX GOLDM (09:05-10:00, 144-151 design days):**
+  - None of these signals points GOLDM's first hour the right way more than 57% of the time. The best is the night's
+    move since MCX closed: 57%, correlation +0.13, on 151 days.
+  - The 06:00-08:00 window's own move stays the strongest link (correlation +0.36). As shown above, even that does not
+    pay after costs.
+- **Not tested:** US stock indices. They are not in the data lake, and Dukascopy refused rapid downloads from this
+  container. In this test, gold's own US session stands for "the US market".
 
 ## What is new compared with the earlier gold work
 

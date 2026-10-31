@@ -1,0 +1,29 @@
+id: r140-c6
+title: 'R140 Amendment A C6: big US day (top 20% of abs move) -> the window (XAUUSD)'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss (31 Oct): the market that closed before 06:00 IST guesses the window''s direction. big US day (top 20% of
+  abs move) -> the window (follow/fade learned walk-forward) earns after costs, beats same-hour twins (p <= 0.05), BH q <=
+  0.10 over 18, >= 3 of 4 folds positive.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min, release + tail to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31 (F1 training only)
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot (the underlying), a move known by 06:00 IST; information only (Boss cannot trade spot gold via
+  Zerodha)'
+model_or_rule: big US day (top 20% of abs move) -> the window; trade the window 06:00-08:00 IST in the predictor's sign x
+  the learned follow/fade; stop 1 ATR15, 60% lock after +1 ATR15
+settings: research/hunt/r140_gold_0600/r140c.py; PREREG.md Amendment A
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 128 trades, win 48% (Boss''s 65% rule: below), avg net $-178 (2x $-210), total $-22,725 (2x $-26,821);
+    folds - / -3,769 / -911 / -6,184 / -11,861; twin p 0.985, BH q 0.985 (18 R140 variants); drawdown $-27,998. Gates failed:
+    net, twins, bh, folds. Holdout not read.'
+  costs: $0.25 spread + $7 commission a 100-oz lot round trip ($32); 2x = $64
+holdout_read: false
+verdict: rejected

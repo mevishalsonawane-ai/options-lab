@@ -1,0 +1,406 @@
+{
+ "variants": {
+  "C1": {
+   "rule": "C1",
+   "n": 473,
+   "win": 0.494715,
+   "avg": -35.106681,
+   "total": -16605.46,
+   "total2": -31741.46,
+   "avg2": -67.106681,
+   "longs": 202,
+   "folds": [
+    null,
+    -6564.424286,
+    -3543.417143,
+    3965.578571,
+    -10463.197143
+   ],
+   "dd": -27557.621429,
+   "worst_month": -13730.748571,
+   "months_green": "6/24",
+   "why": {
+    "stop": 236,
+    "lock": 228,
+    "time": 9
+   },
+   "twin_p": 0.450549,
+   "twin_median_total": -18434.249286,
+   "q": 0.737263,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "C2": {
+   "rule": "C2",
+   "n": 486,
+   "win": 0.477366,
+   "avg": -96.247031,
+   "total": -46776.057143,
+   "total2": -62328.057143,
+   "avg2": -128.247031,
+   "longs": 235,
+   "folds": [
+    null,
+    -5282.171429,
+    -6273.21,
+    -4870.142857,
+    -30350.532857
+   ],
+   "dd": -50202.438571,
+   "worst_month": -20070.737143,
+   "months_green": "6/24",
+   "why": {
+    "stop": 251,
+    "lock": 228,
+    "time": 7
+   },
+   "twin_p": 0.957043,
+   "twin_median_total": -18574.857857,
+   "q": 0.985015,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "C3": {
+   "rule": "C3",
+   "n": 494,
+   "win": 0.510121,
+   "avg": -28.165905,
+   "total": -13913.957143,
+   "total2": -29721.957143,
+   "avg2": -60.165905,
+   "longs": 258,
+   "folds": [
+    null,
+    -5116.071429,
+    -6133.92,
+    2561.815714,
+    -5225.781429
+   ],
+   "dd": -31471.745714,
+   "worst_month": -10829.652857,
+   "months_green": "5/24",
+   "why": {
+    "stop": 237,
+    "lock": 246,
+    "time": 11
+   },
+   "twin_p": 0.404595,
+   "twin_median_total": -18228.068571,
+   "q": 0.737263,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "C4": {
+   "rule": "C4",
+   "n": 493,
+   "win": 0.494929,
+   "avg": -34.981008,
+   "total": -17245.637143,
+   "total2": -33021.637143,
+   "avg2": -66.981008,
+   "longs": 231,
+   "folds": [
+    null,
+    -4192.617143,
+    -3889.291429,
+    -1627.608571,
+    -7536.12
+   ],
+   "dd": -31344.045714,
+   "worst_month": -11282.322857,
+   "months_green": "7/24",
+   "why": {
+    "stop": 243,
+    "lock": 240,
+    "time": 10
+   },
+   "twin_p": 0.446553,
+   "twin_median_total": -18834.383571,
+   "q": 0.737263,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "C5": {
+   "rule": "C5",
+   "n": 495,
+   "win": 0.49899,
+   "avg": -31.296779,
+   "total": -15491.905714,
+   "total2": -31331.905714,
+   "avg2": -63.296779,
+   "longs": 215,
+   "folds": [
+    null,
+    -1608.17,
+    -460.651429,
+    -3472.424286,
+    -9950.66
+   ],
+   "dd": -23343.825714,
+   "worst_month": -9277.035714,
+   "months_green": "9/24",
+   "why": {
+    "stop": 242,
+    "lock": 241,
+    "time": 12
+   },
+   "twin_p": 0.448551,
+   "twin_median_total": -18059.277143,
+   "q": 0.737263,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "C6": {
+   "rule": "C6",
+   "n": 128,
+   "win": 0.484375,
+   "avg": -177.535636,
+   "total": -22724.561429,
+   "total2": -26820.561429,
+   "avg2": -209.535636,
+   "longs": 62,
+   "folds": [
+    null,
+    -3769.094286,
+    -910.944286,
+    -6183.782857,
+    -11860.74
+   ],
+   "dd": -27997.557143,
+   "worst_month": -6825.978571,
+   "months_green": "8/23",
+   "why": {
+    "stop": 66,
+    "lock": 61,
+    "time": 1
+   },
+   "twin_p": 0.985015,
+   "twin_median_total": -5022.667857,
+   "q": 0.985015,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  }
+ },
+ "describe": [
+  {
+   "predictor": "US day session (A2)",
+   "all": {
+    "n": 562,
+    "same": 0.478648,
+    "corr": 0.043794
+   },
+   "summer": {
+    "n": 328,
+    "same": 0.478659,
+    "corr": -0.061309
+   },
+   "winter": {
+    "n": 234,
+    "same": 0.478632,
+    "corr": 0.147642
+   },
+   "goldm_0905_1000": {
+    "n": 149,
+    "corr": 0.104385,
+    "same": 0.530201
+   }
+  },
+  {
+   "predictor": "prior day (A3)",
+   "all": {
+    "n": 561,
+    "same": 0.497326,
+    "corr": 0.059485
+   },
+   "summer": {
+    "n": 327,
+    "same": 0.486239,
+    "corr": -0.023287
+   },
+   "winter": {
+    "n": 234,
+    "same": 0.512821,
+    "corr": 0.138524
+   },
+   "goldm_0905_1000": {
+    "n": 149,
+    "corr": 0.237313,
+    "same": 0.563758
+   }
+  },
+  {
+   "predictor": "last US hour 16-17 NY",
+   "all": {
+    "n": 545,
+    "same": 0.52844,
+    "corr": -0.050794
+   },
+   "summer": {
+    "n": 320,
+    "same": 0.5125,
+    "corr": 0.09081
+   },
+   "winter": {
+    "n": 225,
+    "same": 0.551111,
+    "corr": -0.212585
+   },
+   "goldm_0905_1000": {
+    "n": 144,
+    "corr": -0.086294,
+    "same": 0.444444
+   }
+  },
+  {
+   "predictor": "US afternoon 13:30-17 NY",
+   "all": {
+    "n": 559,
+    "same": 0.502683,
+    "corr": -0.08971
+   },
+   "summer": {
+    "n": 327,
+    "same": 0.507645,
+    "corr": 0.190022
+   },
+   "winter": {
+    "n": 232,
+    "same": 0.49569,
+    "corr": -0.319556
+   },
+   "goldm_0905_1000": {
+    "n": 149,
+    "corr": -0.001706,
+    "same": 0.449664
+   }
+  },
+  {
+   "predictor": "US close -> 06:00 IST",
+   "all": {
+    "n": 573,
+    "same": 0.528796,
+    "corr": -0.105421
+   },
+   "summer": {
+    "n": 331,
+    "same": 0.543807,
+    "corr": -0.074443
+   },
+   "winter": {
+    "n": 242,
+    "same": 0.508264,
+    "corr": -0.181211
+   },
+   "goldm_0905_1000": {
+    "n": 151,
+    "corr": 0.243529,
+    "same": 0.516556
+   }
+  },
+  {
+   "predictor": "05:30 -> 06:00 IST",
+   "all": {
+    "n": 573,
+    "same": 0.52007,
+    "corr": -0.032738
+   },
+   "summer": {
+    "n": 332,
+    "same": 0.542169,
+    "corr": -0.023121
+   },
+   "winter": {
+    "n": 241,
+    "same": 0.489627,
+    "corr": -0.089013
+   },
+   "goldm_0905_1000": {
+    "n": 151,
+    "corr": -0.279852,
+    "same": 0.536424
+   }
+  },
+  {
+   "predictor": "MCX close -> 06:00 IST",
+   "all": {
+    "n": 574,
+    "same": 0.5,
+    "corr": -0.149088
+   },
+   "summer": {
+    "n": 332,
+    "same": 0.51506,
+    "corr": 0.011383
+   },
+   "winter": {
+    "n": 242,
+    "same": 0.479339,
+    "corr": -0.352991
+   },
+   "goldm_0905_1000": {
+    "n": 151,
+    "corr": 0.125459,
+    "same": 0.569536
+   }
+  },
+  {
+   "predictor": "big US day (top 20%)",
+   "all": {
+    "n": 147,
+    "same": 0.469388,
+    "corr": 0.049375
+   },
+   "summer": {
+    "n": 89,
+    "same": 0.494382,
+    "corr": -0.087091
+   },
+   "winter": {
+    "n": 58,
+    "same": 0.431034,
+    "corr": 0.154989
+   },
+   "goldm_0905_1000": {
+    "n": 50,
+    "corr": 0.084523,
+    "same": 0.5
+   }
+  }
+ ]
+}
