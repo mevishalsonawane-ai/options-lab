@@ -1,0 +1,133 @@
+//@version=6
+// R140 H11b: US gold (XAUUSD) at 11:00 IST, busy days only, 4-signal vote. Research rule for a PAPER forward test.
+// Source: research/HUNT_R140_GOLD_0600.md, Amendment E (Python: research/hunt/r140_gold_0600/r140h.py).
+//
+// Tested on XAUUSD 15-minute candles (Dukascopy), Oct 2023 - Mar 2026:
+//   186 trades, 62% win, +$95 per 100 oz after costs; twin p 0.001, BH q 0.045 (90 rules tried).
+//   Unseen holdout Apr - Aug 2026: 29 trades, 55% win, +$58 per 100 oz. Sep - Oct 2026: 18 trades, -$285 per 100 oz.
+//   Not proven: 1 hour out of 24 tried; most design profit came in Oct 2025 - Mar 2026. Paper first, 5x or less.
+//
+// THE RULE (use a 15-minute XAUUSD chart):
+//   1. On every IST weekday, read the 15m candle that closes at 11:00 IST (10:45-11:00).
+//   2. Vote: EMA20 vs EMA50, RSI14 vs 50, the MACD(12,26,9) histogram, and the move from the last 17:00 New York
+//      close to now. All four up = BUY, all four down = SELL, anything else = no trade.
+//   3. Busy filter: that candle's ATR (the mean true range of 14 candles) must be at or above the median of the same
+//      11:00 candle's ATR on all earlier days.
+//   4. Enter at the 11:00 open. Stop = 0.5 ATR. Profit lock: once the trade is up 0.5 ATR, the stop jumps to keep 60%
+//      of the best open profit and only moves in the trade's favour. Close at 13:00 IST if still open.
+//
+// Differences from the Python test: TradingView checks the stop / lock on 15m bars (the test used 1-minute bars;
+// switch on "Bar Magnifier" in the strategy properties where your plan allows it). Costs: $0.16 per oz per fill
+// (= the test's $0.25 spread + $7 per 100-oz lot commission, round trip). The busy median starts from the chart's
+// first loaded day, so give it a long history (the more days, the closer to the test).
+
+strategy("R140 H11b: Gold 11:00 IST busy-day vote", overlay = true, initial_capital = 1000,
+     default_qty_type = strategy.fixed, default_qty_value = 1, pyramiding = 0,
+     commission_type = strategy.commission.cash_per_contract, commission_value = 0.16, slippage = 0,
+     calc_on_every_tick = false, process_orders_on_close = false)
+
+// ---------------------------------------------------------------- inputs (the tested values are the defaults)
+entryHour  = input.int(11, "Entry hour (IST)", minval = 0, maxval = 23)
+holdMin    = input.int(120, "Max hold (minutes)", minval = 15, step = 15)
+stopATR    = input.float(0.5, "Stop (x ATR)", minval = 0.1, step = 0.1)
+lockATR    = input.float(0.5, "Lock starts after (x ATR profit)", minval = 0.1, step = 0.1)
+keepPct    = input.float(60.0, "Lock keeps (% of best open profit)", minval = 10, maxval = 95)
+useBusy    = input.bool(true, "Busy-day filter (tested: on)")
+showTable  = input.bool(true, "Show status table")
+
+// ---------------------------------------------------------------- the 15m indicators
+ema20 = ta.ema(close, 20)
+ema50 = ta.ema(close, 50)
+rsi14 = ta.rsi(close, 14)
+[macdLine, sigLine, macdHist] = ta.macd(close, 12, 26, 9)
+atr14 = ta.sma(ta.tr(true), 14)                 // mean true range of the last 14 candles (as in the test)
+
+// ---------------------------------------------------------------- the last 17:00 New York close
+var float nyClose = na
+if hour(time_close, "America/New_York") == 17 and minute(time_close, "America/New_York") == 0
+    nyClose := close
+
+// ---------------------------------------------------------------- the 11:00 IST candle
+istDow    = dayofweek(time_close, "Asia/Kolkata")
+isWeekday = istDow != dayofweek.saturday and istDow != dayofweek.sunday
+sigBar    = isWeekday and hour(time_close, "Asia/Kolkata") == entryHour and minute(time_close, "Asia/Kolkata") == 0
+
+c3   = na(nyClose) ? 0.0 : math.sign(close - nyClose)
+up   = math.sign(ema20 - ema50) == 1 and math.sign(rsi14 - 50) == 1 and math.sign(macdHist) == 1 and c3 == 1
+down = math.sign(ema20 - ema50) == -1 and math.sign(rsi14 - 50) == -1 and math.sign(macdHist) == -1 and c3 == -1
+
+// busy: this 11:00 candle's ATR vs the median of all EARLIER 11:00 candles (today is added after the check)
+var array<float> atrHist = array.new_float()
+bool busy = false
+float atrMed = na
+if sigBar and not na(atr14)
+    atrMed := array.size(atrHist) > 0 ? array.median(atrHist) : na
+    busy := not na(atrMed) and atr14 >= atrMed
+    array.push(atrHist, atr14)
+
+goLong  = sigBar and up and (busy or not useBusy) and strategy.position_size == 0
+goShort = sigBar and down and (busy or not useBusy) and strategy.position_size == 0
+
+// ---------------------------------------------------------------- entries
+var float tradeATR = na
+var float peak     = 0.0
+var float stopNow  = na
+
+if goLong
+    tradeATR := atr14
+    peak := 0.0
+    strategy.entry("H11b", strategy.long, comment = "BUY 11:00")
+    strategy.exit("H11b-x", "H11b", stop = close - stopATR * atr14, comment_loss = "stop")
+    alert("R140 H11b BUY XAUUSD at the 11:00 IST open. Stop " + str.tostring(close - stopATR * atr14, format.mintick) +
+         " (0.5 ATR). Lock 60% after +" + str.tostring(lockATR * atr14, format.mintick) + ". Out by 13:00 IST.", alert.freq_once_per_bar_close)
+if goShort
+    tradeATR := atr14
+    peak := 0.0
+    strategy.entry("H11b", strategy.short, comment = "SELL 11:00")
+    strategy.exit("H11b-x", "H11b", stop = close + stopATR * atr14, comment_loss = "stop")
+    alert("R140 H11b SELL XAUUSD at the 11:00 IST open. Stop " + str.tostring(close + stopATR * atr14, format.mintick) +
+         " (0.5 ATR). Lock 60% after +" + str.tostring(lockATR * atr14, format.mintick) + ". Out by 13:00 IST.", alert.freq_once_per_bar_close)
+
+// ---------------------------------------------------------------- managing the open trade: stop, lock, time exit
+inTrade = strategy.position_size != 0 and not goLong and not goShort
+if inTrade
+    dir   = strategy.position_size > 0 ? 1 : -1
+    entry = strategy.position_avg_price
+    best  = dir > 0 ? high - entry : entry - low
+    peak := math.max(peak, best)
+    baseStop = entry - dir * stopATR * tradeATR
+    stopNow := baseStop
+    if peak >= lockATR * tradeATR
+        lockLvl = entry + dir * (keepPct / 100.0) * peak
+        stopNow := dir > 0 ? math.max(baseStop, lockLvl) : math.min(baseStop, lockLvl)
+    strategy.exit("H11b-x", "H11b", stop = stopNow, comment_loss = "stop", comment_profit = "lock")
+    entryTime = strategy.opentrades.entry_time(0)
+    if time_close >= entryTime + holdMin * 60 * 1000
+        strategy.close("H11b", comment = "13:00 time exit")
+        alert("R140 H11b: time exit, close XAUUSD at the 13:00 IST open.", alert.freq_once_per_bar_close)
+if strategy.position_size == 0 and not goLong and not goShort
+    stopNow := na
+
+// ---------------------------------------------------------------- visuals
+plot(ema20, "EMA 20", color = color.new(color.teal, 40))
+plot(ema50, "EMA 50", color = color.new(color.orange, 40))
+plot(stopNow, "Stop / lock", color = color.red, style = plot.style_linebr, linewidth = 2)
+bgcolor(sigBar ? color.new(color.yellow, 85) : na, title = "11:00 IST candle")
+plotshape(goLong, "BUY", shape.triangleup, location.belowbar, color.green, size = size.small)
+plotshape(goShort, "SELL", shape.triangledown, location.abovebar, color.red, size = size.small)
+
+var table tb = table.new(position.top_right, 2, 6, bgcolor = color.new(color.black, 20), border_width = 1)
+if showTable and barstate.islast
+    voteTxt = up ? "UP (all 4)" : down ? "DOWN (all 4)" : "mixed: no trade"
+    table.cell(tb, 0, 0, "R140 H11b", text_color = color.white)
+    table.cell(tb, 1, 0, timeframe.period == "15" ? "15m OK" : "use a 15m chart!", text_color = timeframe.period == "15" ? color.lime : color.red)
+    table.cell(tb, 0, 1, "Vote now", text_color = color.white)
+    table.cell(tb, 1, 1, voteTxt, text_color = up ? color.lime : down ? color.red : color.gray)
+    table.cell(tb, 0, 2, "ATR / 11:00 median", text_color = color.white)
+    table.cell(tb, 1, 2, str.tostring(atr14, "#.##") + " / " + (array.size(atrHist) > 0 ? str.tostring(array.median(atrHist), "#.##") : "n/a"), text_color = color.white)
+    table.cell(tb, 0, 3, "Days in median", text_color = color.white)
+    table.cell(tb, 1, 3, str.tostring(array.size(atrHist)), text_color = color.white)
+    table.cell(tb, 0, 4, "Position", text_color = color.white)
+    table.cell(tb, 1, 4, strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "flat", text_color = color.white)
+    table.cell(tb, 0, 5, "Status", text_color = color.white)
+    table.cell(tb, 1, 5, "PAPER ONLY: not proven", text_color = color.yellow)
