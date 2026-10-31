@@ -1,0 +1,32 @@
+id: r139-c7
+title: 'R139 C7: multi-timeframe continuation stack, 4-hour trend as swing structure, 2R'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MTF_CONTINUATION.md
+data_version: Drive lake (index_1m, options_rolling_1m) copied 31 Oct 2026
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_mtf_continuation/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot on every timeframe (4-hour EMA20 trend or swing structure, 1-hour swing-high level, 15-minute
+  close through it with the trend, 5-minute FVG / order-block pullback, 3-minute close above the previous candle); buys the
+  ATM option'
+hypothesis: The top-down multi-timeframe stack (4H trend, 1H level, 15m continuation break, 5m FVG/OB pullback, 3m entry)
+  pays an ATM option after costs
+model_or_rule: research/hunt/r139_mtf_continuation/r139.py
+settings: PREREG.md C7; 1 lot
+variants_tried: 7
+verdict: rejected
+results:
+  summary: 'design 202 trades, win 43% (65% rule: below), avg win Rs 2057, avg loss Rs -1539, avg net Rs -8 (2x Rs -30), total
+    Rs -1,633, drawdown Rs -36,278, worst month Rs -15,190; p 0.525, BH q 0.802 (7 variants). Holdout 11 trades, avg net Rs
+    -649. Fails: n, net, folds, q, account, holdout_net.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
