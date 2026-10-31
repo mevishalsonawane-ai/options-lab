@@ -1,12 +1,12 @@
 {
   "app_lessons": 0,
   "built_from": "2026-10-31",
-  "bytes": 2265031,
+  "bytes": 2268146,
   "counts": {
     "answer": 1296,
     "book_fact": 521,
-    "doc": 18043,
-    "experiment": 2608,
+    "doc": 18078,
+    "experiment": 2630,
     "finding": 695,
     "index_fact": 27,
     "model": 6,
@@ -15,10 +15,10 @@
     "strategy": 65,
     "study": 60
   },
-  "experiments": 2608,
-  "facts": 23362,
+  "experiments": 2630,
+  "facts": 23419,
   "model_cards": 1,
   "schema": 1,
   "shared_items": 1800,
-  "version": "f7349f1a61d4"
+  "version": "a23eafc69271"
 }

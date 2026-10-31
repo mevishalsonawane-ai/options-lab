@@ -1,0 +1,29 @@
+id: r142-t11-51
+title: 'R142 T11-51: skip entries 10:30-12:00 (R51)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward 2025-04-01..2026-03-31)
+  holdout: '2026-04-01..2026-10-13 (final; not fresh: R140/R141 read it, R141 used it to find these leads)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r142_bad_break_noprogress/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R140A features) for filters; the option premium after the fill for the no-progress exit'
+hypothesis: skip entries 10:30-12:00 makes R51 lose less while it still makes money
+model_or_rule: research/hunt/r142_bad_break_noprogress/r142.py
+settings: PREREG.md T11-51; 1 lot
+variants_tried: 22
+verdict: rejected
+results:
+  summary: 'final 1545 trades, win 46% (today 45%; 65% rule: below), net Rs 180,581 (today Rs 134,743), losing days Rs -371,601
+    (today Rs -395,932), drawdown Rs 60,541 (today Rs 81,683); twin p 0.4343, q 1.0. Fails: design: worst month worse; wf:
+    drawdown worse; wf: worst month worse; final: worst day worse; twin p 0.434 >= 0.05; BH q 1 > 0.1.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)

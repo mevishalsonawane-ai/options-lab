@@ -1,0 +1,30 @@
+id: r142-np15-52
+title: 'R142 NP15-52: sell if the option is not up 10% within 15 min (R52)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward 2025-04-01..2026-03-31)
+  holdout: '2026-04-01..2026-10-13 (final; not fresh: R140/R141 read it, R141 used it to find these leads)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r142_bad_break_noprogress/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R140A features) for filters; the option premium after the fill for the no-progress exit'
+hypothesis: sell if the option is not up 10% within 15 min makes R52 lose less while it still makes money
+model_or_rule: research/hunt/r142_bad_break_noprogress/r142.py
+settings: PREREG.md NP15-52; 1 lot
+variants_tried: 22
+verdict: rejected
+results:
+  summary: 'final 293 trades, win 46% (today 52%; 65% rule: below), net Rs 44,404 (today Rs 48,612), losing days Rs -157,800
+    (today Rs -223,320), drawdown Rs 30,285 (today Rs 47,194); twin p 0.1914, q 0.7018. Fails: design: drawdown worse; design:
+    worst day worse; design: worst month worse; wf: drawdown worse; wf: worst day worse; wf: worst month worse; twin p 0.191
+    >= 0.05; BH q 0.702 > 0.1.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)

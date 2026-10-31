@@ -1,11 +1,11 @@
-# R141 result (31 Oct 2026): every losing trade of the four paper arms, and the patterns in them (descriptive)
-1. All of R72, R51, R52 and Liquidity's trades (exact rebuild) were checked. About half lose on every arm (R72 53-54%, R51 55%, R52 44-49%, Liquidity 56-63%); winners being bigger is what pays.
-2. The biggest losing group: trades that never worked (the option never rose 5%). They are 44-50% of the money lost on R72 and R51; 92-98% of them lose, and fast (R72: 85-91% of trades ending within 15 min lose).
-3. About a quarter of the money lost: trades up a median +28-32% that then lost. R105 already tested 20 exits for these: 0 passed (they sell winners early).
-4. Losses bunch: on Liquidity two-thirds of losers fall on days when every trade lost; R72's longest losing streak was 29 (design), 15 (final).
-5. Weekday, index, call/put and hour-of-day patterns are NOT steady: they flip between periods.
-6. Steady at entry (held in 2024-25, 2025-26 and Apr-Oct 2026): R72 weak push into the break, and after a very wide day (R140's filter: passed, proposed for paper).
-7. R51 steady: an earlier fake poke today, a weak push, a quiet signal bar, 10:30-12:00 entries, a very wide previous day. R52: none found. Liquidity: a gap against the trade (R140: failed).
-8. Leads to test next, each pre-registered with lose-less gates: an R51 "bad-break" filter, and a "no progress" exit on R72/R51 (never tested there).
-9. Nothing changes in the app. 4 descriptive entries (research/experiments/entries/r141-*.yaml).
-10. Write-up: research/HUNT_R141_LOSING_TRADES.md. R140 (structure on the arms, fake breakouts) and R139 (market structure) are in research/HUNT_R140_STRUCTURE_ARMS.md and HUNT_R139_MARKET_STRUCTURE.md.
+# R142 result (31 Oct 2026): R141's leads tested on the paper arms; nothing in the app or arms changed
+1. 22 pre-registered tests, gated on losing less (losing days, drawdown, worst day and worst month no worse, still in profit, better than random, BH).
+2. PASSES: NP5-52. On R52 Open outside value, sell at 09:25 if the option is not up 5% by then. Final: losing days -Rs 1.33 lakh vs -Rs 2.23 lakh, worst month -Rs 7.9k vs -Rs 17.1k, average loss halved; p 0.0001.
+3. Its cost: less profit (final Rs 37.5k vs Rs 48.6k; design Rs 1.10 lakh vs Rs 2.91 lakh), and the win rate falls (42% vs 52-56%): more small losses, fewer big ones.
+4. Strong lead, not proven: BBX-51 (skip R51 breaks after a fake poke, with a weak push or a quiet signal bar). Final profit Rs 2.73 lakh vs Rs 1.35 lakh, no losing month, wins 50% vs 45%; but random skipping of that many did nearly as well (p 0.12).
+5. The no-progress exit hurts R72 and R51 (their slow starters include the big winners). The filters did not help Liquidity.
+6. Losing trades cannot be turned into winners. The levers are skip likely losers (raises wins a few points), exit losers early (smaller losses), and locks (R105: none passed). No rule reaches 65%.
+7. Honest limit: the final months were not fresh (R141 used them to find these leads), so each candidate needs a forward log on new days first.
+8. Proposed, NOT built (each needs Boss's approval): shadow forward logs for NP5-52, BBX-51 and R140's FB-R72-A10; then, if Boss approves, labelled paper switches.
+9. 22 entries in research/experiments/entries/r142-*.yaml (1 paper-only candidate, 21 rejected).
+10. Write-up: research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md (with R139-R141 in HUNT_R139/R140/R141_*.md).
