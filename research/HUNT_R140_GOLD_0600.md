@@ -21,6 +21,10 @@ opened for any rule, because none passed design.**
 US summer and 03:30 IST in winter) and the hours after it do not guess the window's direction either. They match it on
 47-53% of days, and 0 of 6 more rules pass. See the Amendment A section.**
 
+**Amendment B (Boss: add indicators, strategies and stop / lock settings to raise the win rate): 0 of 18 more pass.
+The win rate can be lifted to 67-72% by taking small profits early, but the average trade stays at about zero. See
+the Amendment B section.**
+
 1. **What gold does from 06:00 to 08:00 IST** (575 window days, Oct 2023 - Mar 2026):
    - It is a quiet-to-medium stretch. The median 2-hour move is **$4.28**, and the median high-to-low range is **$11.28**
      (0.39%). On MCX that range is about **550 GOLDM points**, but the start-to-end move is much smaller.
@@ -119,6 +123,74 @@ IST. 0 of 6 new rules pass (best BH q 0.74 over 18). The holdout was not opened.
     pay after costs.
 - **Not tested:** US stock indices. They are not in the data lake, and Dukascopy refused rapid downloads from this
   container. In this test, gold's own US session stands for "the US market".
+
+## Amendment B: indicators, a vote, models, high win-rate exits and stop / lock settings (Boss, 31 Oct)
+
+*Pre-registered in PREREG.md Amendment B (commits a1da2f1 and bf02a0d, part L added at Boss's "Stoploss profit lock")
+before any number. Code `r140e.py`, tests `test_r140e.py`, results `results/amendB_design.json` / `amendB_design.md` /
+`amendB_holdout.lock`.*
+
+**No enhancement makes the window or its GOLDM link tradable. 0 of 18 pass (best BH q 0.40 over all 36 R140 rules).
+The win rate CAN be pushed to 67-72%, but only by taking small profits early, and the money stays at about zero. The
+holdout was not opened.**
+
+**XAUUSD window, 06:00 -> 08:00 IST ($ per 100-oz lot; design Oct 2023 - Mar 2026; signals from the 15-minute candle
+completed by 06:00):**
+
+| id | rule | n | win (65% rule) | avg net | total 1x / 2x | folds + | twin p | q |
+|---|---|---|---|---|---|---|---|---|
+| E1 | follow EMA20 vs EMA50 | 574 | 48% | -$64 | -$36,551 / -$54,919 | 0 of 5 | 0.83 | 0.93 |
+| E2 | RSI < 30 buy / > 70 sell | 49 | 39% | -$95 | -$4,651 / -$6,219 | 2 of 5 | 0.66 | 0.85 |
+| E3 | Bollinger band, revert | 90 | 47% | -$109 | -$9,810 / -$12,690 | 1 of 5 | 0.79 | 0.92 |
+| E4 | follow the Supertrend | 574 | 51% | -$49 | -$27,984 / -$46,352 | 1 of 5 | 0.65 | 0.85 |
+| E5 | vote: EMA, RSI, MACD and the move since the US close all agree | 195 | 53% | -$55 | -$10,714 / -$16,954 | 1 of 5 | 0.69 | 0.85 |
+| E6 | walk-forward model on 13 inputs, trade at P >= 0.58 / <= 0.42 | 327 | 55% | -$22 | -$7,271 / -$17,735 | 1 of 4 | 0.54 | 0.85 |
+| E7 | E5 + high win-rate exits (target 0.5 ATR) | 195 | **68%** (meets) | -$5 | -$1,043 / -$7,283 | 1 of 5 | 0.33 | 0.85 |
+| E8 | E6 + high win-rate exits | 327 | **72%** (meets) | -$29 | -$9,337 / -$19,801 | 0 of 4 | 0.67 | 0.85 |
+| L1 | E5, stop 0.5 ATR, lock after +0.5 ATR, keep 60% | 195 | 50% | **+$43** | +$8,450 / +$2,210 | 3 of 5 | **0.011** | 0.40 |
+| L2 | E5, stop 1.5 ATR, lock after +0.5 ATR, keep 50% | 195 | **69%** (meets) | +$28 | +$5,426 / -$814 | 3 of 5 | 0.14 | 0.85 |
+| L3 | E5, stop 1 ATR, lock after +0.5 ATR, keep 75% | 195 | **67%** (meets) | +$37 | +$7,281 / +$1,041 | 2 of 5 | 0.08 | 0.85 |
+
+**MCX GOLDM futures, in 09:05, out 10:00 (Rs per lot; design Aug 2025 - Mar 2026):**
+
+| id | rule | n | win (65% rule) | avg net | total 1x / 2x | twin p | q | worst month |
+|---|---|---|---|---|---|---|---|---|
+| M1 | follow W only if the XAUUSD EMA trend and GOLDM's 09:00-09:05 agree | 40 | 42% | -Rs 1,390 | -Rs 55,614 / -Rs 71,858 | 0.93 | 0.99 | -Rs 27,541 |
+| M2 | walk-forward model (W, gap, 09:00-09:05, US moves, RSI, EMA) | 73 | 56% | -Rs 226 | -Rs 16,484 / -Rs 47,348 | 0.22 | 0.85 | -Rs 17,086 |
+| M3 | follow W + high win-rate exits (target 0.15%) | 150 | 58% | -Rs 345 | -Rs 51,789 / -Rs 111,958 | 0.47 | 0.85 | -Rs 36,256 |
+| M4 | M1 + high win-rate exits | 40 | 45% | -Rs 1,442 | -Rs 57,674 / -Rs 73,917 | 0.99 | 0.99 | -Rs 26,301 |
+| L4 | follow W, stop 0.20%, lock after +0.10%, keep 60% | 150 | 54% | -Rs 475 | -Rs 71,281 / -Rs 131,442 | 0.37 | 0.85 | -Rs 45,672 |
+| L5 | follow W, stop 0.50%, lock after +0.10%, keep 50% | 150 | 55% | -Rs 245 | -Rs 36,742 / -Rs 96,904 | 0.19 | 0.85 | -Rs 36,184 |
+| L6 | follow W, stop 0.30%, lock after +0.10%, keep 75% | 150 | 59% | -Rs 263 | -Rs 39,428 / -Rs 99,596 | 0.30 | 0.85 | -Rs 34,035 |
+
+What this says, in plain words:
+
+1. **Indicators do not find the direction.** The EMA trend, Supertrend, RSI extremes and Bollinger bands at 06:00 all
+   lose. They are right 39-51% of the time. Putting four signals together (E5) or letting a model weigh 13 inputs (E6)
+   lifts the hit rate to 53-55%, still not enough to pay the $32 round trip.
+2. **The win rate goes up when the exits change, not when the signal gets better.**
+   - A small target (E7, E8) or an early lock with a wider stop (L2, L3) wins 67-72% of trades. That reaches Boss's 65%
+     rule.
+   - But the wins are small and the losses are full-sized. The averages stay at -$29 to +$37 a trade. None beats
+     random trades with the same exits.
+   - A 70% win rate with 1-to-2 payoffs is the same coin flip.
+3. **The closest one, L1** (the vote with a tight stop of 0.5 ATR and an early lock), made +$43 a trade on 195 trades.
+   It beats its random twins (p 0.011), but:
+   - it fails BH over the 36 rules tried (q 0.40);
+   - it has only 3 of 5 folds positive;
+   - one fold, Oct 2025 - Mar 2026, made +$11.4k of its +$8.5k total;
+   - it wins only 50%.
+   - It is information only (spot gold), and a 1-in-36 lucky draw is about what p 0.011 looks like after 36 tries.
+4. **On MCX nothing helps.**
+   - Confirmation filters (M1, M4) cut the trades to 40 and make them worse.
+   - The model (M2) and every stop / lock setting (L4-L6) lose -Rs 226 to -Rs 1,442 a trade. The best win rate is 59%.
+   - Every M and L4-L6 rule breaks the -Rs 13k monthly account stop.
+5. **For Boss:** there is no setting of stop, lock, indicator or model that turns the 06:00-08:00 window into a trade.
+   Raising the win rate by itself is easy and does not make money. No paper arm is proposed.
+
+Note on the run: the first Amendment B run required GOLDM's 09:00 minute for every MCX rule. That dropped 13 of 152
+sessions that open at 09:01-09:02, which the plan does not ask for M3 and L4-L6. This was fixed (`mcx_frame`) and the
+design step re-run before any holdout read. The verdict did not change: 0 of 18 both times.
 
 ## What is new compared with the earlier gold work
 

@@ -650,11 +650,11 @@ def run_all(period_x, period_m, folds_x, folds_m, label, learn_from=None, mark_o
     return res, (X, b15, wt, mc), {**a, **b}
 
 
-def table_md(res, cur_a="$", cur_b="Rs"):
+def table_md(res, cur_a="$", cur_b="Rs", is_rs=lambda r: r.startswith("B")):
     lines = ["| id | n | win (65% rule) | avg net | total 1x | total 2x | folds | twin p | BH q | drawdown | worst month | gates passed |",
              "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for rule, s in res.items():
-        cur = cur_b if rule.startswith("B") else cur_a
+        cur = cur_b if is_rs(rule) else cur_a
         fl = " / ".join("-" if x is None else f"{x:+,.0f}" for x in s["folds"])
         g = s["gates"]
         ok = ", ".join(k for k, v in g.items() if v and k != "all") or "none"

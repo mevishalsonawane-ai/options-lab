@@ -1,0 +1,26 @@
+id: r140-e4
+title: 'R140 Amendment B E4: follow the Supertrend 10/3 in the window'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss (31 Oct): more indicators, strategies and stop / lock settings raise the win rate. follow the Supertrend
+  10/3 in the window earns after costs, beats twins with the same exits (p <= 0.05), BH q <= 0.10 over 36, folds positive.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026; GOLDM option-book near future from the Drive lake)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot 15-minute candles completed by 06:00 IST (the underlying); information only'
+model_or_rule: follow the Supertrend 10/3 in the window; every rule has a stop-loss and a 60%-type trailing profit lock
+settings: research/hunt/r140_gold_0600/r140e.py; PREREG.md Amendment B
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 574 trades, win 51% (Boss''s 65% rule: below), avg net $ -49 (2x $ -81), total $ -27,984 (2x $ -46,352);
+    folds -3,413 / -4,334 / -2,894 / +1,085 / -18,429; twin p 0.651, BH q 0.851 (36 R140 rules); drawdown $ -28,385, worst
+    month $ -9,206. Gates failed: net, twins, bh, folds. Holdout not read.'
+  costs: $0.25 spread + $7 commission a 100-oz lot round trip ($32); 2x = $64
+holdout_read: false
+verdict: rejected

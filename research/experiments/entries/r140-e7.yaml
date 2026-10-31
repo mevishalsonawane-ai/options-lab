@@ -1,0 +1,26 @@
+id: r140-e7
+title: 'R140 Amendment B E7: E5 vote + high win-rate exits (target 0.5 ATR)'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss (31 Oct): more indicators, strategies and stop / lock settings raise the win rate. E5 vote + high win-rate
+  exits (target 0.5 ATR) earns after costs, beats twins with the same exits (p <= 0.05), BH q <= 0.10 over 36, folds positive.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026; GOLDM option-book near future from the Drive lake)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot 15-minute candles completed by 06:00 IST (the underlying); information only'
+model_or_rule: E5 vote + high win-rate exits (target 0.5 ATR); every rule has a stop-loss and a 60%-type trailing profit lock
+settings: research/hunt/r140_gold_0600/r140e.py; PREREG.md Amendment B
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 195 trades, win 68% (Boss''s 65% rule: meets), avg net $ -5 (2x $ -37), total $ -1,043 (2x $ -7,283);
+    folds -2,199 / -1,736 / -626 / -231 / +3,748; twin p 0.334, BH q 0.849 (36 R140 rules); drawdown $ -5,864, worst month
+    $ -5,656. Gates failed: net, twins, bh, folds. Holdout not read.'
+  costs: $0.25 spread + $7 commission a 100-oz lot round trip ($32); 2x = $64
+holdout_read: false
+verdict: rejected
