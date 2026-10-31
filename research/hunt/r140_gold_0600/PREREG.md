@@ -288,3 +288,36 @@ for the 06:00 hour).
 up moves, and the share of days on which the vote fires.
 
 **Sizing:** for every rule that passes design, $1,000 at fixed 5x and at risk 1% / 2% (as Amendment D).
+
+## Amendment F (31 Oct 2026, before any Amendment F number): Boss's "5-Step Liquidity Sweep POI" Pine script on US gold
+
+Boss pasted a Pine v6 indicator (31 Oct). It is ported as written and backtested on XAUUSD (information only; not
+tradable via Zerodha). **Signal source: XAUUSD spot candles (the underlying).**
+
+**Port (the script's own defaults):**
+- chart candles of 15 minutes (variants: 5 minutes). The HTF trend is the 60-minute close vs the 60-minute EMA 50,
+  from the last COMPLETED 60-minute candle (request.security with lookahead_off on history);
+- swings are pivots of length 3: the candle 3 bars back is a pivot high when its high is above the 3 highs on each
+  side (strictly). It is known 3 bars later, and then it becomes lastSwingHigh. Pivot lows are the mirror;
+- ATR 14 (Wilder); the POI zone is the last swing +/- 0.5 ATR;
+- BUY on a candle's close when: HTF bullish; the candle overlaps the demand zone; the sweep (low < lastSwingLow and
+  close > lastSwingLow); the confirmation (green, close > previous high); and RR >= 1.5. RR uses: SL = that candle's
+  low, TP = lastSwingHigh. SELL is the mirror;
+- entry at the next 1-minute open after the signal candle closes; SL and TP checked on 1-minute highs and lows (both in
+  one minute = the SL). One trade at a time. The script has no time exit, so a **12-hour cap** is added (out at the
+  open of the first minute after 12 h).
+
+| id | chart | exits |
+|---|---|---|
+| F1 | 15m | the script's SL / TP (and the 12 h cap) |
+| F2 | 15m | F1 + a profit lock: once the open profit reaches 1R, exit if it falls to 60% of its peak (house rule: every trade has a stop and a lock) |
+| F3 | 5m | as F1 |
+| F4 | 5m | as F2 |
+| F5 | 15m | F2, only signals whose entry falls 06:00-08:00 IST (Boss's original window) |
+
+**Costs:** $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also. **Periods:** design 2 Oct 2023 - 31 Mar 2026
+(5 folds as s2). **Holdout 1 Apr - 30 Oct 2026, never read for these rules**, read once, only for a rule passing
+every design gate. **Twins:** for each trade, the same clock time on a random other day, a random side (same share of
+longs), and the same SL and TP distances in $. **Gates:** net > 0 at 1x and 2x; twin p <= 0.05; **BH over 95** (90 +
+5); >= 100 trades (F5 >= 30); >= 4 of 5 folds positive. Win rate against Boss's 65% rule. $1,000 sizing (5x, risk
+1% / 2% of the balance on the SL distance, capped at 20x) reported for every rule.
