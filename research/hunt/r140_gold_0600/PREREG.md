@@ -321,3 +321,36 @@ every design gate. **Twins:** for each trade, the same clock time on a random ot
 longs), and the same SL and TP distances in $. **Gates:** net > 0 at 1x and 2x; twin p <= 0.05; **BH over 95** (90 +
 5); >= 100 trades (F5 >= 30); >= 4 of 5 folds positive. Win rate against Boss's 65% rule. $1,000 sizing (5x, risk
 1% / 2% of the balance on the SL distance, capped at 20x) reported for every rule.
+
+## Amendment G (31 Oct 2026, before any Amendment G number): Boss's second setup, the internal-origin-low sweep after a BOS
+
+Boss, 31 Oct, sent a diagram and this description (the Pine v5 code he mentioned did not arrive, so the rule is built
+from the description): *"Uptrend: higher highs and higher lows. Bullish BOS: price breaks above the previous swing
+high. Internal origin low: the exact higher low that produced the impulse move up to break structure. The trigger:
+price pulls back from the high, dips briefly below the key line (sweeping the low), then recovers back above it.
+Options for a strict sweep (wick below and close back above) or a simple structural break."* US gold (XAUUSD),
+information only. **Signal source: XAUUSD spot candles (the underlying).**
+
+**The rule (BUY; SELL is the exact mirror), on chart candles, swings = pivots of length 3 as in Amendment F:**
+1. **BOS:** a candle closes above the last confirmed swing high SH.
+2. **Origin low OL:** the lowest low from SH's candle to the BOS candle (the higher low that launched the break).
+3. **Impulse high IH:** the highest high from the BOS candle on (updated while waiting).
+4. **Trigger, within 30 candles of the BOS:**
+   - **strict:** a candle's low < OL and its close > OL (wick below, close back above);
+   - **simple:** a candle closes back above OL within 3 candles after a candle that traded below OL.
+   - The setup is cancelled by a new BOS (a new setup starts), by 30 candles passing, or (strict) by a close below OL
+     that is not recovered on that candle. Simple allows that one dip and the recovery within 3 candles.
+5. **Entry** at the next minute's open. **SL** = the lowest low since price first went below OL. **TP** = IH. The trade
+   needs RR >= 1.5 at the signal close, as in Boss's first script. **Profit lock** (house rule): once the open profit
+   reaches 1R, exit if it falls to 60% of its peak. 12-hour cap. One trade at a time.
+
+| id | chart | trigger | extra |
+|---|---|---|---|
+| K1 | 15m | strict | |
+| K2 | 15m | simple | |
+| K3 | 5m | strict | |
+| K4 | 15m | strict | only with the 60-minute trend agreeing (close vs EMA 50, as Amendment F) |
+
+Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never read for these rules**), twins (the
+same clock time, a random day and side, the same $ SL / TP), gates (>= 100 trades; >= 4 of 5 folds) and $1,000 sizing
+as Amendment F. **BH over 99** (95 + 4).
