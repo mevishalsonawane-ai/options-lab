@@ -148,3 +148,72 @@ def test_lookahead_guard():
                           round(x.fake, 6)) for x in M.detect(cht, "NIFTY", cfg)]
                 assert (d, r0 - 1, round(e.level, 6), round(e.neck, 6), round(e.fake, 6)) in again
     assert found > 0
+
+
+# ------------------------------------------------------------------------------------------------ Amendment A
+import r138b as A  # noqa: E402
+
+
+def test_band_removed_or_scaled_to_atr():
+    bars = list(M_BARS)
+    bars[3] = (20070, 20072, 20060, 20065)          # (no other pair of highs within 5 points)
+    bars[6] = (20075, 20085, 20070, 20080)          # B 15 points under A: outside 5 points
+    bars[7] = (20080, 20088, 20075, 20085)
+    assert tops(bars) == []
+    ev = tops(bars, A.STAGE1["U0"])                  # no band: still an M, level = A's 20100
+    assert [(e.a - 25, e.c - 25, -e.level) for e in ev] == [(2, 9, 20100)]
+    assert M.band("NIFTY", 20000, 22.0, A.STAGE1["U1"]) == pytest.approx(5.5)
+    assert M.band("NIFTY", 20000, 22.0, A.STAGE1["U2"]) == pytest.approx(11.0)
+    assert M.band("NIFTY", 20000, 22.0, A.STAGE1["U0"]) == np.inf
+    assert M.band("BANKNIFTY", 20000, 22.0, M.CONFIGS[M.PRIMARY]) == pytest.approx(20000 * M.TOL_PCT)
+
+
+def test_filters_e1_e2_e3():
+    after = [(20090, 20092, 20085, 20088)] + AFTER[1:]
+    g = grid([PREV, M_BARS + after], tf=15)
+    sides = M.R.sides_of(g)
+    (sd, c), = A.m_cands(sides, "NIFTY", M.CONFIGS[M.PRIMARY])
+    assert A.keep_filter(sides, c, {"E1"})            # 11:45 entry, before 14:00
+    assert A.keep_filter(sides, c, {"E2"})            # neckline 50 points away, stop 24: reward >= 1.5 x risk
+    assert not A.keep_filter(sides, c, {"E3"})        # 20090 is above the day's open 20000: not with the day
+    g2 = grid([PREV, M_BARS + AFTER], tf=15)
+    s2 = M.R.sides_of(g2)
+    (_, c2), = A.m_cands(s2, "NIFTY", M.CONFIGS[M.PRIMARY])
+    assert not A.keep_filter(s2, c2, {"E2"})          # already past the neckline at entry
+    c2.r0 = M.K.row(14, 30)
+    assert not A.keep_filter(s2, c2, {"E1"})
+
+
+def test_flip_buys_the_close_back_above_the_fake_high():
+    after = [(20095, 20118, 20094, 20115)] + AFTER[1:]   # closes above the fake high 20110
+    g = grid([PREV, M_BARS + after], tf=15)
+    sides = M.R.sides_of(g)
+    fl = A.flip_cands(sides, A.m_cands(sides, "NIFTY", M.CONFIGS[M.PRIMARY]))
+    assert [(sd, c.d, c.r0) for sd, c in fl] == [(1, 1, 11 * 15)]
+    assert fl[0][1].stop == pytest.approx(M.R.stop_below(20094))
+    assert A.flip_cands(M.R.sides_of(grid([PREV, M_BARS + AFTER], tf=15)),
+                        A.m_cands(M.R.sides_of(grid([PREV, M_BARS + AFTER], tf=15)), "NIFTY",
+                                  M.CONFIGS[M.PRIMARY])) == []
+
+
+def test_amendment_variants():
+    assert set(A.STAGE1) == {"U0", "U1", "U2"} and A.STAGE2 == ("E1", "E2", "E3", "E4", "E5", "E6", "E7")
+
+
+def test_lookahead_guard_amendment():
+    rng = np.random.default_rng(1381)
+    g = random_grid(rng, 15)
+    S = M.R.sides_of(g)
+    found = 0
+    for cfg in A.STAGE1.values():
+        ch = S[-1].chart(15)
+        full = M.detect(ch, "NIFTY", cfg)
+        found += len(full)
+        for i in rng.choice(len(full), size=min(5, len(full)), replace=False) if full else []:
+            e = full[i]
+            d, r0 = int(ch.day[e.e]), int(ch.B.end[e.e]) + 1
+            cht = M.R.sides_of(truncate(g, d, r0))[-1].chart(15)
+            again = [(int(cht.day[x.e]), int(cht.B.end[x.e]), round(x.level, 6), round(x.neck, 6))
+                     for x in M.detect(cht, "NIFTY", cfg)]
+            assert (d, r0 - 1, round(e.level, 6), round(e.neck, 6)) in again
+    assert found > 0

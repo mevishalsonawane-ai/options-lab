@@ -64,6 +64,26 @@ def tolerance(und: str, price: float) -> float:
     return NIFTY_TOL if und == "NIFTY" else TOL_PCT * abs(price)
 
 
+def band(und: str, price: float, atr_b: float, cfg: dict) -> float:
+    """The two touches' band: R138's fixed 5 NIFTY points / 0.022% (default), or Amendment A's none / k x ATR14."""
+    mode = cfg.get("band", "fixed")
+    if mode == "none":
+        return np.inf
+    if mode == "atr":
+        return cfg["k"] * atr_b
+    return tolerance(und, price)
+
+
+def band_max(price: float, atr_b: float, cfg: dict) -> float:
+    """An upper bound of band() for any first touch near price (for the early stop of the search)."""
+    mode = cfg.get("band", "fixed")
+    if mode == "none":
+        return np.inf
+    if mode == "atr":
+        return cfg["k"] * atr_b
+    return TOL_PCT * abs(price) + NIFTY_TOL
+
+
 # ------------------------------------------------------------------------------------------------ the pattern
 @dataclass
 class Event:
@@ -95,7 +115,7 @@ def detect(ch: R.Chart, und: str, cfg: dict) -> list:
         run_min, run_max = np.inf, -np.inf     # lows / highs strictly between a and b
         for a in range(b - 1, lo_a - 1, -1):
             if a <= b - MIN_GAP:
-                tol = tolerance(und, l[a])
+                tol = band(und, l[a], atr[b], cfg)
                 lmin = min(l[a], l[b])
                 if (abs(l[a] - l[b]) <= tol and run_min >= lmin and run_max - lmin >= PULL_ATR * atr[b]):
                     lvl = lmin if cfg["level"] == "max" else (l[a] + l[b]) / 2
@@ -111,7 +131,7 @@ def detect(ch: R.Chart, und: str, cfg: dict) -> list:
                                 best[t] = (b, a, lvl, float(run_max), tol)
             run_min = min(run_min, l[a])
             run_max = max(run_max, h[a])
-            if run_min < l[b] - TOL_PCT * abs(l[b]) - NIFTY_TOL:      # no earlier a can hold the level any more
+            if run_min < l[b] - band_max(l[b], atr[b], cfg):          # no earlier a can hold the level any more
                 break
     out = []
     for t in sorted(best):
