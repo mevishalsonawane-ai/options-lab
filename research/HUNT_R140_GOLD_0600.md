@@ -443,6 +443,15 @@ fires one BUY). BH over 113.*
 | J4 | Internal SMC sweep, 5m, + lock | 577 | 41% | $-49 | $-28,069 / $-46,533 | 0.87 | 1.00 | -37% |
 | J5 | Internal SMC sweep, 15m, + lock, with the 60m trend | 154 | 51% | $-106 | $-16,355 / $-21,283 | 0.93 | 1.00 | -17% |
 
+### Note: the "First-Bar Sweep" version of the Internal SMC script (Boss, 31 Oct)
+
+Boss sent a second version in which the FIRST candle to dip below the HL must close back above it, or the level is
+dropped. This was checked against Amendment J's port on the same data, and it is the same rule in practice. A candle
+that closes below the HL has always dipped below it, so the only difference is a candle that closes exactly on the
+level. Over Oct 2023 - Oct 2026 it gives 281 of the old version's 282 signals on 15m (0 new) and 717 of 719 on 5m (0
+new). Amendment J's numbers therefore stand for it: 15m, 232 design trades, 39% win, -$108 a lot (with the lock: 51%
+win, -$105). It is not counted as a new test.
+
 ## Amendment K: Boss's setups only from 06:00 to 08:00 IST and from 16:00 to 18:00 IST
 
 *Pre-registered in PREREG.md Amendment K (commit 651956f). Boss's five setups (15m, 60% lock) are kept only when the
