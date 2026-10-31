@@ -36,6 +36,9 @@ TWINS = 2000
 TEST = (date(2022, 12, 1), date(2024, 11, 19))
 YEARS = {"Y1": (date(2022, 12, 1), date(2023, 11, 30)), "Y2": (date(2023, 12, 1), date(2024, 11, 19))}
 CHECK = (date(2024, 11, 20), date(2024, 12, 31))
+# The engine check skips the old store's last day: its expiry flag needs the next session, which the old store does not
+# have (31 Dec 2024 was a FINNIFTY expiry; found 31 Oct, the only difference between the stores).
+CHECK_CMP = (date(2024, 11, 20), date(2024, 12, 30))
 OLD_WARM, OLD_START, OLD_END = date(2022, 9, 1), date(2022, 11, 1), date(2024, 12, 31)
 A10_CUT = 1.3206
 CUTS = {"R51": dict(A1_40=1.6274061753648996, A7_20=0.9946660973025536),
@@ -109,7 +112,7 @@ def arm_trades(arm: str, lo: date, hi: date):
 def build():
     patch_old()
     import r51data as R  # noqa: F401  (pickle the Day class under its module name)
-    for u in K.UNDS:
+    for u in r51cfg().UNDS:
         print(S.mods()["r51data"].build(u), flush=True)
 
 
@@ -132,11 +135,12 @@ def run():
         arm = v["arm"]
         if arm not in cache:
             us, base = arm_trades(arm, TEST[0], CHECK[1])
-            mine = trade_set([x for x in base if in_(x, *CHECK)])
-            same = mine == main[arm]
-            out["parity"][arm] = dict(main=len(main[arm]), old=len(mine), identical=same)
+            mine = trade_set([x for x in base if in_(x, *CHECK_CMP)])
+            ref = [x for x in main[arm] if x[1] <= str(CHECK_CMP[1])]
+            same = mine == ref
+            out["parity"][arm] = dict(main=len(ref), old=len(mine), identical=same)
             print("parity", arm, out["parity"][arm], flush=True)
-            assert same, (arm, "the old store does not reproduce the main store's trades on 20 Nov - 31 Dec 2024")
+            assert same, (arm, "the old store does not reproduce the main store's trades on 20 Nov - 30 Dec 2024")
             feats = A.all_features(us) if arm != "R52" else {}
             base_res = {(key[0], key[1], int(c["er"]), c["side"]): r
                         for key, cs, rr, _ in us for c, r in zip(cs, rr) if r is not None}
