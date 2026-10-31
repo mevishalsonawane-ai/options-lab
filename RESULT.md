@@ -6,6 +6,6 @@
 5. $1,000 at 5x: H11b +21.5% over 2.5 years design (worst DD -3.6%), +1.9% in the holdout; risking 2% a trade +88% design (DD -13%).
 6. Caveats: 1 hour of 24 tried; most design profit in Oct 2025-Mar 2026; 62% win < Boss's 65% rule; not tradable via Zerodha.
 7. Boss's Pine "5-Step Liquidity Sweep POI": 0 of 5 pass; as written (15m) 255 trades, 32% win, -$32/100 oz; $1,000 at 5x -15%.
-8. Boss's origin-low sweep (0 of 4, -$15 to -$73/100 oz), refined Pine (0 of 5; as written 30% win, -$63), break and retest (0 of 4; 34% win, -$34 on 1,574), Internal SMC HL/LH sweep (0 of 5; 39% win, -$108 on 232).
-9. GOLDM (MCX) link: all 13 rules lose after costs; no paper arm for MCX. Write-up research/HUNT_R140_GOLD_0600.md; 115 entries r140-*.yaml.
+8. Boss's origin-low sweep (0 of 4, -$15 to -$73/100 oz), refined Pine (0 of 5; as written 30% win, -$63), break and retest (0 of 4; 34% win, -$34 on 1,574), Internal SMC HL/LH sweep (0 of 5; 39% win, -$108 on 232); only 06-08 / 16-18 IST: 0 of 10.
+9. GOLDM (MCX) link: all 13 rules lose after costs; no paper arm for MCX. Write-up research/HUNT_R140_GOLD_0600.md; 125 entries r140-*.yaml.
 10. For Boss: forward-test H11b on paper (offshore or crypto-gold venue, 5x or less, 3-6 months) before any money; nothing to change in the app.

@@ -1,0 +1,25 @@
+id: r140-w9
+title: 'R140 Amendment K W9: Internal SMC sweep (15m, 60% lock) only 06:00-08:00 IST'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss (31 Oct): try only 06-08 and 16-18 IST. Internal SMC sweep (15m, 60% lock) only 06:00-08:00 IST earns on
+  XAUUSD after costs and beats same-time twins.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot candles (the underlying); information only'
+model_or_rule: Internal SMC sweep (15m, 60% lock) only 06:00-08:00 IST; 12 h cap
+settings: research/hunt/r140_gold_0600/r140w.py; PREREG.md Amendment K
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 36 trades, win 36% (65% rule: below), avg net $-143 a 100-oz lot (2x $-175), total $-5,139; folds -151
+    / -353 / -103 / -1,983 / -2,548; twin p 0.951, BH q 1.000 (123). Gates failed: net, twins, bh, folds. Holdout not read.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+holdout_read: false
+verdict: rejected

@@ -25,7 +25,7 @@ US summer and 03:30 IST in winter) and the hours after it do not guess the windo
 4-signal vote (H11b): +$95 a 100-oz lot on 186 design trades and +$58 on 29 holdout trades. $1,000 at 5x: +21.5% in
 2.5 years. It is a forward-test candidate, not proven (one hour of 24; most profit in one fold; Sep-Oct slightly
 negative). Boss's indicators (three Pine scripts, the origin-low sweep and the break-and-retest from his screenshot;
-Amendments F-J) all lose on gold.**
+Amendments F-J) all lose on gold, also when kept to 06:00-08:00 or 16:00-18:00 IST (Amendment K).**
 
 **Amendment B (Boss: add indicators, strategies and stop / lock settings to raise the win rate): 0 of 18 more pass.
 The win rate can be lifted to 67-72% by taking small profits early, but the average trade stays at about zero. See
@@ -442,6 +442,33 @@ fires one BUY). BH over 113.*
 | J3 | Internal SMC sweep, 15m, wick BOS (confirmClose off), + lock | 0 | 0% | $+0 | $+0 / $+0 | 1.00 | 1.00 | +0% |
 | J4 | Internal SMC sweep, 5m, + lock | 577 | 41% | $-49 | $-28,069 / $-46,533 | 0.87 | 1.00 | -37% |
 | J5 | Internal SMC sweep, 15m, + lock, with the 60m trend | 154 | 51% | $-106 | $-16,355 / $-21,283 | 0.93 | 1.00 | -17% |
+
+## Amendment K: Boss's setups only from 06:00 to 08:00 IST and from 16:00 to 18:00 IST
+
+*Pre-registered in PREREG.md Amendment K (commit 651956f). Boss's five setups (15m, 60% lock) are kept only when the
+signal falls in the window. Code `r140w.py`, tests `test_r140w.py`. BH over 123.*
+
+**Narrowing to these two windows does not rescue any setup: 0 of 10 pass, and the holdout was not read.**
+- Only two lines make money, and both fail BH and the folds:
+  - the first Pine at 06:00-08:00 (W1 = F5): +$109 a lot, but on only 20 trades in 2.5 years;
+  - break and retest at 16:00-18:00 (W8): +$42 a lot on 123 trades, with all the profit in Oct 2025 - Mar 2026
+    (+$11.8k after -$5.7k in the fold before).
+- 16:00-18:00 IST is worse than 06:00-08:00 for most setups: both Pine scripts lose -$257 to -$274 a lot there. The
+  London afternoon runs through these levels instead of turning at them.
+- No line reaches Boss's 65% win rate (36-59%).
+
+| id | setup | window | n | win | avg / 100 oz | total 1x / 2x | twin p | q | $1,000 at 5x (2.5 y) |
+|---|---|---|---|---|---|---|---|---|---|
+| W1 | first Pine | 06:00-08:00 IST | 20 | 55% | $+109 | $+2,178 / $+1,538 | 0.10 | 0.45 | +2% |
+| W2 | first Pine | 16:00-18:00 IST | 36 | 44% | $-274 | $-9,862 / $-11,014 | 0.99 | 1.00 | -11% |
+| W3 | refined Pine | 06:00-08:00 IST | 35 | 57% | $-4 | $-126 / $-1,246 | 0.39 | 0.85 | -1% |
+| W4 | refined Pine | 16:00-18:00 IST | 39 | 46% | $-257 | $-10,027 / $-11,275 | 0.99 | 1.00 | -12% |
+| W5 | origin-low sweep | 06:00-08:00 IST | 100 | 39% | $-55 | $-5,468 / $-8,668 | 0.73 | 1.00 | -8% |
+| W6 | origin-low sweep | 16:00-18:00 IST | 76 | 47% | $-15 | $-1,158 / $-3,590 | 0.40 | 0.85 | -4% |
+| W7 | break and retest | 06:00-08:00 IST | 181 | 41% | $-81 | $-14,735 / $-20,527 | 0.90 | 1.00 | -21% |
+| W8 | break and retest | 16:00-18:00 IST | 123 | 48% | $+42 | $+5,215 / $+1,279 | 0.11 | 0.45 | +2% |
+| W9 | Internal SMC sweep | 06:00-08:00 IST | 36 | 36% | $-143 | $-5,139 / $-6,291 | 0.95 | 1.00 | -7% |
+| W10 | Internal SMC sweep | 16:00-18:00 IST | 17 | 59% | $-134 | $-2,281 / $-2,825 | 0.70 | 1.00 | -2% |
 
 ## What is new compared with the earlier gold work
 
