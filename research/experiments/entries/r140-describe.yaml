@@ -1,0 +1,28 @@
+id: r140-describe
+title: 'R140: what XAUUSD does 06:00-08:00 IST and how it links to MCX GOLDM (descriptive)'
+family: market-facts
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: Describe the 06:00-08:00 IST gold window by US DST regime and its correlation with MCX GOLDM's gap and first hour
+  (no trade, no gate).
+data_version: as r140-a1
+period:
+  design: 2023-10-02..2026-03-31 (MCX 2025-08-05..2026-03-31)
+  holdout: full-period tables made after the holdout step, labelled
+instruments:
+- XAUUSD
+- GOLDM
+features:
+- 'signal source: XAUUSD spot 15-minute candles; GOLDM near future minute closes'
+model_or_rule: descriptive tables (results/design.json describe; results/full_describe.json)
+settings: PREREG.md s7
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: null
+results:
+  summary: 'Design 575 window days: mean +4.4 bp (se 1.8), up 56%, median abs move $4.28, median range $11.28 (39 bp); corr
+    with the US session +0.04, with the prior day +0.06; each 15m candle green 48-55%. MCX (132 non-roll days): corr(window,
+    09:00 gap) +0.30, corr(window, GOLDM 09:05-10:00) +0.36 but same sign only 55%; following it 09:05-10:00 makes +Rs 523
+    a lot before costs (se Rs 747, n 151), costs about Rs 400.'
+  costs: none (descriptive)
+holdout_read: null
+verdict: not-a-test

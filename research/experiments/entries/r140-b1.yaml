@@ -1,0 +1,30 @@
+id: r140-b1
+title: 'R140 B1: GOLDM follows the XAUUSD 06:00-08:00 move, 09:05-10:00'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: The window predicts GOLDM 09:05-10:00 after costs; beats random same-time twins (p <= 0.05), BH q <= 0.10 over
+  12, >= 3 of 4 folds positive, drawdown above -Rs 40k and no month below -Rs 13k.
+data_version: XAUUSD Dukascopy BID 1-min (research-data release xauusd_m1_bid.csv.gz to 30 Sep 2026 + Dukascopy tail to 30
+  Oct 2026); GOLDM near future from the Drive lake options_rolling_1m GOLDM book (R53 loader), copied 31 Oct 2026
+period:
+  design: 2025-08-05..2026-03-31 (4 two-month folds)
+  holdout: '2026-04-01..2026-10-19 (locked; not read: nothing passed)'
+instruments:
+- GOLDM
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot (the underlying) 06:00-08:00 IST, 15-minute candles; trades the MCX GOLDM future'
+model_or_rule: 'GOLDM future follows the XAUUSD 06:00-08:00 direction: in 09:05, out 10:00. Stop 0.30% of entry; lock 60%
+  of peak after +0.20%; minute closes'
+settings: research/hunt/r140_gold_0600/r140.py; PREREG.md s4
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 151 trades, win 52% (Boss''s 65% rule: below), avg net Rs -345 (2x Rs -746), total Rs -52,122 (2x Rs -112,605);
+    folds -8,509 / -8,026 / -49,812 / +14,225; twin p 0.225 (twin median total Rs -82,069), BH q 0.674 (12 R140 variants);
+    drawdown Rs -66,348, worst month Rs -38,924 (1 lot). Gates failed: net, twins, bh, folds, account. Holdout not read (nothing
+    passed).'
+  costs: Zerodha MCX futures charges (fut_leg_charges) + half-spread max(1 tick, 1 bp)/2 a fill, 1 lot; 2x doubles both
+holdout_read: false
+verdict: rejected
