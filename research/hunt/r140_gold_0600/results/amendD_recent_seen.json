@@ -1,0 +1,356 @@
+{
+ "G1": {
+  "rule": "G1",
+  "n": 17,
+  "win": 0.764706,
+  "avg": 132.779034,
+  "total": 2257.243571,
+  "total2": 1713.243571,
+  "avg2": 100.779034,
+  "longs": 6,
+  "folds": [
+   2257.243571
+  ],
+  "dd": -492.647857,
+  "worst_month": 757.752143,
+  "months_green": "2/2",
+  "why": {
+   "stop": 4,
+   "lock": 13,
+   "time": 0
+  },
+  "sizing_1000": {
+   "5x": {
+    "end": 1026.949537,
+    "ret": 0.02695,
+    "max_dd_pct": -0.006096,
+    "worst_month": 9.327897,
+    "months_green": "2/2",
+    "avg_win": 3.379105,
+    "avg_loss": -4.244708
+   },
+   "risk1": {
+    "end": 1092.938121,
+    "ret": 0.092938,
+    "max_dd_pct": -0.011326,
+    "worst_month": 41.846567,
+    "months_green": "2/2",
+    "avg_win": 10.713371,
+    "avg_loss": -11.583925
+   },
+   "risk2": {
+    "end": 1110.228,
+    "ret": 0.110228,
+    "max_dd_pct": -0.024469,
+    "worst_month": 39.142205,
+    "months_green": "2/2",
+    "avg_win": 13.976916,
+    "avg_loss": -17.867977
+   },
+   "risk2_2x_costs": {
+    "end": 1082.073192,
+    "ret": 0.082073,
+    "max_dd_pct": -0.030585,
+    "worst_month": 23.437005,
+    "months_green": "2/2",
+    "avg_win": 12.228572,
+    "avg_loss": -19.224562
+   }
+  }
+ },
+ "G2": {
+  "rule": "G2",
+  "n": 17,
+  "win": 0.411765,
+  "avg": 10.017101,
+  "total": 170.290714,
+  "total2": -373.709286,
+  "avg2": -21.982899,
+  "longs": 6,
+  "folds": [
+   170.290714
+  ],
+  "dd": -1251.821429,
+  "worst_month": -81.266429,
+  "months_green": "1/2",
+  "why": {
+   "stop": 10,
+   "lock": 7,
+   "time": 0
+  },
+  "sizing_1000": {
+   "5x": {
+    "end": 1001.967337,
+    "ret": 0.001967,
+    "max_dd_pct": -0.014944,
+    "worst_month": -1.264803,
+    "months_green": "1/2",
+    "avg_win": 5.520391,
+    "avg_loss": -3.66754
+   },
+   "risk1": {
+    "end": 1002.483914,
+    "ret": 0.002484,
+    "max_dd_pct": -0.044406,
+    "worst_month": -5.888505,
+    "months_green": "1/2",
+    "avg_win": 16.314493,
+    "avg_loss": -11.171754
+   },
+   "risk2": {
+    "end": 1005.455009,
+    "ret": 0.005455,
+    "max_dd_pct": -0.058903,
+    "worst_month": -6.001973,
+    "months_green": "1/2",
+    "avg_win": 21.77337,
+    "avg_loss": -14.695858
+   },
+   "risk2_2x_costs": {
+    "end": 979.809111,
+    "ret": -0.020191,
+    "max_dd_pct": -0.067783,
+    "worst_month": -19.807097,
+    "months_green": "0/2",
+    "avg_win": 20.019465,
+    "avg_loss": -16.032714
+   }
+  }
+ },
+ "G3": {
+  "rule": "G3",
+  "n": 17,
+  "win": 0.764706,
+  "avg": 116.153151,
+  "total": 1974.603571,
+  "total2": 1430.603571,
+  "avg2": 84.153151,
+  "longs": 6,
+  "folds": [
+   1974.603571
+  ],
+  "dd": -510.317857,
+  "worst_month": 622.682143,
+  "months_green": "2/2",
+  "why": {
+   "stop": 4,
+   "lock": 13,
+   "time": 0
+  },
+  "sizing_1000": {
+   "5x": {
+    "end": 1023.503507,
+    "ret": 0.023504,
+    "max_dd_pct": -0.006309,
+    "worst_month": 7.613009,
+    "months_green": "2/2",
+    "avg_win": 3.112057,
+    "avg_loss": -4.238308
+   },
+   "risk1": {
+    "end": 1081.842854,
+    "ret": 0.081843,
+    "max_dd_pct": -0.011326,
+    "worst_month": 36.530827,
+    "months_green": "2/2",
+    "avg_win": 9.84479,
+    "avg_loss": -11.534854
+   },
+   "risk2": {
+    "end": 1095.539457,
+    "ret": 0.095539,
+    "max_dd_pct": -0.025297,
+    "worst_month": 31.650195,
+    "months_green": "2/2",
+    "avg_win": 12.813933,
+    "avg_loss": -17.760417
+   },
+   "risk2_2x_costs": {
+    "end": 1067.73564,
+    "ret": 0.067736,
+    "max_dd_pct": -0.03141,
+    "worst_month": 16.222717,
+    "months_green": "2/2",
+    "avg_win": 11.090318,
+    "avg_loss": -19.109623
+   }
+  }
+ },
+ "G4": {
+  "rule": "G4",
+  "n": 17,
+  "win": 0.764706,
+  "avg": 132.779034,
+  "total": 2257.243571,
+  "total2": 1713.243571,
+  "avg2": 100.779034,
+  "longs": 6,
+  "folds": [
+   2257.243571
+  ],
+  "dd": -492.647857,
+  "worst_month": 757.752143,
+  "months_green": "2/2",
+  "why": {
+   "stop": 4,
+   "lock": 13,
+   "time": 0
+  },
+  "sizing_1000": {
+   "5x": {
+    "end": 1026.949537,
+    "ret": 0.02695,
+    "max_dd_pct": -0.006096,
+    "worst_month": 9.327897,
+    "months_green": "2/2",
+    "avg_win": 3.379105,
+    "avg_loss": -4.244708
+   },
+   "risk1": {
+    "end": 1092.938121,
+    "ret": 0.092938,
+    "max_dd_pct": -0.011326,
+    "worst_month": 41.846567,
+    "months_green": "2/2",
+    "avg_win": 10.713371,
+    "avg_loss": -11.583925
+   },
+   "risk2": {
+    "end": 1110.228,
+    "ret": 0.110228,
+    "max_dd_pct": -0.024469,
+    "worst_month": 39.142205,
+    "months_green": "2/2",
+    "avg_win": 13.976916,
+    "avg_loss": -17.867977
+   },
+   "risk2_2x_costs": {
+    "end": 1082.073192,
+    "ret": 0.082073,
+    "max_dd_pct": -0.030585,
+    "worst_month": 23.437005,
+    "months_green": "2/2",
+    "avg_win": 12.228572,
+    "avg_loss": -19.224562
+   }
+  }
+ },
+ "G5": {
+  "rule": "G5",
+  "n": 38,
+  "win": 0.736842,
+  "avg": 100.928853,
+  "total": 3835.296429,
+  "total2": 2619.296429,
+  "avg2": 68.928853,
+  "longs": 12,
+  "folds": [
+   3835.296429
+  ],
+  "dd": -694.567857,
+  "worst_month": 1567.727857,
+  "months_green": "2/2",
+  "why": {
+   "stop": 9,
+   "lock": 29,
+   "time": 0
+  },
+  "sizing_1000": {
+   "5x": {
+    "end": 1045.913817,
+    "ret": 0.045914,
+    "max_dd_pct": -0.008662,
+    "worst_month": 19.45612,
+    "months_green": "2/2",
+    "avg_win": 2.909699,
+    "avg_loss": -3.555776
+   },
+   "risk1": {
+    "end": 1152.077729,
+    "ret": 0.152078,
+    "max_dd_pct": -0.022016,
+    "worst_month": 66.819547,
+    "months_green": "2/2",
+    "avg_win": 9.318276,
+    "avg_loss": -10.8834
+   },
+   "risk2": {
+    "end": 1188.558326,
+    "ret": 0.188558,
+    "max_dd_pct": -0.034433,
+    "worst_month": 84.719842,
+    "months_green": "2/2",
+    "avg_win": 12.2544,
+    "avg_loss": -15.456488
+   },
+   "risk2_2x_costs": {
+    "end": 1122.434872,
+    "ret": 0.122435,
+    "max_dd_pct": -0.037572,
+    "worst_month": 45.46835,
+    "months_green": "2/2",
+    "avg_win": 10.316062,
+    "avg_loss": -16.641487
+   }
+  }
+ },
+ "G6": {
+  "rule": "G6",
+  "n": 38,
+  "win": 0.736842,
+  "avg": 100.928853,
+  "total": 3835.296429,
+  "total2": 2619.296429,
+  "avg2": 68.928853,
+  "longs": 12,
+  "folds": [
+   3835.296429
+  ],
+  "dd": -694.567857,
+  "worst_month": 1567.727857,
+  "months_green": "2/2",
+  "why": {
+   "stop": 9,
+   "lock": 29,
+   "time": 0
+  },
+  "sizing_1000": {
+   "5x": {
+    "end": 1045.913817,
+    "ret": 0.045914,
+    "max_dd_pct": -0.008662,
+    "worst_month": 19.45612,
+    "months_green": "2/2",
+    "avg_win": 2.909699,
+    "avg_loss": -3.555776
+   },
+   "risk1": {
+    "end": 1152.077729,
+    "ret": 0.152078,
+    "max_dd_pct": -0.022016,
+    "worst_month": 66.819547,
+    "months_green": "2/2",
+    "avg_win": 9.318276,
+    "avg_loss": -10.8834
+   },
+   "risk2": {
+    "end": 1188.558326,
+    "ret": 0.188558,
+    "max_dd_pct": -0.034433,
+    "worst_month": 84.719842,
+    "months_green": "2/2",
+    "avg_win": 12.2544,
+    "avg_loss": -15.456488
+   },
+   "risk2_2x_costs": {
+    "end": 1122.434872,
+    "ret": 0.122435,
+    "max_dd_pct": -0.037572,
+    "worst_month": 45.46835,
+    "months_green": "2/2",
+    "avg_win": 10.316062,
+    "avg_loss": -16.641487
+   }
+  }
+ }
+}

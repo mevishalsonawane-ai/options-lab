@@ -224,6 +224,50 @@ How to read it:
 - Per trade at 0.01 lot: average win +$1.10 to +$3.14, average loss -$2.69 to -$8.55, worst single trade -$9.53
   (-4.8% of $200).
 
+## Amendment D: bigger profit per trade on US gold, and a $1,000 account (Boss, 31 Oct)
+
+*Pre-registered in PREREG.md Amendment D (commit 54d9619) before any number. Code `r140g.py`, tests `test_r140g.py`,
+results `results/amendD_design.json`, `amendD_holdout.lock`, `amendD_recent_seen.json`. US gold only; information only.*
+
+**Closer, but still no pass (0 of 6).** Three versions (G1, G3, G4) now pass four of the five gates: profit at 1x and
+2x costs, they beat random twins (p 0.006-0.007), and BH over all 42 R140 rules (q 0.098). They fail the walk-forward
+gate: 2023-24 (F1, F2) lost, and almost all the profit came in one fold, Oct 2025 - Mar 2026 (+$10.3k to +$11.4k of
++$8.7k to +$9.9k in total per 100-oz lot). So the holdout (Apr - Aug 2026) stays closed.
+
+| id | rule | n | win | avg net / 100 oz | folds (F1..F5) | twin p | q (42) | $1,000 at 5x: return / worst DD (2.5 y) | $1,000 at risk 2%: return / worst DD (2.5 y) | Sep-Oct 2026 (seen): n, 5x / risk 2% |
+|---|---|---|---|---|---|---|---|---|---|---|
+| G1 | vote 4/4, stop 0.5 ATR, lock +0.5 keep 60%, out 12:30 IST | 195 | 50% | $+45 | -2,382 / -1,553 / +890 / +390 / +11,351 | 0.006 | 0.098 | +5.8% / -8.8% | -2.0% / -28.7% | 17, +2.7% / +11.0% |
+| G2 | vote 4/4, stop 0.5 ATR, lock +1.0 keep 60%, out 12:30 IST | 195 | 35% | $-5 | -2,085 / -912 / +1,521 / -1,243 / +1,717 | 0.146 | 0.576 | -3.2% / -11.2% | -6.6% / -24.1% | 17, +0.2% / +0.5% |
+| G3 | vote 4/4, stop 0.5 ATR, lock +0.5 keep 50%, out 17:30 IST | 195 | 49% | $+45 | -2,485 / -1,703 / +1,489 / +1,132 / +10,328 | 0.007 | 0.098 | +6.4% / -9.3% | +5.9% / -27.3% | 17, +2.4% / +9.6% |
+| G4 | vote 4/4 on busy days only (ATR >= earlier median), L1 exits, out 08:00 IST | 166 | 54% | $+59 | -1,338 / -1,154 / +475 / +542 / +11,351 | 0.007 | 0.098 | +9.0% / -5.5% | +10.0% / -20.5% | 17, +2.7% / +11.0% |
+| G5 | vote 3/4, L1 exits, out 08:00 IST | 458 | 48% | $-6 | -3,563 / -3,281 / -310 / -880 / +5,513 | 0.089 | 0.477 | -10.9% / -21.0% | -51.2% / -58.7% | 38, +4.6% / +18.9% |
+| G6 | vote 3/4, L1 exits, out 12:30 IST | 458 | 48% | $-5 | -3,828 / -3,281 / +202 / -880 / +5,513 | 0.091 | 0.477 | -10.7% / -20.8% | -50.6% / -58.2% | 38, +4.6% / +18.9% |
+
+What this says for a $1,000 account:
+1. **Holding winners longer does not help.** The stop or the lock closes almost every trade before 08:00, so
+   G1 (out 12:30) and G3 (out 17:30) are almost L1 again (+$45 a 100-oz lot).
+2. **Busy days help a little (G4).**
+   - Trading only when gold's 15-minute range at 06:00 is above its usual size gives +$59 a lot on 166 trades, the
+     best average so far.
+   - Costs are the same, and the moves are bigger.
+3. **The looser 3-of-4 vote (G5, G6) loses (-$6 a lot on 458 trades).** It wins 74% in Sep-Oct 2026 but lost over
+   2.5 years. With 2% risk sizing it would have halved a $1,000 account (-51%, worst drawdown -59%). This is the
+   clearest warning in R140: a great 2 months says nothing.
+4. **Sizing:**
+   - With a fixed 5x, the best versions made **+6% to +9% over 2.5 years** (G1, G3, G4), with worst drawdowns of -6%
+     to -9%.
+   - Risking 1-2% a trade on a 0.5 ATR stop makes the positions large on quiet days, when the edge is weakest. G1 at
+     risk 1% lost 11%; G4 at risk 2% made +10% with a -21% drawdown.
+   - At double costs every sized version loses (G4 risk 2%: -19%).
+5. **Sep - Oct 2026 (already seen, not a test):** G1 / G4 made +2.7% at 5x and +11% at risk 2%, and G5 / G6 made +4.6%
+   and +19%. Gold was very lively then, so every day counted as busy and G4 = G1.
+6. **For Boss:** the most promising US-gold rule after six rounds is **G4**.
+   - The rule: at 06:00 IST, only on busy mornings, trade when the EMA trend, RSI, MACD and the move since the US
+     close all agree. Use a 0.5 ATR stop and a lock that keeps 60% of the open profit after +0.5 ATR.
+   - It is not proven: it lost in 2023-24 and made its money in one 6-month stretch.
+   - It is a forward-test candidate (paper, on an offshore or crypto-gold venue), at 5x or less, not money to risk
+     yet.
+
 ## What is new compared with the earlier gold work
 
 - GOLD_15M_PATTERNS and GOLD_30M_1H_PATTERNS had unconditional hour tables (01:00 UTC green 50.8%, 02:00 UTC 50.7%).
