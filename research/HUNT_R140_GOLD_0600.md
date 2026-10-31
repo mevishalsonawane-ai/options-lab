@@ -479,6 +479,44 @@ signal falls in the window. Code `r140w.py`, tests `test_r140w.py`. BH over 123.
 | W9 | Internal SMC sweep | 06:00-08:00 IST | 36 | 36% | $-143 | $-5,139 / $-6,291 | 0.95 | 1.00 | -7% |
 | W10 | Internal SMC sweep | 16:00-18:00 IST | 17 | 59% | $-134 | $-2,281 / $-2,825 | 0.70 | 1.00 | -2% |
 
+## Amendment L: enhancing Boss's scripts (Boss: "more profit and more win rate")
+
+*Pre-registered in PREREG.md Amendment L (commit 51237dd). The signals of Boss's five setups (15m) are merged, then
+the enhancements below are added: H11b's 4-signal vote, the busy-hour filter, high win-rate exits, the REVERSE bet
+(take the other side) and the 11-13 IST window. Code `r140l.py`, tests `test_r140l.py`. BH over 131.*
+
+**No version passes every gate (0 of 8), so the holdout was not read. The closest is the reverse bet with the vote
+and busy filters (L7).** It is Boss's sweep signals turned around: when the trend vote and a busy market agree,
+price tends to run through the swept level instead of turning back.
+
+| id | rule | n | win | avg / 100 oz | total 1x / 2x | folds + | twin p | q (131) | $1,000 at 5x (2.5 y) |
+|---|---|---|---|---|---|---|---|---|---|
+| L1 | Boss's five setups combined (15m), script SL/TP + 60% lock | 2665 | 48% | $-48 | $-127,497 / $-212,777 | 0 of 5 | 0.950 | 1.00 | -90% (DD -92%) |
+| L2 | combined + H11b 4-signal vote | 790 | 49% | $-13 | $-10,274 / $-35,554 | 2 of 5 | 0.426 | 0.88 | -27% (DD -37%) |
+| L3 | combined + busy hour | 2143 | 49% | $-50 | $-106,673 / $-175,249 | 0 of 5 | 0.935 | 1.00 | -85% (DD -86%) |
+| L4 | combined + vote + busy | 649 | 50% | $-6 | $-3,727 / $-24,495 | 3 of 5 | 0.344 | 0.84 | -16% (DD -31%) |
+| L5 | combined + vote + busy + high win-rate exits (TP 1R, lock after 0.5R) | 652 | 62% | $-35 | $-22,740 / $-43,604 | 1 of 5 | 0.705 | 1.00 | -30% (DD -40%) |
+| L6 | combined, REVERSED (bet the sweep / retest fails), TP 2R | 2664 | 50% | $-16 | $-43,700 / $-128,948 | 1 of 5 | 0.112 | 0.44 | -61% (DD -70%) |
+| L7 | REVERSED + vote + busy | 207 | 53% | $+87 | $+18,035 / $+11,411 | 4 of 5 | 0.010 | 0.18 | +26% (DD -6%) |
+| L8 | combined + vote + busy, 11:00-13:00 IST only | 76 | 46% | $+99 | $+7,524 / $+5,092 | 3 of 5 | 0.046 | 0.41 | +7% (DD -8%) |
+
+What it says:
+1. **Combined as they are, Boss's setups lose (L1: -$48 a lot on 2,665 trades).** The trend vote cuts the trades by
+   70% and most of the loss (L2: -$13; L4 with busy: -$6).
+2. **High win-rate exits lift the win rate to 62% (L5) but lose more (-$35 a lot).** Small wins, full-size losses.
+3. **The reverse bet with the vote and busy filters (L7) is the best result of R140 by profit:**
+   - +$87 a lot on 207 trades, still +$55 at double costs;
+   - it beats random twins (p 0.010) and is positive in 4 of 5 periods;
+   - $1,000 at 5x: +26% in 2.5 years, worst drawdown -6%;
+   - win rate 53% (below the 65% rule);
+   - **it fails only BH (q 0.18)**: after 131 tries in R140, a result this good can happen by luck.
+4. **H11b's hours (11-13 IST) on Boss's signals (L8): +$99 a lot, but only 76 trades.** It fails BH and the folds.
+5. **For Boss:**
+   - Boss's sweep scripts, taken as written, lose on gold.
+   - Read the other way round and filtered (L7), they are the most promising lead after H11b: "when the trend and a busy
+     market agree, a sweep of the level is a break, not a turn".
+   - This lead should be checked on new data with a fresh, pre-registered forward test on paper, not traded yet.
+
 ## What is new compared with the earlier gold work
 
 - GOLD_15M_PATTERNS and GOLD_30M_1H_PATTERNS had unconditional hour tables (01:00 UTC green 50.8%, 02:00 UTC 50.7%).

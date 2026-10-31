@@ -108,7 +108,7 @@ def signals(df: pd.DataFrame, minutes: int) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------------------------- trades
-def sim_fixed(X: R.Xau, i_in: int, i_cap: int, side: int, sl: float, tp: float, lock: bool):
+def sim_fixed(X: R.Xau, i_in: int, i_cap: int, side: int, sl: float, tp: float, lock: bool, lock_r: float = LOCK_R):
     """Entry at the open of minute i_in; SL / TP prices fixed; optional 60% lock after +1R; time exit at i_cap's open.
     A minute touching both the SL (or lock) and the TP counts as the SL (or lock)."""
     e = X.o[i_in]
@@ -126,7 +126,7 @@ def sim_fixed(X: R.Xau, i_in: int, i_cap: int, side: int, sl: float, tp: float, 
             return (max(op, tp) if side > 0 else min(op, tp)), "tp", j
         if lock:
             peak = max(peak, side * (fav - e))
-            if peak >= LOCK_R * risk:
+            if peak >= lock_r * risk:
                 new = e + side * KEEP * peak
                 lk = new if lk is None else (max(lk, new) if side > 0 else min(lk, new))
                 if side * (X.c[j] - lk) <= 0:
@@ -138,7 +138,7 @@ def ist_date(t_utc: pd.Timestamp) -> date:
     return (t_utc + pd.Timedelta(hours=5, minutes=30)).date()
 
 
-def run_trades(X, sigs, lock, window_only, period):
+def run_trades(X, sigs, lock, window_only, period, lock_r: float = LOCK_R):
     out, busy_until = [], None
     for s in sigs:
         d = ist_date(s["t"])
@@ -156,7 +156,7 @@ def run_trades(X, sigs, lock, window_only, period):
         i_cap = X.ix_at_or_after(s["t"] + pd.Timedelta(minutes=CAP_MIN))
         if i_cap >= len(X.ts):
             continue
-        r = sim_fixed(X, i_in, i_cap, s["side"], s["sl"], s["tp"], lock)
+        r = sim_fixed(X, i_in, i_cap, s["side"], s["sl"], s["tp"], lock, lock_r)
         if r is None:
             continue
         px, why, j_exit = r
@@ -168,7 +168,7 @@ def run_trades(X, sigs, lock, window_only, period):
     return out
 
 
-def twins(X, trades, period, lock, rng, n_sets=R.N_TWINS):
+def twins(X, trades, period, lock, rng, n_sets=R.N_TWINS, lock_r: float = LOCK_R):
     """For each trade, N_TWIN_DAYS random other weekdays at the same clock time, both sides, the same $ SL / TP."""
     if not trades:
         return 1.0, 0.0
@@ -192,7 +192,7 @@ def twins(X, trades, period, lock, rng, n_sets=R.N_TWINS):
             e = X.o[i_in]
             vals = []
             for side, M in ((1, L), (-1, S)):
-                r = sim_fixed(X, i_in, i_cap, side, e - side * t["stop_usd"], e + side * t["tp_usd"], lock)
+                r = sim_fixed(X, i_in, i_cap, side, e - side * t["stop_usd"], e + side * t["tp_usd"], lock, lock_r)
                 vals.append(np.nan if r is None else side * (r[0] - e) * R.XAU_LOT_OZ - R.XAU_COST)
             if np.isfinite(vals).all():
                 L[a, k], S[a, k] = vals

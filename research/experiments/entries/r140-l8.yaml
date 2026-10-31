@@ -1,0 +1,25 @@
+id: r140-l8
+title: 'R140 Amendment L L8: combined + vote + busy, 11:00-13:00 IST only'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss (31 Oct): enhance his scripts for more profit and win rate. combined + vote + busy, 11:00-13:00 IST only
+  earns on XAUUSD after costs, beats twins, BH q <= 0.10 over 131, >= 4 of 5 folds positive.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot candles (the underlying); information only'
+model_or_rule: combined + vote + busy, 11:00-13:00 IST only; 12 h cap
+settings: research/hunt/r140_gold_0600/r140l.py; PREREG.md Amendment L
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 76 trades, win 46% (65% rule: below), avg net $+99 a 100-oz lot (2x $+67), total $+7,524; folds -500 /
+    +865 / -3,169 / +2,987 / +7,341; twin p 0.046, BH q 0.410 (131). Gates failed: bh, folds. Holdout not read.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+holdout_read: false
+verdict: rejected

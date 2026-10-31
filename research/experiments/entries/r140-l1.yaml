@@ -1,26 +1,26 @@
 id: r140-l1
-title: 'R140 Amendment B L1: E5 vote, stop 0.5 ATR, lock +0.5 ATR keep 60%'
+title: 'R140 Amendment L L1: Boss''s five setups combined (15m), script SL/TP + 60% lock'
 family: mcx-crypto
 date: '2026-10-31'
 doc: research/HUNT_R140_GOLD_0600.md
-hypothesis: 'Boss (31 Oct): more indicators, strategies and stop / lock settings raise the win rate. E5 vote, stop 0.5 ATR,
-  lock +0.5 ATR keep 60% earns after costs, beats twins with the same exits (p <= 0.05), BH q <= 0.10 over 36, folds positive.'
-data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026; GOLDM option-book near future from the Drive lake)
+hypothesis: 'Boss (31 Oct): enhance his scripts for more profit and win rate. Boss''s five setups combined (15m), script SL/TP
+  + 60% lock earns on XAUUSD after costs, beats twins, BH q <= 0.10 over 131, >= 4 of 5 folds positive.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
 period:
   design: 2023-10-02..2026-03-31
   holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
 instruments:
 - XAUUSD
 features:
-- 'signal source: XAUUSD spot 15-minute candles completed by 06:00 IST (the underlying); information only'
-model_or_rule: E5 vote, stop 0.5 ATR, lock +0.5 ATR keep 60%; every rule has a stop-loss and a 60%-type trailing profit lock
-settings: research/hunt/r140_gold_0600/r140e.py; PREREG.md Amendment B
+- 'signal source: XAUUSD spot candles (the underlying); information only'
+model_or_rule: Boss's five setups combined (15m), script SL/TP + 60% lock; 12 h cap
+settings: research/hunt/r140_gold_0600/r140l.py; PREREG.md Amendment L
 prereg: research/hunt/r140_gold_0600/PREREG.md
 variants_tried: 1
 results:
-  summary: 'Design: 195 trades, win 50% (Boss''s 65% rule: below), avg net $ +43 (2x $ +11), total $ +8,450 (2x $ +2,210);
-    folds -2,117 / -1,553 / +379 / +390 / +11,351; twin p 0.011, BH q 0.396 (36 R140 rules); drawdown $ -3,938, worst month
-    $ -2,336. Gates failed: bh, folds. Holdout not read.'
-  costs: $0.25 spread + $7 commission a 100-oz lot round trip ($32); 2x = $64
+  summary: 'Design: 2665 trades, win 48% (65% rule: below), avg net $-48 a 100-oz lot (2x $-80), total $-127,497; folds -25,770
+    / -21,677 / -15,510 / -37,257 / -27,283; twin p 0.950, BH q 1.000 (131). Gates failed: net, twins, bh, folds. Holdout
+    not read.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
 holdout_read: false
 verdict: rejected
