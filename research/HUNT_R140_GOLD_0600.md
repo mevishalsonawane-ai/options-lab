@@ -21,6 +21,11 @@ opened for any rule, because none passed design.**
 US summer and 03:30 IST in winter) and the hours after it do not guess the window's direction either. They match it on
 47-53% of days, and 0 of 6 more rules pass. See the Amendment A section.**
 
+**Whole day (Amendment E): one rule passes everything, including the unseen holdout: 11:00 IST on busy days with the
+4-signal vote (H11b): +$95 a 100-oz lot on 186 design trades and +$58 on 29 holdout trades. $1,000 at 5x: +21.5% in
+2.5 years. It is a forward-test candidate, not proven (one hour of 24; most profit in one fold; Sep-Oct slightly
+negative). Boss's two Pine / diagram indicators (Amendments F, G) lose on gold.**
+
 **Amendment B (Boss: add indicators, strategies and stop / lock settings to raise the win rate): 0 of 18 more pass.
 The win rate can be lifted to 67-72% by taking small profits early, but the average trade stays at about zero. See
 the Amendment B section.**
@@ -267,6 +272,110 @@ What this says for a $1,000 account:
    - It is not proven: it lost in 2023-24 and made its money in one 6-month stretch.
    - It is a forward-test candidate (paper, on an offshore or crypto-gold venue), at 5x or less, not money to risk
      yet.
+
+## Amendment E: the whole day, hour by hour (Boss: "check whole day then try again")
+
+*Pre-registered in PREREG.md Amendment E (commit cea07a6) before any number. Code `r140h.py`, tests `test_r140h.py`,
+results `results/amendE_design.json`, `amendE_holdout.json` (+ `.lock`), `amendE_recent_seen.json`. US gold only;
+information only. L1 (the 4-signal vote, 0.5 ATR stop, 60% lock after +0.5 ATR) and G4 (the same on busy days) were
+run at every IST hour, out within 2 hours. 48 rules; BH over 90. Hour 06:00 reproduces L1 and G4 exactly (a check
+on the code).*
+
+**One hour passes every gate, including the one read of the unseen holdout: 11:00 IST on busy days (H11b).**
+
+| H11b: 11:00 IST, busy days, the 4-signal vote | design Oct 2023 - Mar 2026 | holdout Apr - Aug 2026 (read once) | Sep - Oct 2026 |
+|---|---|---|---|
+| trades | 186 | 29 | 18 |
+| win rate (65% rule: below) | 62% | 55% | 56% |
+| avg net / 100-oz lot (2x costs) | $+95 ($+63) | $+58 ($+26) | $-16 |
+| twin p / BH q (over 90) | 0.001 / 0.045 | - | - |
+| folds F1..F5 | +275 / -972 / +180 / +4,094 / +14,140 | - | - |
+| $1,000 at 5x | +21.5% (worst DD -3.6%) | +1.9% | -0.3% |
+| $1,000 risking 2% a trade | +87.9% (worst DD -13.0%) | +6.5% | -1.5% |
+
+How to read it:
+- **The rule:** at 11:00 IST, only when gold's 15-minute ATR is above its usual 11:00 size, trade only if the EMA
+  trend, RSI, MACD and the move since the last US close all point the same way. Stop 0.5 ATR, lock 60% of the profit
+  after +0.5 ATR, out by 13:00.
+- 11:00 IST is about 05:30-06:30 GMT: the end of Tokyo and the run-up to London.
+- **Why it is still only a candidate:**
+  - It is 1 hour out of 24 tried. The BH step allows for that (q 0.045), but the margin is small.
+  - Most of the design profit came in one fold (Oct 2025 - Mar 2026: +$14.1k of +$17.7k a lot).
+  - The holdout is positive but small (29 trades, +$58 a lot).
+  - Sep - Oct 2026 is slightly negative (-$285 on 18 trades).
+  - Its win rate (62%) is below Boss's 65% rule.
+- **Every other hour fails.** The 06:00 rules (L1, G4) fail the fold gate. Hours 05:00, 18:00 and 22:00 show some
+  profit but fail BH or the folds.
+- **For Boss:** this is the best US-gold rule R140 found. It is for a forward test on paper on an offshore or
+  crypto-gold venue, at 5x or less, for 3-6 months. It is not money yet and not an app arm (the app does not trade
+  spot gold).
+
+| IST hour | median 2-h range $ | vote (a): n, avg / 100 oz, twin p | busy + vote (b): n, avg, twin p, q (90) |
+|---|---|---|---|
+| 00:00 | 7.42 | 140, $-53, p 0.84 | 117, $-63, p 0.88, q 1.00 |
+| 01:00 | 6.22 | 127, $-34, p 0.69 | 105, $-40, p 0.70, q 0.95 |
+| 02:00 | 4.95 | 115, $+35, p 0.10 | 97, $+48, p 0.11, q 0.40 |
+| 03:00 | 3.94 | 48, $+13, p 0.19 | 41, $+28, p 0.14, q 0.44 |
+| 04:00 | 6.91 | 75, $-127, p 0.99 | 57, $-152, p 1.00, q 1.00 |
+| 05:00 | 10.43 | 150, $+48, p 0.05 | 122, $+67, p 0.03, q 0.28 |
+| 06:00 | 11.29 | 195, $+43, p 0.01 | 166, $+59, p 0.01, q 0.10 |
+| 07:00 | 10.19 | 228, $-58, p 0.93 | 199, $-64, p 0.96, q 1.00 |
+| 08:00 | 8.84 | 267, $-24, p 0.29 | 224, $-24, p 0.27, q 0.59 |
+| 09:00 | 7.22 | 268, $-74, p 0.97 | 222, $-84, p 0.97, q 1.00 |
+| 10:00 | 9.42 | 248, $+15, p 0.12 | 211, $+19, p 0.12, q 0.40 |
+| 11:00 | 10.59 | 218, $+73, p 0.00 | 186, $+95, p 0.00, q 0.04 |
+| 12:00 | 11.22 | 228, $-15, p 0.20 | 198, $-13, p 0.18, q 0.48 |
+| 13:00 | 10.79 | 238, $-48, p 0.81 | 198, $-48, p 0.79, q 1.00 |
+| 14:00 | 9.63 | 239, $+20, p 0.08 | 202, $+29, p 0.04, q 0.33 |
+| 15:00 | 9.31 | 256, $-67, p 0.91 | 219, $-70, p 0.92, q 1.00 |
+| 16:00 | 10.40 | 250, $-65, p 0.82 | 214, $-71, p 0.88, q 1.00 |
+| 17:00 | 13.93 | 210, $-83, p 0.99 | 177, $-89, p 0.99, q 1.00 |
+| 18:00 | 18.51 | 206, $+49, p 0.11 | 175, $+63, p 0.09, q 0.39 |
+| 19:00 | 19.87 | 235, $-8, p 0.44 | 188, $-10, p 0.50, q 0.80 |
+| 20:00 | 15.18 | 298, $+13, p 0.07 | 234, $+19, p 0.07, q 0.39 |
+| 21:00 | 11.52 | 321, $-13, p 0.24 | 257, $-2, p 0.18, q 0.48 |
+| 22:00 | 9.85 | 304, $+21, p 0.04 | 248, $+30, p 0.04, q 0.33 |
+| 23:00 | 8.32 | 258, $+2, p 0.17 | 200, $+16, p 0.11, q 0.40 |
+
+The spread is kept at $0.25 every hour, which flatters the quiet early-Asian hours a little.
+
+## Amendment F: Boss's Pine indicator "5-Step Liquidity Sweep POI" on US gold
+
+*Pre-registered in PREREG.md Amendment F (commit 0243f22). Code `r140p.py`, tests `test_r140p.py`, results
+`results/amendF_design.json`, `amendF_holdout.lock`. The script is ported as written: the 60-minute EMA 50 trend,
+pivot-3 swings, a +/- 0.5 ATR POI zone, a sweep plus a confirmation candle, and RR >= 1.5 with SL at the signal
+candle's low / high and TP at the last swing. The port adds a 12-hour cap. BH over 95.*
+
+**It does not work on gold: 0 of 5 pass, and the holdout was not read.** As written on 15-minute candles it wins only
+32%: 172 of its 255 trades hit the stop, and only 73 reached the target. A $1,000 account at 5x would have fallen
+-15% in 2.5 years. Adding the 60% lock lifts the win rate to 51% but loses more. The 5-minute version is about flat
+before double costs and loses -$31k a lot at 2x.
+
+| id | rule | n | win | avg / 100 oz | total 1x / 2x | twin p | q | $1,000 at 5x (2.5 y) |
+|---|---|---|---|---|---|---|---|---|
+| F1 | as written, 15m | 255 | 32% | $-32 | $-8,111 / $-16,271 | 0.61 | 0.92 | -15% (DD -21%) |
+| F2 | 15m + 60% lock | 257 | 51% | $-49 | $-12,562 / $-20,786 | 0.74 | 0.98 | -20% (DD -22%) |
+| F3 | as written, 5m | 1139 | 28% | $+5 | $+5,378 / $-31,070 | 0.07 | 0.39 | -21% (DD -44%) |
+| F4 | 5m + lock | 1159 | 47% | $-22 | $-25,622 / $-62,710 | 0.37 | 0.71 | -44% (DD -53%) |
+| F5 | 15m + lock, 06:00-08:00 IST only | 20 | 55% | $+109 | $+2,178 / $+1,538 | 0.10 | 0.39 | +2% (DD -3%) |
+
+## Amendment G: Boss's second setup, the internal-origin-low sweep after a BOS (from his diagram)
+
+*Pre-registered in PREREG.md Amendment G (commit 0d7e3e4). The Pine v5 code Boss mentioned did not arrive, so the
+rule was built from his description. After a break of structure, the "origin" low that launched it gets swept (a dip
+below, then a close back above) and the trade buys. The mirror is used for sells. SL is under the sweep, TP is the
+impulse high, RR >= 1.5, with a 60% lock after 1R and a 12-hour cap. Code `r140k.py`, tests `test_r140k.py` (a
+hand-built copy of the diagram fires exactly one BUY). BH over 99.*
+
+**It loses in every version: 0 of 4 pass, and the holdout was not read.** Buys and sells both lose. The pattern
+appears often (700-2,000 times in 2.5 years), but price keeps going after the sweep about as often as it recovers.
+
+| id | rule | n | win | avg / 100 oz | total 1x / 2x | twin p | q | $1,000 at 5x (2.5 y) |
+|---|---|---|---|---|---|---|---|---|
+| K1 | 15m, strict sweep | 702 | 45% | $-41 | $-28,571 / $-51,035 | 0.77 | 1.00 | -41% (DD -47%) |
+| K2 | 15m, simple break | 946 | 45% | $-73 | $-69,428 / $-99,700 | 0.99 | 1.00 | -66% (DD -68%) |
+| K3 | 5m, strict | 2035 | 39% | $-35 | $-71,305 / $-136,425 | 0.81 | 1.00 | -69% (DD -70%) |
+| K4 | 15m, strict, with the 60m trend | 405 | 47% | $-15 | $-6,272 / $-19,232 | 0.44 | 0.77 | -16% (DD -22%) |
 
 ## What is new compared with the earlier gold work
 

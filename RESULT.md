@@ -1,11 +1,11 @@
-# R140 result: US gold 06:00-08:00 IST (15m): 0 of 42 rules pass; best US-gold candidate G4 (busy-day vote) fails only the fold gate; no paper arm
-1. Window (575 design days, Oct 2023 - Mar 2026): median move $4.28, median range $11.28 (0.39%); up 56% (+4.4 bp, se 1.8) = gold's up-trend, not the hour.
-2. Nothing before 06:00 guesses it (Amendment A): US session 48% same way, last US hour 53%, US close -> 06:00 53%, night since MCX close 50%, big US days 47%; 0 of 6 pass.
-3. Amendment B (indicators, vote, models, stop/lock settings): 0 of 18 pass; EMA -$64, Supertrend -$49, RSI -$95, Bollinger -$109, vote -$55, model -$22 a trade.
-4. Win rate can reach 67-72% (E7, E8, L2, L3) by taking small profits early, but the average trade stays -$29 to +$37; none beats random twins with the same exits.
-5. Closest: L1 (vote, stop 0.5 ATR, early lock) +$43 x 195, twin p 0.011, but q 0.40 over 36, 3 of 5 folds, one fold makes it all, win 50%.
-6. MCX link: window vs GOLDM 09:05-10:00 corr +0.36 (132 d), same sign 55%; follow = +Rs 523/lot gross (se 747, n 151) vs about Rs 400 costs.
-7. Every GOLDM rule (B1-B6, M1-M4, L4-L6) loses after costs except B3/B4 (lose at 2x, q 0.67); best GOLDM win rate 68% (B3), all fail the money gates.
-8. Holdout not read for any passing test (none passed; *.lock files); Sep - Oct 2026 replayed on Boss's request for E7/E8/L1-L3/G1-G6 (labelled seen); full-period tables: bigger window ($28.9 range), no up-drift.
-9. Data: XAUUSD Dukascopy (release + tail), GOLDM from the lake option book; write-up research/HUNT_R140_GOLD_0600.md; 44 entries r140-*.yaml.
-10. Amendment D ($1,000): G4 busy-day vote +$59 a lot x 166, twin p 0.007, q 0.098, but lost 2023-24 (fails folds); 5x = +9% in 2.5 years (DD -6%); 3-of-4 vote halves the account at 2% risk. No paper arm proposed.
+# R140 result: US gold, 15m: one candidate found (11:00 IST busy-day vote); the 06:00-08:00 window and Boss's two indicators do not work
+1. 06:00-08:00 IST (575 design days): median move $4.28 in an $11.28 range; nothing before 06:00 guesses its direction (47-53% same way).
+2. 0 of 42 window rules pass (indicators, vote, models, stop/lock settings, US-close signals, MCX link); high win rates (67-72%) only from small early profits.
+3. Whole day (48 rules, BH over 90): H11b = 11:00 IST, busy days, EMA+RSI+MACD+US-close vote, stop 0.5 ATR, 60% lock: 186 trades, 62% win, +$95/100 oz, q 0.045.
+4. H11b holdout Apr-Aug 2026 (read once): 29 trades, 55% win, +$58/100 oz (2x +$26): passes. Sep-Oct 2026: 18 trades, -$285 (slightly negative).
+5. $1,000 at 5x: H11b +21.5% over 2.5 years design (worst DD -3.6%), +1.9% in the holdout; risking 2% a trade +88% design (DD -13%).
+6. Caveats: 1 hour of 24 tried; most design profit in Oct 2025-Mar 2026; 62% win < Boss's 65% rule; not tradable via Zerodha.
+7. Boss's Pine "5-Step Liquidity Sweep POI": 0 of 5 pass; as written (15m) 255 trades, 32% win, -$32/100 oz; $1,000 at 5x -15%.
+8. Boss's origin-low sweep after a BOS (built from his diagram; code did not arrive): 0 of 4 pass; -$15 to -$73/100 oz on 405-2,035 trades.
+9. GOLDM (MCX) link: all 13 rules lose after costs; no paper arm for MCX. Write-up research/HUNT_R140_GOLD_0600.md; 101 entries r140-*.yaml.
+10. For Boss: forward-test H11b on paper (offshore or crypto-gold venue, 5x or less, 3-6 months) before any money; nothing to change in the app.

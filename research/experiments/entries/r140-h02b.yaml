@@ -1,0 +1,26 @@
+id: r140-h02b
+title: 'R140 Amendment E H02b: 02:00 IST: vote 4/4 (EMA20/50, RSI 50, MACD hist, move since the last 17:00 NY close) on b'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss (31 Oct): check the whole day. This hour''s rule earns after costs, beats same-hour twins, BH q <= 0.10
+  over 90, >= 4 of 5 folds positive.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: 2026-04-01..2026-08-31 (locked; not read for this rule)
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot candles (the underlying); information only (not tradable via Zerodha)'
+model_or_rule: '02:00 IST: vote 4/4 (EMA20/50, RSI 50, MACD hist, move since the last 17:00 NY close) on busy hours (ATR >=
+  earlier median at that hour); stop 0.5 ATR, 60% lock after +0.5 ATR, out within 2 h'
+settings: research/hunt/r140_gold_0600/r140h.py; PREREG.md Amendment E
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 97 trades, win 57% (65% rule: below), avg net $+48 a 100-oz lot (2x $+16), total $+4,665; folds +298 /
+    -839 / +162 / -1,233 / +6,278; twin p 0.110, BH q 0.400. Gates failed: twins, bh, folds.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+holdout_read: false
+verdict: rejected
