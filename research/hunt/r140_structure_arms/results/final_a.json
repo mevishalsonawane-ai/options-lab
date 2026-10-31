@@ -1,0 +1,302 @@
+{
+ "_meta": {
+  "phase": "final",
+  "written": "2026-10-31T20:29:29.376698+00:00"
+ },
+ "tests": {
+  "FB-R72-A10": {
+   "today": {
+    "trades": 1202,
+    "win": 0.4584,
+    "net": 171366,
+    "avg_win": 1748,
+    "avg_loss": -1217,
+    "worst_day": -22571,
+    "max_dd": 61884,
+    "bad_months": 2,
+    "loss_sum": -389644,
+    "losing_days": 62,
+    "days": 129,
+    "worst_month": -40908,
+    "sum_losing_trades": -792049
+   },
+   "rule": {
+    "trades": 1015,
+    "win": 0.465,
+    "net": 193840,
+    "avg_win": 1765,
+    "avg_loss": -1177,
+    "worst_day": -22571,
+    "max_dd": 56200,
+    "bad_months": 2,
+    "loss_sum": -300084,
+    "losing_days": 55,
+    "days": 122,
+    "worst_month": -30518,
+    "sum_losing_trades": -639318
+   },
+   "changed": 187,
+   "twin": {
+    "p": 0.0009995002498750624,
+    "p_mc": 0.0009995002498750624,
+    "p_norm": 0.00019705231601589295,
+    "twin_mean": -354203,
+    "twin_sd": 15271,
+    "hits": 1
+   },
+   "dropped_candidates": 360
+  },
+  "FB-R72-C1": {
+   "today": {
+    "trades": 1202,
+    "win": 0.4584,
+    "net": 171366,
+    "avg_win": 1748,
+    "avg_loss": -1217,
+    "worst_day": -22571,
+    "max_dd": 61884,
+    "bad_months": 2,
+    "loss_sum": -389644,
+    "losing_days": 62,
+    "days": 129,
+    "worst_month": -40908,
+    "sum_losing_trades": -792049
+   },
+   "rule": {
+    "trades": 897,
+    "win": 0.4526,
+    "net": 154017,
+    "avg_win": 1883,
+    "avg_loss": -1243,
+    "worst_day": -22367,
+    "max_dd": 79289,
+    "bad_months": 1,
+    "loss_sum": -333150,
+    "losing_days": 62,
+    "days": 126,
+    "worst_month": -53573,
+    "sum_losing_trades": -610422
+   },
+   "changed": 305,
+   "twin": {
+    "p": 0.49525237381309345,
+    "p_mc": 0.49525237381309345,
+    "p_norm": 0.48800702034614896,
+    "twin_mean": -333680,
+    "twin_sd": 17617,
+    "hits": 990
+   },
+   "dropped_candidates": 580
+  },
+  "FB-R72-both": {
+   "today": {
+    "trades": 1202,
+    "win": 0.4584,
+    "net": 171366,
+    "avg_win": 1748,
+    "avg_loss": -1217,
+    "worst_day": -22571,
+    "max_dd": 61884,
+    "bad_months": 2,
+    "loss_sum": -389644,
+    "losing_days": 62,
+    "days": 129,
+    "worst_month": -40908,
+    "sum_losing_trades": -792049
+   },
+   "rule": {
+    "trades": 763,
+    "win": 0.46,
+    "net": 172143,
+    "avg_win": 1877,
+    "avg_loss": -1181,
+    "worst_day": -20770,
+    "max_dd": 57810,
+    "bad_months": 2,
+    "loss_sum": -255206,
+    "losing_days": 57,
+    "days": 121,
+    "worst_month": -34222,
+    "sum_losing_trades": -486511
+   },
+   "changed": 439,
+   "twin": {
+    "p": 0.004997501249375313,
+    "p_mc": 0.004997501249375313,
+    "p_norm": 0.00362187993969669,
+    "twin_mean": -309280,
+    "twin_sd": 20136,
+    "hits": 9
+   },
+   "dropped_candidates": 843
+  },
+  "FB-R51-A10": {
+   "today": {
+    "trades": 1670,
+    "win": 0.4485,
+    "net": 134743,
+    "avg_win": 1651,
+    "avg_loss": -1197,
+    "worst_day": -21578,
+    "max_dd": 81683,
+    "bad_months": 1,
+    "loss_sum": -395932,
+    "losing_days": 72,
+    "days": 133,
+    "worst_month": -54587,
+    "sum_losing_trades": -1102074
+   },
+   "rule": {
+    "trades": 1394,
+    "win": 0.4555,
+    "net": 157384,
+    "avg_win": 1643,
+    "avg_loss": -1168,
+    "worst_day": -21578,
+    "max_dd": 70047,
+    "bad_months": 1,
+    "loss_sum": -316936,
+    "losing_days": 62,
+    "days": 124,
+    "worst_month": -48813,
+    "sum_losing_trades": -886229
+   },
+   "changed": 276,
+   "twin": {
+    "p": 0.000386564534194023,
+    "p_mc": 0.0004997501249375312,
+    "p_norm": 0.000386564534194023,
+    "twin_mean": -377882,
+    "twin_sd": 18127,
+    "hits": 0
+   },
+   "dropped_candidates": 789
+  },
+  "FB-R51-C3": {
+   "today": {
+    "trades": 1670,
+    "win": 0.4485,
+    "net": 134743,
+    "avg_win": 1651,
+    "avg_loss": -1197,
+    "worst_day": -21578,
+    "max_dd": 81683,
+    "bad_months": 1,
+    "loss_sum": -395932,
+    "losing_days": 72,
+    "days": 133,
+    "worst_month": -54587,
+    "sum_losing_trades": -1102074
+   },
+   "rule": {
+    "trades": 1154,
+    "win": 0.4627,
+    "net": 52182,
+    "avg_win": 1542,
+    "avg_loss": -1244,
+    "worst_day": -21578,
+    "max_dd": 87973,
+    "bad_months": 2,
+    "loss_sum": -316417,
+    "losing_days": 65,
+    "days": 109,
+    "worst_month": -43836,
+    "sum_losing_trades": -771142
+   },
+   "changed": 594,
+   "twin": {
+    "p": 0.037481259370314844,
+    "p_mc": 0.037481259370314844,
+    "p_norm": 0.037437884424131304,
+    "twin_mean": -358366,
+    "twin_sd": 23551,
+    "hits": 74
+   },
+   "dropped_candidates": 1638
+  },
+  "FB-R51-both": {
+   "today": {
+    "trades": 1670,
+    "win": 0.4485,
+    "net": 134743,
+    "avg_win": 1651,
+    "avg_loss": -1197,
+    "worst_day": -21578,
+    "max_dd": 81683,
+    "bad_months": 1,
+    "loss_sum": -395932,
+    "losing_days": 72,
+    "days": 133,
+    "worst_month": -54587,
+    "sum_losing_trades": -1102074
+   },
+   "rule": {
+    "trades": 993,
+    "win": 0.4642,
+    "net": 67497,
+    "avg_win": 1548,
+    "avg_loss": -1214,
+    "worst_day": -21578,
+    "max_dd": 58851,
+    "bad_months": 1,
+    "loss_sum": -261054,
+    "losing_days": 60,
+    "days": 102,
+    "worst_month": -38197,
+    "sum_losing_trades": -646002
+   },
+   "changed": 743,
+   "twin": {
+    "p": 0.0009995002498750624,
+    "p_mc": 0.0009995002498750624,
+    "p_norm": 0.0004914371715081669,
+    "twin_mean": -345188,
+    "twin_sd": 25531,
+    "hits": 1
+   },
+   "dropped_candidates": 2107
+  },
+  "FB-LIQ-C1": {
+   "today": {
+    "trades": 357,
+    "win": 0.3725,
+    "net": 11155,
+    "avg_win": 1762,
+    "avg_loss": -997,
+    "worst_day": -11405,
+    "max_dd": 61062,
+    "bad_months": 1,
+    "loss_sum": -144353,
+    "losing_days": 67,
+    "days": 113,
+    "worst_month": -37821,
+    "sum_losing_trades": -223234
+   },
+   "rule": {
+    "trades": 318,
+    "win": 0.3774,
+    "net": 12601,
+    "avg_win": 1769,
+    "avg_loss": -1009,
+    "worst_day": -11405,
+    "max_dd": 62351,
+    "bad_months": 1,
+    "loss_sum": -133241,
+    "losing_days": 66,
+    "days": 108,
+    "worst_month": -39946,
+    "sum_losing_trades": -199693
+   },
+   "changed": 39,
+   "twin": {
+    "p": 0.47726136931534235,
+    "p_mc": 0.47726136931534235,
+    "p_norm": 0.4836238383398815,
+    "twin_mean": -133467,
+    "twin_sd": 5493,
+    "hits": 954
+   },
+   "dropped_candidates": 39
+  }
+ }
+}

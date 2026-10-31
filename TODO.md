@@ -522,3 +522,15 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
       PREREG section 3). No change to the rules before then.
 - [ ] F2. Boss: refresh `DHAN_ACCESS_TOKEN` in the cloud environment's settings (it was expired on 29 Oct), or the
       runs can only log what the Drive lake already has (it ends on 19 Oct).
+
+## R140. Fake-breakout filter on R72 (proposed 31 Oct 2026; waits for Boss's go-ahead)
+
+- [ ] R140-1. FB-R72-A10 as a PAPER switch on R72 Breadth Donchian: skip new entries when the index's previous
+      session range is in the top fifth of its 20-session average range (the cuts per index are in
+      `research/hunt/r140_structure_arms/results/design_a.json`).
+      - It passed every R140 lose-less gate. Final: losing days -Rs 3.00 lakh vs -Rs 3.90 lakh, profit Rs 1.94 lakh
+        vs Rs 1.71 lakh, random-skip p 0.001.
+      - Labelled, logged in the Autopilot timeline, one-tap undo; R72's plain-rules record kept separable.
+      - Live: only in shadow, behind a switch that is off by default.
+      - Caveats: research/HUNT_R140_STRUCTURE_ARMS.md.
+- [ ] R140-2. Forward-log the same rule on R51. It missed by one gate: one worse month in the walk-forward year.

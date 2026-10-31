@@ -1,0 +1,29 @@
+id: r140a-fb-liq-c1
+title: 'R140 Amendment A FB-LIQ-C1: skip a gap against the trade (lowest fifth)'
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R140_STRUCTURE_ARMS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores
+period:
+  design: '2024-11-20..2026-03-31 (slices chosen here: in-sample)'
+  holdout: 2026-04-01..2026-10-13 (final, not fresh; read once by Amendment A)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r140_structure_arms/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index (daily ranges, gap) with R101 VIX context; the arm buys its own option'
+hypothesis: skipping a gap against the trade (lowest fifth) cuts LIQ's fake breakouts and losses
+model_or_rule: research/hunt/r140_structure_arms/r140a.py
+settings: PREREG_A.md FB-LIQ-C1; 1 lot
+variants_tried: 7
+verdict: rejected
+results:
+  summary: 'final 318 trades, win 38% (65% rule: below), net Rs 12,601 (today Rs 11,155), losing days Rs -133,241 (today Rs
+    -144,353), drawdown Rs 62,351 (today Rs 61,062), worst month Rs -39,946 (today Rs -37,821); twin p 0.4773, q 0.4953. Fails:
+    final: drawdown worse; final: worst month worse; twin p 0.477 >= 0.05; BH q 0.495 > 0.1.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)
