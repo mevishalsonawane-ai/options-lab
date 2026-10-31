@@ -433,3 +433,24 @@ spot candles.** The port follows the script:
 
 Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never read for these**), twins, gates (>= 100
 trades; >= 4 of 5 folds) and $1,000 sizing as Amendment F. **BH over 113** (108 + 5).
+
+## Amendment K (31 Oct 2026, before any Amendment K number): Boss's indicators in 06:00-08:00 and 16:00-18:00 IST only
+
+Boss, 31 Oct: *"Try 6 to 8 am IST and 4 to 6 pm IST only."* Boss's five setups, each in its 15-minute version with the
+60% lock after 1R, are kept only when the signal candle closes inside the window (entry 06:00-07:59 or 16:00-17:59
+IST). These are the setups: the first Pine (F2), the refined Pine (R2), the origin-low sweep (K1), break and retest
+(T2) and the Internal SMC HL/LH sweep (J2). Everything else (exits, 12-hour cap, one trade at a time, costs, twins,
+$1,000 sizing) is as in their amendments. The design / holdout periods are as before (holdout 1 Apr - 30 Oct 2026,
+never read for these). 16:00-18:00 IST is the London afternoon, before New York.
+
+| id | setup | window |
+|---|---|---|
+| W1 / W2 | first Pine (F2) | 06-08 / 16-18 |
+| W3 / W4 | refined Pine (R2) | 06-08 / 16-18 |
+| W5 / W6 | origin-low sweep (K1) | 06-08 / 16-18 |
+| W7 / W8 | break and retest (T2) | 06-08 / 16-18 |
+| W9 / W10 | Internal SMC sweep (J2) | 06-08 / 16-18 |
+
+Gates: net > 0 at 1x and 2x; twin p <= 0.05; **BH over 123** (113 + 10); **>= 30 trades** (the windows are short);
+>= 4 of 5 folds positive. Win rate against the 65% rule. W1 repeats Amendment F's F5 (the same rule); it is counted
+again, not dropped.
