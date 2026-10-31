@@ -405,3 +405,31 @@ break-and-retest it shows, built from the picture (no code was sent), tested on 
 Entry at the next minute's open, 1-minute SL / TP checks (both in one minute = SL), one trade at a time, 12-hour cap.
 Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never read for these**), twins, gates (>= 100
 trades; >= 4 of 5 folds) and $1,000 sizing as Amendment F. **BH over 108** (104 + 4).
+
+## Amendment J (31 Oct 2026, before any Amendment J number): Boss's "Internal SMC BOS & Sweep Signals (HL/LH)" (Pine v5)
+
+Boss pasted the Pine v5 script (31 Oct). It is ported as written onto XAUUSD (information only). **Signal source: XAUUSD
+spot candles.** The port follows the script:
+- **Swings:** pivots of length 3 (strict). lastHi / lastLo are set when a pivot is confirmed, and set to na after a
+  break.
+- **Breaks:** with confirmClose (the default), breakHigh = crossover(close, lastHi), using the previous bar's values
+  of close and lastHi (Pine's ta.crossover; na on the previous bar = no cross). With confirmClose off: crossover(high,
+  lastHi). breakLow is the mirror.
+- **Trend:** the first break against the trend is a silent CHoCH. It flips marketTrend and cancels the opposite
+  pending setup. A break with the trend is a BOS: the origin HL = lastLo at that moment (lastHi for a bearish BOS), and
+  the setup is armed. The bullish block runs before the bearish block, as in the script.
+- **Signal (BUY):** an armed setup and a candle with low < HL and close > HL. A close < HL disarms it. SELL is the
+  mirror. No time limit (as in the script).
+- **Exits (the script has none; fixed here):** entry at the next minute's open. **SL** = the sweep candle's low
+  (high for sells). **TP** = 2R. 12-hour cap. One trade at a time. Both SL and TP in one minute = SL.
+
+| id | chart | BOS on | exits | extra |
+|---|---|---|---|---|
+| J1 | 15m | close | SL / TP 2R | |
+| J2 | 15m | close | + 60% lock after 1R (house rule) | |
+| J3 | 15m | wick (confirmClose off) | + lock | |
+| J4 | 5m | close | + lock | |
+| J5 | 15m | close | + lock | only with the 60-minute trend agreeing (Amendment F's HTF) |
+
+Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never read for these**), twins, gates (>= 100
+trades; >= 4 of 5 folds) and $1,000 sizing as Amendment F. **BH over 113** (108 + 5).
