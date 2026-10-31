@@ -203,3 +203,20 @@ GOLDM's own minute closes for M1 / M2 (09:00-09:05). Indicators (standard settin
 **Gates:** s6 unchanged (E-rules as A-rules: >= 100 trades, E2 / E3 / E5 / E7 >= 50; M-rules as B-rules: >= 60, M1 / M2
 / M4 >= 40, and the account stop). BH q <= 0.10 over 30. Twins use each rule's own exits. Every win rate is reported
 against Boss's 65% rule.
+
+### Amendment B, part L (added 31 Oct 2026, still before any Amendment B number): stop-loss and profit-lock settings
+
+Boss, 31 Oct, mid-amendment: *"Stoploss profit lock."* Every rule above already has a stop-loss and a profit lock.
+Part L tests other fixed stop / lock settings on the two simplest entries. The lock is the same trailing kind: once
+the open profit reaches the trigger, exit if it falls to "keep" x its peak. BH now runs over **36** (12 + 6 + 18).
+
+| id | entries | stop | lock trigger | keep |
+|---|---|---|---|---|
+| L1 | E5's (XAUUSD vote), 06:00 -> 08:00 | 0.5 ATR15 | +0.5 ATR15 | 60% |
+| L2 | E5's | 1.5 ATR15 | +0.5 ATR15 | 50% |
+| L3 | E5's | 1.0 ATR15 | +0.5 ATR15 | 75% |
+| L4 | B1's (GOLDM follows W), 09:05 -> 10:00 | 0.20% | +0.10% | 60% |
+| L5 | B1's | 0.50% | +0.10% | 50% |
+| L6 | B1's | 0.30% | +0.10% | 75% |
+
+Gates as their parts (L1-L3 as E5, L4-L6 as B1).
