@@ -1,0 +1,30 @@
+id: r139a-x2
+title: 'R139 Amendment A X2: exit: breakeven at 1R, then a 1R trail, no fixed target'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: 'exit: breakeven at 1R, then a 1R trail, no fixed target improves R139''s rules after costs'
+model_or_rule: research/hunt/r139_market_structure/r139a.py
+settings: PREREG_A.md X2; 1 lot
+variants_tried: 19
+verdict: rejected
+results:
+  summary: 'design 1667 trades, win 44% (65% rule: below), avg net Rs 188 (2x Rs 168), total Rs 313,279, drawdown Rs -189,549,
+    worst month Rs -61,324; p 0.010, q 0.038. Holdout (already seen) 294 trades, win 45%, avg net Rs 37 (2x Rs 10), total
+    Rs 10,890, p 0.663. Fails: account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

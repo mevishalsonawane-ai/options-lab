@@ -1,4 +1,4 @@
-# R139: market structure (higher highs and lows, lower highs and lows, the structure shift). 0 of 12 pass
+# R139: market structure (higher highs and lows, lower highs and lows, the structure shift). 0 of 12 pass; enhancements 0 of 19; reversal 0 of 12
 
 31 Oct 2026. Research only: nothing in the app changes, nothing trades. Boss: *"Anything regarding equity shift, lower
 low, lower high, something like that, and create a strategy. Search on internet regarding these topics and provide me a
@@ -9,6 +9,10 @@ good backtest result."*
   is tested too (S8, S9).
 - **Signal source:** the index spot for every rule (15-minute wick swings; S6 uses 60-minute and 5-minute). The trade
   buys the ATM option; stops and targets are on the index.
+
+> **Update, same day (Amendments A and B, at the end):** Boss asked to enhance S3 with liquidity, volume, order flow and
+> SMC (19 versions), and to try reversal logic (12 versions). **None passes.** The design favourites lost on the
+> newer months; flipping the losing rules still loses.
 
 ## The answer: no good backtest result exists for these rules. 0 of 12 pass
 
@@ -159,3 +163,121 @@ found.
   predictions. No raw data in git.
 - Code and tests: `r139.py`, `test_r139.py` (27 tests). Results: `results/design.json`, `results/holdout.json`.
   Experiment entries: `research/experiments/entries/r139-s1.yaml` to `r139-s12.yaml`.
+
+
+---
+
+# Amendment A: enhancing S3 with liquidity, volume, order flow, SMC and more. 0 of 19 pass
+
+Boss, 31 Oct: *"Enhance it, try to add multiple parameters like liquidity, volumn and order flow, smc, and all things
+and find how could we enhace it"*. Pre-registration: `research/hunt/r139_market_structure/PREREG_A.md` (pushed before
+any number).
+
+**The answer: nothing makes S3 good enough. The add-ons that looked best in design fell apart on the newer months.**
+
+- **Design:** 9 add-ons kept S3 positive and better than random entries, but **every one still broke Boss's account
+  stop** (-Rs 40k drawdown, -Rs 13k month on 1 lot over the five indices):
+  - displacement L2: +Rs 219 a trade on 819;
+  - fair value gap L3: +Rs 164 on 697;
+  - option-volume surge V1: +Rs 260 on 334;
+  - OI flow OF1: +Rs 158 on 510;
+  - call-vs-put volume OF2: +Rs 173 on 1,479;
+  - VIX C1: +Rs 255 on 864;
+  - 60-min trend C2: +Rs 108 on 1,113;
+  - day stop D1: +Rs 185 on 1,662;
+  - trailing exit X2: +Rs 188 on 1,667.
+- **The only add-on inside the account stop** was the stop cap (D2, skip when the stop is more than 1.5 x ATR away):
+  +Rs 617 a trade, but on just **117** trades (300 needed). In the holdout it had 8 trades and lost Rs 2,213 each.
+- **Holdout (Apr - 19 Oct 2026, already seen for S3; read once more, 31 Oct). The design favourites lost:**
+  - displacement: -Rs 184 a trade (144 trades);
+  - volume surge: -Rs 298 (68);
+  - OI flow: -Rs 227 (98);
+  - VIX: +Rs 5 (107);
+  - K3, the stack of the three best design filters (L2 + V1 + C1): -Rs 1,719 (18).
+- **What did well in the holdout had failed design:**
+  - the liquidity sweep (L1): +Rs 366 on 125 trades;
+  - morning only (C3): +Rs 443 on 143.
+  When the winners swap places between periods, the differences are noise.
+- **The 60% premium lock (X1)** lifts the win rate to **68%** (above Boss's 65%) but **loses money**: -Rs 48 a trade
+  on 1,783 in design, -Rs 39 on 313 in the holdout. It cuts the big winners that pay for S3.
+- **The order-block retest entry (L5)** is worse than entering at once: -Rs 82 (622), holdout -Rs 628 (85).
+- **The full SMC stack** (sweep + displacement, K1): +Rs 234 on 444 in design, not better than random (p 0.22).
+  **The flow stack** (K2): -Rs 280 on 100.
+
+Volume and order flow come from the option chain (ATM ± 5 strikes). The index has no volume, and the lake has no tick
+or bid/ask history for 2021-2026. They are context filters around the index signal.
+
+| version | what | design trades | win | avg win / loss | net per trade (2x) | total | max DD | worst month | folds + | p | q | holdout (seen): trades, net per trade (2x), p | fails |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| A0 | S3 as in R139 (the base, for reference; not a new test) | 1,663 | 43% | Rs 3,636 / -Rs 2,449 | Rs 185 (Rs 166) | Rs 307,806 | Rs -203,995 | Rs -61,070 | 4 of 4 | 0.010 | nan | 291, Rs 61 (Rs 34), 0.62 | reference |
+| L1 | liquidity sweep | 812 | 42% | Rs 3,838 / -Rs 2,579 | Rs 148 (Rs 128) | Rs 120,104 | Rs -108,019 | Rs -52,054 | 2 of 4 | 0.109 | 0.172 | 125, Rs 366 (Rs 341), 0.25 | twins, folds, q, account |
+| L2 | displacement | 819 | 43% | Rs 3,799 / -Rs 2,453 | Rs 219 (Rs 200) | Rs 179,238 | Rs -144,774 | Rs -43,996 | 3 of 4 | 0.010 | 0.038 | 144, Rs -184 (Rs -210), 0.73 | account, holdout |
+| L3 | fair value gap left between the low and the CHoCH bar | 697 | 44% | Rs 3,365 / -Rs 2,385 | Rs 164 (Rs 145) | Rs 114,574 | Rs -107,220 | Rs -35,485 | 4 of 4 | 0.040 | 0.075 | 123, Rs 71 (Rs 47), 0.04 | account |
+| L4 | discount | 512 | 45% | Rs 2,790 / -Rs 1,981 | Rs 144 (Rs 124) | Rs 73,532 | Rs -56,153 | Rs -36,715 | 4 of 4 | 0.406 | 0.454 | 93, Rs 54 (Rs 29), 0.01 | twins, q, account |
+| L5 | order-block retest entry | 622 | 40% | Rs 2,336 / -Rs 1,697 | Rs -82 (Rs -103) | Rs -51,222 | Rs -108,936 | Rs -18,224 | 2 of 4 | 0.653 | 0.690 | 85, Rs -628 (Rs -657), 0.95 | net, twins, folds, q, account, holdout |
+| V1 | volume surge | 334 | 44% | Rs 3,253 / -Rs 2,065 | Rs 260 (Rs 243) | Rs 86,811 | Rs -81,572 | Rs -31,537 | 3 of 4 | 0.040 | 0.075 | 68, Rs -298 (Rs -325), 0.74 | account, holdout |
+| OF1 | OI order flow | 510 | 44% | Rs 2,960 / -Rs 2,020 | Rs 158 (Rs 139) | Rs 80,558 | Rs -85,423 | Rs -18,058 | 4 of 4 | 0.020 | 0.054 | 98, Rs -227 (Rs -251), 0.70 | account, holdout |
+| OF2 | buying flow | 1,479 | 43% | Rs 3,689 / -Rs 2,494 | Rs 173 (Rs 154) | Rs 256,198 | Rs -180,551 | Rs -52,292 | 4 of 4 | 0.010 | 0.038 | 252, Rs 17 (Rs -8), 0.57 | account, holdout |
+| C1 | India VIX above its 20-session median | 864 | 45% | Rs 3,889 / -Rs 2,693 | Rs 255 (Rs 235) | Rs 220,568 | Rs -141,703 | Rs -67,527 | 3 of 4 | 0.030 | 0.071 | 107, Rs 5 (Rs -22), 0.28 | account, holdout |
+| C2 | the 60-minute trend is not against the trade | 1,113 | 43% | Rs 3,560 / -Rs 2,538 | Rs 108 (Rs 89) | Rs 120,527 | Rs -160,007 | Rs -44,350 | 3 of 4 | 0.020 | 0.054 | 200, Rs -65 (Rs -91), 0.85 | account, holdout |
+| C3 | morning only | 798 | 41% | Rs 4,525 / -Rs 3,029 | Rs 86 (Rs 66) | Rs 68,291 | Rs -150,974 | Rs -41,012 | 2 of 4 | 0.149 | 0.217 | 143, Rs 443 (Rs 418), 0.70 | twins, folds, q, account |
+| C4 | R123's N1 network expected value > 0 (2023 on) | 178 | 42% | Rs 3,693 / -Rs 2,093 | Rs 313 (Rs 297) | Rs 55,659 | Rs -35,228 | Rs -17,728 | 3 of 4 | 0.383 | 0.454 | 7, Rs 1,691 (Rs 1,674), 0.15 | n, twins, q, account, holdout |
+| D1 | day stop | 1,662 | 43% | Rs 3,639 / -Rs 2,449 | Rs 185 (Rs 165) | Rs 306,709 | Rs -203,995 | Rs -61,070 | 4 of 4 | 0.010 | 0.038 | 291, Rs 61 (Rs 34), 0.55 | account |
+| D2 | stop cap | 117 | 49% | Rs 3,057 / -Rs 1,701 | Rs 617 (Rs 596) | Rs 72,205 | Rs -18,211 | Rs -6,204 | 3 of 4 | 0.010 | 0.038 | 8, Rs -2,213 (Rs -2,254), 0.42 | n, holdout |
+| X1 | exit | 1,783 | 68% | Rs 1,015 / -Rs 2,288 | Rs -48 (Rs -73) | Rs -86,402 | Rs -188,204 | Rs -49,233 | 1 of 4 | 0.396 | 0.454 | 313, Rs -39 (Rs -73), 0.34 | net, twins, folds, q, account, holdout |
+| X2 | exit | 1,667 | 44% | Rs 3,523 / -Rs 2,410 | Rs 188 (Rs 168) | Rs 313,279 | Rs -189,549 | Rs -61,324 | 4 of 4 | 0.010 | 0.038 | 294, Rs 37 (Rs 10), 0.66 | account |
+| K1 | SMC stack | 444 | 42% | Rs 4,133 / -Rs 2,629 | Rs 234 (Rs 214) | Rs 103,973 | Rs -86,146 | Rs -36,359 | 3 of 4 | 0.218 | 0.296 | 69, Rs 326 (Rs 301), 0.49 | twins, q, account |
+| K2 | flow stack | 100 | 41% | Rs 2,058 / -Rs 1,906 | Rs -280 (Rs -297) | Rs -28,031 | Rs -46,279 | Rs -7,803 | 1 of 4 | 0.723 | 0.723 | 26, Rs -632 (Rs -652), 0.60 | n, net, twins, folds, q, account, holdout |
+| K3 | every single filter that beat S3 per trade in design (>= 300 trades), together (L2 + V1 + C1) | 130 | 45% | Rs 3,738 / -Rs 2,406 | Rs 335 (Rs 317) | Rs 43,537 | Rs -34,249 | Rs -21,645 | 2 of 4 | 0.079 | 0.137 | 18, Rs -1,719 (Rs -1,746), 0.92 | n, twins, folds, q, account, holdout |
+
+A0 is S3 itself, for reference. p for C4 is R132's random-subset test. K3's filters were chosen by the pre-registered
+rule from the design results: L2 + V1 + C1.
+
+---
+
+# Amendment B: reversal logic. 0 of 12 pass
+
+Boss, 31 Oct: *"Check the adding reversal logic too and check if it could help??"* Pre-registration: `PREREG_B.md`.
+Two meanings were tested:
+- **flip:** take each R139 rule the other way (F1-F11);
+- **stop-and-reverse on S3** (SR3): when S3 is stopped, buy the opposite option at once, with the stop back at S3's
+  entry.
+
+**The answer: reversal does not help.**
+
+- **Flipping a losing rule does not make it a winner.**
+  - 9 of 11 flipped rules still lose in design. Both directions pay the option's time decay and costs.
+  - Boss's "sell the lower high" flipped (F1): -Rs 125 a trade on 4,247.
+  - The two small positives (F6 +Rs 58 on 1,586, F8 +Rs 12 on 2,973) break the account stop and lost in the
+    holdout.
+- **Stop-and-reverse slightly lowers S3:**
+  - design: +Rs 174 a trade on 1,868, against S3's +Rs 185, and positive in only 2 of 4 folds;
+  - the reverse legs alone: 262 trades, +Rs 93 each;
+  - holdout: +Rs 75 on 325 (the reverse legs: 43 trades, +Rs 16 each), not better than random (p 0.49).
+
+| version | what | design trades | win | avg win / loss | net per trade (2x) | total | max DD | worst month | folds + | p | q | holdout (seen): trades, net per trade (2x), p | fails |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| F1 | S1 taken the other way | 4,247 | 37% | Rs 2,558 / -Rs 1,714 | Rs -125 (Rs -145) | Rs -529,134 | Rs -567,022 | Rs -97,852 | 1 of 4 | 1.000 | 1.000 | 574, Rs 9 (Rs -20), 0.06 | net, twins, folds, q, account, holdout |
+| F2 | S2 taken the other way | 1,818 | 40% | Rs 3,151 / -Rs 2,389 | Rs -171 (Rs -190) | Rs -310,446 | Rs -467,712 | Rs -81,526 | 1 of 4 | 0.970 | 1.000 | 235, Rs -129 (Rs -154), 0.20 | net, twins, folds, q, account, holdout |
+| F3 | S3 taken the other way | 1,592 | 37% | Rs 3,133 / -Rs 2,408 | Rs -365 (Rs -384) | Rs -580,337 | Rs -638,869 | Rs -48,931 | 0 of 4 | 0.970 | 1.000 | 270, Rs -539 (Rs -564), 0.59 | net, twins, folds, q, account, holdout |
+| F4 | S4 taken the other way | 298 | 39% | Rs 2,295 / -Rs 2,003 | Rs -315 (Rs -335) | Rs -93,983 | Rs -103,597 | Rs -17,777 | 0 of 4 | 0.733 | 1.000 | 30, Rs 444 (Rs 412), 0.41 | n, net, twins, folds, q, account, holdout |
+| F5 | S5 taken the other way | 935 | 38% | Rs 2,333 / -Rs 1,682 | Rs -158 (Rs -178) | Rs -147,493 | Rs -178,826 | Rs -47,473 | 0 of 4 | 0.990 | 1.000 | 138, Rs -432 (Rs -460), 0.91 | net, twins, folds, q, account, holdout |
+| F6 | S6 taken the other way | 1,586 | 41% | Rs 2,815 / -Rs 1,886 | Rs 58 (Rs 38) | Rs 92,647 | Rs -108,132 | Rs -38,177 | 3 of 4 | 0.030 | 0.119 | 224, Rs -87 (Rs -115), 0.37 | q, account, holdout |
+| F7 | S7 taken the other way | 3,404 | 36% | Rs 1,936 / -Rs 1,220 | Rs -71 (Rs -93) | Rs -240,640 | Rs -283,661 | Rs -65,872 | 0 of 4 | 0.030 | 0.119 | 468, Rs -181 (Rs -211), 0.02 | net, folds, q, account, holdout |
+| F8 | S8 taken the other way | 2,973 | 38% | Rs 2,979 / -Rs 1,795 | Rs 12 (Rs -9) | Rs 34,954 | Rs -226,238 | Rs -48,058 | 2 of 4 | 0.713 | 1.000 | 391, Rs -152 (Rs -182), 0.36 | net, twins, folds, q, account, holdout |
+| F9 | S9 taken the other way | 3,755 | 32% | Rs 2,004 / -Rs 1,207 | Rs -172 (Rs -195) | Rs -646,439 | Rs -673,162 | Rs -69,815 | 1 of 4 | 1.000 | 1.000 | 493, Rs -170 (Rs -201), 0.59 | net, twins, folds, q, account, holdout |
+| F10 | S10 taken the other way | 718 | 38% | Rs 4,110 / -Rs 2,994 | Rs -293 (Rs -313) | Rs -210,373 | Rs -300,570 | Rs -58,052 | 1 of 4 | 0.950 | 1.000 | 86, Rs -347 (Rs -370), 0.19 | net, twins, folds, q, account, holdout |
+| F11 | S11 taken the other way | 2,736 | 36% | Rs 2,420 / -Rs 1,644 | Rs -162 (Rs -182) | Rs -442,113 | Rs -489,126 | Rs -90,542 | 1 of 4 | 1.000 | 1.000 | 373, Rs -81 (Rs -110), 0.25 | net, twins, folds, q, account, holdout |
+| SR3 | S3 with stop-and-reverse (once per trade) | 1,868 | 43% | Rs 3,592 / -Rs 2,431 | Rs 174 (Rs 155) | Rs 324,795 | Rs -183,553 | Rs -66,994 | 2 of 4 | 0.010 | 0.119 | 325, Rs 75 (Rs 49), 0.49 | folds, q, account |
+
+## Where R139 stands after both amendments
+
+- **0 of 12 rules, 0 of 19 enhancements and 0 of 12 reversal versions pass.** Nothing goes on paper or live.
+- **The honest best:** S3, the CHoCH reversal, with the plain 2R exit:
+  - +Rs 185 a trade on 1,663 in design;
+  - +Rs 61 on 291 in the holdout;
+  - drawdowns far past Boss's account stop.
+- **One thing worth keeping in mind:** cutting the trades with wide stops (D2) is the only change that kept S3 inside
+  the account stop in design. It had far too few trades to judge, and lost in the holdout.
+- **Nothing here earns a forward test.** If Boss wants one anyway, S3 with D2 is the version to log. It would be forward
+  only; CLAUDE.md allows no more failed-gate exceptions.

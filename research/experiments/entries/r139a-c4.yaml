@@ -1,0 +1,30 @@
+id: r139a-c4
+title: 'R139 Amendment A C4: R123''s N1 network expected value > 0 (2023 on)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: '2021-08-01..2026-03-15 (filtered: folds 2023-2026 Q1)'
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: R123's N1 network expected value > 0 (2023 on) improves R139's rules after costs
+model_or_rule: research/hunt/r139_market_structure/r139a.py
+settings: PREREG_A.md C4; 1 lot
+variants_tried: 19
+verdict: rejected
+results:
+  summary: 'design 178 trades, win 42% (65% rule: below), avg net Rs 313 (2x Rs 297), total Rs 55,659, drawdown Rs -35,228,
+    worst month Rs -17,728; p 0.383, q 0.454. Holdout (already seen) 7 trades, win 57%, avg net Rs 1691 (2x Rs 1674), total
+    Rs 11,840, p 0.150. Fails: n, twins, q, account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

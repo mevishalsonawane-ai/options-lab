@@ -1,0 +1,30 @@
+id: r139a-l4
+title: 'R139 Amendment A L4: discount: the CHoCH close at or below 50% of the down-leg''s range'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: 'discount: the CHoCH close at or below 50% of the down-leg''s range improves R139''s rules after costs'
+model_or_rule: research/hunt/r139_market_structure/r139a.py
+settings: PREREG_A.md L4; 1 lot
+variants_tried: 19
+verdict: rejected
+results:
+  summary: 'design 512 trades, win 45% (65% rule: below), avg net Rs 144 (2x Rs 124), total Rs 73,532, drawdown Rs -56,153,
+    worst month Rs -36,715; p 0.406, q 0.454. Holdout (already seen) 93 trades, win 48%, avg net Rs 54 (2x Rs 29), total Rs
+    5,043, p 0.010. Fails: twins, q, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

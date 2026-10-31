@@ -1,0 +1,30 @@
+id: r139a-c1
+title: 'R139 Amendment A C1: India VIX above its 20-session median'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: India VIX above its 20-session median improves R139's rules after costs
+model_or_rule: research/hunt/r139_market_structure/r139a.py
+settings: PREREG_A.md C1; 1 lot
+variants_tried: 19
+verdict: rejected
+results:
+  summary: 'design 864 trades, win 45% (65% rule: below), avg net Rs 255 (2x Rs 235), total Rs 220,568, drawdown Rs -141,703,
+    worst month Rs -67,527; p 0.030, q 0.071. Holdout (already seen) 107 trades, win 49%, avg net Rs 5 (2x Rs -22), total
+    Rs 529, p 0.277. Fails: account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

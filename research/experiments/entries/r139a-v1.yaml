@@ -1,0 +1,31 @@
+id: r139a-v1
+title: 'R139 Amendment A V1: volume surge: option-chain volume of the last 15 min >= 1.5x the session''s average'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN by R139; this amendment read it once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG_A.md
+holdout_read: true
+features:
+- 'signal source: the index spot (R139 15-min swings); volume and order flow from the option chain as context; buys the ATM
+  option; index stop'
+hypothesis: 'volume surge: option-chain volume of the last 15 min >= 1.5x the session''s average improves R139''s rules after
+  costs'
+model_or_rule: research/hunt/r139_market_structure/r139a.py
+settings: PREREG_A.md V1; 1 lot
+variants_tried: 19
+verdict: rejected
+results:
+  summary: 'design 334 trades, win 44% (65% rule: below), avg net Rs 260 (2x Rs 243), total Rs 86,811, drawdown Rs -81,572,
+    worst month Rs -31,537; p 0.040, q 0.075. Holdout (already seen) 68 trades, win 37%, avg net Rs -298 (2x Rs -325), total
+    Rs -20,270, p 0.743. Fails: account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
