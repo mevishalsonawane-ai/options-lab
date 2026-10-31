@@ -1,0 +1,29 @@
+id: r140-b4
+title: 'R140 B4: GOLDM follows the window when the 09:00 gap under-reacted, 09:05-14:00'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: An under-reacting gap catches up after 09:05 after costs; beats random same-time twins (p <= 0.05), BH q <= 0.10
+  over 12, >= 3 of 4 folds positive, drawdown above -Rs 40k and no month below -Rs 13k.
+data_version: XAUUSD Dukascopy BID 1-min (research-data release xauusd_m1_bid.csv.gz to 30 Sep 2026 + Dukascopy tail to 30
+  Oct 2026); GOLDM near future from the Drive lake options_rolling_1m GOLDM book (R53 loader), copied 31 Oct 2026
+period:
+  design: 2025-08-05..2026-03-31 (4 two-month folds)
+  holdout: '2026-04-01..2026-10-19 (locked; not read: nothing passed)'
+instruments:
+- GOLDM
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot (the underlying) 06:00-08:00 IST, 15-minute candles; trades the MCX GOLDM future'
+model_or_rule: follow the window only when MCX's 09:00 gap under-reacted to XAUUSD's overnight move; in 09:05, out 14:00.
+  Stop 0.30% of entry; lock 60% of peak after +0.20%; minute closes
+settings: research/hunt/r140_gold_0600/r140.py; PREREG.md s4
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 72 trades, win 65% (Boss''s 65% rule: meets), avg net Rs +378 (2x Rs -29), total Rs +27,199 (2x Rs -2,052);
+    folds -5,942 / -1,540 / -18,816 / +53,497; twin p 0.078 (twin median total Rs -24,755), BH q 0.674 (12 R140 variants);
+    drawdown Rs -30,146, worst month Rs -11,726 (1 lot). Gates failed: net, twins, bh, folds. Holdout not read (nothing passed).'
+  costs: Zerodha MCX futures charges (fut_leg_charges) + half-spread max(1 tick, 1 bp)/2 a fill, 1 lot; 2x doubles both
+holdout_read: false
+verdict: rejected

@@ -1,0 +1,28 @@
+id: r140-m4
+title: 'R140 Amendment B M4: M1 + high win-rate exits'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss (31 Oct): more indicators, strategies and stop / lock settings raise the win rate. M1 + high win-rate exits
+  earns after costs, beats twins with the same exits (p <= 0.05), BH q <= 0.10 over 36, folds positive, account stop.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026; GOLDM option-book near future from the Drive lake)
+period:
+  design: 2025-08-05..2026-03-31
+  holdout: '2026-04-01..2026-10-19 (locked; not read: nothing passed)'
+instruments:
+- GOLDM
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot 15-minute candles completed by 06:00 IST (the underlying); GOLDM 09:00-09:05 minute closes;
+  trades the GOLDM future'
+model_or_rule: M1 + high win-rate exits; every rule has a stop-loss and a 60%-type trailing profit lock
+settings: research/hunt/r140_gold_0600/r140e.py; PREREG.md Amendment B
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 40 trades, win 45% (Boss''s 65% rule: below), avg net Rs -1,442 (2x Rs -1,848), total Rs -57,674 (2x Rs
+    -73,917); folds +614 / -5,320 / -34,045 / -18,923; twin p 0.988, BH q 0.988 (36 R140 rules); drawdown Rs -59,868, worst
+    month Rs -26,301. Gates failed: net, twins, bh, folds, account. Holdout not read.'
+  costs: Zerodha MCX futures charges + half-spread max(1 tick, 1 bp)/2 a fill, 1 lot; 2x doubles both
+holdout_read: false
+verdict: rejected

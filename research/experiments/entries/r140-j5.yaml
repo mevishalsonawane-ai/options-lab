@@ -1,0 +1,25 @@
+id: r140-j5
+title: 'R140 Amendment J J5: Internal SMC sweep, 15m, + lock, with the 60m trend'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: Boss's Pine v5 Internal SMC BOS & HL/LH sweep (silent CHoCH, then BOS arms the origin HL / LH; a wick through
+  it with a close back is the signal) earns on XAUUSD after costs and beats twins.
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot candles (the underlying); information only'
+model_or_rule: Internal SMC sweep, 15m, + lock, with the 60m trend; 12 h cap
+settings: research/hunt/r140_gold_0600/r140j.py; PREREG.md Amendment J
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 154 trades, win 51% (65% rule: below), avg net $-106 a 100-oz lot (2x $-138), total $-16,355; folds +2,723
+    / -2,042 / +974 / -7,395 / -10,615; twin p 0.930, BH q 1.000. Gates failed: net, twins, bh, folds. Holdout not read.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+holdout_read: false
+verdict: rejected

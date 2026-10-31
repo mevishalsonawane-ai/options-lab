@@ -1,5 +1,7 @@
 # R140: does higher-high / lower-low structure help our paper arms lose less? No. But one fake-breakout filter passed
 
+> Number note (coordinator, 1 Nov): two studies carry the number R140. This one is **R140 structure arms**; the other is **R140 gold 06-08** (research/HUNT_R140_GOLD_0600.md). Their files and entry ids do not overlap.
+
 31 Oct 2026. Research only: nothing in the app changes.
 
 Boss, 31 Oct:

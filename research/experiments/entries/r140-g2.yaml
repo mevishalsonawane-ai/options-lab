@@ -1,0 +1,27 @@
+id: r140-g2
+title: 'R140 Amendment D G2: vote 4/4, stop 0.5 ATR, lock +1.0 keep 60%, out 12:30 IST (XAUUSD 06:00 IST)'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss (31 Oct): bigger profit per trade on US gold. vote 4/4, stop 0.5 ATR, lock +1.0 keep 60%, out 12:30 IST
+  earns after costs, beats twins with its own exits (p <= 0.05), BH q <= 0.10 over 42, >= 4 of 5 folds positive.'
+data_version: as r140-a1
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-08-31 (locked; not read: nothing passed); 2026-09-01..10-30 reported as already seen'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot 15-minute candles completed by 06:00 IST; information only (not tradable via Zerodha)'
+model_or_rule: vote 4/4, stop 0.5 ATR, lock +1.0 keep 60%, out 12:30 IST
+settings: research/hunt/r140_gold_0600/r140g.py; PREREG.md Amendment D
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 195 trades, win 35% (65% rule: below), avg net $-5 a 100-oz lot (2x $-37), total $-1,002 (2x $-7,242);
+    folds -2,085 / -912 / +1,521 / -1,243 / +1,717; twin p 0.146, BH q 0.576 (42). $1,000 account: 5x -3.2% (max DD -11.2%),
+    risk 1% -13.1%, risk 2% -6.6% (max DD -24.1%). Gates failed: net, twins, bh, folds. Holdout not read. Sep-Oct 2026 (seen):
+    17 trades, 5x +0.2%, risk 2% +0.5%.'
+  costs: $0.25 spread + $7 a lot round trip, scaled to the size; 2x also
+holdout_read: false
+verdict: rejected

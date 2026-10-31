@@ -1,0 +1,334 @@
+{
+ "T1": {
+  "rule": "T1",
+  "n": 1574,
+  "win": 0.339898,
+  "avg": -34.324885,
+  "total": -54027.369629,
+  "total2": -104395.369629,
+  "avg2": -66.324885,
+  "longs": 881,
+  "folds": [
+   -22769.363222,
+   -15079.041366,
+   -12807.036569,
+   4129.795252,
+   -7501.723724
+  ],
+  "dd": -82574.640801,
+  "worst_month": -32432.443929,
+  "months_green": "8/30",
+  "why": {
+   "stop": 0,
+   "lock": 0,
+   "time": 32
+  },
+  "twin_p": 0.711289,
+  "twin_median_total": -35735.54585,
+  "sizing_1000": {
+   "5x": {
+    "end": 288.619561,
+    "ret": -0.71138,
+    "max_dd_pct": -0.780875,
+    "worst_month": -234.330694,
+    "months_green": "8/30",
+    "avg_win": 5.25182,
+    "avg_loss": -3.388936
+   },
+   "risk1": {
+    "end": 74.304928,
+    "ret": -0.925695,
+    "max_dd_pct": -0.9418,
+    "worst_month": -304.424356,
+    "months_green": "7/30",
+    "avg_win": 3.386073,
+    "avg_loss": -2.634499
+   },
+   "risk2": {
+    "end": -0.068181,
+    "ret": -1.000068,
+    "max_dd_pct": -1.011206,
+    "worst_month": -472.851539,
+    "months_green": "16/30",
+    "avg_win": 1.071737,
+    "avg_loss": -3.283177
+   },
+   "risk2_2x_costs": {
+    "end": -0.001093,
+    "ret": -1.000001,
+    "max_dd_pct": -1.006578,
+    "worst_month": -294.491474,
+    "months_green": "18/30",
+    "avg_win": 0.717742,
+    "avg_loss": -2.745228
+   }
+  },
+  "exits": {
+   "tp": 516,
+   "sl": 1026,
+   "lock": 0,
+   "time": 32
+  },
+  "long_net": 16459.624184,
+  "short_net": -70486.993814,
+  "avg_stop_usd": 4.816009,
+  "q": 0.998002,
+  "gates": {
+   "net": false,
+   "twins": false,
+   "bh": false,
+   "trades": true,
+   "folds": false,
+   "all": false
+  }
+ },
+ "T2": {
+  "rule": "T2",
+  "n": 1620,
+  "win": 0.480864,
+  "avg": -45.156158,
+  "total": -73152.976179,
+  "total2": -124992.976179,
+  "avg2": -77.156158,
+  "longs": 907,
+  "folds": [
+   -20944.495111,
+   -11601.016459,
+   -16785.256393,
+   -10058.933314,
+   -13763.274902
+  ],
+  "dd": -93168.199862,
+  "worst_month": -20290.855624,
+  "months_green": "5/30",
+  "why": {
+   "stop": 0,
+   "lock": 616,
+   "time": 15
+  },
+  "twin_p": 0.866134,
+  "twin_median_total": -41689.721592,
+  "sizing_1000": {
+   "5x": {
+    "end": 233.736618,
+    "ret": -0.766263,
+    "max_dd_pct": -0.80769,
+    "worst_month": -245.194896,
+    "months_green": "5/30",
+    "avg_win": 2.548546,
+    "avg_loss": -3.271796
+   },
+   "risk1": {
+    "end": 51.936525,
+    "ret": -0.948063,
+    "max_dd_pct": -0.95655,
+    "worst_month": -332.516013,
+    "months_green": "4/30",
+    "avg_win": 1.708581,
+    "avg_loss": -2.709927
+   },
+   "risk2": {
+    "end": -0.042949,
+    "ret": -1.000043,
+    "max_dd_pct": -1.013757,
+    "worst_month": -543.784344,
+    "months_green": "21/30",
+    "avg_win": 1.041928,
+    "avg_loss": -2.29716
+   },
+   "risk2_2x_costs": {
+    "end": -0.000605,
+    "ret": -1.000001,
+    "max_dd_pct": -1.007901,
+    "worst_month": -302.866893,
+    "months_green": "21/30",
+    "avg_win": 0.607229,
+    "avg_loss": -1.869314
+   }
+  },
+  "exits": {
+   "tp": 166,
+   "sl": 823,
+   "lock": 616,
+   "time": 15
+  },
+  "long_net": -504.715144,
+  "short_net": -72648.261035,
+  "avg_stop_usd": 4.784116,
+  "q": 0.998002,
+  "gates": {
+   "net": false,
+   "twins": false,
+   "bh": false,
+   "trades": true,
+   "folds": false,
+   "all": false
+  }
+ },
+ "T3": {
+  "rule": "T3",
+  "n": 4997,
+  "win": 0.479488,
+  "avg": -18.421033,
+  "total": -92049.901383,
+  "total2": -251953.901383,
+  "avg2": -50.421033,
+  "longs": 2719,
+  "folds": [
+   -23134.456029,
+   -27097.952448,
+   -26135.34245,
+   -32536.280765,
+   16854.130309
+  ],
+  "dd": -128439.689248,
+  "worst_month": -19115.419129,
+  "months_green": "4/30",
+  "why": {
+   "stop": 0,
+   "lock": 1957,
+   "time": 13
+  },
+  "twin_p": 0.051948,
+  "twin_median_total": -144757.465009,
+  "sizing_1000": {
+   "5x": {
+    "end": 134.645629,
+    "ret": -0.865354,
+    "max_dd_pct": -0.905822,
+    "worst_month": -187.074863,
+    "months_green": "4/30",
+    "avg_win": 0.933645,
+    "avg_loss": -1.19276
+   },
+   "risk1": {
+    "end": 0.298103,
+    "ret": -0.999702,
+    "max_dd_pct": -0.999746,
+    "worst_month": -456.092768,
+    "months_green": "2/30",
+    "avg_win": 0.481667,
+    "avg_loss": -0.828057
+   },
+   "risk2": {
+    "end": 0.055749,
+    "ret": -0.999944,
+    "max_dd_pct": -0.999956,
+    "worst_month": -517.293428,
+    "months_green": "3/30",
+    "avg_win": 0.527804,
+    "avg_loss": -0.870651
+   },
+   "risk2_2x_costs": {
+    "end": 2e-06,
+    "ret": -1.0,
+    "max_dd_pct": -1.0,
+    "worst_month": -666.099196,
+    "months_green": "0/30",
+    "avg_win": 0.163162,
+    "avg_loss": -0.464325
+   }
+  },
+  "exits": {
+   "tp": 566,
+   "sl": 2461,
+   "lock": 1957,
+   "time": 13
+  },
+  "long_net": -77083.859112,
+  "short_net": -14966.04227,
+  "avg_stop_usd": 2.653467,
+  "q": 0.388411,
+  "gates": {
+   "net": false,
+   "twins": false,
+   "bh": false,
+   "trades": true,
+   "folds": false,
+   "all": false
+  }
+ },
+ "T4": {
+  "rule": "T4",
+  "n": 1058,
+  "win": 0.490548,
+  "avg": -39.159028,
+  "total": -41430.251638,
+  "total2": -75286.251638,
+  "avg2": -71.159028,
+  "longs": 663,
+  "folds": [
+   -4651.666856,
+   -9929.033,
+   -10411.66876,
+   -5360.875492,
+   -11077.00753
+  ],
+  "dd": -58425.41884,
+  "worst_month": -17946.639861,
+  "months_green": "5/30",
+  "why": {
+   "stop": 0,
+   "lock": 413,
+   "time": 10
+  },
+  "twin_p": 0.781219,
+  "twin_median_total": -23004.397101,
+  "sizing_1000": {
+   "5x": {
+    "end": 475.075219,
+    "ret": -0.524925,
+    "max_dd_pct": -0.592859,
+    "worst_month": -88.743697,
+    "months_green": "5/30",
+    "avg_win": 4.274588,
+    "avg_loss": -5.089863
+   },
+   "risk1": {
+    "end": 290.738544,
+    "ret": -0.709261,
+    "max_dd_pct": -0.752069,
+    "worst_month": -104.189803,
+    "months_green": "6/30",
+    "avg_win": 3.944145,
+    "avg_loss": -5.113678
+   },
+   "risk2": {
+    "end": 174.55446,
+    "ret": -0.825446,
+    "max_dd_pct": -0.875053,
+    "worst_month": -116.745805,
+    "months_green": "7/30",
+    "avg_win": 4.987791,
+    "avg_loss": -6.334154
+   },
+   "risk2_2x_costs": {
+    "end": 26.279229,
+    "ret": -0.973721,
+    "max_dd_pct": -0.979902,
+    "worst_month": -186.962564,
+    "months_green": "5/30",
+    "avg_win": 2.056391,
+    "avg_loss": -3.669759
+   }
+  },
+  "exits": {
+   "tp": 108,
+   "sl": 527,
+   "lock": 413,
+   "time": 10
+  },
+  "long_net": 1995.336115,
+  "short_net": -43425.587752,
+  "avg_stop_usd": 4.947739,
+  "q": 0.998002,
+  "gates": {
+   "net": false,
+   "twins": false,
+   "bh": false,
+   "trades": true,
+   "folds": false,
+   "all": false
+  }
+ }
+}
