@@ -454,3 +454,39 @@ never read for these). 16:00-18:00 IST is the London afternoon, before New York.
 Gates: net > 0 at 1x and 2x; twin p <= 0.05; **BH over 123** (113 + 10); **>= 30 trades** (the windows are short);
 >= 4 of 5 folds positive. Win rate against the 65% rule. W1 repeats Amendment F's F5 (the same rule); it is counted
 again, not dropped.
+
+## Amendment L (31 Oct 2026, before any Amendment L number): enhancing Boss's scripts for more profit and win rate
+
+Boss, 31 Oct: *"Can we enhance the scripts to get more profit and more win rate."* US gold; information only.
+**Signal source: XAUUSD spot candles.**
+
+**Base = Boss's signals combined (15m):** every signal of his five setups, as ported in Amendments F-J (the first Pine,
+the refined Pine, the origin-low sweep (strict), break and retest, the Internal SMC sweep; the First-Bar version is
+the same as J). They are merged in time order, with duplicate (time, side) signals once. One trade at a time; each
+signal keeps its script's SL / TP; 12-hour cap; 60% lock after 1R (house rule).
+
+**Enhancements (from what R140 found; that choice is data-driven, so all of them count in BH):**
+- **vote:** trade only when the 4-signal vote of H11b (sign of EMA20 - EMA50, RSI14 - 50, the MACD histogram, and the
+  move from the last 17:00 New York close to the signal) all point the trade's way. Read from the 15m candle the
+  signal closes on;
+- **busy:** trade only when that candle's ATR14 >= the median ATR14 of all earlier 15m candles in the same IST hour;
+- **high win-rate exits:** TP at 1R (instead of the script's) and the lock after +0.5R keeping 60%;
+- **reverse:** take the opposite side (bet that the sweep / retest FAILS and price runs on). Same entry; SL at the
+  script's risk distance on the other side; TP at 2R; 60% lock after 1R;
+- **11-13:** keep only signals that close 11:00-12:59 IST (H11b's hours).
+
+| id | base | enhancements |
+|---|---|---|
+| L1 | combined | none (base exits + lock) |
+| L2 | combined | vote |
+| L3 | combined | busy |
+| L4 | combined | vote + busy |
+| L5 | combined | vote + busy + high win-rate exits |
+| L6 | combined | reverse |
+| L7 | combined | reverse + vote + busy (the vote read in the reversed side's direction) |
+| L8 | combined | vote + busy + 11-13 |
+
+Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never read for these**), twins (the same
+clock time, a random day and side, the same $ SL / TP and exits), $1,000 sizing as Amendment F. Gates: net > 0 at 1x
+and 2x; twin p <= 0.05; **BH over 131** (123 + 8); >= 50 trades; >= 4 of 5 folds positive. Win rate against the 65%
+rule.
