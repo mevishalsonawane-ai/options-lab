@@ -54,9 +54,9 @@ up = math.sign(ema20 - ema50) == 1 and math.sign(rsi14 - 50) == 1 and math.sign(
 down = math.sign(ema20 - ema50) == -1 and math.sign(rsi14 - 50) == -1 and math.sign(macdHist) == -1 and c3 == -1
 
 // busy: this 11:00 candle's ATR vs the median of all EARLIER 11:00 candles (today is added after the check)
-var array<float> atrHist = array.new_float()
-bool busy = false
-float atrMed = na
+var atrHist = array.new_float(0)
+busy = false
+atrMed = float(na)
 if sigBar and not na(atr14)
     atrMed := array.size(atrHist) > 0 ? array.median(atrHist) : na
     busy := not na(atrMed) and atr14 >= atrMed
