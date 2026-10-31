@@ -1,11 +1,11 @@
-# R140 result (31 Oct 2026): HH/LL structure on our arms (0 of 12), and the fake-breakout hunt (1 of 7 passes)
-1. Boss asked whether higher-high/lower-low structure helps our arms, and to judge by losing less, not by profit. The gates: smaller losing days, drawdown, worst day and worst month no worse, still in profit, better than random.
-2. Structure does not help: skipping trades against the 15-min or 5-min trend cut losses only as much as random skipping (p 0.17-0.99), and the structure-shift exit barely changed anything.
-3. Deep analysis of 8,160 arm trades (most lose: R72 53%, R51 56%, Liquidity 56%). Fake breakouts cluster after a wide previous day, on weak pushes, after earlier fake pokes that day, and mid-morning.
-4. Passed every lose-less gate: FB-R72-A10. R72 Breadth Donchian skips breakouts on days after a very wide day (yesterday's range in the top fifth of its 20-day average).
-5. Final (Apr - 13 Oct 2026): losing days -Rs 3.00 lakh vs -Rs 3.90 lakh (23% less), drawdown Rs 56.2k vs Rs 61.9k, worst month -Rs 30.5k vs -Rs 40.9k, profit Rs 1.94 lakh vs Rs 1.71 lakh; random skips matched it 1 in 2,000.
-6. It also held in design and the walk-forward year. The same rule on R51 missed by one gate (one worse month in the walk-forward year).
-7. Caveats: the slice was chosen on design data; the final months were not fresh (never with this filter); counting every earlier family, q would be about 1; win rate 46.5%; R72 still has a month past -Rs 13k.
-8. Proposed, not built: FB-R72-A10 as a labelled paper switch on R72 (one-tap undo, timeline logged); for live only in shadow, switch off by default.
-9. All 19 tests are logged in research/experiments/entries/r140-*.yaml and r140a-*.yaml.
-10. Write-up: research/HUNT_R140_STRUCTURE_ARMS.md. Code, tests, PREREG, PREREG_A: research/hunt/r140_structure_arms/. R139 is in research/HUNT_R139_MARKET_STRUCTURE.md.
+# R141 result (31 Oct 2026): every losing trade of the four paper arms, and the patterns in them (descriptive)
+1. All of R72, R51, R52 and Liquidity's trades (exact rebuild) were checked. About half lose on every arm (R72 53-54%, R51 55%, R52 44-49%, Liquidity 56-63%); winners being bigger is what pays.
+2. The biggest losing group: trades that never worked (the option never rose 5%). They are 44-50% of the money lost on R72 and R51; 92-98% of them lose, and fast (R72: 85-91% of trades ending within 15 min lose).
+3. About a quarter of the money lost: trades up a median +28-32% that then lost. R105 already tested 20 exits for these: 0 passed (they sell winners early).
+4. Losses bunch: on Liquidity two-thirds of losers fall on days when every trade lost; R72's longest losing streak was 29 (design), 15 (final).
+5. Weekday, index, call/put and hour-of-day patterns are NOT steady: they flip between periods.
+6. Steady at entry (held in 2024-25, 2025-26 and Apr-Oct 2026): R72 weak push into the break, and after a very wide day (R140's filter: passed, proposed for paper).
+7. R51 steady: an earlier fake poke today, a weak push, a quiet signal bar, 10:30-12:00 entries, a very wide previous day. R52: none found. Liquidity: a gap against the trade (R140: failed).
+8. Leads to test next, each pre-registered with lose-less gates: an R51 "bad-break" filter, and a "no progress" exit on R72/R51 (never tested there).
+9. Nothing changes in the app. 4 descriptive entries (research/experiments/entries/r141-*.yaml).
+10. Write-up: research/HUNT_R141_LOSING_TRADES.md. R140 (structure on the arms, fake breakouts) and R139 (market structure) are in research/HUNT_R140_STRUCTURE_ARMS.md and HUNT_R139_MARKET_STRUCTURE.md.

@@ -534,3 +534,7 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
       - Live: only in shadow, behind a switch that is off by default.
       - Caveats: research/HUNT_R140_STRUCTURE_ARMS.md.
 - [ ] R140-2. Forward-log the same rule on R51. It missed by one gate: one worse month in the walk-forward year.
+- [ ] R141-1. Leads from R141's losing-trade study, each needing its own pre-registered test with R140's lose-less gates:
+      - an R51 "bad-break" filter: an earlier fake poke today, a weak push, or a quiet signal bar (steady in all
+        three periods, but found by searching);
+      - a "no progress" exit on R72 / R51 (never tested there; R81's on Liquidity failed).
