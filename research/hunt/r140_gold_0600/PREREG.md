@@ -378,3 +378,30 @@ source: XAUUSD spot candles.** The differences from Amendment F, all taken from 
 
 Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never read for these rules**), twins,
 gates (>= 100 trades; >= 4 of 5 folds) and $1,000 sizing as Amendment F. **BH over 104** (99 + 5).
+
+## Amendment I (31 Oct 2026, before any Amendment I number): break and retest (Boss's screenshot)
+
+Boss sent a TradingView screenshot (31 Oct): XAUUSD 15m, a "BREAK" label, then "SELL RETEST, TP 3984.34, SL 4002.72"
+on a zone about $6 wide that price broke and came back to. That is one good trade. The rule below is the plain
+break-and-retest it shows, built from the picture (no code was sent), tested on 2.5 years. US gold; information only.
+**Signal source: XAUUSD spot candles.**
+
+**SELL (BUY is the exact mirror), chart candles, pivot-3 swings as Amendment F, ATR 14 (Wilder):**
+1. **Level:** the last confirmed swing low S. **Zone:** S - 0.25 ATR to S + 0.25 ATR (about $5-6 at 15m, as in the
+   screenshot).
+2. **Break:** a candle closes below the zone's bottom.
+3. **Retest, at least 2 candles after the break and within 30:** a candle's high reaches the zone (high >= the
+   zone's bottom) and it closes back below S. Sell at that close.
+4. **Cancel:** a close above the zone's top before the retest (the level is reclaimed), or 30 candles without one.
+5. **SL** = the zone's top + 0.1 ATR. **TP** = 2R (the screenshot's TP is about 2.2R).
+
+| id | chart | exits | extra |
+|---|---|---|---|
+| T1 | 15m | SL / TP 2R (as the indicator shows) | |
+| T2 | 15m | + 60% lock after 1R (house rule) | |
+| T3 | 5m | + lock | |
+| T4 | 15m | + lock | only with the 60-minute trend agreeing (Amendment F's HTF) |
+
+Entry at the next minute's open, 1-minute SL / TP checks (both in one minute = SL), one trade at a time, 12-hour cap.
+Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never read for these**), twins, gates (>= 100
+trades; >= 4 of 5 folds) and $1,000 sizing as Amendment F. **BH over 108** (104 + 4).
