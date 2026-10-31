@@ -1,0 +1,156 @@
+{
+ "T15-72": {
+  "passed": false,
+  "fails": [
+   "final: drawdown worse",
+   "final: worst day worse",
+   "twin p 0.988 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9875062468765617,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "T5-72": {
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "wf: drawdown worse",
+   "wf: worst month worse",
+   "final: drawdown worse",
+   "final: worst day worse",
+   "final: worst month worse",
+   "twin p 0.979 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9790104947526237,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "T15-51": {
+  "passed": false,
+  "fails": [
+   "design: the arm no longer makes money",
+   "wf: worst month worse",
+   "final: drawdown worse",
+   "final: worst day worse",
+   "final: the arm no longer makes money",
+   "twin p 0.79 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7901049475262368,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "T5-51": {
+  "passed": false,
+  "fails": [
+   "wf: worst month worse",
+   "final: drawdown worse",
+   "twin p 0.869 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8690654672663668,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "T15-52": {
+  "passed": false,
+  "fails": [
+   "wf: drawdown worse",
+   "twin p 0.172 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.17191404297851073,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "T5-52": {
+  "passed": false,
+  "fails": [
+   "twin p 0.245 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.2448775612193903,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "T15-L": {
+  "passed": false,
+  "fails": [
+   "wf: drawdown worse",
+   "final: the arm no longer makes money",
+   "twin p 0.595 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5952023988005997,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "T5-L": {
+  "passed": false,
+  "fails": [
+   "twin p 0.59 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5897051474262869,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "M15-72": {
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "final: losing days not smaller",
+   "final: drawdown worse",
+   "twin p 0.905 >= 0.05",
+   "BH q 1 > 0.1",
+   "< 30 final trades differ"
+  ],
+  "p": 0.9050474762618691,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "M5-72": {
+  "passed": false,
+  "fails": [
+   "wf: drawdown worse",
+   "wf: worst day worse",
+   "wf: worst month worse",
+   "twin p 0.991 >= 0.05",
+   "BH q 1 > 0.1",
+   "< 30 final trades differ"
+  ],
+  "p": 0.9905047476261869,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "M15-51": {
+  "passed": false,
+  "fails": [
+   "design: drawdown worse",
+   "design: worst month worse",
+   "final: losing days not smaller",
+   "twin p 0.998 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9980009995002499,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ },
+ "M5-51": {
+  "passed": false,
+  "fails": [
+   "design: drawdown worse",
+   "wf: losing days not smaller",
+   "wf: drawdown worse",
+   "wf: worst month worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1",
+   "< 30 final trades differ"
+  ],
+  "p": 0.9995002498750625,
+  "q": 0.9995,
+  "q_all_families": 1.0
+ }
+}
