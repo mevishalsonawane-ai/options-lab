@@ -107,3 +107,44 @@ A variant passing everything is proposed (not built) as a paper arm for Boss to 
 - `research/hunt/r138_triple_top_fake/` (`r138.py`, `test_r138.py`: the pattern on hand-built candles, its variants,
   and the look-ahead guard); `results/design.json`, `results/holdout.json`.
 - `research/HUNT_R138_TRIPLE_TOP_FAKE.md`; entries `research/experiments/entries/r138-*.yaml`; RESULT.md.
+
+## Amendment A (31 Oct 2026, after the R138 results; written before any Amendment A number)
+
+Boss, 31 Oct, after reading R138: *"Remove that 5point and try again, still loss then try enhancing it"*.
+
+**The holdout months (1 Apr - 19 Oct 2026) were already read once for this pattern family.** Amendment A gets one
+read of them (its own lock, `HOLDOUT_READ_A.json`), labelled **"already seen"**. Any version that passes design and
+that read would still need a forward test on new days before any paper arm. Never live.
+
+### Stage 1: the 5-point band removed (everything else as R138's primary: max level, 1-tick poke, one-candle fail, same session)
+
+| version | the two touches' band |
+|---|---|
+| **U0** | **none:** any two highs, as long as no high between them is higher, with the 1 x ATR pullback and >= 2 candles between (Boss's words taken literally) |
+| **U1** | 0.25 x ATR14 (the market's own 15-minute movement; 5 NIFTY points is about 0.15 ATR) |
+| **U2** | 0.5 x ATR14 |
+
+For each: the descriptive measures and C1 controls of section 2 (M and W; 60-minute move, move to 15:20, neckline
+first: 3 x 2 x 3 = 18 tests, BH over the 18), and the trade T1 (M, buy the ATM put, stop above the fake high,
+neckline target).
+
+### Stage 2: enhancements (each alone, on the base)
+
+**The base** is the Stage 1 version (U0, U1 or U2) with the best design net per trade. It is chosen on design only,
+and the holdout read uses the same base.
+
+| version | the enhancement |
+|---|---|
+| **E1 early** | only events whose candle closes by 14:00, so the neckline has time to come |
+| **E2 room** | only when the neckline is at least 1.5x the stop distance from the entry (reward >= 1.5 x risk) |
+| **E3 with the day** | only when the index at entry is below the session's open (the M sells with the day's direction) |
+| **E4 house exit** | same entry and index stop, no neckline target; a 60% lock on the option after +Rs 1,000 (R132's E3), out 15:20 |
+| **E5 network** | only trades R123's N1 network expects to pay (its EV filter, R132 Amendment A); design is the folds 2023 - 15 Mar 2026; p from random subsets of the base's trades, by fold |
+| **E6 flip** | the other way, because R138 found the fake high is broken first 61% of the time: after the event, the first 15-minute close back above the fake high (same session) buys the ATM CALL at the next minute; stop 0.02% below that candle's low; 2R target |
+| **E7 combo** | E1 + E2 + E3 together |
+
+The W mirror is not traded in Amendment A.
+
+**Tests and gates:** as section 3 (random-entry twins, 100 per trade; E5 random subsets). **BH over all 18 trade
+variants of R138** (T1-T8, U0-U2, E1-E7). The design gates are unchanged. On the already-seen holdout read: a
+positive average net on >= 50 trades.
