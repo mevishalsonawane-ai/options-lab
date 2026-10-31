@@ -1,0 +1,31 @@
+id: r138-e6
+title: 'R138 Amendment A E6: flip: buy the call on a close back above the fake high, 2R (Boss: remove the 5 points, then enhance)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R138_TRIPLE_TOP_FAKE.md
+data_version: Drive lake (index_1m, options_rolling_1m) copied 31 Oct 2026
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN for this pattern family; one read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r138_triple_top_fake/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (15-min candle wicks); after the M fake breakout, a 15-min close back above the fake high
+  buys the ATM call; stop below that candle, 2R'
+hypothesis: Without the fixed 5-point band (or with an enhancement on the base), the triple-top fake breakout pays an ATM
+  option after costs
+model_or_rule: research/hunt/r138_triple_top_fake/r138b.py
+settings: PREREG.md Amendment A E6; base U1; 1 lot
+variants_tried: 18
+results:
+  summary: 'design 700 trades, win 37% (65% rule: below), avg win Rs 1748, avg loss Rs -1264, avg net Rs -154 (2x Rs -177),
+    total Rs -107,748, drawdown Rs -124,393, worst month Rs -22,358; p 0.485, BH q 1.000 (18 R138 variants). Already-seen
+    holdout 89 trades, avg net Rs -243. Fails: net, folds, q, account, seen_holdout_net.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
+verdict: rejected

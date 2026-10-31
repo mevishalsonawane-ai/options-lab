@@ -1,0 +1,31 @@
+id: r138-t8
+title: 'R138 T8: W mirror, 2R (Boss''s triple-top fake breakout)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R138_TRIPLE_TOP_FAKE.md
+data_version: Drive lake (index_1m, options_rolling_1m) copied 31 Oct 2026
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r138_triple_top_fake/PREREG.md
+holdout_read: true
+model_or_rule: research/hunt/r138_triple_top_fake/r138.py
+variants_tried: 8
+verdict: rejected
+features:
+- 'signal source: the index spot (15-min candle wicks: two touches within 5 NIFTY points / 0.022%, a 1 ATR pullback, a third
+  poke that closes back); buys the ATM call (W, triple bottom mirror); index stop above the fake extreme'
+hypothesis: After an M (two 15-minute touches of one level) and a third poke above it that closes back below, the index falls
+  to the neckline often enough to pay an ATM option after costs
+settings: PREREG.md T8; 1 lot
+results:
+  summary: 'design 827 trades, win 35% (65% rule: below), avg win Rs 1059, avg loss Rs -839, avg net Rs -169 (2x Rs -190),
+    total Rs -140,003, drawdown Rs -159,626, worst month Rs -15,420; twin p 0.990, BH q 1.000 (8 variants). Holdout 121 trades,
+    win 39%, avg net Rs 17, total Rs 2,000. Fails: net, folds, q, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

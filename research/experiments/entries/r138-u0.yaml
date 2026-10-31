@@ -1,0 +1,31 @@
+id: r138-u0
+title: 'R138 Amendment A U0: no band (any two highs) (Boss: remove the 5 points, then enhance)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R138_TRIPLE_TOP_FAKE.md
+data_version: Drive lake (index_1m, options_rolling_1m) copied 31 Oct 2026
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (ALREADY SEEN for this pattern family; one read)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r138_triple_top_fake/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (15-min candle wicks: an M with no band, 1 ATR pullback, a third poke that closes back);
+  buys the ATM put; index stop above the fake high'
+hypothesis: Without the fixed 5-point band (or with an enhancement on the base), the triple-top fake breakout pays an ATM
+  option after costs
+model_or_rule: research/hunt/r138_triple_top_fake/r138b.py
+settings: PREREG.md Amendment A U0; base U1; 1 lot
+variants_tried: 18
+results:
+  summary: 'design 3970 trades, win 29% (65% rule: below), avg win Rs 1359, avg loss Rs -849, avg net Rs -200 (2x Rs -222),
+    total Rs -794,646, drawdown Rs -806,744, worst month Rs -60,031; p 1.000, BH q 1.000 (18 R138 variants). Already-seen
+    holdout 513 trades, avg net Rs -7. Fails: net, folds, q, account, seen_holdout_net.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
+verdict: rejected
