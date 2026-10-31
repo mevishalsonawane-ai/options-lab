@@ -165,3 +165,41 @@ training only; the holdout uses the whole design period). XAUUSD 1 lot, stop 1 A
 same sign, the correlation, and the same split by US summer / winter; also each predictor's correlation with GOLDM
 09:05-10:00 (MCX design days). US stock indices are not in the lake and Dukascopy is rate-limited from this container,
 so US stocks are not tested; gold's own US session is the US market here.
+
+## Amendment B (31 Oct 2026, before any Amendment B number): enhancements to raise the win rate
+
+Boss, 31 Oct: *"Can we enhance it by adding some more parameters, strategies, indicators and more things which could
+increase the win rate."* Already seen before this amendment: R140's 12 rules and Amendment A's 6 (all failed design;
+no holdout read), and the descriptive tables (design and full period). No indicator, model or exit below has been
+computed. A higher win rate alone is not a pass: every gate of s6 still applies, and **BH runs over all 30 R140 rules**
+(12 + 6 + these 12). The holdout stays locked (read once, only for a rule passing every design gate).
+
+**Signal source: XAUUSD spot 15-minute candles (the underlying), completed candles before 06:00 IST only**, plus
+GOLDM's own minute closes for M1 / M2 (09:00-09:05). Indicators (standard settings, fixed, not tuned): EMA 20 and EMA
+50 of closes; RSI 14 (Wilder); Bollinger 20, 2 sd; MACD 12/26/9 histogram; Supertrend 10, 3 (ATR 10).
+
+**Part E: the XAUUSD window, in 06:00, out 08:00 IST (1 lot, $32 a round trip; 2x $64).**
+
+| id | entry rule at 06:00 | exits |
+|---|---|---|
+| E1 | follow the EMA trend: sign(EMA20 - EMA50) | stop 1 ATR15, 60% lock after +1 ATR15 (A2's) |
+| E2 | RSI extreme, revert: RSI < 30 buy, RSI > 70 sell, else no trade | A2's |
+| E3 | Bollinger, revert: close below the lower band buy, above the upper band sell | A2's |
+| E4 | follow the Supertrend's direction | A2's |
+| E5 | vote: trade only when 4 agree: sign(EMA20 - EMA50), sign(RSI - 50), sign(MACD histogram), sign(the move from the US close to 06:00, C3) | A2's |
+| E6 | walk-forward logistic model (sklearn, C = 1, standardised): U, P, C1-C5, RSI - 50, (EMA20 - EMA50) / ATR, MACD hist / ATR, Bollinger z, Supertrend direction, US summer flag. Label: the window's sign. Trained on design days before each fold (F1 training only; the holdout model on the whole design). Trade when P(up) >= 0.58 (buy) or <= 0.42 (sell) | A2's |
+| E7 | E5's entries | **high win-rate exits:** target +0.5 ATR15, stop 1 ATR15, 60% lock after +0.3 ATR15, else 08:00 |
+| E8 | E6's entries | E7's exits |
+
+**Part M: MCX GOLDM futures, 1 lot, in 09:05 (costs as s5).**
+
+| id | entry rule | exits |
+|---|---|---|
+| M1 | B1 + confirmation: trade W's sign only when the XAUUSD EMA trend (E1) has the same sign AND GOLDM's 09:00 -> 09:05 move has the same sign | B1's: stop 0.30%, 60% lock after +0.20%, out 10:00 |
+| M2 | walk-forward logistic model on MCX days: W, the 09:00 gap, GOLDM 09:00 -> 09:05, U, P, C3, C5, RSI - 50, (EMA20 - EMA50) / ATR. Label: the sign of GOLDM 09:05 -> 10:00. Trained on design days before each MCX fold (fold 1 training only). Trade when P >= 0.58 / <= 0.42 | B1's |
+| M3 | B1's entries (follow W) | **high win-rate exits:** target +0.15%, stop 0.30%, 60% lock after +0.10%, out 10:00 |
+| M4 | M1's entries | M3's exits |
+
+**Gates:** s6 unchanged (E-rules as A-rules: >= 100 trades, E2 / E3 / E5 / E7 >= 50; M-rules as B-rules: >= 60, M1 / M2
+/ M4 >= 40, and the account stop). BH q <= 0.10 over 30. Twins use each rule's own exits. Every win rate is reported
+against Boss's 65% rule.
