@@ -479,7 +479,7 @@ signal falls in the window. Code `r140w.py`, tests `test_r140w.py`. BH over 123.
 | W9 | Internal SMC sweep | 06:00-08:00 IST | 36 | 36% | $-143 | $-5,139 / $-6,291 | 0.95 | 1.00 | -7% |
 | W10 | Internal SMC sweep | 16:00-18:00 IST | 17 | 59% | $-134 | $-2,281 / $-2,825 | 0.70 | 1.00 | -2% |
 
-## Amendment L: enhancing Boss's scripts (Boss: "more profit and more win rate")
+## Amendment L: enhancing Boss's scripts (Boss: "more profit and more win rate"); entries r140-en1..en8
 
 *Pre-registered in PREREG.md Amendment L (commit 51237dd). The signals of Boss's five setups (15m) are merged, then
 the enhancements below are added: H11b's 4-signal vote, the busy-hour filter, high win-rate exits, the REVERSE bet

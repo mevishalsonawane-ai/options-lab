@@ -1,26 +1,30 @@
 id: r140-l6
-title: 'R140 Amendment L L6: combined, REVERSED (bet the sweep / retest fails), TP 2R'
+title: 'R140 Amendment B L6: GOLDM follows the window, stop 0.30%, lock +0.10% keep 75%'
 family: mcx-crypto
 date: '2026-10-31'
 doc: research/HUNT_R140_GOLD_0600.md
-hypothesis: 'Boss (31 Oct): enhance his scripts for more profit and win rate. combined, REVERSED (bet the sweep / retest fails),
-  TP 2R earns on XAUUSD after costs, beats twins, BH q <= 0.10 over 131, >= 4 of 5 folds positive.'
-data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+hypothesis: 'Boss (31 Oct): more indicators, strategies and stop / lock settings raise the win rate. GOLDM follows the window,
+  stop 0.30%, lock +0.10% keep 75% earns after costs, beats twins with the same exits (p <= 0.05), BH q <= 0.10 over 36, folds
+  positive, account stop.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026; GOLDM option-book near future from the Drive lake)
 period:
-  design: 2023-10-02..2026-03-31
-  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+  design: 2025-08-05..2026-03-31
+  holdout: '2026-04-01..2026-10-19 (locked; not read: nothing passed)'
 instruments:
+- GOLDM
 - XAUUSD
 features:
-- 'signal source: XAUUSD spot candles (the underlying); information only'
-model_or_rule: combined, REVERSED (bet the sweep / retest fails), TP 2R; 12 h cap
-settings: research/hunt/r140_gold_0600/r140l.py; PREREG.md Amendment L
+- 'signal source: XAUUSD spot 15-minute candles completed by 06:00 IST (the underlying); GOLDM 09:00-09:05 minute closes;
+  trades the GOLDM future'
+model_or_rule: GOLDM follows the window, stop 0.30%, lock +0.10% keep 75%; every rule has a stop-loss and a 60%-type trailing
+  profit lock
+settings: research/hunt/r140_gold_0600/r140e.py; PREREG.md Amendment B
 prereg: research/hunt/r140_gold_0600/PREREG.md
 variants_tried: 1
 results:
-  summary: 'Design: 2664 trades, win 50% (65% rule: below), avg net $-16 a 100-oz lot (2x $-48), total $-43,700; folds +3,802
-    / -13,670 / -20,842 / -7,637 / -5,353; twin p 0.112, BH q 0.441 (131). Gates failed: net, twins, bh, folds. Holdout not
-    read.'
-  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+  summary: 'Design: 150 trades, win 59% (Boss''s 65% rule: below), avg net Rs -263 (2x Rs -664), total Rs -39,428 (2x Rs -99,596);
+    folds -6,259 / -6,489 / -42,084 / +15,404; twin p 0.295, BH q 0.849 (36 R140 rules); drawdown Rs -55,642, worst month
+    Rs -34,035. Gates failed: net, twins, bh, folds, account. Holdout not read.'
+  costs: Zerodha MCX futures charges + half-spread max(1 tick, 1 bp)/2 a fill, 1 lot; 2x doubles both
 holdout_read: false
 verdict: rejected

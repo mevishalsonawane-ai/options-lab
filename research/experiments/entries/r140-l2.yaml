@@ -1,26 +1,26 @@
 id: r140-l2
-title: 'R140 Amendment L L2: combined + H11b 4-signal vote'
+title: 'R140 Amendment B L2: E5 vote, stop 1.5 ATR, lock +0.5 ATR keep 50%'
 family: mcx-crypto
 date: '2026-10-31'
 doc: research/HUNT_R140_GOLD_0600.md
-hypothesis: 'Boss (31 Oct): enhance his scripts for more profit and win rate. combined + H11b 4-signal vote earns on XAUUSD
-  after costs, beats twins, BH q <= 0.10 over 131, >= 4 of 5 folds positive.'
-data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+hypothesis: 'Boss (31 Oct): more indicators, strategies and stop / lock settings raise the win rate. E5 vote, stop 1.5 ATR,
+  lock +0.5 ATR keep 50% earns after costs, beats twins with the same exits (p <= 0.05), BH q <= 0.10 over 36, folds positive.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026; GOLDM option-book near future from the Drive lake)
 period:
   design: 2023-10-02..2026-03-31
   holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
 instruments:
 - XAUUSD
 features:
-- 'signal source: XAUUSD spot candles (the underlying); information only'
-model_or_rule: combined + H11b 4-signal vote; 12 h cap
-settings: research/hunt/r140_gold_0600/r140l.py; PREREG.md Amendment L
+- 'signal source: XAUUSD spot 15-minute candles completed by 06:00 IST (the underlying); information only'
+model_or_rule: E5 vote, stop 1.5 ATR, lock +0.5 ATR keep 50%; every rule has a stop-loss and a 60%-type trailing profit lock
+settings: research/hunt/r140_gold_0600/r140e.py; PREREG.md Amendment B
 prereg: research/hunt/r140_gold_0600/PREREG.md
 variants_tried: 1
 results:
-  summary: 'Design: 790 trades, win 49% (65% rule: below), avg net $-13 a 100-oz lot (2x $-45), total $-10,274; folds -2,562
-    / -6,038 / -11,446 / +5,468 / +4,304; twin p 0.426, BH q 0.880 (131). Gates failed: net, twins, bh, folds. Holdout not
-    read.'
-  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+  summary: 'Design: 195 trades, win 69% (Boss''s 65% rule: meets), avg net $ +28 (2x $ -4), total $ +5,426 (2x $ -814); folds
+    -3,107 / -1,606 / +2,375 / +450 / +7,314; twin p 0.139, BH q 0.849 (36 R140 rules); drawdown $ -7,004, worst month $ -3,889.
+    Gates failed: net, twins, bh, folds. Holdout not read.'
+  costs: $0.25 spread + $7 commission a 100-oz lot round trip ($32); 2x = $64
 holdout_read: false
 verdict: rejected
