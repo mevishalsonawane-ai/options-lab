@@ -544,3 +544,6 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
       - BBX-51: R51 skips bad breaks;
       - R140's FB-R72-A10.
       Then, only with Boss's go-ahead, labelled paper switches. Details: research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md.
+      - R143 update (31 Oct): on the unseen Dec 2022 - Nov 2024, FB-R72-A10 and NP5-52 held up as loss-cutters;
+        BBX-51 did not (drop it).
+      - R72, R51 and R52 themselves lost money in those years: judge the arms on longer history before any live step.

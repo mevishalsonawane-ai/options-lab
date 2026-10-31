@@ -1,0 +1,29 @@
+id: r143-fb-r72-a10
+title: R143 FB-R72-A10 on unseen Dec 2022 - Nov 2024 (R72)
+family: trade-management
+date: '2026-10-31'
+doc: research/HUNT_R143_UNSEEN_TWO_YEARS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores rebuilt Sep 2022 - Dec 2024
+period:
+  design: none (rules frozen from R140 / R142)
+  holdout: 2022-12-01..2024-11-19 (never used by R139-R142; read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r143_unseen_two_years/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R140A features) or the option premium after the fill (no-progress exit)'
+hypothesis: FB-R72-A10 cuts R72's losses on two years it never saw
+model_or_rule: research/hunt/r143_unseen_two_years/r143.py
+settings: frozen cuts; 1 lot
+variants_tried: 3
+verdict: rejected
+results:
+  summary: 'unseen 2 years: 2647 trades vs 3395, win 41% vs 39% (65% rule: below), net Rs -136,743 vs Rs -306,931, losing
+    days Rs -611,647 vs Rs -886,970, drawdown Rs 191,773 vs Rs 337,564; twin p 2.83e-25. Fails: no longer makes money. Every
+    loss measure better and beats random: a proven loss-cutter; the arm itself lost money in these years.'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)
