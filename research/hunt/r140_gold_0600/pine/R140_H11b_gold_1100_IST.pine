@@ -21,19 +21,16 @@
 // (= the test's $0.25 spread + $7 per 100-oz lot commission, round trip). The busy median starts from the chart's
 // first loaded day, so give it a long history (the more days, the closer to the test).
 
-strategy("R140 H11b: Gold 11:00 IST busy-day vote", overlay = true, initial_capital = 1000,
-     default_qty_type = strategy.fixed, default_qty_value = 1, pyramiding = 0,
-     commission_type = strategy.commission.cash_per_contract, commission_value = 0.16, slippage = 0,
-     calc_on_every_tick = false, process_orders_on_close = false)
+strategy("R140 H11b: Gold 11:00 IST busy-day vote", overlay = true, initial_capital = 1000, default_qty_type = strategy.fixed, default_qty_value = 1, pyramiding = 0, commission_type = strategy.commission.cash_per_contract, commission_value = 0.16, slippage = 0, calc_on_every_tick = false, process_orders_on_close = false)
 
 // ---------------------------------------------------------------- inputs (the tested values are the defaults)
-entryHour  = input.int(11, "Entry hour (IST)", minval = 0, maxval = 23)
-holdMin    = input.int(120, "Max hold (minutes)", minval = 15, step = 15)
-stopATR    = input.float(0.5, "Stop (x ATR)", minval = 0.1, step = 0.1)
-lockATR    = input.float(0.5, "Lock starts after (x ATR profit)", minval = 0.1, step = 0.1)
-keepPct    = input.float(60.0, "Lock keeps (% of best open profit)", minval = 10, maxval = 95)
-useBusy    = input.bool(true, "Busy-day filter (tested: on)")
-showTable  = input.bool(true, "Show status table")
+entryHour = input.int(11, "Entry hour (IST)", minval = 0, maxval = 23)
+holdMin = input.int(120, "Max hold (minutes)", minval = 15, step = 15)
+stopATR = input.float(0.5, "Stop (x ATR)", minval = 0.1, step = 0.1)
+lockATR = input.float(0.5, "Lock starts after (x ATR profit)", minval = 0.1, step = 0.1)
+keepPct = input.float(60.0, "Lock keeps (% of best open profit)", minval = 10, maxval = 95)
+useBusy = input.bool(true, "Busy-day filter (tested: on)")
+showTable = input.bool(true, "Show status table")
 
 // ---------------------------------------------------------------- the 15m indicators
 ema20 = ta.ema(close, 20)
@@ -48,12 +45,12 @@ if hour(time_close, "America/New_York") == 17 and minute(time_close, "America/Ne
     nyClose := close
 
 // ---------------------------------------------------------------- the 11:00 IST candle
-istDow    = dayofweek(time_close, "Asia/Kolkata")
+istDow = dayofweek(time_close, "Asia/Kolkata")
 isWeekday = istDow != dayofweek.saturday and istDow != dayofweek.sunday
-sigBar    = isWeekday and hour(time_close, "Asia/Kolkata") == entryHour and minute(time_close, "Asia/Kolkata") == 0
+sigBar = isWeekday and hour(time_close, "Asia/Kolkata") == entryHour and minute(time_close, "Asia/Kolkata") == 0
 
-c3   = na(nyClose) ? 0.0 : math.sign(close - nyClose)
-up   = math.sign(ema20 - ema50) == 1 and math.sign(rsi14 - 50) == 1 and math.sign(macdHist) == 1 and c3 == 1
+c3 = na(nyClose) ? 0.0 : math.sign(close - nyClose)
+up = math.sign(ema20 - ema50) == 1 and math.sign(rsi14 - 50) == 1 and math.sign(macdHist) == 1 and c3 == 1
 down = math.sign(ema20 - ema50) == -1 and math.sign(rsi14 - 50) == -1 and math.sign(macdHist) == -1 and c3 == -1
 
 // busy: this 11:00 candle's ATR vs the median of all EARLIER 11:00 candles (today is added after the check)
@@ -65,7 +62,7 @@ if sigBar and not na(atr14)
     busy := not na(atrMed) and atr14 >= atrMed
     array.push(atrHist, atr14)
 
-goLong  = sigBar and up and (busy or not useBusy) and strategy.position_size == 0
+goLong = sigBar and up and (busy or not useBusy) and strategy.position_size == 0
 goShort = sigBar and down and (busy or not useBusy) and strategy.position_size == 0
 
 // ---------------------------------------------------------------- entries
@@ -78,15 +75,13 @@ if goLong
     peak := 0.0
     strategy.entry("H11b", strategy.long, comment = "BUY 11:00")
     strategy.exit("H11b-x", "H11b", stop = close - stopATR * atr14, comment_loss = "stop")
-    alert("R140 H11b BUY XAUUSD at the 11:00 IST open. Stop " + str.tostring(close - stopATR * atr14, format.mintick) +
-         " (0.5 ATR). Lock 60% after +" + str.tostring(lockATR * atr14, format.mintick) + ". Out by 13:00 IST.", alert.freq_once_per_bar_close)
+    alert("R140 H11b BUY XAUUSD at the 11:00 IST open. Stop " + str.tostring(close - stopATR * atr14, format.mintick) + " (0.5 ATR). Lock 60% after +" + str.tostring(lockATR * atr14, format.mintick) + ". Out by 13:00 IST.", alert.freq_once_per_bar_close)
 if goShort
     tradeATR := atr14
     peak := 0.0
     strategy.entry("H11b", strategy.short, comment = "SELL 11:00")
     strategy.exit("H11b-x", "H11b", stop = close + stopATR * atr14, comment_loss = "stop")
-    alert("R140 H11b SELL XAUUSD at the 11:00 IST open. Stop " + str.tostring(close + stopATR * atr14, format.mintick) +
-         " (0.5 ATR). Lock 60% after +" + str.tostring(lockATR * atr14, format.mintick) + ". Out by 13:00 IST.", alert.freq_once_per_bar_close)
+    alert("R140 H11b SELL XAUUSD at the 11:00 IST open. Stop " + str.tostring(close + stopATR * atr14, format.mintick) + " (0.5 ATR). Lock 60% after +" + str.tostring(lockATR * atr14, format.mintick) + ". Out by 13:00 IST.", alert.freq_once_per_bar_close)
 
 // ---------------------------------------------------------------- managing the open trade: stop, lock, time exit
 inTrade = strategy.position_size != 0 and not goLong and not goShort
