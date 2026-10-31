@@ -354,3 +354,27 @@ information only. **Signal source: XAUUSD spot candles (the underlying).**
 Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never read for these rules**), twins (the
 same clock time, a random day and side, the same $ SL / TP), gates (>= 100 trades; >= 4 of 5 folds) and $1,000 sizing
 as Amendment F. **BH over 99** (95 + 4).
+
+## Amendment H (31 Oct 2026, before any Amendment H number): Boss's refined Pine "5-Step Liquidity Sweep POI [Refined]"
+
+Boss pasted the refined Pine v6 script (31 Oct). It is ported as written onto XAUUSD (information only). **Signal
+source: XAUUSD spot candles.** The differences from Amendment F, all taken from the script:
+- **HTF trend:** request.security(..., close[1] / ta.ema(close, 50)[1], lookahead_off). On history this is the 60-minute
+  candle before the last completed one. If useHTF is off, both sides are allowed.
+- **Swings:** pivot-3 as before. A new pivot high makes the previous active high the "target high"; the same for lows.
+- **POI and sweep** on the active high / low, +/- 0.5 ATR; confirmation candle as before.
+- **TP (buy):** the target high if it is above the close; else the active high if above the close; else close + 3 ATR.
+  The mirror for sells.
+- **SL (buy):** min(the candle's low, active low - 0.25 ATR). The mirror for sells. RR >= 1.5.
+- Entry at the next minute's open; SL / TP on 1-minute bars (both in one minute = SL); one trade at a time; 12-hour cap.
+
+| id | chart | HTF filter | exits |
+|---|---|---|---|
+| R1 | 15m | on | the script's SL / TP |
+| R2 | 15m | on | + 60% lock after 1R (house rule) |
+| R3 | 5m | on | the script's SL / TP |
+| R4 | 5m | on | + lock |
+| R5 | 15m | **off** (the script's input) | + lock |
+
+Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never read for these rules**), twins,
+gates (>= 100 trades; >= 4 of 5 folds) and $1,000 sizing as Amendment F. **BH over 104** (99 + 5).
