@@ -1,0 +1,33 @@
+id: r138-describe
+title: 'R138 facts: what the index does after an M''s fake breakout (and the W''s fake breakdown)'
+family: market-facts
+date: '2026-10-31'
+doc: research/HUNT_R138_TRIPLE_TOP_FAKE.md
+data_version: Drive lake (index_1m, options_rolling_1m) copied 31 Oct 2026
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r138_triple_top_fake/PREREG.md
+holdout_read: true
+model_or_rule: research/hunt/r138_triple_top_fake/r138.py
+variants_tried: 100
+verdict: rejected
+features:
+- 'signal source: the index spot, 15-minute candle wicks; descriptive, no trades'
+hypothesis: After a triple-top fake breakout the index moves down (to the neckline) more often than a random 15-minute close
+  at the same time of day
+settings: 'PREREG.md section 2: 16 pattern configurations x M/W, time-of-day control (20 sessions per event) and plain double
+  tops; 100 tests, BH'
+results:
+  summary: 'M primary, design: 1361 events; 60 min later down 51% (control 49%), mean -0.006% (control -0.004%); neckline
+    first 21%, back above the fake high first 61% (control 21% / 62%); p 0.88 / 0.91, q 1.0. Holdout 156 events: neckline
+    first 26%, fake high first 53%, no difference from control (p 0.44). W mirror: neckline first 20% vs control 24% (n 1262,
+    q 0.01): after a fake breakdown the index continues down a little more than normal (as R135); not seen in the holdout
+    (p 0.06, the other way). No configuration of the M differs from the control (q >= 0.26).'
+  costs: none (index points)

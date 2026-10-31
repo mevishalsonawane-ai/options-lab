@@ -1,0 +1,31 @@
+id: r138-t4
+title: 'R138 T4: M touches may span the previous session (Boss''s triple-top fake breakout)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R138_TRIPLE_TOP_FAKE.md
+data_version: Drive lake (index_1m, options_rolling_1m) copied 31 Oct 2026
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r138_triple_top_fake/PREREG.md
+holdout_read: true
+model_or_rule: research/hunt/r138_triple_top_fake/r138.py
+variants_tried: 8
+verdict: rejected
+features:
+- 'signal source: the index spot (15-min candle wicks: two touches within 5 NIFTY points / 0.022%, a 1 ATR pullback, a third
+  poke that closes back); buys the ATM put (M, triple top); index stop above the fake extreme'
+hypothesis: After an M (two 15-minute touches of one level) and a third poke above it that closes back below, the index falls
+  to the neckline often enough to pay an ATM option after costs
+settings: PREREG.md T4; 1 lot
+results:
+  summary: 'design 1419 trades, win 35% (65% rule: below), avg win Rs 1264, avg loss Rs -879, avg net Rs -124 (2x Rs -144),
+    total Rs -175,531, drawdown Rs -187,737, worst month Rs -20,170; twin p 0.059, BH q 0.475 (8 variants). Holdout 199 trades,
+    win 37%, avg net Rs -27, total Rs -5,414. Fails: net, folds, q, account, holdout_net.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
