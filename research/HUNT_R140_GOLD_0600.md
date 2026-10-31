@@ -24,8 +24,8 @@ US summer and 03:30 IST in winter) and the hours after it do not guess the windo
 **Whole day (Amendment E): one rule passes everything, including the unseen holdout: 11:00 IST on busy days with the
 4-signal vote (H11b): +$95 a 100-oz lot on 186 design trades and +$58 on 29 holdout trades. $1,000 at 5x: +21.5% in
 2.5 years. It is a forward-test candidate, not proven (one hour of 24; most profit in one fold; Sep-Oct slightly
-negative). Boss's indicators (both Pine scripts, the origin-low sweep and the break-and-retest from his screenshot;
-Amendments F-I) all lose on gold.**
+negative). Boss's indicators (three Pine scripts, the origin-low sweep and the break-and-retest from his screenshot;
+Amendments F-J) all lose on gold.**
 
 **Amendment B (Boss: add indicators, strategies and stop / lock settings to raise the win rate): 0 of 18 more pass.
 The win rate can be lifted to 67-72% by taking small profits early, but the average trade stays at about zero. See
@@ -418,6 +418,30 @@ read.**
 | T2 | break and retest, 15m, + 60% lock | 1620 | 48% | $-45 | $-73,153 / $-124,993 | 0.87 | 1.00 | -77% (DD -81%) |
 | T3 | break and retest, 5m, + lock | 4997 | 48% | $-18 | $-92,050 / $-251,954 | 0.05 | 0.39 | -87% (DD -91%) |
 | T4 | break and retest, 15m, + lock, with the 60m trend | 1058 | 49% | $-39 | $-41,430 / $-75,286 | 0.78 | 1.00 | -52% (DD -59%) |
+
+## Amendment J: Boss's "Internal SMC BOS & Sweep Signals (HL/LH)" (Pine v5)
+
+*Pre-registered in PREREG.md Amendment J (commit 0a20db7). Ported as written: the first break against the trend is a
+silent CHoCH, and the next break with the trend is a BOS that arms the origin HL (LH). A wick through it that closes
+back is the signal; a close through it disarms. The script has no exits, so SL = the sweep wick and TP = 2R, with a
+12-hour cap; J2-J5 add the 60% lock. Code `r140j.py`, tests `test_r140j.py` (a hand-built CHoCH -> BOS -> HL sweep
+fires one BUY). BH over 113.*
+
+**It does not work on gold: 0 of 5 pass, and the holdout was not read.**
+- As written (15m), it made 232 trades and won 39%, for -$108 a lot.
+- Buys lose more than sells (-$18.4k against -$6.6k a lot).
+- A $1,000 account at 5x would have fallen 17-37% in 2.5 years.
+- **A logic point in the script:** with "Confirm BOS on Candle Close" switched off, it can never signal. The wick that
+  sweeps the HL is also a wick break of that same low. The bearish block runs first, flips the trend and cancels the
+  buy setup, so J3 has 0 trades.
+
+| id | rule | n | win | avg / 100 oz | total 1x / 2x | twin p | q | $1,000 at 5x (2.5 y) |
+|---|---|---|---|---|---|---|---|---|
+| J1 | Internal SMC BOS + HL/LH sweep, 15m, SL at the sweep wick, TP 2R | 232 | 39% | $-108 | $-25,007 / $-32,431 | 0.92 | 1.00 | -28% |
+| J2 | Internal SMC sweep, 15m, + 60% lock | 232 | 51% | $-105 | $-24,276 / $-31,700 | 0.95 | 1.00 | -24% |
+| J3 | Internal SMC sweep, 15m, wick BOS (confirmClose off), + lock | 0 | 0% | $+0 | $+0 / $+0 | 1.00 | 1.00 | +0% |
+| J4 | Internal SMC sweep, 5m, + lock | 577 | 41% | $-49 | $-28,069 / $-46,533 | 0.87 | 1.00 | -37% |
+| J5 | Internal SMC sweep, 15m, + lock, with the 60m trend | 154 | 51% | $-106 | $-16,355 / $-21,283 | 0.93 | 1.00 | -17% |
 
 ## What is new compared with the earlier gold work
 
