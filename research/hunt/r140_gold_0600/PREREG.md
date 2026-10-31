@@ -129,3 +129,39 @@ After the holdout step is final, the same tables are repeated on the full period
 
 If any MCX variant passes every gate including the holdout, propose (not implement) a PAPER arm in the write-up. A
 variant that fails stays a note.
+
+## Amendment A (31 Oct 2026, before any Amendment A number): does the market that closed before 06:00 guess the direction?
+
+Boss, 31 Oct: *"Check if there is any effect of that markets for guessing the direction."* "That market" = the US
+session, which closes at 17:00 New York (02:30 IST in US summer, 03:30 IST in winter), and the hours after it until
+06:00 IST (gold's reopen at 18:00 New York and the Sydney / Tokyo start).
+
+What was already seen before this amendment: A2 (the US day session 08:20-17:00 New York -> the window) and A3 (the
+prior day) in design (0 of 12 passed), and the descriptive full-period tables made after the holdout step, which
+included corr(window, US day session) in the holdout (-0.05, 138 days). No other predictor below has been computed on
+any period. The holdout stays locked for the new rules: read once, only for a rule passing every design gate.
+
+**Predictors (all known at 06:00 IST; XAUUSD prices; "the US session" = the latest New York weekday whose 17:00 is
+before 06:00 IST, as in s3):**
+
+| id | predictor | from -> to |
+|---|---|---|
+| C1 | the last US hour into the close | 16:00 -> 17:00 New York |
+| C2 | the US afternoon after the COMEX pit close | 13:30 -> 17:00 New York |
+| C3 | after the US close to 06:00 IST (the reopen at 18:00 New York, Sydney and Tokyo starts) | 17:00 New York -> 06:00 IST |
+| C4 | the last 30 minutes before the window (Tokyo's open at 05:30 IST) | 05:30 -> 06:00 IST |
+| C5 | the whole night since MCX closed | MCX close (23:30 IST US summer / 23:55 IST winter, previous MCX weekday) -> 06:00 IST |
+| C6 | a BIG US day only: the US day session (A2's U) when abs(U) >= the 80th percentile of abs(U) over all earlier window days (expanding) | 08:20 -> 17:00 New York |
+
+**Rule for each (same as A2):** trade the 06:00-08:00 IST window in the direction of the predictor's sign, follow or
+fade learned walk-forward (s4: sign of the mean signal x window return over all design days before the fold; F1
+training only; the holdout uses the whole design period). XAUUSD 1 lot, stop 1 ATR15, 60% lock after +1 ATR15, in
+06:00, out 08:00; $32 a round trip (2x $64).
+
+**Gates:** as s6 for A-rules: net > 0 at 1x and 2x; twin p <= 0.05; **BH over 18 (R140's 12 + these 6)**, q <= 0.10;
+>= 100 trades (C6: >= 50); >= 3 of the 4 traded folds positive. Win rate reported against the 65% rule.
+
+**Descriptive (no gates):** for every predictor (C1-C6 plus A2's U and A3's P): the share of days whose window has the
+same sign, the correlation, and the same split by US summer / winter; also each predictor's correlation with GOLDM
+09:05-10:00 (MCX design days). US stock indices are not in the lake and Dukascopy is rate-limited from this container,
+so US stocks are not tested; gold's own US session is the US market here.
