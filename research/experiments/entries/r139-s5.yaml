@@ -1,0 +1,29 @@
+id: r139-s5
+title: 'R139 S5: MSS then the first higher low (ICT)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (15-min wick swings; S6 60-min + 5-min); buys the ATM option; index stop'
+hypothesis: MSS then the first higher low (ICT) pays after costs on Indian index options
+model_or_rule: research/hunt/r139_market_structure/r139.py
+settings: PREREG.md S5; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 957 trades, win 38% (65% rule: below), avg net Rs -142 (2x Rs -163), total Rs -135,993, drawdown Rs -187,615,
+    worst month Rs -38,100; p 0.168, q 0.289. Holdout 144 trades, win 41%, avg net Rs 101 (2x Rs 72), total Rs 14,481, drawdown
+    Rs -56,318, worst month Rs -27,860, p 0.089. Fails: net, twins, folds, q, account.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage

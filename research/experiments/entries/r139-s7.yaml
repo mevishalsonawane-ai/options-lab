@@ -1,0 +1,29 @@
+id: r139-s7
+title: 'R139 S7: Swing failure pattern (SFP)'
+family: patterns-indicators
+date: '2026-10-31'
+doc: research/HUNT_R139_MARKET_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R123 N1 predictions
+period:
+  design: 2021-08-01..2026-03-15
+  holdout: 2026-04-01..2026-10-19 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r139_market_structure/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index spot (15-min wick swings; S6 60-min + 5-min); buys the ATM option; index stop'
+hypothesis: Swing failure pattern (SFP) pays after costs on Indian index options
+model_or_rule: research/hunt/r139_market_structure/r139.py
+settings: PREREG.md S7; 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'design 3409 trades, win 33% (65% rule: below), avg net Rs -204 (2x Rs -227), total Rs -695,859, drawdown Rs -696,160,
+    worst month Rs -63,838; p 1.000, q 1.000. Holdout 480 trades, win 33%, avg net Rs -209 (2x Rs -240), total Rs -100,543,
+    drawdown Rs -111,731, worst month Rs -24,160, p 0.980. Fails: net, twins, folds, q, account, holdout.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
