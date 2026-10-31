@@ -24,7 +24,8 @@ US summer and 03:30 IST in winter) and the hours after it do not guess the windo
 **Whole day (Amendment E): one rule passes everything, including the unseen holdout: 11:00 IST on busy days with the
 4-signal vote (H11b): +$95 a 100-oz lot on 186 design trades and +$58 on 29 holdout trades. $1,000 at 5x: +21.5% in
 2.5 years. It is a forward-test candidate, not proven (one hour of 24; most profit in one fold; Sep-Oct slightly
-negative). Boss's two Pine / diagram indicators (Amendments F, G) lose on gold.**
+negative). Boss's indicators (both Pine scripts, the origin-low sweep and the break-and-retest from his screenshot;
+Amendments F-I) all lose on gold.**
 
 **Amendment B (Boss: add indicators, strategies and stop / lock settings to raise the win rate): 0 of 18 more pass.
 The win rate can be lifted to 67-72% by taking small profits early, but the average trade stays at about zero. See
@@ -376,6 +377,47 @@ appears often (700-2,000 times in 2.5 years), but price keeps going after the sw
 | K2 | 15m, simple break | 946 | 45% | $-73 | $-69,428 / $-99,700 | 0.99 | 1.00 | -66% (DD -68%) |
 | K3 | 5m, strict | 2035 | 39% | $-35 | $-71,305 / $-136,425 | 0.81 | 1.00 | -69% (DD -70%) |
 | K4 | 15m, strict, with the 60m trend | 405 | 47% | $-15 | $-6,272 / $-19,232 | 0.44 | 0.77 | -16% (DD -22%) |
+
+## Amendment H: Boss's refined Pine "5-Step Liquidity Sweep POI [Refined]"
+
+*Pre-registered in PREREG.md Amendment H (commit 67651d5). Ported as written: the HTF trend one more completed hour
+back, the TP at the older swing / newer swing / close + 3 ATR, and the SL at min(low, swing - 0.25 ATR). Code
+`r140q.py`, tests `test_r140q.py`. BH over 104.*
+
+**It does not work on gold: 0 of 5 pass, and the holdout was not read.**
+- As written (15m), it wins 30%. 228 of 332 trades hit the stop.
+- Shorts lose most (-$23.7k a lot against +$2.7k for longs).
+- The best line, R5 (the HTF filter switched off, plus the lock), made +$16 a lot on 877 trades and beat its twins
+  (p 0.034). But it fails BH (q 0.35), loses at 2x costs, and made all its money in Oct 2025 - Mar 2026 (+$29k after
+  -$15k in the fold before).
+
+| id | rule | n | win | avg / 100 oz | total 1x / 2x | twin p | q | $1,000 at 5x (2.5 y) |
+|---|---|---|---|---|---|---|---|---|
+| R1 | refined Pine as written, 15m | 332 | 30% | $-63 | $-20,989 / $-31,613 | 0.78 | 1.00 | -28% (DD -29%) |
+| R2 | refined Pine, 15m + 60% lock | 337 | 54% | $-11 | $-3,656 / $-14,440 | 0.36 | 0.75 | -8% (DD -15%) |
+| R3 | refined Pine as written, 5m | 1418 | 25% | $-35 | $-49,380 / $-94,756 | 0.74 | 1.00 | -64% (DD -65%) |
+| R4 | refined Pine, 5m + lock | 1469 | 46% | $-37 | $-54,644 / $-101,652 | 0.80 | 1.00 | -63% (DD -63%) |
+| R5 | refined Pine, 15m, HTF filter off, + lock | 877 | 54% | $+16 | $+13,921 / $-14,143 | 0.03 | 0.35 | +5% (DD -28%) |
+
+## Amendment I: break and retest (Boss's screenshot)
+
+*Pre-registered in PREREG.md Amendment I (commit eeb5c1e). Built from the screenshot: a swing level breaks (a close
+beyond a +/- 0.25 ATR zone). Price comes back into the zone within 30 candles and closes on the broken side. SL is
+0.1 ATR past the zone and TP is 2R; T2-T4 add the 60% lock. Code `r140t.py`, tests `test_r140t.py`. BH over 108.*
+
+**The screenshot's trade was a good one, but the pattern loses over 2.5 years: 0 of 4 pass, and the holdout was not
+read.**
+- As drawn (15m, TP 2R), it made 1,574 trades and won 34%. 1,026 hit the stop and 516 reached the target, for -$34 a
+  lot.
+- The sells, like the screenshot's, lost most (-$70.5k a lot; the buys made +$16.5k).
+- On 5-minute candles, or with the trend filter, it loses too. A $1,000 account at 5x would have lost 52-87%.
+
+| id | rule | n | win | avg / 100 oz | total 1x / 2x | twin p | q | $1,000 at 5x (2.5 y) |
+|---|---|---|---|---|---|---|---|---|
+| T1 | break and retest, 15m, SL past the zone, TP 2R | 1574 | 34% | $-34 | $-54,027 / $-104,395 | 0.71 | 1.00 | -71% (DD -78%) |
+| T2 | break and retest, 15m, + 60% lock | 1620 | 48% | $-45 | $-73,153 / $-124,993 | 0.87 | 1.00 | -77% (DD -81%) |
+| T3 | break and retest, 5m, + lock | 4997 | 48% | $-18 | $-92,050 / $-251,954 | 0.05 | 0.39 | -87% (DD -91%) |
+| T4 | break and retest, 15m, + lock, with the 60m trend | 1058 | 49% | $-39 | $-41,430 / $-75,286 | 0.78 | 1.00 | -52% (DD -59%) |
 
 ## What is new compared with the earlier gold work
 

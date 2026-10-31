@@ -1,4 +1,4 @@
-# R140 result: US gold, 15m: one candidate found (11:00 IST busy-day vote); the 06:00-08:00 window and Boss's two indicators do not work
+# R140 result: US gold, 15m: one candidate found (11:00 IST busy-day vote); the 06:00-08:00 window and all four of Boss's indicators do not work
 1. 06:00-08:00 IST (575 design days): median move $4.28 in an $11.28 range; nothing before 06:00 guesses its direction (47-53% same way).
 2. 0 of 42 window rules pass (indicators, vote, models, stop/lock settings, US-close signals, MCX link); high win rates (67-72%) only from small early profits.
 3. Whole day (48 rules, BH over 90): H11b = 11:00 IST, busy days, EMA+RSI+MACD+US-close vote, stop 0.5 ATR, 60% lock: 186 trades, 62% win, +$95/100 oz, q 0.045.
@@ -6,6 +6,6 @@
 5. $1,000 at 5x: H11b +21.5% over 2.5 years design (worst DD -3.6%), +1.9% in the holdout; risking 2% a trade +88% design (DD -13%).
 6. Caveats: 1 hour of 24 tried; most design profit in Oct 2025-Mar 2026; 62% win < Boss's 65% rule; not tradable via Zerodha.
 7. Boss's Pine "5-Step Liquidity Sweep POI": 0 of 5 pass; as written (15m) 255 trades, 32% win, -$32/100 oz; $1,000 at 5x -15%.
-8. Boss's origin-low sweep after a BOS (built from his diagram; code did not arrive): 0 of 4 pass; -$15 to -$73/100 oz on 405-2,035 trades.
-9. GOLDM (MCX) link: all 13 rules lose after costs; no paper arm for MCX. Write-up research/HUNT_R140_GOLD_0600.md; 101 entries r140-*.yaml.
+8. Boss's origin-low sweep (0 of 4, -$15 to -$73/100 oz), refined Pine (0 of 5; as written 30% win, -$63), break and retest from his screenshot (0 of 4; 34% win, -$34 on 1,574).
+9. GOLDM (MCX) link: all 13 rules lose after costs; no paper arm for MCX. Write-up research/HUNT_R140_GOLD_0600.md; 110 entries r140-*.yaml.
 10. For Boss: forward-test H11b on paper (offshore or crypto-gold venue, 5x or less, 3-6 months) before any money; nothing to change in the app.
