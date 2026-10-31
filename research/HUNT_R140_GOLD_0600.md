@@ -340,6 +340,19 @@ How to read it:
 
 The spread is kept at $0.25 every hour, which flatters the quiet early-Asian hours a little.
 
+### The H11b Pine script for TradingView (Boss: "create a script for the best")
+
+`research/hunt/r140_gold_0600/pine/R140_H11b_gold_1100_IST.pine` is a Pine v6 strategy of H11b, for a PAPER forward
+test on a 15-minute XAUUSD chart. It uses the same rule as `r140h.py`:
+- the 11:00 IST candle, the 4-signal vote and the busy-day median of that candle's ATR (earlier days only);
+- a stop of 0.5 ATR, a 60% lock after +0.5 ATR, and out at 13:00 IST;
+- costs of $0.16 an ounce per fill.
+
+Known differences: TradingView checks the stop and lock on 15-minute bars, while the test used 1-minute bars ("Bar
+Magnifier" narrows this). The busy median starts from the chart's first loaded day. The script was checked by reading
+it against the Python, not run on TradingView (not reachable from here). Its first compile on TradingView is the check
+to do.
+
 ## Amendment F: Boss's Pine indicator "5-Step Liquidity Sweep POI" on US gold
 
 *Pre-registered in PREREG.md Amendment F (commit 0243f22). Code `r140p.py`, tests `test_r140p.py`, results
