@@ -220,3 +220,38 @@ the open profit reaches the trigger, exit if it falls to "keep" x its peak. BH n
 | L6 | B1's | 0.30% | +0.10% | 75% |
 
 Gates as their parts (L1-L3 as E5, L4-L6 as B1).
+
+## Amendment D (31 Oct 2026, before any Amendment D number): bigger profit per trade on US gold, and sizing for $1,000
+
+Boss, 31 Oct: *"For 1000 dollar if we are getting 1-2 dollars then it is not worth it, enhance it at your best."* US
+gold (XAUUSD) only; information only (not tradable via Zerodha).
+
+What is already seen: every R140 result so far. That includes L1-L3 / E7 / E8 on 1 Sep - 30 Oct 2026
+(`recent_look.lock`). These new rules build on E5's vote because L1 (E5's vote, tight stop, early lock) was the only
+rule that beat its twins in design. **That choice is itself data-driven, so it is counted:** BH runs over **42**
+(12 + 6 + 18 + 6). The design gates are those of the A-rules (s6). The holdout for these rules is **1 Apr - 31 Aug
+2026**, still unseen for them, read once and only for a rule passing every design gate. Sep - Oct 2026 is reported
+separately and labelled already seen.
+
+**Entries at 06:00 IST, from the 15-minute candle completed by 06:00:** "vote 4/4" = E5 (EMA20 vs EMA50, RSI vs 50,
+MACD histogram, and C3, the move from the US close to 06:00, all agree). "vote 3/4" = at least 3 of those 4 agree, in
+the majority direction.
+
+| id | entry | stop | lock | time exit (IST) | extra |
+|---|---|---|---|---|---|
+| G1 | vote 4/4 | 0.5 ATR15 | after +0.5 ATR15, keep 60% | **12:30** (let winners run) | |
+| G2 | vote 4/4 | 0.5 ATR15 | after **+1.0** ATR15, keep 60% | 12:30 | |
+| G3 | vote 4/4 | 0.5 ATR15 | after +0.5 ATR15, keep **50%** | **17:30** (into London) | |
+| G4 | vote 4/4 | 0.5 ATR15 | after +0.5 ATR15, keep 60% | 08:00 (L1) | only when ATR15 at 06:00 >= the median of all earlier days (busy days) |
+| G5 | **vote 3/4** | 0.5 ATR15 | after +0.5 ATR15, keep 60% | 08:00 (L1) | more trades |
+| G6 | vote 3/4 | 0.5 ATR15 | after +0.5 ATR15, keep 60% | 12:30 | |
+
+Costs as s5 ($0.25 spread + $7 a lot round trip, scaled to the size; 2x also). Twins use each rule's own exits and
+time exit. Gates as A-rules (>= 100 trades; G1-G4 >= 50; folds: >= 4 of 5 positive).
+
+**Sizing for a $1,000 account (reported for every rule, no gate; sizing never changes whether a rule has an edge):**
+- (a) fixed 5x: $5,000 of gold a trade;
+- (b) risk 1% of the current balance a trade: ounces = 1% x balance / the stop distance in $, capped at 20x;
+- (c) risk 2%, same cap.
+Reported: end balance, return, the worst drawdown in % and the worst month, for design, and for Sep - Oct 2026
+(labelled seen).
