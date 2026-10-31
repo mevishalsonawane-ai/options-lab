@@ -255,3 +255,36 @@ time exit. Gates as A-rules (>= 100 trades; G1-G4 >= 50; folds: >= 4 of 5 positi
 - (c) risk 2%, same cap.
 Reported: end balance, return, the worst drawdown in % and the worst month, for design, and for Sep - Oct 2026
 (labelled seen).
+
+## Amendment E (31 Oct 2026, before any Amendment E number): the whole day, hour by hour
+
+Boss, 31 Oct: *"Check whole day then try again."* US gold (XAUUSD) only; information only (not tradable via Zerodha).
+Already seen: every R140 result so far. The two rules carried to every hour are the best 06:00 rules, **L1** and
+**G4**. That choice is data-driven, so every hour counts: **BH over 90** (the 42 R140 rules so far + 48 here).
+
+**Entry hours:** every full hour of the IST day, 00:00 ... 23:00 IST (24 hours), on IST weekdays. In at that hour's
+first minute, out at most **2 hours later**. A trade needs prices within 5 minutes of the entry and within 30 minutes
+of the time exit, so hours inside or across gold's daily break (17:00-18:00 New York) and the weekend drop out by
+themselves.
+
+**Signals, from the 15-minute candle completed at the entry** (the same indicators and settings as Amendment B):
+vote 4/4 = sign(EMA20 - EMA50), sign(RSI14 - 50), sign(MACD histogram) and sign(the move from the latest 17:00 New
+York close before the entry to the entry) all agree. At 06:00 IST this is exactly E5.
+
+| id | rule at hour H | stop | lock | out |
+|---|---|---|---|---|
+| H{HH}a (24) | vote 4/4 (= L1 at H) | 0.5 ATR15 | after +0.5 ATR15, keep 60% | H + 2 h |
+| H{HH}b (24) | vote 4/4 on busy days only: ATR15 at H >= the median ATR15 at the same hour on all earlier days (= G4 at H) | 0.5 ATR15 | as a | H + 2 h |
+
+**Costs:** $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also. The spread is kept the same at every hour,
+which flatters the quiet hours; this is said in the write-up.
+
+**Gates (each of the 48), on design 2 Oct 2023 - 31 Mar 2026:** net > 0 at 1x and 2x; twins at the same hour with
+the same exits, p <= 0.05; BH q <= 0.10 over 90; >= 50 trades; >= 4 of the 5 folds positive. **Holdout:** 1 Apr - 31
+Aug 2026, read once, only for a rule passing every design gate. Sep - Oct 2026 is reported separately (already seen
+for the 06:00 hour).
+
+**Descriptive (no gates), design, by hour and by US summer / winter:** the median 2-hour range and move, the share of
+up moves, and the share of days on which the vote fires.
+
+**Sizing:** for every rule that passes design, $1,000 at fixed 5x and at risk 1% / 2% (as Amendment D).
