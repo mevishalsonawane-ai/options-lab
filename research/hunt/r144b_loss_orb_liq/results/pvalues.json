@@ -1,0 +1,11 @@
+{
+ "study": "R144b",
+ "group": "Liquidity 15+5, ORB family, Solo 2.0",
+ "status": "not run",
+ "note": "No data lake in the session: no trade rebuilt, no filter chosen, no p-value. r144b.py test overwrites this file.",
+ "bh_within_group": {
+  "method": "Benjamini-Hochberg",
+  "q": 0.1
+ },
+ "tests": []
+}

@@ -1,0 +1,27 @@
+id: r144b-filters
+title: 'R144b: up to 3 pre-registered skip filters per arm for Liquidity 15+5, the ORB family and Solo 2.0 (not run: no lake)'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144B_LOSS_ORB_LIQ.md
+data_version: none (the session had no copy of the Drive lake)
+period:
+  unseen: 2022-12-01..2024-11-19 (test)
+  design: 2024-11-20..2026-03-31 (choice only)
+  holdout: 2026-04-01..2026-10-13 (test, read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+prereg: research/hunt/r144b_loss_orb_liq/PREREG.md
+holdout_read: false
+features:
+- 'signal source: the index; option-chain and VIX context; filters skip a trade whose design-frozen feature slice is a costly losing one'
+hypothesis: skipping trades in each arm's costliest steady losing slice loses less than today's rules and than random skipping
+model_or_rule: research/hunt/r144b_loss_orb_liq/r144b.py
+settings: 'fixed choice rule (PREREG 5); R142 lose-less gates; 2,000 random-skip twins, p <= 0.05; BH q <= 0.10 within R144b; >= 40 left, >= 30 skipped; must pass final AND unseen'
+variants_tried: null
+verdict: not-a-test
+results:
+  summary: 'NOT RUN: no data lake in the session. No filter chosen or tested; results/pvalues.json lists no tests.'
+  costs: each engine's own (R17 fills, dated charges, 1 lot)
