@@ -260,3 +260,18 @@ average net below 0.
   - `research/experiments/entries/r144b-filters.yaml` (rejected).
 - To re-run: `IRAALGO_LAKE=<flat lake> R51_CLEAN=1 python research/hunt/r144b_loss_orb_liq/r144b.py collect
   {orb|liq|solo} {design|final|unseen}`, then `design` / `test`. The final is read once.
+
+## Addendum, 1 Nov 2026: did any filter raise the win rate? (Boss: "ignore 65%, check if the win rate is increased")
+
+The win rate is the share of trades with net > 0. "Random p" is the share of 2,000 random skips of the same number of
+trades whose win rate was at least as high (trade-level skips, no re-walk).
+
+| filter | final: win before -> after, net, random p | unseen 2022-24: win, net, random p | win rate up in both? |
+|---|---|---|---|
+| Liquidity: skip a PCR rise >= 0.195 since 09:30 | 37.3% -> 38.2% (+0.9), +11,155 -> +19,415, p 0.10 | 31.0% -> 31.8% (+0.8), +83,307 -> +77,429, p 0.14 | **yes, but by < 1 point, not beyond random, and it cut 2022-24 net** |
+| Liquidity: skip an ATM IV fall since 09:30 | 37.3% -> 37.3% (0.0), p 0.54 | 31.0% -> 31.9% (+0.9), p 0.09 | no (flat in the final) |
+| Liquidity: skip a narrow 09:15-09:30 range | 37.3% -> 36.0% (-1.3), net turns -6,156, p 0.83 | 31.0% -> 33.4% (+2.4), p 0.01 | no (down in the final) |
+| Range Fade: skip a narrow 09:15-09:30 range | 33.3% -> 33.8% (+0.5), p 0.36 | 29.8% -> 29.6% (-0.2), p 0.59 | no (down in 2022-24) |
+
+**Verdict:** no filter raises the win rate in a way that beats random skipping in both periods. All four failed the
+gates, so by the CLAUDE.md safety rules they stay notes only: no arm is changed.
