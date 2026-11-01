@@ -444,6 +444,24 @@ object OffShadow {
     @Volatile internal var testSession: Boolean? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
 
+    /**
+     * 1 Nov: TEST ONLY (nothing in the app calls it): waits at most [timeoutMs] for the jobs on this book's own worker (an entry
+     * priced there by [enter]; in the tests [runLate] starts none), then stops any still running. The test fakes of Upstox and
+     * Zerodha call it before they close, and each test calls it (a short wait) before it starts. Why: IraSoloTest.offTakesNothing reached
+     * api.upstox.com now and then (31 Oct 16:34 IST, 2 Nov 03:28 IST in CI): Solo switched off hands its pick here, the price is
+     * read on this worker after the test has returned, and when that read began after the test closed its fake Upstox it went to
+     * the real host (and kept retrying into the next test class). A race with the test's teardown, not the hour: the job always ran.
+     */
+    internal fun settleForTest(timeoutMs: Long = 10_000L) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "settleForTest exists only in debug builds" }
+        val running = scope.coroutineContext[kotlinx.coroutines.Job]?.children?.toList().orEmpty()
+        if (running.isEmpty()) return
+        val done = timeoutMs > 0 && kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeoutOrNull(timeoutMs) { running.forEach { it.join() }; true } ?: false
+        }
+        if (!done) running.forEach { it.cancel() }
+    }
+
     /** For tests: the book forgotten (its file stays). */
     internal fun wipe() {
         synchronized(written) { wipes++; cache = null; _view.value = View(); lastLook.clear(); written.forget() }

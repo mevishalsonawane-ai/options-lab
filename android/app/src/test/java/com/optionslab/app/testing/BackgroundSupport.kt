@@ -76,6 +76,8 @@ class UpstoxStub : Closeable {
     fun count(pred: (String) -> Boolean): Int = paths.count(pred)
 
     override fun close() {
+        // 1 Nov: the switched-off shadow's prices read on its own worker are done (or stopped) before this fake goes, so none reaches the real host.
+        com.optionslab.app.data.OffShadow.settleForTest()
         Net.testEndpoint = null
         server.shutdown()
     }
@@ -130,6 +132,7 @@ object Background {
     /** Everything these tests change that outlives one Robolectric application. */
     fun reset() {
         Market.testClock = null
+        com.optionslab.app.data.OffShadow.settleForTest()   // 1 Nov: before the endpoint goes (see FakeUpstox.close)
         Net.testEndpoint = null
         Holidays.resetForTest()
         holidaysCache().set(null, null)
