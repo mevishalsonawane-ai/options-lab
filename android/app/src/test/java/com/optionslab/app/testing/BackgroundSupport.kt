@@ -132,6 +132,7 @@ object Background {
     /** Everything these tests change that outlives one Robolectric application. */
     fun reset() {
         Market.testClock = null
+        com.optionslab.app.data.OffShadow.settleForTest()   // 1 Nov: before the endpoint goes (see FakeUpstox.close)
         Net.testEndpoint = null
         Holidays.resetForTest()
         holidaysCache().set(null, null)

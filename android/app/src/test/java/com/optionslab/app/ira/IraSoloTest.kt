@@ -377,7 +377,9 @@ class IraSoloTest : RobolectricTest() {
      * began after the test closed its fake Upstox, it went to the real host. Here the same pass runs at five pinned moments (before the
      * open, in the session, after the close, a Saturday, an NSE holiday), each with its own fake Upstox, and the shadow's read is held
      * back 300 ms so it always starts after the pass returns (the race made certain, not left to the machine's load). Each fake is
-     * closed, the shadow's worker is then waited on, and no host may have been asked; in the session the price came from the fake.
+     * closed, the shadow's worker is then waited on, and no host may have been asked; in the session the shadow's worker read its price
+     * from the fake (Solo's own pass reads the strike's price before it hands over, also on a Saturday or holiday: that read is
+     * on the test's thread, through the open fake, and is not counted here).
      */
     @Test fun offNeverReachesTheInternetAtAnyHourOrDay() {
         val me = Thread.currentThread()
@@ -398,14 +400,18 @@ class IraSoloTest : RobolectricTest() {
             upstox.close()
             upstox = FakeUpstox()                           // (clears Market.testClock: set below)
             IraSolo.resetForTest()
-            com.optionslab.app.data.OffShadow.wipe()
+            com.optionslab.app.data.OffShadow.wipeForErase()     // its file too: the case before must not be read back
             day = d
             at(t, 10)
             AutomationSupport.contracts(context, listOf(
                 Upstox.Contract("BANKNIFTY", day.plusDays(2), 51_700.0, Right.CE, 30, ceKey, "BANKNIFTY-SOLO-51700CE")))
             upstox.price(ceKey, 400.0)
             // The pass's own look finds no price in memory (so the read goes to the shadow's worker); the worker's waits 300 ms first.
-            com.optionslab.app.data.OffShadow.testPrice = { _ -> if (Thread.currentThread() !== me) Thread.sleep(300); null }
+            val workerReads = java.util.concurrent.atomic.AtomicInteger()
+            com.optionslab.app.data.OffShadow.testPrice = { _ ->
+                if (Thread.currentThread() !== me) { workerReads.incrementAndGet(); Thread.sleep(300) }
+                null
+            }
             IraSolo.on = false
             runBlocking { IraSolo.passAt(now) }
             val fake = upstox
@@ -413,13 +419,13 @@ class IraSoloTest : RobolectricTest() {
             com.optionslab.app.data.OffShadow.settleForTest()
             assertEquals("$name ($d $t): no host reached", emptyList<String>(), NetworkGuard.blocked.toList())
             assertTrue("$name: nothing bought", IraSolo.all().isEmpty())
-            val priced = fake.requests.any { "SOLOBN51700CE" in it }
             val kept = com.optionslab.app.data.OffShadow.view.value.openOf(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY)
             if (name == "in the session") {
-                assertTrue("in the session the shadow's price came from the fake: ${fake.requests}", priced)
-                assertEquals("and the would-be trade was kept", 1, kept.size)
+                assertEquals("in the session the shadow's worker read the price once", 1, workerReads.get())
+                assertTrue("through the fake: ${fake.requests}", fake.requests.any { "SOLOBN51700CE" in it })
+                assertEquals("and the would-be trade was kept (priced only by that read)", 1, kept.size)
             } else {
-                assertFalse("$name: no price read at all: ${fake.requests}", priced)
+                assertEquals("$name: the shadow read no price on its worker", 0, workerReads.get())
                 assertTrue("$name: no would-be trade", kept.isEmpty())
             }
         }

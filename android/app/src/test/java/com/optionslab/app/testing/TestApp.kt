@@ -198,7 +198,7 @@ class TestApp : Application() {
         com.optionslab.app.data.S5Arm.wipe()
         com.optionslab.app.data.CisdArm.wipe()
         // 1 Nov: no price read of an earlier test's switched-off shadow still running (it would reach the internet in this one).
-        com.optionslab.app.data.OffShadow.settleForTest(0)
+        com.optionslab.app.data.OffShadow.settleForTest(2_000L)
         com.optionslab.app.data.OffShadow.wipe()
         // 30 Oct: the watch's shadow-only passes are noted, never started in a job (a test's pass leaves nothing running behind it).
         AutomationSupport.lateShadow.clear()
