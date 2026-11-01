@@ -117,6 +117,11 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     if (source == DonchianArm.SOURCE && v.stOn) DonchianArm.ST_RECORD + "." else null,
     // 16 Oct (R72): its risk line, and the point of running it beside Donchian - the two on the same days.
     if (source == BreadthDonchianArm.SOURCE) "Risk: ${BreadthDonchianArm.RISK}." else null,
+    // 1 Nov (Boss: "Make the change the arms"): R72's wide-day skip and R52's 09:25 exit, when on, with their records (paper; live in shadow).
+    if (source == BreadthDonchianArm.SOURCE && v.wideOn) "Wide-day skip on: ${BreadthDonchianArm.WIDE_RULE}; ${BreadthDonchianArm.WIDE_RECORD}. " +
+        "Paper only: while it may be copied live its breaks are taken and the skip is only logged." else null,
+    if (source == OovArm.SOURCE && v.np5On) "09:25 exit on: ${OovArm.NO_PROGRESS_RULE}; ${OovArm.NO_PROGRESS_RECORD}. " +
+        "Paper only: a trade that may be copied live keeps the plain exits and the early exit is only logged." else null,
     if (source == BreadthDonchianArm.SOURCE) v.comparison() + "." else null,
     // 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock and R66's +5% once +25%, Boss's choices; paper only).
     com.optionslab.ira.PassedArmsTalk.exitsWords(v.lockOn, v.l25On) + ".",

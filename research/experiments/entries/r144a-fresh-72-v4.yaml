@@ -1,0 +1,27 @@
+id: r144a-fresh-72-v4
+title: 'R144a fresh year: R144A-72-V4 on R72 (Nov 2021 - Nov 2022)'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144A_LOSS_BREAKOUT.md
+data_version: Drive lake copied 1 Nov 2026; R51 clean store rebuilt Aug 2021 - Dec 2022 (r144a_fresh)
+period:
+  design: none (rule frozen from R140 / R142 / R144a)
+  holdout: 2021-11-01..2022-11-30 (never used by R139-R144a; read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+prereg: research/hunt/r144a_fresh_2021/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (the arm''s own break); skip context from index bars or previous-day futures'
+hypothesis: R144A-72-V4 cuts R72's losses on a year it never saw, better than random
+model_or_rule: research/hunt/r144a_fresh_2021/r144a_fresh.py
+settings: skip after yesterday's index-futures volume >= 1.3162 x its 20-day average; frozen; 1 lot; 2,000 twins
+variants_tried: 1
+verdict: inconclusive
+results:
+  summary: 'fresh year: 1039 trades vs 1169, win 43% vs 44% (65% rule: below), net Rs -63,797 vs Rs -67,223, losing days Rs
+    -331,389 vs Rs -388,781, drawdown Rs 98,343 vs Rs 115,480, worst month Rs -22,449 vs Rs -23,441; twin p 0.0005, q 0.0015.
+    Passes. Failed Apr - Oct 2026 (R144a): mixed record, shadow log only.'
+  costs: R17 fills, dated Zerodha charges (STT 0.05% then), 1 lot (R101 / R106 engine)

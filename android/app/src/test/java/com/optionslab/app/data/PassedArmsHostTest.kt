@@ -1996,4 +1996,238 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(1, after.wouldBeOf(BreadthDonchianArm.SOURCE).count { it.shadow == PassedArmsHost.SHADOW_CAP })
         assertTrue(after.forwardLine(BreadthDonchianArm.SOURCE), after.forwardLine(BreadthDonchianArm.SOURCE).startsWith("Forward test: 0 of 40"))
     }
+
+    // ---- 1 Nov (Boss: "Make the change the arms"): R72's wide-day skip and R52's 09:25 no-progress exit -----------------------
+
+    @Test fun theUpdateSwitchesTheWideDaySkipAndTheNoProgressExitOnOnceAndTheirUndoSwitchesThemOff() {
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        assertTrue(view().wideOn); assertTrue(view().np5On)
+        assertEquals(1, view().log.count { "wide-day skip turned on by the 1 Nov update" in it })
+        assertEquals(1, view().log.count { "09:25 no-progress exit turned on by the 1 Nov update" in it })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().wideOn); assertTrue(view().np5On)
+        assertEquals("once only", 1, view().log.count { "wide-day skip turned on" in it })
+        assertTrue(PassedArmsHost.diagLine().contains("wide-day skip (R140) on for new breaks (live in shadow)"))
+        assertTrue(PassedArmsHost.diagLine().contains("09:25 no-progress exit (R142) on for new trades (live in shadow)"))
+        // Each Undo flips only its own switch (paper only, no PIN); another target does nothing.
+        val wide = AutoChange.passedWideSkip(true)
+        assertNull(Autopilot.apply(wide.copy(target = "filter:other"), false))
+        assertTrue(Autopilot.apply(AutoChange.inverse(wide, "undone by you"), false)!!.contains("after a wide day again"))
+        assertFalse(view().wideOn); assertTrue(view().np5On)
+        val np5 = AutoChange.passedNoProgress(true)
+        assertTrue(Autopilot.apply(AutoChange.inverse(np5, "undone by you"), false)!!.contains("plain exits"))
+        assertFalse(view().np5On)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse("its Undo stays undone after a restart", view().wideOn); assertFalse(view().np5On)
+        assertTrue(Autopilot.apply(wide, false)!!.contains("no new paper break"))
+        assertTrue(Autopilot.apply(np5, false)!!.contains("09:25"))
+        assertTrue(view().wideOn && view().np5On)
+        // A book that cannot be read is never switched on by itself.
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().wideOn); assertFalse(view().np5On)
+    }
+
+    /** 21 daily candles of NIFTY up to the previous session (the calendar's; [lag] sessions earlier): ranges 100, the newest's [last]. */
+    private fun niftyDaily(last: Double, lag: Long = 0): List<Bar> {
+        val prev = PassedArmsHost.previousSession(day)!!.minusDays(lag)
+        return (20 downTo 0).map { k ->
+            val r = if (k == 0) last else 100.0
+            Bar(prev.minusDays(k.toLong()).atStartOfDay(), 25_000.0, 25_000.0 + r / 2, 25_000.0 - r / 2, 25_000.0)
+        }
+    }
+
+    /**
+     * R72 on, its wide-day skip [skipOn], NIFTY's daily candles with yesterday's range [last] ([candles] false: none read), the
+     * history read first (so no write of the book is pending when it is), then the 09:20 breadth break (NIFTY + 3 others).
+     */
+    private fun wideDay(last: Double, skipOn: Boolean = true, candles: Boolean = true, lag: Long = 0, paper: Boolean = true) {
+        PassedArmsHost.testDaily = { u -> if (u == "NIFTY" && candles) niftyDaily(last, lag) else emptyList() }
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") yesterday() else bases[u]?.let { b ->
+            (0 until 375).map { Bar(day.minusDays(1).atTime(9, 15).plusMinutes(it.toLong()), b, b + 1, b - 1, b) } }.orEmpty() }
+        PassedArmsHost.wipe(); runBlocking { PassedArmsHost.prefetchNow(day) }
+        only(BreadthDonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setWideSkip(skipOn) }
+        if (paper) paperOnly(BreadthDonchianArm.SOURCE)
+        market(LocalTime.of(9, 21))
+        for (u in setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")) {
+            val b = bases.getValue(u)
+            minutes(indexKeys.getValue(u), LocalTime.of(9, 21)) { t -> if (t.isBefore(LocalTime.of(9, 19))) b else b * 1.004 }
+        }
+    }
+
+    @Test fun afterAVeryWideDayR72TakesNoBreakOnPaperAndSaysWhy() {
+        wideDay(200.0)
+        tick(LocalTime.of(9, 21))
+        val v = view()
+        assertTrue("nothing bought, no would-be either", v.open.none { it.arm == BreadthDonchianArm.SOURCE })
+        val said = v.status["${BreadthDonchianArm.SOURCE}|NIFTY"].orEmpty()
+        assertTrue(said, said.contains("break skipped") && said.contains("very wide day") && said.contains("R140 FB-R72-A10"))
+        // Decided once: a later pass in the window never buys it.
+        tick(LocalTime.of(9, 22))
+        assertTrue(view().open.none { it.arm == BreadthDonchianArm.SOURCE })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun afterAnOrdinaryDayR72BuysAsBefore() {
+        wideDay(110.0)
+        tick(LocalTime.of(9, 21))
+        assertEquals(1, view().open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+    }
+
+    @Test fun withTheSkipOffAWideDayIsTradedAsBefore() {
+        wideDay(200.0, skipOn = false)
+        tick(LocalTime.of(9, 21))
+        assertEquals(1, view().open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+    }
+
+    @Test fun candlesThatLagASessionAreNeverReadAsYesterday() {
+        // The newest candle is the session before the previous one (a late read): unknown, so never a skip on the wrong day.
+        wideDay(200.0, lag = 1)
+        tick(LocalTime.of(9, 21))
+        assertEquals(1, view().open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+    }
+
+    @Test fun thePreviousSessionSkipsWeekendsAndHolidays() {
+        val prev = PassedArmsHost.previousSession(day)!!
+        assertTrue(prev.isBefore(day))
+        assertTrue(Market.isTradingDay(prev))
+        var d = prev.plusDays(1)
+        while (d.isBefore(day)) { assertFalse("$d is not a session", Market.isTradingDay(d)); d = d.plusDays(1) }
+    }
+
+    @Test fun withNoDailyCandlesReadTheSkipNeverActs() {
+        wideDay(200.0, candles = false)
+        tick(LocalTime.of(9, 21))
+        assertEquals("unknown never skips", 1, view().open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+    }
+
+    /** Live with AI trades on and [source] out of shadow with the PIN (CLAUDE.md's live gates): its trades may be copied live. */
+    private fun liveFor(source: String) {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        com.optionslab.app.data.ArmLive.testSync = true
+        runBlocking { com.optionslab.app.data.ArmLive.setShadow(source, false, pinConfirmed = true, log = false) }
+        val sym = "NIFTY26OCT25050CE"
+        kite.instruments += FakeKite.Ins(26_000_001, sym, "NIFTY", day.plusDays(7), 25_050.0, "CE", 65)
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        File(context.filesDir, "kite_instruments.json").delete()
+        runBlocking { Broker.instruments() }
+        kite.requests.clear()
+    }
+
+    @Test fun whileR72MayBeCopiedLiveAWideDayIsOnlyLoggedAndItsBreakIsTakenAsBefore() {
+        liveFor(BreadthDonchianArm.SOURCE)
+        wideDay(200.0, paper = false)
+        tick(LocalTime.of(9, 21))
+        val v = view()
+        assertEquals("taken as before (live in shadow)", 1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+        assertEquals(1, v.log.count { "wide-day skip in shadow" in it && "logged only" in it })
+        assertEquals("its live copy goes as before", "BUY", kite.placed.first().form["transaction_type"])
+    }
+
+    @Test fun withTheNoProgressExitR52SellsAt0925WhenTheOptionIsNotUpFivePercent() {
+        only(OovArm.SOURCE)
+        paperOnly(OovArm.SOURCE)
+        runBlocking { PassedArmsHost.setNoProgress(true) }
+        market(LocalTime.of(9, 20), firstOpen = 25_100.0)
+        tick(LocalTime.of(9, 20))
+        val p = view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }
+        assertTrue("it entered with the 09:25 exit", p.np5)
+        // 09:24 not closed yet: held.
+        market(LocalTime.of(9, 25), firstOpen = 25_100.0, call = { 100.0 })
+        at(LocalTime.of(9, 24, 30), 0); runBlocking { PassedArmsHost.manageOnly() }
+        assertTrue(view().open.any { it.arm == OovArm.SOURCE })
+        market(LocalTime.of(9, 26), firstOpen = 25_100.0, call = { 100.0 })
+        at(LocalTime.of(9, 26)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("no_progress", view().closed.single { it.arm == OovArm.SOURCE && it.shadow == null }.why)
+        // Kept across a restart: the flag is in the book.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().closedOf(OovArm.SOURCE).single { it.shadow == null }.np5)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun theNoProgressExitIsSaidInThePopupOnlyForTheTradesThatEnteredWithIt() {
+        val t0 = day.atTime(9, 20)
+        val oov = PassedArmsHost.Pos(OovArm.SOURCE, "NIFTY", "X", "CE", 65, 100.0, t0, null, lock = true, l25 = true, np5 = true)
+        assertEquals("+5% locked once +25%; out after 5 minutes unless up 5%", PassedArmsHost.exitsOf(oov, null).note)
+        assertEquals("+5% locked once +25%", PassedArmsHost.exitsOf(oov.copy(np5 = false), null).note)
+        assertEquals("out after 5 minutes unless up 5%", PassedArmsHost.exitsOf(oov.copy(lock = false, l25 = false), null).note?.substringAfter("; "))
+        // Never on another arm, whatever its flag says.
+        assertFalse(PassedArmsHost.exitsOf(oov.copy(arm = DonchianArm.SOURCE), null).note.orEmpty().contains("unless up"))
+    }
+
+    @Test fun aR52TradeThatWasUpFivePercentOrEnteredWithTheExitOffKeepsItsPlainExits() {
+        only(OovArm.SOURCE)
+        paperOnly(OovArm.SOURCE)
+        runBlocking { PassedArmsHost.setNoProgress(true) }
+        market(LocalTime.of(9, 20), firstOpen = 25_100.0)
+        tick(LocalTime.of(9, 20))
+        market(LocalTime.of(9, 27), firstOpen = 25_100.0, call = { t -> if (t == LocalTime.of(9, 22)) 106.0 else 101.0 })
+        at(LocalTime.of(9, 27)); runBlocking { PassedArmsHost.manageOnly() }
+        assertTrue("it reached +5%: held", view().open.any { it.arm == OovArm.SOURCE && it.shadow == null })
+        // Switched off: an open trade keeps the exits it entered with; a new one enters without it.
+        assertTrue(runBlocking { PassedArmsHost.setNoProgress(false) }.contains("plain exits"))
+        assertTrue(view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }.np5)
+    }
+
+    /**
+     * [source]'s own "Trade live" off (free, no PIN): its entries cannot be copied live, so the 1 Nov paper rules act. (The tests' app
+     * is in Live with AI trades on, and an unset switch reads as on, so without this every entry "may be copied live".)
+     */
+    private fun paperOnly(source: String) {
+        runBlocking { com.optionslab.app.data.ArmLive.setLive(source, false, pinConfirmed = false, log = false) }
+        assertFalse(ExposureCapHost.liveMirrorPossible(source))
+    }
+
+    /** 1 Nov: with the arm's live copy possible (the tests' default: Live, AI trades on, its switch unset), R52 keeps its plain exits. */
+    @Test fun withALiveCopyPossibleR52KeepsItsPlainExits() {
+        only(OovArm.SOURCE)
+        runBlocking { PassedArmsHost.setNoProgress(true) }
+        market(LocalTime.of(9, 20), firstOpen = 25_100.0)
+        tick(LocalTime.of(9, 20))
+        assertFalse(view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }.np5)
+    }
+
+    /** 1 Nov (review): in Live with AI trades on, a live book not read yet counts as "may be copied live": the rules never act on a guess. */
+    @Test fun anUnreadLiveBookInLiveCountsAsMayBeCopiedLive() {
+        only(OovArm.SOURCE)
+        runBlocking { PassedArmsHost.setNoProgress(true) }
+        org.junit.Assume.assumeFalse("needs the live book unread", com.optionslab.app.data.ArmLive.view.value.loaded)
+        market(LocalTime.of(9, 20), firstOpen = 25_100.0)
+        tick(LocalTime.of(9, 20))
+        assertFalse(view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }.np5)
+    }
+
+    @Test fun aTradeThatEnteredWithTheExitOffIsNeverSaidToBeKeptForLive() {
+        only(OovArm.SOURCE)
+        market(LocalTime.of(9, 20), firstOpen = 25_100.0)
+        tick(LocalTime.of(9, 20))
+        assertFalse(view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }.np5)
+        // Switched on after its entry: the trade keeps the exits it entered with, and no shadow line claims it was kept for live.
+        runBlocking { PassedArmsHost.setNoProgress(true) }
+        market(LocalTime.of(9, 26), firstOpen = 25_100.0, call = { 100.0 })
+        at(LocalTime.of(9, 26)); runBlocking { PassedArmsHost.manageOnly() }
+        assertTrue(view().open.any { it.arm == OovArm.SOURCE && it.shadow == null })
+        assertTrue(view().log.none { "would have been sold at" in it })
+    }
+
+    @Test fun whileR52MayBeCopiedLiveItsTradeKeepsThePlainExitsAndThe0925ExitIsOnlyLogged() {
+        liveFor(OovArm.SOURCE)
+        only(OovArm.SOURCE)
+        runBlocking { PassedArmsHost.setNoProgress(true) }
+        market(LocalTime.of(9, 20), firstOpen = 25_100.0)
+        tick(LocalTime.of(9, 20))
+        val p = view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }
+        assertFalse("may be copied live: plain exits", p.np5)
+        assertTrue(view().log.any { "keeps its plain exits" in it && "live in shadow" in it })
+        market(LocalTime.of(9, 26), firstOpen = 25_100.0, call = { 100.0 })
+        kite.quote("NFO:NIFTY26OCT25050CE", 100.0, 99.95, 100.05)
+        at(LocalTime.of(9, 26)); runBlocking { PassedArmsHost.manageOnly() }
+        assertTrue("not sold: it keeps its plain exits", view().open.any { it.arm == OovArm.SOURCE && it.shadow == null })
+        assertEquals(1, view().log.count { "would have been sold at 09:25 by the 09:25 no-progress exit" in it })
+        // Said once.
+        at(LocalTime.of(9, 27)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals(1, view().log.count { "would have been sold at" in it })
+    }
 }

@@ -117,7 +117,8 @@ class PassedArmsTest {
         assertEquals(130.0, PassedArms.booked(PassedArms.ExitKind.TARGET, 133.0, 130.0, 131.0), 1e-9)
         assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.TIME, 97.0, 130.0, 90.0), 1e-9)
         assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.SQUARE_OFF, 97.0, 130.0, 90.0), 1e-9)
-        assertEquals(5, k.size)
+        assertEquals(6, k.size)
+        assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.NO_PROGRESS, 97.0, 130.0, 90.0), 1e-9)
     }
 
     @Test fun theTimeStopSellsAtTheCloseOfItsLastMinute() {
@@ -435,5 +436,59 @@ class PassedArmsTest {
         // Through the walk: bars unread long after the entry - the price now (never a price that cannot be told).
         val w = PassedArms.exitOnBars(100.0, t(10, 0), emptyList(), 80.0, t(10, 9), r51)
         assertEquals(PassedArms.ExitKind.STOP, w.exit!!.kind); assertEquals(80.0, w.exit!!.price, 1e-9)
+    }
+
+    // ---- 1 Nov: R142's no-progress exit (NP5-52) ---------------------------------------------------------------------------
+
+    private val np5 = PassedArms.withLock(OovArm.EXITS, l25 = true).copy(noProgress = OovArm.NO_PROGRESS)
+
+    /** Five minutes 09:20-09:24 whose highs are [highs] (opens and closes at 100, lows 99). */
+    private fun window(highs: List<Double>) = highs.mapIndexed { i, h -> bar(9, 20 + i, 100.0, h, 99.0, 100.0) }
+
+    @Test fun noProgressSellsAt0925WhenTheHighsNeverReachedFivePercent() {
+        val w = PassedArms.exitOnBars(100.0, t(9, 20), window(listOf(101.0, 104.0, 104.9, 102.0, 103.0)), null, t(9, 25), np5)
+        assertEquals(PassedArms.ExitKind.NO_PROGRESS, w.exit!!.kind)
+        assertEquals(t(9, 25), w.exit!!.at)
+        assertEquals("no_progress", w.exit!!.kind.why)
+    }
+
+    @Test fun noProgressKeepsATradeThatReachedFivePercent() {
+        for (k in 0 until 5) {
+            val highs = MutableList(5) { 101.0 }.also { it[k] = 105.0 }
+            assertNull(PassedArms.exitOnBars(100.0, t(9, 20), window(highs), null, t(9, 25), np5).exit, "reached at minute $k")
+        }
+    }
+
+    @Test fun noProgressWaitsForItsLastMinuteAndNeverActsAfter() {
+        // Before 09:25 the fifth minute is not closed: nothing.
+        assertNull(PassedArms.exitOnBars(100.0, t(9, 20), window(listOf(101.0, 101.0, 101.0, 101.0)), null, t(9, 24), np5).exit)
+        // A trade that reached +5% is never sold by it later, whatever the price does after 09:25 (the stop still works).
+        val later = window(listOf(106.0, 101.0, 101.0, 101.0, 101.0)) + bar(9, 25, 100.0, 100.0, 95.0, 96.0)
+        assertNull(PassedArms.exitOnBars(100.0, t(9, 20), later, null, t(9, 26), np5).exit)
+    }
+
+    @Test fun aMissingMinuteNeverSellsOnNoProgress() {
+        val gap = window(listOf(101.0, 101.0, 101.0, 101.0, 101.0)).filterIndexed { i, _ -> i != 2 }
+        assertNull(PassedArms.exitOnBars(100.0, t(9, 20), gap, null, t(9, 26), np5).exit)
+        val nan = window(listOf(101.0, 101.0, 101.0, 101.0, 101.0)).toMutableList().also { it[1] = bar(9, 21, 100.0, Double.NaN, 99.0, 100.0) }
+        assertNull(PassedArms.exitOnBars(100.0, t(9, 20), nan, null, t(9, 26), np5).exit)
+    }
+
+    @Test fun theStopStillComesFirstAndNoRuleMeansNoChange() {
+        // A -30% stop inside the window goes as a stop, never as no progress.
+        val crash = window(listOf(101.0, 101.0)) + bar(9, 22, 90.0, 90.0, 60.0, 65.0)
+        assertEquals(PassedArms.ExitKind.STOP, PassedArms.exitOnBars(100.0, t(9, 20), crash, null, t(9, 23), np5).exit!!.kind)
+        // Without the rule the same quiet window is held (the plain exits).
+        assertNull(PassedArms.exitOnBars(100.0, t(9, 20), window(listOf(101.0, 101.0, 101.0, 101.0, 101.0)), null, t(9, 25),
+            PassedArms.withLock(OovArm.EXITS, l25 = true)).exit)
+    }
+
+    @Test fun noProgressReadsOnlyItsOwnFiveMinutes() {
+        // Look-ahead guard: minutes after 09:24 never change the 09:25 verdict.
+        val base = window(listOf(101.0, 102.0, 103.0, 101.0, 102.0))
+        val a = PassedArms.exitOnBars(100.0, t(9, 20), base, null, t(9, 25), np5).exit
+        val b = PassedArms.exitOnBars(100.0, t(9, 20), base + bar(9, 25, 100.0, 200.0, 99.0, 150.0), null, t(9, 25), np5).exit
+        assertEquals(a, b)
+        assertEquals(PassedArms.ExitKind.NO_PROGRESS, a!!.kind)
     }
 }

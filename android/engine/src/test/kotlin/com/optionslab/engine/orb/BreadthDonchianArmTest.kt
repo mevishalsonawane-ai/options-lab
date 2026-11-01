@@ -186,4 +186,49 @@ class BreadthDonchianArmTest {
         val puts = BreadthDonchianArm.signals(market(4, down = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")), day)
         assertEquals(setOf(-1), BreadthDonchianArm.dueSides(puts, puts.first().entryTime) { false }.keys)
     }
+
+    // ---- 1 Nov: R140's wide-day skip (FB-R72-A10) -------------------------------------------------------------------------
+
+    private fun daily(ranges: List<Double>, last: LocalDate = LocalDate.of(2026, 10, 30)): List<Bar> {
+        // Weekdays back from [last], oldest first; each candle 1000 +- range / 2.
+        val days = ArrayList<LocalDate>()
+        var d = last
+        while (days.size < ranges.size) { if (d.dayOfWeek.value <= 5) days += d; d = d.minusDays(1) }
+        return days.reversed().zip(ranges).map { (x, r) -> Bar(x.atStartOfDay(), 1000.0, 1000.0 + r / 2, 1000.0 - r / 2, 1000.0) }
+    }
+
+    @Test fun wideRatioIsYesterdayOverTheTwentySessionAverage() {
+        val prev = LocalDate.of(2026, 10, 30)
+        val r = BreadthDonchianArm.wideRatio(daily(List(19) { 100.0 } + 200.0), prev)!!
+        assertEquals(200.0 / (19 * 100.0 + 200.0) * 20, r, 1e-9)
+        assertTrue(BreadthDonchianArm.wideDay(r))
+        // Only the 20 sessions up to yesterday count (older ones never move it).
+        assertEquals(r, BreadthDonchianArm.wideRatio(daily(List(10) { 900.0 } + List(19) { 100.0 } + 200.0), prev)!!, 1e-9)
+        assertFalse(BreadthDonchianArm.wideDay(BreadthDonchianArm.wideRatio(daily(List(20) { 100.0 }), prev)))
+    }
+
+    @Test fun theCutIsR140sAndAtTheCutItSkips() {
+        assertEquals(1.3206, BreadthDonchianArm.WIDE_CUT, 0.0)
+        assertTrue(BreadthDonchianArm.wideDay(1.3206)); assertFalse(BreadthDonchianArm.wideDay(1.3205))
+    }
+
+    @Test fun unknownNeverSkips() {
+        val prev = LocalDate.of(2026, 10, 30)
+        assertNull(BreadthDonchianArm.wideRatio(emptyList(), prev))
+        assertNull(BreadthDonchianArm.wideRatio(daily(List(20) { 100.0 }), null))
+        // Yesterday's candle missing (the newest is an older day: a stale list, a holiday read wrong): unknown.
+        assertNull(BreadthDonchianArm.wideRatio(daily(List(20) { 100.0 }, LocalDate.of(2026, 10, 29)), prev))
+        // Fewer than 10 sessions known.
+        assertNull(BreadthDonchianArm.wideRatio(daily(List(9) { 100.0 }), prev))
+        assertFalse(BreadthDonchianArm.wideDay(null)); assertFalse(BreadthDonchianArm.wideDay(Double.NaN))
+        // Bad candles (NaN, high under low) are left out, not counted as zero ranges.
+        val bad = daily(List(20) { 100.0 }).toMutableList().also { it[3] = it[3].copy(high = Double.NaN); it[4] = it[4].copy(high = 0.0) }
+        assertEquals(1.0, BreadthDonchianArm.wideRatio(bad, prev)!!, 1e-9)
+    }
+
+    @Test fun aHolidayGapIsFineWhenYesterdayIsTheLastSession() {
+        // Friday 30 Oct is the previous session of Monday 2 Nov: the weekend never counts.
+        val r = BreadthDonchianArm.wideRatio(daily(List(19) { 100.0 } + 140.0), LocalDate.of(2026, 10, 30))!!
+        assertTrue(r > 1.3 && r < 1.4)
+    }
 }

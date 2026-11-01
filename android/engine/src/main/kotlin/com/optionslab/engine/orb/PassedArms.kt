@@ -135,7 +135,17 @@ object PassedArms {
      * [stop] / [target] are fractions of the fill (0.15 = -15% / +15%); null: none.
      */
     data class PremiumExits(val stop: Double?, val target: Double?, val tmaxMinutes: Int?, val steps: List<Pair<Double, Double>> = emptyList(),
-                            val squareOff: LocalTime)
+                            val squareOff: LocalTime,
+                            /** 1 Nov 2026 (R142 NP5-52, Boss: "Make the change the arms"): sold early when the trade makes no progress; null: none. */
+                            val noProgress: NoProgress? = null)
+
+    /**
+     * R142's "no progress" exit (research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md, NP5-52; held in all six periods tested, R143 and
+     * R144a's fresh year): when the option's minute HIGHS of the first [minutes] minutes from the entry minute never reached the
+     * fill x (1 + [gain]), the trade is sold at the close of the last of those minutes (the next minute's open in the research).
+     * Judged only when every one of those minutes is known; a missing minute never sells (an unseen high may have reached it).
+     */
+    data class NoProgress(val minutes: Int, val gain: Double)
 
     /**
      * R64's 30-60-100 profit lock (16 Oct 2026, Boss's choice: "All three"; research/HUNT_R64_LOCK_30_60_100.md, variant A4): once the premium
@@ -161,7 +171,9 @@ object PassedArms {
     /** [withLock] with R66's L25 step when [l25] (a trade keeps the ladder it entered with). */
     fun withLock(x: PremiumExits, l25: Boolean): PremiumExits = x.copy(target = null, steps = if (l25) LOCK_L25 else LOCK_306100)
 
-    enum class ExitKind(val why: String) { STOP("stop"), LOCK("lock"), TARGET("target"), TIME("time"), SQUARE_OFF("squareoff") }
+    enum class ExitKind(val why: String) { STOP("stop"), LOCK("lock"), TARGET("target"), TIME("time"), SQUARE_OFF("squareoff"),
+        /** 1 Nov: [NoProgress]'s early exit. */
+        NO_PROGRESS("no_progress") }
 
     /** An exit decided: why, and the price the research would have booked it at (a stop's level or a gap's open; the target). */
     data class Exit(val kind: ExitKind, val at: LocalDateTime, val price: Double)
@@ -196,11 +208,17 @@ object PassedArms {
         val stop = stopLevel(entry, x)
         val tgt = targetLevel(entry, x)
         val tend = x.tmaxMinutes?.let { entryMinute.plusMinutes((it - 1).toLong()) }
+        // 1 Nov (NP5-52): the last minute the no-progress exit judges, and the level the highs must reach by then.
+        val npEnd = x.noProgress?.let { entryMinute.plusMinutes((it.minutes - 1).toLong()) }
+        val npLevel = x.noProgress?.let { entry * (1 + it.gain) }
+        val npMinutes = x.noProgress?.minutes ?: 0
         val sq = entryMinute.toLocalDate().atTime(x.squareOff)
         var peak = entry
         var lock: Double? = null
         val done = bars.filter { !it.start.isBefore(entryMinute) && !it.start.plusMinutes(1).isAfter(now) && it.start.isBefore(sq) }
             .sortedBy { it.start }.distinctBy { it.start }
+        var npSeen = 0
+        var npHigh = Double.NEGATIVE_INFINITY
         for (b in done) {
             if (!b.low.isFinite() || !b.high.isFinite()) continue
             known?.let { (at, lv) -> if (!b.start.isBefore(at) && (lock == null || lv > lock!!)) lock = lv }
@@ -216,6 +234,13 @@ object PassedArms {
             for ((trig, keep) in x.steps) if (g >= trig - 1e-12) {
                 val l = if (keep.isNaN()) breakeven ?: (entry * (1 + ProfitLock.FALLBACK_COST_PCT / 100)) else entry * (1 + keep)
                 if (lock == null || l > lock) lock = l
+            }
+            if (npEnd != null && npLevel != null && !b.start.isAfter(npEnd)) {
+                npSeen++
+                if (b.high > npHigh) npHigh = b.high
+                // Every minute of the window seen and none reached the level: out at this minute's close (the research's next open).
+                if (b.start == npEnd && npSeen == npMinutes && npHigh < npLevel - EPS && b.close.isFinite())
+                    return Walk(Exit(ExitKind.NO_PROGRESS, b.start.plusMinutes(1), b.close), peak, lock)
             }
             if (tend != null && b.start == tend) return Walk(Exit(ExitKind.TIME, b.start.plusMinutes(1), b.close), peak, lock)
         }

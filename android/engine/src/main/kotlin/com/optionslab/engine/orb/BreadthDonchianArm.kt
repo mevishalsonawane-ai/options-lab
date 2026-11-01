@@ -49,6 +49,42 @@ object BreadthDonchianArm {
     const val SPLIT = "in research, Donchian's trades breadth confirmed made +₹1,37,635 (752) and the ones it did not lost −₹55,790 (1,029)"
 
     /**
+     * 1 Nov 2026 (Boss: "Make the change the arms"): research R140's FB-R72-A10 - no new break on a day after a very WIDE day:
+     * yesterday's range (high - low) at least [WIDE_CUT] times the average range of the 20 sessions up to yesterday. Frozen at
+     * R140's design cut; it cut R72's losing days in all six periods tested, two of them never seen (R143, R144a's fresh year:
+     * -Rs 3.15 lakh vs -Rs 3.89 lakh, beat random skipping at p < 0.001). The research measured the ranges from the index's own
+     * minutes; here they come from the daily candles (the same session high and low).
+     */
+    const val WIDE_CUT = 1.3206
+    /** The research's average daily range: the 20 sessions up to yesterday, at least 10 of them known. */
+    const val WIDE_SESSIONS = 20
+    const val WIDE_MIN_SESSIONS = 10
+    const val WIDE_RULE = "no new break the day after a very wide day (yesterday's range at least 1.32x the 20-session average; R140 FB-R72-A10)"
+    const val WIDE_RECORD = "held in all six periods tested; fresh year Nov 2021 - Nov 2022: losing days −₹3.15 lakh instead of " +
+        "−₹3.89 lakh, net −₹53,404 instead of −₹67,223"
+
+    /**
+     * Yesterday's range over the average range of the [WIDE_SESSIONS] sessions up to it, from the index's daily candles [daily]
+     * (oldest first, sessions before today only). [prevSession]: the session before today; the newest candle must be that day,
+     * else (a candle missing, a stale list) null. Null too with fewer than [WIDE_MIN_SESSIONS] known ranges. Pure.
+     */
+    fun wideRatio(daily: List<Bar>, prevSession: LocalDate?): Double? {
+        if (prevSession == null) return null
+        val days = daily.filter { it.high.isFinite() && it.low.isFinite() && it.high >= it.low }
+            .sortedBy { it.start }.distinctBy { it.start.toLocalDate() }
+        val last = days.lastOrNull() ?: return null
+        if (last.start.toLocalDate() != prevSession) return null
+        val win = days.takeLast(WIDE_SESSIONS)
+        if (win.size < WIDE_MIN_SESSIONS) return null
+        val adr = win.sumOf { it.high - it.low } / win.size
+        if (!(adr > 0)) return null
+        return (last.high - last.low) / adr
+    }
+
+    /** The wide-day rule skips today's breaks ([wideRatio] at or above [WIDE_CUT]); unknown never skips. */
+    fun wideDay(ratio: Double?): Boolean = ratio != null && ratio.isFinite() && ratio >= WIDE_CUT - 1e-12
+
+    /**
      * The breaks on bar [b] of [date] for each index of [seriesByIndex] (the continuous 5-minute series, oldest first): +1, -1,
      * or 0 (no break, or no bar then). Only the five [UNDERLYINGS] count.
      */

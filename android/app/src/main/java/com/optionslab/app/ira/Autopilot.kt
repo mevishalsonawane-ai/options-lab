@@ -509,6 +509,16 @@ internal object Autopilot {
                 // switch back for paper (live stays in shadow). Paper only: no PIN; not logged again.
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 com.optionslab.app.data.LiquidityTest.setNoTwin(c.to == AutoChange.ON, log = false)
+            } else if (c.target == AutoChange.WIDE_TARGET || c.target == AutoChange.NO_PROGRESS_TARGET) {
+                // 1 Nov (Boss: "Make the change the arms"): R72's wide-day skip and R52's 09:25 exit ([logPassedWideSkipOn],
+                // [logPassedNoProgressOn]): the Undo flips the switch for new trades. Paper only (live stays in shadow): no PIN;
+                // not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                val on = c.to == AutoChange.ON
+                kotlinx.coroutines.runBlocking {
+                    if (c.target == AutoChange.WIDE_TARGET) com.optionslab.app.data.PassedArmsHost.setWideSkip(on, log = false)
+                    else com.optionslab.app.data.PassedArmsHost.setNoProgress(on, log = false)
+                }.takeIf { !it.contains("not ready") }
             } else {
                 if (c.target != AutoChange.ST_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setSupertrend(c.to == AutoChange.ON, log = false) }
@@ -1326,6 +1336,18 @@ internal object Autopilot {
                 }
             }
         }
+    }
+
+    /** 1 Nov (Boss: "Make the change the arms"): R140's wide-day skip on R72's paper entries, on by the update - logged once as Boss's. */
+    fun logPassedWideSkipOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.passedWideSkip(true), "the 1 Nov update (your ask: \"Make the change the arms\"); paper only - live in shadow")
+    }
+
+    /** 1 Nov (Boss: "Make the change the arms"): R142's 09:25 no-progress exit on R52's paper trades, on by the update - logged once as Boss's. */
+    fun logPassedNoProgressOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.passedNoProgress(true), "the 1 Nov update (your ask: \"Make the change the arms\"); paper only - live in shadow")
     }
 
     /**

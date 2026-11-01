@@ -1,0 +1,206 @@
+{
+ "R72": [
+  {
+   "feature": "Q2",
+   "name": "spread proxy: option minute range / price (last 5 min)",
+   "slice": 0,
+   "edges": [
+    0.018227196905869342,
+    0.02918360765349241,
+    0.04430906311239969,
+    0.06485352804802792
+   ],
+   "t": -4.690058956278377,
+   "design_rule": {
+    "trades": 2554,
+    "win": 0.4812,
+    "net": 335915,
+    "avg_win": 1798,
+    "avg_loss": -1415,
+    "worst_day": -29811,
+    "max_dd": 160209,
+    "bad_months": 4,
+    "loss_sum": -912370,
+    "losing_days": 180,
+    "days": 322,
+    "worst_month": -46358,
+    "sum_losing_trades": -1874299
+   },
+   "design_ok": true,
+   "halves": {
+    "H1": {
+     "n": 97,
+     "losers": 70,
+     "loser_rate": 0.722,
+     "win": 0.278,
+     "avg": -635,
+     "net": -61549,
+     "sum_losses": -98746,
+     "avg_loss": -1411
+    },
+    "H2": {
+     "n": 517,
+     "losers": 295,
+     "loser_rate": 0.571,
+     "win": 0.429,
+     "avg": -159,
+     "net": -82214,
+     "sum_losses": -346674,
+     "avg_loss": -1175
+    }
+   },
+   "id": "R144A-72-Q2"
+  },
+  {
+   "feature": "V4",
+   "name": "index futures volume yesterday vs its 20-day average",
+   "slice": 4,
+   "edges": [
+    0.6530546315791451,
+    0.8443372371671709,
+    1.0338201207572826,
+    1.3162237963282093
+   ],
+   "t": -2.9879914158148377,
+   "design_rule": {
+    "trades": 2473,
+    "win": 0.4739,
+    "net": 313978,
+    "avg_win": 1747,
+    "avg_loss": -1333,
+    "worst_day": -46293,
+    "max_dd": 119498,
+    "bad_months": 4,
+    "loss_sum": -867619,
+    "losing_days": 164,
+    "days": 313,
+    "worst_month": -56301,
+    "sum_losing_trades": -1733922
+   },
+   "design_ok": true,
+   "halves": {
+    "H1": {
+     "n": 135,
+     "losers": 96,
+     "loser_rate": 0.711,
+     "win": 0.289,
+     "avg": -707,
+     "net": -95499,
+     "sum_losses": -153769,
+     "avg_loss": -1602
+    },
+    "H2": {
+     "n": 463,
+     "losers": 238,
+     "loser_rate": 0.514,
+     "win": 0.486,
+     "avg": -3,
+     "net": -1549,
+     "sum_losses": -358460,
+     "avg_loss": -1506
+    }
+   },
+   "id": "R144A-72-V4"
+  }
+ ],
+ "R51": [
+  {
+   "feature": "F4",
+   "name": "futures OI-price quadrant, previous session (trade's way)",
+   "slice": "covering against",
+   "edges": [],
+   "t": -1.9325552477374737,
+   "design_rule": {
+    "trades": 3689,
+    "win": 0.4494,
+    "net": 118429,
+    "avg_win": 1798,
+    "avg_loss": -1409,
+    "worst_day": -47911,
+    "max_dd": 181960,
+    "bad_months": 6,
+    "loss_sum": -1216766,
+    "losing_days": 184,
+    "days": 335,
+    "worst_month": -58417,
+    "sum_losing_trades": -2862201
+   },
+   "design_ok": true,
+   "halves": {
+    "H1": {
+     "n": 144,
+     "losers": 96,
+     "loser_rate": 0.667,
+     "win": 0.333,
+     "avg": -303,
+     "net": -43581,
+     "sum_losses": -118325,
+     "avg_loss": -1233
+    },
+    "H2": {
+     "n": 375,
+     "losers": 210,
+     "loser_rate": 0.56,
+     "win": 0.44,
+     "avg": -65,
+     "net": -24422,
+     "sum_losses": -246497,
+     "avg_loss": -1174
+    }
+   },
+   "id": "R144A-51-F4"
+  },
+  {
+   "feature": "F2",
+   "name": "index tick direction (last 15 min, trade's way)",
+   "slice": 0,
+   "edges": [
+    0.0,
+    0.1428571428571429,
+    0.2142857142857143,
+    0.25
+   ],
+   "t": -0.7408610066653488,
+   "design_rule": {
+    "trades": 4107,
+    "win": 0.4434,
+    "net": 49717,
+    "avg_win": 1732,
+    "avg_loss": -1358,
+    "worst_day": -49738,
+    "max_dd": 188167,
+    "bad_months": 8,
+    "loss_sum": -1320458,
+    "losing_days": 187,
+    "days": 337,
+    "worst_month": -57177,
+    "sum_losing_trades": -3103595
+   },
+   "design_ok": true,
+   "halves": {
+    "H1": {
+     "n": 79,
+     "losers": 50,
+     "loser_rate": 0.633,
+     "win": 0.367,
+     "avg": -282,
+     "net": -22301,
+     "sum_losses": -75899,
+     "avg_loss": -1518
+    },
+    "H2": {
+     "n": 216,
+     "losers": 120,
+     "loser_rate": 0.556,
+     "win": 0.444,
+     "avg": -25,
+     "net": -5367,
+     "sum_losses": -196757,
+     "avg_loss": -1640
+    }
+   },
+   "id": "R144A-51-F2"
+  }
+ ],
+ "R52": []
+}

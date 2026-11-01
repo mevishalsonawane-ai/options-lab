@@ -813,6 +813,43 @@ object AutoChange {
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "R51 Donchian 20's Supertrend filter (paper)")
 
+    /** 1 Nov 2026: the target of R140's wide-day skip on R72 Breadth Donchian's paper entries ([passedWideSkip]). */
+    const val WIDE_TARGET = "filter:r72_wide_day_skip"
+    /** 1 Nov 2026: the target of R142's 09:25 no-progress exit on R52 Open outside value's paper trades ([passedNoProgress]). */
+    const val NO_PROGRESS_TARGET = "filter:r52_no_progress_0925"
+
+    /**
+     * 1 Nov 2026 (Boss: "Make the change the arms", after R144a's fresh-year test): R140's FB-R72-A10 switched [on] for R72 Breadth
+     * Donchian's NEW paper breaks - none taken on a day after a very wide day (yesterday's range at least 1.32x its 20-session
+     * average) - or off again. It passed R140's gates and held in all six periods tested, two of them never seen. It only skips
+     * entries, so on lowers risk. Paper only: while R72 may be copied live its breaks are taken as before and the skip is only
+     * logged (live in shadow). No PIN either way.
+     */
+    fun passedWideSkip(on: Boolean): Change = Change(Kind.PAPER_FILTER, WIDE_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (1 Nov, \"Make the change the arms\"): R72 Breadth Donchian takes no new paper break on a day after a very " +
+            "wide day - yesterday's range at least 1.32x its 20-session average (R140 FB-R72-A10: it cut R72's losing days in all six " +
+            "periods tested; fresh year Nov 2021 - Nov 2022, never used before: -₹3.15 lakh instead of -₹3.89 lakh, beat random " +
+            "skipping at p < 0.001); open trades are not touched; while R72 may be copied live its breaks are taken as before and " +
+            "the skip is only logged (live in shadow)"
+        else "R72 Breadth Donchian takes its breaks after a wide day again (plain rules)",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "R72 Breadth Donchian's wide-day skip (paper)")
+
+    /**
+     * 1 Nov 2026 (Boss: "Make the change the arms"): R142's NP5-52 switched [on] for R52 Open outside value's NEW paper trades - sold
+     * at 09:25 when the option has not traded 5% above the fill in its first 5 minutes - or off again. It passed R142's gates and
+     * held in all six periods tested. It only sells earlier, so on lowers risk (it lowers the win rate and costs profit in good
+     * months). Paper only: a trade that may be copied live keeps the plain exits and the early exit is only logged. No PIN.
+     */
+    fun passedNoProgress(on: Boolean): Change = Change(Kind.PAPER_FILTER, NO_PROGRESS_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (1 Nov, \"Make the change the arms\"): R52 Open outside value's new paper trades are sold at 09:25 when the " +
+            "option has not traded 5% above the fill in its first 5 minutes (R142 NP5-52: it cut R52's losing days in all six periods " +
+            "tested; fresh year Nov 2021 - Nov 2022: -₹1.87 lakh instead of -₹2.42 lakh; it lowers the win rate and costs profit in " +
+            "good months); open trades keep their exits; a trade that may be copied live keeps the plain exits (live in shadow)"
+        else "R52 Open outside value's new paper trades keep their plain exits (no 09:25 exit)",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "R52 Open outside value's 09:25 no-progress exit (paper)")
+
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"
 

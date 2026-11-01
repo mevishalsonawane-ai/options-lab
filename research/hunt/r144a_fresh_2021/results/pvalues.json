@@ -1,0 +1,38 @@
+{
+ "_meta": {
+  "group": "R144a fresh year",
+  "note": "raw twin p (2,000 twins) on 1 Nov 2021 - 30 Nov 2022; when no twin reached the rule, p is R115's normal-tail p (Monte-Carlo floor 1/2001)"
+ },
+ "tests": {
+  "FB-R72-A10": {
+   "arm": "R72",
+   "p": 2.0531705849573462e-05,
+   "q_within_group": 0.0001
+  },
+  "NP5-52": {
+   "arm": "R52",
+   "p": 0.026986506746626688,
+   "q_within_group": 0.054
+  },
+  "BBX-72": {
+   "arm": "R72",
+   "p": 0.5197401299350325,
+   "q_within_group": 0.6237
+  },
+  "BBX-51": {
+   "arm": "R51",
+   "p": 0.9850074962518741,
+   "q_within_group": 0.985
+  },
+  "R144A-72-V4": {
+   "arm": "R72",
+   "p": 0.0004997501249375312,
+   "q_within_group": 0.0015
+  },
+  "R144A-51-F4": {
+   "arm": "R51",
+   "p": 0.2193903048475762,
+   "q_within_group": 0.3291
+  }
+ }
+}
