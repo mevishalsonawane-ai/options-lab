@@ -51,9 +51,9 @@ def liq_np_fxs(D, cands: list, n: int, x: float) -> list:
 
 
 def liq_price(und: str, D, cands: list, fxs: list):
-    Mm = S.mods()
-    return Mm["E"].run_day(und, D, [c["side"] for c in cands], [c["strike"] for c in cands],
-                           [c["er"] for c in cands], Mm["fam_liq"].EX, fxs)
+    Ma = S.mods()["A"].mods()                      # R101's modules: Liquidity's own engine and exits
+    return Ma["E"].run_day(und, D, [c["side"] for c in cands], [c["strike"] for c in cands],
+                           [c["er"] for c in cands], Ma["fam_liq"].EX, fxs)
 
 
 def liq_np_priced(us: list, n: int, x: float) -> list:
