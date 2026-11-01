@@ -1658,8 +1658,8 @@ object PassedArmsHost {
      * it; null: cannot be judged) is skipped and decided, before the day's caps as the research filtered before taking.
      */
     private suspend fun breaks(b: Book, src: String, u: String, sigs: List<DonchianArm.Signal>, now: LocalDateTime,
-                               gate: ((DonchianArm.Signal) -> Boolean?)? = null,
-                               confirm: (DonchianArm.Signal) -> Boolean? = { null }, skipWhy: String? = null): Boolean {
+                               gate: ((DonchianArm.Signal) -> Boolean?)? = null, skipWhy: String? = null,
+                               confirm: (DonchianArm.Signal) -> Boolean? = { null }): Boolean {
         val today = now.toLocalDate()
         val key = "$src|$u"
         var changed = false
