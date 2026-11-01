@@ -1,0 +1,27 @@
+id: r146-singapore
+title: 'R146: Singapore''s STI before India''s open vs NIFTY / BANKNIFTY''s gap, first hour and rest of day'
+family: overnight
+date: '2026-11-01'
+doc: research/HUNT_R146_SINGAPORE.md
+data_version: Yahoo chart API downloaded 1 Nov 2026 (STI, S&P 500); Drive lake (NIFTY, BANKNIFTY)
+period:
+  design: 2015-01-02..2025-09-30 (gap); 2021-08..2025-09-30 (day, with the overnight gap); 2023-12-06..2025-09-30 (morning
+    move)
+  holdout: 2025-10-01..2026-10-30 (read once)
+instruments:
+- NIFTY
+- BANKNIFTY
+prereg: research/hunt/r146_singapore/PREREG.md
+holdout_read: true
+features:
+- 'signal source: Singapore''s STI index (overnight gap and morning move before 09:15 IST), S&P 500 as control'
+hypothesis: Singapore's market before India's open predicts the Indian index day after 09:15
+model_or_rule: research/hunt/r146_singapore/r146.py
+settings: 26 correlation tests, block bootstrap, BH; trade test only if a day-horizon link passed design (none did)
+variants_tried: 26
+verdict: rejected
+results:
+  summary: Singapore's overnight gap lines up with India's 09:15 gap (r 0.61 NIFTY, 0.57 BANKNIFTY, 2,583 days; holdout 0.50
+    / 0.49, 251 days), but no link to the first hour or the rest of the day (design r -0.06..+0.11, all q >= 0.16); no trade
+    test. The gap is already in the 09:15 price.
+  costs: none (no trade test was triggered)
