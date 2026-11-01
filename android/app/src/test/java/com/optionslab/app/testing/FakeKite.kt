@@ -301,6 +301,8 @@ class FakeKite : Closeable {
     }
 
     override fun close() {
+        // 1 Nov: the switched-off shadow's prices read on its own worker are done (or stopped) before this fake goes, so none reaches the real host.
+        com.optionslab.app.data.OffShadow.settleForTest()
         Broker.testEndpoint = null
         server.shutdown()
     }
