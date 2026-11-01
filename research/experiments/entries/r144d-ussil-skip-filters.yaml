@@ -1,0 +1,33 @@
+id: r144d-ussil-skip-filters
+title: 'R144d loss anatomy and design-chosen skip filters: US-night silver'
+family: mcx-crypto
+date: '2026-11-01'
+doc: research/HUNT_R144D_LOSS_NN_MCX.md
+data_version: Drive lake copied 1 Nov 2026 (to 19 Oct 2026); R123 cleaned predictions; Yahoo hourly SI=F/NG=F/INR=X refetched
+  1 Nov 2026
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2022-12-01..2024-11-19 (unseen years) and 2026-04-01..2026-10-19 (final), read once after the filters were committed
+instruments:
+- SILVERMIC
+prereg: research/hunt/r144d_loss_nn_mcx/PREREG.md
+holdout_read: true
+features:
+- 'signal source: COMEX silver + USD/INR before the open'
+- filters on entry features read before the entry (look-ahead guard tested)
+hypothesis: skipping the design-worst fifth of an entry feature cuts US-night silver's losing days in unseen periods more
+  than random skipping
+model_or_rule: research/hunt/r144d_loss_nn_mcx/r144d.py
+settings: quintile cuts from design; 1 lot; each engine's own charges and slippage; 2,000 random-skip twins; BH over 18 R144d
+  filters
+variants_tried: 3
+verdict: rejected
+results:
+  summary: 'skip f_wd = 4: U: no trades (no data); F: 107->84 trades, win 55%->54%, net Rs 69,043->Rs 35,964, losing days
+    Rs -136,583->Rs -119,092, twin p 0.891; pooled p 0.906, q 0.959; fails: U: too small (0 trades), F: dd_no_worse, F: worst_month_no_worse,
+    F: twin, q 0.959 > 0.10 | skip f_us_data = 1: U: no trades (no data); F: 107->94 trades, win 55%->57%, net Rs 69,043->Rs
+    62,942, losing days Rs -136,583->Rs -119,067, twin p 0.427; pooled p 0.423, q 0.718; fails: U: too small (0 trades), F:
+    dd_no_worse, F: twin, q 0.718 > 0.10 | skip if either: (skip f_wd = 4) or (skip f_us_data = 1): U: no trades (no data);
+    F: 107->77 trades, win 55%->56%, net Rs 69,043->Rs 42,889, losing days Rs -136,583->Rs -106,242, twin p 0.774; pooled
+    p 0.764, q 0.923; fails: U: too small (0 trades), F: dd_no_worse, F: twin, q 0.923 > 0.10'
+  costs: 'each arm''s own engine: R123/R128 and R131/R132 fills and dated charges; M3, M4, M2, R2 MCX costs'

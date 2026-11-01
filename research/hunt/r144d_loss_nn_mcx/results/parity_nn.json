@@ -1,0 +1,42 @@
+{
+ "CISD": {
+  "design": {
+   "n": 413,
+   "avg_net": 260.77,
+   "win": 0.6852,
+   "published_n": 413,
+   "published_avg_net": 260.77,
+   "published_win": 0.6852
+  },
+  "holdout_seen": {
+   "n": 35,
+   "avg_net": 76.61,
+   "win": 0.7143,
+   "published_n": 35,
+   "published_avg_net": 76.61,
+   "published_win": 0.7143
+  }
+ },
+ "S5": {
+  "wf": {
+   "n": 540,
+   "avg_net": 161.14,
+   "win": 0.5852,
+   "total": 87015.09,
+   "published_n": 540,
+   "published_avg_net": 161.14,
+   "published_win": 0.5852,
+   "published_total": 87015.09
+  },
+  "holdout": {
+   "n": 33,
+   "avg_net": 508.77,
+   "win": 0.7879,
+   "total": 16789.41,
+   "published_n": 33,
+   "published_avg_net": 508.77,
+   "published_win": 0.7879,
+   "published_total": 16789.41
+  }
+ }
+}

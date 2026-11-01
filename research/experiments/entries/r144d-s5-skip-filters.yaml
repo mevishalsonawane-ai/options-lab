@@ -1,0 +1,39 @@
+id: r144d-s5-skip-filters
+title: 'R144d loss anatomy and design-chosen skip filters: S5 Trail'
+family: ml
+date: '2026-11-01'
+doc: research/HUNT_R144D_LOSS_NN_MCX.md
+data_version: Drive lake copied 1 Nov 2026 (to 19 Oct 2026); R123 cleaned predictions; Yahoo hourly SI=F/NG=F/INR=X refetched
+  1 Nov 2026
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2022-12-01..2024-11-19 (unseen years) and 2026-04-01..2026-10-19 (final), read once after the filters were committed
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r144d_loss_nn_mcx/PREREG.md
+holdout_read: true
+features:
+- 'signal source: index spot (R123 network reads option-chain context)'
+- filters on entry features read before the entry (look-ahead guard tested)
+hypothesis: skipping the design-worst fifth of an entry feature cuts S5 Trail's losing days in unseen periods more than random
+  skipping
+model_or_rule: research/hunt/r144d_loss_nn_mcx/r144d.py
+settings: quintile cuts from design; 1 lot; each engine's own charges and slippage; 2,000 random-skip twins; BH over 18 R144d
+  filters
+variants_tried: 3
+verdict: rejected
+results:
+  summary: 'skip f_atm_iv > 20.81 (design highest fifth): U: 430->257 trades, win 59%->64%, net Rs 80,508->Rs 86,513, losing
+    days Rs -250,449->Rs -142,219, twin p 0.026; F: 33->26 trades, win 79%->88%, net Rs 16,789->Rs 22,165, losing days Rs
+    -13,105->Rs -5,995, twin p 0.016; pooled p 0.015, q 0.135; fails: q 0.135 > 0.10 | skip f_ploss > 0.342 (design highest
+    fifth): U: 430->406 trades, win 59%->60%, net Rs 80,508->Rs 92,067, losing days Rs -250,449->Rs -238,116, twin p 0.435;
+    F: 33->25 trades, win 79%->84%, net Rs 16,789->Rs 16,777, losing days Rs -13,105->Rs -6,030, twin p 0.059; pooled p 0.214,
+    q 0.551; fails: U: twin, F: twin, q 0.551 > 0.10 | skip if either: (skip f_atm_iv > 20.81 (design highest fifth)) or (skip
+    f_ploss > 0.342 (design highest fifth)): U: 430->250 trades, win 59%->64%, net Rs 80,508->Rs 86,109, losing days Rs -250,449->Rs
+    -138,938, twin p 0.037; F: 33->21 trades, win 79%->90%, net Rs 16,789->Rs 17,825, losing days Rs -13,105->Rs -3,998, twin
+    p 0.047; pooled p 0.013, q 0.135; fails: q 0.135 > 0.10'
+  costs: 'each arm''s own engine: R123/R128 and R131/R132 fills and dated charges; M3, M4, M2, R2 MCX costs'

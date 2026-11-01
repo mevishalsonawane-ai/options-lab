@@ -1,0 +1,36 @@
+id: r144d-loss-anatomy
+title: 'R144d: every losing trade of S5 Trail, CISD + network and the four MCX arms (descriptive)'
+family: diagnosis
+date: '2026-11-01'
+doc: research/HUNT_R144D_LOSS_NN_MCX.md
+data_version: Drive lake copied 1 Nov 2026 (to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31
+  holdout: 2022-12-01..2024-11-19 and 2026-04-01..2026-10-19 (anatomy read after the filters were frozen)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+- NATURALGAS
+- SILVERM
+- SILVERMIC
+- CRUDEOILM
+- NATGASMINI
+- GOLDPETAL
+- ZINCMINI
+- ALUMINI
+prereg: research/hunt/r144d_loss_nn_mcx/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the underlying for every arm'
+hypothesis: 'descriptive: loser rate, money lost by exit type, bunching, worst trades, loser rate by quintile of each entry
+  feature, steady patterns'
+model_or_rule: research/hunt/r144d_loss_nn_mcx/r144d.py
+settings: 1 lot; each engine unchanged; parity checked
+variants_tried: null
+verdict: not-a-test
+results:
+  summary: see the write-up; results/r144d.json holds every table
+  costs: each arm's own engine

@@ -1,0 +1,35 @@
+id: r144d-ngeve-skip-filters
+title: 'R144d loss anatomy and design-chosen skip filters: NG evening breakout'
+family: mcx-crypto
+date: '2026-11-01'
+doc: research/HUNT_R144D_LOSS_NN_MCX.md
+data_version: Drive lake copied 1 Nov 2026 (to 19 Oct 2026); R123 cleaned predictions; Yahoo hourly SI=F/NG=F/INR=X refetched
+  1 Nov 2026
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2022-12-01..2024-11-19 (unseen years) and 2026-04-01..2026-10-19 (final), read once after the filters were committed
+instruments:
+- NATURALGAS
+prereg: research/hunt/r144d_loss_nn_mcx/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the NATURALGAS future'
+- filters on entry features read before the entry (look-ahead guard tested)
+hypothesis: skipping the design-worst fifth of an entry feature cuts NG evening breakout's losing days in unseen periods more
+  than random skipping
+model_or_rule: research/hunt/r144d_loss_nn_mcx/r144d.py
+settings: quintile cuts from design; 1 lot; each engine's own charges and slippage; 2,000 random-skip twins; BH over 18 R144d
+  filters
+variants_tried: 3
+verdict: rejected
+results:
+  summary: 'skip f_d_pdh > 0.1633 (design highest fifth): U: no trades (no data); F: 120->97 trades, win 44%->45%, net Rs
+    176->Rs -193, losing days Rs -101,557->Rs -78,323, twin p 0.178; pooled p 0.194, q 0.551; fails: U: too small (0 trades),
+    F: dd_no_worse, F: worst_month_no_worse, F: still_makes_money, F: twin, q 0.551 > 0.10 | skip f_d_pdl > 1.034 (design
+    highest fifth): U: no trades (no data); F: 120->92 trades, win 44%->45%, net Rs 176->Rs -6,258, losing days Rs -101,557->Rs
+    -77,090, twin p 0.416; pooled p 0.439, q 0.718; fails: U: too small (0 trades), F: dd_no_worse, F: worst_month_no_worse,
+    F: still_makes_money, F: twin, q 0.718 > 0.10 | skip if either: (skip f_d_pdh > 0.1633 (design highest fifth)) or (skip
+    f_d_pdl > 1.034 (design highest fifth)): U: no trades (no data); F: 120->87 trades, win 44%->47%, net Rs 176->Rs 1,031,
+    losing days Rs -101,557->Rs -69,802, twin p 0.209; pooled p 0.205, q 0.551; fails: U: too small (0 trades), F: worst_month_no_worse,
+    F: twin, q 0.551 > 0.10'
+  costs: 'each arm''s own engine: R123/R128 and R131/R132 fills and dated charges; M3, M4, M2, R2 MCX costs'

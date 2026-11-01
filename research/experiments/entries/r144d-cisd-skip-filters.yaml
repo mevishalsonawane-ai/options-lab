@@ -1,0 +1,41 @@
+id: r144d-cisd-skip-filters
+title: 'R144d loss anatomy and design-chosen skip filters: CISD + network (R133 S3-V2-E3)'
+family: ml
+date: '2026-11-01'
+doc: research/HUNT_R144D_LOSS_NN_MCX.md
+data_version: Drive lake copied 1 Nov 2026 (to 19 Oct 2026); R123 cleaned predictions; Yahoo hourly SI=F/NG=F/INR=X refetched
+  1 Nov 2026
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2022-12-01..2024-11-19 (unseen years) and 2026-04-01..2026-10-19 (final), read once after the filters were committed
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r144d_loss_nn_mcx/PREREG.md
+holdout_read: true
+features:
+- 'signal source: index spot (CISD on 5-min index bars; network context from the chain)'
+- filters on entry features read before the entry (look-ahead guard tested)
+hypothesis: skipping the design-worst fifth of an entry feature cuts CISD + network (R133 S3-V2-E3)'s losing days in unseen
+  periods more than random skipping
+model_or_rule: research/hunt/r144d_loss_nn_mcx/r144d.py
+settings: quintile cuts from design; 1 lot; each engine's own charges and slippage; 2,000 random-skip twins; BH over 18 R144d
+  filters
+variants_tried: 3
+verdict: rejected
+results:
+  summary: 'skip f_breadth_with <= 0.339 (design lowest fifth): U: 349->301 trades, win 68%->67%, net Rs 90,341->Rs 78,824,
+    losing days Rs -116,918->Rs -102,606, twin p 0.426; F: 35->28 trades, win 71%->71%, net Rs 2,681->Rs 734, losing days
+    Rs -20,146->Rs -17,319, twin p 0.617; pooled p 0.491, q 0.736; fails: U: dd_no_worse, U: twin, F: twin, q 0.736 > 0.10
+    | skip f_oi_chg_with <= -3.316 (design lowest fifth): U: 349->327 trades, win 68%->67%, net Rs 90,341->Rs 79,433, losing
+    days Rs -116,918->Rs -115,450, twin p 0.907; F: 35->28 trades, win 71%->71%, net Rs 2,681->Rs -1,048, losing days Rs -20,146->Rs
+    -17,239, twin p 0.583; pooled p 0.900, q 0.959; fails: U: dd_no_worse, U: worst_month_no_worse, U: twin, F: worst_month_no_worse,
+    F: still_makes_money, F: twin, q 0.959 > 0.10 | skip if either: (skip f_breadth_with <= 0.339 (design lowest fifth)) or
+    (skip f_oi_chg_with <= -3.316 (design lowest fifth)): U: 349->281 trades, win 68%->66%, net Rs 90,341->Rs 66,976, losing
+    days Rs -116,918->Rs -101,249, twin p 0.741; F: 35->22 trades, win 71%->73%, net Rs 2,681->Rs -1,925, losing days Rs -20,146->Rs
+    -14,413, twin p 0.665; pooled p 0.769, q 0.923; fails: U: dd_no_worse, U: twin, F: worst_month_no_worse, F: still_makes_money,
+    F: twin, q 0.923 > 0.10'
+  costs: 'each arm''s own engine: R123/R128 and R131/R132 fills and dated charges; M3, M4, M2, R2 MCX costs'
