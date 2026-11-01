@@ -129,6 +129,10 @@ object PassedArmsHost {
         "${BreadthDonchianArm.RISK} - its paper book never live; its live copy goes by its own Trade live and Shadow switches"
     /** 16 Oct (Boss: "Update normal Donchian ... T7 supertrend agree"): R73 T7 switched on once for R51 Donchian 20's new entries ([setSupertrend]). */
     internal const val ST_ON = "donchian_st_2026-10-16"
+    /** 1 Nov (Boss: "Make the change the arms"): R140's wide-day skip switched on once for R72 Breadth Donchian's new breaks ([setWideSkip]). */
+    internal const val WIDE_ON = "r72_wide_skip_2026-11-01"
+    /** 1 Nov (Boss: "Make the change the arms"): R142's 09:25 no-progress exit switched on once for R52's new trades ([setNoProgress]). */
+    internal const val NP5_ON = "r52_no_progress_2026-11-01"
     /**
      * 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): R51 Donchian 20 set to record only once, when it was on
      * ([Book.recordOnly]); R72 Breadth Donchian stays on. Logged as Boss's ask; one tap undoes it (back on).
@@ -223,6 +227,12 @@ object PassedArmsHost {
          * comparison) still counts it; labelled apart everywhere; never mirrored live. Null: a real paper trade.
          */
         val shadow: String? = null,
+        /**
+         * 1 Nov (R142 NP5-52, Boss: "Make the change the arms"): an R52 trade that entered with the 09:25 no-progress exit
+         * ([OovArm.NO_PROGRESS]). Set only when it could not be copied live then (a live copy keeps the plain exits; the early
+         * exit is only logged); a trade keeps the exits it entered with.
+         */
+        val np5: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -267,10 +277,14 @@ object PassedArmsHost {
         var breadthSince: LocalDate? = null,
         /** 19 Oct: the arms set to record only ([Mode.RECORD]): never also in [armed] as on. */
         val recordOnly: MutableSet<String> = HashSet(),
+        /** 1 Nov: R140's wide-day skip on R72 Breadth Donchian's new breaks ([setWideSkip]). */
+        var wideOn: Boolean = false,
+        /** 1 Nov: R142's 09:25 no-progress exit on R52's new trades ([setNoProgress]). */
+        var np5On: Boolean = false,
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
         fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), status.copyMap(), ArrayList(log), HashSet(migrated), HashMap(base),
-            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly))
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly), wideOn, np5On)
 
         /**
          * [source]'s entries run this pass. 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record
@@ -299,6 +313,10 @@ object PassedArmsHost {
         val stUnjudged: Int = 0,
         /** 19 Oct: the arms set to record only (would-be trades, nothing bought). */
         val recordOnly: Set<String> = emptySet(),
+        /** 1 Nov: R140's wide-day skip is on for R72 Breadth Donchian's new breaks (paper; live in shadow). */
+        val wideOn: Boolean = false,
+        /** 1 Nov: R142's 09:25 no-progress exit is on for R52's new trades (paper; live in shadow). */
+        val np5On: Boolean = false,
     ) {
         fun on(source: String): Boolean = armed[source] == true
         /**
@@ -392,6 +410,8 @@ object PassedArmsHost {
             b.l25On = o.optBoolean("lockL25", false)
             b.breadthSince = o.optString("breadthSince").ifEmpty { null }?.let { LocalDate.parse(it) }
             b.stOn = o.optBoolean("donchianST", false)
+            b.wideOn = o.optBoolean("r72WideSkip", false)
+            b.np5On = o.optBoolean("r52NoProgress", false)
             // 19 Oct: absent in an older book (no arm record only); never beside "on" (on wins).
             o.optJSONArray("recordOnly")?.let { a -> for (i in 0 until a.length()) a.getString(i).takeIf { it in SOURCES && b.armed[it] != true }?.let { b.recordOnly += it } }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
@@ -463,6 +483,29 @@ object PassedArmsHost {
             }
             save(b)
         }
+        // 1 Nov (Boss: "Make the change the arms", after R142 / R143 / R144a): R140's wide-day skip on R72 Breadth Donchian and R142's
+        // 09:25 no-progress exit on R52 passed their gates and held in all six periods tested (two never seen), so under the PAPER
+        // rule they act on paper at once: on once each, logged in the change timeline (one tap undoes each). Both only lower risk
+        // (a skip, an earlier exit). LIVE stays in shadow: a break or trade that may be copied live is taken or kept as before and
+        // the rule is only logged. Same care: never on an unreadable book, never in Gold.
+        if (WIDE_ON !in b.migrated) {
+            b.migrated += WIDE_ON
+            if (!unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD && !b.wideOn) {
+                b.wideOn = true
+                note(b, "${BreadthDonchianArm.LABEL}: wide-day skip turned on by the 1 Nov update, your ask: ${BreadthDonchianArm.WIDE_RULE} (paper; live in shadow)")
+                runCatching { com.optionslab.app.ira.Autopilot.logPassedWideSkipOn() }
+            }
+            save(b)
+        }
+        if (NP5_ON !in b.migrated) {
+            b.migrated += NP5_ON
+            if (!unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD && !b.np5On) {
+                b.np5On = true
+                note(b, "${OovArm.LABEL}: the 09:25 no-progress exit turned on by the 1 Nov update, your ask: ${OovArm.NO_PROGRESS_RULE} (paper; live in shadow)")
+                runCatching { com.optionslab.app.ira.Autopilot.logPassedNoProgressOn() }
+            }
+            save(b)
+        }
         // 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): only R72 Breadth Donchian buys the Donchian breaks on paper; R51
         // Donchian 20, when on, is set to record only once - its breaks still decided, each kept as a would-be trade (nothing bought),
         // so the two can still be compared. Logged as Boss's ask in the change timeline (one tap puts it back on). R72, Liquidity, the
@@ -510,7 +553,7 @@ object PassedArmsHost {
             d("entryRef"), d("idx"), d("atr"), d("exit"), p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
             p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false),
             p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false),
-            p.optString("shadow").ifEmpty { null })
+            p.optString("shadow").ifEmpty { null }, p.optBoolean("np5", false))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -525,6 +568,7 @@ object PassedArmsHost {
             p.soldBy?.let { put("soldBy", it) }
             if (p.st) put("st", true)
             p.shadow?.let { put("shadow", it) }
+            if (p.np5) put("np5", true)
         }
 
     private val written = Vault.LastWrite()
@@ -551,6 +595,8 @@ object PassedArmsHost {
         o.put("lockL25", b.l25On)
         b.breadthSince?.let { o.put("breadthSince", it.toString()) }
         o.put("donchianST", b.stOn)
+        o.put("r72WideSkip", b.wideOn)
+        o.put("r52NoProgress", b.np5On)
         o.put("recordOnly", JSONArray().apply { b.recordOnly.sorted().forEach { put(it) } })
         o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && lockKey(it) == k } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
@@ -600,7 +646,8 @@ object PassedArmsHost {
         val closed = b.positions.filter { !it.open }
         _view.value = View(b.armed.toMap(), b.status.shown({ k, _ -> k == ST_UNJUDGED_KEY }), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
-            model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today), b.recordOnly.toSet())
+            model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today), b.recordOnly.toSet(),
+            wideOn = b.wideOn, np5On = b.np5On)
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
         runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open && it.shadow == null }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
@@ -626,8 +673,9 @@ object PassedArmsHost {
         val at = PassedArms.timeExitAt(p.entryMinute, x)?.takeIf { it.toLocalDate() == p.day && it.toLocalTime().isBefore(sq) }?.toLocalTime() ?: sq
         // R66's L25 first: "+5% locked once +25%" before it is earned, "lock held" after.
         val step = if (held == null) firstStepWords(x) else "lock held"
+        // 1 Nov (R142 NP5-52): an R52 trade that entered with the 09:25 exit says it beside its ladder.
         return com.optionslab.ira.ArmExits.Entry("passed", label(p.arm), false, p.symbol, stop, PassedArms.targetLevel(p.entry, x), at,
-            step?.takeIf { x.steps.isNotEmpty() })
+            listOfNotNull(step?.takeIf { x.steps.isNotEmpty() }, noProgressWords(x)).joinToString("; ").ifEmpty { null })
     }
 
     /** The ladder's first step in words. R64's keeps breakeven (NaN: the fill plus the charges) there: worded so, never "+NaN%". */
@@ -804,6 +852,47 @@ object PassedArmsHost {
     }
 
     /**
+     * 1 Nov (Boss: "Make the change the arms"): R140's wide-day skip on or off for R72 Breadth Donchian's NEW breaks (open trades are
+     * not touched). Paper only; while R72 may be copied live it is only logged. [log]: false for the change log's own Undo (the
+     * switch-on is logged by the 1 Nov update).
+     */
+    suspend fun setWideSkip(on: Boolean, log: Boolean = false): String {
+        if (!ready()) return "The passed arms are not ready yet."
+        return lock.withLock {
+            val b = book()
+            if (b.wideOn == on) return@withLock "${BreadthDonchianArm.LABEL}'s wide-day skip is already ${if (on) "on" else "off"} (paper only)."
+            b.wideOn = on
+            note(b, if (on) "${BreadthDonchianArm.LABEL}: wide-day skip on: ${BreadthDonchianArm.WIDE_RULE} (paper; live in shadow)"
+                else "${BreadthDonchianArm.LABEL}: wide-day skip off: breaks after a wide day are taken again")
+            save(b)
+            if (log && on) runCatching { com.optionslab.app.ira.Autopilot.logPassedWideSkipOn() }
+            if (on) "${BreadthDonchianArm.LABEL} takes no new paper break the day after a very wide day (live: logged only)."
+            else "${BreadthDonchianArm.LABEL} takes its breaks after a wide day again (paper only)."
+        }
+    }
+
+    /**
+     * 1 Nov (Boss: "Make the change the arms"): R142's 09:25 no-progress exit on or off for R52 Open outside value's NEW trades (open
+     * trades keep the exits they entered with). Paper only; a trade that may be copied live keeps the plain exits and the early
+     * exit is only logged. [log]: false for the change log's own Undo (the switch-on is logged by the 1 Nov update).
+     */
+    suspend fun setNoProgress(on: Boolean, log: Boolean = false): String {
+        if (!ready()) return "The passed arms are not ready yet."
+        return lock.withLock {
+            val b = book()
+            if (b.np5On == on) return@withLock "${OovArm.LABEL}'s 09:25 no-progress exit is already ${if (on) "on" else "off"} (paper only)."
+            b.np5On = on
+            note(b, if (on) "${OovArm.LABEL}: 09:25 no-progress exit on: ${OovArm.NO_PROGRESS_RULE} (paper; live in shadow)"
+                else "${OovArm.LABEL}: 09:25 no-progress exit off for new trades" +
+                    if (b.positions.any { it.open && it.np5 }) "; open trades keep the exits they entered with" else "")
+            save(b)
+            if (log && on) runCatching { com.optionslab.app.ira.Autopilot.logPassedNoProgressOn() }
+            if (on) "${OovArm.LABEL}'s new paper trades are sold at 09:25 when the option is not up 5% by then (live: logged only)."
+            else "${OovArm.LABEL}'s new paper trades keep their plain exits (no 09:25 exit)."
+        }
+    }
+
+    /**
      * The diagnostics lines: each arm's switch, open trades, record, apart index and forward test. Every rupee figure is
      * written as is for Copy diagnostics (on the phone only); [hideNet] (the uploaded file) writes [NET_HIDDEN] (20 Oct: Boss's 19 Oct
      * file carried "9 closed on it -10,947, 10 on the research exits -1,049" and "FINNIFTY 3 2,173", rupees the upload
@@ -833,6 +922,10 @@ object PassedArmsHost {
                         "${v.stUnjudged} not judged today, " +
                         "${c.count { it.st }} closed on it ${m(c.filter { it.st }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.st }} on the plain rules ${m(c.filter { !it.st }.sumOf { it.net ?: 0.0 })}" else "") +
                     (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
+                    // 1 Nov: R72's wide-day skip and R52's 09:25 exit (paper; live in shadow), with the trades that entered with the exit.
+                    (if (s == BreadthDonchianArm.SOURCE) " · wide-day skip (R140) ${if (v.wideOn) "on" else "off"} for new breaks (live in shadow)" else "") +
+                    (if (s == OovArm.SOURCE) " · 09:25 no-progress exit (R142) ${if (v.np5On) "on" else "off"} for new trades (live in shadow), " +
+                        "${c.count { it.np5 }} closed on it ${m(c.filter { it.np5 }.sumOf { it.net ?: 0.0 })}" else "") +
                 // (16 Oct, R73 review: the unjudged count is said once above, today's only; its kept line is not repeated.)
                 v.status.filterKeys { it.startsWith("$s|") && it != ST_UNJUDGED_KEY }.toSortedMap().entries.joinToString("") { (k, x) -> "\n${label(s)} · ${k.substringAfter('|')} ${rupees(x)}" } +
                 if (s == BreadthDonchianArm.SOURCE) "\n${label(s)} · ${rupees(v.comparison())}" else ""
@@ -1016,7 +1109,10 @@ object PassedArmsHost {
         if (!b.active(BreadthDonchianArm.SOURCE)) { r72Due = emptyMap(); r72DueBar = barCloseOf(now); return }
         val today = now.toLocalDate()
         val sigs = runCatching { BreadthDonchianArm.signals(seriesAll(today, reads), today) }.getOrNull() ?: return
-        r72Due = BreadthDonchianArm.dueSides(sigs, now) { x -> "$today|${BreadthDonchianArm.SOURCE}|${x.underlying}|${x.bar.b}|${x.side}" in b.decided }
+        // 1 Nov (review): a break the wide-day skip will skip holds no place under the cap (it is never taken).
+        val wide = BreadthDonchianArm.UNDERLYINGS.filter { u -> wideWords(b, BreadthDonchianArm.SOURCE, u, today) != null }.toSet()
+        r72Due = BreadthDonchianArm.dueSides(sigs, now) { x -> "$today|${BreadthDonchianArm.SOURCE}|${x.underlying}|${x.bar.b}|${x.side}" in b.decided ||
+            x.underlying in wide }
         r72DueBar = barCloseOf(now)
     }
 
@@ -1428,6 +1524,10 @@ object PassedArmsHost {
             val p = wouldBe(b, arm, u, c, right, twin.entry, now, setup, idx, atr, keys, breadth, SHADOW_TWIN, "${label(twin.arm)} already holds ${c.symbol}")
             return BuyStep(p, "would-be", true)
         }
+        // 1 Nov (R142 NP5-52; CLAUDE.md's LIVE rule): R52's 09:25 exit goes on a trade only while it cannot be copied live - its
+        // paper exit would sell the live copy early too. A trade that may be copied live keeps the plain exits; the early exit is
+        // only logged for it (live in shadow, [np5Shadow]). Memory only (the live flags already read).
+        val np5LiveCopy = arm == OovArm.SOURCE && b.np5On && mayCopyLive(arm)
         // 16 Oct: the account guard's view shares prices read in the last [Paper.SHARED_QUOTE_MS] (it re-read every held
         // symbol before each entry); the fill itself is priced fresh in Paper.place (2 s at most).
         val snap = runCatching { Paper.snapshot(reuseQuotesMs = Paper.SHARED_QUOTE_MS) }.getOrNull()
@@ -1453,14 +1553,19 @@ object PassedArmsHost {
             } else {
                 val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
                 val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
-                    l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn)
+                    l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn,
+                    np5 = arm == OovArm.SOURCE && b.np5On && !np5LiveCopy)
                 b.positions += pos
                 b.marks[c.symbol] = fill.price
                 b.decided += keys
                 // 16 Oct (the unwatched re-entry): booked in the book itself at once, never only on the entries' copy until the
                 // end of the pass - its stop, target and time exit run from the next minute-lane look, and a pass cut short or
                 // a restart after the fill can never leave it held with no record here. Not cancellable between the two.
-                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys) }
+                // 1 Nov (review): the mark of an R52 trade that keeps its plain exits because it may be copied live ([np5Shadow]) is
+                // booked with it, in the book itself.
+                val marks = if (np5LiveCopy) listOf(np5LiveKey(pos)) else emptyList()
+                b.decided += marks
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys + marks) }
                 // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
                 // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
                 runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos))) }
@@ -1479,6 +1584,8 @@ object PassedArmsHost {
             "${label(arm)} bought ${c.symbol} · Paper",
             "Bought %d @ %s. %s. %s.".format(Locale.ENGLISH, p.qty, px(p.entry), exitWords(p), PassedArms.PASSED), "almanac") }
         note(b, "${label(arm)} bought ${c.symbol} ${p.qty} @ ${px(p.entry)} · paper" + (setup?.let { " ($it)" } ?: ""))
+        if (np5LiveCopy) note(b, "${label(arm)}: ${c.symbol} keeps its plain exits - it may be copied live, so the 09:25 no-progress exit " +
+            "is only logged for it (live in shadow)")
         return BuyStep(p, "bought", true)
     }
 
@@ -1511,7 +1618,7 @@ object PassedArmsHost {
                                 idx: Double?, atr: Double?, keys: List<String>, breadth: Boolean?, kind: String, because: String): Pos {
         runCatching { Paper.rememberContract(c) }
         val pos = Pos(arm, u, c.symbol, right.name, c.lotSize, ref, now, null, setup, ref, idx, atr, lock = b.lockOn, l25 = b.lockOn && b.l25On,
-            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind)
+            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On)
         b.positions += pos
         if (c.symbol !in b.marks) b.marks[c.symbol] = ref
         b.decided += keys
@@ -1545,14 +1652,18 @@ object PassedArmsHost {
             if (p.lock) "; on the premium, ${com.optionslab.ira.PassedArmsTalk.ladderWords(p.l25)}" else ""
         p.lock -> exitsOf(p).let { x ->
             listOfNotNull(x.stop?.let { "stop −%.0f%%".format(Locale.ENGLISH, it * 100) }, com.optionslab.ira.PassedArmsTalk.ladderWords(p.l25),
-                x.tmaxMinutes?.let { "out after $it minutes" }, "square-off ${x.squareOff}").joinToString(", ")
+                noProgressWords(x), x.tmaxMinutes?.let { "out after $it minutes" }, "square-off ${x.squareOff}").joinToString(", ")
         }
         else -> exitsOf(p).let { x ->
             listOfNotNull(x.stop?.let { "stop −%.0f%%".format(Locale.ENGLISH, it * 100) }, x.target?.let { "target +%.0f%%".format(Locale.ENGLISH, it * 100) },
                 x.steps.firstOrNull()?.let { (t, k) -> "+%.0f%% locked once +%.0f%%".format(Locale.ENGLISH, k * 100, t * 100) },
-                x.tmaxMinutes?.let { "out after $it minutes" }, "square-off ${x.squareOff}").joinToString(", ")
+                noProgressWords(x), x.tmaxMinutes?.let { "out after $it minutes" }, "square-off ${x.squareOff}").joinToString(", ")
         }
     }
+
+    /** 1 Nov (R142 NP5-52): the no-progress exit in words ("out after 5 minutes unless up 5%"); null when the trade has none. */
+    private fun noProgressWords(x: PassedArms.PremiumExits): String? =
+        x.noProgress?.let { "out after %d minutes unless up %.0f%%".format(Locale.ENGLISH, it.minutes, it.gain * 100) }
 
     /** S1's premium backstop when its index cannot be read: the Solo layer's -30% stop, SoloMidday's 14:30. */
     private val S1_BACKSTOP = PassedArms.PremiumExits(0.30, null, null, emptyList(), SoloMidday.EXIT)
@@ -1563,6 +1674,8 @@ object PassedArmsHost {
         OovArm.SOURCE -> OovArm.EXITS
         else -> Solo2.exits(Solo2.Setup.entries.firstOrNull { it.key == p.setup } ?: Solo2.Setup.S2)
     }.let { if (p.lock) PassedArms.withLock(it, p.l25) else it }
+        // 1 Nov (R142 NP5-52): the 09:25 no-progress exit, on the trades that entered with it.
+        .let { if (p.np5 && p.arm == OovArm.SOURCE) it.copy(noProgress = OovArm.NO_PROGRESS) else it }
 
     /** The lock's breakeven for [p]: its fill plus the round-trip charges per unit (R64: the fill + charges(entry, entry) / qty). */
     private fun breakeven(p: Pos): Double = p.entry + ProfitLock.roundTripPerUnit(p.entry, p.qty)
@@ -1614,9 +1727,66 @@ object PassedArmsHost {
         var changed = false
         for (u in BreadthDonchianArm.UNDERLYINGS) {
             if (reads.bars[u] == null) continue
-            changed = breaks(b, src, u, sigs[u].orEmpty(), now) || changed
+            val (skip, noted) = wideSkip(b, src, u, today, sigs[u].orEmpty().isNotEmpty())
+            changed = breaks(b, src, u, sigs[u].orEmpty(), now, skipRule = skip) || noted || changed
         }
         return changed
+    }
+
+    /**
+     * 1 Nov (R140 FB-R72-A10, Boss: "Make the change the arms"): R72's wide-day skip for [u] today, as [breaks]' skip - the reason a
+     * break is skipped, or null (taken). Off, or the ratio unknown (no daily candles or no previous session read yet): never skips.
+     * CLAUDE.md's LIVE rule: while R72 may be copied live, a skip would skip its live trade too - the break is taken as before
+     * and the skip is only said on its status line (live in shadow). Memory only (the history read in the background, the
+     * live flags already read).
+     */
+    private fun wideSkip(b: Book, src: String, u: String, today: LocalDate, due: Boolean): Pair<((DonchianArm.Signal) -> String?)?, Boolean> {
+        val words = wideDayWords(b, u, today) ?: return null to false
+        if (mayCopyLive(src)) {
+            // Said once a day per index, when a break is there to take (live in shadow: nothing skipped).
+            val k = "$today|$src|$u|wide_shadow"
+            if (!due || k in b.decided) return null to false
+            b.decided += k
+            note(b, "${label(src)} $u: wide-day skip in shadow - $words; its breaks are taken as before because it may be copied live (logged only)")
+            return null to true
+        }
+        return { _: DonchianArm.Signal -> "no new break $words" } to false
+    }
+
+    /** Why [u]'s breaks are skipped today on paper ([wideSkip]'s skip; null: taken, or only logged while R72 may be copied live). */
+    private fun wideWords(b: Book, src: String, u: String, today: LocalDate): String? =
+        wideDayWords(b, u, today)?.takeIf { !mayCopyLive(src) }
+
+    /** The wide-day rule's words for [u] today when it holds (on, the ratio known and at the cut); null otherwise. */
+    private fun wideDayWords(b: Book, u: String, today: LocalDate): String? {
+        if (!b.wideOn) return null
+        val h = history(u, today) ?: return null
+        // 1 Nov (review): yesterday is the trading calendar's previous session, so candles that lag a session are never read as it.
+        val ratio = BreadthDonchianArm.wideRatio(h.daily, previousSession(today)) ?: return null
+        if (!BreadthDonchianArm.wideDay(ratio)) return null
+        return "the day after a very wide day (yesterday's range %.2fx its 20-session average, cut %.2f; R140 FB-R72-A10)"
+            .format(Locale.ENGLISH, ratio, BreadthDonchianArm.WIDE_CUT)
+    }
+
+    /** The trading session before [today] by the market calendar (weekends and NSE holidays skipped); null when none within 10 days. */
+    internal fun previousSession(today: LocalDate): LocalDate? {
+        var d = today.minusDays(1)
+        repeat(10) {
+            if (runCatching { Market.isTradingDay(d) }.getOrDefault(false)) return d
+            d = d.minusDays(1)
+        }
+        return null
+    }
+
+    /**
+     * 1 Nov (review): whether [arm]'s entry may be copied live now, for the two 1 Nov paper rules (CLAUDE.md's LIVE rule: they act
+     * only when it cannot). The live flags are read afresh first (the entries' worker, never the order or tick path), and while
+     * the live book is not read yet (its switches unknown) a Live account with AI trades on counts as "may" - never "cannot".
+     */
+    private fun mayCopyLive(arm: String): Boolean {
+        val (app, ai) = runCatching { ArmLive.liveFlags() }.getOrDefault(false to false)
+        if (ExposureCapHost.liveMirrorPossible(arm)) return true
+        return app && ai && runCatching { !ArmLive.view.value.loaded }.getOrDefault(true)
     }
 
     /**
@@ -1627,7 +1797,9 @@ object PassedArmsHost {
      */
     private suspend fun breaks(b: Book, src: String, u: String, sigs: List<DonchianArm.Signal>, now: LocalDateTime,
                                gate: ((DonchianArm.Signal) -> Boolean?)? = null,
-                               confirm: (DonchianArm.Signal) -> Boolean? = { null }): Boolean {
+                               confirm: (DonchianArm.Signal) -> Boolean? = { null },
+                               /** 1 Nov: R72's wide-day skip ([wideSkip]): why a break is skipped, null to take it. */
+                               skipRule: ((DonchianArm.Signal) -> String?)? = null): Boolean {
         val today = now.toLocalDate()
         val key = "$src|$u"
         var changed = false
@@ -1656,6 +1828,13 @@ object PassedArmsHost {
                         if (ag == false) "Supertrend (10, 3) is against it (R73 T7)" else ST_UNJUDGED, final = true) || changed
                     continue
                 }
+            }
+            // 1 Nov (R140 FB-R72-A10): skipped and decided before the day's caps, as the research dropped the candidates before taking.
+            val skipWhy = skipRule?.invoke(s)
+            if (skipWhy != null) {
+                b.decided += dk
+                changed = say(b, key, "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break skipped: $skipWhy", final = true) || changed
+                continue
             }
             val open = b.positions.filter { it.arm == src && it.index == u && it.open }.map { it.side }.toSet()
             val taken = b.positions.filter { it.arm == src && it.index == u && it.day == today }.groupingBy { it.side }.eachCount()
@@ -1901,13 +2080,45 @@ object PassedArmsHost {
                 walked = w.exit
             }.exit?.kind?.why
         } ?: if (stopped) "operator_stop" else null
+        // 1 Nov (R142 NP5-52, live in shadow): an R52 trade that kept its plain exits because it may be copied live - the 09:25 exit
+        // it would have taken is logged once, nothing sold ([np5Shadow]).
+        val np5Noted = why == null && np5Shadow(b, p, bars, now, known)
         // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
         if (p.shadow == null) runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
-        if (why == null) return false
+        if (why == null) return np5Noted
         val walkPx = walked?.takeIf { it.kind.why == why }?.price
         val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight, walkPx) else sell(b, p, c, why, ltp, walkPx)
         if (next != p) { b.positions[i] = next; return true }
         return false
+    }
+
+    /**
+     * 1 Nov (R142 NP5-52, CLAUDE.md's LIVE rule): [p], an R52 trade that kept its plain exits ([Pos.np5] false) while the 09:25 exit is
+     * on, would have been sold by it now: logged once in the arm's notes (live in shadow), nothing sold, nothing changed on the
+     * trade. True when it was noted (the book changed). Pure reads of the minutes already in hand.
+     */
+    /** The mark [buyOne] leaves for an R52 trade that kept its plain exits because it may be copied live ([np5Shadow]). */
+    private fun np5LiveKey(p: Pos): String = "${p.day}|np5live|${p.symbol}|${p.entryTime}"
+
+    private fun np5Shadow(b: Book, p: Pos, bars: List<Bar>, now: LocalDateTime, known: Pair<LocalDateTime, Double>?): Boolean {
+        if (p.arm != OovArm.SOURCE || p.np5 || p.shadow != null || !b.np5On || p.day != now.toLocalDate()) return false
+        // 1 Nov (review): only a trade that kept its plain exits BECAUSE it may be copied live (marked at its entry), never one that
+        // entered while the exit was off.
+        if (np5LiveKey(p) !in b.decided) return false
+        val k = "${p.day}|np5shadow|${p.symbol}|${p.entryTime}"
+        if (k in b.decided) return false
+        val w = PassedArms.exitOnBars(p.entry, p.entryMinute, bars, null, now, exitsOf(p).copy(noProgress = OovArm.NO_PROGRESS), known,
+            if (p.lock) breakeven(p) else null)
+        val ex = w.exit
+        if (ex == null || ex.kind != PassedArms.ExitKind.NO_PROGRESS) {
+            // Past its window without it: decided (never looked at again).
+            if (!now.isBefore(p.entryMinute.plusMinutes(OovArm.NO_PROGRESS.minutes.toLong() + 1))) b.decided += k
+            return false
+        }
+        b.decided += k
+        note(b, "${label(p.arm)}: ${p.symbol} would have been sold at ${ex.at.toLocalTime()} by the 09:25 no-progress exit (not up 5%) - " +
+            "it may be copied live, so it keeps its plain exits (live in shadow; logged only)")
+        return true
     }
 
     /** What every trade in [b] took of each SELL fill, by order id ([Pos.soldBy]; memory only). */

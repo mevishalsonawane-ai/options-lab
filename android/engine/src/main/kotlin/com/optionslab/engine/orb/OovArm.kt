@@ -48,6 +48,18 @@ object OovArm {
     val SQUARE_OFF: LocalTime = LocalTime.of(15, 10)
     /** g17's 60-minute exit with R57's Solo layer as the stop (labelled: the research had none). */
     val EXITS = PassedArms.PremiumExits(stop = 0.30, target = null, tmaxMinutes = 60, steps = listOf(0.40 to 0.10), squareOff = SQUARE_OFF)
+    /**
+     * 1 Nov 2026 (Boss: "Make the change the arms", after R142 / R143 / R144a): NP5-52 - sold at 09:25 when the option has not
+     * traded 5% above the fill in its first 5 minutes ([PassedArms.NoProgress]). It cut the losing days in all six periods tested
+     * (fresh year Nov 2021 - Nov 2022: -Rs 1.87 lakh vs -Rs 2.42 lakh, beat random exit times at p 0.03); it costs profit in good
+     * months and lowers the win rate (it turns some losers into smaller ones). PAPER: on by the update (logged, one-tap undo);
+     * a trade that may be mirrored live keeps the plain exits and the early exit is only logged (shadow).
+     */
+    val NO_PROGRESS = PassedArms.NoProgress(5, 0.05)
+    const val NO_PROGRESS_RULE = "sold at 09:25 when the option has not traded 5% above the fill in its first 5 minutes (R142 NP5-52)"
+    const val NO_PROGRESS_RECORD = "held in all six periods tested; fresh year Nov 2021 - Nov 2022: losing days −₹1.87 lakh instead " +
+        "of −₹2.42 lakh, worst month −₹13,899 instead of −₹17,157; it lowers the win rate and costs profit in good months"
+
     const val STOP_ADDED = "Stop added for CLAUDE.md (the research had none): R57's Solo layer, −30% stop and +10% locked once +40%"
 
     const val RULES = "At 09:20: today opened above the previous session's value area (30-minute TPO profile, 70%) and the first 5-minute " +

@@ -268,4 +268,25 @@ class PassedArmRowsTest {
         org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, v).none { "Supertrend (10, 3)" in it })
         org.junit.Assert.assertFalse("Supertrend" in passedStatusLine(BreadthDonchianArm.SOURCE, v))
     }
+
+    /** 1 Nov (Boss: "Make the change the arms"): R72's wide-day skip and R52's 09:25 exit are said in their dialogs when on, never when off. */
+    @Test fun theDialogsSayTheWideDaySkipAndTheNoProgressExitWhenOn() {
+        show(PassedArmsHost.View(armed = mapOf(OovArm.SOURCE to true), np5On = true))
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("About ${OovArm.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText("09:25 exit on", substring = true).assertExists()
+        compose.onNodeWithText("early exit is only logged", substring = true).assertExists()
+        val on = PassedArmsHost.View(wideOn = true, np5On = true)
+        val wide = passedExplanation(BreadthDonchianArm.SOURCE, on).single { "Wide-day skip on" in it }
+        for (w in listOf(BreadthDonchianArm.WIDE_RULE, BreadthDonchianArm.WIDE_RECORD, "skip is only logged")) org.junit.Assert.assertTrue(w, w in wide)
+        org.junit.Assert.assertTrue(passedExplanation(OovArm.SOURCE, on).any { OovArm.NO_PROGRESS_RULE in it && OovArm.NO_PROGRESS_RECORD in it })
+        // Each only on its own arm, and never when off.
+        org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, on).none { "Wide-day" in it || "09:25 exit" in it })
+        org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, on).none { "09:25 exit" in it })
+        org.junit.Assert.assertTrue(passedExplanation(OovArm.SOURCE, on).none { "Wide-day" in it })
+        val off = PassedArmsHost.View()
+        org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, off).none { "Wide-day" in it })
+        org.junit.Assert.assertTrue(passedExplanation(OovArm.SOURCE, off).none { "09:25 exit" in it })
+    }
 }
