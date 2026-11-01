@@ -188,6 +188,8 @@ class TestApp : Application() {
         com.optionslab.app.data.ArmLive.wipe(); com.optionslab.app.data.ArmLive.testNow = null; com.optionslab.app.data.ArmLive.testSync = false; com.optionslab.app.data.ArmLive.testHeard = null
         com.optionslab.app.data.ArmLive.testDefaultOff = true
         com.optionslab.app.data.PassedArmsHost.testDaily = { emptyList() }
+        // 1 Nov: the paper loss-cut switches start off in every test (off is the app's default too).
+        com.optionslab.app.data.LossCutHost.setForTest()
         com.optionslab.app.data.WatchlistHost.resetForTest()
         com.optionslab.app.data.NtfyArm.wipe()
         com.optionslab.app.data.FlowArm.wipe()

@@ -896,6 +896,42 @@ object AutoChange {
         Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.RAISE else Risk.LOWER, Scope.PAPER,
         what = "paper entries priced on the live book (no last price)")
 
+    /** 1 Nov: the target of R72 Breadth Donchian's paper wide-day skip ([wideDaySkip]). */
+    const val WIDE_DAY_TARGET = "filter:r72_wide_day_skip"
+
+    /** 1 Nov: the target of R52 Open outside value's paper no-progress exit ([noProgressExit]). */
+    const val NO_PROGRESS_TARGET = "filter:r52_no_progress_exit"
+
+    /**
+     * 1 Nov (Boss: "Okay go ahead, but dont break any thing, as i am going live tomorrow"): R140's wide-day skip switched [on] for
+     * R72 Breadth Donchian's NEW paper breaks - an index's breaks are skipped on a day after a very wide day (yesterday's range
+     * at least 1.32x its 20-day average) - or off again. Off by default. It only skips (lowers risk). Paper only: while a live
+     * copy of R72 could be sent, it only notes what it would skip (shadow). No PIN either way.
+     */
+    fun wideDaySkip(on: Boolean): Change = Change(Kind.PAPER_FILTER, WIDE_DAY_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your choice (1 Nov): R72 Breadth Donchian skips an index's paper breaks on a day after a very wide day " +
+            "(yesterday's range at least 1.32x its 20-day average). R140 / R143: losing days 23% smaller on Apr - Oct 2026 " +
+            "(-₹3.00 lakh vs -₹3.90 lakh) and 31% smaller on the unseen Dec 2022 - Nov 2024; random skips never did as well. " +
+            "Open trades are not touched; paper only - while R72 could go live it only notes what it would skip"
+        else "R72 Breadth Donchian takes every paper break again (the wide-day skip is off)",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "R72 Breadth Donchian's wide-day skip (paper)")
+
+    /**
+     * 1 Nov (Boss: "Okay go ahead, but dont break any thing, as i am going live tomorrow"): R142's no-progress exit switched [on]
+     * for R52 Open outside value's paper trades - sold at its entry + 5 minutes if the option has not risen 5% by then - or off
+     * again. Off by default. It only exits earlier (lowers risk). Paper only: while a live copy of R52 could be sent, it only
+     * notes what it would sell (shadow). No PIN either way.
+     */
+    fun noProgressExit(on: Boolean): Change = Change(Kind.PAPER_FILTER, NO_PROGRESS_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your choice (1 Nov): R52 Open outside value sells a paper trade at its entry + 5 minutes when the option has not " +
+            "risen 5% by then. R142 / R143: losing days 41% smaller on Apr - Oct 2026 and 28% smaller on the unseen Dec 2022 - " +
+            "Nov 2024; it costs some profit and wins less often, but halves the average loss; paper only - while R52 could go " +
+            "live it only notes what it would sell"
+        else "R52 Open outside value keeps its own exits only (the no-progress exit is off)",
+        Evidence(0, 0.0, AgentLessons.Confidence.BUILDING), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "R52 Open outside value's no-progress exit (paper)")
+
     // ---- 25 Oct (Boss: "Do whatever you think better for application", on the app audit's open decisions) ----------------
     // Each new PAPER rule is logged once as Boss's decision (kept), shown in the timeline, and undone in one tap. None has
     // "liquidity" in its target, so the Liquidity paper-test freeze never holds its Undo. Paper only: live stays in shadow.

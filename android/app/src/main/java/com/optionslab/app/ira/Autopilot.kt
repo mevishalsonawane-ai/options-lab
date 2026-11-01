@@ -504,6 +504,12 @@ internal object Autopilot {
                 // (off: such entries refused again). Paper only, never live: no PIN; not logged again.
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 com.optionslab.app.data.BookPriceHost.setPaperOn(c.to == AutoChange.ON, log = false)
+            } else if (c.target == AutoChange.WIDE_DAY_TARGET || c.target == AutoChange.NO_PROGRESS_TARGET) {
+                // 1 Nov (Boss: "Okay go ahead, but dont break any thing"): R72's wide-day skip and R52's no-progress exit
+                // ([logLossCut]): its Undo flips the paper switch back. Paper only (live stays a note): no PIN; not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                if (c.target == AutoChange.WIDE_DAY_TARGET) com.optionslab.app.data.LossCutHost.setWideDay(c.to == AutoChange.ON, log = false)
+                else com.optionslab.app.data.LossCutHost.setNoProgress(c.to == AutoChange.ON, log = false)
             } else if (c.target == AutoChange.NO_TWIN_TARGET) {
                 // 20 Oct, enhancement round 1: Liquidity's no-twin rule on paper ([logLiqNoTwinOn], [logBossNoTwin]): its Undo flips the
                 // switch back for paper (live stays in shadow). Paper only: no PIN; not logged again.
@@ -1321,6 +1327,28 @@ internal object Autopilot {
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, AutoChange.sameDirCap(on, max), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
+                        by = "your choice", note = "from Bot settings; paper only").first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * 1 Nov: Boss flipped a paper loss-cut switch in Bot settings ([com.optionslab.app.data.LossCutHost]): R72's wide-day skip or
+     * R52's no-progress exit. Logged as Boss's (kept); one tap undoes it (only the newest flip undoes). Paper only, no PIN. On
+     * Autopilot's own worker.
+     */
+    fun logLossCut(change: AutoChange.Change) {
+        if (!enabled()) return
+        scope.launch(trailLane) {
+            runCatching {
+                val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
+                if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${change.target}") }; return@runCatching }
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, change, AutoChange.Status.KEPT, System.currentTimeMillis(), today,
                         by = "your choice", note = "from Bot settings; paper only").first
                     save()
                 }

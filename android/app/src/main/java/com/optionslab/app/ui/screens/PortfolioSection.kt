@@ -205,6 +205,41 @@ internal fun SameDirectionCapCard() {
 }
 
 /**
+ * 1 Nov (Boss: "Okay go ahead, but dont break any thing, as i am going live tomorrow"): Bot settings' two paper loss-cut switches
+ * from research R140-R143 ([com.optionslab.app.data.LossCutHost]): R72's wide-day skip and R52's no-progress exit. Both OFF by
+ * default; each flip is logged in the Autopilot change timeline (one tap undoes it). Paper only: while the arm could go live they
+ * only note what they would do.
+ */
+@Composable
+internal fun LossCutCard() {
+    val scope = rememberCoroutineScope()
+    var wide by remember { mutableStateOf(com.optionslab.app.data.LossCutHost.wideDayOn()) }
+    var np by remember { mutableStateOf(com.optionslab.app.data.LossCutHost.noProgressOn()) }
+    var said by remember { mutableStateOf<String?>(null) }
+    // The switches as saved (read on a worker: the card may open before the start-up read is done).
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.LossCutHost.load() } }
+        wide = com.optionslab.app.data.LossCutHost.wideDayOn(); np = com.optionslab.app.data.LossCutHost.noProgressOn()
+    }
+    fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }
+        withContext(Dispatchers.Main) { said = m; wide = com.optionslab.app.data.LossCutHost.wideDayOn(); np = com.optionslab.app.data.LossCutHost.noProgressOn() } } }
+    LedgerCard(title = "Loss cuts (paper)") {
+        Note("Two rules that cut losses in research (R140-R143, also on Dec 2022 - Nov 2024, never seen before). Paper only: while " +
+            "the arm could go live they only note what they would do. Off until you switch them on.")
+        ToggleRow(LOSS_CUT_WIDE, if (wide) "On: R72 skips an index's breaks after a very wide day (1.32x its 20-day range)" else "Off: R72 takes every break", wide) { on ->
+            save { com.optionslab.app.data.LossCutHost.setWideDay(on) }
+        }
+        ToggleRow(LOSS_CUT_NP, if (np) "On: R52 sells at entry + 5 minutes if the option has not risen 5%" else "Off: R52 keeps its own exits only", np) { on ->
+            save { com.optionslab.app.data.LossCutHost.setNoProgress(on) }
+        }
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
+internal const val LOSS_CUT_WIDE = "R72: skip breaks after a very wide day"
+internal const val LOSS_CUT_NP = "R52: sell if no progress in 5 minutes"
+
+/**
  * 20 Oct, enhancement round 1 (idea 4): Bot settings' account stop rule (-Rs 40,000 from the best, -Rs 13,000 a month) over the whole
  * Zerodha account. Its switch is off by default (shadow: what it would refuse is only logged); on, the bots' new live entries are
  * refused once it is reached. Boss's own orders and every exit are never refused. Restarting the count after it is reached

@@ -9,6 +9,7 @@ import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.BreadthDonchianArm
 import com.optionslab.engine.orb.DonchianArm
 import com.optionslab.engine.orb.HeroRules
+import com.optionslab.engine.orb.LossCutRules
 import com.optionslab.engine.orb.OovArm
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.PassedArms
@@ -144,6 +145,8 @@ object PassedArmsHost {
     /** An arm's switch: on (paper trades), record only (would-be trades, nothing bought), or off (19 Oct). */
     enum class Mode { ON, RECORD, OFF }
 
+    /** 1 Nov: why R72's breaks are skipped on a day after a very wide day ([wideSkip]; paper only). */
+    internal const val WIDE_SKIP = "yesterday was a very wide day (R72's wide-day skip, R140 / R143; paper only)"
     /** A filtered break Supertrend could not judge (skipped): its status words, counted on the row and in the diagnostics. */
     internal const val ST_UNJUDGED = "Supertrend cannot be judged yet (no earlier session in), so not taken"
     /**
@@ -1614,9 +1617,26 @@ object PassedArmsHost {
         var changed = false
         for (u in BreadthDonchianArm.UNDERLYINGS) {
             if (reads.bars[u] == null) continue
-            changed = breaks(b, src, u, sigs[u].orEmpty(), now) || changed
+            changed = breaks(b, src, u, sigs[u].orEmpty(), now, skipWhy = wideSkip(b, src, u, today)) || changed
         }
         return changed
+    }
+
+    /**
+     * 1 Nov (Boss: "Okay go ahead, but dont break any thing"; R140 FB-R72-A10, confirmed by R143): with the paper switch on
+     * ([LossCutHost.wideDayOn]), R72's breaks on [u] are skipped on a day after a very wide day ([LossCutRules.wideDay]: yesterday's
+     * range at least 1.32x its 20-day average, from the daily candles read once a day). Paper only: while R72 could go live
+     * ([LossCutHost.paperOnlyNow]) it only notes, once a day, what it would skip, and takes the breaks as before. Unknown (the
+     * candles not read, too few) never skips. Memory only. The words to skip with, or null (take the breaks as before).
+     */
+    private fun wideSkip(b: Book, src: String, u: String, today: LocalDate): String? {
+        if (!LossCutHost.wideDayOn()) return null
+        val wide = runCatching { LossCutRules.wideDay(history(u, today)?.daily.orEmpty(), today) }.getOrNull()
+        if (wide != true) return null
+        if (LossCutHost.paperOnlyNow(src)) return WIDE_SKIP
+        val k = "$today|$src|$u|wide_shadow"
+        if (k !in b.decided) { b.decided += k; note(b, "${label(src)} $u: yesterday was a very wide day; the wide-day skip would skip today's breaks, but R72 could go live, so it only notes this (shadow)") }
+        return null
     }
 
     /**
@@ -1627,7 +1647,7 @@ object PassedArmsHost {
      */
     private suspend fun breaks(b: Book, src: String, u: String, sigs: List<DonchianArm.Signal>, now: LocalDateTime,
                                gate: ((DonchianArm.Signal) -> Boolean?)? = null,
-                               confirm: (DonchianArm.Signal) -> Boolean? = { null }): Boolean {
+                               confirm: (DonchianArm.Signal) -> Boolean? = { null }, skipWhy: String? = null): Boolean {
         val today = now.toLocalDate()
         val key = "$src|$u"
         var changed = false
@@ -1647,6 +1667,12 @@ object PassedArmsHost {
             // 16 Oct (R73 T7): with the filter on, a break is taken only when Supertrend (10, 3) agrees; one it is against, or
             // cannot judge (no earlier session in, or no direction yet), is skipped - it only ever skips (lowers risk), never
             // adds. Decided once, before the day's caps, as the research filtered the signals before taking them.
+            // 1 Nov (R72's wide-day skip, paper only, [wideSkip]): every break of the day skipped and decided, before the caps.
+            if (skipWhy != null) {
+                b.decided += dk
+                changed = say(b, key, "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break skipped: $skipWhy", final = true) || changed
+                continue
+            }
             if (gate != null) {
                 val ag = gate(s)
                 if (ag != true) {
@@ -1900,7 +1926,7 @@ object PassedArmsHost {
                 w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[lockKey(p)] = "$now|$lv" }
                 walked = w.exit
             }.exit?.kind?.why
-        } ?: if (stopped) "operator_stop" else null
+        } ?: (if (stopped) "operator_stop" else null) ?: noProgress(b, p, bars, now, overnight)
         // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
         if (p.shadow == null) runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
         if (why == null) return false
@@ -1908,6 +1934,33 @@ object PassedArmsHost {
         val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight, walkPx) else sell(b, p, c, why, ltp, walkPx)
         if (next != p) { b.positions[i] = next; return true }
         return false
+    }
+
+    /**
+     * 1 Nov (Boss: "Okay go ahead, but dont break any thing"; R142 NP5-52, confirmed by R143): with the paper switch on
+     * ([LossCutHost.noProgressOn]), an R52 Open outside value trade with no other exit due is sold at its entry minute + 5 when
+     * its option has not traded 5% above the entry in those minutes ([LossCutRules.noProgress]). Decided once a trade; never late
+     * (only in the 5 minutes after it is due) and never on unknown minutes. Paper only: while R52 could go live, or a live trade
+     * holds the option ([LossCutHost.paperOnlyNow]), it only notes what it would do. Memory only. The exit's why, or null.
+     */
+    private fun noProgress(b: Book, p: Pos, bars: List<Bar>, now: LocalDateTime, overnight: Boolean): String? {
+        if (p.arm != OovArm.SOURCE || overnight || !LossCutHost.noProgressOn()) return null
+        val k = "${p.day}|np|${p.arm}|${p.symbol}|${p.entryTime}"
+        if (k in b.decided) return null
+        return when (runCatching { LossCutRules.noProgress(p.entry, p.entryMinute, bars, now) }.getOrDefault(LossCutRules.Verdict.UNKNOWN)) {
+            LossCutRules.Verdict.NOT_YET, LossCutRules.Verdict.UNKNOWN -> null
+            LossCutRules.Verdict.HOLD, LossCutRules.Verdict.TOO_LATE -> { b.decided += k; null }
+            LossCutRules.Verdict.EXIT -> {
+                b.decided += k
+                if (p.shadow != null || LossCutHost.paperOnlyNow(p.arm, p.symbol)) {
+                    note(b, "${label(p.arm)} ${p.index}: ${p.symbol} has not risen 5% in its first 5 minutes: sold (the no-progress exit; paper only)")
+                    LossCutRules.NP_WHY
+                } else {
+                    note(b, "${label(p.arm)} ${p.index}: ${p.symbol} has not risen 5% in its first 5 minutes; the no-progress exit would sell it, but R52 could go live, so it only notes this (shadow)")
+                    null
+                }
+            }
+        }
     }
 
     /** What every trade in [b] took of each SELL fill, by order id ([Pos.soldBy]; memory only). */

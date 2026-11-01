@@ -190,6 +190,7 @@ object PersonalStores {
         "Backup" to "keeps nothing in memory; writes only the backup reminder's day (backup.last) and the restore's disarm flag to the settings (the files it restores belong to their own stores)",
         "IdeaRuleHost" to "writes only the win-rate rule for automatic ideas (g.ideaRule.on, g.ideaRule.minPct, 28 Oct); memory holds that switch and one number, nothing about the account",
         "BookPriceHost" to "writes only the paper book-price switch (g.paperBookPrice.on, 28 Oct); memory holds that one on/off flag, nothing about the account",
+        "LossCutHost" to "writes only the two paper loss-cut switches (g.lossCut.wideDay.on, g.lossCut.noProgress.on, 1 Nov); memory holds those two on/off flags, nothing about the account",
         "WhatsNewStore" to "writes only which What's new entries were seen (home.whatsnew.seen); memory holds this build's own entries, nothing about the account",
         "RemovedFeatureCleanup" to "deletes the removed Telegram files once and keeps only its done flag (cleanup.telegram.v1) in SecurePrefs; no memory copy",
         "IraLiquidityInsight" to "keeps only its weekly look's day and mark in SecurePrefs; reads the arms' book through OrbArms, holds no copy",

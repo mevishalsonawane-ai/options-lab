@@ -694,6 +694,8 @@ fun RiskPage(model: AppModel) {
             item { PortfolioSettingCard() }
             // 19 Oct: the same-direction cap on automatic entries (paper on, live logged only until switched on).
             item { SameDirectionCapCard() }
+            // 1 Nov (Boss): R72's wide-day skip and R52's no-progress exit, paper only, off until switched on.
+            item { LossCutCard() }
             // 20 Oct, enhancement round 1: Boss's account stop rule over the whole account (in shadow until switched on).
             item { AccountStopCard(model) }
             // 25 Oct (Boss's decisions on the app audit): the new risk rules - paper on, live in shadow until switched on.
