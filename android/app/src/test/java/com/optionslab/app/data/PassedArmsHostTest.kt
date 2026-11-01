@@ -2015,6 +2015,19 @@ class PassedArmsHostTest : RobolectricTest() {
     /** The live switches read and the live book read, as the app keeps them warm (the rules act only when both are known). */
     private fun liveKnown() { runBlocking { ArmLive.refresh() }; ArmLive.liveFlags() }
 
+    /**
+     * R72's and R52's own "Trade live" switched off (30 Oct: every arm's is on by default, and these tests run the app in Live), so
+     * neither can go live: the paper-only case. Then [liveKnown].
+     */
+    private fun paperOnly() {
+        runBlocking {
+            ArmLive.setLive(BreadthDonchianArm.SOURCE, false, pinConfirmed = false, log = false)
+            ArmLive.setLive(OovArm.SOURCE, false, pinConfirmed = false, log = false)
+        }
+        liveKnown()
+        assertFalse(ExposureCapHost.liveMirrorPossible(BreadthDonchianArm.SOURCE)); assertFalse(ExposureCapHost.liveMirrorPossible(OovArm.SOURCE))
+    }
+
     private fun r72Break() {
         only(BreadthDonchianArm.SOURCE)
         breadthMarket(up = setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), until = LocalTime.of(9, 20))
@@ -2022,7 +2035,7 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     @Test fun withTheWideDaySkipOnR72SkipsItsBreakAfterAVeryWideDayOnPaper() {
-        wideDaily(); liveKnown()
+        wideDaily(); paperOnly()
         LossCutHost.setForTest(wide = true)
         r72Break()
         assertTrue("nothing bought, no would-be either", PassedArmsHost.view.value.open.none { it.arm == BreadthDonchianArm.SOURCE })
@@ -2037,14 +2050,14 @@ class PassedArmsHostTest : RobolectricTest() {
 
     @Test fun withTheWideDaySkipOffR72BuysAsBeforeOnAVeryWideDay() {
         // Off (the default): the very wide day changes nothing.
-        wideDaily(); liveKnown()
+        wideDaily(); paperOnly()
         r72Break()
         assertEquals(1, PassedArmsHost.view.value.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
         assertNothingAtZerodha()
     }
 
     @Test fun withTheWideDaySkipOnAfterANormalYesterdayR72BuysAsBefore() {
-        wideDaily(lastRange = 110.0); liveKnown()
+        wideDaily(lastRange = 110.0); paperOnly()
         LossCutHost.setForTest(wide = true)
         r72Break()
         assertEquals(1, PassedArmsHost.view.value.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
@@ -2052,7 +2065,7 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     @Test fun withTheWideDaySkipOnButNoDailyCandlesR72BuysAsBefore() {
-        PassedArmsHost.testDaily = { emptyList() }; liveKnown()
+        PassedArmsHost.testDaily = { emptyList() }; paperOnly()
         LossCutHost.setForTest(wide = true)
         r72Break()
         assertEquals("unknown never skips", 1, PassedArmsHost.view.value.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
@@ -2078,8 +2091,8 @@ class PassedArmsHostTest : RobolectricTest() {
         // Nothing read yet (as just after a start): the rules never act on a guess.
         ArmLive.wipe()
         assertFalse(LossCutHost.paperOnlyNow(OovArm.SOURCE, "X"))
-        // Read (R52's Trade live off here): paper only.
-        liveKnown()
+        // Read, with R52's Trade live off: paper only.
+        paperOnly()
         assertTrue(LossCutHost.paperOnlyNow(OovArm.SOURCE, "X"))
     }
 
@@ -2096,7 +2109,7 @@ class PassedArmsHostTest : RobolectricTest() {
     private fun r52At(t: LocalTime) { at(t); runBlocking { PassedArmsHost.manageOnly() } }
 
     @Test fun withTheNoProgressExitOnR52SellsAtEntryPlusFiveWhenTheOptionHasNotRisen5Percent() {
-        liveKnown(); LossCutHost.setForTest(noProgress = true)
+        paperOnly(); LossCutHost.setForTest(noProgress = true)
         val p = r52Bought(LocalTime.of(9, 25)) { 100.0 }
         // 09:24: not due yet.
         r52At(LocalTime.of(9, 24))
@@ -2109,21 +2122,21 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     @Test fun aRiseOf5PercentInTheFirstFiveMinutesHolds() {
-        liveKnown(); LossCutHost.setForTest(noProgress = true)
+        paperOnly(); LossCutHost.setForTest(noProgress = true)
         val p = r52Bought(LocalTime.of(9, 26)) { t -> if (t == LocalTime.of(9, 22)) 106.0 else 100.0 }
         r52At(LocalTime.of(9, 25)); r52At(LocalTime.of(9, 26))
         assertTrue("held: it rose 5%", PassedArmsHost.view.value.open.any { it.symbol == p.symbol && it.arm == OovArm.SOURCE })
     }
 
     @Test fun withTheNoProgressExitOffAFlatOptionIsHeld() {
-        liveKnown()
+        paperOnly()
         val q = r52Bought(LocalTime.of(9, 26)) { 100.0 }
         r52At(LocalTime.of(9, 25)); r52At(LocalTime.of(9, 26))
         assertTrue("its own exits only", PassedArmsHost.view.value.open.any { it.symbol == q.symbol && it.arm == OovArm.SOURCE })
     }
 
     @Test fun theNoProgressExitNeverActsLate() {
-        liveKnown()
+        paperOnly()
         val p = r52Bought(LocalTime.of(9, 32)) { 100.0 }
         r52At(LocalTime.of(9, 31))
         // Switched on after its 5 minutes had passed by more than 5: too late, held.
