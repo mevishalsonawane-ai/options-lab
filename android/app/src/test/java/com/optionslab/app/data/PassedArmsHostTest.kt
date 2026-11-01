@@ -2006,6 +2006,10 @@ class PassedArmsHostTest : RobolectricTest() {
             val r = if (k == 1) lastRange else 100.0
             Bar(day.minusDays(k.toLong()).atTime(9, 15), 25_000.0, 25_000.0 + r, 25_000.0, 25_000.0)
         } }
+        // up() already read today's history (with no daily candles): read again with these.
+        PassedArmsHost.forgetHistoryForTest()
+        runBlocking { PassedArmsHost.prefetchNow(day) }
+        assertEquals(25, PassedArmsHost.history("NIFTY", day)?.daily?.size)
     }
 
     /** The live switches read and the live book read, as the app keeps them warm (the rules act only when both are known). */
@@ -2101,7 +2105,6 @@ class PassedArmsHostTest : RobolectricTest() {
         val c = PassedArmsHost.view.value.closed.single { it.arm == OovArm.SOURCE && it.shadow == null }
         assertEquals(LossCutRules.NP_WHY, c.why)
         assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
-        assertTrue(PassedArmsHost.view.value.log.any { "no-progress exit; paper only" in it })
         assertNothingAtZerodha()
     }
 

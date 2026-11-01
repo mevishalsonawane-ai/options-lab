@@ -71,11 +71,11 @@ object LossCutHost {
 
     /**
      * The rules act on [arm] only while it is surely paper only: the live switches known (memory), no live copy of [arm] possible
-     * ([ExposureCapHost.liveMirrorPossible]), the live book read, and (for an exit) no live trade held on [symbol]. Anything unknown
+     * ([ExposureCapHost.liveMirrorPossible]), the live book read (and readable), and (for an exit) no live trade held on [symbol]. Anything unknown
      * counts as "could be live": the rule then only notes what it would do. Memory only (safe on the order and tick paths).
      */
     fun paperOnlyNow(arm: String, symbol: String? = null): Boolean = runCatching {
-        ArmLive.liveFlagsKept() != null && ArmLive.view.value.loaded && !ExposureCapHost.liveMirrorPossible(arm) &&
+        ArmLive.liveFlagsKept() != null && ArmLive.view.value.let { it.loaded && !it.unreadable } && !ExposureCapHost.liveMirrorPossible(arm) &&
             (symbol == null || ArmLive.ownerOf(symbol) == null)
     }.getOrDefault(false)
 

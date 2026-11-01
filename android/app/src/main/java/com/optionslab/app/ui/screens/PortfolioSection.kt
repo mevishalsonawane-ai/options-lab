@@ -226,10 +226,10 @@ internal fun LossCutCard() {
     LedgerCard(title = "Loss cuts (paper)") {
         Note("Two rules that cut losses in research (R140-R143, also on Dec 2022 - Nov 2024, never seen before). Paper only: while " +
             "the arm could go live they only note what they would do. Off until you switch them on.")
-        ToggleRow(LOSS_CUT_WIDE, if (wide) "On: R72 skips an index's breaks after a very wide day (1.32x its 20-day range)" else "Off: R72 takes every break", wide) { on ->
+        ToggleRow(LOSS_CUT_WIDE, if (wide) "On: R72 skips an index's breaks after a very wide day (1.32x its 20-day range)" else "Off: R72 takes every break", wide, keepSub = true) { on ->
             save { com.optionslab.app.data.LossCutHost.setWideDay(on) }
         }
-        ToggleRow(LOSS_CUT_NP, if (np) "On: R52 sells at entry + 5 minutes if the option has not risen 5%" else "Off: R52 keeps its own exits only", np) { on ->
+        ToggleRow(LOSS_CUT_NP, if (np) "On: R52 sells at entry + 5 minutes if the option has not risen 5%" else "Off: R52 keeps its own exits only", np, keepSub = true) { on ->
             save { com.optionslab.app.data.LossCutHost.setNoProgress(on) }
         }
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }

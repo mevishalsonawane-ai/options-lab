@@ -884,6 +884,9 @@ object PassedArmsHost {
 
     internal const val VIX = "INDIAVIX"
 
+    /** TEST SEAM: the earlier sessions' history forgotten (memory only), so a test's own candles are read again. */
+    internal fun forgetHistoryForTest() { hist.clear(); histTried = null }
+
     /** [prefetch]'s reads for [day] (tests call it directly). */
     internal suspend fun prefetchNow(day: LocalDate, indices: List<String> = ALL_INDICES) {
         for (u in indices + VIX) {
@@ -1617,7 +1620,11 @@ object PassedArmsHost {
         var changed = false
         for (u in BreadthDonchianArm.UNDERLYINGS) {
             if (reads.bars[u] == null) continue
-            changed = breaks(b, src, u, sigs[u].orEmpty(), now, skipWhy = wideSkip(b, src, u, today)) || changed
+            val logged = b.log.size
+            val skipWhy = wideSkip(b, src, u, today)
+            // A shadow note just written: the pass has changed the book, so it is kept (merged and saved).
+            if (b.log.size != logged) changed = true
+            changed = breaks(b, src, u, sigs[u].orEmpty(), now, skipWhy = skipWhy) || changed
         }
         return changed
     }
@@ -1629,13 +1636,18 @@ object PassedArmsHost {
      * ([LossCutHost.paperOnlyNow]) it only notes, once a day, what it would skip, and takes the breaks as before. Unknown (the
      * candles not read, too few) never skips. Memory only. The words to skip with, or null (take the breaks as before).
      */
+    /** The wide-day skip's shadow notes already written today ("day|arm|index"; memory only). */
+    private val wideNoted: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
     private fun wideSkip(b: Book, src: String, u: String, today: LocalDate): String? {
         if (!LossCutHost.wideDayOn()) return null
         val wide = runCatching { LossCutRules.wideDay(history(u, today)?.daily.orEmpty(), today) }.getOrNull()
         if (wide != true) return null
         if (LossCutHost.paperOnlyNow(src)) return WIDE_SKIP
-        val k = "$today|$src|$u|wide_shadow"
-        if (k !in b.decided) { b.decided += k; note(b, "${label(src)} $u: yesterday was a very wide day; the wide-day skip would skip today's breaks, but R72 could go live, so it only notes this (shadow)") }
+        // Noted once a day in memory (the entry pass's copy is merged only when a pass changed something).
+        val k = "$today|$src|$u"
+        if (wideNoted.size > 50) wideNoted.removeAll { !it.startsWith("$today|") }
+        if (wideNoted.add(k)) { note(b, "${label(src)} $u: yesterday was a very wide day; the wide-day skip would skip today's breaks, but R72 could go live, so it only notes this (shadow)") }
         return null
     }
 
@@ -1951,11 +1963,11 @@ object PassedArmsHost {
             LossCutRules.Verdict.NOT_YET, LossCutRules.Verdict.UNKNOWN -> null
             LossCutRules.Verdict.HOLD, LossCutRules.Verdict.TOO_LATE -> { b.decided += k; null }
             LossCutRules.Verdict.EXIT -> {
-                b.decided += k
-                if (p.shadow != null || LossCutHost.paperOnlyNow(p.arm, p.symbol)) {
-                    note(b, "${label(p.arm)} ${p.index}: ${p.symbol} has not risen 5% in its first 5 minutes: sold (the no-progress exit; paper only)")
-                    LossCutRules.NP_WHY
-                } else {
+                // A paper sale that does not fill is tried again on the next look (still EXIT until +10 minutes); the sale's own
+                // line says it was sold ("no_progress"). Only the shadow note is decided once.
+                if (p.shadow != null || LossCutHost.paperOnlyNow(p.arm, p.symbol)) LossCutRules.NP_WHY
+                else {
+                    b.decided += k
                     note(b, "${label(p.arm)} ${p.index}: ${p.symbol} has not risen 5% in its first 5 minutes; the no-progress exit would sell it, but R52 could go live, so it only notes this (shadow)")
                     null
                 }
@@ -2182,7 +2194,7 @@ object PassedArmsHost {
             pendingBytes.set(null)
             written.forget()
         }
-        cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
+        cache = null; _view.value = View(); hist.clear(); histTried = null; wideNoted.clear(); lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
         runCatching { com.optionslab.ira.ArmExits.set("passed", emptyList()) }
         // 26 Oct: the exit looks' kept minutes and the entry retry are memory too.
         exitReads.clear(); exitBars.clear(); retryJob?.cancel(); retryJob = null; plannedRetry = null; retriesOf = null to 0
