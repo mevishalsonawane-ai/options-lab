@@ -2042,15 +2042,14 @@ class PassedArmsHostTest : RobolectricTest() {
      * R72 on, its wide-day skip [skipOn], NIFTY's daily candles with yesterday's range [last] ([candles] false: none read), the
      * history read first (so no write of the book is pending when it is), then the 09:20 breadth break (NIFTY + 3 others).
      */
-    private fun wideDay(last: Double, skipOn: Boolean = true, candles: Boolean = true, lag: Long = 0) {
+    private fun wideDay(last: Double, skipOn: Boolean = true, candles: Boolean = true, lag: Long = 0, paper: Boolean = true) {
         PassedArmsHost.testDaily = { u -> if (u == "NIFTY" && candles) niftyDaily(last, lag) else emptyList() }
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") yesterday() else bases[u]?.let { b ->
             (0 until 375).map { Bar(day.minusDays(1).atTime(9, 15).plusMinutes(it.toLong()), b, b + 1, b - 1, b) } }.orEmpty() }
         PassedArmsHost.wipe(); runBlocking { PassedArmsHost.prefetchNow(day) }
         only(BreadthDonchianArm.SOURCE)
         runBlocking { PassedArmsHost.setWideSkip(skipOn) }
-        // The live book read (its "Trade live" switches known): an unread one in Live counts as "may be copied live".
-        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
+        if (paper) paperOnly(BreadthDonchianArm.SOURCE)
         market(LocalTime.of(9, 21))
         for (u in setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")) {
             val b = bases.getValue(u)
@@ -2119,7 +2118,7 @@ class PassedArmsHostTest : RobolectricTest() {
 
     @Test fun whileR72MayBeCopiedLiveAWideDayIsOnlyLoggedAndItsBreakIsTakenAsBefore() {
         liveFor(BreadthDonchianArm.SOURCE)
-        wideDay(200.0)
+        wideDay(200.0, paper = false)
         tick(LocalTime.of(9, 21))
         val v = view()
         assertEquals("taken as before (live in shadow)", 1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
@@ -2129,7 +2128,7 @@ class PassedArmsHostTest : RobolectricTest() {
 
     @Test fun withTheNoProgressExitR52SellsAt0925WhenTheOptionIsNotUpFivePercent() {
         only(OovArm.SOURCE)
-        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
+        paperOnly(OovArm.SOURCE)
         runBlocking { PassedArmsHost.setNoProgress(true) }
         market(LocalTime.of(9, 20), firstOpen = 25_100.0)
         tick(LocalTime.of(9, 20))
@@ -2160,7 +2159,7 @@ class PassedArmsHostTest : RobolectricTest() {
 
     @Test fun aR52TradeThatWasUpFivePercentOrEnteredWithTheExitOffKeepsItsPlainExits() {
         only(OovArm.SOURCE)
-        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
+        paperOnly(OovArm.SOURCE)
         runBlocking { PassedArmsHost.setNoProgress(true) }
         market(LocalTime.of(9, 20), firstOpen = 25_100.0)
         tick(LocalTime.of(9, 20))
@@ -2170,6 +2169,24 @@ class PassedArmsHostTest : RobolectricTest() {
         // Switched off: an open trade keeps the exits it entered with; a new one enters without it.
         assertTrue(runBlocking { PassedArmsHost.setNoProgress(false) }.contains("plain exits"))
         assertTrue(view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }.np5)
+    }
+
+    /**
+     * [source]'s own "Trade live" off (free, no PIN): its entries cannot be copied live, so the 1 Nov paper rules act. (The tests' app
+     * is in Live with AI trades on, and an unset switch reads as on, so without this every entry "may be copied live".)
+     */
+    private fun paperOnly(source: String) {
+        runBlocking { com.optionslab.app.data.ArmLive.setLive(source, false, pinConfirmed = false, log = false) }
+        assertFalse(ExposureCapHost.liveMirrorPossible(source))
+    }
+
+    /** 1 Nov: with the arm's live copy possible (the tests' default: Live, AI trades on, its switch unset), R52 keeps its plain exits. */
+    @Test fun withALiveCopyPossibleR52KeepsItsPlainExits() {
+        only(OovArm.SOURCE)
+        runBlocking { PassedArmsHost.setNoProgress(true) }
+        market(LocalTime.of(9, 20), firstOpen = 25_100.0)
+        tick(LocalTime.of(9, 20))
+        assertFalse(view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }.np5)
     }
 
     /** 1 Nov (review): in Live with AI trades on, a live book not read yet counts as "may be copied live": the rules never act on a guess. */
