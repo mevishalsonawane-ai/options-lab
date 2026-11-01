@@ -1,0 +1,28 @@
+id: r144c-herotkt-iv-rel-high
+title: 'R144c Hero Rs 1,000 ticket: skip trades with iv_rel > 1.2375'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md
+data_version: Drive lake copied 1 Nov 2026 (index_1m, options_rolling_1m, equity_1m; to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2026-04-01..2026-10-19 (final) and 2022-12-01..2024-11-19 (unseen two years); read once
+instruments:
+- NIFTY
+- SENSEX
+prereg: research/hunt/r144c_loss_expiry_other/PREREG.md
+holdout_read: true
+features:
+- 'signal source: clock; strike by the option''s own price'
+hypothesis: skipping trades with iv_rel > 1.2375 (chosen on design only) loses less on the final months and the unseen years
+model_or_rule: research/hunt/r144c_loss_expiry_other/study.py
+settings: frozen cut; R54 / R55 fills and charges, 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'unseen 350->296 trades, win 15%->16% (65% rule: below), net Rs -27,129->Rs -21,701, losing days Rs -34,342->Rs
+    -28,897; design 248->198 trades, win 16%->18% (65% rule: below), net Rs -14,507->Rs -9,037, losing days Rs -31,198->Rs
+    -24,066; final 111->102 trades, win 23%->23% (65% rule: below), net Rs 1,016->Rs 2,064, losing days Rs -11,575->Rs -10,884.
+    Twin p 0.136, BH q 0.409. Fails: unseen: the arm does not make money (it lost before the filter too); twin p 0.136 > 0.05;
+    BH q 0.409 > 0.1'
+  costs: R54 / R55 fills and charges, 1 lot

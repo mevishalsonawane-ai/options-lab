@@ -1,0 +1,30 @@
+id: r144c-before-after
+title: 'R144c part C: before / after backtests of five proposed changes (Hero ticket off, VIX NIFTY to 15:10, FT3 skips, Night VIX skip, Flow stop)'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md
+data_version: Drive lake copied 1 Nov 2026 (index_1m, options_rolling_1m, equity_1m; to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31 (cuts from parts A / B); every period already read (hindsight)
+  holdout: none fresh (unseen 2022-12-01..2024-11-19 and final 2026-04-01..2026-10-19 read in parts A / B)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r144c_loss_expiry_other/PREREG_C.md
+holdout_read: true
+features:
+- 'signal source: each arm''s own (FT3 and Hero ticket option-price picks, labelled); changes read entry-time features or exits'
+hypothesis: the five changes proposed in part B lower losses on the six arms' 2022-26 trades
+model_or_rule: research/hunt/r144c_loss_expiry_other/backtest_c.py
+settings: C1 Hero ticket off; C2 VIX NIFTY held to 15:10; C3 FT3 no monthly-only expiries; C5 FT3 skip long unwinding; C6 Night skip VIX down > 3.13%; C4 Flow premium stop 30% / 40% / none
+variants_tried: null
+verdict: not-a-test
+results:
+  summary: 'hindsight, all three periods together: Hero off saves Rs 40,620 (709 tickets); VIX NIFTY to 15:10 HURTS
+    (net Rs 1,64,055 -> 1,41,099, drawdown Rs 60,491 -> 1,06,082); FT3 C3+C5 net Rs 6,24,376 -> 8,39,867, win 17% ->
+    20%, drawdown Rs 2,38,223 -> 1,13,214 (random-skip p 0.002); Night C6 net Rs 1,77,072 -> 2,24,287 (p 0.002, unseen
+    drawdown worse); Flow wider stops HURT (-Rs 6,051 -> -14,813 / -19,660 / -20,916). Leads for a shadow log only.'
+  costs: each arm's own engine costs (R98, R55, R27, R1, Flow port)

@@ -56,6 +56,13 @@ notes; match the surrounding code.
       - Its record: 413 design trades, 69% won, +₹261 a trade; only 35 trades in the holdout period.
       - Same terms as S5 Trail: labelled "failed gates, Boss's exception", one tap off; live only through the live gates (Boss, 30 Oct).
       - R134's forward test keeps judging it on new days.
+    - A third exception, chosen by Boss on 1 Nov ("Update all arms which helps", after R144c's before / after backtests):
+      R144c's skips act on paper although they failed the gates (found and judged on the same years).
+      - FT3: no ticket on BANKNIFTY, FINNIFTY or MIDCPNIFTY (monthly expiries only), and none on a pick whose price and OI
+        both fell over the 15 minutes before its mark. Night: no entry when India VIX is down more than 3.13% today.
+      - Same terms: labelled "failed gates, Boss's exception", logged, one tap off; live stays in shadow (logged only, never
+        skips a trade that would really go live).
+      - The Hero ₹1,000 ticket was switched off by the same choice (a risk-lowering switch, one tap back on).
     - No other failed idea may use these exceptions.
   - Paper changes never carry over to live by themselves.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.

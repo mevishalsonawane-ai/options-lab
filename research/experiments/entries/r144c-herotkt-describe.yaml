@@ -1,0 +1,25 @@
+id: r144c-herotkt-describe
+title: 'R144c Hero Rs 1,000 ticket: every losing trade, patterns (descriptive)'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md
+data_version: Drive lake copied 1 Nov 2026 (index_1m, options_rolling_1m, equity_1m; to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2026-04-01..2026-10-19 (final) and 2022-12-01..2024-11-19 (unseen two years); read once
+instruments:
+- NIFTY
+- SENSEX
+prereg: research/hunt/r144c_loss_expiry_other/PREREG.md
+holdout_read: true
+features:
+- 'signal source: clock; strike by the option''s own price'
+hypothesis: Hero Rs 1,000 ticket's losing trades share patterns at entry that hold in every period
+model_or_rule: research/hunt/r144c_loss_expiry_other/study.py
+settings: descriptive; steady = loser rate above the arm and avg < 0 in unseen, design and final (>= 30 each)
+variants_tried: null
+verdict: not-a-test
+results:
+  summary: descriptive, no rule adopted. unseen 350 trades, 85% lose, net Rs -27,129; design 248 trades, 84% lose, net Rs
+    -14,507; final 111 trades, 77% lose, net Rs 1,016. See research/HUNT_R144C_LOSS_EXPIRY_OTHER.md.
+  costs: R54 / R55 fills and charges, 1 lot

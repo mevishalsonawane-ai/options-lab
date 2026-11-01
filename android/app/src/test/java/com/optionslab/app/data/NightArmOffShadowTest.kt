@@ -9,6 +9,7 @@ import com.optionslab.app.testing.TradeFixtures
 import com.optionslab.engine.IST
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.NightRules
+import com.optionslab.engine.orb.R144cSkips
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
@@ -80,6 +81,8 @@ class NightArmOffShadowTest : RobolectricTest() {
         NightArm.testPrevClose = null
         NightArm.testBreadth = null
         NightArm.testBuildUp = null
+        NightArm.testVix = null
+        NightArm.testNoR144c = true
         ArmLive.testHeard = null
         OffShadow.wipe()
         HiddenArms.resetForTest(context)
@@ -133,5 +136,37 @@ class NightArmOffShadowTest : RobolectricTest() {
         assertTrue(said, said.startsWith("night_buy_ce") || said.startsWith("night_not_filled"))
         assertTrue(OffShadow.view.value.openOf(NightRules.SOURCE).isEmpty())
         assertTrue(OffShadow.view.value.closedOf(NightRules.SOURCE).isEmpty())
+    }
+
+    // ---- 1 Nov (Boss: "Update all arms which helps"; research R144c, failed gates - Boss's exception) ----------------------
+
+    @Test fun r144cSkipsThePaperEntryWhenVixIsDownMoreThan313Percent() {
+        NightArm.testNoR144c = false
+        NightArm.testVix = { 14.4 to 15.0 }                     // -4.0% today
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        val orders = Paper.state.orders.size
+        runBlocking { NightArm.tick() }
+        val said = NightArm.view.value.status["NIFTY"].orEmpty()
+        assertTrue(said, said.startsWith("skipped by R144c") && said.contains(R144cSkips.LABEL) && said.contains("-4.0%"))
+        assertEquals("no paper order", orders, Paper.state.orders.size)
+        assertTrue(NightArm.view.value.open.isEmpty())
+        assertTrue(NightArm.r144cOn())
+    }
+
+    @Test fun r144cKeepsTheEntryWhenVixIsDownLessOrUnknownAndItsUndoSwitchesItOff() {
+        NightArm.testNoR144c = false
+        NightArm.testVix = { 14.7 to 15.0 }                     // -2.0%: not skipped
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        runBlocking { NightArm.tick() }
+        val said = NightArm.view.value.status["NIFTY"].orEmpty()
+        assertTrue(said, said.startsWith("night_buy_ce") || said.startsWith("night_not_filled"))
+        // The change log's Undo switches the paper skip off (and kept in its book).
+        val on = com.optionslab.ira.AutoChange.r144cSkips(com.optionslab.ira.AutoChange.R144C_NIGHT_TARGET, true)!!
+        assertTrue(com.optionslab.app.ira.Autopilot.apply(com.optionslab.ira.AutoChange.inverse(on, "undone by you"), false)!!.contains("off"))
+        assertFalse(NightArm.r144cOn())
+        AutomationSupport.reloadFromDisk(NightArm)
+        runBlocking { NightArm.refresh() }
+        assertFalse(NightArm.r144cOn())
+        assertEquals(null, com.optionslab.engine.orb.R144cSkips.nightVixDown(null, 15.0))
     }
 }

@@ -571,4 +571,50 @@ class HeroTicketArmTest : RobolectricTest() {
         assertEquals(HeroTicketRules.TrailStart.AFTER_3X, view().trailStart)
         assertNothingAtZerodha()
     }
+
+    // ---- 1 Nov (Boss: "Update all arms which helps"; research R144c: -Rs 40,620 over 709 tickets in 2022-26) ---------------
+
+    @Test fun theR144cUpdateSwitchesAnArmedTicketOffOnceAndTheUndoTurnsItBackOn() {
+        HeroTicketArm.testNoOffR144c = false
+        try {
+            // A book already on (switched on by the 15 Oct update, before this one).
+            HeroTicketArm.wipe()
+            Vault.writeFile(bookFile, JSONObject().put("armed", true).put("migrated", org.json.JSONArray().put(HeroTicketArm.AUTO_ON))
+                .toString().toByteArray(Charsets.UTF_8))
+            val v = view()
+            assertFalse("switched off by the 1 Nov update", v.armed)
+            assertTrue(v.log.toString(), v.log.single { "switched off once by the 1 Nov update" in it }.contains("R144c"))
+            AutomationSupport.reloadFromDisk(HeroTicketArm)
+            assertFalse(view().armed)
+            assertEquals("once", 1, view().log.count { "switched off once by the 1 Nov update" in it })
+            // Boss switches it back on: it stays on (the update never runs again).
+            assertTrue(runBlocking { HeroTicketArm.setArmed(true, log = false) }.contains("on, paper only"))
+            AutomationSupport.reloadFromDisk(HeroTicketArm)
+            assertTrue(view().armed)
+            // The change log's entry: on -> off, paper, lowers risk; its Undo switches it back on.
+            val off = AutoChange.heroTicketOffR144c()
+            assertEquals(AutoChange.TICKET_TARGET, off.target)
+            assertEquals(AutoChange.ON, off.from); assertEquals(AutoChange.SWITCHED_OFF, off.to)
+            assertEquals(AutoChange.Scope.PAPER, off.scope)
+            assertTrue(Autopilot.apply(off, false)!!.contains("off"))
+            assertFalse(view().armed)
+            assertTrue(Autopilot.apply(AutoChange.inverse(off, "undone by you"), false)!!.contains("on, paper only"))
+            assertTrue(view().armed)
+            assertNothingAtZerodha()
+        } finally { HeroTicketArm.testNoOffR144c = true }
+    }
+
+    @Test fun aFreshInstallAfterR144cIsNeverSwitchedOn() {
+        HeroTicketArm.testNoOffR144c = false
+        try {
+            HeroTicketArm.wipe(); bookFile.delete()
+            AutomationSupport.reloadFromDisk(HeroTicketArm)
+            val v = view()
+            assertFalse(v.armed)
+            assertTrue(v.log.toString(), v.log.none { "switched on once" in it || "switched off once" in it })
+            val o = JSONObject(String(Vault.readFileSteady(bookFile)!!, Charsets.UTF_8))
+            val m = o.getJSONArray("migrated").toString()
+            assertTrue(m, m.contains(HeroTicketArm.AUTO_ON) && m.contains(HeroTicketArm.OFF_R144C))
+        } finally { HeroTicketArm.testNoOffR144c = true }
+    }
 }

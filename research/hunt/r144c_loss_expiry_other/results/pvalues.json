@@ -1,0 +1,65 @@
+{
+ "family": "R144c skip filters (BH within R144c)",
+ "tests": {
+  "r144c-ft3-vix-chg-low": {
+   "p": 0.4767616191904048,
+   "q": 0.8403,
+   "passed": false
+  },
+  "r144c-ft3-iv-rel-high": {
+   "p": 0.6891554222888556,
+   "q": 0.8851,
+   "passed": false
+  },
+  "r144c-ft3-quadrant-cat": {
+   "p": 0.04897551224387806,
+   "q": 0.1959,
+   "passed": false
+  },
+  "r144c-herotkt-iv-rel-high": {
+   "p": 0.136431784107946,
+   "q": 0.4093,
+   "passed": false
+  },
+  "r144c-herotkt-morning-range-low": {
+   "p": 0.015492253873063468,
+   "q": 0.093,
+   "passed": false
+  },
+  "r144c-herotkt-oi-chg-low": {
+   "p": 0.8265867066466767,
+   "q": 0.8851,
+   "passed": false
+  },
+  "r144c-night-vix-prev-high": {
+   "p": 0.0029985007496251873,
+   "q": 0.036,
+   "passed": false
+  },
+  "r144c-night-vix-chg-high": {
+   "p": 0.21889055472263869,
+   "q": 0.5253,
+   "passed": false
+  },
+  "r144c-night-trend-high": {
+   "p": 0.8850574712643678,
+   "q": 0.8851,
+   "passed": false
+  },
+  "r144c-vixdiv-iv-rel-high": {
+   "p": 0.5602198900549725,
+   "q": 0.8403,
+   "passed": false
+  },
+  "r144c-vixdiv-spread-proxy-high": {
+   "p": 0.5082458770614693,
+   "q": 0.8403,
+   "passed": false
+  },
+  "r144c-vixdiv-gap-low": {
+   "p": 0.7466266866566716,
+   "q": 0.8851,
+   "passed": false
+  }
+ }
+}

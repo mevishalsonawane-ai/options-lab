@@ -1,0 +1,30 @@
+id: r144c-ft3-vix-chg-low
+title: 'R144c FT3 near-ATM morning: skip trades with vix_chg < -0.0182'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md
+data_version: Drive lake copied 1 Nov 2026 (index_1m, options_rolling_1m, equity_1m; to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2026-04-01..2026-10-19 (final) and 2022-12-01..2024-11-19 (unseen two years); read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r144c_loss_expiry_other/PREREG.md
+holdout_read: true
+features:
+- 'signal source: option-price pick (labelled; clock + the option''s own price, IV, straddle distance)'
+hypothesis: skipping trades with vix_chg < -0.0182 (chosen on design only) loses less on the final months and the unseen years
+model_or_rule: research/hunt/r144c_loss_expiry_other/study.py
+settings: frozen cut; R98 charges and LIMIT fill, Rs 5,000 a ticket
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'unseen 262->211 trades, win 19%->18% (65% rule: below), net Rs 688,029->Rs 405,051, losing days Rs -960,184->Rs
+    -778,168; design 78->61 trades, win 9%->11% (65% rule: below), net Rs -165,746->Rs -81,962, losing days Rs -332,247->Rs
+    -248,463; final 38->24 trades, win 16%->17% (65% rule: below), net Rs 102,093->Rs 11,457, losing days Rs -147,025->Rs
+    -89,188. Twin p 0.477, BH q 0.84. Fails: unseen: drawdown worse; twin p 0.477 > 0.05; BH q 0.84 > 0.1'
+  costs: R98 charges and LIMIT fill, Rs 5,000 a ticket

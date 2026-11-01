@@ -96,12 +96,16 @@ class TestApp : Application() {
         ShadowArms.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.VixDivArm.init(this)
+        // 1 Nov: R144c's Night VIX skip stays out of every other test (its own test turns it back on; no VIX read).
+        com.optionslab.app.data.NightArm.testNoR144c = true
         com.optionslab.app.data.HeroTicketArm.init(this)
         // 15 Oct: the Hero ₹1,000 ticket's one-time switch-on stays out of every other test (its own tests turn it back on).
         com.optionslab.app.data.HeroTicketArm.testNoAutoOn = true
+        com.optionslab.app.data.HeroTicketArm.testNoOffR144c = true
         // 21 Oct: FT3's one-time switch-on too (its own tests turn it back on).
         com.optionslab.app.data.Ft3Arm.init(this)
         com.optionslab.app.data.Ft3Arm.testNoAutoOn = true
+        com.optionslab.app.data.Ft3Arm.testNoR144c = true
         com.optionslab.app.data.PassedArmsHost.init(this)
         com.optionslab.app.data.PassedArmsHost.testNoAutoOn = true
         // 26 Oct: an entry retry is planned ([PassedArmsHost.plannedRetry]) but never launched by itself in a test.

@@ -1,0 +1,1923 @@
+[
+ {
+  "id": "r144c-ft3-vix-chg-low",
+  "arm": "FT3",
+  "filter": {
+   "feature": "vix_chg",
+   "kind": "low",
+   "cut": -0.0182,
+   "dropped": 17,
+   "share": 0.218,
+   "saved": 83784,
+   "saved_per_trade": 4928.5,
+   "gone_loser_rate": 1.0,
+   "gone_net": -83784
+  },
+  "base": {
+   "early": {
+    "trades": 100,
+    "net": 238534,
+    "win": 0.15,
+    "loss_sum": -392453,
+    "max_dd": 90480,
+    "worst_day": -9728,
+    "worst_month": -32381,
+    "avg_win": 42368,
+    "avg_loss": -4670,
+    "losers": 85,
+    "lost": -396981,
+    "avg": 2385
+   },
+   "unseen": {
+    "trades": 262,
+    "net": 688029,
+    "win": 0.1908,
+    "loss_sum": -960184,
+    "max_dd": 100283,
+    "worst_day": -10031,
+    "worst_month": -42024,
+    "avg_win": 33063,
+    "avg_loss": -4553,
+    "losers": 212,
+    "lost": -965133,
+    "avg": 2626
+   },
+   "design": {
+    "trades": 78,
+    "net": -165746,
+    "win": 0.0897,
+    "loss_sum": -332247,
+    "max_dd": 204084,
+    "worst_day": -19583,
+    "worst_month": -34793,
+    "avg_win": 24166,
+    "avg_loss": -4717,
+    "losers": 71,
+    "lost": -334907,
+    "avg": -2125
+   },
+   "final": {
+    "trades": 38,
+    "net": 102093,
+    "win": 0.1579,
+    "loss_sum": -147025,
+    "max_dd": 44536,
+    "worst_day": -15021,
+    "worst_month": -29999,
+    "avg_win": 41520,
+    "avg_loss": -4595,
+    "losers": 32,
+    "lost": -147025,
+    "avg": 2687
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 72,
+    "net": -210976,
+    "win": 0.0972,
+    "loss_sum": -305391,
+    "max_dd": 243444,
+    "worst_day": -9728,
+    "worst_month": -37656,
+    "avg_win": 13488,
+    "avg_loss": -4698,
+    "losers": 65,
+    "lost": -305391,
+    "avg": -2930
+   },
+   "unseen": {
+    "trades": 211,
+    "net": 405051,
+    "win": 0.1848,
+    "loss_sum": -778168,
+    "max_dd": 110731,
+    "worst_day": -10031,
+    "worst_month": -41241,
+    "avg_win": 30466,
+    "avg_loss": -4553,
+    "losers": 172,
+    "lost": -783117,
+    "avg": 1920
+   },
+   "design": {
+    "trades": 61,
+    "net": -81962,
+    "win": 0.1148,
+    "loss_sum": -248463,
+    "max_dd": 125129,
+    "worst_day": -14934,
+    "worst_month": -29803,
+    "avg_win": 24166,
+    "avg_loss": -4650,
+    "losers": 54,
+    "lost": -251123,
+    "avg": -1344
+   },
+   "final": {
+    "trades": 24,
+    "net": 11457,
+    "win": 0.1667,
+    "loss_sum": -89188,
+    "max_dd": 44536,
+    "worst_day": -15021,
+    "worst_month": -29999,
+    "avg_win": 25161,
+    "avg_loss": -4459,
+    "losers": 20,
+    "lost": -89188,
+    "avg": 477
+   }
+  },
+  "twin_p": 0.4767616191904048,
+  "test_loss_sum": -867355.9459351995,
+  "n_test": 300,
+  "changed": 65,
+  "win_before_after": {
+   "early": [
+    0.15,
+    0.0972
+   ],
+   "unseen": [
+    0.1908,
+    0.1848
+   ],
+   "design": [
+    0.0897,
+    0.1148
+   ],
+   "final": [
+    0.1579,
+    0.1667
+   ]
+  },
+  "q": 0.8403,
+  "fails": [
+   "unseen: drawdown worse",
+   "twin p 0.477 > 0.05",
+   "BH q 0.84 > 0.1"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-ft3-iv-rel-high",
+  "arm": "FT3",
+  "filter": {
+   "feature": "iv_rel",
+   "kind": "high",
+   "cut": 1.0344,
+   "dropped": 16,
+   "share": 0.205,
+   "saved": 78838,
+   "saved_per_trade": 4927.4,
+   "gone_loser_rate": 1.0,
+   "gone_net": -78838
+  },
+  "base": {
+   "early": {
+    "trades": 100,
+    "net": 238534,
+    "win": 0.15,
+    "loss_sum": -392453,
+    "max_dd": 90480,
+    "worst_day": -9728,
+    "worst_month": -32381,
+    "avg_win": 42368,
+    "avg_loss": -4670,
+    "losers": 85,
+    "lost": -396981,
+    "avg": 2385
+   },
+   "unseen": {
+    "trades": 262,
+    "net": 688029,
+    "win": 0.1908,
+    "loss_sum": -960184,
+    "max_dd": 100283,
+    "worst_day": -10031,
+    "worst_month": -42024,
+    "avg_win": 33063,
+    "avg_loss": -4553,
+    "losers": 212,
+    "lost": -965133,
+    "avg": 2626
+   },
+   "design": {
+    "trades": 78,
+    "net": -165746,
+    "win": 0.0897,
+    "loss_sum": -332247,
+    "max_dd": 204084,
+    "worst_day": -19583,
+    "worst_month": -34793,
+    "avg_win": 24166,
+    "avg_loss": -4717,
+    "losers": 71,
+    "lost": -334907,
+    "avg": -2125
+   },
+   "final": {
+    "trades": 38,
+    "net": 102093,
+    "win": 0.1579,
+    "loss_sum": -147025,
+    "max_dd": 44536,
+    "worst_day": -15021,
+    "worst_month": -29999,
+    "avg_win": 41520,
+    "avg_loss": -4595,
+    "losers": 32,
+    "lost": -147025,
+    "avg": 2687
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 97,
+    "net": 253228,
+    "win": 0.1546,
+    "loss_sum": -377759,
+    "max_dd": 90480,
+    "worst_day": -9728,
+    "worst_month": -28723,
+    "avg_win": 42368,
+    "avg_loss": -4662,
+    "losers": 82,
+    "lost": -382287,
+    "avg": 2611
+   },
+   "unseen": {
+    "trades": 252,
+    "net": 544924,
+    "win": 0.1905,
+    "loss_sum": -922367,
+    "max_dd": 110814,
+    "worst_day": -10031,
+    "worst_month": -41533,
+    "avg_win": 30672,
+    "avg_loss": -4546,
+    "losers": 204,
+    "lost": -927315,
+    "avg": 2162
+   },
+   "design": {
+    "trades": 62,
+    "net": -86908,
+    "win": 0.1129,
+    "loss_sum": -253409,
+    "max_dd": 125245,
+    "worst_day": -14622,
+    "worst_month": -27245,
+    "avg_win": 24166,
+    "avg_loss": -4656,
+    "losers": 55,
+    "lost": -256069,
+    "avg": -1402
+   },
+   "final": {
+    "trades": 33,
+    "net": -27972,
+    "win": 0.1212,
+    "loss_sum": -132859,
+    "max_dd": 69237,
+    "worst_day": -15021,
+    "worst_month": -29999,
+    "avg_win": 26222,
+    "avg_loss": -4581,
+    "losers": 29,
+    "lost": -132859,
+    "avg": -848
+   }
+  },
+  "twin_p": 0.6891554222888556,
+  "test_loss_sum": -1055225.8183699579,
+  "n_test": 300,
+  "changed": 15,
+  "win_before_after": {
+   "early": [
+    0.15,
+    0.1546
+   ],
+   "unseen": [
+    0.1908,
+    0.1905
+   ],
+   "design": [
+    0.0897,
+    0.1129
+   ],
+   "final": [
+    0.1579,
+    0.1212
+   ]
+  },
+  "q": 0.8851,
+  "fails": [
+   "unseen: drawdown worse",
+   "final: drawdown worse",
+   "final: the arm does not make money",
+   "twin p 0.689 > 0.05",
+   "BH q 0.885 > 0.1",
+   "< 30 test trades skipped"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-ft3-quadrant-cat",
+  "arm": "FT3",
+  "filter": {
+   "feature": "quadrant",
+   "kind": "cat",
+   "value": "long unwinding",
+   "dropped": 17,
+   "share": 0.218,
+   "saved": 83280,
+   "saved_per_trade": 4898.9,
+   "gone_loser_rate": 1.0,
+   "gone_net": -83280
+  },
+  "base": {
+   "early": {
+    "trades": 100,
+    "net": 238534,
+    "win": 0.15,
+    "loss_sum": -392453,
+    "max_dd": 90480,
+    "worst_day": -9728,
+    "worst_month": -32381,
+    "avg_win": 42368,
+    "avg_loss": -4670,
+    "losers": 85,
+    "lost": -396981,
+    "avg": 2385
+   },
+   "unseen": {
+    "trades": 262,
+    "net": 688029,
+    "win": 0.1908,
+    "loss_sum": -960184,
+    "max_dd": 100283,
+    "worst_day": -10031,
+    "worst_month": -42024,
+    "avg_win": 33063,
+    "avg_loss": -4553,
+    "losers": 212,
+    "lost": -965133,
+    "avg": 2626
+   },
+   "design": {
+    "trades": 78,
+    "net": -165746,
+    "win": 0.0897,
+    "loss_sum": -332247,
+    "max_dd": 204084,
+    "worst_day": -19583,
+    "worst_month": -34793,
+    "avg_win": 24166,
+    "avg_loss": -4717,
+    "losers": 71,
+    "lost": -334907,
+    "avg": -2125
+   },
+   "final": {
+    "trades": 38,
+    "net": 102093,
+    "win": 0.1579,
+    "loss_sum": -147025,
+    "max_dd": 44536,
+    "worst_day": -15021,
+    "worst_month": -29999,
+    "avg_win": 41520,
+    "avg_loss": -4595,
+    "losers": 32,
+    "lost": -147025,
+    "avg": 2687
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 99,
+    "net": 243508,
+    "win": 0.1515,
+    "loss_sum": -387479,
+    "max_dd": 90480,
+    "worst_day": -9728,
+    "worst_month": -29446,
+    "avg_win": 42368,
+    "avg_loss": -4667,
+    "losers": 84,
+    "lost": -392008,
+    "avg": 2460
+   },
+   "unseen": {
+    "trades": 238,
+    "net": 766404,
+    "win": 0.2059,
+    "loss_sum": -857043,
+    "max_dd": 91087,
+    "worst_day": -10031,
+    "worst_month": -40255,
+    "avg_win": 33233,
+    "avg_loss": -4561,
+    "losers": 189,
+    "lost": -861991,
+    "avg": 3220
+   },
+   "design": {
+    "trades": 61,
+    "net": -82466,
+    "win": 0.1148,
+    "loss_sum": -248967,
+    "max_dd": 130605,
+    "worst_day": -14934,
+    "worst_month": -34793,
+    "avg_win": 24166,
+    "avg_loss": -4660,
+    "losers": 54,
+    "lost": -251627,
+    "avg": -1352
+   },
+   "final": {
+    "trades": 32,
+    "net": 107552,
+    "win": 0.1562,
+    "loss_sum": -123449,
+    "max_dd": 44536,
+    "worst_day": -15021,
+    "worst_month": -29999,
+    "avg_win": 46200,
+    "avg_loss": -4572,
+    "losers": 27,
+    "lost": -123449,
+    "avg": 3361
+   }
+  },
+  "twin_p": 0.04897551224387806,
+  "test_loss_sum": -980492.0719358636,
+  "n_test": 300,
+  "changed": 30,
+  "win_before_after": {
+   "early": [
+    0.15,
+    0.1515
+   ],
+   "unseen": [
+    0.1908,
+    0.2059
+   ],
+   "design": [
+    0.0897,
+    0.1148
+   ],
+   "final": [
+    0.1579,
+    0.1562
+   ]
+  },
+  "q": 0.1959,
+  "fails": [
+   "BH q 0.196 > 0.1"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-herotkt-iv-rel-high",
+  "arm": "HEROTKT",
+  "filter": {
+   "feature": "iv_rel",
+   "kind": "high",
+   "cut": 1.2375,
+   "dropped": 50,
+   "share": 0.202,
+   "saved": 7132,
+   "saved_per_trade": 142.6,
+   "gone_loser_rate": 0.9,
+   "gone_net": -5470
+  },
+  "base": {
+   "early": {
+    "trades": 138,
+    "net": -11346,
+    "win": 0.1667,
+    "loss_sum": -19043,
+    "max_dd": 11490,
+    "worst_day": -649,
+    "worst_month": -1685,
+    "avg_win": 456,
+    "avg_loss": -190,
+    "losers": 115,
+    "lost": -21829,
+    "avg": -82
+   },
+   "unseen": {
+    "trades": 350,
+    "net": -27129,
+    "win": 0.1457,
+    "loss_sum": -34342,
+    "max_dd": 27129,
+    "worst_day": -706,
+    "worst_month": -1978,
+    "avg_win": 264,
+    "avg_loss": -136,
+    "losers": 299,
+    "lost": -40576,
+    "avg": -78
+   },
+   "design": {
+    "trades": 248,
+    "net": -14507,
+    "win": 0.1613,
+    "loss_sum": -31198,
+    "max_dd": 18386,
+    "worst_day": -549,
+    "worst_month": -2753,
+    "avg_win": 547,
+    "avg_loss": -175,
+    "losers": 208,
+    "lost": -36388,
+    "avg": -58
+   },
+   "final": {
+    "trades": 111,
+    "net": 1016,
+    "win": 0.2252,
+    "loss_sum": -11575,
+    "max_dd": 5902,
+    "worst_day": -557,
+    "worst_month": -1449,
+    "avg_win": 630,
+    "avg_loss": -171,
+    "losers": 86,
+    "lost": -14724,
+    "avg": 9
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 136,
+    "net": -10999,
+    "win": 0.1691,
+    "loss_sum": -18696,
+    "max_dd": 11306,
+    "worst_day": -649,
+    "worst_month": -1685,
+    "avg_win": 456,
+    "avg_loss": -190,
+    "losers": 113,
+    "lost": -21482,
+    "avg": -81
+   },
+   "unseen": {
+    "trades": 296,
+    "net": -21701,
+    "win": 0.1588,
+    "loss_sum": -28897,
+    "max_dd": 21701,
+    "worst_day": -585,
+    "worst_month": -1877,
+    "avg_win": 268,
+    "avg_loss": -138,
+    "losers": 249,
+    "lost": -34297,
+    "avg": -73
+   },
+   "design": {
+    "trades": 198,
+    "net": -9037,
+    "win": 0.1768,
+    "loss_sum": -24066,
+    "max_dd": 15487,
+    "worst_day": -535,
+    "worst_month": -2373,
+    "avg_win": 548,
+    "avg_loss": -173,
+    "losers": 163,
+    "lost": -28208,
+    "avg": -46
+   },
+   "final": {
+    "trades": 102,
+    "net": 2064,
+    "win": 0.2255,
+    "loss_sum": -10884,
+    "max_dd": 5266,
+    "worst_day": -557,
+    "worst_month": -1251,
+    "avg_win": 676,
+    "avg_loss": -171,
+    "losers": 79,
+    "lost": -13479,
+    "avg": 20
+   }
+  },
+  "twin_p": 0.136431784107946,
+  "test_loss_sum": -39780.83000000007,
+  "n_test": 461,
+  "changed": 63,
+  "win_before_after": {
+   "early": [
+    0.1667,
+    0.1691
+   ],
+   "unseen": [
+    0.1457,
+    0.1588
+   ],
+   "design": [
+    0.1613,
+    0.1768
+   ],
+   "final": [
+    0.2252,
+    0.2255
+   ]
+  },
+  "q": 0.4093,
+  "fails": [
+   "unseen: the arm does not make money (it lost before the filter too)",
+   "twin p 0.136 > 0.05",
+   "BH q 0.409 > 0.1"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-herotkt-morning-range-low",
+  "arm": "HEROTKT",
+  "filter": {
+   "feature": "morning_range",
+   "kind": "low",
+   "cut": 0.5364,
+   "dropped": 49,
+   "share": 0.198,
+   "saved": 6843,
+   "saved_per_trade": 139.7,
+   "gone_loser_rate": 0.878,
+   "gone_net": -6374
+  },
+  "base": {
+   "early": {
+    "trades": 138,
+    "net": -11346,
+    "win": 0.1667,
+    "loss_sum": -19043,
+    "max_dd": 11490,
+    "worst_day": -649,
+    "worst_month": -1685,
+    "avg_win": 456,
+    "avg_loss": -190,
+    "losers": 115,
+    "lost": -21829,
+    "avg": -82
+   },
+   "unseen": {
+    "trades": 350,
+    "net": -27129,
+    "win": 0.1457,
+    "loss_sum": -34342,
+    "max_dd": 27129,
+    "worst_day": -706,
+    "worst_month": -1978,
+    "avg_win": 264,
+    "avg_loss": -136,
+    "losers": 299,
+    "lost": -40576,
+    "avg": -78
+   },
+   "design": {
+    "trades": 248,
+    "net": -14507,
+    "win": 0.1613,
+    "loss_sum": -31198,
+    "max_dd": 18386,
+    "worst_day": -549,
+    "worst_month": -2753,
+    "avg_win": 547,
+    "avg_loss": -175,
+    "losers": 208,
+    "lost": -36388,
+    "avg": -58
+   },
+   "final": {
+    "trades": 111,
+    "net": 1016,
+    "win": 0.2252,
+    "loss_sum": -11575,
+    "max_dd": 5902,
+    "worst_day": -557,
+    "worst_month": -1449,
+    "avg_win": 630,
+    "avg_loss": -171,
+    "losers": 86,
+    "lost": -14724,
+    "avg": 9
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 94,
+    "net": -7790,
+    "win": 0.1702,
+    "loss_sum": -13281,
+    "max_dd": 7790,
+    "worst_day": -649,
+    "worst_month": -1685,
+    "avg_win": 459,
+    "avg_loss": -194,
+    "losers": 78,
+    "lost": -15133,
+    "avg": -83
+   },
+   "unseen": {
+    "trades": 269,
+    "net": -18594,
+    "win": 0.1673,
+    "loss_sum": -25733,
+    "max_dd": 18594,
+    "worst_day": -706,
+    "worst_month": -1656,
+    "avg_win": 285,
+    "avg_loss": -140,
+    "losers": 224,
+    "lost": -31424,
+    "avg": -69
+   },
+   "design": {
+    "trades": 199,
+    "net": -8133,
+    "win": 0.1709,
+    "loss_sum": -24355,
+    "max_dd": 13467,
+    "worst_day": -535,
+    "worst_month": -2373,
+    "avg_win": 604,
+    "avg_loss": -174,
+    "losers": 165,
+    "lost": -28678,
+    "avg": -41
+   },
+   "final": {
+    "trades": 88,
+    "net": 1951,
+    "win": 0.2386,
+    "loss_sum": -9301,
+    "max_dd": 5911,
+    "worst_day": -557,
+    "worst_month": -1449,
+    "avg_win": 652,
+    "avg_loss": -175,
+    "losers": 67,
+    "lost": -11745,
+    "avg": 22
+   }
+  },
+  "twin_p": 0.015492253873063468,
+  "test_loss_sum": -35034.67000000003,
+  "n_test": 461,
+  "changed": 104,
+  "win_before_after": {
+   "early": [
+    0.1667,
+    0.1702
+   ],
+   "unseen": [
+    0.1457,
+    0.1673
+   ],
+   "design": [
+    0.1613,
+    0.1709
+   ],
+   "final": [
+    0.2252,
+    0.2386
+   ]
+  },
+  "q": 0.093,
+  "fails": [
+   "unseen: the arm does not make money (it lost before the filter too)",
+   "final: drawdown worse"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-herotkt-oi-chg-low",
+  "arm": "HEROTKT",
+  "filter": {
+   "feature": "oi_chg",
+   "kind": "low",
+   "cut": 1.6164,
+   "dropped": 50,
+   "share": 0.202,
+   "saved": 6845,
+   "saved_per_trade": 136.9,
+   "gone_loser_rate": 0.86,
+   "gone_net": -6416
+  },
+  "base": {
+   "early": {
+    "trades": 138,
+    "net": -11346,
+    "win": 0.1667,
+    "loss_sum": -19043,
+    "max_dd": 11490,
+    "worst_day": -649,
+    "worst_month": -1685,
+    "avg_win": 456,
+    "avg_loss": -190,
+    "losers": 115,
+    "lost": -21829,
+    "avg": -82
+   },
+   "unseen": {
+    "trades": 350,
+    "net": -27129,
+    "win": 0.1457,
+    "loss_sum": -34342,
+    "max_dd": 27129,
+    "worst_day": -706,
+    "worst_month": -1978,
+    "avg_win": 264,
+    "avg_loss": -136,
+    "losers": 299,
+    "lost": -40576,
+    "avg": -78
+   },
+   "design": {
+    "trades": 248,
+    "net": -14507,
+    "win": 0.1613,
+    "loss_sum": -31198,
+    "max_dd": 18386,
+    "worst_day": -549,
+    "worst_month": -2753,
+    "avg_win": 547,
+    "avg_loss": -175,
+    "losers": 208,
+    "lost": -36388,
+    "avg": -58
+   },
+   "final": {
+    "trades": 111,
+    "net": 1016,
+    "win": 0.2252,
+    "loss_sum": -11575,
+    "max_dd": 5902,
+    "worst_day": -557,
+    "worst_month": -1449,
+    "avg_win": 630,
+    "avg_loss": -171,
+    "losers": 86,
+    "lost": -14724,
+    "avg": 9
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 70,
+    "net": -3819,
+    "win": 0.1857,
+    "loss_sum": -10596,
+    "max_dd": 5071,
+    "worst_day": -649,
+    "worst_month": -1495,
+    "avg_win": 549,
+    "avg_loss": -192,
+    "losers": 57,
+    "lost": -10960,
+    "avg": -55
+   },
+   "unseen": {
+    "trades": 277,
+    "net": -24324,
+    "win": 0.1155,
+    "loss_sum": -28946,
+    "max_dd": 24324,
+    "worst_day": -517,
+    "worst_month": -1877,
+    "avg_win": 235,
+    "avg_loss": -130,
+    "losers": 245,
+    "lost": -31840,
+    "avg": -88
+   },
+   "design": {
+    "trades": 198,
+    "net": -8091,
+    "win": 0.1667,
+    "loss_sum": -24354,
+    "max_dd": 14660,
+    "worst_day": -526,
+    "worst_month": -2241,
+    "avg_win": 582,
+    "avg_loss": -165,
+    "losers": 165,
+    "lost": -27301,
+    "avg": -41
+   },
+   "final": {
+    "trades": 91,
+    "net": 2877,
+    "win": 0.2198,
+    "loss_sum": -10082,
+    "max_dd": 4334,
+    "worst_day": -557,
+    "worst_month": -1345,
+    "avg_win": 772,
+    "avg_loss": -177,
+    "losers": 71,
+    "lost": -12567,
+    "avg": 32
+   }
+  },
+  "twin_p": 0.8265867066466767,
+  "test_loss_sum": -39028.190000000024,
+  "n_test": 461,
+  "changed": 93,
+  "win_before_after": {
+   "early": [
+    0.1667,
+    0.1857
+   ],
+   "unseen": [
+    0.1457,
+    0.1155
+   ],
+   "design": [
+    0.1613,
+    0.1667
+   ],
+   "final": [
+    0.2252,
+    0.2198
+   ]
+  },
+  "q": 0.8851,
+  "fails": [
+   "unseen: the arm does not make money (it lost before the filter too)",
+   "twin p 0.827 > 0.05",
+   "BH q 0.885 > 0.1"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-night-vix-prev-high",
+  "arm": "NIGHT",
+  "filter": {
+   "feature": "vix_prev",
+   "kind": "high",
+   "cut": 15.09,
+   "dropped": 48,
+   "share": 0.196,
+   "saved": 99600,
+   "saved_per_trade": 2075.0,
+   "gone_loser_rate": 0.604,
+   "gone_net": -14696
+  },
+  "base": {
+   "early": {
+    "trades": 205,
+    "net": 95098,
+    "win": 0.5659,
+    "loss_sum": -225262,
+    "max_dd": 35137,
+    "worst_day": -15516,
+    "worst_month": -31685,
+    "avg_win": 2784,
+    "avg_loss": -2560,
+    "losers": 89,
+    "lost": -227809,
+    "avg": 464
+   },
+   "unseen": {
+    "trades": 334,
+    "net": 32755,
+    "win": 0.5539,
+    "loss_sum": -221705,
+    "max_dd": 24652,
+    "worst_day": -15383,
+    "worst_month": -12186,
+    "avg_win": 1396,
+    "avg_loss": -1513,
+    "losers": 149,
+    "lost": -225476,
+    "avg": 98
+   },
+   "design": {
+    "trades": 245,
+    "net": 96250,
+    "win": 0.5265,
+    "loss_sum": -301569,
+    "max_dd": 53213,
+    "worst_day": -15115,
+    "worst_month": -30544,
+    "avg_win": 3134,
+    "avg_loss": -2656,
+    "losers": 116,
+    "lost": -308092,
+    "avg": 393
+   },
+   "final": {
+    "trades": 85,
+    "net": 48068,
+    "win": 0.5059,
+    "loss_sum": -152187,
+    "max_dd": 43635,
+    "worst_day": -14081,
+    "worst_month": -41601,
+    "avg_win": 4670,
+    "avg_loss": -3637,
+    "losers": 42,
+    "lost": -152760,
+    "avg": 566
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 12,
+    "net": 10877,
+    "win": 0.5833,
+    "loss_sum": -6277,
+    "max_dd": 5244,
+    "worst_day": -1942,
+    "worst_month": -4511,
+    "avg_win": 2451,
+    "avg_loss": -1255,
+    "losers": 5,
+    "lost": -6277,
+    "avg": 906
+   },
+   "unseen": {
+    "trades": 273,
+    "net": 52921,
+    "win": 0.5495,
+    "loss_sum": -162562,
+    "max_dd": 26401,
+    "worst_day": -7348,
+    "worst_month": -9282,
+    "avg_win": 1453,
+    "avg_loss": -1342,
+    "losers": 123,
+    "lost": -165070,
+    "avg": 194
+   },
+   "design": {
+    "trades": 197,
+    "net": 110946,
+    "win": 0.5584,
+    "loss_sum": -201969,
+    "max_dd": 39504,
+    "worst_day": -13453,
+    "worst_month": -30544,
+    "avg_win": 2881,
+    "avg_loss": -2367,
+    "losers": 87,
+    "lost": -205949,
+    "avg": 563
+   },
+   "final": {
+    "trades": 48,
+    "net": -15536,
+    "win": 0.4583,
+    "loss_sum": -85071,
+    "max_dd": 37589,
+    "worst_day": -14081,
+    "worst_month": -8597,
+    "avg_win": 3164,
+    "avg_loss": -3275,
+    "losers": 26,
+    "lost": -85149,
+    "avg": -324
+   }
+  },
+  "twin_p": 0.0029985007496251873,
+  "test_loss_sum": -247632.62279999992,
+  "n_test": 419,
+  "changed": 98,
+  "win_before_after": {
+   "early": [
+    0.5659,
+    0.5833
+   ],
+   "unseen": [
+    0.5539,
+    0.5495
+   ],
+   "design": [
+    0.5265,
+    0.5584
+   ],
+   "final": [
+    0.5059,
+    0.4583
+   ]
+  },
+  "q": 0.036,
+  "fails": [
+   "unseen: drawdown worse",
+   "final: the arm does not make money"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-night-vix-chg-high",
+  "arm": "NIGHT",
+  "filter": {
+   "feature": "vix_chg",
+   "kind": "high",
+   "cut": 0.0404,
+   "dropped": 49,
+   "share": 0.2,
+   "saved": 98506,
+   "saved_per_trade": 2010.3,
+   "gone_loser_rate": 0.571,
+   "gone_net": -9478
+  },
+  "base": {
+   "early": {
+    "trades": 205,
+    "net": 95098,
+    "win": 0.5659,
+    "loss_sum": -225262,
+    "max_dd": 35137,
+    "worst_day": -15516,
+    "worst_month": -31685,
+    "avg_win": 2784,
+    "avg_loss": -2560,
+    "losers": 89,
+    "lost": -227809,
+    "avg": 464
+   },
+   "unseen": {
+    "trades": 334,
+    "net": 32755,
+    "win": 0.5539,
+    "loss_sum": -221705,
+    "max_dd": 24652,
+    "worst_day": -15383,
+    "worst_month": -12186,
+    "avg_win": 1396,
+    "avg_loss": -1513,
+    "losers": 149,
+    "lost": -225476,
+    "avg": 98
+   },
+   "design": {
+    "trades": 245,
+    "net": 96250,
+    "win": 0.5265,
+    "loss_sum": -301569,
+    "max_dd": 53213,
+    "worst_day": -15115,
+    "worst_month": -30544,
+    "avg_win": 3134,
+    "avg_loss": -2656,
+    "losers": 116,
+    "lost": -308092,
+    "avg": 393
+   },
+   "final": {
+    "trades": 85,
+    "net": 48068,
+    "win": 0.5059,
+    "loss_sum": -152187,
+    "max_dd": 43635,
+    "worst_day": -14081,
+    "worst_month": -41601,
+    "avg_win": 4670,
+    "avg_loss": -3637,
+    "losers": 42,
+    "lost": -152760,
+    "avg": 566
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 155,
+    "net": 108350,
+    "win": 0.5871,
+    "loss_sum": -132325,
+    "max_dd": 16490,
+    "worst_day": -13275,
+    "worst_month": -14406,
+    "avg_win": 2664,
+    "avg_loss": -2095,
+    "losers": 64,
+    "lost": -134055,
+    "avg": 699
+   },
+   "unseen": {
+    "trades": 248,
+    "net": 29060,
+    "win": 0.5726,
+    "loss_sum": -157969,
+    "max_dd": 26209,
+    "worst_day": -15383,
+    "worst_month": -9337,
+    "avg_win": 1336,
+    "avg_loss": -1515,
+    "losers": 106,
+    "lost": -160621,
+    "avg": 117
+   },
+   "design": {
+    "trades": 196,
+    "net": 105728,
+    "win": 0.551,
+    "loss_sum": -203063,
+    "max_dd": 47818,
+    "worst_day": -13453,
+    "worst_month": -24044,
+    "avg_win": 2913,
+    "avg_loss": -2374,
+    "losers": 88,
+    "lost": -208881,
+    "avg": 539
+   },
+   "final": {
+    "trades": 65,
+    "net": 69842,
+    "win": 0.5385,
+    "loss_sum": -111247,
+    "max_dd": 26028,
+    "worst_day": -14081,
+    "worst_month": -23994,
+    "avg_win": 5188,
+    "avg_loss": -3725,
+    "losers": 30,
+    "lost": -111742,
+    "avg": 1074
+   }
+  },
+  "twin_p": 0.21889055472263869,
+  "test_loss_sum": -269216.2048,
+  "n_test": 419,
+  "changed": 106,
+  "win_before_after": {
+   "early": [
+    0.5659,
+    0.5871
+   ],
+   "unseen": [
+    0.5539,
+    0.5726
+   ],
+   "design": [
+    0.5265,
+    0.551
+   ],
+   "final": [
+    0.5059,
+    0.5385
+   ]
+  },
+  "q": 0.5253,
+  "fails": [
+   "unseen: drawdown worse",
+   "twin p 0.219 > 0.05",
+   "BH q 0.525 > 0.1"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-night-trend-high",
+  "arm": "NIGHT",
+  "filter": {
+   "feature": "trend",
+   "kind": "high",
+   "cut": 1.024,
+   "dropped": 49,
+   "share": 0.2,
+   "saved": 97992,
+   "saved_per_trade": 1999.8,
+   "gone_loser_rate": 0.633,
+   "gone_net": -29120
+  },
+  "base": {
+   "early": {
+    "trades": 205,
+    "net": 95098,
+    "win": 0.5659,
+    "loss_sum": -225262,
+    "max_dd": 35137,
+    "worst_day": -15516,
+    "worst_month": -31685,
+    "avg_win": 2784,
+    "avg_loss": -2560,
+    "losers": 89,
+    "lost": -227809,
+    "avg": 464
+   },
+   "unseen": {
+    "trades": 334,
+    "net": 32755,
+    "win": 0.5539,
+    "loss_sum": -221705,
+    "max_dd": 24652,
+    "worst_day": -15383,
+    "worst_month": -12186,
+    "avg_win": 1396,
+    "avg_loss": -1513,
+    "losers": 149,
+    "lost": -225476,
+    "avg": 98
+   },
+   "design": {
+    "trades": 245,
+    "net": 96250,
+    "win": 0.5265,
+    "loss_sum": -301569,
+    "max_dd": 53213,
+    "worst_day": -15115,
+    "worst_month": -30544,
+    "avg_win": 3134,
+    "avg_loss": -2656,
+    "losers": 116,
+    "lost": -308092,
+    "avg": 393
+   },
+   "final": {
+    "trades": 85,
+    "net": 48068,
+    "win": 0.5059,
+    "loss_sum": -152187,
+    "max_dd": 43635,
+    "worst_day": -14081,
+    "worst_month": -41601,
+    "avg_win": 4670,
+    "avg_loss": -3637,
+    "losers": 42,
+    "lost": -152760,
+    "avg": 566
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 165,
+    "net": 60060,
+    "win": 0.5636,
+    "loss_sum": -183768,
+    "max_dd": 26759,
+    "worst_day": -15516,
+    "worst_month": -23307,
+    "avg_win": 2643,
+    "avg_loss": -2580,
+    "losers": 72,
+    "lost": -185771,
+    "avg": 364
+   },
+   "unseen": {
+    "trades": 267,
+    "net": -191,
+    "win": 0.5243,
+    "loss_sum": -184633,
+    "max_dd": 36884,
+    "worst_day": -15383,
+    "worst_month": -10443,
+    "avg_win": 1339,
+    "avg_loss": -1478,
+    "losers": 127,
+    "lost": -187686,
+    "avg": -1
+   },
+   "design": {
+    "trades": 196,
+    "net": 125370,
+    "win": 0.5663,
+    "loss_sum": -203577,
+    "max_dd": 34087,
+    "worst_day": -14573,
+    "worst_month": -25482,
+    "avg_win": 3014,
+    "avg_loss": -2461,
+    "losers": 85,
+    "lost": -209198,
+    "avg": 640
+   },
+   "final": {
+    "trades": 77,
+    "net": 44777,
+    "win": 0.5195,
+    "loss_sum": -138111,
+    "max_dd": 43635,
+    "worst_day": -14081,
+    "worst_month": -41601,
+    "avg_win": 4587,
+    "avg_loss": -3748,
+    "losers": 37,
+    "lost": -138684,
+    "avg": 582
+   }
+  },
+  "twin_p": 0.8850574712643678,
+  "test_loss_sum": -322744.5700000001,
+  "n_test": 419,
+  "changed": 75,
+  "win_before_after": {
+   "early": [
+    0.5659,
+    0.5636
+   ],
+   "unseen": [
+    0.5539,
+    0.5243
+   ],
+   "design": [
+    0.5265,
+    0.5663
+   ],
+   "final": [
+    0.5059,
+    0.5195
+   ]
+  },
+  "q": 0.8851,
+  "fails": [
+   "unseen: drawdown worse",
+   "unseen: the arm does not make money",
+   "twin p 0.885 > 0.05",
+   "BH q 0.885 > 0.1"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-vixdiv-iv-rel-high",
+  "arm": "VIXDIV",
+  "filter": {
+   "feature": "iv_rel",
+   "kind": "high",
+   "cut": 1.0669,
+   "dropped": 23,
+   "share": 0.198,
+   "saved": 36046,
+   "saved_per_trade": 1567.2,
+   "gone_loser_rate": 0.783,
+   "gone_net": -28270
+  },
+  "base": {
+   "early": {
+    "trades": 104,
+    "net": 29031,
+    "win": 0.3942,
+    "loss_sum": -104133,
+    "max_dd": 32524,
+    "worst_day": -8758,
+    "worst_month": -8658,
+    "avg_win": 3362,
+    "avg_loss": -1727,
+    "losers": 63,
+    "lost": -108804,
+    "avg": 279
+   },
+   "unseen": {
+    "trades": 171,
+    "net": 155139,
+    "win": 0.4678,
+    "loss_sum": -128664,
+    "max_dd": 20251,
+    "worst_day": -12597,
+    "worst_month": -10445,
+    "avg_win": 3690,
+    "avg_loss": -1539,
+    "losers": 91,
+    "lost": -140081,
+    "avg": 907
+   },
+   "design": {
+    "trades": 116,
+    "net": 15658,
+    "win": 0.3621,
+    "loss_sum": -101296,
+    "max_dd": 43407,
+    "worst_day": -10003,
+    "worst_month": -20488,
+    "avg_win": 2941,
+    "avg_loss": -1458,
+    "losers": 74,
+    "lost": -107862,
+    "avg": 135
+   },
+   "final": {
+    "trades": 28,
+    "net": -6742,
+    "win": 0.3214,
+    "loss_sum": -42428,
+    "max_dd": 17417,
+    "worst_day": -6864,
+    "worst_month": -7812,
+    "avg_win": 3968,
+    "avg_loss": -2235,
+    "losers": 19,
+    "lost": -42458,
+    "avg": -241
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 76,
+    "net": 61747,
+    "win": 0.4868,
+    "loss_sum": -73624,
+    "max_dd": 18564,
+    "worst_day": -8758,
+    "worst_month": -8658,
+    "avg_win": 3699,
+    "avg_loss": -1926,
+    "losers": 39,
+    "lost": -75132,
+    "avg": 812
+   },
+   "unseen": {
+    "trades": 133,
+    "net": 144769,
+    "win": 0.4887,
+    "loss_sum": -97720,
+    "max_dd": 20030,
+    "worst_day": -12597,
+    "worst_month": -10012,
+    "avg_win": 3845,
+    "avg_loss": -1546,
+    "losers": 68,
+    "lost": -105124,
+    "avg": 1088
+   },
+   "design": {
+    "trades": 93,
+    "net": 43928,
+    "win": 0.3978,
+    "loss_sum": -65250,
+    "max_dd": 24472,
+    "worst_day": -7843,
+    "worst_month": -12740,
+    "avg_win": 3076,
+    "avg_loss": -1248,
+    "losers": 56,
+    "lost": -69901,
+    "avg": 472
+   },
+   "final": {
+    "trades": 23,
+    "net": -6676,
+    "win": 0.3043,
+    "loss_sum": -40326,
+    "max_dd": 15417,
+    "worst_day": -6864,
+    "worst_month": -7812,
+    "avg_win": 4811,
+    "avg_loss": -2522,
+    "losers": 16,
+    "lost": -40356,
+    "avg": -290
+   }
+  },
+  "twin_p": 0.5602198900549725,
+  "test_loss_sum": -138045.86360000004,
+  "n_test": 199,
+  "changed": 43,
+  "win_before_after": {
+   "early": [
+    0.3942,
+    0.4868
+   ],
+   "unseen": [
+    0.4678,
+    0.4887
+   ],
+   "design": [
+    0.3621,
+    0.3978
+   ],
+   "final": [
+    0.3214,
+    0.3043
+   ]
+  },
+  "q": 0.8403,
+  "fails": [
+   "final: the arm does not make money (it lost before the filter too)",
+   "twin p 0.56 > 0.05",
+   "BH q 0.84 > 0.1"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-vixdiv-spread-proxy-high",
+  "arm": "VIXDIV",
+  "filter": {
+   "feature": "spread_proxy",
+   "kind": "high",
+   "cut": 0.0479,
+   "dropped": 24,
+   "share": 0.207,
+   "saved": 33916,
+   "saved_per_trade": 1413.2,
+   "gone_loser_rate": 0.833,
+   "gone_net": -28550
+  },
+  "base": {
+   "early": {
+    "trades": 104,
+    "net": 29031,
+    "win": 0.3942,
+    "loss_sum": -104133,
+    "max_dd": 32524,
+    "worst_day": -8758,
+    "worst_month": -8658,
+    "avg_win": 3362,
+    "avg_loss": -1727,
+    "losers": 63,
+    "lost": -108804,
+    "avg": 279
+   },
+   "unseen": {
+    "trades": 171,
+    "net": 155139,
+    "win": 0.4678,
+    "loss_sum": -128664,
+    "max_dd": 20251,
+    "worst_day": -12597,
+    "worst_month": -10445,
+    "avg_win": 3690,
+    "avg_loss": -1539,
+    "losers": 91,
+    "lost": -140081,
+    "avg": 907
+   },
+   "design": {
+    "trades": 116,
+    "net": 15658,
+    "win": 0.3621,
+    "loss_sum": -101296,
+    "max_dd": 43407,
+    "worst_day": -10003,
+    "worst_month": -20488,
+    "avg_win": 2941,
+    "avg_loss": -1458,
+    "losers": 74,
+    "lost": -107862,
+    "avg": 135
+   },
+   "final": {
+    "trades": 28,
+    "net": -6742,
+    "win": 0.3214,
+    "loss_sum": -42428,
+    "max_dd": 17417,
+    "worst_day": -6864,
+    "worst_month": -7812,
+    "avg_win": 3968,
+    "avg_loss": -2235,
+    "losers": 19,
+    "lost": -42458,
+    "avg": -241
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 78,
+    "net": 972,
+    "win": 0.3974,
+    "loss_sum": -66337,
+    "max_dd": 23930,
+    "worst_day": -5662,
+    "worst_month": -6931,
+    "avg_win": 2272,
+    "avg_loss": -1478,
+    "losers": 47,
+    "lost": -69462,
+    "avg": 12
+   },
+   "unseen": {
+    "trades": 136,
+    "net": 69098,
+    "win": 0.4632,
+    "loss_sum": -110289,
+    "max_dd": 19866,
+    "worst_day": -12597,
+    "worst_month": -10458,
+    "avg_win": 2961,
+    "avg_loss": -1609,
+    "losers": 73,
+    "lost": -117448,
+    "avg": 508
+   },
+   "design": {
+    "trades": 92,
+    "net": 44208,
+    "win": 0.413,
+    "loss_sum": -67380,
+    "max_dd": 33855,
+    "worst_day": -8730,
+    "worst_month": -15388,
+    "avg_win": 3001,
+    "avg_loss": -1293,
+    "losers": 54,
+    "lost": -69840,
+    "avg": 481
+   },
+   "final": {
+    "trades": 24,
+    "net": 5493,
+    "win": 0.375,
+    "loss_sum": -30194,
+    "max_dd": 14838,
+    "worst_day": -5180,
+    "worst_month": -7812,
+    "avg_win": 3968,
+    "avg_loss": -2015,
+    "losers": 15,
+    "lost": -30223,
+    "avg": 229
+   }
+  },
+  "twin_p": 0.5082458770614693,
+  "test_loss_sum": -140483.23672500008,
+  "n_test": 199,
+  "changed": 39,
+  "win_before_after": {
+   "early": [
+    0.3942,
+    0.3974
+   ],
+   "unseen": [
+    0.4678,
+    0.4632
+   ],
+   "design": [
+    0.3621,
+    0.413
+   ],
+   "final": [
+    0.3214,
+    0.375
+   ]
+  },
+  "q": 0.8403,
+  "fails": [
+   "unseen: worst month worse",
+   "twin p 0.508 > 0.05",
+   "BH q 0.84 > 0.1"
+  ],
+  "passed": false
+ },
+ {
+  "id": "r144c-vixdiv-gap-low",
+  "arm": "VIXDIV",
+  "filter": {
+   "feature": "gap",
+   "kind": "low",
+   "cut": -0.2518,
+   "dropped": 23,
+   "share": 0.198,
+   "saved": 30147,
+   "saved_per_trade": 1310.7,
+   "gone_loser_rate": 0.696,
+   "gone_net": -16959
+  },
+  "base": {
+   "early": {
+    "trades": 104,
+    "net": 29031,
+    "win": 0.3942,
+    "loss_sum": -104133,
+    "max_dd": 32524,
+    "worst_day": -8758,
+    "worst_month": -8658,
+    "avg_win": 3362,
+    "avg_loss": -1727,
+    "losers": 63,
+    "lost": -108804,
+    "avg": 279
+   },
+   "unseen": {
+    "trades": 171,
+    "net": 155139,
+    "win": 0.4678,
+    "loss_sum": -128664,
+    "max_dd": 20251,
+    "worst_day": -12597,
+    "worst_month": -10445,
+    "avg_win": 3690,
+    "avg_loss": -1539,
+    "losers": 91,
+    "lost": -140081,
+    "avg": 907
+   },
+   "design": {
+    "trades": 116,
+    "net": 15658,
+    "win": 0.3621,
+    "loss_sum": -101296,
+    "max_dd": 43407,
+    "worst_day": -10003,
+    "worst_month": -20488,
+    "avg_win": 2941,
+    "avg_loss": -1458,
+    "losers": 74,
+    "lost": -107862,
+    "avg": 135
+   },
+   "final": {
+    "trades": 28,
+    "net": -6742,
+    "win": 0.3214,
+    "loss_sum": -42428,
+    "max_dd": 17417,
+    "worst_day": -6864,
+    "worst_month": -7812,
+    "avg_win": 3968,
+    "avg_loss": -2235,
+    "losers": 19,
+    "lost": -42458,
+    "avg": -241
+   }
+  },
+  "after": {
+   "early": {
+    "trades": 84,
+    "net": 46054,
+    "win": 0.4405,
+    "loss_sum": -74006,
+    "max_dd": 26236,
+    "worst_day": -5968,
+    "worst_month": -11670,
+    "avg_win": 3367,
+    "avg_loss": -1671,
+    "losers": 47,
+    "lost": -78536,
+    "avg": 548
+   },
+   "unseen": {
+    "trades": 128,
+    "net": 128074,
+    "win": 0.4688,
+    "loss_sum": -111532,
+    "max_dd": 16924,
+    "worst_day": -12597,
+    "worst_month": -9577,
+    "avg_win": 4084,
+    "avg_loss": -1720,
+    "losers": 68,
+    "lost": -116960,
+    "avg": 1001
+   },
+   "design": {
+    "trades": 93,
+    "net": 32617,
+    "win": 0.3763,
+    "loss_sum": -71149,
+    "max_dd": 33268,
+    "worst_day": -10003,
+    "worst_month": -12740,
+    "avg_win": 3136,
+    "avg_loss": -1330,
+    "losers": 58,
+    "lost": -77153,
+    "avg": 351
+   },
+   "final": {
+    "trades": 20,
+    "net": -7929,
+    "win": 0.25,
+    "loss_sum": -25284,
+    "max_dd": 20098,
+    "worst_day": -4582,
+    "worst_month": -5962,
+    "avg_win": 3477,
+    "avg_loss": -1688,
+    "losers": 15,
+    "lost": -25314,
+    "avg": -396
+   }
+  },
+  "twin_p": 0.7466266866566716,
+  "test_loss_sum": -136815.97260000004,
+  "n_test": 199,
+  "changed": 51,
+  "win_before_after": {
+   "early": [
+    0.3942,
+    0.4405
+   ],
+   "unseen": [
+    0.4678,
+    0.4688
+   ],
+   "design": [
+    0.3621,
+    0.3763
+   ],
+   "final": [
+    0.3214,
+    0.25
+   ]
+  },
+  "q": 0.8851,
+  "fails": [
+   "final: drawdown worse",
+   "final: the arm does not make money (it lost before the filter too)",
+   "twin p 0.747 > 0.05",
+   "BH q 0.885 > 0.1"
+  ],
+  "passed": false
+ }
+]

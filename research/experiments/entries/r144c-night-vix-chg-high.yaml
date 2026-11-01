@@ -1,0 +1,27 @@
+id: r144c-night-vix-chg-high
+title: 'R144c Night (R3): skip trades with vix_chg > 0.0404'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md
+data_version: Drive lake copied 1 Nov 2026 (index_1m, options_rolling_1m, equity_1m; to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2026-04-01..2026-10-19 (final) and 2022-12-01..2024-11-19 (unseen two years); read once
+instruments:
+- NIFTY
+- BANKNIFTY
+prereg: research/hunt/r144c_loss_expiry_other/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (close location, move, breadth) + day-end OI build-up'
+hypothesis: skipping trades with vix_chg > 0.0404 (chosen on design only) loses less on the final months and the unseen years
+model_or_rule: research/hunt/r144c_loss_expiry_other/study.py
+settings: frozen cut; R27 fills, app charges, 0.16% half-spread, 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'unseen 334->248 trades, win 55%->57% (65% rule: below), net Rs 32,755->Rs 29,060, losing days Rs -221,705->Rs
+    -157,969; design 245->196 trades, win 53%->55% (65% rule: below), net Rs 96,250->Rs 105,728, losing days Rs -301,569->Rs
+    -203,063; final 85->65 trades, win 51%->54% (65% rule: below), net Rs 48,068->Rs 69,842, losing days Rs -152,187->Rs -111,247.
+    Twin p 0.219, BH q 0.525. Fails: unseen: drawdown worse; twin p 0.219 > 0.05; BH q 0.525 > 0.1'
+  costs: R27 fills, app charges, 0.16% half-spread, 1 lot

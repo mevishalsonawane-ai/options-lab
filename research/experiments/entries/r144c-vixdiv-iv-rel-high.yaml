@@ -1,0 +1,29 @@
+id: r144c-vixdiv-iv-rel-high
+title: 'R144c VIX divergence: skip trades with iv_rel > 1.0669'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md
+data_version: Drive lake copied 1 Nov 2026 (index_1m, options_rolling_1m, equity_1m; to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2026-04-01..2026-10-19 (final) and 2022-12-01..2024-11-19 (unseen two years); read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- INDIAVIX
+prereg: research/hunt/r144c_loss_expiry_other/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index and India VIX'
+hypothesis: skipping trades with iv_rel > 1.0669 (chosen on design only) loses less on the final months and the unseen years
+model_or_rule: research/hunt/r144c_loss_expiry_other/study.py
+settings: 'frozen cut; R1 costs: app charges, 0.16% half-spread, 1 lot'
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'unseen 171->133 trades, win 47%->49% (65% rule: below), net Rs 155,139->Rs 144,769, losing days Rs -128,664->Rs
+    -97,720; design 116->93 trades, win 36%->40% (65% rule: below), net Rs 15,658->Rs 43,928, losing days Rs -101,296->Rs
+    -65,250; final 28->23 trades, win 32%->30% (65% rule: below), net Rs -6,742->Rs -6,676, losing days Rs -42,428->Rs -40,326.
+    Twin p 0.56, BH q 0.84. Fails: final: the arm does not make money (it lost before the filter too); twin p 0.56 > 0.05;
+    BH q 0.84 > 0.1'
+  costs: 'R1 costs: app charges, 0.16% half-spread, 1 lot'

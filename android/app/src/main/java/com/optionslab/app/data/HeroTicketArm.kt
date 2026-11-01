@@ -70,6 +70,10 @@ object HeroTicketArm {
     @Volatile internal var testNoAutoOn: Boolean = false
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
+    /** TEST ONLY (1 Nov): leave the one-time R144c switch-off ([OFF_R144C]) undone, so the older tests keep their armed books. */
+    @Volatile internal var testNoOffR144c: Boolean = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
     /**
      * TEST ONLY: the book as an older build left it - [start] saved and the 25 Oct trail change not run yet ([HeroTicketRules.TRAIL_FILL_MIGRATION]
      * taken out of its marks); written, and forgotten from memory, so the next read runs the one-time change. Debug builds only.
@@ -166,9 +170,11 @@ object HeroTicketArm {
         // 15 Oct, Boss's choice: on once, on paper. A book that could not be read is never switched on by itself (Boss may have
         // switched it off): it is only marked done. Never in IraGoldAlgo.
         var changed = false
+        // 1 Nov ([OFF_R144C]): a book that has not had the 1 Nov switch-off yet is never switched on by the 15 Oct one first.
+        val offNow = OFF_R144C !in b.migrated && !testNoOffR144c
         if (AUTO_ON !in b.migrated) {
             b.migrated += AUTO_ON
-            val on = !unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD
+            val on = !unreadable && !testNoAutoOn && !offNow && !com.optionslab.app.BuildConfig.GOLD
             if (on && !b.armed) {
                 b.armed = true
                 note(b, "switched on once by the 15 Oct update, on your choice - paper only; ${HeroTicketRules.BOSS_CHOICE}")
@@ -190,9 +196,26 @@ object HeroTicketArm {
             }
             changed = true
         }
+        // 1 Nov (Boss: "Update all arms which helps"; research R144c part C: -Rs 40,620 over 709 tickets in 2022-26): switched OFF
+        // once. Lowers risk only; what it holds still closes by its own exits; switched off, its would-be tickets go to the
+        // switched-off shadow (30 Oct). Logged in the Autopilot timeline as Boss's, one tap turns it back on. A book that could not
+        // be read is only marked done.
+        if (offNow) {
+            b.migrated += OFF_R144C
+            if (!unreadable && b.armed && !com.optionslab.app.BuildConfig.GOLD) {
+                b.armed = false
+                note(b, "switched off once by the 1 Nov update, on your choice (research R144c: -Rs 40,620 over 709 tickets in 2022-26)" +
+                    if (b.positions.any { it.open }) "; what it holds still closes by its own exits" else "")
+                runCatching { com.optionslab.app.ira.Autopilot.logR144cOnce(com.optionslab.ira.AutoChange.heroTicketOffR144c()) }
+            }
+            changed = true
+        }
         if (changed) save(b) else publish(b)
         return b
     }
+
+    /** 1 Nov: the one-time switch-off (Boss's choice after research R144c); in [Book.migrated] once done, never again. */
+    internal const val OFF_R144C = "ticket_off_r144c_2026_11_01"
 
     private fun readPos(p: JSONObject): Pos = Pos(
         p.getString("index"), p.getString("symbol"), p.getString("right"), p.getInt("qty"), p.getDouble("entry"),

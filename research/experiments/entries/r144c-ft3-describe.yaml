@@ -1,0 +1,28 @@
+id: r144c-ft3-describe
+title: 'R144c FT3 near-ATM morning: every losing trade, patterns (descriptive)'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md
+data_version: Drive lake copied 1 Nov 2026 (index_1m, options_rolling_1m, equity_1m; to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2026-04-01..2026-10-19 (final) and 2022-12-01..2024-11-19 (unseen two years); read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r144c_loss_expiry_other/PREREG.md
+holdout_read: true
+features:
+- 'signal source: option-price pick (labelled; clock + the option''s own price, IV, straddle distance)'
+hypothesis: FT3 near-ATM morning's losing trades share patterns at entry that hold in every period
+model_or_rule: research/hunt/r144c_loss_expiry_other/study.py
+settings: descriptive; steady = loser rate above the arm and avg < 0 in unseen, design and final (>= 30 each)
+variants_tried: null
+verdict: not-a-test
+results:
+  summary: descriptive, no rule adopted. unseen 262 trades, 81% lose, net Rs 688,029; design 78 trades, 91% lose, net Rs -165,746;
+    final 38 trades, 84% lose, net Rs 102,093. See research/HUNT_R144C_LOSS_EXPIRY_OTHER.md.
+  costs: R98 charges and LIMIT fill, Rs 5,000 a ticket
