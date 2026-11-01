@@ -275,3 +275,44 @@ trades whose win rate was at least as high (trade-level skips, no re-walk).
 
 **Verdict:** no filter raises the win rate in a way that beats random skipping in both periods. All four failed the
 gates, so by the CLAUDE.md safety rules they stay notes only: no arm is changed.
+
+## Addendum 2, 1 Nov 2026: what is wrong with Solo 2.0 (descriptive, after the test; not a filter test)
+
+Boss: *"What about solo 2.0 changes"*. Script: `research/hunt/r144b_loss_orb_liq/diag/solo_diag.py`.
+
+**1. Out of sample, the model picks worse than chance.** On the same days, a random candidate instead of the model's
+pick (2,000 draws):
+
+| period | model's picks: trades, net, win | random same-day pick: mean net | p (random >= model) |
+|---|---|---|---|
+| unseen 2022-24 (model never saw it) | 451, -Rs 77,142, 40% | -Rs 42,847 | 0.93 |
+| design (model trained on it) | 310, +Rs 1,02,774, 53% | +Rs 9,925 | 0.014 |
+| final (model trained on it) | 127, +Rs 89,382, 58% | -Rs 1,320 | < 0.001 |
+
+The model looks strong only on the months it learned from: it is over-fitted. In 2022-24, candidates it scored as
+"take" averaged -Rs 59 (2,412) against -Rs 102 below the line (4,383); both lost.
+
+**2. The setups without the model:**
+
+| setup | unseen: n, win, net | design | final |
+|---|---|---|---|
+| S1 SoloMidday (12:00) | 292, 50%, +Rs 51,436 | 305, 48%, +Rs 91,770 | 89, 52%, +Rs 1,329 |
+| S2 Donchian 20 | 4,331, 39%, -Rs 3.32 lakh | 3,724, 45%, +Rs 72,832 | 1,465, 44%, +Rs 48,941 |
+| S3 open outside value | 808, 43%, -Rs 1.28 lakh | 581, 55%, +Rs 2.85 lakh | 231, 51%, +Rs 49,924 |
+| S4 15-min opening range | 1,364, 40%, -Rs 1.82 lakh | 1,170, 44%, -Rs 2.11 lakh | 457, 47%, -Rs 1.11 lakh |
+
+- **S1 made money in all three periods.** The model almost never takes it (6 of 888 picks).
+- **S4 lost in all three periods.**
+- **S2 and S3 lost in 2022-24.**
+
+These were looked at after the test, so they are leads for a fresh pre-registered study, not results.
+
+**What this means (proposals only; nothing changed):**
+- The model is Solo 2.0's flaw. Its edge is not shown out of sample, and no skip filter can fix a picker that does no
+  better than chance.
+- S1 is already its own paper arm, Solo (midday).
+- Options for Boss:
+  - leave Solo 2.0 on paper and let its forward judge decide (60 paper trades, net <= 0 switches it off; or -Rs 25,000);
+  - pause it with its own switch;
+  - order a new pre-registered study: retrain on 2022-26 with walk-forward, drop S4, and gate on the same out-of-sample
+    test.
