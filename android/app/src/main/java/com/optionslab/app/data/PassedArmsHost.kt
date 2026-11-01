@@ -1711,7 +1711,8 @@ object PassedArmsHost {
             // is passed here and not inside [breaks]. Its series is built only when the filter is on (memory only).
             val st = if (b.stOn) todayBars(u, today, reads)?.let { stSeries(u, it) }.orEmpty() else null
             val gate: ((DonchianArm.Signal) -> Boolean?)? = st?.let { ser -> { x: DonchianArm.Signal -> DonchianArm.supertrendAgrees(ser, x) } }
-            changed = breaks(b, src, u, DonchianArm.signals(u, s, today), now, gate) { x -> confirmed?.let { Triple(u, x.bar.b, x.side) in it } } || changed
+            changed = breaks(b, src, u, DonchianArm.signals(u, s, today), now, gate,
+                confirm = { x -> confirmed?.let { Triple(u, x.bar.b, x.side) in it } }) || changed
         }
         return changed
     }
