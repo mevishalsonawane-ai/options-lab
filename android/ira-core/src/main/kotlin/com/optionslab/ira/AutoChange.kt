@@ -535,6 +535,49 @@ object AutoChange {
             "apart from the arms that passed and from the plain-rules record for 26 Oct",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.PAPER, what = "Hero ₹1,000 ticket's switch (paper)")
 
+    /**
+     * 1 Nov (Boss: "Update all arms which helps", after research R144c part C): the Hero ₹1,000 ticket switched OFF once by the
+     * update - "on → off" on paper, logged as Boss's (kept), undone in one tap (the arm back on; paper, no PIN). R144c: it lost
+     * Rs 40,620 over 709 tickets in 2022-26 (unseen two years -Rs 27,129; Nov 2024 - Mar 2026 -Rs 14,507; Apr - Oct 2026
+     * +Rs 1,016). Switched off, it keeps recording its would-be tickets in the switched-off shadow (30 Oct), nothing bought.
+     */
+    fun heroTicketOffR144c(): Change = Change(Kind.PAPER_ARM_ON, TICKET_TARGET, ON, SWITCHED_OFF,
+        "your choice (1 Nov, \"Update all arms which helps\"): the Hero ₹1,000 ticket off - research R144c: it lost Rs 40,620 over " +
+            "709 tickets in 2022-26 (16% won); its would-be tickets are still recorded in the switched-off shadow; one tap turns it back on",
+        Evidence(709, -40620.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "Hero ₹1,000 ticket's switch (paper)")
+
+    /** 1 Nov: the target of FT3's R144c skips (monthly-only expiries, "long unwinding"). */
+    const val R144C_FT3_TARGET = "filter:r144c_ft3_skips"
+    /** 1 Nov: the target of Night's R144c skip (India VIX down more than 3.13% today). */
+    const val R144C_NIGHT_TARGET = "filter:r144c_night_vix"
+
+    /**
+     * 1 Nov (Boss: "Update all arms which helps"): research R144c's skips on [target] ([R144C_FT3_TARGET] or [R144C_NIGHT_TARGET])
+     * switched [on] or off on PAPER. FAILED GATES, BOSS'S EXCEPTION ([com.optionslab.engine.orb.R144cSkips]): found and judged
+     * on the same years (hindsight). Live stays in shadow (logged only): an arm's trade that would really go live is never skipped
+     * by them. On only skips paper entries, so it lowers paper risk; off takes that away. Null for any other target.
+     */
+    fun r144cSkips(target: String, on: Boolean): Change? {
+        val (onWords, offWords, what) = when (target) {
+            R144C_FT3_TARGET -> Triple(
+                "your choice (1 Nov, \"Update all arms which helps\"; ${com.optionslab.engine.orb.R144cSkips.LABEL}): FT3 buys no ticket on " +
+                    "BANKNIFTY, FINNIFTY or MIDCPNIFTY (monthly expiries only) and skips a pick whose option's price and OI both fell over the " +
+                    "15 minutes before its mark (\"long unwinding\"). R144c, 2022-26 in hindsight: 378 -> 306 tickets, +Rs 6.24 -> 8.40 lakh, " +
+                    "17% -> 20% won. Paper only; live stays in shadow (logged only)",
+                "FT3's R144c skips are off: it trades every index and every pick again",
+                "FT3's R144c skips (paper)")
+            R144C_NIGHT_TARGET -> Triple(
+                "your choice (1 Nov, \"Update all arms which helps\"; ${com.optionslab.engine.orb.R144cSkips.LABEL}): Night skips its 15:20 " +
+                    "entry when India VIX is more than 3.13% under yesterday's close. R144c, 2022-26 in hindsight: 664 -> 536 trades, " +
+                    "+Rs 1.77 -> 2.24 lakh (the 2022-24 drawdown got worse, Rs 24.7k -> 36.0k). Paper only; live stays in shadow (logged only)",
+                "Night's R144c VIX skip is off: it takes every signal again",
+                "Night's R144c VIX skip (paper)")
+            else -> return null
+        }
+        return Change(Kind.PAPER_FILTER, target, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF, if (on) onWords else offWords,
+            Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER, what = what)
+    }
+
     /** The target of Boss's FT3 forward-test switch ([Kind.PAPER_ARM_ON]). */
     const val FT3_TARGET = "paperarm:ft3"
 

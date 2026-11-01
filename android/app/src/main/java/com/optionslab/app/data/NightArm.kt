@@ -6,6 +6,7 @@ import com.optionslab.app.work.Notifier
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.NightRules
+import com.optionslab.engine.orb.R144cSkips
 import com.optionslab.engine.sandbox.SandboxEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -75,6 +76,10 @@ object NightArm {
         /** 21 Oct: with the day each line was written ([StatusMap]). */
         val status: StatusMap = StatusMap(),
         val log: ArrayList<String> = ArrayList(),
+        /** 1 Nov (Boss's choice; research R144c, failed gates): the VIX skip on paper ([R144cSkips]); live stays in shadow. */
+        var r144c: Boolean = true,
+        /** 1 Nov: the skip's switch-on logged once in the Autopilot timeline. */
+        var r144cLogged: Boolean = false,
     )
 
     /** What the Strategies row shows. */
@@ -112,9 +117,25 @@ object NightArm {
             o.optJSONArray("decided")?.let { a -> for (i in 0 until a.length()) b.decided += a.getString(i) }
             b.status.readFrom(o, runCatching { file.lastModified() }.getOrDefault(0L))
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
+            b.r144c = o.optBoolean("r144c", true)
+            b.r144cLogged = o.optBoolean("r144cLogged", false)
         }.onFailure { if (file.exists()) Vault.setAside(file) }
         // 26 Oct (review): a book read before "Erase everything" is used by this pass only, never kept or shown ([save] then skips it).
         synchronized(written) { if (gen == wipes) { cache = b; publish(b) } }
+        // 1 Nov (Boss: "Update all arms which helps"; research R144c, failed gates - Boss's exception): the VIX skip starts on for
+        // paper, logged once in the Autopilot timeline as Boss's (one tap undoes it). Never in IraGoldAlgo.
+        if (!b.r144cLogged && !testNoR144c) {
+            b.r144cLogged = true
+            // 1 Nov (review): in IraGoldAlgo the skip stays off (there is no change-log entry there to undo it).
+            if (com.optionslab.app.BuildConfig.GOLD) b.r144c = false
+            if (b.r144c) {
+                note(b, "R144c's paper skip on, on your 1 Nov choice (${R144cSkips.LABEL}): no 15:20 entry when India VIX is more than 3.13% " +
+                    "under yesterday's close; live stays in shadow")
+                runCatching { com.optionslab.ira.AutoChange.r144cSkips(com.optionslab.ira.AutoChange.R144C_NIGHT_TARGET, true)
+                    ?.let { com.optionslab.app.ira.Autopilot.logR144cOnce(it) } }
+            }
+            save(b)
+        }
         return b
     }
 
@@ -125,7 +146,7 @@ object NightArm {
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
-        val o = JSONObject().put("armed", b.armed)
+        val o = JSONObject().put("armed", b.armed).put("r144c", b.r144c).put("r144cLogged", b.r144cLogged)
         o.put("positions", JSONArray().apply {
             b.positions.forEach { p ->
                 put(JSONObject().put("index", p.index).put("symbol", p.symbol).put("right", p.right).put("qty", p.qty).put("entry", p.entry)
@@ -223,6 +244,71 @@ object NightArm {
             if (on) "${NightRules.LABEL} armed on paper: ${NightRules.RULES}. ${NightRules.RECORD}." else "${NightRules.LABEL} switched off" +
                 (if (com.optionslab.app.BuildConfig.GOLD) "." else " - runs in shadow (nothing bought).")
         }
+    }
+
+    /**
+     * 1 Nov: R144c's paper VIX skip on or off ([R144cSkips]; Boss's exception, failed gates). Only from the Undo in Autopilot's change
+     * log; paper only - a Night trade that would really go live is never skipped by it.
+     */
+    suspend fun setR144c(on: Boolean): String {
+        if (!ready()) return "Night (R3) is not ready yet."
+        return lock.withLock {
+            val b = book()
+            if (b.r144c == on) return@withLock "${NightRules.LABEL}'s R144c VIX skip is already ${if (on) "on" else "off"}."
+            b.r144c = on
+            note(b, "R144c's paper VIX skip switched ${if (on) "on" else "off"} - by the Undo in Autopilot's change log")
+            save(b)
+            "${NightRules.LABEL}'s R144c VIX skip ${if (on) "on (paper; ${R144cSkips.LABEL})" else "off"}."
+        }
+    }
+
+    /** The skip's state, for its row and Jarvis. */
+    fun r144cOn(): Boolean = cache?.r144c ?: true
+
+    /** TEST ONLY (1 Nov): R144c's skip never acts (no VIX read), so the older tests are unchanged (its own tests turn it back on). */
+    @Volatile internal var testNoR144c: Boolean = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** TEST ONLY (1 Nov): India VIX (at 15:19, previous close) instead of the feed's (null in the app; debug builds only). */
+    @Volatile internal var testVix: (() -> Pair<Double?, Double?>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** 1 Nov (review): the pass's VIX read (by the minute it was read), so NIFTY and BANKNIFTY share one read. Under [lock]. */
+    private var vixRead: Pair<Long, Pair<Double?, Double?>>? = null
+
+    /**
+     * India VIX at 15:19 today and its previous session's close, from the feed with the stream's minutes laid over it, as the
+     * index's own minutes (a worker; null where not known). A VIX minute that is not fresh ([R144cSkips.nightVixFresh]: a
+     * stalled feed) counts as not known. Read once a minute, shared by the indices.
+     */
+    private suspend fun vixNowAndPrev(today: LocalDate, nowSec: Long): Pair<Double?, Double?> {
+        testVix?.let { return it() }
+        vixRead?.let { (at, v) -> if (at == nowSec / 60) return v }
+        val key = Upstox.INDEX_KEYS["INDIAVIX"] ?: return null to null
+        val feed = runCatching { Net.intraday(key) }.getOrDefault(emptyList()).filter { it.istDate == today && it.epochSecond + 60 <= nowSec }
+            .sortedBy { it.epochSecond }
+        val now = runCatching { LocalCandles.overlay(key, feed, nowSec) }.getOrDefault(feed)
+            .filter { it.istDate == today && it.istMinute <= 15 * 60 + 19 && it.epochSecond + 60 <= nowSec }.maxByOrNull { it.epochSecond }
+            ?.takeIf { R144cSkips.nightVixFresh(it.istMinute) }?.close
+        val prev = runCatching { Net.history(key, today.minusDays(10), today.minusDays(1)) }.getOrDefault(emptyList())
+            .filter { it.istDate.isBefore(today) }.maxByOrNull { it.epochSecond }?.close
+        return (now to prev).also { vixRead = nowSec / 60 to it }
+    }
+
+    /**
+     * R144c's verdict on today's Night signal: the words when it is skipped on paper (null: taken as before). A trade that would
+     * really go live is never skipped: what the skip would have done is noted (live stays in shadow). VIX not known: never skipped.
+     */
+    private suspend fun r144cSkip(b: Book, u: String, today: LocalDate, nowSec: Long): String? {
+        if (testNoR144c) return null
+        val goesLive = runCatching { ArmLive.doorRefusal("arm:${com.optionslab.engine.orb.LiveMirror.NIGHT}") == null }.getOrDefault(true)
+        val mode = R144cSkips.mode(b.r144c, goesLive)
+        if (mode == R144cSkips.Mode.OFF) return null
+        val (vNow, vPrev) = vixNowAndPrev(today, nowSec)
+        if (R144cSkips.nightVixDown(vNow, vPrev) != true) return null
+        val words = R144cSkips.words(mode, "India VIX %.2f is %.1f%% under yesterday's %.2f".format(Locale.ENGLISH, vNow, (vNow!! / vPrev!! - 1) * 100, vPrev))
+        if (mode == R144cSkips.Mode.LIVE_SHADOW) { note(b, "$u: $words"); return null }
+        return words
     }
 
     /** The diagnostics line. */
@@ -470,6 +556,9 @@ object NightArm {
         // 30 Oct: judged at the market clock's now ([nowSec], the wall clock in the app), so a test's fixed clock means the same.
         com.optionslab.engine.risk.ThinOption.refusal(minutes, nowSec, c.lotSize, null, null)
             ?.let { return "night_thin_option: $it" }
+        // 1 Nov (Boss's choice; research R144c, failed gates): India VIX down more than 3.13% today skips the entry on paper (and its
+        // switched-off shadow alike); a trade that would really go live is never skipped (live stays in shadow, noted).
+        r144cSkip(b, u, today, nowSec)?.let { return "$it ($facts)" }
         // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): switched off (or hidden), the
         // signal that passed every guard above is a would-be trade in the switched-off shadow - nothing is bought, nothing goes to
         // the paper book or live. Its one exit, as the arm's: carried overnight (NRML), out at 09:16 the next session (no stop, no

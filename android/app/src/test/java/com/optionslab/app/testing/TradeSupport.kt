@@ -71,7 +71,8 @@ class FakeUpstox : Closeable {
     @Volatile var gate: ((String) -> Unit)? = null
 
     /** One 1-minute candle of today, by its start (IST). */
-    data class Candle(val at: LocalTime, val open: Double, val high: Double, val low: Double, val close: Double)
+    /** 1 Nov: [oi] the bar's open interest (0: none, as before). */
+    data class Candle(val at: LocalTime, val open: Double, val high: Double, val low: Double, val close: Double, val oi: Long = 0)
 
     /** A key's own candles of today (oldest first), served instead of the three made from [price]: highs and lows that matter. */
     val minutes = ConcurrentHashMap<String, List<Candle>>()
@@ -142,7 +143,7 @@ class FakeUpstox : Closeable {
         val fmt = DateTimeFormatter.ISO_OFFSET_DATE_TIME
         // Newest first, as Upstox sends them.
         return list.sortedByDescending { it.at }.map { c ->
-            JSONArray().put(ZonedDateTime.of(day, c.at, IST).toOffsetDateTime().format(fmt)).put(c.open).put(c.high).put(c.low).put(c.close).put(1_000).put(0)
+            JSONArray().put(ZonedDateTime.of(day, c.at, IST).toOffsetDateTime().format(fmt)).put(c.open).put(c.high).put(c.low).put(c.close).put(1_000).put(c.oi)
         }
     }
 

@@ -496,6 +496,15 @@ internal object Autopilot {
                     com.optionslab.app.data.BossRiskHost.setPaper(rule, on, pinConfirmed = pinConfirmed || on, log = false)
                         .takeIf { it != com.optionslab.app.data.BossRiskHost.PIN_LOOSEN }
                 }
+            } else if (c.target == AutoChange.R144C_FT3_TARGET || c.target == AutoChange.R144C_NIGHT_TARGET) {
+                // 1 Nov (Boss: "Update all arms which helps"; research R144c): FT3's / Night's paper skips ([logR144cOnce]): the Undo
+                // flips the arm's paper switch back. Paper only (live stays in shadow): no PIN; not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                val on = c.to == AutoChange.ON
+                kotlinx.coroutines.runBlocking {
+                    if (c.target == AutoChange.R144C_FT3_TARGET) com.optionslab.app.data.Ft3Arm.setR144c(on)
+                    else com.optionslab.app.data.NightArm.setR144c(on)
+                }.takeIf { !it.contains("not ready") }
             } else if (c.target == AutoChange.SAME_DIR_TARGET) {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 com.optionslab.app.data.ExposureCapHost.setPaperOn(c.to == AutoChange.ON, log = false)
@@ -872,8 +881,9 @@ internal object Autopilot {
      * for the same target (a second load of an old book, a restore). In the background, on Autopilot's own worker. 14 Oct
      * review: it first waits for [init] - the arms' books are read at start-up before Autopilot's init, and reading the log
      * before its file is known would load an empty log, mark it read and later save over Boss's real change history.
+     * 1 Nov: [sameReason] narrows "once" to the same target AND wording (a target that already has an older entry of its own).
      */
-    private fun logBossOwnOnce(c: AutoChange.Change, note: String) {
+    private fun logBossOwnOnce(c: AutoChange.Change, note: String, sameReason: Boolean = false) {
         scope.launch {
             runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
@@ -881,7 +891,7 @@ internal object Autopilot {
                 ensureLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
-                    if (_book.value.entries.none { it.change.kind == c.kind && it.change.target == c.target }) {
+                    if (_book.value.entries.none { it.change.kind == c.kind && it.change.target == c.target && (!sameReason || it.change.reason == c.reason) }) {
                         _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                         save()
                     }
@@ -1239,6 +1249,17 @@ internal object Autopilot {
     fun logSameDirCapOn(max: Int) {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.sameDirCap(true, max), "the 19 Oct update (your ask: \"Resolve the issues\"); paper only - live only logs what it would refuse")
+    }
+
+    /**
+     * 1 Nov (Boss: "Update all arms which helps"; research R144c): one of the update's changes ([AutoChange.heroTicketOffR144c],
+     * [AutoChange.r144cSkips]) logged as Boss's (kept), once. Once per its own wording, not per target: the Hero ticket's
+     * switch already has its 15 Oct entry. One tap undoes it. Paper only.
+     */
+    fun logR144cOnce(c: AutoChange.Change) {
+        if (!enabled()) return
+        logBossOwnOnce(c, "your 1 Nov choice (research R144c, ${com.optionslab.engine.orb.R144cSkips.LABEL}); paper only - live stays in shadow, logged only",
+            sameReason = true)
     }
 
     /**

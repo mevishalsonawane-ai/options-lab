@@ -6,6 +6,7 @@ import com.optionslab.app.work.Notifier
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.Ft3Rules
+import com.optionslab.engine.orb.R144cSkips
 import com.optionslab.engine.sandbox.SandboxEvent
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +58,13 @@ object Ft3Arm {
 
     /** A ticket's reference for its live path ([ArmLive]): its paper order (or its entry time). */
     private fun mirrorRef(p: Pos): String = "ft3:${p.index}:${p.orderId ?: p.entryTime}"
+
+    /** 1 Nov: R144c's paper skips logged on once (Boss's choice); in [Book.migrated] once done, never again. */
+    internal const val R144C_ON = "r144c_skips_on_2026-11-01"
+
+    /** TEST ONLY (1 Nov): R144c's skips never act, so the older tests keep their picks (its own tests turn them back on). */
+    @Volatile internal var testNoR144c: Boolean = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /** The one-time switch-on of 21 Oct (Boss's choice); in [Book.migrated] once done, never again. */
     internal const val AUTO_ON = "boss_on_2026-10-21"
@@ -121,6 +129,8 @@ object Ft3Arm {
         val marks: MutableMap<String, Double> = HashMap(),
         /** Every index-day's outcome (the forward test's signal record), oldest first. */
         val signals: MutableList<Signal> = ArrayList(),
+        /** 1 Nov (Boss's choice; research R144c, failed gates): its paper skips on ([R144cSkips]); live stays in shadow. */
+        var r144c: Boolean = true,
     )
 
     /** What its row and Jarvis read: [today] today's tickets (open and closed), [nets] every closed ticket's rupees, oldest first. */
@@ -165,9 +175,24 @@ object Ft3Arm {
             o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) b.migrated += a.getString(i) }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { b.pending[it] = m.getString(it) } }
             o.optJSONArray("signals")?.let { a -> for (i in 0 until a.length()) readSignal(a.getJSONObject(i))?.let { b.signals += it } }
+            b.r144c = o.optBoolean("r144c", true)
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
         // 26 Oct (review): a book read before "Erase everything" ([wipe]) is used by this pass only: never kept, so never saved or shown.
         synchronized(written) { if (gen == wipes) cache = b }
+        // 1 Nov (Boss: "Update all arms which helps"; research R144c, failed gates - Boss's exception): its paper skips start on, logged
+        // once in the Autopilot timeline as Boss's (one tap undoes it). Never in IraGoldAlgo.
+        if (R144C_ON !in b.migrated && !testNoR144c) {
+            b.migrated += R144C_ON
+            // 1 Nov (review): in IraGoldAlgo the skips stay off (there is no change-log entry there to undo them).
+            if (com.optionslab.app.BuildConfig.GOLD) b.r144c = false
+            if (b.r144c) {
+                note(b, "R144c's paper skips on, on your 1 Nov choice (${R144cSkips.LABEL}): no ticket on BANKNIFTY, FINNIFTY or MIDCPNIFTY " +
+                    "(monthly expiries only), and none on a pick whose price and OI both fell in the 15 minutes before its mark; live stays in shadow")
+                runCatching { com.optionslab.ira.AutoChange.r144cSkips(com.optionslab.ira.AutoChange.R144C_FT3_TARGET, true)
+                    ?.let { com.optionslab.app.ira.Autopilot.logR144cOnce(it) } }
+            }
+            if (AUTO_ON in b.migrated) save(b)
+        }
         // 21 Oct, Boss's choice: on once, on paper. A book that could not be read is never switched on by itself (Boss may have
         // switched it off): it is only marked done. Never in IraGoldAlgo.
         if (AUTO_ON !in b.migrated) {
@@ -214,7 +239,7 @@ object Ft3Arm {
     private fun save(b: Book) {
         // 26 Oct ("Erase everything"): a pass still holding the book from before an erase ([wipe] dropped it) never writes it back.
         if (b !== cache) return
-        val o = JSONObject().put("armed", b.armed)
+        val o = JSONObject().put("armed", b.armed).put("r144c", b.r144c)
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(60).forEach { put(it) } })
         // Only the last 10 days' marks and picks are kept (a day's are of no use after it).
@@ -303,6 +328,45 @@ object Ft3Arm {
             if (log) runCatching { com.optionslab.app.ira.Autopilot.ft3SwitchedByBoss(on) }
             if (on) "${Ft3Rules.LABEL} on, on paper. ${Ft3Rules.BOSS_CHOICE}." else "${Ft3Rules.LABEL} off."
         }
+    }
+
+    /**
+     * 1 Nov: R144c's paper skips on or off ([R144cSkips]; Boss's exception, failed gates). Only from the Undo in Autopilot's change
+     * log; paper only - an FT3 ticket that would really go live is never skipped by them.
+     */
+    suspend fun setR144c(on: Boolean): String {
+        if (!ready()) return "${Ft3Rules.LABEL} is not ready yet."
+        return lock.withLock {
+            val b = book()
+            if (b.r144c == on) return@withLock "${Ft3Rules.LABEL}'s R144c skips are already ${if (on) "on" else "off"}."
+            b.r144c = on
+            note(b, "R144c's paper skips switched ${if (on) "on" else "off"} - by the Undo in Autopilot's change log")
+            save(b)
+            "${Ft3Rules.LABEL}'s R144c skips ${if (on) "on (paper; ${R144cSkips.LABEL})" else "off"}."
+        }
+    }
+
+    /** The skips' state, for its row and Jarvis. */
+    fun r144cOn(): Boolean = cache?.r144c ?: true
+
+    /**
+     * R144c's verdict on the day's pick [pick] at mark [m] of [u]: the words when it is skipped on paper (null: bought as before). A
+     * ticket that would really go live is never skipped: what the skip would have done is noted (live stays in shadow).
+     */
+    private fun r144cSkip(b: Book, u: String, m: LocalTime, pick: Ft3Rules.Pick, read: IndexRead?): String? {
+        if (testNoR144c) return null
+        val goesLive = runCatching { ArmLive.doorRefusal("arm:${com.optionslab.engine.orb.LiveMirror.FT3}") == null }.getOrDefault(true)
+        val mode = R144cSkips.mode(b.r144c, goesLive)
+        if (mode == R144cSkips.Mode.OFF) return null
+        val what = when {
+            R144cSkips.ft3MonthlyOnly(u) -> "$u has monthly expiries only (R144c: 1 of 37 such tickets won since Nov 2024)"
+            R144cSkips.ft3LongUnwinding(read?.hist?.get(pick.strike to pick.call).orEmpty(), Ft3Rules.barClose(m)) == true ->
+                "${fmtStrike(pick)}'s price and OI both fell over the 15 minutes before the ${hm(m)} mark (long unwinding)"
+            else -> return null
+        }
+        val words = R144cSkips.words(mode, what)
+        if (mode == R144cSkips.Mode.LIVE_SHADOW) { note(b, "$u: $words"); return null }
+        return words
     }
 
     /**
@@ -438,7 +502,9 @@ object Ft3Arm {
                              * more than [Ft3Rules.SPOT_FRESH] minutes): no ticket at that mark, and the later marks are judged (as the
                              * research replay, which skips a mark with no spot) - never every later mark blocked behind it.
                              */
-                            val noSpot: Set<LocalTime> = emptySet())
+                            val noSpot: Set<LocalTime> = emptySet(),
+                            /** 1 Nov (R144c): each band option's (strike, call) 1-minute (close, OI) by the minute each bar closes. */
+                            val hist: Map<Pair<Double, Boolean>, Map<LocalTime, Pair<Double, Long>>> = emptyMap())
 
     /**
      * The candle feed lags its newest minute by up to this many minutes ([com.optionslab.engine.orb.BarClose]; options are not
@@ -529,7 +595,10 @@ object Ft3Arm {
                 }
                 chains[m] = Ft3Rules.Chain(u, s, c, p, legs)
             }
-            out[u] = IndexRead(chains, waiting, noSpot)
+            val hist = bands.values.flatten().distinctBy { it.instrumentKey }.associate { o ->
+                (o.strike to (o.right == Right.CE)) to bars[o.instrumentKey].orEmpty().filterValues { it.close > 0 }.mapValues { (_, x) -> x.close to x.oi }
+            }
+            out[u] = IndexRead(chains, waiting, noSpot, hist)
         }
         return out
     }
@@ -574,6 +643,9 @@ object Ft3Arm {
             val pick = Ft3Rules.pick(m, chain)
             if (pick == null) { b.checked[dayKey] = m.toString(); changed = true; continue }
             val s = Saved(m, pick)
+            // 1 Nov (Boss's choice; research R144c, failed gates): its paper skips. The day's ticket is given up (kept in the signal
+            // record as "r144c_skip" with its pick, for the forward log); a ticket that would really go live is never skipped.
+            r144cSkip(b, u, m, pick, r)?.let { return done(b, u, dayKey, it, "r144c_skip", s) || changed }
             b.picks[dayKey] = s.encode()
             note(b, "$u: the ${hm(m)} mark met the rule: ${fmtStrike(pick)} @ ${px(pick.price)}, %.2f straddles, IV ratio %.3f".format(Locale.ENGLISH, pick.distEm, pick.ivRatio))
             if (Ft3Rules.entryOpen(m, t)) return buy(b, u, dayKey, s, now) || true

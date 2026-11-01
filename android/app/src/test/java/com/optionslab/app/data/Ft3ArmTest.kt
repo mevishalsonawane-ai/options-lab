@@ -13,6 +13,7 @@ import com.optionslab.engine.IST
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.Ft3Rules
+import com.optionslab.engine.orb.R144cSkips
 import com.optionslab.ira.AutoChange
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
@@ -557,5 +558,77 @@ class Ft3ArmTest : RobolectricTest() {
         assertEquals("the arm sold nothing more", sells, Paper.state.trades.count { it.symbol == p.symbol && it.action == "SELL" })
         assertEquals("flat, never short", 0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
         assertNothingAtZerodha()
+    }
+
+    // ---- 1 Nov (Boss: "Update all arms which helps"; research R144c, failed gates - Boss's exception) ----------------------
+
+    /** The 25,100 call's minutes with its OI: [before] (price, OI) until the signal bar, [atSignal] from it. */
+    private fun callWithOi(until: LocalTime, before: Pair<Double, Long>, atSignal: Pair<Double, Long>) {
+        val out = ArrayList<FakeUpstox.Candle>()
+        var t = LocalTime.of(9, 15)
+        while (t.isBefore(until)) {
+            val (px, oi) = if (t.isBefore(signalBar)) before else atSignal
+            out += FakeUpstox.Candle(t, px, px, px, px, oi); t = t.plusMinutes(1)
+        }
+        upstox.minutes[ce(25_100)] = out
+    }
+
+    @Test fun r144cSkipsALongUnwindingPickOnPaperAndKeepsItInTheSignalRecord() {
+        Ft3Arm.testNoR144c = false
+        try {
+            assertTrue(view().armed)
+            assertTrue(Ft3Arm.r144cOn())
+            // The pick's price fell 12 -> 8 and its OI 200,000 -> 150,000 over the 15 minutes before the 11:20 mark: long unwinding.
+            market(LocalTime.of(11, 21)); callWithOi(LocalTime.of(11, 21), 12.0 to 200_000L, 8.0 to 150_000L)
+            tick(LocalTime.of(11, 21))
+            assertTrue("no ticket on paper", Ft3Arm.view.value.open.isEmpty())
+            val st = Ft3Arm.view.value.status["NIFTY"].orEmpty()
+            assertTrue(st, st.contains("skipped by R144c") && st.contains(R144cSkips.LABEL) && st.contains("long unwinding"))
+            val sig = view().signals.single()
+            assertEquals("r144c_skip", sig.outcome)
+            assertEquals(25_100.0, sig.strike!!, 0.0)
+            assertTrue(Paper.state.trades.none { it.symbol.contains("25100") })
+            assertNothingAtZerodha()
+        } finally { Ft3Arm.testNoR144c = true }
+    }
+
+    @Test fun r144cNeverSkipsWhenTheOiIsUnknownOrRising() {
+        Ft3Arm.testNoR144c = false
+        try {
+            assertTrue(view().armed)
+            // OI rising (short build-up): bought as before.
+            market(LocalTime.of(11, 21)); callWithOi(LocalTime.of(11, 21), 12.0 to 150_000L, 8.0 to 200_000L)
+            tick(LocalTime.of(11, 21))
+            assertTrue(Ft3Arm.view.value.open.single().symbol.contains("25100"))
+            assertNothingAtZerodha()
+        } finally { Ft3Arm.testNoR144c = true }
+    }
+
+    @Test fun r144csUndoSwitchesThePaperSkipsOffAndOn() {
+        view()
+        assertTrue(Ft3Arm.r144cOn())
+        val on = AutoChange.r144cSkips(AutoChange.R144C_FT3_TARGET, true)!!
+        assertEquals(AutoChange.Scope.PAPER, on.scope)
+        assertTrue(on.reason.contains(R144cSkips.LABEL))
+        assertTrue(Autopilot.apply(AutoChange.inverse(on, "undone by you"), false)!!.contains("off"))
+        assertFalse(Ft3Arm.r144cOn())
+        AutomationSupport.reloadFromDisk(Ft3Arm)
+        assertFalse("kept in its book", view().let { Ft3Arm.r144cOn() })
+        assertTrue(Autopilot.apply(on, false)!!.contains("on (paper"))
+        assertTrue(Ft3Arm.r144cOn())
+        // Off, a long-unwinding pick is bought as before.
+        Autopilot.apply(AutoChange.inverse(on, "undone by you"), false)
+        Ft3Arm.testNoR144c = false
+        try {
+            market(LocalTime.of(11, 21)); callWithOi(LocalTime.of(11, 21), 12.0 to 200_000L, 8.0 to 150_000L)
+            tick(LocalTime.of(11, 21))
+            assertTrue(Ft3Arm.view.value.open.single().symbol.contains("25100"))
+        } finally { Ft3Arm.testNoR144c = true }
+    }
+
+    @Test fun r144cMonthlyOnlyIndicesAreTheRulesOwn() {
+        for (u in listOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")) assertTrue(u, R144cSkips.ft3MonthlyOnly(u))
+        for (u in listOf("NIFTY", "SENSEX")) assertFalse(u, R144cSkips.ft3MonthlyOnly(u))
+        assertTrue(Ft3Rules.UNDERLYINGS.containsAll(R144cSkips.FT3_MONTHLY_ONLY))
     }
 }
