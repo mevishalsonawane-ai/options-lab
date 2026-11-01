@@ -1,0 +1,1020 @@
+{
+ "_meta": {
+  "written": "2026-11-01T18:07:16.414380+00:00",
+  "note": "chosen on design trades only (PREREG 5)"
+ },
+ "FT3": {
+  "arm": "FT3",
+  "design_trades": 78,
+  "chosen": [
+   {
+    "feature": "vix_chg",
+    "kind": "low",
+    "cut": -0.0182,
+    "dropped": 17,
+    "share": 0.218,
+    "saved": 83784,
+    "saved_per_trade": 4928.5,
+    "gone_loser_rate": 1.0,
+    "gone_net": -83784
+   },
+   {
+    "feature": "iv_rel",
+    "kind": "high",
+    "cut": 1.0344,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 78838,
+    "saved_per_trade": 4927.4,
+    "gone_loser_rate": 1.0,
+    "gone_net": -78838
+   },
+   {
+    "feature": "quadrant",
+    "kind": "cat",
+    "value": "long unwinding",
+    "dropped": 17,
+    "share": 0.218,
+    "saved": 83280,
+    "saved_per_trade": 4898.9,
+    "gone_loser_rate": 1.0,
+    "gone_net": -83280
+   }
+  ],
+  "eligible": [
+   {
+    "feature": "vix_chg",
+    "kind": "low",
+    "cut": -0.0182,
+    "dropped": 17,
+    "share": 0.218,
+    "saved": 83784,
+    "saved_per_trade": 4928.5,
+    "gone_loser_rate": 1.0,
+    "gone_net": -83784
+   },
+   {
+    "feature": "iv_rel",
+    "kind": "high",
+    "cut": 1.0344,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 78838,
+    "saved_per_trade": 4927.4,
+    "gone_loser_rate": 1.0,
+    "gone_net": -78838
+   },
+   {
+    "feature": "quadrant",
+    "kind": "cat",
+    "value": "long unwinding",
+    "dropped": 17,
+    "share": 0.218,
+    "saved": 83280,
+    "saved_per_trade": 4898.9,
+    "gone_loser_rate": 1.0,
+    "gone_net": -83280
+   },
+   {
+    "feature": "prev_range",
+    "kind": "high",
+    "cut": 1.188,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 76376,
+    "saved_per_trade": 4773.5,
+    "gone_loser_rate": 1.0,
+    "gone_net": -76376
+   },
+   {
+    "feature": "skew",
+    "kind": "low",
+    "cut": -1.8393,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 76204,
+    "saved_per_trade": 4762.7,
+    "gone_loser_rate": 1.0,
+    "gone_net": -78586
+   },
+   {
+    "feature": "opt_oi",
+    "kind": "low",
+    "cut": 14.2075,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 75067,
+    "saved_per_trade": 4691.7,
+    "gone_loser_rate": 1.0,
+    "gone_net": -77727
+   },
+   {
+    "feature": "opt_vol15",
+    "kind": "low",
+    "cut": 14.556,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 74992,
+    "saved_per_trade": 4687.0,
+    "gone_loser_rate": 1.0,
+    "gone_net": -77652
+   },
+   {
+    "feature": "gap",
+    "kind": "low",
+    "cut": -0.1798,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 73992,
+    "saved_per_trade": 4624.5,
+    "gone_loser_rate": 0.938,
+    "gone_net": -55915
+   },
+   {
+    "feature": "spread_proxy",
+    "kind": "low",
+    "cut": 0.0822,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 73498,
+    "saved_per_trade": 4593.6,
+    "gone_loser_rate": 0.938,
+    "gone_net": -55420
+   },
+   {
+    "feature": "trend",
+    "kind": "low",
+    "cut": -0.3285,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 73124,
+    "saved_per_trade": 4570.3,
+    "gone_loser_rate": 0.938,
+    "gone_net": -36873
+   },
+   {
+    "feature": "vol_delta",
+    "kind": "low",
+    "cut": -0.4026,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 73024,
+    "saved_per_trade": 4564.0,
+    "gone_loser_rate": 0.938,
+    "gone_net": -6867
+   },
+   {
+    "feature": "opt_vol15",
+    "kind": "high",
+    "cut": 17.479,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 71755,
+    "saved_per_trade": 4484.7,
+    "gone_loser_rate": 1.0,
+    "gone_net": -71755
+   },
+   {
+    "feature": "iv_rel",
+    "kind": "low",
+    "cut": 0.9582,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 71599,
+    "saved_per_trade": 4475.0,
+    "gone_loser_rate": 1.0,
+    "gone_net": -71599
+   },
+   {
+    "feature": "pcr",
+    "kind": "high",
+    "cut": 1.0476,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 70421,
+    "saved_per_trade": 4401.3,
+    "gone_loser_rate": 0.938,
+    "gone_net": -36552
+   },
+   {
+    "feature": "vol_vs_atm",
+    "kind": "high",
+    "cut": 1.2509,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 70304,
+    "saved_per_trade": 4394.0,
+    "gone_loser_rate": 0.938,
+    "gone_net": -4148
+   },
+   {
+    "feature": "iv",
+    "kind": "low",
+    "cut": 10.9174,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 70230,
+    "saved_per_trade": 4389.4,
+    "gone_loser_rate": 0.938,
+    "gone_net": -33979
+   },
+   {
+    "feature": "morning_range",
+    "kind": "low",
+    "cut": 0.4727,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 70205,
+    "saved_per_trade": 4387.8,
+    "gone_loser_rate": 0.938,
+    "gone_net": -51261
+   },
+   {
+    "feature": "opt_oi",
+    "kind": "high",
+    "cut": 16.964,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 70145,
+    "saved_per_trade": 4384.1,
+    "gone_loser_rate": 0.938,
+    "gone_net": -33894
+   },
+   {
+    "feature": "dist_straddles",
+    "kind": "low",
+    "cut": 0.9532,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 69452,
+    "saved_per_trade": 4340.8,
+    "gone_loser_rate": 0.938,
+    "gone_net": -33201
+   },
+   {
+    "feature": "morning_range",
+    "kind": "high",
+    "cut": 0.9268,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 68985,
+    "saved_per_trade": 4311.6,
+    "gone_loser_rate": 0.938,
+    "gone_net": -2828
+   },
+   {
+    "feature": "pcr",
+    "kind": "low",
+    "cut": 0.7493,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 68471,
+    "saved_per_trade": 4279.4,
+    "gone_loser_rate": 0.938,
+    "gone_net": -41400
+   },
+   {
+    "feature": "strad_vs_vix",
+    "kind": "high",
+    "cut": 1.7102,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 67571,
+    "saved_per_trade": 4223.2,
+    "gone_loser_rate": 0.938,
+    "gone_net": -67571
+   },
+   {
+    "feature": "oi_wall",
+    "kind": "high",
+    "cut": 1.3224,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 67120,
+    "saved_per_trade": 4195.0,
+    "gone_loser_rate": 0.938,
+    "gone_net": -3345
+   },
+   {
+    "feature": "oi_chg",
+    "kind": "high",
+    "cut": 3.7108,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 66981,
+    "saved_per_trade": 4186.3,
+    "gone_loser_rate": 0.938,
+    "gone_net": -66981
+   },
+   {
+    "feature": "mins_to_expiry",
+    "kind": "low",
+    "cut": 199.0,
+    "dropped": 15,
+    "share": 0.192,
+    "saved": 61027,
+    "saved_per_trade": 4068.5,
+    "gone_loser_rate": 0.933,
+    "gone_net": -61027
+   },
+   {
+    "feature": "entry_min",
+    "kind": "high",
+    "cut": 176.0,
+    "dropped": 15,
+    "share": 0.192,
+    "saved": 61027,
+    "saved_per_trade": 4068.5,
+    "gone_loser_rate": 0.933,
+    "gone_net": -61027
+   },
+   {
+    "feature": "vix_prev",
+    "kind": "high",
+    "cut": 15.64,
+    "dropped": 16,
+    "share": 0.205,
+    "saved": 64408,
+    "saved_per_trade": 4025.5,
+    "gone_loser_rate": 0.938,
+    "gone_net": -64408
+   }
+  ]
+ },
+ "HERO": {
+  "arm": "HERO",
+  "design_trades": 12,
+  "chosen": [],
+  "eligible": [],
+  "note": "under 60 design trades: no filter (describe only)"
+ },
+ "HEROTKT": {
+  "arm": "HEROTKT",
+  "design_trades": 248,
+  "chosen": [
+   {
+    "feature": "iv_rel",
+    "kind": "high",
+    "cut": 1.2375,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 7132,
+    "saved_per_trade": 142.6,
+    "gone_loser_rate": 0.9,
+    "gone_net": -5470
+   },
+   {
+    "feature": "morning_range",
+    "kind": "low",
+    "cut": 0.5364,
+    "dropped": 49,
+    "share": 0.198,
+    "saved": 6843,
+    "saved_per_trade": 139.7,
+    "gone_loser_rate": 0.878,
+    "gone_net": -6374
+   },
+   {
+    "feature": "oi_chg",
+    "kind": "low",
+    "cut": 1.6164,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 6845,
+    "saved_per_trade": 136.9,
+    "gone_loser_rate": 0.86,
+    "gone_net": -6416
+   }
+  ],
+  "eligible": [
+   {
+    "feature": "iv_rel",
+    "kind": "high",
+    "cut": 1.2375,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 7132,
+    "saved_per_trade": 142.6,
+    "gone_loser_rate": 0.9,
+    "gone_net": -5470
+   },
+   {
+    "feature": "morning_range",
+    "kind": "low",
+    "cut": 0.5364,
+    "dropped": 49,
+    "share": 0.198,
+    "saved": 6843,
+    "saved_per_trade": 139.7,
+    "gone_loser_rate": 0.878,
+    "gone_net": -6374
+   },
+   {
+    "feature": "oi_chg",
+    "kind": "low",
+    "cut": 1.6164,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 6845,
+    "saved_per_trade": 136.9,
+    "gone_loser_rate": 0.86,
+    "gone_net": -6416
+   },
+   {
+    "feature": "breadth",
+    "kind": "high",
+    "cut": 0.678,
+    "dropped": 47,
+    "share": 0.19,
+    "saved": 6337,
+    "saved_per_trade": 134.8,
+    "gone_loser_rate": 0.872,
+    "gone_net": -1978
+   },
+   {
+    "feature": "opt_oi",
+    "kind": "high",
+    "cut": 17.1178,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 6651,
+    "saved_per_trade": 133.0,
+    "gone_loser_rate": 0.84,
+    "gone_net": -6758
+   },
+   {
+    "feature": "prev_range",
+    "kind": "high",
+    "cut": 1.2193,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 6573,
+    "saved_per_trade": 131.5,
+    "gone_loser_rate": 0.88,
+    "gone_net": -5827
+   },
+   {
+    "feature": "quadrant",
+    "kind": "cat",
+    "value": "long unwinding",
+    "dropped": 36,
+    "share": 0.145,
+    "saved": 4486,
+    "saved_per_trade": 124.6,
+    "gone_loser_rate": 0.944,
+    "gone_net": -5592
+   },
+   {
+    "feature": "quadrant",
+    "kind": "cat",
+    "value": "long build-up",
+    "dropped": 61,
+    "share": 0.246,
+    "saved": 7440,
+    "saved_per_trade": 122.0,
+    "gone_loser_rate": 0.885,
+    "gone_net": -5962
+   },
+   {
+    "feature": "vol_delta",
+    "kind": "high",
+    "cut": 0.1374,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 5945,
+    "saved_per_trade": 118.9,
+    "gone_loser_rate": 0.9,
+    "gone_net": -4241
+   },
+   {
+    "feature": "pcr",
+    "kind": "high",
+    "cut": 1.0582,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 5864,
+    "saved_per_trade": 117.3,
+    "gone_loser_rate": 0.84,
+    "gone_net": -3913
+   },
+   {
+    "feature": "premium",
+    "kind": "high",
+    "cut": 25.61,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 5832,
+    "saved_per_trade": 116.6,
+    "gone_loser_rate": 0.86,
+    "gone_net": -1458
+   },
+   {
+    "feature": "oi_wall",
+    "kind": "high",
+    "cut": 1.6563,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 5786,
+    "saved_per_trade": 115.7,
+    "gone_loser_rate": 0.86,
+    "gone_net": -6391
+   },
+   {
+    "feature": "spread_proxy",
+    "kind": "low",
+    "cut": 0.0814,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 5491,
+    "saved_per_trade": 109.8,
+    "gone_loser_rate": 0.86,
+    "gone_net": -4653
+   },
+   {
+    "feature": "gap",
+    "kind": "low",
+    "cut": -0.274,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 5421,
+    "saved_per_trade": 108.4,
+    "gone_loser_rate": 0.84,
+    "gone_net": -4229
+   },
+   {
+    "feature": "iv_rel",
+    "kind": "low",
+    "cut": 1.015,
+    "dropped": 50,
+    "share": 0.202,
+    "saved": 4436,
+    "saved_per_trade": 88.7,
+    "gone_loser_rate": 0.84,
+    "gone_net": -4297
+   }
+  ]
+ },
+ "NIGHT": {
+  "arm": "NIGHT",
+  "design_trades": 245,
+  "chosen": [
+   {
+    "feature": "vix_prev",
+    "kind": "high",
+    "cut": 15.09,
+    "dropped": 48,
+    "share": 0.196,
+    "saved": 99600,
+    "saved_per_trade": 2075.0,
+    "gone_loser_rate": 0.604,
+    "gone_net": -14696
+   },
+   {
+    "feature": "vix_chg",
+    "kind": "high",
+    "cut": 0.0404,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 98506,
+    "saved_per_trade": 2010.3,
+    "gone_loser_rate": 0.571,
+    "gone_net": -9478
+   },
+   {
+    "feature": "trend",
+    "kind": "high",
+    "cut": 1.024,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 97992,
+    "saved_per_trade": 1999.8,
+    "gone_loser_rate": 0.633,
+    "gone_net": -29120
+   }
+  ],
+  "eligible": [
+   {
+    "feature": "vix_prev",
+    "kind": "high",
+    "cut": 15.09,
+    "dropped": 48,
+    "share": 0.196,
+    "saved": 99600,
+    "saved_per_trade": 2075.0,
+    "gone_loser_rate": 0.604,
+    "gone_net": -14696
+   },
+   {
+    "feature": "vix_chg",
+    "kind": "high",
+    "cut": 0.0404,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 98506,
+    "saved_per_trade": 2010.3,
+    "gone_loser_rate": 0.571,
+    "gone_net": -9478
+   },
+   {
+    "feature": "trend",
+    "kind": "high",
+    "cut": 1.024,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 97992,
+    "saved_per_trade": 1999.8,
+    "gone_loser_rate": 0.633,
+    "gone_net": -29120
+   },
+   {
+    "feature": "gap",
+    "kind": "high",
+    "cut": 0.3915,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 96386,
+    "saved_per_trade": 1967.1,
+    "gone_loser_rate": 0.592,
+    "gone_net": -48311
+   },
+   {
+    "feature": "spread_proxy",
+    "kind": "high",
+    "cut": 0.031,
+    "dropped": 50,
+    "share": 0.204,
+    "saved": 98149,
+    "saved_per_trade": 1963.0,
+    "gone_loser_rate": 0.64,
+    "gone_net": -36671
+   },
+   {
+    "feature": "morning_range",
+    "kind": "high",
+    "cut": 1.3874,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 92562,
+    "saved_per_trade": 1889.0,
+    "gone_loser_rate": 0.551,
+    "gone_net": -21677
+   },
+   {
+    "feature": "vix_chg",
+    "kind": "low",
+    "cut": -0.0313,
+    "dropped": 46,
+    "share": 0.188,
+    "saved": 72501,
+    "saved_per_trade": 1576.1,
+    "gone_loser_rate": 0.63,
+    "gone_net": -23821
+   },
+   {
+    "feature": "iv_rel",
+    "kind": "high",
+    "cut": 1.06,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 73595,
+    "saved_per_trade": 1501.9,
+    "gone_loser_rate": 0.592,
+    "gone_net": -18677
+   },
+   {
+    "feature": "oi_wall",
+    "kind": "high",
+    "cut": 1.2504,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 64668,
+    "saved_per_trade": 1319.8,
+    "gone_loser_rate": 0.531,
+    "gone_net": -902
+   },
+   {
+    "feature": "oi_chg",
+    "kind": "low",
+    "cut": -0.0552,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 63424,
+    "saved_per_trade": 1294.4,
+    "gone_loser_rate": 0.551,
+    "gone_net": -4388
+   },
+   {
+    "feature": "dist_straddles",
+    "kind": "high",
+    "cut": 0.2257,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 61456,
+    "saved_per_trade": 1254.2,
+    "gone_loser_rate": 0.551,
+    "gone_net": -11010
+   },
+   {
+    "feature": "gap",
+    "kind": "low",
+    "cut": -0.1178,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 58739,
+    "saved_per_trade": 1198.8,
+    "gone_loser_rate": 0.592,
+    "gone_net": -13259
+   },
+   {
+    "feature": "vol_vs_atm",
+    "kind": "low",
+    "cut": 0.5077,
+    "dropped": 49,
+    "share": 0.2,
+    "saved": 58300,
+    "saved_per_trade": 1189.8,
+    "gone_loser_rate": 0.551,
+    "gone_net": -1280
+   },
+   {
+    "feature": "mins_to_expiry",
+    "kind": "low",
+    "cut": 4330.0,
+    "dropped": 25,
+    "share": 0.102,
+    "saved": 22109,
+    "saved_per_trade": 884.3,
+    "gone_loser_rate": 0.52,
+    "gone_net": -7562
+   }
+  ]
+ },
+ "VIXDIV": {
+  "arm": "VIXDIV",
+  "design_trades": 116,
+  "chosen": [
+   {
+    "feature": "iv_rel",
+    "kind": "high",
+    "cut": 1.0669,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 36046,
+    "saved_per_trade": 1567.2,
+    "gone_loser_rate": 0.783,
+    "gone_net": -28270
+   },
+   {
+    "feature": "spread_proxy",
+    "kind": "high",
+    "cut": 0.0479,
+    "dropped": 24,
+    "share": 0.207,
+    "saved": 33916,
+    "saved_per_trade": 1413.2,
+    "gone_loser_rate": 0.833,
+    "gone_net": -28550
+   },
+   {
+    "feature": "gap",
+    "kind": "low",
+    "cut": -0.2518,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 30147,
+    "saved_per_trade": 1310.7,
+    "gone_loser_rate": 0.696,
+    "gone_net": -16959
+   }
+  ],
+  "eligible": [
+   {
+    "feature": "iv_rel",
+    "kind": "high",
+    "cut": 1.0669,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 36046,
+    "saved_per_trade": 1567.2,
+    "gone_loser_rate": 0.783,
+    "gone_net": -28270
+   },
+   {
+    "feature": "spread_proxy",
+    "kind": "high",
+    "cut": 0.0479,
+    "dropped": 24,
+    "share": 0.207,
+    "saved": 33916,
+    "saved_per_trade": 1413.2,
+    "gone_loser_rate": 0.833,
+    "gone_net": -28550
+   },
+   {
+    "feature": "mins_to_expiry",
+    "kind": "low",
+    "cut": 1740.0,
+    "dropped": 20,
+    "share": 0.172,
+    "saved": 27723,
+    "saved_per_trade": 1386.1,
+    "gone_loser_rate": 0.8,
+    "gone_net": -7222
+   },
+   {
+    "feature": "gap",
+    "kind": "low",
+    "cut": -0.2518,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 30147,
+    "saved_per_trade": 1310.7,
+    "gone_loser_rate": 0.696,
+    "gone_net": -16959
+   },
+   {
+    "feature": "strad_vs_vix",
+    "kind": "high",
+    "cut": 1.017,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 29981,
+    "saved_per_trade": 1303.5,
+    "gone_loser_rate": 0.739,
+    "gone_net": -12134
+   },
+   {
+    "feature": "pcr",
+    "kind": "low",
+    "cut": 0.7762,
+    "dropped": 24,
+    "share": 0.207,
+    "saved": 29986,
+    "saved_per_trade": 1249.4,
+    "gone_loser_rate": 0.667,
+    "gone_net": -8668
+   },
+   {
+    "feature": "skew",
+    "kind": "high",
+    "cut": 2.9617,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 28709,
+    "saved_per_trade": 1248.2,
+    "gone_loser_rate": 0.696,
+    "gone_net": -5078
+   },
+   {
+    "feature": "vol_delta",
+    "kind": "low",
+    "cut": -0.2399,
+    "dropped": 24,
+    "share": 0.207,
+    "saved": 29323,
+    "saved_per_trade": 1221.8,
+    "gone_loser_rate": 0.792,
+    "gone_net": -21050
+   },
+   {
+    "feature": "morning_range",
+    "kind": "high",
+    "cut": 1.0412,
+    "dropped": 24,
+    "share": 0.207,
+    "saved": 27884,
+    "saved_per_trade": 1161.8,
+    "gone_loser_rate": 0.792,
+    "gone_net": -27021
+   },
+   {
+    "feature": "prev_range",
+    "kind": "low",
+    "cut": 0.7028,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 25469,
+    "saved_per_trade": 1107.3,
+    "gone_loser_rate": 0.783,
+    "gone_net": -8501
+   },
+   {
+    "feature": "breadth",
+    "kind": "high",
+    "cut": 0.8136,
+    "dropped": 18,
+    "share": 0.155,
+    "saved": 19723,
+    "saved_per_trade": 1095.7,
+    "gone_loser_rate": 0.778,
+    "gone_net": -19475
+   },
+   {
+    "feature": "quadrant",
+    "kind": "cat",
+    "value": "long unwinding",
+    "dropped": 16,
+    "share": 0.138,
+    "saved": 17470,
+    "saved_per_trade": 1091.9,
+    "gone_loser_rate": 0.75,
+    "gone_net": -8795
+   },
+   {
+    "feature": "oi_wall",
+    "kind": "high",
+    "cut": 1.1593,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 24122,
+    "saved_per_trade": 1048.8,
+    "gone_loser_rate": 0.739,
+    "gone_net": -9844
+   },
+   {
+    "feature": "oi_chg",
+    "kind": "high",
+    "cut": 4.9437,
+    "dropped": 24,
+    "share": 0.207,
+    "saved": 24309,
+    "saved_per_trade": 1012.9,
+    "gone_loser_rate": 0.75,
+    "gone_net": -8650
+   },
+   {
+    "feature": "skew",
+    "kind": "low",
+    "cut": 0.0639,
+    "dropped": 24,
+    "share": 0.207,
+    "saved": 23562,
+    "saved_per_trade": 981.8,
+    "gone_loser_rate": 0.792,
+    "gone_net": -10495
+   },
+   {
+    "feature": "trend",
+    "kind": "low",
+    "cut": -0.6165,
+    "dropped": 24,
+    "share": 0.207,
+    "saved": 22843,
+    "saved_per_trade": 951.8,
+    "gone_loser_rate": 0.792,
+    "gone_net": -19931
+   },
+   {
+    "feature": "vol_vs_atm",
+    "kind": "low",
+    "cut": 0.2759,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 17050,
+    "saved_per_trade": 741.3,
+    "gone_loser_rate": 0.783,
+    "gone_net": -11218
+   },
+   {
+    "feature": "dist_straddles",
+    "kind": "high",
+    "cut": 0.2184,
+    "dropped": 24,
+    "share": 0.207,
+    "saved": 14533,
+    "saved_per_trade": 605.6,
+    "gone_loser_rate": 0.833,
+    "gone_net": -6475
+   },
+   {
+    "feature": "iv",
+    "kind": "low",
+    "cut": 11.2188,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 11185,
+    "saved_per_trade": 486.3,
+    "gone_loser_rate": 0.783,
+    "gone_net": -2016
+   },
+   {
+    "feature": "premium",
+    "kind": "low",
+    "cut": 137.15,
+    "dropped": 23,
+    "share": 0.198,
+    "saved": 9101,
+    "saved_per_trade": 395.7,
+    "gone_loser_rate": 0.913,
+    "gone_net": -5731
+   }
+  ]
+ },
+ "FLOW": {
+  "arm": "FLOW",
+  "design_trades": 25,
+  "chosen": [],
+  "eligible": [],
+  "note": "under 60 design trades: no filter (describe only)"
+ }
+}
