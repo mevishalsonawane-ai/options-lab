@@ -1,0 +1,28 @@
+id: r144c-night-trend-high
+title: 'R144c Night (R3): skip trades with trend > 1.024'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md
+data_version: Drive lake copied 1 Nov 2026 (index_1m, options_rolling_1m, equity_1m; to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2026-04-01..2026-10-19 (final) and 2022-12-01..2024-11-19 (unseen two years); read once
+instruments:
+- NIFTY
+- BANKNIFTY
+prereg: research/hunt/r144c_loss_expiry_other/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (close location, move, breadth) + day-end OI build-up'
+hypothesis: skipping trades with trend > 1.024 (chosen on design only) loses less on the final months and the unseen years
+model_or_rule: research/hunt/r144c_loss_expiry_other/study.py
+settings: frozen cut; R27 fills, app charges, 0.16% half-spread, 1 lot
+variants_tried: 12
+verdict: rejected
+results:
+  summary: 'unseen 334->267 trades, win 55%->52% (65% rule: below), net Rs 32,755->Rs -191, losing days Rs -221,705->Rs -184,633;
+    design 245->196 trades, win 53%->57% (65% rule: below), net Rs 96,250->Rs 125,370, losing days Rs -301,569->Rs -203,577;
+    final 85->77 trades, win 51%->52% (65% rule: below), net Rs 48,068->Rs 44,777, losing days Rs -152,187->Rs -138,111. Twin
+    p 0.885, BH q 0.885. Fails: unseen: drawdown worse; unseen: the arm does not make money; twin p 0.885 > 0.05; BH q 0.885
+    > 0.1'
+  costs: R27 fills, app charges, 0.16% half-spread, 1 lot
