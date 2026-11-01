@@ -1,0 +1,28 @@
+id: r144-w-51
+title: R144 W-51 (R51)
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144_OTHER_ARMS.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores (main and R143 older)
+period:
+  design: 2024-11-20..2026-03-31 (and walk-forward 2025-04-01..2026-03-31)
+  holdout: 2022-12-01..2024-11-19 (unseen, read once) and 2026-04-01..2026-10-13 (not fresh)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r144_other_arms/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (yesterday range / ADR) or the option premium after the fill (no-progress exit)'
+hypothesis: W-51 makes R51 lose less in every period
+model_or_rule: research/hunt/r144_other_arms/r144.py
+settings: fixed cuts; 1 lot
+variants_tried: 4
+verdict: rejected
+results:
+  summary: 'unseen 2 years: 3728 trades vs 4815, win 40% vs 39% (65% rule: below), net Rs -191,013 vs Rs -400,363, losing
+    days Rs -693,423 vs Rs -1,012,120; twin p 7.4e-34, q 0.0. Fails: wf: worst month worse.'
+  costs: R17 fills, dated Zerodha charges, 1 lot

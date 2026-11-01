@@ -1,0 +1,39 @@
+{
+ "W-51": {
+  "passed": false,
+  "fails": [
+   "wf: worst month worse"
+  ],
+  "p": 7.400311960469373e-34,
+  "q": 0.0
+ },
+ "W-L": {
+  "passed": false,
+  "fails": [
+   "unseen: net lower than today's"
+  ],
+  "p": 0.011494252873563218,
+  "q": 0.0153
+ },
+ "W-52": {
+  "passed": false,
+  "fails": [
+   "final: drawdown worse",
+   "final: worst month worse"
+  ],
+  "p": 1.9855845901335576e-05,
+  "q": 0.0
+ },
+ "NP5-L": {
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "wf: worst month worse",
+   "unseen: net lower than today's",
+   "twin p 1",
+   "q 1"
+  ],
+  "p": 1.0,
+  "q": 1.0
+ }
+}

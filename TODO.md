@@ -547,3 +547,7 @@ candles' high after a gap longer than the stream keeps. Still open (each waits f
       - R143 update (31 Oct): on the unseen Dec 2022 - Nov 2024, FB-R72-A10 and NP5-52 held up as loss-cutters;
         BBX-51 did not (drop it).
       - R72, R51 and R52 themselves lost money in those years: judge the arms on longer history before any live step.
+      - R144 (1 Nov): Liquidity made money in those years (+Rs 83k). The wide-day skip cuts losses on R51, Liquidity
+        and R52 too, but each misses one gate; R51's is close. Do not add a no-progress exit to Liquidity.
+- [ ] R144-1. Not yet replayed: ORB, Night (R3), Solo, MCX / gold arms. Each needs its own engine before these checks can
+      run on them.

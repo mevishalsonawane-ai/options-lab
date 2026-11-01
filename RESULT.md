@@ -1,11 +1,11 @@
-# R143 result (31 Oct 2026): the three candidates on two unseen years (Dec 2022 - Nov 2024); nothing in the app changed
-1. Boss: "try on the last 2 years". Our tests already used Nov 2024 - Oct 2026, which also found the ideas, so the honest test is the two years before: Dec 2022 - Nov 2024, never used by R139-R142.
-2. Warning: the arms LOST money there as they run today (R72 -Rs 3.07 lakh, R51 -Rs 4.00 lakh, R52 -Rs 1.52 lakh). Their profit is from Nov 2024 on, after NSE's expiry and lot changes.
-3. R72 "skip after a very wide day" held up: losing days -Rs 6.12 lakh vs -Rs 8.87 lakh, loss -Rs 1.37 lakh vs -Rs 3.07 lakh, drawdown Rs 1.92 lakh vs Rs 3.38 lakh; random skipping never as good.
-4. R52 "sell at 09:25 if the option is not up 5%" held up: losing days -Rs 3.91 lakh vs -Rs 5.43 lakh, loss -Rs 1.16 lakh vs -Rs 1.52 lakh; random exits never as good.
-5. Both cut losses in all five periods tested (2 unseen years, design, walk-forward year, Apr-Oct 2026). Proven loss-cutters, not profit-makers (they formally fail "the arm still makes money" because the arm lost).
-6. R51 "skip bad breaks" did NOT hold up: random skipping of as many trades cut losses even more (p 0.995). Drop it.
-7. Engine check: the rebuilt older store gives exactly the main store's trades for all four arms on 20 Nov - 30 Dec 2024.
-8. Before -> after tables for every period and rule: research/HUNT_R143_UNSEEN_TWO_YEARS.md.
-9. Proposed, not built (needs Boss's approval): paper switches for the R72 wide-day skip and the R52 09:25 exit. Judge every arm on longer history before any live step.
-10. Entries: research/experiments/entries/r143-*.yaml. Earlier: HUNT_R139 to HUNT_R142.
+# R144 result (1 Nov 2026): the other arms, Liquidity on the unseen years, and the proven rules on more arms; nothing in the app changed
+1. Liquidity 15+5 is the only arm that made money in the unseen Dec 2022 - Nov 2024: +Rs 83,307 on 894 trades (31% won; worst month -Rs 13,213). R72, R51 and R52 all lost there.
+2. The wide-day skip (no entries after a very wide day) cut losing days on every arm in the unseen years, each better than random (p 0.0005-0.012).
+3. But each new version misses one pre-registered gate: R51 one worse month in Apr 2025 - Mar 2026; Liquidity a little less profit in the unseen years; R52 a worse drawdown and month in Apr - Oct 2026. Formally 0 of 4 pass.
+4. A 5-minute no-progress exit hurts Liquidity (its slow starters are its winners). Do not add it.
+5. The two candidates stay as R143 found: R72's wide-day skip and R52's 09:25 exit. R51's wide-day skip is close and could be watched on paper too.
+6. S5 Trail and S3-V2-E3 were already tested on 2023 - Oct 2026 by their own studies: most of their money was in 2023-24, weaker since 2025.
+7. Not yet tested: ORB, Night (R3), Solo and the MCX / gold arms. Each needs its own replay engine (a separate study if Boss wants it).
+8. Before -> after tables for every period and rule: research/HUNT_R144_OTHER_ARMS.md (R72 and R52 in HUNT_R143_UNSEEN_TWO_YEARS.md).
+9. Nothing is built. Paper switches only with Boss's approval.
+10. Entries: research/experiments/entries/r144-*.yaml. Earlier: HUNT_R139 to HUNT_R143.
