@@ -1,0 +1,848 @@
+{
+ "_meta": {
+  "written": "2026-11-01",
+  "candidates": 14817,
+  "sessions": 957,
+  "twins": 2000,
+  "seed": 1445,
+  "test_months": "(2023, 7) - (2026, 10)"
+ },
+ "variants": {
+  "V1": {
+   "kind": "logit",
+   "setups": [
+    "S1",
+    "S2",
+    "S3",
+    "S4"
+   ],
+   "auc_wf": 0.5235,
+   "periods": {
+    "P1": {
+     "trades": 309,
+     "net": -70845,
+     "win_rate": 0.382,
+     "loss_sum": -194703,
+     "max_dd": 75488,
+     "worst_day": -3843,
+     "worst_month": -23305,
+     "per_trade": -229,
+     "by_und": {
+      "BANKNIFTY": {
+       "n": 20,
+       "net": -7713,
+       "win": 0.25
+      },
+      "FINNIFTY": {
+       "n": 59,
+       "net": -19278,
+       "win": 0.339
+      },
+      "MIDCPNIFTY": {
+       "n": 86,
+       "net": -40909,
+       "win": 0.36
+      },
+      "NIFTY": {
+       "n": 144,
+       "net": -2945,
+       "win": 0.431
+      }
+     },
+     "by_setup": {
+      "S1": {
+       "n": 14,
+       "net": -11484,
+       "win": 0.357
+      },
+      "S2": {
+       "n": 99,
+       "net": -17288,
+       "win": 0.343
+      },
+      "S3": {
+       "n": 150,
+       "net": -18087,
+       "win": 0.427
+      },
+      "S4": {
+       "n": 46,
+       "net": -23987,
+       "win": 0.326
+      }
+     },
+     "twin_p": 0.9825087456271864,
+     "random_pick_mean_net": -27425,
+     "q": 0.9825087456271864,
+     "fails": [
+      "net <= 0",
+      "twin p 0.983 > 0.05",
+      "drawdown worse than the frozen A2",
+      "BH q 0.983 > 0.1"
+     ]
+    },
+    "P2": {
+     "trades": 311,
+     "net": 16595,
+     "win_rate": 0.505,
+     "loss_sum": -400827,
+     "max_dd": 51541,
+     "worst_day": -11949,
+     "worst_month": -16499,
+     "per_trade": 53,
+     "by_und": {
+      "BANKNIFTY": {
+       "n": 17,
+       "net": -1125,
+       "win": 0.412
+      },
+      "FINNIFTY": {
+       "n": 95,
+       "net": 47280,
+       "win": 0.547
+      },
+      "MIDCPNIFTY": {
+       "n": 146,
+       "net": -39798,
+       "win": 0.473
+      },
+      "NIFTY": {
+       "n": 53,
+       "net": 10237,
+       "win": 0.547
+      }
+     },
+     "by_setup": {
+      "S1": {
+       "n": 7,
+       "net": 3561,
+       "win": 0.429
+      },
+      "S2": {
+       "n": 73,
+       "net": -12923,
+       "win": 0.452
+      },
+      "S3": {
+       "n": 213,
+       "net": 38004,
+       "win": 0.521
+      },
+      "S4": {
+       "n": 18,
+       "net": -12047,
+       "win": 0.556
+      }
+     },
+     "twin_p": 0.3243378310844578,
+     "random_pick_mean_net": -3494,
+     "q": 0.5547226386806596,
+     "fails": [
+      "twin p 0.324 > 0.05",
+      "drawdown worse than the frozen A2",
+      "BH q 0.555 > 0.1"
+     ]
+    },
+    "P3": {
+     "trades": 127,
+     "net": 83042,
+     "win_rate": 0.598,
+     "loss_sum": -100315,
+     "max_dd": 15254,
+     "worst_day": -6120,
+     "worst_month": -2833,
+     "per_trade": 654,
+     "by_und": {
+      "BANKNIFTY": {
+       "n": 9,
+       "net": 3116,
+       "win": 0.667
+      },
+      "FINNIFTY": {
+       "n": 19,
+       "net": 17391,
+       "win": 0.526
+      },
+      "MIDCPNIFTY": {
+       "n": 82,
+       "net": 46719,
+       "win": 0.61
+      },
+      "NIFTY": {
+       "n": 17,
+       "net": 15816,
+       "win": 0.588
+      }
+     },
+     "by_setup": {
+      "S1": {
+       "n": 2,
+       "net": 3570,
+       "win": 1.0
+      },
+      "S2": {
+       "n": 28,
+       "net": 20389,
+       "win": 0.536
+      },
+      "S3": {
+       "n": 92,
+       "net": 60308,
+       "win": 0.62
+      },
+      "S4": {
+       "n": 5,
+       "net": -1226,
+       "win": 0.4
+      }
+     },
+     "twin_p": 0.0004997501249375312,
+     "random_pick_mean_net": -1436,
+     "q": 0.0022488755622188904,
+     "fails": []
+    }
+   },
+   "passed": false
+  },
+  "V2": {
+   "kind": "logit",
+   "setups": [
+    "S1",
+    "S2",
+    "S3"
+   ],
+   "auc_wf": 0.5309,
+   "periods": {
+    "P1": {
+     "trades": 301,
+     "net": -55292,
+     "win_rate": 0.389,
+     "loss_sum": -169387,
+     "max_dd": 59989,
+     "worst_day": -3443,
+     "worst_month": -19671,
+     "per_trade": -184,
+     "by_und": {
+      "BANKNIFTY": {
+       "n": 21,
+       "net": -7358,
+       "win": 0.333
+      },
+      "FINNIFTY": {
+       "n": 73,
+       "net": -10878,
+       "win": 0.411
+      },
+      "MIDCPNIFTY": {
+       "n": 84,
+       "net": -33616,
+       "win": 0.31
+      },
+      "NIFTY": {
+       "n": 123,
+       "net": -3440,
+       "win": 0.439
+      }
+     },
+     "by_setup": {
+      "S1": {
+       "n": 13,
+       "net": -13882,
+       "win": 0.231
+      },
+      "S2": {
+       "n": 141,
+       "net": -18092,
+       "win": 0.39
+      },
+      "S3": {
+       "n": 147,
+       "net": -23318,
+       "win": 0.401
+      }
+     },
+     "twin_p": 0.9750124937531235,
+     "random_pick_mean_net": -18644,
+     "q": 0.9825087456271864,
+     "fails": [
+      "net <= 0",
+      "twin p 0.975 > 0.05",
+      "BH q 0.983 > 0.1"
+     ]
+    },
+    "P2": {
+     "trades": 300,
+     "net": 33469,
+     "win_rate": 0.483,
+     "loss_sum": -355469,
+     "max_dd": 41909,
+     "worst_day": -7890,
+     "worst_month": -17331,
+     "per_trade": 112,
+     "by_und": {
+      "BANKNIFTY": {
+       "n": 26,
+       "net": 9337,
+       "win": 0.5
+      },
+      "FINNIFTY": {
+       "n": 113,
+       "net": 52059,
+       "win": 0.513
+      },
+      "MIDCPNIFTY": {
+       "n": 117,
+       "net": -27794,
+       "win": 0.453
+      },
+      "NIFTY": {
+       "n": 44,
+       "net": -132,
+       "win": 0.477
+      }
+     },
+     "by_setup": {
+      "S1": {
+       "n": 11,
+       "net": -3246,
+       "win": 0.273
+      },
+      "S2": {
+       "n": 88,
+       "net": 4488,
+       "win": 0.466
+      },
+      "S3": {
+       "n": 201,
+       "net": 32227,
+       "win": 0.502
+      }
+     },
+     "twin_p": 0.3698150924537731,
+     "random_pick_mean_net": 20893,
+     "q": 0.5547226386806596,
+     "fails": [
+      "twin p 0.37 > 0.05",
+      "drawdown worse than the frozen A2",
+      "BH q 0.555 > 0.1"
+     ]
+    },
+    "P3": {
+     "trades": 122,
+     "net": 92470,
+     "win_rate": 0.607,
+     "loss_sum": -99738,
+     "max_dd": 19108,
+     "worst_day": -6120,
+     "worst_month": -8901,
+     "per_trade": 758,
+     "by_und": {
+      "BANKNIFTY": {
+       "n": 9,
+       "net": 3216,
+       "win": 0.556
+      },
+      "FINNIFTY": {
+       "n": 21,
+       "net": 17372,
+       "win": 0.524
+      },
+      "MIDCPNIFTY": {
+       "n": 83,
+       "net": 64734,
+       "win": 0.627
+      },
+      "NIFTY": {
+       "n": 9,
+       "net": 7148,
+       "win": 0.667
+      }
+     },
+     "by_setup": {
+      "S1": {
+       "n": 3,
+       "net": 2080,
+       "win": 0.667
+      },
+      "S2": {
+       "n": 29,
+       "net": 19874,
+       "win": 0.552
+      },
+      "S3": {
+       "n": 90,
+       "net": 70516,
+       "win": 0.622
+      }
+     },
+     "twin_p": 0.0004997501249375312,
+     "random_pick_mean_net": 8993,
+     "q": 0.0022488755622188904,
+     "fails": []
+    }
+   },
+   "passed": false
+  },
+  "V3": {
+   "kind": "gbc",
+   "setups": [
+    "S1",
+    "S2",
+    "S3"
+   ],
+   "auc_wf": 0.5337,
+   "periods": {
+    "P1": {
+     "trades": 295,
+     "net": 15961,
+     "win_rate": 0.464,
+     "loss_sum": -127989,
+     "max_dd": 22101,
+     "worst_day": -3078,
+     "worst_month": -12296,
+     "per_trade": 54,
+     "by_und": {
+      "BANKNIFTY": {
+       "n": 61,
+       "net": 1347,
+       "win": 0.393
+      },
+      "FINNIFTY": {
+       "n": 63,
+       "net": -5223,
+       "win": 0.492
+      },
+      "MIDCPNIFTY": {
+       "n": 84,
+       "net": 16765,
+       "win": 0.5
+      },
+      "NIFTY": {
+       "n": 87,
+       "net": 3073,
+       "win": 0.46
+      }
+     },
+     "by_setup": {
+      "S1": {
+       "n": 12,
+       "net": -3156,
+       "win": 0.5
+      },
+      "S2": {
+       "n": 227,
+       "net": 18963,
+       "win": 0.458
+      },
+      "S3": {
+       "n": 56,
+       "net": 154,
+       "win": 0.482
+      }
+     },
+     "twin_p": 0.04297851074462768,
+     "random_pick_mean_net": -17310,
+     "q": 0.09670164917541228,
+     "fails": []
+    },
+    "P2": {
+     "trades": 297,
+     "net": 13676,
+     "win_rate": 0.488,
+     "loss_sum": -350872,
+     "max_dd": 70367,
+     "worst_day": -8297,
+     "worst_month": -25117,
+     "per_trade": 46,
+     "by_und": {
+      "BANKNIFTY": {
+       "n": 74,
+       "net": 1431,
+       "win": 0.486
+      },
+      "FINNIFTY": {
+       "n": 62,
+       "net": 22386,
+       "win": 0.581
+      },
+      "MIDCPNIFTY": {
+       "n": 112,
+       "net": -3427,
+       "win": 0.455
+      },
+      "NIFTY": {
+       "n": 49,
+       "net": -6714,
+       "win": 0.449
+      }
+     },
+     "by_setup": {
+      "S1": {
+       "n": 11,
+       "net": 7660,
+       "win": 0.364
+      },
+      "S2": {
+       "n": 153,
+       "net": -8988,
+       "win": 0.444
+      },
+      "S3": {
+       "n": 133,
+       "net": 15004,
+       "win": 0.549
+      }
+     },
+     "twin_p": 0.6486756621689156,
+     "random_pick_mean_net": 28955,
+     "q": 0.8340115656457486,
+     "fails": [
+      "twin p 0.649 > 0.05",
+      "drawdown worse than the frozen A2",
+      "BH q 0.834 > 0.1"
+     ]
+    },
+    "P3": {
+     "trades": 117,
+     "net": 58269,
+     "win_rate": 0.556,
+     "loss_sum": -88862,
+     "max_dd": 16859,
+     "worst_day": -9049,
+     "worst_month": 723,
+     "per_trade": 498,
+     "by_und": {
+      "BANKNIFTY": {
+       "n": 29,
+       "net": -8562,
+       "win": 0.448
+      },
+      "FINNIFTY": {
+       "n": 21,
+       "net": 6657,
+       "win": 0.524
+      },
+      "MIDCPNIFTY": {
+       "n": 45,
+       "net": 52385,
+       "win": 0.622
+      },
+      "NIFTY": {
+       "n": 22,
+       "net": 7789,
+       "win": 0.591
+      }
+     },
+     "by_setup": {
+      "S1": {
+       "n": 4,
+       "net": -4652,
+       "win": 0.25
+      },
+      "S2": {
+       "n": 58,
+       "net": 31351,
+       "win": 0.534
+      },
+      "S3": {
+       "n": 55,
+       "net": 31570,
+       "win": 0.6
+      }
+     },
+     "twin_p": 0.015492253873063468,
+     "random_pick_mean_net": 10703,
+     "q": 0.046476761619190406,
+     "fails": []
+    }
+   },
+   "passed": false
+  }
+ },
+ "reference": {
+  "frozen_A2": {
+   "P1": {
+    "trades": 322,
+    "net": -51415,
+    "win_rate": 0.391,
+    "loss_sum": -217944,
+    "max_dd": 71577,
+    "worst_day": -5968,
+    "worst_month": -16836,
+    "per_trade": -160,
+    "by_und": {
+     "BANKNIFTY": {
+      "n": 16,
+      "net": 4911,
+      "win": 0.375
+     },
+     "FINNIFTY": {
+      "n": 132,
+      "net": -31324,
+      "win": 0.371
+     },
+     "MIDCPNIFTY": {
+      "n": 152,
+      "net": -22557,
+      "win": 0.408
+     },
+     "NIFTY": {
+      "n": 22,
+      "net": -2444,
+      "win": 0.409
+     }
+    },
+    "by_setup": {
+     "S1": {
+      "n": 2,
+      "net": -1494,
+      "win": 0.5
+     },
+     "S2": {
+      "n": 74,
+      "net": -16996,
+      "win": 0.338
+     },
+     "S3": {
+      "n": 242,
+      "net": -29015,
+      "win": 0.409
+     },
+     "S4": {
+      "n": 4,
+      "net": -3910,
+      "win": 0.25
+     }
+    }
+   },
+   "P2": {
+    "trades": 310,
+    "net": 102774,
+    "win_rate": 0.532,
+    "loss_sum": -352621,
+    "max_dd": 26708,
+    "worst_day": -14592,
+    "worst_month": -14639,
+    "per_trade": 332,
+    "by_und": {
+     "BANKNIFTY": {
+      "n": 37,
+      "net": 25796,
+      "win": 0.568
+     },
+     "FINNIFTY": {
+      "n": 118,
+      "net": 64906,
+      "win": 0.542
+     },
+     "MIDCPNIFTY": {
+      "n": 137,
+      "net": 19364,
+      "win": 0.526
+     },
+     "NIFTY": {
+      "n": 18,
+      "net": -7292,
+      "win": 0.444
+     }
+    },
+    "by_setup": {
+     "S1": {
+      "n": 2,
+      "net": -3837,
+      "win": 0.0
+     },
+     "S2": {
+      "n": 75,
+      "net": 24665,
+      "win": 0.56
+     },
+     "S3": {
+      "n": 229,
+      "net": 79343,
+      "win": 0.528
+     },
+     "S4": {
+      "n": 4,
+      "net": 2603,
+      "win": 0.5
+     }
+    }
+   },
+   "P3": {
+    "trades": 127,
+    "net": 89382,
+    "win_rate": 0.575,
+    "loss_sum": -107339,
+    "max_dd": 26055,
+    "worst_day": -6120,
+    "worst_month": -3395,
+    "per_trade": 704,
+    "by_und": {
+     "BANKNIFTY": {
+      "n": 11,
+      "net": -1040,
+      "win": 0.364
+     },
+     "FINNIFTY": {
+      "n": 23,
+      "net": 11605,
+      "win": 0.435
+     },
+     "MIDCPNIFTY": {
+      "n": 87,
+      "net": 73947,
+      "win": 0.632
+     },
+     "NIFTY": {
+      "n": 6,
+      "net": 4870,
+      "win": 0.667
+     }
+    },
+    "by_setup": {
+     "S1": {
+      "n": 1,
+      "net": 5718,
+      "win": 1.0
+     },
+     "S2": {
+      "n": 36,
+      "net": 40167,
+      "win": 0.583
+     },
+     "S3": {
+      "n": 87,
+      "net": 37557,
+      "win": 0.563
+     },
+     "S4": {
+      "n": 3,
+      "net": 5939,
+      "win": 0.667
+     }
+    }
+   }
+  },
+  "S1_alone": {
+   "P1": {
+    "trades": 220,
+    "net": 16735,
+    "win_rate": 0.486,
+    "loss_sum": -196885,
+    "max_dd": 39872,
+    "worst_day": -7546,
+    "worst_month": -19909,
+    "per_trade": 76,
+    "by_und": {
+     "BANKNIFTY": {
+      "n": 55,
+      "net": -6651,
+      "win": 0.436
+     },
+     "FINNIFTY": {
+      "n": 59,
+      "net": 24005,
+      "win": 0.542
+     },
+     "MIDCPNIFTY": {
+      "n": 56,
+      "net": 7029,
+      "win": 0.5
+     },
+     "NIFTY": {
+      "n": 50,
+      "net": -7648,
+      "win": 0.46
+     }
+    },
+    "by_setup": {
+     "S1": {
+      "n": 220,
+      "net": 16735,
+      "win": 0.486
+     }
+    }
+   },
+   "P2": {
+    "trades": 305,
+    "net": 91770,
+    "win_rate": 0.482,
+    "loss_sum": -415412,
+    "max_dd": 62723,
+    "worst_day": -21884,
+    "worst_month": -27940,
+    "per_trade": 301,
+    "by_und": {
+     "BANKNIFTY": {
+      "n": 81,
+      "net": -108,
+      "win": 0.42
+     },
+     "FINNIFTY": {
+      "n": 82,
+      "net": -15918,
+      "win": 0.439
+     },
+     "MIDCPNIFTY": {
+      "n": 83,
+      "net": 78627,
+      "win": 0.542
+     },
+     "NIFTY": {
+      "n": 59,
+      "net": 29168,
+      "win": 0.542
+     }
+    },
+    "by_setup": {
+     "S1": {
+      "n": 305,
+      "net": 91770,
+      "win": 0.482
+     }
+    }
+   },
+   "P3": {
+    "trades": 89,
+    "net": 1329,
+    "win_rate": 0.517,
+    "loss_sum": -116277,
+    "max_dd": 43134,
+    "worst_day": -15580,
+    "worst_month": -19886,
+    "per_trade": 15,
+    "by_und": {
+     "BANKNIFTY": {
+      "n": 21,
+      "net": 2634,
+      "win": 0.524
+     },
+     "FINNIFTY": {
+      "n": 20,
+      "net": 4206,
+      "win": 0.55
+     },
+     "MIDCPNIFTY": {
+      "n": 27,
+      "net": 4916,
+      "win": 0.519
+     },
+     "NIFTY": {
+      "n": 21,
+      "net": -10428,
+      "win": 0.476
+     }
+    },
+    "by_setup": {
+     "S1": {
+      "n": 89,
+      "net": 1329,
+      "win": 0.517
+     }
+    }
+   }
+  }
+ },
+ "named": null
+}

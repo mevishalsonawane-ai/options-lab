@@ -1,0 +1,28 @@
+{
+ "checked": "2026-11-01T19:23:01+00:00",
+ "inputs": {
+  "lake": true,
+  "r3_sessions": [
+   "sess_BANKNIFTY.pkl",
+   "sess_FINNIFTY.pkl",
+   "sess_MIDCPNIFTY.pkl",
+   "sess_NIFTY.pkl",
+   "sess_SENSEX.pkl"
+  ],
+  "r51_store": true,
+  "r143_old_store": true,
+  "r57_store": true,
+  "cache": [
+   "liq_design.pkl",
+   "liq_final.pkl",
+   "liq_unseen.pkl",
+   "orb_design.pkl",
+   "orb_final.pkl",
+   "orb_unseen.pkl",
+   "solo_design.pkl",
+   "solo_final.pkl",
+   "solo_unseen.pkl"
+  ]
+ },
+ "runnable": true
+}

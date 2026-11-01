@@ -1,0 +1,26 @@
+id: r144b-solo-retrain
+title: 'R144b-S: Solo 2.0 retrained with purged monthly walk-forward on Dec 2022 - Oct 2026 (3 variants)'
+family: ml
+date: '2026-11-01'
+doc: research/HUNT_R144B_SOLO_RETRAIN.md
+data_version: Drive lake IraAlgo-data-lake downloaded 1 Nov 2026; R57 store and R144b's old R57 store (Dec 2022 - Dec 2024)
+period:
+  design: walk-forward, monthly refits on all earlier months from 2022-12-01
+  holdout: 'test months 2023-07..2026-10, gated separately in P1 2023-07-01..2024-11-19, P2 2024-11-20..2026-03-31, P3 2026-04-01..2026-10-13 (all months previously seen by R144b; no untouched data)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+prereg: research/hunt/r144b_solo_retrain/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R57 setups S1-S4); A2''s 29 inputs (index returns and ranges, VIX, PCR, ATM IV, skew, index and setup flags) as model inputs'
+hypothesis: a Solo 2.0 picker retrained on four years beats a random same-day candidate and makes money in each period
+model_or_rule: research/hunt/r144b_solo_retrain/r144bs.py
+settings: 'V1 logit S1-S4; V2 logit S1-S3; V3 HistGradientBoosting S1-S3; threshold = 70th pct of training scores; 2,000 random same-day twins; BH q <= 0.10 over 9'
+variants_tried: 3
+verdict: rejected
+results:
+  summary: '0 of 3 passed. Walk-forward AUC 0.52-0.53. V3 closest: P1 +15,961 (295 trades, p 0.043), P2 +13,676 (297, p 0.65 vs random +28,955), P3 +58,269 (117, p 0.015). V1 P1 -70,845 (309); V2 P1 -55,292 (301). Frozen A2 P1 -51,415 (322).'
+  costs: R57 engine (R17 fills, dated charges, 1 lot)

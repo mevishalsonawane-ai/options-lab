@@ -1,0 +1,67 @@
+{
+ "study": "R144b",
+ "group": "Liquidity 15+5, ORB family, Solo 2.0",
+ "note": "",
+ "bh_within_group": {
+  "method": "Benjamini-Hochberg",
+  "q": 0.1
+ },
+ "tests": [
+  {
+   "id": "r144b-LIQ-f0-final",
+   "arm": "LIQ",
+   "period": "final",
+   "raw_p": 0.6021989005497251,
+   "q_within_group": 0.9495252373813093
+  },
+  {
+   "id": "r144b-LIQ-f0-unseen",
+   "arm": "LIQ",
+   "period": "unseen",
+   "raw_p": 0.8190904547726137,
+   "q_within_group": 0.9495252373813093
+  },
+  {
+   "id": "r144b-LIQ-f1-final",
+   "arm": "LIQ",
+   "period": "final",
+   "raw_p": 0.16841579210394803,
+   "q_within_group": 0.4491087789438614
+  },
+  {
+   "id": "r144b-LIQ-f1-unseen",
+   "arm": "LIQ",
+   "period": "unseen",
+   "raw_p": 0.8340829585207397,
+   "q_within_group": 0.9495252373813093
+  },
+  {
+   "id": "r144b-LIQ-f2-final",
+   "arm": "LIQ",
+   "period": "final",
+   "raw_p": 0.9495252373813093,
+   "q_within_group": 0.9495252373813093
+  },
+  {
+   "id": "r144b-LIQ-f2-unseen",
+   "arm": "LIQ",
+   "period": "unseen",
+   "raw_p": 0.3308345827086457,
+   "q_within_group": 0.6616691654172914
+  },
+  {
+   "id": "r144b-Range Fade-f0-final",
+   "arm": "Range Fade",
+   "period": "final",
+   "raw_p": 0.08395802098950525,
+   "q_within_group": 0.335832083958021
+  },
+  {
+   "id": "r144b-Range Fade-f0-unseen",
+   "arm": "Range Fade",
+   "period": "unseen",
+   "raw_p": 0.03498250874562719,
+   "q_within_group": 0.2798600699650175
+  }
+ ]
+}
