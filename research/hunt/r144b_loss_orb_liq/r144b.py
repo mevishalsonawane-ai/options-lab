@@ -136,20 +136,39 @@ def liq_trades(lo: date, hi: date, old: bool) -> tuple:
     return [norm("LIQ", t) for t in S.walk("LIQ", us) if t["und"] in LIQ_UNDS], (S, us)
 
 
-def solo_trades(lo: date, hi: date) -> list:
-    """R57's candidates scored by the frozen app model A2.json (no refit), first taker each day."""
+def _r57(old: bool):
+    """R57's modules. old=True points R57 (and the R51 settings it re-points) at its own folder for Sep 2022 - Dec 2024,
+    before r57data / r57setups are imported. R57's final guard is opened here: R144b reads its own final once, after
+    its filters are frozen (collect refuses before design.json exists)."""
     p = str(HUNT / "r57")
     if p not in sys.path:
         sys.path.insert(0, p)
     import r57cfg as K
-    if lo < K.START:                      # the unseen years need R57's store rebuilt from Sep 2022 in its own folder
-        K.OUT = K.OUT / "r144b_old"
-        K._K51.OUT = K.OUT
+    if old:
+        K.OUT = K._K51.OUT = K.OUT / "r144b_old"
         K.WARM_START = K._K51.WARM_START = date(2022, 9, 1)
-        K.START = K._K51.START = date(2022, 12, 1)
+        K.START = K._K51.START = PERIODS["unseen"][0]
+        K.END = K._K51.END = date(2024, 12, 31)
+        K.DESIGN_END = K._K51.DESIGN_END = PERIODS["unseen"][1]
+    import r57data
     import r57eval as Ev
     import r57setups as St
     import r57study as Sy
+    St._FINAL_OPEN = True
+    return K, r57data, Ev, St, Sy
+
+
+def build_solo_old():
+    """R57's day stores for the unseen years, in their own folder (never touches R57's own store)."""
+    K, D, _, _, _ = _r57(True)
+    for u in SOLO_UNDS:
+        print(D.build(u), flush=True)
+
+
+def solo_trades(lo: date, hi: date) -> list:
+    """R57's candidates scored by the frozen app model A2.json (no refit), first taker each day. A2 was trained on
+    21 Nov 2024 - 14 Oct 2026 (its meta), so design AND final trades are in-sample for the model (PREREG amendment 1)."""
+    K, _, Ev, St, Sy = _r57(lo < date(2024, 11, 20))
     model = json.loads((HUNT / "r57" / "results" / "models" / "A2.json").read_text())
     rows = [r for r in Sy.a_rows(St.candidates(lo, hi)) if r["setup"] != "C4"]
     sc = np.array([Ev.score(model, r["f"]) for r in rows], float)
@@ -391,6 +410,8 @@ if __name__ == "__main__":
     cmd = (sys.argv[1:] or [""])[0]
     if cmd == "status":
         print(json.dumps(status(), indent=1))
+    elif cmd == "build-solo-old":
+        build_solo_old()
     elif cmd == "collect":
         collect(sys.argv[2], sys.argv[3])
     elif cmd == "design":

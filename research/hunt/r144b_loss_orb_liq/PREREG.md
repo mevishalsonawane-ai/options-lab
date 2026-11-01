@@ -99,3 +99,23 @@ only through shadow first (CLAUDE.md).
 
 `r144b_lib.py` (pure functions), `r144b.py` (adapters and runs), `test_r144b.py`, `results/*.json`,
 `research/HUNT_R144B_LOSS_ORB_LIQ.md`, entries `research/experiments/entries/r144b-*.yaml`.
+
+## Amendment 1 (1 Nov 2026, written after the ORB and Liquidity design trades were rebuilt, before any Solo 2.0 number and before any filter was chosen)
+
+1. **Data:** the lake was downloaded from the shared Drive folder `IraAlgo-data-lake` (90 files: index minutes
+   2021-2026 for the five indices and VIX, weekly and monthly option files, `index_daily`). The stores were rebuilt
+   from it.
+2. **Parity, passed to the rupee:**
+   - the ORB family on R3's design (BANKNIFTY + NIFTY, Aug 2021 - Oct 2026): ORB 2,489 trades / -Rs 2,23,040; ORB
+     Fresh 2,489 / -2,23,812; ORB Sweep 3,156 / -5,05,954; Range Fade 3,512 / -5,10,978, all equal to R3's
+     `rebuild.json`;
+   - Liquidity on design: 881 trades / +Rs 2,57,249, equal to R101's.
+3. **Solo 2.0's frozen model was trained on 21 Nov 2024 - 14 Oct 2026** (the `trained_on` field of `A2.json`), not
+   only on the design months as section 1 said.
+   - Solo 2.0's design AND final trades are therefore in-sample for the model. Its arm-level numbers in both are
+     flattered.
+   - Only the unseen years (Dec 2022 - Nov 2024) are out of sample for it.
+   - The filter test is unchanged: filters are still chosen on design and tested on final and unseen. A Solo filter's
+     final result is read with this caveat. Its unseen result carries the weight.
+4. **Liquidity's exit labels** in R101's engine are coarse: `rule_exit` covers the index stop, target, failed break
+   and new-liquidity exits together. "Money lost by exit type" uses these labels as they are.
