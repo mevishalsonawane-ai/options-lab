@@ -2049,6 +2049,8 @@ class PassedArmsHostTest : RobolectricTest() {
         PassedArmsHost.wipe(); runBlocking { PassedArmsHost.prefetchNow(day) }
         only(BreadthDonchianArm.SOURCE)
         runBlocking { PassedArmsHost.setWideSkip(skipOn) }
+        // The live book read (its "Trade live" switches known): an unread one in Live counts as "may be copied live".
+        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
         market(LocalTime.of(9, 21))
         for (u in setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")) {
             val b = bases.getValue(u)
@@ -2127,6 +2129,7 @@ class PassedArmsHostTest : RobolectricTest() {
 
     @Test fun withTheNoProgressExitR52SellsAt0925WhenTheOptionIsNotUpFivePercent() {
         only(OovArm.SOURCE)
+        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
         runBlocking { PassedArmsHost.setNoProgress(true) }
         market(LocalTime.of(9, 20), firstOpen = 25_100.0)
         tick(LocalTime.of(9, 20))
@@ -2157,6 +2160,7 @@ class PassedArmsHostTest : RobolectricTest() {
 
     @Test fun aR52TradeThatWasUpFivePercentOrEnteredWithTheExitOffKeepsItsPlainExits() {
         only(OovArm.SOURCE)
+        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
         runBlocking { PassedArmsHost.setNoProgress(true) }
         market(LocalTime.of(9, 20), firstOpen = 25_100.0)
         tick(LocalTime.of(9, 20))
@@ -2166,6 +2170,16 @@ class PassedArmsHostTest : RobolectricTest() {
         // Switched off: an open trade keeps the exits it entered with; a new one enters without it.
         assertTrue(runBlocking { PassedArmsHost.setNoProgress(false) }.contains("plain exits"))
         assertTrue(view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }.np5)
+    }
+
+    /** 1 Nov (review): in Live with AI trades on, a live book not read yet counts as "may be copied live": the rules never act on a guess. */
+    @Test fun anUnreadLiveBookInLiveCountsAsMayBeCopiedLive() {
+        only(OovArm.SOURCE)
+        runBlocking { PassedArmsHost.setNoProgress(true) }
+        org.junit.Assume.assumeFalse("needs the live book unread", com.optionslab.app.data.ArmLive.view.value.loaded)
+        market(LocalTime.of(9, 20), firstOpen = 25_100.0)
+        tick(LocalTime.of(9, 20))
+        assertFalse(view().open.single { it.arm == OovArm.SOURCE && it.shadow == null }.np5)
     }
 
     @Test fun aTradeThatEnteredWithTheExitOffIsNeverSaidToBeKeptForLive() {

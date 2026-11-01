@@ -275,7 +275,7 @@ class PassedArmRowsTest {
         compose.waitForIdle()
         compose.onNodeWithContentDescription("About ${OovArm.LABEL}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         compose.waitForIdle()
-        compose.onNodeWithText("09:25 exit on", substring = true).assertExists()
+        compose.onNodeWithText(keepNumbersWhole("09:25 exit on"), substring = true).assertExists()
         compose.onNodeWithText("early exit is only logged", substring = true).assertExists()
         val on = PassedArmsHost.View(wideOn = true, np5On = true)
         val wide = passedExplanation(BreadthDonchianArm.SOURCE, on).single { "Wide-day skip on" in it }
