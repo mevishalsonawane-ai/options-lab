@@ -246,3 +246,22 @@ def test_gates_fail_when_arm_loses():
     f = {p: dict(trades=40, loss_sum=-800, max_dd=400, worst_day=-200, worst_month=-500, net=-50) for p in ST.TESTS}
     fails = ST.gates(f, b, 0.01, 0.05, 100, 40)
     assert any("does not make money" in x for x in fails) and len(fails) == 2
+
+
+# ---------------------------------------------------------------------------------------- part B sweep
+def test_sweep_period_held_rules():
+    import sweep as SW
+    d0 = date(2025, 1, 1)
+    tr = [dict(day=d0 + timedelta(days=i), net=(-100.0 if i % 3 == 0 else 50.0)) for i in range(30)]
+    P = SW.Period(tr)
+    gone = np.array([i % 3 == 0 for i in range(30)])          # skip exactly the losers
+    ok, s = P.held(gone)
+    assert ok and s == pytest.approx(1.0)
+    assert not P.held(np.zeros(30, bool))[0]                  # skipping nothing is not a rule
+    assert not P.held(~gone)[0]                               # skipping the winners: skipped net > 0
+
+
+def test_sweep_skip_unknown_never_skips():
+    import sweep as SW
+    assert not SW.skip(dict(feature="x", kind="high", cut=1.0), {"x": math.nan})
+    assert SW.skip(dict(feature="side", kind="cat", value="C"), {"side": "C"})

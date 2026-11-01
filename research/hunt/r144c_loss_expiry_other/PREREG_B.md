@@ -29,3 +29,10 @@ period's losing-day sum). The max-statistic check: 1,000 times, give every candi
 in each period and record the best weakest-period saving among the random rules that "held". A rule's family-wise p =
 the share of those 1,000 random sweeps whose best beats it. Leads: family-wise p <= 0.10. Every raw value goes to
 `results/sweep.json`.
+
+## Amendment, after the pre-registered run (said plainly)
+
+The pre-registered chance check pooled all four arms. On the Hero ticket almost every trade loses, so ANY random skip of
+40% saves about 40% of its losing days; that set the bar for every arm. A per-arm version of the same check (random skips
+within the arm only) was added afterwards, descriptive only (`sweep.per_arm_check`, results under
+`per_arm_check_added_after`).

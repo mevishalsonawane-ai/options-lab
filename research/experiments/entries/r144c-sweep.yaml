@@ -1,0 +1,30 @@
+id: r144c-sweep
+title: 'R144c part B: hindsight sweep of 435 skip rules on FT3, Hero ticket, Night, VIX divergence'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md
+data_version: Drive lake copied 1 Nov 2026 (index_1m, options_rolling_1m, equity_1m; to 19 Oct 2026)
+period:
+  design: 2024-11-20..2026-03-31 (cuts); every period already read in part A (hindsight)
+  holdout: none fresh (unseen 2022-12-01..2024-11-19 and final 2026-04-01..2026-10-19 were read in part A)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r144c_loss_expiry_other/PREREG_B.md
+holdout_read: true
+features:
+- 'signal source: each arm''s own (FT3 and Hero ticket option-price picks, labelled); skip rules read entry-time features'
+hypothesis: some single entry-time skip rule helps in every period by more than random skipping of the same size
+model_or_rule: research/hunt/r144c_loss_expiry_other/sweep.py
+settings: 435 rules (fifths / two fifths of every feature, quadrants, side, index); held = skipped net < 0, losing days
+  and worst month better in unseen, design and final; max-statistic chance check over 1,000 random sweeps
+variants_tried: 435
+verdict: rejected
+results:
+  summary: '33 of 435 rules helped in all three periods; none beat random skipping of the same size (whole-sweep check:
+    0 leads; per-arm check added afterwards: best p 0.23). The Hero ticket loses overall, so any random skip saves its
+    share. Leads for a forward log only: FT3 skip long unwinding; Night skip VIX down more than 3% today.'
+  costs: each arm's own engine costs (R98, R55, R27, R1)

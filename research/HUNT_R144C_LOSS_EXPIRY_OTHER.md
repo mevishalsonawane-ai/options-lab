@@ -244,6 +244,43 @@ rule).** **Too small to test:** 62 trades, Dec 2022 - Oct 2026 (unseen 30, desig
 - **Its entries are early:** median 09:45. A morning breakdown that reverses hits the premium stop.
 - **By period:** unseen 27% won, -Rs 4.8k; design 44% won, +Rs 7.8k; final 1 of 7 won, -Rs 9.0k.
 
+## Part B (1 Nov, Boss: "Can we find any way to skip this trades"): a hindsight sweep
+
+Plan: `research/hunt/r144c_loss_expiry_other/PREREG_B.md` (pushed before the run). Every period had already been read in
+part A, so this sweep can only find leads, never a tested rule.
+
+**What was tried:** 435 simple skip rules on FT3, the Hero ticket, Night and VIX divergence:
+- every feature's lowest / highest fifth and two fifths;
+- every OI-price quadrant;
+- calls or puts, each index;
+- VIX divergence's expiry days, FT3's monthly-expiry tickets, Night's close location / day move / OI build-up.
+
+**Answer: no.** No entry-time rule skips the losers better than skipping the same number of trades at random.
+- **33 of 435 rules helped in all three periods** (unseen, design, final).
+- **None beat random skipping** of the same size: the whole-sweep check gave 0 leads.
+- A per-arm check (added afterwards, see the amendment) gave a best family-wise p of 0.23: Night "skip when VIX fell
+  more than 3% today". The Hero ticket's best was 0.26 and FT3's "long unwinding" 0.91.
+- **VIX divergence:** no rule helped in all three periods.
+
+**Why nothing works as a skip:**
+- **The Hero ticket loses money overall.** Skipping ANY 40% of its tickets at random cuts its losses by about 40%. The
+  only skip that helps it is trading it less, or not at all.
+- **FT3's profit is its rare runners.** Nothing at 11:00-13:00 tells a future 5x ticket from a dud. R98 found the same
+  (AUC 0.64-0.69), so any skip throws away runners along with losers.
+- **Night's losses come from the next morning's gap,** decided after entry.
+- **VIX divergence and Flow lose through their exits,** not their entries.
+
+**What can still be done (rule changes, not skips; each needs its own pre-registered test and Boss's approval):**
+1. **Hero ticket:** switch it off, or trade it smaller. It lost money in the unseen years (350 tickets, -Rs 27k) and in
+   design (248, -Rs 14.5k).
+2. **VIX divergence, NIFTY:** hold to 15:10 as BANKNIFTY does. The 20-minute rule and the -15% stop lost Rs 98k over
+   156 trades; NIFTY's 35 trades held to 15:10 made +Rs 1.77 lakh. This is hindsight and needs its own test.
+3. **FT3:** stop the monthly-only expiries (FINNIFTY, MIDCPNIFTY, BANKNIFTY since Nov 2024: 37 tickets, 1 won). They had
+   no unseen-period trades, so only new days can test it.
+4. **Flow:** a wider premium stop than 20% (31 of 62 trades were stopped by noise).
+5. **Forward (shadow) log** of FT3's "long unwinding" skip and Night's "VIX fell > 3%" skip on new days. This is the only
+   honest way to check them now.
+
 ## What this means for Boss
 
 - **No switch is proposed.** No filter passed the gates. CLAUDE.md's rule for paper (only ideas that pass) means none
