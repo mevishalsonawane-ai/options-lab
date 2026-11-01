@@ -370,4 +370,59 @@ class IraSoloTest : RobolectricTest() {
         assertTrue(IraSolo.all().isEmpty())
         assertNoKite()
     }
+
+    /**
+     * 1 Nov: [offTakesNothing] reached api.upstox.com in CI now and then (31 Oct 16:34 IST, 2 Nov 03:28 IST). Solo switched off hands
+     * its 12:00 pick to the switched-off shadow, which reads the price on its own worker after the pass has returned; when that read
+     * began after the test closed its fake Upstox, it went to the real host. Here the same pass runs at five pinned moments (before the
+     * open, in the session, after the close, a Saturday, an NSE holiday), each with its own fake Upstox, and the shadow's read is held
+     * back 300 ms so it always starts after the pass returns (the race made certain, not left to the machine's load). Each fake is
+     * closed, the shadow's worker is then waited on, and no host may have been asked; in the session the price came from the fake.
+     */
+    @Test fun offNeverReachesTheInternetAtAnyHourOrDay() {
+        val me = Thread.currentThread()
+        val base = day
+        val saturday = base.with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.SATURDAY))
+        val holiday = com.optionslab.app.data.Holidays.BUILT_IN.keys.filter {
+            it.dayOfWeek != java.time.DayOfWeek.SATURDAY && it.dayOfWeek != java.time.DayOfWeek.SUNDAY && !Market.isTradingDay(it)
+        }.minOrNull()
+        assertNotNull("a weekday NSE holiday on the built-in list", holiday)
+        val cases = listOf(
+            Triple("before the open", base, LocalTime.of(9, 0)),
+            Triple("in the session", base, LocalTime.of(12, 1)),
+            Triple("after the close", base, LocalTime.of(15, 45)),
+            Triple("a Saturday", saturday, LocalTime.of(12, 1)),
+            Triple("an NSE holiday", holiday!!, LocalTime.of(12, 1)),
+        )
+        for ((name, d, t) in cases) {
+            upstox.close()
+            upstox = FakeUpstox()                           // (clears Market.testClock: set below)
+            IraSolo.resetForTest()
+            com.optionslab.app.data.OffShadow.wipe()
+            day = d
+            at(t, 10)
+            AutomationSupport.contracts(context, listOf(
+                Upstox.Contract("BANKNIFTY", day.plusDays(2), 51_700.0, Right.CE, 30, ceKey, "BANKNIFTY-SOLO-51700CE")))
+            upstox.price(ceKey, 400.0)
+            // The pass's own look finds no price in memory (so the read goes to the shadow's worker); the worker's waits 300 ms first.
+            com.optionslab.app.data.OffShadow.testPrice = { _ -> if (Thread.currentThread() !== me) Thread.sleep(300); null }
+            IraSolo.on = false
+            runBlocking { IraSolo.passAt(now) }
+            val fake = upstox
+            fake.close()
+            com.optionslab.app.data.OffShadow.settleForTest()
+            assertEquals("$name ($d $t): no host reached", emptyList<String>(), NetworkGuard.blocked.toList())
+            assertTrue("$name: nothing bought", IraSolo.all().isEmpty())
+            val priced = fake.requests.any { "SOLOBN51700CE" in it }
+            val kept = com.optionslab.app.data.OffShadow.view.value.openOf(com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY)
+            if (name == "in the session") {
+                assertTrue("in the session the shadow's price came from the fake: ${fake.requests}", priced)
+                assertEquals("and the would-be trade was kept", 1, kept.size)
+            } else {
+                assertFalse("$name: no price read at all: ${fake.requests}", priced)
+                assertTrue("$name: no would-be trade", kept.isEmpty())
+            }
+        }
+        assertNoKite()
+    }
 }
