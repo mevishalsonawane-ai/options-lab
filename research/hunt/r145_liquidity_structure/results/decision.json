@@ -1,0 +1,111 @@
+{
+ "M15-L": {
+  "passed": false,
+  "fails": [
+   "design: losing days not smaller",
+   "final: losing days not smaller",
+   "test: drawdown worse",
+   "unseen: net lower than today's",
+   "twin p 0.97",
+   "q 1",
+   "too few trades"
+  ],
+  "p": 0.9695152423788106,
+  "q": 1.0
+ },
+ "M5-L": {
+  "passed": false,
+  "fails": [
+   "design: drawdown worse",
+   "final: drawdown worse",
+   "final: no longer makes money",
+   "test: drawdown worse",
+   "unseen: net lower than today's",
+   "twin p 1",
+   "q 1"
+  ],
+  "p": 1.0,
+  "q": 1.0
+ },
+ "REV-S": {
+  "passed": false,
+  "fails": [
+   "design: losing days not smaller",
+   "design: drawdown worse",
+   "design: worst month worse",
+   "wf: losing days not smaller",
+   "wf: drawdown worse",
+   "wf: worst day worse",
+   "wf: worst month worse",
+   "final: losing days not smaller",
+   "final: drawdown worse",
+   "final: worst day worse",
+   "final: worst month worse",
+   "final: no longer makes money",
+   "test: losing days not smaller",
+   "test: drawdown worse",
+   "test: worst day worse",
+   "test: worst month worse",
+   "unseen: net lower than today's",
+   "twin p 1",
+   "q 1"
+  ],
+  "p": 1.0,
+  "q": 1.0
+ },
+ "REV-F": {
+  "passed": false,
+  "fails": [
+   "design: losing days not smaller",
+   "design: drawdown worse",
+   "design: worst day worse",
+   "design: worst month worse",
+   "wf: losing days not smaller",
+   "wf: drawdown worse",
+   "wf: worst day worse",
+   "wf: worst month worse",
+   "final: losing days not smaller",
+   "final: drawdown worse",
+   "final: worst day worse",
+   "final: worst month worse",
+   "final: no longer makes money",
+   "test: losing days not smaller",
+   "test: drawdown worse",
+   "test: worst month worse",
+   "unseen: net lower than today's",
+   "twin p 0.95",
+   "q 1"
+  ],
+  "p": 0.9502487562189055,
+  "q": 1.0
+ },
+ "F-L": {
+  "passed": false,
+  "fails": [
+   "design: losing days not smaller",
+   "design: drawdown worse",
+   "design: worst day worse",
+   "design: worst month worse",
+   "design: no longer makes money",
+   "wf: losing days not smaller",
+   "wf: drawdown worse",
+   "wf: worst day worse",
+   "wf: worst month worse",
+   "wf: no longer makes money",
+   "final: losing days not smaller",
+   "final: drawdown worse",
+   "final: worst day worse",
+   "final: worst month worse",
+   "final: no longer makes money",
+   "test: losing days not smaller",
+   "test: drawdown worse",
+   "test: worst day worse",
+   "test: worst month worse",
+   "unseen: net lower than today's",
+   "twin p 0.96",
+   "q 1"
+  ],
+  "p": 0.9601990049751243,
+  "q": 1.0
+ }
+}

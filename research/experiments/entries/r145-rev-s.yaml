@@ -1,0 +1,28 @@
+id: r145-rev-s
+title: 'R145 REV-S: Liquidity 15+5, stop-and-reverse after a stop'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R145_LIQUIDITY_STRUCTURE.md
+data_version: Drive lake copied 31 Oct 2026; R51 clean stores (main and R143 older)
+period:
+  design: 2024-11-20..2026-03-31 (and walk-forward 2025-04-01..2026-03-31)
+  holdout: 2022-12-01..2024-11-19 (unseen, read once) and 2026-04-01..2026-10-13 (not fresh)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+prereg: research/hunt/r145_liquidity_structure/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the index (R139/R140 wick swings); reversal and flip buy the opposite option with Liquidity''s own premium
+  exits'
+hypothesis: stop-and-reverse after a stop makes Liquidity 15+5 lose less
+model_or_rule: research/hunt/r145_liquidity_structure/r145.py
+settings: 1 lot; Liquidity engine
+variants_tried: 5
+verdict: rejected
+results:
+  summary: 'unseen 2 years: 1044 trades vs 894, win 28% vs 31% (65% rule: below), net Rs 16,124 vs Rs 83,307, losing days
+    Rs -336,385 vs Rs -270,509; p 1. Fails: design: losing days not smaller; design: drawdown worse; design: worst month worse;
+    wf: losing days not smaller; wf: drawdown worse; wf: worst day worse.'
+  costs: R17 fills, dated Zerodha charges, 1 lot

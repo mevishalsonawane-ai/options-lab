@@ -1,11 +1,11 @@
-# R144 result (1 Nov 2026): the other arms, Liquidity on the unseen years, and the proven rules on more arms; nothing in the app changed
-1. Liquidity 15+5 is the only arm that made money in the unseen Dec 2022 - Nov 2024: +Rs 83,307 on 894 trades (31% won; worst month -Rs 13,213). R72, R51 and R52 all lost there.
-2. The wide-day skip (no entries after a very wide day) cut losing days on every arm in the unseen years, each better than random (p 0.0005-0.012).
-3. But each new version misses one pre-registered gate: R51 one worse month in Apr 2025 - Mar 2026; Liquidity a little less profit in the unseen years; R52 a worse drawdown and month in Apr - Oct 2026. Formally 0 of 4 pass.
-4. A 5-minute no-progress exit hurts Liquidity (its slow starters are its winners). Do not add it.
-5. The two candidates stay as R143 found: R72's wide-day skip and R52's 09:25 exit. R51's wide-day skip is close and could be watched on paper too.
-6. S5 Trail and S3-V2-E3 were already tested on 2023 - Oct 2026 by their own studies: most of their money was in 2023-24, weaker since 2025.
-7. Not yet tested: ORB, Night (R3), Solo and the MCX / gold arms. Each needs its own replay engine (a separate study if Boss wants it).
-8. Before -> after tables for every period and rule: research/HUNT_R144_OTHER_ARMS.md (R72 and R52 in HUNT_R143_UNSEEN_TWO_YEARS.md).
-9. Nothing is built. Paper switches only with Boss's approval.
-10. Entries: research/experiments/entries/r144-*.yaml. Earlier: HUNT_R139 to HUNT_R143.
+# R145 result (1 Nov 2026): higher-high / lower-low structure, the structure shift and reversal on Liquidity 15+5; 0 of 5 pass; nothing changed
+1. Boss asked for market structure, the structure shift and reversal on Liquidity. Tested on the unseen Dec 2022 - Nov 2024 and on Nov 2024 - Oct 2026, with Liquidity's own engine.
+2. Skipping trades against the 15-min or 5-min HH/LL trend (R140) cuts profit: unseen years Rs 36k (15-min) and Rs 70k (5-min) vs Rs 83k today; no better than random in R140.
+3. Structure-shift exit: almost never fires before Liquidity's own exit (0-41 trades change). The 5-min version turned Apr - Oct 2026 into a loss.
+4. Stop-and-reverse after a stop: the reverse trades lost in every period (unseen: 150 trades, 13% won, -Rs 67k). Random entry times did as well (p 1.0).
+5. Reverse after a failed breakout: also lost in every period (unseen: 311 trades, 18% won, -Rs 54k; Apr - Oct 2026: 141 trades, -Rs 85k).
+6. Flipping every signal: -Rs 4.12 lakh vs +Rs 2.57 lakh (Nov 2024 - Mar 2026). Liquidity picks the right side; reversing gives that away.
+7. Why: on Indian indices breaks tend to continue or chop (R135), and a reverse option loses its time value while it waits.
+8. Keep Liquidity 15+5 as it is. It is the only arm that made money in both the unseen years and 2024-26.
+9. Before -> after tables: research/HUNT_R145_LIQUIDITY_STRUCTURE.md. Other arms: HUNT_R143 (R72, R52) and HUNT_R144 (R51, Liquidity, R52).
+10. Entries: research/experiments/entries/r145-*.yaml. Nothing is built; any change needs Boss's approval.
