@@ -1,5 +1,7 @@
 # R144a result (R72 Breadth Donchian, R51 Donchian 20 + Supertrend, R52 Open outside value)
 
+Follow-up (fresh year Nov 2021 - Nov 2022, never used before; one pre-registered test): R72's wide-day skip and R52's 09:25 exit pass again (six periods of six); R72's heavy-futures-day skip passes here but failed Apr - Oct 2026 (shadow only); the R51 / R72 bad-break skips and R51's futures-covering skip fail. The arms lost money in this year too.
+
 1. No new skip filter passed: 4 tested (R72: quiet option tape Q2, heavy futures-volume day V4; R51: futures short covering against F4, index ticking against F2), all fail in Apr - Oct 2026 (twin p 0.07-0.70, BH q 0.29-0.70); R52 had none qualify on design.
 2. V4 (R72) and F4 (R51) beat random skipping strongly on the unseen Dec 2022 - Nov 2024 (p < 0.001), then failed in the final months: not steady.
 3. Loser rates (unseen / design / final): R72 61% / 53% / 54%, R51 61% / 56% / 55%, R52 54% / 44% / 48%; win rates stay far below the 65% rule.

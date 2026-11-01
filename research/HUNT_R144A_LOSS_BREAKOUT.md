@@ -48,6 +48,48 @@ and also find patterns for each arm, so it could help us to ignore those trades.
 6. **The arms lost money in the unseen two years** (R72 -Rs 3.07 lakh, R51 -Rs 4.00 lakh, R52 -Rs 1.52 lakh; as R143).
    Loser rates were higher then: 61% on R72 and R51, 54% on R52.
 
+## Follow-up (1 Nov): can we skip these trades? One test on a year no study had used (Nov 2021 - Nov 2022)
+
+Boss: *"Can we find any way to skip this trades"*, then chose a one-shot test on the only unused period. Pre-registered
+in `research/hunt/r144a_fresh_2021/PREREG.md` (d7fdafd) before any number. Six rules, frozen exactly as found earlier.
+**The arms lost money in this year too** (R72 -Rs 67,223, R51 -Rs 70,679, R52 -Rs 48,615; 1 lot). Only NIFTY,
+BANKNIFTY and FINNIFTY traded (SENSEX had no options yet; MIDCPNIFTY's few option days gave no trades). The fresh store
+reproduced R143's trades exactly on 1 - 30 Dec 2022 (R72 109, R51 153, R52 36).
+
+**The answer: yes, two ways to skip or cut these losses keep working, and one more joins them as a candidate.**
+
+| rule | trades | win rate | net | losing days (sum) | drawdown | worst day | worst month | beats random? | result |
+|---|---|---|---|---|---|---|---|---|---|
+| **R72: skip after a very wide day** (FB-R72-A10) | 1,169 → 970 | 44% → 44% | -Rs 67,223 → **-Rs 53,404** | -Rs 3,88,781 → **-Rs 3,15,129** | Rs 1,15,480 → Rs 86,456 | -Rs 13,602 → -Rs 13,602 | -Rs 23,441 → -Rs 21,333 | p < 0.001 | **passes (6th period in a row)** |
+| **R52: sell at 09:25 if not up 5%** (NP5-52) | 292 → 292 | 46% → 36% | -Rs 48,615 → **-Rs 30,176** | -Rs 2,41,734 → **-Rs 1,87,123** | Rs 60,851 → Rs 44,010 | -Rs 8,341 → -Rs 6,185 | -Rs 17,157 → -Rs 13,899 | p 0.027 | **passes (6th period in a row)** |
+| **R72: skip after a heavy futures-volume day** (R144A-72-V4) | 1,169 → 1,039 | 44% → 43% | -Rs 67,223 → -Rs 63,797 | -Rs 3,88,781 → **-Rs 3,31,389** | Rs 1,15,480 → Rs 98,343 | -Rs 13,602 → -Rs 8,179 | -Rs 23,441 → -Rs 22,449 | p < 0.001 | passes here; it **failed** Apr - Oct 2026, so a mixed record |
+| R72: skip bad breaks (BBX-72) | 1,169 → 443 | 44% → 47% | -Rs 67,223 → Rs 427 | -Rs 3,88,781 → -Rs 1,74,143 | Rs 1,15,480 → Rs 34,280 | -Rs 13,602 → -Rs 6,552 | -Rs 23,441 → -Rs 10,790 | p 0.52 | fails: random skipping of 62% of trades does as well |
+| R51: skip bad breaks (BBX-51) | 1,392 → 588 | 42% → 43% | -Rs 70,679 → -Rs 35,498 | -Rs 4,26,034 → -Rs 2,40,189 | Rs 1,55,398 → Rs 69,617 | -Rs 11,738 → -Rs 6,042 | -Rs 26,825 → -Rs 12,673 | p 0.985 | fails: random skipping does better |
+| R51: skip after futures short covering against the trade (R144A-51-F4) | 1,392 → 1,226 | 42% → 42% | -Rs 70,679 → -Rs 73,899 | -Rs 4,26,034 → -Rs 4,01,235 | Rs 1,55,398 → Rs 1,54,553 | -Rs 11,738 → -Rs 11,738 | -Rs 26,825 → -Rs 33,437 | p 0.22 | fails |
+
+BH over the six: q 0.0001 (A10), 0.0015 (V4), 0.054 (NP5), 0.33, 0.62, 0.985. Raw p-values:
+`research/hunt/r144a_fresh_2021/results/pvalues.json`.
+
+**What it means:**
+- **R72's wide-day skip has now cut losses in six periods out of six**, including two blind tests. It is the most
+  reliable way to skip R72's losing trades we have.
+- **R52's 09:25 exit has also held in six of six.** It cuts the size of losses, not their number: the win rate drops
+  (46% to 36% here).
+- **Caveat, by half-year:** in Nov 2021 - May 2022 the wide-day skip made the net a little worse (-Rs 13,217 vs
+  -Rs 9,696) and the worst month a little worse (-Rs 21,333 vs -Rs 20,123), though losing days fell. NP5-52's worst
+  month was worse in Jun - Nov 2022 (-Rs 13,899 vs -Rs 5,673). The gates are on the whole year, as pre-registered.
+- **R72's heavy-futures-day skip (V4)** passed here and on Dec 2022 - Nov 2024, but failed Apr - Oct 2026. As fixed in
+  the pre-registration, that makes it a candidate for a **forward shadow log**, not a switch.
+- **R51 still has no rule that works.** And no rule raises any arm near Boss's 65% win rate.
+- **The arms lost money in every year before Nov 2024** (this year and both R143 years). Their edge is recent.
+
+**Proposed (not built, Boss decides):**
+1. FB-R72-A10 and NP5-52 as labelled **paper** switches: shadow log first, off by default, Autopilot timeline, one-tap
+   undo, the arm's plain record kept separate.
+2. R144A-72-V4 in **shadow only** (logged, no effect) on new days.
+3. Live: all three only skip or exit earlier (they lower risk), and would still start in shadow behind a switch that is
+   off by default.
+
 ## What is missing from the data (said plainly)
 
 - **No bid-ask quotes, no market depth, no historical order book** anywhere in the lake. The liquidity and order-flow
