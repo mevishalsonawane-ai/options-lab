@@ -1,6 +1,6 @@
 # R144b result (1 Nov 2026): Liquidity 15+5, ORB family, Solo 2.0 losing trades; no skip filter passed
 1. Rebuilt from the Drive lake with parity to the rupee (ORB family vs R3, Liquidity vs R101); periods: unseen Dec 2022-Nov 2024, design, final (read once).
-2. Solo 2.0 LOST Rs 77,142 on 451 trades in 2022-24, the only years its shipped model never saw; its design/final profits are in-sample.
+2. Solo 2.0 LOST Rs 77,142 on 451 trades in 2022-24 (its model never saw them); retrained 3 ways (R144b-S, walk-forward), none passed: AUC 0.52-0.53.
 3. ORB, ORB Fresh, ORB Sweep, Range Fade lose on BANKNIFTY in the unseen years and design; the -40-point stop-outs are 79-98% of their money lost.
 4. ORB family losers bunch on all-lose days (72-92%); steady signs: quiet break bar, gap against, low option volume, high VIX, directional days (Sweep).
 5. Liquidity made money in every period (+83,307 / +2,57,249 / +11,155) but loses 56-69% of trades; 67-80% of losers on all-lose days; no steady entry sign.
