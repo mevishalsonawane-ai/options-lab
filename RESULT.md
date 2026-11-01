@@ -6,5 +6,5 @@
 5. Night: 67-79% of losing nights opened against the trade next morning (unseeable at 15:20; no US data in the lake).
 6. VIX divergence fades (47% -> 36% -> 32% won); NIFTY's 20-min / -15% exits lost Rs 98k, its 15:10 holds made Rs 1.77 lakh.
 7. Flow: its 20% premium stop closed 31 of 62 trades, all losers; the Time Machine's odds sit near 50%.
-8. Near-misses: FT3 skip "long unwinding" (p 0.049, failed BH q 0.20); Night skip VIX > 15 (q 0.036, final turned to a loss). Part B hindsight sweep: 435 skip rules, 33 helped in every period, none beat random skipping.
+8. Part B: 435 skip rules, none beat random skipping. Part C before/after (hindsight): Hero ticket off saves Rs 40.6k; FT3 skip monthly expiries + long unwinding Rs 6.24 -> 8.40 lakh; Night skip VIX down >3.13% Rs 1.77 -> 2.24 lakh; VIX NIFTY to 15:10 and wider Flow stops HURT.
 9. No arm is near Boss's 65% win rule; no filter moved any win rate by more than ~4 points. Nothing in the app changes. Write-up: research/HUNT_R144C_LOSS_EXPIRY_OTHER.md; code and results: research/hunt/r144c_loss_expiry_other/; entries r144c-*.yaml.

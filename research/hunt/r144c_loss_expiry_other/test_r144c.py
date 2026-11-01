@@ -265,3 +265,16 @@ def test_sweep_skip_unknown_never_skips():
     import sweep as SW
     assert not SW.skip(dict(feature="x", kind="high", cut=1.0), {"x": math.nan})
     assert SW.skip(dict(feature="side", kind="cat", value="C"), {"side": "C"})
+
+
+def test_flow_trade_without_premium_stop_never_stops_on_premium():
+    s = FP.scan(bars_from([100, 101, 100, 99, 97]), [], math.nan)
+    ix = np.full((N, 4), 97.0)
+    a = np.full((N, 7), np.nan)
+    a[:, LK.O] = a[:, LK.C] = a[:, LK.H] = 100.0
+    a[:, LK.L] = 100.0
+    a[40:, LK.L] = 10.0                                 # a deep wick: the 20% stop sells, no stop never does
+    ch = {(100.0, "P"): a}
+    t20 = FP.trade("NIFTY", date(2025, 1, 6), s, 25, ix, ch)
+    tno = FP.trade("NIFTY", date(2025, 1, 6), s, 25, ix, ch, None)
+    assert t20["exit_kind"] == "premium stop" and tno["exit_kind"] == "15:15"

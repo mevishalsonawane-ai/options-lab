@@ -448,8 +448,9 @@ def charges(buy: float, sell: float) -> float:
     return c
 
 
-def trade(und, d, s: Scan, now_row, ix_day, ch) -> dict | None:
-    """The paper trade: ATM PE of the nearest expiry at the index's price, bought at the open of minute now_row."""
+def trade(und, d, s: Scan, now_row, ix_day, ch, stop_frac: float | None = PREMIUM_STOP) -> dict | None:
+    """The paper trade: ATM PE of the nearest expiry at the index's price, bought at the open of minute now_row.
+    stop_frac: the premium stop under the fill (the arm's 20%); None = no premium stop (part C's C4c)."""
     if ch is None:
         return None
     spot = ix_day[now_row - 1, 3]
@@ -461,7 +462,7 @@ def trade(und, d, s: Scan, now_row, ix_day, ch) -> dict | None:
     if er is None:
         return None
     e = a[er, LK.O] * (1 + HALF_SPREAD)
-    stop = max(TICK, math.floor(e * (1 - PREMIUM_STOP) / TICK + 1e-9) * TICK)
+    stop = max(TICK, math.floor(e * (1 - stop_frac) / TICK + 1e-9) * TICK) if stop_frac is not None else -1.0
     tgt = s.entry - 2 * abs(s.stop - s.entry)
     xr, xp, why = None, None, None
     best = e
@@ -497,7 +498,11 @@ def _last(c, j):
     return float(c[ok[-1]]) if len(ok) else 0.0
 
 
-def build(lo=date(2022, 9, 1), hi=date(2026, 10, 19)) -> tuple[list, dict]:
+def build(lo=date(2022, 9, 1), hi=date(2026, 10, 19), stop_fracs=None):
+    """The arm's trades and its stage counts; with stop_fracs, ({stop: trades}, stages) for the same entries."""
+    multi = stop_fracs is not None
+    stop_fracs = list(stop_fracs) if multi else [PREMIUM_STOP]
+    res = {sf: [] for sf in stop_fracs}
     vix = LK.index_minutes("INDIAVIX")
     out, stages = [], {}
     for und in INDICES:
@@ -528,10 +533,13 @@ def build(lo=date(2022, 9, 1), hi=date(2026, 10, 19)) -> tuple[list, dict]:
                 cand.append((d, v))
         ch = LK.chains(und, "WEEK", {d for d, _ in cand})
         for d, v in cand:
-            t = trade(und, d, v["s"], v["now_row"], ix[d], ch.get(d))
-            if t is not None:
-                t.update(score=v["score"], tf=v["odds"]["tf"], sf=v["odds"]["sf"], idx_entry=v["s"].entry,
-                         idx_stop=v["s"].stop, or_width=(v["s"].or_hi - v["s"].or_lo) / v["s"].entry * 100)
-                out.append(t)
-        print(und, "candidates", len(cand), "trades", sum(t["und"] == und for t in out), flush=True)
-    return sorted(out, key=lambda t: (t["day"], t["und"])), {f"{a}|{b}": n for (a, b), n in stages.items()}
+            for sf in stop_fracs:
+                t = trade(und, d, v["s"], v["now_row"], ix[d], ch.get(d), sf)
+                if t is not None:
+                    t.update(score=v["score"], tf=v["odds"]["tf"], sf=v["odds"]["sf"], idx_entry=v["s"].entry,
+                             idx_stop=v["s"].stop, or_width=(v["s"].or_hi - v["s"].or_lo) / v["s"].entry * 100)
+                    res[sf].append(t)
+        print(und, "candidates", len(cand), "trades", sum(t["und"] == und for t in res[stop_fracs[0]]), flush=True)
+    st = {f"{a}|{b}": n for (a, b), n in stages.items()}
+    res = {sf: sorted(v, key=lambda t: (t["day"], t["und"])) for sf, v in res.items()}
+    return (res, st) if multi else (res[PREMIUM_STOP], st)

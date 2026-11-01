@@ -273,13 +273,63 @@ part A, so this sweep can only find leads, never a tested rule.
 **What can still be done (rule changes, not skips; each needs its own pre-registered test and Boss's approval):**
 1. **Hero ticket:** switch it off, or trade it smaller. It lost money in the unseen years (350 tickets, -Rs 27k) and in
    design (248, -Rs 14.5k).
-2. **VIX divergence, NIFTY:** hold to 15:10 as BANKNIFTY does. The 20-minute rule and the -15% stop lost Rs 98k over
+2. **VIX divergence, NIFTY:** hold to 15:10 as BANKNIFTY does (part C: this HURTS; see below). The 20-minute rule and the -15% stop lost Rs 98k over
    156 trades; NIFTY's 35 trades held to 15:10 made +Rs 1.77 lakh. This is hindsight and needs its own test.
 3. **FT3:** stop the monthly-only expiries (FINNIFTY, MIDCPNIFTY, BANKNIFTY since Nov 2024: 37 tickets, 1 won). They had
    no unseen-period trades, so only new days can test it.
-4. **Flow:** a wider premium stop than 20% (31 of 62 trades were stopped by noise).
+4. **Flow:** a wider premium stop than 20% (31 of 62 trades were stopped by noise; part C: this HURTS).
 5. **Forward (shadow) log** of FT3's "long unwinding" skip and Night's "VIX fell > 3%" skip on new days. This is the only
    honest way to check them now.
+
+## Part C (1 Nov, Boss: "Backtest all and provide me before and after results")
+
+Plan: `research/hunt/r144c_loss_expiry_other/PREREG_C.md` (pushed before the run). Code: `backtest_c.py`. Results:
+`results/before_after.json`. **Hindsight:** every period had been read before, and these changes came from looking at
+them, so these numbers are not proof.
+
+Read each "before -> after" as trades / win / net / max drawdown.
+
+**Summary (all three periods together, Dec 2022 - Oct 2026):**
+
+| change | before: trades / win / net / max drawdown | after | verdict |
+|---|---|---|---|
+| **C1 Hero ticket off** | 709 / 16% / -Rs 40,620 / Rs 43,429 | 0 / - / Rs 0 / Rs 0 | **helps**: it lost money in two of three periods |
+| **C2 VIX divergence: NIFTY held to 15:10** | 315 / 42% / +Rs 1,64,055 / Rs 60,491 | 315 / 47% / +Rs 1,41,099 / Rs 1,06,082 | **hurts**: more wins, less money, much bigger drawdown |
+| **C3 FT3: no monthly-only expiries** | 378 / 17% / +Rs 6,24,376 / Rs 2,38,223 | 341 / 18% / +Rs 7,31,214 / Rs 1,57,748 | helps in design and final (unseen had none to skip); random-skip p 0.017 |
+| **C5 FT3: skip "long unwinding"** | 378 / 17% / +Rs 6,24,376 / Rs 2,38,223 | 331 / 18% / +Rs 7,91,491 / Rs 1,59,734 | helps in all three periods; random-skip p 0.008 |
+| **C3 + C5 together (FT3)** | 378 / 17% / +Rs 6,24,376 / Rs 2,38,223 | 306 / 20% / +Rs 8,39,867 / Rs 1,13,214 | best of the FT3 options; p 0.002 |
+| **C6 Night: skip when VIX is down > 3.13% today** | 664 / 54% / +Rs 1,77,072 / Rs 85,200 | 536 / 55% / +Rs 2,24,287 / Rs 59,456 | helps on net in all three periods, but the unseen years' drawdown got worse; p 0.002 |
+| **C4a Flow stop 30%** | 62 / 32% / -Rs 6,051 / Rs 23,528 | 62 / 34% / -Rs 14,813 / Rs 31,520 | **hurts** |
+| **C4b Flow stop 40%** | same | 62 / 34% / -Rs 19,660 / Rs 36,282 | **hurts** |
+| **C4c Flow, no premium stop** | same | 62 / 34% / -Rs 20,916 / Rs 37,539 | **hurts** |
+
+**By period (before -> after):**
+
+| change | unseen (Dec 2022 - Nov 2024) | design (Nov 2024 - Mar 2026) | final (Apr - Oct 2026) |
+|---|---|---|---|
+| C1 Hero off | 350, 15%, -Rs 27,129 -> 0 | 248, 16%, -Rs 14,507 -> 0 | 111, 23%, +Rs 1,016 -> 0 |
+| C2 VIX NIFTY to 15:10 | net +Rs 1,55,139 -> +1,79,768; drawdown Rs 20,251 -> 26,755 | net +Rs 15,658 -> **-Rs 33,829**; drawdown Rs 43,407 -> 1,03,147 | net -Rs 6,742 -> -4,841; drawdown Rs 17,417 -> 13,566 |
+| C3 FT3 monthly off | 262 -> 262 (nothing to skip) | 78 -> 51, -Rs 1,65,746 -> -1,05,780 | 38 -> 28, +Rs 1,02,093 -> +1,48,965 |
+| C5 FT3 long unwinding | 262 -> 238, +Rs 6,88,029 -> +7,66,404 | 78 -> 61, -Rs 1,65,746 -> -82,466 | 38 -> 32, +Rs 1,02,093 -> +1,07,552 |
+| C3 + C5 | 262 -> 238, +Rs 6,88,029 -> +7,66,404 | 78 -> 43, -Rs 1,65,746 -> -66,186 | 38 -> 25, +Rs 1,02,093 -> +1,39,648 |
+| C6 Night VIX down | 334 -> 279, +Rs 32,755 -> +41,853; drawdown Rs 24,652 -> **36,027** | 245 -> 199, +Rs 96,250 -> +1,20,071 | 85 -> 58, +Rs 48,068 -> +62,363; drawdown Rs 43,635 -> 20,672 |
+| C4a Flow 30% | -Rs 4,812 -> -7,826 | +Rs 7,793 -> +2,814 | -Rs 9,031 -> -9,801 |
+
+**What changed from part B's suggestions, said plainly:**
+- **VIX divergence:** part B said NIFTY's 35 trades held to 15:10 made +Rs 1.77 lakh. Those were only the trades that
+  survived the stop and the 20-minute rule. Holding EVERY NIFTY trade to 15:10 makes less money (+Rs 72.6k ->
+  +Rs 49.6k over 142 trades) with three times the drawdown. **NIFTY's exits are doing their job; keep them.**
+- **Flow:** a wider or no premium stop loses more. **The 20% stop is cutting real losers; keep it.** Flow's problem is
+  its entries.
+- **FT3 (C3 + C5) and Night (C6)** improve every period's net, and beat random skipping (hindsight p 0.002 each). They
+  were found by looking at these same periods, so they are still leads.
+- **FT3 stays a lottery:** win rate 17% -> 20%, far from Boss's 65%.
+
+**Recommendation:**
+1. **Hero ticket: switch it off** (Boss's choice; a paper arm, one tap). It lost Rs 40.6k over 709 tickets.
+2. **FT3 C3 + C5 and Night C6:** a shadow log on new days (the skipped trades recorded, not traded), behind switches
+   that are off by default, before any change to the arms.
+3. **No change** to VIX divergence's NIFTY exits or Flow's stop.
 
 ## What this means for Boss
 
