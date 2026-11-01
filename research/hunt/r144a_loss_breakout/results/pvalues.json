@@ -1,0 +1,37 @@
+{
+ "_meta": {
+  "group": "R144a",
+  "note": "raw twin p per test and period (2,000 random-skip twins each); p = max(final, unseen) is what BH used. When no twin reached the rule, p is R115's normal-tail p (Monte-Carlo floor 1/2001)",
+  "written": "2026-11-01T18:23:40.476721+00:00"
+ },
+ "tests": {
+  "R144A-72-Q2": {
+   "arm": "R72",
+   "p_final": 0.19640179910044978,
+   "p_unseen": 0.4672663668165917,
+   "p_used": 0.4672663668165917,
+   "q_within_group": 0.623
+  },
+  "R144A-72-V4": {
+   "arm": "R72",
+   "p_final": 0.2723638180909545,
+   "p_unseen": 5.25448355826684e-13,
+   "p_used": 0.2723638180909545,
+   "q_within_group": 0.5447
+  },
+  "R144A-51-F4": {
+   "arm": "R51",
+   "p_final": 0.07196401799100449,
+   "p_unseen": 2.4571206314775226e-08,
+   "p_used": 0.07196401799100449,
+   "q_within_group": 0.2879
+  },
+  "R144A-51-F2": {
+   "arm": "R51",
+   "p_final": 0.6981509245377311,
+   "p_unseen": 0.0239880059970015,
+   "p_used": 0.6981509245377311,
+   "q_within_group": 0.6982
+  }
+ }
+}

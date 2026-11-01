@@ -1,0 +1,1607 @@
+{
+ "tests": {
+  "R144A-72-Q2": {
+   "arm": "R72",
+   "feature": "Q2",
+   "name": "spread proxy: option minute range / price (last 5 min)",
+   "slice": 0,
+   "edges": [
+    0.018227196905869342,
+    0.02918360765349241,
+    0.04430906311239969,
+    0.06485352804802792
+   ],
+   "p_final": 0.19640179910044978,
+   "p_unseen": 0.4672663668165917,
+   "p": 0.4672663668165917,
+   "final": {
+    "rule": {
+     "trades": 992,
+     "win": 0.4627,
+     "net": 168352,
+     "avg_win": 1795,
+     "avg_loss": -1230,
+     "worst_day": -23034,
+     "max_dd": 57788,
+     "bad_months": 1,
+     "loss_sum": -325432,
+     "losing_days": 63,
+     "days": 129,
+     "worst_month": -43148,
+     "sum_losing_trades": -655654
+    },
+    "today": {
+     "trades": 1202,
+     "win": 0.4584,
+     "net": 171366,
+     "avg_win": 1748,
+     "avg_loss": -1217,
+     "worst_day": -22571,
+     "max_dd": 61884,
+     "bad_months": 2,
+     "loss_sum": -389644,
+     "losing_days": 62,
+     "days": 129,
+     "worst_month": -40908,
+     "sum_losing_trades": -792049
+    },
+    "dropped_candidates": 522,
+    "candidates": 2367,
+    "changed": 346,
+    "twin": {
+     "p": 0.19640179910044978,
+     "p_mc": 0.19640179910044978,
+     "p_norm": 0.19905511386529653,
+     "twin_mean": -339964,
+     "twin_sd": 17197,
+     "hits": 392
+    },
+    "fails": [
+     "worst day worse",
+     "worst month worse",
+     "twin p 0.196 > 0.05"
+    ]
+   },
+   "unseen": {
+    "rule": {
+     "trades": 3341,
+     "win": 0.3918,
+     "net": -298388,
+     "avg_win": 823,
+     "avg_loss": -677,
+     "worst_day": -16757,
+     "max_dd": 329021,
+     "bad_months": 10,
+     "loss_sum": -873433,
+     "losing_days": 277,
+     "days": 453,
+     "worst_month": -53828,
+     "sum_losing_trades": -1375795
+    },
+    "today": {
+     "trades": 3395,
+     "win": 0.3897,
+     "net": -306931,
+     "avg_win": 820,
+     "avg_loss": -672,
+     "worst_day": -16757,
+     "max_dd": 337564,
+     "bad_months": 10,
+     "loss_sum": -886970,
+     "losing_days": 277,
+     "days": 453,
+     "worst_month": -54175,
+     "sum_losing_trades": -1392158
+    },
+    "dropped_candidates": 144,
+    "candidates": 6362,
+    "changed": 104,
+    "twin": {
+     "p": 0.4672663668165917,
+     "p_mc": 0.4672663668165917,
+     "p_norm": 0.4765665795719528,
+     "twin_mean": -873785,
+     "twin_sd": 5988,
+     "hits": 934
+    },
+    "fails": [
+     "twin p 0.467 > 0.05"
+    ]
+   },
+   "design_rule": {
+    "trades": 2554,
+    "win": 0.4812,
+    "net": 335915,
+    "avg_win": 1798,
+    "avg_loss": -1415,
+    "worst_day": -29811,
+    "max_dd": 160209,
+    "bad_months": 4,
+    "loss_sum": -912370,
+    "losing_days": 180,
+    "days": 322,
+    "worst_month": -46358,
+    "sum_losing_trades": -1874299
+   },
+   "design_today": {
+    "trades": 3071,
+    "win": 0.4676,
+    "net": 216929,
+    "avg_win": 1715,
+    "avg_loss": -1374,
+    "worst_day": -58613,
+    "max_dd": 199077,
+    "bad_months": 5,
+    "loss_sum": -1154058,
+    "losing_days": 176,
+    "days": 323,
+    "worst_month": -78467,
+    "sum_losing_trades": -2246151
+   },
+   "q": 0.623,
+   "passed": false,
+   "all_fails": [
+    "final: worst day worse",
+    "final: worst month worse",
+    "final: twin p 0.196 > 0.05",
+    "unseen: twin p 0.467 > 0.05",
+    "BH q 0.623 > 0.1"
+   ]
+  },
+  "R144A-72-V4": {
+   "arm": "R72",
+   "feature": "V4",
+   "name": "index futures volume yesterday vs its 20-day average",
+   "slice": 4,
+   "edges": [
+    0.6530546315791451,
+    0.8443372371671709,
+    1.0338201207572826,
+    1.3162237963282093
+   ],
+   "p_final": 0.2723638180909545,
+   "p_unseen": 5.25448355826684e-13,
+   "p": 0.2723638180909545,
+   "final": {
+    "rule": {
+     "trades": 1037,
+     "win": 0.459,
+     "net": 133998,
+     "avg_win": 1730,
+     "avg_loss": -1229,
+     "worst_day": -22571,
+     "max_dd": 66886,
+     "bad_months": 1,
+     "loss_sum": -349878,
+     "losing_days": 64,
+     "days": 127,
+     "worst_month": -45772,
+     "sum_losing_trades": -689386
+    },
+    "today": {
+     "trades": 1202,
+     "win": 0.4584,
+     "net": 171366,
+     "avg_win": 1748,
+     "avg_loss": -1217,
+     "worst_day": -22571,
+     "max_dd": 61884,
+     "bad_months": 2,
+     "loss_sum": -389644,
+     "losing_days": 62,
+     "days": 129,
+     "worst_month": -40908,
+     "sum_losing_trades": -792049
+    },
+    "dropped_candidates": 319,
+    "candidates": 2367,
+    "changed": 165,
+    "twin": {
+     "p": 0.2723638180909545,
+     "p_mc": 0.2723638180909545,
+     "p_norm": 0.2747263782558447,
+     "twin_mean": -358470,
+     "twin_sd": 14355,
+     "hits": 544
+    },
+    "fails": [
+     "drawdown worse",
+     "worst month worse",
+     "twin p 0.272 > 0.05"
+    ]
+   },
+   "unseen": {
+    "rule": {
+     "trades": 2716,
+     "win": 0.3973,
+     "net": -197589,
+     "avg_win": 785,
+     "avg_loss": -638,
+     "worst_day": -9770,
+     "max_dd": 238273,
+     "bad_months": 8,
+     "loss_sum": -658393,
+     "losing_days": 265,
+     "days": 442,
+     "worst_month": -36876,
+     "sum_losing_trades": -1044709
+    },
+    "today": {
+     "trades": 3395,
+     "win": 0.3897,
+     "net": -306931,
+     "avg_win": 820,
+     "avg_loss": -672,
+     "worst_day": -16757,
+     "max_dd": 337564,
+     "bad_months": 10,
+     "loss_sum": -886970,
+     "losing_days": 277,
+     "days": 453,
+     "worst_month": -54175,
+     "sum_losing_trades": -1392158
+    },
+    "dropped_candidates": 1305,
+    "candidates": 6362,
+    "changed": 679,
+    "twin": {
+     "p": 5.25448355826684e-13,
+     "p_mc": 0.0004997501249375312,
+     "p_norm": 5.25448355826684e-13,
+     "twin_mean": -769928,
+     "twin_sd": 15657,
+     "hits": 0
+    },
+    "fails": []
+   },
+   "design_rule": {
+    "trades": 2473,
+    "win": 0.4739,
+    "net": 313978,
+    "avg_win": 1747,
+    "avg_loss": -1333,
+    "worst_day": -46293,
+    "max_dd": 119498,
+    "bad_months": 4,
+    "loss_sum": -867619,
+    "losing_days": 164,
+    "days": 313,
+    "worst_month": -56301,
+    "sum_losing_trades": -1733922
+   },
+   "design_today": {
+    "trades": 3071,
+    "win": 0.4676,
+    "net": 216929,
+    "avg_win": 1715,
+    "avg_loss": -1374,
+    "worst_day": -58613,
+    "max_dd": 199077,
+    "bad_months": 5,
+    "loss_sum": -1154058,
+    "losing_days": 176,
+    "days": 323,
+    "worst_month": -78467,
+    "sum_losing_trades": -2246151
+   },
+   "q": 0.5447,
+   "passed": false,
+   "all_fails": [
+    "final: drawdown worse",
+    "final: worst month worse",
+    "final: twin p 0.272 > 0.05",
+    "BH q 0.545 > 0.1"
+   ]
+  },
+  "R144A-51-F4": {
+   "arm": "R51",
+   "feature": "F4",
+   "name": "futures OI-price quadrant, previous session (trade's way)",
+   "slice": "covering against",
+   "edges": [],
+   "p_final": 0.07196401799100449,
+   "p_unseen": 2.4571206314775226e-08,
+   "p": 0.07196401799100449,
+   "final": {
+    "rule": {
+     "trades": 1427,
+     "win": 0.4415,
+     "net": 93182,
+     "avg_win": 1645,
+     "avg_loss": -1184,
+     "worst_day": -16666,
+     "max_dd": 80220,
+     "bad_months": 2,
+     "loss_sum": -353484,
+     "losing_days": 75,
+     "days": 132,
+     "worst_month": -66017,
+     "sum_losing_trades": -943346
+    },
+    "today": {
+     "trades": 1670,
+     "win": 0.4485,
+     "net": 134743,
+     "avg_win": 1651,
+     "avg_loss": -1197,
+     "worst_day": -21578,
+     "max_dd": 81683,
+     "bad_months": 1,
+     "loss_sum": -395932,
+     "losing_days": 72,
+     "days": 133,
+     "worst_month": -54587,
+     "sum_losing_trades": -1102074
+    },
+    "dropped_candidates": 707,
+    "candidates": 4846,
+    "changed": 243,
+    "twin": {
+     "p": 0.07196401799100449,
+     "p_mc": 0.07196401799100449,
+     "p_norm": 0.07031643792091968,
+     "twin_mean": -379012,
+     "twin_sd": 17325,
+     "hits": 143
+    },
+    "fails": [
+     "worst month worse",
+     "twin p 0.072 > 0.05"
+    ]
+   },
+   "unseen": {
+    "rule": {
+     "trades": 4263,
+     "win": 0.3957,
+     "net": -338223,
+     "avg_win": 808,
+     "avg_loss": -661,
+     "worst_day": -17346,
+     "max_dd": 358907,
+     "bad_months": 13,
+     "loss_sum": -905959,
+     "losing_days": 303,
+     "days": 486,
+     "worst_month": -52027,
+     "sum_losing_trades": -1701685
+    },
+    "today": {
+     "trades": 4815,
+     "win": 0.3921,
+     "net": -400363,
+     "avg_win": 817,
+     "avg_loss": -664,
+     "worst_day": -17346,
+     "max_dd": 423510,
+     "bad_months": 13,
+     "loss_sum": -1012120,
+     "losing_days": 312,
+     "days": 487,
+     "worst_month": -51440,
+     "sum_losing_trades": -1943132
+    },
+    "dropped_candidates": 1384,
+    "candidates": 14216,
+    "changed": 552,
+    "twin": {
+     "p": 2.4571206314775226e-08,
+     "p_mc": 0.0004997501249375312,
+     "p_norm": 2.4571206314775226e-08,
+     "twin_mean": -983289,
+     "twin_sd": 14177,
+     "hits": 0
+    },
+    "fails": [
+     "worst month worse"
+    ]
+   },
+   "design_rule": {
+    "trades": 3689,
+    "win": 0.4494,
+    "net": 118429,
+    "avg_win": 1798,
+    "avg_loss": -1409,
+    "worst_day": -47911,
+    "max_dd": 181960,
+    "bad_months": 6,
+    "loss_sum": -1216766,
+    "losing_days": 184,
+    "days": 335,
+    "worst_month": -58417,
+    "sum_losing_trades": -2862201
+   },
+   "design_today": {
+    "trades": 4208,
+    "win": 0.4446,
+    "net": 50425,
+    "avg_win": 1752,
+    "avg_loss": -1381,
+    "worst_day": -49738,
+    "max_dd": 214239,
+    "bad_months": 8,
+    "loss_sum": -1346619,
+    "losing_days": 185,
+    "days": 337,
+    "worst_month": -69428,
+    "sum_losing_trades": -3227023
+   },
+   "q": 0.2879,
+   "passed": false,
+   "all_fails": [
+    "final: worst month worse",
+    "final: twin p 0.072 > 0.05",
+    "unseen: worst month worse",
+    "BH q 0.288 > 0.1"
+   ]
+  },
+  "R144A-51-F2": {
+   "arm": "R51",
+   "feature": "F2",
+   "name": "index tick direction (last 15 min, trade's way)",
+   "slice": 0,
+   "edges": [
+    0.0,
+    0.1428571428571429,
+    0.2142857142857143,
+    0.25
+   ],
+   "p_final": 0.6981509245377311,
+   "p_unseen": 0.0239880059970015,
+   "p": 0.6981509245377311,
+   "final": {
+    "rule": {
+     "trades": 1621,
+     "win": 0.4368,
+     "net": 75866,
+     "avg_win": 1629,
+     "avg_loss": -1180,
+     "worst_day": -16666,
+     "max_dd": 71276,
+     "bad_months": 1,
+     "loss_sum": -395385,
+     "losing_days": 71,
+     "days": 133,
+     "worst_month": -48021,
+     "sum_losing_trades": -1077136
+    },
+    "today": {
+     "trades": 1670,
+     "win": 0.4485,
+     "net": 134743,
+     "avg_win": 1651,
+     "avg_loss": -1197,
+     "worst_day": -21578,
+     "max_dd": 81683,
+     "bad_months": 1,
+     "loss_sum": -395932,
+     "losing_days": 72,
+     "days": 133,
+     "worst_month": -54587,
+     "sum_losing_trades": -1102074
+    },
+    "dropped_candidates": 221,
+    "candidates": 4846,
+    "changed": 241,
+    "twin": {
+     "p": 0.6981509245377311,
+     "p_mc": 0.6981509245377311,
+     "p_norm": 0.6866277640533104,
+     "twin_mean": -390248,
+     "twin_sd": 10564,
+     "hits": 1396
+    },
+    "fails": [
+     "twin p 0.698 > 0.05"
+    ]
+   },
+   "unseen": {
+    "rule": {
+     "trades": 4689,
+     "win": 0.3962,
+     "net": -374149,
+     "avg_win": 813,
+     "avg_loss": -665,
+     "worst_day": -14681,
+     "max_dd": 395101,
+     "bad_months": 14,
+     "loss_sum": -977669,
+     "losing_days": 311,
+     "days": 487,
+     "worst_month": -43533,
+     "sum_losing_trades": -1883979
+    },
+    "today": {
+     "trades": 4815,
+     "win": 0.3921,
+     "net": -400363,
+     "avg_win": 817,
+     "avg_loss": -664,
+     "worst_day": -17346,
+     "max_dd": 423510,
+     "bad_months": 13,
+     "loss_sum": -1012120,
+     "losing_days": 312,
+     "days": 487,
+     "worst_month": -51440,
+     "sum_losing_trades": -1943132
+    },
+    "dropped_candidates": 685,
+    "candidates": 14216,
+    "changed": 610,
+    "twin": {
+     "p": 0.0239880059970015,
+     "p_mc": 0.0239880059970015,
+     "p_norm": 0.024962726823593726,
+     "twin_mean": -997980,
+     "twin_sd": 10360,
+     "hits": 47
+    },
+    "fails": []
+   },
+   "design_rule": {
+    "trades": 4107,
+    "win": 0.4434,
+    "net": 49717,
+    "avg_win": 1732,
+    "avg_loss": -1358,
+    "worst_day": -49738,
+    "max_dd": 188167,
+    "bad_months": 8,
+    "loss_sum": -1320458,
+    "losing_days": 187,
+    "days": 337,
+    "worst_month": -57177,
+    "sum_losing_trades": -3103595
+   },
+   "design_today": {
+    "trades": 4208,
+    "win": 0.4446,
+    "net": 50425,
+    "avg_win": 1752,
+    "avg_loss": -1381,
+    "worst_day": -49738,
+    "max_dd": 214239,
+    "bad_months": 8,
+    "loss_sum": -1346619,
+    "losing_days": 185,
+    "days": 337,
+    "worst_month": -69428,
+    "sum_losing_trades": -3227023
+   },
+   "q": 0.6982,
+   "passed": false,
+   "all_fails": [
+    "final: twin p 0.698 > 0.05",
+    "BH q 0.698 > 0.1"
+   ]
+  }
+ },
+ "steady": {
+  "R72": {
+   "overview": {
+    "design": {
+     "n": 3071,
+     "losers": 1635,
+     "loser_rate": 0.532,
+     "win": 0.468,
+     "avg": 71,
+     "net": 216929,
+     "sum_losses": -2246151,
+     "avg_loss": -1374
+    },
+    "final": {
+     "n": 1202,
+     "losers": 651,
+     "loser_rate": 0.542,
+     "win": 0.458,
+     "avg": 143,
+     "net": 171366,
+     "sum_losses": -792049,
+     "avg_loss": -1217
+    },
+    "unseen": {
+     "n": 3395,
+     "losers": 2072,
+     "loser_rate": 0.61,
+     "win": 0.39,
+     "avg": -90,
+     "net": -306931,
+     "sum_losses": -1392158,
+     "avg_loss": -672
+    }
+   },
+   "steady": [
+    {
+     "feature": "A1",
+     "slice": "1",
+     "design": {
+      "n": 614,
+      "losers": 362,
+      "loser_rate": 0.59,
+      "win": 0.41,
+      "avg": -179,
+      "net": -109715,
+      "sum_losses": -485158,
+      "avg_loss": -1340
+     },
+     "final": {
+      "n": 244,
+      "losers": 149,
+      "loser_rate": 0.611,
+      "win": 0.389,
+      "avg": -128,
+      "net": -31228,
+      "sum_losses": -176205,
+      "avg_loss": -1183
+     },
+     "unseen": {
+      "n": 628,
+      "losers": 388,
+      "loser_rate": 0.618,
+      "win": 0.382,
+      "avg": -119,
+      "net": -74848,
+      "sum_losses": -247046,
+      "avg_loss": -637
+     }
+    },
+    {
+     "feature": "A1",
+     "slice": "2",
+     "design": {
+      "n": 614,
+      "losers": 341,
+      "loser_rate": 0.555,
+      "win": 0.445,
+      "avg": -1,
+      "net": -428,
+      "sum_losses": -410994,
+      "avg_loss": -1205
+     },
+     "final": {
+      "n": 234,
+      "losers": 137,
+      "loser_rate": 0.585,
+      "win": 0.415,
+      "avg": -126,
+      "net": -29438,
+      "sum_losses": -166643,
+      "avg_loss": -1216
+     },
+     "unseen": {
+      "n": 612,
+      "losers": 388,
+      "loser_rate": 0.634,
+      "win": 0.366,
+      "avg": -111,
+      "net": -67674,
+      "sum_losses": -249584,
+      "avg_loss": -643
+     }
+    },
+    {
+     "feature": "A7",
+     "slice": "0",
+     "design": {
+      "n": 614,
+      "losers": 344,
+      "loser_rate": 0.56,
+      "win": 0.44,
+      "avg": -84,
+      "net": -51604,
+      "sum_losses": -460356,
+      "avg_loss": -1338
+     },
+     "final": {
+      "n": 226,
+      "losers": 134,
+      "loser_rate": 0.593,
+      "win": 0.407,
+      "avg": -166,
+      "net": -37573,
+      "sum_losses": -153603,
+      "avg_loss": -1146
+     },
+     "unseen": {
+      "n": 534,
+      "losers": 347,
+      "loser_rate": 0.65,
+      "win": 0.35,
+      "avg": -188,
+      "net": -100436,
+      "sum_losses": -226757,
+      "avg_loss": -653
+     }
+    },
+    {
+     "feature": "A10",
+     "slice": "4",
+     "design": {
+      "n": 616,
+      "losers": 357,
+      "loser_rate": 0.58,
+      "win": 0.42,
+      "avg": -78,
+      "net": -47873,
+      "sum_losses": -541635,
+      "avg_loss": -1517
+     },
+     "final": {
+      "n": 187,
+      "losers": 108,
+      "loser_rate": 0.578,
+      "win": 0.422,
+      "avg": -120,
+      "net": -22475,
+      "sum_losses": -152731,
+      "avg_loss": -1414
+     },
+     "unseen": {
+      "n": 748,
+      "losers": 504,
+      "loser_rate": 0.674,
+      "win": 0.326,
+      "avg": -228,
+      "net": -170189,
+      "sum_losses": -401558,
+      "avg_loss": -797
+     }
+    },
+    {
+     "feature": "A10",
+     "slice": "3",
+     "design": {
+      "n": 615,
+      "losers": 334,
+      "loser_rate": 0.543,
+      "win": 0.457,
+      "avg": -8,
+      "net": -4885,
+      "sum_losses": -450146,
+      "avg_loss": -1348
+     },
+     "final": {
+      "n": 201,
+      "losers": 118,
+      "loser_rate": 0.587,
+      "win": 0.413,
+      "avg": -107,
+      "net": -21597,
+      "sum_losses": -157693,
+      "avg_loss": -1336
+     },
+     "unseen": {
+      "n": 494,
+      "losers": 324,
+      "loser_rate": 0.656,
+      "win": 0.344,
+      "avg": -172,
+      "net": -85205,
+      "sum_losses": -222227,
+      "avg_loss": -686
+     }
+    },
+    {
+     "feature": "A11",
+     "slice": "1.0",
+     "design": {
+      "n": 605,
+      "losers": 331,
+      "loser_rate": 0.547,
+      "win": 0.453,
+      "avg": -45,
+      "net": -27462,
+      "sum_losses": -424523,
+      "avg_loss": -1283
+     },
+     "final": {
+      "n": 203,
+      "losers": 120,
+      "loser_rate": 0.591,
+      "win": 0.409,
+      "avg": -160,
+      "net": -32573,
+      "sum_losses": -147287,
+      "avg_loss": -1227
+     },
+     "unseen": {
+      "n": 673,
+      "losers": 436,
+      "loser_rate": 0.648,
+      "win": 0.352,
+      "avg": -123,
+      "net": -82722,
+      "sum_losses": -270513,
+      "avg_loss": -620
+     }
+    }
+   ]
+  },
+  "R51": {
+   "overview": {
+    "design": {
+     "n": 4208,
+     "losers": 2337,
+     "loser_rate": 0.555,
+     "win": 0.445,
+     "avg": 12,
+     "net": 50425,
+     "sum_losses": -3227023,
+     "avg_loss": -1381
+    },
+    "final": {
+     "n": 1670,
+     "losers": 921,
+     "loser_rate": 0.551,
+     "win": 0.449,
+     "avg": 81,
+     "net": 134743,
+     "sum_losses": -1102074,
+     "avg_loss": -1197
+    },
+    "unseen": {
+     "n": 4815,
+     "losers": 2927,
+     "loser_rate": 0.608,
+     "win": 0.392,
+     "avg": -83,
+     "net": -400363,
+     "sum_losses": -1943132,
+     "avg_loss": -664
+    }
+   },
+   "steady": [
+    {
+     "feature": "V4",
+     "slice": "3",
+     "design": {
+      "n": 816,
+      "losers": 456,
+      "loser_rate": 0.559,
+      "win": 0.441,
+      "avg": -4,
+      "net": -3138,
+      "sum_losses": -698305,
+      "avg_loss": -1531
+     },
+     "final": {
+      "n": 266,
+      "losers": 152,
+      "loser_rate": 0.571,
+      "win": 0.429,
+      "avg": -22,
+      "net": -5854,
+      "sum_losses": -188100,
+      "avg_loss": -1238
+     },
+     "unseen": {
+      "n": 791,
+      "losers": 500,
+      "loser_rate": 0.632,
+      "win": 0.368,
+      "avg": -143,
+      "net": -112862,
+      "sum_losses": -360766,
+      "avg_loss": -722
+     }
+    },
+    {
+     "feature": "Q1",
+     "slice": "2",
+     "design": {
+      "n": 841,
+      "losers": 472,
+      "loser_rate": 0.561,
+      "win": 0.439,
+      "avg": -22,
+      "net": -18917,
+      "sum_losses": -634319,
+      "avg_loss": -1344
+     },
+     "final": {
+      "n": 356,
+      "losers": 204,
+      "loser_rate": 0.573,
+      "win": 0.427,
+      "avg": -7,
+      "net": -2670,
+      "sum_losses": -256746,
+      "avg_loss": -1259
+     },
+     "unseen": {
+      "n": 1002,
+      "losers": 626,
+      "loser_rate": 0.625,
+      "win": 0.375,
+      "avg": -174,
+      "net": -173873,
+      "sum_losses": -543577,
+      "avg_loss": -868
+     }
+    },
+    {
+     "feature": "Q2",
+     "slice": "0",
+     "design": {
+      "n": 841,
+      "losers": 486,
+      "loser_rate": 0.578,
+      "win": 0.422,
+      "avg": -129,
+      "net": -108510,
+      "sum_losses": -573466,
+      "avg_loss": -1180
+     },
+     "final": {
+      "n": 446,
+      "losers": 257,
+      "loser_rate": 0.576,
+      "win": 0.424,
+      "avg": -43,
+      "net": -19326,
+      "sum_losses": -300637,
+      "avg_loss": -1170
+     },
+     "unseen": {
+      "n": 146,
+      "losers": 90,
+      "loser_rate": 0.616,
+      "win": 0.384,
+      "avg": -38,
+      "net": -5486,
+      "sum_losses": -30488,
+      "avg_loss": -339
+     }
+    },
+    {
+     "feature": "O1",
+     "slice": "3",
+     "design": {
+      "n": 833,
+      "losers": 477,
+      "loser_rate": 0.573,
+      "win": 0.427,
+      "avg": -53,
+      "net": -44314,
+      "sum_losses": -593083,
+      "avg_loss": -1243
+     },
+     "final": {
+      "n": 319,
+      "losers": 186,
+      "loser_rate": 0.583,
+      "win": 0.417,
+      "avg": -60,
+      "net": -19121,
+      "sum_losses": -186752,
+      "avg_loss": -1004
+     },
+     "unseen": {
+      "n": 1096,
+      "losers": 673,
+      "loser_rate": 0.614,
+      "win": 0.386,
+      "avg": -102,
+      "net": -111665,
+      "sum_losses": -467106,
+      "avg_loss": -694
+     }
+    },
+    {
+     "feature": "C12",
+     "slice": "0",
+     "design": {
+      "n": 842,
+      "losers": 476,
+      "loser_rate": 0.565,
+      "win": 0.435,
+      "avg": -2,
+      "net": -1975,
+      "sum_losses": -816978,
+      "avg_loss": -1716
+     },
+     "final": {
+      "n": 303,
+      "losers": 170,
+      "loser_rate": 0.561,
+      "win": 0.439,
+      "avg": -51,
+      "net": -15482,
+      "sum_losses": -252269,
+      "avg_loss": -1484
+     },
+     "unseen": {
+      "n": 1097,
+      "losers": 670,
+      "loser_rate": 0.611,
+      "win": 0.389,
+      "avg": -123,
+      "net": -134914,
+      "sum_losses": -542974,
+      "avg_loss": -810
+     }
+    },
+    {
+     "feature": "F1",
+     "slice": "2",
+     "design": {
+      "n": 838,
+      "losers": 501,
+      "loser_rate": 0.598,
+      "win": 0.402,
+      "avg": -145,
+      "net": -121698,
+      "sum_losses": -656408,
+      "avg_loss": -1310
+     },
+     "final": {
+      "n": 288,
+      "losers": 185,
+      "loser_rate": 0.642,
+      "win": 0.358,
+      "avg": -124,
+      "net": -35645,
+      "sum_losses": -215777,
+      "avg_loss": -1166
+     },
+     "unseen": {
+      "n": 1043,
+      "losers": 638,
+      "loser_rate": 0.612,
+      "win": 0.388,
+      "avg": -88,
+      "net": -92085,
+      "sum_losses": -425265,
+      "avg_loss": -667
+     }
+    },
+    {
+     "feature": "F2",
+     "slice": "2",
+     "design": {
+      "n": 915,
+      "losers": 511,
+      "loser_rate": 0.558,
+      "win": 0.442,
+      "avg": -43,
+      "net": -39123,
+      "sum_losses": -670496,
+      "avg_loss": -1312
+     },
+     "final": {
+      "n": 349,
+      "losers": 212,
+      "loser_rate": 0.607,
+      "win": 0.393,
+      "avg": -65,
+      "net": -22775,
+      "sum_losses": -237477,
+      "avg_loss": -1120
+     },
+     "unseen": {
+      "n": 1051,
+      "losers": 642,
+      "loser_rate": 0.611,
+      "win": 0.389,
+      "avg": -72,
+      "net": -75319,
+      "sum_losses": -407260,
+      "avg_loss": -634
+     }
+    },
+    {
+     "feature": "F2",
+     "slice": "3",
+     "design": {
+      "n": 723,
+      "losers": 413,
+      "loser_rate": 0.571,
+      "win": 0.429,
+      "avg": -95,
+      "net": -68420,
+      "sum_losses": -533593,
+      "avg_loss": -1292
+     },
+     "final": {
+      "n": 276,
+      "losers": 160,
+      "loser_rate": 0.58,
+      "win": 0.42,
+      "avg": -37,
+      "net": -10222,
+      "sum_losses": -185754,
+      "avg_loss": -1161
+     },
+     "unseen": {
+      "n": 780,
+      "losers": 492,
+      "loser_rate": 0.631,
+      "win": 0.369,
+      "avg": -89,
+      "net": -69417,
+      "sum_losses": -303881,
+      "avg_loss": -618
+     }
+    },
+    {
+     "feature": "A1",
+     "slice": "1",
+     "design": {
+      "n": 841,
+      "losers": 501,
+      "loser_rate": 0.596,
+      "win": 0.404,
+      "avg": -141,
+      "net": -118960,
+      "sum_losses": -610718,
+      "avg_loss": -1219
+     },
+     "final": {
+      "n": 329,
+      "losers": 200,
+      "loser_rate": 0.608,
+      "win": 0.392,
+      "avg": -161,
+      "net": -52986,
+      "sum_losses": -247258,
+      "avg_loss": -1236
+     },
+     "unseen": {
+      "n": 964,
+      "losers": 597,
+      "loser_rate": 0.619,
+      "win": 0.381,
+      "avg": -125,
+      "net": -120370,
+      "sum_losses": -357592,
+      "avg_loss": -599
+     }
+    },
+    {
+     "feature": "A1",
+     "slice": "0",
+     "design": {
+      "n": 842,
+      "losers": 500,
+      "loser_rate": 0.594,
+      "win": 0.406,
+      "avg": -104,
+      "net": -87978,
+      "sum_losses": -618762,
+      "avg_loss": -1238
+     },
+     "final": {
+      "n": 329,
+      "losers": 200,
+      "loser_rate": 0.608,
+      "win": 0.392,
+      "avg": -104,
+      "net": -34063,
+      "sum_losses": -209189,
+      "avg_loss": -1046
+     },
+     "unseen": {
+      "n": 901,
+      "losers": 568,
+      "loser_rate": 0.63,
+      "win": 0.37,
+      "avg": -94,
+      "net": -84791,
+      "sum_losses": -357785,
+      "avg_loss": -630
+     }
+    },
+    {
+     "feature": "A1",
+     "slice": "2",
+     "design": {
+      "n": 842,
+      "losers": 496,
+      "loser_rate": 0.589,
+      "win": 0.411,
+      "avg": -129,
+      "net": -108228,
+      "sum_losses": -639436,
+      "avg_loss": -1289
+     },
+     "final": {
+      "n": 328,
+      "losers": 193,
+      "loser_rate": 0.588,
+      "win": 0.412,
+      "avg": -44,
+      "net": -14317,
+      "sum_losses": -211552,
+      "avg_loss": -1096
+     },
+     "unseen": {
+      "n": 906,
+      "losers": 567,
+      "loser_rate": 0.626,
+      "win": 0.374,
+      "avg": -88,
+      "net": -79297,
+      "sum_losses": -365219,
+      "avg_loss": -644
+     }
+    },
+    {
+     "feature": "A5",
+     "slice": "2",
+     "design": {
+      "n": 851,
+      "losers": 486,
+      "loser_rate": 0.571,
+      "win": 0.429,
+      "avg": -161,
+      "net": -137160,
+      "sum_losses": -654767,
+      "avg_loss": -1347
+     },
+     "final": {
+      "n": 320,
+      "losers": 194,
+      "loser_rate": 0.606,
+      "win": 0.394,
+      "avg": -191,
+      "net": -61120,
+      "sum_losses": -226818,
+      "avg_loss": -1169
+     },
+     "unseen": {
+      "n": 944,
+      "losers": 579,
+      "loser_rate": 0.613,
+      "win": 0.387,
+      "avg": -80,
+      "net": -75699,
+      "sum_losses": -366122,
+      "avg_loss": -632
+     }
+    },
+    {
+     "feature": "A7",
+     "slice": "0",
+     "design": {
+      "n": 842,
+      "losers": 494,
+      "loser_rate": 0.587,
+      "win": 0.413,
+      "avg": -169,
+      "net": -142235,
+      "sum_losses": -643476,
+      "avg_loss": -1303
+     },
+     "final": {
+      "n": 362,
+      "losers": 223,
+      "loser_rate": 0.616,
+      "win": 0.384,
+      "avg": -164,
+      "net": -59437,
+      "sum_losses": -246084,
+      "avg_loss": -1104
+     },
+     "unseen": {
+      "n": 816,
+      "losers": 509,
+      "loser_rate": 0.624,
+      "win": 0.376,
+      "avg": -151,
+      "net": -122969,
+      "sum_losses": -325776,
+      "avg_loss": -640
+     }
+    },
+    {
+     "feature": "A8",
+     "slice": "4",
+     "design": {
+      "n": 842,
+      "losers": 497,
+      "loser_rate": 0.59,
+      "win": 0.41,
+      "avg": -161,
+      "net": -135752,
+      "sum_losses": -742581,
+      "avg_loss": -1494
+     },
+     "final": {
+      "n": 432,
+      "losers": 255,
+      "loser_rate": 0.59,
+      "win": 0.41,
+      "avg": -19,
+      "net": -8306,
+      "sum_losses": -292725,
+      "avg_loss": -1148
+     },
+     "unseen": {
+      "n": 913,
+      "losers": 583,
+      "loser_rate": 0.639,
+      "win": 0.361,
+      "avg": -149,
+      "net": -136450,
+      "sum_losses": -405951,
+      "avg_loss": -696
+     }
+    },
+    {
+     "feature": "A10",
+     "slice": "4",
+     "design": {
+      "n": 842,
+      "losers": 506,
+      "loser_rate": 0.601,
+      "win": 0.399,
+      "avg": -129,
+      "net": -108456,
+      "sum_losses": -779612,
+      "avg_loss": -1541
+     },
+     "final": {
+      "n": 276,
+      "losers": 162,
+      "loser_rate": 0.587,
+      "win": 0.413,
+      "avg": -82,
+      "net": -22642,
+      "sum_losses": -215845,
+      "avg_loss": -1332
+     },
+     "unseen": {
+      "n": 1087,
+      "losers": 704,
+      "loser_rate": 0.648,
+      "win": 0.352,
+      "avg": -193,
+      "net": -209349,
+      "sum_losses": -559254,
+      "avg_loss": -794
+     }
+    },
+    {
+     "feature": "A10",
+     "slice": "3",
+     "design": {
+      "n": 843,
+      "losers": 472,
+      "loser_rate": 0.56,
+      "win": 0.44,
+      "avg": -58,
+      "net": -48684,
+      "sum_losses": -634879,
+      "avg_loss": -1345
+     },
+     "final": {
+      "n": 268,
+      "losers": 155,
+      "loser_rate": 0.578,
+      "win": 0.422,
+      "avg": -118,
+      "net": -31615,
+      "sum_losses": -198054,
+      "avg_loss": -1278
+     },
+     "unseen": {
+      "n": 710,
+      "losers": 456,
+      "loser_rate": 0.642,
+      "win": 0.358,
+      "avg": -169,
+      "net": -119669,
+      "sum_losses": -309514,
+      "avg_loss": -679
+     }
+    },
+    {
+     "feature": "C1",
+     "slice": "0",
+     "design": {
+      "n": 842,
+      "losers": 472,
+      "loser_rate": 0.561,
+      "win": 0.439,
+      "avg": -108,
+      "net": -90830,
+      "sum_losses": -645327,
+      "avg_loss": -1367
+     },
+     "final": {
+      "n": 430,
+      "losers": 239,
+      "loser_rate": 0.556,
+      "win": 0.444,
+      "avg": -42,
+      "net": -18236,
+      "sum_losses": -293060,
+      "avg_loss": -1226
+     },
+     "unseen": {
+      "n": 1139,
+      "losers": 698,
+      "loser_rate": 0.613,
+      "win": 0.387,
+      "avg": -81,
+      "net": -92044,
+      "sum_losses": -469691,
+      "avg_loss": -673
+     }
+    },
+    {
+     "feature": "A11",
+     "slice": "1.0",
+     "design": {
+      "n": 945,
+      "losers": 570,
+      "loser_rate": 0.603,
+      "win": 0.397,
+      "avg": -193,
+      "net": -182667,
+      "sum_losses": -732827,
+      "avg_loss": -1286
+     },
+     "final": {
+      "n": 348,
+      "losers": 202,
+      "loser_rate": 0.58,
+      "win": 0.42,
+      "avg": -141,
+      "net": -49111,
+      "sum_losses": -231989,
+      "avg_loss": -1148
+     },
+     "unseen": {
+      "n": 1065,
+      "losers": 659,
+      "loser_rate": 0.619,
+      "win": 0.381,
+      "avg": -82,
+      "net": -87623,
+      "sum_losses": -403827,
+      "avg_loss": -613
+     }
+    },
+    {
+     "feature": "A11",
+     "slice": "2.0",
+     "design": {
+      "n": 492,
+      "losers": 287,
+      "loser_rate": 0.583,
+      "win": 0.417,
+      "avg": -106,
+      "net": -52297,
+      "sum_losses": -349113,
+      "avg_loss": -1216
+     },
+     "final": {
+      "n": 182,
+      "losers": 101,
+      "loser_rate": 0.555,
+      "win": 0.445,
+      "avg": -1,
+      "net": -203,
+      "sum_losses": -111644,
+      "avg_loss": -1105
+     },
+     "unseen": {
+      "n": 554,
+      "losers": 359,
+      "loser_rate": 0.648,
+      "win": 0.352,
+      "avg": -165,
+      "net": -91310,
+      "sum_losses": -222292,
+      "avg_loss": -619
+     }
+    },
+    {
+     "feature": "C6",
+     "slice": "3",
+     "design": {
+      "n": 675,
+      "losers": 379,
+      "loser_rate": 0.561,
+      "win": 0.439,
+      "avg": -43,
+      "net": -28997,
+      "sum_losses": -503441,
+      "avg_loss": -1328
+     },
+     "final": {
+      "n": 306,
+      "losers": 178,
+      "loser_rate": 0.582,
+      "win": 0.418,
+      "avg": -110,
+      "net": -33664,
+      "sum_losses": -241349,
+      "avg_loss": -1356
+     },
+     "unseen": {
+      "n": 849,
+      "losers": 530,
+      "loser_rate": 0.624,
+      "win": 0.376,
+      "avg": -132,
+      "net": -111778,
+      "sum_losses": -368092,
+      "avg_loss": -695
+     }
+    }
+   ]
+  },
+  "R52": {
+   "overview": {
+    "design": {
+     "n": 706,
+     "losers": 313,
+     "loser_rate": 0.443,
+     "win": 0.557,
+     "avg": 412,
+     "net": 290573,
+     "sum_losses": -739055,
+     "avg_loss": -2361
+    },
+    "final": {
+     "n": 293,
+     "losers": 142,
+     "loser_rate": 0.485,
+     "win": 0.515,
+     "avg": 166,
+     "net": 48612,
+     "sum_losses": -268790,
+     "avg_loss": -1893
+    },
+    "unseen": {
+     "n": 973,
+     "losers": 527,
+     "loser_rate": 0.542,
+     "win": 0.458,
+     "avg": -156,
+     "net": -152248,
+     "sum_losses": -608892,
+     "avg_loss": -1155
+    }
+   },
+   "steady": [
+    {
+     "feature": "A7",
+     "slice": "0",
+     "design": {
+      "n": 141,
+      "losers": 69,
+      "loser_rate": 0.489,
+      "win": 0.511,
+      "avg": -76,
+      "net": -10773,
+      "sum_losses": -163554,
+      "avg_loss": -2370
+     },
+     "final": {
+      "n": 51,
+      "losers": 30,
+      "loser_rate": 0.588,
+      "win": 0.412,
+      "avg": -241,
+      "net": -12304,
+      "sum_losses": -56450,
+      "avg_loss": -1882
+     },
+     "unseen": {
+      "n": 460,
+      "losers": 253,
+      "loser_rate": 0.55,
+      "win": 0.45,
+      "avg": -185,
+      "net": -84901,
+      "sum_losses": -278738,
+      "avg_loss": -1102
+     }
+    }
+   ]
+  }
+ }
+}

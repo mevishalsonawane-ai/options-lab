@@ -1,0 +1,33 @@
+id: r144a-72-v4
+title: 'R144a R144A-72-V4: skip index futures volume yesterday vs its 20-day average (slice 4) on R72'
+family: trade-management
+date: '2026-11-01'
+doc: research/HUNT_R144A_LOSS_BREAKOUT.md
+data_version: Drive lake copied 1 Nov 2026; R51 clean stores (main) and R143 old store; S&P 500 daily from Yahoo (not committed)
+period:
+  design: 2024-11-20..2026-03-31 (halves H1 / H2)
+  holdout: 2026-04-01..2026-10-13 and 2022-12-01..2024-11-19 (each read once; the arms' own trades there were already read
+    by R140-R143)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+prereg: research/hunt/r144a_loss_breakout/PREREG.md
+holdout_read: true
+model_or_rule: research/hunt/r144a_loss_breakout/r144a.py
+features:
+- 'signal source: the index (the arm''s own break); skip feature V4: index futures volume yesterday vs its 20-day average
+  (context from options / futures, proxy where labelled)'
+hypothesis: skipping R72 candidates in the design-chosen slice cuts losses better than random skipping in both test periods
+settings: design-edge slice 4 of V4 (edges [0.6531, 0.8443, 1.0338, 1.3162]); 1 lot; 2,000 random-skip twins per period
+variants_tried: 1
+verdict: rejected
+results:
+  summary: 'unseen: 2716 trades vs 3395, win 40% vs 39% (65% rule: below), net Rs -197,589 vs Rs -306,931, losing days Rs
+    -658,393 vs Rs -886,970, drawdown Rs 238,273 vs Rs 337,564, worst month Rs -36,876 vs Rs -54,175, twin p 5.25e-13; final:
+    1037 trades vs 1202, win 46% vs 46% (65% rule: below), net Rs 133,998 vs Rs 171,366, losing days Rs -349,878 vs Rs -389,644,
+    drawdown Rs 66,886 vs Rs 61,884, worst month Rs -45,772 vs Rs -40,908, twin p 0.272; BH q 0.5447 (within R144a). Fails:
+    final: drawdown worse; final: worst month worse; final: twin p 0.272 > 0.05; BH q 0.545 > 0.1'
+  costs: R17 fills, dated Zerodha charges, 1 lot (R101 / R106 engine)

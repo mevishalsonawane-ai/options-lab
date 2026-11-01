@@ -239,10 +239,14 @@ def cache_key(und, d, c) -> tuple:
 _FC: dict = {}
 
 
+def _cache_file() -> Path:
+    return CACHE / ("features_old.pkl" if "r143_old" in os.environ.get("R51_OUT", "") else "features.pkl")
+
+
 def feature_cache() -> dict:
     """R144a features per candidate, kept outside git (they depend only on the candidate and the store)."""
     if not _FC:
-        p = CACHE / "features.pkl"
+        p = _cache_file()
         if p.exists():
             with open(p, "rb") as f:
                 _FC.update(pickle.load(f))
@@ -251,8 +255,10 @@ def feature_cache() -> dict:
 
 def save_cache(fc: dict):
     CACHE.mkdir(parents=True, exist_ok=True)
-    with open(CACHE / "features.pkl", "wb") as f:
+    tmp = _cache_file().with_suffix(".tmp")
+    with open(tmp, "wb") as f:
         pickle.dump(fc, f, protocol=pickle.HIGHEST_PROTOCOL)
+    tmp.replace(_cache_file())
 
 
 def candidate_features(us: list) -> dict:
@@ -556,7 +562,8 @@ def report():
                 if steady(row, base):
                     st.append(dict(feature=f, slice=sl, **row))
         merged[arm] = dict(overview=base, steady=st)
-    pv = dict(_meta=dict(group="R144a", note="raw twin p per test and period; p = max(final, unseen) is what BH used",
+    pv = dict(_meta=dict(group="R144a", note="raw twin p per test and period (2,000 random-skip twins each); p = max(final, unseen) is what BH "
+                         "used. When no twin reached the rule, p is R115's normal-tail p (Monte-Carlo floor 1/2001)",
                          written=datetime.now(timezone.utc).isoformat()),
               tests={t: dict(arm=rows[t]["arm"], p_final=rows[t]["p_final"], p_unseen=rows[t]["p_unseen"],
                              p_used=rows[t]["p"], q_within_group=rows[t]["q"]) for t in tests})
