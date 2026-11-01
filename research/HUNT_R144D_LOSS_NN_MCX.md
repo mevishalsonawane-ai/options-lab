@@ -335,6 +335,113 @@ reversals at rolls, not something a skip filter catches.
 **Flaw, plainly:** it is one regime (a tripling silver market). Its losses are whole adverse days, and its record
 cannot be checked on older years with our data.
 
+## Before → after, every filter on every arm
+
+1 lot, after charges. "Before" is the arm as it runs today. "Losing days" is the sum of all losing days. Win = share of trades that made money (Boss's rule: 65%).
+
+- The filters were chosen on **design**. Only **unseen** and **final** are tests.
+- MCX intraday arms have no unseen-years trades: the lake has no MCX option minutes before Aug 2025.
+- p: share of 2,000 random skips of the same number of trades that cut losing days as much (pooled = unseen and final together). q: after BH over all 18 filters.
+
+### S5 Trail
+
+| filter | period | trades | win | net | losing days | max drawdown | worst day | worst month |
+|---|---|---|---|---|---|---|---|---|
+| **skip ATM IV > 20.8** | unseen (Dec 2022 - Nov 2024) | 430 → 257 | 59% → 64% | Rs 80,508 → Rs 86,513 | -Rs 2,50,449 → -Rs 1,42,219 | Rs 71,650 → Rs 31,113 | -Rs 10,016 → -Rs 10,016 | -Rs 21,394 → -Rs 12,337 |
+|  | design (Nov 2024 - Mar 2026) | 110 → 88 | 57% → 64% | Rs 6,507 → Rs 27,265 | -Rs 73,482 → -Rs 46,624 | Rs 22,043 → Rs 14,003 | -Rs 6,518 → -Rs 4,053 | -Rs 6,813 → -Rs 6,224 |
+|  | final (Apr - Oct 2026) | 33 → 26 | 79% → 88% | Rs 16,789 → Rs 22,165 | -Rs 13,105 → -Rs 5,995 | Rs 7,111 → Rs 3,997 | -Rs 5,078 → -Rs 2,000 | -Rs 4,327 → -Rs 314 |
+| **skip the network's P(loss) > 0.342** | unseen (Dec 2022 - Nov 2024) | 430 → 406 | 59% → 60% | Rs 80,508 → Rs 92,067 | -Rs 2,50,449 → -Rs 2,38,116 | Rs 71,650 → Rs 60,542 | -Rs 10,016 → -Rs 10,016 | -Rs 21,394 → -Rs 19,394 |
+|  | design (Nov 2024 - Mar 2026) | 110 → 88 | 57% → 61% | Rs 6,507 → Rs 23,534 | -Rs 73,482 → -Rs 47,113 | Rs 22,043 → Rs 13,825 | -Rs 6,518 → -Rs 5,856 | -Rs 6,813 → -Rs 6,222 |
+|  | final (Apr - Oct 2026) | 33 → 25 | 79% → 84% | Rs 16,789 → Rs 16,777 | -Rs 13,105 → -Rs 6,030 | Rs 7,111 → Rs 2,032 | -Rs 5,078 → -Rs 2,032 | -Rs 4,327 → Rs 352 |
+| **either of the two above** | unseen (Dec 2022 - Nov 2024) | 430 → 250 | 59% → 64% | Rs 80,508 → Rs 86,109 | -Rs 2,50,449 → -Rs 1,38,938 | Rs 71,650 → Rs 26,908 | -Rs 10,016 → -Rs 10,016 | -Rs 21,394 → -Rs 10,338 |
+|  | design (Nov 2024 - Mar 2026) | 110 → 75 | 57% → 65% | Rs 6,507 → Rs 30,280 | -Rs 73,482 → -Rs 35,707 | Rs 22,043 → Rs 15,626 | -Rs 6,518 → -Rs 4,000 | -Rs 6,813 → -Rs 6,222 |
+|  | final (Apr - Oct 2026) | 33 → 21 | 79% → 90% | Rs 16,789 → Rs 17,825 | -Rs 13,105 → -Rs 3,998 | Rs 7,111 → Rs 2,000 | -Rs 5,078 → -Rs 2,000 | -Rs 4,327 → -Rs 314 |
+
+- skip ATM IV > 20.8: p unseen 0.026, final 0.016, pooled 0.015, q 0.135. **Fails**: q 0.135 > 0.10.
+- skip the network's P(loss) > 0.342: p unseen 0.435, final 0.059, pooled 0.214, q 0.551. **Fails**: unseen: no better than random skipping; final: no better than random skipping; q 0.551 > 0.10.
+- either of the two above: p unseen 0.037, final 0.047, pooled 0.013, q 0.135. **Fails**: q 0.135 > 0.10.
+
+### CISD + network
+
+| filter | period | trades | win | net | losing days | max drawdown | worst day | worst month |
+|---|---|---|---|---|---|---|---|---|
+| **skip breadth with the trade ≤ 0.339** | unseen (Dec 2022 - Nov 2024) | 349 → 301 | 68% → 67% | Rs 90,341 → Rs 78,824 | -Rs 1,16,918 → -Rs 1,02,606 | Rs 15,095 → Rs 15,402 | -Rs 5,409 → -Rs 5,409 | -Rs 7,474 → -Rs 5,521 |
+|  | design (Nov 2024 - Mar 2026) | 64 → 50 | 73% → 80% | Rs 17,356 → Rs 29,069 | -Rs 24,575 → -Rs 9,305 | Rs 7,005 → Rs 5,272 | -Rs 3,937 → -Rs 3,040 | -Rs 3,222 → -Rs 3,040 |
+|  | final (Apr - Oct 2026) | 35 → 28 | 71% → 71% | Rs 2,681 → Rs 734 | -Rs 20,146 → -Rs 17,319 | Rs 10,761 → Rs 10,761 | -Rs 5,497 → -Rs 5,497 | -Rs 4,433 → -Rs 4,433 |
+| **skip ATM OI change on the bought side (%) ≤ -3.32** | unseen (Dec 2022 - Nov 2024) | 349 → 327 | 68% → 67% | Rs 90,341 → Rs 79,433 | -Rs 1,16,918 → -Rs 1,15,450 | Rs 15,095 → Rs 16,362 | -Rs 5,409 → -Rs 5,409 | -Rs 7,474 → -Rs 8,741 |
+|  | design (Nov 2024 - Mar 2026) | 64 → 51 | 73% → 80% | Rs 17,356 → Rs 24,810 | -Rs 24,575 → -Rs 13,045 | Rs 7,005 → Rs 4,616 | -Rs 3,937 → -Rs 3,040 | -Rs 3,222 → -Rs 3,040 |
+|  | final (Apr - Oct 2026) | 35 → 28 | 71% → 71% | Rs 2,681 → -Rs 1,048 | -Rs 20,146 → -Rs 17,239 | Rs 10,761 → Rs 9,241 | -Rs 5,497 → -Rs 4,447 | -Rs 4,433 → -Rs 4,541 |
+| **either of the two above** | unseen (Dec 2022 - Nov 2024) | 349 → 281 | 68% → 66% | Rs 90,341 → Rs 66,976 | -Rs 1,16,918 → -Rs 1,01,249 | Rs 15,095 → Rs 16,669 | -Rs 5,409 → -Rs 5,409 | -Rs 7,474 → -Rs 6,789 |
+|  | design (Nov 2024 - Mar 2026) | 64 → 40 | 73% → 85% | Rs 17,356 → Rs 26,947 | -Rs 24,575 → -Rs 7,350 | Rs 7,005 → Rs 3,995 | -Rs 3,937 → -Rs 3,040 | -Rs 3,222 → -Rs 3,040 |
+|  | final (Apr - Oct 2026) | 35 → 22 | 71% → 73% | Rs 2,681 → -Rs 1,925 | -Rs 20,146 → -Rs 14,413 | Rs 10,761 → Rs 9,241 | -Rs 5,497 → -Rs 4,447 | -Rs 4,433 → -Rs 5,584 |
+
+- skip breadth with the trade ≤ 0.339: p unseen 0.426, final 0.617, pooled 0.491, q 0.736. **Fails**: unseen: drawdown worse; unseen: no better than random skipping; final: no better than random skipping; q 0.736 > 0.10.
+- skip ATM OI change on the bought side (%) ≤ -3.32: p unseen 0.907, final 0.583, pooled 0.900, q 0.959. **Fails**: unseen: drawdown worse; unseen: worst month worse; unseen: no better than random skipping; final: worst month worse; final: no longer makes money; final: no better than random skipping; q 0.959 > 0.10.
+- either of the two above: p unseen 0.741, final 0.665, pooled 0.769, q 0.923. **Fails**: unseen: drawdown worse; unseen: no better than random skipping; final: worst month worse; final: no longer makes money; final: no better than random skipping; q 0.923 > 0.10.
+
+### NG evening breakout
+
+| filter | period | trades | win | net | losing days | max drawdown | worst day | worst month |
+|---|---|---|---|---|---|---|---|---|
+| **skip distance above yesterday's high (ATR) > 0.163** | design (Nov 2024 - Mar 2026) | 140 → 112 | 46% → 49% | Rs 24,755 → Rs 42,436 | -Rs 1,68,022 → -Rs 1,15,947 | Rs 24,763 → Rs 14,864 | -Rs 6,460 → -Rs 5,644 | -Rs 10,237 → -Rs 5,308 |
+|  | final (Apr - Oct 2026) | 120 → 97 | 44% → 45% | Rs 176 → -Rs 193 | -Rs 1,01,557 → -Rs 78,323 | Rs 19,622 → Rs 20,338 | -Rs 3,268 → -Rs 3,138 | -Rs 8,222 → -Rs 13,056 |
+| **skip distance above yesterday's low (ATR) > 1.03** | design (Nov 2024 - Mar 2026) | 140 → 112 | 46% → 47% | Rs 24,755 → Rs 32,697 | -Rs 1,68,022 → -Rs 1,16,862 | Rs 24,763 → Rs 23,530 | -Rs 6,460 → -Rs 5,644 | -Rs 10,237 → -Rs 9,376 |
+|  | final (Apr - Oct 2026) | 120 → 92 | 44% → 45% | Rs 176 → -Rs 6,258 | -Rs 1,01,557 → -Rs 77,090 | Rs 19,622 → Rs 19,821 | -Rs 3,268 → -Rs 3,138 | -Rs 8,222 → -Rs 11,401 |
+| **either of the two above** | design (Nov 2024 - Mar 2026) | 140 → 106 | 46% → 50% | Rs 24,755 → Rs 45,216 | -Rs 1,68,022 → -Rs 1,04,343 | Rs 24,763 → Rs 18,930 | -Rs 6,460 → -Rs 5,644 | -Rs 10,237 → -Rs 6,254 |
+|  | final (Apr - Oct 2026) | 120 → 87 | 44% → 47% | Rs 176 → Rs 1,031 | -Rs 1,01,557 → -Rs 69,802 | Rs 19,622 → Rs 17,664 | -Rs 3,268 → -Rs 3,138 | -Rs 8,222 → -Rs 10,381 |
+
+- skip distance above yesterday's high (ATR) > 0.163: p final 0.178, pooled 0.194, q 0.551. **Fails**: unseen: no data (0 trades); final: drawdown worse; final: worst month worse; final: no longer makes money; final: no better than random skipping; q 0.551 > 0.10.
+- skip distance above yesterday's low (ATR) > 1.03: p final 0.416, pooled 0.439, q 0.718. **Fails**: unseen: no data (0 trades); final: drawdown worse; final: worst month worse; final: no longer makes money; final: no better than random skipping; q 0.718 > 0.10.
+- either of the two above: p final 0.209, pooled 0.205, q 0.551. **Fails**: unseen: no data (0 trades); final: worst month worse; final: no better than random skipping; q 0.551 > 0.10.
+
+### SILVERM morning call
+
+| filter | period | trades | win | net | losing days | max drawdown | worst day | worst month |
+|---|---|---|---|---|---|---|---|---|
+| **skip premium > Rs 13,370** | design (Nov 2024 - Mar 2026) | 65 → 52 | 58% → 65% | Rs 43,059 → Rs 45,352 | -Rs 49,333 → -Rs 18,950 | Rs 20,834 → Rs 7,475 | -Rs 12,273 → -Rs 5,993 | -Rs 4,371 → -Rs 3,086 |
+|  | final (Apr - Oct 2026) | 87 → 87 | 48% → 48% | Rs 53,127 → Rs 53,127 | -Rs 75,735 → -Rs 75,735 | Rs 18,755 → Rs 18,755 | -Rs 9,987 → -Rs 9,987 | -Rs 11,376 → -Rs 11,376 |
+| **skip premium > 5.4% of silver** | design (Nov 2024 - Mar 2026) | 65 → 52 | 58% → 65% | Rs 43,059 → Rs 45,352 | -Rs 49,333 → -Rs 18,950 | Rs 20,834 → Rs 7,475 | -Rs 12,273 → -Rs 5,993 | -Rs 4,371 → -Rs 3,086 |
+|  | final (Apr - Oct 2026) | 87 → 85 | 48% → 48% | Rs 53,127 → Rs 54,517 | -Rs 75,735 → -Rs 71,332 | Rs 18,755 → Rs 18,755 | -Rs 9,987 → -Rs 9,987 | -Rs 11,376 → -Rs 11,376 |
+| **either of the two above** | design (Nov 2024 - Mar 2026) | 65 → 52 | 58% → 65% | Rs 43,059 → Rs 45,352 | -Rs 49,333 → -Rs 18,950 | Rs 20,834 → Rs 7,475 | -Rs 12,273 → -Rs 5,993 | -Rs 4,371 → -Rs 3,086 |
+|  | final (Apr - Oct 2026) | 87 → 85 | 48% → 48% | Rs 53,127 → Rs 54,517 | -Rs 75,735 → -Rs 71,332 | Rs 18,755 → Rs 18,755 | -Rs 9,987 → -Rs 9,987 | -Rs 11,376 → -Rs 11,376 |
+
+- skip premium > Rs 13,370: p final 1.000, pooled 1.000, q 1.000. **Fails**: unseen: no data (0 trades); final: losing days not smaller; final: no better than random skipping; q 1.000 > 0.10.
+- skip premium > 5.4% of silver: p final 0.114, pooled 0.129, q 0.551. **Fails**: unseen: no data (0 trades); final: no better than random skipping; q 0.551 > 0.10.
+- either of the two above: p final 0.126, pooled 0.124, q 0.551. **Fails**: unseen: no data (0 trades); final: no better than random skipping; q 0.551 > 0.10.
+
+### MCX trend (12-month)
+
+| filter | period | trades | win | net | losing days | max drawdown | worst day | worst month |
+|---|---|---|---|---|---|---|---|---|
+| **skip 60-day volatility > 0.531** | unseen (Dec 2022 - Nov 2024) | 122 → 108 | 59% → 57% | Rs 1,41,216 → Rs 77,695 | -Rs 2,87,931 → -Rs 2,55,174 | Rs 63,585 → Rs 72,517 | -Rs 45,280 → -Rs 45,280 | -Rs 34,822 → -Rs 48,602 |
+|  | design (Nov 2024 - Mar 2026) | 96 → 77 | 56% → 64% | Rs 1,54,907 → Rs 3,52,248 | -Rs 3,42,359 → -Rs 1,15,668 | Rs 77,764 → Rs 33,369 | -Rs 66,317 → -Rs 28,382 | -Rs 41,141 → -Rs 20,307 |
+|  | final (Apr - Oct 2026) | 34 → 26 | 68% → 65% | Rs 1,29,921 → Rs 1,22,463 | -Rs 1,51,155 → -Rs 1,07,346 | Rs 94,842 → Rs 65,474 | -Rs 50,812 → -Rs 50,812 | -Rs 73,129 → -Rs 44,892 |
+| **skip carry > 0.216** | unseen (Dec 2022 - Nov 2024) | 122 → 99 | 59% → 56% | Rs 1,41,216 → Rs 53,351 | -Rs 2,87,931 → -Rs 2,39,227 | Rs 63,585 → Rs 66,990 | -Rs 45,280 → -Rs 45,280 | -Rs 34,822 → -Rs 34,822 |
+|  | design (Nov 2024 - Mar 2026) | 96 → 77 | 56% → 61% | Rs 1,54,907 → Rs 2,83,989 | -Rs 3,42,359 → -Rs 1,67,556 | Rs 77,764 → Rs 40,454 | -Rs 66,317 → -Rs 28,130 | -Rs 41,141 → -Rs 28,130 |
+|  | final (Apr - Oct 2026) | 34 → 28 | 68% → 64% | Rs 1,29,921 → Rs 1,21,673 | -Rs 1,51,155 → -Rs 1,42,933 | Rs 94,842 → Rs 94,620 | -Rs 50,812 → -Rs 50,812 | -Rs 73,129 → -Rs 78,740 |
+| **either of the two above** | unseen (Dec 2022 - Nov 2024) | 122 → 94 | 59% → 55% | Rs 1,41,216 → Rs 18,613 | -Rs 2,87,931 → -Rs 2,23,861 | Rs 63,585 → Rs 73,971 | -Rs 45,280 → -Rs 45,280 | -Rs 34,822 → -Rs 48,602 |
+|  | design (Nov 2024 - Mar 2026) | 96 → 67 | 56% → 66% | Rs 1,54,907 → Rs 3,37,744 | -Rs 3,42,359 → -Rs 95,320 | Rs 77,764 → Rs 19,718 | -Rs 66,317 → -Rs 11,646 | -Rs 41,141 → -Rs 11,418 |
+|  | final (Apr - Oct 2026) | 34 → 22 | 68% → 64% | Rs 1,29,921 → Rs 1,20,883 | -Rs 1,51,155 → -Rs 99,124 | Rs 94,842 → Rs 50,812 | -Rs 50,812 → -Rs 50,812 | -Rs 73,129 → -Rs 50,503 |
+
+- skip 60-day volatility > 0.531: p unseen 0.331, final 0.361, pooled 0.285, q 0.641. **Fails**: unseen: drawdown worse; unseen: worst month worse; unseen: no better than random skipping; final: no better than random skipping; q 0.641 > 0.10.
+- skip carry > 0.216: p unseen 0.370, final 0.722, pooled 0.587, q 0.813. **Fails**: unseen: drawdown worse; unseen: no better than random skipping; final: worst month worse; final: no better than random skipping; q 0.813 > 0.10.
+- either of the two above: p unseen 0.286, final 0.475, pooled 0.364, q 0.718. **Fails**: unseen: drawdown worse; unseen: worst month worse; unseen: no better than random skipping; final: no better than random skipping; q 0.718 > 0.10.
+
+### US-night silver
+
+| filter | period | trades | win | net | losing days | max drawdown | worst day | worst month |
+|---|---|---|---|---|---|---|---|---|
+| **skip Fridays** | design (Nov 2024 - Mar 2026) | 100 → 82 | 56% → 60% | Rs 1,13,838 → Rs 1,18,452 | -Rs 94,785 → -Rs 58,690 | Rs 29,646 → Rs 8,974 | -Rs 18,095 → -Rs 8,298 | -Rs 8,596 → -Rs 8,596 |
+|  | final (Apr - Oct 2026) | 107 → 84 | 55% → 54% | Rs 69,043 → Rs 35,964 | -Rs 1,36,583 → -Rs 1,19,092 | Rs 19,294 → Rs 21,826 | -Rs 10,317 → -Rs 10,317 | -Rs 9,756 → -Rs 10,577 |
+| **skip US data days** | design (Nov 2024 - Mar 2026) | 100 → 89 | 56% → 57% | Rs 1,13,838 → Rs 1,15,248 | -Rs 94,785 → -Rs 80,424 | Rs 29,646 → Rs 29,646 | -Rs 18,095 → -Rs 18,095 | -Rs 8,596 → -Rs 8,596 |
+|  | final (Apr - Oct 2026) | 107 → 94 | 55% → 57% | Rs 69,043 → Rs 62,942 | -Rs 1,36,583 → -Rs 1,19,067 | Rs 19,294 → Rs 20,967 | -Rs 10,317 → -Rs 8,853 | -Rs 9,756 → -Rs 3,158 |
+| **either of the two above** | design (Nov 2024 - Mar 2026) | 100 → 74 | 56% → 61% | Rs 1,13,838 → Rs 1,26,138 | -Rs 94,785 → -Rs 44,950 | Rs 29,646 → Rs 8,974 | -Rs 18,095 → -Rs 8,298 | -Rs 8,596 → -Rs 8,596 |
+|  | final (Apr - Oct 2026) | 107 → 77 | 55% → 56% | Rs 69,043 → Rs 42,889 | -Rs 1,36,583 → -Rs 1,06,242 | Rs 19,294 → Rs 21,550 | -Rs 10,317 → -Rs 8,853 | -Rs 9,756 → -Rs 5,689 |
+
+- skip Fridays: p final 0.891, pooled 0.906, q 0.959. **Fails**: unseen: no data (0 trades); final: drawdown worse; final: worst month worse; final: no better than random skipping; q 0.959 > 0.10.
+- skip US data days: p final 0.427, pooled 0.423, q 0.718. **Fails**: unseen: no data (0 trades); final: drawdown worse; final: no better than random skipping; q 0.718 > 0.10.
+- either of the two above: p final 0.774, pooled 0.764, q 0.923. **Fails**: unseen: no data (0 trades); final: drawdown worse; final: no better than random skipping; q 0.923 > 0.10.
+
 ## What is proposed (nothing is built; each needs Boss's go-ahead)
 
 1. **S5-IVSKIP, a shadow log only.**
