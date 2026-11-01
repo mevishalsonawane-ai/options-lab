@@ -1,0 +1,167 @@
+{
+ "note": "raw p-values of every R144d test: twin tests (2,000 random skips of the same count), pooled U+F is the primary p for BH (q over all R144d filters); U and F alone are gates",
+ "tests": [
+  {
+   "arm": "S5",
+   "filter": "skip f_atm_iv > 20.81 (design highest fifth)",
+   "p_pooled": 0.014992503748125937,
+   "p_U": 0.026486756621689155,
+   "p_F": 0.015992003998001,
+   "q": 0.13493253373313344,
+   "passes": false
+  },
+  {
+   "arm": "S5",
+   "filter": "skip f_ploss > 0.342 (design highest fifth)",
+   "p_pooled": 0.2143928035982009,
+   "p_U": 0.43478260869565216,
+   "p_F": 0.059470264867566215,
+   "q": 0.5512957806810881,
+   "passes": false
+  },
+  {
+   "arm": "S5",
+   "filter": "skip if either: (skip f_atm_iv > 20.81 (design highest fifth)) or (skip f_ploss > 0.342 (design highest fifth))",
+   "p_pooled": 0.012993503248375811,
+   "p_U": 0.03698150924537731,
+   "p_F": 0.04697651174412794,
+   "q": 0.13493253373313344,
+   "passes": false
+  },
+  {
+   "arm": "CISD",
+   "filter": "skip f_breadth_with <= 0.339 (design lowest fifth)",
+   "p_pooled": 0.49075462268865566,
+   "p_U": 0.42628685657171417,
+   "p_F": 0.617191404297851,
+   "q": 0.7361319340329834,
+   "passes": false
+  },
+  {
+   "arm": "CISD",
+   "filter": "skip f_oi_chg_with <= -3.316 (design lowest fifth)",
+   "p_pooled": 0.9000499750124937,
+   "p_U": 0.9065467266366817,
+   "p_F": 0.5832083958020989,
+   "q": 0.958814710291913,
+   "passes": false
+  },
+  {
+   "arm": "CISD",
+   "filter": "skip if either: (skip f_breadth_with <= 0.339 (design lowest fifth)) or (skip f_oi_chg_with <= -3.316 (design lowest fifth))",
+   "p_pooled": 0.7691154422788605,
+   "p_U": 0.7406296851574213,
+   "p_F": 0.665167416291854,
+   "q": 0.9229385307346327,
+   "passes": false
+  },
+  {
+   "arm": "NGEVE",
+   "filter": "skip f_d_pdh > 0.1633 (design highest fifth)",
+   "p_pooled": 0.19440279860069964,
+   "p_U": null,
+   "p_F": 0.17791104447776113,
+   "q": 0.5512957806810881,
+   "passes": false
+  },
+  {
+   "arm": "NGEVE",
+   "filter": "skip f_d_pdl > 1.034 (design highest fifth)",
+   "p_pooled": 0.4387806096951524,
+   "p_U": null,
+   "p_F": 0.41579210394802596,
+   "q": 0.7180046340466131,
+   "passes": false
+  },
+  {
+   "arm": "NGEVE",
+   "filter": "skip if either: (skip f_d_pdh > 0.1633 (design highest fifth)) or (skip f_d_pdl > 1.034 (design highest fifth))",
+   "p_pooled": 0.2048975512243878,
+   "p_U": null,
+   "p_F": 0.20939530234882558,
+   "q": 0.5512957806810881,
+   "passes": false
+  },
+  {
+   "arm": "SILM",
+   "filter": "skip f_prem > 1.337e+04 (design highest fifth)",
+   "p_pooled": 1.0,
+   "p_U": null,
+   "p_F": 1.0,
+   "q": 1.0,
+   "passes": false
+  },
+  {
+   "arm": "SILM",
+   "filter": "skip f_prem_pct > 0.05359 (design highest fifth)",
+   "p_pooled": 0.1294352823588206,
+   "p_U": null,
+   "p_F": 0.11394302848575712,
+   "q": 0.5512957806810881,
+   "passes": false
+  },
+  {
+   "arm": "SILM",
+   "filter": "skip if either: (skip f_prem > 1.337e+04 (design highest fifth)) or (skip f_prem_pct > 0.05359 (design highest fifth))",
+   "p_pooled": 0.12393803098450774,
+   "p_U": null,
+   "p_F": 0.12593703148425786,
+   "q": 0.5512957806810881,
+   "passes": false
+  },
+  {
+   "arm": "TREND",
+   "filter": "skip f_vol60 > 0.5306 (design highest fifth)",
+   "p_pooled": 0.2848575712143928,
+   "p_U": 0.3313343328335832,
+   "p_F": 0.3613193403298351,
+   "q": 0.6409295352323838,
+   "passes": false
+  },
+  {
+   "arm": "TREND",
+   "filter": "skip f_carry > 0.2156 (design highest fifth)",
+   "p_pooled": 0.5872063968015993,
+   "p_U": 0.3698150924537731,
+   "p_F": 0.7216391804097951,
+   "q": 0.8130550109560606,
+   "passes": false
+  },
+  {
+   "arm": "TREND",
+   "filter": "skip if either: (skip f_vol60 > 0.5306 (design highest fifth)) or (skip f_carry > 0.2156 (design highest fifth))",
+   "p_pooled": 0.3638180909545227,
+   "p_U": 0.28585707146426786,
+   "p_F": 0.4752623688155922,
+   "q": 0.7180046340466131,
+   "passes": false
+  },
+  {
+   "arm": "USSIL",
+   "filter": "skip f_wd = 4",
+   "p_pooled": 0.9055472263868066,
+   "p_U": null,
+   "p_F": 0.8905547226386806,
+   "q": 0.958814710291913,
+   "passes": false
+  },
+  {
+   "arm": "USSIL",
+   "filter": "skip f_us_data = 1",
+   "p_pooled": 0.42278860569715143,
+   "p_U": null,
+   "p_F": 0.4267866066966517,
+   "q": 0.7180046340466131,
+   "passes": false
+  },
+  {
+   "arm": "USSIL",
+   "filter": "skip if either: (skip f_wd = 4) or (skip f_us_data = 1)",
+   "p_pooled": 0.7641179410294853,
+   "p_U": null,
+   "p_F": 0.7736131934032984,
+   "q": 0.9229385307346327,
+   "passes": false
+  }
+ ]
+}

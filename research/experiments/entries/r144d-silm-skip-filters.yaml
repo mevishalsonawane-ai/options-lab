@@ -1,0 +1,34 @@
+id: r144d-silm-skip-filters
+title: 'R144d loss anatomy and design-chosen skip filters: SILVERM morning call'
+family: mcx-crypto
+date: '2026-11-01'
+doc: research/HUNT_R144D_LOSS_NN_MCX.md
+data_version: Drive lake copied 1 Nov 2026 (to 19 Oct 2026); R123 cleaned predictions; Yahoo hourly SI=F/NG=F/INR=X refetched
+  1 Nov 2026
+period:
+  design: 2024-11-20..2026-03-31 (filters chosen here only)
+  holdout: 2022-12-01..2024-11-19 (unseen years) and 2026-04-01..2026-10-19 (final), read once after the filters were committed
+instruments:
+- SILVERM
+prereg: research/hunt/r144d_loss_nn_mcx/PREREG.md
+holdout_read: true
+features:
+- 'signal source: the SILVERM future'
+- filters on entry features read before the entry (look-ahead guard tested)
+hypothesis: skipping the design-worst fifth of an entry feature cuts SILVERM morning call's losing days in unseen periods
+  more than random skipping
+model_or_rule: research/hunt/r144d_loss_nn_mcx/r144d.py
+settings: quintile cuts from design; 1 lot; each engine's own charges and slippage; 2,000 random-skip twins; BH over 18 R144d
+  filters
+variants_tried: 3
+verdict: rejected
+results:
+  summary: 'skip f_prem > 1.337e+04 (design highest fifth): U: no trades (no data); F: 87->87 trades, win 48%->48%, net Rs
+    53,127->Rs 53,127, losing days Rs -75,735->Rs -75,735, twin p 1.000; pooled p 1.000, q 1.000; fails: U: too small (0 trades),
+    F: losing_days_smaller, F: twin, q 1.000 > 0.10 | skip f_prem_pct > 0.05359 (design highest fifth): U: no trades (no data);
+    F: 87->85 trades, win 48%->48%, net Rs 53,127->Rs 54,517, losing days Rs -75,735->Rs -71,332, twin p 0.114; pooled p 0.129,
+    q 0.551; fails: U: too small (0 trades), F: twin, q 0.551 > 0.10 | skip if either: (skip f_prem > 1.337e+04 (design highest
+    fifth)) or (skip f_prem_pct > 0.05359 (design highest fifth)): U: no trades (no data); F: 87->85 trades, win 48%->48%,
+    net Rs 53,127->Rs 54,517, losing days Rs -75,735->Rs -71,332, twin p 0.126; pooled p 0.124, q 0.551; fails: U: too small
+    (0 trades), F: twin, q 0.551 > 0.10'
+  costs: 'each arm''s own engine: R123/R128 and R131/R132 fills and dated charges; M3, M4, M2, R2 MCX costs'
