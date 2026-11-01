@@ -4,6 +4,7 @@
     IRAALGO_LAKE=<flat lake> R51_CLEAN=1 python .../r144b.py collect orb  <period>   # period: unseen | design | final
     IRAALGO_LAKE=<flat lake> R51_CLEAN=1 python .../r144b.py collect liq  <period>   # one process per group: r57cfg
     IRAALGO_LAKE=<flat lake> R51_CLEAN=1 python .../r144b.py collect solo <period>   # re-points r51cfg, so never mixed
+    python .../r144b.py build-solo-old  # R57 day stores for Sep 2022 - Dec 2024, in their own folder
     python .../r144b.py design          # anatomy on design, filters chosen and frozen -> results/design.json
     python .../r144b.py test            # final + unseen, read once -> results/test.json, results/pvalues.json
 
@@ -11,9 +12,9 @@
 frozen before a test trade is priced. Trades and features are cached in $R144B_OUT (default
 ~/.cache/iraalgo/r144b; never in git). Signal source: the index; options and VIX as context.
 
-The engine adapters below call R3's, R115 / R101's and R57's engines unchanged. They were written on 1 Nov 2026 in a
-session WITHOUT the lake (no rclone, no Drive copy), so they have not yet been run against real stores: the first run
-must pass the parity checks in PREREG section 1 before any table is trusted.
+The engine adapters below call R3's, R115 / R101's and R57's engines unchanged. Parity (PREREG amendment 1, 1 Nov
+2026): the ORB family equals R3's rebuild and Liquidity equals R101's design and final to the rupee; R143's old store
+gives the main store's Liquidity trades on the weeks both hold.
 """
 from __future__ import annotations
 
@@ -128,6 +129,10 @@ def _r115(old: bool):
 
 def liq_units(lo: date, hi: date, old: bool):
     S = _r115(old)
+    if hi >= PERIODS["final"][0]:          # R51's final guard: opened only after R144b's filters are frozen
+        if not (RESULTS / "design.json").exists():
+            raise SystemExit("filters are not frozen yet: run `design` first")
+        S.mods()["C"].open_final()
     return S, S.units("LIQ", lo, hi)
 
 

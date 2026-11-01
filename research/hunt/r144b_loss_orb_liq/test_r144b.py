@@ -238,3 +238,16 @@ def test_norm_and_strike():
     k = R.strike_of(lt, ss[1])
     spot = ss[1].ix[99, 3]
     assert k == np.floor(spot / 100 + 0.5) * 100 - 100                 # one strike in the money for a call
+
+
+def test_norm_liquidity_and_solo_keys():
+    """R101's walk gives er / xr / side 'C'|'P' / strike; R57 adds setup; R3 gives int sides and entry_row."""
+    liq = R.norm("LIQ", dict(und="FINNIFTY", day=date(2025, 2, 3), er=12, xr=40, side="C", net=5.0, why="rule_exit",
+                             strike=23400.0))
+    assert liq["k"] == 23400.0 and liq["side"] == "C" and liq["why"] == "rule_exit"
+    solo = R.norm("Solo 2.0", dict(und="NIFTY", day=date(2025, 2, 3), er=5, xr=64, side="P", net=-1.0, why="time",
+                                   strike=23000.0, setup="S3"))
+    assert solo["setup"] == "S3" and solo["k"] == 23000.0
+    orb = R.norm("ORB", dict(und="BANKNIFTY", day=date(2025, 2, 3), side=1, entry_row=60, exit_row=61, net=1.0,
+                             why="target", k=51000.0, exit=310.5))
+    assert orb["side"] == "C" and orb["why"] == "target"              # 'exit' (a price) never replaces 'why'

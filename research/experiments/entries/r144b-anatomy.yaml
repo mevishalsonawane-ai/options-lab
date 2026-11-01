@@ -1,9 +1,10 @@
 id: r144b-anatomy
-title: 'R144b: losing-trade anatomy of Liquidity 15+5, ORB, ORB Fresh, ORB Sweep, Range Fade and Solo 2.0 (not run: no lake)'
+title: 'R144b: losing-trade anatomy of Liquidity 15+5, ORB, ORB Fresh, ORB Sweep, Range Fade and Solo 2.0'
 family: trade-management
 date: '2026-11-01'
 doc: research/HUNT_R144B_LOSS_ORB_LIQ.md
-data_version: none (the session had no copy of the Drive lake)
+data_version: Drive lake IraAlgo-data-lake downloaded 1 Nov 2026; R3 sessions, R51 clean stores, R143 old store, R57 stores
+  rebuilt; parity to the rupee (ORB family vs R3, LIQ vs R101)
 period:
   unseen: 2022-12-01..2024-11-19
   design: 2024-11-20..2026-03-31 (halves H1 / H2)
@@ -15,15 +16,21 @@ instruments:
 - MIDCPNIFTY
 - SENSEX
 prereg: research/hunt/r144b_loss_orb_liq/PREREG.md
-holdout_read: false
+holdout_read: true
 features:
-- 'signal source: the index (R3 session store 1-minute bars); options (volume, OI, IV, skew, straddle) and VIX as context; order flow as labelled proxies only'
-hypothesis: each arm's losing trades share entry-time patterns that hold in the unseen years, design and final (>= 30 trades each)
+- 'signal source: the index (R3 session store 1-minute bars); options (volume, OI, IV, skew, straddle) and VIX as context;
+  order flow as labelled proxies only'
+hypothesis: each arm's losing trades share entry-time patterns that hold in the unseen years, design and final (>= 30 trades
+  each)
 model_or_rule: research/hunt/r144b_loss_orb_liq/r144b.py
 settings: descriptive; steady = loser rate above the arm and avg net < 0 in every period, >= 30 trades each
 variants_tried: null
 verdict: not-a-test
 results:
-  summary: 'NOT RUN: no data lake in the session (no rclone, no Drive copy, no R3 / R51 / R143 / R57 stores). Code and
-    11 tests (incl. the look-ahead guard) are ready; no trade was rebuilt and no number exists.'
+  summary: 'descriptive. Judged on unseen / design / final (n): LIQ 894/881/357, lose 69/56/63%, net +83,307/+257,249/+11,155,
+    no steady sign; ORB=ORB Fresh (BANKNIFTY) 456/320/128, lose 63/62/56%, avg -101/-129/+22, stop-outs 79-84% of money lost,
+    6 steady signs (quiet signal bar, far from yesterday''s extreme, gap against, low option volume, high VIX); ORB Sweep
+    628/454/176, lose 73/74/72%, 9 steady signs (directional day, option short build-up); Range Fade 674/500/207, lose 70/69/67%,
+    13 steady signs (no earlier fake poke, low PCR, quiet day); Solo 2.0 451/310/127, net -77,142 / +102,774* / +89,382* (*in-sample
+    for the shipped model), no steady sign.'
   costs: each engine's own (R17 fills, dated charges, 1 lot)

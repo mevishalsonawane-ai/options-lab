@@ -1,133 +1,262 @@
 # R144b: why Liquidity 15+5, the ORB family and Solo 2.0 lose money, and which trades to skip
 
-1 Nov 2026. Research only: nothing in the app changes. One of four parallel studies (R144a-d). Pre-registration:
-`research/hunt/r144b_loss_orb_liq/PREREG.md` (commit dc86985, pushed before any code or number).
+1 Nov 2026. Research only: nothing in the app changes. One of four parallel studies (R144a-d).
 
-## Outcome first: NOT RUN YET. No new numbers; the method is ready and tested
+- Pre-registration: `research/hunt/r144b_loss_orb_liq/PREREG.md`:
+  - dc86985, before any number;
+  - amendment 1 in 07cc000, before any Solo 2.0 number or filter choice.
+- Filters frozen from design data in 76a8702, before any test trade was priced.
+- The final months were read once (`results/FINAL_READ`).
 
-- **Blocked on data.** This study needs the Dhan data lake (option and index minutes, Dec 2022 - Oct 2026). The cloud
-  session that wrote R144b did not have it:
-  - no rclone and no copy of `gdrive:IraAlgo-data-lake`;
-  - no R3, R51, R143 or R57 stores in the cache;
-  - the GitHub `research-data` release holds only older single-index files, not the lake.
-  - `r144b.py status` records this in `results/status.json`.
-- **So not one trade of these six arms was rebuilt, and no filter was chosen or tested.** I have not guessed any.
-  `results/pvalues.json` lists no tests, so the coordinator's BH across R144a-d has nothing to add from R144b.
-- **What is done:**
-  - the pre-registration (arms, engines, periods, every feature, the anatomy, the fixed filter-choice rule, the
-    gates);
-  - the code: `r144b_lib.py` (pure) and `r144b.py` (engine adapters and runs);
-  - 11 tests, all passing:
-    - the look-ahead guard: scrambling every minute from entry on changes no feature;
-    - an end-to-end run on synthetic trades with a planted losing pattern: it is found, frozen on design and passes
-      on the test periods;
-    - the final period can be read only once, and test periods cannot be priced before the filters are frozen.
-- **To finish R144b,** run in a session that has the lake (as R140-R143 did):
+Boss, 1 Nov: *"Find all the lost trades ... find what all makes it lose money ... find patterns for each arm, so it
+could help us to ignore those trades."*
 
-  ```
-  IRAALGO_LAKE=<flat lake> R51_CLEAN=1 python research/hunt/r144b_loss_orb_liq/r144b.py collect {orb|liq|solo} design
-  python research/hunt/r144b_loss_orb_liq/r144b.py design          # anatomy, filters frozen
-  IRAALGO_LAKE=... python .../r144b.py collect {orb|liq|solo} final ; ... collect {orb|liq|solo} unseen
-  python research/hunt/r144b_loss_orb_liq/r144b.py test            # read once; writes test.json and pvalues.json
-  ```
+## The answer in short
 
-  - Run one `collect` per process, because R57's settings re-point the shared R51 settings.
-  - The first run must pass the parity checks (PREREG section 1) before any table is trusted. The adapters have never
-    run against the real stores.
+1. **No skip filter passed.** Four arms got filters chosen by the fixed rule (Liquidity 3, Range Fade 1). All failed
+   in the test periods. No switch is proposed.
+2. **ORB, ORB Fresh, ORB Sweep and Range Fade lose money on BANKNIFTY in the unseen years and in design.** ORB and
+   ORB Fresh made a little in the final months (+Rs 22 a trade, 128 trades); Sweep and Fade lost there too.
+   - Their flaw is the stop: on every one of these arms, the -40-point stop-outs are nearly all of the money lost.
+   - About 9 in 10 ORB losers fall on days when every ORB trade lost.
+   - No skip can fix an arm that loses on almost every kind of day. The best one (Range Fade, narrow morning range)
+     halved the loss but left the arm losing.
+3. **Solo 2.0 lost Rs 77,142 on 451 trades in Dec 2022 - Nov 2024**, the only years its model never saw.
+   - Its design and final profits (+Rs 1,02,774 on 310 trades and +Rs 89,382 on 127) are on months the shipped
+     model was trained on (amendment 1). They flatter it.
+   - **This is the most important finding here:** Solo 2.0's edge is not shown out of sample.
+4. **Liquidity made money in every period:**
 
-## What we already know about these arms' losses (earlier studies, not new R144b numbers)
+   | period | trades | net |
+   |---|---|---|
+   | unseen years | 894 | +Rs 83,307 |
+   | design | 881 | +Rs 2,57,249 |
+   | final | 357 | +Rs 11,155 |
 
-### Liquidity 15+5 (BANKNIFTY 15+5, FINNIFTY 30+5, MIDCPNIFTY 15+5)
+   - It loses on most trades: 69%, 56% and 63% of trades in the three periods.
+   - Most of its losers come in bad days: 67-80% of them fall on index-days where every Liquidity trade lost.
+   - **No entry-time sign was steady in all three periods.**
+5. **Boss's 65% win rule:** no arm comes close in any period, before or after any filter.
+   - The highest win rate of any arm in any period is Solo 2.0's 57.5% in the final months.
+   - Liquidity's is 31-44%.
+   - The ORB family's is 26-44%.
 
-From R141 (design 881 trades, final 357; 1 lot, after charges):
-- **Loser rate:** 56% in design, 63% in the final.
-- **Shape of the losses:** many small ones (about -Rs 1,000 each). Exits within 15 minutes lose 63-69% of the time.
-  The money comes from the trades held 1-3 hours and longer.
-- **Losses come in bunches:** 67-69% of the losers fall on index-days where every Liquidity trade lost.
-- **One steady sign at entry:** a gap against the trade. R140 tested it as a filter and it failed in the final
-  (p 0.48).
-- **Earlier exit studies:** R81 found a no-progress exit the worst idea for Liquidity, because its slow starters
-  include its runners.
+## Data and method (what was rebuilt, and how exactly)
 
-**Still open for R144b:**
-- the unseen years 2022-24 (R143's store; R143 rebuilt only R72, R51 and R52 there);
-- the volume, OI, IV, skew and order-flow-proxy features, which R141 did not have;
-- the per-index split.
+**Data:** the Dhan lake, downloaded on 1 Nov from the shared Drive folder `IraAlgo-data-lake`:
+- 90 files: index minutes 2021-2026 for NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX and India VIX;
+- weekly and monthly option minutes;
+- `index_daily`.
 
-### ORB, ORB Fresh, ORB Sweep, Range Fade (BANKNIFTY, the app's index)
+The stores were rebuilt from it. Nothing raw is in git.
 
-From R3 (2021-2026 lake):
-- **All four lost money in every year, 0 of 6 years in profit.** Design BANKNIFTY + NIFTY:
-  - ORB: -Rs 2.23 lakh on 2,489 trades;
-  - ORB Fresh: -Rs 2.24 lakh on 2,489;
-  - ORB Sweep: -Rs 5.06 lakh on 3,156;
-  - Range Fade: -Rs 5.11 lakh on 3,512.
-- **About 36% of ORB trades win.**
-- **The flaw is the entry:** ORB buys after the break has mostly happened. Even on days that trended its way it lost
-  Rs 52 a trade (1,094 trades).
-- **Nothing known at entry helped:** in R3's thirds of VIX, VIX change, gap, range width, time and expiry, even the best
-  third lost.
-- **All 16 enhanced versions failed.** The arms were paused on 13 Oct.
+**Parity, every arm checked before use:**
 
-**What this means for R144b's gates:** gate 3 requires the arm to still make money after a skip filter. A skip
-filter on an arm that loses in every period can pass it only if skipping alone makes the arm profitable. R3's
-thirds suggest this is unlikely. R144b will still report each arm's anatomy, with the new volume, OI and IV features
-and the unseen years, as pre-registered.
+| arm | check | result |
+|---|---|---|
+| ORB family | R3's design, BANKNIFTY + NIFTY, Aug 2021 - Oct 2026 | identical to the rupee: ORB 2,489 trades / -Rs 2,23,040; Fresh 2,489 / -2,23,812; Sweep 3,156 / -5,05,954; Fade 3,512 / -5,10,978 |
+| Liquidity | R101's design and final | identical: 881 / +Rs 2,57,249 and 357 / +Rs 11,155 |
+| Liquidity, old store (2022-24) | against the main store on the weeks both hold (20 Nov - 30 Dec 2024) | identical: 68 trades, -Rs 841 |
+| Solo 2.0 | the app's frozen model on the final, against R57's monthly refits (128 / +Rs 99,172) | 127 trades / +Rs 89,382: close, as a frozen model should be |
 
-### Solo 2.0 (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY)
+**Which trades each arm is judged on:**
+- the ORB family on BANKNIFTY, the app's index (other indices reported);
+- Liquidity on its three books (BANKNIFTY 15+5, FINNIFTY 30+5, MIDCPNIFTY 15+5);
+- Solo 2.0 on NIFTY, BANKNIFTY, FINNIFTY and MIDCPNIFTY.
 
-From R57:
-- **Final:** 128 trades, +Rs 99,172.
-- **72% of that profit is MIDCPNIFTY** (82 trades). Without MIDCPNIFTY it is +Rs 27,586 on 46 trades.
-- **92 of the 128 trades are setup S3**, whose exit was chosen on the same window.
-- **Its 15-minute ORB setup (S4) lost on its own** (459 trades, -Rs 1.14 lakh).
-- **Its losing trades have never been taken apart.**
+All 1 lot, after each engine's own charges and fills.
 
-**R144b's design for Solo 2.0:**
-- It uses the app's frozen model (`A2.json`, threshold 0.4871), not R57's monthly refits.
-- Its design months are therefore in-sample for the model and will look better than they were.
-- Its unseen years (2022-24) are fully out of sample, but they need R57's store rebuilt from Sep 2022 in its own
-  folder (`r144b_old`), which the adapter does.
+**Features:** 31 at entry, all read from bars closed before the entry minute (the look-ahead guard test checks this).
+- **Signal source:** the index; its options and VIX as context.
+- **Coverage:** ORB 100%. Liquidity 95% for option features, 65% for "since 09:30" changes (many entries come before
+  09:30).
+- **Missing:** 7 trades on 13 Oct 2026 have no features (the session store ends 12 Oct). Unknown never skips.
+- **Not available, as pre-registered:** bid-ask spread, depth and the order book; index VWAP (TWAP used instead);
+  futures volume and basis; breadth; the US overnight move. **Order flow is two proxies only.**
 
-## Per-arm sections
+**"Steady"** means: in all three periods (unseen, design, final), >= 30 trades, a loser rate above the arm's, and an
+average net below 0.
 
-To be filled by the run: loser rate, money lost by exit type, bunching, the worst 20 trades, the loser rate and
-average net by fifth of each of the 31 features per period, steady slices, up to 3 filters, and their tests with the
-win rate before and after (Boss's 65% rule).
+## Summary table
 
-| arm | rebuilt | trades (unseen / design / final) | loser rate | steady losing signs | filters chosen | passed |
+| arm (judged on) | unseen Dec 22 - Nov 24: n, lose, avg | design: n, lose, avg | final Apr - Oct 26: n, lose, avg | steady losing signs | filters chosen | passed |
 |---|---|---|---|---|---|---|
-| Liquidity 15+5 | not yet (no lake) | - | - | - | - | - |
-| ORB | not yet (no lake) | - | - | - | - | - |
-| ORB Fresh | not yet (no lake) | - | - | - | - | - |
-| ORB Sweep | not yet (no lake) | - | - | - | - | - |
-| Range Fade | not yet (no lake) | - | - | - | - | - |
-| Solo 2.0 | not yet (no lake) | - | - | - | - | - |
+| Liquidity 15+5 | 894, 69%, +Rs 93 | 881, 56%, +Rs 292 | 357, 63%, +Rs 31 | none | 3 | 0 |
+| ORB (BANKNIFTY) | 456, 63%, -Rs 101 | 320, 62%, -Rs 129 | 128, 56%, +Rs 22 | 6 | 0 (none qualified) | - |
+| ORB Fresh (BANKNIFTY) | same trades as ORB in all three periods | | | 6 | 0 | - |
+| ORB Sweep (BANKNIFTY) | 628, 73%, -Rs 124 | 454, 74%, -Rs 248 | 176, 72%, -Rs 309 | 9 | 0 (none qualified) | - |
+| Range Fade (BANKNIFTY) | 674, 70%, -Rs 124 | 500, 69%, -Rs 229 | 207, 67%, -Rs 144 | 13 | 1 | 0 |
+| Solo 2.0 | 451, 60%, -Rs 171 | 310, 47%, +Rs 332* | 127, 43%, +Rs 704* | none | 0 (none qualified) | - |
 
-## Features the lake cannot give (stated now, so nobody reads them as tested)
+\* in-sample for the shipped model.
 
-- **Bid-ask spread and depth:** the lake has no quotes. The liquidity proxies are the entry premium, the zero-volume
-  minutes in the last 15, and the contract's OI.
-- **True order flow:** the lake has no order book. Two proxies, labelled as such:
-  - the option's tick-direction volume delta;
-  - its OI-price quadrant.
-- **Index VWAP:** the index has no volume, so TWAP is used instead.
-- **Not in the stores used:** futures volume, the futures basis, breadth and the US overnight move. R101 / R141
-  already tried breadth on Liquidity.
-- **Option band:** R3's store keeps only 4 strikes either side of the 09:20 ATM. A Liquidity or Solo trade whose
-  strike drifted outside it has no option features. The run reports each feature's coverage per period.
+## Liquidity 15+5
 
-## Proposals
+**How it loses:**
 
-None yet: no filter has been tested. Any filter that passes will be proposed (not built) as a paper switch, off by
-default and logged in the Autopilot timeline. Live would use it only after a shadow phase (CLAUDE.md).
+| period | trades | lose | money lost | average loss | longest losing streak |
+|---|---|---|---|---|---|
+| unseen | 894 | 69% | -Rs 3.50 lakh | -Rs 568 | 18 |
+| design | 881 | 56% | -Rs 5.01 lakh | -Rs 1,009 | 13 |
+| final | 357 | 63% | -Rs 2.23 lakh | -Rs 997 | 12 |
+
+- **Exits** (the engine's labels are coarse: `rule_exit` covers the index stop, target, failed break and new
+  liquidity together):
+  - rule exits are the biggest share of the money lost: -Rs 1.48 lakh / -3.09 / -1.45;
+  - time stops: -Rs 0.43 lakh / -1.16 / -0.50;
+  - the 15% option stop: -Rs 1.58 lakh in the unseen years (156 trades, every one a loser), against -0.77 in design
+    and -0.28 in the final. In 2022-24, when the indices had weekly expiries, the option stop was hit five times as
+    often.
+- **Bunching:** 80%, 67% and 69% of losers fall on index-days where every Liquidity trade lost.
+- **Worst 20 trades** (all periods; 7% of all money lost; the worst -Rs 5,165, MIDCPNIFTY, 28 Mar 2025):
+  - 11 were stop-outs;
+  - they came on higher-VIX days (median 15.7 against 13.6) and at higher premiums (Rs 373 against Rs 270).
+- **By index:** BANKNIFTY made money in all three periods (+Rs 110 / +328 / +84 a trade). FINNIFTY was flat in the
+  unseen years (-Rs 3). MIDCPNIFTY lost in the final (-Rs 36).
+- **Steady signs:** none. Signs that held in design (a big PCR rise since 09:30, falling ATM IV, a narrow 09:15-09:30
+  range) did not hold in the other periods.
+- **Flaws in plain words:**
+  - it loses on most trades and lives on a few long runners (R141);
+  - its losses bunch into whole bad days;
+  - in a weekly-expiry market (2022-24) its 15% option stop is hit far more often.
+
+**Filters (chosen on design, tested once):**
+
+| filter: skip when ... | final: trades left, net (before -> after), twin p | unseen: trades left, net, twin p | why it failed |
+|---|---|---|---|
+| the put/call OI ratio rose >= 0.195 since 09:30 | 317, +11,155 -> +19,415, p 0.60 | 726, +83,307 -> +77,429, p 0.82 | no better than random skipping; worse drawdown and worst month in the unseen years |
+| ATM IV fell by > 0.36 points since 09:30 | 308, -> +18,325, p 0.17 | 728, -> +69,518, p 0.83 | no better than random skipping; worse worst month in the unseen years |
+| the 09:15-09:30 range < 0.32 ADR | 292, -> -6,156, p 0.95 | 611, -> +1,18,074, p 0.33 | the final turned into a loss; no better than random |
+
+- The "trades left" column counts trades after the walk is re-run, as R140 did.
+- Win rate before -> after, against Boss's 65%: final 37% -> 36-38%; unseen 31% -> 32-33%.
+
+## ORB and ORB Fresh (BANKNIFTY)
+
+- **The same trades:** on BANKNIFTY in these three periods, ORB Fresh took exactly ORB's trades. Everything below is
+  true of both.
+- **How it loses** (unseen / design / final):
+
+  | | unseen | design | final |
+  |---|---|---|---|
+  | lose | 63% | 62% | 56% |
+  | average | -Rs 101 | -Rs 129 | +Rs 22 |
+  | money lost | -Rs 1.06 lakh | -Rs 1.12 lakh | -Rs 0.40 lakh |
+
+- **Exits:** the -40-point stop is 84%, 83% and 79% of the money lost (108 / 65 / 20 trades, every one a loser).
+  The profit lock's give-backs are the rest. Targets almost never lose.
+- **Bunching:** 92%, 90% and 89% of losers fall on days when every ORB trade lost.
+- **Worst 20:** all stop-outs, on higher VIX (median 14.9 against 13.5) and dearer options (premium Rs 1,076 against
+  Rs 492). 15 of them are in 2026, after BANKNIFTY moved to monthly expiries and bigger lots.
+- **By index:** every other index lost in the unseen years and in design too.
+- **Steady losing signs** (all three periods, n >= 30 each):
+
+  | sign at entry | unseen: n, lose, avg | design | final |
+  |---|---|---|---|
+  | a quiet signal bar (range < 0.81 ATR) | 91, 65%, -175 | 64, 70%, -225 | 31, 61%, -189 |
+  | far below yesterday's high (calls) / above the low (puts): < -0.59 ADR | 95, 71%, -215 | 64, 72%, -374 | 30, 63%, -131 |
+  | a gap against the trade (< -0.24 ADR) | 114, 69%, -196 | 64, 66%, -184 | 35, 60%, -23 |
+  | option band volume a bit below usual (0.61-0.81 of median) | 94, 67%, -179 | 64, 63%, -330 | 38, 58%, -21 |
+  | the option's last 5 minutes quiet (< 0.62 of its 5-min average) | 95, 63%, -88 | 64, 64%, -124 | 35, 57%, -133 |
+  | high VIX (>= 15.8) | 56, 71%, -183 | 64, 63%, -63 | 48, 60%, -34 |
+
+- **Why no filter:** none of these met the choice rule's bar (+5 points over the arm's loser rate in both design
+  halves with n >= 30 each). The arm loses even outside them.
+- **Flaws in plain words:**
+  - it buys a break that has already happened;
+  - it is stopped out on days with no follow-through: a quiet break bar, low volume, far from yesterday's level, a gap
+    against it;
+  - its losses come whole-day at a time.
+
+## ORB Sweep (BANKNIFTY)
+
+- **How it loses:**
+
+  | | unseen | design | final |
+  |---|---|---|---|
+  | lose | 73% | 74% | 72% |
+  | average | -Rs 124 | -Rs 248 | -Rs 309 |
+
+- **Exits:** stop-outs are 95-98% of the money lost. The loss per trade grew each period.
+- **Bunching:** 80-83% of losers fall on all-lose days. The longest losing streak is 19 trades.
+- **Worst 20:** all stop-outs, in high VIX (median 18.4 against 13.6). 18 of them are in 2026.
+- **Steady signs:** 9, all pointing one way. The sweep reversal fails on directional days:
+  - the day already directional (top fifth: 80%, 76% and 76% lose);
+  - the option in "short build-up" (its price falling while OI rises) into entry: 317 / 208 / 84 trades, 74-76% lose;
+  - a middling push, gap or stretch.
+- **Flaw:** it bets on a failed break, and on trend days the break does not fail.
+
+## Range Fade (BANKNIFTY)
+
+- **How it loses:**
+
+  | | unseen | design | final |
+  |---|---|---|---|
+  | lose | 70% | 69% | 67% |
+  | average | -Rs 124 | -Rs 229 | -Rs 144 |
+
+- **Exits:** stop-outs are 94% of the money lost in every period.
+- **Bunching:** 72-73% of losers fall on all-lose days.
+- **Steady signs:** 13. The clearest:
+  - no earlier fake poke today (385 / 322 / 152 trades, 68-73% lose): fading a range edge that has not yet rejected
+    once;
+  - a low put/call ratio (< 0.83);
+  - a quiet day so far (day range in the lowest fifth);
+  - a gap against the trade.
+- **Its one filter: skip when the 09:15-09:30 range < 0.33 ADR.**
+  - final: -Rs 29,811 -> -13,082 on 145 trades; losing days -66,769 -> -42,459; twin p 0.084;
+  - unseen: -Rs 83,384 -> -40,002 on 368 trades; drawdown halved; twin p 0.035.
+  - It failed: the arm still loses money, and BH q is 0.28.
+  - It is the only R144b filter that beat random skipping in either period, and it is a loss-cutter on a losing arm,
+    not a fix.
+- **Flaw:** it fades the edge of a range that is not a range. On a narrow-morning day the "range" breaks.
+
+## Solo 2.0
+
+- **The result by period:**
+
+  | period | trades | lose | average | net | in-sample for the model? |
+  |---|---|---|---|---|---|
+  | unseen (2022-24) | 451 | 60% | -Rs 171 | -Rs 77,142 | no |
+  | design | 310 | 47% | +Rs 332 | +Rs 1,02,774 | yes |
+  | final | 127 | 43% | +Rs 704 | +Rs 89,382 | yes |
+
+- **Unseen, by setup:** S3 (open outside value) 339 trades, -Rs 48,626; S2 (Donchian) 103 trades, -Rs 17,393.
+  It lost in each unseen year: -Rs 26,787 in 2023 and -Rs 44,932 in Jan - Nov 2024.
+- **By index, unseen:** FINNIFTY -Rs 227 a trade (222 trades), MIDCPNIFTY -Rs 174 (155). MIDCPNIFTY carried the
+  final, as R57 warned (87 trades, +Rs 850 a trade).
+- **Exits:** stop-outs and time exits share the losses. Unseen: stops -Rs 1.82 lakh on 121 trades; time -Rs 1.05
+  lakh.
+- **Bunching:** with one trade a day, every losing trade is its whole day.
+- **Worst 20:** 18% of all money lost. The worst is -Rs 14,592 on MIDCPNIFTY, 7 Apr 2025, a crash day.
+- **Steady signs:** none. Nothing qualified for a filter.
+- **Flaw:** the model's choice of which candidate to take has no out-of-sample record. Where it is out of sample, the
+  arm loses.
+
+## What this means (proposals only; nothing built)
+
+1. **No paper or shadow skip switch is proposed:** no filter passed.
+2. **Solo 2.0:** Boss may want to know that it lost money on the two years its model never saw. Its forward judge
+   (switch off after 60 paper trades if net <= 0, or at -Rs 25,000) stays its guard. Whether to keep it on paper is
+   Boss's call; nothing is changed here.
+3. **The ORB family:** R144b agrees with R3 that the arms lose, and adds that it held in 2022-24 and that the stop-outs
+   are almost all of the loss.
+   - The steady signs (a quiet break bar, a gap against, low volume, high VIX) are leads for a fresh pre-registered
+     test, not results.
+   - The Range Fade narrow-morning skip is the one candidate that beat random skipping, though not BH.
+4. **Liquidity:** no entry sign held up. Its losses are a day-level problem (bad days take every trade). The lead
+   for a next study is a day-level stop or a cap after the first loss on an index-day, pre-registered with R140's
+   gates.
 
 ## Files
 
 - `research/hunt/r144b_loss_orb_liq/`:
-  - `PREREG.md`, `r144b_lib.py`, `r144b.py`, `test_r144b.py`;
-  - `results/status.json` (inputs found: none);
-  - `results/pvalues.json` (no tests run).
+  - `PREREG.md` (with amendment 1), `r144b_lib.py`, `r144b.py`, `test_r144b.py`;
+  - results: `design.json` (frozen filters, design anatomy), `test.json` (every table by period: exits, bunching,
+    worst 20, every feature by fifth, steady slices, filter tests), `pvalues.json` (8 raw p-values for the
+    coordinator), `status.json`.
 - Entries:
-  - `research/experiments/entries/r144b-anatomy.yaml` (not-a-test, blocked);
-  - `research/experiments/entries/r144b-filters.yaml` (not-a-test, blocked).
+  - `research/experiments/entries/r144b-anatomy.yaml` (not-a-test);
+  - `research/experiments/entries/r144b-filters.yaml` (rejected).
+- To re-run: `IRAALGO_LAKE=<flat lake> R51_CLEAN=1 python research/hunt/r144b_loss_orb_liq/r144b.py collect
+  {orb|liq|solo} {design|final|unseen}`, then `design` / `test`. The final is read once.

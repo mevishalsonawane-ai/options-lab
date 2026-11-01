@@ -1,9 +1,11 @@
 id: r144b-filters
-title: 'R144b: up to 3 pre-registered skip filters per arm for Liquidity 15+5, the ORB family and Solo 2.0 (not run: no lake)'
+title: 'R144b: pre-registered skip filters for Liquidity 15+5 and Range Fade (none qualified for ORB, ORB Fresh, ORB Sweep,
+  Solo 2.0)'
 family: trade-management
 date: '2026-11-01'
 doc: research/HUNT_R144B_LOSS_ORB_LIQ.md
-data_version: none (the session had no copy of the Drive lake)
+data_version: Drive lake IraAlgo-data-lake downloaded 1 Nov 2026; R3 sessions, R51 clean stores, R143 old store, R57 stores
+  rebuilt; parity to the rupee (ORB family vs R3, LIQ vs R101)
 period:
   unseen: 2022-12-01..2024-11-19 (test)
   design: 2024-11-20..2026-03-31 (choice only)
@@ -14,14 +16,19 @@ instruments:
 - FINNIFTY
 - MIDCPNIFTY
 prereg: research/hunt/r144b_loss_orb_liq/PREREG.md
-holdout_read: false
+holdout_read: true
 features:
-- 'signal source: the index; option-chain and VIX context; filters skip a trade whose design-frozen feature slice is a costly losing one'
+- 'signal source: the index; option-chain and VIX context; filters skip a trade whose design-frozen feature slice is a costly
+  losing one'
 hypothesis: skipping trades in each arm's costliest steady losing slice loses less than today's rules and than random skipping
 model_or_rule: research/hunt/r144b_loss_orb_liq/r144b.py
-settings: 'fixed choice rule (PREREG 5); R142 lose-less gates; 2,000 random-skip twins, p <= 0.05; BH q <= 0.10 within R144b; >= 40 left, >= 30 skipped; must pass final AND unseen'
-variants_tried: null
-verdict: not-a-test
+settings: fixed choice rule (PREREG 5); R142 lose-less gates; 2,000 random-skip twins, p <= 0.05; BH q <= 0.10 within R144b;
+  >= 40 left, >= 30 skipped; must pass final AND unseen
+variants_tried: 4
+verdict: rejected
 results:
-  summary: 'NOT RUN: no data lake in the session. No filter chosen or tested; results/pvalues.json lists no tests.'
+  summary: '0 of 4 passed (8 tests, BH within R144b). LIQ skip PCR rise >= 0.195: final p 0.60, unseen p 0.82; LIQ skip ATM
+    IV fall: final p 0.17, unseen p 0.83; LIQ skip 09:15-09:30 range < 0.32 ADR: final net turned -6,156, p 0.95, unseen p
+    0.33; Range Fade skip 09:15-09:30 range < 0.33 ADR: halved the loss (final -29,811 -> -13,082, unseen -83,384 -> -40,002),
+    p 0.084 / 0.035, BH q 0.34 / 0.28, arm still loses. Win rates stay far below 65%.'
   costs: each engine's own (R17 fills, dated charges, 1 lot)
