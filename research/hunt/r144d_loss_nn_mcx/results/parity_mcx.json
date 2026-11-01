@@ -1,0 +1,355 @@
+{
+ "_coverage": {
+  "asked": "1 Dec 2022 - 19 Oct 2026",
+  "mcx_option_minutes": "lake options_rolling_1m MCX books start 5 Aug 2025 17:45 IST and end 19 Oct 2026 23:29: NGEVE, SILM and USSIL (whose engines read the future from these files' `spot`) cannot be rebuilt before 5 Aug 2025; 1 Dec 2022 - 4 Aug 2025 has no trades for them (not invented)",
+  "mcx_daily_futures": "lake fut_daily_continuous MCX: 2 Jan 2012 - 16 Oct 2026 (TREND rebuilt over all of it; its first trade is 1 Nov 2012, the first month-end with 252 days of history); no LEAD",
+  "mcx_futures_minutes_with_volume_oi": "lake fut_1m_mcx_continuous holds the near month only from NATURALGAS 26 Aug 2026, SILVERM 27 Feb 2026 (patchy: near_share >= 0.5 on 47 of 255 days), SILVER 30 Jun, CRUDEOIL 18 Sep 2026; f_vol_rel, f_oi_chg, f_od, f_oiq, f_rng_proxy are NaN elsewhere",
+  "us_hourly": "Yahoo 1-hour SI=F, NG=F, CL=F, GC=F from 10 Jun 2024, INR=X from 15 Jan 2024, to 30 Oct 2026 (fetched 1 Nov 2026 as R2's fetch_yahoo.sh); f_us_on / f_fx_on NaN before. Yahoo's front-month series jump at its own contract rolls (NG=F most), which shows in f_us_on on those days",
+  "us_data_calendar": "R2 events.py CPI / NFP, fomc.py FOMC, lake xauusd_1m/us_events.csv: Jun 2024 - Oct 2026; f_us_data NaN outside",
+  "features_note": "signed with the trade: f_push, f_trend20, f_gap, f_d_open, f_ret5, f_us_on, f_od, f_oiq (direction); unsigned: f_d_pdh, f_d_pdl, f_fx_on (USD/INR log move, as asked), ranges, volumes. ATR = mean daily high-low of the last 14 sessions (lake daily). f_dte / f_roll_days count MCX trading days on the data's day list (weekdays after its end) to the option series' expiry / the first day of the next series (public calendar dates, inferred by each engine from the data); TREND: f_dte NaN (no expiry in M2's data), f_roll_days to M2's next detected roll. Price features use each engine's own price series (the options' `spot` future for NGEVE / SILM / USSIL, M2's Dhan daily for TREND)."
+ },
+ "NGEVE": {
+  "engine": "research/hunt/m3 (m3lib imported; run_book, costs copied verbatim)",
+  "dropped_premium_over_1L": 0,
+  "design": {
+   "window": [
+    "2025-08-06",
+    "2026-07-06"
+   ],
+   "published": {
+    "trades": 197,
+    "net_total": 9220.431317363102,
+    "net_per_trade": 46.80421988509189,
+    "win_rate": 0.43147208121827413,
+    "max_dd": 39541.64060302501
+   },
+   "rebuilt": {
+    "trades": 197,
+    "net_total": 9220.431317363094,
+    "net_per_trade": 46.80421988509185,
+    "win_rate": 0.43147208121827413,
+    "max_dd": 39541.64060302501
+   },
+   "days_published_only": 0,
+   "days_rebuilt_only": 0,
+   "days_both": 197,
+   "identical_trades": 197,
+   "net_diff_on_identical": 1.8189894035458565e-12,
+   "differing_examples": [],
+   "published_only_days": [],
+   "rebuilt_only_days": []
+  },
+  "holdout": {
+   "window": [
+    "2026-07-08",
+    "2026-10-07"
+   ],
+   "published": {
+    "trades": 55,
+    "net_total": 5136.580291625678,
+    "net_per_trade": 93.39236893864869,
+    "win_rate": 0.4909090909090909,
+    "max_dd": 12530.677562992407
+   },
+   "rebuilt": {
+    "trades": 55,
+    "net_total": 5136.580291625678,
+    "net_per_trade": 93.39236893864869,
+    "win_rate": 0.4909090909090909,
+    "max_dd": 12530.677562992407
+   },
+   "days_published_only": 0,
+   "days_rebuilt_only": 0,
+   "days_both": 55,
+   "identical_trades": 55,
+   "net_diff_on_identical": 9.094947017729282e-13,
+   "differing_examples": [],
+   "published_only_days": [],
+   "rebuilt_only_days": []
+  },
+  "recost_note": "net uses M3's own spread for these trades (0.29% after 17:00); M3's 9 Oct re-cost with the measured 0.43% gave +Rs 70/trade on the holdout instead of +Rs 93",
+  "output": {
+   "file": "~/.cache/iraalgo/r144d/trades_NGEVE.parquet",
+   "rows": 260,
+   "first_day": "2025-08-06",
+   "last_day": "2026-10-19",
+   "all_trades": {
+    "trades": 260,
+    "net_total": 24930.415714673443,
+    "net_per_trade": 95.88621428720555,
+    "win_rate": 0.45384615384615384,
+    "max_dd": 40041.54158292526
+   }
+  }
+ },
+ "SILM": {
+  "engine": "research/hunt/m4 build.py + analyze.py (R42's path-only patch, R42_ONLY=1: the frozen cell's candidates only)",
+  "design": {
+   "window": [
+    "2025-08-05",
+    "2026-07-07"
+   ],
+   "published": {
+    "trades": 78,
+    "net_per_trade": 1438.7685225334114,
+    "win_rate": 0.6282051282051282,
+    "net_total": 112223.94475760608,
+    "max_dd": 30106.314917307856
+   },
+   "rebuilt": {
+    "trades": 95,
+    "net_total": 82809.28948738343,
+    "net_per_trade": 871.6767314461414,
+    "win_rate": 0.5578947368421052,
+    "max_dd": 22422.264836312217
+   },
+   "r42_lake_rebuild": {
+    "trades": 95,
+    "net_per_trade": 871.32,
+    "win_rate": 0.568
+   }
+  },
+  "holdout_to_7oct": {
+   "window": [
+    "2026-07-08",
+    "2026-10-07"
+   ],
+   "published": {
+    "trades": 51,
+    "net_total": 23178.0195423985,
+    "net_per_trade": 454.4709714195784,
+    "win_rate": 0.5294117647058824,
+    "max_dd": 13784.642665567273
+   },
+   "rebuilt": {
+    "trades": 51,
+    "net_total": 22469.703252339466,
+    "net_per_trade": 440.58241671253853,
+    "win_rate": 0.5098039215686274,
+    "max_dd": 14324.434011414305
+   },
+   "r42_lake_rebuild": {
+    "trades": 51,
+    "net_per_trade": 465.66,
+    "win_rate": 0.529
+   },
+   "entries_both": 51,
+   "identical_trades": 45,
+   "same_strike": 48,
+   "same_strike_other_exit_price": 3,
+   "why_different": "strike: M4's unstable sort picked OTM3 where OTM2 also had a price (here OTM2, the app's rule; 3 trades); exit price (3 trades): where one source has no print in the exit minute M4 prices it by B76 at the day's filled IV, so the lake's fuller minutes give a real print or a different fallback",
+   "published_only": [],
+   "rebuilt_only": []
+  },
+  "output": {
+   "file": "~/.cache/iraalgo/r144d/trades_SILM.parquet",
+   "rows": 152,
+   "first_day": "2025-08-28",
+   "last_day": "2026-10-12",
+   "all_trades": {
+    "trades": 152,
+    "net_total": 96186.1855697363,
+    "net_per_trade": 632.8038524324757,
+    "win_rate": 0.5263157894736842,
+    "max_dd": 22422.264836312217
+   }
+  }
+ },
+ "TREND": {
+  "engine": "research/hunt/m2 prep.build + engine (load, signal TSM252, run_futures, stats) imported unchanged",
+  "legs_missing": [
+   "LEAD"
+  ],
+  "legs_missing_why": "LEAD (LEADMINI leg): not in the lake's daily futures; the Dhan token was expired on 1 Nov so it could not be refetched. The rebuild runs on the other 6 legs.",
+  "dev_2013_2024_constrained_PORT_TSM252_LS": {
+   "published": {
+    "cagr": 16.9,
+    "rs_month": 3847,
+    "maxdd": -181000,
+    "sharpe": 0.54,
+    "trades_yr": 11,
+    "final": 650000,
+    "worst_month": -92000,
+    "green": 55,
+    "by_year": {
+     "2013": -12000.0,
+     "2014": 66000.0,
+     "2015": 38000.0,
+     "2016": -60000.0,
+     "2017": 44000.0,
+     "2018": -88000.0,
+     "2019": -20000.0,
+     "2020": 152000.0,
+     "2021": 142000.0,
+     "2022": 67000.0,
+     "2023": 94000.0,
+     "2024": 132000.0
+    }
+   },
+   "rebuilt_6_legs": {
+    "cagr": 16.838644814836414,
+    "rs_month": 3798.081549999721,
+    "maxdd": -201921.0744153997,
+    "sharpe": 0.5447480519545089,
+    "trades_yr": 8.91870150616157,
+    "final": 646923.7431999597,
+    "worst_month": -102994.67304784,
+    "green": 56.94444444444444
+   },
+   "rebuilt_by_year": {
+    "2013": -30839.349574639997,
+    "2014": 44655.280819799955,
+    "2015": 31993.520231040024,
+    "2016": -46623.439817760016,
+    "2017": 38770.62264759999,
+    "2018": -78266.76436616,
+    "2019": -12007.33422644002,
+    "2020": 200543.70424247996,
+    "2021": 180566.13885355997,
+    "2022": 88406.85970656002,
+    "2023": 61120.38042911995,
+    "2024": 68604.12425480006
+   }
+  },
+  "holdout_2025_constrained_PORT_TSM252_LS": {
+   "window": [
+    "2025-01-01",
+    "2026-10-16"
+   ],
+   "published": {
+    "cagr": 92,
+    "rs_month": 9800,
+    "maxdd": -200000,
+    "sharpe": 0.76,
+    "trades_yr": 12,
+    "final": 315000,
+    "worst_month": -87000,
+    "green": 77,
+    "note": "MCX_TREND.md walk-forward pick 'PORT 12-month TSM L/S', to 7 Oct 2026"
+   },
+   "rebuilt_6_legs": {
+    "cagr": 81.28810969568995,
+    "rs_month": 8621.770858481808,
+    "maxdd": -160293.11849451996,
+    "sharpe": 0.7065582414708557,
+    "trades_yr": 12.30551301684533,
+    "final": 289678.95888659987,
+    "worst_month": -79776.32962608004,
+    "green": 68.18181818181817
+   }
+  },
+  "trade_list_check": {
+   "ALUM": {
+    "trades": 168,
+    "sum_trade_net": 232707.75903199983,
+    "run_futures_unconstrained": 232707.75903199994,
+    "open_trade_mtm_included": true
+   },
+   "CRUDE": {
+    "trades": 177,
+    "sum_trade_net": 67793.70476199998,
+    "run_futures_unconstrained": 67793.70476200001,
+    "open_trade_mtm_included": true
+   },
+   "GOLD": {
+    "trades": 103,
+    "sum_trade_net": 6193.875127775995,
+    "run_futures_unconstrained": 6193.875127775995,
+    "open_trade_mtm_included": true
+   },
+   "NATGAS": {
+    "trades": 170,
+    "sum_trade_net": -34316.88281200002,
+    "run_futures_unconstrained": -34316.882812,
+    "open_trade_mtm_included": true
+   },
+   "SILVER": {
+    "trades": 93,
+    "sum_trade_net": 46514.71740424,
+    "run_futures_unconstrained": 46514.71740424,
+    "open_trade_mtm_included": true
+   },
+   "ZINC": {
+    "trades": 168,
+    "sum_trade_net": 423613.2293879998,
+    "run_futures_unconstrained": 423613.22938799986,
+    "open_trade_mtm_included": true
+   }
+  },
+  "roll_flag_note": "M2's prep.roll_days keeps the largest OI jump within 15 days, so a roll flag can move a few days with later data; the trades follow the engine's flags as they are on the full data",
+  "open_trades_note": "6 trades still open at the data's last daily close are marked to it (exit_why open_at_data_end_mtm)",
+  "trade_list_rules": "1 lot of each mini (GOLDPETAL 1 lot as the app, the research held 5), every month-end signal taken, no Rs 1 lakh margin / ruin rule (the app's arm has none); M2's own costs (Zerodha + half spread + 0.02% slippage a side) and roll round trips",
+  "output": {
+   "file": "~/.cache/iraalgo/r144d/trades_TREND.parquet",
+   "rows": 879,
+   "first_day": "2012-11-01",
+   "last_day": "2026-10-15",
+   "all_trades": {
+    "trades": 879,
+    "net_total": 742506.4029020156,
+    "net_per_trade": 844.7171819135558,
+    "win_rate": 0.5108077360637088,
+    "max_dd": 179493.22892400395
+   }
+  }
+ },
+ "USSIL": {
+  "engine": "research/hunt/r2 hourly.py + cand.py (C2, XEOD, FUT; copied verbatim), m3lib.Market imported",
+  "daily_day_list": "lake fut_daily_continuous SILVERM (Dhan expiryCode 0), as R2's m1 Dhan daily",
+  "design": {
+   "window": [
+    "2025-08-01",
+    "2025-09-30"
+   ],
+   "rebuilt": {
+    "trades": 31,
+    "net_total": -7631.30421956,
+    "net_per_trade": -246.1711038567742,
+    "win_rate": 0.5161290322580645,
+    "max_dd": 10773.000912919999
+   },
+   "published": {
+    "trades": 31,
+    "net_per_trade": -246.0,
+    "note": "HUNT_R2_US_MCX.md: '09:05 minute check -Rs 246/tr (31 d)'"
+   }
+  },
+  "holdout": {
+   "window": [
+    "2025-10-01",
+    "2026-10-06"
+   ],
+   "rebuilt": {
+    "trades": 166,
+    "net_total": 197374.70645228,
+    "net_per_trade": 1189.0042557366264,
+    "win_rate": 0.5602409638554217,
+    "max_dd": 29646.301311279996
+   },
+   "published": {
+    "trades": 166,
+    "net_per_trade": 1189.0,
+    "win_rate": 0.56,
+    "max_dd": 29600.0,
+    "per_day": 1115.0
+   }
+  },
+  "day_list_extension": [
+   "2026-10-19"
+  ],
+  "full_run_note": "trades file = one run over the whole span; the published runs skip the first day of each window (hourly.py starts each window with prev=None)",
+  "output": {
+   "file": "~/.cache/iraalgo/r144d/trades_USSIL.parquet",
+   "rows": 207,
+   "first_day": "2025-08-06",
+   "last_day": "2026-10-19",
+   "all_trades": {
+    "trades": 207,
+    "net_total": 182881.51597496,
+    "net_per_trade": 883.4855844200966,
+    "win_rate": 0.5555555555555556,
+    "max_dd": 29646.301311279996
+   }
+  }
+ }
+}
