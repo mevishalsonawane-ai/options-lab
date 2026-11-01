@@ -1,0 +1,25 @@
+id: r140-t4
+title: 'R140 Amendment I T4: break and retest, 15m, + lock, with the 60m trend'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss''s screenshot: after a swing level breaks, the retest into the +/- 0.25 ATR zone that closes on the broken
+  side is a trade (SL past the zone, TP 2R); earns after costs and beats twins.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot candles (the underlying); information only'
+model_or_rule: break and retest, 15m, + lock, with the 60m trend; 12 h cap
+settings: research/hunt/r140_gold_0600/r140t.py; PREREG.md Amendment I
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 1058 trades, win 49% (65% rule: below), avg net $-39 a 100-oz lot (2x $-71), total $-41,430; folds -4,652
+    / -9,929 / -10,412 / -5,361 / -11,077; twin p 0.781, BH q 0.998. Gates failed: net, twins, bh, folds. Holdout not read.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+holdout_read: false
+verdict: rejected

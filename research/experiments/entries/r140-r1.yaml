@@ -1,0 +1,25 @@
+id: r140-r1
+title: 'R140 Amendment H R1: refined Pine as written, 15m'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: Boss's refined Pine (lagged 60m EMA50 trend, pivot-3 swings, POI sweep + confirmation, older-swing / 3 ATR TP,
+  swing SL, RR >= 1.5) earns on XAUUSD after costs and beats twins.
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot candles (the underlying); information only'
+model_or_rule: refined Pine as written, 15m; 12 h cap
+settings: research/hunt/r140_gold_0600/r140q.py; PREREG.md Amendment H
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 332 trades, win 30% (65% rule: below), avg net $-63 a 100-oz lot (2x $-95), total $-20,989; folds -2,595
+    / -4,300 / +961 / -6,952 / -8,103; twin p 0.782, BH q 0.998. Gates failed: net, twins, bh, folds. Holdout not read.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+holdout_read: false
+verdict: rejected

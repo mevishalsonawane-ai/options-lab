@@ -1,0 +1,29 @@
+id: r140-a6
+title: 'R140 A6: post-US-release mornings: US session -> the window (XAUUSD)'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: After big US releases the window follows (or fades) the US day after costs; beats random same-time twins (p <=
+  0.05), BH q <= 0.10 over 12, >= 3 of 4 folds positive.
+data_version: XAUUSD Dukascopy BID 1-min (research-data release xauusd_m1_bid.csv.gz to 30 Sep 2026 + Dukascopy tail to 30
+  Oct 2026); GOLDM near future from the Drive lake options_rolling_1m GOLDM book (R53 loader), copied 31 Oct 2026
+period:
+  design: 2023-10-02..2026-03-31 (5 half-year folds; F1 training only for walk-forward signs)
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot (the underlying) 06:00-08:00 IST, 15-minute candles; information only (Boss cannot trade spot
+  gold via Zerodha)'
+model_or_rule: 'post-US-release mornings (CPI/NFP/FOMC) only: sign of the US session -> the window, walk-forward follow/fade.
+  Stop 1 ATR15; lock 60% of peak after +1 ATR15; 1-minute bars'
+settings: research/hunt/r140_gold_0600/r140.py; PREREG.md s4
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 60 trades, win 50% (Boss''s 65% rule: below), avg net $ +57 (2x $ +25), total $ +3,441 (2x $ +1,521);
+    folds - / +952 / -1,897 / +6,143 / -1,758; twin p 0.151 (twin median total $ -2,651), BH q 0.674 (12 R140 variants); drawdown
+    $ -4,574, worst month $ -2,793 (1 lot = 100 oz). Gates failed: twins, bh, folds. Holdout not read (nothing passed).'
+  costs: $0.25 spread + $7 commission a 100-oz lot round trip ($32); 2x = $64
+holdout_read: false
+verdict: rejected

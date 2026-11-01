@@ -1,0 +1,25 @@
+id: r140-f5
+title: 'R140 Amendment F F5: Boss''s Pine, 15m + lock, 06:00-08:00 IST entries only'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: Boss's pasted Pine v6 indicator (HTF 60m EMA50 trend, pivot-3 swings, POI zone, liquidity sweep + confirmation,
+  RR >= 1.5) earns on XAUUSD after costs and beats twins.
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot candles (the underlying); information only (not tradable via Zerodha)'
+model_or_rule: Boss's Pine, 15m + lock, 06:00-08:00 IST entries only; 12 h cap
+settings: research/hunt/r140_gold_0600/r140p.py; PREREG.md Amendment F
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 20 trades, win 55% (65% rule: below), avg net $+109 a 100-oz lot (2x $+77), total $+2,178; folds -377
+    / -38 / -454 / +749 / +2,298; twin p 0.101, BH q 0.393. Gates failed: twins, bh, trades, folds.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+holdout_read: false
+verdict: rejected

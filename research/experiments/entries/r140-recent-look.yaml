@@ -1,0 +1,27 @@
+id: r140-recent-look
+title: 'R140: high win-rate US-gold versions replayed on 1 Sep - 30 Oct 2026 for a $200 account (not a test)'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss (31 Oct): what did the small-target / early-lock versions make in the last 2 months with $200? A replay
+  of already-rejected rules; no gate.'
+data_version: as r140-a1
+period:
+  design: none (replay)
+  holdout: 2026-09-01..2026-10-30 (inside the R140 holdout; now SEEN for E7, E8, L1-L3)
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot 15-minute candles completed by 06:00 IST; information only'
+model_or_rule: E7, E8, L1, L2, L3 exactly as Amendment B; 0.01 lot (1 oz); $200 start
+settings: research/hunt/r140_gold_0600/r140r.py
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: null
+results:
+  summary: '17 trades each (E8 14): E7 +$9.05 (71% win), E8 -$1.44 (71%), L1 +$22.57 (76%, random-twin p 0.034), L2 +$20.41
+    (88%), L3 +$25.16 (82%) on $200 at 0.01 lot; worst drawdown -$4.93 to -$9.53. In design, 2-month windows were positive
+    28-52% of the time for these rules (29 windows).'
+  costs: $0.25 spread + $7 a lot commission, scaled to 0.01 lot ($0.32 a trade); 2x also shown
+holdout_read: true
+verdict: not-a-test
+notes: Already-rejected rules; no verdict changes. L1 stays a watch-only candidate (failed BH over 36 and folds in design).

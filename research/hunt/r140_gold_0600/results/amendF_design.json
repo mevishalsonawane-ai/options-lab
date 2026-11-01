@@ -1,0 +1,417 @@
+{
+ "F1": {
+  "rule": "F1",
+  "n": 255,
+  "win": 0.317647,
+  "avg": -31.807843,
+  "total": -8111.0,
+  "total2": -16271.0,
+  "avg2": -63.807843,
+  "longs": 150,
+  "folds": [
+   -2351.7,
+   -3864.4,
+   5626.0,
+   -3825.2,
+   -3695.7
+  ],
+  "dd": -18095.7,
+  "worst_month": -5461.0,
+  "months_green": "13/30",
+  "why": {
+   "stop": 0,
+   "lock": 0,
+   "time": 10
+  },
+  "twin_p": 0.609391,
+  "twin_median_total": -4371.65,
+  "sizing_1000": {
+   "5x": {
+    "end": 846.688889,
+    "ret": -0.153311,
+    "max_dd_pct": -0.20671,
+    "worst_month": -47.35741,
+    "months_green": "12/30",
+    "avg_win": 11.50555,
+    "avg_loss": -6.23713
+   },
+   "risk1": {
+    "end": 840.754515,
+    "ret": -0.159245,
+    "max_dd_pct": -0.381733,
+    "worst_month": -70.653102,
+    "months_green": "14/30",
+    "avg_win": 17.310921,
+    "avg_loss": -8.973736
+   },
+   "risk2": {
+    "end": 653.025036,
+    "ret": -0.346975,
+    "max_dd_pct": -0.547545,
+    "worst_month": -101.072051,
+    "months_green": "13/30",
+    "avg_win": 22.386346,
+    "avg_loss": -12.415339
+   },
+   "risk2_2x_costs": {
+    "end": 399.541714,
+    "ret": -0.600458,
+    "max_dd_pct": -0.664206,
+    "worst_month": -119.497347,
+    "months_green": "10/30",
+    "avg_win": 15.350974,
+    "avg_loss": -10.597053
+   }
+  },
+  "signals_total": 268,
+  "exits": {
+   "tp": 73,
+   "sl": 172,
+   "lock": 0,
+   "time": 10
+  },
+  "avg_rr": 3.132881,
+  "avg_stop_usd": 4.305349,
+  "q": 0.918922,
+  "gates": {
+   "net": false,
+   "twins": false,
+   "bh": false,
+   "trades": true,
+   "folds": false,
+   "all": false
+  }
+ },
+ "F2": {
+  "rule": "F2",
+  "n": 257,
+  "win": 0.513619,
+  "avg": -48.878988,
+  "total": -12561.9,
+  "total2": -20785.9,
+  "avg2": -80.878988,
+  "longs": 152,
+  "folds": [
+   -2552.14,
+   -1595.72,
+   -1339.04,
+   -6331.96,
+   -743.04
+  ],
+  "dd": -14309.16,
+  "worst_month": -4843.3,
+  "months_green": "10/30",
+  "why": {
+   "stop": 0,
+   "lock": 118,
+   "time": 2
+  },
+  "twin_p": 0.744256,
+  "twin_median_total": -5284.08,
+  "sizing_1000": {
+   "5x": {
+    "end": 795.504502,
+    "ret": -0.204495,
+    "max_dd_pct": -0.216599,
+    "worst_month": -64.377427,
+    "months_green": "10/30",
+    "avg_win": 4.178344,
+    "avg_loss": -6.048295
+   },
+   "risk1": {
+    "end": 666.660037,
+    "ret": -0.33334,
+    "max_dd_pct": -0.369753,
+    "worst_month": -91.584235,
+    "months_green": "11/30",
+    "avg_win": 5.577251,
+    "avg_loss": -8.556297
+   },
+   "risk2": {
+    "end": 511.332563,
+    "ret": -0.488667,
+    "max_dd_pct": -0.543736,
+    "worst_month": -133.983286,
+    "months_green": "11/30",
+    "avg_win": 7.650052,
+    "avg_loss": -11.987795
+   },
+   "risk2_2x_costs": {
+    "end": 311.395839,
+    "ret": -0.688604,
+    "max_dd_pct": -0.710488,
+    "worst_month": -150.268889,
+    "months_green": "7/30",
+    "avg_win": 5.030936,
+    "avg_loss": -10.095436
+   }
+  },
+  "signals_total": 268,
+  "exits": {
+   "tp": 14,
+   "sl": 123,
+   "lock": 118,
+   "time": 2
+  },
+  "avg_rr": 3.122744,
+  "avg_stop_usd": 4.295374,
+  "q": 0.982004,
+  "gates": {
+   "net": false,
+   "twins": false,
+   "bh": false,
+   "trades": true,
+   "folds": false,
+   "all": false
+  }
+ },
+ "F3": {
+  "rule": "F3",
+  "n": 1139,
+  "win": 0.282704,
+  "avg": 4.721598,
+  "total": 5377.9,
+  "total2": -31070.1,
+  "avg2": -27.278402,
+  "longs": 657,
+  "folds": [
+   -5019.7,
+   -10971.4,
+   -8668.4,
+   2778.2,
+   27259.2
+  ],
+  "dd": -27798.6,
+  "worst_month": -3226.5,
+  "months_green": "11/30",
+  "why": {
+   "stop": 0,
+   "lock": 0,
+   "time": 11
+  },
+  "twin_p": 0.072927,
+  "twin_median_total": -25595.45,
+  "sizing_1000": {
+   "5x": {
+    "end": 788.451648,
+    "ret": -0.211548,
+    "max_dd_pct": -0.442205,
+    "worst_month": -53.97489,
+    "months_green": "10/30",
+    "avg_win": 6.931975,
+    "avg_loss": -2.990997
+   },
+   "risk1": {
+    "end": 163.67068,
+    "ret": -0.836329,
+    "max_dd_pct": -0.854886,
+    "worst_month": -139.288391,
+    "months_green": "7/30",
+    "avg_win": 6.470017,
+    "avg_loss": -3.573653
+   },
+   "risk2": {
+    "end": 142.343183,
+    "ret": -0.857657,
+    "max_dd_pct": -0.891413,
+    "worst_month": -149.073694,
+    "months_green": "10/30",
+    "avg_win": 7.720395,
+    "avg_loss": -4.092563
+   },
+   "risk2_2x_costs": {
+    "end": 12.757736,
+    "ret": -0.987242,
+    "max_dd_pct": -0.988654,
+    "worst_month": -215.43443,
+    "months_green": "4/30",
+    "avg_win": 2.989286,
+    "avg_loss": -2.379955
+   }
+  },
+  "signals_total": 1209,
+  "exits": {
+   "tp": 311,
+   "sl": 817,
+   "lock": 0,
+   "time": 11
+  },
+  "avg_rr": 3.133114,
+  "avg_stop_usd": 2.684289,
+  "q": 0.392562,
+  "gates": {
+   "net": false,
+   "twins": false,
+   "bh": false,
+   "trades": true,
+   "folds": false,
+   "all": false
+  }
+ },
+ "F4": {
+  "rule": "F4",
+  "n": 1159,
+  "win": 0.466782,
+  "avg": -22.106782,
+  "total": -25621.76,
+  "total2": -62709.76,
+  "avg2": -54.106782,
+  "longs": 668,
+  "folds": [
+   -4231.54,
+   -14092.44,
+   -10234.22,
+   -5560.1,
+   8496.54
+  ],
+  "dd": -38502.92,
+  "worst_month": -4493.32,
+  "months_green": "5/30",
+  "why": {
+   "stop": 0,
+   "lock": 472,
+   "time": 1
+  },
+  "twin_p": 0.374625,
+  "twin_median_total": -31459.52,
+  "sizing_1000": {
+   "5x": {
+    "end": 560.684371,
+    "ret": -0.439316,
+    "max_dd_pct": -0.528412,
+    "worst_month": -55.196966,
+    "months_green": "4/30",
+    "avg_win": 2.235159,
+    "avg_loss": -2.667535
+   },
+   "risk1": {
+    "end": 147.223532,
+    "ret": -0.852776,
+    "max_dd_pct": -0.879089,
+    "worst_month": -122.806011,
+    "months_green": "3/30",
+    "avg_win": 2.415039,
+    "avg_loss": -3.494034
+   },
+   "risk2": {
+    "end": 92.603723,
+    "ret": -0.907396,
+    "max_dd_pct": -0.936544,
+    "worst_month": -138.794177,
+    "months_green": "4/30",
+    "avg_win": 2.529609,
+    "avg_loss": -3.68271
+   },
+   "risk2_2x_costs": {
+    "end": 7.924801,
+    "ret": -0.992075,
+    "max_dd_pct": -0.992755,
+    "worst_month": -176.43699,
+    "months_green": "2/30",
+    "avg_win": 0.941253,
+    "avg_loss": -2.210014
+   }
+  },
+  "signals_total": 1209,
+  "exits": {
+   "tp": 93,
+   "sl": 593,
+   "lock": 472,
+   "time": 1
+  },
+  "avg_rr": 3.148449,
+  "avg_stop_usd": 2.669306,
+  "q": 0.711788,
+  "gates": {
+   "net": false,
+   "twins": false,
+   "bh": false,
+   "trades": true,
+   "folds": false,
+   "all": false
+  }
+ },
+ "F5": {
+  "rule": "F5",
+  "n": 20,
+  "win": 0.55,
+  "avg": 108.899,
+  "total": 2177.98,
+  "total2": 1537.98,
+  "avg2": 76.899,
+  "longs": 11,
+  "folds": [
+   -376.9,
+   -38.0,
+   -454.32,
+   749.4,
+   2297.8
+  ],
+  "dd": -1431.22,
+  "worst_month": -298.9,
+  "months_green": "8/15",
+  "why": {
+   "stop": 0,
+   "lock": 10,
+   "time": 0
+  },
+  "twin_p": 0.100899,
+  "twin_median_total": -567.45,
+  "sizing_1000": {
+   "5x": {
+    "end": 1019.129493,
+    "ret": 0.019129,
+    "max_dd_pct": -0.026745,
+    "worst_month": -7.287618,
+    "months_green": "8/15",
+    "avg_win": 5.336616,
+    "avg_loss": -4.397032
+   },
+   "risk1": {
+    "end": 981.408905,
+    "ret": -0.018591,
+    "max_dd_pct": -0.065715,
+    "worst_month": -25.112434,
+    "months_green": "8/15",
+    "avg_win": 7.489027,
+    "avg_loss": -11.218932
+   },
+   "risk2": {
+    "end": 1005.012393,
+    "ret": 0.005012,
+    "max_dd_pct": -0.093775,
+    "worst_month": -28.749776,
+    "months_green": "8/15",
+    "avg_win": 13.249395,
+    "avg_loss": -15.636772
+   },
+   "risk2_2x_costs": {
+    "end": 965.414186,
+    "ret": -0.034586,
+    "max_dd_pct": -0.121151,
+    "worst_month": -34.646807,
+    "months_green": "8/15",
+    "avg_win": 11.362532,
+    "avg_loss": -17.730408
+   }
+  },
+  "signals_total": 268,
+  "exits": {
+   "tp": 1,
+   "sl": 9,
+   "lock": 10,
+   "time": 0
+  },
+  "avg_rr": 2.554981,
+  "avg_stop_usd": 3.60695,
+  "q": 0.39271,
+  "gates": {
+   "net": true,
+   "twins": false,
+   "bh": false,
+   "trades": false,
+   "folds": false,
+   "all": false
+  }
+ }
+}

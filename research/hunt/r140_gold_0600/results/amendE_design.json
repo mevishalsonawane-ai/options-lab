@@ -1,0 +1,2156 @@
+{
+ "variants": {
+  "H00a": {
+   "rule": "H00a",
+   "n": 140,
+   "win": 0.457143,
+   "avg": -53.120224,
+   "total": -7436.831429,
+   "total2": -11916.831429,
+   "avg2": -85.120224,
+   "longs": 88,
+   "folds": [
+    -1223.435714,
+    399.308571,
+    -3603.552143,
+    1527.107857,
+    -4536.26
+   ],
+   "dd": -7948.563571,
+   "worst_month": -3751.274286,
+   "months_green": "10/30",
+   "why": {
+    "stop": 76,
+    "lock": 63,
+    "time": 1
+   },
+   "twin_p": 0.839161,
+   "twin_median_total": -1990.285714,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H00b": {
+   "rule": "H00b",
+   "n": 117,
+   "win": 0.42735,
+   "avg": -63.263516,
+   "total": -7401.831429,
+   "total2": -11145.831429,
+   "avg2": -95.263516,
+   "longs": 74,
+   "folds": [
+    -1044.514286,
+    152.177143,
+    -3573.267857,
+    1600.033571,
+    -4536.26
+   ],
+   "dd": -7805.963571,
+   "worst_month": -3751.274286,
+   "months_green": "9/28",
+   "why": {
+    "stop": 67,
+    "lock": 49,
+    "time": 1
+   },
+   "twin_p": 0.876124,
+   "twin_median_total": -1566.548929,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H01a": {
+   "rule": "H01a",
+   "n": 127,
+   "win": 0.511811,
+   "avg": -34.147036,
+   "total": -4336.673571,
+   "total2": -8400.673571,
+   "avg2": -66.147036,
+   "longs": 80,
+   "folds": [
+    -773.482143,
+    -159.355,
+    -609.81,
+    -548.798571,
+    -2245.227857
+   ],
+   "dd": -6518.805714,
+   "worst_month": -5415.657143,
+   "months_green": "14/30",
+   "why": {
+    "stop": 61,
+    "lock": 62,
+    "time": 4
+   },
+   "twin_p": 0.694306,
+   "twin_median_total": -2069.320714,
+   "q": 0.946069,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H01b": {
+   "rule": "H01b",
+   "n": 105,
+   "win": 0.495238,
+   "avg": -39.588184,
+   "total": -4156.759286,
+   "total2": -7516.759286,
+   "avg2": -71.588184,
+   "longs": 63,
+   "folds": [
+    -562.539286,
+    -121.710714,
+    -559.987857,
+    -667.293571,
+    -2245.227857
+   ],
+   "dd": -6549.834286,
+   "worst_month": -5415.657143,
+   "months_green": "12/28",
+   "why": {
+    "stop": 52,
+    "lock": 49,
+    "time": 4
+   },
+   "twin_p": 0.704296,
+   "twin_median_total": -1776.841429,
+   "q": 0.946069,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H02a": {
+   "rule": "H02a",
+   "n": 115,
+   "win": 0.547826,
+   "avg": 35.308745,
+   "total": 4060.505714,
+   "total2": 380.505714,
+   "avg2": 3.308745,
+   "longs": 72,
+   "folds": [
+    302.684286,
+    -1072.302143,
+    36.54,
+    -1484.0,
+    6277.583571
+   ],
+   "dd": -3376.992857,
+   "worst_month": -1044.992857,
+   "months_green": "14/29",
+   "why": {
+    "stop": 45,
+    "lock": 63,
+    "time": 7
+   },
+   "twin_p": 0.098901,
+   "twin_median_total": -2502.5725,
+   "q": 0.3996,
+   "gates": {
+    "net": true,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H02b": {
+   "rule": "H02b",
+   "n": 97,
+   "win": 0.56701,
+   "avg": 48.093903,
+   "total": 4665.108571,
+   "total2": 1561.108571,
+   "avg2": 16.093903,
+   "longs": 62,
+   "folds": [
+    298.1,
+    -839.486429,
+    162.24,
+    -1233.328571,
+    6277.583571
+   ],
+   "dd": -2675.595,
+   "worst_month": -1044.992857,
+   "months_green": "13/28",
+   "why": {
+    "stop": 36,
+    "lock": 54,
+    "time": 7
+   },
+   "twin_p": 0.10989,
+   "twin_median_total": -1917.795,
+   "q": 0.3996,
+   "gates": {
+    "net": true,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H03a": {
+   "rule": "H03a",
+   "n": 48,
+   "win": 0.479167,
+   "avg": 13.154152,
+   "total": 631.399286,
+   "total2": -904.600714,
+   "avg2": -18.845848,
+   "longs": 33,
+   "folds": [
+    -171.442857,
+    null,
+    -102.523571,
+    null,
+    905.365714
+   ],
+   "dd": -2748.857857,
+   "worst_month": -1038.607143,
+   "months_green": "4/13",
+   "why": {
+    "stop": 23,
+    "lock": 21,
+    "time": 4
+   },
+   "twin_p": 0.192807,
+   "twin_median_total": -1920.412143,
+   "q": 0.475577,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": false,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H03b": {
+   "rule": "H03b",
+   "n": 41,
+   "win": 0.536585,
+   "avg": 27.513833,
+   "total": 1128.067143,
+   "total2": -183.932857,
+   "avg2": -4.486167,
+   "longs": 31,
+   "folds": [
+    325.225,
+    null,
+    -102.523571,
+    null,
+    905.365714
+   ],
+   "dd": -2525.831429,
+   "worst_month": -1038.607143,
+   "months_green": "4/11",
+   "why": {
+    "stop": 17,
+    "lock": 20,
+    "time": 4
+   },
+   "twin_p": 0.142857,
+   "twin_median_total": -1895.432857,
+   "q": 0.437562,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": false,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H04a": {
+   "rule": "H04a",
+   "n": 75,
+   "win": 0.346667,
+   "avg": -126.535171,
+   "total": -9490.137857,
+   "total2": -11890.137857,
+   "avg2": -158.535171,
+   "longs": 50,
+   "folds": [
+    46.05,
+    -1581.435714,
+    191.021429,
+    -3967.184286,
+    -4178.589286
+   ],
+   "dd": -9620.737857,
+   "worst_month": -2105.485714,
+   "months_green": "5/17",
+   "why": {
+    "stop": 48,
+    "lock": 27,
+    "time": 0
+   },
+   "twin_p": 0.986014,
+   "twin_median_total": -3720.437143,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H04b": {
+   "rule": "H04b",
+   "n": 57,
+   "win": 0.315789,
+   "avg": -151.972882,
+   "total": -8662.454286,
+   "total2": -10486.454286,
+   "avg2": -183.972882,
+   "longs": 39,
+   "folds": [
+    130.6,
+    -1290.428571,
+    266.68,
+    -3590.716429,
+    -4178.589286
+   ],
+   "dd": -8793.054286,
+   "worst_month": -2105.485714,
+   "months_green": "4/13",
+   "why": {
+    "stop": 38,
+    "lock": 19,
+    "time": 0
+   },
+   "twin_p": 0.998002,
+   "twin_median_total": -2864.538929,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H05a": {
+   "rule": "H05a",
+   "n": 150,
+   "win": 0.546667,
+   "avg": 48.054529,
+   "total": 7208.179286,
+   "total2": 2408.179286,
+   "avg2": 16.054529,
+   "longs": 96,
+   "folds": [
+    -1129.452857,
+    -109.738571,
+    -837.941429,
+    1787.263571,
+    7498.048571
+   ],
+   "dd": -3441.402857,
+   "worst_month": -1154.346429,
+   "months_green": "12/29",
+   "why": {
+    "stop": 65,
+    "lock": 85,
+    "time": 0
+   },
+   "twin_p": 0.053946,
+   "twin_median_total": -3673.161429,
+   "q": 0.373473,
+   "gates": {
+    "net": true,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H05b": {
+   "rule": "H05b",
+   "n": 122,
+   "win": 0.565574,
+   "avg": 66.580785,
+   "total": 8122.855714,
+   "total2": 4218.855714,
+   "avg2": 34.580785,
+   "longs": 79,
+   "folds": [
+    -791.619286,
+    -143.985,
+    -532.087857,
+    2092.499286,
+    7498.048571
+   ],
+   "dd": -3186.312857,
+   "worst_month": -1154.346429,
+   "months_green": "13/25",
+   "why": {
+    "stop": 53,
+    "lock": 69,
+    "time": 0
+   },
+   "twin_p": 0.027972,
+   "twin_median_total": -3467.456429,
+   "q": 0.27972,
+   "gates": {
+    "net": true,
+    "twins": true,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H06a": {
+   "rule": "H06a",
+   "n": 195,
+   "win": 0.502564,
+   "avg": 43.331366,
+   "total": 8449.616429,
+   "total2": 2209.616429,
+   "avg2": 11.331366,
+   "longs": 126,
+   "folds": [
+    -2117.244286,
+    -1553.285714,
+    379.060714,
+    390.214286,
+    11350.871429
+   ],
+   "dd": -3938.392857,
+   "worst_month": -2336.469286,
+   "months_green": "11/28",
+   "why": {
+    "stop": 91,
+    "lock": 102,
+    "time": 2
+   },
+   "twin_p": 0.012987,
+   "twin_median_total": -5607.483571,
+   "q": 0.146104,
+   "gates": {
+    "net": true,
+    "twins": true,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H06b": {
+   "rule": "H06b",
+   "n": 166,
+   "win": 0.542169,
+   "avg": 59.486979,
+   "total": 9874.838571,
+   "total2": 4562.838571,
+   "avg2": 27.486979,
+   "longs": 109,
+   "folds": [
+    -1338.33,
+    -1154.438571,
+    474.707143,
+    542.028571,
+    11350.871429
+   ],
+   "dd": -3422.603571,
+   "worst_month": -2336.469286,
+   "months_green": "12/27",
+   "why": {
+    "stop": 73,
+    "lock": 91,
+    "time": 2
+   },
+   "twin_p": 0.006993,
+   "twin_median_total": -5435.778929,
+   "q": 0.104895,
+   "gates": {
+    "net": true,
+    "twins": true,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H07a": {
+   "rule": "H07a",
+   "n": 228,
+   "win": 0.513158,
+   "avg": -58.40636,
+   "total": -13316.65,
+   "total2": -20612.65,
+   "avg2": -90.40636,
+   "longs": 149,
+   "folds": [
+    -1086.552143,
+    728.339286,
+    -1422.614286,
+    121.485714,
+    -11657.308571
+   ],
+   "dd": -18368.364286,
+   "worst_month": -13520.735714,
+   "months_green": "12/29",
+   "why": {
+    "stop": 107,
+    "lock": 118,
+    "time": 3
+   },
+   "twin_p": 0.929071,
+   "twin_median_total": -3010.1825,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H07b": {
+   "rule": "H07b",
+   "n": 199,
+   "win": 0.522613,
+   "avg": -63.739304,
+   "total": -12684.121429,
+   "total2": -19052.121429,
+   "avg2": -95.739304,
+   "longs": 132,
+   "folds": [
+    -1208.830714,
+    854.739286,
+    -921.157143,
+    248.435714,
+    -11657.308571
+   ],
+   "dd": -18368.364286,
+   "worst_month": -13520.735714,
+   "months_green": "11/28",
+   "why": {
+    "stop": 92,
+    "lock": 104,
+    "time": 3
+   },
+   "twin_p": 0.961039,
+   "twin_median_total": -2685.679286,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H08a": {
+   "rule": "H08a",
+   "n": 267,
+   "win": 0.505618,
+   "avg": -23.867739,
+   "total": -6372.686429,
+   "total2": -14916.686429,
+   "avg2": -55.867739,
+   "longs": 164,
+   "folds": [
+    -988.255714,
+    -1658.12,
+    -1233.915,
+    -3409.757857,
+    917.362143
+   ],
+   "dd": -9493.426429,
+   "worst_month": -2053.546429,
+   "months_green": "11/30",
+   "why": {
+    "stop": 128,
+    "lock": 136,
+    "time": 3
+   },
+   "twin_p": 0.286713,
+   "twin_median_total": -10592.925357,
+   "q": 0.586459,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H08b": {
+   "rule": "H08b",
+   "n": 224,
+   "win": 0.504464,
+   "avg": -24.16279,
+   "total": -5412.465,
+   "total2": -12580.465,
+   "avg2": -56.16279,
+   "longs": 136,
+   "folds": [
+    -267.593571,
+    -1700.643571,
+    -954.832143,
+    -3406.757857,
+    917.362143
+   ],
+   "dd": -8729.226429,
+   "worst_month": -2053.546429,
+   "months_green": "11/28",
+   "why": {
+    "stop": 109,
+    "lock": 112,
+    "time": 3
+   },
+   "twin_p": 0.274725,
+   "twin_median_total": -9140.231071,
+   "q": 0.586459,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H09a": {
+   "rule": "H09a",
+   "n": 268,
+   "win": 0.466418,
+   "avg": -74.207303,
+   "total": -19887.557143,
+   "total2": -28463.557143,
+   "avg2": -106.207303,
+   "longs": 164,
+   "folds": [
+    -645.107857,
+    -4417.519286,
+    -1770.107143,
+    -5177.215,
+    -7877.607857
+   ],
+   "dd": -19887.557143,
+   "worst_month": -7985.071429,
+   "months_green": "7/30",
+   "why": {
+    "stop": 141,
+    "lock": 124,
+    "time": 3
+   },
+   "twin_p": 0.97003,
+   "twin_median_total": -7039.384286,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H09b": {
+   "rule": "H09b",
+   "n": 222,
+   "win": 0.45045,
+   "avg": -84.446483,
+   "total": -18747.119286,
+   "total2": -25851.119286,
+   "avg2": -116.446483,
+   "longs": 132,
+   "folds": [
+    -437.262857,
+    -4461.815714,
+    -948.039286,
+    -5022.393571,
+    -7877.607857
+   ],
+   "dd": -18823.917143,
+   "worst_month": -7985.071429,
+   "months_green": "7/28",
+   "why": {
+    "stop": 120,
+    "lock": 99,
+    "time": 3
+   },
+   "twin_p": 0.973027,
+   "twin_median_total": -5699.8225,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H10a": {
+   "rule": "H10a",
+   "n": 248,
+   "win": 0.572581,
+   "avg": 14.758923,
+   "total": 3660.212857,
+   "total2": -4275.787143,
+   "avg2": -17.241077,
+   "longs": 147,
+   "folds": [
+    -597.075714,
+    -1687.512857,
+    -17.957143,
+    -983.146429,
+    6945.905
+   ],
+   "dd": -5541.081429,
+   "worst_month": -1693.742857,
+   "months_green": "12/30",
+   "why": {
+    "stop": 103,
+    "lock": 142,
+    "time": 3
+   },
+   "twin_p": 0.11988,
+   "twin_median_total": -5465.121071,
+   "q": 0.3996,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H10b": {
+   "rule": "H10b",
+   "n": 211,
+   "win": 0.56872,
+   "avg": 18.927536,
+   "total": 3993.71,
+   "total2": -2758.29,
+   "avg2": -13.072464,
+   "longs": 122,
+   "folds": [
+    -117.970714,
+    -1897.580714,
+    146.302857,
+    -1082.946429,
+    6945.905
+   ],
+   "dd": -5129.873571,
+   "worst_month": -1693.742857,
+   "months_green": "12/28",
+   "why": {
+    "stop": 89,
+    "lock": 119,
+    "time": 3
+   },
+   "twin_p": 0.116883,
+   "twin_median_total": -4993.593214,
+   "q": 0.3996,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H11a": {
+   "rule": "H11a",
+   "n": 218,
+   "win": 0.573394,
+   "avg": 73.188535,
+   "total": 15955.100714,
+   "total2": 8979.100714,
+   "avg2": 41.188535,
+   "longs": 136,
+   "folds": [
+    -373.313571,
+    -1288.631429,
+    62.797143,
+    3414.137143,
+    14140.111429
+   ],
+   "dd": -2475.202857,
+   "worst_month": -1045.382143,
+   "months_green": "15/29",
+   "why": {
+    "stop": 87,
+    "lock": 129,
+    "time": 2
+   },
+   "twin_p": 0.000999,
+   "twin_median_total": -5757.079286,
+   "q": 0.044955,
+   "gates": {
+    "net": true,
+    "twins": true,
+    "bh": true,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H11b": {
+   "rule": "H11b",
+   "n": 186,
+   "win": 0.61828,
+   "avg": 95.256409,
+   "total": 17717.692143,
+   "total2": 11765.692143,
+   "avg2": 63.256409,
+   "longs": 113,
+   "folds": [
+    274.791429,
+    -971.687857,
+    180.229286,
+    4094.247857,
+    14140.111429
+   ],
+   "dd": -1917.757143,
+   "worst_month": -866.847857,
+   "months_green": "15/29",
+   "why": {
+    "stop": 69,
+    "lock": 115,
+    "time": 2
+   },
+   "twin_p": 0.000999,
+   "twin_median_total": -5387.936071,
+   "q": 0.044955,
+   "gates": {
+    "net": true,
+    "twins": true,
+    "bh": true,
+    "trades": true,
+    "folds": true,
+    "all": true
+   },
+   "sizing_1000": {
+    "5x": {
+     "end": 1215.311899,
+     "ret": 0.215312,
+     "max_dd_pct": -0.036208,
+     "worst_month": -14.861655,
+     "months_green": "15/29",
+     "avg_win": 4.254957,
+     "avg_loss": -3.85927
+    },
+    "risk1": {
+     "end": 1582.086669,
+     "ret": 0.582087,
+     "max_dd_pct": -0.106003,
+     "worst_month": -54.89178,
+     "months_green": "16/29",
+     "avg_win": 12.425098,
+     "avg_loss": -11.926754
+    },
+    "risk2": {
+     "end": 1879.252322,
+     "ret": 0.879252,
+     "max_dd_pct": -0.130393,
+     "worst_month": -58.958091,
+     "months_green": "15/29",
+     "avg_win": 17.489731,
+     "avg_loss": -15.944603
+    },
+    "risk2_2x_costs": {
+     "end": 1286.777897,
+     "ret": 0.286778,
+     "max_dd_pct": -0.283698,
+     "worst_month": -70.252284,
+     "months_green": "12/29",
+     "avg_win": 12.715978,
+     "avg_loss": -12.63029
+    }
+   }
+  },
+  "H12a": {
+   "rule": "H12a",
+   "n": 228,
+   "win": 0.460526,
+   "avg": -15.129724,
+   "total": -3449.577143,
+   "total2": -10745.577143,
+   "avg2": -47.129724,
+   "longs": 137,
+   "folds": [
+    -760.067143,
+    -4936.374286,
+    -3118.208571,
+    -208.575,
+    5573.647857
+   ],
+   "dd": -12042.839286,
+   "worst_month": -2034.960714,
+   "months_green": "7/30",
+   "why": {
+    "stop": 120,
+    "lock": 108,
+    "time": 0
+   },
+   "twin_p": 0.195804,
+   "twin_median_total": -8272.276786,
+   "q": 0.475577,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H12b": {
+   "rule": "H12b",
+   "n": 198,
+   "win": 0.449495,
+   "avg": -12.841032,
+   "total": -2542.524286,
+   "total2": -8878.524286,
+   "avg2": -44.841032,
+   "longs": 114,
+   "folds": [
+    -384.35,
+    -4707.08,
+    -2872.03,
+    -152.712143,
+    5573.647857
+   ],
+   "dd": -11085.386429,
+   "worst_month": -2034.960714,
+   "months_green": "8/29",
+   "why": {
+    "stop": 108,
+    "lock": 90,
+    "time": 0
+   },
+   "twin_p": 0.182817,
+   "twin_median_total": -7581.526429,
+   "q": 0.475577,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H13a": {
+   "rule": "H13a",
+   "n": 238,
+   "win": 0.445378,
+   "avg": -47.845891,
+   "total": -11387.322143,
+   "total2": -19003.322143,
+   "avg2": -79.845891,
+   "longs": 143,
+   "folds": [
+    -1489.03,
+    -2761.809286,
+    -716.475,
+    -3041.733571,
+    -3378.274286
+   ],
+   "dd": -11387.322143,
+   "worst_month": -5436.021429,
+   "months_green": "10/30",
+   "why": {
+    "stop": 128,
+    "lock": 110,
+    "time": 0
+   },
+   "twin_p": 0.809191,
+   "twin_median_total": -6537.846429,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H13b": {
+   "rule": "H13b",
+   "n": 198,
+   "win": 0.454545,
+   "avg": -47.721317,
+   "total": -9448.820714,
+   "total2": -15784.820714,
+   "avg2": -79.721317,
+   "longs": 112,
+   "folds": [
+    -404.583571,
+    -2827.829286,
+    121.639286,
+    -2959.772857,
+    -3378.274286
+   ],
+   "dd": -9510.560714,
+   "worst_month": -5436.021429,
+   "months_green": "10/28",
+   "why": {
+    "stop": 106,
+    "lock": 92,
+    "time": 0
+   },
+   "twin_p": 0.785215,
+   "twin_median_total": -5590.7375,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H14a": {
+   "rule": "H14a",
+   "n": 239,
+   "win": 0.527197,
+   "avg": 19.805684,
+   "total": 4733.558571,
+   "total2": -2914.441429,
+   "avg2": -12.194316,
+   "longs": 142,
+   "folds": [
+    -1427.166429,
+    -108.906429,
+    -2734.730714,
+    3461.095714,
+    5543.266429
+   ],
+   "dd": -6053.878571,
+   "worst_month": -1746.364286,
+   "months_green": "15/29",
+   "why": {
+    "stop": 113,
+    "lock": 124,
+    "time": 2
+   },
+   "twin_p": 0.07992,
+   "twin_median_total": -5918.02,
+   "q": 0.38961,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H14b": {
+   "rule": "H14b",
+   "n": 202,
+   "win": 0.524752,
+   "avg": 28.509264,
+   "total": 5758.871429,
+   "total2": -705.128571,
+   "avg2": -3.490736,
+   "longs": 115,
+   "folds": [
+    -878.751429,
+    331.49,
+    -2698.229286,
+    3461.095714,
+    5543.266429
+   ],
+   "dd": -5028.565714,
+   "worst_month": -1746.364286,
+   "months_green": "15/29",
+   "why": {
+    "stop": 96,
+    "lock": 104,
+    "time": 2
+   },
+   "twin_p": 0.043956,
+   "twin_median_total": -4593.561786,
+   "q": 0.32967,
+   "gates": {
+    "net": false,
+    "twins": true,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H15a": {
+   "rule": "H15a",
+   "n": 256,
+   "win": 0.433594,
+   "avg": -66.853304,
+   "total": -17114.445714,
+   "total2": -25306.445714,
+   "avg2": -98.853304,
+   "longs": 152,
+   "folds": [
+    -1468.09,
+    -5293.463571,
+    -2886.630714,
+    -1316.736429,
+    -6149.525
+   ],
+   "dd": -18956.045714,
+   "worst_month": -3119.003571,
+   "months_green": "7/29",
+   "why": {
+    "stop": 144,
+    "lock": 111,
+    "time": 1
+   },
+   "twin_p": 0.911089,
+   "twin_median_total": -7973.276429,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H15b": {
+   "rule": "H15b",
+   "n": 219,
+   "win": 0.438356,
+   "avg": -69.737668,
+   "total": -15272.549286,
+   "total2": -22280.549286,
+   "avg2": -101.737668,
+   "longs": 128,
+   "folds": [
+    -192.833571,
+    -4832.895714,
+    -2890.058571,
+    -1207.236429,
+    -6149.525
+   ],
+   "dd": -17352.847857,
+   "worst_month": -3119.003571,
+   "months_green": "8/29",
+   "why": {
+    "stop": 123,
+    "lock": 95,
+    "time": 1
+   },
+   "twin_p": 0.92008,
+   "twin_median_total": -6865.292857,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H16a": {
+   "rule": "H16a",
+   "n": 250,
+   "win": 0.428,
+   "avg": -65.079923,
+   "total": -16269.980714,
+   "total2": -24269.980714,
+   "avg2": -97.079923,
+   "longs": 154,
+   "folds": [
+    -2601.783571,
+    -3238.191429,
+    -2752.295,
+    -3282.917857,
+    -4394.792857
+   ],
+   "dd": -16970.380714,
+   "worst_month": -3962.489286,
+   "months_green": "8/29",
+   "why": {
+    "stop": 143,
+    "lock": 107,
+    "time": 0
+   },
+   "twin_p": 0.824176,
+   "twin_median_total": -10514.834643,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H16b": {
+   "rule": "H16b",
+   "n": 214,
+   "win": 0.415888,
+   "avg": -70.558598,
+   "total": -15099.54,
+   "total2": -21947.54,
+   "avg2": -102.558598,
+   "longs": 129,
+   "folds": [
+    -2065.871429,
+    -2631.714286,
+    -2912.479286,
+    -3094.682143,
+    -4394.792857
+   ],
+   "dd": -15680.74,
+   "worst_month": -3962.489286,
+   "months_green": "10/29",
+   "why": {
+    "stop": 125,
+    "lock": 89,
+    "time": 0
+   },
+   "twin_p": 0.875125,
+   "twin_median_total": -9034.496786,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H17a": {
+   "rule": "H17a",
+   "n": 210,
+   "win": 0.42381,
+   "avg": -82.719636,
+   "total": -17371.123571,
+   "total2": -24091.123571,
+   "avg2": -114.719636,
+   "longs": 126,
+   "folds": [
+    -370.555,
+    -1949.97,
+    -1384.511429,
+    -5044.227857,
+    -8621.859286
+   ],
+   "dd": -17404.803571,
+   "worst_month": -2957.75,
+   "months_green": "5/30",
+   "why": {
+    "stop": 117,
+    "lock": 93,
+    "time": 0
+   },
+   "twin_p": 0.988012,
+   "twin_median_total": -5020.771071,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H17b": {
+   "rule": "H17b",
+   "n": 177,
+   "win": 0.423729,
+   "avg": -88.572458,
+   "total": -15677.325,
+   "total2": -21341.325,
+   "avg2": -120.572458,
+   "longs": 103,
+   "folds": [
+    59.892857,
+    -2012.969286,
+    -616.186429,
+    -4486.202857,
+    -8621.859286
+   ],
+   "dd": -15908.539286,
+   "worst_month": -2957.75,
+   "months_green": "6/29",
+   "why": {
+    "stop": 100,
+    "lock": 77,
+    "time": 0
+   },
+   "twin_p": 0.991009,
+   "twin_median_total": -4253.753571,
+   "q": 0.998002,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H18a": {
+   "rule": "H18a",
+   "n": 206,
+   "win": 0.485437,
+   "avg": 49.373024,
+   "total": 10170.842857,
+   "total2": 3578.842857,
+   "avg2": 17.373024,
+   "longs": 122,
+   "folds": [
+    -2329.017143,
+    -1348.576429,
+    3816.745714,
+    8974.920714,
+    1056.77
+   ],
+   "dd": -9447.532143,
+   "worst_month": -2377.607143,
+   "months_green": "13/30",
+   "why": {
+    "stop": 106,
+    "lock": 98,
+    "time": 2
+   },
+   "twin_p": 0.113886,
+   "twin_median_total": 1194.267857,
+   "q": 0.3996,
+   "gates": {
+    "net": true,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H18b": {
+   "rule": "H18b",
+   "n": 175,
+   "win": 0.497143,
+   "avg": 62.856755,
+   "total": 10999.932143,
+   "total2": 5399.932143,
+   "avg2": 30.856755,
+   "longs": 99,
+   "folds": [
+    -1368.284286,
+    -1131.187143,
+    3653.375,
+    8789.258571,
+    1056.77
+   ],
+   "dd": -9447.532143,
+   "worst_month": -2377.607143,
+   "months_green": "13/30",
+   "why": {
+    "stop": 88,
+    "lock": 85,
+    "time": 2
+   },
+   "twin_p": 0.087912,
+   "twin_median_total": 819.173571,
+   "q": 0.38961,
+   "gates": {
+    "net": true,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H19a": {
+   "rule": "H19a",
+   "n": 235,
+   "win": 0.429787,
+   "avg": -8.052401,
+   "total": -1892.314286,
+   "total2": -9412.314286,
+   "avg2": -40.052401,
+   "longs": 145,
+   "folds": [
+    427.261429,
+    -296.902857,
+    3265.282857,
+    1120.076429,
+    -6408.032143
+   ],
+   "dd": -10846.352143,
+   "worst_month": -1823.085714,
+   "months_green": "14/30",
+   "why": {
+    "stop": 129,
+    "lock": 104,
+    "time": 2
+   },
+   "twin_p": 0.441558,
+   "twin_median_total": -2810.402143,
+   "q": 0.750915,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H19b": {
+   "rule": "H19b",
+   "n": 188,
+   "win": 0.462766,
+   "avg": -10.306649,
+   "total": -1937.65,
+   "total2": -7953.65,
+   "avg2": -42.306649,
+   "longs": 114,
+   "folds": [
+    523.800714,
+    1446.593571,
+    3910.484286,
+    -1410.496429,
+    -6408.032143
+   ],
+   "dd": -13376.925,
+   "worst_month": -1823.085714,
+   "months_green": "14/30",
+   "why": {
+    "stop": 99,
+    "lock": 88,
+    "time": 1
+   },
+   "twin_p": 0.496503,
+   "twin_median_total": -2057.301071,
+   "q": 0.797952,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H20a": {
+   "rule": "H20a",
+   "n": 298,
+   "win": 0.540268,
+   "avg": 13.03768,
+   "total": 3885.228571,
+   "total2": -5650.771429,
+   "avg2": -18.96232,
+   "longs": 174,
+   "folds": [
+    -404.165714,
+    1869.38,
+    2231.297143,
+    -1142.358571,
+    1331.075714
+   ],
+   "dd": -8769.905714,
+   "worst_month": -3548.82,
+   "months_green": "15/29",
+   "why": {
+    "stop": 134,
+    "lock": 163,
+    "time": 1
+   },
+   "twin_p": 0.06993,
+   "twin_median_total": -9215.614286,
+   "q": 0.38961,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H20b": {
+   "rule": "H20b",
+   "n": 234,
+   "win": 0.538462,
+   "avg": 19.428489,
+   "total": 4546.266429,
+   "total2": -2941.733571,
+   "avg2": -12.571511,
+   "longs": 130,
+   "folds": [
+    572.960714,
+    2589.98,
+    1001.967143,
+    -949.717143,
+    1331.075714
+   ],
+   "dd": -8577.264286,
+   "worst_month": -3548.82,
+   "months_green": "16/29",
+   "why": {
+    "stop": 108,
+    "lock": 125,
+    "time": 1
+   },
+   "twin_p": 0.073926,
+   "twin_median_total": -7142.255,
+   "q": 0.38961,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": true,
+    "all": false
+   }
+  },
+  "H21a": {
+   "rule": "H21a",
+   "n": 321,
+   "win": 0.535826,
+   "avg": -12.808149,
+   "total": -4111.415714,
+   "total2": -14383.415714,
+   "avg2": -44.808149,
+   "longs": 184,
+   "folds": [
+    782.375714,
+    -1127.945,
+    -4967.13,
+    -693.072857,
+    1894.356429
+   ],
+   "dd": -10523.072143,
+   "worst_month": -3037.242857,
+   "months_green": "9/30",
+   "why": {
+    "stop": 148,
+    "lock": 170,
+    "time": 3
+   },
+   "twin_p": 0.244755,
+   "twin_median_total": -11500.431071,
+   "q": 0.537268,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H21b": {
+   "rule": "H21b",
+   "n": 257,
+   "win": 0.568093,
+   "avg": -1.634739,
+   "total": -420.127857,
+   "total2": -8644.127857,
+   "avg2": -33.634739,
+   "longs": 146,
+   "folds": [
+    2215.885,
+    -1231.154286,
+    -2184.692143,
+    -1114.522857,
+    1894.356429
+   ],
+   "dd": -9174.867857,
+   "worst_month": -3037.242857,
+   "months_green": "12/29",
+   "why": {
+    "stop": 110,
+    "lock": 145,
+    "time": 2
+   },
+   "twin_p": 0.182817,
+   "twin_median_total": -9155.088571,
+   "q": 0.475577,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H22a": {
+   "rule": "H22a",
+   "n": 304,
+   "win": 0.542763,
+   "avg": 21.371196,
+   "total": 6496.843571,
+   "total2": -3231.156429,
+   "avg2": -10.628804,
+   "longs": 176,
+   "folds": [
+    690.095714,
+    180.247143,
+    1669.367857,
+    971.672143,
+    2985.460714
+   ],
+   "dd": -7582.891429,
+   "worst_month": -3778.955714,
+   "months_green": "15/30",
+   "why": {
+    "stop": 137,
+    "lock": 157,
+    "time": 10
+   },
+   "twin_p": 0.043956,
+   "twin_median_total": -9989.761786,
+   "q": 0.32967,
+   "gates": {
+    "net": false,
+    "twins": true,
+    "bh": false,
+    "trades": true,
+    "folds": true,
+    "all": false
+   }
+  },
+  "H22b": {
+   "rule": "H22b",
+   "n": 248,
+   "win": 0.540323,
+   "avg": 29.672506,
+   "total": 7358.781429,
+   "total2": -577.218571,
+   "avg2": -2.327494,
+   "longs": 140,
+   "folds": [
+    902.085,
+    1086.177143,
+    1186.178571,
+    644.976429,
+    3539.364286
+   ],
+   "dd": -7582.891429,
+   "worst_month": -3778.955714,
+   "months_green": "15/29",
+   "why": {
+    "stop": 113,
+    "lock": 127,
+    "time": 8
+   },
+   "twin_p": 0.043956,
+   "twin_median_total": -9291.958571,
+   "q": 0.32967,
+   "gates": {
+    "net": false,
+    "twins": true,
+    "bh": false,
+    "trades": true,
+    "folds": true,
+    "all": false
+   }
+  },
+  "H23a": {
+   "rule": "H23a",
+   "n": 258,
+   "win": 0.465116,
+   "avg": 2.444383,
+   "total": 630.650714,
+   "total2": -7625.349286,
+   "avg2": -29.555617,
+   "longs": 150,
+   "folds": [
+    -436.79,
+    -6312.587143,
+    -3645.212143,
+    -4899.686429,
+    15924.926429
+   ],
+   "dd": -18024.641429,
+   "worst_month": -2113.512143,
+   "months_green": "11/30",
+   "why": {
+    "stop": 134,
+    "lock": 112,
+    "time": 12
+   },
+   "twin_p": 0.168831,
+   "twin_median_total": -7962.492143,
+   "q": 0.474838,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  },
+  "H23b": {
+   "rule": "H23b",
+   "n": 200,
+   "win": 0.475,
+   "avg": 16.087596,
+   "total": 3217.519286,
+   "total2": -3182.480714,
+   "avg2": -15.912404,
+   "longs": 112,
+   "folds": [
+    -111.600714,
+    -5035.246429,
+    -2238.775714,
+    -5321.784286,
+    15924.926429
+   ],
+   "dd": -15572.969286,
+   "worst_month": -2113.512143,
+   "months_green": "10/29",
+   "why": {
+    "stop": 101,
+    "lock": 89,
+    "time": 10
+   },
+   "twin_p": 0.108891,
+   "twin_median_total": -6656.251071,
+   "q": 0.3996,
+   "gates": {
+    "net": false,
+    "twins": false,
+    "bh": false,
+    "trades": true,
+    "folds": false,
+    "all": false
+   }
+  }
+ },
+ "describe": [
+  {
+   "hour": "00:00",
+   "n": 443,
+   "range_med": 7.42,
+   "move_abs_med": 3.35,
+   "up": 0.559819,
+   "vote_share": 0.316027,
+   "summer": {
+    "n": 260,
+    "range_med": 7.3335
+   },
+   "winter": {
+    "n": 183,
+    "range_med": 7.98
+   }
+  },
+  {
+   "hour": "01:00",
+   "n": 439,
+   "range_med": 6.22,
+   "move_abs_med": 2.583,
+   "up": 0.514806,
+   "vote_share": 0.289294,
+   "summer": {
+    "n": 256,
+    "range_med": 6.045
+   },
+   "winter": {
+    "n": 183,
+    "range_med": 6.77
+   }
+  },
+  {
+   "hour": "02:00",
+   "n": 433,
+   "range_med": 4.95,
+   "move_abs_med": 1.73,
+   "up": 0.545035,
+   "vote_share": 0.265589,
+   "summer": {
+    "n": 259,
+    "range_med": 4.957
+   },
+   "winter": {
+    "n": 174,
+    "range_med": 4.9265
+   }
+  },
+  {
+   "hour": "03:00",
+   "n": 181,
+   "range_med": 3.94,
+   "move_abs_med": 1.45,
+   "up": 0.651934,
+   "vote_share": 0.265193,
+   "summer": {
+    "n": 0,
+    "range_med": null
+   },
+   "winter": {
+    "n": 181,
+    "range_med": 3.94
+   }
+  },
+  {
+   "hour": "04:00",
+   "n": 329,
+   "range_med": 6.91,
+   "move_abs_med": 2.803,
+   "up": 0.510638,
+   "vote_share": 0.227964,
+   "summer": {
+    "n": 327,
+    "range_med": 6.91
+   },
+   "winter": {
+    "n": 2,
+    "range_med": 71.345
+   }
+  },
+  {
+   "hour": "05:00",
+   "n": 568,
+   "range_med": 10.4285,
+   "move_abs_med": 4.125,
+   "up": 0.538732,
+   "vote_share": 0.264085,
+   "summer": {
+    "n": 329,
+    "range_med": 10.71
+   },
+   "winter": {
+    "n": 239,
+    "range_med": 10.27
+   }
+  },
+  {
+   "hour": "06:00",
+   "n": 574,
+   "range_med": 11.295,
+   "move_abs_med": 4.2885,
+   "up": 0.56446,
+   "vote_share": 0.339721,
+   "summer": {
+    "n": 332,
+    "range_med": 11.455
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 11.1935
+   }
+  },
+  {
+   "hour": "07:00",
+   "n": 574,
+   "range_med": 10.185,
+   "move_abs_med": 4.2,
+   "up": 0.555749,
+   "vote_share": 0.397213,
+   "summer": {
+    "n": 332,
+    "range_med": 10.325
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 9.5685
+   }
+  },
+  {
+   "hour": "08:00",
+   "n": 574,
+   "range_med": 8.84,
+   "move_abs_med": 3.555,
+   "up": 0.510453,
+   "vote_share": 0.465157,
+   "summer": {
+    "n": 332,
+    "range_med": 9.16
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 8.339
+   }
+  },
+  {
+   "hour": "09:00",
+   "n": 574,
+   "range_med": 7.225,
+   "move_abs_med": 2.88,
+   "up": 0.543554,
+   "vote_share": 0.466899,
+   "summer": {
+    "n": 332,
+    "range_med": 7.515
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 6.86
+   }
+  },
+  {
+   "hour": "10:00",
+   "n": 574,
+   "range_med": 9.4215,
+   "move_abs_med": 4.3585,
+   "up": 0.519164,
+   "vote_share": 0.432056,
+   "summer": {
+    "n": 332,
+    "range_med": 10.3365
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 8.115
+   }
+  },
+  {
+   "hour": "11:00",
+   "n": 574,
+   "range_med": 10.5935,
+   "move_abs_med": 4.4965,
+   "up": 0.503484,
+   "vote_share": 0.379791,
+   "summer": {
+    "n": 332,
+    "range_med": 11.4765
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 9.528
+   }
+  },
+  {
+   "hour": "12:00",
+   "n": 574,
+   "range_med": 11.2185,
+   "move_abs_med": 4.5005,
+   "up": 0.517422,
+   "vote_share": 0.397213,
+   "summer": {
+    "n": 332,
+    "range_med": 11.8485
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 9.9135
+   }
+  },
+  {
+   "hour": "13:00",
+   "n": 574,
+   "range_med": 10.795,
+   "move_abs_med": 4.2265,
+   "up": 0.534843,
+   "vote_share": 0.414634,
+   "summer": {
+    "n": 332,
+    "range_med": 10.925
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 10.3
+   }
+  },
+  {
+   "hour": "14:00",
+   "n": 574,
+   "range_med": 9.635,
+   "move_abs_med": 4.24,
+   "up": 0.543554,
+   "vote_share": 0.416376,
+   "summer": {
+    "n": 332,
+    "range_med": 9.6
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 9.795
+   }
+  },
+  {
+   "hour": "15:00",
+   "n": 574,
+   "range_med": 9.3075,
+   "move_abs_med": 3.435,
+   "up": 0.493031,
+   "vote_share": 0.445993,
+   "summer": {
+    "n": 332,
+    "range_med": 9.7715
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 8.7005
+   }
+  },
+  {
+   "hour": "16:00",
+   "n": 574,
+   "range_med": 10.405,
+   "move_abs_med": 3.878,
+   "up": 0.529617,
+   "vote_share": 0.43554,
+   "summer": {
+    "n": 332,
+    "range_med": 10.938
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 9.108
+   }
+  },
+  {
+   "hour": "17:00",
+   "n": 574,
+   "range_med": 13.925,
+   "move_abs_med": 4.9485,
+   "up": 0.526132,
+   "vote_share": 0.365854,
+   "summer": {
+    "n": 332,
+    "range_med": 15.112
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 10.5565
+   }
+  },
+  {
+   "hour": "18:00",
+   "n": 574,
+   "range_med": 18.51,
+   "move_abs_med": 7.82,
+   "up": 0.529617,
+   "vote_share": 0.358885,
+   "summer": {
+    "n": 332,
+    "range_med": 19.5365
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 16.495
+   }
+  },
+  {
+   "hour": "19:00",
+   "n": 574,
+   "range_med": 19.8685,
+   "move_abs_med": 8.62,
+   "up": 0.494774,
+   "vote_share": 0.409408,
+   "summer": {
+    "n": 332,
+    "range_med": 19.8
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 20.3715
+   }
+  },
+  {
+   "hour": "20:00",
+   "n": 574,
+   "range_med": 15.18,
+   "move_abs_med": 6.8335,
+   "up": 0.522648,
+   "vote_share": 0.519164,
+   "summer": {
+    "n": 332,
+    "range_med": 14.1385
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 16.917
+   }
+  },
+  {
+   "hour": "21:00",
+   "n": 573,
+   "range_med": 11.52,
+   "move_abs_med": 4.893,
+   "up": 0.537522,
+   "vote_share": 0.560209,
+   "summer": {
+    "n": 331,
+    "range_med": 11.02
+   },
+   "winter": {
+    "n": 242,
+    "range_med": 12.5435
+   }
+  },
+  {
+   "hour": "22:00",
+   "n": 564,
+   "range_med": 9.853,
+   "move_abs_med": 3.9085,
+   "up": 0.554965,
+   "vote_share": 0.539007,
+   "summer": {
+    "n": 324,
+    "range_med": 9.7465
+   },
+   "winter": {
+    "n": 240,
+    "range_med": 10.1715
+   }
+  },
+  {
+   "hour": "23:00",
+   "n": 555,
+   "range_med": 8.32,
+   "move_abs_med": 3.75,
+   "up": 0.545946,
+   "vote_share": 0.464865,
+   "summer": {
+    "n": 324,
+    "range_med": 8.1585
+   },
+   "winter": {
+    "n": 231,
+    "range_med": 8.96
+   }
+  }
+ ]
+}

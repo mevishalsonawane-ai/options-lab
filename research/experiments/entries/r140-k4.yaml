@@ -1,0 +1,26 @@
+id: r140-k4
+title: 'R140 Amendment G K4: origin-low sweep, 15m, strict, with the 60m trend'
+family: mcx-crypto
+date: '2026-10-31'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss''s diagram (31 Oct): after a bullish BOS, a sweep of the origin low that recovers is a buy (mirror for sells);
+  earns after costs and beats twins.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot candles (the underlying); information only (not tradable via Zerodha)'
+model_or_rule: origin-low sweep, 15m, strict, with the 60m trend; SL under the sweep, TP the impulse extreme, RR >= 1.5, 60%
+  lock after 1R, 12 h cap
+settings: research/hunt/r140_gold_0600/r140k.py; PREREG.md Amendment G
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 405 trades, win 47% (65% rule: below), avg net $-15 a 100-oz lot (2x $-47), total $-6,272; folds -2,683
+    / -5,307 / +909 / -1,578 / +2,386; twin p 0.439, BH q 0.769. Gates failed: net, twins, bh, folds.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+holdout_read: false
+verdict: rejected
