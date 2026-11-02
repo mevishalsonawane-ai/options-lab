@@ -1,0 +1,1020 @@
+{
+ "part": "holdout",
+ "period": [
+  "2026-04-01",
+  "2026-10-19"
+ ],
+ "sessions": 137,
+ "variants": {
+  "V1": {
+   "n": 9,
+   "win": 0.3333333333333333,
+   "avg_win": 561.8933333333331,
+   "avg_loss": -789.4099999999991,
+   "avg_net": -338.97555555555493,
+   "avg_net_x2": -383.91999999999825,
+   "total": -3050.7799999999943,
+   "max_dd": -3851.5399999999954,
+   "worst_month": -1552.4699999999953,
+   "worst_month_name": "2026-05",
+   "months_green": 1,
+   "months": 5,
+   "avg_pts": 4.827982222220978,
+   "avg_R": 0.0,
+   "pts_win": 0.3333333333333333,
+   "exits": {
+    "stop": 6,
+    "target": 3
+   },
+   "target_vs_stop": {
+    "target": 3,
+    "stop": 6
+   },
+   "buys": 1.0,
+   "p_twins": 0.5124378109452736,
+   "twin_mean_total": -2846.4910999999997,
+   "twin_trades": 9,
+   "by_year": {
+    "2026": {
+     "n": 9,
+     "win": 0.3333333333333333,
+     "avg_win": 561.8933333333331,
+     "avg_loss": -789.4099999999991,
+     "avg_net": -338.97555555555493,
+     "avg_net_x2": -383.91999999999825,
+     "total": -3050.7799999999943,
+     "max_dd": -3851.5399999999954,
+     "worst_month": -1552.4699999999953,
+     "avg_pts": 4.827982222220978,
+     "avg_R": 0.0,
+     "pts_win": 0.3333333333333333,
+     "target_vs_stop": {
+      "target": 3,
+      "stop": 6
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 6,
+     "win": 0.16666666666666666,
+     "avg_win": 779.5500000000002,
+     "avg_loss": -851.8899999999991,
+     "avg_net": -579.9833333333324,
+     "avg_net_x2": -636.566666666664,
+     "total": -3479.8999999999946,
+     "max_dd": -3479.8999999999946,
+     "worst_month": -2353.2299999999964,
+     "avg_pts": -14.33376999999867,
+     "avg_R": -0.5,
+     "pts_win": 0.16666666666666666,
+     "target_vs_stop": {
+      "target": 1,
+      "stop": 5
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 1,
+     "win": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": -477.00999999999914,
+     "avg_net": -477.00999999999914,
+     "avg_net_x2": -515.4099999999983,
+     "total": -477.00999999999914,
+     "max_dd": -477.00999999999914,
+     "worst_month": -477.00999999999914,
+     "avg_pts": -7.5054199999995035,
+     "avg_R": -1.0,
+     "pts_win": 0.0,
+     "target_vs_stop": {
+      "target": 0,
+      "stop": 1
+     }
+    },
+    "SENSEX": {
+     "n": 2,
+     "win": 1.0,
+     "avg_win": 453.0649999999996,
+     "avg_loss": 0.0,
+     "avg_net": 453.0649999999996,
+     "avg_net_x2": 439.7649999999992,
+     "total": 906.1299999999992,
+     "max_dd": 0.0,
+     "worst_month": 105.36999999999827,
+     "avg_pts": 68.47993999999017,
+     "avg_R": 2.0,
+     "pts_win": 1.0,
+     "target_vs_stop": {
+      "target": 2,
+      "stop": 0
+     }
+    }
+   },
+   "label": "the setup as stated",
+   "skips": {
+    "f3_no": 149,
+    "f3_none": 29,
+    "f4_no": 0,
+    "f4_none": 0,
+    "no_entry": 0,
+    "late": 0,
+    "no_contract": 0,
+    "no_price": 2,
+    "no_room": 0,
+    "busy": 1,
+    "both": 0
+   },
+   "c3_share_10k": 0.0,
+   "account_design_plus_holdout": {
+    "max_dd": -15717.339999999982,
+    "worst_month": -2767.1199999999985
+   },
+   "holdout_gates": {
+    "n": false,
+    "net_pos": false,
+    "win": false,
+    "dd": true,
+    "month": true
+   },
+   "passes_all": false
+  },
+  "V2": {
+   "n": 4,
+   "win": 0.25,
+   "avg_win": 555.7999999999996,
+   "avg_loss": -1144.5833333333323,
+   "avg_net": -719.4874999999995,
+   "avg_net_x2": -747.4124999999992,
+   "total": -2877.949999999998,
+   "max_dd": -2877.949999999998,
+   "worst_month": -1680.8700000000008,
+   "worst_month_name": "2026-05",
+   "months_green": 1,
+   "months": 3,
+   "avg_pts": -34.141985000007026,
+   "avg_R": -0.25,
+   "pts_win": 0.25,
+   "exits": {
+    "stop": 3,
+    "target": 1
+   },
+   "target_vs_stop": {
+    "target": 1,
+    "stop": 3
+   },
+   "buys": 1.0,
+   "p_twins": 0.5671641791044776,
+   "twin_mean_total": -2021.565649999999,
+   "twin_trades": 4,
+   "by_year": {
+    "2026": {
+     "n": 4,
+     "win": 0.25,
+     "avg_win": 555.7999999999996,
+     "avg_loss": -1144.5833333333323,
+     "avg_net": -719.4874999999995,
+     "avg_net_x2": -747.4124999999992,
+     "total": -2877.949999999998,
+     "max_dd": -2877.949999999998,
+     "worst_month": -1680.8700000000008,
+     "avg_pts": -34.141985000007026,
+     "avg_R": -0.25,
+     "pts_win": 0.25,
+     "target_vs_stop": {
+      "target": 1,
+      "stop": 3
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 1,
+     "win": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": -1359.8999999999978,
+     "avg_net": -1359.8999999999978,
+     "avg_net_x2": -1402.599999999995,
+     "total": -1359.8999999999978,
+     "max_dd": -1359.8999999999978,
+     "worst_month": -1359.8999999999978,
+     "avg_pts": -87.33433000000514,
+     "avg_R": -1.0,
+     "pts_win": 0.0,
+     "target_vs_stop": {
+      "target": 0,
+      "stop": 1
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 1,
+     "win": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": -392.9799999999988,
+     "avg_net": -392.9799999999988,
+     "avg_net_x2": -431.379999999998,
+     "total": -392.9799999999988,
+     "max_dd": -392.9799999999988,
+     "worst_month": -392.9799999999988,
+     "avg_pts": -8.505419999999503,
+     "avg_R": -1.0,
+     "pts_win": 0.0,
+     "target_vs_stop": {
+      "target": 0,
+      "stop": 1
+     }
+    },
+    "SENSEX": {
+     "n": 2,
+     "win": 0.5,
+     "avg_win": 555.7999999999996,
+     "avg_loss": -1680.8700000000008,
+     "avg_net": -562.5350000000005,
+     "avg_net_x2": -577.8350000000021,
+     "total": -1125.070000000001,
+     "max_dd": -1680.8700000000008,
+     "worst_month": -1680.8700000000008,
+     "avg_pts": -20.36409500001173,
+     "avg_R": 0.5,
+     "pts_win": 0.5,
+     "target_vs_stop": {
+      "target": 1,
+      "stop": 1
+     }
+    }
+   },
+   "label": "enter on a close back above the zone",
+   "skips": {
+    "f3_no": 149,
+    "f3_none": 29,
+    "f4_no": 0,
+    "f4_none": 0,
+    "no_entry": 8,
+    "late": 0,
+    "no_contract": 0,
+    "no_price": 0,
+    "no_room": 0,
+    "busy": 0,
+    "both": 0
+   },
+   "c3_share_10k": 0.0,
+   "account_design_plus_holdout": {
+    "max_dd": -5969.4699999999975,
+    "worst_month": -1680.8700000000008
+   },
+   "holdout_gates": {
+    "n": false,
+    "net_pos": false,
+    "win": false,
+    "dd": true,
+    "month": true
+   },
+   "passes_all": false
+  },
+  "V3": {
+   "n": 9,
+   "win": 0.3333333333333333,
+   "avg_win": 561.8933333333331,
+   "avg_loss": -789.4099999999991,
+   "avg_net": -338.97555555555493,
+   "avg_net_x2": -383.91999999999825,
+   "total": -3050.7799999999943,
+   "max_dd": -3851.5399999999954,
+   "worst_month": -1552.4699999999953,
+   "worst_month_name": "2026-05",
+   "months_green": 1,
+   "months": 5,
+   "avg_pts": 4.827982222220978,
+   "avg_R": 0.0,
+   "pts_win": 0.3333333333333333,
+   "exits": {
+    "stop": 6,
+    "target": 3
+   },
+   "target_vs_stop": {
+    "target": 3,
+    "stop": 6
+   },
+   "buys": 1.0,
+   "p_twins": 0.4228855721393035,
+   "twin_mean_total": -3128.6483000000003,
+   "twin_trades": 9,
+   "by_year": {
+    "2026": {
+     "n": 9,
+     "win": 0.3333333333333333,
+     "avg_win": 561.8933333333331,
+     "avg_loss": -789.4099999999991,
+     "avg_net": -338.97555555555493,
+     "avg_net_x2": -383.91999999999825,
+     "total": -3050.7799999999943,
+     "max_dd": -3851.5399999999954,
+     "worst_month": -1552.4699999999953,
+     "avg_pts": 4.827982222220978,
+     "avg_R": 0.0,
+     "pts_win": 0.3333333333333333,
+     "target_vs_stop": {
+      "target": 3,
+      "stop": 6
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 6,
+     "win": 0.16666666666666666,
+     "avg_win": 779.5500000000002,
+     "avg_loss": -851.8899999999991,
+     "avg_net": -579.9833333333324,
+     "avg_net_x2": -636.566666666664,
+     "total": -3479.8999999999946,
+     "max_dd": -3479.8999999999946,
+     "worst_month": -2353.2299999999964,
+     "avg_pts": -14.33376999999867,
+     "avg_R": -0.5,
+     "pts_win": 0.16666666666666666,
+     "target_vs_stop": {
+      "target": 1,
+      "stop": 5
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 1,
+     "win": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": -477.00999999999914,
+     "avg_net": -477.00999999999914,
+     "avg_net_x2": -515.4099999999983,
+     "total": -477.00999999999914,
+     "max_dd": -477.00999999999914,
+     "worst_month": -477.00999999999914,
+     "avg_pts": -7.5054199999995035,
+     "avg_R": -1.0,
+     "pts_win": 0.0,
+     "target_vs_stop": {
+      "target": 0,
+      "stop": 1
+     }
+    },
+    "SENSEX": {
+     "n": 2,
+     "win": 1.0,
+     "avg_win": 453.0649999999996,
+     "avg_loss": 0.0,
+     "avg_net": 453.0649999999996,
+     "avg_net_x2": 439.7649999999992,
+     "total": 906.1299999999992,
+     "max_dd": 0.0,
+     "worst_month": 105.36999999999827,
+     "avg_pts": 68.47993999999017,
+     "avg_R": 2.0,
+     "pts_win": 1.0,
+     "target_vs_stop": {
+      "target": 2,
+      "stop": 0
+     }
+    }
+   },
+   "label": "no OI condition",
+   "skips": {
+    "f3_no": 149,
+    "f3_none": 29,
+    "f4_no": 0,
+    "f4_none": 0,
+    "no_entry": 0,
+    "late": 0,
+    "no_contract": 0,
+    "no_price": 2,
+    "no_room": 0,
+    "busy": 1,
+    "both": 0
+   },
+   "c3_share_10k": 0.0,
+   "account_design_plus_holdout": {
+    "max_dd": -22334.029999999995,
+    "worst_month": -3680.569999999997
+   },
+   "holdout_gates": {
+    "n": false,
+    "net_pos": false,
+    "win": false,
+    "dd": true,
+    "month": true
+   },
+   "passes_all": false
+  },
+  "V4": {
+   "n": 116,
+   "win": 0.4051724137931034,
+   "avg_win": 732.5925531914893,
+   "avg_loss": -554.2253623188408,
+   "avg_net": -32.84224137931044,
+   "avg_net_x2": -69.95344827586214,
+   "total": -3809.7000000000103,
+   "max_dd": -9232.040000000008,
+   "worst_month": -4849.440000000011,
+   "worst_month_name": "2026-05",
+   "months_green": 3,
+   "months": 7,
+   "avg_pts": 3.470123672413859,
+   "avg_R": 0.06731560172875253,
+   "pts_win": 0.3620689655172414,
+   "exits": {
+    "stop": 74,
+    "target": 40,
+    "time": 2
+   },
+   "target_vs_stop": {
+    "target": 40,
+    "stop": 74
+   },
+   "buys": 1.0,
+   "p_twins": 0.004975124378109453,
+   "twin_mean_total": -28214.356549999997,
+   "twin_trades": 116,
+   "by_year": {
+    "2026": {
+     "n": 116,
+     "win": 0.4051724137931034,
+     "avg_win": 732.5925531914893,
+     "avg_loss": -554.2253623188408,
+     "avg_net": -32.84224137931044,
+     "avg_net_x2": -69.95344827586214,
+     "total": -3809.7000000000103,
+     "max_dd": -9232.040000000008,
+     "worst_month": -4849.440000000011,
+     "avg_pts": 3.470123672413859,
+     "avg_R": 0.06731560172875253,
+     "pts_win": 0.3620689655172414,
+     "target_vs_stop": {
+      "target": 40,
+      "stop": 74
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 32,
+     "win": 0.4375,
+     "avg_win": 900.7742857142854,
+     "avg_loss": -830.7927777777778,
+     "avg_net": -73.2321875000003,
+     "avg_net_x2": -119.96812500000028,
+     "total": -2343.4300000000094,
+     "max_dd": -6224.160000000013,
+     "worst_month": -3996.5000000000105,
+     "avg_pts": 7.717494687500448,
+     "avg_R": 0.21875,
+     "pts_win": 0.40625,
+     "target_vs_stop": {
+      "target": 13,
+      "stop": 19
+     }
+    },
+    "FINNIFTY": {
+     "n": 13,
+     "win": 0.3076923076923077,
+     "avg_win": 684.3700000000007,
+     "avg_loss": -370.5544444444449,
+     "avg_net": -45.9623076923078,
+     "avg_net_x2": -87.08538461538544,
+     "total": -597.5100000000015,
+     "max_dd": -2327.789999999999,
+     "worst_month": -2083.690000000001,
+     "avg_pts": -0.4822030769232347,
+     "avg_R": 0.3065291086755517,
+     "pts_win": 0.46153846153846156,
+     "target_vs_stop": {
+      "target": 5,
+      "stop": 7
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 24,
+     "win": 0.3333333333333333,
+     "avg_win": 1047.05375,
+     "avg_loss": -586.0875000000003,
+     "avg_net": -41.70708333333345,
+     "avg_net_x2": -95.35708333333315,
+     "total": -1000.9700000000028,
+     "max_dd": -2059.8600000000024,
+     "worst_month": -1689.8799999999978,
+     "avg_pts": 0.9188833333332695,
+     "avg_R": -0.125,
+     "pts_win": 0.2916666666666667,
+     "target_vs_stop": {
+      "target": 7,
+      "stop": 17
+     }
+    },
+    "NIFTY": {
+     "n": 26,
+     "win": 0.4230769230769231,
+     "avg_win": 637.8381818181816,
+     "avg_loss": -437.13066666666634,
+     "avg_net": 17.66384615384621,
+     "avg_net_x2": -7.211153846153608,
+     "total": 459.2600000000015,
+     "max_dd": -3643.3699999999994,
+     "worst_month": -1881.7800000000013,
+     "avg_pts": -0.5699450000005387,
+     "avg_R": -0.07828681126465097,
+     "pts_win": 0.3076923076923077,
+     "target_vs_stop": {
+      "target": 8,
+      "stop": 18
+     }
+    },
+    "SENSEX": {
+     "n": 21,
+     "win": 0.47619047619047616,
+     "avg_win": 369.0880000000001,
+     "avg_loss": -365.2663636363637,
+     "avg_net": -15.573809523809478,
+     "avg_net_x2": -31.783333333333108,
+     "total": -327.04999999999905,
+     "max_dd": -1519.889999999999,
+     "worst_month": -537.249999999999,
+     "avg_pts": 7.362310761905281,
+     "avg_R": 0.08853278479209747,
+     "pts_win": 0.38095238095238093,
+     "target_vs_stop": {
+      "target": 7,
+      "stop": 13
+     }
+    }
+   },
+   "label": "baseline: zone + breakdown only",
+   "skips": {
+    "f3_no": 0,
+    "f3_none": 0,
+    "f4_no": 0,
+    "f4_none": 0,
+    "no_entry": 0,
+    "late": 0,
+    "no_contract": 3,
+    "no_price": 43,
+    "no_room": 0,
+    "busy": 28,
+    "both": 0
+   },
+   "c3_share_10k": 0.0,
+   "account_design_plus_holdout": {
+    "max_dd": -228531.77000000005,
+    "worst_month": -21789.22
+   },
+   "holdout_gates": {
+    "n": true,
+    "net_pos": false,
+    "win": false,
+    "dd": false,
+    "month": false
+   },
+   "passes_all": false
+  },
+  "V5": {
+   "n": 9,
+   "win": 0.1111111111111111,
+   "avg_win": 398.3200000000015,
+   "avg_loss": -757.0474999999989,
+   "avg_net": -628.6733333333322,
+   "avg_net_x2": -676.4511111111082,
+   "total": -5658.0599999999895,
+   "max_dd": -6056.379999999992,
+   "worst_month": -1954.9099999999949,
+   "worst_month_name": "2026-05",
+   "months_green": 0,
+   "months": 5,
+   "avg_pts": -28.99344111110885,
+   "avg_R": -1.0,
+   "pts_win": 0.0,
+   "exits": {
+    "stop": 8,
+    "lock": 1
+   },
+   "target_vs_stop": {
+    "target": 0,
+    "stop": 8
+   },
+   "buys": 1.0,
+   "p_twins": 0.8606965174129353,
+   "twin_mean_total": -3030.679200000001,
+   "twin_trades": 9,
+   "by_year": {
+    "2026": {
+     "n": 9,
+     "win": 0.1111111111111111,
+     "avg_win": 398.3200000000015,
+     "avg_loss": -757.0474999999989,
+     "avg_net": -628.6733333333322,
+     "avg_net_x2": -676.4511111111082,
+     "total": -5658.0599999999895,
+     "max_dd": -6056.379999999992,
+     "worst_month": -1954.9099999999949,
+     "avg_pts": -28.99344111110885,
+     "avg_R": -1.0,
+     "pts_win": 0.0,
+     "target_vs_stop": {
+      "target": 0,
+      "stop": 8
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 6,
+     "win": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": -802.563333333332,
+     "avg_net": -802.563333333332,
+     "avg_net_x2": -861.3633333333295,
+     "total": -4815.379999999992,
+     "max_dd": -4815.379999999992,
+     "worst_month": -2353.2299999999964,
+     "avg_pts": -30.825934999998328,
+     "avg_R": -1.0,
+     "pts_win": 0.0,
+     "target_vs_stop": {
+      "target": 0,
+      "stop": 6
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 1,
+     "win": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": -477.00999999999914,
+     "avg_net": -477.00999999999914,
+     "avg_net_x2": -515.4099999999983,
+     "total": -477.00999999999914,
+     "max_dd": -477.00999999999914,
+     "worst_month": -477.00999999999914,
+     "avg_pts": -7.5054199999995035,
+     "avg_R": -1.0,
+     "pts_win": 0.0,
+     "target_vs_stop": {
+      "target": 0,
+      "stop": 1
+     }
+    },
+    "SENSEX": {
+     "n": 2,
+     "win": 0.5,
+     "avg_win": 398.3200000000015,
+     "avg_loss": -763.9900000000008,
+     "avg_net": -182.83499999999964,
+     "avg_net_x2": -202.23499999999905,
+     "total": -365.6699999999993,
+     "max_dd": -763.9900000000008,
+     "worst_month": -763.9900000000008,
+     "avg_pts": -34.23996999999508,
+     "avg_R": -1.0,
+     "pts_win": 0.0,
+     "target_vs_stop": {
+      "target": 0,
+      "stop": 1
+     }
+    }
+   },
+   "label": "ride it: index stop + 60% premium lock after Rs 1,000",
+   "skips": {
+    "f3_no": 149,
+    "f3_none": 29,
+    "f4_no": 0,
+    "f4_none": 0,
+    "no_entry": 0,
+    "late": 0,
+    "no_contract": 0,
+    "no_price": 2,
+    "no_room": 0,
+    "busy": 1,
+    "both": 0
+   },
+   "c3_share_10k": 0.0,
+   "account_design_plus_holdout": {
+    "max_dd": -21891.019999999975,
+    "worst_month": -2767.1199999999985
+   },
+   "holdout_gates": {
+    "n": false,
+    "net_pos": false,
+    "win": false,
+    "dd": true,
+    "month": true
+   },
+   "passes_all": false
+  },
+  "V6": {
+   "n": 12,
+   "win": 0.3333333333333333,
+   "avg_win": 446.1324999999996,
+   "avg_loss": -689.0462499999994,
+   "avg_net": -310.65333333333314,
+   "avg_net_x2": -356.67416666666617,
+   "total": -3727.8399999999974,
+   "max_dd": -4528.599999999998,
+   "worst_month": -1552.4699999999953,
+   "worst_month_name": "2026-05",
+   "months_green": 1,
+   "months": 5,
+   "avg_pts": 2.4910749999990003,
+   "avg_R": 0.0,
+   "pts_win": 0.3333333333333333,
+   "exits": {
+    "stop": 8,
+    "target": 4
+   },
+   "target_vs_stop": {
+    "target": 4,
+    "stop": 8
+   },
+   "buys": 0.75,
+   "p_twins": 0.4527363184079602,
+   "twin_mean_total": -3681.5629,
+   "twin_trades": 12,
+   "by_year": {
+    "2026": {
+     "n": 12,
+     "win": 0.3333333333333333,
+     "avg_win": 446.1324999999996,
+     "avg_loss": -689.0462499999994,
+     "avg_net": -310.65333333333314,
+     "avg_net_x2": -356.67416666666617,
+     "total": -3727.8399999999974,
+     "max_dd": -4528.599999999998,
+     "worst_month": -1552.4699999999953,
+     "avg_pts": 2.4910749999990003,
+     "avg_R": 0.0,
+     "pts_win": 0.3333333333333333,
+     "target_vs_stop": {
+      "target": 4,
+      "stop": 8
+     }
+    }
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 7,
+     "win": 0.14285714285714285,
+     "avg_win": 779.5500000000002,
+     "avg_loss": -833.2033333333326,
+     "avg_net": -602.8099999999994,
+     "avg_net_x2": -657.359999999998,
+     "total": -4219.6699999999955,
+     "max_dd": -4219.6699999999955,
+     "worst_month": -2353.2299999999964,
+     "avg_pts": -15.583532857142147,
+     "avg_R": -0.5714285714285714,
+     "pts_win": 0.14285714285714285,
+     "target_vs_stop": {
+      "target": 1,
+      "stop": 6
+     }
+    },
+    "MIDCPNIFTY": {
+     "n": 2,
+     "win": 0.5,
+     "avg_win": 98.8499999999989,
+     "avg_loss": -477.00999999999914,
+     "avg_net": -189.08000000000013,
+     "avg_net_x2": -246.68000000000058,
+     "total": -378.16000000000025,
+     "max_dd": -477.00999999999914,
+     "worst_month": -378.16000000000025,
+     "avg_pts": -5.398514999998952,
+     "avg_R": -1.0,
+     "pts_win": 0.0,
+     "target_vs_stop": {
+      "target": 0,
+      "stop": 2
+     }
+    },
+    "NIFTY": {
+     "n": 1,
+     "win": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": -36.14000000000132,
+     "avg_net": -36.14000000000132,
+     "avg_net_x2": -64.74000000000487,
+     "total": -36.14000000000132,
+     "max_dd": -36.14000000000132,
+     "worst_month": -36.14000000000132,
+     "avg_pts": 12.81478000000061,
+     "avg_R": 2.0,
+     "pts_win": 1.0,
+     "target_vs_stop": {
+      "target": 1,
+      "stop": 0
+     }
+    },
+    "SENSEX": {
+     "n": 2,
+     "win": 1.0,
+     "avg_win": 453.0649999999996,
+     "avg_loss": 0.0,
+     "avg_net": 453.0649999999996,
+     "avg_net_x2": 439.7649999999992,
+     "total": 906.1299999999992,
+     "max_dd": 0.0,
+     "worst_month": 105.36999999999827,
+     "avg_pts": 68.47993999999017,
+     "avg_R": 2.0,
+     "pts_win": 1.0,
+     "target_vs_stop": {
+      "target": 2,
+      "stop": 0
+     }
+    }
+   },
+   "label": "both sides (mirror)",
+   "skips": {
+    "f3_no": 346,
+    "f3_none": 63,
+    "f4_no": 10,
+    "f4_none": 0,
+    "no_entry": 0,
+    "late": 0,
+    "no_contract": 0,
+    "no_price": 3,
+    "no_room": 0,
+    "busy": 1,
+    "both": 0
+   },
+   "c3_share_10k": 0.0,
+   "account_design_plus_holdout": {
+    "max_dd": -17771.14999999999,
+    "worst_month": -2767.1199999999985
+   },
+   "holdout_gates": {
+    "n": false,
+    "net_pos": false,
+    "win": false,
+    "dd": true,
+    "month": true
+   },
+   "passes_all": false
+  }
+ },
+ "census": {
+  "NIFTY": {
+   "1": {
+    "zones": 10292,
+    "rallied": 2004,
+    "breakdowns": 765,
+    "in_window": 431
+   },
+   "-1": {
+    "zones": 10130,
+    "rallied": 1833,
+    "breakdowns": 866,
+    "in_window": 435
+   }
+  },
+  "BANKNIFTY": {
+   "1": {
+    "zones": 9395,
+    "rallied": 2186,
+    "breakdowns": 1025,
+    "in_window": 573
+   },
+   "-1": {
+    "zones": 9316,
+    "rallied": 1857,
+    "breakdowns": 1025,
+    "in_window": 552
+   }
+  },
+  "FINNIFTY": {
+   "1": {
+    "zones": 9235,
+    "rallied": 2063,
+    "breakdowns": 912,
+    "in_window": 516
+   },
+   "-1": {
+    "zones": 9145,
+    "rallied": 1819,
+    "breakdowns": 946,
+    "in_window": 508
+   }
+  },
+  "MIDCPNIFTY": {
+   "1": {
+    "zones": 8271,
+    "rallied": 2156,
+    "breakdowns": 1019,
+    "in_window": 636
+   },
+   "-1": {
+    "zones": 8200,
+    "rallied": 1765,
+    "breakdowns": 1016,
+    "in_window": 477
+   }
+  },
+  "SENSEX": {
+   "1": {
+    "zones": 9201,
+    "rallied": 1736,
+    "breakdowns": 639,
+    "in_window": 358
+   },
+   "-1": {
+    "zones": 9081,
+    "rallied": 1612,
+    "breakdowns": 715,
+    "in_window": 377
+   }
+  }
+ },
+ "factors": {
+  "NIFTY": {
+   "f3": {
+    "yes": 0,
+    "no": 32,
+    "none": 0
+   },
+   "f4": {
+    "yes": 12,
+    "no": 20,
+    "none": 0
+   }
+  },
+  "BANKNIFTY": {
+   "f3": {
+    "yes": 7,
+    "no": 34,
+    "none": 2
+   },
+   "f4": {
+    "yes": 30,
+    "no": 11,
+    "none": 2
+   }
+  },
+  "FINNIFTY": {
+   "f3": {
+    "yes": 0,
+    "no": 23,
+    "none": 17
+   },
+   "f4": {
+    "yes": 13,
+    "no": 26,
+    "none": 1
+   }
+  },
+  "MIDCPNIFTY": {
+   "f3": {
+    "yes": 2,
+    "no": 34,
+    "none": 2
+   },
+   "f4": {
+    "yes": 20,
+    "no": 16,
+    "none": 2
+   }
+  },
+  "SENSEX": {
+   "f3": {
+    "yes": 3,
+    "no": 26,
+    "none": 8
+   },
+   "f4": {
+    "yes": 17,
+    "no": 18,
+    "none": 2
+   }
+  }
+ },
+ "claims": {
+  "n_races": 190,
+  "n_decided": 161,
+  "up_all": 0.43478260869565216,
+  "C1_f3": {
+   "n1": 12,
+   "up1": 0.5833333333333334,
+   "n2": 123,
+   "up2": 0.42276422764227645,
+   "z": 1.0703831148796188,
+   "p_two_sided": 0.2844468964372171
+  },
+  "C2_f4": {
+   "n1": 83,
+   "up1": 0.4939759036144578,
+   "n2": 71,
+   "up2": 0.36619718309859156,
+   "z": 1.5943735772617578,
+   "p_two_sided": 0.11085238688690802
+  },
+  "C4_both_vs_neither": {
+   "n1": 12,
+   "up1": 0.5833333333333334,
+   "n2": 59,
+   "up2": 0.3389830508474576,
+   "z": 1.589463020460831,
+   "p_two_sided": 0.11195589642534332
+  }
+ }
+}

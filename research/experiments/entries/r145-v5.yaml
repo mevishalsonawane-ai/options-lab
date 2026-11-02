@@ -1,0 +1,33 @@
+id: r145-v5
+title: 'R145 V5: demand-zone trap + put premium divergence + OI video setup (ride it: index stop + 60% premium lock after
+  Rs 1,000)'
+family: patterns-indicators
+date: '2026-11-02'
+doc: research/HUNT_R145_TRAP_DIVERGENCE.md
+hypothesis: A close below a demand zone (a swing low that rallied 1%) is a trap when the ATM put does not make a new high
+  and put OI at the support rises 2%; buying the ATM call then pays.
+data_version: Drive lake copied 2 Nov 2026 (index_1m; options_rolling_1m WEEK/MONTH, lakeclean 1-3), to 19 Oct 2026
+period:
+  design: 2021-08-01..2026-03-15 (folds F1-F4)
+  holdout: 2026-04-01..2026-10-19, read once
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index spot (zone, breakdown, reclaim, stop, target); filters: the ATM put''s traded premium and the
+  support strike''s put OI (option-chain context); the ATM call (V6: put) is bought'
+model_or_rule: research/hunt/r145_trap_divergence/r145.py
+settings: PREREG.md V5; 1 lot
+prereg: research/hunt/r145_trap_divergence/PREREG.md
+variants_tried: 6
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'design: 37 trades, win 16%, avg net Rs -439 (2x Rs -479), total Rs -16,233, max DD Rs -16,233, worst month Rs
+    -2,767, twin p 0.905 (twin mean total Rs -10,362), folds F1 Rs 262, F2 Rs -8,740, F3 Rs -3,967, F4 Rs -1,000; BH q (6)
+    0.980. Holdout: 9 trades, win 11%, avg net Rs -629 (2x Rs -676), total Rs -5,658, max DD Rs -6,056, worst month Rs -1,955,
+    twin p 0.861 (twin mean total Rs -3,031). Fails: n, net_pos, folds, q, holdout n, holdout net_pos, holdout win.'
+  costs: Costs('dated') + Fills('liq'), 1 lot; also 2x slippage
