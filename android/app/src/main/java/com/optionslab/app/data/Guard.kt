@@ -65,7 +65,14 @@ object Guard {
         // is UNKNOWN, not zero. Zero made the equity just the day's m2m, which against the stored peak read as a ~100%
         // drawdown and turned the kill switch on for a network glitch. Unknown (NaN) gives the guard's "Equity is unknown"
         // refusal instead (see [judge]): the entry waits, the kill switch stays off, and the peak is not touched.
-        val capital = (funds?.openingBalance?.takeIf { it > 0 } ?: funds?.net)?.takeIf { it > 0 } ?: Double.NaN
+        // 2 Nov (live, a false kill switch): with no opening balance (money added recently reads 0 there) the fallback was Zerodha's
+        // "net", which falls by every option's premium and every future's margin. The first live buy (65 NIFTY CE, Rs 8,911) read as
+        // a Rs 8,911 loss, a 17.8% drawdown from Rs 50,000, and the kill switch stopped every later entry. The fallback is now the
+        // account's whole funds, net plus what is used (Kite's utilised debits: premium, margin, booked or open losses; negative
+        // when a booked profit or a sold option's premium is credited), which a buy does not move; today's m2m below then counts
+        // each gain or loss once.
+        val capital = (funds?.openingBalance?.takeIf { it > 0 }
+            ?: funds?.let { it.net + (it.used.takeIf { u -> u.isFinite() } ?: 0.0) })?.takeIf { it > 0 } ?: Double.NaN
         // 25 Oct: kept in memory for the live 2% risk cap's shadow in the entry door ([BossRiskHost.liveDoor]); never read from disk there.
         if (capital.isFinite()) BossRiskHost.liveCapital = capital
         val equity = capital + dayPnl

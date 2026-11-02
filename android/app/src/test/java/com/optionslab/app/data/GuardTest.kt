@@ -293,4 +293,59 @@ class GuardTest : RobolectricTest() {
         val ok = Guard.liveAccount(book, Broker.Funds(available = 400_000.0, used = 0.0, net = 400_000.0, openingBalance = 400_000.0), 1)
         assertEquals(400_000.0, ok.capital, 0.01)
     }
+
+    // 2 Nov (live): with no opening balance, an option bought must not read as a loss of its premium (it turned the kill switch on).
+    @Test fun withNoOpeningBalanceABoughtOptionIsNotADrawdown() {
+        limits { it.copy(guardDrawdownPct = 10.0, guardDailyLoss = 0.0, guardKill = false) }
+        SecurePrefs.put("guard.peak.live", 50_000.0)
+        val held = Broker.Positions(listOf(Broker.Position("NIFTY26N0323200CE", "MIS", 65, 137.10, 137.40, 19.5, m2m = 19.5)), emptyList())
+        // Zerodha after the buy: opening balance 0, net down by the premium, the premium in the utilised debits.
+        val funds = Broker.Funds(available = 41_088.5, used = 8_911.5, net = 41_088.5, openingBalance = 0.0, optionPremium = 8_911.5)
+        val a = Guard.liveAccount(held, funds, 1).copy(minuteOfDay = 10 * 60)
+        assertEquals(50_000.0, a.capital, 0.01)
+        assertEquals(50_019.5, a.equity, 0.01)
+        val why = Guard.check(order(sym = "NIFTY26OCT24600PE"), a)
+        assertTrue(why.toString(), why.none { it.startsWith("Drawdown limit") })
+        assertFalse("a bought option must not engage the kill switch", AppSettings.load().guardKill)
+    }
+
+    // A real loss on such a day still trips the drawdown and the kill switch.
+    @Test fun withNoOpeningBalanceARealLossStillTripsTheDrawdown() {
+        limits { it.copy(guardDrawdownPct = 10.0, guardDailyLoss = 0.0, guardKill = false) }
+        SecurePrefs.put("guard.peak.live", 50_000.0)
+        val lost = Broker.Positions(listOf(Broker.Position("NIFTY26N0323200CE", "MIS", 0, 137.10, 45.0, -6_000.0, m2m = -6_000.0)), emptyList())
+        // The loss is booked: Zerodha's net is down by it and its debits carry it.
+        val funds = Broker.Funds(available = 44_000.0, used = 6_000.0, net = 44_000.0, openingBalance = 0.0)
+        val a = Guard.liveAccount(lost, funds, 2).copy(minuteOfDay = 10 * 60)
+        assertEquals(50_000.0, a.capital, 0.01)
+        assertEquals(44_000.0, a.equity, 0.01)
+        val why = Guard.check(order(sym = "NIFTY26OCT24600PE"), a)
+        assertTrue(why.toString(), why.any { it.startsWith("Drawdown limit") })
+        assertTrue("a real 12% drawdown engages the kill switch", AppSettings.load().guardKill)
+    }
+
+    // Edge: debits zero or not a number fall back to net alone (as before); nothing usable stays unknown.
+    @Test fun withNoOpeningBalanceOddDebitsFallBackToNet() {
+        val book = Broker.Positions(emptyList(), emptyList())
+        for (u in listOf(0.0, Double.NaN))
+            assertEquals(u.toString(), 30_000.0, Guard.liveAccount(book, Broker.Funds(30_000.0, u, 30_000.0, 0.0), 0).capital, 0.01)
+        assertTrue(Guard.liveAccount(book, Broker.Funds(0.0, 0.0, 0.0, 0.0), 0).capital.isNaN())
+        // With an opening balance nothing changes: it is the capital, whatever is used.
+        assertEquals(50_000.0, Guard.liveAccount(book, Broker.Funds(41_000.0, 9_000.0, 41_000.0, 50_000.0), 0).capital, 0.01)
+    }
+
+    // A booked profit is credited as negative debits (net up by it): the capital stays the whole funds, so the profit is counted
+    // once (by today's m2m), never twice, and the peak is not lifted above what the account holds.
+    @Test fun withNoOpeningBalanceABookedProfitIsCountedOnce() {
+        limits { it.copy(guardDrawdownPct = 10.0, guardDailyLoss = 0.0, guardKill = false) }
+        SecurePrefs.put("guard.peak.live", 50_000.0)
+        val won = Broker.Positions(listOf(Broker.Position("NIFTY26N0323200CE", "MIS", 0, 137.10, 200.0, 4_000.0, m2m = 4_000.0)), emptyList())
+        val funds = Broker.Funds(available = 54_000.0, used = -4_000.0, net = 54_000.0, openingBalance = 0.0)
+        val a = Guard.liveAccount(won, funds, 2).copy(minuteOfDay = 10 * 60)
+        assertEquals(50_000.0, a.capital, 0.01)
+        assertEquals(54_000.0, a.equity, 0.01)
+        assertEquals(54_000.0, a.peakEquity, 0.01)
+        assertTrue(Guard.check(order(sym = "NIFTY26OCT24600PE"), a).none { it.startsWith("Drawdown limit") })
+        assertFalse(AppSettings.load().guardKill)
+    }
 }
