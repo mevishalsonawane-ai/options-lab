@@ -33,6 +33,17 @@ object BiometricGate {
 
     enum class Kind { STRONG, WEAK, NONE }
 
+    /**
+     * 2 Nov (Boss: "Square off should have a fingerprint option, it asks only the PIN"): the app's screen behind [context]. A
+     * dialog's or a sheet's content sees a wrapper of it (a ContextThemeWrapper), not the activity: the plain cast found nothing
+     * there, so every PIN box shown over a dialog (Square off, Modify, Cancel) fell back to the PIN only. Unwrapped here.
+     */
+    tailrec fun activityOf(context: android.content.Context?): FragmentActivity? = when (context) {
+        is FragmentActivity -> context
+        is android.content.ContextWrapper -> activityOf(context.baseContext)
+        else -> null
+    }
+
     fun available(activity: FragmentActivity): Kind {
         val m = BiometricManager.from(activity)
         return when {

@@ -844,7 +844,7 @@ internal fun ActionConfirm(id: Long, yes: String = "Yes", no: String = "No") {
     if (!waiting) return
     fun mine(): Long? = com.optionslab.ira.Requests.tapTarget(id, IraHub.state.value.pending)
     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        val activity = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
+        val activity = com.optionslab.app.security.BiometricGate.activityOf(androidx.compose.ui.platform.LocalContext.current)
         if (IraHub.needsFingerprint(id) && activity != null) {
             // A live Jarvis trade (or the emergency exit): the owner's fingerprint approves it.
             BrassButton("$yes · fingerprint", tone = LocalPalette.current.oxblood) {
@@ -1247,7 +1247,7 @@ private fun AutomationsCard() {
     LedgerCard(title = "What Jarvis does by itself") {
         // Boss, 4 Oct: one switch for the AI's trades going to Zerodha. Off: on paper even in Live. On (fingerprint):
         // in Live, once their record is proven, each trade still asks him first and needs the fingerprint.
-        val act = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
+        val act = com.optionslab.app.security.BiometricGate.activityOf(androidx.compose.ui.platform.LocalContext.current)
         var aiLive by remember { mutableStateOf(!com.optionslab.app.ira.IraNewsTrades.paperFirst) }
         // 17 Oct (Boss's diagnostics: the screen froze in Vault.encrypt): the switch's vault write - still straight to disk, never
         // left in memory only - runs off the screen's thread ([AI_LIVE_WRITES]).

@@ -189,7 +189,7 @@ fun LoginPinDialog(model: AppModel) {
     val scope = rememberCoroutineScope()
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val findings by model.integrity.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = BiometricGate.activityOf(LocalContext.current)
     val blob = remember { Broker.bioSealedSecret }
     val bio = s.biometric && activity != null && blob != null && !(findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings))
     var usePin by remember { mutableStateOf(!bio) }
@@ -256,7 +256,7 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boo
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // Live orders without PIN (the owner's setting): confirming an order, cancel or square-off is enough.
     if (orderAction && s.oneTapOrders) { LaunchedEffect(Unit) { onOk() }; return }
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = BiometricGate.activityOf(LocalContext.current)
     // A phone that failed the security check can fake a biometric callback: the PIN only, there.
     val findings by model.integrity.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val compromised = findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings)
@@ -1331,7 +1331,7 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     // With the fingerprint on, it seals the secret too (the PIN then becomes optional).
     val st by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val findings by model.integrity.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = BiometricGate.activityOf(LocalContext.current)
     val fingerprint = st.biometric && activity != null && BiometricGate.available(activity) == BiometricGate.Kind.STRONG &&
         !(findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings))
     fun draft(k: String, v: String) = com.optionslab.app.security.SecurePrefs.put(k, v.ifEmpty { null })

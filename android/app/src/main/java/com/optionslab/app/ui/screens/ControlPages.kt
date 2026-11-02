@@ -296,10 +296,10 @@ fun SecurityPage(model: AppModel) {
         Reauth(model, onOk = { guarded = null; action() }, onCancel = { guarded = null }, pinOnly = pinOnly, why = why)
     }
     // Re-read while the page is open, so adding a fingerprint in the phone's Settings shows up on return.
-    var kind by remember { mutableStateOf((context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE) }
+    var kind by remember { mutableStateOf(com.optionslab.app.security.BiometricGate.activityOf(context)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE) }
     com.optionslab.app.ui.PollWhileStarted {
         while (true) {
-            kind = (context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE
+            kind = com.optionslab.app.security.BiometricGate.activityOf(context)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE
             kotlinx.coroutines.delay(2_000)
         }
     }
