@@ -291,9 +291,13 @@ object Notifier {
      */
     fun paperQuiet(): Boolean = testPaperAlerts?.let { !it } ?: !runCatching { AppSettings.load().paperAlerts }.getOrDefault(false)
 
-    /** A paper trade's own notice: an arm's "… · Paper" title, or a notice that says it bought on PAPER. */
+    /**
+     * A paper trade's own notice: an arm's "… · Paper" buy / sell title, a notice that says it bought on PAPER, or the paper book's
+     * own ("Paper contract settled", "Paper MIS squared off", "Paper ticket: …").
+     */
     internal fun isPaperNotice(channel: String, title: String, text: String): Boolean =
-        (channel == BUY || channel == SELL) && (title.endsWith(" · Paper") || title.contains(" · Paper ") || text.contains(" on PAPER"))
+        title.startsWith("Paper ") ||
+            (channel == BUY || channel == SELL) && (title.endsWith(" · Paper") || title.contains(" · Paper ") || text.contains(" on PAPER"))
 
     // ---- 2 Nov: one notice for a live trade (Boss: "when any live order is placed, I see 2 notifications, 1 of paper and 1 of live") ----
 

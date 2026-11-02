@@ -289,6 +289,8 @@ class NotifierTest : RobolectricTest() {
         assertTrue(Notifier.isPaperNotice(Notifier.BUY, "X bought S · Paper", ""))
         assertTrue(Notifier.isPaperNotice(Notifier.SELL, "Night sold S · Paper", ""))
         assertTrue(Notifier.isPaperNotice(Notifier.BUY, "Hero fired", "bought 65 S @ 1 on PAPER (limit 2)"))
+        assertTrue("the paper book's own", Notifier.isPaperNotice(Notifier.LIVE, "Paper MIS squared off", "S"))
+        assertTrue(Notifier.isPaperNotice(Notifier.SCHEDULE, "Paper ticket: SELL NIFTY 23000 PE", ""))
         assertFalse("not a buy or sell notice", Notifier.isPaperNotice(Notifier.APPROVAL, "X bought S · Paper", ""))
         assertFalse("a live fill", Notifier.isPaperNotice(Notifier.BUY, "BUY filled · Live · R51", "65 S @ 1"))
         assertFalse(Notifier.isPaperNotice(Notifier.SELL, "R51 Donchian 20: the live stop at Zerodha was cancelled", "the paper trade is open"))

@@ -116,4 +116,20 @@ class PositionCardsLiveReadTest : RobolectricTest() {
         refresh()
         assertNotNull("back once nothing keeps it down", paperCard())
     }
+
+    /** 2 Nov: paper notifications off (the default): no paper card, yet the paper position still counts as open for the watch. */
+    @Test fun withPaperNotificationsOffNoPaperCardButStillWatched() = FakeUpstox().use { _ ->
+        Background.calendar(Background.WED); Background.at(Background.WED, 11, 0)
+        Notifier.testPaperAlerts = null                                    // the real setting: off by default
+        val option = com.optionslab.engine.mcx.McxContract(148600327L, 580470L, "CRUDEOIL26OCT8550CE", "CRUDEOIL", java.time.LocalDate.of(2026, 10, 15),
+            8550.0, com.optionslab.engine.Right.CE, 0.1, 100)
+        val c = com.optionslab.app.data.McxMarket.paperContract(option)
+        assertTrue(runBlocking { com.optionslab.app.data.Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null, com.optionslab.engine.sandbox.Quote(242.0)) }.ok)
+        refresh()
+        assertNull("no paper card", Background.notifications(context).getNotification(PositionCards.idOf("Paper", c.symbol)))
+        assertTrue("still watched at full speed", PositionCards.anyOpen)
+        Notifier.testPaperAlerts = true
+        refresh()
+        assertNotNull("on again: the card is back", Background.notifications(context).getNotification(PositionCards.idOf("Paper", c.symbol)))
+    }
 }
