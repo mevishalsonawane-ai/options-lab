@@ -512,6 +512,11 @@ fun SchedulePage(model: AppModel) {
                 ToggleRow("Other notifications", "Risk and P&L alerts, price alarms, reminders, health changes and warnings", s.otherAlerts) { on ->
                     model.update { it.copy(otherAlerts = on) }
                 }
+                // 2 Nov (Boss: "for now remove all the notifications for paper").
+                ToggleRow("Paper trade notifications", "Off: paper trades send nothing to the notification shade (they still run and show in the app). " +
+                    "Live trades always notify.", s.paperAlerts) { on ->
+                    model.update { it.copy(paperAlerts = on) }
+                }
             }
         } }
         item {

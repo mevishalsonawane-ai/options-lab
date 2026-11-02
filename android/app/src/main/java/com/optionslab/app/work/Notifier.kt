@@ -241,6 +241,8 @@ object Notifier {
      * position's own card (PositionCards), which the market watch then keeps live with its P&L and a Close button.
      */
     fun orderFilled(context: Context, action: String, qty: Int, symbol: String, price: Double, venue: String, source: String?, orderId: String? = null) {
+        // 2 Nov: paper fills notify nothing unless Boss turns them on ([paperQuiet]); a card already up is taken down.
+        if (venue == "Paper" && paperQuiet()) { runCatching { PositionCards.dismiss(context, "Paper", symbol) }; return }
         val buy = action.equals("BUY", ignoreCase = true)
         val headline = "${if (buy) "BUY" else "SELL"} filled · $venue · ${com.optionslab.app.data.Origins.display(source ?: com.optionslab.app.data.Origins.MANUAL).first}"
         // The order's id, so the fill can be found in the order book ("order #a1b2c3d4").
@@ -276,6 +278,22 @@ object Notifier {
         val owner = source.substringBefore(" · ").trim()
         return owner.isNotEmpty() && com.optionslab.ira.ArmOwners.arm(owner) == com.optionslab.ira.ArmOwners.LIQUIDITY
     }
+
+    // ---- 2 Nov: paper trades notify nothing unless Boss turns them on ----
+
+    /** TEST ONLY: the paper switch as the tests see it (TestApp sets it on, as before; null = the setting). */
+    @Volatile internal var testPaperAlerts: Boolean? = null
+
+    /**
+     * 2 Nov (Boss: "for now remove all the notifications for paper; for selling I get 4 or 5 notifications for 1 single order"):
+     * with [AppSettings.paperAlerts] off (the default), a paper trade's buy, sell, card or arm notice reaches neither the shade nor
+     * the in-app banner. The paper trades still run and show in the app; live trades always notify.
+     */
+    fun paperQuiet(): Boolean = testPaperAlerts?.let { !it } ?: !runCatching { AppSettings.load().paperAlerts }.getOrDefault(false)
+
+    /** A paper trade's own notice: an arm's "… · Paper" title, or a notice that says it bought on PAPER. */
+    internal fun isPaperNotice(channel: String, title: String, text: String): Boolean =
+        (channel == BUY || channel == SELL) && (title.endsWith(" · Paper") || title.contains(" · Paper ") || text.contains(" on PAPER"))
 
     // ---- 2 Nov: one notice for a live trade (Boss: "when any live order is placed, I see 2 notifications, 1 of paper and 1 of live") ----
 
@@ -321,6 +339,8 @@ object Notifier {
              /** An entry waiting on Home ("orb" / "strategy"): the tap's banner shows Home's own rows for it. */ approve: String? = null,
              /** The in-app banner's colour when the channel's own would be wrong (16 Oct: an alerts-only signal is not an error). */
              banner: Alerts.Kind? = null) {
+        // 2 Nov: a paper trade's notice is not shown unless Boss turns paper notifications on ([paperQuiet]).
+        if (isPaperNotice(channel, title, text) && paperQuiet()) return
         // IraGoldAlgo notifies buys and sells only (the owner's choice, 2026-10-02); anything else is never posted there.
         if (com.optionslab.app.BuildConfig.GOLD && channel != BUY && channel != SELL) return
         // Everything notified also drops in at the top of the app when it is open (green / red).

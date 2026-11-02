@@ -128,6 +128,7 @@ object LiquidityNotices {
     /** An entry: told once for [position] (the arm, the contract and the entry time). [chart] is drawn when given. */
     fun entry(context: Context, position: String, e: LiquidityNotice.Entry, chart: (Int, Int) -> LiquidityNotice.Chart?) {
         if (com.optionslab.app.BuildConfig.GOLD) return
+        if (!e.live && Notifier.paperQuiet()) return                 // 2 Nov: paper notifications off (Boss); a live trade always tells
         // No permission: nothing is marked told (it is told once it can be).
         if (!Notifier.canPost(context)) return
         val day = e.time.toLocalDate()
@@ -141,6 +142,7 @@ object LiquidityNotices {
     /** An exit: told once for [position] and its exit time (a part sold earlier is its own exit). */
     fun exit(context: Context, position: String, x: LiquidityNotice.Exit, chart: (Int, Int) -> LiquidityNotice.Chart?) {
         if (com.optionslab.app.BuildConfig.GOLD) return
+        if (!x.live && Notifier.paperQuiet()) return                 // 2 Nov: paper notifications off (Boss); a live trade always tells
         if (!Notifier.canPost(context)) return
         if (!once(context, x.exitTime.toLocalDate(), "$position|exit|${x.exitTime}")) return
         val h = hide()

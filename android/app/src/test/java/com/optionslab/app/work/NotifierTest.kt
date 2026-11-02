@@ -260,4 +260,37 @@ class NotifierTest : RobolectricTest() {
         assertNotNull("the exit notice stays", posted(6971))
         Notifier.resetLiveCopiesForTest()
     }
+
+    // ---- 2 Nov: paper notifications off by default (Boss: "remove all the notifications for paper") ----
+
+    @Test fun paperNoticesAreOffByDefaultAndLiveOnesAlwaysGo() {
+        Notifier.testPaperAlerts = null                                    // the real setting, as on the phone
+        assertFalse("off by default", AppSettings.load().paperAlerts)
+        assertTrue(Notifier.paperQuiet())
+        Notifier.post(context, 6301, Notifier.BUY, "R51 Donchian 20 bought NIFTY03NOV2623300CE · Paper", "Bought 65 @ 110.65.")
+        Notifier.post(context, 6302, Notifier.SELL, "R51 Donchian 20 sold NIFTY03NOV2623300CE · Paper", "Sold (time) @ 101.20.")
+        Notifier.post(context, 6303, Notifier.BUY, "Hero fired", "NIFTY up: bought 65 NIFTY03NOV2623300CE @ 110.65 on PAPER (limit 111).")
+        Notifier.orderFilled(context, "BUY", 65, "NIFTY03NOV2623300CE", 110.65, "Paper", "R51 Donchian 20 · entry")
+        assertNull(posted(6301)); assertNull(posted(6302)); assertNull(posted(6303))
+        assertNull(Background.notifications(context).getNotification(PositionCards.idOf("Paper", "NIFTY03NOV2623300CE")))
+        // Live fills and every other notice still go.
+        Notifier.orderFilled(context, "BUY", 65, "NIFTY26N0323300CE", 110.55, "Live", "R51 Donchian 20 · live entry")
+        assertNotNull(Background.notifications(context).getNotification(PositionCards.idOf("Live", "NIFTY26N0323300CE")))
+        Notifier.post(context, 6304, Notifier.APPROVAL, "Liquidity: approve BUY NIFTY 23300 CE", "Approve?")
+        assertNotNull(posted(6304))
+        // Turned on in Settings: paper notices are back.
+        AppSettings.save(AppSettings.load().copy(paperAlerts = true))
+        assertFalse(Notifier.paperQuiet())
+        Notifier.post(context, 6305, Notifier.BUY, "R51 Donchian 20 bought NIFTY03NOV2623300CE · Paper", "Bought 65 @ 110.65.")
+        assertNotNull(posted(6305))
+    }
+
+    @Test fun onlyAPaperTradesOwnNoticeCountsAsPaper() {
+        assertTrue(Notifier.isPaperNotice(Notifier.BUY, "X bought S · Paper", ""))
+        assertTrue(Notifier.isPaperNotice(Notifier.SELL, "Night sold S · Paper", ""))
+        assertTrue(Notifier.isPaperNotice(Notifier.BUY, "Hero fired", "bought 65 S @ 1 on PAPER (limit 2)"))
+        assertFalse("not a buy or sell notice", Notifier.isPaperNotice(Notifier.APPROVAL, "X bought S · Paper", ""))
+        assertFalse("a live fill", Notifier.isPaperNotice(Notifier.BUY, "BUY filled · Live · R51", "65 S @ 1"))
+        assertFalse(Notifier.isPaperNotice(Notifier.SELL, "R51 Donchian 20: the live stop at Zerodha was cancelled", "the paper trade is open"))
+    }
 }

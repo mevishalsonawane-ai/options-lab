@@ -34,6 +34,8 @@ data class AppSettings(
     val healthAlerts: Boolean = true,
     /** Notifications beyond buy / sell / approval (risk, alarms, P&L, reminders, health). Off by default. */
     val otherAlerts: Boolean = false,
+    /** 2 Nov (Boss: "remove all the notifications for paper"): paper trades' buy / sell notices and cards in the shade. Off by default. */
+    val paperAlerts: Boolean = false,
     // account P&L alerts from the background watch (rupees; 0 = off)
     val pnlLossAlert: Double = 0.0,
     val pnlProfitAlert: Double = 0.0,
@@ -204,6 +206,7 @@ data class AppSettings(
                 riskAlertPct = p.getDouble("n.risk", d.riskAlertPct),
                 healthAlerts = p.getBoolean("n.health", d.healthAlerts),
                 otherAlerts = p.getBoolean("n.other", d.otherAlerts),
+                paperAlerts = p.getBoolean("n.paper", d.paperAlerts),
                 pnlLossAlert = p.getDouble("n.pnlLoss", d.pnlLossAlert),
                 pnlProfitAlert = p.getDouble("n.pnlProfit", d.pnlProfitAlert),
                 widgetPnl = p.getBoolean("ui.widgetPnl", d.widgetPnl),
@@ -314,7 +317,7 @@ data class AppSettings(
                 "s.tkU" to s.ticketUnderlying, "s.tkLots" to s.ticketLots, "s.devSess" to s.includeDeviceSessions,
                 "n.entry" to s.entryReminder, "n.autoTicket" to s.autoTicket, "n.autoSettle" to s.autoSettle,
                 "n.harvest" to s.nightlyHarvest, "n.live" to s.liveWatch, "n.risk" to s.riskAlertPct,
-                "n.health" to s.healthAlerts, "n.other" to s.otherAlerts, "sec.bio" to s.biometric, "sec.face" to s.allowWeakFace,
+                "n.health" to s.healthAlerts, "n.other" to s.otherAlerts, "n.paper" to s.paperAlerts, "sec.bio" to s.biometric, "sec.face" to s.allowWeakFace,
                 "lock.idleSeconds" to s.idleSeconds, "sec.refuse" to s.refuseCompromised,
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,

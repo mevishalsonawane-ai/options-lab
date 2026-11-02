@@ -939,6 +939,9 @@ class ControlPagesTest {
         val other = model.settings.value.otherAlerts
         toggle("Other notifications")
         waitSettings { it.otherAlerts != other }
+        val paper = model.settings.value.paperAlerts
+        toggle("Paper trade notifications")
+        waitSettings { it.paperAlerts != paper }
         val health = model.settings.value.healthAlerts
         toggle("Tell me when health changes")
         waitSettings { it.healthAlerts != health }
