@@ -1,7 +1,6 @@
 package com.optionslab.app.security
 
 import android.view.ContextThemeWrapper
-import com.optionslab.app.MainActivity
 import com.optionslab.app.testing.RobolectricTest
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -14,7 +13,7 @@ import org.robolectric.Robolectric
  */
 class BiometricActivityOfTest : RobolectricTest() {
     @Test fun theActivityIsFoundThroughADialogsWrappers() {
-        val act = Robolectric.buildActivity(MainActivity::class.java).create().get()
+        val act = Robolectric.buildActivity(androidx.fragment.app.FragmentActivity::class.java).create().get()
         assertSame(act, BiometricGate.activityOf(act))
         val dialogContext = ContextThemeWrapper(act, android.R.style.Theme_Material_Dialog)
         assertSame("a dialog's content", act, BiometricGate.activityOf(dialogContext))
