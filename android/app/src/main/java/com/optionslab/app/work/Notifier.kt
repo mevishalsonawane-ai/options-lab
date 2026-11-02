@@ -333,6 +333,8 @@ object Notifier {
         if (!canPost(context)) return
         // 2 Nov: an arm's paper buy whose live copy is open is not shown again in the shade (the live card is); kept otherwise, so a
         // live copy that fills a moment later can take it down.
+        // (An id an arm reuses for another notice - its exit, its close - is no longer that paper buy: a live fill never cancels it.)
+        paperNotices.remove(id)
         if (channel == BUY) paperOf(title)?.let { sym ->
             if (liveCopyShown(sym)) return
             paperNotices[id] = title

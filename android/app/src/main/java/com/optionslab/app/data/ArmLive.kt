@@ -1753,7 +1753,10 @@ object ArmLive {
         val got = p.copy(qty = st.filled, entryQty = st.filled, entry = fill, entryOrderId = oid, unconfirmed = false,
             charges = charge(side, fill, st.filled, p.exchange, p.symbol, p.multiplier))
         val (stop, kind) = spec?.let { firstStop(it, got) } ?: (null to OWN)
-        return restStop(got.copy(stopKind = kind), stop, ltp = fill)
+        return restStop(got.copy(stopKind = kind), stop, ltp = fill).also {
+            // 2 Nov: confirmed late, it is a live copy now: one notice for it, as for an entry confirmed at once.
+            p.paperSymbol?.let { sym -> runCatching { Notifier.liveCopyFilled(app, sym) } }
+        }
     }
 
     /**

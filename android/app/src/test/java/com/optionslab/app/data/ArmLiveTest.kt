@@ -132,7 +132,7 @@ class ArmLiveTest : RobolectricTest() {
             Paper.bookFillForTest(contract.symbol)
             ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "book"))
             assertTrue("nothing sent to Zerodha", kite.placed.isEmpty())
-            assertTrue(view().refused.toString(), view().open.none { !it.shadow && !it.unconfirmed })
+            assertTrue(view().open.isEmpty())
             // An ordinary fill goes as before.
             Paper.bookFillForTest(null)
             ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "plain"))

@@ -130,6 +130,7 @@ class TestApp : Application() {
         TradeBook.init(this)
         com.optionslab.app.data.FillSlippage.init(this)
         com.optionslab.app.data.FillSlippage.resetForTest()
+        com.optionslab.app.work.Notifier.resetLiveCopiesForTest()   // 2 Nov: no live copy left by the previous test hides a paper card
         com.optionslab.app.data.LiquidityTest.init(this)
         com.optionslab.app.data.LiquidityTest.resetForTest()
         // Liquidity BANKNIFTY's paper-test freeze ends on a fixed date: unfrozen here so no test depends on the real date (the freeze

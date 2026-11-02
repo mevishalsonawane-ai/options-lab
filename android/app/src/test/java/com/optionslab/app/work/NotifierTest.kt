@@ -237,6 +237,7 @@ class NotifierTest : RobolectricTest() {
         // Other notices are never touched.
         Notifier.post(context, 6204, Notifier.APPROVAL, "Liquidity: approve BUY NIFTY03NOV2623200CE", "Approve?")
         assertNotNull(posted(6204))
+        Notifier.resetLiveCopiesForTest()
     }
 
     @Test fun aPaperFillWhoseLiveCopyIsOpenShowsNoCardOfItsOwn() {
@@ -248,5 +249,15 @@ class NotifierTest : RobolectricTest() {
         assertNotNull(Background.notifications(context).getNotification(PositionCards.idOf("Live", "NIFTY26N0323200CE")))
         Notifier.orderFilled(context, "BUY", 30, "BANKNIFTY23NOV2654900CE", 938.95, "Paper", "R51 Donchian 20 · entry")
         assertNotNull(Background.notifications(context).getNotification(PositionCards.idOf("Paper", "BANKNIFTY23NOV2654900CE")))
+        Notifier.resetLiveCopiesForTest()
+    }
+
+    // An arm that reuses a notice id for its exit: a later live fill of the same contract never takes that exit notice down.
+    @Test fun aReusedNoticeIdIsNoLongerThePaperBuy() {
+        Notifier.post(context, 6971, Notifier.BUY, "US-night silver bought SILVERMIC30NOV26FUT · Paper", "Bought 1 @ 183,543.")
+        Notifier.post(context, 6971, Notifier.SELL, "US-night silver closed SILVERMIC30NOV26FUT · Paper", "Rs +1,200 after charges.")
+        Notifier.liveCopyFilled(context, "SILVERMIC30NOV26FUT")
+        assertNotNull("the exit notice stays", posted(6971))
+        Notifier.resetLiveCopiesForTest()
     }
 }
