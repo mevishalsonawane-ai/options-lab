@@ -466,6 +466,25 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(1, view().open.size)
     }
 
+    /**
+     * 2 Nov: while Boss exits a contract by hand ([ArmLive.handsOff]) the arm leaves it alone: a stop gone at Zerodha is not rested
+     * again (it would sit beside his exit); once his exit is done ([ArmLive.handsBack]) the arm watches it as before.
+     */
+    @Test fun whileBossExitsByHandTheArmLeavesTheContractAlone() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "hand"))
+        val stop = view().open.single().stopOrderId!!
+        kite.orders.getValue(stop).status = "CANCELLED"                   // the stop taken out for Boss's exit
+        ArmLive.handsOff("NFO", sym)
+        assertTrue(ArmLive.handsOffNow("NFO", sym))
+        kite.requests.clear()
+        watch()
+        assertTrue("no stop rested beside Boss's exit", kite.placed.isEmpty())
+        ArmLive.handsBack("NFO", sym)
+        assertFalse(ArmLive.handsOffNow("NFO", sym))
+        watch()
+        assertEquals("watched again: its stop rests again", 1, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
     @Test fun eachLiveTradeIsRecordedAndLabelledLiveApartFromThePaperBook() {
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "a"))
         kite.quote("NFO:$sym", 220.0, 219.95, 220.05)

@@ -201,6 +201,19 @@ object ArmLive {
     @Volatile var liveKeysHint: List<String> = emptyList()
         private set
 
+    /**
+     * 2 Nov (Boss's square-off with an arm's stop resting): contracts Boss is exiting by hand right now ("EXCHANGE:SYMBOL" -> until,
+     * ms; memory only). The arms leave them alone meanwhile - no stop moved, shrunk or rested again, no exit of their own - so the
+     * stop Boss's exit turns into a sell is never put back to a trigger, and no second sell goes beside his. Given back when his
+     * exit is done ([handsBack]); at most [HANDS_OFF_MS] in any case, so a trade is never left unwatched for long.
+     */
+    private val handsOffUntil = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val HANDS_OFF_MS = 90_000L
+    fun handsOff(exchange: String, symbol: String) { handsOffUntil["$exchange:$symbol"] = System.currentTimeMillis() + HANDS_OFF_MS }
+    fun handsBack(exchange: String, symbol: String) { if (handsOffUntil.remove("$exchange:$symbol") != null) runCatching { nudge() } }
+    internal fun handsOffNow(exchange: String, symbol: String): Boolean =
+        handsOffUntil["$exchange:$symbol"]?.let { System.currentTimeMillis() < it } == true
+
     /** 2 Nov: the paper contracts an open live trade copies (memory only): their paper card and notice stay down ([Notifier.liveCopyShown]). */
     @Volatile var paperMirroredHint: Set<String> = emptySet()
         private set
@@ -932,6 +945,7 @@ object ArmLive {
      * its order and trigger, or with the trigger only (the app watches it, and rests it again on the next look - said, throttled).
      */
     private suspend fun restStop(p: Pos, at: Double?, ltp: Double): Pos {
+        if (handsOffNow(p.exchange, p.symbol)) return p              // Boss is exiting it by hand ([handsOff])
         val spec = LiveMirror.spec(p.key) ?: return p
         val trigger = at ?: return p
         if (!LiveMirror.mayRest(trigger, ltp, p.tick, p.side)) return p.copy(stopTrigger = trigger)
@@ -995,6 +1009,7 @@ object ArmLive {
 
     /** [p]'s resting stop moved to [to] (a modify of the same SL order or GTT: never a cancel and a new one, never down). */
     private suspend fun moveStop(p: Pos, so: Broker.OrderRow?, to: Double, ltp: Double): Pos {
+        if (handsOffNow(p.exchange, p.symbol)) return p              // Boss is exiting it by hand ([handsOff])
         val r = runCatching {
             val gid = p.gttId
             if (gid != null) {
@@ -1017,6 +1032,7 @@ object ArmLive {
 
     /** [p]'s resting stop shrunk to [qty] still to sell (0: taken out, confirmed). [p] as it then stands, or null when not done. */
     private suspend fun shrinkStop(p: Pos, so: Broker.OrderRow?, qty: Int, ltp: Double?): Pos? {
+        if (handsOffNow(p.exchange, p.symbol)) return null           // Boss is exiting it by hand ([handsOff])
         if (qty <= 0) {
             val out = stopOut(p) ?: return null
             if (out.first == "COMPLETE") return null           // it filled: the next look books it
@@ -1332,7 +1348,7 @@ object ArmLive {
     }
 
     private suspend fun look(stream: Boolean) {
-        val open = lock.withLock { book().positions.filter { it.open && !it.shadow && it.ref !in resting }.toList() }
+        val open = lock.withLock { book().positions.filter { it.open && !it.shadow && it.ref !in resting && !handsOffNow(it.exchange, it.symbol) }.toList() }
         if (open.isEmpty()) return
         if (!Broker.loggedIn) { waitingForLogin(open, stream); return }
         val t = now()
@@ -1889,7 +1905,7 @@ object ArmLive {
         written.forget()
         cache = null; unreadable = false; recoverDue = false; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
         readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L
-        _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); paperMirroredHint = emptySet(); levels.clear(); closedRefs.clear()
+        _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); paperMirroredHint = emptySet(); handsOffUntil.clear(); levels.clear(); closedRefs.clear()
     }
 
     /** 26 Oct (Erase everything): [wipe], and the book's files deleted (a set-aside copy too). */
@@ -1910,5 +1926,5 @@ object ArmLive {
     }
 
     /** For tests: as after a restart - the memory gone, the book on disk. */
-    internal fun forgetMemoryForTest() { cache = null; legsKept.clear(); gttsKept = null; levels.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear() }
+    internal fun forgetMemoryForTest() { cache = null; legsKept.clear(); gttsKept = null; levels.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear() }
 }

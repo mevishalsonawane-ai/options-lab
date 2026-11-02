@@ -214,7 +214,7 @@ class OrderFlowLive2Test : RobolectricTest() {
     /**
      * 2 Nov (Boss, live: "if I want to settle the order immediately, it should allow me"): exits resting on the contract that cover
      * the whole square-off (an arm's live stop, a protection's target) are turned into the exit itself: modified into a LIMIT priced
-     * 5% through the last price, so they fill now. No second sell goes beside them.
+     * 5% through the fresh bid, so it fills now. No second sell goes beside it.
      */
     @Test fun aSquareOffTurnsTheExitsRestingOnTheContractIntoTheExit() {
         kite.position(ce, 75, 90.0)
@@ -229,7 +229,7 @@ class OrderFlowLive2Test : RobolectricTest() {
         val put = BrokerArea.await("the resting exit modified") { kite.writes.firstOrNull { it.method == "PUT" } }
         assertEquals("PUT /orders/regular/$target", "${put.method} ${put.path}")
         assertEquals("LIMIT", put.form["order_type"]); assertEquals("75", put.form["quantity"])
-        assertEquals("5% under the last price (100.00), on the tick", "95.00", put.form["price"])
+        assertEquals("5% under the fresh bid (99.95), on the tick", "94.95", put.form["price"])
         kite.fill(target, 99.95)                                          // the exchange fills it at the bid
         val f = sent(m).single()
         assertEquals("COMPLETE", f.status); assertEquals(75, f.filled); assertEquals(target, f.orderId)
