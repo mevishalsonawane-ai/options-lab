@@ -201,7 +201,7 @@ object SettingsIndex {
         Entry("schedule", "schedule.notifications", "Other notifications", "Risk and P&L alerts, price alarms, reminders, health changes and warnings.",
             listOf("Schedules", "Notifications"), listOf("notification", "alerts", "sound", "pop up")),
         Entry("schedule", "schedule.notifications", "Paper trade notifications", "Off: paper trades send nothing to the notification shade; live trades always notify.",
-            listOf("Schedules", "Notifications"), listOf("paper", "notification", "alerts", "quiet", "silence")),
+            listOf("Schedules", "Notifications"), listOf("paper", "notification", "alerts", "silence")),
         Entry("schedule", "schedule.day", "Entry reminder 10:55", "Expiry days only.", DAY, listOf("reminder", "expiry")),
         Entry("schedule", "schedule.day", "Paper ticket 11:01", "Expiry days: records the paper ticket for you.", DAY, listOf("ticket", "paper", "expiry")),
         Entry("schedule", "schedule.day", "Settle 15:35", "Settles today's open ticket at the official window.", DAY, listOf("settlement", "settle")),
