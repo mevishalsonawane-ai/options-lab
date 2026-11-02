@@ -132,7 +132,7 @@ class ArmLiveTest : RobolectricTest() {
             Paper.bookFillForTest(contract.symbol)
             ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "book"))
             assertTrue("nothing sent to Zerodha", kite.placed.isEmpty())
-            assertTrue(view().open.isEmpty())
+            assertTrue(view().refused.toString(), view().open.none { !it.shadow && !it.unconfirmed })
             // An ordinary fill goes as before.
             Paper.bookFillForTest(null)
             ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "plain"))
@@ -389,6 +389,56 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testNow = Market.today().atTime(15, 16).atZone(com.optionslab.engine.IST)
         watch()
         assertEquals("watched after the restart", "square_off", view().closed.single().why)
+    }
+
+    /**
+     * 2 Nov (Boss: "when any live order is placed, I see 2 notifications, 1 of paper and 1 of live"): the live fill takes the paper
+     * copy's card and its "bought · Paper" notice down; they stay down while the live trade is open (after a restart too) and the
+     * paper card may come back once it has closed.
+     */
+    @Test fun aLiveFillLeavesOneNoticeThePaperCopysCardAndNoticeGoDown() {
+        com.optionslab.app.testing.Background.grantNotifications(context)
+        com.optionslab.app.work.Notifier.resetLiveCopiesForTest()
+        val nm = com.optionslab.app.testing.Background.notifications(context)
+        val paperCard = com.optionslab.app.work.PositionCards.idOf("Paper", contract.symbol)
+        com.optionslab.app.work.PositionCards.card(context, "Paper", contract.symbol, 30, 200.0, 200.0, 0.0, alert = true)
+        com.optionslab.app.work.Notifier.post(context, 6123, com.optionslab.app.work.Notifier.BUY, "R72 Breadth Donchian bought ${contract.symbol} · Paper", "Bought 30 @ 200.00.")
+        assertTrue(nm.getNotification(paperCard) != null && nm.getNotification(6123) != null)
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "one"))
+        assertEquals(1, view().open.size)
+        assertEquals(contract.symbol, view().open.single().paperSymbol)
+        assertTrue(contract.symbol in ArmLive.paperMirroredHint)
+        assertEquals("the paper card is down", null, nm.getNotification(paperCard))
+        assertEquals("the paper notice is down", null, nm.getNotification(6123))
+        // A paper fill or notice on it while the live copy is open is not shown again.
+        com.optionslab.app.work.Notifier.orderFilled(context, "BUY", 30, contract.symbol, 200.0, "Paper", "R51 Donchian 20 · entry")
+        assertEquals(null, nm.getNotification(paperCard))
+        // A restart reads it back from the book: still one notice.
+        ArmLive.wipe()
+        com.optionslab.app.work.Notifier.resetLiveCopiesForTest()
+        assertFalse(com.optionslab.app.work.Notifier.liveCopyShown(contract.symbol))
+        assertTrue(runBlocking { PositionsFirst.restore() })
+        assertTrue("kept in the book", com.optionslab.app.work.Notifier.liveCopyShown(contract.symbol))
+        // Closed live: nothing holds the paper card down any more.
+        com.optionslab.app.work.Notifier.resetLiveCopiesForTest()
+        ArmLive.testNow = Market.today().atTime(15, 16).atZone(com.optionslab.engine.IST)
+        watch()
+        assertEquals("square_off", view().closed.single().why)
+        assertFalse(contract.symbol in ArmLive.paperMirroredHint)
+        assertFalse(com.optionslab.app.work.Notifier.liveCopyShown(contract.symbol))
+    }
+
+    /** A live order Zerodha refuses leaves the paper notices as they were (there is no live card to stand for them). */
+    @Test fun aRefusedLiveOrderLeavesThePaperNotice() {
+        com.optionslab.app.testing.Background.grantNotifications(context)
+        com.optionslab.app.work.Notifier.resetLiveCopiesForTest()
+        val nm = com.optionslab.app.testing.Background.notifications(context)
+        com.optionslab.app.work.Notifier.post(context, 6124, com.optionslab.app.work.Notifier.BUY, "R51 Donchian 20 bought ${contract.symbol} · Paper", "Bought 30 @ 200.00.")
+        kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "MCX is disabled for your account.")
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "no"))
+        assertTrue(view().open.isEmpty())
+        assertTrue("the paper notice stays", nm.getNotification(6124) != null)
+        assertFalse(com.optionslab.app.work.Notifier.liveCopyShown(contract.symbol))
     }
 
     @Test fun eachLiveTradeIsRecordedAndLabelledLiveApartFromThePaperBook() {

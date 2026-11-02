@@ -198,6 +198,7 @@ object Background {
         listOf("shown", "sources", "sourceQty", "posted").forEach {
             (PositionCards::class.java.getDeclaredField(it).apply { isAccessible = true }.get(null) as MutableMap<*, *>).clear()
         }
+        com.optionslab.app.work.Notifier.resetLiveCopiesForTest()
     }
 
     /** WorkManager for this test's application: synchronous, and nothing with a network constraint runs. */

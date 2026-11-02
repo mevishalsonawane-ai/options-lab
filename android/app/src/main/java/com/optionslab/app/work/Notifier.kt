@@ -257,6 +257,8 @@ object Notifier {
         }
         // A Liquidity 15+5 paper fill shows in the shade without a sound, a buzz or a pop-up (Boss, 07 Oct 2026), as its own
         // entry / exit notice (LiquidityNotices) does. Every other fill - a live Liquidity order too - sounds as before.
+        // 2 Nov: a paper fill on a contract whose live copy is open shows no card of its own (the live card is the one).
+        if (venue == "Paper" && liveCopyShown(symbol)) return
         val quiet = quietFill(venue, source)
         PositionCards.card(context, card, symbol, if (buy) qty else -qty, price, price, 0.0, alert = !quiet, headline = headline, quiet = quiet)
         // Zerodha: read the book again shortly, so a fill that closed the position takes its card down.
@@ -274,6 +276,40 @@ object Notifier {
         val owner = source.substringBefore(" · ").trim()
         return owner.isNotEmpty() && com.optionslab.ira.ArmOwners.arm(owner) == com.optionslab.ira.ArmOwners.LIQUIDITY
     }
+
+    // ---- 2 Nov: one notice for a live trade (Boss: "when any live order is placed, I see 2 notifications, 1 of paper and 1 of live") ----
+
+    /** Paper contracts whose live copy just filled, with when (memory only): covers the moment before the live book is saved. */
+    private val liveCopied = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** The arms' recent "bought SYMBOL · Paper" notices by id, with their titles (memory only), so a live copy can take them down. */
+    private val paperNotices = java.util.concurrent.ConcurrentHashMap<Int, String>()
+    private const val LIVE_COPY_MS = 10 * 60_000L
+    private const val PAPER_NOTICES_KEPT = 64
+
+    /** Whether the paper contract [paperSymbol] has an open (or just filled) live copy: its paper card and notice stay down. */
+    fun liveCopyShown(paperSymbol: String, nowMs: Long = System.currentTimeMillis()): Boolean =
+        paperSymbol in runCatching { com.optionslab.app.data.ArmLive.paperMirroredHint }.getOrDefault(emptySet()) ||
+            liveCopied[paperSymbol]?.let { nowMs - it in 0..LIVE_COPY_MS } == true
+
+    /** A live copy of the paper trade on [paperSymbol] filled: its paper card and "bought · Paper" notice are taken down. */
+    fun liveCopyFilled(context: Context, paperSymbol: String, nowMs: Long = System.currentTimeMillis()) {
+        liveCopied[paperSymbol] = nowMs
+        liveCopied.entries.removeIf { nowMs - it.value !in 0..LIVE_COPY_MS }
+        PositionCards.dismiss(context, "Paper", paperSymbol)
+        paperNotices.entries.filter { paperOf(it.value) == paperSymbol }.forEach { (id, _) ->
+            paperNotices.remove(id)
+            runCatching { NotificationManagerCompat.from(context).cancel(id) }
+        }
+    }
+
+    /** The contract named in an arm's paper buy notice ("R72 Breadth Donchian bought NIFTY03NOV2623200CE · Paper"); null otherwise. */
+    internal fun paperOf(title: String): String? {
+        if (!title.endsWith(" · Paper")) return null
+        val at = title.lastIndexOf(" bought ").takeIf { it >= 0 }?.plus(8) ?: title.lastIndexOf(" sold ").takeIf { it >= 0 }?.plus(6) ?: return null
+        return title.substring(at, title.length - " · Paper".length).trim().takeIf { it.isNotEmpty() && ' ' !in it }
+    }
+
+    internal fun resetLiveCopiesForTest() { liveCopied.clear(); paperNotices.clear() }
 
     fun canPost(context: Context): Boolean =
         Build.VERSION.SDK_INT < 33 ||
@@ -295,6 +331,13 @@ object Notifier {
             else -> Alerts.classify("$title $text")
         }, title, throttle = true)
         if (!canPost(context)) return
+        // 2 Nov: an arm's paper buy whose live copy is open is not shown again in the shade (the live card is); kept otherwise, so a
+        // live copy that fills a moment later can take it down.
+        if (channel == BUY) paperOf(title)?.let { sym ->
+            if (liveCopyShown(sym)) return
+            paperNotices[id] = title
+            if (paperNotices.size > PAPER_NOTICES_KEPT) paperNotices.keys.take(paperNotices.size - PAPER_NOTICES_KEPT).forEach { paperNotices.remove(it) }
+        }
         // Only buy / sell / approval notifications unless the owner turned the others on (More → Schedules).
         if (channel !in ALWAYS && !runCatching { AppSettings.load().otherAlerts }.getOrDefault(false)) return
         try {

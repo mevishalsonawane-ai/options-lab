@@ -177,6 +177,13 @@ object PositionCards {
         val paperSnap = runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS) }.getOrNull()
         paperSnap?.let { snap -> snap.positions.positions.map { it to snap.trades } }?.forEach { (p, trades) ->
             val key = "Paper|${p.symbol}"
+            // 2 Nov: a paper position copied live is shown by its live card only (one notice for one trade); back once the live copy closes.
+            // Still counted as open ([anyOpen]: the watch's full-speed stop checks never slow for a card not shown).
+            if (p.quantity != 0 && Notifier.liveCopyShown(p.symbol)) {
+                now[key] = Unit
+                if (shown.containsKey(key)) dismiss(context, "Paper", p.symbol)
+                return@forEach
+            }
             if (p.quantity != 0) {
                 now[key] = Unit
                 card(context, "Paper", p.symbol, p.quantity, p.averagePrice, p.ltp.takeIf { it > 0 }, p.pnl,

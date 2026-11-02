@@ -131,6 +131,27 @@ class PositionCardsTest : RobolectricTest() {
         assertFalse(PositionCards.anyOpen)
     } }
 
+    /**
+     * 2 Nov: a paper position whose live copy is open shows no card of its own (the live card is the one notice), yet still counts as
+     * open for the watch's full-speed stop checks; its card comes back once nothing keeps it down.
+     */
+    @Test fun aPaperPositionCopiedLiveShowsNoCardButStaysWatched() = com.optionslab.app.testing.bounded("aPaperPositionCopiedLiveShowsNoCardButStaysWatched") { runBlocking {
+        val option = com.optionslab.engine.mcx.McxContract(148600327L, 580470L, "CRUDEOIL26OCT8550CE", "CRUDEOIL", java.time.LocalDate.of(2026, 10, 15),
+            8550.0, com.optionslab.engine.Right.CE, 0.1, 100)
+        val c = com.optionslab.app.data.McxMarket.paperContract(option)
+        assertTrue(com.optionslab.app.data.Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null, com.optionslab.engine.sandbox.Quote(242.0)).ok)
+        PositionCards.refresh(context)
+        assertNotNull("an ordinary paper position has its card", posted("Paper", c.symbol))
+        Notifier.liveCopyFilled(context, c.symbol)
+        assertNull("taken down by the live fill", posted("Paper", c.symbol))
+        PositionCards.refresh(context)
+        assertNull("not put back while the live copy is open", posted("Paper", c.symbol))
+        assertTrue("still watched at full speed", PositionCards.anyOpen)
+        Notifier.resetLiveCopiesForTest()
+        PositionCards.refresh(context)
+        assertNotNull("back once nothing keeps it down", posted("Paper", c.symbol))
+    } }
+
     @Test fun closingAPaperPositionThatIsNotOpenSaysSo() {
         context.sendBroadcast(Intent(PositionCards.ACTION_CLOSE_PAPER).setComponent(ComponentName(context, NotificationActionReceiver::class.java))
             .putExtra(PositionCards.EXTRA_SYMBOL, "NIFTY25O2124500PE"))

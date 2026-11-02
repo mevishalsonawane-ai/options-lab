@@ -108,6 +108,8 @@ object ArmLive {
         val zeroSinceMs: Long? = null,
         /** Review fix: how much of the CURRENT stop order's fill is already booked closed (a stop that part filled is booked once). */
         val stopBooked: Int = 0,
+        /** 2 Nov: the paper contract this live trade copies (the paper book's own name for it): its paper notices stay down while open. */
+        val paperSymbol: String? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -197,6 +199,10 @@ object ArmLive {
 
     /** The open live trades' quote keys ("NFO:SYMBOL"), for the price stream (memory only: the tick path reads it). */
     @Volatile var liveKeysHint: List<String> = emptyList()
+        private set
+
+    /** 2 Nov: the paper contracts an open live trade copies (memory only): their paper card and notice stay down ([Notifier.liveCopyShown]). */
+    @Volatile var paperMirroredHint: Set<String> = emptySet()
         private set
 
     /** Something live is held (memory only): the fast path and the watch keep running for it. */
@@ -450,7 +456,8 @@ object ArmLive {
             s("expiry")?.let { LocalDate.parse(it) }, s("entryOrderId"), s("stopOrderId"), d("stopTrigger"), p.optBoolean("seen"),
             p.optBoolean("unconfirmed"), d("exit"), s("exitTime")?.let { LocalDateTime.parse(it) }, s("why"), p.optDouble("charges", 0.0),
             p.optBoolean("shadow"), s("stopKind") ?: OWN, if (p.has("stopQty")) p.getInt("stopQty") else null,
-            p.optBoolean("heldSeen", !p.has("heldSeen")), if (p.has("zeroSince")) p.getLong("zeroSince") else null, p.optInt("stopBooked", 0))
+            p.optBoolean("heldSeen", !p.has("heldSeen")), if (p.has("zeroSince")) p.getLong("zeroSince") else null, p.optInt("stopBooked", 0),
+            s("paperSymbol"))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("key", p.key).put("ref", p.ref).put("symbol", p.symbol).put("exchange", p.exchange)
@@ -460,7 +467,8 @@ object ArmLive {
         .put("stopOrderId", p.stopOrderId ?: "").apply { p.stopTrigger?.let { put("stopTrigger", it) }; p.exit?.let { put("exit", it) } }
         .put("seen", p.seen).put("unconfirmed", p.unconfirmed).put("exitTime", p.exitTime?.toString() ?: "").put("why", p.why ?: "")
         .put("charges", p.charges).put("shadow", p.shadow).put("stopKind", p.stopKind).put("heldSeen", p.heldSeen)
-        .apply { p.stopQty?.let { put("stopQty", it) }; p.zeroSinceMs?.let { put("zeroSince", it) } }.put("stopBooked", p.stopBooked)
+        .apply { p.stopQty?.let { put("stopQty", it) }; p.zeroSinceMs?.let { put("zeroSince", it) }; p.paperSymbol?.let { put("paperSymbol", it) } }
+        .put("stopBooked", p.stopBooked)
 
     private fun save(b: Book) {
         // 26 Oct: a book read before an erase is never written back over it.
@@ -498,6 +506,8 @@ object ArmLive {
         holdingHint = real.isNotEmpty()
         shadowHint = open.any { it.shadow }
         liveKeysHint = real.map { "${it.exchange}:${it.symbol}" }.distinct()
+        // (Not one Zerodha has not confirmed yet: no live card stands for it, so the paper card stays.)
+        paperMirroredHint = real.filter { !it.unconfirmed }.mapNotNull { it.paperSymbol }.toSet()
         _view.value = View(b.switches.toMap(), open, b.positions.filter { !it.open && !it.shadow }, b.log.takeLast(40), b.refused.toMap(),
             b.shadow.toMap(), b.shadowSince.toMap(), b.positions.filter { !it.open && it.shadow }, b.notMirrored.toList(), loaded = true)
     }
@@ -794,7 +804,7 @@ object ArmLive {
         // (25 Oct: dated by the market clock, the one the door reads back; in the app the arms' clock is the same one.)
         val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), "arm:${a.key}", stop = a.stop), "arm live gate")
         val base = Pos(a.key, a.ref, ins.symbol, ins.exchange, spec.product, if (a.side >= 0) 1 else -1, qty, qty, ins.lot, ins.tick, ins.multiplier,
-            last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true)
+            last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true, paperSymbol = a.contract.symbol)
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
         val shadowNow = shadowed || (a.key == LiveMirror.SOLO_MIDDAY && soloWhy() != null) ||
             try { lock.withLock { LiveMirror.shadowOn(a.key, book().shadow) } } catch (e: Unreadable) {
@@ -833,6 +843,9 @@ object ArmLive {
         if (f.filled <= 0) { notMirrored(a, "Zerodha ${f.status.lowercase()}" + (f.message.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")); return@withLock }
         val fill = f.avgPrice.takeIf { it > 0 } ?: last
         runCatching { Notifier.orderFilled(app, side.name, f.filled, ins.symbol, fill, "Live", "${spec.label} · live entry", f.orderId) }
+        // 2 Nov (Boss: "when any live order is placed, I see 2 notifications, 1 of paper and 1 of live"): the live card is the one
+        // shown; the paper copy's card and its "bought · Paper" notice are taken down (the paper trade itself goes on, in the app).
+        runCatching { Notifier.liveCopyFilled(app, a.contract.symbol) }
         // Seen held only once Zerodha's position book shows it (review C3): a book that lags the fill never closes the trade.
         var p = base.copy(entryOrderId = id, qty = f.filled, entryQty = f.filled, entry = fill, heldSeen = false,
             charges = charge(side.name, fill, f.filled, ins.exchange, ins.symbol, ins.multiplier))
@@ -1868,7 +1881,7 @@ object ArmLive {
         written.forget()
         cache = null; unreadable = false; recoverDue = false; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
         readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L
-        _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); levels.clear(); closedRefs.clear()
+        _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); paperMirroredHint = emptySet(); levels.clear(); closedRefs.clear()
     }
 
     /** 26 Oct (Erase everything): [wipe], and the book's files deleted (a set-aside copy too). */

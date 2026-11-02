@@ -208,4 +208,45 @@ class NotifierTest : RobolectricTest() {
         for (ok in listOf("Order placed", "Paper position closed", "Settled WIN: Rs +1,200", "Notice: nothing to do"))
             assertEquals(ok, Alerts.Kind.SUCCESS, Alerts.classify(ok))
     }
+
+    // ---- 2 Nov: one notice for a live trade ----
+
+    @Test fun thePaperContractIsReadFromAnArmsPaperBuyNoticeOnly() {
+        assertEquals("NIFTY03NOV2623200CE", Notifier.paperOf("R72 Breadth Donchian bought NIFTY03NOV2623200CE · Paper"))
+        assertEquals("SILVERMIC30NOV26FUT", Notifier.paperOf("US-night silver (not proven, futures) bought SILVERMIC30NOV26FUT · Paper"))
+        assertEquals("SILVERMIC30NOV26FUT", Notifier.paperOf("US-night silver sold SILVERMIC30NOV26FUT · Paper"))
+        assertNull("not a paper notice", Notifier.paperOf("R72 Breadth Donchian bought NIFTY03NOV2623200CE · Live"))
+        assertNull("no contract", Notifier.paperOf("Hero fired"))
+        assertNull(Notifier.paperOf(" bought  · Paper"))
+        assertNull(Notifier.paperOf(""))
+    }
+
+    @Test fun aLiveCopyTakesThePaperNoticeDownAndKeepsLaterOnesOffForTenMinutes() {
+        Notifier.post(context, 6201, Notifier.BUY, "R51 Donchian 20 bought NIFTY03NOV2623200CE · Paper", "Bought 65 @ 138.50.")
+        Notifier.post(context, 6202, Notifier.BUY, "R51 Donchian 20 bought BANKNIFTY23NOV2654900CE · Paper", "Bought 30 @ 938.95.")
+        assertNotNull(posted(6201)); assertNotNull(posted(6202))
+        val t = System.currentTimeMillis()
+        Notifier.liveCopyFilled(context, "NIFTY03NOV2623200CE", t)
+        assertNull("its paper notice is down", posted(6201))
+        assertNotNull("another contract's stays", posted(6202))
+        assertTrue(Notifier.liveCopyShown("NIFTY03NOV2623200CE", t + 60_000))
+        assertFalse("ten minutes on, only the live book keeps it down", Notifier.liveCopyShown("NIFTY03NOV2623200CE", t + 11 * 60_000))
+        // A second arm's paper buy of the same contract right after: not shown again in the shade.
+        Notifier.post(context, 6203, Notifier.BUY, "R72 Breadth Donchian bought NIFTY03NOV2623200CE · Paper", "Bought 65 @ 138.50.")
+        assertNull(posted(6203))
+        // Other notices are never touched.
+        Notifier.post(context, 6204, Notifier.APPROVAL, "Liquidity: approve BUY NIFTY03NOV2623200CE", "Approve?")
+        assertNotNull(posted(6204))
+    }
+
+    @Test fun aPaperFillWhoseLiveCopyIsOpenShowsNoCardOfItsOwn() {
+        Notifier.liveCopyFilled(context, "NIFTY03NOV2623200CE")
+        Notifier.orderFilled(context, "BUY", 65, "NIFTY03NOV2623200CE", 138.5, "Paper", "R72 Breadth Donchian · entry")
+        assertNull(Background.notifications(context).getNotification(PositionCards.idOf("Paper", "NIFTY03NOV2623200CE")))
+        // The live fill itself is shown, and an unrelated paper fill too.
+        Notifier.orderFilled(context, "BUY", 65, "NIFTY26N0323200CE", 137.1, "Live", "R51 Donchian 20 · live entry")
+        assertNotNull(Background.notifications(context).getNotification(PositionCards.idOf("Live", "NIFTY26N0323200CE")))
+        Notifier.orderFilled(context, "BUY", 30, "BANKNIFTY23NOV2654900CE", 938.95, "Paper", "R51 Donchian 20 · entry")
+        assertNotNull(Background.notifications(context).getNotification(PositionCards.idOf("Paper", "BANKNIFTY23NOV2654900CE")))
+    }
 }
