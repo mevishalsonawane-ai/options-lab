@@ -1047,6 +1047,53 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * A position closed elsewhere since the review, or an exit that is already
      * on its way, would otherwise turn the "exit" into a fresh position.
      */
+    /**
+     * 2 Nov (Boss, live: "Square off, modify order not working; if I want to settle the order immediately, it should allow me"): an
+     * exit Boss confirmed is never blocked by the exits already resting on the contract (an arm's live stop, a protection's stop or
+     * GTT). For each closing leg:
+     *  - its resting exit orders cover the whole leg: each is MODIFIED into a LIMIT priced through the market ([marketableLimit]), so
+     *    the stop itself becomes the exit and fills now. No second sell goes, and no gap opens in which an arm could rest a new stop
+     *    beside it (the arm reads its stop as filled and books the close);
+     *  - they cover only a part (or no price is known): they are cancelled and the leg is sent as reviewed.
+     * A protection's day GTT on the contract is deleted first either way. Returns the legs (by index) taken over, with their orders.
+     */
+    private suspend fun takeOverRestingExits(legs: List<com.optionslab.engine.Kite.Order>, start: Int): Map<Int, List<String>> {
+        val b = com.optionslab.app.data.Broker
+        val net = b.positionBook().net
+        val orders = b.orders().filter { it.working }
+        val ins = runCatching { b.cachedInstruments().orEmpty().associateBy { it.tradingSymbol } }.getOrDefault(emptyMap())
+        val out = HashMap<Int, List<String>>()
+        for (i in start until legs.size) {
+            val o = legs[i]
+            if (o.product == "CNC") continue
+            val key = "${o.exchange}:${o.tradingSymbol}"
+            com.optionslab.app.data.Protections.dayGttHint[key].orEmpty().forEach { id -> runCatching { b.deleteGtt(id) } }
+            val resting = orders.filter { it.symbol == o.tradingSymbol && it.exchange == o.exchange && it.product == o.product && it.side == o.side.name }
+            if (resting.isEmpty()) continue
+            // Only while the position still holds what this exit closes: a resting exit is never turned into a sell (or cancelled)
+            // for a position already closed elsewhere - that would open one the other way. The check after says why it is not sent.
+            val row = net.firstOrNull { it.symbol == o.tradingSymbol && it.exchange == o.exchange && it.product == o.product }
+            val open = row?.qty ?: 0
+            val closes = (o.side == com.optionslab.engine.Kite.Side.SELL && open > 0) || (o.side == com.optionslab.engine.Kite.Side.BUY && open < 0)
+            val total = legs.filter { it.tradingSymbol == o.tradingSymbol && it.exchange == o.exchange && it.product == o.product && it.side == o.side }.sumOf { it.quantity }
+            if (!closes || total > kotlin.math.abs(open)) continue
+            val covered = resting.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+            val ltp = row?.last ?: 0.0
+            val tick = ins[o.tradingSymbol]?.tickSize?.takeIf { it > 0 } ?: if (o.exchange == "NFO" || o.exchange == "BFO") 0.05 else 0.0
+            val px = if (ltp > 0 && tick > 0) marketableLimit(o.side, ltp, tick) else null
+            val sameLeg = legs.count { it.tradingSymbol == o.tradingSymbol && it.exchange == o.exchange && it.product == o.product && it.side == o.side } == 1
+            if (px != null && sameLeg && covered == o.quantity) {
+                for (r in resting) b.modify(r, r.qty, "LIMIT", px, null)
+                runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: ${resting.size} resting exit(s) turned into a LIMIT at $px (you, the exit)") }
+                out[i] = resting.map { it.id }
+            } else {
+                for (r in resting) runCatching { b.cancel(r.id, r.variety) }
+                runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: ${resting.size} resting exit(s) cancelled first (you, the exit)") }
+            }
+        }
+        return out
+    }
+
     private suspend fun exitsStillValid(legs: List<com.optionslab.engine.Kite.Order>): String? {
         val b = com.optionslab.app.data.Broker
         // Read together (one round trip, not three); each is still read fresh, now.
@@ -1566,10 +1613,37 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     bad to (if (bad) null else exitCheck.await())
                 }
                 if (bad) { sending.value = Load.Failed("Refused: this device shows signs of compromise, so no real order is sent from it."); return@launch }
-                stale!!.getOrThrow()?.let { why -> sending.value = Load.Failed("Not sent: $why"); loadAccount(); return@launch }
+                // 2 Nov: Boss's exit takes over the exits resting on the contract (see [takeOverRestingExits]); the check is then made
+                // again on what is left to send.
+                var taken: Map<Int, List<String>> = emptyMap()
+                var check = stale!!
+                if (checks && cur.exit && check.getOrNull() != null && check.getOrNull()!!.contains("working exit orders")) {
+                    sending.value = Load.Busy("Taking over the stops resting at Zerodha")
+                    taken = takeOverRestingExits(cur.legs, start)
+                    val rest = cur.legs.withIndex().filter { it.index >= start && it.index !in taken }.map { it.value }
+                    check = runCatching { if (rest.isEmpty()) null else exitsStillValid(rest) }
+                }
+                check.getOrThrow()?.let { why -> sending.value = Load.Failed("Not sent: $why"); loadAccount(); return@launch }
                 for (i in start until cur.legs.size) {
                     val leg = cur.legs[i]
                     sending.value = Load.Busy("Leg ${i + 1} of ${cur.legs.size}: ${leg.side} ${leg.tradingSymbol}")
+                    taken[i]?.let { ids ->
+                        // The resting exits turned into the exit: their fills are this leg's.
+                        val got = ids.map { runCatching { b.awaitOrder(it) }.getOrElse { e -> com.optionslab.app.data.Broker.Fill(it, "UNKNOWN", 0.0, 0, e.message ?: "status not confirmed") } }
+                        val q = got.sumOf { it.filled }
+                        val avg = if (q > 0) got.sumOf { it.avgPrice * it.filled } / q else 0.0
+                        val f = com.optionslab.app.data.Broker.Fill(ids.first(), if (q >= leg.quantity) "COMPLETE" else got.first().status, avg, q,
+                            got.mapNotNull { it.message.takeIf { m -> m.isNotBlank() } }.joinToString("; "))
+                        fills += f
+                        if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", cur.source, f.orderId) } }
+                        if (f.status != "COMPLETE") {
+                            sending.value = Load.Failed("Leg ${i + 1}: its stop at Zerodha was turned into a sell priced through the market, but it is ${f.status.lowercase()}" +
+                                "${if (f.filled > 0) " (${f.filled} of ${leg.quantity} filled)" else ""}${if (f.message.isNotBlank()) ": ${f.message}" else ""}. Check the order book.")
+                            refreshLedger(); loadAccount()
+                            return@launch
+                        }
+                        continue
+                    }
                     val id = try {
                         b.placeOrder(leg, exit = cur.exit, verdict = cur.verdicts.getOrNull(i), stop = cur.protect?.stop, target = cur.protect?.target)
                     } catch (e: Exception) {
@@ -2405,3 +2479,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
 /** The automatic "log in to Zerodha again" prompt. Screen tests switch it off (a dialog over every page); LoginPromptTest turns it on. */
 object LoginPrompt { @Volatile var enabled = true }
+
+/**
+ * 2 Nov: a LIMIT that fills at once: 5% through the last price (a sell under it, a buy over it), on the tick. It still fills at the
+ * best price on the book; the 5% only bounds it. Never under one tick.
+ */
+internal fun marketableLimit(side: com.optionslab.engine.Kite.Side, ltp: Double, tick: Double): Double {
+    val raw = if (side == com.optionslab.engine.Kite.Side.SELL) ltp * 0.95 else ltp * 1.05
+    val steps = if (side == com.optionslab.engine.Kite.Side.SELL) kotlin.math.floor(raw / tick + 1e-9) else kotlin.math.ceil(raw / tick - 1e-9)
+    return java.math.BigDecimal(maxOf(steps, 1.0) * tick).setScale(4, java.math.RoundingMode.HALF_UP).toDouble()
+}

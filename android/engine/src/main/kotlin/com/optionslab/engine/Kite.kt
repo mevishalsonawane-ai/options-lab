@@ -249,6 +249,9 @@ object Kite {
         "quantity" to quantity.toString(), "order_type" to orderType,
         "price" to if (orderType == "LIMIT" || orderType == "SL") money(requireNotNull(price) { "a $orderType order needs a price" }) else null,
         "trigger_price" to if (orderType == "SL" || orderType == "SL-M") money(requireNotNull(triggerPrice) { "a $orderType order needs a trigger price" }) else null,
+        // 2 Nov (live): Zerodha refused a modify to MARKET ("Market orders without market protection are not allowed via API"): the same
+        // protection as a new order's ([Order.formBody]), -1 letting Kite choose it.
+        "market_protection" to if (orderType == "MARKET" || orderType == "SL-M") "-1" else null,
         "validity" to "DAY",
     ))
 

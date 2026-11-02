@@ -211,7 +211,12 @@ class OrderFlowLive2Test : RobolectricTest() {
 
     // ---- the last check before an exit ----------------------------------------------------
 
-    @Test fun workingExitsOnTheSameSideAreSubtracted() {
+    /**
+     * 2 Nov (Boss, live: "if I want to settle the order immediately, it should allow me"): exits resting on the contract that cover
+     * the whole square-off (an arm's live stop, a protection's target) are turned into the exit itself: modified into a LIMIT priced
+     * 5% through the last price, so they fill now. No second sell goes beside them.
+     */
+    @Test fun aSquareOffTurnsTheExitsRestingOnTheContractIntoTheExit() {
         kite.position(ce, 75, 90.0)
         val target = resting(leg(ce, Kite.Side.SELL, price = 130.0))     // e.g. a protection's target, resting
         val m = model()
@@ -221,13 +226,18 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertEquals(listOf(Kite.Side.SELL to 75), plan.legs.map { it.side to it.quantity })
         assertTrue("the review sends nothing", kite.placed.size == 1)
         m.sendPlan()
-        assertEquals("Not sent: $ce changed since the review (open now 75, 75 already in working exit orders such as a protection's stop: " +
-            "cancel them first or wait); review the exit again", refused(m))
-        assertEquals("only the resting target was ever placed", listOf(target), kite.orders.keys.toList())
+        val put = BrokerArea.await("the resting exit modified") { kite.writes.firstOrNull { it.method == "PUT" } }
+        assertEquals("PUT /orders/regular/$target", "${put.method} ${put.path}")
+        assertEquals("LIMIT", put.form["order_type"]); assertEquals("75", put.form["quantity"])
+        assertEquals("5% under the last price (100.00), on the tick", "95.00", put.form["price"])
+        kite.fill(target, 99.95)                                          // the exchange fills it at the bid
+        val f = sent(m).single()
+        assertEquals("COMPLETE", f.status); assertEquals(75, f.filled); assertEquals(target, f.orderId)
+        assertEquals("only the resting target was ever placed: no second sell", listOf(target), kite.orders.keys.toList())
     }
 
-    /** 21 Oct, enhancement round 4 (review): a protection resting as one GTT counts as an exit resting, as its two orders did. */
-    @Test fun aProtectionsDayGttIsSubtractedLikeItsOrders() {
+    /** A protection resting as one GTT is deleted first, then the square-off goes as reviewed. */
+    @Test fun aProtectionsDayGttIsDeletedAndTheSquareOffGoes() {
         kite.position(ce, 75, 90.0)
         com.optionslab.app.data.DayOco.resetForTest(on = true)
         try {
@@ -238,10 +248,33 @@ class OrderFlowLive2Test : RobolectricTest() {
             m.planSquareOff(position(ce))
             BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
             m.sendPlan()
-            assertEquals("Not sent: $ce changed since the review (open now 75, 75 already in working exit orders such as a protection's stop: " +
-                "cancel them first or wait); review the exit again", refused(m))
-            assertTrue("nothing sold beside the GTT", kite.placed.isEmpty())
+            assertEquals("COMPLETE", sent(m).single().status)
+            assertTrue("the GTT is gone, so it can never fire into a short", kite.gtts.isEmpty())
+            assertEquals(0, kite.positions.getValue("NFO:$ce:NRML").first)
         } finally { com.optionslab.app.data.DayOco.resetForTest() }
+    }
+
+    /** A position closed elsewhere since the review: its resting exit is never turned into a sell (it would open a short). */
+    @Test fun aRestingExitIsNeverTakenOverForAPositionAlreadyClosed() {
+        kite.position(ce, 75, 90.0)
+        val target = resting(leg(ce, Kite.Side.SELL, price = 130.0))
+        val m = model()
+        m.planSquareOff(position(ce))
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.position(ce, 0, 0.0)                                           // closed from Kite meanwhile
+        m.sendPlan()
+        assertTrue(refused(m).startsWith("Not sent: $ce changed since the review (open now 0"))
+        assertTrue("nothing modified or sent", kite.writes.none { it.method == "PUT" } && kite.placed.size == 1)
+        assertEquals("the resting order is left as it was", "LIMIT", kite.order(target).type); assertEquals(130.0, kite.order(target).price, 1e-9)
+    }
+
+    @Test fun marketableLimitIsFivePercentThroughOnTheTick() {
+        assertEquals(95.0, marketableLimit(Kite.Side.SELL, 100.0, 0.05), 1e-9)
+        assertEquals(105.0, marketableLimit(Kite.Side.BUY, 100.0, 0.05), 1e-9)
+        assertEquals("a sell rounds down", 274.3, marketableLimit(Kite.Side.SELL, 288.75, 0.05), 1e-9)
+        assertEquals("a buy rounds up", 303.2, marketableLimit(Kite.Side.BUY, 288.75, 0.05), 1e-9)
+        assertEquals("never under one tick", 0.05, marketableLimit(Kite.Side.SELL, 0.05, 0.05), 1e-9)
+        assertEquals("MCX's rupee tick", 174_365.0, marketableLimit(Kite.Side.SELL, 183_543.0, 1.0), 1e-9)
     }
 
     @Test fun anOrderOnTheOtherSideDoesNotBlockTheExit() {
@@ -266,17 +299,18 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertTrue("a closed position must not be re-opened the other way", kite.placed.isEmpty())
     }
 
-    @Test fun freezeSizeSlicesAreCheckedTogether() {
+    /** A resting exit covering only a part of a sliced square-off is cancelled first; the slices then go as reviewed. */
+    @Test fun freezeSizeSlicesCancelAPartRestingExitFirst() {
         kite.position(pe, -2700, 110.0)
-        resting(leg(pe, Kite.Side.BUY, price = 50.0))                      // 75 already on their way out
+        val part = resting(leg(pe, Kite.Side.BUY, price = 50.0))          // 75 already on their way out
         val m = model()
         m.planSquareOff(position(pe))
         val plan = BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
         assertEquals(listOf(1800, 900), plan.legs.map { it.quantity })
         m.sendPlan()
-        assertEquals("Not sent: $pe changed since the review (open now -2700, 75 already in working exit orders such as a protection's stop: " +
-            "cancel them first or wait); review the exit again", refused(m))
-        assertEquals(1, kite.orders.size)
+        assertEquals(listOf("COMPLETE", "COMPLETE"), sent(m).map { it.status })
+        assertEquals("CANCELLED", kite.orders.getValue(part).status)
+        assertEquals("flat, never long", 0, kite.positions.getValue("NFO:$pe:NRML").first)
     }
 
     // ---- square-off ------------------------------------------------------------------------------

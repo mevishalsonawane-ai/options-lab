@@ -126,7 +126,7 @@ class KiteTest {
 
     @Test fun `a modify sends only what may change`() {
         assertEquals("quantity=130&order_type=LIMIT&price=5.10&validity=DAY", Kite.modifyBody(130, "LIMIT", 5.1, null))
-        assertEquals("quantity=65&order_type=SL-M&trigger_price=9.00&validity=DAY", Kite.modifyBody(65, "SL-M", null, 9.0))
+        assertEquals("quantity=65&order_type=SL-M&trigger_price=9.00&market_protection=-1&validity=DAY", Kite.modifyBody(65, "SL-M", null, 9.0))
     }
 
     @Test fun `an exit is never trapped by the caps that limit new risk`() {
