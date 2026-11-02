@@ -441,6 +441,31 @@ class ArmLiveTest : RobolectricTest() {
         assertFalse(com.optionslab.app.work.Notifier.liveCopyShown(contract.symbol))
     }
 
+    /**
+     * 2 Nov (live): R51's MIDCPNIFTY entry at 11:30:03 was sold 16 s later as "paper_exit" while its paper trade was open. A stream
+     * look reads the paper legs kept from the last regular look, which predate a new entry: a trade missing from that copy is not gone.
+     * Only a fresh read says so, and then the live trade is sold.
+     */
+    @Test fun aStreamLookNeverSellsATradeNewerThanItsKeptPaperLegs() {
+        val arm = com.optionslab.engine.orb.DonchianArm.SOURCE
+        ArmLive.entered(ask(arm, "older"))
+        watch()                                                    // a regular look: the paper legs kept are [older]
+        val (c2, s2) = other(3)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        ArmLive.entered(ask(arm, "newer", c = c2))
+        assertEquals(2, view().open.size)
+        kite.requests.clear()
+        runBlocking { ArmLive.watch(stream = true) }               // the kept legs do not hold "newer" yet
+        assertEquals("not sold on a stream look", 2, view().open.size)
+        assertTrue(kite.placed.none { it.form["tradingsymbol"] == s2 && it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
+        watch()                                                    // a fresh read sees it open: still held
+        assertEquals(2, view().open.size)
+        legs["newer"] = arm to 0                                   // its paper trade closes: the fresh read sells it
+        watch()
+        assertEquals("paper_exit", view().closed.single { it.ref == "newer" }.why)
+        assertEquals(1, view().open.size)
+    }
+
     @Test fun eachLiveTradeIsRecordedAndLabelledLiveApartFromThePaperBook() {
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "a"))
         kite.quote("NFO:$sym", 220.0, 219.95, 220.05)

@@ -1289,12 +1289,17 @@ object ArmLive {
         if (stream) legsKept[sp.family] else hosts[sp.family]?.open()?.also { legsKept[sp.family] = it }
     }
 
-    /** What the paper trade [p] follows says now: whether it is gone, and how much of the live trade to sell for it. */
-    private fun paperSide(p: Pos, legs: List<PaperLeg>?): Triple<Pos, Int, String?> {
+    /**
+     * What the paper trade [p] follows says now: whether it is gone, and how much of the live trade to sell for it.
+     * 2 Nov (live): [fresh] false = [legs] is the copy kept from the last regular look (a stream look). A trade missing from that copy
+     * may simply be newer than it: R51's MIDCPNIFTY entry at 11:30:03 was sold 16 s later as "paper_exit" while its paper trade was
+     * open. So only a fresh read of the paper book may call a missing trade gone; a stream look still acts on a leg it does see.
+     */
+    private fun paperSide(p: Pos, legs: List<PaperLeg>?, fresh: Boolean = true): Triple<Pos, Int, String?> {
         val leg = legs?.firstOrNull { it.ref == p.ref }
         var q = p
         if (leg != null && leg.qty > 0 && !q.seen) q = q.copy(seen = true)
-        val gone = closedRefs.containsKey(p.ref) || LiveMirror.paperGone(q.seen, legs?.let { leg != null }) || leg?.qty == 0
+        val gone = closedRefs.containsKey(p.ref) || (fresh && LiveMirror.paperGone(q.seen, legs?.let { leg != null })) || leg?.qty == 0
         val sell = if (gone) q.qty else leg?.let { LiveMirror.toSell(q.qty, q.entryQty, q.paperQty, it.qty, q.lot) } ?: 0
         val why = closedWhy(p.ref) ?: if (gone) "paper_exit" else if (sell > 0) "paper_part" else null
         return Triple(q, sell, why)
@@ -1478,7 +1483,7 @@ object ArmLive {
                 if (contract in dirty) { reread(); refill() }
                 try {
                     val spec = LiveMirror.spec(p1.key)
-                    val (p, paperSell, paperWhy) = paperSide(p1, legsOf(spec, stream))
+                    val (p, paperSell, paperWhy) = paperSide(p1, legsOf(spec, stream), fresh = !stream)
                     val so = p.slId?.let { orders[it] }
                     val g = p.gttId?.let { gtts?.get(it) }
                     val exitSide = if (p.side > 0) "SELL" else "BUY"
@@ -1545,7 +1550,7 @@ object ArmLive {
         if (loginAsked.size > 500) loginAsked.clear()
         for (p in open) {
             if (p.unconfirmed) continue
-            val sell = runCatching { paperSide(p, legsOf(LiveMirror.spec(p.key), stream)).second }.getOrDefault(0)
+            val sell = runCatching { paperSide(p, legsOf(LiveMirror.spec(p.key), stream), fresh = !stream).second }.getOrDefault(0)
             if (sell <= 0 && !LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day)) continue
             if (!loginAsked.add("${p.ref}|${t.toLocalDate()}")) continue
             com.optionslab.app.work.Alerts.error("${p.label} live trade waiting for the Zerodha login to exit (${p.symbol}). " +
