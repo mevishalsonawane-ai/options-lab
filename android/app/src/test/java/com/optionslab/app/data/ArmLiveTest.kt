@@ -494,9 +494,11 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("its stop covers both lots", "60", stop.form["quantity"])
         assertEquals(60, view().open.single().qty)
         // Its paper trade closes: both lots are sold.
+        kite.requests.clear()
         legs["two"] = com.optionslab.engine.orb.DonchianArm.SOURCE to 0
         watch()
         assertEquals("paper_exit", view().closed.single().why)
+        assertEquals("both lots sold", "60", kite.placed.single { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }.form["quantity"])
     }
 
     @Test fun eachLiveTradeIsRecordedAndLabelledLiveApartFromThePaperBook() {

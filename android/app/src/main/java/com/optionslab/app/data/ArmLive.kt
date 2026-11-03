@@ -792,8 +792,9 @@ object ArmLive {
         LiveMirror.tooLate(now(), ins.exchange, spec.product, a.contract.expiry)?.let { notMirrored(a, it); return@withLock }
         val lots = LiveMirror.lots(a.paperQty, a.contract.lotSize)
         val s = AppSettings.load()
-        // 30 Oct (Boss: "1 lot per arm entry, never more unless Boss sets it"): every arm goes live at 1 lot ([LiveMirror.liveLotCap]),
-        // said on its own entry line - except ntfy alerts, whose lots are Boss's own setting. The order gates still apply to all.
+        // 30 Oct (Boss: "1 lot per arm entry, never more unless Boss sets it"): every arm goes live at Boss's lots (3 Nov: his Bot
+        // settings' setting, default 1), said on its own entry line - except ntfy alerts, whose lots are his setting on its page.
+        // The order gates still apply to all.
         // 3 Nov (Boss): the live lots are Boss's own setting in Bot settings ([AppSettings.armLiveLots], default 1).
         val qty = testLotCap?.let { LiveMirror.liveQty(lots, ins.lot, it) } ?: LiveMirror.armLiveQty(lots, ins.lot, spec, s.armLiveLots)
         if (qty <= 0) { notMirrored(a, "the paper trade is under one lot"); return@withLock }

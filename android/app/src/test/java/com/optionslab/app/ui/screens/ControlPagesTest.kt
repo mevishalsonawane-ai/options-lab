@@ -566,6 +566,28 @@ class ControlPagesTest {
         compose.onNodeWithTag("armLots.plus").assertIsNotEnabled()
     }
 
+    /** 3 Nov: in Live, raising the live lots asks for the PIN (Cancel keeps it); lowering never waits. Never carried by a backup. */
+    @Test fun inLiveRaisingTheLiveLotsAsksForThePin() {
+        assertFalse("a restore can never raise live size", com.optionslab.ira.Upkeep.carried("k.armLots"))
+        PinLock.setPin(pin.toCharArray())
+        model.update { it.copy(mode = "live", allowRealOrders = true) }
+        waitSettings { it.live && it.allowRealOrders }
+        show { RiskPage(model) }
+        compose.reveal("Live lots per arm trade")
+        compose.onNodeWithTag("armLots.plus").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.waitForText("Confirm it is you")
+        compose.onNodeWithText("Enter your app PIN to raise every arm's live trade to 2 lots.").assertExists()
+        tap("Cancel")
+        compose.waitForNoText("Confirm it is you")
+        assertEquals(1, model.settings.value.armLiveLots)
+        compose.onNodeWithTag("armLots.plus").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        reauth(pin, "Enter your app PIN to raise every arm's live trade to 2 lots.")
+        waitSettings { it.armLiveLots == 2 }
+        compose.onNodeWithTag("armLots.minus").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        waitSettings { it.armLiveLots == 1 }
+        assertFalse("lowering never asks", compose.has("Confirm it is you"))
+    }
+
     @Test fun eachLimitIsSavedWhenPicked() {
         show { RiskPage(model) }
         val picks = listOf<Pair<String, (AppSettings) -> Boolean>>(

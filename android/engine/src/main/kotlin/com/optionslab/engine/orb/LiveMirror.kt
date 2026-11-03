@@ -77,7 +77,8 @@ object LiveMirror {
          */
         val closeStop: Boolean = false,
         /**
-         * 30 Oct (Boss: "1 lot per arm entry, never more unless Boss sets it"): every arm's live entry is 1 lot ([LIVE_LOTS]), cut from
+         * 30 Oct (Boss: "1 lot per arm entry, never more unless Boss sets it"): every arm's live entry is Boss's lots (3 Nov: [armLiveQty],
+         * his Bot settings' setting, default [LIVE_LOTS]), cut from
          * its paper lots and said on its entry line - except an arm whose size IS Boss's own setting ([bossLots]: ntfy alerts' "at most
          * N lots" on its page), which keeps its paper lots (the order gates still apply). Before, FT3 alone was cut (to the Bot settings'
          * lot cap) and every other arm sent its paper lots.

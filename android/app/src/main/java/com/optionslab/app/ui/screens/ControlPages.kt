@@ -742,7 +742,9 @@ internal fun ArmLotsCard(model: AppModel) {
         why = "Enter your app PIN to raise every arm's live trade to $to lots.") }
     val n = com.optionslab.engine.orb.LiveMirror.armLots(s.armLiveLots)
     LedgerCard(title = "Live lots per arm trade") {
-        Note("Every arm's live trade buys this many lots (paper trades keep their own size). Default 1.")
+        Note("Each arm copied live (R51, R72, R52, Solo, S5, CISD, FT3, Night, Hero ticket, Flow, the MCX arms...) buys this many lots " +
+            "live; paper trades keep their own size. Default 1. For an MCX future it is that many futures lots, and Night's trade is held " +
+            "overnight. Liquidity 15+5 keeps its own size setting.")
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) {
             BrassButton("−", Modifier.testTag("armLots.minus"), enabled = n > 1, tone = p.inkSoft) { setArmLots(model, n - 1) }
             Text(if (n == 1) "1 lot" else "$n lots", style = Type.title, modifier = Modifier.padding(horizontal = 18.dp).testTag("armLots.value"))
@@ -756,6 +758,7 @@ internal fun ArmLotsCard(model: AppModel) {
             s.guardMaxLots.takeIf { it in 1 until n }?.let { "max lots per instrument is $it" },
         )
         if (caps.isNotEmpty()) Note("Above your order limits (${caps.joinToString(" and ")}): those entries are refused until you raise them too.")
+        if (n > 1) Note("The order value and exposure limits in the account guard still apply to the bigger size.")
     }
 }
 
