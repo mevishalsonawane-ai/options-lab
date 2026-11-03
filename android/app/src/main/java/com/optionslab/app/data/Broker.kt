@@ -1332,6 +1332,18 @@ object Broker {
         }
     }
 
+    /** 3 Nov: today's SENSEX options, read now when not yet in memory (a worker thread only: the morning check). */
+    suspend fun bfoOptionsNow(): List<Kite.Instrument> {
+        cachedBfoOptions()?.let { return it }
+        val text = call("GET", "/instruments/BFO", raw = true) as String
+        return Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT").also { bfoOptions = Market.today() to it }
+    }
+
+    /** 3 Nov: whether the account's commodity (MCX) segment is enabled at Zerodha (GET /user/margins/commodity); null: not known. */
+    suspend fun commodityEnabled(): Boolean? = runCatching {
+        (call("GET", "/user/margins/commodity") as? JSONObject)?.takeIf { it.has("enabled") }?.getBoolean("enabled")
+    }.getOrNull()
+
     fun find(list: List<Kite.Instrument>, underlying: String, expiry: LocalDate, strike: Double, right: Right) =
         list.firstOrNull { it.name == underlying && it.expiry == expiry && it.strike == strike && it.right == right }
 

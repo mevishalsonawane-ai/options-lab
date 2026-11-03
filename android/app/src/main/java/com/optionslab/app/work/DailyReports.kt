@@ -288,6 +288,17 @@ object DailyReports {
                 // Kept in the diary too, so Jarvis can answer "is my static IP working?" from it (RelayHealth); the IP is the one shown.
                 com.optionslab.app.data.Diag.record("static-ip", "Morning check: $said")
             }
+            // 3 Nov (Boss: "check all the symbols like MIDCPNIFTY which work on paper also work on live"): each index the arms trade,
+            // its at-the-money call priced for 1 lot by Zerodha's margin calculator (a read: nothing is placed), and MCX's segment.
+            if (Broker.loggedIn) runCatching {
+                val free = Broker.within(10_000) { Broker.funds() }?.available
+                val mcxLive = runCatching { com.optionslab.app.data.ArmLive.view.value.let { v ->
+                    com.optionslab.engine.orb.LiveMirror.ARMS.any { it.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE && v.on(it.key) } } }.getOrDefault(false)
+                kotlinx.coroutines.withTimeoutOrNull(45_000) { com.optionslab.app.data.IndexReadiness.check(free, mcxLive) }?.forEach { l ->
+                    ok(l.ok, "Live orders: ${l.text}")
+                    com.optionslab.app.data.Diag.record("readiness", "Morning check: ${l.text}")
+                }
+            }
             runCatching { com.optionslab.app.ira.IraHub.refresh() }
             val ira = com.optionslab.app.ira.IraHub.state.value
             // The pre-market checklist's checks the morning did not have ([com.optionslab.ira.PreMarket]): the relay, the
