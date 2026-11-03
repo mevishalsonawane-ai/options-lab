@@ -34,7 +34,7 @@ def oos(tag="design") -> pd.DataFrame:
                 p = x if p is None else p.merge(x, on=["ts", "sym"], how="outer")
         parts.append(p.assign(fold=f))
     P = pd.concat(parts, ignore_index=True)
-    keep = ["ts", "sym", "bar", "col", "sig_bar", "fund_rate", "mkt_volz", "btc_r1440", "weekend"] + M.TARGETS
+    keep = ["ts", "sym", "bar", "col", "sig_bar", "fund_rate", "mkt_volz", "btc_r1440", "weekend", "y_ret_15", "y_ret_60", "y_ret_240"] + M.TARGETS
     return P.merge(D[keep], on=["ts", "sym"], how="left")
 
 
@@ -295,7 +295,7 @@ def holdout():
         if fp.exists():
             x = pd.read_parquet(fp)
             P = x if P is None else P.merge(x, on=["ts", "sym"], how="outer")
-    keep = ["ts", "sym", "bar", "col", "sig_bar", "fund_rate", "mkt_volz", "btc_r1440", "weekend"] + M.TARGETS
+    keep = ["ts", "sym", "bar", "col", "sig_bar", "fund_rate", "mkt_volz", "btc_r1440", "weekend", "y_ret_15", "y_ret_60", "y_ret_240"] + M.TARGETS
     df = P.merge(D[keep], on=["ts", "sym"], how="left").assign(fold=0)
     assert df.ts.min() >= pd.Timestamp("2026-04-01")
     flag.write_text(f"read {pd.Timestamp.now('UTC')}\n")
