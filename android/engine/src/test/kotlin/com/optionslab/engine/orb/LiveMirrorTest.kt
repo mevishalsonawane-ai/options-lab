@@ -351,6 +351,13 @@ class LiveMirrorTest {
         // whose size is Boss's own setting on its page.
         assertEquals(setOf(LiveMirror.NTFY_ALERTS), LiveMirror.ARMS.filter { it.bossLots }.map { it.key }.toSet())
         for (a in LiveMirror.ARMS) assertEquals(if (a.bossLots) 0 else 1, LiveMirror.liveLotCap(a), a.key)
+        // 3 Nov (Boss): the indices selected in Bot settings go live; the rest stay in shadow; MCX is not decided here.
+        assertEquals(setOf("BANKNIFTY", "SENSEX"), LiveMirror.markets("banknifty, SENSEX,GOLD,"))
+        assertEquals(emptySet(), LiveMirror.markets(""))
+        assertTrue(LiveMirror.marketOn("BANKNIFTY", setOf("BANKNIFTY")))
+        assertFalse(LiveMirror.marketOn("NIFTY", setOf("BANKNIFTY")))
+        assertFalse(LiveMirror.marketOn("MIDCPNIFTY", emptySet()))
+        assertTrue(LiveMirror.marketOn("SILVERMIC", emptySet()), "MCX keeps its own switch")
         // 3 Nov: a MARKET order Zerodha blocks (low OI) goes once as a LIMIT at the offer, never over 1% through the last price.
         assertTrue(LiveMirror.marketBlocked("MIS MARKET orders are blocked for this FINNIFTY contract due to its open interest (OI) being less than 100 lots."))
         assertFalse(LiveMirror.marketBlocked("Insufficient funds. Margin required: 64076.00."))

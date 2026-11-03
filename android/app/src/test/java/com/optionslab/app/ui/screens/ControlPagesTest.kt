@@ -588,6 +588,23 @@ class ControlPagesTest {
         assertFalse("lowering never asks", compose.has("Confirm it is you"))
     }
 
+    /** 3 Nov (Boss): the indices the arms trade live: all by default, one tap off, "All" back; never carried by a backup. */
+    @Test fun theLiveIndicesAreTickedAndUnticked() {
+        assertFalse("a restore can never add a live index", com.optionslab.ira.Upkeep.carried("k.markets"))
+        show { RiskPage(model) }
+        assertEquals(com.optionslab.engine.orb.LiveMirror.INDEX_MARKETS.toSet(), model.settings.value.liveMarkets)
+        compose.reveal("Indices the arms trade live")
+        compose.onNodeWithTag("indices.none").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        waitSettings { it.liveMarkets.isEmpty() }
+        compose.reveal("BANKNIFTY")
+        toggle("BANKNIFTY")
+        waitSettings { it.liveMarkets == setOf("BANKNIFTY") }
+        compose.until(10_000) { AppSettings.load().liveMarkets == setOf("BANKNIFTY") }
+        compose.reveal("Indices the arms trade live")
+        compose.onNodeWithTag("indices.all").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        waitSettings { it.liveMarkets.size == 5 }
+    }
+
     @Test fun eachLimitIsSavedWhenPicked() {
         show { RiskPage(model) }
         val picks = listOf<Pair<String, (AppSettings) -> Boolean>>(

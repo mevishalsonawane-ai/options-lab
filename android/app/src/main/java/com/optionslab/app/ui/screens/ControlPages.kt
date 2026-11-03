@@ -693,6 +693,8 @@ fun RiskPage(model: AppModel) {
         item { com.optionslab.app.ui.SettingSpot("risk.guards") { GuardCard(model) } }
         // 3 Nov (Boss): the lots every arm's live trade buys, − / +.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.armlots") { ArmLotsCard(model) } }
+        // 3 Nov (Boss): the indices the arms trade live.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.indices") { LiveIndicesCard(model) } }
         // Autopilot learning (11 Oct): OFF / SAFE / SHADOW-ONLY; SAFE asks for the PIN while live. Never from a backup.
         if (com.optionslab.app.ira.Autopilot.enabled()) item { com.optionslab.app.ui.SettingSpot("jarvis.autolearn") { AutopilotSettingCard(model) } }
         // 28 Oct (Boss: "until 65% + winrate is found"): the minimum win rate for automatic ideas; every change takes the PIN.
@@ -760,6 +762,38 @@ internal fun ArmLotsCard(model: AppModel) {
         if (caps.isNotEmpty()) Note("Above your order limits (${caps.joinToString(" and ")}): those entries are refused until you raise them too.")
         if (n > 1) Note("The order value and exposure limits in the account guard still apply to the bigger size.")
     }
+}
+
+/**
+ * 3 Nov (Boss: "an option in Bot settings for selecting the index we use: only Bank Nifty, I select Bank Nifty; all, I select
+ * all"): the indices the arms trade LIVE. The others stay in shadow (recorded, never sent) and the paper trades go on as before.
+ * Adding an index asks for the PIN or fingerprint (more live risk); taking one off is at once. MCX keeps its own stop button.
+ */
+@Composable
+internal fun LiveIndicesCard(model: AppModel) {
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    var ask by remember { mutableStateOf<Set<String>?>(null) }
+    ask?.let { to -> Reauth(model, onOk = { ask = null; setIndices(model, to) }, onCancel = { ask = null },
+        why = "Enter your app PIN to let the arms trade ${(to - s.liveMarkets).sorted().joinToString()} live.") }
+    fun pick(to: Set<String>) { if ((to - s.liveMarkets).isNotEmpty() && com.optionslab.app.security.GuardPin.asks(true, s.live)) ask = to else setIndices(model, to) }
+    val all = com.optionslab.engine.orb.LiveMirror.INDEX_MARKETS
+    LedgerCard(title = "Indices the arms trade live") {
+        Note("Only the indices ticked here get live orders from the arms. The others keep trading on paper and are recorded in " +
+            "shadow, never sent. MCX has its own stop button.")
+        for (idx in all) ToggleRow(idx, null, idx in s.liveMarkets) { on -> pick(if (on) s.liveMarkets + idx else s.liveMarkets - idx) }
+        Row(Modifier.padding(top = 6.dp)) {
+            BrassButton("All", Modifier.testTag("indices.all"), enabled = s.liveMarkets.size < all.size) { pick(all.toSet()) }
+            Spacer(Modifier.width(10.dp))
+            BrassButton("None", Modifier.testTag("indices.none"), enabled = s.liveMarkets.isNotEmpty(), tone = LocalPalette.current.inkSoft) { pick(emptySet()) }
+        }
+        if (s.liveMarkets.isEmpty()) Note("None ticked: the arms send no live order on any index.")
+    }
+}
+
+private fun setIndices(model: AppModel, to: Set<String>) {
+    val v = to.filter { it in com.optionslab.engine.orb.LiveMirror.INDEX_MARKETS }.toSet()
+    model.update { it.copy(liveMarkets = v) }
+    runCatching { com.optionslab.app.data.Diag.record("armlive", "live indices set to ${if (v.isEmpty()) "none" else v.sorted().joinToString()} (you, Bot settings)") }
 }
 
 private fun setArmLots(model: AppModel, to: Int) {

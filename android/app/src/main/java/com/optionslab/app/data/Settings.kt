@@ -28,6 +28,11 @@ data class AppSettings(
      * PIN. Kept under "k." (Zerodha's limits): never carried by a backup, so a restore can never raise live size.
      */
     val armLiveLots: Int = 1,
+    /**
+     * 3 Nov (Boss): the index markets the arms trade LIVE (Bot settings → Markets); the others they keep in shadow (recorded, never
+     * sent). Default all five. Under "k." (never carried by a backup). Adding one asks for the PIN; MCX is not one of these.
+     */
+    val liveMarkets: Set<String> = com.optionslab.engine.orb.LiveMirror.INDEX_MARKETS.toSet(),
     val includeDeviceSessions: Boolean = true,
     // schedules and notifications
     val entryReminder: Boolean = true,
@@ -203,6 +208,7 @@ data class AppSettings(
                 ticketUnderlying = p.getString("s.tkU", d.ticketUnderlying)!!,
                 ticketLots = p.getInt("s.tkLots", d.ticketLots),
                 armLiveLots = com.optionslab.engine.orb.LiveMirror.armLots(p.getInt("k.armLots", d.armLiveLots)),
+                liveMarkets = p.getString("k.markets", null)?.let { com.optionslab.engine.orb.LiveMirror.markets(it) } ?: d.liveMarkets,
                 includeDeviceSessions = p.getBoolean("s.devSess", d.includeDeviceSessions),
                 entryReminder = p.getBoolean("n.entry", d.entryReminder),
                 autoTicket = p.getBoolean("n.autoTicket", d.autoTicket),
@@ -320,7 +326,7 @@ data class AppSettings(
                 "s.otm" to s.otmPct, "s.entry" to s.entry, "s.regime" to s.regime, "s.dated" to s.datedLot,
                 "s.lot" to s.pinnedLot, "s.wing" to (s.wingPct ?: -1.0), "s.capital" to s.capital,
                 "s.survive" to s.survive, "s.holdout" to s.holdout, "s.last" to s.healthLast,
-                "s.tkU" to s.ticketUnderlying, "s.tkLots" to s.ticketLots, "k.armLots" to s.armLiveLots, "s.devSess" to s.includeDeviceSessions,
+                "s.tkU" to s.ticketUnderlying, "s.tkLots" to s.ticketLots, "k.armLots" to s.armLiveLots, "k.markets" to s.liveMarkets.sorted().joinToString(","), "s.devSess" to s.includeDeviceSessions,
                 "n.entry" to s.entryReminder, "n.autoTicket" to s.autoTicket, "n.autoSettle" to s.autoSettle,
                 "n.harvest" to s.nightlyHarvest, "n.live" to s.liveWatch, "n.risk" to s.riskAlertPct,
                 "n.health" to s.healthAlerts, "n.other" to s.otherAlerts, "n.paper" to s.paperAlerts, "sec.bio" to s.biometric, "sec.face" to s.allowWeakFace,

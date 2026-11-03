@@ -316,6 +316,15 @@ object LiveMirror {
     /** 3 Nov: the most lots Boss's "live lots per arm trade" setting can ask for (the order gates still apply on top). */
     const val MAX_ARM_LOTS = 10
 
+    /** 3 Nov (Boss): the indices Bot settings → Indices offers for live trading (MCX is not one of them: it keeps its own stop). */
+    val INDEX_MARKETS = listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
+
+    /** The kept setting ("NIFTY,BANKNIFTY") back to a set of known indices (unknown names dropped). */
+    fun markets(csv: String): Set<String> = csv.split(',').map { it.trim().uppercase() }.filter { it in INDEX_MARKETS }.toSet()
+
+    /** Whether a live entry on [underlying] may go: an index only when Boss selected it; anything else (MCX) is not decided here. */
+    fun marketOn(underlying: String, selected: Set<String>): Boolean = underlying.uppercase() !in INDEX_MARKETS || underlying.uppercase() in selected
+
     /** 3 Nov (live): Zerodha's refusal of a MARKET order on a contract with little open interest (it takes a LIMIT). */
     fun marketBlocked(message: String?): Boolean = message?.contains("MARKET orders are blocked", ignoreCase = true) == true
 

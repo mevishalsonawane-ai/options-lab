@@ -217,6 +217,8 @@ object SettingsIndex {
         Entry("schedule", "schedule.appearance", "Calm motion", "Fewer and shorter animations.", listOf("Schedules", "Appearance"), listOf("animation", "motion")),
 
         // ---- Settings → Bot settings ----
+        Entry("risk", "risk.indices", "Indices the arms trade live", "Tick the indices (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX) the arms send live orders on; the rest stay in shadow.",
+            listOf("Bot settings", "Indices the arms trade live"), listOf("index", "indices", "bank nifty", "banknifty", "nifty", "sensex", "which index"), guarded = true),
         Entry("risk", "risk.armlots", "Live lots per arm trade", "How many lots each arm's live trade buys (− / +, default 1); raising it asks for the PIN.",
             listOf("Bot settings", "Live lots per arm trade"), listOf("lots", "lot size", "quantity", "size", "increase"), guarded = true),
         Entry("risk", "risk.guards", "Kill switch", "Stops all new entries at once; exits and square-offs still go through. Asks you to confirm both ways.",

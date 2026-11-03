@@ -2749,6 +2749,8 @@ object OrbArms {
         liveRefusal(arm.source)?.let { return it }
         val s = AppSettings.load()
         if (s.guardKill) return "refused: the kill switch is on"
+        // 3 Nov (Boss): only the indices selected in Bot settings → Indices go live.
+        if (!com.optionslab.engine.orb.LiveMirror.marketOn(c.underlying, s.liveMarkets)) return "refused: ${c.underlying} is not one of your live indices (Bot settings → Indices)"
         // Liquidity's size over the Bot settings' max lots: said by name, never sent smaller (the guard's own checks follow).
         LiquidityLots.liveRefusal(lots, s.guardMaxLots)?.let { return it }
         // A phone that failed the security check never sends a real order on its own.

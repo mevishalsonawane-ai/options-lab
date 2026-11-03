@@ -821,7 +821,10 @@ object ArmLive {
         val base = Pos(a.key, a.ref, ins.symbol, ins.exchange, spec.product, if (a.side >= 0) 1 else -1, qty, qty, ins.lot, ins.tick, ins.multiplier,
             last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true, paperSymbol = a.contract.symbol)
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
-        val shadowNow = shadowed || (a.key == LiveMirror.SOLO_MIDDAY && soloWhy() != null) ||
+        // 3 Nov (Boss): an index not selected in Bot settings → Indices stays in shadow (recorded, never sent).
+        val marketOff = !LiveMirror.marketOn(a.contract.underlying, s.liveMarkets)
+        if (marketOff) note(a.key, "${spec.label}: ${a.contract.underlying} is not one of your live indices (Bot settings → Indices): kept in shadow")
+        val shadowNow = shadowed || marketOff || (a.key == LiveMirror.SOLO_MIDDAY && soloWhy() != null) ||
             try { lock.withLock { LiveMirror.shadowOn(a.key, book().shadow) } } catch (e: Unreadable) {
                 note(a.key, "not mirrored: the live book could not be read"); return@withLock
             }

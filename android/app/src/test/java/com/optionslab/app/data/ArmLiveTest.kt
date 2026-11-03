@@ -511,6 +511,21 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(1, view().open.size)
     }
 
+    /** 3 Nov (Boss): an index not ticked in Bot settings → Indices gets no live order from an arm; it is kept in shadow. */
+    @Test fun anIndexNotTickedForLiveIsKeptInShadowAndNothingIsSent() {
+        AppSettings.save(AppSettings.load().copy(liveMarkets = setOf("NIFTY")))
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "bnf"))     // a BANKNIFTY call
+        assertTrue("nothing sent to Zerodha", kite.placed.isEmpty())
+        assertTrue(view().open.none { !it.shadow })
+        assertEquals("kept in shadow, recorded", 1, view().open.count { it.shadow })
+        // Ticked again: the next one goes live.
+        AppSettings.save(AppSettings.load().copy(liveMarkets = setOf("NIFTY", "BANKNIFTY")))
+        val (c2, _) = other(4)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "bnf2", c = c2))
+        assertEquals("BUY", kite.placed.first().form["transaction_type"])
+    }
+
     @Test fun eachLiveTradeIsRecordedAndLabelledLiveApartFromThePaperBook() {
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "a"))
         kite.quote("NFO:$sym", 220.0, 219.95, 220.05)
