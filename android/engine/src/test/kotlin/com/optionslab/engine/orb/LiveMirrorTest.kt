@@ -352,14 +352,14 @@ class LiveMirrorTest {
         assertEquals(setOf(LiveMirror.NTFY_ALERTS), LiveMirror.ARMS.filter { it.bossLots }.map { it.key }.toSet())
         for (a in LiveMirror.ARMS) assertEquals(if (a.bossLots) 0 else 1, LiveMirror.liveLotCap(a), a.key)
         // 3 Nov: Boss's "live lots per arm trade" (default 1): exactly that many lots live, the paper keeping its own size.
-        val ft3 = LiveMirror.spec(Ft3Rules.SOURCE)!!
-        assertEquals(65, LiveMirror.armLiveQty(1, 65, ft3, 1))
-        assertEquals(195, LiveMirror.armLiveQty(1, 65, ft3, 3))
-        assertEquals(0, LiveMirror.armLiveQty(0, 65, ft3, 3), "never past the paper being under a lot")
-        assertEquals(130, LiveMirror.armLiveQty(9, 65, ft3, 2), "a 9-lot paper ticket at 2 live lots")
-        assertEquals(65, LiveMirror.armLiveQty(1, 65, ft3, 0), "within 1..10")
-        assertEquals(650, LiveMirror.armLiveQty(1, 65, ft3, 99))
-        assertEquals(0, LiveMirror.armLiveQty(1, 0, ft3, 2), "no lot: nothing")
+        val ft3Spec = LiveMirror.spec(Ft3Rules.SOURCE)!!
+        assertEquals(65, LiveMirror.armLiveQty(1, 65, ft3Spec, 1))
+        assertEquals(195, LiveMirror.armLiveQty(1, 65, ft3Spec, 3))
+        assertEquals(0, LiveMirror.armLiveQty(0, 65, ft3Spec, 3), "never past the paper being under a lot")
+        assertEquals(130, LiveMirror.armLiveQty(9, 65, ft3Spec, 2), "a 9-lot paper ticket at 2 live lots")
+        assertEquals(65, LiveMirror.armLiveQty(1, 65, ft3Spec, 0), "within 1..10")
+        assertEquals(650, LiveMirror.armLiveQty(1, 65, ft3Spec, 99))
+        assertEquals(0, LiveMirror.armLiveQty(1, 0, ft3Spec, 2), "no lot: nothing")
         assertEquals(130, LiveMirror.armLiveQty(2, 65, LiveMirror.spec(LiveMirror.NTFY_ALERTS)!!, 5), "ntfy keeps Boss's own lots")
         assertEquals(" · 3 lots live, the paper trades 1 (3 lots per arm entry live, your Bot settings)", LiveMirror.cutWords(1, 195, 65, 3))
         assertEquals(" · 2 of the paper's 9 lots (2 lots per arm entry live)", LiveMirror.cutWords(9, 130, 65, 2))
