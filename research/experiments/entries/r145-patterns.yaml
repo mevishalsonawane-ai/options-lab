@@ -1,0 +1,31 @@
+id: r145-patterns
+title: 'R145 patterns: IST hours, coins, market states, BTC lead-lag, coin clusters'
+family: mcx-crypto
+date: '2026-11-03'
+doc: research/HUNT_R145_CRYPTO_NN.md
+data_version: Drive crypto lake top-100 perps (Nov 2025 on) + data.binance.vision 1-minute perp klines and funding (Dec 2023
+  - Oct 2025); 5-minute bars
+period:
+  design: 2024-01-08..2026-03-31 (scored out of sample 2024-10-01..2026-03-31, six quarterly walk-forward folds)
+  holdout: 2026-04-01..2026-10-11, read once 3 Nov 2026 (BTC/ETH partly seen by NN_CRYPTO, STRAD_CRYPTO, RC2)
+instruments:
+- 95 Binance USD-M perpetuals of the top-100 coins (manifest)
+prereg: research/brain/crypto/PREREG_R145_NN.md
+holdout_read: true
+features:
+- 'signal source: N1 forecasts on the underlying; 1-minute and 5-minute perp returns for lead-lag; hourly market-residual
+  returns for clusters'
+hypothesis: Predictability depends on IST hour, coin and market state; BTC leads alts; coins form stable groups
+model_or_rule: research/brain/crypto/r145/patterns.py, evaluate.py
+settings: PREREG_R145_NN.md section 5 (P1-P5)
+variants_tried: 164
+verdict: rejected
+results:
+  summary: 'Design: 120 of 164 pattern tests real; holdout: 103 confirmed. Rank IC confirmed in 23 of 24 IST hours and all
+    7 market states; direction by hour (17:00-19:59 IST, design AUC up to 0.58) NOT confirmed; direction by coin AUC 0.51-0.55
+    (70 of 80 confirmed as AUC > 0.5, too small to pay costs). BTC leads alts by 1 minute only (corr 0.016 holdout, 663 coin-months;
+    0.015 design, 2,095); 5-minute lead not confirmed. Coin groups stable (ARI 0.19 design halves, 0.20 holdout, p 0.001):
+    large caps, DeFi, memes, L1/AI. Busiest hours 18:00-21:59 IST.'
+  costs: none (descriptions and forecast scores)
+notes: rejected as a source of trading rules (no pattern is a rule, and the trading tests r145-trade-td/tx lost after costs);
+  the facts themselves (volatility, rank reversal, 1-minute BTC lead, stable coin groups) were confirmed on the holdout

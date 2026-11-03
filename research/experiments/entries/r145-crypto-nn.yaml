@@ -1,27 +1,31 @@
 id: r145-crypto-nn
-title: 'R145 a neural network over the top-100 crypto coins: what patterns are real (pre-registered)'
-family: mcx-crypto
+title: R145 networks (MLP, GRU) over the top-100 crypto coins vs naive, linear, trees and shuffled twins
+family: ml
 date: '2026-11-03'
 doc: research/HUNT_R145_CRYPTO_NN.md
-data_version: Drive crypto lake (top-100 perps, 2025-11 to 2026-10) plus data.binance.vision 1-minute perp klines and
-  funding for 2023-12 to 2025-10
+data_version: Drive crypto lake top-100 perps (Nov 2025 on) + data.binance.vision 1-minute perp klines and funding (Dec 2023
+  - Oct 2025); 5-minute bars
 period:
-  design: 2024-01-08..2026-03-31 (six quarterly walk-forward folds 2024-Q4..2026-Q1)
-  holdout: 2026-04-01..2026-10-12, locked, read once only for what passes design (BTC/ETH partly seen by NN_CRYPTO, STRAD_CRYPTO,
-    RC2)
+  design: 2024-01-08..2026-03-31 (scored out of sample 2024-10-01..2026-03-31, six quarterly walk-forward folds)
+  holdout: 2026-04-01..2026-10-11, read once 3 Nov 2026 (BTC/ETH partly seen by NN_CRYPTO, STRAD_CRYPTO, RC2)
 instruments:
-- 96 Binance USD-M perpetuals of the top-100 coins (manifest)
+- 95 Binance USD-M perpetuals of the top-100 coins (manifest)
 prereg: research/brain/crypto/PREREG_R145_NN.md
-holdout_read: null
+holdout_read: true
 features:
-- 'signal source: each coin''s own perpetual price (the underlying), plus market context (BTC/ETH, breadth, dispersion), funding,
-  calendar'
-hypothesis: A network over the cross-section of 96 coins forecasts 15/60/240-minute direction, size, volatility, big moves
-  and cross-sectional rank better than base rates, linear models, trees and shuffled-label twins
-model_or_rule: research/brain/crypto/r145/
-settings: PREREG_R145_NN.md (240 tests, one BH family, q 0.05)
-variants_tried: null
-verdict: proposed
+- 'signal source: each coins own perpetual price (the underlying) plus market context (BTC/ETH, breadth, dispersion, funding,
+  IST hour); 51 point-in-time features; GRU reads the last 48 five-minute bars'
+hypothesis: A network over the cross-section of coins forecasts 15/60/240-minute direction, size, volatility, big moves and
+  cross-sectional rank better than base rates, linear models, trees and shuffled-label twins
+model_or_rule: research/brain/crypto/r145/models.py, run.py
+settings: PREREG_R145_NN.md sections 4-5, Amendments 1-2
+variants_tried: 90
+verdict: rejected
 results:
-  summary: pre-registered; not run yet
-  costs: perp taker 0.05% a side, slippage 1/2/5 bp a side, funding; 2x slippage stress
+  summary: 'Design (1,072,642 rows, 79 weeks): networks beat naive on 28 of 30 target cells and the twin on 14 of 15; beat
+    trees on 14 of 30, linear on 9 of 15. Holdout (444,243 rows, 28 weeks, read once): confirmed for volatility (N1 R2 0.776
+    vs trees 0.784, naive 0.740), big moves (AUC 0.698 vs 0.701), size (R2 0.054 vs 0.050) and cross-sectional rank (IC 0.054
+    vs linear 0.050, trees 0.049); direction NOT confirmed (AUC 0.524, log-loss vs base rate q 0.08 at 60 min, 0.72 at 15
+    min). Network beats trees: 4 of 14 design passes confirmed, all tiny. Verdict: real size/volatility/rank patterns, but
+    the network is not better than trees and has no usable direction edge.'
+  costs: none (forecast scores); trading in r145-trade-td / r145-trade-tx

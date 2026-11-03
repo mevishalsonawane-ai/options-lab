@@ -164,7 +164,8 @@ def design(n_boot=2000):
         prereg="research/brain/crypto/PREREG_R145_NN.md", n_tests=len(tests),
         rows=int(len(df)), coins=int(df.sym.nunique()), weeks=int(len(np.unique(S.week(df.ts.values)))),
         span=[str(df.ts.min()), str(df.ts.max())],
-        scores=model_summary(df), scores_with_stale_rows=unfiltered, stale_rows_dropped=n_stale, tests=tests, real=[t["id"] for t in tests if t["real"]],
+        scores=model_summary(df), scores_with_stale_rows=unfiltered, stale_rows_dropped=n_stale, tests=tests,
+        real=[t["id"] for t in tests if t["real"]],
         leadlag=ll_info, leadlag_5m=d5, clusters=d_cl, importance=imp, tree_gain_top=tree_top,
         hour_table=hour_table(df), coin_table=coin_table(df), state_table=None,
     )
