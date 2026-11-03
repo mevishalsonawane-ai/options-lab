@@ -822,7 +822,8 @@ object ArmLive {
             last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true, paperSymbol = a.contract.symbol)
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
         // 3 Nov (Boss): an index not selected in Bot settings → Indices stays in shadow (recorded, never sent).
-        val marketOff = !LiveMirror.marketOn(a.contract.underlying, s.liveMarkets)
+        // (Read again here, just before anything is sent: a change made while this entry was on its way counts.)
+        val marketOff = !LiveMirror.marketOn(a.contract.underlying, AppSettings.load().liveMarkets)
         if (marketOff) note(a.key, "${spec.label}: ${a.contract.underlying} is not one of your live indices (Bot settings → Indices): kept in shadow")
         val shadowNow = shadowed || marketOff || (a.key == LiveMirror.SOLO_MIDDAY && soloWhy() != null) ||
             try { lock.withLock { LiveMirror.shadowOn(a.key, book().shadow) } } catch (e: Unreadable) {

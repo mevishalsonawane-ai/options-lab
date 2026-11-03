@@ -319,8 +319,17 @@ object LiveMirror {
     /** 3 Nov (Boss): the indices Bot settings → Indices offers for live trading (MCX is not one of them: it keeps its own stop). */
     val INDEX_MARKETS = listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
 
-    /** The kept setting ("NIFTY,BANKNIFTY") back to a set of known indices (unknown names dropped). */
+    /** How "none ticked" is kept (an empty value reads back as "not set", which would mean all five). */
+    const val NO_MARKETS = "-"
+
+    /** The kept setting ("NIFTY,BANKNIFTY", or [NO_MARKETS]) back to a set of known indices (unknown names dropped). */
     fun markets(csv: String): Set<String> = csv.split(',').map { it.trim().uppercase() }.filter { it in INDEX_MARKETS }.toSet()
+
+    /** The setting as kept: never empty text ([NO_MARKETS] for none). */
+    fun marketsKept(set: Set<String>): String = set.filter { it in INDEX_MARKETS }.sorted().joinToString(",").ifEmpty { NO_MARKETS }
+
+    /** The index a Zerodha option symbol ("BANKNIFTY26NOV55200CE", "SENSEX26N0576100CE") belongs to, or null (not one of the five). */
+    fun indexOf(symbol: String): String? = INDEX_MARKETS.firstOrNull { symbol.startsWith(it) && symbol.getOrNull(it.length)?.isDigit() == true }
 
     /** Whether a live entry on [underlying] may go: an index only when Boss selected it; anything else (MCX) is not decided here. */
     fun marketOn(underlying: String, selected: Set<String>): Boolean = underlying.uppercase() !in INDEX_MARKETS || underlying.uppercase() in selected

@@ -1254,6 +1254,10 @@ object PineAuto {
             ?: run { note(b, id, "No Zerodha quote for $sym: nothing sent"); return }
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, lots * ins.lotSize, ins.lotSize, "MIS", "MARKET", null,
             ins.tickSize, "NFO", "irapine")
+        // 3 Nov (Boss): only the indices ticked in Bot settings → Indices get live orders.
+        if (!com.optionslab.engine.orb.LiveMirror.marketOn(c.underlying, AppSettings.load().liveMarkets)) {
+            note(b, id, "${c.underlying} is not one of your live indices (Bot settings → Indices): nothing sent"); return
+        }
         val acct = Broker.accountNow()      // positions, funds and orders read in parallel
         val refusals = Guard.check(Guard.liveOrder(o).copy(price = quote), acct)
         if (refusals.isNotEmpty()) { note(b, id, "Guard refused: ${refusals.joinToString(" ")}"); return }

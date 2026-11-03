@@ -354,6 +354,12 @@ class LiveMirrorTest {
         // 3 Nov (Boss): the indices selected in Bot settings go live; the rest stay in shadow; MCX is not decided here.
         assertEquals(setOf("BANKNIFTY", "SENSEX"), LiveMirror.markets("banknifty, SENSEX,GOLD,"))
         assertEquals(emptySet(), LiveMirror.markets(""))
+        assertEquals("-", LiveMirror.marketsKept(emptySet()), "none ticked is kept as a value of its own")
+        assertEquals(emptySet(), LiveMirror.markets(LiveMirror.marketsKept(emptySet())))
+        assertEquals("BANKNIFTY,NIFTY", LiveMirror.marketsKept(setOf("NIFTY", "BANKNIFTY", "GOLD")))
+        assertEquals("BANKNIFTY", LiveMirror.indexOf("BANKNIFTY26NOV55200CE")); assertEquals("NIFTY", LiveMirror.indexOf("NIFTY26N0323300PE"))
+        assertEquals("SENSEX", LiveMirror.indexOf("SENSEX26N0576100CE")); assertEquals(null, LiveMirror.indexOf("NIFTYNXT5026NOV70000CE"))
+        assertEquals(null, LiveMirror.indexOf("SILVERMIC26NOVFUT"))
         assertTrue(LiveMirror.marketOn("BANKNIFTY", setOf("BANKNIFTY")))
         assertFalse(LiveMirror.marketOn("NIFTY", setOf("BANKNIFTY")))
         assertFalse(LiveMirror.marketOn("MIDCPNIFTY", emptySet()))

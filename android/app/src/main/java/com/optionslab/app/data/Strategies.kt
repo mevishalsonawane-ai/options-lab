@@ -652,6 +652,11 @@ object Strategies {
                     }
                     val last = runCatching { Broker.quotes(listOf("${ref.exchange}:$kiteSym"))["${ref.exchange}:$kiteSym"]?.last }.getOrNull()
                     val o = Kite.Order(kiteSym, side, qty, ref.lot, order.product, "MARKET", null, ref.tick, ref.exchange, "iraalgostrat")
+                    // 3 Nov (Boss): an entry only on an index ticked in Bot settings → Indices (an exit always goes).
+                    if (!exit) com.optionslab.engine.orb.LiveMirror.indexOf(kiteSym)?.let { idx ->
+                        if (!com.optionslab.engine.orb.LiveMirror.marketOn(idx, AppSettings.load().liveMarkets))
+                            return@runBlocking StrategyHost.Placed.Refused("$idx is not one of your live indices (Bot settings → Indices)")
+                    }
                     // The account-wide guard, on a fresh read of the account.
                     val acct = Broker.accountNow()      // positions, funds and orders read in parallel
                     // 20 Oct, review: no quote is an UNKNOWN price (NaN), not 0. At 0 the guard's order-value and exposure limits saw

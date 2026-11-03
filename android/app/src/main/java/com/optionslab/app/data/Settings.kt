@@ -326,7 +326,7 @@ data class AppSettings(
                 "s.otm" to s.otmPct, "s.entry" to s.entry, "s.regime" to s.regime, "s.dated" to s.datedLot,
                 "s.lot" to s.pinnedLot, "s.wing" to (s.wingPct ?: -1.0), "s.capital" to s.capital,
                 "s.survive" to s.survive, "s.holdout" to s.holdout, "s.last" to s.healthLast,
-                "s.tkU" to s.ticketUnderlying, "s.tkLots" to s.ticketLots, "k.armLots" to s.armLiveLots, "k.markets" to s.liveMarkets.sorted().joinToString(","), "s.devSess" to s.includeDeviceSessions,
+                "s.tkU" to s.ticketUnderlying, "s.tkLots" to s.ticketLots, "k.armLots" to s.armLiveLots, "k.markets" to com.optionslab.engine.orb.LiveMirror.marketsKept(s.liveMarkets), "s.devSess" to s.includeDeviceSessions,
                 "n.entry" to s.entryReminder, "n.autoTicket" to s.autoTicket, "n.autoSettle" to s.autoSettle,
                 "n.harvest" to s.nightlyHarvest, "n.live" to s.liveWatch, "n.risk" to s.riskAlertPct,
                 "n.health" to s.healthAlerts, "n.other" to s.otherAlerts, "n.paper" to s.paperAlerts, "sec.bio" to s.biometric, "sec.face" to s.allowWeakFace,

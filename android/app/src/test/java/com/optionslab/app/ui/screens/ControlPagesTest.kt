@@ -596,6 +596,7 @@ class ControlPagesTest {
         compose.reveal("Indices the arms trade live")
         compose.onNodeWithTag("indices.none").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         waitSettings { it.liveMarkets.isEmpty() }
+        compose.until(10_000) { AppSettings.load().liveMarkets.isEmpty() }       // kept as none, never read back as all five
         compose.reveal("BANKNIFTY")
         toggle("BANKNIFTY")
         waitSettings { it.liveMarkets == setOf("BANKNIFTY") }

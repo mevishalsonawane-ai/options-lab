@@ -778,8 +778,9 @@ internal fun LiveIndicesCard(model: AppModel) {
     fun pick(to: Set<String>) { if ((to - s.liveMarkets).isNotEmpty() && com.optionslab.app.security.GuardPin.asks(true, s.live)) ask = to else setIndices(model, to) }
     val all = com.optionslab.engine.orb.LiveMirror.INDEX_MARKETS
     LedgerCard(title = "Indices the arms trade live") {
-        Note("Only the indices ticked here get live orders from the arms. The others keep trading on paper and are recorded in " +
-            "shadow, never sent. MCX has its own stop button.")
+        Note("Only the indices ticked here get live orders from the arms, Pine scripts and Strategy Lab. On the others the arms keep " +
+            "trading on paper and are recorded in shadow, never sent (Liquidity 15+5 and ORB, which trade live only, simply skip). " +
+            "Your own orders are never limited. MCX has its own stop button.")
         for (idx in all) ToggleRow(idx, null, idx in s.liveMarkets) { on -> pick(if (on) s.liveMarkets + idx else s.liveMarkets - idx) }
         Row(Modifier.padding(top = 6.dp)) {
             BrassButton("All", Modifier.testTag("indices.all"), enabled = s.liveMarkets.size < all.size) { pick(all.toSet()) }
