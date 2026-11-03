@@ -141,18 +141,20 @@ def summary(t: pd.DataFrame) -> dict:
 
 def twins_p(strategy_mean: float, cand: pd.DataFrame, picks_per_ts: pd.Series, n: int = 1000, seed: int = 0):
     """Random twins: at each entry time, the same number of trades on random coins with random sides, the same exits.
-    cand: net per candidate (ts, side) from simulating every available row both ways. Returns (p, twin means)."""
+    cand: net per candidate (ts, side) from simulating every available row both ways. All n draws are made at once
+    per entry time. Returns (p, twin means)."""
     rng = np.random.default_rng(seed)
-    groups = {t: g.net.to_numpy() for t, g in cand.groupby("ts")}
-    means = np.empty(n)
-    keys = [t for t in picks_per_ts.index if t in groups]
-    for b in range(n):
-        tot, cnt = 0.0, 0
-        for t in keys:
-            v = groups[t]
-            kpick = min(int(picks_per_ts[t]), len(v))
-            if kpick:
-                tot += v[rng.choice(len(v), kpick, replace=False)].sum()
-                cnt += kpick
-        means[b] = tot / max(cnt, 1)
+    tot = np.zeros(n)
+    cnt = 0
+    groups = dict(tuple(cand.groupby("ts").net))
+    for t, k in picks_per_ts.items():
+        v = groups.get(t)
+        if v is None or not len(v):
+            continue
+        v = v.to_numpy()
+        k = min(int(k), len(v))
+        idx = np.argsort(rng.random((n, len(v))), axis=1)[:, :k]        # k distinct candidates per draw
+        tot += v[idx].sum(axis=1)
+        cnt += k
+    means = tot / max(cnt, 1)
     return float((np.sum(means >= strategy_mean) + 1) / (n + 1)), means

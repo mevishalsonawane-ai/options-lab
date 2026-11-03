@@ -360,3 +360,16 @@ def test_net_checkpoint_resume_matches_one_run(tmp_path):
     M.fit_net(X[:5000], Y[:5000], X[5000:], Y[5000:], epochs=2, log=q, batch=512, ckpt=ck)    # "stopped" after 2
     part, ep2, h2 = M.fit_net(X[:5000], Y[:5000], X[5000:], Y[5000:], epochs=3, log=q, batch=512, ckpt=ck)
     assert len(h2) == 3 and np.allclose(h1, h2, rtol=1e-5) and ep1 == ep2
+
+
+def test_twins_p_detects_a_better_pick():
+    rng = np.random.default_rng(0)
+    ts = np.repeat(pd.date_range("2025-01-01", periods=200, freq="h").values, 20)
+    net = rng.normal(0, 0.01, len(ts))
+    cand = pd.DataFrame({"ts": ts, "net": net})
+    best = cand.loc[cand.groupby("ts").net.idxmax()]                     # a perfect picker: the best coin each hour
+    p, m = trade.twins_p(float(best.net.mean()), cand, best.groupby("ts").size(), n=200)
+    assert p < 0.01 and abs(m.mean()) < 0.002
+    rnd = cand.groupby("ts").head(1)
+    p2, _ = trade.twins_p(float(rnd.net.mean()), cand, rnd.groupby("ts").size(), n=200)
+    assert 0.02 < p2 < 0.98
