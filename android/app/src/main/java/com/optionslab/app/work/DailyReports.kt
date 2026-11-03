@@ -290,11 +290,16 @@ object DailyReports {
             }
             // 3 Nov (Boss: "check all the symbols like MIDCPNIFTY which work on paper also work on live"): each index the arms trade,
             // its at-the-money call priced for 1 lot by Zerodha's margin calculator (a read: nothing is placed), and MCX's segment.
+            // At the analysis priority: these reads never take a place an exit's read needs. No amount is said (spoken morning).
             if (Broker.loggedIn) runCatching {
                 val free = Broker.within(10_000) { Broker.funds() }?.available
                 val mcxLive = runCatching { com.optionslab.app.data.ArmLive.view.value.let { v ->
                     com.optionslab.engine.orb.LiveMirror.ARMS.any { it.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE && v.on(it.key) } } }.getOrDefault(false)
-                kotlinx.coroutines.withTimeoutOrNull(45_000) { com.optionslab.app.data.IndexReadiness.check(free, mcxLive) }?.forEach { l ->
+                val got = kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ANALYSIS)) {
+                    kotlinx.coroutines.withTimeoutOrNull(45_000) { com.optionslab.app.data.IndexReadiness.check(free, mcxLive) }
+                }
+                if (got == null) ok(false, "Live orders: the check of each index did not finish in time; it runs again tomorrow")
+                got?.forEach { l ->
                     ok(l.ok, "Live orders: ${l.text}")
                     com.optionslab.app.data.Diag.record("readiness", "Morning check: ${l.text}")
                 }

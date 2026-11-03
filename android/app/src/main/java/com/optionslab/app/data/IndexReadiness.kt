@@ -3,7 +3,6 @@ package com.optionslab.app.data
 import com.optionslab.engine.Kite
 import com.optionslab.engine.Right
 import com.optionslab.engine.orb.LiveMirror
-import java.util.Locale
 
 /**
  * 3 Nov (Boss: "check all the symbols like MIDCPNIFTY which work on paper trading also work on live"): every morning, for each
@@ -20,43 +19,51 @@ object IndexReadiness {
 
     data class Line(val ok: Boolean, val text: String)
 
-    /** The morning's lines (a worker thread: it reads Zerodha). [available]: the free money, for the 1-lot comparison. */
+    /**
+     * The morning's lines (a worker thread: it reads Zerodha). [available]: the free money, compared with each lot - never said
+     * as a figure (the morning is spoken and goes to the diagnostics: no account amount in it). One line says which lots the
+     * free money does not cover.
+     */
     suspend fun check(available: Double?, mcxArmsLive: Boolean): List<Line> {
         val nfo = runCatching { Broker.instruments() }.getOrNull()
-        val out = INDICES.map { idx -> runCatching { one(idx, nfo, available) }.getOrElse { Line(false, "$idx: could not be checked (${it.message?.take(120)})") } }
+        val got = INDICES.map { idx ->
+            try { one(idx, nfo) } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { Got(Line(false, "$idx: could not be checked (${e.message?.take(120)})"), null) }
+        }
+        val short = got.filter { g -> g.need != null && available != null && available.isFinite() && g.need > available }.map { it.line.text.substringBefore(":") }
+        val money = if (short.isEmpty()) null else Line(false, "1 lot of ${short.joinToString()} needs more than the free money in the account")
         val mcx = if (!mcxArmsLive) null else when (Broker.commodityEnabled()) {
             true -> Line(true, "MCX: enabled on your Zerodha account")
             false -> Line(false, "MCX: not enabled on your Zerodha account - the MCX arms' live copies are refused (Zerodha Console → Segments)")
             null -> null
         }
-        return out + listOfNotNull(mcx)
+        return got.map { it.line } + listOfNotNull(money, mcx)
     }
 
-    private suspend fun one(idx: String, nfo: List<Kite.Instrument>?, available: Double?): Line {
+    private class Got(val line: Line, val need: Double?)
+
+    private suspend fun one(idx: String, nfo: List<Kite.Instrument>?): Got {
         val today = Market.today()
         val list = (if (idx == "SENSEX") Broker.bfoOptionsNow() else nfo ?: error("Zerodha's contract list could not be read"))
             .filter { it.name == idx && !it.expiry.isBefore(today) }
-        if (list.isEmpty()) return Line(false, "$idx: no options listed at Zerodha today")
+        if (list.isEmpty()) return Got(Line(false, "$idx: no options listed at Zerodha today"), null)
         val expiry = list.map { it.expiry }.filter { it.isAfter(today) }.minOrNull() ?: list.minOf { it.expiry }
-        val spot = Broker.indexQuote(idx, spark = false)?.last?.takeIf { it > 0 } ?: return Line(false, "$idx: no index price to find the at-the-money strike")
+        val spot = Broker.indexQuote(idx, spark = false)?.last?.takeIf { it > 0 } ?: return Got(Line(false, "$idx: no index price to find the at-the-money strike"), null)
         val ce = list.filter { it.expiry == expiry && it.right == Right.CE }.minByOrNull { kotlin.math.abs(it.strike - spot) }
-            ?: return Line(false, "$idx: no call listed for $expiry")
+            ?: return Got(Line(false, "$idx: no call listed for $expiry"), null)
         val ex = if (idx == "SENSEX") "BFO" else "NFO"
         val o = Kite.Order(ce.tradingSymbol, Kite.Side.BUY, ce.lotSize, ce.lotSize, "MIS", "MARKET", null, ce.tickSize, ex, LiveMirror.TAG)
         val need = Broker.orderMargins(listOf(o)).singleOrNull()?.takeIf { it.isFinite() && it > 0 }
-            ?: return Line(false, "$idx: Zerodha did not price 1 lot of ${ce.tradingSymbol}")
+            ?: return Got(Line(false, "$idx: Zerodha did not price 1 lot of ${ce.tradingSymbol}"), null)
         val oi = runCatching { Broker.quotesFresh(listOf("$ex:${ce.tradingSymbol}"))["$ex:${ce.tradingSymbol}"]?.oi }.getOrNull()
-        return line(idx, ce.tradingSymbol, ce.lotSize, need, available, oi)
+        return Got(line(idx, ce.tradingSymbol, ce.lotSize, oi), need)
     }
 
-    /** The line for one index (pure, for the tests). */
-    internal fun line(idx: String, symbol: String, lot: Int, need: Double, available: Double?, oi: Long?): Line {
-        val notes = ArrayList<String>()
-        val short = available != null && available.isFinite() && need > available
-        if (short) notes += "1 lot needs ${rs(need)}, more than the ${rs(available!!)} free"
-        if (oi != null && oi > 0 && oi < MARKET_OI_LOTS.toLong() * lot) notes += "low open interest: Zerodha blocks MARKET orders on it, the arms send a LIMIT"
-        return Line(!short, "$idx: ${symbol} orderable at Zerodha, 1 lot ${rs(need)}" + if (notes.isEmpty()) "" else " (${notes.joinToString("; ")})")
+    /** The line for one index (pure, for the tests): no amount in it. */
+    internal fun line(idx: String, symbol: String, lot: Int, oi: Long?): Line {
+        val thin = oi != null && oi > 0 && oi < MARKET_OI_LOTS.toLong() * lot
+        return Line(true, "$idx: $symbol orderable at Zerodha (1 lot priced by its margin check)" +
+            if (thin) " - low open interest: Zerodha blocks MARKET orders on it, the arms send a LIMIT" else "")
     }
 
-    private fun rs(x: Double) = "₹%,.0f".format(Locale.ENGLISH, x)
 }

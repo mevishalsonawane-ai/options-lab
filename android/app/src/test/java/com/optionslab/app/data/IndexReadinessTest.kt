@@ -51,8 +51,9 @@ class IndexReadinessTest : RobolectricTest() {
         val lines = IndexReadiness.check(available = 50_000.0, mcxArmsLive = false)
         assertEquals(IndexReadiness.INDICES, lines.map { it.text.substringBefore(":") })
         assertTrue(lines.joinToString("\n") { it.text }, lines.all { it.ok })
+        assertTrue("no amount in any line (the morning is spoken)", lines.none { it.text.contains("₹") })
         // The ATM call of the nearest expiry that is not today (the arms never buy today's expiry).
-        assertTrue(lines[0].text, lines[0].text.startsWith("NIFTY: " + BrokerArea.symbol("NIFTY", expiry, 24_500.0, "CE") + " orderable at Zerodha, 1 lot ₹12,000"))
+        assertTrue(lines[0].text, lines[0].text.startsWith("NIFTY: " + BrokerArea.symbol("NIFTY", expiry, 24_500.0, "CE") + " orderable at Zerodha (1 lot priced by its margin check)"))
         assertTrue(lines[3].text, lines[3].text.startsWith("MIDCPNIFTY: " + BrokerArea.symbol("MIDCPNIFTY", expiry, 13_425.0, "CE")))
         assertTrue(lines[4].text, lines[4].text.startsWith("SENSEX: " + BrokerArea.symbol("SENSEX", expiry, 76_100.0, "CE")))
         val asked = kite.requests.filter { it.path == "/margins/orders" }
@@ -61,10 +62,11 @@ class IndexReadinessTest : RobolectricTest() {
         assertTrue("reads only: nothing placed, changed or cancelled", kite.placed.isEmpty() && kite.writes.isEmpty())
     }
 
-    @Test fun aLotTheFreeMoneyDoesNotCoverIsSaid() = runBlocking {
+    @Test fun aLotTheFreeMoneyDoesNotCoverIsSaidOnceWithNoAmount() = runBlocking {
         val lines = IndexReadiness.check(available = 10_000.0, mcxArmsLive = false)
-        assertTrue(lines.none { it.ok })
-        assertTrue(lines[1].text, lines[1].text.contains("1 lot needs ₹12,000, more than the ₹10,000 free"))
+        assertEquals("the five indices are still orderable", 5, lines.count { it.ok })
+        assertEquals(IndexReadiness.Line(false, "1 lot of NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX needs more than the free money in the account"), lines.last())
+        assertTrue(lines.none { it.text.contains("₹") })
     }
 
     @Test fun anIndexNotListedTodayFailsAloneAndTheRestAreChecked() = runBlocking {
@@ -76,12 +78,12 @@ class IndexReadinessTest : RobolectricTest() {
         assertEquals(4, lines.count { it.ok })
     }
 
-    @Test fun theLineSaysALowOpenInterestAndTheShortMoney() {
-        val ok = IndexReadiness.line("NIFTY", "NIFTY26N1023600CE", 65, 9_000.0, 50_000.0, 1_000_000)
-        assertEquals(IndexReadiness.Line(true, "NIFTY: NIFTY26N1023600CE orderable at Zerodha, 1 lot ₹9,000"), ok)
-        val thin = IndexReadiness.line("FINNIFTY", "FINNIFTY26NOV25050CE", 60, 26_000.0, 50_000.0, 3_000)
+    @Test fun theLineSaysALowOpenInterest() {
+        assertEquals(IndexReadiness.Line(true, "NIFTY: NIFTY26N1023600CE orderable at Zerodha (1 lot priced by its margin check)"),
+            IndexReadiness.line("NIFTY", "NIFTY26N1023600CE", 65, 1_000_000))
+        val thin = IndexReadiness.line("FINNIFTY", "FINNIFTY26NOV25050CE", 60, 3_000)
         assertTrue(thin.ok); assertTrue(thin.text, thin.text.contains("low open interest: Zerodha blocks MARKET orders on it, the arms send a LIMIT"))
-        assertFalse("an unknown open interest says nothing", IndexReadiness.line("X", "S", 60, 1.0, null, 0).text.contains("open interest"))
-        assertFalse(IndexReadiness.line("X", "S", 60, 60_000.0, 50_000.0, null).ok)
+        assertFalse("an unknown open interest says nothing", IndexReadiness.line("X", "S", 60, 0).text.contains("open interest"))
+        assertFalse(IndexReadiness.line("X", "S", 60, null).text.contains("open interest"))
     }
 }
