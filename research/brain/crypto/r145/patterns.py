@@ -176,6 +176,8 @@ def importance(D: pd.DataFrame, feats: list[str], folds=(4, 5), n_rows=150_000, 
     for fold in folds:
         pk = pickle.load(open(mdir / f"fold{fold}_prep.pkl", "rb"))
         _, _, _, te = run.split(D, fold)
+        st = ((D.lrv_60 <= -15) | (D[["y_vol_15", "y_vol_60", "y_vol_240"]] <= -15).any(axis=1)).to_numpy()
+        te = te[~st[te]]                                                    # Amendment 2: no stale rows
         te = np.sort(rng.choice(te, min(n_rows, len(te)), replace=False))
         X = D[feats].to_numpy(np.float64)[te]
         Z = pk["prep"](X)
