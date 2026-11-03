@@ -87,8 +87,13 @@ def build(symbols, tag="design", frm=BARS_FROM, to=BARS_TO, rows_from=DESIGN_ROW
 
 
 # --- walk-forward -------------------------------------------------------------------------------------------------------
-def split(D: pd.DataFrame, fold: int):
-    lo, hi = (pd.Timestamp(x) for x in FOLDS[fold])
+HOLDOUT_FOLD = ("2026-04-01", "2026-10-13")     # Amendment 1: final models on all design rows, scored once here
+HOLDOUT_ROWS_TO = "2026-10-12"                   # the lake's end (Oct 2026 was built on 13 Oct from daily files)
+
+
+def split(D: pd.DataFrame, fold: int, folds=None):
+    folds = FOLDS if folds is None else folds
+    lo, hi = (pd.Timestamp(x) for x in folds[fold])
     te = np.flatnonzero((D.ts >= lo) & (D.ts < hi))
     tr = np.flatnonzero(D.ts + MAX_H + EMBARGO <= lo)
     ts = D.ts.values[tr]
@@ -98,13 +103,13 @@ def split(D: pd.DataFrame, fold: int):
     return fit, va, tr, te
 
 
-def run_fold(D, C, feats, fold, models=MODELS, tag="design"):
+def run_fold(D, C, feats, fold, models=MODELS, tag="design", folds=None):
     o = out_dir() / tag / "preds"
     o.mkdir(parents=True, exist_ok=True)
     mdir = out_dir() / tag / "models"
     mdir.mkdir(parents=True, exist_ok=True)
-    fit, va, tr, te = split(D, fold)
-    log(f"fold {fold} {FOLDS[fold]}: fit {len(fit):,} val {len(va):,} test {len(te):,}")
+    fit, va, tr, te = split(D, fold, folds)
+    log(f"fold {fold} {(folds or FOLDS)[fold]}: fit {len(fit):,} val {len(va):,} test {len(te):,}")
     X = D[feats].to_numpy(np.float64)
     prep = M.Prep().fit(X[fit])
     Z = prep(X)
@@ -191,7 +196,7 @@ def push(sub=""):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m research.brain.crypto.r145.run")
-    ap.add_argument("what", choices=["build", "fit", "push"])
+    ap.add_argument("what", choices=["build", "fit", "push", "holdout-build", "holdout-fit"])
     ap.add_argument("--manifest")
     ap.add_argument("--folds", nargs="*", type=int, default=list(range(len(FOLDS))))
     ap.add_argument("--models", nargs="*", default=list(MODELS))
@@ -204,6 +209,15 @@ def main(argv=None):
             run_fold(D, C, meta["features"], f, a.models)
             push("design/preds")
             push("design/models")
+    elif a.what == "holdout-build":
+        # the ONE holdout read (Amendment 1): bars to Oct 2026 must have been fetched with --allow-holdout first
+        build(data.manifest_symbols(a.manifest), tag="full", frm=BARS_FROM, to="2026-10",
+              rows_to=HOLDOUT_ROWS_TO)
+    elif a.what == "holdout-fit":
+        D, C, meta = load_design("full")
+        run_fold(D, C, meta["features"], 0, a.models, tag="full", folds=[HOLDOUT_FOLD])
+        push("full/preds")
+        push("full/models")
     else:
         push()
     return 0

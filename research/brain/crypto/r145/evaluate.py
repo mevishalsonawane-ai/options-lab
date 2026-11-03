@@ -280,15 +280,120 @@ def trade_design(passed: list[str]):
     return out
 
 
+# --- the ONE holdout read (Amendment 1) ----------------------------------------------------------------------------------
+def holdout():
+    """Score, once, every design-"real" test and every trading variant that passed design, on 1 Apr - 12 Oct 2026."""
+    flag = RESULTS / "r145_HOLDOUT_READ"
+    if flag.exists():
+        raise SystemExit("R145 holdout already read once; a second read needs a new pre-registration")
+    d = json.load(open(RESULTS / "r145_design.json"))
+    real = {t["id"]: t for t in d["tests"] if t["real"]}
+    D = pd.read_parquet(run.out_dir() / "full" / "rows.parquet")
+    P = None
+    for m in run.MODELS:
+        fp = run.out_dir() / "full" / "preds" / f"fold0_{m}.parquet"
+        if fp.exists():
+            x = pd.read_parquet(fp)
+            P = x if P is None else P.merge(x, on=["ts", "sym"], how="outer")
+    keep = ["ts", "sym", "bar", "col", "sig_bar", "fund_rate", "mkt_volz", "btc_r1440", "weekend"] + M.TARGETS
+    df = P.merge(D[keep], on=["ts", "sym"], how="left").assign(fold=0)
+    assert df.ts.min() >= pd.Timestamp("2026-04-01")
+    flag.write_text(f"read {pd.Timestamp.now('UTC')}\n")
+    df["ist_hour"] = (pd.DatetimeIndex(df.ts) + IST).hour
+    cuts = None
+    out = []
+    meta = json.load(open(run.out_dir() / "full" / "meta.json"))
+    C5 = None
+    for tid, t in real.items():
+        if tid.startswith("F"):
+            fid, tgt = tid.split("-", 1)
+            m, c = {f: (mm, cc) for f, mm, cc in F_SETS}[fid]
+            r = S.compare(df, tgt, m, c)
+        elif tid.startswith("P1-"):
+            _, tg, hh = tid.split("-")
+            sub = df[df.ist_hour == int(hh[3:])]
+            if tg == "dir60":
+                r = S.compare(sub, "y_dir_60", "N1", "B0")
+                r["effect"] = r["model_auc"] - 0.5
+            else:
+                r = S.compare(sub, "y_xs_60", "N1", "ZERO")
+        elif tid.startswith("P2-"):
+            sym = tid.split("-", 2)[2]
+            sub = df[df.sym == sym]
+            y, p_ = sub.y_dir_60.to_numpy(float), sub["N1|y_dir_60"].to_numpy(float)
+            ok = np.isfinite(y) & np.isfinite(p_)
+            a, pv = S.bootstrap_auc_p(p_[ok], y[ok], S.week(sub.ts.values[ok]))
+            r = dict(n=int(ok.sum()), model_auc=a, effect=a - 0.5, p=pv, metric="AUC")
+        elif tid.startswith("P3-"):
+            _, tg, name = tid.split("-", 2)
+            if cuts is None:
+                dd = pd.read_parquet(run.out_dir() / "design" / "rows.parquet", columns=["ts", "mkt_volz"])
+                dd = dd[dd.ts >= pd.Timestamp(run.FOLDS[0][0])]
+                cuts = dd.mkt_volz.quantile([1 / 3, 2 / 3]).to_numpy()       # the design cut points
+            st = {"market vol low": df.mkt_volz <= cuts[0],
+                  "market vol mid": (df.mkt_volz > cuts[0]) & (df.mkt_volz <= cuts[1]),
+                  "market vol high": df.mkt_volz > cuts[1], "BTC 1-day up": df.btc_r1440 > 0,
+                  "BTC 1-day down": df.btc_r1440 <= 0, "weekend": df.weekend == 1, "weekday": df.weekend == 0}[name]
+            sub = df[st.to_numpy()]
+            r = (S.compare(sub, "y_dir_60", "N1", "B0") if tg == "dir60" else S.compare(sub, "y_xs_60", "N1", "ZERO"))
+        elif tid.startswith("P4-1m"):
+            tests, _ = PT.leadlag_tests(lo_month="2026-04", hi_month="2026-10")
+            r = next(x for x in tests if x["id"] == tid)
+        elif tid.startswith("P4-5m"):
+            C5 = PT.closes(meta["symbols"], "2026-03", "2026-10") if C5 is None else C5
+            r, _ = PT.leadlag_5m(C5, pd.Timestamp("2026-04-01"), pd.Timestamp("2026-10-13"))
+        elif tid.startswith("P5"):
+            C5 = PT.closes(meta["symbols"], "2026-03", "2026-10") if C5 is None else C5
+            r = PT.holdout_cluster_test(C5, d["clusters"]["groups"], pd.Timestamp("2026-04-01"),
+                                        pd.Timestamp("2026-10-13"))
+        else:
+            continue
+        r = dict(r)
+        r.update(id=tid, design_effect=t["effect"], design_q=t["q"])
+        out.append(r)
+    q = S.bh([r.get("p", np.nan) for r in out])
+    for r, qq in zip(out, q):
+        r["q"] = qq
+        r["confirmed"] = bool(np.isfinite(qq) and qq < 0.05 and r["effect"] > 0)
+    res = dict(amendment="PREREG_R145_NN.md Amendment 1", span=[str(df.ts.min()), str(df.ts.max())],
+               rows=int(len(df)), coins=int(df.sym.nunique()), weeks=int(len(np.unique(S.week(df.ts.values)))),
+               scores=model_summary(df), tests=out, confirmed=[r["id"] for r in out if r["confirmed"]])
+    # trading variants that passed design
+    tp = RESULTS / "r145_trade_design.json"
+    if tp.exists():
+        td = json.load(open(tp))
+        passed = [k for k, v in td["variants"].items() if v.get("passes_design")]
+        if passed:
+            grid = pd.read_parquet(run.out_dir() / "full" / "grid.parquet").grid
+            A = panel_arrays(meta["symbols"], "2023-12", "2026-10", pd.DatetimeIndex(grid))
+            iq = {0: json.load(open(run.out_dir() / "full" / "preds" / "fold0_N1_info.json"))["val_q"]}
+            tr = {}
+            for k in passed:
+                rule, rest = k.split("-", 1)
+                h = int(rest.split("-")[0])
+                window = "-window-" in k
+                v = run_trades(df, A, rule, h, window, iq, label="holdout")
+                tr[k] = v[k]
+                v2 = tr[k]
+                v2["passes_holdout"] = bool(v2["trades"] >= 30 and (v2.get("net_rs_2x") or -1) > 0
+                                            and v2["twin_p"] < 0.10)
+            res["trading"] = tr
+    json.dump(_jsonable(res), open(RESULTS / "r145_holdout.json", "w"), indent=1)
+    print("confirmed:", res["confirmed"])
+    return res
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m research.brain.crypto.r145.evaluate")
-    ap.add_argument("what", choices=["design", "trade"])
+    ap.add_argument("what", choices=["design", "trade", "holdout"])
     a = ap.parse_args(argv)
     if a.what == "design":
         design()
-    else:
+    elif a.what == "trade":
         d = json.load(open(RESULTS / "r145_design.json"))
         trade_design(d["real"])
+    else:
+        holdout()
     return 0
 
 

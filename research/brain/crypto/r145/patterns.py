@@ -21,10 +21,11 @@ N_CLUSTERS = 6
 HALF = pd.Timestamp("2025-02-15")            # P5: first half 2024-01-08 .. 2025-02-14, second half 2025-02-15 .. 2026-03-31
 
 
-def leadlag_tests(base: Path | None = None, hi_month: str = "2026-03") -> tuple[list[dict], dict]:
+def leadlag_tests(base: Path | None = None, hi_month: str = "2026-03", lo_month: str = "2023-12"
+                  ) -> tuple[list[dict], dict]:
     """P4a (1-minute): mean across coin-months of corr(alt_t, BTC_{t-k}) > 0. Returns tests and the full profile."""
     base = base or data.root()
-    fs = [p for p in (base / "leadlag").glob("*/*.parquet") if p.stem <= hi_month]
+    fs = [p for p in (base / "leadlag").glob("*/*.parquet") if lo_month <= p.stem <= hi_month]
     LL = pd.concat([pd.read_parquet(p) for p in fs], ignore_index=True)
     LL = LL[LL.n >= 10000]
     prof = LL.groupby("lag")["corr"].agg(["mean", "median", "count"]).reset_index()
@@ -95,6 +96,23 @@ def _clusters(R: pd.DataFrame) -> np.ndarray:
 def ari(a, b) -> float:
     from sklearn.metrics import adjusted_rand_score
     return float(adjusted_rand_score(a, b))
+
+
+def holdout_cluster_test(C5: pd.DataFrame, design_groups: dict, lo, hi, n_perm=1000, seed=0) -> dict:
+    """Holdout check of P5: clusters fitted on the holdout hours alone vs the design clusters (ARI, permutations)."""
+    H = C5[(C5.index >= lo) & (C5.index < hi)]
+    H = H[(H.index + pd.Timedelta(minutes=5)).minute == 0]
+    R = np.log(H).diff()
+    R = R.sub(R.mean(axis=1), axis=0)
+    lab = {s: int(g) for g, m in design_groups.items() for s in m}
+    keep = [s for s in R.columns if s in lab and R[s].notna().mean() > 0.9]
+    la = np.array([lab[s] for s in keep])
+    lb = _clusters(R[keep])
+    obs = ari(la, lb)
+    rng = np.random.default_rng(seed)
+    null = np.array([ari(la, rng.permutation(lb)) for _ in range(n_perm)])
+    return dict(id="P5-cluster-stability", ari=obs, null_mean=float(null.mean()), n=len(keep),
+                p=float((np.sum(null >= obs) + 1) / (n_perm + 1)), effect=obs, metric="ARI")
 
 
 def cluster_test(C5: pd.DataFrame, lo, hi, n_perm=1000, seed=0) -> tuple[dict, dict]:
