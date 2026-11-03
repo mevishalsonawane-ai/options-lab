@@ -14,6 +14,8 @@ target's own scale for the others.
 """
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -126,15 +128,24 @@ class SeqGather:
 
 
 def fit_net(Xtr, Ytr, Xva, Yva, seq: SeqGather | None = None, tr_idx=None, va_idx=None, epochs=6, seed=0,
-            batch=4096, lr=1e-3, wd=1e-4, log=print):
-    """Fit one multi-task net; returns (model, best_epoch, val_losses). Ytr/Yva already scaled (TargetScale)."""
+            batch=4096, lr=1e-3, wd=1e-4, log=print, ckpt=None):
+    """Fit one multi-task net; returns (model, best_epoch, val_losses). Ytr/Yva already scaled (TargetScale).
+    ckpt: a file path; the state is saved after every epoch and a run resumes from it (a long fit may be stopped)."""
     torch = _torch()
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
     net = _nets(Xtr.shape[1], Ytr.shape[1], seq is not None)
     opt = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=wd)
     binmask = torch.tensor([is_binary(t) for t in TARGETS])
-    best, best_state, hist = np.inf, None, []
+    best, best_state, hist, start = np.inf, None, [], 0
+    if ckpt is not None and os.path.exists(ckpt):
+        c = torch.load(ckpt, weights_only=False)
+        net.load_state_dict(c["net"])
+        opt.load_state_dict(c["opt"])
+        best, best_state, hist, start = c["best"], c["best_state"], c["hist"], c["epoch"]
+        rng.bit_generator.state = c["rng"]
+        torch.set_rng_state(c["torch_rng"])
+        log(f"    resumed after epoch {start}")
 
     def batches(n, shuffle):
         order = rng.permutation(n) if shuffle else np.arange(n)
@@ -147,7 +158,7 @@ def fit_net(Xtr, Ytr, Xva, Yva, seq: SeqGather | None = None, tr_idx=None, va_id
         s = torch.from_numpy(seq(idx[b])) if seq is not None else None
         return x, y, s
 
-    for ep in range(epochs):
+    for ep in range(start, epochs):
         net.train()
         for b in batches(len(Xtr), True):
             x, y, s = tens(Xtr, Ytr, b, tr_idx)
@@ -168,6 +179,9 @@ def fit_net(Xtr, Ytr, Xva, Yva, seq: SeqGather | None = None, tr_idx=None, va_id
         if v < best:
             best = v
             best_state = {k: t.detach().clone() for k, t in net.state_dict().items()}
+        if ckpt is not None:
+            torch.save(dict(net=net.state_dict(), opt=opt.state_dict(), best=best, best_state=best_state, hist=hist,
+                            epoch=ep + 1, rng=rng.bit_generator.state, torch_rng=torch.get_rng_state()), ckpt)
     net.load_state_dict(best_state)
     return net, int(np.argmin(hist)) + 1, hist
 

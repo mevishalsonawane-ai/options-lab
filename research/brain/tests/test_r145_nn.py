@@ -345,3 +345,18 @@ def test_baselines_run():
     assert lin["y_dir_60"].min() >= 0 and lin["y_dir_60"].max() <= 1
     tr, info = M.trees(Z[:4000], df.iloc[:4000], Z[4000:5000], df.iloc[4000:5000], Z[5000:])
     assert len(tr["y_vol_240"]) == 1000 and info["y_vol_240"]["rounds"] >= 0
+
+
+def test_net_checkpoint_resume_matches_one_run(tmp_path):
+    pytest.importorskip("torch")
+    from research.brain.crypto.r145 import models as M
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(6000, 5)).astype(np.float32)
+    Y = np.full((6000, len(M.TARGETS)), np.nan, np.float32)
+    Y[:, M.TARGETS.index("y_dir_60")] = (X[:, 0] > 0)
+    q = lambda *a: None                                                   # noqa: E731
+    full, ep1, h1 = M.fit_net(X[:5000], Y[:5000], X[5000:], Y[5000:], epochs=3, log=q, batch=512)
+    ck = str(tmp_path / "c.pt")
+    M.fit_net(X[:5000], Y[:5000], X[5000:], Y[5000:], epochs=2, log=q, batch=512, ckpt=ck)    # "stopped" after 2
+    part, ep2, h2 = M.fit_net(X[:5000], Y[:5000], X[5000:], Y[5000:], epochs=3, log=q, batch=512, ckpt=ck)
+    assert len(h2) == 3 and np.allclose(h1, h2, rtol=1e-5) and ep1 == ep2

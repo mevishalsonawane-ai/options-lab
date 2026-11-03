@@ -174,7 +174,7 @@ def run_fold(D, C, feats, fold, models=MODELS, tag="design", folds=None):
         rng = np.random.default_rng(7 + fold)
         f2 = np.sort(rng.choice(fit, N2_MAX_ROWS, replace=False)) if len(fit) > N2_MAX_ROWS else fit
         net, ep, hist = M.fit_net(Z[f2], Ys[f2], Z[va], Ys[va], seq=seq, tr_idx=f2, va_idx=va, epochs=4, seed=0,
-                                  log=log)
+                                  log=log, ckpt=str(mdir / f"fold{fold}_N2_ckpt.pt"))
         torch.save(net.state_dict(), mdir / f"fold{fold}_N2.pt")
         pr = ts_.inv(M.predict_net(net, Z[te], seq=seq, idx=te))
         put("N2", {t: pr[:, i] for i, t in enumerate(M.TARGETS)}, dict(best_epoch=ep, val=hist, rows=len(f2)))
