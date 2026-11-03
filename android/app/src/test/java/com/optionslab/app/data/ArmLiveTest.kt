@@ -501,6 +501,16 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("both lots sold", "60", kite.placed.single { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }.form["quantity"])
     }
 
+    /** 3 Nov (live): Zerodha blocks MIS MARKET orders on a low-OI contract; the entry goes once as a LIMIT at the offer instead. */
+    @Test fun aMarketOrderZerodhaBlocksGoesOnceAsALimitAtTheOffer() {
+        kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "MIS MARKET orders are blocked for this FINNIFTY contract due to its open interest (OI) being less than 100 lots.")
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "lowoi"))
+        val sent = kite.placed
+        assertEquals(listOf("MARKET", "LIMIT", "SL"), sent.map { it.form["order_type"] })
+        assertEquals("at the offer", "200.05", sent[1].form["price"]); assertEquals("BUY", sent[1].form["transaction_type"])
+        assertEquals(1, view().open.size)
+    }
+
     @Test fun eachLiveTradeIsRecordedAndLabelledLiveApartFromThePaperBook() {
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "a"))
         kite.quote("NFO:$sym", 220.0, 219.95, 220.05)

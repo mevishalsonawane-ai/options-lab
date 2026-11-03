@@ -834,12 +834,30 @@ object ArmLive {
         } catch (e: Broker.NotLoggedIn) {
             notMirrored(a, "not logged in to Zerodha today"); return@withLock
         } catch (e: Exception) {
+            // 3 Nov (live): Zerodha blocks MIS MARKET orders on a contract with little open interest ("MIS MARKET orders are blocked for
+            // this FINNIFTY contract due to its open interest (OI) being less than 100 lots"): the same entry goes once as a LIMIT at
+            // the offer, never more than 1% over the last price ([LiveMirror.blockedMarketLimit]); unfilled in 15 s it is cancelled below.
+            val retry = if (Broker.definite(e) && o.orderType == "MARKET" && LiveMirror.marketBlocked(e.message))
+                LiveMirror.blockedMarketLimit(side == Kite.Side.BUY, last, quote?.ask, quote?.bid)?.let { px ->
+                    o.copy(orderType = "LIMIT", price = Kite.onTick(px, ins.tick, side)) } else null
+            if (retry != null) {
+                note(a.key, "${spec.label}: Zerodha blocks MARKET orders on ${ins.symbol} (low open interest): sent as a LIMIT at %.2f instead"
+                    .format(Locale.ENGLISH, retry.price ?: 0.0))
+                val v2 = OrderVerdicts.cleared(OrderVerdicts.liveFields(retry, Market.today(), "arm:${a.key}", stop = a.stop), "arm live gate (LIMIT, MARKET blocked)")
+                try { Broker.placeOrder(retry, arm = "arm:${a.key}", intended = last, verdict = v2, stop = a.stop) }
+                catch (e2: Broker.NotLoggedIn) { notMirrored(a, "not logged in to Zerodha today"); return@withLock }
+                catch (e2: Exception) {
+                    if (Broker.definite(e2)) { notMirrored(a, e2.message ?: "Zerodha refused the order"); return@withLock }
+                    try { Broker.findRecentRetrying(retry, known) } catch (_: Exception) { null }
+                }
+            } else {
             if (Broker.definite(e)) { notMirrored(a, e.message ?: "Zerodha refused the order"); return@withLock }
             // The answer was lost, not necessarily the order: look before calling it unsent. 30 Oct (deep review): an order book that
             // does not show it yet is not proof it was never placed (the book can trail the POST) - the entry is held as UNCONFIRMED
             // with no order id, so [settle] keeps looking for it by its tag for [UNCONFIRMED_GRACE_MS] before dropping it, and a filled
             // order is never left at Zerodha with no stop and no watch.
             try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }
+            }
         }
         id?.let { runCatching { Strategies.tagOwner("kite:$it", "${spec.label} · live entry") } }
         var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }

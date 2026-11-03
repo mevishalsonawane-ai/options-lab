@@ -316,6 +316,19 @@ object LiveMirror {
     /** 3 Nov: the most lots Boss's "live lots per arm trade" setting can ask for (the order gates still apply on top). */
     const val MAX_ARM_LOTS = 10
 
+    /** 3 Nov (live): Zerodha's refusal of a MARKET order on a contract with little open interest (it takes a LIMIT). */
+    fun marketBlocked(message: String?): Boolean = message?.contains("MARKET orders are blocked", ignoreCase = true) == true
+
+    /**
+     * 3 Nov: the LIMIT an entry is sent at when Zerodha blocks its MARKET order: the offer for a buy (the bid for a sell), never more
+     * than 1% through the [last] price (it never chases); the last price ±0.5% when the book has no side. null: no usable price.
+     */
+    fun blockedMarketLimit(buy: Boolean, last: Double, ask: Double?, bid: Double?): Double? {
+        if (!(last.isFinite() && last > 0)) return null
+        return if (buy) minOf(ask?.takeIf { it.isFinite() && it > 0 } ?: last * 1.005, last * 1.01)
+            else maxOf(bid?.takeIf { it.isFinite() && it > 0 } ?: last * 0.995, last * 0.99)
+    }
+
     /** Boss's setting, kept within 1..[MAX_ARM_LOTS]. */
     fun armLots(set: Int): Int = set.coerceIn(1, MAX_ARM_LOTS)
 

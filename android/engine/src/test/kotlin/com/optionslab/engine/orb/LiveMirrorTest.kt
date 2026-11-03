@@ -351,6 +351,16 @@ class LiveMirrorTest {
         // whose size is Boss's own setting on its page.
         assertEquals(setOf(LiveMirror.NTFY_ALERTS), LiveMirror.ARMS.filter { it.bossLots }.map { it.key }.toSet())
         for (a in LiveMirror.ARMS) assertEquals(if (a.bossLots) 0 else 1, LiveMirror.liveLotCap(a), a.key)
+        // 3 Nov: a MARKET order Zerodha blocks (low OI) goes once as a LIMIT at the offer, never over 1% through the last price.
+        assertTrue(LiveMirror.marketBlocked("MIS MARKET orders are blocked for this FINNIFTY contract due to its open interest (OI) being less than 100 lots."))
+        assertFalse(LiveMirror.marketBlocked("Insufficient funds. Margin required: 64076.00."))
+        assertFalse(LiveMirror.marketBlocked(null))
+        assertEquals(431.40, LiveMirror.blockedMarketLimit(true, 428.0, 431.40, 415.75)!!, 1e-9)
+        assertEquals(431.27, LiveMirror.blockedMarketLimit(true, 427.0, 442.10, 426.70)!!, 1e-9, "a wide offer: capped at 1% over the last")
+        assertEquals(429.135, LiveMirror.blockedMarketLimit(true, 427.0, null, null)!!, 1e-9)
+        assertEquals(418.0, LiveMirror.blockedMarketLimit(false, 420.0, 431.4, 418.0)!!, 1e-9)
+        assertEquals(415.8, LiveMirror.blockedMarketLimit(false, 420.0, null, 400.0)!!, 1e-9)
+        assertNull(LiveMirror.blockedMarketLimit(true, 0.0, 431.4, 415.75))
         // 3 Nov: Boss's "live lots per arm trade" (default 1): exactly that many lots live, the paper keeping its own size.
         val ft3Spec = LiveMirror.spec(Ft3Rules.SOURCE)!!
         assertEquals(65, LiveMirror.armLiveQty(1, 65, ft3Spec, 1))
