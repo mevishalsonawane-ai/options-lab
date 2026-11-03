@@ -485,6 +485,20 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("watched again: its stop rests again", 1, kite.placed.count { it.form["order_type"] == "SL" })
     }
 
+    /** 3 Nov (Boss): the live lots per arm trade from Bot settings: 2 lots live for a 1-lot paper trade, said on its line. */
+    @Test fun anArmsLiveTradeBuysBossesLotsFromBotSettings() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 2))
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "two", qty = 30))
+        val (buy, stop) = kite.placed
+        assertEquals("2 lots of 30", "60", buy.form["quantity"]); assertEquals("BUY", buy.form["transaction_type"])
+        assertEquals("its stop covers both lots", "60", stop.form["quantity"])
+        assertEquals(60, view().open.single().qty)
+        // Its paper trade closes: both lots are sold.
+        legs["two"] = com.optionslab.engine.orb.DonchianArm.SOURCE to 0
+        watch()
+        assertEquals("paper_exit", view().closed.single().why)
+    }
+
     @Test fun eachLiveTradeIsRecordedAndLabelledLiveApartFromThePaperBook() {
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "a"))
         kite.quote("NFO:$sym", 220.0, 219.95, 220.05)

@@ -310,20 +310,42 @@ object LiveMirror {
         return lots * lot
     }
 
-    /** 30 Oct (Boss): the live lots of one arm entry ([Spec.bossLots]: Boss's own size). */
+    /** 30 Oct (Boss): the live lots of one arm entry ([Spec.bossLots]: Boss's own size). 3 Nov: the default of Boss's setting. */
     const val LIVE_LOTS = 1
+    /** 3 Nov: the most lots Boss's "live lots per arm trade" setting can ask for (the order gates still apply on top). */
+    const val MAX_ARM_LOTS = 10
+
+    /** Boss's setting, kept within 1..[MAX_ARM_LOTS]. */
+    fun armLots(set: Int): Int = set.coerceIn(1, MAX_ARM_LOTS)
 
     /** The lot cap [liveQty] applies to [spec]'s live entry: [LIVE_LOTS], or 0 (no cap here: its paper lots) for [Spec.bossLots]. */
     fun liveLotCap(spec: Spec): Int = if (spec.bossLots) 0 else LIVE_LOTS
 
     /**
+     * 3 Nov (Boss: "all the arms work on a single lot; give me an option in Bot settings to increase the lots, default 1"): the live
+     * quantity of an arm's entry: exactly Boss's [setLots] (1..[MAX_ARM_LOTS]) lots at Zerodha's [lot], whatever the paper trade's
+     * size (the paper keeps its own, so its record stays comparable) - once the paper trade holds at least one lot. An arm whose size
+     * IS Boss's own setting elsewhere ([Spec.bossLots]: ntfy alerts) keeps its paper lots. 0: nothing to buy.
+     */
+    fun armLiveQty(paperLots: Int, lot: Int, spec: Spec, setLots: Int): Int {
+        if (paperLots <= 0 || lot <= 0) return 0
+        return (if (spec.bossLots) paperLots else armLots(setLots)) * lot
+    }
+
+    /**
      * The words for a live / shadow entry cut to [LIVE_LOTS] - " · 1 of the paper's 9 lots (1 lot per arm entry live)" - or "" when
      * it is the paper's size. Said on the arm's own entry line, so its record is read at its own size.
      */
-    fun cutWords(paperLots: Int, liveQty: Int, lot: Int): String {
+    fun cutWords(paperLots: Int, liveQty: Int, lot: Int, setLots: Int = LIVE_LOTS): String {
         if (lot <= 0 || liveQty <= 0) return ""
         val live = liveQty / lot
-        return if (live < paperLots) " · $live of the paper's $paperLots lots (1 lot per arm entry live)" else ""
+        val per = "${armLots(setLots)} lot${if (armLots(setLots) == 1) "" else "s"} per arm entry live"
+        return when {
+            live < paperLots -> " · $live of the paper's $paperLots lots ($per)"
+            // 3 Nov: Boss's setting above the paper's size.
+            live > paperLots -> " · $live lots live, the paper trades $paperLots ($per, your Bot settings)"
+            else -> ""
+        }
     }
 
     // ---- levels ---------------------------------------------------------------------------------------------------------------

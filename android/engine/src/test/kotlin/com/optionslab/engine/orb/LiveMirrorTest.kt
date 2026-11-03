@@ -351,6 +351,18 @@ class LiveMirrorTest {
         // whose size is Boss's own setting on its page.
         assertEquals(setOf(LiveMirror.NTFY_ALERTS), LiveMirror.ARMS.filter { it.bossLots }.map { it.key }.toSet())
         for (a in LiveMirror.ARMS) assertEquals(if (a.bossLots) 0 else 1, LiveMirror.liveLotCap(a), a.key)
+        // 3 Nov: Boss's "live lots per arm trade" (default 1): exactly that many lots live, the paper keeping its own size.
+        val ft3 = LiveMirror.spec(Ft3Rules.SOURCE)!!
+        assertEquals(65, LiveMirror.armLiveQty(1, 65, ft3, 1))
+        assertEquals(195, LiveMirror.armLiveQty(1, 65, ft3, 3))
+        assertEquals("never past the paper being under a lot", 0, LiveMirror.armLiveQty(0, 65, ft3, 3))
+        assertEquals("a 9-lot paper ticket at 2 live lots", 130, LiveMirror.armLiveQty(9, 65, ft3, 2))
+        assertEquals("within 1..10", 65, LiveMirror.armLiveQty(1, 65, ft3, 0))
+        assertEquals(650, LiveMirror.armLiveQty(1, 65, ft3, 99))
+        assertEquals("no lot: nothing", 0, LiveMirror.armLiveQty(1, 0, ft3, 2))
+        assertEquals("ntfy keeps Boss's own lots", 130, LiveMirror.armLiveQty(2, 65, LiveMirror.spec(LiveMirror.NTFY_ALERTS)!!, 5))
+        assertEquals(" · 3 lots live, the paper trades 1 (3 lots per arm entry live, your Bot settings)", LiveMirror.cutWords(1, 195, 65, 3))
+        assertEquals(" · 2 of the paper's 9 lots (2 lots per arm entry live)", LiveMirror.cutWords(9, 130, 65, 2))
         assertEquals(65, LiveMirror.liveQty(9, 65, LiveMirror.liveLotCap(LiveMirror.spec(Ft3Rules.SOURCE)!!)), "FT3: 1 lot of NIFTY")
         assertEquals(20, LiveMirror.liveQty(12, 20, LiveMirror.liveLotCap(LiveMirror.spec(HeroRules.ARM.source)!!)), "Hero: 1 lot of SENSEX")
         assertEquals(130, LiveMirror.liveQty(2, 65, LiveMirror.liveLotCap(LiveMirror.spec(LiveMirror.NTFY_ALERTS)!!)), "ntfy: Boss's own lots")

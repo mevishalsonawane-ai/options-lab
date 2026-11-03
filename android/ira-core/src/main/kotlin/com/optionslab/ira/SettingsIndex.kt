@@ -217,6 +217,8 @@ object SettingsIndex {
         Entry("schedule", "schedule.appearance", "Calm motion", "Fewer and shorter animations.", listOf("Schedules", "Appearance"), listOf("animation", "motion")),
 
         // ---- Settings → Bot settings ----
+        Entry("risk", "risk.armlots", "Live lots per arm trade", "How many lots each arm's live trade buys (− / +, default 1); raising it asks for the PIN.",
+            listOf("Bot settings", "Live lots per arm trade"), listOf("lots", "lot size", "quantity", "size", "increase"), guarded = true),
         Entry("risk", "risk.guards", "Kill switch", "Stops all new entries at once; exits and square-offs still go through. Asks you to confirm both ways.",
             GUARD, listOf("kill", "emergency", "stop all", "block"), guarded = true),
         Entry("risk", "risk.guards", "Daily loss limit", "New entries refused once the day's loss reaches it.", GUARD, listOf("loss", "max loss", "limit")),

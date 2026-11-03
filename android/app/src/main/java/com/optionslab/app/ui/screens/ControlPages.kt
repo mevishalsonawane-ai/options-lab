@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -690,6 +691,8 @@ fun RiskPage(model: AppModel) {
     Page {
         item { PageTitle("Bot settings", "Limits on every order the bot or you place, paper and live") }
         item { com.optionslab.app.ui.SettingSpot("risk.guards") { GuardCard(model) } }
+        // 3 Nov (Boss): the lots every arm's live trade buys, − / +.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.armlots") { ArmLotsCard(model) } }
         // Autopilot learning (11 Oct): OFF / SAFE / SHADOW-ONLY; SAFE asks for the PIN while live. Never from a backup.
         if (com.optionslab.app.ira.Autopilot.enabled()) item { com.optionslab.app.ui.SettingSpot("jarvis.autolearn") { AutopilotSettingCard(model) } }
         // 28 Oct (Boss: "until 65% + winrate is found"): the minimum win rate for automatic ideas; every change takes the PIN.
@@ -723,6 +726,43 @@ fun RiskPage(model: AppModel) {
         // The pre-trade checks (13 Oct, R17): shadow lines and the danger meter's half-size switch (off; paper arms only).
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.pretrade") { PreTradeCard(model) } }
     }
+}
+
+/**
+ * 3 Nov (Boss: "all the arms work on a single lot; give me an option in Bot settings to increase the lot size, with plus and minus
+ * buttons; default 1"): how many lots each arm's LIVE trade buys (1..10). The paper trades keep their own size. Raising it asks for
+ * the PIN or fingerprint (as raising any limit here does); lowering it is at once. The order limits still apply on top.
+ */
+@Composable
+internal fun ArmLotsCard(model: AppModel) {
+    val p = LocalPalette.current
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    var ask by remember { mutableStateOf<Int?>(null) }
+    ask?.let { to -> Reauth(model, onOk = { ask = null; setArmLots(model, to) }, onCancel = { ask = null },
+        why = "Enter your app PIN to raise every arm's live trade to $to lots.") }
+    val n = com.optionslab.engine.orb.LiveMirror.armLots(s.armLiveLots)
+    LedgerCard(title = "Live lots per arm trade") {
+        Note("Every arm's live trade buys this many lots (paper trades keep their own size). Default 1.")
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) {
+            BrassButton("−", Modifier.testTag("armLots.minus"), enabled = n > 1, tone = p.inkSoft) { setArmLots(model, n - 1) }
+            Text(if (n == 1) "1 lot" else "$n lots", style = Type.title, modifier = Modifier.padding(horizontal = 18.dp).testTag("armLots.value"))
+            BrassButton("+", Modifier.testTag("armLots.plus"), enabled = n < com.optionslab.engine.orb.LiveMirror.MAX_ARM_LOTS) {
+                val to = n + 1
+                if (com.optionslab.app.security.GuardPin.asks(true, s.live)) ask = to else setArmLots(model, to)
+            }
+        }
+        val caps = listOfNotNull(
+            s.maxLotsPerOrder.takeIf { it in 1 until n }?.let { "max lots per order is $it" },
+            s.guardMaxLots.takeIf { it in 1 until n }?.let { "max lots per instrument is $it" },
+        )
+        if (caps.isNotEmpty()) Note("Above your order limits (${caps.joinToString(" and ")}): those entries are refused until you raise them too.")
+    }
+}
+
+private fun setArmLots(model: AppModel, to: Int) {
+    val v = com.optionslab.engine.orb.LiveMirror.armLots(to)
+    model.update { it.copy(armLiveLots = v) }
+    runCatching { com.optionslab.app.data.Diag.record("armlive", "live lots per arm trade set to $v (you, Bot settings)") }
 }
 
 @Composable

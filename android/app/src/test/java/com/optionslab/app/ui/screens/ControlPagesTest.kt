@@ -22,6 +22,8 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
@@ -542,6 +544,26 @@ class ControlPagesTest {
         tap("Turn on")
         waitSettings { it.guardKill }
         assertFalse(compose.has("exits included", substring = true))
+    }
+
+    /** 3 Nov (Boss): the live lots per arm trade, − / +: 1 by default, never under 1 nor over 10. */
+    @Test fun theLiveLotsPerArmTradeGoUpAndDownByOne() {
+        show { RiskPage(model) }
+        assertEquals(1, model.settings.value.armLiveLots)
+        compose.reveal("Live lots per arm trade")
+        compose.onNodeWithTag("armLots.value").assertTextEquals("1 lot")
+        compose.onNodeWithTag("armLots.minus").assertIsNotEnabled()
+        compose.onNodeWithTag("armLots.plus").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        waitSettings { it.armLiveLots == 2 }
+        compose.until(10_000) { AppSettings.load().armLiveLots == 2 }
+        compose.onNodeWithTag("armLots.value").assertTextEquals("2 lots")
+        compose.onNodeWithTag("armLots.minus").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        waitSettings { it.armLiveLots == 1 }
+        // The top: the + is off at 10.
+        model.update { it.copy(armLiveLots = 10) }
+        waitSettings { it.armLiveLots == 10 }
+        compose.frames()
+        compose.onNodeWithTag("armLots.plus").assertIsNotEnabled()
     }
 
     @Test fun eachLimitIsSavedWhenPicked() {

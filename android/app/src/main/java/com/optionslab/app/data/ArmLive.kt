@@ -794,9 +794,10 @@ object ArmLive {
         val s = AppSettings.load()
         // 30 Oct (Boss: "1 lot per arm entry, never more unless Boss sets it"): every arm goes live at 1 lot ([LiveMirror.liveLotCap]),
         // said on its own entry line - except ntfy alerts, whose lots are Boss's own setting. The order gates still apply to all.
-        val qty = LiveMirror.liveQty(lots, ins.lot, testLotCap ?: LiveMirror.liveLotCap(spec))
+        // 3 Nov (Boss): the live lots are Boss's own setting in Bot settings ([AppSettings.armLiveLots], default 1).
+        val qty = testLotCap?.let { LiveMirror.liveQty(lots, ins.lot, it) } ?: LiveMirror.armLiveQty(lots, ins.lot, spec, s.armLiveLots)
         if (qty <= 0) { notMirrored(a, "the paper trade is under one lot"); return@withLock }
-        val cut = LiveMirror.cutWords(lots, qty, ins.lot)
+        val cut = LiveMirror.cutWords(lots, qty, ins.lot, s.armLiveLots)
         val qkey = "${ins.exchange}:${ins.symbol}"
         val quote = runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
