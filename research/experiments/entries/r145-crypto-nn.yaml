@@ -1,0 +1,27 @@
+id: r145-crypto-nn
+title: 'R145 a neural network over the top-100 crypto coins: what patterns are real (pre-registered)'
+family: mcx-crypto
+date: '2026-11-03'
+doc: research/HUNT_R145_CRYPTO_NN.md
+data_version: Drive crypto lake (top-100 perps, 2025-11 to 2026-10) plus data.binance.vision 1-minute perp klines and
+  funding for 2023-12 to 2025-10
+period:
+  design: 2024-01-08..2026-03-31 (six quarterly walk-forward folds 2024-Q4..2026-Q1)
+  holdout: 2026-04-01..2026-10-12, locked, read once only for what passes design (BTC/ETH partly seen by NN_CRYPTO, STRAD_CRYPTO,
+    RC2)
+instruments:
+- 96 Binance USD-M perpetuals of the top-100 coins (manifest)
+prereg: research/brain/crypto/PREREG_R145_NN.md
+holdout_read: null
+features:
+- 'signal source: each coin''s own perpetual price (the underlying), plus market context (BTC/ETH, breadth, dispersion), funding,
+  calendar'
+hypothesis: A network over the cross-section of 96 coins forecasts 15/60/240-minute direction, size, volatility, big moves
+  and cross-sectional rank better than base rates, linear models, trees and shuffled-label twins
+model_or_rule: research/brain/crypto/r145/
+settings: PREREG_R145_NN.md (240 tests, one BH family, q 0.05)
+variants_tried: null
+verdict: proposed
+results:
+  summary: pre-registered; not run yet
+  costs: perp taker 0.05% a side, slippage 1/2/5 bp a side, funding; 2x slippage stress
