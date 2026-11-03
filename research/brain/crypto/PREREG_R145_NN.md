@@ -187,3 +187,23 @@ Written after only fold 0 (2024-Q4) of the design walk-forward had finished. No 
   - The N1 validation-slice percentiles for TD-h are saved by the fit.
   - Before any fit, a bug was fixed: funding had been looked up at the decision bar's open time (5 minutes early)
     instead of the decision time.
+
+## Amendment 2 (3 Nov 2026, 16:30 UTC): stale (never-traded) rows are left out of every score
+
+Written after a **dry run** of the design evaluation on partial predictions (the GRU had 3 of 6 folds), before the
+final design evaluation and before any holdout data. What the dry run showed: the simple HAR line beat every model on
+the volatility target (R2 0.92 vs 0.86). The cause was data, not skill: 7,894 of 1,483,142 design rows (0.53%) sit on
+a price that did not move at all.
+- LITUSDT accounts for 7,098 of them: a frozen price from Oct 2024 to Dec 2025, apparently a dead contract whose symbol
+  was later reused.
+- PUMPUSDT has 640 rows before its real trading began.
+- Every coin is frozen for one exchange-wide hour, 28 Oct 2024 at 20:00 UTC.
+
+Those rows have a realised variance of exactly 0 (log floor -16). The networks' inputs are clipped at +-6 standard
+deviations (section 4), so the networks cannot follow these rows; the unclipped HAR line can.
+
+**Rule (as R123's Amendment 2, "zero-volume minutes are never priced"):** a row whose last 60 minutes, or any label
+window, has zero realised variance (log realised vol <= -15) is a stale row. It is left out of every test, score,
+pattern and trade, for every model alike. Models are not refitted (they were trained with these rows; that can only
+hurt them). The unfiltered scores are reported beside the filtered ones. The same rule applies to the holdout.
+This is the only change, and it does not depend on any direction or rank result.

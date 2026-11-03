@@ -22,7 +22,12 @@ F_SETS = [("F1", "N1", "B0"), ("F2", "N2", "B0"), ("F3", "N1", "B2"), ("F4", "N2
           ("F6", "N1", "TW")]
 
 
-def oos(tag="design") -> pd.DataFrame:
+def stale(df: pd.DataFrame) -> np.ndarray:
+    """Amendment 2: rows whose last 60 minutes or any label window had zero realised variance (a frozen price)."""
+    return ((df.lrv_60 <= -15) | (df[["y_vol_15", "y_vol_60", "y_vol_240"]] <= -15).any(axis=1)).to_numpy()
+
+
+def oos(tag="design", drop_stale=True) -> pd.DataFrame:
     D = pd.read_parquet(run.out_dir() / tag / "rows.parquet")
     parts = []
     for f in range(len(run.FOLDS)):
@@ -34,8 +39,9 @@ def oos(tag="design") -> pd.DataFrame:
                 p = x if p is None else p.merge(x, on=["ts", "sym"], how="outer")
         parts.append(p.assign(fold=f))
     P = pd.concat(parts, ignore_index=True)
-    keep = ["ts", "sym", "bar", "col", "sig_bar", "fund_rate", "mkt_volz", "btc_r1440", "weekend", "y_ret_15", "y_ret_60", "y_ret_240"] + M.TARGETS
-    return P.merge(D[keep], on=["ts", "sym"], how="left")
+    keep = ["ts", "sym", "bar", "col", "sig_bar", "fund_rate", "mkt_volz", "btc_r1440", "weekend", "lrv_60", "y_ret_15", "y_ret_60", "y_ret_240"] + M.TARGETS
+    df = P.merge(D[keep], on=["ts", "sym"], how="left")
+    return df[~stale(df)].reset_index(drop=True) if drop_stale else df
 
 
 def _jsonable(x):
@@ -77,6 +83,10 @@ def model_summary(df) -> dict:
 
 
 def design(n_boot=2000):
+    raw = oos(drop_stale=False)
+    unfiltered = {t: v for t, v in model_summary(raw).items() if "_vol_" in t or "_size_" in t}
+    n_stale = int(stale(raw).sum())
+    del raw
     df = oos()
     tests = []
     for fid, m, c in F_SETS:
@@ -154,7 +164,7 @@ def design(n_boot=2000):
         prereg="research/brain/crypto/PREREG_R145_NN.md", n_tests=len(tests),
         rows=int(len(df)), coins=int(df.sym.nunique()), weeks=int(len(np.unique(S.week(df.ts.values)))),
         span=[str(df.ts.min()), str(df.ts.max())],
-        scores=model_summary(df), tests=tests, real=[t["id"] for t in tests if t["real"]],
+        scores=model_summary(df), scores_with_stale_rows=unfiltered, stale_rows_dropped=n_stale, tests=tests, real=[t["id"] for t in tests if t["real"]],
         leadlag=ll_info, leadlag_5m=d5, clusters=d_cl, importance=imp, tree_gain_top=tree_top,
         hour_table=hour_table(df), coin_table=coin_table(df), state_table=None,
     )
@@ -295,8 +305,10 @@ def holdout():
         if fp.exists():
             x = pd.read_parquet(fp)
             P = x if P is None else P.merge(x, on=["ts", "sym"], how="outer")
-    keep = ["ts", "sym", "bar", "col", "sig_bar", "fund_rate", "mkt_volz", "btc_r1440", "weekend", "y_ret_15", "y_ret_60", "y_ret_240"] + M.TARGETS
+    keep = ["ts", "sym", "bar", "col", "sig_bar", "fund_rate", "mkt_volz", "btc_r1440", "weekend", "lrv_60", "y_ret_15", "y_ret_60", "y_ret_240"] + M.TARGETS
     df = P.merge(D[keep], on=["ts", "sym"], how="left").assign(fold=0)
+    n_stale = int(stale(df).sum())
+    df = df[~stale(df)].reset_index(drop=True)
     assert df.ts.min() >= pd.Timestamp("2026-04-01")
     flag.write_text(f"read {pd.Timestamp.now('UTC')}\n")
     df["ist_hour"] = (pd.DatetimeIndex(df.ts) + IST).hour
@@ -355,7 +367,7 @@ def holdout():
     for r, qq in zip(out, q):
         r["q"] = qq
         r["confirmed"] = bool(np.isfinite(qq) and qq < 0.05 and r["effect"] > 0)
-    res = dict(amendment="PREREG_R145_NN.md Amendment 1", span=[str(df.ts.min()), str(df.ts.max())],
+    res = dict(amendment="PREREG_R145_NN.md Amendments 1-2", stale_rows_dropped=n_stale, span=[str(df.ts.min()), str(df.ts.max())],
                rows=int(len(df)), coins=int(df.sym.nunique()), weeks=int(len(np.unique(S.week(df.ts.values)))),
                scores=model_summary(df), tests=out, confirmed=[r["id"] for r in out if r["confirmed"]])
     # trading variants that passed design

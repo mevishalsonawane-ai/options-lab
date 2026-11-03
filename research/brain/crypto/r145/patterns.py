@@ -33,8 +33,8 @@ def leadlag_tests(base: Path | None = None, hi_month: str = "2026-03", lo_month:
     for k in LAGS_TESTED:
         x = LL[LL.lag == k]["corr"].to_numpy()
         t, p, n = S.t_one_sided(x)
-        tests.append(dict(id=f"P4-1m-lag{k}", lag_min=k, mean_corr=float(np.mean(x)), n=n, t=t, p=p,
-                          effect=float(np.mean(x)), metric="corr", folds_pos=None))
+        tests.append(dict(id=f"P4-1m-lag{k}", lag_min=k, mean_corr=float(np.nanmean(x)), n=n, t=t, p=p,
+                          effect=float(np.nanmean(x)), metric="corr", folds_pos=None))
     by_coin = (LL[LL.lag.isin([0, 1])].pivot_table(index="sym", columns="lag", values="corr", aggfunc="mean")
                .rename(columns={0: "same_minute", 1: "btc_1min_earlier"}).sort_values("btc_1min_earlier",
                                                                                         ascending=False))
@@ -72,8 +72,8 @@ def leadlag_5m(C5: pd.DataFrame, lo, hi) -> tuple[dict, dict]:
             if len(g) > 2000:
                 cors.append(np.corrcoef(g.a, g.b)[0, 1])
     t, p, n = S.t_one_sided(cors)
-    test = dict(id="P4-5m-lag1", lag_min=5, mean_corr=float(np.mean(cors)), n=n, t=t, p=p,
-                effect=float(np.mean(cors)), metric="corr", folds_pos=None)
+    test = dict(id="P4-5m-lag1", lag_min=5, mean_corr=float(np.nanmean(cors)), n=n, t=t, p=p,
+                effect=float(np.nanmean(cors)), metric="corr", folds_pos=None)
     sd = r["BTCUSDT"].rolling(288 * 7, min_periods=288).std().shift(1)
     z = r["BTCUSDT"] / sd
     alts = r.drop(columns="BTCUSDT").shift(-1)                   # the NEXT bar's alt returns
