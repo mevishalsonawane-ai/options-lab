@@ -164,3 +164,26 @@ Signal on the underlying: the coin's perpetual price; the trade is the perpetual
 - Write-up: `research/HUNT_R145_CRYPTO_NN.md`; results JSON in `research/brain/crypto/results/`; big files (bars,
   features, predictions, weights) in `gdrive:IraAlgo-data-crypto/derived/r145/`, never in git.
 - Any change to this plan after a result is seen is an amendment, dated, with the reason, and reported as a deviation.
+
+## Amendment 1 (3 Nov 2026, 10:40 UTC): the holdout procedure, fixed before the design results and the holdout
+
+Written after only fold 0 (2024-Q4) of the design walk-forward had finished. No holdout data had been downloaded.
+
+- **What was seen so far (design only):** a sanity check of fold 0's scores, which showed a 60-minute direction AUC
+  of about 0.56 for N1 and the linear model (twin 0.50). To rule out a label artifact, that was re-checked without
+  flat hours (a 0 return counts as "not up"): about 1% of hours are flat, and the AUC is unchanged. No setting, feature,
+  model or gate was changed after this.
+- **Final models for the holdout:** each model is refitted once on all design rows, with the same purge, 1-day
+  embargo and last-10% validation slice. It is then scored on the holdout rows (decision times 1 Apr 2026 00:00 to
+  12 Oct 2026, the lake's end), built from one panel spanning Dec 2023 to Oct 2026 (features are point in time, so the
+  design rows of that panel are identical to the design build).
+- **A design-"real" forecast or pattern is "confirmed"** if, on the holdout, its statistic has the same sign and a
+  one-sided p-value whose BH q (across every holdout test read) is below 0.05. Sample sizes are reported. Patterns
+  that were not "real" in design are not read on the holdout.
+- **Trading rules:** the section 6 holdout gates.
+- **Implementation notes, not changes:**
+  - Funding is applied on the 00/08/16 UTC schedule; coins that settle every 4 hours are undercounted, a small effect
+    over these holding times.
+  - The N1 validation-slice percentiles for TD-h are saved by the fit.
+  - Before any fit, a bug was fixed: funding had been looked up at the decision bar's open time (5 minutes early)
+    instead of the decision time.
