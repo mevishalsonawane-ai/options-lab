@@ -53,7 +53,7 @@ a risk tool, not an edge, and like everything in crypto it would need Boss's say
   - `models.py`: the networks and baselines.
   - `run.py`: the walk-forward.
   - `stats.py`, `patterns.py`, `trade.py`, `evaluate.py`: tests, patterns, trading test and evaluation.
-- **Tests:** 28 tests in `research/brain/tests/test_r145_nn.py`.
+- **Tests:** 27 tests in `research/brain/tests/test_r145_nn.py`.
 - **Results:** `research/brain/crypto/results/`.
   - `r145_design.json`: 254 tests, scores, patterns, importance.
   - `r145_trade_design.json`: 40 trading variants.
