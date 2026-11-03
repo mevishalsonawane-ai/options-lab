@@ -1,0 +1,30 @@
+id: r145-trade-tx
+title: 'R145 TX-h: long the top-3 / short the bottom-3 predicted cross-sectional rank, stop + lock'
+family: mcx-crypto
+date: '2026-11-03'
+doc: research/HUNT_R145_CRYPTO_NN.md
+data_version: Drive crypto lake top-100 perps + data.binance.vision 1-minute perp klines and funding (Dec 2023 - Mar 2026)
+period:
+  design: 2024-10-01..2026-03-31 (six quarterly walk-forward folds)
+  holdout: not read (failed design)
+instruments:
+- 95 Binance USD-M perpetuals (top-100 coins)
+prereg: research/brain/crypto/PREREG_R145_NN.md
+holdout_read: false
+features:
+- 'signal source: the network N1 reading each coins own perpetual price (the underlying) plus market context; traded as the
+  perpetual'
+hypothesis: The networks {n} forecasts, traded with a stop-loss and a profit lock, make money after real costs and beat random
+  twins
+model_or_rule: research/brain/crypto/r145/evaluate.py (select, run_trades) and trade.py
+settings: 'PREREG_R145_NN.md section 6: stop 1 or 2 x trailing vol; trail (half of peak after +1 s) or step lock; Bosss 00:00-09:00
+  IST window and all hours'
+variants_tried: 24
+verdict: rejected
+results:
+  summary: '24 variants (horizons x window/all hours x stop 1s/2s x trail/step lock), design walk-forward Oct 2024 - Mar 2026:
+    none passes; all lose after costs. Best TX-240-allhours-stop2-step: 37657 trades, win 45%, net Rs -123 a trade (2x slippage
+    Rs -209) at Rs 1 lakh notional, random twins Rs -172 (p 0.001), 1 of 18 months positive. Worst TX-15-allhours-stop1-step:
+    Rs -161 a trade. The picks beat random entries but the edge (about Rs 25-60 per Rs 1 lakh) is far below the 0.12-0.20%
+    round trip.'
+  costs: perp taker 0.05% a side, slippage 1/2/5 bp a side, funding per settlement; 2x slippage stress
