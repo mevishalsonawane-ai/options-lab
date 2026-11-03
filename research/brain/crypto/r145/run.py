@@ -106,6 +106,9 @@ def split(D: pd.DataFrame, fold: int, folds=None):
 def run_fold(D, C, feats, fold, models=MODELS, tag="design", folds=None):
     o = out_dir() / tag / "preds"
     o.mkdir(parents=True, exist_ok=True)
+    models = [m for m in models if not (o / f"fold{fold}_{m}.parquet").exists()]     # resume: skip finished work
+    if not models:
+        return
     mdir = out_dir() / tag / "models"
     mdir.mkdir(parents=True, exist_ok=True)
     fit, va, tr, te = split(D, fold, folds)
