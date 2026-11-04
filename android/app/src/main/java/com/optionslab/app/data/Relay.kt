@@ -58,7 +58,7 @@ object Relay {
      */
     private object SocksAuth : java.net.Authenticator() {
         override fun getPasswordAuthentication(): java.net.PasswordAuthentication? {
-            val port = socks?.takeIf { !it.isClosed }?.localPort ?: return null
+            val port = socks.get()?.takeIf { !it.isClosed }?.localPort ?: return null
             if (!requestingProtocol.orEmpty().equals("SOCKS5", true) || requestingPort != port) return null
             if (requestingSite?.isLoopbackAddress == false) return null
             return java.net.PasswordAuthentication(SOCKS_USER, socksPass.toCharArray())
@@ -104,7 +104,8 @@ object Relay {
     // ---- the SSH session ---------------------------------------------------------------
 
     @Volatile private var session: Session? = null
-    @Volatile private var socks: ServerSocket? = null
+    /** 4 Nov: atomic, so a [close] while [socksServer] makes one always closes what it takes (review). */
+    private val socks = java.util.concurrent.atomic.AtomicReference<ServerSocket?>(null)
 
     /** Remembers the server's key on first use; a different key later is refused. */
     private object Tofu : HostKeyRepository {
@@ -131,6 +132,9 @@ object Relay {
     const val FAIL_FAST_MS = 5_000L
     @Volatile private var failedAt = 0L
     @Volatile private var failedWhy: String? = null
+
+    /** TEST ONLY: the server's SSH port (22; a test's local stand-in server listens elsewhere). */
+    @Volatile internal var sshPort = 22
 
     /** TEST ONLY: the clock the fail-fast window is read on. */
     @Volatile internal var clock: () -> Long = { System.currentTimeMillis() }
@@ -164,7 +168,7 @@ object Relay {
         var last: Exception? = null
         var s: Session? = null
         for (name in names) {
-            val t = jsch.getSession(name, h, 22)
+            val t = jsch.getSession(name, h, sshPort)
             t.setConfig("StrictHostKeyChecking", "yes")
             t.setConfig("PreferredAuthentications", "publickey")
             t.timeout = 15_000
@@ -205,10 +209,10 @@ object Relay {
     }
 
     @Synchronized private fun socksServer(): ServerSocket {
-        socks?.takeIf { !it.isClosed }?.let { return it }
+        socks.get()?.takeIf { !it.isClosed }?.let { return it }
         java.net.Authenticator.setDefault(SocksAuth)
         val ss = ServerSocket(0, 50, InetAddress.getLoopbackAddress())      // loopback only, never the network
-        socks = ss
+        socks.set(ss)
         Thread({
             while (!ss.isClosed) {
                 val client = runCatching { ss.accept() }.getOrNull() ?: break
@@ -241,14 +245,15 @@ object Relay {
      */
     fun wipe() {
         erased++
+        closes.incrementAndGet()                                             // 4 Nov (review): a connect running now keeps nothing
         enabledKept = null
         failedAt = 0L; failedWhy = null
-        val ss = socks; socks = null; runCatching { ss?.close() }
+        runCatching { socks.getAndSet(null)?.close() }
         val s = session; session = null; runCatching { s?.disconnect() }
     }
 
     /** 26 Oct: whether a session, the SOCKS port or the kept switch is still in memory (the erase's tests). Memory only. */
-    internal fun holdsForErase(): Boolean = session != null || socks != null || enabledKept?.second == true
+    internal fun holdsForErase(): Boolean = session != null || socks.get() != null || enabledKept?.second == true
 
     /**
      * Ends the session and the SOCKS port. 4 Nov (Boss's diagnostics: the 08:38 freeze, "main thread in Relay.close, waiting
@@ -258,7 +263,7 @@ object Relay {
     fun close() {
         closes.incrementAndGet()
         failedAt = 0L; failedWhy = null
-        val ss = socks; socks = null; runCatching { ss?.close() }
+        runCatching { socks.getAndSet(null)?.close() }
         val s = session; session = null; runCatching { s?.disconnect() }
     }
 
@@ -289,13 +294,12 @@ object Relay {
             }
             val port = inp.readUnsignedShort()
             if (port != 443 || !allowed(dest)) { reply(out, 2); return }
-            val sess = try { connect() } catch (e: Exception) { reply(out, 1); return }
             val ch = try {
-                (sess.openChannel("direct-tcpip") as ChannelDirectTCPIP).apply { setHost(dest); setPort(port) }
-            } catch (e: Exception) { dropDead(sess); reply(out, 1); return }
+                (connect().openChannel("direct-tcpip") as ChannelDirectTCPIP).apply { setHost(dest); setPort(port) }
+            } catch (e: Exception) { reply(out, 1); return }
             val fromServer = ch.inputStream
             val toServer = ch.outputStream
-            try { ch.connect(15_000) } catch (e: Exception) { dropDead(sess); runCatching { ch.disconnect() }; reply(out, 5); return }
+            try { ch.connect(15_000) } catch (e: Exception) { reply(out, 5); return }
             reply(out, 0)
             c.soTimeout = 0                                                    // a quiet tunnel is not an error
             val up = Thread({ pump(inp, toServer); runCatching { ch.disconnect() } }, "relay-up").apply { isDaemon = true; start() }
@@ -303,15 +307,6 @@ object Relay {
             runCatching { ch.disconnect() }
             up.join(1_000)
         }
-    }
-
-    /**
-     * 4 Nov: a session that looked connected but could not open a channel (the server stopped answering; SSH's keep-alive
-     * notices only after 45 s) is ended, so the next call connects afresh (and fails fast if the server is down) instead of
-     * each call waiting 15 s on the same dead session.
-     */
-    private fun dropDead(s: Session) {
-        if (session === s) { session = null; runCatching { s.disconnect() } }
     }
 
     /** Reads the RFC 1929 request and checks it in constant time; the bytes read are wiped. */

@@ -21,15 +21,20 @@ import java.util.concurrent.TimeUnit
 class RelayFailFastTest : RobolectricTest() {
     private val why = "Relay: cannot reach 203.0.113.5 on port 22 (is the server running, with the IP attached?)"
 
+    private var server: java.net.ServerSocket? = null
+
     @After fun down() {
         Relay.clock = { System.currentTimeMillis() }
+        Relay.sshPort = 22
         Relay.close()
+        runCatching { server?.close() }
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
     @Test fun aCallRightAfterAFailedConnectFailsAtOnceWithTheSameReason() {
         Relay.host = "203.0.113.5"
         Relay.enabled = true
+        Relay.clock = { 1_000_000L }                                     // pinned: the window cannot run out mid-test
         Relay.failedForTest(why)
         val t0 = System.nanoTime()
         try { Relay.proxy(); fail("the relay is on and down: no proxy, and never a direct route") }
@@ -58,6 +63,69 @@ class RelayFailFastTest : RobolectricTest() {
         Relay.failedForTest(why)
         Relay.wipe()
         assertNull(Relay.recentFailure())
+    }
+
+    /**
+     * A local stand-in "server" on loopback ([hold]: keeps each connection open without a word, else closes it at once),
+     * counting the connects that reach it. JSch fails on it either way (no SSH banner): a connect that really fails.
+     */
+    private fun standIn(hold: Boolean, accepted: java.util.concurrent.atomic.AtomicInteger, kept: MutableList<java.net.Socket>): Int {
+        val ss = java.net.ServerSocket(0, 50, java.net.InetAddress.getLoopbackAddress())
+        server = ss
+        Thread {
+            while (!ss.isClosed) {
+                val c = runCatching { ss.accept() }.getOrNull() ?: break
+                accepted.incrementAndGet()
+                if (hold) kept += c else runCatching { c.close() }
+            }
+        }.apply { isDaemon = true; start() }
+        return ss.localPort
+    }
+
+    private fun relayTo(port: Int) {
+        Relay.sshPort = port
+        Relay.host = "127.0.0.1"
+        Relay.newKey()
+        Relay.enabled = true
+    }
+
+    @Test fun aRealFailedConnectIsTriedOnceAndTheCallsBehindItFailAtOnce() {
+        val accepted = java.util.concurrent.atomic.AtomicInteger()
+        relayTo(standIn(hold = false, accepted = accepted, kept = mutableListOf()))
+        val first = try { Relay.proxy(); null } catch (e: IOException) { e.message }
+        assertTrue("the connect failed with a reason: $first", first != null && first.startsWith("Relay:"))
+        assertEquals("one connect reached the server", 1, accepted.get())
+        assertEquals("the failure is remembered", first, Relay.recentFailure())
+        val t0 = System.nanoTime()
+        repeat(5) {
+            try { Relay.proxy(); fail("never a route while the relay is down") } catch (e: IOException) { assertEquals(first, e.message) }
+        }
+        assertTrue("the five calls behind it failed at once", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0) < 2_000)
+        assertEquals("and none of them tried the server again", 1, accepted.get())
+        // Once the window is over, the next call tries the server again.
+        val later = System.currentTimeMillis() + Relay.FAIL_FAST_MS
+        Relay.clock = { later }
+        try { Relay.proxy(); fail("still down") } catch (e: IOException) { assertEquals(first, e.message) }
+        assertEquals(2, accepted.get())
+    }
+
+    @Test fun aConnectThatFailsAfterTheRelayWasClosedIsNotRemembered() {
+        val accepted = java.util.concurrent.atomic.AtomicInteger()
+        val kept = java.util.Collections.synchronizedList(mutableListOf<java.net.Socket>())
+        relayTo(standIn(hold = true, accepted = accepted, kept = kept))
+        val outcome = java.util.concurrent.atomic.AtomicReference<String?>()
+        val caller = Thread { outcome.set(try { Relay.proxy(); "connected" } catch (e: IOException) { e.message }) }.apply { isDaemon = true; start() }
+        val end = System.currentTimeMillis() + 10_000
+        while (accepted.get() == 0 && System.currentTimeMillis() < end) Thread.sleep(10)
+        assertEquals("the connect is waiting on the server", 1, accepted.get())
+        val t0 = System.nanoTime()
+        Relay.close()                                                    // while that connect holds the relay's lock
+        assertTrue("close did not wait for the connect", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0) < 2_000)
+        synchronized(kept) { kept.forEach { runCatching { it.close() } } }   // the server goes away: the connect fails
+        caller.join(20_000)
+        assertTrue("the connect failed: ${outcome.get()}", outcome.get()?.startsWith("Relay:") == true)
+        assertNull("a failure from before the close is not held against the next call", Relay.recentFailure())
+        assertTrue(!Relay.connected)
     }
 
     @Test fun switchingTheRelayOffNeverWaitsOnAConnectInProgress() {
