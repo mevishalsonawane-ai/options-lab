@@ -946,6 +946,12 @@ object PassedArmsHost {
     @Volatile private var histTried: Pair<LocalDate, Long>? = null
     private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /** 4 Nov: the day each index's history read last finished (found or not): until then a rule needing it waits. Memory only. */
+    private val histRead = java.util.concurrent.ConcurrentHashMap<String, LocalDate>()
+
+    /** Whether [index]'s history read for [day] has not finished yet (a restart's first looks): its rules wait, not skip. */
+    internal fun historyPending(index: String, day: LocalDate): Boolean = history(index, day) == null && histRead[index] != day
+
     /** The history of [index] for [day] (null: not read yet). Memory only. Shared with the Watchlist ([WatchlistHost]). */
     internal fun history(index: String, day: LocalDate): Hist? = hist[index]?.takeIf { it.day == day }
 
@@ -976,17 +982,67 @@ object PassedArmsHost {
 
     /** [prefetch]'s reads for [day] (tests call it directly). */
     internal suspend fun prefetchNow(day: LocalDate, indices: List<String> = ALL_INDICES) {
+        // 4 Nov (Boss: after Android closed the app at 13:40, R51's 13:40 FINNIFTY and SENSEX breaks were skipped, "Supertrend
+        // cannot be judged yet", and CISD could not look): the day's earlier sessions are kept on the phone once read, so a
+        // restart has them back from the file in a moment instead of waiting on Upstox. All the cached files are read first.
+        // (A test's own history seam bypasses the file, so a test's planted bars are always the ones read.)
+        val cached = testHistory == null && testDaily == null
+        if (cached) for (u in indices + VIX) if (history(u, day) == null) runCatching { readHistCache(u, day)?.let { (ones, daily) -> keepHist(u, day, ones, daily) } }
         for (u in indices + VIX) {
             if (history(u, day) != null) continue
             runCatching {
                 val key = if (u == VIX) Upstox.INDEX_KEYS.getValue("INDIAVIX") else upKey(u)
                 val ones = testHistory?.invoke(u) ?: toBars(Net.history(key, day.minusDays(16), day.minusDays(1)))
                 val daily = testDaily?.invoke(u) ?: toBars(Net.daily(key, day.minusDays(45), day.minusDays(1)))
-                val sessions = ones.filter { it.start.toLocalDate().isBefore(day) }.groupBy { it.start.toLocalDate() }.toSortedMap()
-                    .map { (d, l) -> PassedArms.DayBars.of(d, l) }.filter { it.count > 0 }
-                if (sessions.isNotEmpty() || daily.isNotEmpty()) hist[u] = Hist(day, sessions, daily.filter { it.start.toLocalDate().isBefore(day) })
+                if (keepHist(u, day, ones, daily) && cached) runCatching { writeHistCache(u, day, ones, daily) }
             }
+            histRead[u] = day
         }
+    }
+
+    /** [u]'s earlier sessions and daily candles for [day] kept in memory; false when there was nothing to keep. */
+    private fun keepHist(u: String, day: LocalDate, ones: List<Bar>, daily: List<Bar>): Boolean {
+        val sessions = ones.filter { it.start.toLocalDate().isBefore(day) }.groupBy { it.start.toLocalDate() }.toSortedMap()
+            .map { (d, l) -> PassedArms.DayBars.of(d, l) }.filter { it.count > 0 }
+        if (sessions.isEmpty() && daily.isEmpty()) return false
+        hist[u] = Hist(day, sessions, daily.filter { it.start.toLocalDate().isBefore(day) })
+        return true
+    }
+
+    /**
+     * 4 Nov: the history cache, one small text file per index (market prices only: nothing about the account), for one day.
+     * Written and read on the background reads ([prefetchNow]), never on the order or tick path. A file from another day,
+     * or one that cannot be read, is ignored (the reads go to Upstox as before).
+     */
+    private fun histFile(u: String): File? = if (::app.isInitialized) File(File(app.filesDir, "history_cache"), "$u.txt") else null
+
+    private fun barLine(kind: Char, x: Bar) = "$kind,${x.start},${x.open},${x.high},${x.low},${x.close}"
+
+    internal fun writeHistCache(u: String, day: LocalDate, ones: List<Bar>, daily: List<Bar>) {
+        val f = histFile(u) ?: return
+        f.parentFile?.mkdirs()
+        val text = buildString {
+            append(day).append('\n')
+            ones.forEach { append(barLine('m', it)).append('\n') }
+            daily.forEach { append(barLine('d', it)).append('\n') }
+        }
+        val tmp = File(f.parentFile, "${f.name}.tmp")
+        tmp.writeText(text)
+        if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+    }
+
+    internal fun readHistCache(u: String, day: LocalDate): Pair<List<Bar>, List<Bar>>? {
+        val f = histFile(u)?.takeIf { it.isFile } ?: return null
+        val lines = f.readLines()
+        if (lines.firstOrNull() != day.toString()) return null
+        val ones = ArrayList<Bar>(); val daily = ArrayList<Bar>()
+        for (l in lines.drop(1)) {
+            val p = l.split(',')
+            if (p.size != 6) continue
+            val b = Bar(LocalDateTime.parse(p[1]), p[2].toDouble(), p[3].toDouble(), p[4].toDouble(), p[5].toDouble())
+            if (p[0] == "m") ones += b else if (p[0] == "d") daily += b
+        }
+        return if (ones.isEmpty() && daily.isEmpty()) null else ones to daily
     }
 
     /** Today's finished 1-minute bars of [key] at [now] (the feed's, with the stream's newer whole minutes), bar start times. */
@@ -1822,6 +1878,13 @@ object PassedArmsHost {
             // adds. Decided once, before the day's caps, as the research filtered the signals before taking them.
             if (gate != null) {
                 val ag = gate(s)
+                // 4 Nov: after a restart the earlier sessions may still be loading (from the phone's file or Upstox): the break
+                // is not decided yet, and the next look inside its fill window judges it (a missed window is said as before).
+                if (ag == null && historyPending(u, today)) {
+                    tried[dk] = "the earlier sessions were still loading after a restart, so Supertrend could not judge it"
+                    changed = say(b, key, "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break: waiting for the earlier sessions to load (judged on the next look)") || changed
+                    continue
+                }
                 if (ag != true) {
                     b.decided += dk
                     if (ag == null) b.status[ST_UNJUDGED_KEY] = "$today: ${stUnjudgedOn(b.status, today) + 1} skipped, Supertrend could not judge (no earlier session in)"
@@ -2341,7 +2404,7 @@ object PassedArmsHost {
             pendingBytes.set(null)
             written.forget()
         }
-        cache = null; _view.value = View(); hist.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
+        cache = null; _view.value = View(); hist.clear(); histRead.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
         runCatching { com.optionslab.ira.ArmExits.set("passed", emptyList()) }
         // 26 Oct: the exit looks' kept minutes and the entry retry are memory too.
         exitReads.clear(); exitBars.clear(); retryJob?.cancel(); retryJob = null; plannedRetry = null; retriesOf = null to 0
@@ -2355,6 +2418,7 @@ object PassedArmsHost {
         synchronized(writeLock) {
             wipe()
             if (ready()) file.delete()
+            runCatching { histFile(VIX)?.parentFile?.deleteRecursively() }     // 4 Nov: the history cache (market prices only)
         }
     }
 

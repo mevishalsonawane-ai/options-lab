@@ -21,6 +21,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -1757,6 +1758,59 @@ class PassedArmsHostTest : RobolectricTest() {
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertTrue("the label is kept on disk", view().open.single().st)
         assertNothingAtZerodha()
+    }
+
+    /**
+     * 4 Nov (Boss's diagnostics: after Android closed the app at 13:40, R51's FINNIFTY and SENSEX breaks were skipped,
+     * "Supertrend cannot be judged yet"): right after a restart the earlier sessions are still loading, so a break waits (not
+     * decided) and the next look inside its fill window judges it - here Supertrend agrees, and it is bought and labelled.
+     */
+    @Test fun afterARestartABreakWaitsForTheEarlierSessionsAndIsJudgedInsideItsWindow() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setSupertrend(true) }
+        val h0 = PassedArmsHost.testHistory!!
+        val loaded = java.util.concurrent.CountDownLatch(1)
+        PassedArmsHost.testHistory = { u -> loaded.await(10, java.util.concurrent.TimeUnit.SECONDS); h0(u) }
+        PassedArmsHost.wipe()                                            // the restart: the day's memory is gone, the book's file stays
+        assertTrue(PassedArmsHost.historyPending("NIFTY", day))
+        market(LocalTime.of(9, 20))
+        tick(LocalTime.of(9, 20))                                        // its history read starts in the background and waits
+        assertTrue("nothing bought yet", PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
+        assertFalse("not skipped: it waits", view().log.any { "Supertrend cannot be judged yet" in it })
+        assertTrue(view().status.values.toString(), view().status.values.any { "waiting for the earlier sessions to load" in it })
+        assertEquals(0, view().stUnjudged)
+        loaded.countDown()
+        val end = System.currentTimeMillis() + 10_000
+        while (PassedArmsHost.historyPending("NIFTY", day) && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertFalse(PassedArmsHost.historyPending("NIFTY", day))
+        market(LocalTime.of(9, 21))
+        tick(LocalTime.of(9, 21))                                        // inside its 09:20-09:22 fill window
+        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
+        assertEquals("CE", p.right); assertTrue("bought with Supertrend agreeing", p.st)
+        PassedArmsHost.testHistory = h0
+        assertNothingAtZerodha()
+    }
+
+    /** 4 Nov: the day's earlier sessions are kept on the phone, so a restart reads them back from the file (no Upstox read). */
+    @Test fun theEarlierSessionsComeBackFromThePhoneAfterARestart() {
+        val h0 = PassedArmsHost.testHistory
+        val d0 = PassedArmsHost.testDaily
+        try {
+            val ones = yesterday()
+            PassedArmsHost.writeHistCache("NIFTY", day, ones, emptyList())
+            PassedArmsHost.writeHistCache(PassedArmsHost.VIX, day, ones.map { it.copy(open = 15.0, high = 15.5, low = 14.5, close = 15.0) }, emptyList())
+            assertEquals(ones, PassedArmsHost.readHistCache("NIFTY", day)!!.first)
+            assertNull("another day's file is never used", PassedArmsHost.readHistCache("NIFTY", day.plusDays(1)))
+            PassedArmsHost.testHistory = null; PassedArmsHost.testDaily = null
+            PassedArmsHost.wipe()
+            assertNull(PassedArmsHost.history("NIFTY", day))
+            runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY")) }
+            assertEquals(1, PassedArmsHost.history("NIFTY", day)!!.sessions.size)
+            assertNotNull(PassedArmsHost.history(PassedArmsHost.VIX, day))
+            assertFalse(PassedArmsHost.historyPending("NIFTY", day))
+        } finally {
+            PassedArmsHost.testHistory = h0; PassedArmsHost.testDaily = d0
+        }
     }
 
     @Test fun withTheFilterOnABreakSupertrendIsAgainstIsSkipped() {
