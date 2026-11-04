@@ -773,6 +773,12 @@ object Broker {
     /** The last margins read and when (memory only): the live entry's margin check ([accountNow] with a need). */
     @Volatile private var fundsKept: Pair<Long, Funds>? = null
 
+    /** 4 Nov: the free margin (Kite's equity net) read within [maxAgeMs]: the kept read, else Zerodha now; null when unreadable. */
+    suspend fun freeMargin(maxAgeMs: Long = 30_000L): Double? {
+        fundsKept?.let { (at, f) -> if (System.currentTimeMillis() - at in 0..maxAgeMs) return f.net }
+        return runCatching { funds().net }.getOrNull()
+    }
+
     /** The kept margins as the pure check sees them (the free margin the guard compares with: equity net). */
     private fun marginSnap(): com.optionslab.ira.MarginCache.Snapshot? =
         fundsKept?.let { (at, f) -> com.optionslab.ira.MarginCache.Snapshot(f.net, at) }

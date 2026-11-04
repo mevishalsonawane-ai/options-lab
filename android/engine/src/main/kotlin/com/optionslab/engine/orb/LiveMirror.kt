@@ -359,6 +359,27 @@ object LiveMirror {
      * size (the paper keeps its own, so its record stays comparable) - once the paper trade holds at least one lot. An arm whose size
      * IS Boss's own setting elsewhere ([Spec.bossLots]: ntfy alerts) keeps its paper lots. 0: nothing to buy.
      */
+    /**
+     * 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"): the most of [want] lots of an option
+     * buy whose premium ([perLot] rupees a lot at the price now, with [FIT_BUFFER] for the fill moving and the charges) fits the
+     * free margin [free]. [want] when it all fits, or when the cost or the margin is not known; 0 when not even one lot fits (the
+     * entry then goes as before and Zerodha says why). Never above [want]: it only ever buys less than Boss's setting.
+     */
+    fun lotsThatFit(want: Int, perLot: Double, free: Double?): Int {
+        if (want <= 0) return 0
+        if (!(perLot > 0) || free == null || !free.isFinite()) return want
+        for (k in want downTo 1) if (k * perLot * (1 + FIT_BUFFER) <= free) return k
+        return 0
+    }
+
+    /** 4 Nov: the room [lotsThatFit] keeps above the premium (3%: a MARKET fill a little above the last price, and the charges). */
+    const val FIT_BUFFER = 0.03
+
+    /** 4 Nov: the words on the entry line when fewer lots were bought ([acted]) or would have been (the switch off). */
+    fun fitWords(want: Int, fit: Int, free: Double, acted: Boolean): String =
+        if (acted) " · $fit of your $want lots: the free margin (Rs %,.0f) fits $fit".format(java.util.Locale.ENGLISH, free)
+        else " · the free margin (Rs %,.0f) fits $fit of your $want lots (fewer lots when funds are short is off: all $want sent)".format(java.util.Locale.ENGLISH, free)
+
     fun armLiveQty(paperLots: Int, lot: Int, spec: Spec, setLots: Int): Int {
         if (paperLots <= 0 || lot <= 0) return 0
         return (if (spec.bossLots) paperLots else armLots(setLots)) * lot

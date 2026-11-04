@@ -796,12 +796,25 @@ object ArmLive {
         // settings' setting, default 1), said on its own entry line - except ntfy alerts, whose lots are his setting on its page.
         // The order gates still apply to all.
         // 3 Nov (Boss): the live lots are Boss's own setting in Bot settings ([AppSettings.armLiveLots], default 1).
-        val qty = testLotCap?.let { LiveMirror.liveQty(lots, ins.lot, it) } ?: LiveMirror.armLiveQty(lots, ins.lot, spec, s.armLiveLots)
+        var qty = testLotCap?.let { LiveMirror.liveQty(lots, ins.lot, it) } ?: LiveMirror.armLiveQty(lots, ins.lot, spec, s.armLiveLots)
         if (qty <= 0) { notMirrored(a, "the paper trade is under one lot"); return@withLock }
-        val cut = LiveMirror.cutWords(lots, qty, ins.lot, s.armLiveLots)
+        var cut = LiveMirror.cutWords(lots, qty, ins.lot, s.armLiveLots)
         val qkey = "${ins.exchange}:${ins.symbol}"
         val quote = runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
+        // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"): an option buy of more than one lot
+        // is cut to the lots the free margin fits - only ever fewer than his setting, never more. Off by default: then it is only
+        // said on the entry line (shadow) and all his lots go, as before. A sale or a future (margin, not premium) is never cut.
+        val want = qty / ins.lot
+        if (want > 1 && a.side > 0 && a.contract.right != Right.IX) {
+            val free = runCatching { Broker.freeMargin() }.getOrNull()
+            val fit = LiveMirror.lotsThatFit(want, last * ins.lot * ins.multiplier, free)
+            if (free != null && fit in 1 until want) {
+                if (s.fewerLotsIfShort) qty = fit * ins.lot
+                cut += LiveMirror.fitWords(want, fit, free, acted = s.fewerLotsIfShort)
+                runCatching { Diag.record("armlive", "${spec.label}: ${ins.symbol} ${LiveMirror.fitWords(want, fit, free, acted = s.fewerLotsIfShort).removePrefix(" · ")}") }
+            }
+        }
         // Never an entry against what Zerodha holds the other way on this contract (two arms on one future, opposite ways).
         val net = runCatching { Broker.positionBook().net.filter { it.symbol == ins.symbol && it.exchange == ins.exchange && it.product == spec.product }.sumOf { it.qty } }
             .getOrElse { notMirrored(a, "Zerodha's positions could not be read"); return@withLock }

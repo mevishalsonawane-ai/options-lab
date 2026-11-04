@@ -29,6 +29,12 @@ data class AppSettings(
      */
     val armLiveLots: Int = 1,
     /**
+     * 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"): an arm's live option buy above 1 lot is
+     * cut to the lots the free margin fits. Off by default (CLAUDE.md: new live resizing starts in shadow, logged only); turning it
+     * on asks for the PIN. Kept under "k." (never carried by a backup).
+     */
+    val fewerLotsIfShort: Boolean = false,
+    /**
      * 3 Nov (Boss): the index markets the arms trade LIVE (Bot settings → Markets); the others they keep in shadow (recorded, never
      * sent). Default all five. Under "k." (never carried by a backup). Adding one asks for the PIN; MCX is not one of these.
      */
@@ -208,6 +214,7 @@ data class AppSettings(
                 ticketUnderlying = p.getString("s.tkU", d.ticketUnderlying)!!,
                 ticketLots = p.getInt("s.tkLots", d.ticketLots),
                 armLiveLots = com.optionslab.engine.orb.LiveMirror.armLots(p.getInt("k.armLots", d.armLiveLots)),
+                fewerLotsIfShort = p.getBoolean("k.fewerLots", d.fewerLotsIfShort),
                 liveMarkets = p.getString("k.markets", null)?.let { com.optionslab.engine.orb.LiveMirror.markets(it) } ?: d.liveMarkets,
                 includeDeviceSessions = p.getBoolean("s.devSess", d.includeDeviceSessions),
                 entryReminder = p.getBoolean("n.entry", d.entryReminder),
@@ -326,7 +333,7 @@ data class AppSettings(
                 "s.otm" to s.otmPct, "s.entry" to s.entry, "s.regime" to s.regime, "s.dated" to s.datedLot,
                 "s.lot" to s.pinnedLot, "s.wing" to (s.wingPct ?: -1.0), "s.capital" to s.capital,
                 "s.survive" to s.survive, "s.holdout" to s.holdout, "s.last" to s.healthLast,
-                "s.tkU" to s.ticketUnderlying, "s.tkLots" to s.ticketLots, "k.armLots" to s.armLiveLots, "k.markets" to com.optionslab.engine.orb.LiveMirror.marketsKept(s.liveMarkets), "s.devSess" to s.includeDeviceSessions,
+                "s.tkU" to s.ticketUnderlying, "s.tkLots" to s.ticketLots, "k.armLots" to s.armLiveLots, "k.fewerLots" to s.fewerLotsIfShort, "k.markets" to com.optionslab.engine.orb.LiveMirror.marketsKept(s.liveMarkets), "s.devSess" to s.includeDeviceSessions,
                 "n.entry" to s.entryReminder, "n.autoTicket" to s.autoTicket, "n.autoSettle" to s.autoSettle,
                 "n.harvest" to s.nightlyHarvest, "n.live" to s.liveWatch, "n.risk" to s.riskAlertPct,
                 "n.health" to s.healthAlerts, "n.other" to s.otherAlerts, "n.paper" to s.paperAlerts, "sec.bio" to s.biometric, "sec.face" to s.allowWeakFace,

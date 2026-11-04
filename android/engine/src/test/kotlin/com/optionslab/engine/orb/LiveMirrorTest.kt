@@ -17,6 +17,26 @@ import kotlin.test.assertTrue
 
 /** The live path of the paper strategies (18 Oct, Boss: every paper strategy present for live too), its pure rules. */
 class LiveMirrorTest {
+    /** 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"). */
+    @Test fun lotsThatFitStepDownToWhatTheFreeMarginBuys() {
+        // 1 lot = Rs 6,000 of premium (Rs 6,180 with the 3% room).
+        assertEquals(3, LiveMirror.lotsThatFit(3, 6_000.0, 20_000.0), "all three fit")
+        assertEquals(2, LiveMirror.lotsThatFit(3, 6_000.0, 13_000.0), "two fit")
+        assertEquals(1, LiveMirror.lotsThatFit(3, 6_000.0, 7_000.0), "one fits")
+        assertEquals(0, LiveMirror.lotsThatFit(3, 6_000.0, 6_100.0), "not one with the room for the fill and charges")
+        assertEquals(2, LiveMirror.lotsThatFit(3, 6_000.0, 12_360.0), "exactly two with the room")
+        // Never above the setting, and nothing changes when a figure is unknown.
+        assertEquals(3, LiveMirror.lotsThatFit(3, 6_000.0, 1_000_000.0))
+        assertEquals(3, LiveMirror.lotsThatFit(3, 6_000.0, null))
+        assertEquals(3, LiveMirror.lotsThatFit(3, 6_000.0, Double.NaN))
+        assertEquals(3, LiveMirror.lotsThatFit(3, Double.NaN, 5_000.0))
+        assertEquals(3, LiveMirror.lotsThatFit(3, 0.0, 5_000.0))
+        assertEquals(0, LiveMirror.lotsThatFit(0, 6_000.0, 20_000.0))
+        assertEquals(0, LiveMirror.lotsThatFit(3, 6_000.0, -500.0), "a negative free margin fits nothing")
+        assertEquals(" · 2 of your 3 lots: the free margin (Rs 13,000) fits 2", LiveMirror.fitWords(3, 2, 13_000.0, acted = true))
+        assertTrue("all 3 sent" in LiveMirror.fitWords(3, 2, 13_000.0, acted = false))
+    }
+
     private val day = LocalDate.of(2026, 10, 27)
     private fun at(h: Int, m: Int, d: LocalDate = day): LocalDateTime = d.atTime(h, m)
 

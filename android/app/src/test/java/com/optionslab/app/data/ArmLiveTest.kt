@@ -501,6 +501,38 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("both lots sold", "60", kite.placed.single { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }.form["quantity"])
     }
 
+    /**
+     * 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"): with "fewer lots when funds are short" on,
+     * a 3-lot live buy the free margin cannot pay for buys the 2 it can (1 lot = 30 at 200 = Rs 6,000); with it off (the default),
+     * all 3 go as before and the arm's line says only 2 would have fitted.
+     */
+    @Test fun withFewerLotsOnAnEntryBuysOnlyTheLotsTheFundsFit() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10, fewerLotsIfShort = true))
+        kite.cash = 13_000.0
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "fit"))
+        val (buy, stop) = kite.placed
+        assertEquals("2 of the 3 lots of 30", "60", buy.form["quantity"]); assertEquals("BUY", buy.form["transaction_type"])
+        assertEquals("its stop covers what was bought", "60", stop.form["quantity"])
+        assertEquals(60, view().open.single().qty)
+        assertTrue(view().log.toString(), view().log.any { "2 of your 3 lots: the free margin (Rs 13,000) fits 2" in it })
+    }
+
+    @Test fun withFewerLotsOffAllTheLotsAreSentAndTheLineSaysWhatWouldHaveFitted() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10))
+        assertFalse("off by default", AppSettings.load().fewerLotsIfShort)
+        kite.cash = 13_000.0
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "nofit"))
+        assertEquals("all 3 lots sent, as before", "90", kite.placed.first().form["quantity"])
+        assertTrue(view().log.toString(), view().log.any { "fits 2 of your 3 lots" in it && "all 3 sent" in it })
+    }
+
+    @Test fun withFewerLotsOnAllTheLotsGoWhenTheFundsFitThem() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10, fewerLotsIfShort = true))
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "plenty"))           // the fake account's Rs 5 lakh
+        assertEquals("90", kite.placed.first().form["quantity"])
+        assertTrue(view().log.none { "of your 3 lots" in it })
+    }
+
     /** 3 Nov (live): Zerodha blocks MIS MARKET orders on a low-OI contract; the entry goes once as a LIMIT at the offer instead. */
     @Test fun aMarketOrderZerodhaBlocksGoesOnceAsALimitAtTheOffer() {
         kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "MIS MARKET orders are blocked for this FINNIFTY contract due to its open interest (OI) being less than 100 lots.")
