@@ -742,10 +742,6 @@ internal fun ArmLotsCard(model: AppModel) {
     var ask by remember { mutableStateOf<Int?>(null) }
     ask?.let { to -> Reauth(model, onOk = { ask = null; setArmLots(model, to) }, onCancel = { ask = null },
         why = "Enter your app PIN to raise every arm's live trade to $to lots.") }
-    // 4 Nov: turning "fewer lots when funds are short" on lets an entry go that Zerodha would refuse for funds: the PIN first.
-    var fitAsk by remember { mutableStateOf(false) }
-    if (fitAsk) Reauth(model, onOk = { fitAsk = false; setFewerLots(model, true) }, onCancel = { fitAsk = false },
-        why = "Enter your app PIN to let an arm's live trade buy fewer lots when the funds are short.")
     val n = com.optionslab.engine.orb.LiveMirror.armLots(s.armLiveLots)
     LedgerCard(title = "Live lots per arm trade") {
         Note("Each arm copied live (R51, R72, R52, Solo, S5, CISD, FT3, Night, Hero ticket, Flow, the MCX arms...) buys this many lots " +
@@ -765,20 +761,12 @@ internal fun ArmLotsCard(model: AppModel) {
         )
         if (caps.isNotEmpty()) Note("Above your order limits (${caps.joinToString(" and ")}): those entries are refused until you raise them too.")
         if (n > 1) Note("The order value and exposure limits in the account guard still apply to the bigger size.")
-        // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1").
-        if (n > 1) ToggleRow("Fewer lots when funds are short", FEWER_LOTS_SUB, s.fewerLotsIfShort, keepSub = true) { on ->
-            if (on && com.optionslab.app.security.GuardPin.asks(true, s.live)) fitAsk = true else setFewerLots(model, on)
-        }
+        // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; always on, no switch).
+        if (n > 1) Note("When the free cash is short, an arm's live index option buy takes as many of these lots as it fits " +
+            "($n, else ${n - 1}${if (n > 2) ", down to 1" else ""}); never more than this setting.")
     }
 }
 
-internal const val FEWER_LOTS_SUB = "An arm's live option buy of more than 1 lot buys as many of your lots as the free margin fits " +
-    "(3 lots, else 2, else 1), never more than your setting. Off: all your lots are sent and the arm's line says how many would have fitted."
-
-private fun setFewerLots(model: AppModel, on: Boolean) {
-    model.update { it.copy(fewerLotsIfShort = on) }
-    runCatching { com.optionslab.app.data.Diag.record("armlive", "fewer lots when funds are short ${if (on) "on" else "off"} (you, Bot settings)") }
-}
 
 /**
  * 3 Nov (Boss: "an option in Bot settings for selecting the index we use: only Bank Nifty, I select Bank Nifty; all, I select

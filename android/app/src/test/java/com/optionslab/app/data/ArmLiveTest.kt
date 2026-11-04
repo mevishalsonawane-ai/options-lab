@@ -502,33 +502,40 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     /**
-     * 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"): with "fewer lots when funds are short" on,
-     * a 3-lot live buy the free margin cannot pay for buys the 2 it can (1 lot = 30 at 200 = Rs 6,000); with it off (the default),
-     * all 3 go as before and the arm's line says only 2 would have fitted.
+     * 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; always on): a 3-lot live buy the free
+     * cash cannot pay for buys the 2 it can (1 lot = 30 at the 200.05 offer = about Rs 6,000), said on its line.
      */
-    @Test fun withFewerLotsOnAnEntryBuysOnlyTheLotsTheFundsFit() {
-        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10, fewerLotsIfShort = true))
+    @Test fun anEntryBuysOnlyTheLotsTheFreeCashFits() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10))
         kite.cash = 13_000.0
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "fit"))
         val (buy, stop) = kite.placed
         assertEquals("2 of the 3 lots of 30", "60", buy.form["quantity"]); assertEquals("BUY", buy.form["transaction_type"])
         assertEquals("its stop covers what was bought", "60", stop.form["quantity"])
         assertEquals(60, view().open.single().qty)
-        assertTrue(view().log.toString(), view().log.any { "2 of your 3 lots: the free margin (Rs 13,000) fits 2" in it })
+        assertTrue(view().log.toString(), view().log.any { "2 of your 3 lots: the free cash (Rs 13,000) fits 2" in it })
     }
 
-    @Test fun withFewerLotsOffAllTheLotsAreSentAndTheLineSaysWhatWouldHaveFitted() {
+    /** 4 Nov: a LIMIT entry is priced at its own limit (Zerodha blocks the premium there), not the lower last price. */
+    @Test fun aLimitEntryIsFittedAtItsLimitPrice() {
         AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10))
-        assertFalse("off by default", AppSettings.load().fewerLotsIfShort)
-        kite.cash = 13_000.0
-        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "nofit"))
-        assertEquals("all 3 lots sent, as before", "90", kite.placed.first().form["quantity"])
-        assertTrue(view().log.toString(), view().log.any { "fits 2 of your 3 lots" in it && "all 3 sent" in it })
+        kite.cash = 12_500.0                                         // 2 lots at 200 fit; at the 210 limit only 1 does
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "lim", limit = 210.0))
+        val buy = kite.placed.first()
+        assertEquals("LIMIT", buy.form["order_type"]); assertEquals("1 lot", "30", buy.form["quantity"])
     }
 
-    @Test fun withFewerLotsOnAllTheLotsGoWhenTheFundsFitThem() {
-        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10, fewerLotsIfShort = true))
-        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "plenty"))           // the fake account's Rs 5 lakh
+    @Test fun whenNotEvenOneLotFitsTheEntryGoesAsBefore() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10))
+        kite.cash = 5_000.0                                          // under one lot's Rs 6,000
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "none"))
+        assertEquals("all 3 lots sent: Zerodha says why", "90", kite.placed.first().form["quantity"])
+        assertTrue(view().log.none { "of your 3 lots" in it })
+    }
+
+    @Test fun allTheLotsGoWhenTheFreeCashFitsThem() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10))
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "plenty"))   // the fake account's Rs 5 lakh
         assertEquals("90", kite.placed.first().form["quantity"])
         assertTrue(view().log.none { "of your 3 lots" in it })
     }

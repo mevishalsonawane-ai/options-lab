@@ -33,8 +33,7 @@ class LiveMirrorTest {
         assertEquals(3, LiveMirror.lotsThatFit(3, 0.0, 5_000.0))
         assertEquals(0, LiveMirror.lotsThatFit(0, 6_000.0, 20_000.0))
         assertEquals(0, LiveMirror.lotsThatFit(3, 6_000.0, -500.0), "a negative free margin fits nothing")
-        assertEquals(" · 2 of your 3 lots: the free margin (Rs 13,000) fits 2", LiveMirror.fitWords(3, 2, 13_000.0, acted = true))
-        assertTrue("all 3 sent" in LiveMirror.fitWords(3, 2, 13_000.0, acted = false))
+        assertEquals(" · 2 of your 3 lots: the free cash (Rs 13,000) fits 2", LiveMirror.fitWords(3, 2, 13_000.0))
     }
 
     private val day = LocalDate.of(2026, 10, 27)

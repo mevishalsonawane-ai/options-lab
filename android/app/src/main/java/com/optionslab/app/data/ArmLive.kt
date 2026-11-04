@@ -802,17 +802,19 @@ object ArmLive {
         val qkey = "${ins.exchange}:${ins.symbol}"
         val quote = runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
-        // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"): an option buy of more than one lot
-        // is cut to the lots the free margin fits - only ever fewer than his setting, never more. Off by default: then it is only
-        // said on the entry line (shadow) and all his lots go, as before. A sale or a future (margin, not premium) is never cut.
+        // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; "make it default, don't have one
+        // more option"): an index option buy of more than one lot is cut to the lots the free cash fits - only ever fewer than his
+        // setting, never more. Priced at the higher of the last price, the offer and its own limit. A sale, a future or an MCX
+        // option (its own segment's money) is never cut; not even one lot fitting, or the cash unreadable, goes as before.
         val want = qty / ins.lot
-        if (want > 1 && a.side > 0 && a.contract.right != Right.IX) {
-            val free = runCatching { Broker.freeMargin() }.getOrNull()
-            val fit = LiveMirror.lotsThatFit(want, last * ins.lot * ins.multiplier, free)
+        if (want > 1 && a.side > 0 && a.contract.right != Right.IX && ins.exchange != "MCX") {
+            val free = Broker.freeCash()
+            val px = maxOf(last, quote?.ask?.takeIf { it.isFinite() && it > 0 } ?: last, a.limit ?: 0.0)
+            val fit = LiveMirror.lotsThatFit(want, px * ins.lot * ins.multiplier, free)
             if (free != null && fit in 1 until want) {
-                if (s.fewerLotsIfShort) qty = fit * ins.lot
-                cut += LiveMirror.fitWords(want, fit, free, acted = s.fewerLotsIfShort)
-                runCatching { Diag.record("armlive", "${spec.label}: ${ins.symbol} ${LiveMirror.fitWords(want, fit, free, acted = s.fewerLotsIfShort).removePrefix(" · ")}") }
+                qty = fit * ins.lot
+                cut += LiveMirror.fitWords(want, fit, free)
+                runCatching { Diag.record("armlive", "${spec.label}: ${ins.symbol} ${LiveMirror.fitWords(want, fit, free).removePrefix(" · ")}") }
             }
         }
         // Never an entry against what Zerodha holds the other way on this contract (two arms on one future, opposite ways).

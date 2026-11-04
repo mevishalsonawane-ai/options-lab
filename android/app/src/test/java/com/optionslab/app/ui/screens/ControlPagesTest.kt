@@ -588,36 +588,16 @@ class ControlPagesTest {
         assertFalse("lowering never asks", compose.has("Confirm it is you"))
     }
 
-    /**
-     * 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"): the switch shows once more than 1 lot
-     * is set, is off by default, asks for the PIN in Live to turn on (Cancel keeps it off), turns off at once; never in a backup.
-     */
-    @Test fun fewerLotsWhenFundsAreShortIsOffByDefaultAndAsksThePinToTurnOn() {
-        assertFalse("a restore can never turn it on", com.optionslab.ira.Upkeep.carried("k.fewerLots"))
-        PinLock.setPin(pin.toCharArray())
-        model.update { it.copy(mode = "live", allowRealOrders = true) }
-        waitSettings { it.live && it.allowRealOrders }
+    /** 4 Nov (Boss: "make it default, don't have one more option"): no switch; with more than 1 lot the card says the step-down. */
+    @Test fun theLotsCardSaysTheStepDownWithNoSwitch() {
         show { RiskPage(model) }
         compose.reveal("Live lots per arm trade")
-        assertFalse("not offered at 1 lot", compose.has("Fewer lots when funds are short"))
+        assertFalse("not said at 1 lot", compose.has("When the free cash is short", substring = true))
         model.update { it.copy(armLiveLots = 3) }
         waitSettings { it.armLiveLots == 3 }
         compose.frames()
-        compose.reveal("Fewer lots when funds are short")
-        assertFalse(model.settings.value.fewerLotsIfShort)
-        toggle("Fewer lots when funds are short")
-        compose.waitForText("Confirm it is you")
-        compose.onNodeWithText("Enter your app PIN to let an arm's live trade buy fewer lots when the funds are short.").assertExists()
-        tap("Cancel")
-        compose.waitForNoText("Confirm it is you")
-        assertFalse(model.settings.value.fewerLotsIfShort)
-        toggle("Fewer lots when funds are short")
-        reauth(pin, "Enter your app PIN to let an arm's live trade buy fewer lots when the funds are short.")
-        waitSettings { it.fewerLotsIfShort }
-        compose.until(10_000) { AppSettings.load().fewerLotsIfShort }
-        toggle("Fewer lots when funds are short")
-        waitSettings { !it.fewerLotsIfShort }
-        assertFalse("turning it off never asks", compose.has("Confirm it is you"))
+        compose.reveal("When the free cash is short, an arm's live index option buy takes as many of these lots as it fits (3, else 2, down to 1); never more than this setting.")
+        assertFalse("no extra switch", compose.has("Fewer lots when funds are short"))
     }
 
     /** 3 Nov (Boss): the indices the arms trade live: all by default, one tap off, "All" back; never carried by a backup. */

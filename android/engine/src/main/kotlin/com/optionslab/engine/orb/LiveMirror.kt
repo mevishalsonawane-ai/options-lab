@@ -354,12 +354,6 @@ object LiveMirror {
     fun liveLotCap(spec: Spec): Int = if (spec.bossLots) 0 else LIVE_LOTS
 
     /**
-     * 3 Nov (Boss: "all the arms work on a single lot; give me an option in Bot settings to increase the lots, default 1"): the live
-     * quantity of an arm's entry: exactly Boss's [setLots] (1..[MAX_ARM_LOTS]) lots at Zerodha's [lot], whatever the paper trade's
-     * size (the paper keeps its own, so its record stays comparable) - once the paper trade holds at least one lot. An arm whose size
-     * IS Boss's own setting elsewhere ([Spec.bossLots]: ntfy alerts) keeps its paper lots. 0: nothing to buy.
-     */
-    /**
      * 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"): the most of [want] lots of an option
      * buy whose premium ([perLot] rupees a lot at the price now, with [FIT_BUFFER] for the fill moving and the charges) fits the
      * free margin [free]. [want] when it all fits, or when the cost or the margin is not known; 0 when not even one lot fits (the
@@ -375,11 +369,16 @@ object LiveMirror {
     /** 4 Nov: the room [lotsThatFit] keeps above the premium (3%: a MARKET fill a little above the last price, and the charges). */
     const val FIT_BUFFER = 0.03
 
-    /** 4 Nov: the words on the entry line when fewer lots were bought ([acted]) or would have been (the switch off). */
-    fun fitWords(want: Int, fit: Int, free: Double, acted: Boolean): String =
-        if (acted) " · $fit of your $want lots: the free margin (Rs %,.0f) fits $fit".format(java.util.Locale.ENGLISH, free)
-        else " · the free margin (Rs %,.0f) fits $fit of your $want lots (fewer lots when funds are short is off: all $want sent)".format(java.util.Locale.ENGLISH, free)
+    /** 4 Nov: the words on the entry line when fewer lots were bought than Boss's setting. */
+    fun fitWords(want: Int, fit: Int, free: Double): String =
+        " · $fit of your $want lots: the free cash (Rs %,.0f) fits $fit".format(java.util.Locale.ENGLISH, free)
 
+    /**
+     * 3 Nov (Boss: "all the arms work on a single lot; give me an option in Bot settings to increase the lots, default 1"): the live
+     * quantity of an arm's entry: exactly Boss's [setLots] (1..[MAX_ARM_LOTS]) lots at Zerodha's [lot], whatever the paper trade's
+     * size (the paper keeps its own, so its record stays comparable) - once the paper trade holds at least one lot. An arm whose size
+     * IS Boss's own setting elsewhere ([Spec.bossLots]: ntfy alerts) keeps its paper lots. 0: nothing to buy.
+     */
     fun armLiveQty(paperLots: Int, lot: Int, spec: Spec, setLots: Int): Int {
         if (paperLots <= 0 || lot <= 0) return 0
         return (if (spec.bossLots) paperLots else armLots(setLots)) * lot

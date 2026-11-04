@@ -32,6 +32,9 @@ notes; match the surrounding code.
 - Real orders only with Boss's PIN and "AI trades go live" on. Jarvis's own trades stay on paper.
 - LIVE: automatic changes may only LOWER risk (skip, smaller size, earlier exit). Anything new that could skip or resize
   live trades starts in shadow (logged only), behind a switch that is off by default.
+  - Boss's exception (4 Nov: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1 ... make it default, dont
+    have 1 more option"): an arm's live index option buy of more than one lot is cut to the lots the free cash fits, always on,
+    no switch. It never buys more than Boss's lots setting and still passes every live gate.
 - EVERY ARM CAN GO LIVE (Boss, 30 Oct: "make all arms as live, will stop it if i want, dont keep any in paper only or
   record only, make all live if i move to live market").
   - No arm is paper-only or record-only by design. Each arm's live trade goes only through the same gates: the app in
