@@ -914,7 +914,8 @@ internal fun StaticIpCard(
         BrassButton(if (testing) "Connecting…" else "Connect & test", Modifier.fillMaxWidth().padding(top = 8.dp), enabled = !testing && pub != null) {
             if (!com.optionslab.app.data.StaticIp.valid(hostText)) { com.optionslab.app.work.Alerts.error("Enter the server's IP, like 144.24.125.164."); return@BrassButton }
             testing = true; relayMsg = null
-            scope.launch {
+            // 4 Nov (review): not cancelled when the card leaves the screen, so a failed test always switches the relay back off.
+            scope.launch(kotlinx.coroutines.NonCancellable) {
                 val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     runCatching {
                         relay.host = hostText.trim(); relay.enabled = true

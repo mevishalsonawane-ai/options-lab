@@ -75,8 +75,8 @@ class RelayFailFastTest : RobolectricTest() {
         Thread {
             while (!ss.isClosed) {
                 val c = runCatching { ss.accept() }.getOrNull() ?: break
-                accepted.incrementAndGet()
                 if (hold) kept += c else runCatching { c.close() }
+                accepted.incrementAndGet()                               // after it is kept: the test closes what it counted
             }
         }.apply { isDaemon = true; start() }
         return ss.localPort
@@ -113,6 +113,7 @@ class RelayFailFastTest : RobolectricTest() {
         val accepted = java.util.concurrent.atomic.AtomicInteger()
         val kept = java.util.Collections.synchronizedList(mutableListOf<java.net.Socket>())
         relayTo(standIn(hold = true, accepted = accepted, kept = kept))
+        Relay.clock = { 1_000_000L }                                     // pinned: only the close can explain no failure kept
         val outcome = java.util.concurrent.atomic.AtomicReference<String?>()
         val caller = Thread { outcome.set(try { Relay.proxy(); "connected" } catch (e: IOException) { e.message }) }.apply { isDaemon = true; start() }
         val end = System.currentTimeMillis() + 10_000
@@ -122,7 +123,7 @@ class RelayFailFastTest : RobolectricTest() {
         Relay.close()                                                    // while that connect holds the relay's lock
         assertTrue("close did not wait for the connect", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0) < 2_000)
         synchronized(kept) { kept.forEach { runCatching { it.close() } } }   // the server goes away: the connect fails
-        caller.join(20_000)
+        caller.join(10_000)
         assertTrue("the connect failed: ${outcome.get()}", outcome.get()?.startsWith("Relay:") == true)
         assertNull("a failure from before the close is not held against the next call", Relay.recentFailure())
         assertTrue(!Relay.connected)
