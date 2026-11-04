@@ -838,12 +838,12 @@ class BrokerScreensTest {
         val reads = ipReads
         compose.onAllNodes(isToggleable()).onFirst().performClick()
         until("on") { shown("Orders go through your server") }
-        assertTrue(Relay.enabled)
+        until("the switch saved off the screen's thread (4 Nov)") { Relay.enabled }
         compose.onAllNodes(isToggleable()).onFirst().assertIsOn()
         until("the IP read again") { ipReads > reads }
         compose.onAllNodes(isToggleable()).onFirst().performClick()
         until("off") { shown("Relay off: orders go direct") }
-        assertFalse(Relay.enabled)
+        until("saved off") { !Relay.enabled }
     }
 
     @Test fun theVpnGuideOpensWithItsCommandAndLinks() {

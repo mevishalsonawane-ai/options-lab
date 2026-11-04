@@ -122,9 +122,36 @@ object Relay {
         override fun getHostKey(host: String?, type: String?): Array<HostKey> = emptyArray()
     }
 
+    /**
+     * 4 Nov (Boss's diagnostics: the relay did not answer from 10:23 to 10:55, and one relay round trip took 427 s): each
+     * call waited its turn on this lock and then made its own 15 s attempt, so the waits added up to minutes. Now a failed
+     * connect is remembered for [FAIL_FAST_MS]: the calls queued behind it get the same reason at once (an order still never
+     * leaves from another IP: it fails, and its caller retries) instead of another 15 s attempt each. [close] forgets it.
+     */
+    const val FAIL_FAST_MS = 5_000L
+    @Volatile private var failedAt = 0L
+    @Volatile private var failedWhy: String? = null
+
+    /** TEST ONLY: the clock the fail-fast window is read on. */
+    @Volatile internal var clock: () -> Long = { System.currentTimeMillis() }
+
+    /** The last connect's failure while it is still within [FAIL_FAST_MS] of [now], else null. Memory only. */
+    internal fun recentFailure(now: Long = clock()): String? {
+        val why = failedWhy ?: return null
+        return if (now - failedAt in 0 until FAIL_FAST_MS) why else null
+    }
+
+    /** TEST ONLY: as if a connect had just failed with [why]. */
+    internal fun failedForTest(why: String, at: Long = clock()) { failedAt = at; failedWhy = why }
+
+    /** 4 Nov: bumped by [close]: a connect that began before it keeps nothing (the switch went off, or the server changed). */
+    private val closes = java.util.concurrent.atomic.AtomicInteger()
+
     @Synchronized private fun connect(): Session {
         session?.takeIf { it.isConnected }?.let { return it }
+        recentFailure()?.let { throw IOException(it) }
         val gen = erased
+        val closed = closes.get()
         runCatching { session?.disconnect() }
         val h = host ?: throw IOException("Relay: no server IP set (More → Zerodha → Static IP)")
         val prv = SecurePrefs.getString(K_PRV) ?: throw IOException("Relay: no key yet: tap Create key, then add it to the server")
@@ -156,17 +183,24 @@ object Relay {
         if (s == null) {
             val m = last?.message.orEmpty()
             Diag.record("relay", "connect FAILED to the server as ${names.joinToString("/")}: ${last?.javaClass?.simpleName}: $m")
-            throw IOException(when {
+            val why = when {
                 m.contains("HostKey has been changed", true) || m.contains("reject HostKey", true) ->
                     "Relay: the server's identity changed. If you rebuilt the server, tap Forget server and connect again."
                 m.contains("Auth fail", true) -> "Relay: the server refused the app's key. Log in to the server once and add the key to ~/.ssh/authorized_keys (user ubuntu on Ubuntu, opc on Oracle Linux)."
                 m.contains("timeout", true) || m.contains("connect", true) -> "Relay: cannot reach $h on port 22 (is the server running, with the IP attached?)"
                 else -> "Relay: $m"
-            })
+            }
+            // Only a connect that began after the last close is remembered (a close meanwhile: the next call tries afresh).
+            if (closed == closes.get()) { failedWhy = why; failedAt = clock() }
+            throw IOException(why)
         }
         // 26 Oct: "Erase everything" ran while this connected (with the key it read before): the session is not kept.
         if (gen != erased) { runCatching { s.disconnect() }; throw IOException("Relay: everything was erased; set the relay up again") }
         session = s
+        // 4 Nov: closed while this connected (the switch went off, or the server or its key changed): not kept. Checked after
+        // the session is set, so a close either is seen here or finds the session and ends it.
+        if (closed != closes.get()) { if (session === s) session = null; runCatching { s.disconnect() }; throw IOException("Relay: switched off or changed while connecting; try again") }
+        failedAt = 0L; failedWhy = null
         return s
     }
 
@@ -203,11 +237,12 @@ object Relay {
     /**
      * 26 Oct: "Erase everything" ([PersonalStores]): the SSH session (logged in with Boss's key) and the local SOCKS port closed,
      * the kept switch forgotten. The key, the server and the switch are settings keys, gone with [SecurePrefs.wipe]; never read
-     * here. Not [close]: that waits on this object's lock, which a connect holds for up to 45 s.
+     * here. (Like [close], it never waits on the lock a connect holds for up to 45 s.)
      */
     fun wipe() {
         erased++
         enabledKept = null
+        failedAt = 0L; failedWhy = null
         val ss = socks; socks = null; runCatching { ss?.close() }
         val s = session; session = null; runCatching { s?.disconnect() }
     }
@@ -215,9 +250,16 @@ object Relay {
     /** 26 Oct: whether a session, the SOCKS port or the kept switch is still in memory (the erase's tests). Memory only. */
     internal fun holdsForErase(): Boolean = session != null || socks != null || enabledKept?.second == true
 
-    @Synchronized fun close() {
-        runCatching { socks?.close() }; socks = null
-        runCatching { session?.disconnect() }; session = null
+    /**
+     * Ends the session and the SOCKS port. 4 Nov (Boss's diagnostics: the 08:38 freeze, "main thread in Relay.close, waiting
+     * for a lock of Relay"): it no longer takes the lock a connect holds for up to 45 s, so the switch on the screen never
+     * waits on a server that does not answer. A connect still running is told by [closes] and keeps nothing.
+     */
+    fun close() {
+        closes.incrementAndGet()
+        failedAt = 0L; failedWhy = null
+        val ss = socks; socks = null; runCatching { ss?.close() }
+        val s = session; session = null; runCatching { s?.disconnect() }
     }
 
     val connected: Boolean get() = session?.isConnected == true
@@ -247,12 +289,13 @@ object Relay {
             }
             val port = inp.readUnsignedShort()
             if (port != 443 || !allowed(dest)) { reply(out, 2); return }
+            val sess = try { connect() } catch (e: Exception) { reply(out, 1); return }
             val ch = try {
-                (connect().openChannel("direct-tcpip") as ChannelDirectTCPIP).apply { setHost(dest); setPort(port) }
-            } catch (e: Exception) { reply(out, 1); return }
+                (sess.openChannel("direct-tcpip") as ChannelDirectTCPIP).apply { setHost(dest); setPort(port) }
+            } catch (e: Exception) { dropDead(sess); reply(out, 1); return }
             val fromServer = ch.inputStream
             val toServer = ch.outputStream
-            try { ch.connect(15_000) } catch (e: Exception) { reply(out, 5); return }
+            try { ch.connect(15_000) } catch (e: Exception) { dropDead(sess); runCatching { ch.disconnect() }; reply(out, 5); return }
             reply(out, 0)
             c.soTimeout = 0                                                    // a quiet tunnel is not an error
             val up = Thread({ pump(inp, toServer); runCatching { ch.disconnect() } }, "relay-up").apply { isDaemon = true; start() }
@@ -260,6 +303,15 @@ object Relay {
             runCatching { ch.disconnect() }
             up.join(1_000)
         }
+    }
+
+    /**
+     * 4 Nov: a session that looked connected but could not open a channel (the server stopped answering; SSH's keep-alive
+     * notices only after 45 s) is ended, so the next call connects afresh (and fails fast if the server is down) instead of
+     * each call waiting 15 s on the same dead session.
+     */
+    private fun dropDead(s: Session) {
+        if (session === s) { session = null; runCatching { s.disconnect() } }
     }
 
     /** Reads the RFC 1929 request and checks it in constant time; the bytes read are wiped. */

@@ -94,6 +94,7 @@ import com.optionslab.engine.Kite
 import com.optionslab.engine.Right
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import java.time.format.DateTimeFormatter
 
 private val secureDialog get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
@@ -836,6 +837,8 @@ internal fun StaticIpCard(
     var testing by remember { mutableStateOf(false) }
     var relayMsg by remember { mutableStateOf<String?>(null) }
     fun check() { checking = true; scope.launch(kotlinx.coroutines.Dispatchers.Main) { status = readStatus(); checking = false } }
+    // 4 Nov: the relay switch's saves, run off the screen's thread one at a time in order.
+    val relaySaves = remember { kotlinx.coroutines.sync.Mutex() }
     LaunchedEffect(Unit) { check() }
     fun open(url: String) = runCatching {
         ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -917,8 +920,10 @@ internal fun StaticIpCard(
                     relayMsg = if (st.current != null) "✓ Connected. Zerodha will see your orders from ${st.current}." else "Connected, but the IP check did not answer; try again."
                     status = st
                 }.onFailure { e ->
-                    relay.enabled = false; relayOn = false
+                    // 4 Nov: the switch is saved off the screen's thread (a vault write; it froze the screen 1.3 s).
+                    relayOn = false
                     relayMsg = e.message ?: "Could not connect"
+                    relaySaves.withLock { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { relay.enabled = false } } }
                 }
             }
         }
@@ -929,7 +934,13 @@ internal fun StaticIpCard(
         if (pub != null) Row(
             Modifier.fillMaxWidth().padding(top = 10.dp).heightIn(min = 48.dp)
                 .toggleable(value = relayOn, role = Role.Switch) { on ->
-                    if (on && relay.host == null) com.optionslab.app.work.Alerts.error("Connect & test first.") else { relay.enabled = on; relayOn = on; check() }
+                    // 4 Nov (Boss's diagnostics: the screen froze 1.3 s in the vault write, and the 08:38 close waited on the
+                    // relay's lock): the switch is saved, and the relay closed, off the screen's thread; the IP is read after.
+                    if (on && relay.host == null) com.optionslab.app.work.Alerts.error("Connect & test first.") else {
+                        relayOn = on
+                        // One save at a time, in tap order (a fair lock): on-then-off never lands as on.
+                        scope.launch { relaySaves.withLock { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { relay.enabled = on } } }; check() }
+                    }
                 }
                 .semantics { contentDescription = "Send orders through your server" },
             horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
