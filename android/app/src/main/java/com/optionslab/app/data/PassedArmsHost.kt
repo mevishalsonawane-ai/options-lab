@@ -994,7 +994,10 @@ object PassedArmsHost {
                 val key = if (u == VIX) Upstox.INDEX_KEYS.getValue("INDIAVIX") else upKey(u)
                 val ones = testHistory?.invoke(u) ?: toBars(Net.history(key, day.minusDays(16), day.minusDays(1)))
                 val daily = testDaily?.invoke(u) ?: toBars(Net.daily(key, day.minusDays(45), day.minusDays(1)))
-                if (keepHist(u, day, ones, daily) && cached) runCatching { writeHistCache(u, day, ones, daily) }
+                // 4 Nov (review): only a whole read is kept on the phone (sessions and daily candles both in): a partial one is
+                // not pinned for the day, so a restart reads Upstox again.
+                val whole = ones.any { it.start.toLocalDate().isBefore(day) } && daily.any { it.start.toLocalDate().isBefore(day) }
+                if (keepHist(u, day, ones, daily) && cached && whole) runCatching { writeHistCache(u, day, ones, daily) }
             }
             histRead[u] = day
         }
@@ -1026,7 +1029,7 @@ object PassedArmsHost {
             ones.forEach { append(barLine('m', it)).append('\n') }
             daily.forEach { append(barLine('d', it)).append('\n') }
         }
-        val tmp = File(f.parentFile, "${f.name}.tmp")
+        val tmp = File(f.parentFile, "${f.name}.${Thread.currentThread().id}.${System.nanoTime()}.tmp")
         tmp.writeText(text)
         if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
     }
@@ -1765,9 +1768,12 @@ object PassedArmsHost {
             val s = all[u] ?: continue
             // 16 Oct (R73 T7, Boss): the Supertrend filter is R51's only (R73 found it does not help R72's breadth breaks), so it
             // is passed here and not inside [breaks]. Its series is built only when the filter is on (memory only).
+            // 4 Nov (review): whether the history was still loading, read BEFORE the series is built, so a read finishing in
+            // between never turns "not loaded yet" into "cannot be judged".
+            val stPending = b.stOn && historyPending(u, today)
             val st = if (b.stOn) todayBars(u, today, reads)?.let { stSeries(u, it) }.orEmpty() else null
             val gate: ((DonchianArm.Signal) -> Boolean?)? = st?.let { ser -> { x: DonchianArm.Signal -> DonchianArm.supertrendAgrees(ser, x) } }
-            changed = breaks(b, src, u, DonchianArm.signals(u, s, today), now, gate,
+            changed = breaks(b, src, u, DonchianArm.signals(u, s, today), now, gate, stPending = stPending,
                 confirm = { x -> confirmed?.let { Triple(u, x.bar.b, x.side) in it } }) || changed
         }
         return changed
@@ -1856,7 +1862,9 @@ object PassedArmsHost {
                                gate: ((DonchianArm.Signal) -> Boolean?)? = null,
                                confirm: (DonchianArm.Signal) -> Boolean? = { null },
                                /** 1 Nov: R72's wide-day skip ([wideSkip]): why a break is skipped, null to take it. */
-                               skipRule: ((DonchianArm.Signal) -> String?)? = null): Boolean {
+                               skipRule: ((DonchianArm.Signal) -> String?)? = null,
+                               /** 4 Nov: the gate's history was still loading when its series was built (after a restart). */
+                               stPending: Boolean = false): Boolean {
         val today = now.toLocalDate()
         val key = "$src|$u"
         var changed = false
@@ -1880,7 +1888,7 @@ object PassedArmsHost {
                 val ag = gate(s)
                 // 4 Nov: after a restart the earlier sessions may still be loading (from the phone's file or Upstox): the break
                 // is not decided yet, and the next look inside its fill window judges it (a missed window is said as before).
-                if (ag == null && historyPending(u, today)) {
+                if (ag == null && stPending) {
                     tried[dk] = "the earlier sessions were still loading after a restart, so Supertrend could not judge it"
                     changed = say(b, key, "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break: waiting for the earlier sessions to load (judged on the next look)") || changed
                     continue
@@ -2431,7 +2439,7 @@ object PassedArmsHost {
     }.getOrDefault(false)
 
     /** Its book's file (none before [init]). */
-    internal fun filesForErase(): List<File> = if (ready()) listOf(file) else emptyList()
+    internal fun filesForErase(): List<File> = if (ready()) listOfNotNull(file, histFile(VIX)?.parentFile) else emptyList()
 
     /** TEST ONLY: closed trades added to the book as if traded (the forward bars' tests). Debug builds only. */
     internal suspend fun addClosedForTest(list: List<Pos>) {

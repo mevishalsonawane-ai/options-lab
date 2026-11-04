@@ -1770,24 +1770,37 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { PassedArmsHost.setSupertrend(true) }
         val h0 = PassedArmsHost.testHistory!!
         val loaded = java.util.concurrent.CountDownLatch(1)
-        PassedArmsHost.testHistory = { u -> loaded.await(10, java.util.concurrent.TimeUnit.SECONDS); h0(u) }
-        PassedArmsHost.wipe()                                            // the restart: the day's memory is gone, the book's file stays
-        assertTrue(PassedArmsHost.historyPending("NIFTY", day))
-        market(LocalTime.of(9, 20))
-        tick(LocalTime.of(9, 20))                                        // its history read starts in the background and waits
-        assertTrue("nothing bought yet", PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
-        assertFalse("not skipped: it waits", view().log.any { "Supertrend cannot be judged yet" in it })
-        assertTrue(view().status.values.toString(), view().status.values.any { "waiting for the earlier sessions to load" in it })
-        assertEquals(0, view().stUnjudged)
-        loaded.countDown()
-        val end = System.currentTimeMillis() + 10_000
-        while (PassedArmsHost.historyPending("NIFTY", day) && System.currentTimeMillis() < end) Thread.sleep(20)
-        assertFalse(PassedArmsHost.historyPending("NIFTY", day))
-        market(LocalTime.of(9, 21))
-        tick(LocalTime.of(9, 21))                                        // inside its 09:20-09:22 fill window
-        val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
-        assertEquals("CE", p.right); assertTrue("bought with Supertrend agreeing", p.st)
-        PassedArmsHost.testHistory = h0
+        try {
+            PassedArmsHost.testHistory = { u -> loaded.await(10, java.util.concurrent.TimeUnit.SECONDS); h0(u) }
+            PassedArmsHost.wipe()                                        // the restart: the day's memory is gone, the book's file stays
+            assertTrue(PassedArmsHost.historyPending("NIFTY", day))
+            // Flat at 25,000 until 10:58, then 25,100: today's 21st 5-minute bar breaks up (entry 11:00), as late in the day as
+            // the 13:40 breaks of 4 Nov (the break needs no earlier session; only Supertrend's judgement does).
+            fun market11(until: LocalTime) {
+                minutes(niftyKey, until) { t -> if (t.isBefore(LocalTime.of(10, 59))) 25_000.0 else 25_100.0 }
+                minutes(ce, until) { 100.0 }; minutes(pe, until) { 90.0 }
+            }
+            market11(LocalTime.of(11, 0))
+            tick(LocalTime.of(11, 0))                                    // its history read starts in the background and waits
+            assertTrue("nothing bought yet", PassedArmsHost.view.value.open.none { it.shadow != PassedArmsHost.SHADOW_OFF })
+            assertFalse("not skipped: it waits", view().log.any { "Supertrend cannot be judged yet" in it })
+            assertTrue(view().status.values.toString(), view().status.values.any { "waiting for the earlier sessions to load" in it })
+            assertEquals(0, view().stUnjudged)
+            loaded.countDown()
+            val end = System.currentTimeMillis() + 10_000
+            while (PassedArmsHost.historyPending("NIFTY", day) && System.currentTimeMillis() < end) Thread.sleep(20)
+            assertFalse(PassedArmsHost.historyPending("NIFTY", day))
+            market11(LocalTime.of(11, 1))
+            tick(LocalTime.of(11, 1))                                    // inside its 11:00-11:02 fill window: judged now
+            assertFalse("judged with the earlier sessions in", view().log.any { "Supertrend cannot be judged yet" in it })
+            assertEquals(0, view().stUnjudged)
+            val bought = PassedArmsHost.view.value.open.filter { it.shadow != PassedArmsHost.SHADOW_OFF }
+            val against = view().log.any { "call break skipped: Supertrend (10, 3) is against it (R73 T7)" in it }
+            assertTrue("Supertrend decided it: bought with the label, or skipped as against ($bought)", (bought.size == 1 && bought.single().st) != against)
+        } finally {
+            loaded.countDown()
+            PassedArmsHost.testHistory = h0
+        }
         assertNothingAtZerodha()
     }
 

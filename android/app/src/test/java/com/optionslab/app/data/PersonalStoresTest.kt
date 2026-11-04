@@ -657,6 +657,10 @@ class PersonalStoresTest {
             // TestApp: init done, writeInlineForTest = true, testNoAutoOn = true. book() saves its migrations; the switch saves again.
             kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setArmed(com.optionslab.app.data.PassedArmsHost.SOURCES.first(), true, log = false) }
             com.optionslab.app.data.PassedArmsHost.awaitWrites()
+            // 4 Nov: its day's history kept on the phone (market prices only), erased with it.
+            val d = java.time.LocalDate.of(2026, 11, 4)
+            com.optionslab.app.data.PassedArmsHost.writeHistCache("NIFTY", d,
+                listOf(com.optionslab.engine.orb.Bar(d.minusDays(1).atTime(9, 15), 25_000.0, 25_001.0, 24_999.0, 25_000.0)), emptyList())
         },
         s("PineAuto") {
             // No Pine script is set up in a unit test: resetPaper() reads the (empty) book and saves it, so its file exists (holds() may
